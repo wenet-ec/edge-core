@@ -1,0 +1,39 @@
+# deploy/production/web.yml
+networks:
+  production_edge_core:
+    name: production_edge_core
+
+volumes:
+  production_edge_admin_db_data: {}
+  production_edge_admin_db_data_backups: {}
+
+services:
+  edge_admin_db:
+    build:
+      context: ../..
+      dockerfile: ./deploy/production/compose/postgres/Dockerfile
+    image: production_edge_admin_db
+    container_name: production_edge_admin_db
+    networks:
+      - production_edge_core
+    volumes:
+      - production_edge_admin_db_data:/var/lib/postgresql/data
+      - production_edge_admin_db_data_backups:/backups
+    env_file:
+      - ./.envs/.edge_admin_db
+
+  edge_admin:
+    build:
+      context: ../..
+      dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
+    image: production_edge_admin
+    container_name: production_edge_admin
+    networks:
+      - production_edge_core
+    depends_on:
+      - edge_admin_db
+    env_file:
+      - ./.envs/.edge_admin
+    ports:
+      - "4000:4000"
+    command: ["sh", "-c", "/app/bin/migrate && /app/bin/server"]

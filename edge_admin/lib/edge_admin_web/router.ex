@@ -30,7 +30,7 @@ defmodule EdgeAdminWeb.Router do
     pipe_through(:browser)
 
     # Serve SwaggerUI - this is what you'll navigate to see the docs
-    get("/docs", OpenApiSpex.Plug.SwaggerUI, path: "/api/openapi")
+    get("/swaggerui", OpenApiSpex.Plug.SwaggerUI, path: "/api/openapi")
 
     # To enable metrics dashboard use `telemetry_ui_allowed: true` as assigns value
     #

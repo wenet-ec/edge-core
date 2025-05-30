@@ -1,0 +1,85 @@
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - "**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: postgres:17
+        env:
+          POSTGRES_DB: edge_admin_test
+          POSTGRES_PASSWORD: development
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+    env:
+      MIX_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: erlef/setup-beam@v1
+        id: setup-beam
+        with:
+          version-file: edge_admin/.tool-versions
+          version-type: strict
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            edge_admin/deps
+            edge_admin/_build
+            edge_admin/priv/plts
+          key: ${{ runner.os }}-mix-${{ steps.setup-beam.outputs.otp-version }}-${{ steps.setup-beam.outputs.elixir-version }}-${{ hashFiles('edge_admin/mix.lock') }}
+
+      - name: Set environment variables
+        run: |
+          cd edge_admin
+          grep -v '^\(#.*\|\s\?\)$' .env.test >> $GITHUB_ENV
+
+      - name: Get dependencies
+        run: |
+          cd edge_admin
+          mix deps.get
+
+      - name: Check formatting
+        run: |
+          cd edge_admin
+          mix format --check-formatted
+
+      - name: Lint with Credo
+        run: |
+          cd edge_admin
+          mix compile --warnings-as-errors --force
+          mix credo --strict
+
+      - name: Run tests
+        run: |
+          cd edge_admin
+          mix test
+
+      - name: Check coverage
+        run: |
+          cd edge_admin
+          mix coveralls
+
+      - name: Security checks
+        run: |
+          cd edge_admin
+          mix deps.audit
+          mix sobelow --config

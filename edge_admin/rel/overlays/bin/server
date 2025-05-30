@@ -1,0 +1,4 @@
+#!/bin/sh
+# rel/overlays/bin/server
+cd -P -- "$(dirname -- "$0")"
+PHX_SERVER=true exec ./edge_admin start

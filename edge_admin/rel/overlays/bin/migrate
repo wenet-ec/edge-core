@@ -1,0 +1,4 @@
+#!/bin/sh
+# rel/overlays/bin/migrate
+cd -P -- "$(dirname -- "$0")"
+exec ./edge_admin eval EdgeAdmin.Release.migrate

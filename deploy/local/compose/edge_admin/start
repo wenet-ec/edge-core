@@ -1,0 +1,25 @@
+#!/bin/bash
+# deploy/local/compose/edge_admin/start
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+# Only compile if _build directory is empty or deps changed
+if [ ! -d "_build/dev" ] || [ "mix.lock" -nt "_build/dev" ]; then
+    echo "Installing/updating dependencies..."
+    mix deps.get
+    echo "Compiling dependencies and application..."
+    mix deps.compile
+    mix compile
+else
+    echo "Dependencies and build are up to date, skipping compilation..."
+fi
+
+# Run migrations
+echo "Running migrations..."
+mix ecto.migrate
+
+# Start the development server with hot reloading
+echo "Starting Phoenix server..."
+exec mix phx.server

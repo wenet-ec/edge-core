@@ -1,0 +1,8 @@
+# deploy/local/.envs/.edge_admin_db
+# PostgreSQL
+# ------------------------------------------------------------------------------
+POSTGRES_HOST=edge_admin_db
+POSTGRES_PORT=5432
+POSTGRES_DB=edge_admin_local
+POSTGRES_USER=edge_admin_user
+POSTGRES_PASSWORD=edge_admin_password

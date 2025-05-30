@@ -1,0 +1,9 @@
+#!/bin/bash
+# deploy/local/compose/edge_admin/migrate
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+# Run migrations only, without starting the server
+exec mix ecto.migrate

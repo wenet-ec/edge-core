@@ -1,0 +1,57 @@
+# deploy/local/.envs/.edge_admin
+# -----------------------------------------------------------------------------
+# This file contains all the environment variables needed (or supported) by the
+# application. It is checked into version control so all developers can share
+# it and use it as a base for local development.
+#
+# Current project developers should try to fill the values with the most
+# generic information possible for future developers.
+#
+# Personal values (such as access and secret keys) should *not* be stored in
+# this file since they're not shared among developers.
+# -----------------------------------------------------------------------------
+
+# Server configuration
+CORS_ALLOWED_ORIGINS=*
+PORT=4000
+SECRET_KEY_BASE=zsIbO5eGH9IJ1p+E6M1a1VL4bIGrwLeTS8W7q8QDAOE/o3Ucy0si768bJxmF4A1Q
+SESSION_KEY=edge_admin
+SESSION_SIGNING_SALT=FUYY5L041VshhwCep1OyX+vu4imud8+63+kLzupf7lrqlkiztQWQjFcJLgCLalXp
+
+# Database configuration
+POSTGRES_HOST=edge_admin_db
+POSTGRES_PORT=5432
+POSTGRES_DB=edge_admin_local
+POSTGRES_USER=edge_admin_user
+POSTGRES_PASSWORD=edge_admin_password
+DATABASE_URL=postgres://edge_admin_user:edge_admin_password@edge_admin_db:5432/edge_admin_local
+DATABASE_POOL_SIZE=60
+DATABASE_SSL=false
+
+# URL configuration (used by Phoenix to build URLs from routes)
+# Other features also extracts values from this URL:
+# - Redirect to canonical host
+# - Force SSL requests
+CANONICAL_URL=http://localhost:4000
+
+# Telemetry UI configuration
+TELEMETRY_UI_SHARE_KEY=DzbqdoAx/MGq8rM
+
+# Static URL configuration (used by Phoenix to generate static file URLs, eg.
+# CSS and JavaScript). We often use these variables to configure a CDN that
+# will cache static files once they have been served by the Phoenix
+# application.
+# STATIC_URL=
+
+# Basic Authentication
+# BASIC_AUTH_USERNAME=
+# BASIC_AUTH_PASSWORD=
+
+# New Relic configuration
+# NEW_RELIC_APP_NAME=
+# NEW_RELIC_LICENSE_KEY=
+
+# Sentry configuration
+# Sentry requires an environment name (but not a DSN)
+# SENTRY_DSN=
+SENTRY_ENVIRONMENT_NAME=local

@@ -1,0 +1,106 @@
+# .dockerignore
+
+# Git
+.git/
+.gitignore
+
+# Docker
+.dockerignore
+**/Dockerfile*
+docker-compose*.yml
+
+# Elixir/Phoenix build artifacts
+edge_admin/_build/
+edge_admin/deps/
+edge_admin/*.ez
+edge_admin/cover/
+edge_admin/tmp/
+edge_admin/erl_crash.dump
+edge_admin/npm-debug.log
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+edge_admin/logs/
+
+# Runtime data
+edge_admin/pids/
+edge_admin/*.pid
+edge_admin/*.seed
+
+# Coverage directory used by tools like istanbul
+edge_admin/coverage/
+
+# Dependency directories
+node_modules/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file (if any at root)
+.env
+.env.test
+.env.production
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Temporary folders
+tmp/
+temp/
+
+# Archives
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Database files (if any local DBs)
+*.sqlite
+*.sqlite3
+*.db
+
+# Certificate files
+*.pem
+*.key
+*.crt
+*.csr
+
+# Keep these exceptions (files we DO want to include)
+!edge_admin/lib/
+!edge_admin/config/
+!edge_admin/priv/repo/
+!edge_admin/priv/static/robots.txt
+!edge_admin/mix.exs
+!edge_admin/mix.lock
+!edge_admin/rel/

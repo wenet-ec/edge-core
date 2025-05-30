@@ -102,7 +102,7 @@ defmodule EdgeAdmin.Mixfile do
       {:dns_cluster, "~> 0.2"},
 
       # Oban
-      {:oban, "~> 2.19"},
+      {:oban, "~> 2.19"}
     ]
   end
 

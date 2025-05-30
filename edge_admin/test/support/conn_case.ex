@@ -9,19 +9,20 @@ defmodule EdgeAdminWeb.ConnCase do
 
   using do
     quote do
+      use EdgeAdminWeb, :verified_routes
+
+      import EdgeAdmin.Factory
+      import EdgeAdminWeb.ConnCase
+      import Phoenix.ConnTest
+      import Plug.Conn
       # The default endpoint for testing
       @endpoint EdgeAdminWeb.Endpoint
 
       # Add verified routes support - THIS WAS MISSING
-      use EdgeAdminWeb, :verified_routes
 
       # Import conveniences for testing with connections
-      import Plug.Conn
-      import Phoenix.ConnTest
-      import EdgeAdminWeb.ConnCase
 
       # Add factory support for easier testing
-      import EdgeAdmin.Factory
     end
   end
 

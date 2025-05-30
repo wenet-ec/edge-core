@@ -1,15 +1,18 @@
 # lib/edge_admin_web/api_spec.ex
 defmodule EdgeAdminWeb.ApiSpec do
-  alias OpenApiSpex.{Info, OpenApi, Paths, Server}
+  @moduledoc false
+  @behaviour OpenApiSpex.OpenApi
+
   alias EdgeAdminWeb.Router
-  @behaviour OpenApi
+  alias OpenApiSpex.Info
+  alias OpenApiSpex.OpenApi
+  alias OpenApiSpex.Paths
+  alias OpenApiSpex.Server
 
   @impl OpenApi
   def spec do
-    %OpenApi{
-      servers: [
-        %Server{url: "http://localhost:4000"}
-      ],
+    OpenApiSpex.resolve_schema_modules(%OpenApi{
+      servers: [%Server{url: "http://localhost:4000"}],
       info: %Info{
         title: "EdgeAdmin API",
         version: "0.0.1",
@@ -19,9 +22,11 @@ defmodule EdgeAdminWeb.ApiSpec do
         functionality for edge computing systems.
         """
       },
-      # Populate the paths from the phoenix router
       paths: Paths.from_router(Router)
-    }
-    |> OpenApiSpex.resolve_schema_modules() # Discover request/response schemas from path specs
+    })
+
+    # Populate the paths from the phoenix router
+
+    # Discover request/response schemas from path specs
   end
 end

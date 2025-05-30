@@ -16,16 +16,16 @@ defmodule TestEnvironment do
   end
 end
 
+# This config is to output keys instead of translated message in test
+config :edge_admin, EdgeAdmin.Gettext, priv: "priv/null", interpolation: EdgeAdmin.GettextInterpolation
+
 config :edge_admin, EdgeAdmin.Repo,
   pool: Ecto.Adapters.SQL.Sandbox,
   url: TestEnvironment.get_database_url()
 
 config :edge_admin, EdgeAdminWeb.Endpoint, server: false
 
-# This config is to output keys instead of translated message in test
-config :edge_admin, EdgeAdmin.Gettext, priv: "priv/null", interpolation: EdgeAdmin.GettextInterpolation
-
-config :logger, level: :warning
-
 # Disable Oban during tests:
 config :edge_admin, Oban, testing: :manual
+
+config :logger, level: :warning

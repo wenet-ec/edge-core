@@ -4,6 +4,8 @@ defmodule EdgeAdminWeb.Router do
 
   import Phoenix.LiveView.Router
 
+  alias OpenApiSpex.Plug.PutApiSpec
+
   pipeline :browser do
     plug(:accepts, ["html", "json"])
     plug(:session)
@@ -15,13 +17,13 @@ defmodule EdgeAdminWeb.Router do
   pipeline :api do
     plug(:accepts, ["json"])
     # Add the OpenApiSpex plug to make the spec available
-    plug(OpenApiSpex.Plug.PutApiSpec, module: EdgeAdminWeb.ApiSpec)
+    plug(PutApiSpec, module: EdgeAdminWeb.ApiSpec)
   end
 
   # Add a new pipeline for OpenAPI that doesn't have CSRF protection
   pipeline :openapi do
     plug(:accepts, ["json"])
-    plug(OpenApiSpex.Plug.PutApiSpec, module: EdgeAdminWeb.ApiSpec)
+    plug(PutApiSpec, module: EdgeAdminWeb.ApiSpec)
   end
 
   scope "/" do

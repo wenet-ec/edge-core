@@ -17,7 +17,7 @@ defmodule EdgeAdminHealth.Router do
           json_encoder: Jason,
           checks: EdgeAdminHealth.checks(),
           error_code: EdgeAdminHealth.error_code(),
-          timeout: :timer.seconds(5),
+          timeout: to_timeout(second: 5),
           pretty: false
         )
     )

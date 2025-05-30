@@ -18,9 +18,9 @@ defmodule EdgeAdminWeb.ChannelCase do
 
   using do
     quote do
+      import EdgeAdmin.Factory
       # Import conveniences for testing with channels
       import Phoenix.ChannelTest
-      import EdgeAdmin.Factory
 
       # The default endpoint for testing
       @endpoint EdgeAdminWeb.Endpoint

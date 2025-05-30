@@ -5,21 +5,24 @@ import EdgeAdmin.Config
 canonical_uri = get_env("CANONICAL_URL", :uri)
 static_uri = get_env("STATIC_URL", :uri)
 
-config :edge_admin,
-  canonical_host: get_uri_part(canonical_uri, :host),
-  force_ssl: get_uri_part(canonical_uri, :scheme) == "https"
-
 config :edge_admin, EdgeAdmin.Repo,
   url: get_env!("DATABASE_URL"),
   ssl: get_env("DATABASE_SSL", :boolean),
   pool_size: get_env!("DATABASE_POOL_SIZE", :integer),
   socket_options: if(get_env("DATABASE_IPV6", :boolean), do: [:inet6], else: [])
 
+config :edge_admin,
+  canonical_host: get_uri_part(canonical_uri, :host),
+  force_ssl: get_uri_part(canonical_uri, :scheme) == "https"
+
 # NOTE: Only set `server` to `true` if `PHX_SERVER` is present. We cannot set
 # it to `false` otherwise because `mix phx.server` will stop working without it.
 if get_env("PHX_SERVER", :boolean) == true do
   config :edge_admin, EdgeAdminWeb.Endpoint, server: true
 end
+
+config :edge_admin, Corsica, origins: get_env("CORS_ALLOWED_ORIGINS", :cors)
+config :edge_admin, EdgeAdmin.TelemetryUI, share_key: get_env("TELEMETRY_UI_SHARE_KEY")
 
 config :edge_admin, EdgeAdminWeb.Endpoint,
   http: [
@@ -33,15 +36,11 @@ config :edge_admin, EdgeAdminWeb.Endpoint,
   url: get_endpoint_url_config(canonical_uri),
   static_url: get_endpoint_url_config(static_uri)
 
-config :edge_admin, Corsica, origins: get_env("CORS_ALLOWED_ORIGINS", :cors)
-
 config :edge_admin,
   basic_auth: [
     username: get_env("BASIC_AUTH_USERNAME"),
     password: get_env("BASIC_AUTH_PASSWORD")
   ]
-
-config :edge_admin, EdgeAdmin.TelemetryUI, share_key: get_env("TELEMETRY_UI_SHARE_KEY")
 
 config :sentry,
   dsn: get_env("SENTRY_DSN"),

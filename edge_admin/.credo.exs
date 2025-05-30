@@ -76,8 +76,7 @@
           # Naming
           {CredoEnvvar.Check.Warning.EnvironmentVariablesAtCompileTime},
           {CredoNaming.Check.Warning.AvoidSpecificTermsInModuleNames, terms: ["Manager", "Fetcher", "Builder", "Persister", "Serializer", ~r/^Helpers?$/i, ~r/^Utils?$/i]},
-          {CredoNaming.Check.Consistency.ModuleFilename,
-           excluded_paths: ["config", "mix.exs", "priv", "test/support"], acronyms: []},
+          {CredoNaming.Check.Consistency.ModuleFilename, excluded_paths: ["config", "mix.exs", "priv", "test/support"], acronyms: []},
 
           # Database
           {ExcellentMigrations.CredoCheck.MigrationsSafety, []}

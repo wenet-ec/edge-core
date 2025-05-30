@@ -1,4 +1,5 @@
 defmodule EdgeAdmin.Repo.Migrations.AddObanJobsTable do
+  @moduledoc false
   use Ecto.Migration
 
   def up do

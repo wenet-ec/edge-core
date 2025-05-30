@@ -72,9 +72,6 @@ defmodule EdgeAdmin.Mixfile do
       # Errors
       {:sentry, "~> 10.10"},
 
-      # Monitoring
-      {:new_relic_agent, "~> 1.37"},
-
       # Telemetry
       {:telemetry_ui, "~> 5.0"},
 

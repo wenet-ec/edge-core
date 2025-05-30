@@ -34,10 +34,6 @@ TELEMETRY_UI_SHARE_KEY=DzbqdoAx/MGq8rM
 # BASIC_AUTH_USERNAME=
 # BASIC_AUTH_PASSWORD=
 
-# New Relic configuration
-# NEW_RELIC_APP_NAME=EdgeAdmin-Production
-# NEW_RELIC_LICENSE_KEY=
-
 # Sentry configuration
 # SENTRY_DSN=
 SENTRY_ENVIRONMENT_NAME=local

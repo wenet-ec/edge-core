@@ -47,10 +47,6 @@ TELEMETRY_UI_SHARE_KEY=DzbqdoAx/MGq8rM
 # BASIC_AUTH_USERNAME=
 # BASIC_AUTH_PASSWORD=
 
-# New Relic configuration
-# NEW_RELIC_APP_NAME=
-# NEW_RELIC_LICENSE_KEY=
-
 # Sentry configuration
 # Sentry requires an environment name (but not a DSN)
 # SENTRY_DSN=

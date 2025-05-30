@@ -18,7 +18,7 @@ POSTGRES_DB=edge_admin_production
 POSTGRES_USER=edge_admin_user  
 POSTGRES_PASSWORD=edge_admin_password
 DATABASE_URL=postgres://edge_admin_user:edge_admin_password@edge_admin_db:5432/edge_admin_production
-DATABASE_POOL_SIZE=60
+DATABASE_POOL_SIZE=20
 DATABASE_SSL=false
 
 # URL configuration

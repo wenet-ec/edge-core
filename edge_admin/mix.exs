@@ -40,8 +40,8 @@ defmodule EdgeAdmin.Mixfile do
 
   defp deps do
     [
-      # HTTP Client
-      {:hackney, "~> 1.24"},
+      # HTTP Client/Wrapper
+      {:req, "~> 0.5.0"},
 
       # HTTP server
       {:bandit, "~> 1.6"},

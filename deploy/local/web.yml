@@ -43,3 +43,23 @@ services:
     ports:
       - "4000:4000"
     command: /start
+  
+  edge_admin_test:
+    build:
+      context: ../..
+      dockerfile: ./deploy/local/compose/edge_admin/Dockerfile
+    image: local_edge_admin
+    container_name: local_edge_admin_test
+    networks:
+      - local_edge_core
+    depends_on:
+      - edge_admin_db
+    volumes:
+      - ../../edge_admin:/app:z
+      - local_edge_admin_deps:/app/deps
+      - local_edge_admin_build:/app/_build
+    env_file:
+      - ./.envs/.edge_admin_test
+    profiles:
+      - test
+    command: mix test

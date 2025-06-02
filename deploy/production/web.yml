@@ -6,8 +6,10 @@ networks:
 volumes:
   production_edge_admin_db_data: {}
   production_edge_admin_db_data_backups: {}
+  production_edge_vpn_data: {}
 
 services:
+  # Edge Admin
   edge_admin_db:
     build:
       context: ../..
@@ -37,3 +39,20 @@ services:
     ports:
       - "4000:4000"
     command: ["sh", "-c", "/app/bin/migrate && /app/bin/server"]
+
+  # Edge VPN
+  edge_vpn:
+    build:
+      context: ../..
+      dockerfile: ./deploy/production/compose/edge_vpn/Dockerfile
+    container_name: local_edge_vpn
+    volumes:
+      - ../../deploy/production/compose/edge_vpn/headscale_config:/etc/headscale
+      - production_edge_vpn_data:/var/lib/headscale
+    ports:
+      - "8080:8080"  # Headscale
+      - "8081:8081"  # VPN Wrapper
+      - "9090:9090"  # Metrics
+    networks:
+      - production_edge_core
+    command: /start

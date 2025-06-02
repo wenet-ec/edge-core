@@ -76,8 +76,9 @@ services:
       - ../../deploy/local/compose/edge_vpn/headscale_config:/etc/headscale
       - local_edge_vpn_data:/var/lib/headscale
     ports:
-      - "8080:8080"
-      - "9090:9090"
+      - "8080:8080"  # Headscale
+      - "8081:8081"  # VPN Wrapper
+      - "9090:9090"  # Metrics
     networks:
       - local_edge_core
-    command: serve
+    command: /start

@@ -1,5 +1,5 @@
 #!/bin/bash
-# deploy/local/compose/edge_admin/entrypoint
+# deploy/production/compose/edge_admin/entrypoint
 
 set -o errexit
 set -o pipefail
@@ -29,18 +29,27 @@ wait_for_service() {
 setup_vpn_connection() {
     echo "Setting up VPN connection..."
     
-    # Start tailscaled daemon
-    echo "Starting tailscaled daemon..."
-    mkdir -p /var/run/tailscale /var/cache/tailscale /var/lib/tailscale
-    tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/var/run/tailscale/tailscaled.sock &
-    sleep 2
-    
-    # Wait for VPN wrapper to be available
+    # Wait for VPN wrapper to be available first
     wait_for_service "edge_vpn" "8081" "VPN Wrapper"
+    
+    # Start tailscaled daemon (using sudo since we need root for networking)
+    echo "Starting tailscaled daemon..."
+    
+    # Ensure directories exist and are accessible - use || true to ignore errors if they exist
+    sudo mkdir -p /var/run/tailscale || true
+    sudo mkdir -p /var/cache/tailscale || true  
+    sudo mkdir -p /var/lib/tailscale || true
+    
+    # Fix ownership
+    sudo chown -R app:app /var/run/tailscale /var/cache/tailscale /var/lib/tailscale || true
+    
+    # Start tailscaled as root (required for VPN operations)
+    sudo tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/var/run/tailscale/tailscaled.sock &
+    sleep 3
     
     # Check if we're already authenticated and connected
     echo "Checking existing Tailscale status..."
-    if tailscale status 2>/dev/null | grep -q "edge-admin" && tailscale status 2>/dev/null | grep -q "100\."; then
+    if sudo tailscale status 2>/dev/null | grep -q "edge-admin" && sudo tailscale status 2>/dev/null | grep -q "100\."; then
         echo "Already authenticated and connected, using existing state"
         return 0
     fi
@@ -53,15 +62,15 @@ setup_vpn_connection() {
         # We'll try to get status and see if we're logged in
         sleep 2  # Give tailscaled time to read the state
         
-        if tailscale status 2>/dev/null | grep -q "Logged out"; then
+        if sudo tailscale status 2>/dev/null | grep -q "Logged out"; then
             echo "Existing state is logged out, need new authentication..."
-        elif tailscale status 2>/dev/null | grep -q "edge-admin"; then
+        elif sudo tailscale status 2>/dev/null | grep -q "edge-admin"; then
             echo "Found valid existing authentication, attempting to connect..."
             # Try to bring up the connection with existing auth
-            if tailscale up --login-server="${VPN_URL}" --accept-dns=false --hostname=edge-admin; then
+            if sudo tailscale up --login-server="${VPN_URL}" --accept-dns=false --hostname=edge-admin; then
                 # Give it a moment and check if connection succeeded
                 sleep 2
-                if tailscale status 2>/dev/null | grep -q "100\."; then
+                if sudo tailscale status 2>/dev/null | grep -q "100\."; then
                     echo "Successfully reconnected using existing credentials"
                     return 0
                 fi
@@ -115,7 +124,7 @@ setup_vpn_connection() {
     echo "Preauth key obtained: ${PREAUTH_KEY}"
     
     # Step 3: Connect to VPN with new preauth key
-    tailscale up --login-server="${VPN_URL}" --authkey="${PREAUTH_KEY}" --accept-dns=false --hostname=edge-admin
+    sudo tailscale up --login-server="${VPN_URL}" --authkey="${PREAUTH_KEY}" --accept-dns=false --hostname=edge-admin
 }
 
 # Main execution flow
@@ -129,7 +138,7 @@ setup_vpn_connection
 
 if [ $? -eq 0 ]; then
     echo "Successfully connected to VPN"
-    tailscale status
+    sudo tailscale status
 else
     echo "ERROR: Failed to connect to VPN"
     exit 1

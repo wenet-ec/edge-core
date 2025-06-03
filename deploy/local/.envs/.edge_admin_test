@@ -43,3 +43,7 @@ STATIC_URL=http://localhost:4001
 
 # Sentry requires an environment name (but not a DSN)
 SENTRY_ENVIRONMENT_NAME=test
+
+# VPN configuration
+VPN_URL=http://edge_vpn:8080
+VPN_WRAPPER_URL=http://edge_vpn:8081

@@ -7,6 +7,7 @@ volumes:
   production_edge_admin_db_data: {}
   production_edge_admin_db_data_backups: {}
   production_edge_vpn_data: {}
+  production_edge_admin_tailscale_data: {}
 
 services:
   # Edge Admin
@@ -34,10 +35,18 @@ services:
       - production_edge_core
     depends_on:
       - edge_admin_db
+      - edge_vpn
+    volumes:
+      - production_edge_admin_tailscale_data:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
     env_file:
       - ./.envs/.edge_admin
     ports:
       - "4000:4000"
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.ip_forward=1
     command: ["sh", "-c", "/app/bin/migrate && /app/bin/server"]
 
   # Edge VPN
@@ -45,7 +54,7 @@ services:
     build:
       context: ../..
       dockerfile: ./deploy/production/compose/edge_vpn/Dockerfile
-    container_name: local_edge_vpn
+    container_name: production_edge_vpn
     volumes:
       - ../../deploy/production/compose/edge_vpn/headscale_config:/etc/headscale
       - production_edge_vpn_data:/var/lib/headscale

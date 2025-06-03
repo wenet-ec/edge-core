@@ -37,3 +37,7 @@ TELEMETRY_UI_SHARE_KEY=DzbqdoAx/MGq8rM
 # Sentry configuration
 # SENTRY_DSN=
 SENTRY_ENVIRONMENT_NAME=local
+
+# VPN configuration
+VPN_URL=http://edge_vpn:8080
+VPN_WRAPPER_URL=http://edge_vpn:8081

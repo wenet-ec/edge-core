@@ -30,8 +30,19 @@ config :edge_admin, EdgeAdminWeb.Plugs.Security, allow_unsafe_scripts: false
 
 config :edge_admin, Oban,
   engine: Oban.Engines.Basic,
-  queues: [default: 10],
-  repo: EdgeAdmin.Repo
+  queues: [vpn: 5],
+  repo: EdgeAdmin.Repo,
+  plugins: [
+    {Oban.Plugins.Cron,
+     crontab: [
+       # Every minute - connectivity check
+       {"* * * * *", EdgeAdmin.VPN.Workers.ConnectivityChecker},
+       # Every 2 minutes - auto reconnection check
+       {"*/2 * * * *", EdgeAdmin.VPN.Workers.AutoReconnector}
+     ]}
+  ]
+
+config :edge_admin, :vpn, client: EdgeAdmin.VPN.Clients.Tailscale
 
 config :edge_admin,
   ecto_repos: [EdgeAdmin.Repo],

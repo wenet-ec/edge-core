@@ -50,7 +50,12 @@ defmodule EdgeAdminWeb.Router do
   scope "/api", EdgeAdminWeb do
     pipe_through(:api)
 
-    # Your API routes will go here
+    scope "/vpn", VPN do
+      scope "/connections" do
+        get "/self", ConnectionController, :show
+        patch "/self", ConnectionController, :update
+      end
+    end
   end
 
   # Keep the session function as TelemetryUI might need it

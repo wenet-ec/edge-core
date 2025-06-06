@@ -40,14 +40,4 @@ defmodule EdgeAgent.Config do
   defp parse_env(nil, :uri), do: nil
   defp parse_env("", :uri), do: nil
   defp parse_env(value, :uri), do: URI.parse(value)
-
-  @spec get_endpoint_url_config(URI.t() | any()) :: nil | [scheme: String.t(), host: String.t(), port: String.t()]
-  def get_endpoint_url_config(%URI{scheme: scheme, host: host, port: port}), do: [scheme: scheme, host: host, port: port]
-  def get_endpoint_url_config(_invalid), do: nil
-
-  @spec get_uri_part(URI.t() | any(), :scheme | :host | :port) :: String.t() | nil
-  def get_uri_part(%URI{scheme: scheme}, :scheme), do: scheme
-  def get_uri_part(%URI{host: host}, :host), do: host
-  def get_uri_part(%URI{port: port}, :port), do: port
-  def get_uri_part(_invalid, _part), do: nil
 end

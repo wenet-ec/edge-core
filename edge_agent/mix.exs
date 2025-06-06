@@ -46,7 +46,6 @@ defmodule EdgeAgent.Mixfile do
 
       # HTTP server
       {:bandit, "~> 1.6"},
-      {:plug_canonical_host, "~> 2.0"},
       {:corsica, "~> 2.1"},
 
       # Phoenix

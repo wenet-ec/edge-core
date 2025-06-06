@@ -5,8 +5,6 @@ defmodule EdgeAgentWeb.Endpoint do
 
   alias Plug.Conn
 
-  @plug_ssl Plug.SSL.init(rewrite_on: [:x_forwarded_proto], subdomains: true)
-
   socket("/live", Phoenix.LiveView.Socket,
     websocket: [connect_info: [session: {EdgeAgentWeb.Session, :config, []}]],
     longpoll: [connect_info: [session: {EdgeAgentWeb.Session, :config, []}]]
@@ -14,8 +12,6 @@ defmodule EdgeAgentWeb.Endpoint do
 
   plug(EdgeAgentWeb.Plugs.Security)
   plug(:ping)
-  plug(:canonical_host)
-  plug(:force_ssl)
   plug(:cors)
   plug(:basic_auth)
 
@@ -80,24 +76,6 @@ defmodule EdgeAgentWeb.Endpoint do
   end
 
   defp ping(conn, _opts), do: conn
-
-  defp canonical_host(%{request_path: "/health"} = conn, _opts), do: conn
-
-  defp canonical_host(conn, _opts) do
-    opts = PlugCanonicalHost.init(canonical_host: Application.get_env(:edge_agent, :canonical_host))
-
-    PlugCanonicalHost.call(conn, opts)
-  end
-
-  defp force_ssl(%{request_path: "/health"} = conn, _opts), do: conn
-
-  defp force_ssl(conn, _opts) do
-    if Application.get_env(:edge_agent, :force_ssl) do
-      Plug.SSL.call(conn, @plug_ssl)
-    else
-      conn
-    end
-  end
 
   defp cors(conn, _opts) do
     opts = Corsica.init(Application.get_env(:edge_agent, Corsica))

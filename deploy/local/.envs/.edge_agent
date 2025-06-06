@@ -34,9 +34,6 @@ DATABASE_SSL=false
 # - Force SSL requests
 CANONICAL_URL=http://localhost:4000
 
-# Telemetry UI configuration
-TELEMETRY_UI_SHARE_KEY=DzbqdoAx/MGq8rM
-
 # Static URL configuration (used by Phoenix to generate static file URLs, eg.
 # CSS and JavaScript). We often use these variables to configure a CDN that
 # will cache static files once they have been served by the Phoenix

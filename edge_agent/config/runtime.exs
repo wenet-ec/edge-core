@@ -22,7 +22,6 @@ if get_env("PHX_SERVER", :boolean) == true do
 end
 
 config :edge_agent, Corsica, origins: get_env("CORS_ALLOWED_ORIGINS", :cors)
-config :edge_agent, EdgeAgent.TelemetryUI, share_key: get_env("TELEMETRY_UI_SHARE_KEY")
 
 config :edge_agent, EdgeAgentWeb.Endpoint,
   http: [

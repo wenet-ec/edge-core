@@ -24,9 +24,6 @@ DATABASE_SSL=false
 # URL configuration
 CANONICAL_URL=http://localhost:4000
 
-# Telemetry UI configuration
-TELEMETRY_UI_SHARE_KEY=DzbqdoAx/MGq8rM
-
 # Static URL configuration
 # STATIC_URL=
 

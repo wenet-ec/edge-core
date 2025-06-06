@@ -15,8 +15,7 @@ defmodule EdgeAgent.Application do
       # Add Oban to the supervision tree
       {Oban, Application.fetch_env!(:edge_agent, Oban)},
       # Start to serve requests, typically the last entry
-      EdgeAgentWeb.Endpoint,
-      {TelemetryUI, EdgeAgent.TelemetryUI.config()}
+      EdgeAgentWeb.Endpoint
     ]
 
     :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{

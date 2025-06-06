@@ -70,9 +70,6 @@ defmodule EdgeAgent.Mixfile do
       # Errors
       {:sentry, "~> 10.10"},
 
-      # Telemetry
-      {:telemetry_ui, "~> 5.0"},
-
       # Linting
       {:credo, "~> 1.7", only: [:dev, :test], override: true},
       {:credo_envvar, "~> 0.1", only: [:dev, :test], runtime: false},

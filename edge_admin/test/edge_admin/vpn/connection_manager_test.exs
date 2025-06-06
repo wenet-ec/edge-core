@@ -1,4 +1,4 @@
-# test/edge_admin/vpn/connection_manager_test.exs
+# edge_admin/test/edge_admin/vpn/connection_manager_test.exs
 defmodule EdgeAdmin.VPN.ConnectionManagerTest do
   use ExUnit.Case, async: false
 

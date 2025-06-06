@@ -1,4 +1,4 @@
-# test/support/channel_case.ex
+# edge_admin/test/support/channel_case.ex
 defmodule EdgeAdminWeb.ChannelCase do
   @moduledoc """
   This module defines the test case to be used by

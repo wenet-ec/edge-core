@@ -1,4 +1,4 @@
-# lib/edge_admin_web/plugs/security.ex
+# edge_admin/lib/edge_admin_web/plugs/security.ex
 defmodule EdgeAdminWeb.Plugs.Security do
   @moduledoc false
   @behaviour Plug

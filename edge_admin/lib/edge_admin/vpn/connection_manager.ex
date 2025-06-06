@@ -1,4 +1,4 @@
-# lib/edge_admin/vpn/connection_manager.ex
+# edge_admin/lib/edge_admin/vpn/connection_manager.ex
 defmodule EdgeAdmin.VPN.ConnectionManager do
   @moduledoc false
   use GenServer

@@ -1,4 +1,4 @@
-# lib/edge_admin/gettext.ex
+# edge_admin/lib/edge_admin/gettext.ex
 defmodule EdgeAdmin.Gettext do
   @moduledoc """
   This module manages everything related to the translations used in the

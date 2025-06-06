@@ -1,4 +1,4 @@
-# lib/edge_admin/schema.ex
+# edge_admin/lib/edge_admin/schema.ex
 defmodule EdgeAdmin.Schema do
   @moduledoc false
   defmacro __using__(_) do

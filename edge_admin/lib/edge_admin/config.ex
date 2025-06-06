@@ -1,4 +1,4 @@
-# lib/edge_admin/config.ex
+# edge_admin/lib/edge_admin/config.ex
 defmodule EdgeAdmin.Config do
   @moduledoc """
   This modules provides various helpers to handle environment variables

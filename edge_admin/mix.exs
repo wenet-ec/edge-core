@@ -1,3 +1,4 @@
+# edge_admin/mix.exs
 defmodule EdgeAdmin.Mixfile do
   use Mix.Project
 

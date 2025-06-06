@@ -1,4 +1,4 @@
-# lib/edge_admin/errors/sentry.ex
+# edge_admin/lib/edge_admin/errors/sentry.ex
 defmodule EdgeAdmin.Errors.Sentry do
   @moduledoc false
   @scrubbed_keys ["first_name", "last_name", "email"]

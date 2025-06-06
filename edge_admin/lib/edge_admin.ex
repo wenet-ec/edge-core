@@ -1,4 +1,4 @@
-# lib/edge_admin.ex
+# edge_admin/lib/edge_admin.ex
 defmodule EdgeAdmin do
   @moduledoc """
   EdgeAdmin keeps the contexts that define your domain

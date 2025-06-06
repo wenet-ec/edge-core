@@ -1,4 +1,4 @@
-# lib/edge_admin/application.ex
+# edge_admin/lib/edge_admin/application.ex
 defmodule EdgeAdmin.Application do
   @moduledoc """
   Main entry point of the app

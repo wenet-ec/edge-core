@@ -1,4 +1,4 @@
-# lib/edge_admin_web/controllers/error_json.ex
+# edge_admin/lib/edge_admin_web/controllers/error_json.ex
 defmodule EdgeAdminWeb.ErrorJSON do
   @moduledoc """
   This module handles JSON error responses for the API.

@@ -1,4 +1,4 @@
-# config/dev.exs
+# edge_admin/config/dev.exs
 import Config
 
 config :edge_admin, EdgeAdminWeb.Endpoint,

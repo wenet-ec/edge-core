@@ -1,4 +1,4 @@
-# lib/edge_admin/repo.ex
+# edge_admin/lib/edge_admin/repo.ex
 defmodule EdgeAdmin.Repo do
   use Ecto.Repo,
     adapter: Ecto.Adapters.Postgres,

@@ -1,4 +1,4 @@
-# lib/edge_admin_web/endpoint.ex
+# edge_admin/lib/edge_admin_web/endpoint.ex
 defmodule EdgeAdminWeb.Endpoint do
   use Sentry.PlugCapture
   use Phoenix.Endpoint, otp_app: :edge_admin

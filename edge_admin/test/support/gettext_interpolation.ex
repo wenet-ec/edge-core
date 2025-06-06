@@ -1,4 +1,4 @@
-# test/support/gettext_interpolation.ex
+# edge_admin/test/support/gettext_interpolation.ex
 defmodule EdgeAdmin.GettextInterpolation do
   @moduledoc """
   Default Gettext.Interpolation implementation for testing purposes

@@ -1,4 +1,4 @@
-# lib/edge_admin/vpn/config.ex
+# edge_admin/lib/edge_admin/vpn/config.ex
 defmodule EdgeAdmin.VPN.Config do
   @moduledoc """
   Configuration for VPN context.

@@ -1,4 +1,4 @@
-# test/edge_admin_web/health_test.exs
+# edge_admin/test/edge_admin_web/health_test.exs
 defmodule EdgeAdminWeb.HealthTest do
   use EdgeAdminWeb.ConnCase, async: true
 

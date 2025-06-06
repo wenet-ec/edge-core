@@ -1,4 +1,4 @@
-# lib/edge_admin/release.ex
+# edge_admin/lib/edge_admin/release.ex
 defmodule EdgeAdmin.Release do
   @moduledoc false
   alias Ecto.Migrator

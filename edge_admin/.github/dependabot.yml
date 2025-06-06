@@ -1,4 +1,4 @@
-# .github/dependabot.yml
+# edge_admin/.github/dependabot.yml
 version: 2
 updates:
   - package-ecosystem: "mix"

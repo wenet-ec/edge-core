@@ -1,3 +1,4 @@
+# edge_admin/lib/edge_admin_web/controllers/vpn/connection_json.ex
 defmodule EdgeAdminWeb.VPN.ConnectionJSON do
   @moduledoc """
   JSON rendering for VPN connection resources.

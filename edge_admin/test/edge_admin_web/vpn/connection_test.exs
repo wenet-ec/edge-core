@@ -1,4 +1,4 @@
-# test/edge_admin_web/vpn/connection_test.exs
+# edge_admin/test/edge_admin_web/vpn/connection_test.exs
 defmodule EdgeAdminWeb.VPN.ConnectionTest do
   use EdgeAdminWeb.ConnCase, async: false
 

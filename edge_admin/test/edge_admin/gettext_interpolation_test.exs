@@ -1,4 +1,4 @@
-# test/edge_admin/gettext_interpolation_test.exs
+# edge_admin/test/edge_admin/gettext_interpolation_test.exs
 defmodule EdgeAdmin.GettextInterpolationTest do
   use ExUnit.Case, async: true
 

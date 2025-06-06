@@ -1,4 +1,4 @@
-# test/support/conn_case.ex
+# edge_admin/test/support/conn_case.ex
 defmodule EdgeAdminWeb.ConnCase do
   @moduledoc """
   This module defines the test case to be used by

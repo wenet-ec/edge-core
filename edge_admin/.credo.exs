@@ -1,4 +1,4 @@
-# .credo.exs
+# edge_admin/.credo.exs
 %{
   configs: [
     %{

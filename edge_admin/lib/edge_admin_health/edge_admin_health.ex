@@ -1,4 +1,4 @@
-# lib/edge_admin_health/edge_admin_health.ex
+# edge_admin/lib/edge_admin_health/edge_admin_health.ex
 defmodule EdgeAdminHealth do
   @moduledoc false
   @health_check_error_code 422

@@ -1,4 +1,4 @@
-# lib/edge_admin/vpn.ex
+# edge_admin/lib/edge_admin/vpn.ex
 defmodule EdgeAdmin.VPN do
   @moduledoc """
   The VPN context manages the EdgeAdmin service's VPN connection state.

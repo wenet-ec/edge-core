@@ -1,4 +1,4 @@
-# lib/edge_admin_web.ex
+# edge_admin/lib/edge_admin_web.ex
 defmodule EdgeAdminWeb do
   @moduledoc """
   The entrypoint for defining your web interface, such

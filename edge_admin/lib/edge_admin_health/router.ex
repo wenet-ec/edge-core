@@ -1,4 +1,4 @@
-# lib/edge_admin_health/router.ex
+# edge_admin/lib/edge_admin_health/router.ex
 defmodule EdgeAdminHealth.Router do
   use Plug.Router
 

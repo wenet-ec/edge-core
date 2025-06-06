@@ -1,4 +1,4 @@
-# lib/edge_admin_web/router.ex
+# edge_admin/lib/edge_admin_web/router.ex
 defmodule EdgeAdminWeb.Router do
   use EdgeAdminWeb, :router
 

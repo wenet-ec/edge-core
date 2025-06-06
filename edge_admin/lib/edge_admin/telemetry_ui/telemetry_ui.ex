@@ -1,4 +1,4 @@
-# lib/edge_admin/telemetry_ui/telemetry_ui.ex
+# edge_admin/lib/edge_admin/telemetry_ui/telemetry_ui.ex
 defmodule EdgeAdmin.TelemetryUI do
   @moduledoc false
   import TelemetryUI.Metrics

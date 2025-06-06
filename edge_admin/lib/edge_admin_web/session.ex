@@ -1,4 +1,4 @@
-# lib/edge_admin_web/session.ex
+# edge_admin/lib/edge_admin_web/session.ex
 defmodule EdgeAdminWeb.Session do
   @moduledoc false
   def config do

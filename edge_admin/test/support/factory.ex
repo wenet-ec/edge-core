@@ -1,4 +1,4 @@
-# test/support/factory.ex
+# edge_admin/test/support/factory.ex
 defmodule EdgeAdmin.Factory do
   @moduledoc """
   Test data factories for EdgeAdmin.

@@ -1,4 +1,4 @@
-# config/test.exs
+# edge_admin/config/test.exs
 import Config
 
 defmodule TestEnvironment do

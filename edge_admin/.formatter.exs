@@ -1,4 +1,4 @@
-# .formatter.exs
+# edge_admin/.formatter.exs
 [
   import_deps: [:ecto, :ecto_sql, :phoenix, :open_api_spex],
   subdirectories: ["priv/*/migrations"],

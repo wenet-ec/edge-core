@@ -1,4 +1,4 @@
-# lib/edge_admin_web/api_spec.ex
+# edge_admin/lib/edge_admin_web/api_spec.ex
 defmodule EdgeAdminWeb.ApiSpec do
   @moduledoc false
   @behaviour OpenApiSpex.OpenApi

@@ -1,4 +1,4 @@
-# test/edge_admin/factory_test.exs
+# edge_admin/test/edge_admin/factory_test.exs
 defmodule EdgeAdmin.FactoryTest do
   @moduledoc """
   This is a test module to make sure our factory setup is working correctly.

@@ -1,4 +1,4 @@
-# lib/edge_admin/vpn/connection.ex
+# edge_admin/lib/edge_admin/vpn/connection.ex
 defmodule EdgeAdmin.VPN.Connection do
   @moduledoc false
   use Ecto.Schema

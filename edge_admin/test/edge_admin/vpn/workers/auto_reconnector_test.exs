@@ -1,4 +1,4 @@
-# test/edge_admin/vpn/workers/auto_reconnector_test.exs
+# edge_admin/test/edge_admin/vpn/workers/auto_reconnector_test.exs
 defmodule EdgeAdmin.VPN.Workers.AutoReconnectorTest do
   use EdgeAdmin.DataCase, async: false
   use Oban.Testing, repo: EdgeAdmin.Repo

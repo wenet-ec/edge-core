@@ -1,4 +1,4 @@
-# test/support/data_case.ex
+# edge_admin/test/support/data_case.ex
 defmodule EdgeAdmin.DataCase do
   @moduledoc """
   This module defines the setup for tests requiring

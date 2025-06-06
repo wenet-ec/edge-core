@@ -1,4 +1,4 @@
-# config/runtime.exs
+# edge_admin/config/runtime.exs
 import Config
 import EdgeAdmin.Config
 

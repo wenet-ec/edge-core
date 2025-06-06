@@ -1,4 +1,4 @@
-# test/edge_admin_web/controllers/error_json_test.exs
+# edge_admin/test/edge_admin_web/controllers/error_json_test.exs
 defmodule EdgeAdminWeb.ErrorJSONTest do
   use EdgeAdminWeb.ConnCase, async: true
 

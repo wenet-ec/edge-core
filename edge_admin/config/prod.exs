@@ -1,4 +1,4 @@
-# config/prod.exs
+# edge_admin/config/prod.exs
 import Config
 
 config :edge_admin, EdgeAdminWeb.Endpoint, debug_errors: false

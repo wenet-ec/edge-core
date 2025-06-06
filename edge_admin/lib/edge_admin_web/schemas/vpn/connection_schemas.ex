@@ -1,3 +1,4 @@
+# edge_admin/lib/edge_admin_web/schemas/vpn/connection_schemas.ex
 defmodule EdgeAdminWeb.Schemas.VPN.ConnectionSchemas do
   @moduledoc """
   OpenAPI schemas for VPN connection resources.

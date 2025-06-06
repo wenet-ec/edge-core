@@ -1,4 +1,4 @@
-# test/edge_admin_web/ping_test.exs
+# edge_admin/test/edge_admin_web/ping_test.exs
 defmodule EdgeAdminWeb.PingTest do
   use EdgeAdminWeb.ConnCase, async: true
 

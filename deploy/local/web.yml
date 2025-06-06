@@ -10,6 +10,10 @@ volumes:
   local_edge_admin_build: {}
   local_edge_admin_tailscale_data: {}
   local_edge_vpn_data: {}
+  local_edge_agent_db_data: {}
+  local_edge_agent_db_data_backups: {}
+  local_edge_agent_deps: {}
+  local_edge_agent_build: {}
 
 services:
   # Edge Admin
@@ -97,3 +101,58 @@ services:
     networks:
       - local_edge_core
     command: /start
+
+  # Edge Agent
+  edge_agent_db:
+    build:
+      context: ../..
+      dockerfile: ./deploy/local/compose/postgres/Dockerfile
+    image: local_edge_agent_db
+    container_name: local_edge_agent_db
+    networks:
+      - local_edge_core
+    volumes:
+      - local_edge_agent_db_data:/var/lib/postgresql/data
+      - local_edge_agent_db_data_backups:/backups
+    env_file:
+      - ./.envs/.edge_agent_db
+  
+  edge_agent:
+    build:
+      context: ../..
+      dockerfile: ./deploy/local/compose/edge_agent/Dockerfile
+    image: local_edge_agent
+    container_name: local_edge_agent
+    networks:
+      - local_edge_core
+    depends_on:
+      - edge_agent_db
+    volumes:
+      - ../../edge_agent:/app:z
+      - local_edge_agent_deps:/app/deps
+      - local_edge_agent_build:/app/_build
+    env_file:
+      - ./.envs/.edge_agent
+    ports:
+      - "4400:4000"
+    command: /start
+  
+  edge_agent_test:
+    build:
+      context: ../..
+      dockerfile: ./deploy/local/compose/edge_agent/Dockerfile
+    image: local_edge_agent
+    container_name: local_edge_agent_test
+    networks:
+      - local_edge_core
+    depends_on:
+      - edge_agent_db
+    volumes:
+      - ../../edge_agent:/app:z
+      - local_edge_agent_deps:/app/deps
+      - local_edge_agent_build:/app/_build
+    env_file:
+      - ./.envs/.edge_agent_test
+    profiles:
+      - test
+    command: mix test

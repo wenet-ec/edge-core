@@ -8,6 +8,8 @@ volumes:
   production_edge_admin_db_data_backups: {}
   production_edge_vpn_data: {}
   production_edge_admin_tailscale_data: {}
+  production_edge_agent_db_data: {}
+  production_edge_agent_db_data_backups: {}
 
 services:
   # Edge Admin
@@ -65,3 +67,34 @@ services:
     networks:
       - production_edge_core
     command: /start
+
+  # Edge Agent
+  edge_agent_db:
+    build:
+      context: ../..
+      dockerfile: ./deploy/production/compose/postgres/Dockerfile
+    image: production_edge_agent_db
+    container_name: production_edge_agent_db
+    networks:
+      - production_edge_core
+    volumes:
+      - production_edge_agent_db_data:/var/lib/postgresql/data
+      - production_edge_agent_db_data_backups:/backups
+    env_file:
+      - ./.envs/.edge_agent_db
+
+  edge_agent:
+    build:
+      context: ../..
+      dockerfile: ./deploy/production/compose/edge_agent/Dockerfile
+    image: production_edge_agent
+    container_name: production_edge_agent
+    networks:
+      - production_edge_core
+    depends_on:
+      - edge_agent_db
+    env_file:
+      - ./.envs/.edge_agent
+    ports:
+      - "4400:4000"
+    command: ["sh", "-c", "/app/bin/migrate && /app/bin/server"]

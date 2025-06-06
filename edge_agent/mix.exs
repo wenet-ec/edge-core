@@ -82,6 +82,7 @@ defmodule EdgeAgent.Mixfile do
       # Test factories
       {:ex_machina, "~> 2.8", only: :test},
       {:faker, "~> 0.18", only: :test},
+      {:mox, "~> 1.2", only: :test},
 
       # Test coverage
       {:excoveralls, "~> 0.18", only: :test},

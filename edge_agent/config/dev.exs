@@ -25,9 +25,6 @@ config :file_system,
 # Do not include metadata nor timestamps in development logs
 config :logger, :console, format: "[$level] $message\n"
 
-# Disable OpenApiSpex caching in development for live spec updates
-config :open_api_spex, :cache_adapter, OpenApiSpex.Plug.NoneCache
-
 # Initialize plugs at runtime for faster development compilation
 config :phoenix, :plug_init_mode, :runtime
 

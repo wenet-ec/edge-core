@@ -57,9 +57,6 @@ defmodule EdgeAgent.Mixfile do
       {:phoenix_live_reload, "~> 1.6", only: :dev},
       {:jason, "~> 1.4"},
 
-      # API
-      {:open_api_spex, "~> 3.21"},
-
       # Database
       {:ecto_sql, "~> 3.12"},
       {:postgrex, "~> 0.20"},

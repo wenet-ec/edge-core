@@ -4,8 +4,6 @@ defmodule EdgeAgentWeb.Router do
 
   import Phoenix.LiveView.Router
 
-  alias OpenApiSpex.Plug.PutApiSpec
-
   pipeline :browser do
     plug(:accepts, ["html", "json"])
     plug(:session)
@@ -16,35 +14,16 @@ defmodule EdgeAgentWeb.Router do
 
   pipeline :api do
     plug(:accepts, ["json"])
-    # Add the OpenApiSpex plug to make the spec available
-    plug(PutApiSpec, module: EdgeAgentWeb.ApiSpec)
-  end
-
-  # Add a new pipeline for OpenAPI that doesn't have CSRF protection
-  pipeline :openapi do
-    plug(:accepts, ["json"])
-    plug(PutApiSpec, module: EdgeAgentWeb.ApiSpec)
   end
 
   scope "/" do
     pipe_through(:browser)
-
-    # Serve SwaggerUI - this is what you'll navigate to see the docs
-    get("/swaggerui", OpenApiSpex.Plug.SwaggerUI, path: "/api/openapi")
 
     # To enable metrics dashboard use `telemetry_ui_allowed: true` as assigns value
     #
     # Metrics can contains sensitive data you should protect it under authorization
     # See https://github.com/mirego/telemetry_ui#security
     get("/metrics", TelemetryUI.Web, [], assigns: %{telemetry_ui_allowed: true})
-  end
-
-  # Serve OpenAPI spec through the openapi pipeline
-  scope "/api" do
-    pipe_through(:openapi)
-
-    # Serve the OpenAPI spec as JSON
-    get("/openapi", OpenApiSpex.Plug.RenderSpec, [])
   end
 
   scope "/api", EdgeAgentWeb do

@@ -1,6 +1,5 @@
 # edge_agent/lib/edge_agent_web/endpoint.ex
 defmodule EdgeAgentWeb.Endpoint do
-  use Sentry.PlugCapture
   use Phoenix.Endpoint, otp_app: :edge_agent
 
   alias Plug.Conn
@@ -40,11 +39,6 @@ defmodule EdgeAgentWeb.Endpoint do
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
     json_decoder: Phoenix.json_library()
-  )
-
-  plug(Sentry.PlugContext,
-    body_scrubber: {EdgeAgent.Errors.Sentry, :scrub_params},
-    remote_address_reader: {EdgeAgent.Errors.Sentry, :scrubbed_remote_address}
   )
 
   plug(Plug.MethodOverride)

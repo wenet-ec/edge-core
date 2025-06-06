@@ -31,8 +31,3 @@ DATABASE_SSL=false
 # Basic Authentication
 # BASIC_AUTH_USERNAME=
 # BASIC_AUTH_PASSWORD=
-
-# Sentry configuration
-# Sentry requires an environment name (but not a DSN)
-# SENTRY_DSN=
-SENTRY_ENVIRONMENT_NAME=local

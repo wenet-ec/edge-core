@@ -37,13 +37,9 @@ config :edge_agent,
   ecto_repos: [EdgeAgent.Repo],
   version: version
 
-config :logger, backends: [:console, Sentry.LoggerBackend]
+config :logger, backends: [:console]
 
 config :phoenix, :json_library, Jason
-
-config :sentry,
-  root_source_code_path: File.cwd!(),
-  release: version
 
 # Import environment configuration
 import_config "#{Mix.env()}.exs"

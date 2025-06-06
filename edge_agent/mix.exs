@@ -66,9 +66,6 @@ defmodule EdgeAgent.Mixfile do
       # Translations
       {:gettext, "~> 0.26"},
 
-      # Errors
-      {:sentry, "~> 10.10"},
-
       # Linting
       {:credo, "~> 1.7", only: [:dev, :test], override: true},
       {:credo_envvar, "~> 0.1", only: [:dev, :test], runtime: false},

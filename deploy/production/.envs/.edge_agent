@@ -24,7 +24,3 @@ DATABASE_SSL=false
 # Basic Authentication (optional for internal service)
 # BASIC_AUTH_USERNAME=
 # BASIC_AUTH_PASSWORD=
-
-# Sentry configuration
-# SENTRY_DSN=
-SENTRY_ENVIRONMENT_NAME=local

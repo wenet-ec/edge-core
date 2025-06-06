@@ -18,12 +18,6 @@ defmodule EdgeAgent.Application do
       EdgeAgentWeb.Endpoint
     ]
 
-    :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{
-      config: %{
-        metadata: [:file, :line]
-      }
-    })
-
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: EdgeAgent.Supervisor]

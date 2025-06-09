@@ -3,13 +3,14 @@
 # -----------------------------------------------
 # Stage: Build the OTP release
 # -----------------------------------------------
-FROM elixir:1.18.4-otp-26-slim AS builder
+FROM elixir:1.18.4-otp-26-alpine AS builder
 
 # Install build dependencies
-RUN apt-get update -y && \
-    apt-get install -y build-essential git && \
-    apt-get clean && \
-    rm -f /var/lib/apt/lists/*_*
+RUN apk add --no-cache \
+    build-base \
+    git \
+    postgresql-dev \
+    && rm -rf /var/cache/apk/*
 
 WORKDIR /app
 
@@ -24,7 +25,6 @@ COPY edge_agent/mix.exs edge_agent/mix.lock ./
 RUN mix deps.get --only $MIX_ENV
 
 # Copy config files (needed for compilation)
-# Make sure to copy ALL config files
 COPY edge_agent/config config/
 RUN mix deps.compile
 
@@ -40,22 +40,21 @@ RUN mix release
 # -----------------------------------------------
 # Stage: Production runtime image
 # -----------------------------------------------
-FROM debian:stable-20250520-slim
+FROM alpine:3.22.0
 
 # Install runtime dependencies
-RUN apt-get update -y && \
-    apt-get install -y libstdc++6 openssl libncurses5 locales curl netcat-openbsd && \
-    apt-get clean && \
-    rm -f /var/lib/apt/lists/*_*
-
-# Set locale
-RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
-ENV LANG=en_US.UTF-8
-ENV LANGUAGE=en_US:en
-ENV LC_ALL=en_US.UTF-8
+RUN apk add --no-cache \
+    openssl \
+    ncurses-libs \
+    postgresql-client \
+    netcat-openbsd \
+    tzdata \
+    bash \
+    && rm -rf /var/cache/apk/*
 
 # Create app user
-RUN useradd --create-home --shell /bin/bash app
+RUN addgroup -g 1000 app && \
+    adduser -u 1000 -G app -s /bin/bash -D app
 
 # Copy the release from builder stage
 COPY --from=builder --chown=app:app /app/_build/prod/rel/edge_agent /app

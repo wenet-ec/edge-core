@@ -1,41 +1,37 @@
 # deploy/local/compose/edge_agent/Dockerfile
-FROM elixir:1.18.4-otp-26-slim AS elixir-dev-stage
+FROM elixir:1.18.4-otp-26-alpine AS elixir-dev-stage
 
 ARG APP_HOME=/app
 ENV MIX_ENV=dev
 
 WORKDIR ${APP_HOME}
 
-# Install apt packages
-RUN apt-get update && apt-get install --no-install-recommends -y \
-  # dependencies for building
-  build-essential \
+# Install Alpine packages
+RUN apk add --no-cache \
+  # Core build tools
+  build-base \
   git \
   ca-certificates \
-  # psycopg dependencies
-  libpq-dev \
-  # development utilities
-  sudo \
+  # PostgreSQL client and dev libraries
+  postgresql-client \
+  postgresql-dev \
+  # Development utilities
+  bash \
   bash-completion \
   nano \
-  ssh \
-  # networking utilities
-  netcat-traditional \
-  # postgresql client
-  postgresql-client \
-  # health checks and pings
+  # Networking utilities
+  netcat-openbsd \
+  # Health checks and monitoring
   curl \
-  # file system watching for live reload
+  # File system watching for live reload
   inotify-tools \
-  # cleaning up unused files
-  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-  && rm -rf /var/lib/apt/lists/*
+  # For any native dependencies
+  pkgconfig \
+  && rm -rf /var/cache/apk/*
 
-# Create devcontainer user and add it to sudoers
-RUN groupadd --gid 1000 dev-user \
-  && useradd --uid 1000 --gid dev-user --shell /bin/bash --create-home dev-user \
-  && echo dev-user ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/dev-user \
-  && chmod 0440 /etc/sudoers.d/dev-user
+# Create development user
+RUN addgroup -g 1000 dev-user \
+  && adduser -u 1000 -G dev-user -s /bin/bash -D dev-user
 
 # Install Hex and Rebar
 RUN mix local.hex --force && \
@@ -43,16 +39,16 @@ RUN mix local.hex --force && \
 
 # Copy entrypoint and utility scripts
 COPY ./deploy/local/compose/edge_agent/entrypoint /entrypoint
-RUN sed -i 's/\r$//g' /entrypoint
-RUN chmod +x /entrypoint
+RUN sed -i 's/\r$//g' /entrypoint && \
+    chmod +x /entrypoint
 
 COPY ./deploy/local/compose/edge_agent/start /start
-RUN sed -i 's/\r$//g' /start
-RUN chmod +x /start
+RUN sed -i 's/\r$//g' /start && \
+    chmod +x /start
 
 COPY ./deploy/local/compose/edge_agent/migrate /migrate
-RUN sed -i 's/\r$//g' /migrate
-RUN chmod +x /migrate
+RUN sed -i 's/\r$//g' /migrate && \
+    chmod +x /migrate
 
 # Copy ONLY dependency files first (for Docker layer caching)
 COPY edge_agent/mix.exs edge_agent/mix.lock ./

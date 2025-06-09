@@ -1,5 +1,5 @@
 # deploy/local/compose/edge_agent/Dockerfile
-FROM elixir:1.18.4-otp-26-alpine AS elixir-dev-stage
+FROM elixir:1.18.4-otp-26-alpine
 
 ARG APP_HOME=/app
 ENV MIX_ENV=dev
@@ -12,9 +12,8 @@ RUN apk add --no-cache \
   build-base \
   git \
   ca-certificates \
-  # PostgreSQL client and dev libraries
-  postgresql-client \
-  postgresql-dev \
+  # SQLite3 client
+  sqlite \
   # Development utilities
   bash \
   bash-completion \
@@ -29,9 +28,11 @@ RUN apk add --no-cache \
   pkgconfig \
   && rm -rf /var/cache/apk/*
 
-# Create development user
-RUN addgroup -g 1000 dev-user \
-  && adduser -u 1000 -G dev-user -s /bin/bash -D dev-user
+# Create app user
+RUN addgroup -g 1000 app && \
+    adduser -u 1000 -G app -s /bin/bash -D app && \
+    mkdir -p /app/data && \
+    chown -R app:app /app
 
 # Install Hex and Rebar
 RUN mix local.hex --force && \

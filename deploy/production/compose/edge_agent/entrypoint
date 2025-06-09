@@ -1,10 +1,9 @@
 #!/bin/bash
-# deploy/local/compose/edge_agent/entrypoint
+# deploy/production/compose/edge_agent/entrypoint
 
 set -o errexit
 set -o pipefail
 set -o nounset
-
 
 echo "Starting application..."
 exec "$@"

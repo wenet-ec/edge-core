@@ -8,8 +8,7 @@ volumes:
   production_edge_admin_db_data_backups: {}
   production_edge_vpn_data: {}
   production_edge_admin_tailscale_data: {}
-  production_edge_agent_db_data: {}
-  production_edge_agent_db_data_backups: {}
+  production_edge_agent_data: {}
 
 services:
   # Edge Admin
@@ -69,20 +68,6 @@ services:
     command: /start
 
   # Edge Agent
-  edge_agent_db:
-    build:
-      context: ../..
-      dockerfile: ./deploy/production/compose/postgres/Dockerfile
-    image: production_edge_agent_db
-    container_name: production_edge_agent_db
-    networks:
-      - production_edge_core
-    volumes:
-      - production_edge_agent_db_data:/var/lib/postgresql/data
-      - production_edge_agent_db_data_backups:/backups
-    env_file:
-      - ./.envs/.edge_agent_db
-
   edge_agent:
     build:
       context: ../..
@@ -91,8 +76,8 @@ services:
     container_name: production_edge_agent
     networks:
       - production_edge_core
-    depends_on:
-      - edge_agent_db
+    volumes:
+      - production_edge_agent_data:/app/data
     env_file:
       - ./.envs/.edge_agent
     ports:

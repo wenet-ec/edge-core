@@ -9,7 +9,7 @@ FROM elixir:1.18.4-otp-26-alpine AS builder
 RUN apk add --no-cache \
     build-base \
     git \
-    postgresql-dev \
+    sqlite-dev \
     && rm -rf /var/cache/apk/*
 
 WORKDIR /app
@@ -46,19 +46,30 @@ FROM alpine:3.22.0
 RUN apk add --no-cache \
     openssl \
     ncurses-libs \
-    postgresql-client \
+    sqlite \
     netcat-openbsd \
     tzdata \
     bash \
+    libstdc++ \
+    libgcc \
     && rm -rf /var/cache/apk/*
 
-# Create app user
+# Create app user and data directory
 RUN addgroup -g 1000 app && \
-    adduser -u 1000 -G app -s /bin/bash -D app
+    adduser -u 1000 -G app -s /bin/bash -D app && \
+    mkdir -p /app/data && \
+    chown -R app:app /app
 
 # Copy the release from builder stage
 COPY --from=builder --chown=app:app /app/_build/prod/rel/edge_agent /app
 
+# Copy entrypoint script
+COPY ./deploy/production/compose/edge_agent/entrypoint /entrypoint
+RUN sed -i 's/\r$//g' /entrypoint && \
+    chmod +x /entrypoint
+
 # Switch to app user
 USER app
 WORKDIR /app
+
+ENTRYPOINT ["/entrypoint"]

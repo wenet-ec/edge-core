@@ -19,14 +19,8 @@ SESSION_KEY=edge_agent
 SESSION_SIGNING_SALT=FUYY5L041VshhwCep1OyX+vu4imud8+63+kLzupf7lrqlkiztQWQjFcJLgCLalXp
 
 # Database configuration
-POSTGRES_HOST=edge_agent_db
-POSTGRES_PORT=5432
-POSTGRES_DB=edge_agent_local
-POSTGRES_USER=edge_agent_user
-POSTGRES_PASSWORD=edge_agent_password
-DATABASE_URL=postgres://edge_agent_user:edge_agent_password@edge_agent_db:5432/edge_agent_local
-DATABASE_POOL_SIZE=20
-DATABASE_SSL=false
+DATABASE_PATH=/app/data/edge_agent_local.db
+DATABASE_POOL_SIZE=5
 
 # Basic Authentication
 # BASIC_AUTH_USERNAME=

@@ -1,8 +1,0 @@
-# deploy/prdduction/.envs/.edge_agent_db
-# PostgreSQL
-# ------------------------------------------------------------------------------
-POSTGRES_HOST=edge_agent_db
-POSTGRES_PORT=5432
-POSTGRES_DB=edge_agent_production
-POSTGRES_USER=edge_agent_user
-POSTGRES_PASSWORD=edge_agent_password

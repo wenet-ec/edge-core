@@ -20,11 +20,5 @@ SESSION_KEY=edge_agent
 SESSION_SIGNING_SALT=qh+vmMHsOqcjKF3TSSIsghwt2go48m2+IQ+kMTOB3BrSysSr7D4a21uAtt4yp4wn
 
 # Database configuration
-POSTGRES_HOST=edge_agent_db
-POSTGRES_PORT=5432
-POSTGRES_DB=edge_agent_test
-POSTGRES_USER=edge_agent_user
-POSTGRES_PASSWORD=edge_agent_password
-DATABASE_URL=postgres://edge_agent_user:edge_agent_password@edge_agent_db:5432/edge_agent_test
+DATABASE_PATH=/app/data/edge_agent_test.db
 DATABASE_POOL_SIZE=5
-DATABASE_SSL=false

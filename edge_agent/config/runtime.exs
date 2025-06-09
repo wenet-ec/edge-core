@@ -3,10 +3,8 @@ import Config
 import EdgeAgent.Config
 
 config :edge_agent, EdgeAgent.Repo,
-  url: get_env!("DATABASE_URL"),
-  ssl: get_env("DATABASE_SSL", :boolean),
-  pool_size: get_env!("DATABASE_POOL_SIZE", :integer),
-  socket_options: if(get_env("DATABASE_IPV6", :boolean), do: [:inet6], else: [])
+  database: get_env!("DATABASE_PATH"),
+  pool_size: get_env!("DATABASE_POOL_SIZE", :integer)
 
 # NOTE: Only set `server` to `true` if `PHX_SERVER` is present. We cannot set
 # it to `false` otherwise because `mix phx.server` will stop working without it.

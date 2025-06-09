@@ -1,6 +1,10 @@
 # edge_agent/config/dev.exs
 import Config
 
+# Development-specific overrides only
+config :edge_agent, EdgeAgent.Repo,
+  show_sensitive_data_on_connection_error: true
+
 config :edge_agent, EdgeAgentWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4000],
   code_reloader: true,

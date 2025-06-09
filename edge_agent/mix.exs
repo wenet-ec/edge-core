@@ -58,7 +58,7 @@ defmodule EdgeAgent.Mixfile do
 
       # Database
       {:ecto_sql, "~> 3.12"},
-      {:postgrex, "~> 0.20"},
+      {:ecto_sqlite3, "~> 0.19"},
 
       # Database check
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},

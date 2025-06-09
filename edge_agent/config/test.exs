@@ -3,15 +3,15 @@ import Config
 
 defmodule TestEnvironment do
   @moduledoc false
-  @database_name_suffix "_test"
+  @database_name_suffix "_test.db"
 
-  def get_database_url do
-    url = System.get_env("DATABASE_URL")
+  def get_database_path do
+    path = System.get_env("DATABASE_PATH")
 
-    if is_nil(url) || String.ends_with?(url, @database_name_suffix) do
-      url
+    if is_nil(path) || String.ends_with?(path, @database_name_suffix) do
+      path
     else
-      raise "Expected database URL to end with '#{@database_name_suffix}', got: #{url}"
+      raise "Expected database path to end with '#{@database_name_suffix}', got: #{path}"
     end
   end
 end
@@ -21,7 +21,7 @@ config :edge_agent, EdgeAgent.Gettext, priv: "priv/null", interpolation: EdgeAge
 
 config :edge_agent, EdgeAgent.Repo,
   pool: Ecto.Adapters.SQL.Sandbox,
-  url: TestEnvironment.get_database_url()
+  database: TestEnvironment.get_database_path()
 
 config :edge_agent, EdgeAgentWeb.Endpoint, server: false
 

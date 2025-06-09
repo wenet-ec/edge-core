@@ -29,7 +29,7 @@ config :edge_agent, EdgeAgentWeb.Endpoint,
 config :edge_agent, EdgeAgentWeb.Plugs.Security, allow_unsafe_scripts: false
 
 config :edge_agent, Oban,
-  engine: Oban.Engines.Basic,
+  engine: Oban.Engines.Lite,
   queues: [default: 10],
   repo: EdgeAgent.Repo
 

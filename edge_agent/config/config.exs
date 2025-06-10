@@ -13,10 +13,9 @@ version = Mix.Project.config()[:version]
 config :edge_agent, Corsica, allow_headers: :all
 config :edge_agent, EdgeAgent.Gettext, default_locale: "en"
 
-config :edge_agent, EdgeAgent.Repo,
-  migration_primary_key: [type: :binary_id, default: {:fragment, "gen_random_uuid()"}],
-  migration_timestamps: [type: :utc_datetime_usec],
-  start_apps_before_migration: [:ssl]
+config :edge_agent,
+  ecto_repos: [EdgeAgent.Repo],
+  generators: [timestamp_type: :utc_datetime, binary_id: true]
 
 config :edge_agent, EdgeAgentWeb.Endpoint,
   adapter: Bandit.PhoenixAdapter,

@@ -14,9 +14,12 @@ config :edge_admin, Corsica, allow_headers: :all
 config :edge_admin, EdgeAdmin.Gettext, default_locale: "en"
 
 config :edge_admin, EdgeAdmin.Repo,
-  migration_primary_key: [type: :binary_id, default: {:fragment, "gen_random_uuid()"}],
-  migration_timestamps: [type: :utc_datetime_usec],
   start_apps_before_migration: [:ssl]
+
+config :edge_admin,
+  ecto_repos: [EdgeAdmin.Repo],
+  generators: [timestamp_type: :utc_datetime, binary_id: true],
+  version: version
 
 config :edge_admin, EdgeAdminWeb.Endpoint,
   adapter: Bandit.PhoenixAdapter,

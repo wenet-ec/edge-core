@@ -3,6 +3,7 @@ import Config
 
 # Development-specific overrides only
 config :edge_agent, EdgeAgent.Repo,
+  stacktrace: true,
   show_sensitive_data_on_connection_error: true
 
 config :edge_agent, EdgeAgentWeb.Endpoint,

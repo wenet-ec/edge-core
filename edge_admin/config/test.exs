@@ -21,7 +21,8 @@ config :edge_admin, EdgeAdmin.Gettext, priv: "priv/null", interpolation: EdgeAdm
 
 config :edge_admin, EdgeAdmin.Repo,
   pool: Ecto.Adapters.SQL.Sandbox,
-  url: TestEnvironment.get_database_url()
+  pool_size: System.schedulers_online() * 2,
+  url: "#{TestEnvironment.get_database_url()}#{System.get_env("MIX_TEST_PARTITION")}"
 
 config :edge_admin, EdgeAdminWeb.Endpoint, server: false
 

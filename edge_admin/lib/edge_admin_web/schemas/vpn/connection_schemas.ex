@@ -1,7 +1,7 @@
 # edge_admin/lib/edge_admin_web/schemas/vpn/connection_schemas.ex
 defmodule EdgeAdminWeb.Schemas.VPN.ConnectionSchemas do
   @moduledoc """
-  OpenAPI schemas for VPN connection resources.
+  OpenAPI schemas for VPN Connection resources
   """
 
   alias OpenApiSpex.Schema
@@ -56,7 +56,7 @@ defmodule EdgeAdminWeb.Schemas.VPN.ConnectionSchemas do
         },
         manual_disconnect: %Schema{
           type: :boolean,
-          description: "Whether VPN was manually disconnected (prevents auto-reconnection)"
+          description: "Controls auto-reconnection behavior - when true, prevents automatic reconnection attempts"
         }
       },
       required: [:status, :last_checked_at, :manual_disconnect],
@@ -79,47 +79,17 @@ defmodule EdgeAdminWeb.Schemas.VPN.ConnectionSchemas do
 
     OpenApiSpex.schema(%{
       title: "VPN Connection Update",
-      description: "Update VPN connection manual disconnect setting",
+      description: "Update VPN connection properties",
       type: :object,
       properties: %{
         manual_disconnect: %Schema{
           type: :boolean,
-          description: "Set to true to manually disconnect and prevent auto-reconnection, false to allow reconnection"
+          description: "Controls auto-reconnection behavior - set to true to disable automatic reconnection, false to enable it"
         }
       },
       required: [:manual_disconnect],
       example: %{
         manual_disconnect: true
-      }
-    })
-  end
-
-  defmodule ErrorResponse do
-    @moduledoc false
-    require OpenApiSpex
-
-    OpenApiSpex.schema(%{
-      title: "Error Response",
-      description: "Standard error response",
-      type: :object,
-      properties: %{
-        error: %Schema{
-          type: :string,
-          description: "Error message"
-        },
-        message: %Schema{
-          type: :string,
-          description: "Additional details (optional)"
-        },
-        details: %Schema{
-          type: :string,
-          description: "Technical details (optional)"
-        }
-      },
-      required: [:error],
-      example: %{
-        error: "Invalid request",
-        message: "Only 'manual_disconnect' field is allowed for updates and must be a boolean"
       }
     })
   end

@@ -50,7 +50,7 @@ defmodule EdgeAdminWeb.Router do
   scope "/api", EdgeAdminWeb do
     pipe_through(:api)
 
-    scope "/vpn", VPN do
+    scope "/", VPN do
       scope "/connections" do
         get "/self", ConnectionController, :show
         patch "/self", ConnectionController, :update

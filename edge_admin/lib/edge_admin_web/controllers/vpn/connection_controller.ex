@@ -5,48 +5,43 @@ defmodule EdgeAdminWeb.VPN.ConnectionController do
 
   alias EdgeAdmin.VPN
   alias EdgeAdminWeb.Schemas.VPN.ConnectionSchemas
-
+  alias EdgeAdminWeb.Schemas.CommonSchemas
   action_fallback EdgeAdminWeb.FallbackController
 
   tags ["VPN"]
 
-  @doc """
-  Get VPN connection status
-  """
   operation :show,
     summary: "Get VPN connection status",
-    description: "Returns the current VPN connection status and details",
+    description: "Retrieve the current VPN connection status and details",
     responses: %{
-      200 => {"VPN connection status", "application/json", ConnectionSchemas.ConnectionResponse},
-      500 => {"Internal server error", "application/json", ConnectionSchemas.ErrorResponse}
+      200 => {"VPN connection details", "application/json", ConnectionSchemas.ConnectionResponse}
     }
 
   def show(conn, _params) do
     case VPN.get_connection() do
       {:ok, connection} ->
-        conn
-        |> put_status(:ok)
-        |> render(:show, connection: connection)
+        render(conn, :show, connection: connection)
 
-      {:error, _reason} ->
+      {:error, :not_found} ->
         conn
         |> put_status(:internal_server_error)
         |> json(%{error: "Failed to retrieve VPN connection status"})
+
+      {:error, reason} ->
+        conn
+        |> put_status(:internal_server_error)
+        |> json(%{error: "Failed to retrieve VPN connection status", details: inspect(reason)})
     end
   end
 
-  @doc """
-  Update VPN connection manual disconnect setting
-  """
   operation :update,
-    summary: "Update VPN manual disconnect setting",
-    description: "Update the manual disconnect flag to control auto-reconnection behavior",
-    request_body: {"Connection update", "application/json", ConnectionSchemas.UpdateRequest},
+    summary: "Update VPN connection",
+    description: "Update VPN connection properties and settings",
+    request_body: {"VPN connection update parameters", "application/json", ConnectionSchemas.UpdateRequest},
     responses: %{
-      200 => {"Updated VPN connection", "application/json", ConnectionSchemas.ConnectionResponse},
-      400 => {"Bad request", "application/json", ConnectionSchemas.ErrorResponse},
-      422 => {"Validation error", "application/json", ConnectionSchemas.ErrorResponse},
-      500 => {"Internal server error", "application/json", ConnectionSchemas.ErrorResponse}
+      200 => {"VPN connection updated successfully", "application/json", ConnectionSchemas.ConnectionResponse},
+      400 => {"Invalid request", "application/json", CommonSchemas.GenericErrorResponse},
+      422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
     }
 
   def update(conn, %{"manual_disconnect" => manual_disconnect} = _params) when is_boolean(manual_disconnect) do

@@ -1,5 +1,5 @@
-# edge_admin/test/edge_admin_web/vpn/connection_test.exs
-defmodule EdgeAdminWeb.VPN.ConnectionTest do
+# edge_admin/test/edge_admin_web/vpn/connection_controller_test.exs
+defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
   use EdgeAdminWeb.ConnCase, async: false
 
   alias EdgeAdmin.VPN
@@ -11,7 +11,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionTest do
     :ok
   end
 
-  describe "GET /api/vpn/connections/self" do
+  describe "GET /api/connections/self" do
     test "returns 200 with connection data when connection exists", %{conn: conn} do
       # Setup connection state
       {:ok, _} = VPN.update_connection(%{
@@ -22,7 +22,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionTest do
         manual_disconnect: false
       })
 
-      conn = get(conn, ~p"/api/vpn/connections/self")
+      conn = get(conn, ~p"/api/connections/self")
 
       assert json_response(conn, 200)
       response = json_response(conn, 200)
@@ -37,7 +37,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionTest do
 
     test "returns 200 with disconnected status", %{conn: conn} do
       # Connection starts as disconnected by default
-      conn = get(conn, ~p"/api/vpn/connections/self")
+      conn = get(conn, ~p"/api/connections/self")
 
       assert json_response(conn, 200)
       response = json_response(conn, 200)
@@ -52,7 +52,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionTest do
       # Clear the connection to simulate context failure
       :ets.delete_all_objects(:vpn_connection)
 
-      conn = get(conn, ~p"/api/vpn/connections/self")
+      conn = get(conn, ~p"/api/connections/self")
 
       assert json_response(conn, 500)
       response = json_response(conn, 500)
@@ -60,9 +60,9 @@ defmodule EdgeAdminWeb.VPN.ConnectionTest do
     end
   end
 
-  describe "PATCH /api/vpn/connections/self" do
+  describe "PATCH /api/connections/self" do
     test "updates manual_disconnect to true", %{conn: conn} do
-      conn = patch(conn, ~p"/api/vpn/connections/self", %{"manual_disconnect" => true})
+      conn = patch(conn, ~p"/api/connections/self", %{"manual_disconnect" => true})
 
       assert json_response(conn, 200)
       response = json_response(conn, 200)
@@ -75,7 +75,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionTest do
       # First set it to true
       {:ok, _} = VPN.update_connection(%{manual_disconnect: true})
 
-      conn = patch(conn, ~p"/api/vpn/connections/self", %{"manual_disconnect" => false})
+      conn = patch(conn, ~p"/api/connections/self", %{"manual_disconnect" => false})
 
       assert json_response(conn, 200)
       response = json_response(conn, 200)
@@ -92,7 +92,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionTest do
         manual_disconnect: false
       })
 
-      conn = patch(conn, ~p"/api/vpn/connections/self", %{"manual_disconnect" => true})
+      conn = patch(conn, ~p"/api/connections/self", %{"manual_disconnect" => true})
 
       assert json_response(conn, 200)
       response = json_response(conn, 200)
@@ -106,7 +106,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionTest do
     end
 
     test "returns 400 for invalid request body", %{conn: conn} do
-      conn = patch(conn, ~p"/api/vpn/connections/self", %{"invalid_field" => "value"})
+      conn = patch(conn, ~p"/api/connections/self", %{"invalid_field" => "value"})
 
       assert json_response(conn, 400)
       response = json_response(conn, 400)
@@ -116,21 +116,23 @@ defmodule EdgeAdminWeb.VPN.ConnectionTest do
     end
 
     test "returns 400 when manual_disconnect is not a boolean", %{conn: conn} do
-      conn = patch(conn, ~p"/api/vpn/connections/self", %{"manual_disconnect" => "true"})
+      conn = patch(conn, ~p"/api/connections/self", %{"manual_disconnect" => "true"})
 
       assert json_response(conn, 400)
       response = json_response(conn, 400)
 
       assert response["error"] == "Invalid request"
+      assert response["message"] == "Only 'manual_disconnect' field is allowed for updates and must be a boolean"
     end
 
     test "returns 400 for empty request body", %{conn: conn} do
-      conn = patch(conn, ~p"/api/vpn/connections/self", %{})
+      conn = patch(conn, ~p"/api/connections/self", %{})
 
       assert json_response(conn, 400)
       response = json_response(conn, 400)
 
       assert response["error"] == "Invalid request"
+      assert response["message"] == "Only 'manual_disconnect' field is allowed for updates and must be a boolean"
     end
   end
 end

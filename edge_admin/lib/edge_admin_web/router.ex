@@ -56,6 +56,10 @@ defmodule EdgeAdminWeb.Router do
         patch "/self", ConnectionController, :update
       end
     end
+
+    scope "/", Nodes do
+      resources "/nodes", NodeController, only: [:index, :show, :create, :update, :delete]
+    end
   end
 
   # Keep the session function as TelemetryUI might need it

@@ -25,7 +25,42 @@ wait_for_service() {
     >&2 echo "${service_name} is available"
 }
 
-# Function to setup VPN connection
+# Function to ensure required VPN users exist
+ensure_vpn_users() {
+    echo "Ensuring required VPN users exist..."
+    
+    # Wait for VPN wrapper to be available first
+    wait_for_service "edge_vpn" "8081" "VPN Wrapper"
+    
+    # Array of users to create
+    declare -a users=("edge-admins" "edge-nodes")
+    
+    for user_name in "${users[@]}"; do
+        echo "Checking for ${user_name} user..."
+        USER_RESPONSE=$(curl -s "${VPN_WRAPPER_URL}/api/v1/user?name=${user_name}")
+        
+        if echo "${USER_RESPONSE}" | grep -q "${user_name}"; then
+            echo "User ${user_name} already exists"
+        else
+            echo "Creating ${user_name} user..."
+            CREATE_RESPONSE=$(curl -s -X POST "${VPN_WRAPPER_URL}/api/v1/user" \
+                -H "Content-Type: application/json" \
+                -d '{"name": "'"${user_name}"'"}')
+            
+            if echo "${CREATE_RESPONSE}" | grep -q '"id":"'; then
+                echo "Successfully created ${user_name} user"
+            else
+                echo "ERROR: Failed to create ${user_name} user"
+                echo "Response: ${CREATE_RESPONSE}"
+                exit 1
+            fi
+        fi
+    done
+    
+    echo "All required VPN users are available"
+}
+
+# Function to setup VPN connection (modified)
 setup_vpn_connection() {
     echo "Setting up VPN connection..."
     
@@ -34,9 +69,6 @@ setup_vpn_connection() {
     mkdir -p /var/run/tailscale /var/cache/tailscale /var/lib/tailscale
     tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/var/run/tailscale/tailscaled.sock &
     sleep 2
-    
-    # Wait for VPN wrapper to be available
-    wait_for_service "edge_vpn" "8081" "VPN Wrapper"
     
     # Check if we're already authenticated and connected
     echo "Checking existing Tailscale status..."
@@ -49,17 +81,13 @@ setup_vpn_connection() {
     if [ -f "/var/lib/tailscale/tailscaled.state" ] && [ -s "/var/lib/tailscale/tailscaled.state" ]; then
         echo "Found existing Tailscale state, checking if it's valid..."
         
-        # First, check if the state contains valid authentication
-        # We'll try to get status and see if we're logged in
         sleep 2  # Give tailscaled time to read the state
         
         if tailscale status 2>/dev/null | grep -q "Logged out"; then
             echo "Existing state is logged out, need new authentication..."
         elif tailscale status 2>/dev/null | grep -q "edge-admin"; then
             echo "Found valid existing authentication, attempting to connect..."
-            # Try to bring up the connection with existing auth
             if tailscale up --login-server="${VPN_URL}" --accept-dns=false --hostname=edge-admin; then
-                # Give it a moment and check if connection succeeded
                 sleep 2
                 if tailscale status 2>/dev/null | grep -q "100\."; then
                     echo "Successfully reconnected using existing credentials"
@@ -72,27 +100,21 @@ setup_vpn_connection() {
         fi
     fi
     
-    echo "Getting new VPN authentication..."
+    echo "Getting new VPN authentication for edge-admin..."
     
-    # Step 1: Check if edge-admins user exists, create if not
-    echo "Checking for edge-admins user..."
+    # Get edge-admins user ID
     USER_RESPONSE=$(curl -s "${VPN_WRAPPER_URL}/api/v1/user?name=edge-admins")
+    USER_ID=$(echo "${USER_RESPONSE}" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
     
-    if echo "${USER_RESPONSE}" | grep -q "edge-admins"; then
-        echo "User edge-admins already exists"
-        USER_ID=$(echo "${USER_RESPONSE}" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
-    else
-        echo "Creating edge-admins user..."
-        CREATE_RESPONSE=$(curl -s -X POST "${VPN_WRAPPER_URL}/api/v1/user" \
-            -H "Content-Type: application/json" \
-            -d '{"name": "edge-admins"}')
-        USER_ID=$(echo "${CREATE_RESPONSE}" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+    if [ -z "${USER_ID}" ]; then
+        echo "ERROR: Could not find edge-admins user ID"
+        exit 1
     fi
     
-    echo "User ID: ${USER_ID}"
+    echo "Using edge-admins user ID: ${USER_ID}"
     
-    # Step 2: Get preauth key
-    echo "Getting preauth key..."
+    # Get preauth key for edge-admin
+    echo "Getting preauth key for edge-admin..."
     EXPIRATION=$(date -d "+1 hour" --iso-8601=seconds)
 
     PREAUTH_RESPONSE=$(curl -s -X POST "${VPN_WRAPPER_URL}/api/v1/preauthkey" \
@@ -107,24 +129,27 @@ setup_vpn_connection() {
     PREAUTH_KEY=$(echo "${PREAUTH_RESPONSE}" | grep -o '"key":"[^"]*"' | cut -d'"' -f4)
     
     if [ -z "${PREAUTH_KEY}" ]; then
-        echo "ERROR: Failed to get preauth key"
+        echo "ERROR: Failed to get preauth key for edge-admin"
         echo "Response: ${PREAUTH_RESPONSE}"
         exit 1
     fi
 
-    echo "Preauth key obtained: ${PREAUTH_KEY}"
+    echo "Preauth key obtained for edge-admin: ${PREAUTH_KEY}"
     
-    # Step 3: Connect to VPN with new preauth key
+    # Connect to VPN with new preauth key
     tailscale up --login-server="${VPN_URL}" --authkey="${PREAUTH_KEY}" --accept-dns=false --hostname=edge-admin
 }
 
-# Main execution flow
+# Main execution flow (modified)
 echo "Starting Edge Admin setup..."
 
 # Wait for PostgreSQL
 wait_for_service "${POSTGRES_HOST}" "${POSTGRES_PORT}" "PostgreSQL"
 
-# Setup VPN connection
+# Ensure both edge-admins and edge-nodes users exist
+ensure_vpn_users
+
+# Setup VPN connection for this edge-admin instance
 setup_vpn_connection
 
 if [ $? -eq 0 ]; then

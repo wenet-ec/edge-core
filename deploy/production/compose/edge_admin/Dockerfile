@@ -24,7 +24,6 @@ COPY edge_admin/mix.exs edge_admin/mix.lock ./
 RUN mix deps.get --only $MIX_ENV
 
 # Copy config files (needed for compilation)
-# Make sure to copy ALL config files
 COPY edge_admin/config config/
 RUN mix deps.compile
 
@@ -50,11 +49,11 @@ RUN apt-get update -y && \
     libncurses5 \
     locales \
     curl \
-    netcat-openbsd \
-    gnupg \
-    lsb-release \
     ca-certificates \
-    sudo && \
+    sudo \
+    # for tailscale installation
+    gnupg \
+    lsb-release && \
     apt-get clean && \
     rm -f /var/lib/apt/lists/*_*
 

@@ -29,6 +29,12 @@ services:
       - local_edge_admin_db_data_backups:/backups
     env_file:
       - ./.envs/.edge_admin_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
   
   edge_admin:
     build:
@@ -39,8 +45,10 @@ services:
     networks:
       - local_edge_core
     depends_on:
-      - edge_admin_db
-      - edge_vpn
+      edge_vpn:
+        condition: service_healthy
+      edge_admin_db:
+        condition: service_healthy
     volumes:
       - ../../edge_admin:/app:z
       - local_edge_admin_deps:/app/deps
@@ -66,8 +74,10 @@ services:
     networks:
       - local_edge_core
     depends_on:
-      - edge_admin_db
-      - edge_vpn
+      edge_vpn:
+        condition: service_healthy
+      edge_admin_db:
+        condition: service_healthy
     volumes:
       - ../../edge_admin:/app:z
       - local_edge_admin_deps:/app/deps
@@ -97,6 +107,12 @@ services:
       - "8080:8080"  # Headscale
       - "8081:8081"  # VPN Wrapper
       - "9090:9090"  # Metrics
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - local_edge_core
     command: /start

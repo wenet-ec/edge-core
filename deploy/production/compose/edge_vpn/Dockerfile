@@ -30,7 +30,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o edge_vpn_wrapper 
 FROM alpine:latest
 
 # Install runtime dependencies
-RUN apk add --no-cache bash ca-certificates
+RUN apk add --no-cache bash ca-certificates curl
 
 # Create app directory
 WORKDIR /app
@@ -44,6 +44,6 @@ COPY --from=go-builder /app/edge_vpn_wrapper /app/edge_vpn_wrapper
 RUN chmod +x /app/edge_vpn_wrapper
 
 # Copy the start script
-COPY ./deploy/local/compose/edge_vpn/start /start
+COPY ./deploy/production/compose/edge_vpn/start /start
 RUN sed -i 's/\r$//g' /start
 RUN chmod +x /start

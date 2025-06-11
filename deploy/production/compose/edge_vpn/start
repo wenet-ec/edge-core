@@ -1,34 +1,51 @@
 #!/bin/bash
 # deploy/production/compose/edge_vpn/start
 
-set -e
+set -o errexit
+set -o pipefail
+set -o nounset
 
 echo "Starting Edge VPN services..."
 
-# Function to handle shutdown gracefully
-cleanup() {
-    echo "Shutting down services..."
-    kill $HEADSCALE_PID $WRAPPER_PID 2>/dev/null || true
-    wait
-    echo "Services stopped."
-}
+# Ensure data directory exists with proper permissions
+mkdir -p /var/lib/headscale
+chown -R $(whoami):$(whoami) /var/lib/headscale
 
-# Set up signal handling
-trap cleanup SIGTERM SIGINT
+# Validate configuration file exists
+if [ ! -f "/etc/headscale/config.yaml" ]; then
+    echo "ERROR: Headscale configuration file not found at /etc/headscale/config.yaml"
+    exit 1
+fi
 
 # Start Headscale in the background
-echo "Starting Headscale on port 8080..."
-/usr/local/bin/headscale serve &
+echo "Starting Headscale server on port 8080..."
+headscale --config /etc/headscale/config.yaml serve &
 HEADSCALE_PID=$!
 
 # Wait a moment for Headscale to start up
-sleep 3
+sleep 5
 
 # Verify Headscale is running
 if ! kill -0 $HEADSCALE_PID 2>/dev/null; then
     echo "ERROR: Headscale failed to start"
     exit 1
 fi
+
+# Test Headscale health endpoint
+echo "Verifying Headscale health..."
+for i in {1..10}; do
+    if curl -f -s http://localhost:8080/health >/dev/null 2>&1; then
+        echo "Headscale health check passed"
+        break
+    elif [ $i -eq 10 ]; then
+        echo "ERROR: Headscale health check failed after 10 attempts"
+        kill $HEADSCALE_PID 2>/dev/null || true
+        exit 1
+    else
+        echo "Headscale health check attempt $i failed, retrying..."
+        sleep 2
+    fi
+done
 
 echo "Headscale started successfully (PID: $HEADSCALE_PID)"
 
@@ -39,7 +56,7 @@ cd /app
 WRAPPER_PID=$!
 
 # Wait a moment for the wrapper to start
-sleep 2
+sleep 3
 
 # Verify wrapper is running
 if ! kill -0 $WRAPPER_PID 2>/dev/null; then
@@ -48,10 +65,38 @@ if ! kill -0 $WRAPPER_PID 2>/dev/null; then
     exit 1
 fi
 
+# Test wrapper health endpoint
+echo "Verifying VPN Wrapper health..."
+for i in {1..10}; do
+    if curl -f -s http://localhost:8081/health >/dev/null 2>&1; then
+        echo "VPN Wrapper health check passed"
+        break
+    elif [ $i -eq 10 ]; then
+        echo "ERROR: VPN Wrapper health check failed after 10 attempts"
+        kill $HEADSCALE_PID $WRAPPER_PID 2>/dev/null || true
+        exit 1
+    else
+        echo "VPN Wrapper health check attempt $i failed, retrying..."
+        sleep 2
+    fi
+done
+
 echo "VPN Wrapper started successfully (PID: $WRAPPER_PID)"
-echo "Both services are running:"
+echo "Edge VPN services are running:"
 echo "  - Headscale: http://localhost:8080"
 echo "  - VPN Wrapper: http://localhost:8081"
+echo "  - Metrics: http://localhost:9090"
+
+# Setup signal handlers for graceful shutdown
+cleanup() {
+    echo "Shutting down services gracefully..."
+    kill $WRAPPER_PID $HEADSCALE_PID 2>/dev/null || true
+    wait
+    echo "Shutdown complete"
+    exit 0
+}
+
+trap cleanup SIGTERM SIGINT
 
 # Wait for either process to exit
 wait

@@ -30,7 +30,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o edge_vpn_wrapper 
 FROM alpine:latest
 
 # Install runtime dependencies
-RUN apk add --no-cache bash ca-certificates
+RUN apk add --no-cache bash ca-certificates curl
 
 # Create app directory
 WORKDIR /app

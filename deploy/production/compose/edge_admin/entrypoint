@@ -5,32 +5,9 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-# Set default PostgreSQL user if not provided
-if [ -z "${POSTGRES_USER:-}" ]; then
-    base_postgres_image_default_user='postgres'
-    export POSTGRES_USER="${base_postgres_image_default_user}"
-fi
-
-# Function to wait for a service to be available
-wait_for_service() {
-    local host=$1
-    local port=$2
-    local service_name=$3
-    
-    echo "Waiting for ${service_name} to be available..."
-    while ! nc -z "${host}" "${port}"; do
-        >&2 echo "${service_name} is unavailable - sleeping"
-        sleep 1
-    done
-    >&2 echo "${service_name} is available"
-}
-
 # Function to ensure required VPN users exist
 ensure_vpn_users() {
     echo "Ensuring required VPN users exist..."
-    
-    # Wait for VPN wrapper to be available first
-    wait_for_service "edge_vpn" "8081" "VPN Wrapper"
     
     # Array of users to create
     declare -a users=("edge-admins" "edge-nodes")
@@ -60,19 +37,19 @@ ensure_vpn_users() {
     echo "All required VPN users are available"
 }
 
-# Function to setup VPN connection (modified)
+# Function to setup VPN connection
 setup_vpn_connection() {
     echo "Setting up VPN connection..."
     
     # Start tailscaled daemon
     echo "Starting tailscaled daemon..."
-    mkdir -p /var/run/tailscale /var/cache/tailscale /var/lib/tailscale
-    tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/var/run/tailscale/tailscaled.sock &
+    sudo mkdir -p /var/run/tailscale /var/cache/tailscale /var/lib/tailscale
+    sudo tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/var/run/tailscale/tailscaled.sock &
     sleep 2
     
     # Check if we're already authenticated and connected
     echo "Checking existing Tailscale status..."
-    if tailscale status 2>/dev/null | grep -q "edge-admin" && tailscale status 2>/dev/null | grep -q "100\."; then
+    if sudo tailscale status 2>/dev/null | grep -q "edge-admin" && sudo tailscale status 2>/dev/null | grep -q "100\."; then
         echo "Already authenticated and connected, using existing state"
         return 0
     fi
@@ -83,13 +60,13 @@ setup_vpn_connection() {
         
         sleep 2  # Give tailscaled time to read the state
         
-        if tailscale status 2>/dev/null | grep -q "Logged out"; then
+        if sudo tailscale status 2>/dev/null | grep -q "Logged out"; then
             echo "Existing state is logged out, need new authentication..."
-        elif tailscale status 2>/dev/null | grep -q "edge-admin"; then
+        elif sudo tailscale status 2>/dev/null | grep -q "edge-admin"; then
             echo "Found valid existing authentication, attempting to connect..."
-            if tailscale up --login-server="${VPN_URL}" --accept-dns=false --hostname=edge-admin; then
+            if sudo tailscale up --login-server="${VPN_URL}" --accept-dns=false --hostname=edge-admin; then
                 sleep 2
-                if tailscale status 2>/dev/null | grep -q "100\."; then
+                if sudo tailscale status 2>/dev/null | grep -q "100\."; then
                     echo "Successfully reconnected using existing credentials"
                     return 0
                 fi
@@ -137,14 +114,11 @@ setup_vpn_connection() {
     echo "Preauth key obtained for edge-admin: ${PREAUTH_KEY}"
     
     # Connect to VPN with new preauth key
-    tailscale up --login-server="${VPN_URL}" --authkey="${PREAUTH_KEY}" --accept-dns=false --hostname=edge-admin
+    sudo tailscale up --login-server="${VPN_URL}" --authkey="${PREAUTH_KEY}" --accept-dns=false --hostname=edge-admin
 }
 
-# Main execution flow (modified)
+# Main execution flow
 echo "Starting Edge Admin setup..."
-
-# Wait for PostgreSQL
-wait_for_service "${POSTGRES_HOST}" "${POSTGRES_PORT}" "PostgreSQL"
 
 # Ensure both edge-admins and edge-nodes users exist
 ensure_vpn_users
@@ -153,10 +127,10 @@ ensure_vpn_users
 setup_vpn_connection
 
 if [ $? -eq 0 ]; then
-    echo "Successfully connected to VPN"
-    tailscale status
+    echo "VPN setup completed successfully"
+    sudo tailscale status
 else
-    echo "ERROR: Failed to connect to VPN"
+    echo "ERROR: VPN setup failed"
     exit 1
 fi
 

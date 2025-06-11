@@ -1,24 +1,19 @@
 #!/bin/bash
 # deploy/local/compose/edge_vpn/start
 
-set -e
+set -o errexit
+set -o pipefail
+set -o nounset
 
 echo "Starting Edge VPN services..."
 
-# Function to handle shutdown gracefully
-cleanup() {
-    echo "Shutting down services..."
-    kill $HEADSCALE_PID $WRAPPER_PID 2>/dev/null || true
-    wait
-    echo "Services stopped."
-}
-
-# Set up signal handling
-trap cleanup SIGTERM SIGINT
+# Ensure data directory exists with proper permissions
+mkdir -p /var/lib/headscale
+chown -R $(whoami):$(whoami) /var/lib/headscale
 
 # Start Headscale in the background
-echo "Starting Headscale on port 8080..."
-/usr/local/bin/headscale serve &
+echo "Starting Headscale server on port 8080..."
+headscale --config /etc/headscale/config.yaml serve &
 HEADSCALE_PID=$!
 
 # Wait a moment for Headscale to start up

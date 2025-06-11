@@ -19,11 +19,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   bash-completion \
   nano \
   ssh \
-  # networking utilities
-  netcat-traditional \
   # postgresql client
   postgresql-client \
-  # health checks and pings
+  # requests and pings
   curl \
   # file system watching for live reload
   inotify-tools \

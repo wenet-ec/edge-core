@@ -5,32 +5,9 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-# Set default PostgreSQL user if not provided
-if [ -z "${POSTGRES_USER:-}" ]; then
-    base_postgres_image_default_user='postgres'
-    export POSTGRES_USER="${base_postgres_image_default_user}"
-fi
-
-# Function to wait for a service to be available
-wait_for_service() {
-    local host=$1
-    local port=$2
-    local service_name=$3
-    
-    echo "Waiting for ${service_name} to be available..."
-    while ! nc -z "${host}" "${port}"; do
-        >&2 echo "${service_name} is unavailable - sleeping"
-        sleep 1
-    done
-    >&2 echo "${service_name} is available"
-}
-
 # Function to ensure required VPN users exist
 ensure_vpn_users() {
     echo "Ensuring required VPN users exist..."
-    
-    # Wait for VPN wrapper to be available first
-    wait_for_service "edge_vpn" "8081" "VPN Wrapper"
     
     # Array of users to create
     declare -a users=("edge-admins" "edge-nodes")
@@ -60,7 +37,7 @@ ensure_vpn_users() {
     echo "All required VPN users are available"
 }
 
-# Function to setup VPN connection (modified)
+# Function to setup VPN connection
 setup_vpn_connection() {
     echo "Setting up VPN connection..."
     
@@ -140,11 +117,8 @@ setup_vpn_connection() {
     tailscale up --login-server="${VPN_URL}" --authkey="${PREAUTH_KEY}" --accept-dns=false --hostname=edge-admin
 }
 
-# Main execution flow (modified)
+# Main execution flow
 echo "Starting Edge Admin setup..."
-
-# Wait for PostgreSQL
-wait_for_service "${POSTGRES_HOST}" "${POSTGRES_PORT}" "PostgreSQL"
 
 # Ensure both edge-admins and edge-nodes users exist
 ensure_vpn_users
@@ -153,10 +127,10 @@ ensure_vpn_users
 setup_vpn_connection
 
 if [ $? -eq 0 ]; then
-    echo "Successfully connected to VPN"
+    echo "VPN setup completed successfully"
     tailscale status
 else
-    echo "ERROR: Failed to connect to VPN"
+    echo "ERROR: VPN setup failed"
     exit 1
 fi
 

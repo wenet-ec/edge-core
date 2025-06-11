@@ -22,6 +22,10 @@ SESSION_SIGNING_SALT=FUYY5L041VshhwCep1OyX+vu4imud8+63+kLzupf7lrqlkiztQWQjFcJLgC
 DATABASE_PATH=/app/data/edge_agent_local.db
 DATABASE_POOL_SIZE=5
 
+# VPN configuration
+VPN_URL=http://edge_vpn:8080
+EDGE_ADMIN_URL=http://edge_admin:4000
+
 # Basic Authentication
 # BASIC_AUTH_USERNAME=
 # BASIC_AUTH_PASSWORD=

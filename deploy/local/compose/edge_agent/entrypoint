@@ -5,6 +5,92 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+# Function to get enrollment key from Edge Admin
+get_enrollment_key() {
+    echo "Getting enrollment key from Edge Admin..."
+    
+    # Get enrollment key from Edge Admin API
+    ENROLLMENT_RESPONSE=$(curl -s -X POST "${EDGE_ADMIN_URL}/api/enrollment-keys" \
+        -H "Content-Type: application/json")
+    
+    ENROLLMENT_KEY=$(echo "${ENROLLMENT_RESPONSE}" | grep -o '"key":"[^"]*"' | cut -d'"' -f4)
+    
+    if [ -z "${ENROLLMENT_KEY}" ]; then
+        echo "ERROR: Failed to get enrollment key from Edge Admin"
+        echo "Response: ${ENROLLMENT_RESPONSE}"
+        exit 1
+    fi
+    
+    echo "Successfully obtained enrollment key from Edge Admin"
+    export ENROLLMENT_KEY="${ENROLLMENT_KEY}"
+}
 
-echo "Starting application..."
+# Function to setup VPN connection
+setup_vpn_connection() {
+    echo "Setting up VPN connection..."
+    
+    # Start tailscaled daemon
+    echo "Starting tailscaled daemon..."
+    mkdir -p /var/run/tailscale /var/cache/tailscale /var/lib/tailscale
+    tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/var/run/tailscale/tailscaled.sock &
+    sleep 2
+    
+    # Check if we're already authenticated and connected
+    echo "Checking existing Tailscale status..."
+    if tailscale status 2>/dev/null | grep -q "edge-agent" && tailscale status 2>/dev/null | grep -q "100\."; then
+        echo "Already authenticated and connected, using existing state"
+        return 0
+    fi
+    
+    # Check for existing state
+    if [ -f "/var/lib/tailscale/tailscaled.state" ] && [ -s "/var/lib/tailscale/tailscaled.state" ]; then
+        echo "Found existing Tailscale state, checking if it's valid..."
+        
+        sleep 2
+        
+        if tailscale status 2>/dev/null | grep -q "Logged out"; then
+            echo "Existing state is logged out, using new enrollment key..."
+        elif tailscale status 2>/dev/null | grep -q "edge-agent"; then
+            echo "Found valid existing authentication, attempting to connect..."
+            if tailscale up --login-server="${VPN_URL}" --accept-dns=false --hostname=edge-agent; then
+                sleep 2
+                if tailscale status 2>/dev/null | grep -q "100\."; then
+                    echo "Successfully reconnected using existing credentials"
+                    return 0
+                fi
+            fi
+            echo "Failed to reconnect with existing state, will use new enrollment key..."
+        fi
+    fi
+    
+    echo "Connecting to VPN with enrollment key..."
+    
+    # Use the enrollment key (either fetched locally or provided via env)
+    if [ -z "${ENROLLMENT_KEY:-}" ]; then
+        echo "ERROR: No enrollment key available"
+        exit 1
+    fi
+    
+    # Connect to VPN
+    tailscale up --login-server="${VPN_URL}" --authkey="${ENROLLMENT_KEY}" --accept-dns=false --hostname=edge-agent
+}
+
+# Main execution flow
+echo "Starting Edge Agent setup..."
+
+# LOCAL DEVELOPMENT: Get enrollment key from Edge Admin
+get_enrollment_key
+
+# Setup VPN connection
+setup_vpn_connection
+
+if [ $? -eq 0 ]; then
+    echo "Successfully connected to VPN"
+    tailscale status
+else
+    echo "ERROR: Failed to connect to VPN"
+    exit 1
+fi
+
+echo "All prerequisites ready, starting application..."
 exec "$@"

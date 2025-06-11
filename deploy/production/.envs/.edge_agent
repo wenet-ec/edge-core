@@ -18,3 +18,7 @@ DATABASE_POOL_SIZE=10
 # Basic Authentication (optional for internal service)
 # BASIC_AUTH_USERNAME=
 # BASIC_AUTH_PASSWORD=
+
+# VPN configuration
+VPN_URL=http://edge_vpn:8080
+ENROLLMENT_KEY=a8f38b60f9bfca1432539d5f6bc799c6c0dc14ad44b69187

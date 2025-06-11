@@ -18,15 +18,17 @@ RUN apk add --no-cache \
   bash \
   bash-completion \
   nano \
-  # Networking utilities
-  netcat-openbsd \
-  # Health checks and monitoring
+  # For requests and pings
   curl \
   # File system watching for live reload
   inotify-tools \
   # For any native dependencies
   pkgconfig \
   && rm -rf /var/cache/apk/*
+
+# Install tailscale
+RUN apk add --no-cache tailscale && \
+    mkdir -p /var/run/tailscale
 
 # Create app user
 RUN addgroup -g 1000 app && \

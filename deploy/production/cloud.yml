@@ -1,4 +1,4 @@
-# deploy/production/web.yml
+# deploy/production/cloud.yml
 networks:
   production_edge_core:
     name: production_edge_core
@@ -8,7 +8,6 @@ volumes:
   production_edge_admin_db_data_backups: {}
   production_edge_vpn_data: {}
   production_edge_admin_tailscale_data: {}
-  production_edge_agent_data: {}
 
 services:
   # Edge Admin
@@ -80,20 +79,3 @@ services:
     networks:
       - production_edge_core
     command: /start
-
-  # Edge Agent
-  edge_agent:
-    build:
-      context: ../..
-      dockerfile: ./deploy/production/compose/edge_agent/Dockerfile
-    image: production_edge_agent
-    container_name: production_edge_agent
-    networks:
-      - production_edge_core
-    volumes:
-      - production_edge_agent_data:/app/data
-    env_file:
-      - ./.envs/.edge_agent
-    ports:
-      - "4400:4000"
-    command: ["sh", "-c", "/app/bin/migrate && /app/bin/server"]

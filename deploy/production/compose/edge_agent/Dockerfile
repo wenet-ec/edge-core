@@ -1,5 +1,4 @@
 # deploy/production/compose/edge_agent/Dockerfile
-
 # -----------------------------------------------
 # Stage: Build the OTP release
 # -----------------------------------------------
@@ -10,6 +9,7 @@ RUN apk add --no-cache \
     build-base \
     git \
     sqlite-dev \
+    ca-certificates \
     && rm -rf /var/cache/apk/*
 
 WORKDIR /app
@@ -47,18 +47,19 @@ RUN apk add --no-cache \
     openssl \
     ncurses-libs \
     sqlite \
-    netcat-openbsd \
-    tzdata \
     bash \
+    curl \
+    tailscale \
     libstdc++ \
     libgcc \
+    su-exec \
     && rm -rf /var/cache/apk/*
 
-# Create app user and data directory
+# Create app user and setup directories
 RUN addgroup -g 1000 app && \
     adduser -u 1000 -G app -s /bin/bash -D app && \
-    mkdir -p /app/data && \
-    chown -R app:app /app
+    mkdir -p /app/data /var/run/tailscale /var/lib/tailscale /var/cache/tailscale && \
+    chown -R app:app /app /var/lib/tailscale /var/cache/tailscale
 
 # Copy the release from builder stage
 COPY --from=builder --chown=app:app /app/_build/prod/rel/edge_agent /app
@@ -68,8 +69,6 @@ COPY ./deploy/production/compose/edge_agent/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint && \
     chmod +x /entrypoint
 
-# Switch to app user
-USER app
 WORKDIR /app
 
 ENTRYPOINT ["/entrypoint"]

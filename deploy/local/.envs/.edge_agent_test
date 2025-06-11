@@ -22,3 +22,7 @@ SESSION_SIGNING_SALT=qh+vmMHsOqcjKF3TSSIsghwt2go48m2+IQ+kMTOB3BrSysSr7D4a21uAtt4
 # Database configuration
 DATABASE_PATH=/app/data/edge_agent_test.db
 DATABASE_POOL_SIZE=5
+
+# VPN configuration
+VPN_URL=http://edge_vpn:8080
+EDGE_ADMIN_URL=http://edge_admin:4000

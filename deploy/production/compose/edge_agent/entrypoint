@@ -5,5 +5,74 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-echo "Starting application..."
-exec "$@"
+# Function to setup VPN connection
+setup_vpn_connection() {
+    echo "Setting up VPN connection..."
+    
+    # Ensure directories exist with correct permissions
+    mkdir -p /var/run/tailscale /var/cache/tailscale /var/lib/tailscale
+    chown app:app /var/lib/tailscale /var/cache/tailscale
+    
+    # Start tailscaled daemon
+    echo "Starting tailscaled daemon..."
+    tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/var/run/tailscale/tailscaled.sock &
+    sleep 3
+    
+    # Check if we're already authenticated and connected
+    echo "Checking existing Tailscale status..."
+    if tailscale status 2>/dev/null | grep -q "edge-agent" && tailscale status 2>/dev/null | grep -q "100\."; then
+        echo "Already authenticated and connected, using existing state"
+        return 0
+    fi
+    
+    # Check for existing state
+    if [ -f "/var/lib/tailscale/tailscaled.state" ] && [ -s "/var/lib/tailscale/tailscaled.state" ]; then
+        echo "Found existing Tailscale state, checking if it's valid..."
+        
+        sleep 2
+        
+        if tailscale status 2>/dev/null | grep -q "Logged out"; then
+            echo "Existing state is logged out, using enrollment key..."
+        elif tailscale status 2>/dev/null | grep -q "edge-agent"; then
+            echo "Found valid existing authentication, attempting to connect..."
+            if tailscale up --login-server="${VPN_URL}" --accept-dns=false --hostname=edge-agent; then
+                sleep 2
+                if tailscale status 2>/dev/null | grep -q "100\."; then
+                    echo "Successfully reconnected using existing credentials"
+                    return 0
+                fi
+            fi
+            echo "Failed to reconnect with existing state, will use enrollment key..."
+        fi
+    fi
+    
+    echo "Connecting to VPN with enrollment key..."
+    
+    # Check if enrollment key is provided
+    if [ -z "${ENROLLMENT_KEY:-}" ]; then
+        echo "ERROR: ENROLLMENT_KEY environment variable is required for production"
+        exit 1
+    fi
+    
+    # Connect to VPN using the provided enrollment key
+    tailscale up --login-server="${VPN_URL}" --authkey="${ENROLLMENT_KEY}" --accept-dns=false --hostname=edge-agent
+}
+
+# Main execution flow
+echo "Starting Edge Agent setup..."
+
+# Setup VPN connection (as root)
+setup_vpn_connection
+
+if [ $? -eq 0 ]; then
+    echo "Successfully connected to VPN"
+    tailscale status
+else
+    echo "ERROR: Failed to connect to VPN"
+    exit 1
+fi
+
+echo "All prerequisites ready, starting application as app user..."
+
+# Switch to app user for running the application
+exec su-exec app "$@"

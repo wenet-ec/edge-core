@@ -5,7 +5,7 @@ defmodule EdgeAgent.Bootstrap do
 
   Handles the complete agent startup sequence:
   1. Determine node identity (machine_id, hardware_id, or temporary_id)
-  2. Connect to VPN (future step)
+  2. Connect to VPN using Tailscale
   3. Register with admin (future step)
   4. Store configuration (future step)
   """
@@ -13,6 +13,7 @@ defmodule EdgeAgent.Bootstrap do
   require Logger
 
   alias EdgeAgent.Settings
+  alias EdgeAgent.VPN.Tailscale
 
   @doc """
   Runs the complete bootstrap sequence.
@@ -23,7 +24,8 @@ defmodule EdgeAgent.Bootstrap do
     Logger.info("Starting EdgeAgent bootstrap sequence...")
 
     with {:ok, node_id, node_id_type} <- determine_node_identity(),
-         {:ok, _} <- store_node_identity(node_id, node_id_type) do
+         {:ok, _} <- store_node_identity(node_id, node_id_type),
+         {:ok, _} <- setup_vpn_connection(node_id) do
       Logger.info("Bootstrap sequence completed successfully")
       {:ok, :bootstrap_complete}
     else
@@ -57,9 +59,38 @@ defmodule EdgeAgent.Bootstrap do
 
           :error ->
             node_id = generate_temporary_id()
-            Logger.warning("Generated temporary_id: #{String.slice(node_id, 0, 8)}... (node will be ephemeral)")
+
+            Logger.warning(
+              "Generated temporary_id: #{String.slice(node_id, 0, 8)}... (node will be ephemeral)"
+            )
+
             {:ok, node_id, "temporary_id"}
         end
+    end
+  end
+
+  @doc """
+  Sets up VPN connection using Tailscale with node-specific hostname.
+
+  Reads VPN_URL and ENROLLMENT_KEY from environment variables.
+  Uses hostname pattern: node-{node_id}
+
+  Returns {:ok, :vpn_connected} or {:error, reason}.
+  """
+  def setup_vpn_connection(node_id) do
+    Logger.info("Setting up VPN connection for node: #{String.slice(node_id, 0, 8)}...")
+
+    with {:ok, vpn_url} <- get_required_env("VPN_URL"),
+         {:ok, enrollment_key} <- get_required_env("ENROLLMENT_KEY"),
+         :ok <- start_tailscale_daemon(),
+         :ok <- connect_to_vpn(vpn_url, enrollment_key, node_id),
+         {:ok, vpn_ip} <- validate_vpn_connection() do
+      Logger.info("Successfully connected to VPN with IP: #{vpn_ip}")
+      {:ok, :vpn_connected}
+    else
+      {:error, reason} = error ->
+        Logger.error("VPN connection failed: #{inspect(reason)}")
+        error
     end
   end
 
@@ -71,8 +102,65 @@ defmodule EdgeAgent.Bootstrap do
     case Settings.set_node_identity(node_id, node_id_type) do
       {:ok, _} ->
         {:ok, :stored}
+
       {:error, reason} ->
         {:error, "Failed to store node identity: #{reason}"}
+    end
+  end
+
+  # VPN Connection Helpers
+
+  defp get_required_env(env_var) do
+    case System.get_env(env_var) do
+      nil ->
+        {:error, "Missing required environment variable: #{env_var}"}
+
+      "" ->
+        {:error, "Empty environment variable: #{env_var}"}
+
+      value ->
+        Logger.debug("Found environment variable #{env_var}")
+        {:ok, value}
+    end
+  end
+
+  defp start_tailscale_daemon do
+    Logger.info("Starting Tailscale daemon...")
+
+    case Tailscale.start_daemon() do
+      :ok ->
+        Logger.info("Tailscale daemon started successfully")
+        :ok
+
+      :error ->
+        {:error, "Failed to start Tailscale daemon"}
+    end
+  end
+
+  defp connect_to_vpn(vpn_url, enrollment_key, node_id) do
+    hostname = "node-#{node_id}"
+    Logger.info("Connecting to VPN with hostname: #{hostname}")
+
+    case Tailscale.connect(vpn_url, enrollment_key, hostname) do
+      :ok ->
+        Logger.info("VPN connection established")
+        :ok
+
+      :error ->
+        {:error, "Failed to connect to VPN"}
+    end
+  end
+
+  defp validate_vpn_connection do
+    Logger.info("Validating VPN connection...")
+
+    case Tailscale.get_vpn_ip() do
+      {:ok, vpn_ip} ->
+        Logger.info("VPN connection validated with IP: #{vpn_ip}")
+        {:ok, vpn_ip}
+
+      {:error, _} ->
+        {:error, "VPN connection validation failed - no IP assigned"}
     end
   end
 
@@ -90,6 +178,7 @@ defmodule EdgeAgent.Bootstrap do
         {:ok, content} ->
           cleaned = String.trim(content)
           if valid_machine_id?(cleaned), do: {:ok, cleaned}, else: false
+
         :error ->
           false
       end
@@ -112,6 +201,7 @@ defmodule EdgeAgent.Bootstrap do
         {:ok, content} ->
           cleaned = String.trim(content)
           if valid_hardware_id?(cleaned), do: {:ok, cleaned}, else: false
+
         :error ->
           false
       end
@@ -145,13 +235,20 @@ defmodule EdgeAgent.Bootstrap do
     # Accept UUIDs (with or without dashes) or alphanumeric serials
     cond do
       # UUID format (with dashes)
-      String.match?(content, ~r/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i) -> true
+      String.match?(content, ~r/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i) ->
+        true
+
       # UUID format (without dashes)
-      String.match?(content, ~r/^[a-f0-9]{32}$/i) -> true
+      String.match?(content, ~r/^[a-f0-9]{32}$/i) ->
+        true
+
       # Serial number (alphanumeric, 6-64 chars)
-      String.match?(content, ~r/^[a-zA-Z0-9]{6,64}$/) -> true
+      String.match?(content, ~r/^[a-zA-Z0-9]{6,64}$/) ->
+        true
+
       # Default
-      true -> false
+      true ->
+        false
     end
   end
 end

@@ -18,29 +18,18 @@ defmodule EdgeAdmin.NodesFixtures do
   Generate a node.
   """
   def node_fixture(attrs \\ %{}) do
-    {:ok, node} =
-      attrs
-      |> Enum.into(%{
-        id: Map.get(attrs, :id, unique_hardware_id()),
-        # Optional fields with sensible defaults
-        last_seen_at: ~U[2025-06-08 08:12:00Z],
-        status: "online",
-        vpn_ip: "100.64.0.#{:rand.uniform(253) + 1}"
-      })
-      |> EdgeAdmin.Nodes.create_node()
+    # Only use default hardware ID if one isn't provided
+    default_attrs = %{
+      id: unique_hardware_id(),
+      id_type: "machine_id",
+      status: "online",
+      vpn_ip: "100.64.0.1",
+      last_seen_at: ~U[2025-06-08 08:12:00Z]
+    }
 
-    node
-  end
-
-  @doc """
-  Generate a minimal node with only required fields.
-  """
-  def minimal_node_fixture(attrs \\ %{}) do
     {:ok, node} =
-      attrs
-      |> Enum.into(%{
-        id: Map.get(attrs, :id, unique_hardware_id())
-      })
+      default_attrs
+      |> Map.merge(attrs)
       |> EdgeAdmin.Nodes.create_node()
 
     node

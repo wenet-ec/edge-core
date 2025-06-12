@@ -20,6 +20,12 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           format: :uuid,
           description: "Unique node identifier (hardware ID)"
         },
+        id_type: %Schema{
+          type: :string,
+          nullable: true,
+          enum: ["machine_id", "hardware_id", "temporary_id"],
+          description: "Type of node identifier used for determining persistence"
+        },
         vpn_ip: %Schema{
           type: :string,
           nullable: true,
@@ -48,6 +54,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
       required: [:id],
       example: %{
         id: "01234567-89ab-cdef-0123-456789abcdef",
+        id_type: "machine_id",
         vpn_ip: "100.64.0.1",
         vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef",
         last_seen_at: "2025-06-09T08:20:00Z",
@@ -61,14 +68,13 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
     require OpenApiSpex
 
     OpenApiSpex.schema(%{
-      title: "Node List",
-      description: "List of edge nodes",
+      title: "Node List Response",
+      description: "List of nodes",
       type: :object,
       properties: %{
         data: %Schema{
           type: :array,
-          items: NodeResponse,
-          description: "Array of nodes"
+          items: NodeResponse
         }
       },
       required: [:data],
@@ -76,6 +82,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         data: [
           %{
             id: "01234567-89ab-cdef-0123-456789abcdef",
+            id_type: "machine_id",
             vpn_ip: "100.64.0.1",
             vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef",
             last_seen_at: "2025-06-09T08:20:00Z",
@@ -101,6 +108,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
       example: %{
         data: %{
           id: "01234567-89ab-cdef-0123-456789abcdef",
+          id_type: "machine_id",
           vpn_ip: "100.64.0.1",
           vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef",
           last_seen_at: "2025-06-09T08:20:00Z",
@@ -115,8 +123,8 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
     require OpenApiSpex
 
     OpenApiSpex.schema(%{
-      title: "Create Node Request",
-      description: "Request to create a new node",
+      title: "Node Create Request",
+      description: "Parameters for creating a new node",
       type: :object,
       properties: %{
         node: %Schema{
@@ -124,39 +132,36 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           properties: %{
             id: %Schema{
               type: :string,
-              description: "Hardware identifier (required) - used as primary key",
-              example: "hw-123-abc-456"
+              description: "Hardware ID of the node (will be converted to UUID format)",
+              example: "bc9ebeb196a44dfd953e899a61637577"
+            },
+            id_type: %Schema{
+              type: :string,
+              enum: ["machine_id", "hardware_id", "temporary_id"],
+              description: "Type of identifier being provided"
             },
             vpn_ip: %Schema{
               type: :string,
               nullable: true,
-              description: "VPN-assigned IP address (optional)",
+              description: "VPN-assigned IP address",
               example: "100.64.0.1"
-            },
-            last_seen_at: %Schema{
-              type: :string,
-              format: :datetime,
-              nullable: true,
-              description: "Last heartbeat timestamp (optional)"
             },
             status: %Schema{
               type: :string,
               nullable: true,
               enum: ["online", "offline", "unknown"],
-              description: "Node status (optional)"
+              description: "Initial node status"
             }
           },
-          required: [:id]
+          required: [:id, :id_type],
+          example: %{
+            id: "bc9ebeb196a44dfd953e899a61637577",
+            id_type: "machine_id",
+            status: "online"
+          }
         }
       },
-      required: [:node],
-      example: %{
-        node: %{
-          id: "hw-123-abc-456",
-          vpn_ip: "100.64.0.1",
-          status: "online"
-        }
-      }
+      required: [:node]
     })
   end
 

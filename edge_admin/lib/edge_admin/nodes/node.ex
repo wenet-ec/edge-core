@@ -10,6 +10,7 @@ defmodule EdgeAdmin.Nodes.Node do
     field(:status, :string)
     field(:vpn_ip, :string)
     field(:last_seen_at, :utc_datetime)
+    field(:id_type, :string)
 
     # Virtual field - computed from UUID
     field(:vpn_hostname, :string, virtual: true)
@@ -20,9 +21,10 @@ defmodule EdgeAdmin.Nodes.Node do
   @doc false
   def changeset(node, attrs) do
     node
-    |> cast(attrs, [:id, :vpn_ip, :last_seen_at, :status])
+    |> cast(attrs, [:id, :vpn_ip, :last_seen_at, :status, :id_type])
     |> normalize_hardware_id()
     |> validate_required([:id])
+    |> validate_inclusion(:id_type, ["machine_id", "hardware_id", "temporary_id"])
     |> unique_constraint(:id, name: :nodes_pkey)
     |> put_vpn_hostname()
   end
@@ -60,15 +62,16 @@ defmodule EdgeAdmin.Nodes.Node do
     # Check if it's a valid 32-character hex string
     if String.match?(clean_hex, ~r/^[a-f0-9]{32}$/) do
       # Insert dashes at proper UUID positions: 8-4-4-4-12
-      uuid = String.slice(clean_hex, 0, 8) <>
-             "-" <>
-             String.slice(clean_hex, 8, 4) <>
-             "-" <>
-             String.slice(clean_hex, 12, 4) <>
-             "-" <>
-             String.slice(clean_hex, 16, 4) <>
-             "-" <>
-             String.slice(clean_hex, 20, 12)
+      uuid =
+        String.slice(clean_hex, 0, 8) <>
+          "-" <>
+          String.slice(clean_hex, 8, 4) <>
+          "-" <>
+          String.slice(clean_hex, 12, 4) <>
+          "-" <>
+          String.slice(clean_hex, 16, 4) <>
+          "-" <>
+          String.slice(clean_hex, 20, 12)
 
       {:ok, uuid}
     else
@@ -80,7 +83,6 @@ defmodule EdgeAdmin.Nodes.Node do
     end
   end
 
-  # Rest of your existing functions...
   defp put_vpn_hostname(%Ecto.Changeset{data: %{id: id}} = changeset) when not is_nil(id) do
     put_change(changeset, :vpn_hostname, "node-#{id}")
   end
@@ -96,4 +98,18 @@ defmodule EdgeAdmin.Nodes.Node do
   def populate_virtual_fields(%__MODULE__{} = node) do
     %{node | vpn_hostname: vpn_hostname(node)}
   end
+
+  @doc """
+  Helper to check if a node is temporary (for cleanup logic)
+  """
+  def temporary?(%__MODULE__{id_type: "temporary_id"}), do: true
+  def temporary?(_), do: false
+
+  @doc """
+  Helper to check if a node is persistent
+  """
+  def persistent?(%__MODULE__{id_type: id_type}) when id_type in ["machine_id", "hardware_id"],
+    do: true
+
+  def persistent?(_), do: false
 end

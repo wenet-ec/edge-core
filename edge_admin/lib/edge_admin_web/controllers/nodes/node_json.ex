@@ -19,6 +19,7 @@ defmodule EdgeAdminWeb.Nodes.NodeJSON do
   defp data(%Node{} = node) do
     %{
       id: node.id,
+      id_type: node.id_type,
       vpn_ip: node.vpn_ip,
       vpn_hostname: node.vpn_hostname,
       last_seen_at: node.last_seen_at,

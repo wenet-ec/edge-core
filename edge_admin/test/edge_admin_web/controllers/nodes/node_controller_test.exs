@@ -8,14 +8,14 @@ defmodule EdgeAdminWeb.Nodes.NodeControllerTest do
 
   # Updated test data to reflect our validation changes
   @create_attrs %{
-    id: "bc9ebeb196a44dfd953e899a61637577",  # 32-char hex (like machine ID)
+    id: "bc9ebeb1-96a4-4dfd-953e-899a61637577",
     status: "online",
     vpn_ip: "100.64.0.1",
     last_seen_at: ~U[2025-06-08 08:20:00Z]
   }
 
   @minimal_create_attrs %{
-    id: "01234567890123456789012345678901"  # Another 32-char hex
+    id: "01234567-8901-2345-6789-012345678901"
   }
 
   @update_attrs %{
@@ -55,17 +55,15 @@ defmodule EdgeAdminWeb.Nodes.NodeControllerTest do
       conn = get(conn, ~p"/api/nodes/#{id}")
 
       assert %{
-              "id" => ^id,
-              "last_seen_at" => "2025-06-08T08:20:00Z",
-              "status" => "online",
-              "vpn_ip" => "100.64.0.1",
-              "vpn_hostname" => vpn_hostname
-            } = json_response(conn, 200)["data"]
+               "id" => ^id,
+               "last_seen_at" => "2025-06-08T08:20:00Z",
+               "status" => "online",
+               "vpn_ip" => "100.64.0.1",
+               "vpn_hostname" => vpn_hostname
+             } = json_response(conn, 200)["data"]
 
       # Test virtual field computation
       assert vpn_hostname == "node-#{id}"
-      # After normalization, the hex string becomes UUID format
-      assert id == "bc9ebeb1-96a4-4dfd-953e-899a61637577"
     end
 
     test "renders node with minimal data", %{conn: conn} do
@@ -84,7 +82,6 @@ defmodule EdgeAdminWeb.Nodes.NodeControllerTest do
 
       # Virtual field should still work with minimal data
       assert vpn_hostname == "node-#{id}"
-      assert id == "01234567-8901-2345-6789-012345678901"
     end
 
     test "renders errors when data is invalid", %{conn: conn} do
@@ -94,8 +91,9 @@ defmodule EdgeAdminWeb.Nodes.NodeControllerTest do
 
     # Update this test in edge_admin/test/edge_admin_web/controllers/nodes/node_controller_test.exs
     test "renders errors when id is not unique", %{conn: conn} do
-      # Create first node with specific id
-      create_attrs_with_fixed_id = %{@create_attrs | id: "fixed-test-id-123"}
+      # Create first node with specific VALID UUID
+      valid_uuid = "bc9ebeb1-96a4-4dfd-953e-899a61637577"
+      create_attrs_with_fixed_id = %{@create_attrs | id: valid_uuid}
       post(conn, ~p"/api/nodes", node: create_attrs_with_fixed_id)
 
       # Try to create second node with same id
@@ -103,8 +101,6 @@ defmodule EdgeAdminWeb.Nodes.NodeControllerTest do
 
       assert response = json_response(conn, 422)
       assert response["errors"] != %{}
-      # The error might be on "id" field or a general constraint error
-      # This depends on how Ecto translates the primary key constraint violation
     end
   end
 
@@ -115,9 +111,9 @@ defmodule EdgeAdminWeb.Nodes.NodeControllerTest do
       conn = get(conn, ~p"/api/nodes/#{node}")
 
       assert %{
-        "id" => id,
-        "vpn_hostname" => vpn_hostname
-      } = json_response(conn, 200)["data"]
+               "id" => id,
+               "vpn_hostname" => vpn_hostname
+             } = json_response(conn, 200)["data"]
 
       assert id == node.id
       assert vpn_hostname == "node-#{node.id}"
@@ -171,9 +167,9 @@ defmodule EdgeAdminWeb.Nodes.NodeControllerTest do
       conn = delete(conn, ~p"/api/nodes/#{node}")
       assert response(conn, 204)
 
-      assert_error_sent 404, fn ->
+      assert_error_sent(404, fn ->
         get(conn, ~p"/api/nodes/#{node}")
-      end
+      end)
     end
   end
 

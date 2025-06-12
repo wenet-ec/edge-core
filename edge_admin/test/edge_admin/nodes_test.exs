@@ -23,8 +23,7 @@ defmodule EdgeAdmin.NodesTest do
 
     test "create_node/1 with valid data creates a node" do
       valid_attrs = %{
-        # Use valid 32-char hex
-        id: "bc9ebeb196a44dfd953e899a61637577",
+        id: "bc9ebeb1-96a4-4dfd-953e-899a61637577",
         id_type: "machine_id",
         status: "online",
         vpn_ip: "100.64.0.1",
@@ -32,7 +31,6 @@ defmodule EdgeAdmin.NodesTest do
       }
 
       assert {:ok, %Node{} = node} = Nodes.create_node(valid_attrs)
-      # After normalization, it should be in UUID format
       assert node.id == "bc9ebeb1-96a4-4dfd-953e-899a61637577"
       assert node.id_type == "machine_id"
       assert node.status == "online"
@@ -43,11 +41,13 @@ defmodule EdgeAdmin.NodesTest do
     end
 
     test "create_node/1 with minimal data creates a node" do
-      hardware_id = "bc9ebeb196a44dfd953e899a61637577"
-      valid_attrs = %{id: hardware_id, id_type: "hardware_id"}
+      valid_attrs = %{
+        id: "01234567-8901-2345-6789-012345678901",
+        id_type: "hardware_id"
+      }
 
       assert {:ok, %Node{} = node} = Nodes.create_node(valid_attrs)
-      assert node.id == "bc9ebeb1-96a4-4dfd-953e-899a61637577"
+      assert node.id == "01234567-8901-2345-6789-012345678901"
       assert node.id_type == "hardware_id"
       assert is_nil(node.status)
       assert is_nil(node.vpn_ip)
@@ -56,36 +56,38 @@ defmodule EdgeAdmin.NodesTest do
       assert node.vpn_hostname == "node-#{node.id}"
     end
 
-    test "create_node/1 accepts hardware ID with dashes" do
-      hardware_id = "bc9ebeb1-96a4-4dfd-953e-899a61637577"
-      valid_attrs = %{id: hardware_id, id_type: "machine_id"}
-
-      assert {:ok, %Node{} = node} = Nodes.create_node(valid_attrs)
-      assert node.id == "bc9ebeb1-96a4-4dfd-953e-899a61637577"
-      assert node.id_type == "machine_id"
-    end
-
     test "create_node/1 validates id_type field" do
-      # Test valid id_types - use unique hardware IDs for each
+      # Test valid id_types - use unique UUIDs for each
       for id_type <- ["machine_id", "hardware_id", "temporary_id"] do
-        # Generate unique hardware ID for each iteration
-        hardware_id = :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
-        valid_attrs = %{id: hardware_id, id_type: id_type}
+        uuid = Ecto.UUID.generate()
+        valid_attrs = %{id: uuid, id_type: id_type}
         assert {:ok, %Node{}} = Nodes.create_node(valid_attrs)
       end
 
-      # Test invalid id_type with a fresh hardware ID
-      invalid_hardware_id = :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
-      invalid_attrs = %{id: invalid_hardware_id, id_type: "invalid_type"}
+      invalid_uuid = Ecto.UUID.generate()
+      invalid_attrs = %{id: invalid_uuid, id_type: "invalid_type"}
       assert {:error, %Ecto.Changeset{} = changeset} = Nodes.create_node(invalid_attrs)
       assert changeset.errors[:id_type] != nil
     end
 
-    test "create_node/1 rejects invalid hardware ID format" do
-      invalid_attrs = %{id: "invalid-hardware-id", id_type: "machine_id"}
+    test "create_node/1 rejects invalid UUID format" do
+      invalid_formats = [
+        "invalid-uuid",
+        # No dashes
+        "bc9ebeb196a44dfd953e899a61637577",
+        # Too short
+        "bc9ebeb1-96a4-4dfd-953e",
+        # Too long
+        "bc9ebeb1-96a4-4dfd-953e-899a61637577-extra",
+        "not-a-uuid-at-all"
+      ]
 
-      assert {:error, %Ecto.Changeset{} = changeset} = Nodes.create_node(invalid_attrs)
-      assert changeset.errors[:id] != nil
+      for invalid_id <- invalid_formats do
+        invalid_attrs = %{id: invalid_id, id_type: "machine_id"}
+        assert {:error, %Ecto.Changeset{} = changeset} = Nodes.create_node(invalid_attrs)
+        # Check that the error is on the id field
+        assert Keyword.has_key?(changeset.errors, :id)
+      end
     end
 
     test "create_node/1 with invalid data returns error changeset" do

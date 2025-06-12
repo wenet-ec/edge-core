@@ -6,21 +6,18 @@ defmodule EdgeAdmin.NodesFixtures do
   """
 
   @doc """
-  Generate a unique hardware ID in hex format (like real hardware IDs).
+  Generate a proper UUID format with dashes.
   """
-  def unique_hardware_id do
-    # Generate a 32-character hex string like real machine IDs
-    :crypto.strong_rand_bytes(16)
-    |> Base.encode16(case: :lower)
+  def unique_node_id do
+    Ecto.UUID.generate()
   end
 
   @doc """
   Generate a node.
   """
   def node_fixture(attrs \\ %{}) do
-    # Only use default hardware ID if one isn't provided
     default_attrs = %{
-      id: unique_hardware_id(),
+      id: unique_node_id(),
       id_type: "machine_id",
       status: "online",
       vpn_ip: "100.64.0.1",

@@ -145,6 +145,7 @@ services:
       - local_edge_agent_data:/app/data
       - local_edge_agent_tailscale_data:/var/lib/tailscale
       - /dev/net/tun:/dev/net/tun
+      - /:/host:rw
     env_file:
       - ./.envs/.edge_agent
     ports:
@@ -153,6 +154,8 @@ services:
       - NET_ADMIN
     sysctls:
       - net.ipv4.ip_forward=1
+    privileged: true
+    pid: "host"
     command: /start
   
   edge_agent_test:
@@ -175,6 +178,7 @@ services:
       - local_edge_agent_data:/app/data
       - local_edge_agent_tailscale_data:/var/lib/tailscale
       - /dev/net/tun:/dev/net/tun
+      - /:/host:rw
     env_file:
       - ./.envs/.edge_agent_test
     profiles:
@@ -183,4 +187,6 @@ services:
       - NET_ADMIN
     sysctls:
       - net.ipv4.ip_forward=1
+    privileged: true
+    pid: "host"
     command: mix test

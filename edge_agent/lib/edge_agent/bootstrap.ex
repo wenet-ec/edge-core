@@ -21,11 +21,11 @@ defmodule EdgeAgent.Bootstrap do
   Returns {:ok, :bootstrap_complete} on success or {:error, reason} on failure.
   """
   def run do
-    Logger.info("Starting EdgeAgent bootstrap sequence...")
+    Logger.info("Starting EdgeAgent bootstrap...")
 
     with {:ok, node_id, node_id_type} <- determine_node_identity(),
-         {:ok, _} <- store_node_identity(node_id, node_id_type),
-         {:ok, _} <- setup_vpn_connection(node_id) do
+         {:ok, normalized_node_id} <- store_node_identity(node_id, node_id_type),
+         {:ok, _} <- setup_vpn_connection(normalized_node_id) do
       Logger.info("Bootstrap sequence completed successfully")
       {:ok, :bootstrap_complete}
     else
@@ -73,17 +73,19 @@ defmodule EdgeAgent.Bootstrap do
   Sets up VPN connection using Tailscale with node-specific hostname.
 
   Reads VPN_URL and ENROLLMENT_KEY from environment variables.
-  Uses hostname pattern: node-{node_id}
+  Uses hostname pattern: node-{normalized_node_id}
 
   Returns {:ok, :vpn_connected} or {:error, reason}.
   """
-  def setup_vpn_connection(node_id) do
-    Logger.info("Setting up VPN connection for node: #{String.slice(node_id, 0, 8)}...")
+  def setup_vpn_connection(normalized_node_id) do
+    Logger.info(
+      "Setting up VPN connection for node: #{String.slice(normalized_node_id, 0, 8)}..."
+    )
 
     with {:ok, vpn_url} <- get_required_env("VPN_URL"),
          {:ok, enrollment_key} <- get_required_env("ENROLLMENT_KEY"),
          :ok <- start_tailscale_daemon(),
-         :ok <- connect_to_vpn(vpn_url, enrollment_key, node_id),
+         :ok <- connect_to_vpn(vpn_url, enrollment_key, normalized_node_id),
          {:ok, vpn_ip} <- validate_vpn_connection() do
       Logger.info("Successfully connected to VPN with IP: #{vpn_ip}")
       {:ok, :vpn_connected}
@@ -100,8 +102,9 @@ defmodule EdgeAgent.Bootstrap do
     Logger.info("Storing node identity: type=#{node_id_type}")
 
     case Settings.set_node_identity(node_id, node_id_type) do
-      {:ok, _} ->
-        {:ok, :stored}
+      {:ok, %{node_id: normalized_node_id}} ->
+        Logger.info("Stored normalized node ID: #{String.slice(normalized_node_id, 0, 8)}...")
+        {:ok, normalized_node_id}
 
       {:error, reason} ->
         {:error, "Failed to store node identity: #{reason}"}
@@ -131,9 +134,6 @@ defmodule EdgeAgent.Bootstrap do
       :ok ->
         Logger.info("Tailscale daemon started successfully")
         :ok
-
-      :error ->
-        {:error, "Failed to start Tailscale daemon"}
     end
   end
 

@@ -171,17 +171,24 @@ defmodule EdgeAgent.SettingsTest do
 
   describe "node configuration scenarios" do
     test "node identity workflow" do
-      # Bootstrap sets node identity
-      assert {:ok, _} = Settings.set("node_id", "abc123")
-      assert {:ok, _} = Settings.set("node_id_type", "machine_id")
+      # Bootstrap sets node identity (now normalized to UUID format)
+      assert {:ok, result} = Settings.set_node_identity("abc123", "machine_id")
 
-      # Later retrieval
-      assert Settings.get("node_id") == "abc123"
+      # Should be normalized to UUID format
+      assert result.node_id != "abc123"
+
+      assert String.match?(
+               result.node_id,
+               ~r/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
+             )
+
+      # Later retrieval returns normalized value
+      assert Settings.get("node_id") == result.node_id
       assert Settings.get("node_id_type") == "machine_id"
 
       # Check configuration state
       config = Settings.all()
-      assert config["node_id"] == "abc123"
+      assert config["node_id"] == result.node_id
       assert config["node_id_type"] == "machine_id"
     end
 
@@ -220,12 +227,62 @@ defmodule EdgeAgent.SettingsTest do
       assert Settings.get_node_id_type() == nil
     end
 
-    test "set_node_identity/2 sets both node ID and type" do
-      assert {:ok, result} = Settings.set_node_identity("abc123", "machine_id")
-      assert result == %{node_id: "abc123", node_id_type: "machine_id"}
+    test "set_node_identity/2 sets both node ID and type with valid UUID" do
+      valid_uuid = "bc9ebeb1-96a4-4dfd-953e-899a61637577"
+      assert {:ok, result} = Settings.set_node_identity(valid_uuid, "machine_id")
+      assert result == %{node_id: valid_uuid, node_id_type: "machine_id"}
 
-      assert Settings.get_node_id() == "abc123"
+      assert Settings.get_node_id() == valid_uuid
       assert Settings.get_node_id_type() == "machine_id"
+    end
+
+    test "set_node_identity/2 normalizes 32-char hex to UUID format" do
+      hex_32 = "bc9ebeb196a44dfd953e899a61637577"
+      expected_uuid = "bc9ebeb1-96a4-4dfd-953e-899a61637577"
+
+      assert {:ok, result} = Settings.set_node_identity(hex_32, "machine_id")
+      assert result == %{node_id: expected_uuid, node_id_type: "machine_id"}
+
+      assert Settings.get_node_id() == expected_uuid
+      assert Settings.get_node_id_type() == "machine_id"
+    end
+
+    test "set_node_identity/2 normalizes 32-char hex with mixed case" do
+      hex_mixed = "BC9EBEB196A44DFD953E899A61637577"
+      expected_uuid = "bc9ebeb1-96a4-4dfd-953e-899a61637577"
+
+      assert {:ok, result} = Settings.set_node_identity(hex_mixed, "hardware_id")
+      assert result == %{node_id: expected_uuid, node_id_type: "hardware_id"}
+
+      assert Settings.get_node_id() == expected_uuid
+    end
+
+    test "set_node_identity/2 handles UUID with mixed case" do
+      uuid_upper = "BC9EBEB1-96A4-4DFD-953E-899A61637577"
+      expected_uuid = "bc9ebeb1-96a4-4dfd-953e-899a61637577"
+
+      assert {:ok, result} = Settings.set_node_identity(uuid_upper, "temporary_id")
+      assert result == %{node_id: expected_uuid, node_id_type: "temporary_id"}
+    end
+
+    test "set_node_identity/2 validates node ID format" do
+      invalid_formats = [
+        "invalid-not-hex",
+        # too short
+        "12345",
+        # too long
+        "bc9ebeb196a44dfd953e899a61637577abc",
+        # invalid hex chars
+        "gggggggggggggggggggggggggggggggg",
+        # incomplete UUID
+        "bc9ebeb1-96a4-4dfd-953e",
+        ""
+      ]
+
+      for invalid_id <- invalid_formats do
+        assert {:error, "Invalid node ID format"} =
+                 Settings.set_node_identity(invalid_id, "machine_id")
+      end
     end
 
     test "set_node_identity/2 validates node ID" do
@@ -235,12 +292,16 @@ defmodule EdgeAgent.SettingsTest do
     end
 
     test "set_node_identity/2 validates node ID type" do
-      assert {:error, "Node ID type cannot be empty"} = Settings.set_node_identity("abc123", "")
-      assert {:error, "Node ID type cannot be empty"} = Settings.set_node_identity("abc123", nil)
+      valid_uuid = Ecto.UUID.generate()
+
+      assert {:error, "Node ID type cannot be empty"} = Settings.set_node_identity(valid_uuid, "")
+
+      assert {:error, "Node ID type cannot be empty"} =
+               Settings.set_node_identity(valid_uuid, nil)
 
       assert {:error,
               "Invalid node ID type. Must be one of: machine_id, hardware_id, temporary_id"} =
-               Settings.set_node_identity("abc123", "invalid_type")
+               Settings.set_node_identity(valid_uuid, "invalid_type")
     end
 
     test "set_node_identity/2 validates node ID length" do
@@ -251,10 +312,13 @@ defmodule EdgeAgent.SettingsTest do
     end
 
     test "get_node_identity/0 returns complete identity map" do
-      Settings.set_node_identity("test123", "hardware_id")
+      hex_id = "bc9ebeb196a44dfd953e899a61637577"
+      expected_uuid = "bc9ebeb1-96a4-4dfd-953e-899a61637577"
+
+      Settings.set_node_identity(hex_id, "hardware_id")
 
       assert Settings.get_node_identity() == %{
-               node_id: "test123",
+               node_id: expected_uuid,
                node_id_type: "hardware_id"
              }
     end
@@ -267,7 +331,8 @@ defmodule EdgeAgent.SettingsTest do
     end
 
     test "node_identity_configured?/0 returns true when both values are set" do
-      Settings.set_node_identity("abc123", "machine_id")
+      valid_uuid = Ecto.UUID.generate()
+      Settings.set_node_identity(valid_uuid, "machine_id")
 
       assert Settings.node_identity_configured?() == true
     end
@@ -284,7 +349,8 @@ defmodule EdgeAgent.SettingsTest do
     end
 
     test "clear_node_identity/0 removes both values" do
-      Settings.set_node_identity("abc123", "machine_id")
+      valid_uuid = Ecto.UUID.generate()
+      Settings.set_node_identity(valid_uuid, "machine_id")
       assert Settings.node_identity_configured?() == true
 
       assert {:ok, :cleared} = Settings.clear_node_identity()
@@ -293,16 +359,46 @@ defmodule EdgeAgent.SettingsTest do
     end
 
     test "set_node_identity/2 updates existing identity" do
-      Settings.set_node_identity("old_id", "temporary_id")
-      Settings.set_node_identity("new_id", "machine_id")
+      old_uuid = Ecto.UUID.generate()
+      new_hex = "bc9ebeb196a44dfd953e899a61637577"
+      expected_new_uuid = "bc9ebeb1-96a4-4dfd-953e-899a61637577"
+
+      Settings.set_node_identity(old_uuid, "temporary_id")
+      Settings.set_node_identity(new_hex, "machine_id")
 
       assert Settings.get_node_identity() == %{
-               node_id: "new_id",
+               node_id: expected_new_uuid,
                node_id_type: "machine_id"
              }
 
       # Verify no duplicate entries
       assert length(Settings.list_settings()) == 2
+    end
+
+    test "set_node_identity/2 works with various valid formats" do
+      test_cases = [
+        # 32-char lowercase hex
+        {"bc9ebeb196a44dfd953e899a61637577", "bc9ebeb1-96a4-4dfd-953e-899a61637577"},
+        # 32-char uppercase hex
+        {"BC9EBEB196A44DFD953E899A61637577", "bc9ebeb1-96a4-4dfd-953e-899a61637577"},
+        # 32-char mixed case hex
+        {"Bc9eBeb196A44dfD953e899a61637577", "bc9ebeb1-96a4-4dfd-953e-899a61637577"},
+        # Valid UUID lowercase
+        {"bc9ebeb1-96a4-4dfd-953e-899a61637577", "bc9ebeb1-96a4-4dfd-953e-899a61637577"},
+        # Valid UUID uppercase
+        {"BC9EBEB1-96A4-4DFD-953E-899A61637577", "bc9ebeb1-96a4-4dfd-953e-899a61637577"},
+        # Valid UUID mixed case
+        {"Bc9eBeb1-96A4-4dfD-953e-899a61637577", "bc9ebeb1-96a4-4dfd-953e-899a61637577"}
+      ]
+
+      for {input, expected} <- test_cases do
+        # Clear previous settings
+        Settings.clear_node_identity()
+
+        assert {:ok, result} = Settings.set_node_identity(input, "machine_id")
+        assert result.node_id == expected
+        assert Settings.get_node_id() == expected
+      end
     end
   end
 end

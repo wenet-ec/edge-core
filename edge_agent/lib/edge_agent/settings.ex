@@ -232,7 +232,7 @@ defmodule EdgeAgent.Settings do
   end
 
   @doc """
-  Sets the node identity (both ID and type).
+  Sets the node identity (both ID and type), normalizing the node_id to UUID format.
 
   ## Examples
 
@@ -245,9 +245,10 @@ defmodule EdgeAgent.Settings do
   """
   def set_node_identity(node_id, node_id_type) do
     with :ok <- validate_node_identity(node_id, node_id_type),
-         {:ok, _} <- set("node_id", node_id),
+         {:ok, normalized_id} <- normalize_node_id(node_id),
+         {:ok, _} <- set("node_id", normalized_id),
          {:ok, _} <- set("node_id_type", node_id_type) do
-      {:ok, %{node_id: node_id, node_id_type: node_id_type}}
+      {:ok, %{node_id: normalized_id, node_id_type: node_id_type}}
     else
       {:error, reason} -> {:error, reason}
       error -> error
@@ -323,6 +324,48 @@ defmodule EdgeAgent.Settings do
 
       true ->
         :ok
+    end
+  end
+
+  defp normalize_node_id(node_id) do
+    case Ecto.UUID.cast(node_id) do
+      {:ok, uuid} ->
+        # Already in proper format
+        {:ok, uuid}
+
+      :error ->
+        # Try to convert from 32-char hex to UUID format
+        case format_hex_to_uuid(node_id) do
+          {:ok, uuid} -> {:ok, uuid}
+          :error -> {:error, "Invalid node ID format"}
+        end
+    end
+  end
+
+  defp format_hex_to_uuid(hex_string) do
+    # Remove any existing dashes and convert to lowercase
+    clean_hex =
+      hex_string
+      |> String.replace("-", "")
+      |> String.downcase()
+
+    # Check if it's a valid 32-character hex string
+    if String.match?(clean_hex, ~r/^[a-f0-9]{32}$/) do
+      # Insert dashes at proper UUID positions: 8-4-4-4-12
+      uuid =
+        String.slice(clean_hex, 0, 8) <>
+          "-" <>
+          String.slice(clean_hex, 8, 4) <>
+          "-" <>
+          String.slice(clean_hex, 12, 4) <>
+          "-" <>
+          String.slice(clean_hex, 16, 4) <>
+          "-" <>
+          String.slice(clean_hex, 20, 12)
+
+      {:ok, uuid}
+    else
+      :error
     end
   end
 end

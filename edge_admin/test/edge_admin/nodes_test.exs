@@ -9,8 +9,8 @@ defmodule EdgeAdmin.NodesTest do
 
     import EdgeAdmin.NodesFixtures
 
-    # Updated invalid attrs - only hardware_id is required now
-    @invalid_attrs %{hardware_id: nil}
+    # Updated invalid attrs - only id is required now
+    @invalid_attrs %{id: nil}
 
     test "list_nodes/0 returns all nodes" do
       node = node_fixture()
@@ -24,14 +24,15 @@ defmodule EdgeAdmin.NodesTest do
 
     test "create_node/1 with valid data creates a node" do
       valid_attrs = %{
-        hardware_id: "some-hardware-id",
+        id: "bc9ebeb196a44dfd953e899a61637577",  # Use valid 32-char hex
         status: "online",
         vpn_ip: "100.64.0.1",
         last_seen_at: ~U[2025-06-08 08:12:00Z]
       }
 
       assert {:ok, %Node{} = node} = Nodes.create_node(valid_attrs)
-      assert node.hardware_id == "some-hardware-id"
+      # After normalization, it should be in UUID format
+      assert node.id == "bc9ebeb1-96a4-4dfd-953e-899a61637577"
       assert node.status == "online"
       assert node.vpn_ip == "100.64.0.1"
       assert node.last_seen_at == ~U[2025-06-08 08:12:00Z]
@@ -40,15 +41,31 @@ defmodule EdgeAdmin.NodesTest do
     end
 
     test "create_node/1 with minimal data creates a node" do
-      valid_attrs = %{hardware_id: "minimal-hardware-id"}
+      hardware_id = "bc9ebeb196a44dfd953e899a61637577"
+      valid_attrs = %{id: hardware_id}
 
       assert {:ok, %Node{} = node} = Nodes.create_node(valid_attrs)
-      assert node.hardware_id == "minimal-hardware-id"
+      assert node.id == "bc9ebeb1-96a4-4dfd-953e-899a61637577"
       assert is_nil(node.status)
       assert is_nil(node.vpn_ip)
       assert is_nil(node.last_seen_at)
       # Virtual field should still work
       assert node.vpn_hostname == "node-#{node.id}"
+    end
+
+    test "create_node/1 accepts hardware ID with dashes" do
+      hardware_id = "bc9ebeb1-96a4-4dfd-953e-899a61637577"
+      valid_attrs = %{id: hardware_id}
+
+      assert {:ok, %Node{} = node} = Nodes.create_node(valid_attrs)
+      assert node.id == "bc9ebeb1-96a4-4dfd-953e-899a61637577"
+    end
+
+    test "create_node/1 rejects invalid hardware ID format" do
+      invalid_attrs = %{id: "invalid-hardware-id"}
+
+      assert {:error, %Ecto.Changeset{} = changeset} = Nodes.create_node(invalid_attrs)
+      assert changeset.errors[:id] != nil
     end
 
     test "create_node/1 with invalid data returns error changeset" do
@@ -59,18 +76,18 @@ defmodule EdgeAdmin.NodesTest do
       node = node_fixture()
       update_attrs = %{
         status: "offline",
-        hardware_id: "updated-hardware-id",
         vpn_ip: "100.64.0.2",
         last_seen_at: ~U[2025-06-09 08:12:00Z]
       }
 
       assert {:ok, %Node{} = updated_node} = Nodes.update_node(node, update_attrs)
       assert updated_node.status == "offline"
-      assert updated_node.hardware_id == "updated-hardware-id"
       assert updated_node.vpn_ip == "100.64.0.2"
       assert updated_node.last_seen_at == ~U[2025-06-09 08:12:00Z]
       # Virtual field should remain consistent
       assert updated_node.vpn_hostname == "node-#{updated_node.id}"
+      # ID should remain the same
+      assert updated_node.id == node.id
     end
 
     test "update_node/2 with invalid data returns error changeset" do
@@ -98,6 +115,18 @@ defmodule EdgeAdmin.NodesTest do
     test "vpn_hostname/1 returns nil for node without ID" do
       node = %Node{id: nil}
       assert Node.vpn_hostname(node) == nil
+    end
+
+    test "create_node/1 with duplicate id returns error changeset" do
+      # Use valid hardware ID format
+      id = "bc9ebeb196a44dfd953e899a61637577"
+      assert {:ok, %Node{}} = Nodes.create_node(%{id: id})
+
+      # Try to create second node with same id
+      assert {:error, %Ecto.Changeset{} = changeset} = Nodes.create_node(%{id: id})
+
+      # Should have a primary key constraint error
+      assert changeset.errors[:id] != nil or changeset.action == :insert
     end
   end
 end

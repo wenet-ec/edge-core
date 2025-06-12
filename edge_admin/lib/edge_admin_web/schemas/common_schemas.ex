@@ -27,7 +27,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
       required: [:errors],
       example: %{
         errors: %{
-          hardware_id: ["can't be blank", "has already been taken"]
+          id: ["can't be blank", "has already been taken"]
         }
       }
     })

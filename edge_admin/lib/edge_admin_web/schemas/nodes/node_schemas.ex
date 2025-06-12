@@ -18,12 +18,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         id: %Schema{
           type: :string,
           format: :uuid,
-          description: "Unique node identifier"
-        },
-        hardware_id: %Schema{
-          type: :string,
-          description: "Hardware identifier (MAC address hash or hostname+timestamp+random)",
-          example: "hw-123-abc-456"
+          description: "Unique node identifier (hardware ID)"
         },
         vpn_ip: %Schema{
           type: :string,
@@ -50,10 +45,9 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           description: "Current node status"
         }
       },
-      required: [:id, :hardware_id],
+      required: [:id],
       example: %{
         id: "01234567-89ab-cdef-0123-456789abcdef",
-        hardware_id: "hw-123-abc-456",
         vpn_ip: "100.64.0.1",
         vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef",
         last_seen_at: "2025-06-09T08:20:00Z",
@@ -82,7 +76,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         data: [
           %{
             id: "01234567-89ab-cdef-0123-456789abcdef",
-            hardware_id: "hw-123-abc-456",
             vpn_ip: "100.64.0.1",
             vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef",
             last_seen_at: "2025-06-09T08:20:00Z",
@@ -108,7 +101,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
       example: %{
         data: %{
           id: "01234567-89ab-cdef-0123-456789abcdef",
-          hardware_id: "hw-123-abc-456",
           vpn_ip: "100.64.0.1",
           vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef",
           last_seen_at: "2025-06-09T08:20:00Z",
@@ -130,9 +122,9 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         node: %Schema{
           type: :object,
           properties: %{
-            hardware_id: %Schema{
+            id: %Schema{
               type: :string,
-              description: "Hardware identifier (required)",
+              description: "Hardware identifier (required) - used as primary key",
               example: "hw-123-abc-456"
             },
             vpn_ip: %Schema{
@@ -154,13 +146,13 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
               description: "Node status (optional)"
             }
           },
-          required: [:hardware_id]
+          required: [:id]
         }
       },
       required: [:node],
       example: %{
         node: %{
-          hardware_id: "hw-123-abc-456",
+          id: "hw-123-abc-456",
           vpn_ip: "100.64.0.1",
           status: "online"
         }
@@ -180,11 +172,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         node: %Schema{
           type: :object,
           properties: %{
-            hardware_id: %Schema{
-              type: :string,
-              description: "Hardware identifier",
-              example: "hw-123-abc-456"
-            },
             vpn_ip: %Schema{
               type: :string,
               nullable: true,

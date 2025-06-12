@@ -6,9 +6,13 @@ defmodule EdgeAdmin.NodesFixtures do
   """
 
   @doc """
-  Generate a unique node hardware_id.
+  Generate a unique hardware ID in hex format (like real hardware IDs).
   """
-  def unique_node_hardware_id, do: "hardware-id-#{System.unique_integer([:positive])}"
+  def unique_hardware_id do
+    # Generate a 32-character hex string like real machine IDs
+    :crypto.strong_rand_bytes(16)
+    |> Base.encode16(case: :lower)
+  end
 
   @doc """
   Generate a node.
@@ -17,7 +21,7 @@ defmodule EdgeAdmin.NodesFixtures do
     {:ok, node} =
       attrs
       |> Enum.into(%{
-        hardware_id: unique_node_hardware_id(),
+        id: Map.get(attrs, :id, unique_hardware_id()),
         # Optional fields with sensible defaults
         last_seen_at: ~U[2025-06-08 08:12:00Z],
         status: "online",
@@ -35,7 +39,7 @@ defmodule EdgeAdmin.NodesFixtures do
     {:ok, node} =
       attrs
       |> Enum.into(%{
-        hardware_id: unique_node_hardware_id()
+        id: Map.get(attrs, :id, unique_hardware_id())
       })
       |> EdgeAdmin.Nodes.create_node()
 

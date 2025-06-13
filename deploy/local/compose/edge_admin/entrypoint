@@ -119,6 +119,7 @@ setup_vpn_connection() {
 
 # Main execution flow
 echo "Starting Edge Admin setup..."
+sleep 3
 
 # Ensure both edge-admins and edge-nodes users exist
 ensure_vpn_users

@@ -5,15 +5,19 @@ defmodule EdgeAgent.Bootstrap do
 
   Handles the complete agent startup sequence:
   1. Determine node identity (machine_id, hardware_id, or temporary_id)
-  2. Connect to VPN using Tailscale
-  3. Register with admin (future step)
-  4. Store configuration (future step)
+  2. Store node identity in settings
+  3. Connect to VPN using node-specific hostname (node-{uuid})
+  4. Connect to EdgeAdmin via get-or-create pattern
+  5. Store node settings from EdgeAdmin
+
+  Returns {:ok, :bootstrap_complete} on success or {:error, reason} on failure.
   """
 
   require Logger
 
   alias EdgeAgent.Settings
   alias EdgeAgent.VPN.Tailscale
+  alias EdgeAgent.AdminClient
 
   @doc """
   Runs the complete bootstrap sequence.
@@ -24,8 +28,10 @@ defmodule EdgeAgent.Bootstrap do
     Logger.info("Starting EdgeAgent bootstrap...")
 
     with {:ok, node_id, node_id_type} <- determine_node_identity(),
-         {:ok, normalized_node_id} <- store_node_identity(node_id, node_id_type),
-         {:ok, _} <- setup_vpn_connection(normalized_node_id) do
+         {:ok, _} <- store_node_identity(node_id, node_id_type),
+         settings <- Settings.all(),
+         :ok <- setup_vpn_connection(settings),
+         {:ok, _} <- connect_to_admin(settings) do
       Logger.info("Bootstrap sequence completed successfully")
       {:ok, :bootstrap_complete}
     else
@@ -77,18 +83,17 @@ defmodule EdgeAgent.Bootstrap do
 
   Returns {:ok, :vpn_connected} or {:error, reason}.
   """
-  def setup_vpn_connection(normalized_node_id) do
-    Logger.info(
-      "Setting up VPN connection for node: #{String.slice(normalized_node_id, 0, 8)}..."
-    )
+  def setup_vpn_connection(settings) do
+    node_id = Map.get(settings, "node_id")
+    Logger.info("Setting up VPN connection for node: #{String.slice(node_id, 0, 8)}...")
 
     with {:ok, vpn_url} <- get_required_env("VPN_URL"),
          {:ok, enrollment_key} <- get_required_env("ENROLLMENT_KEY"),
          :ok <- start_tailscale_daemon(),
-         :ok <- connect_to_vpn(vpn_url, enrollment_key, normalized_node_id),
+         :ok <- connect_to_vpn(vpn_url, enrollment_key, node_id),
          {:ok, vpn_ip} <- validate_vpn_connection() do
       Logger.info("Successfully connected to VPN with IP: #{vpn_ip}")
-      {:ok, :vpn_connected}
+      :ok
     else
       {:error, reason} = error ->
         Logger.error("VPN connection failed: #{inspect(reason)}")
@@ -96,7 +101,30 @@ defmodule EdgeAgent.Bootstrap do
     end
   end
 
+  def connect_to_admin(settings) do
+    node_id = Map.get(settings, "node_id")
+    node_id_type = Map.get(settings, "node_id_type")
+
+    Logger.info("Connecting to admin for node: #{String.slice(node_id, 0, 8)}...")
+
+    case AdminClient.get_node(node_id) do
+      {:ok, node_data} ->
+        Logger.info("Node already registered with admin")
+        store_node_settings_from_admin(node_data)
+
+      {:error, :not_found} ->
+        Logger.info("Node not found, registering with admin...")
+        register_new_node(node_id, node_id_type)
+
+      {:error, reason} ->
+        Logger.error("Failed to connect to admin: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
   # PRIVATE FUNCTIONS
+
+  # Node Identity Helpers
 
   defp store_node_identity(node_id, node_id_type) do
     Logger.info("Storing node identity: type=#{node_id_type}")
@@ -108,59 +136,6 @@ defmodule EdgeAgent.Bootstrap do
 
       {:error, reason} ->
         {:error, "Failed to store node identity: #{reason}"}
-    end
-  end
-
-  # VPN Connection Helpers
-
-  defp get_required_env(env_var) do
-    case System.get_env(env_var) do
-      nil ->
-        {:error, "Missing required environment variable: #{env_var}"}
-
-      "" ->
-        {:error, "Empty environment variable: #{env_var}"}
-
-      value ->
-        Logger.debug("Found environment variable #{env_var}")
-        {:ok, value}
-    end
-  end
-
-  defp start_tailscale_daemon do
-    Logger.info("Starting Tailscale daemon...")
-
-    case Tailscale.start_daemon() do
-      :ok ->
-        Logger.info("Tailscale daemon started successfully")
-        :ok
-    end
-  end
-
-  defp connect_to_vpn(vpn_url, enrollment_key, node_id) do
-    hostname = "node-#{node_id}"
-    Logger.info("Connecting to VPN with hostname: #{hostname}")
-
-    case Tailscale.connect(vpn_url, enrollment_key, hostname) do
-      :ok ->
-        Logger.info("VPN connection established")
-        :ok
-
-      :error ->
-        {:error, "Failed to connect to VPN"}
-    end
-  end
-
-  defp validate_vpn_connection do
-    Logger.info("Validating VPN connection...")
-
-    case Tailscale.get_vpn_ip() do
-      {:ok, vpn_ip} ->
-        Logger.info("VPN connection validated with IP: #{vpn_ip}")
-        {:ok, vpn_ip}
-
-      {:error, _} ->
-        {:error, "VPN connection validation failed - no IP assigned"}
     end
   end
 
@@ -249,6 +224,124 @@ defmodule EdgeAgent.Bootstrap do
       # Default
       true ->
         false
+    end
+  end
+
+  # VPN Connection Helpers
+
+  defp get_required_env(env_var) do
+    case System.get_env(env_var) do
+      nil ->
+        {:error, "Missing required environment variable: #{env_var}"}
+
+      "" ->
+        {:error, "Empty environment variable: #{env_var}"}
+
+      value ->
+        Logger.debug("Found environment variable #{env_var}")
+        {:ok, value}
+    end
+  end
+
+  defp start_tailscale_daemon do
+    Logger.info("Starting Tailscale daemon...")
+
+    case Tailscale.start_daemon() do
+      :ok ->
+        Logger.info("Tailscale daemon started successfully")
+        :ok
+    end
+  end
+
+  defp connect_to_vpn(vpn_url, enrollment_key, node_id) do
+    hostname = "node-#{node_id}"
+    Logger.info("Connecting to VPN with hostname: #{hostname}")
+
+    case Tailscale.connect(vpn_url, enrollment_key, hostname) do
+      :ok ->
+        Logger.info("VPN connection established")
+        :ok
+
+      :error ->
+        {:error, "Failed to connect to VPN"}
+    end
+  end
+
+  defp validate_vpn_connection do
+    Logger.info("Validating VPN connection...")
+
+    case Tailscale.get_vpn_ip() do
+      {:ok, vpn_ip} ->
+        Logger.info("VPN connection validated with IP: #{vpn_ip}")
+        {:ok, vpn_ip}
+
+      {:error, _} ->
+        {:error, "VPN connection validation failed - no IP assigned"}
+    end
+  end
+
+  # Admin Connection Helpers
+
+  defp register_new_node(node_id, node_id_type) do
+    node_params = %{
+      id: node_id,
+      id_type: node_id_type,
+      status: "online"
+    }
+
+    case AdminClient.create_node(node_params) do
+      {:ok, node_data} ->
+        Logger.info("Successfully registered new node with admin")
+        store_node_settings_from_admin(node_data)
+
+      {:error, reason} ->
+        Logger.error("Failed to register node with admin: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+  defp store_node_settings_from_admin(node_data) do
+    Logger.info("Storing admin response data...")
+
+    # Define the mapping from node_data keys to config keys
+    key_mapping = %{
+      "id" => "node_id",
+      "id_type" => "node_id_type",
+      "vpn_ip" => "node_vpn_ip",
+      "vpn_hostname" => "node_vpn_hostname",
+      "status" => "node_status",
+      "last_seen_at" => "node_last_seen_at"
+    }
+
+    # Filter out nil values and store only what we have
+    storage_results =
+      node_data
+      |> Enum.filter(fn {_key, value} -> not is_nil(value) end)
+      |> Enum.filter(fn {key, _value} -> Map.has_key?(key_mapping, key) end)
+      |> Enum.map(fn {node_key, value} ->
+        config_key = Map.get(key_mapping, node_key)
+
+        case Settings.set(config_key, value) do
+          {:ok, _} ->
+            Logger.debug("Stored #{config_key}: #{inspect(value)}")
+            :ok
+
+          {:error, reason} ->
+            Logger.error("Failed to store #{config_key}: #{inspect(reason)}")
+            {:error, {config_key, reason}}
+        end
+      end)
+
+    # Check if any storage operations failed
+    case Enum.find(storage_results, fn result -> match?({:error, _}, result) end) do
+      nil ->
+        stored_count = length(storage_results)
+        Logger.info("Successfully stored #{stored_count} admin configuration values")
+        {:ok, node_data}
+
+      {:error, {key, reason}} ->
+        Logger.error("Failed to store #{key}: #{inspect(reason)}")
+        {:error, reason}
     end
   end
 end

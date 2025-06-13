@@ -9,6 +9,9 @@ defmodule EdgeAdmin.Nodes do
 
   alias EdgeAdmin.Nodes.Node
 
+  alias EdgeAdmin.VPN.HeadscaleClient
+  require Logger
+
   @doc """
   Returns the list of nodes.
 
@@ -113,5 +116,38 @@ defmodule EdgeAdmin.Nodes do
   """
   def change_node(%Node{} = node, attrs \\ %{}) do
     Node.changeset(node, attrs)
+  end
+
+  def fetch_vpn_info(%Node{} = node) do
+    vpn_hostname = Node.vpn_hostname(node)
+
+    case HeadscaleClient.get_node_by_hostname(vpn_hostname) do
+      {:ok, vpn_info} ->
+        # Update node with VPN info
+        update_node(node, vpn_info)
+
+      {:error, reason} ->
+        Logger.warning("Failed to get VPN info for #{vpn_hostname}: #{inspect(reason)}")
+        # Return node unchanged if VPN lookup fails
+        {:ok, node}
+    end
+  end
+
+  def create_node_with_vpn_info(attrs \\ %{}) do
+    with {:ok, node} <- create_node(attrs),
+         {:ok, node_with_vpn_info} <- fetch_vpn_info(node) do
+      {:ok, node_with_vpn_info}
+    else
+      error -> error
+    end
+  end
+
+  def get_node_with_vpn_info!(id) do
+    node = get_node!(id)
+
+    case fetch_vpn_info(node) do
+      {:ok, node_with_vpn_info} -> node_with_vpn_info
+      {:error, _reason} -> node
+    end
   end
 end

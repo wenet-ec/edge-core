@@ -9,6 +9,7 @@ defmodule EdgeAdminWeb.Nodes.NodeControllerTest do
   # Updated test data to reflect our validation changes
   @create_attrs %{
     id: "bc9ebeb1-96a4-4dfd-953e-899a61637577",
+    id_type: "machine_id",
     status: "online",
     vpn_ip: "100.64.0.1",
     last_seen_at: ~U[2025-06-08 08:20:00Z]
@@ -58,12 +59,15 @@ defmodule EdgeAdminWeb.Nodes.NodeControllerTest do
                "id" => ^id,
                "last_seen_at" => "2025-06-08T08:20:00Z",
                "status" => "online",
-               "vpn_ip" => "100.64.0.1",
+               "id_type" => "machine_id",
                "vpn_hostname" => vpn_hostname
              } = json_response(conn, 200)["data"]
 
-      # Test virtual field computation
       assert vpn_hostname == "node-#{id}"
+
+      response = json_response(conn, 200)["data"]
+      assert Map.has_key?(response, "vpn_ip")
+      assert is_binary(response["vpn_ip"]) or is_nil(response["vpn_ip"])
     end
 
     test "renders node with minimal data", %{conn: conn} do

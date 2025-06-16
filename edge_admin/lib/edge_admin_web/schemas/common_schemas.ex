@@ -84,4 +84,104 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
       }
     })
   end
+
+  defmodule PaginationMeta do
+    @moduledoc false
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "Pagination Metadata",
+      description: "Pagination information for paginated responses",
+      type: :object,
+      properties: %{
+        page: %Schema{type: :integer, description: "Current page number", example: 1},
+        page_size: %Schema{type: :integer, description: "Items per page", example: 20},
+        total: %Schema{type: :integer, description: "Total number of items", example: 150},
+        total_pages: %Schema{type: :integer, description: "Total number of pages", example: 8},
+        has_next: %Schema{
+          type: :boolean,
+          description: "Whether there's a next page",
+          example: true
+        },
+        has_prev: %Schema{
+          type: :boolean,
+          description: "Whether there's a previous page",
+          example: false
+        }
+      },
+      required: [:page, :page_size, :total, :total_pages, :has_next, :has_prev]
+    })
+  end
+
+  defmodule FilteringSortingMeta do
+    @moduledoc false
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "Filtering and Sorting Metadata",
+      description: "Information about applied filters and sorting",
+      type: :object,
+      properties: %{
+        filters: %Schema{
+          type: :object,
+          description: "Applied filters",
+          additionalProperties: %Schema{type: :string},
+          example: %{status: "online", id_type: "machine_id"}
+        },
+        sort: %Schema{
+          type: :array,
+          items: %Schema{type: :string},
+          description: "Applied sort order",
+          example: ["status:desc", "inserted_at:asc"]
+        }
+      }
+    })
+  end
+
+  @doc """
+  Creates a paginated response schema for any data type.
+
+  ## Parameters
+  - `data_schema` - The schema for individual items
+  - `title` - Title for the response schema
+  - `description` - Description for the response schema
+
+  ## Example
+      defmodule NodePaginatedResponse do
+        require OpenApiSpex
+
+        OpenApiSpex.schema(
+          CommonSchemas.paginated_response(
+            NodeResponse,
+            "Node Paginated Response",
+            "Paginated list of nodes with metadata"
+          )
+        )
+      end
+  """
+  def paginated_response(data_schema, title, description) do
+    %{
+      title: title,
+      description: description,
+      type: :object,
+      properties: %{
+        data: %Schema{
+          type: :array,
+          items: data_schema
+        },
+        pagination: PaginationMeta,
+        filters: %Schema{
+          type: :object,
+          description: "Applied filters",
+          additionalProperties: %Schema{type: :string}
+        },
+        sort: %Schema{
+          type: :array,
+          items: %Schema{type: :string},
+          description: "Applied sort order"
+        }
+      },
+      required: [:data, :pagination]
+    }
+  end
 end

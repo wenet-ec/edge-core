@@ -6,9 +6,8 @@ defmodule EdgeAdmin.Nodes do
 
   import Ecto.Query, warn: false
   alias EdgeAdmin.Repo
-
   alias EdgeAdmin.Nodes.Node
-
+  alias EdgeAdmin.FilteringPagination
   alias EdgeAdmin.VPN.HeadscaleClient
   require Logger
 
@@ -149,5 +148,72 @@ defmodule EdgeAdmin.Nodes do
       {:ok, node_with_vpn_info} -> node_with_vpn_info
       {:error, _reason} -> node
     end
+  end
+
+  @doc """
+  Applies filtering and pagination to nodes with predefined field configurations.
+
+  This function encapsulates the filtering/pagination logic for nodes including:
+  - Which fields can be filtered
+  - Which fields can be sorted
+  - Default sorting behavior
+  - Any node-specific processing
+
+  ## Examples
+
+      iex> apply_filtering_pagination(%{"status" => "online", "page" => "2"})
+      %FilteringPagination{data: [...], page: 2, ...}
+
+      iex> apply_filtering_pagination(%{"sort" => "status:desc,inserted_at:asc"})
+      %FilteringPagination{data: [...], sort: [{:status, :desc}, {:inserted_at, :asc}], ...}
+
+  """
+  def apply_filtering_pagination(params \\ %{}) do
+    FilteringPagination.paginate(
+      Node,
+      params,
+      filterable_fields: [:status, :id_type, :vpn_ip],
+      sortable_fields: [:inserted_at, :updated_at, :status, :vpn_ip, :last_seen_at],
+      default_sort: "inserted_at:desc",
+      repo: Repo
+    )
+  end
+
+  @doc """
+  Returns a paginated list of nodes with filtering, sorting, and virtual fields populated.
+
+  This is the high-level function that combines filtering/pagination with node-specific
+  enhancements like populating virtual fields.
+
+  ## Parameters
+  - `params` - Map of query parameters (page, page_size, sort, filters)
+
+  ## Supported Query Parameters
+  - `page` - Page number (default: 1)
+  - `page_size` - Items per page (default: 20, max: 100)
+  - `sort` - Sort specification: "field1:dir1,field2:dir2"
+
+  ## Filterable Fields
+  - `status` - Node status (online, offline, unknown)
+  - `id_type` - Node ID type (machine_id, hardware_id, temporary_id)
+  - `vpn_ip` - VPN IP address (supports wildcards)
+
+  ## Sortable Fields
+  - `inserted_at`, `updated_at`, `status`, `vpn_ip`, `last_seen_at`
+
+  ## Examples
+
+      iex> list_nodes_with_filtering_pagination(%{"page" => "2", "status" => "online"})
+      %FilteringPagination{data: [%Node{vpn_hostname: "node-..."}, ...], ...}
+
+  """
+  def list_nodes_with_filtering_pagination(params \\ %{}) do
+    page_result = apply_filtering_pagination(params)
+
+    # Populate virtual fields for all nodes in the page
+    nodes_with_virtual_fields = Enum.map(page_result.data, &Node.populate_virtual_fields/1)
+
+    # Return the page result with enhanced nodes
+    %{page_result | data: nodes_with_virtual_fields}
   end
 end

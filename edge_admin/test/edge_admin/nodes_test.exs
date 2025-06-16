@@ -151,4 +151,118 @@ defmodule EdgeAdmin.NodesTest do
       assert Node.persistent?(unknown_node) == false
     end
   end
+
+  describe "filtering and pagination integration" do
+    test "apply_filtering_pagination/1 uses correct field configurations" do
+      # Create some test nodes
+      {:ok, _node1} =
+        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "machine_id", status: "online"})
+
+      {:ok, _node2} =
+        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "hardware_id", status: "offline"})
+
+      # Test that it returns a FilteringPagination struct
+      result = Nodes.apply_filtering_pagination(%{})
+      assert %EdgeAdmin.FilteringPagination{} = result
+      assert length(result.data) == 2
+    end
+
+    test "apply_filtering_pagination/1 respects filterable fields configuration" do
+      {:ok, _node1} =
+        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "machine_id", status: "online"})
+
+      {:ok, _node2} =
+        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "hardware_id", status: "offline"})
+
+      # Test status filtering (should work - it's in filterable_fields)
+      result = Nodes.apply_filtering_pagination(%{"status" => "online"})
+      assert length(result.data) == 1
+      assert hd(result.data).status == "online"
+
+      # Test that non-filterable fields are ignored
+      result = Nodes.apply_filtering_pagination(%{"non_existent_field" => "value"})
+      assert result.filters == %{}
+      # No filtering applied
+      assert length(result.data) == 2
+    end
+
+    test "apply_filtering_pagination/1 respects sortable fields configuration" do
+      {:ok, _node1} =
+        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "machine_id", status: "online"})
+
+      {:ok, _node2} =
+        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "hardware_id", status: "offline"})
+
+      # Test valid sortable field
+      result = Nodes.apply_filtering_pagination(%{"sort" => "status:desc"})
+      assert result.sort == [{:status, :desc}]
+
+      # Test that non-sortable fields are ignored
+      result = Nodes.apply_filtering_pagination(%{"sort" => "non_existent_field:asc"})
+      assert result.sort == []
+    end
+
+    test "apply_filtering_pagination/1 uses correct default sort" do
+      {:ok, _node} = Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "machine_id"})
+
+      result = Nodes.apply_filtering_pagination(%{})
+      # Should use default sort "inserted_at:desc"
+      assert result.sort == [{:inserted_at, :desc}]
+    end
+  end
+
+  describe "list_nodes_with_filtering_pagination/1" do
+    test "populates virtual fields for paginated results" do
+      {:ok, _node1} = Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "machine_id"})
+      {:ok, _node2} = Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "hardware_id"})
+
+      result = Nodes.list_nodes_with_filtering_pagination(%{})
+
+      assert %EdgeAdmin.FilteringPagination{} = result
+      assert length(result.data) == 2
+
+      # Test that virtual fields are populated
+      Enum.each(result.data, fn node ->
+        assert node.vpn_hostname == "node-#{node.id}"
+      end)
+    end
+
+    test "combines filtering and virtual field population" do
+      {:ok, _node1} =
+        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "machine_id", status: "online"})
+
+      {:ok, _node2} =
+        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "hardware_id", status: "offline"})
+
+      result = Nodes.list_nodes_with_filtering_pagination(%{"status" => "online"})
+
+      assert length(result.data) == 1
+      node = hd(result.data)
+      assert node.status == "online"
+      # Virtual field populated
+      assert node.vpn_hostname == "node-#{node.id}"
+    end
+
+    test "handles empty results" do
+      result = Nodes.list_nodes_with_filtering_pagination(%{"status" => "nonexistent"})
+
+      assert result.data == []
+      assert result.total == 0
+    end
+
+    test "preserves pagination metadata" do
+      # Create 3 nodes
+      for _ <- 1..3 do
+        {:ok, _node} = Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "machine_id"})
+      end
+
+      result = Nodes.list_nodes_with_filtering_pagination(%{"page_size" => "2"})
+
+      assert result.page_size == 2
+      assert result.total == 3
+      assert result.total_pages == 2
+      assert result.has_next == true
+      assert length(result.data) == 2
+    end
+  end
 end

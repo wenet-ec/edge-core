@@ -14,14 +14,56 @@ defmodule EdgeAdminWeb.Nodes.NodeController do
 
   operation :index,
     summary: "List all nodes",
-    description: "Returns a list of all registered edge nodes",
+    description:
+      "Returns a paginated list of all registered edge nodes with filtering and sorting",
+    parameters: [
+      page: [
+        in: :query,
+        description: "Page number",
+        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, default: 1},
+        example: 1
+      ],
+      page_size: [
+        in: :query,
+        description: "Items per page",
+        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, maximum: 100, default: 20},
+        example: 20
+      ],
+      sort: [
+        in: :query,
+        description: "Sort specification: field1:dir1,field2:dir2",
+        schema: %OpenApiSpex.Schema{type: :string},
+        example: "status:desc,inserted_at:asc"
+      ],
+      status: [
+        in: :query,
+        description: "Filter by node status",
+        schema: %OpenApiSpex.Schema{type: :string, enum: ["online", "offline", "unknown"]},
+        example: "online"
+      ],
+      id_type: [
+        in: :query,
+        description: "Filter by node ID type",
+        schema: %OpenApiSpex.Schema{
+          type: :string,
+          enum: ["machine_id", "hardware_id", "temporary_id"]
+        },
+        example: "machine_id"
+      ],
+      vpn_ip: [
+        in: :query,
+        description: "Filter by VPN IP (supports wildcards with *)",
+        schema: %OpenApiSpex.Schema{type: :string},
+        example: "100.64.*"
+      ]
+    ],
     responses: %{
-      200 => {"List of nodes", "application/json", NodeSchemas.NodeListResponse}
+      200 => {"Paginated list of nodes", "application/json", NodeSchemas.NodePaginatedResponse}
     }
 
-  def index(conn, _params) do
-    nodes = Nodes.list_nodes()
-    render(conn, :index, nodes: nodes)
+  def index(conn, params) do
+    page_result = Nodes.list_nodes_with_filtering_pagination(params)
+    render(conn, :index, page_result: page_result)
   end
 
   operation :create,

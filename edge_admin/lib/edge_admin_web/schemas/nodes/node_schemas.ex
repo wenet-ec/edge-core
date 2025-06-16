@@ -5,6 +5,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
   """
 
   alias OpenApiSpex.Schema
+  alias EdgeAdminWeb.Schemas.CommonSchemas
 
   defmodule NodeResponse do
     @moduledoc false
@@ -91,6 +92,19 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         ]
       }
     })
+  end
+
+  defmodule NodePaginatedResponse do
+    @moduledoc false
+    require OpenApiSpex
+
+    OpenApiSpex.schema(
+      CommonSchemas.paginated_response(
+        NodeResponse,
+        "Node Paginated Response",
+        "Paginated list of nodes with filtering and sorting metadata"
+      )
+    )
   end
 
   defmodule NodeSingleResponse do

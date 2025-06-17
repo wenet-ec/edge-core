@@ -164,19 +164,6 @@ defmodule EdgeAdminWeb.Nodes.NodeControllerTest do
     end
   end
 
-  describe "delete node" do
-    setup [:create_node]
-
-    test "deletes chosen node", %{conn: conn, node: node} do
-      conn = delete(conn, ~p"/api/nodes/#{node}")
-      assert response(conn, 204)
-
-      assert_error_sent(404, fn ->
-        get(conn, ~p"/api/nodes/#{node}")
-      end)
-    end
-  end
-
   defp create_node(_) do
     node = node_fixture()
     %{node: node}

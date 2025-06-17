@@ -130,28 +130,4 @@ defmodule EdgeAdminWeb.Nodes.NodeController do
       render(conn, :show, node: node)
     end
   end
-
-  operation :delete,
-    summary: "Delete a node",
-    description: "Remove a node from the system",
-    parameters: [
-      id: [
-        in: :path,
-        description: "Node ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid},
-        example: "01234567-89ab-cdef-0123-456789abcdef"
-      ]
-    ],
-    responses: %{
-      204 => {"Node deleted successfully", "application/json", nil},
-      404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse}
-    }
-
-  def delete(conn, %{"id" => id}) do
-    node = Nodes.get_node!(id)
-
-    with {:ok, %Node{}} <- Nodes.delete_node(node) do
-      send_resp(conn, :no_content, "")
-    end
-  end
 end

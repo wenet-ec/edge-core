@@ -58,7 +58,7 @@ defmodule EdgeAdminWeb.Router do
     end
 
     scope "/", Nodes do
-      resources "/nodes", NodeController, only: [:index, :show, :create, :update, :delete]
+      resources "/nodes", NodeController, only: [:index, :show, :create, :update]
       resources "/enrollment-keys", EnrollmentKeyController, only: [:create]
     end
 

@@ -16,7 +16,7 @@ defmodule EdgeAgent.Bootstrap do
   require Logger
 
   alias EdgeAgent.Settings
-  alias EdgeAgent.VPN.Tailscale
+  alias EdgeAgent.Tailscale
   alias EdgeAgent.AdminClient
 
   @doc """
@@ -28,9 +28,9 @@ defmodule EdgeAgent.Bootstrap do
     Logger.info("Starting EdgeAgent bootstrap...")
 
     with {:ok, node_id, node_id_type} <- determine_node_identity(),
-         {:ok, _} <- store_node_identity(node_id, node_id_type),
+         {:ok, normalized_node_id} <- store_node_identity(node_id, node_id_type),
+         :ok <- setup_vpn_connection(normalized_node_id),
          settings <- Settings.all(),
-         :ok <- setup_vpn_connection(settings),
          {:ok, _} <- connect_to_admin(settings) do
       Logger.info("Bootstrap sequence completed successfully")
       {:ok, :bootstrap_complete}
@@ -81,16 +81,15 @@ defmodule EdgeAgent.Bootstrap do
   Reads VPN_URL and ENROLLMENT_KEY from environment variables.
   Uses hostname pattern: node-{normalized_node_id}
 
-  Returns {:ok, :vpn_connected} or {:error, reason}.
+  Returns :ok or {:error, reason}.
   """
-  def setup_vpn_connection(settings) do
-    node_id = Map.get(settings, "node_id")
+  def setup_vpn_connection(node_id) do
     Logger.info("Setting up VPN connection for node: #{String.slice(node_id, 0, 8)}...")
 
     with {:ok, vpn_url} <- get_required_env("VPN_URL"),
          {:ok, enrollment_key} <- get_required_env("ENROLLMENT_KEY"),
-         :ok <- start_tailscale_daemon(),
-         :ok <- connect_to_vpn(vpn_url, enrollment_key, node_id),
+         :ok <- Tailscale.start_daemon(),
+         {:ok, _result} <- connect_to_vpn(vpn_url, enrollment_key, node_id),
          {:ok, vpn_ip} <- validate_vpn_connection() do
       Logger.info("Successfully connected to VPN with IP: #{vpn_ip}")
       :ok
@@ -105,7 +104,7 @@ defmodule EdgeAgent.Bootstrap do
     node_id = Map.get(settings, "node_id")
     node_id_type = Map.get(settings, "node_id_type")
 
-    Logger.info("Connecting to admin for node: #{String.slice(node_id, 0, 8)}...")
+    Logger.info("Connecting to admin for node: #{String.slice(node_id || "unknown", 0, 8)}...")
 
     case AdminClient.get_node(node_id) do
       {:ok, node_data} ->
@@ -243,27 +242,19 @@ defmodule EdgeAgent.Bootstrap do
     end
   end
 
-  defp start_tailscale_daemon do
-    Logger.info("Starting Tailscale daemon...")
-
-    case Tailscale.start_daemon() do
-      :ok ->
-        Logger.info("Tailscale daemon started successfully")
-        :ok
-    end
-  end
-
   defp connect_to_vpn(vpn_url, enrollment_key, node_id) do
     hostname = "node-#{node_id}"
     Logger.info("Connecting to VPN with hostname: #{hostname}")
 
-    case Tailscale.connect(vpn_url, enrollment_key, hostname) do
-      :ok ->
+    # Use the new unified Tailscale interface
+    case Tailscale.connect_to_vpn(vpn_url, enrollment_key, hostname) do
+      {:ok, result} ->
         Logger.info("VPN connection established")
-        :ok
+        {:ok, result}
 
-      :error ->
-        {:error, "Failed to connect to VPN"}
+      {:error, reason} ->
+        Logger.error("VPN connection failed: #{reason}")
+        {:error, "Failed to connect to VPN: #{reason}"}
     end
   end
 

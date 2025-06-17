@@ -8,7 +8,7 @@ defmodule EdgeAdmin.Nodes do
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Nodes.Node
   alias EdgeAdmin.FilteringPagination
-  alias EdgeAdmin.VPN.HeadscaleClient
+  alias EdgeAdmin.Headscale
   require Logger
 
   @doc """
@@ -120,7 +120,8 @@ defmodule EdgeAdmin.Nodes do
   def fetch_vpn_info(%Node{} = node) do
     vpn_hostname = Node.vpn_hostname(node)
 
-    case HeadscaleClient.get_node_by_hostname(vpn_hostname) do
+    # Changed from HeadscaleClient.get_node_by_hostname
+    case Headscale.get_node_by_hostname(vpn_hostname) do
       {:ok, vpn_info} ->
         # Update node with VPN info
         update_node(node, vpn_info)

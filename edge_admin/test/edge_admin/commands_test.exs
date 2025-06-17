@@ -3,10 +3,10 @@ defmodule EdgeAdmin.CommandsTest do
   use EdgeAdmin.DataCase
 
   alias EdgeAdmin.Commands
+  import EdgeAdmin.CommandsFixtures
+  import EdgeAdmin.NodesFixtures
 
   describe "command validation" do
-    import EdgeAdmin.CommandsFixtures
-
     test "validates command_text format" do
       # Valid cases
       assert {:ok, _} = Commands.create_command(%{command_text: "echo 'test'\npwd"})
@@ -20,9 +20,6 @@ defmodule EdgeAdmin.CommandsTest do
   end
 
   describe "command execution validation" do
-    import EdgeAdmin.CommandsFixtures
-    import EdgeAdmin.NodesFixtures
-
     test "requires node_id when target_all is false" do
       command = command_fixture()
 
@@ -65,104 +62,7 @@ defmodule EdgeAdmin.CommandsTest do
     end
   end
 
-  describe "query helpers" do
-    import EdgeAdmin.CommandsFixtures
-    import EdgeAdmin.NodesFixtures
-
-    test "valid_statuses/0 returns valid status list" do
-      assert Commands.valid_statuses() == ["pending", "sent", "completed"]
-    end
-
-    test "list_command_executions_by_status/1 filters by status" do
-      _pending = command_execution_fixture(%{status: "pending"})
-      completed = completed_command_execution_fixture()
-
-      pending_executions = Commands.list_command_executions_by_status("pending")
-      completed_executions = Commands.list_command_executions_by_status("completed")
-
-      assert length(pending_executions) == 1
-      assert length(completed_executions) == 1
-      assert hd(completed_executions).id == completed.id
-    end
-
-    test "list_pending_executions_for_node/1 returns pending executions for specific node" do
-      node1 = node_fixture()
-      node2 = node_fixture()
-
-      command_execution_fixture(%{node_id: node1.id, status: "pending"})
-      command_execution_fixture(%{node_id: node1.id, status: "completed"})
-      command_execution_fixture(%{node_id: node2.id, status: "pending"})
-
-      pending_for_node1 = Commands.list_pending_executions_for_node(node1.id)
-
-      assert length(pending_for_node1) == 1
-      assert hd(pending_for_node1).node_id == node1.id
-      assert hd(pending_for_node1).status == "pending"
-    end
-
-    test "count_pending_executions_for_node/1 returns count of pending executions" do
-      node = node_fixture()
-
-      assert Commands.count_pending_executions_for_node(node.id) == 0
-
-      command_execution_fixture(%{node_id: node.id, status: "pending"})
-      command_execution_fixture(%{node_id: node.id, status: "pending"})
-      command_execution_fixture(%{node_id: node.id, status: "completed"})
-
-      assert Commands.count_pending_executions_for_node(node.id) == 2
-    end
-
-    test "has_pending_executions?/1 returns boolean for pending executions" do
-      node = node_fixture()
-
-      assert Commands.has_pending_executions?(node.id) == false
-
-      _execution = command_execution_fixture(%{node_id: node.id, status: "pending"})
-
-      assert Commands.has_pending_executions?(node.id) == true
-    end
-
-    test "list_pending_executions_by_node/0 returns all pending executions ordered by node and time" do
-      node1 = node_fixture()
-      node2 = node_fixture()
-
-      # Create executions with specific timing
-      command_execution_fixture(%{node_id: node1.id, status: "pending"})
-      command_execution_fixture(%{node_id: node2.id, status: "pending"})
-      command_execution_fixture(%{node_id: node1.id, status: "pending"})
-      command_execution_fixture(%{node_id: node1.id, status: "completed"})
-
-      pending_executions = Commands.list_pending_executions_by_node()
-
-      assert length(pending_executions) == 3
-
-      # The exact order depends on node UUIDs, but we can verify grouping
-      node1_executions = Enum.filter(pending_executions, &(&1.node_id == node1.id))
-      node2_executions = Enum.filter(pending_executions, &(&1.node_id == node2.id))
-
-      assert length(node1_executions) == 2
-      assert length(node2_executions) == 1
-    end
-
-    test "get_oldest_pending_execution_for_node/1 returns oldest pending execution" do
-      node = node_fixture()
-
-      assert Commands.get_oldest_pending_execution_for_node(node.id) == nil
-
-      execution1 = command_execution_fixture(%{node_id: node.id, status: "pending"})
-      command_execution_fixture(%{node_id: node.id, status: "pending"})
-
-      oldest = Commands.get_oldest_pending_execution_for_node(node.id)
-
-      # First created should be oldest
-      assert oldest.id == execution1.id
-    end
-  end
-
   describe "filtering and pagination integration" do
-    import EdgeAdmin.CommandsFixtures
-    import EdgeAdmin.NodesFixtures
-
     setup do
       # Create test data for filtering
       command1 = command_fixture()

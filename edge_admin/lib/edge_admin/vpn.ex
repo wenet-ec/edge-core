@@ -72,9 +72,15 @@ defmodule EdgeAdmin.VPN do
 
     if should_reconnect?(connection) do
       Logger.info("VPN: Attempting auto-reconnection")
-      handle_auto_reconnection()
+
+      with {:ok, _} <- update_connection(%{status: :connecting}),
+           {:ok, result} <- tailscale_module().connect_to_vpn(vpn_url(), "edge-admin") do
+        handle_connection_success(result)
+      else
+        {:error, reason} -> handle_connection_failure(reason)
+      end
     else
-      Logger.debug("VPN: Skipping auto-reconnection - preconditions not met")
+      Logger.debug("VPN: Skipping auto-reconnection - conditions not met")
       :skipped
     end
   end
@@ -86,7 +92,7 @@ defmodule EdgeAdmin.VPN do
     Logger.info("VPN: Initiating manual connection")
 
     with {:ok, _} <- update_connection(%{status: :connecting}),
-         {:ok, result} <- tailscale_module().connect_to_vpn(vpn_url()) do
+         {:ok, result} <- tailscale_module().connect_to_vpn(vpn_url(), "edge-admin") do
       handle_connection_success(result)
     else
       {:error, reason} -> handle_connection_failure(reason)
@@ -121,26 +127,14 @@ defmodule EdgeAdmin.VPN do
       {:ok, vpn_info} when is_map(vpn_info) ->
         update_connection_healthy(vpn_info)
         log_vpn_info_update(vpn_info)
-        # Add this
         :ok
 
       {:ok, :healthy} ->
         update_connection_healthy()
-        # Add this
         :ok
 
       {:error, reason} ->
         update_connection_lost(current_connection, reason)
-        # update_connection_lost already returns :ok via update_and_log
-    end
-  end
-
-  defp handle_auto_reconnection do
-    with {:ok, _} <- update_connection(%{status: :connecting}),
-         {:ok, result} <- tailscale_module().connect_to_vpn(vpn_url()) do
-      handle_connection_success(result)
-    else
-      {:error, reason} -> handle_connection_failure(reason)
     end
   end
 
@@ -214,7 +208,6 @@ defmodule EdgeAdmin.VPN do
     case update_connection(attrs) do
       {:ok, _updated_connection} ->
         Logger.info(log_message)
-        # Always return :ok for workers
         :ok
 
       {:error, reason} ->

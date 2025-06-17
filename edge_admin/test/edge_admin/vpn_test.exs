@@ -6,8 +6,7 @@ defmodule EdgeAdmin.VPNTest do
 
   import Mox
 
-  # Setup mock for Tailscale
-  defmock(EdgeAdmin.TailscaleMock, for: EdgeAdmin.Tailscale.Behaviour)
+  defmock(EdgeAdmin.VPNTailscaleMock, for: EdgeAdmin.Tailscale.Behaviour)
 
   setup do
     # Reset the ETS table state between tests
@@ -15,7 +14,7 @@ defmodule EdgeAdmin.VPNTest do
     {:ok, _} = VPN.create_connection(%{})
 
     # Replace Tailscale with mock
-    Application.put_env(:edge_admin, :tailscale_module, EdgeAdmin.TailscaleMock)
+    Application.put_env(:edge_admin, :tailscale_module, EdgeAdmin.VPNTailscaleMock)
 
     on_exit(fn ->
       # Restore original module
@@ -60,7 +59,7 @@ defmodule EdgeAdmin.VPNTest do
     test "updates last_checked_at when connectivity is healthy" do
       VPN.update_connection(%{status: :connected})
 
-      EdgeAdmin.TailscaleMock
+      EdgeAdmin.VPNTailscaleMock
       |> expect(:check_connectivity, fn -> {:ok, :healthy} end)
 
       assert :ok = VPN.check_and_update_connectivity()
@@ -78,7 +77,7 @@ defmodule EdgeAdmin.VPNTest do
 
       vpn_info = %{vpn_ip: "100.64.0.15", vpn_hostname: "edge-admin"}
 
-      EdgeAdmin.TailscaleMock
+      EdgeAdmin.VPNTailscaleMock
       |> expect(:check_connectivity, fn -> {:ok, vpn_info} end)
 
       assert :ok = VPN.check_and_update_connectivity()
@@ -92,7 +91,7 @@ defmodule EdgeAdmin.VPNTest do
       connect_time = DateTime.add(DateTime.utc_now(), -300, :second)
       VPN.update_connection(%{status: :connected, connected_at: connect_time})
 
-      EdgeAdmin.TailscaleMock
+      EdgeAdmin.VPNTailscaleMock
       |> expect(:check_connectivity, fn -> {:error, "Network unreachable"} end)
 
       assert :ok = VPN.check_and_update_connectivity()
@@ -120,8 +119,11 @@ defmodule EdgeAdmin.VPNTest do
     test "attempts reconnection when disconnected and not manual" do
       VPN.update_connection(%{status: :disconnected, manual_disconnect: false})
 
-      EdgeAdmin.TailscaleMock
-      |> expect(:connect_to_vpn, fn _url -> {:ok, :no_info} end)
+      # Set VPN_URL environment variable for the test
+      System.put_env("VPN_URL", "http://test-vpn.local")
+
+      EdgeAdmin.VPNTailscaleMock
+      |> expect(:connect_to_vpn, fn "http://test-vpn.local", "edge-admin" -> {:ok, :no_info} end)
 
       assert :ok = VPN.attempt_auto_reconnection()
 
@@ -133,8 +135,13 @@ defmodule EdgeAdmin.VPNTest do
     test "handles reconnection failure" do
       VPN.update_connection(%{status: :disconnected, manual_disconnect: false})
 
-      EdgeAdmin.TailscaleMock
-      |> expect(:connect_to_vpn, fn _url -> {:error, "Auth failed"} end)
+      # Set VPN_URL environment variable for the test
+      System.put_env("VPN_URL", "http://test-vpn.local")
+
+      EdgeAdmin.VPNTailscaleMock
+      |> expect(:connect_to_vpn, fn "http://test-vpn.local", "edge-admin" ->
+        {:error, "Auth failed"}
+      end)
 
       assert :ok = VPN.attempt_auto_reconnection()
 
@@ -146,10 +153,13 @@ defmodule EdgeAdmin.VPNTest do
     test "updates with VPN info on successful reconnection" do
       VPN.update_connection(%{status: :disconnected, manual_disconnect: false})
 
+      # Set VPN_URL environment variable for the test
+      System.put_env("VPN_URL", "http://test-vpn.local")
+
       vpn_info = %{vpn_ip: "100.64.0.20", vpn_hostname: "edge-admin"}
 
-      EdgeAdmin.TailscaleMock
-      |> expect(:connect_to_vpn, fn _url -> {:ok, vpn_info} end)
+      EdgeAdmin.VPNTailscaleMock
+      |> expect(:connect_to_vpn, fn "http://test-vpn.local", "edge-admin" -> {:ok, vpn_info} end)
 
       assert :ok = VPN.attempt_auto_reconnection()
 
@@ -162,8 +172,11 @@ defmodule EdgeAdmin.VPNTest do
 
   describe "connect_to_vpn/0" do
     test "sets connecting status then handles success" do
-      EdgeAdmin.TailscaleMock
-      |> expect(:connect_to_vpn, fn _url -> {:ok, :no_info} end)
+      # Set VPN_URL environment variable for the test
+      System.put_env("VPN_URL", "http://test-vpn.local")
+
+      EdgeAdmin.VPNTailscaleMock
+      |> expect(:connect_to_vpn, fn "http://test-vpn.local", "edge-admin" -> {:ok, :no_info} end)
 
       assert :ok = VPN.connect_to_vpn()
 
@@ -174,8 +187,13 @@ defmodule EdgeAdmin.VPNTest do
     end
 
     test "handles connection failure" do
-      EdgeAdmin.TailscaleMock
-      |> expect(:connect_to_vpn, fn _url -> {:error, "Connection timeout"} end)
+      # Set VPN_URL environment variable for the test
+      System.put_env("VPN_URL", "http://test-vpn.local")
+
+      EdgeAdmin.VPNTailscaleMock
+      |> expect(:connect_to_vpn, fn "http://test-vpn.local", "edge-admin" ->
+        {:error, "Connection timeout"}
+      end)
 
       assert :ok = VPN.connect_to_vpn()
 
@@ -189,7 +207,7 @@ defmodule EdgeAdmin.VPNTest do
     test "successfully disconnects and sets manual_disconnect" do
       VPN.update_connection(%{status: :connected, vpn_ip: "100.64.0.10"})
 
-      EdgeAdmin.TailscaleMock
+      EdgeAdmin.VPNTailscaleMock
       |> expect(:disconnect_from_vpn, fn -> :ok end)
 
       assert {:ok, _} = VPN.disconnect_from_vpn()
@@ -201,10 +219,68 @@ defmodule EdgeAdmin.VPNTest do
     end
 
     test "handles disconnect failure" do
-      EdgeAdmin.TailscaleMock
+      EdgeAdmin.VPNTailscaleMock
       |> expect(:disconnect_from_vpn, fn -> {:error, "Failed to stop"} end)
 
       assert {:error, "Failed to stop"} = VPN.disconnect_from_vpn()
+    end
+  end
+
+  describe "environment configuration" do
+    test "raises when VPN_URL not set" do
+      # Clear the environment variable
+      System.delete_env("VPN_URL")
+
+      VPN.update_connection(%{status: :disconnected, manual_disconnect: false})
+
+      assert_raise RuntimeError, "VPN_URL environment variable not set", fn ->
+        VPN.attempt_auto_reconnection()
+      end
+    end
+
+    test "uses VPN_URL from environment" do
+      System.put_env("VPN_URL", "http://custom-vpn.example.com")
+
+      VPN.update_connection(%{status: :disconnected, manual_disconnect: false})
+
+      EdgeAdmin.VPNTailscaleMock
+      |> expect(:connect_to_vpn, fn "http://custom-vpn.example.com", "edge-admin" ->
+        {:ok, :no_info}
+      end)
+
+      assert :ok = VPN.attempt_auto_reconnection()
+    end
+  end
+
+  describe "error handling" do
+    test "handles connection manager errors gracefully" do
+      # This tests when ConnectionManager fails
+      :ets.delete_all_objects(:vpn_connection)
+
+      assert_raise RuntimeError, "VPN connection not found", fn ->
+        VPN.check_and_update_connectivity()
+      end
+    end
+
+    test "handles concurrent connection attempts" do
+      # Test multiple connection attempts
+      VPN.update_connection(%{status: :disconnected, manual_disconnect: false})
+      System.put_env("VPN_URL", "http://test-vpn.local")
+
+      # First connection
+      EdgeAdmin.VPNTailscaleMock
+      |> expect(:connect_to_vpn, fn _, _ -> {:ok, :no_info} end)
+
+      # Second connection
+      EdgeAdmin.VPNTailscaleMock
+      |> expect(:connect_to_vpn, fn _, _ -> {:ok, %{vpn_ip: "100.64.0.25"}} end)
+
+      assert :ok = VPN.attempt_auto_reconnection()
+      assert :ok = VPN.connect_to_vpn()
+
+      connection = VPN.get_connection!()
+      assert connection.status == :connected
+      assert connection.vpn_ip == "100.64.0.25"
     end
   end
 end

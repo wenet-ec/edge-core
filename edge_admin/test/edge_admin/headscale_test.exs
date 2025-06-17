@@ -21,8 +21,8 @@ defmodule EdgeAdmin.HeadscaleTest do
     :ok
   end
 
-  describe "get_node_by_hostname/1" do
-    test "returns node information when found" do
+  describe "node operations" do
+    test "get_node_by_hostname/1 success and error cases" do
       expected_result = %{
         vpn_ip: "100.64.0.1",
         vpn_hostname: "node-abc123",
@@ -34,91 +34,19 @@ defmodule EdgeAdmin.HeadscaleTest do
       |> expect(:get_node_by_hostname, fn "node-abc123" ->
         {:ok, expected_result}
       end)
-
-      assert {:ok, result} = Headscale.get_node_by_hostname("node-abc123")
-      assert result == expected_result
-    end
-
-    test "returns error when node not found" do
-      EdgeAdmin.Headscale.ClientMock
       |> expect(:get_node_by_hostname, fn "nonexistent" ->
         {:error, :node_not_found}
       end)
 
+      # Success case
+      assert {:ok, result} = Headscale.get_node_by_hostname("node-abc123")
+      assert result == expected_result
+
+      # Error case
       assert {:error, :node_not_found} = Headscale.get_node_by_hostname("nonexistent")
     end
-  end
 
-  describe "create_enrollment_key/0" do
-    test "creates enrollment key successfully" do
-      expected_result = %{
-        key: "preauth-key-abc123",
-        expiration: "2024-06-10T15:30:00Z",
-        created_at: "2024-06-10T14:30:00Z"
-      }
-
-      EdgeAdmin.Headscale.ClientMock
-      |> expect(:create_enrollment_key, fn "edge-nodes" ->
-        {:ok, expected_result}
-      end)
-
-      assert {:ok, result} = Headscale.create_enrollment_key()
-      assert result == expected_result
-    end
-
-    test "returns error when VPN service unavailable" do
-      EdgeAdmin.Headscale.ClientMock
-      |> expect(:create_enrollment_key, fn "edge-nodes" ->
-        {:error, :vpn_service_unavailable}
-      end)
-
-      assert {:error, :vpn_service_unavailable} = Headscale.create_enrollment_key()
-    end
-  end
-
-  describe "create_enrollment_key/1" do
-    test "creates enrollment key for specific user" do
-      expected_result = %{
-        key: "preauth-key-abc123",
-        expiration: "2024-06-10T15:30:00Z",
-        created_at: "2024-06-10T14:30:00Z"
-      }
-
-      EdgeAdmin.Headscale.ClientMock
-      |> expect(:create_enrollment_key, fn "custom-user" ->
-        {:ok, expected_result}
-      end)
-
-      assert {:ok, result} = Headscale.create_enrollment_key("custom-user")
-      assert result == expected_result
-    end
-  end
-
-  describe "get_user/1" do
-    test "gets user information successfully" do
-      expected_result = %{id: "user123", name: "edge-nodes"}
-
-      EdgeAdmin.Headscale.ClientMock
-      |> expect(:get_user, fn "edge-nodes" ->
-        {:ok, expected_result}
-      end)
-
-      assert {:ok, result} = Headscale.get_user("edge-nodes")
-      assert result == expected_result
-    end
-
-    test "returns error when user not found" do
-      EdgeAdmin.Headscale.ClientMock
-      |> expect(:get_user, fn "nonexistent" ->
-        {:error, :user_not_found}
-      end)
-
-      assert {:error, :user_not_found} = Headscale.get_user("nonexistent")
-    end
-  end
-
-  describe "list_nodes_for_user/1" do
-    test "lists nodes for user successfully" do
+    test "list_nodes_for_user/1 returns node list" do
       expected_result = [
         %{vpn_ip: "100.64.0.1", vpn_hostname: "node-1", online: true},
         %{vpn_ip: "100.64.0.2", vpn_hostname: "node-2", online: false}
@@ -131,6 +59,59 @@ defmodule EdgeAdmin.HeadscaleTest do
 
       assert {:ok, result} = Headscale.list_nodes_for_user()
       assert result == expected_result
+    end
+  end
+
+  describe "enrollment key operations" do
+    test "create_enrollment_key with default and custom users" do
+      expected_result = %{
+        key: "preauth-key-abc123",
+        expiration: "2024-06-10T15:30:00Z",
+        created_at: "2024-06-10T14:30:00Z"
+      }
+
+      EdgeAdmin.Headscale.ClientMock
+      |> expect(:create_enrollment_key, fn "edge-nodes" ->
+        {:ok, expected_result}
+      end)
+      |> expect(:create_enrollment_key, fn "custom-user" ->
+        {:ok, expected_result}
+      end)
+      |> expect(:create_enrollment_key, fn "edge-nodes" ->
+        {:error, :vpn_service_unavailable}
+      end)
+
+      # Default user (no argument)
+      assert {:ok, result} = Headscale.create_enrollment_key()
+      assert result == expected_result
+
+      # Custom user
+      assert {:ok, result} = Headscale.create_enrollment_key("custom-user")
+      assert result == expected_result
+
+      # Error case
+      assert {:error, :vpn_service_unavailable} = Headscale.create_enrollment_key()
+    end
+  end
+
+  describe "user operations" do
+    test "get_user/1 success and error cases" do
+      expected_result = %{id: "user123", name: "edge-nodes"}
+
+      EdgeAdmin.Headscale.ClientMock
+      |> expect(:get_user, fn "edge-nodes" ->
+        {:ok, expected_result}
+      end)
+      |> expect(:get_user, fn "nonexistent" ->
+        {:error, :user_not_found}
+      end)
+
+      # Success case
+      assert {:ok, result} = Headscale.get_user("edge-nodes")
+      assert result == expected_result
+
+      # Error case
+      assert {:error, :user_not_found} = Headscale.get_user("nonexistent")
     end
   end
 end

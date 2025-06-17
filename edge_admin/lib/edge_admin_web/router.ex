@@ -61,6 +61,10 @@ defmodule EdgeAdminWeb.Router do
       resources "/nodes", NodeController, only: [:index, :show, :create, :update, :delete]
       resources "/enrollment-keys", EnrollmentKeyController, only: [:create]
     end
+
+    scope "/", Commands do
+      resources "/command-executions", CommandExecutionController, only: [:index, :show, :update]
+    end
   end
 
   # Keep the session function as TelemetryUI might need it

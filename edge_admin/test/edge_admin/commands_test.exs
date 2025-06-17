@@ -295,54 +295,122 @@ defmodule EdgeAdmin.CommandsTest do
       # First created should be oldest
       assert oldest.id == execution1.id
     end
+  end
 
-    test "list_command_executions_with_filters/1 filters executions by various criteria" do
+  describe "filtering and pagination" do
+    import EdgeAdmin.CommandsFixtures
+    import EdgeAdmin.NodesFixtures
+
+    setup do
+      # Create test data for filtering
       command1 = command_fixture()
       command2 = command_fixture()
       node1 = node_fixture()
       node2 = node_fixture()
 
-      execution1 =
+      _execution1 =
         command_execution_fixture(%{
           command_id: command1.id,
           node_id: node1.id,
-          status: "pending"
+          status: "pending",
+          output: "Starting process..."
         })
 
-      command_execution_fixture(%{
-        command_id: command1.id,
-        node_id: node2.id,
-        status: "completed"
-      })
-
-      command_execution_fixture(%{command_id: command2.id, node_id: node1.id, status: "pending"})
-
-      # Filter by command_id
-      command1_executions = Commands.list_command_executions_with_filters(command_id: command1.id)
-      assert length(command1_executions) == 2
-
-      # Filter by node_id
-      node1_executions = Commands.list_command_executions_with_filters(node_id: node1.id)
-      assert length(node1_executions) == 2
-
-      # Filter by status
-      pending_executions = Commands.list_command_executions_with_filters(status: "pending")
-      assert length(pending_executions) == 2
-
-      # Multiple filters
-      specific_executions =
-        Commands.list_command_executions_with_filters(
+      _execution2 =
+        command_execution_fixture(%{
           command_id: command1.id,
+          node_id: node2.id,
+          status: "completed",
+          exit_code: 0,
+          output: "Process completed successfully"
+        })
+
+      _execution3 =
+        command_execution_fixture(%{
+          command_id: command2.id,
           node_id: node1.id,
-          status: "pending"
-        )
+          status: "completed",
+          exit_code: 1,
+          output: "Process failed with error"
+        })
 
-      assert length(specific_executions) == 1
-      assert hd(specific_executions).id == execution1.id
+      {:ok, command1: command1, command2: command2, node1: node1, node2: node2}
+    end
 
-      # Invalid filter is ignored
-      all_executions = Commands.list_command_executions_with_filters(invalid_filter: "value")
-      assert length(all_executions) == 3
+    test "apply_filtering_pagination/1 returns paginated results with default settings" do
+      result = Commands.apply_filtering_pagination(%{})
+
+      assert %EdgeAdmin.FilteringPagination{} = result
+      assert length(result.data) == 3
+      assert result.page == 1
+      assert result.page_size == 20
+      assert result.total == 3
+    end
+
+    test "list_command_executions_with_filtering_pagination/1 works with basic pagination" do
+      result = Commands.list_command_executions_with_filtering_pagination(%{"page_size" => "2"})
+
+      assert length(result.data) == 2
+      assert result.page_size == 2
+      assert result.total_pages == 2
+    end
+
+    test "filtering by status works", %{} do
+      result =
+        Commands.list_command_executions_with_filtering_pagination(%{"status" => "completed"})
+
+      assert length(result.data) == 2
+      assert result.filters == %{"status" => "completed"}
+      Enum.each(result.data, fn execution -> assert execution.status == "completed" end)
+    end
+
+    test "filtering by command_id works", %{command1: command1} do
+      result =
+        Commands.list_command_executions_with_filtering_pagination(%{"command_id" => command1.id})
+
+      assert length(result.data) == 2
+      assert result.filters == %{"command_id" => command1.id}
+      Enum.each(result.data, fn execution -> assert execution.command_id == command1.id end)
+    end
+
+    test "filtering by exit_code works" do
+      result = Commands.list_command_executions_with_filtering_pagination(%{"exit_code" => "0"})
+
+      assert length(result.data) == 1
+      assert result.filters == %{"exit_code" => "0"}
+      assert hd(result.data).exit_code == 0
+    end
+
+    test "filtering by output with wildcards works" do
+      result =
+        Commands.list_command_executions_with_filtering_pagination(%{"output" => "*error*"})
+
+      assert length(result.data) == 1
+      assert result.filters == %{"output" => "*error*"}
+      assert String.contains?(hd(result.data).output, "error")
+    end
+
+    test "sorting works" do
+      result =
+        Commands.list_command_executions_with_filtering_pagination(%{"sort" => "status:asc"})
+
+      statuses = Enum.map(result.data, & &1.status)
+      # Should be: completed, completed, pending (alphabetical)
+      assert statuses == ["completed", "completed", "pending"]
+    end
+
+    test "multiple filters work together", %{command1: command1} do
+      result =
+        Commands.list_command_executions_with_filtering_pagination(%{
+          "command_id" => command1.id,
+          "status" => "completed"
+        })
+
+      assert length(result.data) == 1
+      assert result.filters == %{"command_id" => command1.id, "status" => "completed"}
+      execution = hd(result.data)
+      assert execution.command_id == command1.id
+      assert execution.status == "completed"
     end
   end
 end

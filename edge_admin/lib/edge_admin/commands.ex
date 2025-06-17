@@ -320,51 +320,71 @@ defmodule EdgeAdmin.Commands do
   end
 
   @doc """
-  Returns command executions with optional filtering.
+  Applies filtering and pagination to command executions with predefined field configurations.
 
-  ## Options
-  - `:command_id` - Filter by command ID
-  - `:node_id` - Filter by node ID
-  - `:status` - Filter by status
+  This function encapsulates the filtering/pagination logic for command executions including:
+  - Which fields can be filtered
+  - Which fields can be sorted
+  - Default sorting behavior
+  - Any command execution-specific processing
 
   ## Examples
 
-      iex> list_command_executions_with_filters(command_id: cmd_id)
-      [%CommandExecution{}, ...]
+      iex> apply_filtering_pagination(%{"status" => "completed", "page" => "2"})
+      %FilteringPagination{data: [...], page: 2, ...}
 
-      iex> list_command_executions_with_filters(node_id: node_id, status: "completed")
-      [%CommandExecution{}, ...]
+      iex> apply_filtering_pagination(%{"sort" => "status:desc,inserted_at:asc"})
+      %FilteringPagination{data: [...], sort: [{:status, :desc}, {:inserted_at, :asc}], ...}
 
   """
-  def list_command_executions_with_filters(opts \\ []) do
-    CommandExecution
-    |> apply_execution_filters(opts)
-    |> order_by([ce], desc: ce.inserted_at)
-    |> Repo.all()
+  def apply_filtering_pagination(params \\ %{}) do
+    EdgeAdmin.FilteringPagination.paginate(
+      CommandExecution,
+      params,
+      filterable_fields: [:status, :target_all, :exit_code, :command_id, :node_id, :output],
+      sortable_fields: [:inserted_at, :updated_at, :status, :sent_at, :completed_at, :exit_code],
+      default_sort: "inserted_at:desc",
+      repo: Repo
+    )
   end
 
-  defp apply_execution_filters(query, []), do: query
+  @doc """
+  Returns a paginated list of command executions with filtering and sorting.
 
-  defp apply_execution_filters(query, [{:command_id, command_id} | rest]) do
-    query
-    |> where([ce], ce.command_id == ^command_id)
-    |> apply_execution_filters(rest)
-  end
+  This is the high-level function that combines filtering/pagination with command execution-specific
+  enhancements if needed in the future.
 
-  defp apply_execution_filters(query, [{:node_id, node_id} | rest]) do
-    query
-    |> where([ce], ce.node_id == ^node_id)
-    |> apply_execution_filters(rest)
-  end
+  ## Parameters
+  - `params` - Map of query parameters (page, page_size, sort, filters)
 
-  defp apply_execution_filters(query, [{:status, status} | rest])
-       when status in @valid_statuses do
-    query
-    |> where([ce], ce.status == ^status)
-    |> apply_execution_filters(rest)
-  end
+  ## Supported Query Parameters
+  - `page` - Page number (default: 1)
+  - `page_size` - Items per page (default: 20, max: 100)
+  - `sort` - Sort specification: "field1:dir1,field2:dir2"
 
-  defp apply_execution_filters(query, [_invalid | rest]) do
-    apply_execution_filters(query, rest)
+  ## Filterable Fields
+  - `status` - Execution status (pending, sent, completed)
+  - `target_all` - Boolean filter for system-wide commands
+  - `exit_code` - Exit code filter (supports ranges like "gte:0", "ne:0")
+  - `command_id` - Filter by command ID
+  - `node_id` - Filter by node ID
+  - `output` - Text search in output (supports wildcards with *)
+
+  ## Sortable Fields
+  - `inserted_at`, `updated_at`, `status`, `sent_at`, `completed_at`, `exit_code`
+
+  ## Examples
+
+      iex> list_command_executions_with_filtering_pagination(%{"page" => "2", "status" => "completed"})
+      %FilteringPagination{data: [%CommandExecution{}, ...], ...}
+
+  """
+  def list_command_executions_with_filtering_pagination(params \\ %{}) do
+    page_result = apply_filtering_pagination(params)
+
+    # If we need to add any command execution-specific enhancements in the future,
+    # we can do them here (similar to how nodes populate virtual fields)
+    # For now, just return the page result as-is
+    page_result
   end
 end

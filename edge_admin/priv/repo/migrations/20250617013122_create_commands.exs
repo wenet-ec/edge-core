@@ -4,7 +4,7 @@ defmodule EdgeAdmin.Repo.Migrations.CreateCommands do
   def change do
     create table(:commands, primary_key: false) do
       add :id, :binary_id, primary_key: true
-      add :commands, {:array, :string}
+      add :command_text, :text
 
       timestamps(type: :utc_datetime)
     end

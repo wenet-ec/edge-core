@@ -56,10 +56,10 @@ defmodule EdgeAdmin.Commands do
 
   ## Examples
 
-      iex> create_command(%{commands: ["echo hello", "ls -la"]})
+      iex> create_command(%{command_text: "echo hello\nls -la"})
       {:ok, %Command{}}
 
-      iex> create_command(%{commands: []})
+      iex> create_command(%{command_text: ""})
       {:error, %Ecto.Changeset{}}
 
   """
@@ -74,10 +74,10 @@ defmodule EdgeAdmin.Commands do
 
   ## Examples
 
-      iex> update_command(command, %{commands: ["new command"]})
+      iex> update_command(command, %{command_text: "new command"})
       {:ok, %Command{}}
 
-      iex> update_command(command, %{commands: []})
+      iex> update_command(command, %{command_text: ""})
       {:error, %Ecto.Changeset{}}
 
   """
@@ -357,7 +357,8 @@ defmodule EdgeAdmin.Commands do
     |> apply_execution_filters(rest)
   end
 
-  defp apply_execution_filters(query, [{:status, status} | rest]) when status in @valid_statuses do
+  defp apply_execution_filters(query, [{:status, status} | rest])
+       when status in @valid_statuses do
     query
     |> where([ce], ce.status == ^status)
     |> apply_execution_filters(rest)

@@ -6,7 +6,8 @@ defmodule EdgeAdmin.Commands.CommandExecution do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "command_executions" do
-    field :output, :string  # Maps to TEXT in database
+    # Maps to TEXT in database
+    field :output, :string
     field :status, :string
     field :exit_code, :integer
     field :target_all, :boolean, default: false

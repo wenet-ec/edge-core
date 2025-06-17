@@ -6,7 +6,8 @@ defmodule EdgeAdmin.Commands.Command do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "commands" do
-    field :commands, {:array, :string}
+    # Maps to TEXT in database
+    field :command_text, :string
 
     # Associations
     has_many :command_executions, EdgeAdmin.Commands.CommandExecution
@@ -17,19 +18,20 @@ defmodule EdgeAdmin.Commands.Command do
   @doc false
   def changeset(command, attrs) do
     command
-    |> cast(attrs, [:commands])
-    |> validate_required([:commands])
-    |> validate_length(:commands, min: 1, message: "must have at least one command")
-    |> validate_commands_format()
+    |> cast(attrs, [:command_text])
+    |> validate_required([:command_text])
+    |> validate_command_text_format()
   end
 
   @doc false
-  defp validate_commands_format(changeset) do
-    validate_change(changeset, :commands, fn :commands, commands ->
-      if Enum.all?(commands, &is_binary/1) and Enum.all?(commands, &(String.trim(&1) != "")) do
+  defp validate_command_text_format(changeset) do
+    validate_change(changeset, :command_text, fn :command_text, command_text ->
+      trimmed = String.trim(command_text)
+
+      if trimmed != "" do
         []
       else
-        [commands: "all commands must be non-empty strings"]
+        [command_text: "cannot be empty or only whitespace"]
       end
     end)
   end

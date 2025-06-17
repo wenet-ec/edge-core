@@ -9,7 +9,7 @@ defmodule EdgeAdmin.CommandsTest do
 
     import EdgeAdmin.CommandsFixtures
 
-    @invalid_attrs %{commands: nil}
+    @invalid_attrs %{command_text: nil}
 
     test "list_commands/0 returns all commands" do
       command = command_fixture()
@@ -22,22 +22,25 @@ defmodule EdgeAdmin.CommandsTest do
     end
 
     test "create_command/1 with valid data creates a command" do
-      valid_attrs = %{commands: ["echo 'test'", "pwd"]}
+      valid_attrs = %{command_text: "echo 'test'\npwd"}
 
       assert {:ok, %Command{} = command} = Commands.create_command(valid_attrs)
-      assert command.commands == ["echo 'test'", "pwd"]
+      assert command.command_text == "echo 'test'\npwd"
     end
 
-    test "create_command/1 with empty commands array returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = Commands.create_command(%{commands: []})
+    test "create_command/1 with single line command creates a command" do
+      valid_attrs = %{command_text: "echo 'hello world'"}
+
+      assert {:ok, %Command{} = command} = Commands.create_command(valid_attrs)
+      assert command.command_text == "echo 'hello world'"
     end
 
-    test "create_command/1 with blank commands returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = Commands.create_command(%{commands: ["", "  "]})
+    test "create_command/1 with empty command_text returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Commands.create_command(%{command_text: ""})
     end
 
-    test "create_command/1 with non-string commands returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = Commands.create_command(%{commands: [123, "valid"]})
+    test "create_command/1 with whitespace only command_text returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Commands.create_command(%{command_text: "   \n\t  "})
     end
 
     test "create_command/1 with invalid data returns error changeset" do
@@ -46,10 +49,10 @@ defmodule EdgeAdmin.CommandsTest do
 
     test "update_command/2 with valid data updates the command" do
       command = command_fixture()
-      update_attrs = %{commands: ["systemctl status nginx"]}
+      update_attrs = %{command_text: "systemctl status nginx"}
 
       assert {:ok, %Command{} = command} = Commands.update_command(command, update_attrs)
-      assert command.commands == ["systemctl status nginx"]
+      assert command.command_text == "systemctl status nginx"
     end
 
     test "update_command/2 with invalid data returns error changeset" do

@@ -15,8 +15,8 @@ defmodule EdgeAdmin.CommandsFixtures do
     {:ok, command} =
       attrs
       |> Enum.into(%{
-        # More realistic commands
-        commands: ["echo 'hello'", "ls -la", "pwd"]
+        # More realistic multi-line command text
+        command_text: "echo 'hello'\nls -la\npwd"
       })
       |> Commands.create_command()
 
@@ -63,7 +63,7 @@ defmodule EdgeAdmin.CommandsFixtures do
         %{
           status: "completed",
           output:
-            "$ echo 'hello'\nhello\n$ ls -la\ntotal 8\ndrwxr-xr-x 2 user user 4096 Jun 17 10:30 .\n",
+            "$ echo 'hello'\nhello\n$ ls -la\ntotal 8\ndrwxr-xr-x 2 user user 4096 Jun 17 10:30 .\n$ pwd\n/home/user",
           exit_code: 0,
           sent_at: ~U[2025-06-16 02:07:00Z],
           completed_at: ~U[2025-06-16 02:08:00Z]

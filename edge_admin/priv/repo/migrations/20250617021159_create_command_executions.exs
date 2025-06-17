@@ -18,5 +18,8 @@ defmodule EdgeAdmin.Repo.Migrations.CreateCommandExecutions do
 
     create index(:command_executions, [:command_id])
     create index(:command_executions, [:node_id])
+    create index(:command_executions, [:status])
+    create index(:command_executions, [:node_id, :status])
+    create index(:command_executions, [:node_id, :inserted_at])
   end
 end

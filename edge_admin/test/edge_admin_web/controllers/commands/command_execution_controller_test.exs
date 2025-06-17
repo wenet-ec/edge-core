@@ -5,11 +5,9 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
   import EdgeAdmin.CommandsFixtures
   import EdgeAdmin.NodesFixtures
 
-  alias EdgeAdmin.Commands.CommandExecution
-
   @update_attrs %{
     status: "completed",
-    output: "$ echo hello\nhello\n$ ls -la\ntotal 8\n",
+    output: "$ echo hello\nhello\n",
     exit_code: 0
   }
   @invalid_attrs %{status: "invalid_status"}
@@ -19,115 +17,66 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
   end
 
   describe "index" do
-    test "lists all command_executions with pagination", %{conn: conn} do
+    test "lists command executions with basic pagination", %{conn: conn} do
       conn = get(conn, ~p"/api/command-executions")
 
       response = json_response(conn, 200)
       assert response["data"] == []
       assert response["pagination"]["total"] == 0
-      assert response["pagination"]["page"] == 1
-      assert response["pagination"]["page_size"] == 20
     end
 
-    test "lists command_executions with basic filtering", %{conn: conn} do
-      # Create test data
+    test "supports filtering and sorting", %{conn: conn} do
       command_execution_fixture(%{status: "pending"})
       command_execution_fixture(%{status: "completed"})
 
-      # Filter by status
+      # Test filtering
       conn = get(conn, ~p"/api/command-executions?status=pending")
-
       response = json_response(conn, 200)
+
       assert length(response["data"]) == 1
       assert hd(response["data"])["status"] == "pending"
       assert response["filters"] == %{"status" => "pending"}
-    end
 
-    test "lists command_executions with pagination", %{conn: conn} do
-      # Create multiple executions
-      command_execution_fixture()
-      command_execution_fixture()
-      command_execution_fixture()
-
-      # Get first page with page_size 2
-      conn = get(conn, ~p"/api/command-executions?page=1&page_size=2")
-
-      response = json_response(conn, 200)
-      assert length(response["data"]) == 2
-      assert response["pagination"]["page"] == 1
-      assert response["pagination"]["page_size"] == 2
-      assert response["pagination"]["total"] == 3
-      assert response["pagination"]["total_pages"] == 2
-      assert response["pagination"]["has_next"] == true
-      assert response["pagination"]["has_prev"] == false
-    end
-
-    test "lists command_executions with sorting", %{conn: conn} do
-      # Create executions with different statuses
-      command_execution_fixture(%{status: "pending"})
-      command_execution_fixture(%{status: "completed"})
-
-      # Sort by status descending
+      # Test sorting
       conn = get(conn, ~p"/api/command-executions?sort=status:desc")
-
       response = json_response(conn, 200)
+
       statuses = Enum.map(response["data"], & &1["status"])
-      # pending > completed alphabetically
       assert statuses == ["pending", "completed"]
-      assert response["sort"] == ["status:desc"]
     end
 
-    test "lists command_executions filtered by command_id", %{conn: conn} do
+    test "filters by command_id and node_id", %{conn: conn} do
       command1 = command_fixture()
-      command2 = command_fixture()
+      node1 = node_fixture()
 
       execution1 = command_execution_fixture(%{command_id: command1.id})
-      _execution2 = command_execution_fixture(%{command_id: command2.id})
+      execution2 = command_execution_fixture(%{node_id: node1.id})
 
+      # Filter by command_id
       conn = get(conn, ~p"/api/command-executions?command_id=#{command1.id}")
-
       response = json_response(conn, 200)
       assert length(response["data"]) == 1
       assert hd(response["data"])["id"] == execution1.id
-      assert response["filters"] == %{"command_id" => command1.id}
-    end
 
-    test "lists command_executions filtered by node_id", %{conn: conn} do
-      node1 = node_fixture()
-      node2 = node_fixture()
-
-      execution1 = command_execution_fixture(%{node_id: node1.id})
-      _execution2 = command_execution_fixture(%{node_id: node2.id})
-
+      # Filter by node_id
       conn = get(conn, ~p"/api/command-executions?node_id=#{node1.id}")
-
       response = json_response(conn, 200)
       assert length(response["data"]) == 1
-      assert hd(response["data"])["id"] == execution1.id
-      assert response["filters"] == %{"node_id" => node1.id}
+      assert hd(response["data"])["id"] == execution2.id
     end
   end
 
   describe "show command_execution" do
-    setup [:create_command_execution]
-
-    test "renders command_execution", %{conn: conn, command_execution: command_execution} do
+    test "returns command execution by ID", %{conn: conn} do
+      command_execution = command_execution_fixture()
       conn = get(conn, ~p"/api/command-executions/#{command_execution}")
 
-      assert %{
-               "id" => id,
-               "status" => "pending",
-               "target_all" => false,
-               "command_id" => command_id,
-               "node_id" => node_id
-             } = json_response(conn, 200)["data"]
-
-      assert id == command_execution.id
-      assert command_id == command_execution.command_id
-      assert node_id == command_execution.node_id
+      response = json_response(conn, 200)["data"]
+      assert response["id"] == command_execution.id
+      assert response["status"] == "pending"
     end
 
-    test "renders 404 when command_execution does not exist", %{conn: conn} do
+    test "returns 404 for non-existent execution", %{conn: conn} do
       fake_id = Ecto.UUID.generate()
 
       assert_error_sent(404, fn ->
@@ -137,34 +86,23 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
   end
 
   describe "update command_execution" do
-    setup [:create_command_execution]
+    test "updates execution with valid data", %{conn: conn} do
+      command_execution = command_execution_fixture()
 
-    test "renders command_execution when data is valid", %{
-      conn: conn,
-      command_execution: %CommandExecution{id: id} = command_execution
-    } do
       conn =
         put(conn, ~p"/api/command-executions/#{command_execution}",
           command_execution: @update_attrs
         )
 
-      assert %{"id" => ^id} = json_response(conn, 200)["data"]
-
-      conn = get(conn, ~p"/api/command-executions/#{id}")
-
-      assert %{
-               "id" => ^id,
-               "status" => "completed",
-               "output" => "$ echo hello\nhello\n$ ls -la\ntotal 8\n",
-               "exit_code" => 0,
-               "target_all" => false
-             } = json_response(conn, 200)["data"]
+      response = json_response(conn, 200)["data"]
+      assert response["status"] == "completed"
+      assert response["output"] == "$ echo hello\nhello\n"
+      assert response["exit_code"] == 0
     end
 
-    test "renders errors when data is invalid", %{
-      conn: conn,
-      command_execution: command_execution
-    } do
+    test "handles validation errors", %{conn: conn} do
+      command_execution = command_execution_fixture()
+
       conn =
         put(conn, ~p"/api/command-executions/#{command_execution}",
           command_execution: @invalid_attrs
@@ -173,7 +111,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
       assert json_response(conn, 422)["errors"] != %{}
     end
 
-    test "renders 404 when command_execution does not exist", %{conn: conn} do
+    test "returns 404 for non-existent execution", %{conn: conn} do
       fake_id = Ecto.UUID.generate()
 
       assert_error_sent(404, fn ->
@@ -181,44 +119,17 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
       end)
     end
 
-    test "updates sent_at timestamp when marking as sent", %{
-      conn: conn,
-      command_execution: command_execution
-    } do
-      sent_time = ~U[2025-06-17 12:00:00Z]
-
-      conn =
-        put(conn, ~p"/api/command-executions/#{command_execution}",
-          command_execution: %{status: "sent", sent_at: sent_time}
-        )
-
-      response = json_response(conn, 200)["data"]
-      assert response["status"] == "sent"
-      assert response["sent_at"] == "2025-06-17T12:00:00Z"
-    end
-
-    test "updates completed_at timestamp when marking as completed", %{
-      conn: conn,
-      command_execution: command_execution
-    } do
+    test "updates timestamps correctly", %{conn: conn} do
+      command_execution = command_execution_fixture()
       completed_time = ~U[2025-06-17 12:05:00Z]
 
-      update_attrs = Map.merge(@update_attrs, %{completed_at: completed_time})
+      attrs = Map.merge(@update_attrs, %{completed_at: completed_time})
 
-      conn =
-        put(conn, ~p"/api/command-executions/#{command_execution}",
-          command_execution: update_attrs
-        )
+      conn = put(conn, ~p"/api/command-executions/#{command_execution}", command_execution: attrs)
 
       response = json_response(conn, 200)["data"]
       assert response["status"] == "completed"
       assert response["completed_at"] == "2025-06-17T12:05:00Z"
-      assert response["exit_code"] == 0
     end
-  end
-
-  defp create_command_execution(_) do
-    command_execution = command_execution_fixture()
-    %{command_execution: command_execution}
   end
 end

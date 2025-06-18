@@ -35,7 +35,7 @@ defmodule EdgeAdmin.Commands.CommandExecution do
       :node_id
     ])
     |> validate_required([:status])
-    |> validate_inclusion(:status, EdgeAdmin.Commands.valid_statuses())
+    |> validate_inclusion(:status, ["pending", "sent", "completed"])
     |> validate_node_or_target_all()
     |> foreign_key_constraint(:command_id)
     |> foreign_key_constraint(:node_id)

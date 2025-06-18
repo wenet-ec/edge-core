@@ -3,6 +3,7 @@ defmodule EdgeAdmin.CommandsTest do
   use EdgeAdmin.DataCase
 
   alias EdgeAdmin.Commands
+
   import EdgeAdmin.CommandsFixtures
   import EdgeAdmin.NodesFixtures
 
@@ -89,8 +90,8 @@ defmodule EdgeAdmin.CommandsTest do
       {:ok, command1: command1, node1: node1, node2: node2}
     end
 
-    test "applies filtering with predefined field configurations" do
-      result = Commands.apply_filtering_pagination(%{})
+    test "list_command_executions_with_filtering_pagination handles basic functionality" do
+      result = Commands.list_command_executions_with_filtering_pagination(%{})
 
       assert %EdgeAdmin.FilteringPagination{} = result
       assert length(result.data) == 2

@@ -11,17 +11,6 @@ defmodule EdgeAdmin.Commands do
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Commands.{Command, CommandExecution}
 
-  @valid_statuses ["pending", "sent", "completed"]
-
-  @doc """
-  Returns the list of valid statuses for command executions.
-  """
-  def valid_statuses, do: @valid_statuses
-
-  # ====================================================================
-  # Command CRUD Operations
-  # ====================================================================
-
   @doc """
   Returns the list of commands.
 
@@ -116,22 +105,6 @@ defmodule EdgeAdmin.Commands do
     Command.changeset(command, attrs)
   end
 
-  # ====================================================================
-  # CommandExecution CRUD Operations
-  # ====================================================================
-
-  @doc """
-  Returns the list of command_executions.
-
-  ## Examples
-
-      iex> list_command_executions()
-      [%CommandExecution{}, ...]
-
-  """
-  def list_command_executions do
-    Repo.all(CommandExecution)
-  end
 
   @doc """
   Gets a single command_execution.
@@ -215,39 +188,14 @@ defmodule EdgeAdmin.Commands do
   end
 
   @doc """
-  Applies filtering and pagination to command executions with predefined field configurations.
-
-  This function encapsulates the filtering/pagination logic for command executions including:
-  - Which fields can be filtered
-  - Which fields can be sorted
-  - Default sorting behavior
-  - Any command execution-specific processing
-
-  ## Examples
-
-      iex> apply_filtering_pagination(%{"status" => "completed", "page" => "2"})
-      %FilteringPagination{data: [...], page: 2, ...}
-
-      iex> apply_filtering_pagination(%{"sort" => "status:desc,inserted_at:asc"})
-      %FilteringPagination{data: [...], sort: [{:status, :desc}, {:inserted_at, :asc}], ...}
-
-  """
-  def apply_filtering_pagination(params \\ %{}) do
-    EdgeAdmin.FilteringPagination.paginate(
-      CommandExecution,
-      params,
-      filterable_fields: [:status, :target_all, :exit_code, :command_id, :node_id, :output],
-      sortable_fields: [:inserted_at, :updated_at, :status, :sent_at, :completed_at, :exit_code],
-      default_sort: "inserted_at:desc",
-      repo: Repo
-    )
-  end
-
-  @doc """
   Returns a paginated list of command executions with filtering and sorting.
 
-  This is the high-level function that combines filtering/pagination with command execution-specific
-  enhancements if needed in the future.
+  This function combines filtering/pagination with command execution-specific
+  enhancements if needed in the future. It encapsulates the filtering/pagination
+  logic including:
+  - Which fields can be filtered and sorted
+  - Default sorting behavior
+  - Any command execution-specific processing
 
   ## Parameters
   - `params` - Map of query parameters (page, page_size, sort, filters)
@@ -273,9 +221,20 @@ defmodule EdgeAdmin.Commands do
       iex> list_command_executions_with_filtering_pagination(%{"page" => "2", "status" => "completed"})
       %FilteringPagination{data: [%CommandExecution{}, ...], ...}
 
+      iex> list_command_executions_with_filtering_pagination(%{"sort" => "status:desc,inserted_at:asc"})
+      %FilteringPagination{data: [...], sort: [{:status, :desc}, {:inserted_at, :asc}], ...}
+
   """
   def list_command_executions_with_filtering_pagination(params \\ %{}) do
-    page_result = apply_filtering_pagination(params)
+    page_result =
+      EdgeAdmin.FilteringPagination.paginate(
+        CommandExecution,
+        params,
+        filterable_fields: [:status, :target_all, :exit_code, :command_id, :node_id, :output],
+        sortable_fields: [:inserted_at, :updated_at, :status, :sent_at, :completed_at, :exit_code],
+        default_sort: "inserted_at:desc",
+        repo: Repo
+      )
 
     # If we need to add any command execution-specific enhancements in the future,
     # we can do them here (similar to how nodes populate virtual fields)

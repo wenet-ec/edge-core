@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/vpn/workers/connectivity_checker.ex
-defmodule EdgeAdmin.VPN.Workers.ConnectivityChecker do
+# edge_admin/lib/edge_admin/vpn/workers/connectivity_checking_worker.ex
+defmodule EdgeAdmin.VPN.Workers.ConnectivityCheckingWorker do
   @moduledoc """
   Oban worker that monitors VPN connectivity when the connection status is :connected.
   """

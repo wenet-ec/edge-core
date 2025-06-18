@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/vpn/workers/auto_reconnector.ex
-defmodule EdgeAdmin.VPN.Workers.AutoReconnector do
+# edge_admin/lib/edge_admin/vpn/workers/auto_reconnecting_worker.ex
+defmodule EdgeAdmin.VPN.Workers.AutoReconnectingWorker do
   @moduledoc """
   Oban worker that attempts to reconnect to VPN when disconnected.
   """

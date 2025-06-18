@@ -93,7 +93,7 @@ defmodule EdgeAdmin.NodesTest do
   end
 
   describe "filtering and pagination integration" do
-    test "applies filtering with predefined field configurations" do
+    test "list_nodes_with_filtering_pagination handles basic functionality" do
       # Create test nodes
       {:ok, _node1} =
         Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "machine_id", status: "online"})
@@ -102,19 +102,19 @@ defmodule EdgeAdmin.NodesTest do
         Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "hardware_id", status: "offline"})
 
       # Test basic functionality
-      result = Nodes.apply_filtering_pagination(%{})
+      result = Nodes.list_nodes_with_filtering_pagination(%{})
       assert %EdgeAdmin.FilteringPagination{} = result
       assert length(result.data) == 2
       # Default sort
       assert result.sort == [{:inserted_at, :desc}]
 
       # Test status filtering (allowed field)
-      result = Nodes.apply_filtering_pagination(%{"status" => "online"})
+      result = Nodes.list_nodes_with_filtering_pagination(%{"status" => "online"})
       assert length(result.data) == 1
       assert hd(result.data).status == "online"
 
       # Test non-filterable fields are ignored
-      result = Nodes.apply_filtering_pagination(%{"non_existent_field" => "value"})
+      result = Nodes.list_nodes_with_filtering_pagination(%{"non_existent_field" => "value"})
       assert result.filters == %{}
       assert length(result.data) == 2
     end
@@ -127,11 +127,11 @@ defmodule EdgeAdmin.NodesTest do
         Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "hardware_id", status: "offline"})
 
       # Valid sortable field
-      result = Nodes.apply_filtering_pagination(%{"sort" => "status:desc"})
+      result = Nodes.list_nodes_with_filtering_pagination(%{"sort" => "status:desc"})
       assert result.sort == [{:status, :desc}]
 
       # Non-sortable fields are ignored
-      result = Nodes.apply_filtering_pagination(%{"sort" => "non_existent_field:asc"})
+      result = Nodes.list_nodes_with_filtering_pagination(%{"sort" => "non_existent_field:asc"})
       assert result.sort == []
     end
 

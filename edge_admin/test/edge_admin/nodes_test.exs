@@ -159,6 +159,30 @@ defmodule EdgeAdmin.NodesTest do
       assert node.vpn_hostname == "node-#{node.id}"
     end
 
+    test "get_nodes_by_ids returns mixed results" do
+      # Create a valid node
+      {:ok, valid_node} = Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "machine_id"})
+      invalid_id = Ecto.UUID.generate()
+
+      # Test mixed valid/invalid IDs
+      results = Nodes.get_nodes_by_ids([valid_node.id, invalid_id])
+
+      assert length(results) == 2
+      assert {:ok, returned_node} = Enum.at(results, 0)
+      assert returned_node.id == valid_node.id
+      assert {:error, "Node " <> ^invalid_id <> " not found"} = Enum.at(results, 1)
+
+      # Test all valid IDs
+      {:ok, valid_node2} = Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "hardware_id"})
+      results = Nodes.get_nodes_by_ids([valid_node.id, valid_node2.id])
+
+      assert length(results) == 2
+      assert Enum.all?(results, fn {status, _} -> status == :ok end)
+
+      # Test empty list
+      assert Nodes.get_nodes_by_ids([]) == []
+    end
+
     test "handles edge cases" do
       # Empty results
       result = Nodes.list_nodes_with_filtering_pagination(%{"status" => "nonexistent"})

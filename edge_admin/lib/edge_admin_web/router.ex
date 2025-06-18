@@ -63,6 +63,7 @@ defmodule EdgeAdminWeb.Router do
     end
 
     scope "/", Commands do
+      resources "/commands", CommandController, only: [:index, :create, :show, :update]
       resources "/command-executions", CommandExecutionController, only: [:index, :show, :update]
     end
   end

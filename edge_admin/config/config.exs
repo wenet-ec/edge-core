@@ -33,13 +33,18 @@ config :edge_admin, EdgeAdminWeb.Plugs.Security, allow_unsafe_scripts: false
 
 config :edge_admin, Oban,
   engine: Oban.Engines.Basic,
-  queues: [vpn: 5],
+  queues: [
+    vpn: 2,
+    command_dispatch: 10,
+    command_retry: 1
+  ],
   repo: EdgeAdmin.Repo,
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [
        {"* * * * *", EdgeAdmin.VPN.Workers.ConnectivityChecker},
-       {"* * * * *", EdgeAdmin.VPN.Workers.AutoReconnector}
+       {"* * * * *", EdgeAdmin.VPN.Workers.AutoReconnector},
+       {"* * * * *", EdgeAdmin.Commands.Workers.ExecutionRetryWorker}
      ]}
   ]
 

@@ -187,4 +187,31 @@ defmodule EdgeAdmin.Nodes do
     # Return the page result with enhanced nodes
     %{page_result | data: nodes_with_virtual_fields}
   end
+
+  @doc """
+  Gets multiple nodes by their IDs.
+
+  Returns a list of {:ok, node} or {:error, reason} tuples.
+  Reuses the existing get_node! function for consistency.
+
+  ## Examples
+
+      iex> get_nodes_by_ids(["valid-id", "invalid-id"])
+      [
+        {:ok, %Node{id: "valid-id", ...}},
+        {:error, "Node invalid-id not found"}
+      ]
+
+  """
+  def get_nodes_by_ids(node_ids) do
+    Enum.map(node_ids, fn node_id ->
+      try do
+        node = get_node!(node_id)
+        {:ok, node}
+      rescue
+        Ecto.NoResultsError ->
+          {:error, "Node #{node_id} not found"}
+      end
+    end)
+  end
 end

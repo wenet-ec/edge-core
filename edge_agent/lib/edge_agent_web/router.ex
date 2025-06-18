@@ -23,7 +23,7 @@ defmodule EdgeAgentWeb.Router do
   scope "/api", EdgeAgentWeb do
     pipe_through(:api)
 
-    # Your API routes will go here
+    resources "/command-executions", CommandExecutionController, except: [:new, :edit]
   end
 
   # Keep the session function as TelemetryUI might need it

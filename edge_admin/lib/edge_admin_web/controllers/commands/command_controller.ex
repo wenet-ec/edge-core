@@ -37,8 +37,7 @@ defmodule EdgeAdminWeb.Commands.CommandController do
       command_text: [
         in: :query,
         description: "Filter by command text (supports wildcards with *)",
-        schema: %OpenApiSpex.Schema{type: :string},
-        example: "*nginx*"
+        schema: %OpenApiSpex.Schema{type: :string}
       ]
     ],
     responses: %{
@@ -67,7 +66,8 @@ defmodule EdgeAdminWeb.Commands.CommandController do
   )
 
   def create(conn, %{"command" => command_params}) do
-    with {:ok, %Command{} = command} <- Commands.create_command_and_dispatch_executions(command_params) do
+    with {:ok, %Command{} = command} <-
+           Commands.create_command_and_dispatch_executions(command_params) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/commands/#{command}")
@@ -82,8 +82,7 @@ defmodule EdgeAdminWeb.Commands.CommandController do
       id: [
         in: :path,
         description: "Command ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid},
-        example: "01234567-89ab-cdef-0123-456789abcdef"
+        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ]
     ],
     responses: %{
@@ -104,8 +103,7 @@ defmodule EdgeAdminWeb.Commands.CommandController do
       id: [
         in: :path,
         description: "Command ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid},
-        example: "01234567-89ab-cdef-0123-456789abcdef"
+        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ]
     ],
     request_body:

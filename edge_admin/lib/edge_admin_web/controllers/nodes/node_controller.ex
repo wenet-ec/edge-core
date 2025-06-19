@@ -8,11 +8,11 @@ defmodule EdgeAdminWeb.Nodes.NodeController do
   alias EdgeAdminWeb.Schemas.Nodes.NodeSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
 
-  action_fallback EdgeAdminWeb.FallbackController
+  action_fallback(EdgeAdminWeb.FallbackController)
 
-  tags ["Nodes"]
+  tags(["Nodes"])
 
-  operation :index,
+  operation(:index,
     summary: "List all nodes",
     description:
       "Returns a paginated list of all registered edge nodes with filtering and sorting",
@@ -38,8 +38,7 @@ defmodule EdgeAdminWeb.Nodes.NodeController do
       status: [
         in: :query,
         description: "Filter by node status",
-        schema: %OpenApiSpex.Schema{type: :string, enum: ["online", "offline", "unknown"]},
-        example: "online"
+        schema: %OpenApiSpex.Schema{type: :string, enum: ["online", "offline", "unknown"]}
       ],
       id_type: [
         in: :query,
@@ -47,26 +46,25 @@ defmodule EdgeAdminWeb.Nodes.NodeController do
         schema: %OpenApiSpex.Schema{
           type: :string,
           enum: ["machine_id", "hardware_id", "temporary_id"]
-        },
-        example: "machine_id"
+        }
       ],
       vpn_ip: [
         in: :query,
         description: "Filter by VPN IP (supports wildcards with *)",
-        schema: %OpenApiSpex.Schema{type: :string},
-        example: "100.64.*"
+        schema: %OpenApiSpex.Schema{type: :string}
       ]
     ],
     responses: %{
       200 => {"Paginated list of nodes", "application/json", NodeSchemas.NodePaginatedResponse}
     }
+  )
 
   def index(conn, params) do
     page_result = Nodes.list_nodes_with_filtering_pagination(params)
     render(conn, :index, page_result: page_result)
   end
 
-  operation :create,
+  operation(:create,
     summary: "Create a new node",
     description: "Register a new edge node in the system",
     request_body: {"Node creation parameters", "application/json", NodeSchemas.NodeCreateRequest},
@@ -74,6 +72,7 @@ defmodule EdgeAdminWeb.Nodes.NodeController do
       201 => {"Node created successfully", "application/json", NodeSchemas.NodeSingleResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
     }
+  )
 
   def create(conn, %{"node" => node_params}) do
     with {:ok, %Node{} = node} <- Nodes.create_node_with_vpn_info(node_params) do
@@ -84,36 +83,35 @@ defmodule EdgeAdminWeb.Nodes.NodeController do
     end
   end
 
-  operation :show,
+  operation(:show,
     summary: "Get a specific node",
     description: "Returns details for a specific node by ID",
     parameters: [
       id: [
         in: :path,
         description: "Node ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid},
-        example: "01234567-89ab-cdef-0123-456789abcdef"
+        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ]
     ],
     responses: %{
       200 => {"Node details", "application/json", NodeSchemas.NodeSingleResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse}
     }
+  )
 
   def show(conn, %{"id" => id}) do
     node = Nodes.get_node_with_vpn_info!(id)
     render(conn, :show, node: node)
   end
 
-  operation :update,
+  operation(:update,
     summary: "Update a node",
     description: "Update an existing node's information",
     parameters: [
       id: [
         in: :path,
         description: "Node ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid},
-        example: "01234567-89ab-cdef-0123-456789abcdef"
+        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ]
     ],
     request_body: {"Node update parameters", "application/json", NodeSchemas.NodeUpdateRequest},
@@ -122,6 +120,7 @@ defmodule EdgeAdminWeb.Nodes.NodeController do
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
     }
+  )
 
   def update(conn, %{"id" => id, "node" => node_params}) do
     node = Nodes.get_node!(id)

@@ -8,11 +8,11 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionController do
   alias EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
 
-  action_fallback EdgeAdminWeb.FallbackController
+  action_fallback(EdgeAdminWeb.FallbackController)
 
-  tags ["Commands"]
+  tags(["Commands"])
 
-  operation :index,
+  operation(:index,
     summary: "List command executions",
     description: "Returns a paginated list of command executions with filtering and sorting",
     parameters: [
@@ -32,97 +32,101 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionController do
         in: :query,
         description: "Sort specification: field1:dir1,field2:dir2",
         schema: %OpenApiSpex.Schema{type: :string},
-        example: "status:desc,inserted_at:asc"
+        example: "inserted_at:desc"
       ],
       status: [
         in: :query,
         description: "Filter by execution status",
-        schema: %OpenApiSpex.Schema{type: :string, enum: ["pending", "sent", "completed"]},
-        example: "completed"
+        schema: %OpenApiSpex.Schema{type: :string, enum: ["pending", "sent", "completed"]}
       ],
       target_all: [
         in: :query,
         description: "Filter by target_all flag",
-        schema: %OpenApiSpex.Schema{type: :boolean},
-        example: false
+        schema: %OpenApiSpex.Schema{type: :boolean}
       ],
       exit_code: [
         in: :query,
         description: "Filter by exit code (supports ranges like 'gte:0', 'ne:0')",
-        schema: %OpenApiSpex.Schema{type: :string},
-        example: "0"
+        schema: %OpenApiSpex.Schema{type: :string}
       ],
       command_id: [
         in: :query,
         description: "Filter by command ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid},
-        example: "01234567-89ab-cdef-0123-456789abcdef"
+        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ],
       node_id: [
         in: :query,
         description: "Filter by node ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid},
-        example: "01234567-89ab-cdef-0123-456789abcdef"
+        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ],
       output: [
         in: :query,
         description: "Text search in output (supports wildcards with *)",
-        schema: %OpenApiSpex.Schema{type: :string},
-        example: "*error*"
+        schema: %OpenApiSpex.Schema{type: :string}
       ]
     ],
     responses: %{
-      200 => {"Paginated list of command executions", "application/json", CommandExecutionSchemas.CommandExecutionPaginatedResponse}
+      200 =>
+        {"Paginated list of command executions", "application/json",
+         CommandExecutionSchemas.CommandExecutionPaginatedResponse}
     }
+  )
 
   def index(conn, params) do
     page_result = Commands.list_command_executions_with_filtering_pagination(params)
     render(conn, :index, page_result: page_result)
   end
 
-  operation :show,
+  operation(:show,
     summary: "Get a specific command execution",
     description: "Returns details for a specific command execution by ID",
     parameters: [
       id: [
         in: :path,
         description: "Command Execution ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid},
-        example: "01234567-89ab-cdef-0123-456789abcdef"
+        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ]
     ],
     responses: %{
-      200 => {"Command execution details", "application/json", CommandExecutionSchemas.CommandExecutionSingleResponse},
+      200 =>
+        {"Command execution details", "application/json",
+         CommandExecutionSchemas.CommandExecutionSingleResponse},
       404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse}
     }
+  )
 
   def show(conn, %{"id" => id}) do
     command_execution = Commands.get_command_execution!(id)
     render(conn, :show, command_execution: command_execution)
   end
 
-  operation :update,
+  operation(:update,
     summary: "Update command execution",
     description: "Update command execution results (typically called by agents)",
     parameters: [
       id: [
         in: :path,
         description: "Command Execution ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid},
-        example: "01234567-89ab-cdef-0123-456789abcdef"
+        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ]
     ],
-    request_body: {"Command execution update", "application/json", CommandExecutionSchemas.CommandExecutionUpdateRequest},
+    request_body:
+      {"Command execution update", "application/json",
+       CommandExecutionSchemas.CommandExecutionUpdateRequest},
     responses: %{
-      200 => {"Command execution updated successfully", "application/json", CommandExecutionSchemas.CommandExecutionSingleResponse},
+      200 =>
+        {"Command execution updated successfully", "application/json",
+         CommandExecutionSchemas.CommandExecutionSingleResponse},
       404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
     }
+  )
 
   def update(conn, %{"id" => id, "command_execution" => command_execution_params}) do
     command_execution = Commands.get_command_execution!(id)
 
-    with {:ok, %CommandExecution{} = command_execution} <- Commands.update_command_execution(command_execution, command_execution_params) do
+    with {:ok, %CommandExecution{} = command_execution} <-
+           Commands.update_command_execution(command_execution, command_execution_params) do
       render(conn, :show, command_execution: command_execution)
     end
   end

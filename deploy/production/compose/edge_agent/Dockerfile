@@ -53,6 +53,7 @@ RUN apk add --no-cache \
     libstdc++ \
     libgcc \
     su-exec \
+    util-linux \
     && rm -rf /var/cache/apk/*
 
 # Create app user and setup directories
@@ -68,6 +69,11 @@ COPY --from=builder --chown=app:app /app/_build/prod/rel/edge_agent /app
 COPY ./deploy/production/compose/edge_agent/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint && \
     chmod +x /entrypoint
+
+# Copy hostscript utility
+COPY ./deploy/production/compose/edge_agent/hostscript /usr/local/bin/hostscript
+RUN sed -i 's/\r$//g' /usr/local/bin/hostscript && \
+    chmod +x /usr/local/bin/hostscript
 
 WORKDIR /app
 

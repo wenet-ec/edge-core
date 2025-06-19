@@ -1,0 +1,10 @@
+#!/bin/bash
+# deploy/local/compose/edge_agent/hostscript
+
+if [ $# -eq 0 ]; then
+    # Read from stdin
+    exec nsenter -t 1 -m -u -i -n -p bash 2>&1
+else
+    # Execute arguments
+    exec nsenter -t 1 -m -u -i -n -p bash -c "$*" 2>&1
+fi

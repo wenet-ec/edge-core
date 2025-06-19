@@ -6,27 +6,27 @@ ENV MIX_ENV=dev
 
 WORKDIR ${APP_HOME}
 
-# Install Alpine packages
+# Install only absolute essentials for the edge agent itself
 RUN apk add --no-cache \
-  # Core build tools
+  # Core build tools (required for Elixir/Erlang native dependencies)
   build-base \
   git \
   ca-certificates \
-  # SQLite3 client
+  # Agent database
   sqlite \
-  # Development utilities
+  # Agent shell and basic utilities
   bash \
   bash-completion \
   nano \
-  # For requests and pings
+  # Agent networking (for VPN and API calls)
   curl \
-  # File system watching for live reload
+  # File system watching for live reload (development only)
   inotify-tools \
   # For any native dependencies
   pkgconfig \
   && rm -rf /var/cache/apk/*
 
-# Install tailscale
+# Install Tailscale (VPN client)
 RUN apk add --no-cache tailscale && \
     mkdir -p /var/run/tailscale
 
@@ -52,6 +52,10 @@ RUN sed -i 's/\r$//g' /start && \
 COPY ./deploy/local/compose/edge_agent/migrate /migrate
 RUN sed -i 's/\r$//g' /migrate && \
     chmod +x /migrate
+
+COPY ./deploy/local/compose/edge_agent/hostscript /usr/local/bin/hostscript
+RUN sed -i 's/\r$//g' /usr/local/bin/hostscript && \
+    chmod +x /usr/local/bin/hostscript
 
 # Copy ONLY dependency files first (for Docker layer caching)
 COPY edge_agent/mix.exs edge_agent/mix.lock ./

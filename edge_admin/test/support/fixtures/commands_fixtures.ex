@@ -31,22 +31,19 @@ defmodule EdgeAdmin.CommandsFixtures do
     command = attrs[:command] || command_fixture()
     node = attrs[:node] || node_fixture()
 
+    # Remove command/node from attrs if they were passed as structs
+    attrs = Map.drop(attrs, [:command, :node])
+
     {:ok, command_execution} =
       attrs
       |> Enum.into(%{
         command_id: command.id,
         node_id: node.id,
-        # Start with pending
         status: "pending",
-        # Default to false
         target_all: false,
-        # Start empty
         output: nil,
-        # Start empty
         exit_code: nil,
-        # Start empty
         sent_at: nil,
-        # Start empty
         completed_at: nil
       })
       |> Commands.create_command_execution()

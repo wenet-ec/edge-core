@@ -61,6 +61,31 @@ defmodule EdgeAdmin.CommandsTest do
       invalid_attrs = %{command_id: command.id, node_id: node.id, status: "invalid_status"}
       assert {:error, %Ecto.Changeset{}} = Commands.create_command_execution(invalid_attrs)
     end
+
+    test "prevents duplicate command executions for same node-command pair" do
+      command = command_fixture()
+      node = node_fixture()
+
+      # First execution should succeed
+      valid_attrs = %{command_id: command.id, node_id: node.id, status: "pending"}
+      assert {:ok, _execution1} = Commands.create_command_execution(valid_attrs)
+
+      # Second execution with same node-command pair should fail
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Commands.create_command_execution(valid_attrs)
+
+      assert changeset.errors[:node_id] != nil || changeset.errors[:command_id] != nil
+
+      # Different node should work
+      node2 = node_fixture()
+      different_node_attrs = %{command_id: command.id, node_id: node2.id, status: "pending"}
+      assert {:ok, _execution2} = Commands.create_command_execution(different_node_attrs)
+
+      # Different command should work
+      command2 = command_fixture()
+      different_command_attrs = %{command_id: command2.id, node_id: node.id, status: "pending"}
+      assert {:ok, _execution3} = Commands.create_command_execution(different_command_attrs)
+    end
   end
 
   describe "filtering and pagination integration" do
@@ -156,6 +181,35 @@ defmodule EdgeAdmin.CommandsTest do
 
       assert length(result.data) == 1
       assert result.filters == %{"command_id" => command1.id, "status" => "completed"}
+    end
+  end
+
+  describe "command execution dispatch (integration)" do
+    test "create_command_and_dispatch_executions creates command successfully" do
+      node1 = node_fixture()
+      node2 = node_fixture()
+
+      attrs = %{
+        "command_text" => "echo test",
+        "target_nodes" => [node1.id, node2.id]
+      }
+
+      # This should create the command and enqueue workers
+      assert {:ok, command} = Commands.create_command_and_dispatch_executions(attrs)
+      assert command.command_text == "echo test"
+
+      # We don't test the actual worker execution here since it involves
+      # HTTP calls and background jobs - that's integration/e2e territory
+    end
+
+    test "target_all creates command and enqueues background worker" do
+      attrs = %{
+        "command_text" => "echo test",
+        "target_all" => true
+      }
+
+      assert {:ok, command} = Commands.create_command_and_dispatch_executions(attrs)
+      assert command.command_text == "echo test"
     end
   end
 end

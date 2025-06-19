@@ -39,6 +39,9 @@ defmodule EdgeAdmin.Commands.CommandExecution do
     |> validate_node_or_target_all()
     |> foreign_key_constraint(:command_id)
     |> foreign_key_constraint(:node_id)
+    |> unique_constraint([:node_id, :command_id],
+      name: :command_executions_node_id_command_id_index
+    )
   end
 
   @doc false

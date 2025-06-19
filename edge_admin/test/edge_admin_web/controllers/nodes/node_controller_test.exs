@@ -74,7 +74,7 @@ defmodule EdgeAdminWeb.Nodes.NodeControllerTest do
   describe "update node" do
     test "updates node with valid data", %{conn: conn} do
       node = node_fixture()
-      conn = put(conn, ~p"/api/nodes/#{node}", node: @update_attrs)
+      conn = patch(conn, ~p"/api/nodes/#{node}", node: @update_attrs)
 
       response = json_response(conn, 200)["data"]
       assert response["status"] == "offline"
@@ -83,7 +83,7 @@ defmodule EdgeAdminWeb.Nodes.NodeControllerTest do
 
     test "handles validation errors on update", %{conn: conn} do
       node = node_fixture()
-      conn = put(conn, ~p"/api/nodes/#{node}", node: @invalid_attrs)
+      conn = patch(conn, ~p"/api/nodes/#{node}", node: @invalid_attrs)
 
       assert json_response(conn, 422)["errors"] != %{}
     end

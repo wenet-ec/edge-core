@@ -90,7 +90,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
       command_execution = command_execution_fixture()
 
       conn =
-        put(conn, ~p"/api/command-executions/#{command_execution}",
+        patch(conn, ~p"/api/command-executions/#{command_execution}",
           command_execution: @update_attrs
         )
 
@@ -104,7 +104,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
       command_execution = command_execution_fixture()
 
       conn =
-        put(conn, ~p"/api/command-executions/#{command_execution}",
+        patch(conn, ~p"/api/command-executions/#{command_execution}",
           command_execution: @invalid_attrs
         )
 
@@ -115,7 +115,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
       fake_id = Ecto.UUID.generate()
 
       assert_error_sent(404, fn ->
-        put(conn, ~p"/api/command-executions/#{fake_id}", command_execution: @update_attrs)
+        patch(conn, ~p"/api/command-executions/#{fake_id}", command_execution: @update_attrs)
       end)
     end
 
@@ -125,7 +125,8 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
 
       attrs = Map.merge(@update_attrs, %{completed_at: completed_time})
 
-      conn = put(conn, ~p"/api/command-executions/#{command_execution}", command_execution: attrs)
+      conn =
+        patch(conn, ~p"/api/command-executions/#{command_execution}", command_execution: attrs)
 
       response = json_response(conn, 200)["data"]
       assert response["status"] == "completed"

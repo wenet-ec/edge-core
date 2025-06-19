@@ -52,19 +52,26 @@ defmodule EdgeAdminWeb.Router do
 
     scope "/", VPN do
       scope "/connections" do
-        get "/self", ConnectionController, :show
-        patch "/self", ConnectionController, :update
+        get("/self", ConnectionController, :show)
+        patch("/self", ConnectionController, :update)
       end
     end
 
     scope "/", Nodes do
-      resources "/nodes", NodeController, only: [:index, :show, :create, :update]
-      resources "/enrollment-keys", EnrollmentKeyController, only: [:create]
+      resources("/enrollment-keys", EnrollmentKeyController, only: [:create])
+
+      get("/nodes", NodeController, :index)
+      post("/nodes", NodeController, :create)
+      get("/nodes/:id", NodeController, :show)
+      patch("/nodes/:id", NodeController, :update)
     end
 
     scope "/", Commands do
-      resources "/commands", CommandController, only: [:index, :create, :show]
-      resources "/command-executions", CommandExecutionController, only: [:index, :show, :update]
+      resources("/commands", CommandController, only: [:index, :create, :show])
+
+      get("/command-executions", CommandExecutionController, :index)
+      get("/command-executions/:id", CommandExecutionController, :show)
+      patch("/command-executions/:id", CommandExecutionController, :update)
     end
   end
 

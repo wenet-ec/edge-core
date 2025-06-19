@@ -13,9 +13,7 @@ defmodule EdgeAgentWeb.CommandExecutionController do
   """
   def create(conn, command_execution_params) do
     with {:ok, %CommandExecution{} = command_execution} <-
-           Commands.create_command_execution(command_execution_params) do
-      # TODO: Enqueue for execution (we'll add this later)
-
+           Commands.create_command_execution_and_maybe_start_worker(command_execution_params) do
       conn
       |> put_status(:created)
       |> render(:show, command_execution: command_execution)

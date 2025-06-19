@@ -42,4 +42,27 @@ defmodule EdgeAgent.AdminClient do
         {:error, {:request_failed, reason}}
     end
   end
+
+  def update_command_execution(execution_id, command_execution_params) do
+    url = "#{@admin_base_url}/api/command-executions/#{execution_id}"
+
+    payload = %{command_execution: command_execution_params}
+
+    case Req.patch(url, json: payload) do
+      {:ok, %{status: status}} when status in 200..299 ->
+        Logger.debug("Successfully updated command execution #{execution_id}")
+        :ok
+
+      {:ok, %{status: status, body: body}} ->
+        Logger.warning(
+          "Failed to update command execution #{execution_id}, HTTP #{status}: #{inspect(body)}"
+        )
+
+        {:error, {:http_error, status, body}}
+
+      {:error, reason} ->
+        Logger.warning("Failed to update command execution #{execution_id}: #{inspect(reason)}")
+        {:error, {:request_failed, reason}}
+    end
+  end
 end

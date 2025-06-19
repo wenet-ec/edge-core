@@ -5,8 +5,6 @@ defmodule EdgeAdminWeb.Commands.CommandControllerTest do
   import EdgeAdmin.CommandsFixtures
   import EdgeAdmin.NodesFixtures
 
-  alias EdgeAdmin.Commands.Command
-
   @create_attrs %{
     command_text: "echo hello\nls -la"
   }
@@ -21,10 +19,6 @@ defmodule EdgeAdminWeb.Commands.CommandControllerTest do
   @create_target_all_attrs %{
     command_text: "apt update && apt upgrade -y",
     target_all: true
-  }
-
-  @update_attrs %{
-    command_text: "echo updated\npwd"
   }
 
   @invalid_attrs %{command_text: nil}
@@ -151,39 +145,5 @@ defmodule EdgeAdminWeb.Commands.CommandControllerTest do
         get(conn, ~p"/api/commands/#{fake_id}")
       end)
     end
-  end
-
-  describe "update command" do
-    setup [:create_command]
-
-    test "updates command with valid data", %{conn: conn, command: %Command{id: id} = command} do
-      conn = put(conn, ~p"/api/commands/#{command}", command: @update_attrs)
-      assert %{"id" => ^id} = json_response(conn, 200)["data"]
-
-      conn = get(conn, ~p"/api/commands/#{id}")
-
-      assert %{
-               "id" => ^id,
-               "command_text" => "echo updated\npwd"
-             } = json_response(conn, 200)["data"]
-    end
-
-    test "renders errors when data is invalid", %{conn: conn, command: command} do
-      conn = put(conn, ~p"/api/commands/#{command}", command: @invalid_attrs)
-      assert json_response(conn, 422)["errors"] != %{}
-    end
-
-    test "returns 404 for non-existent command", %{conn: conn} do
-      fake_id = Ecto.UUID.generate()
-
-      assert_error_sent(404, fn ->
-        put(conn, ~p"/api/commands/#{fake_id}", command: @update_attrs)
-      end)
-    end
-  end
-
-  defp create_command(_) do
-    command = command_fixture()
-    %{command: command}
   end
 end

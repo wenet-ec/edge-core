@@ -130,31 +130,4 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
       required: [:command]
     })
   end
-
-  defmodule CommandUpdateRequest do
-    @moduledoc false
-    require OpenApiSpex
-
-    OpenApiSpex.schema(%{
-      title: "Command Update Request",
-      description: "Update an existing command",
-      type: :object,
-      properties: %{
-        command: %Schema{
-          type: :object,
-          properties: %{
-            command_text: %Schema{
-              type: :string,
-              description: "Multi-line shell script/commands to execute",
-              example: "ABC=value\necho $ABC\nsystemctl restart nginx"
-            }
-          },
-          example: %{
-            command_text: "ABC=value\necho $ABC\nsystemctl restart nginx"
-          }
-        }
-      },
-      required: [:command]
-    })
-  end
 end

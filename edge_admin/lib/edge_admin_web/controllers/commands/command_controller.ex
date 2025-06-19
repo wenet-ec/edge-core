@@ -95,32 +95,4 @@ defmodule EdgeAdminWeb.Commands.CommandController do
     command = Commands.get_command!(id)
     render(conn, :show, command: command)
   end
-
-  operation(:update,
-    summary: "Update a command",
-    description: "Update an existing command's information",
-    parameters: [
-      id: [
-        in: :path,
-        description: "Command ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ]
-    ],
-    request_body:
-      {"Command update parameters", "application/json", CommandSchemas.CommandUpdateRequest},
-    responses: %{
-      200 =>
-        {"Command updated successfully", "application/json", CommandSchemas.CommandSingleResponse},
-      404 => {"Command not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
-    }
-  )
-
-  def update(conn, %{"id" => id, "command" => command_params}) do
-    command = Commands.get_command!(id)
-
-    with {:ok, %Command{} = command} <- Commands.update_command(command, command_params) do
-      render(conn, :show, command: command)
-    end
-  end
 end

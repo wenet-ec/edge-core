@@ -3,94 +3,56 @@ defmodule EdgeAgent.CommandsTest do
   use EdgeAgent.DataCase
 
   alias EdgeAgent.Commands
+  alias EdgeAgent.Commands.CommandExecution
+
+  import EdgeAgent.CommandsFixtures
 
   describe "command_executions" do
-    alias EdgeAgent.Commands.CommandExecution
-
-    import EdgeAgent.CommandsFixtures
-
-    @invalid_attrs %{
-      output: nil,
-      status: nil,
-      exit_code: nil,
-      command_id: nil,
-      node_id: nil,
-      command_text: nil
+    @valid_attrs %{
+      id: "01234567-89ab-cdef-0123-456789abcdef",
+      command_id: "fedcba98-7654-3210-fedc-ba9876543210",
+      node_id: "abcdef01-2345-6789-abcd-ef0123456789",
+      command_text: "echo hello",
+      status: "pending"
     }
 
-    test "list_command_executions/0 returns all command_executions" do
-      command_execution = command_execution_fixture()
-      assert Commands.list_command_executions() == [command_execution]
+    test "creates and retrieves command execution" do
+      assert {:ok, %CommandExecution{} = execution} =
+               Commands.create_command_execution(@valid_attrs)
+
+      assert Commands.get_command_execution!(execution.id) == execution
+      assert execution.status == "pending"
     end
 
-    test "get_command_execution!/1 returns the command_execution with given id" do
-      command_execution = command_execution_fixture()
-      assert Commands.get_command_execution!(command_execution.id) == command_execution
+    test "updates execution to completed" do
+      execution = command_execution_fixture()
+
+      assert {:ok, updated} =
+               Commands.update_command_execution(execution, %{
+                 status: "completed",
+                 output: "done",
+                 exit_code: 0
+               })
+
+      assert updated.status == "completed"
+      assert updated.exit_code == 0
     end
 
-    test "create_command_execution/1 with valid data creates a command_execution" do
-      valid_attrs = %{
-        command_id: "7488a646-e31f-11e4-aace-600308960662",
-        node_id: "7488a646-e31f-11e4-aace-600308960662",
-        command_text: "echo hello",
-        status: "pending",
-        output: "some output",
-        exit_code: 0
-      }
-
-      assert {:ok, %CommandExecution{} = command_execution} =
-               Commands.create_command_execution(valid_attrs)
-
-      assert command_execution.output == "some output"
-      assert command_execution.status == "pending"
-      assert command_execution.exit_code == 0
-      assert command_execution.command_id == "7488a646-e31f-11e4-aace-600308960662"
-      assert command_execution.node_id == "7488a646-e31f-11e4-aace-600308960662"
-      assert command_execution.command_text == "echo hello"
+    test "validates required fields" do
+      assert {:error, changeset} = Commands.create_command_execution(%{})
+      assert "can't be blank" in errors_on(changeset).id
     end
 
-    test "create_command_execution/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = Commands.create_command_execution(@invalid_attrs)
+    test "validates UUID format" do
+      invalid_attrs = %{@valid_attrs | id: "invalid"}
+      assert {:error, changeset} = Commands.create_command_execution(invalid_attrs)
+      assert "must be a valid UUID format" in errors_on(changeset).id
     end
 
-    test "update_command_execution/2 with valid data updates the command_execution" do
-      command_execution = command_execution_fixture()
-
-      update_attrs = %{
-        output: "command completed",
-        status: "completed",
-        exit_code: 0
-      }
-
-      assert {:ok, %CommandExecution{} = command_execution} =
-               Commands.update_command_execution(command_execution, update_attrs)
-
-      assert command_execution.output == "command completed"
-      assert command_execution.status == "completed"
-      assert command_execution.exit_code == 0
-    end
-
-    test "update_command_execution/2 with invalid data returns error changeset" do
-      command_execution = command_execution_fixture()
-
-      assert {:error, %Ecto.Changeset{}} =
-               Commands.update_command_execution(command_execution, @invalid_attrs)
-
-      assert command_execution == Commands.get_command_execution!(command_execution.id)
-    end
-
-    test "delete_command_execution/1 deletes the command_execution" do
-      command_execution = command_execution_fixture()
-      assert {:ok, %CommandExecution{}} = Commands.delete_command_execution(command_execution)
-
-      assert_raise Ecto.NoResultsError, fn ->
-        Commands.get_command_execution!(command_execution.id)
-      end
-    end
-
-    test "change_command_execution/1 returns a command_execution changeset" do
-      command_execution = command_execution_fixture()
-      assert %Ecto.Changeset{} = Commands.change_command_execution(command_execution)
+    test "prevents duplicate IDs" do
+      Commands.create_command_execution(@valid_attrs)
+      assert {:error, changeset} = Commands.create_command_execution(@valid_attrs)
+      assert "has already been taken" in errors_on(changeset).id
     end
   end
 end

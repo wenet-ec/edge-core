@@ -10,15 +10,14 @@ defmodule EdgeAgent.CommandsFixtures do
   """
   def command_execution_fixture(attrs \\ %{}) do
     {:ok, command_execution} =
-      attrs
-      |> Enum.into(%{
-        command_id: "7488a646-e31f-11e4-aace-600308960662",
-        node_id: "7488a646-e31f-11e4-aace-600308960662",
-        command_text: "echo hello",
-        status: "pending",
-        output: "some output",
-        exit_code: 0
-      })
+      %{
+        id: Ecto.UUID.generate(),
+        command_id: Ecto.UUID.generate(),
+        node_id: Ecto.UUID.generate(),
+        command_text: "echo test",
+        status: "pending"
+      }
+      |> Map.merge(attrs)
       |> EdgeAgent.Commands.create_command_execution()
 
     command_execution

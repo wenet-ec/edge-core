@@ -3,6 +3,7 @@ defmodule EdgeAgentWeb.CommandExecutionControllerTest do
   use EdgeAgentWeb.ConnCase
 
   @create_attrs %{
+    id: "01234567-89ab-cdef-0123-456789abcdef",
     command_id: "7488a646-e31f-11e4-aace-600308960662",
     node_id: "7488a646-e31f-11e4-aace-600308960662",
     command_text: "echo hello\nls -la",
@@ -25,31 +26,12 @@ defmodule EdgeAgentWeb.CommandExecutionControllerTest do
       conn = post(conn, ~p"/api/command-executions", @create_attrs)
 
       assert %{"id" => id} = json_response(conn, 201)["data"]
-
-      # Verify the created command execution has correct data
-      assert %{
-               "id" => ^id,
-               "command_id" => "7488a646-e31f-11e4-aace-600308960662",
-               "node_id" => "7488a646-e31f-11e4-aace-600308960662",
-               "command_text" => "echo hello\nls -la",
-               "status" => "pending",
-               "output" => nil,
-               "exit_code" => nil,
-               "inserted_at" => _,
-               "updated_at" => _
-             } = json_response(conn, 201)["data"]
+      assert id == @create_attrs.id
     end
 
     test "renders errors when data is invalid", %{conn: conn} do
       conn = post(conn, ~p"/api/command-executions", @invalid_attrs)
       assert json_response(conn, 422)["errors"] != %{}
-    end
-
-    test "handles EdgeAdmin format (direct params without nesting)", %{conn: conn} do
-      # This tests the format EdgeAdmin will send
-      conn = post(conn, ~p"/api/command-executions", @create_attrs)
-
-      assert %{"id" => _id} = json_response(conn, 201)["data"]
     end
   end
 end

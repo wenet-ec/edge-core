@@ -7,6 +7,7 @@ defmodule EdgeAdmin.Nodes do
   import Ecto.Query, warn: false
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Nodes.Node
+  alias EdgeAdmin.Nodes.SshUsername
   alias EdgeAdmin.FilteringPagination
   alias EdgeAdmin.Headscale
   require Logger
@@ -213,5 +214,99 @@ defmodule EdgeAdmin.Nodes do
           {:error, "Node #{node_id} not found"}
       end
     end)
+  end
+
+  @doc """
+  Returns the list of ssh_usernames.
+
+  ## Examples
+
+      iex> list_ssh_usernames()
+      [%SshUsername{}, ...]
+
+  """
+  def list_ssh_usernames do
+    Repo.all(SshUsername)
+  end
+
+  @doc """
+  Gets a single ssh_username.
+
+  Raises `Ecto.NoResultsError` if the Ssh username does not exist.
+
+  ## Examples
+
+      iex> get_ssh_username!(123)
+      %SshUsername{}
+
+      iex> get_ssh_username!(456)
+      ** (Ecto.NoResultsError)
+
+  """
+  def get_ssh_username!(id), do: Repo.get!(SshUsername, id)
+
+  @doc """
+  Creates a ssh_username.
+
+  ## Examples
+
+      iex> create_ssh_username(%{field: value})
+      {:ok, %SshUsername{}}
+
+      iex> create_ssh_username(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def create_ssh_username(attrs \\ %{}) do
+    %SshUsername{}
+    |> SshUsername.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Updates a ssh_username.
+
+  ## Examples
+
+      iex> update_ssh_username(ssh_username, %{field: new_value})
+      {:ok, %SshUsername{}}
+
+      iex> update_ssh_username(ssh_username, %{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def update_ssh_username(%SshUsername{} = ssh_username, attrs) do
+    ssh_username
+    |> SshUsername.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Deletes a ssh_username.
+
+  ## Examples
+
+      iex> delete_ssh_username(ssh_username)
+      {:ok, %SshUsername{}}
+
+      iex> delete_ssh_username(ssh_username)
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def delete_ssh_username(%SshUsername{} = ssh_username) do
+    Repo.delete(ssh_username)
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking ssh_username changes.
+
+  ## Examples
+
+      iex> change_ssh_username(ssh_username)
+      %Ecto.Changeset{data: %SshUsername{}}
+
+  """
+  def change_ssh_username(%SshUsername{} = ssh_username, attrs \\ %{}) do
+    SshUsername.changeset(ssh_username, attrs)
   end
 end

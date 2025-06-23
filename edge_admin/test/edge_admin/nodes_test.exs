@@ -4,6 +4,8 @@ defmodule EdgeAdmin.NodesTest do
 
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.Node
+  alias EdgeAdmin.Nodes.SshUsername
+  import EdgeAdmin.NodesFixtures
 
   describe "node validation and business rules" do
     test "validates UUID format" do
@@ -200,6 +202,41 @@ defmodule EdgeAdmin.NodesTest do
       assert result.total_pages == 2
       assert result.has_next == true
       assert length(result.data) == 2
+    end
+  end
+
+  describe "ssh_usernames" do
+    @invalid_attrs %{username: nil, node_id: nil}
+
+    test "create_ssh_username/1 with valid data creates a ssh_username" do
+      node = node_fixture()
+      valid_attrs = %{username: "john", node_id: node.id}
+
+      assert {:ok, %SshUsername{} = ssh_username} = Nodes.create_ssh_username(valid_attrs)
+      assert ssh_username.username == "john"
+      assert ssh_username.node_id == node.id
+    end
+
+    test "create_ssh_username/1 with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Nodes.create_ssh_username(@invalid_attrs)
+    end
+
+    test "create_ssh_username/1 enforces unique constraint per node" do
+      node = node_fixture()
+      attrs = %{username: "john", node_id: node.id}
+
+      # First creation should succeed
+      assert {:ok, %SshUsername{}} = Nodes.create_ssh_username(attrs)
+
+      # Second creation with same username + node should fail
+      assert {:error, %Ecto.Changeset{} = changeset} = Nodes.create_ssh_username(attrs)
+      assert changeset.errors[:username] != nil or changeset.errors[:node_id] != nil
+    end
+
+    test "delete_ssh_username/1 deletes the ssh_username" do
+      ssh_username = ssh_username_fixture()
+      assert {:ok, %SshUsername{}} = Nodes.delete_ssh_username(ssh_username)
+      assert_raise Ecto.NoResultsError, fn -> Nodes.get_ssh_username!(ssh_username.id) end
     end
   end
 end

@@ -31,4 +31,22 @@ defmodule EdgeAdmin.NodesFixtures do
 
     node
   end
+
+  @doc """
+  Generate a ssh_username.
+  """
+  def ssh_username_fixture(attrs \\ %{}) do
+    # Create a node first since ssh_username requires node_id
+    node = node_fixture()
+
+    {:ok, ssh_username} =
+      attrs
+      |> Enum.into(%{
+        username: "some username",
+        node_id: node.id
+      })
+      |> EdgeAdmin.Nodes.create_ssh_username()
+
+    ssh_username
+  end
 end

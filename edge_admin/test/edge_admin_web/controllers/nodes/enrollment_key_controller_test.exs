@@ -14,7 +14,7 @@ defmodule EdgeAdminWeb.Nodes.EnrollmentKeyControllerTest do
           data = response["data"]
           assert is_binary(data["key"])
           assert is_binary(data["expiration"])
-          assert is_binary(data["created_at"])
+          assert is_binary(data["inserted_at"])
 
         503 ->
           response = json_response(conn, 503)

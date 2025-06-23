@@ -11,7 +11,7 @@ defmodule EdgeAdminWeb.Nodes.EnrollmentKeyJSON do
     %{
       key: enrollment_key.key,
       expiration: enrollment_key.expiration,
-      created_at: enrollment_key.created_at
+      inserted_at: enrollment_key.created_at
     }
   end
 end

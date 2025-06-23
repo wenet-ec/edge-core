@@ -26,18 +26,18 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
           description: "When the enrollment key expires",
           example: "2024-06-10T15:30:00Z"
         },
-        created_at: %Schema{
+        inserted_at: %Schema{
           type: :string,
           format: :datetime,
           description: "When the enrollment key was created",
           example: "2024-06-10T14:30:00Z"
         }
       },
-      required: [:key, :expiration, :created_at],
+      required: [:key, :expiration, :inserted_at],
       example: %{
         key: "preauth-key-abc123def456ghi789",
         expiration: "2024-06-10T15:30:00Z",
-        created_at: "2024-06-10T14:30:00Z"
+        inserted_at: "2024-06-10T14:30:00Z"
       }
     })
   end

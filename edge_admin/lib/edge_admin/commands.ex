@@ -258,20 +258,14 @@ defmodule EdgeAdmin.Commands do
 
   """
   def list_command_executions_with_filtering_pagination(params \\ %{}) do
-    page_result =
-      FilteringPagination.paginate(
-        CommandExecution,
-        params,
-        filterable_fields: [:status, :target_all, :exit_code, :command_id, :node_id, :output],
-        sortable_fields: [:inserted_at, :updated_at, :status, :sent_at, :completed_at, :exit_code],
-        default_sort: "inserted_at:desc",
-        repo: Repo
-      )
-
-    # If we need to add any command execution-specific enhancements in the future,
-    # we can do them here (similar to how nodes populate virtual fields)
-    # For now, just return the page result as-is
-    page_result
+    FilteringPagination.paginate(
+      CommandExecution,
+      params,
+      filterable_fields: [:status, :target_all, :exit_code, :command_id, :node_id, :output],
+      sortable_fields: [:inserted_at, :updated_at, :status, :sent_at, :completed_at, :exit_code],
+      default_sort: "inserted_at:desc",
+      repo: Repo
+    )
   end
 
   @doc """

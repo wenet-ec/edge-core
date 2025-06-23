@@ -50,16 +50,28 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           nullable: true,
           enum: ["online", "offline", "unknown"],
           description: "Current node status"
+        },
+        inserted_at: %Schema{
+          type: :string,
+          format: :datetime,
+          description: "When the node was created"
+        },
+        updated_at: %Schema{
+          type: :string,
+          format: :datetime,
+          description: "When the node was last updated"
         }
       },
-      required: [:id],
+      required: [:id, :inserted_at, :updated_at],
       example: %{
         id: "01234567-89ab-cdef-0123-456789abcdef",
         id_type: "machine_id",
         vpn_ip: "100.64.0.1",
         vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef",
         last_seen_at: "2025-06-09T08:20:00Z",
-        status: "online"
+        status: "online",
+        inserted_at: "2025-06-09T08:00:00Z",
+        updated_at: "2025-06-09T08:20:00Z"
       }
     })
   end
@@ -87,7 +99,9 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
             vpn_ip: "100.64.0.1",
             vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef",
             last_seen_at: "2025-06-09T08:20:00Z",
-            status: "online"
+            status: "online",
+            inserted_at: "2025-06-09T08:00:00Z",
+            updated_at: "2025-06-09T08:20:00Z"
           }
         ]
       }
@@ -126,7 +140,9 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           vpn_ip: "100.64.0.1",
           vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef",
           last_seen_at: "2025-06-09T08:20:00Z",
-          status: "online"
+          status: "online",
+          inserted_at: "2025-06-09T08:00:00Z",
+          updated_at: "2025-06-09T08:20:00Z"
         }
       }
     })

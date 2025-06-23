@@ -40,7 +40,9 @@ defmodule EdgeAdminWeb.Nodes.NodeJSON do
       vpn_ip: node.vpn_ip,
       vpn_hostname: node.vpn_hostname,
       last_seen_at: node.last_seen_at,
-      status: node.status
+      status: node.status,
+      inserted_at: node.inserted_at,
+      updated_at: node.updated_at
     }
   end
 end

@@ -8,6 +8,7 @@ defmodule EdgeAdmin.Nodes do
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Nodes.Node
   alias EdgeAdmin.Nodes.SshUsername
+  alias EdgeAdmin.Nodes.SshPublicKey
   alias EdgeAdmin.FilteringPagination
   alias EdgeAdmin.Headscale
   require Logger
@@ -217,19 +218,6 @@ defmodule EdgeAdmin.Nodes do
   end
 
   @doc """
-  Returns the list of ssh_usernames.
-
-  ## Examples
-
-      iex> list_ssh_usernames()
-      [%SshUsername{}, ...]
-
-  """
-  def list_ssh_usernames do
-    Repo.all(SshUsername)
-  end
-
-  @doc """
   Gets a single ssh_username.
 
   Raises `Ecto.NoResultsError` if the Ssh username does not exist.
@@ -264,24 +252,6 @@ defmodule EdgeAdmin.Nodes do
   end
 
   @doc """
-  Updates a ssh_username.
-
-  ## Examples
-
-      iex> update_ssh_username(ssh_username, %{field: new_value})
-      {:ok, %SshUsername{}}
-
-      iex> update_ssh_username(ssh_username, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def update_ssh_username(%SshUsername{} = ssh_username, attrs) do
-    ssh_username
-    |> SshUsername.changeset(attrs)
-    |> Repo.update()
-  end
-
-  @doc """
   Deletes a ssh_username.
 
   ## Examples
@@ -310,7 +280,48 @@ defmodule EdgeAdmin.Nodes do
     SshUsername.changeset(ssh_username, attrs)
   end
 
-  alias EdgeAdmin.Nodes.SshPublicKey
+  @doc """
+  Returns a paginated list of ssh_usernames with filtering and sorting.
+
+  This function provides filtering/pagination for SSH usernames including:
+  - Which fields can be filtered and sorted
+  - Default sorting behavior
+  - Optional node_id filtering
+
+  ## Parameters
+  - `params` - Map of query parameters (page, page_size, sort, filters)
+
+  ## Supported Query Parameters
+  - `page` - Page number (default: 1)
+  - `page_size` - Items per page (default: 20, max: 100)
+  - `sort` - Sort specification: "field1:dir1,field2:dir2"
+
+  ## Filterable Fields
+  - `username` - SSH username (supports wildcards)
+  - `node_id` - Node ID (exact match or comma-separated list)
+
+  ## Sortable Fields
+  - `inserted_at`, `updated_at`, `username`
+
+  ## Examples
+
+      iex> list_ssh_usernames_with_filtering_pagination(%{"page" => "2", "node_id" => "123"})
+      %FilteringPagination{data: [%SshUsername{}, ...], ...}
+
+      iex> list_ssh_usernames_with_filtering_pagination(%{"sort" => "username:asc,inserted_at:desc"})
+      %FilteringPagination{data: [...], sort: [{:username, :asc}, {:inserted_at, :desc}], ...}
+
+  """
+  def list_ssh_usernames_with_filtering_pagination(params \\ %{}) do
+    FilteringPagination.paginate(
+      SshUsername,
+      params,
+      filterable_fields: [:username, :node_id],
+      sortable_fields: [:inserted_at, :updated_at, :username],
+      default_sort: "inserted_at:desc",
+      repo: Repo
+    )
+  end
 
   @doc """
   Returns the list of ssh_public_keys.

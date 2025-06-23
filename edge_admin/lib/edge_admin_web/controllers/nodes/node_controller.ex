@@ -33,7 +33,7 @@ defmodule EdgeAdminWeb.Nodes.NodeController do
         in: :query,
         description: "Sort specification: field1:dir1,field2:dir2",
         schema: %OpenApiSpex.Schema{type: :string},
-        example: "status:desc,inserted_at:asc"
+        example: "inserted_at:desc"
       ],
       status: [
         in: :query,

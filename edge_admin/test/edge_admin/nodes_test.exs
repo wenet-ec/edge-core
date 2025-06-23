@@ -208,6 +208,62 @@ defmodule EdgeAdmin.NodesTest do
   describe "ssh_usernames" do
     @invalid_attrs %{username: nil, node_id: nil}
 
+    test "list_ssh_usernames_with_filtering_pagination basic functionality" do
+      # Create test data
+      node1 = node_fixture()
+      node2 = node_fixture()
+      _ssh_username1 = ssh_username_fixture(%{node_id: node1.id, username: "admin"})
+      _ssh_username2 = ssh_username_fixture(%{node_id: node2.id, username: "user"})
+
+      # Test basic pagination
+      result = Nodes.list_ssh_usernames_with_filtering_pagination(%{})
+      assert %EdgeAdmin.FilteringPagination{} = result
+      assert length(result.data) == 2
+      assert result.sort == [{:inserted_at, :desc}]
+
+      # Test node_id filtering (most important filter for SSH usernames)
+      result = Nodes.list_ssh_usernames_with_filtering_pagination(%{"node_id" => node1.id})
+      assert length(result.data) == 1
+      assert hd(result.data).node_id == node1.id
+      assert hd(result.data).username == "admin"
+
+      # Test username filtering with wildcard
+      result = Nodes.list_ssh_usernames_with_filtering_pagination(%{"username" => "adm*"})
+      assert length(result.data) == 1
+      assert hd(result.data).username == "admin"
+    end
+
+    test "configuration matches expected fields" do
+      # Just verify the filterable/sortable fields are what we expect
+      # This catches configuration errors without retesting the filtering logic
+      node = node_fixture()
+      _ssh_username = ssh_username_fixture(%{node_id: node.id, username: "test"})
+
+      # Test that all configured filterable fields work
+      result =
+        Nodes.list_ssh_usernames_with_filtering_pagination(%{
+          "username" => "test",
+          "node_id" => node.id
+        })
+
+      assert length(result.data) == 1
+
+      # Test that all configured sortable fields work
+      result =
+        Nodes.list_ssh_usernames_with_filtering_pagination(%{
+          "sort" => "username:asc"
+        })
+
+      assert result.sort == [{:username, :asc}]
+
+      result =
+        Nodes.list_ssh_usernames_with_filtering_pagination(%{
+          "sort" => "inserted_at:desc"
+        })
+
+      assert result.sort == [{:inserted_at, :desc}]
+    end
+
     test "create_ssh_username/1 with valid data creates a ssh_username" do
       node = node_fixture()
       valid_attrs = %{username: "john", node_id: node.id}

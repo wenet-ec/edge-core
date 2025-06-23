@@ -64,6 +64,11 @@ defmodule EdgeAdminWeb.Router do
       post("/nodes", NodeController, :create)
       get("/nodes/:id", NodeController, :show)
       patch("/nodes/:id", NodeController, :update)
+
+      get("/ssh_usernames", SshUsernameController, :index)
+      post("/nodes/:node_id/ssh_usernames", SshUsernameController, :create)
+      get("/ssh_usernames/:id", SshUsernameController, :show)
+      delete("/ssh_usernames/:id", SshUsernameController, :delete)
     end
 
     scope "/", Commands do

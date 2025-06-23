@@ -324,19 +324,6 @@ defmodule EdgeAdmin.Nodes do
   end
 
   @doc """
-  Returns the list of ssh_public_keys.
-
-  ## Examples
-
-      iex> list_ssh_public_keys()
-      [%SshPublicKey{}, ...]
-
-  """
-  def list_ssh_public_keys do
-    Repo.all(SshPublicKey)
-  end
-
-  @doc """
   Gets a single ssh_public_key.
 
   Raises `Ecto.NoResultsError` if the Ssh public key does not exist.
@@ -415,5 +402,48 @@ defmodule EdgeAdmin.Nodes do
   """
   def change_ssh_public_key(%SshPublicKey{} = ssh_public_key, attrs \\ %{}) do
     SshPublicKey.changeset(ssh_public_key, attrs)
+  end
+
+  @doc """
+  Returns a paginated list of ssh_public_keys with filtering and sorting.
+
+  This function provides filtering/pagination for SSH public keys including:
+  - Which fields can be filtered and sorted
+  - Default sorting behavior
+  - Optional ssh_username_id filtering
+
+  ## Parameters
+  - `params` - Map of query parameters (page, page_size, sort, filters)
+
+  ## Supported Query Parameters
+  - `page` - Page number (default: 1)
+  - `page_size` - Items per page (default: 20, max: 100)
+  - `sort` - Sort specification: "field1:dir1,field2:dir2"
+
+  ## Filterable Fields
+  - `key_name` - SSH key name (supports wildcards)
+  - `ssh_username_id` - SSH username ID (exact match or comma-separated list)
+
+  ## Sortable Fields
+  - `inserted_at`, `updated_at`, `key_name`
+
+  ## Examples
+
+      iex> list_ssh_public_keys_with_filtering_pagination(%{"page" => "2", "ssh_username_id" => "123"})
+      %FilteringPagination{data: [%SshPublicKey{}, ...], ...}
+
+      iex> list_ssh_public_keys_with_filtering_pagination(%{"sort" => "key_name:asc,inserted_at:desc"})
+      %FilteringPagination{data: [...], sort: [{:key_name, :asc}, {:inserted_at, :desc}], ...}
+
+  """
+  def list_ssh_public_keys_with_filtering_pagination(params \\ %{}) do
+    FilteringPagination.paginate(
+      SshPublicKey,
+      params,
+      filterable_fields: [:key_name, :ssh_username_id],
+      sortable_fields: [:inserted_at, :updated_at, :key_name],
+      default_sort: "inserted_at:desc",
+      repo: Repo
+    )
   end
 end

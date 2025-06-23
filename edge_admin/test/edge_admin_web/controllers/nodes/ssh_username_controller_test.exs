@@ -142,13 +142,15 @@ defmodule EdgeAdminWeb.Nodes.SshUsernameControllerTest do
 
     test "cascades deletion to associated public keys", %{conn: conn, ssh_username: ssh_username} do
       # Create a public key for this username
-      _public_key = ssh_public_key_fixture(%{ssh_username_id: ssh_username.id})
+      public_key = ssh_public_key_fixture(%{ssh_username_id: ssh_username.id})
 
       conn = delete(conn, ~p"/api/ssh_usernames/#{ssh_username.id}")
       assert response(conn, 204)
 
-      # Verify the public key was also deleted
-      assert EdgeAdmin.Nodes.list_ssh_public_keys() == []
+      # Verify the public key was also deleted by trying to fetch it
+      assert_raise Ecto.NoResultsError, fn ->
+        EdgeAdmin.Nodes.get_ssh_public_key!(public_key.id)
+      end
     end
 
     test "renders 404 when ssh_username does not exist", %{conn: conn} do

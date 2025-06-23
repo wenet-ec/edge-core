@@ -344,5 +344,33 @@ defmodule EdgeAdmin.NodesTest do
       assert {:ok, %SshPublicKey{}} = Nodes.delete_ssh_public_key(ssh_public_key)
       assert_raise Ecto.NoResultsError, fn -> Nodes.get_ssh_public_key!(ssh_public_key.id) end
     end
+
+    test "list_ssh_public_keys_with_filtering_pagination basic functionality" do
+      # Create test data
+      ssh_username1 = ssh_username_fixture()
+      ssh_username2 = ssh_username_fixture()
+      _key1 = ssh_public_key_fixture(%{ssh_username_id: ssh_username1.id, key_name: "key1"})
+      _key2 = ssh_public_key_fixture(%{ssh_username_id: ssh_username2.id, key_name: "key2"})
+
+      # Test basic pagination
+      result = Nodes.list_ssh_public_keys_with_filtering_pagination(%{})
+      assert %EdgeAdmin.FilteringPagination{} = result
+      assert length(result.data) == 2
+      assert result.sort == [{:inserted_at, :desc}]
+
+      # Test ssh_username_id filtering
+      result =
+        Nodes.list_ssh_public_keys_with_filtering_pagination(%{
+          "ssh_username_id" => ssh_username1.id
+        })
+
+      assert length(result.data) == 1
+      assert hd(result.data).ssh_username_id == ssh_username1.id
+
+      # Test key_name filtering with wildcard
+      result = Nodes.list_ssh_public_keys_with_filtering_pagination(%{"key_name" => "key1*"})
+      assert length(result.data) == 1
+      assert hd(result.data).key_name == "key1"
+    end
   end
 end

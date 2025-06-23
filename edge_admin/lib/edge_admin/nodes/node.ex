@@ -15,8 +15,10 @@ defmodule EdgeAdmin.Nodes.Node do
     # Virtual field - computed from UUID
     field(:vpn_hostname, :string, virtual: true)
 
-    # Relationships
+    # Associations
     has_many(:ssh_usernames, EdgeAdmin.Nodes.SshUsername, on_delete: :delete_all)
+    has_many(:command_executions, EdgeAdmin.Commands.CommandExecution, on_delete: :nilify_all)
+    has_many(:commands, through: [:command_executions, :command])
 
     timestamps()
   end

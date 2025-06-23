@@ -5,18 +5,19 @@ defmodule EdgeAdmin.Commands.CommandExecution do
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
+
   schema "command_executions" do
     # Maps to TEXT in database
-    field :output, :string
-    field :status, :string
-    field :exit_code, :integer
-    field :target_all, :boolean, default: false
-    field :sent_at, :utc_datetime
-    field :completed_at, :utc_datetime
+    field(:output, :string)
+    field(:status, :string)
+    field(:exit_code, :integer)
+    field(:target_all, :boolean, default: false)
+    field(:sent_at, :utc_datetime)
+    field(:completed_at, :utc_datetime)
 
     # Associations
-    belongs_to :command, EdgeAdmin.Commands.Command
-    belongs_to :node, EdgeAdmin.Nodes.Node
+    belongs_to(:command, EdgeAdmin.Commands.Command)
+    belongs_to(:node, EdgeAdmin.Nodes.Node)
 
     timestamps(type: :utc_datetime)
   end
@@ -53,7 +54,7 @@ defmodule EdgeAdmin.Commands.CommandExecution do
       target_all == true ->
         changeset
 
-      is_nil(node_id) ->
+      target_all == false and is_nil(node_id) ->
         add_error(changeset, :node_id, "must be present when target_all is false")
 
       true ->

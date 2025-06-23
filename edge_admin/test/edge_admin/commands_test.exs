@@ -49,6 +49,18 @@ defmodule EdgeAdmin.CommandsTest do
       assert execution.node_id == nil
     end
 
+    test "allows multiple target_all executions for same command (nulls don't conflict)" do
+      command = command_fixture()
+
+      # First target_all execution
+      attrs1 = %{command_id: command.id, node_id: nil, status: "pending", target_all: true}
+      assert {:ok, _execution1} = Commands.create_command_execution(attrs1)
+
+      # Second target_all execution for same command should work (NULL values don't conflict in unique constraint)
+      attrs2 = %{command_id: command.id, node_id: nil, status: "pending", target_all: true}
+      assert {:ok, _execution2} = Commands.create_command_execution(attrs2)
+    end
+
     test "validates status inclusion" do
       command = command_fixture()
       node = node_fixture()

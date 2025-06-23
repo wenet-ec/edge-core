@@ -5,12 +5,13 @@ defmodule EdgeAdmin.Commands.Command do
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
+
   schema "commands" do
     # Maps to TEXT in database
-    field :command_text, :string
+    field(:command_text, :string)
 
     # Associations
-    has_many :command_executions, EdgeAdmin.Commands.CommandExecution
+    has_many(:command_executions, EdgeAdmin.Commands.CommandExecution, on_delete: :delete_all)
 
     timestamps(type: :utc_datetime)
   end

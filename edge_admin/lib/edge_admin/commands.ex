@@ -512,7 +512,7 @@ defmodule EdgeAdmin.Commands do
   This is the abstraction layer that can be swapped to Erlang distribution later.
   """
   def send_command_to_node(node_vpn_ip, execution_data) do
-    url = "http://#{node_vpn_ip}:4000/api/command-executions"
+    url = "http://#{node_vpn_ip}:4000/api/command_executions"
 
     case Req.post(url, json: execution_data, receive_timeout: 5000) do
       {:ok, %{status: status}} when status in 200..299 ->

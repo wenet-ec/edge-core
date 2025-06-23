@@ -44,7 +44,7 @@ defmodule EdgeAgent.AdminClient do
   end
 
   def update_command_execution(execution_id, command_execution_params) do
-    url = "#{@admin_base_url}/api/command-executions/#{execution_id}"
+    url = "#{@admin_base_url}/api/command_executions/#{execution_id}"
 
     payload = %{command_execution: command_execution_params}
 

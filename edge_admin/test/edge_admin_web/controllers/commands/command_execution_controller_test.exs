@@ -18,7 +18,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
 
   describe "index" do
     test "lists command executions with basic pagination", %{conn: conn} do
-      conn = get(conn, ~p"/api/command-executions")
+      conn = get(conn, ~p"/api/command_executions")
 
       response = json_response(conn, 200)
       assert response["data"] == []
@@ -30,7 +30,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
       command_execution_fixture(%{status: "completed"})
 
       # Test filtering
-      conn = get(conn, ~p"/api/command-executions?status=pending")
+      conn = get(conn, ~p"/api/command_executions?status=pending")
       response = json_response(conn, 200)
 
       assert length(response["data"]) == 1
@@ -38,7 +38,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
       assert response["filters"] == %{"status" => "pending"}
 
       # Test sorting
-      conn = get(conn, ~p"/api/command-executions?sort=status:desc")
+      conn = get(conn, ~p"/api/command_executions?sort=status:desc")
       response = json_response(conn, 200)
 
       statuses = Enum.map(response["data"], & &1["status"])
@@ -53,13 +53,13 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
       execution2 = command_execution_fixture(%{node_id: node1.id})
 
       # Filter by command_id
-      conn = get(conn, ~p"/api/command-executions?command_id=#{command1.id}")
+      conn = get(conn, ~p"/api/command_executions?command_id=#{command1.id}")
       response = json_response(conn, 200)
       assert length(response["data"]) == 1
       assert hd(response["data"])["id"] == execution1.id
 
       # Filter by node_id
-      conn = get(conn, ~p"/api/command-executions?node_id=#{node1.id}")
+      conn = get(conn, ~p"/api/command_executions?node_id=#{node1.id}")
       response = json_response(conn, 200)
       assert length(response["data"]) == 1
       assert hd(response["data"])["id"] == execution2.id
@@ -69,7 +69,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
   describe "show command_execution" do
     test "returns command execution by ID", %{conn: conn} do
       command_execution = command_execution_fixture()
-      conn = get(conn, ~p"/api/command-executions/#{command_execution}")
+      conn = get(conn, ~p"/api/command_executions/#{command_execution}")
 
       response = json_response(conn, 200)["data"]
       assert response["id"] == command_execution.id
@@ -80,7 +80,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
       fake_id = Ecto.UUID.generate()
 
       assert_error_sent(404, fn ->
-        get(conn, ~p"/api/command-executions/#{fake_id}")
+        get(conn, ~p"/api/command_executions/#{fake_id}")
       end)
     end
   end
@@ -90,7 +90,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
       command_execution = command_execution_fixture()
 
       conn =
-        patch(conn, ~p"/api/command-executions/#{command_execution}",
+        patch(conn, ~p"/api/command_executions/#{command_execution}",
           command_execution: @update_attrs
         )
 
@@ -104,7 +104,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
       command_execution = command_execution_fixture()
 
       conn =
-        patch(conn, ~p"/api/command-executions/#{command_execution}",
+        patch(conn, ~p"/api/command_executions/#{command_execution}",
           command_execution: @invalid_attrs
         )
 
@@ -115,7 +115,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
       fake_id = Ecto.UUID.generate()
 
       assert_error_sent(404, fn ->
-        patch(conn, ~p"/api/command-executions/#{fake_id}", command_execution: @update_attrs)
+        patch(conn, ~p"/api/command_executions/#{fake_id}", command_execution: @update_attrs)
       end)
     end
 
@@ -126,7 +126,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
       attrs = Map.merge(@update_attrs, %{completed_at: completed_time})
 
       conn =
-        patch(conn, ~p"/api/command-executions/#{command_execution}", command_execution: attrs)
+        patch(conn, ~p"/api/command_executions/#{command_execution}", command_execution: attrs)
 
       response = json_response(conn, 200)["data"]
       assert response["status"] == "completed"

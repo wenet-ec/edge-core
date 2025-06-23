@@ -69,9 +69,9 @@ defmodule EdgeAdminWeb.Router do
     scope "/", Commands do
       resources("/commands", CommandController, only: [:index, :create, :show])
 
-      get("/command-executions", CommandExecutionController, :index)
-      get("/command-executions/:id", CommandExecutionController, :show)
-      patch("/command-executions/:id", CommandExecutionController, :update)
+      get("/command_executions", CommandExecutionController, :index)
+      get("/command_executions/:id", CommandExecutionController, :show)
+      patch("/command_executions/:id", CommandExecutionController, :update)
     end
   end
 

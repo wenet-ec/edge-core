@@ -23,14 +23,14 @@ defmodule EdgeAgentWeb.CommandExecutionControllerTest do
 
   describe "create command_execution" do
     test "renders command_execution when data is valid", %{conn: conn} do
-      conn = post(conn, ~p"/api/command-executions", @create_attrs)
+      conn = post(conn, ~p"/api/command_executions", @create_attrs)
 
       assert %{"id" => id} = json_response(conn, 201)["data"]
       assert id == @create_attrs.id
     end
 
     test "renders errors when data is invalid", %{conn: conn} do
-      conn = post(conn, ~p"/api/command-executions", @invalid_attrs)
+      conn = post(conn, ~p"/api/command_executions", @invalid_attrs)
       assert json_response(conn, 422)["errors"] != %{}
     end
   end

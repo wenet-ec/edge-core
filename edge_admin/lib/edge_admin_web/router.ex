@@ -60,27 +60,23 @@ defmodule EdgeAdminWeb.Router do
     scope "/", Nodes do
       resources("/enrollment-keys", EnrollmentKeyController, only: [:create])
 
-      get("/nodes", NodeController, :index)
-      post("/nodes", NodeController, :create)
-      get("/nodes/:id", NodeController, :show)
+      resources("/nodes", NodeController, only: [:index, :create, :show]) do
+        resources("/ssh_usernames", SshUsernameController, only: [:create])
+      end
+
       patch("/nodes/:id", NodeController, :update)
 
-      get("/ssh_usernames", SshUsernameController, :index)
-      post("/nodes/:node_id/ssh_usernames", SshUsernameController, :create)
-      get("/ssh_usernames/:id", SshUsernameController, :show)
-      delete("/ssh_usernames/:id", SshUsernameController, :delete)
+      resources("/ssh_usernames", SshUsernameController, only: [:index, :show, :delete]) do
+        resources("/ssh_public_keys", SshPublicKeyController, only: [:create])
+      end
 
-      get("/ssh_public_keys", SshPublicKeyController, :index)
-      post("/ssh_usernames/:ssh_username_id/ssh_public_keys", SshPublicKeyController, :create)
-      get("/ssh_public_keys/:id", SshPublicKeyController, :show)
-      delete("/ssh_public_keys/:id", SshPublicKeyController, :delete)
+      resources("/ssh_public_keys", SshPublicKeyController, only: [:index, :show, :delete])
     end
 
     scope "/", Commands do
       resources("/commands", CommandController, only: [:index, :create, :show])
 
-      get("/command_executions", CommandExecutionController, :index)
-      get("/command_executions/:id", CommandExecutionController, :show)
+      resources("/command_executions", CommandExecutionController, only: [:index, :show])
       patch("/command_executions/:id", CommandExecutionController, :update)
     end
   end

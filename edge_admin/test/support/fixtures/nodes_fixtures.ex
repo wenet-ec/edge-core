@@ -49,4 +49,24 @@ defmodule EdgeAdmin.NodesFixtures do
 
     ssh_username
   end
+
+  @doc """
+  Generate a ssh_public_key.
+  """
+  def ssh_public_key_fixture(attrs \\ %{}) do
+    # Create a ssh_username first since ssh_public_key requires ssh_username_id
+    ssh_username = ssh_username_fixture()
+
+    {:ok, ssh_public_key} =
+      attrs
+      |> Enum.into(%{
+        key_name: "some key_name",
+        public_key:
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 test@example.com",
+        ssh_username_id: ssh_username.id
+      })
+      |> EdgeAdmin.Nodes.create_ssh_public_key()
+
+    ssh_public_key
+  end
 end

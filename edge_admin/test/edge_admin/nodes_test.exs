@@ -239,4 +239,54 @@ defmodule EdgeAdmin.NodesTest do
       assert_raise Ecto.NoResultsError, fn -> Nodes.get_ssh_username!(ssh_username.id) end
     end
   end
+
+  describe "ssh_public_keys" do
+    alias EdgeAdmin.Nodes.SshPublicKey
+
+    @invalid_attrs %{public_key: nil, key_name: nil, ssh_username_id: nil}
+
+    test "create_ssh_public_key/1 with valid data creates a ssh_public_key" do
+      ssh_username = ssh_username_fixture()
+
+      valid_attrs = %{
+        public_key:
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 test@example.com",
+        key_name: "laptop_key",
+        ssh_username_id: ssh_username.id
+      }
+
+      assert {:ok, %SshPublicKey{} = ssh_public_key} = Nodes.create_ssh_public_key(valid_attrs)
+      assert ssh_public_key.public_key == valid_attrs.public_key
+      assert ssh_public_key.key_name == "laptop_key"
+      assert ssh_public_key.ssh_username_id == ssh_username.id
+    end
+
+    test "create_ssh_public_key/1 with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Nodes.create_ssh_public_key(@invalid_attrs)
+    end
+
+    test "create_ssh_public_key/1 enforces unique constraint per username" do
+      ssh_username = ssh_username_fixture()
+
+      attrs = %{
+        public_key:
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 test@example.com",
+        key_name: "laptop_key",
+        ssh_username_id: ssh_username.id
+      }
+
+      # First creation should succeed
+      assert {:ok, %SshPublicKey{}} = Nodes.create_ssh_public_key(attrs)
+
+      # Second creation with same key_name + ssh_username should fail
+      assert {:error, %Ecto.Changeset{} = changeset} = Nodes.create_ssh_public_key(attrs)
+      assert changeset.errors[:key_name] != nil or changeset.errors[:ssh_username_id] != nil
+    end
+
+    test "delete_ssh_public_key/1 deletes the ssh_public_key" do
+      ssh_public_key = ssh_public_key_fixture()
+      assert {:ok, %SshPublicKey{}} = Nodes.delete_ssh_public_key(ssh_public_key)
+      assert_raise Ecto.NoResultsError, fn -> Nodes.get_ssh_public_key!(ssh_public_key.id) end
+    end
+  end
 end

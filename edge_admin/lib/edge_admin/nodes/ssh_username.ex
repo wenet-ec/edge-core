@@ -8,7 +8,9 @@ defmodule EdgeAdmin.Nodes.SshUsername do
   schema "ssh_usernames" do
     field(:username, :string)
 
+    # Relationships
     belongs_to(:node, EdgeAdmin.Nodes.Node)
+    has_many :ssh_public_keys, EdgeAdmin.Nodes.SshPublicKey, on_delete: :delete_all
 
     timestamps(type: :utc_datetime)
   end

@@ -309,4 +309,100 @@ defmodule EdgeAdmin.Nodes do
   def change_ssh_username(%SshUsername{} = ssh_username, attrs \\ %{}) do
     SshUsername.changeset(ssh_username, attrs)
   end
+
+  alias EdgeAdmin.Nodes.SshPublicKey
+
+  @doc """
+  Returns the list of ssh_public_keys.
+
+  ## Examples
+
+      iex> list_ssh_public_keys()
+      [%SshPublicKey{}, ...]
+
+  """
+  def list_ssh_public_keys do
+    Repo.all(SshPublicKey)
+  end
+
+  @doc """
+  Gets a single ssh_public_key.
+
+  Raises `Ecto.NoResultsError` if the Ssh public key does not exist.
+
+  ## Examples
+
+      iex> get_ssh_public_key!(123)
+      %SshPublicKey{}
+
+      iex> get_ssh_public_key!(456)
+      ** (Ecto.NoResultsError)
+
+  """
+  def get_ssh_public_key!(id), do: Repo.get!(SshPublicKey, id)
+
+  @doc """
+  Creates a ssh_public_key.
+
+  ## Examples
+
+      iex> create_ssh_public_key(%{field: value})
+      {:ok, %SshPublicKey{}}
+
+      iex> create_ssh_public_key(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def create_ssh_public_key(attrs \\ %{}) do
+    %SshPublicKey{}
+    |> SshPublicKey.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Updates a ssh_public_key.
+
+  ## Examples
+
+      iex> update_ssh_public_key(ssh_public_key, %{field: new_value})
+      {:ok, %SshPublicKey{}}
+
+      iex> update_ssh_public_key(ssh_public_key, %{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def update_ssh_public_key(%SshPublicKey{} = ssh_public_key, attrs) do
+    ssh_public_key
+    |> SshPublicKey.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Deletes a ssh_public_key.
+
+  ## Examples
+
+      iex> delete_ssh_public_key(ssh_public_key)
+      {:ok, %SshPublicKey{}}
+
+      iex> delete_ssh_public_key(ssh_public_key)
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def delete_ssh_public_key(%SshPublicKey{} = ssh_public_key) do
+    Repo.delete(ssh_public_key)
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking ssh_public_key changes.
+
+  ## Examples
+
+      iex> change_ssh_public_key(ssh_public_key)
+      %Ecto.Changeset{data: %SshPublicKey{}}
+
+  """
+  def change_ssh_public_key(%SshPublicKey{} = ssh_public_key, attrs \\ %{}) do
+    SshPublicKey.changeset(ssh_public_key, attrs)
+  end
 end

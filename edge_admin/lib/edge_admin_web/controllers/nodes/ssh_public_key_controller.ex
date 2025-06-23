@@ -10,7 +10,7 @@ defmodule EdgeAdminWeb.Nodes.SshPublicKeyController do
 
   action_fallback(EdgeAdminWeb.FallbackController)
 
-  tags(["Nodes"])
+  tags(["Nodes.SshPublicKey"])
 
   operation(:index,
     summary: "List SSH public keys",

@@ -10,7 +10,7 @@ defmodule EdgeAdminWeb.Nodes.SshUsernameController do
 
   action_fallback(EdgeAdminWeb.FallbackController)
 
-  tags(["Nodes"])
+  tags(["Nodes.SshUsername"])
 
   operation(:index,
     summary: "List SSH usernames",

@@ -10,7 +10,7 @@ defmodule EdgeAdminWeb.Nodes.NodeController do
 
   action_fallback(EdgeAdminWeb.FallbackController)
 
-  tags(["Nodes"])
+  tags(["Nodes.Node"])
 
   operation(:index,
     summary: "List all nodes",

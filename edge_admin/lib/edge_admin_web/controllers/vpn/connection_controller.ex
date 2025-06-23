@@ -8,7 +8,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionController do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   action_fallback EdgeAdminWeb.FallbackController
 
-  tags ["VPN"]
+  tags ["VPN.Connection"]
 
   operation :show,
     summary: "Get VPN connection status",

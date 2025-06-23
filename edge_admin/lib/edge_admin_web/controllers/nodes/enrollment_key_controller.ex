@@ -9,7 +9,7 @@ defmodule EdgeAdminWeb.Nodes.EnrollmentKeyController do
 
   action_fallback(EdgeAdminWeb.FallbackController)
 
-  tags ["Nodes"]
+  tags ["Nodes.EnrollmentKey"]
 
   operation :create,
     summary: "Create enrollment key",

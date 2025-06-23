@@ -10,7 +10,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionController do
 
   action_fallback(EdgeAdminWeb.FallbackController)
 
-  tags(["Commands"])
+  tags(["Commands.CommandExecution"])
 
   operation(:index,
     summary: "List command executions",

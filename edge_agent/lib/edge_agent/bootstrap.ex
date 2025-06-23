@@ -101,8 +101,8 @@ defmodule EdgeAgent.Bootstrap do
   end
 
   def connect_to_admin(settings) do
-    node_id = Map.get(settings, "node_id")
-    node_id_type = Map.get(settings, "node_id_type")
+    node_id = Map.get(settings, "id")
+    node_id_type = Map.get(settings, "id_type")
 
     Logger.info("Connecting to admin for node: #{String.slice(node_id || "unknown", 0, 8)}...")
 
@@ -129,7 +129,7 @@ defmodule EdgeAgent.Bootstrap do
     Logger.info("Storing node identity: type=#{node_id_type}")
 
     case Settings.set_node_identity(node_id, node_id_type) do
-      {:ok, %{node_id: normalized_node_id}} ->
+      {:ok, %{id: normalized_node_id}} ->
         Logger.info("Stored normalized node ID: #{String.slice(normalized_node_id, 0, 8)}...")
         {:ok, normalized_node_id}
 
@@ -296,12 +296,12 @@ defmodule EdgeAgent.Bootstrap do
 
     # Define the mapping from node_data keys to config keys
     key_mapping = %{
-      "id" => "node_id",
-      "id_type" => "node_id_type",
-      "vpn_ip" => "node_vpn_ip",
-      "vpn_hostname" => "node_vpn_hostname",
-      "status" => "node_status",
-      "last_seen_at" => "node_last_seen_at"
+      "id" => "id",
+      "id_type" => "id_type",
+      "vpn_ip" => "vpn_ip",
+      "vpn_hostname" => "vpn_hostname",
+      "status" => "status",
+      "last_seen_at" => "last_seen_at"
     }
 
     # Filter out nil values and store only what we have

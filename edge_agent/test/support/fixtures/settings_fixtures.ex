@@ -30,7 +30,7 @@ defmodule EdgeAgent.SettingsFixtures do
   """
   def node_config_fixture(attrs \\ %{}) do
     default_attrs = %{
-      key: "node_id",
+      key: "id",
       value: "test_node_#{System.unique_integer([:positive])}"
     }
 
@@ -51,8 +51,8 @@ defmodule EdgeAgent.SettingsFixtures do
   """
   def node_identity_fixture do
     settings_batch_fixture(%{
-      "node_id" => "test_machine_id_#{System.unique_integer([:positive])}",
-      "node_id_type" => "machine_id"
+      "id" => "test_machine_id_#{System.unique_integer([:positive])}",
+      "id_type" => "machine_id"
     })
   end
 end

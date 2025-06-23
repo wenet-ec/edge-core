@@ -160,20 +160,20 @@ defmodule EdgeAgent.SettingsTest do
       assert {:ok, result} = Settings.set_node_identity(hex_32, "machine_id")
 
       # Should be normalized to UUID format
-      assert result.node_id == "bc9ebeb1-96a4-4dfd-953e-899a61637577"
+      assert result.id == "bc9ebeb1-96a4-4dfd-953e-899a61637577"
 
       assert String.match?(
-               result.node_id,
+               result.id,
                ~r/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
              )
 
       # Verify persistence
-      assert Settings.get("node_id") == result.node_id
-      assert Settings.get("node_id_type") == "machine_id"
+      assert Settings.get("id") == result.id
+      assert Settings.get("id_type") == "machine_id"
 
       config = Settings.all()
-      assert config["node_id"] == result.node_id
-      assert config["node_id_type"] == "machine_id"
+      assert config["id"] == result.id
+      assert config["id_type"] == "machine_id"
     end
 
     test "configuration updates don't create duplicates" do
@@ -186,60 +186,14 @@ defmodule EdgeAgent.SettingsTest do
     end
   end
 
-  describe "node identity functions - getters" do
-    test "get_node_id/0 and get_node_id_type/0" do
-      # When not set
-      assert Settings.get_node_id() == nil
-      assert Settings.get_node_id_type() == nil
-
-      # When set
-      Settings.set("node_id", "test_node_123")
-      Settings.set("node_id_type", "machine_id")
-
-      assert Settings.get_node_id() == "test_node_123"
-      assert Settings.get_node_id_type() == "machine_id"
-    end
-
-    test "get_node_identity/0 returns complete identity map" do
-      # When not configured
-      assert Settings.get_node_identity() == %{node_id: nil, node_id_type: nil}
-
-      # When configured
-      hex_id = "bc9ebeb196a44dfd953e899a61637577"
-      expected_uuid = "bc9ebeb1-96a4-4dfd-953e-899a61637577"
-
-      Settings.set_node_identity(hex_id, "hardware_id")
-
-      assert Settings.get_node_identity() == %{
-               node_id: expected_uuid,
-               node_id_type: "hardware_id"
-             }
-    end
-
-    test "node_identity_configured?/0" do
-      assert Settings.node_identity_configured?() == false
-
-      Settings.set("node_id", "abc123")
-      assert Settings.node_identity_configured?() == false
-
-      Settings.delete("node_id")
-      Settings.set("node_id_type", "machine_id")
-      assert Settings.node_identity_configured?() == false
-
-      valid_uuid = Ecto.UUID.generate()
-      Settings.set_node_identity(valid_uuid, "machine_id")
-      assert Settings.node_identity_configured?() == true
-    end
-  end
-
   describe "set_node_identity/2 - valid cases" do
     test "sets both node ID and type with valid UUID" do
       valid_uuid = "bc9ebeb1-96a4-4dfd-953e-899a61637577"
       assert {:ok, result} = Settings.set_node_identity(valid_uuid, "machine_id")
-      assert result == %{node_id: valid_uuid, node_id_type: "machine_id"}
+      assert result == %{id: valid_uuid, id_type: "machine_id"}
 
-      assert Settings.get_node_id() == valid_uuid
-      assert Settings.get_node_id_type() == "machine_id"
+      assert Settings.get("id") == valid_uuid
+      assert Settings.get("id_type") == "machine_id"
     end
 
     test "normalizes various valid formats" do
@@ -262,8 +216,8 @@ defmodule EdgeAgent.SettingsTest do
         # Clear before each iteration in the loop
         Repo.delete_all(Setting)
         assert {:ok, result} = Settings.set_node_identity(input, "machine_id")
-        assert result.node_id == expected
-        assert Settings.get_node_id() == expected
+        assert result.id == expected
+        assert Settings.get("id") == expected
       end
     end
 
@@ -275,10 +229,8 @@ defmodule EdgeAgent.SettingsTest do
       Settings.set_node_identity(old_uuid, "temporary_id")
       Settings.set_node_identity(new_hex, "machine_id")
 
-      assert Settings.get_node_identity() == %{
-               node_id: expected_new_uuid,
-               node_id_type: "machine_id"
-             }
+      assert Settings.get("id") == expected_new_uuid
+      assert Settings.get("id_type") == "machine_id"
 
       # Verify no duplicate entries
       assert length(Settings.list_settings()) == 2
@@ -331,18 +283,6 @@ defmodule EdgeAgent.SettingsTest do
 
       assert {:error, "Node ID too long (max 255 characters)"} =
                Settings.set_node_identity(long_id, "machine_id")
-    end
-  end
-
-  describe "clear_node_identity/0" do
-    test "removes both values" do
-      valid_uuid = Ecto.UUID.generate()
-      Settings.set_node_identity(valid_uuid, "machine_id")
-      assert Settings.node_identity_configured?() == true
-
-      assert {:ok, :cleared} = Settings.clear_node_identity()
-      assert Settings.node_identity_configured?() == false
-      assert Settings.get_node_identity() == %{node_id: nil, node_id_type: nil}
     end
   end
 end

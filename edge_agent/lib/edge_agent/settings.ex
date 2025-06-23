@@ -108,13 +108,13 @@ defmodule EdgeAgent.Settings do
 
   ## Examples
 
-      iex> get("node_id")
+      iex> get("id")
       "abc123"
 
       iex> get("nonexistent")
       nil
 
-      iex> get("node_id", "default_value")
+      iex> get("id", "default_value")
       "abc123"
 
   """
@@ -130,7 +130,7 @@ defmodule EdgeAgent.Settings do
 
   ## Examples
 
-      iex> set("node_id", "abc123")
+      iex> set("id", "abc123")
       {:ok, %Setting{}}
 
       iex> set("", "value")
@@ -152,7 +152,7 @@ defmodule EdgeAgent.Settings do
 
   ## Examples
 
-      iex> delete("node_id")
+      iex> delete("id")
       {:ok, %Setting{}}
 
       iex> delete("nonexistent")
@@ -172,7 +172,7 @@ defmodule EdgeAgent.Settings do
   ## Examples
 
       iex> all()
-      %{"node_id" => "abc123", "node_id_type" => "machine_id"}
+      %{"id" => "abc123", "id_type" => "machine_id"}
 
   """
   def all do
@@ -186,7 +186,7 @@ defmodule EdgeAgent.Settings do
 
   ## Examples
 
-      iex> has_key?("node_id")
+      iex> has_key?("id")
       true
 
       iex> has_key?("nonexistent")
@@ -200,44 +200,12 @@ defmodule EdgeAgent.Settings do
   end
 
   @doc """
-  Gets the node ID.
-
-  ## Examples
-
-      iex> get_node_id()
-      "bc9ebeb196a44dfd953e899a61637577"
-
-      iex> get_node_id()
-      nil
-
-  """
-  def get_node_id do
-    get("node_id")
-  end
-
-  @doc """
-  Gets the node ID type.
-
-  ## Examples
-
-      iex> get_node_id_type()
-      "machine_id"
-
-      iex> get_node_id_type()
-      nil
-
-  """
-  def get_node_id_type do
-    get("node_id_type")
-  end
-
-  @doc """
   Sets the node identity (both ID and type), normalizing the node_id to UUID format.
 
   ## Examples
 
       iex> set_node_identity("abc123", "machine_id")
-      {:ok, %{node_id: "abc123", node_id_type: "machine_id"}}
+      {:ok, %{id: "abc123", id_type: "machine_id"}}
 
       iex> set_node_identity("", "machine_id")
       {:error, "Node ID cannot be empty"}
@@ -246,63 +214,12 @@ defmodule EdgeAgent.Settings do
   def set_node_identity(node_id, node_id_type) do
     with :ok <- validate_node_identity(node_id, node_id_type),
          {:ok, normalized_id} <- normalize_node_id(node_id),
-         {:ok, _} <- set("node_id", normalized_id),
-         {:ok, _} <- set("node_id_type", node_id_type) do
-      {:ok, %{node_id: normalized_id, node_id_type: node_id_type}}
+         {:ok, _} <- set("id", normalized_id),
+         {:ok, _} <- set("id_type", node_id_type) do
+      {:ok, %{id: normalized_id, id_type: node_id_type}}
     else
       {:error, reason} -> {:error, reason}
       error -> error
-    end
-  end
-
-  @doc """
-  Gets the complete node identity as a map.
-
-  ## Examples
-
-      iex> get_node_identity()
-      %{node_id: "abc123", node_id_type: "machine_id"}
-
-      iex> get_node_identity()
-      %{node_id: nil, node_id_type: nil}
-
-  """
-  def get_node_identity do
-    %{
-      node_id: get_node_id(),
-      node_id_type: get_node_id_type()
-    }
-  end
-
-  @doc """
-  Checks if node identity is configured.
-
-  ## Examples
-
-      iex> node_identity_configured?()
-      true
-
-      iex> node_identity_configured?()
-      false
-
-  """
-  def node_identity_configured? do
-    get_node_id() != nil && get_node_id_type() != nil
-  end
-
-  @doc """
-  Clears the node identity (useful for testing or reset scenarios).
-
-  ## Examples
-
-      iex> clear_node_identity()
-      {:ok, :cleared}
-
-  """
-  def clear_node_identity do
-    with {:ok, _} <- delete("node_id"),
-         {:ok, _} <- delete("node_id_type") do
-      {:ok, :cleared}
     end
   end
 

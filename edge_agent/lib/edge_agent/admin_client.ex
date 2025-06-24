@@ -8,6 +8,8 @@ defmodule EdgeAgent.AdminClient do
 
   @admin_base_url "http://100.64.0.1:4000"
 
+  # Node operations
+
   def get_node(node_id) do
     url = "#{@admin_base_url}/api/nodes/#{node_id}"
 
@@ -42,6 +44,61 @@ defmodule EdgeAgent.AdminClient do
         {:error, {:request_failed, reason}}
     end
   end
+
+  # SSH operations
+
+  def list_ssh_usernames(node_id) do
+    url = "#{@admin_base_url}/api/ssh_usernames"
+    params = %{node_id: node_id}
+
+    case Req.get(url, params: params) do
+      {:ok, %{status: 200, body: %{"data" => ssh_usernames}}} ->
+        {:ok, ssh_usernames}
+
+      {:ok, %{status: 404}} ->
+        {:error, :not_found}
+
+      {:ok, %{status: status, body: body}} ->
+        Logger.warning(
+          "Failed to list SSH usernames for node #{node_id}, HTTP #{status}: #{inspect(body)}"
+        )
+
+        {:error, {:http_error, status, body}}
+
+      {:error, reason} ->
+        Logger.warning("Failed to list SSH usernames for node #{node_id}: #{inspect(reason)}")
+        {:error, {:request_failed, reason}}
+    end
+  end
+
+  def list_ssh_public_keys(ssh_username_id) do
+    url = "#{@admin_base_url}/api/ssh_public_keys"
+    params = %{ssh_username_id: ssh_username_id}
+
+    case Req.get(url, params: params) do
+      {:ok, %{status: 200, body: %{"data" => ssh_public_keys}}} ->
+        {:ok, ssh_public_keys}
+
+      {:ok, %{status: 404}} ->
+        {:error, :not_found}
+
+      {:ok, %{status: status, body: body}} ->
+        Logger.warning(
+          "Failed to list SSH public keys for username #{ssh_username_id}, HTTP #{status}: #{inspect(body)}"
+        )
+
+        {:error, {:http_error, status, body}}
+
+      {:error, reason} ->
+        Logger.warning(
+          "Failed to list SSH public keys for username #{ssh_username_id}: #{inspect(reason)}"
+        )
+
+        {:error, {:request_failed, reason}}
+    end
+  end
+
+  # Command execution operations
 
   def update_command_execution(execution_id, command_execution_params) do
     url = "#{@admin_base_url}/api/command_executions/#{execution_id}"

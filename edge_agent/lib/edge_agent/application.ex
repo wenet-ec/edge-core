@@ -14,24 +14,28 @@ defmodule EdgeAgent.Application do
       {DNSCluster, query: Application.get_env(:edge_agent, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: EdgeAgent.PubSub},
       {Oban, Application.fetch_env!(:edge_agent, Oban)},
+      EdgeAgent.SshServer,
       EdgeAgentWeb.Endpoint
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: EdgeAgent.Supervisor]
+
     case Supervisor.start_link(children, opts) do
       {:ok, pid} ->
         # Run bootstrap after supervisor starts successfully
         case EdgeAgent.Bootstrap.run() do
           {:ok, :bootstrap_complete} ->
             {:ok, pid}
+
           {:error, reason} ->
             # Bootstrap failed - you can decide whether to:
             # 1. Continue anyway (for development)
             # 2. Crash the application (for production)
             Logger.error("Bootstrap failed: #{inspect(reason)}")
-            {:ok, pid}  # Continue for now, but you might want {:error, reason}
+            # Continue for now, but you might want {:error, reason}
+            {:ok, pid}
         end
 
       error ->

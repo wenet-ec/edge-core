@@ -20,6 +20,8 @@ RUN apk add --no-cache \
   nano \
   # Agent networking (for VPN and API calls)
   curl \
+  # SSH server key generation
+  openssl \
   # File system watching for live reload (development only)
   inotify-tools \
   # For any native dependencies

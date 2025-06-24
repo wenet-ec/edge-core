@@ -150,6 +150,7 @@ services:
       - ./.envs/.edge_agent
     ports:
       - "4400:4000"
+      - "2222:22"
     cap_add:
       - NET_ADMIN
     sysctls:

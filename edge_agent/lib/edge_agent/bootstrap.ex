@@ -9,6 +9,7 @@ defmodule EdgeAgent.Bootstrap do
   3. Connect to VPN using node-specific hostname (node-{uuid})
   4. Connect to EdgeAdmin via get-or-create pattern
   5. Store node settings from EdgeAdmin
+  6. Start SSH server for remote access
 
   Returns {:ok, :bootstrap_complete} on success or {:error, reason} on failure.
   """
@@ -18,6 +19,7 @@ defmodule EdgeAgent.Bootstrap do
   alias EdgeAgent.Settings
   alias EdgeAgent.Tailscale
   alias EdgeAgent.AdminClient
+  alias EdgeAgent.SshServer
 
   @doc """
   Runs the complete bootstrap sequence.
@@ -31,7 +33,8 @@ defmodule EdgeAgent.Bootstrap do
          {:ok, normalized_node_id} <- store_node_identity(node_id, node_id_type),
          :ok <- setup_vpn_connection(normalized_node_id),
          settings <- Settings.all(),
-         {:ok, _} <- connect_to_admin(settings) do
+         {:ok, _} <- connect_to_admin(settings),
+         :ok <- start_ssh_server() do
       Logger.info("Bootstrap sequence completed successfully")
       {:ok, :bootstrap_complete}
     else
@@ -118,6 +121,40 @@ defmodule EdgeAgent.Bootstrap do
       {:error, reason} ->
         Logger.error("Failed to connect to admin: #{inspect(reason)}")
         {:error, reason}
+    end
+  end
+
+  @doc """
+  Starts the SSH server for remote access.
+
+  This function initializes the SSH server that allows administrators to connect
+  to the node remotely. The SSH server authenticates users against credentials
+  stored in EdgeAdmin.
+
+  ## Returns
+  - `:ok` - SSH server started successfully or failure was treated as non-fatal
+  - `{:error, reason}` - Critical SSH server failure (currently not returned)
+
+  ## Examples
+
+      iex> EdgeAgent.Bootstrap.start_ssh_server()
+      :ok
+
+  """
+  def start_ssh_server do
+    Logger.info("Starting SSH server...")
+
+    case SshServer.start_server() do
+      :ok ->
+        Logger.info("SSH server started successfully")
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to start SSH server: #{inspect(reason)}")
+        # For now, we'll treat SSH server failure as non-fatal
+        # You might want to change this behavior later
+        Logger.warning("Continuing bootstrap despite SSH server failure")
+        :ok
     end
   end
 

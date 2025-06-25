@@ -5,13 +5,7 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-echo "Starting vmagent with:"
-echo "  Config Path: ${VMAGENT_CONFIG_PATH}"
-echo "  Strict Parse: ${VMAGENT_STRICT_PARSE}"
-echo "  Remote Write URL: ${VMAGENT_REMOTE_WRITE_URL}"
+echo "Initialize Edge Metrics Collector..."
 
-# Start vmagent with configured parameters
-exec /vmagent-prod \
-  -promscrape.config="${VMAGENT_CONFIG_PATH}" \
-  -promscrape.config.strictParse="${VMAGENT_STRICT_PARSE}" \
-  -remoteWrite.url="${VMAGENT_REMOTE_WRITE_URL}"
+# Execute the command passed to the container
+exec "$@"

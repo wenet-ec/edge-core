@@ -1,0 +1,4 @@
+# deploy/local/.envs/.edge_metrics_collector
+VMAGENT_CONFIG_PATH=/etc/prometheus/prometheus.yml
+VMAGENT_STRICT_PARSE=false
+VMAGENT_REMOTE_WRITE_URL=http://edge_metrics_storage:8428/api/v1/write

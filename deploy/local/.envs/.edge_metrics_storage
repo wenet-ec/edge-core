@@ -1,0 +1,4 @@
+# deploy/local/.envs/.edge_metrics_storage
+VM_STORAGE_PATH=/storage
+VM_RETENTION_PERIOD=7d
+VM_SELF_SCRAPE_INTERVAL=10s

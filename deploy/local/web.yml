@@ -14,6 +14,8 @@ volumes:
   local_edge_agent_deps: {}
   local_edge_agent_build: {}
   local_edge_agent_tailscale_data: {}
+  local_edge_metrics_storage_data: {}
+  local_edge_metrics_collector_data: {}
 
 services:
   # Edge Admin
@@ -36,7 +38,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-  
+
   edge_admin:
     build:
       context: ../..
@@ -71,7 +73,7 @@ services:
       retries: 6
       start_period: 45s
     command: /start
-  
+
   edge_admin_test:
     build:
       context: ../..
@@ -111,9 +113,9 @@ services:
       - ../../deploy/local/compose/edge_vpn/headscale_config:/etc/headscale
       - local_edge_vpn_data:/var/lib/headscale
     ports:
-      - "8080:8080"  # Headscale
-      - "8081:8081"  # VPN Wrapper
-      - "9090:9090"  # Metrics
+      - "8080:8080" # Headscale
+      - "8081:8081" # VPN Wrapper
+      - "9090:9090" # Metrics
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
       interval: 60s
@@ -158,7 +160,7 @@ services:
     privileged: true
     pid: "host"
     command: /start
-  
+
   edge_agent_test:
     build:
       context: ../..
@@ -191,3 +193,45 @@ services:
     privileged: true
     pid: "host"
     command: mix test
+
+  # Metrics
+  edge_metrics_storage:
+    build:
+      context: ../..
+      dockerfile: ./deploy/local/compose/edge_metrics_storage/Dockerfile
+    image: local_edge_metrics_storage
+    container_name: local_edge_metrics_storage
+    networks:
+      - local_edge_core
+    ports:
+      - "8428:8428"
+    volumes:
+      - local_edge_metrics_storage_data:/storage
+    env_file:
+      - ./.envs/.edge_metrics_storage
+
+  edge_metrics_collector:
+    build:
+      context: ../..
+      dockerfile: ./deploy/local/compose/edge_metrics_collector/Dockerfile
+    image: local_edge_metrics_collector
+    container_name: local_edge_metrics_collector
+    networks:
+      - local_edge_core
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+      edge_admin:
+        condition: service_healthy
+    volumes:
+      - local_edge_metrics_collector_data:/vmagent-data
+      - /dev/net/tun:/dev/net/tun
+      - ../../deploy/local/compose/edge_metrics_collector/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    env_file:
+      - ./.envs/.edge_metrics_collector
+    ports:
+      - "8429:8429"
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.ip_forward=1

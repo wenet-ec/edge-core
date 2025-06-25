@@ -16,6 +16,7 @@ volumes:
   local_edge_agent_tailscale_data: {}
   local_edge_metrics_storage_data: {}
   local_edge_metrics_collector_data: {}
+  local_edge_metrics_collector_tailscale_data: {}
 
 services:
   # Edge Admin
@@ -223,8 +224,11 @@ services:
         condition: service_healthy
       edge_admin:
         condition: service_healthy
+      edge_metrics_storage:
+        condition: service_started
     volumes:
       - local_edge_metrics_collector_data:/vmagent-data
+      - local_edge_metrics_collector_tailscale_data:/var/lib/tailscale
       - /dev/net/tun:/dev/net/tun
       - ../../deploy/local/compose/edge_metrics_collector/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     env_file:

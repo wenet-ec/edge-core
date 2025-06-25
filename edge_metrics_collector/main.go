@@ -3,52 +3,44 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"edge_metrics_collector/internal/config"
+	"edge_metrics_collector/internal/server"
+	"edge_metrics_collector/internal/vpn"
 )
-
-type HealthResponse struct {
-	Status        string `json:"status"`
-	Timestamp     string `json:"timestamp"`
-	VPNConnected  bool   `json:"vpn_connected"`
-	VMAgentStatus string `json:"vmagent_status"`
-}
-
-type VPNStatus struct {
-	Connected bool   `json:"connected"`
-	IP        string `json:"ip,omitempty"`
-	Error     string `json:"error,omitempty"`
-}
 
 func main() {
 	log.Println("Starting Edge Metrics Collector service...")
 
-	// TODO: Add VPN connection management logic here
-	// TODO: Add vmagent process management logic here
-	// TODO: Add VPN reconnection logic here
-
-	mux := http.NewServeMux()
-
-	// Health endpoint
-	mux.HandleFunc("/health", healthHandler)
-
-	// VPN status endpoint (for future use)
-	mux.HandleFunc("/vpn/status", vpnStatusHandler)
-
-	server := &http.Server{
-		Addr:    ":8430",
-		Handler: mux,
+	// Load configuration
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	// Start server in goroutine
+	// Initialize VPN manager
+	vpnManager := vpn.NewManager(cfg.VPN)
+
+	// Initialize server
+	srv := server.New(cfg.Server, vpnManager)
+
+	// Start background services
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start VPN manager background services
+	go vpnManager.Start(ctx)
+
+	// Start HTTP server
 	go func() {
-		log.Println("Starting HTTP server on :8430")
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Printf("Starting HTTP server on :%d", cfg.Server.Port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed to start: %v", err)
 		}
 	}()
@@ -59,32 +51,17 @@ func main() {
 	<-c
 
 	log.Println("Shutting down...")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
+	// Cancel background services
+	cancel()
+
+	// Shutdown HTTP server
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Printf("Server shutdown error: %v", err)
 	}
-}
 
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	response := HealthResponse{
-		Status:        "ok",
-		Timestamp:     time.Now().UTC().Format(time.RFC3339),
-		VPNConnected:  false,             // TODO: Check actual VPN status
-		VMAgentStatus: "not_implemented", // TODO: Check vmagent status
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
-}
-
-func vpnStatusHandler(w http.ResponseWriter, r *http.Request) {
-	status := VPNStatus{
-		Connected: false, // TODO: Implement actual VPN status check
-		Error:     "not_implemented",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(status)
+	log.Println("Shutdown complete")
 }

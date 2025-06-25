@@ -11,14 +11,6 @@ echo "Starting VPN management service on :8430..."
 edge_metrics_collector_wrapper &
 GO_PID=$!
 
-# TODO: Add VPN connection logic here
-# echo "Starting Tailscale daemon..."
-# tailscaled --state-dir=/var/lib/tailscale &
-# TAILSCALE_PID=$!
-
-# TODO: Wait for VPN connection before starting vmagent
-# sleep 5
-
 # Start vmagent as the main process
 echo "Starting vmagent..."
 echo "  Config Path: ${VMAGENT_CONFIG_PATH:-/etc/prometheus/prometheus.yml}"

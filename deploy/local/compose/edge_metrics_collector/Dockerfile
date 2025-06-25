@@ -9,8 +9,8 @@ WORKDIR /app
 COPY edge_metrics_collector/go.mod edge_metrics_collector/go.sum ./
 RUN go mod download
 
-# Copy the main.go file
-COPY edge_metrics_collector/main.go ./
+# Copy collector wrapper source code
+COPY edge_metrics_collector/ ./
 RUN CGO_ENABLED=0 GOOS=linux go build -o edge_metrics_collector_wrapper main.go
 
 # Final stage
@@ -40,7 +40,7 @@ RUN wget https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/${
 RUN mkdir -p /var/run/tailscale
 
 # Copy Go service binary
-COPY --from=go-builder /app/edge-metrics-collector /usr/local/bin/edge-metrics-collector
+COPY --from=go-builder /app/edge_metrics_collector_wrapper /usr/local/bin/edge_metrics_collector_wrapper
 
 # Create directories
 RUN mkdir -p /var/lib/tailscale /vmagent-data /etc/prometheus
@@ -53,7 +53,5 @@ RUN sed -i 's/\r$//g' /entrypoint && \
 COPY ./deploy/local/compose/edge_metrics_collector/start /start
 RUN sed -i 's/\r$//g' /start && \
     chmod +x /start
-
-EXPOSE 8429 8430
 
 ENTRYPOINT ["/entrypoint"]

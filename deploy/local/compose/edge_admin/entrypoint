@@ -10,7 +10,7 @@ ensure_vpn_users() {
     echo "Ensuring required VPN users exist..."
     
     # Array of users to create
-    declare -a users=("edge-admins" "edge-nodes")
+    declare -a users=("edge-admins" "edge-nodes" "edge-metrics")
     
     for user_name in "${users[@]}"; do
         echo "Checking for ${user_name} user..."

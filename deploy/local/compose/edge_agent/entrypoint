@@ -9,7 +9,7 @@ set -o nounset
 get_enrollment_key() {
     echo "Getting enrollment key from Edge Admin..."
     
-    ENROLLMENT_RESPONSE=$(curl -s -X POST "${EDGE_ADMIN_URL}/api/enrollment-keys" \
+    ENROLLMENT_RESPONSE=$(curl -s -X POST "${EDGE_ADMIN_URL}/api/enrollment_keys" \
         -H "Content-Type: application/json")
     
     ENROLLMENT_KEY=$(echo "${ENROLLMENT_RESPONSE}" | grep -o '"key":"[^"]*"' | cut -d'"' -f4)

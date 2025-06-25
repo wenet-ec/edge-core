@@ -2,9 +2,9 @@
 defmodule EdgeAdminWeb.Nodes.EnrollmentKeyControllerTest do
   use EdgeAdminWeb.ConnCase
 
-  describe "POST /api/enrollment-keys" do
+  describe "POST /api/enrollment_keys" do
     test "creates enrollment key successfully", %{conn: conn} do
-      conn = post(conn, ~p"/api/enrollment-keys")
+      conn = post(conn, ~p"/api/enrollment_keys")
 
       case conn.status do
         201 ->
@@ -27,7 +27,7 @@ defmodule EdgeAdminWeb.Nodes.EnrollmentKeyControllerTest do
     end
 
     test "handles VPN service errors appropriately", %{conn: conn} do
-      conn = post(conn, ~p"/api/enrollment-keys")
+      conn = post(conn, ~p"/api/enrollment_keys")
 
       # Endpoint should respond (not 404/405) and return JSON
       refute conn.status == 404

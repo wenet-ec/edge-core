@@ -36,3 +36,6 @@ config :edge_admin,
 config :sentry,
   dsn: get_env("SENTRY_DSN"),
   environment_name: get_env("SENTRY_ENVIRONMENT_NAME")
+
+config :edge_admin,
+  metrics_storage_url: System.get_env("METRICS_STORAGE_URL")

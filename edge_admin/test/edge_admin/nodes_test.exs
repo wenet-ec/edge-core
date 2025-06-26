@@ -205,6 +205,73 @@ defmodule EdgeAdmin.NodesTest do
     end
   end
 
+  describe "node metrics" do
+    test "list_node_metrics/1 returns node_not_found for invalid node ID" do
+      fake_id = Ecto.UUID.generate()
+      assert {:error, :node_not_found} = Nodes.list_node_metrics(fake_id)
+    end
+
+    test "list_node_metrics/1 returns metrics_unavailable when node has no VPN IP" do
+      {:ok, node} =
+        Nodes.create_node(%{
+          id: Ecto.UUID.generate(),
+          id_type: "machine_id",
+          vpn_ip: nil
+        })
+
+      assert {:error, :metrics_unavailable} = Nodes.list_node_metrics(node.id)
+    end
+
+    test "list_node_metrics/1 returns metrics_unavailable when node has empty VPN IP" do
+      {:ok, node} =
+        Nodes.create_node(%{
+          id: Ecto.UUID.generate(),
+          id_type: "machine_id",
+          vpn_ip: ""
+        })
+
+      assert {:error, :metrics_unavailable} = Nodes.list_node_metrics(node.id)
+    end
+
+    test "list_node_metrics/1 returns metrics_unavailable when metrics storage URL is missing" do
+      {:ok, node} =
+        Nodes.create_node(%{
+          id: Ecto.UUID.generate(),
+          id_type: "machine_id",
+          vpn_ip: "100.64.0.1"
+        })
+
+      # Remove the config entirely
+      original_url = Application.get_env(:edge_admin, :metrics_storage_url)
+      Application.delete_env(:edge_admin, :metrics_storage_url)
+
+      try do
+        assert {:error, :metrics_unavailable} = Nodes.list_node_metrics(node.id)
+      after
+        Application.put_env(:edge_admin, :metrics_storage_url, original_url)
+      end
+    end
+
+    test "list_node_metrics/1 returns metrics_unavailable when metrics storage URL is empty" do
+      {:ok, node} =
+        Nodes.create_node(%{
+          id: Ecto.UUID.generate(),
+          id_type: "machine_id",
+          vpn_ip: "100.64.0.1"
+        })
+
+      # Set empty config
+      original_url = Application.get_env(:edge_admin, :metrics_storage_url)
+      Application.put_env(:edge_admin, :metrics_storage_url, "")
+
+      try do
+        assert {:error, :metrics_unavailable} = Nodes.list_node_metrics(node.id)
+      after
+        Application.put_env(:edge_admin, :metrics_storage_url, original_url)
+      end
+    end
+  end
+
   describe "ssh_usernames" do
     @invalid_attrs %{username: nil, node_id: nil}
 

@@ -49,12 +49,21 @@ RUN apk add --no-cache \
     sqlite \
     bash \
     curl \
+    wget \
     tailscale \
     libstdc++ \
     libgcc \
     su-exec \
     util-linux \
     && rm -rf /var/cache/apk/*
+
+# Install node_exporter for metrics collection
+ENV NODE_EXPORTER_VERSION="1.9.1"
+RUN wget -q https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz \
+    && tar xzf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz \
+    && mv node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64/node_exporter /usr/local/bin/ \
+    && rm -rf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64* \
+    && chmod +x /usr/local/bin/node_exporter
 
 # Create app user and setup directories
 RUN addgroup -g 1000 app && \

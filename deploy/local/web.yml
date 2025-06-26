@@ -154,6 +154,7 @@ services:
     ports:
       - "4400:4000"
       - "2222:22"
+      - "9100:9100"
     cap_add:
       - NET_ADMIN
     sysctls:

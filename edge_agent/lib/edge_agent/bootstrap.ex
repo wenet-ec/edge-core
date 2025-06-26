@@ -20,6 +20,7 @@ defmodule EdgeAgent.Bootstrap do
   alias EdgeAgent.Tailscale
   alias EdgeAgent.AdminClient
   alias EdgeAgent.SshServer
+  alias EdgeAgent.MetricsServer
 
   @doc """
   Runs the complete bootstrap sequence.
@@ -34,7 +35,8 @@ defmodule EdgeAgent.Bootstrap do
          :ok <- setup_vpn_connection(normalized_node_id),
          settings <- Settings.all(),
          {:ok, _} <- connect_to_admin(settings),
-         :ok <- start_ssh_server() do
+         :ok <- start_ssh_server(),
+         :ok <- start_metrics_server() do
       Logger.info("Bootstrap sequence completed successfully")
       {:ok, :bootstrap_complete}
     else
@@ -154,6 +156,28 @@ defmodule EdgeAgent.Bootstrap do
         # For now, we'll treat SSH server failure as non-fatal
         # You might want to change this behavior later
         Logger.warning("Continuing bootstrap despite SSH server failure")
+        :ok
+    end
+  end
+
+  @doc """
+  Starts the metrics server during bootstrap.
+
+  Returns :ok on success or {:error, reason} on failure.
+  """
+  def start_metrics_server do
+    Logger.info("Starting metrics server...")
+
+    case MetricsServer.start_server() do
+      {:ok, _pid} ->
+        Logger.info("Metrics server started successfully")
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to start metrics server: #{inspect(reason)}")
+        # For now, we'll treat metrics server failure as non-fatal
+        # You might want to change this behavior later
+        Logger.warning("Continuing bootstrap despite metrics server failure")
         :ok
     end
   end

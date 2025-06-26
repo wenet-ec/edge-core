@@ -20,6 +20,7 @@ RUN apk add --no-cache \
   nano \
   # Agent networking (for VPN and API calls)
   curl \
+  wget \
   # SSH server key generation
   openssl \
   # File system watching for live reload (development only)
@@ -27,6 +28,14 @@ RUN apk add --no-cache \
   # For any native dependencies
   pkgconfig \
   && rm -rf /var/cache/apk/*
+
+# Install node_exporter for metrics collection
+ENV NODE_EXPORTER_VERSION="1.9.1"
+RUN wget -q https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz \
+    && tar xzf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz \
+    && mv node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64/node_exporter /usr/local/bin/ \
+    && rm -rf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64* \
+    && chmod +x /usr/local/bin/node_exporter
 
 # Install Tailscale (VPN client)
 RUN apk add --no-cache tailscale && \

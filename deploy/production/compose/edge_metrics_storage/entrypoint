@@ -1,0 +1,17 @@
+#!/bin/sh
+# deploy/production/compose/edge_metrics_storage/entrypoint
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+echo "Starting VictoriaMetrics with:"
+echo "  Storage Path: ${VM_STORAGE_PATH}"
+echo "  Retention Period: ${VM_RETENTION_PERIOD}"
+echo "  Self Scrape Interval: ${VM_SELF_SCRAPE_INTERVAL}"
+
+# Start VictoriaMetrics with configured parameters
+exec /victoria-metrics-prod \
+  -storageDataPath="${VM_STORAGE_PATH}" \
+  -retentionPeriod="${VM_RETENTION_PERIOD}" \
+  -selfScrapeInterval="${VM_SELF_SCRAPE_INTERVAL}"

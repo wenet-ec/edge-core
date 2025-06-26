@@ -1,0 +1,19 @@
+# deploy/production/compose/edge_metrics_collector/prometheus.yml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  # - job_name: "edge-nodes"
+  #   http_sd_configs:
+  #     - url: "http://edge_admin:4000/api/metrics/discovery"
+  #       refresh_interval: 15s
+
+  - job_name: "edge-metrics-collector"
+    static_configs:
+      - targets: ["localhost:8429"]
+    metrics_path: "/metrics"
+
+  - job_name: "edge-metrics-storage"
+    static_configs:
+      - targets: ["edge_metrics_storage:8428"]
+    metrics_path: "/metrics"

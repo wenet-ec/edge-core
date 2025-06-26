@@ -4,7 +4,7 @@ defmodule EdgeAdmin.VPN.Workers.ConnectivityCheckingWorker do
   Oban worker that monitors VPN connectivity when the connection status is :connected.
   """
 
-  use Oban.Worker, queue: :vpn, max_attempts: 3
+  use Oban.Worker, queue: :vpn, max_attempts: 1
 
   alias EdgeAdmin.VPN
 

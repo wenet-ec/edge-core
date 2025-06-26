@@ -4,7 +4,7 @@ defmodule EdgeAdmin.VPN.Workers.AutoReconnectingWorker do
   Oban worker that attempts to reconnect to VPN when disconnected.
   """
 
-  use Oban.Worker, queue: :vpn, max_attempts: 3
+  use Oban.Worker, queue: :vpn, max_attempts: 1
 
   alias EdgeAdmin.VPN
 

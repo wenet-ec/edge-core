@@ -71,6 +71,8 @@ defmodule EdgeAdminWeb.Router do
       end
 
       resources("/ssh_public_keys", SshPublicKeyController, only: [:index, :show, :delete])
+
+      get("/metrics/discovery", MetricsDiscoveryController, :index)
     end
 
     scope "/", Commands do

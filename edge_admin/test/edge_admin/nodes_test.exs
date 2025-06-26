@@ -373,4 +373,107 @@ defmodule EdgeAdmin.NodesTest do
       assert hd(result.data).key_name == "key1"
     end
   end
+
+  describe "metrics discovery" do
+    test "list_metrics_discovery_targets returns empty list when no nodes exist" do
+      # Ensure no nodes exist
+      assert Nodes.list_metrics_discovery_targets() == []
+    end
+
+    test "list_metrics_discovery_targets returns empty list when nodes have no VPN IPs" do
+      # Create nodes without VPN IPs
+      {:ok, _node1} =
+        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "machine_id", vpn_ip: nil})
+
+      {:ok, _node2} =
+        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "hardware_id", vpn_ip: ""})
+
+      assert Nodes.list_metrics_discovery_targets() == []
+    end
+
+    test "list_metrics_discovery_targets returns formatted targets for nodes with VPN IPs" do
+      # Create nodes with VPN IPs
+      {:ok, _node1} =
+        Nodes.create_node(%{
+          id: Ecto.UUID.generate(),
+          id_type: "machine_id",
+          vpn_ip: "100.64.0.1"
+        })
+
+      {:ok, _node2} =
+        Nodes.create_node(%{
+          id: Ecto.UUID.generate(),
+          id_type: "hardware_id",
+          vpn_ip: "100.64.0.2"
+        })
+
+      targets = Nodes.list_metrics_discovery_targets()
+
+      assert length(targets) == 2
+      assert "100.64.0.1:9100" in targets
+      assert "100.64.0.2:9100" in targets
+
+      # Verify all targets have the :9100 port suffix
+      Enum.each(targets, fn target ->
+        assert String.ends_with?(target, ":9100")
+      end)
+    end
+
+    test "list_metrics_discovery_targets only includes nodes with valid VPN IPs" do
+      # Create mix of nodes
+      {:ok, _valid1} =
+        Nodes.create_node(%{
+          id: Ecto.UUID.generate(),
+          id_type: "machine_id",
+          vpn_ip: "100.64.0.10"
+        })
+
+      {:ok, _invalid1} =
+        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "hardware_id", vpn_ip: nil})
+
+      {:ok, _invalid2} =
+        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "temporary_id", vpn_ip: ""})
+
+      {:ok, _valid2} =
+        Nodes.create_node(%{
+          id: Ecto.UUID.generate(),
+          id_type: "machine_id",
+          vpn_ip: "100.64.0.20"
+        })
+
+      targets = Nodes.list_metrics_discovery_targets()
+
+      # Should only include the 2 nodes with valid VPN IPs
+      assert length(targets) == 2
+      assert "100.64.0.10:9100" in targets
+      assert "100.64.0.20:9100" in targets
+    end
+
+    test "list_metrics_discovery_targets handles various VPN IP formats" do
+      # Test different valid IP formats that might be in the database
+      {:ok, _node1} =
+        Nodes.create_node(%{
+          id: Ecto.UUID.generate(),
+          id_type: "machine_id",
+          vpn_ip: "192.168.1.100"
+        })
+
+      {:ok, _node2} =
+        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "hardware_id", vpn_ip: "10.0.0.5"})
+
+      {:ok, _node3} =
+        Nodes.create_node(%{
+          id: Ecto.UUID.generate(),
+          id_type: "temporary_id",
+          vpn_ip: "172.16.0.1"
+        })
+
+      targets = Nodes.list_metrics_discovery_targets()
+
+      assert length(targets) == 3
+      assert "192.168.1.100:9100" in targets
+      assert "10.0.0.5:9100" in targets
+      assert "172.16.0.1:9100" in targets
+    end
+  end
 end

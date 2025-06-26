@@ -446,4 +446,28 @@ defmodule EdgeAdmin.Nodes do
       repo: Repo
     )
   end
+
+  @doc """
+  Returns a list of metrics discovery targets for all nodes with VPN IP addresses.
+
+  This function queries the database directly to get only the VPN IP addresses
+  of nodes that have them assigned, then formats them as metrics endpoints.
+
+  ## Examples
+
+      iex> list_metrics_discovery_targets()
+      ["100.64.0.1:9100", "100.64.0.2:9100", "100.64.0.3:9100"]
+
+      iex> list_metrics_discovery_targets()  # when no nodes have VPN IPs
+      []
+
+  """
+  def list_metrics_discovery_targets do
+    from(n in Node,
+      where: not is_nil(n.vpn_ip) and n.vpn_ip != "",
+      select: n.vpn_ip
+    )
+    |> Repo.all()
+    |> Enum.map(&"#{&1}:9100")
+  end
 end

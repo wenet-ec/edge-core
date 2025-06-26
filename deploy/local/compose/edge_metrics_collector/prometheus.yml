@@ -3,10 +3,10 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  # - job_name: "edge-nodes"
-  #   http_sd_configs:
-  #     - url: "http://edge_admin:4000/api/metrics/discovery"
-  #       refresh_interval: 15s
+  - job_name: "edge-nodes"
+    http_sd_configs:
+      - url: "http://edge_admin:4000/api/metrics/discovery"
+        refresh_interval: 30s
 
   - job_name: "edge-metrics-collector"
     static_configs:

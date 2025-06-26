@@ -38,7 +38,7 @@ defmodule EdgeAdminWeb.Nodes.NodeController do
       status: [
         in: :query,
         description: "Filter by node status",
-        schema: %OpenApiSpex.Schema{type: :string, enum: ["online", "offline", "unknown"]}
+        schema: %OpenApiSpex.Schema{type: :string, enum: ["online", "offline"]}
       ],
       id_type: [
         in: :query,

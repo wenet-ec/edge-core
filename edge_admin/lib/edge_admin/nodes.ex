@@ -156,7 +156,7 @@ defmodule EdgeAdmin.Nodes do
   - `sort` - Sort specification: "field1:dir1,field2:dir2"
 
   ## Filterable Fields
-  - `status` - Node status (online, offline, unknown)
+  - `status` - Node status (online, offline)
   - `id_type` - Node ID type (machine_id, hardware_id, temporary_id)
   - `vpn_ip` - VPN IP address (supports wildcards)
 

@@ -28,7 +28,7 @@ defmodule EdgeAdmin.FilteringPaginationTest do
       },
       %{
         id: "00000000-0000-0000-0000-000000000004",
-        status: "unknown",
+        status: "offline",
         id_type: "machine_id",
         vpn_ip: "100.64.1.1"
       },
@@ -182,15 +182,15 @@ defmodule EdgeAdmin.FilteringPaginationTest do
       result =
         FilteringPagination.paginate(
           Node,
-          %{"status" => "online,offline"},
+          %{"status" => "online"},
           filterable_fields: [:status],
           repo: Repo
         )
 
-      assert length(result.data) == 4
+      assert length(result.data) == 3
 
       Enum.each(result.data, fn node ->
-        assert node.status in ["online", "offline"]
+        assert node.status in ["online"]
       end)
     end
 

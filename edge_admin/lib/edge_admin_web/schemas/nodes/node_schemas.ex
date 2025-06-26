@@ -48,7 +48,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         status: %Schema{
           type: :string,
           nullable: true,
-          enum: ["online", "offline", "unknown"],
+          enum: ["online", "offline"],
           description: "Current node status"
         },
         inserted_at: %Schema{
@@ -179,7 +179,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
             status: %Schema{
               type: :string,
               nullable: true,
-              enum: ["online", "offline", "unknown"],
+              enum: ["online", "offline"],
               description: "Initial node status"
             }
           },
@@ -222,7 +222,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
             status: %Schema{
               type: :string,
               nullable: true,
-              enum: ["online", "offline", "unknown"],
+              enum: ["online", "offline"],
               description: "Node status"
             }
           }

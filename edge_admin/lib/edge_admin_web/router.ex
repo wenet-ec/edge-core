@@ -36,7 +36,7 @@ defmodule EdgeAdminWeb.Router do
     #
     # Metrics can contains sensitive data you should protect it under authorization
     # See https://github.com/mirego/telemetry_ui#security
-    get("/metrics", TelemetryUI.Web, [], assigns: %{telemetry_ui_allowed: true})
+    get("/metrics_dashboard", TelemetryUI.Web, [], assigns: %{telemetry_ui_allowed: true})
   end
 
   # Serve OpenAPI spec through the openapi pipeline
@@ -62,6 +62,7 @@ defmodule EdgeAdminWeb.Router do
 
       resources("/nodes", NodeController, only: [:index, :create, :show]) do
         resources("/ssh_usernames", SshUsernameController, only: [:create])
+        get("/metrics", MetricsController, :index)
       end
 
       patch("/nodes/:id", NodeController, :update)

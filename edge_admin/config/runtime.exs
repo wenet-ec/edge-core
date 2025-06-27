@@ -39,3 +39,8 @@ config :sentry,
 
 config :edge_admin,
   metrics_storage_url: System.get_env("METRICS_STORAGE_URL")
+
+config :edge_admin, EdgeAdmin.PromEx,
+  disabled: false,
+  grafana: :disabled,
+  metrics_server: :disabled

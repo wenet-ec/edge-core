@@ -17,3 +17,8 @@ scrape_configs:
     static_configs:
       - targets: ["edge_metrics_storage:8428"]
     metrics_path: "/metrics"
+
+  - job_name: "edge-admin"
+    static_configs:
+      - targets: ["edge_admin:4000"]
+    metrics_path: "/metrics/self"

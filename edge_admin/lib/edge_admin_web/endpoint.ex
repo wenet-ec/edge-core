@@ -10,6 +10,11 @@ defmodule EdgeAdminWeb.Endpoint do
     longpoll: [connect_info: [session: {EdgeAdminWeb.Session, :config, []}]]
   )
 
+  plug(PromEx.Plug,
+    prom_ex_module: EdgeAdmin.PromEx,
+    path: "/metrics/self"
+  )
+
   plug(EdgeAdminWeb.Plugs.Security)
   plug(:ping)
   plug(:cors)

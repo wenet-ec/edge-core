@@ -9,13 +9,12 @@ defmodule EdgeAdmin.Application do
   @impl true
   def start(_type, _args) do
     children = [
+      EdgeAdmin.PromEx,
       EdgeAdmin.Repo,
       {DNSCluster, query: Application.get_env(:edge_admin, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: EdgeAdmin.PubSub},
       EdgeAdmin.VPN.ConnectionManager,
-      # Add Oban to the supervision tree
       {Oban, Application.fetch_env!(:edge_admin, Oban)},
-      # Start to serve requests, typically the last entry
       EdgeAdminWeb.Endpoint,
       {TelemetryUI, EdgeAdmin.TelemetryUI.config()}
     ]

@@ -73,6 +73,7 @@ defmodule EdgeAdmin.Mixfile do
       {:sentry, "~> 10.10"},
 
       # Telemetry
+      {:prom_ex, "~> 1.11"},
       {:telemetry_ui, "~> 5.0"},
 
       # Linting

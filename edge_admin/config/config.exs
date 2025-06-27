@@ -13,8 +13,7 @@ version = Mix.Project.config()[:version]
 config :edge_admin, Corsica, allow_headers: :all
 config :edge_admin, EdgeAdmin.Gettext, default_locale: "en"
 
-config :edge_admin, EdgeAdmin.Repo,
-  start_apps_before_migration: [:ssl]
+config :edge_admin, EdgeAdmin.Repo, start_apps_before_migration: [:ssl]
 
 config :edge_admin,
   ecto_repos: [EdgeAdmin.Repo],
@@ -59,6 +58,13 @@ config :phoenix, :json_library, Jason
 config :sentry,
   root_source_code_path: File.cwd!(),
   release: version
+
+config :edge_admin, EdgeAdmin.PromEx,
+  disabled: false,
+  manual_metrics_start_delay: :no_delay,
+  drop_metrics_groups: [],
+  grafana: :disabled,
+  metrics_server: :disabled
 
 # Import environment configuration
 import_config "#{Mix.env()}.exs"

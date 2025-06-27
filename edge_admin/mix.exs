@@ -42,10 +42,10 @@ defmodule EdgeAdmin.Mixfile do
   defp deps do
     [
       # HTTP Client/Wrapper
-      {:req, "~> 0.5.0"},
+      {:req, "~> 0.5.12"},
 
       # HTTP server
-      {:bandit, "~> 1.6"},
+      {:bandit, "~> 1.7"},
       {:corsica, "~> 2.1"},
 
       # Phoenix
@@ -60,7 +60,7 @@ defmodule EdgeAdmin.Mixfile do
       {:open_api_spex, "~> 3.21"},
 
       # Database
-      {:ecto_sql, "~> 3.12"},
+      {:ecto_sql, "~> 3.13"},
       {:postgrex, "~> 0.20"},
 
       # Database check
@@ -70,7 +70,7 @@ defmodule EdgeAdmin.Mixfile do
       {:gettext, "~> 0.26"},
 
       # Errors
-      {:sentry, "~> 10.10"},
+      {:sentry, "~> 11.0"},
 
       # Telemetry
       {:prom_ex, "~> 1.11"},

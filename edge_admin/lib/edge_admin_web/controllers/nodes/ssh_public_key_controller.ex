@@ -59,7 +59,9 @@ defmodule EdgeAdminWeb.Nodes.SshPublicKeyController do
 
   operation(:create,
     summary: "Create SSH public key",
-    description: "Create a new SSH public key for a specific SSH username",
+    description: """
+    Create a new SSH public key for a specific SSH username.
+    """,
     parameters: [
       ssh_username_id: [
         in: :path,
@@ -74,7 +76,10 @@ defmodule EdgeAdminWeb.Nodes.SshPublicKeyController do
       201 =>
         {"SSH public key created", "application/json",
          SshPublicKeySchemas.SshPublicKeySingleResponse},
-      422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
+      422 =>
+        {"Validation error - Invalid key format, unsupported algorithm, or duplicate key name",
+         "application/json", CommonSchemas.ErrorResponse},
+      404 => {"SSH username not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
 

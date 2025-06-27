@@ -439,6 +439,75 @@ defmodule EdgeAdmin.NodesTest do
       assert length(result.data) == 1
       assert hd(result.data).key_name == "key1"
     end
+
+    test "validates SSH public key format and algorithms" do
+      ssh_username = ssh_username_fixture()
+
+      # Valid Ed25519 keys (easier to test with)
+      valid_keys = [
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8",
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@host",
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE7f6E+VW7k3q3Q8Q2Q2Q2Q2Q2Q2Q2Q2Q2Q2Q2Q2Q2Q2 test@laptop"
+      ]
+
+      for {valid_key, index} <- Enum.with_index(valid_keys) do
+        attrs = %{
+          public_key: valid_key,
+          key_name: "test-key-#{index}",
+          ssh_username_id: ssh_username.id
+        }
+
+        assert {:ok, _} = Nodes.create_ssh_public_key(attrs)
+      end
+
+      # Test that different algorithms are detected correctly
+      algorithm_tests = [
+        {"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8",
+         "ssh-ed25519"}
+        # You can add more when you have valid test keys for other algorithms
+      ]
+
+      for {key, expected_algorithm} <- algorithm_tests do
+        assert {:ok, ^expected_algorithm} = EdgeAdmin.Nodes.SshPublicKey.validate_key_format(key)
+      end
+
+      # Invalid keys should fail validation
+      invalid_keys = [
+        # Completely invalid format
+        "not-a-ssh-key",
+        # Missing key data
+        "ssh-ed25519",
+        # Invalid base64
+        "ssh-ed25519 invalid-base64!@#$%",
+        # Unsupported algorithm
+        "ssh-unknown AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8",
+        # Empty string
+        "",
+        # Only whitespace
+        "   \n\t  "
+      ]
+
+      for {invalid_key, index} <- Enum.with_index(invalid_keys) do
+        attrs = %{
+          public_key: invalid_key,
+          key_name: "invalid-key-#{index}",
+          ssh_username_id: ssh_username.id
+        }
+
+        assert {:error, %Ecto.Changeset{} = changeset} = Nodes.create_ssh_public_key(attrs)
+        assert changeset.errors[:public_key] != nil
+      end
+    end
+
+    test "SshPublicKey.validate_key_format/1 utility function" do
+      # Test the utility function directly
+      assert {:ok, "ssh-ed25519"} =
+               EdgeAdmin.Nodes.SshPublicKey.validate_key_format(
+                 "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8"
+               )
+
+      assert {:error, _} = EdgeAdmin.Nodes.SshPublicKey.validate_key_format("invalid-key")
+    end
   end
 
   describe "metrics discovery" do

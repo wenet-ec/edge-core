@@ -67,6 +67,15 @@ defmodule EdgeAgent.SshServer do
     ]
   ]
 
+  @supported_algorithms [
+    "ssh-ed25519",
+    "ecdsa-sha2-nistp256",
+    "ecdsa-sha2-nistp384",
+    "ecdsa-sha2-nistp521",
+    "ssh-rsa",
+    "ssh-dss"
+  ]
+
   @supported_host_key_types [:"ssh-ed25519", :"ecdsa-sha2-nistp256", :"ssh-rsa"]
 
   # Client API
@@ -459,43 +468,61 @@ defmodule EdgeAgent.SshServer do
     Logger.debug("Raw provided key format: #{inspect(provided_key, limit: :infinity)}")
 
     provided_key_string = format_public_key(provided_key)
-    # Normalize: extract just algorithm + key data (remove comment if present)
     provided_key_normalized = normalize_ssh_key(provided_key_string)
 
-    Logger.debug("Formatted provided key: #{provided_key_string}")
-    Logger.debug("Normalized provided key: #{provided_key_normalized}")
-    Logger.debug("Against #{length(ssh_public_keys)} stored keys")
+    # Validate the algorithm first - return false if invalid
+    with {:ok, algorithm} <- validate_key_algorithm(provided_key_string) do
+      Logger.debug("Provided key algorithm: #{algorithm}")
+      Logger.debug("Formatted provided key: #{provided_key_string}")
+      Logger.debug("Normalized provided key: #{provided_key_normalized}")
+      Logger.debug("Against #{length(ssh_public_keys)} stored keys")
 
-    Enum.each(ssh_public_keys, fn stored_key ->
-      Logger.debug("Stored key: #{stored_key["public_key"]}")
-    end)
-
-    result =
-      Enum.any?(ssh_public_keys, fn stored_key ->
-        stored_key_string = String.trim(stored_key["public_key"])
-        # Normalize stored key too (remove comment)
-        stored_key_normalized = normalize_ssh_key(stored_key_string)
-
-        match = provided_key_normalized == stored_key_normalized
-
-        if match do
-          Logger.debug("Key match found for key: #{stored_key["key_name"]}")
-        else
-          Logger.debug("Key mismatch - provided: #{provided_key_normalized}")
-          Logger.debug("Key mismatch - stored: #{stored_key_normalized}")
-        end
-
-        match
+      Enum.each(ssh_public_keys, fn stored_key ->
+        Logger.debug("Stored key: #{stored_key["public_key"]}")
       end)
 
-    unless result do
-      Logger.debug("No matching public key found")
-    end
+      result =
+        Enum.any?(ssh_public_keys, fn stored_key ->
+          stored_key_string = String.trim(stored_key["public_key"])
+          stored_key_normalized = normalize_ssh_key(stored_key_string)
 
-    result
+          match = provided_key_normalized == stored_key_normalized
+
+          if match do
+            Logger.debug("Key match found for key: #{stored_key["key_name"]}")
+          else
+            Logger.debug("Key mismatch - provided: #{provided_key_normalized}")
+            Logger.debug("Key mismatch - stored: #{stored_key_normalized}")
+          end
+
+          match
+        end)
+
+      unless result do
+        Logger.debug("No matching public key found")
+      end
+
+      result
+    else
+      {:error, reason} ->
+        Logger.warning("Unsupported key algorithm: #{reason}")
+        false
+    end
   end
 
-  # New function to normalize SSH keys for comparison
+  defp validate_key_algorithm(key_string) do
+    case String.split(key_string, " ", parts: 2) do
+      [algorithm, _key_data] when algorithm in @supported_algorithms ->
+        {:ok, algorithm}
+
+      [algorithm, _key_data] ->
+        {:error, "unsupported algorithm: #{algorithm}"}
+
+      _ ->
+        {:error, "invalid key format"}
+    end
+  end
+
   defp normalize_ssh_key(key_string) do
     # Split into parts: algorithm, key_data, comment (optional)
     case String.split(key_string, " ", parts: 3) do

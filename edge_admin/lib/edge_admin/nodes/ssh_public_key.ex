@@ -6,6 +6,20 @@ defmodule EdgeAdmin.Nodes.SshPublicKey do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
+  # Supported SSH key algorithms (matching your SSH server)
+  @supported_algorithms [
+    "ssh-ed25519",
+    "ecdsa-sha2-nistp256",
+    "ecdsa-sha2-nistp384",
+    "ecdsa-sha2-nistp521",
+    "ssh-rsa",
+    # Legacy support
+    "ssh-dss"
+  ]
+
+  # SSH key format regex - matches "algorithm base64data [comment]"
+  @ssh_key_regex ~r/^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa|ssh-dss)\s+([A-Za-z0-9+\/]+=*)\s*(.*)$/
+
   schema "ssh_public_keys" do
     field(:public_key, :string)
     field(:key_name, :string)
@@ -21,7 +35,102 @@ defmodule EdgeAdmin.Nodes.SshPublicKey do
     ssh_public_key
     |> cast(attrs, [:public_key, :key_name, :ssh_username_id])
     |> validate_required([:public_key, :key_name, :ssh_username_id])
+    |> validate_ssh_public_key_format()
+    |> validate_ssh_key_algorithm()
+    |> validate_base64_key_data()
     |> unique_constraint([:ssh_username_id, :key_name])
     |> foreign_key_constraint(:ssh_username_id)
+  end
+
+  # Validation functions
+
+  defp validate_ssh_public_key_format(changeset) do
+    validate_change(changeset, :public_key, fn :public_key, public_key ->
+      trimmed_key = String.trim(public_key)
+
+      if Regex.match?(@ssh_key_regex, trimmed_key) do
+        []
+      else
+        [public_key: "must be a valid SSH public key format (algorithm base64data [comment])"]
+      end
+    end)
+  end
+
+  defp validate_ssh_key_algorithm(changeset) do
+    validate_change(changeset, :public_key, fn :public_key, public_key ->
+      case extract_algorithm(public_key) do
+        {:ok, algorithm} ->
+          if algorithm in @supported_algorithms do
+            []
+          else
+            [
+              public_key:
+                "unsupported key algorithm '#{algorithm}'. Supported: #{Enum.join(@supported_algorithms, ", ")}"
+            ]
+          end
+
+        {:error, reason} ->
+          [public_key: reason]
+      end
+    end)
+  end
+
+  defp validate_base64_key_data(changeset) do
+    validate_change(changeset, :public_key, fn :public_key, public_key ->
+      case extract_key_data(public_key) do
+        {:ok, key_data} ->
+          case Base.decode64(key_data, ignore: :whitespace) do
+            {:ok, _decoded} -> []
+            :error -> [public_key: "contains invalid base64 key data"]
+          end
+
+        {:error, _reason} ->
+          # Already handled by format validation
+          []
+      end
+    end)
+  end
+
+  # Helper functions
+
+  defp extract_algorithm(public_key) do
+    case Regex.run(@ssh_key_regex, String.trim(public_key)) do
+      [_full, algorithm, _key_data, _comment] -> {:ok, algorithm}
+      [_full, algorithm, _key_data] -> {:ok, algorithm}
+      _ -> {:error, "invalid SSH key format"}
+    end
+  end
+
+  defp extract_key_data(public_key) do
+    case Regex.run(@ssh_key_regex, String.trim(public_key)) do
+      [_full, _algorithm, key_data, _comment] -> {:ok, key_data}
+      [_full, _algorithm, key_data] -> {:ok, key_data}
+      _ -> {:error, "invalid SSH key format"}
+    end
+  end
+
+  @doc """
+  Returns the list of supported SSH key algorithms.
+  """
+  def supported_algorithms, do: @supported_algorithms
+
+  @doc """
+  Validates if a public key string has valid format and algorithm.
+  Returns {:ok, algorithm} or {:error, reason}.
+  """
+  def validate_key_format(public_key) when is_binary(public_key) do
+    trimmed_key = String.trim(public_key)
+
+    with true <- Regex.match?(@ssh_key_regex, trimmed_key),
+         {:ok, algorithm} <- extract_algorithm(trimmed_key),
+         true <- algorithm in @supported_algorithms,
+         {:ok, key_data} <- extract_key_data(trimmed_key),
+         {:ok, _decoded} <- Base.decode64(key_data, ignore: :whitespace) do
+      {:ok, algorithm}
+    else
+      false -> {:error, "invalid SSH key format"}
+      {:error, reason} -> {:error, reason}
+      :error -> {:error, "invalid base64 key data"}
+    end
   end
 end

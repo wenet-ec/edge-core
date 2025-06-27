@@ -74,7 +74,8 @@ defmodule EdgeAdmin.VPN do
       Logger.info("VPN: Attempting auto-reconnection")
 
       with {:ok, _} <- update_connection(%{status: :connecting}),
-           {:ok, result} <- tailscale_module().connect_to_vpn(vpn_url(), "edge-admin") do
+           {:ok, result} <-
+             tailscale_module().connect_to_vpn(vpn_url(), enrollment_key(), "edge-admin") do
         handle_connection_success(result)
       else
         {:error, reason} -> handle_connection_failure(reason)
@@ -92,7 +93,8 @@ defmodule EdgeAdmin.VPN do
     Logger.info("VPN: Initiating manual connection")
 
     with {:ok, _} <- update_connection(%{status: :connecting}),
-         {:ok, result} <- tailscale_module().connect_to_vpn(vpn_url(), "edge-admin") do
+         {:ok, result} <-
+           tailscale_module().connect_to_vpn(vpn_url(), enrollment_key(), "edge-admin") do
       handle_connection_success(result)
     else
       {:error, reason} -> handle_connection_failure(reason)
@@ -241,5 +243,9 @@ defmodule EdgeAdmin.VPN do
 
   defp tailscale_module do
     Application.get_env(:edge_admin, :tailscale_module, EdgeAdmin.Tailscale)
+  end
+
+  defp enrollment_key do
+    System.get_env("ENROLLMENT_KEY") || raise "ENROLLMENT_KEY environment variable not set"
   end
 end

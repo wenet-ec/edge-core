@@ -10,8 +10,6 @@ defmodule EdgeAdmin.Tailscale.Behaviour do
   @type connection_result :: {:ok, map()} | {:ok, :no_info} | {:error, String.t()}
   @type connectivity_result :: {:ok, map()} | {:ok, :healthy} | {:error, String.t()}
 
-  @callback connect_to_vpn(String.t()) :: connection_result()
-  @callback connect_to_vpn(String.t(), String.t()) :: connection_result()
   @callback connect_to_vpn(String.t(), String.t(), String.t()) :: connection_result()
   @callback check_connectivity() :: connectivity_result()
   @callback disconnect_from_vpn() :: :ok | {:error, String.t()}

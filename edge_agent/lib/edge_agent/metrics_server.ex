@@ -5,17 +5,21 @@ defmodule EdgeAgent.MetricsServer do
 
   This module provides an interface for starting and stopping the node_exporter
   metrics server that collects system metrics for monitoring.
+
+  The implementation is delegated to the configured server module to enable
+  testing and different implementations.
   """
 
-  alias EdgeAgent.MetricsServer.Server
+  @behaviour EdgeAgent.MetricsServer.Behaviour
 
   @doc """
   Starts the metrics server process.
 
   Returns {:ok, pid} on success or {:error, reason} on failure.
   """
+  @impl true
   def start_server do
-    Server.start_server()
+    server_module().start_server()
   end
 
   @doc """
@@ -23,8 +27,9 @@ defmodule EdgeAgent.MetricsServer do
 
   Returns :ok on success or {:error, reason} on failure.
   """
+  @impl true
   def stop_server do
-    Server.stop_server()
+    server_module().stop_server()
   end
 
   @doc """
@@ -32,8 +37,9 @@ defmodule EdgeAgent.MetricsServer do
 
   Returns :running, :stopped, or :unknown.
   """
+  @impl true
   def server_status do
-    Server.server_status()
+    server_module().server_status()
   end
 
   @doc """
@@ -41,8 +47,9 @@ defmodule EdgeAgent.MetricsServer do
 
   Returns a map with server configuration details.
   """
+  @impl true
   def server_config do
-    Server.server_config()
+    server_module().server_config()
   end
 
   @doc """
@@ -50,7 +57,13 @@ defmodule EdgeAgent.MetricsServer do
 
   Returns {:ok, ip_address} or {:error, reason}.
   """
+  @impl true
   def get_primary_interface_ip do
-    Server.get_primary_interface_ip()
+    server_module().get_primary_interface_ip()
+  end
+
+  # Private function to get the configured server module
+  defp server_module do
+    Application.get_env(:edge_agent, :metrics_server_module, EdgeAgent.MetricsServer.Server)
   end
 end

@@ -1,0 +1,100 @@
+# edge_agent/lib/edge_agent/metrics_server/network_utils.ex
+defmodule EdgeAgent.MetricsServer.NetworkUtils do
+  @moduledoc """
+  Network utility functions for the metrics server.
+
+  Handles IP address detection and network interface queries.
+  """
+
+  @type ip_result :: {:ok, String.t()} | {:error, term()}
+
+  @doc """
+  Detects the primary network interface IP address.
+
+  Tries multiple methods to find the primary interface IP.
+  """
+  @spec detect_primary_interface_ip() :: String.t() | nil
+  def detect_primary_interface_ip do
+    detect_via_ip_route() ||
+      detect_via_default_route() ||
+      detect_via_interfaces()
+  end
+
+  @doc """
+  Gets the IP address for a specific network interface.
+  """
+  @spec get_interface_ip(String.t()) :: String.t() | nil
+  def get_interface_ip(interface) do
+    case System.cmd("ip", ["addr", "show", interface], stderr_to_stdout: true) do
+      {output, 0} ->
+        case Regex.run(~r/inet\s+(\d+\.\d+\.\d+\.\d+)/, output) do
+          [_, ip] -> ip
+          _ -> nil
+        end
+
+      _ ->
+        nil
+    end
+  rescue
+    _ -> nil
+  end
+
+  # Private functions
+
+  defp detect_via_ip_route do
+    case System.cmd("ip", ["route", "get", "8.8.8.8"], stderr_to_stdout: true) do
+      {output, 0} ->
+        # Parse output like: "8.8.8.8 via 192.168.1.1 dev eth0 src 192.168.1.100 uid 1000"
+        case Regex.run(~r/src\s+(\d+\.\d+\.\d+\.\d+)/, output) do
+          [_, ip] -> ip
+          _ -> nil
+        end
+
+      _ ->
+        nil
+    end
+  rescue
+    _ -> nil
+  end
+
+  defp detect_via_default_route do
+    case System.cmd("ip", ["route", "show", "default"], stderr_to_stdout: true) do
+      {output, 0} ->
+        # Parse output like: "default via 192.168.1.1 dev eth0 proto dhcp src 192.168.1.100 metric 100"
+        case Regex.run(~r/dev\s+(\w+)/, output) do
+          [_, interface] ->
+            get_interface_ip(interface)
+
+          _ ->
+            nil
+        end
+
+      _ ->
+        nil
+    end
+  rescue
+    _ -> nil
+  end
+
+  defp detect_via_interfaces do
+    case System.cmd("ip", ["addr", "show"], stderr_to_stdout: true) do
+      {output, 0} ->
+        # Find the first non-loopback, non-docker interface with an IP
+        output
+        |> String.split("\n")
+        |> Enum.find_value(&extract_ip_from_line/1)
+
+      _ ->
+        nil
+    end
+  rescue
+    _ -> nil
+  end
+
+  defp extract_ip_from_line(line) do
+    case Regex.run(~r/inet\s+(\d+\.\d+\.\d+\.\d+)\/\d+.+scope global/, line) do
+      [_, ip] when ip != "127.0.0.1" -> ip
+      _ -> nil
+    end
+  end
+end

@@ -1,5 +1,5 @@
 # deploy/local/compose/edge_agent/Dockerfile
-FROM elixir:1.18.4-otp-26-alpine
+FROM elixir:1.18.4-otp-27-alpine
 
 ARG APP_HOME=/app
 ENV MIX_ENV=dev

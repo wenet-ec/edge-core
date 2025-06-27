@@ -2,7 +2,7 @@
 # -----------------------------------------------
 # Stage: Build the OTP release
 # -----------------------------------------------
-FROM elixir:1.18.4-otp-26-alpine AS builder
+FROM elixir:1.18.4-otp-27-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache \

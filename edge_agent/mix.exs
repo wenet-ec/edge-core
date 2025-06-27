@@ -41,11 +41,11 @@ defmodule EdgeAgent.Mixfile do
 
   defp deps do
     [
-      # HTTP Client/Wrapper
-      {:req, "~> 0.5.0"},
+      # HTTP Client
+      {:req, "~> 0.5.12"},
 
       # HTTP server
-      {:bandit, "~> 1.6"},
+      {:bandit, "~> 1.7"},
       {:corsica, "~> 2.1"},
 
       # Phoenix
@@ -57,7 +57,7 @@ defmodule EdgeAgent.Mixfile do
       {:jason, "~> 1.4"},
 
       # Database
-      {:ecto_sql, "~> 3.12"},
+      {:ecto_sql, "~> 3.13"},
       {:ecto_sqlite3, "~> 0.19"},
 
       # Database check

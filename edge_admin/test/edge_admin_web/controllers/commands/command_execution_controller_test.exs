@@ -64,6 +64,28 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
       assert length(response["data"]) == 1
       assert hd(response["data"])["id"] == execution2.id
     end
+
+    test "includes command_text in response", %{conn: conn} do
+      command = command_fixture(%{command_text: "echo hello world"})
+      command_execution = command_execution_fixture(%{command: command})
+
+      conn = get(conn, ~p"/api/command_executions/#{command_execution}")
+
+      response = json_response(conn, 200)["data"]
+      assert response["id"] == command_execution.id
+      assert response["command_text"] == "echo hello world"
+    end
+
+    test "returns command execution by ID", %{conn: conn} do
+      command_execution = command_execution_fixture()
+      conn = get(conn, ~p"/api/command_executions/#{command_execution}")
+
+      response = json_response(conn, 200)["data"]
+      assert response["id"] == command_execution.id
+      assert response["status"] == "pending"
+      # Ensure command_text is present
+      assert is_binary(response["command_text"])
+    end
   end
 
   describe "show command_execution" do

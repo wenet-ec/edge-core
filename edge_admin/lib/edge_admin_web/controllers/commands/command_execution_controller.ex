@@ -125,9 +125,10 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionController do
   def update(conn, %{"id" => id, "command_execution" => command_execution_params}) do
     command_execution = Commands.get_command_execution!(id)
 
-    with {:ok, %CommandExecution{} = command_execution} <-
+    with {:ok, %CommandExecution{} = updated_execution} <-
            Commands.update_command_execution(command_execution, command_execution_params) do
-      render(conn, :show, command_execution: command_execution)
+      final_execution = Commands.get_command_execution!(updated_execution.id)
+      render(conn, :show, command_execution: final_execution)
     end
   end
 end

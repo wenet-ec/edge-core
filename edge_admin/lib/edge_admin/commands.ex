@@ -138,6 +138,26 @@ defmodule EdgeAdmin.Commands do
     )
   end
 
+  defp preload_and_populate_command_text(execution_or_executions) do
+    case execution_or_executions do
+      # Handle single execution
+      %CommandExecution{} = execution ->
+        execution
+        |> Repo.preload(:command)
+        |> CommandExecution.populate_command_text()
+
+      # Handle list of executions
+      executions when is_list(executions) ->
+        executions
+        |> Repo.preload(:command)
+        |> Enum.map(&CommandExecution.populate_command_text/1)
+
+      # Handle other cases (shouldn't happen but defensive)
+      other ->
+        other
+    end
+  end
+
   @doc """
   Gets a single command_execution.
 
@@ -152,7 +172,11 @@ defmodule EdgeAdmin.Commands do
       ** (Ecto.NoResultsError)
 
   """
-  def get_command_execution!(id), do: Repo.get!(CommandExecution, id)
+  def get_command_execution!(id) do
+    CommandExecution
+    |> Repo.get!(id)
+    |> preload_and_populate_command_text()
+  end
 
   @doc """
   Creates a command_execution.
@@ -258,14 +282,22 @@ defmodule EdgeAdmin.Commands do
 
   """
   def list_command_executions_with_filtering_pagination(params \\ %{}) do
-    FilteringPagination.paginate(
-      CommandExecution,
-      params,
-      filterable_fields: [:status, :target_all, :exit_code, :command_id, :node_id, :output],
-      sortable_fields: [:inserted_at, :updated_at, :status, :sent_at, :completed_at, :exit_code],
-      default_sort: "inserted_at:desc",
-      repo: Repo
-    )
+    page_result =
+      FilteringPagination.paginate(
+        CommandExecution,
+        params,
+        filterable_fields: [:status, :target_all, :exit_code, :command_id, :node_id, :output],
+        sortable_fields: [:inserted_at, :updated_at, :status, :sent_at, :completed_at, :exit_code],
+        default_sort: "inserted_at:desc",
+        repo: Repo
+      )
+
+    executions_with_command_text =
+      page_result.data
+      |> Repo.preload(:command)
+      |> Enum.map(&CommandExecution.populate_command_text/1)
+
+    %{page_result | data: executions_with_command_text}
   end
 
   @doc """
@@ -329,16 +361,13 @@ defmodule EdgeAdmin.Commands do
   Creates command executions for all nodes with pending status.
   """
   def create_executions_for_all_nodes(command_id) do
-    # First get the command to access command_text
+    # Get the command for command_text
     command = get_command!(command_id)
 
-    # Get all nodes using existing pagination function with large page size
-    page_result =
-      Nodes.list_nodes_with_filtering_pagination(%{
-        "page_size" => "1000"
-      })
+    # Get all nodes
+    page_result = Nodes.list_nodes_with_filtering_pagination(%{"page_size" => "1000"})
 
-    # Create executions for all nodes
+    # Create executions with command_text directly in the struct
     executions =
       Enum.map(page_result.data, fn node ->
         %{
@@ -347,17 +376,23 @@ defmodule EdgeAdmin.Commands do
           node_id: node.id,
           target_all: true,
           status: "pending",
-          command_text: command.command_text,
           inserted_at: DateTime.utc_now(),
           updated_at: DateTime.utc_now()
         }
       end)
 
-    # Bulk insert all executions
+    # Bulk insert
     try do
       {count, executions} = Repo.insert_all(CommandExecution, executions, returning: true)
       Logger.info("Successfully created #{count} command executions")
-      {:ok, executions}
+
+      # Return executions with command_text populated
+      executions_with_command_text =
+        Enum.map(executions, fn execution ->
+          %CommandExecution{execution | command_text: command.command_text}
+        end)
+
+      {:ok, executions_with_command_text}
     rescue
       exception ->
         Logger.error("Failed to bulk insert executions: #{Exception.message(exception)}")
@@ -369,27 +404,30 @@ defmodule EdgeAdmin.Commands do
   Creates executions for specific target nodes and attempts immediate delivery.
   """
   def create_executions_for_target_nodes(command_id, node_ids) do
-    # First get the command to access command_text
+    # Get the command for command_text
     command = get_command!(command_id)
 
-    # Get nodes using existing get_nodes_by_ids function from Nodes context
+    # Get nodes
     nodes = Nodes.get_nodes_by_ids(node_ids)
 
     results =
       Enum.map(nodes, fn
         {:ok, node} ->
-          # Create execution record
+          # Create execution with command_text in attrs
           execution_attrs = %{
             command_id: command_id,
             node_id: node.id,
             target_all: false,
             status: "pending",
+            # Set virtual field
             command_text: command.command_text
           }
 
           case create_command_execution(execution_attrs) do
             {:ok, execution} ->
-              # Attempt immediate delivery
+              # Populate command_text since it's virtual
+              execution = %{execution | command_text: command.command_text}
+
               case attempt_execution_delivery(execution, node) do
                 :ok ->
                   {:ok, execution}
@@ -436,7 +474,7 @@ defmodule EdgeAdmin.Commands do
   Reuses existing get_node! function if node is not provided.
   """
   def attempt_execution_delivery(execution, node \\ nil) do
-    # Get node info if not provided, reusing existing function
+    # Get node info if not provided
     node =
       case node do
         nil ->
@@ -464,14 +502,12 @@ defmodule EdgeAdmin.Commands do
         :error
 
       _ ->
-        # Get the command to access command_text
-        command = get_command!(execution.command_id)
-
+        # Use command_text from virtual field
         execution_data = %{
           id: execution.id,
           command_id: execution.command_id,
           node_id: execution.node_id,
-          command_text: command.command_text,
+          command_text: execution.command_text,
           status: "pending"
         }
 
@@ -536,6 +572,10 @@ defmodule EdgeAdmin.Commands do
         order_by: [asc: ce.node_id, asc: ce.inserted_at]
       )
       |> Repo.all()
+      # Add preload
+      |> Repo.preload(:command)
+      # Populate virtual field
+      |> Enum.map(&CommandExecution.populate_command_text/1)
       |> Enum.group_by(& &1.node_id)
 
     # Process oldest pending execution for each node

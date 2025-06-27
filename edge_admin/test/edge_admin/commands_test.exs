@@ -224,4 +224,26 @@ defmodule EdgeAdmin.CommandsTest do
       assert command.command_text == "echo test"
     end
   end
+
+  describe "virtual command_text field" do
+    test "get_command_execution! populates command_text" do
+      command = command_fixture(%{command_text: "echo virtual field test"})
+      command_execution = command_execution_fixture(%{command: command})
+
+      retrieved = Commands.get_command_execution!(command_execution.id)
+
+      assert retrieved.command_text == "echo virtual field test"
+    end
+
+    test "list_command_executions_with_filtering_pagination populates command_text" do
+      command = command_fixture(%{command_text: "echo pagination test"})
+      _execution = command_execution_fixture(%{command: command})
+
+      result = Commands.list_command_executions_with_filtering_pagination(%{})
+
+      assert length(result.data) == 1
+      execution = hd(result.data)
+      assert execution.command_text == "echo pagination test"
+    end
+  end
 end

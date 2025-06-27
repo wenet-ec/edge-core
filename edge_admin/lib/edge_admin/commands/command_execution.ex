@@ -15,6 +15,9 @@ defmodule EdgeAdmin.Commands.CommandExecution do
     field(:sent_at, :utc_datetime)
     field(:completed_at, :utc_datetime)
 
+    # Virtual field for cleaner access to command text
+    field(:command_text, :string, virtual: true)
+
     # Associations
     belongs_to(:command, EdgeAdmin.Commands.Command)
     belongs_to(:node, EdgeAdmin.Nodes.Node)
@@ -33,7 +36,9 @@ defmodule EdgeAdmin.Commands.CommandExecution do
       :sent_at,
       :completed_at,
       :command_id,
-      :node_id
+      :node_id,
+      # Include virtual field in cast
+      :command_text
     ])
     |> validate_required([:status])
     |> validate_inclusion(:status, ["pending", "sent", "completed"])
@@ -43,6 +48,27 @@ defmodule EdgeAdmin.Commands.CommandExecution do
     |> unique_constraint([:node_id, :command_id],
       name: :command_executions_node_id_command_id_index
     )
+  end
+
+  @doc """
+  Populates the virtual command_text field from the associated command.
+
+  ## Examples
+
+      iex> execution = %CommandExecution{command: %Command{command_text: "echo hello"}}
+      iex> CommandExecution.populate_command_text(execution)
+      %CommandExecution{command_text: "echo hello", ...}
+
+      iex> execution = %CommandExecution{command: nil}
+      iex> CommandExecution.populate_command_text(execution)
+      %CommandExecution{command_text: nil, ...}
+  """
+  def populate_command_text(%__MODULE__{command: %{command_text: command_text}} = execution) do
+    %{execution | command_text: command_text}
+  end
+
+  def populate_command_text(%__MODULE__{} = execution) do
+    %{execution | command_text: nil}
   end
 
   @doc false

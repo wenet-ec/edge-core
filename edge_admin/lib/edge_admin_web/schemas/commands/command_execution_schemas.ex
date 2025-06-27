@@ -40,6 +40,12 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
           enum: ["pending", "sent", "completed"],
           description: "Current execution status"
         },
+        command_text: %Schema{
+          type: :string,
+          nullable: true,
+          description: "The command text being executed (denormalized for convenience)",
+          example: "echo hello\nls -la"
+        },
         output: %Schema{
           type: :string,
           nullable: true,
@@ -83,6 +89,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
         node_id: "abcdef01-2345-6789-abcd-ef0123456789",
         target_all: false,
         status: "completed",
+        command_text: "echo hello\nls -la",
         output:
           "$ ABC=value\n$ echo $ABC\nvalue\n$ systemctl restart nginx\nFailed to restart nginx.service: Unit not found\n",
         exit_code: 5,
@@ -126,7 +133,8 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
           node_id: "11111111-2222-3333-4444-555555555555",
           target_all: false,
           status: "completed",
-          output: "$ echo hello\nhello\n",
+          command_text: "echo hello\npwd",
+          output: "$ echo hello\nhello\n$ pwd\n/home/user",
           exit_code: 0,
           sent_at: "2025-06-17T12:00:00Z",
           completed_at: "2025-06-17T12:00:05Z",

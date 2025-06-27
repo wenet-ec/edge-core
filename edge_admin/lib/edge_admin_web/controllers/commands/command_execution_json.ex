@@ -40,6 +40,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionJSON do
       node_id: command_execution.node_id,
       target_all: command_execution.target_all,
       status: command_execution.status,
+      command_text: command_execution.command_text,
       output: command_execution.output,
       exit_code: command_execution.exit_code,
       sent_at: command_execution.sent_at,

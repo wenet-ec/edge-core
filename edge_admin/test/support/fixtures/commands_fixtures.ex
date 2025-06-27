@@ -48,7 +48,8 @@ defmodule EdgeAdmin.CommandsFixtures do
       })
       |> Commands.create_command_execution()
 
-    command_execution
+    # Populate the virtual field for easier testing
+    %{command_execution | command_text: command.command_text}
   end
 
   @doc """

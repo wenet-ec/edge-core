@@ -108,10 +108,10 @@ services:
   edge_vpn:
     build:
       context: ../..
-      dockerfile: ./deploy/local/compose/edge_vpn/Dockerfile
+      dockerfile: ./deploy/production/compose/edge_vpn/Dockerfile
     container_name: local_edge_vpn
     volumes:
-      - ../../deploy/local/compose/edge_vpn/headscale_config:/etc/headscale
+      - ../../deploy/production/compose/edge_vpn/headscale_config:/etc/headscale
       - local_edge_vpn_data:/var/lib/headscale
     ports:
       - "8080:8080" # Headscale
@@ -200,7 +200,7 @@ services:
   edge_metrics_storage:
     build:
       context: ../..
-      dockerfile: ./deploy/local/compose/edge_metrics_storage/Dockerfile
+      dockerfile: ./deploy/production/compose/edge_metrics_storage/Dockerfile
     image: local_edge_metrics_storage
     container_name: local_edge_metrics_storage
     networks:
@@ -215,7 +215,7 @@ services:
   edge_metrics_collector:
     build:
       context: ../..
-      dockerfile: ./deploy/local/compose/edge_metrics_collector/Dockerfile
+      dockerfile: ./deploy/production/compose/edge_metrics_collector/Dockerfile
     image: local_edge_metrics_collector
     container_name: local_edge_metrics_collector
     networks:
@@ -231,7 +231,7 @@ services:
       - local_edge_metrics_collector_data:/vmagent-data
       - local_edge_metrics_collector_tailscale_data:/var/lib/tailscale
       - /dev/net/tun:/dev/net/tun
-      - ../../deploy/local/compose/edge_metrics_collector/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../../deploy/production/compose/edge_metrics_collector/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     env_file:
       - ./.envs/.edge_metrics_collector
     ports:

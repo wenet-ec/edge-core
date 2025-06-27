@@ -83,7 +83,7 @@ defmodule EdgeAgent.Bootstrap do
   @doc """
   Sets up VPN connection using Tailscale with node-specific hostname.
 
-  Reads VPN_URL and ENROLLMENT_KEY from environment variables.
+  Reads VPN_URL and ENROLLMENT_KEY from application configuration.
   Uses hostname pattern: node-{normalized_node_id}
 
   Returns :ok or {:error, reason}.
@@ -91,8 +91,8 @@ defmodule EdgeAgent.Bootstrap do
   def setup_vpn_connection(node_id) do
     Logger.info("Setting up VPN connection for node: #{String.slice(node_id, 0, 8)}...")
 
-    with {:ok, vpn_url} <- get_required_env("VPN_URL"),
-         {:ok, enrollment_key} <- get_required_env("ENROLLMENT_KEY"),
+    with {:ok, vpn_url} <- get_vpn_config(:vpn_url),
+         {:ok, enrollment_key} <- get_vpn_config(:enrollment_key),
          :ok <- Tailscale.start_daemon(),
          {:ok, _result} <- connect_to_vpn(vpn_url, enrollment_key, node_id),
          {:ok, vpn_ip} <- validate_vpn_connection() do
@@ -289,16 +289,18 @@ defmodule EdgeAgent.Bootstrap do
 
   # VPN Connection Helpers
 
-  defp get_required_env(env_var) do
-    case System.get_env(env_var) do
+  defp get_vpn_config(key) do
+    case Application.get_env(:edge_agent, key) do
       nil ->
-        {:error, "Missing required environment variable: #{env_var}"}
+        env_var = key |> Atom.to_string() |> String.upcase()
+        {:error, "Missing required configuration: #{env_var}"}
 
       "" ->
-        {:error, "Empty environment variable: #{env_var}"}
+        env_var = key |> Atom.to_string() |> String.upcase()
+        {:error, "Empty configuration: #{env_var}"}
 
       value ->
-        Logger.debug("Found environment variable #{env_var}")
+        Logger.debug("Found configuration #{key}")
         {:ok, value}
     end
   end

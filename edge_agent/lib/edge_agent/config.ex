@@ -7,17 +7,33 @@ defmodule EdgeAgent.Config do
   @type value_type :: :string | :integer | :boolean | :uri | :cors
   @type config_type :: String.t() | integer() | boolean() | URI.t() | [String.t()]
 
-  @spec get_env(String.t(), nil | value_type()) :: config_type()
-  def get_env(key, type \\ :string) do
-    value = System.get_env(key)
+  @spec get_env(String.t()) :: config_type()
+  def get_env(key) do
+    get_env(key, :string)
+  end
 
+  @spec get_env(String.t(), value_type()) :: config_type()
+  def get_env(key, type) do
+    value = System.get_env(key)
     parse_env(value, type)
   end
 
-  @spec get_env!(String.t(), nil | value_type()) :: config_type()
-  def get_env!(key, type \\ :string) do
-    value = System.fetch_env!(key)
+  @spec get_env(String.t(), value_type(), any()) :: config_type()
+  def get_env(key, type, default) do
+    case System.get_env(key) do
+      nil -> default
+      value -> parse_env(value, type)
+    end
+  end
 
+  @spec get_env!(String.t()) :: config_type()
+  def get_env!(key) do
+    get_env!(key, :string)
+  end
+
+  @spec get_env!(String.t(), value_type()) :: config_type()
+  def get_env!(key, type) do
+    value = System.fetch_env!(key)
     parse_env(value, type)
   end
 

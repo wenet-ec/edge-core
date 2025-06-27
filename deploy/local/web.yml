@@ -109,6 +109,7 @@ services:
     build:
       context: ../..
       dockerfile: ./deploy/production/compose/edge_vpn/Dockerfile
+    image: local_edge_vpn
     container_name: local_edge_vpn
     volumes:
       - ../../deploy/production/compose/edge_vpn/headscale_config:/etc/headscale

@@ -25,18 +25,20 @@ defmodule EdgeAgent.Application do
 
     case Supervisor.start_link(children, opts) do
       {:ok, pid} ->
-        # Run bootstrap after supervisor starts successfully
-        case EdgeAgent.Bootstrap.run() do
-          {:ok, :bootstrap_complete} ->
-            {:ok, pid}
+        # Only run bootstrap if not in test environment
+        if should_run_bootstrap?() do
+          case EdgeAgent.Bootstrap.run() do
+            {:ok, :bootstrap_complete} ->
+              {:ok, pid}
 
-          {:error, reason} ->
-            # Bootstrap failed - you can decide whether to:
-            # 1. Continue anyway (for development)
-            # 2. Crash the application (for production)
-            Logger.error("Bootstrap failed: #{inspect(reason)}")
-            # Continue for now, but you might want {:error, reason}
-            {:ok, pid}
+            {:error, reason} ->
+              Logger.error("Bootstrap failed: #{inspect(reason)}")
+              # Continue for now, but you might want {:error, reason}
+              {:ok, pid}
+          end
+        else
+          Logger.info("Skipping bootstrap in #{Mix.env()} environment")
+          {:ok, pid}
         end
 
       error ->
@@ -50,5 +52,16 @@ defmodule EdgeAgent.Application do
   def config_change(changed, _new, removed) do
     EdgeAgentWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  # Private function to determine if bootstrap should run
+  defp should_run_bootstrap? do
+    # Skip bootstrap in test environment
+    # You can also add other conditions like checking for specific environment variables
+    case Application.get_env(:edge_agent, :run_bootstrap, :auto) do
+      false -> false
+      true -> true
+      :auto -> Mix.env() != :test
+    end
   end
 end

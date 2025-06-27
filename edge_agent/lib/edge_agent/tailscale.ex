@@ -4,28 +4,12 @@ defmodule EdgeAgent.Tailscale do
   The Tailscale context for VPN operations.
 
   This context provides functionality for connecting to and managing
-  Tailscale VPN connections. It's designed to be reusable across
-  different applications (edge-admin, edge-agent).
+  Tailscale VPN connections using enrollment keys.
   """
-
-  @doc """
-  Connects to VPN with default hostname.
-  """
-  def connect_to_vpn(vpn_url) do
-    client().connect_to_vpn(vpn_url)
-  end
-
-  @doc """
-  Connects to VPN and returns connection info.
-  Handles the complete connection flow including daemon startup.
-  """
-  def connect_to_vpn(vpn_url, hostname) do
-    client().connect_to_vpn(vpn_url, hostname)
-  end
 
   @doc """
   Connects to VPN using enrollment key and returns connection info.
-  Used primarily by edge-agent for initial connection.
+  Used by edge-agent for connection with enrollment key.
   """
   def connect_to_vpn(vpn_url, enrollment_key, hostname) do
     client().connect_to_vpn(vpn_url, enrollment_key, hostname)
@@ -75,6 +59,6 @@ defmodule EdgeAgent.Tailscale do
 
   # Private function to get the configured client module
   defp client do
-    Application.get_env(:edge_agent, :tailscale_client, EdgeAgent.Tailscale.Client)
+    Application.get_env(:edge_agent, :tailscale_module, EdgeAgent.Tailscale.Client)
   end
 end

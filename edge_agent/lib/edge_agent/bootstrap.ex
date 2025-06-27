@@ -83,7 +83,7 @@ defmodule EdgeAgent.Bootstrap do
   @doc """
   Sets up VPN connection using Tailscale with node-specific hostname.
 
-  Reads VPN_URL and ENROLLMENT_KEY from application configuration.
+  Reads VPN_URL and ENROLLMENT_KEY from environment variables.
   Uses hostname pattern: node-{normalized_node_id}
 
   Returns :ok or {:error, reason}.
@@ -289,19 +289,17 @@ defmodule EdgeAgent.Bootstrap do
 
   # VPN Connection Helpers
 
-  defp get_vpn_config(key) do
-    case Application.get_env(:edge_agent, key) do
-      nil ->
-        env_var = key |> Atom.to_string() |> String.upcase()
-        {:error, "Missing required configuration: #{env_var}"}
+  defp get_vpn_config(:vpn_url) do
+    case System.get_env("VPN_URL") do
+      nil -> {:error, "VPN_URL environment variable not set"}
+      url -> {:ok, url}
+    end
+  end
 
-      "" ->
-        env_var = key |> Atom.to_string() |> String.upcase()
-        {:error, "Empty configuration: #{env_var}"}
-
-      value ->
-        Logger.debug("Found configuration #{key}")
-        {:ok, value}
+  defp get_vpn_config(:enrollment_key) do
+    case System.get_env("ENROLLMENT_KEY") do
+      nil -> {:error, "ENROLLMENT_KEY environment variable not set"}
+      key -> {:ok, key}
     end
   end
 

@@ -1,10 +1,9 @@
 # edge_agent/lib/edge_agent/tailscale/client.ex
 defmodule EdgeAgent.Tailscale.Client do
   @moduledoc """
-  Unified Tailscale client for managing VPN connections.
+  Tailscale client for managing VPN connections using enrollment keys.
 
-  This implementation works for both edge-admin and edge-agent scenarios,
-  handling different connection patterns based on the arguments provided.
+  Both EdgeAdmin and EdgeAgent use this same pattern now.
   """
 
   @behaviour EdgeAgent.Tailscale.Behaviour
@@ -19,34 +18,9 @@ defmodule EdgeAgent.Tailscale.Client do
   @tailscale_socket "/var/run/tailscale/tailscaled.sock"
   @tailscale_cache_dir "/var/cache/tailscale"
 
-  # EdgeAdmin-style connection (with hostname only) - 2 separate functions for clarity
-  @impl true
-  def connect_to_vpn(vpn_url) do
-    connect_to_vpn(vpn_url, "edge-admin")
-  end
-
-  @impl true
-  def connect_to_vpn(vpn_url, hostname) do
-    Logger.info("Tailscale: Initiating connection to #{vpn_url} with hostname #{hostname}")
-
-    with :ok <- ensure_daemon_running(),
-         :ok <- perform_connection(vpn_url, hostname),
-         result <- get_connection_info() do
-      Logger.info("Tailscale: Connection flow completed successfully")
-      result
-    else
-      {:error, reason} = error ->
-        Logger.error("Tailscale: Connection flow failed - #{reason}")
-        error
-    end
-  end
-
-  # EdgeAgent-style connection (with enrollment key)
   @impl true
   def connect_to_vpn(vpn_url, enrollment_key, hostname) do
-    Logger.info(
-      "Tailscale: Initiating connection to #{vpn_url} with enrollment key and hostname #{hostname}"
-    )
+    Logger.info("Tailscale: Initiating connection to #{vpn_url} with hostname #{hostname}")
 
     with :ok <- ensure_daemon_running(),
          :ok <- perform_connection_with_key(vpn_url, enrollment_key, hostname),
@@ -174,17 +148,6 @@ defmodule EdgeAgent.Tailscale.Client do
     |> Enum.each(&File.mkdir_p!/1)
   end
 
-  # EdgeAdmin-style connection logic
-  defp perform_connection(vpn_url, hostname) do
-    if already_connected?(hostname) do
-      Logger.info("Tailscale: Already connected with hostname #{hostname}")
-      :ok
-    else
-      attempt_connection(vpn_url, hostname)
-    end
-  end
-
-  # EdgeAgent-style connection logic
   defp perform_connection_with_key(vpn_url, enrollment_key, hostname) do
     if already_connected?(hostname) do
       Logger.info("Tailscale: Already connected with hostname #{hostname}")
@@ -206,58 +169,6 @@ defmodule EdgeAgent.Tailscale.Client do
     end
   end
 
-  # EdgeAdmin connection flow
-  defp attempt_connection(vpn_url, hostname) do
-    state_file = @tailscale_state_file
-
-    if File.exists?(state_file) and File.stat!(state_file).size > 0 do
-      Logger.info("Tailscale: Found existing state, attempting reconnection")
-      attempt_reconnect(vpn_url, hostname)
-    else
-      Logger.info("Tailscale: No existing state, performing fresh connection")
-      fresh_connect(vpn_url, hostname)
-    end
-  end
-
-  defp attempt_reconnect(vpn_url, hostname) do
-    args = ["up", "--login-server=#{vpn_url}", "--accept-dns=false", "--hostname=#{hostname}"]
-
-    case System.cmd("tailscale", args, stderr_to_stdout: true) do
-      {_output, 0} ->
-        :timer.sleep(2000)
-
-        if verify_connection() do
-          Logger.info("Tailscale: Reconnected successfully using existing credentials")
-          :ok
-        else
-          Logger.info("Tailscale: Reconnection failed, trying fresh connection")
-          fresh_connect(vpn_url, hostname)
-        end
-
-      {output, _} ->
-        Logger.warning("Tailscale: Reconnection failed: #{String.trim(output)}")
-        fresh_connect(vpn_url, hostname)
-    end
-  end
-
-  defp fresh_connect(vpn_url, hostname) do
-    Logger.info("Tailscale: Performing fresh connection")
-
-    args = ["up", "--login-server=#{vpn_url}", "--accept-dns=false", "--hostname=#{hostname}"]
-
-    case System.cmd("tailscale", args, stderr_to_stdout: true) do
-      {_output, 0} ->
-        Logger.info("Tailscale: Fresh connection successful")
-        :ok
-
-      {output, exit_code} ->
-        error_msg = "Connection failed: #{String.trim(output)} (exit: #{exit_code})"
-        Logger.error("Tailscale: #{error_msg}")
-        {:error, error_msg}
-    end
-  end
-
-  # EdgeAgent connection flow
   defp connect_with_state_check(vpn_url, enrollment_key, hostname) do
     if File.exists?(@tailscale_state_file) and File.stat!(@tailscale_state_file).size > 0 do
       Logger.info("Tailscale: Found existing state, checking if it's valid...")

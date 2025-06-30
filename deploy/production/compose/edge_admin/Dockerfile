@@ -72,14 +72,7 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-# Create app user and add to sudoers for VPN operations
-RUN useradd --create-home --shell /bin/bash app \
-    && echo "app ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/app \
-    && chmod 0440 /etc/sudoers.d/app
-
-# Pre-create Tailscale directories with proper permissions
-RUN mkdir -p /var/run/tailscale /var/cache/tailscale /var/lib/tailscale \
-    && chown -R app:app /var/run/tailscale /var/cache/tailscale /var/lib/tailscale
+RUN mkdir -p /var/run/tailscale /var/cache/tailscale /var/lib/tailscale
 
 # Copy the entrypoint script
 COPY ./deploy/production/compose/edge_admin/entrypoint /entrypoint
@@ -87,10 +80,9 @@ RUN sed -i 's/\r$//g' /entrypoint
 RUN chmod +x /entrypoint
 
 # Copy the release from builder stage
-COPY --from=builder --chown=app:app /app/_build/prod/rel/edge_admin /app
+COPY --from=builder /app/_build/prod/rel/edge_admin /app
 
 # Switch to app user
-USER app
 WORKDIR /app
 
 ENTRYPOINT ["/entrypoint"]

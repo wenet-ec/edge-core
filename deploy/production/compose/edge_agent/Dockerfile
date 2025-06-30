@@ -65,14 +65,10 @@ RUN wget -q https://github.com/prometheus/node_exporter/releases/download/v${NOD
     && rm -rf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64* \
     && chmod +x /usr/local/bin/node_exporter
 
-# Create app user and setup directories
-RUN addgroup -g 1000 app && \
-    adduser -u 1000 -G app -s /bin/bash -D app && \
-    mkdir -p /app/data /var/run/tailscale /var/lib/tailscale /var/cache/tailscale && \
-    chown -R app:app /app /var/lib/tailscale /var/cache/tailscale
+RUN mkdir -p /app/data /var/run/tailscale /var/lib/tailscale /var/cache/tailscale
 
 # Copy the release from builder stage
-COPY --from=builder --chown=app:app /app/_build/prod/rel/edge_agent /app
+COPY --from=builder /app/_build/prod/rel/edge_agent /app
 
 # Copy entrypoint script
 COPY ./deploy/production/compose/edge_agent/entrypoint /entrypoint

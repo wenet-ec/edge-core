@@ -7,6 +7,8 @@ defmodule EdgeAgent.Application do
   use Application
   require Logger
 
+  @env Mix.env()
+
   @impl true
   def start(_type, _args) do
     children = [
@@ -62,7 +64,7 @@ defmodule EdgeAgent.Application do
     case Application.get_env(:edge_agent, :run_bootstrap, :auto) do
       false -> false
       true -> true
-      :auto -> Mix.env() != :test
+      :auto -> @env != :test
     end
   end
 end

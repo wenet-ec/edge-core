@@ -7,6 +7,8 @@ defmodule EdgeAdmin.Application do
   use Application
   require Logger
 
+  @env Mix.env()
+
   @impl true
   def start(_type, _args) do
     children = [
@@ -21,18 +23,13 @@ defmodule EdgeAdmin.Application do
     ]
 
     :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{
-      config: %{
-        metadata: [:file, :line]
-      }
+      config: %{metadata: [:file, :line]}
     })
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: EdgeAdmin.Supervisor]
 
     case Supervisor.start_link(children, opts) do
       {:ok, pid} ->
-        # Run bootstrap if not in test environment
         if should_run_bootstrap?() do
           case EdgeAdmin.Bootstrap.run() do
             {:ok, :bootstrap_complete} ->
@@ -40,11 +37,10 @@ defmodule EdgeAdmin.Application do
 
             {:error, reason} ->
               Logger.error("Bootstrap failed: #{inspect(reason)}")
-              # Continue for now, but you might want {:error, reason}
               {:ok, pid}
           end
         else
-          Logger.info("Skipping bootstrap in #{Mix.env()} environment")
+          Logger.info("Skipping bootstrap in #{@env} environment")
           {:ok, pid}
         end
 
@@ -57,7 +53,7 @@ defmodule EdgeAdmin.Application do
     case Application.get_env(:edge_admin, :run_bootstrap, :auto) do
       false -> false
       true -> true
-      :auto -> Mix.env() != :test
+      :auto -> @env != :test
     end
   end
 

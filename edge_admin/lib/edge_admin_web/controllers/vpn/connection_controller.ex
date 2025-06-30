@@ -6,16 +6,18 @@ defmodule EdgeAdminWeb.VPN.ConnectionController do
   alias EdgeAdmin.VPN
   alias EdgeAdminWeb.Schemas.VPN.ConnectionSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
-  action_fallback EdgeAdminWeb.FallbackController
+  action_fallback(EdgeAdminWeb.FallbackController)
 
-  tags ["VPN.Connection"]
+  tags(["VPN.Connection"])
 
-  operation :show,
+  operation(:show,
     summary: "Get VPN connection status",
     description: "Retrieve the current VPN connection status and details",
     responses: %{
-      200 => {"VPN connection details", "application/json", ConnectionSchemas.ConnectionResponse}
+      200 =>
+        {"VPN connection details", "application/json", ConnectionSchemas.ConnectionSingleResponse}
     }
+  )
 
   def show(conn, _params) do
     case VPN.get_connection() do
@@ -34,17 +36,22 @@ defmodule EdgeAdminWeb.VPN.ConnectionController do
     end
   end
 
-  operation :update,
+  operation(:update,
     summary: "Update VPN connection",
     description: "Update VPN connection properties and settings",
-    request_body: {"VPN connection update parameters", "application/json", ConnectionSchemas.UpdateRequest},
+    request_body:
+      {"VPN connection update parameters", "application/json", ConnectionSchemas.ConnectionUpdateRequest},
     responses: %{
-      200 => {"VPN connection updated successfully", "application/json", ConnectionSchemas.ConnectionResponse},
+      200 =>
+        {"VPN connection updated successfully", "application/json",
+         ConnectionSchemas.ConnectionSingleResponse},
       400 => {"Invalid request", "application/json", CommonSchemas.GenericErrorResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
     }
+  )
 
-  def update(conn, %{"manual_disconnect" => manual_disconnect} = _params) when is_boolean(manual_disconnect) do
+  def update(conn, %{"manual_disconnect" => manual_disconnect} = _params)
+      when is_boolean(manual_disconnect) do
     case VPN.update_connection(%{manual_disconnect: manual_disconnect}) do
       {:ok, connection} ->
         conn

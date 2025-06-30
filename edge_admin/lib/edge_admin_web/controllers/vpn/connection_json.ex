@@ -10,7 +10,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionJSON do
   Renders a single VPN connection.
   """
   def show(%{connection: connection}) do
-    data(connection)
+    %{data: data(connection)}
   end
 
   defp data(%Connection{} = connection) do
@@ -22,7 +22,9 @@ defmodule EdgeAdminWeb.VPN.ConnectionJSON do
       last_checked_at: connection.last_checked_at,
       last_error: connection.last_error,
       last_error_at: connection.last_error_at,
-      manual_disconnect: connection.manual_disconnect
+      manual_disconnect: connection.manual_disconnect,
+      inserted_at: connection.inserted_at,
+      updated_at: connection.updated_at
     }
   end
 end

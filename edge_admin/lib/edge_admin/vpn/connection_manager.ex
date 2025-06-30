@@ -73,9 +73,9 @@ defmodule EdgeAdmin.VPN.ConnectionManager do
         {:reply, {:ok, connection}, state}
 
       current ->
-        # Update existing
         current_map = Map.from_struct(current)
-        updated_attrs = Map.merge(current_map, attrs)
+        updated_attrs = Map.merge(attrs, %{updated_at: DateTime.utc_now()})
+        updated_attrs = Map.merge(current_map, updated_attrs)
         updated_connection = Connection.new(updated_attrs)
         store_connection(updated_connection)
         {:reply, {:ok, updated_connection}, state}

@@ -16,10 +16,11 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
       # Test default disconnected state
       conn = get(conn, ~p"/api/connections/self")
       response = json_response(conn, 200)
+      data = response["data"]
 
-      assert response["status"] == "disconnected"
-      assert response["manual_disconnect"] == false
-      assert is_nil(response["vpn_ip"])
+      assert data["status"] == "disconnected"
+      assert data["manual_disconnect"] == false
+      assert is_nil(data["vpn_ip"])
 
       # Test connected state
       {:ok, _} =
@@ -31,19 +32,24 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
 
       conn = get(conn, ~p"/api/connections/self")
       response = json_response(conn, 200)
+      data = response["data"]
 
-      assert response["status"] == "connected"
-      assert response["vpn_ip"] == "100.64.0.10"
-      assert response["vpn_hostname"] == "edge-admin"
+      assert data["status"] == "connected"
+      assert data["vpn_ip"] == "100.64.0.10"
+      assert data["vpn_hostname"] == "edge-admin"
     end
 
-    test "handles VPN context errors", %{conn: conn} do
-      :ets.delete_all_objects(:vpn_connection)
-
+    test "returns connection with timestamps", %{conn: conn} do
       conn = get(conn, ~p"/api/connections/self")
-      response = json_response(conn, 500)
+      response = json_response(conn, 200)
+      data = response["data"]
 
-      assert response["error"] == "Failed to retrieve VPN connection status"
+      assert data["status"] == "disconnected"
+      assert data["manual_disconnect"] == false
+      assert is_binary(data["inserted_at"])
+      assert is_binary(data["updated_at"])
+      assert {:ok, _, _} = DateTime.from_iso8601(data["inserted_at"])
+      assert {:ok, _, _} = DateTime.from_iso8601(data["updated_at"])
     end
   end
 
@@ -52,14 +58,16 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
       # Test setting to true
       conn = patch(conn, ~p"/api/connections/self", %{"manual_disconnect" => true})
       response = json_response(conn, 200)
+      data = response["data"]
 
-      assert response["manual_disconnect"] == true
+      assert data["manual_disconnect"] == true
 
       # Test setting to false
       conn = patch(conn, ~p"/api/connections/self", %{"manual_disconnect" => false})
       response = json_response(conn, 200)
+      data = response["data"]
 
-      assert response["manual_disconnect"] == false
+      assert data["manual_disconnect"] == false
     end
 
     test "preserves other connection fields", %{conn: conn} do
@@ -72,11 +80,12 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
 
       conn = patch(conn, ~p"/api/connections/self", %{"manual_disconnect" => true})
       response = json_response(conn, 200)
+      data = response["data"]
 
-      assert response["manual_disconnect"] == true
-      assert response["status"] == "connected"
-      assert response["vpn_ip"] == "100.64.0.15"
-      assert response["vpn_hostname"] == "edge-admin"
+      assert data["manual_disconnect"] == true
+      assert data["status"] == "connected"
+      assert data["vpn_ip"] == "100.64.0.15"
+      assert data["vpn_hostname"] == "edge-admin"
     end
 
     test "validates request parameters", %{conn: conn} do

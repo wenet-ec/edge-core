@@ -56,10 +56,21 @@ defmodule EdgeAdminWeb.Schemas.VPN.ConnectionSchemas do
         },
         manual_disconnect: %Schema{
           type: :boolean,
-          description: "Controls auto-reconnection behavior - when true, prevents automatic reconnection attempts"
+          description:
+            "Controls auto-reconnection behavior - when true, prevents automatic reconnection attempts"
+        },
+        inserted_at: %Schema{
+          type: :string,
+          format: :datetime,
+          description: "When the connection record was created"
+        },
+        updated_at: %Schema{
+          type: :string,
+          format: :datetime,
+          description: "When the connection record was last updated"
         }
       },
-      required: [:status, :last_checked_at, :manual_disconnect],
+      required: [:status, :last_checked_at, :manual_disconnect, :inserted_at, :updated_at],
       example: %{
         status: "connected",
         vpn_ip: "100.64.0.10",
@@ -68,12 +79,43 @@ defmodule EdgeAdminWeb.Schemas.VPN.ConnectionSchemas do
         last_checked_at: "2024-01-01T12:05:00Z",
         last_error: nil,
         last_error_at: nil,
-        manual_disconnect: false
+        manual_disconnect: false,
+        inserted_at: "2024-01-01T11:00:00Z",
+        updated_at: "2024-01-01T12:05:00Z"
       }
     })
   end
 
-  defmodule UpdateRequest do
+  defmodule ConnectionSingleResponse do
+    @moduledoc false
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "VPN Connection Single Response",
+      description: "Single VPN connection response",
+      type: :object,
+      properties: %{
+        data: ConnectionResponse
+      },
+      required: [:data],
+      example: %{
+        data: %{
+          status: "connected",
+          vpn_ip: "100.64.0.10",
+          vpn_hostname: "edge-admin",
+          connected_at: "2024-01-01T12:00:00Z",
+          last_checked_at: "2024-01-01T12:05:00Z",
+          last_error: nil,
+          last_error_at: nil,
+          manual_disconnect: false,
+          inserted_at: "2024-01-01T11:00:00Z",
+          updated_at: "2024-01-01T12:05:00Z"
+        }
+      }
+    })
+  end
+
+  defmodule ConnectionUpdateRequest do
     @moduledoc false
     require OpenApiSpex
 
@@ -84,7 +126,8 @@ defmodule EdgeAdminWeb.Schemas.VPN.ConnectionSchemas do
       properties: %{
         manual_disconnect: %Schema{
           type: :boolean,
-          description: "Controls auto-reconnection behavior - set to true to disable automatic reconnection, false to enable it"
+          description:
+            "Controls auto-reconnection behavior - set to true to disable automatic reconnection, false to enable it"
         }
       },
       required: [:manual_disconnect],

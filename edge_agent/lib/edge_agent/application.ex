@@ -13,6 +13,7 @@ defmodule EdgeAgent.Application do
       EdgeAgent.Repo,
       {DNSCluster, query: Application.get_env(:edge_agent, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: EdgeAgent.PubSub},
+      EdgeAgent.Tailscale.ConnectionManager,
       {Oban, Application.fetch_env!(:edge_agent, Oban)},
       EdgeAgent.SshServer,
       EdgeAgent.MetricsServer.Server,

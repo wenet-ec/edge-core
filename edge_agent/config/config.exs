@@ -31,6 +31,7 @@ config :edge_agent, Oban,
   engine: Oban.Engines.Lite,
   repo: EdgeAgent.Repo,
   queues: [
+    vpn: 2,
     command_execution: 1,
     command_reporting: 1
   ],
@@ -38,7 +39,8 @@ config :edge_agent, Oban,
     Oban.Plugins.Pruner,
     {Oban.Plugins.Cron,
      crontab: [
-       # Report unreported executions every 5 minutes
+       {"* * * * *", EdgeAgent.Tailscale.Workers.ConnectivityCheckingWorker},
+       {"* * * * *", EdgeAgent.Tailscale.Workers.AutoReconnectingWorker},
        {"*/5 * * * *", EdgeAgent.Commands.Workers.CommandReportWorker}
      ]}
   ]

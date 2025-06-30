@@ -4,7 +4,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionJSON do
   JSON rendering for VPN connection resources.
   """
 
-  alias EdgeAdmin.VPN.Connection
+  alias EdgeAdmin.Tailscale.Connection
 
   @doc """
   Renders a single VPN connection.

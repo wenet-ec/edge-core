@@ -2,12 +2,12 @@
 defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
   use EdgeAdminWeb.ConnCase, async: false
 
-  alias EdgeAdmin.VPN
+  alias EdgeAdmin.Tailscale
 
   setup do
     # Reset the ETS table state between tests
-    :ets.delete_all_objects(:vpn_connection)
-    {:ok, _} = VPN.create_connection(%{})
+    :ets.delete_all_objects(:tailscale_connection)
+    {:ok, _} = Tailscale.create_connection(%{})
     :ok
   end
 
@@ -24,7 +24,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
 
       # Test connected state
       {:ok, _} =
-        VPN.update_connection(%{
+        Tailscale.update_connection(%{
           status: :connected,
           vpn_ip: "100.64.0.10",
           vpn_hostname: "edge-admin"
@@ -72,7 +72,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
 
     test "preserves other connection fields", %{conn: conn} do
       {:ok, _} =
-        VPN.update_connection(%{
+        Tailscale.update_connection(%{
           status: :connected,
           vpn_ip: "100.64.0.15",
           vpn_hostname: "edge-admin"

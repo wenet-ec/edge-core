@@ -1,6 +1,11 @@
-# edge_admin/lib/edge_admin/vpn/connection.ex
-defmodule EdgeAdmin.VPN.Connection do
-  @moduledoc false
+# edge_admin/lib/edge_admin/tailscale/connection.ex
+defmodule EdgeAdmin.Tailscale.Connection do
+  @moduledoc """
+  Embedded schema for Tailscale VPN connection state.
+
+  This struct represents the current state of the Tailscale VPN connection,
+  including status, connection details, error information, and configuration.
+  """
   use Ecto.Schema
 
   import Ecto.Changeset
@@ -19,6 +24,9 @@ defmodule EdgeAdmin.VPN.Connection do
     timestamps(type: :utc_datetime)
   end
 
+  @doc """
+  Creates a changeset for the connection.
+  """
   def changeset(connection, attrs) do
     connection
     |> cast(attrs, [
@@ -30,12 +38,14 @@ defmodule EdgeAdmin.VPN.Connection do
       :last_error,
       :last_error_at,
       :manual_disconnect
-      # Note: inserted_at and updated_at are automatically handled by timestamps()
     ])
     |> validate_required([:status])
     |> validate_inclusion(:status, [:connected, :disconnected, :connecting])
   end
 
+  @doc """
+  Creates a new connection with default or custom attributes.
+  """
   def new(attrs \\ %{}) do
     now = DateTime.utc_now()
 

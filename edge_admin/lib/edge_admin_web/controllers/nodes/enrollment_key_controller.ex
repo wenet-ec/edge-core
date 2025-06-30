@@ -3,7 +3,7 @@ defmodule EdgeAdminWeb.Nodes.EnrollmentKeyController do
   use EdgeAdminWeb, :controller
   use OpenApiSpex.ControllerSpecs
 
-  alias EdgeAdmin.Headscale
+  alias EdgeAdmin.Tailscale
   alias EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
 
@@ -22,7 +22,7 @@ defmodule EdgeAdminWeb.Nodes.EnrollmentKeyController do
     }
 
   def create(conn, _params) do
-    case Headscale.create_enrollment_key() do
+    case Tailscale.create_enrollment_key() do
       {:ok, enrollment_data} ->
         conn
         |> put_status(:created)

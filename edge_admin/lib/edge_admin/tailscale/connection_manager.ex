@@ -1,28 +1,48 @@
-# edge_admin/lib/edge_admin/vpn/connection_manager.ex
-defmodule EdgeAdmin.VPN.ConnectionManager do
-  @moduledoc false
+# edge_admin/lib/edge_admin/tailscale/connection_manager.ex
+defmodule EdgeAdmin.Tailscale.ConnectionManager do
+  @moduledoc """
+  GenServer for managing Tailscale VPN connection state.
+
+  This module provides a singleton pattern for storing and managing
+  the current VPN connection state in memory using ETS. It offers
+  pure CRUD operations for the connection state.
+  """
   use GenServer
 
-  alias EdgeAdmin.VPN.Connection
+  alias EdgeAdmin.Tailscale.Connection
 
   require Logger
 
-  @table_name :vpn_connection
+  @table_name :tailscale_connection
 
   # Client API - Pure CRUD
 
+  @doc """
+  Starts the connection manager.
+  """
   def start_link(_) do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
+  @doc """
+  Gets the current connection state.
+  """
   def get_connection do
     GenServer.call(__MODULE__, :get)
   end
 
+  @doc """
+  Creates a new connection with the given attributes.
+  Only creates if no connection exists (singleton pattern).
+  """
   def create_connection(attrs) do
     GenServer.call(__MODULE__, {:create, attrs})
   end
 
+  @doc """
+  Updates the connection with the given attributes.
+  Creates a new connection if none exists.
+  """
   def update_connection(attrs) do
     GenServer.call(__MODULE__, {:update, attrs})
   end
@@ -37,7 +57,7 @@ defmodule EdgeAdmin.VPN.ConnectionManager do
     initial_connection = Connection.new()
     store_connection(initial_connection)
 
-    Logger.info("VPN Connection Manager initialized with CRUD interface")
+    Logger.info("Tailscale Connection Manager initialized")
     {:ok, %{}}
   end
 

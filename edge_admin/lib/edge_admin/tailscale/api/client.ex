@@ -1,13 +1,14 @@
-# edge_admin/lib/edge_admin/headscale/client.ex
-defmodule EdgeAdmin.Headscale.Client do
+# edge_admin/lib/edge_admin/tailscale/api/client.ex
+defmodule EdgeAdmin.Tailscale.Api.Client do
   @moduledoc """
-  HTTP client for communicating with VPN wrapper service.
+  HTTP client for communicating with Headscale VPN API service.
 
   This module handles the low-level HTTP communication with the Headscale
-  VPN service through the wrapper API.
+  VPN service through the wrapper API for node management, enrollment
+  key creation, and user operations.
   """
 
-  @behaviour EdgeAdmin.Headscale.Behaviour
+  @behaviour EdgeAdmin.Tailscale.Api.Behaviour
 
   require Logger
 
@@ -69,7 +70,7 @@ defmodule EdgeAdmin.Headscale.Client do
     end
   end
 
-  # Private functions (rest of the implementation remains the same)
+  # Private functions
 
   defp wrapper_url do
     Application.get_env(:edge_admin, :vpn_wrapper_url, "http://edge_vpn:8081")

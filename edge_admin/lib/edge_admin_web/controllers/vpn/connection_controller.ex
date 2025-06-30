@@ -3,7 +3,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionController do
   use EdgeAdminWeb, :controller
   use OpenApiSpex.ControllerSpecs
 
-  alias EdgeAdmin.VPN
+  alias EdgeAdmin.Tailscale
   alias EdgeAdminWeb.Schemas.VPN.ConnectionSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
   action_fallback(EdgeAdminWeb.FallbackController)
@@ -20,7 +20,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionController do
   )
 
   def show(conn, _params) do
-    case VPN.get_connection() do
+    case Tailscale.get_connection() do
       {:ok, connection} ->
         render(conn, :show, connection: connection)
 
@@ -52,7 +52,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionController do
 
   def update(conn, %{"manual_disconnect" => manual_disconnect} = _params)
       when is_boolean(manual_disconnect) do
-    case VPN.update_connection(%{manual_disconnect: manual_disconnect}) do
+    case Tailscale.update_connection(%{manual_disconnect: manual_disconnect}) do
       {:ok, connection} ->
         conn
         |> put_status(:ok)

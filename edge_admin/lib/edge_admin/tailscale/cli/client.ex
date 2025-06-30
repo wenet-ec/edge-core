@@ -1,12 +1,13 @@
-# edge_admin/lib/edge_admin/tailscale/client.ex
-defmodule EdgeAdmin.Tailscale.Client do
+# edge_admin/lib/edge_admin/tailscale/cli/client.ex
+defmodule EdgeAdmin.Tailscale.Cli.Client do
   @moduledoc """
-  Tailscale client for managing VPN connections using enrollment keys.
+  Tailscale CLI client for managing VPN connections using enrollment keys.
 
-  Both EdgeAdmin and EdgeAgent use this same pattern now.
+  This module handles direct interaction with the Tailscale command-line interface
+  for connection management, status checking, and daemon control.
   """
 
-  @behaviour EdgeAdmin.Tailscale.Behaviour
+  @behaviour EdgeAdmin.Tailscale.Cli.Behaviour
 
   require Logger
 
@@ -18,19 +19,18 @@ defmodule EdgeAdmin.Tailscale.Client do
   @tailscale_socket "/var/run/tailscale/tailscaled.sock"
   @tailscale_cache_dir "/var/cache/tailscale"
 
-
   @impl true
   def connect_to_vpn(vpn_url, enrollment_key, hostname) do
-    Logger.info("Tailscale: Initiating connection to #{vpn_url} with hostname #{hostname}")
+    Logger.info("Tailscale CLI: Initiating connection to #{vpn_url} with hostname #{hostname}")
 
     with :ok <- ensure_daemon_running(),
          :ok <- perform_connection_with_key(vpn_url, enrollment_key, hostname),
          result <- get_connection_info() do
-      Logger.info("Tailscale: Connection flow completed successfully")
+      Logger.info("Tailscale CLI: Connection flow completed successfully")
       result
     else
       {:error, reason} = error ->
-        Logger.error("Tailscale: Connection flow failed - #{reason}")
+        Logger.error("Tailscale CLI: Connection flow failed - #{reason}")
         error
     end
   end
@@ -55,22 +55,22 @@ defmodule EdgeAdmin.Tailscale.Client do
 
   @impl true
   def disconnect_from_vpn do
-    Logger.info("Tailscale: Initiating disconnection")
+    Logger.info("Tailscale CLI: Initiating disconnection")
 
     case System.cmd("tailscale", ["down"], stderr_to_stdout: true) do
       {_output, 0} ->
-        Logger.info("Tailscale: Disconnected successfully")
+        Logger.info("Tailscale CLI: Disconnected successfully")
         :ok
 
       {output, _code} ->
         error_msg = "Disconnect failed: #{String.trim(output)}"
-        Logger.error("Tailscale: #{error_msg}")
+        Logger.error("Tailscale CLI: #{error_msg}")
         {:error, error_msg}
     end
   rescue
     e ->
       error_msg = "Disconnect failed: #{inspect(e)}"
-      Logger.error("Tailscale: #{error_msg}")
+      Logger.error("Tailscale CLI: #{error_msg}")
       {:error, error_msg}
   end
 
@@ -101,7 +101,7 @@ defmodule EdgeAdmin.Tailscale.Client do
 
   @impl true
   def start_daemon do
-    Logger.info("Tailscale: Starting daemon...")
+    Logger.info("Tailscale CLI: Starting daemon...")
 
     ensure_directories()
 
@@ -112,7 +112,7 @@ defmodule EdgeAdmin.Tailscale.Client do
     end)
 
     :timer.sleep(2000)
-    Logger.info("Tailscale: Daemon started")
+    Logger.info("Tailscale CLI: Daemon started")
     :ok
   end
 
@@ -135,11 +135,11 @@ defmodule EdgeAdmin.Tailscale.Client do
   defp ensure_daemon_running do
     case System.cmd("tailscale", ["status"], stderr_to_stdout: true) do
       {_output, 0} ->
-        Logger.debug("Tailscale: Daemon already running")
+        Logger.debug("Tailscale CLI: Daemon already running")
         :ok
 
       {_output, _} ->
-        Logger.info("Tailscale: Starting daemon")
+        Logger.info("Tailscale CLI: Starting daemon")
         start_daemon()
     end
   end
@@ -151,7 +151,7 @@ defmodule EdgeAdmin.Tailscale.Client do
 
   defp perform_connection_with_key(vpn_url, enrollment_key, hostname) do
     if already_connected?(hostname) do
-      Logger.info("Tailscale: Already connected with hostname #{hostname}")
+      Logger.info("Tailscale CLI: Already connected with hostname #{hostname}")
       :ok
     else
       connect_with_state_check(vpn_url, enrollment_key, hostname)
@@ -172,37 +172,40 @@ defmodule EdgeAdmin.Tailscale.Client do
 
   defp connect_with_state_check(vpn_url, enrollment_key, hostname) do
     if File.exists?(@tailscale_state_file) and File.stat!(@tailscale_state_file).size > 0 do
-      Logger.info("Tailscale: Found existing state, checking if it's valid...")
+      Logger.info("Tailscale CLI: Found existing state, checking if it's valid...")
       :timer.sleep(2000)
 
       case System.cmd("tailscale", ["status"], stderr_to_stdout: true) do
         {output, 0} ->
           cond do
             String.contains?(output, "Logged out") ->
-              Logger.info("Tailscale: Existing state is logged out, using new enrollment key...")
+              Logger.info(
+                "Tailscale CLI: Existing state is logged out, using new enrollment key..."
+              )
+
               fresh_connect_with_key(vpn_url, enrollment_key, hostname)
 
             String.contains?(output, hostname) ->
               Logger.info(
-                "Tailscale: Found valid existing authentication, attempting to connect..."
+                "Tailscale CLI: Found valid existing authentication, attempting to connect..."
               )
 
               attempt_reconnect_with_fallback(vpn_url, hostname, enrollment_key)
 
             true ->
-              Logger.info("Tailscale: Unknown state, using new enrollment key...")
+              Logger.info("Tailscale CLI: Unknown state, using new enrollment key...")
               fresh_connect_with_key(vpn_url, enrollment_key, hostname)
           end
 
         {output, _exit_code} ->
           Logger.info(
-            "Tailscale: Cannot get status (#{String.trim(output)}), using new enrollment key..."
+            "Tailscale CLI: Cannot get status (#{String.trim(output)}), using new enrollment key..."
           )
 
           fresh_connect_with_key(vpn_url, enrollment_key, hostname)
       end
     else
-      Logger.info("Tailscale: No existing state, using enrollment key...")
+      Logger.info("Tailscale CLI: No existing state, using enrollment key...")
       fresh_connect_with_key(vpn_url, enrollment_key, hostname)
     end
   end
@@ -215,11 +218,11 @@ defmodule EdgeAdmin.Tailscale.Client do
         :timer.sleep(2000)
 
         if verify_connection() do
-          Logger.info("Tailscale: Successfully reconnected using existing credentials")
+          Logger.info("Tailscale CLI: Successfully reconnected using existing credentials")
           :ok
         else
           Logger.info(
-            "Tailscale: Failed to reconnect with existing state, will use new enrollment key..."
+            "Tailscale CLI: Failed to reconnect with existing state, will use new enrollment key..."
           )
 
           fresh_connect_with_key(vpn_url, fallback_key, hostname)
@@ -227,7 +230,7 @@ defmodule EdgeAdmin.Tailscale.Client do
 
       {_output, _} ->
         Logger.info(
-          "Tailscale: Failed to reconnect with existing state, will use new enrollment key..."
+          "Tailscale CLI: Failed to reconnect with existing state, will use new enrollment key..."
         )
 
         fresh_connect_with_key(vpn_url, fallback_key, hostname)
@@ -235,7 +238,7 @@ defmodule EdgeAdmin.Tailscale.Client do
   end
 
   defp fresh_connect_with_key(vpn_url, enrollment_key, hostname) do
-    Logger.info("Tailscale: Connecting to VPN with enrollment key...")
+    Logger.info("Tailscale CLI: Connecting to VPN with enrollment key...")
 
     args = [
       "up",
@@ -247,12 +250,12 @@ defmodule EdgeAdmin.Tailscale.Client do
 
     case System.cmd("tailscale", args, stderr_to_stdout: true) do
       {_output, 0} ->
-        Logger.info("Tailscale: Successfully connected to VPN")
+        Logger.info("Tailscale CLI: Successfully connected to VPN")
         :ok
 
       {output, exit_code} ->
         error_msg = "Connection failed: #{String.trim(output)} (exit code: #{exit_code})"
-        Logger.error("Tailscale: #{error_msg}")
+        Logger.error("Tailscale CLI: #{error_msg}")
         {:error, error_msg}
     end
   end

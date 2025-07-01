@@ -7,12 +7,11 @@ defmodule EdgeAdminWeb.ApiSpec do
   alias OpenApiSpex.Info
   alias OpenApiSpex.OpenApi
   alias OpenApiSpex.Paths
-  alias OpenApiSpex.Server
 
   @impl OpenApi
   def spec do
     OpenApiSpex.resolve_schema_modules(%OpenApi{
-      servers: [%Server{url: "http://localhost:4000"}],
+      servers: [],
       info: %Info{
         title: "EdgeAdmin API",
         version: "0.0.1",

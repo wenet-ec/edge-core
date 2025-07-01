@@ -70,6 +70,8 @@ defmodule EdgeAdminWeb.Plugs.Security do
   defp swagger_style_src_directive, do: "'self' 'unsafe-inline' https://cdnjs.cloudflare.com"
   defp swagger_script_src_directive, do: "'self' 'unsafe-eval' 'unsafe-inline' https://cdnjs.cloudflare.com"
   defp swagger_font_src_directive, do: "'self' https://cdnjs.cloudflare.com"
-  defp swagger_image_src_directive, do: "'self' data: https://cdnjs.cloudflare.com"
   defp swagger_connect_src_directive, do: "'self' https://cdnjs.cloudflare.com"
+  defp swagger_image_src_directive do
+    "'self' data: https://cdnjs.cloudflare.com https://validator.swagger.io"
+  end
 end

@@ -37,4 +37,4 @@ VPN_URL=http://edge_vpn:8080
 VPN_WRAPPER_URL=http://edge_vpn:8081
 
 # Metrics configuration
-METRICS_STORAGE_URL=http://victoriametrics:8428
+METRICS_STORAGE_URL=http://edge_metrics_storage:8428

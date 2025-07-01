@@ -129,8 +129,10 @@ defmodule EdgeAgent.Tailscale do
     if should_reconnect?(connection) do
       Logger.info("Tailscale: Attempting auto-reconnection")
 
-      with {:ok, _} <- update_connection(%{status: :connecting}),
-           {:ok, result} <- connect_to_vpn(vpn_url(), enrollment_key(), "edge-admin") do
+      with {:ok, node_id} <- Settings.get("id"),
+           hostname = "node-#{node_id}",
+           {:ok, _} <- update_connection(%{status: :connecting}),
+           {:ok, result} <- connect_to_vpn(vpn_url(), enrollment_key(), hostname) do
         handle_connection_success(result)
       else
         {:error, reason} -> handle_connection_failure(reason)
@@ -147,8 +149,10 @@ defmodule EdgeAgent.Tailscale do
   def connect_to_vpn_manual do
     Logger.info("Tailscale: Initiating manual connection")
 
-    with {:ok, _} <- update_connection(%{status: :connecting}),
-         {:ok, result} <- connect_to_vpn(vpn_url(), enrollment_key(), "edge-admin") do
+    with {:ok, node_id} <- Settings.get("id"),
+         hostname = "node-#{node_id}",
+         {:ok, _} <- update_connection(%{status: :connecting}),
+         {:ok, result} <- connect_to_vpn(vpn_url(), enrollment_key(), hostname) do
       handle_connection_success(result)
     else
       {:error, reason} -> handle_connection_failure(reason)

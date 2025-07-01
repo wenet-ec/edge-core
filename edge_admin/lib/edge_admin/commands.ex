@@ -370,15 +370,14 @@ defmodule EdgeAdmin.Commands do
     # Create executions with command_text directly in the struct
     executions =
       Enum.map(page_result.data, fn node ->
-        %{
-          id: Ecto.UUID.generate(),
+        %CommandExecution{}
+        |> CommandExecution.changeset(%{
           command_id: command_id,
           node_id: node.id,
           target_all: true,
-          status: "pending",
-          inserted_at: DateTime.utc_now(),
-          updated_at: DateTime.utc_now()
-        }
+          status: "pending"
+        })
+        |> Repo.insert!()
       end)
 
     # Bulk insert

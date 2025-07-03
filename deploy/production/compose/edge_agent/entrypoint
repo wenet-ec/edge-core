@@ -7,15 +7,5 @@ set -o nounset
 
 echo "Setting up Edge Agent..."
 
-if [ -z "${ENROLLMENT_KEY:-}" ]; then
-    echo "ERROR: ENROLLMENT_KEY environment variable is required"
-    exit 1
-fi
-
-if [ -z "${VPN_URL:-}" ]; then
-    echo "ERROR: VPN_URL environment variable is required"
-    exit 1
-fi
-
 echo "Starting Edge Agent..."
 exec "$@"

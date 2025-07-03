@@ -91,10 +91,12 @@ defmodule EdgeAgent.Bootstrap do
   def setup_vpn_connection(node_id) do
     Logger.info("Setting up VPN connection for node: #{String.slice(node_id, 0, 8)}...")
 
-    with {:ok, vpn_url} <- get_vpn_config(:vpn_url),
-         {:ok, enrollment_key} <- get_vpn_config(:enrollment_key),
-         :ok <- Tailscale.start_daemon(),
-         {:ok, _result} <- connect_to_vpn(vpn_url, enrollment_key, node_id),
+    vpn_url = Application.get_env(:edge_agent, :vpn_url)
+    enrollment_key = Application.get_env(:edge_agent, :enrollment_key)
+    hostname = "node-#{node_id}"
+
+    with :ok <- Tailscale.start_daemon(),
+         {:ok, _result} <- Tailscale.connect_to_vpn(vpn_url, enrollment_key, hostname),
          {:ok, vpn_ip} <- validate_vpn_connection() do
       Logger.info("Successfully connected to VPN with IP: #{vpn_ip}")
       :ok
@@ -288,36 +290,6 @@ defmodule EdgeAgent.Bootstrap do
   end
 
   # VPN Connection Helpers
-
-  defp get_vpn_config(:vpn_url) do
-    case System.get_env("VPN_URL") do
-      nil -> {:error, "VPN_URL environment variable not set"}
-      url -> {:ok, url}
-    end
-  end
-
-  defp get_vpn_config(:enrollment_key) do
-    case System.get_env("ENROLLMENT_KEY") do
-      nil -> {:error, "ENROLLMENT_KEY environment variable not set"}
-      key -> {:ok, key}
-    end
-  end
-
-  defp connect_to_vpn(vpn_url, enrollment_key, node_id) do
-    hostname = "node-#{node_id}"
-    Logger.info("Connecting to VPN with hostname: #{hostname}")
-
-    # Use the new unified Tailscale interface
-    case Tailscale.connect_to_vpn(vpn_url, enrollment_key, hostname) do
-      {:ok, result} ->
-        Logger.info("VPN connection established")
-        {:ok, result}
-
-      {:error, reason} ->
-        Logger.error("VPN connection failed: #{reason}")
-        {:error, "Failed to connect to VPN: #{reason}"}
-    end
-  end
 
   defp validate_vpn_connection do
     Logger.info("Validating VPN connection...")

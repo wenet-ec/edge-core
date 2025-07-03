@@ -2,9 +2,9 @@
 import Config
 import EdgeAgent.Config
 
-# Required environment variables - will raise if missing
-vpn_url = get_env!("VPN_URL")
-enrollment_key = get_env!("ENROLLMENT_KEY")
+# Optional VPN environment variables
+vpn_url = get_env("VPN_URL", :string, nil)
+enrollment_key = get_env("ENROLLMENT_KEY", :string, nil)
 
 # Optional environment variables with defaults
 config :edge_agent, EdgeAgent.Repo,

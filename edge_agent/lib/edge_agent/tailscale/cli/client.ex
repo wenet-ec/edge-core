@@ -21,10 +21,12 @@ defmodule EdgeAgent.Tailscale.Cli.Client do
 
   @impl true
   def connect_to_vpn(vpn_url, enrollment_key, hostname) do
-    Logger.info("Tailscale CLI: Initiating connection to #{vpn_url} with hostname #{hostname}")
+    Logger.info(
+      "Tailscale CLI: Initiating connection to #{vpn_url || "existing state"} with hostname #{hostname}"
+    )
 
     with :ok <- ensure_daemon_running(),
-         :ok <- perform_connection_with_key(vpn_url, enrollment_key, hostname),
+         :ok <- perform_connection(vpn_url, enrollment_key, hostname),
          result <- get_connection_info() do
       Logger.info("Tailscale CLI: Connection flow completed successfully")
       result
@@ -149,13 +151,85 @@ defmodule EdgeAgent.Tailscale.Cli.Client do
     |> Enum.each(&File.mkdir_p!/1)
   end
 
-  defp perform_connection_with_key(vpn_url, enrollment_key, hostname) do
+  defp perform_connection(vpn_url, enrollment_key, hostname) do
+    cond do
+      # Both credentials provided - proceed with fresh or existing state
+      vpn_url && enrollment_key ->
+        perform_connection_with_credentials(vpn_url, enrollment_key, hostname)
+
+      # No credentials but existing state available
+      has_existing_state?() ->
+        Logger.info("Tailscale CLI: No credentials provided, attempting to use existing state")
+        attempt_reconnect_without_credentials(hostname)
+
+      # No credentials and no existing state
+      true ->
+        Logger.error(
+          "Tailscale CLI: No VPN_URL/ENROLLMENT_KEY provided and no existing state found"
+        )
+
+        {:error, "VPN credentials required for first-time connection"}
+    end
+  end
+
+  defp perform_connection_with_credentials(vpn_url, enrollment_key, hostname) do
     if already_connected?(hostname) do
       Logger.info("Tailscale CLI: Already connected with hostname #{hostname}")
       :ok
     else
       connect_with_state_check(vpn_url, enrollment_key, hostname)
     end
+  end
+
+  defp attempt_reconnect_without_credentials(hostname) do
+    Logger.info("Tailscale CLI: Attempting to reconnect using existing state...")
+
+    case System.cmd("tailscale", ["status"], stderr_to_stdout: true) do
+      {output, 0} ->
+        cond do
+          String.contains?(output, "Logged out") ->
+            Logger.error("Tailscale CLI: Existing state is logged out, need fresh credentials")
+            {:error, "Logged out - VPN_URL and ENROLLMENT_KEY required"}
+
+          String.contains?(output, hostname) && Regex.match?(~r/100\.\d+\.\d+\.\d+/, output) ->
+            Logger.info("Tailscale CLI: Already connected with existing state")
+            :ok
+
+          true ->
+            Logger.info("Tailscale CLI: Attempting to bring up connection with existing state")
+            attempt_up_without_credentials(hostname)
+        end
+
+      {output, _exit_code} ->
+        Logger.error("Tailscale CLI: Cannot get status: #{String.trim(output)}")
+        {:error, "Cannot determine connection state"}
+    end
+  end
+
+  defp attempt_up_without_credentials(hostname) do
+    # Try to bring up connection without specifying login server or auth key
+    args = ["up", "--accept-dns=false", "--hostname=#{hostname}"]
+
+    case System.cmd("tailscale", args, stderr_to_stdout: true) do
+      {_output, 0} ->
+        :timer.sleep(2000)
+
+        if verify_connection() do
+          Logger.info("Tailscale CLI: Successfully reconnected using existing state")
+          :ok
+        else
+          Logger.error("Tailscale CLI: Failed to establish connection with existing state")
+          {:error, "Reconnection failed - may need fresh credentials"}
+        end
+
+      {output, _} ->
+        Logger.error("Tailscale CLI: Failed to bring up connection: #{String.trim(output)}")
+        {:error, "Connection failed - may need fresh VPN_URL and ENROLLMENT_KEY"}
+    end
+  end
+
+  defp has_existing_state? do
+    File.exists?(@tailscale_state_file) and File.stat!(@tailscale_state_file).size > 0
   end
 
   defp already_connected?(hostname) do
@@ -171,7 +245,7 @@ defmodule EdgeAgent.Tailscale.Cli.Client do
   end
 
   defp connect_with_state_check(vpn_url, enrollment_key, hostname) do
-    if File.exists?(@tailscale_state_file) and File.stat!(@tailscale_state_file).size > 0 do
+    if has_existing_state?() do
       Logger.info("Tailscale CLI: Found existing state, checking if it's valid...")
       :timer.sleep(2000)
 

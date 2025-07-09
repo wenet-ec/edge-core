@@ -35,7 +35,8 @@ defmodule EdgeAdmin.Bootstrap do
   @doc """
   Sets up VPN connection using Tailscale with admin hostname.
 
-  Reads VPN_URL and ENROLLMENT_KEY from application configuration.
+  Attempts to use VPN_URL and ENROLLMENT_KEY from environment variables,
+  but gracefully falls back to existing state if they're not available.
   Uses hostname: edge-admin
 
   Returns :ok or {:error, reason}.
@@ -43,12 +44,12 @@ defmodule EdgeAdmin.Bootstrap do
   def setup_vpn_connection do
     Logger.info("Setting up VPN connection for EdgeAdmin...")
 
-    vpn_url = Application.get_env(:edge_admin, :vpn_url)
-    enrollment_key = Application.get_env(:edge_admin, :enrollment_key)
-    hostname = "edge-admin"
+    # Get credentials but don't fail if they're missing
+    vpn_url = System.get_env("VPN_URL")
+    enrollment_key = System.get_env("ENROLLMENT_KEY")
 
     with :ok <- Tailscale.start_daemon(),
-         {:ok, _result} <- Tailscale.connect_to_vpn(vpn_url, enrollment_key, hostname),
+         {:ok, _result} <- Tailscale.connect_to_vpn(vpn_url, enrollment_key, "edge-admin"),
          {:ok, vpn_ip} <- validate_vpn_connection() do
       Logger.info("Successfully connected to VPN with IP: #{vpn_ip}")
       :ok

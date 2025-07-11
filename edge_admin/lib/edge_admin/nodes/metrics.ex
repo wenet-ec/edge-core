@@ -25,12 +25,6 @@ defmodule EdgeAdmin.Nodes.Metrics do
     embeds_one(:uptime, Uptime)
   end
 
-  @doc """
-  Creates a metrics struct from raw VictoriaMetrics data.
-
-  This function handles the conversion from raw float values to properly
-  typed and validated metrics data.
-  """
   def from_raw_metrics(raw_metrics, node_id) do
     attrs = %{
       node_id: node_id,

@@ -14,11 +14,6 @@ defmodule EdgeAdmin.Bootstrap do
 
   alias EdgeAdmin.Tailscale
 
-  @doc """
-  Runs the complete bootstrap sequence for EdgeAdmin.
-
-  Returns {:ok, :bootstrap_complete} on success or {:error, reason} on failure.
-  """
   def run do
     Logger.info("Starting EdgeAdmin bootstrap...")
 
@@ -32,15 +27,6 @@ defmodule EdgeAdmin.Bootstrap do
     end
   end
 
-  @doc """
-  Sets up VPN connection using Tailscale with admin hostname.
-
-  Attempts to use VPN_URL and ENROLLMENT_KEY from environment variables,
-  but gracefully falls back to existing state if they're not available.
-  Uses hostname: edge-admin
-
-  Returns :ok or {:error, reason}.
-  """
   def setup_vpn_connection do
     Logger.info("Setting up VPN connection for EdgeAdmin...")
 

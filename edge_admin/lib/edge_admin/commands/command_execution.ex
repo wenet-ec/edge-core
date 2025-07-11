@@ -50,19 +50,6 @@ defmodule EdgeAdmin.Commands.CommandExecution do
     )
   end
 
-  @doc """
-  Populates the virtual command_text field from the associated command.
-
-  ## Examples
-
-      iex> execution = %CommandExecution{command: %Command{command_text: "echo hello"}}
-      iex> CommandExecution.populate_command_text(execution)
-      %CommandExecution{command_text: "echo hello", ...}
-
-      iex> execution = %CommandExecution{command: nil}
-      iex> CommandExecution.populate_command_text(execution)
-      %CommandExecution{command_text: nil, ...}
-  """
   def populate_command_text(%__MODULE__{command: %{command_text: command_text}} = execution) do
     %{execution | command_text: command_text}
   end

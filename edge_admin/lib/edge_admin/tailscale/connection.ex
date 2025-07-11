@@ -24,9 +24,6 @@ defmodule EdgeAdmin.Tailscale.Connection do
     timestamps(type: :utc_datetime)
   end
 
-  @doc """
-  Creates a changeset for the connection.
-  """
   def changeset(connection, attrs) do
     connection
     |> cast(attrs, [
@@ -43,9 +40,6 @@ defmodule EdgeAdmin.Tailscale.Connection do
     |> validate_inclusion(:status, [:connected, :disconnected, :connecting])
   end
 
-  @doc """
-  Creates a new connection with default or custom attributes.
-  """
   def new(attrs \\ %{}) do
     now = DateTime.utc_now()
 

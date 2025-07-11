@@ -20,113 +20,28 @@ defmodule EdgeAdmin.Commands do
 
   require Logger
 
-  @doc """
-  Gets a single command.
-
-  Raises `Ecto.NoResultsError` if the Command does not exist.
-
-  ## Examples
-
-      iex> get_command!(123)
-      %Command{}
-
-      iex> get_command!(456)
-      ** (Ecto.NoResultsError)
-
-  """
   def get_command!(id), do: Repo.get!(Command, id)
 
-  @doc """
-  Creates a command.
-
-  ## Examples
-
-      iex> create_command(%{command_text: "echo hello\nls -la"})
-      {:ok, %Command{}}
-
-      iex> create_command(%{command_text: ""})
-      {:error, %Ecto.Changeset{}}
-
-  """
   def create_command(attrs \\ %{}) do
     %Command{}
     |> Command.changeset(attrs)
     |> Repo.insert()
   end
 
-  @doc """
-  Updates a command.
-
-  ## Examples
-
-      iex> update_command(command, %{command_text: "new command"})
-      {:ok, %Command{}}
-
-      iex> update_command(command, %{command_text: ""})
-      {:error, %Ecto.Changeset{}}
-
-  """
   def update_command(%Command{} = command, attrs) do
     command
     |> Command.changeset(attrs)
     |> Repo.update()
   end
 
-  @doc """
-  Deletes a command.
-
-  ## Examples
-
-      iex> delete_command(command)
-      {:ok, %Command{}}
-
-      iex> delete_command(command)
-      {:error, %Ecto.Changeset{}}
-
-  """
   def delete_command(%Command{} = command) do
     Repo.delete(command)
   end
 
-  @doc """
-  Returns an `%Ecto.Changeset{}` for tracking command changes.
-
-  ## Examples
-
-      iex> change_command(command)
-      %Ecto.Changeset{data: %Command{}}
-
-  """
   def change_command(%Command{} = command, attrs \\ %{}) do
     Command.changeset(command, attrs)
   end
 
-  @doc """
-  Returns a paginated list of commands with filtering and sorting.
-
-  ## Parameters
-  - `params` - Map of query parameters (page, page_size, sort, filters)
-
-  ## Supported Query Parameters
-  - `page` - Page number (default: 1)
-  - `page_size` - Items per page (default: 20, max: 100)
-  - `sort` - Sort specification: "field1:dir1,field2:dir2"
-
-  ## Filterable Fields
-  - `command_text` - Text search in command text (supports wildcards with *)
-
-  ## Sortable Fields
-  - `inserted_at`, `updated_at`
-
-  ## Examples
-
-      iex> list_commands_with_filtering_pagination(%{"page" => "2", "command_text" => "*nginx*"})
-      %FilteringPagination{data: [%Command{}, ...], ...}
-
-      iex> list_commands_with_filtering_pagination(%{"sort" => "inserted_at:desc"})
-      %FilteringPagination{data: [...], sort: [{:inserted_at, :desc}], ...}
-
-  """
   def list_commands_with_filtering_pagination(params \\ %{}) do
     FilteringPagination.paginate(
       Command,
@@ -158,129 +73,32 @@ defmodule EdgeAdmin.Commands do
     end
   end
 
-  @doc """
-  Gets a single command_execution.
-
-  Raises `Ecto.NoResultsError` if the Command execution does not exist.
-
-  ## Examples
-
-      iex> get_command_execution!(123)
-      %CommandExecution{}
-
-      iex> get_command_execution!(456)
-      ** (Ecto.NoResultsError)
-
-  """
   def get_command_execution!(id) do
     CommandExecution
     |> Repo.get!(id)
     |> preload_and_populate_command_text()
   end
 
-  @doc """
-  Creates a command_execution.
-
-  ## Examples
-
-      iex> create_command_execution(%{status: "pending", command_id: cmd_id, node_id: node_id})
-      {:ok, %CommandExecution{}}
-
-      iex> create_command_execution(%{status: "invalid"})
-      {:error, %Ecto.Changeset{}}
-
-  """
   def create_command_execution(attrs \\ %{}) do
     %CommandExecution{}
     |> CommandExecution.changeset(attrs)
     |> Repo.insert()
   end
 
-  @doc """
-  Updates a command_execution.
-
-  ## Examples
-
-      iex> update_command_execution(command_execution, %{status: "completed", output: "Done"})
-      {:ok, %CommandExecution{}}
-
-      iex> update_command_execution(command_execution, %{status: "invalid"})
-      {:error, %Ecto.Changeset{}}
-
-  """
   def update_command_execution(%CommandExecution{} = command_execution, attrs) do
     command_execution
     |> CommandExecution.changeset(attrs)
     |> Repo.update()
   end
 
-  @doc """
-  Deletes a command_execution.
-
-  ## Examples
-
-      iex> delete_command_execution(command_execution)
-      {:ok, %CommandExecution{}}
-
-      iex> delete_command_execution(command_execution)
-      {:error, %Ecto.Changeset{}}
-
-  """
   def delete_command_execution(%CommandExecution{} = command_execution) do
     Repo.delete(command_execution)
   end
 
-  @doc """
-  Returns an `%Ecto.Changeset{}` for tracking command_execution changes.
-
-  ## Examples
-
-      iex> change_command_execution(command_execution)
-      %Ecto.Changeset{data: %CommandExecution{}}
-
-  """
   def change_command_execution(%CommandExecution{} = command_execution, attrs \\ %{}) do
     CommandExecution.changeset(command_execution, attrs)
   end
 
-  @doc """
-  Returns a paginated list of command executions with filtering and sorting.
-
-  This function combines filtering/pagination with command execution-specific
-  enhancements if needed in the future. It encapsulates the filtering/pagination
-  logic including:
-  - Which fields can be filtered and sorted
-  - Default sorting behavior
-  - Any command execution-specific processing
-
-  ## Parameters
-  - `params` - Map of query parameters (page, page_size, sort, filters)
-
-  ## Supported Query Parameters
-  - `page` - Page number (default: 1)
-  - `page_size` - Items per page (default: 20, max: 100)
-  - `sort` - Sort specification: "field1:dir1,field2:dir2"
-
-  ## Filterable Fields
-  - `status` - Execution status (pending, sent, completed)
-  - `target_all` - Boolean filter for system-wide commands
-  - `exit_code` - Exit code filter (supports ranges like "gte:0", "ne:0")
-  - `command_id` - Filter by command ID
-  - `node_id` - Filter by node ID
-  - `output` - Text search in output (supports wildcards with *)
-
-  ## Sortable Fields
-  - `inserted_at`, `updated_at`, `status`, `sent_at`, `completed_at`, `exit_code`
-
-  ## Examples
-
-      iex> list_command_executions_with_filtering_pagination(%{"page" => "2", "status" => "completed"})
-      %FilteringPagination{data: [%CommandExecution{}, ...], ...}
-
-      iex> list_command_executions_with_filtering_pagination(%{"sort" => "status:desc,inserted_at:asc"})
-      %FilteringPagination{data: [...], sort: [{:status, :desc}, {:inserted_at, :asc}], ...}
-
-  """
   def list_command_executions_with_filtering_pagination(params \\ %{}) do
     page_result =
       FilteringPagination.paginate(
@@ -300,9 +118,6 @@ defmodule EdgeAdmin.Commands do
     %{page_result | data: executions_with_command_text}
   end
 
-  @doc """
-  Creates a command and dispatches executions based on target specification.
-  """
   def create_command_and_dispatch_executions(attrs) do
     # First create the command
     case create_command(attrs) do
@@ -357,9 +172,6 @@ defmodule EdgeAdmin.Commands do
     :ok
   end
 
-  @doc """
-  Creates command executions for all nodes with pending status.
-  """
   def create_executions_for_all_nodes(command_id) do
     # Get the command for command_text
     command = get_command!(command_id)
@@ -399,9 +211,6 @@ defmodule EdgeAdmin.Commands do
     end
   end
 
-  @doc """
-  Creates executions for specific target nodes and attempts immediate delivery.
-  """
   def create_executions_for_target_nodes(command_id, node_ids) do
     # Get the command for command_text
     command = get_command!(command_id)
@@ -466,12 +275,6 @@ defmodule EdgeAdmin.Commands do
     end
   end
 
-  @doc """
-  Attempts to deliver a command execution to a node.
-
-  Updates execution status to 'sent' if successful, keeps as 'pending' if failed.
-  Reuses existing get_node! function if node is not provided.
-  """
   def attempt_execution_delivery(execution, node \\ nil) do
     # Get node info if not provided
     node =
@@ -535,11 +338,6 @@ defmodule EdgeAdmin.Commands do
     end
   end
 
-  @doc """
-  HTTP client to send command execution to a node.
-
-  This is the abstraction layer that can be swapped to Erlang distribution later.
-  """
   def send_command_to_node(node_vpn_ip, execution_data) do
     url = "http://#{node_vpn_ip}:4000/api/command_executions"
 
@@ -556,11 +354,6 @@ defmodule EdgeAdmin.Commands do
     end
   end
 
-  @doc """
-  Retries pending command executions in FIFO order per node.
-
-  Used by ExecutionRetryWorker cron job.
-  """
   def retry_pending_executions do
     Logger.info("Starting retry of pending executions")
 

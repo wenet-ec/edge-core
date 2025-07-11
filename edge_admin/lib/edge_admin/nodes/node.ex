@@ -60,15 +60,9 @@ defmodule EdgeAdmin.Nodes.Node do
     %{node | vpn_hostname: vpn_hostname(node)}
   end
 
-  @doc """
-  Helper to check if a node is temporary (for cleanup logic)
-  """
   def temporary?(%__MODULE__{id_type: "temporary_id"}), do: true
   def temporary?(_), do: false
 
-  @doc """
-  Helper to check if a node is persistent
-  """
   def persistent?(%__MODULE__{id_type: id_type}) when id_type in ["machine_id", "hardware_id"],
     do: true
 

@@ -48,56 +48,6 @@ defmodule EdgeAdmin.FilteringPagination do
           sort: [sort_item()]
         }
 
-  @doc """
-  Applies filtering and pagination to a query based on parameters.
-
-  ## Parameters
-  - `queryable`: The base Ecto query or schema module
-  - `params`: Map of query parameters from the request
-  - `opts`: Options for filtering and pagination
-
-  ## Options
-  - `:filterable_fields` - List of fields that can be filtered
-  - `:sortable_fields` - List of fields that can be sorted
-  - `:default_sort` - Default sort as list of tuples or string
-  - `:page_size` - Default page size
-  - `:max_page_size` - Maximum allowed page size
-  - `:repo` - Ecto repo module (defaults to EdgeAdmin.Repo)
-
-  ## Examples
-
-      # Basic usage
-      FilteringPagination.paginate(
-        EdgeAdmin.Nodes.Node,
-        %{"page" => "2", "page_size" => "10", "status" => "online"},
-        filterable_fields: [:status, :id_type],
-        sortable_fields: [:inserted_at, :status, :vpn_ip],
-        default_sort: "inserted_at:desc,status:asc"
-      )
-
-      # With custom repo
-      FilteringPagination.paginate(
-        query,
-        params,
-        repo: MyApp.Repo,
-        filterable_fields: [:name, :email],
-        sortable_fields: [:inserted_at, :name],
-        default_sort: [inserted_at: :desc, name: :asc]
-      )
-
-  ## Query Parameters
-
-  - `page` - Page number (default: 1)
-  - `page_size` - Items per page (default: 20, max: 100)
-  - `sort` - Sort specification: "field1:dir1,field2:dir2"
-  - Any filterable field name as key with filter value
-
-  ## Sort Parameter Examples
-
-  - `sort=name:asc` - Sort by name ascending
-  - `sort=status:desc,inserted_at:asc` - Sort by status desc, then inserted_at asc
-  - `sort=name,status:desc` - Sort by name asc (default), then status desc
-  """
   def paginate(queryable, params \\ %{}, opts \\ []) do
     repo = Keyword.get(opts, :repo, EdgeAdmin.Repo)
     filterable_fields = Keyword.get(opts, :filterable_fields, [])
@@ -197,23 +147,6 @@ defmodule EdgeAdmin.FilteringPagination do
     |> Enum.into(%{})
   end
 
-  @doc """
-  Parses sort parameter into a list of {field, direction} tuples.
-
-  ## Examples
-
-      iex> parse_sort("name:asc,status:desc", [], [:name, :status])
-      [{:name, :asc}, {:status, :desc}]
-
-      iex> parse_sort("name,status:desc", [], [:name, :status])
-      [{:name, :asc}, {:status, :desc}]
-
-      iex> parse_sort(nil, "id:desc", [:id, :name])
-      [{:id, :desc}]
-
-      iex> parse_sort(nil, [id: :desc, name: :asc], [:id, :name])
-      [{:id, :desc}, {:name, :asc}]
-  """
   def parse_sort(sort_param, default_sort, sortable_fields)
 
   def parse_sort(nil, default_sort, sortable_fields) do

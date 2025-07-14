@@ -4,6 +4,7 @@ package main
 import (
 	"edge_vpn/internal/keymanager"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -96,25 +97,48 @@ func main() {
 
 	// Give services a moment to start, then mark as ready
 	go func() {
-		time.Sleep(2 * time.Second)
+		maxRetries := 60 // 60 seconds total
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			time.Sleep(1 * time.Second)
 
-		// Verify everything is working before marking ready
-		if _, err := keyManager.GetCurrentKey(); err != nil {
-			log.Printf("Key manager not ready: %v", err)
+			// Check if key manager has a valid key
+			apiKey, err := keyManager.GetCurrentKey()
+			if err != nil {
+				log.Printf("Key manager not ready (attempt %d/%d): %v", attempt, maxRetries, err)
+				continue
+			}
+
+			// Test that the key actually works by making a real API call
+			testURL := "http://localhost:8080/api/v1/user"
+			req, err := http.NewRequest("GET", testURL, nil)
+			if err != nil {
+				log.Printf("Failed to create test request (attempt %d/%d): %v", attempt, maxRetries, err)
+				continue
+			}
+
+			req.Header.Set("Authorization", "Bearer "+apiKey)
+			req.Header.Set("Content-Type", "application/json")
+
+			client := &http.Client{Timeout: 5 * time.Second}
+			resp, err := client.Do(req)
+			if err != nil {
+				log.Printf("Headscale API test failed (attempt %d/%d): %v", attempt, maxRetries, err)
+				continue
+			}
+			resp.Body.Close()
+
+			if resp.StatusCode != 200 {
+				log.Printf("Headscale API returned status %d (attempt %d/%d)", resp.StatusCode, attempt, maxRetries)
+				continue
+			}
+
+			// Everything is working!
+			atomic.StoreInt32(&server.ready, 1)
+			log.Println("All services ready - API key fully functional")
 			return
 		}
 
-		// Test if we can reach Headscale
-		testURL := "http://localhost:8080/health"
-		resp, err := http.Get(testURL)
-		if err != nil {
-			log.Printf("Headscale not ready: %v", err)
-			return
-		}
-		resp.Body.Close()
-
-		atomic.StoreInt32(&server.ready, 1)
-		log.Println("All services ready - health check will now return OK")
+		log.Println("Failed to become ready after all retries - API key may not be functional")
 	}()
 
 	// Wait for interrupt signal
@@ -143,18 +167,46 @@ func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 		response.Status = "starting"
 		w.WriteHeader(http.StatusServiceUnavailable)
 	} else {
-		// Additional check: ensure we still have a valid key
-		_, err := s.keyManager.GetCurrentKey()
+		// Additional real-time check: ensure we still have a functional key
+		apiKey, err := s.keyManager.GetCurrentKey()
 		if err != nil {
 			response.Status = "degraded"
 			response.Ready = false
 			w.WriteHeader(http.StatusServiceUnavailable)
 		} else {
-			response.Status = "ok"
+			// Quick validation test
+			if err := s.testAPIKeyQuick(apiKey); err != nil {
+				response.Status = "degraded"
+				response.Ready = false
+				w.WriteHeader(http.StatusServiceUnavailable)
+			} else {
+				response.Status = "ok"
+			}
 		}
 	}
 
 	json.NewEncoder(w).Encode(response)
+}
+
+func (s *Server) testAPIKeyQuick(apiKey string) error {
+	req, err := http.NewRequest("GET", "http://localhost:8080/api/v1/user", nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	client := &http.Client{Timeout: 2 * time.Second}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == 200 {
+		return nil
+	}
+	return fmt.Errorf("API returned status %d", resp.StatusCode)
 }
 
 // readinessHandler is a separate endpoint for readiness checks (if needed)

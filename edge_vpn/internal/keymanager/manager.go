@@ -41,21 +41,21 @@ func (m *Manager) Initialize() error {
 	keyData, err := m.storage.Load()
 	if err != nil {
 		log.Printf("No existing key found or failed to load: %v", err)
-		// Generate new key
-		return m.generateNewKey()
+		return m.generateNewKeyWithValidation()
 	}
 
 	// Validate existing key
 	if keyData.IsExpired() {
 		log.Println("Existing key is expired, generating new one...")
-		return m.generateNewKey()
+		return m.generateNewKeyWithValidation()
 	}
 
-	// Test the key
-	if err := m.headscaleClient.ValidateAPIKey(keyData.CurrentKey); err != nil {
+	// Test the key with retry logic for startup
+	log.Println("Validating existing API key...")
+	if err := m.headscaleClient.ValidateAPIKeyWithRetry(keyData.CurrentKey, 30, 2*time.Second); err != nil {
 		log.Printf("Existing key validation failed: %v", err)
 		log.Println("Generating new key...")
-		return m.generateNewKey()
+		return m.generateNewKeyWithValidation()
 	}
 
 	log.Println("Using existing valid API key")
@@ -64,6 +64,39 @@ func (m *Manager) Initialize() error {
 	if keyData.NeedsRotation() {
 		log.Printf("Key will expire in less than %d days, scheduling rotation", RotationWarningDays)
 	}
+
+	return nil
+}
+
+// Update generateNewKey to use proper validation
+func (m *Manager) generateNewKeyWithValidation() error {
+	log.Println("Generating new API key...")
+
+	apiKey, err := m.headscaleClient.CreateAPIKey(DefaultRotationIntervalDays)
+	if err != nil {
+		return fmt.Errorf("failed to create API key: %w", err)
+	}
+
+	// Validate the new key with retry logic (headscale might need time to process it)
+	log.Println("Validating newly generated API key...")
+	if err := m.headscaleClient.ValidateAPIKeyWithRetry(apiKey, 15, 1*time.Second); err != nil {
+		return fmt.Errorf("newly generated key validation failed: %w", err)
+	}
+
+	now := time.Now()
+	keyData := &APIKeyData{
+		CurrentKey:           apiKey,
+		CreatedAt:            now,
+		ExpiresAt:            now.AddDate(0, 0, DefaultRotationIntervalDays),
+		RotationIntervalDays: DefaultRotationIntervalDays,
+	}
+
+	if err := m.storage.Save(keyData); err != nil {
+		return fmt.Errorf("failed to save new key: %w", err)
+	}
+
+	m.currentKey = keyData
+	log.Printf("Successfully generated, validated, and saved new API key (expires: %s)", keyData.ExpiresAt.Format(time.RFC3339))
 
 	return nil
 }
@@ -127,34 +160,7 @@ func (m *Manager) CheckRotationNeeded() bool {
 
 // generateNewKey creates a new API key and saves it (must be called with mutex locked)
 func (m *Manager) generateNewKey() error {
-	log.Println("Generating new API key...")
-
-	apiKey, err := m.headscaleClient.CreateAPIKey(DefaultRotationIntervalDays)
-	if err != nil {
-		return fmt.Errorf("failed to create API key: %w", err)
-	}
-
-	// Validate the new key
-	if err := m.headscaleClient.ValidateAPIKey(apiKey); err != nil {
-		return fmt.Errorf("newly generated key validation failed: %w", err)
-	}
-
-	now := time.Now()
-	keyData := &APIKeyData{
-		CurrentKey:           apiKey,
-		CreatedAt:            now,
-		ExpiresAt:            now.AddDate(0, 0, DefaultRotationIntervalDays),
-		RotationIntervalDays: DefaultRotationIntervalDays,
-	}
-
-	if err := m.storage.Save(keyData); err != nil {
-		return fmt.Errorf("failed to save new key: %w", err)
-	}
-
-	m.currentKey = keyData
-	log.Printf("Successfully generated and saved new API key (expires: %s)", keyData.ExpiresAt.Format(time.RFC3339))
-
-	return nil
+	return m.generateNewKeyWithValidation()
 }
 
 // GetKeyInfo returns information about the current key (for debugging/monitoring)

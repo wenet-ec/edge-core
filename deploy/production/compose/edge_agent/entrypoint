@@ -5,7 +5,5 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-echo "Setting up Edge Agent..."
-
 echo "Starting Edge Agent..."
 exec "$@"

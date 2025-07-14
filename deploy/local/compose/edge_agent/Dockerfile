@@ -60,6 +60,10 @@ COPY ./deploy/local/compose/edge_agent/start /start
 RUN sed -i 's/\r$//g' /start && \
     chmod +x /start
 
+COPY ./deploy/local/compose/edge_agent/start-dev /start-dev
+RUN sed -i 's/\r$//g' /start-dev && \
+    chmod +x /start-dev
+
 COPY ./deploy/local/compose/edge_agent/migrate /migrate
 RUN sed -i 's/\r$//g' /migrate && \
     chmod +x /migrate

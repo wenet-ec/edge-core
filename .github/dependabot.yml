@@ -1,0 +1,62 @@
+# .github/dependabot.yml
+version: 2
+updates:
+  # Elixir/Phoenix dependencies for edge_admin
+  - package-ecosystem: "mix"
+    directory: "/edge_admin"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "elixir"
+
+  # Elixir/Phoenix dependencies for edge_agent
+  - package-ecosystem: "mix"
+    directory: "/edge_agent"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "elixir"
+
+  # Go dependencies for edge_vpn
+  - package-ecosystem: "gomod"
+    directory: "/edge_vpn"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "golang"
+
+  # Go dependencies for edge_metrics_collector
+  - package-ecosystem: "gomod"
+    directory: "/edge_metrics_collector"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "golang"
+
+  # Docker base images
+  - package-ecosystem: "docker"
+    directory: "/deploy/production/compose"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"

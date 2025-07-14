@@ -15,7 +15,6 @@ defmodule EdgeAdmin.Commands.CommandExecution do
     field(:sent_at, :utc_datetime)
     field(:completed_at, :utc_datetime)
 
-    # Virtual field for cleaner access to command text
     field(:command_text, :string, virtual: true)
 
     # Associations
@@ -37,12 +36,12 @@ defmodule EdgeAdmin.Commands.CommandExecution do
       :completed_at,
       :command_id,
       :node_id,
-      # Include virtual field in cast
       :command_text
     ])
     |> validate_required([:status])
     |> validate_inclusion(:status, ["pending", "sent", "completed"])
     |> validate_node_or_target_all()
+    |> maybe_set_completed_at()
     |> foreign_key_constraint(:command_id)
     |> foreign_key_constraint(:node_id)
     |> unique_constraint([:node_id, :command_id],
@@ -72,6 +71,17 @@ defmodule EdgeAdmin.Commands.CommandExecution do
 
       true ->
         changeset
+    end
+  end
+
+  defp maybe_set_completed_at(changeset) do
+    status = get_change(changeset, :status)
+    completed_at = get_change(changeset, :completed_at)
+
+    if status == "completed" and is_nil(completed_at) do
+      put_change(changeset, :completed_at, DateTime.utc_now())
+    else
+      changeset
     end
   end
 end

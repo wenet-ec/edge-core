@@ -143,12 +143,12 @@ defmodule EdgeAgent.Commands do
       {output, exit_code} ->
         Logger.info("Command #{execution.id} completed with exit code: #{exit_code}")
 
-        # Update execution with results
         {:ok, updated_execution} =
           update_command_execution(execution, %{
             status: "completed",
             output: output,
-            exit_code: exit_code
+            exit_code: exit_code,
+            completed_at: DateTime.utc_now()
           })
 
         updated_execution
@@ -160,7 +160,8 @@ defmodule EdgeAgent.Commands do
           update_command_execution(execution, %{
             status: "completed",
             output: "Execution failed: #{inspect(error)}",
-            exit_code: -1
+            exit_code: -1,
+            completed_at: DateTime.utc_now()
           })
 
         updated_execution
@@ -174,7 +175,8 @@ defmodule EdgeAgent.Commands do
       params = %{
         status: execution.status,
         output: execution.output,
-        exit_code: execution.exit_code
+        exit_code: execution.exit_code,
+        completed_at: execution.completed_at
       }
 
       case AdminClient.update_command_execution(execution.id, params) do

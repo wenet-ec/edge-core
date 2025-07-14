@@ -172,6 +172,12 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
               type: :integer,
               description: "Final exit code (0 = success, non-zero = failure)",
               example: 5
+            },
+            completed_at: %Schema{
+              type: :string,
+              format: :"date-time",
+              description: "Timestamp when the command execution completed",
+              example: "2025-06-17T12:00:05Z"
             }
           },
           required: [:status, :output, :exit_code],
@@ -179,7 +185,8 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
             status: "completed",
             output:
               "$ ABC=value\n$ echo $ABC\nvalue\n$ systemctl restart nginx\nFailed to restart nginx.service: Unit not found\n",
-            exit_code: 5
+            exit_code: 5,
+            completed_at: "2025-06-17T12:00:05Z"
           }
         }
       },

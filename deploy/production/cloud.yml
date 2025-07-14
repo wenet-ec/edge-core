@@ -136,4 +136,4 @@ services:
       - NET_ADMIN
     sysctls:
       - net.ipv4.ip_forward=1
-    command: /start
+    command: ["sh", "-c", "sleep 30 && /start"]

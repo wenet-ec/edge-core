@@ -1,0 +1,12 @@
+#!/bin/bash
+# deploy/production/compose/edge_admin/start
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+echo "Running migrations..."
+/app/bin/migrate
+
+echo "Starting server..."
+exec /app/bin/server

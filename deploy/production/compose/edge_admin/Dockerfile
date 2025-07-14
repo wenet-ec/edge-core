@@ -79,6 +79,10 @@ COPY ./deploy/production/compose/edge_admin/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint
 RUN chmod +x /entrypoint
 
+COPY ./deploy/production/compose/edge_admin/start /start
+RUN sed -i 's/\r$//g' /start
+RUN chmod +x /start
+
 # Copy the release from builder stage
 COPY --from=builder /app/_build/prod/rel/edge_admin /app
 

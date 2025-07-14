@@ -80,6 +80,10 @@ COPY ./deploy/production/compose/edge_agent/hostscript /usr/local/bin/hostscript
 RUN sed -i 's/\r$//g' /usr/local/bin/hostscript && \
     chmod +x /usr/local/bin/hostscript
 
+COPY ./deploy/production/compose/edge_agent/start /start
+RUN sed -i 's/\r$//g' /start && \
+    chmod +x /start
+
 WORKDIR /app
 
 ENTRYPOINT ["/entrypoint"]

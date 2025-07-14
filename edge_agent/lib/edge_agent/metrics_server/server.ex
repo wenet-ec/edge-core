@@ -17,30 +17,18 @@ defmodule EdgeAgent.MetricsServer.Server do
 
   ## Public API
 
-  @doc """
-  Starts the metrics server GenServer.
-  """
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  @doc """
-  Starts the node_exporter process.
-  """
   def start_server do
     GenServer.call(__MODULE__, :start_server, 10_000)
   end
 
-  @doc """
-  Stops the node_exporter process.
-  """
   def stop_server do
     GenServer.call(__MODULE__, :stop_server, 5_000)
   end
 
-  @doc """
-  Gets the current server status.
-  """
   def server_status do
     try do
       GenServer.call(__MODULE__, :server_status, 1_000)
@@ -50,9 +38,6 @@ defmodule EdgeAgent.MetricsServer.Server do
     end
   end
 
-  @doc """
-  Gets the server configuration.
-  """
   def server_config do
     try do
       GenServer.call(__MODULE__, :server_config, 1_000)
@@ -62,9 +47,6 @@ defmodule EdgeAgent.MetricsServer.Server do
     end
   end
 
-  @doc """
-  Gets the primary network interface IP address.
-  """
   def get_primary_interface_ip do
     try do
       GenServer.call(__MODULE__, :get_primary_interface_ip, 5_000)

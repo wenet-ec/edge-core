@@ -29,9 +29,6 @@ defmodule EdgeAgent.MetricsServer.Config do
   def tailscale_socket, do: @tailscale_socket
   def tailscale_cache_dir, do: @tailscale_cache_dir
 
-  @doc """
-  Returns the complete configuration as a map.
-  """
   def build_config do
     %{
       port: @metrics_port,
@@ -47,9 +44,6 @@ defmodule EdgeAgent.MetricsServer.Config do
     }
   end
 
-  @doc """
-  Returns the command line arguments for node_exporter.
-  """
   def node_exporter_args do
     [
       "--web.listen-address=#{@listen_address}:#{@metrics_port}",

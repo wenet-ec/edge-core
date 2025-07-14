@@ -28,6 +28,7 @@ defmodule EdgeAgent.Tailscale do
   """
 
   alias EdgeAgent.Tailscale.ConnectionManager
+  alias EdgeAgent.Settings
 
   require Logger
 
@@ -91,9 +92,6 @@ defmodule EdgeAgent.Tailscale do
   defdelegate create_connection(attrs \\ %{}), to: ConnectionManager
   defdelegate update_connection(attrs), to: ConnectionManager
 
-  @doc """
-  Gets the connection, raising if not found.
-  """
   def get_connection! do
     case get_connection() do
       {:ok, connection} -> connection
@@ -103,10 +101,6 @@ defmodule EdgeAgent.Tailscale do
 
   # Business logic functions for workers
 
-  @doc """
-  Checks connectivity and updates connection state accordingly.
-  Called by the connectivity checker worker.
-  """
   def check_and_update_connectivity do
     connection = get_connection!()
 
@@ -119,10 +113,6 @@ defmodule EdgeAgent.Tailscale do
     end
   end
 
-  @doc """
-  Attempts auto-reconnection if conditions are met.
-  Called by the auto-reconnector worker.
-  """
   def attempt_auto_reconnection do
     connection = get_connection!()
 
@@ -143,9 +133,6 @@ defmodule EdgeAgent.Tailscale do
     end
   end
 
-  @doc """
-  Manually connects to VPN.
-  """
   def connect_to_vpn_manual do
     Logger.info("Tailscale: Initiating manual connection")
 
@@ -159,9 +146,6 @@ defmodule EdgeAgent.Tailscale do
     end
   end
 
-  @doc """
-  Manually disconnects from VPN.
-  """
   def disconnect_from_vpn_manual do
     Logger.info("Tailscale: Initiating manual disconnection")
 

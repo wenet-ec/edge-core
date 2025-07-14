@@ -8,11 +8,6 @@ defmodule EdgeAgent.MetricsServer.NetworkUtils do
 
   @type ip_result :: {:ok, String.t()} | {:error, term()}
 
-  @doc """
-  Detects the primary network interface IP address.
-
-  Tries multiple methods to find the primary interface IP.
-  """
   @spec detect_primary_interface_ip() :: String.t() | nil
   def detect_primary_interface_ip do
     detect_via_ip_route() ||
@@ -20,9 +15,6 @@ defmodule EdgeAgent.MetricsServer.NetworkUtils do
       detect_via_interfaces()
   end
 
-  @doc """
-  Gets the IP address for a specific network interface.
-  """
   @spec get_interface_ip(String.t()) :: String.t() | nil
   def get_interface_ip(interface) do
     case System.cmd("ip", ["addr", "show", interface], stderr_to_stdout: true) do

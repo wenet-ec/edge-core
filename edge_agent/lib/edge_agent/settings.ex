@@ -9,115 +9,32 @@ defmodule EdgeAgent.Settings do
 
   alias EdgeAgent.Settings.Setting
 
-  @doc """
-  Returns the list of settings.
-
-  ## Examples
-
-      iex> list_settings()
-      [%Setting{}, ...]
-
-  """
   def list_settings do
     Repo.all(Setting)
   end
 
-  @doc """
-  Gets a single setting.
-
-  Raises `Ecto.NoResultsError` if the Setting does not exist.
-
-  ## Examples
-
-      iex> get_setting!(123)
-      %Setting{}
-
-      iex> get_setting!(456)
-      ** (Ecto.NoResultsError)
-
-  """
   def get_setting!(id), do: Repo.get!(Setting, id)
 
-  @doc """
-  Creates a setting.
-
-  ## Examples
-
-      iex> create_setting(%{field: value})
-      {:ok, %Setting{}}
-
-      iex> create_setting(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
   def create_setting(attrs \\ %{}) do
     %Setting{}
     |> Setting.changeset(attrs)
     |> Repo.insert()
   end
 
-  @doc """
-  Updates a setting.
-
-  ## Examples
-
-      iex> update_setting(setting, %{field: new_value})
-      {:ok, %Setting{}}
-
-      iex> update_setting(setting, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
   def update_setting(%Setting{} = setting, attrs) do
     setting
     |> Setting.changeset(attrs)
     |> Repo.update()
   end
 
-  @doc """
-  Deletes a setting.
-
-  ## Examples
-
-      iex> delete_setting(setting)
-      {:ok, %Setting{}}
-
-      iex> delete_setting(setting)
-      {:error, %Ecto.Changeset{}}
-
-  """
   def delete_setting(%Setting{} = setting) do
     Repo.delete(setting)
   end
 
-  @doc """
-  Returns an `%Ecto.Changeset{}` for tracking setting changes.
-
-  ## Examples
-
-      iex> change_setting(setting)
-      %Ecto.Changeset{data: %Setting{}}
-
-  """
   def change_setting(%Setting{} = setting, attrs \\ %{}) do
     Setting.changeset(setting, attrs)
   end
 
-  @doc """
-  Gets a value by key.
-
-  ## Examples
-
-      iex> get("id")
-      "abc123"
-
-      iex> get("nonexistent")
-      nil
-
-      iex> get("id", "default_value")
-      "abc123"
-
-  """
   def get(key, default \\ nil) do
     case Repo.get_by(Setting, key: key) do
       %Setting{value: value} -> value
@@ -125,18 +42,6 @@ defmodule EdgeAgent.Settings do
     end
   end
 
-  @doc """
-  Sets a key-value pair. Creates if doesn't exist, updates if it does.
-
-  ## Examples
-
-      iex> set("id", "abc123")
-      {:ok, %Setting{}}
-
-      iex> set("", "value")
-      {:error, %Ecto.Changeset{}}
-
-  """
   def set(key, value) do
     case Repo.get_by(Setting, key: key) do
       nil ->
@@ -147,18 +52,6 @@ defmodule EdgeAgent.Settings do
     end
   end
 
-  @doc """
-  Deletes a setting by key.
-
-  ## Examples
-
-      iex> delete("id")
-      {:ok, %Setting{}}
-
-      iex> delete("nonexistent")
-      {:ok, nil}
-
-  """
   def delete(key) do
     case Repo.get_by(Setting, key: key) do
       nil -> {:ok, nil}
@@ -166,51 +59,18 @@ defmodule EdgeAgent.Settings do
     end
   end
 
-  @doc """
-  Returns all settings as a map.
-
-  ## Examples
-
-      iex> all()
-      %{"id" => "abc123", "id_type" => "machine_id"}
-
-  """
   def all do
     Setting
     |> Repo.all()
     |> Enum.into(%{}, fn %Setting{key: key, value: value} -> {key, value} end)
   end
 
-  @doc """
-  Checks if a key exists.
-
-  ## Examples
-
-      iex> has_key?("id")
-      true
-
-      iex> has_key?("nonexistent")
-      false
-
-  """
   def has_key?(key) do
     Setting
     |> where([s], s.key == ^key)
     |> Repo.exists?()
   end
 
-  @doc """
-  Sets the node identity (both ID and type), normalizing the node_id to UUID format.
-
-  ## Examples
-
-      iex> set_node_identity("abc123", "machine_id")
-      {:ok, %{id: "abc123", id_type: "machine_id"}}
-
-      iex> set_node_identity("", "machine_id")
-      {:error, "Node ID cannot be empty"}
-
-  """
   def set_node_identity(node_id, node_id_type) do
     with :ok <- validate_node_identity(node_id, node_id_type),
          {:ok, normalized_id} <- normalize_node_id(node_id),

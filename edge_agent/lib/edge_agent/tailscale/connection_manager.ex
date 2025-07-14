@@ -17,32 +17,18 @@ defmodule EdgeAgent.Tailscale.ConnectionManager do
 
   # Client API - Pure CRUD
 
-  @doc """
-  Starts the connection manager.
-  """
   def start_link(_) do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
-  @doc """
-  Gets the current connection state.
-  """
   def get_connection do
     GenServer.call(__MODULE__, :get)
   end
 
-  @doc """
-  Creates a new connection with the given attributes.
-  Only creates if no connection exists (singleton pattern).
-  """
   def create_connection(attrs) do
     GenServer.call(__MODULE__, {:create, attrs})
   end
 
-  @doc """
-  Updates the connection with the given attributes.
-  Creates a new connection if none exists.
-  """
   def update_connection(attrs) do
     GenServer.call(__MODULE__, {:update, attrs})
   end

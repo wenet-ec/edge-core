@@ -24,9 +24,6 @@ defmodule EdgeAgent.MetricsServer.Impl do
   @type start_result :: {:ok, state()} | {:error, term(), state()}
   @type stop_result :: {:ok, state()} | {:error, term(), state()}
 
-  @doc """
-  Creates initial state for the metrics server.
-  """
   @spec init_state() :: state()
   def init_state do
     %{
@@ -41,11 +38,6 @@ defmodule EdgeAgent.MetricsServer.Impl do
     }
   end
 
-  @doc """
-  Starts the node_exporter server.
-
-  Returns {:ok, new_state} or {:error, reason, state}.
-  """
   @spec start_server(state()) :: start_result()
   def start_server(%{status: :running} = state) do
     Logger.info("MetricsServer is already running")
@@ -79,11 +71,6 @@ defmodule EdgeAgent.MetricsServer.Impl do
     end
   end
 
-  @doc """
-  Stops the node_exporter server.
-
-  Returns {:ok, new_state} or {:error, reason, state}.
-  """
   @spec stop_server(state()) :: stop_result()
   def stop_server(%{status: :stopped} = state) do
     Logger.info("MetricsServer is already stopped")
@@ -113,9 +100,6 @@ defmodule EdgeAgent.MetricsServer.Impl do
     end
   end
 
-  @doc """
-  Gets the current server status, checking if process is still alive.
-  """
   @spec get_server_status(state()) :: {atom(), state()}
   def get_server_status(state) do
     status =
@@ -139,9 +123,6 @@ defmodule EdgeAgent.MetricsServer.Impl do
     {status, updated_state}
   end
 
-  @doc """
-  Gets the server configuration with current runtime info.
-  """
   @spec get_server_config(state()) :: map()
   def get_server_config(state) do
     Map.merge(state.config, %{
@@ -151,9 +132,6 @@ defmodule EdgeAgent.MetricsServer.Impl do
     })
   end
 
-  @doc """
-  Gets the primary interface IP, detecting it if not cached.
-  """
   @spec get_primary_interface_ip(state()) :: {{:ok, String.t()} | {:error, term()}, state()}
   def get_primary_interface_ip(state) do
     case state.primary_interface_ip do
@@ -173,11 +151,6 @@ defmodule EdgeAgent.MetricsServer.Impl do
     end
   end
 
-  @doc """
-  Handles process exit events.
-
-  Updates state when the node_exporter process exits.
-  """
   @spec handle_process_exit(state(), pid(), term()) :: state()
   def handle_process_exit(%{node_exporter_pid: pid} = state, pid, reason) do
     Logger.warning("node_exporter process #{pid} exited with reason: #{inspect(reason)}")
@@ -197,11 +170,6 @@ defmodule EdgeAgent.MetricsServer.Impl do
     state
   end
 
-  @doc """
-  Handles port exit events.
-
-  Updates state when the node_exporter port exits.
-  """
   @spec handle_port_exit(state(), port(), integer()) :: state()
   def handle_port_exit(%{node_exporter_port_ref: port} = state, port, status) do
     Logger.warning("node_exporter port exited with status: #{status}")

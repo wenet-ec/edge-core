@@ -13,11 +13,6 @@ defmodule EdgeAgent.MetricsServer.ProcessManager do
   @type process_result :: {:ok, pid() | integer(), port()} | {:error, term()}
   @type stop_result :: :ok | {:error, term()}
 
-  @doc """
-  Starts the node_exporter process.
-
-  Returns {:ok, pid, port_ref} on success or {:error, reason} on failure.
-  """
   @spec start_node_exporter() :: process_result()
   def start_node_exporter do
     if File.exists?(Config.node_exporter_binary()) do
@@ -40,9 +35,6 @@ defmodule EdgeAgent.MetricsServer.ProcessManager do
       {:error, {:exception, error}}
   end
 
-  @doc """
-  Stops the node_exporter process.
-  """
   @spec stop_node_exporter(pid() | integer() | nil, port() | nil) :: stop_result()
   def stop_node_exporter(nil, nil), do: :ok
 
@@ -84,9 +76,6 @@ defmodule EdgeAgent.MetricsServer.ProcessManager do
     end
   end
 
-  @doc """
-  Checks if a process exists by PID.
-  """
   @spec process_exists?(integer()) :: boolean()
   def process_exists?(pid) when is_integer(pid) do
     case System.cmd("kill", ["-0", "#{pid}"], stderr_to_stdout: true) do
@@ -97,9 +86,6 @@ defmodule EdgeAgent.MetricsServer.ProcessManager do
     _ -> false
   end
 
-  @doc """
-  Finds the node_exporter process by port.
-  """
   @spec find_node_exporter_process(integer()) :: {:ok, integer()} | {:error, term()}
   def find_node_exporter_process(port) do
     case System.cmd("pgrep", ["-f", "node_exporter.*#{port}"], stderr_to_stdout: true) do

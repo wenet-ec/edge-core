@@ -22,11 +22,6 @@ defmodule EdgeAgent.Bootstrap do
   alias EdgeAgent.SshServer
   alias EdgeAgent.MetricsServer
 
-  @doc """
-  Runs the complete bootstrap sequence.
-
-  Returns {:ok, :bootstrap_complete} on success or {:error, reason} on failure.
-  """
   def run do
     Logger.info("Starting EdgeAgent bootstrap...")
 
@@ -46,14 +41,6 @@ defmodule EdgeAgent.Bootstrap do
     end
   end
 
-  @doc """
-  Determines the node identity using the 3-tier approach:
-  1. machine_id (from systemd/dbus)
-  2. hardware_id (from DMI/hardware sources)
-  3. temporary_id (generated UUID)
-
-  Returns {:ok, node_id, node_id_type} or {:error, reason}.
-  """
   def determine_node_identity do
     Logger.info("Determining node identity...")
 
@@ -80,14 +67,6 @@ defmodule EdgeAgent.Bootstrap do
     end
   end
 
-  @doc """
-  Sets up VPN connection using Tailscale with node-specific hostname.
-
-  Reads VPN_URL and ENROLLMENT_KEY from environment variables.
-  Uses hostname pattern: node-{normalized_node_id}
-
-  Returns :ok or {:error, reason}.
-  """
   def setup_vpn_connection(node_id) do
     Logger.info("Setting up VPN connection for node: #{String.slice(node_id, 0, 8)}...")
 
@@ -128,23 +107,6 @@ defmodule EdgeAgent.Bootstrap do
     end
   end
 
-  @doc """
-  Starts the SSH server for remote access.
-
-  This function initializes the SSH server that allows administrators to connect
-  to the node remotely. The SSH server authenticates users against credentials
-  stored in EdgeAdmin.
-
-  ## Returns
-  - `:ok` - SSH server started successfully or failure was treated as non-fatal
-  - `{:error, reason}` - Critical SSH server failure (currently not returned)
-
-  ## Examples
-
-      iex> EdgeAgent.Bootstrap.start_ssh_server()
-      :ok
-
-  """
   def start_ssh_server do
     Logger.info("Starting SSH server...")
 
@@ -162,11 +124,6 @@ defmodule EdgeAgent.Bootstrap do
     end
   end
 
-  @doc """
-  Starts the metrics server during bootstrap.
-
-  Returns :ok on success or {:error, reason} on failure.
-  """
   def start_metrics_server do
     Logger.info("Starting metrics server...")
 

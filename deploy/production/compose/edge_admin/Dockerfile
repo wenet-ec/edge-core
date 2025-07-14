@@ -86,6 +86,8 @@ RUN chmod +x /start
 # Copy the release from builder stage
 COPY --from=builder /app/_build/prod/rel/edge_admin /app
 
+RUN chmod +x /app/bin/migrate /app/bin/server
+
 # Switch to app user
 WORKDIR /app
 

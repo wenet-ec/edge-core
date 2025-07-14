@@ -70,6 +70,8 @@ RUN mkdir -p /app/data /var/run/tailscale /var/lib/tailscale /var/cache/tailscal
 # Copy the release from builder stage
 COPY --from=builder /app/_build/prod/rel/edge_agent /app
 
+RUN chmod +x /app/bin/migrate /app/bin/server
+
 # Copy entrypoint script
 COPY ./deploy/production/compose/edge_agent/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint && \

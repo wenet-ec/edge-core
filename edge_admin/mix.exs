@@ -42,7 +42,7 @@ defmodule EdgeAdmin.Mixfile do
   defp deps do
     [
       # HTTP Client/Wrapper
-      {:req, "~> 0.5.12"},
+      {:req, "~> 0.5"},
 
       # HTTP server
       {:bandit, "~> 1.7"},

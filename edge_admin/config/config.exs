@@ -33,9 +33,9 @@ config :edge_admin, EdgeAdminWeb.Plugs.Security, allow_unsafe_scripts: false
 config :edge_admin, Oban,
   engine: Oban.Engines.Basic,
   queues: [
-    vpn: 2,
+    vpn: 3,
     command_dispatch: 10,
-    command_retry: 1
+    command_retry: 1,
   ],
   repo: EdgeAdmin.Repo,
   plugins: [
@@ -43,7 +43,8 @@ config :edge_admin, Oban,
      crontab: [
        {"* * * * *", EdgeAdmin.Tailscale.Workers.ConnectivityCheckingWorker},
        {"* * * * *", EdgeAdmin.Tailscale.Workers.AutoReconnectingWorker},
-       {"* * * * *", EdgeAdmin.Commands.Workers.ExecutionRetryWorker}
+       {"* * * * *", EdgeAdmin.Commands.Workers.ExecutionRetryWorker},
+       {"* * * * *", EdgeAdmin.Nodes.Workers.NodeHealthCheckWorker}
      ]}
   ]
 

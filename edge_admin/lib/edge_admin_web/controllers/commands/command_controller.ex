@@ -54,8 +54,15 @@ defmodule EdgeAdminWeb.Commands.CommandController do
 
   operation(:create,
     summary: "Create a new command",
-    description:
-      "Create a new command for execution on nodes. Either specify target nodes or set target_all to true.",
+    description: """
+    Create a new command for execution on nodes using flexible targeting options.
+
+    Targeting types:
+    - 'all': Target all nodes, optionally with node_filters
+    - 'nodes': Target specific nodes by IDs, optionally with node_filters
+
+    Node filters can be applied to any targeting type to further refine which nodes receive the command.
+    """,
     request_body:
       {"Command creation parameters", "application/json", CommandSchemas.CommandCreateRequest},
     responses: %{

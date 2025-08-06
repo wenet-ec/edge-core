@@ -89,7 +89,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
 
     OpenApiSpex.schema(%{
       title: "Command Create Request",
-      description: "Create a new command with target specification",
+      description: "Create a new command with flexible targeting options",
       type: :object,
       properties: %{
         command: %Schema{
@@ -100,34 +100,130 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
               description: "Multi-line shell script/commands to execute",
               example: "ABC=value\necho $ABC\nsystemctl restart nginx"
             },
-            target_nodes: %Schema{
-              type: :array,
-              items: %Schema{type: :string, format: :uuid},
-              description: "Array of node UUIDs to target (required if target_all is false) (will always be deduplicated)",
-              example: [
-                "01234567-89ab-cdef-0123-456789abcdef",
-                "fedcba98-7654-3210-fedc-ba9876543210"
-              ]
-            },
-            target_all: %Schema{
-              type: :boolean,
-              description: "Whether to target all nodes (if true, target_nodes is ignored)",
-              example: false,
-              default: false
+            targeting: %Schema{
+              type: :object,
+              properties: %{
+                type: %Schema{
+                  type: :string,
+                  enum: ["all", "nodes"],
+                  description:
+                    "Targeting strategy: 'all' for all nodes, 'nodes' for specific nodes"
+                },
+                ids: %Schema{
+                  type: :array,
+                  items: %Schema{type: :string, format: :uuid},
+                  description: "Array of target type's IDs (required when type is 'nodes') (will always be deduplicated)",
+                  example: [
+                    "01234567-89ab-cdef-0123-456789abcdef",
+                    "fedcba98-7654-3210-fedc-ba9876543210"
+                  ]
+                },
+                node_filters: %Schema{
+                  type: :object,
+                  description: "Optional filters to apply to target nodes",
+                  properties: %{
+                    status: %Schema{
+                      type: :string,
+                      enum: ["online", "offline"],
+                      description: "Filter by node status"
+                    },
+                    id_type: %Schema{
+                      type: :string,
+                      enum: ["machine_id", "hardware_id", "temporary_id"],
+                      description: "Filter by node ID type"
+                    },
+                    vpn_ip: %Schema{
+                      type: :string,
+                      description: "Filter by VPN IP (supports wildcards with *)",
+                      example: "100.64.*"
+                    }
+                  },
+                  additionalProperties: false
+                }
+              },
+              required: [:type],
+              example: %{
+                type: "all",
+                node_filters: %{
+                  status: "online",
+                  id_type: "machine_id"
+                }
+              }
             }
           },
-          required: [:command_text],
+          required: [:command_text, :targeting],
           example: %{
-            command_text: "ABC=value\necho $ABC\nsystemctl restart nginx",
-            target_nodes: [
-              "01234567-89ab-cdef-0123-456789abcdef",
-              "fedcba98-7654-3210-fedc-ba9876543210"
-            ],
-            target_all: false
+            command_text: "ABC=value\necho $ABC\nsudo docker ps",
+            targeting: %{
+              type: "nodes",
+              ids: ["01234567-89ab-cdef-0123-456789abcdef"],
+              node_filters: %{
+                status: "online",
+                id_type: "machine_id"
+              }
+            }
           }
         }
       },
-      required: [:command]
+      required: [:command],
+      examples: %{
+        target_all_with_filters: %{
+          summary: "Target all online nodes",
+          value: %{
+            command: %{
+              command_text: "systemctl status nginx",
+              targeting: %{
+                type: "all",
+                node_filters: %{
+                  status: "online"
+                }
+              }
+            }
+          }
+        },
+        target_specific_nodes: %{
+          summary: "Target specific nodes with filters",
+          value: %{
+            command: %{
+              command_text: "df -h",
+              targeting: %{
+                type: "nodes",
+                ids: ["01234567-89ab-cdef-0123-456789abcdef"],
+                node_filters: %{
+                  status: "online",
+                  id_type: "machine_id"
+                }
+              }
+            }
+          }
+        },
+        target_all_no_filters: %{
+          summary: "Target all nodes without filters",
+          value: %{
+            command: %{
+              command_text: "whoami",
+              targeting: %{
+                type: "all"
+              }
+            }
+          }
+        },
+        target_specific_nodes_no_filters: %{
+          summary: "Target specific nodes without filters",
+          value: %{
+            command: %{
+              command_text: "uptime",
+              targeting: %{
+                type: "nodes",
+                ids: [
+                  "01234567-89ab-cdef-0123-456789abcdef",
+                  "fedcba98-7654-3210-fedc-ba9876543210"
+                ]
+              }
+            }
+          }
+        }
+      }
     })
   end
 end

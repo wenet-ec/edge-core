@@ -14,8 +14,8 @@ defmodule EdgeAdmin.Commands do
   alias EdgeAdmin.Commands.{Command, CommandExecution}
 
   alias EdgeAdmin.Commands.Workers.{
-    AllNodesDispatchWorker,
-    TargetedDispatchWorker
+    TargetAllDispatchWorker,
+    TargetNodesDispatchWorker
   }
 
   require Logger
@@ -119,11 +119,9 @@ defmodule EdgeAdmin.Commands do
   end
 
   def create_command_and_dispatch_executions(attrs) do
-    # First create the command
     case create_command(attrs) do
       {:ok, command} ->
-        # Dispatch executions based on target specification
-        dispatch_executions(command, attrs)
+        dispatch_executions_with_targeting(command, attrs)
         {:ok, command}
 
       {:error, changeset} ->
@@ -132,74 +130,84 @@ defmodule EdgeAdmin.Commands do
     end
   end
 
-  defp dispatch_executions(command, %{"target_all" => true}) do
-    # For target_all, enqueue background worker to create mass executions
-    %{command_id: command.id}
-    |> AllNodesDispatchWorker.new()
-    |> Oban.insert()
-    |> case do
-      {:ok, _job} ->
-        :ok
+  defp dispatch_executions_with_targeting(command, %{"targeting" => targeting}) do
+    case targeting["type"] do
+      "all" ->
+        %{
+          command_id: command.id,
+          node_filters: Map.get(targeting, "node_filters", %{})
+        }
+        |> TargetAllDispatchWorker.new()
+        |> Oban.insert()
+        |> case do
+          {:ok, _job} ->
+            :ok
 
-      {:error, reason} ->
-        Logger.error("Failed to enqueue AllNodesDispatchWorker: #{inspect(reason)}")
+          {:error, reason} ->
+            Logger.error("Failed to enqueue TargetAllDispatchWorker: #{inspect(reason)}")
+        end
+
+      "nodes" ->
+        %{
+          command_id: command.id,
+          node_ids: Map.get(targeting, "ids", []),
+          node_filters: Map.get(targeting, "node_filters", %{})
+        }
+        |> TargetNodesDispatchWorker.new()
+        |> Oban.insert()
+        |> case do
+          {:ok, _job} ->
+            :ok
+
+          {:error, reason} ->
+            Logger.error("Failed to enqueue TargetNodesDispatchWorker: #{inspect(reason)}")
+        end
+
+      _ ->
+        Logger.warning("Invalid targeting type for command #{command.id}: #{inspect(targeting)}")
+        :ok
     end
   end
 
-  defp dispatch_executions(command, %{"target_nodes" => target_nodes})
-       when is_list(target_nodes) do
-    # For specific targets, enqueue worker for immediate dispatch attempt
-    %{
-      command_id: command.id,
-      target_node_ids: target_nodes
-    }
-    |> TargetedDispatchWorker.new()
-    |> Oban.insert()
-    |> case do
-      {:ok, _job} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to enqueue TargetedDispatchWorker: #{inspect(reason)}")
-    end
-  end
-
-  defp dispatch_executions(command, attrs) do
+  defp dispatch_executions_with_targeting(command, attrs) do
     Logger.warning(
-      "No target specification found for command #{command.id}, attrs: #{inspect(attrs)}"
+      "No targeting specification found for command #{command.id}, attrs: #{inspect(attrs)}"
     )
 
     :ok
   end
 
-  def create_executions_for_all_nodes(command_id) do
-    # Get the command for command_text
+  def create_executions_for_target_all(command_id, node_filters \\ %{}) do
     command = get_command!(command_id)
 
-    # Get all nodes
-    page_result = Nodes.list_nodes_with_filtering_pagination(%{"page_size" => "1000"})
+    # Get all nodes by handling pagination
+    nodes = get_all_filtered_nodes(node_filters)
 
-    # Create executions with command_text directly in the struct
+    Logger.info("Creating executions for #{length(nodes)} filtered nodes")
+
+    # Truncate to match PostgreSQL precision
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
     executions =
-      Enum.map(page_result.data, fn node ->
-        %CommandExecution{}
-        |> CommandExecution.changeset(%{
+      Enum.map(nodes, fn node ->
+        %{
           command_id: command_id,
           node_id: node.id,
           target_all: true,
-          status: "pending"
-        })
-        |> Repo.insert!()
+          status: "pending",
+          inserted_at: now,
+          updated_at: now
+        }
       end)
 
-    # Bulk insert
     try do
-      {count, executions} = Repo.insert_all(CommandExecution, executions, returning: true)
+      {count, inserted_executions} =
+        Repo.insert_all(CommandExecution, executions, returning: true)
+
       Logger.info("Successfully created #{count} command executions")
 
-      # Return executions with command_text populated
       executions_with_command_text =
-        Enum.map(executions, fn execution ->
+        Enum.map(inserted_executions, fn execution ->
           %CommandExecution{execution | command_text: command.command_text}
         end)
 
@@ -211,70 +219,93 @@ defmodule EdgeAdmin.Commands do
     end
   end
 
-  def create_executions_for_target_nodes(command_id, node_ids) do
-    # Get the command for command_text
+  def create_executions_for_target_nodes(command_id, node_ids, node_filters \\ %{}) do
     command = get_command!(command_id)
-
-    # Deduplicate node IDs
     unique_node_ids = Enum.uniq(node_ids)
 
-    # Get nodes
-    nodes = Nodes.get_nodes_by_ids(unique_node_ids)
+    # Get the specified nodes
+    specified_nodes = Nodes.get_nodes_by_ids(unique_node_ids)
+
+    nodes =
+      specified_nodes
+      |> Enum.filter(&match?({:ok, _}, &1))
+      |> Enum.map(fn {:ok, node} -> node end)
+
+    # Apply node_filters if any are provided
+    filtered_nodes =
+      if Enum.empty?(node_filters) do
+        nodes
+      else
+        # Use the same helper function to get all matching nodes
+        all_matching_nodes = get_all_filtered_nodes(node_filters)
+        matching_node_ids = MapSet.new(all_matching_nodes, & &1.id)
+        Enum.filter(nodes, fn node -> MapSet.member?(matching_node_ids, node.id) end)
+      end
+
+    Logger.info(
+      "Creating executions for #{length(filtered_nodes)} nodes (#{length(nodes)} specified, #{length(filtered_nodes)} after filtering)"
+    )
 
     results =
-      Enum.map(nodes, fn
-        {:ok, node} ->
-          # Create execution with command_text in attrs
-          execution_attrs = %{
-            command_id: command_id,
-            node_id: node.id,
-            target_all: false,
-            status: "pending",
-            # Set virtual field
-            command_text: command.command_text
-          }
+      Enum.map(filtered_nodes, fn node ->
+        execution_attrs = %{
+          command_id: command_id,
+          node_id: node.id,
+          target_all: false,
+          status: "pending",
+          command_text: command.command_text
+        }
 
-          case create_command_execution(execution_attrs) do
-            {:ok, execution} ->
-              # Populate command_text since it's virtual
-              execution = %{execution | command_text: command.command_text}
+        case create_command_execution(execution_attrs) do
+          {:ok, execution} ->
+            execution = %{execution | command_text: command.command_text}
 
-              case attempt_execution_delivery(execution, node) do
-                :ok ->
-                  {:ok, execution}
+            case attempt_execution_delivery(execution, node) do
+              :ok ->
+                {:ok, execution}
 
-                :error ->
-                  Logger.warning(
-                    "Failed to deliver execution #{execution.id} to node #{node.id}, will retry later"
-                  )
+              :error ->
+                Logger.warning(
+                  "Failed to deliver execution #{execution.id} to node #{node.id}, will retry later"
+                )
 
-                  {:ok, execution}
-              end
+                {:ok, execution}
+            end
 
-            {:error, changeset} ->
-              Logger.error(
-                "Failed to create execution for node #{node.id}: #{inspect(changeset.errors)}"
-              )
+          {:error, changeset} ->
+            Logger.error(
+              "Failed to create execution for node #{node.id}: #{inspect(changeset.errors)}"
+            )
 
-              {:error, changeset}
-          end
-
-        {:error, reason} = error ->
-          Logger.error("Failed to get node: #{inspect(reason)}")
-          error
+            {:error, changeset}
+        end
       end)
 
-    # Separate successful and failed results
-    {successes, errors} =
-      Enum.split_with(results, fn
-        {:ok, _} -> true
-        {:error, _} -> false
-      end)
+    {successes, errors} = Enum.split_with(results, &match?({:ok, _}, &1))
 
     if Enum.empty?(errors) do
       {:ok, Enum.map(successes, fn {:ok, execution} -> execution end)}
     else
       {:partial_success, %{successes: successes, errors: errors}}
+    end
+  end
+
+  # Helper function to get all nodes across all pages
+  defp get_all_filtered_nodes(node_filters, page \\ 1, accumulated_nodes \\ []) do
+    params =
+      node_filters
+      # Reasonable page size
+      |> Map.put("page_size", "1000")
+      |> Map.put("page", to_string(page))
+
+    page_result = Nodes.list_nodes_with_filtering_pagination(params)
+
+    all_nodes = accumulated_nodes ++ page_result.data
+
+    if page_result.has_next do
+      get_all_filtered_nodes(node_filters, page + 1, all_nodes)
+    else
+      all_nodes
     end
   end
 

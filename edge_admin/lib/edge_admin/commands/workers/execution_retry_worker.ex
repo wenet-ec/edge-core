@@ -4,8 +4,8 @@ defmodule EdgeAdmin.Commands.Workers.ExecutionRetryWorker do
   Cron worker that retries pending command executions in FIFO order per node.
 
   This worker runs periodically (every 60 seconds) to handle:
-  - Failed deliveries from TargetedDispatchWorker
-  - All executions created by AllNodesDispatchWorker
+  - Failed deliveries from TargetNodesDispatchWorker
+  - All executions created by TargetAllDispatchWorker
   - Any executions that become pending due to node connectivity issues
 
   Maintains strict FIFO ordering per node by only processing the oldest

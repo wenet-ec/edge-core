@@ -103,7 +103,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
             target_nodes: %Schema{
               type: :array,
               items: %Schema{type: :string, format: :uuid},
-              description: "Array of node UUIDs to target (required if target_all is false)",
+              description: "Array of node UUIDs to target (required if target_all is false) (will always be deduplicated)",
               example: [
                 "01234567-89ab-cdef-0123-456789abcdef",
                 "fedcba98-7654-3210-fedc-ba9876543210"

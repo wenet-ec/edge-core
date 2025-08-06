@@ -215,8 +215,11 @@ defmodule EdgeAdmin.Commands do
     # Get the command for command_text
     command = get_command!(command_id)
 
+    # Deduplicate node IDs
+    unique_node_ids = Enum.uniq(node_ids)
+
     # Get nodes
-    nodes = Nodes.get_nodes_by_ids(node_ids)
+    nodes = Nodes.get_nodes_by_ids(unique_node_ids)
 
     results =
       Enum.map(nodes, fn

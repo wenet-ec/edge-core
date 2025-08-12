@@ -68,7 +68,7 @@ RUN mix release
 FROM debian:bookworm-20230612-slim
 
 RUN apt-get update -y && \
-    apt-get install -y libstdc++6 openssl libncurses5 locales && \
+    apt-get install -y libstdc++6 openssl libncurses6 locales && \
     apt-get clean && \
     rm -f /var/lib/apt/lists/*_*
 

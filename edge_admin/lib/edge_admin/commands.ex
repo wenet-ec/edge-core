@@ -260,16 +260,19 @@ defmodule EdgeAdmin.Commands do
           {:ok, execution} ->
             execution = %{execution | command_text: command.command_text}
 
-            case attempt_execution_delivery(execution, node) do
-              :ok ->
-                {:ok, execution}
+            pending_count = count_pending_executions_for_node(node.id)
 
-              :error ->
-                Logger.warning(
-                  "Failed to deliver execution #{execution.id} to node #{node.id}, will retry later"
-                )
+            if pending_count > 1 do
+              {:ok, execution}
+            else
+              # No other pending executions, attempt immediate delivery
+              case attempt_execution_delivery(execution, node) do
+                :ok ->
+                  {:ok, execution}
 
-                {:ok, execution}
+                :error ->
+                  {:ok, execution}
+              end
             end
 
           {:error, changeset} ->
@@ -288,6 +291,14 @@ defmodule EdgeAdmin.Commands do
     else
       {:partial_success, %{successes: successes, errors: errors}}
     end
+  end
+
+  defp count_pending_executions_for_node(node_id) do
+    from(ce in CommandExecution,
+      where: ce.node_id == ^node_id and ce.status == "pending",
+      select: count(ce.id)
+    )
+    |> Repo.one()
   end
 
   # Helper function to get all nodes across all pages
@@ -398,17 +409,16 @@ defmodule EdgeAdmin.Commands do
         order_by: [asc: ce.node_id, asc: ce.inserted_at]
       )
       |> Repo.all()
-      # Add preload
       |> Repo.preload(:command)
-      # Populate virtual field
       |> Enum.map(&CommandExecution.populate_command_text/1)
       |> Enum.group_by(& &1.node_id)
 
-    # Process oldest pending execution for each node
-    Enum.each(pending_executions, fn {_node_id, executions} ->
-      # Take only the oldest execution for this node
-      oldest_execution = List.first(executions)
-      attempt_execution_delivery(oldest_execution)
+    # Process ALL pending executions for each node in bulk
+    Enum.each(pending_executions, fn {node_id, executions} ->
+      # Send all executions for this node in order
+      Enum.each(executions, fn execution ->
+        attempt_execution_delivery(execution)
+      end)
     end)
 
     Logger.info("Completed retry of pending executions")

@@ -1,0 +1,33 @@
+FROM elixir:1.18-alpine
+
+# Install system dependencies
+RUN apk add --no-cache \
+    build-base \
+    git \
+    curl \
+    bash
+
+# Install Tailscale (for CLI testing) - avoid service auto-start in Alpine
+RUN apk add --no-cache tailscale
+
+# Set work directory
+WORKDIR /app
+
+# Install hex and rebar
+RUN mix local.hex --force && \
+    mix local.rebar --force
+
+# Copy mix files
+COPY mix.exs mix.lock ./
+
+# Install dependencies
+RUN mix deps.get
+
+# Copy source code
+COPY . .
+
+# Compile for test
+RUN MIX_ENV=test mix compile
+
+# Default command
+CMD ["mix", "test"]

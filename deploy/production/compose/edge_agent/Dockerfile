@@ -20,6 +20,16 @@ RUN mix local.hex --force && \
 
 ENV MIX_ENV=prod
 
+# First, build the tailscale library
+WORKDIR /tailscale
+COPY tailscale/mix.exs tailscale/mix.lock ./
+RUN mix deps.get --only $MIX_ENV
+COPY tailscale/lib lib/
+RUN mix deps.compile && mix compile
+
+# Then build the main application
+WORKDIR /app
+
 # Copy mix files and install dependencies
 COPY edge_agent/mix.exs edge_agent/mix.lock ./
 RUN mix deps.get --only $MIX_ENV

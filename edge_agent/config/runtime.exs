@@ -39,3 +39,11 @@ config :edge_agent,
   ],
   vpn_url: vpn_url,
   enrollment_key: enrollment_key
+
+# Tailscale library configuration
+# Note: Edge agent only uses CLI operations, so VPN_WRAPPER_URL is optional
+# Only needed if using API functions like get_node_by_hostname, create_enrollment_key, etc.
+if System.get_env("VPN_WRAPPER_URL") do
+  config :tailscale,
+    vpn_wrapper_url: System.get_env("VPN_WRAPPER_URL")
+end

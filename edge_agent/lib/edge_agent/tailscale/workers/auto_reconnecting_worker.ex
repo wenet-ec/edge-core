@@ -1,34 +1,37 @@
 # edge_agent/lib/edge_agent/tailscale/workers/auto_reconnecting_worker.ex
 defmodule EdgeAgent.Tailscale.Workers.AutoReconnectingWorker do
   @moduledoc """
-  Oban worker that attempts to reconnect to Tailscale VPN when disconnected.
-
-  This worker runs periodically (every 60 seconds) to check if auto-reconnection
-  should be attempted. It only attempts reconnection when:
-  - Status is :disconnected
-  - manual_disconnect is false (user hasn't manually disconnected)
-
-  The worker uses enrollment keys for reconnection attempts.
+  EdgeAgent worker for Tailscale auto-reconnection.
+  Uses EdgeAgent-specific logic for hostname and configuration.
   """
 
   use Oban.Worker, queue: :vpn, max_attempts: 1
 
   alias EdgeAgent.Tailscale
-
   require Logger
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
-    case Tailscale.attempt_auto_reconnection() do
-      :ok ->
-        :ok
+    Logger.debug("Starting EdgeAgent Tailscale auto-reconnection check")
 
-      :skipped ->
-        :ok
+    try do
+      result = Tailscale.attempt_auto_reconnection()
 
-      {:error, reason} ->
-        Logger.error("Tailscale auto-reconnection failed: #{inspect(reason)}")
-        {:error, reason}
+      case result do
+        {:ok, _connection} ->
+          Logger.debug("EdgeAgent auto-reconnection completed successfully")
+          :ok
+        {:error, :already_connected} ->
+          Logger.debug("EdgeAgent already connected, no reconnection needed")
+          :ok
+        {:error, reason} ->
+          Logger.warning("EdgeAgent auto-reconnection failed: #{inspect(reason)}")
+          {:error, reason}
+      end
+    catch
+      error ->
+        Logger.error("EdgeAgent auto-reconnection crashed: #{inspect(error)}")
+        {:error, error}
     end
   end
 end

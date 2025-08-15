@@ -16,7 +16,7 @@ defmodule EdgeAdmin.Application do
       EdgeAdmin.Repo,
       {DNSCluster, query: Application.get_env(:edge_admin, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: EdgeAdmin.PubSub},
-      EdgeAdmin.Tailscale.ConnectionManager,
+      Tailscale.ConnectionManager,
       {Oban, Application.fetch_env!(:edge_admin, Oban)},
       EdgeAdminWeb.Endpoint,
       {TelemetryUI, EdgeAdmin.TelemetryUI.config()}

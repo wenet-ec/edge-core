@@ -40,7 +40,8 @@ defmodule EdgeAdminWeb.VPN.ConnectionController do
     summary: "Update VPN connection",
     description: "Update VPN connection properties and settings",
     request_body:
-      {"VPN connection update parameters", "application/json", ConnectionSchemas.ConnectionUpdateRequest},
+      {"VPN connection update parameters", "application/json",
+       ConnectionSchemas.ConnectionUpdateRequest},
     responses: %{
       200 =>
         {"VPN connection updated successfully", "application/json",
@@ -50,9 +51,25 @@ defmodule EdgeAdminWeb.VPN.ConnectionController do
     }
   )
 
-  def update(conn, %{"manual_disconnect" => manual_disconnect} = _params)
-      when is_boolean(manual_disconnect) do
-    case Tailscale.update_connection(%{manual_disconnect: manual_disconnect}) do
+  def update(conn, %{"manual_disconnect" => true} = _params) do
+    # Perform manual disconnect operation
+    case Tailscale.disconnect_from_vpn_manual() do
+      {:ok, connection} ->
+        conn
+        |> put_status(:ok)
+        |> render(:show, connection: connection)
+
+      {:error, reason} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{error: "Failed to disconnect from VPN", details: inspect(reason)})
+    end
+  end
+
+  def update(conn, %{"manual_disconnect" => false} = _params) do
+    # For manual_disconnect: false, just update the flag without reconnecting
+    # (reconnection should be handled by auto-reconnection worker)
+    case Tailscale.update_connection(%{manual_disconnect: false}) do
       {:ok, connection} ->
         conn
         |> put_status(:ok)

@@ -33,7 +33,7 @@ config :edge_admin, EdgeAdminWeb.Plugs.Security, allow_unsafe_scripts: false
 config :edge_admin, Oban,
   engine: Oban.Engines.Basic,
   queues: [
-    vpn: 3,
+    vpn: 2,
     command_dispatch: 10,
     command_retry: 1,
   ],

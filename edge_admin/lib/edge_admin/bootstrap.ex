@@ -36,8 +36,10 @@ defmodule EdgeAdmin.Bootstrap do
 
     with :ok <- Tailscale.start_daemon(),
          {:ok, _result} <- Tailscale.connect_to_vpn(vpn_url, enrollment_key, "edge-admin"),
-         {:ok, vpn_ip} <- validate_vpn_connection() do
+         {:ok, vpn_ip} <- validate_vpn_connection(),
+         {:ok, _connection} <- Tailscale.sync_connection_state() do
       Logger.info("Successfully connected to VPN with IP: #{vpn_ip}")
+      Logger.info("Tailscale connection state synchronized")
       :ok
     else
       {:error, reason} = error ->

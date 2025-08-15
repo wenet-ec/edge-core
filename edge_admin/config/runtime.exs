@@ -44,3 +44,7 @@ config :edge_admin, EdgeAdmin.PromEx,
   disabled: false,
   grafana: :disabled,
   metrics_server: :disabled
+
+# Tailscale library configuration
+config :tailscale,
+  vpn_wrapper_url: System.get_env("VPN_WRAPPER_URL", "http://edge_vpn:8081")

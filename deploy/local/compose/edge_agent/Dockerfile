@@ -74,6 +74,7 @@ RUN sed -i 's/\r$//g' /usr/local/bin/hostscript && \
 
 # Copy ONLY dependency files first (for Docker layer caching)
 COPY edge_agent/mix.exs edge_agent/mix.lock ./
+COPY tailscale/ /tailscale/
 
 # Copy config files (needed for dependency compilation)
 COPY edge_agent/config ./config

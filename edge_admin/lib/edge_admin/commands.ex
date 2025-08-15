@@ -414,7 +414,7 @@ defmodule EdgeAdmin.Commands do
       |> Enum.group_by(& &1.node_id)
 
     # Process ALL pending executions for each node in bulk
-    Enum.each(pending_executions, fn {node_id, executions} ->
+    Enum.each(pending_executions, fn {_node_id, executions} ->
       # Send all executions for this node in order
       Enum.each(executions, fn execution ->
         attempt_execution_delivery(execution)

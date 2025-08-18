@@ -2,13 +2,13 @@
 defmodule EdgeAdmin.VPN do
   @moduledoc """
   VPN context for EdgeAdmin.
-  
+
   This module provides EdgeAdmin-specific VPN functionality while delegating
   core operations to the shared Tailscale library. It handles EdgeAdmin's
   specific hostname requirements, environment configuration, and business logic.
   """
 
-  alias Tailscale.Connection
+  alias EdgeAdmin.VPN.Connection
   require Logger
 
   # Delegate all basic operations to the shared library
@@ -44,22 +44,37 @@ defmodule EdgeAdmin.VPN do
   end
 
   @doc """
-  Updates VPN connection from controller parameters with validation.
-  
-  This function handles parameter validation and business logic for VPN connection updates.
-  """
-  def update_connection_from_params(%{"manual_disconnect" => manual_disconnect} = _params) 
-      when is_boolean(manual_disconnect) do
-    update_connection_manual_disconnect(manual_disconnect)
-  end
+  Updates VPN connection from controller parameters with changeset validation.
 
-  def update_connection_from_params(_params) do
-    {:error, :invalid_params}
+  This function uses Ecto changesets for validation and provides detailed error information.
+  """
+  def update_connection_from_params(params) do
+    with {:ok, tailscale_conn} <- get_connection(),
+         embedded_conn <- Connection.from_tailscale_connection(tailscale_conn),
+         changeset <- Connection.update_changeset(embedded_conn, params) do
+
+      if changeset.valid? do
+        case Ecto.Changeset.get_change(changeset, :manual_disconnect) do
+          true ->
+            Logger.info("VPN: Performing manual disconnect")
+            disconnect_from_vpn_manual()
+
+          false ->
+            Logger.info("VPN: Re-enabling auto-reconnection")
+            update_connection(%{manual_disconnect: false})
+
+          nil ->
+            {:ok, Connection.from_tailscale_connection(tailscale_conn)}
+        end
+      else
+        {:error, changeset}
+      end
+    end
   end
 
   @doc """
   Updates the VPN connection with manual disconnect handling.
-  
+
   This function encapsulates the business logic for updating VPN connections:
   - When manual_disconnect is true: Performs immediate disconnect
   - When manual_disconnect is false: Updates flag to allow auto-reconnection
@@ -69,7 +84,7 @@ defmodule EdgeAdmin.VPN do
       true ->
         Logger.info("VPN: Performing manual disconnect")
         disconnect_from_vpn_manual()
-        
+
       false ->
         Logger.info("VPN: Re-enabling auto-reconnection")
         update_connection(%{manual_disconnect: false})
@@ -92,7 +107,7 @@ defmodule EdgeAdmin.VPN do
 
   @doc """
   Creates enrollment key with proper error handling and user-friendly messages.
-  
+
   This function encapsulates the business logic for enrollment key creation including
   error classification and message formatting.
   """
@@ -113,23 +128,15 @@ defmodule EdgeAdmin.VPN do
   end
 
   # Connection data transformation
-  
+
   @doc """
-  Transforms a Tailscale.Connection struct into a map suitable for JSON rendering.
+  Transforms a Tailscale.Connection struct into an EdgeAdmin.VPN.Connection embedded schema.
   """
-  def connection_to_map(%Connection{} = connection) do
-    %{
-      status: connection.status,
-      vpn_ip: connection.vpn_ip,
-      vpn_hostname: connection.vpn_hostname,
-      connected_at: connection.connected_at,
-      last_checked_at: connection.last_checked_at,
-      last_error: connection.last_error,
-      last_error_at: connection.last_error_at,
-      manual_disconnect: connection.manual_disconnect,
-      inserted_at: connection.inserted_at,
-      updated_at: connection.updated_at
-    }
+  def get_connection_as_embedded do
+    case get_connection() do
+      {:ok, tailscale_conn} -> {:ok, Connection.from_tailscale_connection(tailscale_conn)}
+      error -> error
+    end
   end
 
   # Private helper functions

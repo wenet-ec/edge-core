@@ -6,6 +6,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionController do
   alias EdgeAdmin.VPN
   alias EdgeAdminWeb.Schemas.VPN.ConnectionSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias EdgeAdminWeb.ChangesetJSON
   action_fallback(EdgeAdminWeb.FallbackController)
 
   tags(["VPN.Connection"])
@@ -20,7 +21,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionController do
   )
 
   def show(conn, _params) do
-    case VPN.get_connection() do
+    case VPN.get_connection_as_embedded() do
       {:ok, connection} ->
         render(conn, :show, connection: connection)
 
@@ -58,13 +59,11 @@ defmodule EdgeAdminWeb.VPN.ConnectionController do
         |> put_status(:ok)
         |> render(:show, connection: connection)
 
-      {:error, :invalid_params} ->
+      {:error, %Ecto.Changeset{} = changeset} ->
         conn
-        |> put_status(:bad_request)
-        |> json(%{
-          error: "Invalid request",
-          message: "Only 'manual_disconnect' field is allowed for updates and must be a boolean"
-        })
+        |> put_status(:unprocessable_entity)
+        |> put_view(ChangesetJSON)
+        |> render(:error, changeset: changeset)
 
       {:error, reason} ->
         conn

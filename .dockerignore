@@ -18,6 +18,16 @@ edge_admin/tmp/
 edge_admin/erl_crash.dump
 edge_admin/npm-debug.log
 
+# Edge Agent build artifacts
+edge_agent/_build/
+edge_agent/deps/
+edge_agent/*.ez
+edge_agent/cover/
+edge_agent/tmp/
+edge_agent/erl_crash.dump
+edge_agent/data/
+edge_agent/native/
+
 # IDE and editor files
 .vscode/
 .idea/
@@ -37,6 +47,8 @@ Thumbs.db
 # Logs
 *.log
 edge_admin/logs/
+edge_agent/logs/
+logs/
 
 # Runtime data
 edge_admin/pids/
@@ -45,6 +57,22 @@ edge_admin/*.seed
 
 # Coverage directory used by tools like istanbul
 edge_admin/coverage/
+edge_agent/coverage/
+cover/
+coverage/
+*.coverprofile
+*.lcov
+
+# Go build artifacts
+edge_metrics_collector/edge_metrics_collector
+edge_vpn/edge_vpn
+*.exe
+*.exe~
+*.so
+*.dylib
+*.test
+*.out
+**/vendor/
 
 # Dependency directories
 node_modules/
@@ -104,3 +132,21 @@ temp/
 !edge_admin/mix.exs
 !edge_admin/mix.lock
 !edge_admin/rel/
+
+!edge_agent/lib/
+!edge_agent/config/
+!edge_agent/priv/repo/
+!edge_agent/priv/static/robots.txt
+!edge_agent/mix.exs
+!edge_agent/mix.lock
+!edge_agent/rel/
+
+!edge_metrics_collector/*.go
+!edge_metrics_collector/go.mod
+!edge_metrics_collector/go.sum
+!edge_metrics_collector/internal/
+
+!edge_vpn/*.go
+!edge_vpn/go.mod
+!edge_vpn/go.sum
+!edge_vpn/internal/

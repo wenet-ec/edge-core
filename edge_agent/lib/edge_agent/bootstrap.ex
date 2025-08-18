@@ -17,7 +17,7 @@ defmodule EdgeAgent.Bootstrap do
   require Logger
 
   alias EdgeAgent.Settings
-  alias EdgeAgent.Tailscale
+  alias EdgeAgent.VPN
   alias EdgeAgent.AdminClient
   alias EdgeAgent.SshServer
   alias EdgeAgent.MetricsServer
@@ -74,10 +74,10 @@ defmodule EdgeAgent.Bootstrap do
     enrollment_key = Application.get_env(:edge_agent, :enrollment_key)
     hostname = "node-#{node_id}"
 
-    with :ok <- Tailscale.start_daemon(),
-         {:ok, _result} <- Tailscale.connect_to_vpn(vpn_url, enrollment_key, hostname),
+    with :ok <- VPN.start_daemon(),
+         {:ok, _result} <- VPN.connect_to_vpn(vpn_url, enrollment_key, hostname),
          {:ok, vpn_ip} <- validate_vpn_connection(),
-         {:ok, _connection} <- Tailscale.sync_connection_state() do
+         {:ok, _connection} <- VPN.sync_connection_state() do
       Logger.info("Successfully connected to VPN with IP: #{vpn_ip}")
       :ok
     else
@@ -252,7 +252,7 @@ defmodule EdgeAgent.Bootstrap do
   defp validate_vpn_connection do
     Logger.info("Validating VPN connection...")
 
-    case Tailscale.get_vpn_ip() do
+    case VPN.get_vpn_ip() do
       {:ok, vpn_ip} ->
         Logger.info("VPN connection validated with IP: #{vpn_ip}")
         {:ok, vpn_ip}

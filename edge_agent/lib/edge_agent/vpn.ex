@@ -1,9 +1,9 @@
-# edge_agent/lib/edge_agent/tailscale.ex
-defmodule EdgeAgent.Tailscale do
+# edge_agent/lib/edge_agent/vpn.ex
+defmodule EdgeAgent.VPN do
   @moduledoc """
-  EdgeAgent adapter for the shared Tailscale library.
+  VPN context for EdgeAgent.
 
-  This module provides EdgeAgent-specific functionality while delegating
+  This module provides EdgeAgent-specific VPN functionality while delegating
   core operations to the shared Tailscale library. It handles EdgeAgent's
   specific hostname requirements (node-{id}) and Settings integration.
   """

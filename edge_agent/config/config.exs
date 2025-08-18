@@ -39,8 +39,8 @@ config :edge_agent, Oban,
     Oban.Plugins.Pruner,
     {Oban.Plugins.Cron,
      crontab: [
-       {"* * * * *", EdgeAgent.Tailscale.Workers.ConnectivityCheckingWorker},
-       {"* * * * *", EdgeAgent.Tailscale.Workers.AutoReconnectingWorker},
+       {"* * * * *", EdgeAgent.VPN.Workers.ConnectivityCheckingWorker},
+       {"* * * * *", EdgeAgent.VPN.Workers.AutoReconnectingWorker},
        {"*/5 * * * *", EdgeAgent.Commands.Workers.CommandReportWorker}
      ]}
   ]

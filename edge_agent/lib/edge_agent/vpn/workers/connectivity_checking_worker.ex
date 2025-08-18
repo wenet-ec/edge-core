@@ -1,23 +1,23 @@
-# edge_agent/lib/edge_agent/tailscale/workers/connectivity_checking_worker.ex
-defmodule EdgeAgent.Tailscale.Workers.ConnectivityCheckingWorker do
+# edge_agent/lib/edge_agent/vpn/workers/connectivity_checking_worker.ex
+defmodule EdgeAgent.VPN.Workers.ConnectivityCheckingWorker do
   @moduledoc """
-  EdgeAgent worker for Tailscale connectivity checking.
+  EdgeAgent worker for VPN connectivity checking.
 
   This worker monitors VPN connectivity and updates the connection status.
-  It uses EdgeAgent.Tailscale adapter for app-specific functionality.
+  It uses EdgeAgent.VPN context for app-specific functionality.
   """
 
   use Oban.Worker, queue: :vpn, max_attempts: 1
 
-  alias EdgeAgent.Tailscale
+  alias EdgeAgent.VPN
   require Logger
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
-    Logger.debug("Starting EdgeAgent Tailscale connectivity check")
+    Logger.debug("Starting EdgeAgent VPN connectivity check")
 
     try do
-      result = Tailscale.check_and_update_connectivity()
+      result = VPN.check_and_update_connectivity()
 
       case result do
         :ok ->

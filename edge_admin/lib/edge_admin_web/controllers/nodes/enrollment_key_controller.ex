@@ -3,7 +3,7 @@ defmodule EdgeAdminWeb.Nodes.EnrollmentKeyController do
   use EdgeAdminWeb, :controller
   use OpenApiSpex.ControllerSpecs
 
-  alias EdgeAdmin.Tailscale
+  alias EdgeAdmin.VPN
   alias EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
 
@@ -22,21 +22,21 @@ defmodule EdgeAdminWeb.Nodes.EnrollmentKeyController do
     }
 
   def create(conn, _params) do
-    case Tailscale.create_enrollment_key() do
+    case VPN.create_enrollment_key_with_error_handling() do
       {:ok, enrollment_data} ->
         conn
         |> put_status(:created)
         |> render(:show, enrollment_key: enrollment_data)
 
-      {:error, :vpn_service_unavailable} ->
+      {:error, :vpn_service_unavailable, message} ->
         conn
         |> put_status(:service_unavailable)
-        |> json(%{error: "VPN service is currently unavailable"})
+        |> json(%{error: message})
 
-      {:error, :user_not_found} ->
+      {:error, :internal_server_error, message} ->
         conn
         |> put_status(:internal_server_error)
-        |> json(%{error: "edge-nodes user not found in VPN system"})
+        |> json(%{error: message})
 
       {:error, reason} ->
         conn

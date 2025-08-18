@@ -41,8 +41,8 @@ config :edge_admin, Oban,
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [
-       {"* * * * *", EdgeAdmin.Tailscale.Workers.ConnectivityCheckingWorker},
-       {"* * * * *", EdgeAdmin.Tailscale.Workers.AutoReconnectingWorker},
+       {"* * * * *", EdgeAdmin.VPN.Workers.ConnectivityCheckingWorker},
+       {"* * * * *", EdgeAdmin.VPN.Workers.AutoReconnectingWorker},
        {"* * * * *", EdgeAdmin.Commands.Workers.ExecutionRetryWorker},
        {"* * * * *", EdgeAdmin.Nodes.Workers.NodeHealthCheckWorker}
      ]}

@@ -1,21 +1,21 @@
-# edge_admin/lib/edge_admin/tailscale/workers/auto_reconnecting_worker.ex
-defmodule EdgeAdmin.Tailscale.Workers.AutoReconnectingWorker do
+# edge_admin/lib/edge_admin/vpn/workers/auto_reconnecting_worker.ex
+defmodule EdgeAdmin.VPN.Workers.AutoReconnectingWorker do
   @moduledoc """
-  EdgeAdmin worker for Tailscale auto-reconnection.
+  EdgeAdmin worker for VPN auto-reconnection.
   Uses EdgeAdmin-specific logic for hostname and configuration.
   """
 
   use Oban.Worker, queue: :vpn, max_attempts: 1
 
-  alias EdgeAdmin.Tailscale
+  alias EdgeAdmin.VPN
   require Logger
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
-    Logger.debug("Starting EdgeAdmin Tailscale auto-reconnection check")
+    Logger.debug("Starting EdgeAdmin VPN auto-reconnection check")
 
     try do
-      result = Tailscale.attempt_auto_reconnection()
+      result = VPN.attempt_auto_reconnection()
 
       case result do
         {:ok, _connection} ->

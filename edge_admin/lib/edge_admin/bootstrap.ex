@@ -12,7 +12,7 @@ defmodule EdgeAdmin.Bootstrap do
 
   require Logger
 
-  alias EdgeAdmin.Tailscale
+  alias EdgeAdmin.VPN
 
   def run do
     Logger.info("Starting EdgeAdmin bootstrap...")
@@ -34,12 +34,12 @@ defmodule EdgeAdmin.Bootstrap do
     vpn_url = System.get_env("VPN_URL")
     enrollment_key = System.get_env("ENROLLMENT_KEY")
 
-    with :ok <- Tailscale.start_daemon(),
-         {:ok, _result} <- Tailscale.connect_to_vpn(vpn_url, enrollment_key, "edge-admin"),
+    with :ok <- VPN.start_daemon(),
+         {:ok, _result} <- VPN.connect_to_vpn(vpn_url, enrollment_key, "edge-admin"),
          {:ok, vpn_ip} <- validate_vpn_connection(),
-         {:ok, _connection} <- Tailscale.sync_connection_state() do
+         {:ok, _connection} <- VPN.sync_connection_state() do
       Logger.info("Successfully connected to VPN with IP: #{vpn_ip}")
-      Logger.info("Tailscale connection state synchronized")
+      Logger.info("VPN connection state synchronized")
       :ok
     else
       {:error, reason} = error ->
@@ -50,7 +50,7 @@ defmodule EdgeAdmin.Bootstrap do
 
   # Validate VPN connection is working
   defp validate_vpn_connection do
-    case Tailscale.get_vpn_ip() do
+    case VPN.get_vpn_ip() do
       {:ok, ip} when is_binary(ip) ->
         {:ok, ip}
 

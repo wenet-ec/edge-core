@@ -33,7 +33,8 @@ config :edge_agent, Oban,
   queues: [
     vpn: 2,
     command_execution: 1,
-    command_reporting: 1
+    command_reporting: 1,
+    command_scheduling: 1
   ],
   plugins: [
     Oban.Plugins.Pruner,
@@ -41,7 +42,8 @@ config :edge_agent, Oban,
      crontab: [
        {"* * * * *", EdgeAgent.VPN.Workers.ConnectivityCheckingWorker},
        {"* * * * *", EdgeAgent.VPN.Workers.AutoReconnectingWorker},
-       {"*/5 * * * *", EdgeAgent.Commands.Workers.CommandReportWorker}
+       {"* * * * *", EdgeAgent.Commands.Workers.CommandReportScheduler},  # Every minute for faster reporting
+       {"*/2 * * * *", EdgeAgent.Commands.Workers.CommandExecutionScheduler}  # Every 2 minutes safety net
      ]}
   ]
 

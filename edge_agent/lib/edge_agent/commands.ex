@@ -50,9 +50,45 @@ defmodule EdgeAgent.Commands do
   end
 
   def process_command_queue do
-    Logger.debug("Starting command queue processing")
+    Logger.debug("Starting command queue processing with lazy querying")
 
-    # Get all pending executions ordered by creation time (FIFO)
+    # Use lazy querying to handle race conditions
+    process_pending_commands_loop()
+
+    # After all pending processed, trigger reporting if needed
+    maybe_start_report_worker()
+
+    Logger.debug("Command queue processing completed")
+    :ok
+  end
+
+  def report_unreported_executions do
+    Logger.info("Starting unreported executions report")
+
+    # Get completed executions ordered by creation time (oldest first)
+    completed_executions = get_completed_executions()
+
+    if Enum.empty?(completed_executions) do
+      Logger.debug("No completed executions found")
+      :ok
+    else
+      Logger.info("Reporting #{length(completed_executions)} completed executions")
+      report_executions(completed_executions)
+    end
+
+    :ok
+  end
+
+  def maybe_start_execution_worker do
+    maybe_start_worker(CommandExecutionWorker, "CommandExecutionWorker")
+  end
+
+  def maybe_start_report_worker do
+    maybe_start_worker(EdgeAgent.Commands.Workers.CommandReportWorker, "CommandReportWorker")
+  end
+
+  defp process_pending_commands_loop do
+    # Query fresh each iteration - fixes race conditions!
     pending_executions = get_pending_executions()
 
     if Enum.empty?(pending_executions) do
@@ -61,79 +97,14 @@ defmodule EdgeAgent.Commands do
     else
       Logger.debug("Processing #{length(pending_executions)} pending executions")
 
-      # Execute each command sequentially
-      completed_executions =
-        Enum.map(pending_executions, fn execution ->
-          execute_single_command(execution)
-        end)
+      # Execute each command sequentially (no reporting here!)
+      Enum.each(pending_executions, fn execution ->
+        execute_single_command(execution)
+      end)
 
-      # Attempt to report all completed executions
-      report_completed_executions(completed_executions)
-
-      Logger.debug("Command queue processing completed")
-      :ok
+      # Recurse to check for new commands that arrived during execution
+      process_pending_commands_loop()
     end
-  end
-
-  def report_unreported_executions do
-    Logger.info("Starting unreported executions report")
-
-    # Get all completed executions
-    completed_executions = get_completed_executions()
-
-    if Enum.empty?(completed_executions) do
-      Logger.debug("No completed executions found")
-      :ok
-    else
-      Logger.info("Reporting #{length(completed_executions)} completed executions")
-      report_completed_executions(completed_executions)
-    end
-
-    :ok
-  end
-
-  # Private helper functions
-
-  defp maybe_start_execution_worker do
-    # Check if there's already a CommandExecutionWorker job scheduled/running
-    existing_jobs =
-      Oban.Job
-      |> where([j], j.worker == "EdgeAgent.Commands.Workers.CommandExecutionWorker")
-      |> where([j], j.state in ["available", "executing", "retryable"])
-      |> Repo.all()
-
-    if Enum.empty?(existing_jobs) do
-      Logger.info("No execution worker running, starting new one")
-
-      %{}
-      |> CommandExecutionWorker.new()
-      |> Oban.insert()
-      |> case do
-        {:ok, _job} ->
-          Logger.info("CommandExecutionWorker started successfully")
-
-        {:error, reason} ->
-          Logger.error("Failed to start CommandExecutionWorker: #{inspect(reason)}")
-      end
-    else
-      Logger.debug("CommandExecutionWorker already running, skipping")
-    end
-  end
-
-  defp get_pending_executions do
-    from(ce in CommandExecution,
-      where: ce.status == "pending",
-      order_by: [asc: ce.inserted_at]
-    )
-    |> Repo.all()
-  end
-
-  defp get_completed_executions do
-    from(ce in CommandExecution,
-      where: ce.status == "completed",
-      order_by: [asc: ce.inserted_at]
-    )
-    |> Repo.all()
   end
 
   defp execute_single_command(execution) do
@@ -168,10 +139,10 @@ defmodule EdgeAgent.Commands do
     end
   end
 
-  defp report_completed_executions(executions) do
+  defp report_executions(executions) do
     Logger.info("Attempting to report #{length(executions)} executions to admin")
 
-    Enum.each(executions, fn execution ->
+    Enum.reduce_while(executions, :ok, fn execution, _acc ->
       params = %{
         status: execution.status,
         output: execution.output,
@@ -194,13 +165,61 @@ defmodule EdgeAgent.Commands do
               )
           end
 
-        {:error, reason} ->
-          Logger.warning(
-            "Failed to report execution #{execution.id}: #{inspect(reason)}, will retry later"
-          )
+          {:cont, :ok}
 
-          # Don't delete on failure - let CommandReportWorker retry later
+        {:error, reason} ->
+          Logger.warning("Failed to report execution #{execution.id}: #{inspect(reason)}")
+
+          # Don't process remaining executions
+          # Let next cron run retry this and subsequent executions
+          {:halt, :error}
       end
     end)
+  end
+
+  defp maybe_start_worker(worker_module, worker_name) do
+    # Check if there's already a worker of this type scheduled/running
+    worker_class = "EdgeAgent.Commands.Workers.#{worker_name}"
+
+    existing_jobs =
+      Oban.Job
+      |> where([j], j.worker == ^worker_class)
+      |> where([j], j.state in ["available", "executing", "retryable"])
+      |> Repo.all()
+
+    if Enum.empty?(existing_jobs) do
+      Logger.debug("No #{worker_name} running, starting one")
+
+      %{}
+      |> worker_module.new()
+      |> Oban.insert()
+      |> case do
+        {:ok, _job} ->
+          Logger.debug("#{worker_name} started successfully")
+
+        {:error, reason} ->
+          Logger.error("Failed to start #{worker_name}: #{inspect(reason)}")
+      end
+    else
+      Logger.debug("#{worker_name} already running, skipping")
+    end
+  end
+
+  defp get_pending_executions do
+    from(ce in CommandExecution,
+      where: ce.status == "pending",
+      # FIFO order
+      order_by: [asc: ce.inserted_at]
+    )
+    |> Repo.all()
+  end
+
+  defp get_completed_executions do
+    from(ce in CommandExecution,
+      where: ce.status == "completed",
+      # OLDEST FIRST - maintains execution order
+      order_by: [asc: ce.inserted_at]
+    )
+    |> Repo.all()
   end
 end

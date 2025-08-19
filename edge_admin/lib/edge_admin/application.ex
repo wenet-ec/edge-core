@@ -8,8 +8,6 @@ defmodule EdgeAdmin.Application do
 
   require Logger
 
-  @env Mix.env()
-
   @impl true
   def start(_type, _args) do
     children = [
@@ -41,7 +39,7 @@ defmodule EdgeAdmin.Application do
               {:ok, pid}
           end
         else
-          Logger.info("Skipping bootstrap in #{@env} environment")
+          Logger.info("Skipping bootstrap in #{Mix.env()} environment")
           {:ok, pid}
         end
 
@@ -54,7 +52,7 @@ defmodule EdgeAdmin.Application do
     case Application.get_env(:edge_admin, :run_bootstrap, :auto) do
       false -> false
       true -> true
-      :auto -> @env != :test and phoenix_server_starting?()
+      :auto -> Mix.env() != :test and phoenix_server_starting?()
     end
   end
 

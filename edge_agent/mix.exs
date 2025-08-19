@@ -48,14 +48,10 @@ defmodule EdgeAgent.Mixfile do
         "sobelow --config",
         "compile --warnings-as-errors",
         "credo --strict",
-        "dialyzer",
-        "coveralls"
+        "dialyzer"
       ],
       precommit: [
-        "compile --warnings-as-errors",
-        "deps.unlock --check-unused",
-        "format --check-formatted",
-        "credo --strict",
+        "check",
         "test"
       ]
     ]

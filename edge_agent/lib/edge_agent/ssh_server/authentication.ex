@@ -18,7 +18,7 @@ defmodule EdgeAgent.SshServer.Authentication do
     "ssh-dss"
   ]
 
-  def is_auth_key(key, user) do
+  def auth_key?(key, user) do
     Logger.debug("SSH auth attempt for user: #{user}")
 
     with {:ok, node_id} <- get_node_id(),

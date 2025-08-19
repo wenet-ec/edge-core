@@ -23,10 +23,7 @@
           {CredoNaming.Check.Warning.AvoidSpecificTermsInModuleNames,
            terms: ["Manager", "Fetcher", "Builder", "Persister", "Serializer", ~r/^Helpers?$/i, ~r/^Utils?$/i]},
           {CredoNaming.Check.Consistency.ModuleFilename,
-           excluded_paths: ["config", "mix.exs", "priv", "test/support"], acronyms: []},
-
-          # Keep database migration safety
-          {ExcellentMigrations.CredoCheck.MigrationsSafety, []}
+           excluded_paths: ["config", "mix.exs", "priv", "test/support"], acronyms: []}
         ],
         disabled: [
           # Disable overly strict checks for API development

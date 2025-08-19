@@ -89,7 +89,7 @@ defmodule EdgeAgent.SshServer do
 
   @impl true
   def is_auth_key(key, user, _daemon_options) do
-    Authentication.is_auth_key(key, user)
+    Authentication.auth_key?(key, user)
   end
 
   # Private functions

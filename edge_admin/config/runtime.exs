@@ -19,6 +19,12 @@ if get_env("PHX_SERVER", :boolean) == true do
 end
 
 config :edge_admin, Corsica, origins: get_env("CORS_ALLOWED_ORIGINS", :cors)
+
+config :edge_admin, EdgeAdmin.PromEx,
+  disabled: false,
+  grafana: :disabled,
+  metrics_server: :disabled
+
 config :edge_admin, EdgeAdmin.TelemetryUI, share_key: get_env("TELEMETRY_UI_SHARE_KEY")
 
 config :edge_admin, EdgeAdminWeb.Endpoint,
@@ -36,17 +42,12 @@ config :edge_admin,
     password: get_env("BASIC_AUTH_PASSWORD")
   ]
 
-config :sentry,
-  dsn: get_env("SENTRY_DSN"),
-  environment_name: get_env("SENTRY_ENVIRONMENT_NAME")
-
 config :edge_admin,
   metrics_storage_url: System.get_env("METRICS_STORAGE_URL")
 
-config :edge_admin, EdgeAdmin.PromEx,
-  disabled: false,
-  grafana: :disabled,
-  metrics_server: :disabled
+config :sentry,
+  dsn: get_env("SENTRY_DSN"),
+  environment_name: get_env("SENTRY_ENVIRONMENT_NAME")
 
 # Tailscale library configuration
 config :tailscale,

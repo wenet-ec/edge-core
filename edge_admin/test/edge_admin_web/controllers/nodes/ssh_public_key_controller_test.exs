@@ -5,8 +5,7 @@ defmodule EdgeAdminWeb.Nodes.SshPublicKeyControllerTest do
   import EdgeAdmin.NodesFixtures
 
   @create_attrs %{
-    public_key:
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 test@example.com",
+    public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 test@example.com",
     key_name: "test-key"
   }
   @invalid_attrs %{public_key: nil, key_name: nil}
@@ -49,9 +48,7 @@ defmodule EdgeAdminWeb.Nodes.SshPublicKeyControllerTest do
       ssh_username = ssh_username_fixture()
 
       conn =
-        post(conn, ~p"/api/ssh_usernames/#{ssh_username.id}/ssh_public_keys",
-          ssh_public_key: @create_attrs
-        )
+        post(conn, ~p"/api/ssh_usernames/#{ssh_username.id}/ssh_public_keys", ssh_public_key: @create_attrs)
 
       assert %{"id" => id} = json_response(conn, 201)["data"]
 
@@ -74,9 +71,7 @@ defmodule EdgeAdminWeb.Nodes.SshPublicKeyControllerTest do
       ssh_username = ssh_username_fixture()
 
       conn =
-        post(conn, ~p"/api/ssh_usernames/#{ssh_username.id}/ssh_public_keys",
-          ssh_public_key: @invalid_attrs
-        )
+        post(conn, ~p"/api/ssh_usernames/#{ssh_username.id}/ssh_public_keys", ssh_public_key: @invalid_attrs)
 
       assert json_response(conn, 422)["errors"] != %{}
     end
@@ -85,9 +80,7 @@ defmodule EdgeAdminWeb.Nodes.SshPublicKeyControllerTest do
       fake_id = Ecto.UUID.generate()
 
       conn =
-        post(conn, ~p"/api/ssh_usernames/#{fake_id}/ssh_public_keys",
-          ssh_public_key: @create_attrs
-        )
+        post(conn, ~p"/api/ssh_usernames/#{fake_id}/ssh_public_keys", ssh_public_key: @create_attrs)
 
       assert json_response(conn, 422)["errors"] != %{}
     end

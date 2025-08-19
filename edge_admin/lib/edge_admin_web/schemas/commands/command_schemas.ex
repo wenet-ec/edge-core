@@ -4,8 +4,8 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
   OpenAPI schemas for Command resources
   """
 
-  alias OpenApiSpex.Schema
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias OpenApiSpex.Schema
 
   defmodule CommandResponse do
     @moduledoc false
@@ -106,13 +106,13 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
                 type: %Schema{
                   type: :string,
                   enum: ["all", "nodes"],
-                  description:
-                    "Targeting strategy: 'all' for all nodes, 'nodes' for specific nodes"
+                  description: "Targeting strategy: 'all' for all nodes, 'nodes' for specific nodes"
                 },
                 ids: %Schema{
                   type: :array,
                   items: %Schema{type: :string, format: :uuid},
-                  description: "Array of target type's IDs (required when type is 'nodes') (will always be deduplicated)",
+                  description:
+                    "Array of target type's IDs (required when type is 'nodes') (will always be deduplicated)",
                   example: [
                     "01234567-89ab-cdef-0123-456789abcdef",
                     "fedcba98-7654-3210-fedc-ba9876543210"

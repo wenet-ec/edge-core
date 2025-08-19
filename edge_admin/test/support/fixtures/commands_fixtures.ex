@@ -5,8 +5,9 @@ defmodule EdgeAdmin.CommandsFixtures do
   entities via the `EdgeAdmin.Commands` context.
   """
 
-  alias EdgeAdmin.Commands
   import EdgeAdmin.NodesFixtures
+
+  alias EdgeAdmin.Commands
 
   @doc """
   Generate a command.

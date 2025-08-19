@@ -14,9 +14,11 @@ defmodule EdgeAdmin.Nodes.Workers.NodeHealthCheckWorker do
 
   use Oban.Worker, queue: :vpn, max_attempts: 1
 
+  import Ecto.Query
+
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Repo
-  import Ecto.Query
+
   require Logger
 
   # HTTP request timeout in milliseconds (5 seconds)
@@ -45,11 +47,7 @@ defmodule EdgeAdmin.Nodes.Workers.NodeHealthCheckWorker do
   end
 
   defp get_nodes_with_vpn_ip do
-    from(n in EdgeAdmin.Nodes.Node,
-      where: not is_nil(n.vpn_ip),
-      select: n
-    )
-    |> Repo.all()
+    Repo.all(from(n in EdgeAdmin.Nodes.Node, where: not is_nil(n.vpn_ip), select: n))
   end
 
   defp check_node_health(node) do

@@ -12,13 +12,7 @@ defmodule EdgeAdmin.Commands.Workers.TargetNodesDispatchWorker do
   alias EdgeAdmin.Commands
 
   @impl Oban.Worker
-  def perform(%Oban.Job{
-        args: %{
-          "command_id" => command_id,
-          "node_ids" => node_ids,
-          "node_filters" => node_filters
-        }
-      }) do
+  def perform(%Oban.Job{args: %{"command_id" => command_id, "node_ids" => node_ids, "node_filters" => node_filters}}) do
     case Commands.create_executions_for_target_nodes(command_id, node_ids, node_filters) do
       {:ok, _executions} -> :ok
       {:partial_success, %{successes: _successes, errors: _errors}} -> :ok

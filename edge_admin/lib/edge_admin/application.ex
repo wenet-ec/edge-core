@@ -5,6 +5,7 @@ defmodule EdgeAdmin.Application do
   """
 
   use Application
+
   require Logger
 
   @env Mix.env()

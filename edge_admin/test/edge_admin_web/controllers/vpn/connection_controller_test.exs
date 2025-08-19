@@ -3,6 +3,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
   use EdgeAdminWeb.ConnCase, async: true
 
   import Mox
+
   alias EdgeAdmin.TailscaleMock
 
   # Make sure mocks are verified when the test exits
@@ -11,7 +12,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
   describe "GET /api/connections/self" do
     test "returns disconnected connection status", %{conn: conn} do
       disconnected_connection = build(:tailscale_connection)
-      
+
       expect(TailscaleMock, :get_connection, fn ->
         {:ok, disconnected_connection}
       end)
@@ -30,7 +31,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
 
     test "returns connected connection status", %{conn: conn} do
       connected_connection = build(:connected_tailscale_connection)
-      
+
       expect(TailscaleMock, :get_connection, fn ->
         {:ok, connected_connection}
       end)
@@ -47,13 +48,15 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
 
     test "returns connection with all timestamp fields", %{conn: conn} do
       now = DateTime.utc_now()
-      connection = build(:connected_tailscale_connection, %{
-        connected_at: now,
-        last_checked_at: now,
-        inserted_at: now,
-        updated_at: now
-      })
-      
+
+      connection =
+        build(:connected_tailscale_connection, %{
+          connected_at: now,
+          last_checked_at: now,
+          inserted_at: now,
+          updated_at: now
+        })
+
       expect(TailscaleMock, :get_connection, fn ->
         {:ok, connection}
       end)
@@ -66,7 +69,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
       assert is_binary(data["last_checked_at"])
       assert is_binary(data["inserted_at"])
       assert is_binary(data["updated_at"])
-      
+
       # Verify timestamps are valid ISO8601
       assert {:ok, _, _} = DateTime.from_iso8601(data["connected_at"])
       assert {:ok, _, _} = DateTime.from_iso8601(data["last_checked_at"])
@@ -101,18 +104,20 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
   describe "PATCH /api/connections/self" do
     test "successfully updates manual_disconnect to true (performs disconnect)", %{conn: conn} do
       original_connection = build(:connected_tailscale_connection)
-      disconnected_connection = build(:tailscale_connection, %{
-        manual_disconnect: true,
-        status: :disconnected,
-        vpn_ip: nil,
-        vpn_hostname: nil,
-        connected_at: nil
-      })
-      
+
+      disconnected_connection =
+        build(:tailscale_connection, %{
+          manual_disconnect: true,
+          status: :disconnected,
+          vpn_ip: nil,
+          vpn_hostname: nil,
+          connected_at: nil
+        })
+
       expect(TailscaleMock, :get_connection, fn ->
         {:ok, original_connection}
       end)
-      
+
       expect(TailscaleMock, :disconnect_from_vpn_manual, fn ->
         {:ok, disconnected_connection}
       end)
@@ -129,15 +134,15 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
     test "successfully updates manual_disconnect to false (re-enables auto-reconnection)", %{conn: conn} do
       original_connection = build(:tailscale_connection, %{manual_disconnect: true})
       updated_connection = build(:tailscale_connection, %{manual_disconnect: false})
-      
+
       expect(TailscaleMock, :get_connection, fn ->
         {:ok, original_connection}
       end)
-      
+
       expect(TailscaleMock, :get_connection!, fn ->
         original_connection
       end)
-      
+
       expect(TailscaleMock, :update_connection, fn ^original_connection, %{manual_disconnect: false} ->
         {:ok, updated_connection}
       end)
@@ -150,21 +155,24 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
     end
 
     test "preserves other connection fields during update", %{conn: conn} do
-      connected_connection = build(:connected_tailscale_connection, %{
-        vpn_ip: "100.64.0.15",
-        vpn_hostname: "edge-admin"
-      })
-      disconnected_connection = %{connected_connection | 
-        manual_disconnect: true,
-        status: :disconnected,
-        vpn_ip: nil,
-        connected_at: nil
+      connected_connection =
+        build(:connected_tailscale_connection, %{
+          vpn_ip: "100.64.0.15",
+          vpn_hostname: "edge-admin"
+        })
+
+      disconnected_connection = %{
+        connected_connection
+        | manual_disconnect: true,
+          status: :disconnected,
+          vpn_ip: nil,
+          connected_at: nil
       }
-      
+
       expect(TailscaleMock, :get_connection, fn ->
         {:ok, connected_connection}
       end)
-      
+
       expect(TailscaleMock, :disconnect_from_vpn_manual, fn ->
         {:ok, disconnected_connection}
       end)
@@ -181,7 +189,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
 
     test "handles empty params without changes", %{conn: conn} do
       connection = build(:tailscale_connection)
-      
+
       expect(TailscaleMock, :get_connection, fn ->
         {:ok, connection}
       end)
@@ -196,20 +204,24 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
 
     test "validates manual_disconnect field type", %{conn: conn} do
       connection = build(:tailscale_connection)
-      
+
       # Test genuinely invalid values that Ecto won't cast
       invalid_values = [
-        "invalid",  # invalid string
-        %{},        # object
-        [],         # array
-        1.5         # float
+        # invalid string
+        "invalid",
+        # object
+        %{},
+        # array
+        [],
+        # float
+        1.5
       ]
 
       for invalid_value <- invalid_values do
         expect(TailscaleMock, :get_connection, fn ->
           {:ok, connection}
         end)
-        
+
         conn = patch(conn, ~p"/api/connections/self", %{"manual_disconnect" => invalid_value})
         response = json_response(conn, 422)
 
@@ -221,15 +233,15 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
     test "ignores unknown fields in request", %{conn: conn} do
       original_connection = build(:tailscale_connection, %{manual_disconnect: true})
       updated_connection = build(:tailscale_connection, %{manual_disconnect: false})
-      
+
       expect(TailscaleMock, :get_connection, fn ->
         {:ok, original_connection}
       end)
-      
+
       expect(TailscaleMock, :get_connection!, fn ->
         original_connection
       end)
-      
+
       expect(TailscaleMock, :update_connection, fn _, %{manual_disconnect: false} ->
         {:ok, updated_connection}
       end)
@@ -238,8 +250,10 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
       params = %{
         "manual_disconnect" => false,
         "invalid_field" => "should_be_ignored",
-        "status" => "connected",  # Should be ignored in update
-        "vpn_ip" => "1.2.3.4"     # Should be ignored in update
+        # Should be ignored in update
+        "status" => "connected",
+        # Should be ignored in update
+        "vpn_ip" => "1.2.3.4"
       }
 
       conn = patch(conn, ~p"/api/connections/self", params)
@@ -263,11 +277,11 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
 
     test "handles disconnect operation errors", %{conn: conn} do
       original_connection = build(:connected_tailscale_connection)
-      
+
       expect(TailscaleMock, :get_connection, fn ->
         {:ok, original_connection}
       end)
-      
+
       expect(TailscaleMock, :disconnect_from_vpn_manual, fn ->
         {:error, :disconnect_failed}
       end)
@@ -281,15 +295,15 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
 
     test "handles update operation errors", %{conn: conn} do
       original_connection = build(:tailscale_connection, %{manual_disconnect: true})
-      
+
       expect(TailscaleMock, :get_connection, fn ->
         {:ok, original_connection}
       end)
-      
+
       expect(TailscaleMock, :get_connection!, fn ->
         original_connection
       end)
-      
+
       expect(TailscaleMock, :update_connection, fn _, _ ->
         {:error, :update_failed}
       end)
@@ -305,7 +319,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
   describe "API response format" do
     test "follows consistent JSON:API-like structure", %{conn: conn} do
       connection = build(:connected_tailscale_connection)
-      
+
       expect(TailscaleMock, :get_connection, fn ->
         {:ok, connection}
       end)
@@ -319,11 +333,18 @@ defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
 
       # Should have all expected fields
       expected_fields = [
-        "status", "vpn_ip", "vpn_hostname", "connected_at", 
-        "last_checked_at", "last_error", "last_error_at", 
-        "manual_disconnect", "inserted_at", "updated_at"
+        "status",
+        "vpn_ip",
+        "vpn_hostname",
+        "connected_at",
+        "last_checked_at",
+        "last_error",
+        "last_error_at",
+        "manual_disconnect",
+        "inserted_at",
+        "updated_at"
       ]
-      
+
       for field <- expected_fields do
         assert Map.has_key?(data, field), "Missing field: #{field}"
       end

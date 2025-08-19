@@ -132,8 +132,7 @@ defmodule EdgeAdmin.FilteringPagination do
     end
   end
 
-  defp parse_page_size(size, _default, max) when is_integer(size) and size > 0 and size <= max,
-    do: size
+  defp parse_page_size(size, _default, max) when is_integer(size) and size > 0 and size <= max, do: size
 
   defp parse_page_size(size, _default, max) when is_integer(size) and size > max, do: max
   defp parse_page_size(_, default, _max), do: default
@@ -144,7 +143,7 @@ defmodule EdgeAdmin.FilteringPagination do
     params
     |> Map.take(filterable_field_strings)
     |> Enum.reject(fn {_k, v} -> is_nil(v) or v == "" end)
-    |> Enum.into(%{})
+    |> Map.new()
   end
 
   def parse_sort(sort_param, default_sort, sortable_fields)
@@ -196,8 +195,7 @@ defmodule EdgeAdmin.FilteringPagination do
   end
 
   defp normalize_sort(sort, sortable_fields) when is_list(sort) do
-    sort
-    |> Enum.filter(fn {field, _dir} -> field in sortable_fields end)
+    Enum.filter(sort, fn {field, _dir} -> field in sortable_fields end)
   end
 
   defp normalize_sort(_sort, _sortable_fields), do: []
@@ -235,7 +233,7 @@ defmodule EdgeAdmin.FilteringPagination do
 
       # Handle comma-separated lists (IN operation)
       String.contains?(value, ",") ->
-        values = String.split(value, ",") |> Enum.map(&String.trim/1)
+        values = value |> String.split(",") |> Enum.map(&String.trim/1)
         where(query, [q], field(q, ^field) in ^values)
 
       # Handle range queries (e.g., "gte:100", "lt:50")

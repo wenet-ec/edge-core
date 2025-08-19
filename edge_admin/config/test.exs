@@ -7,7 +7,7 @@ defmodule TestEnvironment do
 
   def get_database_name do
     db_name = System.get_env("POSTGRES_DB")
-    
+
     if is_nil(db_name) do
       raise "POSTGRES_DB environment variable is required for tests"
     end

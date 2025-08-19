@@ -1,6 +1,8 @@
 # edge_admin/lib/edge_admin/nodes/ssh_username.ex
 defmodule EdgeAdmin.Nodes.SshUsername do
+  @moduledoc false
   use Ecto.Schema
+
   import Ecto.Changeset
 
   @primary_key {:id, :binary_id, autogenerate: true}

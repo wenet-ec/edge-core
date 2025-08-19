@@ -1,8 +1,9 @@
 # edge_admin/lib/edge_admin/nodes/metrics.ex
 defmodule EdgeAdmin.Nodes.Metrics.Uptime do
-  @derive Jason.Encoder
+  @moduledoc false
   use Ecto.Schema
 
+  @derive Jason.Encoder
   @primary_key false
   embedded_schema do
     field(:seconds, :integer)

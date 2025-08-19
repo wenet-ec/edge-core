@@ -1,6 +1,10 @@
 # edge_admin/config/dev.exs
 import Config
 
+config :edge_admin, EdgeAdmin.PromEx,
+  grafana: :disabled,
+  metrics_server: :disabled
+
 config :edge_admin, EdgeAdminWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4000],
   code_reloader: true,
@@ -34,7 +38,3 @@ config :phoenix, :plug_init_mode, :runtime
 # Set a higher stacktrace during development. Avoid configuring such
 # in production as building large stacktraces may be expensive.
 config :phoenix, :stacktrace_depth, 20
-
-config :edge_admin, EdgeAdmin.PromEx,
-  grafana: :disabled,
-  metrics_server: :disabled

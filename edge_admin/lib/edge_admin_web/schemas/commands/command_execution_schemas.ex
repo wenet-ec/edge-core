@@ -4,8 +4,8 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
   OpenAPI schemas for Command Execution resources
   """
 
-  alias OpenApiSpex.Schema
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias OpenApiSpex.Schema
 
   defmodule CommandExecutionResponse do
     @moduledoc false

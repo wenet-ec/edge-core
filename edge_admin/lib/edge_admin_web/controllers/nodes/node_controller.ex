@@ -5,8 +5,8 @@ defmodule EdgeAdminWeb.Nodes.NodeController do
 
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.Node
-  alias EdgeAdminWeb.Schemas.Nodes.NodeSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias EdgeAdminWeb.Schemas.Nodes.NodeSchemas
 
   action_fallback(EdgeAdminWeb.FallbackController)
 
@@ -14,8 +14,7 @@ defmodule EdgeAdminWeb.Nodes.NodeController do
 
   operation(:index,
     summary: "List all nodes",
-    description:
-      "Returns a paginated list of all registered edge nodes with filtering and sorting",
+    description: "Returns a paginated list of all registered edge nodes with filtering and sorting",
     parameters: [
       page: [
         in: :query,

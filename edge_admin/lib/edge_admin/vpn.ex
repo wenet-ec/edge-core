@@ -9,6 +9,7 @@ defmodule EdgeAdmin.VPN do
   """
 
   alias EdgeAdmin.VPN.Connection
+
   require Logger
 
   # Module configuration - allows dependency injection for testing
@@ -17,56 +18,40 @@ defmodule EdgeAdmin.VPN do
   end
 
   # Delegate all basic operations to the configured library (real or mock)
-  def connect_to_vpn(vpn_url, enrollment_key, hostname), 
+  def connect_to_vpn(vpn_url, enrollment_key, hostname),
     do: tailscale_module().connect_to_vpn(vpn_url, enrollment_key, hostname)
-  
-  def disconnect_from_vpn(), 
-    do: tailscale_module().disconnect_from_vpn()
-  
-  def check_connectivity(), 
-    do: tailscale_module().check_connectivity()
-  
-  def status_json(), 
-    do: tailscale_module().status_json()
-  
-  def connected?(status_data), 
-    do: tailscale_module().connected?(status_data)
-  
-  def start_daemon(), 
-    do: tailscale_module().start_daemon()
-  
-  def get_vpn_ip(), 
-    do: tailscale_module().get_vpn_ip()
-  
-  def get_node_by_hostname(vpn_hostname), 
-    do: tailscale_module().get_node_by_hostname(vpn_hostname)
-  
-  def list_nodes_for_user(user \\ "edge-nodes"), 
-    do: tailscale_module().list_nodes_for_user(user)
-  
-  def create_enrollment_key(user \\ "edge-nodes"), 
-    do: tailscale_module().create_enrollment_key(user)
-  
-  def get_user(username), 
-    do: tailscale_module().get_user(username)
-  
-  def get_connection(), 
-    do: tailscale_module().get_connection()
-  
-  def create_connection(attrs \\ %{}), 
-    do: tailscale_module().create_connection(attrs)
-  
-  def get_connection!(), 
-    do: tailscale_module().get_connection!()
-  
-  def check_and_update_connectivity(), 
-    do: tailscale_module().check_and_update_connectivity()
-  
-  def sync_connection_state(), 
-    do: tailscale_module().sync_connection_state()
-  
-  def disconnect_from_vpn_manual(), 
-    do: tailscale_module().disconnect_from_vpn_manual()
+
+  def disconnect_from_vpn, do: tailscale_module().disconnect_from_vpn()
+
+  def check_connectivity, do: tailscale_module().check_connectivity()
+
+  def status_json, do: tailscale_module().status_json()
+
+  def connected?(status_data), do: tailscale_module().connected?(status_data)
+
+  def start_daemon, do: tailscale_module().start_daemon()
+
+  def get_vpn_ip, do: tailscale_module().get_vpn_ip()
+
+  def get_node_by_hostname(vpn_hostname), do: tailscale_module().get_node_by_hostname(vpn_hostname)
+
+  def list_nodes_for_user(user \\ "edge-nodes"), do: tailscale_module().list_nodes_for_user(user)
+
+  def create_enrollment_key(user \\ "edge-nodes"), do: tailscale_module().create_enrollment_key(user)
+
+  def get_user(username), do: tailscale_module().get_user(username)
+
+  def get_connection, do: tailscale_module().get_connection()
+
+  def create_connection(attrs \\ %{}), do: tailscale_module().create_connection(attrs)
+
+  def get_connection!, do: tailscale_module().get_connection!()
+
+  def check_and_update_connectivity, do: tailscale_module().check_and_update_connectivity()
+
+  def sync_connection_state, do: tailscale_module().sync_connection_state()
+
+  def disconnect_from_vpn_manual, do: tailscale_module().disconnect_from_vpn_manual()
 
   # EdgeAdmin-specific hostname provider
   defp hostname_provider, do: "edge-admin"
@@ -87,26 +72,32 @@ defmodule EdgeAdmin.VPN do
   This function uses Ecto changesets for validation and provides detailed error information.
   """
   def update_connection_from_params(params) do
-    with {:ok, tailscale_conn} <- get_connection(),
-         embedded_conn <- Connection.from_tailscale_connection(tailscale_conn),
-         changeset <- Connection.update_changeset(embedded_conn, params) do
+    with {:ok, tailscale_conn} <- get_connection() do
+      embedded_conn = Connection.from_tailscale_connection(tailscale_conn)
+      changeset = Connection.update_changeset(embedded_conn, params)
 
       if changeset.valid? do
         case Ecto.Changeset.get_change(changeset, :manual_disconnect) do
           true ->
             Logger.info("VPN: Performing manual disconnect")
+
             case disconnect_from_vpn_manual() do
               {:ok, updated_tailscale_conn} ->
                 {:ok, Connection.from_tailscale_connection(updated_tailscale_conn)}
-              error -> error
+
+              error ->
+                error
             end
 
           false ->
             Logger.info("VPN: Re-enabling auto-reconnection")
+
             case update_connection(%{manual_disconnect: false}) do
               {:ok, updated_tailscale_conn} ->
                 {:ok, Connection.from_tailscale_connection(updated_tailscale_conn)}
-              error -> error
+
+              error ->
+                error
             end
 
           nil ->
@@ -126,14 +117,12 @@ defmodule EdgeAdmin.VPN do
   - When manual_disconnect is false: Updates flag to allow auto-reconnection
   """
   def update_connection_manual_disconnect(manual_disconnect) when is_boolean(manual_disconnect) do
-    case manual_disconnect do
-      true ->
-        Logger.info("VPN: Performing manual disconnect")
-        disconnect_from_vpn_manual()
-
-      false ->
-        Logger.info("VPN: Re-enabling auto-reconnection")
-        update_connection(%{manual_disconnect: false})
+    if manual_disconnect do
+      Logger.info("VPN: Performing manual disconnect")
+      disconnect_from_vpn_manual()
+    else
+      Logger.info("VPN: Re-enabling auto-reconnection")
+      update_connection(%{manual_disconnect: false})
     end
   end
 

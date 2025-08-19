@@ -2,7 +2,7 @@
 defmodule EdgeAdmin.TailscaleBehaviour do
   @moduledoc """
   Behaviour defining the interface for Tailscale module operations.
-  
+
   This behaviour allows us to swap the real Tailscale implementation
   with mocks during testing, ensuring we test our business logic
   without depending on external VPN services.

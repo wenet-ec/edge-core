@@ -8,15 +8,14 @@ defmodule EdgeAdmin.Commands do
   """
 
   import Ecto.Query, warn: false
-  alias EdgeAdmin.Repo
+
+  alias EdgeAdmin.Commands.Command
+  alias EdgeAdmin.Commands.CommandExecution
+  alias EdgeAdmin.Commands.Workers.TargetAllDispatchWorker
+  alias EdgeAdmin.Commands.Workers.TargetNodesDispatchWorker
   alias EdgeAdmin.FilteringPagination
   alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Commands.{Command, CommandExecution}
-
-  alias EdgeAdmin.Commands.Workers.{
-    TargetAllDispatchWorker,
-    TargetNodesDispatchWorker
-  }
+  alias EdgeAdmin.Repo
 
   require Logger
 
@@ -170,9 +169,7 @@ defmodule EdgeAdmin.Commands do
   end
 
   defp dispatch_executions_with_targeting(command, attrs) do
-    Logger.warning(
-      "No targeting specification found for command #{command.id}, attrs: #{inspect(attrs)}"
-    )
+    Logger.warning("No targeting specification found for command #{command.id}, attrs: #{inspect(attrs)}")
 
     :ok
   end
@@ -186,7 +183,7 @@ defmodule EdgeAdmin.Commands do
     Logger.info("Creating executions for #{length(nodes)} filtered nodes")
 
     # Truncate to match PostgreSQL precision
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    now = DateTime.truncate(DateTime.utc_now(), :second)
 
     executions =
       Enum.map(nodes, fn node ->
@@ -208,7 +205,7 @@ defmodule EdgeAdmin.Commands do
 
       executions_with_command_text =
         Enum.map(inserted_executions, fn execution ->
-          %CommandExecution{execution | command_text: command.command_text}
+          %{execution | command_text: command.command_text}
         end)
 
       {:ok, executions_with_command_text}
@@ -276,9 +273,7 @@ defmodule EdgeAdmin.Commands do
             end
 
           {:error, changeset} ->
-            Logger.error(
-              "Failed to create execution for node #{node.id}: #{inspect(changeset.errors)}"
-            )
+            Logger.error("Failed to create execution for node #{node.id}: #{inspect(changeset.errors)}")
 
             {:error, changeset}
         end
@@ -294,11 +289,9 @@ defmodule EdgeAdmin.Commands do
   end
 
   defp count_pending_executions_for_node(node_id) do
-    from(ce in CommandExecution,
-      where: ce.node_id == ^node_id and ce.status == "pending",
-      select: count(ce.id)
+    Repo.one(
+      from(ce in CommandExecution, where: ce.node_id == ^node_id and ce.status == "pending", select: count(ce.id))
     )
-    |> Repo.one()
   end
 
   # Helper function to get all nodes across all pages
@@ -369,9 +362,7 @@ defmodule EdgeAdmin.Commands do
               :ok
 
             {:error, reason} ->
-              Logger.warning(
-                "Failed to send execution #{execution.id} to node #{node.vpn_ip}: #{inspect(reason)}"
-              )
+              Logger.warning("Failed to send execution #{execution.id} to node #{node.vpn_ip}: #{inspect(reason)}")
 
               :error
           end

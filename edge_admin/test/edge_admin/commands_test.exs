@@ -3,10 +3,10 @@ defmodule EdgeAdmin.CommandsTest do
   use EdgeAdmin.DataCase
   use Oban.Testing, repo: EdgeAdmin.Repo
 
-  alias EdgeAdmin.Commands
-
   import EdgeAdmin.CommandsFixtures
   import EdgeAdmin.NodesFixtures
+
+  alias EdgeAdmin.Commands
 
   describe "command validation" do
     test "validates command_text format" do
@@ -112,7 +112,7 @@ defmodule EdgeAdmin.CommandsTest do
     test "update_command/2 with valid data updates command" do
       command = command_fixture()
       update_attrs = %{command_text: "updated command"}
-      
+
       assert {:ok, updated_command} = Commands.update_command(command, update_attrs)
       assert updated_command.command_text == "updated command"
     end
@@ -135,7 +135,7 @@ defmodule EdgeAdmin.CommandsTest do
       command = command_fixture()
       node = node_fixture()
       execution = command_execution_fixture(%{command_id: command.id, node_id: node.id})
-      
+
       fetched = Commands.get_command_execution!(execution.id)
       assert fetched.id == execution.id
       assert fetched.command_text == command.command_text
@@ -143,9 +143,9 @@ defmodule EdgeAdmin.CommandsTest do
 
     test "update_command_execution/2 updates execution" do
       execution = command_execution_fixture()
-      completed_time = DateTime.utc_now() |> DateTime.truncate(:second)
+      completed_time = DateTime.truncate(DateTime.utc_now(), :second)
       update_attrs = %{status: "completed", exit_code: 0, completed_at: completed_time}
-      
+
       assert {:ok, updated} = Commands.update_command_execution(execution, update_attrs)
       assert updated.status == "completed"
       assert updated.exit_code == 0
@@ -176,7 +176,7 @@ defmodule EdgeAdmin.CommandsTest do
 
       assert {:ok, command} = Commands.create_command_and_dispatch_executions(attrs)
       assert command.command_text == "echo test"
-      
+
       # Should have enqueued Oban job
       assert_enqueued(worker: EdgeAdmin.Commands.Workers.TargetAllDispatchWorker)
     end
@@ -184,7 +184,7 @@ defmodule EdgeAdmin.CommandsTest do
     test "creates command and dispatches for specific nodes" do
       node1 = node_fixture()
       node2 = node_fixture()
-      
+
       attrs = %{
         "command_text" => "pwd",
         "targeting" => %{
@@ -195,19 +195,20 @@ defmodule EdgeAdmin.CommandsTest do
 
       assert {:ok, command} = Commands.create_command_and_dispatch_executions(attrs)
       assert command.command_text == "pwd"
-      
+
       # Should have enqueued Oban job for specific nodes
       assert_enqueued(worker: EdgeAdmin.Commands.Workers.TargetNodesDispatchWorker)
     end
 
     test "returns error for invalid command" do
       attrs = %{
-        "command_text" => "",  # Invalid
+        # Invalid
+        "command_text" => "",
         "targeting" => %{"type" => "all"}
       }
 
       assert {:error, changeset} = Commands.create_command_and_dispatch_executions(attrs)
-      assert changeset.errors[:command_text] != nil
+      assert changeset.errors[:command_text]
     end
   end
 

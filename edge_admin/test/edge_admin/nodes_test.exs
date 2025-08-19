@@ -2,23 +2,25 @@
 defmodule EdgeAdmin.NodesTest do
   use EdgeAdmin.DataCase
 
+  import EdgeAdmin.NodesFixtures
+
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.Node
   alias EdgeAdmin.Nodes.SshUsername
-  import EdgeAdmin.NodesFixtures
 
   describe "node CRUD operations" do
     test "get_node!/1 returns node with virtual fields" do
       node = node_fixture()
       fetched = Nodes.get_node!(node.id)
       assert fetched.id == node.id
-      assert fetched.vpn_hostname != nil  # Virtual field populated
+      # Virtual field populated
+      assert fetched.vpn_hostname
     end
 
     test "update_node/2 with valid data updates the node" do
       node = node_fixture()
       update_attrs = %{status: "offline", vpn_ip: "100.64.0.99"}
-      
+
       assert {:ok, updated_node} = Nodes.update_node(node, update_attrs)
       assert updated_node.status == "offline"
       assert updated_node.vpn_ip == "100.64.0.99"
@@ -41,7 +43,7 @@ defmodule EdgeAdmin.NodesTest do
     test "list_nodes_with_filtering_pagination returns paginated results" do
       _node1 = node_fixture(%{status: "online"})
       _node2 = node_fixture(%{status: "offline"})
-      
+
       result = Nodes.list_nodes_with_filtering_pagination(%{})
       assert length(result.data) >= 2
       assert result.page == 1
@@ -50,9 +52,9 @@ defmodule EdgeAdmin.NodesTest do
     test "filters nodes by status" do
       _online_node = node_fixture(%{status: "online"})
       _offline_node = node_fixture(%{status: "offline"})
-      
+
       result = Nodes.list_nodes_with_filtering_pagination(%{"status" => "online"})
-      
+
       # Should only return online nodes
       Enum.each(result.data, fn node ->
         assert node.status == "online"
@@ -62,13 +64,15 @@ defmodule EdgeAdmin.NodesTest do
     test "sorts nodes by specified field" do
       _node1 = node_fixture(%{status: "offline"})
       _node2 = node_fixture(%{status: "online"})
-      
-      result = Nodes.list_nodes_with_filtering_pagination(%{
-        "sort" => "status:asc",
-        "page_size" => "10"
-      })
-      
-      statuses = Enum.map(result.data, & &1.status) |> Enum.filter(& &1 != nil)
+
+      result =
+        Nodes.list_nodes_with_filtering_pagination(%{
+          "sort" => "status:asc",
+          "page_size" => "10"
+        })
+
+      statuses = result.data |> Enum.map(& &1.status) |> Enum.filter(&(&1 != nil))
+
       if length(statuses) >= 2 do
         assert List.first(statuses) <= List.last(statuses)
       end
@@ -112,7 +116,7 @@ defmodule EdgeAdmin.NodesTest do
       invalid_uuid = Ecto.UUID.generate()
       invalid_attrs = %{id: invalid_uuid, id_type: "invalid_type"}
       assert {:error, %Ecto.Changeset{} = changeset} = Nodes.create_node(invalid_attrs)
-      assert changeset.errors[:id_type] != nil
+      assert changeset.errors[:id_type]
     end
 
     test "populates virtual fields correctly" do
@@ -440,8 +444,7 @@ defmodule EdgeAdmin.NodesTest do
       ssh_username = ssh_username_fixture()
 
       valid_attrs = %{
-        public_key:
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 test@example.com",
+        public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 test@example.com",
         key_name: "laptop_key",
         ssh_username_id: ssh_username.id
       }
@@ -460,8 +463,7 @@ defmodule EdgeAdmin.NodesTest do
       ssh_username = ssh_username_fixture()
 
       attrs = %{
-        public_key:
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 test@example.com",
+        public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 test@example.com",
         key_name: "laptop_key",
         ssh_username_id: ssh_username.id
       }
@@ -530,13 +532,12 @@ defmodule EdgeAdmin.NodesTest do
 
       # Test that different algorithms are detected correctly
       algorithm_tests = [
-        {"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8",
-         "ssh-ed25519"}
+        {"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8", "ssh-ed25519"}
         # You can add more when you have valid test keys for other algorithms
       ]
 
       for {key, expected_algorithm} <- algorithm_tests do
-        assert {:ok, ^expected_algorithm} = EdgeAdmin.Nodes.SshPublicKey.validate_key_format(key)
+        assert {:ok, ^expected_algorithm} = SshPublicKey.validate_key_format(key)
       end
 
       # Invalid keys should fail validation
@@ -563,18 +564,18 @@ defmodule EdgeAdmin.NodesTest do
         }
 
         assert {:error, %Ecto.Changeset{} = changeset} = Nodes.create_ssh_public_key(attrs)
-        assert changeset.errors[:public_key] != nil
+        assert changeset.errors[:public_key]
       end
     end
 
     test "SshPublicKey.validate_key_format/1 utility function" do
       # Test the utility function directly
       assert {:ok, "ssh-ed25519"} =
-               EdgeAdmin.Nodes.SshPublicKey.validate_key_format(
+               SshPublicKey.validate_key_format(
                  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8"
                )
 
-      assert {:error, _} = EdgeAdmin.Nodes.SshPublicKey.validate_key_format("invalid-key")
+      assert {:error, _} = SshPublicKey.validate_key_format("invalid-key")
     end
   end
 

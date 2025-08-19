@@ -1,6 +1,8 @@
 # edge_admin/lib/edge_admin/nodes/ssh_public_key.ex
 defmodule EdgeAdmin.Nodes.SshPublicKey do
+  @moduledoc false
   use Ecto.Schema
+
   import Ecto.Changeset
 
   @primary_key {:id, :binary_id, autogenerate: true}

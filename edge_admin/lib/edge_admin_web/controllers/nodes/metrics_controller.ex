@@ -4,8 +4,8 @@ defmodule EdgeAdminWeb.Nodes.MetricsController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdminWeb.Schemas.Nodes.MetricsSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias EdgeAdminWeb.Schemas.Nodes.MetricsSchemas
 
   action_fallback(EdgeAdminWeb.FallbackController)
 

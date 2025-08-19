@@ -4,8 +4,8 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
   OpenAPI schemas for Node resources
   """
 
-  alias OpenApiSpex.Schema
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias OpenApiSpex.Schema
 
   defmodule NodeResponse do
     @moduledoc false

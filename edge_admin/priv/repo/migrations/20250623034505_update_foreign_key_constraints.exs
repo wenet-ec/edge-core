@@ -1,4 +1,5 @@
 defmodule EdgeAdmin.Repo.Migrations.UpdateForeignKeyConstraints do
+  @moduledoc false
   use Ecto.Migration
 
   def up do

@@ -112,9 +112,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
       command_execution = command_execution_fixture()
 
       conn =
-        patch(conn, ~p"/api/command_executions/#{command_execution}",
-          command_execution: @update_attrs
-        )
+        patch(conn, ~p"/api/command_executions/#{command_execution}", command_execution: @update_attrs)
 
       response = json_response(conn, 200)["data"]
       assert response["status"] == "completed"
@@ -126,9 +124,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
       command_execution = command_execution_fixture()
 
       conn =
-        patch(conn, ~p"/api/command_executions/#{command_execution}",
-          command_execution: @invalid_attrs
-        )
+        patch(conn, ~p"/api/command_executions/#{command_execution}", command_execution: @invalid_attrs)
 
       assert json_response(conn, 422)["errors"] != %{}
     end
@@ -145,7 +141,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionControllerTest do
       command_execution = command_execution_fixture()
       completed_time = ~U[2025-06-17 12:05:00Z]
 
-      attrs = Map.merge(@update_attrs, %{completed_at: completed_time})
+      attrs = Map.put(@update_attrs, :completed_at, completed_time)
 
       conn =
         patch(conn, ~p"/api/command_executions/#{command_execution}", command_execution: attrs)

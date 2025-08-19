@@ -5,8 +5,8 @@ defmodule EdgeAdminWeb.Nodes.SshUsernameController do
 
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.SshUsername
-  alias EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas
 
   action_fallback(EdgeAdminWeb.FallbackController)
 
@@ -46,9 +46,7 @@ defmodule EdgeAdminWeb.Nodes.SshUsernameController do
       ]
     ],
     responses: %{
-      200 =>
-        {"Paginated list of SSH usernames", "application/json",
-         SshUsernameSchemas.SshUsernamePaginatedResponse}
+      200 => {"Paginated list of SSH usernames", "application/json", SshUsernameSchemas.SshUsernamePaginatedResponse}
     }
   )
 
@@ -67,12 +65,9 @@ defmodule EdgeAdminWeb.Nodes.SshUsernameController do
         schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ]
     ],
-    request_body:
-      {"SSH username creation data", "application/json",
-       SshUsernameSchemas.SshUsernameCreateRequest},
+    request_body: {"SSH username creation data", "application/json", SshUsernameSchemas.SshUsernameCreateRequest},
     responses: %{
-      201 =>
-        {"SSH username created", "application/json", SshUsernameSchemas.SshUsernameSingleResponse},
+      201 => {"SSH username created", "application/json", SshUsernameSchemas.SshUsernameSingleResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
     }
   )
@@ -99,8 +94,7 @@ defmodule EdgeAdminWeb.Nodes.SshUsernameController do
       ]
     ],
     responses: %{
-      200 =>
-        {"SSH username details", "application/json", SshUsernameSchemas.SshUsernameSingleResponse},
+      200 => {"SSH username details", "application/json", SshUsernameSchemas.SshUsernameSingleResponse},
       404 => {"SSH username not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )

@@ -1,4 +1,5 @@
 defmodule EdgeAdmin.Repo.Migrations.AllowNullNodeIdInCommandExecutions do
+  @moduledoc false
   use Ecto.Migration
 
   def change do

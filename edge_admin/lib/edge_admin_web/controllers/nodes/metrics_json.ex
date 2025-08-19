@@ -6,7 +6,8 @@ defmodule EdgeAdminWeb.Nodes.MetricsJSON do
   def index(%{metrics: metrics, node_id: node_id}) do
     %{
       data:
-        Map.put(metrics, :node_id, node_id)
+        metrics
+        |> Map.put(:node_id, node_id)
         |> Map.put(:timestamp, DateTime.utc_now())
     }
   end

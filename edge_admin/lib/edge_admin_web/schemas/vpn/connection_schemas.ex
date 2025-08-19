@@ -56,8 +56,7 @@ defmodule EdgeAdminWeb.Schemas.VPN.ConnectionSchemas do
         },
         manual_disconnect: %Schema{
           type: :boolean,
-          description:
-            "Controls auto-reconnection behavior - when true, prevents automatic reconnection attempts"
+          description: "Controls auto-reconnection behavior - when true, prevents automatic reconnection attempts"
         },
         inserted_at: %Schema{
           type: :string,

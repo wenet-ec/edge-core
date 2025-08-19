@@ -1,4 +1,5 @@
 defmodule EdgeAdmin.Repo.Migrations.AddUniqueIndexToCommandExecutions do
+  @moduledoc false
   use Ecto.Migration
 
   def change do

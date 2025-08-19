@@ -1,6 +1,8 @@
 # edge_admin/lib/edge_admin/nodes/node.ex
 defmodule EdgeAdmin.Nodes.Node do
+  @moduledoc false
   use Ecto.Schema
+
   import Ecto.Changeset
 
   @primary_key {:id, :binary_id, autogenerate: false}
@@ -63,8 +65,7 @@ defmodule EdgeAdmin.Nodes.Node do
   def temporary?(%__MODULE__{id_type: "temporary_id"}), do: true
   def temporary?(_), do: false
 
-  def persistent?(%__MODULE__{id_type: id_type}) when id_type in ["machine_id", "hardware_id"],
-    do: true
+  def persistent?(%__MODULE__{id_type: id_type}) when id_type in ["machine_id", "hardware_id"], do: true
 
   def persistent?(_), do: false
 end

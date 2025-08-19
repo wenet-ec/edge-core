@@ -18,9 +18,9 @@ defmodule EdgeAdmin.Bootstrap do
   - Clear separation of concerns between steps
   """
 
-  require Logger
-
   alias EdgeAdmin.VPN
+
+  require Logger
 
   @doc """
   Runs the complete bootstrap sequence.
@@ -48,7 +48,7 @@ defmodule EdgeAdmin.Bootstrap do
     _vpn_module = Keyword.get(opts, :vpn_module, VPN)
     skip_vpn = Keyword.get(opts, :skip_vpn, false)
 
-    result = 
+    result =
       if skip_vpn do
         Logger.info("Skipping VPN setup as requested")
         :ok

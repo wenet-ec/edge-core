@@ -41,9 +41,7 @@ defmodule EdgeAdminWeb.Commands.CommandController do
       ]
     ],
     responses: %{
-      200 =>
-        {"Paginated list of commands", "application/json",
-         CommandSchemas.CommandPaginatedResponse}
+      200 => {"Paginated list of commands", "application/json", CommandSchemas.CommandPaginatedResponse}
     }
   )
 
@@ -63,11 +61,9 @@ defmodule EdgeAdminWeb.Commands.CommandController do
 
     Node filters can be applied to any targeting type to further refine which nodes receive the command.
     """,
-    request_body:
-      {"Command creation parameters", "application/json", CommandSchemas.CommandCreateRequest},
+    request_body: {"Command creation parameters", "application/json", CommandSchemas.CommandCreateRequest},
     responses: %{
-      201 =>
-        {"Command created successfully", "application/json", CommandSchemas.CommandSingleResponse},
+      201 => {"Command created successfully", "application/json", CommandSchemas.CommandSingleResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
     }
   )

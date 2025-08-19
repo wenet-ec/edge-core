@@ -3,9 +3,10 @@ defmodule EdgeAdmin.VPNTest do
   use EdgeAdmin.DataCase, async: true
 
   import Mox
+
+  alias EdgeAdmin.TailscaleMock
   alias EdgeAdmin.VPN
   alias EdgeAdmin.VPN.Connection
-  alias EdgeAdmin.TailscaleMock
 
   # Make sure mocks are verified when the test exits
   setup :verify_on_exit!
@@ -29,7 +30,7 @@ defmodule EdgeAdmin.VPNTest do
 
     test "get_connection/0 delegates to Tailscale module" do
       connection = build(:tailscale_connection)
-      
+
       expect(TailscaleMock, :get_connection, fn ->
         {:ok, connection}
       end)
@@ -39,7 +40,7 @@ defmodule EdgeAdmin.VPNTest do
 
     test "create_enrollment_key/1 delegates to Tailscale module" do
       enrollment_data = build(:enrollment_key)
-      
+
       expect(TailscaleMock, :create_enrollment_key, fn "edge-nodes" ->
         {:ok, enrollment_data}
       end)
@@ -52,11 +53,11 @@ defmodule EdgeAdmin.VPNTest do
     test "successfully updates connection with valid attributes" do
       connection = build(:tailscale_connection)
       updated_connection = %{connection | status: :connected, vpn_ip: "100.64.0.10"}
-      
+
       expect(TailscaleMock, :get_connection!, fn ->
         connection
       end)
-      
+
       expect(TailscaleMock, :update_connection, fn ^connection, %{status: :connected} ->
         {:ok, updated_connection}
       end)
@@ -79,11 +80,11 @@ defmodule EdgeAdmin.VPNTest do
     test "successfully updates with valid manual_disconnect: true" do
       connection = build(:tailscale_connection)
       disconnected_connection = %{connection | manual_disconnect: true, status: :disconnected}
-      
+
       expect(TailscaleMock, :get_connection, fn ->
         {:ok, connection}
       end)
-      
+
       expect(TailscaleMock, :disconnect_from_vpn_manual, fn ->
         {:ok, disconnected_connection}
       end)
@@ -96,15 +97,15 @@ defmodule EdgeAdmin.VPNTest do
     test "successfully updates with valid manual_disconnect: false" do
       connection = build(:tailscale_connection, %{manual_disconnect: true})
       updated_connection = %{connection | manual_disconnect: false}
-      
+
       expect(TailscaleMock, :get_connection, fn ->
         {:ok, connection}
       end)
-      
+
       expect(TailscaleMock, :get_connection!, fn ->
         connection
       end)
-      
+
       expect(TailscaleMock, :update_connection, fn ^connection, %{manual_disconnect: false} ->
         {:ok, updated_connection}
       end)
@@ -116,7 +117,7 @@ defmodule EdgeAdmin.VPNTest do
 
     test "returns unchanged connection when manual_disconnect is nil" do
       connection = build(:tailscale_connection)
-      
+
       expect(TailscaleMock, :get_connection, fn ->
         {:ok, connection}
       end)
@@ -128,7 +129,7 @@ defmodule EdgeAdmin.VPNTest do
 
     test "returns error for invalid parameters" do
       connection = build(:tailscale_connection)
-      
+
       expect(TailscaleMock, :get_connection, fn ->
         {:ok, connection}
       end)
@@ -153,7 +154,7 @@ defmodule EdgeAdmin.VPNTest do
   describe "update_connection_manual_disconnect/1" do
     test "performs manual disconnect when true" do
       disconnected_connection = build(:tailscale_connection, %{manual_disconnect: true, status: :disconnected})
-      
+
       expect(TailscaleMock, :disconnect_from_vpn_manual, fn ->
         {:ok, disconnected_connection}
       end)
@@ -165,11 +166,11 @@ defmodule EdgeAdmin.VPNTest do
 
     test "re-enables auto-reconnection when false" do
       connection = build(:tailscale_connection, %{manual_disconnect: false})
-      
+
       expect(TailscaleMock, :update_connection, fn _, %{manual_disconnect: false} ->
         {:ok, connection}
       end)
-      
+
       expect(TailscaleMock, :get_connection!, fn ->
         build(:tailscale_connection, %{manual_disconnect: true})
       end)
@@ -181,7 +182,7 @@ defmodule EdgeAdmin.VPNTest do
 
   describe "attempt_auto_reconnection/0" do
     test "attempts reconnection with EdgeAdmin configuration" do
-      expect(TailscaleMock, :attempt_auto_reconnection, fn 
+      expect(TailscaleMock, :attempt_auto_reconnection, fn
         "http://test-vpn:8080", "test-key", "edge-admin" ->
           {:ok, %{status: :reconnected, message: "Auto-reconnection successful"}}
       end)
@@ -201,8 +202,8 @@ defmodule EdgeAdmin.VPNTest do
   describe "connect_to_vpn_manual/0" do
     test "connects manually with EdgeAdmin configuration" do
       connected_connection = build(:connected_tailscale_connection)
-      
-      expect(TailscaleMock, :connect_to_vpn_manual, fn 
+
+      expect(TailscaleMock, :connect_to_vpn_manual, fn
         "http://test-vpn:8080", "test-key", "edge-admin" ->
           {:ok, connected_connection}
       end)
@@ -216,7 +217,7 @@ defmodule EdgeAdmin.VPNTest do
   describe "create_enrollment_key_with_error_handling/0" do
     test "returns enrollment data on success" do
       enrollment_data = build(:enrollment_key)
-      
+
       expect(TailscaleMock, :create_enrollment_key, fn "edge-nodes" ->
         {:ok, enrollment_data}
       end)
@@ -229,8 +230,8 @@ defmodule EdgeAdmin.VPNTest do
         {:error, :vpn_service_unavailable}
       end)
 
-      assert {:error, :vpn_service_unavailable, "VPN service is currently unavailable"} = 
-        VPN.create_enrollment_key_with_error_handling()
+      assert {:error, :vpn_service_unavailable, "VPN service is currently unavailable"} =
+               VPN.create_enrollment_key_with_error_handling()
     end
 
     test "handles user not found error" do
@@ -238,8 +239,8 @@ defmodule EdgeAdmin.VPNTest do
         {:error, :user_not_found}
       end)
 
-      assert {:error, :internal_server_error, "edge-nodes user not found in VPN system"} = 
-        VPN.create_enrollment_key_with_error_handling()
+      assert {:error, :internal_server_error, "edge-nodes user not found in VPN system"} =
+               VPN.create_enrollment_key_with_error_handling()
     end
 
     test "handles other errors" do
@@ -254,7 +255,7 @@ defmodule EdgeAdmin.VPNTest do
   describe "get_connection_as_embedded/0" do
     test "transforms Tailscale connection to EdgeAdmin connection" do
       tailscale_conn = build(:connected_tailscale_connection)
-      
+
       expect(TailscaleMock, :get_connection, fn ->
         {:ok, tailscale_conn}
       end)
@@ -277,7 +278,7 @@ defmodule EdgeAdmin.VPNTest do
   describe "environment configuration" do
     test "uses Application environment for VPN URL and enrollment key" do
       # VPN URL and enrollment key are set in test_helper.exs
-      expect(TailscaleMock, :attempt_auto_reconnection, fn 
+      expect(TailscaleMock, :attempt_auto_reconnection, fn
         "http://test-vpn:8080", "test-key", "edge-admin" ->
           {:ok, %{status: :reconnected}}
       end)
@@ -293,7 +294,7 @@ defmodule EdgeAdmin.VPNTest do
       original_enrollment_key = Application.get_env(:edge_admin, :enrollment_key)
       original_sys_vpn_url = System.get_env("VPN_URL")
       original_sys_enrollment_key = System.get_env("ENROLLMENT_KEY")
-      
+
       Application.delete_env(:edge_admin, :vpn_url)
       Application.delete_env(:edge_admin, :enrollment_key)
       System.delete_env("VPN_URL")

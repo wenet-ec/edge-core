@@ -4,9 +4,10 @@ defmodule EdgeAdminWeb.VPN.ConnectionController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.VPN
-  alias EdgeAdminWeb.Schemas.VPN.ConnectionSchemas
-  alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.ChangesetJSON
+  alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias EdgeAdminWeb.Schemas.VPN.ConnectionSchemas
+
   action_fallback(EdgeAdminWeb.FallbackController)
 
   tags(["VPN.Connection"])
@@ -15,8 +16,7 @@ defmodule EdgeAdminWeb.VPN.ConnectionController do
     summary: "Get VPN connection status",
     description: "Retrieve the current VPN connection status and details",
     responses: %{
-      200 =>
-        {"VPN connection details", "application/json", ConnectionSchemas.ConnectionSingleResponse}
+      200 => {"VPN connection details", "application/json", ConnectionSchemas.ConnectionSingleResponse}
     }
   )
 
@@ -40,13 +40,9 @@ defmodule EdgeAdminWeb.VPN.ConnectionController do
   operation(:update,
     summary: "Update VPN connection",
     description: "Update VPN connection properties and settings",
-    request_body:
-      {"VPN connection update parameters", "application/json",
-       ConnectionSchemas.ConnectionUpdateRequest},
+    request_body: {"VPN connection update parameters", "application/json", ConnectionSchemas.ConnectionUpdateRequest},
     responses: %{
-      200 =>
-        {"VPN connection updated successfully", "application/json",
-         ConnectionSchemas.ConnectionSingleResponse},
+      200 => {"VPN connection updated successfully", "application/json", ConnectionSchemas.ConnectionSingleResponse},
       400 => {"Invalid request", "application/json", CommonSchemas.GenericErrorResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
     }

@@ -5,17 +5,20 @@ defmodule EdgeAdmin.Nodes do
   """
 
   import Ecto.Query, warn: false
-  alias EdgeAdmin.Repo
-  alias EdgeAdmin.Nodes.Node
-  alias EdgeAdmin.Nodes.SshUsername
-  alias EdgeAdmin.Nodes.SshPublicKey
-  alias EdgeAdmin.Nodes.Metrics
+
   alias EdgeAdmin.FilteringPagination
+  alias EdgeAdmin.Nodes.Metrics
+  alias EdgeAdmin.Nodes.Node
+  alias EdgeAdmin.Nodes.SshPublicKey
+  alias EdgeAdmin.Nodes.SshUsername
+  alias EdgeAdmin.Repo
   alias EdgeAdmin.VPN
+
   require Logger
 
   def get_node!(id) do
-    Repo.get!(Node, id)
+    Node
+    |> Repo.get!(id)
     |> Node.populate_virtual_fields()
   end
 
@@ -63,11 +66,8 @@ defmodule EdgeAdmin.Nodes do
   end
 
   def create_node_with_vpn_info(attrs \\ %{}) do
-    with {:ok, node} <- create_node(attrs),
-         {:ok, node_with_vpn_info} <- fetch_vpn_info(node) do
-      {:ok, node_with_vpn_info}
-    else
-      error -> error
+    with {:ok, node} <- create_node(attrs) do
+      fetch_vpn_info(node)
     end
   end
 
@@ -195,11 +195,9 @@ defmodule EdgeAdmin.Nodes do
   end
 
   defp get_node_result(node_id) do
-    try do
-      {:ok, get_node!(node_id)}
-    rescue
-      Ecto.NoResultsError -> {:error, :not_found}
-    end
+    {:ok, get_node!(node_id)}
+  rescue
+    Ecto.NoResultsError -> {:error, :not_found}
   end
 
   defp fetch_current_node_metrics(%Node{vpn_ip: nil}), do: {:error, :no_vpn_ip}
@@ -230,10 +228,8 @@ defmodule EdgeAdmin.Nodes do
          "(1 - (node_memory_MemAvailable_bytes{instance=\"#{instance}\"} / node_memory_MemTotal_bytes{instance=\"#{instance}\"})) * 100"},
 
         # Disk metrics (root filesystem)
-        {"disk_total_bytes",
-         "node_filesystem_size_bytes{instance=\"#{instance}\",mountpoint=\"/\"}"},
-        {"disk_available_bytes",
-         "node_filesystem_avail_bytes{instance=\"#{instance}\",mountpoint=\"/\"}"},
+        {"disk_total_bytes", "node_filesystem_size_bytes{instance=\"#{instance}\",mountpoint=\"/\"}"},
+        {"disk_available_bytes", "node_filesystem_avail_bytes{instance=\"#{instance}\",mountpoint=\"/\"}"},
         {"disk_usage_percent",
          "100 - ((node_filesystem_avail_bytes{instance=\"#{instance}\",mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{instance=\"#{instance}\",mountpoint=\"/\"})"},
 
@@ -264,15 +260,13 @@ defmodule EdgeAdmin.Nodes do
   end
 
   defp build_validated_metrics(raw_metrics, node_id) do
-    try do
-      metrics = Metrics.from_raw_metrics(raw_metrics, node_id)
-      {:ok, metrics}
-    rescue
-      Ecto.InvalidChangesetError ->
-        {:error, :invalid_metrics_data}
-    catch
-      {:error, %Ecto.Changeset{}} = error -> error
-    end
+    metrics = Metrics.from_raw_metrics(raw_metrics, node_id)
+    {:ok, metrics}
+  rescue
+    Ecto.InvalidChangesetError ->
+      {:error, :invalid_metrics_data}
+  catch
+    {:error, %Ecto.Changeset{}} = error -> error
   end
 
   defp query_all_metrics(base_url, queries) do

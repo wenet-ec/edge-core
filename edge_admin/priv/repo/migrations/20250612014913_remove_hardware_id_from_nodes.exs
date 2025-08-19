@@ -1,4 +1,5 @@
 defmodule EdgeAdmin.Repo.Migrations.ChangeNodeIdToString do
+  @moduledoc false
   use Ecto.Migration
 
   def change do

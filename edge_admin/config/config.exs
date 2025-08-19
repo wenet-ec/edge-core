@@ -13,12 +13,14 @@ version = Mix.Project.config()[:version]
 config :edge_admin, Corsica, allow_headers: :all
 config :edge_admin, EdgeAdmin.Gettext, default_locale: "en"
 
-config :edge_admin, EdgeAdmin.Repo, start_apps_before_migration: [:ssl]
+config :edge_admin, EdgeAdmin.PromEx,
+  disabled: false,
+  manual_metrics_start_delay: :no_delay,
+  drop_metrics_groups: [],
+  grafana: :disabled,
+  metrics_server: :disabled
 
-config :edge_admin,
-  ecto_repos: [EdgeAdmin.Repo],
-  generators: [timestamp_type: :utc_datetime, binary_id: true],
-  version: version
+config :edge_admin, EdgeAdmin.Repo, start_apps_before_migration: [:ssl]
 
 config :edge_admin, EdgeAdminWeb.Endpoint,
   adapter: Bandit.PhoenixAdapter,
@@ -35,7 +37,7 @@ config :edge_admin, Oban,
   queues: [
     vpn: 2,
     command_dispatch: 10,
-    command_retry: 1,
+    command_retry: 1
   ],
   repo: EdgeAdmin.Repo,
   plugins: [
@@ -50,22 +52,20 @@ config :edge_admin, Oban,
 
 config :edge_admin,
   ecto_repos: [EdgeAdmin.Repo],
+  generators: [timestamp_type: :utc_datetime, binary_id: true],
+  version: version
+
+config :edge_admin,
+  ecto_repos: [EdgeAdmin.Repo],
   version: version
 
 config :logger, backends: [:console, Sentry.LoggerBackend]
 
 config :phoenix, :json_library, Jason
 
+# Import environment configuration
 config :sentry,
   root_source_code_path: File.cwd!(),
   release: version
 
-config :edge_admin, EdgeAdmin.PromEx,
-  disabled: false,
-  manual_metrics_start_delay: :no_delay,
-  drop_metrics_groups: [],
-  grafana: :disabled,
-  metrics_server: :disabled
-
-# Import environment configuration
 import_config "#{Mix.env()}.exs"

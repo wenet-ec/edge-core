@@ -5,9 +5,10 @@ defmodule EdgeAdmin.PromEx do
   """
 
   use PromEx, otp_app: :edge_admin
-  require Logger
 
   alias PromEx.Plugins
+
+  require Logger
 
   @impl true
   def plugins do

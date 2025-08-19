@@ -3,6 +3,7 @@ defmodule EdgeAdminWeb.Nodes.EnrollmentKeyControllerTest do
   use EdgeAdminWeb.ConnCase, async: true
 
   import Mox
+
   alias EdgeAdmin.TailscaleMock
 
   # Make sure mocks are verified when the test exits
@@ -11,7 +12,7 @@ defmodule EdgeAdminWeb.Nodes.EnrollmentKeyControllerTest do
   describe "POST /api/enrollment_keys" do
     test "creates enrollment key successfully", %{conn: conn} do
       enrollment_key_data = build(:enrollment_key)
-      
+
       expect(TailscaleMock, :create_enrollment_key, fn "edge-nodes" ->
         {:ok, enrollment_key_data}
       end)
@@ -48,7 +49,7 @@ defmodule EdgeAdminWeb.Nodes.EnrollmentKeyControllerTest do
       # Endpoint should respond (not 404/405) and return JSON
       refute conn.status == 404
       refute conn.status == 405
-      assert get_resp_header(conn, "content-type") |> List.first() =~ "application/json"
+      assert conn |> get_resp_header("content-type") |> List.first() =~ "application/json"
     end
   end
 end

@@ -8,9 +8,14 @@ defmodule EdgeAdmin.Nodes.Metrics do
   """
 
   use Ecto.Schema
+
   import Ecto.Changeset
 
-  alias EdgeAdmin.Nodes.Metrics.{CPU, Memory, Disk, Network, Uptime}
+  alias EdgeAdmin.Nodes.Metrics.CPU
+  alias EdgeAdmin.Nodes.Metrics.Disk
+  alias EdgeAdmin.Nodes.Metrics.Memory
+  alias EdgeAdmin.Nodes.Metrics.Network
+  alias EdgeAdmin.Nodes.Metrics.Uptime
 
   @derive Jason.Encoder
   @primary_key false
@@ -164,7 +169,7 @@ defmodule EdgeAdmin.Nodes.Metrics do
   defp build_memory_attrs(raw_metrics) do
     total_bytes = raw_metrics["memory_total_bytes"]
     available_bytes = raw_metrics["memory_available_bytes"]
-    used_bytes = if total_bytes && available_bytes, do: total_bytes - available_bytes, else: nil
+    used_bytes = if total_bytes && available_bytes, do: total_bytes - available_bytes
 
     %{
       usage_percent: round_to_2dp(raw_metrics["memory_usage_percent"]),
@@ -180,7 +185,7 @@ defmodule EdgeAdmin.Nodes.Metrics do
   defp build_disk_attrs(raw_metrics) do
     total_bytes = raw_metrics["disk_total_bytes"]
     available_bytes = raw_metrics["disk_available_bytes"]
-    used_bytes = if total_bytes && available_bytes, do: total_bytes - available_bytes, else: nil
+    used_bytes = if total_bytes && available_bytes, do: total_bytes - available_bytes
 
     %{
       usage_percent: round_to_2dp(raw_metrics["disk_usage_percent"]),
@@ -207,7 +212,7 @@ defmodule EdgeAdmin.Nodes.Metrics do
 
     %{
       seconds: trunc_or_nil(uptime_seconds),
-      human: if(uptime_seconds, do: format_uptime_human(trunc(uptime_seconds)), else: nil)
+      human: if(uptime_seconds, do: format_uptime_human(trunc(uptime_seconds)))
     }
   end
 
@@ -222,8 +227,8 @@ defmodule EdgeAdmin.Nodes.Metrics do
   defp bytes_to_gb(bytes), do: Float.round(bytes / 1_073_741_824, 1)
 
   defp format_uptime_human(seconds) do
-    days = div(seconds, 86400)
-    hours = div(rem(seconds, 86400), 3600)
+    days = div(seconds, 86_400)
+    hours = div(rem(seconds, 86_400), 3600)
     minutes = div(rem(seconds, 3600), 60)
 
     cond do

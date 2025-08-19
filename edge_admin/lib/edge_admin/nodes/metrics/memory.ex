@@ -1,8 +1,9 @@
 # edge_admin/lib/edge_admin/nodes/metrics/memory.ex
 defmodule EdgeAdmin.Nodes.Metrics.Memory do
-  @derive Jason.Encoder
+  @moduledoc false
   use Ecto.Schema
 
+  @derive Jason.Encoder
   @primary_key false
   embedded_schema do
     field(:usage_percent, :float)

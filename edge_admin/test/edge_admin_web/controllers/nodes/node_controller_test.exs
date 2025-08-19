@@ -4,6 +4,7 @@ defmodule EdgeAdminWeb.Nodes.NodeControllerTest do
 
   import EdgeAdmin.NodesFixtures
   import Mox
+
   alias EdgeAdmin.TailscaleMock
 
   # Make sure mocks are verified when the test exits
@@ -44,21 +45,24 @@ defmodule EdgeAdminWeb.Nodes.NodeControllerTest do
     test "creates node with valid data", %{conn: conn} do
       # Mock the VPN node lookup for create
       vpn_hostname = "node-#{@create_attrs.id}"
+
       expect(TailscaleMock, :get_node_by_hostname, fn ^vpn_hostname ->
-        {:ok, %{
-          vpn_ip: "100.64.0.10",
-          status: "online",
-          last_seen_at: DateTime.utc_now()
-        }}
+        {:ok,
+         %{
+           vpn_ip: "100.64.0.10",
+           status: "online",
+           last_seen_at: DateTime.utc_now()
+         }}
       end)
-      
+
       # Mock the VPN node lookup for show  
       expect(TailscaleMock, :get_node_by_hostname, fn ^vpn_hostname ->
-        {:ok, %{
-          vpn_ip: "100.64.0.10",
-          status: "online",
-          last_seen_at: DateTime.utc_now()
-        }}
+        {:ok,
+         %{
+           vpn_ip: "100.64.0.10",
+           status: "online",
+           last_seen_at: DateTime.utc_now()
+         }}
       end)
 
       conn = post(conn, ~p"/api/nodes", node: @create_attrs)
@@ -81,14 +85,16 @@ defmodule EdgeAdminWeb.Nodes.NodeControllerTest do
       # Mock the VPN node lookup for first create only
       # The second create should fail at database level before calling VPN
       vpn_hostname = "node-#{@create_attrs.id}"
+
       expect(TailscaleMock, :get_node_by_hostname, fn ^vpn_hostname ->
-        {:ok, %{
-          vpn_ip: "100.64.0.10",
-          status: "online",
-          last_seen_at: DateTime.utc_now()
-        }}
+        {:ok,
+         %{
+           vpn_ip: "100.64.0.10",
+           status: "online",
+           last_seen_at: DateTime.utc_now()
+         }}
       end)
-      
+
       post(conn, ~p"/api/nodes", node: @create_attrs)
       conn = post(conn, ~p"/api/nodes", node: @create_attrs)
 
@@ -99,17 +105,19 @@ defmodule EdgeAdminWeb.Nodes.NodeControllerTest do
   describe "show node" do
     test "returns node by ID", %{conn: conn} do
       node = node_fixture()
-      
+
       # Mock the VPN node lookup for show
       vpn_hostname = "node-#{node.id}"
+
       expect(TailscaleMock, :get_node_by_hostname, fn ^vpn_hostname ->
-        {:ok, %{
-          vpn_ip: "100.64.0.10",
-          status: "online",
-          last_seen_at: DateTime.utc_now()
-        }}
+        {:ok,
+         %{
+           vpn_ip: "100.64.0.10",
+           status: "online",
+           last_seen_at: DateTime.utc_now()
+         }}
       end)
-      
+
       conn = get(conn, ~p"/api/nodes/#{node}")
 
       response = json_response(conn, 200)["data"]

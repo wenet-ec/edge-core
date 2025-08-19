@@ -4,8 +4,8 @@ defmodule EdgeAdminWeb.Nodes.EnrollmentKeyController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.VPN
-  alias EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas
 
   action_fallback(EdgeAdminWeb.FallbackController)
 
@@ -15,8 +15,7 @@ defmodule EdgeAdminWeb.Nodes.EnrollmentKeyController do
     summary: "Create enrollment key",
     description: "Generate a new enrollment key for edge nodes to join the VPN",
     responses: %{
-      201 =>
-        {"Enrollment key created", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
+      201 => {"Enrollment key created", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
       500 => {"VPN service error", "application/json", CommonSchemas.GenericErrorResponse},
       503 => {"VPN service unavailable", "application/json", CommonSchemas.GenericErrorResponse}
     }

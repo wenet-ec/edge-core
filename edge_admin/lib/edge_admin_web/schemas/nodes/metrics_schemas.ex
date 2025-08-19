@@ -1,9 +1,11 @@
 # edge_admin/lib/edge_admin_web/schemas/nodes/metrics_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Nodes.MetricsSchemas do
+  @moduledoc false
   defmodule MetricsResponse do
     @moduledoc false
-    require OpenApiSpex
     alias OpenApiSpex.Schema
+
+    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Metrics Response",
@@ -214,7 +216,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.MetricsSchemas do
             tx_packets_per_sec: 18.7
           },
           uptime: %{
-            seconds: 90061,
+            seconds: 90_061,
             human: "1d 1h 1m"
           }
         }

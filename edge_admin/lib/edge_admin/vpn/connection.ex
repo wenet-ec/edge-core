@@ -2,13 +2,14 @@
 defmodule EdgeAdmin.VPN.Connection do
   @moduledoc """
   Embedded Ecto schema for VPN connection data in EdgeAdmin.
-  
+
   This schema provides EdgeAdmin-specific validation and changeset functionality
   while proxying the shared Tailscale.Connection struct. It leverages Phoenix/Ecto
   ecosystem benefits without database mapping.
   """
 
   use Ecto.Schema
+
   import Ecto.Changeset
 
   @type status :: :connected | :disconnected | :connecting
@@ -112,14 +113,20 @@ defmodule EdgeAdmin.VPN.Connection do
   defp validate_ip_address(changeset, field) do
     validate_change(changeset, field, fn _, value ->
       case value do
-        nil -> []
-        "" -> []
+        nil ->
+          []
+
+        "" ->
+          []
+
         ip when is_binary(ip) ->
           case :inet.parse_address(String.to_charlist(ip)) do
             {:ok, _} -> []
             {:error, _} -> [{field, "must be a valid IP address"}]
           end
-        _ -> [{field, "must be a string"}]
+
+        _ ->
+          [{field, "must be a string"}]
       end
     end)
   end

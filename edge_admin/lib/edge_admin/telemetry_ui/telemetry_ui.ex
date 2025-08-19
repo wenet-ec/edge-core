@@ -78,7 +78,9 @@ defmodule EdgeAdmin.TelemetryUI do
   end
 
   defp ecto_metrics do
-    ecto_keep = &(&1[:source] not in [nil, ""] and not String.starts_with?(&1[:source], "oban") and not String.starts_with?(&1[:source], "telemetry_ui"))
+    ecto_keep =
+      &(&1[:source] not in [nil, ""] and not String.starts_with?(&1[:source], "oban") and
+          not String.starts_with?(&1[:source], "telemetry_ui"))
 
     [
       average("edge_admin.repo.query.total_time",

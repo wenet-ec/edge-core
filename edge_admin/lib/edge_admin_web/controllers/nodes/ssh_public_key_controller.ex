@@ -5,8 +5,8 @@ defmodule EdgeAdminWeb.Nodes.SshPublicKeyController do
 
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.SshPublicKey
-  alias EdgeAdminWeb.Schemas.Nodes.SshPublicKeySchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias EdgeAdminWeb.Schemas.Nodes.SshPublicKeySchemas
 
   action_fallback(EdgeAdminWeb.FallbackController)
 
@@ -47,8 +47,7 @@ defmodule EdgeAdminWeb.Nodes.SshPublicKeyController do
     ],
     responses: %{
       200 =>
-        {"Paginated list of SSH public keys", "application/json",
-         SshPublicKeySchemas.SshPublicKeyPaginatedResponse}
+        {"Paginated list of SSH public keys", "application/json", SshPublicKeySchemas.SshPublicKeyPaginatedResponse}
     }
   )
 
@@ -69,24 +68,17 @@ defmodule EdgeAdminWeb.Nodes.SshPublicKeyController do
         schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ]
     ],
-    request_body:
-      {"SSH public key creation data", "application/json",
-       SshPublicKeySchemas.SshPublicKeyCreateRequest},
+    request_body: {"SSH public key creation data", "application/json", SshPublicKeySchemas.SshPublicKeyCreateRequest},
     responses: %{
-      201 =>
-        {"SSH public key created", "application/json",
-         SshPublicKeySchemas.SshPublicKeySingleResponse},
+      201 => {"SSH public key created", "application/json", SshPublicKeySchemas.SshPublicKeySingleResponse},
       422 =>
-        {"Validation error - Invalid key format, unsupported algorithm, or duplicate key name",
-         "application/json", CommonSchemas.ErrorResponse},
+        {"Validation error - Invalid key format, unsupported algorithm, or duplicate key name", "application/json",
+         CommonSchemas.ErrorResponse},
       404 => {"SSH username not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
 
-  def create(conn, %{
-        "ssh_username_id" => ssh_username_id,
-        "ssh_public_key" => ssh_public_key_params
-      }) do
+  def create(conn, %{"ssh_username_id" => ssh_username_id, "ssh_public_key" => ssh_public_key_params}) do
     ssh_public_key_params = Map.put(ssh_public_key_params, "ssh_username_id", ssh_username_id)
 
     with {:ok, %SshPublicKey{} = ssh_public_key} <-
@@ -109,9 +101,7 @@ defmodule EdgeAdminWeb.Nodes.SshPublicKeyController do
       ]
     ],
     responses: %{
-      200 =>
-        {"SSH public key details", "application/json",
-         SshPublicKeySchemas.SshPublicKeySingleResponse},
+      200 => {"SSH public key details", "application/json", SshPublicKeySchemas.SshPublicKeySingleResponse},
       404 => {"SSH public key not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )

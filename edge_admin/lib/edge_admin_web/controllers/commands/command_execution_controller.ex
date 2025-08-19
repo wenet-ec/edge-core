@@ -88,9 +88,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionController do
       ]
     ],
     responses: %{
-      200 =>
-        {"Command execution details", "application/json",
-         CommandExecutionSchemas.CommandExecutionSingleResponse},
+      200 => {"Command execution details", "application/json", CommandExecutionSchemas.CommandExecutionSingleResponse},
       404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
@@ -111,8 +109,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionController do
       ]
     ],
     request_body:
-      {"Command execution update", "application/json",
-       CommandExecutionSchemas.CommandExecutionUpdateRequest},
+      {"Command execution update", "application/json", CommandExecutionSchemas.CommandExecutionUpdateRequest},
     responses: %{
       200 =>
         {"Command execution updated successfully", "application/json",

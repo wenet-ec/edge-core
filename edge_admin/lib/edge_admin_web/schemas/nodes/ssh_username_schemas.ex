@@ -4,8 +4,8 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas do
   OpenAPI schemas for SSH Username resources
   """
 
-  alias OpenApiSpex.Schema
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias OpenApiSpex.Schema
 
   defmodule SshUsernameResponse do
     @moduledoc false

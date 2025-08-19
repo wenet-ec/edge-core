@@ -9,6 +9,8 @@ defmodule EdgeAdmin.Factory do
 
   use ExMachina.Ecto, repo: EdgeAdmin.Repo
 
+  alias EdgeAdmin.VPN.Connection
+
   # Keep the existing name factory but make it more useful
   def name_factory do
     Faker.Person.name()
@@ -26,7 +28,7 @@ defmodule EdgeAdmin.Factory do
   # VPN Connection factories
   def tailscale_connection_factory do
     now = DateTime.utc_now()
-    
+
     %Tailscale.Connection{
       status: :disconnected,
       vpn_ip: nil,
@@ -43,7 +45,7 @@ defmodule EdgeAdmin.Factory do
 
   def connected_tailscale_connection_factory do
     now = DateTime.utc_now()
-    
+
     %Tailscale.Connection{
       status: :connected,
       vpn_ip: "100.64.0.10",
@@ -60,12 +62,12 @@ defmodule EdgeAdmin.Factory do
 
   def edge_admin_vpn_connection_factory do
     tailscale_conn = build(:tailscale_connection)
-    EdgeAdmin.VPN.Connection.from_tailscale_connection(tailscale_conn)
+    Connection.from_tailscale_connection(tailscale_conn)
   end
 
   def connected_edge_admin_vpn_connection_factory do
     tailscale_conn = build(:connected_tailscale_connection)
-    EdgeAdmin.VPN.Connection.from_tailscale_connection(tailscale_conn)
+    Connection.from_tailscale_connection(tailscale_conn)
   end
 
   # VPN API response factories

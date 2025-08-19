@@ -20,7 +20,7 @@ defmodule EdgeAdminWeb.HealthTest do
 
       # Verify NOOP check exists (our specific check)
       noop_check = Enum.find(response, fn check -> check["name"] == "NOOP" end)
-      assert noop_check != nil
+      assert noop_check
       assert noop_check["healthy"] == true
     end
   end

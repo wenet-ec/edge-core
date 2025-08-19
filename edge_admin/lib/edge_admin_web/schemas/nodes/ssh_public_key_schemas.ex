@@ -4,8 +4,8 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshPublicKeySchemas do
   OpenAPI schemas for SSH Public Key resources
   """
 
-  alias OpenApiSpex.Schema
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias OpenApiSpex.Schema
 
   defmodule SshPublicKeyResponse do
     @moduledoc false
@@ -24,8 +24,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshPublicKeySchemas do
         public_key: %Schema{
           type: :string,
           description: "SSH public key in OpenSSH format (algorithm base64data [comment])",
-          example:
-            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop"
+          example: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop"
         },
         key_name: %Schema{
           type: :string,
@@ -51,8 +50,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshPublicKeySchemas do
       required: [:id, :public_key, :key_name, :ssh_username_id, :inserted_at, :updated_at],
       example: %{
         id: "01234567-89ab-cdef-0123-456789abcdef",
-        public_key:
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
+        public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
         key_name: "laptop-key",
         ssh_username_id: "fedcba98-7654-3210-fedc-ba9876543210",
         inserted_at: "2025-06-23T10:30:00Z",
@@ -105,8 +103,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshPublicKeySchemas do
 
     OpenApiSpex.schema(%{
       title: "SSH Public Key Create Request",
-      description:
-        "Create a new SSH public key for a username. The key must be in valid OpenSSH format.",
+      description: "Create a new SSH public key for a username. The key must be in valid OpenSSH format.",
       type: :object,
       properties: %{
         ssh_public_key: %Schema{
@@ -116,11 +113,9 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshPublicKeySchemas do
               type: :string,
               description:
                 "SSH public key in OpenSSH format (algorithm base64data [comment]). Supported algorithms: ssh-ed25519 (recommended), ecdsa-sha2-nistp256, ecdsa-sha2-nistp384, ecdsa-sha2-nistp521, ssh-rsa, ssh-dss",
-              example:
-                "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
+              example: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
               # Updated regex to include ssh-dss
-              pattern:
-                "^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa|ssh-dss)\\s+[A-Za-z0-9+\\/]+=*\\s*.*$"
+              pattern: "^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa|ssh-dss)\\s+[A-Za-z0-9+\\/]+=*\\s*.*$"
             },
             key_name: %Schema{
               type: :string,
@@ -132,8 +127,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshPublicKeySchemas do
           },
           required: [:public_key, :key_name],
           example: %{
-            public_key:
-              "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
+            public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
             key_name: "laptop-key"
           }
         }

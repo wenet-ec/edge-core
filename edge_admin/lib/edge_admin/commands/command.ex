@@ -1,6 +1,8 @@
 # edge_admin/lib/edge_admin/commands/command.ex
 defmodule EdgeAdmin.Commands.Command do
+  @moduledoc false
   use Ecto.Schema
+
   import Ecto.Changeset
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -29,10 +31,10 @@ defmodule EdgeAdmin.Commands.Command do
     validate_change(changeset, :command_text, fn :command_text, command_text ->
       trimmed = String.trim(command_text)
 
-      if trimmed != "" do
-        []
-      else
+      if trimmed == "" do
         [command_text: "cannot be empty or only whitespace"]
+      else
+        []
       end
     end)
   end

@@ -124,7 +124,7 @@ defmodule EdgeAdminWeb.Commands.CommandControllerTest do
     test "validates command_text format", %{conn: conn} do
       invalid_attrs = %{command_text: "   \n\t  "}
       conn = post(conn, ~p"/api/commands", command: invalid_attrs)
-      assert json_response(conn, 422)["errors"]["command_text"] != nil
+      assert json_response(conn, 422)["errors"]["command_text"]
     end
   end
 

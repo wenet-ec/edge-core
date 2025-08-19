@@ -1,6 +1,8 @@
 # edge_admin/lib/edge_admin/commands/command_execution.ex
 defmodule EdgeAdmin.Commands.CommandExecution do
+  @moduledoc false
   use Ecto.Schema
+
   import Ecto.Changeset
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -79,7 +81,7 @@ defmodule EdgeAdmin.Commands.CommandExecution do
     completed_at = get_change(changeset, :completed_at)
 
     if status == "completed" and is_nil(completed_at) do
-      put_change(changeset, :completed_at, DateTime.utc_now() |> DateTime.truncate(:second))
+      put_change(changeset, :completed_at, DateTime.truncate(DateTime.utc_now(), :second))
     else
       changeset
     end

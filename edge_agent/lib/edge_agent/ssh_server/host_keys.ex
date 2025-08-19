@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/ssh_server/host_key_manager.ex
-defmodule EdgeAgent.SshServer.HostKeyManager do
+# edge_agent/lib/edge_agent/ssh_server/host_keys.ex
+defmodule EdgeAgent.SshServer.HostKeys do
   @moduledoc """
   Manages SSH host keys - generation, loading, and validation.
   """

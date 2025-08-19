@@ -8,8 +8,8 @@ defmodule EdgeAgent.MetricsServer.Impl do
   """
 
   alias EdgeAgent.MetricsServer.Config
-  alias EdgeAgent.MetricsServer.NetworkUtils
-  alias EdgeAgent.MetricsServer.ProcessManager
+  alias EdgeAgent.MetricsServer.Network
+  alias EdgeAgent.MetricsServer.ProcessSupervisor
 
   require Logger
 
@@ -50,9 +50,9 @@ defmodule EdgeAgent.MetricsServer.Impl do
   def start_server(state) do
     Logger.info("Starting node_exporter metrics server...")
 
-    case ProcessManager.start_node_exporter() do
+    case ProcessSupervisor.start_node_exporter() do
       {:ok, pid, port_ref} ->
-        primary_ip = NetworkUtils.detect_primary_interface_ip()
+        primary_ip = Network.detect_primary_interface_ip()
 
         new_state = %{
           state
@@ -83,7 +83,7 @@ defmodule EdgeAgent.MetricsServer.Impl do
   def stop_server(state) do
     Logger.info("Stopping node_exporter metrics server...")
 
-    case ProcessManager.stop_node_exporter(state.node_exporter_pid, state.node_exporter_port_ref) do
+    case ProcessSupervisor.stop_node_exporter(state.node_exporter_pid, state.node_exporter_port_ref) do
       :ok ->
         new_state = %{
           state
@@ -113,7 +113,7 @@ defmodule EdgeAgent.MetricsServer.Impl do
             if Process.alive?(pid), do: :running, else: :stopped
 
           pid when is_integer(pid) ->
-            if ProcessManager.process_exists?(pid), do: :running, else: :stopped
+            if ProcessSupervisor.process_exists?(pid), do: :running, else: :stopped
 
           _ ->
             :stopped
@@ -140,7 +140,7 @@ defmodule EdgeAgent.MetricsServer.Impl do
     case state.primary_interface_ip do
       nil ->
         # Try to detect it again
-        ip = NetworkUtils.detect_primary_interface_ip()
+        ip = Network.detect_primary_interface_ip()
         new_state = %{state | primary_interface_ip: ip}
 
         if ip do

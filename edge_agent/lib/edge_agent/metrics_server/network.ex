@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/metrics_server/network_utils.ex
-defmodule EdgeAgent.MetricsServer.NetworkUtils do
+# edge_agent/lib/edge_agent/metrics_server/network.ex
+defmodule EdgeAgent.MetricsServer.Network do
   @moduledoc """
   Network utility functions for the metrics server.
 

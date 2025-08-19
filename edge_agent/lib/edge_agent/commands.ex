@@ -111,33 +111,19 @@ defmodule EdgeAgent.Commands do
   defp execute_single_command(execution) do
     Logger.info("Executing command: #{execution.id}")
 
-    case System.cmd("/usr/local/bin/hostscript", [execution.command_text]) do
-      {output, exit_code} ->
-        Logger.info("Command #{execution.id} completed with exit code: #{exit_code}")
+    {output, exit_code} = System.cmd("/usr/local/bin/hostscript", [execution.command_text])
 
-        {:ok, updated_execution} =
-          update_command_execution(execution, %{
-            status: "completed",
-            output: output,
-            exit_code: exit_code,
-            completed_at: DateTime.utc_now()
-          })
+    Logger.info("Command #{execution.id} completed with exit code: #{exit_code}")
 
-        updated_execution
+    {:ok, updated_execution} =
+      update_command_execution(execution, %{
+        status: "completed",
+        output: output,
+        exit_code: exit_code,
+        completed_at: DateTime.utc_now()
+      })
 
-      error ->
-        Logger.error("Command #{execution.id} execution failed: #{inspect(error)}")
-
-        {:ok, updated_execution} =
-          update_command_execution(execution, %{
-            status: "completed",
-            output: "Execution failed: #{inspect(error)}",
-            exit_code: -1,
-            completed_at: DateTime.utc_now()
-          })
-
-        updated_execution
-    end
+    updated_execution
   end
 
   defp report_executions(executions) do

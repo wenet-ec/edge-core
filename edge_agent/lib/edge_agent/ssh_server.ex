@@ -11,7 +11,7 @@ defmodule EdgeAgent.SshServer do
 
   alias EdgeAgent.SshServer.Authentication
   alias EdgeAgent.SshServer.Config
-  alias EdgeAgent.SshServer.HostKeyManager
+  alias EdgeAgent.SshServer.HostKeys
   alias EdgeAgent.SshServer.Shell
 
   require Logger
@@ -66,15 +66,9 @@ defmodule EdgeAgent.SshServer do
         {:reply, :ok, state}
 
       :running when not is_nil(state.daemon_ref) ->
-        case :ssh.stop_daemon(state.daemon_ref) do
-          :ok ->
-            Logger.info("SSH server stopped successfully")
-            {:reply, :ok, %{state | daemon_ref: nil, status: :stopped}}
-
-          {:error, reason} = error ->
-            Logger.error("Failed to stop SSH server: #{inspect(reason)}")
-            {:reply, error, state}
-        end
+        :ok = :ssh.stop_daemon(state.daemon_ref)
+        Logger.info("SSH server stopped successfully")
+        {:reply, :ok, %{state | daemon_ref: nil, status: :stopped}}
 
       _status ->
         Logger.warning("SSH server in unknown state, marking as stopped")
@@ -87,10 +81,10 @@ defmodule EdgeAgent.SshServer do
     {:reply, state.status, state}
   end
 
-  # SSH Server Key API Callbacks (delegates to HostKeyManager)
+  # SSH Server Key API Callbacks (delegates to HostKeys)
   @impl true
   def host_key(algorithm, _daemon_options) do
-    HostKeyManager.host_key(algorithm)
+    HostKeys.host_key(algorithm)
   end
 
   @impl true
@@ -100,7 +94,7 @@ defmodule EdgeAgent.SshServer do
 
   # Private functions
   defp do_start_server do
-    with :ok <- HostKeyManager.ensure_host_keys() do
+    with :ok <- HostKeys.ensure_host_keys() do
       start_ssh_daemon()
     end
   end

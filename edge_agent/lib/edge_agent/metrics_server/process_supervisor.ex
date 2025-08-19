@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/metrics_server/process_manager.ex
-defmodule EdgeAgent.MetricsServer.ProcessManager do
+# edge_agent/lib/edge_agent/metrics_server/process_supervisor.ex
+defmodule EdgeAgent.MetricsServer.ProcessSupervisor do
   @moduledoc """
   Manages the node_exporter process lifecycle.
 

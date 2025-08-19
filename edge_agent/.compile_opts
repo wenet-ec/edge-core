@@ -1,0 +1,14 @@
+# edge_agent/.compile_opts
+# Mix compilation optimization settings for development
+
+# Enable parallel compilation
+export ELIXIR_MAKE_PARALLEL=true
+export ELIXIR_MAKE_ARGS=-j$(nproc)
+
+# Increase memory limits for faster compilation
+export ERL_MAX_ETS_TABLES=50000
+export ERL_MAX_PORTS=65536
+
+# Enable incremental compilation
+export MIX_ENV=dev
+export MIX_COMPILE_PATH=_build/dev/lib

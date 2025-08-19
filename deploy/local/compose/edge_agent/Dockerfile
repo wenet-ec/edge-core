@@ -72,22 +72,36 @@ COPY ./deploy/local/compose/edge_agent/hostscript /usr/local/bin/hostscript
 RUN sed -i 's/\r$//g' /usr/local/bin/hostscript && \
     chmod +x /usr/local/bin/hostscript
 
-# Copy ONLY dependency files first (for Docker layer caching)
-COPY edge_agent/mix.exs edge_agent/mix.lock ./
+# Copy dependency files first (for Docker layer caching)
+COPY edge_agent/mix.exs edge_agent/mix.lock* ./
 COPY tailscale/ /tailscale/
 
 # Copy config files (needed for dependency compilation)
 COPY edge_agent/config ./config
 
-# Install and compile dependencies (this layer will be cached!)
+# Install dependencies with smart caching
 RUN --mount=type=cache,target=/root/.hex \
     --mount=type=cache,target=/root/.mix \
+    --mount=type=cache,target=/app/deps,id=edge_agent_deps \
+    --mount=type=cache,target=/app/_build,id=edge_agent_build \
+    if [ ! -f mix.lock ]; then \
+      echo "mix.lock not found, generating from mix.exs..."; \
+    else \
+      echo "Using existing mix.lock for dependency resolution"; \
+    fi && \
     mix deps.get
 
 RUN --mount=type=cache,target=/root/.hex \
     --mount=type=cache,target=/root/.mix \
-    --mount=type=cache,target=deps \
-    --mount=type=cache,target=_build \
+    --mount=type=cache,target=/app/deps,id=edge_agent_deps \
+    --mount=type=cache,target=/app/_build,id=edge_agent_build \
     mix deps.compile
+
+# Pre-compile the application (this will speed up startup)
+RUN --mount=type=cache,target=/root/.hex \
+    --mount=type=cache,target=/root/.mix \
+    --mount=type=cache,target=/app/deps,id=edge_agent_deps \
+    --mount=type=cache,target=/app/_build,id=edge_agent_build \
+    mix compile
 
 ENTRYPOINT ["/entrypoint"]

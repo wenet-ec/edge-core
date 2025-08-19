@@ -5,6 +5,12 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+# Source compilation optimization settings
+if [ -f ".compile_opts" ]; then
+    echo "Loading compilation optimizations..."
+    source .compile_opts
+fi
+
 # Function to get enrollment key from Edge Admin
 get_enrollment_key() {
     echo "Getting enrollment key from Edge Admin..."
@@ -29,13 +35,26 @@ echo "Setting up Edge Agent..."
 # Get enrollment key from Edge Admin
 get_enrollment_key
 
-# Only compile if _build directory is empty or deps changed
-if [ ! -d "_build/dev" ] || [ "mix.lock" -nt "_build/dev" ]; then
+# Smart compilation check - handle optional mix.lock
+SHOULD_COMPILE=false
+
+if [ ! -d "_build/dev" ]; then
+    echo "Build directory not found, compilation needed..."
+    SHOULD_COMPILE=true
+elif [ -f "mix.lock" ] && [ "mix.lock" -nt "_build/dev" ]; then
+    echo "mix.lock is newer than build, compilation needed..."
+    SHOULD_COMPILE=true
+elif [ "mix.exs" -nt "_build/dev" ]; then
+    echo "mix.exs is newer than build, compilation needed..."
+    SHOULD_COMPILE=true
+fi
+
+if [ "$SHOULD_COMPILE" = true ]; then
     echo "Installing/updating dependencies..."
     mix deps.get
-    echo "Compiling dependencies and application..."
-    mix deps.compile
-    mix compile
+    echo "Compiling dependencies and application (using parallel compilation)..."
+    ERL_MAX_PORTS=4096 mix deps.compile --parallel --all-warnings
+    ERL_MAX_PORTS=4096 mix compile --parallel --all-warnings
 else
     echo "Dependencies and build are up to date, skipping compilation..."
 fi

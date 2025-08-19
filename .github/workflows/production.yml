@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
+      max-parallel: 3
       matrix:
         service:
           - name: edge_admin_db
@@ -50,6 +52,11 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            network=host
+            env.BUILDKIT_STEP_LOG_MAX_SIZE=10485760
+            env.BUILDKIT_STEP_LOG_MAX_SPEED=10485760
 
       - name: Build and push ${{ matrix.service.name }}
         uses: docker/build-push-action@v6
@@ -59,8 +66,17 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ matrix.service.image }}:${{ env.IMAGE_TAG }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=gha,scope=${{ matrix.service.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.service.name }}
+          cache-from: |
+            type=gha,scope=${{ matrix.service.name }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ matrix.service.image }}:cache
+          cache-to: |
+            type=gha,mode=max,scope=${{ matrix.service.name }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ matrix.service.image }}:cache,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            BUILDKIT_MULTI_PLATFORM=1
+          provenance: false
+          sbom: false
 
       - name: Output image info
         run: |

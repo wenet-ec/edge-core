@@ -19,40 +19,55 @@ RUN mix local.hex --force && \
     mix local.rebar --force
 
 ENV MIX_ENV=prod
+ENV ERL_MAX_PORTS=65536
+ENV ELIXIR_MAKE_PARALLEL=true
 
-# First, build the tailscale library
+# First, build the tailscale library with caching
 WORKDIR /tailscale
 COPY tailscale/mix.exs tailscale/mix.lock ./
-RUN mix deps.get --only $MIX_ENV
+RUN --mount=type=cache,target=/root/.hex \
+    --mount=type=cache,target=/root/.mix \
+    mix deps.get --only $MIX_ENV
 COPY tailscale/lib lib/
-RUN mix deps.compile && mix compile
+RUN --mount=type=cache,target=/root/.hex \
+    --mount=type=cache,target=/root/.mix \
+    mix deps.compile --parallel && mix compile --parallel
 
 # Then build the main application
 WORKDIR /app
 
-# Copy mix files and install dependencies
+# Copy mix files and install dependencies with caching
 COPY edge_agent/mix.exs edge_agent/mix.lock ./
-RUN mix deps.get --only $MIX_ENV
+RUN --mount=type=cache,target=/root/.hex \
+    --mount=type=cache,target=/root/.mix \
+    mix deps.get --only $MIX_ENV
 
 # Copy config files (needed for compilation)
 COPY edge_agent/config config/
-RUN mix deps.compile
+RUN --mount=type=cache,target=/root/.hex \
+    --mount=type=cache,target=/root/.mix \
+    mix deps.compile --parallel
 
 # Copy source code and compile
 COPY edge_agent/lib lib/
 COPY edge_agent/priv priv/
 COPY edge_agent/rel rel/
-RUN mix compile
+RUN --mount=type=cache,target=/root/.hex \
+    --mount=type=cache,target=/root/.mix \
+    mix compile --parallel
 
 # Create release
-RUN mix release
+RUN --mount=type=cache,target=/root/.hex \
+    --mount=type=cache,target=/root/.mix \
+    mix release
 
 # -----------------------------------------------
-# Stage: Production runtime image
+# Stage: Production runtime image (optimized)
 # -----------------------------------------------
 FROM alpine:3.22.0
 
-# Install runtime dependencies
+# Install runtime dependencies and node_exporter in single layer
+ENV NODE_EXPORTER_VERSION="1.9.1"
 RUN apk add --no-cache \
     openssl \
     ncurses-libs \
@@ -64,18 +79,15 @@ RUN apk add --no-cache \
     libstdc++ \
     libgcc \
     su-exec \
-    util-linux \
-    && rm -rf /var/cache/apk/*
-
-# Install node_exporter for metrics collection
-ENV NODE_EXPORTER_VERSION="1.9.1"
-RUN wget -q https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz \
-    && tar xzf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz \
-    && mv node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64/node_exporter /usr/local/bin/ \
-    && rm -rf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64* \
-    && chmod +x /usr/local/bin/node_exporter
-
-RUN mkdir -p /app/data /var/run/tailscale /var/lib/tailscale /var/cache/tailscale
+    util-linux && \
+    # Install node_exporter in same layer to reduce image size
+    wget -q https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz && \
+    tar xzf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz && \
+    mv node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64/node_exporter /usr/local/bin/ && \
+    chmod +x /usr/local/bin/node_exporter && \
+    mkdir -p /app/data /var/run/tailscale /var/lib/tailscale /var/cache/tailscale && \
+    # Clean up in same layer to reduce image size
+    rm -rf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64* /var/cache/apk/* /tmp/* /var/tmp/*
 
 # Copy the release from builder stage
 COPY --from=builder /app/_build/prod/rel/edge_agent /app

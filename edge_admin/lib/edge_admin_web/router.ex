@@ -32,6 +32,9 @@ defmodule EdgeAdminWeb.Router do
     # Serve SwaggerUI - this is what you'll navigate to see the docs
     get("/swaggerui", OpenApiSpex.Plug.SwaggerUI, path: "/api/openapi")
 
+    # Serve ReDoc - alternative API documentation UI
+    get("/redoc", Redoc.Plug.RedocUI, spec_url: "/api/openapi")
+
     # To enable metrics dashboard use `telemetry_ui_allowed: true` as assigns value
     #
     # Metrics can contains sensitive data you should protect it under authorization

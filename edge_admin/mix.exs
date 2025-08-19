@@ -60,6 +60,7 @@ defmodule EdgeAdmin.Mixfile do
 
       # API
       {:open_api_spex, "~> 3.22"},
+      {:redoc_ui_plug, "~> 0.2.1"},
 
       # Database
       {:ecto_sql, "~> 3.13"},

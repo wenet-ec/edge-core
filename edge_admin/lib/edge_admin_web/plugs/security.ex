@@ -14,22 +14,22 @@ defmodule EdgeAdminWeb.Plugs.Security do
   def init(opts), do: opts
 
   def call(conn, _) do
-    # Check if this is the SwaggerUI route
-    if conn.request_path == "/swaggerui" do
-      # More permissive CSP for SwaggerUI
-      swagger_directives = [
+    # Check if this is a documentation route (SwaggerUI or ReDoc)
+    if conn.request_path in ["/swaggerui", "/redoc"] do
+      # More permissive CSP for documentation UIs
+      docs_directives = [
         "default-src #{default_src_directive()}",
         "form-action #{form_action_directive()}",
         "media-src #{media_src_directive()}",
-        "img-src #{swagger_image_src_directive()}",
-        "script-src #{swagger_script_src_directive()}",
-        "font-src #{swagger_font_src_directive()}",
-        "connect-src #{swagger_connect_src_directive()}",
-        "style-src #{swagger_style_src_directive()}",
+        "img-src #{docs_image_src_directive()}",
+        "script-src #{docs_script_src_directive()}",
+        "font-src #{docs_font_src_directive()}",
+        "connect-src #{docs_connect_src_directive()}",
+        "style-src #{docs_style_src_directive()}",
         "frame-src #{frame_src_directive()}"
       ]
 
-      put_secure_browser_headers(conn, %{"content-security-policy" => Enum.join(swagger_directives, "; ")})
+      put_secure_browser_headers(conn, %{"content-security-policy" => Enum.join(docs_directives, "; ")})
     else
       # Regular CSP for other routes
       directives = [
@@ -66,12 +66,22 @@ defmodule EdgeAdminWeb.Plugs.Security do
     end
   end
 
-  # SwaggerUI-specific CSP directives (more permissive)
-  defp swagger_style_src_directive, do: "'self' 'unsafe-inline' https://cdnjs.cloudflare.com"
-  defp swagger_script_src_directive, do: "'self' 'unsafe-eval' 'unsafe-inline' https://cdnjs.cloudflare.com"
-  defp swagger_font_src_directive, do: "'self' https://cdnjs.cloudflare.com"
-  defp swagger_connect_src_directive, do: "'self' https://cdnjs.cloudflare.com"
-  defp swagger_image_src_directive do
-    "'self' data: https://cdnjs.cloudflare.com https://validator.swagger.io"
+  # Documentation UIs CSP directives (SwaggerUI + ReDoc)
+  defp docs_style_src_directive do
+    "'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com"
+  end
+
+  defp docs_script_src_directive do
+    "'self' 'unsafe-eval' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net"
+  end
+
+  defp docs_font_src_directive do
+    "'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com"
+  end
+
+  defp docs_connect_src_directive, do: "'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net"
+
+  defp docs_image_src_directive do
+    "'self' data: https://cdnjs.cloudflare.com https://validator.swagger.io https://cdn.jsdelivr.net"
   end
 end

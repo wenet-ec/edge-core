@@ -28,8 +28,7 @@ config :edge_admin, EdgeAdminWeb.Endpoint,
   ],
   secret_key_base: get_env!("SECRET_KEY_BASE"),
   session_key: get_env!("SESSION_KEY"),
-  session_signing_salt: get_env!("SESSION_SIGNING_SALT"),
-  live_view: [signing_salt: get_env!("SESSION_SIGNING_SALT")]
+  session_signing_salt: get_env!("SESSION_SIGNING_SALT")
 
 config :edge_admin,
   basic_auth: [

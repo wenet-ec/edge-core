@@ -11,23 +11,28 @@ defmodule EdgeAgent.VPN do
   alias EdgeAgent.Settings
   require Logger
 
-  # Delegate all basic operations to the shared library
-  defdelegate connect_to_vpn(vpn_url, enrollment_key, hostname), to: Tailscale
-  defdelegate disconnect_from_vpn(), to: Tailscale
-  defdelegate check_connectivity(), to: Tailscale
-  defdelegate status_json(), to: Tailscale
-  defdelegate connected?(status_data), to: Tailscale
-  defdelegate start_daemon(), to: Tailscale
-  defdelegate get_vpn_ip(), to: Tailscale
-  defdelegate get_node_by_hostname(vpn_hostname), to: Tailscale
-  defdelegate list_nodes_for_user(user \\ "edge-nodes"), to: Tailscale
-  defdelegate create_enrollment_key(user \\ "edge-nodes"), to: Tailscale
-  defdelegate get_user(username), to: Tailscale
-  defdelegate get_connection(), to: Tailscale
-  defdelegate create_connection(attrs \\ %{}), to: Tailscale
-  defdelegate get_connection!(), to: Tailscale
-  defdelegate check_and_update_connectivity(), to: Tailscale
-  defdelegate sync_connection_state(), to: Tailscale
+  # Delegate all basic operations to the configurable Tailscale module
+  def connect_to_vpn(vpn_url, enrollment_key, hostname), do: tailscale_module().connect_to_vpn(vpn_url, enrollment_key, hostname)
+  def disconnect_from_vpn(), do: tailscale_module().disconnect_from_vpn()
+  def check_connectivity(), do: tailscale_module().check_connectivity()
+  def status_json(), do: tailscale_module().status_json()
+  def connected?(status_data), do: tailscale_module().connected?(status_data)
+  def start_daemon(), do: tailscale_module().start_daemon()
+  def get_vpn_ip(), do: tailscale_module().get_vpn_ip()
+  def get_node_by_hostname(vpn_hostname), do: tailscale_module().get_node_by_hostname(vpn_hostname)
+  def list_nodes_for_user(user \\ "edge-nodes"), do: tailscale_module().list_nodes_for_user(user)
+  def create_enrollment_key(user \\ "edge-nodes"), do: tailscale_module().create_enrollment_key(user)
+  def get_user(username), do: tailscale_module().get_user(username)
+  def get_connection(), do: tailscale_module().get_connection()
+  def create_connection(attrs \\ %{}), do: tailscale_module().create_connection(attrs)
+  def get_connection!(), do: tailscale_module().get_connection!()
+  def check_and_update_connectivity(), do: tailscale_module().check_and_update_connectivity()
+  def sync_connection_state(), do: tailscale_module().sync_connection_state()
+
+  # Get the configurable Tailscale module
+  defp tailscale_module do
+    Application.get_env(:edge_agent, :tailscale_module, Tailscale)
+  end
 
   # EdgeAgent-specific hostname provider function
   defp hostname_provider do
@@ -43,18 +48,18 @@ defmodule EdgeAgent.VPN do
 
   def update_connection(attrs) do
     connection = get_connection!()
-    Tailscale.update_connection(connection, attrs)
+    tailscale_module().update_connection(connection, attrs)
   end
 
   def attempt_auto_reconnection do
-    Tailscale.attempt_auto_reconnection(vpn_url(), enrollment_key(), hostname_provider())
+    tailscale_module().attempt_auto_reconnection(vpn_url(), enrollment_key(), hostname_provider())
   end
 
   def connect_to_vpn_manual do
-    Tailscale.connect_to_vpn_manual(vpn_url(), enrollment_key(), hostname_provider())
+    tailscale_module().connect_to_vpn_manual(vpn_url(), enrollment_key(), hostname_provider())
   end
 
-  defdelegate disconnect_from_vpn_manual(), to: Tailscale
+  def disconnect_from_vpn_manual(), do: tailscale_module().disconnect_from_vpn_manual()
 
   # Private helper functions
 

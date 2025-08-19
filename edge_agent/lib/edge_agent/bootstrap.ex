@@ -22,16 +22,21 @@ defmodule EdgeAgent.Bootstrap do
   alias EdgeAgent.SshServer
   alias EdgeAgent.MetricsServer
 
-  def run do
+  def run(opts \\ []) do
     Logger.info("Starting EdgeAgent bootstrap...")
+
+    vpn_module = Keyword.get(opts, :vpn_module, VPN)
+    admin_client_module = Keyword.get(opts, :admin_client_module, AdminClient)
+    ssh_server_module = Keyword.get(opts, :ssh_server_module, SshServer)
+    metrics_server_module = Keyword.get(opts, :metrics_server_module, MetricsServer)
 
     with {:ok, node_id, node_id_type} <- determine_node_identity(),
          {:ok, normalized_node_id} <- store_node_identity(node_id, node_id_type),
-         :ok <- setup_vpn_connection(normalized_node_id),
+         :ok <- setup_vpn_connection(normalized_node_id, vpn_module),
          settings <- Settings.all(),
-         {:ok, _} <- connect_to_admin(settings),
-         :ok <- start_ssh_server(),
-         :ok <- start_metrics_server() do
+         {:ok, _} <- connect_to_admin(settings, admin_client_module),
+         :ok <- start_ssh_server(ssh_server_module),
+         :ok <- start_metrics_server(metrics_server_module) do
       Logger.info("Bootstrap sequence completed successfully")
       {:ok, :bootstrap_complete}
     else
@@ -67,17 +72,17 @@ defmodule EdgeAgent.Bootstrap do
     end
   end
 
-  def setup_vpn_connection(node_id) do
+  def setup_vpn_connection(node_id, vpn_module \\ VPN) do
     Logger.info("Setting up VPN connection for node: #{String.slice(node_id, 0, 8)}...")
 
     vpn_url = Application.get_env(:edge_agent, :vpn_url)
     enrollment_key = Application.get_env(:edge_agent, :enrollment_key)
     hostname = "node-#{node_id}"
 
-    with :ok <- VPN.start_daemon(),
-         {:ok, _result} <- VPN.connect_to_vpn(vpn_url, enrollment_key, hostname),
-         {:ok, vpn_ip} <- validate_vpn_connection(),
-         {:ok, _connection} <- VPN.sync_connection_state() do
+    with :ok <- vpn_module.start_daemon(),
+         {:ok, _result} <- vpn_module.connect_to_vpn(vpn_url, enrollment_key, hostname),
+         {:ok, vpn_ip} <- validate_vpn_connection(vpn_module),
+         {:ok, _connection} <- vpn_module.sync_connection_state() do
       Logger.info("Successfully connected to VPN with IP: #{vpn_ip}")
       :ok
     else
@@ -87,20 +92,20 @@ defmodule EdgeAgent.Bootstrap do
     end
   end
 
-  def connect_to_admin(settings) do
+  def connect_to_admin(settings, admin_client_module \\ AdminClient) do
     node_id = Map.get(settings, "id")
     node_id_type = Map.get(settings, "id_type")
 
     Logger.info("Connecting to admin for node: #{String.slice(node_id || "unknown", 0, 8)}...")
 
-    case AdminClient.get_node(node_id) do
+    case admin_client_module.get_node(node_id) do
       {:ok, node_data} ->
         Logger.info("Node already registered with admin")
         store_node_settings_from_admin(node_data)
 
       {:error, :not_found} ->
         Logger.info("Node not found, registering with admin...")
-        register_new_node(node_id, node_id_type)
+        register_new_node(node_id, node_id_type, admin_client_module)
 
       {:error, reason} ->
         Logger.error("Failed to connect to admin: #{inspect(reason)}")
@@ -108,10 +113,10 @@ defmodule EdgeAgent.Bootstrap do
     end
   end
 
-  def start_ssh_server do
+  def start_ssh_server(ssh_server_module \\ SshServer) do
     Logger.info("Starting SSH server...")
 
-    case SshServer.start_server() do
+    case ssh_server_module.start_server() do
       :ok ->
         Logger.info("SSH server started successfully")
         :ok
@@ -125,10 +130,10 @@ defmodule EdgeAgent.Bootstrap do
     end
   end
 
-  def start_metrics_server do
+  def start_metrics_server(metrics_server_module \\ MetricsServer) do
     Logger.info("Starting metrics server...")
 
-    case MetricsServer.start_server() do
+    case metrics_server_module.start_server() do
       {:ok, _pid} ->
         Logger.info("Metrics server started successfully")
         :ok
@@ -249,10 +254,10 @@ defmodule EdgeAgent.Bootstrap do
 
   # VPN Connection Helpers
 
-  defp validate_vpn_connection do
+  defp validate_vpn_connection(vpn_module) do
     Logger.info("Validating VPN connection...")
 
-    case VPN.get_vpn_ip() do
+    case vpn_module.get_vpn_ip() do
       {:ok, vpn_ip} ->
         Logger.info("VPN connection validated with IP: #{vpn_ip}")
         {:ok, vpn_ip}
@@ -264,14 +269,14 @@ defmodule EdgeAgent.Bootstrap do
 
   # Admin Connection Helpers
 
-  defp register_new_node(node_id, node_id_type) do
+  defp register_new_node(node_id, node_id_type, admin_client_module) do
     node_params = %{
       id: node_id,
       id_type: node_id_type,
       status: "online"
     }
 
-    case AdminClient.create_node(node_params) do
+    case admin_client_module.create_node(node_params) do
       {:ok, node_data} ->
         Logger.info("Successfully registered new node with admin")
         store_node_settings_from_admin(node_data)

@@ -1,5 +1,5 @@
 # edge_admin/test/edge_admin_web/controllers/nodes/ssh_public_key_controller_test.exs
-defmodule EdgeAdminWeb.Nodes.SshPublicKeyControllerTest do
+defmodule EdgeAdminWeb.Controllers.Nodes.SshPublicKeyControllerTest do
   use EdgeAdminWeb.ConnCase
 
   import EdgeAdmin.NodesFixtures

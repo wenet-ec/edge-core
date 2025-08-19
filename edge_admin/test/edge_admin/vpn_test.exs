@@ -290,10 +290,10 @@ defmodule EdgeAdmin.VPNTest do
   describe "error scenarios" do
     test "handles missing environment variables gracefully in tests" do
       # Temporarily remove config and system env vars
-      original_vpn_url = Application.get_env(:edge_admin, :vpn_url)
-      original_enrollment_key = Application.get_env(:edge_admin, :enrollment_key)
-      original_sys_vpn_url = System.get_env("VPN_URL")
-      original_sys_enrollment_key = System.get_env("ENROLLMENT_KEY")
+      original_vpn_url = (fn -> Application.get_env(:edge_admin, :vpn_url) end).()
+      original_enrollment_key = (fn -> Application.get_env(:edge_admin, :enrollment_key) end).()
+      original_sys_vpn_url = (fn -> System.get_env("VPN_URL") end).()
+      original_sys_enrollment_key = (fn -> System.get_env("ENROLLMENT_KEY") end).()
 
       Application.delete_env(:edge_admin, :vpn_url)
       Application.delete_env(:edge_admin, :enrollment_key)

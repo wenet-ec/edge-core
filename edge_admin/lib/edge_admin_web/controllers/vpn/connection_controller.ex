@@ -1,14 +1,14 @@
 # edge_admin/lib/edge_admin_web/controllers/vpn/connection_controller.ex
-defmodule EdgeAdminWeb.VPN.ConnectionController do
+defmodule EdgeAdminWeb.Controllers.VPN.ConnectionController do
   use EdgeAdminWeb, :controller
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.VPN
-  alias EdgeAdminWeb.ChangesetJSON
+  alias EdgeAdminWeb.Controllers.ChangesetJSON
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.VPN.ConnectionSchemas
 
-  action_fallback(EdgeAdminWeb.FallbackController)
+  action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
   tags(["VPN.Connection"])
 

@@ -1,5 +1,5 @@
 # edge_admin/lib/edge_admin_web/controllers/commands/command_execution_controller.ex
-defmodule EdgeAdminWeb.Commands.CommandExecutionController do
+defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
   use EdgeAdminWeb, :controller
   use OpenApiSpex.ControllerSpecs
 
@@ -8,7 +8,7 @@ defmodule EdgeAdminWeb.Commands.CommandExecutionController do
   alias EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
 
-  action_fallback(EdgeAdminWeb.FallbackController)
+  action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
   tags(["Commands.CommandExecution"])
 

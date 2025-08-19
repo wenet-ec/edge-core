@@ -1,5 +1,5 @@
 # edge_admin/test/edge_admin_web/controllers/commands/command_controller_test.exs
-defmodule EdgeAdminWeb.Commands.CommandControllerTest do
+defmodule EdgeAdminWeb.Controllers.Commands.CommandControllerTest do
   use EdgeAdminWeb.ConnCase
 
   import EdgeAdmin.CommandsFixtures

@@ -1,5 +1,5 @@
 # edge_admin/test/edge_admin_web/controllers/nodes/metrics_discovery_controller_test.exs
-defmodule EdgeAdminWeb.Nodes.MetricsDiscoveryControllerTest do
+defmodule EdgeAdminWeb.Controllers.Nodes.MetricsDiscoveryControllerTest do
   use EdgeAdminWeb.ConnCase
 
   import EdgeAdmin.NodesFixtures

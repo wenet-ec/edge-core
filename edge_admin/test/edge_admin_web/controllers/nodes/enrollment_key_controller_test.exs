@@ -1,5 +1,5 @@
 # edge_admin/test/edge_admin_web/controllers/nodes/enrollment_key_controller_test.exs
-defmodule EdgeAdminWeb.Nodes.EnrollmentKeyControllerTest do
+defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyControllerTest do
   use EdgeAdminWeb.ConnCase, async: true
 
   import Mox

@@ -1,5 +1,5 @@
 # edge_admin/lib/edge_admin_web/controllers/nodes/enrollment_key_json.ex
-defmodule EdgeAdminWeb.Nodes.EnrollmentKeyJSON do
+defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyJSON do
   @doc """
   Renders a single enrollment key.
   """

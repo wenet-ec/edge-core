@@ -220,65 +220,76 @@ defmodule EdgeAdmin.Commands do
     command = get_command!(command_id)
     unique_node_ids = Enum.uniq(node_ids)
 
-    # Get the specified nodes
-    specified_nodes = Nodes.get_nodes_by_ids(unique_node_ids)
+    with {:ok, nodes} <- get_valid_nodes(unique_node_ids),
+         filtered_nodes = apply_node_filters(nodes, node_filters),
+         :ok <- log_execution_creation_info(nodes, filtered_nodes) do
+      results = create_executions_for_nodes(command, filtered_nodes)
+      process_execution_results(results)
+    end
+  end
 
-    nodes =
-      specified_nodes
-      |> Enum.filter(&match?({:ok, _}, &1))
-      |> Enum.map(fn {:ok, node} -> node end)
+  defp get_valid_nodes(node_ids) do
+    node_ids
+    |> Nodes.get_nodes_by_ids()
+    |> Enum.filter(&match?({:ok, _}, &1))
+    |> Enum.map(fn {:ok, node} -> node end)
+    |> then(&{:ok, &1})
+  end
 
-    # Apply node_filters if any are provided
-    filtered_nodes =
-      if Enum.empty?(node_filters) do
-        nodes
-      else
-        # Use the same helper function to get all matching nodes
-        all_matching_nodes = get_all_filtered_nodes(node_filters)
-        matching_node_ids = MapSet.new(all_matching_nodes, & &1.id)
-        Enum.filter(nodes, fn node -> MapSet.member?(matching_node_ids, node.id) end)
-      end
+  defp apply_node_filters(nodes, node_filters) when map_size(node_filters) == 0, do: nodes
 
+  defp apply_node_filters(nodes, node_filters) do
+    all_matching_nodes = get_all_filtered_nodes(node_filters)
+    matching_node_ids = MapSet.new(all_matching_nodes, & &1.id)
+    Enum.filter(nodes, fn node -> MapSet.member?(matching_node_ids, node.id) end)
+  end
+
+  defp log_execution_creation_info(nodes, filtered_nodes) do
     Logger.info(
       "Creating executions for #{length(filtered_nodes)} nodes (#{length(nodes)} specified, #{length(filtered_nodes)} after filtering)"
     )
 
-    results =
-      Enum.map(filtered_nodes, fn node ->
-        execution_attrs = %{
-          command_id: command_id,
-          node_id: node.id,
-          target_all: false,
-          status: "pending",
-          command_text: command.command_text
-        }
+    :ok
+  end
 
-        case create_command_execution(execution_attrs) do
-          {:ok, execution} ->
-            execution = %{execution | command_text: command.command_text}
+  defp create_executions_for_nodes(command, nodes) do
+    Enum.map(nodes, fn node ->
+      create_execution_for_single_node(command, node)
+    end)
+  end
 
-            pending_count = count_pending_executions_for_node(node.id)
+  defp create_execution_for_single_node(command, node) do
+    execution_attrs = %{
+      command_id: command.id,
+      node_id: node.id,
+      target_all: false,
+      status: "pending",
+      command_text: command.command_text
+    }
 
-            if pending_count > 1 do
-              {:ok, execution}
-            else
-              # No other pending executions, attempt immediate delivery
-              case attempt_execution_delivery(execution, node) do
-                :ok ->
-                  {:ok, execution}
+    case create_command_execution(execution_attrs) do
+      {:ok, execution} ->
+        execution = %{execution | command_text: command.command_text}
+        handle_execution_delivery(execution, node)
 
-                :error ->
-                  {:ok, execution}
-              end
-            end
+      {:error, changeset} ->
+        Logger.error("Failed to create execution for node #{node.id}: #{inspect(changeset.errors)}")
+        {:error, changeset}
+    end
+  end
 
-          {:error, changeset} ->
-            Logger.error("Failed to create execution for node #{node.id}: #{inspect(changeset.errors)}")
+  defp handle_execution_delivery(execution, node) do
+    pending_count = count_pending_executions_for_node(node.id)
 
-            {:error, changeset}
-        end
-      end)
+    if pending_count > 1 do
+      {:ok, execution}
+    else
+      attempt_execution_delivery(execution, node)
+      {:ok, execution}
+    end
+  end
 
+  defp process_execution_results(results) do
     {successes, errors} = Enum.split_with(results, &match?({:ok, _}, &1))
 
     if Enum.empty?(errors) do

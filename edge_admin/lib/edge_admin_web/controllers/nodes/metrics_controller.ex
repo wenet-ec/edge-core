@@ -1,5 +1,5 @@
 # edge_admin/lib/edge_admin_web/controllers/nodes/metrics_controller.ex
-defmodule EdgeAdminWeb.Nodes.MetricsController do
+defmodule EdgeAdminWeb.Controllers.Nodes.MetricsController do
   use EdgeAdminWeb, :controller
   use OpenApiSpex.ControllerSpecs
 
@@ -7,7 +7,7 @@ defmodule EdgeAdminWeb.Nodes.MetricsController do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Nodes.MetricsSchemas
 
-  action_fallback(EdgeAdminWeb.FallbackController)
+  action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
   tags(["Nodes.Metrics"])
 

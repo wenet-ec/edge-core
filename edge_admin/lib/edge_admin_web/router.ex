@@ -50,7 +50,7 @@ defmodule EdgeAdminWeb.Router do
     get("/openapi", OpenApiSpex.Plug.RenderSpec, [])
   end
 
-  scope "/api", EdgeAdminWeb do
+  scope "/api", EdgeAdminWeb.Controllers do
     pipe_through(:api)
 
     scope "/", VPN do

@@ -1,5 +1,5 @@
 # edge_admin/lib/edge_admin_web/controllers/nodes/metrics_json.ex
-defmodule EdgeAdminWeb.Nodes.MetricsJSON do
+defmodule EdgeAdminWeb.Controllers.Nodes.MetricsJSON do
   @doc """
   Renders metrics.
   """

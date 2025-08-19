@@ -1,5 +1,5 @@
 # edge_admin/lib/edge_admin_web/controllers/fallback_controller.ex
-defmodule EdgeAdminWeb.FallbackController do
+defmodule EdgeAdminWeb.Controllers.FallbackController do
   @moduledoc """
   Translates controller action results into valid `Plug.Conn` responses.
 
@@ -11,7 +11,7 @@ defmodule EdgeAdminWeb.FallbackController do
   def call(conn, {:error, %Ecto.Changeset{} = changeset}) do
     conn
     |> put_status(:unprocessable_entity)
-    |> put_view(json: EdgeAdminWeb.ChangesetJSON)
+    |> put_view(json: EdgeAdminWeb.Controllers.ChangesetJSON)
     |> render(:error, changeset: changeset)
   end
 
@@ -19,7 +19,7 @@ defmodule EdgeAdminWeb.FallbackController do
   def call(conn, {:error, :not_found}) do
     conn
     |> put_status(:not_found)
-    |> put_view(json: EdgeAdminWeb.ErrorJSON)
+    |> put_view(json: EdgeAdminWeb.Controllers.ErrorJSON)
     |> render(:"404")
   end
 

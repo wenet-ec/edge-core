@@ -1,5 +1,5 @@
 # edge_admin/test/edge_admin_web/controllers/nodes/node_controller_test.exs
-defmodule EdgeAdminWeb.Nodes.NodeControllerTest do
+defmodule EdgeAdminWeb.Controllers.Nodes.NodeControllerTest do
   use EdgeAdminWeb.ConnCase
 
   import EdgeAdmin.NodesFixtures
@@ -55,7 +55,7 @@ defmodule EdgeAdminWeb.Nodes.NodeControllerTest do
          }}
       end)
 
-      # Mock the VPN node lookup for show  
+      # Mock the VPN node lookup for show
       expect(TailscaleMock, :get_node_by_hostname, fn ^vpn_hostname ->
         {:ok,
          %{

@@ -1,5 +1,5 @@
 # edge_admin/lib/edge_admin_web/controllers/nodes/ssh_username_controller.ex
-defmodule EdgeAdminWeb.Nodes.SshUsernameController do
+defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameController do
   use EdgeAdminWeb, :controller
   use OpenApiSpex.ControllerSpecs
 
@@ -8,7 +8,7 @@ defmodule EdgeAdminWeb.Nodes.SshUsernameController do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas
 
-  action_fallback(EdgeAdminWeb.FallbackController)
+  action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
   tags(["Nodes.SshUsername"])
 

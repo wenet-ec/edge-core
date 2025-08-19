@@ -1,5 +1,5 @@
 # edge_admin/lib/edge_admin_web/controllers/nodes/enrollment_key_controller.ex
-defmodule EdgeAdminWeb.Nodes.EnrollmentKeyController do
+defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   use EdgeAdminWeb, :controller
   use OpenApiSpex.ControllerSpecs
 
@@ -7,7 +7,7 @@ defmodule EdgeAdminWeb.Nodes.EnrollmentKeyController do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas
 
-  action_fallback(EdgeAdminWeb.FallbackController)
+  action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
   tags ["Nodes.EnrollmentKey"]
 

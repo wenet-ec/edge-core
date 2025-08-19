@@ -26,7 +26,7 @@ config :edge_admin, EdgeAdminWeb.Endpoint,
   adapter: Bandit.PhoenixAdapter,
   pubsub_server: EdgeAdmin.PubSub,
   render_errors: [
-    formats: [json: EdgeAdminWeb.ErrorJSON],
+    formats: [json: EdgeAdminWeb.Controllers.ErrorJSON],
     layout: false
   ]
 

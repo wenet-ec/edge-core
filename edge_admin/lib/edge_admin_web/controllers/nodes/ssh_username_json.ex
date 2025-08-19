@@ -1,5 +1,5 @@
 # edge_admin/lib/edge_admin_web/controllers/nodes/ssh_username_json.ex
-defmodule EdgeAdminWeb.Nodes.SshUsernameJSON do
+defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameJSON do
   alias EdgeAdmin.FilteringPagination
   alias EdgeAdmin.Nodes.SshUsername
 

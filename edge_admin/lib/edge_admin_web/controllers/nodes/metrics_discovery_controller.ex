@@ -1,5 +1,5 @@
 # lib/edge_admin_web/controllers/nodes/metrics_discovery_controller.ex
-defmodule EdgeAdminWeb.Nodes.MetricsDiscoveryController do
+defmodule EdgeAdminWeb.Controllers.Nodes.MetricsDiscoveryController do
   use EdgeAdminWeb, :controller
 
   alias EdgeAdmin.Nodes

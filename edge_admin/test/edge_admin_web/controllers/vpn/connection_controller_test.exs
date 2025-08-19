@@ -1,5 +1,5 @@
 # edge_admin/test/edge_admin_web/controllers/vpn/connection_controller_test.exs
-defmodule EdgeAdminWeb.VPN.ConnectionControllerTest do
+defmodule EdgeAdminWeb.Controllers.VPN.ConnectionControllerTest do
   use EdgeAdminWeb.ConnCase, async: true
 
   import Mox

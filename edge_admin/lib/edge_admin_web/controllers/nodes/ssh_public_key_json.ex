@@ -1,5 +1,5 @@
 # edge_admin/lib/edge_admin_web/controllers/nodes/ssh_public_key_json.ex
-defmodule EdgeAdminWeb.Nodes.SshPublicKeyJSON do
+defmodule EdgeAdminWeb.Controllers.Nodes.SshPublicKeyJSON do
   alias EdgeAdmin.FilteringPagination
   alias EdgeAdmin.Nodes.SshPublicKey
 

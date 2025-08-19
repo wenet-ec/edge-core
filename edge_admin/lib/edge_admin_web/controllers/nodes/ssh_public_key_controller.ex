@@ -1,5 +1,5 @@
 # edge_admin/lib/edge_admin_web/controllers/nodes/ssh_public_key_controller.ex
-defmodule EdgeAdminWeb.Nodes.SshPublicKeyController do
+defmodule EdgeAdminWeb.Controllers.Nodes.SshPublicKeyController do
   use EdgeAdminWeb, :controller
   use OpenApiSpex.ControllerSpecs
 
@@ -8,7 +8,7 @@ defmodule EdgeAdminWeb.Nodes.SshPublicKeyController do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Nodes.SshPublicKeySchemas
 
-  action_fallback(EdgeAdminWeb.FallbackController)
+  action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
   tags(["Nodes.SshPublicKey"])
 

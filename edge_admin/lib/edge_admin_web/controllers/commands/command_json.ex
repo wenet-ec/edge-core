@@ -1,5 +1,5 @@
 # edge_admin_web/controllers/commands/command_json.ex
-defmodule EdgeAdminWeb.Commands.CommandJSON do
+defmodule EdgeAdminWeb.Controllers.Commands.CommandJSON do
   alias EdgeAdmin.Commands.Command
   alias EdgeAdmin.FilteringPagination
 

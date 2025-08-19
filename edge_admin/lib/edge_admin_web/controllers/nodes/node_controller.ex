@@ -1,5 +1,5 @@
 # edge_admin/lib/edge_admin_web/controllers/nodes/node_controller.ex
-defmodule EdgeAdminWeb.Nodes.NodeController do
+defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   use EdgeAdminWeb, :controller
   use OpenApiSpex.ControllerSpecs
 
@@ -8,7 +8,7 @@ defmodule EdgeAdminWeb.Nodes.NodeController do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Nodes.NodeSchemas
 
-  action_fallback(EdgeAdminWeb.FallbackController)
+  action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
   tags(["Nodes.Node"])
 

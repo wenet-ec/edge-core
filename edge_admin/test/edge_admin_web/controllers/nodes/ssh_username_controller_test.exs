@@ -1,5 +1,5 @@
 # edge_admin/test/edge_admin_web/controllers/nodes/ssh_username_controller_test.exs
-defmodule EdgeAdminWeb.Nodes.SshUsernameControllerTest do
+defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameControllerTest do
   use EdgeAdminWeb.ConnCase
 
   import EdgeAdmin.NodesFixtures

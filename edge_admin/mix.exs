@@ -38,6 +38,19 @@ defmodule EdgeAdmin.Mixfile do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate", "test --warnings-as-errors"],
+      lint: ["compile --warnings-as-errors", "credo --strict"],
+      quality: ["format --check-formatted", "credo --strict", "dialyzer"],
+      security: ["deps.audit", "sobelow --config"],
+      check: [
+        "format --check-formatted",
+        "deps.unlock --check-unused",
+        "deps.audit",
+        "sobelow --config",
+        "compile --warnings-as-errors",
+        "credo --strict",
+        "dialyzer",
+        "coveralls"
+      ],
       precommit: [
         "compile --warnings-as-errors",
         "deps.unlock --check-unused",

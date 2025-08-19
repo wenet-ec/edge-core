@@ -9,7 +9,7 @@ enrollment_key = get_env("ENROLLMENT_KEY", :string, nil)
 # Optional environment variables with defaults
 config :edge_agent, EdgeAgent.Repo,
   database: get_env("DATABASE_PATH", :string, "/app/data/edge_agent.db"),
-  pool_size: get_env("DATABASE_POOL_SIZE", :integer, 5)
+  pool_size: get_env("DATABASE_POOL_SIZE", :integer, 3)
 
 # NOTE: Only set `server` to `true` if `PHX_SERVER` is present. We cannot set
 # it to `false` otherwise because `mix phx.server` will stop working without it.

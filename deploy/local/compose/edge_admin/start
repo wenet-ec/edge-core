@@ -41,4 +41,5 @@ mix ecto.migrate
 
 # Start the development server with hot reloading
 echo "Starting Phoenix server..."
+export PHX_SERVER=true
 exec mix phx.server

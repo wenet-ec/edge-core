@@ -54,8 +54,13 @@ defmodule EdgeAdmin.Application do
     case Application.get_env(:edge_admin, :run_bootstrap, :auto) do
       false -> false
       true -> true
-      :auto -> @env != :test
+      :auto -> @env != :test and phoenix_server_starting?()
     end
+  end
+
+  defp phoenix_server_starting? do
+    # Only run bootstrap when Phoenix server is actually starting
+    System.get_env("PHX_SERVER") == "true"
   end
 
   # Tell Phoenix to update the endpoint configuration

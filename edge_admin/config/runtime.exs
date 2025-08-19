@@ -3,7 +3,11 @@ import Config
 import EdgeAdmin.Config
 
 config :edge_admin, EdgeAdmin.Repo,
-  url: get_env!("DATABASE_URL"),
+  username: get_env!("POSTGRES_USER"),
+  password: get_env!("POSTGRES_PASSWORD"),
+  hostname: get_env!("POSTGRES_HOST"),
+  database: get_env!("POSTGRES_DB"),
+  port: get_env!("POSTGRES_PORT", :integer),
   ssl: get_env("DATABASE_SSL", :boolean),
   pool_size: get_env!("DATABASE_POOL_SIZE", :integer),
   socket_options: if(get_env("DATABASE_IPV6", :boolean), do: [:inet6], else: [])

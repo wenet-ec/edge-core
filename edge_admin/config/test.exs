@@ -5,13 +5,17 @@ defmodule TestEnvironment do
   @moduledoc false
   @database_name_suffix "_test"
 
-  def get_database_url do
-    url = System.get_env("DATABASE_URL")
+  def get_database_name do
+    db_name = System.get_env("POSTGRES_DB")
+    
+    if is_nil(db_name) do
+      raise "POSTGRES_DB environment variable is required for tests"
+    end
 
-    if is_nil(url) || String.ends_with?(url, @database_name_suffix) do
-      url
+    if String.ends_with?(db_name, @database_name_suffix) do
+      db_name
     else
-      raise "Expected database URL to end with '#{@database_name_suffix}', got: #{url}"
+      raise "Expected database name to end with '#{@database_name_suffix}', got: #{db_name}"
     end
   end
 end
@@ -20,9 +24,13 @@ end
 config :edge_admin, EdgeAdmin.Gettext, priv: "priv/null", interpolation: EdgeAdmin.GettextInterpolation
 
 config :edge_admin, EdgeAdmin.Repo,
+  username: System.get_env("POSTGRES_USER"),
+  password: System.get_env("POSTGRES_PASSWORD"),
+  hostname: System.get_env("POSTGRES_HOST"),
+  database: "#{TestEnvironment.get_database_name()}#{System.get_env("MIX_TEST_PARTITION")}",
+  port: String.to_integer(System.get_env("POSTGRES_PORT")),
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: System.schedulers_online() * 2,
-  url: "#{TestEnvironment.get_database_url()}#{System.get_env("MIX_TEST_PARTITION")}"
+  pool_size: System.schedulers_online() * 2
 
 config :edge_admin, EdgeAdminWeb.Endpoint, server: false
 

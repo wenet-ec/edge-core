@@ -19,7 +19,6 @@
           {Credo.Check.Refactor.ABCSize, [max_size: 40]},
 
           # Keep valuable naming checks
-          {CredoEnvvar.Check.Warning.EnvironmentVariablesAtCompileTime},
           {CredoNaming.Check.Warning.AvoidSpecificTermsInModuleNames,
            terms: ["Manager", "Fetcher", "Builder", "Persister", "Serializer", ~r/^Helpers?$/i, ~r/^Utils?$/i]},
           {CredoNaming.Check.Consistency.ModuleFilename,
@@ -33,7 +32,8 @@
           {Credo.Check.Readability.ModuleDoc, false},
           {Credo.Check.Readability.Specs, false},
           {Credo.Check.Readability.StrictModuleLayout, false},
-          {Credo.Check.Design.DuplicatedCode, false}
+          {Credo.Check.Design.DuplicatedCode, false},
+          {CredoEnvvar.Check.Warning.EnvironmentVariablesAtCompileTime, false}
         ]
       }
     }

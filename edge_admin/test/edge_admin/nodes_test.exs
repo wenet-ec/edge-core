@@ -314,7 +314,7 @@ defmodule EdgeAdmin.NodesTest do
         })
 
       # Remove the config entirely
-      original_url = (fn -> Application.get_env(:edge_admin, :metrics_storage_url) end).()
+      original_url = Application.get_env(:edge_admin, :metrics_storage_url)
       Application.delete_env(:edge_admin, :metrics_storage_url)
 
       try do
@@ -333,7 +333,7 @@ defmodule EdgeAdmin.NodesTest do
         })
 
       # Set empty config
-      original_url = (fn -> Application.get_env(:edge_admin, :metrics_storage_url) end).()
+      original_url = Application.get_env(:edge_admin, :metrics_storage_url)
       Application.put_env(:edge_admin, :metrics_storage_url, "")
 
       try do

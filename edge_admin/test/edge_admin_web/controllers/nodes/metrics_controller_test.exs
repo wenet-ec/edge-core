@@ -40,7 +40,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.MetricsControllerTest do
       node = node_fixture(%{vpn_ip: "100.64.0.1"})
 
       # Remove the config
-      original_url = (fn -> Application.get_env(:edge_admin, :metrics_storage_url) end).()
+      original_url = Application.get_env(:edge_admin, :metrics_storage_url)
       Application.delete_env(:edge_admin, :metrics_storage_url)
 
       try do

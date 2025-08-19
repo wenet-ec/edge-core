@@ -165,65 +165,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
           }
         }
       },
-      required: [:command],
-      examples: %{
-        target_all_with_filters: %{
-          summary: "Target all online nodes",
-          value: %{
-            command: %{
-              command_text: "systemctl status nginx",
-              targeting: %{
-                type: "all",
-                node_filters: %{
-                  status: "online"
-                }
-              }
-            }
-          }
-        },
-        target_specific_nodes: %{
-          summary: "Target specific nodes with filters",
-          value: %{
-            command: %{
-              command_text: "df -h",
-              targeting: %{
-                type: "nodes",
-                ids: ["01234567-89ab-cdef-0123-456789abcdef"],
-                node_filters: %{
-                  status: "online",
-                  id_type: "machine_id"
-                }
-              }
-            }
-          }
-        },
-        target_all_no_filters: %{
-          summary: "Target all nodes without filters",
-          value: %{
-            command: %{
-              command_text: "whoami",
-              targeting: %{
-                type: "all"
-              }
-            }
-          }
-        },
-        target_specific_nodes_no_filters: %{
-          summary: "Target specific nodes without filters",
-          value: %{
-            command: %{
-              command_text: "uptime",
-              targeting: %{
-                type: "nodes",
-                ids: [
-                  "01234567-89ab-cdef-0123-456789abcdef",
-                  "fedcba98-7654-3210-fedc-ba9876543210"
-                ]
-              }
-            }
-          }
-        }
-      }
+      required: [:command]
     })
   end
 end

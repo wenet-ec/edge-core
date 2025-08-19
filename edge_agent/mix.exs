@@ -6,7 +6,7 @@ defmodule EdgeAgent.Mixfile do
     [
       app: :edge_agent,
       version: "0.0.1",
-      erlang: "~> 26.0",
+      erlang: "~> 27.0",
       elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       test_paths: ["test"],
@@ -17,7 +17,8 @@ defmodule EdgeAgent.Mixfile do
       aliases: aliases(),
       deps: deps(),
       dialyzer: dialyzer(),
-      releases: releases()
+      releases: releases(),
+      listeners: [Phoenix.CodeReloader]
     ]
   end
 
@@ -45,20 +46,20 @@ defmodule EdgeAgent.Mixfile do
       {:req, "~> 0.5"},
 
       # HTTP server
-      {:bandit, "~> 1.7"},
+      {:bandit, "~> 1.8"},
       {:corsica, "~> 2.1"},
 
       # Phoenix
-      {:phoenix, "~> 1.7"},
+      {:phoenix, "~> 1.8"},
       {:phoenix_html, "~> 4.2"},
-      {:phoenix_live_view, "~> 1.0"},
+      {:phoenix_live_view, "~> 1.1"},
       {:phoenix_ecto, "~> 4.6"},
       {:phoenix_live_reload, "~> 1.6", only: :dev},
       {:jason, "~> 1.4"},
 
       # Database
       {:ecto_sql, "~> 3.13"},
-      {:ecto_sqlite3, "~> 0.19"},
+      {:ecto_sqlite3, "~> 0.21"},
 
       # Database check
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
@@ -70,7 +71,7 @@ defmodule EdgeAgent.Mixfile do
       {:credo, "~> 1.7", only: [:dev, :test], override: true},
       {:credo_envvar, "~> 0.1", only: [:dev, :test], runtime: false},
       {:credo_naming, "~> 2.1", only: [:dev, :test], runtime: false},
-      {:styler, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:styler, "~> 1.7", only: [:dev, :test], runtime: false},
 
       # Security check
       {:sobelow, "~> 0.14", only: [:dev, :test], runtime: true},
@@ -94,7 +95,7 @@ defmodule EdgeAgent.Mixfile do
       {:dns_cluster, "~> 0.2"},
 
       # Oban
-      {:oban, "~> 2.19"},
+      {:oban, "~> 2.20"},
 
       # Tailscale library
       {:tailscale, path: "../tailscale"}

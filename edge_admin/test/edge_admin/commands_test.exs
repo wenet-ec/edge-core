@@ -1,6 +1,7 @@
 # edge_admin/test/edge_admin/commands_test.exs
 defmodule EdgeAdmin.CommandsTest do
   use EdgeAdmin.DataCase
+  use Oban.Testing, repo: EdgeAdmin.Repo
 
   alias EdgeAdmin.Commands
 
@@ -97,6 +98,116 @@ defmodule EdgeAdmin.CommandsTest do
       command2 = command_fixture()
       different_command_attrs = %{command_id: command2.id, node_id: node.id, status: "pending"}
       assert {:ok, _execution3} = Commands.create_command_execution(different_command_attrs)
+    end
+  end
+
+  describe "command CRUD operations" do
+    test "get_command!/1 returns command" do
+      command = command_fixture()
+      fetched = Commands.get_command!(command.id)
+      assert fetched.id == command.id
+      assert fetched.command_text == command.command_text
+    end
+
+    test "update_command/2 with valid data updates command" do
+      command = command_fixture()
+      update_attrs = %{command_text: "updated command"}
+      
+      assert {:ok, updated_command} = Commands.update_command(command, update_attrs)
+      assert updated_command.command_text == "updated command"
+    end
+
+    test "delete_command/1 deletes the command" do
+      command = command_fixture()
+      assert {:ok, _} = Commands.delete_command(command)
+      assert_raise Ecto.NoResultsError, fn -> Commands.get_command!(command.id) end
+    end
+
+    test "change_command/1 returns changeset" do
+      command = command_fixture()
+      changeset = Commands.change_command(command)
+      assert %Ecto.Changeset{} = changeset
+    end
+  end
+
+  describe "command execution CRUD operations" do
+    test "get_command_execution!/1 returns execution with preloaded command" do
+      command = command_fixture()
+      node = node_fixture()
+      execution = command_execution_fixture(%{command_id: command.id, node_id: node.id})
+      
+      fetched = Commands.get_command_execution!(execution.id)
+      assert fetched.id == execution.id
+      assert fetched.command_text == command.command_text
+    end
+
+    test "update_command_execution/2 updates execution" do
+      execution = command_execution_fixture()
+      completed_time = DateTime.utc_now() |> DateTime.truncate(:second)
+      update_attrs = %{status: "completed", exit_code: 0, completed_at: completed_time}
+      
+      assert {:ok, updated} = Commands.update_command_execution(execution, update_attrs)
+      assert updated.status == "completed"
+      assert updated.exit_code == 0
+    end
+
+    test "delete_command_execution/1 deletes execution" do
+      execution = command_execution_fixture()
+      assert {:ok, _} = Commands.delete_command_execution(execution)
+      assert_raise Ecto.NoResultsError, fn -> Commands.get_command_execution!(execution.id) end
+    end
+
+    test "change_command_execution/1 returns changeset" do
+      execution = command_execution_fixture()
+      changeset = Commands.change_command_execution(execution)
+      assert %Ecto.Changeset{} = changeset
+    end
+  end
+
+  describe "create_command_and_dispatch_executions/1" do
+    test "creates command and dispatches for target_all" do
+      attrs = %{
+        "command_text" => "echo test",
+        "targeting" => %{
+          "type" => "all",
+          "node_filters" => %{}
+        }
+      }
+
+      assert {:ok, command} = Commands.create_command_and_dispatch_executions(attrs)
+      assert command.command_text == "echo test"
+      
+      # Should have enqueued Oban job
+      assert_enqueued(worker: EdgeAdmin.Commands.Workers.TargetAllDispatchWorker)
+    end
+
+    test "creates command and dispatches for specific nodes" do
+      node1 = node_fixture()
+      node2 = node_fixture()
+      
+      attrs = %{
+        "command_text" => "pwd",
+        "targeting" => %{
+          "type" => "nodes",
+          "ids" => [node1.id, node2.id]
+        }
+      }
+
+      assert {:ok, command} = Commands.create_command_and_dispatch_executions(attrs)
+      assert command.command_text == "pwd"
+      
+      # Should have enqueued Oban job for specific nodes
+      assert_enqueued(worker: EdgeAdmin.Commands.Workers.TargetNodesDispatchWorker)
+    end
+
+    test "returns error for invalid command" do
+      attrs = %{
+        "command_text" => "",  # Invalid
+        "targeting" => %{"type" => "all"}
+      }
+
+      assert {:error, changeset} = Commands.create_command_and_dispatch_executions(attrs)
+      assert changeset.errors[:command_text] != nil
     end
   end
 

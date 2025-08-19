@@ -7,6 +7,74 @@ defmodule EdgeAdmin.NodesTest do
   alias EdgeAdmin.Nodes.SshUsername
   import EdgeAdmin.NodesFixtures
 
+  describe "node CRUD operations" do
+    test "get_node!/1 returns node with virtual fields" do
+      node = node_fixture()
+      fetched = Nodes.get_node!(node.id)
+      assert fetched.id == node.id
+      assert fetched.vpn_hostname != nil  # Virtual field populated
+    end
+
+    test "update_node/2 with valid data updates the node" do
+      node = node_fixture()
+      update_attrs = %{status: "offline", vpn_ip: "100.64.0.99"}
+      
+      assert {:ok, updated_node} = Nodes.update_node(node, update_attrs)
+      assert updated_node.status == "offline"
+      assert updated_node.vpn_ip == "100.64.0.99"
+    end
+
+    test "delete_node/1 deletes the node" do
+      node = node_fixture()
+      assert {:ok, _} = Nodes.delete_node(node)
+      assert_raise Ecto.NoResultsError, fn -> Nodes.get_node!(node.id) end
+    end
+
+    test "change_node/1 returns a node changeset" do
+      node = node_fixture()
+      changeset = Nodes.change_node(node)
+      assert %Ecto.Changeset{} = changeset
+    end
+  end
+
+  describe "node filtering and pagination" do
+    test "list_nodes_with_filtering_pagination returns paginated results" do
+      _node1 = node_fixture(%{status: "online"})
+      _node2 = node_fixture(%{status: "offline"})
+      
+      result = Nodes.list_nodes_with_filtering_pagination(%{})
+      assert length(result.data) >= 2
+      assert result.page == 1
+    end
+
+    test "filters nodes by status" do
+      _online_node = node_fixture(%{status: "online"})
+      _offline_node = node_fixture(%{status: "offline"})
+      
+      result = Nodes.list_nodes_with_filtering_pagination(%{"status" => "online"})
+      
+      # Should only return online nodes
+      Enum.each(result.data, fn node ->
+        assert node.status == "online"
+      end)
+    end
+
+    test "sorts nodes by specified field" do
+      _node1 = node_fixture(%{status: "offline"})
+      _node2 = node_fixture(%{status: "online"})
+      
+      result = Nodes.list_nodes_with_filtering_pagination(%{
+        "sort" => "status:asc",
+        "page_size" => "10"
+      })
+      
+      statuses = Enum.map(result.data, & &1.status) |> Enum.filter(& &1 != nil)
+      if length(statuses) >= 2 do
+        assert List.first(statuses) <= List.last(statuses)
+      end
+    end
+  end
+
   describe "node validation and business rules" do
     test "validates UUID format" do
       # Valid UUID formats

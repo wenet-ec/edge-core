@@ -1,9 +1,21 @@
 # edge_admin/test/edge_admin_web/controllers/nodes/enrollment_key_controller_test.exs
 defmodule EdgeAdminWeb.Nodes.EnrollmentKeyControllerTest do
-  use EdgeAdminWeb.ConnCase
+  use EdgeAdminWeb.ConnCase, async: true
+
+  import Mox
+  alias EdgeAdmin.TailscaleMock
+
+  # Make sure mocks are verified when the test exits
+  setup :verify_on_exit!
 
   describe "POST /api/enrollment_keys" do
     test "creates enrollment key successfully", %{conn: conn} do
+      enrollment_key_data = build(:enrollment_key)
+      
+      expect(TailscaleMock, :create_enrollment_key, fn "edge-nodes" ->
+        {:ok, enrollment_key_data}
+      end)
+
       conn = post(conn, ~p"/api/enrollment_keys")
 
       case conn.status do
@@ -27,6 +39,10 @@ defmodule EdgeAdminWeb.Nodes.EnrollmentKeyControllerTest do
     end
 
     test "handles VPN service errors appropriately", %{conn: conn} do
+      expect(TailscaleMock, :create_enrollment_key, fn "edge-nodes" ->
+        {:error, :vpn_service_unavailable}
+      end)
+
       conn = post(conn, ~p"/api/enrollment_keys")
 
       # Endpoint should respond (not 404/405) and return JSON

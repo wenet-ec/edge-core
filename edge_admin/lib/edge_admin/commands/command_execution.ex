@@ -79,7 +79,7 @@ defmodule EdgeAdmin.Commands.CommandExecution do
     completed_at = get_change(changeset, :completed_at)
 
     if status == "completed" and is_nil(completed_at) do
-      put_change(changeset, :completed_at, DateTime.utc_now())
+      put_change(changeset, :completed_at, DateTime.utc_now() |> DateTime.truncate(:second))
     else
       changeset
     end

@@ -103,7 +103,7 @@ defmodule EdgeAdmin.VPN.Connection do
       :inserted_at,
       :updated_at
     ])
-    |> validate_required([:status, :manual_disconnect])
+    |> validate_required([:status])
     |> validate_inclusion(:status, [:connected, :disconnected, :connecting])
     |> validate_inclusion(:manual_disconnect, [true, false])
     |> validate_ip_address(:vpn_ip)

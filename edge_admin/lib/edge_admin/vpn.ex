@@ -11,24 +11,62 @@ defmodule EdgeAdmin.VPN do
   alias EdgeAdmin.VPN.Connection
   require Logger
 
-  # Delegate all basic operations to the shared library
-  defdelegate connect_to_vpn(vpn_url, enrollment_key, hostname), to: Tailscale
-  defdelegate disconnect_from_vpn(), to: Tailscale
-  defdelegate check_connectivity(), to: Tailscale
-  defdelegate status_json(), to: Tailscale
-  defdelegate connected?(status_data), to: Tailscale
-  defdelegate start_daemon(), to: Tailscale
-  defdelegate get_vpn_ip(), to: Tailscale
-  defdelegate get_node_by_hostname(vpn_hostname), to: Tailscale
-  defdelegate list_nodes_for_user(user \\ "edge-nodes"), to: Tailscale
-  defdelegate create_enrollment_key(user \\ "edge-nodes"), to: Tailscale
-  defdelegate get_user(username), to: Tailscale
-  defdelegate get_connection(), to: Tailscale
-  defdelegate create_connection(attrs \\ %{}), to: Tailscale
-  defdelegate get_connection!(), to: Tailscale
-  defdelegate check_and_update_connectivity(), to: Tailscale
-  defdelegate sync_connection_state(), to: Tailscale
-  defdelegate disconnect_from_vpn_manual(), to: Tailscale
+  # Module configuration - allows dependency injection for testing
+  defp tailscale_module do
+    Application.get_env(:edge_admin, :tailscale_module, Tailscale)
+  end
+
+  # Delegate all basic operations to the configured library (real or mock)
+  def connect_to_vpn(vpn_url, enrollment_key, hostname), 
+    do: tailscale_module().connect_to_vpn(vpn_url, enrollment_key, hostname)
+  
+  def disconnect_from_vpn(), 
+    do: tailscale_module().disconnect_from_vpn()
+  
+  def check_connectivity(), 
+    do: tailscale_module().check_connectivity()
+  
+  def status_json(), 
+    do: tailscale_module().status_json()
+  
+  def connected?(status_data), 
+    do: tailscale_module().connected?(status_data)
+  
+  def start_daemon(), 
+    do: tailscale_module().start_daemon()
+  
+  def get_vpn_ip(), 
+    do: tailscale_module().get_vpn_ip()
+  
+  def get_node_by_hostname(vpn_hostname), 
+    do: tailscale_module().get_node_by_hostname(vpn_hostname)
+  
+  def list_nodes_for_user(user \\ "edge-nodes"), 
+    do: tailscale_module().list_nodes_for_user(user)
+  
+  def create_enrollment_key(user \\ "edge-nodes"), 
+    do: tailscale_module().create_enrollment_key(user)
+  
+  def get_user(username), 
+    do: tailscale_module().get_user(username)
+  
+  def get_connection(), 
+    do: tailscale_module().get_connection()
+  
+  def create_connection(attrs \\ %{}), 
+    do: tailscale_module().create_connection(attrs)
+  
+  def get_connection!(), 
+    do: tailscale_module().get_connection!()
+  
+  def check_and_update_connectivity(), 
+    do: tailscale_module().check_and_update_connectivity()
+  
+  def sync_connection_state(), 
+    do: tailscale_module().sync_connection_state()
+  
+  def disconnect_from_vpn_manual(), 
+    do: tailscale_module().disconnect_from_vpn_manual()
 
   # EdgeAdmin-specific hostname provider
   defp hostname_provider, do: "edge-admin"
@@ -40,7 +78,7 @@ defmodule EdgeAdmin.VPN do
   """
   def update_connection(attrs) do
     connection = get_connection!()
-    Tailscale.update_connection(connection, attrs)
+    tailscale_module().update_connection(connection, attrs)
   end
 
   @doc """
@@ -57,11 +95,19 @@ defmodule EdgeAdmin.VPN do
         case Ecto.Changeset.get_change(changeset, :manual_disconnect) do
           true ->
             Logger.info("VPN: Performing manual disconnect")
-            disconnect_from_vpn_manual()
+            case disconnect_from_vpn_manual() do
+              {:ok, updated_tailscale_conn} ->
+                {:ok, Connection.from_tailscale_connection(updated_tailscale_conn)}
+              error -> error
+            end
 
           false ->
             Logger.info("VPN: Re-enabling auto-reconnection")
-            update_connection(%{manual_disconnect: false})
+            case update_connection(%{manual_disconnect: false}) do
+              {:ok, updated_tailscale_conn} ->
+                {:ok, Connection.from_tailscale_connection(updated_tailscale_conn)}
+              error -> error
+            end
 
           nil ->
             {:ok, Connection.from_tailscale_connection(tailscale_conn)}
@@ -95,14 +141,14 @@ defmodule EdgeAdmin.VPN do
   Attempts auto-reconnection using EdgeAdmin-specific configuration.
   """
   def attempt_auto_reconnection do
-    Tailscale.attempt_auto_reconnection(vpn_url(), enrollment_key(), hostname_provider())
+    tailscale_module().attempt_auto_reconnection(vpn_url(), enrollment_key(), hostname_provider())
   end
 
   @doc """
   Initiates manual connection using EdgeAdmin-specific configuration.
   """
   def connect_to_vpn_manual do
-    Tailscale.connect_to_vpn_manual(vpn_url(), enrollment_key(), hostname_provider())
+    tailscale_module().connect_to_vpn_manual(vpn_url(), enrollment_key(), hostname_provider())
   end
 
   @doc """
@@ -142,10 +188,14 @@ defmodule EdgeAdmin.VPN do
   # Private helper functions
 
   defp vpn_url do
-    System.get_env("VPN_URL") || raise "VPN_URL environment variable not set"
+    Application.get_env(:edge_admin, :vpn_url) ||
+      System.get_env("VPN_URL") ||
+      raise "VPN_URL environment variable not set"
   end
 
   defp enrollment_key do
-    System.get_env("ENROLLMENT_KEY") || raise "ENROLLMENT_KEY environment variable not set"
+    Application.get_env(:edge_admin, :enrollment_key) ||
+      System.get_env("ENROLLMENT_KEY") ||
+      raise "ENROLLMENT_KEY environment variable not set"
   end
 end

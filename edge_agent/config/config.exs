@@ -17,7 +17,7 @@ config :edge_agent, EdgeAgentWeb.Endpoint,
   adapter: Bandit.PhoenixAdapter,
   pubsub_server: EdgeAgent.PubSub,
   render_errors: [
-    formats: [json: EdgeAgentWeb.ErrorJSON],
+    formats: [json: EdgeAgentWeb.Controllers.ErrorJSON],
     layout: false
   ]
 

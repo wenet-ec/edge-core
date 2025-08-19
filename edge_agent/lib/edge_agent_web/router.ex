@@ -20,7 +20,7 @@ defmodule EdgeAgentWeb.Router do
     pipe_through(:browser)
   end
 
-  scope "/api", EdgeAgentWeb do
+  scope "/api", EdgeAgentWeb.Controllers do
     pipe_through(:api)
 
     resources "/command_executions", CommandExecutionController, only: [:create]

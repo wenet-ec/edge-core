@@ -1,5 +1,5 @@
 # edge_agent/lib/edge_agent_web/controllers/error_json.ex
-defmodule EdgeAgentWeb.ErrorJSON do
+defmodule EdgeAgentWeb.Controllers.ErrorJSON do
   @moduledoc """
   This module handles JSON error responses for the API.
   """

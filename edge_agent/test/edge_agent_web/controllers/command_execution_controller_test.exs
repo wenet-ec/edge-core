@@ -1,5 +1,5 @@
 # edge_agent/test/edge_agent_web/controllers/command_execution_controller_test.exs
-defmodule EdgeAgentWeb.CommandExecutionControllerTest do
+defmodule EdgeAgentWeb.Controllers.CommandExecutionControllerTest do
   use EdgeAgentWeb.ConnCase
 
   @create_attrs %{

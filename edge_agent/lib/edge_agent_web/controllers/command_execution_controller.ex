@@ -1,11 +1,11 @@
 # edge_agent/lib/edge_agent_web/controllers/command_execution_controller.ex
-defmodule EdgeAgentWeb.CommandExecutionController do
+defmodule EdgeAgentWeb.Controllers.CommandExecutionController do
   use EdgeAgentWeb, :controller
 
   alias EdgeAgent.Commands
   alias EdgeAgent.Commands.CommandExecution
 
-  action_fallback(EdgeAgentWeb.FallbackController)
+  action_fallback(EdgeAgentWeb.Controllers.FallbackController)
 
   @doc """
   Receives command execution requests from EdgeAdmin.

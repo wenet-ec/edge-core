@@ -1,5 +1,5 @@
 # edge_agent/lib/edge_agent_web/controllers/fallback_controller.ex
-defmodule EdgeAgentWeb.FallbackController do
+defmodule EdgeAgentWeb.Controllers.FallbackController do
   @moduledoc """
   Translates controller action results into valid `Plug.Conn` responses.
 
@@ -11,7 +11,7 @@ defmodule EdgeAgentWeb.FallbackController do
   def call(conn, {:error, %Ecto.Changeset{} = changeset}) do
     conn
     |> put_status(:unprocessable_entity)
-    |> put_view(json: EdgeAgentWeb.ChangesetJSON)
+    |> put_view(json: EdgeAgentWeb.Controllers.ChangesetJSON)
     |> render(:error, changeset: changeset)
   end
 
@@ -19,7 +19,7 @@ defmodule EdgeAgentWeb.FallbackController do
   def call(conn, {:error, :not_found}) do
     conn
     |> put_status(:not_found)
-    |> put_view(html: EdgeAgentWeb.ErrorHTML, json: EdgeAgentWeb.ErrorJSON)
+    |> put_view(html: EdgeAgentWeb.ErrorHTML, json: EdgeAgentWeb.Controllers.ErrorJSON)
     |> render(:"404")
   end
 end

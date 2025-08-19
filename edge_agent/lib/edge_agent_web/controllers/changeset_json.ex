@@ -1,5 +1,5 @@
 # edge_agent/lib/edge_agent_web/controllers/changeset_json.ex
-defmodule EdgeAgentWeb.ChangesetJSON do
+defmodule EdgeAgentWeb.Controllers.ChangesetJSON do
   @doc """
   Renders changeset errors.
   """

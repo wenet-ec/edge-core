@@ -11,6 +11,7 @@ defmodule EdgeAgent.Commands.Workers.CommandExecutionWorker do
   use Oban.Worker, queue: :command_execution, max_attempts: 1
 
   alias EdgeAgent.Commands
+
   require Logger
 
   @impl Oban.Worker

@@ -4,13 +4,17 @@ defmodule EdgeAgent.SshServer do
   SSH server GenServer
   """
 
-  use GenServer
-  require Logger
-
   @behaviour :ssh_server_key_api
   @behaviour EdgeAgent.SshServer.Behaviour
 
-  alias EdgeAgent.SshServer.{Config, HostKeyManager, Authentication, Shell}
+  use GenServer
+
+  alias EdgeAgent.SshServer.Authentication
+  alias EdgeAgent.SshServer.Config
+  alias EdgeAgent.SshServer.HostKeyManager
+  alias EdgeAgent.SshServer.Shell
+
+  require Logger
 
   # Client API
   @impl EdgeAgent.SshServer.Behaviour
@@ -96,11 +100,8 @@ defmodule EdgeAgent.SshServer do
 
   # Private functions
   defp do_start_server do
-    with :ok <- HostKeyManager.ensure_host_keys(),
-         {:ok, daemon_ref} <- start_ssh_daemon() do
-      {:ok, daemon_ref}
-    else
-      {:error, reason} -> {:error, reason}
+    with :ok <- HostKeyManager.ensure_host_keys() do
+      start_ssh_daemon()
     end
   end
 

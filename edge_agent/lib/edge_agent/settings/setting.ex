@@ -1,6 +1,8 @@
 # edge_agent/lib/edge_agent/settings/setting.ex
 defmodule EdgeAgent.Settings.Setting do
+  @moduledoc false
   use Ecto.Schema
+
   import Ecto.Changeset
 
   @primary_key {:id, :binary_id, autogenerate: true}

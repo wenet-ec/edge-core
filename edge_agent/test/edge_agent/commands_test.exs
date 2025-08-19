@@ -3,11 +3,11 @@ defmodule EdgeAgent.CommandsTest do
   use EdgeAgent.DataCase
   use Oban.Testing, repo: EdgeAgent.Repo
 
+  import EdgeAgent.CommandsFixtures
+
   alias EdgeAgent.Commands
   alias EdgeAgent.Commands.CommandExecution
   alias EdgeAgent.Commands.Workers.CommandExecutionWorker
-
-  import EdgeAgent.CommandsFixtures
 
   describe "command_executions" do
     @valid_attrs %{

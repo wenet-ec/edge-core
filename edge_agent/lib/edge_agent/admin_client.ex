@@ -59,9 +59,7 @@ defmodule EdgeAgent.AdminClient do
         {:error, :not_found}
 
       {:ok, %{status: status, body: body}} ->
-        Logger.warning(
-          "Failed to list SSH usernames for node #{node_id}, HTTP #{status}: #{inspect(body)}"
-        )
+        Logger.warning("Failed to list SSH usernames for node #{node_id}, HTTP #{status}: #{inspect(body)}")
 
         {:error, {:http_error, status, body}}
 
@@ -90,9 +88,7 @@ defmodule EdgeAgent.AdminClient do
         {:error, {:http_error, status, body}}
 
       {:error, reason} ->
-        Logger.warning(
-          "Failed to list SSH public keys for username #{ssh_username_id}: #{inspect(reason)}"
-        )
+        Logger.warning("Failed to list SSH public keys for username #{ssh_username_id}: #{inspect(reason)}")
 
         {:error, {:request_failed, reason}}
     end
@@ -111,9 +107,7 @@ defmodule EdgeAgent.AdminClient do
         :ok
 
       {:ok, %{status: status, body: body}} ->
-        Logger.warning(
-          "Failed to update command execution #{execution_id}, HTTP #{status}: #{inspect(body)}"
-        )
+        Logger.warning("Failed to update command execution #{execution_id}, HTTP #{status}: #{inspect(body)}")
 
         {:error, {:http_error, status, body}}
 

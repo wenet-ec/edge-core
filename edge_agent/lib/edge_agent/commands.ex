@@ -5,10 +5,11 @@ defmodule EdgeAgent.Commands do
   """
 
   import Ecto.Query, warn: false
-  alias EdgeAgent.Repo
+
+  alias EdgeAgent.AdminClient
   alias EdgeAgent.Commands.CommandExecution
   alias EdgeAgent.Commands.Workers.CommandExecutionWorker
-  alias EdgeAgent.AdminClient
+  alias EdgeAgent.Repo
 
   require Logger
 
@@ -160,9 +161,7 @@ defmodule EdgeAgent.Commands do
               Logger.debug("Deleted execution #{execution.id} from local database")
 
             {:error, changeset} ->
-              Logger.warning(
-                "Failed to delete execution #{execution.id}: #{inspect(changeset.errors)}"
-              )
+              Logger.warning("Failed to delete execution #{execution.id}: #{inspect(changeset.errors)}")
           end
 
           {:cont, :ok}
@@ -206,20 +205,12 @@ defmodule EdgeAgent.Commands do
   end
 
   defp get_pending_executions do
-    from(ce in CommandExecution,
-      where: ce.status == "pending",
-      # FIFO order
-      order_by: [asc: ce.inserted_at]
-    )
-    |> Repo.all()
+    Repo.all(from(ce in CommandExecution, where: ce.status == "pending", order_by: [asc: ce.inserted_at]))
+    # FIFO order
   end
 
   defp get_completed_executions do
-    from(ce in CommandExecution,
-      where: ce.status == "completed",
-      # OLDEST FIRST - maintains execution order
-      order_by: [asc: ce.inserted_at]
-    )
-    |> Repo.all()
+    Repo.all(from(ce in CommandExecution, where: ce.status == "completed", order_by: [asc: ce.inserted_at]))
+    # OLDEST FIRST - maintains execution order
   end
 end

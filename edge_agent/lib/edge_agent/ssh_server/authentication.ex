@@ -4,9 +4,10 @@ defmodule EdgeAgent.SshServer.Authentication do
   Handles SSH authentication against EdgeAdmin.
   """
 
-  require Logger
-  alias EdgeAgent.Settings
   alias EdgeAgent.AdminClient
+  alias EdgeAgent.Settings
+
+  require Logger
 
   @supported_algorithms [
     "ssh-ed25519",
@@ -69,39 +70,40 @@ defmodule EdgeAgent.SshServer.Authentication do
     provided_key_string = format_public_key(provided_key)
     provided_key_normalized = normalize_ssh_key(provided_key_string)
 
-    with {:ok, algorithm} <- validate_key_algorithm(provided_key_string) do
-      Logger.debug("Provided key algorithm: #{algorithm}")
-      Logger.debug("Formatted provided key: #{provided_key_string}")
-      Logger.debug("Normalized provided key: #{provided_key_normalized}")
-      Logger.debug("Against #{length(ssh_public_keys)} stored keys")
+    case validate_key_algorithm(provided_key_string) do
+      {:ok, algorithm} ->
+        Logger.debug("Provided key algorithm: #{algorithm}")
+        Logger.debug("Formatted provided key: #{provided_key_string}")
+        Logger.debug("Normalized provided key: #{provided_key_normalized}")
+        Logger.debug("Against #{length(ssh_public_keys)} stored keys")
 
-      Enum.each(ssh_public_keys, fn stored_key ->
-        Logger.debug("Stored key: #{stored_key["public_key"]}")
-      end)
-
-      result =
-        Enum.any?(ssh_public_keys, fn stored_key ->
-          stored_key_string = String.trim(stored_key["public_key"])
-          stored_key_normalized = normalize_ssh_key(stored_key_string)
-
-          match = provided_key_normalized == stored_key_normalized
-
-          if match do
-            Logger.debug("Key match found for key: #{stored_key["key_name"]}")
-          else
-            Logger.debug("Key mismatch - provided: #{provided_key_normalized}")
-            Logger.debug("Key mismatch - stored: #{stored_key_normalized}")
-          end
-
-          match
+        Enum.each(ssh_public_keys, fn stored_key ->
+          Logger.debug("Stored key: #{stored_key["public_key"]}")
         end)
 
-      unless result do
-        Logger.debug("No matching public key found")
-      end
+        result =
+          Enum.any?(ssh_public_keys, fn stored_key ->
+            stored_key_string = String.trim(stored_key["public_key"])
+            stored_key_normalized = normalize_ssh_key(stored_key_string)
 
-      result
-    else
+            match = provided_key_normalized == stored_key_normalized
+
+            if match do
+              Logger.debug("Key match found for key: #{stored_key["key_name"]}")
+            else
+              Logger.debug("Key mismatch - provided: #{provided_key_normalized}")
+              Logger.debug("Key mismatch - stored: #{stored_key_normalized}")
+            end
+
+            match
+          end)
+
+        if !result do
+          Logger.debug("No matching public key found")
+        end
+
+        result
+
       {:error, reason} ->
         Logger.warning("Unsupported key algorithm: #{reason}")
         false
@@ -129,8 +131,7 @@ defmodule EdgeAgent.SshServer.Authentication do
     end
   end
 
-  defp format_public_key({key_type, key_data, _comment})
-       when is_list(key_type) and is_binary(key_data) do
+  defp format_public_key({key_type, key_data, _comment}) when is_list(key_type) and is_binary(key_data) do
     key_type_string =
       case key_type do
         ~c"ssh-rsa" -> "ssh-rsa"

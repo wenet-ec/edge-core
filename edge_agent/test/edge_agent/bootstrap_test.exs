@@ -1,6 +1,7 @@
 # edge_agent/test/edge_agent/bootstrap_test.exs
 defmodule EdgeAgent.BootstrapTest do
   use EdgeAgent.DataCase
+
   import Mox
 
   alias EdgeAgent.Bootstrap
@@ -49,7 +50,7 @@ defmodule EdgeAgent.BootstrapTest do
   end
 
   # Helper functions for setting up common mock expectations
-  
+
   defp expect_successful_vpn_connection do
     expect(VPNMock, :start_daemon, fn -> :ok end)
     expect(VPNMock, :connect_to_vpn, fn _url, _key, _hostname -> {:ok, %{}} end)

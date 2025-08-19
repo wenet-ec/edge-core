@@ -4,8 +4,9 @@ defmodule EdgeAgent.SshServer.HostKeyManager do
   Manages SSH host keys - generation, loading, and validation.
   """
 
-  require Logger
   alias EdgeAgent.SshServer.Config
+
+  require Logger
 
   @type key_type :: :ed25519 | :ecdsa_nistp256 | :rsa
   @type algorithm :: atom()
@@ -63,25 +64,21 @@ defmodule EdgeAgent.SshServer.HostKeyManager do
   # Private functions
 
   defp generate_host_key(key_path, key_type) do
-    try do
-      case key_type do
-        :ed25519 -> generate_ed25519_key(key_path)
-        :ecdsa_nistp256 -> generate_ecdsa_key(key_path, "prime256v1")
-        :rsa -> generate_rsa_key(key_path)
-      end
-    rescue
-      error ->
-        Logger.error("Failed to generate #{key_type} host key: #{inspect(error)}")
-        {:error, {:key_generation_failed, error}}
+    case key_type do
+      :ed25519 -> generate_ed25519_key(key_path)
+      :ecdsa_nistp256 -> generate_ecdsa_key(key_path, "prime256v1")
+      :rsa -> generate_rsa_key(key_path)
     end
+  rescue
+    error ->
+      Logger.error("Failed to generate #{key_type} host key: #{inspect(error)}")
+      {:error, {:key_generation_failed, error}}
   end
 
   defp generate_ed25519_key(key_path) do
     Logger.info("Generating Ed25519 host key using OpenSSL...")
 
-    case System.cmd("openssl", ["genpkey", "-algorithm", "Ed25519", "-out", key_path],
-           stderr_to_stdout: true
-         ) do
+    case System.cmd("openssl", ["genpkey", "-algorithm", "Ed25519", "-out", key_path], stderr_to_stdout: true) do
       {_output, 0} ->
         Logger.info("Ed25519 host key generated successfully at: #{key_path}")
         {:ok, :ed25519}

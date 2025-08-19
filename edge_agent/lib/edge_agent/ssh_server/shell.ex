@@ -48,18 +48,16 @@ defmodule EdgeAgent.SshServer.Shell do
   end
 
   defp execute_hostscript_command(command) do
-    try do
-      case System.cmd("/usr/local/bin/hostscript", [command], stderr_to_stdout: true) do
-        {output, 0} ->
-          IO.puts(output)
+    case System.cmd("/usr/local/bin/hostscript", [command], stderr_to_stdout: true) do
+      {output, 0} ->
+        IO.puts(output)
 
-        {output, exit_code} ->
-          IO.puts(output)
-          IO.puts("Command exited with code: #{exit_code}")
-      end
-    rescue
-      error ->
-        IO.puts("Error executing command: #{inspect(error)}")
+      {output, exit_code} ->
+        IO.puts(output)
+        IO.puts("Command exited with code: #{exit_code}")
     end
+  rescue
+    error ->
+      IO.puts("Error executing command: #{inspect(error)}")
   end
 end

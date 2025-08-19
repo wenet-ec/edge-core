@@ -2,10 +2,10 @@
 defmodule EdgeAgent.SettingsTest do
   use EdgeAgent.DataCase
 
+  import EdgeAgent.SettingsFixtures
+
   alias EdgeAgent.Settings
   alias EdgeAgent.Settings.Setting
-
-  import EdgeAgent.SettingsFixtures
 
   # Clear ALL settings before each test, not just node identity
   setup do
@@ -254,8 +254,7 @@ defmodule EdgeAgent.SettingsTest do
       assert {:error, "Node ID type cannot be empty"} =
                Settings.set_node_identity(valid_uuid, nil)
 
-      assert {:error,
-              "Invalid node ID type. Must be one of: machine_id, hardware_id, temporary_id"} =
+      assert {:error, "Invalid node ID type. Must be one of: machine_id, hardware_id, temporary_id"} =
                Settings.set_node_identity(valid_uuid, "invalid_type")
     end
 

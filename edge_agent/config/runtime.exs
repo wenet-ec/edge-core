@@ -24,8 +24,7 @@ config :edge_agent, EdgeAgentWeb.Endpoint,
     ip: {0, 0, 0, 0, 0, 0, 0, 0},
     port: get_env("PORT", :integer, 4000)
   ],
-  secret_key_base:
-    get_env("SECRET_KEY_BASE", :string, "default-secret-key-base-change-in-production"),
+  secret_key_base: get_env("SECRET_KEY_BASE", :string, "default-secret-key-base-change-in-production"),
   session_key: get_env("SESSION_KEY", :string, "edge_agent"),
   session_signing_salt: get_env("SESSION_SIGNING_SALT", :string, "default-session-signing-salt"),
   live_view: [

@@ -14,6 +14,7 @@ defmodule EdgeAgent.Commands.Workers.CommandReportWorker do
   use Oban.Worker, queue: :command_reporting, max_attempts: 1
 
   alias EdgeAgent.Commands
+
   require Logger
 
   @impl Oban.Worker

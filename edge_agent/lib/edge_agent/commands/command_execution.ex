@@ -1,6 +1,8 @@
 # edge_agent/lib/edge_agent/commands/command_execution.ex
 defmodule EdgeAgent.Commands.CommandExecution do
+  @moduledoc false
   use Ecto.Schema
+
   import Ecto.Changeset
 
   @primary_key {:id, :binary_id, autogenerate: false}

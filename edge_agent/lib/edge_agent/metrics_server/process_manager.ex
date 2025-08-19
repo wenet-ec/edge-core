@@ -7,8 +7,9 @@ defmodule EdgeAgent.MetricsServer.ProcessManager do
   node_exporter process.
   """
 
-  require Logger
   alias EdgeAgent.MetricsServer.Config
+
+  require Logger
 
   @type process_result :: {:ok, pid() | integer(), port()} | {:error, term()}
   @type stop_result :: :ok | {:error, term()}
@@ -58,22 +59,20 @@ defmodule EdgeAgent.MetricsServer.ProcessManager do
   end
 
   def stop_node_exporter(pid, _port_ref) when is_integer(pid) do
-    try do
-      case System.cmd("kill", ["-TERM", "#{pid}"], stderr_to_stdout: true) do
-        {_output, 0} ->
-          :ok
+    case System.cmd("kill", ["-TERM", "#{pid}"], stderr_to_stdout: true) do
+      {_output, 0} ->
+        :ok
 
-        {output, _exit_code} ->
-          Logger.warning("Failed to kill node_exporter process #{pid}: #{output}")
-          # Try force kill
-          case System.cmd("kill", ["-KILL", "#{pid}"], stderr_to_stdout: true) do
-            {_output, 0} -> :ok
-            {output, _exit_code} -> {:error, {:kill_failed, output}}
-          end
-      end
-    rescue
-      error -> {:error, {:exception, error}}
+      {output, _exit_code} ->
+        Logger.warning("Failed to kill node_exporter process #{pid}: #{output}")
+        # Try force kill
+        case System.cmd("kill", ["-KILL", "#{pid}"], stderr_to_stdout: true) do
+          {_output, 0} -> :ok
+          {output, _exit_code} -> {:error, {:kill_failed, output}}
+        end
     end
+  rescue
+    error -> {:error, {:exception, error}}
   end
 
   @spec process_exists?(integer()) :: boolean()
@@ -105,31 +104,29 @@ defmodule EdgeAgent.MetricsServer.ProcessManager do
   # Private functions
 
   defp spawn_node_exporter(args) do
-    try do
-      # Use Port to spawn the process
-      port =
-        Port.open({:spawn_executable, Config.node_exporter_binary()}, [
-          :binary,
-          :stderr_to_stdout,
-          args: args,
-          cd: "/tmp"
-        ])
+    # Use Port to spawn the process
+    port =
+      Port.open({:spawn_executable, Config.node_exporter_binary()}, [
+        :binary,
+        :stderr_to_stdout,
+        args: args,
+        cd: "/tmp"
+      ])
 
-      # Give the process a moment to start
-      :timer.sleep(2000)
+    # Give the process a moment to start
+    :timer.sleep(2000)
 
-      # Find the actual PID of the node_exporter process
-      case find_node_exporter_process(Config.metrics_port()) do
-        {:ok, pid} ->
-          {:ok, pid, port}
+    # Find the actual PID of the node_exporter process
+    case find_node_exporter_process(Config.metrics_port()) do
+      {:ok, pid} ->
+        {:ok, pid, port}
 
-        {:error, reason} ->
-          Port.close(port)
-          {:error, {:process_not_found, reason}}
-      end
-    rescue
-      error ->
-        {:error, {:spawn_failed, error}}
+      {:error, reason} ->
+        Port.close(port)
+        {:error, {:process_not_found, reason}}
     end
+  rescue
+    error ->
+      {:error, {:spawn_failed, error}}
   end
 end

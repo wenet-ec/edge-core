@@ -14,13 +14,13 @@ defmodule EdgeAgent.Bootstrap do
   Returns {:ok, :bootstrap_complete} on success or {:error, reason} on failure.
   """
 
-  require Logger
-
-  alias EdgeAgent.Settings
-  alias EdgeAgent.VPN
   alias EdgeAgent.AdminClient
-  alias EdgeAgent.SshServer
   alias EdgeAgent.MetricsServer
+  alias EdgeAgent.Settings
+  alias EdgeAgent.SshServer
+  alias EdgeAgent.VPN
+
+  require Logger
 
   def run(opts \\ []) do
     Logger.info("Starting EdgeAgent bootstrap...")
@@ -33,7 +33,7 @@ defmodule EdgeAgent.Bootstrap do
     with {:ok, node_id, node_id_type} <- determine_node_identity(),
          {:ok, normalized_node_id} <- store_node_identity(node_id, node_id_type),
          :ok <- setup_vpn_connection(normalized_node_id, vpn_module),
-         settings <- Settings.all(),
+         settings = Settings.all(),
          {:ok, _} <- connect_to_admin(settings, admin_client_module),
          :ok <- start_ssh_server(ssh_server_module),
          :ok <- start_metrics_server(metrics_server_module) do
@@ -63,9 +63,7 @@ defmodule EdgeAgent.Bootstrap do
           :error ->
             node_id = generate_temporary_id()
 
-            Logger.warning(
-              "Generated temporary_id: #{String.slice(node_id, 0, 8)}... (node will be ephemeral)"
-            )
+            Logger.warning("Generated temporary_id: #{String.slice(node_id, 0, 8)}... (node will be ephemeral)")
 
             {:ok, node_id, "temporary_id"}
         end
@@ -172,8 +170,7 @@ defmodule EdgeAgent.Bootstrap do
       "/host/var/lib/dbus/machine-id"
     ]
 
-    machine_id_paths
-    |> Enum.find_value(:error, fn path ->
+    Enum.find_value(machine_id_paths, :error, fn path ->
       case read_file_safely(path) do
         {:ok, content} ->
           cleaned = String.trim(content)
@@ -195,8 +192,7 @@ defmodule EdgeAgent.Bootstrap do
       "/host/proc/sys/kernel/random/boot_id"
     ]
 
-    hardware_id_paths
-    |> Enum.find_value(:error, fn path ->
+    Enum.find_value(hardware_id_paths, :error, fn path ->
       case read_file_safely(path) do
         {:ok, content} ->
           cleaned = String.trim(content)

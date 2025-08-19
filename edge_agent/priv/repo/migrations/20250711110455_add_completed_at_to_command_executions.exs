@@ -1,4 +1,5 @@
 defmodule EdgeAgent.Repo.Migrations.AddCompletedAtToCommandExecutions do
+  @moduledoc false
   use Ecto.Migration
 
   def change do

@@ -8,6 +8,7 @@ defmodule EdgeAgent.VPN.Workers.AutoReconnectingWorker do
   use Oban.Worker, queue: :vpn, max_attempts: 1
 
   alias EdgeAgent.VPN
+
   require Logger
 
   @impl Oban.Worker
@@ -21,9 +22,11 @@ defmodule EdgeAgent.VPN.Workers.AutoReconnectingWorker do
         {:ok, _connection} ->
           Logger.debug("EdgeAgent auto-reconnection completed successfully")
           :ok
+
         {:error, :already_connected} ->
           Logger.debug("EdgeAgent already connected, no reconnection needed")
           :ok
+
         {:error, reason} ->
           Logger.warning("EdgeAgent auto-reconnection failed: #{inspect(reason)}")
           {:error, reason}

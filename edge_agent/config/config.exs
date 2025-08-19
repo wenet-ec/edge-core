@@ -13,10 +13,6 @@ version = Mix.Project.config()[:version]
 config :edge_agent, Corsica, allow_headers: :all
 config :edge_agent, EdgeAgent.Gettext, default_locale: "en"
 
-config :edge_agent,
-  ecto_repos: [EdgeAgent.Repo],
-  generators: [timestamp_type: :utc_datetime, binary_id: true]
-
 config :edge_agent, EdgeAgentWeb.Endpoint,
   adapter: Bandit.PhoenixAdapter,
   pubsub_server: EdgeAgent.PubSub,
@@ -42,10 +38,16 @@ config :edge_agent, Oban,
      crontab: [
        {"* * * * *", EdgeAgent.VPN.Workers.ConnectivityCheckingWorker},
        {"* * * * *", EdgeAgent.VPN.Workers.AutoReconnectingWorker},
-       {"* * * * *", EdgeAgent.Commands.Workers.CommandReportScheduler},  # Every minute for faster reporting
-       {"*/2 * * * *", EdgeAgent.Commands.Workers.CommandExecutionScheduler}  # Every 2 minutes safety net
+       # Every minute for faster reporting
+       {"* * * * *", EdgeAgent.Commands.Workers.CommandReportScheduler},
+       # Every 2 minutes safety net
+       {"*/2 * * * *", EdgeAgent.Commands.Workers.CommandExecutionScheduler}
      ]}
   ]
+
+config :edge_agent,
+  ecto_repos: [EdgeAgent.Repo],
+  generators: [timestamp_type: :utc_datetime, binary_id: true]
 
 config :edge_agent,
   ecto_repos: [EdgeAgent.Repo],

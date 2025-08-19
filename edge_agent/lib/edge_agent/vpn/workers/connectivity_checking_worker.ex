@@ -10,6 +10,7 @@ defmodule EdgeAgent.VPN.Workers.ConnectivityCheckingWorker do
   use Oban.Worker, queue: :vpn, max_attempts: 1
 
   alias EdgeAgent.VPN
+
   require Logger
 
   @impl Oban.Worker
@@ -23,6 +24,7 @@ defmodule EdgeAgent.VPN.Workers.ConnectivityCheckingWorker do
         :ok ->
           Logger.debug("EdgeAgent connectivity check completed successfully")
           :ok
+
         {:error, reason} ->
           Logger.warning("EdgeAgent connectivity check failed: #{inspect(reason)}")
           {:error, reason}

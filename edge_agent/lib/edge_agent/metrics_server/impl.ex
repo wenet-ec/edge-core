@@ -7,8 +7,11 @@ defmodule EdgeAgent.MetricsServer.Impl do
   separated from GenServer concerns for easier testing.
   """
 
+  alias EdgeAgent.MetricsServer.Config
+  alias EdgeAgent.MetricsServer.NetworkUtils
+  alias EdgeAgent.MetricsServer.ProcessManager
+
   require Logger
-  alias EdgeAgent.MetricsServer.{Config, ProcessManager, NetworkUtils}
 
   @type state :: %{
           port: integer(),

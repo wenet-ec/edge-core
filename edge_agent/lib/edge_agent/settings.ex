@@ -5,8 +5,8 @@ defmodule EdgeAgent.Settings do
   """
 
   import Ecto.Query, warn: false
-  alias EdgeAgent.Repo
 
+  alias EdgeAgent.Repo
   alias EdgeAgent.Settings.Setting
 
   def list_settings do
@@ -62,7 +62,7 @@ defmodule EdgeAgent.Settings do
   def all do
     Setting
     |> Repo.all()
-    |> Enum.into(%{}, fn %Setting{key: key, value: value} -> {key, value} end)
+    |> Map.new(fn %Setting{key: key, value: value} -> {key, value} end)
   end
 
   def has_key?(key) do

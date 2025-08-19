@@ -11,9 +11,10 @@ defmodule EdgeAgent.MetricsServer.Server do
   """
 
   use GenServer
-  require Logger
 
   alias EdgeAgent.MetricsServer.Impl
+
+  require Logger
 
   ## Public API
 
@@ -30,30 +31,24 @@ defmodule EdgeAgent.MetricsServer.Server do
   end
 
   def server_status do
-    try do
-      GenServer.call(__MODULE__, :server_status, 1_000)
-    catch
-      :exit, {:noproc, _} -> :not_started
-      :exit, {:timeout, _} -> :unknown
-    end
+    GenServer.call(__MODULE__, :server_status, 1_000)
+  catch
+    :exit, {:noproc, _} -> :not_started
+    :exit, {:timeout, _} -> :unknown
   end
 
   def server_config do
-    try do
-      GenServer.call(__MODULE__, :server_config, 1_000)
-    catch
-      :exit, {:noproc, _} -> %{}
-      :exit, {:timeout, _} -> %{}
-    end
+    GenServer.call(__MODULE__, :server_config, 1_000)
+  catch
+    :exit, {:noproc, _} -> %{}
+    :exit, {:timeout, _} -> %{}
   end
 
   def get_primary_interface_ip do
-    try do
-      GenServer.call(__MODULE__, :get_primary_interface_ip, 5_000)
-    catch
-      :exit, {:noproc, _} -> {:error, :server_not_started}
-      :exit, {:timeout, _} -> {:error, :timeout}
-    end
+    GenServer.call(__MODULE__, :get_primary_interface_ip, 5_000)
+  catch
+    :exit, {:noproc, _} -> {:error, :server_not_started}
+    :exit, {:timeout, _} -> {:error, :timeout}
   end
 
   ## GenServer Callbacks

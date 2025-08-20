@@ -1,8 +1,8 @@
 # deploy/production/compose/edge_vpn/Dockerfile
-FROM golang:1.24-alpine AS go-builder
+FROM golang:1.25-alpine AS go-builder
 
 # Define headscale version
-ARG HEADSCALE_VERSION=v0.26.0
+ARG HEADSCALE_VERSION=v0.26.1
 
 # Install build dependencies
 RUN apk add --no-cache git make

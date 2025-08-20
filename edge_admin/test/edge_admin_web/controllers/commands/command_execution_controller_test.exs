@@ -151,4 +151,22 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionControllerTest do
       assert response["completed_at"] == "2025-06-17T12:05:00Z"
     end
   end
+
+  describe "delete command_execution" do
+    test "deletes chosen command execution", %{conn: conn} do
+      command_execution = command_execution_fixture()
+      conn = delete(conn, ~p"/api/command_executions/#{command_execution}")
+      assert response(conn, 204)
+
+      assert_error_sent(404, fn ->
+        get(conn, ~p"/api/command_executions/#{command_execution}")
+      end)
+    end
+
+    test "returns 404 for non-existent command execution", %{conn: conn} do
+      assert_error_sent(404, fn ->
+        delete(conn, ~p"/api/command_executions/00000000-0000-0000-0000-000000000000")
+      end)
+    end
+  end
 end

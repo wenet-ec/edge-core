@@ -98,4 +98,27 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
     command = Commands.get_command!(id)
     render(conn, :show, command: command)
   end
+
+  operation(:delete,
+    summary: "Delete a command",
+    description: "Delete a command and all its related command executions (cascaded deletion)",
+    parameters: [
+      id: [
+        in: :path,
+        description: "Command ID",
+        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
+      ]
+    ],
+    responses: %{
+      204 => {"Command deleted successfully", "", nil},
+      404 => {"Command not found", "application/json", CommonSchemas.NotFoundResponse}
+    }
+  )
+
+  def delete(conn, %{"id" => id}) do
+    command = Commands.get_command!(id)
+    {:ok, _command} = Commands.delete_command(command)
+
+    send_resp(conn, :no_content, "")
+  end
 end

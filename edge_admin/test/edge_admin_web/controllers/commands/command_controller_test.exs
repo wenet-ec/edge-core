@@ -146,4 +146,46 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandControllerTest do
       end)
     end
   end
+
+  describe "delete command" do
+    test "deletes chosen command", %{conn: conn} do
+      command = command_fixture()
+      conn = delete(conn, ~p"/api/commands/#{command}")
+      assert response(conn, 204)
+
+      assert_error_sent(404, fn ->
+        get(conn, ~p"/api/commands/#{command}")
+      end)
+    end
+
+    test "returns 404 for non-existent command", %{conn: conn} do
+      assert_error_sent(404, fn ->
+        delete(conn, ~p"/api/commands/00000000-0000-0000-0000-000000000000")
+      end)
+    end
+
+    test "deletes command and cascades to command executions", %{conn: conn} do
+      # Create a command with executions
+      command = command_fixture()
+      command_execution = command_execution_fixture(%{command_id: command.id})
+
+      # Verify execution exists
+      conn = get(conn, ~p"/api/command_executions/#{command_execution.id}")
+      assert json_response(conn, 200)
+
+      # Delete the command
+      conn = delete(conn, ~p"/api/commands/#{command}")
+      assert response(conn, 204)
+
+      # Verify command is deleted
+      assert_error_sent(404, fn ->
+        get(conn, ~p"/api/commands/#{command}")
+      end)
+
+      # Verify related execution is also deleted (cascade)
+      assert_error_sent(404, fn ->
+        get(conn, ~p"/api/command_executions/#{command_execution.id}")
+      end)
+    end
+  end
 end

@@ -69,6 +69,7 @@ defmodule EdgeAdminWeb.Router do
       end
 
       patch("/nodes/:id", NodeController, :update)
+      delete("/nodes/:id", NodeController, :delete)
 
       resources("/ssh_usernames", SshUsernameController, only: [:index, :show, :delete]) do
         resources("/ssh_public_keys", SshPublicKeyController, only: [:create])
@@ -81,9 +82,11 @@ defmodule EdgeAdminWeb.Router do
 
     scope "/", Commands do
       resources("/commands", CommandController, only: [:index, :create, :show])
+      delete("/commands/:id", CommandController, :delete)
 
       resources("/command_executions", CommandExecutionController, only: [:index, :show])
       patch("/command_executions/:id", CommandExecutionController, :update)
+      delete("/command_executions/:id", CommandExecutionController, :delete)
     end
   end
 

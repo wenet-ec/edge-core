@@ -142,4 +142,22 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeControllerTest do
       assert json_response(conn, 422)["errors"] != %{}
     end
   end
+
+  describe "delete node" do
+    test "deletes chosen node", %{conn: conn} do
+      node = node_fixture()
+      conn = delete(conn, ~p"/api/nodes/#{node}")
+      assert response(conn, 204)
+
+      assert_error_sent(404, fn ->
+        get(conn, ~p"/api/nodes/#{node}")
+      end)
+    end
+
+    test "returns 404 for non-existent node", %{conn: conn} do
+      assert_error_sent(404, fn ->
+        delete(conn, ~p"/api/nodes/00000000-0000-0000-0000-000000000000")
+      end)
+    end
+  end
 end

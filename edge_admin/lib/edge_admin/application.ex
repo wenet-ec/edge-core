@@ -52,7 +52,7 @@ defmodule EdgeAdmin.Application do
     case Application.get_env(:edge_admin, :run_bootstrap, :auto) do
       false -> false
       true -> true
-      :auto -> Mix.env() != :test and phoenix_server_starting?()
+      :auto -> phoenix_server_starting?()
     end
   end
 

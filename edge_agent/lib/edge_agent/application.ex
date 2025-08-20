@@ -56,14 +56,11 @@ defmodule EdgeAgent.Application do
     :ok
   end
 
-  # Private function to determine if bootstrap should run
   defp should_run_bootstrap? do
-    # Skip bootstrap in test environment
-    # You can also add other conditions like checking for specific environment variables
     case Application.get_env(:edge_agent, :run_bootstrap, :auto) do
       false -> false
       true -> true
-      :auto -> Mix.env() != :test and phoenix_server_starting?()
+      :auto -> phoenix_server_starting?()
     end
   end
 

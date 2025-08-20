@@ -131,13 +131,17 @@ func (c *Client) ValidateAPIKeyWithRetry(apiKey string, maxRetries int, delay ti
 // isRetryableError determines if an error should trigger a retry
 func (c *Client) isRetryableError(err error) bool {
 	errStr := err.Error()
-	// Retry on connection issues and server errors, but not auth errors
+	// Retry on connection issues, server errors, and auth errors during startup
+	// Auth errors during startup might be timing-related (key not yet in database)
 	retryablePatterns := []string{
 		"connection refused",
 		"timeout",
 		"internal server error",
 		"service unavailable",
 		"headscale not accessible",
+		"unauthorized", // API key might not be in database yet
+		"record not found", // API key might not be in database yet
+		"bcrypt", // Hash validation timing issues
 	}
 
 	for _, pattern := range retryablePatterns {

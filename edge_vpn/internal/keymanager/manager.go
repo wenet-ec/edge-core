@@ -68,37 +68,62 @@ func (m *Manager) Initialize() error {
 	return nil
 }
 
-// Update generateNewKey to use proper validation
+// Update generateNewKey to use proper validation with key regeneration on failure
 func (m *Manager) generateNewKeyWithValidation() error {
-	log.Println("Generating new API key...")
+	const maxKeyAttempts = 5 // Try generating up to 5 different keys
+	const validationRetries = 5 // Retry validation 5 times per key
+	
+	for attempt := 1; attempt <= maxKeyAttempts; attempt++ {
+		log.Printf("Generating new API key (attempt %d/%d)...", attempt, maxKeyAttempts)
 
-	apiKey, err := m.headscaleClient.CreateAPIKey(DefaultRotationIntervalDays)
-	if err != nil {
-		return fmt.Errorf("failed to create API key: %w", err)
+		apiKey, err := m.headscaleClient.CreateAPIKey(DefaultRotationIntervalDays)
+		if err != nil {
+			log.Printf("Failed to create API key on attempt %d: %v", attempt, err)
+			if attempt == maxKeyAttempts {
+				return fmt.Errorf("failed to create API key after %d attempts: %w", maxKeyAttempts, err)
+			}
+			continue // Try generating another key
+		}
+
+		// Validate the new key with limited retry logic
+		log.Printf("Validating newly generated API key (attempt %d/%d)...", attempt, maxKeyAttempts)
+		if err := m.headscaleClient.ValidateAPIKeyWithRetry(apiKey, validationRetries, 1*time.Second); err != nil {
+			log.Printf("Key validation failed on attempt %d: %v", attempt, err)
+			
+			// Attempt to clean up the failed key
+			keyPrefix := m.headscaleClient.GetKeyPrefix(apiKey)
+			if expireErr := m.headscaleClient.ExpireAPIKey(keyPrefix); expireErr != nil {
+				log.Printf("Warning: failed to expire failed key %s: %v", keyPrefix, expireErr)
+			} else {
+				log.Printf("Expired failed key %s", keyPrefix)
+			}
+
+			if attempt == maxKeyAttempts {
+				return fmt.Errorf("key validation failed after %d key generation attempts, last error: %w", maxKeyAttempts, err)
+			}
+			continue // Try generating another key
+		}
+
+		// Key is valid, save it
+		now := time.Now()
+		keyData := &APIKeyData{
+			CurrentKey:           apiKey,
+			CreatedAt:            now,
+			ExpiresAt:            now.AddDate(0, 0, DefaultRotationIntervalDays),
+			RotationIntervalDays: DefaultRotationIntervalDays,
+		}
+
+		if err := m.storage.Save(keyData); err != nil {
+			return fmt.Errorf("failed to save new key: %w", err)
+		}
+
+		m.currentKey = keyData
+		log.Printf("Successfully generated, validated, and saved new API key on attempt %d (expires: %s)", attempt, keyData.ExpiresAt.Format(time.RFC3339))
+
+		return nil
 	}
 
-	// Validate the new key with retry logic (headscale might need time to process it)
-	log.Println("Validating newly generated API key...")
-	if err := m.headscaleClient.ValidateAPIKeyWithRetry(apiKey, 15, 1*time.Second); err != nil {
-		return fmt.Errorf("newly generated key validation failed: %w", err)
-	}
-
-	now := time.Now()
-	keyData := &APIKeyData{
-		CurrentKey:           apiKey,
-		CreatedAt:            now,
-		ExpiresAt:            now.AddDate(0, 0, DefaultRotationIntervalDays),
-		RotationIntervalDays: DefaultRotationIntervalDays,
-	}
-
-	if err := m.storage.Save(keyData); err != nil {
-		return fmt.Errorf("failed to save new key: %w", err)
-	}
-
-	m.currentKey = keyData
-	log.Printf("Successfully generated, validated, and saved new API key (expires: %s)", keyData.ExpiresAt.Format(time.RFC3339))
-
-	return nil
+	return fmt.Errorf("failed to generate a valid API key after %d attempts", maxKeyAttempts)
 }
 
 // GetCurrentKey returns the current valid API key (thread-safe)

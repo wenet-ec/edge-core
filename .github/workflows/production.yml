@@ -67,14 +67,17 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ matrix.service.image }}:${{ env.IMAGE_TAG }}
           platforms: linux/amd64,linux/arm64
           cache-from: |
-            type=gha,scope=${{ matrix.service.name }}
+            type=gha,scope=${{ matrix.service.name }}-build
+            type=gha,scope=${{ matrix.service.name }}-mod
             type=registry,ref=${{ env.REGISTRY }}/${{ matrix.service.image }}:cache
           cache-to: |
-            type=gha,mode=max,scope=${{ matrix.service.name }}
+            type=gha,mode=max,scope=${{ matrix.service.name }}-build
+            type=gha,mode=max,scope=${{ matrix.service.name }}-mod
             type=registry,ref=${{ env.REGISTRY }}/${{ matrix.service.image }}:cache,mode=max
           build-args: |
             BUILDKIT_INLINE_CACHE=1
             BUILDKIT_MULTI_PLATFORM=1
+            BUILDKIT_CACHE_MOUNT_NS=${{ matrix.service.name }}
           provenance: false
           sbom: false
 

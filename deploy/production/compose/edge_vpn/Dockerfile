@@ -7,24 +7,43 @@ ARG HEADSCALE_VERSION=v0.26.1
 # Install build dependencies
 RUN apk add --no-cache git make
 
+# Set Go environment for better caching and performance
+ENV GOCACHE=/root/.cache/go-build
+ENV GOMODCACHE=/go/pkg/mod
+
 WORKDIR /build
 
-# Build headscale from source
+# Clone headscale repository
 RUN git clone https://github.com/juanfont/headscale.git
 WORKDIR /build/headscale
 
 # Checkout the specific version we want
 RUN git checkout ${HEADSCALE_VERSION}
 
-# Build headscale using the proper method
-RUN go build -ldflags="-s -w -X github.com/juanfont/headscale/hscontrol/types.Version=${HEADSCALE_VERSION}" -o headscale ./cmd/headscale
+# Download dependencies first for better layer caching
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go mod download
+
+# Build headscale with cache mounts for faster builds
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go build -ldflags="-s -w -X github.com/juanfont/headscale/hscontrol/types.Version=${HEADSCALE_VERSION}" -o headscale ./cmd/headscale
 
 # Build our Go wrapper
 WORKDIR /app
 COPY edge_vpn/go.mod edge_vpn/go.sum ./
-RUN go mod download
+
+# Download wrapper dependencies with cache
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+
 COPY edge_vpn/ .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o edge_vpn_wrapper .
+
+# Build wrapper with cache mounts
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o edge_vpn_wrapper .
 
 # Final stage - Alpine with both binaries
 FROM alpine:latest

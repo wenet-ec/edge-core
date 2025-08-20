@@ -3,15 +3,26 @@
 # Build stage for Go service
 FROM golang:1.25-alpine AS go-builder
 
+# Set Go environment for better caching and performance
+ENV GOCACHE=/root/.cache/go-build
+ENV GOMODCACHE=/go/pkg/mod
+
 WORKDIR /app
 
 # Copy Go module files from the edge_metrics_collector directory
 COPY edge_metrics_collector/go.mod edge_metrics_collector/go.sum ./
-RUN go mod download
+
+# Download dependencies with cache mount
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
 
 # Copy collector wrapper source code
 COPY edge_metrics_collector/ ./
-RUN CGO_ENABLED=0 GOOS=linux go build -o edge_metrics_collector_wrapper main.go
+
+# Build with cache mounts for faster builds
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux go build -o edge_metrics_collector_wrapper main.go
 
 # Final stage
 FROM alpine:latest

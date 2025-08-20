@@ -4,7 +4,6 @@ package vpn
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -41,7 +40,6 @@ func NewManager(cfg config.VPNConfig) *Manager {
 }
 
 func (m *Manager) Start(ctx context.Context) {
-	log.Println("VPN Manager: Starting background services")
 
 	// Initial connection attempt
 	go m.initialConnect()
@@ -54,9 +52,7 @@ func (m *Manager) Start(ctx context.Context) {
 }
 
 func (m *Manager) initialConnect() {
-	log.Println("VPN Manager: Attempting initial connection")
 	if err := m.Connect(); err != nil {
-		log.Printf("VPN Manager: Initial connection failed: %v", err)
 	}
 }
 
@@ -67,7 +63,6 @@ func (m *Manager) connectivityChecker(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("VPN Manager: Connectivity checker stopped")
 			return
 		case <-ticker.C:
 			m.checkConnectivity()
@@ -82,7 +77,6 @@ func (m *Manager) autoReconnector(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("VPN Manager: Auto-reconnector stopped")
 			return
 		case <-ticker.C:
 			m.attemptAutoReconnect()
@@ -93,8 +87,6 @@ func (m *Manager) autoReconnector(ctx context.Context) {
 func (m *Manager) Connect() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
-	log.Println("VPN Manager: Initiating manual connection")
 
 	m.connection.Status = "connecting"
 	m.connection.LastCheckedAt = time.Now()
@@ -110,7 +102,6 @@ func (m *Manager) Connect() error {
 	// Get connection info
 	status, err := m.client.GetStatus()
 	if err != nil {
-		log.Printf("VPN Manager: Warning - failed to get status after connection: %v", err)
 		m.connection.Status = "connected"
 		m.connection.ConnectedAt = time.Now()
 		m.connection.LastError = ""
@@ -123,16 +114,12 @@ func (m *Manager) Connect() error {
 	m.connection.ConnectedAt = time.Now()
 	m.connection.LastError = ""
 
-	log.Printf("VPN Manager: Connected successfully - IP: %s, Hostname: %s",
-		status.VPNIp, status.VPNHostname)
 	return nil
 }
 
 func (m *Manager) Disconnect() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
-	log.Println("VPN Manager: Initiating manual disconnection")
 
 	if err := m.client.Disconnect(); err != nil {
 		return fmt.Errorf("disconnection failed: %w", err)
@@ -145,7 +132,6 @@ func (m *Manager) Disconnect() error {
 	m.connection.LastCheckedAt = time.Now()
 	m.connection.LastError = ""
 
-	log.Println("VPN Manager: Disconnected successfully")
 	return nil
 }
 
@@ -166,11 +152,8 @@ func (m *Manager) checkConnectivity() {
 		return
 	}
 
-	log.Println("VPN Manager: Checking connectivity")
-
 	status, err := m.client.GetStatus()
 	if err != nil {
-		log.Printf("VPN Manager: Connectivity check failed: %v", err)
 		m.connection.Status = "disconnected"
 		m.connection.VPNIp = ""
 		m.connection.VPNHostname = ""
@@ -194,13 +177,10 @@ func (m *Manager) attemptAutoReconnect() {
 		return
 	}
 
-	log.Println("VPN Manager: Attempting auto-reconnection")
-
 	m.connection.Status = "connecting"
 	m.connection.LastCheckedAt = time.Now()
 
 	if err := m.client.Connect(); err != nil {
-		log.Printf("VPN Manager: Auto-reconnection failed: %v", err)
 		m.connection.Status = "disconnected"
 		m.connection.LastError = err.Error()
 		m.connection.LastErrorAt = time.Now()
@@ -210,7 +190,6 @@ func (m *Manager) attemptAutoReconnect() {
 	// Get connection info
 	status, err := m.client.GetStatus()
 	if err != nil {
-		log.Printf("VPN Manager: Warning - failed to get status after auto-reconnection: %v", err)
 		m.connection.Status = "connected"
 		m.connection.ConnectedAt = time.Now()
 		m.connection.LastError = ""
@@ -223,6 +202,4 @@ func (m *Manager) attemptAutoReconnect() {
 	m.connection.ConnectedAt = time.Now()
 	m.connection.LastError = ""
 
-	log.Printf("VPN Manager: Auto-reconnected successfully - IP: %s, Hostname: %s",
-		status.VPNIp, status.VPNHostname)
 }

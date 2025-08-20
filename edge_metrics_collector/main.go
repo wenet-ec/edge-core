@@ -16,7 +16,6 @@ import (
 )
 
 func main() {
-	log.Println("Starting Edge Metrics Collector service...")
 
 	// Load configuration
 	cfg, err := config.Load()
@@ -39,7 +38,6 @@ func main() {
 
 	// Start HTTP server
 	go func() {
-		log.Printf("Starting HTTP server on :%d", cfg.Server.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed to start: %v", err)
 		}
@@ -50,7 +48,6 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	<-c
 
-	log.Println("Shutting down...")
 
 	// Cancel background services
 	cancel()
@@ -59,9 +56,6 @@ func main() {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
 
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Printf("Server shutdown error: %v", err)
-	}
+	srv.Shutdown(shutdownCtx)
 
-	log.Println("Shutdown complete")
 }

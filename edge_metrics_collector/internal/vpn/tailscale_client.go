@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -71,7 +70,6 @@ func (c *TailscaleClient) Connect() error {
 
 	// Check if already connected
 	if connected, err := c.isAlreadyConnected(); err == nil && connected {
-		log.Println("Tailscale: Already connected")
 		return nil
 	}
 
@@ -134,11 +132,9 @@ func (c *TailscaleClient) ensureDaemonRunning() error {
 	cmd := exec.Command("tailscale", "status")
 	_, err := cmd.CombinedOutput()
 	if err == nil {
-		log.Println("Tailscale: Daemon already running")
 		return nil
 	}
 
-	log.Println("Tailscale: Starting daemon")
 	return c.startDaemon()
 }
 
@@ -161,10 +157,7 @@ func (c *TailscaleClient) startDaemon() error {
 	}
 
 	// Wait for daemon to be ready (like Elixir's :timer.sleep(2000))
-	log.Println("Tailscale: Waiting for daemon to be ready...")
 	time.Sleep(2 * time.Second)
-
-	log.Println("Tailscale: Daemon started")
 	return nil
 }
 
@@ -295,6 +288,5 @@ func (c *TailscaleClient) connectWithKey(enrollmentKey string) error {
 		return fmt.Errorf("tailscale up failed: %w, output: %s", err, string(output))
 	}
 
-	log.Printf("Tailscale: Connected successfully with hostname %s", c.config.Hostname)
 	return nil
 }

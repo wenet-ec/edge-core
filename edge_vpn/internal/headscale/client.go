@@ -105,9 +105,6 @@ func (c *Client) ValidateAPIKeyWithRetry(apiKey string, maxRetries int, delay ti
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		err := c.ValidateAPIKey(apiKey)
 		if err == nil {
-			if attempt > 1 {
-				fmt.Printf("API key validation succeeded on attempt %d\n", attempt)
-			}
 			return nil
 		}
 
@@ -119,8 +116,6 @@ func (c *Client) ValidateAPIKeyWithRetry(apiKey string, maxRetries int, delay ti
 		}
 
 		if attempt < maxRetries {
-			fmt.Printf("API key validation failed (attempt %d/%d): %v, retrying in %v...\n",
-				attempt, maxRetries, err, delay)
 			time.Sleep(delay)
 		}
 	}

@@ -89,7 +89,6 @@ func main() {
 
 	// Start the HTTP server in a goroutine
 	go func() {
-		log.Printf("Starting Edge VPN Wrapper on port %s", port)
 		if err := http.ListenAndServe(":"+port, r); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed: %v", err)
 		}
@@ -104,7 +103,6 @@ func main() {
 			// Check if key manager has a valid key
 			apiKey, err := keyManager.GetCurrentKey()
 			if err != nil {
-				log.Printf("Key manager not ready (attempt %d/%d): %v", attempt, maxRetries, err)
 				continue
 			}
 
@@ -112,7 +110,6 @@ func main() {
 			testURL := "http://localhost:8080/api/v1/user"
 			req, err := http.NewRequest("GET", testURL, nil)
 			if err != nil {
-				log.Printf("Failed to create test request (attempt %d/%d): %v", attempt, maxRetries, err)
 				continue
 			}
 
@@ -122,13 +119,11 @@ func main() {
 			client := &http.Client{Timeout: 5 * time.Second}
 			resp, err := client.Do(req)
 			if err != nil {
-				log.Printf("Headscale API test failed (attempt %d/%d): %v", attempt, maxRetries, err)
 				continue
 			}
 			resp.Body.Close()
 
 			if resp.StatusCode != 200 {
-				log.Printf("Headscale API returned status %d (attempt %d/%d)", resp.StatusCode, attempt, maxRetries)
 				continue
 			}
 
@@ -138,7 +133,7 @@ func main() {
 			return
 		}
 
-		log.Println("Failed to become ready after all retries - API key may not be functional")
+		log.Println("ERROR: Failed to become ready - API key may not be functional")
 	}()
 
 	// Wait for interrupt signal
@@ -146,9 +141,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server...")
 	rotationService.Stop()
-	log.Println("Server shutdown complete")
 }
 
 // healthHandler returns the health status - only OK when everything is ready
@@ -248,7 +241,6 @@ func (s *Server) keyStatusHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) forceRotationHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	log.Println("Force rotation requested via API")
 
 	if err := s.rotationService.ForceRotation(); err != nil {
 		log.Printf("Force rotation failed: %v", err)
@@ -259,7 +251,6 @@ func (s *Server) forceRotationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("Force rotation completed successfully")
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "Rotation completed successfully",
 	})
@@ -270,7 +261,6 @@ func (s *Server) proxyHandler(w http.ResponseWriter, r *http.Request) {
 	// Get current API key
 	apiKey, err := s.keyManager.GetCurrentKey()
 	if err != nil {
-		log.Printf("Failed to get API key for request: %v", err)
 		w.WriteHeader(http.StatusServiceUnavailable)
 		json.NewEncoder(w).Encode(map[string]string{
 			"error": "Service temporarily unavailable",

@@ -16,7 +16,7 @@ defmodule EdgeAgent.SshServer.Shell do
   def edge_shell do
     spawn(fn ->
       Process.flag(:trap_exit, true)
-      IO.puts("Edge Shell - Type 'quit' to exit")
+      IO.puts("Edge Shell - Type 'quit' or 'exit' to exit")
       shell_loop()
     end)
   end

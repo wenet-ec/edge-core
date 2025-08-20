@@ -8,10 +8,10 @@ defmodule EdgeAgent.BootstrapTest do
   alias EdgeAgent.Settings.Setting
 
   # Mock modules
-  defmock(VPNMock, for: EdgeAgent.VPNBehaviour)
+  defmock(VPNMock, for: EdgeAgent.VPN.Behaviour)
   defmock(AdminClientMock, for: EdgeAgent.AdminClientBehaviour)
-  defmock(SshServerMock, for: EdgeAgent.SshServerBehaviour)
-  defmock(MetricsServerMock, for: EdgeAgent.MetricsServerBehaviour)
+  defmock(SshServerMock, for: EdgeAgent.SshServer.Behaviour)
+  defmock(MetricsServerMock, for: EdgeAgent.MetricsServer.Behaviour)
 
   setup :verify_on_exit!
 

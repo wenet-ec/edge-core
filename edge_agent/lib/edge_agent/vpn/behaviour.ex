@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/vpn_behaviour.ex
-defmodule EdgeAgent.VPNBehaviour do
+# edge_agent/lib/edge_agent/vpn/behaviour.ex
+defmodule EdgeAgent.VPN.Behaviour do
   @moduledoc """
   Behaviour defining the VPN interface for EdgeAgent.
   Allows mocking of VPN operations during testing.

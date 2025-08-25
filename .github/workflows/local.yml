@@ -3,9 +3,9 @@ name: Local CI Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ develop, dev ]
   pull_request:
-    branches: [ main ]
+    branches: [ develop, dev ]
 
 jobs:
   edge_admin_precommit:

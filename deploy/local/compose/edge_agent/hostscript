@@ -2,9 +2,15 @@
 # deploy/local/compose/edge_agent/hostscript
 
 if [ $# -eq 0 ]; then
-    # Read from stdin
-    exec nsenter -t 1 -m -u -i -n -p bash 2>&1
+    # Interactive mode - try nsenter, fallback to chroot
+    nsenter -t 1 -m -u -i -n -p bash 2>/dev/null || \
+    nsenter -t 1 -m -u -n -p bash 2>/dev/null || \
+    chroot /host bash 2>/dev/null || \
+    chroot /host sh 2>&1
 else
-    # Execute arguments
-    exec nsenter -t 1 -m -u -i -n -p bash -c "$*" 2>&1
+    # Command execution - try nsenter, fallback to chroot  
+    nsenter -t 1 -m -u -i -n -p bash -c "$*" 2>/dev/null || \
+    nsenter -t 1 -m -u -n -p bash -c "$*" 2>/dev/null || \
+    chroot /host bash -c "$*" 2>/dev/null || \
+    chroot /host sh -c "$*" 2>&1
 fi

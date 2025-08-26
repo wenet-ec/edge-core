@@ -27,9 +27,6 @@ jobs:
       max-parallel: 3
       matrix:
         service:
-          - name: edge_admin_db
-            dockerfile: ./deploy/production/compose/postgres/Dockerfile
-            image: edge_admin_db
           - name: edge_admin
             dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
             image: edge_admin
@@ -98,7 +95,6 @@ jobs:
           echo "🏪 Registry: ${{ env.REGISTRY }}"
           echo ""
           echo "Built images:"
-          echo "• ${{ env.REGISTRY }}/edge_admin_db:${{ env.IMAGE_TAG }}"
           echo "• ${{ env.REGISTRY }}/edge_admin:${{ env.IMAGE_TAG }}"
           echo "• ${{ env.REGISTRY }}/edge_vpn:${{ env.IMAGE_TAG }}"
           echo "• ${{ env.REGISTRY }}/edge_metrics_storage:${{ env.IMAGE_TAG }}"

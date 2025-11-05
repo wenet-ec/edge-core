@@ -20,15 +20,12 @@ volumes:
 services:
   # Edge Admin
   edge_admin_db:
-    build:
-      context: ../..
-      dockerfile: ./deploy/local/compose/postgres/Dockerfile
-    image: local_edge_admin_db
+    image: docker.io/postgres:18
     container_name: local_edge_admin_db
     networks:
       - local_edge_core
     volumes:
-      - local_edge_admin_db_data:/var/lib/postgresql/data
+      - local_edge_admin_db_data:/var/lib/postgresql
       - local_edge_admin_db_data_backups:/backups
     env_file:
       - ./.envs/.edge_admin_db

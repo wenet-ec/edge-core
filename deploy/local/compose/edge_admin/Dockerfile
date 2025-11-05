@@ -1,5 +1,5 @@
 # deploy/local/compose/edge_admin/Dockerfile
-FROM elixir:1.18.4-otp-27-slim AS elixir-dev-stage
+FROM elixir:1.19.1-otp-28-slim AS elixir-dev-stage
 
 ARG APP_HOME=/app
 ENV MIX_ENV=dev

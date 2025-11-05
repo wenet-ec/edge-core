@@ -2,7 +2,7 @@
 # -----------------------------------------------
 # Stage: Build the OTP release
 # -----------------------------------------------
-FROM elixir:1.18.4-otp-27-alpine AS builder
+FROM elixir:1.19.1-otp-28-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache \
@@ -67,7 +67,7 @@ RUN --mount=type=cache,target=/root/.hex \
 FROM alpine:3.22.0
 
 # Install runtime dependencies and node_exporter in single layer
-ENV NODE_EXPORTER_VERSION="1.9.1"
+ENV NODE_EXPORTER_VERSION="1.10.2"
 RUN apk add --no-cache \
     openssl \
     ncurses-libs \

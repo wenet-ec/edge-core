@@ -1,5 +1,5 @@
 # deploy/local/compose/edge_agent/Dockerfile
-FROM elixir:1.18.4-otp-27-alpine
+FROM elixir:1.19.1-otp-28-alpine
 
 ARG APP_HOME=/app
 ENV MIX_ENV=dev
@@ -30,7 +30,7 @@ RUN apk add --no-cache \
   && rm -rf /var/cache/apk/*
 
 # Install node_exporter for metrics collection
-ENV NODE_EXPORTER_VERSION="1.9.1"
+ENV NODE_EXPORTER_VERSION="1.10.2"
 RUN wget -q https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz \
     && tar xzf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz \
     && mv node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64/node_exporter /usr/local/bin/ \

@@ -16,7 +16,6 @@ volumes:
   local_edge_agent_tailscale_data: {}
   local_edge_metrics_storage_data: {}
   local_edge_metrics_collector_data: {}
-  local_edge_metrics_collector_tailscale_data: {}
 
 services:
   # Edge Admin
@@ -203,10 +202,7 @@ services:
 
   # Metrics
   edge_metrics_storage:
-    build:
-      context: ../..
-      dockerfile: ./deploy/production/compose/edge_metrics_storage/Dockerfile
-    image: local_edge_metrics_storage
+    image: victoriametrics/victoria-metrics:v1.129.1
     container_name: local_edge_metrics_storage
     networks:
       - local_edge_core
@@ -216,34 +212,24 @@ services:
       - local_edge_metrics_storage_data:/storage
     env_file:
       - ./.envs/.edge_metrics_storage
+    command:
+      - '-envflag.enable'
+      - '-envflag.prefix=VM_'
 
   edge_metrics_collector:
-    build:
-      context: ../..
-      dockerfile: ./deploy/production/compose/edge_metrics_collector/Dockerfile
-    image: local_edge_metrics_collector
+    image: victoriametrics/vmagent:v1.129.1
     container_name: local_edge_metrics_collector
     networks:
       - local_edge_core
     depends_on:
-      edge_vpn:
-        condition: service_healthy
-      edge_admin:
-        condition: service_healthy
       edge_metrics_storage:
         condition: service_started
     volumes:
-      - local_edge_metrics_collector_data:/vmagent-data
-      - local_edge_metrics_collector_tailscale_data:/var/lib/tailscale
-      - /dev/net/tun:/dev/net/tun
       - ../../deploy/production/compose/edge_metrics_collector/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     env_file:
       - ./.envs/.edge_metrics_collector
     ports:
       - "8429:8429"
-      - "8430:8430"
-    cap_add:
-      - NET_ADMIN
-    sysctls:
-      - net.ipv4.ip_forward=1
-    command: /start
+    command:
+      - '-envflag.enable'
+      - '-envflag.prefix=VM_'

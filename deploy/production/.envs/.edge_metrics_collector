@@ -1,9 +1,6 @@
 # deploy/production/.envs/.edge_metrics_collector
-VMAGENT_CONFIG_PATH=/etc/prometheus/prometheus.yml
-VMAGENT_STRICT_PARSE=false
-VMAGENT_REMOTE_WRITE_URL=http://edge_metrics_storage:8428/api/v1/write
-
-VPN_URL=http://edge_vpn:8080
-VPN_WRAPPER_URL=http://edge_vpn:8081
-VPN_USERNAME=edge-metrics
-VPN_HOSTNAME=edge-metrics-collector
+VM_promscrape_config=/etc/prometheus/prometheus.yml
+VM_promscrape_httpSDCheckInterval=60s
+VM_remoteWrite_url=http://edge_metrics_storage:8428/api/v1/write
+VM_httpListenAddr=:8429
+VM_loggerLevel=WARN

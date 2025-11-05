@@ -6,7 +6,9 @@ scrape_configs:
   - job_name: "edge-nodes"
     http_sd_configs:
       - url: "http://edge_admin:4000/api/metrics/discovery"
-        refresh_interval: 30s
+    authorization:
+      type: Bearer
+      credentials: changeme-in-production
 
   - job_name: "edge-metrics-collector"
     static_configs:

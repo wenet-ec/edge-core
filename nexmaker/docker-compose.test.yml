@@ -1,0 +1,113 @@
+services:
+  nexmaker_test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - MIX_ENV=test
+      - NETMAKER_BASE_URL=http://netmaker:8081
+      - NETMAKER_MASTER_KEY=supersecretkey123456789
+    command: sh -c "sleep 30 && mix test --include integration"
+    depends_on:
+      netmaker:
+        condition: service_healthy
+    networks:
+      - test_network
+
+  netmaker_db:
+    image: postgres:18
+    environment:
+      - POSTGRES_DB=netmaker
+      - POSTGRES_USER=netmaker
+      - POSTGRES_PASSWORD=netmaker123
+    networks:
+      - test_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U netmaker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  netmaker_broker:
+    image: emqx/emqx:5.8.8
+    environment:
+      - EMQX_NAME=emqx
+      - EMQX_DASHBOARD__DEFAULT_USERNAME=admin
+      - EMQX_DASHBOARD__DEFAULT_PASSWORD=netmaker123
+    volumes:
+      - netmaker_broker_data:/opt/emqx/data
+      - netmaker_broker_etc:/opt/emqx/etc
+      - netmaker_broker_logs:/opt/emqx/log
+      - ./emqx.conf:/opt/emqx/data/configs/cluster.hocon
+    networks:
+      - test_network
+    healthcheck:
+      test: ["CMD-SHELL", "emqx ctl status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  netmaker:
+    image: gravitl/netmaker:v1.1.0
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
+    volumes:
+      - netmaker_data:/root/data
+    environment:
+      - SERVER_NAME=test-netmaker
+      - SERVER_HOST=netmaker
+      - MASTER_KEY=supersecretkey123456789
+      - CORS_ALLOWED_ORIGIN=*
+      - DISPLAY_KEYS=on
+      - DATABASE=postgres
+      - SQL_HOST=netmaker_db
+      - SQL_PORT=5432
+      - SQL_USER=netmaker
+      - SQL_PASS=netmaker123
+      - SQL_DB=netmaker
+      - SQL_SSL_MODE=disable
+      - API_PORT=8081
+      - DNS_MODE=off
+      - DISABLE_REMOTE_IP_CHECK=on
+      - TELEMETRY=off
+      - SERVER_BROKER_ENDPOINT=ws://netmaker_broker:8083/mqtt
+      - BROKER_ENDPOINT=ws://netmaker_broker:8083/mqtt
+      - BROKER_TYPE=emqx
+      - EMQX_REST_ENDPOINT=http://netmaker_broker:18083
+      - MQ_USERNAME=admin
+      - MQ_PASSWORD=netmaker123
+      - VERBOSITY=1
+    ports:
+      - "8081:8081"
+    depends_on:
+      netmaker_db:
+        condition: service_healthy
+      netmaker_broker:
+        condition: service_healthy
+    networks:
+      - test_network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/api/server/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+networks:
+  test_network:
+    driver: bridge
+
+volumes:
+  netmaker_data:
+  netmaker_broker_data:
+  netmaker_broker_etc:
+  netmaker_broker_logs:

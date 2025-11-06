@@ -1,0 +1,4 @@
+# deploy/local/.envs/.edge_vpn_broker
+EMQX_NAME=emqx
+EMQX_DASHBOARD__DEFAULT_USERNAME=admin
+EMQX_DASHBOARD__DEFAULT_PASSWORD=netmaker123

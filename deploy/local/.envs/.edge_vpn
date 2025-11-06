@@ -1,0 +1,26 @@
+# deploy/local/.envs/.edge_vpn
+SERVER_NAME=local-netmaker
+SERVER_HOST=netmaker.localtest.me
+MASTER_KEY=supersecretkey123456789
+CORS_ALLOWED_ORIGIN=*
+DISPLAY_KEYS=on
+DATABASE=postgres
+SQL_HOST=edge_vpn_db
+SQL_PORT=5432
+SQL_USER=netmaker
+SQL_PASS=netmaker123
+SQL_DB=netmaker
+SQL_SSL_MODE=disable
+API_PORT=8081
+DNS_MODE=on
+COREDNS_ADDR=edge_vpn_dns:5353
+DISABLE_REMOTE_IP_CHECK=on
+TELEMETRY=off
+SERVER_BROKER_ENDPOINT=ws://edge_vpn_broker:8083/mqtt
+BROKER_ENDPOINT=ws://broker.netmaker.localtest.me/mqtt
+BROKER_TYPE=emqx
+EMQX_REST_ENDPOINT=http://edge_vpn_broker:18083
+MQ_USERNAME=admin
+MQ_PASSWORD=netmaker123
+VERBOSITY=1
+STUN_LIST=stun1.l.google.com:19302,stun2.l.google.com:19302,stun.netmaker.io:3478

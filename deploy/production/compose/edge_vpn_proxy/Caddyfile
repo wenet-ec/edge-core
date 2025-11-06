@@ -1,0 +1,18 @@
+# deploy/production/compose/edge_vpn_proxy/Caddyfile
+http://netmaker.localtest.me {
+    reverse_proxy edge_vpn:8081
+}
+
+https://netmaker.localtest.me {
+    reverse_proxy edge_vpn:8081
+    tls internal
+}
+
+# EMQX Broker WebSocket proxy
+http://broker.netmaker.localtest.me {
+    @ws {
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    reverse_proxy @ws edge_vpn_broker:8083
+}

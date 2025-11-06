@@ -6,10 +6,17 @@ networks:
 volumes:
   production_edge_admin_db_data: {}
   production_edge_admin_db_data_backups: {}
-  production_edge_vpn_data: {}
   production_edge_admin_tailscale_data: {}
   production_edge_metrics_storage_data: {}
   production_edge_metrics_collector_data: {}
+  production_edge_vpn_data: {}
+  production_edge_vpn_db_data: {}
+  production_edge_vpn_dns_config: {}
+  production_edge_vpn_broker_data: {}
+  production_edge_vpn_broker_etc: {}
+  production_edge_vpn_broker_logs: {}
+  production_edge_vpn_proxy_data: {}
+  production_edge_vpn_proxy_config: {}
 
 services:
   # Edge Admin
@@ -62,29 +69,95 @@ services:
       - net.ipv4.ip_forward=1
     command: /start
 
-  # Edge VPN
-  edge_vpn:
-    build:
-      context: ../..
-      dockerfile: ./deploy/production/compose/edge_vpn/Dockerfile
-    image: production_edge_vpn
-    container_name: production_edge_vpn
-    volumes:
-      - ../../deploy/production/compose/edge_vpn/headscale_config:/etc/headscale
-      - production_edge_vpn_data:/var/lib/headscale
-    ports:
-      - "8080:8080"  # Headscale
-      - "8081:8081"  # VPN Wrapper
-      - "9090:9090"  # Metrics
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
-      interval: 60s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
+  # Netmaker VPN Stack
+  edge_vpn_db:
+    image: postgres:18
+    container_name: production_edge_vpn_db
     networks:
       - production_edge_core
-    command: /start
+    volumes:
+      - production_edge_vpn_db_data:/var/lib/postgresql
+    env_file:
+      - ./.envs/.edge_vpn_db
+
+  edge_vpn_broker:
+    image: emqx/emqx:6.0.0
+    container_name: production_edge_vpn_broker
+    networks:
+      - production_edge_core
+    ports:
+      - "8083:8083"
+      - "8084:8084"
+      - "18083:18083"
+    volumes:
+      - production_edge_vpn_broker_data:/opt/emqx/data
+      - production_edge_vpn_broker_etc:/opt/emqx/etc
+      - production_edge_vpn_broker_logs:/opt/emqx/log
+      - ./compose/edge_vpn_broker/emqx.conf:/opt/emqx/data/configs/cluster.hocon
+    env_file:
+      - ./.envs/.edge_vpn_broker
+
+  edge_vpn:
+    image: gravitl/netmaker:v1.1.0
+    container_name: production_edge_vpn
+    networks:
+      - production_edge_core
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
+    volumes:
+      - production_edge_vpn_data:/root/data
+      - production_edge_vpn_dns_config:/root/config/dnsconfig
+      - /dev/net/tun:/dev/net/tun:rw
+    env_file:
+      - ./.envs/.edge_vpn
+    ports:
+      - "8081:8081"
+    depends_on:
+      - edge_vpn_db
+      - edge_vpn_broker
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/api/server/health || nc -z localhost 8081 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 1
+      start_period: 10s
+
+  edge_vpn_dns:
+    image: coredns/coredns:1.13.1
+    container_name: production_edge_vpn_dns
+    networks:
+      - production_edge_core
+    user: "0:0"
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+    volumes:
+      - production_edge_vpn_dns_config:/root/config/dnsconfig
+    ports:
+      - "5353:53/udp"
+      - "5353:53/tcp"
+    command: -conf /root/config/dnsconfig/Corefile
+
+  edge_vpn_proxy:
+    image: caddy:2.10-alpine
+    container_name: production_edge_vpn_proxy
+    networks:
+      - production_edge_core
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./compose/edge_vpn_proxy/Caddyfile:/etc/caddy/Caddyfile
+      - production_edge_vpn_proxy_data:/data
+      - production_edge_vpn_proxy_config:/config
+    depends_on:
+      - edge_vpn
+    command: caddy run --config /etc/caddy/Caddyfile
 
   # Metrics Storage
   edge_metrics_storage:

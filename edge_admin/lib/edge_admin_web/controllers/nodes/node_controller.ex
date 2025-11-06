@@ -74,7 +74,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   )
 
   def create(conn, %{"node" => node_params}) do
-    with {:ok, %Node{} = node} <- Nodes.create_node_with_vpn_info(node_params) do
+    with {:ok, %Node{} = node} <- Nodes.create_node(node_params) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/nodes/#{node}")
@@ -99,7 +99,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   )
 
   def show(conn, %{"id" => id}) do
-    node = Nodes.get_node_with_vpn_info!(id)
+    node = Nodes.get_node!(id)
     render(conn, :show, node: node)
   end
 

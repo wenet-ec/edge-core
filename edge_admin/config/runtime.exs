@@ -48,7 +48,3 @@ config :edge_admin,
 config :sentry,
   dsn: get_env("SENTRY_DSN"),
   environment_name: get_env("SENTRY_ENVIRONMENT_NAME")
-
-# Tailscale library configuration
-config :tailscale,
-  vpn_wrapper_url: System.get_env("VPN_WRAPPER_URL", "http://edge_vpn:8081")

@@ -15,7 +15,6 @@ defmodule EdgeAdmin.Application do
       EdgeAdmin.Repo,
       {DNSCluster, query: Application.get_env(:edge_admin, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: EdgeAdmin.PubSub},
-      Tailscale.ConnectionManager,
       {Oban, Application.fetch_env!(:edge_admin, Oban)},
       EdgeAdminWeb.Endpoint,
       {TelemetryUI, EdgeAdmin.TelemetryUI.config()}
@@ -26,39 +25,7 @@ defmodule EdgeAdmin.Application do
     })
 
     opts = [strategy: :one_for_one, name: EdgeAdmin.Supervisor]
-
-    case Supervisor.start_link(children, opts) do
-      {:ok, pid} ->
-        if should_run_bootstrap?() do
-          case EdgeAdmin.Bootstrap.run() do
-            {:ok, :bootstrap_complete} ->
-              {:ok, pid}
-
-            {:error, reason} ->
-              Logger.error("Bootstrap failed: #{inspect(reason)}")
-              {:ok, pid}
-          end
-        else
-          Logger.info("Skipping bootstrap in #{Mix.env()} environment")
-          {:ok, pid}
-        end
-
-      error ->
-        error
-    end
-  end
-
-  defp should_run_bootstrap? do
-    case Application.get_env(:edge_admin, :run_bootstrap, :auto) do
-      false -> false
-      true -> true
-      :auto -> phoenix_server_starting?()
-    end
-  end
-
-  defp phoenix_server_starting? do
-    # Only run bootstrap when Phoenix server is actually starting
-    System.get_env("PHX_SERVER") == "true"
+    Supervisor.start_link(children, opts)
   end
 
   # Tell Phoenix to update the endpoint configuration

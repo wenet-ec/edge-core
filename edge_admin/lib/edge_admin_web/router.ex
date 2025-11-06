@@ -53,16 +53,7 @@ defmodule EdgeAdminWeb.Router do
   scope "/api", EdgeAdminWeb.Controllers do
     pipe_through(:api)
 
-    scope "/", VPN do
-      scope "/connections" do
-        get("/self", ConnectionController, :show)
-        patch("/self", ConnectionController, :update)
-      end
-    end
-
     scope "/", Nodes do
-      resources("/enrollment_keys", EnrollmentKeyController, only: [:create])
-
       resources("/nodes", NodeController, only: [:index, :create, :show]) do
         resources("/ssh_usernames", SshUsernameController, only: [:create])
         get("/metrics", MetricsController, :index)

@@ -19,9 +19,5 @@ POSTGRES_PASSWORD=edge_admin_password
 DATABASE_POOL_SIZE=2
 DATABASE_SSL=false
 
-# VPN configuration (needed by runtime.exs even in test)
-VPN_URL=http://edge_vpn:8080
-VPN_WRAPPER_URL=http://edge_vpn:8081
-
 # Optional: Enable detailed test output
 # TRACE_TESTS=true

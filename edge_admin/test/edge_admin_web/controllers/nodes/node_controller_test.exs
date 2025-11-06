@@ -3,12 +3,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeControllerTest do
   use EdgeAdminWeb.ConnCase
 
   import EdgeAdmin.NodesFixtures
-  import Mox
-
-  alias EdgeAdmin.TailscaleMock
-
-  # Make sure mocks are verified when the test exits
-  setup :verify_on_exit!
 
   @create_attrs %{
     id: "bc9ebeb1-96a4-4dfd-953e-899a61637577",
@@ -43,28 +37,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeControllerTest do
 
   describe "create node" do
     test "creates node with valid data", %{conn: conn} do
-      # Mock the VPN node lookup for create
-      vpn_hostname = "node-#{@create_attrs.id}"
-
-      expect(TailscaleMock, :get_node_by_hostname, fn ^vpn_hostname ->
-        {:ok,
-         %{
-           vpn_ip: "100.64.0.10",
-           status: "online",
-           last_seen_at: DateTime.utc_now()
-         }}
-      end)
-
-      # Mock the VPN node lookup for show
-      expect(TailscaleMock, :get_node_by_hostname, fn ^vpn_hostname ->
-        {:ok,
-         %{
-           vpn_ip: "100.64.0.10",
-           status: "online",
-           last_seen_at: DateTime.utc_now()
-         }}
-      end)
-
       conn = post(conn, ~p"/api/nodes", node: @create_attrs)
       assert %{"id" => id} = json_response(conn, 201)["data"]
 
@@ -82,19 +54,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeControllerTest do
     end
 
     test "prevents duplicate node IDs", %{conn: conn} do
-      # Mock the VPN node lookup for first create only
-      # The second create should fail at database level before calling VPN
-      vpn_hostname = "node-#{@create_attrs.id}"
-
-      expect(TailscaleMock, :get_node_by_hostname, fn ^vpn_hostname ->
-        {:ok,
-         %{
-           vpn_ip: "100.64.0.10",
-           status: "online",
-           last_seen_at: DateTime.utc_now()
-         }}
-      end)
-
       post(conn, ~p"/api/nodes", node: @create_attrs)
       conn = post(conn, ~p"/api/nodes", node: @create_attrs)
 
@@ -105,19 +64,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeControllerTest do
   describe "show node" do
     test "returns node by ID", %{conn: conn} do
       node = node_fixture()
-
-      # Mock the VPN node lookup for show
-      vpn_hostname = "node-#{node.id}"
-
-      expect(TailscaleMock, :get_node_by_hostname, fn ^vpn_hostname ->
-        {:ok,
-         %{
-           vpn_ip: "100.64.0.10",
-           status: "online",
-           last_seen_at: DateTime.utc_now()
-         }}
-      end)
-
       conn = get(conn, ~p"/api/nodes/#{node}")
 
       response = json_response(conn, 200)["data"]

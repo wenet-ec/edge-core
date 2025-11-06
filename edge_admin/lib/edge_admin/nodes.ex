@@ -12,7 +12,6 @@ defmodule EdgeAdmin.Nodes do
   alias EdgeAdmin.Nodes.SshPublicKey
   alias EdgeAdmin.Nodes.SshUsername
   alias EdgeAdmin.Repo
-  alias EdgeAdmin.VPN
 
   require Logger
 
@@ -50,34 +49,10 @@ defmodule EdgeAdmin.Nodes do
     Node.changeset(node, attrs)
   end
 
-  defp fetch_vpn_info(%Node{} = node) do
-    vpn_hostname = Node.vpn_hostname(node)
-
-    case VPN.get_node_by_hostname(vpn_hostname) do
-      {:ok, vpn_info} ->
-        # Update node with VPN info
-        update_node(node, vpn_info)
-
-      {:error, reason} ->
-        Logger.warning("Failed to get VPN info for #{vpn_hostname}: #{inspect(reason)}")
-        # Return node unchanged if VPN lookup fails
-        {:ok, node}
-    end
-  end
-
-  def create_node_with_vpn_info(attrs \\ %{}) do
-    with {:ok, node} <- create_node(attrs) do
-      fetch_vpn_info(node)
-    end
-  end
-
-  def get_node_with_vpn_info!(id) do
-    node = get_node!(id)
-
-    case fetch_vpn_info(node) do
-      {:ok, node_with_vpn_info} -> node_with_vpn_info
-      {:error, _reason} -> node
-    end
+  def get_node(id) do
+    {:ok, get_node!(id)}
+  rescue
+    Ecto.NoResultsError -> {:error, :not_found}
   end
 
   def list_nodes_with_filtering_pagination(params \\ %{}) do

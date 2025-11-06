@@ -84,7 +84,7 @@ RUN chmod +x /migrate
 
 # Copy dependency files first (for Docker layer caching)
 COPY edge_admin/mix.exs edge_admin/mix.lock* ./
-COPY tailscale/ /tailscale/
+COPY nexmaker/ /nexmaker/
 
 # Copy config files (needed for dependency compilation)
 COPY edge_admin/config ./config

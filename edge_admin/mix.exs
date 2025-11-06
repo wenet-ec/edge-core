@@ -125,8 +125,8 @@ defmodule EdgeAdmin.Mixfile do
       # Oban
       {:oban, "~> 2.20"},
 
-      # Tailscale library
-      {:tailscale, path: "../tailscale"}
+      # Nexmaker library
+      {:nexmaker, path: "../nexmaker"}
     ]
   end
 

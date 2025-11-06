@@ -22,13 +22,13 @@ ENV MIX_ENV=prod
 ENV ERL_MAX_PORTS=65536
 ENV ELIXIR_MAKE_PARALLEL=true
 
-# First, build the tailscale library with caching
-WORKDIR /tailscale
-COPY tailscale/mix.exs tailscale/mix.lock ./
+# First, build the nexmaker library with caching
+WORKDIR /nexmaker
+COPY nexmaker/mix.exs nexmaker/mix.lock ./
 RUN --mount=type=cache,target=/root/.hex \
     --mount=type=cache,target=/root/.mix \
     mix deps.get --only $MIX_ENV
-COPY tailscale/lib lib/
+COPY nexmaker/lib lib/
 RUN --mount=type=cache,target=/root/.hex \
     --mount=type=cache,target=/root/.mix \
     mix deps.compile --parallel && mix compile --parallel

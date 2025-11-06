@@ -12,7 +12,7 @@ defmodule EdgeAdmin.Schema do
 
       @primary_key {:id, :binary_id, autogenerate: true}
       @foreign_key_type :binary_id
-      @timestamps_opts [type: :utc_datetime_usec]
+      @timestamps_opts [type: :utc_datetime]
     end
   end
 end

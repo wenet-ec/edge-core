@@ -182,8 +182,7 @@ defmodule EdgeAdmin.Commands do
 
     Logger.info("Creating executions for #{length(nodes)} filtered nodes")
 
-    # Truncate to match PostgreSQL precision
-    now = DateTime.truncate(DateTime.utc_now(), :second)
+    now = DateTime.utc_now()
 
     executions =
       Enum.map(nodes, fn node ->

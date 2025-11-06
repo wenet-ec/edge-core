@@ -1,4 +1,30 @@
 # deploy/local/compose/edge_agent/Dockerfile
+
+# Build netclient with HTTP patches (for local development)
+ARG NETCLIENT_VERSION=v1.1.0
+FROM golang:1.25-alpine AS netclient-builder
+
+# Install git
+RUN apk add --no-cache git
+
+# Clone the netclient repository and checkout specific version
+WORKDIR /build
+RUN git clone https://github.com/gravitl/netclient.git . && \
+    git checkout ${NETCLIENT_VERSION}
+
+# Patch ONLY API-related https:// to http:// (surgical patches for local dev)
+# Using find to apply patches to all relevant files
+RUN find . -type f -name '*.go' -exec sed -i \
+    -e 's|"https://" + server\.API|"http://" + server.API|g' \
+    -e 's|"https://" + serverData\.Server|"http://" + serverData.Server|g' \
+    -e 's|fmt\.Sprintf("https://%s/|fmt.Sprintf("http://%s/|g' \
+    {} \;
+
+# Build the patched netclient
+RUN go mod download && \
+    CGO_ENABLED=0 GOOS=linux go build -o netclient .
+
+# Main Elixir stage
 FROM elixir:1.19.1-otp-28-alpine
 
 ARG APP_HOME=/app
@@ -37,9 +63,9 @@ RUN wget -q https://github.com/prometheus/node_exporter/releases/download/v${NOD
     && rm -rf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64* \
     && chmod +x /usr/local/bin/node_exporter
 
-# Install Tailscale (VPN client)
-RUN apk add --no-cache tailscale && \
-    mkdir -p /var/run/tailscale
+# Copy patched netclient binary from builder stage
+COPY --from=netclient-builder /build/netclient /usr/local/bin/netclient
+RUN chmod +x /usr/local/bin/netclient
 
 # Create app user
 RUN addgroup -g 1000 app && \

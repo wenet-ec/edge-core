@@ -6,7 +6,7 @@ networks:
 volumes:
   production_edge_admin_db_data: {}
   production_edge_admin_db_data_backups: {}
-  production_edge_admin_tailscale_data: {}
+  production_edge_admin_netclient_data: {}
   production_edge_metrics_storage_data: {}
   production_edge_metrics_collector_data: {}
   production_edge_vpn_data: {}
@@ -51,7 +51,7 @@ services:
       edge_admin_db:
         condition: service_healthy
     volumes:
-      - production_edge_admin_tailscale_data:/var/lib/tailscale
+      - production_edge_admin_netclient_data:/etc/netclient
       - /dev/net/tun:/dev/net/tun
     env_file:
       - ./.envs/.edge_admin

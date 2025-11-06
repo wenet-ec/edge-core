@@ -74,15 +74,12 @@ RUN apt-get update -y && \
     locales \
     curl \
     ca-certificates \
-    # for tailscale installation
-    gnupg \
-    lsb-release && \
-    # Install Tailscale in same layer to reduce image size
-    curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null && \
-    curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.tailscale-keyring.list | tee /etc/apt/sources.list.d/tailscale.list && \
-    apt-get update && \
-    apt-get install --no-install-recommends -y tailscale && \
-    mkdir -p /var/run/tailscale /var/cache/tailscale /var/lib/tailscale && \
+    wget && \
+    # Install netclient in same layer to reduce image size
+    wget -qO /tmp/netclient https://github.com/gravitl/netclient/releases/download/v1.1.0/netclient-linux-amd64 && \
+    mv /tmp/netclient /usr/local/bin/netclient && \
+    chmod +x /usr/local/bin/netclient && \
+    mkdir -p /etc/netclient && \
     # Set locale in same layer
     sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen && \
     # Clean up in same layer to reduce image size

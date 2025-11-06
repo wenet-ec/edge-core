@@ -1,4 +1,30 @@
 # deploy/local/compose/edge_admin/Dockerfile
+
+# Build netclient with HTTP patches (for local development)
+ARG NETCLIENT_VERSION=v1.1.0
+FROM golang:1.25-alpine AS netclient-builder
+
+# Install git
+RUN apk add --no-cache git
+
+# Clone the netclient repository and checkout specific version
+WORKDIR /build
+RUN git clone https://github.com/gravitl/netclient.git . && \
+    git checkout ${NETCLIENT_VERSION}
+
+# Patch ONLY API-related https:// to http:// (surgical patches for local dev)
+# Using find to apply patches to all relevant files
+RUN find . -type f -name '*.go' -exec sed -i \
+    -e 's|"https://" + server\.API|"http://" + server.API|g' \
+    -e 's|"https://" + serverData\.Server|"http://" + serverData.Server|g' \
+    -e 's|fmt\.Sprintf("https://%s/|fmt.Sprintf("http://%s/|g' \
+    {} \;
+
+# Build the patched netclient
+RUN go mod download && \
+    CGO_ENABLED=0 GOOS=linux go build -o netclient .
+
+# Main Elixir stage
 FROM elixir:1.19.1-otp-28-slim AS elixir-dev-stage
 
 ARG APP_HOME=/app
@@ -25,21 +51,13 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   curl \
   # file system watching for live reload
   inotify-tools \
-  # for tailscale installation
-  gnupg \
-  lsb-release \
   # cleaning up unused files
   && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
   && rm -rf /var/lib/apt/lists/*
 
-# Install Tailscale
-RUN curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null \
-  && curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.tailscale-keyring.list | tee /etc/apt/sources.list.d/tailscale.list \
-  && apt-get update \
-  && apt-get install --no-install-recommends -y tailscale \
-  && mkdir -p /var/run/tailscale \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/*
+# Copy patched netclient binary from builder stage
+COPY --from=netclient-builder /build/netclient /usr/local/bin/netclient
+RUN chmod +x /usr/local/bin/netclient
 
 # Create devcontainer user and add it to sudoers
 RUN groupadd --gid 1000 dev-user \

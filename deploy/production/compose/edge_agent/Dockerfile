@@ -75,7 +75,6 @@ RUN apk add --no-cache \
     bash \
     curl \
     wget \
-    tailscale \
     libstdc++ \
     libgcc \
     su-exec \
@@ -85,7 +84,11 @@ RUN apk add --no-cache \
     tar xzf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz && \
     mv node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64/node_exporter /usr/local/bin/ && \
     chmod +x /usr/local/bin/node_exporter && \
-    mkdir -p /app/data /var/run/tailscale /var/lib/tailscale /var/cache/tailscale && \
+    # Install netclient in same layer to reduce image size
+    wget -qO /tmp/netclient https://github.com/gravitl/netclient/releases/download/v1.1.0/netclient-linux-amd64 && \
+    mv /tmp/netclient /usr/local/bin/netclient && \
+    chmod +x /usr/local/bin/netclient && \
+    mkdir -p /app/data /etc/netclient && \
     # Clean up in same layer to reduce image size
     rm -rf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64* /var/cache/apk/* /tmp/* /var/tmp/*
 

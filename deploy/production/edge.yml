@@ -5,7 +5,7 @@ networks:
 
 volumes:
   production_edge_agent_data: {}
-  production_edge_agent_tailscale_data: {}
+  production_edge_agent_netclient_data: {}
 
 services:
   # Edge Agent
@@ -19,7 +19,7 @@ services:
       - production_edge_core
     volumes:
       - production_edge_agent_data:/app/data
-      - production_edge_agent_tailscale_data:/var/lib/tailscale
+      - production_edge_agent_netclient_data:/etc/netclient
       - /dev/net/tun:/dev/net/tun
       - /:/host:ro
     env_file:

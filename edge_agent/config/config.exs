@@ -53,8 +53,6 @@ config :edge_agent,
   ecto_repos: [EdgeAgent.Repo],
   version: version
 
-config :logger, backends: [:console]
-
 config :phoenix, :json_library, Jason
 
 # Import environment configuration

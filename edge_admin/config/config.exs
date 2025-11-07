@@ -56,8 +56,6 @@ config :edge_admin,
   ecto_repos: [EdgeAdmin.Repo],
   version: version
 
-config :logger, backends: [:console, Sentry.LoggerBackend]
-
 config :phoenix, :json_library, Jason
 
 # Import environment configuration

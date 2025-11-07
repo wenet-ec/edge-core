@@ -43,7 +43,18 @@ config :edge_admin,
   ]
 
 config :edge_admin,
-  metrics_storage_url: System.get_env("METRICS_STORAGE_URL")
+  metrics_storage_url: get_env("METRICS_STORAGE_URL")
+
+# Nexmaker (Netmaker) configuration
+config :nexmaker,
+  base_url: get_env!("NETMAKER_API_URL"),
+  master_key: get_env!("NETMAKER_MASTER_KEY")
+
+# Cluster configuration
+config :edge_admin,
+  cluster_subnet_prefix: get_env("CLUSTER_SUBNET_PREFIX", :integer, 24),
+  cluster_auto_generated_ranges:
+    get_env("CLUSTER_AUTO_GENERATED_RANGES", :list, ["100.64.0.0/10"])
 
 config :sentry,
   dsn: get_env("SENTRY_DSN"),

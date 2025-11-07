@@ -5,11 +5,34 @@ defmodule EdgeAdmin.NodesFixtures do
   entities via the `EdgeAdmin.Nodes` context.
   """
 
+  import Mox
+
   @doc """
   Generate a proper UUID format with dashes.
   """
   def unique_node_id do
     Ecto.UUID.generate()
+  end
+
+  @doc """
+  Generate a cluster with mocked Nexmaker API calls.
+  """
+  def cluster_fixture(attrs \\ %{}) do
+    # Mock the Nexmaker network creation
+    expect(NexmakerMock, :create_network, fn _network_name, _params ->
+      {:ok, %{}}
+    end)
+
+    default_attrs = %{
+      ipv4_range: "100.64.#{:rand.uniform(255)}.0/24"
+    }
+
+    {:ok, cluster} =
+      default_attrs
+      |> Map.merge(attrs)
+      |> EdgeAdmin.Nodes.create_cluster()
+
+    cluster
   end
 
   @doc """

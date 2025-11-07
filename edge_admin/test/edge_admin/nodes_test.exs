@@ -681,4 +681,195 @@ defmodule EdgeAdmin.NodesTest do
       assert "172.16.0.1:9100" in targets
     end
   end
+
+  describe "cluster CRUD operations" do
+    test "list_clusters/0 returns all clusters with node counts" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      clusters = Nodes.list_clusters()
+      assert length(clusters) >= 1
+      assert Enum.any?(clusters, fn c -> c.id == cluster.id end)
+
+      # Check node_count is present
+      found_cluster = Enum.find(clusters, fn c -> c.id == cluster.id end)
+      assert found_cluster.node_count == 0
+    end
+
+    test "list_clusters_with_filtering_pagination/1 filters and paginates" do
+      expect(NexmakerMock, :create_network, 2, fn _, _ -> {:ok, %{}} end)
+
+      cluster1 = cluster_fixture(%{ipv4_range: "100.64.1.0/24"})
+      _cluster2 = cluster_fixture(%{ipv4_range: "100.64.2.0/24"})
+
+      # Filter by ipv4_range
+      result = Nodes.list_clusters_with_filtering_pagination(%{"ipv4_range" => "100.64.1"})
+      assert length(result.data) == 1
+      assert hd(result.data).id == cluster1.id
+      assert result.total == 1
+
+      # No filter returns all with pagination
+      result = Nodes.list_clusters_with_filtering_pagination(%{})
+      assert length(result.data) >= 2
+      assert result.pagination == %{}
+      assert result.total >= 2
+    end
+
+    test "list_clusters_with_filtering_pagination/1 supports sorting" do
+      expect(NexmakerMock, :create_network, 2, fn _, _ -> {:ok, %{}} end)
+
+      cluster1 = cluster_fixture(%{ipv4_range: "100.64.1.0/24"})
+      cluster2 = cluster_fixture(%{ipv4_range: "100.64.2.0/24"})
+
+      # Sort by ipv4_range ascending
+      result = Nodes.list_clusters_with_filtering_pagination(%{"sort" => "ipv4_range:asc"})
+      assert hd(result.data).id == cluster1.id
+      assert result.sort == [{:ipv4_range, :asc}]
+    end
+
+    test "get_cluster!/1 returns the cluster with node count" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      fetched = Nodes.get_cluster!(cluster.id)
+      assert fetched.id == cluster.id
+      assert fetched.node_count == 0
+    end
+
+    test "create_cluster/1 with valid data creates a cluster and Netmaker network" do
+      expect(NexmakerMock, :create_network, fn network_name, params ->
+        assert network_name =~ ~r/^cluster-/
+        assert params.addressrange == "100.64.50.0/24"
+        {:ok, %{}}
+      end)
+
+      assert {:ok, %Cluster{} = cluster} =
+               Nodes.create_cluster(%{ipv4_range: "100.64.50.0/24"})
+
+      assert cluster.ipv4_range == "100.64.50.0/24"
+      assert cluster.id
+    end
+
+    test "create_cluster/1 with explicit ID creates cluster with that ID" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+
+      explicit_id = Ecto.UUID.generate()
+
+      assert {:ok, %Cluster{} = cluster} =
+               Nodes.create_cluster(%{id: explicit_id, ipv4_range: "100.64.51.0/24"})
+
+      assert cluster.id == explicit_id
+    end
+
+    test "create_cluster/1 auto-generates IP range if not provided" do
+      expect(NexmakerMock, :create_network, fn _, params ->
+        assert params.addressrange =~ ~r/^100\.64\.\d+\.0\/24$/
+        {:ok, %{}}
+      end)
+
+      assert {:ok, %Cluster{} = cluster} = Nodes.create_cluster(%{})
+      assert cluster.ipv4_range =~ ~r/^100\.64\.\d+\.0\/24$/
+    end
+
+    test "create_cluster/1 rolls back on Netmaker network creation failure" do
+      expect(NexmakerMock, :create_network, fn _, _ ->
+        {:error, "Netmaker error"}
+      end)
+
+      assert {:error, "Netmaker error"} = Nodes.create_cluster(%{ipv4_range: "100.64.52.0/24"})
+
+      # Cluster should not exist in database
+      assert Nodes.list_clusters() == []
+    end
+
+    test "create_cluster/1 with invalid ipv4_range returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Nodes.create_cluster(%{ipv4_range: "invalid"})
+    end
+
+    test "create_cluster/1 with duplicate ipv4_range returns error" do
+      expect(NexmakerMock, :create_network, 2, fn _, _ -> {:ok, %{}} end)
+
+      {:ok, _cluster1} = Nodes.create_cluster(%{ipv4_range: "100.64.60.0/24"})
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Nodes.create_cluster(%{ipv4_range: "100.64.60.0/24"})
+
+      assert changeset.errors[:ipv4_range]
+    end
+
+    test "delete_cluster/1 deletes the cluster and Netmaker network" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+
+      expect(NexmakerMock, :delete_network, fn network_name ->
+        assert network_name =~ ~r/^cluster-/
+        {:ok, %{}}
+      end)
+
+      cluster = cluster_fixture()
+      assert {:ok, %Cluster{}} = Nodes.delete_cluster(cluster)
+      assert_raise Ecto.NoResultsError, fn -> Nodes.get_cluster!(cluster.id) end
+    end
+
+    test "delete_cluster/1 rolls back on Netmaker network deletion failure" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+
+      expect(NexmakerMock, :delete_network, fn _ ->
+        {:error, "Netmaker deletion error"}
+      end)
+
+      cluster = cluster_fixture()
+      assert {:error, "Netmaker deletion error"} = Nodes.delete_cluster(cluster)
+
+      # Cluster should still exist in database
+      assert Nodes.get_cluster!(cluster.id)
+    end
+
+    test "change_cluster/1 returns a cluster changeset" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      changeset = Nodes.change_cluster(cluster)
+      assert %Ecto.Changeset{} = changeset
+    end
+  end
+
+  describe "IP range validation" do
+    test "rejects private ranges" do
+      assert {:error, changeset} = Nodes.create_cluster(%{ipv4_range: "192.168.1.0/24"})
+      assert changeset.errors[:ipv4_range]
+    end
+
+    test "rejects loopback range" do
+      assert {:error, changeset} = Nodes.create_cluster(%{ipv4_range: "127.0.0.0/8"})
+      assert changeset.errors[:ipv4_range]
+    end
+
+    test "rejects link-local range" do
+      assert {:error, changeset} = Nodes.create_cluster(%{ipv4_range: "169.254.0.0/16"})
+      assert changeset.errors[:ipv4_range]
+    end
+
+    test "accepts valid CGNAT range (100.64.0.0/10)" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+
+      assert {:ok, cluster} = Nodes.create_cluster(%{ipv4_range: "100.64.100.0/24"})
+      assert cluster.ipv4_range == "100.64.100.0/24"
+    end
+  end
+
+  describe "Cluster helper functions" do
+    test "network_name/1 returns correct format" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      assert Cluster.network_name(cluster) == "cluster-#{cluster.id}"
+    end
+
+    test "dns_domain/1 returns correct format" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      assert Cluster.dns_domain(cluster) == "cluster-#{cluster.id}.nm.internal"
+    end
+  end
 end

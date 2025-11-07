@@ -271,12 +271,30 @@ defmodule EdgeAdmin.FilteringPagination do
   end
 
   defp get_total_count(query, repo) do
-    query
-    |> exclude(:order_by)
-    |> exclude(:preload)
-    |> exclude(:select)
-    |> select([q], count())
-    |> repo.one()
+    # Check if query has GROUP BY (which requires special handling for counts)
+    has_group_by = query.group_bys != []
+
+    if has_group_by do
+      # For grouped queries (with GROUP BY and potentially HAVING),
+      # we need to count the number of groups after grouping/filtering.
+      # Wrap the query in a subquery and count the resulting rows.
+      subquery =
+        query
+        |> exclude(:order_by)
+        |> exclude(:preload)
+        |> subquery()
+
+      from(s in subquery, select: count())
+      |> repo.one()
+    else
+      # For non-grouped queries, use the simple count approach
+      query
+      |> exclude(:order_by)
+      |> exclude(:preload)
+      |> exclude(:select)
+      |> select([q], count())
+      |> repo.one()
+    end
   end
 
   defp calculate_total_pages(0, _page_size), do: 0

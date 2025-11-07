@@ -54,6 +54,8 @@ defmodule EdgeAdminWeb.Router do
     pipe_through(:api)
 
     scope "/", Nodes do
+      resources("/clusters", ClusterController, only: [:index, :show, :create, :delete])
+
       resources("/nodes", NodeController, only: [:index, :create, :show]) do
         resources("/ssh_usernames", SshUsernameController, only: [:create])
         get("/metrics", MetricsController, :index)

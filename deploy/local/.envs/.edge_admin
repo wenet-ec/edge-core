@@ -28,5 +28,9 @@ TELEMETRY_UI_SHARE_KEY=DzbqdoAx/MGq8rM
 # SENTRY_DSN=
 SENTRY_ENVIRONMENT_NAME=local
 
+# Netmaker
+NETMAKER_API_URL=http://edge_vpn:8081
+NETMAKER_MASTER_KEY=supersecretkey123456789
+
 # Metrics configuration
 METRICS_STORAGE_URL=http://edge_metrics_storage:8428

@@ -8,5 +8,8 @@ set -o nounset
 echo "Running migrations..."
 /app/bin/migrate
 
+echo "Bootstrapping Netmaker superadmin..."
+/app/bin/create_netmaker_superadmin
+
 echo "Starting server..."
 exec /app/bin/server

@@ -50,6 +50,11 @@ config :nexmaker,
   base_url: get_env!("NETMAKER_API_URL"),
   master_key: get_env!("NETMAKER_MASTER_KEY")
 
+# Netmaker Superadmin (for UI access - optional)
+config :edge_admin,
+  netmaker_superadmin_username: get_env!("NETMAKER_SUPERADMIN_USERNAME"),
+  netmaker_superadmin_password: get_env!("NETMAKER_SUPERADMIN_PASSWORD")
+
 # Cluster configuration
 config :edge_admin,
   cluster_subnet_prefix: get_env("CLUSTER_SUBNET_PREFIX", :integer, 24),

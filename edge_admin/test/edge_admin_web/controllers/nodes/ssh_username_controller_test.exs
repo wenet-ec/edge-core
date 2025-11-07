@@ -7,6 +7,24 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameControllerTest do
   @create_attrs %{
     username: "admin"
   }
+  @create_attrs_with_password %{
+    username: "admin",
+    password: "secret123"
+  }
+  @create_attrs_with_keys %{
+    username: "deploy",
+    password: "secret456",
+    public_keys: [
+      %{
+        key_name: "laptop",
+        public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop"
+      },
+      %{
+        key_name: "ci",
+        public_key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC7Z8nFkX+7rT9uJ2p9lH8... ci@server"
+      }
+    ]
+  }
   @invalid_attrs %{
     username: nil
   }
@@ -79,6 +97,50 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameControllerTest do
       assert node_id == node.id
     end
 
+    test "renders ssh_username with password when provided", %{conn: conn} do
+      node = node_fixture()
+
+      conn = post(conn, ~p"/api/nodes/#{node.id}/ssh_usernames", ssh_username: @create_attrs_with_password)
+      assert %{"id" => id, "password" => password} = json_response(conn, 201)["data"]
+      assert password == "secret123"
+
+      conn = get(conn, ~p"/api/ssh_usernames/#{id}")
+
+      assert %{
+               "id" => ^id,
+               "username" => "admin",
+               "password" => "secret123",
+               "node_id" => node_id
+             } = json_response(conn, 200)["data"]
+
+      assert node_id == node.id
+    end
+
+    test "creates ssh_username with password and public keys in single transaction", %{conn: conn} do
+      node = node_fixture()
+
+      conn = post(conn, ~p"/api/nodes/#{node.id}/ssh_usernames", ssh_username: @create_attrs_with_keys)
+      response = json_response(conn, 201)["data"]
+
+      assert %{
+               "id" => id,
+               "username" => "deploy",
+               "password" => "secret456",
+               "public_keys" => public_keys
+             } = response
+
+      assert length(public_keys) == 2
+      assert Enum.any?(public_keys, fn key -> key["key_name"] == "laptop" end)
+      assert Enum.any?(public_keys, fn key -> key["key_name"] == "ci" end)
+
+      # Verify the username with keys can be retrieved
+      conn = get(conn, ~p"/api/ssh_usernames/#{id}")
+      response = json_response(conn, 200)["data"]
+
+      assert %{"username" => "deploy", "public_keys" => keys} = response
+      assert length(keys) == 2
+    end
+
     test "renders errors when data is invalid", %{conn: conn} do
       node = node_fixture()
 
@@ -100,6 +162,32 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameControllerTest do
       conn = post(conn, ~p"/api/nodes/#{node.id}/ssh_usernames", ssh_username: @create_attrs)
       assert json_response(conn, 422)["errors"] != %{}
     end
+
+    test "rolls back transaction if any public key is invalid", %{conn: conn} do
+      node = node_fixture()
+
+      invalid_keys_attrs = %{
+        username: "testuser",
+        public_keys: [
+          %{
+            key_name: "valid",
+            public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop"
+          },
+          %{
+            key_name: "invalid",
+            public_key: "not-a-valid-ssh-key"
+          }
+        ]
+      }
+
+      conn = post(conn, ~p"/api/nodes/#{node.id}/ssh_usernames", ssh_username: invalid_keys_attrs)
+      assert json_response(conn, 422)["errors"] != %{}
+
+      # Verify no username was created (transaction rolled back)
+      conn = get(conn, ~p"/api/ssh_usernames?username=testuser")
+      response = json_response(conn, 200)
+      assert response["data"] == []
+    end
   end
 
   describe "show ssh_username" do
@@ -117,6 +205,36 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameControllerTest do
       assert id == ssh_username.id
       assert username == ssh_username.username
       assert node_id == ssh_username.node_id
+    end
+
+    test "renders ssh_username with public_keys when present", %{conn: conn} do
+      node = node_fixture()
+      ssh_username = ssh_username_fixture(%{node_id: node.id, username: "testuser"})
+
+      # Create public keys
+      key1 = ssh_public_key_fixture(%{
+        ssh_username_id: ssh_username.id,
+        key_name: "laptop",
+        public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop"
+      })
+      key2 = ssh_public_key_fixture(%{
+        ssh_username_id: ssh_username.id,
+        key_name: "server",
+        public_key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC7Z8nFkX+7rT9uJ2p9lH8... ci@server"
+      })
+
+      conn = get(conn, ~p"/api/ssh_usernames/#{ssh_username.id}")
+      response = json_response(conn, 200)["data"]
+
+      assert %{
+               "id" => _id,
+               "username" => "testuser",
+               "public_keys" => public_keys
+             } = response
+
+      assert length(public_keys) == 2
+      assert Enum.any?(public_keys, fn key -> key["key_name"] == "laptop" end)
+      assert Enum.any?(public_keys, fn key -> key["key_name"] == "server" end)
     end
 
     test "renders 404 when ssh_username does not exist", %{conn: conn} do

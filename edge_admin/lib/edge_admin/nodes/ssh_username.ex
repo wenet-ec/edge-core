@@ -1,27 +1,23 @@
 # edge_admin/lib/edge_admin/nodes/ssh_username.ex
 defmodule EdgeAdmin.Nodes.SshUsername do
   @moduledoc false
-  use Ecto.Schema
-
-  import Ecto.Changeset
-
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
+  use EdgeAdmin.Schema
 
   schema "ssh_usernames" do
     field(:username, :string)
+    field(:password, :string)
 
     # Associations
     belongs_to(:node, EdgeAdmin.Nodes.Node)
     has_many(:ssh_public_keys, EdgeAdmin.Nodes.SshPublicKey, on_delete: :delete_all)
 
-    timestamps(type: :utc_datetime)
+    timestamps()
   end
 
   @doc false
   def changeset(ssh_username, attrs) do
     ssh_username
-    |> cast(attrs, [:username, :node_id])
+    |> cast(attrs, [:username, :password, :node_id])
     |> validate_required([:username, :node_id])
     |> unique_constraint([:node_id, :username])
     |> foreign_key_constraint(:node_id)

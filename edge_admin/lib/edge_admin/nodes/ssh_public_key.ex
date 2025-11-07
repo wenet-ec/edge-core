@@ -1,26 +1,19 @@
 # edge_admin/lib/edge_admin/nodes/ssh_public_key.ex
 defmodule EdgeAdmin.Nodes.SshPublicKey do
   @moduledoc false
-  use Ecto.Schema
+  use EdgeAdmin.Schema
 
-  import Ecto.Changeset
-
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
-
-  # Supported SSH key algorithms (matching your SSH server)
+  # Supported SSH key algorithms
   @supported_algorithms [
     "ssh-ed25519",
     "ecdsa-sha2-nistp256",
     "ecdsa-sha2-nistp384",
     "ecdsa-sha2-nistp521",
-    "ssh-rsa",
-    # Legacy support
-    "ssh-dss"
+    "ssh-rsa"
   ]
 
   # SSH key format regex - matches "algorithm base64data [comment]"
-  @ssh_key_regex ~r/^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa|ssh-dss)\s+([A-Za-z0-9+\/]+=*)\s*(.*)$/
+  @ssh_key_regex ~r/^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa)\s+([A-Za-z0-9+\/]+=*)\s*(.*)$/
 
   schema "ssh_public_keys" do
     field(:public_key, :string)
@@ -29,7 +22,7 @@ defmodule EdgeAdmin.Nodes.SshPublicKey do
     # Associations
     belongs_to(:ssh_username, EdgeAdmin.Nodes.SshUsername)
 
-    timestamps(type: :utc_datetime)
+    timestamps()
   end
 
   @doc false

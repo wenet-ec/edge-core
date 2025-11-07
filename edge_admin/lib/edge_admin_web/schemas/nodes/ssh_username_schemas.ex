@@ -5,6 +5,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas do
   """
 
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias EdgeAdminWeb.Schemas.Nodes.SshPublicKeySchemas
   alias OpenApiSpex.Schema
 
   defmodule SshUsernameResponse do
@@ -26,10 +27,23 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas do
           description: "SSH username for node access",
           example: "admin"
         },
+        password: %Schema{
+          type: :string,
+          description: "Optional SSH password for username/password authentication",
+          example: "secret123",
+          nullable: true
+        },
         node_id: %Schema{
           type: :string,
           format: :uuid,
           description: "Node this username belongs to"
+        },
+        public_keys: %Schema{
+          type: :array,
+          description:
+            "SSH public keys associated with this username (only included when preloaded)",
+          items: SshPublicKeySchemas.SshPublicKeyResponse,
+          nullable: true
         },
         inserted_at: %Schema{
           type: :string,
@@ -46,7 +60,19 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas do
       example: %{
         id: "01234567-89ab-cdef-0123-456789abcdef",
         username: "admin",
+        password: "secret123",
         node_id: "fedcba98-7654-3210-fedc-ba9876543210",
+        public_keys: [
+          %{
+            id: "fedcba98-7654-3210-fedc-ba9876543210",
+            key_name: "laptop",
+            public_key:
+              "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
+            ssh_username_id: "01234567-89ab-cdef-0123-456789abcdef",
+            inserted_at: "2025-06-23T10:30:00Z",
+            updated_at: "2025-06-23T10:30:00Z"
+          }
+        ],
         inserted_at: "2025-06-23T10:30:00Z",
         updated_at: "2025-06-23T10:30:00Z"
       }
@@ -96,7 +122,8 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas do
 
     OpenApiSpex.schema(%{
       title: "SSH Username Create Request",
-      description: "Create a new SSH username for a node",
+      description:
+        "Create a new SSH username for a node, optionally with password and/or public keys",
       type: :object,
       properties: %{
         ssh_username: %Schema{
@@ -106,11 +133,51 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas do
               type: :string,
               description: "SSH username for node access",
               example: "admin"
+            },
+            password: %Schema{
+              type: :string,
+              description: "Optional password for username/password SSH authentication",
+              example: "secret123",
+              nullable: true
+            },
+            public_keys: %Schema{
+              type: :array,
+              description: "Optional array of SSH public keys to create with this username",
+              items: %Schema{
+                type: :object,
+                properties: %{
+                  key_name: %Schema{
+                    type: :string,
+                    description: "Human-readable name for the SSH key",
+                    example: "laptop"
+                  },
+                  public_key: %Schema{
+                    type: :string,
+                    description: "SSH public key in OpenSSH format",
+                    example:
+                      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop"
+                  }
+                },
+                required: [:key_name, :public_key]
+              },
+              nullable: true
             }
           },
           required: [:username],
           example: %{
-            username: "admin"
+            username: "admin",
+            password: "secret123",
+            public_keys: [
+              %{
+                key_name: "laptop",
+                public_key:
+                  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop"
+              },
+              %{
+                key_name: "ci",
+                public_key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ... ci@server"
+              }
+            ]
           }
         }
       },

@@ -46,7 +46,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameController do
       ]
     ],
     responses: %{
-      200 => {"Paginated list of SSH usernames", "application/json", SshUsernameSchemas.SshUsernamePaginatedResponse}
+      200 =>
+        {"Paginated list of SSH usernames", "application/json",
+         SshUsernameSchemas.SshUsernamePaginatedResponse}
     }
   )
 
@@ -57,7 +59,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameController do
 
   operation(:create,
     summary: "Create SSH username",
-    description: "Create a new SSH username for a specific node",
+    description:
+      "Create a new SSH username for a specific node, optionally with public keys and/or password",
     parameters: [
       node_id: [
         in: :path,
@@ -65,9 +68,12 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameController do
         schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ]
     ],
-    request_body: {"SSH username creation data", "application/json", SshUsernameSchemas.SshUsernameCreateRequest},
+    request_body:
+      {"SSH username creation data", "application/json",
+       SshUsernameSchemas.SshUsernameCreateRequest},
     responses: %{
-      201 => {"SSH username created", "application/json", SshUsernameSchemas.SshUsernameSingleResponse},
+      201 =>
+        {"SSH username created", "application/json", SshUsernameSchemas.SshUsernameSingleResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
     }
   )
@@ -75,7 +81,18 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameController do
   def create(conn, %{"node_id" => node_id, "ssh_username" => ssh_username_params}) do
     ssh_username_params = Map.put(ssh_username_params, "node_id", node_id)
 
-    with {:ok, %SshUsername{} = ssh_username} <- Nodes.create_ssh_username(ssh_username_params) do
+    # Check if public_keys is provided - use transaction if yes, simple create if no
+    result =
+      if Map.has_key?(ssh_username_params, "public_keys") do
+        Nodes.create_ssh_username_with_keys(ssh_username_params)
+      else
+        Nodes.create_ssh_username(ssh_username_params)
+      end
+
+    with {:ok, %SshUsername{} = ssh_username} <- result do
+      # Ensure keys are loaded for response
+      ssh_username = ssh_username |> EdgeAdmin.Repo.preload(:ssh_public_keys)
+
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/ssh_usernames/#{ssh_username}")
@@ -94,13 +111,14 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameController do
       ]
     ],
     responses: %{
-      200 => {"SSH username details", "application/json", SshUsernameSchemas.SshUsernameSingleResponse},
+      200 =>
+        {"SSH username details", "application/json", SshUsernameSchemas.SshUsernameSingleResponse},
       404 => {"SSH username not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
 
   def show(conn, %{"id" => id}) do
-    ssh_username = Nodes.get_ssh_username!(id)
+    ssh_username = Nodes.get_ssh_username_with_keys!(id)
     render(conn, :show, ssh_username: ssh_username)
   end
 

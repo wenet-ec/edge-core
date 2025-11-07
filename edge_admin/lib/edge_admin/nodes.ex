@@ -348,10 +348,65 @@ defmodule EdgeAdmin.Nodes do
 
   def get_ssh_username!(id), do: Repo.get!(SshUsername, id)
 
+  def get_ssh_username_with_keys!(id) do
+    Repo.get!(SshUsername, id) |> Repo.preload(:ssh_public_keys)
+  end
+
+  @doc """
+  Lists SSH usernames for a specific node with preloaded public keys.
+  """
+  def list_ssh_usernames_for_node(node_id) do
+    from(u in SshUsername,
+      where: u.node_id == ^node_id,
+      preload: [:ssh_public_keys],
+      order_by: [desc: u.inserted_at]
+    )
+    |> Repo.all()
+  end
+
   def create_ssh_username(attrs \\ %{}) do
     %SshUsername{}
     |> SshUsername.changeset(attrs)
     |> Repo.insert()
+  end
+
+  @doc """
+  Creates an SSH username with optional public keys in a transaction.
+
+  attrs format:
+  %{
+    username: "deploy",
+    password: "secret123",  # Optional
+    node_id: "uuid",
+    public_keys: [  # Optional
+      %{key_name: "laptop", public_key: "ssh-rsa AAA..."},
+      %{key_name: "ci", public_key: "ssh-rsa BBB..."}
+    ]
+  }
+  """
+  def create_ssh_username_with_keys(attrs) do
+    Repo.transaction(fn ->
+      {public_keys_attrs, username_attrs} = Map.pop(attrs, :public_keys, [])
+
+      # Create username
+      case create_ssh_username(username_attrs) do
+        {:ok, username} ->
+          # Create public keys if provided
+          keys = Enum.map(public_keys_attrs, fn key_attrs ->
+            key_attrs = Map.put(key_attrs, :ssh_username_id, username.id)
+            case create_ssh_public_key(key_attrs) do
+              {:ok, key} -> key
+              {:error, changeset} -> Repo.rollback(changeset)
+            end
+          end)
+
+          # Return username with loaded keys
+          %{username | ssh_public_keys: keys}
+
+        {:error, changeset} ->
+          Repo.rollback(changeset)
+      end
+    end)
   end
 
   def delete_ssh_username(%SshUsername{} = ssh_username) do
@@ -369,7 +424,8 @@ defmodule EdgeAdmin.Nodes do
       filterable_fields: [:username, :node_id],
       sortable_fields: [:inserted_at, :updated_at, :username],
       default_sort: "inserted_at:desc",
-      repo: Repo
+      repo: Repo,
+      preload: [:ssh_public_keys]
     )
   end
 

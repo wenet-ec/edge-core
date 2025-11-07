@@ -34,12 +34,30 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameJSON do
   end
 
   defp data(%SshUsername{} = ssh_username) do
-    %{
+    base = %{
       id: ssh_username.id,
       username: ssh_username.username,
+      password: ssh_username.password,
       node_id: ssh_username.node_id,
       inserted_at: ssh_username.inserted_at,
       updated_at: ssh_username.updated_at
+    }
+
+    # Include public_keys if loaded
+    if Ecto.assoc_loaded?(ssh_username.ssh_public_keys) do
+      Map.put(base, :public_keys, Enum.map(ssh_username.ssh_public_keys, &public_key_data/1))
+    else
+      base
+    end
+  end
+
+  defp public_key_data(public_key) do
+    %{
+      id: public_key.id,
+      key_name: public_key.key_name,
+      public_key: public_key.public_key,
+      inserted_at: public_key.inserted_at,
+      updated_at: public_key.updated_at
     }
   end
 end

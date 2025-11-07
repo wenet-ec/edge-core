@@ -362,7 +362,7 @@ defmodule EdgeAdmin.Commands do
         }
 
         try do
-          case send_command_to_node(node.vpn_ip, execution_data) do
+          case send_command_to_node(node, execution_data) do
             {:ok, _response} ->
               update_command_execution(execution, %{
                 status: "sent",
@@ -372,7 +372,7 @@ defmodule EdgeAdmin.Commands do
               :ok
 
             {:error, reason} ->
-              Logger.warning("Failed to send execution #{execution.id} to node #{node.vpn_ip}: #{inspect(reason)}")
+              Logger.warning("Failed to send execution #{execution.id} to node #{node.id}: #{inspect(reason)}")
 
               :error
           end
@@ -384,8 +384,8 @@ defmodule EdgeAdmin.Commands do
     end
   end
 
-  def send_command_to_node(node_vpn_ip, execution_data) do
-    url = "http://#{node_vpn_ip}:4000/api/command_executions"
+  def send_command_to_node(node, execution_data) do
+    url = "#{EdgeAdmin.Nodes.Node.http_url(node)}/api/command_executions"
 
     case Req.post(url, json: execution_data, receive_timeout: 5000) do
       {:ok, %{status: status}} when status in 200..299 ->

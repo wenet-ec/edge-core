@@ -2,19 +2,15 @@
 defmodule EdgeAdmin.Nodes.Workers.NodeHealthCheckWorker do
   @moduledoc """
   Oban worker that periodically checks the health of all nodes by making HTTP requests
-  to their VPN IP health endpoints.
+  to their health endpoints.
 
   This worker runs every minute to:
-  - Check if each node is reachable at `<vpn_ip>:4000/health`
+  - Check if each node is reachable at its HTTP URL /health endpoint
   - Update node status to "offline" if unreachable
   - Update node status to "online" and last_seen_at if reachable
-
-  The worker only checks nodes that have a vpn_ip configured.
   """
 
   use Oban.Worker, queue: :vpn, max_attempts: 1
-
-  import Ecto.Query
 
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Repo
@@ -35,23 +31,23 @@ defmodule EdgeAdmin.Nodes.Workers.NodeHealthCheckWorker do
   end
 
   defp check_all_nodes_health do
-    # Get all nodes that have a VPN IP configured
-    nodes_with_vpn_ip = get_nodes_with_vpn_ip()
+    # Get all nodes
+    nodes = get_all_nodes()
 
-    Logger.debug("Found #{length(nodes_with_vpn_ip)} nodes with VPN IP configured")
+    Logger.debug("Found #{length(nodes)} nodes to check")
 
     # Check each node's health
-    Enum.each(nodes_with_vpn_ip, &check_node_health/1)
+    Enum.each(nodes, &check_node_health/1)
 
-    length(nodes_with_vpn_ip)
+    length(nodes)
   end
 
-  defp get_nodes_with_vpn_ip do
-    Repo.all(from(n in EdgeAdmin.Nodes.Node, where: not is_nil(n.vpn_ip), select: n))
+  defp get_all_nodes do
+    Repo.all(EdgeAdmin.Nodes.Node)
   end
 
   defp check_node_health(node) do
-    health_url = "http://#{node.vpn_ip}:4000/health"
+    health_url = "#{EdgeAdmin.Nodes.Node.http_url(node)}/health"
 
     Logger.debug("Checking health for node #{node.id} at #{health_url}")
 

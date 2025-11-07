@@ -129,13 +129,13 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
                     },
                     id_type: %Schema{
                       type: :string,
-                      enum: ["machine_id", "hardware_id", "temporary_id"],
+                      enum: ["persistent", "random"],
                       description: "Filter by node ID type"
                     },
-                    vpn_ip: %Schema{
+                    cluster_id: %Schema{
                       type: :string,
-                      description: "Filter by VPN IP (supports wildcards with *)",
-                      example: "100.64.*"
+                      format: :uuid,
+                      description: "Filter by cluster ID"
                     }
                   },
                   additionalProperties: false

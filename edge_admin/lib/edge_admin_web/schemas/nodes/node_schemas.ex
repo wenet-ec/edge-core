@@ -19,37 +19,73 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         id: %Schema{
           type: :string,
           format: :uuid,
-          description: "Unique node identifier (hardware ID)"
+          description: "Unique node identifier"
+        },
+        cluster_id: %Schema{
+          type: :string,
+          format: :uuid,
+          description: "Cluster this node belongs to"
+        },
+        netmaker_host_id: %Schema{
+          type: :string,
+          format: :uuid,
+          nullable: true,
+          description: "Netmaker Host UUID for API operations"
         },
         id_type: %Schema{
           type: :string,
-          nullable: true,
-          enum: ["machine_id", "hardware_id", "temporary_id"],
-          description: "Type of node identifier used for determining persistence"
+          enum: ["persistent", "random"],
+          description: "Type of node identifier (persistent or random)"
         },
-        vpn_ip: %Schema{
+        status: %Schema{
+          type: :string,
+          enum: ["online", "offline"],
+          description: "Current node status"
+        },
+        dns_hostname: %Schema{
+          type: :string,
+          description: "DNS hostname for this node",
+          example: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc.nm.internal"
+        },
+        http_url: %Schema{
+          type: :string,
+          description: "HTTP URL for this node",
+          example: "http://node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc.nm.internal:44000"
+        },
+        http_port: %Schema{
+          type: :integer,
+          description: "HTTP API port"
+        },
+        ssh_port: %Schema{
+          type: :integer,
+          description: "SSH port"
+        },
+        metrics_port: %Schema{
+          type: :integer,
+          description: "Metrics port"
+        },
+        http_proxy_port: %Schema{
+          type: :integer,
+          description: "HTTP proxy port"
+        },
+        socks5_proxy_port: %Schema{
+          type: :integer,
+          description: "SOCKS5 proxy port"
+        },
+        version: %Schema{
           type: :string,
           nullable: true,
-          description: "VPN-assigned IP address",
-          example: "100.64.0.1"
+          description: "Agent version"
         },
-        vpn_hostname: %Schema{
-          type: :string,
-          nullable: true,
-          description: "VPN hostname (computed from node ID)",
-          example: "node-01234567-89ab-cdef-0123-456789abcdef"
+        self_update_enabled: %Schema{
+          type: :boolean,
+          description: "Whether self-updates are enabled"
         },
         last_seen_at: %Schema{
           type: :string,
           format: :datetime,
           nullable: true,
           description: "Last heartbeat timestamp from the node"
-        },
-        status: %Schema{
-          type: :string,
-          nullable: true,
-          enum: ["online", "offline"],
-          description: "Current node status"
         },
         inserted_at: %Schema{
           type: :string,
@@ -62,14 +98,24 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           description: "When the node was last updated"
         }
       },
-      required: [:id, :inserted_at, :updated_at],
+      required: [:id, :cluster_id, :id_type, :http_port, :ssh_port, :metrics_port,
+                 :http_proxy_port, :socks5_proxy_port, :inserted_at, :updated_at],
       example: %{
         id: "01234567-89ab-cdef-0123-456789abcdef",
-        id_type: "machine_id",
-        vpn_ip: "100.64.0.1",
-        vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef",
-        last_seen_at: "2025-06-09T08:20:00Z",
+        cluster_id: "abc12345-1234-1234-1234-123456789abc",
+        netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
+        id_type: "persistent",
         status: "online",
+        dns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
+        http_url: "http://node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal:44000",
+        http_port: 44000,
+        ssh_port: 42222,
+        metrics_port: 49100,
+        http_proxy_port: 44880,
+        socks5_proxy_port: 44180,
+        version: "0.1.0",
+        self_update_enabled: false,
+        last_seen_at: "2025-06-09T08:20:00Z",
         inserted_at: "2025-06-09T08:00:00Z",
         updated_at: "2025-06-09T08:20:00Z"
       }
@@ -95,11 +141,20 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         data: [
           %{
             id: "01234567-89ab-cdef-0123-456789abcdef",
-            id_type: "machine_id",
-            vpn_ip: "100.64.0.1",
-            vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef",
-            last_seen_at: "2025-06-09T08:20:00Z",
+            cluster_id: "abc12345-1234-1234-1234-123456789abc",
+            netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
+            id_type: "persistent",
             status: "online",
+            dns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
+            http_url: "http://node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal:44000",
+            http_port: 44000,
+            ssh_port: 42222,
+            metrics_port: 49100,
+            http_proxy_port: 44880,
+            socks5_proxy_port: 44180,
+            version: "0.1.0",
+            self_update_enabled: false,
+            last_seen_at: "2025-06-09T08:20:00Z",
             inserted_at: "2025-06-09T08:00:00Z",
             updated_at: "2025-06-09T08:20:00Z"
           }
@@ -136,11 +191,20 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
       example: %{
         data: %{
           id: "01234567-89ab-cdef-0123-456789abcdef",
-          id_type: "machine_id",
-          vpn_ip: "100.64.0.1",
-          vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef",
-          last_seen_at: "2025-06-09T08:20:00Z",
+          cluster_id: "abc12345-1234-1234-1234-123456789abc",
+          netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
+          id_type: "persistent",
           status: "online",
+          dns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
+          http_url: "http://node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal:44000",
+          http_port: 44000,
+          ssh_port: 42222,
+          metrics_port: 49100,
+          http_proxy_port: 44880,
+          socks5_proxy_port: 44180,
+          version: "0.1.0",
+          self_update_enabled: false,
+          last_seen_at: "2025-06-09T08:20:00Z",
           inserted_at: "2025-06-09T08:00:00Z",
           updated_at: "2025-06-09T08:20:00Z"
         }
@@ -162,19 +226,64 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           properties: %{
             id: %Schema{
               type: :string,
-              description: "Hardware ID of the node (will be converted to UUID format)",
-              example: "bc9ebeb196a44dfd953e899a61637577"
+              format: :uuid,
+              description: "Unique node identifier"
+            },
+            cluster_id: %Schema{
+              type: :string,
+              format: :uuid,
+              description: "Cluster this node belongs to"
+            },
+            netmaker_host_id: %Schema{
+              type: :string,
+              format: :uuid,
+              nullable: true,
+              description: "Netmaker Host UUID"
             },
             id_type: %Schema{
               type: :string,
-              enum: ["machine_id", "hardware_id", "temporary_id"],
-              description: "Type of identifier being provided"
+              enum: ["persistent", "random"],
+              description: "Type of identifier"
             },
-            vpn_ip: %Schema{
+            http_port: %Schema{
+              type: :integer,
+              description: "HTTP API port"
+            },
+            ssh_port: %Schema{
+              type: :integer,
+              description: "SSH port"
+            },
+            metrics_port: %Schema{
+              type: :integer,
+              description: "Metrics port"
+            },
+            http_proxy_port: %Schema{
+              type: :integer,
+              description: "HTTP proxy port"
+            },
+            socks5_proxy_port: %Schema{
+              type: :integer,
+              description: "SOCKS5 proxy port"
+            },
+            api_token: %Schema{
               type: :string,
               nullable: true,
-              description: "VPN-assigned IP address",
-              example: "100.64.0.1"
+              description: "API authentication token"
+            },
+            proxy_password: %Schema{
+              type: :string,
+              nullable: true,
+              description: "Proxy authentication password"
+            },
+            version: %Schema{
+              type: :string,
+              nullable: true,
+              description: "Agent version"
+            },
+            self_update_enabled: %Schema{
+              type: :boolean,
+              nullable: true,
+              description: "Whether self-updates are enabled"
             },
             status: %Schema{
               type: :string,
@@ -183,10 +292,19 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
               description: "Initial node status"
             }
           },
-          required: [:id, :id_type],
+          required: [:id, :cluster_id, :id_type, :http_port, :ssh_port, :metrics_port,
+                     :http_proxy_port, :socks5_proxy_port],
           example: %{
-            id: "bc9ebeb196a44dfd953e899a61637577",
-            id_type: "machine_id",
+            id: "01234567-89ab-cdef-0123-456789abcdef",
+            cluster_id: "abc12345-1234-1234-1234-123456789abc",
+            netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
+            id_type: "persistent",
+            http_port: 44000,
+            ssh_port: 42222,
+            metrics_port: 49100,
+            http_proxy_port: 44880,
+            socks5_proxy_port: 44180,
+            version: "0.1.0",
             status: "online"
           }
         }
@@ -207,23 +325,49 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         node: %Schema{
           type: :object,
           properties: %{
-            vpn_ip: %Schema{
+            cluster_id: %Schema{
               type: :string,
+              format: :uuid,
               nullable: true,
-              description: "VPN-assigned IP address",
-              example: "100.64.0.1"
+              description: "Cluster this node belongs to"
             },
-            last_seen_at: %Schema{
+            netmaker_host_id: %Schema{
               type: :string,
-              format: :datetime,
+              format: :uuid,
               nullable: true,
-              description: "Last heartbeat timestamp"
+              description: "Netmaker Host UUID"
             },
             status: %Schema{
               type: :string,
               nullable: true,
               enum: ["online", "offline"],
               description: "Node status"
+            },
+            api_token: %Schema{
+              type: :string,
+              nullable: true,
+              description: "API authentication token"
+            },
+            proxy_password: %Schema{
+              type: :string,
+              nullable: true,
+              description: "Proxy authentication password"
+            },
+            version: %Schema{
+              type: :string,
+              nullable: true,
+              description: "Agent version"
+            },
+            self_update_enabled: %Schema{
+              type: :boolean,
+              nullable: true,
+              description: "Whether self-updates are enabled"
+            },
+            last_seen_at: %Schema{
+              type: :string,
+              format: :datetime,
+              nullable: true,
+              description: "Last heartbeat timestamp"
             }
           }
         }

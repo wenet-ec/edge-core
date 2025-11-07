@@ -36,11 +36,20 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSON do
   defp data(%Node{} = node) do
     %{
       id: node.id,
+      cluster_id: node.cluster_id,
+      netmaker_host_id: node.netmaker_host_id,
       id_type: node.id_type,
-      vpn_ip: node.vpn_ip,
-      vpn_hostname: node.vpn_hostname,
-      last_seen_at: node.last_seen_at,
       status: node.status,
+      dns_hostname: Node.dns_hostname(node),
+      http_url: Node.http_url(node),
+      http_port: node.http_port,
+      ssh_port: node.ssh_port,
+      metrics_port: node.metrics_port,
+      http_proxy_port: node.http_proxy_port,
+      socks5_proxy_port: node.socks5_proxy_port,
+      version: node.version,
+      self_update_enabled: node.self_update_enabled,
+      last_seen_at: node.last_seen_at,
       inserted_at: node.inserted_at,
       updated_at: node.updated_at
     }

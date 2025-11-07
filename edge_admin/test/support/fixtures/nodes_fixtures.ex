@@ -41,9 +41,14 @@ defmodule EdgeAdmin.NodesFixtures do
   def node_fixture(attrs \\ %{}) do
     default_attrs = %{
       id: unique_node_id(),
-      id_type: "machine_id",
+      cluster_id: unique_node_id(),
+      id_type: "persistent",
       status: "online",
-      vpn_ip: "100.64.0.1",
+      http_port: 44000,
+      ssh_port: 42222,
+      metrics_port: 49100,
+      http_proxy_port: 44880,
+      socks5_proxy_port: 44180,
       last_seen_at: ~U[2025-06-08 08:12:00Z]
     }
 

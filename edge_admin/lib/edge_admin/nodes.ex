@@ -321,8 +321,8 @@ defmodule EdgeAdmin.Nodes do
       FilteringPagination.paginate(
         Node,
         params,
-        filterable_fields: [:status, :id_type, :vpn_ip],
-        sortable_fields: [:inserted_at, :updated_at, :status, :vpn_ip, :last_seen_at],
+        filterable_fields: [:status, :id_type, :cluster_id],
+        sortable_fields: [:inserted_at, :updated_at, :status, :last_seen_at],
         default_sort: "inserted_at:desc",
         repo: Repo
       )
@@ -436,17 +436,18 @@ defmodule EdgeAdmin.Nodes do
     Ecto.NoResultsError -> {:error, :not_found}
   end
 
-  defp fetch_current_node_metrics(%Node{vpn_ip: nil}), do: {:error, :no_vpn_ip}
-  defp fetch_current_node_metrics(%Node{vpn_ip: ""}), do: {:error, :no_vpn_ip}
+  defp fetch_current_node_metrics(%Node{cluster_id: nil}), do: {:error, :no_cluster}
 
-  defp fetch_current_node_metrics(%Node{vpn_ip: vpn_ip}) do
+  defp fetch_current_node_metrics(%Node{} = node) do
     base_url = Application.get_env(:edge_admin, :metrics_storage_url)
 
     # Add validation for missing config
     if is_nil(base_url) or base_url == "" do
       {:error, :metrics_service_not_configured}
     else
-      instance = "#{vpn_ip}:9100"
+      # Use DNS hostname and metrics_port instead of vpn_ip
+      dns_name = Node.dns_hostname(node)
+      instance = "#{dns_name}:#{node.metrics_port}"
 
       queries = [
         # CPU metrics
@@ -464,8 +465,10 @@ defmodule EdgeAdmin.Nodes do
          "(1 - (node_memory_MemAvailable_bytes{instance=\"#{instance}\"} / node_memory_MemTotal_bytes{instance=\"#{instance}\"})) * 100"},
 
         # Disk metrics (root filesystem)
-        {"disk_total_bytes", "node_filesystem_size_bytes{instance=\"#{instance}\",mountpoint=\"/\"}"},
-        {"disk_available_bytes", "node_filesystem_avail_bytes{instance=\"#{instance}\",mountpoint=\"/\"}"},
+        {"disk_total_bytes",
+         "node_filesystem_size_bytes{instance=\"#{instance}\",mountpoint=\"/\"}"},
+        {"disk_available_bytes",
+         "node_filesystem_avail_bytes{instance=\"#{instance}\",mountpoint=\"/\"}"},
         {"disk_usage_percent",
          "100 - ((node_filesystem_avail_bytes{instance=\"#{instance}\",mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{instance=\"#{instance}\",mountpoint=\"/\"})"},
 

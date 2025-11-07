@@ -1,21 +1,31 @@
 # edge_admin/lib/edge_admin/nodes/node.ex
 defmodule EdgeAdmin.Nodes.Node do
   @moduledoc false
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use EdgeAdmin.Schema
 
   @primary_key {:id, :binary_id, autogenerate: false}
-  @foreign_key_type :binary_id
 
   schema "nodes" do
-    field(:status, :string)
-    field(:vpn_ip, :string)
-    field(:last_seen_at, :utc_datetime)
-    field(:id_type, :string)
+    belongs_to(:cluster, EdgeAdmin.Nodes.Cluster)
 
-    # Virtual field - computed from UUID
-    field(:vpn_hostname, :string, virtual: true)
+    # Netmaker references
+    field(:netmaker_host_id, :binary_id)
+    field(:id_type, :string)
+    field(:status, :string, default: "online")
+
+    # HTTP communication fields
+    field(:http_port, :integer)
+    field(:ssh_port, :integer)
+    field(:metrics_port, :integer)
+    field(:http_proxy_port, :integer)
+    field(:socks5_proxy_port, :integer)
+    field(:api_token, :string)
+    field(:proxy_password, :string)
+    field(:last_seen_at, :utc_datetime)
+
+    # Self-update tracking
+    field(:version, :string)
+    field(:self_update_enabled, :boolean, default: false)
 
     # Associations
     has_many(:ssh_usernames, EdgeAdmin.Nodes.SshUsername, on_delete: :delete_all)
@@ -28,12 +38,39 @@ defmodule EdgeAdmin.Nodes.Node do
   @doc false
   def changeset(node, attrs) do
     node
-    |> cast(attrs, [:id, :vpn_ip, :last_seen_at, :status, :id_type])
+    |> cast(attrs, [
+      :id,
+      :cluster_id,
+      :netmaker_host_id,
+      :id_type,
+      :status,
+      :http_port,
+      :ssh_port,
+      :metrics_port,
+      :http_proxy_port,
+      :socks5_proxy_port,
+      :api_token,
+      :proxy_password,
+      :last_seen_at,
+      :version,
+      :self_update_enabled
+    ])
     |> validate_uuid_format(:id)
-    |> validate_required([:id])
-    |> validate_inclusion(:id_type, ["machine_id", "hardware_id", "temporary_id"])
+    |> validate_required([
+      :id,
+      :cluster_id,
+      :id_type,
+      :http_port,
+      :ssh_port,
+      :metrics_port,
+      :http_proxy_port,
+      :socks5_proxy_port
+    ])
+    |> validate_inclusion(:id_type, ["persistent", "random"])
+    |> validate_inclusion(:status, ["online", "offline"])
     |> unique_constraint(:id, name: :nodes_pkey)
-    |> put_vpn_hostname()
+    |> unique_constraint(:api_token)
+    |> foreign_key_constraint(:cluster_id)
   end
 
   defp validate_uuid_format(changeset, field) do
@@ -45,27 +82,32 @@ defmodule EdgeAdmin.Nodes.Node do
     end)
   end
 
-  defp put_vpn_hostname(%Ecto.Changeset{} = changeset) do
-    case get_change(changeset, :id) || get_field(changeset, :id) do
-      nil -> changeset
-      id -> put_change(changeset, :vpn_hostname, "node-#{id}")
-    end
+  @doc """
+  Returns the DNS hostname for this node.
+  Format: node-{id}.cluster-{cluster_id}.nm.internal
+  """
+  def dns_hostname(%__MODULE__{id: id, cluster_id: cluster_id}) do
+    "node-#{id}.cluster-#{cluster_id}.nm.internal"
   end
 
-  def vpn_hostname(%__MODULE__{id: id}) when not is_nil(id) do
-    "node-#{id}"
+  @doc """
+  Returns the HTTP URL for this node.
+  Format: http://node-{id}.cluster-{cluster_id}.nm.internal:{port}
+  """
+  def http_url(%__MODULE__{http_port: port} = node) do
+    "http://#{dns_hostname(node)}:#{port}"
   end
 
-  def vpn_hostname(_), do: nil
-
-  def populate_virtual_fields(%__MODULE__{} = node) do
-    %{node | vpn_hostname: vpn_hostname(node)}
-  end
-
-  def temporary?(%__MODULE__{id_type: "temporary_id"}), do: true
-  def temporary?(_), do: false
-
-  def persistent?(%__MODULE__{id_type: id_type}) when id_type in ["machine_id", "hardware_id"], do: true
-
+  def persistent?(%__MODULE__{id_type: "persistent"}), do: true
   def persistent?(_), do: false
+
+  def random?(%__MODULE__{id_type: "random"}), do: true
+  def random?(_), do: false
+
+  @doc """
+  Populates virtual fields for a node.
+  In v2, nodes don't have virtual fields (no vpn_ip), so this just returns the node as-is.
+  Kept for backward compatibility with existing code.
+  """
+  def populate_virtual_fields(%__MODULE__{} = node), do: node
 end

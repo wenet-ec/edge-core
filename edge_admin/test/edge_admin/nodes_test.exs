@@ -9,21 +9,21 @@ defmodule EdgeAdmin.NodesTest do
   alias EdgeAdmin.Nodes.SshUsername
 
   describe "node CRUD operations" do
-    test "get_node!/1 returns node with virtual fields" do
+    test "get_node!/1 returns node with all fields" do
       node = node_fixture()
       fetched = Nodes.get_node!(node.id)
       assert fetched.id == node.id
-      # Virtual field populated
-      assert fetched.vpn_hostname
+      assert fetched.cluster_id
+      assert fetched.http_port
     end
 
     test "update_node/2 with valid data updates the node" do
       node = node_fixture()
-      update_attrs = %{status: "offline", vpn_ip: "100.64.0.99"}
+      update_attrs = %{status: "offline", version: "0.2.0"}
 
       assert {:ok, updated_node} = Nodes.update_node(node, update_attrs)
       assert updated_node.status == "offline"
-      assert updated_node.vpn_ip == "100.64.0.99"
+      assert updated_node.version == "0.2.0"
     end
 
     test "delete_node/1 deletes the node" do
@@ -83,7 +83,19 @@ defmodule EdgeAdmin.NodesTest do
     test "validates UUID format" do
       # Valid UUID formats
       valid_uuid = "bc9ebeb1-96a4-4dfd-953e-899a61637577"
-      assert {:ok, %Node{}} = Nodes.create_node(%{id: valid_uuid, id_type: "machine_id"})
+      cluster_id = Ecto.UUID.generate()
+
+      assert {:ok, %Node{}} =
+               Nodes.create_node(%{
+                 id: valid_uuid,
+                 cluster_id: cluster_id,
+                 id_type: "persistent",
+                 http_port: 44000,
+                 ssh_port: 42222,
+                 metrics_port: 49100,
+                 http_proxy_port: 44880,
+                 socks5_proxy_port: 44180
+               })
 
       # Invalid UUID formats
       invalid_formats = [
@@ -98,7 +110,19 @@ defmodule EdgeAdmin.NodesTest do
       ]
 
       for invalid_id <- invalid_formats do
-        invalid_attrs = %{id: invalid_id, id_type: "machine_id"}
+        cluster_id = Ecto.UUID.generate()
+
+        invalid_attrs = %{
+          id: invalid_id,
+          cluster_id: cluster_id,
+          id_type: "persistent",
+          http_port: 44000,
+          ssh_port: 42222,
+          metrics_port: 49100,
+          http_proxy_port: 44880,
+          socks5_proxy_port: 44180
+        }
+
         assert {:error, %Ecto.Changeset{} = changeset} = Nodes.create_node(invalid_attrs)
         assert Keyword.has_key?(changeset.errors, :id)
       end
@@ -106,74 +130,112 @@ defmodule EdgeAdmin.NodesTest do
 
     test "validates id_type field" do
       # Valid id_types
-      for id_type <- ["machine_id", "hardware_id", "temporary_id"] do
+      for id_type <- ["persistent", "random"] do
         uuid = Ecto.UUID.generate()
-        valid_attrs = %{id: uuid, id_type: id_type}
+        cluster_id = Ecto.UUID.generate()
+
+        valid_attrs = %{
+          id: uuid,
+          cluster_id: cluster_id,
+          id_type: id_type,
+          http_port: 44000,
+          ssh_port: 42222,
+          metrics_port: 49100,
+          http_proxy_port: 44880,
+          socks5_proxy_port: 44180
+        }
+
         assert {:ok, %Node{}} = Nodes.create_node(valid_attrs)
       end
 
       # Invalid id_type
       invalid_uuid = Ecto.UUID.generate()
-      invalid_attrs = %{id: invalid_uuid, id_type: "invalid_type"}
+      cluster_id = Ecto.UUID.generate()
+
+      invalid_attrs = %{
+        id: invalid_uuid,
+        cluster_id: cluster_id,
+        id_type: "invalid_type",
+        http_port: 44000,
+        ssh_port: 42222,
+        metrics_port: 49100,
+        http_proxy_port: 44880,
+        socks5_proxy_port: 44180
+      }
+
       assert {:error, %Ecto.Changeset{} = changeset} = Nodes.create_node(invalid_attrs)
       assert changeset.errors[:id_type]
     end
 
-    test "populates virtual fields correctly" do
+    test "computes DNS hostname and HTTP URL correctly" do
       # Test with full data
       full_attrs = %{
         id: "bc9ebeb1-96a4-4dfd-953e-899a61637577",
-        id_type: "machine_id",
+        cluster_id: "abc12345-1234-1234-1234-123456789abc",
+        id_type: "persistent",
         status: "online",
-        vpn_ip: "100.64.0.1",
+        http_port: 44000,
+        ssh_port: 42222,
+        metrics_port: 49100,
+        http_proxy_port: 44880,
+        socks5_proxy_port: 44180,
         last_seen_at: ~U[2025-06-08 08:12:00Z]
       }
 
       assert {:ok, %Node{} = node} = Nodes.create_node(full_attrs)
-      assert node.vpn_hostname == "node-#{node.id}"
+      assert Node.dns_hostname(node) == "node-#{node.id}.cluster-#{node.cluster_id}.nm.internal"
 
-      # Test with minimal data
-      minimal_attrs = %{
-        id: "01234567-8901-2345-6789-012345678901",
-        id_type: "hardware_id"
-      }
-
-      assert {:ok, %Node{} = minimal_node} = Nodes.create_node(minimal_attrs)
-      assert minimal_node.vpn_hostname == "node-#{minimal_node.id}"
-      assert is_nil(minimal_node.status)
-      assert is_nil(minimal_node.vpn_ip)
+      assert Node.http_url(node) ==
+               "http://node-#{node.id}.cluster-#{node.cluster_id}.nm.internal:44000"
     end
 
     test "node classification helpers" do
-      # Test temporary node
-      temp_node = %Node{id_type: "temporary_id"}
-      assert Node.temporary?(temp_node) == true
-      assert Node.persistent?(temp_node) == false
+      # Test random node
+      random_node = %Node{id_type: "random", cluster_id: Ecto.UUID.generate()}
+      assert Node.random?(random_node) == true
+      assert Node.persistent?(random_node) == false
 
-      # Test persistent nodes
-      machine_node = %Node{id_type: "machine_id"}
-      assert Node.temporary?(machine_node) == false
-      assert Node.persistent?(machine_node) == true
-
-      hardware_node = %Node{id_type: "hardware_id"}
-      assert Node.temporary?(hardware_node) == false
-      assert Node.persistent?(hardware_node) == true
+      # Test persistent node
+      persistent_node = %Node{id_type: "persistent", cluster_id: Ecto.UUID.generate()}
+      assert Node.random?(persistent_node) == false
+      assert Node.persistent?(persistent_node) == true
 
       # Test node without id_type
-      unknown_node = %Node{id_type: nil}
-      assert Node.temporary?(unknown_node) == false
+      unknown_node = %Node{id_type: nil, cluster_id: Ecto.UUID.generate()}
+      assert Node.random?(unknown_node) == false
       assert Node.persistent?(unknown_node) == false
     end
   end
 
   describe "filtering and pagination integration" do
     test "list_nodes_with_filtering_pagination handles basic functionality" do
+      cluster_id = Ecto.UUID.generate()
       # Create test nodes
       {:ok, _node1} =
-        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "machine_id", status: "online"})
+        Nodes.create_node(%{
+          id: Ecto.UUID.generate(),
+          cluster_id: cluster_id,
+          id_type: "persistent",
+          status: "online",
+          http_port: 44000,
+          ssh_port: 42222,
+          metrics_port: 49100,
+          http_proxy_port: 44880,
+          socks5_proxy_port: 44180
+        })
 
       {:ok, _node2} =
-        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "hardware_id", status: "offline"})
+        Nodes.create_node(%{
+          id: Ecto.UUID.generate(),
+          cluster_id: cluster_id,
+          id_type: "random",
+          status: "offline",
+          http_port: 44000,
+          ssh_port: 42222,
+          metrics_port: 49100,
+          http_proxy_port: 44880,
+          socks5_proxy_port: 44180
+        })
 
       # Test basic functionality
       result = Nodes.list_nodes_with_filtering_pagination(%{})
@@ -194,11 +256,33 @@ defmodule EdgeAdmin.NodesTest do
     end
 
     test "supports sorting configuration" do
+      cluster_id = Ecto.UUID.generate()
+
       {:ok, _node1} =
-        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "machine_id", status: "online"})
+        Nodes.create_node(%{
+          id: Ecto.UUID.generate(),
+          cluster_id: cluster_id,
+          id_type: "persistent",
+          status: "online",
+          http_port: 44000,
+          ssh_port: 42222,
+          metrics_port: 49100,
+          http_proxy_port: 44880,
+          socks5_proxy_port: 44180
+        })
 
       {:ok, _node2} =
-        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "hardware_id", status: "offline"})
+        Nodes.create_node(%{
+          id: Ecto.UUID.generate(),
+          cluster_id: cluster_id,
+          id_type: "random",
+          status: "offline",
+          http_port: 44000,
+          ssh_port: 42222,
+          metrics_port: 49100,
+          http_proxy_port: 44880,
+          socks5_proxy_port: 44180
+        })
 
       # Valid sortable field
       result = Nodes.list_nodes_with_filtering_pagination(%{"sort" => "status:desc"})
@@ -209,33 +293,68 @@ defmodule EdgeAdmin.NodesTest do
       assert result.sort == []
     end
 
-    test "virtual field population in paginated results" do
+    test "DNS hostname and HTTP URL in paginated results" do
+      cluster_id = Ecto.UUID.generate()
+
       {:ok, _node1} =
-        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "machine_id", status: "online"})
+        Nodes.create_node(%{
+          id: Ecto.UUID.generate(),
+          cluster_id: cluster_id,
+          id_type: "persistent",
+          status: "online",
+          http_port: 44000,
+          ssh_port: 42222,
+          metrics_port: 49100,
+          http_proxy_port: 44880,
+          socks5_proxy_port: 44180
+        })
 
       {:ok, _node2} =
-        Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "hardware_id", status: "offline"})
+        Nodes.create_node(%{
+          id: Ecto.UUID.generate(),
+          cluster_id: cluster_id,
+          id_type: "random",
+          status: "offline",
+          http_port: 44000,
+          ssh_port: 42222,
+          metrics_port: 49100,
+          http_proxy_port: 44880,
+          socks5_proxy_port: 44180
+        })
 
-      # Test virtual fields are populated
+      # Test DNS hostnames are computed correctly
       result = Nodes.list_nodes_with_filtering_pagination(%{})
       assert %EdgeAdmin.FilteringPagination{} = result
       assert length(result.data) == 2
 
       Enum.each(result.data, fn node ->
-        assert node.vpn_hostname == "node-#{node.id}"
+        assert Node.dns_hostname(node) =~ ~r/^node-.+\.cluster-.+\.nm\.internal$/
+        assert Node.http_url(node) =~ ~r/^http:\/\/node-.+\.cluster-.+\.nm\.internal:\d+$/
       end)
 
-      # Test filtering + virtual fields
+      # Test filtering + computed fields
       result = Nodes.list_nodes_with_filtering_pagination(%{"status" => "online"})
       assert length(result.data) == 1
       node = hd(result.data)
       assert node.status == "online"
-      assert node.vpn_hostname == "node-#{node.id}"
+      assert Node.dns_hostname(node) =~ ~r/^node-.+\.cluster-.+\.nm\.internal$/
     end
 
     test "get_nodes_by_ids returns mixed results" do
+      cluster_id = Ecto.UUID.generate()
       # Create a valid node
-      {:ok, valid_node} = Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "machine_id"})
+      {:ok, valid_node} =
+        Nodes.create_node(%{
+          id: Ecto.UUID.generate(),
+          cluster_id: cluster_id,
+          id_type: "persistent",
+          http_port: 44000,
+          ssh_port: 42222,
+          metrics_port: 49100,
+          http_proxy_port: 44880,
+          socks5_proxy_port: 44180
+        })
+
       invalid_id = Ecto.UUID.generate()
 
       # Test mixed valid/invalid IDs
@@ -247,7 +366,18 @@ defmodule EdgeAdmin.NodesTest do
       assert {:error, "Node " <> ^invalid_id <> " not found"} = Enum.at(results, 1)
 
       # Test all valid IDs
-      {:ok, valid_node2} = Nodes.create_node(%{id: Ecto.UUID.generate(), id_type: "hardware_id"})
+      {:ok, valid_node2} =
+        Nodes.create_node(%{
+          id: Ecto.UUID.generate(),
+          cluster_id: cluster_id,
+          id_type: "random",
+          http_port: 44000,
+          ssh_port: 42222,
+          metrics_port: 49100,
+          http_proxy_port: 44880,
+          socks5_proxy_port: 44180
+        })
+
       results = Nodes.get_nodes_by_ids([valid_node.id, valid_node2.id])
 
       assert length(results) == 2
@@ -444,7 +574,8 @@ defmodule EdgeAdmin.NodesTest do
       ssh_username = ssh_username_fixture()
 
       valid_attrs = %{
-        public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 test@example.com",
+        public_key:
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 test@example.com",
         key_name: "laptop_key",
         ssh_username_id: ssh_username.id
       }
@@ -463,7 +594,8 @@ defmodule EdgeAdmin.NodesTest do
       ssh_username = ssh_username_fixture()
 
       attrs = %{
-        public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 test@example.com",
+        public_key:
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 test@example.com",
         key_name: "laptop_key",
         ssh_username_id: ssh_username.id
       }
@@ -532,7 +664,8 @@ defmodule EdgeAdmin.NodesTest do
 
       # Test that different algorithms are detected correctly
       algorithm_tests = [
-        {"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8", "ssh-ed25519"}
+        {"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8",
+         "ssh-ed25519"}
         # You can add more when you have valid test keys for other algorithms
       ]
 

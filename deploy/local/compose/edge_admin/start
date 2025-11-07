@@ -43,6 +43,10 @@ mix ecto.migrate
 echo "Bootstrapping Netmaker superadmin..."
 mix run -e "EdgeAdmin.Release.create_netmaker_superadmin()"
 
+# Bootstrap default cluster
+echo "Bootstrapping default cluster..."
+mix run -e "EdgeAdmin.Release.create_default_cluster()"
+
 # Start the development server with hot reloading
 echo "Starting Phoenix server..."
 export PHX_SERVER=true

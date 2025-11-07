@@ -6,6 +6,10 @@ defmodule EdgeAdmin.Release do
 
   @app :edge_admin
 
+  # ============================================================================
+  # Database Migrations
+  # ============================================================================
+
   def migrate do
     load_app()
 
@@ -19,6 +23,10 @@ defmodule EdgeAdmin.Release do
 
     {:ok, _, _} = Migrator.with_repo(repo, &Migrator.run(&1, :down, to: version))
   end
+
+  # ============================================================================
+  # Netmaker Superadmin Bootstrap
+  # ============================================================================
 
   @doc """
   Creates Netmaker superadmin user if doesn't exist.
@@ -41,20 +49,6 @@ defmodule EdgeAdmin.Release do
     password = Application.get_env(:edge_admin, :netmaker_superadmin_password)
 
     create_superadmin_if_needed(username, password)
-  end
-
-  defp repos do
-    Application.fetch_env!(@app, :ecto_repos)
-  end
-
-  defp load_app do
-    Application.load(@app)
-  end
-
-  defp start_dependencies do
-    # Start only the minimum dependencies needed for HTTP requests
-    Application.ensure_all_started(:hackney)
-    Application.ensure_all_started(:httpoison)
   end
 
   defp create_superadmin_if_needed(username, password) do
@@ -94,5 +88,108 @@ defmodule EdgeAdmin.Release do
         Logger.error("Failed to create superadmin: #{inspect(reason)}")
         System.halt(1)
     end
+  end
+
+  # ============================================================================
+  # Default Cluster Bootstrap
+  # ============================================================================
+
+  @doc """
+  Creates default cluster if configured.
+
+  Reads configuration from Application config (configured in runtime.exs):
+  - `:default_cluster_name` - Name for the default cluster (optional)
+  - `:default_cluster_subnet` - IPv4 CIDR range (optional, auto-generates if not provided)
+
+  This task is idempotent and optional:
+  - Skips if `default_cluster_name` is not configured
+  - Skips if cluster with that name already exists
+  - Auto-generates subnet if not provided
+
+  ## Exit codes
+    - 0: Success (created or already exists or skipped)
+    - 1: Failure (validation error, API error)
+  """
+  def create_default_cluster do
+    load_app()
+    start_app()
+
+    cluster_name = Application.get_env(:edge_admin, :default_cluster_name)
+
+    case cluster_name do
+      nil ->
+        Logger.info("Skipping default cluster creation: DEFAULT_CLUSTER_NAME not set")
+        :ok
+
+      name ->
+        create_cluster_if_needed(name)
+    end
+  end
+
+  defp create_cluster_if_needed(cluster_name) do
+    Logger.info("Checking if default cluster exists: #{cluster_name}")
+
+    case EdgeAdmin.Repo.get_by(EdgeAdmin.Nodes.Cluster, name: cluster_name) do
+      nil ->
+        Logger.info("Default cluster not found, creating: #{cluster_name}")
+        create_cluster(cluster_name)
+
+      _cluster ->
+        Logger.info("Default cluster already exists, skipping: #{cluster_name}")
+        :ok
+    end
+  end
+
+  defp create_cluster(cluster_name) do
+    subnet = Application.get_env(:edge_admin, :default_cluster_subnet)
+
+    # Use atom keys consistently
+    attrs =
+      if subnet do
+        %{name: cluster_name, ipv4_range: subnet}
+      else
+        %{name: cluster_name}
+      end
+      |> Enum.into(%{}, fn {k, v} -> {to_string(k), v} end)
+
+    case EdgeAdmin.Nodes.create_cluster(attrs) do
+      {:ok, cluster} ->
+        Logger.info(
+          "Successfully created default cluster: #{cluster.name} (#{cluster.ipv4_range})"
+        )
+
+        :ok
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        errors = Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
+        Logger.error("Failed to create default cluster: #{inspect(errors)}")
+        System.halt(1)
+
+      {:error, reason} ->
+        Logger.error("Failed to create default cluster: #{inspect(reason)}")
+        System.halt(1)
+    end
+  end
+
+  # ============================================================================
+  # Private Helpers
+  # ============================================================================
+
+  defp repos do
+    Application.fetch_env!(@app, :ecto_repos)
+  end
+
+  defp load_app do
+    Application.load(@app)
+  end
+
+  defp start_dependencies do
+    # Start only the minimum dependencies needed for HTTP requests
+    Application.ensure_all_started(:hackney)
+    Application.ensure_all_started(:httpoison)
+  end
+
+  defp start_app do
+    Application.ensure_all_started(:edge_admin)
   end
 end

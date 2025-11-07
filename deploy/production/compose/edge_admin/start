@@ -11,5 +11,8 @@ echo "Running migrations..."
 echo "Bootstrapping Netmaker superadmin..."
 /app/bin/create_netmaker_superadmin
 
+echo "Bootstrapping default cluster..."
+/app/bin/create_default_cluster
+
 echo "Starting server..."
 exec /app/bin/server

@@ -61,6 +61,11 @@ config :edge_admin,
   cluster_auto_generated_ranges:
     get_env("CLUSTER_AUTO_GENERATED_RANGES", :list, ["100.64.0.0/10"])
 
+# Default cluster (optional - for convenience)
+config :edge_admin,
+  default_cluster_name: get_env("DEFAULT_CLUSTER_NAME"),
+  default_cluster_subnet: get_env("DEFAULT_CLUSTER_SUBNET")
+
 config :sentry,
   dsn: get_env("SENTRY_DSN"),
   environment_name: get_env("SENTRY_ENVIRONMENT_NAME")

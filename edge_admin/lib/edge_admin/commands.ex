@@ -169,7 +169,9 @@ defmodule EdgeAdmin.Commands do
   end
 
   defp dispatch_executions_with_targeting(command, attrs) do
-    Logger.warning("No targeting specification found for command #{command.id}, attrs: #{inspect(attrs)}")
+    Logger.warning(
+      "No targeting specification found for command #{command.id}, attrs: #{inspect(attrs)}"
+    )
 
     :ok
   end
@@ -272,7 +274,10 @@ defmodule EdgeAdmin.Commands do
         handle_execution_delivery(execution, node)
 
       {:error, changeset} ->
-        Logger.error("Failed to create execution for node #{node.id}: #{inspect(changeset.errors)}")
+        Logger.error(
+          "Failed to create execution for node #{node.id}: #{inspect(changeset.errors)}"
+        )
+
         {:error, changeset}
     end
   end
@@ -300,7 +305,10 @@ defmodule EdgeAdmin.Commands do
 
   defp count_pending_executions_for_node(node_id) do
     Repo.one(
-      from(ce in CommandExecution, where: ce.node_id == ^node_id and ce.status == "pending", select: count(ce.id))
+      from(ce in CommandExecution,
+        where: ce.node_id == ^node_id and ce.status == "pending",
+        select: count(ce.id)
+      )
     )
   end
 
@@ -372,7 +380,9 @@ defmodule EdgeAdmin.Commands do
               :ok
 
             {:error, reason} ->
-              Logger.warning("Failed to send execution #{execution.id} to node #{node.id}: #{inspect(reason)}")
+              Logger.warning(
+                "Failed to send execution #{execution.id} to node #{node.id}: #{inspect(reason)}"
+              )
 
               :error
           end
@@ -424,5 +434,56 @@ defmodule EdgeAdmin.Commands do
 
     Logger.info("Completed retry of pending executions")
     :ok
+  end
+
+  @doc """
+  Lists command executions for a specific node with status "sent".
+  Used by agent to fetch pending commands.
+  """
+  def list_sent_command_executions_for_node(node_id) do
+    from(ce in CommandExecution,
+      where: ce.node_id == ^node_id and ce.status == "sent",
+      order_by: [asc: ce.inserted_at],
+      preload: :command
+    )
+    |> Repo.all()
+    |> Enum.map(&CommandExecution.populate_command_text/1)
+  end
+
+  @doc """
+  Updates command execution result from agent.
+
+  Validates:
+  - Execution belongs to the specified node
+  - Execution is in "sent" status
+
+  Returns:
+  - {:ok, execution} on success
+  - {:error, :forbidden} if execution doesn't belong to node
+  - {:error, :invalid_status} if execution is not in "sent" status
+  - {:error, changeset} on validation errors
+  """
+  def update_command_execution_result(execution_id, node_id, attrs) do
+    execution = get_command_execution!(execution_id)
+
+    # Verify it belongs to this node
+    if execution.node_id != node_id do
+      {:error, :forbidden}
+    else
+      # Only allow updating from "sent" status
+      if execution.status != "sent" do
+        {:error, :invalid_status}
+      else
+        # Build update attrs with completed_at timestamp
+        update_attrs = %{
+          status: attrs["status"],
+          output: attrs["output"],
+          exit_code: attrs["exit_code"],
+          completed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        }
+
+        update_command_execution(execution, update_attrs)
+      end
+    end
   end
 end

@@ -316,6 +316,94 @@ defmodule EdgeAdmin.Nodes do
     Ecto.NoResultsError -> {:error, :not_found}
   end
 
+  @doc """
+  Registers or updates a node from agent.
+
+  Verifies cluster and Netmaker node existence, generates new tokens on every registration,
+  and creates or updates the node record.
+  """
+  def register_agent_node(attrs) do
+    %{
+      "node_id" => node_id,
+      "cluster_id" => cluster_id
+    } = attrs
+
+    # 1. Verify cluster exists
+    cluster = get_cluster!(cluster_id)
+
+    # 2. Verify node exists in Netmaker
+    network_name = Cluster.network_name(cluster)
+
+    case Nexmaker.Api.Nodes.get(network_name, node_id) do
+      {:ok, netmaker_node} ->
+        netmaker_host_id = netmaker_node["hostid"]
+
+        # 3. Generate new tokens on every registration
+        existing_node = Repo.get(Node, node_id)
+        is_new_node = is_nil(existing_node)
+
+        api_token = generate_token()
+        proxy_password = generate_token()
+
+        now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+        # 4. Create or update node record
+        node_attrs = %{
+          id: node_id,
+          cluster_id: cluster_id,
+          netmaker_host_id: netmaker_host_id,
+          id_type: attrs["id_type"],
+          status: "online",
+          last_seen_at: now,
+          http_port: attrs["http_port"],
+          ssh_port: attrs["ssh_port"],
+          metrics_port: attrs["metrics_port"],
+          http_proxy_port: attrs["http_proxy_port"],
+          socks5_proxy_port: attrs["socks5_proxy_port"],
+          api_token: api_token,
+          proxy_password: proxy_password,
+          version: attrs["version"],
+          self_update_enabled: attrs["self_update_enabled"]
+        }
+
+        result =
+          case existing_node do
+            nil ->
+              # New node - create it
+              create_node(node_attrs)
+
+            node ->
+              # Existing node - update it
+              update_node(node, node_attrs)
+          end
+
+        case result do
+          {:ok, node} ->
+            # Emit event only for new nodes (Metadata will update ETS)
+            if is_new_node do
+              # TODO: Emit Phoenix.PubSub event for metadata recomputation
+              # Phoenix.PubSub.broadcast(
+              #   EdgeAdmin.PubSub,
+              #   "#{admin_cluster_name}:metadata",
+              #   {:node_created, node_id, cluster_id}
+              # )
+            end
+
+            {:ok, node, api_token, proxy_password}
+
+          {:error, changeset} ->
+            {:error, changeset}
+        end
+
+      {:error, :not_found} ->
+        {:error, :node_not_found_in_netmaker}
+    end
+  end
+
+  defp generate_token do
+    :crypto.strong_rand_bytes(32) |> Base.encode64(padding: false)
+  end
+
   def list_nodes_with_filtering_pagination(params \\ %{}) do
     page_result =
       FilteringPagination.paginate(

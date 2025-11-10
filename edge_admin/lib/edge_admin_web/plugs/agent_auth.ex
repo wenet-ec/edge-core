@@ -36,12 +36,19 @@ defmodule EdgeAdminWeb.Plugs.AgentAuth do
   end
 
   defp validate_agent_token(conn, token) do
-    # TODO: Implement token validation against database
-    # For now, this is a placeholder that always fails
-    # Implementation will query the agents table for matching api_token
-    conn
-    |> put_status(:unauthorized)
-    |> json(%{error: "Unauthorized"})
-    |> halt()
+    alias EdgeAdmin.Nodes.Node
+    alias EdgeAdmin.Repo
+
+    case Repo.get_by(Node, api_token: token) do
+      %Node{} = node ->
+        # Assign node to connection (like current_user pattern)
+        assign(conn, :current_node, node)
+
+      nil ->
+        conn
+        |> put_status(:unauthorized)
+        |> json(%{error: "Unauthorized"})
+        |> halt()
+    end
   end
 end

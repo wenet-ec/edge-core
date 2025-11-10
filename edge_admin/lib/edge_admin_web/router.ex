@@ -90,12 +90,24 @@ defmodule EdgeAdminWeb.Router do
     end
   end
 
+  # Agent API endpoints (no authentication for registration)
+  scope "/api/agents", EdgeAdminWeb.Controllers.Agents do
+    pipe_through(:public_api)
+
+    # Node registration (no auth required)
+    post("/nodes", NodeController, :create)
+  end
+
   # Agent API endpoints (requires agent api_token)
-  scope "/api/agents", EdgeAdminWeb.Controllers do
+  scope "/api/agents", EdgeAdminWeb.Controllers.Agents do
     pipe_through(:agent_api)
 
-    # Agent-initiated endpoints will go here
-    # TODO: Add agent endpoints (command result reporting, etc.)
+    # SSH credentials query
+    get("/ssh_usernames", SshUsernameController, :index)
+
+    # Command sync and result reporting
+    get("/command_executions", CommandExecutionController, :index)
+    patch("/command_executions/:id", CommandExecutionController, :update)
   end
 
   # Protected API endpoints (requires MASTER_KEY)

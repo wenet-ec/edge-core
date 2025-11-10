@@ -1005,4 +1005,184 @@ defmodule EdgeAdmin.NodesTest do
       assert Cluster.dns_domain(cluster) == "cluster-#{cluster.id}.nm.internal"
     end
   end
+
+  describe "register_agent_node/1" do
+    test "successfully registers new node" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      expect(NexmakerMock, :get_node, fn network_name, node_id ->
+        assert network_name == "cluster-#{cluster.id}"
+        assert node_id == "test-node-123"
+        {:ok, %{"hostid" => "netmaker-host-456"}}
+      end)
+
+      attrs = %{
+        "node_id" => "test-node-123",
+        "cluster_id" => cluster.id,
+        "id_type" => "persistent",
+        "http_port" => 44000,
+        "ssh_port" => 42222,
+        "metrics_port" => 49100,
+        "http_proxy_port" => 44880,
+        "socks5_proxy_port" => 44180,
+        "version" => "1.0.0",
+        "self_update_enabled" => true
+      }
+
+      assert {:ok, node, api_token, proxy_password} = Nodes.register_agent_node(attrs)
+      assert node.id == "test-node-123"
+      assert node.cluster_id == cluster.id
+      assert node.netmaker_host_id == "netmaker-host-456"
+      assert node.status == "online"
+      assert node.last_seen_at != nil
+      assert is_binary(api_token)
+      assert is_binary(proxy_password)
+      assert byte_size(api_token) > 0
+      assert byte_size(proxy_password) > 0
+    end
+
+    test "generates new tokens when node re-registers" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      expect(NexmakerMock, :get_node, 2, fn _, _ ->
+        {:ok, %{"hostid" => "netmaker-host-456"}}
+      end)
+
+      attrs = %{
+        "node_id" => "test-node-789",
+        "cluster_id" => cluster.id,
+        "id_type" => "persistent",
+        "http_port" => 44000,
+        "ssh_port" => 42222,
+        "metrics_port" => 49100,
+        "http_proxy_port" => 44880,
+        "socks5_proxy_port" => 44180,
+        "version" => "1.0.0",
+        "self_update_enabled" => true
+      }
+
+      # First registration
+      {:ok, _node1, first_api_token, first_proxy_password} = Nodes.register_agent_node(attrs)
+
+      # Second registration with updated version
+      attrs2 = Map.put(attrs, "version", "1.0.1")
+      {:ok, _node2, second_api_token, second_proxy_password} = Nodes.register_agent_node(attrs2)
+
+      # Tokens should be DIFFERENT (regenerated on every registration)
+      assert second_api_token != first_api_token
+      assert second_proxy_password != first_proxy_password
+      assert is_binary(second_api_token)
+      assert is_binary(second_proxy_password)
+    end
+
+    test "returns error when cluster doesn't exist" do
+      attrs = %{
+        "node_id" => "test-node",
+        "cluster_id" => Ecto.UUID.generate(),
+        "id_type" => "persistent",
+        "http_port" => 44000,
+        "ssh_port" => 42222,
+        "metrics_port" => 49100,
+        "http_proxy_port" => 44880,
+        "socks5_proxy_port" => 44180,
+        "version" => "1.0.0",
+        "self_update_enabled" => true
+      }
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Nodes.register_agent_node(attrs)
+      end
+    end
+
+    test "returns error when node doesn't exist in Netmaker" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      expect(NexmakerMock, :get_node, fn _, _ ->
+        {:error, :not_found}
+      end)
+
+      attrs = %{
+        "node_id" => "nonexistent-node",
+        "cluster_id" => cluster.id,
+        "id_type" => "persistent",
+        "http_port" => 44000,
+        "ssh_port" => 42222,
+        "metrics_port" => 49100,
+        "http_proxy_port" => 44880,
+        "socks5_proxy_port" => 44180,
+        "version" => "1.0.0",
+        "self_update_enabled" => true
+      }
+
+      assert {:error, :node_not_found_in_netmaker} = Nodes.register_agent_node(attrs)
+    end
+
+    test "updates existing node with new information" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      expect(NexmakerMock, :get_node, 2, fn _, _ ->
+        {:ok, %{"hostid" => "netmaker-host-456"}}
+      end)
+
+      attrs = %{
+        "node_id" => "test-node-update",
+        "cluster_id" => cluster.id,
+        "id_type" => "persistent",
+        "http_port" => 44000,
+        "ssh_port" => 42222,
+        "metrics_port" => 49100,
+        "http_proxy_port" => 44880,
+        "socks5_proxy_port" => 44180,
+        "version" => "1.0.0",
+        "self_update_enabled" => false
+      }
+
+      # First registration
+      {:ok, node1, _, _} = Nodes.register_agent_node(attrs)
+      assert node1.version == "1.0.0"
+      assert node1.self_update_enabled == false
+
+      # Update with new version and self_update_enabled
+      updated_attrs = %{attrs | "version" => "1.1.0", "self_update_enabled" => true}
+      {:ok, node2, _, _} = Nodes.register_agent_node(updated_attrs)
+
+      assert node2.id == node1.id
+      assert node2.version == "1.1.0"
+      assert node2.self_update_enabled == true
+    end
+
+    test "sets status to online and updates last_seen_at" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      expect(NexmakerMock, :get_node, fn _, _ ->
+        {:ok, %{"hostid" => "netmaker-host-456"}}
+      end)
+
+      before_registration = DateTime.utc_now()
+
+      attrs = %{
+        "node_id" => "test-node-timestamps",
+        "cluster_id" => cluster.id,
+        "id_type" => "persistent",
+        "http_port" => 44000,
+        "ssh_port" => 42222,
+        "metrics_port" => 49100,
+        "http_proxy_port" => 44880,
+        "socks5_proxy_port" => 44180,
+        "version" => "1.0.0",
+        "self_update_enabled" => true
+      }
+
+      {:ok, node, _, _} = Nodes.register_agent_node(attrs)
+
+      assert node.status == "online"
+      assert node.last_seen_at != nil
+      assert DateTime.compare(node.last_seen_at, before_registration) in [:gt, :eq]
+    end
+  end
 end

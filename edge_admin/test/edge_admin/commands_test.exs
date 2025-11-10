@@ -358,4 +358,241 @@ defmodule EdgeAdmin.CommandsTest do
       assert execution.command_text == "echo pagination test"
     end
   end
+
+  describe "list_sent_command_executions_for_node/1" do
+    test "returns only sent executions for specified node" do
+      command = command_fixture()
+      node = node_fixture()
+      other_node = node_fixture()
+
+      # Create sent execution for target node
+      {:ok, sent_execution} =
+        Commands.create_command_execution(%{
+          command_id: command.id,
+          node_id: node.id,
+          status: "sent",
+          target_all: false
+        })
+
+      # Create pending execution for target node (should not be returned)
+      {:ok, _pending_execution} =
+        Commands.create_command_execution(%{
+          command_id: command.id,
+          node_id: node.id,
+          status: "pending",
+          target_all: false
+        })
+
+      # Create sent execution for other node (should not be returned)
+      {:ok, _other_node_execution} =
+        Commands.create_command_execution(%{
+          command_id: command.id,
+          node_id: other_node.id,
+          status: "sent",
+          target_all: false
+        })
+
+      result = Commands.list_sent_command_executions_for_node(node.id)
+
+      assert length(result) == 1
+      assert hd(result).id == sent_execution.id
+      assert hd(result).status == "sent"
+      assert hd(result).command_text == command.command_text
+    end
+
+    test "returns empty list when no sent executions exist" do
+      node = node_fixture()
+
+      result = Commands.list_sent_command_executions_for_node(node.id)
+
+      assert result == []
+    end
+
+    test "returns executions ordered by insertion (oldest first)" do
+      command = command_fixture()
+      node = node_fixture()
+
+      {:ok, execution1} =
+        Commands.create_command_execution(%{
+          command_id: command.id,
+          node_id: node.id,
+          status: "sent",
+          target_all: false
+        })
+
+      Process.sleep(10)
+
+      {:ok, execution2} =
+        Commands.create_command_execution(%{
+          command_id: command.id,
+          node_id: node.id,
+          status: "sent",
+          target_all: false
+        })
+
+      Process.sleep(10)
+
+      {:ok, execution3} =
+        Commands.create_command_execution(%{
+          command_id: command.id,
+          node_id: node.id,
+          status: "sent",
+          target_all: false
+        })
+
+      result = Commands.list_sent_command_executions_for_node(node.id)
+
+      assert length(result) == 3
+      [first, second, third] = result
+      assert first.id == execution1.id
+      assert second.id == execution2.id
+      assert third.id == execution3.id
+    end
+  end
+
+  describe "update_command_execution_result/3" do
+    test "successfully updates execution with valid data" do
+      command = command_fixture()
+      node = node_fixture()
+
+      {:ok, execution} =
+        Commands.create_command_execution(%{
+          command_id: command.id,
+          node_id: node.id,
+          status: "sent",
+          target_all: false
+        })
+
+      attrs = %{
+        "status" => "completed",
+        "output" => "Command executed successfully",
+        "exit_code" => 0
+      }
+
+      assert {:ok, updated} =
+               Commands.update_command_execution_result(execution.id, node.id, attrs)
+
+      assert updated.status == "completed"
+      assert updated.output == "Command executed successfully"
+      assert updated.exit_code == 0
+      assert updated.completed_at != nil
+    end
+
+    test "returns forbidden error when node_id doesn't match" do
+      command = command_fixture()
+      node = node_fixture()
+      other_node = node_fixture()
+
+      {:ok, execution} =
+        Commands.create_command_execution(%{
+          command_id: command.id,
+          node_id: node.id,
+          status: "sent",
+          target_all: false
+        })
+
+      attrs = %{
+        "status" => "completed",
+        "output" => "output",
+        "exit_code" => 0
+      }
+
+      assert {:error, :forbidden} =
+               Commands.update_command_execution_result(execution.id, other_node.id, attrs)
+    end
+
+    test "returns invalid_status error when execution is not in sent status" do
+      command = command_fixture()
+      node = node_fixture()
+
+      {:ok, execution} =
+        Commands.create_command_execution(%{
+          command_id: command.id,
+          node_id: node.id,
+          status: "pending",
+          target_all: false
+        })
+
+      attrs = %{
+        "status" => "completed",
+        "output" => "output",
+        "exit_code" => 0
+      }
+
+      assert {:error, :invalid_status} =
+               Commands.update_command_execution_result(execution.id, node.id, attrs)
+    end
+
+    test "returns invalid_status error when execution is already completed" do
+      command = command_fixture()
+      node = node_fixture()
+
+      {:ok, execution} =
+        Commands.create_command_execution(%{
+          command_id: command.id,
+          node_id: node.id,
+          status: "completed",
+          target_all: false
+        })
+
+      attrs = %{
+        "status" => "completed",
+        "output" => "trying to update again",
+        "exit_code" => 0
+      }
+
+      assert {:error, :invalid_status} =
+               Commands.update_command_execution_result(execution.id, node.id, attrs)
+    end
+
+    test "returns changeset error for invalid data" do
+      command = command_fixture()
+      node = node_fixture()
+
+      {:ok, execution} =
+        Commands.create_command_execution(%{
+          command_id: command.id,
+          node_id: node.id,
+          status: "sent",
+          target_all: false
+        })
+
+      # Invalid status value
+      attrs = %{
+        "status" => "invalid_status",
+        "output" => "output",
+        "exit_code" => 0
+      }
+
+      assert {:error, %Ecto.Changeset{}} =
+               Commands.update_command_execution_result(execution.id, node.id, attrs)
+    end
+
+    test "sets completed_at timestamp automatically" do
+      command = command_fixture()
+      node = node_fixture()
+
+      {:ok, execution} =
+        Commands.create_command_execution(%{
+          command_id: command.id,
+          node_id: node.id,
+          status: "sent",
+          target_all: false
+        })
+
+      before_update = DateTime.utc_now()
+
+      attrs = %{
+        "status" => "completed",
+        "output" => "output",
+        "exit_code" => 0
+      }
+
+      assert {:ok, updated} =
+               Commands.update_command_execution_result(execution.id, node.id, attrs)
+
+      assert updated.completed_at != nil
+      assert DateTime.compare(updated.completed_at, before_update) in [:gt, :eq]
+    end
+  end
 end

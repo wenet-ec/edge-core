@@ -3,14 +3,14 @@ import Config
 import EdgeAdmin.Config
 
 config :edge_admin, EdgeAdmin.Repo,
-  username: get_env!("POSTGRES_USER"),
-  password: get_env!("POSTGRES_PASSWORD"),
-  hostname: get_env!("POSTGRES_HOST"),
-  database: get_env!("POSTGRES_DB"),
-  port: get_env!("POSTGRES_PORT", :integer),
-  ssl: get_env("DATABASE_SSL", :boolean),
-  pool_size: get_env!("DATABASE_POOL_SIZE", :integer),
-  socket_options: if(get_env("DATABASE_IPV6", :boolean), do: [:inet6], else: [])
+  username: get_env!("DB_USER"),
+  password: get_env!("DB_PASSWORD"),
+  hostname: get_env!("DB_HOST"),
+  database: get_env!("DB_NAME"),
+  port: get_env!("DB_PORT", :integer),
+  ssl: get_env("DB_SSL", :boolean),
+  pool_size: get_env!("DB_POOL_SIZE", :integer),
+  socket_options: if(get_env("DB_IPV6", :boolean), do: [:inet6], else: [])
 
 # NOTE: Only set `server` to `true` if `PHX_SERVER` is present. We cannot set
 # it to `false` otherwise because `mix phx.server` will stop working without it.

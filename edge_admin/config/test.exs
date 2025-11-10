@@ -6,10 +6,10 @@ defmodule TestEnvironment do
   @database_name_suffix "_test"
 
   def get_database_name do
-    db_name = System.get_env("POSTGRES_DB")
+    db_name = System.get_env("DB_NAME")
 
     if is_nil(db_name) do
-      raise "POSTGRES_DB environment variable is required for tests"
+      raise "DB_NAME environment variable is required for tests"
     end
 
     if String.ends_with?(db_name, @database_name_suffix) do
@@ -24,11 +24,11 @@ end
 config :edge_admin, EdgeAdmin.Gettext, priv: "priv/null", interpolation: EdgeAdmin.GettextInterpolation
 
 config :edge_admin, EdgeAdmin.Repo,
-  username: System.get_env("POSTGRES_USER"),
-  password: System.get_env("POSTGRES_PASSWORD"),
-  hostname: System.get_env("POSTGRES_HOST"),
+  username: System.get_env("DB_USER"),
+  password: System.get_env("DB_PASSWORD"),
+  hostname: System.get_env("DB_HOST"),
   database: "#{TestEnvironment.get_database_name()}#{System.get_env("MIX_TEST_PARTITION")}",
-  port: String.to_integer(System.get_env("POSTGRES_PORT")),
+  port: String.to_integer(System.get_env("DB_PORT")),
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
 

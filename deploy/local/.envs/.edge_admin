@@ -8,13 +8,13 @@ SESSION_KEY=edge_admin
 SESSION_SIGNING_SALT=FUYY5L041VshhwCep1OyX+vu4imud8+63+kLzupf7lrqlkiztQWQjFcJLgCLalXp
 
 # Database configuration
-POSTGRES_HOST=edge_admin_db
-POSTGRES_PORT=5432
-POSTGRES_DB=edge_admin_local
-POSTGRES_USER=edge_admin_user
-POSTGRES_PASSWORD=edge_admin_password
-DATABASE_POOL_SIZE=10
-DATABASE_SSL=false
+DB_HOST=edge_admin_db
+DB_PORT=5432
+DB_NAME=edge_admin_local
+DB_USER=edge_admin_user
+DB_PASSWORD=edge_admin_password
+DB_POOL_SIZE=10
+DB_SSL=false
 
 # Telemetry UI configuration
 TELEMETRY_UI_SHARE_KEY=DzbqdoAx/MGq8rM

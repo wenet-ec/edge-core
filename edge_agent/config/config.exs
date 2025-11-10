@@ -33,7 +33,6 @@ config :edge_agent, Oban,
     command_scheduling: 1
   ],
   plugins: [
-    Oban.Plugins.Pruner,
     {Oban.Plugins.Cron,
      crontab: [
        {"* * * * *", EdgeAgent.VPN.Workers.ConnectivityCheckingWorker},
@@ -42,7 +41,9 @@ config :edge_agent, Oban,
        {"* * * * *", EdgeAgent.Commands.Workers.CommandReportScheduler},
        # Every 2 minutes safety net
        {"*/2 * * * *", EdgeAgent.Commands.Workers.CommandExecutionScheduler}
-     ]}
+     ]},
+    Oban.Plugins.Lifeline,
+    {Oban.Plugins.Pruner, max_age: 86_400}
   ]
 
 config :edge_agent,

@@ -44,7 +44,9 @@ config :edge_admin, Oban,
      crontab: [
        {"* * * * *", EdgeAdmin.Commands.Workers.ExecutionRetryWorker},
        {"* * * * *", EdgeAdmin.Nodes.Workers.NodeHealthCheckWorker}
-     ]}
+     ]},
+    Oban.Plugins.Lifeline,
+    {Oban.Plugins.Pruner, max_age: 86_400}
   ]
 
 config :edge_admin,

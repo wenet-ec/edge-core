@@ -5,6 +5,9 @@
 MIX_ENV=test
 API_PORT=4000
 
+# Authentication configuration (disabled for tests)
+AUTH_ENABLED=false
+
 # Phoenix/Session (needed for controller tests)
 SECRET_KEY_BASE=G0ieeRljoXGzSDPRrYc2q4ADyNHCwxNOkw7YpPNMa+JgP9iGgJKT4K96Bw/Mf/pd
 SESSION_KEY=edge_admin

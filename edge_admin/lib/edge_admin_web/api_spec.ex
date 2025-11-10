@@ -4,28 +4,45 @@ defmodule EdgeAdminWeb.ApiSpec do
   @behaviour OpenApiSpex.OpenApi
 
   alias EdgeAdminWeb.Router
-  alias OpenApiSpex.Info
-  alias OpenApiSpex.OpenApi
-  alias OpenApiSpex.Paths
+  alias OpenApiSpex.{Components, Info, OpenApi, Paths, SecurityScheme}
 
   @impl OpenApi
   def spec do
-    OpenApiSpex.resolve_schema_modules(%OpenApi{
+    %OpenApi{
       servers: [],
       info: %Info{
-        title: "EdgeAdmin API",
-        version: "0.0.1",
+        title: "Edge Admin API",
+        version: "0.2.0",
         description: """
-        EdgeAdmin API - A backend REST API that serves as a wrapper for various systems.
+        Edge Admin API - A backend REST API that serves as a wrapper for various systems.
         This API is designed for internal network use only and provides administrative
         functionality for edge computing systems.
         """
       },
       paths: Paths.from_router(Router)
-    })
+    }
+    |> maybe_add_security()
+    |> OpenApiSpex.resolve_schema_modules()
+  end
 
-    # Populate the paths from the phoenix router
-
-    # Discover request/response schemas from path specs
+  defp maybe_add_security(spec) do
+    if Application.get_env(:edge_admin, :auth_enabled, true) do
+      %{
+        spec
+        | components: %Components{
+            securitySchemes: %{
+              "masterKey" => %SecurityScheme{
+                type: "http",
+                scheme: "bearer",
+                bearerFormat: "opaque",
+                description: "Master key for full API access"
+              }
+            }
+          },
+          security: [%{"masterKey" => []}]
+      }
+    else
+      spec
+    end
   end
 end

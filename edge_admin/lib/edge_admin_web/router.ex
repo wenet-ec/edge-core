@@ -14,14 +14,28 @@ defmodule EdgeAdminWeb.Router do
     plug(:fetch_live_flash)
   end
 
-  pipeline :api do
+  # Public API pipeline (no authentication required)
+  pipeline :public_api do
     plug(:accepts, ["json"])
-    # Add the OpenApiSpex plug to make the spec available
     plug(PutApiSpec, module: EdgeAdminWeb.ApiSpec)
   end
 
-  # Add a new pipeline for OpenAPI that doesn't have CSRF protection
-  pipeline :openapi do
+  # Protected API pipeline (requires MASTER_KEY)
+  pipeline :protected_api do
+    plug(:accepts, ["json"])
+    plug(PutApiSpec, module: EdgeAdminWeb.ApiSpec)
+    plug(EdgeAdminWeb.Plugs.MasterKeyAuth)
+  end
+
+  # Metrics API pipeline (accepts MASTER_KEY or METRICS_KEY)
+  pipeline :protected_metrics do
+    plug(:accepts, ["json"])
+    plug(PutApiSpec, module: EdgeAdminWeb.ApiSpec)
+    plug(EdgeAdminWeb.Plugs.MetricsAuth)
+  end
+
+  # OpenAPI pipeline (no CSRF, no auth for spec access)
+  pipeline :open_api do
     plug(:accepts, ["json"])
     plug(PutApiSpec, module: EdgeAdminWeb.ApiSpec)
   end
@@ -42,16 +56,36 @@ defmodule EdgeAdminWeb.Router do
     get("/metrics_dashboard", TelemetryUI.Web, [], assigns: %{telemetry_ui_allowed: true})
   end
 
-  # Serve OpenAPI spec through the openapi pipeline
+  # Serve OpenAPI spec through the open_api pipeline
   scope "/api" do
-    pipe_through(:openapi)
+    pipe_through(:open_api)
 
     # Serve the OpenAPI spec as JSON
     get("/openapi", OpenApiSpex.Plug.RenderSpec, [])
   end
 
+  # Public API endpoints (no authentication required)
   scope "/api", EdgeAdminWeb.Controllers do
-    pipe_through(:api)
+    pipe_through(:public_api)
+
+    # Admin self-discovery endpoint (for agent subnet scanning)
+    # TODO: Create AdminDiscoveryController
+    # get("/admins/self/discovery", Admins.AdminDiscoveryController, :show)
+  end
+
+  # Metrics endpoints (accepts MASTER_KEY or METRICS_KEY)
+  scope "/api", EdgeAdminWeb.Controllers do
+    pipe_through(:protected_metrics)
+
+    scope "/", Nodes do
+      # Prometheus HTTP service discovery
+      get("/metrics/discovery", MetricsDiscoveryController, :index)
+    end
+  end
+
+  # Protected API endpoints (requires MASTER_KEY)
+  scope "/api", EdgeAdminWeb.Controllers do
+    pipe_through(:protected_api)
 
     scope "/", Nodes do
       resources("/clusters", ClusterController, only: [:index, :show, :create, :delete])
@@ -69,8 +103,6 @@ defmodule EdgeAdminWeb.Router do
       end
 
       resources("/ssh_public_keys", SshPublicKeyController, only: [:index, :show, :delete])
-
-      get("/metrics/discovery", MetricsDiscoveryController, :index)
     end
 
     scope "/", Commands do

@@ -66,6 +66,24 @@ config :edge_admin,
   default_cluster_name: get_env("DEFAULT_CLUSTER_NAME"),
   default_cluster_subnet: get_env("DEFAULT_CLUSTER_SUBNET")
 
+# Authentication configuration
+auth_enabled = get_env("AUTH_ENABLED", :boolean, true)
+
+if auth_enabled do
+  master_key = get_env!("MASTER_KEY")
+  metrics_key = get_env("METRICS_KEY") || master_key
+
+  config :edge_admin,
+    auth_enabled: true,
+    master_key: master_key,
+    metrics_key: metrics_key
+else
+  config :edge_admin,
+    auth_enabled: false,
+    master_key: nil,
+    metrics_key: nil
+end
+
 config :sentry,
   dsn: get_env("SENTRY_DSN"),
   environment_name: get_env("SENTRY_ENVIRONMENT_NAME")

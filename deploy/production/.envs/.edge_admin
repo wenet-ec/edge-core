@@ -11,6 +11,11 @@ SECRET_KEY_BASE=zsIbO5eGH9IJ1p+E6M1a1VL4bIGrwLeTS8W7q8QDAOE/o3Ucy0si768bJxmF4A1Q
 SESSION_KEY=edge_admin
 SESSION_SIGNING_SALT=FUYY5L041VshhwCep1OyX+vu4imud8+63+kLzupf7lrqlkiztQWQjFcJLgCLalXp
 
+# Authentication configuration
+AUTH_ENABLED=true
+MASTER_KEY=supersecretkey123456789
+# METRICS_KEY=  # Optional: Scoped key for metrics endpoints (defaults to MASTER_KEY)
+
 # Database configuration
 DB_HOST=edge_admin_db
 DB_PORT=5432

@@ -63,25 +63,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
     render(conn, :index, page_result: page_result)
   end
 
-  operation(:create,
-    summary: "Create a new node",
-    description: "Register a new edge node in the system",
-    request_body: {"Node creation parameters", "application/json", NodeSchemas.NodeCreateRequest},
-    responses: %{
-      201 => {"Node created successfully", "application/json", NodeSchemas.NodeSingleResponse},
-      422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
-    }
-  )
-
-  def create(conn, %{"node" => node_params}) do
-    with {:ok, %Node{} = node} <- Nodes.create_node(node_params) do
-      conn
-      |> put_status(:created)
-      |> put_resp_header("location", ~p"/api/nodes/#{node}")
-      |> render(:show, node: node)
-    end
-  end
-
   operation(:show,
     summary: "Get a specific node",
     description: "Returns details for a specific node by ID",

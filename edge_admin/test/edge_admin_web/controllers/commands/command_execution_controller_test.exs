@@ -107,51 +107,6 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionControllerTest do
     end
   end
 
-  describe "update command_execution" do
-    test "updates execution with valid data", %{conn: conn} do
-      command_execution = command_execution_fixture()
-
-      conn =
-        patch(conn, ~p"/api/command_executions/#{command_execution}", command_execution: @update_attrs)
-
-      response = json_response(conn, 200)["data"]
-      assert response["status"] == "completed"
-      assert response["output"] == "$ echo hello\nhello\n"
-      assert response["exit_code"] == 0
-    end
-
-    test "handles validation errors", %{conn: conn} do
-      command_execution = command_execution_fixture()
-
-      conn =
-        patch(conn, ~p"/api/command_executions/#{command_execution}", command_execution: @invalid_attrs)
-
-      assert json_response(conn, 422)["errors"] != %{}
-    end
-
-    test "returns 404 for non-existent execution", %{conn: conn} do
-      fake_id = Ecto.UUID.generate()
-
-      assert_error_sent(404, fn ->
-        patch(conn, ~p"/api/command_executions/#{fake_id}", command_execution: @update_attrs)
-      end)
-    end
-
-    test "updates timestamps correctly", %{conn: conn} do
-      command_execution = command_execution_fixture()
-      completed_time = ~U[2025-06-17 12:05:00Z]
-
-      attrs = Map.put(@update_attrs, :completed_at, completed_time)
-
-      conn =
-        patch(conn, ~p"/api/command_executions/#{command_execution}", command_execution: attrs)
-
-      response = json_response(conn, 200)["data"]
-      assert response["status"] == "completed"
-      assert response["completed_at"] == "2025-06-17T12:05:00Z"
-    end
-  end
-
   describe "delete command_execution" do
     test "deletes chosen command execution", %{conn: conn} do
       command_execution = command_execution_fixture()

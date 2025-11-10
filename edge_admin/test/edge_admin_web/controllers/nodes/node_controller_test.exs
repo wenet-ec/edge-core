@@ -35,32 +35,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeControllerTest do
     end
   end
 
-  describe "create node" do
-    test "creates node with valid data", %{conn: conn} do
-      conn = post(conn, ~p"/api/nodes", node: @create_attrs)
-      assert %{"id" => id} = json_response(conn, 201)["data"]
-
-      conn = get(conn, ~p"/api/nodes/#{id}")
-      response = json_response(conn, 200)["data"]
-
-      assert response["id"] == id
-      assert response["status"] == "online"
-      assert response["id_type"] == "machine_id"
-    end
-
-    test "handles validation errors", %{conn: conn} do
-      conn = post(conn, ~p"/api/nodes", node: @invalid_attrs)
-      assert json_response(conn, 422)["errors"] != %{}
-    end
-
-    test "prevents duplicate node IDs", %{conn: conn} do
-      post(conn, ~p"/api/nodes", node: @create_attrs)
-      conn = post(conn, ~p"/api/nodes", node: @create_attrs)
-
-      assert json_response(conn, 422)["errors"] != %{}
-    end
-  end
-
   describe "show node" do
     test "returns node by ID", %{conn: conn} do
       node = node_fixture()

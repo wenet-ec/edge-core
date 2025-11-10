@@ -4,7 +4,6 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Commands
-  alias EdgeAdmin.Commands.CommandExecution
   alias EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
 
@@ -88,7 +87,9 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
       ]
     ],
     responses: %{
-      200 => {"Command execution details", "application/json", CommandExecutionSchemas.CommandExecutionSingleResponse},
+      200 =>
+        {"Command execution details", "application/json",
+         CommandExecutionSchemas.CommandExecutionSingleResponse},
       404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
@@ -96,37 +97,6 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
   def show(conn, %{"id" => id}) do
     command_execution = Commands.get_command_execution!(id)
     render(conn, :show, command_execution: command_execution)
-  end
-
-  operation(:update,
-    summary: "Update command execution",
-    description: "Update command execution results (typically called by agents)",
-    parameters: [
-      id: [
-        in: :path,
-        description: "Command Execution ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ]
-    ],
-    request_body:
-      {"Command execution update", "application/json", CommandExecutionSchemas.CommandExecutionUpdateRequest},
-    responses: %{
-      200 =>
-        {"Command execution updated successfully", "application/json",
-         CommandExecutionSchemas.CommandExecutionSingleResponse},
-      404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
-    }
-  )
-
-  def update(conn, %{"id" => id, "command_execution" => command_execution_params}) do
-    command_execution = Commands.get_command_execution!(id)
-
-    with {:ok, %CommandExecution{} = updated_execution} <-
-           Commands.update_command_execution(command_execution, command_execution_params) do
-      final_execution = Commands.get_command_execution!(updated_execution.id)
-      render(conn, :show, command_execution: final_execution)
-    end
   end
 
   operation(:delete,

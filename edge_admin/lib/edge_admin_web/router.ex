@@ -117,7 +117,7 @@ defmodule EdgeAdminWeb.Router do
     scope "/", Nodes do
       resources("/clusters", ClusterController, only: [:index, :show, :create, :delete])
 
-      resources("/nodes", NodeController, only: [:index, :create, :show]) do
+      resources("/nodes", NodeController, only: [:index, :show]) do
         resources("/ssh_usernames", SshUsernameController, only: [:create])
         get("/metrics", MetricsController, :index)
       end
@@ -137,7 +137,6 @@ defmodule EdgeAdminWeb.Router do
       delete("/commands/:id", CommandController, :delete)
 
       resources("/command_executions", CommandExecutionController, only: [:index, :show])
-      patch("/command_executions/:id", CommandExecutionController, :update)
       delete("/command_executions/:id", CommandExecutionController, :delete)
     end
   end

@@ -30,7 +30,7 @@ config :edge_admin, EdgeAdmin.TelemetryUI, share_key: get_env("TELEMETRY_UI_SHAR
 config :edge_admin, EdgeAdminWeb.Endpoint,
   http: [
     ip: {0, 0, 0, 0, 0, 0, 0, 0},
-    port: get_env!("PORT", :integer)
+    port: get_env!("API_PORT", :integer)
   ],
   secret_key_base: get_env!("SECRET_KEY_BASE"),
   session_key: get_env!("SESSION_KEY"),

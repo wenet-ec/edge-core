@@ -3,7 +3,7 @@
 
 # Core test environment
 MIX_ENV=test
-PORT=4000
+API_PORT=4000
 
 # Phoenix/Session (needed for controller tests)
 SECRET_KEY_BASE=G0ieeRljoXGzSDPRrYc2q4ADyNHCwxNOkw7YpPNMa+JgP9iGgJKT4K96Bw/Mf/pd

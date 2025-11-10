@@ -40,6 +40,13 @@ defmodule EdgeAdminWeb.Router do
     plug(PutApiSpec, module: EdgeAdminWeb.ApiSpec)
   end
 
+  # Agent API pipeline (requires agent api_token)
+  pipeline :agent_api do
+    plug(:accepts, ["json"])
+    plug(PutApiSpec, module: EdgeAdminWeb.ApiSpec)
+    plug(EdgeAdminWeb.Plugs.AgentAuth)
+  end
+
   scope "/" do
     pipe_through(:browser)
 
@@ -81,6 +88,14 @@ defmodule EdgeAdminWeb.Router do
       # Prometheus HTTP service discovery
       get("/metrics/discovery", MetricsDiscoveryController, :index)
     end
+  end
+
+  # Agent API endpoints (requires agent api_token)
+  scope "/api/agents", EdgeAdminWeb.Controllers do
+    pipe_through(:agent_api)
+
+    # Agent-initiated endpoints will go here
+    # TODO: Add agent endpoints (command result reporting, etc.)
   end
 
   # Protected API endpoints (requires MASTER_KEY)

@@ -25,7 +25,7 @@ RUN go mod download && \
     CGO_ENABLED=0 GOOS=linux go build -o netclient .
 
 # Main Elixir stage
-FROM elixir:1.19.1-otp-28-slim AS elixir-dev-stage
+FROM elixir:1.19.2-otp-28-slim AS elixir-dev-stage
 
 ARG APP_HOME=/app
 ENV MIX_ENV=dev

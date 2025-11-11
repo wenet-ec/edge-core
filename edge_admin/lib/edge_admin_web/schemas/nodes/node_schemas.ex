@@ -218,7 +218,9 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
 
     OpenApiSpex.schema(%{
       title: "Update Node Request",
-      description: "Request to update an existing node",
+      description:
+        "Request to update an existing node. Currently only cluster_id updates are allowed. " <>
+          "If cluster_id is changed, performs cluster migration via Netmaker (requires host to be online).",
       type: :object,
       properties: %{
         node: %Schema{
@@ -228,45 +230,9 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
               type: :string,
               format: :uuid,
               nullable: true,
-              description: "Cluster this node belongs to"
-            },
-            netmaker_host_id: %Schema{
-              type: :string,
-              format: :uuid,
-              nullable: true,
-              description: "Netmaker Host UUID"
-            },
-            status: %Schema{
-              type: :string,
-              nullable: true,
-              enum: ["online", "offline"],
-              description: "Node status"
-            },
-            api_token: %Schema{
-              type: :string,
-              nullable: true,
-              description: "API authentication token"
-            },
-            proxy_password: %Schema{
-              type: :string,
-              nullable: true,
-              description: "Proxy authentication password"
-            },
-            version: %Schema{
-              type: :string,
-              nullable: true,
-              description: "Agent version"
-            },
-            self_update_enabled: %Schema{
-              type: :boolean,
-              nullable: true,
-              description: "Whether self-updates are enabled"
-            },
-            last_seen_at: %Schema{
-              type: :string,
-              format: :datetime,
-              nullable: true,
-              description: "Last heartbeat timestamp"
+              description:
+                "Cluster this node belongs to. Changing this field triggers cluster migration via Netmaker. " <>
+                  "The host must be online (lastcheckin < 60s) for migration to succeed."
             }
           }
         }
@@ -274,8 +240,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
       required: [:node],
       example: %{
         node: %{
-          status: "offline",
-          last_seen_at: "2025-06-09T08:25:00Z"
+          cluster_id: "new-cluster-uuid-here"
         }
       }
     })

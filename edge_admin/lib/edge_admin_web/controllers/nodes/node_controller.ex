@@ -14,7 +14,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
 
   operation(:index,
     summary: "List all nodes",
-    description: "Returns a paginated list of all registered edge nodes with filtering and sorting",
+    description:
+      "Returns a paginated list of all registered edge nodes with filtering and sorting",
     parameters: [
       page: [
         in: :query,
@@ -86,7 +87,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
 
   operation(:update,
     summary: "Update a node",
-    description: "Update an existing node's information",
+    description:
+      "Update an existing node's information. If cluster_id is being changed, performs cluster migration via Netmaker (requires host to be online).",
     parameters: [
       id: [
         in: :path,
@@ -98,6 +100,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
     responses: %{
       200 => {"Node updated successfully", "application/json", NodeSchemas.NodeSingleResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
+      412 =>
+        {"Host is offline, cannot migrate cluster", "application/json",
+         CommonSchemas.ErrorResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
     }
   )
@@ -105,14 +110,39 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   def update(conn, %{"id" => id, "node" => node_params}) do
     node = Nodes.get_node!(id)
 
-    with {:ok, %Node{} = node} <- Nodes.update_node(node, node_params) do
-      render(conn, :show, node: node)
+    # Check if cluster_id is being changed
+    new_cluster_id = node_params["cluster_id"]
+
+    cond do
+      new_cluster_id && new_cluster_id != node.cluster_id ->
+        # Cluster migration - involves Netmaker
+        case Nodes.change_node_cluster(node, new_cluster_id) do
+          {:ok, updated_node} ->
+            render(conn, :show, node: updated_node)
+
+          {:error, :host_offline} ->
+            conn
+            |> put_status(:precondition_failed)
+            |> json(%{error: "Host is offline, cannot migrate cluster"})
+
+          {:error, reason} ->
+            conn
+            |> put_status(:unprocessable_entity)
+            |> json(%{error: inspect(reason)})
+        end
+
+      true ->
+        # Regular update - no Netmaker interaction
+        with {:ok, %Node{} = updated_node} <- Nodes.update_node(node, node_params) do
+          render(conn, :show, node: updated_node)
+        end
     end
   end
 
   operation(:delete,
     summary: "Delete a node",
-    description: "Delete a node and all its related data (cascaded deletion)",
+    description:
+      "Delete a node from Netmaker and database in a transaction. Cascades to ssh_usernames, ssh_public_keys, and command_executions.",
     parameters: [
       id: [
         in: :path,
@@ -122,14 +152,23 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
     ],
     responses: %{
       204 => {"Node deleted successfully", "", nil},
-      404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse}
+      404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
+      422 =>
+        {"Failed to delete node from Netmaker", "application/json", CommonSchemas.ErrorResponse}
     }
   )
 
   def delete(conn, %{"id" => id}) do
     node = Nodes.get_node!(id)
-    {:ok, _node} = Nodes.delete_node(node)
 
-    send_resp(conn, :no_content, "")
+    case Nodes.delete_node(node) do
+      {:ok, _node} ->
+        send_resp(conn, :no_content, "")
+
+      {:error, reason} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{error: "Failed to delete node: #{inspect(reason)}"})
+    end
   end
 end

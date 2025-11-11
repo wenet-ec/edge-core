@@ -995,14 +995,14 @@ defmodule EdgeAdmin.NodesTest do
       expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
       cluster = cluster_fixture()
 
-      assert Cluster.network_name(cluster) == "cluster-#{cluster.id}"
+      assert Cluster.network_name(cluster) == "cluster-#{cluster.name}"
     end
 
     test "dns_domain/1 returns correct format" do
       expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
       cluster = cluster_fixture()
 
-      assert Cluster.dns_domain(cluster) == "cluster-#{cluster.id}.nm.internal"
+      assert Cluster.dns_domain(cluster) == "cluster-#{cluster.name}.nm.internal"
     end
   end
 
@@ -1012,7 +1012,7 @@ defmodule EdgeAdmin.NodesTest do
       cluster = cluster_fixture()
 
       expect(NexmakerMock, :get_node, fn network_name, node_id ->
-        assert network_name == "cluster-#{cluster.id}"
+        assert network_name == "cluster-#{cluster.name}"
         assert node_id == "test-node-123"
         {:ok, %{"hostid" => "netmaker-host-456"}}
       end)
@@ -1461,7 +1461,7 @@ defmodule EdgeAdmin.NodesTest do
   end
 
   describe "delete_node with Netmaker cleanup" do
-    test "delete_node/1 attempts to delete Netmaker host before deleting node" do
+    test "delete_node/1 deletes Netmaker node in transaction" do
       expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
       cluster = cluster_fixture()
 
@@ -1471,8 +1471,9 @@ defmodule EdgeAdmin.NodesTest do
           netmaker_host_id: "host-to-delete"
         })
 
-      expect(NexmakerMock, :delete_host, fn _network_name, host_id ->
-        assert host_id == "host-to-delete"
+      expect(NexmakerMock, :delete_node, fn network_name, node_id ->
+        assert network_name == "cluster-#{cluster.name}"
+        assert node_id == node.id
         {:ok, %{}}
       end)
 
@@ -1480,7 +1481,7 @@ defmodule EdgeAdmin.NodesTest do
       assert_raise Ecto.NoResultsError, fn -> Nodes.get_node!(node.id) end
     end
 
-    test "delete_node/1 deletes from DB even if Netmaker deletion fails" do
+    test "delete_node/1 rolls back DB deletion if Netmaker deletion fails" do
       expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
       cluster = cluster_fixture()
 
@@ -1490,21 +1491,158 @@ defmodule EdgeAdmin.NodesTest do
           netmaker_host_id: "host-fail"
         })
 
-      expect(NexmakerMock, :delete_host, fn _network_name, _host_id ->
+      expect(NexmakerMock, :delete_node, fn _network_name, _node_id ->
         {:error, :not_found}
       end)
 
-      # Should still delete from DB
-      assert {:ok, _} = Nodes.delete_node(node)
-      assert_raise Ecto.NoResultsError, fn -> Nodes.get_node!(node.id) end
+      # Should roll back entire transaction
+      assert {:error, :not_found} = Nodes.delete_node(node)
+
+      # Node should still exist in DB
+      assert Nodes.get_node!(node.id)
     end
 
-    test "delete_node/1 works without netmaker_host_id" do
-      node = node_fixture(%{netmaker_host_id: nil})
+    test "delete_node/1 cascades to related records" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
 
-      # Should not attempt Netmaker deletion
+      node = node_fixture(%{cluster_id: cluster.id})
+
+      # Create related records
+      ssh_username = ssh_username_fixture(%{node_id: node.id})
+      ssh_public_key = ssh_public_key_fixture(%{ssh_username_id: ssh_username.id})
+
+      expect(NexmakerMock, :delete_node, fn _, _ -> {:ok, %{}} end)
+
       assert {:ok, _} = Nodes.delete_node(node)
+
+      # Verify cascade deletions
       assert_raise Ecto.NoResultsError, fn -> Nodes.get_node!(node.id) end
+      assert_raise Ecto.NoResultsError, fn -> Nodes.get_ssh_username!(ssh_username.id) end
+      assert_raise Ecto.NoResultsError, fn -> Nodes.get_ssh_public_key!(ssh_public_key.id) end
+    end
+  end
+
+  describe "change_node_cluster (cluster migration)" do
+    test "successfully migrates node to new cluster" do
+      expect(NexmakerMock, :create_network, 2, fn _, _ -> {:ok, %{}} end)
+      old_cluster = cluster_fixture()
+      new_cluster = cluster_fixture()
+
+      node = node_fixture(%{cluster_id: old_cluster.id, netmaker_host_id: "host-123"})
+
+      # Mock node status check (use Netmaker's status field)
+      expect(NexmakerMock, :get_node, fn network_name, node_id ->
+        assert network_name == "cluster-#{old_cluster.id}"
+        assert node_id == node.id
+        {:ok, %{"id" => node_id, "status" => "online"}}
+      end)
+
+      # Mock add to new network
+      expect(NexmakerMock, :add_host_to_network, fn host_id, network_name ->
+        assert host_id == "host-123"
+        assert network_name == "cluster-#{new_cluster.id}"
+        {:ok, %{}}
+      end)
+
+      # Mock delete from old network
+      expect(NexmakerMock, :delete_node, fn network_name, node_id ->
+        assert network_name == "cluster-#{old_cluster.id}"
+        assert node_id == node.id
+        {:ok, %{}}
+      end)
+
+      assert {:ok, updated_node} = Nodes.change_node_cluster(node, new_cluster.id)
+      assert updated_node.cluster_id == new_cluster.id
+    end
+
+    test "fails when node is offline" do
+      expect(NexmakerMock, :create_network, 2, fn _, _ -> {:ok, %{}} end)
+      old_cluster = cluster_fixture()
+      new_cluster = cluster_fixture()
+
+      node = node_fixture(%{cluster_id: old_cluster.id, netmaker_host_id: "host-offline"})
+
+      # Mock node offline (status != "online")
+      expect(NexmakerMock, :get_node, fn _network_name, _node_id ->
+        {:ok, %{"id" => node.id, "status" => "offline"}}
+      end)
+
+      assert {:error, :host_offline} = Nodes.change_node_cluster(node, new_cluster.id)
+
+      # Verify node cluster didn't change
+      unchanged_node = Nodes.get_node!(node.id)
+      assert unchanged_node.cluster_id == old_cluster.id
+    end
+
+    test "rolls back on Netmaker add_to_network failure" do
+      expect(NexmakerMock, :create_network, 2, fn _, _ -> {:ok, %{}} end)
+      old_cluster = cluster_fixture()
+      new_cluster = cluster_fixture()
+
+      node = node_fixture(%{cluster_id: old_cluster.id, netmaker_host_id: "host-456"})
+
+      # Mock node online
+      expect(NexmakerMock, :get_node, fn _network_name, _node_id ->
+        {:ok, %{"id" => node.id, "status" => "online"}}
+      end)
+
+      # Mock add to network failure
+      expect(NexmakerMock, :add_host_to_network, fn _, _ ->
+        {:error, "Network full"}
+      end)
+
+      assert {:error, "Network full"} = Nodes.change_node_cluster(node, new_cluster.id)
+
+      # Verify node cluster didn't change
+      unchanged_node = Nodes.get_node!(node.id)
+      assert unchanged_node.cluster_id == old_cluster.id
+    end
+
+    test "rolls back on Netmaker delete_node failure" do
+      expect(NexmakerMock, :create_network, 2, fn _, _ -> {:ok, %{}} end)
+      old_cluster = cluster_fixture()
+      new_cluster = cluster_fixture()
+
+      node = node_fixture(%{cluster_id: old_cluster.id, netmaker_host_id: "host-789"})
+
+      # Mock node online
+      expect(NexmakerMock, :get_node, fn _network_name, _node_id ->
+        {:ok, %{"id" => node.id, "status" => "online"}}
+      end)
+
+      # Mock add to network success
+      expect(NexmakerMock, :add_host_to_network, fn _, _ -> {:ok, %{}} end)
+
+      # Mock delete from old network failure
+      expect(NexmakerMock, :delete_node, fn _, _ ->
+        {:error, "Delete failed"}
+      end)
+
+      assert {:error, "Delete failed"} = Nodes.change_node_cluster(node, new_cluster.id)
+
+      # Verify node cluster didn't change (transaction rolled back)
+      unchanged_node = Nodes.get_node!(node.id)
+      assert unchanged_node.cluster_id == old_cluster.id
+    end
+
+    test "fails when node doesn't exist in Netmaker" do
+      expect(NexmakerMock, :create_network, 2, fn _, _ -> {:ok, %{}} end)
+      old_cluster = cluster_fixture()
+      new_cluster = cluster_fixture()
+
+      node = node_fixture(%{cluster_id: old_cluster.id, netmaker_host_id: "host-missing"})
+
+      # Mock node not found
+      expect(NexmakerMock, :get_node, fn _network_name, _node_id ->
+        {:error, :not_found}
+      end)
+
+      assert {:error, :not_found} = Nodes.change_node_cluster(node, new_cluster.id)
+
+      # Verify node cluster didn't change
+      unchanged_node = Nodes.get_node!(node.id)
+      assert unchanged_node.cluster_id == old_cluster.id
     end
   end
 end

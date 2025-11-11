@@ -319,27 +319,105 @@ defmodule EdgeAdmin.Nodes do
   end
 
   @doc """
-  Deletes a node from DB and attempts to delete its host from Netmaker.
+  Changes a node's cluster.
 
-  Always tries to delete the Netmaker host first (if netmaker_host_id exists),
-  then deletes the node from DB regardless of Netmaker result.
+  Performs cluster migration via Netmaker:
+  1. Verifies host is online (uses Netmaker's status field)
+  2. Adds host to new network
+  3. Deletes node from old network
+  4. Updates DB
+  5. Emits event for metadata recomputation
   """
-  def delete_node(%Node{} = node) do
-    # Try to delete from Netmaker if we have a host ID
-    if node.netmaker_host_id && node.cluster_id do
-      case delete_host(node.cluster_id, node.netmaker_host_id) do
-        {:ok, _} ->
-          Logger.info("Deleted Netmaker host #{node.netmaker_host_id} for node #{node.id}")
+  def change_node_cluster(%Node{} = node, new_cluster_id) do
+    Repo.transaction(fn ->
+      old_cluster = get_cluster!(node.cluster_id)
+      new_cluster = get_cluster!(new_cluster_id)
+
+      # 1. Verify host online (use Netmaker's node status)
+      old_network_name = Cluster.network_name(old_cluster)
+
+      case Nexmaker.Api.Nodes.get(old_network_name, node.id) do
+        {:ok, netmaker_node} ->
+          # Use Netmaker's computed status field instead of manual lastcheckin comparison
+          # Status is computed by Netmaker based on lastcheckin, connected state, and static node config
+          if netmaker_node["status"] != "online" do
+            Repo.rollback(:host_offline)
+          end
 
         {:error, reason} ->
-          Logger.warning(
-            "Failed to delete Netmaker host #{node.netmaker_host_id} for node #{node.id}: #{inspect(reason)}"
-          )
+          Repo.rollback(reason)
       end
-    end
 
-    # Always delete from DB regardless of Netmaker result
-    Repo.delete(node)
+      # 2. Add host to new network
+      new_network_name = Cluster.network_name(new_cluster)
+
+      case Nexmaker.Api.Hosts.add_to_network(node.netmaker_host_id, new_network_name) do
+        {:ok, _} ->
+          # 3. Delete node from old network
+          case Nexmaker.Api.Nodes.delete(old_network_name, node.id) do
+            {:ok, _} ->
+              # 4. Update database
+              updated_node =
+                node
+                |> Ecto.Changeset.change(cluster_id: new_cluster_id)
+                |> Repo.update!()
+
+              # TODO: Emit PubSub event for metadata recomputation when PubSub is implemented
+              # admin_cluster_name = Application.get_env(:edge_admin, :admin_cluster_name)
+              # Phoenix.PubSub.broadcast(
+              #   EdgeAdmin.PubSub,
+              #   "#{admin_cluster_name}:metadata",
+              #   {:node_updated, node.id, node.cluster_id, new_cluster_id}
+              # )
+
+              Node.populate_virtual_fields(updated_node)
+
+            {:error, reason} ->
+              Repo.rollback(reason)
+          end
+
+        {:error, reason} ->
+          Repo.rollback(reason)
+      end
+    end)
+  end
+
+  @doc """
+  Deletes a node and its Netmaker node in a transaction.
+
+  Transaction flow:
+  1. Delete node from Netmaker network
+  2. Delete from DB (cascades to ssh_usernames, ssh_public_keys, command_executions)
+  3. Emit event for metadata recomputation
+  """
+  def delete_node(%Node{} = node) do
+    Repo.transaction(fn ->
+      # 1. Delete from Netmaker first (critical - must succeed)
+      cluster = get_cluster!(node.cluster_id)
+      network_name = Cluster.network_name(cluster)
+
+      case Nexmaker.Api.Nodes.delete(network_name, node.id) do
+        {:ok, _} ->
+          Logger.info("Deleted Netmaker node #{node.id} from network #{network_name}")
+
+          # 2. Delete from DB (cascades to ssh_usernames, ssh_public_keys, command_executions)
+          Repo.delete!(node)
+
+          # TODO: Emit PubSub event for metadata recomputation when PubSub is implemented
+          # admin_cluster_name = Application.get_env(:edge_admin, :admin_cluster_name)
+          # Phoenix.PubSub.broadcast(
+          #   EdgeAdmin.PubSub,
+          #   "#{admin_cluster_name}:metadata",
+          #   {:node_deleted, node.id, node.cluster_id}
+          # )
+
+          node
+
+        {:error, reason} ->
+          Logger.error("Failed to delete Netmaker node #{node.id}: #{inspect(reason)}")
+          Repo.rollback(reason)
+      end
+    end)
   end
 
   def change_node(%Node{} = node, attrs \\ %{}) do

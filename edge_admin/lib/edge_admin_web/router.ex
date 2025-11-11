@@ -115,7 +115,13 @@ defmodule EdgeAdminWeb.Router do
     pipe_through(:protected_api)
 
     scope "/", Nodes do
-      resources("/clusters", ClusterController, only: [:index, :show, :create, :delete])
+      # Convenience endpoint for default cluster (must come BEFORE resources)
+      post("/clusters/default/enrollment_keys", EnrollmentKeyController, :create_for_default)
+
+      resources("/clusters", ClusterController, only: [:index, :show, :create, :delete]) do
+        # Enrollment keys nested under clusters
+        post("/enrollment_keys", EnrollmentKeyController, :create)
+      end
 
       resources("/nodes", NodeController, only: [:index, :show]) do
         resources("/ssh_usernames", SshUsernameController, only: [:create])

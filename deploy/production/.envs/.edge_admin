@@ -48,3 +48,8 @@ METRICS_STORAGE_URL=http://edge_metrics_storage:8428
 # Default cluster
 DEFAULT_CLUSTER_NAME=default
 # DEFAULT_CLUSTER_SUBNET=100.64.0.0/24
+
+# Ephemeral key cleanup configuration
+EPHEMERAL_KEY_TTL_HOURS=168  # 7 days
+EPHEMERAL_KEY_CLEANUP_SCHEDULE=0 0 * * *  # Daily at midnight
+EPHEMERAL_KEY_CLEANUP_ENABLED=true

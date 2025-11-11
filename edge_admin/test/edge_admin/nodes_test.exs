@@ -1185,4 +1185,326 @@ defmodule EdgeAdmin.NodesTest do
       assert DateTime.compare(node.last_seen_at, before_registration) in [:gt, :eq]
     end
   end
+
+  describe "enrollment keys" do
+    test "create_enrollment_key/2 creates ephemeral key and tracks in DB" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      expect(NexmakerMock, :create_enrollment_key, fn _network_name, params ->
+        # Verify unique tag is generated
+        assert is_list(params[:tags])
+        assert length(params[:tags]) == 1
+        [tag] = params[:tags]
+        assert String.starts_with?(tag, "ephemeral-")
+        {:ok, %{"value" => "nmkey-ephemeral123"}}
+      end)
+
+      assert {:ok, result} =
+               Nodes.create_enrollment_key(cluster.id, %{key_type: "ephemeral", expiry: 3600})
+
+      assert result.key_value == "nmkey-ephemeral123"
+      assert result.key_type == "ephemeral"
+      assert result.tracked == true
+
+      # Verify it was tracked in DB
+      ephemeral_key =
+        EdgeAdmin.Repo.get_by(EdgeAdmin.Nodes.EphemeralEnrollmentKey,
+          key_value: "nmkey-ephemeral123"
+        )
+
+      assert ephemeral_key
+      assert ephemeral_key.cluster_id == cluster.id
+    end
+
+    test "create_enrollment_key/2 creates permanent key and does NOT track in DB" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      expect(NexmakerMock, :create_enrollment_key, fn _network_name, params ->
+        # Verify unique tag is generated
+        assert is_list(params[:tags])
+        assert length(params[:tags]) == 1
+        [tag] = params[:tags]
+        assert String.starts_with?(tag, "permanent-")
+        {:ok, %{"value" => "nmkey-permanent123"}}
+      end)
+
+      assert {:ok, result} =
+               Nodes.create_enrollment_key(cluster.id, %{key_type: "permanent", expiry: 3600})
+
+      assert result.key_value == "nmkey-permanent123"
+      assert result.key_type == "permanent"
+      assert result.tracked == false
+
+      # Verify it was NOT tracked in DB
+      ephemeral_key =
+        EdgeAdmin.Repo.get_by(EdgeAdmin.Nodes.EphemeralEnrollmentKey,
+          key_value: "nmkey-permanent123"
+        )
+
+      refute ephemeral_key
+    end
+
+    test "create_enrollment_key/2 defaults to permanent when key_type not specified" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      expect(NexmakerMock, :create_enrollment_key, fn _network_name, params ->
+        assert params[:expiration] == 86400
+        # Verify unique tag is generated with "permanent" prefix (default)
+        assert is_list(params[:tags])
+        assert length(params[:tags]) == 1
+        [tag] = params[:tags]
+        assert String.starts_with?(tag, "permanent-")
+        {:ok, %{"value" => "nmkey-default"}}
+      end)
+
+      assert {:ok, result} = Nodes.create_enrollment_key(cluster.id)
+      assert result.key_type == "permanent"
+      assert result.tracked == false
+    end
+
+    test "create_enrollment_key/2 fails if cluster doesn't exist" do
+      invalid_cluster_id = Ecto.UUID.generate()
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Nodes.create_enrollment_key(invalid_cluster_id)
+      end
+    end
+
+    test "get_hosts_by_enrollment_key/2 returns hosts enrolled with key" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      expect(NexmakerMock, :list_hosts, fn _network_name ->
+        {:ok,
+         [
+           %{"id" => "host-1", "enrollmentkey" => "nmkey-test123"},
+           %{"id" => "host-2", "enrollmentkey" => "nmkey-other"},
+           %{"id" => "host-3", "enrollmentkey" => "nmkey-test123"}
+         ]}
+      end)
+
+      hosts = Nodes.get_hosts_by_enrollment_key(cluster.id, "nmkey-test123")
+      assert length(hosts) == 2
+      assert Enum.all?(hosts, &(&1["enrollmentkey"] == "nmkey-test123"))
+    end
+
+    test "delete_host/2 deletes host from Netmaker" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      expect(NexmakerMock, :delete_host, fn _network_name, host_id ->
+        assert host_id == "host-123"
+        {:ok, %{}}
+      end)
+
+      assert {:ok, _} = Nodes.delete_host(cluster.id, "host-123")
+    end
+
+    test "cleanup_ephemeral_nodes/0 processes expired ephemeral keys and deletes nodes" do
+      # Set TTL to 1 hour for testing
+      Application.put_env(:edge_admin, :ephemeral_key_ttl_hours, 1)
+
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      # Create an EPHEMERAL enrollment key
+      expect(NexmakerMock, :create_enrollment_key, fn _network_name, _params ->
+        {:ok, %{"value" => "nmkey-expired"}}
+      end)
+
+      {:ok, result} = Nodes.create_enrollment_key(cluster.id, %{key_type: "ephemeral"})
+
+      # Get the tracked ephemeral key from DB
+      ephemeral_key =
+        EdgeAdmin.Repo.get_by!(EdgeAdmin.Nodes.EphemeralEnrollmentKey,
+          key_value: result.key_value
+        )
+
+      # Manually update inserted_at to be 2 hours ago (expired)
+      two_hours_ago = DateTime.add(DateTime.utc_now(), -2 * 3600, :second)
+
+      from(ek in EdgeAdmin.Nodes.EphemeralEnrollmentKey, where: ek.id == ^ephemeral_key.id)
+      |> EdgeAdmin.Repo.update_all(set: [inserted_at: two_hours_ago])
+
+      # Mock Netmaker responses
+      expect(NexmakerMock, :list_hosts, fn _network_name ->
+        {:ok,
+         [
+           %{"id" => "host-expired-1", "enrollmentkey" => "nmkey-expired"},
+           %{"id" => "host-other", "enrollmentkey" => "nmkey-other"}
+         ]}
+      end)
+
+      expect(NexmakerMock, :delete_host, fn _network_name, host_id ->
+        assert host_id == "host-expired-1"
+        {:ok, %{}}
+      end)
+
+      # Expect enrollment key deletion from Netmaker
+      expect(NexmakerMock, :delete_enrollment_key, fn key_value ->
+        assert key_value == "nmkey-expired"
+        {:ok, %{}}
+      end)
+
+      # Run cleanup
+      cleanup_result = Nodes.cleanup_ephemeral_nodes()
+
+      # Verify results
+      assert cleanup_result.deleted_keys == 1
+      assert cleanup_result.deleted_hosts == 1
+
+      # Verify ephemeral enrollment key was deleted
+      refute EdgeAdmin.Repo.get(EdgeAdmin.Nodes.EphemeralEnrollmentKey, ephemeral_key.id)
+
+      # Reset config
+      Application.put_env(:edge_admin, :ephemeral_key_ttl_hours, 168)
+    end
+
+    test "cleanup_ephemeral_nodes/0 skips non-expired ephemeral keys" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      expect(NexmakerMock, :create_enrollment_key, fn _network_name, _params ->
+        {:ok, %{"value" => "nmkey-fresh"}}
+      end)
+
+      {:ok, result} = Nodes.create_enrollment_key(cluster.id, %{key_type: "ephemeral"})
+
+      # Get the tracked ephemeral key from DB
+      ephemeral_key =
+        EdgeAdmin.Repo.get_by!(EdgeAdmin.Nodes.EphemeralEnrollmentKey,
+          key_value: result.key_value
+        )
+
+      # Run cleanup (should not delete fresh key)
+      cleanup_result = Nodes.cleanup_ephemeral_nodes()
+
+      # Verify no deletions occurred
+      assert cleanup_result.deleted_keys == 0
+      assert cleanup_result.deleted_hosts == 0
+      assert cleanup_result.deleted_nodes == 0
+
+      # Verify ephemeral enrollment key still exists
+      assert EdgeAdmin.Repo.get(EdgeAdmin.Nodes.EphemeralEnrollmentKey, ephemeral_key.id)
+    end
+
+    test "cleanup_ephemeral_nodes/0 does NOT delete permanent keys" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      expect(NexmakerMock, :create_enrollment_key, fn _network_name, _params ->
+        {:ok, %{"value" => "nmkey-permanent"}}
+      end)
+
+      # Create permanent key (not tracked in DB)
+      {:ok, result} = Nodes.create_enrollment_key(cluster.id, %{key_type: "permanent"})
+      assert result.tracked == false
+
+      # Run cleanup
+      cleanup_result = Nodes.cleanup_ephemeral_nodes()
+
+      # Verify nothing was deleted (permanent keys are never tracked)
+      assert cleanup_result.deleted_keys == 0
+      assert cleanup_result.deleted_hosts == 0
+      assert cleanup_result.deleted_nodes == 0
+    end
+
+    test "cleanup_ephemeral_nodes/0 handles multiple expired ephemeral keys" do
+      # Set TTL to 1 hour
+      Application.put_env(:edge_admin, :ephemeral_key_ttl_hours, 1)
+
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      # Create two EPHEMERAL enrollment keys
+      expect(NexmakerMock, :create_enrollment_key, 2, fn _network_name, _params ->
+        {:ok, %{"value" => "nmkey-#{:rand.uniform(1000)}"}}
+      end)
+
+      {:ok, result1} = Nodes.create_enrollment_key(cluster.id, %{key_type: "ephemeral"})
+      {:ok, result2} = Nodes.create_enrollment_key(cluster.id, %{key_type: "ephemeral"})
+
+      # Get tracked keys
+      key1 =
+        EdgeAdmin.Repo.get_by!(EdgeAdmin.Nodes.EphemeralEnrollmentKey,
+          key_value: result1.key_value
+        )
+
+      key2 =
+        EdgeAdmin.Repo.get_by!(EdgeAdmin.Nodes.EphemeralEnrollmentKey,
+          key_value: result2.key_value
+        )
+
+      # Make both expired
+      two_hours_ago = DateTime.add(DateTime.utc_now(), -2 * 3600, :second)
+
+      from(ek in EdgeAdmin.Nodes.EphemeralEnrollmentKey, where: ek.id in [^key1.id, ^key2.id])
+      |> EdgeAdmin.Repo.update_all(set: [inserted_at: two_hours_ago])
+
+      # Mock Netmaker responses
+      expect(NexmakerMock, :list_hosts, 2, fn _network_name ->
+        {:ok, []}
+      end)
+
+      # Run cleanup
+      cleanup_result = Nodes.cleanup_ephemeral_nodes()
+
+      # Verify both keys deleted
+      assert cleanup_result.deleted_keys == 2
+
+      # Reset config
+      Application.put_env(:edge_admin, :ephemeral_key_ttl_hours, 168)
+    end
+  end
+
+  describe "delete_node with Netmaker cleanup" do
+    test "delete_node/1 attempts to delete Netmaker host before deleting node" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      node =
+        node_fixture(%{
+          cluster_id: cluster.id,
+          netmaker_host_id: "host-to-delete"
+        })
+
+      expect(NexmakerMock, :delete_host, fn _network_name, host_id ->
+        assert host_id == "host-to-delete"
+        {:ok, %{}}
+      end)
+
+      assert {:ok, _} = Nodes.delete_node(node)
+      assert_raise Ecto.NoResultsError, fn -> Nodes.get_node!(node.id) end
+    end
+
+    test "delete_node/1 deletes from DB even if Netmaker deletion fails" do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      node =
+        node_fixture(%{
+          cluster_id: cluster.id,
+          netmaker_host_id: "host-fail"
+        })
+
+      expect(NexmakerMock, :delete_host, fn _network_name, _host_id ->
+        {:error, :not_found}
+      end)
+
+      # Should still delete from DB
+      assert {:ok, _} = Nodes.delete_node(node)
+      assert_raise Ecto.NoResultsError, fn -> Nodes.get_node!(node.id) end
+    end
+
+    test "delete_node/1 works without netmaker_host_id" do
+      node = node_fixture(%{netmaker_host_id: nil})
+
+      # Should not attempt Netmaker deletion
+      assert {:ok, _} = Nodes.delete_node(node)
+      assert_raise Ecto.NoResultsError, fn -> Nodes.get_node!(node.id) end
+    end
+  end
 end

@@ -32,23 +32,6 @@ config :edge_admin, EdgeAdminWeb.Endpoint,
 
 config :edge_admin, EdgeAdminWeb.Plugs.Security, allow_unsafe_scripts: false
 
-config :edge_admin, Oban,
-  engine: Oban.Engines.Basic,
-  queues: [
-    command_dispatch: 10,
-    command_retry: 1
-  ],
-  repo: EdgeAdmin.Repo,
-  plugins: [
-    {Oban.Plugins.Cron,
-     crontab: [
-       {"* * * * *", EdgeAdmin.Commands.Workers.ExecutionRetryWorker},
-       {"* * * * *", EdgeAdmin.Nodes.Workers.NodeHealthCheckWorker}
-     ]},
-    Oban.Plugins.Lifeline,
-    {Oban.Plugins.Pruner, max_age: 86_400}
-  ]
-
 config :edge_admin,
   ecto_repos: [EdgeAdmin.Repo],
   generators: [timestamp_type: :utc_datetime, binary_id: true],

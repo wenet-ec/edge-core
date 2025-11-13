@@ -37,4 +37,15 @@ config :edge_admin, EdgeAdminWeb.Endpoint, server: false
 # Disable Oban during tests:
 config :edge_admin, Oban, testing: :manual
 
+# Disable admin clustering during tests
+config :edge_admin,
+  run_bootstrap: false,
+  admin_id: "test123456",
+  admin_name: "admin-test123456",
+  admin_cluster_name: "admin-cluster-test",
+  admin_max_capacity: 100,
+  erlang_cookie: :test_cookie,
+  admin_discovery_port: 4000,
+  netmaker_default_domain: "nm.internal"
+
 config :logger, level: :warning

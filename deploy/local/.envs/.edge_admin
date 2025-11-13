@@ -50,3 +50,10 @@ DEFAULT_CLUSTER_NAME=default
 EPHEMERAL_KEY_TTL_HOURS=168  # 7 days
 EPHEMERAL_KEY_CLEANUP_SCHEDULE=0 0 * * *  # Daily at midnight
 EPHEMERAL_KEY_CLEANUP_ENABLED=true
+
+# Admin clustering configuration
+ADMIN_CLUSTER_NAME=1  # Will be prefixed with "admin-cluster-" → admin-cluster-1 (max 16 chars for suffix)
+ADMIN_MAX_CAPACITY=200  # Maximum number of nodes this admin can handle
+ERLANG_COOKIE=local-cookie  # Shared secret for Erlang distribution
+ADMIN_DISCOVERY_PORT=4000  # Port to scan for admin discovery endpoint
+NETMAKER_DEFAULT_DOMAIN=nm.internal  # DNS domain suffix for hostname construction

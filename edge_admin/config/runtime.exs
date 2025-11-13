@@ -124,3 +124,15 @@ end
 config :sentry,
   dsn: get_env("SENTRY_DSN"),
   environment_name: get_env("SENTRY_ENVIRONMENT_NAME")
+
+admin_id = generate_random_string(12)
+
+config :edge_admin,
+  admin_id: admin_id,
+  admin_name: "admin-#{admin_id}",
+  admin_cluster_name: build_admin_cluster_name(get_env!("ADMIN_CLUSTER_NAME")),
+  admin_cluster_subnet: get_env("ADMIN_CLUSTER_SUBNET", :string, "100.63.0.0/24"),
+  admin_max_capacity: get_env!("ADMIN_MAX_CAPACITY", :positive_integer),
+  erlang_cookie: get_env!("ERLANG_COOKIE", :atom),
+  admin_discovery_port: get_env("ADMIN_DISCOVERY_PORT", :integer, 4000),
+  netmaker_default_domain: get_env("NETMAKER_DEFAULT_DOMAIN", :string, "nm.internal")

@@ -75,9 +75,9 @@ defmodule EdgeAdminWeb.Router do
   scope "/api", EdgeAdminWeb.Controllers do
     pipe_through(:public_api)
 
-    # Admin self-discovery endpoint (for agent subnet scanning)
-    # TODO: Create AdminDiscoveryController
-    # get("/admins/self/discovery", Admins.AdminDiscoveryController, :show)
+    scope "/admins", Admins do
+      get("/self/discovery", DiscoveryController, :index)
+    end
   end
 
   # Metrics endpoints (accepts MASTER_KEY or METRICS_KEY)

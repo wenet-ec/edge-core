@@ -125,6 +125,9 @@ defmodule EdgeAdmin.Mixfile do
       # Oban
       {:oban, "~> 2.20"},
 
+      # Erlang Distribution
+      {:syn, "~> 3.3"},
+
       # Nexmaker library
       {:nexmaker, path: "../nexmaker"}
     ]

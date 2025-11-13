@@ -295,27 +295,18 @@ defmodule EdgeAdmin.Nodes do
   def get_node!(id) do
     Node
     |> Repo.get!(id)
-    |> Node.populate_virtual_fields()
   end
 
   def create_node(attrs \\ %{}) do
     %Node{}
     |> Node.changeset(attrs)
     |> Repo.insert()
-    |> case do
-      {:ok, node} -> {:ok, Node.populate_virtual_fields(node)}
-      error -> error
-    end
   end
 
   def update_node(%Node{} = node, attrs) do
     node
     |> Node.changeset(attrs)
     |> Repo.update()
-    |> case do
-      {:ok, node} -> {:ok, Node.populate_virtual_fields(node)}
-      error -> error
-    end
   end
 
   @doc """
@@ -370,7 +361,7 @@ defmodule EdgeAdmin.Nodes do
               #   {:node_updated, node.id, node.cluster_id, new_cluster_id}
               # )
 
-              Node.populate_virtual_fields(updated_node)
+              updated_node
 
             {:error, reason} ->
               Repo.rollback(reason)
@@ -518,6 +509,18 @@ defmodule EdgeAdmin.Nodes do
     :crypto.strong_rand_bytes(32) |> Base.encode64(padding: false)
   end
 
+  @doc """
+  Lists all nodes belonging to a specific cluster.
+  Used by Metadata for recomputation.
+  """
+  def list_nodes_by_cluster(cluster_id) do
+    from(n in Node,
+      where: n.cluster_id == ^cluster_id,
+      order_by: [asc: n.inserted_at]
+    )
+    |> Repo.all()
+  end
+
   def list_nodes_with_filtering_pagination(params \\ %{}) do
     page_result =
       FilteringPagination.paginate(
@@ -529,11 +532,7 @@ defmodule EdgeAdmin.Nodes do
         repo: Repo
       )
 
-    # Populate virtual fields for all nodes in the page
-    nodes_with_virtual_fields = Enum.map(page_result.data, &Node.populate_virtual_fields/1)
-
-    # Return the page result with enhanced nodes
-    %{page_result | data: nodes_with_virtual_fields}
+    page_result
   end
 
   def get_nodes_by_ids(node_ids) do

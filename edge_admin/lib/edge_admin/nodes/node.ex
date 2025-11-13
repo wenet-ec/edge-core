@@ -109,11 +109,4 @@ defmodule EdgeAdmin.Nodes.Node do
 
   def random?(%__MODULE__{id_type: "random"}), do: true
   def random?(_), do: false
-
-  @doc """
-  Populates virtual fields for a node.
-  In v2, nodes don't have virtual fields (no vpn_ip), so this just returns the node as-is.
-  Kept for backward compatibility with existing code.
-  """
-  def populate_virtual_fields(%__MODULE__{} = node), do: node
 end

@@ -84,19 +84,25 @@ defmodule EdgeAdmin.Nodes.Node do
 
   @doc """
   Returns the DNS hostname for this node.
-  Format: node-{id}.cluster-{cluster_id}.nm.internal
+  Format: node-{id}.cluster-{cluster_id}.{domain}
+  where domain is configured via NETMAKER_DEFAULT_DOMAIN (default: nm.internal)
   """
   def dns_hostname(%__MODULE__{id: id, cluster_id: cluster_id}) do
-    "node-#{id}.cluster-#{cluster_id}.nm.internal"
+    default_domain = Application.get_env(:edge_admin, :netmaker_default_domain, "nm.internal")
+    build_hostname("node-#{id}", "cluster-#{cluster_id}", default_domain)
   end
 
   @doc """
   Returns the HTTP URL for this node.
-  Format: http://node-{id}.cluster-{cluster_id}.nm.internal:{port}
+  Format: http://node-{id}.cluster-{cluster_id}.{domain}:{port}
+  where domain is configured via NETMAKER_DEFAULT_DOMAIN (default: nm.internal)
   """
   def http_url(%__MODULE__{http_port: port} = node) do
     "http://#{dns_hostname(node)}:#{port}"
   end
+
+  defp build_hostname(host, network, ""), do: "#{host}.#{network}"
+  defp build_hostname(host, network, domain), do: "#{host}.#{network}.#{domain}"
 
   def persistent?(%__MODULE__{id_type: "persistent"}), do: true
   def persistent?(_), do: false

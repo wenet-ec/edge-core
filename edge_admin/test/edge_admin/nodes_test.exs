@@ -183,10 +183,13 @@ defmodule EdgeAdmin.NodesTest do
       }
 
       assert {:ok, %Node{} = node} = Nodes.create_node(full_attrs)
-      assert Node.dns_hostname(node) == "node-#{node.id}.cluster-#{node.cluster_id}.nm.internal"
 
-      assert Node.http_url(node) ==
-               "http://node-#{node.id}.cluster-#{node.cluster_id}.nm.internal:44000"
+      # Get configured domain for assertions
+      default_domain = Application.get_env(:edge_admin, :netmaker_default_domain, "nm.internal")
+      expected_hostname = "node-#{node.id}.cluster-#{node.cluster_id}.#{default_domain}"
+
+      assert Node.dns_hostname(node) == expected_hostname
+      assert Node.http_url(node) == "http://#{expected_hostname}:44000"
     end
 
     test "node classification helpers" do
@@ -1002,7 +1005,11 @@ defmodule EdgeAdmin.NodesTest do
       expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
       cluster = cluster_fixture()
 
-      assert Cluster.dns_domain(cluster) == "cluster-#{cluster.name}.nm.internal"
+      # Get configured domain for assertions
+      default_domain = Application.get_env(:edge_admin, :netmaker_default_domain, "nm.internal")
+      expected_domain = "cluster-#{cluster.name}.#{default_domain}"
+
+      assert Cluster.dns_domain(cluster) == expected_domain
     end
   end
 

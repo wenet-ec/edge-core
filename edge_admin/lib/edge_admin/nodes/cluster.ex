@@ -39,9 +39,16 @@ defmodule EdgeAdmin.Nodes.Cluster do
 
   @doc """
   Returns the DNS domain suffix for nodes in this cluster.
-  Format: cluster-{name}.nm.internal
+  Format: cluster-{name}.{domain}
+  where domain is configured via NETMAKER_DEFAULT_DOMAIN (default: nm.internal)
   """
-  def dns_domain(%__MODULE__{name: name}), do: "cluster-#{name}.nm.internal"
+  def dns_domain(%__MODULE__{name: name}) do
+    default_domain = Application.get_env(:edge_admin, :netmaker_default_domain, "nm.internal")
+    build_domain("cluster-#{name}", default_domain)
+  end
+
+  defp build_domain(network, ""), do: network
+  defp build_domain(network, domain), do: "#{network}.#{domain}"
 
   # Private helper functions
 

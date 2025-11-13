@@ -37,6 +37,9 @@ config :edge_admin, EdgeAdminWeb.Endpoint, server: false
 # Disable Oban during tests:
 config :edge_admin, Oban, testing: :manual
 
+# Disable Quantum during tests:
+config :edge_admin, EdgeAdmin.LocalScheduler, jobs: []
+
 # Disable admin clustering during tests
 config :edge_admin,
   run_bootstrap: false,

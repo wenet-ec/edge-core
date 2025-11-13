@@ -16,6 +16,7 @@ defmodule EdgeAdmin.Application do
       {DNSCluster, query: Application.get_env(:edge_admin, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: EdgeAdmin.PubSub},
       {Oban, Application.fetch_env!(:edge_admin, Oban)},
+      EdgeAdmin.LocalScheduler,
       EdgeAdminWeb.Endpoint,
       {TelemetryUI, EdgeAdmin.TelemetryUI.config()}
     ]

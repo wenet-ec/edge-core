@@ -136,3 +136,13 @@ config :edge_admin,
   erlang_cookie: get_env!("ERLANG_COOKIE", :atom),
   admin_discovery_port: get_env("ADMIN_DISCOVERY_PORT", :integer, 4000),
   netmaker_default_domain: get_env("NETMAKER_DEFAULT_DOMAIN", :string, "nm.internal")
+
+# Quantum LocalScheduler configuration
+config :edge_admin, EdgeAdmin.LocalScheduler,
+  jobs: [
+    # Admin discovery - every 5 minutes
+    admin_discovery: [
+      schedule: "*/5 * * * *",
+      task: {EdgeAdmin.Admins.Discovery, :scan_and_connect_admins, []}
+    ],
+  ]

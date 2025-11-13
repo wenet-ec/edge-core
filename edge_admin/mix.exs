@@ -122,8 +122,9 @@ defmodule EdgeAdmin.Mixfile do
       # DNS Cluster
       {:dns_cluster, "~> 0.2"},
 
-      # Oban
+      # Background Jobs
       {:oban, "~> 2.20"},
+      {:quantum, "~> 3.5"},
 
       # Erlang Distribution
       {:syn, "~> 3.3"},

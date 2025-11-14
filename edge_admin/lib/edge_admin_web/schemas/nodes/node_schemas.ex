@@ -21,6 +21,11 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           format: :uuid,
           description: "Unique node identifier"
         },
+        node_name: %Schema{
+          type: :string,
+          description: "Human-readable node name (derived from ID)",
+          example: "node-01234567-89ab-cdef-0123-456789abcdef"
+        },
         cluster_id: %Schema{
           type: :string,
           format: :uuid,
@@ -102,6 +107,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
                  :http_proxy_port, :socks5_proxy_port, :inserted_at, :updated_at],
       example: %{
         id: "01234567-89ab-cdef-0123-456789abcdef",
+        node_name: "node-01234567-89ab-cdef-0123-456789abcdef",
         cluster_id: "abc12345-1234-1234-1234-123456789abc",
         netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
         id_type: "persistent",
@@ -141,6 +147,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         data: [
           %{
             id: "01234567-89ab-cdef-0123-456789abcdef",
+            node_name: "node-01234567-89ab-cdef-0123-456789abcdef",
             cluster_id: "abc12345-1234-1234-1234-123456789abc",
             netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
             id_type: "persistent",
@@ -191,6 +198,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
       example: %{
         data: %{
           id: "01234567-89ab-cdef-0123-456789abcdef",
+          node_name: "node-01234567-89ab-cdef-0123-456789abcdef",
           cluster_id: "abc12345-1234-1234-1234-123456789abc",
           netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
           id_type: "persistent",

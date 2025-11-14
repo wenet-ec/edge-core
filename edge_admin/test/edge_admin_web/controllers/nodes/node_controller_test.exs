@@ -32,6 +32,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeControllerTest do
 
       [response_node] = json_response(conn, 200)["data"]
       assert response_node["id"] == node.id
+      assert response_node["node_name"] == "node-#{node.id}"
     end
   end
 
@@ -42,6 +43,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeControllerTest do
 
       response = json_response(conn, 200)["data"]
       assert response["id"] == node.id
+      assert response["node_name"] == "node-#{node.id}"
     end
   end
 

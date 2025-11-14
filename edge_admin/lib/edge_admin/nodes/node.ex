@@ -83,6 +83,12 @@ defmodule EdgeAdmin.Nodes.Node do
   end
 
   @doc """
+  Returns the node name for this node.
+  Format: node-{id}
+  """
+  def node_name(%__MODULE__{id: id}), do: "node-#{id}"
+
+  @doc """
   Returns the DNS hostname for this node.
   Format: node-{id}.cluster-{cluster_id}.{domain}
   where domain is configured via NETMAKER_DEFAULT_DOMAIN (default: nm.internal)

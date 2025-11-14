@@ -36,6 +36,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSON do
   defp data(%Node{} = node) do
     %{
       id: node.id,
+      node_name: Node.node_name(node),
       cluster_id: node.cluster_id,
       netmaker_host_id: node.netmaker_host_id,
       id_type: node.id_type,

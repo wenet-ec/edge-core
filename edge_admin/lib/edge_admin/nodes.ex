@@ -166,6 +166,14 @@ defmodule EdgeAdmin.Nodes do
 
       case Nexmaker.Api.Networks.create(network_name, %{addressrange: cluster.ipv4_range}) do
         {:ok, _} ->
+          # 5. Broadcast cluster creation event to all admins in this admin cluster
+          admin_cluster_name = Application.get_env(:edge_admin, :admin_cluster_name)
+          Phoenix.PubSub.broadcast(
+            EdgeAdmin.PubSub,
+            "#{admin_cluster_name}:metadata",
+            {:cluster_created, cluster.id}
+          )
+
           cluster
 
         {:error, reason} ->
@@ -202,7 +210,17 @@ defmodule EdgeAdmin.Nodes do
       case Nexmaker.Api.Networks.delete(network_name) do
         {:ok, _} ->
           # 3. Delete from DB
-          Repo.delete!(cluster)
+          deleted_cluster = Repo.delete!(cluster)
+
+          # 4. Broadcast cluster deletion event to all admins in this admin cluster
+          admin_cluster_name = Application.get_env(:edge_admin, :admin_cluster_name)
+          Phoenix.PubSub.broadcast(
+            EdgeAdmin.PubSub,
+            "#{admin_cluster_name}:metadata",
+            {:cluster_deleted, cluster.id}
+          )
+
+          deleted_cluster
 
         {:error, reason} ->
           Repo.rollback(reason)
@@ -353,13 +371,13 @@ defmodule EdgeAdmin.Nodes do
                 |> Ecto.Changeset.change(cluster_id: new_cluster_id)
                 |> Repo.update!()
 
-              # TODO: Emit PubSub event for metadata recomputation when PubSub is implemented
-              # admin_cluster_name = Application.get_env(:edge_admin, :admin_cluster_name)
-              # Phoenix.PubSub.broadcast(
-              #   EdgeAdmin.PubSub,
-              #   "#{admin_cluster_name}:metadata",
-              #   {:node_updated, node.id, node.cluster_id, new_cluster_id}
-              # )
+              # 5. Emit PubSub event for metadata recomputation (cluster migration)
+              admin_cluster_name = Application.get_env(:edge_admin, :admin_cluster_name)
+              Phoenix.PubSub.broadcast(
+                EdgeAdmin.PubSub,
+                "#{admin_cluster_name}:metadata",
+                {:node_updated, node.id, node.cluster_id, new_cluster_id}
+              )
 
               updated_node
 
@@ -394,13 +412,13 @@ defmodule EdgeAdmin.Nodes do
           # 2. Delete from DB (cascades to ssh_usernames, ssh_public_keys, command_executions)
           Repo.delete!(node)
 
-          # TODO: Emit PubSub event for metadata recomputation when PubSub is implemented
-          # admin_cluster_name = Application.get_env(:edge_admin, :admin_cluster_name)
-          # Phoenix.PubSub.broadcast(
-          #   EdgeAdmin.PubSub,
-          #   "#{admin_cluster_name}:metadata",
-          #   {:node_deleted, node.id, node.cluster_id}
-          # )
+          # 3. Emit PubSub event for metadata recomputation
+          admin_cluster_name = Application.get_env(:edge_admin, :admin_cluster_name)
+          Phoenix.PubSub.broadcast(
+            EdgeAdmin.PubSub,
+            "#{admin_cluster_name}:metadata",
+            {:node_deleted, node.id, node.cluster_id}
+          )
 
           node
 
@@ -484,14 +502,14 @@ defmodule EdgeAdmin.Nodes do
 
         case result do
           {:ok, node} ->
-            # Emit event only for new nodes (Metadata will update ETS)
+            # Emit event only for new nodes (Metadata will recompute assignments)
             if is_new_node do
-              # TODO: Emit Phoenix.PubSub event for metadata recomputation
-              # Phoenix.PubSub.broadcast(
-              #   EdgeAdmin.PubSub,
-              #   "#{admin_cluster_name}:metadata",
-              #   {:node_created, node_id, cluster_id}
-              # )
+              admin_cluster_name = Application.get_env(:edge_admin, :admin_cluster_name)
+              Phoenix.PubSub.broadcast(
+                EdgeAdmin.PubSub,
+                "#{admin_cluster_name}:metadata",
+                {:node_created, node_id, cluster_id}
+              )
             end
 
             {:ok, node, api_token, proxy_password}

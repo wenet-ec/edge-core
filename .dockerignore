@@ -1,152 +1,39 @@
 # .dockerignore
+# IMPORTANT: This uses allowlist approach - exclude everything, then include what's needed
+# This prevents massive build contexts
 
-# Git
-.git/
-.gitignore
+# Exclude everything by default
+*
 
-# Docker
-.dockerignore
-**/Dockerfile*
-docker-compose*.yml
-
-# Elixir/Phoenix build artifacts
-edge_admin/_build/
-edge_admin/deps/
-edge_admin/*.ez
-edge_admin/cover/
-edge_admin/tmp/
-edge_admin/erl_crash.dump
-edge_admin/npm-debug.log
-
-# Edge Agent build artifacts
-edge_agent/_build/
-edge_agent/deps/
-edge_agent/*.ez
-edge_agent/cover/
-edge_agent/tmp/
-edge_agent/erl_crash.dump
-edge_agent/data/
-edge_agent/native/
-
-# IDE and editor files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Logs
-*.log
-edge_admin/logs/
-edge_agent/logs/
-logs/
-
-# Runtime data
-edge_admin/pids/
-edge_admin/*.pid
-edge_admin/*.seed
-
-# Coverage directory used by tools like istanbul
-edge_admin/coverage/
-edge_agent/coverage/
-cover/
-coverage/
-*.coverprofile
-*.lcov
-
-# Go build artifacts
-edge_metrics_collector/edge_metrics_collector
-edge_vpn/edge_vpn
-*.exe
-*.exe~
-*.so
-*.dylib
-*.test
-*.out
-**/vendor/
-
-# Dependency directories
-node_modules/
-
-# Optional npm cache directory
-.npm
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# dotenv environment variables file (if any at root)
-.env
-.env.test
-.env.production
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Temporary folders
-tmp/
-temp/
-
-# Archives
-*.zip
-*.tar.gz
-*.tgz
-*.rar
-
-# Backup files
-*.bak
-*.backup
-*.old
-
-# Database files (if any local DBs)
-*.sqlite
-*.sqlite3
-*.db
-
-# Certificate files
-*.pem
-*.key
-*.crt
-*.csr
-
-# Keep these exceptions (files we DO want to include)
-!edge_admin/lib/
-!edge_admin/config/
-!edge_admin/priv/repo/
-!edge_admin/priv/static/robots.txt
+# Include only what's needed for edge_admin builds
+!deploy/
 !edge_admin/mix.exs
 !edge_admin/mix.lock
+!edge_admin/config/
+!edge_admin/lib/
+!edge_admin/priv/repo/
+!edge_admin/priv/static/robots.txt
 !edge_admin/rel/
 
-!edge_agent/lib/
-!edge_agent/config/
-!edge_agent/priv/repo/
-!edge_agent/priv/static/robots.txt
+# Include nexmaker dependency
+!nexmaker/
+
+# For edge_agent builds (only include if needed)
 !edge_agent/mix.exs
 !edge_agent/mix.lock
+!edge_agent/config/
+!edge_agent/lib/
+!edge_agent/priv/repo/
+!edge_agent/priv/static/robots.txt
 !edge_agent/rel/
 
-!edge_metrics_collector/*.go
-!edge_metrics_collector/go.mod
-!edge_metrics_collector/go.sum
-!edge_metrics_collector/internal/
-
-!edge_vpn/*.go
-!edge_vpn/go.mod
-!edge_vpn/go.sum
-!edge_vpn/internal/
+# Exclude build artifacts even if parent is included
+**/_build/
+**/deps/
+**/node_modules/
+**/*.log
+**/.git/
+**/tmp/
+**/cover/
+**/erl_crash.dump
+**/.DS_Store

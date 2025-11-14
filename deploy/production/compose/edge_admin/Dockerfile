@@ -65,6 +65,8 @@ RUN --mount=type=cache,target=/root/.hex \
 # -----------------------------------------------
 FROM debian:stable-20250520-slim
 
+ENV NETCLIENT_VERSION="1.2.0"
+
 # Install runtime dependencies in single layer
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
@@ -76,7 +78,7 @@ RUN apt-get update -y && \
     ca-certificates \
     wget && \
     # Install netclient in same layer to reduce image size
-    wget -qO /tmp/netclient https://github.com/gravitl/netclient/releases/download/v1.1.0/netclient-linux-amd64 && \
+    wget -qO /tmp/netclient https://github.com/gravitl/netclient/releases/download/v${NETCLIENT_VERSION}/netclient-linux-amd64 && \
     mv /tmp/netclient /usr/local/bin/netclient && \
     chmod +x /usr/local/bin/netclient && \
     mkdir -p /etc/netclient && \

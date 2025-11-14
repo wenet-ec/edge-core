@@ -307,10 +307,15 @@ defmodule Nexmaker.IntegrationTest do
         # Step 6: Check connection status
         IO.puts("\n=== Step 6: Checking connection status ===")
         case Nexmaker.Cli.check_connection(network_name) do
-          {:ok, true} ->
+          {:ok, info} ->
             IO.puts("Successfully connected to #{network_name}")
-          {:ok, false} ->
-            IO.puts("Not connected to #{network_name}")
+            IO.puts("Connection info: #{inspect(info)}")
+            assert info.network == network_name
+            assert info.connected == true
+            assert info.subnet != nil, "Should have calculated subnet"
+            IO.puts("Subnet: #{info.subnet}")
+          {:error, :not_connected} ->
+            IO.puts("Network exists but not connected yet")
           {:error, reason} ->
             IO.puts("Error checking connection: #{inspect(reason)}")
         end

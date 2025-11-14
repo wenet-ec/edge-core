@@ -68,6 +68,8 @@ FROM alpine:3.22.0
 
 # Install runtime dependencies and node_exporter in single layer
 ENV NODE_EXPORTER_VERSION="1.10.2"
+ENV NETCLIENT_VERSION="1.2.0"
+
 RUN apk add --no-cache \
     openssl \
     ncurses-libs \
@@ -85,7 +87,7 @@ RUN apk add --no-cache \
     mv node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64/node_exporter /usr/local/bin/ && \
     chmod +x /usr/local/bin/node_exporter && \
     # Install netclient in same layer to reduce image size
-    wget -qO /tmp/netclient https://github.com/gravitl/netclient/releases/download/v1.1.0/netclient-linux-amd64 && \
+    wget -qO /tmp/netclient https://github.com/gravitl/netclient/releases/download/v${NETCLIENT_VERSION}/netclient-linux-amd64 && \
     mv /tmp/netclient /usr/local/bin/netclient && \
     chmod +x /usr/local/bin/netclient && \
     mkdir -p /app/data /etc/netclient && \

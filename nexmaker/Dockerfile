@@ -1,5 +1,5 @@
 # Multi-stage build: Build patched netclient, then create Elixir test environment with it
-ARG NETCLIENT_VERSION=v1.1.0
+ARG NETCLIENT_VERSION=v1.2.0
 
 # Stage 1: Build patched netclient (HTTP instead of HTTPS for local testing)
 FROM golang:1.23-alpine AS netclient_builder
@@ -22,11 +22,11 @@ RUN echo "=== Patching netclient for HTTP (local testing) ===" && \
     sed -i 's|"https://" + server\.API|"http://" + server.API|g' functions/server.go && \
     sed -i 's|"https://" + serverData\.Server|"http://" + serverData.Server|g' functions/register.go && \
     sed -i 's|"https://" + server\.API|"http://" + server.API|g' functions/list.go && \
-    sed -i 's|"https://" + server\.API|"http://" + server.API|g' functions/fail_over.go && \
     sed -i 's|"https://" + server\.API|"http://" + server.API|g' functions/mqpublish.go && \
     sed -i 's|fmt\.Sprintf("https://%s/|fmt.Sprintf("http://%s/|g' functions/mqhandlers.go && \
-    sed -i 's|fmt\.Sprintf("https://%s/|fmt.Sprintf("http://%s/|g' functions/fail_over.go && \
-    sed -i 's|"https://" + server\.API|"http://" + server.API|g' functions/pull.go
+    sed -i 's|"https://" + server\.API|"http://" + server.API|g' functions/pull.go && \
+    sed -i 's|"https://" + server\.API|"http://" + server.API|g' functions/auto_relay.go && \
+    sed -i 's|"https://" + api|"http://" + api|g' ncutils/netclientutils.go
 
 # Build patched netclient
 RUN go mod download && \

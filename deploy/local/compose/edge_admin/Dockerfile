@@ -1,7 +1,7 @@
 # deploy/local/compose/edge_admin/Dockerfile
 
 # Build netclient with HTTP patches (for local development)
-ARG NETCLIENT_VERSION=v1.1.0
+ARG NETCLIENT_VERSION=v1.2.0
 FROM golang:1.25-alpine AS netclient-builder
 
 # Install git
@@ -17,6 +17,7 @@ RUN git clone https://github.com/gravitl/netclient.git . && \
 RUN find . -type f -name '*.go' -exec sed -i \
     -e 's|"https://" + server\.API|"http://" + server.API|g' \
     -e 's|"https://" + serverData\.Server|"http://" + serverData.Server|g' \
+    -e 's|"https://" + api|"http://" + api|g' \
     -e 's|fmt\.Sprintf("https://%s/|fmt.Sprintf("http://%s/|g' \
     {} \;
 

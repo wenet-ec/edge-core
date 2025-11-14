@@ -27,79 +27,72 @@ defmodule Nexmaker.Cli do
       :ok = Nexmaker.Cli.leave_network("cluster-old-id")
   """
 
+  import Bitwise
   require Logger
 
   @doc """
-  Joins a network using an enrollment key or token.
+  Joins a network using an enrollment token.
 
   First join: Registers host + creates node in network.
   Subsequent joins: Creates node in additional network (multi-cluster support).
 
-  ## Parameters
-    - enrollment_token: String - Can be either:
-      - Base64-encoded token from API response's "token" field (preferred)
-      - Raw enrollment key value
-    - opts: Keyword list
-      - :server - Server URL with port (e.g., "netmaker:8081") to fix API token server field
+  ## Options
+    - `:token` (required) - Base64-encoded enrollment token from API response's "token" field
+    - `:name` - Host name to register with (defaults to machine hostname)
+    - `:endpoint` - Endpoint IP address
+    - `:mtu` - MTU value for the interface
+    - `:interface` - Netmaker interface to use
+    - `:static` - Flag to set host as static endpoint
+    - `:static_port` - Flag to set host as static port
 
   ## Returns
-    - `{:ok, network_info}` - Successfully joined, returns network details
+    - `{:ok, %{}}` - Successfully joined
     - `{:error, reason}` - Failed to join
 
   ## Examples
 
-      # Using API token field (preferred)
       {:ok, key} = Nexmaker.Api.EnrollmentKeys.create("mynet", %{tags: ["default"]})
-      {:ok, network_info} = Nexmaker.Cli.join_network(key["token"], server: "netmaker:8081")
+      {:ok, %{}} = Nexmaker.Cli.join_network(token: key["token"])
 
-      # Using raw enrollment value
-      {:ok, network_info} = Nexmaker.Cli.join_network(key["value"], server: "netmaker:8081")
+      # With custom hostname
+      {:ok, %{}} = Nexmaker.Cli.join_network(token: key["token"], name: "admin-abc123")
   """
-  @spec join_network(String.t(), keyword()) :: {:ok, map()} | {:error, any()}
-  def join_network(enrollment_token, opts \\ []) when is_binary(enrollment_token) do
-    # Netclient v1.1.0 expects token in format: base64({"server":"host:port","value":"KEY"})
-    # The API returns a "token" field that's already base64-encoded but may have wrong server
-    token = case Keyword.get(opts, :server) do
-      nil ->
-        # Use as-is (might be pre-formatted token or raw key)
-        enrollment_token
+  @spec join_network(keyword()) :: {:ok, map()} | {:error, any()}
+  def join_network(opts) when is_list(opts) do
+    # Ensure token is provided
+    _token = Keyword.fetch!(opts, :token)
 
-      server ->
-        # Check if it's already a base64 token or raw key
-        case Base.decode64(enrollment_token) do
-          {:ok, json_str} ->
-            # It's a base64 token - decode, fix server, re-encode
-            case Jason.decode(json_str) do
-              {:ok, %{"value" => value}} ->
-                # Fix the server field and re-encode
-                token_json = Jason.encode!(%{"server" => server, "value" => value})
-                Base.encode64(token_json)
-              _ ->
-                # Invalid token format, treat as raw key
-                token_json = Jason.encode!(%{"server" => server, "value" => enrollment_token})
-                Base.encode64(token_json)
-            end
+    # Build args from options
+    args = build_join_args(opts)
 
-          :error ->
-            # Not base64, treat as raw enrollment key
-            token_json = Jason.encode!(%{"server" => server, "value" => enrollment_token})
-            Base.encode64(token_json)
-        end
-    end
-
-    case System.cmd("netclient", ["join", "--token", token], stderr_to_stdout: true) do
-      {output, 0} ->
-        Logger.info("Successfully joined network via enrollment key")
-        {:ok, %{output: output}}
+    case System.cmd("netclient", ["join" | args], stderr_to_stdout: true) do
+      {_output, 0} ->
+        {:ok, %{}}
 
       {output, exit_code} ->
-        Logger.error("Failed to join network: #{output}")
         {:error, {:netclient_error, exit_code, output}}
     end
   rescue
     e in ErlangError ->
       Logger.error("netclient command not found or failed: #{inspect(e)}")
       {:error, :netclient_not_found}
+  end
+
+  # Build CLI arguments from keyword options
+  defp build_join_args(opts) do
+    opts
+    |> Enum.flat_map(fn
+      {:token, value} -> ["--token", value]
+      {:name, value} -> ["--name", to_string(value)]
+      {:endpoint, value} -> ["--endpoint", to_string(value)]
+      {:mtu, value} -> ["--mtu", to_string(value)]
+      {:interface, value} -> ["--interface", to_string(value)]
+      {:static, true} -> ["--static"]
+      {:static, false} -> []
+      {:static_port, true} -> ["--static-port"]
+      {:static_port, false} -> []
+      _ -> []
+    end)
   end
 
   @doc """
@@ -206,34 +199,82 @@ defmodule Nexmaker.Cli do
     - network_name: String - Network name to check
 
   ## Returns
-    - `{:ok, network_info}` - Network info map
+    - `{:ok, network_info}` - Network info map with subnet extracted from ipv4_addr
     - `{:error, :not_found}` - Not connected to this network
+    - `{:error, :not_connected}` - Network exists but not connected yet
 
   ## Examples
 
       {:ok, info} = Nexmaker.Cli.check_connection("admin-cluster")
-      # => %{"network" => "admin-cluster", "connected" => true, ...}
+      # => %{network: "admin-cluster", connected: true, subnet: "100.63.0.0/24", ...}
   """
-  @spec check_connection(String.t()) :: {:ok, map()} | {:error, :not_found | any()}
+  @spec check_connection(String.t()) :: {:ok, map()} | {:error, :not_found | :not_connected | any()}
   def check_connection(network_name) when is_binary(network_name) do
     case System.cmd("netclient", ["list", network_name], stderr_to_stdout: true) do
       {output, 0} ->
-        case Jason.decode(output) do
+        # Strip any log lines that appear before the JSON array
+        # Netclient sometimes outputs error logs before the actual JSON
+        cleaned_output = extract_json_from_output(output)
+
+        case Jason.decode(cleaned_output) do
           {:ok, [network_info | _]} when is_map(network_info) ->
-            {:ok, network_info}
+            # Check if actually connected
+            connected = Map.get(network_info, "connected", false)
+
+            if connected do
+              # Extract subnet from ipv4_addr (e.g., "100.63.0.5/24" -> "100.63.0.0/24")
+              subnet = extract_subnet(Map.get(network_info, "ipv4_addr", ""))
+
+              # Convert to atom keys for easier access
+              processed_info = %{
+                network: Map.get(network_info, "network"),
+                node_id: Map.get(network_info, "node_id"),
+                connected: connected,
+                ipv4_addr: Map.get(network_info, "ipv4_addr"),
+                ipv6_addr: Map.get(network_info, "ipv6_addr"),
+                subnet: subnet
+              }
+
+              {:ok, processed_info}
+            else
+              {:error, :not_connected}
+            end
+
+          {:ok, decoded} when is_map(decoded) ->
+            # Single network returned as map instead of list
+            connected = Map.get(decoded, "connected", false)
+
+            if connected do
+              subnet = extract_subnet(Map.get(decoded, "ipv4_addr", ""))
+
+              processed_info = %{
+                network: Map.get(decoded, "network"),
+                node_id: Map.get(decoded, "node_id"),
+                connected: connected,
+                ipv4_addr: Map.get(decoded, "ipv4_addr"),
+                ipv6_addr: Map.get(decoded, "ipv6_addr"),
+                subnet: subnet
+              }
+
+              {:ok, processed_info}
+            else
+              {:error, :not_connected}
+            end
 
           {:ok, []} ->
             {:error, :not_found}
 
-          {:ok, _} ->
+          {:ok, other} ->
+            Logger.error("Unexpected netclient list output format: #{inspect(other)}")
             {:error, :invalid_output_format}
 
-          {:error, _reason} ->
-            # Try checking if it's a "no such network" message
+          {:error, json_error} ->
+            # Check if it's a "no such network" message that isn't valid JSON
             if String.contains?(output, "no such network") do
               {:error, :not_found}
             else
-              {:error, :invalid_output_format}
+              Logger.error("Failed to parse netclient output as JSON: #{inspect(json_error)}, output: #{output}")
+              {:error, {:json_parse_error, json_error}}
             end
         end
 
@@ -248,5 +289,52 @@ defmodule Nexmaker.Cli do
     e in ErlangError ->
       Logger.error("netclient command not found or failed: #{inspect(e)}")
       {:error, :netclient_not_found}
+  end
+
+  # Extract network CIDR from an IP address with CIDR notation
+  # E.g., "100.63.0.5/24" -> "100.63.0.0/24"
+  defp extract_subnet(ipv4_addr) when is_binary(ipv4_addr) do
+    case String.split(ipv4_addr, "/") do
+      [ip, prefix] ->
+        # Parse IP and prefix
+        octets = String.split(ip, ".") |> Enum.map(&String.to_integer/1)
+        prefix_int = String.to_integer(prefix)
+
+        # Calculate network address
+        [a, b, c, d] = octets
+        ip_int = (a <<< 24) + (b <<< 16) + (c <<< 8) + d
+
+        # Apply netmask
+        host_bits = 32 - prefix_int
+        netmask = Bitwise.bnot((1 <<< host_bits) - 1) &&& 0xFFFFFFFF
+        network_int = ip_int &&& netmask
+
+        # Convert back to dotted notation
+        na = (network_int >>> 24) &&& 0xFF
+        nb = (network_int >>> 16) &&& 0xFF
+        nc = (network_int >>> 8) &&& 0xFF
+        nd = network_int &&& 0xFF
+
+        "#{na}.#{nb}.#{nc}.#{nd}/#{prefix}"
+
+      _ ->
+        nil
+    end
+  rescue
+    _ -> nil
+  end
+
+  defp extract_subnet(_), do: nil
+
+  # Extract JSON array from output that may contain log lines
+  # Netclient sometimes outputs error logs (as JSON objects) before the actual JSON array
+  defp extract_json_from_output(output) do
+    # The actual data is always a JSON array starting with '['
+    # Log lines are JSON objects starting with '{' on their own lines
+    # We need to find the '[' that starts the array
+    case :binary.match(output, "[") do
+      {pos, _} -> binary_part(output, pos, byte_size(output) - pos)
+      :nomatch -> output
+    end
   end
 end

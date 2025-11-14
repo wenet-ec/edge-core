@@ -81,7 +81,7 @@ services:
       - ./.envs/.edge_vpn_db
 
   edge_vpn_broker:
-    image: emqx/emqx:6.0.0
+    image: emqx/emqx:6.0.1
     container_name: production_edge_vpn_broker
     networks:
       - production_edge_core
@@ -98,7 +98,7 @@ services:
       - ./.envs/.edge_vpn_broker
 
   edge_vpn:
-    image: gravitl/netmaker:v1.1.0
+    image: gravitl/netmaker:v1.2.0
     container_name: production_edge_vpn
     networks:
       - production_edge_core

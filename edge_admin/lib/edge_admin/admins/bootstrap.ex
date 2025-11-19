@@ -14,13 +14,10 @@ defmodule EdgeAdmin.Admins.Bootstrap do
 
   ## Bootstrap Sequence
 
-  1. Check if bootstrap should run (skip in test, require PHX_SERVER=true)
-  2. Ensure VPN joined
-  3. Start Erlang distribution
-  4. Query network info (subnet) at runtime
-  5. Scan subnet for peer admins and connect
-  6. Initialize syn (add scopes + register self)
-  7. Mark as initialized
+  1. Join VPN network (create if needed)
+  2. Start Erlang distribution
+  3. Discover and connect peer admins
+  4. Initialize syn registry
 
   ## Configuration
 
@@ -30,7 +27,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
   - `:admin_cluster_name` - Peer admin cluster name
   - `:admin_max_capacity` - Max nodes this admin can handle
   - `:erlang_cookie` - Shared secret for Erlang distribution
-  - `:netmaker_default_domain` - DNS domain suffix
+  - `:admin_cluster_subnet` - Subnet for admin cluster (optional, auto-generates)
   """
 
   use GenServer
@@ -38,14 +35,14 @@ defmodule EdgeAdmin.Admins.Bootstrap do
   require Logger
 
   alias EdgeAdmin.Admins.Discovery
+  alias EdgeAdmin.Vpn
 
-  # === Public API ===
+  # =============================================================================
+  # Public API
+  # =============================================================================
 
   @doc """
   Starts the Bootstrap GenServer.
-
-  Options:
-  - `:skip_bootstrap` - Skip bootstrap entirely (for testing)
   """
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -69,7 +66,9 @@ defmodule EdgeAdmin.Admins.Bootstrap do
     end
   end
 
-  # === GenServer Callbacks ===
+  # =============================================================================
+  # GenServer Callbacks
+  # =============================================================================
 
   @impl true
   def init(opts) do
@@ -96,36 +95,30 @@ defmodule EdgeAdmin.Admins.Bootstrap do
     {:reply, Map.get(state, :initialized, false), state}
   end
 
-  # === Private Helpers ===
+  # =============================================================================
+  # Config Helpers
+  # =============================================================================
 
-  defp should_run?(opts) do
-    cond do
-      Keyword.get(opts, :skip_bootstrap, false) ->
-        false
+  defp admin_id, do: Application.get_env(:edge_admin, :admin_id)
+  defp admin_name, do: Application.get_env(:edge_admin, :admin_name)
+  defp admin_cluster_name, do: Application.get_env(:edge_admin, :admin_cluster_name)
+  defp admin_cluster_subnet, do: Application.get_env(:edge_admin, :admin_cluster_subnet)
+  defp max_capacity, do: Application.get_env(:edge_admin, :admin_max_capacity)
+  defp erlang_cookie, do: Application.get_env(:edge_admin, :erlang_cookie)
 
-      Application.get_env(:edge_admin, :run_bootstrap) == false ->
-        false
+  # =============================================================================
+  # Bootstrap Flow
+  # =============================================================================
 
-      Mix.env() == :test ->
-        false
-
-      true ->
-        System.get_env("PHX_SERVER") == "true"
-    end
+  defp should_run?(_opts) do
+    Application.get_env(:edge_admin, :run_bootstrap, true)
   end
 
   defp do_bootstrap do
-    # Read config values
-    admin_id = Application.get_env(:edge_admin, :admin_id)
-    admin_name = Application.get_env(:edge_admin, :admin_name)
-    admin_cluster_name = Application.get_env(:edge_admin, :admin_cluster_name)
-    max_capacity = Application.get_env(:edge_admin, :admin_max_capacity)
-    erlang_cookie = Application.get_env(:edge_admin, :erlang_cookie)
-
-    with :ok <- ensure_vpn_joined(admin_cluster_name),
-         :ok <- start_erlang_distribution(admin_name, admin_cluster_name, erlang_cookie),
-         :ok <- discover_and_connect_peers(admin_cluster_name),
-         :ok <- initialize_syn(admin_id, admin_cluster_name, max_capacity) do
+    with :ok <- step_1_join_vpn(),
+         :ok <- step_2_start_erlang_distribution(),
+         :ok <- step_3_discover_peers(),
+         :ok <- step_4_initialize_syn() do
       Logger.info("All bootstrap steps completed")
       :ok
     else
@@ -135,48 +128,73 @@ defmodule EdgeAdmin.Admins.Bootstrap do
     end
   end
 
-  defp ensure_vpn_joined(admin_cluster_name) do
-    Logger.info("Joining VPN network #{admin_cluster_name}")
+  # =============================================================================
+  # Step 1: VPN Network Join
+  # =============================================================================
 
-    # Always create network if needed, create enrollment key, and join
-    # This is idempotent - netclient handles re-registration and updates hostname
-    case Discovery.create_and_join_admin_cluster(admin_cluster_name) do
-      :ok ->
-        Logger.info("Successfully joined admin cluster network")
-        :ok
+  defp step_1_join_vpn do
+    network_name = admin_cluster_name()
+    Logger.info("Step 1: Joining VPN network #{network_name}")
 
+    with :ok <- ensure_network_exists(network_name),
+         {:ok, key} <- create_enrollment_key(network_name),
+         :ok <- join_network(key) do
+      Logger.info("Successfully joined admin cluster network")
+      :ok
+    else
       {:error, reason} ->
         Logger.error("Failed to join admin cluster network: #{inspect(reason)}")
         {:error, {:vpn_join_failed, reason}}
     end
   end
 
-  defp start_erlang_distribution(admin_name, admin_cluster_name, erlang_cookie) do
-    Logger.info("Starting Erlang distribution")
-
-    # Build node name from config
-    netmaker_default_domain = Application.get_env(:edge_admin, :netmaker_default_domain)
-
-    node_name =
-      if netmaker_default_domain == "" do
-        :"admin@#{admin_name}.#{admin_cluster_name}"
-      else
-        :"admin@#{admin_name}.#{admin_cluster_name}.#{netmaker_default_domain}"
+  defp ensure_network_exists(network_name) do
+    # Get admin cluster subnet from env or generate from pool
+    subnet =
+      case admin_cluster_subnet() do
+        nil -> Vpn.generate_next_subnet([])
+        value -> value
       end
+
+    Vpn.ensure_network_exists(network_name, %{addressrange: subnet})
+  end
+
+  defp create_enrollment_key(network_name) do
+    Vpn.create_enrollment_key(network_name, %{
+      uses_remaining: 1,
+      expiration: 86400,
+      tags: [admin_name()]
+    })
+  end
+
+  defp join_network(key) do
+    case Vpn.join_network(token: key["token"], name: admin_name()) do
+      {:ok, _} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # =============================================================================
+  # Step 2: Erlang Distribution
+  # =============================================================================
+
+  defp step_2_start_erlang_distribution do
+    Logger.info("Step 2: Starting Erlang distribution")
+
+    dns_hostname = Vpn.build_hostname(admin_name(), admin_cluster_name())
+    node_name = :"admin@#{dns_hostname}"
 
     Logger.info("Starting distributed node: #{node_name}")
 
     try do
       case Node.start(node_name, :longnames) do
         {:ok, _pid} ->
-          # Set cookie after node starts
-          :erlang.set_cookie(node(), erlang_cookie)
+          :erlang.set_cookie(node(), erlang_cookie())
           Logger.info("Erlang distribution started: #{node()}")
           :ok
 
         {:error, {:already_started, _pid}} ->
-          # Set cookie if node already started
-          :erlang.set_cookie(node(), erlang_cookie)
+          :erlang.set_cookie(node(), erlang_cookie())
           Logger.info("Erlang distribution already started: #{node()}")
           :ok
 
@@ -191,34 +209,38 @@ defmodule EdgeAdmin.Admins.Bootstrap do
     end
   end
 
-  defp discover_and_connect_peers(_admin_cluster_name) do
-    # Discovery now fetches network info dynamically
-    Logger.info("Starting peer admin discovery")
+  # =============================================================================
+  # Step 3: Peer Discovery
+  # =============================================================================
+
+  defp step_3_discover_peers do
+    Logger.info("Step 3: Discovering peer admins")
     Discovery.scan_and_connect_admins()
     Logger.info("Peer admin discovery completed")
     :ok
   end
 
-  defp initialize_syn(admin_id, admin_cluster_name, max_capacity) do
-    Logger.info("Initializing syn registry")
+  # =============================================================================
+  # Step 4: Syn Registry
+  # =============================================================================
+
+  defp step_4_initialize_syn do
+    Logger.info("Step 4: Initializing syn registry")
 
     # Add node to syn scopes
     :syn.add_node_to_scopes([:admin_scope])
     Logger.debug("Added node to :admin_scope")
 
     # Join the admin cluster group with metadata
-    # This allows all admins in the same cluster to find each other
     metadata = %{
-      id: admin_id,
-      max_capacity: max_capacity,
+      id: admin_id(),
+      max_capacity: max_capacity(),
       erlang_node_name: node()
     }
 
-    # Join the admin cluster group (not register with a key)
-    # :syn.join/4 is used for group membership (process groups)
-    case :syn.join(:admin_scope, admin_cluster_name, self(), metadata) do
+    case :syn.join(:admin_scope, admin_cluster_name(), self(), metadata) do
       :ok ->
-        Logger.info("Joined syn group :admin_scope/#{admin_cluster_name} with metadata")
+        Logger.info("Joined syn group :admin_scope/#{admin_cluster_name()} with metadata")
         :ok
 
       {:error, reason} ->

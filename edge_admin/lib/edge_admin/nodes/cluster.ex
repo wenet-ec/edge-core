@@ -6,6 +6,8 @@ defmodule EdgeAdmin.Nodes.Cluster do
   """
   use EdgeAdmin.Schema
 
+  alias EdgeAdmin.Vpn
+
   schema "clusters" do
     field(:name, :string)
     field(:ipv4_range, :string)
@@ -35,7 +37,7 @@ defmodule EdgeAdmin.Nodes.Cluster do
   Returns the Netmaker network name for this cluster.
   Format: cluster-{name}
   """
-  def network_name(%__MODULE__{name: name}), do: "cluster-#{name}"
+  def network_name(%__MODULE__{name: name}), do: Vpn.cluster_network_name(name)
 
   @doc """
   Returns the DNS domain suffix for nodes in this cluster.
@@ -43,12 +45,8 @@ defmodule EdgeAdmin.Nodes.Cluster do
   where domain is configured via NETMAKER_DEFAULT_DOMAIN (default: nm.internal)
   """
   def dns_domain(%__MODULE__{name: name}) do
-    default_domain = Application.get_env(:edge_admin, :netmaker_default_domain, "nm.internal")
-    build_domain("cluster-#{name}", default_domain)
+    Vpn.build_domain(Vpn.cluster_network_name(name))
   end
-
-  defp build_domain(network, ""), do: network
-  defp build_domain(network, domain), do: "#{network}.#{domain}"
 
   # Private helper functions
 
@@ -79,7 +77,7 @@ defmodule EdgeAdmin.Nodes.Cluster do
 
   defp validate_ipv4_cidr_format(changeset) do
     validate_change(changeset, :ipv4_range, fn _, value ->
-      case parse_cidr(value) do
+      case Vpn.parse_cidr(value) do
         {:ok, _} -> []
         {:error, reason} -> [ipv4_range: reason]
       end
@@ -88,7 +86,7 @@ defmodule EdgeAdmin.Nodes.Cluster do
 
   defp validate_ipv4_exclusions(changeset) do
     validate_change(changeset, :ipv4_range, fn _, value ->
-      case parse_cidr(value) do
+      case Vpn.parse_cidr(value) do
         {:ok, {ip_tuple, _prefix}} ->
           if excluded_range?(ip_tuple) do
             [ipv4_range: "cannot use private, loopback, link-local, or multicast ranges"]
@@ -100,40 +98,6 @@ defmodule EdgeAdmin.Nodes.Cluster do
           []
       end
     end)
-  end
-
-  defp parse_cidr(cidr) when is_binary(cidr) do
-    case String.split(cidr, "/") do
-      [ip_str, prefix_str] ->
-        with {:ok, ip_tuple} <- parse_ipv4(ip_str),
-             {prefix, ""} <- Integer.parse(prefix_str),
-             true <- prefix >= 0 and prefix <= 32 do
-          {:ok, {ip_tuple, prefix}}
-        else
-          _ -> {:error, "invalid CIDR format"}
-        end
-
-      _ ->
-        {:error, "invalid CIDR format"}
-    end
-  end
-
-  defp parse_ipv4(ip_str) do
-    case String.split(ip_str, ".") do
-      [a, b, c, d] ->
-        with {a_int, ""} <- Integer.parse(a),
-             {b_int, ""} <- Integer.parse(b),
-             {c_int, ""} <- Integer.parse(c),
-             {d_int, ""} <- Integer.parse(d),
-             true <- Enum.all?([a_int, b_int, c_int, d_int], &(&1 >= 0 and &1 <= 255)) do
-          {:ok, {a_int, b_int, c_int, d_int}}
-        else
-          _ -> {:error, "invalid IPv4 address"}
-        end
-
-      _ ->
-        {:error, "invalid IPv4 address"}
-    end
   end
 
   defp excluded_range?({a, _, _, _}) do

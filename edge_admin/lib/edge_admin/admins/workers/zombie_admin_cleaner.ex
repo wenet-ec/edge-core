@@ -19,16 +19,18 @@ defmodule EdgeAdmin.Admins.Workers.ZombieAdminCleaner do
     queue: :default,
     unique: [period: 3600]
 
+  alias EdgeAdmin.Vpn
+
   require Logger
 
   @impl Oban.Worker
   def perform(_job) do
-    admin_cluster_name = Application.get_env(:edge_admin, :admin_cluster_name)
+    admin_cluster_name = Vpn.admin_cluster_name()
 
     Logger.info("Starting zombie admin cleanup for #{admin_cluster_name}")
 
     # Query Netmaker for all hosts
-    case Nexmaker.Api.Hosts.list() do
+    case Vpn.list_hosts() do
       {:ok, hosts} when is_list(hosts) ->
         # Filter for admin hosts in our admin cluster
         # Pattern: admin-{id}.{admin_cluster_name}.nm.internal
@@ -60,7 +62,7 @@ defmodule EdgeAdmin.Admins.Workers.ZombieAdminCleaner do
 
               Logger.info("Deleting offline admin host: #{host_name} (id: #{host_id})")
 
-              case Nexmaker.Api.Hosts.delete(host_id) do
+              case Vpn.delete_host(host_id) do
                 {:ok, _} ->
                   Logger.info("Successfully deleted offline host #{host_name}")
                   count + 1

@@ -3,6 +3,8 @@ defmodule EdgeAdmin.Nodes.Node do
   @moduledoc false
   use EdgeAdmin.Schema
 
+  alias EdgeAdmin.Vpn
+
   @primary_key {:id, :binary_id, autogenerate: false}
 
   schema "nodes" do
@@ -94,8 +96,7 @@ defmodule EdgeAdmin.Nodes.Node do
   where domain is configured via NETMAKER_DEFAULT_DOMAIN (default: nm.internal)
   """
   def dns_hostname(%__MODULE__{id: id, cluster_id: cluster_id}) do
-    default_domain = Application.get_env(:edge_admin, :netmaker_default_domain, "nm.internal")
-    build_hostname("node-#{id}", "cluster-#{cluster_id}", default_domain)
+    Vpn.build_hostname("node-#{id}", Vpn.cluster_network_name(cluster_id))
   end
 
   @doc """
@@ -106,9 +107,6 @@ defmodule EdgeAdmin.Nodes.Node do
   def http_url(%__MODULE__{http_port: port} = node) do
     "http://#{dns_hostname(node)}:#{port}"
   end
-
-  defp build_hostname(host, network, ""), do: "#{host}.#{network}"
-  defp build_hostname(host, network, domain), do: "#{host}.#{network}.#{domain}"
 
   def persistent?(%__MODULE__{id_type: "persistent"}), do: true
   def persistent?(_), do: false

@@ -65,38 +65,6 @@ defmodule EdgeAdmin.Config do
     int
   end
 
-  @spec build_admin_cluster_name(String.t()) :: String.t()
-  def build_admin_cluster_name(suffix) do
-    prefix = "admin-cluster-"
-    max_total_length = 32
-
-    # Validate format: lowercase alphanumeric with hyphens, no leading/trailing hyphens
-    unless Regex.match?(~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, suffix) do
-      raise ArgumentError, """
-      ADMIN_CLUSTER_NAME must match format: lowercase alphanumeric with hyphens, no leading/trailing hyphens
-      Got: #{suffix}
-      """
-    end
-
-    # Build full name
-    full_name = "#{prefix}#{suffix}"
-
-    # Validate length
-    if String.length(full_name) > max_total_length do
-      max_suffix_length = max_total_length - String.length(prefix)
-
-      raise ArgumentError, """
-      ADMIN_CLUSTER_NAME exceeds Netmaker's #{max_total_length} character limit
-      Prefix: #{prefix} (#{String.length(prefix)} chars)
-      Suffix: #{suffix} (#{String.length(suffix)} chars)
-      Total: #{String.length(full_name)} chars
-      Max suffix length: #{max_suffix_length} chars
-      """
-    end
-
-    full_name
-  end
-
   @spec generate_random_string(pos_integer()) :: String.t()
   def generate_random_string(length) do
     # Generate more bytes than needed to ensure we get enough characters after encoding

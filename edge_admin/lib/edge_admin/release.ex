@@ -1,14 +1,44 @@
 # edge_admin/lib/edge_admin/release.ex
 defmodule EdgeAdmin.Release do
-  @moduledoc false
+  @moduledoc """
+  Release tasks for Edge Admin.
+
+  Provides Mix-like tasks that can be run in production releases:
+  - Database migrations
+  - Netmaker superadmin bootstrap
+  - Default cluster creation
+  """
+
   alias Ecto.Migrator
+  alias EdgeAdmin.Vpn
+
   require Logger
 
   @app :edge_admin
 
-  # ============================================================================
+  # =============================================================================
+  # Config Helpers
+  # =============================================================================
+
+  defp netmaker_superadmin_username do
+    Application.get_env(:edge_admin, :netmaker_superadmin_username)
+  end
+
+  defp netmaker_superadmin_password do
+    Application.get_env(:edge_admin, :netmaker_superadmin_password)
+  end
+
+  defp default_cluster_name do
+    Application.get_env(:edge_admin, :default_cluster_name)
+  end
+
+  defp default_cluster_subnet do
+    Application.get_env(:edge_admin, :default_cluster_subnet)
+  end
+
+  # =============================================================================
   # Database Migrations
-  # ============================================================================
+  # =============================================================================
 
   def migrate do
     load_app()
@@ -24,9 +54,9 @@ defmodule EdgeAdmin.Release do
     {:ok, _, _} = Migrator.with_repo(repo, &Migrator.run(&1, :down, to: version))
   end
 
-  # ============================================================================
+  # =============================================================================
   # Netmaker Superadmin Bootstrap
-  # ============================================================================
+  # =============================================================================
 
   @doc """
   Creates Netmaker superadmin user if doesn't exist.
@@ -45,23 +75,16 @@ defmodule EdgeAdmin.Release do
     load_app()
     start_dependencies()
 
-    username = Application.get_env(:edge_admin, :netmaker_superadmin_username)
-    password = Application.get_env(:edge_admin, :netmaker_superadmin_password)
-
-    create_superadmin_if_needed(username, password)
-  end
-
-  defp create_superadmin_if_needed(username, password) do
     Logger.info("Checking if Netmaker superadmin exists...")
 
-    case Nexmaker.Api.Superadmin.check() do
+    case Vpn.check_superadmin() do
       {:ok, true} ->
         Logger.info("Netmaker superadmin already exists, skipping creation")
         :ok
 
       {:ok, false} ->
-        Logger.info("No superadmin found, creating superadmin: #{username}")
-        create_superadmin(username, password)
+        Logger.info("No superadmin found, creating superadmin: #{netmaker_superadmin_username()}")
+        do_create_superadmin()
 
       {:error, reason} ->
         Logger.error("Failed to check superadmin status: #{inspect(reason)}")
@@ -69,15 +92,15 @@ defmodule EdgeAdmin.Release do
     end
   end
 
-  defp create_superadmin(username, password) do
+  defp do_create_superadmin do
     attrs = %{
-      username: username,
-      password: password
+      username: netmaker_superadmin_username(),
+      password: netmaker_superadmin_password()
     }
 
-    case Nexmaker.Api.Superadmin.create(attrs) do
+    case Vpn.create_superadmin(attrs) do
       {:ok, _user} ->
-        Logger.info("Successfully created Netmaker superadmin: #{username}")
+        Logger.info("Successfully created Netmaker superadmin: #{netmaker_superadmin_username()}")
         :ok
 
       {:error, {:http_error, status, body}} ->
@@ -90,9 +113,9 @@ defmodule EdgeAdmin.Release do
     end
   end
 
-  # ============================================================================
+  # =============================================================================
   # Default Cluster Bootstrap
-  # ============================================================================
+  # =============================================================================
 
   @doc """
   Creates default cluster if configured.
@@ -114,50 +137,39 @@ defmodule EdgeAdmin.Release do
     load_app()
     start_app()
 
-    cluster_name = Application.get_env(:edge_admin, :default_cluster_name)
-
-    case cluster_name do
+    case default_cluster_name() do
       nil ->
         Logger.info("Skipping default cluster creation: DEFAULT_CLUSTER_NAME not set")
         :ok
 
       name ->
-        create_cluster_if_needed(name)
+        Logger.info("Checking if default cluster exists: #{name}")
+
+        case EdgeAdmin.Nodes.get_cluster_by_name(name) do
+          nil ->
+            Logger.info("Default cluster not found, creating: #{name}")
+            do_create_cluster(name)
+
+          _cluster ->
+            Logger.info("Default cluster already exists, skipping: #{name}")
+            :ok
+        end
     end
   end
 
-  defp create_cluster_if_needed(cluster_name) do
-    Logger.info("Checking if default cluster exists: #{cluster_name}")
-
-    case EdgeAdmin.Repo.get_by(EdgeAdmin.Nodes.Cluster, name: cluster_name) do
-      nil ->
-        Logger.info("Default cluster not found, creating: #{cluster_name}")
-        create_cluster(cluster_name)
-
-      _cluster ->
-        Logger.info("Default cluster already exists, skipping: #{cluster_name}")
-        :ok
-    end
-  end
-
-  defp create_cluster(cluster_name) do
-    subnet = Application.get_env(:edge_admin, :default_cluster_subnet)
-
-    # Use atom keys consistently
+  defp do_create_cluster(cluster_name) do
+    # Build attrs - only include subnet if provided
     attrs =
-      if subnet do
-        %{name: cluster_name, ipv4_range: subnet}
-      else
-        %{name: cluster_name}
+      case default_cluster_subnet() do
+        nil -> %{"name" => cluster_name}
+        subnet -> %{"name" => cluster_name, "ipv4_range" => subnet}
       end
-      |> Enum.into(%{}, fn {k, v} -> {to_string(k), v} end)
 
     case EdgeAdmin.Nodes.create_cluster(attrs) do
       {:ok, cluster} ->
         Logger.info(
           "Successfully created default cluster: #{cluster.name} (#{cluster.ipv4_range})"
         )
-
         :ok
 
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -171,9 +183,9 @@ defmodule EdgeAdmin.Release do
     end
   end
 
-  # ============================================================================
+  # =============================================================================
   # Private Helpers
-  # ============================================================================
+  # =============================================================================
 
   defp repos do
     Application.fetch_env!(@app, :ecto_repos)

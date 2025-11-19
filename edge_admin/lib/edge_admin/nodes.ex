@@ -14,6 +14,7 @@ defmodule EdgeAdmin.Nodes do
   alias EdgeAdmin.Nodes.SshPublicKey
   alias EdgeAdmin.Nodes.SshUsername
   alias EdgeAdmin.Repo
+  alias EdgeAdmin.Vpn
 
   require Logger
 
@@ -150,7 +151,8 @@ defmodule EdgeAdmin.Nodes do
   def create_cluster(attrs \\ %{}) do
     Repo.transaction(fn ->
       # 1. Auto-generate IP range if not provided
-      ipv4_range = attrs["ipv4_range"] || attrs[:ipv4_range] || generate_next_ipv4_range()
+      existing_ranges = Repo.all(from(c in Cluster, select: c.ipv4_range))
+      ipv4_range = attrs["ipv4_range"] || attrs[:ipv4_range] || Vpn.generate_next_subnet(existing_ranges)
 
       # 2. Merge IP range into attrs (maintain existing key type)
       cluster_attrs = Map.put(attrs, "ipv4_range", ipv4_range)
@@ -162,15 +164,14 @@ defmodule EdgeAdmin.Nodes do
         |> Repo.insert!()
 
       # 4. Create Netmaker network
-      network_name = Cluster.network_name(cluster)
+      network_name = Vpn.cluster_network_name(cluster.name)
 
-      case Nexmaker.Api.Networks.create(network_name, %{addressrange: cluster.ipv4_range}) do
+      case Vpn.create_network(network_name, %{addressrange: cluster.ipv4_range}) do
         {:ok, _} ->
           # 5. Broadcast cluster creation event to all admins in this admin cluster
-          admin_cluster_name = Application.get_env(:edge_admin, :admin_cluster_name)
           Phoenix.PubSub.broadcast(
             EdgeAdmin.PubSub,
-            "#{admin_cluster_name}:metadata",
+            "#{Vpn.admin_cluster_name()}:metadata",
             {:cluster_created, cluster.id}
           )
 
@@ -205,18 +206,17 @@ defmodule EdgeAdmin.Nodes do
       end
 
       # 2. Delete Netmaker network
-      network_name = Cluster.network_name(cluster)
+      network_name = Vpn.cluster_network_name(cluster.name)
 
-      case Nexmaker.Api.Networks.delete(network_name) do
+      case Vpn.delete_network(network_name) do
         {:ok, _} ->
           # 3. Delete from DB
           deleted_cluster = Repo.delete!(cluster)
 
           # 4. Broadcast cluster deletion event to all admins in this admin cluster
-          admin_cluster_name = Application.get_env(:edge_admin, :admin_cluster_name)
           Phoenix.PubSub.broadcast(
             EdgeAdmin.PubSub,
-            "#{admin_cluster_name}:metadata",
+            "#{Vpn.admin_cluster_name()}:metadata",
             {:cluster_deleted, cluster.id}
           )
 
@@ -235,76 +235,6 @@ defmodule EdgeAdmin.Nodes do
     Cluster.changeset(cluster, attrs)
   end
 
-  @doc """
-  Generates the next available IPv4 range from configured pools.
-  """
-  def generate_next_ipv4_range do
-    base_ranges = Application.get_env(:edge_admin, :cluster_auto_generated_ranges)
-    target_prefix = Application.get_env(:edge_admin, :cluster_subnet_prefix)
-
-    # Get all existing ranges
-    existing_ranges = Repo.all(from(c in Cluster, select: c.ipv4_range))
-
-    # Try to find available subnet from each base range
-    Enum.find_value(base_ranges, fn base_range ->
-      find_available_subnet(base_range, target_prefix, existing_ranges)
-    end) || raise "No available IP ranges in configured pools"
-  end
-
-  defp find_available_subnet(base_cidr, target_prefix, existing_ranges) do
-    with {:ok, {base_ip, base_prefix}} <- parse_cidr(base_cidr),
-         subnets <- generate_subnets(base_ip, base_prefix, target_prefix) do
-      Enum.find(subnets, fn subnet ->
-        subnet not in existing_ranges
-      end)
-    else
-      _ -> nil
-    end
-  end
-
-  defp parse_cidr(cidr) do
-    case String.split(cidr, "/") do
-      [ip_str, prefix_str] ->
-        with {:ok, ip_tuple} <- parse_ipv4(ip_str),
-             {prefix, ""} <- Integer.parse(prefix_str) do
-          {:ok, {ip_tuple, prefix}}
-        end
-
-      _ ->
-        {:error, :invalid_cidr}
-    end
-  end
-
-  defp parse_ipv4(ip_str) do
-    case String.split(ip_str, ".") do
-      [a, b, c, d] ->
-        with {a_int, ""} <- Integer.parse(a),
-             {b_int, ""} <- Integer.parse(b),
-             {c_int, ""} <- Integer.parse(c),
-             {d_int, ""} <- Integer.parse(d),
-             true <- Enum.all?([a_int, b_int, c_int, d_int], &(&1 >= 0 and &1 <= 255)) do
-          {:ok, {a_int, b_int, c_int, d_int}}
-        else
-          _ -> {:error, :invalid_ipv4}
-        end
-
-      _ ->
-        {:error, :invalid_ipv4}
-    end
-  end
-
-  defp generate_subnets({a, b, c, d}, base_prefix, target_prefix) do
-    # Simple implementation: for /10 -> /24, generate first 256 subnets
-    # This covers 100.64.0.0/24 through 100.64.255.0/24
-    if target_prefix == 24 and base_prefix == 10 do
-      for third_octet <- 0..255 do
-        "#{a}.#{b}.#{third_octet}.0/24"
-      end
-    else
-      # For other combinations, just return the base as-is for now
-      ["#{a}.#{b}.#{c}.#{d}/#{target_prefix}"]
-    end
-  end
 
   # ===========================================================================
   # Node functions
@@ -343,9 +273,9 @@ defmodule EdgeAdmin.Nodes do
       new_cluster = get_cluster!(new_cluster_id)
 
       # 1. Verify host online (use Netmaker's node status)
-      old_network_name = Cluster.network_name(old_cluster)
+      old_network_name = Vpn.cluster_network_name(old_cluster.name)
 
-      case Nexmaker.Api.Nodes.get(old_network_name, node.id) do
+      case Vpn.get_node(old_network_name, node.id) do
         {:ok, netmaker_node} ->
           # Use Netmaker's computed status field instead of manual lastcheckin comparison
           # Status is computed by Netmaker based on lastcheckin, connected state, and static node config
@@ -358,12 +288,12 @@ defmodule EdgeAdmin.Nodes do
       end
 
       # 2. Add host to new network
-      new_network_name = Cluster.network_name(new_cluster)
+      new_network_name = Vpn.cluster_network_name(new_cluster.name)
 
-      case Nexmaker.Api.Hosts.add_to_network(node.netmaker_host_id, new_network_name) do
+      case Vpn.add_host_to_network(node.netmaker_host_id, new_network_name) do
         {:ok, _} ->
           # 3. Delete node from old network
-          case Nexmaker.Api.Nodes.delete(old_network_name, node.id) do
+          case Vpn.delete_node(old_network_name, node.id) do
             {:ok, _} ->
               # 4. Update database
               updated_node =
@@ -372,10 +302,9 @@ defmodule EdgeAdmin.Nodes do
                 |> Repo.update!()
 
               # 5. Emit PubSub event for metadata recomputation (cluster migration)
-              admin_cluster_name = Application.get_env(:edge_admin, :admin_cluster_name)
               Phoenix.PubSub.broadcast(
                 EdgeAdmin.PubSub,
-                "#{admin_cluster_name}:metadata",
+                "#{Vpn.admin_cluster_name()}:metadata",
                 {:node_updated, node.id, node.cluster_id, new_cluster_id}
               )
 
@@ -403,9 +332,9 @@ defmodule EdgeAdmin.Nodes do
     Repo.transaction(fn ->
       # 1. Delete from Netmaker first (critical - must succeed)
       cluster = get_cluster!(node.cluster_id)
-      network_name = Cluster.network_name(cluster)
+      network_name = Vpn.cluster_network_name(cluster.name)
 
-      case Nexmaker.Api.Nodes.delete(network_name, node.id) do
+      case Vpn.delete_node(network_name, node.id) do
         {:ok, _} ->
           Logger.info("Deleted Netmaker node #{node.id} from network #{network_name}")
 
@@ -413,10 +342,9 @@ defmodule EdgeAdmin.Nodes do
           Repo.delete!(node)
 
           # 3. Emit PubSub event for metadata recomputation
-          admin_cluster_name = Application.get_env(:edge_admin, :admin_cluster_name)
           Phoenix.PubSub.broadcast(
             EdgeAdmin.PubSub,
-            "#{admin_cluster_name}:metadata",
+            "#{Vpn.admin_cluster_name()}:metadata",
             {:node_deleted, node.id, node.cluster_id}
           )
 
@@ -455,9 +383,9 @@ defmodule EdgeAdmin.Nodes do
     cluster = get_cluster!(cluster_id)
 
     # 2. Verify node exists in Netmaker
-    network_name = Cluster.network_name(cluster)
+    network_name = Vpn.cluster_network_name(cluster.name)
 
-    case Nexmaker.Api.Nodes.get(network_name, node_id) do
+    case Vpn.get_node(network_name, node_id) do
       {:ok, netmaker_node} ->
         netmaker_host_id = netmaker_node["hostid"]
 
@@ -504,10 +432,9 @@ defmodule EdgeAdmin.Nodes do
           {:ok, node} ->
             # Emit event only for new nodes (Metadata will recompute assignments)
             if is_new_node do
-              admin_cluster_name = Application.get_env(:edge_admin, :admin_cluster_name)
               Phoenix.PubSub.broadcast(
                 EdgeAdmin.PubSub,
-                "#{admin_cluster_name}:metadata",
+                "#{Vpn.admin_cluster_name()}:metadata",
                 {:node_created, node_id, cluster_id}
               )
             end
@@ -723,7 +650,7 @@ defmodule EdgeAdmin.Nodes do
       Repo.transaction(fn ->
         # 1. Get cluster
         cluster = get_cluster!(cluster_id)
-        network_name = Cluster.network_name(cluster)
+        network_name = Vpn.cluster_network_name(cluster.name)
 
         # 2. Generate unique tag for this key (Netmaker requires unique tags per network)
         # Format: {key_type}-{timestamp}-{random}
@@ -732,7 +659,7 @@ defmodule EdgeAdmin.Nodes do
         tag = "#{key_type}-#{timestamp}-#{random}"
 
         # 3. Create enrollment key in Netmaker
-        case Nexmaker.Api.EnrollmentKeys.create(network_name, %{
+        case Vpn.create_enrollment_key(network_name, %{
                expiration: expiry,
                uses_remaining: uses,
                tags: [tag]
@@ -773,9 +700,9 @@ defmodule EdgeAdmin.Nodes do
   """
   def get_hosts_by_enrollment_key(cluster_id, key_value) do
     cluster = get_cluster!(cluster_id)
-    network_name = Cluster.network_name(cluster)
+    network_name = Vpn.cluster_network_name(cluster.name)
 
-    case Nexmaker.Api.Hosts.list(network_name) do
+    case Vpn.list_hosts(network_name) do
       {:ok, hosts} ->
         # Filter hosts that were enrolled with this key
         # Netmaker stores the enrollment key ID in host metadata
@@ -797,13 +724,13 @@ defmodule EdgeAdmin.Nodes do
   """
   def delete_host(cluster_id, host_id) do
     cluster = get_cluster!(cluster_id)
-    network_name = Cluster.network_name(cluster)
+    network_name = Vpn.cluster_network_name(cluster.name)
 
-    Nexmaker.Api.Hosts.delete(network_name, host_id)
+    Vpn.delete_host(network_name, host_id)
   end
 
   @doc """
-  Cleans up ephemeral nodes enrolled with expired enrollment keys.
+  Cleans up expired ephemeral enrollment keys and their associated resources.
 
   This function:
   1. Finds expired ephemeral enrollment keys (inserted_at < cutoff_time)
@@ -818,7 +745,7 @@ defmodule EdgeAdmin.Nodes do
 
   Returns statistics about the cleanup operation.
   """
-  def cleanup_ephemeral_nodes do
+  def cleanup_ephemeral_keys do
     ttl_hours = Application.get_env(:edge_admin, :ephemeral_key_ttl_hours, 168)
     cutoff_time = DateTime.add(DateTime.utc_now(), -ttl_hours * 3600, :second)
 
@@ -884,7 +811,7 @@ defmodule EdgeAdmin.Nodes do
            end
 
            # 4. Delete the enrollment key from Netmaker
-           case Nexmaker.Api.EnrollmentKeys.delete(enrollment_key.key_value) do
+           case Vpn.delete_enrollment_key(enrollment_key.key_value) do
              {:ok, _} ->
                Logger.info("Deleted enrollment key from Netmaker: #{enrollment_key.key_value}")
 

@@ -10,7 +10,7 @@ defmodule EdgeAdmin.Nodes.Workers.EphemeralKeyCleanupWorker do
   4. Deletes the enrollment keys from Netmaker
   5. Deletes the ephemeral key tracker from our DB
 
-  Delegates to EdgeAdmin.Nodes.cleanup_ephemeral_nodes/0 for the actual cleanup logic.
+  Delegates to EdgeAdmin.Nodes.cleanup_ephemeral_keys/0 for the actual cleanup logic.
 
   Runs on a configurable schedule (default: daily at midnight).
   """
@@ -27,7 +27,7 @@ defmodule EdgeAdmin.Nodes.Workers.EphemeralKeyCleanupWorker do
     if Application.get_env(:edge_admin, :ephemeral_key_cleanup_enabled, true) do
       Logger.info("Starting ephemeral key cleanup")
 
-      result = Nodes.cleanup_ephemeral_nodes()
+      result = Nodes.cleanup_ephemeral_keys()
 
       Logger.info(
         "Ephemeral key cleanup complete: #{result.deleted_keys} keys, " <>

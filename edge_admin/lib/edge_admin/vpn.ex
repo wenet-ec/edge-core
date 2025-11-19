@@ -1,0 +1,451 @@
+# edge_admin/lib/edge_admin/vpn.ex
+defmodule EdgeAdmin.Vpn do
+  @moduledoc """
+  Centralized VPN/Netmaker utilities for Edge Admin.
+
+  This module provides:
+  - DNS hostname building
+  - Network name construction and validation
+  - IPv4/CIDR parsing and subnet generation
+  - Netmaker API wrappers
+  - Config accessors for VPN-related settings
+  """
+
+  require Logger
+
+  # ===========================================================================
+  # Config Accessors
+  # ===========================================================================
+
+  @doc """
+  Returns the default Netmaker DNS domain suffix.
+  Configured via NETMAKER_DEFAULT_DOMAIN (default: "nm.internal")
+  """
+  def default_domain do
+    Application.get_env(:edge_admin, :netmaker_default_domain, "nm.internal")
+  end
+
+  @doc """
+  Returns the admin cluster network name.
+  Configured via :admin_cluster_name in application config.
+  """
+  def admin_cluster_name do
+    Application.get_env(:edge_admin, :admin_cluster_name)
+  end
+
+  @doc """
+  Returns the configured base ranges for auto-generating cluster subnets.
+  """
+  def cluster_auto_generated_ranges do
+    Application.get_env(:edge_admin, :cluster_auto_generated_ranges)
+  end
+
+  @doc """
+  Returns the target subnet prefix for auto-generated clusters.
+  """
+  def cluster_subnet_prefix do
+    Application.get_env(:edge_admin, :cluster_subnet_prefix)
+  end
+
+  # ===========================================================================
+  # DNS/Hostname Building
+  # ===========================================================================
+
+  @doc """
+  Builds a DNS hostname from components.
+
+  ## Examples
+
+      iex> EdgeAdmin.Vpn.build_hostname("node-abc", "cluster-xyz")
+      "node-abc.cluster-xyz.nm.internal"
+
+      iex> EdgeAdmin.Vpn.build_hostname("node-abc", "cluster-xyz", "custom.domain")
+      "node-abc.cluster-xyz.custom.domain"
+
+      iex> EdgeAdmin.Vpn.build_hostname("node-abc", "cluster-xyz", "")
+      "node-abc.cluster-xyz"
+  """
+  def build_hostname(host, network, domain \\ nil) do
+    domain = domain || default_domain()
+
+    case domain do
+      "" -> "#{host}.#{network}"
+      _ -> "#{host}.#{network}.#{domain}"
+    end
+  end
+
+  @doc """
+  Builds a DNS domain from network name.
+
+  ## Examples
+
+      iex> EdgeAdmin.Vpn.build_domain("cluster-xyz")
+      "cluster-xyz.nm.internal"
+  """
+  def build_domain(network, domain \\ nil) do
+    domain = domain || default_domain()
+
+    case domain do
+      "" -> network
+      _ -> "#{network}.#{domain}"
+    end
+  end
+
+  # ===========================================================================
+  # Network Name Construction
+  # ===========================================================================
+
+  @doc """
+  Returns the Netmaker network name for an edge cluster.
+  Format: cluster-{name}
+
+  ## Examples
+
+      iex> EdgeAdmin.Vpn.cluster_network_name("prod-east")
+      "cluster-prod-east"
+  """
+  def cluster_network_name(cluster_name) when is_binary(cluster_name) do
+    "cluster-#{cluster_name}"
+  end
+
+  @doc """
+  Builds a full admin cluster network name from a suffix.
+  Format: admin-cluster-{suffix}
+
+  Validates:
+  - Suffix matches lowercase alphanumeric with hyphens
+  - No leading/trailing hyphens
+  - Total length <= 32 characters (Netmaker limit)
+
+  ## Examples
+
+      iex> EdgeAdmin.Vpn.build_admin_cluster_name("prod")
+      "admin-cluster-prod"
+  """
+  def build_admin_cluster_name(suffix) when is_binary(suffix) do
+    prefix = "admin-cluster-"
+    max_total_length = 32
+
+    # Validate format: lowercase alphanumeric with hyphens, no leading/trailing hyphens
+    unless Regex.match?(~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, suffix) do
+      raise ArgumentError, """
+      Admin cluster name suffix must match format: lowercase alphanumeric with hyphens, no leading/trailing hyphens
+      Got: #{suffix}
+      """
+    end
+
+    # Build full name
+    full_name = "#{prefix}#{suffix}"
+
+    # Validate length
+    if String.length(full_name) > max_total_length do
+      max_suffix_length = max_total_length - String.length(prefix)
+
+      raise ArgumentError, """
+      Admin cluster name exceeds Netmaker's #{max_total_length} character limit
+      Prefix: #{prefix} (#{String.length(prefix)} chars)
+      Suffix: #{suffix} (#{String.length(suffix)} chars)
+      Total: #{String.length(full_name)} chars
+      Max suffix length: #{max_suffix_length} chars
+      """
+    end
+
+    full_name
+  end
+
+  @doc """
+  Validates a network name for Netmaker compatibility.
+
+  Returns :ok or {:error, reason}
+
+  Validates:
+  - Max 32 characters
+  - Lowercase alphanumeric with hyphens
+  - No leading/trailing hyphens
+  """
+  def validate_network_name(name) when is_binary(name) do
+    cond do
+      String.length(name) > 32 ->
+        {:error, "network name exceeds 32 character limit"}
+
+      not Regex.match?(~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, name) ->
+        {:error, "network name must be lowercase alphanumeric with hyphens, no leading/trailing hyphens"}
+
+      true ->
+        :ok
+    end
+  end
+
+  # ===========================================================================
+  # IPv4/CIDR Parsing
+  # ===========================================================================
+
+  @doc """
+  Parses a CIDR string into IP tuple and prefix.
+
+  ## Examples
+
+      iex> EdgeAdmin.Vpn.parse_cidr("10.0.0.0/24")
+      {:ok, {{10, 0, 0, 0}, 24}}
+
+      iex> EdgeAdmin.Vpn.parse_cidr("invalid")
+      {:error, "invalid CIDR format"}
+  """
+  def parse_cidr(cidr) when is_binary(cidr) do
+    case String.split(cidr, "/") do
+      [ip_str, prefix_str] ->
+        with {:ok, ip_tuple} <- parse_ipv4(ip_str),
+             {prefix, ""} <- Integer.parse(prefix_str),
+             true <- prefix >= 0 and prefix <= 32 do
+          {:ok, {ip_tuple, prefix}}
+        else
+          _ -> {:error, "invalid CIDR format"}
+        end
+
+      _ ->
+        {:error, "invalid CIDR format"}
+    end
+  end
+
+  @doc """
+  Parses an IPv4 address string into a tuple.
+
+  ## Examples
+
+      iex> EdgeAdmin.Vpn.parse_ipv4("192.168.1.1")
+      {:ok, {192, 168, 1, 1}}
+
+      iex> EdgeAdmin.Vpn.parse_ipv4("invalid")
+      {:error, "invalid IPv4 address"}
+  """
+  def parse_ipv4(ip_str) when is_binary(ip_str) do
+    case String.split(ip_str, ".") do
+      [a, b, c, d] ->
+        with {a_int, ""} <- Integer.parse(a),
+             {b_int, ""} <- Integer.parse(b),
+             {c_int, ""} <- Integer.parse(c),
+             {d_int, ""} <- Integer.parse(d),
+             true <- Enum.all?([a_int, b_int, c_int, d_int], &(&1 >= 0 and &1 <= 255)) do
+          {:ok, {a_int, b_int, c_int, d_int}}
+        else
+          _ -> {:error, "invalid IPv4 address"}
+        end
+
+      _ ->
+        {:error, "invalid IPv4 address"}
+    end
+  end
+
+  # ===========================================================================
+  # Subnet Generation
+  # ===========================================================================
+
+  @doc """
+  Generates the next available IPv4 range from configured pools.
+
+  Uses :cluster_auto_generated_ranges and :cluster_subnet_prefix from config.
+  Excludes any ranges in the provided list.
+
+  ## Examples
+
+      iex> EdgeAdmin.Vpn.generate_next_subnet(["100.64.0.0/24"])
+      "100.64.1.0/24"
+  """
+  def generate_next_subnet(existing_ranges \\ []) do
+    base_ranges = cluster_auto_generated_ranges()
+    target_prefix = cluster_subnet_prefix()
+
+    # Try to find available subnet from each base range
+    Enum.find_value(base_ranges, fn base_range ->
+      find_available_subnet(base_range, target_prefix, existing_ranges)
+    end) || raise "No available IP ranges in configured pools"
+  end
+
+  @doc """
+  Finds an available subnet within a base CIDR range.
+
+  ## Examples
+
+      iex> EdgeAdmin.Vpn.find_available_subnet("100.64.0.0/10", 24, ["100.64.0.0/24"])
+      "100.64.1.0/24"
+  """
+  def find_available_subnet(base_cidr, target_prefix, existing_ranges) do
+    with {:ok, {base_ip, base_prefix}} <- parse_cidr(base_cidr),
+         subnets <- generate_subnets(base_ip, base_prefix, target_prefix) do
+      Enum.find(subnets, fn subnet ->
+        subnet not in existing_ranges
+      end)
+    else
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Generates all possible subnets within a base range.
+  """
+  def generate_subnets({a, b, _c, _d}, base_prefix, target_prefix) do
+    # Simple implementation: for /10 -> /24, generate first 256 subnets
+    # This covers 100.64.0.0/24 through 100.64.255.0/24
+    if target_prefix == 24 and base_prefix == 10 do
+      for third_octet <- 0..255 do
+        "#{a}.#{b}.#{third_octet}.0/24"
+      end
+    else
+      # For other combinations, just return the base as-is for now
+      ["#{a}.#{b}.0.0/#{target_prefix}"]
+    end
+  end
+
+  # ===========================================================================
+  # Netmaker API Wrappers
+  # ===========================================================================
+
+  @doc """
+  Creates a Netmaker network.
+  """
+  def create_network(network_name, opts \\ %{}) do
+    case validate_network_name(network_name) do
+      :ok ->
+        Nexmaker.Api.Networks.create(network_name, opts)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  Deletes a Netmaker network.
+  """
+  def delete_network(network_name) do
+    Nexmaker.Api.Networks.delete(network_name)
+  end
+
+  @doc """
+  Gets a Netmaker network.
+  """
+  def get_network(network_name) do
+    Nexmaker.Api.Networks.get(network_name)
+  end
+
+  @doc """
+  Ensures a network exists, creating it if necessary.
+
+  Returns :ok on success or {:error, reason} on failure.
+  """
+  def ensure_network_exists(network_name, create_opts \\ %{}) do
+    case get_network(network_name) do
+      {:ok, _network} ->
+        :ok
+
+      {:error, :not_found} ->
+        case create_network(network_name, create_opts) do
+          {:ok, _} -> :ok
+          {:error, reason} -> {:error, reason}
+        end
+
+      # Netmaker returns 500 with "no result found" or "could not find any records"
+      # for non-existent networks (Netmaker uses these error constants for not found)
+      {:error, {:http_error, 500, body}} ->
+        if String.contains?(body, "no result found") or
+             String.contains?(body, "could not find any records") do
+          case create_network(network_name, create_opts) do
+            {:ok, _} -> :ok
+            {:error, reason} -> {:error, reason}
+          end
+        else
+          {:error, {:http_error, 500, body}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  Gets a node from a Netmaker network.
+  """
+  def get_node(network_name, node_id) do
+    Nexmaker.Api.Nodes.get(network_name, node_id)
+  end
+
+  @doc """
+  Lists all nodes in a Netmaker network.
+  """
+  def list_nodes(network_name) do
+    Nexmaker.Api.Nodes.list(network_name)
+  end
+
+  @doc """
+  Deletes a node from a Netmaker network.
+  """
+  def delete_node(network_name, node_id) do
+    Nexmaker.Api.Nodes.delete(network_name, node_id)
+  end
+
+  @doc """
+  Adds a host to a Netmaker network.
+  """
+  def add_host_to_network(host_id, network_name) do
+    Nexmaker.Api.Hosts.add_to_network(host_id, network_name)
+  end
+
+  @doc """
+  Lists Netmaker hosts, optionally filtered by network.
+  """
+  def list_hosts(network_name \\ nil) do
+    if network_name do
+      Nexmaker.Api.Hosts.list(network_name)
+    else
+      Nexmaker.Api.Hosts.list()
+    end
+  end
+
+  @doc """
+  Deletes a Netmaker host.
+  """
+  def delete_host(host_id) do
+    Nexmaker.Api.Hosts.delete(host_id)
+  end
+
+  @doc """
+  Deletes a Netmaker host from a specific network.
+  """
+  def delete_host(network_name, host_id) do
+    Nexmaker.Api.Hosts.delete(network_name, host_id)
+  end
+
+  @doc """
+  Creates an enrollment key for a Netmaker network.
+  """
+  def create_enrollment_key(network_name, opts \\ %{}) do
+    Nexmaker.Api.EnrollmentKeys.create(network_name, opts)
+  end
+
+  @doc """
+  Deletes an enrollment key from Netmaker.
+  """
+  def delete_enrollment_key(key_value) do
+    Nexmaker.Api.EnrollmentKeys.delete(key_value)
+  end
+
+  @doc """
+  Joins a Netmaker network using netclient CLI.
+  """
+  def join_network(opts) do
+    Nexmaker.Cli.join_network(opts)
+  end
+
+  @doc """
+  Checks if Netmaker superadmin exists.
+  """
+  def check_superadmin do
+    Nexmaker.Api.Superadmin.check()
+  end
+
+  @doc """
+  Creates Netmaker superadmin.
+  """
+  def create_superadmin(attrs) do
+    Nexmaker.Api.Superadmin.create(attrs)
+  end
+end

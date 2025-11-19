@@ -15,10 +15,10 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
       description: "Enrollment key information",
       type: :object,
       properties: %{
-        key_value: %Schema{
+        token: %Schema{
           type: :string,
-          description: "The actual enrollment key value from Netmaker",
-          example: "nmkey-abc123def456"
+          description: "The enrollment token used by netclient to join the network",
+          example: "eyJzZXJ2ZXIiOiIxMC4wLjAuMSIsInZhbHVlIjoiQUJDMTIzIn0="
         },
         key_type: %Schema{
           type: :string,
@@ -33,9 +33,9 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
           example: false
         }
       },
-      required: [:key_value, :key_type, :tracked],
+      required: [:token, :key_type, :tracked],
       example: %{
-        key_value: "nmkey-abc123def456",
+        token: "eyJzZXJ2ZXIiOiIxMC4wLjAuMSIsInZhbHVlIjoiQUJDMTIzIn0=",
         key_type: "permanent",
         tracked: false
       }
@@ -56,7 +56,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
       required: [:data],
       example: %{
         data: %{
-          key_value: "nmkey-abc123def456",
+          token: "eyJzZXJ2ZXIiOiIxMC4wLjAuMSIsInZhbHVlIjoiQUJDMTIzIn0=",
           key_type: "permanent",
           tracked: false
         }
@@ -69,9 +69,14 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
     require OpenApiSpex
 
     OpenApiSpex.schema(%{
-      title: "Enrollment Key Create Request",
-      description:
-        "Parameters for creating an enrollment key. Use 'permanent' (default) for production nodes, 'ephemeral' for temporary access.",
+      title: "Enrollment Key Request",
+      description: """
+      Parameters for getting an enrollment key.
+
+      **Permanent (default)**: Retrieves the Netmaker default key (unlimited uses, no expiration).
+
+      **Ephemeral**: Creates a new single-use key (1 hour expiration, tracked for auto-cleanup).
+      """,
       type: :object,
       properties: %{
         enrollment_key: %Schema{
@@ -81,35 +86,19 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
               type: :string,
               nullable: true,
               description:
-                "Key type: 'permanent' (not tracked, for production) or 'ephemeral' (tracked, auto-cleanup). Default: 'permanent'",
+                "Key type: 'permanent' (retrieves default key) or 'ephemeral' (creates single-use key). Default: 'permanent'",
               enum: ["permanent", "ephemeral"],
               example: "permanent"
-            },
-            expiry: %Schema{
-              type: :integer,
-              nullable: true,
-              description: "Key expiration time in seconds (default: 86400 = 24 hours)",
-              example: 86400
-            },
-            uses: %Schema{
-              type: :integer,
-              nullable: true,
-              description: "Number of times the key can be used (default: 1)",
-              example: 1
             }
           },
           example: %{
-            key_type: "permanent",
-            expiry: 86400,
-            uses: 1
+            key_type: "permanent"
           }
         }
       },
       example: %{
         enrollment_key: %{
-          key_type: "permanent",
-          expiry: 86400,
-          uses: 1
+          key_type: "permanent"
         }
       }
     })

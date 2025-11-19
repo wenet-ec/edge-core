@@ -12,35 +12,33 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyControllerTest do
   end
 
   describe "create enrollment key for cluster" do
-    test "creates permanent enrollment key successfully (default)", %{conn: conn} do
+    test "retrieves permanent enrollment key successfully (default)", %{conn: conn} do
       expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
       cluster = cluster_fixture()
 
-      expect(NexmakerMock, :create_enrollment_key, fn _network_name, params ->
-        assert params[:expiration] == 3600
-        assert params[:uses_remaining] == 1
-        # Verify unique tag is generated
-        assert is_list(params[:tags])
-        assert length(params[:tags]) == 1
-        [tag] = params[:tags]
-        assert String.starts_with?(tag, "permanent-")
-        {:ok, %{"value" => "nmkey-permanent-abc123"}}
+      # Mock listing all enrollment keys - returns keys with "default": true field
+      expect(NexmakerMock, :list_enrollment_keys, fn ->
+        {:ok, [
+          %{
+            "token" => "eyJ0b2tlbi1kZWZhdWx0LWFiYzEyMyJ9",
+            "networks" => ["cluster-#{cluster.name}"],
+            "default" => true
+          }
+        ]}
       end)
 
       conn =
-        post(conn, ~p"/api/clusters/#{cluster.id}/enrollment_keys", %{
-          enrollment_key: %{expiry: 3600}
-        })
+        post(conn, ~p"/api/clusters/#{cluster.id}/enrollment_keys", %{})
 
       response = json_response(conn, 201)
-      assert response["data"]["key_value"] == "nmkey-permanent-abc123"
+      assert response["data"]["token"] == "eyJ0b2tlbi1kZWZhdWx0LWFiYzEyMyJ9"
       assert response["data"]["key_type"] == "permanent"
       assert response["data"]["tracked"] == false
 
       # Verify NOT tracked in DB
       ephemeral_key =
         EdgeAdmin.Repo.get_by(EdgeAdmin.Nodes.EphemeralEnrollmentKey,
-          key_value: "nmkey-permanent-abc123"
+          token: "eyJ0b2tlbi1kZWZhdWx0LWFiYzEyMyJ9"
         )
 
       refute ephemeral_key
@@ -51,6 +49,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyControllerTest do
       cluster = cluster_fixture()
 
       expect(NexmakerMock, :create_enrollment_key, fn _network_name, params ->
+        # Ephemeral keys have fixed 1 hour expiration and 1 use
         assert params[:expiration] == 3600
         assert params[:uses_remaining] == 1
         # Verify unique tag is generated
@@ -58,47 +57,48 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyControllerTest do
         assert length(params[:tags]) == 1
         [tag] = params[:tags]
         assert String.starts_with?(tag, "ephemeral-")
-        {:ok, %{"value" => "nmkey-ephemeral-abc123"}}
+        {:ok, %{"token" => "eyJ0b2tlbi1lcGhlbWVyYWwtYWJjMTIzIn0="}}
       end)
 
       conn =
         post(conn, ~p"/api/clusters/#{cluster.id}/enrollment_keys", %{
-          enrollment_key: %{key_type: "ephemeral", expiry: 3600}
+          enrollment_key: %{key_type: "ephemeral"}
         })
 
       response = json_response(conn, 201)
-      assert response["data"]["key_value"] == "nmkey-ephemeral-abc123"
+      assert response["data"]["token"] == "eyJ0b2tlbi1lcGhlbWVyYWwtYWJjMTIzIn0="
       assert response["data"]["key_type"] == "ephemeral"
       assert response["data"]["tracked"] == true
 
       # Verify tracked in DB
       ephemeral_key =
         EdgeAdmin.Repo.get_by(EdgeAdmin.Nodes.EphemeralEnrollmentKey,
-          key_value: "nmkey-ephemeral-abc123"
+          token: "eyJ0b2tlbi1lcGhlbWVyYWwtYWJjMTIzIn0="
         )
 
       assert ephemeral_key
       assert ephemeral_key.cluster_id == cluster.id
     end
 
-    test "uses default expiry and key_type if not provided", %{conn: conn} do
+    test "uses permanent key_type by default", %{conn: conn} do
       expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
       cluster = cluster_fixture()
 
-      expect(NexmakerMock, :create_enrollment_key, fn _network_name, params ->
-        assert params[:expiration] == 86400
-        # Verify unique tag is generated (defaults to permanent)
-        assert is_list(params[:tags])
-        assert length(params[:tags]) == 1
-        [tag] = params[:tags]
-        assert String.starts_with?(tag, "permanent-")
-        {:ok, %{"value" => "nmkey-default"}}
+      # Mock listing all enrollment keys
+      expect(NexmakerMock, :list_enrollment_keys, fn ->
+        {:ok, [
+          %{
+            "token" => "eyJ0b2tlbi1kZWZhdWx0LWtleSJ9",
+            "networks" => ["cluster-#{cluster.name}"],
+            "default" => true
+          }
+        ]}
       end)
 
       conn = post(conn, ~p"/api/clusters/#{cluster.id}/enrollment_keys", %{})
 
       response = json_response(conn, 201)
-      assert response["data"]["key_value"] == "nmkey-default"
+      assert response["data"]["token"] == "eyJ0b2tlbi1kZWZhdWx0LWtleSJ9"
       assert response["data"]["key_type"] == "permanent"
       assert response["data"]["tracked"] == false
     end
@@ -108,37 +108,57 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyControllerTest do
 
       conn =
         post(conn, ~p"/api/clusters/#{invalid_cluster_id}/enrollment_keys", %{
-          enrollment_key: %{expiry: 3600}
+          enrollment_key: %{}
         })
 
       assert json_response(conn, 404)
     end
+
+    test "returns error when default key not found", %{conn: conn} do
+      expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
+      cluster = cluster_fixture()
+
+      # Mock listing enrollment keys with no default key for this network
+      expect(NexmakerMock, :list_enrollment_keys, fn ->
+        {:ok, [
+          %{
+            "token" => "eyJ0b2tlbi1vdGhlciJ9",
+            "networks" => ["other-network"],
+            "default" => true
+          }
+        ]}
+      end)
+
+      conn = post(conn, ~p"/api/clusters/#{cluster.id}/enrollment_keys", %{})
+
+      assert json_response(conn, 422)
+    end
   end
 
   describe "create enrollment key for default cluster" do
-    test "creates permanent key for default cluster successfully", %{conn: conn} do
+    test "retrieves permanent key for default cluster successfully", %{conn: conn} do
       # Set default cluster name in config
       Application.put_env(:edge_admin, :default_cluster_name, "default")
 
       expect(NexmakerMock, :create_network, fn _, _ -> {:ok, %{}} end)
       cluster = cluster_fixture(%{name: "default"})
 
-      expect(NexmakerMock, :create_enrollment_key, fn _network_name, params ->
-        # Verify unique tag is generated
-        assert is_list(params[:tags])
-        assert length(params[:tags]) == 1
-        [tag] = params[:tags]
-        assert String.starts_with?(tag, "permanent-")
-        {:ok, %{"value" => "nmkey-default-cluster"}}
+      # Mock listing all enrollment keys
+      expect(NexmakerMock, :list_enrollment_keys, fn ->
+        {:ok, [
+          %{
+            "token" => "eyJ0b2tlbi1kZWZhdWx0LWNsdXN0ZXIifQ==",
+            "networks" => ["cluster-default"],
+            "default" => true
+          }
+        ]}
       end)
 
       conn =
-        post(conn, ~p"/api/clusters/default/enrollment_keys", %{
-          enrollment_key: %{expiry: 7200}
-        })
+        post(conn, ~p"/api/clusters/default/enrollment_keys", %{})
 
       response = json_response(conn, 201)
-      assert response["data"]["key_value"] == "nmkey-default-cluster"
+      assert response["data"]["token"] == "eyJ0b2tlbi1kZWZhdWx0LWNsdXN0ZXIifQ=="
       assert response["data"]["key_type"] == "permanent"
       assert response["data"]["tracked"] == false
     end
@@ -151,28 +171,31 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyControllerTest do
       cluster = cluster_fixture(%{name: "default"})
 
       expect(NexmakerMock, :create_enrollment_key, fn _network_name, params ->
+        # Ephemeral keys have fixed 1 hour expiration and 1 use
+        assert params[:expiration] == 3600
+        assert params[:uses_remaining] == 1
         # Verify unique tag is generated
         assert is_list(params[:tags])
         assert length(params[:tags]) == 1
         [tag] = params[:tags]
         assert String.starts_with?(tag, "ephemeral-")
-        {:ok, %{"value" => "nmkey-default-ephemeral"}}
+        {:ok, %{"token" => "eyJ0b2tlbi1kZWZhdWx0LWVwaGVtZXJhbCJ9"}}
       end)
 
       conn =
         post(conn, ~p"/api/clusters/default/enrollment_keys", %{
-          enrollment_key: %{key_type: "ephemeral", expiry: 7200}
+          enrollment_key: %{key_type: "ephemeral"}
         })
 
       response = json_response(conn, 201)
-      assert response["data"]["key_value"] == "nmkey-default-ephemeral"
+      assert response["data"]["token"] == "eyJ0b2tlbi1kZWZhdWx0LWVwaGVtZXJhbCJ9"
       assert response["data"]["key_type"] == "ephemeral"
       assert response["data"]["tracked"] == true
 
       # Verify tracked in DB
       ephemeral_key =
         EdgeAdmin.Repo.get_by(EdgeAdmin.Nodes.EphemeralEnrollmentKey,
-          key_value: "nmkey-default-ephemeral"
+          token: "eyJ0b2tlbi1kZWZhdWx0LWVwaGVtZXJhbCJ9"
         )
 
       assert ephemeral_key

@@ -422,6 +422,42 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
+  Lists all enrollment keys from Netmaker.
+  """
+  def list_enrollment_keys do
+    Nexmaker.Api.EnrollmentKeys.list()
+  end
+
+  @doc """
+  Gets the default enrollment key for a network.
+
+  Netmaker automatically creates a default key (with "default": true) when a network is created.
+  This key has unlimited uses and no expiration.
+
+  Returns {:ok, token} or {:error, reason}
+  """
+  def get_default_enrollment_key(network_name) do
+    case list_enrollment_keys() do
+      {:ok, keys} ->
+        # Find the default key for this network
+        default_key = Enum.find(keys, fn key ->
+          # Check if key is for this network and is the default key
+          networks = Map.get(key, "networks", [])
+          is_default = Map.get(key, "default", false)
+          network_name in networks and is_default
+        end)
+
+        case default_key do
+          nil -> {:error, :default_key_not_found}
+          key -> {:ok, key["token"]}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
   Deletes an enrollment key from Netmaker.
   """
   def delete_enrollment_key(key_value) do

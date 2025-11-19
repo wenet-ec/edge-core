@@ -615,101 +615,120 @@ defmodule EdgeAdmin.Nodes do
   # ===========================================================================
 
   @doc """
-  Creates an enrollment key for a cluster.
+  Gets an enrollment key for a cluster.
 
   ## Parameters
-    - cluster_id: The cluster ID to create the key for
+    - cluster_id: The cluster ID to get the key for
     - attrs: Map with:
-      - :key_type - "ephemeral" (tracked in DB, auto-cleanup) or "permanent" (not tracked), default "permanent"
-      - :expiry - Seconds until expiration, default 86400 (24 hours)
-      - :uses - Number of uses, default 1
+      - :key_type - "ephemeral" (tracked in DB, auto-cleanup) or "permanent" (default key, not tracked), default "permanent"
 
   ## Returns
     - {:ok, %{key_value: string, key_type: string, tracked: boolean}} on success
     - {:error, changeset | reason} on failure
 
-  ## Examples
-      # Permanent key (production edge nodes, not tracked)
-      create_enrollment_key(cluster_id, %{key_type: "permanent", expiry: 604800})
-      # => {:ok, %{key_value: "nmkey-...", key_type: "permanent", tracked: false}}
+  ## Key Types
 
-      # Ephemeral key (staff/testing, tracked for cleanup)
-      create_enrollment_key(cluster_id, %{key_type: "ephemeral", expiry: 86400})
-      # => {:ok, %{key_value: "nmkey-...", key_type: "ephemeral", tracked: true}}
+  ### Permanent (default)
+  Retrieves the Netmaker default enrollment key for the network.
+  - Unlimited uses
+  - No expiration
+  - Not tracked in our DB
+  - Use for: Production edge nodes, bulk deployments
+
+  ### Ephemeral
+  Creates a new single-use key with 1 hour expiration.
+  - 1 use only
+  - 1 hour expiration
+  - Tracked in DB for auto-cleanup
+  - Use for: Staff testing, temporary access, demos
+
+  ## Examples
+      # Permanent key (retrieves default key from Netmaker)
+      create_enrollment_key(cluster_id)
+      # => {:ok, %{token: "eyJ...", key_type: "permanent", tracked: false}}
+
+      # Ephemeral key (creates new single-use key)
+      create_enrollment_key(cluster_id, %{key_type: "ephemeral"})
+      # => {:ok, %{token: "eyJ...", key_type: "ephemeral", tracked: true}}
   """
   def create_enrollment_key(cluster_id, attrs \\ %{}) do
     # Parse parameters
     key_type = Map.get(attrs, :key_type, Map.get(attrs, "key_type", "permanent"))
-    expiry = Map.get(attrs, :expiry, Map.get(attrs, "expiry", 86400))
-    uses = Map.get(attrs, :uses, Map.get(attrs, "uses", 1))
 
     # Validate key_type
     if key_type not in ["ephemeral", "permanent"] do
       {:error, "key_type must be 'ephemeral' or 'permanent'"}
     else
-      Repo.transaction(fn ->
-        # 1. Get cluster
-        cluster = get_cluster!(cluster_id)
-        network_name = Vpn.cluster_network_name(cluster.name)
+      # Get cluster
+      cluster = get_cluster!(cluster_id)
+      network_name = Vpn.cluster_network_name(cluster.name)
 
-        # 2. Generate unique tag for this key (Netmaker requires unique tags per network)
-        # Format: {key_type}-{timestamp}-{random}
-        timestamp = System.system_time(:millisecond)
-        random = :crypto.strong_rand_bytes(4) |> Base.encode16(case: :lower)
-        tag = "#{key_type}-#{timestamp}-#{random}"
+      case key_type do
+        "permanent" ->
+          # Retrieve the default key from Netmaker (created automatically with network)
+          case Vpn.get_default_enrollment_key(network_name) do
+            {:ok, token} ->
+              {:ok, %{token: token, key_type: "permanent", tracked: false}}
 
-        # 3. Create enrollment key in Netmaker
-        case Vpn.create_enrollment_key(network_name, %{
-               expiration: expiry,
-               uses_remaining: uses,
-               tags: [tag]
-             }) do
-          {:ok, netmaker_key} ->
-            key_value = netmaker_key["value"]
+            {:error, reason} ->
+              {:error, reason}
+          end
 
-            # 4. Only track ephemeral keys in DB
-            if key_type == "ephemeral" do
-              case %EphemeralEnrollmentKey{}
-                   |> EphemeralEnrollmentKey.changeset(%{
-                     key_value: key_value,
-                     cluster_id: cluster_id
-                   })
-                   |> Repo.insert() do
-                {:ok, _} ->
-                  %{key_value: key_value, key_type: key_type, tracked: true}
+        "ephemeral" ->
+          # Create a new single-use key with 1 hour expiration
+          Repo.transaction(fn ->
+            # Generate unique tag for this key
+            timestamp = System.system_time(:millisecond)
+            random = :crypto.strong_rand_bytes(4) |> Base.encode16(case: :lower)
+            tag = "ephemeral-#{timestamp}-#{random}"
 
-                {:error, changeset} ->
-                  Repo.rollback(changeset)
-              end
-            else
-              # Permanent key - don't track in DB
-              %{key_value: key_value, key_type: key_type, tracked: false}
+            case Vpn.create_enrollment_key(network_name, %{
+                   expiration: 3600,  # 1 hour
+                   uses_remaining: 1,
+                   tags: [tag]
+                 }) do
+              {:ok, netmaker_key} ->
+                token = netmaker_key["token"]
+
+                # Track in DB for cleanup
+                case %EphemeralEnrollmentKey{}
+                     |> EphemeralEnrollmentKey.changeset(%{
+                       token: token,
+                       cluster_id: cluster_id
+                     })
+                     |> Repo.insert() do
+                  {:ok, _} ->
+                    %{token: token, key_type: "ephemeral", tracked: true}
+
+                  {:error, changeset} ->
+                    Repo.rollback(changeset)
+                end
+
+              {:error, reason} ->
+                Repo.rollback(reason)
             end
-
-          {:error, reason} ->
-            Repo.rollback(reason)
-        end
-      end)
+          end)
+      end
     end
   end
 
   @doc """
-  Gets hosts enrolled with a specific enrollment key from Netmaker.
+  Gets hosts enrolled with a specific enrollment token from Netmaker.
 
   Returns list of Netmaker host records.
   """
-  def get_hosts_by_enrollment_key(cluster_id, key_value) do
+  def get_hosts_by_enrollment_token(cluster_id, token) do
     cluster = get_cluster!(cluster_id)
     network_name = Vpn.cluster_network_name(cluster.name)
 
     case Vpn.list_hosts(network_name) do
       {:ok, hosts} ->
-        # Filter hosts that were enrolled with this key
-        # Netmaker stores the enrollment key ID in host metadata
+        # Filter hosts that were enrolled with this token
+        # Netmaker stores the enrollment key value in host metadata
         hosts
         |> Enum.filter(fn host ->
           # Check if host has the enrollment key in metadata
-          Map.get(host, "enrollmentkey") == key_value
+          Map.get(host, "enrollmentkey") == token
         end)
 
       {:error, _} ->
@@ -772,13 +791,13 @@ defmodule EdgeAdmin.Nodes do
   end
 
   defp cleanup_enrollment_key(enrollment_key, acc) do
-    Logger.debug("Processing expired key: #{enrollment_key.key_value}")
+    Logger.debug("Processing expired key: #{enrollment_key.token}")
 
     # Wrap entire cleanup in transaction - rollback everything if ANY step fails
     case Repo.transaction(fn ->
-           # 1. Query Netmaker for hosts using this key
+           # 1. Query Netmaker for hosts using this token
            netmaker_hosts =
-             get_hosts_by_enrollment_key(enrollment_key.cluster_id, enrollment_key.key_value)
+             get_hosts_by_enrollment_token(enrollment_key.cluster_id, enrollment_key.token)
 
            host_ids = Enum.map(netmaker_hosts, & &1["id"])
 
@@ -811,9 +830,9 @@ defmodule EdgeAdmin.Nodes do
            end
 
            # 4. Delete the enrollment key from Netmaker
-           case Vpn.delete_enrollment_key(enrollment_key.key_value) do
+           case Vpn.delete_enrollment_key(enrollment_key.token) do
              {:ok, _} ->
-               Logger.info("Deleted enrollment key from Netmaker: #{enrollment_key.key_value}")
+               Logger.info("Deleted enrollment key from Netmaker: #{enrollment_key.token}")
 
              {:error, reason} ->
                # Log but don't fail - key might already be deleted
@@ -843,7 +862,7 @@ defmodule EdgeAdmin.Nodes do
       {:error, reason} ->
         # Transaction failed - log and skip this key
         Logger.error(
-          "Transaction failed for ephemeral key #{enrollment_key.key_value}: #{inspect(reason)}"
+          "Transaction failed for ephemeral key #{enrollment_key.token}: #{inspect(reason)}"
         )
 
         acc

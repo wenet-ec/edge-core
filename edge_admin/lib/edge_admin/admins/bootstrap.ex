@@ -137,8 +137,8 @@ defmodule EdgeAdmin.Admins.Bootstrap do
     Logger.info("Step 1: Joining VPN network #{network_name}")
 
     with :ok <- ensure_network_exists(network_name),
-         {:ok, key} <- create_enrollment_key(network_name),
-         :ok <- join_network(key) do
+         {:ok, key_value} <- get_default_enrollment_key(network_name),
+         :ok <- join_network(key_value) do
       Logger.info("Successfully joined admin cluster network")
       :ok
     else
@@ -159,16 +159,14 @@ defmodule EdgeAdmin.Admins.Bootstrap do
     Vpn.ensure_network_exists(network_name, %{addressrange: subnet})
   end
 
-  defp create_enrollment_key(network_name) do
-    Vpn.create_enrollment_key(network_name, %{
-      uses_remaining: 1,
-      expiration: 86400,
-      tags: [admin_name()]
-    })
+  defp get_default_enrollment_key(network_name) do
+    # Use the default key created automatically by Netmaker
+    # This avoids creating a new key on every admin restart
+    Vpn.get_default_enrollment_key(network_name)
   end
 
-  defp join_network(key) do
-    case Vpn.join_network(token: key["token"], name: admin_name()) do
+  defp join_network(key_value) do
+    case Vpn.join_network(token: key_value, name: admin_name()) do
       {:ok, _} -> :ok
       {:error, reason} -> {:error, reason}
     end

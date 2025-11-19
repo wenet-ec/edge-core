@@ -8,9 +8,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyJSON do
   end
 
   # Handle map response from create_enrollment_key/2
-  defp data(%{key_value: key_value, key_type: key_type, tracked: tracked}) do
+  defp data(%{token: token, key_type: key_type, tracked: tracked}) do
     %{
-      key_value: key_value,
+      token: token,
       key_type: key_type,
       tracked: tracked
     }

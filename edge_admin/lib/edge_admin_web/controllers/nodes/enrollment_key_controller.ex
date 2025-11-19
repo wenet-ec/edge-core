@@ -12,9 +12,16 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   tags(["Nodes.EnrollmentKey"])
 
   operation(:create,
-    summary: "Create enrollment key for cluster",
-    description:
-      "Creates an enrollment key for a cluster. Use key_type='permanent' (default) for production edge nodes, or key_type='ephemeral' for temporary access (staff troubleshooting or ephemeral nodes that will be auto-cleaned after TTL)",
+    summary: "Get enrollment key for cluster",
+    description: """
+    Gets an enrollment key for a cluster.
+
+    **Permanent (default)**: Retrieves the Netmaker default key (unlimited uses, no expiration).
+    Use for production edge nodes and bulk deployments.
+
+    **Ephemeral**: Creates a new single-use key (1 hour expiration, tracked for auto-cleanup).
+    Use for staff testing, temporary access, or demos.
+    """,
     parameters: [
       cluster_id: [
         in: :path,
@@ -27,7 +34,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
        EnrollmentKeySchemas.EnrollmentKeyCreateRequest},
     responses: %{
       201 =>
-        {"Enrollment key created", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
+        {"Enrollment key retrieved/created", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
       404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
     }
@@ -44,15 +51,15 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   end
 
   operation(:create_for_default,
-    summary: "Create enrollment key for default cluster",
+    summary: "Get enrollment key for default cluster",
     description:
-      "Convenience endpoint that creates an enrollment key for the default cluster (configured via DEFAULT_CLUSTER_NAME env)",
+      "Convenience endpoint that gets an enrollment key for the default cluster (configured via DEFAULT_CLUSTER_NAME env)",
     request_body:
       {"Enrollment key parameters", "application/json",
        EnrollmentKeySchemas.EnrollmentKeyCreateRequest},
     responses: %{
       201 =>
-        {"Enrollment key created", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
+        {"Enrollment key retrieved/created", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
       400 => {"Default cluster not configured", "application/json", CommonSchemas.ErrorResponse},
       404 => {"Default cluster not found", "application/json", CommonSchemas.NotFoundResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}

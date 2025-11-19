@@ -38,6 +38,7 @@ NETMAKER_API_URL=http://edge_vpn:8081
 NETMAKER_MASTER_KEY=supersecretkey123456789
 NETMAKER_SUPERADMIN_USERNAME=admin
 NETMAKER_SUPERADMIN_PASSWORD=admin
+WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
 
 # Metrics configuration
 METRICS_STORAGE_URL=http://edge_metrics_storage:8428
@@ -53,6 +54,7 @@ EPHEMERAL_KEY_CLEANUP_ENABLED=true
 
 # Admin clustering configuration
 ADMIN_CLUSTER_NAME=1  # Will be prefixed with "admin-cluster-" → admin-cluster-1 (max 16 chars for suffix)
+ADMIN_CLUSTER_SUBNET=100.63.0.0/24  # IPv4 CIDR for admin cluster network (separate from edge clusters)
 ADMIN_MAX_CAPACITY=200  # Maximum number of nodes this admin can handle
 ERLANG_COOKIE=local-cookie  # Shared secret for Erlang distribution
 ADMIN_DISCOVERY_PORT=4000  # Port to scan for admin discovery endpoint

@@ -5,6 +5,10 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+# Wipe netclient credentials to start fresh every boot
+echo "Wiping netclient credentials..."
+rm -rf /etc/netclient/*
+
 echo "Running migrations..."
 /app/bin/migrate
 
@@ -13,6 +17,16 @@ echo "Bootstrapping Netmaker superadmin..."
 
 echo "Bootstrapping default cluster..."
 /app/bin/create_default_cluster
+
+# Start EPMD daemon for Erlang distribution
+echo "Starting EPMD daemon..."
+epmd -daemon
+
+# Start netclient daemon in the background
+echo "Starting netclient daemon..."
+netclient daemon &
+NETCLIENT_PID=$!
+echo "Netclient daemon started with PID: $NETCLIENT_PID"
 
 echo "Starting server..."
 exec /app/bin/server

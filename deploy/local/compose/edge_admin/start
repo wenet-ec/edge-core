@@ -5,6 +5,10 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+# Wipe netclient credentials to start fresh every boot
+echo "Wiping netclient credentials..."
+rm -rf /etc/netclient/*
+
 mix deps.get
 mix compile
 mix ecto.migrate
@@ -16,6 +20,16 @@ mix run -e "EdgeAdmin.Release.create_netmaker_superadmin()"
 # Bootstrap default cluster
 echo "Bootstrapping default cluster..."
 mix run -e "EdgeAdmin.Release.create_default_cluster()"
+
+# Start EPMD daemon for Erlang distribution
+echo "Starting EPMD daemon..."
+epmd -daemon
+
+# Start netclient daemon in the background
+echo "Starting netclient daemon..."
+netclient daemon &
+NETCLIENT_PID=$!
+echo "Netclient daemon started with PID: $NETCLIENT_PID"
 
 # Start the development server with hot reloading
 echo "Starting Phoenix server..."

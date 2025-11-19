@@ -24,3 +24,4 @@ MQ_USERNAME=admin
 MQ_PASSWORD=netmaker123
 VERBOSITY=1
 STUN_LIST=stun1.l.google.com:19302,stun2.l.google.com:19302,stun.netmaker.io:3478
+SERVER_API_CONN_STRING=netmaker.yourdomain.com

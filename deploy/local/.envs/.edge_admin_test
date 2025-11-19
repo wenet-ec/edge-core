@@ -24,3 +24,6 @@ DB_SSL=false
 
 # Optional: Enable detailed test output
 # TRACE_TESTS=true
+
+# Netmaker (for netclient userspace mode)
+WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go

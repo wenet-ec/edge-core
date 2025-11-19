@@ -15,21 +15,12 @@ services:
       dockerfile: ./deploy/production/compose/edge_agent/Dockerfile
     image: production_edge_agent
     container_name: production_edge_agent
-    networks:
-      - production_edge_core
+    network_mode: host
     volumes:
       - production_edge_agent_data:/app/data
       - production_edge_agent_netclient_data:/etc/netclient
-      - /dev/net/tun:/dev/net/tun
       - /:/host:ro
     env_file:
       - ./.envs/.edge_agent
-    ports:
-      - "4400:4000"
-    cap_add:
-      - NET_ADMIN
-    sysctls:
-      - net.ipv4.ip_forward=1
     privileged: true
-    pid: "host"
     command: /start

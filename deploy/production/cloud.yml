@@ -6,7 +6,6 @@ networks:
 volumes:
   production_edge_admin_db_data: {}
   production_edge_admin_db_data_backups: {}
-  production_edge_admin_netclient_data: {}
   production_edge_metrics_storage_data: {}
   production_edge_metrics_collector_data: {}
   production_edge_vpn_data: {}
@@ -51,7 +50,6 @@ services:
       edge_admin_db:
         condition: service_healthy
     volumes:
-      - production_edge_admin_netclient_data:/etc/netclient
       - /dev/net/tun:/dev/net/tun
     env_file:
       - ./.envs/.edge_admin
@@ -79,6 +77,12 @@ services:
       - production_edge_vpn_db_data:/var/lib/postgresql
     env_file:
       - ./.envs/.edge_vpn_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   edge_vpn_broker:
     image: emqx/emqx:6.0.1
@@ -96,6 +100,12 @@ services:
       - ./compose/edge_vpn_broker/emqx.conf:/opt/emqx/data/configs/cluster.hocon
     env_file:
       - ./.envs/.edge_vpn_broker
+    healthcheck:
+      test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   edge_vpn:
     image: gravitl/netmaker:v1.2.0
@@ -118,8 +128,10 @@ services:
     ports:
       - "8081:8081"
     depends_on:
-      - edge_vpn_db
-      - edge_vpn_broker
+      edge_vpn_db:
+        condition: service_healthy
+      edge_vpn_broker:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/api/server/health || nc -z localhost 8081 || exit 1"]
       interval: 10s
@@ -147,7 +159,10 @@ services:
     image: caddy:2.10-alpine
     container_name: production_edge_vpn_proxy
     networks:
-      - production_edge_core
+      production_edge_core:
+        aliases:
+          - netmaker.yourdomain.com
+          - broker.yourdomain.com
     ports:
       - "443:443"
       - "80:80"

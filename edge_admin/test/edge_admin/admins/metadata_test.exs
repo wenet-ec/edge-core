@@ -22,10 +22,10 @@ defmodule EdgeAdmin.Admins.MetadataTest do
       assert admin_cluster.name != nil
       assert admin_cluster.degraded == false
 
-      # Check :edge_clusters key
+      # Check :edge_clusters key (uses admin_name as key)
       [{:edge_clusters, edge_clusters}] = :ets.lookup(:metadata, :edge_clusters)
       assert is_map(edge_clusters)
-      assert Map.has_key?(edge_clusters, admin.id)
+      assert Map.has_key?(edge_clusters, admin.name)
     end
   end
 
@@ -52,31 +52,31 @@ defmodule EdgeAdmin.Admins.MetadataTest do
       assert Metadata.get_cluster_owner("non-existent") == nil
     end
 
-    test "returns admin_id for assigned cluster" do
+    test "returns admin_name for assigned cluster" do
       # Insert test data into ETS
-      admin_id = Metadata.get_admin_id()
+      admin = Metadata.get_admin()
 
       :ets.insert(:metadata, {
         :edge_clusters,
         %{
-          admin_id => %{
+          admin.name => %{
             "cluster-test" => ["node-1", "node-2"]
           }
         }
       })
 
-      assert Metadata.get_cluster_owner("cluster-test") == admin_id
+      assert Metadata.get_cluster_owner("cluster-test") == admin.name
     end
   end
 
   describe "get_my_clusters/0" do
     test "returns clusters managed by this admin" do
-      admin_id = Metadata.get_admin_id()
+      admin = Metadata.get_admin()
 
       :ets.insert(:metadata, {
         :edge_clusters,
         %{
-          admin_id => %{
+          admin.name => %{
             "cluster-a" => ["node-1"],
             "cluster-b" => []
           }
@@ -97,16 +97,16 @@ defmodule EdgeAdmin.Admins.MetadataTest do
           total_admins: 2,
           degraded: false,
           topology: [
-            %{id: "admin-1", max_capacity: 200},
-            %{id: "admin-2", max_capacity: 300}
+            %{name: "admin-1", max_capacity: 200},
+            %{name: "admin-2", max_capacity: 300}
           ]
         }
       })
 
       peers = Metadata.get_peer_admins()
       assert length(peers) == 2
-      assert Enum.any?(peers, fn p -> p.id == "admin-1" end)
-      assert Enum.any?(peers, fn p -> p.id == "admin-2" end)
+      assert Enum.any?(peers, fn p -> p.name == "admin-1" end)
+      assert Enum.any?(peers, fn p -> p.name == "admin-2" end)
     end
   end
 

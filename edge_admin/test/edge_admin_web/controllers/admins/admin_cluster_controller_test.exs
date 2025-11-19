@@ -22,12 +22,12 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminClusterControllerTest do
       degraded: false,
       topology: [
         %{
-          id: "admin-test123456",
+          name: "admin-test123456",
           max_capacity: 100,
           erlang_node_name: :"admin@admin-test123456.admin-cluster-test.nm.internal"
         },
         %{
-          id: "admin-peer789012",
+          name: "admin-peer789012",
           max_capacity: 200,
           erlang_node_name: :"admin@admin-peer789012.admin-cluster-test.nm.internal"
         }
@@ -50,9 +50,9 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminClusterControllerTest do
       conn = get(conn, ~p"/api/admins/admin_cluster")
       response = json_response(conn, 200)
 
-      first_admin = Enum.find(response["topology"], fn a -> a["id"] == "admin-test123456" end)
+      first_admin = Enum.find(response["topology"], fn a -> a["name"] == "admin-test123456" end)
 
-      assert first_admin["id"] == "admin-test123456"
+      assert first_admin["name"] == "admin-test123456"
       assert first_admin["max_capacity"] == 100
       assert first_admin["erlang_node_name"] == "admin@admin-test123456.admin-cluster-test.nm.internal"
     end
@@ -74,7 +74,7 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminClusterControllerTest do
         degraded: true,
         topology: [
           %{
-            id: "admin-test123456",
+            name: "admin-test123456",
             max_capacity: 100,
             erlang_node_name: :"admin@admin-test123456.admin-cluster-test.nm.internal"
           }

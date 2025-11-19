@@ -68,9 +68,9 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
       description: "A peer admin in the cluster topology",
       type: :object,
       properties: %{
-        id: %Schema{
+        name: %Schema{
           type: :string,
-          description: "Admin ID"
+          description: "Admin name (e.g., admin-k7m3n2p9x4j6)"
         },
         max_capacity: %Schema{
           type: :integer,
@@ -81,9 +81,9 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           description: "Erlang distribution node name"
         }
       },
-      required: [:id, :max_capacity, :erlang_node_name],
+      required: [:name, :max_capacity, :erlang_node_name],
       example: %{
-        id: "admin-k7m3n2p9x4j6",
+        name: "admin-k7m3n2p9x4j6",
         max_capacity: 200,
         erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
       }
@@ -124,12 +124,12 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
         degraded: false,
         topology: [
           %{
-            id: "admin-k7m3n2p9x4j6",
+            name: "admin-k7m3n2p9x4j6",
             max_capacity: 200,
             erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
           },
           %{
-            id: "admin-x9j4p2k7m8n3",
+            name: "admin-x9j4p2k7m8n3",
             max_capacity: 300,
             erlang_node_name: "admin@admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal"
           }

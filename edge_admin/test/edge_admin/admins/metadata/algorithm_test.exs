@@ -12,8 +12,8 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       }
 
       clusters = [
-        %{id: "cluster-a", nodes: ["node-1", "node-2", "node-3"]},
-        %{id: "cluster-b", nodes: ["node-4", "node-5"]}
+        %{name: "cluster-a", nodes: ["node-1", "node-2", "node-3"]},
+        %{name: "cluster-b", nodes: ["node-4", "node-5"]}
       ]
 
       result = Algorithm.compute_assignments(admins, clusters)
@@ -28,7 +28,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       # Total clusters should be 2
       total_clusters =
         result.edge_clusters
-        |> Enum.flat_map(fn {_admin_id, clusters} -> Map.keys(clusters) end)
+        |> Enum.flat_map(fn {_admin_name, clusters} -> Map.keys(clusters) end)
         |> length()
 
       assert total_clusters == 2
@@ -36,7 +36,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       # All nodes should be assigned
       assigned_nodes =
         result.edge_clusters
-        |> Enum.flat_map(fn {_admin_id, clusters} -> Map.values(clusters) end)
+        |> Enum.flat_map(fn {_admin_name, clusters} -> Map.values(clusters) end)
         |> Enum.flat_map(& &1)
         |> Enum.sort()
 
@@ -51,7 +51,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
 
       clusters = [
         # 3 nodes!
-        %{id: "cluster-a", nodes: ["node-1", "node-2", "node-3"]}
+        %{name: "cluster-a", nodes: ["node-1", "node-2", "node-3"]}
       ]
 
       result = Algorithm.compute_assignments(admins, clusters)
@@ -68,8 +68,8 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       }
 
       clusters = [
-        %{id: "cluster-a", nodes: []},
-        %{id: "cluster-b", nodes: ["node-1"]}
+        %{name: "cluster-a", nodes: []},
+        %{name: "cluster-b", nodes: ["node-1"]}
       ]
 
       result = Algorithm.compute_assignments(admins, clusters)
@@ -89,7 +89,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       clusters =
         for i <- 1..6 do
           %{
-            id: "cluster-#{i}",
+            name: "cluster-#{i}",
             nodes: ["node-#{i}-1", "node-#{i}-2"]
           }
         end
@@ -101,7 +101,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       # Count clusters per admin
       cluster_counts =
         result.edge_clusters
-        |> Enum.map(fn {admin_id, clusters} -> {admin_id, map_size(clusters)} end)
+        |> Enum.map(fn {admin_name, clusters} -> {admin_name, map_size(clusters)} end)
         |> Map.new()
 
       # Should be balanced (3 and 3)
@@ -117,7 +117,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       }
 
       clusters = [
-        %{id: "cluster-a", nodes: ["node-1"]}
+        %{name: "cluster-a", nodes: ["node-1"]}
       ]
 
       result = Algorithm.compute_assignments(admins, clusters)
@@ -132,7 +132,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       # Two admins should have empty maps
       empty_count =
         result.edge_clusters
-        |> Enum.count(fn {_admin_id, clusters} -> map_size(clusters) == 0 end)
+        |> Enum.count(fn {_admin_name, clusters} -> map_size(clusters) == 0 end)
 
       assert empty_count == 2
     end
@@ -147,14 +147,14 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
 
       # Start with some existing assignments
       clusters = [
-        %{id: "cluster-a", nodes: ["node-1", "node-2"]}
+        %{name: "cluster-a", nodes: ["node-1", "node-2"]}
       ]
 
       assignments = Algorithm.compute_assignments(admins, clusters)
 
       # Bootstrap new empty cluster
-      assert {:ok, admin_id} = Algorithm.bootstrap_empty_cluster(admins, assignments, "cluster-b")
-      assert admin_id in ["admin-1", "admin-2"]
+      assert {:ok, admin_name} = Algorithm.bootstrap_empty_cluster(admins, assignments, "cluster-b")
+      assert admin_name in ["admin-1", "admin-2"]
     end
 
     test "returns existing admin if cluster already assigned" do
@@ -163,7 +163,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       }
 
       clusters = [
-        %{id: "cluster-a", nodes: ["node-1"]}
+        %{name: "cluster-a", nodes: ["node-1"]}
       ]
 
       assignments = Algorithm.compute_assignments(admins, clusters)
@@ -179,7 +179,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       }
 
       clusters = [
-        %{id: "cluster-a", nodes: ["node-1"]}
+        %{name: "cluster-a", nodes: ["node-1"]}
       ]
 
       assignments = Algorithm.compute_assignments(admins, clusters)
@@ -290,7 +290,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
 
       assigned_nodes =
         result.edge_clusters
-        |> Enum.flat_map(fn {_admin_id, clusters} -> Map.values(clusters) end)
+        |> Enum.flat_map(fn {_admin_name, clusters} -> Map.values(clusters) end)
         |> Enum.flat_map(& &1)
         |> length()
 
@@ -311,7 +311,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
 
       nodes = for j <- 1..node_count, do: "node-cluster-#{i}-#{j}"
 
-      %{id: "cluster-#{i}", nodes: nodes}
+      %{name: "cluster-#{i}", nodes: nodes}
     end
   end
 end

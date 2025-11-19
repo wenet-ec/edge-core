@@ -24,7 +24,7 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminClusterController do
     topology =
       Enum.map(admin_cluster.topology, fn entry ->
         %{
-          id: entry.id,
+          name: entry.name,
           max_capacity: entry.max_capacity,
           erlang_node_name: to_string(entry.erlang_node_name)
         }

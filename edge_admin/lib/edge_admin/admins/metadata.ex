@@ -36,8 +36,8 @@ defmodule EdgeAdmin.Admins.Metadata do
     total_admins: 2,
     degraded: false,
     topology: [
-      %{id: "admin-abc123", max_capacity: 200, erlang_node_name: ...},
-      %{id: "admin-def456", max_capacity: 300, erlang_node_name: ...}
+      %{name: "admin-abc123", max_capacity: 200, erlang_node_name: ...},
+      %{name: "admin-def456", max_capacity: 300, erlang_node_name: ...}
     ]
   }
 
@@ -50,6 +50,8 @@ defmodule EdgeAdmin.Admins.Metadata do
       "cluster-c" => ["node-3"]
     }
   }
+
+  Note: edge_clusters uses admin_name (e.g., "admin-abc123") as keys, not admin_id.
   ```
   """
 
@@ -120,7 +122,7 @@ defmodule EdgeAdmin.Admins.Metadata do
 
     :ets.insert(@table, {
       :edge_clusters,
-      %{admin_id => %{}}
+      %{admin_name => %{}}
     })
 
     # Subscribe to PubSub events (cluster/node CRUD from this admin cluster)
@@ -159,15 +161,15 @@ defmodule EdgeAdmin.Admins.Metadata do
   def get_cluster_owner(cluster_id) do
     [{:edge_clusters, assignments}] = :ets.lookup(@table, :edge_clusters)
 
-    Enum.find_value(assignments, fn {admin_id, clusters} ->
-      if Map.has_key?(clusters, cluster_id), do: admin_id
+    Enum.find_value(assignments, fn {admin_name, clusters} ->
+      if Map.has_key?(clusters, cluster_id), do: admin_name
     end)
   end
 
   def get_my_clusters do
-    [{:admin, %{id: admin_id}}] = :ets.lookup(@table, :admin)
+    [{:admin, %{name: admin_name}}] = :ets.lookup(@table, :admin)
     [{:edge_clusters, assignments}] = :ets.lookup(@table, :edge_clusters)
-    Map.get(assignments, admin_id, %{})
+    Map.get(assignments, admin_name, %{})
   end
 
   def get_peer_admins do
@@ -352,9 +354,10 @@ defmodule EdgeAdmin.Admins.Metadata do
         members when is_list(members) ->
           members
           |> Enum.map(fn {_pid, metadata} ->
-            # metadata should contain: %{id: admin_id, max_capacity: capacity, erlang_node_name: ...}
-            admin_id = metadata.id
-            {admin_id, metadata}
+            # metadata should contain: %{name: admin_name, max_capacity: capacity, erlang_node_name: ...}
+            # Use admin_name as key for edge_clusters mapping
+            admin_name = metadata.name
+            {admin_name, metadata}
           end)
           |> Map.new()
 
@@ -378,7 +381,7 @@ defmodule EdgeAdmin.Admins.Metadata do
       nodes = Nodes.list_nodes_by_cluster(cluster.id)
 
       %{
-        id: Cluster.network_name(cluster),
+        name: Cluster.network_name(cluster),
         nodes: Enum.map(nodes, &Node.node_name/1)
       }
     end)
@@ -393,9 +396,9 @@ defmodule EdgeAdmin.Admins.Metadata do
 
     topology =
       all_admins
-      |> Enum.map(fn {admin_id, metadata} ->
+      |> Enum.map(fn {admin_name, metadata} ->
         %{
-          id: admin_id,
+          name: admin_name,
           max_capacity: metadata.max_capacity,
           erlang_node_name: metadata.erlang_node_name
         }

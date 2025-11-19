@@ -79,7 +79,8 @@ config :edge_admin,
 # Build crontab list conditionally
 base_crontab = [
   {"* * * * *", EdgeAdmin.Commands.Workers.ExecutionRetryWorker},
-  {"* * * * *", EdgeAdmin.Nodes.Workers.NodeHealthCheckWorker}
+  {"* * * * *", EdgeAdmin.Nodes.Workers.NodeHealthCheckWorker},
+  {"0 */6 * * *", EdgeAdmin.Admins.Workers.ZombieAdminCleaner}
 ]
 
 crontab =

@@ -80,6 +80,17 @@ defmodule EdgeAdminWeb.Router do
     end
   end
 
+  # Protected admin metadata endpoints (requires MASTER_KEY)
+  scope "/api", EdgeAdminWeb.Controllers do
+    pipe_through(:protected_api)
+
+    scope "/admins", Admins do
+      get("/self", AdminController, :show)
+      get("/admin_cluster", AdminClusterController, :show)
+      get("/edge_clusters", EdgeClustersController, :index)
+    end
+  end
+
   # Metrics endpoints (accepts MASTER_KEY or METRICS_KEY)
   scope "/api", EdgeAdminWeb.Controllers do
     pipe_through(:protected_metrics)

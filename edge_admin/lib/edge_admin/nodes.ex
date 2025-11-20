@@ -803,13 +803,23 @@ defmodule EdgeAdmin.Nodes do
 
            Logger.debug("Found #{length(host_ids)} hosts enrolled with this key")
 
-           # 2. Delete each Netmaker host (fail entire transaction if ANY deletion fails)
+           # 2. Delete each Netmaker host (treat "not found" as success for idempotency)
            Enum.each(netmaker_hosts, fn host ->
              case delete_host(enrollment_key.cluster_id, host["id"]) do
                {:ok, _} ->
                  Logger.info(
                    "Deleted Netmaker host #{host["id"]} from cluster #{enrollment_key.cluster_id}"
                  )
+
+               {:error, {:http_error, 500, body}} = error ->
+                 if netmaker_not_found_error?(body) do
+                   Logger.info(
+                     "Netmaker host #{host["id"]} already deleted (not found)"
+                   )
+                 else
+                   Logger.error("Failed to delete host #{host["id"]}: #{inspect(error)}")
+                   Repo.rollback(error)
+                 end
 
                {:error, reason} ->
                  Logger.error("Failed to delete host #{host["id"]}: #{inspect(reason)}")
@@ -868,6 +878,15 @@ defmodule EdgeAdmin.Nodes do
         acc
     end
   end
+
+  # Helper to check if Netmaker error is a "not found" error
+  # Netmaker uses HTTP 500 with specific messages for not found
+  defp netmaker_not_found_error?(body) when is_binary(body) do
+    String.contains?(body, "no result found") or
+      String.contains?(body, "could not find any records")
+  end
+
+  defp netmaker_not_found_error?(_), do: false
 
   def list_metrics_discovery_targets do
     from(n in Node,

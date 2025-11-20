@@ -16,8 +16,11 @@ defmodule EdgeAdmin.Admins.Workers.ZombieAdminCleaner do
   """
 
   use Oban.Worker,
-    queue: :default,
-    unique: [period: 3600]
+    queue: :zombie_admin_cleanup,
+    unique: [
+      period: :infinity,
+      states: [:available, :scheduled, :executing, :retryable]
+    ]
 
   alias EdgeAdmin.Vpn
 

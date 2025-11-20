@@ -154,7 +154,8 @@ config :edge_admin, Oban,
   queues: [
     command_dispatch: 10,
     command_retry: 1,
-    key_cleanup: 1
+    key_cleanup: 1,
+    zombie_admin_cleanup: 1
   ],
   repo: EdgeAdmin.Repo,
   plugins: [

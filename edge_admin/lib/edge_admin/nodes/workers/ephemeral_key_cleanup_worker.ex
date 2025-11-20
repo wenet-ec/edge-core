@@ -15,7 +15,13 @@ defmodule EdgeAdmin.Nodes.Workers.EphemeralKeyCleanupWorker do
   Runs on a configurable schedule (default: daily at midnight).
   """
 
-  use Oban.Worker, queue: :key_cleanup, max_attempts: 3
+  use Oban.Worker,
+    queue: :key_cleanup,
+    max_attempts: 3,
+    unique: [
+      period: :infinity,
+      states: [:available, :scheduled, :executing, :retryable]
+    ]
 
   alias EdgeAdmin.Nodes
 

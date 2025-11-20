@@ -116,7 +116,7 @@ config :edge_admin,
   admin_cluster_name: EdgeAdmin.Vpn.build_admin_cluster_name(get_env!("ADMIN_CLUSTER_NAME")),
   admin_cluster_subnet: get_env("ADMIN_CLUSTER_SUBNET"),
   admin_max_capacity: get_env!("ADMIN_MAX_CAPACITY", :positive_integer),
-  erlang_cookie: get_env!("ERLANG_COOKIE", :atom),
+  erlang_cookie: get_env("ERLANG_COOKIE", :atom, :edge_admin_default_cookie),
   admin_discovery_port: get_env("ADMIN_DISCOVERY_PORT", :integer, 4000),
   netmaker_default_domain: get_env("NETMAKER_DEFAULT_DOMAIN", :string, "nm.internal")
 

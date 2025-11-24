@@ -18,7 +18,8 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
 
       result = Algorithm.compute_assignments(admins, clusters)
 
-      assert result.success == true
+      assert result.degraded == false
+      assert result.orphaned_clusters == %{}
       assert map_size(result.edge_clusters) == 2
 
       # Both admins should have at least one cluster
@@ -43,7 +44,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       assert assigned_nodes == ["node-1", "node-2", "node-3", "node-4", "node-5"]
     end
 
-    test "no capacity - degraded mode" do
+    test "no capacity - degraded mode (full cluster rejection)" do
       admins = %{
         # Only 2 nodes capacity
         "admin-1" => %{max_capacity: 2}
@@ -56,10 +57,42 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
 
       result = Algorithm.compute_assignments(admins, clusters)
 
-      assert result.success == false
+      assert result.degraded == true
 
       # No clusters should be assigned since cluster is too big
       assert result.edge_clusters["admin-1"] == %{}
+
+      # Cluster should be in orphaned_clusters
+      assert result.orphaned_clusters == %{
+               "cluster-a" => ["node-1", "node-2", "node-3"]
+             }
+    end
+
+    test "partial capacity - degraded mode (some clusters assigned, some orphaned)" do
+      admins = %{
+        "admin-1" => %{max_capacity: 5}
+      }
+
+      clusters = [
+        %{name: "cluster-a", nodes: ["node-1", "node-2"]},
+        %{name: "cluster-b", nodes: ["node-3", "node-4", "node-5"]},
+        # This cluster would exceed capacity (2 + 3 + 2 = 7 > 5)
+        %{name: "cluster-c", nodes: ["node-6", "node-7"]}
+      ]
+
+      result = Algorithm.compute_assignments(admins, clusters)
+
+      assert result.degraded == true
+
+      # First two clusters should be assigned (5 nodes total)
+      assert map_size(result.edge_clusters["admin-1"]) == 2
+      assert Map.has_key?(result.edge_clusters["admin-1"], "cluster-a")
+      assert Map.has_key?(result.edge_clusters["admin-1"], "cluster-b")
+
+      # Third cluster should be orphaned
+      assert result.orphaned_clusters == %{
+               "cluster-c" => ["node-6", "node-7"]
+             }
     end
 
     test "empty clusters are assigned" do
@@ -74,7 +107,8 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
 
       result = Algorithm.compute_assignments(admins, clusters)
 
-      assert result.success == true
+      assert result.degraded == false
+      assert result.orphaned_clusters == %{}
       assert Map.has_key?(result.edge_clusters["admin-1"], "cluster-a")
       assert Map.has_key?(result.edge_clusters["admin-1"], "cluster-b")
     end
@@ -96,7 +130,8 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
 
       result = Algorithm.compute_assignments(admins, clusters)
 
-      assert result.success == true
+      assert result.degraded == false
+      assert result.orphaned_clusters == %{}
 
       # Count clusters per admin
       cluster_counts =
@@ -122,7 +157,8 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
 
       result = Algorithm.compute_assignments(admins, clusters)
 
-      assert result.success == true
+      assert result.degraded == false
+      assert result.orphaned_clusters == %{}
 
       # All admins should exist in edge_clusters
       assert Map.has_key?(result.edge_clusters, "admin-1")
@@ -278,7 +314,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
 
       time_ms = time_us / 1000
 
-      assert result.success == true
+      assert result.degraded == false
       # Should complete in reasonable time (< 100ms)
       assert time_ms < 100
 

@@ -19,7 +19,7 @@ defmodule EdgeAdmin.Admins.Metadata do
 
   ## ETS Schema
 
-  The `:metadata` table contains 3 keys:
+  The `:metadata` table contains 4 keys:
 
   ```elixir
   :admin => %{
@@ -49,6 +49,11 @@ defmodule EdgeAdmin.Admins.Metadata do
     "admin-def456" => %{
       "cluster-c" => ["node-3"]
     }
+  }
+
+  :orphaned_clusters => %{
+    "cluster-orphaned-1" => ["node-5", "node-6"],
+    "cluster-orphaned-2" => ["node-7"]
   }
 
   Note: edge_clusters uses admin_name (e.g., "admin-abc123") as keys, not admin_id.
@@ -125,6 +130,11 @@ defmodule EdgeAdmin.Admins.Metadata do
       %{admin_name => %{}}
     })
 
+    :ets.insert(@table, {
+      :orphaned_clusters,
+      %{}
+    })
+
     # Subscribe to PubSub events (cluster/node CRUD from this admin cluster)
     Phoenix.PubSub.subscribe(EdgeAdmin.PubSub, "#{admin_cluster_name}:metadata")
 
@@ -185,6 +195,11 @@ defmodule EdgeAdmin.Admins.Metadata do
   def get_edge_clusters do
     [{:edge_clusters, assignments}] = :ets.lookup(@table, :edge_clusters)
     assignments
+  end
+
+  def get_orphaned_clusters do
+    [{:orphaned_clusters, orphaned}] = :ets.lookup(@table, :orphaned_clusters)
+    orphaned
   end
 
   def degraded? do
@@ -391,6 +406,9 @@ defmodule EdgeAdmin.Admins.Metadata do
     # Update :edge_clusters
     :ets.insert(@table, {:edge_clusters, result.edge_clusters})
 
+    # Update :orphaned_clusters
+    :ets.insert(@table, {:orphaned_clusters, result.orphaned_clusters})
+
     # Update :admin_cluster topology
     [{:admin_cluster, admin_cluster}] = :ets.lookup(@table, :admin_cluster)
 
@@ -404,26 +422,12 @@ defmodule EdgeAdmin.Admins.Metadata do
         }
       end)
 
-    # Calculate degraded flag
-    total_capacity =
-      all_admins
-      |> Enum.map(fn {_id, metadata} -> metadata.max_capacity end)
-      |> Enum.sum()
-
-    total_nodes =
-      result.edge_clusters
-      |> Enum.flat_map(fn {_admin_id, clusters} ->
-        Enum.flat_map(clusters, fn {_cluster_id, nodes} -> nodes end)
-      end)
-      |> length()
-
-    degraded = total_nodes > total_capacity
-
+    # Use degraded flag from algorithm result
     updated_admin_cluster = %{
       admin_cluster
       | topology: topology,
         total_admins: map_size(all_admins),
-        degraded: degraded
+        degraded: result.degraded
     }
 
     :ets.insert(@table, {:admin_cluster, updated_admin_cluster})

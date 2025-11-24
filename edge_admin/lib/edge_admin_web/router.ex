@@ -88,6 +88,7 @@ defmodule EdgeAdminWeb.Router do
       get("/self", AdminController, :show)
       get("/admin_cluster", AdminClusterController, :show)
       get("/edge_clusters", EdgeClustersController, :index)
+      get("/orphaned_clusters", OrphanedClustersController, :index)
     end
   end
 

@@ -20,7 +20,8 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   ## Returns (ETS format - ready for direct insertion)
   %{
     edge_clusters: %{admin_name => %{cluster_name => [node_names]}},
-    success: boolean  # false if any cluster couldn't be assigned
+    orphaned_clusters: %{cluster_name => [node_names]},
+    degraded: boolean  # true if any cluster couldn't be assigned
   }
 
   ## Example
@@ -38,7 +39,8 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
           "admin-1" => %{"cluster-b" => ["node-4", "node-5"]},
           "admin-2" => %{"cluster-a" => ["node-1", "node-2", "node-3"]}
         },
-        success: true
+        orphaned_clusters: %{},
+        degraded: false
       }
   """
   def compute_assignments(admins, clusters) do
@@ -49,7 +51,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
     initial_state = %{
       cluster_assignments: %{},
       admin_node_counts: Map.new(admins, fn {admin_name, _} -> {admin_name, 0} end),
-      success: true
+      orphaned_clusters: %{}
     }
 
     # Assign each cluster
@@ -69,12 +71,15 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
               cluster_assignments: Map.put(state.cluster_assignments, cluster.name, best_admin),
               admin_node_counts:
                 Map.update!(state.admin_node_counts, best_admin, &(&1 + cluster_size)),
-              success: state.success
+              orphaned_clusters: state.orphaned_clusters
             }
 
           {:error, :no_capacity} ->
-            # Cluster couldn't be assigned - mark as failed but continue
-            %{state | success: false}
+            # Cluster couldn't be assigned - add to orphaned clusters
+            %{
+              state
+              | orphaned_clusters: Map.put(state.orphaned_clusters, cluster.name, cluster.nodes)
+            }
         end
       end)
 
@@ -88,7 +93,8 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
 
     %{
       edge_clusters: edge_clusters,
-      success: intermediate_result.success
+      orphaned_clusters: intermediate_result.orphaned_clusters,
+      degraded: map_size(intermediate_result.orphaned_clusters) > 0
     }
   end
 

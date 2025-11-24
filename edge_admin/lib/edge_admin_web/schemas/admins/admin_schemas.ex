@@ -167,4 +167,25 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
       }
     })
   end
+
+  defmodule OrphanedClustersResponse do
+    @moduledoc false
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "Orphaned Clusters Response",
+      description:
+        "Clusters that could not be assigned to any admin due to capacity constraints. Empty map when system is not degraded.",
+      type: :object,
+      additionalProperties: %Schema{
+        type: :array,
+        items: %Schema{type: :string},
+        description: "List of node IDs in this orphaned cluster"
+      },
+      example: %{
+        "cluster-orphaned-1" => ["node-uuid-5", "node-uuid-6"],
+        "cluster-orphaned-2" => ["node-uuid-7"]
+      }
+    })
+  end
 end

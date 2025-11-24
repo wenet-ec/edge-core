@@ -26,6 +26,11 @@ defmodule EdgeAdmin.Admins.MetadataTest do
       [{:edge_clusters, edge_clusters}] = :ets.lookup(:metadata, :edge_clusters)
       assert is_map(edge_clusters)
       assert Map.has_key?(edge_clusters, admin.name)
+
+      # Check :orphaned_clusters key
+      [{:orphaned_clusters, orphaned_clusters}] = :ets.lookup(:metadata, :orphaned_clusters)
+      assert is_map(orphaned_clusters)
+      assert orphaned_clusters == %{}
     end
   end
 
@@ -107,6 +112,25 @@ defmodule EdgeAdmin.Admins.MetadataTest do
       assert length(peers) == 2
       assert Enum.any?(peers, fn p -> p.name == "admin-1" end)
       assert Enum.any?(peers, fn p -> p.name == "admin-2" end)
+    end
+  end
+
+  describe "get_orphaned_clusters/0" do
+    test "returns empty map when no orphaned clusters" do
+      :ets.insert(:metadata, {:orphaned_clusters, %{}})
+
+      assert Metadata.get_orphaned_clusters() == %{}
+    end
+
+    test "returns orphaned clusters when system is degraded" do
+      orphaned = %{
+        "cluster-orphaned-1" => ["node-1", "node-2"],
+        "cluster-orphaned-2" => ["node-3"]
+      }
+
+      :ets.insert(:metadata, {:orphaned_clusters, orphaned})
+
+      assert Metadata.get_orphaned_clusters() == orphaned
     end
   end
 

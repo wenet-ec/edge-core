@@ -225,6 +225,78 @@ defmodule Nexmaker.IntegrationTest do
     end
   end
 
+  describe "Nexmaker.Api.Server" do
+    test "get server status" do
+      result = Nexmaker.Api.Server.status(
+        base_url: @base_url,
+        master_key: @master_key
+      )
+
+      IO.puts("Server status result: #{inspect(result)}")
+      assert {:ok, status} = result
+      assert is_map(status)
+
+      # Verify expected health check fields
+      assert Map.has_key?(status, "db_connected")
+      assert Map.has_key?(status, "broker_connected")
+      assert Map.has_key?(status, "version")
+    end
+
+    test "get server info" do
+      result = Nexmaker.Api.Server.get_server_info(
+        base_url: @base_url,
+        master_key: @master_key
+      )
+
+      IO.puts("Server info result: #{inspect(result)}")
+      assert {:ok, info} = result
+      assert is_map(info)
+
+      # Server info should contain version or other identifying information
+      IO.puts("Server version: #{inspect(Map.get(info, "version"))}")
+    end
+
+    test "get public IP" do
+      result = Nexmaker.Api.Server.get_public_ip(
+        base_url: @base_url,
+        master_key: @master_key
+      )
+
+      IO.puts("Public IP result: #{inspect(result)}")
+
+      # This endpoint may fail depending on network setup, so we accept both success and error
+      case result do
+        {:ok, ip_info} ->
+          IO.puts("Public IP: #{inspect(ip_info)}")
+          assert is_map(ip_info)
+
+        {:error, reason} ->
+          IO.puts("Public IP check failed (this is okay in some network setups): #{inspect(reason)}")
+          :ok
+      end
+    end
+
+    test "get server logs" do
+      result = Nexmaker.Api.Server.get_logs(
+        base_url: @base_url,
+        master_key: @master_key
+      )
+
+      IO.puts("Server logs result: #{inspect(result)}")
+
+      # Logs endpoint may not be available in all Netmaker versions
+      case result do
+        {:ok, logs} ->
+          IO.puts("Retrieved #{if is_list(logs), do: length(logs), else: "some"} log entries")
+          assert logs != nil
+
+        {:error, reason} ->
+          IO.puts("Server logs not available (may not be enabled): #{inspect(reason)}")
+          :ok
+      end
+    end
+  end
+
   describe "Nexmaker.Cli - Full Workflow" do
     test "create network, generate enrollment key, join, verify, and leave" do
       # Use unique IDs to avoid conflicts

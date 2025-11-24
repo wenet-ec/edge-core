@@ -15,11 +15,11 @@ mix ecto.migrate
 
 # Bootstrap Netmaker superadmin
 echo "Bootstrapping Netmaker superadmin..."
-mix run -e "EdgeAdmin.Release.create_netmaker_superadmin()"
+RUN_BOOTSTRAP=false mix run -e "EdgeAdmin.Release.create_netmaker_superadmin()"
 
 # Bootstrap default cluster
 echo "Bootstrapping default cluster..."
-mix run -e "EdgeAdmin.Release.create_default_cluster()"
+RUN_BOOTSTRAP=false mix run -e "EdgeAdmin.Release.create_default_cluster()"
 
 # Start EPMD daemon for Erlang distribution
 echo "Starting EPMD daemon..."

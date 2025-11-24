@@ -99,7 +99,6 @@ defmodule EdgeAdmin.Admins.Bootstrap do
   # Config Helpers
   # =============================================================================
 
-  defp admin_id, do: Application.get_env(:edge_admin, :admin_id)
   defp admin_name, do: Application.get_env(:edge_admin, :admin_name)
   defp admin_cluster_name, do: Application.get_env(:edge_admin, :admin_cluster_name)
   defp admin_cluster_subnet, do: Application.get_env(:edge_admin, :admin_cluster_subnet)
@@ -111,14 +110,17 @@ defmodule EdgeAdmin.Admins.Bootstrap do
   # =============================================================================
 
   defp should_run?(_opts) do
-    Application.get_env(:edge_admin, :run_bootstrap, true)
+    case System.get_env("RUN_BOOTSTRAP") do
+      "false" -> false
+      _ -> Application.get_env(:edge_admin, :run_bootstrap, true)
+    end
   end
 
   defp do_bootstrap do
     with :ok <- step_1_join_vpn(),
          :ok <- step_2_start_erlang_distribution(),
-         :ok <- step_3_discover_peers(),
-         :ok <- step_4_initialize_syn() do
+         :ok <- step_3_initialize_syn(),
+         :ok <- step_4_discover_peers() do
       Logger.info("All bootstrap steps completed")
       :ok
     else
@@ -208,30 +210,16 @@ defmodule EdgeAdmin.Admins.Bootstrap do
   end
 
   # =============================================================================
-  # Step 3: Peer Discovery
+  # Step 3: Syn Registry
   # =============================================================================
 
-  defp step_3_discover_peers do
-    Logger.info("Step 3: Discovering peer admins")
-    Discovery.scan_and_connect_admins()
-    Logger.info("Peer admin discovery completed")
-    :ok
-  end
-
-  # =============================================================================
-  # Step 4: Syn Registry
-  # =============================================================================
-
-  defp step_4_initialize_syn do
-    Logger.info("Step 4: Initializing syn registry")
-
-    # Add node to syn scopes
+  defp step_3_initialize_syn do
+    Logger.info("Step 3: Initializing syn registry")
     :syn.add_node_to_scopes([:admin_scope])
-    Logger.debug("Added node to :admin_scope")
 
     # Join the admin cluster group with metadata
     metadata = %{
-      id: admin_id(),
+      name: admin_name(),
       max_capacity: max_capacity(),
       erlang_node_name: node()
     }
@@ -245,5 +233,16 @@ defmodule EdgeAdmin.Admins.Bootstrap do
         Logger.error("Failed to join syn group: #{inspect(reason)}")
         {:error, {:syn_join_failed, reason}}
     end
+  end
+
+  # =============================================================================
+  # Step 4: Peer Discovery
+  # =============================================================================
+
+  defp step_4_discover_peers do
+    Logger.info("Step 4: Discovering peer admins")
+    Discovery.scan_and_connect_admins()
+    Logger.info("Peer admin discovery completed")
+    :ok
   end
 end

@@ -8,6 +8,8 @@ volumes:
   local_edge_admin_db_data_backups: {}
   local_edge_admin_deps: {}
   local_edge_admin_build: {}
+  local_edge_admin_2_deps: {}
+  local_edge_admin_2_build: {}
   local_edge_agent_data: {}
   local_edge_agent_deps: {}
   local_edge_agent_build: {}
@@ -67,6 +69,47 @@ services:
       - "4000:4000"
     cap_add:
       - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 60s
+      timeout: 5s
+      retries: 6
+      start_period: 45s
+    command: /start
+
+  edge_admin_2:
+    build:
+      context: ../..
+      dockerfile: ./deploy/local/compose/edge_admin/Dockerfile
+    image: local_edge_admin
+    container_name: local_edge_admin_2
+    networks:
+      - local_edge_core
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+      edge_admin_db:
+        condition: service_healthy
+      edge_admin:
+        condition: service_healthy
+    volumes:
+      - ../../edge_admin:/app:z
+      - ../../nexmaker:/nexmaker:z
+      - local_edge_admin_2_deps:/app/deps
+      - local_edge_admin_2_build:/app/_build
+      - /dev/net/tun:/dev/net/tun
+    env_file:
+      - ./.envs/.edge_admin
+    ports:
+      - "4001:4000"
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
     sysctls:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1

@@ -172,7 +172,7 @@ config :edge_admin, EdgeAdmin.LocalScheduler,
       schedule: "*/5 * * * *",
       task: {EdgeAdmin.Admins.Discovery, :scan_and_connect_admins, []}
     ],
-    # Metadata recomputation - every 60 seconds
+    # Metadata recomputation - every 1 minutes
     metadata_recomputation: [
       schedule: "* * * * *",
       task: {EdgeAdmin.Admins.Metadata, :recompute_now, []}

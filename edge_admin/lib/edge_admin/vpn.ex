@@ -109,6 +109,19 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
+  Builds an admin name from an admin ID.
+  Format: admin-{id}
+
+  ## Examples
+
+      iex> EdgeAdmin.Vpn.build_admin_name("k7m3n2p9x4j6")
+      "admin-k7m3n2p9x4j6"
+  """
+  def build_admin_name(admin_id) when is_binary(admin_id) do
+    "admin-#{admin_id}"
+  end
+
+  @doc """
   Builds a full admin cluster network name from a suffix.
   Format: admin-cluster-{suffix}
 
@@ -469,6 +482,25 @@ defmodule EdgeAdmin.Vpn do
   """
   def join_network(opts) do
     Nexmaker.Cli.join_network(opts)
+  end
+
+  @doc """
+  Checks Netmaker server health via status endpoint.
+
+  Returns :ok if server is reachable and healthy, {:error, reason} otherwise.
+  """
+  def health_check do
+    case Nexmaker.Api.Server.status() do
+      {:ok, _status} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Gets Netmaker server info including version.
+  """
+  def get_server_info do
+    Nexmaker.Api.Server.get_server_info()
   end
 
   @doc """

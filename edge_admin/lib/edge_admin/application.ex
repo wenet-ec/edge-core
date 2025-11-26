@@ -17,6 +17,8 @@ defmodule EdgeAdmin.Application do
       {Phoenix.PubSub, name: EdgeAdmin.PubSub},
       {Oban, Application.fetch_env!(:edge_admin, Oban)},
       EdgeAdmin.Admins.Bootstrap,
+      EdgeAdmin.EdgeClusters.Supervisor,
+      EdgeAdmin.EdgeClusters,
       EdgeAdmin.Admins.Metadata,
       EdgeAdmin.LocalScheduler,
       EdgeAdminWeb.Endpoint,

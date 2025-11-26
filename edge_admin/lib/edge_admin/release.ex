@@ -73,7 +73,7 @@ defmodule EdgeAdmin.Release do
   """
   def create_netmaker_superadmin do
     load_app()
-    start_dependencies()
+    start_http_client()
 
     Logger.info("Checking if Netmaker superadmin exists...")
 
@@ -135,7 +135,9 @@ defmodule EdgeAdmin.Release do
   """
   def create_default_cluster do
     load_app()
-    start_app()
+    start_http_client()
+    start_repo()
+    start_phoenix_pubsub()
 
     case default_cluster_name() do
       nil ->
@@ -195,13 +197,28 @@ defmodule EdgeAdmin.Release do
     Application.load(@app)
   end
 
-  defp start_dependencies do
-    # Start only the minimum dependencies needed for HTTP requests
+  defp start_http_client do
     Application.ensure_all_started(:hackney)
     Application.ensure_all_started(:httpoison)
   end
 
-  defp start_app do
-    Application.ensure_all_started(:edge_admin)
+  defp start_repo do
+    Application.ensure_all_started(:postgrex)
+    Application.ensure_all_started(:ecto)
+    Application.ensure_all_started(:ecto_sql)
+
+    for repo <- repos() do
+      {:ok, _} = repo.start_link()
+    end
+  end
+
+  defp start_phoenix_pubsub do
+    Application.ensure_all_started(:phoenix_pubsub)
+
+    children = [
+      {Phoenix.PubSub, name: EdgeAdmin.PubSub}
+    ]
+
+    {:ok, _} = Supervisor.start_link(children, strategy: :one_for_one)
   end
 end

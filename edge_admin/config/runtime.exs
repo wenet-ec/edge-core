@@ -138,7 +138,7 @@ config :edge_admin,
 base_crontab = [
   {"* * * * *", EdgeAdmin.Commands.Workers.ExecutionRetryWorker},
   {"* * * * *", EdgeAdmin.Nodes.Workers.NodeHealthCheckWorker},
-  {"0 */6 * * *", EdgeAdmin.Admins.Workers.ZombieAdminCleaner}
+  {"0 * * * *", EdgeAdmin.Admins.Workers.ZombieAdminCleaner}
 ]
 
 crontab =
@@ -167,12 +167,10 @@ config :edge_admin, Oban,
 # Quantum LocalScheduler
 config :edge_admin, EdgeAdmin.LocalScheduler,
   jobs: [
-    # Admin discovery - every 5 minutes
     admin_discovery: [
       schedule: "*/5 * * * *",
       task: {EdgeAdmin.Admins.Discovery, :scan_and_connect_admins, []}
     ],
-    # Metadata recomputation - every 1 minutes
     metadata_recomputation: [
       schedule: "* * * * *",
       task: {EdgeAdmin.Admins.Metadata, :recompute_now, []}

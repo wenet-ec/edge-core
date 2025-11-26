@@ -269,31 +269,24 @@ defmodule EdgeAdmin.Nodes do
   """
   def change_node_cluster(%Node{} = node, new_cluster_id) do
     Repo.transaction(fn ->
+      # 1. Verify node is online (check DB status)
+      if node.status != "online" do
+        Logger.warning("Cannot change cluster for offline node #{node.id}")
+        Repo.rollback(:node_offline)
+      end
+
       old_cluster = get_cluster!(node.cluster_id)
       new_cluster = get_cluster!(new_cluster_id)
 
-      # 1. Verify host online (use Netmaker's node status)
+      # Build network names
       old_network_name = Vpn.cluster_network_name(old_cluster.name)
-
-      case Vpn.get_node(old_network_name, node.id) do
-        {:ok, netmaker_node} ->
-          # Use Netmaker's computed status field instead of manual lastcheckin comparison
-          # Status is computed by Netmaker based on lastcheckin, connected state, and static node config
-          if netmaker_node["status"] != "online" do
-            Repo.rollback(:host_offline)
-          end
-
-        {:error, reason} ->
-          Repo.rollback(reason)
-      end
-
-      # 2. Add host to new network
       new_network_name = Vpn.cluster_network_name(new_cluster.name)
 
+      # 2. Add host to new network first
       case Vpn.add_host_to_network(node.netmaker_host_id, new_network_name) do
         {:ok, _} ->
-          # 3. Delete node from old network
-          case Vpn.delete_node(old_network_name, node.id) do
+          # 3. Remove host from old network (Netmaker handles node deletion)
+          case Vpn.remove_host_from_network(node.netmaker_host_id, old_network_name) do
             {:ok, _} ->
               # 4. Update database
               updated_node =
@@ -330,13 +323,14 @@ defmodule EdgeAdmin.Nodes do
   """
   def delete_node(%Node{} = node) do
     Repo.transaction(fn ->
-      # 1. Delete from Netmaker first (critical - must succeed)
+      # 1. Remove from Netmaker first (critical - must succeed)
       cluster = get_cluster!(node.cluster_id)
       network_name = Vpn.cluster_network_name(cluster.name)
 
-      case Vpn.delete_node(network_name, node.id) do
+      # Remove host from network (Netmaker handles node deletion automatically)
+      case Vpn.remove_host_from_network(node.netmaker_host_id, network_name) do
         {:ok, _} ->
-          Logger.info("Deleted Netmaker node #{node.id} from network #{network_name}")
+          Logger.info("Removed host #{node.netmaker_host_id} from network #{network_name}")
 
           # 2. Delete from DB (cascades to ssh_usernames, ssh_public_keys, command_executions)
           Repo.delete!(node)
@@ -351,7 +345,7 @@ defmodule EdgeAdmin.Nodes do
           node
 
         {:error, reason} ->
-          Logger.error("Failed to delete Netmaker node #{node.id}: #{inspect(reason)}")
+          Logger.error("Failed to remove host from network: #{inspect(reason)}")
           Repo.rollback(reason)
       end
     end)
@@ -382,13 +376,12 @@ defmodule EdgeAdmin.Nodes do
     # 1. Verify cluster exists
     cluster = get_cluster!(cluster_id)
 
-    # 2. Verify node exists in Netmaker
+    # 2. Verify node exists in Netmaker and get host ID
     network_name = Vpn.cluster_network_name(cluster.name)
+    node_hostname = Vpn.build_node_name(node_id)
 
-    case Vpn.get_node(network_name, node_id) do
-      {:ok, netmaker_node} ->
-        netmaker_host_id = netmaker_node["hostid"]
-
+    case Vpn.get_host_id(node_hostname, network_name: network_name) do
+      {:ok, netmaker_host_id} ->
         # 3. Generate new tokens on every registration
         existing_node = Repo.get(Node, node_id)
         is_new_node = is_nil(existing_node)
@@ -445,8 +438,8 @@ defmodule EdgeAdmin.Nodes do
             {:error, changeset}
         end
 
-      {:error, :not_found} ->
-        {:error, :node_not_found_in_netmaker}
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 

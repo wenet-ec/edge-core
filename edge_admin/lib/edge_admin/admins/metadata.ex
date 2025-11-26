@@ -28,6 +28,7 @@ defmodule EdgeAdmin.Admins.Metadata do
     erlang_node_name: :"admin@admin-abc123.admin-cluster-1.nm.internal",
     dns_hostname: "admin-abc123.admin-cluster-1.nm.internal",
     admin_cluster_name: "admin-cluster-1",
+    netmaker_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505",
     last_computed_at: ~U[2025-01-15 12:00:00Z]
   }
 
@@ -101,6 +102,10 @@ defmodule EdgeAdmin.Admins.Metadata do
     dns_hostname = build_dns_hostname(admin_name, admin_cluster_name, netmaker_default_domain)
     erlang_node_name = node()
 
+    # Fetch Netmaker host ID
+    {:ok, netmaker_host_id} = EdgeAdmin.Vpn.get_host_id(admin_name)
+    Logger.info("Fetched Netmaker host ID: #{netmaker_host_id}")
+
     # Initial ETS state (placeholders - will be populated by first computation)
     :ets.insert(@table, {
       :admin,
@@ -111,6 +116,7 @@ defmodule EdgeAdmin.Admins.Metadata do
         erlang_node_name: erlang_node_name,
         dns_hostname: dns_hostname,
         admin_cluster_name: admin_cluster_name,
+        netmaker_host_id: netmaker_host_id,
         last_computed_at: nil
       }
     })

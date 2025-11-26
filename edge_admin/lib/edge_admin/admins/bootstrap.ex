@@ -71,8 +71,8 @@ defmodule EdgeAdmin.Admins.Bootstrap do
   # =============================================================================
 
   @impl true
-  def init(opts) do
-    if should_run?(opts) do
+  def init(_opts) do
+    if Application.get_env(:edge_admin, :run_bootstrap, true) do
       Logger.info("Bootstrap starting...")
 
       case do_bootstrap() do
@@ -109,13 +109,6 @@ defmodule EdgeAdmin.Admins.Bootstrap do
   # Bootstrap Flow
   # =============================================================================
 
-  defp should_run?(_opts) do
-    case System.get_env("RUN_BOOTSTRAP") do
-      "false" -> false
-      _ -> Application.get_env(:edge_admin, :run_bootstrap, true)
-    end
-  end
-
   defp do_bootstrap do
     with :ok <- step_1_join_vpn(),
          :ok <- step_2_start_erlang_distribution(),
@@ -136,11 +129,13 @@ defmodule EdgeAdmin.Admins.Bootstrap do
 
   defp step_1_join_vpn do
     network_name = admin_cluster_name()
+    admin_name = admin_name()
     Logger.info("Step 1: Joining VPN network #{network_name}")
 
     with :ok <- ensure_network_exists(network_name),
-         {:ok, key_value} <- get_default_enrollment_key(network_name),
-         :ok <- join_network(key_value) do
+         {:ok, token} <- Vpn.get_default_enrollment_key(network_name),
+         {:ok, _} <- Vpn.join_network(token: token, name: admin_name) do
+      wait_for_host(admin_name)
       Logger.info("Successfully joined admin cluster network")
       :ok
     else
@@ -161,16 +156,14 @@ defmodule EdgeAdmin.Admins.Bootstrap do
     Vpn.ensure_network_exists(network_name, %{addressrange: subnet})
   end
 
-  defp get_default_enrollment_key(network_name) do
-    # Use the default key created automatically by Netmaker
-    # This avoids creating a new key on every admin restart
-    Vpn.get_default_enrollment_key(network_name)
-  end
+  defp wait_for_host(admin_name) do
+    case Vpn.get_host_id(admin_name) do
+      {:ok, _host_id} ->
+        Logger.info("Host #{admin_name} registered in Netmaker API")
 
-  defp join_network(key_value) do
-    case Vpn.join_network(token: key_value, name: admin_name()) do
-      {:ok, _} -> :ok
-      {:error, reason} -> {:error, reason}
+      _ ->
+        Process.sleep(1000)
+        wait_for_host(admin_name)
     end
   end
 

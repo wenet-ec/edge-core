@@ -167,6 +167,19 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
+  Builds a node hostname from a node ID.
+  Format: node-{id}
+
+  ## Examples
+
+      iex> EdgeAdmin.Vpn.build_node_name("a1b2c3d4-uuid")
+      "node-a1b2c3d4-uuid"
+  """
+  def build_node_name(node_id) when is_binary(node_id) do
+    "node-#{node_id}"
+  end
+
+  @doc """
   Validates a network name for Netmaker compatibility.
 
   Returns :ok or {:error, reason}
@@ -182,7 +195,8 @@ defmodule EdgeAdmin.Vpn do
         {:error, "network name exceeds 32 character limit"}
 
       not Regex.match?(~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, name) ->
-        {:error, "network name must be lowercase alphanumeric with hyphens, no leading/trailing hyphens"}
+        {:error,
+         "network name must be lowercase alphanumeric with hyphens, no leading/trailing hyphens"}
 
       true ->
         :ok
@@ -389,10 +403,20 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Deletes a node from a Netmaker network.
+  Removes a host from a Netmaker network.
+
+  ## Parameters
+
+  - `host_id` - Netmaker host ID (UUID)
+  - `network_name` - Network name to remove from
+
+  ## Examples
+
+      iex> Vpn.remove_host_from_network("f272e703-...", "cluster-prod")
+      {:ok, %{}}
   """
-  def delete_node(network_name, node_id) do
-    Nexmaker.Api.Nodes.delete(network_name, node_id)
+  def remove_host_from_network(host_id, network_name) do
+    Nexmaker.Api.Hosts.remove_from_network(host_id, network_name)
   end
 
   @doc """
@@ -400,6 +424,53 @@ defmodule EdgeAdmin.Vpn do
   """
   def add_host_to_network(host_id, network_name) do
     Nexmaker.Api.Hosts.add_to_network(host_id, network_name)
+  end
+
+  @doc """
+  Get the Netmaker host ID using hostname.
+
+  Optionally filter by network for better performance when there are many hosts.
+
+  ## Examples
+
+      iex> Vpn.get_host_id("admin-abc123")
+      {:ok, "f272e703-b48f-4b61-b4c1-bfe4fffde62b"}
+
+      iex> Vpn.get_host_id("node-def456", network_name: "cluster-prod")
+      {:ok, "a1b2c3d4-..."}
+  """
+  def get_host_id(hostname, opts \\ []) do
+    network_name = Keyword.get(opts, :network_name)
+
+    Logger.debug(
+      "Looking for Netmaker host with name: #{hostname}" <>
+        if(network_name, do: " in network: #{network_name}", else: "")
+    )
+
+    # List all hosts from Netmaker (optionally filtered by network)
+    case list_hosts(network_name) do
+      {:ok, hosts} ->
+        Logger.debug("Retrieved #{length(hosts)} hosts from Netmaker")
+
+        matching_host =
+          Enum.find(hosts, fn host ->
+            host["name"] == hostname
+          end)
+
+        case matching_host do
+          nil ->
+            Logger.debug("No Netmaker host found with name: #{hostname}")
+            {:error, :host_not_found}
+
+          host ->
+            Logger.debug("Found Netmaker host ID: #{host["id"]} for name: #{hostname}")
+            {:ok, host["id"]}
+        end
+
+      {:error, reason} ->
+        Logger.error("Failed to list Netmaker hosts: #{inspect(reason)}")
+        {:error, reason}
+    end
   end
 
   @doc """
@@ -453,12 +524,13 @@ defmodule EdgeAdmin.Vpn do
     case list_enrollment_keys() do
       {:ok, keys} ->
         # Find the default key for this network
-        default_key = Enum.find(keys, fn key ->
-          # Check if key is for this network and is the default key
-          networks = Map.get(key, "networks", [])
-          is_default = Map.get(key, "default", false)
-          network_name in networks and is_default
-        end)
+        default_key =
+          Enum.find(keys, fn key ->
+            # Check if key is for this network and is the default key
+            networks = Map.get(key, "networks", [])
+            is_default = Map.get(key, "default", false)
+            network_name in networks and is_default
+          end)
 
         case default_key do
           nil -> {:error, :default_key_not_found}

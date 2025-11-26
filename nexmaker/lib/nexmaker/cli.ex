@@ -65,7 +65,13 @@ defmodule Nexmaker.Cli do
     # Build args from options
     args = build_join_args(opts)
 
-    case System.cmd("netclient", ["join" | args], stderr_to_stdout: true) do
+    # Run netclient join in a separate process to avoid blocking
+    task = Task.async(fn ->
+      System.cmd("netclient", ["join" | args], stderr_to_stdout: true)
+    end)
+
+    # Wait for the task with a reasonable timeout
+    case Task.await(task, 60_000) do
       {_output, 0} ->
         {:ok, %{}}
 

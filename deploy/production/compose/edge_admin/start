@@ -13,10 +13,10 @@ echo "Running migrations..."
 /app/bin/migrate
 
 echo "Bootstrapping Netmaker superadmin..."
-RUN_BOOTSTRAP=false /app/bin/create_netmaker_superadmin
+/app/bin/create_netmaker_superadmin
 
 echo "Bootstrapping default cluster..."
-RUN_BOOTSTRAP=false /app/bin/create_default_cluster
+/app/bin/create_default_cluster
 
 # Start EPMD daemon for Erlang distribution
 echo "Starting EPMD daemon..."

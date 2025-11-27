@@ -70,7 +70,7 @@ defmodule EdgeAgent.Mixfile do
       {:phoenix, "~> 1.8"},
       {:phoenix_html, "~> 4.3"},
       {:phoenix_live_view, "~> 1.1"},
-      {:phoenix_ecto, "~> 4.6"},
+      {:phoenix_ecto, "~> 4.7"},
       {:phoenix_live_reload, "~> 1.6", only: :dev},
       {:jason, "~> 1.4"},
 
@@ -82,7 +82,7 @@ defmodule EdgeAgent.Mixfile do
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
 
       # Translations
-      {:gettext, "~> 0.26"},
+      {:gettext, "~> 1.0"},
 
       # Linting
       {:credo, "~> 1.7", only: [:dev, :test], override: true},

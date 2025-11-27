@@ -4,7 +4,7 @@ defmodule EdgeAgent.SshServer.Authentication do
   Handles SSH authentication against EdgeAdmin.
   """
 
-  alias EdgeAgent.AdminClient
+  alias EdgeAgent.EdgeClusters.AdminClient
   alias EdgeAgent.Settings
 
   require Logger

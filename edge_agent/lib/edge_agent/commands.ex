@@ -6,8 +6,8 @@ defmodule EdgeAgent.Commands do
 
   import Ecto.Query, warn: false
 
-  alias EdgeAgent.AdminClient
   alias EdgeAgent.Commands.CommandExecution
+  alias EdgeAgent.EdgeClusters.AdminClient
   alias EdgeAgent.Commands.Workers.CommandExecutionWorker
   alias EdgeAgent.Repo
 

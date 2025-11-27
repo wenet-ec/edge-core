@@ -14,6 +14,7 @@ defmodule EdgeAgentWeb.Router do
 
   pipeline :api do
     plug(:accepts, ["json"])
+    plug(EdgeAgentWeb.Plugs.ApiTokenAuth)
   end
 
   scope "/" do

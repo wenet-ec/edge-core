@@ -10,5 +10,5 @@ defmodule EdgeAgent.SshServer.Behaviour do
 
   @callback start_server() :: start_result()
   @callback stop_server() :: stop_result()
-  @callback status() :: status()
+  @callback server_status() :: status()
 end

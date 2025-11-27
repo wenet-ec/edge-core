@@ -24,7 +24,7 @@ defmodule EdgeAgent.SshServer do
   def stop_server, do: GenServer.call(__MODULE__, :stop_server)
 
   @impl EdgeAgent.SshServer.Behaviour
-  def status, do: GenServer.call(__MODULE__, :status)
+  def server_status, do: GenServer.call(__MODULE__, :server_status)
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -33,8 +33,8 @@ defmodule EdgeAgent.SshServer do
   # GenServer callbacks
   @impl true
   def init(_opts) do
-    Logger.info("SSH server context initialized")
     :ok = File.mkdir_p(Config.ssh_system_dir())
+    Logger.info("SSH server initialized on port #{Config.ssh_port()}")
     {:ok, %{daemon_ref: nil, status: :stopped}}
   end
 
@@ -77,7 +77,7 @@ defmodule EdgeAgent.SshServer do
   end
 
   @impl true
-  def handle_call(:status, _from, state) do
+  def handle_call(:server_status, _from, state) do
     {:reply, state.status, state}
   end
 

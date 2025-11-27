@@ -16,7 +16,7 @@ defmodule EdgeAgent.Application do
       {Phoenix.PubSub, name: EdgeAgent.PubSub},
       {Oban, Application.fetch_env!(:edge_agent, Oban)},
       EdgeAgent.SshServer,
-      EdgeAgent.MetricsServer.Server,
+      EdgeAgent.MetricsServer,
       EdgeAgentWeb.Endpoint
     ]
 

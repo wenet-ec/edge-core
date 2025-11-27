@@ -4,7 +4,6 @@ defmodule EdgeAgent.SshServer.Config do
   SSH server configuration management.
   """
 
-  @ssh_port 22
   @ssh_system_dir "/tmp/ssh_daemon"
   @ssh_user_dir "/tmp"
 
@@ -53,7 +52,7 @@ defmodule EdgeAgent.SshServer.Config do
 
   @supported_host_key_types [:"ssh-ed25519", :"ecdsa-sha2-nistp256", :"ssh-rsa"]
 
-  def ssh_port, do: @ssh_port
+  def ssh_port, do: Application.get_env(:edge_agent, :ssh_port)
   def ssh_system_dir, do: @ssh_system_dir
   def ssh_user_dir, do: @ssh_user_dir
   def ssh_algorithms, do: @ssh_algorithms

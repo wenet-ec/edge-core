@@ -65,13 +65,16 @@ defmodule Nexmaker.Cli do
     # Build args from options
     args = build_join_args(opts)
 
-    # Run netclient join in a separate process to avoid blocking
-    task = Task.async(fn ->
-      System.cmd("netclient", ["join" | args], stderr_to_stdout: true)
-    end)
+    retry(fn -> run_netclient_join(args) end, attempts: 3)
+  end
 
-    # Wait for the task with a reasonable timeout
-    case Task.await(task, 60_000) do
+  defp run_netclient_join(args) do
+    task =
+      Task.async(fn ->
+        System.cmd("netclient", ["join" | args], stderr_to_stdout: true)
+      end)
+
+    case Task.await(task, 20_000) do
       {_output, 0} ->
         {:ok, %{}}
 
@@ -83,6 +86,23 @@ defmodule Nexmaker.Cli do
       Logger.error("netclient command not found or failed: #{inspect(e)}")
       {:error, :netclient_not_found}
   end
+
+  defp retry(fun, attempts: attempts) when attempts > 1 do
+    case fun.() do
+      {:ok, _} = ok ->
+        ok
+
+      {:error, reason} ->
+        Logger.warning("Netclient join attempt failed (#{attempts} attempts remaining): #{inspect(reason)}")
+        Process.sleep(500)
+        retry(fun, attempts: attempts - 1)
+    end
+  end
+
+  defp retry(fun, attempts: 1) do
+    fun.()
+  end
+
 
   # Build CLI arguments from keyword options
   defp build_join_args(opts) do

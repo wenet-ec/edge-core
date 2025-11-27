@@ -37,10 +37,8 @@ defmodule EdgeAdmin.Admins.Discovery do
       # Build Erlang node names from hostnames
       peer_nodes =
         peer_hostnames
-        |> Enum.map(fn hostname ->
-          dns_hostname = Vpn.build_hostname(hostname, network_name)
-          :"admin@#{dns_hostname}"
-        end)
+        |> Enum.map(&Vpn.build_hostname(&1, network_name))
+        |> Enum.map(&Vpn.build_admin_erlang_node_name/1)
 
       # Get currently connected nodes
       connected_nodes = Node.list()

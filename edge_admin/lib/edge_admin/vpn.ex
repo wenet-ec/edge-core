@@ -180,6 +180,18 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
+  Builds an admin erlang node name from dns hostname.
+
+  ## Examples
+
+      iex> EdgeAdmin.Vpn.build_admin_erlang_node_name("node-abc.cluster-xyz.nm.internal")
+      :"admin@node-abc.cluster-xyz.nm.internal"
+  """
+  def build_admin_erlang_node_name(hostname) do
+    :"admin@#{hostname}"
+  end
+
+  @doc """
   Validates a network name for Netmaker compatibility.
 
   Returns :ok or {:error, reason}

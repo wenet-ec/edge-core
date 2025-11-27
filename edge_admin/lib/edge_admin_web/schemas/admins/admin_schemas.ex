@@ -76,6 +76,10 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           type: :integer,
           description: "Maximum node capacity"
         },
+        dns_hostname: %Schema{
+          type: :string,
+          description: "Netmaker dns hostname"
+        },
         erlang_node_name: %Schema{
           type: :string,
           description: "Erlang distribution node name"
@@ -85,6 +89,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
       example: %{
         name: "admin-k7m3n2p9x4j6",
         max_capacity: 200,
+        dns_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
         erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
       }
     })
@@ -126,11 +131,13 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           %{
             name: "admin-k7m3n2p9x4j6",
             max_capacity: 200,
+            dns_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
             erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
           },
           %{
             name: "admin-x9j4p2k7m8n3",
             max_capacity: 300,
+            dns_hostname: "admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal",
             erlang_node_name: "admin@admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal"
           }
         ]

@@ -175,7 +175,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
     Logger.info("Step 2: Starting Erlang distribution")
 
     dns_hostname = Vpn.build_hostname(admin_name(), admin_cluster_name())
-    node_name = :"admin@#{dns_hostname}"
+    node_name = Vpn.build_admin_erlang_node_name(dns_hostname)
 
     Logger.info("Starting distributed node: #{node_name}")
 
@@ -214,6 +214,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
     metadata = %{
       name: admin_name(),
       max_capacity: max_capacity(),
+      dns_hostname: Vpn.build_hostname(admin_name(), admin_cluster_name()),
       erlang_node_name: node()
     }
 

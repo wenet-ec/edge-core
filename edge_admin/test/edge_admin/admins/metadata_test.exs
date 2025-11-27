@@ -34,15 +34,6 @@ defmodule EdgeAdmin.Admins.MetadataTest do
     end
   end
 
-  describe "get_admin_id/0" do
-    test "returns current admin ID" do
-      admin_id = Metadata.get_admin_id()
-      assert is_binary(admin_id)
-      assert String.starts_with?(admin_id, "admin-") == false
-      # admin_id is just the random part, not prefixed
-    end
-  end
-
   describe "get_admin/0" do
     test "returns full admin info" do
       admin = Metadata.get_admin()

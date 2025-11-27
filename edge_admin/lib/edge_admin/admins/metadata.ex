@@ -23,7 +23,8 @@ defmodule EdgeAdmin.Admins.Metadata do
 
   ```elixir
   :admin => %{
-    id: "admin-abc123",
+    id: "abc123",
+    name: "admin-abc123",
     max_capacity: 200,
     erlang_node_name: :"admin@admin-abc123.admin-cluster-1.nm.internal",
     dns_hostname: "admin-abc123.admin-cluster-1.nm.internal",
@@ -37,8 +38,8 @@ defmodule EdgeAdmin.Admins.Metadata do
     total_admins: 2,
     degraded: false,
     topology: [
-      %{name: "admin-abc123", max_capacity: 200, erlang_node_name: ...},
-      %{name: "admin-def456", max_capacity: 300, erlang_node_name: ...}
+      %{name: "admin-abc123", max_capacity: 200, dns_hostname: ..., erlang_node_name: ...},
+      %{name: "admin-def456", max_capacity: 300, dns_hostname: ..., erlang_node_name: ...}
     ]
   }
 
@@ -67,6 +68,7 @@ defmodule EdgeAdmin.Admins.Metadata do
 
   alias EdgeAdmin.Admins.Metadata.Algorithm
   alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Vpn
   alias EdgeAdmin.Nodes.Cluster
   alias EdgeAdmin.Nodes.Node
 
@@ -91,7 +93,6 @@ defmodule EdgeAdmin.Admins.Metadata do
     admin_name = Application.get_env(:edge_admin, :admin_name)
     admin_cluster_name = Application.get_env(:edge_admin, :admin_cluster_name)
     max_capacity = Application.get_env(:edge_admin, :admin_max_capacity)
-    netmaker_default_domain = Application.get_env(:edge_admin, :netmaker_default_domain)
 
     Logger.info("Metadata initializing for admin #{admin_name}")
 
@@ -99,7 +100,7 @@ defmodule EdgeAdmin.Admins.Metadata do
     :ets.new(@table, [:set, :public, :named_table, read_concurrency: true])
 
     # Compute derived values
-    dns_hostname = build_dns_hostname(admin_name, admin_cluster_name, netmaker_default_domain)
+    dns_hostname = Vpn.build_hostname(admin_name, admin_cluster_name)
     erlang_node_name = node()
 
     # Fetch Netmaker host ID
@@ -163,11 +164,6 @@ defmodule EdgeAdmin.Admins.Metadata do
   end
 
   # === Public API (Queries) ===
-
-  def get_admin_id do
-    [{:admin, admin}] = :ets.lookup(@table, :admin)
-    admin.id
-  end
 
   def get_admin do
     [{:admin, admin}] = :ets.lookup(@table, :admin)
@@ -366,7 +362,7 @@ defmodule EdgeAdmin.Admins.Metadata do
   defp read_admins_from_syn do
     # Get all admins from syn process group
     # :syn.members/2 returns list of {pid, metadata} tuples
-    # We join all admins to a common group using the admin_cluster_name as group name
+    # Metadata contains: %{name: admin_name, max_capacity: capacity, erlang_node_name: ..., dns_hostname: ...}
     [{:admin, admin_info}] = :ets.lookup(@table, :admin)
     admin_cluster_name = admin_info.admin_cluster_name
 
@@ -374,21 +370,14 @@ defmodule EdgeAdmin.Admins.Metadata do
       case :syn.members(:admin_scope, admin_cluster_name) do
         members when is_list(members) ->
           members
-          |> Enum.map(fn {_pid, metadata} ->
-            # metadata should contain: %{name: admin_name, max_capacity: capacity, erlang_node_name: ...}
-            # Use admin_name as key for edge_clusters mapping
-            admin_name = metadata.name
-            {admin_name, metadata}
-          end)
+          |> Enum.map(fn {_pid, metadata} -> {metadata.name, metadata} end)
           |> Map.new()
 
         _ ->
-          # syn not ready or no members
           %{}
       end
     rescue
       ErlangError ->
-        # Syn scope not initialized (Bootstrap was skipped)
         Logger.debug("Syn scope :admin_scope not initialized, returning empty admin list")
         %{}
     end
@@ -418,15 +407,8 @@ defmodule EdgeAdmin.Admins.Metadata do
     # Update :admin_cluster topology
     [{:admin_cluster, admin_cluster}] = :ets.lookup(@table, :admin_cluster)
 
-    topology =
-      all_admins
-      |> Enum.map(fn {admin_name, metadata} ->
-        %{
-          name: admin_name,
-          max_capacity: metadata.max_capacity,
-          erlang_node_name: metadata.erlang_node_name
-        }
-      end)
+    # Extract metadata values
+    topology = Map.values(all_admins)
 
     # Use degraded flag from algorithm result
     updated_admin_cluster = %{
@@ -450,10 +432,4 @@ defmodule EdgeAdmin.Admins.Metadata do
 
     :ok
   end
-
-  defp build_dns_hostname(admin_name, admin_cluster_name, ""),
-    do: "#{admin_name}.#{admin_cluster_name}"
-
-  defp build_dns_hostname(admin_name, admin_cluster_name, domain),
-    do: "#{admin_name}.#{admin_cluster_name}.#{domain}"
 end

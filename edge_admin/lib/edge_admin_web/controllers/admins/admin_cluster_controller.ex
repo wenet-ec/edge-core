@@ -20,23 +20,8 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminClusterController do
   def show(conn, _params) do
     [{:admin_cluster, admin_cluster}] = :ets.lookup(:metadata, :admin_cluster)
 
-    # Convert topology erlang node names to strings
-    topology =
-      Enum.map(admin_cluster.topology, fn entry ->
-        %{
-          name: entry.name,
-          max_capacity: entry.max_capacity,
-          erlang_node_name: to_string(entry.erlang_node_name)
-        }
-      end)
-
     conn
     |> put_status(:ok)
-    |> json(%{
-      name: admin_cluster.name,
-      total_admins: admin_cluster.total_admins,
-      degraded: admin_cluster.degraded,
-      topology: topology
-    })
+    |> json(admin_cluster)
   end
 end

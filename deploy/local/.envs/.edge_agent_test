@@ -1,6 +1,2 @@
 # deploy/local/.envs/.edge_agent_test
 MIX_ENV=test
-
-# VPN configuration
-VPN_URL=http://edge_vpn:8080
-EDGE_ADMIN_URL=http://edge_admin:4000

@@ -269,8 +269,6 @@ services:
     depends_on:
       edge_admin:
         condition: service_healthy
-      edge_vpn:
-        condition: service_healthy
     volumes:
       - ../../edge_agent:/app:z
       - ../../nexmaker:/nexmaker:z
@@ -282,7 +280,7 @@ services:
     env_file:
       - ./.envs/.edge_agent
     privileged: true
-    command: /start-dev
+    command: /start
 
   edge_agent_test:
     build:

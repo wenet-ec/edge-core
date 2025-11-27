@@ -2,10 +2,6 @@
 import Config
 import EdgeAgent.Config
 
-# Optional VPN environment variables
-vpn_url = get_env("VPN_URL", :string, nil)
-enrollment_key = get_env("ENROLLMENT_KEY", :string, nil)
-
 # Optional environment variables with defaults
 config :edge_agent, EdgeAgent.Repo,
   database: get_env("DATABASE_PATH", :string, "/app/data/edge_agent.db"),
@@ -35,14 +31,4 @@ config :edge_agent,
   basic_auth: [
     username: get_env("BASIC_AUTH_USERNAME", :string, nil),
     password: get_env("BASIC_AUTH_PASSWORD", :string, nil)
-  ],
-  vpn_url: vpn_url,
-  enrollment_key: enrollment_key
-
-# Tailscale library configuration
-# Note: Edge agent only uses CLI operations, so VPN_WRAPPER_URL is optional
-# Only needed if using API functions like get_node_by_hostname, create_enrollment_key, etc.
-if System.get_env("VPN_WRAPPER_URL") do
-  config :tailscale,
-    vpn_wrapper_url: System.get_env("VPN_WRAPPER_URL")
-end
+  ]

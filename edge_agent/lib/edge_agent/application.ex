@@ -14,38 +14,14 @@ defmodule EdgeAgent.Application do
       EdgeAgent.Repo,
       {DNSCluster, query: Application.get_env(:edge_agent, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: EdgeAgent.PubSub},
-      Tailscale.ConnectionManager,
       {Oban, Application.fetch_env!(:edge_agent, Oban)},
       EdgeAgent.SshServer,
       EdgeAgent.MetricsServer.Server,
       EdgeAgentWeb.Endpoint
     ]
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: EdgeAgent.Supervisor]
-
-    case Supervisor.start_link(children, opts) do
-      {:ok, pid} ->
-        # Only run bootstrap if not in test environment
-        if should_run_bootstrap?() do
-          case EdgeAgent.Bootstrap.run() do
-            {:ok, :bootstrap_complete} ->
-              {:ok, pid}
-
-            {:error, reason} ->
-              Logger.error("Bootstrap failed: #{inspect(reason)}")
-              # Continue for now, but you might want {:error, reason}
-              {:ok, pid}
-          end
-        else
-          Logger.info("Skipping bootstrap in #{Mix.env()} environment")
-          {:ok, pid}
-        end
-
-      error ->
-        error
-    end
+    Supervisor.start_link(children, opts)
   end
 
   # Tell Phoenix to update the endpoint configuration
@@ -54,18 +30,5 @@ defmodule EdgeAgent.Application do
   def config_change(changed, _new, removed) do
     EdgeAgentWeb.Endpoint.config_change(changed, removed)
     :ok
-  end
-
-  defp should_run_bootstrap? do
-    case Application.get_env(:edge_agent, :run_bootstrap, :auto) do
-      false -> false
-      true -> true
-      :auto -> phoenix_server_starting?()
-    end
-  end
-
-  defp phoenix_server_starting? do
-    # Only run bootstrap when Phoenix server is actually starting
-    System.get_env("PHX_SERVER") == "true"
   end
 end

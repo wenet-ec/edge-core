@@ -1,6 +1,2 @@
 # deploy/production/.envs/.edge_agent
-
-# VPN configuration
-EDGE_ADMIN_URL=http://edge_admin:4000
-VPN_URL=http://edge_vpn:8080
 ENROLLMENT_KEY=

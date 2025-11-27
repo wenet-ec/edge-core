@@ -27,7 +27,6 @@ config :edge_agent, Oban,
   engine: Oban.Engines.Lite,
   repo: EdgeAgent.Repo,
   queues: [
-    vpn: 2,
     command_execution: 1,
     command_reporting: 1,
     command_scheduling: 1
@@ -35,8 +34,6 @@ config :edge_agent, Oban,
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [
-       {"* * * * *", EdgeAgent.VPN.Workers.ConnectivityCheckingWorker},
-       {"* * * * *", EdgeAgent.VPN.Workers.AutoReconnectingWorker},
        # Every minute for faster reporting
        {"* * * * *", EdgeAgent.Commands.Workers.CommandReportScheduler},
        # Every 2 minutes safety net

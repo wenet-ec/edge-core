@@ -48,7 +48,7 @@ config :edge_admin,
   admin_cluster_name: "admin-cluster-test",
   admin_max_capacity: 100,
   erlang_cookie: :test_cookie,
-  admin_discovery_port: 4000,
+  admin_discovery_port: 44000,
   netmaker_default_domain: "nm.internal"
 
 config :logger, level: :warning

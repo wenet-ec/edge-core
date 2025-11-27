@@ -2,7 +2,7 @@
 
 # Server configuration
 CORS_ALLOWED_ORIGINS=*
-API_PORT=4000
+API_PORT=44000
 SECRET_KEY_BASE=zsIbO5eGH9IJ1p+E6M1a1VL4bIGrwLeTS8W7q8QDAOE/o3Ucy0si768bJxmF4A1Q
 SESSION_KEY=edge_admin
 SESSION_SIGNING_SALT=FUYY5L041VshhwCep1OyX+vu4imud8+63+kLzupf7lrqlkiztQWQjFcJLgCLalXp
@@ -57,5 +57,5 @@ ADMIN_CLUSTER_NAME=1  # Will be prefixed with "admin-cluster-" → admin-cluster
 ADMIN_CLUSTER_SUBNET=100.63.0.0/24  # IPv4 CIDR for admin cluster network (separate from edge clusters)
 ADMIN_MAX_CAPACITY=200  # Maximum number of nodes this admin can handle
 ERLANG_COOKIE=local-cookie  # Shared secret for Erlang distribution
-ADMIN_DISCOVERY_PORT=4000  # Port to scan for admin discovery endpoint
+ADMIN_DISCOVERY_PORT=44000  # Port to scan for admin discovery endpoint
 NETMAKER_DEFAULT_DOMAIN=nm.internal  # DNS domain suffix for hostname construction

@@ -54,9 +54,9 @@ services:
     env_file:
       - ./.envs/.edge_admin
     ports:
-      - "4000:4000"
+      - "4000:44000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
       interval: 60s
       timeout: 5s
       retries: 6

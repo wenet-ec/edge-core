@@ -30,4 +30,5 @@ config :edge_agent, EdgeAgentWeb.Endpoint,
 config :edge_agent,
   ssh_port: get_env("SSH_PORT", :integer, 40022),
   metrics_port: get_env("METRICS_PORT", :integer, 49100),
+  admin_discovery_port: get_env("ADMIN_DISCOVERY_PORT", :integer, 44000),
   use_random_id: get_env("USE_RANDOM_ID", :boolean, false)

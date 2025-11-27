@@ -29,7 +29,7 @@ end
 config :edge_admin, EdgeAdminWeb.Endpoint,
   http: [
     ip: {0, 0, 0, 0, 0, 0, 0, 0},
-    port: get_env!("API_PORT", :integer)
+    port: get_env("API_PORT", :integer, 44000)
   ],
   secret_key_base: get_env!("SECRET_KEY_BASE"),
   session_key: get_env!("SESSION_KEY"),
@@ -117,7 +117,7 @@ config :edge_admin,
   admin_cluster_subnet: get_env("ADMIN_CLUSTER_SUBNET"),
   admin_max_capacity: get_env!("ADMIN_MAX_CAPACITY", :positive_integer),
   erlang_cookie: get_env("ERLANG_COOKIE", :atom, :edge_admin_default_cookie),
-  admin_discovery_port: get_env("ADMIN_DISCOVERY_PORT", :integer, 4000),
+  admin_discovery_port: get_env("ADMIN_DISCOVERY_PORT", :integer, 44000),
   netmaker_default_domain: get_env("NETMAKER_DEFAULT_DOMAIN", :string, "nm.internal")
 
 # =============================================================================

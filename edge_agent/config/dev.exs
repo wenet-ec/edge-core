@@ -7,7 +7,7 @@ config :edge_agent, EdgeAgent.Repo,
   show_sensitive_data_on_connection_error: true
 
 config :edge_agent, EdgeAgentWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4000],
+  http: [ip: {127, 0, 0, 1}, port: 44000],
   code_reloader: true,
   debug_errors: true,
   check_origin: false,

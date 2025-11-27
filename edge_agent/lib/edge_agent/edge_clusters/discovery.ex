@@ -19,7 +19,7 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
 
   Returns `{:ok, cluster_id, admin_urls}` where admin_urls is a list of HTTP URLs:
   ```
-  ["http://admin-xyz.cluster-abc.nm.internal:4000", ...]
+  ["http://admin-xyz.cluster-abc.nm.internal:44000", ...]
   ```
 
   Stores discovered admins in Settings table as JSON-encoded list.
@@ -51,7 +51,7 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
 
   # Scan subnet for admins
   defp scan_subnet(subnet, cluster_id) do
-    discovery_port = Application.get_env(:edge_agent, :admin_discovery_port, 4000)
+    discovery_port = Application.get_env(:edge_agent, :admin_discovery_port, 44000)
     default_domain = Application.get_env(:edge_agent, :netmaker_default_domain, "nm.internal")
 
     Logger.info("Scanning subnet #{subnet} for admins...")

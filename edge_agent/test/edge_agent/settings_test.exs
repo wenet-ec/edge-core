@@ -177,12 +177,12 @@ defmodule EdgeAgent.SettingsTest do
     end
 
     test "configuration updates don't create duplicates" do
-      Settings.set("admin_endpoint", "http://admin:4000")
+      Settings.set("admin_endpoint", "http://admin:44000")
       assert length(Settings.list_settings()) == 1
 
-      Settings.set("admin_endpoint", "http://new-admin:4000")
+      Settings.set("admin_endpoint", "http://new-admin:44000")
       assert length(Settings.list_settings()) == 1
-      assert Settings.get("admin_endpoint") == "http://new-admin:4000"
+      assert Settings.get("admin_endpoint") == "http://new-admin:44000"
     end
   end
 

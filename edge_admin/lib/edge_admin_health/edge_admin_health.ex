@@ -32,16 +32,24 @@ defmodule EdgeAdminHealth do
   def database_health do
     case EdgeAdmin.Repo.query("SELECT 1", []) do
       {:ok, _} -> :ok
-      {:error, _} -> :error
+      {:error, reason} -> {:error, "Database query failed: #{inspect(reason)}"}
     end
   end
 
   def bootstrap_health do
-    if EdgeAdmin.Admins.Bootstrap.initialized?(), do: :ok, else: :error
+    if EdgeAdmin.Admins.Bootstrap.initialized?() do
+      :ok
+    else
+      {:error, "Bootstrap not initialized"}
+    end
   end
 
   def metadata_health do
-    if EdgeAdmin.Admins.Metadata.initialized?(), do: :ok, else: :error
+    if EdgeAdmin.Admins.Metadata.initialized?() do
+      :ok
+    else
+      {:error, "Metadata not initialized"}
+    end
   end
 
   def netmaker_api_health do
@@ -51,10 +59,12 @@ defmodule EdgeAdminHealth do
 
       {:error, reason} ->
         Logger.debug("Netmaker API health check failed: #{inspect(reason)}")
-        :error
+        {:error, "API unreachable"}
     end
   rescue
-    _ -> :error
+    e ->
+      Logger.error("Netmaker API health check exception: #{inspect(e)}")
+      {:error, "API check exception"}
   end
 
   def netclient_health do
@@ -67,21 +77,23 @@ defmodule EdgeAdminHealth do
 
       {:ok, %{connected: false}} ->
         Logger.error("Netclient shows disconnected from admin cluster network #{network_name}")
-        :error
+        {:error, "Disconnected"}
 
       {:error, :not_connected} ->
         Logger.error("Netclient not connected to admin cluster network #{network_name}")
-        :error
+        {:error, "Not connected"}
 
       {:error, :not_found} ->
         Logger.error("Admin cluster network #{network_name} not found in netclient")
-        :error
+        {:error, "Network not found"}
 
       {:error, reason} ->
         Logger.error("Failed to check netclient connection: #{inspect(reason)}")
-        :error
+        {:error, "Connection check failed"}
     end
   rescue
-    _ -> :error
+    e ->
+      Logger.error("Netclient health check exception: #{inspect(e)}")
+      {:error, "Health check exception"}
   end
 end

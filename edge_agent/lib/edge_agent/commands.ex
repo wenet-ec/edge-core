@@ -130,11 +130,19 @@ defmodule EdgeAgent.Commands do
     Logger.info("Attempting to report #{length(executions)} executions to admin")
 
     Enum.reduce_while(executions, :ok, fn execution, _acc ->
+      # Convert DateTime to ISO8601 string for JSON encoding
+      completed_at_string =
+        if execution.completed_at do
+          DateTime.to_iso8601(execution.completed_at)
+        else
+          nil
+        end
+
       params = %{
         status: execution.status,
         output: execution.output,
         exit_code: execution.exit_code,
-        completed_at: execution.completed_at
+        completed_at: completed_at_string
       }
 
       case AdminClient.update_command_execution(execution.id, params) do

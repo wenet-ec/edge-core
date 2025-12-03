@@ -6,7 +6,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.SshUsernameJSON do
   Renders a list of SSH usernames with their public keys.
   """
   def index(%{ssh_usernames: ssh_usernames}) do
-    %{ssh_usernames: for(username <- ssh_usernames, do: data(username))}
+    %{data: for(username <- ssh_usernames, do: data(username))}
   end
 
   defp data(%SshUsername{} = username) do

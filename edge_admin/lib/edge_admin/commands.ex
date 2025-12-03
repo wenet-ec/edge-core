@@ -396,8 +396,9 @@ defmodule EdgeAdmin.Commands do
 
   def send_command_to_node(node, execution_data) do
     url = "#{EdgeAdmin.Nodes.Node.http_url(node)}/api/command_executions"
+    headers = [{"authorization", "Bearer #{node.api_token}"}]
 
-    case Req.post(url, json: execution_data, receive_timeout: 5000) do
+    case Req.post(url, json: execution_data, headers: headers, receive_timeout: 5000) do
       {:ok, %{status: status}} when status in 200..299 ->
         {:ok, :sent}
 
@@ -463,7 +464,7 @@ defmodule EdgeAdmin.Commands do
   - {:error, :invalid_status} if execution is not in "sent" status
   - {:error, changeset} on validation errors
   """
-  def update_command_execution_result(execution_id, node_id, attrs) do
+  def update_command_execution_result(execution_id, node_id, params) do
     execution = get_command_execution!(execution_id)
 
     # Verify it belongs to this node
@@ -474,12 +475,27 @@ defmodule EdgeAdmin.Commands do
       if execution.status != "sent" do
         {:error, :invalid_status}
       else
-        # Build update attrs with completed_at timestamp
+        # Extract command_execution params from Phoenix-wrapped request
+        attrs = params["command_execution"] || %{}
+
+        # Parse completed_at from agent (ISO8601 string to DateTime)
+        completed_at =
+          case attrs["completed_at"] do
+            nil -> DateTime.utc_now() |> DateTime.truncate(:second)
+            timestamp when is_binary(timestamp) ->
+              case DateTime.from_iso8601(timestamp) do
+                {:ok, dt, _offset} -> DateTime.truncate(dt, :second)
+                _ -> DateTime.utc_now() |> DateTime.truncate(:second)
+              end
+            %DateTime{} = dt -> DateTime.truncate(dt, :second)
+          end
+
+        # Build update attrs with agent's completion timestamp
         update_attrs = %{
           status: attrs["status"],
           output: attrs["output"],
           exit_code: attrs["exit_code"],
-          completed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+          completed_at: completed_at
         }
 
         update_command_execution(execution, update_attrs)

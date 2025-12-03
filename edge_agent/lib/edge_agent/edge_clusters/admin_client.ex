@@ -58,36 +58,6 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   end
 
   @doc """
-  List SSH public keys for an SSH username.
-  GET /api/agents/ssh_public_keys?ssh_username_id=...
-  """
-  def list_ssh_public_keys(ssh_username_id) do
-    path = "/api/agents/ssh_public_keys"
-    params = %{ssh_username_id: ssh_username_id}
-
-    request_with_fallback(path, fn url ->
-      case Req.get(url, params: params) do
-        {:ok, %{status: 200, body: %{"data" => ssh_public_keys}}} ->
-          {:ok, ssh_public_keys}
-
-        {:ok, %{status: 404}} ->
-          {:error, :not_found}
-
-        {:ok, %{status: status, body: body}} ->
-          Logger.warning(
-            "Failed to list SSH public keys for username #{ssh_username_id}, HTTP #{status}: #{inspect(body)}"
-          )
-
-          {:error, {:http_error, status, body}}
-
-        {:error, reason} ->
-          Logger.warning("Failed to list SSH public keys for username #{ssh_username_id}: #{inspect(reason)}")
-          {:error, {:request_failed, reason}}
-      end
-    end)
-  end
-
-  @doc """
   Get sent command executions for the authenticated node.
   GET /api/agents/command_executions
   """

@@ -5,7 +5,6 @@ defmodule EdgeAgent.SshServer.Authentication do
   """
 
   alias EdgeAgent.EdgeClusters.AdminClient
-  alias EdgeAgent.Settings
 
   require Logger
 
@@ -21,10 +20,9 @@ defmodule EdgeAgent.SshServer.Authentication do
   def auth_key?(key, user) do
     Logger.debug("SSH auth attempt for user: #{user}")
 
-    with {:ok, node_id} <- get_node_id(),
-         {:ok, ssh_usernames} <- AdminClient.list_ssh_usernames(node_id),
+    with {:ok, ssh_usernames} <- AdminClient.list_ssh_usernames(),
          {:ok, ssh_username} <- find_username(ssh_usernames, to_string(user)),
-         {:ok, ssh_public_keys} <- AdminClient.list_ssh_public_keys(ssh_username["id"]),
+         ssh_public_keys <- ssh_username["public_keys"] || [],
          true <- validate_public_key(key, ssh_public_keys) do
       Logger.info("SSH authentication successful for user: #{user}")
       true
@@ -40,17 +38,6 @@ defmodule EdgeAgent.SshServer.Authentication do
   end
 
   # Private functions
-
-  defp get_node_id do
-    case Settings.get("id") do
-      nil ->
-        Logger.warning("Node ID not found in settings")
-        {:error, :node_id_not_found}
-
-      node_id ->
-        {:ok, node_id}
-    end
-  end
 
   defp find_username(ssh_usernames, username) do
     case Enum.find(ssh_usernames, fn u -> u["username"] == username end) do

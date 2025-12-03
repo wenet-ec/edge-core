@@ -31,4 +31,6 @@ config :edge_agent,
   ssh_port: get_env("SSH_PORT", :integer, 40022),
   metrics_port: get_env("METRICS_PORT", :integer, 49100),
   admin_discovery_port: get_env("ADMIN_DISCOVERY_PORT", :integer, 44000),
-  use_random_id: get_env("USE_RANDOM_ID", :boolean, false)
+  netmaker_default_domain: get_env("NETMAKER_DEFAULT_DOMAIN", :string, "nm.internal"),
+  use_random_id: get_env("USE_RANDOM_ID", :boolean, false),
+  enrollment_key: get_env("ENROLLMENT_KEY", :string, nil)

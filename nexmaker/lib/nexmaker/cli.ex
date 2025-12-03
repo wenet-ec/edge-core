@@ -65,16 +65,12 @@ defmodule Nexmaker.Cli do
     # Build args from options
     args = build_join_args(opts)
 
-    retry(fn -> run_netclient_join(args) end, attempts: 3)
-  end
-
-  defp run_netclient_join(args) do
     task =
       Task.async(fn ->
         System.cmd("netclient", ["join" | args], stderr_to_stdout: true)
       end)
 
-    case Task.await(task, 20_000) do
+    case Task.await(task, 30_000) do
       {_output, 0} ->
         {:ok, %{}}
 
@@ -85,22 +81,6 @@ defmodule Nexmaker.Cli do
     e in ErlangError ->
       Logger.error("netclient command not found or failed: #{inspect(e)}")
       {:error, :netclient_not_found}
-  end
-
-  defp retry(fun, attempts: attempts) when attempts > 1 do
-    case fun.() do
-      {:ok, _} = ok ->
-        ok
-
-      {:error, reason} ->
-        Logger.warning("Netclient join attempt failed (#{attempts} attempts remaining): #{inspect(reason)}")
-        Process.sleep(500)
-        retry(fun, attempts: attempts - 1)
-    end
-  end
-
-  defp retry(fun, attempts: 1) do
-    fun.()
   end
 
 
@@ -213,6 +193,79 @@ defmodule Nexmaker.Cli do
     e in ErlangError ->
       Logger.error("netclient command not found or failed: #{inspect(e)}")
       {:error, :netclient_not_found}
+  end
+
+  @doc """
+  Checks if connected to any network.
+
+  Uses `list_networks()` with retry logic and file fallback.
+  Useful during bootstrap to determine if already joined before attempting to join.
+
+  ## Returns
+    - `{:ok, :connected}` - Connected to at least one network
+    - `{:ok, :not_connected}` - No networks found (safe to join)
+    - `{:error, reason}` - Failed to determine status
+
+  ## Options
+    - `:retries` - Number of retry attempts (default: 2)
+    - `:retry_delay` - Milliseconds between retries (default: 2000)
+
+  ## Examples
+
+      {:ok, :connected} = Nexmaker.Cli.check_any_connection()
+      {:ok, :not_connected} = Nexmaker.Cli.check_any_connection(retries: 3)
+  """
+  @spec check_any_connection(keyword()) :: {:ok, :connected | :not_connected} | {:error, any()}
+  def check_any_connection(opts \\ []) do
+    retries = Keyword.get(opts, :retries, 10)
+    retry_delay = Keyword.get(opts, :retry_delay, 5000)
+
+    check_with_retry(retries, retry_delay, 1)
+  end
+
+  defp check_with_retry(max_attempts, retry_delay, attempt) do
+    case list_networks() do
+      {:ok, [_ | _]} ->
+        {:ok, :connected}
+
+      {:ok, []} ->
+        {:ok, :not_connected}
+
+      {:error, reason} ->
+        if attempt < max_attempts do
+          Logger.debug("list_networks failed (attempt #{attempt}/#{max_attempts}), retrying in #{retry_delay}ms: #{inspect(reason)}")
+          Process.sleep(retry_delay)
+          check_with_retry(max_attempts, retry_delay, attempt + 1)
+        else
+          # Fallback: check nodes.json file
+          Logger.warning("list_networks failed after #{max_attempts} attempts, falling back to file check")
+          check_nodes_file()
+        end
+    end
+  end
+
+  defp check_nodes_file do
+    nodes_file = "/etc/netclient/nodes.json"
+
+    case File.read(nodes_file) do
+      {:ok, content} ->
+        case Jason.decode(content) do
+          {:ok, nodes} when map_size(nodes) > 0 ->
+            {:ok, :connected}
+
+          {:ok, _empty_map} ->
+            {:ok, :not_connected}
+
+          {:error, reason} ->
+            {:error, {:json_parse_error, reason}}
+        end
+
+      {:error, :enoent} ->
+        {:ok, :not_connected}
+
+      {:error, reason} ->
+        {:error, {:file_read_error, reason}}
+    end
   end
 
   @doc """

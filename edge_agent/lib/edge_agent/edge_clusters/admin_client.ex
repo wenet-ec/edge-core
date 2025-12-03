@@ -32,15 +32,14 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   end
 
   @doc """
-  List SSH usernames for a node.
-  GET /api/agents/ssh_usernames?node_id=...
+  List SSH usernames for the authenticated node.
+  GET /api/agents/ssh_usernames
   """
-  def list_ssh_usernames(node_id) do
+  def list_ssh_usernames do
     path = "/api/agents/ssh_usernames"
-    params = %{node_id: node_id}
 
-    request_with_fallback(path, fn url ->
-      case Req.get(url, params: params) do
+    request_with_auth(path, fn url, headers ->
+      case Req.get(url, headers: headers) do
         {:ok, %{status: 200, body: %{"data" => ssh_usernames}}} ->
           {:ok, ssh_usernames}
 
@@ -48,11 +47,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
           {:error, :not_found}
 
         {:ok, %{status: status, body: body}} ->
-          Logger.warning("Failed to list SSH usernames for node #{node_id}, HTTP #{status}: #{inspect(body)}")
+          Logger.warning("Failed to list SSH usernames, HTTP #{status}: #{inspect(body)}")
           {:error, {:http_error, status, body}}
 
         {:error, reason} ->
-          Logger.warning("Failed to list SSH usernames for node #{node_id}: #{inspect(reason)}")
+          Logger.warning("Failed to list SSH usernames: #{inspect(reason)}")
           {:error, {:request_failed, reason}}
       end
     end)
@@ -89,15 +88,14 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   end
 
   @doc """
-  Get sent command executions for this node.
-  GET /api/agents/command_executions?node_id=...
+  Get sent command executions for the authenticated node.
+  GET /api/agents/command_executions
   """
-  def get_sent_command_executions(node_id) do
+  def get_sent_command_executions do
     path = "/api/agents/command_executions"
-    params = %{node_id: node_id}
 
-    request_with_fallback(path, fn url ->
-      case Req.get(url, params: params) do
+    request_with_auth(path, fn url, headers ->
+      case Req.get(url, headers: headers) do
         {:ok, %{status: 200, body: %{"data" => command_executions}}} ->
           {:ok, command_executions}
 
@@ -105,11 +103,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
           {:error, :not_found}
 
         {:ok, %{status: status, body: body}} ->
-          Logger.warning("Failed to get command executions for node #{node_id}, HTTP #{status}: #{inspect(body)}")
+          Logger.warning("Failed to get command executions, HTTP #{status}: #{inspect(body)}")
           {:error, {:http_error, status, body}}
 
         {:error, reason} ->
-          Logger.warning("Failed to get command executions for node #{node_id}: #{inspect(reason)}")
+          Logger.warning("Failed to get command executions: #{inspect(reason)}")
           {:error, {:request_failed, reason}}
       end
     end)
@@ -123,8 +121,8 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     path = "/api/agents/command_executions/#{execution_id}"
     payload = %{command_execution: command_execution_params}
 
-    request_with_fallback(path, fn url ->
-      case Req.patch(url, json: payload) do
+    request_with_auth(path, fn url, headers ->
+      case Req.patch(url, json: payload, headers: headers) do
         {:ok, %{status: status}} when status in 200..299 ->
           Logger.debug("Successfully updated command execution #{execution_id}")
           :ok
@@ -143,7 +141,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   # Private functions
 
   defp request_with_fallback(path, request_fn) do
-    case get_admin_urls() do
+    case Settings.get_admin_urls() do
       [] ->
         Logger.warning("No admin URLs found in Settings")
         {:error, :no_admin_urls}
@@ -153,23 +151,23 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     end
   end
 
-  defp get_admin_urls do
-    case Settings.get("admin_urls") do
+  defp request_with_auth(path, request_fn) do
+    case Settings.get_api_token() do
       nil ->
-        []
+        Logger.warning("No API token found in Settings")
+        {:error, :no_api_token}
 
-      admin_urls when is_list(admin_urls) ->
-        admin_urls
+      api_token ->
+        headers = [{"authorization", "Bearer #{api_token}"}]
 
-      admin_urls when is_binary(admin_urls) ->
-        # Handle case where it might be stored as JSON string
-        case Jason.decode(admin_urls) do
-          {:ok, urls} when is_list(urls) -> urls
-          _ -> []
+        case Settings.get_admin_urls() do
+          [] ->
+            Logger.warning("No admin URLs found in Settings")
+            {:error, :no_admin_urls}
+
+          admin_urls ->
+            try_request_with_auth(admin_urls, path, headers, request_fn)
         end
-
-      _ ->
-        []
     end
   end
 
@@ -187,6 +185,23 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   end
 
   defp try_request([], _path, _request_fn) do
+    {:error, {:all_requests_failed, "All admin URLs failed"}}
+  end
+
+  defp try_request_with_auth([url | remaining_urls], path, headers, request_fn) do
+    full_url = "#{url}#{path}"
+
+    case request_fn.(full_url, headers) do
+      {:error, {:request_failed, _reason}} when remaining_urls != [] ->
+        Logger.debug("Request to #{full_url} failed, trying next URL")
+        try_request_with_auth(remaining_urls, path, headers, request_fn)
+
+      result ->
+        result
+    end
+  end
+
+  defp try_request_with_auth([], _path, _headers, _request_fn) do
     {:error, {:all_requests_failed, "All admin URLs failed"}}
   end
 end

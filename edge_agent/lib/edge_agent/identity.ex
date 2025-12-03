@@ -29,8 +29,8 @@ defmodule EdgeAgent.Identity do
   """
   def determine do
     # Check if we already have an ID in the database
-    with node_id when not is_nil(node_id) <- Settings.get("node_id"),
-         id_type when not is_nil(id_type) <- Settings.get("id_type"),
+    with node_id when not is_nil(node_id) <- Settings.get_node_id(),
+         id_type when not is_nil(id_type) <- Settings.get_id_type(),
          true <- id_type in ["persistent", "random"] do
       # Found valid existing ID
       Logger.info("Found existing node identity: #{String.slice(node_id, 0, 8)}... (#{id_type})")
@@ -56,13 +56,46 @@ defmodule EdgeAgent.Identity do
         # Try persistent ID first, fall back to random
         case try_persistent_id() do
           {:ok, id} ->
-            Logger.info("Found persistent ID: #{String.slice(id, 0, 8)}...")
-            {:ok, id, "persistent"}
+            # Normalize to UUID format with hyphens
+            normalized_id = normalize_to_uuid(id)
+            Logger.info("Found persistent ID: #{String.slice(normalized_id, 0, 8)}...")
+            {:ok, normalized_id, "persistent"}
 
           :error ->
             Logger.warning("No persistent ID found, generating random UUID")
             {:ok, Ecto.UUID.generate(), "random"}
         end
+    end
+  end
+
+  # Normalize a string to UUID format (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+  defp normalize_to_uuid(id) do
+    # Check if already in UUID format
+    if String.contains?(id, "-") and String.match?(id, ~r/^[a-f0-9-]{36}$/i) do
+      String.downcase(id)
+    else
+      # Remove any non-hex characters and convert to lowercase
+      clean_hex =
+        id
+        |> String.replace(~r/[^a-fA-F0-9]/, "")
+        |> String.downcase()
+
+      # Take first 32 hex characters (or pad if shorter)
+      hex32 =
+        case String.length(clean_hex) do
+          len when len >= 32 ->
+            String.slice(clean_hex, 0, 32)
+
+          len ->
+            # Pad with zeros if shorter than 32 characters
+            clean_hex <> String.duplicate("0", 32 - len)
+        end
+
+      # Insert hyphens at UUID positions: 8-4-4-4-12
+      <<p1::binary-size(8), p2::binary-size(4), p3::binary-size(4), p4::binary-size(4),
+        p5::binary-size(12)>> = hex32
+
+      "#{p1}-#{p2}-#{p3}-#{p4}-#{p5}"
     end
   end
 

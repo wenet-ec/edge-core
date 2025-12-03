@@ -367,22 +367,24 @@ defmodule EdgeAdmin.Nodes do
   Verifies cluster and Netmaker node existence, generates new tokens on every registration,
   and creates or updates the node record.
   """
-  def register_agent_node(attrs) do
+  def register_agent_node(%{"node" => attrs}) do
     %{
       "node_id" => node_id,
-      "cluster_id" => cluster_id
+      "network_name" => network_name
     } = attrs
 
-    # 1. Verify cluster exists
-    cluster = get_cluster!(cluster_id)
+    # 1. Parse cluster name from network name (e.g., "cluster-default" -> "default")
+    cluster_name = String.replace_prefix(network_name, "cluster-", "")
 
-    # 2. Verify node exists in Netmaker and get host ID
-    network_name = Vpn.cluster_network_name(cluster.name)
+    # 2. Verify cluster exists
+    cluster = Repo.get_by!(Cluster, name: cluster_name)
+
+    # 3. Verify node exists in Netmaker and get host ID
     node_hostname = Vpn.build_node_name(node_id)
 
     case Vpn.get_host_id(node_hostname, network_name: network_name) do
       {:ok, netmaker_host_id} ->
-        # 3. Generate new tokens on every registration
+        # 4. Generate new tokens on every registration
         existing_node = Repo.get(Node, node_id)
         is_new_node = is_nil(existing_node)
 
@@ -391,10 +393,10 @@ defmodule EdgeAdmin.Nodes do
 
         now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-        # 4. Create or update node record
+        # 5. Create or update node record
         node_attrs = %{
           id: node_id,
-          cluster_id: cluster_id,
+          cluster_id: cluster.id,
           netmaker_host_id: netmaker_host_id,
           id_type: attrs["id_type"],
           status: "online",
@@ -428,7 +430,7 @@ defmodule EdgeAdmin.Nodes do
               Phoenix.PubSub.broadcast(
                 EdgeAdmin.PubSub,
                 "#{Vpn.admin_cluster_name()}:metadata",
-                {:node_created, node_id, cluster_id}
+                {:node_created, node_id, cluster.id}
               )
             end
 
@@ -438,8 +440,8 @@ defmodule EdgeAdmin.Nodes do
             {:error, changeset}
         end
 
-      {:error, reason} ->
-        {:error, reason}
+      {:error, _reason} ->
+        {:error, :node_not_found_in_netmaker}
     end
   end
 

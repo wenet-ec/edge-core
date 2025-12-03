@@ -487,12 +487,33 @@ defmodule EdgeAdmin.Vpn do
 
   @doc """
   Lists Netmaker hosts, optionally filtered by network.
+
+  When network_name is provided, lists all hosts and filters to those
+  that have a node in the specified network.
   """
   def list_hosts(network_name \\ nil) do
-    if network_name do
-      Nexmaker.Api.Hosts.list(network_name)
-    else
-      Nexmaker.Api.Hosts.list()
+    with {:ok, hosts} <- Nexmaker.Api.Hosts.list() do
+      if is_binary(network_name) do
+        # Get all nodes in the network and extract their host IDs
+        case list_nodes(network_name) do
+          {:ok, nodes} ->
+            host_ids_in_network = MapSet.new(nodes, & &1["hostid"])
+
+            # Filter hosts that have a node in this network
+            filtered_hosts =
+              Enum.filter(hosts, fn host ->
+                MapSet.member?(host_ids_in_network, host["id"])
+              end)
+
+            {:ok, filtered_hosts}
+
+          error ->
+            error
+        end
+      else
+        # No filter, return all hosts
+        {:ok, hosts}
+      end
     end
   end
 

@@ -17,6 +17,7 @@ defmodule EdgeAgent.Application do
       {Oban, Application.fetch_env!(:edge_agent, Oban)},
       EdgeAgent.SshServer,
       EdgeAgent.MetricsServer,
+      EdgeAgent.Bootstrap,
       EdgeAgentWeb.Endpoint
     ]
 

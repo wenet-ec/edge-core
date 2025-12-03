@@ -6,7 +6,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionJSON do
   Renders a list of command executions.
   """
   def index(%{command_executions: command_executions}) do
-    %{command_executions: for(execution <- command_executions, do: data(execution))}
+    %{data: for(execution <- command_executions, do: data(execution))}
   end
 
   @doc """

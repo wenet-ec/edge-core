@@ -1,7 +1,14 @@
 # edge_agent/lib/edge_agent/settings.ex
 defmodule EdgeAgent.Settings do
   @moduledoc """
-  The Settings context.
+  Simple key-value settings storage for agent configuration.
+
+  Stores settings like:
+  - node_id: The agent's node identifier
+  - id_type: Type of ID (persistent or random)
+  - api_token: Token for authenticating with admin API
+  - proxy_password: Password for proxy authentication
+  - admin_urls: JSON-encoded list of admin URLs
   """
 
   import Ecto.Query, warn: false
@@ -9,32 +16,11 @@ defmodule EdgeAgent.Settings do
   alias EdgeAgent.Repo
   alias EdgeAgent.Settings.Setting
 
-  def list_settings do
-    Repo.all(Setting)
-  end
+  @doc """
+  Get a setting value by key.
 
-  def get_setting!(id), do: Repo.get!(Setting, id)
-
-  def create_setting(attrs \\ %{}) do
-    %Setting{}
-    |> Setting.changeset(attrs)
-    |> Repo.insert()
-  end
-
-  def update_setting(%Setting{} = setting, attrs) do
-    setting
-    |> Setting.changeset(attrs)
-    |> Repo.update()
-  end
-
-  def delete_setting(%Setting{} = setting) do
-    Repo.delete(setting)
-  end
-
-  def change_setting(%Setting{} = setting, attrs \\ %{}) do
-    Setting.changeset(setting, attrs)
-  end
-
+  Returns the value if found, otherwise returns the default.
+  """
   def get(key, default \\ nil) do
     case Repo.get_by(Setting, key: key) do
       %Setting{value: value} -> value
@@ -42,107 +28,131 @@ defmodule EdgeAgent.Settings do
     end
   end
 
+  @doc """
+  Set a setting value by key.
+
+  Creates the setting if it doesn't exist, updates it if it does.
+  """
   def set(key, value) do
     case Repo.get_by(Setting, key: key) do
       nil ->
-        create_setting(%{key: key, value: value})
+        %Setting{}
+        |> Setting.changeset(%{key: key, value: value})
+        |> Repo.insert()
 
       existing ->
-        update_setting(existing, %{value: value})
+        existing
+        |> Setting.changeset(%{value: value})
+        |> Repo.update()
     end
   end
 
+  @doc """
+  Delete a setting by key.
+  """
   def delete(key) do
     case Repo.get_by(Setting, key: key) do
       nil -> {:ok, nil}
-      setting -> delete_setting(setting)
+      setting -> Repo.delete(setting)
     end
   end
 
-  def all do
-    Setting
-    |> Repo.all()
-    |> Map.new(fn %Setting{key: key, value: value} -> {key, value} end)
-  end
-
+  @doc """
+  Check if a setting key exists.
+  """
   def has_key?(key) do
     Setting
     |> where([s], s.key == ^key)
     |> Repo.exists?()
   end
 
-  def set_node_identity(node_id, node_id_type) do
-    with :ok <- validate_node_identity(node_id, node_id_type),
-         {:ok, normalized_id} <- normalize_node_id(node_id),
-         {:ok, _} <- set("id", normalized_id),
-         {:ok, _} <- set("id_type", node_id_type) do
-      {:ok, %{id: normalized_id, id_type: node_id_type}}
-    else
-      {:error, reason} -> {:error, reason}
-      error -> error
-    end
+  @doc """
+  Get all settings as a map.
+  """
+  def all do
+    Setting
+    |> Repo.all()
+    |> Map.new(fn %Setting{key: key, value: value} -> {key, value} end)
   end
 
-  # PRIVATE FUNCTIONS
+  # =============================================================================
+  # Typed Setting Accessors
+  # =============================================================================
 
-  defp validate_node_identity(node_id, node_id_type) do
-    cond do
-      is_nil(node_id) or String.trim(node_id) == "" ->
-        {:error, "Node ID cannot be empty"}
+  @doc """
+  Get the node ID.
+  """
+  def get_node_id, do: get("node_id")
 
-      is_nil(node_id_type) or String.trim(node_id_type) == "" ->
-        {:error, "Node ID type cannot be empty"}
+  @doc """
+  Set the node ID.
+  """
+  def set_node_id(value), do: set("node_id", value)
 
-      node_id_type not in ["machine_id", "hardware_id", "temporary_id"] ->
-        {:error, "Invalid node ID type. Must be one of: machine_id, hardware_id, temporary_id"}
+  @doc """
+  Get the node ID type (persistent or random).
+  """
+  def get_id_type, do: get("id_type")
 
-      String.length(node_id) > 255 ->
-        {:error, "Node ID too long (max 255 characters)"}
+  @doc """
+  Set the node ID type.
+  """
+  def set_id_type(value), do: set("id_type", value)
 
-      true ->
-        :ok
-    end
-  end
+  @doc """
+  Get the API token for admin authentication.
+  """
+  def get_api_token, do: get("api_token")
 
-  defp normalize_node_id(node_id) do
-    case Ecto.UUID.cast(node_id) do
-      {:ok, uuid} ->
-        # Already in proper format
-        {:ok, uuid}
+  @doc """
+  Set the API token.
+  """
+  def set_api_token(value), do: set("api_token", value)
 
-      :error ->
-        # Try to convert from 32-char hex to UUID format
-        case format_hex_to_uuid(node_id) do
-          {:ok, uuid} -> {:ok, uuid}
-          :error -> {:error, "Invalid node ID format"}
+  @doc """
+  Get the proxy password.
+  """
+  def get_proxy_password, do: get("proxy_password")
+
+  @doc """
+  Set the proxy password.
+  """
+  def set_proxy_password(value), do: set("proxy_password", value)
+
+  @doc """
+  Get admin URLs as a list.
+
+  Returns a list of admin URL strings, or empty list if not set.
+  The URLs are stored as a JSON-encoded string.
+  """
+  def get_admin_urls do
+    case get("admin_urls") do
+      nil ->
+        []
+
+      json when is_binary(json) ->
+        case Jason.decode(json) do
+          {:ok, urls} when is_list(urls) -> urls
+          _ -> []
         end
+
+      urls when is_list(urls) ->
+        urls
+
+      _ ->
+        []
     end
   end
 
-  defp format_hex_to_uuid(hex_string) do
-    # Remove any existing dashes and convert to lowercase
-    clean_hex =
-      hex_string
-      |> String.replace("-", "")
-      |> String.downcase()
+  @doc """
+  Set admin URLs.
 
-    # Check if it's a valid 32-character hex string
-    if String.match?(clean_hex, ~r/^[a-f0-9]{32}$/) do
-      # Insert dashes at proper UUID positions: 8-4-4-4-12
-      uuid =
-        String.slice(clean_hex, 0, 8) <>
-          "-" <>
-          String.slice(clean_hex, 8, 4) <>
-          "-" <>
-          String.slice(clean_hex, 12, 4) <>
-          "-" <>
-          String.slice(clean_hex, 16, 4) <>
-          "-" <>
-          String.slice(clean_hex, 20, 12)
-
-      {:ok, uuid}
-    else
-      :error
+  Accepts a list of URL strings and stores them as JSON.
+  """
+  def set_admin_urls(urls) when is_list(urls) do
+    case Jason.encode(urls) do
+      {:ok, json} -> set("admin_urls", json)
+      {:error, _} -> {:error, "Failed to encode admin URLs"}
     end
   end
 end

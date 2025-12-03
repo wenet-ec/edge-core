@@ -1,15 +1,64 @@
 # edge_agent/lib/edge_agent_health/edge_agent_health.ex
 defmodule EdgeAgentHealth do
-  @moduledoc false
-  @health_check_error_code 422
+  @moduledoc """
+  Health check configuration for EdgeAgent.
+
+  Verifies that all critical services have successfully initialized:
+  - Database connection
+  - Bootstrap completion (identity, VPN join, admin registration)
+  - Netclient connection to assigned cluster network
+
+  Returns 503 Service Unavailable if any check fails.
+  """
+
+  require Logger
+
+  @health_check_error_code 503
 
   def checks do
     [
-      %PlugCheckup.Check{name: "NOOP", module: __MODULE__, function: :noop_health}
+      %PlugCheckup.Check{name: "Database", module: __MODULE__, function: :database_health},
+      %PlugCheckup.Check{name: "Bootstrap", module: __MODULE__, function: :bootstrap_health},
+      %PlugCheckup.Check{name: "Netclient", module: __MODULE__, function: :netclient_health}
     ]
   end
 
   def error_code, do: @health_check_error_code
 
-  def noop_health, do: :ok
+  def database_health do
+    case EdgeAgent.Repo.query("SELECT 1", []) do
+      {:ok, _} -> :ok
+      {:error, reason} -> {:error, "Database query failed: #{inspect(reason)}"}
+    end
+  end
+
+  def bootstrap_health do
+    if EdgeAgent.Bootstrap.initialized?() do
+      :ok
+    else
+      {:error, "Bootstrap not initialized"}
+    end
+  end
+
+  def netclient_health do
+    # Check if connected to any network (agent is assigned to a cluster network)
+    case Nexmaker.Cli.list_networks() do
+      {:ok, [_ | _]} ->
+        # Agent should be connected to at least one network
+        # We could check specific network name here, but for now just verify connectivity
+        :ok
+
+      {:ok, []} ->
+        Logger.error("Netclient not connected to any network")
+        {:error, "Not connected"}
+
+      {:error, reason} ->
+        Logger.error("Failed to check netclient connection: #{inspect(reason)}")
+        {:error, "Connection check failed"}
+    end
+  rescue
+    e ->
+      Logger.error("Netclient health check exception: #{inspect(e)}")
+      {:error, "Health check exception"}
+  end
 end

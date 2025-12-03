@@ -35,7 +35,7 @@ defmodule EdgeAgentWeb.Plugs.ApiTokenAuth do
   end
 
   defp get_stored_token do
-    case Settings.get("api_token") do
+    case Settings.get_api_token() do
       nil ->
         {:error, :no_token_configured}
 

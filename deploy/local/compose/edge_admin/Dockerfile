@@ -50,6 +50,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   postgresql-client \
   # requests and pings
   curl \
+  iputils-ping \
   # file system watching for live reload
   inotify-tools \
   # cleaning up unused files

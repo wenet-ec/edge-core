@@ -1,6 +1,7 @@
 # deploy/production/.envs/.edge_vpn
 SERVER_NAME=production-netmaker
 SERVER_HOST=netmaker.yourdomain.com
+SERVER_HTTP_HOST=netmaker.yourdomain.com
 MASTER_KEY=supersecretkey123456789
 CORS_ALLOWED_ORIGIN=*
 DISPLAY_KEYS=on

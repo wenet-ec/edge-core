@@ -234,10 +234,26 @@ services:
         condition: service_healthy
     volumes:
       - local_edge_vpn_dns_config:/root/config/dnsconfig
-    ports:
-      - "5353:53/udp"
-      - "5353:53/tcp"
     command: -conf /root/config/dnsconfig/Corefile
+
+  edge_vpn_dns_proxy:
+    image: alpine/socat:latest
+    container_name: local_edge_vpn_dns_proxy
+    networks:
+      local_edge_core:
+        aliases:
+          - dns.netmaker.localtest.me
+    ports:
+      - "5353:5353/udp"
+      - "5353:5353/tcp"
+    depends_on:
+      - edge_vpn_dns
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        socat -d -d UDP4-LISTEN:5353,reuseaddr,fork UDP4:edge_vpn_dns:53 &
+        socat -d -d TCP4-LISTEN:5353,reuseaddr,fork TCP4:edge_vpn_dns:53 &
+        wait
 
   edge_vpn_proxy:
     image: caddy:2.10-alpine
@@ -265,10 +281,6 @@ services:
       dockerfile: ./deploy/local/compose/edge_agent/Dockerfile
     image: local_edge_agent
     container_name: local_edge_agent
-    network_mode: host
-    depends_on:
-      edge_admin:
-        condition: service_healthy
     volumes:
       - ../../edge_agent:/app:z
       - ../../nexmaker:/nexmaker:z
@@ -276,9 +288,11 @@ services:
       - local_edge_agent_build:/app/_build
       - local_edge_agent_data:/app/data
       - local_edge_agent_netclient_data:/etc/netclient
+      - /etc/resolv.conf:/etc/resolv.conf:rw
       - /:/host:ro
     env_file:
       - ./.envs/.edge_agent
+    network_mode: host
     privileged: true
     command: /start
 

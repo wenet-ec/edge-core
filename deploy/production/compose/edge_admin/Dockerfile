@@ -75,6 +75,7 @@ RUN apt-get update -y && \
     libncurses6 \
     locales \
     curl \
+    iputils-ping \
     ca-certificates \
     wget && \
     # Install netclient in same layer to reduce image size

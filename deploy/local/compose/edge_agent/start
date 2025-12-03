@@ -5,11 +5,76 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+# Cleanup function to be called on container shutdown
+cleanup() {
+    echo "Received shutdown signal, cleaning up..."
+
+    # Find all netclient daemon processes and send SIGTERM for graceful shutdown
+    NETCLIENT_PIDS=$(pgrep -f "netclient daemon" || true)
+
+    if [ -n "$NETCLIENT_PIDS" ]; then
+        echo "Stopping netclient daemon processes: $NETCLIENT_PIDS"
+        for pid in $NETCLIENT_PIDS; do
+            kill -TERM "$pid" 2>/dev/null || true
+        done
+
+        # Wait for processes to exit gracefully (max 5 seconds)
+        for i in {1..5}; do
+            if ! pgrep -f "netclient daemon" > /dev/null; then
+                echo "Netclient daemon stopped gracefully"
+                break
+            fi
+            sleep 1
+        done
+
+        # Force kill if still running
+        if pgrep -f "netclient daemon" > /dev/null; then
+            echo "Force killing remaining netclient processes"
+            pkill -9 -f "netclient daemon" 2>/dev/null || true
+        fi
+    else
+        echo "No netclient daemon processes found"
+    fi
+
+    # Remove WireGuard interface from host
+    if ip link show netmaker &>/dev/null; then
+        echo "Removing netmaker WireGuard interface..."
+        ip link delete netmaker 2>/dev/null || true
+    fi
+
+    echo "Cleanup complete"
+}
+
+# Trap EXIT, INT, and TERM signals
+trap cleanup EXIT INT TERM
+
 mix deps.get
 mix compile
 mix ecto.migrate
 
+# Clean up any stale WireGuard interface from previous run
+echo "Cleaning up stale WireGuard interface..."
+ip link delete netmaker 2>/dev/null || true
+
+# Start netclient daemon in the background
+echo "Starting netclient daemon..."
+netclient daemon &
+NETCLIENT_PID=$!
+echo "Netclient daemon started with PID: $NETCLIENT_PID"
+
+# Give netclient a head start to initialize
+echo "Waiting for netclient to initialize..."
+sleep 5
+
+# Sync latest config and recover from any stale state
+echo "Pulling latest network configuration..."
+netclient pull || echo "Pull failed (expected on first run)"
+
 # Start the development server with hot reloading
 echo "Starting Phoenix server..."
 export PHX_SERVER=true
-exec mix phx.server
+mix phx.server &
+PHOENIX_PID=$!
+
+# Wait for Phoenix server to exit
+wait $PHOENIX_PID

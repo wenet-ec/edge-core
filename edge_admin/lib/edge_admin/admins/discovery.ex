@@ -22,17 +22,21 @@ defmodule EdgeAdmin.Admins.Discovery do
       # Get current admin's hostname to exclude self
       self_hostname = Application.get_env(:edge_admin, :admin_name)
 
-      # Extract host IDs from nodes in this network
-      node_host_ids = nodes |> Enum.map(& &1["hostid"]) |> MapSet.new()
+      # Filter nodes that are online and connected
+      online_node_host_ids =
+        nodes
+        |> Enum.filter(&(&1["connected"] == true and &1["status"] == "online"))
+        |> Enum.map(& &1["hostid"])
+        |> MapSet.new()
 
-      # Filter hosts that are in this network, extract hostnames, exclude self
+      # Filter hosts that have online nodes, extract hostnames, exclude self
       peer_hostnames =
         hosts
-        |> Enum.filter(&MapSet.member?(node_host_ids, &1["id"]))
+        |> Enum.filter(&MapSet.member?(online_node_host_ids, &1["id"]))
         |> Enum.map(& &1["name"])
         |> Enum.reject(&(is_nil(&1) or &1 == "" or &1 == self_hostname))
 
-      Logger.debug("Found #{length(peer_hostnames)} peer admin(s) in #{network_name}")
+      Logger.debug("Found #{length(peer_hostnames)} online peer admin(s) in #{network_name}")
 
       # Build Erlang node names from hostnames
       peer_nodes =

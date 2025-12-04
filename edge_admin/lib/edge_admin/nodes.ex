@@ -527,7 +527,11 @@ defmodule EdgeAdmin.Nodes do
   """
   def create_ssh_username_with_keys(attrs) do
     Repo.transaction(fn ->
-      {public_keys_attrs, username_attrs} = Map.pop(attrs, :public_keys, [])
+      # Handle both string and atom keys for public_keys
+      {public_keys_attrs, username_attrs} =
+        Map.pop(attrs, "public_keys") || Map.pop(attrs, :public_keys, [])
+
+      public_keys_attrs = public_keys_attrs || []
 
       # Create username
       case create_ssh_username(username_attrs) do
@@ -535,7 +539,8 @@ defmodule EdgeAdmin.Nodes do
           # Create public keys if provided
           keys =
             Enum.map(public_keys_attrs, fn key_attrs ->
-              key_attrs = Map.put(key_attrs, :ssh_username_id, username.id)
+              # Ensure ssh_username_id is set (use string key to avoid mixed keys)
+              key_attrs = Map.put(key_attrs, "ssh_username_id", username.id)
 
               case create_ssh_public_key(key_attrs) do
                 {:ok, key} -> key

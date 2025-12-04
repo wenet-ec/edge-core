@@ -108,7 +108,19 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas do
         data: %{
           id: "01234567-89ab-cdef-0123-456789abcdef",
           username: "admin",
+          password: "secret123",
           node_id: "fedcba98-7654-3210-fedc-ba9876543210",
+          public_keys: [
+            %{
+              id: "fedcba98-7654-3210-fedc-ba9876543210",
+              key_name: "laptop",
+              public_key:
+                "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
+              ssh_username_id: "01234567-89ab-cdef-0123-456789abcdef",
+              inserted_at: "2025-06-23T10:30:00Z",
+              updated_at: "2025-06-23T10:30:00Z"
+            }
+          ],
           inserted_at: "2025-06-23T10:30:00Z",
           updated_at: "2025-06-23T10:30:00Z"
         }

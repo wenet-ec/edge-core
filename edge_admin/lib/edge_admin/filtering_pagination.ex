@@ -55,6 +55,7 @@ defmodule EdgeAdmin.FilteringPagination do
     default_sort = Keyword.get(opts, :default_sort, [])
     default_page_size = Keyword.get(opts, :page_size, @default_page_size)
     max_page_size = Keyword.get(opts, :max_page_size, @max_page_size)
+    preloads = Keyword.get(opts, :preload, [])
 
     # Parse and validate parameters
     parsed_params =
@@ -86,6 +87,7 @@ defmodule EdgeAdmin.FilteringPagination do
       |> limit(^parsed_params.page_size)
       |> offset(^((parsed_params.page - 1) * parsed_params.page_size))
       |> repo.all()
+      |> repo.preload(preloads)
 
     %__MODULE__{
       data: data,

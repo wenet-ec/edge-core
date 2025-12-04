@@ -88,7 +88,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   operation(:update,
     summary: "Update a node",
     description:
-      "Update an existing node's information. If cluster_id is being changed, performs cluster migration via Netmaker (requires host to be online).",
+      "Update an existing node's information. If cluster_name is being changed, performs cluster migration via Netmaker (requires host to be online).",
     parameters: [
       id: [
         in: :path,
@@ -110,13 +110,13 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   def update(conn, %{"id" => id, "node" => node_params}) do
     node = Nodes.get_node!(id)
 
-    # Check if cluster_id is being changed
-    new_cluster_id = node_params["cluster_id"]
+    # Check if cluster_name is being changed
+    new_cluster_name = node_params["cluster_name"]
 
     cond do
-      new_cluster_id && new_cluster_id != node.cluster_id ->
+      new_cluster_name && new_cluster_name != node.cluster.name ->
         # Cluster migration - involves Netmaker
-        case Nodes.change_node_cluster(node, new_cluster_id) do
+        case Nodes.change_node_cluster(node, new_cluster_name) do
           {:ok, updated_node} ->
             render(conn, :show, node: updated_node)
 

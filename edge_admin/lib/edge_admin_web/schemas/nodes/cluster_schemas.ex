@@ -18,11 +18,12 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         id: %Schema{
           type: :string,
           format: :uuid,
-          description: "Unique cluster identifier"
+          description: "Unique cluster identifier (UUID for database compatibility, use name for API operations)"
         },
         name: %Schema{
           type: :string,
-          description: "Cluster name (max 24 chars)",
+          description: "Cluster name - primary identifier used in API operations (max 24 chars, alphanumeric with hyphens)",
+          pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
           example: "prod-east"
         },
         ipv4_range: %Schema{
@@ -133,7 +134,8 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
             name: %Schema{
               type: :string,
               nullable: true,
-              description: "Cluster name (max 24 chars, auto-generated 12-char alphanumeric if not provided)",
+              description: "Cluster name - will be used as primary identifier (max 24 chars, auto-generated 12-char alphanumeric if not provided)",
+              pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
               example: "prod-east"
             },
             ipv4_range: %Schema{

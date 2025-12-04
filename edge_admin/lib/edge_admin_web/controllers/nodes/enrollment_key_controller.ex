@@ -23,10 +23,10 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     Use for staff testing, temporary access, or demos.
     """,
     parameters: [
-      cluster_id: [
+      name: [
         in: :path,
-        description: "Cluster ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
+        description: "Cluster name",
+        schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"}
       ]
     ],
     request_body:
@@ -40,10 +40,10 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     }
   )
 
-  def create(conn, %{"cluster_id" => cluster_id} = params) do
+  def create(conn, %{"name" => cluster_name} = params) do
     enrollment_key_params = Map.get(params, "enrollment_key", %{})
 
-    with {:ok, enrollment_key} <- Nodes.create_enrollment_key(cluster_id, enrollment_key_params) do
+    with {:ok, enrollment_key} <- Nodes.create_enrollment_key(cluster_name, enrollment_key_params) do
       conn
       |> put_status(:created)
       |> render(:show, enrollment_key: enrollment_key)
@@ -80,23 +80,11 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
         message: "DEFAULT_CLUSTER_NAME environment variable is not set"
       })
     else
-      # Look up cluster by name
-      cluster = Nodes.get_cluster_by_name(default_cluster_name)
-
-      if is_nil(cluster) do
+      with {:ok, enrollment_key} <-
+             Nodes.create_enrollment_key(default_cluster_name, enrollment_key_params) do
         conn
-        |> put_status(:not_found)
-        |> json(%{
-          error: "Default cluster not found",
-          message: "No cluster found with name: #{default_cluster_name}"
-        })
-      else
-        with {:ok, enrollment_key} <-
-               Nodes.create_enrollment_key(cluster.id, enrollment_key_params) do
-          conn
-          |> put_status(:created)
-          |> render(:show, enrollment_key: enrollment_key)
-        end
+        |> put_status(:created)
+        |> render(:show, enrollment_key: enrollment_key)
       end
     end
   end

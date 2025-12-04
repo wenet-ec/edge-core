@@ -415,6 +415,28 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
+  Lists all nodes across all networks that have a specific tag.
+
+  Queries all nodes from Netmaker and filters by the given tag.
+  Each node has a `tags` field which is a list of tag strings.
+  """
+  def list_nodes_by_tag(tag) do
+    case Nexmaker.Api.Nodes.list_all() do
+      {:ok, nodes} ->
+        filtered =
+          Enum.filter(nodes, fn node ->
+            tags = node["tags"] || []
+            tag in tags
+          end)
+
+        {:ok, filtered}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
   Removes a host from a Netmaker network.
 
   ## Parameters

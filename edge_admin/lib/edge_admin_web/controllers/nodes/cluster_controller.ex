@@ -58,12 +58,12 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
 
   operation(:show,
     summary: "Get a specific cluster",
-    description: "Returns details for a specific cluster by ID",
+    description: "Returns details for a specific cluster by name",
     parameters: [
-      id: [
+      name: [
         in: :path,
-        description: "Cluster ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
+        description: "Cluster name",
+        schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"}
       ]
     ],
     responses: %{
@@ -72,8 +72,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     }
   )
 
-  def show(conn, %{"id" => id}) do
-    cluster = Nodes.get_cluster!(id)
+  def show(conn, %{"name" => name}) do
+    cluster = Nodes.get_cluster!(name)
     render(conn, :show, cluster: cluster)
   end
 
@@ -92,11 +92,11 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
   def create(conn, %{"cluster" => cluster_params}) do
     with {:ok, cluster} <- Nodes.create_cluster(cluster_params) do
       # Reload with node_count
-      cluster = Nodes.get_cluster!(cluster.id)
+      cluster = Nodes.get_cluster!(cluster.name)
 
       conn
       |> put_status(:created)
-      |> put_resp_header("location", ~p"/api/clusters/#{cluster}")
+      |> put_resp_header("location", ~p"/api/clusters/#{cluster.name}")
       |> render(:show, cluster: cluster)
     end
   end
@@ -105,10 +105,10 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     summary: "Delete a cluster",
     description: "Delete an empty cluster (must have no nodes)",
     parameters: [
-      id: [
+      name: [
         in: :path,
-        description: "Cluster ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
+        description: "Cluster name",
+        schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"}
       ]
     ],
     responses: %{
@@ -118,8 +118,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     }
   )
 
-  def delete(conn, %{"id" => id}) do
-    cluster = Nodes.get_cluster!(id)
+  def delete(conn, %{"name" => name}) do
+    cluster = Nodes.get_cluster!(name)
 
     with {:ok, _cluster} <- Nodes.delete_cluster(cluster) do
       send_resp(conn, :no_content, "")

@@ -16,6 +16,7 @@ defmodule EdgeAdmin.Nodes.EphemeralEnrollmentKey do
 
   schema "ephemeral_enrollment_keys" do
     field(:token, :string)
+    field(:tag, :string)
     belongs_to(:cluster, EdgeAdmin.Nodes.Cluster)
 
     timestamps()
@@ -24,8 +25,8 @@ defmodule EdgeAdmin.Nodes.EphemeralEnrollmentKey do
   @doc false
   def changeset(enrollment_key, attrs) do
     enrollment_key
-    |> cast(attrs, [:token, :cluster_id])
-    |> validate_required([:token, :cluster_id])
+    |> cast(attrs, [:token, :tag, :cluster_id])
+    |> validate_required([:token, :tag, :cluster_id])
     |> unique_constraint(:token)
     |> foreign_key_constraint(:cluster_id)
   end

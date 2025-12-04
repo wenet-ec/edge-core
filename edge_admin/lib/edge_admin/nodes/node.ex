@@ -92,17 +92,21 @@ defmodule EdgeAdmin.Nodes.Node do
 
   @doc """
   Returns the DNS hostname for this node.
-  Format: node-{id}.cluster-{cluster_id}.{domain}
+  Format: node-{id}.cluster-{cluster_name}.{domain}
   where domain is configured via NETMAKER_DEFAULT_DOMAIN (default: nm.internal)
+
+  Requires cluster association to be preloaded.
   """
-  def dns_hostname(%__MODULE__{id: id, cluster_id: cluster_id}) do
-    Vpn.build_hostname("node-#{id}", Vpn.cluster_network_name(cluster_id))
+  def dns_hostname(%__MODULE__{id: id, cluster: %{name: cluster_name}}) do
+    Vpn.build_hostname("node-#{id}", Vpn.cluster_network_name(cluster_name))
   end
 
   @doc """
   Returns the HTTP URL for this node.
-  Format: http://node-{id}.cluster-{cluster_id}.{domain}:{port}
+  Format: http://node-{id}.cluster-{cluster_name}.{domain}:{port}
   where domain is configured via NETMAKER_DEFAULT_DOMAIN (default: nm.internal)
+
+  Requires cluster association to be preloaded.
   """
   def http_url(%__MODULE__{http_port: port} = node) do
     "http://#{dns_hostname(node)}:#{port}"

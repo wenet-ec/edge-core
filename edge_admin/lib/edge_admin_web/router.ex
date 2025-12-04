@@ -130,7 +130,8 @@ defmodule EdgeAdminWeb.Router do
       # Convenience endpoint for default cluster (must come BEFORE resources)
       post("/clusters/default/enrollment_keys", EnrollmentKeyController, :create_for_default)
 
-      resources("/clusters", ClusterController, only: [:index, :show, :create, :delete]) do
+      # Cluster routes using name as parameter instead of id
+      resources("/clusters", ClusterController, only: [:index, :show, :create, :delete], param: "name") do
         # Enrollment keys nested under clusters
         post("/enrollment_keys", EnrollmentKeyController, :create)
       end

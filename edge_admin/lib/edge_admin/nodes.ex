@@ -118,13 +118,13 @@ defmodule EdgeAdmin.Nodes do
   end
 
   @doc """
-  Gets a single cluster by ID.
+  Gets a single cluster by name.
   Raises `Ecto.NoResultsError` if the Cluster does not exist.
   """
-  def get_cluster!(id) do
+  def get_cluster!(name) do
     from(c in Cluster,
       left_join: n in assoc(c, :nodes),
-      where: c.id == ^id,
+      where: c.name == ^name,
       group_by: c.id,
       select_merge: %{node_count: count(n.id)}
     )
@@ -135,7 +135,7 @@ defmodule EdgeAdmin.Nodes do
   Gets a single cluster by name.
   Returns `nil` if the Cluster does not exist.
   """
-  def get_cluster_by_name(name) do
+  def get_cluster(name) do
     from(c in Cluster,
       left_join: n in assoc(c, :nodes),
       where: c.name == ^name,
@@ -243,6 +243,7 @@ defmodule EdgeAdmin.Nodes do
   def get_node!(id) do
     Node
     |> Repo.get!(id)
+    |> Repo.preload(:cluster)
   end
 
   def create_node(attrs \\ %{}) do
@@ -267,7 +268,7 @@ defmodule EdgeAdmin.Nodes do
   4. Updates DB
   5. Emits event for metadata recomputation
   """
-  def change_node_cluster(%Node{} = node, new_cluster_id) do
+  def change_node_cluster(%Node{} = node, new_cluster_name) do
     Repo.transaction(fn ->
       # 1. Verify node is online (check DB status)
       if node.status != "online" do
@@ -275,11 +276,10 @@ defmodule EdgeAdmin.Nodes do
         Repo.rollback(:node_offline)
       end
 
-      old_cluster = get_cluster!(node.cluster_id)
-      new_cluster = get_cluster!(new_cluster_id)
+      new_cluster = get_cluster!(new_cluster_name)
 
       # Build network names
-      old_network_name = Vpn.cluster_network_name(old_cluster.name)
+      old_network_name = Vpn.cluster_network_name(node.cluster.name)
       new_network_name = Vpn.cluster_network_name(new_cluster.name)
 
       # 2. Add host to new network first
@@ -291,14 +291,14 @@ defmodule EdgeAdmin.Nodes do
               # 4. Update database
               updated_node =
                 node
-                |> Ecto.Changeset.change(cluster_id: new_cluster_id)
+                |> Ecto.Changeset.change(cluster_id: new_cluster.id)
                 |> Repo.update!()
 
               # 5. Emit PubSub event for metadata recomputation (cluster migration)
               Phoenix.PubSub.broadcast(
                 EdgeAdmin.PubSub,
                 "#{Vpn.admin_cluster_name()}:metadata",
-                {:node_updated, node.id, node.cluster_id, new_cluster_id}
+                {:node_updated, node.id, node.cluster_id, new_cluster.id}
               )
 
               updated_node
@@ -324,8 +324,7 @@ defmodule EdgeAdmin.Nodes do
   def delete_node(%Node{} = node) do
     Repo.transaction(fn ->
       # 1. Remove from Netmaker first (critical - must succeed)
-      cluster = get_cluster!(node.cluster_id)
-      network_name = Vpn.cluster_network_name(cluster.name)
+      network_name = Vpn.cluster_network_name(node.cluster.name)
 
       # Remove host from network (Netmaker handles node deletion automatically)
       case Vpn.remove_host_from_network(node.netmaker_host_id, network_name) do
@@ -469,7 +468,8 @@ defmodule EdgeAdmin.Nodes do
         filterable_fields: [:status, :id_type, :cluster_id],
         sortable_fields: [:inserted_at, :updated_at, :status, :last_seen_at],
         default_sort: "inserted_at:desc",
-        repo: Repo
+        repo: Repo,
+        preload: [:cluster]
       )
 
     page_result
@@ -644,14 +644,14 @@ defmodule EdgeAdmin.Nodes do
 
   ## Examples
       # Permanent key (retrieves default key from Netmaker)
-      create_enrollment_key(cluster_id)
+      create_enrollment_key("prod-east")
       # => {:ok, %{token: "eyJ...", key_type: "permanent", tracked: false}}
 
       # Ephemeral key (creates new single-use key)
-      create_enrollment_key(cluster_id, %{key_type: "ephemeral"})
+      create_enrollment_key("prod-east", %{key_type: "ephemeral"})
       # => {:ok, %{token: "eyJ...", key_type: "ephemeral", tracked: true}}
   """
-  def create_enrollment_key(cluster_id, attrs \\ %{}) do
+  def create_enrollment_key(cluster_name, attrs \\ %{}) do
     # Parse parameters
     key_type = Map.get(attrs, :key_type, Map.get(attrs, "key_type", "permanent"))
 
@@ -659,8 +659,8 @@ defmodule EdgeAdmin.Nodes do
     if key_type not in ["ephemeral", "permanent"] do
       {:error, "key_type must be 'ephemeral' or 'permanent'"}
     else
-      # Get cluster
-      cluster = get_cluster!(cluster_id)
+      # Get cluster by name
+      cluster = get_cluster!(cluster_name)
       network_name = Vpn.cluster_network_name(cluster.name)
 
       case key_type do
@@ -690,11 +690,12 @@ defmodule EdgeAdmin.Nodes do
               {:ok, netmaker_key} ->
                 token = netmaker_key["token"]
 
-                # Track in DB for cleanup
+                # Track in DB for cleanup (store tag for later queries)
                 case %EphemeralEnrollmentKey{}
                      |> EphemeralEnrollmentKey.changeset(%{
                        token: token,
-                       cluster_id: cluster_id
+                       tag: tag,
+                       cluster_id: cluster.id
                      })
                      |> Repo.insert() do
                   {:ok, _} ->
@@ -710,42 +711,6 @@ defmodule EdgeAdmin.Nodes do
           end)
       end
     end
-  end
-
-  @doc """
-  Gets hosts enrolled with a specific enrollment token from Netmaker.
-
-  Returns list of Netmaker host records.
-  """
-  def get_hosts_by_enrollment_token(cluster_id, token) do
-    cluster = get_cluster!(cluster_id)
-    network_name = Vpn.cluster_network_name(cluster.name)
-
-    case Vpn.list_hosts(network_name) do
-      {:ok, hosts} ->
-        # Filter hosts that were enrolled with this token
-        # Netmaker stores the enrollment key value in host metadata
-        hosts
-        |> Enum.filter(fn host ->
-          # Check if host has the enrollment key in metadata
-          Map.get(host, "enrollmentkey") == token
-        end)
-
-      {:error, _} ->
-        []
-    end
-  end
-
-  @doc """
-  Deletes a host from Netmaker.
-
-  This also deletes all nodes associated with the host.
-  """
-  def delete_host(cluster_id, host_id) do
-    cluster = get_cluster!(cluster_id)
-    network_name = Vpn.cluster_network_name(cluster.name)
-
-    Vpn.delete_host(network_name, host_id)
   end
 
   @doc """
@@ -791,38 +756,52 @@ defmodule EdgeAdmin.Nodes do
   end
 
   defp cleanup_enrollment_key(enrollment_key, acc) do
-    Logger.debug("Processing expired key: #{enrollment_key.token}")
+    Logger.debug("Processing expired key: #{enrollment_key.token} with tag: #{enrollment_key.tag}")
 
     # Wrap entire cleanup in transaction - rollback everything if ANY step fails
     case Repo.transaction(fn ->
-           # 1. Query Netmaker for hosts using this token
-           netmaker_hosts =
-             get_hosts_by_enrollment_token(enrollment_key.cluster_id, enrollment_key.token)
+           # 1. Query Netmaker for nodes using this tag
+           network_name = Vpn.cluster_network_name(enrollment_key.cluster.name)
 
-           host_ids = Enum.map(netmaker_hosts, & &1["id"])
+           netmaker_nodes =
+             case Vpn.list_nodes_by_tag(enrollment_key.tag) do
+               {:ok, nodes} -> nodes
+               {:error, reason} ->
+                 Logger.warning(
+                   "Failed to query nodes by tag #{enrollment_key.tag}: #{inspect(reason)}"
+                 )
+                 []
+             end
 
-           Logger.debug("Found #{length(host_ids)} hosts enrolled with this key")
+           # Extract unique host IDs from nodes
+           host_ids =
+             netmaker_nodes
+             |> Enum.map(& &1["hostid"])
+             |> Enum.uniq()
+             |> Enum.reject(&is_nil/1)
+
+           Logger.debug("Found #{length(host_ids)} unique hosts with tag #{enrollment_key.tag}")
 
            # 2. Delete each Netmaker host (treat "not found" as success for idempotency)
-           Enum.each(netmaker_hosts, fn host ->
-             case delete_host(enrollment_key.cluster_id, host["id"]) do
+           Enum.each(host_ids, fn host_id ->
+             case Vpn.delete_host(network_name, host_id) do
                {:ok, _} ->
                  Logger.info(
-                   "Deleted Netmaker host #{host["id"]} from cluster #{enrollment_key.cluster_id}"
+                   "Deleted Netmaker host #{host_id} from cluster #{enrollment_key.cluster.name}"
                  )
 
                {:error, {:http_error, 500, body}} = error ->
                  if netmaker_not_found_error?(body) do
                    Logger.info(
-                     "Netmaker host #{host["id"]} already deleted (not found)"
+                     "Netmaker host #{host_id} already deleted (not found)"
                    )
                  else
-                   Logger.error("Failed to delete host #{host["id"]}: #{inspect(error)}")
+                   Logger.error("Failed to delete host #{host_id}: #{inspect(error)}")
                    Repo.rollback(error)
                  end
 
                {:error, reason} ->
-                 Logger.error("Failed to delete host #{host["id"]}: #{inspect(reason)}")
+                 Logger.error("Failed to delete host #{host_id}: #{inspect(reason)}")
                  Repo.rollback(reason)
              end
            end)
@@ -857,7 +836,7 @@ defmodule EdgeAdmin.Nodes do
 
            # Return stats for this key
            %{
-             deleted_hosts: length(netmaker_hosts),
+             deleted_hosts: length(host_ids),
              deleted_nodes: deleted_nodes
            }
          end) do

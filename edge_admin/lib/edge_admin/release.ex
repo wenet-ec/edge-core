@@ -147,7 +147,7 @@ defmodule EdgeAdmin.Release do
       name ->
         Logger.info("Checking if default cluster exists: #{name}")
 
-        case EdgeAdmin.Nodes.get_cluster_by_name(name) do
+        case EdgeAdmin.Nodes.get_cluster(name) do
           nil ->
             Logger.info("Default cluster not found, creating: #{name}")
             do_create_cluster(name)

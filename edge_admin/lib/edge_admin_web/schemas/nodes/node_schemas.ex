@@ -26,10 +26,11 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           description: "Human-readable node name (derived from ID)",
           example: "node-01234567-89ab-cdef-0123-456789abcdef"
         },
-        cluster_id: %Schema{
+        cluster_name: %Schema{
           type: :string,
-          format: :uuid,
-          description: "Cluster this node belongs to"
+          description: "Name of the cluster this node belongs to",
+          pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+          example: "prod-east"
         },
         netmaker_host_id: %Schema{
           type: :string,
@@ -103,17 +104,17 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           description: "When the node was last updated"
         }
       },
-      required: [:id, :cluster_id, :id_type, :http_port, :ssh_port, :metrics_port,
+      required: [:id, :cluster_name, :id_type, :http_port, :ssh_port, :metrics_port,
                  :http_proxy_port, :socks5_proxy_port, :inserted_at, :updated_at],
       example: %{
         id: "01234567-89ab-cdef-0123-456789abcdef",
         node_name: "node-01234567-89ab-cdef-0123-456789abcdef",
-        cluster_id: "abc12345-1234-1234-1234-123456789abc",
+        cluster_name: "prod-east",
         netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
         id_type: "persistent",
         status: "online",
-        dns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
-        http_url: "http://node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal:44000",
+        dns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
+        http_url: "http://node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal:44000",
         http_port: 44000,
         ssh_port: 42222,
         metrics_port: 49100,
@@ -227,20 +228,21 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
     OpenApiSpex.schema(%{
       title: "Update Node Request",
       description:
-        "Request to update an existing node. Currently only cluster_id updates are allowed. " <>
-          "If cluster_id is changed, performs cluster migration via Netmaker (requires host to be online).",
+        "Request to update an existing node. Currently only cluster_name updates are allowed. " <>
+          "If cluster_name is changed, performs cluster migration via Netmaker (requires host to be online).",
       type: :object,
       properties: %{
         node: %Schema{
           type: :object,
           properties: %{
-            cluster_id: %Schema{
+            cluster_name: %Schema{
               type: :string,
-              format: :uuid,
+              pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
               nullable: true,
               description:
-                "Cluster this node belongs to. Changing this field triggers cluster migration via Netmaker. " <>
-                  "The host must be online (lastcheckin < 60s) for migration to succeed."
+                "Name of the cluster this node should belong to. Changing this field triggers cluster migration via Netmaker. " <>
+                  "The host must be online (lastcheckin < 60s) for migration to succeed.",
+              example: "prod-west"
             }
           }
         }
@@ -248,7 +250,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
       required: [:node],
       example: %{
         node: %{
-          cluster_id: "new-cluster-uuid-here"
+          cluster_name: "prod-west"
         }
       }
     })

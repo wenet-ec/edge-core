@@ -5,6 +5,7 @@ defmodule EdgeAdmin.Repo.Migrations.CreateEphemeralEnrollmentKeys do
     create table(:ephemeral_enrollment_keys, primary_key: false) do
       add :id, :binary_id, primary_key: true
       add :token, :string, null: false
+      add :tag, :string, null: false
       add :cluster_id, references(:clusters, type: :binary_id, on_delete: :restrict), null: false
 
       timestamps(type: :utc_datetime)
@@ -12,5 +13,6 @@ defmodule EdgeAdmin.Repo.Migrations.CreateEphemeralEnrollmentKeys do
 
     create unique_index(:ephemeral_enrollment_keys, [:token])
     create index(:ephemeral_enrollment_keys, [:cluster_id])
+    create index(:ephemeral_enrollment_keys, [:tag])
   end
 end

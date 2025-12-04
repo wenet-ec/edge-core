@@ -12,7 +12,6 @@ defmodule EdgeAdmin.Mixfile do
       test_paths: ["test"],
       test_pattern: "**/*_test.exs",
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [coveralls: :test, "coveralls.detail": :test, "coveralls.post": :test, "coveralls.html": :test],
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
@@ -27,6 +26,10 @@ defmodule EdgeAdmin.Mixfile do
       mod: {EdgeAdmin.Application, []},
       extra_applications: [:logger, :runtime_tools]
     ]
+  end
+
+  def cli do
+    [preferred_envs: [coveralls: :test, "coveralls.detail": :test, "coveralls.post": :test, "coveralls.html": :test]]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]

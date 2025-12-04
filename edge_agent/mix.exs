@@ -12,7 +12,6 @@ defmodule EdgeAgent.Mixfile do
       test_paths: ["test"],
       test_pattern: "**/*_test.exs",
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [coveralls: :test, "coveralls.detail": :test, "coveralls.post": :test, "coveralls.html": :test],
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
@@ -20,6 +19,10 @@ defmodule EdgeAgent.Mixfile do
       releases: releases(),
       listeners: [Phoenix.CodeReloader]
     ]
+  end
+
+  def cli do
+    [preferred_envs: [coveralls: :test, "coveralls.detail": :test, "coveralls.post": :test, "coveralls.html": :test]]
   end
 
   def application do

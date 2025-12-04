@@ -7,6 +7,8 @@ defmodule EdgeAgentHealth do
   - Database connection
   - Bootstrap completion (identity, VPN join, admin registration)
   - Netclient connection to assigned cluster network
+  - SSH server status
+  - Metrics server status
 
   Returns 503 Service Unavailable if any check fails.
   """
@@ -19,7 +21,9 @@ defmodule EdgeAgentHealth do
     [
       %PlugCheckup.Check{name: "Database", module: __MODULE__, function: :database_health},
       %PlugCheckup.Check{name: "Bootstrap", module: __MODULE__, function: :bootstrap_health},
-      %PlugCheckup.Check{name: "Netclient", module: __MODULE__, function: :netclient_health}
+      %PlugCheckup.Check{name: "Netclient", module: __MODULE__, function: :netclient_health},
+      %PlugCheckup.Check{name: "SSH Server", module: __MODULE__, function: :ssh_server_health},
+      %PlugCheckup.Check{name: "Metrics Server", module: __MODULE__, function: :metrics_server_health}
     ]
   end
 
@@ -59,6 +63,46 @@ defmodule EdgeAgentHealth do
   rescue
     e ->
       Logger.error("Netclient health check exception: #{inspect(e)}")
+      {:error, "Health check exception"}
+  end
+
+  def ssh_server_health do
+    case EdgeAgent.SshServer.server_status() do
+      :running ->
+        :ok
+
+      :stopped ->
+        {:error, "SSH server stopped"}
+
+      :error ->
+        {:error, "SSH server error"}
+
+      status ->
+        {:error, "Unknown status: #{inspect(status)}"}
+    end
+  rescue
+    e ->
+      Logger.error("SSH server health check exception: #{inspect(e)}")
+      {:error, "Health check exception"}
+  end
+
+  def metrics_server_health do
+    case EdgeAgent.MetricsServer.server_status() do
+      :running ->
+        :ok
+
+      :stopped ->
+        {:error, "Metrics server stopped"}
+
+      :error ->
+        {:error, "Metrics server error"}
+
+      status ->
+        {:error, "Unknown status: #{inspect(status)}"}
+    end
+  rescue
+    e ->
+      Logger.error("Metrics server health check exception: #{inspect(e)}")
       {:error, "Health check exception"}
   end
 end

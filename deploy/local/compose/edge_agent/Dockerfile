@@ -45,6 +45,7 @@ RUN apk add --no-cache \
   bash \
   bash-completion \
   nano \
+  util-linux \
   # Agent networking (for VPN and API calls)
   curl \
   wget \
@@ -97,6 +98,10 @@ RUN sed -i 's/\r$//g' /migrate && \
 COPY ./deploy/local/compose/edge_agent/hostscript /usr/local/bin/hostscript
 RUN sed -i 's/\r$//g' /usr/local/bin/hostscript && \
     chmod +x /usr/local/bin/hostscript
+
+COPY ./deploy/local/compose/edge_agent/edge_bashrc /usr/local/bin/edge_bashrc
+RUN sed -i 's/\r$//g' /usr/local/bin/edge_bashrc && \
+    chmod +r /usr/local/bin/edge_bashrc
 
 RUN mix deps.get --only hex rebar || true
 

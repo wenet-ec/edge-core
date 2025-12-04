@@ -1,0 +1,78 @@
+#!/bin/bash
+# deploy/local/compose/edge_agent/edge_bashrc
+
+# Edge Agent Custom Bash Configuration
+# This rcfile provides a full bash experience with hostscript integration
+
+# Get node ID from environment (set by shell.ex)
+NODE_ID="${EDGE_NODE_ID:-unknown}"
+# Take first 8 characters of node ID for compact display
+SHORT_NODE_ID="${NODE_ID:0:8}"
+
+# Get current username (will be the SSH username like 'admin')
+CURRENT_USER="${USER:-root}"
+
+# Set a custom prompt: username@node-<short-id>:/path#
+# Format: admin@node-a1b2c3d4:/app#
+export PS1="\[\033[1;32m\]${CURRENT_USER}\[\033[0m\]@\[\033[1;36m\]node-${SHORT_NODE_ID}\[\033[0m\]:\[\033[1;34m\]\w\[\033[0m\]# "
+
+# Enable history
+HISTFILE=~/.bash_history
+HISTSIZE=1000
+HISTFILESIZE=2000
+HISTCONTROL=ignoreboth
+
+# Append to history file, don't overwrite
+shopt -s histappend
+
+# Check window size after each command
+shopt -s checkwinsize
+
+# Enable programmable completion
+if [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+fi
+
+# Enable color support for ls and grep
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+    alias ls='ls --color=auto'
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
+fi
+
+# Useful aliases
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+
+# Variable to track if we're in the middle of a command
+IN_COMMAND=0
+
+# This function runs before each command
+preexec() {
+    if [[ $IN_COMMAND -eq 0 ]]; then
+        IN_COMMAND=1
+
+        # Get the command being executed
+        local cmd="${BASH_COMMAND}"
+
+        # Skip hostscript call for certain internal commands to avoid recursion
+        if [[ ! "$cmd" =~ ^(precmd|preexec|history|PROMPT_COMMAND) ]]; then
+            # Call hostscript with the command as argument
+            hostscript "$cmd" 2>/dev/null || true
+        fi
+    fi
+}
+
+# This function runs after each command
+precmd() {
+    IN_COMMAND=0
+}
+
+# Set up the DEBUG trap to run before each command
+trap 'preexec' DEBUG
+
+# Set up PROMPT_COMMAND to run after each command
+PROMPT_COMMAND='precmd'

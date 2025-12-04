@@ -64,7 +64,7 @@ RUN --mount=type=cache,target=/root/.hex \
 # -----------------------------------------------
 # Stage: Production runtime image (optimized)
 # -----------------------------------------------
-FROM alpine:3.22.0
+FROM alpine:3.23.0
 
 # Install runtime dependencies and node_exporter in single layer
 ENV NODE_EXPORTER_VERSION="1.10.2"
@@ -114,6 +114,10 @@ RUN sed -i 's/\r$//g' /usr/local/bin/hostscript && \
 COPY ./deploy/production/compose/edge_agent/start /start
 RUN sed -i 's/\r$//g' /start && \
     chmod +x /start
+
+COPY ./deploy/production/compose/edge_agent/edge_bashrc /usr/local/bin/edge_bashrc
+RUN sed -i 's/\r$//g' /usr/local/bin/edge_bashrc && \
+    chmod +r /usr/local/bin/edge_bashrc
 
 WORKDIR /app
 

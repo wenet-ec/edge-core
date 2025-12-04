@@ -58,15 +58,18 @@ defmodule EdgeAgent.SshServer.Config do
   def ssh_algorithms, do: @ssh_algorithms
   def supported_host_key_types, do: @supported_host_key_types
 
-  def ssh_options(key_callback_module, shell_fun) do
+  def ssh_options(key_callback_module, password_callback) do
     [
       {:ip, :any},
       {:system_dir, String.to_charlist(@ssh_system_dir)},
       {:user_dir, String.to_charlist(@ssh_user_dir)},
       {:key_cb, {key_callback_module, []}},
-      {:auth_methods, ~c"publickey"},
+      {:pwdfun, password_callback},
+      {:auth_methods, ~c"publickey,password"},
       {:preferred_algorithms, @ssh_algorithms},
-      {:shell, shell_fun}
+      {:parallel_login, true},
+      {:subsystems, []},
+      {:ssh_cli, {EdgeAgent.SshServer.Channel, []}}
     ]
   end
 end

@@ -67,8 +67,15 @@ defmodule EdgeAgent.MetricsServer do
       primary_interface_ip: nil
     }
 
-    Logger.info("Metrics server initialized on port #{state.port}")
-    {:ok, state}
+    case do_start_server(state) do
+      {:ok, new_state} ->
+        Logger.info("Metrics server started successfully on port #{new_state.port}")
+        {:ok, new_state}
+
+      {:error, reason, new_state} ->
+        Logger.error("Failed to auto-start metrics server: #{inspect(reason)}")
+        {:ok, new_state}
+    end
   end
 
   @impl true

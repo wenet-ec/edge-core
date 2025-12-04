@@ -12,7 +12,6 @@ defmodule EdgeAgent.SshServer do
   alias EdgeAgent.SshServer.Authentication
   alias EdgeAgent.SshServer.Config
   alias EdgeAgent.SshServer.HostKeys
-  alias EdgeAgent.SshServer.Shell
 
   require Logger
 
@@ -35,7 +34,16 @@ defmodule EdgeAgent.SshServer do
   def init(_opts) do
     :ok = File.mkdir_p(Config.ssh_system_dir())
     Logger.info("SSH server initialized on port #{Config.ssh_port()}")
-    {:ok, %{daemon_ref: nil, status: :stopped}}
+
+    case do_start_server() do
+      {:ok, daemon_ref} ->
+        Logger.info("SSH server started successfully on port #{Config.ssh_port()}")
+        {:ok, %{daemon_ref: daemon_ref, status: :running}}
+
+      {:error, reason} ->
+        Logger.error("Failed to auto-start SSH server: #{inspect(reason)}")
+        {:ok, %{daemon_ref: nil, status: :error}}
+    end
   end
 
   @impl true
@@ -100,8 +108,8 @@ defmodule EdgeAgent.SshServer do
   end
 
   defp start_ssh_daemon do
-    shell_fun = Shell.create_shell_function()
-    ssh_options = Config.ssh_options(__MODULE__, shell_fun)
+    password_callback_fun = &Authentication.auth_password/4
+    ssh_options = Config.ssh_options(__MODULE__, password_callback_fun)
 
     Logger.info("Starting SSH daemon on port #{Config.ssh_port()}...")
 

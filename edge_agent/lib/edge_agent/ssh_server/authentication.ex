@@ -17,6 +17,33 @@ defmodule EdgeAgent.SshServer.Authentication do
     "ssh-dss"
   ]
 
+  @doc """
+  Password authentication callback for SSH server.
+  Validates username/password against EdgeAdmin SSH usernames.
+  """
+  def auth_password(user, password, _peer_address, _state) do
+    Logger.debug("SSH password auth attempt for user: #{inspect(user)}")
+
+    with {:ok, ssh_usernames} <- AdminClient.list_ssh_usernames(),
+         {:ok, ssh_username} <- find_username(ssh_usernames, to_string(user)),
+         true <- validate_password(password, ssh_username["password"]) do
+      Logger.info("SSH password authentication successful for user: #{to_string(user)}")
+      true
+    else
+      {:error, reason} ->
+        Logger.warning("SSH password authentication failed for user #{inspect(user)}: #{inspect(reason)}")
+        false
+
+      false ->
+        Logger.warning("SSH password authentication failed for user #{inspect(user)}: incorrect password")
+        false
+    end
+  end
+
+  @doc """
+  Public key authentication callback for SSH server.
+  Validates public key against EdgeAdmin SSH public keys.
+  """
   def auth_key?(key, user) do
     Logger.debug("SSH auth attempt for user: #{user}")
 
@@ -49,6 +76,28 @@ defmodule EdgeAgent.SshServer.Authentication do
         Logger.debug("Found SSH username: #{ssh_username["id"]}")
         {:ok, ssh_username}
     end
+  end
+
+  defp validate_password(provided_password, stored_password) when is_list(provided_password) do
+    validate_password(List.to_string(provided_password), stored_password)
+  end
+
+  defp validate_password(provided_password, stored_password) when is_binary(provided_password) do
+    # Direct string comparison - admin stores plaintext passwords
+    result = provided_password == stored_password
+
+    if result do
+      Logger.debug("Password match successful")
+    else
+      Logger.debug("Password mismatch")
+    end
+
+    result
+  end
+
+  defp validate_password(_provided_password, nil) do
+    Logger.debug("No password configured for user")
+    false
   end
 
   defp validate_public_key(provided_key, ssh_public_keys) do

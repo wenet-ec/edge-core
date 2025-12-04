@@ -14,13 +14,16 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   operation(:create,
     summary: "Get enrollment key for cluster",
     description: """
-    Gets an enrollment key for a cluster.
+    Creates or retrieves an enrollment key for a cluster.
 
-    **Permanent (default)**: Retrieves the Netmaker default key (unlimited uses, no expiration).
-    Use for production edge nodes and bulk deployments.
+    **Default**: Retrieves the Netmaker auto-generated default key (unlimited uses, no expiration).
+    Use for production edge nodes and mass deployments.
 
-    **Ephemeral**: Creates a new single-use key (1 hour expiration, tracked for auto-cleanup).
-    Use for staff testing, temporary access, or demos.
+    **Custom**: Creates a new key with user-specified expiry and uses (not tracked in DB, tagged for audit trail).
+    Use for controlled/time-limited registrations.
+
+    **Ephemeral**: Creates a tracked key for automatic cleanup (configurable expiry/uses, tracked in DB).
+    Use for temporary troubleshooting, testing, or demos.
     """,
     parameters: [
       name: [

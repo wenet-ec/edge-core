@@ -615,67 +615,76 @@ defmodule EdgeAdmin.Nodes do
   # ===========================================================================
 
   @doc """
-  Gets an enrollment key for a cluster.
-
-  ## Parameters
-    - cluster_id: The cluster ID to get the key for
-    - attrs: Map with:
-      - :key_type - "ephemeral" (tracked in DB, auto-cleanup) or "permanent" (default key, not tracked), default "permanent"
-
-  ## Returns
-    - {:ok, %{key_value: string, key_type: string, tracked: boolean}} on success
-    - {:error, changeset | reason} on failure
-
+  Creates or retrieves an enrollment key for a cluster.
   ## Key Types
 
-  ### Permanent (default)
-  Retrieves the Netmaker default enrollment key for the network.
+  ### Default (default behavior)
+  Retrieves the Netmaker auto-generated default enrollment key.
   - Unlimited uses
   - No expiration
   - Not tracked in our DB
-  - Use for: Production edge nodes, bulk deployments
+  - Use for: Production edge nodes, mass deployments
+
+  ### Custom
+  Creates a new key with user-specified expiry and uses.
+  - Configurable expiration (default: 1 hour)
+  - Configurable uses (default: 1)
+  - Not tracked in DB (tagged for audit trail in Netmaker)
+  - Use for: Controlled/time-limited registrations
 
   ### Ephemeral
-  Creates a new single-use key with 1 hour expiration.
-  - 1 use only
-  - 1 hour expiration
+  Creates a tracked key for automatic cleanup after TTL.
+  - Configurable expiration (default: 1 hour)
+  - Configurable uses (default: 1)
   - Tracked in DB for auto-cleanup
-  - Use for: Staff testing, temporary access, demos
-
-  ## Examples
-      # Permanent key (retrieves default key from Netmaker)
-      create_enrollment_key("prod-east")
-      # => {:ok, %{token: "eyJ...", key_type: "permanent", tracked: false}}
-
-      # Ephemeral key (creates new single-use key)
-      create_enrollment_key("prod-east", %{key_type: "ephemeral"})
-      # => {:ok, %{token: "eyJ...", key_type: "ephemeral", tracked: true}}
+  - Use for: Temporary troubleshooting, testing, demos
   """
   def create_enrollment_key(cluster_name, attrs \\ %{}) do
     # Parse parameters
-    key_type = Map.get(attrs, :key_type, Map.get(attrs, "key_type", "permanent"))
+    key_type = Map.get(attrs, :key_type, Map.get(attrs, "key_type", "default"))
+    expiration = Map.get(attrs, :expiration, Map.get(attrs, "expiration", 3600))  # Default 1 hour
+    uses_remaining = Map.get(attrs, :uses_remaining, Map.get(attrs, "uses_remaining", 1))  # Default single use
 
     # Validate key_type
-    if key_type not in ["ephemeral", "permanent"] do
-      {:error, "key_type must be 'ephemeral' or 'permanent'"}
+    if key_type not in ["default", "custom", "ephemeral"] do
+      {:error, "key_type must be 'default', 'custom', or 'ephemeral'"}
     else
       # Get cluster by name
       cluster = get_cluster!(cluster_name)
       network_name = Vpn.cluster_network_name(cluster.name)
 
       case key_type do
-        "permanent" ->
+        "default" ->
           # Retrieve the default key from Netmaker (created automatically with network)
           case Vpn.get_default_enrollment_key(network_name) do
             {:ok, token} ->
-              {:ok, %{token: token, key_type: "permanent", tracked: false}}
+              {:ok, %{token: token, key_type: "default"}}
+
+            {:error, reason} ->
+              {:error, reason}
+          end
+
+        "custom" ->
+          # Create a custom key with user-specified expiry/uses
+          # Generate tag for audit trail (not tracked in DB)
+          timestamp = System.system_time(:millisecond)
+          random = :crypto.strong_rand_bytes(4) |> Base.encode16(case: :lower)
+          tag = "custom-#{timestamp}-#{random}"
+
+          case Vpn.create_enrollment_key(network_name, %{
+                 expiration: expiration,
+                 uses_remaining: uses_remaining,
+                 tags: [tag]
+               }) do
+            {:ok, netmaker_key} ->
+              {:ok, %{token: netmaker_key["token"], key_type: "custom"}}
 
             {:error, reason} ->
               {:error, reason}
           end
 
         "ephemeral" ->
-          # Create a new single-use key with 1 hour expiration
+          # Create ephemeral key tracked in DB for automatic cleanup
           Repo.transaction(fn ->
             # Generate unique tag for this key
             timestamp = System.system_time(:millisecond)
@@ -683,8 +692,8 @@ defmodule EdgeAdmin.Nodes do
             tag = "ephemeral-#{timestamp}-#{random}"
 
             case Vpn.create_enrollment_key(network_name, %{
-                   expiration: 3600,  # 1 hour
-                   uses_remaining: 1,
+                   expiration: expiration,
+                   uses_remaining: uses_remaining,
                    tags: [tag]
                  }) do
               {:ok, netmaker_key} ->
@@ -699,7 +708,7 @@ defmodule EdgeAdmin.Nodes do
                      })
                      |> Repo.insert() do
                   {:ok, _} ->
-                    %{token: token, key_type: "ephemeral", tracked: true}
+                    %{token: token, key_type: "ephemeral"}
 
                   {:error, changeset} ->
                     Repo.rollback(changeset)

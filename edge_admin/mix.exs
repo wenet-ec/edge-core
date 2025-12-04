@@ -6,7 +6,7 @@ defmodule EdgeAdmin.Mixfile do
     [
       app: :edge_admin,
       version: "0.2.0",
-      erlang: "~> 28.1",
+      erlang: "~> 28.2",
       elixir: "~> 1.19",
       elixirc_paths: elixirc_paths(Mix.env()),
       test_paths: ["test"],
@@ -102,7 +102,7 @@ defmodule EdgeAdmin.Mixfile do
       {:credo, "~> 1.7", only: [:dev, :test], override: true},
       {:credo_envvar, "~> 0.1", only: [:dev, :test], runtime: false},
       {:credo_naming, "~> 2.1", only: [:dev, :test], runtime: false},
-      {:styler, "~> 1.9", only: [:dev, :test], runtime: false},
+      {:styler, "~> 1.10", only: [:dev, :test], runtime: false},
 
       # Security check
       {:sobelow, "~> 0.14", only: [:dev, :test], runtime: true},

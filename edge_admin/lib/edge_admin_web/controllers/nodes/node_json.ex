@@ -22,10 +22,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSON do
     }
   end
 
-  def index(%{nodes: nodes}) do
-    %{data: for(node <- nodes, do: data(node))}
-  end
-
   @doc """
   Renders a single node.
   """

@@ -22,10 +22,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameJSON do
     }
   end
 
-  def index(%{ssh_usernames: ssh_usernames}) do
-    %{data: for(ssh_username <- ssh_usernames, do: data(ssh_username))}
-  end
-
   @doc """
   Renders a single SSH username.
   """

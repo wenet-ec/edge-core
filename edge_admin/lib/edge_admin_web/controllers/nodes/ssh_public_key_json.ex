@@ -22,10 +22,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshPublicKeyJSON do
     }
   end
 
-  def index(%{ssh_public_keys: ssh_public_keys}) do
-    %{data: for(ssh_public_key <- ssh_public_keys, do: data(ssh_public_key))}
-  end
-
   @doc """
   Renders a single SSH public key.
   """

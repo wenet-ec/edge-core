@@ -22,10 +22,6 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSON do
     }
   end
 
-  def index(%{command_executions: command_executions}) do
-    %{data: for(command_execution <- command_executions, do: data(command_execution))}
-  end
-
   @doc """
   Renders a single command_execution.
   """

@@ -22,10 +22,6 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandJSON do
     }
   end
 
-  def index(%{commands: commands}) do
-    %{data: for(command <- commands, do: data(command))}
-  end
-
   @doc """
   Renders a single command.
   """

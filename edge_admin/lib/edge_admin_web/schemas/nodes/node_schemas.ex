@@ -53,11 +53,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           description: "DNS hostname for this node",
           example: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc.nm.internal"
         },
-        http_url: %Schema{
-          type: :string,
-          description: "HTTP URL for this node",
-          example: "http://node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc.nm.internal:44000"
-        },
         http_port: %Schema{
           type: :integer,
           description: "HTTP API port"
@@ -114,7 +109,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         id_type: "persistent",
         status: "online",
         dns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
-        http_url: "http://node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal:44000",
         http_port: 44000,
         ssh_port: 42222,
         metrics_port: 49100,
@@ -154,7 +148,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
             id_type: "persistent",
             status: "online",
             dns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
-            http_url: "http://node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal:44000",
             http_port: 44000,
             ssh_port: 42222,
             metrics_port: 49100,
@@ -205,7 +198,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           id_type: "persistent",
           status: "online",
           dns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
-          http_url: "http://node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal:44000",
           http_port: 44000,
           ssh_port: 42222,
           metrics_port: 49100,

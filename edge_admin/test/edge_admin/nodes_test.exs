@@ -166,48 +166,6 @@ defmodule EdgeAdmin.NodesTest do
       assert {:error, %Ecto.Changeset{} = changeset} = Nodes.create_node(invalid_attrs)
       assert changeset.errors[:id_type]
     end
-
-    test "computes DNS hostname and HTTP URL correctly" do
-      # Test with full data
-      full_attrs = %{
-        id: "bc9ebeb1-96a4-4dfd-953e-899a61637577",
-        cluster_id: "abc12345-1234-1234-1234-123456789abc",
-        id_type: "persistent",
-        status: "online",
-        http_port: 44000,
-        ssh_port: 42222,
-        metrics_port: 49100,
-        http_proxy_port: 44880,
-        socks5_proxy_port: 44180,
-        last_seen_at: ~U[2025-06-08 08:12:00Z]
-      }
-
-      assert {:ok, %Node{} = node} = Nodes.create_node(full_attrs)
-
-      # Get configured domain for assertions
-      default_domain = Application.get_env(:edge_admin, :netmaker_default_domain, "nm.internal")
-      expected_hostname = "node-#{node.id}.cluster-#{node.cluster_id}.#{default_domain}"
-
-      assert Node.dns_hostname(node) == expected_hostname
-      assert Node.http_url(node) == "http://#{expected_hostname}:44000"
-    end
-
-    test "node classification helpers" do
-      # Test random node
-      random_node = %Node{id_type: "random", cluster_id: Ecto.UUID.generate()}
-      assert Node.random?(random_node) == true
-      assert Node.persistent?(random_node) == false
-
-      # Test persistent node
-      persistent_node = %Node{id_type: "persistent", cluster_id: Ecto.UUID.generate()}
-      assert Node.random?(persistent_node) == false
-      assert Node.persistent?(persistent_node) == true
-
-      # Test node without id_type
-      unknown_node = %Node{id_type: nil, cluster_id: Ecto.UUID.generate()}
-      assert Node.random?(unknown_node) == false
-      assert Node.persistent?(unknown_node) == false
-    end
   end
 
   describe "filtering and pagination integration" do
@@ -296,7 +254,7 @@ defmodule EdgeAdmin.NodesTest do
       assert result.sort == []
     end
 
-    test "DNS hostname and HTTP URL in paginated results" do
+    test "DNS hostname in paginated results" do
       cluster_id = Ecto.UUID.generate()
 
       {:ok, _node1} =
@@ -332,7 +290,6 @@ defmodule EdgeAdmin.NodesTest do
 
       Enum.each(result.data, fn node ->
         assert Node.dns_hostname(node) =~ ~r/^node-.+\.cluster-.+\.nm\.internal$/
-        assert Node.http_url(node) =~ ~r/^http:\/\/node-.+\.cluster-.+\.nm\.internal:\d+$/
       end)
 
       # Test filtering + computed fields

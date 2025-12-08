@@ -111,10 +111,4 @@ defmodule EdgeAdmin.Nodes.Node do
   def http_url(%__MODULE__{http_port: port} = node) do
     "http://#{dns_hostname(node)}:#{port}"
   end
-
-  def persistent?(%__MODULE__{id_type: "persistent"}), do: true
-  def persistent?(_), do: false
-
-  def random?(%__MODULE__{id_type: "random"}), do: true
-  def random?(_), do: false
 end

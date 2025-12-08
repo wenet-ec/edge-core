@@ -47,11 +47,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
           type: :string,
           enum: ["machine_id", "hardware_id", "temporary_id"]
         }
-      ],
-      vpn_ip: [
-        in: :query,
-        description: "Filter by VPN IP (supports wildcards with *)",
-        schema: %OpenApiSpex.Schema{type: :string}
       ]
     ],
     responses: %{

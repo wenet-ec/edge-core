@@ -38,7 +38,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSON do
       id_type: node.id_type,
       status: node.status,
       dns_hostname: Node.dns_hostname(node),
-      http_url: Node.http_url(node),
       http_port: node.http_port,
       ssh_port: node.ssh_port,
       metrics_port: node.metrics_port,

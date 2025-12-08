@@ -129,10 +129,16 @@ ephemeral_key_cleanup_enabled = get_env("EPHEMERAL_KEY_CLEANUP_ENABLED", :boolea
 ephemeral_key_ttl_hours = get_env("EPHEMERAL_KEY_TTL_HOURS", :integer, 168)
 ephemeral_key_cleanup_schedule = get_env("EPHEMERAL_KEY_CLEANUP_SCHEDULE", :string, "0 0 * * *")
 
+# Cluster reconciliation configuration
+cluster_reconciliation_enabled = get_env("CLUSTER_RECONCILIATION_ENABLED", :boolean, true)
+cluster_reconciliation_schedule = get_env("CLUSTER_RECONCILIATION_SCHEDULE", :string, "0 */6 * * *")
+
 config :edge_admin,
   ephemeral_key_cleanup_enabled: ephemeral_key_cleanup_enabled,
   ephemeral_key_ttl_hours: ephemeral_key_ttl_hours,
-  ephemeral_key_cleanup_schedule: ephemeral_key_cleanup_schedule
+  ephemeral_key_cleanup_schedule: ephemeral_key_cleanup_schedule,
+  cluster_reconciliation_enabled: cluster_reconciliation_enabled,
+  cluster_reconciliation_schedule: cluster_reconciliation_schedule
 
 # Oban crontab
 base_crontab = [
@@ -142,12 +148,22 @@ base_crontab = [
 ]
 
 crontab =
-  if ephemeral_key_cleanup_enabled do
-    base_crontab ++
+  cron_jobs =
+    if ephemeral_key_cleanup_enabled do
       [{ephemeral_key_cleanup_schedule, EdgeAdmin.Nodes.Workers.EphemeralKeyCleanupWorker}]
-  else
-    base_crontab
-  end
+    else
+      []
+    end
+
+  cron_jobs =
+    if cluster_reconciliation_enabled do
+      cron_jobs ++
+        [{cluster_reconciliation_schedule, EdgeAdmin.Nodes.Workers.ClusterReconciliationWorker}]
+    else
+      cron_jobs
+    end
+
+  base_crontab ++ cron_jobs
 
 config :edge_admin, Oban,
   engine: Oban.Engines.Basic,
@@ -155,7 +171,8 @@ config :edge_admin, Oban,
     command_dispatch: 10,
     command_retry: 1,
     key_cleanup: 1,
-    zombie_admin_cleanup: 1
+    zombie_admin_cleanup: 1,
+    cluster_reconciliation: 1
   ],
   repo: EdgeAdmin.Repo,
   plugins: [

@@ -115,21 +115,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
 
     cond do
       new_cluster_name && new_cluster_name != node.cluster.name ->
-        # Cluster migration - involves Netmaker
-        case Nodes.change_node_cluster(node, new_cluster_name) do
-          {:ok, updated_node} ->
-            render(conn, :show, node: updated_node)
-
-          {:error, :host_offline} ->
-            conn
-            |> put_status(:precondition_failed)
-            |> json(%{error: "Host is offline, cannot migrate cluster"})
-
-          {:error, reason} ->
-            conn
-            |> put_status(:unprocessable_entity)
-            |> json(%{error: inspect(reason)})
-        end
+        # Cluster migration - involves Netmaker (best-effort, reconciliation worker handles failures)
+        {:ok, updated_node} = Nodes.change_node_cluster(node, new_cluster_name)
+        render(conn, :show, node: updated_node)
 
       true ->
         # Regular update - no Netmaker interaction

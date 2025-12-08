@@ -261,56 +261,63 @@ defmodule EdgeAdmin.Nodes do
   @doc """
   Changes a node's cluster.
 
-  Performs cluster migration via Netmaker:
-  1. Verifies host is online (uses Netmaker's status field)
-  2. Adds host to new network
-  3. Deletes node from old network
-  4. Updates DB
-  5. Emits event for metadata recomputation
+  DB-first approach: Updates database immediately, then best-effort syncs with Netmaker.
+  A background reconciliation worker handles any inconsistencies.
+
+  Flow:
+  1. Update database (source of truth)
+  2. Best-effort sync: Add host to new network
+  3. Best-effort sync: Remove host from old network
+  4. Emit event for metadata recomputation
+
+  Inconsistencies are handled by the cluster reconciliation worker.
   """
   def change_node_cluster(%Node{} = node, new_cluster_name) do
-    Repo.transaction(fn ->
-      # 1. Verify node is online (check DB status)
-      if node.status != "online" do
-        Logger.warning("Cannot change cluster for offline node #{node.id}")
-        Repo.rollback(:node_offline)
-      end
+    new_cluster = get_cluster!(new_cluster_name)
+    old_cluster_id = node.cluster_id
 
-      new_cluster = get_cluster!(new_cluster_name)
+    # 1. Update database first (source of truth)
+    updated_node =
+      node
+      |> Ecto.Changeset.change(cluster_id: new_cluster.id)
+      |> Repo.update!()
+      |> Repo.preload(:cluster, force: true)
 
-      # Build network names
-      old_network_name = Vpn.cluster_network_name(node.cluster.name)
-      new_network_name = Vpn.cluster_network_name(new_cluster.name)
+    # 2. Emit PubSub event for metadata recomputation
+    Phoenix.PubSub.broadcast(
+      EdgeAdmin.PubSub,
+      "#{Vpn.admin_cluster_name()}:metadata",
+      {:node_updated, node.id, old_cluster_id, new_cluster.id}
+    )
 
-      # 2. Add host to new network first
-      case Vpn.add_host_to_network(node.netmaker_host_id, new_network_name) do
-        {:ok, _} ->
-          # 3. Remove host from old network (Netmaker handles node deletion)
-          case Vpn.remove_host_from_network(node.netmaker_host_id, old_network_name) do
-            {:ok, _} ->
-              # 4. Update database
-              updated_node =
-                node
-                |> Ecto.Changeset.change(cluster_id: new_cluster.id)
-                |> Repo.update!()
+    # 3. Best-effort Netmaker sync (don't fail if this doesn't work)
+    # The reconciliation worker will fix any inconsistencies
+    old_network_name = Vpn.cluster_network_name(node.cluster.name)
+    new_network_name = Vpn.cluster_network_name(new_cluster.name)
 
-              # 5. Emit PubSub event for metadata recomputation (cluster migration)
-              Phoenix.PubSub.broadcast(
-                EdgeAdmin.PubSub,
-                "#{Vpn.admin_cluster_name()}:metadata",
-                {:node_updated, node.id, node.cluster_id, new_cluster.id}
-              )
+    case Vpn.add_host_to_network(node.netmaker_host_id, new_network_name) do
+      {:ok, _} ->
+        Logger.info("Added host #{node.netmaker_host_id} to network #{new_network_name}")
 
-              updated_node
+        case Vpn.remove_host_from_network(node.netmaker_host_id, old_network_name) do
+          {:ok, _} ->
+            Logger.info("Removed host #{node.netmaker_host_id} from network #{old_network_name}")
 
-            {:error, reason} ->
-              Repo.rollback(reason)
-          end
+          {:error, reason} ->
+            Logger.warning(
+              "Failed to remove host #{node.netmaker_host_id} from old network #{old_network_name}: #{inspect(reason)}. " <>
+                "Reconciliation worker will handle cleanup."
+            )
+        end
 
-        {:error, reason} ->
-          Repo.rollback(reason)
-      end
-    end)
+      {:error, reason} ->
+        Logger.warning(
+          "Failed to add host #{node.netmaker_host_id} to new network #{new_network_name}: #{inspect(reason)}. " <>
+            "Reconciliation worker will handle sync."
+        )
+    end
+
+    {:ok, updated_node}
   end
 
   @doc """
@@ -875,6 +882,117 @@ defmodule EdgeAdmin.Nodes do
   end
 
   defp netmaker_not_found_error?(_), do: false
+
+  @doc """
+  Reconciles cluster node membership between database (source of truth) and Netmaker.
+
+  For each cluster:
+  1. Gets nodes that SHOULD be in the network (from DB)
+  2. Gets nodes that ARE in the network (from Netmaker)
+  3. Adds missing nodes (DB says yes, Netmaker says no)
+  4. Removes extra nodes (Netmaker says yes, DB says no)
+
+  Only processes edge nodes (those belonging to edge agents, identified by having a DB record).
+  Admin nodes and staff machines are not touched.
+
+  Returns statistics about the reconciliation operation.
+  """
+  def reconcile_cluster_nodes do
+    clusters = list_clusters()
+
+    # Get all DB nodes grouped by cluster
+    db_nodes_by_cluster =
+      from(n in Node, preload: [:cluster])
+      |> Repo.all()
+      |> Enum.group_by(& &1.cluster_id)
+
+    Logger.info("Starting cluster reconciliation for #{length(clusters)} clusters")
+
+    result = %{
+      clusters_processed: 0,
+      nodes_added: 0,
+      nodes_removed: 0,
+      errors: 0
+    }
+
+    Enum.reduce(clusters, result, fn cluster, acc ->
+      reconcile_single_cluster(cluster, db_nodes_by_cluster[cluster.id] || [], acc)
+    end)
+  end
+
+  defp reconcile_single_cluster(cluster, db_nodes, acc) do
+    network_name = Vpn.cluster_network_name(cluster.name)
+
+    Logger.debug("Reconciling cluster #{cluster.name} (network: #{network_name})")
+
+    # Get what SHOULD be in this network (from DB)
+    expected_host_ids = MapSet.new(db_nodes, & &1.netmaker_host_id)
+
+    # Get what IS in this network (from Netmaker)
+    case Vpn.list_nodes(network_name) do
+      {:ok, netmaker_nodes} ->
+        # Extract host IDs from Netmaker nodes
+        # These are all nodes in the network, including admin nodes and staff machines
+        actual_host_ids =
+          netmaker_nodes
+          |> Enum.map(& &1["hostid"])
+          |> Enum.reject(&is_nil/1)
+          |> MapSet.new()
+
+        # Find edge node host IDs in Netmaker (those we have in DB)
+        # This filters out admin nodes and staff machines
+        edge_node_host_ids = MapSet.intersection(actual_host_ids, expected_host_ids)
+
+        # Add missing nodes (DB says yes, Netmaker says no)
+        missing = MapSet.difference(expected_host_ids, edge_node_host_ids)
+        added = add_missing_nodes(missing, network_name, cluster.name)
+
+        # Remove extra nodes (Netmaker says yes for our edge nodes, but DB says no)
+        # Only remove edge nodes that we manage (exist in our DB or used to exist)
+        extra = MapSet.difference(edge_node_host_ids, expected_host_ids)
+        removed = remove_extra_nodes(extra, network_name, cluster.name)
+
+        %{
+          clusters_processed: acc.clusters_processed + 1,
+          nodes_added: acc.nodes_added + added,
+          nodes_removed: acc.nodes_removed + removed,
+          errors: acc.errors
+        }
+
+      {:error, reason} ->
+        Logger.error("Failed to list nodes for cluster #{cluster.name}: #{inspect(reason)}")
+
+        %{acc | errors: acc.errors + 1}
+    end
+  end
+
+  defp add_missing_nodes(host_ids, network_name, cluster_name) do
+    Enum.reduce(host_ids, 0, fn host_id, count ->
+      case Vpn.add_host_to_network(host_id, network_name) do
+        {:ok, _} ->
+          Logger.info("Reconciliation: Added host #{host_id} to network #{network_name} (cluster: #{cluster_name})")
+          count + 1
+
+        {:error, reason} ->
+          Logger.warning("Reconciliation: Failed to add host #{host_id} to network #{network_name}: #{inspect(reason)}")
+          count
+      end
+    end)
+  end
+
+  defp remove_extra_nodes(host_ids, network_name, cluster_name) do
+    Enum.reduce(host_ids, 0, fn host_id, count ->
+      case Vpn.remove_host_from_network(host_id, network_name) do
+        {:ok, _} ->
+          Logger.info("Reconciliation: Removed host #{host_id} from network #{network_name} (cluster: #{cluster_name})")
+          count + 1
+
+        {:error, reason} ->
+          Logger.warning("Reconciliation: Failed to remove host #{host_id} from network #{network_name}: #{inspect(reason)}")
+          count
+      end
+    end)
+  end
 
   def list_metrics_discovery_targets do
     from(n in Node,

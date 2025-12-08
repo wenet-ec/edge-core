@@ -102,6 +102,38 @@ defmodule Nexmaker.Cli do
   end
 
   @doc """
+  Pulls latest configuration from Netmaker server.
+
+  Forces netclient to fetch the full configuration from the server via HTTP API,
+  bypassing MQTT. This ensures WireGuard interface is updated with all networks
+  and addresses, useful after bulk cluster operations.
+
+  ## Returns
+    - `:ok` - Successfully pulled configuration
+    - `{:error, reason}` - Failed to pull
+
+  ## Examples
+
+      :ok = Nexmaker.Cli.pull()
+  """
+  @spec pull() :: :ok | {:error, any()}
+  def pull do
+    case System.cmd("netclient", ["pull"], stderr_to_stdout: true) do
+      {_output, 0} ->
+        Logger.debug("Successfully pulled netclient configuration from server")
+        :ok
+
+      {output, exit_code} ->
+        Logger.error("Failed to pull netclient configuration: #{output}")
+        {:error, {:netclient_error, exit_code, output}}
+    end
+  rescue
+    e in ErlangError ->
+      Logger.error("netclient command not found or failed: #{inspect(e)}")
+      {:error, :netclient_not_found}
+  end
+
+  @doc """
   Leaves a network.
 
   Deletes node from network (host remains registered).

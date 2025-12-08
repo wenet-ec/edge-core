@@ -234,17 +234,75 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   end
 
   defp leave_network(netmaker_host_id, cluster_name) do
-    # cluster_name is already normalized (e.g., "cluster-default")
-    # Remove from network via direct API
-    # Note: This deletes the Node (network membership), not the Host
     case Vpn.remove_host_from_network(netmaker_host_id, cluster_name) do
       {:ok, _} ->
-        Logger.info("Gateway left network #{cluster_name}")
+        # Wait for actual deletion (Netmaker uses PendingDelete + zombie cleanup)
+        case wait_for_deletion(netmaker_host_id, cluster_name) do
+          :ok ->
+            Logger.info("Gateway left network #{cluster_name}")
+
+          {:error, :timeout} ->
+            Logger.warning(
+              "Gateway left network #{cluster_name} but deletion still pending after 10s"
+            )
+        end
+
         :ok
 
       {:error, reason} ->
         Logger.error("Failed to leave network #{cluster_name}: #{inspect(reason)}")
         :ok  # Don't crash on cleanup failure
+    end
+  end
+
+  defp wait_for_deletion(netmaker_host_id, cluster_name, max_attempts \\ 10, delay_ms \\ 1000) do
+    Enum.reduce_while(1..max_attempts, {:error, :timeout}, fn attempt, _acc ->
+      case check_if_still_in_network(netmaker_host_id, cluster_name) do
+        {:ok, false} ->
+          # Node actually deleted from network
+          Logger.debug(
+            "Node deletion confirmed for #{cluster_name} after #{attempt * delay_ms}ms"
+          )
+
+          {:halt, :ok}
+
+        {:ok, true} ->
+          # Still exists (or PendingDelete=true)
+          if attempt < max_attempts do
+            :timer.sleep(delay_ms)
+            {:cont, {:error, :timeout}}
+          else
+            {:halt, {:error, :timeout}}
+          end
+
+        {:error, reason} ->
+          # Couldn't check - log and continue
+          Logger.debug("Failed to check deletion status: #{inspect(reason)}")
+
+          if attempt < max_attempts do
+            :timer.sleep(delay_ms)
+            {:cont, {:error, :timeout}}
+          else
+            {:halt, {:error, :timeout}}
+          end
+      end
+    end)
+  end
+
+  defp check_if_still_in_network(netmaker_host_id, cluster_name) do
+    # Check if this host still has a node in the network
+    case Vpn.list_nodes(cluster_name) do
+      {:ok, nodes} ->
+        # Check if any node belongs to this host
+        still_exists =
+          Enum.any?(nodes, fn node ->
+            node["hostid"] == netmaker_host_id
+          end)
+
+        {:ok, still_exists}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 end

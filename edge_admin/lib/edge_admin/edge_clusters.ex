@@ -94,6 +94,16 @@ defmodule EdgeAdmin.EdgeClusters do
 
   @impl true
   def handle_info(:reconciliation_complete, state) do
+    # Trigger netclient pull to ensure WireGuard interface is consistent
+    # This fixes race conditions when multiple networks are joined/left rapidly via MQTT
+    case Nexmaker.Cli.pull() do
+      :ok ->
+        Logger.debug("EdgeClusters: Netclient pull completed successfully")
+
+      {:error, reason} ->
+        Logger.warning("EdgeClusters: Netclient pull failed: #{inspect(reason)}")
+    end
+
     if state.pending_reconcile do
       # Something changed while we worked - do it again
       spawn_reconciliation_task(state)

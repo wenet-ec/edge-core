@@ -6,17 +6,10 @@ defmodule EdgeAdmin.Admins.Metadata do
   Responsibilities:
   - ETS table ownership and lifecycle management
   - Event subscription (syn for admin topology, Phoenix PubSub for PostgreSQL changes)
-  - Recompute state machine logic (cooldown, batching)
+  - Recompute state machine logic (pending flag pattern)
   - Recomputation orchestration (triggers Algorithm module)
   - ETS updates (write assignments, topology, system state)
   - Public API for ETS queries
-
-  ## Event Handling Strategy
-
-  - **Syn events** (admin join/leave) → immediate recomputation (bypass cooldown)
-  - **PubSub events** (cluster/node CRUD) → batched with cooldown
-  - **Periodic task** (Quantum every 60s) → forced recomputation (cross-cluster sync)
-
   ## ETS Schema
 
   The `:metadata` table contains 4 keys:
@@ -73,10 +66,6 @@ defmodule EdgeAdmin.Admins.Metadata do
   alias EdgeAdmin.Nodes.Node
 
   @table :metadata
-  # 30 seconds (configurable)
-  @recompute_cooldown_ms 30_000
-  # Min changes before recompute (configurable)
-  @recompute_batch_size 10
 
   # === Lifecycle ===
 
@@ -145,22 +134,22 @@ defmodule EdgeAdmin.Admins.Metadata do
     # Subscribe to PubSub events (cluster/node CRUD from this admin cluster)
     Phoenix.PubSub.subscribe(EdgeAdmin.PubSub, "#{admin_cluster_name}:metadata")
 
-    # Trigger first computation (reads from syn + PostgreSQL, updates ETS)
+    # Initial state with flags
     initial_state = %{
       admin_id: admin_id,
       admin_cluster_name: admin_cluster_name,
       last_computed_at: nil,
-      pending_changes: 0,
-      cooldown_timer: nil,
+      recomputing?: false,
+      pending_recompute: false,
       initialized: false
     }
 
-    # Perform initial recomputation
-    new_state = perform_recomputation(initial_state)
+    # Trigger first recomputation
+    spawn_recomputation_task(initial_state)
 
     Logger.info("Metadata initialization complete for #{admin_name}")
 
-    {:ok, %{new_state | initialized: true}}
+    {:ok, %{initial_state | recomputing?: true, initialized: true}}
   end
 
   # === Public API (Queries) ===
@@ -236,97 +225,103 @@ defmodule EdgeAdmin.Admins.Metadata do
 
   @impl true
   def handle_call(:recompute_now, _from, state) do
-    new_state = perform_recomputation(state)
-    {:reply, :ok, new_state}
+    if state.recomputing? do
+      # Already working - mark pending
+      {:reply, :ok, %{state | pending_recompute: true}}
+    else
+      # Start recomputation
+      spawn_recomputation_task(state)
+      {:reply, :ok, %{state | recomputing?: true}}
+    end
   end
 
   # === Event Handlers ===
 
-  # Syn events (admin topology changes - immediate recomputation)
+  # Syn events (admin topology changes)
   @impl true
   def handle_info({:syn_event, :admin_scope, {:join, admin_id, _pid, _metadata}}, state) do
-    Logger.info("Admin joined: #{admin_id}, triggering immediate recomputation")
-    new_state = perform_recomputation(state)
-    {:noreply, new_state}
+    Logger.info("Admin joined: #{admin_id}, requesting recomputation")
+    request_recomputation(state)
   end
 
   @impl true
   def handle_info({:syn_event, :admin_scope, {:leave, admin_id, _pid, _metadata}}, state) do
-    Logger.info("Admin left: #{admin_id}, triggering immediate recomputation")
-    new_state = perform_recomputation(state)
-    {:noreply, new_state}
+    Logger.info("Admin left: #{admin_id}, requesting recomputation")
+    request_recomputation(state)
   end
 
-  # PostgreSQL events - Cluster structure changes (immediate recomputation)
+  # PostgreSQL events - Cluster structure changes
   @impl true
   def handle_info({:cluster_created, cluster_id}, state) do
-    Logger.info("Cluster created: #{cluster_id}, triggering immediate recomputation")
-    new_state = perform_recomputation(state)
-    {:noreply, new_state}
+    Logger.debug("Cluster created: #{cluster_id}, requesting recomputation")
+    request_recomputation(state)
   end
 
   @impl true
   def handle_info({:cluster_deleted, cluster_id}, state) do
-    Logger.info("Cluster deleted: #{cluster_id}, triggering immediate recomputation")
-    new_state = perform_recomputation(state)
-    {:noreply, new_state}
+    Logger.debug("Cluster deleted: #{cluster_id}, requesting recomputation")
+    request_recomputation(state)
   end
 
-  # PostgreSQL events - Node changes (batched with cooldown)
+  # PostgreSQL events - Node changes
   @impl true
   def handle_info({:node_created, _node_id, _cluster_id}, state) do
-    accumulate_change(state)
+    Logger.debug("Node created, requesting recomputation")
+    request_recomputation(state)
   end
 
   @impl true
   def handle_info({:node_deleted, _node_id, _cluster_id}, state) do
-    accumulate_change(state)
+    Logger.debug("Node deleted, requesting recomputation")
+    request_recomputation(state)
   end
 
   @impl true
   def handle_info({:node_updated, _node_id, _old_cluster_id, _new_cluster_id}, state) do
-    accumulate_change(state)
+    Logger.debug("Node updated, requesting recomputation")
+    request_recomputation(state)
   end
 
-  # Cooldown timer expired
+  # Recomputation complete
   @impl true
-  def handle_info(:cooldown_expired, state) do
-    if state.pending_changes >= @recompute_batch_size do
-      Logger.debug(
-        "Cooldown expired with #{state.pending_changes} changes, triggering recomputation"
-      )
-
-      new_state = perform_recomputation(state)
-      {:noreply, new_state}
+  def handle_info(:recomputation_complete, state) do
+    if state.pending_recompute do
+      # Something changed while we worked - do it again
+      Logger.debug("Metadata: Pending recomputation triggered")
+      spawn_recomputation_task(state)
+      {:noreply, %{state | recomputing?: true, pending_recompute: false}}
     else
-      Logger.debug(
-        "Cooldown expired but only #{state.pending_changes} changes (threshold: #{@recompute_batch_size}), skipping"
-      )
-
-      {:noreply, %{state | cooldown_timer: nil}}
+      Logger.debug("Metadata: Recomputation complete, idle")
+      {:noreply, %{state | recomputing?: false}}
     end
   end
 
   # === Private Helpers ===
 
-  defp accumulate_change(state) do
-    new_state = %{state | pending_changes: state.pending_changes + 1}
-
-    # Start cooldown timer if not already running
-    if is_nil(new_state.cooldown_timer) do
-      Logger.debug("Starting cooldown timer (#{@recompute_cooldown_ms}ms)")
-      timer = Process.send_after(self(), :cooldown_expired, @recompute_cooldown_ms)
-      {:noreply, %{new_state | cooldown_timer: timer}}
+  defp request_recomputation(state) do
+    if state.recomputing? do
+      # Already working - mark that we need to do it again
+      Logger.debug("Metadata: Already recomputing, marked pending")
+      {:noreply, %{state | pending_recompute: true}}
     else
-      {:noreply, new_state}
+      # Start recomputation
+      spawn_recomputation_task(state)
+      Logger.debug("Metadata: Starting recomputation")
+      {:noreply, %{state | recomputing?: true}}
     end
   end
 
-  defp perform_recomputation(state) do
-    Logger.debug("Performing metadata recomputation")
+  defp spawn_recomputation_task(state) do
+    parent = self()
 
-    # Cancel existing timer if any
-    if state.cooldown_timer, do: Process.cancel_timer(state.cooldown_timer)
+    Task.start(fn ->
+      perform_recomputation(state)
+      send(parent, :recomputation_complete)
+    end)
+  end
+
+  defp perform_recomputation(_state) do
+    Logger.debug("Performing metadata recomputation")
 
     # Read inputs from syn and PostgreSQL (already transformed to names)
     all_admins = read_admins_from_syn()
@@ -349,14 +344,7 @@ defmodule EdgeAdmin.Admins.Metadata do
 
     Logger.debug("Metadata recomputation complete")
 
-    %{
-      admin_id: state.admin_id,
-      admin_cluster_name: state.admin_cluster_name,
-      last_computed_at: System.monotonic_time(:millisecond),
-      pending_changes: 0,
-      cooldown_timer: nil,
-      initialized: state.initialized
-    }
+    :ok
   end
 
   defp read_admins_from_syn do

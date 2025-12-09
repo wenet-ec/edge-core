@@ -410,7 +410,7 @@ defmodule EdgeAdmin.Nodes do
           cluster_id: cluster.id,
           netmaker_host_id: netmaker_host_id,
           id_type: attrs["id_type"],
-          status: "online",
+          status: "healthy",
           last_seen_at: now,
           http_port: attrs["http_port"],
           ssh_port: attrs["ssh_port"],

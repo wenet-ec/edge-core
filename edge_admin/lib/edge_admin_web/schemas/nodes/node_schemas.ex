@@ -45,7 +45,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         },
         status: %Schema{
           type: :string,
-          enum: ["online", "offline"],
+          enum: ["healthy", "unhealthy", "unreachable"],
           description: "Current node status"
         },
         dns_hostname: %Schema{
@@ -107,7 +107,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         cluster_name: "prod-east",
         netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
         id_type: "persistent",
-        status: "online",
+        status: "healthy",
         dns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
         http_port: 44000,
         ssh_port: 42222,
@@ -146,7 +146,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
             cluster_id: "abc12345-1234-1234-1234-123456789abc",
             netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
             id_type: "persistent",
-            status: "online",
+            status: "healthy",
             dns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
             http_port: 44000,
             ssh_port: 42222,
@@ -196,7 +196,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           cluster_id: "abc12345-1234-1234-1234-123456789abc",
           netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
           id_type: "persistent",
-          status: "online",
+          status: "healthy",
           dns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
           http_port: 44000,
           ssh_port: 42222,

@@ -32,7 +32,7 @@ defmodule EdgeAdmin.Repo.Migrations.UpdateNodesSchema do
 
     # Set default status for existing records
     from(n in "nodes", where: is_nil(n.status))
-    |> Repo.update_all(set: [status: "online"])
+    |> Repo.update_all(set: [status: "healthy"])
 
     # Modify timestamp columns
     alter table(:nodes) do

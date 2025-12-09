@@ -13,7 +13,7 @@ defmodule EdgeAdmin.Nodes.Node do
     # Netmaker references
     field(:netmaker_host_id, :binary_id)
     field(:id_type, :string)
-    field(:status, :string, default: "online")
+    field(:status, :string, default: "healthy")
 
     # HTTP communication fields
     field(:http_port, :integer)
@@ -70,7 +70,7 @@ defmodule EdgeAdmin.Nodes.Node do
       :socks5_proxy_port
     ])
     |> validate_inclusion(:id_type, ["persistent", "random"])
-    |> validate_inclusion(:status, ["online", "offline"])
+    |> validate_inclusion(:status, ["healthy", "unhealthy", "unreachable"])
     |> unique_constraint(:id, name: :nodes_pkey)
     |> unique_constraint(:api_token)
     |> foreign_key_constraint(:cluster_id)

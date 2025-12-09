@@ -4,7 +4,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Nodes.Node
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Nodes.NodeSchemas
 
@@ -80,10 +79,10 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
     render(conn, :show, node: node)
   end
 
-  operation(:update,
-    summary: "Update a node",
+  operation(:change_cluster,
+    summary: "Change a node's cluster",
     description:
-      "Update an existing node's information. If cluster_name is being changed, performs cluster migration via Netmaker (requires host to be online).",
+      "Move a node to a different cluster. Performs cluster migration via Netmaker (best-effort, reconciliation worker handles failures).",
     parameters: [
       id: [
         in: :path,
@@ -91,35 +90,20 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
         schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ]
     ],
-    request_body: {"Node update parameters", "application/json", NodeSchemas.NodeUpdateRequest},
+    request_body:
+      {"Cluster change parameters", "application/json", NodeSchemas.ChangeClusterRequest},
     responses: %{
-      200 => {"Node updated successfully", "application/json", NodeSchemas.NodeSingleResponse},
-      404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
-      412 =>
-        {"Host is offline, cannot migrate cluster", "application/json",
-         CommonSchemas.ErrorResponse},
+      200 => {"Node cluster changed successfully", "application/json", NodeSchemas.NodeSingleResponse},
+      404 => {"Node or cluster not found", "application/json", CommonSchemas.NotFoundResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
     }
   )
 
-  def update(conn, %{"id" => id, "node" => node_params}) do
+  def change_cluster(conn, %{"id" => id, "node" => %{"cluster_name" => cluster_name}}) do
     node = Nodes.get_node!(id)
 
-    # Check if cluster_name is being changed
-    new_cluster_name = node_params["cluster_name"]
-
-    cond do
-      new_cluster_name && new_cluster_name != node.cluster.name ->
-        # Cluster migration - involves Netmaker (best-effort, reconciliation worker handles failures)
-        {:ok, updated_node} = Nodes.change_node_cluster(node, new_cluster_name)
-        render(conn, :show, node: updated_node)
-
-      true ->
-        # Regular update - no Netmaker interaction
-        with {:ok, %Node{} = updated_node} <- Nodes.update_node(node, node_params) do
-          render(conn, :show, node: updated_node)
-        end
-    end
+    {:ok, updated_node} = Nodes.change_node_cluster(node, cluster_name)
+    render(conn, :show, node: updated_node)
   end
 
   operation(:delete,

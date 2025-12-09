@@ -213,15 +213,15 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
     })
   end
 
-  defmodule NodeUpdateRequest do
+  defmodule ChangeClusterRequest do
     @moduledoc false
     require OpenApiSpex
 
     OpenApiSpex.schema(%{
-      title: "Update Node Request",
+      title: "Change Cluster Request",
       description:
-        "Request to update an existing node. Currently only cluster_name updates are allowed. " <>
-          "If cluster_name is changed, performs cluster migration via Netmaker (requires host to be online).",
+        "Request to move a node to a different cluster. " <>
+          "Performs cluster migration via Netmaker (best-effort, reconciliation worker handles failures).",
       type: :object,
       properties: %{
         node: %Schema{
@@ -230,13 +230,12 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
             cluster_name: %Schema{
               type: :string,
               pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-              nullable: true,
               description:
-                "Name of the cluster this node should belong to. Changing this field triggers cluster migration via Netmaker. " <>
-                  "The host must be online (lastcheckin < 60s) for migration to succeed.",
+                "Name of the target cluster to move this node to.",
               example: "prod-west"
             }
-          }
+          },
+          required: [:cluster_name]
         }
       },
       required: [:node],

@@ -141,7 +141,7 @@ defmodule EdgeAdminWeb.Router do
         get("/metrics", MetricsController, :index)
       end
 
-      patch("/nodes/:id", NodeController, :update)
+      patch("/nodes/:id/change_cluster", NodeController, :change_cluster)
       delete("/nodes/:id", NodeController, :delete)
 
       resources("/ssh_usernames", SshUsernameController, only: [:index, :show, :delete]) do

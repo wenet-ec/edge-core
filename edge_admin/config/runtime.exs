@@ -112,8 +112,8 @@ admin_id = generate_random_string(12)
 
 config :edge_admin,
   admin_id: admin_id,
-  admin_name: EdgeAdmin.Vpn.build_admin_name(admin_id),
-  admin_cluster_name: EdgeAdmin.Vpn.build_admin_cluster_name(get_env!("ADMIN_CLUSTER_NAME")),
+  admin_name: EdgeAdmin.Vpn.build_dns_name(admin_id, prefix: :admin),
+  admin_cluster_name: EdgeAdmin.Vpn.build_network_name(get_env!("ADMIN_CLUSTER_NAME"), prefix: :admin),
   admin_cluster_subnet: get_env("ADMIN_CLUSTER_SUBNET"),
   admin_max_capacity: get_env!("ADMIN_MAX_CAPACITY", :positive_integer),
   erlang_cookie: get_env("ERLANG_COOKIE", :atom, :edge_admin_default_cookie),

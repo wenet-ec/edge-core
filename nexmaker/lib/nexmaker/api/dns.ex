@@ -110,7 +110,7 @@ defmodule Nexmaker.Api.DNS do
   @spec create(String.t(), map(), keyword()) :: {:ok, map()} | {:error, any()}
   def create(network_name, attrs, opts \\ []) do
     body = Map.put(attrs, :network, network_name)
-    Api.request(:post, "/api/dns", Keyword.put(opts, :body, body))
+    Api.request(:post, "/api/dns/#{network_name}", Keyword.put(opts, :body, body))
   end
 
   @doc """

@@ -4,65 +4,65 @@ defmodule EdgeAdmin.VpnTest do
 
   alias EdgeAdmin.Vpn
 
-  describe "build_admin_name/1" do
+  describe "build_dns_name/2 with prefix: :admin" do
     test "builds admin name from admin ID" do
-      assert Vpn.build_admin_name("k7m3n2p9x4j6") == "admin-k7m3n2p9x4j6"
+      assert Vpn.build_dns_name("k7m3n2p9x4j6", prefix: :admin) == "admin-k7m3n2p9x4j6"
     end
 
     test "handles various admin ID formats" do
-      assert Vpn.build_admin_name("abc123") == "admin-abc123"
-      assert Vpn.build_admin_name("test-id-123") == "admin-test-id-123"
-      assert Vpn.build_admin_name("x9j4p2k7m8n3") == "admin-x9j4p2k7m8n3"
+      assert Vpn.build_dns_name("abc123", prefix: :admin) == "admin-abc123"
+      assert Vpn.build_dns_name("test-id-123", prefix: :admin) == "admin-test-id-123"
+      assert Vpn.build_dns_name("x9j4p2k7m8n3", prefix: :admin) == "admin-x9j4p2k7m8n3"
     end
   end
 
-  describe "build_admin_cluster_name/1" do
+  describe "build_network_name/2 with prefix: :admin" do
     test "builds valid admin cluster name from suffix" do
-      assert Vpn.build_admin_cluster_name("prod") == "admin-cluster-prod"
-      assert Vpn.build_admin_cluster_name("staging") == "admin-cluster-staging"
-      assert Vpn.build_admin_cluster_name("dev-us-west") == "admin-cluster-dev-us-west"
+      assert Vpn.build_network_name("prod", prefix: :admin) == "admin-cluster-prod"
+      assert Vpn.build_network_name("staging", prefix: :admin) == "admin-cluster-staging"
+      assert Vpn.build_network_name("dev-us-west", prefix: :admin) == "admin-cluster-dev-us-west"
     end
 
     test "validates suffix format - lowercase alphanumeric with hyphens" do
       # Valid formats
-      assert Vpn.build_admin_cluster_name("prod") == "admin-cluster-prod"
-      assert Vpn.build_admin_cluster_name("prod-123") == "admin-cluster-prod-123"
-      assert Vpn.build_admin_cluster_name("123-prod") == "admin-cluster-123-prod"
+      assert Vpn.build_network_name("prod", prefix: :admin) == "admin-cluster-prod"
+      assert Vpn.build_network_name("prod-123", prefix: :admin) == "admin-cluster-prod-123"
+      assert Vpn.build_network_name("123-prod", prefix: :admin) == "admin-cluster-123-prod"
 
       # Invalid formats - should raise
       assert_raise ArgumentError, fn ->
-        Vpn.build_admin_cluster_name("PROD")  # Uppercase
+        Vpn.build_network_name("PROD", prefix: :admin)  # Uppercase
       end
 
       assert_raise ArgumentError, fn ->
-        Vpn.build_admin_cluster_name("prod_env")  # Underscore
+        Vpn.build_network_name("prod_env", prefix: :admin)  # Underscore
       end
 
       assert_raise ArgumentError, fn ->
-        Vpn.build_admin_cluster_name("-prod")  # Leading hyphen
+        Vpn.build_network_name("-prod", prefix: :admin)  # Leading hyphen
       end
 
       assert_raise ArgumentError, fn ->
-        Vpn.build_admin_cluster_name("prod-")  # Trailing hyphen
+        Vpn.build_network_name("prod-", prefix: :admin)  # Trailing hyphen
       end
     end
 
     test "validates total length does not exceed 32 characters" do
       # Valid: 32 chars total (admin-cluster- = 14 chars + 18 char suffix)
-      assert Vpn.build_admin_cluster_name("a23456789012345678") == "admin-cluster-a23456789012345678"
+      assert Vpn.build_network_name("a23456789012345678", prefix: :admin) == "admin-cluster-a23456789012345678"
 
       # Invalid: 33 chars total (admin-cluster- = 14 chars + 19 char suffix)
       assert_raise ArgumentError, ~r/exceeds.*32 character limit/i, fn ->
-        Vpn.build_admin_cluster_name("a234567890123456789")
+        Vpn.build_network_name("a234567890123456789", prefix: :admin)
       end
     end
   end
 
-  describe "cluster_network_name/1" do
+  describe "build_network_name/2 with prefix: :node (default)" do
     test "builds cluster network name" do
-      assert Vpn.cluster_network_name("prod-east") == "cluster-prod-east"
-      assert Vpn.cluster_network_name("abc123") == "cluster-abc123"
-      assert Vpn.cluster_network_name("my-cluster") == "cluster-my-cluster"
+      assert Vpn.build_network_name("prod-east", prefix: :node) == "cluster-prod-east"
+      assert Vpn.build_network_name("abc123", prefix: :node) == "cluster-abc123"
+      assert Vpn.build_network_name("my-cluster", prefix: :node) == "cluster-my-cluster"
     end
   end
 

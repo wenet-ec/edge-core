@@ -164,7 +164,7 @@ defmodule EdgeAdmin.Nodes do
         |> Repo.insert!()
 
       # 4. Create Netmaker network
-      network_name = Vpn.cluster_network_name(cluster.name)
+      network_name = Vpn.build_network_name(cluster.name, prefix: :node)
 
       case Vpn.create_network(network_name, %{addressrange: cluster.ipv4_range}) do
         {:ok, _} ->
@@ -206,7 +206,7 @@ defmodule EdgeAdmin.Nodes do
       end
 
       # 2. Delete Netmaker network
-      network_name = Vpn.cluster_network_name(cluster.name)
+      network_name = Vpn.build_network_name(cluster.name, prefix: :node)
 
       case Vpn.delete_network(network_name) do
         {:ok, _} ->
@@ -292,8 +292,8 @@ defmodule EdgeAdmin.Nodes do
 
     # 3. Best-effort Netmaker sync (don't fail if this doesn't work)
     # The reconciliation worker will fix any inconsistencies
-    old_network_name = Vpn.cluster_network_name(node.cluster.name)
-    new_network_name = Vpn.cluster_network_name(new_cluster.name)
+    old_network_name = Vpn.build_network_name(node.cluster.name, prefix: :node)
+    new_network_name = Vpn.build_network_name(new_cluster.name, prefix: :node)
 
     case Vpn.add_host_to_network(node.netmaker_host_id, new_network_name) do
       {:ok, _} ->
@@ -331,7 +331,7 @@ defmodule EdgeAdmin.Nodes do
   def delete_node(%Node{} = node) do
     Repo.transaction(fn ->
       # 1. Remove from Netmaker first (critical - must succeed)
-      network_name = Vpn.cluster_network_name(node.cluster.name)
+      network_name = Vpn.build_network_name(node.cluster.name, prefix: :node)
 
       # Remove host from network (Netmaker handles node deletion automatically)
       case Vpn.remove_host_from_network(node.netmaker_host_id, network_name) do
@@ -386,7 +386,7 @@ defmodule EdgeAdmin.Nodes do
     cluster = Repo.get_by!(Cluster, name: cluster_name)
 
     # 3. Verify node exists in Netmaker and get host ID
-    node_hostname = Vpn.build_node_name(node_id)
+    node_hostname = Vpn.build_dns_name(node_id, prefix: :node)
 
     case Vpn.get_host_id(node_hostname, network_name: network_name) do
       {:ok, netmaker_host_id} ->
@@ -658,7 +658,7 @@ defmodule EdgeAdmin.Nodes do
     else
       # Get cluster by name
       cluster = get_cluster!(cluster_name)
-      network_name = Vpn.cluster_network_name(cluster.name)
+      network_name = Vpn.build_network_name(cluster.name, prefix: :node)
 
       case key_type do
         "default" ->
@@ -777,7 +777,7 @@ defmodule EdgeAdmin.Nodes do
     # Wrap entire cleanup in transaction - rollback everything if ANY step fails
     case Repo.transaction(fn ->
            # 1. Query Netmaker for nodes using this tag
-           network_name = Vpn.cluster_network_name(enrollment_key.cluster.name)
+           network_name = Vpn.build_network_name(enrollment_key.cluster.name, prefix: :node)
 
            netmaker_nodes =
              case Vpn.list_nodes_by_tag(enrollment_key.tag) do
@@ -921,7 +921,7 @@ defmodule EdgeAdmin.Nodes do
   end
 
   defp reconcile_single_cluster(cluster, db_nodes, acc) do
-    network_name = Vpn.cluster_network_name(cluster.name)
+    network_name = Vpn.build_network_name(cluster.name, prefix: :node)
 
     Logger.debug("Reconciling cluster #{cluster.name} (network: #{network_name})")
 

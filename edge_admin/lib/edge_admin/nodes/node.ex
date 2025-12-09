@@ -88,7 +88,9 @@ defmodule EdgeAdmin.Nodes.Node do
   Returns the node name for this node.
   Format: node-{id}
   """
-  def node_name(%__MODULE__{id: id}), do: "node-#{id}"
+  def node_name(%__MODULE__{id: id}) do
+    Vpn.build_dns_name(id, prefix: :node)
+  end
 
   @doc """
   Returns the DNS hostname for this node.
@@ -98,7 +100,9 @@ defmodule EdgeAdmin.Nodes.Node do
   Requires cluster association to be preloaded.
   """
   def dns_hostname(%__MODULE__{id: id, cluster: %{name: cluster_name}}) do
-    Vpn.build_hostname("node-#{id}", Vpn.cluster_network_name(cluster_name))
+    short_name = Vpn.build_dns_name(id, prefix: :node)
+    network_name = Vpn.build_network_name(cluster_name, prefix: :node)
+    Vpn.build_hostname(short_name, network_name)
   end
 
   @doc """

@@ -37,7 +37,7 @@ defmodule EdgeAdmin.Nodes.Cluster do
   Returns the Netmaker network name for this cluster.
   Format: cluster-{name}
   """
-  def network_name(%__MODULE__{name: name}), do: Vpn.cluster_network_name(name)
+  def network_name(%__MODULE__{name: name}), do: Vpn.build_network_name(name, prefix: :node)
 
   @doc """
   Returns the DNS domain suffix for nodes in this cluster.
@@ -45,7 +45,7 @@ defmodule EdgeAdmin.Nodes.Cluster do
   where domain is configured via NETMAKER_DEFAULT_DOMAIN (default: nm.internal)
   """
   def dns_domain(%__MODULE__{name: name}) do
-    Vpn.build_domain(Vpn.cluster_network_name(name))
+    Vpn.build_domain(Vpn.build_network_name(name, prefix: :node))
   end
 
   # Private helper functions

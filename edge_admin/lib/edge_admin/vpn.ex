@@ -52,26 +52,98 @@ defmodule EdgeAdmin.Vpn do
   # ===========================================================================
 
   @doc """
-  Builds a DNS hostname from components.
+  Builds a DNS name with a prefix.
+  Format: {prefix}-{name}
+
+  ## Options
+    - `:node` - Prefix with "node-" (default)
+    - `:admin` - Prefix with "admin-"
 
   ## Examples
 
-      iex> EdgeAdmin.Vpn.build_hostname("node-abc", "cluster-xyz")
-      "node-abc.cluster-xyz.nm.internal"
+      iex> EdgeAdmin.Vpn.build_dns_name("abc123")
+      "node-abc123"
 
-      iex> EdgeAdmin.Vpn.build_hostname("node-abc", "cluster-xyz", "custom.domain")
-      "node-abc.cluster-xyz.custom.domain"
+      iex> EdgeAdmin.Vpn.build_dns_name("abc123", prefix: :node)
+      "node-abc123"
 
-      iex> EdgeAdmin.Vpn.build_hostname("node-abc", "cluster-xyz", "")
-      "node-abc.cluster-xyz"
+      iex> EdgeAdmin.Vpn.build_dns_name("k7m3n2p9", prefix: :admin)
+      "admin-k7m3n2p9"
   """
-  def build_hostname(host, network, domain \\ nil) do
-    domain = domain || default_domain()
+  def build_dns_name(name, opts \\ []) when is_binary(name) do
+    prefix = Keyword.get(opts, :prefix, :node)
 
-    case domain do
-      "" -> "#{host}.#{network}"
-      _ -> "#{host}.#{network}.#{domain}"
+    case prefix do
+      :node -> "node-#{name}"
+      :admin -> "admin-#{name}"
     end
+  end
+
+  @doc """
+  Builds a network name with a prefix.
+  Format: cluster-{name} or admin-cluster-{name}
+
+  ## Options
+    - `:node` - Prefix with "cluster-" (default)
+    - `:admin` - Prefix with "admin-cluster-" and validate
+
+  ## Examples
+
+      iex> EdgeAdmin.Vpn.build_network_name("prod-east")
+      "cluster-prod-east"
+
+      iex> EdgeAdmin.Vpn.build_network_name("prod-east", prefix: :node)
+      "cluster-prod-east"
+
+      iex> EdgeAdmin.Vpn.build_network_name("prod", prefix: :admin)
+      "admin-cluster-prod"
+  """
+  def build_network_name(name, opts \\ []) when is_binary(name) do
+    prefix = Keyword.get(opts, :prefix, :node)
+
+    case prefix do
+      :node ->
+        "cluster-#{name}"
+
+      :admin ->
+        validate_admin_cluster_suffix!(name)
+        "admin-cluster-#{name}"
+    end
+  end
+
+  @doc """
+  Validates admin cluster name suffix.
+  Raises ArgumentError if invalid.
+
+  Rules:
+  - Lowercase alphanumeric with hyphens
+  - No leading/trailing hyphens
+  - Total length with "admin-cluster-" prefix <= 32 chars
+  """
+  def validate_admin_cluster_suffix!(suffix) when is_binary(suffix) do
+    prefix = "admin-cluster-"
+    max_total_length = 32
+
+    unless Regex.match?(~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, suffix) do
+      raise ArgumentError, """
+      Admin cluster name suffix must match format: lowercase alphanumeric with hyphens
+      Got: #{suffix}
+      """
+    end
+
+    full_name = "#{prefix}#{suffix}"
+
+    if String.length(full_name) > max_total_length do
+      max_suffix_length = max_total_length - String.length(prefix)
+
+      raise ArgumentError, """
+      Admin cluster name exceeds Netmaker's #{max_total_length} character limit
+      Total: #{String.length(full_name)} chars
+      Max suffix length: #{max_suffix_length} chars
+      """
+    end
+
+    :ok
   end
 
   @doc """
@@ -91,92 +163,22 @@ defmodule EdgeAdmin.Vpn do
     end
   end
 
-  # ===========================================================================
-  # Network Name Construction
-  # ===========================================================================
-
   @doc """
-  Returns the Netmaker network name for an edge cluster.
-  Format: cluster-{name}
+  Builds a DNS hostname from components.
 
   ## Examples
 
-      iex> EdgeAdmin.Vpn.cluster_network_name("prod-east")
-      "cluster-prod-east"
+      iex> EdgeAdmin.Vpn.build_hostname("node-abc", "cluster-xyz")
+      "node-abc.cluster-xyz.nm.internal"
+
+      iex> EdgeAdmin.Vpn.build_hostname("node-abc", "cluster-xyz", "custom.domain")
+      "node-abc.cluster-xyz.custom.domain"
+
+      iex> EdgeAdmin.Vpn.build_hostname("node-abc", "cluster-xyz", "")
+      "node-abc.cluster-xyz"
   """
-  def cluster_network_name(cluster_name) when is_binary(cluster_name) do
-    "cluster-#{cluster_name}"
-  end
-
-  @doc """
-  Builds an admin name from an admin ID.
-  Format: admin-{id}
-
-  ## Examples
-
-      iex> EdgeAdmin.Vpn.build_admin_name("k7m3n2p9x4j6")
-      "admin-k7m3n2p9x4j6"
-  """
-  def build_admin_name(admin_id) when is_binary(admin_id) do
-    "admin-#{admin_id}"
-  end
-
-  @doc """
-  Builds a full admin cluster network name from a suffix.
-  Format: admin-cluster-{suffix}
-
-  Validates:
-  - Suffix matches lowercase alphanumeric with hyphens
-  - No leading/trailing hyphens
-  - Total length <= 32 characters (Netmaker limit)
-
-  ## Examples
-
-      iex> EdgeAdmin.Vpn.build_admin_cluster_name("prod")
-      "admin-cluster-prod"
-  """
-  def build_admin_cluster_name(suffix) when is_binary(suffix) do
-    prefix = "admin-cluster-"
-    max_total_length = 32
-
-    # Validate format: lowercase alphanumeric with hyphens, no leading/trailing hyphens
-    unless Regex.match?(~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, suffix) do
-      raise ArgumentError, """
-      Admin cluster name suffix must match format: lowercase alphanumeric with hyphens, no leading/trailing hyphens
-      Got: #{suffix}
-      """
-    end
-
-    # Build full name
-    full_name = "#{prefix}#{suffix}"
-
-    # Validate length
-    if String.length(full_name) > max_total_length do
-      max_suffix_length = max_total_length - String.length(prefix)
-
-      raise ArgumentError, """
-      Admin cluster name exceeds Netmaker's #{max_total_length} character limit
-      Prefix: #{prefix} (#{String.length(prefix)} chars)
-      Suffix: #{suffix} (#{String.length(suffix)} chars)
-      Total: #{String.length(full_name)} chars
-      Max suffix length: #{max_suffix_length} chars
-      """
-    end
-
-    full_name
-  end
-
-  @doc """
-  Builds a node hostname from a node ID.
-  Format: node-{id}
-
-  ## Examples
-
-      iex> EdgeAdmin.Vpn.build_node_name("a1b2c3d4-uuid")
-      "node-a1b2c3d4-uuid"
-  """
-  def build_node_name(node_id) when is_binary(node_id) do
-    "node-#{node_id}"
+  def build_hostname(host, network, domain \\ nil) do
+    "#{host}.#{build_domain(network, domain)}"
   end
 
   @doc """

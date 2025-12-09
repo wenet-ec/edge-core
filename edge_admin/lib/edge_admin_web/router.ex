@@ -138,11 +138,14 @@ defmodule EdgeAdminWeb.Router do
 
       resources("/nodes", NodeController, only: [:index, :show]) do
         resources("/ssh_usernames", SshUsernameController, only: [:create])
+        resources("/aliases", AliasController, only: [:create])
         get("/metrics", MetricsController, :index)
       end
 
       patch("/nodes/:id/change_cluster", NodeController, :change_cluster)
       delete("/nodes/:id", NodeController, :delete)
+
+      resources("/aliases", AliasController, only: [:index, :show, :delete])
 
       resources("/ssh_usernames", SshUsernameController, only: [:index, :show, :delete]) do
         resources("/ssh_public_keys", SshPublicKeyController, only: [:create])

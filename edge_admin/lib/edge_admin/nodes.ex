@@ -7,6 +7,7 @@ defmodule EdgeAdmin.Nodes do
   import Ecto.Query, warn: false
 
   alias EdgeAdmin.FilteringPagination
+  alias EdgeAdmin.Nodes.Alias
   alias EdgeAdmin.Nodes.Cluster
   alias EdgeAdmin.Nodes.EphemeralEnrollmentKey
   alias EdgeAdmin.Nodes.Metrics
@@ -243,7 +244,7 @@ defmodule EdgeAdmin.Nodes do
   def get_node!(id) do
     Node
     |> Repo.get!(id)
-    |> Repo.preload(:cluster)
+    |> Repo.preload([:cluster, aliases: :cluster])
   end
 
   def create_node(attrs \\ %{}) do
@@ -265,10 +266,11 @@ defmodule EdgeAdmin.Nodes do
   A background reconciliation worker handles any inconsistencies.
 
   Flow:
-  1. Update database (source of truth)
-  2. Best-effort sync: Add host to new network
-  3. Best-effort sync: Remove host from old network
-  4. Emit event for metadata recomputation
+  1. Delete all aliases (they're cluster-specific)
+  2. Update database (source of truth)
+  3. Best-effort sync: Add host to new network
+  4. Best-effort sync: Remove host from old network
+  5. Emit event for metadata recomputation
 
   Inconsistencies are handled by the cluster reconciliation worker.
   """
@@ -276,21 +278,24 @@ defmodule EdgeAdmin.Nodes do
     new_cluster = get_cluster!(new_cluster_name)
     old_cluster_id = node.cluster_id
 
-    # 1. Update database first (source of truth)
+    # 1. Delete all aliases (they're cluster-specific and DNS entries are in old network)
+    cleanup_node_aliases(node)
+
+    # 2. Update database first (source of truth)
     updated_node =
       node
       |> Ecto.Changeset.change(cluster_id: new_cluster.id)
       |> Repo.update!()
       |> Repo.preload(:cluster, force: true)
 
-    # 2. Emit PubSub event for metadata recomputation
+    # 3. Emit PubSub event for metadata recomputation
     Phoenix.PubSub.broadcast(
       EdgeAdmin.PubSub,
       "#{Vpn.admin_cluster_name()}:metadata",
       {:node_updated, node.id, old_cluster_id, new_cluster.id}
     )
 
-    # 3. Best-effort Netmaker sync (don't fail if this doesn't work)
+    # 4. Best-effort Netmaker sync (don't fail if this doesn't work)
     # The reconciliation worker will fix any inconsistencies
     old_network_name = Vpn.build_network_name(node.cluster.name, prefix: :node)
     new_network_name = Vpn.build_network_name(new_cluster.name, prefix: :node)
@@ -468,18 +473,40 @@ defmodule EdgeAdmin.Nodes do
   end
 
   def list_nodes_with_filtering_pagination(params \\ %{}) do
-    page_result =
-      FilteringPagination.paginate(
-        Node,
-        params,
-        filterable_fields: [:status, :id_type, :cluster_id],
-        sortable_fields: [:inserted_at, :updated_at, :status, :last_seen_at],
-        default_sort: "inserted_at:desc",
-        repo: Repo,
-        preload: [:cluster]
+    # Handle cluster_name filter specially (join-based)
+    {cluster_name_filter, other_params} = Map.pop(params, "cluster_name")
+
+    base_query =
+      from(n in Node,
+        join: c in assoc(n, :cluster),
+        preload: [:cluster, aliases: :cluster]
       )
 
-    page_result
+    # Apply cluster_name filter if present
+    query_with_cluster_filter =
+      if cluster_name_filter do
+        from([n, c] in base_query, where: c.name == ^cluster_name_filter)
+      else
+        base_query
+      end
+
+    # Use FilteringPagination for the rest
+    result =
+      FilteringPagination.paginate(
+        query_with_cluster_filter,
+        other_params,
+        filterable_fields: [:status, :id_type, :version, :self_update_enabled],
+        sortable_fields: [:inserted_at, :updated_at, :status, :last_seen_at],
+        default_sort: "inserted_at:desc",
+        repo: Repo
+      )
+
+    # Re-add cluster_name to filters if it was present
+    if cluster_name_filter do
+      %{result | filters: Map.put(result.filters, "cluster_name", cluster_name_filter)}
+    else
+      result
+    end
   end
 
   def get_nodes_by_ids(node_ids) do
@@ -889,8 +916,9 @@ defmodule EdgeAdmin.Nodes do
   For each cluster:
   1. Gets nodes that SHOULD be in the network (from DB)
   2. Gets nodes that ARE in the network (from Netmaker)
-  3. Adds missing nodes (DB says yes, Netmaker says no)
-  4. Removes extra nodes (Netmaker says yes, DB says no)
+  3. Cleans up orphaned aliases (nodes not in DB or not in Netmaker)
+  4. Adds missing nodes (DB says yes, Netmaker says no)
+  5. Removes extra nodes (Netmaker says yes, DB says no)
 
   Only processes edge nodes (those belonging to edge agents, identified by having a DB record).
   Admin nodes and staff machines are not touched.
@@ -912,6 +940,7 @@ defmodule EdgeAdmin.Nodes do
       clusters_processed: 0,
       nodes_added: 0,
       nodes_removed: 0,
+      aliases_cleaned: 0,
       errors: 0
     }
 
@@ -943,6 +972,12 @@ defmodule EdgeAdmin.Nodes do
         # This filters out admin nodes and staff machines
         edge_node_host_ids = MapSet.intersection(actual_host_ids, expected_host_ids)
 
+        # Clean up orphaned aliases for nodes not in both DB and Netmaker
+        # These are nodes that either: left the network, were deleted, or moved clusters
+        orphaned_host_ids = MapSet.difference(expected_host_ids, edge_node_host_ids)
+        orphaned_nodes = Enum.filter(db_nodes, fn node -> node.netmaker_host_id in orphaned_host_ids end)
+        aliases_cleaned = cleanup_orphaned_aliases(orphaned_nodes)
+
         # Add missing nodes (DB says yes, Netmaker says no)
         missing = MapSet.difference(expected_host_ids, edge_node_host_ids)
         added = add_missing_nodes(missing, network_name, cluster.name)
@@ -956,6 +991,7 @@ defmodule EdgeAdmin.Nodes do
           clusters_processed: acc.clusters_processed + 1,
           nodes_added: acc.nodes_added + added,
           nodes_removed: acc.nodes_removed + removed,
+          aliases_cleaned: acc.aliases_cleaned + aliases_cleaned,
           errors: acc.errors
         }
 
@@ -992,6 +1028,269 @@ defmodule EdgeAdmin.Nodes do
           count
       end
     end)
+  end
+
+  @doc """
+  Cleans up all aliases for a single node.
+
+  Deletes DNS entries from Netmaker and removes alias records from DB.
+  Best-effort - logs warnings on failures but continues cleanup.
+
+  Used when a node changes clusters (all aliases become invalid).
+  """
+  def cleanup_node_aliases(%Node{} = node) do
+    node = Repo.preload(node, [:cluster, aliases: :cluster])
+
+    Enum.each(node.aliases, fn alias_record ->
+      cleanup_single_alias(alias_record)
+    end)
+  end
+
+  @doc """
+  Cleans up orphaned aliases for multiple nodes.
+
+  Used by reconciliation worker to clean up aliases for nodes that:
+  - No longer exist in Netmaker (left network, deleted)
+  - Exist in DB but not in the current network
+
+  Returns count of cleaned aliases.
+  """
+  def cleanup_orphaned_aliases(nodes) do
+    Enum.reduce(nodes, 0, fn node, count ->
+      node = Repo.preload(node, [:cluster, aliases: :cluster])
+      alias_count = length(node.aliases)
+
+      if alias_count > 0 do
+        Logger.info("Cleaning up #{alias_count} orphaned alias(es) for node #{node.id}")
+        cleanup_node_aliases(node)
+        count + alias_count
+      else
+        count
+      end
+    end)
+  end
+
+  defp cleanup_single_alias(%Alias{} = alias_record) do
+    network_name = Vpn.build_network_name(alias_record.cluster.name, prefix: :node)
+    dns_hostname = Alias.dns_hostname(alias_record)
+
+    # 1. Try to delete DNS entry (best-effort)
+    case Nexmaker.Api.DNS.delete(network_name, dns_hostname) do
+      {:ok, _} ->
+        Logger.info("Deleted DNS entry for alias #{alias_record.name}: #{dns_hostname}")
+
+      {:error, {:http_error, 500, body}} ->
+        # Netmaker returns 500 for "not found" - treat as already deleted
+        if String.contains?(body, "no result found") or
+             String.contains?(body, "could not find any records") do
+          Logger.debug("DNS entry already deleted for alias #{alias_record.name}: #{dns_hostname}")
+        else
+          Logger.warning("Failed to delete DNS entry for alias #{alias_record.name}: #{inspect(body)}")
+        end
+
+      {:error, reason} ->
+        Logger.warning("Failed to delete DNS entry for alias #{alias_record.name}: #{inspect(reason)}")
+    end
+
+    # 2. Delete from DB
+    case Repo.delete(alias_record) do
+      {:ok, _} ->
+        Logger.debug("Deleted alias record: #{alias_record.name}")
+
+      {:error, reason} ->
+        Logger.error("Failed to delete alias record #{alias_record.name}: #{inspect(reason)}")
+    end
+  end
+
+  # ===========================================================================
+  # Alias functions
+  # ===========================================================================
+
+  @doc """
+  Lists aliases with filtering and pagination.
+
+  Supports filtering by:
+  - `name` - Text search
+  - `cluster_name` - Exact match on cluster name
+  - `node_id` - Exact match on node ID
+  """
+  def list_aliases_with_filtering_pagination(params \\ %{}) do
+    # Handle cluster_name filter specially (join-based)
+    {cluster_name_filter, other_params} = Map.pop(params, "cluster_name")
+
+    base_query =
+      from(a in Alias,
+        join: c in assoc(a, :cluster),
+        preload: [cluster: c]
+      )
+
+    # Apply cluster_name filter if present
+    query_with_cluster_filter =
+      if cluster_name_filter do
+        from([a, c] in base_query, where: c.name == ^cluster_name_filter)
+      else
+        base_query
+      end
+
+    # Use FilteringPagination for the rest
+    result =
+      FilteringPagination.paginate(
+        query_with_cluster_filter,
+        other_params,
+        filterable_fields: [:name, :node_id],
+        sortable_fields: [:inserted_at, :updated_at, :name],
+        default_sort: "inserted_at:desc",
+        repo: Repo
+      )
+
+    # Re-add cluster_name to filters if it was present
+    if cluster_name_filter do
+      %{result | filters: Map.put(result.filters, "cluster_name", cluster_name_filter)}
+    else
+      result
+    end
+  end
+
+  @doc """
+  Gets a single alias by ID.
+  Raises `Ecto.NoResultsError` if not found.
+  """
+  def get_alias!(id) do
+    Alias
+    |> Repo.get!(id)
+    |> Repo.preload(:cluster)
+  end
+
+  @doc """
+  Creates an alias for a node.
+
+  Flow:
+  1. Verify node exists and preload cluster
+  2. Query Netmaker for node's IP address
+  3. Create DNS entry in Netmaker
+  4. Insert alias into DB
+
+  If any step fails, the entire operation is rolled back.
+  """
+  def create_alias(%Node{} = node, attrs) do
+    Repo.transaction(fn ->
+      # 1. Ensure node has cluster preloaded
+      node = Repo.preload(node, :cluster)
+
+      # 2. Build attrs with cluster_id
+      alias_attrs = Map.merge(attrs, %{
+        "node_id" => node.id,
+        "cluster_id" => node.cluster_id
+      })
+
+      # 3. Validate with changeset first
+      changeset = Alias.changeset(%Alias{}, alias_attrs)
+
+      case Repo.insert(changeset) do
+        {:ok, alias_record} ->
+          # 4. Preload cluster for virtual fields
+          alias_record = Repo.preload(alias_record, :cluster)
+
+          # 5. Query Netmaker for node's IP address
+          network_name = Vpn.build_network_name(node.cluster.name, prefix: :node)
+
+          case Vpn.list_nodes(network_name) do
+            {:ok, netmaker_nodes} ->
+              # Find node by hostid
+              netmaker_node =
+                Enum.find(netmaker_nodes, fn n ->
+                  n["hostid"] == node.netmaker_host_id
+                end)
+
+              case netmaker_node do
+                nil ->
+                  Repo.rollback(:node_not_found_in_netmaker)
+
+                %{"address" => address} when is_binary(address) and address != "" ->
+                  # 6. Create DNS entry in Netmaker
+                  # Strip CIDR suffix if present (e.g., "100.64.1.5/32" -> "100.64.1.5")
+                  ip_address = address |> String.split("/") |> List.first()
+                  dns_hostname = Alias.dns_hostname(alias_record)
+
+                  case Nexmaker.Api.DNS.create(network_name, %{
+                         name: dns_hostname,
+                         address: ip_address
+                       }) do
+                    {:ok, _} ->
+                      Logger.info(
+                        "Created DNS entry for alias #{alias_record.name}: #{dns_hostname} -> #{address}"
+                      )
+
+                      alias_record
+
+                    {:error, reason} ->
+                      Logger.error("Failed to create DNS entry: #{inspect(reason)}")
+                      Repo.rollback(reason)
+                  end
+
+                _ ->
+                  Repo.rollback(:node_has_no_ip_address)
+              end
+
+            {:error, reason} ->
+              Logger.error("Failed to list Netmaker nodes: #{inspect(reason)}")
+              Repo.rollback(reason)
+          end
+
+        {:error, changeset} ->
+          Repo.rollback(changeset)
+      end
+    end)
+  end
+
+  @doc """
+  Deletes an alias.
+
+  Flow:
+  1. Delete DNS entry from Netmaker
+  2. Delete alias from DB
+
+  If DNS deletion fails, the entire operation is rolled back.
+  """
+  def delete_alias(%Alias{} = alias_record) do
+    Repo.transaction(fn ->
+      # 1. Ensure cluster is preloaded
+      alias_record = Repo.preload(alias_record, :cluster)
+
+      # 2. Delete DNS entry from Netmaker
+      network_name = Vpn.build_network_name(alias_record.cluster.name, prefix: :node)
+      dns_hostname = Alias.dns_hostname(alias_record)
+
+      case Nexmaker.Api.DNS.delete(network_name, dns_hostname) do
+        {:ok, _} ->
+          Logger.info("Deleted DNS entry for alias #{alias_record.name}: #{dns_hostname}")
+
+          # 3. Delete from DB
+          Repo.delete!(alias_record)
+
+        {:error, {:http_error, 500, body}} = error ->
+          # Netmaker returns 500 for "not found" - treat as success for idempotency
+          if String.contains?(body, "no result found") or
+               String.contains?(body, "could not find any records") do
+            Logger.info("DNS entry already deleted for alias #{alias_record.name}: #{dns_hostname}")
+            Repo.delete!(alias_record)
+          else
+            Logger.error("Failed to delete DNS entry: #{inspect(error)}")
+            Repo.rollback(error)
+          end
+
+        {:error, reason} ->
+          Logger.error("Failed to delete DNS entry: #{inspect(reason)}")
+          Repo.rollback(reason)
+      end
+    end)
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking alias changes.
+  """
+  def change_alias(%Alias{} = alias_record, attrs \\ %{}) do
+    Alias.changeset(alias_record, attrs)
   end
 
   def list_metrics_discovery_targets do
@@ -1034,8 +1333,8 @@ defmodule EdgeAdmin.Nodes do
       {:error, :metrics_service_not_configured}
     else
       # Use DNS hostname and metrics_port instead of vpn_ip
-      dns_name = Node.dns_hostname(node)
-      instance = "#{dns_name}:#{node.metrics_port}"
+      dns_hostname = Node.dns_hostname(node)
+      instance = "#{dns_hostname}:#{node.metrics_port}"
 
       queries = [
         # CPU metrics

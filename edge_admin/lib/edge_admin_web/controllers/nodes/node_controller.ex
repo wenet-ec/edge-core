@@ -46,6 +46,21 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
           type: :string,
           enum: ["machine_id", "hardware_id", "temporary_id"]
         }
+      ],
+      version: [
+        in: :query,
+        description: "Filter by agent version",
+        schema: %OpenApiSpex.Schema{type: :string}
+      ],
+      self_update_enabled: [
+        in: :query,
+        description: "Filter by self-update enabled status",
+        schema: %OpenApiSpex.Schema{type: :boolean}
+      ],
+      cluster_name: [
+        in: :query,
+        description: "Filter by cluster name",
+        schema: %OpenApiSpex.Schema{type: :string}
       ]
     ],
     responses: %{

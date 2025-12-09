@@ -31,6 +31,7 @@ defmodule EdgeAdmin.Nodes.Node do
 
     # Associations
     has_many(:ssh_usernames, EdgeAdmin.Nodes.SshUsername, on_delete: :delete_all)
+    has_many(:aliases, EdgeAdmin.Nodes.Alias, on_delete: :delete_all)
     has_many(:command_executions, EdgeAdmin.Commands.CommandExecution, on_delete: :nilify_all)
     has_many(:commands, through: [:command_executions, :command])
 

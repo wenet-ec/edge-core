@@ -58,6 +58,12 @@ RUN apk add --no-cache \
   # For any native dependencies
   pkgconfig \
   iputils \
+  # Networking debugging tools
+  iproute2 \
+  net-tools \
+  bind-tools \
+  netcat-openbsd \
+  tcpdump \
   && rm -rf /var/cache/apk/*
 
 # Install node_exporter for metrics collection

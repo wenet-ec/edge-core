@@ -28,16 +28,15 @@ config :edge_agent, Oban,
   repo: EdgeAgent.Repo,
   queues: [
     command_execution: 1,
-    command_reporting: 1,
-    command_scheduling: 1
+    command_reporting: 1
   ],
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [
-       # Every minute for faster reporting
-       {"* * * * *", EdgeAgent.Commands.Workers.CommandReportScheduler},
-       # Every 2 minutes safety net
-       {"*/2 * * * *", EdgeAgent.Commands.Workers.CommandExecutionScheduler}
+       # Every minute for faster reporting (safety net)
+       {"* * * * *", EdgeAgent.Commands.Workers.CommandReportWorker},
+       # Every 2 minutes safety net for execution
+       {"*/2 * * * *", EdgeAgent.Commands.Workers.CommandExecutionWorker}
      ]},
     Oban.Plugins.Lifeline,
     {Oban.Plugins.Pruner, max_age: 86_400}

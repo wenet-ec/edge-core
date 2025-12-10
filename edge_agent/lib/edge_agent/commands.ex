@@ -19,10 +19,11 @@ defmodule EdgeAgent.Commands do
 
   def get_command_execution!(id), do: Repo.get!(CommandExecution, id)
 
-  def create_command_execution_and_maybe_start_worker(attrs \\ %{}) do
+  def create_command_execution_and_enqueue_worker(attrs \\ %{}) do
     case create_command_execution(attrs) do
       {:ok, command_execution} ->
-        maybe_start_execution_worker()
+        # Trigger execution worker (Oban's unique constraint prevents duplicates)
+        enqueue_worker(CommandExecutionWorker, "CommandExecutionWorker")
         {:ok, command_execution}
 
       {:error, changeset} ->
@@ -56,8 +57,8 @@ defmodule EdgeAgent.Commands do
     # Use lazy querying to handle race conditions
     process_pending_commands_loop()
 
-    # After all pending processed, trigger reporting if needed
-    maybe_start_report_worker()
+    # After all pending processed, trigger reporting (Oban's unique constraint prevents duplicates)
+    enqueue_worker(EdgeAgent.Commands.Workers.CommandReportWorker, "CommandReportWorker")
 
     Logger.debug("Command queue processing completed")
     :ok
@@ -80,13 +81,6 @@ defmodule EdgeAgent.Commands do
     :ok
   end
 
-  def maybe_start_execution_worker do
-    maybe_start_worker(CommandExecutionWorker, "CommandExecutionWorker")
-  end
-
-  def maybe_start_report_worker do
-    maybe_start_worker(EdgeAgent.Commands.Workers.CommandReportWorker, "CommandReportWorker")
-  end
 
   defp process_pending_commands_loop do
     # Query fresh each iteration - fixes race conditions!
@@ -130,81 +124,70 @@ defmodule EdgeAgent.Commands do
     Logger.info("Attempting to report #{length(executions)} executions to admin")
 
     Enum.reduce_while(executions, :ok, fn execution, _acc ->
-      # Convert DateTime to ISO8601 string for JSON encoding
-      completed_at_string =
-        if execution.completed_at do
-          DateTime.to_iso8601(execution.completed_at)
-        else
-          nil
-        end
-
-      params = %{
-        status: execution.status,
-        output: execution.output,
-        exit_code: execution.exit_code,
-        completed_at: completed_at_string
-      }
+      params = build_report_params(execution)
 
       case AdminClient.update_command_execution(execution.id, params) do
         :ok ->
           Logger.debug("Successfully reported execution #{execution.id}")
-
-          # Delete the execution from local database after successful report
-          case delete_command_execution(execution) do
-            {:ok, _deleted_execution} ->
-              Logger.debug("Deleted execution #{execution.id} from local database")
-
-            {:error, changeset} ->
-              Logger.warning("Failed to delete execution #{execution.id}: #{inspect(changeset.errors)}")
-          end
-
+          delete_execution_after_report(execution)
           {:cont, :ok}
 
         {:error, reason} ->
           Logger.warning("Failed to report execution #{execution.id}: #{inspect(reason)}")
-
-          # Don't process remaining executions
-          # Let next cron run retry this and subsequent executions
+          # Stop processing remaining executions - let next cron retry
           {:halt, :error}
       end
     end)
   end
 
-  defp maybe_start_worker(worker_module, worker_name) do
-    # Check if there's already a worker of this type scheduled/running
-    worker_class = "EdgeAgent.Commands.Workers.#{worker_name}"
+  defp build_report_params(execution) do
+    %{
+      status: execution.status,
+      output: execution.output,
+      exit_code: execution.exit_code,
+      completed_at: execution.completed_at && DateTime.to_iso8601(execution.completed_at)
+    }
+  end
 
-    existing_jobs =
-      Oban.Job
-      |> where([j], j.worker == ^worker_class)
-      |> where([j], j.state in ["available", "executing", "retryable"])
-      |> Repo.all()
+  defp delete_execution_after_report(execution) do
+    case delete_command_execution(execution) do
+      {:ok, _deleted_execution} ->
+        Logger.debug("Deleted execution #{execution.id} from local database")
 
-    if Enum.empty?(existing_jobs) do
-      Logger.debug("No #{worker_name} running, starting one")
-
-      %{}
-      |> worker_module.new()
-      |> Oban.insert()
-      |> case do
-        {:ok, _job} ->
-          Logger.debug("#{worker_name} started successfully")
-
-        {:error, reason} ->
-          Logger.error("Failed to start #{worker_name}: #{inspect(reason)}")
-      end
-    else
-      Logger.debug("#{worker_name} already running, skipping")
+      {:error, changeset} ->
+        Logger.warning(
+          "Failed to delete execution #{execution.id}: #{inspect(changeset.errors)}"
+        )
     end
   end
 
-  defp get_pending_executions do
-    Repo.all(from(ce in CommandExecution, where: ce.status == "pending", order_by: [asc: ce.inserted_at]))
-    # FIFO order
+
+  # Enqueues a worker, handling duplicates gracefully
+  defp enqueue_worker(worker_module, worker_name) do
+    %{}
+    |> worker_module.new()
+    |> Oban.insert()
+    |> case do
+      {:ok, _job} ->
+        Logger.debug("#{worker_name} enqueued")
+        :ok
+
+      {:error, _changeset} ->
+        # Likely duplicate due to unique constraint - this is expected and fine
+        Logger.debug("#{worker_name} already exists, skipped")
+        :ok
+    end
   end
 
-  defp get_completed_executions do
-    Repo.all(from(ce in CommandExecution, where: ce.status == "completed", order_by: [asc: ce.inserted_at]))
-    # OLDEST FIRST - maintains execution order
+  # Queries command executions by status, ordered by insertion time (FIFO)
+  defp get_executions_by_status(status) do
+    from(ce in CommandExecution,
+      where: ce.status == ^status,
+      order_by: [asc: ce.inserted_at]
+    )
+    |> Repo.all()
   end
+
+  defp get_pending_executions, do: get_executions_by_status("pending")
+  defp get_completed_executions, do: get_executions_by_status("completed")
 end

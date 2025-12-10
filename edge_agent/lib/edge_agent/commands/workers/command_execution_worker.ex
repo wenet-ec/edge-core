@@ -1,14 +1,24 @@
 # edge_agent/lib/edge_agent/commands/workers/command_execution_worker.ex
 defmodule EdgeAgent.Commands.Workers.CommandExecutionWorker do
   @moduledoc """
-  Event-triggered worker that processes command queue sequentially with lazy querying.
+  Worker that processes command queue sequentially with lazy querying.
 
-  Spawned when new commands arrive and no worker exists.
+  Triggered by:
+  - New command arrival (via enqueue_worker/2 in Commands context)
+  - Cron scheduler every 2 minutes (safety net)
+
+  Uses Oban's unique constraint to ensure only one worker runs at a time.
   Uses lazy querying to handle race conditions where new commands arrive during execution.
   Only focuses on execution - reporting is handled separately by CommandReportWorker.
   """
 
-  use Oban.Worker, queue: :command_execution, max_attempts: 1
+  use Oban.Worker,
+    queue: :command_execution,
+    max_attempts: 1,
+    unique: [
+      period: :infinity,
+      states: [:available, :scheduled, :executing, :retryable]
+    ]
 
   alias EdgeAgent.Commands
 

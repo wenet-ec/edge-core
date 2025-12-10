@@ -59,28 +59,28 @@ defmodule EdgeAgent.CommandsTest do
   end
 
   describe "worker integration" do
-    test "create_command_execution_and_maybe_start_worker creates execution" do
+    test "create_command_execution_and_enqueue_worker creates execution" do
       assert {:ok, execution} =
-               Commands.create_command_execution_and_maybe_start_worker(@valid_attrs)
+               Commands.create_command_execution_and_enqueue_worker(@valid_attrs)
 
       assert execution.id == @valid_attrs.id
       assert execution.status == "pending"
     end
 
-    test "create_command_execution_and_maybe_start_worker enqueues worker when none exists" do
-      Commands.create_command_execution_and_maybe_start_worker(@valid_attrs)
+    test "create_command_execution_and_enqueue_worker enqueues worker when none exists" do
+      Commands.create_command_execution_and_enqueue_worker(@valid_attrs)
 
       # Verify worker job was enqueued
       assert_enqueued(worker: CommandExecutionWorker)
     end
 
-    test "create_command_execution_and_maybe_start_worker doesn't enqueue duplicate workers" do
+    test "create_command_execution_and_enqueue_worker doesn't enqueue duplicate workers" do
       # Create first execution and worker
-      Commands.create_command_execution_and_maybe_start_worker(@valid_attrs)
+      Commands.create_command_execution_and_enqueue_worker(@valid_attrs)
 
       # Create second execution - should not enqueue another worker
       different_attrs = %{@valid_attrs | id: Ecto.UUID.generate()}
-      Commands.create_command_execution_and_maybe_start_worker(different_attrs)
+      Commands.create_command_execution_and_enqueue_worker(different_attrs)
 
       # Should only have one worker job
       jobs = all_enqueued(worker: CommandExecutionWorker)

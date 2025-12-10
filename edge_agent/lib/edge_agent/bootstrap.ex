@@ -256,7 +256,7 @@ defmodule EdgeAgent.Bootstrap do
             status: "pending"
           }
 
-          case Commands.create_command_execution_and_maybe_start_worker(attrs) do
+          case Commands.create_command_execution_and_enqueue_worker(attrs) do
             {:ok, _execution} ->
               Logger.debug("Stored command execution: #{command["id"]}")
             {:error, changeset} ->

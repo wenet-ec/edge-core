@@ -36,6 +36,12 @@ cleanup() {
         echo "No netclient daemon processes found"
     fi
 
+    # Clean up routing policy rules (netmaker creates these with priorities 3000, 2500, 2000)
+    echo "Cleaning up routing policy rules..."
+    ip rule delete pref 3000 2>/dev/null || true
+    ip rule delete pref 2500 2>/dev/null || true
+    ip rule delete pref 2000 2>/dev/null || true
+
     # Remove WireGuard interface from host
     if ip link show netmaker &>/dev/null; then
         echo "Removing netmaker WireGuard interface..."

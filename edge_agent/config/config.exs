@@ -28,7 +28,8 @@ config :edge_agent, Oban,
   repo: EdgeAgent.Repo,
   queues: [
     command_execution: 1,
-    command_reporting: 1
+    command_reporting: 1,
+    admin_discovery: 1
   ],
   plugins: [
     {Oban.Plugins.Cron,
@@ -36,7 +37,9 @@ config :edge_agent, Oban,
        # Every minute for faster reporting (safety net)
        {"* * * * *", EdgeAgent.Commands.Workers.CommandReportWorker},
        # Every 2 minutes safety net for execution
-       {"*/2 * * * *", EdgeAgent.Commands.Workers.CommandExecutionWorker}
+       {"*/2 * * * *", EdgeAgent.Commands.Workers.CommandExecutionWorker},
+       # Every 5 minutes for admin discovery
+       {"*/5 * * * *", EdgeAgent.EdgeClusters.Workers.AdminDiscoveryWorker}
      ]},
     Oban.Plugins.Lifeline,
     {Oban.Plugins.Pruner, max_age: 86_400}

@@ -29,7 +29,8 @@ config :edge_agent, Oban,
   queues: [
     command_execution: 1,
     command_reporting: 1,
-    admin_discovery: 1
+    admin_discovery: 1,
+    vpn_config_pull: 1
   ],
   plugins: [
     {Oban.Plugins.Cron,
@@ -39,7 +40,9 @@ config :edge_agent, Oban,
        # Every 2 minutes safety net for execution
        {"*/2 * * * *", EdgeAgent.Commands.Workers.CommandExecutionWorker},
        # Every 5 minutes for admin discovery
-       {"*/5 * * * *", EdgeAgent.EdgeClusters.Workers.AdminDiscoveryWorker}
+       {"*/5 * * * *", EdgeAgent.EdgeClusters.Workers.AdminDiscoveryWorker},
+       # Every 30 minutes to pull VPN config from Netmaker
+       {"*/30 * * * *", EdgeAgent.Vpn.Workers.VpnConfigPullWorker}
      ]},
     Oban.Plugins.Lifeline,
     {Oban.Plugins.Pruner, max_age: 86_400}

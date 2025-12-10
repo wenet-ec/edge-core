@@ -395,7 +395,7 @@ defmodule EdgeAdmin.Commands do
   end
 
   def send_command_to_node(node, execution_data) do
-    url = "#{EdgeAdmin.Nodes.Node.http_url(node)}/api/command_executions"
+    url = "#{Nodes.node_http_url(node)}/api/command_executions"
     headers = [{"authorization", "Bearer #{node.api_token}"}]
 
     case Req.post(url, json: execution_data, headers: headers, receive_timeout: 5000) do

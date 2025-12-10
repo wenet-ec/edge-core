@@ -241,6 +241,16 @@ defmodule EdgeAdmin.Nodes do
   # Node functions
   # ===========================================================================
 
+  @doc """
+  Returns the HTTP URL for a node.
+  Format: http://node-{id}.cluster-{cluster_name}.{domain}:{port}
+
+  Requires cluster association to be preloaded.
+  """
+  def node_http_url(%Node{http_port: port} = node) do
+    "http://#{Node.dns_hostname(node)}:#{port}"
+  end
+
   def get_node!(id) do
     Node
     |> Repo.get!(id)
@@ -458,6 +468,103 @@ defmodule EdgeAdmin.Nodes do
 
   defp generate_token do
     :crypto.strong_rand_bytes(32) |> Base.encode64(padding: false)
+  end
+
+  @doc """
+  Performs health check on all nodes assigned to this admin.
+
+  Called by Quantum scheduler periodically. Reads from Metadata ETS to determine
+  which nodes this admin governs, then performs parallel health checks.
+
+  Health check logic:
+  - 200 response => status: "healthy", update last_seen_at
+  - 503 response => status: "unhealthy", update last_seen_at (we reached it)
+  - Network error/timeout => status: "unreachable", don't update last_seen_at
+
+  Logs warnings for unreachable and unhealthy nodes.
+  """
+  def check_node_health do
+    config = Application.get_env(:edge_admin, :node_health_check, [])
+    concurrency = Keyword.get(config, :concurrency, 100)
+    timeout = Keyword.get(config, :timeout_ms, 10_000)
+
+    # Get nodes this admin governs from ETS
+    # Returns %{cluster_name => ["node-{id}", "node-{id2}"]}
+    my_clusters = EdgeAdmin.Admins.Metadata.get_my_clusters()
+    node_names = my_clusters |> Map.values() |> List.flatten()
+
+    if Enum.empty?(node_names) do
+      Logger.debug("No nodes assigned to this admin for health check")
+      :ok
+    else
+      # Extract node IDs from node names (e.g., "node-abc123" => "abc123")
+      node_ids =
+        Enum.map(node_names, fn node_name ->
+          String.replace_prefix(node_name, "node-", "")
+        end)
+
+      # Load full node records from DB
+      nodes =
+        from(n in Node, where: n.id in ^node_ids, preload: [:cluster])
+        |> Repo.all()
+
+      Logger.debug("Starting health check for #{length(nodes)} nodes (concurrency: #{concurrency}, timeout: #{timeout}ms)")
+      start_time = System.monotonic_time(:millisecond)
+
+      # Ping all nodes in parallel
+      results =
+        Task.async_stream(
+          nodes,
+          &ping_node(&1, timeout),
+          max_concurrency: concurrency,
+          timeout: timeout + 500,
+          on_timeout: :kill_task
+        )
+        |> Enum.reduce(%{healthy: 0, unhealthy: 0, unreachable: 0}, fn
+          {:ok, :healthy}, acc -> %{acc | healthy: acc.healthy + 1}
+          {:ok, :unhealthy}, acc -> %{acc | unhealthy: acc.unhealthy + 1}
+          {:ok, :unreachable}, acc -> %{acc | unreachable: acc.unreachable + 1}
+          {:exit, _reason}, acc -> %{acc | unreachable: acc.unreachable + 1}
+        end)
+
+      elapsed = System.monotonic_time(:millisecond) - start_time
+
+      Logger.info(
+        "Health check completed in #{elapsed}ms: " <>
+        "#{results.healthy} healthy, #{results.unhealthy} unhealthy, " <>
+        "#{results.unreachable} unreachable"
+      )
+
+      :ok
+    end
+  end
+
+  defp ping_node(node, timeout) do
+    url = "#{node_http_url(node)}/health"
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    try do
+      case Req.get(url, receive_timeout: timeout, retry: false) do
+        {:ok, %{status: 200}} ->
+          update_node(node, %{status: "healthy", last_seen_at: now})
+          :healthy
+
+        {:ok, %{status: 503}} ->
+          Logger.warning("Node #{node.id} is unhealthy (503 response)")
+          update_node(node, %{status: "unhealthy", last_seen_at: now})
+          :unhealthy
+
+        _ ->
+          Logger.warning("Node #{node.id} is unreachable")
+          update_node(node, %{status: "unreachable"})
+          :unreachable
+      end
+    catch
+      _, _ ->
+        Logger.warning("Node #{node.id} is unreachable")
+        update_node(node, %{status: "unreachable"})
+        :unreachable
+    end
   end
 
   @doc """

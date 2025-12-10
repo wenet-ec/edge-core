@@ -158,18 +158,16 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   def handle_call({:execute_command, node, execution_data}, _from, state) do
     url = "http://#{node.dns_hostname}:#{node.http_port}/api/command_executions"
 
-    headers = [
-      {"Authorization", "Bearer #{node.api_token}"},
-      {"Content-Type", "application/json"}
-    ]
-
-    body = Jason.encode!(execution_data)
-
-    case HTTPoison.post(url, body, headers, recv_timeout: 5000) do
-      {:ok, %{status_code: status}} when status in 200..299 ->
+    case Req.post(url,
+      json: execution_data,
+      auth: {:bearer, node.api_token},
+      receive_timeout: 5000,
+      retry: false
+    ) do
+      {:ok, %{status: status}} when status in 200..299 ->
         {:reply, {:ok, :sent}, state}
 
-      {:ok, %{status_code: status}} ->
+      {:ok, %{status: status}} ->
         {:reply, {:error, "HTTP #{status}"}, state}
 
       {:error, reason} ->
@@ -182,11 +180,11 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   def handle_call({:scrape_metrics, node}, _from, state) do
     url = "http://#{node.dns_hostname}:#{node.metrics_port}/metrics"
 
-    case HTTPoison.get(url) do
-      {:ok, %{status_code: 200, body: metrics_text}} ->
+    case Req.get(url, retry: false) do
+      {:ok, %{status: 200, body: metrics_text}} ->
         {:reply, {:ok, metrics_text}, state}
 
-      {:ok, %{status_code: status}} ->
+      {:ok, %{status: status}} ->
         {:reply, {:error, "HTTP #{status}"}, state}
 
       {:error, reason} ->
@@ -199,13 +197,15 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   def handle_call({:trigger_self_update, node}, _from, state) do
     url = "http://#{node.dns_hostname}:#{node.http_port}/api/self_updates/"
 
-    headers = [{"Authorization", "Bearer #{node.api_token}"}]
-
-    case HTTPoison.post(url, "", headers, recv_timeout: 5000) do
-      {:ok, %{status_code: 200}} ->
+    case Req.post(url,
+      auth: {:bearer, node.api_token},
+      receive_timeout: 5000,
+      retry: false
+    ) do
+      {:ok, %{status: 200}} ->
         {:reply, :ok, state}
 
-      {:ok, %{status_code: status}} ->
+      {:ok, %{status: status}} ->
         {:reply, {:error, "HTTP #{status}"}, state}
 
       {:error, reason} ->

@@ -106,14 +106,4 @@ defmodule EdgeAdmin.Nodes.Node do
     Vpn.build_hostname(short_name, network_name)
   end
 
-  @doc """
-  Returns the HTTP URL for this node.
-  Format: http://node-{id}.cluster-{cluster_name}.{domain}:{port}
-  where domain is configured via NETMAKER_DEFAULT_DOMAIN (default: nm.internal)
-
-  Requires cluster association to be preloaded.
-  """
-  def http_url(%__MODULE__{http_port: port} = node) do
-    "http://#{dns_hostname(node)}:#{port}"
-  end
 end

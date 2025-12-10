@@ -140,10 +140,18 @@ config :edge_admin,
   cluster_reconciliation_enabled: cluster_reconciliation_enabled,
   cluster_reconciliation_schedule: cluster_reconciliation_schedule
 
+# Node health check configuration
+node_health_check_schedule = get_env("NODE_HEALTH_CHECK_SCHEDULE", :string, "* * * * *")
+node_health_check_concurrency = get_env("NODE_HEALTH_CHECK_CONCURRENCY", :integer, 100)
+node_health_check_timeout = get_env("NODE_HEALTH_CHECK_TIMEOUT_MS", :integer, 5_000)
+
+config :edge_admin, :node_health_check,
+  concurrency: node_health_check_concurrency,
+  timeout_ms: node_health_check_timeout
+
 # Oban crontab
 base_crontab = [
   {"* * * * *", EdgeAdmin.Commands.Workers.ExecutionRetryWorker},
-  {"* * * * *", EdgeAdmin.Nodes.Workers.NodeHealthCheckWorker},
   {"0 * * * *", EdgeAdmin.Admins.Workers.ZombieAdminCleaner}
 ]
 
@@ -191,5 +199,9 @@ config :edge_admin, EdgeAdmin.LocalScheduler,
     metadata_recomputation: [
       schedule: "* * * * *",
       task: {EdgeAdmin.Admins.Metadata, :recompute_now, []}
+    ],
+    node_health_check: [
+      schedule: node_health_check_schedule,
+      task: {EdgeAdmin.Nodes, :check_node_health, []}
     ]
   ]

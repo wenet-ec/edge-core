@@ -59,3 +59,8 @@ ADMIN_MAX_CAPACITY=200  # Maximum number of nodes this admin can handle
 ERLANG_COOKIE=local-cookie  # Shared secret for Erlang distribution
 ADMIN_DISCOVERY_PORT=44000  # Port to scan for admin discovery endpoint
 NETMAKER_DEFAULT_DOMAIN=nm.internal  # DNS domain suffix for hostname construction
+
+# Node health check configuration
+NODE_HEALTH_CHECK_SCHEDULE=* * * * *  # Cron schedule (default: every minute)
+NODE_HEALTH_CHECK_CONCURRENCY=100  # Number of parallel health check requests
+NODE_HEALTH_CHECK_TIMEOUT_MS=5000  # Timeout per health check in milliseconds (5 seconds)

@@ -26,6 +26,7 @@ defmodule EdgeAgent.Bootstrap do
   require Logger
 
   alias EdgeAgent.Identity
+  alias EdgeAgent.Vpn
   alias EdgeAgent.EdgeClusters.Discovery
   alias EdgeAgent.EdgeClusters.AdminClient
   alias EdgeAgent.Settings
@@ -136,50 +137,7 @@ defmodule EdgeAgent.Bootstrap do
 
   defp step_2_join_vpn(node_id) do
     Logger.info("Step 2: Joining VPN network...")
-
-    with {:ok, :not_connected} <- Nexmaker.Cli.check_any_connection(),
-         {:ok, _} <- join_and_verify(node_id) do
-      :ok
-    else
-      {:ok, :connected} ->
-        Logger.info("Already connected to network, skipping join...")
-        :ok
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  defp join_and_verify(node_id) do
-    Logger.info("No networks found, joining VPN...")
-
-    enrollment_key = Application.get_env(:edge_agent, :enrollment_key)
-    node_name = "node-#{node_id}"
-
-    with {:ok, _} <- Nexmaker.Cli.join_network(token: enrollment_key, name: node_name),
-         :ok <- wait_and_verify_connection() do
-      {:ok, :joined}
-    else
-      {:error, reason} ->
-        {:error, "VPN join failed: #{inspect(reason)}"}
-    end
-  end
-
-  defp wait_and_verify_connection do
-    Logger.info("Join command completed, verifying connection...")
-    Process.sleep(5000)
-
-    case Nexmaker.Cli.check_any_connection() do
-      {:ok, :connected} ->
-        Logger.info("VPN connection verified successfully")
-        :ok
-
-      {:ok, :not_connected} ->
-        {:error, "Join command succeeded but no networks found - enrollment key may be invalid"}
-
-      {:error, reason} ->
-        {:error, "Failed to verify join: #{inspect(reason)}"}
-    end
+    Vpn.join_if_needed(node_id)
   end
 
   # =============================================================================

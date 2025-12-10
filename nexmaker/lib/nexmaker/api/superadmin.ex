@@ -52,28 +52,41 @@ defmodule Nexmaker.Api.Superadmin do
 
     url = "#{String.trim_trailing(base_url, "/")}/api/users/adm/hassuperadmin"
 
-    case HTTPoison.get(url) do
-      {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
+    case Req.get(url, retry: false) do
+      {:ok, %{status: 200, body: body}} ->
         # The API returns a boolean directly (true or false)
-        case Jason.decode(body) do
-          {:ok, result} when is_boolean(result) ->
-            {:ok, result}
+        result =
+          cond do
+            is_boolean(body) ->
+              # Req auto-decoded boolean
+              body
 
-          {:ok, %{"issuperadmin" => is_super}} when is_boolean(is_super) ->
-            # Support map format if API changes
-            {:ok, is_super}
+            is_map(body) and Map.has_key?(body, "issuperadmin") ->
+              # Support map format if API changes
+              body["issuperadmin"]
 
-          {:ok, other} ->
-            {:error, {:unexpected_response, other}}
+            is_binary(body) ->
+              # Manual decode if needed
+              case Jason.decode(body) do
+                {:ok, result} when is_boolean(result) -> result
+                {:ok, %{"issuperadmin" => is_super}} when is_boolean(is_super) -> is_super
+                {:ok, other} -> {:unexpected_response, other}
+                {:error, reason} -> {:json_decode_error, reason}
+              end
 
-          {:error, reason} ->
-            {:error, {:json_decode_error, reason}}
+            true ->
+              {:unexpected_response, body}
+          end
+
+        case result do
+          value when is_boolean(value) -> {:ok, value}
+          error -> {:error, error}
         end
 
-      {:ok, %HTTPoison.Response{status_code: status, body: body}} ->
+      {:ok, %{status: status, body: body}} ->
         {:error, {:http_error, status, body}}
 
-      {:error, %HTTPoison.Error{reason: reason}} ->
+      {:error, reason} ->
         {:error, {:http_client_error, reason}}
     end
   end
@@ -111,18 +124,26 @@ defmodule Nexmaker.Api.Superadmin do
     end
 
     url = "#{String.trim_trailing(base_url, "/")}/api/users/adm/createsuperadmin"
-    headers = [{"Content-Type", "application/json"}]
-    body = Jason.encode!(attrs)
 
-    case HTTPoison.post(url, body, headers) do
-      {:ok, %HTTPoison.Response{status_code: status, body: response_body}}
-      when status in 200..299 ->
-        Jason.decode(response_body)
+    case Req.post(url, json: attrs, retry: false) do
+      {:ok, %{status: status, body: response_body}} when status in 200..299 ->
+        cond do
+          is_map(response_body) or is_list(response_body) ->
+            # Req already decoded JSON
+            {:ok, response_body}
 
-      {:ok, %HTTPoison.Response{status_code: status, body: response_body}} ->
+          is_binary(response_body) ->
+            # Manual decode if needed
+            Jason.decode(response_body)
+
+          true ->
+            {:ok, response_body}
+        end
+
+      {:ok, %{status: status, body: response_body}} ->
         {:error, {:http_error, status, response_body}}
 
-      {:error, %HTTPoison.Error{reason: reason}} ->
+      {:error, reason} ->
         {:error, {:http_client_error, reason}}
     end
   end

@@ -199,7 +199,7 @@ defmodule EdgeAdmin.Release do
 
   defp start_http_client do
     Application.ensure_all_started(:hackney)
-    Application.ensure_all_started(:httpoison)
+    Application.ensure_all_started(:req)
   end
 
   defp start_repo do

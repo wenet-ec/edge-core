@@ -1015,6 +1015,12 @@ defmodule EdgeAdmin.Nodes do
       String.contains?(body, "could not find any records")
   end
 
+  defp netmaker_not_found_error?(body) when is_map(body) do
+    message = Map.get(body, "Message", "")
+    String.contains?(message, "no result found") or
+      String.contains?(message, "could not find any records")
+  end
+
   defp netmaker_not_found_error?(_), do: false
 
   @doc """

@@ -21,7 +21,7 @@ defmodule Nexmaker.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:httpoison, "~> 2.2"},
+      {:req, "~> 0.5"},
       {:jason, "~> 1.4"}
     ]
   end

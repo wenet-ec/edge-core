@@ -167,20 +167,33 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
           |> Enum.map(fn ip ->
             url = "http://#{ip}:#{discovery_port}/api/admins/self/discovery"
 
-            case HTTPoison.get(url, [], recv_timeout: 5000, timeout: 5000) do
-              {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
-                case Jason.decode(body) do
-                  {:ok, %{"name" => admin_name}} ->
-                    # Construct DNS hostname for this cluster
-                    dns_hostname = build_hostname(admin_name, "cluster-#{cluster_id}", default_domain)
-                    admin_url = "http://#{dns_hostname}:#{discovery_port}"
+            case Req.get(url, receive_timeout: 5000, retry: false) do
+              {:ok, %{status: 200, body: body}} ->
+                admin_name =
+                  cond do
+                    is_map(body) and Map.has_key?(body, "name") ->
+                      body["name"]
 
-                    Logger.info("✓ Discovered admin: #{admin_name} at #{admin_url}")
-                    admin_url
+                    is_binary(body) ->
+                      case Jason.decode(body) do
+                        {:ok, %{"name" => name}} -> name
+                        _ -> nil
+                      end
 
-                  _ ->
-                    Logger.debug("✗ #{ip} returned invalid JSON response")
-                    nil
+                    true ->
+                      nil
+                  end
+
+                if admin_name do
+                  # Construct DNS hostname for this cluster
+                  dns_hostname = build_hostname(admin_name, "cluster-#{cluster_id}", default_domain)
+                  admin_url = "http://#{dns_hostname}:#{discovery_port}"
+
+                  Logger.info("✓ Discovered admin: #{admin_name} at #{admin_url}")
+                  admin_url
+                else
+                  Logger.debug("✗ #{ip} returned invalid JSON response")
+                  nil
                 end
 
               {:error, reason} ->

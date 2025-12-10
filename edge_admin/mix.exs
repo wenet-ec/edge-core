@@ -92,6 +92,7 @@ defmodule EdgeAdmin.Mixfile do
       {:gettext, "~> 1.0"},
 
       # Errors
+      {:hackney, "~> 1.25"},
       {:sentry, "~> 11.0"},
 
       # Telemetry

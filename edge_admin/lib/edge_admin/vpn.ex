@@ -387,8 +387,16 @@ defmodule EdgeAdmin.Vpn do
       # Netmaker returns 500 with "no result found" or "could not find any records"
       # for non-existent networks (Netmaker uses these error constants for not found)
       {:error, {:http_error, 500, body}} ->
-        if String.contains?(body, "no result found") or
-             String.contains?(body, "could not find any records") do
+        # Body can be a map (from Req JSON decoding) or a string
+        message =
+          cond do
+            is_map(body) and Map.has_key?(body, "Message") -> body["Message"]
+            is_binary(body) -> body
+            true -> inspect(body)
+          end
+
+        if String.contains?(message, "no result found") or
+             String.contains?(message, "could not find any records") do
           case create_network(network_name, create_opts) do
             {:ok, _} -> :ok
             {:error, reason} -> {:error, reason}

@@ -88,31 +88,45 @@ defmodule Nexmaker.Api do
     end
 
     url = build_url(base_url, path, query)
-    headers = build_headers(master_key)
-    request_body = if body, do: Jason.encode!(body), else: ""
 
     Logger.debug("Nexmaker API request: #{method} #{url}")
 
-    case HTTPoison.request(method, url, request_body, headers) do
-      {:ok, %HTTPoison.Response{status_code: status, body: response_body}}
-      when status in 200..299 ->
-        case Jason.decode(response_body) do
-          {:ok, decoded} ->
-            {:ok, decoded}
+    req_opts = [
+      method: method,
+      url: url,
+      auth: {:bearer, master_key},
+      retry: false
+    ]
 
-          {:error, _} ->
-            # Some endpoints return empty body or plain text
+    req_opts = if body, do: Keyword.put(req_opts, :json, body), else: req_opts
+
+    case Req.request(req_opts) do
+      {:ok, %{status: status, body: response_body}} when status in 200..299 ->
+        cond do
+          is_map(response_body) or is_list(response_body) ->
+            # Req already decoded JSON
+            {:ok, response_body}
+
+          is_binary(response_body) and response_body != "" ->
+            # Try to decode if it's a string
+            case Jason.decode(response_body) do
+              {:ok, decoded} -> {:ok, decoded}
+              {:error, _} -> {:ok, %{body: response_body}}
+            end
+
+          true ->
+            # Empty or non-JSON response
             {:ok, %{body: response_body}}
         end
 
-      {:ok, %HTTPoison.Response{status_code: 404}} ->
+      {:ok, %{status: 404}} ->
         {:error, :not_found}
 
-      {:ok, %HTTPoison.Response{status_code: status, body: response_body}} ->
-        Logger.error("Netmaker API error #{status}: #{response_body}")
+      {:ok, %{status: status, body: response_body}} ->
+        Logger.error("Netmaker API error #{status}: #{inspect(response_body)}")
         {:error, {:http_error, status, response_body}}
 
-      {:error, %HTTPoison.Error{reason: reason}} ->
+      {:error, reason} ->
         Logger.error("HTTP request failed: #{inspect(reason)}")
         {:error, {:http_client_error, reason}}
     end
@@ -133,12 +147,5 @@ defmodule Nexmaker.Api do
     base_url = String.trim_trailing(base_url, "/")
     query_string = URI.encode_query(query)
     "#{base_url}#{path}?#{query_string}"
-  end
-
-  defp build_headers(master_key) do
-    [
-      {"Authorization", "Bearer #{master_key}"},
-      {"Content-Type", "application/json"}
-    ]
   end
 end

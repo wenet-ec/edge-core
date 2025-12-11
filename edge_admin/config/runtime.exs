@@ -172,6 +172,8 @@ crontab =
 
   base_crontab ++ cron_jobs
 
+crontab = base_crontab ++ cron_jobs
+
 config :edge_admin, Oban,
   engine: Oban.Engines.Basic,
   queues: [
@@ -181,6 +183,7 @@ config :edge_admin, Oban,
     cluster_reconciliation: 1
   ],
   repo: EdgeAdmin.Repo,
+  peer: Oban.Peers.Global,
   plugins: [
     {Oban.Plugins.Cron, crontab: crontab},
     Oban.Plugins.Lifeline,

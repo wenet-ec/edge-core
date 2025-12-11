@@ -4,14 +4,14 @@ defmodule EdgeAdmin.Admins.Workers.ZombieAdminCleaner do
   Periodic cleanup of offline admin hosts in Netmaker.
 
   Runs once per admin cluster (Oban unique ensures single execution).
-  Deletes only admin hosts with `status: "offline"` in Netmaker.
+  Deletes admin hosts that have offline nodes in the admin cluster.
   Scoped to own admin cluster network.
 
   ## Detection Logic
 
-  1. Query Netmaker for all hosts
-  2. Filter for admin hosts in this admin cluster (pattern: admin-*.admin-cluster-*.nm.internal)
-  3. Filter for hosts with `status == "offline"` (Netmaker's native field)
+  1. Query Netmaker for all nodes in the admin cluster network
+  2. Filter for nodes with `status == "offline"` (Netmaker's native node status field)
+  3. Extract unique host IDs from offline nodes
   4. Delete offline admin hosts (Netmaker cascades to nodes, DNS entries)
   """
 
@@ -32,63 +32,55 @@ defmodule EdgeAdmin.Admins.Workers.ZombieAdminCleaner do
 
     Logger.info("Starting zombie admin cleanup for #{admin_cluster_name}")
 
-    # Query Netmaker for all hosts
-    case Vpn.list_hosts() do
-      {:ok, hosts} when is_list(hosts) ->
-        # Filter for admin hosts in our admin cluster
-        # Pattern: admin-{id}.{admin_cluster_name}.nm.internal
-        admin_hosts =
-          hosts
-          |> Enum.filter(fn host ->
-            host_name = host["name"] || ""
-
-            String.starts_with?(host_name, "admin-") and
-              String.contains?(host_name, ".#{admin_cluster_name}.")
+    # Query Netmaker for all nodes in the admin cluster
+    case Vpn.list_nodes(admin_cluster_name) do
+      {:ok, nodes} when is_list(nodes) ->
+        # Filter for offline nodes only
+        offline_nodes =
+          nodes
+          |> Enum.filter(fn node ->
+            node["status"] == "offline"
           end)
 
-        # Filter for offline hosts only (Netmaker manages status field)
-        offline_hosts =
-          admin_hosts
-          |> Enum.filter(fn host ->
-            # Netmaker uses "no" for offline status in isconnected field
-            # or check the actual status field if available
-            host["isconnected"] == "no" or host["connected"] == false
-          end)
+        if length(offline_nodes) > 0 do
+          Logger.info("Found #{length(offline_nodes)} offline admin node(s)")
 
-        if length(offline_hosts) > 0 do
-          Logger.info("Found #{length(offline_hosts)} offline admin host(s)")
+          # Get unique host IDs from offline nodes
+          offline_host_ids =
+            offline_nodes
+            |> Enum.map(fn node -> node["hostid"] end)
+            |> Enum.uniq()
+
+          Logger.info("Found #{length(offline_host_ids)} unique offline host(s) to delete")
 
           deleted_count =
-            Enum.reduce(offline_hosts, 0, fn host, count ->
-              host_id = host["id"]
-              host_name = host["name"]
-
-              Logger.info("Deleting offline admin host: #{host_name} (id: #{host_id})")
+            Enum.reduce(offline_host_ids, 0, fn host_id, count ->
+              Logger.info("Deleting offline admin host with id: #{host_id}")
 
               case Vpn.delete_host(host_id) do
                 {:ok, _} ->
-                  Logger.info("Successfully deleted offline host #{host_name}")
+                  Logger.info("Successfully deleted offline host #{host_id}")
                   count + 1
 
                 {:error, reason} ->
-                  Logger.error("Failed to delete host #{host_name}: #{inspect(reason)}")
+                  Logger.error("Failed to delete host #{host_id}: #{inspect(reason)}")
                   count
               end
             end)
 
           Logger.info("Zombie admin cleanup complete: #{deleted_count} host(s) deleted")
         else
-          Logger.debug("No offline admin hosts found in #{admin_cluster_name}")
+          Logger.debug("No offline admin nodes found in #{admin_cluster_name}")
         end
 
         :ok
 
       {:ok, _} ->
-        Logger.warning("Unexpected response format from Netmaker Hosts API")
+        Logger.warning("Unexpected response format from Netmaker Nodes API")
         :ok
 
       {:error, reason} ->
-        Logger.error("Failed to query Netmaker Hosts API: #{inspect(reason)}")
+        Logger.error("Failed to query Netmaker Nodes API: #{inspect(reason)}")
         {:error, reason}
     end
   end

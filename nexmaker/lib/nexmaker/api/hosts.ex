@@ -98,7 +98,12 @@ defmodule Nexmaker.Api.Hosts do
 
   ## Parameters
     - host_id: String - Host UUID
-    - opts: Keyword - API options (base_url, master_key)
+    - opts: Keyword - API options (base_url, master_key, force)
+
+  ## Options
+    - `:force` - Boolean - Force delete host even if it has associated nodes (default: true)
+    - `:base_url` - Netmaker API base URL
+    - `:master_key` - Netmaker master key
 
   ## Returns
     - `{:ok, response}` - Host deleted
@@ -106,11 +111,24 @@ defmodule Nexmaker.Api.Hosts do
 
   ## Examples
 
+      # Force delete (default - cascades to all nodes)
       {:ok, _} = Nexmaker.Api.Hosts.delete(host_id)
+
+      # Force delete (explicit)
+      {:ok, _} = Nexmaker.Api.Hosts.delete(host_id, force: true)
+
+      # Non-force delete (will fail if host has nodes)
+      {:ok, _} = Nexmaker.Api.Hosts.delete(host_id, force: false)
   """
   @spec delete(String.t(), keyword()) :: {:ok, any()} | {:error, any()}
   def delete(host_id, opts \\ []) do
-    Api.request(:delete, "/api/hosts/#{host_id}", opts)
+    # Extract force option (default true for our use case - we want cascade delete)
+    {force, api_opts} = Keyword.pop(opts, :force, true)
+
+    # Add force query parameter to URL
+    url = "/api/hosts/#{host_id}?force=#{force}"
+
+    Api.request(:delete, url, api_opts)
   end
 
   @doc """

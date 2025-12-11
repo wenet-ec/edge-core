@@ -22,7 +22,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
   ## HTTP Client Functions
 
-  - execute_command/3 - Send command to agent
+  - create_command_execution/3 - Send command to agent
   - scrape_metrics/2 - Scrape metrics from node exporter
   - trigger_self_update/2 - Trigger self-update on agent
   """
@@ -31,6 +31,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   require Logger
 
   alias EdgeAdmin.Vpn
+  alias EdgeAdmin.Nodes.Node
 
   # ===========================================================================
   # Client API
@@ -59,8 +60,8 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - {:ok, :sent} - Command sent successfully
   - {:error, reason} - HTTP error or network failure
   """
-  def execute_command(gateway_pid, node, execution_data) do
-    GenServer.call(gateway_pid, {:execute_command, node, execution_data}, 30_000)
+  def create_command_execution(gateway_pid, node, execution_data) do
+    GenServer.call(gateway_pid, {:create_command_execution, node, execution_data}, 30_000)
   end
 
   @doc """
@@ -155,8 +156,8 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   # ===========================================================================
 
   @impl true
-  def handle_call({:execute_command, node, execution_data}, _from, state) do
-    url = "http://#{node.dns_hostname}:#{node.http_port}/api/command_executions"
+  def handle_call({:create_command_execution, node, execution_data}, _from, state) do
+    url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/command_executions"
 
     case Req.post(url,
       json: execution_data,
@@ -178,7 +179,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
   @impl true
   def handle_call({:scrape_metrics, node}, _from, state) do
-    url = "http://#{node.dns_hostname}:#{node.metrics_port}/metrics"
+    url = "http://#{Node.dns_hostname(node)}:#{node.metrics_port}/metrics"
 
     case Req.get(url, retry: false) do
       {:ok, %{status: 200, body: metrics_text}} ->
@@ -195,7 +196,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
   @impl true
   def handle_call({:trigger_self_update, node}, _from, state) do
-    url = "http://#{node.dns_hostname}:#{node.http_port}/api/self_updates/"
+    url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/self_updates/"
 
     case Req.post(url,
       auth: {:bearer, node.api_token},

@@ -92,7 +92,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     payload = %{command_execution: command_execution_params}
 
     request_with_auth(path, fn url, headers ->
-      case Req.patch(url, json: payload, headers: headers) do
+      case Req.patch(url, json: payload, headers: headers, receive_timeout: 5000, retry: false) do
         {:ok, %{status: status}} when status in 200..299 ->
           Logger.debug("Successfully updated command execution #{execution_id}")
           :ok

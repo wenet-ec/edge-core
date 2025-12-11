@@ -126,7 +126,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
           type: :object,
           description: "Applied filters",
           additionalProperties: %Schema{type: :string},
-          example: %{status: "online", id_type: "machine_id"}
+          example: %{status: "healthy", id_type: "persistent_id"}
         },
         sort: %Schema{
           type: :array,

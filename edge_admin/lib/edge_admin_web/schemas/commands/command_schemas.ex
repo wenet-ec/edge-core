@@ -108,11 +108,11 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
                   enum: ["all", "nodes"],
                   description: "Targeting strategy: 'all' for all nodes, 'nodes' for specific nodes"
                 },
-                ids: %Schema{
+                node_ids: %Schema{
                   type: :array,
                   items: %Schema{type: :string, format: :uuid},
                   description:
-                    "Array of target type's IDs (required when type is 'nodes') (will always be deduplicated)",
+                    "Array of node IDs (required when type is 'nodes') (will always be deduplicated)",
                   example: [
                     "01234567-89ab-cdef-0123-456789abcdef",
                     "fedcba98-7654-3210-fedc-ba9876543210"
@@ -124,7 +124,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
                   properties: %{
                     status: %Schema{
                       type: :string,
-                      enum: ["online", "offline"],
+                      enum: ["healthy", "unhealthy", "unreachable"],
                       description: "Filter by node status"
                     },
                     id_type: %Schema{
@@ -145,8 +145,8 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
               example: %{
                 type: "all",
                 node_filters: %{
-                  status: "online",
-                  id_type: "machine_id"
+                  status: "healthy",
+                  id_type: "persistent"
                 }
               }
             }
@@ -156,10 +156,10 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
             command_text: "ABC=value\necho $ABC\nsudo docker ps",
             targeting: %{
               type: "nodes",
-              ids: ["01234567-89ab-cdef-0123-456789abcdef"],
+              node_ids: ["01234567-89ab-cdef-0123-456789abcdef"],
               node_filters: %{
-                status: "online",
-                id_type: "machine_id"
+                status: "healthy",
+                id_type: "persistent"
               }
             }
           }

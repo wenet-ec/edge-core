@@ -151,8 +151,7 @@ config :edge_admin, :node_health_check,
 
 # Oban crontab
 base_crontab = [
-  {"* * * * *", EdgeAdmin.Commands.Workers.ExecutionRetryWorker},
-  {"0 * * * *", EdgeAdmin.Admins.Workers.ZombieAdminCleaner}
+  {"*/30 * * * *", EdgeAdmin.Admins.Workers.ZombieAdminCleaner}
 ]
 
 crontab =
@@ -176,8 +175,7 @@ crontab =
 config :edge_admin, Oban,
   engine: Oban.Engines.Basic,
   queues: [
-    command_dispatch: 10,
-    command_retry: 1,
+    execution_creation: 10,
     key_cleanup: 1,
     zombie_admin_cleanup: 1,
     cluster_reconciliation: 1
@@ -203,5 +201,9 @@ config :edge_admin, EdgeAdmin.LocalScheduler,
     node_health_check: [
       schedule: node_health_check_schedule,
       task: {EdgeAdmin.Nodes, :check_node_health, []}
+    ],
+    execution_delivery: [
+      schedule: "* * * * *",
+      task: {EdgeAdmin.Commands, :deliver_local_executions, []}
     ]
   ]

@@ -41,7 +41,9 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
       ]
     ],
     responses: %{
-      200 => {"Paginated list of commands", "application/json", CommandSchemas.CommandPaginatedResponse}
+      200 =>
+        {"Paginated list of commands", "application/json",
+         CommandSchemas.CommandPaginatedResponse}
     }
   )
 
@@ -61,16 +63,18 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
 
     Node filters can be applied to any targeting type to further refine which nodes receive the command.
     """,
-    request_body: {"Command creation parameters", "application/json", CommandSchemas.CommandCreateRequest},
+    request_body:
+      {"Command creation parameters", "application/json", CommandSchemas.CommandCreateRequest},
     responses: %{
-      201 => {"Command created successfully", "application/json", CommandSchemas.CommandSingleResponse},
+      201 =>
+        {"Command created successfully", "application/json", CommandSchemas.CommandSingleResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
     }
   )
 
   def create(conn, %{"command" => command_params}) do
     with {:ok, %Command{} = command} <-
-           Commands.create_command_and_dispatch_executions(command_params) do
+           Commands.create_command_and_executions(command_params) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/commands/#{command}")

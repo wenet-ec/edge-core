@@ -72,21 +72,16 @@ defmodule EdgeAdmin.Admins.Bootstrap do
 
   @impl true
   def init(_opts) do
-    if Application.get_env(:edge_admin, :run_bootstrap, true) do
-      Logger.info("Bootstrap starting...")
+    Logger.info("Bootstrap starting...")
 
-      case do_bootstrap() do
-        :ok ->
-          Logger.info("Bootstrap completed successfully")
-          {:ok, %{status: :complete, initialized: true}}
+    case do_bootstrap() do
+      :ok ->
+        Logger.info("Bootstrap completed successfully")
+        {:ok, %{status: :complete, initialized: true}}
 
-        {:error, reason} ->
-          Logger.error("Bootstrap failed: #{inspect(reason)}")
-          {:stop, reason}
-      end
-    else
-      Logger.info("Bootstrap skipped")
-      {:ok, %{status: :skipped, initialized: false}}
+      {:error, reason} ->
+        Logger.error("Bootstrap failed: #{inspect(reason)}")
+        {:stop, reason}
     end
   end
 

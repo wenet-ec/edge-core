@@ -10,20 +10,8 @@ defmodule EdgeAdmin.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      EdgeAdmin.PromEx,
-      EdgeAdmin.Repo,
-      {DNSCluster, query: Application.get_env(:edge_admin, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: EdgeAdmin.PubSub},
-      {Oban, Application.fetch_env!(:edge_admin, Oban)},
-      EdgeAdmin.Admins.Bootstrap,
-      EdgeAdmin.EdgeClusters.Supervisor,
-      EdgeAdmin.EdgeClusters,
-      EdgeAdmin.Admins.Metadata,
-      EdgeAdmin.LocalScheduler,
-      EdgeAdminWeb.Endpoint,
-      {TelemetryUI, EdgeAdmin.TelemetryUI.config()}
-    ]
+    mode = runtime_mode()
+    children = build_children(mode)
 
     :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{
       config: %{metadata: [:file, :line]}
@@ -39,5 +27,42 @@ defmodule EdgeAdmin.Application do
   def config_change(changed, _new, removed) do
     EdgeAdminWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  # ===========================================================================
+  # Private Helpers
+  # ===========================================================================
+
+  defp runtime_mode do
+    case System.get_env("EDGE_ADMIN_MODE") do
+      "task" -> :task
+      _ -> :server
+    end
+  end
+
+  defp build_children(:task) do
+    [
+      EdgeAdmin.PromEx,
+      EdgeAdmin.Repo,
+      {Phoenix.PubSub, name: EdgeAdmin.PubSub},
+      {Oban, Application.fetch_env!(:edge_admin, Oban)}
+    ]
+  end
+
+  defp build_children(:server) do
+    [
+      EdgeAdmin.PromEx,
+      EdgeAdmin.Repo,
+      {DNSCluster, query: Application.get_env(:edge_admin, :dns_cluster_query) || :ignore},
+      {Phoenix.PubSub, name: EdgeAdmin.PubSub},
+      {Oban, Application.fetch_env!(:edge_admin, Oban)},
+      EdgeAdmin.Admins.Bootstrap,
+      EdgeAdmin.EdgeClusters.Supervisor,
+      EdgeAdmin.EdgeClusters,
+      EdgeAdmin.Admins.Metadata,
+      EdgeAdmin.LocalScheduler,
+      EdgeAdminWeb.Endpoint,
+      {TelemetryUI, EdgeAdmin.TelemetryUI.config()}
+    ]
   end
 end

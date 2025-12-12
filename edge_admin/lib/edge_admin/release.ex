@@ -2,11 +2,6 @@
 defmodule EdgeAdmin.Release do
   @moduledoc """
   Release tasks for Edge Admin.
-
-  Provides Mix-like tasks that can be run in production releases:
-  - Database migrations
-  - Netmaker superadmin bootstrap
-  - Default cluster creation
   """
 
   alias Ecto.Migrator

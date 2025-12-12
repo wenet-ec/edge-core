@@ -6,6 +6,48 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
 
   alias OpenApiSpex.Schema
 
+  defmodule NodeSummary do
+    @moduledoc false
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "Node Summary",
+      description: "Brief node information within cluster response",
+      type: :object,
+      properties: %{
+        id: %Schema{
+          type: :string,
+          description: "Node ID",
+          example: "node-abc123"
+        },
+        status: %Schema{
+          type: :string,
+          description: "Node status",
+          enum: ["healthy", "unhealthy"],
+          example: "healthy"
+        },
+        id_type: %Schema{
+          type: :string,
+          description: "Node ID type",
+          enum: ["hostname", "mac"],
+          example: "hostname"
+        },
+        dns_hostname: %Schema{
+          type: :string,
+          description: "DNS hostname for this node",
+          example: "node-abc123.cluster-prod-east.nm.internal"
+        }
+      },
+      required: [:id, :status, :id_type, :dns_hostname],
+      example: %{
+        id: "node-abc123",
+        status: "healthy",
+        id_type: "hostname",
+        dns_hostname: "node-abc123.cluster-prod-east.nm.internal"
+      }
+    })
+  end
+
   defmodule ClusterResponse do
     @moduledoc false
     require OpenApiSpex
@@ -35,6 +77,11 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
           type: :integer,
           description: "Number of nodes in this cluster"
         },
+        nodes: %Schema{
+          type: :array,
+          description: "Summary of nodes in this cluster",
+          items: NodeSummary
+        },
         network_name: %Schema{
           type: :string,
           description: "Netmaker network name",
@@ -61,6 +108,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         :name,
         :ipv4_range,
         :node_count,
+        :nodes,
         :network_name,
         :dns_domain,
         :inserted_at,
@@ -70,7 +118,21 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         id: "abc12345-1234-1234-1234-123456789abc",
         name: "prod-east",
         ipv4_range: "100.64.0.0/24",
-        node_count: 5,
+        node_count: 2,
+        nodes: [
+          %{
+            id: "node-abc123",
+            status: "healthy",
+            id_type: "hostname",
+            dns_hostname: "node-abc123.cluster-prod-east.nm.internal"
+          },
+          %{
+            id: "node-def456",
+            status: "healthy",
+            id_type: "hostname",
+            dns_hostname: "node-def456.cluster-prod-east.nm.internal"
+          }
+        ],
         network_name: "cluster-prod-east",
         dns_domain: "cluster-prod-east.nm.internal",
         inserted_at: "2025-06-09T08:00:00Z",
@@ -109,7 +171,21 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
           id: "abc12345-1234-1234-1234-123456789abc",
           name: "prod-east",
           ipv4_range: "100.64.0.0/24",
-          node_count: 5,
+          node_count: 2,
+          nodes: [
+            %{
+              id: "node-abc123",
+              status: "healthy",
+              id_type: "hostname",
+              dns_hostname: "node-abc123.cluster-prod-east.nm.internal"
+            },
+            %{
+              id: "node-def456",
+              status: "healthy",
+              id_type: "hostname",
+              dns_hostname: "node-def456.cluster-prod-east.nm.internal"
+            }
+          ],
           network_name: "cluster-prod-east",
           dns_domain: "cluster-prod-east.nm.internal",
           inserted_at: "2025-06-09T08:00:00Z",

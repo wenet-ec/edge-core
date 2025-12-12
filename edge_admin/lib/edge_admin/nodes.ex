@@ -38,29 +38,29 @@ defmodule EdgeAdmin.Nodes do
     {node_count_filter, other_params} = Map.pop(params, "node_count")
 
     base_query =
-      from(c in Cluster,
-        left_join: n in assoc(c, :nodes),
-        group_by: c.id,
-        select_merge: %{node_count: count(n.id)}
-      )
-
-    # Apply node_count HAVING filter if present
-    query_with_having =
       if node_count_filter do
-        apply_node_count_filter(base_query, node_count_filter)
+        # Need to compute count for HAVING clause when filtering
+        from(c in Cluster,
+          left_join: n in assoc(c, :nodes),
+          group_by: c.id,
+          select_merge: %{node_count: count(n.id)}
+        )
+        |> apply_node_count_filter(node_count_filter)
       else
-        base_query
+        # No filter, just use base Cluster query
+        Cluster
       end
 
     # Use FilteringPagination for the rest
     result =
       FilteringPagination.paginate(
-        query_with_having,
+        base_query,
         other_params,
         filterable_fields: [:ipv4_range],
-        sortable_fields: [:inserted_at, :updated_at, :ipv4_range, :node_count],
+        sortable_fields: [:inserted_at, :updated_at, :ipv4_range],
         default_sort: "inserted_at:desc",
-        repo: Repo
+        repo: Repo,
+        preload: :nodes
       )
 
     # Re-add node_count to filters if it was present
@@ -106,14 +106,12 @@ defmodule EdgeAdmin.Nodes do
   end
 
   @doc """
-  Lists all clusters with node counts (no pagination).
+  Lists all clusters with nodes preloaded (no pagination).
   """
   def list_clusters do
     from(c in Cluster,
-      left_join: n in assoc(c, :nodes),
-      group_by: c.id,
-      select_merge: %{node_count: count(n.id)},
-      order_by: [desc: c.inserted_at]
+      order_by: [desc: c.inserted_at],
+      preload: :nodes
     )
     |> Repo.all()
   end
@@ -124,10 +122,8 @@ defmodule EdgeAdmin.Nodes do
   """
   def get_cluster!(name) do
     from(c in Cluster,
-      left_join: n in assoc(c, :nodes),
       where: c.name == ^name,
-      group_by: c.id,
-      select_merge: %{node_count: count(n.id)}
+      preload: :nodes
     )
     |> Repo.one!()
   end
@@ -138,10 +134,8 @@ defmodule EdgeAdmin.Nodes do
   """
   def get_cluster(name) do
     from(c in Cluster,
-      left_join: n in assoc(c, :nodes),
       where: c.name == ^name,
-      group_by: c.id,
-      select_merge: %{node_count: count(n.id)}
+      preload: :nodes
     )
     |> Repo.one()
   end

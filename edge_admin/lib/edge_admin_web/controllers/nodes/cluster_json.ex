@@ -34,11 +34,21 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSON do
       id: cluster.id,
       name: cluster.name,
       ipv4_range: cluster.ipv4_range,
-      node_count: cluster.node_count || 0,
+      node_count: Cluster.node_count(cluster),
+      nodes: Enum.map(cluster.nodes, &node_summary/1),
       network_name: Cluster.network_name(cluster),
       dns_domain: Cluster.dns_domain(cluster),
       inserted_at: cluster.inserted_at,
       updated_at: cluster.updated_at
+    }
+  end
+
+  defp node_summary(node) do
+    %{
+      id: node.id,
+      status: node.status,
+      id_type: node.id_type,
+      dns_hostname: EdgeAdmin.Nodes.Node.dns_hostname(node)
     }
   end
 end

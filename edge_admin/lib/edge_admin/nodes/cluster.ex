@@ -11,7 +11,6 @@ defmodule EdgeAdmin.Nodes.Cluster do
   schema "clusters" do
     field(:name, :string)
     field(:ipv4_range, :string)
-    field(:node_count, :integer, virtual: true)
 
     has_many(:nodes, EdgeAdmin.Nodes.Node)
 
@@ -47,6 +46,13 @@ defmodule EdgeAdmin.Nodes.Cluster do
   def dns_domain(%__MODULE__{name: name}) do
     Vpn.build_domain(Vpn.build_network_name(name, prefix: :node))
   end
+
+  @doc """
+  Returns the number of nodes in this cluster.
+  Requires nodes association to be preloaded.
+  """
+  def node_count(%__MODULE__{nodes: nodes}) when is_list(nodes), do: length(nodes)
+  def node_count(%__MODULE__{}), do: 0
 
   # Private helper functions
 

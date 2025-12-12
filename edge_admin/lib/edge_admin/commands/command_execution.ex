@@ -17,11 +17,10 @@ defmodule EdgeAdmin.Commands.CommandExecution do
     field(:sent_at, :utc_datetime)
     field(:completed_at, :utc_datetime)
 
-    field(:command_text, :string, virtual: true)
-
     # Associations
     belongs_to(:command, EdgeAdmin.Commands.Command)
     belongs_to(:node, EdgeAdmin.Nodes.Node)
+    belongs_to(:cluster, EdgeAdmin.Nodes.Cluster)
 
     timestamps(type: :utc_datetime)
   end
@@ -38,52 +37,30 @@ defmodule EdgeAdmin.Commands.CommandExecution do
       :completed_at,
       :command_id,
       :node_id,
-      :command_text
+      :cluster_id
     ])
-    |> validate_required([:status])
+    |> validate_required([:status, :node_id])
     |> validate_inclusion(:status, ["pending", "sent", "completed"])
-    |> validate_node_or_target_all()
-    |> maybe_set_completed_at()
     |> foreign_key_constraint(:command_id)
     |> foreign_key_constraint(:node_id)
+    |> foreign_key_constraint(:cluster_id)
     |> unique_constraint([:node_id, :command_id],
       name: :command_executions_node_id_command_id_index
     )
   end
 
-  def populate_command_text(%__MODULE__{command: %{command_text: command_text}} = execution) do
-    %{execution | command_text: command_text}
-  end
+  @doc """
+  Returns the command text for this execution.
+  Requires command association to be preloaded.
+  """
+  def command_text(%__MODULE__{command: %{command_text: command_text}}), do: command_text
+  def command_text(%__MODULE__{}), do: nil
 
-  def populate_command_text(%__MODULE__{} = execution) do
-    %{execution | command_text: nil}
-  end
-
-  @doc false
-  defp validate_node_or_target_all(changeset) do
-    target_all = get_field(changeset, :target_all)
-    node_id = get_field(changeset, :node_id)
-
-    cond do
-      target_all == true ->
-        changeset
-
-      target_all == false and is_nil(node_id) ->
-        add_error(changeset, :node_id, "must be present when target_all is false")
-
-      true ->
-        changeset
-    end
-  end
-
-  defp maybe_set_completed_at(changeset) do
-    status = get_change(changeset, :status)
-    completed_at = get_change(changeset, :completed_at)
-
-    if status == "completed" and is_nil(completed_at) do
-      put_change(changeset, :completed_at, DateTime.utc_now())
-    else
-      changeset
-    end
-  end
+  @doc """
+  Returns the cluster name for this execution.
+  Requires cluster association to be preloaded.
+  Returns nil if no cluster is associated.
+  """
+  def cluster_name(%__MODULE__{cluster: %{name: name}}), do: name
+  def cluster_name(%__MODULE__{}), do: nil
 end

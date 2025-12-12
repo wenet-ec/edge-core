@@ -31,6 +31,17 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
           format: :uuid,
           description: "ID of the target node"
         },
+        cluster_id: %Schema{
+          type: :string,
+          format: :uuid,
+          nullable: true,
+          description: "ID of the target cluster (null for system-wide or single node targets)"
+        },
+        cluster_name: %Schema{
+          type: :string,
+          nullable: true,
+          description: "Name of the target cluster (null if cluster_id is null)"
+        },
         target_all: %Schema{
           type: :boolean,
           description: "Whether this execution was created from a system-wide command"
@@ -87,6 +98,8 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
         id: "01234567-89ab-cdef-0123-456789abcdef",
         command_id: "fedcba98-7654-3210-fedc-ba9876543210",
         node_id: "abcdef01-2345-6789-abcd-ef0123456789",
+        cluster_id: "aaaabbbb-cccc-dddd-eeee-ffffffffffff",
+        cluster_name: "prod",
         target_all: false,
         status: "completed",
         command_text: "echo hello\nls -la",
@@ -131,6 +144,8 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
           id: "01234567-89ab-cdef-0123-456789abcdef",
           command_id: "98765432-fedc-ba98-7654-321098765432",
           node_id: "11111111-2222-3333-4444-555555555555",
+          cluster_id: nil,
+          cluster_name: nil,
           target_all: false,
           status: "completed",
           command_text: "echo hello\npwd",

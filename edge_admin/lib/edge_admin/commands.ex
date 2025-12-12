@@ -54,30 +54,10 @@ defmodule EdgeAdmin.Commands do
     )
   end
 
-  defp preload_and_populate_command_text(execution_or_executions) do
-    case execution_or_executions do
-      # Handle single execution
-      %CommandExecution{} = execution ->
-        execution
-        |> Repo.preload(:command)
-        |> CommandExecution.populate_command_text()
-
-      # Handle list of executions
-      executions when is_list(executions) ->
-        executions
-        |> Repo.preload(:command)
-        |> Enum.map(&CommandExecution.populate_command_text/1)
-
-      # Handle other cases (shouldn't happen but defensive)
-      other ->
-        other
-    end
-  end
-
   def get_command_execution!(id) do
     CommandExecution
     |> Repo.get!(id)
-    |> preload_and_populate_command_text()
+    |> Repo.preload([:command, :cluster])
   end
 
   def create_command_execution(attrs \\ %{}) do
@@ -101,22 +81,15 @@ defmodule EdgeAdmin.Commands do
   end
 
   def list_command_executions_with_filtering_pagination(params \\ %{}) do
-    page_result =
-      FilteringPagination.paginate(
-        CommandExecution,
-        params,
-        filterable_fields: [:status, :target_all, :exit_code, :command_id, :node_id, :output],
-        sortable_fields: [:inserted_at, :updated_at, :status, :sent_at, :completed_at, :exit_code],
-        default_sort: "inserted_at:desc",
-        repo: Repo
-      )
-
-    executions_with_command_text =
-      page_result.data
-      |> Repo.preload(:command)
-      |> Enum.map(&CommandExecution.populate_command_text/1)
-
-    %{page_result | data: executions_with_command_text}
+    FilteringPagination.paginate(
+      CommandExecution,
+      params,
+      filterable_fields: [:status, :target_all, :exit_code, :command_id, :node_id, :output],
+      sortable_fields: [:inserted_at, :updated_at, :status, :sent_at, :completed_at, :exit_code],
+      default_sort: "inserted_at:desc",
+      repo: Repo,
+      preload: [:command, :cluster]
+    )
   end
 
   @doc """
@@ -161,7 +134,8 @@ defmodule EdgeAdmin.Commands do
           %{
             command_id: command.id,
             targeting_type: "all",
-            node_filters: Map.get(targeting, "node_filters", %{})
+            node_filters: Map.get(targeting, "node_filters", %{}),
+            cluster_filters: Map.get(targeting, "cluster_filters", %{})
           }
 
         "nodes" ->
@@ -170,6 +144,15 @@ defmodule EdgeAdmin.Commands do
             targeting_type: "nodes",
             node_ids: Map.get(targeting, "node_ids", []),
             node_filters: Map.get(targeting, "node_filters", %{})
+          }
+
+        "clusters" ->
+          %{
+            command_id: command.id,
+            targeting_type: "clusters",
+            cluster_names: Map.get(targeting, "cluster_names", []),
+            node_filters: Map.get(targeting, "node_filters", %{}),
+            cluster_filters: Map.get(targeting, "cluster_filters", %{})
           }
 
         _ ->
@@ -207,15 +190,17 @@ defmodule EdgeAdmin.Commands do
   @doc """
   Creates command executions based on targeting args.
 
-  Unified function that handles both "all" and "nodes" targeting types.
+  Unified function that handles "all", "nodes", and "clusters" targeting types.
   All validation and filtering happens here - the worker just passes args.
 
   ## Args Structure
 
   - `command_id` - The command ID
-  - `targeting_type` - Either "all" or "nodes"
-  - `node_filters` - Optional filters for nodes (status, etc.)
+  - `targeting_type` - Either "all", "nodes", or "clusters"
+  - `node_filters` - Optional filters for nodes (status, id_type, version, self_update_enabled)
+  - `cluster_filters` - Optional filters for clusters (name, ipv4_range, node_count)
   - `node_ids` - Required for "nodes" type, list of specific node IDs
+  - `cluster_names` - Required for "clusters" type, list of cluster names
 
   ## Behavior
 
@@ -228,29 +213,34 @@ defmodule EdgeAdmin.Commands do
     command_id = args["command_id"]
     targeting_type = args["targeting_type"]
     node_filters = args["node_filters"] || %{}
+    cluster_filters = args["cluster_filters"] || %{}
 
     command = get_command!(command_id)
 
     # Get nodes based on targeting type
-    nodes =
+    {nodes, cluster_id} =
       case targeting_type do
         "all" ->
-          get_all_filtered_nodes(node_filters)
+          {get_all_filtered_nodes(node_filters, cluster_filters), nil}
 
         "nodes" ->
           node_ids = args["node_ids"] || []
-          get_nodes_for_targeting(node_ids, node_filters)
+          {get_nodes_for_targeting(node_ids, node_filters), nil}
+
+        "clusters" ->
+          cluster_names = args["cluster_names"] || []
+          get_nodes_for_clusters(cluster_names, node_filters, cluster_filters)
 
         _ ->
           Logger.error("Invalid targeting type: #{targeting_type}")
-          []
+          {[], nil}
       end
 
     if Enum.empty?(nodes) do
       Logger.info("No healthy nodes found for command #{command_id}")
       {:ok, []}
     else
-      bulk_create_executions(command, nodes, targeting_type == "all")
+      bulk_create_executions(command, nodes, targeting_type == "all", cluster_id)
     end
   end
 
@@ -269,8 +259,8 @@ defmodule EdgeAdmin.Commands do
       # Filter only by healthy status
       Enum.filter(nodes, &(&1.status == "healthy"))
     else
-      # Apply both healthy status and custom filters
-      all_matching_nodes = get_all_filtered_nodes(node_filters)
+      # Apply both healthy status and custom filters (no cluster filters for node targeting)
+      all_matching_nodes = get_all_filtered_nodes(node_filters, %{})
       matching_node_ids = MapSet.new(all_matching_nodes, & &1.id)
 
       Enum.filter(nodes, fn node ->
@@ -279,7 +269,7 @@ defmodule EdgeAdmin.Commands do
     end
   end
 
-  defp bulk_create_executions(command, nodes, target_all) do
+  defp bulk_create_executions(command, nodes, target_all, cluster_id) do
     Logger.info("Creating executions for #{length(nodes)} healthy nodes")
 
     now = DateTime.utc_now() |> DateTime.truncate(:second)
@@ -289,6 +279,7 @@ defmodule EdgeAdmin.Commands do
         %{
           command_id: command.id,
           node_id: node.id,
+          cluster_id: cluster_id,
           target_all: target_all,
           status: "pending",
           inserted_at: now,
@@ -302,12 +293,7 @@ defmodule EdgeAdmin.Commands do
 
       Logger.info("Successfully created #{count} command executions")
 
-      executions_with_command_text =
-        Enum.map(inserted_executions, fn execution ->
-          %{execution | command_text: command.command_text}
-        end)
-
-      {:ok, executions_with_command_text}
+      {:ok, inserted_executions}
     rescue
       exception ->
         Logger.error("Failed to bulk insert executions: #{Exception.message(exception)}")
@@ -315,8 +301,111 @@ defmodule EdgeAdmin.Commands do
     end
   end
 
+  # Get all cluster names matching cluster_filters
+  defp get_all_filtered_cluster_names(cluster_filters, page \\ 1, accumulated_names \\ []) do
+    params =
+      cluster_filters
+      |> Map.put("page_size", "1000")
+      |> Map.put("page", to_string(page))
+
+    page_result = Nodes.list_clusters_with_filtering_pagination(params)
+
+    all_names = accumulated_names ++ Enum.map(page_result.data, & &1.name)
+
+    if page_result.has_next do
+      get_all_filtered_cluster_names(cluster_filters, page + 1, all_names)
+    else
+      all_names
+    end
+  end
+
+  # Get nodes for clusters targeting
+  defp get_nodes_for_clusters(cluster_names, node_filters, cluster_filters) do
+    # Deduplicate cluster names
+    unique_cluster_names = Enum.uniq(cluster_names)
+
+    # Get existing clusters by name (ignore non-existent)
+    clusters =
+      unique_cluster_names
+      |> Enum.map(&Nodes.get_cluster/1)
+      |> Enum.reject(&is_nil/1)
+
+    if Enum.empty?(clusters) do
+      Logger.warning("No valid clusters found from names: #{inspect(unique_cluster_names)}")
+      {[], nil}
+    else
+      # Apply cluster_filters (AND logic with cluster_names)
+      filtered_clusters =
+        if map_size(cluster_filters) > 0 do
+          filtered_cluster_names = get_all_filtered_cluster_names(cluster_filters)
+          filtered_set = MapSet.new(filtered_cluster_names)
+
+          Enum.filter(clusters, fn cluster ->
+            MapSet.member?(filtered_set, cluster.name)
+          end)
+        else
+          clusters
+        end
+
+      if Enum.empty?(filtered_clusters) do
+        Logger.info("No clusters match the combined cluster_names AND cluster_filters")
+        {[], nil}
+      else
+        # For single cluster, set cluster_id; for multiple clusters, cluster_id is nil
+        cluster_id =
+          case filtered_clusters do
+            [single_cluster] -> single_cluster.id
+            _ -> nil
+          end
+
+        # Get all cluster names from filtered clusters
+        cluster_names_list = Enum.map(filtered_clusters, & &1.name)
+
+        # Fetch nodes from these clusters with node_filters
+        nodes = get_nodes_from_cluster_list(cluster_names_list, node_filters)
+
+        {nodes, cluster_id}
+      end
+    end
+  end
+
+  # Get all healthy nodes from a list of cluster names with node filters
+  defp get_nodes_from_cluster_list(cluster_names, node_filters, page \\ 1, accumulated_nodes \\ []) do
+    cluster_name_set = MapSet.new(cluster_names)
+
+    params =
+      node_filters
+      |> Map.put("status", "healthy")
+      |> Map.put("page_size", "1000")
+      |> Map.put("page", to_string(page))
+
+    page_result = Nodes.list_nodes_with_filtering_pagination(params)
+
+    # Filter nodes by cluster names
+    filtered_nodes =
+      Enum.filter(page_result.data, fn node ->
+        MapSet.member?(cluster_name_set, node.cluster.name)
+      end)
+
+    all_nodes = accumulated_nodes ++ filtered_nodes
+
+    if page_result.has_next do
+      get_nodes_from_cluster_list(cluster_names, node_filters, page + 1, all_nodes)
+    else
+      all_nodes
+    end
+  end
+
   # Helper function to get all nodes across all pages
-  defp get_all_filtered_nodes(node_filters, page \\ 1, accumulated_nodes \\ []) do
+  defp get_all_filtered_nodes(node_filters, cluster_filters, page \\ 1, accumulated_nodes \\ []) do
+    # First get filtered clusters if cluster_filters provided
+    cluster_names =
+      if map_size(cluster_filters) > 0 do
+        get_all_filtered_cluster_names(cluster_filters)
+      else
+        nil
+      end
+
     params =
       node_filters
       # Only fetch healthy nodes
@@ -324,12 +413,35 @@ defmodule EdgeAdmin.Commands do
       |> Map.put("page_size", "1000")
       |> Map.put("page", to_string(page))
 
+    # Add cluster_name filter if we have filtered clusters
+    params =
+      if cluster_names do
+        # Note: list_nodes supports cluster_name filter (singular) for join-based filtering
+        # We need to query each cluster separately or modify the query
+        # For now, we'll fetch all and filter in memory
+        params
+      else
+        params
+      end
+
     page_result = Nodes.list_nodes_with_filtering_pagination(params)
 
-    all_nodes = accumulated_nodes ++ page_result.data
+    # Filter by cluster names if provided
+    filtered_nodes =
+      if cluster_names do
+        cluster_name_set = MapSet.new(cluster_names)
+
+        Enum.filter(page_result.data, fn node ->
+          MapSet.member?(cluster_name_set, node.cluster.name)
+        end)
+      else
+        page_result.data
+      end
+
+    all_nodes = accumulated_nodes ++ filtered_nodes
 
     if page_result.has_next do
-      get_all_filtered_nodes(node_filters, page + 1, all_nodes)
+      get_all_filtered_nodes(node_filters, cluster_filters, page + 1, all_nodes)
     else
       all_nodes
     end
@@ -418,7 +530,6 @@ defmodule EdgeAdmin.Commands do
       preload: [node: :cluster, command: []]
     )
     |> Repo.all()
-    |> Enum.map(&CommandExecution.populate_command_text/1)
   end
 
   defp deliver_to_single_node(node_id, executions) do
@@ -467,7 +578,7 @@ defmodule EdgeAdmin.Commands do
         id: execution.id,
         command_id: execution.command_id,
         node_id: execution.node_id,
-        command_text: execution.command_text,
+        command_text: CommandExecution.command_text(execution),
         status: "pending"
       }
 
@@ -503,7 +614,6 @@ defmodule EdgeAdmin.Commands do
       preload: :command
     )
     |> Repo.all()
-    |> Enum.map(&CommandExecution.populate_command_text/1)
   end
 
   @doc """

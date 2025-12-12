@@ -105,8 +105,8 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
               properties: %{
                 type: %Schema{
                   type: :string,
-                  enum: ["all", "nodes"],
-                  description: "Targeting strategy: 'all' for all nodes, 'nodes' for specific nodes"
+                  enum: ["all", "nodes", "clusters"],
+                  description: "Targeting strategy: 'all' for all nodes, 'nodes' for specific nodes, 'clusters' for specific clusters"
                 },
                 node_ids: %Schema{
                   type: :array,
@@ -118,9 +118,16 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
                     "fedcba98-7654-3210-fedc-ba9876543210"
                   ]
                 },
+                cluster_names: %Schema{
+                  type: :array,
+                  items: %Schema{type: :string},
+                  description:
+                    "Array of cluster names (required when type is 'clusters') (will always be deduplicated)",
+                  example: ["prod", "staging"]
+                },
                 node_filters: %Schema{
                   type: :object,
-                  description: "Optional filters to apply to target nodes",
+                  description: "Optional filters to apply to target nodes (AND logic with cluster_filters)",
                   properties: %{
                     status: %Schema{
                       type: :string,
@@ -132,10 +139,32 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
                       enum: ["persistent", "random"],
                       description: "Filter by node ID type"
                     },
-                    cluster_id: %Schema{
+                    version: %Schema{
                       type: :string,
-                      format: :uuid,
-                      description: "Filter by cluster ID"
+                      description: "Filter by node version (supports wildcards with *)"
+                    },
+                    self_update_enabled: %Schema{
+                      type: :boolean,
+                      description: "Filter by self-update enabled status"
+                    }
+                  },
+                  additionalProperties: false
+                },
+                cluster_filters: %Schema{
+                  type: :object,
+                  description: "Optional filters to apply to target clusters (AND logic with node_filters)",
+                  properties: %{
+                    name: %Schema{
+                      type: :string,
+                      description: "Filter by cluster name (supports wildcards with *)"
+                    },
+                    ipv4_range: %Schema{
+                      type: :string,
+                      description: "Filter by IPv4 range (CIDR notation)"
+                    },
+                    node_count: %Schema{
+                      type: :integer,
+                      description: "Filter by exact node count"
                     }
                   },
                   additionalProperties: false
@@ -143,7 +172,11 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
               },
               required: [:type],
               example: %{
-                type: "all",
+                type: "clusters",
+                cluster_names: ["prod", "staging"],
+                cluster_filters: %{
+                  name: "*prod*"
+                },
                 node_filters: %{
                   status: "healthy",
                   id_type: "persistent"

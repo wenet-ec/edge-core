@@ -449,7 +449,7 @@ defmodule EdgeAdmin.Nodes do
               )
             end
 
-            {:ok, node, api_token, proxy_password}
+            {:ok, node}
 
           {:error, changeset} ->
             {:error, changeset}

@@ -15,6 +15,7 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionJSON do
       command_id: command_execution.command_id,
       node_id: command_execution.node_id,
       command_text: command_execution.command_text,
+      timeout: command_execution.timeout,
       status: command_execution.status,
       output: command_execution.output,
       exit_code: command_execution.exit_code,

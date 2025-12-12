@@ -27,18 +27,19 @@ config :edge_agent, Oban,
   engine: Oban.Engines.Lite,
   repo: EdgeAgent.Repo,
   queues: [
-    command_execution: 1,
-    command_reporting: 1,
+    execution_enqueue: 1,
+    command_execution: [limit: 10],
+    execution_report: 1,
     admin_discovery: 1,
     vpn_config_pull: 1
   ],
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [
-       # Every minute for faster reporting (safety net)
-       {"* * * * *", EdgeAgent.Commands.Workers.CommandReportWorker},
-       # Every 2 minutes safety net for execution
-       {"*/2 * * * *", EdgeAgent.Commands.Workers.CommandExecutionWorker},
+       # Every minute to enqueue pending executions
+       {"* * * * *", EdgeAgent.Commands.Workers.ExecutionEnqueueWorker},
+       # Every minute for reporting (safety net)
+       {"* * * * *", EdgeAgent.Commands.Workers.ExecutionReportWorker},
        # Every 5 minutes for admin discovery
        {"*/5 * * * *", EdgeAgent.EdgeClusters.Workers.AdminDiscoveryWorker},
        # Every 30 minutes to pull VPN config from Netmaker

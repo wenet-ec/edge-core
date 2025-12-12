@@ -8,7 +8,6 @@ defmodule EdgeAgent.Commands do
 
   alias EdgeAgent.Commands.CommandExecution
   alias EdgeAgent.EdgeClusters.AdminClient
-  alias EdgeAgent.Commands.Workers.CommandExecutionWorker
   alias EdgeAgent.Repo
 
   require Logger
@@ -22,8 +21,12 @@ defmodule EdgeAgent.Commands do
   def create_command_execution_and_enqueue_worker(attrs \\ %{}) do
     case create_command_execution(attrs) do
       {:ok, command_execution} ->
-        # Trigger execution worker (Oban's unique constraint prevents duplicates)
-        enqueue_worker(CommandExecutionWorker, "CommandExecutionWorker")
+        # Trigger enqueue worker (Oban's unique constraint prevents duplicates)
+        enqueue_worker(
+          EdgeAgent.Commands.Workers.ExecutionEnqueueWorker,
+          "ExecutionEnqueueWorker"
+        )
+
         {:ok, command_execution}
 
       {:error, changeset} ->
@@ -51,16 +54,69 @@ defmodule EdgeAgent.Commands do
     CommandExecution.changeset(command_execution, attrs)
   end
 
-  def process_command_queue do
-    Logger.debug("Starting command queue processing with lazy querying")
+  def enqueue_pending_executions do
+    Logger.debug("Enqueueing pending command executions")
 
-    # Use lazy querying to handle race conditions
-    process_pending_commands_loop()
+    pending_executions = get_pending_executions()
 
-    # After all pending processed, trigger reporting (Oban's unique constraint prevents duplicates)
-    enqueue_worker(EdgeAgent.Commands.Workers.CommandReportWorker, "CommandReportWorker")
+    if Enum.empty?(pending_executions) do
+      Logger.debug("No pending executions to enqueue")
+      :ok
+    else
+      Logger.info("Enqueueing #{length(pending_executions)} pending executions")
 
-    Logger.debug("Command queue processing completed")
+      # Enqueue each execution as a separate Oban job
+      Enum.each(pending_executions, fn execution ->
+        enqueue_execution_job(execution)
+      end)
+
+      :ok
+    end
+  end
+
+  def execute_single_command(execution) do
+    Logger.info("Executing command: #{execution.id}")
+
+    timeout_ms = execution.timeout || :infinity
+
+    result =
+      try do
+        task =
+          Task.async(fn ->
+            System.cmd("/usr/local/bin/hostscript", [execution.command_text])
+          end)
+
+        case Task.yield(task, timeout_ms) || Task.shutdown(task, :brutal_kill) do
+          {:ok, {output, exit_code}} ->
+            {:ok, output, exit_code}
+
+          nil ->
+            Logger.warning("Command #{execution.id} timed out after #{execution.timeout}ms")
+            {:timeout, "Command timed out after #{execution.timeout} milliseconds", 124}
+        end
+      rescue
+        e ->
+          Logger.error("Command #{execution.id} crashed: #{inspect(e)}")
+          {:error, "Command crashed: #{Exception.message(e)}", 1}
+      end
+
+    {output, exit_code} =
+      case result do
+        {:ok, out, code} -> {out, code}
+        {:timeout, out, code} -> {out, code}
+        {:error, out, code} -> {out, code}
+      end
+
+    Logger.info("Command #{execution.id} completed with exit code: #{exit_code}")
+
+    {:ok, _updated_execution} =
+      update_command_execution(execution, %{
+        status: "completed",
+        output: output,
+        exit_code: exit_code,
+        completed_at: DateTime.utc_now()
+      })
+
     :ok
   end
 
@@ -81,43 +137,24 @@ defmodule EdgeAgent.Commands do
     :ok
   end
 
+  defp enqueue_execution_job(execution) do
+    %{execution_id: execution.id}
+    |> EdgeAgent.Commands.Workers.CommandExecutionWorker.new()
+    |> Oban.insert()
+    |> case do
+      {:ok, _job} ->
+        Logger.debug("Enqueued execution job for #{execution.id}")
+        :ok
 
-  defp process_pending_commands_loop do
-    # Query fresh each iteration - fixes race conditions!
-    pending_executions = get_pending_executions()
+      {:error, %Ecto.Changeset{errors: [unique: _]}} ->
+        # Already enqueued - this is fine, Oban's unique constraint prevents duplicates
+        Logger.debug("Execution #{execution.id} already enqueued, skipped")
+        :ok
 
-    if Enum.empty?(pending_executions) do
-      Logger.debug("No pending executions found")
-      :ok
-    else
-      Logger.debug("Processing #{length(pending_executions)} pending executions")
-
-      # Execute each command sequentially (no reporting here!)
-      Enum.each(pending_executions, fn execution ->
-        execute_single_command(execution)
-      end)
-
-      # Recurse to check for new commands that arrived during execution
-      process_pending_commands_loop()
+      {:error, reason} ->
+        Logger.warning("Failed to enqueue execution #{execution.id}: #{inspect(reason)}")
+        :error
     end
-  end
-
-  defp execute_single_command(execution) do
-    Logger.info("Executing command: #{execution.id}")
-
-    {output, exit_code} = System.cmd("/usr/local/bin/hostscript", [execution.command_text])
-
-    Logger.info("Command #{execution.id} completed with exit code: #{exit_code}")
-
-    {:ok, updated_execution} =
-      update_command_execution(execution, %{
-        status: "completed",
-        output: output,
-        exit_code: exit_code,
-        completed_at: DateTime.utc_now()
-      })
-
-    updated_execution
   end
 
   defp report_executions(executions) do
@@ -163,7 +200,7 @@ defmodule EdgeAgent.Commands do
 
 
   # Enqueues a worker, handling duplicates gracefully
-  defp enqueue_worker(worker_module, worker_name) do
+  def enqueue_worker(worker_module, worker_name) do
     %{}
     |> worker_module.new()
     |> Oban.insert()

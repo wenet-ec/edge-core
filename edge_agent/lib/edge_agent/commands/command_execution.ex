@@ -14,6 +14,7 @@ defmodule EdgeAgent.Commands.CommandExecution do
     field(:command_id, :binary_id)
     field(:node_id, :binary_id)
     field(:command_text, :string)
+    field(:timeout, :integer)
     field(:completed_at, :utc_datetime)
 
     timestamps(type: :utc_datetime)
@@ -27,6 +28,7 @@ defmodule EdgeAgent.Commands.CommandExecution do
       :command_id,
       :node_id,
       :command_text,
+      :timeout,
       :status,
       :output,
       :exit_code,

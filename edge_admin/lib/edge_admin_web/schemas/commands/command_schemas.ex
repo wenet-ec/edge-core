@@ -26,6 +26,12 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
           description: "Multi-line shell script/commands",
           example: "ABC=value\necho $ABC\nsystemctl restart nginx"
         },
+        timeout: %Schema{
+          type: :integer,
+          nullable: true,
+          description: "Command timeout in milliseconds (optional, null means no timeout)",
+          example: 30000
+        },
         inserted_at: %Schema{
           type: :string,
           format: :datetime,
@@ -41,6 +47,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
       example: %{
         id: "01234567-89ab-cdef-0123-456789abcdef",
         command_text: "ABC=value\necho $ABC\nsystemctl restart nginx",
+        timeout: 30000,
         inserted_at: "2025-06-17T10:30:00Z",
         updated_at: "2025-06-17T10:30:00Z"
       }
@@ -99,6 +106,12 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
               type: :string,
               description: "Multi-line shell script/commands to execute",
               example: "ABC=value\necho $ABC\nsystemctl restart nginx"
+            },
+            timeout: %Schema{
+              type: :integer,
+              nullable: true,
+              description: "Command timeout in milliseconds (optional, null or omitted means no timeout, must be > 0)",
+              example: 30000
             },
             targeting: %Schema{
               type: :object,

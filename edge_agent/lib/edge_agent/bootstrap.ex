@@ -211,6 +211,7 @@ defmodule EdgeAgent.Bootstrap do
             command_id: command["command_id"],
             node_id: Settings.get_node_id(),
             command_text: command["command_text"],
+            timeout: command["timeout"],
             status: "pending"
           }
 

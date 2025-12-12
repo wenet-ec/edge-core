@@ -32,22 +32,9 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
     # Get node ID from authenticated context (set by AgentAuth plug)
     node_id = conn.assigns.current_node.id
 
-    case Commands.update_command_execution_result(id, node_id, params) do
-      {:ok, updated_execution} ->
-        render(conn, :show, command_execution: updated_execution)
-
-      {:error, :forbidden} ->
-        conn
-        |> put_status(:forbidden)
-        |> json(%{error: "Forbidden"})
-
-      {:error, :invalid_status} ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{error: "Command execution is not in 'sent' status"})
-
-      {:error, changeset} ->
-        {:error, changeset}
+    with {:ok, updated_execution} <-
+           Commands.update_command_execution_result(id, node_id, params) do
+      render(conn, :show, command_execution: updated_execution)
     end
   end
 end

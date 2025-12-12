@@ -11,6 +11,7 @@ defmodule EdgeAdmin.Commands.Command do
   schema "commands" do
     # Maps to TEXT in database
     field(:command_text, :string)
+    field(:timeout, :integer)
 
     # Associations
     has_many(:command_executions, EdgeAdmin.Commands.CommandExecution, on_delete: :delete_all)
@@ -21,9 +22,27 @@ defmodule EdgeAdmin.Commands.Command do
   @doc false
   def changeset(command, attrs) do
     command
-    |> cast(attrs, [:command_text])
+    |> cast(attrs, [:command_text, :timeout])
     |> validate_required([:command_text])
     |> validate_command_text_format()
+    |> validate_timeout()
+  end
+
+  @doc false
+  defp validate_timeout(changeset) do
+    validate_change(changeset, :timeout, fn :timeout, timeout ->
+      cond do
+        is_nil(timeout) ->
+          # Timeout is optional - nil is valid
+          []
+
+        timeout <= 0 ->
+          [timeout: "must be a positive number (in milliseconds)"]
+
+        true ->
+          []
+      end
+    end)
   end
 
   @doc false

@@ -1,11 +1,11 @@
-# edge_agent/lib/edge_agent/commands/workers/command_report_worker.ex
-defmodule EdgeAgent.Commands.Workers.CommandReportWorker do
+# edge_agent/lib/edge_agent/commands/workers/execution_report_worker.ex
+defmodule EdgeAgent.Commands.Workers.ExecutionReportWorker do
   @moduledoc """
-  Worker that reports completed command execution results.
+  Worker that reports completed command execution results to admin.
 
   Triggered by:
   - After command execution completes (via enqueue_worker/2 in Commands context)
-  - Cron scheduler every minute (safety net for timely reporting)
+  - Cron scheduler every 30 seconds (safety net for timely reporting)
 
   Uses Oban's unique constraint to ensure only one worker runs at a time.
 
@@ -18,7 +18,7 @@ defmodule EdgeAgent.Commands.Workers.CommandReportWorker do
   """
 
   use Oban.Worker,
-    queue: :command_reporting,
+    queue: :execution_report,
     max_attempts: 1,
     unique: [
       period: :infinity,
@@ -31,12 +31,12 @@ defmodule EdgeAgent.Commands.Workers.CommandReportWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: _args}) do
-    Logger.debug("CommandReportWorker started")
+    Logger.debug("ExecutionReportWorker started")
 
     # Report unreported executions in order
     Commands.report_unreported_executions()
 
-    Logger.debug("CommandReportWorker completed")
+    Logger.debug("ExecutionReportWorker completed")
     :ok
   end
 end

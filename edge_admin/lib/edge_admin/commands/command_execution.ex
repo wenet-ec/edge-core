@@ -63,4 +63,12 @@ defmodule EdgeAdmin.Commands.CommandExecution do
   """
   def cluster_name(%__MODULE__{cluster: %{name: name}}), do: name
   def cluster_name(%__MODULE__{}), do: nil
+
+  @doc """
+  Returns the timeout for this execution in milliseconds.
+  Requires command association to be preloaded.
+  Returns nil if no timeout is set.
+  """
+  def timeout(%__MODULE__{command: %{timeout: timeout}}), do: timeout
+  def timeout(%__MODULE__{}), do: nil
 end

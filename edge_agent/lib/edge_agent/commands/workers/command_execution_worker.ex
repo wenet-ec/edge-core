@@ -1,15 +1,11 @@
 # edge_agent/lib/edge_agent/commands/workers/command_execution_worker.ex
 defmodule EdgeAgent.Commands.Workers.CommandExecutionWorker do
   @moduledoc """
-  Worker that processes command queue sequentially with lazy querying.
+  Worker that executes a single command.
 
-  Triggered by:
-  - New command arrival (via enqueue_worker/2 in Commands context)
-  - Cron scheduler every 2 minutes (safety net)
-
-  Uses Oban's unique constraint to ensure only one worker runs at a time.
-  Uses lazy querying to handle race conditions where new commands arrive during execution.
-  Only focuses on execution - reporting is handled separately by CommandReportWorker.
+  Each command execution gets its own worker instance, allowing parallel execution.
+  Uses Oban's unique constraint to prevent duplicate execution of the same command.
+  Supports timeout per command.
   """
 
   use Oban.Worker,
@@ -17,21 +13,44 @@ defmodule EdgeAgent.Commands.Workers.CommandExecutionWorker do
     max_attempts: 1,
     unique: [
       period: :infinity,
+      fields: [:args],
+      keys: [:execution_id],
       states: [:available, :scheduled, :executing, :retryable]
     ]
 
   alias EdgeAgent.Commands
+  alias EdgeAgent.Commands.CommandExecution
+  alias EdgeAgent.Repo
 
   require Logger
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: _args}) do
-    Logger.info("CommandExecutionWorker started")
+  def perform(%Oban.Job{args: %{"execution_id" => execution_id}}) do
+    execution = Repo.get(CommandExecution, execution_id)
 
-    # Process the entire queue with lazy querying
-    Commands.process_command_queue()
+    if is_nil(execution) do
+      Logger.warning("Execution #{execution_id} not found, skipping")
+      :ok
+    else
+      # Check status - only execute if still pending
+      if execution.status == "pending" do
+        # Execute command via Commands context
+        Commands.execute_single_command(execution)
 
-    Logger.info("CommandExecutionWorker completed, dying")
-    :ok
+        # Trigger reporting worker
+        Commands.enqueue_worker(
+          EdgeAgent.Commands.Workers.ExecutionReportWorker,
+          "ExecutionReportWorker"
+        )
+
+        :ok
+      else
+        Logger.debug(
+          "Execution #{execution_id} already processed (status: #{execution.status}), skipping"
+        )
+
+        :ok
+      end
+    end
   end
 end

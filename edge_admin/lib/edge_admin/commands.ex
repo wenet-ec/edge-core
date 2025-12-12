@@ -204,7 +204,8 @@ defmodule EdgeAdmin.Commands do
 
   ## Behavior
 
-  - Only creates executions for nodes with status "healthy"
+  - Creates executions for ALL matching nodes (regardless of health status)
+  - Delivery will only happen to healthy nodes (filtered during delivery phase)
   - All executions created with status "pending"
   - Uses bulk insert for efficiency
   - Returns {:ok, executions} or {:error, reason}
@@ -237,7 +238,7 @@ defmodule EdgeAdmin.Commands do
       end
 
     if Enum.empty?(nodes) do
-      Logger.info("No healthy nodes found for command #{command_id}")
+      Logger.info("No matching nodes found for command #{command_id}")
       {:ok, []}
     else
       bulk_create_executions(command, nodes, targeting_type == "all", cluster_id)
@@ -256,21 +257,21 @@ defmodule EdgeAdmin.Commands do
 
     # Apply additional filters if provided
     if map_size(node_filters) == 0 do
-      # Filter only by healthy status
-      Enum.filter(nodes, &(&1.status == "healthy"))
+      # No additional filters, return all nodes
+      nodes
     else
-      # Apply both healthy status and custom filters (no cluster filters for node targeting)
+      # Apply custom filters (no cluster filters for node targeting)
       all_matching_nodes = get_all_filtered_nodes(node_filters, %{})
       matching_node_ids = MapSet.new(all_matching_nodes, & &1.id)
 
       Enum.filter(nodes, fn node ->
-        node.status == "healthy" and MapSet.member?(matching_node_ids, node.id)
+        MapSet.member?(matching_node_ids, node.id)
       end)
     end
   end
 
   defp bulk_create_executions(command, nodes, target_all, cluster_id) do
-    Logger.info("Creating executions for #{length(nodes)} healthy nodes")
+    Logger.info("Creating executions for #{length(nodes)} node(s)")
 
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
@@ -369,13 +370,12 @@ defmodule EdgeAdmin.Commands do
     end
   end
 
-  # Get all healthy nodes from a list of cluster names with node filters
+  # Get all nodes from a list of cluster names with node filters
   defp get_nodes_from_cluster_list(cluster_names, node_filters, page \\ 1, accumulated_nodes \\ []) do
     cluster_name_set = MapSet.new(cluster_names)
 
     params =
       node_filters
-      |> Map.put("status", "healthy")
       |> Map.put("page_size", "1000")
       |> Map.put("page", to_string(page))
 
@@ -408,9 +408,7 @@ defmodule EdgeAdmin.Commands do
 
     params =
       node_filters
-      # Only fetch healthy nodes
-      |> Map.put("status", "healthy")
-      |> Map.put("page_size", "1000")
+      |> Map.put("page_size", "100")
       |> Map.put("page", to_string(page))
 
     # Add cluster_name filter if we have filtered clusters
@@ -536,21 +534,14 @@ defmodule EdgeAdmin.Commands do
     # Get the node (already preloaded from query)
     node = hd(executions).node
 
-    # Double-check node is healthy (metadata might be stale)
-    if node.status != "healthy" do
-      Logger.debug("Skipping node #{node_id} - status: #{node.status}")
-      :skip
-    else
-      # Lookup local gateway for this cluster
-      case lookup_gateway(node) do
-        {:ok, gateway_pid} ->
-          deliver_executions_via_gateway(gateway_pid, node, executions)
+    # Lookup local gateway for this cluster
+    case lookup_gateway(node) do
+      {:ok, gateway_pid} ->
+        deliver_executions_via_gateway(gateway_pid, node, executions)
 
-        {:error, :gateway_not_found} ->
-          Logger.debug("Gateway not found for cluster #{node.cluster.name}, will retry later")
-
-          :skip
-      end
+      {:error, :gateway_not_found} ->
+        Logger.debug("Gateway not found for cluster #{node.cluster.name}, will retry later")
+        :skip
     end
   end
 
@@ -572,13 +563,16 @@ defmodule EdgeAdmin.Commands do
   end
 
   defp deliver_executions_via_gateway(gateway_pid, node, executions) do
-    # Deliver executions one by one, stop on first failure
-    Enum.reduce_while(executions, :ok, fn execution, :ok ->
+    # Deliver all executions at once - don't stop on failures
+    Logger.info("Delivering #{length(executions)} executions to node #{node.id}")
+
+    Enum.each(executions, fn execution ->
       execution_data = %{
         id: execution.id,
         command_id: execution.command_id,
         node_id: execution.node_id,
         command_text: CommandExecution.command_text(execution),
+        timeout: CommandExecution.timeout(execution),
         status: "pending"
       }
 
@@ -590,17 +584,14 @@ defmodule EdgeAdmin.Commands do
             sent_at: DateTime.utc_now()
           })
 
-          {:cont, :ok}
-
         {:error, reason} ->
           Logger.warning(
             "Failed to deliver execution #{execution.id} to node #{node.id}: #{inspect(reason)}"
           )
-
-          # Stop processing remaining executions for this node
-          {:halt, :error}
       end
     end)
+
+    :ok
   end
 
   @doc """

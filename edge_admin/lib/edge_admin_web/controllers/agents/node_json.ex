@@ -3,15 +3,15 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeJSON do
   @doc """
   Renders node registration response with tokens.
   """
-  def create(%{node: node, api_token: api_token, proxy_password: proxy_password}) do
-    %{data: data(node, api_token, proxy_password)}
+  def show(%{node: node}) do
+    %{data: data(node)}
   end
 
-  defp data(node, api_token, proxy_password) do
+  defp data(node) do
     %{
       node_id: node.id,
-      api_token: api_token,
-      proxy_password: proxy_password
+      api_token: node.api_token,
+      proxy_password: node.proxy_password
     }
   end
 end

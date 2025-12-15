@@ -98,7 +98,7 @@ defmodule EdgeAgent.Mixfile do
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
 
       # Health
-      {:plug_checkup, "~> 0.6"},
+      {:plug_checkup, git: "https://github.com/voughtdq/plug_checkup.git", tag: "v1.0.0"},
 
       # Test factories
       {:ex_machina, "~> 2.8", only: :test},

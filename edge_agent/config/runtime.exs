@@ -33,4 +33,5 @@ config :edge_agent,
   admin_discovery_port: get_env("ADMIN_DISCOVERY_PORT", :integer, 44000),
   netmaker_default_domain: get_env("NETMAKER_DEFAULT_DOMAIN", :string, "nm.internal"),
   use_random_id: get_env("USE_RANDOM_ID", :boolean, false),
-  enrollment_key: get_env("ENROLLMENT_KEY", :string, nil)
+  enrollment_key: get_env("ENROLLMENT_KEY", :string, nil),
+  public_enrollment_key_url: get_env("PUBLIC_ENROLLMENT_KEY_URL", :string, nil)

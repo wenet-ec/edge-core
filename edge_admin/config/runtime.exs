@@ -105,7 +105,8 @@ config :edge_admin,
 # Default cluster (optional)
 config :edge_admin,
   default_cluster_name: get_env("DEFAULT_CLUSTER_NAME"),
-  default_cluster_subnet: get_env("DEFAULT_CLUSTER_SUBNET")
+  default_cluster_subnet: get_env("DEFAULT_CLUSTER_SUBNET"),
+  public_enrollment_key_enabled: get_env("PUBLIC_ENROLLMENT_KEY_ENABLED", :boolean, false)
 
 # Admin cluster configuration
 admin_id = generate_random_string(12)
@@ -151,7 +152,7 @@ config :edge_admin, :node_health_check,
 
 # Oban crontab
 base_crontab = [
-  {"*/30 * * * *", EdgeAdmin.Admins.Workers.ZombieAdminCleaner}
+  {"* * * * *", EdgeAdmin.Admins.Workers.ZombieAdminCleaner}
 ]
 
 crontab =

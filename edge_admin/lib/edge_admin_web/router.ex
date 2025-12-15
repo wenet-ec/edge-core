@@ -78,6 +78,10 @@ defmodule EdgeAdminWeb.Router do
     scope "/admins", Admins do
       get("/self/discovery", DiscoveryController, :index)
     end
+
+    scope "/", Nodes do
+      post("/clusters/default/enrollment_keys/public", EnrollmentKeyController, :create_for_public)
+    end
   end
 
   # Protected admin metadata endpoints (requires MASTER_KEY)

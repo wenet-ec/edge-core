@@ -502,8 +502,8 @@ defmodule EdgeAdmin.Commands do
         # Process nodes in parallel (like health check)
         Task.async_stream(
           executions_by_node,
-          fn {node_id, executions} ->
-            deliver_to_single_node(node_id, executions)
+          fn {_node_id, executions} ->
+            deliver_to_single_node(executions)
           end,
           max_concurrency: 50,
           timeout: 30_000,
@@ -530,7 +530,7 @@ defmodule EdgeAdmin.Commands do
     |> Repo.all()
   end
 
-  defp deliver_to_single_node(node_id, executions) do
+  defp deliver_to_single_node(executions) do
     # Get the node (already preloaded from query)
     node = hd(executions).node
 

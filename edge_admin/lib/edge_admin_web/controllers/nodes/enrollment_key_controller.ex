@@ -91,4 +91,53 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
       end
     end
   end
+
+  operation(:create_for_public,
+    summary: "Get public enrollment key for default cluster",
+    description: """
+    Public endpoint (no authentication required) that retrieves the default enrollment key
+    for the default cluster. This endpoint is only enabled when both:
+    - PUBLIC_ENROLLMENT_KEY_ENABLED=true
+    - DEFAULT_CLUSTER_NAME is configured
+
+    Use this for public/demo environments where agents can auto-enroll without pre-configured keys.
+    """,
+    responses: %{
+      200 =>
+        {"Public enrollment key", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
+      403 => {"Public enrollment disabled", "application/json", CommonSchemas.ErrorResponse},
+      404 => {"Default cluster not found", "application/json", CommonSchemas.NotFoundResponse}
+    }
+  )
+
+  def create_for_public(conn, _params) do
+    # Check if public enrollment is enabled
+    public_enabled = Application.get_env(:edge_admin, :public_enrollment_key_enabled, false)
+    default_cluster_name = Application.get_env(:edge_admin, :default_cluster_name)
+
+    cond do
+      not public_enabled ->
+        conn
+        |> put_status(:forbidden)
+        |> json(%{
+          error: "Public enrollment disabled",
+          message: "PUBLIC_ENROLLMENT_KEY_ENABLED is not set to true"
+        })
+
+      is_nil(default_cluster_name) ->
+        conn
+        |> put_status(:forbidden)
+        |> json(%{
+          error: "Default cluster not configured",
+          message: "DEFAULT_CLUSTER_NAME environment variable is not set"
+        })
+
+      true ->
+        # Get default enrollment key (key_type: "default")
+        with {:ok, enrollment_key} <-
+               Nodes.create_enrollment_key(default_cluster_name, %{"key_type" => "default"}) do
+          render(conn, :show, enrollment_key: enrollment_key)
+        end
+    end
+  end
 end

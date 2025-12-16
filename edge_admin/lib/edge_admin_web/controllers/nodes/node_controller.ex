@@ -90,8 +90,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   )
 
   def show(conn, %{"id" => id}) do
-    node = Nodes.get_node!(id)
-    render(conn, :show, node: node)
+    with {:ok, node} <- Nodes.get_node(id) do
+      render(conn, :show, node: node)
+    end
   end
 
   operation(:change_cluster,
@@ -114,11 +115,11 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
     }
   )
 
-  def change_cluster(conn, %{"id" => id, "node" => %{"cluster_name" => cluster_name}}) do
-    node = Nodes.get_node!(id)
-
-    {:ok, updated_node} = Nodes.change_node_cluster(node, cluster_name)
-    render(conn, :show, node: updated_node)
+  def change_cluster(conn, %{"id" => id} = params) do
+    with {:ok, node} <- Nodes.get_node(id),
+         {:ok, updated_node} <- Nodes.change_node_cluster(node, params) do
+      render(conn, :show, node: updated_node)
+    end
   end
 
   operation(:delete,
@@ -141,16 +142,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   )
 
   def delete(conn, %{"id" => id}) do
-    node = Nodes.get_node!(id)
-
-    case Nodes.delete_node(node) do
-      {:ok, _node} ->
-        send_resp(conn, :no_content, "")
-
-      {:error, reason} ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{error: "Failed to delete node: #{inspect(reason)}"})
+    with {:ok, node} <- Nodes.get_node(id),
+         {:ok, _node} <- Nodes.delete_node(node) do
+      send_resp(conn, :no_content, "")
     end
   end
 end

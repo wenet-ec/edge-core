@@ -2,6 +2,7 @@
 defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSON do
   alias EdgeAdmin.FilteringPagination
   alias EdgeAdmin.Nodes.Cluster
+  alias EdgeAdmin.Vpn
 
   @doc """
   Renders a paginated list of clusters.
@@ -35,7 +36,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSON do
       name: cluster.name,
       ipv4_range: cluster.ipv4_range,
       node_count: Cluster.node_count(cluster),
-      nodes: Enum.map(cluster.nodes, &node_summary/1),
+      nodes: Enum.map(cluster.nodes, &node_summary(&1, cluster)),
       network_name: Cluster.network_name(cluster),
       dns_domain: Cluster.dns_domain(cluster),
       inserted_at: cluster.inserted_at,
@@ -43,12 +44,17 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSON do
     }
   end
 
-  defp node_summary(node) do
+  defp node_summary(node, cluster) do
+    # Build DNS hostname using cluster we already have (avoid circular preload)
+    short_name = Vpn.build_dns_name(node.id, prefix: :node)
+    network_name = Vpn.build_network_name(cluster.name, prefix: :node)
+    dns_hostname = Vpn.build_hostname(short_name, network_name)
+
     %{
       id: node.id,
       status: node.status,
       id_type: node.id_type,
-      dns_hostname: EdgeAdmin.Nodes.Node.dns_hostname(node)
+      dns_hostname: dns_hostname
     }
   end
 end

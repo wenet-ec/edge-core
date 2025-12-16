@@ -33,7 +33,7 @@ defmodule EdgeAdmin.Nodes.SshPublicKey do
     |> validate_ssh_public_key_format()
     |> validate_ssh_key_algorithm()
     |> validate_base64_key_data()
-    |> unique_constraint([:ssh_username_id, :key_name])
+    |> unique_constraint([:key_name, :ssh_username_id], name: :ssh_public_keys_ssh_username_id_key_name_index)
     |> foreign_key_constraint(:ssh_username_id)
   end
 

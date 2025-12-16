@@ -19,7 +19,7 @@ defmodule EdgeAdmin.Nodes.SshUsername do
     ssh_username
     |> cast(attrs, [:username, :password, :node_id])
     |> validate_required([:username, :node_id])
-    |> unique_constraint([:node_id, :username])
+    |> unique_constraint([:username, :node_id], name: :ssh_usernames_node_id_username_index)
     |> foreign_key_constraint(:node_id)
   end
 end

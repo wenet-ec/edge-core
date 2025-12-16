@@ -36,13 +36,13 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
       ipv4_range: [
         in: :query,
         description: "Filter by IPv4 range (text search, supports partial matches)",
-        schema: %OpenApiSpex.Schema{type: :string},
+        schema: %OpenApiSpex.Schema{type: :string}
       ],
       node_count: [
         in: :query,
         description:
           "Filter by node count (exact match or range queries: gte:5, gt:5, lte:10, lt:10)",
-        schema: %OpenApiSpex.Schema{type: :string},
+        schema: %OpenApiSpex.Schema{type: :string}
       ]
     ],
     responses: %{
@@ -73,8 +73,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
   )
 
   def show(conn, %{"name" => name}) do
-    cluster = Nodes.get_cluster!(name)
-    render(conn, :show, cluster: cluster)
+    with {:ok, cluster} <- Nodes.get_cluster(name) do
+      render(conn, :show, cluster: cluster)
+    end
   end
 
   operation(:create,
@@ -89,11 +90,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     }
   )
 
-  def create(conn, %{"cluster" => cluster_params}) do
-    with {:ok, cluster} <- Nodes.create_cluster(cluster_params) do
-      # Reload with node_count
-      cluster = Nodes.get_cluster!(cluster.name)
-
+  def create(conn, params) do
+    with {:ok, cluster} <- Nodes.create_cluster(params),
+         {:ok, cluster} <- Nodes.get_cluster(cluster.name) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/clusters/#{cluster.name}")
@@ -119,9 +118,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
   )
 
   def delete(conn, %{"name" => name}) do
-    cluster = Nodes.get_cluster!(name)
-
-    with {:ok, _cluster} <- Nodes.delete_cluster(cluster) do
+    with {:ok, cluster} <- Nodes.get_cluster(name),
+         {:ok, _cluster} <- Nodes.delete_cluster(cluster) do
       send_resp(conn, :no_content, "")
     end
   end

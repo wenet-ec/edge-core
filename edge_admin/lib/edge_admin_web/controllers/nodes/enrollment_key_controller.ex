@@ -44,9 +44,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   )
 
   def create(conn, %{"name" => cluster_name} = params) do
-    enrollment_key_params = Map.get(params, "enrollment_key", %{})
-
-    with {:ok, enrollment_key} <- Nodes.create_enrollment_key(cluster_name, enrollment_key_params) do
+    with {:ok, cluster} <- Nodes.get_cluster(cluster_name),
+         {:ok, enrollment_key} <- Nodes.create_enrollment_key(cluster, params) do
       conn
       |> put_status(:created)
       |> render(:show, enrollment_key: enrollment_key)
@@ -63,28 +62,26 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     responses: %{
       201 =>
         {"Enrollment key retrieved/created", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
-      400 => {"Default cluster not configured", "application/json", CommonSchemas.ErrorResponse},
+      403 => {"Default cluster not configured", "application/json", CommonSchemas.ErrorResponse},
       404 => {"Default cluster not found", "application/json", CommonSchemas.NotFoundResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
     }
   )
 
   def create_for_default(conn, params) do
-    enrollment_key_params = Map.get(params, "enrollment_key", %{})
-
     # Get default cluster name from config
     default_cluster_name = Application.get_env(:edge_admin, :default_cluster_name)
 
     if is_nil(default_cluster_name) do
       conn
-      |> put_status(:bad_request)
+      |> put_status(:forbidden)
       |> json(%{
         error: "Default cluster not configured",
         message: "DEFAULT_CLUSTER_NAME environment variable is not set"
       })
     else
-      with {:ok, enrollment_key} <-
-             Nodes.create_enrollment_key(default_cluster_name, enrollment_key_params) do
+      with {:ok, cluster} <- Nodes.get_cluster(default_cluster_name),
+           {:ok, enrollment_key} <- Nodes.create_enrollment_key(cluster, params) do
         conn
         |> put_status(:created)
         |> render(:show, enrollment_key: enrollment_key)
@@ -134,8 +131,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
 
       true ->
         # Get default enrollment key (key_type: "default")
-        with {:ok, enrollment_key} <-
-               Nodes.create_enrollment_key(default_cluster_name, %{"key_type" => "default"}) do
+        with {:ok, cluster} <- Nodes.get_cluster(default_cluster_name),
+             {:ok, enrollment_key} <-
+               Nodes.create_enrollment_key(cluster, %{"enrollment_key" => %{"key_type" => "default"}}) do
           render(conn, :show, enrollment_key: enrollment_key)
         end
     end

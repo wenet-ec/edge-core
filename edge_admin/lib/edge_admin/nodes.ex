@@ -10,6 +10,7 @@ defmodule EdgeAdmin.Nodes do
   alias EdgeAdmin.Nodes.Alias
   alias EdgeAdmin.Nodes.Cluster
   alias EdgeAdmin.Nodes.EphemeralEnrollmentKey
+  alias EdgeAdmin.Nodes.Forms
   alias EdgeAdmin.Nodes.Metrics
   alias EdgeAdmin.Nodes.Node
   alias EdgeAdmin.Nodes.SshPublicKey
@@ -118,64 +119,66 @@ defmodule EdgeAdmin.Nodes do
 
   @doc """
   Gets a single cluster by name.
-  Raises `Ecto.NoResultsError` if the Cluster does not exist.
-  """
-  def get_cluster!(name) do
-    from(c in Cluster,
-      where: c.name == ^name,
-      preload: :nodes
-    )
-    |> Repo.one!()
-  end
 
-  @doc """
-  Gets a single cluster by name.
-  Returns `nil` if the Cluster does not exist.
+  ## Returns
+  - `{:ok, cluster}` - Cluster found
+  - `{:error, :not_found}` - Cluster does not exist
   """
   def get_cluster(name) do
-    from(c in Cluster,
-      where: c.name == ^name,
-      preload: :nodes
-    )
-    |> Repo.one()
+    case Repo.get_by(Cluster, name: name) do
+      nil -> {:error, :not_found}
+      cluster -> {:ok, Repo.preload(cluster, :nodes)}
+    end
   end
 
   @doc """
   Creates a cluster with automatic name/IP range generation and Netmaker network creation.
+
+  ## Parameters
+  - `attrs` - Cluster creation parameters (validated through CreateClusterForm)
+
+  ## Returns
+  - `{:ok, cluster}` - Cluster created successfully
+  - `{:error, changeset}` - Validation or creation failed
   """
   def create_cluster(attrs \\ %{}) do
-    Repo.transaction(fn ->
-      # 1. Auto-generate IP range if not provided
-      existing_ranges = Repo.all(from(c in Cluster, select: c.ipv4_range))
-      ipv4_range = attrs["ipv4_range"] || attrs[:ipv4_range] || Vpn.generate_next_subnet(existing_ranges)
+    with {:ok, validated_attrs} <- Forms.CreateClusterForm.changeset(attrs) do
+      Repo.transaction(fn ->
+        # 1. Auto-generate IP range if not provided
+        existing_ranges = Repo.all(from(c in Cluster, select: c.ipv4_range))
+        ipv4_range = validated_attrs["ipv4_range"] || Vpn.generate_next_subnet(existing_ranges)
 
-      # 2. Merge IP range into attrs (maintain existing key type)
-      cluster_attrs = Map.put(attrs, "ipv4_range", ipv4_range)
+        # 2. Merge IP range into attrs
+        cluster_attrs = Map.put(validated_attrs, "ipv4_range", ipv4_range)
 
-      # 3. Create cluster in DB (changeset handles name auto-generation)
-      cluster =
-        %Cluster{}
-        |> Cluster.changeset(cluster_attrs)
-        |> Repo.insert!()
+        # 3. Create cluster in DB (changeset handles name auto-generation)
+        case %Cluster{}
+             |> Cluster.changeset(cluster_attrs)
+             |> Repo.insert() do
+          {:ok, cluster} ->
+            # 4. Create Netmaker network
+            network_name = Vpn.build_network_name(cluster.name, prefix: :node)
 
-      # 4. Create Netmaker network
-      network_name = Vpn.build_network_name(cluster.name, prefix: :node)
+            case Vpn.create_network(network_name, %{addressrange: cluster.ipv4_range}) do
+              {:ok, _} ->
+                # 5. Broadcast cluster creation event to all admins in this admin cluster
+                Phoenix.PubSub.broadcast(
+                  EdgeAdmin.PubSub,
+                  "#{Vpn.admin_cluster_name()}:metadata",
+                  {:cluster_created, cluster.id}
+                )
 
-      case Vpn.create_network(network_name, %{addressrange: cluster.ipv4_range}) do
-        {:ok, _} ->
-          # 5. Broadcast cluster creation event to all admins in this admin cluster
-          Phoenix.PubSub.broadcast(
-            EdgeAdmin.PubSub,
-            "#{Vpn.admin_cluster_name()}:metadata",
-            {:cluster_created, cluster.id}
-          )
+                cluster
 
-          cluster
+              {:error, reason} ->
+                Repo.rollback(reason)
+            end
 
-        {:error, reason} ->
-          Repo.rollback(reason)
-      end
-    end)
+          {:error, changeset} ->
+            Repo.rollback(changeset)
+        end
+      end)
+    end
   end
 
   @doc """
@@ -197,7 +200,7 @@ defmodule EdgeAdmin.Nodes do
       node_count = Repo.aggregate(from(n in Node, where: n.cluster_id == ^cluster.id), :count)
 
       if node_count > 0 do
-        Repo.rollback(:cluster_not_empty)
+        Repo.rollback("Cannot delete cluster with nodes. Remove all nodes first.")
       end
 
       # 2. Delete Netmaker network
@@ -206,16 +209,20 @@ defmodule EdgeAdmin.Nodes do
       case Vpn.delete_network(network_name) do
         {:ok, _} ->
           # 3. Delete from DB
-          deleted_cluster = Repo.delete!(cluster)
+          case Repo.delete(cluster) do
+            {:ok, deleted_cluster} ->
+              # 4. Broadcast cluster deletion event to all admins in this admin cluster
+              Phoenix.PubSub.broadcast(
+                EdgeAdmin.PubSub,
+                "#{Vpn.admin_cluster_name()}:metadata",
+                {:cluster_deleted, cluster.id}
+              )
 
-          # 4. Broadcast cluster deletion event to all admins in this admin cluster
-          Phoenix.PubSub.broadcast(
-            EdgeAdmin.PubSub,
-            "#{Vpn.admin_cluster_name()}:metadata",
-            {:cluster_deleted, cluster.id}
-          )
+              deleted_cluster
 
-          deleted_cluster
+            {:error, changeset} ->
+              Repo.rollback(changeset)
+          end
 
         {:error, reason} ->
           Repo.rollback(reason)
@@ -229,7 +236,6 @@ defmodule EdgeAdmin.Nodes do
   def change_cluster(%Cluster{} = cluster, attrs \\ %{}) do
     Cluster.changeset(cluster, attrs)
   end
-
 
   # ===========================================================================
   # Node functions
@@ -245,10 +251,20 @@ defmodule EdgeAdmin.Nodes do
     "http://#{Node.dns_hostname(node)}:#{port}"
   end
 
-  def get_node!(id) do
-    Node
-    |> Repo.get!(id)
-    |> Repo.preload([:cluster, aliases: :cluster])
+  @doc """
+  Gets a single node by ID.
+
+  ## Returns
+  - `{:ok, node}` - Node found with cluster and aliases preloaded
+  - `{:error, :not_found}` - Node does not exist or invalid UUID format
+  """
+  def get_node(id) do
+    case Repo.get(Node, id) do
+      nil -> {:error, :not_found}
+      node -> {:ok, Repo.preload(node, [:cluster, aliases: :cluster])}
+    end
+  rescue
+    Ecto.Query.CastError -> {:error, :not_found}
   end
 
   def create_node(attrs \\ %{}) do
@@ -277,56 +293,72 @@ defmodule EdgeAdmin.Nodes do
   5. Emit event for metadata recomputation
 
   Inconsistencies are handled by the cluster reconciliation worker.
+
+  ## Parameters
+  - `node` - The node struct to move
+  - `params` - Request params containing new cluster name (validated through ChangeNodeClusterForm)
+
+  ## Returns
+  - `{:ok, updated_node}` - Node cluster changed successfully
+  - `{:error, changeset}` - Validation failed
   """
-  def change_node_cluster(%Node{} = node, new_cluster_name) do
-    new_cluster = get_cluster!(new_cluster_name)
-    old_cluster_id = node.cluster_id
+  def change_node_cluster(%Node{} = node, params) do
+    with {:ok, new_cluster_name} <- Forms.ChangeNodeClusterForm.changeset(params),
+         {:ok, new_cluster} <- get_cluster(new_cluster_name) do
+      old_cluster_id = node.cluster_id
 
-    # 1. Delete all aliases (they're cluster-specific and DNS entries are in old network)
-    cleanup_node_aliases(node)
+      # 1. Delete all aliases (they're cluster-specific and DNS entries are in old network)
+      cleanup_node_aliases(node)
 
-    # 2. Update database first (source of truth)
-    updated_node =
-      node
-      |> Ecto.Changeset.change(cluster_id: new_cluster.id)
-      |> Repo.update!()
-      |> Repo.preload(:cluster, force: true)
+      # 2. Update database first (source of truth)
+      case node
+           |> Ecto.Changeset.change(cluster_id: new_cluster.id)
+           |> Repo.update() do
+        {:ok, updated_node} ->
+          updated_node = Repo.preload(updated_node, :cluster, force: true)
 
-    # 3. Emit PubSub event for metadata recomputation
-    Phoenix.PubSub.broadcast(
-      EdgeAdmin.PubSub,
-      "#{Vpn.admin_cluster_name()}:metadata",
-      {:node_updated, node.id, old_cluster_id, new_cluster.id}
-    )
+          # 3. Emit PubSub event for metadata recomputation
+          Phoenix.PubSub.broadcast(
+            EdgeAdmin.PubSub,
+            "#{Vpn.admin_cluster_name()}:metadata",
+            {:node_updated, node.id, old_cluster_id, new_cluster.id}
+          )
 
-    # 4. Best-effort Netmaker sync (don't fail if this doesn't work)
-    # The reconciliation worker will fix any inconsistencies
-    old_network_name = Vpn.build_network_name(node.cluster.name, prefix: :node)
-    new_network_name = Vpn.build_network_name(new_cluster.name, prefix: :node)
+          # 4. Best-effort Netmaker sync (don't fail if this doesn't work)
+          # The reconciliation worker will fix any inconsistencies
+          old_network_name = Vpn.build_network_name(node.cluster.name, prefix: :node)
+          new_network_name = Vpn.build_network_name(new_cluster.name, prefix: :node)
 
-    case Vpn.add_host_to_network(node.netmaker_host_id, new_network_name) do
-      {:ok, _} ->
-        Logger.info("Added host #{node.netmaker_host_id} to network #{new_network_name}")
+          case Vpn.add_host_to_network(node.netmaker_host_id, new_network_name) do
+            {:ok, _} ->
+              Logger.info("Added host #{node.netmaker_host_id} to network #{new_network_name}")
 
-        case Vpn.remove_host_from_network(node.netmaker_host_id, old_network_name) do
-          {:ok, _} ->
-            Logger.info("Removed host #{node.netmaker_host_id} from network #{old_network_name}")
+              case Vpn.remove_host_from_network(node.netmaker_host_id, old_network_name) do
+                {:ok, _} ->
+                  Logger.info(
+                    "Removed host #{node.netmaker_host_id} from network #{old_network_name}"
+                  )
 
-          {:error, reason} ->
-            Logger.warning(
-              "Failed to remove host #{node.netmaker_host_id} from old network #{old_network_name}: #{inspect(reason)}. " <>
-                "Reconciliation worker will handle cleanup."
-            )
-        end
+                {:error, reason} ->
+                  Logger.warning(
+                    "Failed to remove host #{node.netmaker_host_id} from old network #{old_network_name}: #{inspect(reason)}. " <>
+                      "Reconciliation worker will handle cleanup."
+                  )
+              end
 
-      {:error, reason} ->
-        Logger.warning(
-          "Failed to add host #{node.netmaker_host_id} to new network #{new_network_name}: #{inspect(reason)}. " <>
-            "Reconciliation worker will handle sync."
-        )
+            {:error, reason} ->
+              Logger.warning(
+                "Failed to add host #{node.netmaker_host_id} to new network #{new_network_name}: #{inspect(reason)}. " <>
+                  "Reconciliation worker will handle sync."
+              )
+          end
+
+          {:ok, updated_node}
+
+        {:error, changeset} ->
+          {:error, changeset}
+      end
     end
-
-    {:ok, updated_node}
   end
 
   @doc """
@@ -348,16 +380,20 @@ defmodule EdgeAdmin.Nodes do
           Logger.info("Removed host #{node.netmaker_host_id} from network #{network_name}")
 
           # 2. Delete from DB (cascades to ssh_usernames, ssh_public_keys, command_executions)
-          Repo.delete!(node)
+          case Repo.delete(node) do
+            {:ok, deleted_node} ->
+              # 3. Emit PubSub event for metadata recomputation
+              Phoenix.PubSub.broadcast(
+                EdgeAdmin.PubSub,
+                "#{Vpn.admin_cluster_name()}:metadata",
+                {:node_deleted, node.id, node.cluster_id}
+              )
 
-          # 3. Emit PubSub event for metadata recomputation
-          Phoenix.PubSub.broadcast(
-            EdgeAdmin.PubSub,
-            "#{Vpn.admin_cluster_name()}:metadata",
-            {:node_deleted, node.id, node.cluster_id}
-          )
+              deleted_node
 
-          node
+            {:error, changeset} ->
+              Repo.rollback(changeset)
+          end
 
         {:error, reason} ->
           Logger.error("Failed to remove host from network: #{inspect(reason)}")
@@ -370,93 +406,96 @@ defmodule EdgeAdmin.Nodes do
     Node.changeset(node, attrs)
   end
 
-  def get_node(id) do
-    {:ok, get_node!(id)}
-  rescue
-    Ecto.NoResultsError -> {:error, :not_found}
-  end
-
   @doc """
   Registers or updates a node from agent.
 
   Verifies cluster and Netmaker node existence, generates new tokens on every registration,
   and creates or updates the node record.
+
+  ## Parameters
+  - `params` - Node registration parameters (validated through RegisterNodeForm)
+
+  ## Returns
+  - `{:ok, node}` - Node registered/updated successfully
+  - `{:error, changeset}` - Validation or registration failed
   """
-  def register_agent_node(%{"node" => attrs}) do
-    %{
-      "node_id" => node_id,
-      "network_name" => network_name
-    } = attrs
+  def register_node(params) do
+    with {:ok, attrs} <- Forms.RegisterNodeForm.changeset(params) do
+      %{
+        "node_id" => node_id,
+        "network_name" => network_name
+      } = attrs
 
-    # 1. Parse cluster name from network name (e.g., "cluster-default" -> "default")
-    cluster_name = String.replace_prefix(network_name, "cluster-", "")
+      # 1. Parse cluster name from network name (e.g., "cluster-default" -> "default")
+      cluster_name = String.replace_prefix(network_name, "cluster-", "")
 
-    # 2. Verify cluster exists
-    cluster = Repo.get_by!(Cluster, name: cluster_name)
+      # 2. Get cluster
+      {:ok, cluster} = get_cluster(cluster_name)
 
-    # 3. Verify node exists in Netmaker and get host ID
-    node_hostname = Vpn.build_dns_name(node_id, prefix: :node)
+      # 3. Verify node exists in Netmaker and get host ID
+      node_hostname = Vpn.build_dns_name(node_id, prefix: :node)
 
-    case Vpn.get_host_id(node_hostname, network_name: network_name) do
-      {:ok, netmaker_host_id} ->
-        # 4. Generate new tokens on every registration
-        existing_node = Repo.get(Node, node_id)
-        is_new_node = is_nil(existing_node)
+      case Vpn.get_host_id(node_hostname, network_name: network_name) do
+        {:ok, netmaker_host_id} ->
+          # 4. Generate new tokens on every registration
+          existing_node = Repo.get(Node, node_id)
+          is_new_node = is_nil(existing_node)
 
-        api_token = generate_token()
-        proxy_password = generate_token()
+          api_token = generate_token()
+          proxy_password = generate_token()
 
-        now = DateTime.utc_now() |> DateTime.truncate(:second)
+          now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-        # 5. Create or update node record
-        node_attrs = %{
-          id: node_id,
-          cluster_id: cluster.id,
-          netmaker_host_id: netmaker_host_id,
-          id_type: attrs["id_type"],
-          status: "healthy",
-          last_seen_at: now,
-          http_port: attrs["http_port"],
-          ssh_port: attrs["ssh_port"],
-          metrics_port: attrs["metrics_port"],
-          http_proxy_port: attrs["http_proxy_port"],
-          socks5_proxy_port: attrs["socks5_proxy_port"],
-          api_token: api_token,
-          proxy_password: proxy_password,
-          version: attrs["version"],
-          self_update_enabled: attrs["self_update_enabled"]
-        }
+          # 5. Create or update node record
+          node_attrs = %{
+            id: node_id,
+            cluster_id: cluster.id,
+            netmaker_host_id: netmaker_host_id,
+            id_type: attrs["id_type"],
+            status: "healthy",
+            last_seen_at: now,
+            http_port: attrs["http_port"],
+            ssh_port: attrs["ssh_port"],
+            metrics_port: attrs["metrics_port"],
+            http_proxy_port: attrs["http_proxy_port"],
+            socks5_proxy_port: attrs["socks5_proxy_port"],
+            api_token: api_token,
+            proxy_password: proxy_password,
+            version: attrs["version"],
+            self_update_enabled: attrs["self_update_enabled"]
+          }
 
-        result =
-          case existing_node do
-            nil ->
-              # New node - create it
-              create_node(node_attrs)
+          result =
+            case existing_node do
+              nil ->
+                # New node - create it
+                create_node(node_attrs)
 
-            node ->
-              # Existing node - update it
-              update_node(node, node_attrs)
-          end
-
-        case result do
-          {:ok, node} ->
-            # Emit event only for new nodes (Metadata will recompute assignments)
-            if is_new_node do
-              Phoenix.PubSub.broadcast(
-                EdgeAdmin.PubSub,
-                "#{Vpn.admin_cluster_name()}:metadata",
-                {:node_created, node_id, cluster.id}
-              )
+              node ->
+                # Existing node - update it
+                update_node(node, node_attrs)
             end
 
-            {:ok, node}
+          case result do
+            {:ok, node} ->
+              # Emit event only for new nodes (Metadata will recompute assignments)
+              if is_new_node do
+                Phoenix.PubSub.broadcast(
+                  EdgeAdmin.PubSub,
+                  "#{Vpn.admin_cluster_name()}:metadata",
+                  {:node_created, node_id, cluster.id}
+                )
+              end
 
-          {:error, changeset} ->
-            {:error, changeset}
-        end
+              {:ok, node}
 
-      {:error, _reason} ->
-        {:error, :node_not_found_in_netmaker}
+            {:error, changeset} ->
+              {:error, changeset}
+          end
+
+        {:error, _reason} ->
+          Forms.RegisterNodeForm.add_netmaker_not_found_error()
+      end
     end
   end
 
@@ -502,7 +541,10 @@ defmodule EdgeAdmin.Nodes do
         from(n in Node, where: n.id in ^node_ids, preload: [:cluster])
         |> Repo.all()
 
-      Logger.debug("Starting health check for #{length(nodes)} nodes (concurrency: #{concurrency}, timeout: #{timeout}ms)")
+      Logger.debug(
+        "Starting health check for #{length(nodes)} nodes (concurrency: #{concurrency}, timeout: #{timeout}ms)"
+      )
+
       start_time = System.monotonic_time(:millisecond)
 
       # Ping all nodes in parallel
@@ -525,8 +567,8 @@ defmodule EdgeAdmin.Nodes do
 
       Logger.info(
         "Health check completed in #{elapsed}ms: " <>
-        "#{results.healthy} healthy, #{results.unhealthy} unhealthy, " <>
-        "#{results.unreachable} unreachable"
+          "#{results.healthy} healthy, #{results.unhealthy} unhealthy, " <>
+          "#{results.unreachable} unreachable"
       )
 
       :ok
@@ -612,20 +654,20 @@ defmodule EdgeAdmin.Nodes do
 
   def get_nodes_by_ids(node_ids) do
     Enum.map(node_ids, fn node_id ->
-      try do
-        node = get_node!(node_id)
-        {:ok, node}
-      rescue
-        Ecto.NoResultsError ->
-          {:error, "Node #{node_id} not found"}
+      case get_node(node_id) do
+        {:ok, node} -> {:ok, node}
+        {:error, :not_found} -> {:error, "Node #{node_id} not found"}
       end
     end)
   end
 
-  def get_ssh_username!(id), do: Repo.get!(SshUsername, id)
-
-  def get_ssh_username_with_keys!(id) do
-    Repo.get!(SshUsername, id) |> Repo.preload(:ssh_public_keys)
+  def get_ssh_username(id) do
+    case Repo.get(SshUsername, id) do
+      nil -> {:error, :not_found}
+      ssh_username -> {:ok, Repo.preload(ssh_username, :ssh_public_keys)}
+    end
+  rescue
+    Ecto.Query.CastError -> {:error, :not_found}
   end
 
   @doc """
@@ -649,47 +691,41 @@ defmodule EdgeAdmin.Nodes do
   @doc """
   Creates an SSH username with optional public keys in a transaction.
 
-  attrs format:
-  %{
-    username: "deploy",
-    password: "secret123",  # Optional
-    node_id: "uuid",
-    public_keys: [  # Optional
-      %{key_name: "laptop", public_key: "ssh-rsa AAA..."},
-      %{key_name: "ci", public_key: "ssh-rsa BBB..."}
-    ]
-  }
-  """
-  def create_ssh_username_with_keys(attrs) do
-    Repo.transaction(fn ->
-      # Handle both string and atom keys for public_keys
-      {public_keys_attrs, username_attrs} =
-        Map.pop(attrs, "public_keys") || Map.pop(attrs, :public_keys, [])
+  ## Parameters
+  - `node` - The node struct (validated in controller via path param)
+  - `params` - Request params (validated through CreateSshUsernameForm)
 
-      public_keys_attrs = public_keys_attrs || []
+  ## Returns
+  - `{:ok, ssh_username}` - SSH username created successfully with keys loaded
+  - `{:error, changeset}` - Validation or creation failed
+  """
+  def create_ssh_username_with_keys(%Node{} = node, params) do
+    with {:ok, attrs} <- Forms.CreateSshUsernameForm.changeset(params) do
+      # Extract public_keys (if present) and prepare username attrs
+      {public_keys_attrs, username_attrs} = Map.pop(attrs, "public_keys", [])
+      username_attrs = Map.put(username_attrs, "node_id", node.id)
 
       # Create username
       case create_ssh_username(username_attrs) do
         {:ok, username} ->
-          # Create public keys if provided
+          # Create public keys (already validated by CreateSshUsernameForm, fail silently on DB errors)
           keys =
-            Enum.map(public_keys_attrs, fn key_attrs ->
-              # Ensure ssh_username_id is set (use string key to avoid mixed keys)
+            Enum.flat_map(public_keys_attrs, fn key_attrs ->
               key_attrs = Map.put(key_attrs, "ssh_username_id", username.id)
 
-              case create_ssh_public_key(key_attrs) do
-                {:ok, key} -> key
-                {:error, changeset} -> Repo.rollback(changeset)
+              case insert_ssh_public_key(key_attrs) do
+                {:ok, key} -> [key]
+                {:error, _changeset} -> []
               end
             end)
 
-          # Return username with loaded keys
-          %{username | ssh_public_keys: keys}
+          # Return username with loaded keys (only successfully created keys)
+          {:ok, %{username | ssh_public_keys: keys}}
 
         {:error, changeset} ->
-          Repo.rollback(changeset)
+          {:error, changeset}
       end
-    end)
+    end
   end
 
   def delete_ssh_username(%SshUsername{} = ssh_username) do
@@ -712,9 +748,35 @@ defmodule EdgeAdmin.Nodes do
     )
   end
 
-  def get_ssh_public_key!(id), do: Repo.get!(SshPublicKey, id)
+  def get_ssh_public_key(id) do
+    case Repo.get(SshPublicKey, id) do
+      nil -> {:error, :not_found}
+      ssh_public_key -> {:ok, ssh_public_key}
+    end
+  rescue
+    Ecto.Query.CastError -> {:error, :not_found}
+  end
 
-  def create_ssh_public_key(attrs \\ %{}) do
+  @doc """
+  Creates an SSH public key.
+
+  ## Parameters
+  - `ssh_username` - The SSH username struct (validated in controller via path param)
+  - `params` - Request params (validated through CreateSshPublicKeyForm)
+
+  ## Returns
+  - `{:ok, ssh_public_key}` - SSH public key created successfully
+  - `{:error, changeset}` - Validation or creation failed
+  """
+  def create_ssh_public_key(%SshUsername{} = ssh_username, params) do
+    with {:ok, attrs} <- Forms.CreateSshPublicKeyForm.changeset(params) do
+      attrs = Map.put(attrs, "ssh_username_id", ssh_username.id)
+      insert_ssh_public_key(attrs)
+    end
+  end
+
+  # Private function for internal use (bypasses form validation when attrs already validated)
+  defp insert_ssh_public_key(attrs) do
     %SshPublicKey{}
     |> SshPublicKey.changeset(attrs)
     |> Repo.insert()
@@ -774,18 +836,12 @@ defmodule EdgeAdmin.Nodes do
   - Tracked in DB for auto-cleanup
   - Use for: Temporary troubleshooting, testing, demos
   """
-  def create_enrollment_key(cluster_name, attrs \\ %{}) do
-    # Parse parameters
-    key_type = Map.get(attrs, :key_type, Map.get(attrs, "key_type", "default"))
-    expiration = Map.get(attrs, :expiration, Map.get(attrs, "expiration", 3600))  # Default 1 hour
-    uses_remaining = Map.get(attrs, :uses_remaining, Map.get(attrs, "uses_remaining", 1))  # Default single use
-
-    # Validate key_type
-    if key_type not in ["default", "custom", "ephemeral"] do
-      {:error, "key_type must be 'default', 'custom', or 'ephemeral'"}
-    else
-      # Get cluster by name
-      cluster = get_cluster!(cluster_name)
+  def create_enrollment_key(%Cluster{} = cluster, params \\ %{}) do
+    with {:ok, attrs} <- Forms.CreateEnrollmentKeyForm.changeset(params) do
+      # Get key_type (required) and apply defaults for optional fields
+      key_type = Map.fetch!(attrs, "key_type")
+      expiration = Map.get(attrs, "expiration", 3600)
+      uses_remaining = Map.get(attrs, "uses_remaining", 1)
       network_name = Vpn.build_network_name(cluster.name, prefix: :node)
 
       case key_type do
@@ -900,7 +956,9 @@ defmodule EdgeAdmin.Nodes do
   end
 
   defp cleanup_enrollment_key(enrollment_key, acc) do
-    Logger.debug("Processing expired key: #{enrollment_key.token} with tag: #{enrollment_key.tag}")
+    Logger.debug(
+      "Processing expired key: #{enrollment_key.token} with tag: #{enrollment_key.tag}"
+    )
 
     # Wrap entire cleanup in transaction - rollback everything if ANY step fails
     case Repo.transaction(fn ->
@@ -909,11 +967,14 @@ defmodule EdgeAdmin.Nodes do
 
            netmaker_nodes =
              case Vpn.list_nodes_by_tag(enrollment_key.tag) do
-               {:ok, nodes} -> nodes
+               {:ok, nodes} ->
+                 nodes
+
                {:error, reason} ->
                  Logger.warning(
                    "Failed to query nodes by tag #{enrollment_key.tag}: #{inspect(reason)}"
                  )
+
                  []
              end
 
@@ -936,9 +997,7 @@ defmodule EdgeAdmin.Nodes do
 
                {:error, {:http_error, 500, body}} = error ->
                  if netmaker_not_found_error?(body) do
-                   Logger.info(
-                     "Netmaker host #{host_id} already deleted (not found)"
-                   )
+                   Logger.info("Netmaker host #{host_id} already deleted (not found)")
                  else
                    Logger.error("Failed to delete host #{host_id}: #{inspect(error)}")
                    Repo.rollback(error)
@@ -1011,6 +1070,7 @@ defmodule EdgeAdmin.Nodes do
 
   defp netmaker_not_found_error?(body) when is_map(body) do
     message = Map.get(body, "Message", "")
+
     String.contains?(message, "no result found") or
       String.contains?(message, "could not find any records")
   end
@@ -1082,7 +1142,10 @@ defmodule EdgeAdmin.Nodes do
         # Clean up orphaned aliases for nodes not in both DB and Netmaker
         # These are nodes that either: left the network, were deleted, or moved clusters
         orphaned_host_ids = MapSet.difference(expected_host_ids, edge_node_host_ids)
-        orphaned_nodes = Enum.filter(db_nodes, fn node -> node.netmaker_host_id in orphaned_host_ids end)
+
+        orphaned_nodes =
+          Enum.filter(db_nodes, fn node -> node.netmaker_host_id in orphaned_host_ids end)
+
         aliases_cleaned = cleanup_orphaned_aliases(orphaned_nodes)
 
         # Add missing nodes (DB says yes, Netmaker says no)
@@ -1113,11 +1176,17 @@ defmodule EdgeAdmin.Nodes do
     Enum.reduce(host_ids, 0, fn host_id, count ->
       case Vpn.add_host_to_network(host_id, network_name) do
         {:ok, _} ->
-          Logger.info("Reconciliation: Added host #{host_id} to network #{network_name} (cluster: #{cluster_name})")
+          Logger.info(
+            "Reconciliation: Added host #{host_id} to network #{network_name} (cluster: #{cluster_name})"
+          )
+
           count + 1
 
         {:error, reason} ->
-          Logger.warning("Reconciliation: Failed to add host #{host_id} to network #{network_name}: #{inspect(reason)}")
+          Logger.warning(
+            "Reconciliation: Failed to add host #{host_id} to network #{network_name}: #{inspect(reason)}"
+          )
+
           count
       end
     end)
@@ -1127,11 +1196,17 @@ defmodule EdgeAdmin.Nodes do
     Enum.reduce(host_ids, 0, fn host_id, count ->
       case Vpn.remove_host_from_network(host_id, network_name) do
         {:ok, _} ->
-          Logger.info("Reconciliation: Removed host #{host_id} from network #{network_name} (cluster: #{cluster_name})")
+          Logger.info(
+            "Reconciliation: Removed host #{host_id} from network #{network_name} (cluster: #{cluster_name})"
+          )
+
           count + 1
 
         {:error, reason} ->
-          Logger.warning("Reconciliation: Failed to remove host #{host_id} from network #{network_name}: #{inspect(reason)}")
+          Logger.warning(
+            "Reconciliation: Failed to remove host #{host_id} from network #{network_name}: #{inspect(reason)}"
+          )
+
           count
       end
     end)
@@ -1190,13 +1265,19 @@ defmodule EdgeAdmin.Nodes do
         # Netmaker returns 500 for "not found" - treat as already deleted
         if String.contains?(body, "no result found") or
              String.contains?(body, "could not find any records") do
-          Logger.debug("DNS entry already deleted for alias #{alias_record.name}: #{dns_hostname}")
+          Logger.debug(
+            "DNS entry already deleted for alias #{alias_record.name}: #{dns_hostname}"
+          )
         else
-          Logger.warning("Failed to delete DNS entry for alias #{alias_record.name}: #{inspect(body)}")
+          Logger.warning(
+            "Failed to delete DNS entry for alias #{alias_record.name}: #{inspect(body)}"
+          )
         end
 
       {:error, reason} ->
-        Logger.warning("Failed to delete DNS entry for alias #{alias_record.name}: #{inspect(reason)}")
+        Logger.warning(
+          "Failed to delete DNS entry for alias #{alias_record.name}: #{inspect(reason)}"
+        )
     end
 
     # 2. Delete from DB
@@ -1262,10 +1343,13 @@ defmodule EdgeAdmin.Nodes do
   Gets a single alias by ID.
   Raises `Ecto.NoResultsError` if not found.
   """
-  def get_alias!(id) do
-    Alias
-    |> Repo.get!(id)
-    |> Repo.preload(:cluster)
+  def get_alias(id) do
+    case Repo.get(Alias, id) do
+      nil -> {:error, :not_found}
+      alias_record -> {:ok, Repo.preload(alias_record, :cluster)}
+    end
+  rescue
+    Ecto.Query.CastError -> {:error, :not_found}
   end
 
   @doc """
@@ -1273,81 +1357,85 @@ defmodule EdgeAdmin.Nodes do
 
   Flow:
   1. Verify node exists and preload cluster
-  2. Query Netmaker for node's IP address
-  3. Create DNS entry in Netmaker
-  4. Insert alias into DB
+  2. Validate input via form
+  3. Query Netmaker for node's IP address
+  4. Create DNS entry in Netmaker
+  5. Insert alias into DB
 
   If any step fails, the entire operation is rolled back.
   """
-  def create_alias(%Node{} = node, attrs) do
-    Repo.transaction(fn ->
-      # 1. Ensure node has cluster preloaded
-      node = Repo.preload(node, :cluster)
+  def create_alias(%Node{} = node, params) do
+    with {:ok, attrs} <- Forms.CreateAliasForm.changeset(params) do
+      Repo.transaction(fn ->
+        # 1. Ensure node has cluster preloaded
+        node = Repo.preload(node, :cluster)
 
-      # 2. Build attrs with cluster_id
-      alias_attrs = Map.merge(attrs, %{
-        "node_id" => node.id,
-        "cluster_id" => node.cluster_id
-      })
+        # 2. Build attrs with node_id and cluster_id
+        alias_attrs =
+          Map.merge(attrs, %{
+            "node_id" => node.id,
+            "cluster_id" => node.cluster_id
+          })
 
-      # 3. Validate with changeset first
-      changeset = Alias.changeset(%Alias{}, alias_attrs)
+        # 3. Validate with changeset
+        changeset = Alias.changeset(%Alias{}, alias_attrs)
 
-      case Repo.insert(changeset) do
-        {:ok, alias_record} ->
-          # 4. Preload cluster for virtual fields
-          alias_record = Repo.preload(alias_record, :cluster)
+        case Repo.insert(changeset) do
+          {:ok, alias_record} ->
+            # 4. Preload cluster for virtual fields
+            alias_record = Repo.preload(alias_record, :cluster)
 
-          # 5. Query Netmaker for node's IP address
-          network_name = Vpn.build_network_name(node.cluster.name, prefix: :node)
+            # 5. Query Netmaker for node's IP address
+            network_name = Vpn.build_network_name(node.cluster.name, prefix: :node)
 
-          case Vpn.list_nodes(network_name) do
-            {:ok, netmaker_nodes} ->
-              # Find node by hostid
-              netmaker_node =
-                Enum.find(netmaker_nodes, fn n ->
-                  n["hostid"] == node.netmaker_host_id
-                end)
+            case Vpn.list_nodes(network_name) do
+              {:ok, netmaker_nodes} ->
+                # Find node by hostid
+                netmaker_node =
+                  Enum.find(netmaker_nodes, fn n ->
+                    n["hostid"] == node.netmaker_host_id
+                  end)
 
-              case netmaker_node do
-                nil ->
-                  Repo.rollback(:node_not_found_in_netmaker)
+                case netmaker_node do
+                  nil ->
+                    Repo.rollback(:node_not_found_in_netmaker)
 
-                %{"address" => address} when is_binary(address) and address != "" ->
-                  # 6. Create DNS entry in Netmaker
-                  # Strip CIDR suffix if present (e.g., "100.64.1.5/32" -> "100.64.1.5")
-                  ip_address = address |> String.split("/") |> List.first()
-                  dns_hostname = Alias.dns_hostname(alias_record)
+                  %{"address" => address} when is_binary(address) and address != "" ->
+                    # 6. Create DNS entry in Netmaker
+                    # Strip CIDR suffix if present (e.g., "100.64.1.5/32" -> "100.64.1.5")
+                    ip_address = address |> String.split("/") |> List.first()
+                    dns_hostname = Alias.dns_hostname(alias_record)
 
-                  case Nexmaker.Api.DNS.create(network_name, %{
-                         name: dns_hostname,
-                         address: ip_address
-                       }) do
-                    {:ok, _} ->
-                      Logger.info(
-                        "Created DNS entry for alias #{alias_record.name}: #{dns_hostname} -> #{address}"
-                      )
+                    case Nexmaker.Api.DNS.create(network_name, %{
+                           name: dns_hostname,
+                           address: ip_address
+                         }) do
+                      {:ok, _} ->
+                        Logger.info(
+                          "Created DNS entry for alias #{alias_record.name}: #{dns_hostname} -> #{address}"
+                        )
 
-                      alias_record
+                        alias_record
 
-                    {:error, reason} ->
-                      Logger.error("Failed to create DNS entry: #{inspect(reason)}")
-                      Repo.rollback(reason)
-                  end
+                      {:error, reason} ->
+                        Logger.error("Failed to create DNS entry: #{inspect(reason)}")
+                        Repo.rollback(reason)
+                    end
 
-                _ ->
-                  Repo.rollback(:node_has_no_ip_address)
-              end
+                  _ ->
+                    Repo.rollback(:node_has_no_ip_address)
+                end
 
-            {:error, reason} ->
-              Logger.error("Failed to list Netmaker nodes: #{inspect(reason)}")
-              Repo.rollback(reason)
-          end
+              {:error, reason} ->
+                Logger.error("Failed to list Netmaker nodes: #{inspect(reason)}")
+                Repo.rollback(reason)
+            end
 
-        {:error, changeset} ->
-          Repo.rollback(changeset)
-      end
-    end)
+          {:error, changeset} ->
+            Repo.rollback(changeset)
+        end
+      end)
+    end
   end
 
   @doc """
@@ -1379,7 +1467,10 @@ defmodule EdgeAdmin.Nodes do
           # Netmaker returns 500 for "not found" - treat as success for idempotency
           if String.contains?(body, "no result found") or
                String.contains?(body, "could not find any records") do
-            Logger.info("DNS entry already deleted for alias #{alias_record.name}: #{dns_hostname}")
+            Logger.info(
+              "DNS entry already deleted for alias #{alias_record.name}: #{dns_hostname}"
+            )
+
             Repo.delete!(alias_record)
           else
             Logger.error("Failed to delete DNS entry: #{inspect(error)}")
@@ -1409,25 +1500,17 @@ defmodule EdgeAdmin.Nodes do
     |> Enum.map(&"#{&1}:9100")
   end
 
-  def list_node_metrics(node_id) do
-    with {:ok, node} <- get_node_result(node_id),
-         {:ok, raw_metrics} <- fetch_current_node_metrics(node),
-         {:ok, metrics} <- build_validated_metrics(raw_metrics, node_id) do
+  def list_node_metrics(%Node{} = node) do
+    with {:ok, raw_metrics} <- fetch_current_node_metrics(node),
+         {:ok, metrics} <- build_validated_metrics(raw_metrics, node.id) do
       {:ok, metrics}
     else
-      {:error, :not_found} -> {:error, :node_not_found}
       {:error, :no_vpn_ip} -> {:error, :metrics_unavailable}
       {:error, :metrics_service_not_configured} -> {:error, :metrics_unavailable}
       {:error, :metrics_service_unavailable} -> {:error, :metrics_unavailable}
       {:error, %Ecto.Changeset{}} = changeset_error -> changeset_error
       {:error, _reason} -> {:error, :metrics_unavailable}
     end
-  end
-
-  defp get_node_result(node_id) do
-    {:ok, get_node!(node_id)}
-  rescue
-    Ecto.NoResultsError -> {:error, :not_found}
   end
 
   defp fetch_current_node_metrics(%Node{cluster_id: nil}), do: {:error, :no_cluster}

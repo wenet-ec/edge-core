@@ -47,7 +47,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshPublicKeyController do
     ],
     responses: %{
       200 =>
-        {"Paginated list of SSH public keys", "application/json", SshPublicKeySchemas.SshPublicKeyPaginatedResponse}
+        {"Paginated list of SSH public keys", "application/json",
+         SshPublicKeySchemas.SshPublicKeyPaginatedResponse}
     }
   )
 
@@ -68,21 +69,24 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshPublicKeyController do
         schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ]
     ],
-    request_body: {"SSH public key creation data", "application/json", SshPublicKeySchemas.SshPublicKeyCreateRequest},
+    request_body:
+      {"SSH public key creation data", "application/json",
+       SshPublicKeySchemas.SshPublicKeyCreateRequest},
     responses: %{
-      201 => {"SSH public key created", "application/json", SshPublicKeySchemas.SshPublicKeySingleResponse},
+      201 =>
+        {"SSH public key created", "application/json",
+         SshPublicKeySchemas.SshPublicKeySingleResponse},
       422 =>
-        {"Validation error - Invalid key format, unsupported algorithm, or duplicate key name", "application/json",
-         CommonSchemas.ErrorResponse},
+        {"Validation error - Invalid key format, unsupported algorithm, or duplicate key name",
+         "application/json", CommonSchemas.ErrorResponse},
       404 => {"SSH username not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
 
-  def create(conn, %{"ssh_username_id" => ssh_username_id, "ssh_public_key" => ssh_public_key_params}) do
-    ssh_public_key_params = Map.put(ssh_public_key_params, "ssh_username_id", ssh_username_id)
-
-    with {:ok, %SshPublicKey{} = ssh_public_key} <-
-           Nodes.create_ssh_public_key(ssh_public_key_params) do
+  def create(conn, %{"ssh_username_id" => ssh_username_id} = params) do
+    with {:ok, ssh_username} <- Nodes.get_ssh_username(ssh_username_id),
+         {:ok, %SshPublicKey{} = ssh_public_key} <-
+           Nodes.create_ssh_public_key(ssh_username, params) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/ssh_public_keys/#{ssh_public_key}")
@@ -101,14 +105,17 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshPublicKeyController do
       ]
     ],
     responses: %{
-      200 => {"SSH public key details", "application/json", SshPublicKeySchemas.SshPublicKeySingleResponse},
+      200 =>
+        {"SSH public key details", "application/json",
+         SshPublicKeySchemas.SshPublicKeySingleResponse},
       404 => {"SSH public key not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
 
   def show(conn, %{"id" => id}) do
-    ssh_public_key = Nodes.get_ssh_public_key!(id)
-    render(conn, :show, ssh_public_key: ssh_public_key)
+    with {:ok, ssh_public_key} <- Nodes.get_ssh_public_key(id) do
+      render(conn, :show, ssh_public_key: ssh_public_key)
+    end
   end
 
   operation(:delete,
@@ -128,9 +135,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshPublicKeyController do
   )
 
   def delete(conn, %{"id" => id}) do
-    ssh_public_key = Nodes.get_ssh_public_key!(id)
-
-    with {:ok, %SshPublicKey{}} <- Nodes.delete_ssh_public_key(ssh_public_key) do
+    with {:ok, ssh_public_key} <- Nodes.get_ssh_public_key(id),
+         {:ok, %SshPublicKey{}} <- Nodes.delete_ssh_public_key(ssh_public_key) do
       send_resp(conn, :no_content, "")
     end
   end

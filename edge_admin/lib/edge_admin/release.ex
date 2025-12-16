@@ -143,13 +143,13 @@ defmodule EdgeAdmin.Release do
         Logger.info("Checking if default cluster exists: #{name}")
 
         case EdgeAdmin.Nodes.get_cluster(name) do
-          nil ->
-            Logger.info("Default cluster not found, creating: #{name}")
-            do_create_cluster(name)
-
-          _cluster ->
+          {:ok, _cluster} ->
             Logger.info("Default cluster already exists, skipping: #{name}")
             :ok
+
+          {:error, :not_found} ->
+            Logger.info("Default cluster not found, creating: #{name}")
+            do_create_cluster(name)
         end
     end
   end
@@ -158,8 +158,8 @@ defmodule EdgeAdmin.Release do
     # Build attrs - only include subnet if provided
     attrs =
       case default_cluster_subnet() do
-        nil -> %{"name" => cluster_name}
-        subnet -> %{"name" => cluster_name, "ipv4_range" => subnet}
+        nil -> %{"cluster" => %{"name" => cluster_name}}
+        subnet -> %{"cluster" => %{"name" => cluster_name, "ipv4_range" => subnet}}
       end
 
     case EdgeAdmin.Nodes.create_cluster(attrs) do
@@ -167,6 +167,7 @@ defmodule EdgeAdmin.Release do
         Logger.info(
           "Successfully created default cluster: #{cluster.name} (#{cluster.ipv4_range})"
         )
+
         :ok
 
       {:error, %Ecto.Changeset{} = changeset} ->

@@ -29,19 +29,17 @@ defmodule EdgeAdminWeb.Controllers.Nodes.MetricsController do
   )
 
   def index(conn, %{"node_id" => node_id}) do
-    case Nodes.list_node_metrics(node_id) do
-      {:ok, metrics} ->
-        render(conn, :index, metrics: metrics, node_id: node_id)
-
-      {:error, :node_not_found} ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Node not found"})
-
+    with {:ok, node} <- Nodes.get_node(node_id),
+         {:ok, metrics} <- Nodes.list_node_metrics(node) do
+      render(conn, :index, metrics: metrics, node_id: node_id)
+    else
       {:error, :metrics_unavailable} ->
         conn
         |> put_status(:service_unavailable)
         |> json(%{error: "Metrics service unavailable"})
+
+      error ->
+        error
     end
   end
 end

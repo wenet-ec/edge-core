@@ -7,7 +7,7 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
   """
   use EdgeAdminWeb, :controller
 
-  # This clause handles errors returned by Ecto's insert/update/delete.
+  # Handle validation errors from Ecto changesets
   def call(conn, {:error, %Ecto.Changeset{} = changeset}) do
     conn
     |> put_status(:unprocessable_entity)
@@ -15,7 +15,7 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> render(:error, changeset: changeset)
   end
 
-  # This clause is an example of how to handle resources that cannot be found.
+  # Handle generic not found errors
   def call(conn, {:error, :not_found}) do
     conn
     |> put_status(:not_found)
@@ -23,13 +23,14 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> render(:"404")
   end
 
-  # Handle other generic errors
+  # Handle business logic errors with descriptive messages
   def call(conn, {:error, reason}) when is_binary(reason) do
     conn
     |> put_status(:unprocessable_entity)
     |> json(%{error: reason})
   end
 
+  # Fallback for unexpected error formats
   def call(conn, {:error, reason}) do
     conn
     |> put_status(:unprocessable_entity)

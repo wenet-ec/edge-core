@@ -78,18 +78,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameController do
     }
   )
 
-  def create(conn, %{"node_id" => node_id, "ssh_username" => ssh_username_params}) do
-    ssh_username_params = Map.put(ssh_username_params, "node_id", node_id)
-
-    # Check if public_keys is provided - use transaction if yes, simple create if no
-    result =
-      if Map.has_key?(ssh_username_params, "public_keys") do
-        Nodes.create_ssh_username_with_keys(ssh_username_params)
-      else
-        Nodes.create_ssh_username(ssh_username_params)
-      end
-
-    with {:ok, %SshUsername{} = ssh_username} <- result do
+  def create(conn, %{"node_id" => node_id} = params) do
+    with {:ok, node} <- Nodes.get_node(node_id),
+         {:ok, %SshUsername{} = ssh_username} <- Nodes.create_ssh_username_with_keys(node, params) do
       # Ensure keys are loaded for response
       ssh_username = ssh_username |> EdgeAdmin.Repo.preload(:ssh_public_keys)
 
@@ -118,8 +109,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameController do
   )
 
   def show(conn, %{"id" => id}) do
-    ssh_username = Nodes.get_ssh_username_with_keys!(id)
-    render(conn, :show, ssh_username: ssh_username)
+    with {:ok, ssh_username} <- Nodes.get_ssh_username(id) do
+      render(conn, :show, ssh_username: ssh_username)
+    end
   end
 
   operation(:delete,
@@ -139,9 +131,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameController do
   )
 
   def delete(conn, %{"id" => id}) do
-    ssh_username = Nodes.get_ssh_username!(id)
-
-    with {:ok, %SshUsername{}} <- Nodes.delete_ssh_username(ssh_username) do
+    with {:ok, ssh_username} <- Nodes.get_ssh_username(id),
+         {:ok, %SshUsername{}} <- Nodes.delete_ssh_username(ssh_username) do
       send_resp(conn, :no_content, "")
     end
   end

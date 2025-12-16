@@ -26,7 +26,7 @@ defmodule EdgeAdmin.Nodes.Alias do
     |> validate_format(:name, ~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
       message: "must be lowercase alphanumeric with hyphens, no leading/trailing hyphens"
     )
-    |> unique_constraint([:cluster_id, :name], name: :aliases_cluster_id_name_index)
+    |> unique_constraint([:name, :cluster_id], name: :aliases_cluster_id_name_index)
     |> foreign_key_constraint(:node_id)
     |> foreign_key_constraint(:cluster_id)
   end

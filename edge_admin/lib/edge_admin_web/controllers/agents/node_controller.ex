@@ -12,7 +12,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
   Agent registers itself with admin, receives api_token and proxy_password.
   """
   def create(conn, params) do
-    with {:ok, node} <- Nodes.register_agent_node(params) do
+    with {:ok, node} <- Nodes.register_node(params) do
       conn
       |> put_status(:created)
       |> render(:show, node: node)

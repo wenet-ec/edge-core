@@ -6,7 +6,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   One Gateway process runs per cluster assigned to this admin. The Gateway:
   - Joins the cluster's VPN network using direct API (no enrollment keys)
   - Registers in syn for cross-admin routing
-  - Provides HTTP client functions for communicating with agents
+  - Provides HTTP client functions for admin-to-agent communication
 
   ## VPN Lifecycle
 
@@ -22,7 +22,6 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
   ## HTTP Client Functions
 
-  - create_command_execution/3 - Send command to agent
   - scrape_metrics/2 - Scrape metrics from node exporter
   - trigger_self_update/2 - Trigger self-update on agent
   """
@@ -44,24 +43,6 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   """
   def start_link(cluster_name) do
     GenServer.start_link(__MODULE__, cluster_name)
-  end
-
-  @doc """
-  Sends a command execution request to an agent.
-
-  ## Parameters
-
-  - gateway_pid: Gateway process (via syn lookup or direct pid)
-  - node: Node struct with dns_hostname, http_port, api_token
-  - execution_data: Map with command execution details
-
-  ## Returns
-
-  - {:ok, :sent} - Command sent successfully
-  - {:error, reason} - HTTP error or network failure
-  """
-  def create_command_execution(gateway_pid, node, execution_data) do
-    GenServer.call(gateway_pid, {:create_command_execution, node, execution_data}, 30_000)
   end
 
   @doc """
@@ -134,7 +115,10 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
          }}
 
       {:error, reason} ->
-        Logger.error("Failed to initialize Gateway for cluster #{cluster_name}: #{inspect(reason)}")
+        Logger.error(
+          "Failed to initialize Gateway for cluster #{cluster_name}: #{inspect(reason)}"
+        )
+
         {:stop, reason}
     end
   end
@@ -154,28 +138,6 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   # ===========================================================================
   # HTTP Client Handlers
   # ===========================================================================
-
-  @impl true
-  def handle_call({:create_command_execution, node, execution_data}, _from, state) do
-    url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/command_executions"
-
-    case Req.post(url,
-      json: execution_data,
-      auth: {:bearer, node.api_token},
-      receive_timeout: 5000,
-      retry: false
-    ) do
-      {:ok, %{status: status}} when status in 200..299 ->
-        {:reply, {:ok, :sent}, state}
-
-      {:ok, %{status: status}} ->
-        {:reply, {:error, "HTTP #{status}"}, state}
-
-      {:error, reason} ->
-        Logger.error("HTTP request failed: #{inspect(reason)}")
-        {:reply, {:error, reason}, state}
-    end
-  end
 
   @impl true
   def handle_call({:scrape_metrics, node}, _from, state) do
@@ -199,10 +161,10 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/self_updates/"
 
     case Req.post(url,
-      auth: {:bearer, node.api_token},
-      receive_timeout: 5000,
-      retry: false
-    ) do
+           auth: {:bearer, node.api_token},
+           receive_timeout: 5000,
+           retry: false
+         ) do
       {:ok, %{status: 200}} ->
         {:reply, :ok, state}
 
@@ -252,7 +214,8 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
       {:error, reason} ->
         Logger.error("Failed to leave network #{cluster_name}: #{inspect(reason)}")
-        :ok  # Don't crash on cleanup failure
+        # Don't crash on cleanup failure
+        :ok
     end
   end
 

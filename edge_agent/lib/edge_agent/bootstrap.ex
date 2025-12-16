@@ -218,8 +218,14 @@ defmodule EdgeAgent.Bootstrap do
           case Commands.create_command_execution_and_enqueue_worker(attrs) do
             {:ok, _execution} ->
               Logger.debug("Stored command execution: #{command["id"]}")
+
+            {:error, %Ecto.Changeset{errors: [id: {"has already been taken", _}]}} ->
+              Logger.debug("Command execution #{command["id"]} already exists, skipping")
+
             {:error, changeset} ->
-              Logger.warning("Failed to store command execution #{command["id"]}: #{inspect(changeset.errors)}")
+              Logger.warning(
+                "Failed to store command execution #{command["id"]}: #{inspect(changeset.errors)}"
+              )
           end
         end)
 

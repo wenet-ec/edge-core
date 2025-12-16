@@ -15,10 +15,9 @@ defmodule EdgeAdmin.Commands do
   alias EdgeAdmin.Commands.Workers.ExecutionCreationWorker
   alias EdgeAdmin.FilteringPagination
   alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Nodes.Node
   alias EdgeAdmin.Admins.Metadata
-  alias EdgeAdmin.EdgeClusters.Gateway
   alias EdgeAdmin.Repo
-  alias EdgeAdmin.Vpn
 
   require Logger
 
@@ -470,15 +469,15 @@ defmodule EdgeAdmin.Commands do
   Delivers pending command executions for clusters owned by this admin.
 
   Called by Quantum scheduler every 10 seconds. Uses local metadata to determine
-  which clusters this admin owns, then delivers pending executions via Gateway processes.
+  which clusters this admin owns, then delivers pending executions directly to agents.
 
   ## Behavior
 
   - Only processes executions for nodes in clusters owned by this admin
   - Delivers executions in FIFO order per node
   - Uses Task.async_stream for parallel delivery across nodes
-  - Stops processing a node on first failure (remaining executions stay pending)
-  - Skips nodes that are unhealthy or have no available Gateway
+  - Admin sends HTTP requests directly to agents (no Gateway intermediary)
+  - Continues processing all executions even if some fail
 
   ## Returns
 
@@ -523,11 +522,12 @@ defmodule EdgeAdmin.Commands do
           "Delivering #{length(pending_executions)} pending executions across #{map_size(executions_by_node)} nodes"
         )
 
-        # Process nodes in parallel (like health check)
+        # Process nodes in parallel
         Task.async_stream(
           executions_by_node,
           fn {_node_id, executions} ->
-            deliver_to_single_node(executions)
+            node = hd(executions).node
+            deliver_executions_to_node(node, executions)
           end,
           max_concurrency: 50,
           timeout: 30_000,
@@ -554,40 +554,8 @@ defmodule EdgeAdmin.Commands do
     |> Repo.all()
   end
 
-  defp deliver_to_single_node(executions) do
-    # Get the node (already preloaded from query)
-    node = hd(executions).node
-
-    # Lookup local gateway for this cluster
-    case lookup_gateway(node) do
-      {:ok, gateway_pid} ->
-        deliver_executions_via_gateway(gateway_pid, node, executions)
-
-      {:error, :gateway_not_found} ->
-        Logger.debug("Gateway not found for cluster #{node.cluster.name}, will retry later")
-        :skip
-    end
-  end
-
-  defp lookup_gateway(node) do
-    admin_name = Application.get_env(:edge_admin, :admin_name)
-    # Gateway is registered with network name (cluster-xxx), not DB name (xxx)
-    cluster_network_name = Vpn.build_network_name(node.cluster.name, prefix: :node)
-
-    case :syn.lookup(:cluster_scope, {:gateway, admin_name, cluster_network_name}) do
-      :undefined ->
-        {:error, :gateway_not_found}
-
-      {gateway_pid, _meta} ->
-        {:ok, gateway_pid}
-
-      gateway_pid when is_pid(gateway_pid) ->
-        {:ok, gateway_pid}
-    end
-  end
-
-  defp deliver_executions_via_gateway(gateway_pid, node, executions) do
-    # Deliver all executions at once - don't stop on failures
+  defp deliver_executions_to_node(node, executions) do
+    # Deliver all executions - don't stop on failures
     Logger.info("Delivering #{length(executions)} executions to node #{node.id}")
 
     Enum.each(executions, fn execution ->
@@ -600,7 +568,7 @@ defmodule EdgeAdmin.Commands do
         status: "pending"
       }
 
-      case Gateway.create_command_execution(gateway_pid, node, execution_data) do
+      case create_execution_with_node(node, execution_data) do
         {:ok, :sent} ->
           # Agent received it - update to "sent"
           update_command_execution(execution, %{
@@ -616,6 +584,27 @@ defmodule EdgeAdmin.Commands do
     end)
 
     :ok
+  end
+
+  defp create_execution_with_node(node, execution_data) do
+    url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/command_executions"
+
+    case Req.post(url,
+           json: execution_data,
+           auth: {:bearer, node.api_token},
+           receive_timeout: 5000,
+           retry: false
+         ) do
+      {:ok, %{status: status}} when status in 200..299 ->
+        {:ok, :sent}
+
+      {:ok, %{status: status}} ->
+        {:error, "HTTP #{status}"}
+
+      {:error, reason} ->
+        Logger.error("HTTP request failed for node #{node.id}: #{inspect(reason)}")
+        {:error, reason}
+    end
   end
 
   @doc """
@@ -653,7 +642,8 @@ defmodule EdgeAdmin.Commands do
   end
 
   def update_command_execution_result(execution, params) do
-    with {:ok, attrs} <- Forms.UpdateCommandExecutionResultForm.changeset(params, execution.status) do
+    with {:ok, attrs} <-
+           Forms.UpdateCommandExecutionResultForm.changeset(params, execution.status) do
       # Hardcode status to "completed" since form validated current status is "sent"
       attrs = Map.put(attrs, "status", "completed")
       update_command_execution(execution, attrs)

@@ -68,6 +68,7 @@ defmodule EdgeAdmin.Mixfile do
       # HTTP server
       {:bandit, "~> 1.8"},
       {:corsica, "~> 2.1"},
+      {:ranch, "~> 2.2"},
 
       # Phoenix
       {:phoenix, "~> 1.8"},

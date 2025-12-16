@@ -85,7 +85,7 @@ services:
       start_period: 10s
 
   edge_vpn_broker:
-    image: emqx/emqx:6.0.1
+    image: emqx/emqx:5.8.8
     container_name: production_edge_vpn_broker
     networks:
       - production_edge_core
@@ -140,7 +140,7 @@ services:
       start_period: 10s
 
   edge_vpn_dns:
-    image: coredns/coredns:1.13.1
+    image: coredns/coredns:1.13.2
     container_name: production_edge_vpn_dns
     networks:
       - production_edge_core

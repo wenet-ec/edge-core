@@ -33,7 +33,7 @@ services:
       retries: 5
 
   netmaker_broker:
-    image: emqx/emqx:6.0.1
+    image: emqx/emqx:5.8.8
     environment:
       - EMQX_NAME=emqx
       - EMQX_DASHBOARD__DEFAULT_USERNAME=admin

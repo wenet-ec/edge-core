@@ -5,10 +5,10 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
   """
 
   alias OpenApiSpex.Schema
+  require OpenApiSpex
 
   defmodule AdminResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Admin Response",
@@ -61,7 +61,6 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
 
   defmodule AdminTopologyEntry do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Admin Topology Entry",
@@ -97,7 +96,6 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
 
   defmodule AdminClusterResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Admin Cluster Response",
@@ -147,7 +145,6 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
 
   defmodule EdgeClustersResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Edge Clusters Response",
@@ -177,7 +174,6 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
 
   defmodule OrphanedClustersResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Orphaned Clusters Response",

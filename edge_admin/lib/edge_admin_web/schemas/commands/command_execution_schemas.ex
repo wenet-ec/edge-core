@@ -6,10 +6,10 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
 
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
+  require OpenApiSpex
 
   defmodule CommandExecutionResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Command Execution",
@@ -116,7 +116,6 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
 
   defmodule CommandExecutionPaginatedResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(
       CommonSchemas.paginated_response(
@@ -129,7 +128,6 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
 
   defmodule CommandExecutionSingleResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Command Execution Single Response",
@@ -159,5 +157,4 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
       }
     })
   end
-
 end

@@ -1,11 +1,13 @@
 # edge_admin/lib/edge_admin_web/schemas/nodes/metrics_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Nodes.MetricsSchemas do
-  @moduledoc false
+  @moduledoc """
+  OpenAPI schemas for Human-friendly Metrics resources
+  """
+  alias OpenApiSpex.Schema
+  require OpenApiSpex
+
   defmodule MetricsResponse do
     @moduledoc false
-    alias OpenApiSpex.Schema
-
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Metrics Response",

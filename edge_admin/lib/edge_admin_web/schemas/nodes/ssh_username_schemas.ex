@@ -7,10 +7,10 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Nodes.SshPublicKeySchemas
   alias OpenApiSpex.Schema
+  require OpenApiSpex
 
   defmodule SshUsernameResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "SSH Username",
@@ -81,7 +81,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas do
 
   defmodule SshUsernamePaginatedResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(
       CommonSchemas.paginated_response(
@@ -94,7 +93,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas do
 
   defmodule SshUsernameSingleResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "SSH Username Single Response",
@@ -130,7 +128,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas do
 
   defmodule SshUsernameCreateRequest do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "SSH Username Create Request",

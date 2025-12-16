@@ -6,10 +6,10 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
 
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
+  require OpenApiSpex
 
   defmodule AliasResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Alias",
@@ -68,7 +68,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
 
   defmodule AliasListResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(
       CommonSchemas.paginated_response(
@@ -81,7 +80,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
 
   defmodule CreateAliasRequest do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Create Alias Request",

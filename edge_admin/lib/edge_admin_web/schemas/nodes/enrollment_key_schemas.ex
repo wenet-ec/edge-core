@@ -5,10 +5,10 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
   """
 
   alias OpenApiSpex.Schema
+  require OpenApiSpex
 
   defmodule EnrollmentKeyData do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "EnrollmentKey",
@@ -38,7 +38,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
 
   defmodule EnrollmentKeyResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Enrollment Key Response",
@@ -59,7 +58,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
 
   defmodule EnrollmentKeyCreateRequest do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Enrollment Key Request",

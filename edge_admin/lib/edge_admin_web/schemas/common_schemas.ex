@@ -4,12 +4,11 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
   Common OpenAPI schemas shared across the application
   """
 
+  require OpenApiSpex
   alias OpenApiSpex.Schema
 
   defmodule ErrorResponse do
     @moduledoc false
-    require OpenApiSpex
-
     OpenApiSpex.schema(%{
       title: "Error Response",
       description: "Standard error response for validation and other errors",
@@ -35,28 +34,34 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
 
   defmodule NotFoundResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Not Found Response",
       description: "Resource not found error",
       type: :object,
       properties: %{
-        error: %Schema{
-          type: :string,
-          description: "Error message"
+        errors: %Schema{
+          type: :object,
+          properties: %{
+            detail: %Schema{
+              type: :string,
+              description: "Error detail message"
+            }
+          },
+          required: [:detail]
         }
       },
-      required: [:error],
+      required: [:errors],
       example: %{
-        error: "Resource not found"
+        errors: %{
+          detail: "Not Found"
+        }
       }
     })
   end
 
   defmodule GenericErrorResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Generic Error Response",
@@ -87,7 +92,6 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
 
   defmodule PaginationMeta do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Pagination Metadata",
@@ -115,7 +119,6 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
 
   defmodule FilteringSortingMeta do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Filtering and Sorting Metadata",

@@ -6,10 +6,10 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
 
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
+  require OpenApiSpex
 
   defmodule NodeResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Node",
@@ -125,7 +125,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
 
   defmodule NodeListResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Node List Response",
@@ -166,7 +165,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
 
   defmodule NodePaginatedResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(
       CommonSchemas.paginated_response(
@@ -179,7 +177,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
 
   defmodule NodeSingleResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Node Single Response",
@@ -215,7 +212,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
 
   defmodule ChangeClusterRequest do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Change Cluster Request",

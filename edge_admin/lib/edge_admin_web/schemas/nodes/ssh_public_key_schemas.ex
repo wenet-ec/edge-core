@@ -6,10 +6,10 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshPublicKeySchemas do
 
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
+  require OpenApiSpex
 
   defmodule SshPublicKeyResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "SSH Public Key",
@@ -61,7 +61,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshPublicKeySchemas do
 
   defmodule SshPublicKeyPaginatedResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(
       CommonSchemas.paginated_response(
@@ -74,7 +73,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshPublicKeySchemas do
 
   defmodule SshPublicKeySingleResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "SSH Public Key Single Response",
@@ -99,7 +97,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshPublicKeySchemas do
 
   defmodule SshPublicKeyCreateRequest do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "SSH Public Key Create Request",

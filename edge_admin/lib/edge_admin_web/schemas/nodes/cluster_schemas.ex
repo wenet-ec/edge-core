@@ -5,10 +5,10 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
   """
 
   alias OpenApiSpex.Schema
+  require OpenApiSpex
 
   defmodule NodeSummary do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Node Summary",
@@ -18,7 +18,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         id: %Schema{
           type: :string,
           description: "Node ID",
-          example: "node-abc123"
+          example: "abc12345-1234-1234-1234-123456789abc"
         },
         status: %Schema{
           type: :string,
@@ -35,22 +35,21 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         dns_hostname: %Schema{
           type: :string,
           description: "DNS hostname for this node",
-          example: "node-abc123.cluster-prod-east.nm.internal"
+          example: "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
         }
       },
       required: [:id, :status, :id_type, :dns_hostname],
       example: %{
-        id: "node-abc123",
+        id: "abc12345-1234-1234-1234-123456789abc",
         status: "healthy",
         id_type: "hostname",
-        dns_hostname: "node-abc123.cluster-prod-east.nm.internal"
+        dns_hostname: "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
       }
     })
   end
 
   defmodule ClusterResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Cluster",
@@ -121,16 +120,16 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         node_count: 2,
         nodes: [
           %{
-            id: "node-abc123",
+            id: "abc12345-1234-1234-1234-123456789abc",
             status: "healthy",
             id_type: "hostname",
-            dns_hostname: "node-abc123.cluster-prod-east.nm.internal"
+            dns_hostname: "abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
           },
           %{
-            id: "node-def456",
+            id: "node-def12345-1234-1234-1234-123456789def",
             status: "healthy",
             id_type: "hostname",
-            dns_hostname: "node-def456.cluster-prod-east.nm.internal"
+            dns_hostname: "node-def12345-1234-1234-1234-123456789def.cluster-prod-east.nm.internal"
           }
         ],
         network_name: "cluster-prod-east",
@@ -143,7 +142,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
 
   defmodule ClusterPaginatedResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(
       EdgeAdminWeb.Schemas.CommonSchemas.paginated_response(
@@ -156,7 +154,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
 
   defmodule ClusterSingleResponse do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Cluster Single Response",
@@ -174,16 +171,16 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
           node_count: 2,
           nodes: [
             %{
-              id: "node-abc123",
+              id: "abc12345-1234-1234-1234-123456789abc",
               status: "healthy",
               id_type: "hostname",
-              dns_hostname: "node-abc123.cluster-prod-east.nm.internal"
+              dns_hostname: "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
             },
             %{
-              id: "node-def456",
+              id: "node-def12345-1234-1234-1234-123456789def",
               status: "healthy",
               id_type: "hostname",
-              dns_hostname: "node-def456.cluster-prod-east.nm.internal"
+              dns_hostname: "node-def12345-1234-1234-1234-123456789def.cluster-prod-east.nm.internal"
             }
           ],
           network_name: "cluster-prod-east",
@@ -197,7 +194,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
 
   defmodule ClusterCreateRequest do
     @moduledoc false
-    require OpenApiSpex
 
     OpenApiSpex.schema(%{
       title: "Cluster Create Request",

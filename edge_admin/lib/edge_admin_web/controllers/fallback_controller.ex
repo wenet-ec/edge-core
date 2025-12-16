@@ -23,6 +23,13 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> render(:"404")
   end
 
+  # Handle forbidden errors (e.g., agent trying to update execution that doesn't belong to them)
+  def call(conn, {:error, :forbidden}) do
+    conn
+    |> put_status(:forbidden)
+    |> json(%{error: "Forbidden"})
+  end
+
   # Handle business logic errors with descriptive messages
   def call(conn, {:error, reason}) when is_binary(reason) do
     conn

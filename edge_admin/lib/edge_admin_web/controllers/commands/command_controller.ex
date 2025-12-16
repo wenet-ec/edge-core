@@ -72,9 +72,9 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
     }
   )
 
-  def create(conn, %{"command" => command_params}) do
+  def create(conn, params) do
     with {:ok, %Command{} = command} <-
-           Commands.create_command_and_executions(command_params) do
+           Commands.create_command_and_executions(params) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/commands/#{command}")
@@ -99,8 +99,9 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
   )
 
   def show(conn, %{"id" => id}) do
-    command = Commands.get_command!(id)
-    render(conn, :show, command: command)
+    with {:ok, command} <- Commands.get_command(id) do
+      render(conn, :show, command: command)
+    end
   end
 
   operation(:delete,
@@ -120,9 +121,9 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
   )
 
   def delete(conn, %{"id" => id}) do
-    command = Commands.get_command!(id)
-    {:ok, _command} = Commands.delete_command(command)
-
-    send_resp(conn, :no_content, "")
+    with {:ok, command} <- Commands.get_command(id),
+         {:ok, _command} <- Commands.delete_command(command) do
+      send_resp(conn, :no_content, "")
+    end
   end
 end

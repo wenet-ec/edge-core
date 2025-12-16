@@ -95,8 +95,9 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
   )
 
   def show(conn, %{"id" => id}) do
-    command_execution = Commands.get_command_execution!(id)
-    render(conn, :show, command_execution: command_execution)
+    with {:ok, command_execution} <- Commands.get_command_execution(id) do
+      render(conn, :show, command_execution: command_execution)
+    end
   end
 
   operation(:delete,
@@ -116,9 +117,9 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
   )
 
   def delete(conn, %{"id" => id}) do
-    command_execution = Commands.get_command_execution!(id)
-    {:ok, _command_execution} = Commands.delete_command_execution(command_execution)
-
-    send_resp(conn, :no_content, "")
+    with {:ok, command_execution} <- Commands.get_command_execution(id),
+         {:ok, _command_execution} <- Commands.delete_command_execution(command_execution) do
+      send_resp(conn, :no_content, "")
+    end
   end
 end

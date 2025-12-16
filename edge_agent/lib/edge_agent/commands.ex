@@ -7,6 +7,7 @@ defmodule EdgeAgent.Commands do
   import Ecto.Query, warn: false
 
   alias EdgeAgent.Commands.CommandExecution
+  alias EdgeAgent.Commands.Forms.CreateCommandExecutionForm
   alias EdgeAgent.EdgeClusters.AdminClient
   alias EdgeAgent.Repo
 
@@ -18,19 +19,16 @@ defmodule EdgeAgent.Commands do
 
   def get_command_execution!(id), do: Repo.get!(CommandExecution, id)
 
-  def create_command_execution_and_enqueue_worker(attrs \\ %{}) do
-    case create_command_execution(attrs) do
-      {:ok, command_execution} ->
-        # Trigger enqueue worker (Oban's unique constraint prevents duplicates)
-        enqueue_worker(
-          EdgeAgent.Commands.Workers.ExecutionEnqueueWorker,
-          "ExecutionEnqueueWorker"
-        )
+  def create_command_execution_and_enqueue_worker(params \\ %{}) do
+    with {:ok, attrs} <- CreateCommandExecutionForm.changeset(params),
+         {:ok, command_execution} <- create_command_execution(attrs) do
+      # Trigger enqueue worker (Oban's unique constraint prevents duplicates)
+      enqueue_worker(
+        EdgeAgent.Commands.Workers.ExecutionEnqueueWorker,
+        "ExecutionEnqueueWorker"
+      )
 
-        {:ok, command_execution}
-
-      {:error, changeset} ->
-        {:error, changeset}
+      {:ok, command_execution}
     end
   end
 

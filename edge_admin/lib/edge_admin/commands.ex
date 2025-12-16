@@ -11,6 +11,7 @@ defmodule EdgeAdmin.Commands do
 
   alias EdgeAdmin.Commands.Command
   alias EdgeAdmin.Commands.CommandExecution
+  alias EdgeAdmin.Commands.Forms
   alias EdgeAdmin.Commands.Workers.ExecutionCreationWorker
   alias EdgeAdmin.FilteringPagination
   alias EdgeAdmin.Nodes
@@ -21,7 +22,14 @@ defmodule EdgeAdmin.Commands do
 
   require Logger
 
-  def get_command!(id), do: Repo.get!(Command, id)
+  def get_command(id) do
+    case Repo.get(Command, id) do
+      nil -> {:error, :not_found}
+      command -> {:ok, command}
+    end
+  rescue
+    Ecto.Query.CastError -> {:error, :not_found}
+  end
 
   def create_command(attrs \\ %{}) do
     %Command{}
@@ -54,10 +62,13 @@ defmodule EdgeAdmin.Commands do
     )
   end
 
-  def get_command_execution!(id) do
-    CommandExecution
-    |> Repo.get!(id)
-    |> Repo.preload([:command, :cluster])
+  def get_command_execution(id) do
+    case Repo.get(CommandExecution, id) do
+      nil -> {:error, :not_found}
+      command_execution -> {:ok, Repo.preload(command_execution, [:command, :cluster])}
+    end
+  rescue
+    Ecto.Query.CastError -> {:error, :not_found}
   end
 
   def create_command_execution(attrs \\ %{}) do
@@ -113,12 +124,12 @@ defmodule EdgeAdmin.Commands do
   - `{:ok, command}` - Command created successfully
   - `{:error, changeset}` - Validation failed
   """
-  def create_command_and_executions(attrs) do
-    case create_command(attrs) do
-      {:ok, command} ->
-        enqueue_execution_creation(command, attrs)
-        {:ok, command}
-
+  def create_command_and_executions(params) do
+    with {:ok, attrs} <- Forms.CreateCommandForm.changeset(params),
+         {:ok, command} <- create_command(attrs) do
+      enqueue_execution_creation(command, attrs)
+      {:ok, command}
+    else
       {:error, changeset} ->
         Logger.error("Failed to create command: #{inspect(changeset.errors)}")
         {:error, changeset}
@@ -216,32 +227,37 @@ defmodule EdgeAdmin.Commands do
     node_filters = args["node_filters"] || %{}
     cluster_filters = args["cluster_filters"] || %{}
 
-    command = get_command!(command_id)
+    case get_command(command_id) do
+      {:ok, command} ->
+        # Get nodes based on targeting type
+        {nodes, cluster_id} =
+          case targeting_type do
+            "all" ->
+              {get_all_filtered_nodes(node_filters, cluster_filters), nil}
 
-    # Get nodes based on targeting type
-    {nodes, cluster_id} =
-      case targeting_type do
-        "all" ->
-          {get_all_filtered_nodes(node_filters, cluster_filters), nil}
+            "nodes" ->
+              node_ids = args["node_ids"] || []
+              {get_nodes_for_targeting(node_ids, node_filters), nil}
 
-        "nodes" ->
-          node_ids = args["node_ids"] || []
-          {get_nodes_for_targeting(node_ids, node_filters), nil}
+            "clusters" ->
+              cluster_names = args["cluster_names"] || []
+              get_nodes_for_clusters(cluster_names, node_filters, cluster_filters)
 
-        "clusters" ->
-          cluster_names = args["cluster_names"] || []
-          get_nodes_for_clusters(cluster_names, node_filters, cluster_filters)
+            _ ->
+              Logger.error("Invalid targeting type: #{targeting_type}")
+              {[], nil}
+          end
 
-        _ ->
-          Logger.error("Invalid targeting type: #{targeting_type}")
-          {[], nil}
-      end
+        if Enum.empty?(nodes) do
+          Logger.info("No matching nodes found for command #{command_id}")
+          {:ok, []}
+        else
+          bulk_create_executions(command, nodes, targeting_type == "all", cluster_id)
+        end
 
-    if Enum.empty?(nodes) do
-      Logger.info("No matching nodes found for command #{command_id}")
-      {:ok, []}
-    else
-      bulk_create_executions(command, nodes, targeting_type == "all", cluster_id)
+      {:error, :not_found} ->
+        Logger.error("Command not found: #{command_id}")
+        {:error, "Command not found"}
     end
   end
 
@@ -371,7 +387,12 @@ defmodule EdgeAdmin.Commands do
   end
 
   # Get all nodes from a list of cluster names with node filters
-  defp get_nodes_from_cluster_list(cluster_names, node_filters, page \\ 1, accumulated_nodes \\ []) do
+  defp get_nodes_from_cluster_list(
+         cluster_names,
+         node_filters,
+         page \\ 1,
+         accumulated_nodes \\ []
+       ) do
     cluster_name_set = MapSet.new(cluster_names)
 
     params =
@@ -469,7 +490,10 @@ defmodule EdgeAdmin.Commands do
     my_cluster_network_names = Map.keys(my_clusters)
 
     Logger.debug("Execution delivery - my_clusters: #{inspect(my_clusters)}")
-    Logger.debug("Execution delivery - my_cluster_network_names: #{inspect(my_cluster_network_names)}")
+
+    Logger.debug(
+      "Execution delivery - my_cluster_network_names: #{inspect(my_cluster_network_names)}"
+    )
 
     if Enum.empty?(my_cluster_network_names) do
       Logger.debug("No clusters assigned to this admin, skipping execution delivery")
@@ -620,46 +644,19 @@ defmodule EdgeAdmin.Commands do
   - {:error, :invalid_status} if execution is not in "sent" status
   - {:error, changeset} on validation errors
   """
-  def update_command_execution_result(execution_id, node_id, params) do
-    execution = get_command_execution!(execution_id)
-
-    # Verify it belongs to this node
-    if execution.node_id != node_id do
-      {:error, :forbidden}
+  def verify_execution_belongs_to_node(execution, node_id) do
+    if execution.node_id == node_id do
+      :ok
     else
-      # Only allow updating from "sent" status
-      if execution.status != "sent" do
-        {:error, :invalid_status}
-      else
-        # Extract command_execution params from Phoenix-wrapped request
-        attrs = params["command_execution"] || %{}
+      {:error, :forbidden}
+    end
+  end
 
-        # Parse completed_at from agent (ISO8601 string to DateTime)
-        completed_at =
-          case attrs["completed_at"] do
-            nil ->
-              DateTime.utc_now() |> DateTime.truncate(:second)
-
-            timestamp when is_binary(timestamp) ->
-              case DateTime.from_iso8601(timestamp) do
-                {:ok, dt, _offset} -> DateTime.truncate(dt, :second)
-                _ -> DateTime.utc_now() |> DateTime.truncate(:second)
-              end
-
-            %DateTime{} = dt ->
-              DateTime.truncate(dt, :second)
-          end
-
-        # Build update attrs with agent's completion timestamp
-        update_attrs = %{
-          status: attrs["status"],
-          output: attrs["output"],
-          exit_code: attrs["exit_code"],
-          completed_at: completed_at
-        }
-
-        update_command_execution(execution, update_attrs)
-      end
+  def update_command_execution_result(execution, params) do
+    with {:ok, attrs} <- Forms.UpdateCommandExecutionResultForm.changeset(params, execution.status) do
+      # Hardcode status to "completed" since form validated current status is "sent"
+      attrs = Map.put(attrs, "status", "completed")
+      update_command_execution(execution, attrs)
     end
   end
 end

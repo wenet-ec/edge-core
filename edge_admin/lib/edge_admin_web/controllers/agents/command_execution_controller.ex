@@ -32,8 +32,9 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
     # Get node ID from authenticated context (set by AgentAuth plug)
     node_id = conn.assigns.current_node.id
 
-    with {:ok, updated_execution} <-
-           Commands.update_command_execution_result(id, node_id, params) do
+    with {:ok, execution} <- Commands.get_command_execution(id),
+         :ok <- Commands.verify_execution_belongs_to_node(execution, node_id),
+         {:ok, updated_execution} <- Commands.update_command_execution_result(execution, params) do
       render(conn, :show, command_execution: updated_execution)
     end
   end

@@ -75,6 +75,10 @@ defmodule EdgeAgent.SshServer.Channel do
     # Get node ID for prompt
     node_id = get_node_id()
 
+    # Get authenticated username from connection
+    username = get_authenticated_user(connection_ref)
+    Logger.info("Starting shell for user: #{username}")
+
     # Use script to allocate a PTY, then run bash
     port = Port.open({:spawn_executable, "/usr/bin/script"}, [
       {:args, [
@@ -84,7 +88,8 @@ defmodule EdgeAgent.SshServer.Channel do
       ]},
       {:env, [
         {~c"TERM", ~c"xterm"},
-        {~c"EDGE_NODE_ID", to_charlist(node_id)}
+        {~c"EDGE_NODE_ID", to_charlist(node_id)},
+        {~c"USER", to_charlist(username)}
       ]},
       :binary,
       :use_stdio,
@@ -131,6 +136,19 @@ defmodule EdgeAgent.SshServer.Channel do
     case Settings.get_node_id() do
       nil -> "unknown"
       node_id -> node_id
+    end
+  rescue
+    _ -> "unknown"
+  end
+
+  defp get_authenticated_user(connection_ref) do
+    # Get connection info to extract the authenticated username
+    case :ssh.connection_info(connection_ref, :user) do
+      {:user, user} when is_list(user) ->
+        to_string(user)
+
+      _ ->
+        "unknown"
     end
   rescue
     _ -> "unknown"

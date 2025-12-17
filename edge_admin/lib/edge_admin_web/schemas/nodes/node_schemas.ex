@@ -73,6 +73,14 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           type: :integer,
           description: "SOCKS5 proxy port"
         },
+        api_token: %Schema{
+          type: :string,
+          description: "API token for agent authentication"
+        },
+        proxy_password: %Schema{
+          type: :string,
+          description: "Password for proxy authentication (username is always '_')"
+        },
         version: %Schema{
           type: :string,
           nullable: true,
@@ -99,8 +107,20 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           description: "When the node was last updated"
         }
       },
-      required: [:id, :cluster_name, :id_type, :http_port, :ssh_port, :metrics_port,
-                 :http_proxy_port, :socks5_proxy_port, :inserted_at, :updated_at],
+      required: [
+        :id,
+        :cluster_name,
+        :id_type,
+        :http_port,
+        :ssh_port,
+        :metrics_port,
+        :http_proxy_port,
+        :socks5_proxy_port,
+        :api_token,
+        :proxy_password,
+        :inserted_at,
+        :updated_at
+      ],
       example: %{
         id: "01234567-89ab-cdef-0123-456789abcdef",
         node_name: "node-01234567-89ab-cdef-0123-456789abcdef",
@@ -114,6 +134,8 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         metrics_port: 49100,
         http_proxy_port: 44880,
         socks5_proxy_port: 44180,
+        api_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        proxy_password: "securepassword123",
         version: "0.1.0",
         self_update_enabled: false,
         last_seen_at: "2025-06-09T08:20:00Z",
@@ -146,12 +168,15 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
             netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
             id_type: "persistent",
             status: "healthy",
-            dns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
+            dns_hostname:
+              "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
             http_port: 44000,
             ssh_port: 42222,
             metrics_port: 49100,
             http_proxy_port: 44880,
             socks5_proxy_port: 44180,
+            api_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            proxy_password: "securepassword123",
             version: "0.1.0",
             self_update_enabled: false,
             last_seen_at: "2025-06-09T08:20:00Z",
@@ -194,12 +219,15 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
           id_type: "persistent",
           status: "healthy",
-          dns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
+          dns_hostname:
+            "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
           http_port: 44000,
           ssh_port: 42222,
           metrics_port: 49100,
           http_proxy_port: 44880,
           socks5_proxy_port: 44180,
+          api_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+          proxy_password: "securepassword123",
           version: "0.1.0",
           self_update_enabled: false,
           last_seen_at: "2025-06-09T08:20:00Z",
@@ -226,8 +254,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
             cluster_name: %Schema{
               type: :string,
               pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-              description:
-                "Name of the target cluster to move this node to.",
+              description: "Name of the target cluster to move this node to.",
               example: "prod-west"
             }
           },

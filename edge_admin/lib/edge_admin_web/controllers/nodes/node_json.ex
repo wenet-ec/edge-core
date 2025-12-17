@@ -51,6 +51,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSON do
       metrics_port: node.metrics_port,
       http_proxy_port: node.http_proxy_port,
       socks5_proxy_port: node.socks5_proxy_port,
+      api_token: node.api_token,
+      proxy_password: node.proxy_password,
       version: node.version,
       self_update_enabled: node.self_update_enabled,
       last_seen_at: node.last_seen_at,

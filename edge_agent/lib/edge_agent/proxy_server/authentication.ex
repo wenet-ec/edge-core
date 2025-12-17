@@ -1,0 +1,35 @@
+# edge_agent/lib/edge_agent/proxy_server/authentication.ex
+defmodule EdgeAgent.ProxyServer.Authentication do
+  @moduledoc """
+  Authentication for proxy server.
+
+  Agent proxy uses simple username/password authentication:
+  - Username: "_" (underscore, always)
+  - Password: proxy_password from settings table
+  """
+
+  alias EdgeAgent.Settings
+
+  require Logger
+
+  @doc """
+  Authenticate proxy request.
+
+  Returns :ok if credentials are valid, {:error, reason} otherwise.
+  """
+  def authenticate(username, password) do
+    case Settings.get("proxy_password") do
+      nil ->
+        Logger.warning("Proxy authentication failed: no password configured")
+        {:error, :no_password_configured}
+
+      stored_password ->
+        if username == "_" and password == stored_password do
+          :ok
+        else
+          Logger.warning("Proxy authentication failed: invalid credentials")
+          {:error, :invalid_credentials}
+        end
+    end
+  end
+end

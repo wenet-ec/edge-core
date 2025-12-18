@@ -61,6 +61,7 @@ defmodule EdgeAdmin.Application do
       EdgeAdmin.EdgeClusters,
       EdgeAdmin.Admins.Metadata,
       EdgeAdmin.LocalScheduler,
+      EdgeAdmin.ProxyServer,
       EdgeAdminWeb.Endpoint,
       {TelemetryUI, EdgeAdmin.TelemetryUI.config()}
     ]

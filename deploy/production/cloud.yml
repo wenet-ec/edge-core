@@ -55,6 +55,8 @@ services:
       - ./.envs/.edge_admin
     ports:
       - "4000:44000"
+      - "3128:43128"  # HTTP proxy
+      - "1080:41080"  # SOCKS5 proxy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
       interval: 60s

@@ -52,17 +52,28 @@ auth_enabled = get_env("AUTH_ENABLED", :boolean, true)
 if auth_enabled do
   master_key = get_env!("MASTER_KEY")
   metrics_key = get_env("METRICS_KEY") || master_key
+  proxy_key = get_env("PROXY_KEY") || master_key
 
   config :edge_admin,
     auth_enabled: true,
     master_key: master_key,
-    metrics_key: metrics_key
+    metrics_key: metrics_key,
+    proxy_key: proxy_key
 else
   config :edge_admin,
     auth_enabled: false,
     master_key: nil,
-    metrics_key: nil
+    metrics_key: nil,
+    proxy_key: ""
 end
+
+# =============================================================================
+# Proxy Server
+# =============================================================================
+
+config :edge_admin,
+  http_proxy_port: get_env("HTTP_PROXY_PORT", :integer, 43128),
+  socks5_proxy_port: get_env("SOCKS5_PROXY_PORT", :integer, 41080)
 
 # =============================================================================
 # Observability (Metrics, Telemetry, Sentry)

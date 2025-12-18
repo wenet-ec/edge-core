@@ -31,6 +31,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
   alias EdgeAdmin.Vpn
   alias EdgeAdmin.Nodes.Node
+  alias EdgeAdmin.ProxyServer.RemoteTunnel
 
   # ===========================================================================
   # Client API
@@ -77,6 +78,25 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   """
   def trigger_self_update(gateway_pid, node) do
     GenServer.call(gateway_pid, {:trigger_self_update, node}, 30_000)
+  end
+
+  @doc """
+  Establishes TCP connection to a target through the Gateway's VPN.
+
+  Gateway is a pure network abstraction - it only handles VPN connectivity.
+  Returns {:ok, socket} with ownership transferred to caller, or error.
+
+  The caller is responsible for:
+  - Managing the returned socket
+  - Handling cross-node communication if needed
+  - Setting up any streaming/forwarding logic
+
+  - target_host: VPN DNS hostname (e.g., node-*.cluster-*.nm.internal)
+  - target_port: Target port
+  - caller_pid: PID of the process that will own the socket
+  """
+  def tcp_connect(gateway_pid, target_host, target_port, caller_pid) do
+    GenServer.call(gateway_pid, {:tcp_connect, target_host, target_port, caller_pid}, 30_000)
   end
 
   # ===========================================================================
@@ -175,6 +195,58 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
         Logger.error("HTTP request failed: #{inspect(reason)}")
         {:reply, {:error, reason}, state}
     end
+  end
+
+  @impl true
+  def handle_call({:tcp_connect, target_host, target_port, caller_pid}, _from, state) do
+    Logger.debug("Gateway connecting to #{target_host}:#{target_port}")
+
+    # Connect through this Gateway's VPN interface
+    case :gen_tcp.connect(
+           String.to_charlist(target_host),
+           target_port,
+           [:binary, packet: :raw, active: false],
+           30_000
+         ) do
+      {:ok, socket} ->
+        Logger.debug("Gateway established connection to #{target_host}:#{target_port}")
+
+        # Check if caller is on same node (local) or different node (remote)
+        if node(caller_pid) == node() do
+          # Local: transfer socket ownership directly to caller
+          :gen_tcp.controlling_process(socket, caller_pid)
+          Logger.debug("Socket transferred to local caller")
+          {:reply, {:ok, socket}, state}
+        else
+          # Remote: spawn proxy process on this node to manage socket
+          {:ok, proxy_pid} = RemoteTunnel.start_proxy(socket, caller_pid)
+          Logger.debug("Remote proxy started: #{inspect(proxy_pid)}")
+          {:reply, {:ok, :remote, proxy_pid}, state}
+        end
+
+      {:error, reason} ->
+        Logger.error("Gateway failed to connect to #{target_host}:#{target_port}: #{inspect(reason)}")
+        {:reply, {:error, reason}, state}
+    end
+  end
+
+  # Handle EXIT messages from linked processes (RemoteTunnel proxies)
+  # These are normal when connections close
+  @impl true
+  def handle_info({:EXIT, _pid, :normal}, state) do
+    {:noreply, state}
+  end
+
+  # Handle unexpected EXIT messages (non-normal termination)
+  def handle_info({:EXIT, pid, reason}, state) do
+    Logger.warning("Linked process #{inspect(pid)} exited abnormally: #{inspect(reason)}")
+    {:noreply, state}
+  end
+
+  # Catch-all for unexpected messages
+  def handle_info(msg, state) do
+    Logger.warning("Gateway received unexpected message: #{inspect(msg)}")
+    {:noreply, state}
   end
 
   # ===========================================================================

@@ -661,6 +661,56 @@ defmodule EdgeAdmin.Nodes do
     end)
   end
 
+  @doc """
+  Lists all valid node identifiers (IDs and aliases) for a cluster.
+
+  Returns a map with node IDs as keys and the full node struct as values.
+  Each node can be looked up by its ID or any of its aliases.
+
+  ## Parameters
+  - `cluster_name` - Cluster name (without "cluster-" prefix)
+
+  ## Returns
+  - `{:ok, identifiers_map}` - Map of identifier => node
+  - `{:error, :not_found}` - Cluster doesn't exist
+
+  ## Example
+      {:ok, map} = list_node_identifiers_by_cluster("default")
+      # map = %{
+      #   "abc-123" => %Node{id: "abc-123", ...},
+      #   "test" => %Node{id: "abc-123", ...},  # alias
+      #   "def-456" => %Node{id: "def-456", ...}
+      # }
+  """
+  def list_node_identifiers_by_cluster(cluster_name) do
+    case get_cluster(cluster_name) do
+      {:error, :not_found} ->
+        {:error, :not_found}
+
+      {:ok, cluster} ->
+        nodes =
+          from(n in Node,
+            where: n.cluster_id == ^cluster.id,
+            preload: [:cluster, aliases: :cluster]
+          )
+          |> Repo.all()
+
+        # Build map of all identifiers (node IDs + aliases) => node
+        identifiers_map =
+          Enum.reduce(nodes, %{}, fn node, acc ->
+            # Add node ID
+            acc = Map.put(acc, node.id, node)
+
+            # Add all aliases
+            Enum.reduce(node.aliases, acc, fn alias_record, inner_acc ->
+              Map.put(inner_acc, alias_record.name, node)
+            end)
+          end)
+
+        {:ok, identifiers_map}
+    end
+  end
+
   def get_ssh_username(id) do
     case Repo.get(SshUsername, id) do
       nil -> {:error, :not_found}

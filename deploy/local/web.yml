@@ -67,6 +67,8 @@ services:
       - ./.envs/.edge_admin
     ports:
       - "4000:44000"
+      - "3128:43128"
+      - "1080:41080"
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -107,6 +109,8 @@ services:
       - ./.envs/.edge_admin
     ports:
       - "4001:44000"
+      - "3129:43128"
+      - "1081:41080"
     cap_add:
       - NET_ADMIN
       - SYS_MODULE

@@ -35,6 +35,7 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   """
   def discover_admins(opts \\ []) do
     fail_on_empty = Keyword.get(opts, :fail_on_empty, false)
+
     case Nexmaker.Cli.list_networks() do
       {:ok, networks} when is_list(networks) and networks != [] ->
         # Filter to only connected networks
@@ -65,9 +66,12 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
           case results do
             [{network_name, _admin_urls} | _rest] ->
               # Aggregate all discovered admins from all networks
-              all_admin_urls = Enum.flat_map(results, fn {_network, urls} -> urls end) |> Enum.uniq()
+              all_admin_urls =
+                Enum.flat_map(results, fn {_network, urls} -> urls end) |> Enum.uniq()
 
-              Logger.info("Discovered total of #{length(all_admin_urls)} unique admin(s) across all networks")
+              Logger.info(
+                "Discovered total of #{length(all_admin_urls)} unique admin(s) across all networks"
+              )
 
               # Store in Settings for AdminClient to use
               Settings.set_admin_urls(all_admin_urls)
@@ -118,13 +122,14 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
                 network_ip = band(ip_int, mask)
 
                 # Convert back to dotted notation
-                network_string = [
-                  band(bsr(network_ip, 24), 255),
-                  band(bsr(network_ip, 16), 255),
-                  band(bsr(network_ip, 8), 255),
-                  band(network_ip, 255)
-                ]
-                |> Enum.join(".")
+                network_string =
+                  [
+                    band(bsr(network_ip, 24), 255),
+                    band(bsr(network_ip, 16), 255),
+                    band(bsr(network_ip, 8), 255),
+                    band(network_ip, 255)
+                  ]
+                  |> Enum.join(".")
 
                 "#{network_string}/#{mask_bits}"
 
@@ -150,15 +155,23 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
     discovery_port = Application.get_env(:edge_agent, :admin_discovery_port, 44000)
     default_domain = Application.get_env(:edge_agent, :netmaker_default_domain, "nm.internal")
 
-    Logger.info("Scanning subnet #{subnet} for admins on port #{discovery_port} (excluding self: #{self_ip})...")
+    Logger.info(
+      "Scanning subnet #{subnet} for admins on port #{discovery_port} (excluding self: #{self_ip})..."
+    )
 
     # Use nmap to find hosts with port open
     case scan_with_nmap(subnet, discovery_port) do
       {:ok, ips_with_port_open} ->
         # Filter out our own IP
-        ips_to_query = if self_ip, do: Enum.reject(ips_with_port_open, &(&1 == self_ip)), else: ips_with_port_open
+        ips_to_query =
+          if self_ip,
+            do: Enum.reject(ips_with_port_open, &(&1 == self_ip)),
+            else: ips_with_port_open
 
-        Logger.info("Found #{length(ips_with_port_open)} host(s) with port #{discovery_port} open")
+        Logger.info(
+          "Found #{length(ips_with_port_open)} host(s) with port #{discovery_port} open"
+        )
+
         Logger.debug("IPs to query (after excluding self): #{inspect(ips_to_query)}")
 
         # Now query each IP with port open to get admin info
@@ -186,7 +199,9 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
 
                 if admin_name do
                   # Construct DNS hostname for this cluster
-                  dns_hostname = build_hostname(admin_name, "cluster-#{cluster_id}", default_domain)
+                  dns_hostname =
+                    build_hostname(admin_name, "cluster-#{cluster_id}", default_domain)
+
                   admin_url = "http://#{dns_hostname}:#{discovery_port}"
 
                   Logger.info("✓ Discovered admin: #{admin_name} at #{admin_url}")
@@ -219,15 +234,31 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   defp scan_with_nmap(subnet, port) do
     # nmap -Pn -p <port> --open -oG - <subnet>
     # -Pn: Skip ping, directly scan ports (faster)
+    # --host-timeout: Timeout per host to prevent hanging on unresponsive networks
     # Returns greppable output, we parse for "Host: <ip> ... Ports: <port>/open"
-    case System.cmd("nmap", ["-Pn", "-p", "#{port}", "--open", "-oG", "-", subnet], stderr_to_stdout: true) do
-      {output, 0} ->
+
+    # Wrap in Task.async with timeout to prevent infinite blocking
+    task =
+      Task.async(fn ->
+        System.cmd(
+          "nmap",
+          ["-Pn", "-p", "#{port}", "--open", "--host-timeout", "2s", "-oG", "-", subnet],
+          stderr_to_stdout: true
+        )
+      end)
+
+    case Task.yield(task, 15_000) || Task.shutdown(task) do
+      {:ok, {output, 0}} ->
         ips = parse_nmap_output(output)
         {:ok, ips}
 
-      {output, exit_code} ->
+      {:ok, {output, exit_code}} ->
         Logger.error("nmap failed with exit code #{exit_code}: #{output}")
         {:error, {:nmap_error, exit_code, output}}
+
+      nil ->
+        Logger.error("nmap scan timed out after 15 seconds")
+        {:error, :scan_timeout}
     end
   rescue
     e ->

@@ -11,7 +11,7 @@ defmodule EdgeAgent.EdgeClusters.Workers.AdminDiscoveryWorker do
     queue: :admin_discovery,
     max_attempts: 1,
     unique: [
-      period: :infinity,
+      period: 300,
       states: [:available, :scheduled, :executing, :retryable]
     ]
 
@@ -23,9 +23,17 @@ defmodule EdgeAgent.EdgeClusters.Workers.AdminDiscoveryWorker do
   def perform(%Oban.Job{args: _args}) do
     Logger.debug("AdminDiscoveryWorker started")
 
-    Discovery.discover_admins()
+    # Always return :ok to prevent job from getting stuck in failed state
+    # Discovery errors are logged but don't block the worker
+    case Discovery.discover_admins() do
+      {:ok, _network_name, admin_urls} ->
+        Logger.debug("AdminDiscoveryWorker completed - discovered #{length(admin_urls)} admin(s)")
+        :ok
 
-    Logger.debug("AdminDiscoveryWorker completed")
-    :ok
+      {:error, reason} ->
+        Logger.warning("AdminDiscoveryWorker failed to discover admins: #{inspect(reason)}")
+        # Return :ok anyway so job completes and next cron run can try again
+        :ok
+    end
   end
 end

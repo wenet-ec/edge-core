@@ -1,8 +1,10 @@
 # deploy/local/compose/edge_admin/Dockerfile
 
 # Build netclient with HTTP patches (for local development)
-ARG NETCLIENT_VERSION=v1.2.0
 FROM golang:1.25-alpine AS netclient-builder
+
+# Define version inside the build stage
+ARG NETCLIENT_VERSION=v1.2.0
 
 # Install git
 RUN apk add --no-cache git

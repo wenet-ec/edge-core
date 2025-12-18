@@ -1,10 +1,9 @@
-# Multi-stage build: Build patched netclient, then create Elixir test environment with it
-ARG NETCLIENT_VERSION=v1.2.0
-
 # Stage 1: Build patched netclient (HTTP instead of HTTPS for local testing)
 FROM golang:1.23-alpine AS netclient_builder
 
-ARG NETCLIENT_VERSION
+# Multi-stage build: Build patched netclient, then create Elixir test environment with it
+ARG NETCLIENT_VERSION=v1.2.0
+
 WORKDIR /build
 
 # Install dependencies

@@ -145,12 +145,18 @@ ephemeral_key_cleanup_schedule = get_env("EPHEMERAL_KEY_CLEANUP_SCHEDULE", :stri
 cluster_reconciliation_enabled = get_env("CLUSTER_RECONCILIATION_ENABLED", :boolean, true)
 cluster_reconciliation_schedule = get_env("CLUSTER_RECONCILIATION_SCHEDULE", :string, "0 */6 * * *")
 
+# Zombie admin cleanup configuration
+zombie_admin_cleanup_schedule = get_env("ZOMBIE_ADMIN_CLEANUP_SCHEDULE", :string, "*/30 * * * *")
+zombie_admin_checkin_threshold_minutes = get_env("ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES", :integer, 120)
+
 config :edge_admin,
   ephemeral_key_cleanup_enabled: ephemeral_key_cleanup_enabled,
   ephemeral_key_ttl_hours: ephemeral_key_ttl_hours,
   ephemeral_key_cleanup_schedule: ephemeral_key_cleanup_schedule,
   cluster_reconciliation_enabled: cluster_reconciliation_enabled,
-  cluster_reconciliation_schedule: cluster_reconciliation_schedule
+  cluster_reconciliation_schedule: cluster_reconciliation_schedule,
+  zombie_admin_cleanup_schedule: zombie_admin_cleanup_schedule,
+  zombie_admin_checkin_threshold_minutes: zombie_admin_checkin_threshold_minutes
 
 # Node health check configuration
 node_health_check_schedule = get_env("NODE_HEALTH_CHECK_SCHEDULE", :string, "* * * * *")
@@ -163,7 +169,7 @@ config :edge_admin, :node_health_check,
 
 # Oban crontab
 base_crontab = [
-  {"* * * * *", EdgeAdmin.Admins.Workers.ZombieAdminCleaner}
+  {zombie_admin_cleanup_schedule, EdgeAdmin.Vpn.Workers.ZombieAdminCleaner}
 ]
 
 crontab =

@@ -205,12 +205,15 @@ defmodule EdgeAdmin.Admins.Bootstrap do
     Logger.info("Step 3: Initializing syn registry")
     :syn.add_node_to_scopes([:admin_scope])
 
+    {:ok, netmaker_host_id} = Vpn.get_host_id(admin_name())
+
     # Join the admin cluster group with metadata
     metadata = %{
       name: admin_name(),
       max_capacity: max_capacity(),
       dns_hostname: Vpn.build_hostname(admin_name(), admin_cluster_name()),
-      erlang_node_name: node()
+      erlang_node_name: node(),
+      netmaker_host_id: netmaker_host_id
     }
 
     case :syn.join(:admin_scope, admin_cluster_name(), self(), metadata) do

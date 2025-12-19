@@ -31,8 +31,8 @@ defmodule EdgeAdmin.Admins.Metadata do
     total_admins: 2,
     degraded: false,
     topology: [
-      %{name: "admin-abc123", max_capacity: 200, dns_hostname: ..., erlang_node_name: ...},
-      %{name: "admin-def456", max_capacity: 300, dns_hostname: ..., erlang_node_name: ...}
+      %{name: "admin-abc123", max_capacity: 200, dns_hostname: ..., erlang_node_name: ..., netmaker_host_id: "..."},
+      %{name: "admin-def456", max_capacity: 300, dns_hostname: ..., erlang_node_name: ..., netmaker_host_id: "..."}
     ]
   }
 
@@ -350,7 +350,7 @@ defmodule EdgeAdmin.Admins.Metadata do
   defp read_admins_from_syn do
     # Get all admins from syn process group
     # :syn.members/2 returns list of {pid, metadata} tuples
-    # Metadata contains: %{name: admin_name, max_capacity: capacity, erlang_node_name: ..., dns_hostname: ...}
+    # Metadata contains: %{name: admin_name, max_capacity: capacity, erlang_node_name: ..., dns_hostname: ..., netmaker_host_id: ...}
     [{:admin, admin_info}] = :ets.lookup(@table, :admin)
     admin_cluster_name = admin_info.admin_cluster_name
 

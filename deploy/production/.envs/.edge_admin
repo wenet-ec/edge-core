@@ -66,3 +66,7 @@ NETMAKER_DEFAULT_DOMAIN=nm.internal  # DNS domain suffix for hostname constructi
 NODE_HEALTH_CHECK_SCHEDULE=* * * * *  # Cron schedule (default: every minute)
 NODE_HEALTH_CHECK_CONCURRENCY=100  # Number of parallel health check requests
 NODE_HEALTH_CHECK_TIMEOUT_MS=5000  # Timeout per health check in milliseconds (5 seconds)
+
+# Zombie admin cleanup configuration
+ZOMBIE_ADMIN_CLEANUP_SCHEDULE=*/30 * * * *  # Cron schedule (default: every 30 minutes)
+ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES=120  # Minutes since last checkin to consider dead (default: 120 = 2 hours)

@@ -653,4 +653,118 @@ defmodule EdgeAdmin.Vpn do
   def create_superadmin(attrs) do
     Nexmaker.Api.Superadmin.create(attrs)
   end
+
+  @doc """
+  Cleans up zombie admin hosts from the admin cluster.
+
+  Deletes hosts whose nodes in the admin-cluster haven't checked in for
+  the configured threshold. Protects nodes that are in our ETS metadata.
+
+  ## Configuration
+
+  - ZOMBIE_ADMIN_CHECKIN_THRESHOLD_HOURS: Hours since last checkin (default: 2)
+
+  ## Returns
+
+  - `{:ok, deleted_count}` - Number of hosts deleted
+  - `{:error, reason}` - Error occurred
+
+  ## Examples
+
+      {:ok, 3} = Vpn.cleanup_zombie_admins()
+  """
+  def cleanup_zombie_admins do
+    admin_cluster_name = admin_cluster_name()
+    threshold_minutes = Application.get_env(:edge_admin, :zombie_admin_checkin_threshold_minutes, 120)
+    threshold_seconds = threshold_minutes * 60
+
+    Logger.info("Starting zombie admin cleanup for #{admin_cluster_name}")
+    Logger.debug("Threshold: #{threshold_minutes} minute(s) (#{threshold_seconds} seconds)")
+
+    # Get protected host IDs from ETS metadata
+    protected_host_ids = get_protected_host_ids()
+    Logger.debug("Protected hosts: #{inspect(protected_host_ids)}")
+
+    # Query Netmaker for all nodes in admin cluster
+    case list_nodes(admin_cluster_name) do
+      {:ok, nodes} when is_list(nodes) ->
+        current_time = System.system_time(:second)
+
+        # Find zombie nodes (not checked in for threshold, host not protected)
+        zombie_nodes =
+          nodes
+          |> Enum.filter(fn node ->
+            age_seconds = current_time - node["lastcheckin"]
+            is_zombie = age_seconds > threshold_seconds
+            is_protected = node["hostid"] in protected_host_ids
+
+            if is_zombie and not is_protected do
+              Logger.debug("Zombie found: node=#{node["id"]}, host=#{node["hostid"]} (age: #{age_seconds}s)")
+              true
+            else
+              false
+            end
+          end)
+
+        if length(zombie_nodes) > 0 do
+          Logger.info("Found #{length(zombie_nodes)} zombie node(s)")
+
+          # Get unique host IDs from zombie nodes
+          zombie_host_ids =
+            zombie_nodes
+            |> Enum.map(fn node -> node["hostid"] end)
+            |> Enum.uniq()
+
+          Logger.info("Found #{length(zombie_host_ids)} unique zombie host(s) to delete")
+
+          # Delete each host
+          deleted_count =
+            Enum.reduce(zombie_host_ids, 0, fn host_id, count ->
+              Logger.info("Deleting zombie admin host: #{host_id}")
+
+              case delete_host(host_id) do
+                {:ok, _} ->
+                  Logger.info("Successfully deleted zombie host #{host_id}")
+                  count + 1
+
+                {:error, reason} ->
+                  Logger.error("Failed to delete host #{host_id}: #{inspect(reason)}")
+                  count
+              end
+            end)
+
+          {:ok, deleted_count}
+        else
+          Logger.debug("No zombie admin nodes found in #{admin_cluster_name}")
+          {:ok, 0}
+        end
+
+      {:ok, _} ->
+        Logger.warning("Unexpected response format from Netmaker Nodes API")
+        {:ok, 0}
+
+      {:error, reason} ->
+        Logger.error("Failed to query Netmaker Nodes API: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+  # Get protected host IDs from ETS metadata (admin_cluster topology)
+  defp get_protected_host_ids do
+    case :ets.lookup(:metadata, :admin_cluster) do
+      [{:admin_cluster, metadata}] when is_map(metadata) ->
+        # Extract netmaker_host_id from each admin in topology
+        # Topology structure: [%{name: "admin-abc123", netmaker_host_id: "...", ...}, ...]
+        metadata
+        |> Map.get(:topology, [])
+        |> Enum.map(fn admin_data ->
+          Map.get(admin_data, :netmaker_host_id)
+        end)
+        |> Enum.reject(&is_nil/1)
+
+      _ ->
+        Logger.warning("No admin_cluster metadata found in ETS")
+        []
+    end
+  end
 end

@@ -9,6 +9,7 @@ defmodule EdgeAgentHealth do
   - Netclient connection to assigned cluster network
   - SSH server status
   - Metrics server status
+  - Proxy server
 
   Returns 503 Service Unavailable if any check fails.
   """
@@ -23,7 +24,8 @@ defmodule EdgeAgentHealth do
       %PlugCheckup.Check{name: "Bootstrap", module: __MODULE__, function: :bootstrap_health},
       %PlugCheckup.Check{name: "Netclient", module: __MODULE__, function: :netclient_health},
       %PlugCheckup.Check{name: "SSH Server", module: __MODULE__, function: :ssh_server_health},
-      %PlugCheckup.Check{name: "Metrics Server", module: __MODULE__, function: :metrics_server_health}
+      %PlugCheckup.Check{name: "Metrics Server", module: __MODULE__, function: :metrics_server_health},
+      %PlugCheckup.Check{name: "Proxy Server", module: __MODULE__, function: :proxy_server_health}
     ]
   end
 
@@ -104,5 +106,13 @@ defmodule EdgeAgentHealth do
     e ->
       Logger.error("Metrics server health check exception: #{inspect(e)}")
       {:error, "Health check exception"}
+  end
+
+  def proxy_server_health do
+    if EdgeAgent.ProxyServer.initialized?() do
+      :ok
+    else
+      {:error, "Proxy server not initialized"}
+    end
   end
 end

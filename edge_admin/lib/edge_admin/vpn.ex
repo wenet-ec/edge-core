@@ -550,6 +550,18 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
+  Gets a specific Netmaker host by ID.
+
+  ## Returns
+    - `{:ok, host}` - Host map
+    - `{:error, :not_found}` - Host not found
+    - `{:error, reason}` - Error occurred
+  """
+  def get_host(host_id) do
+    Nexmaker.Api.Hosts.get(host_id)
+  end
+
+  @doc """
   Deletes a Netmaker host.
   """
   def delete_host(host_id) do

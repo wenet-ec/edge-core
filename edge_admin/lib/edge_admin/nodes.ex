@@ -21,6 +21,25 @@ defmodule EdgeAdmin.Nodes do
   require Logger
 
   # ===========================================================================
+  # Private Helpers
+  # ===========================================================================
+
+  # Broadcasts metadata recomputation event to all admins in this admin cluster
+  defp broadcast_metadata_event(event) do
+    Phoenix.PubSub.broadcast(
+      EdgeAdmin.PubSub,
+      "#{Vpn.admin_cluster_name()}:metadata",
+      event
+    )
+  end
+
+  # Builds network name for a cluster (node network, not admin network)
+  defp node_network_name(%Cluster{name: name}), do: Vpn.build_network_name(name, prefix: :node)
+
+  defp node_network_name(cluster_name) when is_binary(cluster_name),
+    do: Vpn.build_network_name(cluster_name, prefix: :node)
+
+  # ===========================================================================
   # Cluster functions
   # ===========================================================================
 
@@ -143,41 +162,50 @@ defmodule EdgeAdmin.Nodes do
   """
   def create_cluster(attrs \\ %{}) do
     with {:ok, validated_attrs} <- Forms.CreateClusterForm.changeset(attrs) do
-      Repo.transaction(fn ->
-        # 1. Auto-generate IP range if not provided
-        existing_ranges = Repo.all(from(c in Cluster, select: c.ipv4_range))
-        ipv4_range = validated_attrs["ipv4_range"] || Vpn.generate_next_subnet(existing_ranges)
+      # 1. Auto-generate IP range if not provided
+      existing_ranges = Repo.all(from(c in Cluster, select: c.ipv4_range))
+      ipv4_range = validated_attrs["ipv4_range"] || Vpn.generate_next_subnet(existing_ranges)
 
-        # 2. Merge IP range into attrs
-        cluster_attrs = Map.put(validated_attrs, "ipv4_range", ipv4_range)
+      # 2. Merge IP range into attrs
+      cluster_attrs = Map.put(validated_attrs, "ipv4_range", ipv4_range)
 
-        # 3. Create cluster in DB (changeset handles name auto-generation)
-        case %Cluster{}
-             |> Cluster.changeset(cluster_attrs)
-             |> Repo.insert() do
-          {:ok, cluster} ->
-            # 4. Create Netmaker network
-            network_name = Vpn.build_network_name(cluster.name, prefix: :node)
+      # 3. Create temporary cluster record to get name (for network name generation)
+      temp_changeset = Cluster.changeset(%Cluster{}, cluster_attrs)
 
-            case Vpn.create_network(network_name, %{addressrange: cluster.ipv4_range}) do
-              {:ok, _} ->
-                # 5. Broadcast cluster creation event to all admins in this admin cluster
-                Phoenix.PubSub.broadcast(
-                  EdgeAdmin.PubSub,
-                  "#{Vpn.admin_cluster_name()}:metadata",
-                  {:cluster_created, cluster.id}
-                )
+      case Ecto.Changeset.apply_action(temp_changeset, :insert) do
+        {:ok, temp_cluster} ->
+          # 4. Create Netmaker network FIRST
+          network_name = node_network_name(temp_cluster)
 
-                cluster
+          case Vpn.create_network(network_name, %{addressrange: ipv4_range}) do
+            {:ok, _} ->
+              # 5. Create cluster in DB (source of truth)
+              case %Cluster{}
+                   |> Cluster.changeset(cluster_attrs)
+                   |> Repo.insert() do
+                {:ok, cluster} ->
+                  # 6. Broadcast cluster creation event to all admins in this admin cluster
+                  broadcast_metadata_event({:cluster_created, cluster.id})
 
-              {:error, reason} ->
-                Repo.rollback(reason)
-            end
+                  {:ok, cluster}
 
-          {:error, changeset} ->
-            Repo.rollback(changeset)
-        end
-      end)
+                {:error, changeset} ->
+                  # Cleanup: Delete Netmaker network if DB insert fails
+                  Logger.warning(
+                    "Failed to create cluster in DB, cleaning up Netmaker network #{network_name}"
+                  )
+
+                  Vpn.delete_network(network_name)
+                  {:error, changeset}
+              end
+
+            {:error, reason} ->
+              {:error, reason}
+          end
+
+        {:error, changeset} ->
+          {:error, changeset}
+      end
     end
   end
 
@@ -193,41 +221,48 @@ defmodule EdgeAdmin.Nodes do
   @doc """
   Deletes a cluster and its Netmaker network.
   Fails if cluster has nodes.
+
+  Flow:
+  1. Verify cluster is empty
+  2. Delete Netmaker network first
+  3. Delete from DB (source of truth)
+  4. Emit event for metadata recomputation
+
+  If Netmaker deletion fails, DB deletion is skipped.
+  If DB deletion fails after Netmaker succeeds, reconciliation will clean up the orphaned cluster.
   """
   def delete_cluster(%Cluster{} = cluster) do
-    Repo.transaction(fn ->
-      # 1. Verify cluster is empty (DB constraint also enforces this)
-      node_count = Repo.aggregate(from(n in Node, where: n.cluster_id == ^cluster.id), :count)
+    # 1. Verify cluster is empty (DB constraint also enforces this)
+    node_count = Repo.aggregate(from(n in Node, where: n.cluster_id == ^cluster.id), :count)
 
-      if node_count > 0 do
-        Repo.rollback("Cannot delete cluster with nodes. Remove all nodes first.")
-      end
-
-      # 2. Delete Netmaker network
-      network_name = Vpn.build_network_name(cluster.name, prefix: :node)
+    if node_count > 0 do
+      {:error, "Cannot delete cluster with nodes. Remove all nodes first."}
+    else
+      # 2. Delete Netmaker network FIRST
+      network_name = node_network_name(cluster)
 
       case Vpn.delete_network(network_name) do
         {:ok, _} ->
-          # 3. Delete from DB
+          # 3. Delete from DB (source of truth)
           case Repo.delete(cluster) do
             {:ok, deleted_cluster} ->
               # 4. Broadcast cluster deletion event to all admins in this admin cluster
-              Phoenix.PubSub.broadcast(
-                EdgeAdmin.PubSub,
-                "#{Vpn.admin_cluster_name()}:metadata",
-                {:cluster_deleted, cluster.id}
-              )
+              broadcast_metadata_event({:cluster_deleted, cluster.id})
 
-              deleted_cluster
+              {:ok, deleted_cluster}
 
             {:error, changeset} ->
-              Repo.rollback(changeset)
+              Logger.error(
+                "Failed to delete cluster #{cluster.id} from DB after Netmaker deletion. Reconciliation will clean up."
+              )
+
+              {:error, changeset}
           end
 
         {:error, reason} ->
-          Repo.rollback(reason)
+          {:error, reason}
       end
-    end)
+    end
   end
 
   @doc """
@@ -318,16 +353,12 @@ defmodule EdgeAdmin.Nodes do
           updated_node = Repo.preload(updated_node, :cluster, force: true)
 
           # 3. Emit PubSub event for metadata recomputation
-          Phoenix.PubSub.broadcast(
-            EdgeAdmin.PubSub,
-            "#{Vpn.admin_cluster_name()}:metadata",
-            {:node_updated, node.id, old_cluster_id, new_cluster.id}
-          )
+          broadcast_metadata_event({:node_updated, node.id, old_cluster_id, new_cluster.id})
 
           # 4. Best-effort Netmaker sync (don't fail if this doesn't work)
           # The reconciliation worker will fix any inconsistencies
-          old_network_name = Vpn.build_network_name(node.cluster.name, prefix: :node)
-          new_network_name = Vpn.build_network_name(new_cluster.name, prefix: :node)
+          old_network_name = node_network_name(node.cluster)
+          new_network_name = node_network_name(new_cluster)
 
           case Vpn.add_host_to_network(node.netmaker_host_id, new_network_name) do
             {:ok, _} ->
@@ -362,44 +393,47 @@ defmodule EdgeAdmin.Nodes do
   end
 
   @doc """
-  Deletes a node and its Netmaker node in a transaction.
+  Deletes a node and its Netmaker host.
 
-  Transaction flow:
-  1. Delete node from Netmaker network
-  2. Delete from DB (cascades to ssh_usernames, ssh_public_keys, command_executions)
-  3. Emit event for metadata recomputation
+  Flow:
+  1. Delete all DNS records (aliases) from Netmaker first
+  2. Delete host from Netmaker (removes from all networks)
+  3. Delete from DB (cascades to ssh_usernames, ssh_public_keys, command_executions, aliases)
+  4. Emit event for metadata recomputation
+
+  If Netmaker deletion fails, DB deletion is skipped.
+  If DB deletion fails after Netmaker succeeds, reconciliation will clean up the orphaned node.
   """
   def delete_node(%Node{} = node) do
-    Repo.transaction(fn ->
-      # 1. Remove from Netmaker first (critical - must succeed)
-      network_name = Vpn.build_network_name(node.cluster.name, prefix: :node)
+    # 1. Clean up DNS records (aliases) from Netmaker FIRST
+    # Best-effort - logs warnings on failures but continues
+    cleanup_node_aliases(node)
 
-      # Remove host from network (Netmaker handles node deletion automatically)
-      case Vpn.remove_host_from_network(node.netmaker_host_id, network_name) do
-        {:ok, _} ->
-          Logger.info("Removed host #{node.netmaker_host_id} from network #{network_name}")
+    # 2. Delete host from Netmaker (removes from all networks)
+    case Vpn.delete_host(node.netmaker_host_id) do
+      {:ok, _} ->
+        Logger.info("Deleted host #{node.netmaker_host_id} from Netmaker")
 
-          # 2. Delete from DB (cascades to ssh_usernames, ssh_public_keys, command_executions)
-          case Repo.delete(node) do
-            {:ok, deleted_node} ->
-              # 3. Emit PubSub event for metadata recomputation
-              Phoenix.PubSub.broadcast(
-                EdgeAdmin.PubSub,
-                "#{Vpn.admin_cluster_name()}:metadata",
-                {:node_deleted, node.id, node.cluster_id}
-              )
+        # 3. Delete from DB (cascades to ssh_usernames, ssh_public_keys, command_executions, aliases)
+        case Repo.delete(node) do
+          {:ok, deleted_node} ->
+            # 4. Emit PubSub event for metadata recomputation
+            broadcast_metadata_event({:node_deleted, node.id, node.cluster_id})
 
-              deleted_node
+            {:ok, deleted_node}
 
-            {:error, changeset} ->
-              Repo.rollback(changeset)
-          end
+          {:error, changeset} ->
+            Logger.error(
+              "Failed to delete node #{node.id} from DB after Netmaker deletion. Reconciliation will clean up."
+            )
 
-        {:error, reason} ->
-          Logger.error("Failed to remove host from network: #{inspect(reason)}")
-          Repo.rollback(reason)
-      end
-    end)
+            {:error, changeset}
+        end
+
+      {:error, reason} ->
+        Logger.error("Failed to delete host from Netmaker: #{inspect(reason)}")
+        {:error, reason}
+    end
   end
 
   def change_node(%Node{} = node, attrs \\ %{}) do
@@ -480,11 +514,7 @@ defmodule EdgeAdmin.Nodes do
             {:ok, node} ->
               # Emit event only for new nodes (Metadata will recompute assignments)
               if is_new_node do
-                Phoenix.PubSub.broadcast(
-                  EdgeAdmin.PubSub,
-                  "#{Vpn.admin_cluster_name()}:metadata",
-                  {:node_created, node_id, cluster.id}
-                )
+                broadcast_metadata_event({:node_created, node_id, cluster.id})
               end
 
               {:ok, node}
@@ -892,7 +922,7 @@ defmodule EdgeAdmin.Nodes do
       key_type = Map.fetch!(attrs, "key_type")
       expiration = Map.get(attrs, "expiration", 3600)
       uses_remaining = Map.get(attrs, "uses_remaining", 1)
-      network_name = Vpn.build_network_name(cluster.name, prefix: :node)
+      network_name = node_network_name(cluster)
 
       case key_type do
         "default" ->
@@ -1013,7 +1043,7 @@ defmodule EdgeAdmin.Nodes do
     # Wrap entire cleanup in transaction - rollback everything if ANY step fails
     case Repo.transaction(fn ->
            # 1. Query Netmaker for nodes using this tag
-           network_name = Vpn.build_network_name(enrollment_key.cluster.name, prefix: :node)
+           network_name = node_network_name(enrollment_key.cluster)
 
            netmaker_nodes =
              case Vpn.list_nodes_by_tag(enrollment_key.tag) do
@@ -1157,17 +1187,25 @@ defmodule EdgeAdmin.Nodes do
       clusters_processed: 0,
       nodes_added: 0,
       nodes_removed: 0,
+      nodes_deleted: 0,
+      clusters_deleted: 0,
       aliases_cleaned: 0,
       errors: 0
     }
 
-    Enum.reduce(clusters, result, fn cluster, acc ->
-      reconcile_single_cluster(cluster, db_nodes_by_cluster[cluster.id] || [], acc)
-    end)
+    result =
+      Enum.reduce(clusters, result, fn cluster, acc ->
+        reconcile_single_cluster(cluster, db_nodes_by_cluster[cluster.id] || [], acc)
+      end)
+
+    # Clean up orphaned clusters (exist in DB but network doesn't exist in Netmaker)
+    result_with_clusters = cleanup_orphaned_clusters(clusters, result)
+
+    result_with_clusters
   end
 
   defp reconcile_single_cluster(cluster, db_nodes, acc) do
-    network_name = Vpn.build_network_name(cluster.name, prefix: :node)
+    network_name = node_network_name(cluster)
 
     Logger.debug("Reconciling cluster #{cluster.name} (network: #{network_name})")
 
@@ -1185,32 +1223,43 @@ defmodule EdgeAdmin.Nodes do
           |> Enum.reject(&is_nil/1)
           |> MapSet.new()
 
-        # Find edge node host IDs in Netmaker (those we have in DB)
-        # This filters out admin nodes and staff machines
-        edge_node_host_ids = MapSet.intersection(actual_host_ids, expected_host_ids)
-
-        # Clean up orphaned aliases for nodes not in both DB and Netmaker
-        # These are nodes that either: left the network, were deleted, or moved clusters
-        orphaned_host_ids = MapSet.difference(expected_host_ids, edge_node_host_ids)
+        # Nodes in DB but NOT in this Netmaker network
+        # Could be: deleted (host gone), in limbo (changing clusters), or moved to another cluster
+        orphaned_in_db = MapSet.difference(expected_host_ids, actual_host_ids)
 
         orphaned_nodes =
-          Enum.filter(db_nodes, fn node -> node.netmaker_host_id in orphaned_host_ids end)
+          Enum.filter(db_nodes, fn node -> node.netmaker_host_id in orphaned_in_db end)
 
+        # Clean up aliases for orphaned nodes
         aliases_cleaned = cleanup_orphaned_aliases(orphaned_nodes)
 
-        # Add missing nodes (DB says yes, Netmaker says no)
-        missing = MapSet.difference(expected_host_ids, edge_node_host_ids)
+        # Delete orphaned nodes from DB if host doesn't exist in Netmaker at all
+        deleted = delete_orphaned_nodes(orphaned_nodes)
+
+        # Add missing nodes (DB says yes, Netmaker says no, but host exists in Netmaker)
+        # These are hosts in limbo between cluster changes
+        missing = MapSet.difference(expected_host_ids, actual_host_ids)
         added = add_missing_nodes(missing, network_name, cluster.name)
 
-        # Remove extra nodes (Netmaker says yes for our edge nodes, but DB says no)
-        # Only remove edge nodes that we manage (exist in our DB or used to exist)
-        extra = MapSet.difference(edge_node_host_ids, expected_host_ids)
-        removed = remove_extra_nodes(extra, network_name, cluster.name)
+        # Remove extra nodes (Netmaker says yes, but DB says this cluster shouldn't have them)
+        # These are nodes that moved to another cluster but weren't removed from old network
+        extra_in_netmaker = MapSet.difference(actual_host_ids, expected_host_ids)
+
+        # Only remove if we manage this host (it's in our DB somewhere)
+        all_db_host_ids =
+          from(n in Node, select: n.netmaker_host_id)
+          |> Repo.all()
+          |> MapSet.new()
+
+        managed_extra = MapSet.intersection(extra_in_netmaker, all_db_host_ids)
+        removed = remove_extra_nodes(managed_extra, network_name, cluster.name)
 
         %{
           clusters_processed: acc.clusters_processed + 1,
           nodes_added: acc.nodes_added + added,
           nodes_removed: acc.nodes_removed + removed,
+          nodes_deleted: acc.nodes_deleted + deleted,
+          clusters_deleted: acc.clusters_deleted,
           aliases_cleaned: acc.aliases_cleaned + aliases_cleaned,
           errors: acc.errors
         }
@@ -1262,6 +1311,93 @@ defmodule EdgeAdmin.Nodes do
     end)
   end
 
+  defp delete_orphaned_nodes(orphaned_nodes) do
+    Enum.reduce(orphaned_nodes, 0, fn node, count ->
+      # Check if host exists in Netmaker at all
+      case Vpn.get_host(node.netmaker_host_id) do
+        {:ok, _host} ->
+          # Host exists in Netmaker (probably in limbo between clusters)
+          # Don't delete from DB - add_missing_nodes will handle re-adding
+          Logger.debug(
+            "Reconciliation: Host #{node.netmaker_host_id} exists in Netmaker, skipping DB deletion (node in limbo)"
+          )
+
+          count
+
+        {:error, :not_found} ->
+          # Host doesn't exist in Netmaker - safe to delete from DB
+          # This means deletion was attempted and Netmaker succeeded but DB failed
+          Logger.info(
+            "Reconciliation: Deleting orphaned node #{node.id} from DB (host not found in Netmaker)"
+          )
+
+          case Repo.delete(node) do
+            {:ok, _} ->
+              # Emit event for metadata recomputation
+              broadcast_metadata_event({:node_deleted, node.id, node.cluster_id})
+
+              count + 1
+
+            {:error, changeset} ->
+              Logger.error(
+                "Reconciliation: Failed to delete orphaned node #{node.id}: #{inspect(changeset)}"
+              )
+
+              count
+          end
+
+        {:error, reason} ->
+          Logger.warning(
+            "Reconciliation: Failed to check if host #{node.netmaker_host_id} exists: #{inspect(reason)}"
+          )
+
+          count
+      end
+    end)
+  end
+
+  defp cleanup_orphaned_clusters(clusters, acc) do
+    Enum.reduce(clusters, acc, fn cluster, result ->
+      network_name = node_network_name(cluster)
+
+      # Check if network exists in Netmaker
+      case Vpn.get_network(network_name) do
+        {:ok, _network} ->
+          # Network exists, cluster is fine
+          result
+
+        {:error, :not_found} ->
+          # Network doesn't exist - cluster should be deleted from DB
+          # This means deletion was attempted and Netmaker succeeded but DB failed
+          Logger.info(
+            "Reconciliation: Deleting orphaned cluster #{cluster.id} from DB (network not found in Netmaker)"
+          )
+
+          case Repo.delete(cluster) do
+            {:ok, _} ->
+              # Emit event for metadata recomputation
+              broadcast_metadata_event({:cluster_deleted, cluster.id})
+
+              %{result | clusters_deleted: result.clusters_deleted + 1}
+
+            {:error, changeset} ->
+              Logger.error(
+                "Reconciliation: Failed to delete orphaned cluster #{cluster.id}: #{inspect(changeset)}"
+              )
+
+              %{result | errors: result.errors + 1}
+          end
+
+        {:error, reason} ->
+          Logger.warning(
+            "Reconciliation: Failed to check if network #{network_name} exists: #{inspect(reason)}"
+          )
+
+          %{result | errors: result.errors + 1}
+      end
+    end)
+  end
+
   @doc """
   Cleans up all aliases for a single node.
 
@@ -1303,7 +1439,7 @@ defmodule EdgeAdmin.Nodes do
   end
 
   defp cleanup_single_alias(%Alias{} = alias_record) do
-    network_name = Vpn.build_network_name(alias_record.cluster.name, prefix: :node)
+    network_name = node_network_name(alias_record.cluster)
     dns_hostname = Alias.dns_hostname(alias_record)
 
     # 1. Try to delete DNS entry (best-effort)
@@ -1436,7 +1572,7 @@ defmodule EdgeAdmin.Nodes do
             alias_record = Repo.preload(alias_record, :cluster)
 
             # 5. Query Netmaker for node's IP address
-            network_name = Vpn.build_network_name(node.cluster.name, prefix: :node)
+            network_name = node_network_name(node.cluster)
 
             case Vpn.list_nodes(network_name) do
               {:ok, netmaker_nodes} ->
@@ -1503,7 +1639,7 @@ defmodule EdgeAdmin.Nodes do
       alias_record = Repo.preload(alias_record, :cluster)
 
       # 2. Delete DNS entry from Netmaker
-      network_name = Vpn.build_network_name(alias_record.cluster.name, prefix: :node)
+      network_name = node_network_name(alias_record.cluster)
       dns_hostname = Alias.dns_hostname(alias_record)
 
       case Nexmaker.Api.DNS.delete(network_name, dns_hostname) do

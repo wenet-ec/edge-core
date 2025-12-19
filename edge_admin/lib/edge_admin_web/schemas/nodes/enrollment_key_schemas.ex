@@ -94,18 +94,26 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
               nullable: true,
               description: "Number of allowed uses (only for custom/ephemeral). Default: 1",
               example: 1
+            },
+            time_to_live: %Schema{
+              type: :integer,
+              nullable: true,
+              description: "Time to live in minutes (required for ephemeral keys only)",
+              example: 60
             }
           },
           example: %{
-            key_type: "default"
+            key_type: "ephemeral",
+            time_to_live: 60
           }
         }
       },
       example: %{
         enrollment_key: %{
-          key_type: "custom",
-          expiration: 7200,
-          uses_remaining: 5
+          key_type: "ephemeral",
+          expiration: 3600,
+          uses_remaining: 1,
+          time_to_live: 60
         }
       }
     })

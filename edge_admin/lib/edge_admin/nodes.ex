@@ -956,6 +956,8 @@ defmodule EdgeAdmin.Nodes do
 
         "ephemeral" ->
           # Create ephemeral key tracked in DB for automatic cleanup
+          time_to_live = Map.fetch!(attrs, "time_to_live")
+
           Repo.transaction(fn ->
             # Generate unique tag for this key
             timestamp = System.system_time(:millisecond)
@@ -970,16 +972,17 @@ defmodule EdgeAdmin.Nodes do
               {:ok, netmaker_key} ->
                 token = netmaker_key["token"]
 
-                # Track in DB for cleanup (store tag for later queries)
+                # Track in DB for cleanup (store tag and TTL for later queries)
                 case %EphemeralEnrollmentKey{}
                      |> EphemeralEnrollmentKey.changeset(%{
                        token: token,
                        tag: tag,
+                       time_to_live: time_to_live,
                        cluster_id: cluster.id
                      })
                      |> Repo.insert() do
                   {:ok, _} ->
-                    %{token: token, key_type: "ephemeral"}
+                    %{token: token, key_type: "ephemeral", time_to_live: time_to_live}
 
                   {:error, changeset} ->
                     Repo.rollback(changeset)
@@ -997,7 +1000,7 @@ defmodule EdgeAdmin.Nodes do
   Cleans up expired ephemeral enrollment keys and their associated resources.
 
   This function:
-  1. Finds expired ephemeral enrollment keys (inserted_at < cutoff_time)
+  1. Finds expired ephemeral enrollment keys based on their individual time_to_live
   2. For each expired key:
      - Queries Netmaker for hosts enrolled with this key
      - Deletes Netmaker hosts (both staff and ephemeral edge nodes)
@@ -1010,13 +1013,13 @@ defmodule EdgeAdmin.Nodes do
   Returns statistics about the cleanup operation.
   """
   def cleanup_ephemeral_keys do
-    ttl_hours = Application.get_env(:edge_admin, :ephemeral_key_ttl_hours, 168)
-    cutoff_time = DateTime.add(DateTime.utc_now(), -ttl_hours * 3600, :second)
+    current_time = DateTime.utc_now()
 
-    # Find expired tracked keys
+    # Find expired tracked keys (using per-key TTL)
+    # Calculate cutoff time for each key: inserted_at + time_to_live (minutes)
     expired_keys =
       from(ek in EphemeralEnrollmentKey,
-        where: ek.inserted_at < ^cutoff_time,
+        where: fragment("? + (? || ' minutes')::interval < ?", ek.inserted_at, ek.time_to_live, ^current_time),
         preload: [:cluster]
       )
       |> Repo.all()

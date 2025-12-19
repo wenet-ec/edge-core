@@ -12,6 +12,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyForm do
     field(:key_type, :string)
     field(:expiration, :integer)
     field(:uses_remaining, :integer)
+    field(:time_to_live, :integer)
   end
 
   @doc """
@@ -21,6 +22,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyForm do
   - `key_type` - Required, must be "default", "custom", or "ephemeral"
   - `expiration` - Optional, must be positive integer in seconds (default: 3600)
   - `uses_remaining` - Optional, must be positive integer (default: 1)
+  - `time_to_live` - Required for ephemeral keys, must be positive integer in minutes
 
   ## Returns
   - `{:ok, attrs}` - Validated and normalized attributes as a map with string keys
@@ -33,11 +35,13 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyForm do
 
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
-    |> cast(attrs, [:key_type, :expiration, :uses_remaining])
+    |> cast(attrs, [:key_type, :expiration, :uses_remaining, :time_to_live])
     |> validate_required([:key_type])
     |> validate_inclusion(:key_type, ["default", "custom", "ephemeral"])
     |> validate_number(:expiration, greater_than: 0)
     |> validate_number(:uses_remaining, greater_than: 0)
+    |> validate_number(:time_to_live, greater_than: 0)
+    |> validate_ephemeral_ttl()
     |> apply_action(:insert)
     |> case do
       {:ok, form} -> {:ok, to_map(form)}
@@ -53,11 +57,24 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyForm do
      |> apply_action!(:insert)}
   end
 
+  # Validate that ephemeral keys have time_to_live
+  defp validate_ephemeral_ttl(changeset) do
+    key_type = get_field(changeset, :key_type)
+    time_to_live = get_field(changeset, :time_to_live)
+
+    if key_type == "ephemeral" and is_nil(time_to_live) do
+      add_error(changeset, :time_to_live, "is required for ephemeral keys")
+    else
+      changeset
+    end
+  end
+
   defp to_map(%__MODULE__{} = form) do
     %{
       "key_type" => form.key_type,
       "expiration" => form.expiration,
-      "uses_remaining" => form.uses_remaining
+      "uses_remaining" => form.uses_remaining,
+      "time_to_live" => form.time_to_live
     }
     |> Enum.reject(fn {_k, v} -> is_nil(v) end)
     |> Map.new()

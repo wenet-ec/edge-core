@@ -138,7 +138,6 @@ config :edge_admin,
 
 # Ephemeral key cleanup configuration
 ephemeral_key_cleanup_enabled = get_env("EPHEMERAL_KEY_CLEANUP_ENABLED", :boolean, true)
-ephemeral_key_ttl_hours = get_env("EPHEMERAL_KEY_TTL_HOURS", :integer, 168)
 ephemeral_key_cleanup_schedule = get_env("EPHEMERAL_KEY_CLEANUP_SCHEDULE", :string, "0 0 * * *")
 
 # Cluster reconciliation configuration
@@ -151,7 +150,6 @@ zombie_admin_checkin_threshold_minutes = get_env("ZOMBIE_ADMIN_CHECKIN_THRESHOLD
 
 config :edge_admin,
   ephemeral_key_cleanup_enabled: ephemeral_key_cleanup_enabled,
-  ephemeral_key_ttl_hours: ephemeral_key_ttl_hours,
   ephemeral_key_cleanup_schedule: ephemeral_key_cleanup_schedule,
   cluster_reconciliation_enabled: cluster_reconciliation_enabled,
   cluster_reconciliation_schedule: cluster_reconciliation_schedule,

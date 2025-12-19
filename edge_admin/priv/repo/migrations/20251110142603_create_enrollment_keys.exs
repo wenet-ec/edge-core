@@ -6,6 +6,7 @@ defmodule EdgeAdmin.Repo.Migrations.CreateEphemeralEnrollmentKeys do
       add :id, :binary_id, primary_key: true
       add :token, :string, null: false
       add :tag, :string, null: false
+      add :time_to_live, :integer, null: false
       add :cluster_id, references(:clusters, type: :binary_id, on_delete: :restrict), null: false
 
       timestamps(type: :utc_datetime)

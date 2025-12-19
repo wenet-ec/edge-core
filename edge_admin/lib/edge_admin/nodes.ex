@@ -783,6 +783,19 @@ defmodule EdgeAdmin.Nodes do
     with {:ok, attrs} <- Forms.CreateSshUsernameForm.changeset(params) do
       # Extract public_keys (if present) and prepare username attrs
       {public_keys_attrs, username_attrs} = Map.pop(attrs, "public_keys", [])
+
+      # Hash password if provided
+      username_attrs =
+        case Map.get(username_attrs, "password") do
+          nil ->
+            username_attrs
+
+          password when is_binary(password) ->
+            username_attrs
+            |> Map.delete("password")
+            |> Map.put("password_hash", Argon2.hash_pwd_salt(password))
+        end
+
       username_attrs = Map.put(username_attrs, "node_id", node.id)
 
       # Create username
@@ -814,6 +827,37 @@ defmodule EdgeAdmin.Nodes do
 
   def change_ssh_username(%SshUsername{} = ssh_username, attrs \\ %{}) do
     SshUsername.changeset(ssh_username, attrs)
+  end
+
+  def verify_ssh_password(node_id, params) do
+    with {:ok, attrs} <- Forms.VerifySshPasswordForm.changeset(params) do
+      username = Map.get(attrs, "username")
+      password = Map.get(attrs, "password")
+
+      # Query SSH username for this node
+      ssh_username =
+        from(u in SshUsername,
+          where: u.node_id == ^node_id and u.username == ^username
+        )
+        |> Repo.one()
+
+      verified =
+        case ssh_username do
+          nil ->
+            # Username not found - return false (don't leak this info)
+            false
+
+          %SshUsername{password_hash: nil} ->
+            # No password configured - can't authenticate with password
+            false
+
+          %SshUsername{password_hash: hash} ->
+            # Verify password with Argon2
+            Argon2.verify_pass(password, hash)
+        end
+
+      {:ok, verified}
+    end
   end
 
   def list_ssh_usernames_with_filtering_pagination(params \\ %{}) do

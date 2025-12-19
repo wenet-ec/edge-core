@@ -58,6 +58,34 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   end
 
   @doc """
+  Verify SSH password for the authenticated node.
+  POST /api/agents/ssh_usernames/verify_password
+  """
+  def verify_ssh_password(username, password) do
+    path = "/api/agents/ssh_usernames/verify_password"
+    payload = %{ssh_username: %{username: username, password: password}}
+
+    request_with_auth(path, fn url, headers ->
+      case Req.post(url, json: payload, headers: headers, receive_timeout: 5000, retry: false) do
+        {:ok, %{status: 200, body: %{"data" => %{"verified" => verified}}}} ->
+          {:ok, verified}
+
+        {:ok, %{status: 422, body: body}} ->
+          Logger.warning("SSH password verification validation failed: #{inspect(body)}")
+          {:error, {:validation_error, body}}
+
+        {:ok, %{status: status, body: body}} ->
+          Logger.warning("Failed to verify SSH password, HTTP #{status}: #{inspect(body)}")
+          {:error, {:http_error, status, body}}
+
+        {:error, reason} ->
+          Logger.warning("Failed to verify SSH password: #{inspect(reason)}")
+          {:error, {:request_failed, reason}}
+      end
+    end)
+  end
+
+  @doc """
   Get sent command executions for the authenticated node.
   GET /api/agents/command_executions
   """

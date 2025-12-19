@@ -3,7 +3,7 @@ defmodule EdgeAdmin.Repo.Migrations.AddPasswordToSshUsernames do
 
   def change do
     alter table(:ssh_usernames) do
-      add :password, :string
+      add :password_hash, :string
       modify :inserted_at, :utc_datetime, from: :naive_datetime
       modify :updated_at, :utc_datetime, from: :naive_datetime
     end

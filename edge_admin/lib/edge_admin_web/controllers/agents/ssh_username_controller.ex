@@ -21,4 +21,22 @@ defmodule EdgeAdminWeb.Controllers.Agents.SshUsernameController do
 
     render(conn, :index, ssh_usernames: ssh_usernames)
   end
+
+  @doc """
+  SSH password verification endpoint (requires authentication).
+
+  Agent's SSH server calls this to verify password authentication attempts.
+  Node ID is inferred from conn.assigns.current_node.
+
+  Returns {"data": {"verified": true/false}}
+  - true: password matches
+  - false: username not found or password incorrect (security: don't distinguish)
+  """
+  def verify_password(conn, params) do
+    node_id = conn.assigns.current_node.id
+
+    with {:ok, verified} <- Nodes.verify_ssh_password(node_id, params) do
+      render(conn, :verify_password, verified: verified)
+    end
+  end
 end

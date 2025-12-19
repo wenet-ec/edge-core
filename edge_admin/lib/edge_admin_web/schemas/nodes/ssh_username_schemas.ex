@@ -24,14 +24,13 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas do
         },
         username: %Schema{
           type: :string,
-          description: "SSH username for node access",
+          description: "SSH username for node access (3-32 characters)",
           example: "admin"
         },
-        password: %Schema{
-          type: :string,
-          description: "Optional SSH password for username/password authentication",
-          example: "secret123",
-          nullable: true
+        has_password: %Schema{
+          type: :boolean,
+          description: "Whether this username has a password configured for authentication",
+          example: true
         },
         node_id: %Schema{
           type: :string,
@@ -56,11 +55,11 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas do
           description: "When the SSH username was last updated"
         }
       },
-      required: [:id, :username, :node_id, :inserted_at, :updated_at],
+      required: [:id, :username, :has_password, :node_id, :inserted_at, :updated_at],
       example: %{
         id: "01234567-89ab-cdef-0123-456789abcdef",
         username: "admin",
-        password: "secret123",
+        has_password: true,
         node_id: "fedcba98-7654-3210-fedc-ba9876543210",
         public_keys: [
           %{
@@ -106,7 +105,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas do
         data: %{
           id: "01234567-89ab-cdef-0123-456789abcdef",
           username: "admin",
-          password: "secret123",
+          has_password: true,
           node_id: "fedcba98-7654-3210-fedc-ba9876543210",
           public_keys: [
             %{
@@ -140,13 +139,18 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas do
           properties: %{
             username: %Schema{
               type: :string,
-              description: "SSH username for node access",
-              example: "admin"
+              description: "SSH username for node access (3-32 characters)",
+              example: "admin",
+              minLength: 3,
+              maxLength: 32
             },
             password: %Schema{
               type: :string,
-              description: "Optional password for username/password SSH authentication",
-              example: "secret123",
+              description:
+                "Optional password for username/password SSH authentication (12-128 characters if provided, will be hashed with Argon2)",
+              example: "MySecurePassword123!",
+              minLength: 12,
+              maxLength: 128,
               nullable: true
             },
             public_keys: %Schema{
@@ -175,7 +179,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas do
           required: [:username],
           example: %{
             username: "admin",
-            password: "secret123",
+            password: "MySecurePassword123!",
             public_keys: [
               %{
                 key_name: "laptop",

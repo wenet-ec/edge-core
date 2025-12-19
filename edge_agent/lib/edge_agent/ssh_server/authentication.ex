@@ -19,23 +19,28 @@ defmodule EdgeAgent.SshServer.Authentication do
 
   @doc """
   Password authentication callback for SSH server.
-  Validates username/password against EdgeAdmin SSH usernames.
+  Validates username/password against EdgeAdmin via remote verification.
   """
   def auth_password(user, password, _peer_address, _state) do
-    Logger.debug("SSH password auth attempt for user: #{inspect(user)}")
+    username = to_string(user)
+    password_string = to_string(password)
 
-    with {:ok, ssh_usernames} <- AdminClient.list_ssh_usernames(),
-         {:ok, ssh_username} <- find_username(ssh_usernames, to_string(user)),
-         true <- validate_password(password, ssh_username["password"]) do
-      Logger.info("SSH password authentication successful for user: #{to_string(user)}")
-      true
-    else
-      {:error, reason} ->
-        Logger.warning("SSH password authentication failed for user #{inspect(user)}: #{inspect(reason)}")
+    Logger.debug("SSH password auth attempt for user: #{username}")
+
+    case AdminClient.verify_ssh_password(username, password_string) do
+      {:ok, true} ->
+        Logger.info("SSH password authentication successful for user: #{username}")
+        true
+
+      {:ok, false} ->
+        Logger.warning(
+          "SSH password authentication failed for user #{username}: verification returned false"
+        )
+
         false
 
-      false ->
-        Logger.warning("SSH password authentication failed for user #{inspect(user)}: incorrect password")
+      {:error, reason} ->
+        Logger.error("SSH password authentication error for user #{username}: #{inspect(reason)}")
         false
     end
   end
@@ -78,60 +83,36 @@ defmodule EdgeAgent.SshServer.Authentication do
     end
   end
 
-  defp validate_password(provided_password, stored_password) when is_list(provided_password) do
-    validate_password(List.to_string(provided_password), stored_password)
-  end
-
-  defp validate_password(provided_password, stored_password) when is_binary(provided_password) do
-    # Direct string comparison - admin stores plaintext passwords
-    result = provided_password == stored_password
-
-    if result do
-      Logger.debug("Password match successful")
-    else
-      Logger.debug("Password mismatch")
-    end
-
-    result
-  end
-
-  defp validate_password(_provided_password, nil) do
-    Logger.debug("No password configured for user")
+  defp validate_public_key(provided_key, []) do
+    Logger.debug("No public keys configured for user")
     false
   end
 
   defp validate_public_key(provided_key, ssh_public_keys) do
-    Logger.debug("Raw provided key format: #{inspect(provided_key, limit: :infinity)}")
+    Logger.debug("Validating public key against #{length(ssh_public_keys)} stored key(s)")
 
     provided_key_string = format_public_key(provided_key)
     provided_key_normalized = normalize_ssh_key(provided_key_string)
 
     case validate_key_algorithm(provided_key_string) do
       {:ok, algorithm} ->
-        Logger.debug("Provided key algorithm: #{algorithm}")
-        Logger.debug("Formatted provided key: #{provided_key_string}")
-        Logger.debug("Normalized provided key: #{provided_key_normalized}")
-        Logger.debug("Against #{length(ssh_public_keys)} stored keys")
-
-        Enum.each(ssh_public_keys, fn stored_key ->
-          Logger.debug("Stored key: #{stored_key["public_key"]}")
-        end)
+        Logger.debug(
+          "Provided key: #{algorithm} #{String.slice(provided_key_normalized, 0..50)}..."
+        )
 
         result =
-          Enum.any?(ssh_public_keys, fn stored_key ->
-            stored_key_string = String.trim(stored_key["public_key"])
-            stored_key_normalized = normalize_ssh_key(stored_key_string)
+          Enum.find_value(ssh_public_keys, false, fn stored_key ->
+            stored_key_normalized =
+              stored_key["public_key"]
+              |> String.trim()
+              |> normalize_ssh_key()
 
-            match = provided_key_normalized == stored_key_normalized
-
-            if match do
-              Logger.debug("Key match found for key: #{stored_key["key_name"]}")
+            if provided_key_normalized == stored_key_normalized do
+              Logger.debug("Key match found: #{stored_key["key_name"]}")
+              true
             else
-              Logger.debug("Key mismatch - provided: #{provided_key_normalized}")
-              Logger.debug("Key mismatch - stored: #{stored_key_normalized}")
+              false
             end
-
-            match
           end)
 
         if !result do
@@ -141,7 +122,7 @@ defmodule EdgeAgent.SshServer.Authentication do
         result
 
       {:error, reason} ->
-        Logger.warning("Unsupported key algorithm: #{reason}")
+        Logger.warning("Invalid key: #{reason}")
         false
     end
   end
@@ -167,19 +148,9 @@ defmodule EdgeAgent.SshServer.Authentication do
     end
   end
 
-  defp format_public_key({key_type, key_data, _comment}) when is_list(key_type) and is_binary(key_data) do
-    key_type_string =
-      case key_type do
-        ~c"ssh-rsa" -> "ssh-rsa"
-        ~c"ssh-dss" -> "ssh-dss"
-        ~c"ecdsa-sha2-nistp256" -> "ecdsa-sha2-nistp256"
-        ~c"ecdsa-sha2-nistp384" -> "ecdsa-sha2-nistp384"
-        ~c"ecdsa-sha2-nistp521" -> "ecdsa-sha2-nistp521"
-        ~c"ssh-ed25519" -> "ssh-ed25519"
-        other when is_list(other) -> List.to_string(other)
-        other -> to_string(other)
-      end
-
+  defp format_public_key({key_type, key_data, _comment})
+       when is_list(key_type) and is_binary(key_data) do
+    key_type_string = charlist_to_string(key_type)
     key_data_base64 = Base.encode64(key_data)
     "#{key_type_string} #{key_data_base64}"
   end
@@ -210,4 +181,19 @@ defmodule EdgeAgent.SshServer.Authentication do
     Logger.debug("Key format details: #{inspect(other, limit: :infinity)}")
     ""
   end
+
+  # Helper to convert SSH key type charlist to string
+  defp charlist_to_string(charlist) when is_list(charlist) do
+    case charlist do
+      ~c"ssh-rsa" -> "ssh-rsa"
+      ~c"ssh-dss" -> "ssh-dss"
+      ~c"ecdsa-sha2-nistp256" -> "ecdsa-sha2-nistp256"
+      ~c"ecdsa-sha2-nistp384" -> "ecdsa-sha2-nistp384"
+      ~c"ecdsa-sha2-nistp521" -> "ecdsa-sha2-nistp521"
+      ~c"ssh-ed25519" -> "ssh-ed25519"
+      other -> List.to_string(other)
+    end
+  end
+
+  defp charlist_to_string(other), do: to_string(other)
 end

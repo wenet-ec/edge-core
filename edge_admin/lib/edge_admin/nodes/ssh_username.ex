@@ -5,7 +5,7 @@ defmodule EdgeAdmin.Nodes.SshUsername do
 
   schema "ssh_usernames" do
     field(:username, :string)
-    field(:password, :string)
+    field(:password_hash, :string)
 
     # Associations
     belongs_to(:node, EdgeAdmin.Nodes.Node)
@@ -14,11 +14,18 @@ defmodule EdgeAdmin.Nodes.SshUsername do
     timestamps()
   end
 
+  @doc """
+  Returns whether this SSH username has a password configured.
+  """
+  def has_password?(%__MODULE__{password_hash: nil}), do: false
+  def has_password?(%__MODULE__{password_hash: _hash}), do: true
+
   @doc false
   def changeset(ssh_username, attrs) do
     ssh_username
-    |> cast(attrs, [:username, :password, :node_id])
+    |> cast(attrs, [:username, :password_hash, :node_id])
     |> validate_required([:username, :node_id])
+    |> validate_length(:username, min: 3, max: 32)
     |> unique_constraint([:username, :node_id], name: :ssh_usernames_node_id_username_index)
     |> foreign_key_constraint(:node_id)
   end

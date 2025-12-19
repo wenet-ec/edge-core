@@ -22,8 +22,8 @@ defmodule EdgeAdmin.Nodes.Forms.CreateSshUsernameForm do
   by the context function.
 
   ## Validations
-  - `username` - Required
-  - `password` - Optional
+  - `username` - Required, 3-32 characters
+  - `password` - Optional, 12-128 characters if provided
   - `public_keys` - Optional array of public keys (validated individually)
 
   ## Returns
@@ -61,6 +61,8 @@ defmodule EdgeAdmin.Nodes.Forms.CreateSshUsernameForm do
     %__MODULE__{}
     |> cast(attrs, [:username, :password])
     |> validate_required([:username])
+    |> validate_length(:username, min: 3, max: 32)
+    |> validate_length(:password, min: 12, max: 128)
     |> apply_action(:insert)
     |> case do
       {:ok, form} -> {:ok, to_map(form)}

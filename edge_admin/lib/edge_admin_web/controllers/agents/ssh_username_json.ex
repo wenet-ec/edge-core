@@ -9,11 +9,14 @@ defmodule EdgeAdminWeb.Controllers.Agents.SshUsernameJSON do
     %{data: for(username <- ssh_usernames, do: data(username))}
   end
 
+  def verify_password(%{verified: verified}) do
+    %{data: %{verified: verified}}
+  end
+
   defp data(%SshUsername{} = username) do
     %{
       id: username.id,
       username: username.username,
-      password: username.password,
       public_keys: for(key <- username.ssh_public_keys, do: key_data(key))
     }
   end

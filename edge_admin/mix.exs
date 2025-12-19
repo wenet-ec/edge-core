@@ -77,6 +77,7 @@ defmodule EdgeAdmin.Mixfile do
       {:phoenix_ecto, "~> 4.7"},
       {:phoenix_live_reload, "~> 1.6", only: :dev},
       {:jason, "~> 1.4"},
+      {:argon2_elixir, "~> 4.1"},
 
       # API
       {:open_api_spex, "~> 3.22"},

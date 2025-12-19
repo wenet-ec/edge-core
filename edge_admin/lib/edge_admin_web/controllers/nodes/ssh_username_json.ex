@@ -33,7 +33,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameJSON do
     base = %{
       id: ssh_username.id,
       username: ssh_username.username,
-      password: ssh_username.password,
+      has_password: SshUsername.has_password?(ssh_username),
       node_id: ssh_username.node_id,
       inserted_at: ssh_username.inserted_at,
       updated_at: ssh_username.updated_at

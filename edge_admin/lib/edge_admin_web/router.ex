@@ -120,6 +120,7 @@ defmodule EdgeAdminWeb.Router do
 
     # SSH credentials query
     get("/ssh_usernames", SshUsernameController, :index)
+    post("/ssh_usernames/verify_password", SshUsernameController, :verify_password)
 
     # Command sync and result reporting
     get("/command_executions", CommandExecutionController, :index)

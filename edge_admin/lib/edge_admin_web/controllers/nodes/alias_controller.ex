@@ -76,8 +76,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
   )
 
   def show(conn, %{"id" => id}) do
-    with {:ok, alias} <- Nodes.get_alias(id) do
-      render(conn, :show, alias: alias)
+    with {:ok, alias_record} <- Nodes.get_alias(id) do
+      render(conn, :show, alias: alias_record)
     end
   end
 
@@ -103,10 +103,10 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
 
   def create(conn, %{"node_id" => node_id} = params) do
     with {:ok, node} <- Nodes.get_node(node_id),
-         {:ok, alias} <- Nodes.create_alias(node, params) do
+         {:ok, alias_record} <- Nodes.create_alias(node, params) do
       conn
       |> put_status(:created)
-      |> render(:show, alias: alias)
+      |> render(:show, alias: alias_record)
     end
   end
 
@@ -127,8 +127,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
   )
 
   def delete(conn, %{"id" => id}) do
-    with {:ok, alias} <- Nodes.get_alias(id),
-         {:ok, _} <- Nodes.delete_alias(alias) do
+    with {:ok, alias_record} <- Nodes.get_alias(id),
+         {:ok, _} <- Nodes.delete_alias(alias_record) do
       send_resp(conn, :no_content, "")
     end
   end

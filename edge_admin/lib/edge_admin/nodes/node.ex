@@ -8,14 +8,13 @@ defmodule EdgeAdmin.Nodes.Node do
   @primary_key {:id, :binary_id, autogenerate: false}
 
   schema "nodes" do
-    belongs_to(:cluster, EdgeAdmin.Nodes.Cluster)
-
-    # Netmaker references
-    field(:netmaker_host_id, :binary_id)
+    # Informative fields
     field(:id_type, :string)
     field(:status, :string, default: "healthy")
+    field(:last_seen_at, :utc_datetime)
+    field(:version, :string)
 
-    # HTTP communication fields
+    # Operational fields
     field(:http_port, :integer)
     field(:ssh_port, :integer)
     field(:metrics_port, :integer)
@@ -23,13 +22,17 @@ defmodule EdgeAdmin.Nodes.Node do
     field(:socks5_proxy_port, :integer)
     field(:api_token, :string)
     field(:proxy_password, :string)
-    field(:last_seen_at, :utc_datetime)
-
-    # Self-update tracking
-    field(:version, :string)
     field(:self_update_enabled, :boolean, default: false)
 
+    # Netmaker references
+    field(:netmaker_host_id, :binary_id)
+
+    # Computed fields
+    field(:node_name, :string, virtual: true)
+    field(:dns_hostname, :string, virtual: true)
+
     # Associations
+    belongs_to(:cluster, EdgeAdmin.Nodes.Cluster)
     has_many(:ssh_usernames, EdgeAdmin.Nodes.SshUsername, on_delete: :delete_all)
     has_many(:aliases, EdgeAdmin.Nodes.Alias, on_delete: :delete_all)
     has_many(:command_executions, EdgeAdmin.Commands.CommandExecution, on_delete: :nilify_all)
@@ -105,5 +108,4 @@ defmodule EdgeAdmin.Nodes.Node do
     network_name = Vpn.build_network_name(cluster_name, prefix: :node)
     Vpn.build_hostname(short_name, network_name)
   end
-
 end

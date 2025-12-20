@@ -9,13 +9,17 @@ defmodule EdgeAdmin.Commands.CommandExecution do
   @foreign_key_type :binary_id
 
   schema "command_executions" do
-    # Maps to TEXT in database
+    # "output" will be mapped to TEXT in database
     field(:output, :string)
     field(:status, :string)
     field(:exit_code, :integer)
     field(:target_all, :boolean, default: false)
     field(:sent_at, :utc_datetime)
     field(:completed_at, :utc_datetime)
+
+    field(:command_text, :string, virtual: true)
+    field(:cluster_name, :string, virtual: true)
+    field(:timeout, :integer, virtual: true)
 
     # Associations
     belongs_to(:command, EdgeAdmin.Commands.Command)

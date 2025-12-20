@@ -6,6 +6,7 @@ defmodule EdgeAdmin.Nodes.SshUsername do
   schema "ssh_usernames" do
     field(:username, :string)
     field(:password_hash, :string)
+    field(:has_password, :boolean, virtual: true)
 
     # Associations
     belongs_to(:node, EdgeAdmin.Nodes.Node)

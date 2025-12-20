@@ -11,6 +11,9 @@ defmodule EdgeAdmin.Nodes.Cluster do
   schema "clusters" do
     field(:name, :string)
     field(:ipv4_range, :string)
+    field(:network_name, :string, virtual: true)
+    field(:dns_domain, :string, virtual: true)
+    field(:node_count, :integer, virtual: true)
 
     has_many(:nodes, EdgeAdmin.Nodes.Node)
 

@@ -83,7 +83,7 @@ defmodule EdgeAgent.SshServer.Authentication do
     end
   end
 
-  defp validate_public_key(provided_key, []) do
+  defp validate_public_key(_provided_key, []) do
     Logger.debug("No public keys configured for user")
     false
   end

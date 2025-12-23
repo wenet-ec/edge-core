@@ -2,20 +2,14 @@
 defmodule EdgeAgent.SshServer.Authentication do
   @moduledoc """
   Handles SSH authentication against EdgeAdmin.
+
+  Both password and public key authentication are verified remotely by
+  calling the admin's unified credentials verification endpoint.
   """
 
   alias EdgeAgent.EdgeClusters.AdminClient
 
   require Logger
-
-  @supported_algorithms [
-    "ssh-ed25519",
-    "ecdsa-sha2-nistp256",
-    "ecdsa-sha2-nistp384",
-    "ecdsa-sha2-nistp521",
-    "ssh-rsa",
-    "ssh-dss"
-  ]
 
   @doc """
   Password authentication callback for SSH server.
@@ -27,16 +21,13 @@ defmodule EdgeAgent.SshServer.Authentication do
 
     Logger.debug("SSH password auth attempt for user: #{username}")
 
-    case AdminClient.verify_ssh_password(username, password_string) do
+    case AdminClient.verify_ssh_credentials(username, {:password, password_string}) do
       {:ok, true} ->
         Logger.info("SSH password authentication successful for user: #{username}")
         true
 
       {:ok, false} ->
-        Logger.warning(
-          "SSH password authentication failed for user #{username}: verification returned false"
-        )
-
+        Logger.warning("SSH password authentication failed for user #{username}")
         false
 
       {:error, reason} ->
@@ -47,106 +38,40 @@ defmodule EdgeAgent.SshServer.Authentication do
 
   @doc """
   Public key authentication callback for SSH server.
-  Validates public key against EdgeAdmin SSH public keys.
+  Formats the key and validates against EdgeAdmin via remote verification.
   """
   def auth_key?(key, user) do
-    Logger.debug("SSH auth attempt for user: #{user}")
+    username = to_string(user)
 
-    with {:ok, ssh_usernames} <- AdminClient.list_ssh_usernames(),
-         {:ok, ssh_username} <- find_username(ssh_usernames, to_string(user)),
-         ssh_public_keys <- ssh_username["public_keys"] || [],
-         true <- validate_public_key(key, ssh_public_keys) do
-      Logger.info("SSH authentication successful for user: #{user}")
-      true
+    Logger.debug("SSH public key auth attempt for user: #{username}")
+
+    # Format the key from Erlang SSH format to OpenSSH string format
+    public_key_string = format_public_key(key)
+
+    if public_key_string == "" do
+      Logger.warning("SSH public key auth failed for user #{username}: unsupported key format")
+      false
     else
-      {:error, reason} ->
-        Logger.warning("SSH authentication failed for user #{user}: #{inspect(reason)}")
-        false
+      case AdminClient.verify_ssh_credentials(username, {:public_key, public_key_string}) do
+        {:ok, true} ->
+          Logger.info("SSH public key authentication successful for user: #{username}")
+          true
 
-      false ->
-        Logger.warning("SSH authentication failed for user #{user}: public key not found")
-        false
+        {:ok, false} ->
+          Logger.warning("SSH public key authentication failed for user #{username}")
+          false
+
+        {:error, reason} ->
+          Logger.error(
+            "SSH public key authentication error for user #{username}: #{inspect(reason)}"
+          )
+
+          false
+      end
     end
   end
 
-  # Private functions
-
-  defp find_username(ssh_usernames, username) do
-    case Enum.find(ssh_usernames, fn u -> u["username"] == username end) do
-      nil ->
-        Logger.debug("Username '#{username}' not found in SSH usernames")
-        {:error, :username_not_found}
-
-      ssh_username ->
-        Logger.debug("Found SSH username: #{ssh_username["id"]}")
-        {:ok, ssh_username}
-    end
-  end
-
-  defp validate_public_key(_provided_key, []) do
-    Logger.debug("No public keys configured for user")
-    false
-  end
-
-  defp validate_public_key(provided_key, ssh_public_keys) do
-    Logger.debug("Validating public key against #{length(ssh_public_keys)} stored key(s)")
-
-    provided_key_string = format_public_key(provided_key)
-    provided_key_normalized = normalize_ssh_key(provided_key_string)
-
-    case validate_key_algorithm(provided_key_string) do
-      {:ok, algorithm} ->
-        Logger.debug(
-          "Provided key: #{algorithm} #{String.slice(provided_key_normalized, 0..50)}..."
-        )
-
-        result =
-          Enum.find_value(ssh_public_keys, false, fn stored_key ->
-            stored_key_normalized =
-              stored_key["public_key"]
-              |> String.trim()
-              |> normalize_ssh_key()
-
-            if provided_key_normalized == stored_key_normalized do
-              Logger.debug("Key match found: #{stored_key["key_name"]}")
-              true
-            else
-              false
-            end
-          end)
-
-        if !result do
-          Logger.debug("No matching public key found")
-        end
-
-        result
-
-      {:error, reason} ->
-        Logger.warning("Invalid key: #{reason}")
-        false
-    end
-  end
-
-  defp validate_key_algorithm(key_string) do
-    case String.split(key_string, " ", parts: 2) do
-      [algorithm, _key_data] when algorithm in @supported_algorithms ->
-        {:ok, algorithm}
-
-      [algorithm, _key_data] ->
-        {:error, "unsupported algorithm: #{algorithm}"}
-
-      _ ->
-        {:error, "invalid key format"}
-    end
-  end
-
-  defp normalize_ssh_key(key_string) do
-    case String.split(key_string, " ", parts: 3) do
-      [algorithm, key_data, _comment] -> "#{algorithm} #{key_data}"
-      [algorithm, key_data] -> "#{algorithm} #{key_data}"
-      _ -> key_string
-    end
-  end
+  # Private functions - Key formatting (Erlang SSH format -> OpenSSH string)
 
   defp format_public_key({key_type, key_data, _comment})
        when is_list(key_type) and is_binary(key_data) do
@@ -178,7 +103,6 @@ defmodule EdgeAgent.SshServer.Authentication do
 
   defp format_public_key(other) do
     Logger.warning("Unknown public key format: #{inspect(other)}")
-    Logger.debug("Key format details: #{inspect(other, limit: :infinity)}")
     ""
   end
 

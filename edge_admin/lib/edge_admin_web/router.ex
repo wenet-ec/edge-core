@@ -118,9 +118,8 @@ defmodule EdgeAdminWeb.Router do
   scope "/api/agents", EdgeAdminWeb.Controllers.Agents do
     pipe_through(:agent_api)
 
-    # SSH credentials query
-    get("/ssh_usernames", SshUsernameController, :index)
-    post("/ssh_usernames/verify_password", SshUsernameController, :verify_password)
+    # SSH credentials verification
+    post("/ssh_usernames/verify_credentials", SshUsernameController, :verify_credentials)
 
     # Command sync and result reporting
     get("/command_executions", CommandExecutionController, :index)

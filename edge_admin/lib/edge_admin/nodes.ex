@@ -751,15 +751,15 @@ defmodule EdgeAdmin.Nodes do
   end
 
   @doc """
-  Lists SSH usernames for a specific node with preloaded public keys.
+  Gets a specific SSH username for a node with preloaded public keys.
+  Used by agents for credential verification.
   """
-  def list_ssh_usernames_for_node(node_id) do
+  def get_ssh_username_for_node(node_id, username) do
     from(u in SshUsername,
-      where: u.node_id == ^node_id,
-      preload: [:ssh_public_keys],
-      order_by: [desc: u.inserted_at]
+      where: u.node_id == ^node_id and u.username == ^username,
+      preload: [:ssh_public_keys]
     )
-    |> Repo.all()
+    |> Repo.one()
   end
 
   def create_ssh_username(attrs \\ %{}) do
@@ -829,34 +829,72 @@ defmodule EdgeAdmin.Nodes do
     SshUsername.changeset(ssh_username, attrs)
   end
 
-  def verify_ssh_password(node_id, params) do
-    with {:ok, attrs} <- Forms.VerifySshPasswordForm.changeset(params) do
+  @doc """
+  Verifies SSH credentials (password or public key) for a given node and username.
+
+  Used by agents to validate SSH authentication attempts. Does not distinguish
+  between "username not found" and "incorrect credential" for security reasons.
+
+  ## Parameters
+  - `node_id` - The node ID (from agent's API token)
+  - `params` - Request params containing username and either password or public_key
+
+  ## Returns
+  - `{:ok, true}` - Credential verified successfully
+  - `{:ok, false}` - Username not found or credential incorrect
+  - `{:error, changeset}` - Validation failed
+  """
+  def verify_ssh_credentials(node_id, params) do
+    with {:ok, attrs} <- Forms.VerifySshCredentialsForm.changeset(params) do
       username = Map.get(attrs, "username")
       password = Map.get(attrs, "password")
+      public_key = Map.get(attrs, "public_key")
 
-      # Query SSH username for this node
-      ssh_username =
-        from(u in SshUsername,
-          where: u.node_id == ^node_id and u.username == ^username
-        )
-        |> Repo.one()
+      # Query SSH username for this node (with preloaded public keys)
+      ssh_username = get_ssh_username_for_node(node_id, username)
 
       verified =
-        case ssh_username do
-          nil ->
+        case {ssh_username, password, public_key} do
+          {nil, _, _} ->
             # Username not found - return false (don't leak this info)
             false
 
-          %SshUsername{password_hash: nil} ->
-            # No password configured - can't authenticate with password
+          {%SshUsername{password_hash: nil}, password, _} when not is_nil(password) ->
+            # Password auth requested but no password configured
             false
 
-          %SshUsername{password_hash: hash} ->
+          {%SshUsername{password_hash: hash}, password, _} when not is_nil(password) ->
             # Verify password with Argon2
             Argon2.verify_pass(password, hash)
+
+          {%SshUsername{ssh_public_keys: []}, _, public_key} when not is_nil(public_key) ->
+            # Public key auth requested but no keys configured
+            false
+
+          {%SshUsername{ssh_public_keys: keys}, _, public_key} when not is_nil(public_key) ->
+            # Verify public key - normalize and compare
+            provided_key_normalized = normalize_ssh_key(public_key)
+
+            Enum.any?(keys, fn stored_key ->
+              stored_key_normalized =
+                stored_key.public_key
+                |> String.trim()
+                |> normalize_ssh_key()
+
+              provided_key_normalized == stored_key_normalized
+            end)
         end
 
       {:ok, verified}
+    end
+  end
+
+  # Normalizes SSH key by removing comment (keeps algorithm + key data only)
+  defp normalize_ssh_key(key_string) do
+    case String.split(key_string, " ", parts: 3) do
+      [algorithm, key_data, _comment] -> "#{algorithm} #{key_data}"
+      [algorithm, key_data] -> "#{algorithm} #{key_data}"
+      _ -> String.trim(key_string)
     end
   end
 

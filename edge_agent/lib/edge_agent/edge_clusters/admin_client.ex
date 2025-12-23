@@ -32,38 +32,29 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   end
 
   @doc """
-  List SSH usernames for the authenticated node.
-  GET /api/agents/ssh_usernames
+  Verify SSH credentials (password or public key) for the authenticated node.
+  POST /api/agents/ssh_usernames/verify_credentials
+
+  ## Parameters
+  - `username` - SSH username
+  - `credential` - Either `{:password, password}` or `{:public_key, public_key}`
+
+  ## Returns
+  - `{:ok, true}` - credential verified
+  - `{:ok, false}` - username not found or credential incorrect
+  - `{:error, reason}` - request or validation error
   """
-  def list_ssh_usernames do
-    path = "/api/agents/ssh_usernames"
+  def verify_ssh_credentials(username, credential) do
+    path = "/api/agents/ssh_usernames/verify_credentials"
 
-    request_with_auth(path, fn url, headers ->
-      case Req.get(url, headers: headers) do
-        {:ok, %{status: 200, body: %{"data" => ssh_usernames}}} ->
-          {:ok, ssh_usernames}
+    payload =
+      case credential do
+        {:password, password} ->
+          %{ssh_username: %{username: username, password: password}}
 
-        {:ok, %{status: 404}} ->
-          {:error, :not_found}
-
-        {:ok, %{status: status, body: body}} ->
-          Logger.warning("Failed to list SSH usernames, HTTP #{status}: #{inspect(body)}")
-          {:error, {:http_error, status, body}}
-
-        {:error, reason} ->
-          Logger.warning("Failed to list SSH usernames: #{inspect(reason)}")
-          {:error, {:request_failed, reason}}
+        {:public_key, public_key} ->
+          %{ssh_username: %{username: username, public_key: public_key}}
       end
-    end)
-  end
-
-  @doc """
-  Verify SSH password for the authenticated node.
-  POST /api/agents/ssh_usernames/verify_password
-  """
-  def verify_ssh_password(username, password) do
-    path = "/api/agents/ssh_usernames/verify_password"
-    payload = %{ssh_username: %{username: username, password: password}}
 
     request_with_auth(path, fn url, headers ->
       case Req.post(url, json: payload, headers: headers, receive_timeout: 5000, retry: false) do
@@ -71,15 +62,15 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
           {:ok, verified}
 
         {:ok, %{status: 422, body: body}} ->
-          Logger.warning("SSH password verification validation failed: #{inspect(body)}")
+          Logger.warning("SSH credentials verification validation failed: #{inspect(body)}")
           {:error, {:validation_error, body}}
 
         {:ok, %{status: status, body: body}} ->
-          Logger.warning("Failed to verify SSH password, HTTP #{status}: #{inspect(body)}")
+          Logger.warning("Failed to verify SSH credentials, HTTP #{status}: #{inspect(body)}")
           {:error, {:http_error, status, body}}
 
         {:error, reason} ->
-          Logger.warning("Failed to verify SSH password: #{inspect(reason)}")
+          Logger.warning("Failed to verify SSH credentials: #{inspect(reason)}")
           {:error, {:request_failed, reason}}
       end
     end)

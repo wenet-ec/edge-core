@@ -7,36 +7,21 @@ defmodule EdgeAdminWeb.Controllers.Agents.SshUsernameController do
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
   @doc """
-  SSH credentials query endpoint (requires authentication).
+  SSH credentials verification endpoint (requires authentication).
 
-  Agent's SSH server fetches allowed credentials during auth.
-  Node ID is inferred from conn.assigns.current_node.
-  """
-  def index(conn, _params) do
-    # Get node ID from authenticated context (set by AgentAuth plug)
-    node_id = conn.assigns.current_node.id
-
-    # Query SSH usernames with preloaded public keys
-    ssh_usernames = Nodes.list_ssh_usernames_for_node(node_id)
-
-    render(conn, :index, ssh_usernames: ssh_usernames)
-  end
-
-  @doc """
-  SSH password verification endpoint (requires authentication).
-
-  Agent's SSH server calls this to verify password authentication attempts.
+  Agent's SSH server calls this to verify authentication attempts.
+  Supports both password and public key authentication.
   Node ID is inferred from conn.assigns.current_node.
 
   Returns {"data": {"verified": true/false}}
-  - true: password matches
-  - false: username not found or password incorrect (security: don't distinguish)
+  - true: credential matches
+  - false: username not found or credential incorrect (security: don't distinguish)
   """
-  def verify_password(conn, params) do
+  def verify_credentials(conn, params) do
     node_id = conn.assigns.current_node.id
 
-    with {:ok, verified} <- Nodes.verify_ssh_password(node_id, params) do
-      render(conn, :verify_password, verified: verified)
+    with {:ok, verified} <- Nodes.verify_ssh_credentials(node_id, params) do
+      render(conn, :verify_credentials, verified: verified)
     end
   end
 end

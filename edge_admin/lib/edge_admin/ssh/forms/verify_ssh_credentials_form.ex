@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/nodes/forms/verify_ssh_credentials_form.ex
-defmodule EdgeAdmin.Nodes.Forms.VerifySshCredentialsForm do
+# edge_admin/lib/edge_admin/ssh/forms/verify_ssh_credentials_form.ex
+defmodule EdgeAdmin.Ssh.Forms.VerifySshCredentialsForm do
   @moduledoc """
   Form for validating SSH credentials verification requests from agents.
 

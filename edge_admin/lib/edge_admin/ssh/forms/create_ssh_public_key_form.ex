@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/nodes/forms/create_ssh_public_key_form.ex
-defmodule EdgeAdmin.Nodes.Forms.CreateSshPublicKeyForm do
+# edge_admin/lib/edge_admin/ssh/forms/create_ssh_public_key_form.ex
+defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyForm do
   @moduledoc """
   Form for validating SSH public key creation inputs.
 
@@ -8,7 +8,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateSshPublicKeyForm do
   """
   use EdgeAdmin.Form
 
-  alias EdgeAdmin.Nodes.SshPublicKey
+  alias EdgeAdmin.Ssh.SshPublicKey
 
   embedded_schema do
     field(:key_name, :string)

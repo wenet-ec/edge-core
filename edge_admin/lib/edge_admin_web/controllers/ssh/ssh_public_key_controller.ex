@@ -1,16 +1,16 @@
-# edge_admin/lib/edge_admin_web/controllers/nodes/ssh_public_key_controller.ex
-defmodule EdgeAdminWeb.Controllers.Nodes.SshPublicKeyController do
+# edge_admin/lib/edge_admin_web/controllers/ssh/ssh_public_key_controller.ex
+defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
   use EdgeAdminWeb, :controller
   use OpenApiSpex.ControllerSpecs
 
-  alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Nodes.SshPublicKey
+  alias EdgeAdmin.Ssh
+  alias EdgeAdmin.Ssh.SshPublicKey
   alias EdgeAdminWeb.Schemas.CommonSchemas
-  alias EdgeAdminWeb.Schemas.Nodes.SshPublicKeySchemas
+  alias EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  tags(["Nodes.SshPublicKey"])
+  tags(["Ssh.SshPublicKey"])
 
   operation(:index,
     summary: "List SSH public keys",
@@ -53,7 +53,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshPublicKeyController do
   )
 
   def index(conn, params) do
-    page_result = Nodes.list_ssh_public_keys_with_filtering_pagination(params)
+    page_result = Ssh.list_ssh_public_keys_with_filtering_pagination(params)
     render(conn, :index, page_result: page_result)
   end
 
@@ -84,9 +84,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshPublicKeyController do
   )
 
   def create(conn, %{"ssh_username_id" => ssh_username_id} = params) do
-    with {:ok, ssh_username} <- Nodes.get_ssh_username(ssh_username_id),
+    with {:ok, ssh_username} <- Ssh.get_ssh_username(ssh_username_id),
          {:ok, %SshPublicKey{} = ssh_public_key} <-
-           Nodes.create_ssh_public_key(ssh_username, params) do
+           Ssh.create_ssh_public_key(ssh_username, params) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/ssh_public_keys/#{ssh_public_key}")
@@ -113,7 +113,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshPublicKeyController do
   )
 
   def show(conn, %{"id" => id}) do
-    with {:ok, ssh_public_key} <- Nodes.get_ssh_public_key(id) do
+    with {:ok, ssh_public_key} <- Ssh.get_ssh_public_key(id) do
       render(conn, :show, ssh_public_key: ssh_public_key)
     end
   end
@@ -135,8 +135,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshPublicKeyController do
   )
 
   def delete(conn, %{"id" => id}) do
-    with {:ok, ssh_public_key} <- Nodes.get_ssh_public_key(id),
-         {:ok, %SshPublicKey{}} <- Nodes.delete_ssh_public_key(ssh_public_key) do
+    with {:ok, ssh_public_key} <- Ssh.get_ssh_public_key(id),
+         {:ok, %SshPublicKey{}} <- Ssh.delete_ssh_public_key(ssh_public_key) do
       send_resp(conn, :no_content, "")
     end
   end

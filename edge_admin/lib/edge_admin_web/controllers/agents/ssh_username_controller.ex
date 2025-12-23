@@ -1,8 +1,14 @@
 # edge_admin/lib/edge_admin_web/controllers/agents/ssh_username_controller.ex
 defmodule EdgeAdminWeb.Controllers.Agents.SshUsernameController do
+  @moduledoc """
+  Controller for agent SSH credential verification.
+
+  This controller handles requests from edge agents to verify SSH credentials.
+  It uses the agent's API token to identify the node.
+  """
   use EdgeAdminWeb, :controller
 
-  alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Ssh
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
@@ -20,7 +26,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.SshUsernameController do
   def verify_credentials(conn, params) do
     node_id = conn.assigns.current_node.id
 
-    with {:ok, verified} <- Nodes.verify_ssh_credentials(node_id, params) do
+    with {:ok, verified} <- Ssh.verify_ssh_credentials(node_id, params) do
       render(conn, :verify_credentials, verified: verified)
     end
   end

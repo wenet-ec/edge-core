@@ -1,7 +1,7 @@
-# edge_admin/lib/edge_admin_web/controllers/nodes/ssh_public_key_json.ex
-defmodule EdgeAdminWeb.Controllers.Nodes.SshPublicKeyJSON do
+# edge_admin/lib/edge_admin_web/controllers/ssh/ssh_public_key_json.ex
+defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyJSON do
   alias EdgeAdmin.FilteringPagination
-  alias EdgeAdmin.Nodes.SshPublicKey
+  alias EdgeAdmin.Ssh.SshPublicKey
 
   @doc """
   Renders a paginated list of SSH public keys.

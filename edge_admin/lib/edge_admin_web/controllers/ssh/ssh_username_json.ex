@@ -1,7 +1,7 @@
-# edge_admin/lib/edge_admin_web/controllers/nodes/ssh_username_json.ex
-defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameJSON do
+# edge_admin/lib/edge_admin_web/controllers/ssh/ssh_username_json.ex
+defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameJSON do
   alias EdgeAdmin.FilteringPagination
-  alias EdgeAdmin.Nodes.SshUsername
+  alias EdgeAdmin.Ssh.SshUsername
 
   @doc """
   Renders a paginated list of SSH usernames.

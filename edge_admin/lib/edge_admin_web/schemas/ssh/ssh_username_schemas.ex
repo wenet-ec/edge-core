@@ -1,11 +1,11 @@
-# edge_admin/lib/edge_admin_web/schemas/nodes/ssh_username_schemas.ex
-defmodule EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas do
+# edge_admin/lib/edge_admin_web/schemas/ssh/ssh_username_schemas.ex
+defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
   @moduledoc """
   OpenAPI schemas for SSH Username resources
   """
 
   alias EdgeAdminWeb.Schemas.CommonSchemas
-  alias EdgeAdminWeb.Schemas.Nodes.SshPublicKeySchemas
+  alias EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas
   alias OpenApiSpex.Schema
   require OpenApiSpex
 

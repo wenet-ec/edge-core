@@ -1,16 +1,17 @@
-# edge_admin/lib/edge_admin_web/controllers/nodes/ssh_username_controller.ex
-defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameController do
+# edge_admin/lib/edge_admin_web/controllers/ssh/ssh_username_controller.ex
+defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
   use EdgeAdminWeb, :controller
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Nodes.SshUsername
+  alias EdgeAdmin.Ssh
+  alias EdgeAdmin.Ssh.SshUsername
   alias EdgeAdminWeb.Schemas.CommonSchemas
-  alias EdgeAdminWeb.Schemas.Nodes.SshUsernameSchemas
+  alias EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  tags(["Nodes.SshUsername"])
+  tags(["Ssh.SshUsername"])
 
   operation(:index,
     summary: "List SSH usernames",
@@ -53,7 +54,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameController do
   )
 
   def index(conn, params) do
-    page_result = Nodes.list_ssh_usernames_with_filtering_pagination(params)
+    page_result = Ssh.list_ssh_usernames_with_filtering_pagination(params)
     render(conn, :index, page_result: page_result)
   end
 
@@ -80,7 +81,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameController do
 
   def create(conn, %{"node_id" => node_id} = params) do
     with {:ok, node} <- Nodes.get_node(node_id),
-         {:ok, %SshUsername{} = ssh_username} <- Nodes.create_ssh_username_with_keys(node, params) do
+         {:ok, %SshUsername{} = ssh_username} <- Ssh.create_ssh_username_with_keys(node, params) do
       # Ensure keys are loaded for response
       ssh_username = ssh_username |> EdgeAdmin.Repo.preload(:ssh_public_keys)
 
@@ -109,7 +110,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameController do
   )
 
   def show(conn, %{"id" => id}) do
-    with {:ok, ssh_username} <- Nodes.get_ssh_username(id) do
+    with {:ok, ssh_username} <- Ssh.get_ssh_username(id) do
       render(conn, :show, ssh_username: ssh_username)
     end
   end
@@ -131,8 +132,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameController do
   )
 
   def delete(conn, %{"id" => id}) do
-    with {:ok, ssh_username} <- Nodes.get_ssh_username(id),
-         {:ok, %SshUsername{}} <- Nodes.delete_ssh_username(ssh_username) do
+    with {:ok, ssh_username} <- Ssh.get_ssh_username(id),
+         {:ok, %SshUsername{}} <- Ssh.delete_ssh_username(ssh_username) do
       send_resp(conn, :no_content, "")
     end
   end

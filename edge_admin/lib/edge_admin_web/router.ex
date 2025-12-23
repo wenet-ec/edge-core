@@ -141,7 +141,6 @@ defmodule EdgeAdminWeb.Router do
       end
 
       resources("/nodes", NodeController, only: [:index, :show]) do
-        resources("/ssh_usernames", SshUsernameController, only: [:create])
         resources("/aliases", AliasController, only: [:create])
         get("/metrics", MetricsController, :index)
       end
@@ -150,6 +149,10 @@ defmodule EdgeAdminWeb.Router do
       delete("/nodes/:id", NodeController, :delete)
 
       resources("/aliases", AliasController, only: [:index, :show, :delete])
+    end
+
+    scope "/", Ssh do
+      post("/nodes/:node_id/ssh_usernames", SshUsernameController, :create)
 
       resources("/ssh_usernames", SshUsernameController, only: [:index, :show, :delete]) do
         resources("/ssh_public_keys", SshPublicKeyController, only: [:create])

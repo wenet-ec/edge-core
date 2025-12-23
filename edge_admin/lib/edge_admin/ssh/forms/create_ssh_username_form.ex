@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/nodes/forms/create_ssh_username_form.ex
-defmodule EdgeAdmin.Nodes.Forms.CreateSshUsernameForm do
+# edge_admin/lib/edge_admin/ssh/forms/create_ssh_username_form.ex
+defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameForm do
   @moduledoc """
   Form for validating SSH username creation inputs.
 
@@ -8,7 +8,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateSshUsernameForm do
   """
   use EdgeAdmin.Form
 
-  alias EdgeAdmin.Nodes.Forms.CreateSshPublicKeyForm
+  alias EdgeAdmin.Ssh.Forms.CreateSshPublicKeyForm
 
   embedded_schema do
     field(:username, :string)

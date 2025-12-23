@@ -13,9 +13,14 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
     field(:ipv4_range, :string)
   end
 
-  def changeset(%{"cluster" => cluster_attrs}) do
+  def changeset(%{"cluster" => cluster_attrs}) when is_map(cluster_attrs) do
+    # Unwrap cluster
+    changeset(cluster_attrs)
+  end
+
+  def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
-    |> cast(cluster_attrs, [:name, :ipv4_range])
+    |> cast(attrs, [:name, :ipv4_range])
     |> validate_name()
     |> validate_ipv4_range()
     |> apply_action(:insert)

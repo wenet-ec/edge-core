@@ -30,10 +30,15 @@ defmodule EdgeAdmin.Nodes.Forms.CreateSshUsernameForm do
   - `{:ok, attrs}` - Validated and normalized attributes as a map with string keys
   - `{:error, changeset}` - Validation errors
   """
-  def changeset(%{"ssh_username" => ssh_username_attrs}) do
+  def changeset(%{"ssh_username" => ssh_username_attrs}) when is_map(ssh_username_attrs) do
+    # Unwrap ssh_username
+    changeset(ssh_username_attrs)
+  end
+
+  def changeset(attrs) when is_map(attrs) do
     # Extract public_keys for separate validation
     {public_keys_attrs, username_attrs} =
-      Map.pop(ssh_username_attrs, "public_keys", [])
+      Map.pop(attrs, "public_keys", [])
 
     with {:ok, validated_username} <- validate_username(username_attrs),
          {:ok, validated_keys} <- validate_public_keys(public_keys_attrs) do

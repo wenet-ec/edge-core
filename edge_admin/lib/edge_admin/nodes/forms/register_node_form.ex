@@ -28,19 +28,20 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
   - Format validations: UUID, ports, network name format
   - Checks if cluster exists (via get_cluster_fn callback)
 
-  ## Parameters
-  - `params` - Request parameters
-  - `get_cluster_fn` - Function to check if cluster exists (injected for testing)
-
   ## Returns
   - `{:ok, attrs}` - Validated attributes as map
   - `{:error, changeset}` - Validation errors
   """
-  def changeset(params, get_cluster_fn \\ &EdgeAdmin.Nodes.get_cluster/1)
+  def changeset(attrs, get_cluster_fn \\ &EdgeAdmin.Nodes.get_cluster/1)
 
-  def changeset(%{"node" => node_attrs}, get_cluster_fn) do
+  def changeset(%{"node" => node_attrs}, get_cluster_fn) when is_map(node_attrs) do
+    # Unwrap node
+    changeset(node_attrs, get_cluster_fn)
+  end
+
+  def changeset(attrs, get_cluster_fn) when is_map(attrs) do
     %__MODULE__{}
-    |> cast(node_attrs, [
+    |> cast(attrs, [
       :node_id,
       :network_name,
       :id_type,

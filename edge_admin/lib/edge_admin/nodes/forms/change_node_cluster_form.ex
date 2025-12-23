@@ -19,19 +19,20 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterForm do
   - `cluster_name` - Required, must match pattern ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$, max 24 chars
   - Also checks if cluster exists (via get_cluster_fn callback)
 
-  ## Parameters
-  - `params` - Request parameters
-  - `get_cluster_fn` - Function to check if cluster exists (injected for testing)
-
   ## Returns
   - `{:ok, cluster_name}` - Validated cluster name as string
   - `{:error, changeset}` - Validation errors
   """
-  def changeset(params, get_cluster_fn \\ &EdgeAdmin.Nodes.get_cluster/1)
+  def changeset(attrs, get_cluster_fn \\ &EdgeAdmin.Nodes.get_cluster/1)
 
-  def changeset(%{"node" => node_attrs}, get_cluster_fn) do
+  def changeset(%{"node" => node_attrs}, get_cluster_fn) when is_map(node_attrs) do
+    # Unwrap node
+    changeset(node_attrs, get_cluster_fn)
+  end
+
+  def changeset(attrs, get_cluster_fn) when is_map(attrs) do
     %__MODULE__{}
-    |> cast(node_attrs, [:cluster_name])
+    |> cast(attrs, [:cluster_name])
     |> validate_required([:cluster_name])
     |> validate_length(:cluster_name, max: 24)
     |> validate_format(:cluster_name, ~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,

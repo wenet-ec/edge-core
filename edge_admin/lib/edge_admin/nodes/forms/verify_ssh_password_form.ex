@@ -26,9 +26,14 @@ defmodule EdgeAdmin.Nodes.Forms.VerifySshPasswordForm do
   - `{:ok, attrs}` - Validated attributes as a map with string keys
   - `{:error, changeset}` - Validation errors
   """
-  def changeset(%{"ssh_username" => ssh_username_attrs}) do
+  def changeset(%{"ssh_username" => ssh_username_attrs}) when is_map(ssh_username_attrs) do
+    # unwrap ssh_username
+    changeset(ssh_username_attrs)
+  end
+
+  def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
-    |> cast(ssh_username_attrs, [:username, :password])
+    |> cast(attrs, [:username, :password])
     |> validate_required([:username, :password])
     |> apply_action(:insert)
     |> case do

@@ -1123,7 +1123,7 @@ defmodule EdgeAdmin.Nodes do
                  )
 
                {:error, {:http_error, 500, body}} = error ->
-                 if netmaker_not_found_error?(body) do
+                 if Vpn.netmaker_not_found_error?(body) do
                    Logger.info("Netmaker host #{host_id} already deleted (not found)")
                  else
                    Logger.error("Failed to delete host #{host_id}: #{inspect(error)}")
@@ -1187,22 +1187,6 @@ defmodule EdgeAdmin.Nodes do
         acc
     end
   end
-
-  # Helper to check if Netmaker error is a "not found" error
-  # Netmaker uses HTTP 500 with specific messages for not found
-  defp netmaker_not_found_error?(body) when is_binary(body) do
-    String.contains?(body, "no result found") or
-      String.contains?(body, "could not find any records")
-  end
-
-  defp netmaker_not_found_error?(body) when is_map(body) do
-    message = Map.get(body, "Message", "")
-
-    String.contains?(message, "no result found") or
-      String.contains?(message, "could not find any records")
-  end
-
-  defp netmaker_not_found_error?(_), do: false
 
   @doc """
   Reconciles cluster node membership between database (source of truth) and Netmaker.
@@ -1496,8 +1480,7 @@ defmodule EdgeAdmin.Nodes do
 
       {:error, {:http_error, 500, body}} ->
         # Netmaker returns 500 for "not found" - treat as already deleted
-        if String.contains?(body, "no result found") or
-             String.contains?(body, "could not find any records") do
+        if Vpn.netmaker_not_found_error?(body) do
           Logger.debug(
             "DNS entry already deleted for alias #{alias_record.name}: #{dns_hostname}"
           )
@@ -1698,8 +1681,7 @@ defmodule EdgeAdmin.Nodes do
 
         {:error, {:http_error, 500, body}} = error ->
           # Netmaker returns 500 for "not found" - treat as success for idempotency
-          if String.contains?(body, "no result found") or
-               String.contains?(body, "could not find any records") do
+          if Vpn.netmaker_not_found_error?(body) do
             Logger.info(
               "DNS entry already deleted for alias #{alias_record.name}: #{dns_hostname}"
             )

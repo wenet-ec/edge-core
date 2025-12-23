@@ -342,6 +342,37 @@ defmodule EdgeAdmin.Vpn do
   # ===========================================================================
 
   @doc """
+  Checks if a Netmaker HTTP error body indicates a "not found" condition.
+
+  Netmaker uses HTTP 500 with specific messages for not found errors instead
+  of proper 404 responses. This helper normalizes that behavior.
+
+  ## Examples
+
+      iex> Vpn.netmaker_not_found_error?(%{"Message" => "no result found"})
+      true
+
+      iex> Vpn.netmaker_not_found_error?("could not find any records")
+      true
+
+      iex> Vpn.netmaker_not_found_error?(%{"Message" => "internal server error"})
+      false
+  """
+  def netmaker_not_found_error?(body) when is_binary(body) do
+    String.contains?(body, "no result found") or
+      String.contains?(body, "could not find any records")
+  end
+
+  def netmaker_not_found_error?(body) when is_map(body) do
+    message = Map.get(body, "Message", "")
+
+    String.contains?(message, "no result found") or
+      String.contains?(message, "could not find any records")
+  end
+
+  def netmaker_not_found_error?(_), do: false
+
+  @doc """
   Creates a Netmaker network.
   """
   def create_network(network_name, opts \\ %{}) do
@@ -384,19 +415,9 @@ defmodule EdgeAdmin.Vpn do
           {:error, reason} -> {:error, reason}
         end
 
-      # Netmaker returns 500 with "no result found" or "could not find any records"
-      # for non-existent networks (Netmaker uses these error constants for not found)
+      # Netmaker returns 500 with "no result found" for non-existent networks
       {:error, {:http_error, 500, body}} ->
-        # Body can be a map (from Req JSON decoding) or a string
-        message =
-          cond do
-            is_map(body) and Map.has_key?(body, "Message") -> body["Message"]
-            is_binary(body) -> body
-            true -> inspect(body)
-          end
-
-        if String.contains?(message, "no result found") or
-             String.contains?(message, "could not find any records") do
+        if netmaker_not_found_error?(body) do
           case create_network(network_name, create_opts) do
             {:ok, _} -> :ok
             {:error, reason} -> {:error, reason}

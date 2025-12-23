@@ -117,30 +117,6 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
     })
   end
 
-  defmodule FilteringSortingMeta do
-    @moduledoc false
-
-    OpenApiSpex.schema(%{
-      title: "Filtering and Sorting Metadata",
-      description: "Information about applied filters and sorting",
-      type: :object,
-      properties: %{
-        filters: %Schema{
-          type: :object,
-          description: "Applied filters",
-          additionalProperties: %Schema{type: :string},
-          example: %{status: "healthy", id_type: "persistent_id"}
-        },
-        sort: %Schema{
-          type: :array,
-          items: %Schema{type: :string},
-          description: "Applied sort order",
-          example: ["status:desc", "inserted_at:asc"]
-        }
-      }
-    })
-  end
-
   @doc """
   Creates a paginated response schema for any data type.
 
@@ -172,17 +148,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
           type: :array,
           items: data_schema
         },
-        pagination: PaginationMeta,
-        filters: %Schema{
-          type: :object,
-          description: "Applied filters",
-          additionalProperties: %Schema{type: :string}
-        },
-        sort: %Schema{
-          type: :array,
-          items: %Schema{type: :string},
-          description: "Applied sort order"
-        }
+        pagination: PaginationMeta
       },
       required: [:data, :pagination]
     }

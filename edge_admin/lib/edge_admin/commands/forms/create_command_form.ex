@@ -154,6 +154,13 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
         filters -> Map.put(targeting, "node_filters", filters)
       end
 
+    # Preserve cluster_filters if present in original attrs
+    targeting =
+      case get_in(original_attrs, ["targeting", "cluster_filters"]) do
+        nil -> targeting
+        filters -> Map.put(targeting, "cluster_filters", filters)
+      end
+
     Map.put(base_attrs, "targeting", targeting)
   end
 end

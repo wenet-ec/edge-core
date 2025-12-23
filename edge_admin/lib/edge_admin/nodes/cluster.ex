@@ -8,6 +8,16 @@ defmodule EdgeAdmin.Nodes.Cluster do
 
   alias EdgeAdmin.Vpn
 
+  @derive {
+    Flop.Schema,
+    filterable: [:name, :ipv4_range, :inserted_at],
+    sortable: [:name, :ipv4_range, :inserted_at, :updated_at],
+    default_order: %{
+      order_by: [:inserted_at],
+      order_directions: [:desc]
+    }
+  }
+
   schema "clusters" do
     field(:name, :string)
     field(:ipv4_range, :string)

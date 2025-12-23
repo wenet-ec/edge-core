@@ -1,12 +1,17 @@
 # edge_admin/lib/edge_admin/commands/command.ex
 defmodule EdgeAdmin.Commands.Command do
   @moduledoc false
-  use Ecto.Schema
+  use EdgeAdmin.Schema
 
-  import Ecto.Changeset
-
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
+  @derive {
+    Flop.Schema,
+    filterable: [:command_text, :inserted_at],
+    sortable: [:inserted_at, :updated_at],
+    default_order: %{
+      order_by: [:inserted_at],
+      order_directions: [:desc]
+    }
+  }
 
   schema "commands" do
     # Maps to TEXT in database

@@ -31,12 +31,6 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
           format: :uuid,
           description: "ID of the target node"
         },
-        cluster_id: %Schema{
-          type: :string,
-          format: :uuid,
-          nullable: true,
-          description: "ID of the target cluster (null for system-wide or single node targets)"
-        },
         cluster_name: %Schema{
           type: :string,
           nullable: true,

@@ -28,16 +28,34 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
         schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, maximum: 100, default: 20},
         example: 20
       ],
-      sort: [
+      order_by: [
         in: :query,
-        description: "Sort specification: field1:dir1,field2:dir2",
+        description: "Comma-separated list of fields to sort by",
         schema: %OpenApiSpex.Schema{type: :string},
-        example: "inserted_at:desc"
+        example: "inserted_at"
+      ],
+      order_directions: [
+        in: :query,
+        description:
+          "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
+        schema: %OpenApiSpex.Schema{type: :string},
+        example: "desc"
       ],
       command_text: [
         in: :query,
-        description: "Filter by command text (supports wildcards with *)",
+        description:
+          "Filter by command text (exact match or wildcard: ls*, *docker*, etc.)",
         schema: %OpenApiSpex.Schema{type: :string}
+      ],
+      inserted_at__gte: [
+        in: :query,
+        description: "Filter commands inserted after or on this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+      ],
+      inserted_at__lte: [
+        in: :query,
+        description: "Filter commands inserted before or on this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
       ]
     ],
     responses: %{
@@ -48,8 +66,8 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
   )
 
   def index(conn, params) do
-    page_result = Commands.list_commands_with_filtering_pagination(params)
-    render(conn, :index, page_result: page_result)
+    {:ok, {commands, meta}} = Commands.list_commands(params)
+    render(conn, :index, commands: commands, meta: meta)
   end
 
   operation(:create,

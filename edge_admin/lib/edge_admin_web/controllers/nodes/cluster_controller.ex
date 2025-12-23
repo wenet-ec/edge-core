@@ -27,22 +27,48 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
         schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, maximum: 100, default: 20},
         example: 20
       ],
-      sort: [
+      order_by: [
         in: :query,
-        description: "Sort specification: field1:dir1,field2:dir2",
+        description: "Comma-separated list of fields to sort by",
         schema: %OpenApiSpex.Schema{type: :string},
-        example: "inserted_at:desc"
+        example: "inserted_at,name"
+      ],
+      order_directions: [
+        in: :query,
+        description:
+          "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
+        schema: %OpenApiSpex.Schema{type: :string},
+        example: "desc,asc"
+      ],
+      name: [
+        in: :query,
+        description: "Filter by cluster name (exact match or wildcard: prod*, *tion, *rod*)",
+        schema: %OpenApiSpex.Schema{type: :string},
       ],
       ipv4_range: [
         in: :query,
-        description: "Filter by IPv4 range (text search, supports partial matches)",
-        schema: %OpenApiSpex.Schema{type: :string}
+        description: "Filter by IPv4 range (exact match or wildcard)",
+        schema: %OpenApiSpex.Schema{type: :string},
       ],
-      node_count: [
+      inserted_at__gte: [
         in: :query,
-        description:
-          "Filter by node count (exact match or range queries: gte:5, gt:5, lte:10, lt:10)",
-        schema: %OpenApiSpex.Schema{type: :string}
+        description: "Filter clusters inserted after or on this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date},
+      ],
+      inserted_at__lte: [
+        in: :query,
+        description: "Filter clusters inserted before or on this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date},
+      ],
+      node_count__gte: [
+        in: :query,
+        description: "Filter by minimum node count",
+        schema: %OpenApiSpex.Schema{type: :integer, minimum: 0},
+      ],
+      node_count__lte: [
+        in: :query,
+        description: "Filter by maximum node count",
+        schema: %OpenApiSpex.Schema{type: :integer, minimum: 0},
       ]
     ],
     responses: %{
@@ -52,8 +78,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
   )
 
   def index(conn, params) do
-    page_result = Nodes.list_clusters_with_filtering_pagination(params)
-    render(conn, :index, page_result: page_result)
+    {:ok, {clusters, meta}} = Nodes.list_clusters(params)
+    render(conn, :index, clusters: clusters, meta: meta)
   end
 
   operation(:show,

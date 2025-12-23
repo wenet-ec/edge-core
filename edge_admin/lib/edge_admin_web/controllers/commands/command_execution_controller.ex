@@ -27,11 +27,18 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
         schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, maximum: 100, default: 20},
         example: 20
       ],
-      sort: [
+      order_by: [
         in: :query,
-        description: "Sort specification: field1:dir1,field2:dir2",
+        description: "Comma-separated list of fields to sort by",
         schema: %OpenApiSpex.Schema{type: :string},
-        example: "inserted_at:desc"
+        example: "inserted_at,status"
+      ],
+      order_directions: [
+        in: :query,
+        description:
+          "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
+        schema: %OpenApiSpex.Schema{type: :string},
+        example: "desc,asc"
       ],
       status: [
         in: :query,
@@ -45,8 +52,8 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
       ],
       exit_code: [
         in: :query,
-        description: "Filter by exit code (supports ranges like 'gte:0', 'ne:0')",
-        schema: %OpenApiSpex.Schema{type: :string}
+        description: "Filter by exit code",
+        schema: %OpenApiSpex.Schema{type: :integer}
       ],
       command_id: [
         in: :query,
@@ -60,8 +67,31 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
       ],
       output: [
         in: :query,
-        description: "Text search in output (supports wildcards with *)",
+        description:
+          "Text search in output (exact match or wildcard: *error*, *failed, etc.)",
         schema: %OpenApiSpex.Schema{type: :string}
+      ],
+      cluster_name: [
+        in: :query,
+        description:
+          "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *staging, etc.)",
+        schema: %OpenApiSpex.Schema{type: :string}
+      ],
+      has_cluster: [
+        in: :query,
+        description:
+          "Filter by cluster_id presence (true = cluster-wide executions, false = non-cluster-wide)",
+        schema: %OpenApiSpex.Schema{type: :boolean}
+      ],
+      inserted_at__gte: [
+        in: :query,
+        description: "Filter command executions inserted after or on this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+      ],
+      inserted_at__lte: [
+        in: :query,
+        description: "Filter command executions inserted before or on this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
       ]
     ],
     responses: %{
@@ -72,8 +102,8 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
   )
 
   def index(conn, params) do
-    page_result = Commands.list_command_executions_with_filtering_pagination(params)
-    render(conn, :index, page_result: page_result)
+    {:ok, {command_executions, meta}} = Commands.list_command_executions(params)
+    render(conn, :index, command_executions: command_executions, meta: meta)
   end
 
   operation(:show,

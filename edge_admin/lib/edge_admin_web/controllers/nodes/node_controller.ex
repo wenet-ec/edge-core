@@ -28,28 +28,32 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
         schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, maximum: 100, default: 20},
         example: 20
       ],
-      sort: [
+      order_by: [
         in: :query,
-        description: "Sort specification: field1:dir1,field2:dir2",
+        description: "Comma-separated list of fields to sort by",
         schema: %OpenApiSpex.Schema{type: :string},
-        example: "inserted_at:desc"
+        example: "inserted_at,status"
+      ],
+      order_directions: [
+        in: :query,
+        description:
+          "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
+        schema: %OpenApiSpex.Schema{type: :string},
+        example: "desc,asc"
+      ],
+      id_type: [
+        in: :query,
+        description: "Filter by node ID type",
+        schema: %OpenApiSpex.Schema{type: :string, enum: ["persistent", "random"]}
       ],
       status: [
         in: :query,
         description: "Filter by node status",
         schema: %OpenApiSpex.Schema{type: :string, enum: ["healthy", "unhealthy", "unreachable"]}
       ],
-      id_type: [
-        in: :query,
-        description: "Filter by node ID type",
-        schema: %OpenApiSpex.Schema{
-          type: :string,
-          enum: ["persistent", "random"]
-        }
-      ],
       version: [
         in: :query,
-        description: "Filter by agent version",
+        description: "Filter by agent version (exact match or wildcard: 1.0.0, 1.*, etc.)",
         schema: %OpenApiSpex.Schema{type: :string}
       ],
       self_update_enabled: [
@@ -57,9 +61,29 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
         description: "Filter by self-update enabled status",
         schema: %OpenApiSpex.Schema{type: :boolean}
       ],
+      last_seen_at__gte: [
+        in: :query,
+        description: "Filter nodes last seen after or on this datetime",
+        schema: %OpenApiSpex.Schema{type: :string, format: :"date-time"}
+      ],
+      last_seen_at__lte: [
+        in: :query,
+        description: "Filter nodes last seen before or on this datetime",
+        schema: %OpenApiSpex.Schema{type: :string, format: :"date-time"}
+      ],
+      inserted_at__gte: [
+        in: :query,
+        description: "Filter nodes inserted after or on this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+      ],
+      inserted_at__lte: [
+        in: :query,
+        description: "Filter nodes inserted before or on this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+      ],
       cluster_name: [
         in: :query,
-        description: "Filter by cluster name",
+        description: "Filter by cluster name (exact match or wildcard: prod*, *east, etc.)",
         schema: %OpenApiSpex.Schema{type: :string}
       ]
     ],
@@ -69,8 +93,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   )
 
   def index(conn, params) do
-    page_result = Nodes.list_nodes_with_filtering_pagination(params)
-    render(conn, :index, page_result: page_result)
+    {:ok, {nodes, meta}} = Nodes.list_nodes(params)
+    render(conn, :index, nodes: nodes, meta: meta)
   end
 
   operation(:show,

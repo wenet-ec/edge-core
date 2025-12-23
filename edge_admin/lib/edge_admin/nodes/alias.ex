@@ -7,6 +7,16 @@ defmodule EdgeAdmin.Nodes.Alias do
 
   alias EdgeAdmin.Vpn
 
+  @derive {
+    Flop.Schema,
+    filterable: [:name, :inserted_at],
+    sortable: [:name, :inserted_at, :updated_at],
+    default_order: %{
+      order_by: [:inserted_at],
+      order_directions: [:desc]
+    }
+  }
+
   schema "aliases" do
     field(:name, :string)
     field(:dns_hostname, :string, virtual: true)

@@ -28,21 +28,44 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
         schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, maximum: 100, default: 20},
         example: 20
       ],
-      sort: [
+      order_by: [
         in: :query,
-        description: "Sort specification: field1:dir1,field2:dir2",
+        description: "Comma-separated list of fields to sort by",
         schema: %OpenApiSpex.Schema{type: :string},
-        example: "inserted_at:desc"
+        example: "inserted_at,key_name"
+      ],
+      order_directions: [
+        in: :query,
+        description:
+          "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
+        schema: %OpenApiSpex.Schema{type: :string},
+        example: "desc,asc"
       ],
       key_name: [
         in: :query,
-        description: "Filter by key name (supports wildcards with *)",
+        description: "Filter by key name (exact match or wildcard: my-key*, *prod, etc.)",
+        schema: %OpenApiSpex.Schema{type: :string}
+      ],
+      public_key: [
+        in: :query,
+        description:
+          "Filter by public key content (useful for searching email comments: *@example.com)",
         schema: %OpenApiSpex.Schema{type: :string}
       ],
       ssh_username_id: [
         in: :query,
         description: "Filter by SSH username ID",
         schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
+      ],
+      inserted_at__gte: [
+        in: :query,
+        description: "Filter SSH public keys inserted after or on this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+      ],
+      inserted_at__lte: [
+        in: :query,
+        description: "Filter SSH public keys inserted before or on this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
       ]
     ],
     responses: %{
@@ -53,8 +76,8 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
   )
 
   def index(conn, params) do
-    page_result = Ssh.list_ssh_public_keys_with_filtering_pagination(params)
-    render(conn, :index, page_result: page_result)
+    {:ok, {ssh_public_keys, meta}} = Ssh.list_ssh_public_keys(params)
+    render(conn, :index, ssh_public_keys: ssh_public_keys, meta: meta)
   end
 
   operation(:create,

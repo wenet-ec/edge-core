@@ -15,6 +15,16 @@ defmodule EdgeAdmin.Ssh.SshPublicKey do
   # SSH key format regex - matches "algorithm base64data [comment]"
   @ssh_key_regex ~r/^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa)\s+([A-Za-z0-9+\/]+=*)\s*(.*)$/
 
+  @derive {
+    Flop.Schema,
+    filterable: [:key_name, :public_key, :ssh_username_id, :inserted_at],
+    sortable: [:key_name, :inserted_at, :updated_at],
+    default_order: %{
+      order_by: [:inserted_at],
+      order_directions: [:desc]
+    }
+  }
+
   schema "ssh_public_keys" do
     field(:public_key, :string)
     field(:key_name, :string)

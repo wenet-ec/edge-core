@@ -1,25 +1,22 @@
 # edge_admin_web/lib/edge_admin_web/controllers/nodes/cluster_json.ex
 defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSON do
-  alias EdgeAdmin.FilteringPagination
   alias EdgeAdmin.Nodes.Cluster
   alias EdgeAdmin.Vpn
 
   @doc """
   Renders a paginated list of clusters.
   """
-  def index(%{page_result: %FilteringPagination{} = page_result}) do
+  def index(%{clusters: clusters, meta: %Flop.Meta{} = meta}) do
     %{
-      data: for(cluster <- page_result.data, do: data(cluster)),
+      data: for(cluster <- clusters, do: data(cluster)),
       pagination: %{
-        page: page_result.page,
-        page_size: page_result.page_size,
-        total: page_result.total,
-        total_pages: page_result.total_pages,
-        has_next: page_result.has_next,
-        has_prev: page_result.has_prev
-      },
-      filters: page_result.filters,
-      sort: Enum.map(page_result.sort, fn {field, direction} -> "#{field}:#{direction}" end)
+        page: meta.current_page,
+        page_size: meta.page_size,
+        total: meta.total_count,
+        total_pages: meta.total_pages,
+        has_next: meta.has_next_page?,
+        has_prev: meta.has_previous_page?
+      }
     }
   end
 

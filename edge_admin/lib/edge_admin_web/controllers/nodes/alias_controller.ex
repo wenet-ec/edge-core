@@ -27,26 +27,38 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
         schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, maximum: 100, default: 20},
         example: 20
       ],
-      sort: [
+      order_by: [
         in: :query,
-        description: "Sort specification: field1:dir1,field2:dir2",
+        description: "Comma-separated list of fields to sort by",
         schema: %OpenApiSpex.Schema{type: :string},
-        example: "inserted_at:desc"
+        example: "inserted_at,name"
+      ],
+      order_directions: [
+        in: :query,
+        description:
+          "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
+        schema: %OpenApiSpex.Schema{type: :string},
+        example: "desc,asc"
       ],
       name: [
         in: :query,
-        description: "Filter by alias name (text search)",
+        description: "Filter by alias name (exact match or wildcard: prod*, *east, etc.)",
         schema: %OpenApiSpex.Schema{type: :string}
       ],
       cluster_name: [
         in: :query,
-        description: "Filter by cluster name",
+        description: "Filter by cluster name (exact match or wildcard: prod*, *east, etc.)",
         schema: %OpenApiSpex.Schema{type: :string}
       ],
-      node_id: [
+      inserted_at__gte: [
         in: :query,
-        description: "Filter by node ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
+        description: "Filter aliases inserted after or on this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+      ],
+      inserted_at__lte: [
+        in: :query,
+        description: "Filter aliases inserted before or on this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
       ]
     ],
     responses: %{
@@ -55,8 +67,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
   )
 
   def index(conn, params) do
-    page_result = Nodes.list_aliases_with_filtering_pagination(params)
-    render(conn, :index, page_result: page_result)
+    {:ok, {aliases, meta}} = Nodes.list_aliases(params)
+    render(conn, :index, aliases: aliases, meta: meta)
   end
 
   operation(:show,

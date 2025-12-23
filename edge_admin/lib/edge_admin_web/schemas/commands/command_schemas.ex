@@ -137,36 +137,56 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
                 },
                 node_filters: %Schema{
                   type: :object,
-                  description: "Optional filters to apply to target nodes (AND logic with cluster_filters)",
+                  description: "Optional filters to apply to target nodes (AND logic with cluster_filters). Supports all node list filters except cluster_name.",
                   properties: %{
-                    status: %Schema{
-                      type: :string,
-                      enum: ["healthy", "unhealthy", "unreachable"],
-                      description: "Filter by node status"
-                    },
                     id_type: %Schema{
                       type: :string,
                       enum: ["persistent", "random"],
                       description: "Filter by node ID type"
                     },
+                    status: %Schema{
+                      type: :string,
+                      enum: ["healthy", "unhealthy", "unreachable"],
+                      description: "Filter by node status"
+                    },
                     version: %Schema{
                       type: :string,
-                      description: "Filter by node version (supports wildcards with *)"
+                      description: "Filter by node version (exact match or wildcard: 1.0.0, 1.*, etc.)"
                     },
                     self_update_enabled: %Schema{
                       type: :boolean,
                       description: "Filter by self-update enabled status"
+                    },
+                    last_seen_at__gte: %Schema{
+                      type: :string,
+                      format: :datetime,
+                      description: "Filter nodes last seen after or on this datetime"
+                    },
+                    last_seen_at__lte: %Schema{
+                      type: :string,
+                      format: :datetime,
+                      description: "Filter nodes last seen before or on this datetime"
+                    },
+                    inserted_at__gte: %Schema{
+                      type: :string,
+                      format: :date,
+                      description: "Filter nodes inserted after or on this date"
+                    },
+                    inserted_at__lte: %Schema{
+                      type: :string,
+                      format: :date,
+                      description: "Filter nodes inserted before or on this date"
                     }
                   },
                   additionalProperties: false
                 },
                 cluster_filters: %Schema{
                   type: :object,
-                  description: "Optional filters to apply to target clusters (AND logic with node_filters)",
+                  description: "Optional filters to apply to target clusters (AND logic with node_filters). Supports all cluster list filters.",
                   properties: %{
                     name: %Schema{
                       type: :string,
-                      description: "Filter by cluster name (supports wildcards with *)"
+                      description: "Filter by cluster name (exact match or wildcard: prod*, *staging, etc.)"
                     },
                     ipv4_range: %Schema{
                       type: :string,
@@ -175,6 +195,24 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
                     node_count: %Schema{
                       type: :integer,
                       description: "Filter by exact node count"
+                    },
+                    node_count__gte: %Schema{
+                      type: :integer,
+                      description: "Filter by node count greater than or equal to"
+                    },
+                    node_count__lte: %Schema{
+                      type: :integer,
+                      description: "Filter by node count less than or equal to"
+                    },
+                    inserted_at__gte: %Schema{
+                      type: :string,
+                      format: :date,
+                      description: "Filter clusters inserted after or on this date"
+                    },
+                    inserted_at__lte: %Schema{
+                      type: :string,
+                      format: :date,
+                      description: "Filter clusters inserted before or on this date"
                     }
                   },
                   additionalProperties: false

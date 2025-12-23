@@ -86,6 +86,7 @@ defmodule EdgeAdmin.Mixfile do
       # Database
       {:ecto_sql, "~> 3.13"},
       {:postgrex, "~> 0.21"},
+      {:flop, "~> 0.26"},
 
       # Database check
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},

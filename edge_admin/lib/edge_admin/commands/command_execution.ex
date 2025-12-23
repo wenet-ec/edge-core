@@ -1,12 +1,17 @@
 # edge_admin/lib/edge_admin/commands/command_execution.ex
 defmodule EdgeAdmin.Commands.CommandExecution do
   @moduledoc false
-  use Ecto.Schema
+  use EdgeAdmin.Schema
 
-  import Ecto.Changeset
-
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
+  @derive {
+    Flop.Schema,
+    filterable: [:status, :target_all, :exit_code, :command_id, :node_id, :output, :inserted_at],
+    sortable: [:status, :exit_code, :sent_at, :completed_at, :inserted_at, :updated_at],
+    default_order: %{
+      order_by: [:inserted_at],
+      order_directions: [:desc]
+    }
+  }
 
   schema "command_executions" do
     # "output" will be mapped to TEXT in database
@@ -18,15 +23,15 @@ defmodule EdgeAdmin.Commands.CommandExecution do
     field(:completed_at, :utc_datetime)
 
     field(:command_text, :string, virtual: true)
-    field(:cluster_name, :string, virtual: true)
     field(:timeout, :integer, virtual: true)
+    field(:cluster_name, :string, virtual: true)
 
     # Associations
     belongs_to(:command, EdgeAdmin.Commands.Command)
     belongs_to(:node, EdgeAdmin.Nodes.Node)
     belongs_to(:cluster, EdgeAdmin.Nodes.Cluster)
 
-    timestamps(type: :utc_datetime)
+    timestamps()
   end
 
   @doc false

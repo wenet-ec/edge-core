@@ -9,7 +9,6 @@ defmodule EdgeAdmin.Ssh do
 
   import Ecto.Query, warn: false
 
-  alias EdgeAdmin.FilteringPagination
   alias EdgeAdmin.Nodes.Node
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Ssh.Forms
@@ -36,17 +35,6 @@ defmodule EdgeAdmin.Ssh do
     Ecto.Query.CastError -> {:error, :not_found}
   end
 
-  @doc """
-  Gets a specific SSH username for a node with preloaded public keys.
-  Used by agents for credential verification.
-  """
-  def get_ssh_username_for_node(node_id, username) do
-    from(u in SshUsername,
-      where: u.node_id == ^node_id and u.username == ^username,
-      preload: [:ssh_public_keys]
-    )
-    |> Repo.one()
-  end
 
   @doc """
   Creates an SSH username.
@@ -146,7 +134,12 @@ defmodule EdgeAdmin.Ssh do
       public_key = Map.get(attrs, "public_key")
 
       # Query SSH username for this node (with preloaded public keys)
-      ssh_username = get_ssh_username_for_node(node_id, username)
+      ssh_username =
+        case list_ssh_usernames(%{"node_id" => node_id, "username" => username, "page_size" => "1"}) do
+          {:ok, {[ssh_username | _], _meta}} -> ssh_username
+          {:ok, {[], _meta}} -> nil
+          {:error, _meta} -> nil
+        end
 
       verified =
         case {ssh_username, password, public_key} do
@@ -194,19 +187,79 @@ defmodule EdgeAdmin.Ssh do
   end
 
   @doc """
-  Lists SSH usernames with filtering and pagination.
+  Lists SSH usernames with filtering, sorting, and pagination.
+
+  Supports filtering by:
+  - `username` - Text search with wildcard support
+  - `node_id` - Exact match on node ID
+  - `has_password` - Boolean (filters by password_hash presence)
+  - `inserted_at__gte/lte` - Date range filter
+
+  ## Returns
+  - `{:ok, {ssh_usernames, meta}}` - List of SSH usernames with Flop.Meta pagination info
+  - `{:error, meta}` - Validation errors (when replace_invalid_params: false)
   """
-  def list_ssh_usernames_with_filtering_pagination(params \\ %{}) do
-    FilteringPagination.paginate(
-      SshUsername,
-      params,
-      filterable_fields: [:username, :node_id],
-      sortable_fields: [:inserted_at, :updated_at, :username],
-      default_sort: "inserted_at:desc",
-      repo: Repo,
-      preload: [:ssh_public_keys]
-    )
+  def list_ssh_usernames(params \\ %{}) do
+    # Parse params into Flop format
+    flop_params = EdgeAdmin.RequestParser.parse(params)
+
+    # Extract has_password filter (virtual field, handle separately)
+    {has_password_filters, other_filters} =
+      Enum.split_with(flop_params[:filters] || [], fn filter ->
+        filter.field == :has_password
+      end)
+
+    # Build base query with preload
+    base_query = from(u in SshUsername, preload: [:ssh_public_keys])
+
+    # Apply has_password filter if present
+    query_with_password_filter =
+      if has_password_filters != [] do
+        apply_has_password_filters(base_query, has_password_filters)
+      else
+        base_query
+      end
+
+    # Remove has_password filters from Flop params (handled above)
+    flop_params = Map.put(flop_params, :filters, other_filters)
+
+    # Run Flop query
+    case Flop.validate_and_run(query_with_password_filter, flop_params,
+           for: SshUsername,
+           replace_invalid_params: true
+         ) do
+      {:ok, {usernames, meta}} ->
+        {:ok, {usernames, meta}}
+
+      {:error, meta} ->
+        {:error, meta}
+    end
   end
+
+  # Apply has_password filters using WHERE clause on password_hash
+  defp apply_has_password_filters(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc_query ->
+      apply_has_password_filter(acc_query, filter)
+    end)
+  end
+
+  defp apply_has_password_filter(query, %{op: :==, value: "true"}) do
+    from(u in query, where: not is_nil(u.password_hash))
+  end
+
+  defp apply_has_password_filter(query, %{op: :==, value: "false"}) do
+    from(u in query, where: is_nil(u.password_hash))
+  end
+
+  defp apply_has_password_filter(query, %{op: :==, value: true}) do
+    from(u in query, where: not is_nil(u.password_hash))
+  end
+
+  defp apply_has_password_filter(query, %{op: :==, value: false}) do
+    from(u in query, where: is_nil(u.password_hash))
+  end
+
+  defp apply_has_password_filter(query, _), do: query
 
   # ===========================================================================
   # SSH Public Key functions
@@ -277,16 +330,32 @@ defmodule EdgeAdmin.Ssh do
   end
 
   @doc """
-  Lists SSH public keys with filtering and pagination.
+  Lists SSH public keys with filtering, sorting, and pagination.
+
+  Supports filtering by:
+  - `key_name` - Text search with wildcard support
+  - `public_key` - Text search with wildcard support (useful for searching email comments)
+  - `ssh_username_id` - Exact match on SSH username ID
+  - `inserted_at__gte/lte` - Date range filter
+
+  ## Returns
+  - `{:ok, {ssh_public_keys, meta}}` - List of SSH public keys with Flop.Meta pagination info
+  - `{:error, meta}` - Validation errors (when replace_invalid_params: false)
   """
-  def list_ssh_public_keys_with_filtering_pagination(params \\ %{}) do
-    FilteringPagination.paginate(
-      SshPublicKey,
-      params,
-      filterable_fields: [:key_name, :ssh_username_id],
-      sortable_fields: [:inserted_at, :updated_at, :key_name],
-      default_sort: "inserted_at:desc",
-      repo: Repo
-    )
+  def list_ssh_public_keys(params \\ %{}) do
+    # Parse params into Flop format
+    flop_params = EdgeAdmin.RequestParser.parse(params)
+
+    # Run Flop query
+    case Flop.validate_and_run(SshPublicKey, flop_params,
+           for: SshPublicKey,
+           replace_invalid_params: true
+         ) do
+      {:ok, {public_keys, meta}} ->
+        {:ok, {public_keys, meta}}
+
+      {:error, meta} ->
+        {:error, meta}
+    end
   end
 end

@@ -5,6 +5,16 @@ defmodule EdgeAdmin.Nodes.Node do
 
   alias EdgeAdmin.Vpn
 
+  @derive {
+    Flop.Schema,
+    filterable: [:id_type, :status, :version, :self_update_enabled, :last_seen_at, :inserted_at],
+    sortable: [:id_type, :status, :version, :self_update_enabled, :last_seen_at, :inserted_at, :updated_at],
+    default_order: %{
+      order_by: [:inserted_at],
+      order_directions: [:desc]
+    }
+  }
+
   @primary_key {:id, :binary_id, autogenerate: false}
 
   schema "nodes" do

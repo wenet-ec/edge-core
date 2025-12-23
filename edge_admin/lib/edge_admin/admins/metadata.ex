@@ -62,8 +62,6 @@ defmodule EdgeAdmin.Admins.Metadata do
   alias EdgeAdmin.Admins.Metadata.Algorithm
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Vpn
-  alias EdgeAdmin.Nodes.Cluster
-  alias EdgeAdmin.Nodes.Node
 
   @table :metadata
 
@@ -90,7 +88,7 @@ defmodule EdgeAdmin.Admins.Metadata do
 
     # Compute derived values
     dns_hostname = Vpn.build_hostname(admin_name, admin_cluster_name)
-    erlang_node_name = node()
+    erlang_node_name = Node.self()
 
     # Fetch Netmaker host ID
     {:ok, netmaker_host_id} = EdgeAdmin.Vpn.get_host_id(admin_name)
@@ -372,17 +370,7 @@ defmodule EdgeAdmin.Admins.Metadata do
   end
 
   defp read_clusters_from_db do
-    # Query all clusters with their nodes and transform to names immediately
-    all_clusters = Nodes.list_clusters()
-
-    Enum.map(all_clusters, fn cluster ->
-      nodes = Nodes.list_nodes_by_cluster(cluster.id)
-
-      %{
-        name: Cluster.network_name(cluster),
-        nodes: Enum.map(nodes, &Node.node_name/1)
-      }
-    end)
+    Nodes.list_cluster_node_mappings()
   end
 
   defp update_ets(result, all_admins) do

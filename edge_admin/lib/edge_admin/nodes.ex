@@ -6,13 +6,13 @@ defmodule EdgeAdmin.Nodes do
 
   import Ecto.Query, warn: false
 
-  alias EdgeAdmin.FilteringPagination
   alias EdgeAdmin.Nodes.Alias
   alias EdgeAdmin.Nodes.Cluster
   alias EdgeAdmin.Nodes.EphemeralEnrollmentKey
   alias EdgeAdmin.Nodes.Forms
   alias EdgeAdmin.Nodes.Metrics
   alias EdgeAdmin.Nodes.Node
+  alias EdgeAdmin.RequestParser
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Vpn
 
@@ -45,102 +45,141 @@ defmodule EdgeAdmin.Nodes do
   Lists all clusters with node counts, filtering, and pagination.
 
   Supports filtering by:
-  - `ipv4_range` - Text search (e.g., "100.64.1")
-  - `node_count` - Range queries (e.g., "gte:5", "lt:10", "0")
+  - `name` - Text search (supports wildcards: `prod*`, `*tion`, `*rod*`)
+  - `ipv4_range` - Text search (supports wildcards)
+  - `inserted_at` - Range queries (e.g., `inserted_at__gte=2025-01-01`, `inserted_at__lte=2025-12-31`)
+  - `node_count` - Range queries (e.g., `node_count__gte=5`, `node_count__lte=10`)
 
   Supports sorting by:
-  - `inserted_at`, `updated_at`, `ipv4_range`, `node_count`
+  - `name`, `ipv4_range`, `inserted_at`, `updated_at`
+  - Default: `inserted_at:desc`
   """
-  def list_clusters_with_filtering_pagination(params \\ %{}) do
-    # Extract node_count filter to handle separately
-    {node_count_filter, other_params} = Map.pop(params, "node_count")
+  def list_clusters(params \\ %{}) do
+    # Parse API params into Flop format
+    flop_params = RequestParser.parse(params)
 
+    # Extract node_count filters to handle separately (computed field)
+    {node_count_filters, other_filters} =
+      Enum.split_with(flop_params[:filters] || [], fn filter ->
+        filter.field == :node_count
+      end)
+
+    # Build base query with node_count if filtering/sorting on it
     base_query =
-      if node_count_filter do
-        # Need to compute count for HAVING clause when filtering
+      if node_count_filters != [] do
         from(c in Cluster,
           left_join: n in assoc(c, :nodes),
           group_by: c.id,
           select_merge: %{node_count: count(n.id)}
         )
-        |> apply_node_count_filter(node_count_filter)
+        |> apply_node_count_filters(node_count_filters)
       else
-        # No filter, just use base Cluster query
         Cluster
       end
 
-    # Use FilteringPagination for the rest
-    result =
-      FilteringPagination.paginate(
-        base_query,
-        other_params,
-        filterable_fields: [:ipv4_range],
-        sortable_fields: [:inserted_at, :updated_at, :ipv4_range],
-        default_sort: "inserted_at:desc",
-        repo: Repo,
-        preload: :nodes
-      )
+    flop_params = Map.put(flop_params, :filters, other_filters)
 
-    # Re-add node_count to filters if it was present
-    if node_count_filter do
-      %{result | filters: Map.put(result.filters, "node_count", node_count_filter)}
-    else
-      result
+    case Flop.validate_and_run(base_query, flop_params, for: Cluster, replace_invalid_params: true) do
+      {:ok, {clusters, meta}} ->
+        # Preload nodes to compute node_count for response
+        clusters_with_nodes = Repo.preload(clusters, :nodes)
+        {:ok, {clusters_with_nodes, meta}}
+
+      {:error, meta} ->
+        {:error, meta}
     end
   end
 
-  defp apply_node_count_filter(query, filter_value) do
-    cond do
-      # Range queries: gte:5, lt:10, etc.
-      String.contains?(filter_value, ":") ->
-        case String.split(filter_value, ":", parts: 2) do
-          ["gte", val] ->
-            {num, _} = Integer.parse(val)
-            from([c, n] in query, having: count(n.id) >= ^num)
+  # Apply node_count filters using HAVING clause
+  defp apply_node_count_filters(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc_query ->
+      apply_node_count_filter(acc_query, filter)
+    end)
+  end
 
-          ["gt", val] ->
-            {num, _} = Integer.parse(val)
-            from([c, n] in query, having: count(n.id) > ^num)
-
-          ["lte", val] ->
-            {num, _} = Integer.parse(val)
-            from([c, n] in query, having: count(n.id) <= ^num)
-
-          ["lt", val] ->
-            {num, _} = Integer.parse(val)
-            from([c, n] in query, having: count(n.id) < ^num)
-
-          _ ->
-            query
-        end
-
-      # Exact match: "5" means exactly 5 nodes
-      true ->
-        case Integer.parse(filter_value) do
-          {num, ""} -> from([c, n] in query, having: count(n.id) == ^num)
-          _ -> query
-        end
+  defp apply_node_count_filter(query, %{op: :>=, value: value}) when is_binary(value) do
+    case Integer.parse(value) do
+      {num, _} -> from([c, n] in query, having: count(n.id) >= ^num)
+      _ -> query
     end
   end
+
+  defp apply_node_count_filter(query, %{op: :>, value: value}) when is_binary(value) do
+    case Integer.parse(value) do
+      {num, _} -> from([c, n] in query, having: count(n.id) > ^num)
+      _ -> query
+    end
+  end
+
+  defp apply_node_count_filter(query, %{op: :<=, value: value}) when is_binary(value) do
+    case Integer.parse(value) do
+      {num, _} -> from([c, n] in query, having: count(n.id) <= ^num)
+      _ -> query
+    end
+  end
+
+  defp apply_node_count_filter(query, %{op: :<, value: value}) when is_binary(value) do
+    case Integer.parse(value) do
+      {num, _} -> from([c, n] in query, having: count(n.id) < ^num)
+      _ -> query
+    end
+  end
+
+  defp apply_node_count_filter(query, %{op: :==, value: value}) when is_binary(value) do
+    case Integer.parse(value) do
+      {num, _} -> from([c, n] in query, having: count(n.id) == ^num)
+      _ -> query
+    end
+  end
+
+  defp apply_node_count_filter(query, %{op: :!=, value: value}) when is_binary(value) do
+    case Integer.parse(value) do
+      {num, _} -> from([c, n] in query, having: count(n.id) != ^num)
+      _ -> query
+    end
+  end
+
+  defp apply_node_count_filter(query, _), do: query
 
   @doc """
-  Lists all clusters with nodes preloaded (no pagination).
+  Lists cluster-node mappings for metadata recomputation.
+  Returns minimal data needed: cluster network names and node names only.
+
+  Returns list of maps:
+  ```
+  [
+    %{name: "cluster-prod-east", nodes: ["node-abc123", "node-def456"]},
+    %{name: "cluster-staging", nodes: ["node-xyz789"]}
+  ]
+  ```
   """
-  def list_clusters do
+  def list_cluster_node_mappings do
     from(c in Cluster,
-      order_by: [desc: c.inserted_at],
-      preload: :nodes
+      left_join: n in assoc(c, :nodes),
+      select: %{
+        cluster_name: c.name,
+        node_id: n.id
+      },
+      order_by: [asc: c.inserted_at]
     )
     |> Repo.all()
+    |> Enum.group_by(
+      fn row -> row.cluster_name end,
+      fn row ->
+        case row.node_id do
+          nil -> nil
+          id -> Vpn.build_dns_name(id, prefix: :node)
+        end
+      end
+    )
+    |> Enum.map(fn {cluster_name, node_names} ->
+      %{
+        name: node_network_name(cluster_name),
+        nodes: Enum.reject(node_names, &is_nil/1)
+      }
+    end)
   end
 
-  @doc """
-  Gets a single cluster by name.
-
-  ## Returns
-  - `{:ok, cluster}` - Cluster found
-  - `{:error, :not_found}` - Cluster does not exist
-  """
   def get_cluster(name) do
     case Repo.get_by(Cluster, name: name) do
       nil -> {:error, :not_found}
@@ -148,16 +187,6 @@ defmodule EdgeAdmin.Nodes do
     end
   end
 
-  @doc """
-  Creates a cluster with automatic name/IP range generation and Netmaker network creation.
-
-  ## Parameters
-  - `attrs` - Cluster creation parameters (validated through CreateClusterForm)
-
-  ## Returns
-  - `{:ok, cluster}` - Cluster created successfully
-  - `{:error, changeset}` - Validation or creation failed
-  """
   def create_cluster(attrs \\ %{}) do
     with {:ok, validated_attrs} <- Forms.CreateClusterForm.changeset(attrs) do
       # 1. Auto-generate IP range if not provided
@@ -207,9 +236,6 @@ defmodule EdgeAdmin.Nodes do
     end
   end
 
-  @doc """
-  Updates a cluster.
-  """
   def update_cluster(%Cluster{} = cluster, attrs) do
     cluster
     |> Cluster.changeset(attrs)
@@ -263,9 +289,6 @@ defmodule EdgeAdmin.Nodes do
     end
   end
 
-  @doc """
-  Returns an `%Ecto.Changeset{}` for tracking cluster changes.
-  """
   def change_cluster(%Cluster{} = cluster, attrs \\ %{}) do
     Cluster.changeset(cluster, attrs)
   end
@@ -274,23 +297,10 @@ defmodule EdgeAdmin.Nodes do
   # Node functions
   # ===========================================================================
 
-  @doc """
-  Returns the HTTP URL for a node.
-  Format: http://node-{id}.cluster-{cluster_name}.{domain}:{port}
-
-  Requires cluster association to be preloaded.
-  """
   def node_http_url(%Node{http_port: port} = node) do
     "http://#{Node.dns_hostname(node)}:#{port}"
   end
 
-  @doc """
-  Gets a single node by ID.
-
-  ## Returns
-  - `{:ok, node}` - Node found with cluster and aliases preloaded
-  - `{:error, :not_found}` - Node does not exist or invalid UUID format
-  """
   def get_node(id) do
     case Repo.get(Node, id) do
       nil -> {:error, :not_found}
@@ -632,53 +642,75 @@ defmodule EdgeAdmin.Nodes do
   end
 
   @doc """
-  Lists all nodes belonging to a specific cluster.
-  Used by Metadata for recomputation.
+  Lists nodes with filtering, sorting, and pagination.
+
+  Supports filtering by:
+  - `id_type` - Enum: "persistent" or "random"
+  - `status` - Enum: "healthy", "unhealthy", or "unreachable"
+  - `version` - Text search with wildcard support (1.0.0 exact, 1.* ilike)
+  - `self_update_enabled` - Boolean
+  - `last_seen_at__gte/lte` - Datetime range filter
+  - `inserted_at__gte/lte` - Date range filter
+  - `cluster_name` - Text search with wildcard support (requires join)
+
+  ## Returns
+  - `{:ok, {nodes, meta}}` - List of nodes with Flop.Meta pagination info
+  - `{:error, meta}` - Validation errors (when replace_invalid_params: false)
   """
-  def list_nodes_by_cluster(cluster_id) do
-    from(n in Node,
-      where: n.cluster_id == ^cluster_id,
-      order_by: [asc: n.inserted_at]
-    )
-    |> Repo.all()
-  end
+  def list_nodes(params \\ %{}) do
+    # Parse params into Flop format
+    flop_params = RequestParser.parse(params)
 
-  def list_nodes_with_filtering_pagination(params \\ %{}) do
-    # Handle cluster_name filter specially (join-based)
-    {cluster_name_filter, other_params} = Map.pop(params, "cluster_name")
+    # Extract cluster_name filters (join-based, handle separately)
+    {cluster_name_filters, other_filters} =
+      Enum.split_with(flop_params[:filters] || [], fn filter ->
+        filter.field == :cluster_name
+      end)
 
+    # Build base query with cluster preload
     base_query =
       from(n in Node,
         join: c in assoc(n, :cluster),
         preload: [:cluster, aliases: :cluster]
       )
 
-    # Apply cluster_name filter if present
+    # Apply cluster_name filters if present
     query_with_cluster_filter =
-      if cluster_name_filter do
-        from([n, c] in base_query, where: c.name == ^cluster_name_filter)
+      if cluster_name_filters != [] do
+        apply_cluster_name_filters(base_query, cluster_name_filters)
       else
         base_query
       end
 
-    # Use FilteringPagination for the rest
-    result =
-      FilteringPagination.paginate(
-        query_with_cluster_filter,
-        other_params,
-        filterable_fields: [:status, :id_type, :version, :self_update_enabled],
-        sortable_fields: [:inserted_at, :updated_at, :status, :last_seen_at],
-        default_sort: "inserted_at:desc",
-        repo: Repo
-      )
+    # Remove cluster_name filters from Flop params (handled above)
+    flop_params = Map.put(flop_params, :filters, other_filters)
 
-    # Re-add cluster_name to filters if it was present
-    if cluster_name_filter do
-      %{result | filters: Map.put(result.filters, "cluster_name", cluster_name_filter)}
-    else
-      result
+    # Run Flop query
+    case Flop.validate_and_run(query_with_cluster_filter, flop_params, for: Node, replace_invalid_params: true) do
+      {:ok, {nodes, meta}} ->
+        {:ok, {nodes, meta}}
+
+      {:error, meta} ->
+        {:error, meta}
     end
   end
+
+  # Apply cluster_name filters using WHERE clause on joined cluster table
+  defp apply_cluster_name_filters(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc_query ->
+      apply_cluster_name_filter(acc_query, filter)
+    end)
+  end
+
+  defp apply_cluster_name_filter(query, %{op: :==, value: value}) when is_binary(value) do
+    from([_main, c] in query, where: c.name == ^value)
+  end
+
+  defp apply_cluster_name_filter(query, %{op: :ilike, value: value}) when is_binary(value) do
+    from([_main, c] in query, where: ilike(c.name, ^value))
+  end
+
+  defp apply_cluster_name_filter(query, _), do: query
 
   def get_nodes_by_ids(node_ids) do
     Enum.map(node_ids, fn node_id ->
@@ -871,7 +903,13 @@ defmodule EdgeAdmin.Nodes do
     # Calculate cutoff time for each key: inserted_at + time_to_live (minutes)
     expired_keys =
       from(ek in EphemeralEnrollmentKey,
-        where: fragment("? + (? || ' minutes')::interval < ?", ek.inserted_at, ek.time_to_live, ^current_time),
+        where:
+          fragment(
+            "? + (? || ' minutes')::interval < ?",
+            ek.inserted_at,
+            ek.time_to_live,
+            ^current_time
+          ),
         preload: [:cluster]
       )
       |> Repo.all()
@@ -1012,7 +1050,7 @@ defmodule EdgeAdmin.Nodes do
   Returns statistics about the reconciliation operation.
   """
   def reconcile_cluster_nodes do
-    clusters = list_clusters()
+    {:ok, {clusters, _meta}} = list_clusters(%{"page_size" => "10000"})
 
     # Get all DB nodes grouped by cluster
     db_nodes_by_cluster =
@@ -1322,51 +1360,48 @@ defmodule EdgeAdmin.Nodes do
   Lists aliases with filtering and pagination.
 
   Supports filtering by:
-  - `name` - Text search
-  - `cluster_name` - Exact match on cluster name
-  - `node_id` - Exact match on node ID
+  - `name` - Text search with wildcard support
+  - `cluster_name` - Text search with wildcard support (requires join)
+  - `inserted_at__gte/lte` - Date range filter
   """
-  def list_aliases_with_filtering_pagination(params \\ %{}) do
-    # Handle cluster_name filter specially (join-based)
-    {cluster_name_filter, other_params} = Map.pop(params, "cluster_name")
+  def list_aliases(params \\ %{}) do
+    # Parse params into Flop format
+    flop_params = RequestParser.parse(params)
 
+    # Extract cluster_name filters (join-based, handle separately)
+    {cluster_name_filters, other_filters} =
+      Enum.split_with(flop_params[:filters] || [], fn filter ->
+        filter.field == :cluster_name
+      end)
+
+    # Build base query with cluster preload
     base_query =
       from(a in Alias,
         join: c in assoc(a, :cluster),
         preload: [cluster: c]
       )
 
-    # Apply cluster_name filter if present
+    # Apply cluster_name filters if present
     query_with_cluster_filter =
-      if cluster_name_filter do
-        from([a, c] in base_query, where: c.name == ^cluster_name_filter)
+      if cluster_name_filters != [] do
+        apply_cluster_name_filters(base_query, cluster_name_filters)
       else
         base_query
       end
 
-    # Use FilteringPagination for the rest
-    result =
-      FilteringPagination.paginate(
-        query_with_cluster_filter,
-        other_params,
-        filterable_fields: [:name, :node_id],
-        sortable_fields: [:inserted_at, :updated_at, :name],
-        default_sort: "inserted_at:desc",
-        repo: Repo
-      )
+    # Remove cluster_name filters from Flop params (handled above)
+    flop_params = Map.put(flop_params, :filters, other_filters)
 
-    # Re-add cluster_name to filters if it was present
-    if cluster_name_filter do
-      %{result | filters: Map.put(result.filters, "cluster_name", cluster_name_filter)}
-    else
-      result
+    # Run Flop query
+    case Flop.validate_and_run(query_with_cluster_filter, flop_params, for: Alias, replace_invalid_params: true) do
+      {:ok, {aliases, meta}} ->
+        {:ok, {aliases, meta}}
+
+      {:error, meta} ->
+        {:error, meta}
     end
   end
 
-  @doc """
-  Gets a single alias by ID.
-  Raises `Ecto.NoResultsError` if not found.
-  """
   def get_alias(id) do
     case Repo.get(Alias, id) do
       nil -> {:error, :not_found}
@@ -1376,18 +1411,6 @@ defmodule EdgeAdmin.Nodes do
     Ecto.Query.CastError -> {:error, :not_found}
   end
 
-  @doc """
-  Creates an alias for a node.
-
-  Flow:
-  1. Verify node exists and preload cluster
-  2. Validate input via form
-  3. Query Netmaker for node's IP address
-  4. Create DNS entry in Netmaker
-  5. Insert alias into DB
-
-  If any step fails, the entire operation is rolled back.
-  """
   def create_alias(%Node{} = node, params) do
     with {:ok, attrs} <- Forms.CreateAliasForm.changeset(params) do
       Repo.transaction(fn ->
@@ -1462,15 +1485,6 @@ defmodule EdgeAdmin.Nodes do
     end
   end
 
-  @doc """
-  Deletes an alias.
-
-  Flow:
-  1. Delete DNS entry from Netmaker
-  2. Delete alias from DB
-
-  If DNS deletion fails, the entire operation is rolled back.
-  """
   def delete_alias(%Alias{} = alias_record) do
     Repo.transaction(fn ->
       # 1. Ensure cluster is preloaded
@@ -1507,9 +1521,6 @@ defmodule EdgeAdmin.Nodes do
     end)
   end
 
-  @doc """
-  Returns an `%Ecto.Changeset{}` for tracking alias changes.
-  """
   def change_alias(%Alias{} = alias_record, attrs \\ %{}) do
     Alias.changeset(alias_record, attrs)
   end

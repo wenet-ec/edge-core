@@ -29,21 +29,43 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
         schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, maximum: 100, default: 20},
         example: 20
       ],
-      sort: [
+      order_by: [
         in: :query,
-        description: "Sort specification: field1:dir1,field2:dir2",
+        description: "Comma-separated list of fields to sort by",
         schema: %OpenApiSpex.Schema{type: :string},
-        example: "inserted_at:desc"
+        example: "inserted_at,username"
+      ],
+      order_directions: [
+        in: :query,
+        description:
+          "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
+        schema: %OpenApiSpex.Schema{type: :string},
+        example: "desc,asc"
       ],
       username: [
         in: :query,
-        description: "Filter by username (supports wildcards with *)",
+        description: "Filter by username (exact match or wildcard: root*, *admin, etc.)",
         schema: %OpenApiSpex.Schema{type: :string}
       ],
       node_id: [
         in: :query,
         description: "Filter by node ID",
         schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
+      ],
+      has_password: [
+        in: :query,
+        description: "Filter by whether username has password configured",
+        schema: %OpenApiSpex.Schema{type: :boolean}
+      ],
+      inserted_at__gte: [
+        in: :query,
+        description: "Filter SSH usernames inserted after or on this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+      ],
+      inserted_at__lte: [
+        in: :query,
+        description: "Filter SSH usernames inserted before or on this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
       ]
     ],
     responses: %{
@@ -54,8 +76,8 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
   )
 
   def index(conn, params) do
-    page_result = Ssh.list_ssh_usernames_with_filtering_pagination(params)
-    render(conn, :index, page_result: page_result)
+    {:ok, {ssh_usernames, meta}} = Ssh.list_ssh_usernames(params)
+    render(conn, :index, ssh_usernames: ssh_usernames, meta: meta)
   end
 
   operation(:create,

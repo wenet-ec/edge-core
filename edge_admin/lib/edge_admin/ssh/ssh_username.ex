@@ -3,6 +3,16 @@ defmodule EdgeAdmin.Ssh.SshUsername do
   @moduledoc false
   use EdgeAdmin.Schema
 
+  @derive {
+    Flop.Schema,
+    filterable: [:username, :node_id, :inserted_at],
+    sortable: [:username, :inserted_at, :updated_at],
+    default_order: %{
+      order_by: [:inserted_at],
+      order_directions: [:desc]
+    }
+  }
+
   schema "ssh_usernames" do
     field(:username, :string)
     field(:password_hash, :string)

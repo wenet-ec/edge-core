@@ -41,6 +41,8 @@ config :edge_admin,
   ecto_repos: [EdgeAdmin.Repo],
   version: version
 
+config :flop, repo: EdgeAdmin.Repo
+
 config :phoenix, :json_library, Jason
 
 # Import environment configuration

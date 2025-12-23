@@ -13,7 +13,6 @@ defmodule EdgeAdmin.Commands do
   alias EdgeAdmin.Commands.CommandExecution
   alias EdgeAdmin.Commands.Forms
   alias EdgeAdmin.Commands.Workers.ExecutionCreationWorker
-  alias EdgeAdmin.FilteringPagination
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.Node
   alias EdgeAdmin.Admins.Metadata
@@ -50,15 +49,32 @@ defmodule EdgeAdmin.Commands do
     Command.changeset(command, attrs)
   end
 
-  def list_commands_with_filtering_pagination(params \\ %{}) do
-    FilteringPagination.paginate(
-      Command,
-      params,
-      filterable_fields: [:command_text],
-      sortable_fields: [:inserted_at, :updated_at],
-      default_sort: "inserted_at:desc",
-      repo: Repo
-    )
+  @doc """
+  Lists commands with filtering, sorting, and pagination.
+
+  Supports filtering by:
+  - `command_text` - Text search with wildcard support
+  - `inserted_at__gte/lte` - Date range filter
+
+  ## Returns
+  - `{:ok, {commands, meta}}` - List of commands with Flop.Meta pagination info
+  - `{:error, meta}` - Validation errors (when replace_invalid_params: false)
+  """
+  def list_commands(params \\ %{}) do
+    # Parse params into Flop format
+    flop_params = EdgeAdmin.RequestParser.parse(params)
+
+    # Run Flop query
+    case Flop.validate_and_run(Command, flop_params,
+           for: Command,
+           replace_invalid_params: true
+         ) do
+      {:ok, {commands, meta}} ->
+        {:ok, {commands, meta}}
+
+      {:error, meta} ->
+        {:error, meta}
+    end
   end
 
   def get_command_execution(id) do
@@ -90,17 +106,123 @@ defmodule EdgeAdmin.Commands do
     CommandExecution.changeset(command_execution, attrs)
   end
 
-  def list_command_executions_with_filtering_pagination(params \\ %{}) do
-    FilteringPagination.paginate(
-      CommandExecution,
-      params,
-      filterable_fields: [:status, :target_all, :exit_code, :command_id, :node_id, :output],
-      sortable_fields: [:inserted_at, :updated_at, :status, :sent_at, :completed_at, :exit_code],
-      default_sort: "inserted_at:desc",
-      repo: Repo,
-      preload: [:command, :cluster]
-    )
+  @doc """
+  Lists command executions with filtering, sorting, and pagination.
+
+  Supports filtering by:
+  - `status` - Enum: "pending", "sent", or "completed"
+  - `target_all` - Boolean
+  - `exit_code` - Integer
+  - `command_id` - Exact match on command ID
+  - `node_id` - Exact match on node ID
+  - `output` - Text search with wildcard support
+  - `cluster_name` - Text search with wildcard support (filters by node's cluster name)
+  - `has_cluster` - Boolean (filters by cluster_id presence: true = NOT NULL, false = IS NULL)
+  - `inserted_at__gte/lte` - Date range filter
+
+  ## Returns
+  - `{:ok, {command_executions, meta}}` - List of command executions with Flop.Meta pagination info
+  - `{:error, meta}` - Validation errors (when replace_invalid_params: false)
+  """
+  def list_command_executions(params \\ %{}) do
+    # Parse params into Flop format
+    flop_params = EdgeAdmin.RequestParser.parse(params)
+
+    # Extract cluster_name filters (join-based, handle separately)
+    {cluster_name_filters, other_filters} =
+      Enum.split_with(flop_params[:filters] || [], fn filter ->
+        filter.field == :cluster_name
+      end)
+
+    # Extract has_cluster filters (virtual field, handle separately)
+    {has_cluster_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter ->
+        filter.field == :has_cluster
+      end)
+
+    # Build base query with preload and cluster join (needed for cluster_name filter)
+    base_query =
+      from(ce in CommandExecution,
+        join: n in assoc(ce, :node),
+        join: c in assoc(n, :cluster),
+        preload: [:command, :cluster, node: :cluster]
+      )
+
+    # Apply cluster_name filters if present
+    query_with_cluster_name =
+      if cluster_name_filters != [] do
+        apply_execution_cluster_name_filters(base_query, cluster_name_filters)
+      else
+        base_query
+      end
+
+    # Apply has_cluster filters if present
+    query_with_has_cluster =
+      if has_cluster_filters != [] do
+        apply_has_cluster_filters(query_with_cluster_name, has_cluster_filters)
+      else
+        query_with_cluster_name
+      end
+
+    # Remove cluster_name and has_cluster filters from Flop params (handled above)
+    flop_params = Map.put(flop_params, :filters, other_filters)
+
+    # Run Flop query
+    case Flop.validate_and_run(query_with_has_cluster, flop_params,
+           for: CommandExecution,
+           replace_invalid_params: true
+         ) do
+      {:ok, {command_executions, meta}} ->
+        {:ok, {command_executions, meta}}
+
+      {:error, meta} ->
+        {:error, meta}
+    end
   end
+
+  # Apply cluster_name filters for command executions using WHERE clause on joined cluster table
+  defp apply_execution_cluster_name_filters(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc_query ->
+      apply_execution_cluster_name_filter(acc_query, filter)
+    end)
+  end
+
+  defp apply_execution_cluster_name_filter(query, %{op: :==, value: value})
+       when is_binary(value) do
+    from([ce, n, c] in query, where: c.name == ^value)
+  end
+
+  defp apply_execution_cluster_name_filter(query, %{op: :ilike, value: value})
+       when is_binary(value) do
+    from([ce, n, c] in query, where: ilike(c.name, ^value))
+  end
+
+  defp apply_execution_cluster_name_filter(query, _), do: query
+
+  # Apply has_cluster filters using WHERE clause on cluster_id
+  defp apply_has_cluster_filters(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc_query ->
+      apply_has_cluster_filter(acc_query, filter)
+    end)
+  end
+
+  defp apply_has_cluster_filter(query, %{op: :==, value: "true"}) do
+    from([ce, _n, _c] in query, where: not is_nil(ce.cluster_id))
+  end
+
+  defp apply_has_cluster_filter(query, %{op: :==, value: "false"}) do
+    from([ce, _n, _c] in query, where: is_nil(ce.cluster_id))
+  end
+
+  defp apply_has_cluster_filter(query, %{op: :==, value: true}) do
+    from([ce, _n, _c] in query, where: not is_nil(ce.cluster_id))
+  end
+
+  defp apply_has_cluster_filter(query, %{op: :==, value: false}) do
+    from([ce, _n, _c] in query, where: is_nil(ce.cluster_id))
+  end
+
+  defp apply_has_cluster_filter(query, _), do: query
 
   @doc """
   Creates a command and enqueues execution creation job.
@@ -324,11 +446,11 @@ defmodule EdgeAdmin.Commands do
       |> Map.put("page_size", "1000")
       |> Map.put("page", to_string(page))
 
-    page_result = Nodes.list_clusters_with_filtering_pagination(params)
+    {:ok, {clusters, meta}} = Nodes.list_clusters(params)
 
-    all_names = accumulated_names ++ Enum.map(page_result.data, & &1.name)
+    all_names = accumulated_names ++ Enum.map(clusters, & &1.name)
 
-    if page_result.has_next do
+    if meta.has_next_page? do
       get_all_filtered_cluster_names(cluster_filters, page + 1, all_names)
     else
       all_names
@@ -399,17 +521,17 @@ defmodule EdgeAdmin.Commands do
       |> Map.put("page_size", "1000")
       |> Map.put("page", to_string(page))
 
-    page_result = Nodes.list_nodes_with_filtering_pagination(params)
+    {:ok, {nodes, meta}} = Nodes.list_nodes(params)
 
     # Filter nodes by cluster names
     filtered_nodes =
-      Enum.filter(page_result.data, fn node ->
+      Enum.filter(nodes, fn node ->
         MapSet.member?(cluster_name_set, node.cluster.name)
       end)
 
     all_nodes = accumulated_nodes ++ filtered_nodes
 
-    if page_result.has_next do
+    if meta.has_next_page? do
       get_nodes_from_cluster_list(cluster_names, node_filters, page + 1, all_nodes)
     else
       all_nodes
@@ -417,49 +539,46 @@ defmodule EdgeAdmin.Commands do
   end
 
   # Helper function to get all nodes across all pages
-  defp get_all_filtered_nodes(node_filters, cluster_filters, page \\ 1, accumulated_nodes \\ []) do
-    # First get filtered clusters if cluster_filters provided
+  defp get_all_filtered_nodes(
+         node_filters,
+         cluster_filters,
+         page \\ 1,
+         accumulated_nodes \\ [],
+         cluster_names \\ nil
+       ) do
+    # Get cluster names from filters on first call (cached for pagination)
     cluster_names =
-      if map_size(cluster_filters) > 0 do
-        get_all_filtered_cluster_names(cluster_filters)
-      else
-        nil
-      end
+      cluster_names ||
+        if map_size(cluster_filters) > 0 do
+          get_all_filtered_cluster_names(cluster_filters)
+        else
+          nil
+        end
 
+    # Build params with node_filters
     params =
       node_filters
       |> Map.put("page_size", "100")
       |> Map.put("page", to_string(page))
 
-    # Add cluster_name filter if we have filtered clusters
-    params =
-      if cluster_names do
-        # Note: list_nodes supports cluster_name filter (singular) for join-based filtering
-        # We need to query each cluster separately or modify the query
-        # For now, we'll fetch all and filter in memory
-        params
-      else
-        params
-      end
+    {:ok, {nodes, meta}} = Nodes.list_nodes(params)
 
-    page_result = Nodes.list_nodes_with_filtering_pagination(params)
-
-    # Filter by cluster names if provided
+    # Filter by cluster names if cluster_filters were provided
     filtered_nodes =
       if cluster_names do
         cluster_name_set = MapSet.new(cluster_names)
 
-        Enum.filter(page_result.data, fn node ->
+        Enum.filter(nodes, fn node ->
           MapSet.member?(cluster_name_set, node.cluster.name)
         end)
       else
-        page_result.data
+        nodes
       end
 
     all_nodes = accumulated_nodes ++ filtered_nodes
 
-    if page_result.has_next do
-      get_all_filtered_nodes(node_filters, cluster_filters, page + 1, all_nodes)
+    if meta.has_next_page? do
+      get_all_filtered_nodes(node_filters, cluster_filters, page + 1, all_nodes, cluster_names)
     else
       all_nodes
     end
@@ -610,14 +729,20 @@ defmodule EdgeAdmin.Commands do
   @doc """
   Lists command executions for a specific node with status "sent".
   Used by agent to fetch pending commands.
+
+  ## Returns
+  - `{:ok, {executions, meta}}` - List of command executions with Flop.Meta pagination info
   """
   def list_sent_command_executions_for_node(node_id) do
-    from(ce in CommandExecution,
-      where: ce.node_id == ^node_id and ce.status == "sent",
-      order_by: [asc: ce.inserted_at],
-      preload: :command
-    )
-    |> Repo.all()
+    params = %{
+      "node_id" => node_id,
+      "status" => "sent",
+      "order_by" => "inserted_at",
+      "order_directions" => "asc",
+      "page_size" => "1000"
+    }
+
+    list_command_executions(params)
   end
 
   @doc """

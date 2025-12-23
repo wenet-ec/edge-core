@@ -10,7 +10,7 @@ defmodule EdgeAdmin.Commands.Workers.ExecutionCreationWorker do
   Quantum scheduler handles actual delivery via `Commands.deliver_local_executions/0`.
   """
 
-  use Oban.Worker, queue: :execution_creation, max_attempts: 1
+  use Oban.Worker, queue: :execution_creation, max_attempts: 3
 
   alias EdgeAdmin.Commands
 

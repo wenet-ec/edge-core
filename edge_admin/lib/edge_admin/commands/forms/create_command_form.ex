@@ -134,8 +134,11 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
     |> Enum.reject(fn {_k, v} -> is_nil(v) end)
     |> Map.new()
 
-    # Build targeting map
-    targeting =
+    # Get original targeting to preserve all fields
+    original_targeting = Map.get(original_attrs, "targeting", %{})
+
+    # Build base targeting with validated fields
+    base_targeting =
       case form.targeting_type do
         "all" ->
           %{"type" => "all"}
@@ -147,19 +150,8 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
           %{"type" => "clusters", "cluster_names" => form.cluster_names}
       end
 
-    # Preserve node_filters if present in original attrs
-    targeting =
-      case get_in(original_attrs, ["targeting", "node_filters"]) do
-        nil -> targeting
-        filters -> Map.put(targeting, "node_filters", filters)
-      end
-
-    # Preserve cluster_filters if present in original attrs
-    targeting =
-      case get_in(original_attrs, ["targeting", "cluster_filters"]) do
-        nil -> targeting
-        filters -> Map.put(targeting, "cluster_filters", filters)
-      end
+    # Merge original targeting with base targeting (base targeting takes precedence for validated fields)
+    targeting = Map.merge(original_targeting, base_targeting)
 
     Map.put(base_attrs, "targeting", targeting)
   end

@@ -17,6 +17,7 @@ defmodule EdgeAdmin.Commands.Command do
     # Maps to TEXT in database
     field(:command_text, :string)
     field(:timeout, :integer)
+    field(:targeting, :map)
 
     # Associations
     has_many(:command_executions, EdgeAdmin.Commands.CommandExecution, on_delete: :delete_all)
@@ -27,8 +28,8 @@ defmodule EdgeAdmin.Commands.Command do
   @doc false
   def changeset(command, attrs) do
     command
-    |> cast(attrs, [:command_text, :timeout])
-    |> validate_required([:command_text])
+    |> cast(attrs, [:command_text, :timeout, :targeting])
+    |> validate_required([:command_text, :targeting])
     |> validate_command_text_format()
     |> validate_timeout()
   end

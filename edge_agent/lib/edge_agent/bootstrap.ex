@@ -198,11 +198,11 @@ defmodule EdgeAgent.Bootstrap do
   # =============================================================================
 
   defp step_5_get_sent_command_executions(_node_id) do
-    Logger.info("Step 5: Syncing pending commands...")
+    Logger.info("Step 5: Syncing commands...")
 
     case AdminClient.get_sent_command_executions() do
       {:ok, commands} ->
-        Logger.info("Synced #{length(commands)} pending command(s)")
+        Logger.info("Synced #{length(commands)} command(s)")
 
         # Store each command in local database and trigger execution
         Enum.each(commands, fn command ->

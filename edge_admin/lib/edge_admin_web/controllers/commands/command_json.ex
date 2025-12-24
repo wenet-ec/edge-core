@@ -31,6 +31,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandJSON do
       id: command.id,
       command_text: command.command_text,
       timeout: command.timeout,
+      targeting: command.targeting,
       inserted_at: command.inserted_at,
       updated_at: command.updated_at
     }

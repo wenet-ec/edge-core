@@ -466,7 +466,8 @@ defmodule EdgeAdmin.Commands do
     clusters =
       unique_cluster_names
       |> Enum.map(&Nodes.get_cluster/1)
-      |> Enum.reject(&is_nil/1)
+      |> Enum.filter(&match?({:ok, _}, &1))
+      |> Enum.map(fn {:ok, cluster} -> cluster end)
 
     if Enum.empty?(clusters) do
       Logger.warning("No valid clusters found from names: #{inspect(unique_cluster_names)}")
@@ -492,8 +493,11 @@ defmodule EdgeAdmin.Commands do
         # For single cluster, set cluster_id; for multiple clusters, cluster_id is nil
         cluster_id =
           case filtered_clusters do
-            [single_cluster] -> single_cluster.id
-            _ -> nil
+            [single_cluster] ->
+              single_cluster.id
+
+            _ ->
+              nil
           end
 
         # Get all cluster names from filtered clusters

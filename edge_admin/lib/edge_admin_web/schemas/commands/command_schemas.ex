@@ -32,6 +32,15 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
           description: "Command timeout in milliseconds (optional, null means no timeout)",
           example: 30000
         },
+        targeting: %Schema{
+          type: :object,
+          description: "Targeting configuration used when creating this command (informational only, not filterable)",
+          example: %{
+            type: "nodes",
+            node_ids: ["01234567-89ab-cdef-0123-456789abcdef"],
+            node_filters: %{status: "healthy"}
+          }
+        },
         inserted_at: %Schema{
           type: :string,
           format: :datetime,
@@ -43,11 +52,16 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
           description: "When the command was last updated"
         }
       },
-      required: [:id, :command_text, :inserted_at, :updated_at],
+      required: [:id, :command_text, :targeting, :inserted_at, :updated_at],
       example: %{
         id: "01234567-89ab-cdef-0123-456789abcdef",
         command_text: "ABC=value\necho $ABC\nsystemctl restart nginx",
         timeout: 30000,
+        targeting: %{
+          type: "nodes",
+          node_ids: ["01234567-89ab-cdef-0123-456789abcdef"],
+          node_filters: %{status: "healthy"}
+        },
         inserted_at: "2025-06-17T10:30:00Z",
         updated_at: "2025-06-17T10:30:00Z"
       }
@@ -81,6 +95,11 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
         data: %{
           id: "01234567-89ab-cdef-0123-456789abcdef",
           command_text: "echo hello\ndate",
+          timeout: nil,
+          targeting: %{
+            type: "all",
+            node_filters: %{status: "healthy"}
+          },
           inserted_at: "2025-06-17T12:00:00Z",
           updated_at: "2025-06-17T12:00:00Z"
         }
@@ -148,6 +167,10 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
                       type: :string,
                       enum: ["healthy", "unhealthy", "unreachable"],
                       description: "Filter by node status"
+                    },
+                    cluster_name: %Schema{
+                      type: :string,
+                      description: "Filter by cluster name (exact match or wildcard: prod*, *staging, etc.)"
                     },
                     version: %Schema{
                       type: :string,

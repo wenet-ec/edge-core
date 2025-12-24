@@ -1,12 +1,8 @@
 # edge_agent/lib/edge_agent/commands/command_execution.ex
 defmodule EdgeAgent.Commands.CommandExecution do
   @moduledoc false
-  use Ecto.Schema
+  use EdgeAgent.Schema
 
-  import Ecto.Changeset
-
-  @primary_key {:id, :binary_id, autogenerate: false}
-  @foreign_key_type :binary_id
   schema "command_executions" do
     field(:output, :string)
     field(:status, :string)
@@ -17,7 +13,7 @@ defmodule EdgeAgent.Commands.CommandExecution do
     field(:timeout, :integer)
     field(:completed_at, :utc_datetime)
 
-    timestamps(type: :utc_datetime)
+    timestamps()
   end
 
   @doc false

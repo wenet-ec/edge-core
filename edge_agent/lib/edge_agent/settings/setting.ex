@@ -1,17 +1,13 @@
 # edge_agent/lib/edge_agent/settings/setting.ex
 defmodule EdgeAgent.Settings.Setting do
   @moduledoc false
-  use Ecto.Schema
+  use EdgeAgent.Schema
 
-  import Ecto.Changeset
-
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "settings" do
     field :key, :string
     field :value, :string
 
-    timestamps(type: :utc_datetime)
+    timestamps()
   end
 
   @doc false

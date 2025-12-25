@@ -4,7 +4,7 @@
 FROM golang:1.25-alpine AS netclient-builder
 
 # Define version inside the build stage
-ARG NETCLIENT_VERSION=v1.2.0
+ARG NETCLIENT_VERSION=v1.4.0
 
 # Install git
 RUN apk add --no-cache git

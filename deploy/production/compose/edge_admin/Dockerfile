@@ -65,7 +65,7 @@ RUN --mount=type=cache,target=/root/.hex \
 # -----------------------------------------------
 FROM debian:stable-20250520-slim
 
-ENV NETCLIENT_VERSION="1.2.0"
+ENV NETCLIENT_VERSION="1.4.0"
 
 # Install runtime dependencies in single layer
 RUN apt-get update -y && \

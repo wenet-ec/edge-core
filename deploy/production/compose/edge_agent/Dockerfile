@@ -68,7 +68,7 @@ FROM alpine:3.23.0
 
 # Install runtime dependencies and node_exporter in single layer
 ENV NODE_EXPORTER_VERSION="1.10.2"
-ENV NETCLIENT_VERSION="1.2.0"
+ENV NETCLIENT_VERSION="1.4.0"
 
 RUN apk add --no-cache \
     openssl \

@@ -2,30 +2,25 @@
 FROM golang:1.23-alpine AS netclient_builder
 
 # Multi-stage build: Build patched netclient, then create Elixir test environment with it
-ARG NETCLIENT_VERSION=v1.2.0
+ARG NETCLIENT_VERSION=v1.4.0
 
 WORKDIR /build
 
 # Install dependencies
-RUN apk add --no-cache git grep
+RUN apk add --no-cache git
 
 # Clone and checkout specific version
 RUN git clone https://github.com/gravitl/netclient.git . && \
     git checkout ${NETCLIENT_VERSION}
 
-# Patch API calls from HTTPS to HTTP for local testing
-RUN echo "=== Patching netclient for HTTP (local testing) ===" && \
-    sed -i 's|"https://" + server\.API|"http://" + server.API|g' auth/auth.go && \
-    sed -i 's|"https://" + server\.API|"http://" + server.API|g' config/oldconfig.go && \
-    sed -i 's|"https://" + server\.API|"http://" + server.API|g' functions/uninstall.go && \
-    sed -i 's|"https://" + server\.API|"http://" + server.API|g' functions/server.go && \
-    sed -i 's|"https://" + serverData\.Server|"http://" + serverData.Server|g' functions/register.go && \
-    sed -i 's|"https://" + server\.API|"http://" + server.API|g' functions/list.go && \
-    sed -i 's|"https://" + server\.API|"http://" + server.API|g' functions/mqpublish.go && \
-    sed -i 's|fmt\.Sprintf("https://%s/|fmt.Sprintf("http://%s/|g' functions/mqhandlers.go && \
-    sed -i 's|"https://" + server\.API|"http://" + server.API|g' functions/pull.go && \
-    sed -i 's|"https://" + server\.API|"http://" + server.API|g' functions/auto_relay.go && \
-    sed -i 's|"https://" + api|"http://" + api|g' ncutils/netclientutils.go
+# Patch ONLY API-related https:// to http:// (surgical patches for local dev)
+# Using find to apply patches to all relevant files
+RUN find . -type f -name '*.go' -exec sed -i \
+    -e 's|"https://" + server\.API|"http://" + server.API|g' \
+    -e 's|"https://" + serverData\.Server|"http://" + serverData.Server|g' \
+    -e 's|"https://" + api|"http://" + api|g' \
+    -e 's|fmt\.Sprintf("https://%s/|fmt.Sprintf("http://%s/|g' \
+    {} \;
 
 # Build patched netclient
 RUN go mod download && \

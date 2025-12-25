@@ -105,17 +105,36 @@ defmodule EdgeAdmin.Admins.Bootstrap do
   # =============================================================================
 
   defp do_bootstrap do
-    with :ok <- step_1_join_vpn(),
-         :ok <- step_2_start_erlang_distribution(),
-         :ok <- step_3_initialize_syn(),
-         :ok <- step_4_discover_peers() do
-      Logger.info("All bootstrap steps completed")
-      :ok
-    else
-      {:error, reason} = error ->
-        Logger.error("Bootstrap step failed: #{inspect(reason)}")
-        error
-    end
+    start_time = System.monotonic_time(:millisecond)
+
+    result =
+      with :ok <- step_1_join_vpn(),
+           :ok <- step_2_start_erlang_distribution(),
+           :ok <- step_3_initialize_syn(),
+           :ok <- step_4_discover_peers() do
+        Logger.info("All bootstrap steps completed")
+        :ok
+      else
+        {:error, reason} = error ->
+          Logger.error("Bootstrap step failed: #{inspect(reason)}")
+          error
+      end
+
+    duration = System.monotonic_time(:millisecond) - start_time
+
+    status =
+      case result do
+        :ok -> :success
+        {:error, _} -> :failure
+      end
+
+    :telemetry.execute(
+      [:edge_admin, :bootstrap, :complete],
+      %{duration: duration, count: 1, total: 1},
+      %{status: status}
+    )
+
+    result
   end
 
   # =============================================================================
@@ -127,18 +146,37 @@ defmodule EdgeAdmin.Admins.Bootstrap do
     admin_name = admin_name()
     Logger.info("Step 1: Joining VPN network #{network_name}")
 
-    with :ok <- ensure_network_exists(network_name),
-         {:ok, token} <- Vpn.get_default_enrollment_key(network_name),
-         {:ok, _} <- Vpn.join_network(token: token, name: admin_name),
-         :ok <- wait_for_host(admin_name),
-         :ok <- verify_netclient_connection(network_name) do
-      Logger.info("Successfully joined admin cluster network")
-      :ok
-    else
-      {:error, reason} ->
-        Logger.error("Failed to join admin cluster network: #{inspect(reason)}")
-        {:error, {:vpn_join_failed, reason}}
-    end
+    start_time = System.monotonic_time(:millisecond)
+
+    result =
+      with :ok <- ensure_network_exists(network_name),
+           {:ok, token} <- Vpn.get_default_enrollment_key(network_name),
+           {:ok, _} <- Vpn.join_network(token: token, name: admin_name),
+           :ok <- wait_for_host(admin_name),
+           :ok <- verify_netclient_connection(network_name) do
+        Logger.info("Successfully joined admin cluster network")
+        :ok
+      else
+        {:error, reason} ->
+          Logger.error("Failed to join admin cluster network: #{inspect(reason)}")
+          {:error, {:vpn_join_failed, reason}}
+      end
+
+    duration = System.monotonic_time(:millisecond) - start_time
+
+    status =
+      case result do
+        :ok -> :success
+        {:error, _} -> :failure
+      end
+
+    :telemetry.execute(
+      [:edge_admin, :bootstrap, :step],
+      %{duration: duration, count: 1, total: 1},
+      %{step: :join_vpn, status: status}
+    )
+
+    result
   end
 
   defp ensure_network_exists(network_name) do
@@ -190,35 +228,48 @@ defmodule EdgeAdmin.Admins.Bootstrap do
   defp step_2_start_erlang_distribution do
     Logger.info("Step 2: Starting Erlang distribution")
 
+    start_time = System.monotonic_time(:millisecond)
+
     dns_hostname = Vpn.build_hostname(admin_name(), admin_cluster_name())
     node_name = Vpn.build_admin_erlang_node_name(dns_hostname)
 
     Logger.info("Starting distributed node: #{node_name}")
 
-    try do
-      case Node.start(node_name, :longnames) do
-        {:ok, _pid} ->
-          :erlang.set_cookie(node(), erlang_cookie())
-          Logger.info("Erlang distribution started: #{node()}")
-          :ok
+    result =
+      try do
+        case Node.start(node_name, :longnames) do
+          {:ok, _pid} ->
+            :erlang.set_cookie(node(), erlang_cookie())
+            Logger.info("Erlang distribution started: #{node()}")
+            :ok
 
-        {:error, {:already_started, _pid}} ->
-          :erlang.set_cookie(node(), erlang_cookie())
-          Logger.info("Erlang distribution already started: #{node()}")
-          :ok
+          {:error, {:already_started, _pid}} ->
+            :erlang.set_cookie(node(), erlang_cookie())
+            Logger.info("Erlang distribution already started: #{node()}")
+            :ok
 
-        {:error, reason} ->
-          Logger.warning(
-            "Failed to start Erlang distribution (will retry later): #{inspect(reason)}"
-          )
+          {:error, reason} ->
+            Logger.warning(
+              "Failed to start Erlang distribution (will retry later): #{inspect(reason)}"
+            )
 
+            :ok
+        end
+      rescue
+        e ->
+          Logger.warning("Failed to start Erlang distribution (will retry later): #{inspect(e)}")
           :ok
       end
-    rescue
-      e ->
-        Logger.warning("Failed to start Erlang distribution (will retry later): #{inspect(e)}")
-        :ok
-    end
+
+    duration = System.monotonic_time(:millisecond) - start_time
+
+    :telemetry.execute(
+      [:edge_admin, :bootstrap, :step],
+      %{duration: duration, count: 1, total: 1},
+      %{step: :start_erlang_distribution, status: :success}
+    )
+
+    result
   end
 
   # =============================================================================
@@ -227,6 +278,9 @@ defmodule EdgeAdmin.Admins.Bootstrap do
 
   defp step_3_initialize_syn do
     Logger.info("Step 3: Initializing syn registry")
+
+    start_time = System.monotonic_time(:millisecond)
+
     :syn.add_node_to_scopes([:admin_scope])
 
     {:ok, netmaker_host_id} = Vpn.get_host_id(admin_name())
@@ -240,15 +294,32 @@ defmodule EdgeAdmin.Admins.Bootstrap do
       netmaker_host_id: netmaker_host_id
     }
 
-    case :syn.join(:admin_scope, admin_cluster_name(), self(), metadata) do
-      :ok ->
-        Logger.info("Joined syn group :admin_scope/#{admin_cluster_name()} with metadata")
-        :ok
+    result =
+      case :syn.join(:admin_scope, admin_cluster_name(), self(), metadata) do
+        :ok ->
+          Logger.info("Joined syn group :admin_scope/#{admin_cluster_name()} with metadata")
+          :ok
 
-      {:error, reason} ->
-        Logger.error("Failed to join syn group: #{inspect(reason)}")
-        {:error, {:syn_join_failed, reason}}
-    end
+        {:error, reason} ->
+          Logger.error("Failed to join syn group: #{inspect(reason)}")
+          {:error, {:syn_join_failed, reason}}
+      end
+
+    duration = System.monotonic_time(:millisecond) - start_time
+
+    status =
+      case result do
+        :ok -> :success
+        {:error, _} -> :failure
+      end
+
+    :telemetry.execute(
+      [:edge_admin, :bootstrap, :step],
+      %{duration: duration, count: 1, total: 1},
+      %{step: :initialize_syn, status: status}
+    )
+
+    result
   end
 
   # =============================================================================
@@ -257,8 +328,21 @@ defmodule EdgeAdmin.Admins.Bootstrap do
 
   defp step_4_discover_peers do
     Logger.info("Step 4: Discovering peer admins")
+
+    start_time = System.monotonic_time(:millisecond)
+
     Discovery.scan_and_connect_admins()
+
+    duration = System.monotonic_time(:millisecond) - start_time
+
     Logger.info("Peer admin discovery completed")
+
+    :telemetry.execute(
+      [:edge_admin, :bootstrap, :step],
+      %{duration: duration, count: 1, total: 1},
+      %{step: :discover_peers, status: :success}
+    )
+
     :ok
   end
 end

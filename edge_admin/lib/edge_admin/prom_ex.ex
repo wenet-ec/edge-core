@@ -20,7 +20,8 @@ defmodule EdgeAdmin.PromEx do
       Plugins.Beam,
       {Plugins.Phoenix, endpoint: EdgeAdminWeb.Endpoint, router: EdgeAdminWeb.Router},
       {Plugins.Ecto, otp_app: :edge_admin, repos: [EdgeAdmin.Repo]},
-      {Plugins.Oban, otp_app: :edge_admin}
+      {Plugins.Oban, otp_app: :edge_admin},
+      EdgeAdmin.PromEx.EdgeAdminPlugin
     ]
   end
 
@@ -40,7 +41,8 @@ defmodule EdgeAdmin.PromEx do
       {:prom_ex, "beam.json"},
       {:prom_ex, "phoenix.json"},
       {:prom_ex, "ecto.json"},
-      {:prom_ex, "oban.json"}
+      {:prom_ex, "oban.json"},
+      {:edge_admin, "edge_admin.json"}
     ]
   end
 end

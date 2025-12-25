@@ -46,6 +46,7 @@ defmodule EdgeAdmin.Admins.Discovery do
 
       # Get currently connected nodes
       connected_nodes = Node.list()
+      connected_peers_count = length(connected_nodes)
 
       # Connect to any new peers
       new_peers =
@@ -66,16 +67,40 @@ defmodule EdgeAdmin.Admins.Discovery do
           case dns_result do
             {:ok, _hostent} ->
               # DNS resolved, attempt connection
+              :telemetry.execute(
+                [:edge_admin, :discovery, :dns_resolution],
+                %{count: 1, total: 1},
+                %{result: :success}
+              )
+
               case Node.connect(peer) do
                 true ->
                   Logger.info("✓ Connected to admin: #{peer_hostname}")
                   Logger.debug("Total connected nodes: #{length(Node.list())}")
 
+                  :telemetry.execute(
+                    [:edge_admin, :discovery, :peer_connection],
+                    %{count: 1, total: 1},
+                    %{result: :success}
+                  )
+
                 false ->
                   Logger.warning("✗ Connection failed to #{peer_hostname} (DNS ok, node unreachable)")
 
+                  :telemetry.execute(
+                    [:edge_admin, :discovery, :peer_connection],
+                    %{count: 1, total: 1},
+                    %{result: :failure}
+                  )
+
                 :ignored ->
                   Logger.debug("Already connected to #{peer_hostname}")
+
+                  :telemetry.execute(
+                    [:edge_admin, :discovery, :peer_connection],
+                    %{count: 1, total: 1},
+                    %{result: :already_connected}
+                  )
               end
 
             {:error, :nxdomain} ->
@@ -83,13 +108,32 @@ defmodule EdgeAdmin.Admins.Discovery do
                 "DNS not ready for #{peer_hostname} (will retry in next discovery cycle)"
               )
 
+              :telemetry.execute(
+                [:edge_admin, :discovery, :dns_resolution],
+                %{count: 1, total: 1},
+                %{result: :nxdomain}
+              )
+
             {:error, reason} ->
               Logger.warning("DNS error for #{peer_hostname}: #{inspect(reason)}")
+
+              :telemetry.execute(
+                [:edge_admin, :discovery, :dns_resolution],
+                %{count: 1, total: 1},
+                %{result: :error}
+              )
           end
         end)
       else
         Logger.debug("No new peer admins discovered")
       end
+
+      # Emit scan complete event with connected peers count
+      :telemetry.execute(
+        [:edge_admin, :discovery, :scan_complete],
+        %{connected_peers: connected_peers_count},
+        %{}
+      )
 
       :ok
     else

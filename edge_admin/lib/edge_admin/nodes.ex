@@ -645,6 +645,13 @@ defmodule EdgeAdmin.Nodes do
           "#{results.unreachable} unreachable"
       )
 
+      # Emit summary telemetry
+      :telemetry.execute(
+        [:edge_admin, :nodes, :health_check_summary],
+        %{unhealthy_count: results.unhealthy + results.unreachable, count: 1, total: 1},
+        %{}
+      )
+
       :ok
     end
   end
@@ -652,29 +659,41 @@ defmodule EdgeAdmin.Nodes do
   defp ping_node(node, timeout) do
     url = "#{node_http_url(node)}/health"
     now = DateTime.utc_now() |> DateTime.truncate(:second)
+    start_time = System.monotonic_time(:millisecond)
 
-    try do
-      case Req.get(url, receive_timeout: timeout, retry: false) do
-        {:ok, %{status: 200}} ->
-          update_node(node, %{status: "healthy", last_seen_at: now})
-          :healthy
+    result =
+      try do
+        case Req.get(url, receive_timeout: timeout, retry: false) do
+          {:ok, %{status: 200}} ->
+            update_node(node, %{status: "healthy", last_seen_at: now})
+            :healthy
 
-        {:ok, %{status: 503}} ->
-          Logger.warning("Node #{node.id} is unhealthy (503 response)")
-          update_node(node, %{status: "unhealthy", last_seen_at: now})
-          :unhealthy
+          {:ok, %{status: 503}} ->
+            Logger.warning("Node #{node.id} is unhealthy (503 response)")
+            update_node(node, %{status: "unhealthy", last_seen_at: now})
+            :unhealthy
 
-        _ ->
+          _ ->
+            Logger.warning("Node #{node.id} is unreachable")
+            update_node(node, %{status: "unreachable"})
+            :unreachable
+        end
+      catch
+        _, _ ->
           Logger.warning("Node #{node.id} is unreachable")
           update_node(node, %{status: "unreachable"})
           :unreachable
       end
-    catch
-      _, _ ->
-        Logger.warning("Node #{node.id} is unreachable")
-        update_node(node, %{status: "unreachable"})
-        :unreachable
-    end
+
+    duration = System.monotonic_time(:millisecond) - start_time
+
+    :telemetry.execute(
+      [:edge_admin, :nodes, :health_check],
+      %{duration: duration, count: 1, total: 1},
+      %{result: result}
+    )
+
+    result
   end
 
   @doc """

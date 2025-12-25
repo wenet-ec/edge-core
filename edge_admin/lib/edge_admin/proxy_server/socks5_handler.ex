@@ -49,9 +49,41 @@ defmodule EdgeAdmin.ProxyServer.Socks5Handler do
     {:ok, {client_ip, client_port}} = :inet.peername(socket)
     Logger.info("SOCKS5 client connected from #{:inet.ntoa(client_ip)}:#{client_port}")
 
-    case handle_socks5_handshake(socket, transport) do
-      :ok -> :ok
-      {:error, _reason} -> transport.close(socket)
+    result = handle_socks5_handshake(socket, transport)
+
+    case result do
+      :ok ->
+        :telemetry.execute(
+          [:edge_admin, :proxy, :connection],
+          %{count: 1, total: 1},
+          %{protocol: :socks5, result: :success}
+        )
+
+        :ok
+
+      {:error, :auth_failed} ->
+        :telemetry.execute(
+          [:edge_admin, :proxy, :auth_failure],
+          %{count: 1, total: 1},
+          %{protocol: :socks5}
+        )
+
+        :telemetry.execute(
+          [:edge_admin, :proxy, :connection],
+          %{count: 1, total: 1},
+          %{protocol: :socks5, result: :auth_failed}
+        )
+
+        transport.close(socket)
+
+      {:error, _reason} ->
+        :telemetry.execute(
+          [:edge_admin, :proxy, :connection],
+          %{count: 1, total: 1},
+          %{protocol: :socks5, result: :failure}
+        )
+
+        transport.close(socket)
     end
   end
 

@@ -23,4 +23,4 @@ scrape_configs:
   - job_name: "edge-admin"
     static_configs:
       - targets: ["edge_admin:44000"]
-    metrics_path: "/metrics/self"
+    metrics_path: "/api/admins/metrics/self/raw"

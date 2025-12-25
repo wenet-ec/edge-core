@@ -373,7 +373,7 @@ defmodule EdgeAdmin.Commands do
           Logger.info("No matching nodes found for command #{command_id}")
           {:ok, []}
         else
-          bulk_create_executions(command, nodes, targeting_type == "all", cluster_id)
+          bulk_create_executions(command, nodes, targeting_type == "all", cluster_id, targeting_type)
         end
 
       {:error, :not_found} ->
@@ -407,7 +407,7 @@ defmodule EdgeAdmin.Commands do
     end
   end
 
-  defp bulk_create_executions(command, nodes, target_all, cluster_id) do
+  defp bulk_create_executions(command, nodes, target_all, cluster_id, targeting_type) do
     Logger.info("Creating executions for #{length(nodes)} node(s)")
 
     now = DateTime.utc_now() |> DateTime.truncate(:second)
@@ -430,6 +430,15 @@ defmodule EdgeAdmin.Commands do
         Repo.insert_all(CommandExecution, executions, returning: true)
 
       Logger.info("Successfully created #{count} command executions")
+
+      # Emit telemetry for each execution created
+      Enum.each(1..count, fn _ ->
+        :telemetry.execute(
+          [:edge_admin, :commands, :execution, :created],
+          %{count: 1, total: 1},
+          %{targeting_type: targeting_type}
+        )
+      end)
 
       {:ok, inserted_executions}
     rescue
@@ -699,9 +708,21 @@ defmodule EdgeAdmin.Commands do
             sent_at: DateTime.utc_now()
           })
 
+          :telemetry.execute(
+            [:edge_admin, :commands, :execution, :delivered],
+            %{count: 1, total: 1},
+            %{result: :success}
+          )
+
         {:error, reason} ->
           Logger.warning(
             "Failed to deliver execution #{execution.id} to node #{node.id}: #{inspect(reason)}"
+          )
+
+          :telemetry.execute(
+            [:edge_admin, :commands, :execution, :delivered],
+            %{count: 1, total: 1},
+            %{result: :failure}
           )
       end
     end)
@@ -775,7 +796,38 @@ defmodule EdgeAdmin.Commands do
            Forms.UpdateCommandExecutionResultForm.changeset(params, execution.status) do
       # Hardcode status to "completed" since form validated current status is "sent"
       attrs = Map.put(attrs, "status", "completed")
-      update_command_execution(execution, attrs)
+      result = update_command_execution(execution, attrs)
+
+      # Emit completion telemetry
+      case result do
+        {:ok, updated_execution} ->
+          # Calculate duration from sent_at to now
+          duration_ms =
+            if execution.sent_at do
+              DateTime.diff(DateTime.utc_now(), execution.sent_at, :millisecond)
+            else
+              0
+            end
+
+          # Categorize exit code
+          exit_code_category =
+            cond do
+              updated_execution.exit_code == 0 -> :success
+              updated_execution.exit_code > 0 -> :failure
+              true -> :unknown
+            end
+
+          :telemetry.execute(
+            [:edge_admin, :commands, :execution, :completed],
+            %{duration: duration_ms},
+            %{exit_code_category: exit_code_category}
+          )
+
+        _ ->
+          :ok
+      end
+
+      result
     end
   end
 end

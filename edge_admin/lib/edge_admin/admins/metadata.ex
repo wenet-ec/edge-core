@@ -143,7 +143,7 @@ defmodule EdgeAdmin.Admins.Metadata do
     }
 
     # Trigger first recomputation
-    spawn_recomputation_task(initial_state)
+    spawn_recomputation_task(initial_state, :initialization)
 
     Logger.info("Metadata initialization complete for #{admin_name}")
 
@@ -239,7 +239,7 @@ defmodule EdgeAdmin.Admins.Metadata do
   end
 
   def recompute_now do
-    GenServer.call(__MODULE__, :recompute_now, 10_000)
+    GenServer.call(__MODULE__, {:recompute_now, :manual}, 10_000)
   end
 
   # === GenServer Callbacks ===
@@ -250,13 +250,13 @@ defmodule EdgeAdmin.Admins.Metadata do
   end
 
   @impl true
-  def handle_call(:recompute_now, _from, state) do
+  def handle_call({:recompute_now, trigger}, _from, state) do
     if state.recomputing? do
       # Already working - mark pending
       {:reply, :ok, %{state | pending_recompute: true}}
     else
       # Start recomputation
-      spawn_recomputation_task(state)
+      spawn_recomputation_task(state, trigger)
       {:reply, :ok, %{state | recomputing?: true}}
     end
   end
@@ -267,82 +267,88 @@ defmodule EdgeAdmin.Admins.Metadata do
   @impl true
   def handle_info({:syn_event, :admin_scope, {:join, admin_id, _pid, _metadata}}, state) do
     Logger.info("Admin joined: #{admin_id}, requesting recomputation")
-    request_recomputation(state)
+    request_recomputation(state, :admin_join)
   end
 
   @impl true
   def handle_info({:syn_event, :admin_scope, {:leave, admin_id, _pid, _metadata}}, state) do
     Logger.info("Admin left: #{admin_id}, requesting recomputation")
-    request_recomputation(state)
+    request_recomputation(state, :admin_leave)
   end
 
   # PostgreSQL events - Cluster structure changes
   @impl true
   def handle_info({:cluster_created, cluster_name}, state) do
     Logger.debug("Cluster created: #{cluster_name}, requesting recomputation")
-    request_recomputation(state)
+    request_recomputation(state, :cluster_created)
   end
 
   @impl true
   def handle_info({:cluster_deleted, cluster_name}, state) do
     Logger.debug("Cluster deleted: #{cluster_name}, requesting recomputation")
-    request_recomputation(state)
+    request_recomputation(state, :cluster_deleted)
   end
 
   # PostgreSQL events - Node changes
   @impl true
   def handle_info({:node_created, _node_id, _cluster_name}, state) do
     Logger.debug("Node created, requesting recomputation")
-    request_recomputation(state)
+    request_recomputation(state, :node_created)
   end
 
   @impl true
   def handle_info({:node_deleted, _node_id, _cluster_name}, state) do
     Logger.debug("Node deleted, requesting recomputation")
-    request_recomputation(state)
+    request_recomputation(state, :node_deleted)
   end
 
   @impl true
   def handle_info({:node_updated, _node_id, _old_cluster_name, _new_cluster_name}, state) do
     Logger.debug("Node updated, requesting recomputation")
-    request_recomputation(state)
+    request_recomputation(state, :node_updated)
   end
 
   # Recomputation complete
   @impl true
-  def handle_info(:recomputation_complete, state) do
+  def handle_info({:recomputation_complete, trigger, duration}, state) do
     if state.pending_recompute do
       # Something changed while we worked - do it again
       Logger.debug("Metadata: Pending recomputation triggered")
-      spawn_recomputation_task(state)
+      spawn_recomputation_task(state, :pending)
       {:noreply, %{state | recomputing?: true, pending_recompute: false}}
     else
       Logger.debug("Metadata: Recomputation complete, idle")
+
+      # Emit recomputation telemetry
+      emit_recomputation_telemetry(trigger, duration)
+
       {:noreply, %{state | recomputing?: false}}
     end
   end
 
   # === Private Helpers ===
 
-  defp request_recomputation(state) do
+  defp request_recomputation(state, trigger) do
     if state.recomputing? do
       # Already working - mark that we need to do it again
       Logger.debug("Metadata: Already recomputing, marked pending")
       {:noreply, %{state | pending_recompute: true}}
     else
       # Start recomputation
-      spawn_recomputation_task(state)
+      spawn_recomputation_task(state, trigger)
       Logger.debug("Metadata: Starting recomputation")
       {:noreply, %{state | recomputing?: true}}
     end
   end
 
-  defp spawn_recomputation_task(state) do
+  defp spawn_recomputation_task(state, trigger) do
     parent = self()
 
     Task.start(fn ->
+      start_time = System.monotonic_time(:millisecond)
       perform_recomputation(state)
-      send(parent, :recomputation_complete)
+      duration = System.monotonic_time(:millisecond) - start_time
+      send(parent, {:recomputation_complete, trigger, duration})
     end)
   end
 
@@ -435,5 +441,35 @@ defmodule EdgeAdmin.Admins.Metadata do
     :ets.insert(@table, {:admin, updated_admin})
 
     :ok
+  end
+
+  defp emit_recomputation_telemetry(trigger, duration) do
+    # Read current state from ETS
+    [{:edge_clusters, edge_clusters}] = :ets.lookup(@table, :edge_clusters)
+    [{:orphaned_clusters, orphaned_clusters}] = :ets.lookup(@table, :orphaned_clusters)
+    [{:admin, admin}] = :ets.lookup(@table, :admin)
+    [{:admin_cluster, admin_cluster}] = :ets.lookup(@table, :admin_cluster)
+
+    # Count assigned clusters for this admin
+    assigned_clusters =
+      case Map.get(edge_clusters, admin.name) do
+        nil -> 0
+        clusters -> map_size(clusters)
+      end
+
+    orphaned_clusters_count = map_size(orphaned_clusters)
+    degraded = if admin_cluster.degraded, do: 1, else: 0
+
+    :telemetry.execute(
+      [:edge_admin, :metadata, :recomputation],
+      %{
+        duration: duration,
+        count: 1,
+        assigned_clusters: assigned_clusters,
+        orphaned_clusters: orphaned_clusters_count,
+        degraded: degraded
+      },
+      %{trigger: trigger}
+    )
   end
 end

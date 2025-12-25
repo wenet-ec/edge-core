@@ -10,11 +10,6 @@ defmodule EdgeAdminWeb.Endpoint do
     longpoll: [connect_info: [session: {EdgeAdminWeb.Session, :config, []}]]
   )
 
-  plug(PromEx.Plug,
-    prom_ex_module: EdgeAdmin.PromEx,
-    path: "/metrics/self"
-  )
-
   plug(EdgeAdminWeb.Plugs.Security)
   plug(:ping)
   plug(:cors)
@@ -60,7 +55,19 @@ defmodule EdgeAdminWeb.Endpoint do
 
   plug(EdgeAdminHealth.Router)
   plug(:halt_if_sent)
+
+  # PromEx metrics with conditional authentication
+  plug(:metrics_auth_conditional)
+  plug(PromEx.Plug, prom_ex_module: EdgeAdmin.PromEx, path: "/api/admins/metrics/self/raw")
+
   plug(EdgeAdminWeb.Router)
+
+  # Apply metrics auth only for the metrics endpoint
+  defp metrics_auth_conditional(%{request_path: "/api/admins/metrics/self/raw"} = conn, _opts) do
+    EdgeAdminWeb.Plugs.MetricsAuth.call(conn, [])
+  end
+
+  defp metrics_auth_conditional(conn, _opts), do: conn
 
   # Add the session function
   defp session(conn, _opts) do

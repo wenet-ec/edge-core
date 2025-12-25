@@ -29,9 +29,41 @@ defmodule EdgeAdmin.ProxyServer.HttpHandler do
     {:ok, {client_ip, client_port}} = :inet.peername(socket)
     Logger.info("HTTP proxy client connected from #{:inet.ntoa(client_ip)}:#{client_port}")
 
-    case handle_http_request(socket, transport) do
-      :ok -> :ok
-      {:error, _reason} -> transport.close(socket)
+    result = handle_http_request(socket, transport)
+
+    case result do
+      :ok ->
+        :telemetry.execute(
+          [:edge_admin, :proxy, :connection],
+          %{count: 1, total: 1},
+          %{protocol: :http, result: :success}
+        )
+
+        :ok
+
+      {:error, :auth_failed} ->
+        :telemetry.execute(
+          [:edge_admin, :proxy, :auth_failure],
+          %{count: 1, total: 1},
+          %{protocol: :http}
+        )
+
+        :telemetry.execute(
+          [:edge_admin, :proxy, :connection],
+          %{count: 1, total: 1},
+          %{protocol: :http, result: :auth_failed}
+        )
+
+        transport.close(socket)
+
+      {:error, _reason} ->
+        :telemetry.execute(
+          [:edge_admin, :proxy, :connection],
+          %{count: 1, total: 1},
+          %{protocol: :http, result: :failure}
+        )
+
+        transport.close(socket)
     end
   end
 

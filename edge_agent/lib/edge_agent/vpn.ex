@@ -10,18 +10,6 @@ defmodule EdgeAgent.Vpn do
   require Logger
 
   @doc """
-  Checks if agent is connected to any VPN network.
-
-  Returns:
-  - `{:ok, :connected}` - Connected to at least one network
-  - `{:ok, :not_connected}` - Not connected to any network
-  - `{:error, reason}` - Failed to check connection
-  """
-  def check_connection do
-    Nexmaker.Cli.check_any_connection()
-  end
-
-  @doc """
   Joins VPN network using enrollment key if not already connected.
 
   Returns:
@@ -31,17 +19,18 @@ defmodule EdgeAgent.Vpn do
   def join_if_needed(node_id) do
     Logger.info("Checking VPN connection status...")
 
-    case check_connection() do
-      {:ok, :not_connected} ->
-        Logger.info("Not connected to any network, joining VPN...")
-        join_network(node_id)
-
-      {:ok, :connected} ->
+    case Nexmaker.Cli.health_check() do
+      {:ok, :healthy, _info} ->
         Logger.info("Already connected to network, skipping join...")
         :ok
 
-      {:error, reason} ->
-        {:error, reason}
+      {:ok, :degraded, _info} ->
+        Logger.info("Already connected to network (degraded), skipping join...")
+        :ok
+
+      {:ok, :unhealthy, _info} ->
+        Logger.info("Not connected to any network, joining VPN...")
+        join_network(node_id)
     end
   end
 
@@ -123,26 +112,33 @@ defmodule EdgeAgent.Vpn do
   @doc """
   Waits and verifies VPN connection was established after join.
 
-  Waits 5 seconds for the network to stabilize, then checks connection.
+  Waits 5 seconds for the network to stabilize, then performs health check.
 
   Returns:
-  - `:ok` - Connection verified
+  - `:ok` - Connection verified and healthy
   - `{:error, reason}` - Connection not established
   """
   def verify_connection_after_join do
     Logger.info("Join command completed, verifying connection...")
     Process.sleep(5000)
 
-    case check_connection() do
-      {:ok, :connected} ->
-        Logger.info("VPN connection verified successfully")
+    case Nexmaker.Cli.health_check() do
+      {:ok, :healthy, info} ->
+        networks = info[:networks] || []
+        Logger.info("VPN connection verified: joined #{length(networks)} network(s)")
         :ok
 
-      {:ok, :not_connected} ->
-        {:error, "Join command succeeded but no networks found - enrollment key may be invalid"}
+      {:ok, :degraded, info} ->
+        # Degraded but connected - acceptable for fresh join
+        networks = info[:networks] || []
+        warnings = info[:warnings] || []
+        Logger.warning("VPN connected but degraded: #{inspect(warnings)}")
+        Logger.info("Joined #{length(networks)} network(s), continuing despite warnings")
+        :ok
 
-      {:error, reason} ->
-        {:error, "Failed to verify join: #{inspect(reason)}"}
+      {:ok, :unhealthy, info} ->
+        warnings = info[:warnings] || []
+        {:error, "Join command succeeded but health check failed: #{Enum.join(warnings, "; ")}"}
     end
   end
 end

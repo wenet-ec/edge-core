@@ -3,7 +3,7 @@ defmodule Nexmaker.Cli do
   Thin Elixir wrapper around netclient CLI for VPN operations.
 
   This module provides functions to interact with the netclient daemon
-  for network joining, leaving, and status checking.
+  for network joining, leaving, status checking, and peer diagnostics.
 
   ## Overview
 
@@ -11,10 +11,10 @@ defmodule Nexmaker.Cli do
   - **Netclient daemon**: Runs as background service with auto-reconnection
   - **Resilience**: Survives network outages and system reboots automatically
 
-  ## Examples
+  ## Network Management
 
       # Join a network
-      {:ok, network_info} = Nexmaker.Cli.join_network("nmkey-abc123...")
+      {:ok, network_info} = Nexmaker.Cli.join_network(token: "nmkey-abc123...")
 
       # Check connection status
       {:ok, %{network: "admin-cluster", connected: true, ipv4_addr: "10.100.0.5"}} =
@@ -25,6 +25,14 @@ defmodule Nexmaker.Cli do
 
       # Leave a network
       :ok = Nexmaker.Cli.leave_network("cluster-old-id")
+
+      # Get detailed peer information
+      {:ok, peer_info} = Nexmaker.Cli.list_peers()
+      %{"peers" => %{"admin-cluster-1" => peers}} = peer_info
+
+      # Check peer connectivity and latency
+      {:ok, results} = Nexmaker.Cli.ping_peers(network: "admin-cluster-1")
+      connected_count = Enum.count(results, fn r -> r["connected"] end)
   """
 
   import Bitwise
@@ -82,7 +90,6 @@ defmodule Nexmaker.Cli do
       Logger.error("netclient command not found or failed: #{inspect(e)}")
       {:error, :netclient_not_found}
   end
-
 
   # Build CLI arguments from keyword options
   defp build_join_args(opts) do
@@ -199,7 +206,10 @@ defmodule Nexmaker.Cli do
         if String.contains?(output, "no such network") do
           {:ok, []}
         else
-          case Jason.decode(output) do
+          # Strip error logs before JSON
+          cleaned_output = extract_json_from_output(output)
+
+          case Jason.decode(cleaned_output) do
             {:ok, networks} when is_list(networks) ->
               {:ok, networks}
 
@@ -228,75 +238,185 @@ defmodule Nexmaker.Cli do
   end
 
   @doc """
-  Checks if connected to any network.
+  Performs a comprehensive health check on the netclient VPN connection.
 
-  Uses `list_networks()` with retry logic and file fallback.
-  Useful during bootstrap to determine if already joined before attempting to join.
+  This is the recommended way to verify netclient health. It checks multiple layers:
+  1. Network membership (via list_networks)
+  2. WireGuard interface health (via list_peers, if peers exist)
+  3. Peer handshake activity (if peers are configured)
+
+  ## Health Check Levels
+
+  - **`:healthy`** - All checks passed
+    - Connected to at least one network
+    - If peers exist, WireGuard has established handshakes
+
+  - **`:degraded`** - Network connected but peer issues
+    - On network but peers check failed (non-critical)
+    - Or peers exist but no handshakes (WireGuard may have issues)
+
+  - **`:unhealthy`** - Critical failure
+    - Not connected to any network
+    - Unable to determine connection status
 
   ## Returns
-    - `{:ok, :connected}` - Connected to at least one network
-    - `{:ok, :not_connected}` - No networks found (safe to join)
-    - `{:error, reason}` - Failed to determine status
+    - `{:ok, :healthy, info}` - All checks passed
+    - `{:ok, :degraded, info}` - Connected but with warnings
+    - `{:ok, :unhealthy, info}` - Critical issues detected
+    - `{:error, reason}` - Health check failed to run
+
+  The `info` map contains:
+    - `:networks` - List of connected networks
+    - `:peer_count` - Number of peers (if available)
+    - `:handshake_count` - Number of peers with successful handshakes
+    - `:warnings` - List of warning messages
+    - `:timestamp` - When check was performed
 
   ## Options
-    - `:retries` - Number of retry attempts (default: 2)
-    - `:retry_delay` - Milliseconds between retries (default: 2000)
+    - `:skip_peers` - Skip peer health check (default: true)
+    - `:require_handshakes` - Fail if no peer handshakes (default: false)
 
   ## Examples
 
-      {:ok, :connected} = Nexmaker.Cli.check_any_connection()
-      {:ok, :not_connected} = Nexmaker.Cli.check_any_connection(retries: 3)
+      # Basic health check (fast, skips peers by default)
+      {:ok, :healthy, %{networks: ["cluster-default"], peer_count: nil}} =
+        Nexmaker.Cli.health_check()
+
+      # Full health check with peer diagnostics
+      {:ok, :healthy, _info} = Nexmaker.Cli.health_check(skip_peers: false)
+
+      # Require peer handshakes (strict mode)
+      {:ok, :degraded, %{warnings: ["No peer handshakes"]}} =
+        Nexmaker.Cli.health_check(require_handshakes: true)
   """
-  @spec check_any_connection(keyword()) :: {:ok, :connected | :not_connected} | {:error, any()}
-  def check_any_connection(opts \\ []) do
-    retries = Keyword.get(opts, :retries, 10)
-    retry_delay = Keyword.get(opts, :retry_delay, 5000)
+  @spec health_check(keyword()) ::
+          {:ok, :healthy | :degraded | :unhealthy, map()} | {:error, any()}
+  def health_check(opts \\ []) do
+    skip_peers = Keyword.get(opts, :skip_peers, true)
+    require_handshakes = Keyword.get(opts, :require_handshakes, false)
 
-    check_with_retry(retries, retry_delay, 1)
-  end
+    timestamp = DateTime.utc_now()
 
-  defp check_with_retry(max_attempts, retry_delay, attempt) do
+    # Layer 1: Check network membership (required)
     case list_networks() do
-      {:ok, [_ | _]} ->
-        {:ok, :connected}
+      {:ok, networks} when is_list(networks) and length(networks) > 0 ->
+        # Connected to at least one network
+        if skip_peers do
+          {:ok, :healthy,
+           %{
+             networks: Enum.map(networks, & &1["network"]),
+             peer_count: nil,
+             handshake_count: nil,
+             warnings: [],
+             timestamp: timestamp
+           }}
+        else
+          # Layer 2: Check WireGuard peer health
+          check_peer_health(networks, require_handshakes, timestamp)
+        end
 
       {:ok, []} ->
-        {:ok, :not_connected}
+        # Not connected to any network - unhealthy
+        {:ok, :unhealthy,
+         %{
+           networks: [],
+           peer_count: nil,
+           handshake_count: nil,
+           warnings: ["Not connected to any network"],
+           timestamp: timestamp
+         }}
 
       {:error, reason} ->
-        if attempt < max_attempts do
-          Logger.debug("list_networks failed (attempt #{attempt}/#{max_attempts}), retrying in #{retry_delay}ms: #{inspect(reason)}")
-          Process.sleep(retry_delay)
-          check_with_retry(max_attempts, retry_delay, attempt + 1)
-        else
-          # Fallback: check nodes.json file
-          Logger.warning("list_networks failed after #{max_attempts} attempts, falling back to file check")
-          check_nodes_file()
-        end
+        # Failed to determine status - unhealthy
+        {:ok, :unhealthy,
+         %{
+           networks: [],
+           peer_count: nil,
+           handshake_count: nil,
+           warnings: ["Failed to list networks: #{inspect(reason)}"],
+           timestamp: timestamp
+         }}
     end
   end
 
-  defp check_nodes_file do
-    nodes_file = "/etc/netclient/nodes.json"
+  defp check_peer_health(networks, require_handshakes, timestamp) do
+    network_names = Enum.map(networks, & &1["network"])
 
-    case File.read(nodes_file) do
-      {:ok, content} ->
-        case Jason.decode(content) do
-          {:ok, nodes} when map_size(nodes) > 0 ->
-            {:ok, :connected}
+    case list_peers() do
+      {:ok, %{"peers" => peers_by_network}} when map_size(peers_by_network) > 0 ->
+        # Count total peers and those with handshakes
+        {total_peers, handshake_count} =
+          Enum.reduce(peers_by_network, {0, 0}, fn {_network, peers}, {total, hs_count} ->
+            peer_count = length(peers)
 
-          {:ok, _empty_map} ->
-            {:ok, :not_connected}
+            handshakes =
+              Enum.count(peers, fn peer ->
+                case peer["last_handshake"] do
+                  "never" -> false
+                  handshake when is_binary(handshake) -> true
+                  _ -> false
+                end
+              end)
 
-          {:error, reason} ->
-            {:error, {:json_parse_error, reason}}
+            {total + peer_count, hs_count + handshakes}
+          end)
+
+        cond do
+          handshake_count > 0 ->
+            # Have peers with handshakes - healthy
+            {:ok, :healthy,
+             %{
+               networks: network_names,
+               peer_count: total_peers,
+               handshake_count: handshake_count,
+               warnings: [],
+               timestamp: timestamp
+             }}
+
+          require_handshakes ->
+            # Peers exist but no handshakes and handshakes are required - degraded
+            {:ok, :degraded,
+             %{
+               networks: network_names,
+               peer_count: total_peers,
+               handshake_count: 0,
+               warnings: ["Peers configured but no handshake activity"],
+               timestamp: timestamp
+             }}
+
+          true ->
+            # No handshakes but not required - still healthy (peers might be offline)
+            {:ok, :healthy,
+             %{
+               networks: network_names,
+               peer_count: total_peers,
+               handshake_count: 0,
+               warnings: ["Peers exist but no handshakes yet"],
+               timestamp: timestamp
+             }}
         end
 
-      {:error, :enoent} ->
-        {:ok, :not_connected}
+      {:ok, _} ->
+        # No peers yet - healthy (first/only node on network)
+        {:ok, :healthy,
+         %{
+           networks: network_names,
+           peer_count: 0,
+           handshake_count: 0,
+           warnings: [],
+           timestamp: timestamp
+         }}
 
       {:error, reason} ->
-        {:error, {:file_read_error, reason}}
+        # Peer check failed but we have networks - degraded
+        {:ok, :degraded,
+         %{
+           networks: network_names,
+           peer_count: nil,
+           handshake_count: nil,
+           warnings: ["Failed to check peers: #{inspect(reason)}"],
+           timestamp: timestamp
+         }}
     end
   end
 
@@ -319,7 +439,8 @@ defmodule Nexmaker.Cli do
       {:ok, info} = Nexmaker.Cli.check_connection("admin-cluster")
       # => %{network: "admin-cluster", connected: true, subnet: "100.63.0.0/24", ...}
   """
-  @spec check_connection(String.t()) :: {:ok, map()} | {:error, :not_found | :not_connected | any()}
+  @spec check_connection(String.t()) ::
+          {:ok, map()} | {:error, :not_found | :not_connected | any()}
   def check_connection(network_name) when is_binary(network_name) do
     case System.cmd("netclient", ["list", network_name], stderr_to_stdout: true) do
       {output, 0} ->
@@ -384,7 +505,10 @@ defmodule Nexmaker.Cli do
             if String.contains?(output, "no such network") do
               {:error, :not_found}
             else
-              Logger.error("Failed to parse netclient output as JSON: #{inspect(json_error)}, output: #{output}")
+              Logger.error(
+                "Failed to parse netclient output as JSON: #{inspect(json_error)}, output: #{output}"
+              )
+
               {:error, {:json_parse_error, json_error}}
             end
         end
@@ -421,9 +545,9 @@ defmodule Nexmaker.Cli do
         network_int = ip_int &&& netmask
 
         # Convert back to dotted notation
-        na = (network_int >>> 24) &&& 0xFF
-        nb = (network_int >>> 16) &&& 0xFF
-        nc = (network_int >>> 8) &&& 0xFF
+        na = network_int >>> 24 &&& 0xFF
+        nb = network_int >>> 16 &&& 0xFF
+        nc = network_int >>> 8 &&& 0xFF
         nd = network_int &&& 0xFF
 
         "#{na}.#{nb}.#{nc}.#{nd}/#{prefix}"
@@ -440,12 +564,310 @@ defmodule Nexmaker.Cli do
   # Extract JSON array from output that may contain log lines
   # Netclient sometimes outputs error logs (as JSON objects) before the actual JSON array
   defp extract_json_from_output(output) do
-    # The actual data is always a JSON array starting with '['
-    # Log lines are JSON objects starting with '{' on their own lines
-    # We need to find the '[' that starts the array
-    case :binary.match(output, "[") do
-      {pos, _} -> binary_part(output, pos, byte_size(output) - pos)
-      :nomatch -> output
+    # netclient output can be either:
+    # 1. JSON array starting with '[' (e.g., list)
+    # 2. JSON object starting with '{' (e.g., peers, ping)
+    # However, error logs (also JSON objects) may appear before the actual data
+    # Error logs typically have "time", "level", "msg" keys
+    # Actual data objects have domain-specific keys like "interface", "peers", network names, etc.
+
+    # First, try to find a complete JSON object by looking for patterns
+    cond do
+      String.contains?(output, "\"interface\"") ->
+        # This is a peers command output - find the '{' before "interface"
+        case :binary.match(output, "{\"interface\"") do
+          {pos, _} ->
+            binary_part(output, pos, byte_size(output) - pos)
+
+          :nomatch ->
+            # Try finding any '{' that comes before "interface"
+            interface_pos = :binary.match(output, "\"interface\"")
+
+            case interface_pos do
+              {ipos, _} ->
+                # Search backwards from interface position to find opening '{'
+                before = binary_part(output, 0, ipos)
+
+                case :binary.matches(before, "{") do
+                  [] ->
+                    output
+
+                  matches ->
+                    {last_brace_pos, _} = List.last(matches)
+                    binary_part(output, last_brace_pos, byte_size(output) - last_brace_pos)
+                end
+
+              :nomatch ->
+                output
+            end
+        end
+
+      String.contains?(output, "\"networks\"") or String.contains?(output, "\"network\"") ->
+        # This is a list command output - look for array that starts a line
+        lines = String.split(output, "\n", trim: true)
+
+        json_line = Enum.find(lines, fn line ->
+          trimmed = String.trim(line)
+          String.starts_with?(trimmed, "[")
+        end)
+
+        case json_line do
+          nil ->
+            # Fallback: find first '['
+            case :binary.match(output, "[") do
+              {pos, _} -> binary_part(output, pos, byte_size(output) - pos)
+              :nomatch -> output
+            end
+          line ->
+            case String.split(output, line, parts: 2) do
+              [_before, rest] -> line <> rest
+              _ -> output
+            end
+        end
+
+      true ->
+        # Fallback: could be ping (object) or other array output
+        # Try to find first valid JSON start ('{' or '[')
+        # Skip error log objects by looking for the first '{' or '[' that's NOT a log line
+        lines = String.split(output, "\n", trim: true)
+
+        # Find first line that starts with '{' or '[' and doesn't look like an error log
+        json_line =
+          Enum.find(lines, fn line ->
+            trimmed = String.trim(line)
+
+            (String.starts_with?(trimmed, "{") and not String.contains?(trimmed, "\"level\"")) or
+              String.starts_with?(trimmed, "[")
+          end)
+
+        case json_line do
+          nil ->
+            # Ultimate fallback: just find first '{' or '['
+            case :binary.match(output, "{") do
+              {pos, _} ->
+                binary_part(output, pos, byte_size(output) - pos)
+
+              :nomatch ->
+                case :binary.match(output, "[") do
+                  {pos, _} -> binary_part(output, pos, byte_size(output) - pos)
+                  :nomatch -> output
+                end
+            end
+
+          line ->
+            # Found valid JSON line, return from this point onwards
+            case String.split(output, line, parts: 2) do
+              [_before, rest] -> line <> rest
+              _ -> output
+            end
+        end
     end
+  end
+
+  @doc """
+  Lists WireGuard peer information including public keys, endpoints, traffic stats, and more.
+
+  Returns detailed peer information from the WireGuard interface with data enriched from
+  the Netmaker server (hostnames, network associations, etc.).
+
+  ## Options
+    - `:network` - Filter peers by network name (optional)
+    - `:json` - Return raw JSON output (default: true for programmatic access)
+
+  ## Returns
+    - `{:ok, peer_info}` - Peer information map
+    - `{:error, reason}` - Failed to get peer information
+
+  ## Peer Info Structure (when json: true)
+      %{
+        "interface" => %{
+          "name" => "netmaker",
+          "port" => 51821,
+          "public_key" => "abc123..."
+        },
+        "peers" => %{
+          "admin-cluster-1" => [
+            %{
+              "public_key" => "xyz789...",
+              "host_name" => "admin-abc123",
+              "network" => "admin-cluster-1",
+              "endpoint" => "192.168.1.5:51821",
+              "last_handshake" => "2 minutes ago",
+              "last_handshake_time" => "2025-12-25T08:00:00Z",
+              "receive_bytes" => 1024000,
+              "transmit_bytes" => 2048000,
+              "allowed_ips" => ["100.63.0.1/32"],
+              "is_extclient" => false,
+              "username" => ""
+            }
+          ],
+          "cluster-default" => [...]
+        }
+      }
+
+  ## Examples
+
+      # Get all peers across all networks
+      {:ok, peer_info} = Nexmaker.Cli.list_peers()
+
+      # Get peers for specific network
+      {:ok, peer_info} = Nexmaker.Cli.list_peers(network: "admin-cluster-1")
+
+      # Access interface info
+      %{"interface" => %{"name" => iface}} = peer_info
+
+      # Access peers by network
+      admin_peers = peer_info["peers"]["admin-cluster-1"]
+  """
+  @spec list_peers(keyword()) :: {:ok, map()} | {:error, any()}
+  def list_peers(opts \\ []) do
+    network = Keyword.get(opts, :network)
+    json = Keyword.get(opts, :json, true)
+
+    args = build_peers_args(network, json)
+
+    case System.cmd("netclient", ["peers" | args], stderr_to_stdout: true) do
+      {output, 0} ->
+        if json do
+          # Extract JSON from output (skip any error logs)
+          cleaned_output = extract_json_from_output(output)
+
+          case Jason.decode(cleaned_output) do
+            {:ok, peer_data} when is_map(peer_data) ->
+              {:ok, peer_data}
+
+            {:ok, _other} ->
+              {:error, :invalid_output_format}
+
+            {:error, reason} ->
+              Logger.error("Failed to parse netclient peers output: #{inspect(reason)}")
+              {:error, {:json_parse_error, reason}}
+          end
+        else
+          # Return raw text output
+          {:ok, output}
+        end
+
+      {output, exit_code} ->
+        Logger.error("Failed to get peer information: #{output}")
+        {:error, {:netclient_error, exit_code, output}}
+    end
+  rescue
+    e in ErlangError ->
+      Logger.error("netclient command not found or failed: #{inspect(e)}")
+      {:error, :netclient_not_found}
+  end
+
+  defp build_peers_args(network, json) do
+    args = []
+    args = if network, do: args ++ [network], else: args
+    args = if json, do: args ++ ["-j"], else: args
+    args
+  end
+
+  @doc """
+  Checks connectivity and latency to WireGuard peers across networks.
+
+  Pings peers through the WireGuard VPN tunnel and measures latency.
+  Useful for diagnosing network connectivity issues and monitoring peer health.
+
+  ## Options
+    - `:network` - Filter by network name (optional)
+    - `:peer` - Filter by peer name, address, or ID (case-insensitive, optional)
+    - `:count` - Number of ping packets to send per peer (default: 3)
+    - `:ipv4` - Use IPv4 addresses only (default: false)
+    - `:ipv6` - Use IPv6 addresses only (default: false)
+    - `:json` - Return JSON output (default: true)
+
+  ## Returns
+    - `{:ok, ping_results}` - Map of network name to list of ping results
+    - `{:error, reason}` - Failed to ping peers
+
+  ## Ping Result Structure (when json: true)
+      %{
+        "cluster-default" => [
+          %{
+            "network" => "cluster-default",
+            "name" => "admin-abc123",
+            "address" => "100.64.0.4",
+            "is_extclient" => false,
+            "connected" => true,
+            "latency_ms" => 0,
+            "username" => ""
+          }
+        ],
+        "admin-cluster-1" => [...]
+      }
+
+  ## Examples
+
+      # Ping all peers on all networks
+      {:ok, results} = Nexmaker.Cli.ping_peers()
+
+      # Ping peers on specific network
+      {:ok, results} = Nexmaker.Cli.ping_peers(network: "admin-cluster-1")
+
+      # Ping specific peer
+      {:ok, results} = Nexmaker.Cli.ping_peers(peer: "admin-abc123")
+
+      # Ping with more packets for accuracy
+      {:ok, results} = Nexmaker.Cli.ping_peers(count: 10)
+
+      # Check connectivity status
+      connected_peers = Enum.filter(results, fn r -> r["connected"] end)
+      avg_latency = Enum.reduce(connected_peers, 0, fn r, acc -> acc + r["latency_ms"] end) / length(connected_peers)
+  """
+  @spec ping_peers(keyword()) :: {:ok, map()} | {:error, any()}
+  def ping_peers(opts \\ []) do
+    network = Keyword.get(opts, :network)
+    peer = Keyword.get(opts, :peer)
+    count = Keyword.get(opts, :count, 3)
+    ipv4 = Keyword.get(opts, :ipv4, false)
+    ipv6 = Keyword.get(opts, :ipv6, false)
+    json = Keyword.get(opts, :json, true)
+
+    args = build_ping_args(network, peer, count, ipv4, ipv6, json)
+
+    case System.cmd("netclient", ["ping" | args], stderr_to_stdout: true) do
+      {output, 0} ->
+        if json do
+          # Extract JSON from output (skip any error logs)
+          cleaned_output = extract_json_from_output(output)
+
+          case Jason.decode(cleaned_output) do
+            {:ok, ping_results} when is_map(ping_results) ->
+              {:ok, ping_results}
+
+            {:ok, _other} ->
+              {:error, :invalid_output_format}
+
+            {:error, reason} ->
+              Logger.error("Failed to parse netclient ping output: #{inspect(reason)}")
+              {:error, {:json_parse_error, reason}}
+          end
+        else
+          # Return raw text output
+          {:ok, output}
+        end
+
+      {output, exit_code} ->
+        Logger.error("Failed to ping peers: #{output}")
+        {:error, {:netclient_error, exit_code, output}}
+    end
+  rescue
+    e in ErlangError ->
+      Logger.error("netclient command not found or failed: #{inspect(e)}")
+      {:error, :netclient_not_found}
+  end
+
+  defp build_ping_args(network, peer, count, ipv4, ipv6, json) do
+    args = []
+    args = if network, do: args ++ ["-n", network], else: args
+    args = if peer, do: args ++ ["-p", peer], else: args
+    args = if count, do: args ++ ["-c", to_string(count)], else: args
+    args = if ipv4, do: args ++ ["-4"], else: args
+    args = if ipv6, do: args ++ ["-6"], else: args
+    args = if json, do: args ++ ["-j"], else: args
+    args
   end
 end

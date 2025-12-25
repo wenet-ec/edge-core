@@ -47,20 +47,18 @@ defmodule EdgeAgentHealth do
   end
 
   def netclient_health do
-    # Check if connected to any network (agent is assigned to a cluster network)
-    case Nexmaker.Cli.list_networks() do
-      {:ok, [_ | _]} ->
-        # Agent should be connected to at least one network
-        # We could check specific network name here, but for now just verify connectivity
+    case Nexmaker.Cli.health_check() do
+      {:ok, :healthy, _info} ->
         :ok
 
-      {:ok, []} ->
-        Logger.error("Netclient not connected to any network")
-        {:error, "Not connected"}
+      {:ok, :degraded, info} ->
+        # Log warnings but don't fail health check
+        # Degraded state means we're on network but have non-critical issues
+        Logger.warning("Netclient degraded: #{inspect(info[:warnings])}")
+        :ok
 
-      {:error, reason} ->
-        Logger.error("Failed to check netclient connection: #{inspect(reason)}")
-        {:error, "Connection check failed"}
+      {:ok, :unhealthy, info} ->
+        {:error, Enum.join(info[:warnings], "; ")}
     end
   rescue
     e ->

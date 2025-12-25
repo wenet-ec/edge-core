@@ -70,28 +70,28 @@ defmodule EdgeAdminHealth do
   end
 
   def netclient_health do
-    # Admin cluster network name (already includes "admin-cluster-" prefix from config)
-    network_name = EdgeAdmin.Vpn.admin_cluster_name()
+    admin_cluster = EdgeAdmin.Vpn.admin_cluster_name()
 
-    case Nexmaker.Cli.check_connection(network_name) do
-      {:ok, %{connected: true}} ->
-        :ok
+    case Nexmaker.Cli.health_check() do
+      {:ok, :healthy, info} ->
+        if admin_cluster in info[:networks] do
+          :ok
+        else
+          Logger.error("Connected but not to admin cluster (#{admin_cluster}), networks: #{inspect(info[:networks])}")
+          {:error, "Not on admin cluster"}
+        end
 
-      {:ok, %{connected: false}} ->
-        Logger.error("Netclient shows disconnected from admin cluster network #{network_name}")
-        {:error, "Disconnected"}
+      {:ok, :degraded, info} ->
+        if admin_cluster in info[:networks] do
+          Logger.warning("Netclient degraded on admin cluster: #{inspect(info[:warnings])}")
+          :ok
+        else
+          Logger.error("Degraded and not on admin cluster (#{admin_cluster}), networks: #{inspect(info[:networks])}")
+          {:error, "Not on admin cluster"}
+        end
 
-      {:error, :not_connected} ->
-        Logger.error("Netclient not connected to admin cluster network #{network_name}")
-        {:error, "Not connected"}
-
-      {:error, :not_found} ->
-        Logger.error("Admin cluster network #{network_name} not found in netclient")
-        {:error, "Network not found"}
-
-      {:error, reason} ->
-        Logger.error("Failed to check netclient connection: #{inspect(reason)}")
-        {:error, "Connection check failed"}
+      {:ok, :unhealthy, _info} ->
+        {:error, "Not connected to any network"}
     end
   rescue
     e ->

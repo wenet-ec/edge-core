@@ -49,8 +49,6 @@ RUN apk add --no-cache \
   # Agent networking (for VPN and API calls)
   curl \
   wget \
-  # Network discovery
-  nmap \
   # SSH server key generation
   openssl \
   # File system watching for live reload (development only)

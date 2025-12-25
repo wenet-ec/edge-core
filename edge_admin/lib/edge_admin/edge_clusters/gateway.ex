@@ -15,10 +15,10 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
   ## Cross-Admin Routing
 
-  Registered in syn with key `{:gateway, cluster_id}` for cross-admin routing.
+  Registered in syn with key `{:gateway, admin_name, cluster_name}` for cross-admin routing.
   Other admins can route requests to this Gateway via:
 
-      :syn.whereis(:cluster_scope, {:gateway, cluster_id})
+      :syn.lookup(:cluster_scope, {:gateway, admin_name, cluster_name})
 
   ## HTTP Client Functions
 
@@ -172,7 +172,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
       {:error, reason} ->
         Logger.error("HTTP request failed: #{inspect(reason)}")
-        {:reply, {:error, reason}, state}
+        {:reply, {:error, :service_unavailable}, state}
     end
   end
 

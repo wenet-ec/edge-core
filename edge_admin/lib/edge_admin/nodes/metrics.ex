@@ -14,30 +14,29 @@ defmodule EdgeAdmin.Nodes.Metrics do
   alias EdgeAdmin.Nodes.Metrics.CPU
   alias EdgeAdmin.Nodes.Metrics.Disk
   alias EdgeAdmin.Nodes.Metrics.Memory
-  alias EdgeAdmin.Nodes.Metrics.Network
   alias EdgeAdmin.Nodes.Metrics.Uptime
 
   @derive Jason.Encoder
   @primary_key false
   embedded_schema do
     field(:node_id, :binary_id)
+    field(:cluster_name, :string)
     field(:timestamp, :utc_datetime)
 
     embeds_one(:cpu, CPU)
     embeds_one(:memory, Memory)
     embeds_one(:disk, Disk)
-    embeds_one(:network, Network)
     embeds_one(:uptime, Uptime)
   end
 
   def from_raw_metrics(raw_metrics, node_id) do
     attrs = %{
       node_id: node_id,
+      cluster_name: raw_metrics["cluster_name"],
       timestamp: DateTime.utc_now(),
       cpu: build_cpu_attrs(raw_metrics),
       memory: build_memory_attrs(raw_metrics),
       disk: build_disk_attrs(raw_metrics),
-      network: build_network_attrs(raw_metrics),
       uptime: build_uptime_attrs(raw_metrics)
     }
 
@@ -49,20 +48,18 @@ defmodule EdgeAdmin.Nodes.Metrics do
   @doc false
   def changeset(metrics, attrs) do
     metrics
-    |> cast(attrs, [:node_id, :timestamp])
+    |> cast(attrs, [:node_id, :cluster_name, :timestamp])
     |> cast_embed(:cpu, with: &cpu_changeset/2)
     |> cast_embed(:memory, with: &memory_changeset/2)
     |> cast_embed(:disk, with: &disk_changeset/2)
-    |> cast_embed(:network, with: &network_changeset/2)
     |> cast_embed(:uptime, with: &uptime_changeset/2)
-    |> validate_required([:node_id, :timestamp])
+    |> validate_required([:node_id, :cluster_name, :timestamp])
   end
 
   # CPU changeset with validation
   defp cpu_changeset(cpu, attrs) do
     cpu
-    |> cast(attrs, [:usage_percent, :cores, :load_1m, :load_5m, :load_15m])
-    |> validate_number(:usage_percent, greater_than_or_equal_to: 0, less_than_or_equal_to: 100)
+    |> cast(attrs, [:cores, :load_1m, :load_5m, :load_15m])
     |> validate_number(:cores, greater_than: 0)
     |> validate_number(:load_1m, greater_than_or_equal_to: 0)
     |> validate_number(:load_5m, greater_than_or_equal_to: 0)
@@ -107,21 +104,6 @@ defmodule EdgeAdmin.Nodes.Metrics do
     |> validate_disk_consistency()
   end
 
-  # Network changeset with validation
-  defp network_changeset(network, attrs) do
-    network
-    |> cast(attrs, [
-      :rx_bytes_per_sec,
-      :tx_bytes_per_sec,
-      :rx_packets_per_sec,
-      :tx_packets_per_sec
-    ])
-    |> validate_number(:rx_bytes_per_sec, greater_than_or_equal_to: 0)
-    |> validate_number(:tx_bytes_per_sec, greater_than_or_equal_to: 0)
-    |> validate_number(:rx_packets_per_sec, greater_than_or_equal_to: 0)
-    |> validate_number(:tx_packets_per_sec, greater_than_or_equal_to: 0)
-  end
-
   # Uptime changeset with validation
   defp uptime_changeset(uptime, attrs) do
     uptime
@@ -158,7 +140,6 @@ defmodule EdgeAdmin.Nodes.Metrics do
   # Attribute builders for each metric type
   defp build_cpu_attrs(raw_metrics) do
     %{
-      usage_percent: round_to_2dp(raw_metrics["cpu_usage_percent"]),
       cores: trunc_or_nil(raw_metrics["cpu_cores"]),
       load_1m: round_to_2dp(raw_metrics["load_1m"]),
       load_5m: round_to_2dp(raw_metrics["load_5m"]),
@@ -195,15 +176,6 @@ defmodule EdgeAdmin.Nodes.Metrics do
       total_gb: bytes_to_gb(total_bytes),
       available_gb: bytes_to_gb(available_bytes),
       used_gb: bytes_to_gb(used_bytes)
-    }
-  end
-
-  defp build_network_attrs(raw_metrics) do
-    %{
-      rx_bytes_per_sec: round_to_2dp(raw_metrics["network_rx_bytes_per_sec"]),
-      tx_bytes_per_sec: round_to_2dp(raw_metrics["network_tx_bytes_per_sec"]),
-      rx_packets_per_sec: round_to_2dp(raw_metrics["network_rx_packets_per_sec"]),
-      tx_packets_per_sec: round_to_2dp(raw_metrics["network_tx_packets_per_sec"])
     }
   end
 

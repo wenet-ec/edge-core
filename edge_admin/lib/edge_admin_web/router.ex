@@ -102,7 +102,10 @@ defmodule EdgeAdminWeb.Router do
 
     scope "/", Nodes do
       # Prometheus HTTP service discovery
-      get("/metrics/discovery", MetricsDiscoveryController, :index)
+      get("/nodes/metrics/discovery", NodeMetricsDiscoveryController, :index)
+
+      # Raw metrics proxy (per-node)
+      get("/nodes/:node_id/metrics/raw", NodeMetricsDiscoveryController, :show)
     end
   end
 
@@ -142,7 +145,7 @@ defmodule EdgeAdminWeb.Router do
 
       resources("/nodes", NodeController, only: [:index, :show]) do
         resources("/aliases", AliasController, only: [:create])
-        get("/metrics", MetricsController, :index)
+        get("/metrics", NodeMetricsController, :index)
       end
 
       patch("/nodes/:id/change_cluster", NodeController, :change_cluster)

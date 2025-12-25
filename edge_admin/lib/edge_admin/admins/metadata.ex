@@ -157,12 +157,40 @@ defmodule EdgeAdmin.Admins.Metadata do
     admin
   end
 
-  def get_cluster_owner(cluster_id) do
+  def get_cluster_owner(cluster_name) do
     [{:edge_clusters, assignments}] = :ets.lookup(@table, :edge_clusters)
 
     Enum.find_value(assignments, fn {admin_name, clusters} ->
-      if Map.has_key?(clusters, cluster_id), do: admin_name
+      if Map.has_key?(clusters, cluster_name), do: admin_name
     end)
+  end
+
+  @doc """
+  Finds which cluster a node belongs to by searching ETS metadata.
+
+  ## Parameters
+  - node_name: Node name with "node-" prefix (e.g., "node-abc123")
+
+  ## Returns
+  - {:ok, cluster_name, admin_name} if found
+  - {:error, :not_found} if node not assigned to any cluster
+  """
+  def find_node_cluster(node_name) do
+    [{:edge_clusters, assignments}] = :ets.lookup(@table, :edge_clusters)
+
+    result =
+      Enum.find_value(assignments, fn {admin_name, clusters} ->
+        Enum.find_value(clusters, fn {cluster_name, node_names} ->
+          if node_name in node_names do
+            {cluster_name, admin_name}
+          end
+        end)
+      end)
+
+    case result do
+      {cluster_name, admin_name} -> {:ok, cluster_name, admin_name}
+      nil -> {:error, :not_found}
+    end
   end
 
   def get_my_clusters do
@@ -250,32 +278,32 @@ defmodule EdgeAdmin.Admins.Metadata do
 
   # PostgreSQL events - Cluster structure changes
   @impl true
-  def handle_info({:cluster_created, cluster_id}, state) do
-    Logger.debug("Cluster created: #{cluster_id}, requesting recomputation")
+  def handle_info({:cluster_created, cluster_name}, state) do
+    Logger.debug("Cluster created: #{cluster_name}, requesting recomputation")
     request_recomputation(state)
   end
 
   @impl true
-  def handle_info({:cluster_deleted, cluster_id}, state) do
-    Logger.debug("Cluster deleted: #{cluster_id}, requesting recomputation")
+  def handle_info({:cluster_deleted, cluster_name}, state) do
+    Logger.debug("Cluster deleted: #{cluster_name}, requesting recomputation")
     request_recomputation(state)
   end
 
   # PostgreSQL events - Node changes
   @impl true
-  def handle_info({:node_created, _node_id, _cluster_id}, state) do
+  def handle_info({:node_created, _node_id, _cluster_name}, state) do
     Logger.debug("Node created, requesting recomputation")
     request_recomputation(state)
   end
 
   @impl true
-  def handle_info({:node_deleted, _node_id, _cluster_id}, state) do
+  def handle_info({:node_deleted, _node_id, _cluster_name}, state) do
     Logger.debug("Node deleted, requesting recomputation")
     request_recomputation(state)
   end
 
   @impl true
-  def handle_info({:node_updated, _node_id, _old_cluster_id, _new_cluster_id}, state) do
+  def handle_info({:node_updated, _node_id, _old_cluster_name, _new_cluster_name}, state) do
     Logger.debug("Node updated, requesting recomputation")
     request_recomputation(state)
   end
@@ -370,7 +398,7 @@ defmodule EdgeAdmin.Admins.Metadata do
   end
 
   defp read_clusters_from_db do
-    Nodes.list_cluster_node_mappings()
+    Nodes.list_cluster_node_mappings(prefix: true)
   end
 
   defp update_ets(result, all_admins) do

@@ -106,7 +106,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   ## Arguments
   - admins: %{admin_name => %{max_capacity: int}}
   - current_assignments: result from compute_assignments/2 (has edge_clusters)
-  - cluster_id: cluster to bootstrap
+  - cluster_name: cluster to bootstrap
 
   ## Returns
   {:ok, admin_name} | {:error, :no_capacity}
@@ -117,12 +117,12 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
       iex> EdgeAdmin.Admins.Metadata.Algorithm.bootstrap_empty_cluster(admins, current, "cluster-new")
       {:ok, "admin-1"}
   """
-  def bootstrap_empty_cluster(admins, current_assignments, cluster_id) do
+  def bootstrap_empty_cluster(admins, current_assignments, cluster_name) do
     # Check if already assigned (search in edge_clusters)
     existing_owner =
       current_assignments.edge_clusters
       |> Enum.find_value(fn {admin_name, clusters} ->
-        if Map.has_key?(clusters, cluster_id), do: admin_name
+        if Map.has_key?(clusters, cluster_name), do: admin_name
       end)
 
     case existing_owner do
@@ -180,7 +180,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
     # How many clusters is this admin currently managing?
     clusters_managed =
       cluster_assignments
-      |> Enum.count(fn {_cluster_id, assigned_admin} -> assigned_admin == admin_name end)
+      |> Enum.count(fn {_cluster_name, assigned_admin} -> assigned_admin == admin_name end)
 
     # How much remaining capacity does this admin have?
     remaining_capacity = admins[admin_name].max_capacity - admin_node_counts[admin_name]

@@ -30,6 +30,13 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> json(%{error: "Forbidden"})
   end
 
+  # Handle service unavailable errors (metrics, gateway issues, etc.)
+  def call(conn, {:error, :service_unavailable}) do
+    conn
+    |> put_status(:service_unavailable)
+    |> json(%{error: "Service unavailable"})
+  end
+
   # Handle business logic errors with descriptive messages
   def call(conn, {:error, reason}) when is_binary(reason) do
     conn

@@ -1,5 +1,5 @@
-# lib/edge_admin_web/controllers/nodes/metrics_discovery_json.ex
-defmodule EdgeAdminWeb.Controllers.Nodes.MetricsDiscoveryJSON do
+# lib/edge_admin_web/controllers/nodes/node_metrics_discovery_json.ex
+defmodule EdgeAdminWeb.Controllers.Nodes.NodeMetricsDiscoveryJSON do
   @doc """
   Renders the metrics discovery response in the format expected by vmagent.
 

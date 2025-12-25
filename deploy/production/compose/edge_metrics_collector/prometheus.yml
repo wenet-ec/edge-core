@@ -5,10 +5,10 @@ global:
 scrape_configs:
   - job_name: "edge-nodes"
     http_sd_configs:
-      - url: "http://edge_admin:4000/api/metrics/discovery"
+      - url: "http://edge_admin:44000/api/nodes/metrics/discovery"
     authorization:
       type: Bearer
-      credentials: changeme-in-production
+      credentials: supersecretkey123456789
 
   - job_name: "edge-metrics-collector"
     static_configs:
@@ -22,5 +22,5 @@ scrape_configs:
 
   - job_name: "edge-admin"
     static_configs:
-      - targets: ["edge_admin:4000"]
+      - targets: ["edge_admin:44000"]
     metrics_path: "/metrics/self"

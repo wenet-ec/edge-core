@@ -87,7 +87,7 @@ config :edge_admin, EdgeAdmin.PromEx,
 config :edge_admin, EdgeAdmin.TelemetryUI, share_key: get_env("TELEMETRY_UI_SHARE_KEY")
 
 config :edge_admin,
-  metrics_storage_url: get_env("METRICS_STORAGE_URL")
+  metrics_base_url: get_env!("METRICS_BASE_URL")
 
 config :sentry,
   dsn: get_env("SENTRY_DSN"),
@@ -125,7 +125,8 @@ admin_id = generate_random_string(12)
 config :edge_admin,
   admin_id: admin_id,
   admin_name: EdgeAdmin.Vpn.build_dns_name(admin_id, prefix: :admin),
-  admin_cluster_name: EdgeAdmin.Vpn.build_network_name(get_env!("ADMIN_CLUSTER_NAME"), prefix: :admin),
+  admin_cluster_name:
+    EdgeAdmin.Vpn.build_network_name(get_env!("ADMIN_CLUSTER_NAME"), prefix: :admin),
   admin_cluster_subnet: get_env("ADMIN_CLUSTER_SUBNET"),
   admin_max_capacity: get_env!("ADMIN_MAX_CAPACITY", :positive_integer),
   erlang_cookie: get_env("ERLANG_COOKIE", :atom, :edge_admin_default_cookie),
@@ -142,11 +143,15 @@ ephemeral_key_cleanup_schedule = get_env("EPHEMERAL_KEY_CLEANUP_SCHEDULE", :stri
 
 # Cluster reconciliation configuration
 cluster_reconciliation_enabled = get_env("CLUSTER_RECONCILIATION_ENABLED", :boolean, true)
-cluster_reconciliation_schedule = get_env("CLUSTER_RECONCILIATION_SCHEDULE", :string, "0 */6 * * *")
+
+cluster_reconciliation_schedule =
+  get_env("CLUSTER_RECONCILIATION_SCHEDULE", :string, "0 */6 * * *")
 
 # Zombie admin cleanup configuration
 zombie_admin_cleanup_schedule = get_env("ZOMBIE_ADMIN_CLEANUP_SCHEDULE", :string, "*/30 * * * *")
-zombie_admin_checkin_threshold_minutes = get_env("ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES", :integer, 120)
+
+zombie_admin_checkin_threshold_minutes =
+  get_env("ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES", :integer, 120)
 
 config :edge_admin,
   ephemeral_key_cleanup_enabled: ephemeral_key_cleanup_enabled,
@@ -166,29 +171,16 @@ config :edge_admin, :node_health_check,
   timeout_ms: node_health_check_timeout
 
 # Oban crontab
-base_crontab = [
-  {zombie_admin_cleanup_schedule, EdgeAdmin.Vpn.Workers.ZombieAdminCleaner}
-]
-
 crontab =
-  cron_jobs =
-    if ephemeral_key_cleanup_enabled do
-      [{ephemeral_key_cleanup_schedule, EdgeAdmin.Nodes.Workers.EphemeralKeyCleanupWorker}]
-    else
-      []
-    end
-
-  cron_jobs =
-    if cluster_reconciliation_enabled do
-      cron_jobs ++
-        [{cluster_reconciliation_schedule, EdgeAdmin.Nodes.Workers.ClusterReconciliationWorker}]
-    else
-      cron_jobs
-    end
-
-  base_crontab ++ cron_jobs
-
-crontab = base_crontab ++ cron_jobs
+  [
+    {true, {zombie_admin_cleanup_schedule, EdgeAdmin.Vpn.Workers.ZombieAdminCleaner}},
+    {ephemeral_key_cleanup_enabled,
+     {ephemeral_key_cleanup_schedule, EdgeAdmin.Nodes.Workers.EphemeralKeyCleanupWorker}},
+    {cluster_reconciliation_enabled,
+     {cluster_reconciliation_schedule, EdgeAdmin.Nodes.Workers.ClusterReconciliationWorker}}
+  ]
+  |> Enum.filter(&elem(&1, 0))
+  |> Enum.map(&elem(&1, 1))
 
 config :edge_admin, Oban,
   engine: Oban.Engines.Basic,

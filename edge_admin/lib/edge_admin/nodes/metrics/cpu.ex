@@ -6,7 +6,6 @@ defmodule EdgeAdmin.Nodes.Metrics.CPU do
   @derive Jason.Encoder
   @primary_key false
   embedded_schema do
-    field(:usage_percent, :float)
     field(:cores, :integer)
     field(:load_1m, :float)
     field(:load_5m, :float)

@@ -10,9 +10,12 @@ defmodule EdgeAdmin.Nodes do
   alias EdgeAdmin.Nodes.Cluster
   alias EdgeAdmin.Nodes.EphemeralEnrollmentKey
   alias EdgeAdmin.Nodes.Forms
+  alias EdgeAdmin.Nodes.PrometheusParser
   alias EdgeAdmin.Nodes.Metrics
   alias EdgeAdmin.Nodes.Node
   alias EdgeAdmin.RequestParser
+  alias EdgeAdmin.Admins.Metadata
+  alias EdgeAdmin.EdgeClusters.Gateway
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Vpn
 
@@ -79,7 +82,10 @@ defmodule EdgeAdmin.Nodes do
 
     flop_params = Map.put(flop_params, :filters, other_filters)
 
-    case Flop.validate_and_run(base_query, flop_params, for: Cluster, replace_invalid_params: true) do
+    case Flop.validate_and_run(base_query, flop_params,
+           for: Cluster,
+           replace_invalid_params: true
+         ) do
       {:ok, {clusters, meta}} ->
         # Preload nodes to compute node_count for response
         clusters_with_nodes = Repo.preload(clusters, :nodes)
@@ -142,40 +148,70 @@ defmodule EdgeAdmin.Nodes do
   defp apply_node_count_filter(query, _), do: query
 
   @doc """
-  Lists cluster-node mappings for metadata recomputation.
-  Returns minimal data needed: cluster network names and node names only.
+  Lists cluster-node mappings.
 
-  Returns list of maps:
+  ## Options
+  - `:prefix` - Add DNS name prefixes (default: false)
+    - `true`: Returns "cluster-prod", "node-abc123" (for metadata)
+    - `false`: Returns "prod", "abc123" (for discovery endpoints)
+  - `:filter_status` - Filter nodes by status (default: nil, includes all)
+    - Example: `["healthy", "unhealthy"]` excludes unreachable nodes
+
+  ## Returns
+  List of maps:
   ```
+  # With prefix: true
   [
     %{name: "cluster-prod-east", nodes: ["node-abc123", "node-def456"]},
     %{name: "cluster-staging", nodes: ["node-xyz789"]}
   ]
+
+  # With prefix: false
+  [
+    %{name: "prod-east", nodes: ["abc123", "def456"]},
+    %{name: "staging", nodes: ["xyz789"]}
+  ]
   ```
   """
-  def list_cluster_node_mappings do
-    from(c in Cluster,
-      left_join: n in assoc(c, :nodes),
-      select: %{
-        cluster_name: c.name,
-        node_id: n.id
-      },
-      order_by: [asc: c.inserted_at]
-    )
+  def list_cluster_node_mappings(opts \\ []) do
+    use_prefix = Keyword.get(opts, :prefix, false)
+    filter_status = Keyword.get(opts, :filter_status)
+
+    base_query =
+      from(c in Cluster,
+        left_join: n in assoc(c, :nodes),
+        select: %{
+          cluster_name: c.name,
+          node_id: n.id
+        },
+        order_by: [asc: c.inserted_at]
+      )
+
+    # Apply status filter if provided
+    query =
+      if filter_status do
+        from([c, n] in base_query,
+          where: is_nil(n.id) or n.status in ^filter_status
+        )
+      else
+        base_query
+      end
+
+    query
     |> Repo.all()
     |> Enum.group_by(
       fn row -> row.cluster_name end,
       fn row ->
         case row.node_id do
           nil -> nil
-          id -> Vpn.build_dns_name(id, prefix: :node)
+          id -> if use_prefix, do: Vpn.build_dns_name(id, prefix: :node), else: id
         end
       end
     )
-    |> Enum.map(fn {cluster_name, node_names} ->
+    |> Enum.map(fn {cluster_name, node_ids} ->
       %{
-        name: node_network_name(cluster_name),
-        nodes: Enum.reject(node_names, &is_nil/1)
+        name: if(use_prefix, do: node_network_name(cluster_name), else: cluster_name),
+        nodes: Enum.reject(node_ids, &is_nil/1)
       }
     end)
   end
@@ -686,7 +722,10 @@ defmodule EdgeAdmin.Nodes do
     flop_params = Map.put(flop_params, :filters, other_filters)
 
     # Run Flop query
-    case Flop.validate_and_run(query_with_cluster_filter, flop_params, for: Node, replace_invalid_params: true) do
+    case Flop.validate_and_run(query_with_cluster_filter, flop_params,
+           for: Node,
+           replace_invalid_params: true
+         ) do
       {:ok, {nodes, meta}} ->
         {:ok, {nodes, meta}}
 
@@ -1393,7 +1432,10 @@ defmodule EdgeAdmin.Nodes do
     flop_params = Map.put(flop_params, :filters, other_filters)
 
     # Run Flop query
-    case Flop.validate_and_run(query_with_cluster_filter, flop_params, for: Alias, replace_invalid_params: true) do
+    case Flop.validate_and_run(query_with_cluster_filter, flop_params,
+           for: Alias,
+           replace_invalid_params: true
+         ) do
       {:ok, {aliases, meta}} ->
         {:ok, {aliases, meta}}
 
@@ -1525,131 +1567,66 @@ defmodule EdgeAdmin.Nodes do
     Alias.changeset(alias_record, attrs)
   end
 
-  def list_metrics_discovery_targets do
-    from(n in Node,
-      where: not is_nil(n.vpn_ip) and n.vpn_ip != "",
-      select: n.vpn_ip
-    )
-    |> Repo.all()
-    |> Enum.map(&"#{&1}:9100")
+  # ===========================================================================
+  # Metrics functions
+  # ===========================================================================
+
+  @doc """
+  Scrapes raw Prometheus metrics from a node via Gateway.
+
+  Uses ETS metadata to find cluster/admin, only queries DB for metrics_port.
+
+  ## Parameters
+  - node_id: Node UUID
+
+  ## Returns
+  - {:ok, metrics_text} - Raw Prometheus metrics in text format
+  - {:error, :node_not_found} - Node not assigned to any cluster (ETS) or not in DB
+  - {:error, :gateway_not_found} - Gateway process not found
+  - {:error, reason} - HTTP request failed or other error
+  """
+  def scrape_node_metrics(node_id) do
+    # Build node name for ETS lookup
+    node_name = Vpn.build_dns_name(node_id, prefix: :node)
+
+    with {:ok, cluster_name, admin_name} <- Metadata.find_node_cluster(node_name),
+         {:ok, gateway_pid} <- lookup_gateway(admin_name, cluster_name),
+         {:ok, node} <- get_node(node_id),
+         {:ok, metrics_text} <- Gateway.scrape_metrics(gateway_pid, node) do
+      {:ok, metrics_text}
+    end
   end
 
-  def list_node_metrics(%Node{} = node) do
-    with {:ok, raw_metrics} <- fetch_current_node_metrics(node),
-         {:ok, metrics} <- build_validated_metrics(raw_metrics, node.id) do
+  defp lookup_gateway(admin_name, cluster_name) do
+    case :syn.lookup(:cluster_scope, {:gateway, admin_name, cluster_name}) do
+      :undefined ->
+        {:error, :gateway_not_found}
+
+      {pid, _metadata} when is_pid(pid) ->
+        {:ok, pid}
+    end
+  end
+
+  @doc """
+  Returns human-friendly metrics for a node by parsing raw Prometheus text.
+
+  ## Parameters
+  - node_id: Node UUID (string)
+
+  ## Returns
+  - {:ok, metrics} - Metrics struct with cluster_name, cpu, memory, disk, network, uptime
+  - {:error, reason} - Various error reasons
+  """
+  def list_node_metrics(node_id) do
+    with {:ok, raw_text} <- scrape_node_metrics(node_id),
+         {:ok, node} <- get_node(node_id),
+         parsed_metrics <- PrometheusParser.parse(raw_text) do
+      # Add cluster_name to parsed metrics for from_raw_metrics
+      parsed_metrics = Map.put(parsed_metrics, "cluster_name", node.cluster.name)
+
+      metrics = Metrics.from_raw_metrics(parsed_metrics, node_id)
+
       {:ok, metrics}
-    else
-      {:error, :no_vpn_ip} -> {:error, :metrics_unavailable}
-      {:error, :metrics_service_not_configured} -> {:error, :metrics_unavailable}
-      {:error, :metrics_service_unavailable} -> {:error, :metrics_unavailable}
-      {:error, %Ecto.Changeset{}} = changeset_error -> changeset_error
-      {:error, _reason} -> {:error, :metrics_unavailable}
-    end
-  end
-
-  defp fetch_current_node_metrics(%Node{cluster_id: nil}), do: {:error, :no_cluster}
-
-  defp fetch_current_node_metrics(%Node{} = node) do
-    base_url = Application.get_env(:edge_admin, :metrics_storage_url)
-
-    # Add validation for missing config
-    if is_nil(base_url) or base_url == "" do
-      {:error, :metrics_service_not_configured}
-    else
-      # Use DNS hostname and metrics_port instead of vpn_ip
-      dns_hostname = Node.dns_hostname(node)
-      instance = "#{dns_hostname}:#{node.metrics_port}"
-
-      queries = [
-        # CPU metrics
-        {"cpu_usage_percent",
-         "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\",instance=\"#{instance}\"}[5m])) * 100)"},
-        {"cpu_cores", "count(count(node_cpu_seconds_total{instance=\"#{instance}\"}) by (cpu))"},
-        {"load_1m", "node_load1{instance=\"#{instance}\"}"},
-        {"load_5m", "node_load5{instance=\"#{instance}\"}"},
-        {"load_15m", "node_load15{instance=\"#{instance}\"}"},
-
-        # Memory metrics
-        {"memory_total_bytes", "node_memory_MemTotal_bytes{instance=\"#{instance}\"}"},
-        {"memory_available_bytes", "node_memory_MemAvailable_bytes{instance=\"#{instance}\"}"},
-        {"memory_usage_percent",
-         "(1 - (node_memory_MemAvailable_bytes{instance=\"#{instance}\"} / node_memory_MemTotal_bytes{instance=\"#{instance}\"})) * 100"},
-
-        # Disk metrics (root filesystem)
-        {"disk_total_bytes",
-         "node_filesystem_size_bytes{instance=\"#{instance}\",mountpoint=\"/\"}"},
-        {"disk_available_bytes",
-         "node_filesystem_avail_bytes{instance=\"#{instance}\",mountpoint=\"/\"}"},
-        {"disk_usage_percent",
-         "100 - ((node_filesystem_avail_bytes{instance=\"#{instance}\",mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{instance=\"#{instance}\",mountpoint=\"/\"})"},
-
-        # Network metrics (rate over 5 minutes, excluding loopback)
-        {"network_rx_bytes_per_sec",
-         "sum(rate(node_network_receive_bytes_total{instance=\"#{instance}\",device!=\"lo\"}[5m]))"},
-        {"network_tx_bytes_per_sec",
-         "sum(rate(node_network_transmit_bytes_total{instance=\"#{instance}\",device!=\"lo\"}[5m]))"},
-        {"network_rx_packets_per_sec",
-         "sum(rate(node_network_receive_packets_total{instance=\"#{instance}\",device!=\"lo\"}[5m]))"},
-        {"network_tx_packets_per_sec",
-         "sum(rate(node_network_transmit_packets_total{instance=\"#{instance}\",device!=\"lo\"}[5m]))"},
-
-        # Uptime
-        {"uptime_seconds",
-         "node_time_seconds{instance=\"#{instance}\"} - node_boot_time_seconds{instance=\"#{instance}\"}"}
-      ]
-
-      try do
-        raw_metrics = query_all_metrics(base_url, queries)
-        {:ok, raw_metrics}
-      rescue
-        _ -> {:error, :metrics_service_unavailable}
-      catch
-        _ -> {:error, :metrics_service_unavailable}
-      end
-    end
-  end
-
-  defp build_validated_metrics(raw_metrics, node_id) do
-    metrics = Metrics.from_raw_metrics(raw_metrics, node_id)
-    {:ok, metrics}
-  rescue
-    Ecto.InvalidChangesetError ->
-      {:error, :invalid_metrics_data}
-  catch
-    {:error, %Ecto.Changeset{}} = error -> error
-  end
-
-  defp query_all_metrics(base_url, queries) do
-    Enum.reduce(queries, %{}, fn {key, query}, acc ->
-      case query_victoria_metrics(base_url, query) do
-        {:ok, value} -> Map.put(acc, key, value)
-        {:error, _} -> Map.put(acc, key, nil)
-      end
-    end)
-  end
-
-  defp query_victoria_metrics(base_url, query) do
-    url = "#{base_url}/api/v1/query"
-
-    case Req.get(url, params: [query: query]) do
-      {:ok,
-       %{
-         status: 200,
-         body: %{
-           "status" => "success",
-           "data" => %{"result" => [%{"value" => [_timestamp, value]} | _]}
-         }
-       }} ->
-        case Float.parse(value) do
-          {float_value, _} -> {:ok, float_value}
-          :error -> {:error, :invalid_number}
-        end
-
-      {:ok, %{status: 200, body: %{"status" => "success", "data" => %{"result" => []}}}} ->
-        {:error, :no_data}
-
-      _ ->
-        {:error, :query_failed}
     end
   end
 end

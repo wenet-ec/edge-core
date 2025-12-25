@@ -41,7 +41,7 @@ NETMAKER_SUPERADMIN_PASSWORD=admin
 WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
 
 # Metrics configuration
-METRICS_STORAGE_URL=http://edge_metrics_storage:8428
+METRICS_BASE_URL=edge_admin:44000
 
 # Default cluster
 DEFAULT_CLUSTER_NAME=default

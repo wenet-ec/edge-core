@@ -21,9 +21,6 @@ DB_PASSWORD=edge_admin_password
 DB_POOL_SIZE=10
 DB_SSL=false
 
-# Telemetry UI configuration
-TELEMETRY_UI_SHARE_KEY=DzbqdoAx/MGq8rM
-
 # Basic Authentication
 # BASIC_AUTH_USERNAME=
 # BASIC_AUTH_PASSWORD=

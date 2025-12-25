@@ -55,12 +55,6 @@ defmodule EdgeAdminWeb.Router do
 
     # Serve ReDoc - alternative API documentation UI
     get("/redoc", Redoc.Plug.RedocUI, spec_url: "/api/openapi")
-
-    # To enable metrics dashboard use `telemetry_ui_allowed: true` as assigns value
-    #
-    # Metrics can contains sensitive data you should protect it under authorization
-    # See https://github.com/mirego/telemetry_ui#security
-    get("/metrics_dashboard", TelemetryUI.Web, [], assigns: %{telemetry_ui_allowed: true})
   end
 
   # Serve OpenAPI spec through the open_api pipeline
@@ -173,7 +167,6 @@ defmodule EdgeAdminWeb.Router do
     end
   end
 
-  # Keep the session function as TelemetryUI might need it
   defp session(conn, _opts) do
     opts = Plug.Session.init(EdgeAdminWeb.Session.config())
     Plug.Session.call(conn, opts)

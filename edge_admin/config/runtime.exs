@@ -84,8 +84,6 @@ config :edge_admin, EdgeAdmin.PromEx,
   grafana: :disabled,
   metrics_server: :disabled
 
-config :edge_admin, EdgeAdmin.TelemetryUI, share_key: get_env("TELEMETRY_UI_SHARE_KEY")
-
 config :edge_admin,
   metrics_base_url: get_env!("METRICS_BASE_URL")
 

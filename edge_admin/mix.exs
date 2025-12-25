@@ -100,7 +100,6 @@ defmodule EdgeAdmin.Mixfile do
 
       # Telemetry
       {:prom_ex, "~> 1.11"},
-      {:telemetry_ui, "~> 5.3"},
 
       # Linting
       {:credo, "~> 1.7", only: [:dev, :test], override: true},

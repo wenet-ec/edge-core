@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/commands/command.ex
-defmodule EdgeAdmin.Commands.Command do
+# edge_admin/lib/edge_admin/commands/schemas/command.ex
+defmodule EdgeAdmin.Commands.Schemas.Command do
   @moduledoc false
   use EdgeAdmin.Schema
 
@@ -20,7 +20,7 @@ defmodule EdgeAdmin.Commands.Command do
     field(:targeting, :map)
 
     # Associations
-    has_many(:command_executions, EdgeAdmin.Commands.CommandExecution, on_delete: :delete_all)
+    has_many(:command_executions, EdgeAdmin.Commands.Schemas.CommandExecution, on_delete: :delete_all)
 
     timestamps(type: :utc_datetime)
   end

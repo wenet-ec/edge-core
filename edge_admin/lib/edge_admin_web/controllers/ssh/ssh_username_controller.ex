@@ -5,7 +5,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
 
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Ssh
-  alias EdgeAdmin.Ssh.SshUsername
+  alias EdgeAdmin.Ssh.Schemas.SshUsername
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas
 

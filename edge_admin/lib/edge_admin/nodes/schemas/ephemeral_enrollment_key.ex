@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/nodes/ephemeral_enrollment_key.ex
-defmodule EdgeAdmin.Nodes.EphemeralEnrollmentKey do
+# edge_admin/lib/edge_admin/nodes/schemas/ephemeral_enrollment_key.ex
+defmodule EdgeAdmin.Nodes.Schemas.EphemeralEnrollmentKey do
   @moduledoc """
   Tracks ephemeral enrollment keys for automatic cleanup.
 
@@ -18,7 +18,7 @@ defmodule EdgeAdmin.Nodes.EphemeralEnrollmentKey do
     field(:token, :string)
     field(:tag, :string)
     field(:time_to_live, :integer)
-    belongs_to(:cluster, EdgeAdmin.Nodes.Cluster)
+    belongs_to(:cluster, EdgeAdmin.Nodes.Schemas.Cluster)
 
     timestamps()
   end

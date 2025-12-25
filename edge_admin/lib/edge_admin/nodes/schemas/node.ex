@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/nodes/node.ex
-defmodule EdgeAdmin.Nodes.Node do
+# edge_admin/lib/edge_admin/nodes/schemas/node.ex
+defmodule EdgeAdmin.Nodes.Schemas.Node do
   @moduledoc false
   use EdgeAdmin.Schema
 
@@ -42,10 +42,10 @@ defmodule EdgeAdmin.Nodes.Node do
     field(:dns_hostname, :string, virtual: true)
 
     # Associations
-    belongs_to(:cluster, EdgeAdmin.Nodes.Cluster)
-    has_many(:ssh_usernames, EdgeAdmin.Ssh.SshUsername, on_delete: :delete_all)
-    has_many(:aliases, EdgeAdmin.Nodes.Alias, on_delete: :delete_all)
-    has_many(:command_executions, EdgeAdmin.Commands.CommandExecution, on_delete: :nilify_all)
+    belongs_to(:cluster, EdgeAdmin.Nodes.Schemas.Cluster)
+    has_many(:ssh_usernames, EdgeAdmin.Ssh.Schemas.SshUsername, on_delete: :delete_all)
+    has_many(:aliases, EdgeAdmin.Nodes.Schemas.Alias, on_delete: :delete_all)
+    has_many(:command_executions, EdgeAdmin.Commands.Schemas.CommandExecution, on_delete: :nilify_all)
     has_many(:commands, through: [:command_executions, :command])
 
     timestamps()

@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/nodes/alias.ex
-defmodule EdgeAdmin.Nodes.Alias do
+# edge_admin/lib/edge_admin/nodes/schemas/alias.ex
+defmodule EdgeAdmin.Nodes.Schemas.Alias do
   @moduledoc """
   Schema for node aliases. Each alias creates a custom DNS entry for a node.
   """
@@ -21,8 +21,8 @@ defmodule EdgeAdmin.Nodes.Alias do
     field(:name, :string)
     field(:dns_hostname, :string, virtual: true)
 
-    belongs_to(:node, EdgeAdmin.Nodes.Node, type: :binary_id)
-    belongs_to(:cluster, EdgeAdmin.Nodes.Cluster, type: :binary_id)
+    belongs_to(:node, EdgeAdmin.Nodes.Schemas.Node, type: :binary_id)
+    belongs_to(:cluster, EdgeAdmin.Nodes.Schemas.Cluster, type: :binary_id)
 
     timestamps()
   end

@@ -9,11 +9,11 @@ defmodule EdgeAdmin.Ssh do
 
   import Ecto.Query, warn: false
 
-  alias EdgeAdmin.Nodes.Node
+  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Ssh.Forms
-  alias EdgeAdmin.Ssh.SshPublicKey
-  alias EdgeAdmin.Ssh.SshUsername
+  alias EdgeAdmin.Ssh.Schemas.SshPublicKey
+  alias EdgeAdmin.Ssh.Schemas.SshUsername
 
   # ===========================================================================
   # SSH Username functions

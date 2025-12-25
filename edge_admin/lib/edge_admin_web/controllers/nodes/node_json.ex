@@ -1,7 +1,7 @@
 # edge_admin/lib/edge_admin_web/controllers/nodes/node_json.ex
 defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSON do
-  alias EdgeAdmin.Nodes.Alias
-  alias EdgeAdmin.Nodes.Node
+  alias EdgeAdmin.Nodes.Schemas.Alias
+  alias EdgeAdmin.Nodes.Schemas.Node
 
   @doc """
   Renders a paginated list of nodes.

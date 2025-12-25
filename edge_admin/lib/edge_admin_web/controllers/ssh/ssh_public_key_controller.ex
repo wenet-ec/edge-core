@@ -4,7 +4,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Ssh
-  alias EdgeAdmin.Ssh.SshPublicKey
+  alias EdgeAdmin.Ssh.Schemas.SshPublicKey
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas
 

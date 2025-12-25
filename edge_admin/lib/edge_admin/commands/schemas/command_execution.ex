@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/commands/command_execution.ex
-defmodule EdgeAdmin.Commands.CommandExecution do
+# edge_admin/lib/edge_admin/commands/schemas/command_execution.ex
+defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   @moduledoc false
   use EdgeAdmin.Schema
 
@@ -27,9 +27,9 @@ defmodule EdgeAdmin.Commands.CommandExecution do
     field(:cluster_name, :string, virtual: true)
 
     # Associations
-    belongs_to(:command, EdgeAdmin.Commands.Command)
-    belongs_to(:node, EdgeAdmin.Nodes.Node)
-    belongs_to(:cluster, EdgeAdmin.Nodes.Cluster)
+    belongs_to(:command, EdgeAdmin.Commands.Schemas.Command)
+    belongs_to(:node, EdgeAdmin.Nodes.Schemas.Node)
+    belongs_to(:cluster, EdgeAdmin.Nodes.Schemas.Cluster)
 
     timestamps()
   end

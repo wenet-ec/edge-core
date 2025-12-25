@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/nodes/cluster.ex
-defmodule EdgeAdmin.Nodes.Cluster do
+# edge_admin/lib/edge_admin/nodes/schemas/cluster.ex
+defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   @moduledoc """
   Schema for edge clusters. Each cluster represents an isolated Netmaker network
   with its own IPv4 range.
@@ -25,7 +25,7 @@ defmodule EdgeAdmin.Nodes.Cluster do
     field(:dns_domain, :string, virtual: true)
     field(:node_count, :integer, virtual: true)
 
-    has_many(:nodes, EdgeAdmin.Nodes.Node)
+    has_many(:nodes, EdgeAdmin.Nodes.Schemas.Node)
 
     timestamps()
   end

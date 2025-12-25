@@ -36,7 +36,7 @@ defmodule EdgeAdminWeb.Plugs.AgentAuth do
   end
 
   defp validate_agent_token(conn, token) do
-    alias EdgeAdmin.Nodes.Node
+    alias EdgeAdmin.Nodes.Schemas.Node
     alias EdgeAdmin.Repo
 
     case Repo.get_by(Node, api_token: token) do

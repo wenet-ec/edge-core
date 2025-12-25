@@ -8,7 +8,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyForm do
   """
   use EdgeAdmin.Form
 
-  alias EdgeAdmin.Ssh.SshPublicKey
+  alias EdgeAdmin.Ssh.Schemas.SshPublicKey
 
   embedded_schema do
     field(:key_name, :string)

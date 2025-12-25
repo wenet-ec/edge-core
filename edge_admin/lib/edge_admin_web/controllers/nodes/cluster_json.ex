@@ -1,6 +1,6 @@
 # edge_admin_web/lib/edge_admin_web/controllers/nodes/cluster_json.ex
 defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSON do
-  alias EdgeAdmin.Nodes.Cluster
+  alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Vpn
 
   @doc """

@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/nodes/metrics.ex
-defmodule EdgeAdmin.Nodes.Metrics do
+# edge_admin/lib/edge_admin/nodes/schemas/metrics.ex
+defmodule EdgeAdmin.Nodes.Schemas.Metrics do
   @moduledoc """
   Embedded schema for node metrics with validation and formatting.
 
@@ -11,10 +11,10 @@ defmodule EdgeAdmin.Nodes.Metrics do
 
   import Ecto.Changeset
 
-  alias EdgeAdmin.Nodes.Metrics.CPU
-  alias EdgeAdmin.Nodes.Metrics.Disk
-  alias EdgeAdmin.Nodes.Metrics.Memory
-  alias EdgeAdmin.Nodes.Metrics.Uptime
+  alias EdgeAdmin.Nodes.Schemas.Metrics.CPU
+  alias EdgeAdmin.Nodes.Schemas.Metrics.Disk
+  alias EdgeAdmin.Nodes.Schemas.Metrics.Memory
+  alias EdgeAdmin.Nodes.Schemas.Metrics.Uptime
 
   @derive Jason.Encoder
   @primary_key false

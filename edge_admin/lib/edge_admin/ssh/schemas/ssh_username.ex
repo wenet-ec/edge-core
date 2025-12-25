@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/ssh/ssh_username.ex
-defmodule EdgeAdmin.Ssh.SshUsername do
+# edge_admin/lib/edge_admin/ssh/schemas/ssh_username.ex
+defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
   @moduledoc false
   use EdgeAdmin.Schema
 
@@ -19,8 +19,8 @@ defmodule EdgeAdmin.Ssh.SshUsername do
     field(:has_password, :boolean, virtual: true)
 
     # Associations
-    belongs_to(:node, EdgeAdmin.Nodes.Node)
-    has_many(:ssh_public_keys, EdgeAdmin.Ssh.SshPublicKey, on_delete: :delete_all)
+    belongs_to(:node, EdgeAdmin.Nodes.Schemas.Node)
+    has_many(:ssh_public_keys, EdgeAdmin.Ssh.Schemas.SshPublicKey, on_delete: :delete_all)
 
     timestamps()
   end

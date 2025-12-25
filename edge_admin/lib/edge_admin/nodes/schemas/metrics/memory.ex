@@ -1,11 +1,10 @@
-# edge_admin/lib/edge_admin/nodes/metrics/disk.ex
-defmodule EdgeAdmin.Nodes.Metrics.Disk do
+# edge_admin/lib/edge_admin/nodes/schemas/metrics/memory.ex
+defmodule EdgeAdmin.Nodes.Schemas.Metrics.Memory do
   @moduledoc false
   use Ecto.Schema
 
   @derive Jason.Encoder
   @primary_key false
-
   embedded_schema do
     field(:usage_percent, :float)
     field(:total_bytes, :integer)

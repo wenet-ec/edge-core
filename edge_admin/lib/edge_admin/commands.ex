@@ -9,12 +9,12 @@ defmodule EdgeAdmin.Commands do
 
   import Ecto.Query, warn: false
 
-  alias EdgeAdmin.Commands.Command
-  alias EdgeAdmin.Commands.CommandExecution
+  alias EdgeAdmin.Commands.Schemas.Command
+  alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Commands.Forms
   alias EdgeAdmin.Commands.Workers.ExecutionCreationWorker
   alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Nodes.Node
+  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Repo
 

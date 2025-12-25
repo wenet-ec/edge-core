@@ -6,13 +6,13 @@ defmodule EdgeAdmin.Nodes do
 
   import Ecto.Query, warn: false
 
-  alias EdgeAdmin.Nodes.Alias
-  alias EdgeAdmin.Nodes.Cluster
-  alias EdgeAdmin.Nodes.EphemeralEnrollmentKey
+  alias EdgeAdmin.Nodes.Schemas.Alias
+  alias EdgeAdmin.Nodes.Schemas.Cluster
+  alias EdgeAdmin.Nodes.Schemas.EphemeralEnrollmentKey
   alias EdgeAdmin.Nodes.Forms
   alias EdgeAdmin.Nodes.PrometheusParser
-  alias EdgeAdmin.Nodes.Metrics
-  alias EdgeAdmin.Nodes.Node
+  alias EdgeAdmin.Nodes.Schemas.Metrics
+  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.RequestParser
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.EdgeClusters.Gateway

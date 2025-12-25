@@ -30,7 +30,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   require Logger
 
   alias EdgeAdmin.Vpn
-  alias EdgeAdmin.Nodes.Node
+  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.ProxyServer.RemoteTunnel
 
   # ===========================================================================

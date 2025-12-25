@@ -4,7 +4,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Commands
-  alias EdgeAdmin.Commands.Command
+  alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdminWeb.Schemas.Commands.CommandSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
 

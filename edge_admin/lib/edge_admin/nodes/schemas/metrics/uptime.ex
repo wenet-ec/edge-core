@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/nodes/metrics.ex
-defmodule EdgeAdmin.Nodes.Metrics.Uptime do
+# edge_admin/lib/edge_admin/nodes/schemas/metrics/uptime.ex
+defmodule EdgeAdmin.Nodes.Schemas.Metrics.Uptime do
   @moduledoc false
   use Ecto.Schema
 

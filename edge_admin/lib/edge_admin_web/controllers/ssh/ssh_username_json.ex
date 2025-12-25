@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin_web/controllers/ssh/ssh_username_json.ex
 defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameJSON do
-  alias EdgeAdmin.Ssh.SshUsername
+  alias EdgeAdmin.Ssh.Schemas.SshUsername
 
   @doc """
   Renders a paginated list of SSH usernames.

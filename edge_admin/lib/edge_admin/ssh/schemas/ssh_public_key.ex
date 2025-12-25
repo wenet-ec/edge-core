@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/ssh/ssh_public_key.ex
-defmodule EdgeAdmin.Ssh.SshPublicKey do
+# edge_admin/lib/edge_admin/ssh/schemas/ssh_public_key.ex
+defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
   @moduledoc false
   use EdgeAdmin.Schema
 
@@ -30,7 +30,7 @@ defmodule EdgeAdmin.Ssh.SshPublicKey do
     field(:key_name, :string)
 
     # Associations
-    belongs_to(:ssh_username, EdgeAdmin.Ssh.SshUsername)
+    belongs_to(:ssh_username, EdgeAdmin.Ssh.Schemas.SshUsername)
 
     timestamps()
   end

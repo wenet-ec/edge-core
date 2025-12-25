@@ -1,6 +1,6 @@
 # edge_admin_web/controllers/commands/command_json.ex
 defmodule EdgeAdminWeb.Controllers.Commands.CommandJSON do
-  alias EdgeAdmin.Commands.Command
+  alias EdgeAdmin.Commands.Schemas.Command
 
   @doc """
   Renders a paginated list of commands.

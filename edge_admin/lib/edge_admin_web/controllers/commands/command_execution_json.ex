@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin_web/controllers/commands/command_execution_json.ex
 defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSON do
-  alias EdgeAdmin.Commands.CommandExecution
+  alias EdgeAdmin.Commands.Schemas.CommandExecution
 
   @doc """
   Renders a paginated list of command executions.

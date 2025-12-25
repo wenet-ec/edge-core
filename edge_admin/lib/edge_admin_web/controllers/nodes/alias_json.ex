@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin_web/controllers/nodes/alias_json.ex
 defmodule EdgeAdminWeb.Controllers.Nodes.AliasJSON do
-  alias EdgeAdmin.Nodes.Alias
+  alias EdgeAdmin.Nodes.Schemas.Alias
 
   @doc """
   Renders a paginated list of aliases.

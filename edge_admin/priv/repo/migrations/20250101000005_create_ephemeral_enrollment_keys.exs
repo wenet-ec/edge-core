@@ -1,4 +1,5 @@
 defmodule EdgeAdmin.Repo.Migrations.CreateEphemeralEnrollmentKeys do
+  @moduledoc false
   use Ecto.Migration
 
   def change do
@@ -7,7 +8,7 @@ defmodule EdgeAdmin.Repo.Migrations.CreateEphemeralEnrollmentKeys do
       add :token, :string, null: false
       add :tag, :string, null: false
       add :time_to_live, :integer, null: false
-      add :cluster_id, references(:clusters, type: :binary_id, on_delete: :restrict), null: false
+      add :cluster_id, references(:clusters, type: :binary_id, on_delete: :delete_all), null: false
 
       timestamps(type: :utc_datetime)
     end

@@ -1,7 +1,7 @@
-# edge_admin/lib/edge_admin/proxy_server.ex
-defmodule EdgeAdmin.ProxyServer do
+# edge_admin/lib/edge_admin/proxy_servers.ex
+defmodule EdgeAdmin.ProxyServers do
   @moduledoc """
-  Proxy server supervisor managing HTTP and SOCKS5 forward proxies for admin.
+  Proxy servers supervisor managing HTTP and SOCKS5 forward proxies for admin.
 
   Runs two separate Ranch listeners:
   - HTTP forward proxy on port 43128 (configurable)
@@ -17,9 +17,9 @@ defmodule EdgeAdmin.ProxyServer do
 
   use GenServer
 
-  alias EdgeAdmin.ProxyServer.Config
-  alias EdgeAdmin.ProxyServer.HttpHandler
-  alias EdgeAdmin.ProxyServer.Socks5Handler
+  alias EdgeAdmin.ProxyServers.Config
+  alias EdgeAdmin.ProxyServers.HttpHandler
+  alias EdgeAdmin.ProxyServers.Socks5Handler
 
   require Logger
 
@@ -42,8 +42,8 @@ defmodule EdgeAdmin.ProxyServer do
     end
   end
 
-  def server_status do
-    GenServer.call(__MODULE__, :server_status, 5_000)
+  def servers_status do
+    GenServer.call(__MODULE__, :servers_status, 5_000)
   catch
     :exit, {:noproc, _} -> :not_started
     :exit, {:timeout, _} -> :unknown
@@ -87,7 +87,7 @@ defmodule EdgeAdmin.ProxyServer do
   end
 
   @impl true
-  def handle_call(:server_status, _from, state) do
+  def handle_call(:servers_status, _from, state) do
     status =
       if state.http_listener_ref && state.socks5_listener_ref do
         :running

@@ -9,7 +9,7 @@ defmodule EdgeAdminHealth do
   - Metadata computation
   - Netmaker API reachability
   - Netclient connection to admin cluster network
-  - Proxy server
+  - Proxy servers
 
   Returns 503 Service Unavailable if any check fails.
   """
@@ -25,7 +25,7 @@ defmodule EdgeAdminHealth do
       %PlugCheckup.Check{name: "Metadata", module: __MODULE__, function: :metadata_health},
       %PlugCheckup.Check{name: "Netmaker API", module: __MODULE__, function: :netmaker_api_health},
       %PlugCheckup.Check{name: "Netclient", module: __MODULE__, function: :netclient_health},
-      %PlugCheckup.Check{name: "Proxy Server", module: __MODULE__, function: :proxy_server_health}
+      %PlugCheckup.Check{name: "Proxy Servers", module: __MODULE__, function: :proxy_servers_health}
     ]
   end
 
@@ -99,11 +99,11 @@ defmodule EdgeAdminHealth do
       {:error, "Health check exception"}
   end
 
-  def proxy_server_health do
-    if EdgeAdmin.ProxyServer.initialized?() do
+  def proxy_servers_health do
+    if EdgeAdmin.ProxyServers.initialized?() do
       :ok
     else
-      {:error, "Proxy server not initialized"}
+      {:error, "Proxy servers not initialized"}
     end
   end
 end

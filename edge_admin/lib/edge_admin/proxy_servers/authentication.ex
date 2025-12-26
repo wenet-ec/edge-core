@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/proxy_server/authentication.ex
-defmodule EdgeAdmin.ProxyServer.Authentication do
+# edge_admin/lib/edge_admin/proxy_servers/authentication.ex
+defmodule EdgeAdmin.ProxyServers.Authentication do
   @moduledoc """
   Authentication for admin proxy server.
 

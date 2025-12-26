@@ -62,7 +62,7 @@ defmodule EdgeAdmin.Application do
       EdgeAdmin.EdgeClusters,
       EdgeAdmin.Admins.Metadata,
       EdgeAdmin.LocalScheduler,
-      EdgeAdmin.ProxyServer,
+      EdgeAdmin.ProxyServers,
       EdgeAdminWeb.Endpoint
     ]
   end

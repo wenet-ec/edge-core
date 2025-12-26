@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/proxy_server/remote_tunnel.ex
-defmodule EdgeAdmin.ProxyServer.RemoteTunnel do
+# edge_admin/lib/edge_admin/proxy_servers/remote_tunnel.ex
+defmodule EdgeAdmin.ProxyServers.RemoteTunnel do
   @moduledoc """
   Manages remote TCP tunnels when Gateway is on a different Erlang node.
 

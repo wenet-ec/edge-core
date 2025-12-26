@@ -32,7 +32,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   alias EdgeAdmin.Vpn
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Nodes.Schemas.Node
-  alias EdgeAdmin.ProxyServer.RemoteTunnel
+  alias EdgeAdmin.ProxyServers.RemoteTunnel
 
   # ===========================================================================
   # Client API

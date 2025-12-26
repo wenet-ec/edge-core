@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/proxy_server/tcp_tunnel.ex
-defmodule EdgeAdmin.ProxyServer.TcpTunnel do
+# edge_admin/lib/edge_admin/proxy_servers/tcp_tunnel.ex
+defmodule EdgeAdmin.ProxyServers.TcpTunnel do
   @moduledoc """
   Bidirectional TCP tunnel for admin proxy forwarding.
 

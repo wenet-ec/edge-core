@@ -176,6 +176,21 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
         Logger.info("Gateway started for cluster #{cluster_name}")
 
+        # Emit telemetry
+        :telemetry.execute(
+          [:edge_admin, :gateway, :connection],
+          %{count: 1},
+          %{cluster: cluster_name, event: :connected}
+        )
+
+        # Emit active count (this will be overwritten by other gateways, but that's ok)
+        active_count = length(:syn.members(:cluster_scope, {:gateway, admin_name}))
+        :telemetry.execute(
+          [:edge_admin, :gateway, :active_count],
+          %{active_count: active_count},
+          %{}
+        )
+
         {:ok,
          %{
            cluster_name: cluster_name,
@@ -202,6 +217,13 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     # Leave the network on shutdown
     leave_network(state.netmaker_host_id, state.cluster_name)
 
+    # Emit telemetry
+    :telemetry.execute(
+      [:edge_admin, :gateway, :connection],
+      %{count: 1},
+      %{cluster: state.cluster_name, event: :disconnected}
+    )
+
     :ok
   end
 
@@ -213,34 +235,74 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   def handle_call({:scrape_host_metrics, node}, _from, state) do
     url = "http://#{Node.dns_hostname(node)}:#{node.host_metrics_port}/metrics"
 
-    case Req.get(url, retry: false) do
+    result = case Req.get(url, retry: false) do
       {:ok, %{status: 200, body: metrics_text}} ->
+        # Emit success telemetry
+        :telemetry.execute(
+          [:edge_admin, :gateway, :scrape],
+          %{count: 1},
+          %{cluster: state.cluster_name, metrics_type: :host, result: :success}
+        )
         {:reply, {:ok, metrics_text}, state}
 
       {:ok, %{status: status}} ->
+        # Emit error telemetry
+        :telemetry.execute(
+          [:edge_admin, :gateway, :scrape],
+          %{count: 1},
+          %{cluster: state.cluster_name, metrics_type: :host, result: :error}
+        )
         {:reply, {:error, "HTTP #{status}"}, state}
 
       {:error, reason} ->
         Logger.error("HTTP request failed: #{inspect(reason)}")
+        # Emit error telemetry
+        :telemetry.execute(
+          [:edge_admin, :gateway, :scrape],
+          %{count: 1},
+          %{cluster: state.cluster_name, metrics_type: :host, result: :error}
+        )
         {:reply, {:error, :service_unavailable}, state}
     end
+
+    result
   end
 
   @impl true
   def handle_call({:scrape_agent_metrics, node}, _from, state) do
     url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/agents/metrics/self/raw"
 
-    case Req.get(url, auth: {:bearer, node.api_token}, retry: false) do
+    result = case Req.get(url, auth: {:bearer, node.api_token}, retry: false) do
       {:ok, %{status: 200, body: metrics_text}} ->
+        # Emit success telemetry
+        :telemetry.execute(
+          [:edge_admin, :gateway, :scrape],
+          %{count: 1},
+          %{cluster: state.cluster_name, metrics_type: :agent, result: :success}
+        )
         {:reply, {:ok, metrics_text}, state}
 
       {:ok, %{status: status}} ->
+        # Emit error telemetry
+        :telemetry.execute(
+          [:edge_admin, :gateway, :scrape],
+          %{count: 1},
+          %{cluster: state.cluster_name, metrics_type: :agent, result: :error}
+        )
         {:reply, {:error, "HTTP #{status}"}, state}
 
       {:error, reason} ->
         Logger.error("HTTP request failed: #{inspect(reason)}")
+        # Emit error telemetry
+        :telemetry.execute(
+          [:edge_admin, :gateway, :scrape],
+          %{count: 1},
+          %{cluster: state.cluster_name, metrics_type: :agent, result: :error}
+        )
         {:reply, {:error, :service_unavailable}, state}
     end
+
+    result
   end
 
   @impl true

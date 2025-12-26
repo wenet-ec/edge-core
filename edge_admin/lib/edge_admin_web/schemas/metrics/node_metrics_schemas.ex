@@ -316,10 +316,10 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                   nullable: true,
                   description: "Total discovery scans performed"
                 },
-                admins_found_total: %Schema{
+                admins_found_last: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Total admins discovered (cumulative)"
+                  description: "Total admins discovered during last scan"
                 }
               }
             },
@@ -455,7 +455,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
           },
           discovery: %{
             scans_total: 48,
-            admins_found_total: 96
+            admins_found_last: 5
           },
           proxy: %{
             http_connections_total: 523,

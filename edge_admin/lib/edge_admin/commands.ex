@@ -628,6 +628,14 @@ defmodule EdgeAdmin.Commands do
 
     if Enum.empty?(my_cluster_network_names) do
       Logger.debug("No clusters assigned to this admin, skipping execution delivery")
+
+      # Emit telemetry
+      :telemetry.execute(
+        [:edge_admin, :commands, :delivery],
+        %{delivered_count: 0},
+        %{result: :skipped}
+      )
+
       :ok
     else
       # Strip "cluster-" prefix to get DB cluster names
@@ -645,6 +653,14 @@ defmodule EdgeAdmin.Commands do
 
       if Enum.empty?(pending_executions) do
         Logger.debug("No pending executions to deliver")
+
+        # Emit telemetry
+        :telemetry.execute(
+          [:edge_admin, :commands, :delivery],
+          %{delivered_count: 0},
+          %{result: :success}
+        )
+
         :ok
       else
         # Group by node for FIFO processing
@@ -668,6 +684,14 @@ defmodule EdgeAdmin.Commands do
         |> Stream.run()
 
         Logger.info("Completed execution delivery")
+
+        # Emit telemetry
+        :telemetry.execute(
+          [:edge_admin, :commands, :delivery],
+          %{delivered_count: length(pending_executions)},
+          %{result: :success}
+        )
+
         :ok
       end
     end

@@ -121,6 +121,9 @@ defmodule EdgeAdminWeb.Router do
       get("/nodes/:node_id/metrics", NodeMetricsController, :show_unified)
       get("/nodes/:node_id/metrics/host", NodeMetricsController, :show_host)
       get("/nodes/:node_id/metrics/agent", NodeMetricsController, :show_agent)
+
+      # Admin metrics endpoints (human-friendly)
+      get("/admins/metrics/self", AdminMetricsController, :show_self)
     end
   end
 

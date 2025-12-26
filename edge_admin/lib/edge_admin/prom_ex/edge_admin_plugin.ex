@@ -177,6 +177,85 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
           reporter_options: [
             buckets: [100, 500, 1_000, 5_000, 10_000, 30_000, 60_000]
           ]
+        ),
+
+        # Quantum scheduler job metrics (leveraging Quantum's built-in telemetry)
+        counter(
+          [:edge_admin, :quantum, :job, :executed, :total],
+          event_name: [:quantum, :job, :stop],
+          description: "Total number of Quantum jobs executed",
+          tags: [:job_name, :result],
+          tag_values: &get_quantum_job_tags/1
+        ),
+        distribution(
+          [:edge_admin, :quantum, :job, :duration, :milliseconds],
+          event_name: [:quantum, :job, :stop],
+          description: "Duration of Quantum job executions in native time units",
+          measurement: :duration,
+          unit: {:native, :millisecond},
+          tags: [:job_name, :result],
+          tag_values: &get_quantum_job_tags/1,
+          reporter_options: [
+            buckets: [10, 50, 100, 500, 1_000, 5_000, 10_000, 30_000]
+          ]
+        ),
+        counter(
+          [:edge_admin, :quantum, :job, :exception, :total],
+          event_name: [:quantum, :job, :exception],
+          description: "Total number of Quantum job exceptions",
+          tags: [:job_name, :kind],
+          tag_values: &get_quantum_exception_tags/1
+        ),
+
+        # Oban worker result metrics
+        counter(
+          [:edge_admin, :vpn, :zombie_admin_cleanup, :total],
+          event_name: [:edge_admin, :vpn, :zombie_admin_cleanup],
+          description: "Total zombie admin cleanup runs",
+          tags: [:result],
+          tag_values: &get_result_tag/1
+        ),
+        last_value(
+          [:edge_admin, :vpn, :zombie_admin_cleanup, :deleted_count],
+          event_name: [:edge_admin, :vpn, :zombie_admin_cleanup],
+          description: "Number of zombie admins deleted in last cleanup",
+          measurement: :deleted_count
+        ),
+
+        counter(
+          [:edge_admin, :commands, :delivery, :total],
+          event_name: [:edge_admin, :commands, :delivery],
+          description: "Total execution delivery runs",
+          tags: [:result],
+          tag_values: &get_result_tag/1
+        ),
+        last_value(
+          [:edge_admin, :commands, :delivery, :delivered_count],
+          event_name: [:edge_admin, :commands, :delivery],
+          description: "Number of executions delivered in last run",
+          measurement: :delivered_count
+        ),
+
+        # Gateway metrics
+        counter(
+          [:edge_admin, :gateway, :connection, :total],
+          event_name: [:edge_admin, :gateway, :connection],
+          description: "Total gateway connection events",
+          tags: [:cluster, :event],
+          tag_values: &get_gateway_tags/1
+        ),
+        last_value(
+          [:edge_admin, :gateway, :active_count],
+          event_name: [:edge_admin, :gateway, :active_count],
+          description: "Current number of active gateway connections",
+          measurement: :active_count
+        ),
+        counter(
+          [:edge_admin, :gateway, :scrape, :total],
+          event_name: [:edge_admin, :gateway, :scrape],
+          description: "Total gateway metrics scrape operations",
+          tags: [:cluster, :metrics_type, :result],
+          tag_values: &get_gateway_scrape_tags/1
         )
       ]
     )
@@ -201,5 +280,25 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
 
   defp get_targeting_type_tag(%{targeting_type: targeting_type}) do
     %{targeting_type: to_string(targeting_type)}
+  end
+
+  defp get_quantum_job_tags(metadata) do
+    job_name = metadata[:job] |> Map.get(:name) |> to_string()
+    result = if match?({:ok, _}, metadata[:result]), do: "success", else: "error"
+    %{job_name: job_name, result: result}
+  end
+
+  defp get_quantum_exception_tags(metadata) do
+    job_name = metadata[:job] |> Map.get(:name) |> to_string()
+    kind = metadata[:kind] |> to_string()
+    %{job_name: job_name, kind: kind}
+  end
+
+  defp get_gateway_tags(%{cluster: cluster, event: event}) do
+    %{cluster: to_string(cluster), event: to_string(event)}
+  end
+
+  defp get_gateway_scrape_tags(%{cluster: cluster, metrics_type: metrics_type, result: result}) do
+    %{cluster: to_string(cluster), metrics_type: to_string(metrics_type), result: to_string(result)}
   end
 end

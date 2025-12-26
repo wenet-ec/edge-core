@@ -772,18 +772,49 @@ defmodule EdgeAdmin.Vpn do
               end
             end)
 
+          # Emit telemetry
+          :telemetry.execute(
+            [:edge_admin, :vpn, :zombie_admin_cleanup],
+            %{deleted_count: deleted_count},
+            %{result: :success}
+          )
+
           {:ok, deleted_count}
         else
           Logger.debug("No zombie admin nodes found in #{admin_cluster_name}")
+
+          # Emit telemetry
+          :telemetry.execute(
+            [:edge_admin, :vpn, :zombie_admin_cleanup],
+            %{deleted_count: 0},
+            %{result: :success}
+          )
+
           {:ok, 0}
         end
 
       {:ok, _} ->
         Logger.warning("Unexpected response format from Netmaker Nodes API")
+
+        # Emit telemetry
+        :telemetry.execute(
+          [:edge_admin, :vpn, :zombie_admin_cleanup],
+          %{deleted_count: 0},
+          %{result: :error}
+        )
+
         {:ok, 0}
 
       {:error, reason} ->
         Logger.error("Failed to query Netmaker Nodes API: #{inspect(reason)}")
+
+        # Emit telemetry
+        :telemetry.execute(
+          [:edge_admin, :vpn, :zombie_admin_cleanup],
+          %{deleted_count: 0},
+          %{result: :error}
+        )
+
         {:error, reason}
     end
   end

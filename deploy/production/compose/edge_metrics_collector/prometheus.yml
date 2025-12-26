@@ -3,9 +3,16 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: "edge-nodes"
+  - job_name: "edge-nodes-host"
     http_sd_configs:
       - url: "http://edge_admin:44000/api/nodes/metrics/host/discovery"
+    authorization:
+      type: Bearer
+      credentials: supersecretkey123456789
+
+  - job_name: "edge-nodes-agent"
+    http_sd_configs:
+      - url: "http://edge_admin:44000/api/nodes/metrics/agent/discovery"
     authorization:
       type: Bearer
       credentials: supersecretkey123456789

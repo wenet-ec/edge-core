@@ -111,9 +111,16 @@ defmodule EdgeAdminWeb.Router do
       # Raw host metrics proxy (per-node)
       get("/nodes/:node_id/metrics/host/raw", HostMetricsController, :show)
 
-      # Human-friendly metrics endpoints
-      get("/nodes/:node_id/metrics", HumanMetricsController, :show_unified)
-      get("/nodes/:node_id/metrics/host", HumanMetricsController, :show_host)
+      # Prometheus HTTP service discovery for agent metrics
+      get("/nodes/metrics/agent/discovery", AgentMetricsDiscoveryController, :index)
+
+      # Raw agent metrics proxy (per-node)
+      get("/nodes/:node_id/metrics/agent/raw", AgentMetricsController, :show)
+
+      # Node metrics endpoints (human-friendly)
+      get("/nodes/:node_id/metrics", NodeMetricsController, :show_unified)
+      get("/nodes/:node_id/metrics/host", NodeMetricsController, :show_host)
+      get("/nodes/:node_id/metrics/agent", NodeMetricsController, :show_agent)
     end
   end
 

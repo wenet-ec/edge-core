@@ -97,6 +97,23 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   end
 
   @doc """
+  Scrapes agent application metrics from a node's PromEx endpoint.
+
+  ## Parameters
+
+  - gateway_pid: Gateway process
+  - node: Node struct with dns_hostname, http_port, api_token
+
+  ## Returns
+
+  - {:ok, metrics_text} - Raw Prometheus metrics
+  - {:error, reason} - HTTP error or network failure
+  """
+  def scrape_agent_metrics(gateway_pid, node) do
+    GenServer.call(gateway_pid, {:scrape_agent_metrics, node}, 30_000)
+  end
+
+  @doc """
   Triggers self-update on an agent.
 
   ## Parameters
@@ -197,6 +214,23 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     url = "http://#{Node.dns_hostname(node)}:#{node.host_metrics_port}/metrics"
 
     case Req.get(url, retry: false) do
+      {:ok, %{status: 200, body: metrics_text}} ->
+        {:reply, {:ok, metrics_text}, state}
+
+      {:ok, %{status: status}} ->
+        {:reply, {:error, "HTTP #{status}"}, state}
+
+      {:error, reason} ->
+        Logger.error("HTTP request failed: #{inspect(reason)}")
+        {:reply, {:error, :service_unavailable}, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:scrape_agent_metrics, node}, _from, state) do
+    url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/agents/metrics/self/raw"
+
+    case Req.get(url, auth: {:bearer, node.api_token}, retry: false) do
       {:ok, %{status: 200, body: metrics_text}} ->
         {:reply, {:ok, metrics_text}, state}
 

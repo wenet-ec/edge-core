@@ -9,7 +9,7 @@ defmodule EdgeAdmin.Metrics.HostMetrics do
 
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.EdgeClusters.Gateway
-  alias EdgeAdmin.Metrics.Parsers.NodeExporterParser
+  alias EdgeAdmin.Metrics.Parsers.HostMetricsParser
   alias EdgeAdmin.Metrics.Schemas.HostMetrics
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Vpn
@@ -51,7 +51,7 @@ defmodule EdgeAdmin.Metrics.HostMetrics do
   def get(node_id) do
     with {:ok, raw_text} <- scrape_raw(node_id),
          {:ok, node} <- Nodes.get_node(node_id),
-         parsed_metrics <- NodeExporterParser.parse(raw_text) do
+         parsed_metrics <- HostMetricsParser.parse(raw_text) do
       # Add cluster_name to parsed metrics for from_raw_metrics
       parsed_metrics = Map.put(parsed_metrics, "cluster_name", node.cluster.name)
 

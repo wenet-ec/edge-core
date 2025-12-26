@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/metrics/parsers/node_exporter_parser.ex
-defmodule EdgeAdmin.Metrics.Parsers.NodeExporterParser do
+# edge_admin/lib/edge_admin/metrics/parsers/host_metrics_parser.ex
+defmodule EdgeAdmin.Metrics.Parsers.HostMetricsParser do
   @moduledoc """
   Parses Prometheus text format metrics from Node Exporter.
 

@@ -1,15 +1,15 @@
-# edge_admin/lib/edge_admin/nodes/prometheus_parser.ex
-defmodule EdgeAdmin.Nodes.PrometheusParser do
+# edge_admin/lib/edge_admin/metrics/parsers/node_exporter_parser.ex
+defmodule EdgeAdmin.Metrics.Parsers.NodeExporterParser do
   @moduledoc """
-  Parses Prometheus text format metrics from node_exporter.
+  Parses Prometheus text format metrics from Node Exporter.
 
-  Extracts instant values for CPU, memory, disk, network, and uptime metrics.
+  Extracts instant values for host-level CPU, memory, disk, network, and uptime metrics.
   """
 
   @doc """
-  Parses raw Prometheus text format and extracts metrics.
+  Parses raw Prometheus text format from Node Exporter and extracts host metrics.
 
-  Returns a map with metric keys that can be used to build the Metrics schema.
+  Returns a map with metric keys that can be used to build the HostMetrics schema.
   """
   def parse(prometheus_text) do
     lines = String.split(prometheus_text, "\n", trim: true)

@@ -1,20 +1,21 @@
-# edge_admin/lib/edge_admin/nodes/schemas/metrics.ex
-defmodule EdgeAdmin.Nodes.Schemas.Metrics do
+# edge_admin/lib/edge_admin/metrics/schemas/host_metrics.ex
+defmodule EdgeAdmin.Metrics.Schemas.HostMetrics do
   @moduledoc """
-  Embedded schema for node metrics with validation and formatting.
+  Embedded schema for host-level metrics with validation and formatting.
 
-  This schema provides a structured way to handle metrics data from VictoriaMetrics,
-  including validation, type conversion, and consistent formatting.
+  Represents system metrics from Node Exporter including CPU, memory, disk, and uptime.
+  This schema provides structured data handling with validation, type conversion, and
+  consistent formatting.
   """
 
   use Ecto.Schema
 
   import Ecto.Changeset
 
-  alias EdgeAdmin.Nodes.Schemas.Metrics.CPU
-  alias EdgeAdmin.Nodes.Schemas.Metrics.Disk
-  alias EdgeAdmin.Nodes.Schemas.Metrics.Memory
-  alias EdgeAdmin.Nodes.Schemas.Metrics.Uptime
+  alias EdgeAdmin.Metrics.Schemas.HostMetrics.CPU
+  alias EdgeAdmin.Metrics.Schemas.HostMetrics.Disk
+  alias EdgeAdmin.Metrics.Schemas.HostMetrics.Memory
+  alias EdgeAdmin.Metrics.Schemas.HostMetrics.Uptime
 
   @derive Jason.Encoder
   @primary_key false

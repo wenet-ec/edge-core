@@ -12,12 +12,12 @@ defmodule EdgeAdmin.Repo.Migrations.UpdateNodesSchema do
       add :netmaker_host_id, :binary_id
       add :http_port, :integer, null: false
       add :ssh_port, :integer, null: false
-      add :metrics_port, :integer, null: false
+      add :host_metrics_port, :integer, null: false
       add :http_proxy_port, :integer, null: false
       add :socks5_proxy_port, :integer, null: false
-      add :api_token, :string
-      add :proxy_password, :string
-      add :version, :string
+      add :api_token, :string, null: false
+      add :proxy_password, :string, null: false
+      add :version, :string, null: false
       add :self_update_enabled, :boolean, default: false
     end
 
@@ -87,7 +87,7 @@ defmodule EdgeAdmin.Repo.Migrations.UpdateNodesSchema do
       remove :netmaker_host_id
       remove :http_port
       remove :ssh_port
-      remove :metrics_port
+      remove :host_metrics_port
       remove :http_proxy_port
       remove :socks5_proxy_port
       remove :api_token

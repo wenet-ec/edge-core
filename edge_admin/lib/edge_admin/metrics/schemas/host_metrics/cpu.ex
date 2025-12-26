@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/nodes/schemas/metrics/cpu.ex
-defmodule EdgeAdmin.Nodes.Schemas.Metrics.CPU do
+# edge_admin/lib/edge_admin/metrics/schemas/host_metrics/cpu.ex
+defmodule EdgeAdmin.Metrics.Schemas.HostMetrics.CPU do
   @moduledoc false
   use Ecto.Schema
 

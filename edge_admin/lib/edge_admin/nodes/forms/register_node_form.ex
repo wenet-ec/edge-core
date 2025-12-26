@@ -14,7 +14,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     field(:id_type, :string)
     field(:http_port, :integer)
     field(:ssh_port, :integer)
-    field(:metrics_port, :integer)
+    field(:host_metrics_port, :integer)
     field(:http_proxy_port, :integer)
     field(:socks5_proxy_port, :integer)
     field(:version, :string)
@@ -47,7 +47,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
       :id_type,
       :http_port,
       :ssh_port,
-      :metrics_port,
+      :host_metrics_port,
       :http_proxy_port,
       :socks5_proxy_port,
       :version,
@@ -59,9 +59,11 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
       :id_type,
       :http_port,
       :ssh_port,
-      :metrics_port,
+      :host_metrics_port,
       :http_proxy_port,
-      :socks5_proxy_port
+      :socks5_proxy_port,
+      :version,
+      :self_update_enabled
     ])
     |> validate_uuid_format(:node_id)
     |> validate_network_name()
@@ -69,7 +71,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     |> validate_inclusion(:id_type, ["persistent", "random"])
     |> validate_port(:http_port)
     |> validate_port(:ssh_port)
-    |> validate_port(:metrics_port)
+    |> validate_port(:host_metrics_port)
     |> validate_port(:http_proxy_port)
     |> validate_port(:socks5_proxy_port)
     |> apply_action(:insert)
@@ -149,7 +151,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
       "id_type" => form.id_type,
       "http_port" => form.http_port,
       "ssh_port" => form.ssh_port,
-      "metrics_port" => form.metrics_port,
+      "host_metrics_port" => form.host_metrics_port,
       "http_proxy_port" => form.http_proxy_port,
       "socks5_proxy_port" => form.socks5_proxy_port,
       "version" => form.version,

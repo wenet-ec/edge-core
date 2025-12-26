@@ -248,9 +248,11 @@ defmodule EdgeAgent.Bootstrap do
       network_name: network_name,
       http_port: Application.get_env(:edge_agent, :http_port, 44000),
       ssh_port: Application.get_env(:edge_agent, :ssh_port, 40022),
-      metrics_port: Application.get_env(:edge_agent, :metrics_port, 49100),
+      host_metrics_port: Application.get_env(:edge_agent, :host_metrics_port, 49100),
       http_proxy_port: Application.get_env(:edge_agent, :http_proxy_port, 43128),
-      socks5_proxy_port: Application.get_env(:edge_agent, :socks5_proxy_port, 41080)
+      socks5_proxy_port: Application.get_env(:edge_agent, :socks5_proxy_port, 41080),
+      version: Application.spec(:edge_agent, :vsn) |> to_string() || "0.1.0",
+      self_update_enabled: true
     }
   end
 end

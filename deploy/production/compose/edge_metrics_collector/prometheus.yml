@@ -5,7 +5,7 @@ global:
 scrape_configs:
   - job_name: "edge-nodes"
     http_sd_configs:
-      - url: "http://edge_admin:44000/api/nodes/metrics/discovery"
+      - url: "http://edge_admin:44000/api/nodes/metrics/host/discovery"
     authorization:
       type: Bearer
       credentials: supersecretkey123456789

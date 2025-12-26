@@ -117,7 +117,7 @@ defmodule EdgeAgent.MetricsServer.ProcessSupervisor do
     :timer.sleep(2000)
 
     # Find the actual PID of the node_exporter process
-    case find_node_exporter_process(Config.metrics_port()) do
+    case find_node_exporter_process(Config.host_metrics_port()) do
       {:ok, pid} ->
         {:ok, pid, port}
 

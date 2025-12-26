@@ -1,5 +1,5 @@
-# lib/edge_admin_web/controllers/nodes/node_metrics_discovery_controller.ex
-defmodule EdgeAdminWeb.Controllers.Nodes.NodeMetricsDiscoveryController do
+# lib/edge_admin_web/controllers/metrics/host_metrics_discovery_controller.ex
+defmodule EdgeAdminWeb.Controllers.Metrics.HostMetricsDiscoveryController do
   use EdgeAdminWeb, :controller
 
   alias EdgeAdmin.Nodes
@@ -7,7 +7,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeMetricsDiscoveryController do
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
   @doc """
-  Service discovery endpoint for vmagent HTTP SD.
+  Service discovery endpoint for vmagent HTTP SD (host metrics).
   Returns all active nodes grouped by cluster in the format expected by vmagent http_sd_configs.
 
   This endpoint is NOT documented in Swagger.
@@ -20,32 +20,18 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeMetricsDiscoveryController do
       |> Enum.map(fn %{name: cluster_name, nodes: node_ids} ->
         targets =
           Enum.map(node_ids, fn node_id ->
-            "#{metrics_base_url}/api/nodes/#{node_id}/metrics/raw"
+            "#{metrics_base_url}/api/nodes/#{node_id}/metrics/host/raw"
           end)
 
         %{
           targets: targets,
           labels: %{
             cluster: cluster_name,
-            job: "edge-nodes"
+            job: "edge-nodes-host"
           }
         }
       end)
 
     json(conn, target_groups)
-  end
-
-  @doc """
-  Raw metrics proxy endpoint.
-  Scrapes Prometheus metrics from a node via Gateway and returns raw text format.
-
-  This endpoint is NOT documented in Swagger.
-  """
-  def show(conn, %{"node_id" => node_id}) do
-    with {:ok, metrics_text} <- Nodes.scrape_node_metrics(node_id) do
-      conn
-      |> put_resp_content_type("text/plain; version=0.0.4")
-      |> send_resp(200, metrics_text)
-    end
   end
 end

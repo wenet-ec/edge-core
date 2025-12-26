@@ -80,20 +80,20 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   end
 
   @doc """
-  Scrapes metrics from a node's exporter.
+  Scrapes host metrics from a node's Node Exporter.
 
   ## Parameters
 
   - gateway_pid: Gateway process
-  - node: Node struct with dns_hostname, metrics_port
+  - node: Node struct with dns_hostname, host_metrics_port
 
   ## Returns
 
   - {:ok, metrics_text} - Raw Prometheus metrics
   - {:error, reason} - HTTP error or network failure
   """
-  def scrape_metrics(gateway_pid, node) do
-    GenServer.call(gateway_pid, {:scrape_metrics, node}, 30_000)
+  def scrape_host_metrics(gateway_pid, node) do
+    GenServer.call(gateway_pid, {:scrape_host_metrics, node}, 30_000)
   end
 
   @doc """
@@ -193,8 +193,8 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   # ===========================================================================
 
   @impl true
-  def handle_call({:scrape_metrics, node}, _from, state) do
-    url = "http://#{Node.dns_hostname(node)}:#{node.metrics_port}/metrics"
+  def handle_call({:scrape_host_metrics, node}, _from, state) do
+    url = "http://#{Node.dns_hostname(node)}:#{node.host_metrics_port}/metrics"
 
     case Req.get(url, retry: false) do
       {:ok, %{status: 200, body: metrics_text}} ->

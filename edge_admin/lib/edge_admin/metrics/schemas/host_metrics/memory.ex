@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/nodes/schemas/metrics/memory.ex
-defmodule EdgeAdmin.Nodes.Schemas.Metrics.Memory do
+# edge_admin/lib/edge_admin/metrics/schemas/host_metrics/memory.ex
+defmodule EdgeAdmin.Metrics.Schemas.HostMetrics.Memory do
   @moduledoc false
   use Ecto.Schema
 

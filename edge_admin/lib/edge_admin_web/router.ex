@@ -104,12 +104,16 @@ defmodule EdgeAdminWeb.Router do
   scope "/api", EdgeAdminWeb.Controllers do
     pipe_through(:protected_metrics)
 
-    scope "/", Nodes do
-      # Prometheus HTTP service discovery
-      get("/nodes/metrics/discovery", NodeMetricsDiscoveryController, :index)
+    scope "/", Metrics do
+      # Prometheus HTTP service discovery for host metrics
+      get("/nodes/metrics/host/discovery", HostMetricsDiscoveryController, :index)
 
-      # Raw metrics proxy (per-node)
-      get("/nodes/:node_id/metrics/raw", NodeMetricsDiscoveryController, :show)
+      # Raw host metrics proxy (per-node)
+      get("/nodes/:node_id/metrics/host/raw", HostMetricsController, :show)
+
+      # Human-friendly metrics endpoints
+      get("/nodes/:node_id/metrics", HumanMetricsController, :show_unified)
+      get("/nodes/:node_id/metrics/host", HumanMetricsController, :show_host)
     end
   end
 
@@ -149,7 +153,6 @@ defmodule EdgeAdminWeb.Router do
 
       resources("/nodes", NodeController, only: [:index, :show]) do
         resources("/aliases", AliasController, only: [:create])
-        get("/metrics", NodeMetricsController, :index)
       end
 
       patch("/nodes/:id/change_cluster", NodeController, :change_cluster)

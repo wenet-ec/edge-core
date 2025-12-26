@@ -27,7 +27,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     # Operational fields
     field(:http_port, :integer)
     field(:ssh_port, :integer)
-    field(:metrics_port, :integer)
+    field(:host_metrics_port, :integer)
     field(:http_proxy_port, :integer)
     field(:socks5_proxy_port, :integer)
     field(:api_token, :string)
@@ -62,7 +62,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
       :status,
       :http_port,
       :ssh_port,
-      :metrics_port,
+      :host_metrics_port,
       :http_proxy_port,
       :socks5_proxy_port,
       :api_token,
@@ -78,9 +78,13 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
       :id_type,
       :http_port,
       :ssh_port,
-      :metrics_port,
+      :host_metrics_port,
       :http_proxy_port,
-      :socks5_proxy_port
+      :socks5_proxy_port,
+      :api_token,
+      :proxy_password,
+      :version,
+      :self_update_enabled
     ])
     |> validate_inclusion(:id_type, ["persistent", "random"])
     |> validate_inclusion(:status, ["healthy", "unhealthy", "unreachable"])

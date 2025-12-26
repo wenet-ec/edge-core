@@ -10,12 +10,8 @@ defmodule EdgeAdmin.Nodes do
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.EphemeralEnrollmentKey
   alias EdgeAdmin.Nodes.Forms
-  alias EdgeAdmin.Nodes.PrometheusParser
-  alias EdgeAdmin.Nodes.Schemas.Metrics
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.RequestParser
-  alias EdgeAdmin.Admins.Metadata
-  alias EdgeAdmin.EdgeClusters.Gateway
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Vpn
 
@@ -534,7 +530,7 @@ defmodule EdgeAdmin.Nodes do
             last_seen_at: now,
             http_port: attrs["http_port"],
             ssh_port: attrs["ssh_port"],
-            metrics_port: attrs["metrics_port"],
+            host_metrics_port: attrs["host_metrics_port"],
             http_proxy_port: attrs["http_proxy_port"],
             socks5_proxy_port: attrs["socks5_proxy_port"],
             api_token: api_token,
@@ -1584,58 +1580,5 @@ defmodule EdgeAdmin.Nodes do
 
   def change_alias(%Alias{} = alias_record, attrs \\ %{}) do
     Alias.changeset(alias_record, attrs)
-  end
-
-  # ===========================================================================
-  # Metrics functions
-  # ===========================================================================
-
-  @doc """
-  Scrapes raw Prometheus metrics from a node via Gateway.
-
-  Uses ETS metadata to find cluster/admin, only queries DB for metrics_port.
-
-  ## Parameters
-  - node_id: Node UUID
-
-  ## Returns
-  - {:ok, metrics_text} - Raw Prometheus metrics in text format
-  - {:error, :node_not_found} - Node not assigned to any cluster (ETS) or not in DB
-  - {:error, :gateway_not_found} - Gateway process not found
-  - {:error, reason} - HTTP request failed or other error
-  """
-  def scrape_node_metrics(node_id) do
-    # Build node name for ETS lookup
-    node_name = Vpn.build_dns_name(node_id, prefix: :node)
-
-    with {:ok, cluster_name, _admin_name} <- Metadata.find_node_cluster(node_name),
-         {:ok, gateway_pid} <- Gateway.lookup(cluster_name),
-         {:ok, node} <- get_node(node_id),
-         {:ok, metrics_text} <- Gateway.scrape_metrics(gateway_pid, node) do
-      {:ok, metrics_text}
-    end
-  end
-
-  @doc """
-  Returns human-friendly metrics for a node by parsing raw Prometheus text.
-
-  ## Parameters
-  - node_id: Node UUID (string)
-
-  ## Returns
-  - {:ok, metrics} - Metrics struct with cluster_name, cpu, memory, disk, network, uptime
-  - {:error, reason} - Various error reasons
-  """
-  def list_node_metrics(node_id) do
-    with {:ok, raw_text} <- scrape_node_metrics(node_id),
-         {:ok, node} <- get_node(node_id),
-         parsed_metrics <- PrometheusParser.parse(raw_text) do
-      # Add cluster_name to parsed metrics for from_raw_metrics
-      parsed_metrics = Map.put(parsed_metrics, "cluster_name", node.cluster.name)
-
-      metrics = Metrics.from_raw_metrics(parsed_metrics, node_id)
-
-      {:ok, metrics}
-    end
   end
 end

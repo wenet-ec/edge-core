@@ -13,7 +13,7 @@ defmodule EdgeAgent.MetricsServer.Config do
   @host_sys_path "/host/sys"
   @host_root_path "/host"
 
-  def metrics_port, do: Application.get_env(:edge_agent, :metrics_port)
+  def host_metrics_port, do: Application.get_env(:edge_agent, :host_metrics_port)
   def listen_address, do: @listen_address
   def node_exporter_binary, do: @node_exporter_binary
   def host_proc_path, do: @host_proc_path
@@ -21,7 +21,7 @@ defmodule EdgeAgent.MetricsServer.Config do
   def host_root_path, do: @host_root_path
 
   def build_config do
-    port = metrics_port()
+    port = host_metrics_port()
 
     %{
       port: port,
@@ -34,7 +34,7 @@ defmodule EdgeAgent.MetricsServer.Config do
   end
 
   def node_exporter_args do
-    port = metrics_port()
+    port = host_metrics_port()
 
     [
       "--web.listen-address=#{@listen_address}:#{port}",

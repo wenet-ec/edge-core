@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/nodes/schemas/metrics/disk.ex
-defmodule EdgeAdmin.Nodes.Schemas.Metrics.Disk do
+# edge_admin/lib/edge_admin/metrics/schemas/host_metrics/disk.ex
+defmodule EdgeAdmin.Metrics.Schemas.HostMetrics.Disk do
   @moduledoc false
   use Ecto.Schema
 

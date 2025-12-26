@@ -1,19 +1,18 @@
-# edge_admin/lib/edge_admin_web/schemas/nodes/node_metrics_schemas.ex
-defmodule EdgeAdminWeb.Schemas.Nodes.NodeMetricsSchemas do
+# edge_admin/lib/edge_admin_web/schemas/metrics/human_metrics_schemas.ex
+defmodule EdgeAdminWeb.Schemas.Metrics.HumanMetricsSchemas do
   @moduledoc """
-  OpenAPI schemas for Node Metrics resources
+  OpenAPI schemas for human-friendly metrics endpoints
   """
   alias OpenApiSpex.Schema
   require OpenApiSpex
 
-  defmodule MetricsResponse do
-    @moduledoc false
+  defmodule HostMetricsResponse do
+    @moduledoc "Host-level metrics response"
 
     OpenApiSpex.schema(%{
-      title: "Node Metrics Response",
+      title: "Host Metrics Response",
       description: """
-      Current system metrics for a specific node, parsed from raw Prometheus metrics.
-
+      Host-level system metrics from Node Exporter (CPU, memory, disk, uptime).
       """,
       type: :object,
       properties: %{
@@ -189,6 +188,56 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeMetricsSchemas do
         uptime: %{
           seconds: 90_061,
           human: "1d 1h 1m"
+        }
+      }
+    })
+  end
+
+  defmodule UnifiedMetricsResponse do
+    @moduledoc "Unified metrics from all sources"
+
+    OpenApiSpex.schema(%{
+      title: "Unified Metrics Response",
+      description: """
+      Complete metrics from all sources: host (Node Exporter), application (agent PromEx), etc.
+      Provides a unified view of node health and performance.
+      """,
+      type: :object,
+      properties: %{
+        data: %Schema{
+          type: :object,
+          properties: %{
+            node_id: %Schema{
+              type: :string,
+              format: :uuid
+            },
+            cluster_name: %Schema{
+              type: :string
+            },
+            timestamp: %Schema{
+              type: :string,
+              format: :"date-time"
+            },
+            host: %Schema{
+              type: :object,
+              description: "Host-level metrics",
+              properties: %{
+                available: %Schema{type: :boolean},
+                cpu: %Schema{type: :object, nullable: true},
+                memory: %Schema{type: :object, nullable: true},
+                disk: %Schema{type: :object, nullable: true},
+                uptime: %Schema{type: :object, nullable: true}
+              }
+            },
+            application: %Schema{
+              type: :object,
+              description: "Application metrics (future)",
+              nullable: true,
+              properties: %{
+                available: %Schema{type: :boolean}
+              }
+            }
+          }
         }
       }
     })

@@ -61,9 +61,9 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           type: :integer,
           description: "SSH port"
         },
-        metrics_port: %Schema{
+        host_metrics_port: %Schema{
           type: :integer,
-          description: "Metrics port"
+          description: "Host metrics port (Node Exporter)"
         },
         http_proxy_port: %Schema{
           type: :integer,
@@ -113,7 +113,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         :id_type,
         :http_port,
         :ssh_port,
-        :metrics_port,
+        :host_metrics_port,
         :http_proxy_port,
         :socks5_proxy_port,
         :api_token,
@@ -131,7 +131,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         dns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
         http_port: 44000,
         ssh_port: 42222,
-        metrics_port: 49100,
+        host_metrics_port: 49100,
         http_proxy_port: 44880,
         socks5_proxy_port: 44180,
         api_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -172,7 +172,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
               "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
             http_port: 44000,
             ssh_port: 42222,
-            metrics_port: 49100,
+            host_metrics_port: 49100,
             http_proxy_port: 44880,
             socks5_proxy_port: 44180,
             api_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -223,7 +223,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
             "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
           http_port: 44000,
           ssh_port: 42222,
-          metrics_port: 49100,
+          host_metrics_port: 49100,
           http_proxy_port: 44880,
           socks5_proxy_port: 44180,
           api_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",

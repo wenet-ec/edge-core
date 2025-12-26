@@ -57,10 +57,9 @@ defmodule EdgeAgent.MetricsServer do
     Process.flag(:trap_exit, true)
 
     state = %{
-      port: Config.metrics_port(),
+      host_metrics_port: Config.host_metrics_port(),
       listen_address: Config.listen_address(),
       node_exporter_pid: nil,
-      node_exporter_port: nil,
       node_exporter_port_ref: nil,
       status: :stopped,
       config: Config.build_config(),
@@ -69,11 +68,11 @@ defmodule EdgeAgent.MetricsServer do
 
     case do_start_server(state) do
       {:ok, new_state} ->
-        Logger.info("Metrics server started successfully on port #{new_state.port}")
+        Logger.info("Host metrics server started successfully on port #{new_state.host_metrics_port}")
         {:ok, new_state}
 
       {:error, reason, new_state} ->
-        Logger.error("Failed to auto-start metrics server: #{inspect(reason)}")
+        Logger.error("Failed to auto-start host metrics server: #{inspect(reason)}")
         {:ok, new_state}
     end
   end
@@ -205,13 +204,12 @@ defmodule EdgeAgent.MetricsServer do
         new_state = %{
           state
           | node_exporter_pid: pid,
-            node_exporter_port: state.port,
             node_exporter_port_ref: port_ref,
             status: :running,
             primary_interface_ip: primary_ip
         }
 
-        Logger.info("Metrics server started successfully with PID #{pid} on port #{state.port}")
+        Logger.info("Host metrics server started successfully with PID #{pid} on port #{state.host_metrics_port}")
         if primary_ip, do: Logger.info("Primary interface IP: #{primary_ip}")
 
         {:ok, new_state}
@@ -262,7 +260,6 @@ defmodule EdgeAgent.MetricsServer do
     %{
       state
       | node_exporter_pid: nil,
-        node_exporter_port: nil,
         node_exporter_port_ref: nil,
         status: :stopped,
         primary_interface_ip: nil

@@ -12,7 +12,6 @@ defmodule EdgeAgent.Application do
   def start(_type, _args) do
     children = [
       EdgeAgent.Repo,
-      {DNSCluster, query: Application.get_env(:edge_agent, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: EdgeAgent.PubSub},
       {Oban, Application.fetch_env!(:edge_agent, Oban)},
       EdgeAgent.PromEx,

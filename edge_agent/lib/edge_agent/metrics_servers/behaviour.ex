@@ -10,9 +10,9 @@ defmodule EdgeAgent.MetricsServers.Behaviour do
   @type config :: map()
   @type ip_result :: {:ok, String.t()} | {:error, term()}
 
-  @callback start_server() :: start_result()
-  @callback stop_server() :: stop_result()
-  @callback server_status() :: status()
-  @callback server_config() :: config()
+  @callback start_servers() :: start_result()
+  @callback stop_servers() :: stop_result()
+  @callback servers_status() :: status()
+  @callback servers_config() :: config()
   @callback get_primary_interface_ip() :: ip_result()
 end

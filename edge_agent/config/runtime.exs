@@ -13,19 +13,13 @@ if get_env("PHX_SERVER", :boolean, false) == true do
   config :edge_agent, EdgeAgentWeb.Endpoint, server: true
 end
 
-config :edge_agent, Corsica, origins: get_env("CORS_ALLOWED_ORIGINS", :cors, "*")
-
 config :edge_agent, EdgeAgentWeb.Endpoint,
   http: [
     ip: {0, 0, 0, 0, 0, 0, 0, 0},
     port: get_env("API_PORT", :integer, 44000)
   ],
-  secret_key_base: get_env("SECRET_KEY_BASE", :string, "default-secret-key-base-change-in-production"),
-  session_key: get_env("SESSION_KEY", :string, "edge_agent"),
-  session_signing_salt: get_env("SESSION_SIGNING_SALT", :string, "default-session-signing-salt"),
-  live_view: [
-    signing_salt: get_env("SESSION_SIGNING_SALT", :string, "default-session-signing-salt")
-  ]
+  # Generate ephemeral secret_key_base (agent is stateless API, no sessions)
+  secret_key_base: Base.encode64(:crypto.strong_rand_bytes(48))
 
 config :edge_agent,
   ssh_port: get_env("SSH_PORT", :integer, 40022),

@@ -6,7 +6,7 @@ defmodule EdgeAgent.Mixfile do
     [
       app: :edge_agent,
       version: "0.2.0",
-      erlang: "~> 28.2",
+      erlang: "~> 28.3",
       elixir: "~> 1.19",
       elixirc_paths: elixirc_paths(Mix.env()),
       test_paths: ["test"],
@@ -66,28 +66,21 @@ defmodule EdgeAgent.Mixfile do
       {:req, "~> 0.5"},
 
       # HTTP server
-      {:bandit, "~> 1.8"},
-      {:corsica, "~> 2.1"},
+      {:bandit, "~> 1.9"},
       {:ranch, "~> 2.2"},
-
-      # Phoenix
       {:phoenix, "~> 1.8"},
-      {:phoenix_html, "~> 4.3"},
-      {:phoenix_live_view, "~> 1.1"},
-      {:phoenix_ecto, "~> 4.7"},
       {:phoenix_live_reload, "~> 1.6", only: :dev},
       {:jason, "~> 1.4"},
+      {:plug_checkup, git: "https://github.com/voughtdq/plug_checkup.git", tag: "v1.0.0"},
 
       # Database
+      {:phoenix_ecto, "~> 4.7"},
       {:ecto_sql, "~> 3.13"},
       {:ecto_sqlite3, "~> 0.22"},
-
-      # Database check
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
 
-      # Translations
-      {:gettext, "~> 1.0"},
-
+      # Background jobs
+      {:oban, "~> 2.20"},
       # Telemetry
       {:prom_ex, "~> 1.11"},
 
@@ -101,9 +94,6 @@ defmodule EdgeAgent.Mixfile do
       {:sobelow, "~> 0.14", only: [:dev, :test], runtime: true},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
 
-      # Health
-      {:plug_checkup, git: "https://github.com/voughtdq/plug_checkup.git", tag: "v1.0.0"},
-
       # Test factories
       {:ex_machina, "~> 2.8", only: :test},
       {:faker, "~> 0.18", only: :test},
@@ -114,12 +104,6 @@ defmodule EdgeAgent.Mixfile do
 
       # Dialyzer
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
-
-      # DNS Cluster
-      {:dns_cluster, "~> 0.2"},
-
-      # Oban
-      {:oban, "~> 2.20"},
 
       # Nexmaker library
       {:nexmaker, path: "../nexmaker"}

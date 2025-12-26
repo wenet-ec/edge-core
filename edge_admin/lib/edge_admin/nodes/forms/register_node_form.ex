@@ -15,6 +15,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     field(:http_port, :integer)
     field(:ssh_port, :integer)
     field(:host_metrics_port, :integer)
+    field(:wireguard_metrics_port, :integer)
     field(:http_proxy_port, :integer)
     field(:socks5_proxy_port, :integer)
     field(:version, :string)
@@ -48,6 +49,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
       :http_port,
       :ssh_port,
       :host_metrics_port,
+      :wireguard_metrics_port,
       :http_proxy_port,
       :socks5_proxy_port,
       :version,
@@ -60,6 +62,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
       :http_port,
       :ssh_port,
       :host_metrics_port,
+      :wireguard_metrics_port,
       :http_proxy_port,
       :socks5_proxy_port,
       :version,
@@ -72,6 +75,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     |> validate_port(:http_port)
     |> validate_port(:ssh_port)
     |> validate_port(:host_metrics_port)
+    |> validate_port(:wireguard_metrics_port)
     |> validate_port(:http_proxy_port)
     |> validate_port(:socks5_proxy_port)
     |> apply_action(:insert)
@@ -152,6 +156,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
       "http_port" => form.http_port,
       "ssh_port" => form.ssh_port,
       "host_metrics_port" => form.host_metrics_port,
+      "wireguard_metrics_port" => form.wireguard_metrics_port,
       "http_proxy_port" => form.http_proxy_port,
       "socks5_proxy_port" => form.socks5_proxy_port,
       "version" => form.version,

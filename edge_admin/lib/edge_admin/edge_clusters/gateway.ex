@@ -114,6 +114,23 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   end
 
   @doc """
+  Scrapes WireGuard metrics from a node's WireGuard Exporter endpoint.
+
+  ## Parameters
+
+  - gateway_pid: Gateway process
+  - node: Node struct with dns_hostname, wireguard_metrics_port
+
+  ## Returns
+
+  - {:ok, metrics_text} - Raw Prometheus metrics
+  - {:error, reason} - HTTP error or network failure
+  """
+  def scrape_wireguard_metrics(gateway_pid, node) do
+    GenServer.call(gateway_pid, {:scrape_wireguard_metrics, node}, 30_000)
+  end
+
+  @doc """
   Triggers self-update on an agent.
 
   ## Parameters
@@ -298,6 +315,43 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
           [:edge_admin, :gateway, :scrape],
           %{count: 1},
           %{cluster: state.cluster_name, metrics_type: :agent, result: :error}
+        )
+        {:reply, {:error, :service_unavailable}, state}
+    end
+
+    result
+  end
+
+  @impl true
+  def handle_call({:scrape_wireguard_metrics, node}, _from, state) do
+    url = "http://#{Node.dns_hostname(node)}:#{node.wireguard_metrics_port}/metrics"
+
+    result = case Req.get(url, retry: false) do
+      {:ok, %{status: 200, body: metrics_text}} ->
+        # Emit success telemetry
+        :telemetry.execute(
+          [:edge_admin, :gateway, :scrape],
+          %{count: 1},
+          %{cluster: state.cluster_name, metrics_type: :wireguard, result: :success}
+        )
+        {:reply, {:ok, metrics_text}, state}
+
+      {:ok, %{status: status}} ->
+        # Emit error telemetry
+        :telemetry.execute(
+          [:edge_admin, :gateway, :scrape],
+          %{count: 1},
+          %{cluster: state.cluster_name, metrics_type: :wireguard, result: :error}
+        )
+        {:reply, {:error, "HTTP #{status}"}, state}
+
+      {:error, reason} ->
+        Logger.error("HTTP request failed: #{inspect(reason)}")
+        # Emit error telemetry
+        :telemetry.execute(
+          [:edge_admin, :gateway, :scrape],
+          %{count: 1},
+          %{cluster: state.cluster_name, metrics_type: :wireguard, result: :error}
         )
         {:reply, {:error, :service_unavailable}, state}
     end

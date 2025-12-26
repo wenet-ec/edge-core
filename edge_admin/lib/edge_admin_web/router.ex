@@ -117,6 +117,12 @@ defmodule EdgeAdminWeb.Router do
       # Raw agent metrics proxy (per-node)
       get("/nodes/:node_id/metrics/agent/raw", AgentMetricsController, :show)
 
+      # Prometheus HTTP service discovery for WireGuard metrics
+      get("/nodes/metrics/wireguard/discovery", WireguardMetricsDiscoveryController, :index)
+
+      # Raw WireGuard metrics proxy (per-node)
+      get("/nodes/:node_id/metrics/wireguard/raw", WireguardMetricsController, :show)
+
       # Node metrics endpoints (human-friendly)
       get("/nodes/:node_id/metrics", NodeMetricsController, :show_unified)
       get("/nodes/:node_id/metrics/host", NodeMetricsController, :show_host)

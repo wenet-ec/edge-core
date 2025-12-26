@@ -28,6 +28,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     field(:http_port, :integer)
     field(:ssh_port, :integer)
     field(:host_metrics_port, :integer)
+    field(:wireguard_metrics_port, :integer)
     field(:http_proxy_port, :integer)
     field(:socks5_proxy_port, :integer)
     field(:api_token, :string)
@@ -63,6 +64,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
       :http_port,
       :ssh_port,
       :host_metrics_port,
+      :wireguard_metrics_port,
       :http_proxy_port,
       :socks5_proxy_port,
       :api_token,
@@ -79,6 +81,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
       :http_port,
       :ssh_port,
       :host_metrics_port,
+      :wireguard_metrics_port,
       :http_proxy_port,
       :socks5_proxy_port,
       :api_token,

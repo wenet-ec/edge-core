@@ -531,6 +531,7 @@ defmodule EdgeAdmin.Nodes do
             http_port: attrs["http_port"],
             ssh_port: attrs["ssh_port"],
             host_metrics_port: attrs["host_metrics_port"],
+            wireguard_metrics_port: attrs["wireguard_metrics_port"],
             http_proxy_port: attrs["http_proxy_port"],
             socks5_proxy_port: attrs["socks5_proxy_port"],
             api_token: api_token,

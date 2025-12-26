@@ -65,6 +65,10 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           type: :integer,
           description: "Host metrics port (Node Exporter)"
         },
+        wireguard_metrics_port: %Schema{
+          type: :integer,
+          description: "WireGuard metrics port (WireGuard Exporter)"
+        },
         http_proxy_port: %Schema{
           type: :integer,
           description: "HTTP proxy port"
@@ -114,6 +118,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         :http_port,
         :ssh_port,
         :host_metrics_port,
+        :wireguard_metrics_port,
         :http_proxy_port,
         :socks5_proxy_port,
         :api_token,
@@ -132,6 +137,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         http_port: 44000,
         ssh_port: 42222,
         host_metrics_port: 49100,
+        wireguard_metrics_port: 49586,
         http_proxy_port: 44880,
         socks5_proxy_port: 44180,
         api_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -173,6 +179,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
             http_port: 44000,
             ssh_port: 42222,
             host_metrics_port: 49100,
+            wireguard_metrics_port: 49586,
             http_proxy_port: 44880,
             socks5_proxy_port: 44180,
             api_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -224,6 +231,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           http_port: 44000,
           ssh_port: 42222,
           host_metrics_port: 49100,
+          wireguard_metrics_port: 49586,
           http_proxy_port: 44880,
           socks5_proxy_port: 44180,
           api_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",

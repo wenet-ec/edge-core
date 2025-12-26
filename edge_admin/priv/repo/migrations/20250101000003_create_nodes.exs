@@ -17,6 +17,7 @@ defmodule EdgeAdmin.Repo.Migrations.CreateNodes do
       add :http_port, :integer, null: false
       add :ssh_port, :integer, null: false
       add :host_metrics_port, :integer, null: false
+      add :wireguard_metrics_port, :integer, null: false
       add :http_proxy_port, :integer, null: false
       add :socks5_proxy_port, :integer, null: false
       add :api_token, :string, null: false

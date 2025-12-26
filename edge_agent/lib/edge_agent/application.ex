@@ -18,7 +18,7 @@ defmodule EdgeAgent.Application do
       EdgeAgent.PromEx,
       EdgeAgent.SshServer,
       EdgeAgent.MetricsServers,
-      EdgeAgent.ProxyServer,
+      EdgeAgent.ProxyServers,
       EdgeAgent.Bootstrap,
       EdgeAgentWeb.Endpoint
     ]

@@ -1,5 +1,5 @@
 # edge_agent/lib/edge_agent/proxy_server/http_handler.ex
-defmodule EdgeAgent.ProxyServer.HttpHandler do
+defmodule EdgeAgent.ProxyServers.HttpHandler do
   @moduledoc """
   Ranch protocol handler for HTTP forward proxy.
 
@@ -12,8 +12,8 @@ defmodule EdgeAgent.ProxyServer.HttpHandler do
 
   @behaviour :ranch_protocol
 
-  alias EdgeAgent.ProxyServer.Authentication
-  alias EdgeAgent.ProxyServer.TcpTunnel
+  alias EdgeAgent.ProxyServers.Authentication
+  alias EdgeAgent.ProxyServers.TcpTunnel
 
   require Logger
 

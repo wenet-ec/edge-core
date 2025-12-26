@@ -1,5 +1,5 @@
 # edge_agent/lib/edge_agent/proxy_server/config.ex
-defmodule EdgeAgent.ProxyServer.Config do
+defmodule EdgeAgent.ProxyServers.Config do
   @moduledoc """
   Configuration for the proxy server (HTTP and SOCKS5).
   """

@@ -8,8 +8,8 @@ defmodule EdgeAgentHealth do
   - Bootstrap completion (identity, VPN join, admin registration)
   - Netclient connection to assigned cluster network
   - SSH server status
-  - Metrics server status
-  - Proxy server
+  - Metrics servers status
+  - Proxy servers
 
   Returns 503 Service Unavailable if any check fails.
   """
@@ -24,8 +24,8 @@ defmodule EdgeAgentHealth do
       %PlugCheckup.Check{name: "Bootstrap", module: __MODULE__, function: :bootstrap_health},
       %PlugCheckup.Check{name: "Netclient", module: __MODULE__, function: :netclient_health},
       %PlugCheckup.Check{name: "SSH Server", module: __MODULE__, function: :ssh_server_health},
-      %PlugCheckup.Check{name: "Metrics Server", module: __MODULE__, function: :metrics_server_health},
-      %PlugCheckup.Check{name: "Proxy Server", module: __MODULE__, function: :proxy_server_health}
+      %PlugCheckup.Check{name: "Metrics Servers", module: __MODULE__, function: :metrics_servers_health},
+      %PlugCheckup.Check{name: "Proxy Servers", module: __MODULE__, function: :proxy_servers_health}
     ]
   end
 
@@ -86,31 +86,31 @@ defmodule EdgeAgentHealth do
       {:error, "Health check exception"}
   end
 
-  def metrics_server_health do
-    case EdgeAgent.MetricsServer.server_status() do
+  def metrics_servers_health do
+    case EdgeAgent.MetricsServers.servers_status() do
       :running ->
         :ok
 
       :stopped ->
-        {:error, "Metrics server stopped"}
+        {:error, "Metrics servers stopped"}
 
       :error ->
-        {:error, "Metrics server error"}
+        {:error, "Metrics servers error"}
 
       status ->
         {:error, "Unknown status: #{inspect(status)}"}
     end
   rescue
     e ->
-      Logger.error("Metrics server health check exception: #{inspect(e)}")
+      Logger.error("Metrics servers health check exception: #{inspect(e)}")
       {:error, "Health check exception"}
   end
 
-  def proxy_server_health do
-    if EdgeAgent.ProxyServer.initialized?() do
+  def proxy_servers_health do
+    if EdgeAgent.ProxyServers.initialized?() do
       :ok
     else
-      {:error, "Proxy server not initialized"}
+      {:error, "Proxy servers not initialized"}
     end
   end
 end

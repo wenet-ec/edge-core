@@ -1,7 +1,7 @@
-# edge_agent/lib/edge_agent/proxy_server.ex
-defmodule EdgeAgent.ProxyServer do
+# edge_agent/lib/edge_agent/proxy_servers.ex
+defmodule EdgeAgent.ProxyServers do
   @moduledoc """
-  Proxy server supervisor managing HTTP and SOCKS5 forward proxies.
+  Proxy servers supervisor managing HTTP and SOCKS5 forward proxies.
 
   Runs two separate Ranch listeners:
   - HTTP forward proxy on port 44880 (configurable)
@@ -16,7 +16,7 @@ defmodule EdgeAgent.ProxyServer do
 
   use GenServer
 
-  alias EdgeAgent.ProxyServer.Config
+  alias EdgeAgent.ProxyServers.Config
 
   require Logger
 
@@ -39,8 +39,8 @@ defmodule EdgeAgent.ProxyServer do
     end
   end
 
-  def server_status do
-    GenServer.call(__MODULE__, :server_status, 5_000)
+  def servers_status do
+    GenServer.call(__MODULE__, :servers_status, 5_000)
   catch
     :exit, {:noproc, _} -> :not_started
     :exit, {:timeout, _} -> :unknown
@@ -84,7 +84,7 @@ defmodule EdgeAgent.ProxyServer do
   end
 
   @impl true
-  def handle_call(:server_status, _from, state) do
+  def handle_call(:servers_status, _from, state) do
     status =
       if state.http_listener_ref && state.socks5_listener_ref do
         :running
@@ -134,7 +134,7 @@ defmodule EdgeAgent.ProxyServer do
            :http_proxy,
            :ranch_tcp,
            transport_opts,
-           EdgeAgent.ProxyServer.HttpHandler,
+           EdgeAgent.ProxyServers.HttpHandler,
            []
          ) do
       {:ok, _pid} ->
@@ -160,7 +160,7 @@ defmodule EdgeAgent.ProxyServer do
            :socks5_proxy,
            :ranch_tcp,
            transport_opts,
-           EdgeAgent.ProxyServer.Socks5Handler,
+           EdgeAgent.ProxyServers.Socks5Handler,
            []
          ) do
       {:ok, _pid} ->

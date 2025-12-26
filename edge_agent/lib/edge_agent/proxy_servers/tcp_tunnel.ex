@@ -1,5 +1,5 @@
 # edge_agent/lib/edge_agent/proxy_server/tcp_tunnel.ex
-defmodule EdgeAgent.ProxyServer.TcpTunnel do
+defmodule EdgeAgent.ProxyServers.TcpTunnel do
   @moduledoc """
   Bidirectional TCP tunnel for agent proxy forwarding.
 

@@ -1,5 +1,5 @@
 # edge_agent/lib/edge_agent/proxy_server/socks5_handler.ex
-defmodule EdgeAgent.ProxyServer.Socks5Handler do
+defmodule EdgeAgent.ProxyServers.Socks5Handler do
   @moduledoc """
   Ranch protocol handler for SOCKS5 proxy.
 
@@ -16,8 +16,8 @@ defmodule EdgeAgent.ProxyServer.Socks5Handler do
 
   @behaviour :ranch_protocol
 
-  alias EdgeAgent.ProxyServer.Authentication
-  alias EdgeAgent.ProxyServer.TcpTunnel
+  alias EdgeAgent.ProxyServers.Authentication
+  alias EdgeAgent.ProxyServers.TcpTunnel
 
   require Logger
 

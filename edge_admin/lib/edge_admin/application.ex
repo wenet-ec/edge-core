@@ -53,7 +53,6 @@ defmodule EdgeAdmin.Application do
     [
       EdgeAdmin.PromEx,
       EdgeAdmin.Repo,
-      {DNSCluster, query: Application.get_env(:edge_admin, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: EdgeAdmin.PubSub},
       EdgeAdminWeb.Telemetry,
       EdgeAdminWeb.NetmakerDashboard.Collector,

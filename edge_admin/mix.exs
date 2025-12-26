@@ -6,7 +6,7 @@ defmodule EdgeAdmin.Mixfile do
     [
       app: :edge_admin,
       version: "0.2.0",
-      erlang: "~> 28.2",
+      erlang: "~> 28.3",
       elixir: "~> 1.19",
       elixirc_paths: elixirc_paths(Mix.env()),
       test_paths: ["test"],
@@ -72,7 +72,6 @@ defmodule EdgeAdmin.Mixfile do
 
       # Phoenix
       {:phoenix, "~> 1.8"},
-      {:phoenix_html, "~> 4.3"},
       {:phoenix_live_view, "~> 1.1"},
       {:phoenix_ecto, "~> 4.7"},
       {:phoenix_live_reload, "~> 1.6", only: :dev},
@@ -127,9 +126,6 @@ defmodule EdgeAdmin.Mixfile do
 
       # Dialyzer
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
-
-      # DNS Cluster
-      {:dns_cluster, "~> 0.2"},
 
       # Background Jobs
       {:oban, "~> 2.20"},

@@ -11,14 +11,14 @@ defmodule EdgeAdminWeb.Controllers.Admins.EdgeClustersController do
 
   operation(:index,
     summary: "Get all edge cluster assignments",
-    description: "Returns all edge cluster assignments across all admins from ETS metadata",
+    description: "Returns all edge cluster assignments across all admins from metadata",
     responses: %{
       200 => {"Edge clusters", "application/json", AdminSchemas.EdgeClustersResponse}
     }
   )
 
   def index(conn, _params) do
-    [{:edge_clusters, edge_clusters}] = :ets.lookup(:metadata, :edge_clusters)
+    edge_clusters = EdgeAdmin.Admins.Metadata.get_edge_clusters()
 
     conn
     |> put_status(:ok)

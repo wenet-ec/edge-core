@@ -9,6 +9,7 @@ defmodule EdgeAdmin.ProxyServer.TcpTunnel do
   2. Proxy chaining: Routes through agent's proxy server as exit node
   """
 
+  alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.EdgeClusters.Gateway
 
   require Logger
@@ -61,7 +62,7 @@ defmodule EdgeAdmin.ProxyServer.TcpTunnel do
 
   # Connect through Gateway to target
   defp connect_via_gateway(client_socket, cluster_name, target_host, target_port, caller_pid, initial_data) do
-    admin_name = find_cluster_owner(cluster_name)
+    admin_name = Metadata.get_cluster_owner(cluster_name)
 
     if admin_name do
       case :syn.lookup(:cluster_scope, {:gateway, admin_name, cluster_name}) do
@@ -144,7 +145,7 @@ defmodule EdgeAdmin.ProxyServer.TcpTunnel do
          protocol,
          proxy_password
        ) do
-    admin_name = find_cluster_owner(cluster_name)
+    admin_name = Metadata.get_cluster_owner(cluster_name)
 
     if admin_name do
       case :syn.lookup(:cluster_scope, {:gateway, admin_name, cluster_name}) do
@@ -379,19 +380,6 @@ defmodule EdgeAdmin.ProxyServer.TcpTunnel do
     auth = <<1, byte_size(username)::8>> <> username <> <<byte_size(proxy_password)::8>> <> proxy_password
     connect = <<5, 1, 0, 3, byte_size(target_host)::8>> <> target_host <> <<target_port::16>>
     IO.iodata_to_binary([greeting, auth, connect])
-  end
-
-  # Find which admin owns this cluster from ETS metadata
-  defp find_cluster_owner(cluster_name) do
-    case :ets.lookup(:metadata, :edge_clusters) do
-      [{:edge_clusters, assignments}] ->
-        Enum.find_value(assignments, fn {admin_name, clusters} ->
-          if Map.has_key?(clusters, cluster_name), do: admin_name
-        end)
-
-      [] ->
-        nil
-    end
   end
 
   # Forwarding loop: recv from source, send to destination

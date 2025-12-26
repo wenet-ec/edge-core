@@ -112,8 +112,8 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
     admin_name = Application.get_env(:edge_admin, :admin_name)
 
-    # Read Netmaker host ID from ETS (set by Metadata during init)
-    [{:admin, admin_info}] = :ets.lookup(:metadata, :admin)
+    # Read Netmaker host ID from Metadata (set during init)
+    admin_info = EdgeAdmin.Admins.Metadata.get_admin()
     netmaker_host_id = admin_info.netmaker_host_id
 
     # Join VPN network for this cluster using direct API

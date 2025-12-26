@@ -11,14 +11,14 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminClusterController do
 
   operation(:show,
     summary: "Get admin cluster topology",
-    description: "Returns admin cluster metadata and peer topology from ETS",
+    description: "Returns admin cluster metadata and peer topology",
     responses: %{
       200 => {"Admin cluster topology", "application/json", AdminSchemas.AdminClusterResponse}
     }
   )
 
   def show(conn, _params) do
-    [{:admin_cluster, admin_cluster}] = :ets.lookup(:metadata, :admin_cluster)
+    admin_cluster = EdgeAdmin.Admins.Metadata.get_admin_cluster()
 
     conn
     |> put_status(:ok)

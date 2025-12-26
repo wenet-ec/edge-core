@@ -131,16 +131,12 @@ defmodule EdgeAdmin.EdgeClusters do
   # ===========================================================================
 
   defp get_assigned_clusters(admin_name) do
-    case :ets.lookup(:metadata, :edge_clusters) do
-      [{:edge_clusters, assignments}] ->
-        # Extract cluster IDs for this admin (keyed by admin_name, not admin_id)
-        Map.get(assignments, admin_name, %{})
-        |> Map.keys()
+    # Get assignments from Metadata public API
+    assignments = EdgeAdmin.Admins.Metadata.get_edge_clusters()
 
-      [] ->
-        # No assignments yet (Metadata hasn't computed)
-        []
-    end
+    # Extract cluster IDs for this admin (keyed by admin_name, not admin_id)
+    Map.get(assignments, admin_name, %{})
+    |> Map.keys()
   end
 
   defp spawn_reconciliation_task(state) do

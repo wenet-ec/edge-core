@@ -19,7 +19,7 @@ defmodule EdgeAdminWeb.Controllers.Admins.OrphanedClustersController do
   )
 
   def index(conn, _params) do
-    [{:orphaned_clusters, orphaned_clusters}] = :ets.lookup(:metadata, :orphaned_clusters)
+    orphaned_clusters = EdgeAdmin.Admins.Metadata.get_orphaned_clusters()
 
     conn
     |> put_status(:ok)

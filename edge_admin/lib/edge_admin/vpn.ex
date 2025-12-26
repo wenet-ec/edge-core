@@ -708,7 +708,10 @@ defmodule EdgeAdmin.Vpn do
   """
   def cleanup_zombie_admins do
     admin_cluster_name = admin_cluster_name()
-    threshold_minutes = Application.get_env(:edge_admin, :zombie_admin_checkin_threshold_minutes, 120)
+
+    threshold_minutes =
+      Application.get_env(:edge_admin, :zombie_admin_checkin_threshold_minutes, 120)
+
     threshold_seconds = threshold_minutes * 60
 
     Logger.info("Starting zombie admin cleanup for #{admin_cluster_name}")
@@ -732,7 +735,10 @@ defmodule EdgeAdmin.Vpn do
             is_protected = node["hostid"] in protected_host_ids
 
             if is_zombie and not is_protected do
-              Logger.debug("Zombie found: node=#{node["id"]}, host=#{node["hostid"]} (age: #{age_seconds}s)")
+              Logger.debug(
+                "Zombie found: node=#{node["id"]}, host=#{node["hostid"]} (age: #{age_seconds}s)"
+              )
+
               true
             else
               false
@@ -782,22 +788,21 @@ defmodule EdgeAdmin.Vpn do
     end
   end
 
-  # Get protected host IDs from ETS metadata (admin_cluster topology)
+  # Get protected host IDs from metadata (admin_cluster topology)
   defp get_protected_host_ids do
-    case :ets.lookup(:metadata, :admin_cluster) do
-      [{:admin_cluster, metadata}] when is_map(metadata) ->
-        # Extract netmaker_host_id from each admin in topology
-        # Topology structure: [%{name: "admin-abc123", netmaker_host_id: "...", ...}, ...]
-        metadata
-        |> Map.get(:topology, [])
-        |> Enum.map(fn admin_data ->
-          Map.get(admin_data, :netmaker_host_id)
-        end)
-        |> Enum.reject(&is_nil/1)
+    admin_cluster = EdgeAdmin.Admins.Metadata.get_admin_cluster()
 
-      _ ->
-        Logger.warning("No admin_cluster metadata found in ETS")
-        []
-    end
+    # Extract netmaker_host_id from each admin in topology
+    # Topology structure: [%{name: "admin-abc123", netmaker_host_id: "...", ...}, ...]
+    admin_cluster
+    |> Map.get(:topology, [])
+    |> Enum.map(fn admin_data ->
+      Map.get(admin_data, :netmaker_host_id)
+    end)
+    |> Enum.reject(&is_nil/1)
+  rescue
+    _ ->
+      Logger.warning("Failed to get admin_cluster metadata")
+      []
   end
 end

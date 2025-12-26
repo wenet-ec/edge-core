@@ -39,6 +39,10 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           type: :string,
           description: "Name of the admin cluster this admin belongs to"
         },
+        netmaker_host_id: %Schema{
+          type: :string,
+          description: "Netmaker host ID for this admin (UUID format)"
+        },
         last_computed_at: %Schema{
           type: :string,
           format: :"date-time",
@@ -46,7 +50,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           nullable: true
         }
       },
-      required: [:id, :name, :max_capacity, :erlang_node_name, :dns_hostname, :admin_cluster_name],
+      required: [:id, :name, :max_capacity, :erlang_node_name, :dns_hostname, :admin_cluster_name, :netmaker_host_id],
       example: %{
         id: "k7m3n2p9x4j6",
         name: "admin-k7m3n2p9x4j6",
@@ -54,6 +58,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
         erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
         dns_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
         admin_cluster_name: "admin-cluster-1",
+        netmaker_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505",
         last_computed_at: "2025-01-15T12:00:00Z"
       }
     })
@@ -82,14 +87,19 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
         erlang_node_name: %Schema{
           type: :string,
           description: "Erlang distribution node name"
+        },
+        netmaker_host_id: %Schema{
+          type: :string,
+          description: "Netmaker host ID for this admin (UUID format)"
         }
       },
-      required: [:name, :max_capacity, :erlang_node_name],
+      required: [:name, :max_capacity, :erlang_node_name, :netmaker_host_id],
       example: %{
         name: "admin-k7m3n2p9x4j6",
         max_capacity: 200,
         dns_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
-        erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
+        erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
+        netmaker_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505"
       }
     })
   end
@@ -130,13 +140,15 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
             name: "admin-k7m3n2p9x4j6",
             max_capacity: 200,
             dns_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
-            erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
+            erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
+            netmaker_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505"
           },
           %{
             name: "admin-x9j4p2k7m8n3",
             max_capacity: 300,
             dns_hostname: "admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal",
-            erlang_node_name: "admin@admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal"
+            erlang_node_name: "admin@admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal",
+            netmaker_host_id: "7f3c8d4e-9a1b-4c2d-8e3f-5a6b7c8d9e0f"
           }
         ]
       }

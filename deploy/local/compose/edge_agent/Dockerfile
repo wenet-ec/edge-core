@@ -62,6 +62,8 @@ RUN apk add --no-cache \
   bind-tools \
   netcat-openbsd \
   tcpdump \
+  # WireGuard tools (required by wireguard_exporter)
+  wireguard-tools-wg \
   && rm -rf /var/cache/apk/*
 
 # Install node_exporter for metrics collection
@@ -75,6 +77,10 @@ RUN wget -q https://github.com/prometheus/node_exporter/releases/download/v${NOD
 # Copy patched netclient binary from builder stage
 COPY --from=netclient-builder /build/netclient /usr/local/bin/netclient
 RUN chmod +x /usr/local/bin/netclient
+
+# Copy wireguard_exporter binary from official Docker image
+COPY --from=mindflavor/prometheus-wireguard-exporter:3.6.6 /usr/local/bin/prometheus_wireguard_exporter /usr/local/bin/prometheus_wireguard_exporter
+RUN chmod +x /usr/local/bin/prometheus_wireguard_exporter
 
 # Create app user
 RUN addgroup -g 1000 app && \

@@ -81,7 +81,8 @@ RUN apk add --no-cache \
     libstdc++ \
     libgcc \
     su-exec \
-    util-linux && \
+    util-linux \
+    wireguard-tools-wg && \
     # Install node_exporter in same layer to reduce image size
     wget -q https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz && \
     tar xzf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz && \
@@ -97,6 +98,10 @@ RUN apk add --no-cache \
 
 # Copy the release from builder stage
 COPY --from=builder /app/_build/prod/rel/edge_agent /app
+
+# Copy wireguard_exporter binary from official Docker image
+COPY --from=mindflavor/prometheus-wireguard-exporter:3.6.6 /usr/local/bin/prometheus_wireguard_exporter /usr/local/bin/prometheus_wireguard_exporter
+RUN chmod +x /usr/local/bin/prometheus_wireguard_exporter
 
 RUN chmod +x /app/bin/migrate /app/bin/server
 

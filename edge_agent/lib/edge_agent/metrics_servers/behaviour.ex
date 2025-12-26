@@ -1,5 +1,5 @@
 # edge_agent/lib/edge_agent/metrics_server/behaviour.ex
-defmodule EdgeAgent.MetricsServer.Behaviour do
+defmodule EdgeAgent.MetricsServers.Behaviour do
   @moduledoc """
   Behaviour for metrics server operations to enable testing and abstraction.
   """

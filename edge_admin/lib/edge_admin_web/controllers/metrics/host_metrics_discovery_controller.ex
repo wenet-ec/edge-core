@@ -27,7 +27,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.HostMetricsDiscoveryController do
           targets: targets,
           labels: %{
             cluster: cluster_name,
-            job: "edge-nodes-host"
+            job: "node-host-metrics"
           }
         }
       end)

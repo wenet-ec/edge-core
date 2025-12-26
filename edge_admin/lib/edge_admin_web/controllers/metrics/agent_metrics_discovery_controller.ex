@@ -27,7 +27,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AgentMetricsDiscoveryController do
           targets: targets,
           labels: %{
             cluster: cluster_name,
-            job: "edge-nodes-agent"
+            job: "node-agent-metrics"
           }
         }
       end)

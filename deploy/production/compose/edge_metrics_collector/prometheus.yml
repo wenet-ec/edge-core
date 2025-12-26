@@ -1,18 +1,25 @@
 # deploy/production/compose/edge_metrics_collector/prometheus.yml
 global:
-  scrape_interval: 15s
+  scrape_interval: 30s
 
 scrape_configs:
-  - job_name: "edge-nodes-host"
+  - job_name: "node-host-metrics"
     http_sd_configs:
       - url: "http://edge_admin:44000/api/nodes/metrics/host/discovery"
     authorization:
       type: Bearer
       credentials: supersecretkey123456789
 
-  - job_name: "edge-nodes-agent"
+  - job_name: "node-agent-metrics"
     http_sd_configs:
       - url: "http://edge_admin:44000/api/nodes/metrics/agent/discovery"
+    authorization:
+      type: Bearer
+      credentials: supersecretkey123456789
+
+  - job_name: "node-wireguard-metrics"
+    http_sd_configs:
+      - url: "http://edge_admin:44000/api/nodes/metrics/wireguard/discovery"
     authorization:
       type: Bearer
       credentials: supersecretkey123456789
@@ -27,7 +34,7 @@ scrape_configs:
       - targets: ["edge_metrics_storage:8428"]
     metrics_path: "/metrics"
 
-  - job_name: "edge-admin"
+  - job_name: "admin-metrics"
     static_configs:
       - targets: ["edge_admin:44000"]
     metrics_path: "/api/admins/metrics/self/raw"

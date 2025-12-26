@@ -27,7 +27,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.WireguardMetricsDiscoveryController d
           targets: targets,
           labels: %{
             cluster: cluster_name,
-            job: "edge-nodes-wireguard"
+            job: "node-wireguard-metrics"
           }
         }
       end)

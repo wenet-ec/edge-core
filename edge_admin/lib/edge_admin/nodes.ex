@@ -1608,21 +1608,11 @@ defmodule EdgeAdmin.Nodes do
     # Build node name for ETS lookup
     node_name = Vpn.build_dns_name(node_id, prefix: :node)
 
-    with {:ok, cluster_name, admin_name} <- Metadata.find_node_cluster(node_name),
-         {:ok, gateway_pid} <- lookup_gateway(admin_name, cluster_name),
+    with {:ok, cluster_name, _admin_name} <- Metadata.find_node_cluster(node_name),
+         {:ok, gateway_pid} <- Gateway.lookup(cluster_name),
          {:ok, node} <- get_node(node_id),
          {:ok, metrics_text} <- Gateway.scrape_metrics(gateway_pid, node) do
       {:ok, metrics_text}
-    end
-  end
-
-  defp lookup_gateway(admin_name, cluster_name) do
-    case :syn.lookup(:cluster_scope, {:gateway, admin_name, cluster_name}) do
-      :undefined ->
-        {:error, :gateway_not_found}
-
-      {pid, _metadata} when is_pid(pid) ->
-        {:ok, pid}
     end
   end
 

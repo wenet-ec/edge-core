@@ -30,6 +30,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   require Logger
 
   alias EdgeAdmin.Vpn
+  alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.ProxyServer.RemoteTunnel
 
@@ -44,6 +45,38 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   """
   def start_link(cluster_name) do
     GenServer.start_link(__MODULE__, cluster_name)
+  end
+
+  @doc """
+  Looks up the Gateway process for a given cluster.
+
+  Returns the Gateway PID for the admin that owns the cluster.
+  Uses cluster ownership from Metadata to determine which admin's Gateway to use.
+
+  ## Parameters
+  - cluster_name: The edge cluster name
+
+  ## Returns
+  - `{:ok, gateway_pid}` - Gateway process found
+  - `{:error, :gateway_not_found}` - No Gateway registered for this cluster
+  - `{:error, :no_owner}` - Cluster not assigned to any admin
+
+  ## Examples
+
+      {:ok, pid} = Gateway.lookup("cluster-abc123")
+      Gateway.scrape_metrics(pid, node)
+  """
+  def lookup(cluster_name) do
+    case Metadata.get_cluster_owner(cluster_name) do
+      nil ->
+        {:error, :no_owner}
+
+      admin_name ->
+        case :syn.lookup(:cluster_scope, {:gateway, admin_name, cluster_name}) do
+          :undefined -> {:error, :gateway_not_found}
+          {pid, _metadata} -> {:ok, pid}
+        end
+    end
   end
 
   @doc """
@@ -113,7 +146,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     admin_name = Application.get_env(:edge_admin, :admin_name)
 
     # Read Netmaker host ID from Metadata (set during init)
-    admin_info = EdgeAdmin.Admins.Metadata.get_admin()
+    admin_info = Metadata.get_admin()
     netmaker_host_id = admin_info.netmaker_host_id
 
     # Join VPN network for this cluster using direct API

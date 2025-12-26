@@ -9,7 +9,6 @@ defmodule EdgeAdmin.ProxyServer.TcpTunnel do
   2. Proxy chaining: Routes through agent's proxy server as exit node
   """
 
-  alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.EdgeClusters.Gateway
 
   require Logger
@@ -62,27 +61,24 @@ defmodule EdgeAdmin.ProxyServer.TcpTunnel do
 
   # Connect through Gateway to target
   defp connect_via_gateway(client_socket, cluster_name, target_host, target_port, caller_pid, initial_data) do
-    admin_name = Metadata.get_cluster_owner(cluster_name)
+    case Gateway.lookup(cluster_name) do
+      {:ok, gateway_pid} ->
+        establish_connection_via_gateway(
+          client_socket,
+          gateway_pid,
+          target_host,
+          target_port,
+          caller_pid,
+          initial_data
+        )
 
-    if admin_name do
-      case :syn.lookup(:cluster_scope, {:gateway, admin_name, cluster_name}) do
-        :undefined ->
-          Logger.error("No Gateway found for cluster #{cluster_name}")
-          {:error, :no_gateway}
+      {:error, :no_owner} ->
+        Logger.error("No admin owns cluster #{cluster_name}")
+        {:error, :no_cluster_owner}
 
-        {gateway_pid, _meta} ->
-          establish_connection_via_gateway(
-            client_socket,
-            gateway_pid,
-            target_host,
-            target_port,
-            caller_pid,
-            initial_data
-          )
-      end
-    else
-      Logger.error("No admin owns cluster #{cluster_name}")
-      {:error, :no_cluster_owner}
+      {:error, :gateway_not_found} ->
+        Logger.error("No Gateway found for cluster #{cluster_name}")
+        {:error, :no_gateway}
     end
   end
 
@@ -145,31 +141,28 @@ defmodule EdgeAdmin.ProxyServer.TcpTunnel do
          protocol,
          proxy_password
        ) do
-    admin_name = Metadata.get_cluster_owner(cluster_name)
+    case Gateway.lookup(cluster_name) do
+      {:ok, gateway_pid} ->
+        connect_to_agent_proxy(
+          client_socket,
+          gateway_pid,
+          node_dns,
+          agent_proxy_port,
+          target_host,
+          target_port,
+          caller_pid,
+          initial_data,
+          protocol,
+          proxy_password
+        )
 
-    if admin_name do
-      case :syn.lookup(:cluster_scope, {:gateway, admin_name, cluster_name}) do
-        :undefined ->
-          Logger.error("No Gateway found for exit node cluster #{cluster_name}")
-          {:error, :no_gateway}
+      {:error, :no_owner} ->
+        Logger.error("No admin owns cluster #{cluster_name}")
+        {:error, :no_cluster_owner}
 
-        {gateway_pid, _meta} ->
-          connect_to_agent_proxy(
-            client_socket,
-            gateway_pid,
-            node_dns,
-            agent_proxy_port,
-            target_host,
-            target_port,
-            caller_pid,
-            initial_data,
-            protocol,
-            proxy_password
-          )
-      end
-    else
-      Logger.error("No admin owns cluster #{cluster_name}")
-      {:error, :no_cluster_owner}
+      {:error, :gateway_not_found} ->
+        Logger.error("No Gateway found for exit node cluster #{cluster_name}")
+        {:error, :no_gateway}
     end
   end
 

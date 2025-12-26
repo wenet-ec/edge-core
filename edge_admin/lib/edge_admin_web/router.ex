@@ -7,10 +7,7 @@ defmodule EdgeAdminWeb.Router do
   alias OpenApiSpex.Plug.PutApiSpec
 
   pipeline :browser do
-    plug(:accepts, ["html", "json"])
-    plug(:session)
     plug(:fetch_session)
-    plug(:protect_from_forgery)
     plug(:fetch_live_flash)
   end
 
@@ -178,10 +175,5 @@ defmodule EdgeAdminWeb.Router do
       resources("/command_executions", CommandExecutionController, only: [:index, :show])
       delete("/command_executions/:id", CommandExecutionController, :delete)
     end
-  end
-
-  defp session(conn, _opts) do
-    opts = Plug.Session.init(EdgeAdminWeb.Session.config())
-    Plug.Session.call(conn, opts)
   end
 end

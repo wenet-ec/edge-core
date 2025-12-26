@@ -32,8 +32,6 @@ config :edge_admin, EdgeAdminWeb.Endpoint,
     port: get_env("API_PORT", :integer, 44000)
   ],
   secret_key_base: get_env!("SECRET_KEY_BASE"),
-  session_key: get_env!("SESSION_KEY"),
-  session_signing_salt: get_env!("SESSION_SIGNING_SALT"),
   live_view: [
     signing_salt: generate_random_string(16)
   ]

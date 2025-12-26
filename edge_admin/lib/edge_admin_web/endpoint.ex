@@ -6,8 +6,8 @@ defmodule EdgeAdminWeb.Endpoint do
   alias Plug.Conn
 
   socket("/live", Phoenix.LiveView.Socket,
-    websocket: [connect_info: [session: {EdgeAdminWeb.Session, :config, []}]],
-    longpoll: [connect_info: [session: {EdgeAdminWeb.Session, :config, []}]]
+    websocket: [connect_info: [:peer_data, :x_headers]],
+    longpoll: false
   )
 
   plug(EdgeAdminWeb.Plugs.Security)
@@ -72,9 +72,15 @@ defmodule EdgeAdminWeb.Endpoint do
 
   defp metrics_auth_conditional(conn, _opts), do: conn
 
-  # Add the session function
+  # Session configuration for LiveView
   defp session(conn, _opts) do
-    opts = Plug.Session.init(EdgeAdminWeb.Session.config())
+    opts =
+      Plug.Session.init(
+        store: :cookie,
+        key: "_edge_admin_key",
+        signing_salt: "liveview"
+      )
+
     Plug.Session.call(conn, opts)
   end
 

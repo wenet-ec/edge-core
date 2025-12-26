@@ -149,8 +149,8 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
           [:edge_agent, :ssh, :authentication, :total],
           event_name: [:edge_agent, :ssh, :authentication],
           description: "Total SSH authentication attempts",
-          tags: [:result],
-          tag_values: &get_result_tag/1
+          tags: [:username, :auth_method, :result],
+          tag_values: &get_ssh_auth_tags/1
         ),
         distribution(
           [:edge_agent, :ssh, :session, :duration, :milliseconds],
@@ -191,5 +191,9 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
 
   defp get_protocol_tag(%{protocol: protocol}) do
     %{protocol: to_string(protocol)}
+  end
+
+  defp get_ssh_auth_tags(%{username: username, auth_method: auth_method, result: result}) do
+    %{username: to_string(username), auth_method: to_string(auth_method), result: to_string(result)}
   end
 end

@@ -532,7 +532,7 @@
       "targets": [
         {
           "expr": "rate(edge_agent_ssh_authentication_total[$__rate_interval])",
-          "legendFormat": "{{result}}",
+          "legendFormat": "{{username}} - {{auth_method}} - {{result}}",
           "refId": "A"
         }
       ],

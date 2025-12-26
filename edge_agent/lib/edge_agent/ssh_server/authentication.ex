@@ -46,7 +46,7 @@ defmodule EdgeAgent.SshServer.Authentication do
     :telemetry.execute(
       [:edge_agent, :ssh, :authentication],
       %{count: 1, total: 1},
-      %{result: auth_result}
+      %{username: username, auth_method: :password, result: auth_result}
     )
 
     result
@@ -97,7 +97,7 @@ defmodule EdgeAgent.SshServer.Authentication do
     :telemetry.execute(
       [:edge_agent, :ssh, :authentication],
       %{count: 1, total: 1},
-      %{result: auth_result}
+      %{username: username, auth_method: :public_key, result: auth_result}
     )
 
     result

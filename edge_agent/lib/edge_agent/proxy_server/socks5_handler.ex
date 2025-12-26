@@ -49,14 +49,45 @@ defmodule EdgeAgent.ProxyServer.Socks5Handler do
     {:ok, {client_ip, client_port}} = :inet.peername(socket)
     Logger.info("SOCKS5 client connected from #{:inet.ntoa(client_ip)}:#{client_port}")
 
-    case handle_socks5_handshake(socket, transport) do
-      :ok ->
-        :ok
+    start_time = System.monotonic_time(:millisecond)
 
-      {:error, reason} ->
-        Logger.debug("SOCKS5 handler error: #{inspect(reason)}")
-        transport.close(socket)
+    result =
+      case handle_socks5_handshake(socket, transport) do
+        :ok ->
+          :ok
+
+        {:error, reason} ->
+          Logger.debug("SOCKS5 handler error: #{inspect(reason)}")
+          transport.close(socket)
+          {:error, reason}
+      end
+
+    duration = System.monotonic_time(:millisecond) - start_time
+
+    # Emit connection telemetry
+    conn_result =
+      case result do
+        :ok -> :success
+        {:error, :auth_failed} -> :auth_failed
+        {:error, _} -> :failure
+      end
+
+    :telemetry.execute(
+      [:edge_agent, :proxy, :socks5, :connection],
+      %{count: 1, total: 1},
+      %{result: conn_result}
+    )
+
+    # Emit session duration telemetry if connection was successful
+    if conn_result == :success do
+      :telemetry.execute(
+        [:edge_agent, :proxy, :session, :duration],
+        %{duration: duration},
+        %{protocol: :socks5}
+      )
     end
+
+    result
   end
 
   defp handle_socks5_handshake(socket, transport) do

@@ -21,19 +21,35 @@ defmodule EdgeAgent.SshServer.Authentication do
 
     Logger.debug("SSH password auth attempt for user: #{username}")
 
-    case AdminClient.verify_ssh_credentials(username, {:password, password_string}) do
-      {:ok, true} ->
-        Logger.info("SSH password authentication successful for user: #{username}")
-        true
+    result =
+      case AdminClient.verify_ssh_credentials(username, {:password, password_string}) do
+        {:ok, true} ->
+          Logger.info("SSH password authentication successful for user: #{username}")
+          true
 
-      {:ok, false} ->
-        Logger.warning("SSH password authentication failed for user #{username}")
-        false
+        {:ok, false} ->
+          Logger.warning("SSH password authentication failed for user #{username}")
+          false
 
-      {:error, reason} ->
-        Logger.error("SSH password authentication error for user #{username}: #{inspect(reason)}")
-        false
-    end
+        {:error, reason} ->
+          Logger.error("SSH password authentication error for user #{username}: #{inspect(reason)}")
+          false
+      end
+
+    auth_result =
+      if result do
+        :success
+      else
+        :failure
+      end
+
+    :telemetry.execute(
+      [:edge_agent, :ssh, :authentication],
+      %{count: 1, total: 1},
+      %{result: auth_result}
+    )
+
+    result
   end
 
   @doc """
@@ -48,27 +64,43 @@ defmodule EdgeAgent.SshServer.Authentication do
     # Format the key from Erlang SSH format to OpenSSH string format
     public_key_string = format_public_key(key)
 
-    if public_key_string == "" do
-      Logger.warning("SSH public key auth failed for user #{username}: unsupported key format")
-      false
-    else
-      case AdminClient.verify_ssh_credentials(username, {:public_key, public_key_string}) do
-        {:ok, true} ->
-          Logger.info("SSH public key authentication successful for user: #{username}")
-          true
+    result =
+      if public_key_string == "" do
+        Logger.warning("SSH public key auth failed for user #{username}: unsupported key format")
+        false
+      else
+        case AdminClient.verify_ssh_credentials(username, {:public_key, public_key_string}) do
+          {:ok, true} ->
+            Logger.info("SSH public key authentication successful for user: #{username}")
+            true
 
-        {:ok, false} ->
-          Logger.warning("SSH public key authentication failed for user #{username}")
-          false
+          {:ok, false} ->
+            Logger.warning("SSH public key authentication failed for user #{username}")
+            false
 
-        {:error, reason} ->
-          Logger.error(
-            "SSH public key authentication error for user #{username}: #{inspect(reason)}"
-          )
+          {:error, reason} ->
+            Logger.error(
+              "SSH public key authentication error for user #{username}: #{inspect(reason)}"
+            )
 
-          false
+            false
+        end
       end
-    end
+
+    auth_result =
+      if result do
+        :success
+      else
+        :failure
+      end
+
+    :telemetry.execute(
+      [:edge_agent, :ssh, :authentication],
+      %{count: 1, total: 1},
+      %{result: auth_result}
+    )
+
+    result
   end
 
   # Private functions - Key formatting (Erlang SSH format -> OpenSSH string)

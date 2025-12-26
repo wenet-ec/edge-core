@@ -88,6 +88,9 @@ defmodule EdgeAgent.Mixfile do
       # Translations
       {:gettext, "~> 1.0"},
 
+      # Telemetry
+      {:prom_ex, "~> 1.11"},
+
       # Linting
       {:credo, "~> 1.7", only: [:dev, :test], override: true},
       {:credo_envvar, "~> 0.1", only: [:dev, :test], runtime: false},

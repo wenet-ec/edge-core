@@ -28,14 +28,45 @@ defmodule EdgeAgent.ProxyServer.HttpHandler do
     {:ok, {client_ip, client_port}} = :inet.peername(socket)
     Logger.info("HTTP proxy client connected from #{:inet.ntoa(client_ip)}:#{client_port}")
 
-    case handle_http_request(socket, transport) do
-      :ok ->
-        :ok
+    start_time = System.monotonic_time(:millisecond)
 
-      {:error, reason} ->
-        Logger.debug("HTTP proxy handler error: #{inspect(reason)}")
-        transport.close(socket)
+    result =
+      case handle_http_request(socket, transport) do
+        :ok ->
+          :ok
+
+        {:error, reason} ->
+          Logger.debug("HTTP proxy handler error: #{inspect(reason)}")
+          transport.close(socket)
+          {:error, reason}
+      end
+
+    duration = System.monotonic_time(:millisecond) - start_time
+
+    # Emit connection telemetry
+    conn_result =
+      case result do
+        :ok -> :success
+        {:error, :auth_failed} -> :auth_failed
+        {:error, _} -> :failure
+      end
+
+    :telemetry.execute(
+      [:edge_agent, :proxy, :http, :connection],
+      %{count: 1, total: 1},
+      %{result: conn_result}
+    )
+
+    # Emit session duration telemetry if connection was successful
+    if conn_result == :success do
+      :telemetry.execute(
+        [:edge_agent, :proxy, :session, :duration],
+        %{duration: duration},
+        %{protocol: :http}
+      )
     end
+
+    result
   end
 
   defp handle_http_request(socket, transport) do

@@ -15,6 +15,7 @@ defmodule EdgeAgent.Application do
       {DNSCluster, query: Application.get_env(:edge_agent, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: EdgeAgent.PubSub},
       {Oban, Application.fetch_env!(:edge_agent, Oban)},
+      EdgeAgent.PromEx,
       EdgeAgent.SshServer,
       EdgeAgent.MetricsServer,
       EdgeAgent.ProxyServer,

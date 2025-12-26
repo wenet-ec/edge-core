@@ -15,12 +15,20 @@ defmodule EdgeAgent.SshServer.Channel do
 
   @impl true
   def init(_options) do
-    {:ok, %{}}
+    {:ok, %{start_time: System.monotonic_time(:millisecond)}}
   end
 
   @impl true
   def handle_msg({:ssh_channel_up, channel_id, connection_ref}, state) do
     Logger.debug("SSH channel up: #{channel_id}")
+
+    # Emit connection telemetry
+    :telemetry.execute(
+      [:edge_agent, :ssh, :connection],
+      %{count: 1, total: 1},
+      %{result: :success}
+    )
+
     {:ok, Map.merge(state, %{channel_id: channel_id, connection_ref: connection_ref})}
   end
 
@@ -128,7 +136,18 @@ defmodule EdgeAgent.SshServer.Channel do
   end
 
   @impl true
-  def terminate(_reason, _state) do
+  def terminate(_reason, state) do
+    # Emit session duration telemetry
+    if Map.has_key?(state, :start_time) do
+      duration = System.monotonic_time(:millisecond) - state.start_time
+
+      :telemetry.execute(
+        [:edge_agent, :ssh, :session, :duration],
+        %{duration: duration},
+        %{}
+      )
+    end
+
     :ok
   end
 

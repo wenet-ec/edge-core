@@ -49,6 +49,11 @@ defmodule EdgeAgentWeb.Endpoint do
 
   plug(EdgeAgentHealth.Router)
   plug(:halt_if_sent)
+
+  # PromEx metrics with api_token authentication
+  plug(:metrics_auth_conditional)
+  plug(PromEx.Plug, prom_ex_module: EdgeAgent.PromEx, path: "/api/agents/metrics/self/raw")
+
   plug(EdgeAgentWeb.Router)
 
   # Add the session function
@@ -86,6 +91,13 @@ defmodule EdgeAgentWeb.Endpoint do
       conn
     end
   end
+
+  # Apply api_token auth only for the metrics endpoint
+  defp metrics_auth_conditional(%{request_path: "/api/agents/metrics/self/raw"} = conn, _opts) do
+    EdgeAgentWeb.Plugs.ApiTokenAuth.call(conn, [])
+  end
+
+  defp metrics_auth_conditional(conn, _opts), do: conn
 
   # Splitting routers in separate modules has a negative side effect:
   # Phoenix.Router does not check the Plug.Conn state and tries to match the

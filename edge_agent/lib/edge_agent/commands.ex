@@ -75,6 +75,7 @@ defmodule EdgeAgent.Commands do
   def execute_single_command(execution) do
     Logger.info("Executing command: #{execution.id}")
 
+    start_time = System.monotonic_time(:millisecond)
     timeout_ms = execution.timeout || :infinity
 
     result =
@@ -105,6 +106,8 @@ defmodule EdgeAgent.Commands do
         {:error, out, code} -> {out, code}
       end
 
+    duration = System.monotonic_time(:millisecond) - start_time
+
     Logger.info("Command #{execution.id} completed with exit code: #{exit_code}")
 
     {:ok, _updated_execution} =
@@ -114,6 +117,21 @@ defmodule EdgeAgent.Commands do
         exit_code: exit_code,
         completed_at: DateTime.utc_now()
       })
+
+    # Categorize result
+    exec_result =
+      cond do
+        exit_code == 0 -> :success
+        exit_code == 124 -> :timeout
+        exit_code > 0 -> :failure
+        true -> :unknown
+      end
+
+    :telemetry.execute(
+      [:edge_agent, :commands, :execution, :completed],
+      %{duration: duration, exit_code: exit_code, count: 1, total: 1},
+      %{result: exec_result}
+    )
 
     :ok
   end
@@ -129,7 +147,22 @@ defmodule EdgeAgent.Commands do
       :ok
     else
       Logger.info("Reporting #{length(completed_executions)} completed executions")
-      report_executions(completed_executions)
+      batch_size = length(completed_executions)
+      result = report_executions(completed_executions)
+
+      status =
+        case result do
+          :ok -> :success
+          :error -> :failure
+        end
+
+      :telemetry.execute(
+        [:edge_agent, :commands, :report],
+        %{batch_size: batch_size, count: 1, total: 1},
+        %{status: status}
+      )
+
+      result
     end
 
     :ok
@@ -142,15 +175,36 @@ defmodule EdgeAgent.Commands do
     |> case do
       {:ok, _job} ->
         Logger.debug("Enqueued execution job for #{execution.id}")
+
+        :telemetry.execute(
+          [:edge_agent, :commands, :execution, :enqueued],
+          %{count: 1, total: 1},
+          %{status: :success}
+        )
+
         :ok
 
       {:error, %Ecto.Changeset{errors: [unique: _]}} ->
         # Already enqueued - this is fine, Oban's unique constraint prevents duplicates
         Logger.debug("Execution #{execution.id} already enqueued, skipped")
+
+        :telemetry.execute(
+          [:edge_agent, :commands, :execution, :enqueued],
+          %{count: 1, total: 1},
+          %{status: :duplicate}
+        )
+
         :ok
 
       {:error, reason} ->
         Logger.warning("Failed to enqueue execution #{execution.id}: #{inspect(reason)}")
+
+        :telemetry.execute(
+          [:edge_agent, :commands, :execution, :enqueued],
+          %{count: 1, total: 1},
+          %{status: :failure}
+        )
+
         :error
     end
   end

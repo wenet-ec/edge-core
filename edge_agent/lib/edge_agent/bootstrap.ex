@@ -148,15 +148,30 @@ defmodule EdgeAgent.Bootstrap do
     Logger.info("Step 3: Discovering admins...")
 
     # Bootstrap requires at least one admin to be discovered (fail fast)
-    case Discovery.discover_admins(fail_on_empty: true) do
-      {:ok, network_name, admin_urls} ->
-        Logger.info("Network: #{network_name}")
-        Logger.info("Discovered #{length(admin_urls)} admin(s)")
-        {:ok, network_name, admin_urls}
+    result =
+      case Discovery.discover_admins(fail_on_empty: true) do
+        {:ok, network_name, admin_urls} ->
+          Logger.info("Network: #{network_name}")
+          Logger.info("Discovered #{length(admin_urls)} admin(s)")
+          {:ok, network_name, admin_urls}
 
-      {:error, reason} ->
-        {:error, "Admin discovery failed: #{inspect(reason)}"}
-    end
+        {:error, reason} ->
+          {:error, "Admin discovery failed: #{inspect(reason)}"}
+      end
+
+    status =
+      case result do
+        {:ok, _, _} -> :success
+        {:error, _} -> :failure
+      end
+
+    :telemetry.execute(
+      [:edge_agent, :discovery, :admin, :found],
+      %{count: 1, total: 1},
+      %{status: status}
+    )
+
+    result
   end
 
   # =============================================================================
@@ -166,31 +181,49 @@ defmodule EdgeAgent.Bootstrap do
   defp step_4_register_node(node_id, id_type, network_name) do
     Logger.info("Step 4: Registering with admin...")
 
+    start_time = System.monotonic_time(:millisecond)
     payload = build_registration_payload(node_id, id_type, network_name)
 
-    case AdminClient.register_node(payload) do
-      {:ok, node_data} ->
-        # Store API token and proxy password from registration response
-        api_token = node_data["api_token"]
-        proxy_password = node_data["proxy_password"]
+    result =
+      case AdminClient.register_node(payload) do
+        {:ok, node_data} ->
+          # Store API token and proxy password from registration response
+          api_token = node_data["api_token"]
+          proxy_password = node_data["proxy_password"]
 
-        cond do
-          is_nil(api_token) ->
-            {:error, "Registration response missing api_token"}
+          cond do
+            is_nil(api_token) ->
+              {:error, "Registration response missing api_token"}
 
-          is_nil(proxy_password) ->
-            {:error, "Registration response missing proxy_password"}
+            is_nil(proxy_password) ->
+              {:error, "Registration response missing proxy_password"}
 
-          true ->
-            Settings.set_api_token(api_token)
-            Settings.set_proxy_password(proxy_password)
-            Logger.info("Successfully registered with admin")
-            :ok
-        end
+            true ->
+              Settings.set_api_token(api_token)
+              Settings.set_proxy_password(proxy_password)
+              Logger.info("Successfully registered with admin")
+              :ok
+          end
 
-      {:error, reason} ->
-        {:error, "Registration failed: #{inspect(reason)}"}
-    end
+        {:error, reason} ->
+          {:error, "Registration failed: #{inspect(reason)}"}
+      end
+
+    duration = System.monotonic_time(:millisecond) - start_time
+
+    status =
+      case result do
+        :ok -> :success
+        {:error, _} -> :failure
+      end
+
+    :telemetry.execute(
+      [:edge_agent, :bootstrap, :registration],
+      %{duration: duration, count: 1, total: 1},
+      %{status: status}
+    )
+
+    result
   end
 
   # =============================================================================
@@ -200,41 +233,57 @@ defmodule EdgeAgent.Bootstrap do
   defp step_5_get_sent_command_executions(_node_id) do
     Logger.info("Step 5: Syncing commands...")
 
-    case AdminClient.get_sent_command_executions() do
-      {:ok, commands} ->
-        Logger.info("Synced #{length(commands)} command(s)")
+    result =
+      case AdminClient.get_sent_command_executions() do
+        {:ok, commands} ->
+          Logger.info("Synced #{length(commands)} command(s)")
 
-        # Store each command in local database and trigger execution
-        Enum.each(commands, fn command ->
-          attrs = %{
-            id: command["id"],
-            command_id: command["command_id"],
-            node_id: Settings.get_node_id(),
-            command_text: command["command_text"],
-            timeout: command["timeout"],
-            status: "pending"
-          }
+          # Store each command in local database and trigger execution
+          Enum.each(commands, fn command ->
+            attrs = %{
+              id: command["id"],
+              command_id: command["command_id"],
+              node_id: Settings.get_node_id(),
+              command_text: command["command_text"],
+              timeout: command["timeout"],
+              status: "pending"
+            }
 
-          case Commands.create_command_execution_and_enqueue_worker(attrs) do
-            {:ok, _execution} ->
-              Logger.debug("Stored command execution: #{command["id"]}")
+            case Commands.create_command_execution_and_enqueue_worker(attrs) do
+              {:ok, _execution} ->
+                Logger.debug("Stored command execution: #{command["id"]}")
 
-            {:error, %Ecto.Changeset{errors: [id: {"has already been taken", _}]}} ->
-              Logger.debug("Command execution #{command["id"]} already exists, skipping")
+              {:error, %Ecto.Changeset{errors: [id: {"has already been taken", _}]}} ->
+                Logger.debug("Command execution #{command["id"]} already exists, skipping")
 
-            {:error, changeset} ->
-              Logger.warning(
-                "Failed to store command execution #{command["id"]}: #{inspect(changeset.errors)}"
-              )
-          end
-        end)
+              {:error, changeset} ->
+                Logger.warning(
+                  "Failed to store command execution #{command["id"]}: #{inspect(changeset.errors)}"
+                )
+            end
+          end)
 
-        :ok
+          :telemetry.execute(
+            [:edge_agent, :commands, :sync],
+            %{count: length(commands), total: length(commands)},
+            %{status: :success}
+          )
 
-      {:error, reason} ->
-        Logger.warning("Command sync failed (non-fatal): #{inspect(reason)}")
-        :ok
-    end
+          :ok
+
+        {:error, reason} ->
+          Logger.warning("Command sync failed (non-fatal): #{inspect(reason)}")
+
+          :telemetry.execute(
+            [:edge_agent, :commands, :sync],
+            %{count: 0, total: 0},
+            %{status: :failure}
+          )
+
+          :ok
+      end
+
+    result
   end
 
   # =============================================================================

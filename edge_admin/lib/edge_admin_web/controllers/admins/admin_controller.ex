@@ -7,6 +7,8 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:show]
+
   tags(["Admins.Metadata"])
 
   operation(:show,

@@ -9,6 +9,8 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :show, :delete, :cancel]
+
   tags(["Commands.CommandExecution"])
 
   operation(:index,
@@ -188,7 +190,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
         {"Validation failed - execution status not cancellable", "application/json",
          CommonSchemas.ChangesetErrorResponse},
       503 =>
-        {"Agent unreachable", "application/json", CommonSchemas.ServiceUnavailableResponse}
+        {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 

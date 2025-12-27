@@ -9,6 +9,8 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AdminMetricsController do
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:show_self]
+
   tags(["Admins.Metrics"])
 
   operation(:show_self,

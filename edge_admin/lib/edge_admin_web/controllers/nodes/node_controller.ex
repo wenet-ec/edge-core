@@ -9,6 +9,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
+  plug EdgeAdminWeb.Plugs.DegradedMode, :block when action in [:change_cluster, :delete]
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :show]
+
   tags(["Nodes.Node"])
 
   operation(:index,
@@ -123,7 +126,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   operation(:change_cluster,
     summary: "Change a node's cluster",
     description:
-      "Move a node to a different cluster. Performs cluster migration via Netmaker (best-effort, reconciliation worker handles failures).",
+      "Move a node to a different cluster. Performs cluster migration via Netmaker (best-effort, reconciliation worker handles failures).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
     parameters: [
       id: [
         in: :path,
@@ -136,7 +139,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
     responses: %{
       200 => {"Node cluster changed successfully", "application/json", NodeSchemas.NodeSingleResponse},
       404 => {"Node or cluster not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
+      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
+      503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 
@@ -150,7 +154,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   operation(:delete,
     summary: "Delete a node",
     description:
-      "Delete a node from Netmaker and database in a transaction. Cascades to ssh_usernames, ssh_public_keys, and command_executions.",
+      "Delete a node from Netmaker and database in a transaction. Cascades to ssh_usernames, ssh_public_keys, and command_executions.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
     parameters: [
       id: [
         in: :path,
@@ -162,7 +166,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
       204 => {"Node deleted successfully", "", nil},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
       422 =>
-        {"Failed to delete node from Netmaker", "application/json", CommonSchemas.ChangesetErrorResponse}
+        {"Failed to delete node from Netmaker", "application/json", CommonSchemas.ChangesetErrorResponse},
+      503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 

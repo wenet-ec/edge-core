@@ -6,6 +6,8 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AgentMetricsController do
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:show]
+
   @doc """
   Raw agent metrics proxy endpoint.
   Scrapes Prometheus metrics from a node's PromEx endpoint via Gateway and returns raw text format.

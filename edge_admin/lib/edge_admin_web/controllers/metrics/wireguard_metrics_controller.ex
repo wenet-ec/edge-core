@@ -6,6 +6,8 @@ defmodule EdgeAdminWeb.Controllers.Metrics.WireguardMetricsController do
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:show]
+
   @doc """
   Raw WireGuard metrics proxy endpoint.
   Scrapes Prometheus metrics from a node's WireGuard Exporter endpoint via Gateway and returns raw text format.

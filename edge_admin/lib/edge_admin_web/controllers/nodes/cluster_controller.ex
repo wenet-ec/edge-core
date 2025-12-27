@@ -9,6 +9,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
+  plug EdgeAdminWeb.Plugs.DegradedMode, :block when action in [:create, :delete]
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :show]
+
   tags(["Nodes.Cluster"])
 
   operation(:index,
@@ -107,13 +110,14 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
 
   operation(:create,
     summary: "Create a new cluster",
-    description: "Create a new edge cluster with optional IP range",
+    description: "Create a new edge cluster with optional IP range.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
     request_body:
       {"Cluster creation parameters", "application/json", ClusterSchemas.ClusterCreateRequest},
     responses: %{
       201 =>
         {"Cluster created successfully", "application/json", ClusterSchemas.ClusterSingleResponse},
-      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
+      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
+      503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 
@@ -129,7 +133,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
 
   operation(:delete,
     summary: "Delete a cluster",
-    description: "Delete an empty cluster (must have no nodes)",
+    description: "Delete an empty cluster (must have no nodes).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
     parameters: [
       name: [
         in: :path,
@@ -140,7 +144,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     responses: %{
       204 => "Cluster deleted successfully",
       404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Cannot delete cluster with nodes", "application/json", CommonSchemas.ChangesetErrorResponse}
+      422 => {"Cannot delete cluster with nodes", "application/json", CommonSchemas.ChangesetErrorResponse},
+      503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 

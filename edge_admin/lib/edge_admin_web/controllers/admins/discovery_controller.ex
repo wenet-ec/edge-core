@@ -4,6 +4,8 @@ defmodule EdgeAdminWeb.Controllers.Admins.DiscoveryController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index]
+
   def index(conn, _params) do
     admin_name = Application.get_env(:edge_admin, :admin_name)
     render(conn, :index, admin_name: admin_name)

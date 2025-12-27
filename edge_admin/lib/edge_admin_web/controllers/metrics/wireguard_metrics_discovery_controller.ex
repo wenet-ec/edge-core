@@ -6,6 +6,8 @@ defmodule EdgeAdminWeb.Controllers.Metrics.WireguardMetricsDiscoveryController d
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index]
+
   @doc """
   Service discovery endpoint for vmagent HTTP SD (WireGuard metrics).
   Returns all active nodes grouped by cluster in the format expected by vmagent http_sd_configs.

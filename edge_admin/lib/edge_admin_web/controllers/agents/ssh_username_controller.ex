@@ -12,6 +12,8 @@ defmodule EdgeAdminWeb.Controllers.Agents.SshUsernameController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:verify_credentials]
+
   @doc """
   SSH credentials verification endpoint (requires authentication).
 

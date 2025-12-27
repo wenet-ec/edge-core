@@ -10,6 +10,8 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :show, :create, :delete]
+
   tags(["Ssh.SshPublicKey"])
 
   operation(:index,

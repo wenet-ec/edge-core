@@ -7,6 +7,8 @@ defmodule EdgeAdminWeb.Controllers.Admins.EdgeClustersController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index]
+
   tags(["Admins.Metadata"])
 
   operation(:index,

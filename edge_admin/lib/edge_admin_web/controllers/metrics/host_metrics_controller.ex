@@ -6,6 +6,8 @@ defmodule EdgeAdminWeb.Controllers.Metrics.HostMetricsController do
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:show]
+
   @doc """
   Raw host metrics proxy endpoint.
   Scrapes Prometheus metrics from a node's Node Exporter via Gateway and returns raw text format.

@@ -6,6 +6,8 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :update]
+
   @doc """
   Command sync endpoint (requires authentication).
 

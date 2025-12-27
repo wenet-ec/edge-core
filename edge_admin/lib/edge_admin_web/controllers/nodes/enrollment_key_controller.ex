@@ -9,6 +9,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
+  plug EdgeAdminWeb.Plugs.DegradedMode, :block when action in [:create, :create_for_default, :create_for_public]
+
   tags(["Nodes.EnrollmentKey"])
 
   operation(:create,
@@ -24,6 +26,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
 
     **Ephemeral**: Creates a tracked key for automatic cleanup (configurable expiry/uses, tracked in DB).
     Use for temporary troubleshooting, testing, or demos.
+
+    **Note:** This endpoint is unavailable during degraded mode (503).
     """,
     parameters: [
       name: [
@@ -39,7 +43,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
       201 =>
         {"Enrollment key retrieved/created", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
       404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
+      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
+      503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 
@@ -55,7 +60,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   operation(:create_for_default,
     summary: "Get enrollment key for default cluster",
     description:
-      "Convenience endpoint that gets an enrollment key for the default cluster (configured via DEFAULT_CLUSTER_NAME env)",
+      "Convenience endpoint that gets an enrollment key for the default cluster (configured via DEFAULT_CLUSTER_NAME env).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
     request_body:
       {"Enrollment key parameters", "application/json",
        EnrollmentKeySchemas.EnrollmentKeyCreateRequest},
@@ -64,7 +69,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
         {"Enrollment key retrieved/created", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
       403 => {"Default cluster not configured", "application/json", CommonSchemas.ForbiddenResponse},
       404 => {"Default cluster not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
+      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
+      503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 
@@ -98,12 +104,15 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     - DEFAULT_CLUSTER_NAME is configured
 
     Use this for public/demo environments where agents can auto-enroll without pre-configured keys.
+
+    **Note:** This endpoint is unavailable during degraded mode (503).
     """,
     responses: %{
       200 =>
         {"Public enrollment key", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
       403 => {"Public enrollment disabled", "application/json", CommonSchemas.ForbiddenResponse},
-      404 => {"Default cluster not found", "application/json", CommonSchemas.NotFoundResponse}
+      404 => {"Default cluster not found", "application/json", CommonSchemas.NotFoundResponse},
+      503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 

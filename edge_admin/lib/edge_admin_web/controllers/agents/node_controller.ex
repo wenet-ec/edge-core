@@ -6,6 +6,8 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
+  plug EdgeAdminWeb.Plugs.DegradedMode, :block when action in [:create]
+
   @doc """
   Node registration endpoint (no authentication required).
 

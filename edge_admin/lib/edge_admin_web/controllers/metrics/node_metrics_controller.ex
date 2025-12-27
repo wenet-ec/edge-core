@@ -10,6 +10,8 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:show_unified, :show_host, :show_agent]
+
   tags(["Nodes.Metrics"])
 
   operation(:show_unified,

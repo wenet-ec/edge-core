@@ -22,7 +22,15 @@ defmodule EdgeAgent.Mixfile do
   end
 
   def cli do
-    [preferred_envs: [coveralls: :test, "coveralls.detail": :test, "coveralls.post": :test, "coveralls.html": :test]]
+    [
+      preferred_envs: [
+        precommit: :test,
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
+      ]
+    ]
   end
 
   def application do

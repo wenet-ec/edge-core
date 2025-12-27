@@ -17,6 +17,7 @@ defmodule EdgeAdmin.Mixfile do
       deps: deps(),
       dialyzer: dialyzer(),
       releases: releases(),
+      compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader]
     ]
   end
@@ -29,7 +30,15 @@ defmodule EdgeAdmin.Mixfile do
   end
 
   def cli do
-    [preferred_envs: [coveralls: :test, "coveralls.detail": :test, "coveralls.post": :test, "coveralls.html": :test]]
+    [
+      preferred_envs: [
+        precommit: :test,
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
+      ]
+    ]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]

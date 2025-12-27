@@ -67,8 +67,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
   )
 
   def index(conn, params) do
-    {:ok, {aliases, meta}} = Nodes.list_aliases(params)
-    render(conn, :index, aliases: aliases, meta: meta)
+    with {:ok, {aliases, meta}} <- Nodes.list_aliases(params) do
+      render(conn, :index, aliases: aliases, meta: meta)
+    end
   end
 
   operation(:show,

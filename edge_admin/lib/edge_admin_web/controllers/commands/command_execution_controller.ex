@@ -102,8 +102,9 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
   )
 
   def index(conn, params) do
-    {:ok, {command_executions, meta}} = Commands.list_command_executions(params)
-    render(conn, :index, command_executions: command_executions, meta: meta)
+    with {:ok, {command_executions, meta}} <- Commands.list_command_executions(params) do
+      render(conn, :index, command_executions: command_executions, meta: meta)
+    end
   end
 
   operation(:show,

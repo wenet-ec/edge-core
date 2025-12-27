@@ -19,9 +19,6 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminClusterController do
 
   def show(conn, _params) do
     admin_cluster = EdgeAdmin.Admins.Metadata.get_admin_cluster()
-
-    conn
-    |> put_status(:ok)
-    |> json(admin_cluster)
+    render(conn, :show, admin_cluster: admin_cluster)
   end
 end

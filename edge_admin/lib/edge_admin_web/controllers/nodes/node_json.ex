@@ -27,14 +27,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSON do
     %{data: data(node)}
   end
 
-  defp data(%Node{cluster: cluster} = node) do
-    # Check if aliases are preloaded
-    aliases =
-      case node.aliases do
-        %Ecto.Association.NotLoaded{} -> []
-        loaded_aliases -> Enum.map(loaded_aliases, &alias_data/1)
-      end
-
+  defp data(%Node{cluster: cluster, aliases: aliases} = node) do
     %{
       id: node.id,
       node_name: Node.node_name(node),
@@ -54,7 +47,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSON do
       version: node.version,
       self_update_enabled: node.self_update_enabled,
       last_seen_at: node.last_seen_at,
-      aliases: aliases,
+      aliases: Enum.map(aliases, &alias_data/1),
       inserted_at: node.inserted_at,
       updated_at: node.updated_at
     }

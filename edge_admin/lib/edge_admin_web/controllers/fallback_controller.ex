@@ -7,7 +7,9 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
   """
   use EdgeAdminWeb, :controller
 
-  # Handle validation errors from Ecto changesets
+  require Logger
+
+  # 1. Handle validation errors from Ecto changesets (422)
   def call(conn, {:error, %Ecto.Changeset{} = changeset}) do
     conn
     |> put_status(:unprocessable_entity)
@@ -15,7 +17,7 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> render(:error, changeset: changeset)
   end
 
-  # Handle generic not found errors
+  # 2. Handle not found errors (404)
   def call(conn, {:error, :not_found}) do
     conn
     |> put_status(:not_found)
@@ -23,31 +25,62 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> render(:"404")
   end
 
-  # Handle forbidden errors (e.g., agent trying to update execution that doesn't belong to them)
+  # 3. Handle forbidden errors (403)
   def call(conn, {:error, :forbidden}) do
     conn
     |> put_status(:forbidden)
-    |> json(%{error: "Forbidden"})
+    |> put_view(json: EdgeAdminWeb.Controllers.ErrorJSON)
+    |> render(:"403")
   end
 
-  # Handle service unavailable errors (metrics, gateway issues, etc.)
+  # 4. Handle unauthorized errors (401) - rare, usually handled in plugs
+  def call(conn, {:error, :unauthorized}) do
+    conn
+    |> put_status(:unauthorized)
+    |> put_view(json: EdgeAdminWeb.Controllers.ErrorJSON)
+    |> render(:"401")
+  end
+
+  # 5. Handle conflict errors (409) - duplicate resources, unique constraints
+  def call(conn, {:error, :conflict}) do
+    conn
+    |> put_status(:conflict)
+    |> put_view(json: EdgeAdminWeb.Controllers.ErrorJSON)
+    |> render(:"409")
+  end
+
+  # 6. Handle service unavailable errors (503) - downstream services (VPN, metrics, etc.)
   def call(conn, {:error, :service_unavailable}) do
     conn
     |> put_status(:service_unavailable)
-    |> json(%{error: "Service unavailable"})
+    |> put_view(json: EdgeAdminWeb.Controllers.ErrorJSON)
+    |> render(:"503")
   end
 
-  # Handle business logic errors with descriptive messages
+  # 7. Handle bad request errors (400) - malformed input
+  def call(conn, {:error, :bad_request}) do
+    conn
+    |> put_status(:bad_request)
+    |> put_view(json: EdgeAdminWeb.Controllers.ErrorJSON)
+    |> render(:"400")
+  end
+
+  # 8. Handle business logic errors with descriptive messages (422)
+  # Keep as 422 since these are often validation-like errors from form inputs
   def call(conn, {:error, reason}) when is_binary(reason) do
     conn
     |> put_status(:unprocessable_entity)
-    |> json(%{error: reason})
+    |> json(%{errors: %{detail: reason}})
   end
 
-  # Fallback for unexpected error formats
+  # 9. CATCH-ALL: Unknown errors → 500 Internal Server Error
+  # These indicate bugs or unhandled edge cases - log them for investigation
   def call(conn, {:error, reason}) do
+    Logger.error("Unhandled error in controller: #{inspect(reason)}")
+
     conn
-    |> put_status(:unprocessable_entity)
-    |> json(%{error: inspect(reason)})
+    |> put_status(:internal_server_error)
+    |> put_view(json: EdgeAdminWeb.Controllers.ErrorJSON)
+    |> render(:"500")
   end
 end

@@ -93,8 +93,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   )
 
   def index(conn, params) do
-    {:ok, {nodes, meta}} = Nodes.list_nodes(params)
-    render(conn, :index, nodes: nodes, meta: meta)
+    with {:ok, {nodes, meta}} <- Nodes.list_nodes(params) do
+      render(conn, :index, nodes: nodes, meta: meta)
+    end
   end
 
   operation(:show,

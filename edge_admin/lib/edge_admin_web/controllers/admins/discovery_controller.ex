@@ -6,11 +6,6 @@ defmodule EdgeAdminWeb.Controllers.Admins.DiscoveryController do
 
   def index(conn, _params) do
     admin_name = Application.get_env(:edge_admin, :admin_name)
-
-    conn
-    |> put_status(:ok)
-    |> json(%{
-      name: admin_name
-    })
+    render(conn, :index, admin_name: admin_name)
   end
 end

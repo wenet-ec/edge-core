@@ -76,8 +76,9 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
   )
 
   def index(conn, params) do
-    {:ok, {ssh_usernames, meta}} = Ssh.list_ssh_usernames(params)
-    render(conn, :index, ssh_usernames: ssh_usernames, meta: meta)
+    with {:ok, {ssh_usernames, meta}} <- Ssh.list_ssh_usernames(params) do
+      render(conn, :index, ssh_usernames: ssh_usernames, meta: meta)
+    end
   end
 
   operation(:create,

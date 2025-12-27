@@ -19,9 +19,6 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminController do
 
   def show(conn, _params) do
     admin = EdgeAdmin.Admins.Metadata.get_admin()
-
-    conn
-    |> put_status(:ok)
-    |> json(admin)
+    render(conn, :show, admin: admin)
   end
 end

@@ -455,14 +455,19 @@ defmodule EdgeAdmin.Commands do
       |> Map.put("page_size", "1000")
       |> Map.put("page", to_string(page))
 
-    {:ok, {clusters, meta}} = Nodes.list_clusters(params)
+    case Nodes.list_clusters(params) do
+      {:ok, {clusters, meta}} ->
+        all_names = accumulated_names ++ Enum.map(clusters, & &1.name)
 
-    all_names = accumulated_names ++ Enum.map(clusters, & &1.name)
+        if meta.has_next_page? do
+          get_all_filtered_cluster_names(cluster_filters, page + 1, all_names)
+        else
+          all_names
+        end
 
-    if meta.has_next_page? do
-      get_all_filtered_cluster_names(cluster_filters, page + 1, all_names)
-    else
-      all_names
+      {:error, _meta} ->
+        Logger.error("Failed to list clusters with filters: #{inspect(cluster_filters)}")
+        accumulated_names
     end
   end
 
@@ -534,20 +539,25 @@ defmodule EdgeAdmin.Commands do
       |> Map.put("page_size", "1000")
       |> Map.put("page", to_string(page))
 
-    {:ok, {nodes, meta}} = Nodes.list_nodes(params)
+    case Nodes.list_nodes(params) do
+      {:ok, {nodes, meta}} ->
+        # Filter nodes by cluster names
+        filtered_nodes =
+          Enum.filter(nodes, fn node ->
+            MapSet.member?(cluster_name_set, node.cluster.name)
+          end)
 
-    # Filter nodes by cluster names
-    filtered_nodes =
-      Enum.filter(nodes, fn node ->
-        MapSet.member?(cluster_name_set, node.cluster.name)
-      end)
+        all_nodes = accumulated_nodes ++ filtered_nodes
 
-    all_nodes = accumulated_nodes ++ filtered_nodes
+        if meta.has_next_page? do
+          get_nodes_from_cluster_list(cluster_names, node_filters, page + 1, all_nodes)
+        else
+          all_nodes
+        end
 
-    if meta.has_next_page? do
-      get_nodes_from_cluster_list(cluster_names, node_filters, page + 1, all_nodes)
-    else
-      all_nodes
+      {:error, _meta} ->
+        Logger.error("Failed to list nodes with filters: #{inspect(node_filters)}")
+        accumulated_nodes
     end
   end
 
@@ -574,26 +584,31 @@ defmodule EdgeAdmin.Commands do
       |> Map.put("page_size", "100")
       |> Map.put("page", to_string(page))
 
-    {:ok, {nodes, meta}} = Nodes.list_nodes(params)
+    case Nodes.list_nodes(params) do
+      {:ok, {nodes, meta}} ->
+        # Filter by cluster names if cluster_filters were provided
+        filtered_nodes =
+          if cluster_names do
+            cluster_name_set = MapSet.new(cluster_names)
 
-    # Filter by cluster names if cluster_filters were provided
-    filtered_nodes =
-      if cluster_names do
-        cluster_name_set = MapSet.new(cluster_names)
+            Enum.filter(nodes, fn node ->
+              MapSet.member?(cluster_name_set, node.cluster.name)
+            end)
+          else
+            nodes
+          end
 
-        Enum.filter(nodes, fn node ->
-          MapSet.member?(cluster_name_set, node.cluster.name)
-        end)
-      else
-        nodes
-      end
+        all_nodes = accumulated_nodes ++ filtered_nodes
 
-    all_nodes = accumulated_nodes ++ filtered_nodes
+        if meta.has_next_page? do
+          get_all_filtered_nodes(node_filters, cluster_filters, page + 1, all_nodes, cluster_names)
+        else
+          all_nodes
+        end
 
-    if meta.has_next_page? do
-      get_all_filtered_nodes(node_filters, cluster_filters, page + 1, all_nodes, cluster_names)
-    else
-      all_nodes
+      {:error, _meta} ->
+        Logger.error("Failed to list nodes with filters: #{inspect(node_filters)}")
+        accumulated_nodes
     end
   end
 

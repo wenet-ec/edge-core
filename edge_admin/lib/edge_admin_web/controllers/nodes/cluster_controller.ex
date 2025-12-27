@@ -78,8 +78,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
   )
 
   def index(conn, params) do
-    {:ok, {clusters, meta}} = Nodes.list_clusters(params)
-    render(conn, :index, clusters: clusters, meta: meta)
+    with {:ok, {clusters, meta}} <- Nodes.list_clusters(params) do
+      render(conn, :index, clusters: clusters, meta: meta)
+    end
   end
 
   operation(:show,

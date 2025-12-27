@@ -32,6 +32,6 @@ defmodule EdgeAdminWeb.Controllers.Metrics.HostMetricsDiscoveryController do
         }
       end)
 
-    json(conn, target_groups)
+    render(conn, :index, target_groups: target_groups)
   end
 end

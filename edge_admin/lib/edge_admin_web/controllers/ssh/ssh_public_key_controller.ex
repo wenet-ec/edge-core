@@ -76,8 +76,9 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
   )
 
   def index(conn, params) do
-    {:ok, {ssh_public_keys, meta}} = Ssh.list_ssh_public_keys(params)
-    render(conn, :index, ssh_public_keys: ssh_public_keys, meta: meta)
+    with {:ok, {ssh_public_keys, meta}} <- Ssh.list_ssh_public_keys(params) do
+      render(conn, :index, ssh_public_keys: ssh_public_keys, meta: meta)
+    end
   end
 
   operation(:create,

@@ -17,9 +17,9 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
     node_id = conn.assigns.current_node.id
 
     # Query pending commands for this node using context function
-    {:ok, {command_executions, _meta}} = Commands.list_sent_command_executions_for_node(node_id)
-
-    render(conn, :index, command_executions: command_executions)
+    with {:ok, {command_executions, _meta}} <- Commands.list_sent_command_executions_for_node(node_id) do
+      render(conn, :index, command_executions: command_executions)
+    end
   end
 
   @doc """

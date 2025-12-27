@@ -66,8 +66,9 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
   )
 
   def index(conn, params) do
-    {:ok, {commands, meta}} = Commands.list_commands(params)
-    render(conn, :index, commands: commands, meta: meta)
+    with {:ok, {commands, meta}} <- Commands.list_commands(params) do
+      render(conn, :index, commands: commands, meta: meta)
+    end
   end
 
   operation(:create,

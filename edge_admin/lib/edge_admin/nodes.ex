@@ -258,8 +258,8 @@ defmodule EdgeAdmin.Nodes do
                   {:error, changeset}
               end
 
-            {:error, reason} ->
-              {:error, reason}
+            {:error, _reason} ->
+              {:error, :service_unavailable}
           end
 
         {:error, changeset} ->
@@ -315,8 +315,8 @@ defmodule EdgeAdmin.Nodes do
               {:error, changeset}
           end
 
-        {:error, reason} ->
-          {:error, reason}
+        {:error, _reason} ->
+          {:error, :service_unavailable}
       end
     end
   end
@@ -390,7 +390,7 @@ defmodule EdgeAdmin.Nodes do
            |> Ecto.Changeset.change(cluster_id: new_cluster.id)
            |> Repo.update() do
         {:ok, updated_node} ->
-          updated_node = Repo.preload(updated_node, :cluster, force: true)
+          updated_node = Repo.preload(updated_node, [:cluster, aliases: :cluster], force: true)
 
           # 3. Emit PubSub event for metadata recomputation
           broadcast_metadata_event({:node_updated, node.id, old_cluster_id, new_cluster.id})
@@ -470,9 +470,9 @@ defmodule EdgeAdmin.Nodes do
             {:error, changeset}
         end
 
-      {:error, reason} ->
-        Logger.error("Failed to delete host from Netmaker: #{inspect(reason)}")
-        {:error, reason}
+      {:error, _reason} ->
+        Logger.error("Failed to delete host from Netmaker")
+        {:error, :service_unavailable}
     end
   end
 
@@ -870,8 +870,8 @@ defmodule EdgeAdmin.Nodes do
             {:ok, token} ->
               {:ok, %{token: token, key_type: "default"}}
 
-            {:error, reason} ->
-              {:error, reason}
+            {:error, _reason} ->
+              {:error, :service_unavailable}
           end
 
         "custom" ->
@@ -889,8 +889,8 @@ defmodule EdgeAdmin.Nodes do
             {:ok, netmaker_key} ->
               {:ok, %{token: netmaker_key["token"], key_type: "custom"}}
 
-            {:error, reason} ->
-              {:error, reason}
+            {:error, _reason} ->
+              {:error, :service_unavailable}
           end
 
         "ephemeral" ->
@@ -927,8 +927,8 @@ defmodule EdgeAdmin.Nodes do
                     Repo.rollback(changeset)
                 end
 
-              {:error, reason} ->
-                Repo.rollback(reason)
+              {:error, _reason} ->
+                Repo.rollback(:service_unavailable)
             end
           end)
       end
@@ -1503,7 +1503,8 @@ defmodule EdgeAdmin.Nodes do
 
                 case netmaker_node do
                   nil ->
-                    Repo.rollback(:node_not_found_in_netmaker)
+                    Logger.error("Node #{node.netmaker_host_id} not found in Netmaker")
+                    Repo.rollback(:service_unavailable)
 
                   %{"address" => address} when is_binary(address) and address != "" ->
                     # 6. Create DNS entry in Netmaker
@@ -1522,18 +1523,19 @@ defmodule EdgeAdmin.Nodes do
 
                         alias_record
 
-                      {:error, reason} ->
-                        Logger.error("Failed to create DNS entry: #{inspect(reason)}")
-                        Repo.rollback(reason)
+                      {:error, _reason} ->
+                        Logger.error("Failed to create DNS entry in Netmaker")
+                        Repo.rollback(:service_unavailable)
                     end
 
                   _ ->
-                    Repo.rollback(:node_has_no_ip_address)
+                    Logger.error("Node #{node.netmaker_host_id} has no IP address in Netmaker")
+                    Repo.rollback(:service_unavailable)
                 end
 
-              {:error, reason} ->
-                Logger.error("Failed to list Netmaker nodes: #{inspect(reason)}")
-                Repo.rollback(reason)
+              {:error, _reason} ->
+                Logger.error("Failed to list Netmaker nodes")
+                Repo.rollback(:service_unavailable)
             end
 
           {:error, changeset} ->
@@ -1559,7 +1561,7 @@ defmodule EdgeAdmin.Nodes do
           # 3. Delete from DB
           Repo.delete!(alias_record)
 
-        {:error, {:http_error, 500, body}} = error ->
+        {:error, {:http_error, 500, body}} ->
           # Netmaker returns 500 for "not found" - treat as success for idempotency
           if Vpn.netmaker_not_found_error?(body) do
             Logger.info(
@@ -1568,13 +1570,13 @@ defmodule EdgeAdmin.Nodes do
 
             Repo.delete!(alias_record)
           else
-            Logger.error("Failed to delete DNS entry: #{inspect(error)}")
-            Repo.rollback(error)
+            Logger.error("Failed to delete DNS entry from Netmaker")
+            Repo.rollback(:service_unavailable)
           end
 
-        {:error, reason} ->
-          Logger.error("Failed to delete DNS entry: #{inspect(reason)}")
-          Repo.rollback(reason)
+        {:error, _reason} ->
+          Logger.error("Failed to delete DNS entry from Netmaker")
+          Repo.rollback(:service_unavailable)
       end
     end)
   end

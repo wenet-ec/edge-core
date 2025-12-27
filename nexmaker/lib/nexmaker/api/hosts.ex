@@ -155,10 +155,15 @@ defmodule Nexmaker.Api.Hosts do
   @doc """
   Removes a host from a network (deletes the node).
 
+  Uses force delete by default to avoid PendingDelete limbo state.
+
   ## Parameters
     - host_id: String - Host UUID
     - network_name: String - Network name to leave
-    - opts: Keyword - API options (base_url, master_key)
+    - opts: Keyword - API options (base_url, master_key, force)
+
+  ## Options
+    - `:force` - Boolean, when true performs immediate hard delete without PendingDelete state (default: true)
 
   ## Returns
     - `{:ok, response}` - Node deleted
@@ -167,10 +172,15 @@ defmodule Nexmaker.Api.Hosts do
   ## Examples
 
       {:ok, _} = Nexmaker.Api.Hosts.remove_from_network(host_id, "old-cluster")
+      {:ok, _} = Nexmaker.Api.Hosts.remove_from_network(host_id, "old-cluster", force: false)
   """
   @spec remove_from_network(String.t(), String.t(), keyword()) :: {:ok, any()} | {:error, any()}
   def remove_from_network(host_id, network_name, opts \\ []) do
-    Api.request(:delete, "/api/hosts/#{host_id}/networks/#{network_name}", opts)
+    {force, api_opts} = Keyword.pop(opts, :force, true)
+
+    query_params = if force, do: "?force=true", else: ""
+
+    Api.request(:delete, "/api/hosts/#{host_id}/networks/#{network_name}#{query_params}", api_opts)
   end
 
   @doc """

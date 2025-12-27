@@ -117,10 +117,15 @@ defmodule Nexmaker.Api.Nodes do
   @doc """
   Deletes a node from a network.
 
+  Uses force delete by default to avoid PendingDelete limbo state.
+
   ## Parameters
     - network_name: String - Network name
     - node_id: String - Node ID
-    - opts: Keyword - API options (base_url, master_key)
+    - opts: Keyword - API options (base_url, master_key, force)
+
+  ## Options
+    - `:force` - Boolean, when true performs immediate hard delete without PendingDelete state (default: true)
 
   ## Returns
     - `{:ok, response}` - Node deleted
@@ -129,10 +134,15 @@ defmodule Nexmaker.Api.Nodes do
   ## Examples
 
       {:ok, _} = Nexmaker.Api.Nodes.delete("old-cluster", node_id)
+      {:ok, _} = Nexmaker.Api.Nodes.delete("old-cluster", node_id, force: false)
   """
   @spec delete(String.t(), String.t(), keyword()) :: {:ok, any()} | {:error, any()}
   def delete(network_name, node_id, opts \\ []) do
-    Api.request(:delete, "/api/nodes/#{network_name}/#{node_id}", opts)
+    {force, api_opts} = Keyword.pop(opts, :force, true)
+
+    query_params = if force, do: "?force=true", else: ""
+
+    Api.request(:delete, "/api/nodes/#{network_name}/#{node_id}#{query_params}", api_opts)
   end
 
   @doc """

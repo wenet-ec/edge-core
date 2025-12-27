@@ -95,17 +95,146 @@ defmodule EdgeAgent.Vpn do
 
   defp get_public_enrollment_key(url) do
     case Req.post(url) do
-      {:ok, %{status: status, body: %{"data" => %{"token" => token}}}} when status in [200, 201] ->
-        Logger.info("Successfully fetched public enrollment key")
-        {:ok, token}
+      {:ok, %{status: status, body: body}} when status in [200, 201] ->
+        # Try to extract token from response body using multiple patterns
+        case extract_enrollment_token(body) do
+          {:ok, token} ->
+            Logger.info("Successfully fetched public enrollment key")
+            {:ok, token}
+
+          {:error, reason} ->
+            Logger.error(
+              "Failed to extract enrollment token from response body: #{reason}. Body: #{inspect(body)}"
+            )
+
+            {:error, "Could not extract enrollment token from response: #{reason}"}
+        end
 
       {:ok, %{status: status, body: body}} ->
-        Logger.error("Failed to fetch public enrollment key: HTTP #{status}, body: #{inspect(body)}")
+        Logger.error(
+          "Failed to fetch public enrollment key: HTTP #{status}, body: #{inspect(body)}"
+        )
+
         {:error, "Public enrollment key request failed: HTTP #{status}"}
 
       {:error, reason} ->
         Logger.error("Failed to fetch public enrollment key: #{inspect(reason)}")
         {:error, "Failed to fetch public enrollment key: #{inspect(reason)}"}
+    end
+  end
+
+  @doc """
+  Extracts enrollment token from API response body.
+
+  Supports multiple patterns commonly used in popular frameworks:
+  1. Custom path from config: PUBLIC_ENROLLMENT_KEY_PATH (e.g., "data.attributes.token")
+  2. Phoenix/Rails/Laravel: {"data": {"token": "..."}}
+  3. Django/Express/Spring/ASP.NET: {"token": "..."}
+  4. Nested with key_type: {"data": {"key_type": "...", "token": "..."}}
+  5. Alternative key names: {"enrollment_key": "..."}, {"enrollment_token": "..."}
+  6. Deep nesting: {"result": {"data": {"token": "..."}}}
+
+  Returns:
+  - `{:ok, token}` - Successfully extracted token
+  - `{:error, reason}` - Could not find token in response
+  """
+  def extract_enrollment_token(body) when is_map(body) do
+    # Try custom path from config first (highest priority)
+    custom_path = Application.get_env(:edge_agent, :public_enrollment_key_path)
+
+    cond do
+      custom_path != nil and custom_path != "" ->
+        extract_by_path(body, custom_path)
+
+      true ->
+        # Try common patterns in order of popularity
+        try_extraction_patterns(body)
+    end
+  end
+
+  def extract_enrollment_token(body) when is_binary(body) do
+    # If body is a plain string, it might be the token itself
+    if String.length(body) > 10 and not String.contains?(body, ["{", "<"]) do
+      Logger.debug("Response body is a plain string, treating as token")
+      {:ok, String.trim(body)}
+    else
+      {:error, "Response body is a string but doesn't look like a token"}
+    end
+  end
+
+  def extract_enrollment_token(_body) do
+    {:error, "Response body is not a map or string"}
+  end
+
+  # Try extraction using a custom path (e.g., "data.attributes.token")
+  defp extract_by_path(body, path) when is_binary(path) do
+    keys = String.split(path, ".")
+
+    case get_in_path(body, keys) do
+      nil ->
+        {:error, "Custom path '#{path}' not found in response"}
+
+      token when is_binary(token) ->
+        Logger.debug("Found token using custom path: #{path}")
+        {:ok, token}
+
+      _other ->
+        {:error, "Custom path '#{path}' does not point to a string value"}
+    end
+  end
+
+  # Navigate nested map using list of string keys
+  defp get_in_path(map, []), do: map
+
+  defp get_in_path(map, [key | rest]) when is_map(map) do
+    case Map.get(map, key) do
+      nil -> nil
+      value -> get_in_path(value, rest)
+    end
+  end
+
+  defp get_in_path(_non_map, _keys), do: nil
+
+  # Try multiple common patterns
+  defp try_extraction_patterns(body) do
+    patterns = [
+      # Pattern 1: {"data": {"token": "..."}} - Phoenix, Rails, Laravel
+      fn -> get_in(body, ["data", "token"]) end,
+      # Pattern 2: {"token": "..."} - Django, Express, NestJS, Spring, ASP.NET
+      fn -> Map.get(body, "token") end,
+      # Pattern 3: {"enrollment_token": "..."}
+      fn -> Map.get(body, "enrollment_token") end,
+      # Pattern 4: {"enrollment_key": "..."}
+      fn -> Map.get(body, "enrollment_key") end,
+      # Pattern 5: {"key": "..."}
+      fn -> Map.get(body, "key") end,
+      # Pattern 6: {"result": {"token": "..."}}
+      fn -> get_in(body, ["result", "token"]) end,
+      # Pattern 7: {"result": {"data": {"token": "..."}}}
+      fn -> get_in(body, ["result", "data", "token"]) end,
+      # Pattern 8: {"data": {"enrollment_key": "..."}}
+      fn -> get_in(body, ["data", "enrollment_key"]) end,
+      # Pattern 9: {"response": {"token": "..."}}
+      fn -> get_in(body, ["response", "token"]) end,
+      # Pattern 10: {"payload": {"token": "..."}}
+      fn -> get_in(body, ["payload", "token"]) end
+    ]
+
+    try_patterns(patterns, body)
+  end
+
+  defp try_patterns([], _body) do
+    {:error, "No matching pattern found for enrollment token"}
+  end
+
+  defp try_patterns([pattern_fn | rest], body) do
+    case pattern_fn.() do
+      token when is_binary(token) and token != "" ->
+        Logger.debug("Found token using pattern matching")
+        {:ok, token}
+
+      _other ->
+        try_patterns(rest, body)
     end
   end
 

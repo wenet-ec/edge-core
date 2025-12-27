@@ -98,8 +98,8 @@ defmodule EdgeAdmin.Release do
         Logger.info("Successfully created Netmaker superadmin: #{netmaker_superadmin_username()}")
         :ok
 
-      {:error, {:http_error, status, body}} ->
-        Logger.error("Failed to create superadmin (HTTP #{status}): #{body}")
+      {:error, :service_unavailable} ->
+        Logger.error("Failed to create superadmin: Netmaker service unavailable")
         System.halt(1)
 
       {:error, reason} ->

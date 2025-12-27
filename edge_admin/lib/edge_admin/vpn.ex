@@ -372,37 +372,74 @@ defmodule EdgeAdmin.Vpn do
 
   def netmaker_not_found_error?(_), do: false
 
+  # ===========================================================================
+  # Error Normalization
+  # ===========================================================================
+
+  @doc false
+  # Normalizes Netmaker API errors to standard format for context layer.
+  #
+  # Converts all Nexmaker errors to either:
+  # - `{:error, :not_found}` - Resource not found (404 or "no result found" messages)
+  # - `{:error, :service_unavailable}` - Netmaker unreachable or returned error
+  #
+  # This allows contexts to use clean `with` pipelines without explicit error handling.
+  defp normalize_netmaker_error({:ok, result}), do: {:ok, result}
+
+  defp normalize_netmaker_error({:error, :not_found}), do: {:error, :not_found}
+
+  defp normalize_netmaker_error({:error, {:http_error, 500, body}}) do
+    if netmaker_not_found_error?(body) do
+      {:error, :not_found}
+    else
+      {:error, :service_unavailable}
+    end
+  end
+
+  defp normalize_netmaker_error({:error, _reason}), do: {:error, :service_unavailable}
+
+  # ===========================================================================
+  # Netmaker API Wrappers
+  # ===========================================================================
+
   @doc """
   Creates a Netmaker network.
+
+  Returns `{:ok, network}` or `{:error, :service_unavailable}`.
   """
   def create_network(network_name, opts \\ %{}) do
-    case validate_network_name(network_name) do
-      :ok ->
-        Nexmaker.Api.Networks.create(network_name, opts)
-
-      {:error, reason} ->
-        {:error, reason}
+    with :ok <- validate_network_name(network_name),
+         result <- Nexmaker.Api.Networks.create(network_name, opts) do
+      normalize_netmaker_error(result)
     end
   end
 
   @doc """
   Deletes a Netmaker network.
+
+  Returns `{:ok, response}` or `{:error, :service_unavailable}`.
   """
   def delete_network(network_name) do
-    Nexmaker.Api.Networks.delete(network_name)
+    network_name
+    |> Nexmaker.Api.Networks.delete()
+    |> normalize_netmaker_error()
   end
 
   @doc """
   Gets a Netmaker network.
+
+  Returns `{:ok, network}`, `{:error, :not_found}`, or `{:error, :service_unavailable}`.
   """
   def get_network(network_name) do
-    Nexmaker.Api.Networks.get(network_name)
+    network_name
+    |> Nexmaker.Api.Networks.get()
+    |> normalize_netmaker_error()
   end
 
   @doc """
   Ensures a network exists, creating it if necessary.
 
-  Returns :ok on success or {:error, reason} on failure.
+  Returns `:ok`, `{:error, :service_unavailable}`, or `{:error, reason}` for validation errors.
   """
   def ensure_network_exists(network_name, create_opts \\ %{}) do
     case get_network(network_name) do
@@ -412,37 +449,32 @@ defmodule EdgeAdmin.Vpn do
       {:error, :not_found} ->
         case create_network(network_name, create_opts) do
           {:ok, _} -> :ok
-          {:error, reason} -> {:error, reason}
+          error -> error
         end
 
-      # Netmaker returns 500 with "no result found" for non-existent networks
-      {:error, {:http_error, 500, body}} ->
-        if netmaker_not_found_error?(body) do
-          case create_network(network_name, create_opts) do
-            {:ok, _} -> :ok
-            {:error, reason} -> {:error, reason}
-          end
-        else
-          {:error, {:http_error, 500, body}}
-        end
-
-      {:error, reason} ->
-        {:error, reason}
+      error ->
+        error
     end
   end
 
   @doc """
   Gets a node from a Netmaker network.
+
+  Returns `{:ok, node}`, `{:error, :not_found}`, or `{:error, :service_unavailable}`.
   """
   def get_node(network_name, node_id) do
     Nexmaker.Api.Nodes.get(network_name, node_id)
+    |> normalize_netmaker_error()
   end
 
   @doc """
   Lists all nodes in a Netmaker network.
+
+  Returns `{:ok, nodes}` or `{:error, :service_unavailable}`.
   """
   def list_nodes(network_name) do
     Nexmaker.Api.Nodes.list(network_name)
+    |> normalize_netmaker_error()
   end
 
   @doc """
@@ -450,9 +482,11 @@ defmodule EdgeAdmin.Vpn do
 
   Queries all nodes from Netmaker and filters by the given tag.
   Each node has a `tags` field which is a list of tag strings.
+
+  Returns `{:ok, nodes}` or `{:error, :service_unavailable}`.
   """
   def list_nodes_by_tag(tag) do
-    case Nexmaker.Api.Nodes.list_all() do
+    case Nexmaker.Api.Nodes.list_all() |> normalize_netmaker_error() do
       {:ok, nodes} ->
         filtered =
           Enum.filter(nodes, fn node ->
@@ -462,13 +496,15 @@ defmodule EdgeAdmin.Vpn do
 
         {:ok, filtered}
 
-      {:error, reason} ->
-        {:error, reason}
+      error ->
+        error
     end
   end
 
   @doc """
   Removes a host from a Netmaker network.
+
+  Returns `{:ok, response}` or `{:error, :service_unavailable}`.
 
   ## Parameters
 
@@ -482,13 +518,17 @@ defmodule EdgeAdmin.Vpn do
   """
   def remove_host_from_network(host_id, network_name) do
     Nexmaker.Api.Hosts.remove_from_network(host_id, network_name)
+    |> normalize_netmaker_error()
   end
 
   @doc """
   Adds a host to a Netmaker network.
+
+  Returns `{:ok, response}` or `{:error, :service_unavailable}`.
   """
   def add_host_to_network(host_id, network_name) do
     Nexmaker.Api.Hosts.add_to_network(host_id, network_name)
+    |> normalize_netmaker_error()
   end
 
   @doc """
@@ -543,9 +583,11 @@ defmodule EdgeAdmin.Vpn do
 
   When network_name is provided, lists all hosts and filters to those
   that have a node in the specified network.
+
+  Returns `{:ok, hosts}` or `{:error, :service_unavailable}`.
   """
   def list_hosts(network_name \\ nil) do
-    with {:ok, hosts} <- Nexmaker.Api.Hosts.list() do
+    with {:ok, hosts} <- Nexmaker.Api.Hosts.list() |> normalize_netmaker_error() do
       if is_binary(network_name) do
         # Get all nodes in the network and extract their host IDs
         case list_nodes(network_name) do
@@ -573,41 +615,51 @@ defmodule EdgeAdmin.Vpn do
   @doc """
   Gets a specific Netmaker host by ID.
 
-  ## Returns
-    - `{:ok, host}` - Host map
-    - `{:error, :not_found}` - Host not found
-    - `{:error, reason}` - Error occurred
+  Returns `{:ok, host}`, `{:error, :not_found}`, or `{:error, :service_unavailable}`.
   """
   def get_host(host_id) do
     Nexmaker.Api.Hosts.get(host_id)
+    |> normalize_netmaker_error()
   end
 
   @doc """
   Deletes a Netmaker host.
+
+  Returns `{:ok, response}` or `{:error, :service_unavailable}`.
   """
   def delete_host(host_id) do
     Nexmaker.Api.Hosts.delete(host_id)
+    |> normalize_netmaker_error()
   end
 
   @doc """
   Deletes a Netmaker host from a specific network.
+
+  Returns `{:ok, response}` or `{:error, :service_unavailable}`.
   """
   def delete_host(network_name, host_id) do
     Nexmaker.Api.Hosts.delete(network_name, host_id)
+    |> normalize_netmaker_error()
   end
 
   @doc """
   Creates an enrollment key for a Netmaker network.
+
+  Returns `{:ok, key}` or `{:error, :service_unavailable}`.
   """
   def create_enrollment_key(network_name, opts \\ %{}) do
     Nexmaker.Api.EnrollmentKeys.create(network_name, opts)
+    |> normalize_netmaker_error()
   end
 
   @doc """
   Lists all enrollment keys from Netmaker.
+
+  Returns `{:ok, keys}` or `{:error, :service_unavailable}`.
   """
   def list_enrollment_keys do
     Nexmaker.Api.EnrollmentKeys.list()
+    |> normalize_netmaker_error()
   end
 
   @doc """
@@ -642,13 +694,20 @@ defmodule EdgeAdmin.Vpn do
 
   @doc """
   Deletes an enrollment key from Netmaker.
+
+  Returns `{:ok, response}` or `{:error, :service_unavailable}`.
   """
   def delete_enrollment_key(key_value) do
     Nexmaker.Api.EnrollmentKeys.delete(key_value)
+    |> normalize_netmaker_error()
   end
 
   @doc """
   Joins a Netmaker network using netclient CLI.
+
+  Returns `{:ok, result}` or `{:error, reason}`.
+
+  Note: This is a CLI operation, not an API call, so errors are not normalized.
   """
   def join_network(opts) do
     Nexmaker.Cli.join_network(opts)
@@ -657,34 +716,57 @@ defmodule EdgeAdmin.Vpn do
   @doc """
   Checks Netmaker server health via status endpoint.
 
-  Returns :ok if server is reachable and healthy, {:error, reason} otherwise.
+  ## Options
+    - `:retries` - Number of retry attempts (default: 0)
+    - `:retry_delay` - Delay between retries in milliseconds (default: 100)
+
+  Returns `:ok` or `{:error, :service_unavailable}`.
   """
-  def health_check do
-    case Nexmaker.Api.Server.status() do
+  def health_check(opts \\ []) do
+    case Nexmaker.Api.Server.status(opts) |> normalize_netmaker_error() do
       {:ok, _status} -> :ok
-      {:error, reason} -> {:error, reason}
+      error -> error
     end
   end
 
   @doc """
-  Gets Netmaker server info including version.
-  """
-  def get_server_info do
-    Nexmaker.Api.Server.get_server_info()
-  end
-
-  @doc """
   Checks if Netmaker superadmin exists.
+
+  Returns `{:ok, result}` or `{:error, :service_unavailable}`.
   """
   def check_superadmin do
     Nexmaker.Api.Superadmin.check()
+    |> normalize_netmaker_error()
   end
 
   @doc """
   Creates Netmaker superadmin.
+
+  Returns `{:ok, superadmin}` or `{:error, :service_unavailable}`.
   """
   def create_superadmin(attrs) do
     Nexmaker.Api.Superadmin.create(attrs)
+    |> normalize_netmaker_error()
+  end
+
+  @doc """
+  Creates a DNS entry in Netmaker.
+
+  Returns `{:ok, dns_entry}` or `{:error, :service_unavailable}`.
+  """
+  def create_dns_entry(network_name, attrs) do
+    Nexmaker.Api.DNS.create(network_name, attrs)
+    |> normalize_netmaker_error()
+  end
+
+  @doc """
+  Deletes a DNS entry from Netmaker.
+
+  Returns `{:ok, response}`, `{:error, :not_found}`, or `{:error, :service_unavailable}`.
+  """
+  def delete_dns_entry(network_name, dns_name) do
+    Nexmaker.Api.DNS.delete(network_name, dns_name)
+    |> normalize_netmaker_error()
   end
 
   @doc """

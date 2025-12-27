@@ -23,27 +23,33 @@ defmodule EdgeAdmin.Nodes.Workers.EphemeralKeyCleanupWorker do
       states: [:available, :scheduled, :executing, :retryable]
     ]
 
+  alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Nodes
 
   require Logger
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
-    # Check if cleanup is enabled
-    if Application.get_env(:edge_admin, :ephemeral_key_cleanup_enabled, true) do
-      Logger.info("Starting ephemeral key cleanup")
+    cond do
+      Metadata.degraded?() ->
+        Logger.info("Ephemeral key cleanup skipped - system in degraded mode")
+        {:discard, "skipped during degraded mode"}
 
-      result = Nodes.cleanup_ephemeral_keys()
+      Application.get_env(:edge_admin, :ephemeral_key_cleanup_enabled, true) ->
+        Logger.info("Starting ephemeral key cleanup")
 
-      Logger.info(
-        "Ephemeral key cleanup complete: #{result.deleted_keys} keys, " <>
-          "#{result.deleted_hosts} hosts, #{result.deleted_nodes} nodes"
-      )
+        result = Nodes.cleanup_ephemeral_keys()
 
-      {:ok, result}
-    else
-      Logger.info("Ephemeral key cleanup is disabled, skipping")
-      {:ok, %{deleted_count: 0, skipped: true}}
+        Logger.info(
+          "Ephemeral key cleanup complete: #{result.deleted_keys} keys, " <>
+            "#{result.deleted_hosts} hosts, #{result.deleted_nodes} nodes"
+        )
+
+        {:ok, result}
+
+      true ->
+        Logger.info("Ephemeral key cleanup is disabled, skipping")
+        {:ok, %{deleted_count: 0, skipped: true}}
     end
   end
 end

@@ -29,28 +29,34 @@ defmodule EdgeAdmin.Nodes.Workers.ClusterReconciliationWorker do
       states: [:available, :scheduled, :executing, :retryable]
     ]
 
+  alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Nodes
 
   require Logger
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
-    # Check if reconciliation is enabled
-    if Application.get_env(:edge_admin, :cluster_reconciliation_enabled, true) do
-      Logger.info("Starting cluster reconciliation")
+    cond do
+      Metadata.degraded?() ->
+        Logger.info("Cluster reconciliation skipped - system in degraded mode")
+        {:discard, "skipped during degraded mode"}
 
-      result = Nodes.reconcile_cluster_nodes()
+      Application.get_env(:edge_admin, :cluster_reconciliation_enabled, true) ->
+        Logger.info("Starting cluster reconciliation")
 
-      Logger.info(
-        "Cluster reconciliation complete: #{result.clusters_processed} clusters processed, " <>
-          "#{result.nodes_added} nodes added, #{result.nodes_removed} nodes removed, " <>
-          "#{result.errors} errors"
-      )
+        result = Nodes.reconcile_cluster_nodes()
 
-      {:ok, result}
-    else
-      Logger.info("Cluster reconciliation is disabled, skipping")
-      {:ok, %{clusters_processed: 0, skipped: true}}
+        Logger.info(
+          "Cluster reconciliation complete: #{result.clusters_processed} clusters processed, " <>
+            "#{result.nodes_added} nodes added, #{result.nodes_removed} nodes removed, " <>
+            "#{result.errors} errors"
+        )
+
+        {:ok, result}
+
+      true ->
+        Logger.info("Cluster reconciliation is disabled, skipping")
+        {:ok, %{clusters_processed: 0, skipped: true}}
     end
   end
 end

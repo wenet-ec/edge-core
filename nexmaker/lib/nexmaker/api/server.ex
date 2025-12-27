@@ -17,17 +17,45 @@ defmodule Nexmaker.Api.Server do
 
   Returns server status information including connection status and version.
 
+  ## Options
+    - `:retries` - Number of retry attempts on failure (default: 0)
+    - `:retry_delay` - Delay in milliseconds between retries (default: 100)
+    - Other options passed to `Nexmaker.Api.request/3`
+
   ## Returns
     - `{:ok, status}` - Server status map
-    - `{:error, reason}` - Failed to get status
+    - `{:error, reason}` - Failed to get status after all retries
 
   ## Examples
 
+      # Simple health check (no retries)
       {:ok, status} = Nexmaker.Api.Server.status()
+
+      # Health check with retries for transient failures
+      {:ok, status} = Nexmaker.Api.Server.status(retries: 2, retry_delay: 200)
   """
   @spec status(keyword()) :: {:ok, map()} | {:error, any()}
   def status(opts \\ []) do
-    Nexmaker.Api.request(:get, "/api/server/status", opts)
+    retries = Keyword.get(opts, :retries, 0)
+    retry_delay = Keyword.get(opts, :retry_delay, 100)
+    api_opts = Keyword.drop(opts, [:retries, :retry_delay])
+
+    do_request_with_retry(:get, "/api/server/status", api_opts, retries, retry_delay)
+  end
+
+  # Private helper for retry logic
+  defp do_request_with_retry(method, path, opts, retries_left, retry_delay) do
+    case Nexmaker.Api.request(method, path, opts) do
+      {:ok, result} ->
+        {:ok, result}
+
+      {:error, _reason} when retries_left > 0 ->
+        Process.sleep(retry_delay)
+        do_request_with_retry(method, path, opts, retries_left - 1, retry_delay)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   @doc """

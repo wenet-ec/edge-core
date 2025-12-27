@@ -12,6 +12,7 @@ defmodule EdgeAdminWeb.Endpoint do
 
   plug(EdgeAdminWeb.Plugs.Security)
   plug(:ping)
+  plug(:livez)
   plug(:cors)
   plug(:basic_auth)
 
@@ -98,6 +99,22 @@ defmodule EdgeAdminWeb.Endpoint do
   end
 
   defp ping(conn, _opts), do: conn
+
+  # Kubernetes liveness probe - lightweight check
+  # Returns 200 if application is alive (responsive)
+  # Does NOT check external dependencies - only checks if BEAM is responsive
+  # sobelow_skip ["XSS.SendResp"]
+  defp livez(%{request_path: "/livez"} = conn, _opts) do
+    version = Application.get_env(:edge_admin, :version)
+    response = Jason.encode!(%{status: "ok", version: version})
+
+    conn
+    |> Conn.put_resp_header("content-type", "application/json")
+    |> Conn.send_resp(200, response)
+    |> Conn.halt()
+  end
+
+  defp livez(conn, _opts), do: conn
 
   defp cors(conn, _opts) do
     opts = Corsica.init(Application.get_env(:edge_admin, Corsica))

@@ -55,12 +55,12 @@ defmodule EdgeAdminHealth do
   end
 
   def netmaker_api_health do
-    case Nexmaker.Api.Server.status() do
+    case Nexmaker.Api.Server.status(retries: 2, retry_delay: 200) do
       {:ok, _status} ->
         :ok
 
       {:error, reason} ->
-        Logger.debug("Netmaker API health check failed: #{inspect(reason)}")
+        Logger.debug("Netmaker API health check failed after retries: #{inspect(reason)}")
         {:error, "API unreachable"}
     end
   rescue

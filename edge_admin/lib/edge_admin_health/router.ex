@@ -26,6 +26,14 @@ defmodule EdgeAdminHealth.Router do
   plug(:match)
   plug(:dispatch)
 
+  # Kubernetes readiness probe - comprehensive health checks with retries
+  # Returns 200 if ready to serve traffic, 503 if not ready
+  forward("/readyz", to: Health)
+
+  # Kubernetes general health check - alias to readyz for compatibility
+  forward("/healthz", to: Health)
+
+  # Legacy health endpoint - kept for backward compatibility
   forward("/health", to: Health)
 
   match(_, do: conn)

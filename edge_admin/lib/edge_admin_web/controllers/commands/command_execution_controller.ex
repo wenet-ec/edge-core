@@ -153,4 +153,42 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
       send_resp(conn, :no_content, "")
     end
   end
+
+  operation(:cancel,
+    summary: "Cancel a command execution",
+    description: """
+    Attempts to cancel a command execution. Behavior depends on current status:
+
+    - `pending`: Immediately cancelled in database with status "completed" and output "Command cancelled"
+    - `sent`: Sends cancellation request to agent (best-effort, async)
+    - `completed`: Returns 422 validation error (cannot cancel completed execution)
+
+    Returns 200 if cancellation was initiated. For "sent" executions, check status later to confirm cancellation.
+    """,
+    parameters: [
+      id: [
+        in: :path,
+        description: "Command Execution ID",
+        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
+      ]
+    ],
+    responses: %{
+      200 =>
+        {"Cancellation request sent", "application/json",
+         CommandExecutionSchemas.CancelExecutionResponse},
+      404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse},
+      422 =>
+        {"Validation failed - execution status not cancellable", "application/json",
+         CommonSchemas.ErrorResponse},
+      503 =>
+        {"Agent unreachable", "application/json", CommonSchemas.GenericErrorResponse}
+    }
+  )
+
+  def cancel(conn, %{"id" => id}) do
+    with {:ok, execution} <- Commands.get_command_execution(id),
+         {:ok, result} <- Commands.cancel_command_execution(execution) do
+      render(conn, :cancel, result: result)
+    end
+  end
 end

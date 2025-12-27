@@ -11,5 +11,6 @@ defmodule EdgeAgentWeb.Router do
     pipe_through(:api)
 
     resources "/command_executions", CommandExecutionController, only: [:create]
+    patch "/command_executions/:id/cancel", CommandExecutionController, :cancel
   end
 end

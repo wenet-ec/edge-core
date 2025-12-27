@@ -19,26 +19,38 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
 
   Note: Status is automatically set to "completed" by the context after validation.
 
+  ## Parameters
+  - `attrs` - Map containing execution result attributes
+  - `current_status` - Current status of the execution
+  - `current_exit_code` - Current exit code of the execution (nil if not set)
+
   ## Validations
   - `output` - Optional, command output text
   - `exit_code` - Optional, must be integer if present
-  - `completed_at` - Optional, must be valid ISO8601 datetime if present
-  - `current_status` - Validates execution is in "sent" status (passed by context)
+  - `completed_at` - Optional, must be valid ISO8601 datetime if present, defaults to now
+  - `current_status` - Must be "sent" or "completed" with exit_code 143 (cancelled race condition)
+  - `current_exit_code` - Used to detect race condition (cancelled executions can be overwritten)
 
   ## Returns
   - `{:ok, attrs}` - Validated and normalized attributes as a map with string keys
   - `{:error, changeset}` - Validation errors
-  """
-  def changeset(%{"command_execution" => execution_attrs}, current_status) when is_map(execution_attrs) do
-    # Unwrap command_execution
-    changeset(execution_attrs, current_status)
-  end
 
-  def changeset(attrs, current_status) when is_map(attrs) do
+  ## Examples
+
+      iex> changeset(%{"output" => "Hello", "exit_code" => 0}, "sent", nil)
+      {:ok, %{"output" => "Hello", "exit_code" => 0, "completed_at" => ~U[...]}}
+
+      iex> changeset(%{"output" => "Cancelled", "exit_code" => 1}, "completed", 143)
+      {:ok, %{"output" => "Cancelled", "exit_code" => 1, "completed_at" => ~U[...]}}
+
+      iex> changeset(%{"output" => "Error"}, "completed", 1)
+      {:error, %Ecto.Changeset{}}
+  """
+  def changeset(attrs, current_status, current_exit_code) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:output, :exit_code, :completed_at])
     |> validate_completed_at()
-    |> validate_current_status(current_status)
+    |> validate_current_status(current_status, current_exit_code)
     |> apply_action(:insert)
     |> case do
       {:ok, form} -> {:ok, to_map(form)}
@@ -46,20 +58,32 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
     end
   end
 
-  defp validate_current_status(changeset, "sent") do
-    changeset
-  end
-
-  defp validate_current_status(changeset, _current_status) do
-    add_error(changeset, :base, "execution is not in 'sent' status and cannot be updated")
-  end
-
-  def changeset(_params) do
+  def changeset(_params, _current_status, _current_exit_code) do
     {:error,
      %__MODULE__{}
      |> cast(%{}, [])
-     |> add_error(:command_execution, "is required")
+     |> add_error(:base, "invalid parameters - expected a map")
      |> apply_action!(:insert)}
+  end
+
+  # Normal case: execution is in "sent" status
+  defp validate_current_status(changeset, "sent", _current_exit_code) do
+    changeset
+  end
+
+  # Race condition: execution was cancelled (completed with exit_code 143) but command actually ran
+  # Allow agent to overwrite with actual results
+  defp validate_current_status(changeset, "completed", 143) do
+    changeset
+  end
+
+  # All other cases: reject update
+  defp validate_current_status(changeset, current_status, current_exit_code) do
+    add_error(
+      changeset,
+      :base,
+      "execution is in '#{current_status}' status (exit_code: #{inspect(current_exit_code)}) and cannot be updated"
+    )
   end
 
   defp validate_completed_at(changeset) do

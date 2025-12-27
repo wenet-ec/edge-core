@@ -148,6 +148,24 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   end
 
   @doc """
+  Cancels a command execution on an agent.
+
+  ## Parameters
+
+  - gateway_pid: Gateway process
+  - node: Node struct with dns_hostname, http_port, api_token
+  - execution_id: Command execution ID to cancel
+
+  ## Returns
+
+  - :ok - Cancellation request sent successfully
+  - {:error, reason} - HTTP error or network failure
+  """
+  def cancel_execution(gateway_pid, node, execution_id) do
+    GenServer.call(gateway_pid, {:cancel_execution, node, execution_id}, 30_000)
+  end
+
+  @doc """
   Establishes TCP connection to a target through the Gateway's VPN.
 
   Gateway is a pure network abstraction - it only handles VPN connectivity.
@@ -369,6 +387,27 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
            retry: false
          ) do
       {:ok, %{status: 200}} ->
+        {:reply, :ok, state}
+
+      {:ok, %{status: status}} ->
+        {:reply, {:error, "HTTP #{status}"}, state}
+
+      {:error, reason} ->
+        Logger.error("HTTP request failed: #{inspect(reason)}")
+        {:reply, {:error, reason}, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:cancel_execution, node, execution_id}, _from, state) do
+    url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/command_executions/#{execution_id}/cancel"
+
+    case Req.patch(url,
+           auth: {:bearer, node.api_token},
+           receive_timeout: 5000,
+           retry: false
+         ) do
+      {:ok, %{status: status}} when status in 200..299 ->
         {:reply, :ok, state}
 
       {:ok, %{status: status}} ->

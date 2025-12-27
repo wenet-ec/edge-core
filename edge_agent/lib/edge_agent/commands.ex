@@ -7,6 +7,7 @@ defmodule EdgeAgent.Commands do
   import Ecto.Query, warn: false
 
   alias EdgeAgent.Commands.CommandExecution
+  alias EdgeAgent.Commands.ExecutionRegistry
   alias EdgeAgent.Commands.Forms.CreateCommandExecutionForm
   alias EdgeAgent.EdgeClusters.AdminClient
   alias EdgeAgent.Repo
@@ -17,7 +18,14 @@ defmodule EdgeAgent.Commands do
     Repo.all(CommandExecution)
   end
 
-  def get_command_execution!(id), do: Repo.get!(CommandExecution, id)
+  def get_command_execution(id) do
+    case Repo.get(CommandExecution, id) do
+      nil -> {:error, :not_found}
+      execution -> {:ok, execution}
+    end
+  rescue
+    Ecto.Query.CastError -> {:error, :not_found}
+  end
 
   def create_command_execution_and_enqueue_worker(params \\ %{}) do
     with {:ok, attrs} <- CreateCommandExecutionForm.changeset(params),
@@ -85,6 +93,9 @@ defmodule EdgeAgent.Commands do
             System.cmd("/usr/local/bin/hostscript", [execution.command_text])
           end)
 
+        # Register task for potential cancellation
+        ExecutionRegistry.register(execution.id, task.pid)
+
         case Task.yield(task, timeout_ms) || Task.shutdown(task, :brutal_kill) do
           {:ok, {output, exit_code}} ->
             {:ok, output, exit_code}
@@ -97,6 +108,9 @@ defmodule EdgeAgent.Commands do
         e ->
           Logger.error("Command #{execution.id} crashed: #{inspect(e)}")
           {:error, "Command crashed: #{Exception.message(e)}", 1}
+      after
+        # Always unregister after completion/timeout/crash
+        ExecutionRegistry.unregister(execution.id)
       end
 
     {output, exit_code} =
@@ -221,9 +235,19 @@ defmodule EdgeAgent.Commands do
           delete_execution_after_report(execution)
           {:cont, :ok}
 
+        {:error, {:http_error, status, body}} when status in [404, 422] ->
+          # 404: Execution deleted on admin side
+          # 422: Validation error (execution already completed, can't be updated)
+          # Discard the execution since it can't be reported anymore
+          Logger.warning(
+            "Admin rejected update for execution #{execution.id} with HTTP #{status}: #{inspect(body)}. Discarding execution."
+          )
+          delete_execution_after_report(execution)
+          {:cont, :ok}
+
         {:error, reason} ->
+          # Network/connectivity error or other HTTP errors - stop and retry later
           Logger.warning("Failed to report execution #{execution.id}: #{inspect(reason)}")
-          # Stop processing remaining executions - let next cron retry
           {:halt, :error}
       end
     end)
@@ -279,4 +303,88 @@ defmodule EdgeAgent.Commands do
 
   defp get_pending_executions, do: get_executions_by_status("pending")
   defp get_completed_executions, do: get_executions_by_status("completed")
+
+  @doc """
+  Cancels a command execution.
+
+  Handles three scenarios:
+  1. Pending (not running) - Updates to completed with "cancelled" message
+  2. Pending (currently running) - Kills task and updates to completed
+  3. Completed - No action taken
+
+  ## Parameters
+    - execution: CommandExecution struct
+
+  ## Returns
+    - `{:ok, result_map}` - Cancellation result with details
+  """
+  def cancel_execution(execution) do
+    case execution.status do
+      "pending" ->
+        # Try to kill running task if executing
+        task_kill_result =
+          case ExecutionRegistry.get_task(execution.id) do
+            nil ->
+              Logger.debug("Execution #{execution.id} not currently running, marking as cancelled")
+              :task_not_running
+
+            task_pid ->
+              Logger.info("Killing running task for execution #{execution.id}")
+              Process.exit(task_pid, :kill)
+              :task_killed
+          end
+
+        # Cancel Oban job (prevents future execution)
+        oban_result = cancel_oban_job(execution.id)
+
+        # Update execution to cancelled
+        {:ok, _updated} =
+          update_command_execution(execution, %{
+            status: "completed",
+            output: "Command cancelled",
+            exit_code: 143,
+            completed_at: DateTime.utc_now()
+          })
+
+        Logger.info("Execution #{execution.id} cancelled successfully")
+
+        {:ok,
+         %{
+           action: :cancelled,
+           task_kill: task_kill_result,
+           oban_result: oban_result
+         }}
+
+      "completed" ->
+        Logger.debug("Execution #{execution.id} already completed, ignoring cancel request")
+        {:ok, %{action: :already_completed}}
+    end
+  end
+
+  defp cancel_oban_job(execution_id) do
+    import Ecto.Query
+
+    # Find and cancel Oban job for this execution
+    query =
+      from(j in Oban.Job,
+        where: j.queue == "command_execution",
+        where: j.worker == "EdgeAgent.Commands.Workers.CommandExecutionWorker",
+        where: fragment("?->>'execution_id' = ?", j.args, ^execution_id),
+        where: j.state in ["available", "scheduled", "executing"]
+      )
+
+    case Oban.cancel_all_jobs(query) do
+      {:ok, 1} ->
+        Logger.debug("Cancelled Oban job for execution #{execution_id}")
+        :job_cancelled
+
+      {:ok, 0} ->
+        Logger.debug("No Oban job found for execution #{execution_id}")
+        :job_not_found
+
+      {:ok, count} when count > 1 ->
+        Logger.warning("Cancelled #{count} Oban jobs for execution #{execution_id} (expected 1)")
+        :job_cancelled
+    end
+  end
 end

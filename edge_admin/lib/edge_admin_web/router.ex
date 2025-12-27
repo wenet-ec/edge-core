@@ -193,6 +193,7 @@ defmodule EdgeAdminWeb.Router do
 
       resources("/command_executions", CommandExecutionController, only: [:index, :show])
       delete("/command_executions/:id", CommandExecutionController, :delete)
+      patch("/command_executions/:id/cancel", CommandExecutionController, :cancel)
     end
   end
 end

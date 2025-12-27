@@ -19,4 +19,21 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionController do
       |> render(:show, command_execution: command_execution)
     end
   end
+
+  @doc """
+  Cancels a command execution.
+
+  Attempts to cancel the command:
+  - If pending/queued: Marks as cancelled
+  - If currently executing: Kills the task and marks as cancelled
+  - If already completed: No action taken
+
+  Returns 200 with cancellation result details.
+  """
+  def cancel(conn, %{"id" => id}) do
+    with {:ok, execution} <- Commands.get_command_execution(id),
+         {:ok, result} <- Commands.cancel_execution(execution) do
+      render(conn, :cancel, result: result)
+    end
+  end
 end

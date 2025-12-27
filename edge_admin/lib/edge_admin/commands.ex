@@ -13,6 +13,7 @@ defmodule EdgeAdmin.Commands do
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Commands.Forms
   alias EdgeAdmin.Commands.Workers.ExecutionCreationWorker
+  alias EdgeAdmin.EdgeClusters.Gateway
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Admins.Metadata
@@ -80,7 +81,7 @@ defmodule EdgeAdmin.Commands do
   def get_command_execution(id) do
     case Repo.get(CommandExecution, id) do
       nil -> {:error, :not_found}
-      command_execution -> {:ok, Repo.preload(command_execution, [:command, :cluster])}
+      command_execution -> {:ok, Repo.preload(command_execution, :command)}
     end
   rescue
     Ecto.Query.CastError -> {:error, :not_found}
@@ -373,7 +374,13 @@ defmodule EdgeAdmin.Commands do
           Logger.info("No matching nodes found for command #{command_id}")
           {:ok, []}
         else
-          bulk_create_executions(command, nodes, targeting_type == "all", cluster_id, targeting_type)
+          bulk_create_executions(
+            command,
+            nodes,
+            targeting_type == "all",
+            cluster_id,
+            targeting_type
+          )
         end
 
       {:error, :not_found} ->
@@ -601,7 +608,13 @@ defmodule EdgeAdmin.Commands do
         all_nodes = accumulated_nodes ++ filtered_nodes
 
         if meta.has_next_page? do
-          get_all_filtered_nodes(node_filters, cluster_filters, page + 1, all_nodes, cluster_names)
+          get_all_filtered_nodes(
+            node_filters,
+            cluster_filters,
+            page + 1,
+            all_nodes,
+            cluster_names
+          )
         else
           all_nodes
         end
@@ -832,8 +845,8 @@ defmodule EdgeAdmin.Commands do
 
   def update_command_execution_result(execution, params) do
     with {:ok, attrs} <-
-           Forms.UpdateCommandExecutionResultForm.changeset(params, execution.status) do
-      # Hardcode status to "completed" since form validated current status is "sent"
+           Forms.UpdateCommandExecutionResultForm.changeset(params, execution.status, execution.exit_code) do
+      # Hardcode status to "completed" since form validated current status is "sent" or "completed" (race condition)
       attrs = Map.put(attrs, "status", "completed")
       result = update_command_execution(execution, attrs)
 
@@ -867,6 +880,92 @@ defmodule EdgeAdmin.Commands do
       end
 
       result
+    end
+  end
+
+  @doc """
+  Cancels a command execution.
+
+  Handles two scenarios:
+  1. Pending - Updates DB to completed with "cancelled" message
+  2. Sent - Sends cancellation request to agent via gateway (best-effort)
+
+  ## Parameters
+    - execution: CommandExecution struct (must be preloaded with :cluster)
+
+  ## Returns
+    - `{:ok, %{result: "cancellation request sent"}}` - Success
+    - `{:error, changeset}` - Validation failed (status not pending/sent)
+    - `{:error, :service_unavailable}` - Agent unreachable (sent status only)
+  """
+  def cancel_command_execution(execution) do
+    # Validate execution is cancellable (status must be pending or sent)
+    with {:ok, _attrs} <- Forms.CancelExecutionForm.changeset(execution.status) do
+      case execution.status do
+        "pending" ->
+          # Cancel immediately in DB (use regular update, not agent result update)
+          {:ok, _updated} =
+            update_command_execution(execution, %{
+              status: "completed",
+              output: "Command cancelled",
+              exit_code: 143,
+              completed_at: DateTime.utc_now()
+            })
+
+          {:ok, %{result: "cancellation request sent"}}
+
+        "sent" ->
+          # Send cancellation request to agent (best-effort)
+          case send_cancel_to_agent(execution) do
+            :ok ->
+              {:ok, %{result: "cancellation request sent"}}
+
+            {:error, reason} ->
+              Logger.warning(
+                "Failed to send cancellation to agent for execution #{execution.id}: #{inspect(reason)}"
+              )
+
+              {:error, :service_unavailable}
+          end
+      end
+    end
+  end
+
+  defp send_cancel_to_agent(execution) do
+    # Get node to send cancellation request
+    with {:ok, node} <- Nodes.get_node(execution.node_id),
+         # Build node name for ETS lookup
+         node_name <- Node.node_name(node),
+         # Lookup cluster name from ETS metadata
+         {:ok, cluster_name, _admin_name} <- Metadata.find_node_cluster(node_name),
+         # Lookup gateway via ETS metadata
+         {:ok, gateway_pid} <- Gateway.lookup(cluster_name),
+         # Send cancellation request via Gateway
+         :ok <- Gateway.cancel_execution(gateway_pid, node, execution.id) do
+      Logger.info(
+        "Successfully sent cancellation request to agent for execution #{execution.id}"
+      )
+
+      :ok
+    else
+      {:error, :not_found} ->
+        Logger.error("Node not found for execution #{execution.id}")
+        {:error, :node_not_found}
+
+      {:error, :gateway_not_found} ->
+        Logger.error("Gateway not found for node #{execution.node_id}")
+        {:error, :gateway_not_found}
+
+      {:error, :no_owner} ->
+        Logger.error("No owner found for node #{execution.node_id}")
+        {:error, :no_owner}
+
+      {:error, reason} ->
+        Logger.warning(
+          "Failed to send cancellation to agent for execution #{execution.id}: #{inspect(reason)}"
+        )
+
+        {:error, reason}
     end
   end
 end

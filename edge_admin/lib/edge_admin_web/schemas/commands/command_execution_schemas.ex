@@ -151,4 +151,33 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
       }
     })
   end
+
+  defmodule CancelExecutionResponse do
+    @moduledoc false
+
+    OpenApiSpex.schema(%{
+      title: "Cancel Execution Response",
+      description: "Response from command execution cancellation request",
+      type: :object,
+      properties: %{
+        data: %Schema{
+          type: :object,
+          properties: %{
+            result: %Schema{
+              type: :string,
+              description: "Cancellation request status message",
+              example: "cancellation request sent"
+            }
+          },
+          required: [:result]
+        }
+      },
+      required: [:data],
+      example: %{
+        data: %{
+          result: "cancellation request sent"
+        }
+      }
+    })
+  end
 end

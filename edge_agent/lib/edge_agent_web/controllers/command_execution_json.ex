@@ -9,6 +9,13 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionJSON do
     %{data: data(command_execution)}
   end
 
+  @doc """
+  Renders cancellation result.
+  """
+  def cancel(%{result: result}) do
+    %{data: result}
+  end
+
   defp data(%CommandExecution{} = command_execution) do
     %{
       id: command_execution.id,

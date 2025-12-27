@@ -150,7 +150,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
       404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse},
       422 =>
         {"Cannot delete non-completed execution", "application/json",
-         CommonSchemas.ErrorResponse}
+         CommonSchemas.ChangesetErrorResponse}
     }
   )
 
@@ -186,9 +186,9 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
       404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse},
       422 =>
         {"Validation failed - execution status not cancellable", "application/json",
-         CommonSchemas.ErrorResponse},
+         CommonSchemas.ChangesetErrorResponse},
       503 =>
-        {"Agent unreachable", "application/json", CommonSchemas.GenericErrorResponse}
+        {"Agent unreachable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 

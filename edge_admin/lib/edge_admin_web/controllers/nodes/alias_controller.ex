@@ -108,9 +108,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
     request_body: {"Alias creation parameters", "application/json", AliasSchemas.CreateAliasRequest},
     responses: %{
       201 => {"Alias created successfully", "application/json", AliasSchemas.AliasResponse},
-      400 => {"Invalid request", "application/json", CommonSchemas.ErrorResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
+      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )
 

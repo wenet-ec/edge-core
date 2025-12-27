@@ -10,7 +10,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
-  tags(["Metrics.Nodes"])
+  tags(["Nodes.Metrics"])
 
   operation(:show_unified,
     summary: "Get unified metrics for a node",
@@ -32,7 +32,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
     responses: %{
       200 => {"Unified metrics retrieved successfully", "application/json", NodeMetricsSchemas.UnifiedMetricsResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
-      503 => {"Metrics unavailable", "application/json", CommonSchemas.GenericErrorResponse}
+      503 => {"Metrics unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 
@@ -99,7 +99,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
     responses: %{
       200 => {"Host metrics retrieved successfully", "application/json", NodeMetricsSchemas.HostMetricsResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
-      503 => {"Metrics unavailable", "application/json", CommonSchemas.GenericErrorResponse}
+      503 => {"Metrics unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 
@@ -133,7 +133,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
     responses: %{
       200 => {"Agent metrics retrieved successfully", "application/json", NodeMetricsSchemas.AgentMetricsResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
-      503 => {"Metrics unavailable", "application/json", CommonSchemas.GenericErrorResponse}
+      503 => {"Metrics unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 

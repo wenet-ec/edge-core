@@ -39,7 +39,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
       201 =>
         {"Enrollment key retrieved/created", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
       404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
+      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )
 
@@ -62,9 +62,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     responses: %{
       201 =>
         {"Enrollment key retrieved/created", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
-      403 => {"Default cluster not configured", "application/json", CommonSchemas.ErrorResponse},
+      403 => {"Default cluster not configured", "application/json", CommonSchemas.ForbiddenResponse},
       404 => {"Default cluster not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
+      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )
 
@@ -102,7 +102,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     responses: %{
       200 =>
         {"Public enrollment key", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
-      403 => {"Public enrollment disabled", "application/json", CommonSchemas.ErrorResponse},
+      403 => {"Public enrollment disabled", "application/json", CommonSchemas.ForbiddenResponse},
       404 => {"Default cluster not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )

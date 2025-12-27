@@ -87,7 +87,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
     responses: %{
       201 =>
         {"Command created successfully", "application/json", CommandSchemas.CommandSingleResponse},
-      422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
+      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )
 

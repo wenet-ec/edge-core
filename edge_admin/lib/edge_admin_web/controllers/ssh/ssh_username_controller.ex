@@ -98,7 +98,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
     responses: %{
       201 =>
         {"SSH username created", "application/json", SshUsernameSchemas.SshUsernameSingleResponse},
-      422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
+      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )
 

@@ -7,16 +7,16 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
   require OpenApiSpex
   alias OpenApiSpex.Schema
 
-  defmodule ErrorResponse do
+  defmodule ChangesetErrorResponse do
     @moduledoc false
     OpenApiSpex.schema(%{
-      title: "Error Response",
-      description: "Standard error response for validation and other errors",
+      title: "Changeset Error Response",
+      description: "Validation error response from Ecto changeset (422 Unprocessable Entity)",
       type: :object,
       properties: %{
         errors: %Schema{
           type: :object,
-          description: "Error details with field-specific messages",
+          description: "Field-specific validation errors",
           additionalProperties: %Schema{
             type: :array,
             items: %Schema{type: :string}
@@ -26,7 +26,8 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
       required: [:errors],
       example: %{
         errors: %{
-          id: ["can't be blank", "has already been taken"]
+          name: ["can't be blank"],
+          email: ["has already been taken", "must have the @ sign"]
         }
       }
     })
@@ -37,7 +38,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
 
     OpenApiSpex.schema(%{
       title: "Not Found Response",
-      description: "Resource not found error",
+      description: "Resource not found error (404)",
       type: :object,
       properties: %{
         errors: %Schema{
@@ -60,32 +61,170 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
     })
   end
 
-  defmodule GenericErrorResponse do
+  defmodule UnauthorizedResponse do
     @moduledoc false
 
     OpenApiSpex.schema(%{
-      title: "Generic Error Response",
-      description: "Generic error response for various error conditions",
+      title: "Unauthorized Response",
+      description: "Authentication required or invalid credentials (401)",
       type: :object,
       properties: %{
-        error: %Schema{
-          type: :string,
-          description: "Error message"
-        },
-        message: %Schema{
-          type: :string,
-          description: "Additional details (optional)"
-        },
-        details: %Schema{
-          type: :string,
-          description: "Technical details (optional)"
+        errors: %Schema{
+          type: :object,
+          properties: %{
+            detail: %Schema{
+              type: :string,
+              description: "Error detail message"
+            }
+          },
+          required: [:detail]
         }
       },
-      required: [:error],
+      required: [:errors],
       example: %{
-        error: "Operation failed",
-        message: "Additional context about the error",
-        details: "Technical details for debugging"
+        errors: %{
+          detail: "Unauthorized"
+        }
+      }
+    })
+  end
+
+  defmodule ForbiddenResponse do
+    @moduledoc false
+
+    OpenApiSpex.schema(%{
+      title: "Forbidden Response",
+      description: "Insufficient permissions to access resource (403)",
+      type: :object,
+      properties: %{
+        errors: %Schema{
+          type: :object,
+          properties: %{
+            detail: %Schema{
+              type: :string,
+              description: "Error detail message"
+            }
+          },
+          required: [:detail]
+        }
+      },
+      required: [:errors],
+      example: %{
+        errors: %{
+          detail: "Forbidden"
+        }
+      }
+    })
+  end
+
+  defmodule ConflictResponse do
+    @moduledoc false
+
+    OpenApiSpex.schema(%{
+      title: "Conflict Response",
+      description: "Resource conflict, usually duplicate or constraint violation (409)",
+      type: :object,
+      properties: %{
+        errors: %Schema{
+          type: :object,
+          properties: %{
+            detail: %Schema{
+              type: :string,
+              description: "Error detail message"
+            }
+          },
+          required: [:detail]
+        }
+      },
+      required: [:errors],
+      example: %{
+        errors: %{
+          detail: "Conflict"
+        }
+      }
+    })
+  end
+
+  defmodule ServiceUnavailableResponse do
+    @moduledoc false
+
+    OpenApiSpex.schema(%{
+      title: "Service Unavailable Response",
+      description: "Downstream service unavailable (503)",
+      type: :object,
+      properties: %{
+        errors: %Schema{
+          type: :object,
+          properties: %{
+            detail: %Schema{
+              type: :string,
+              description: "Error detail message"
+            }
+          },
+          required: [:detail]
+        }
+      },
+      required: [:errors],
+      example: %{
+        errors: %{
+          detail: "Service Unavailable"
+        }
+      }
+    })
+  end
+
+  defmodule BadRequestResponse do
+    @moduledoc false
+
+    OpenApiSpex.schema(%{
+      title: "Bad Request Response",
+      description: "Malformed request or invalid input (400)",
+      type: :object,
+      properties: %{
+        errors: %Schema{
+          type: :object,
+          properties: %{
+            detail: %Schema{
+              type: :string,
+              description: "Error detail message"
+            }
+          },
+          required: [:detail]
+        }
+      },
+      required: [:errors],
+      example: %{
+        errors: %{
+          detail: "Bad Request"
+        }
+      }
+    })
+  end
+
+  defmodule InternalServerErrorResponse do
+    @moduledoc false
+
+    OpenApiSpex.schema(%{
+      title: "Internal Server Error Response",
+      description: "Unexpected server error (500)",
+      type: :object,
+      properties: %{
+        errors: %Schema{
+          type: :object,
+          properties: %{
+            detail: %Schema{
+              type: :string,
+              description: "Error detail message"
+            }
+          },
+          required: [:detail]
+        }
+      },
+      required: [:errors],
+      example: %{
+        errors: %{
+          detail: "Internal Server Error"
+        }
       }
     })
   end

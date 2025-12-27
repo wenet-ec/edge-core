@@ -9,7 +9,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AdminMetricsController do
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
-  tags(["Metrics.Admins"])
+  tags(["Admins.Metrics"])
 
   operation(:show_self,
     summary: "Get admin metrics for self",
@@ -24,7 +24,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AdminMetricsController do
     parameters: [],
     responses: %{
       200 => {"Admin metrics retrieved successfully", "application/json", AdminMetricsSchemas.AdminMetricsResponse},
-      503 => {"Metrics unavailable", "application/json", CommonSchemas.GenericErrorResponse}
+      503 => {"Metrics unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 

@@ -113,7 +113,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     responses: %{
       201 =>
         {"Cluster created successfully", "application/json", ClusterSchemas.ClusterSingleResponse},
-      422 => {"Validation error", "application/json", CommonSchemas.ErrorResponse}
+      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )
 
@@ -140,7 +140,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     responses: %{
       204 => "Cluster deleted successfully",
       404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Cannot delete cluster with nodes", "application/json", CommonSchemas.ErrorResponse}
+      422 => {"Cannot delete cluster with nodes", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )
 

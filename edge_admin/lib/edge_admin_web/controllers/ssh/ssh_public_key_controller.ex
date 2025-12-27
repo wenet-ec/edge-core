@@ -102,7 +102,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
          SshPublicKeySchemas.SshPublicKeySingleResponse},
       422 =>
         {"Validation error - Invalid key format, unsupported algorithm, or duplicate key name",
-         "application/json", CommonSchemas.ErrorResponse},
+         "application/json", CommonSchemas.ChangesetErrorResponse},
       404 => {"SSH username not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )

@@ -88,7 +88,7 @@ defmodule EdgeAdmin.Admins.Metadata do
 
     # Compute derived values
     dns_hostname = Vpn.build_hostname(admin_name, admin_cluster_name)
-    erlang_node_name = Node.self()
+    erlang_node_name = node()
 
     # Fetch Netmaker host ID
     {:ok, netmaker_host_id} = EdgeAdmin.Vpn.get_host_id(admin_name)

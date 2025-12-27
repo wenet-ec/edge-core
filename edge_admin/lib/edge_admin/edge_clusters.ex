@@ -68,7 +68,8 @@ defmodule EdgeAdmin.EdgeClusters do
      %{
        admin_name: admin_name,
        current_clusters: MapSet.new(),
-       gateway_pids: %{},  # %{cluster_name => pid}
+       # %{cluster_name => pid}
+       gateway_pids: %{},
        reconciling?: false,
        pending_reconcile: false
      }}
@@ -155,15 +156,27 @@ defmodule EdgeAdmin.EdgeClusters do
         "EdgeClusters reconciliation: +#{MapSet.size(to_join)} clusters, -#{MapSet.size(to_leave)} clusters"
       )
 
+      # Track successful joins separately
+      successful_joins = MapSet.new()
+
       # Start tracking new gateway pids
       new_gateway_pids = state.gateway_pids
 
       # Apply changes (VPN operations happen here - slow)
-      new_gateway_pids =
-        Enum.reduce(to_join, new_gateway_pids, fn cluster_name, acc ->
+      {new_gateway_pids, successful_joins} =
+        Enum.reduce(to_join, {new_gateway_pids, successful_joins}, fn cluster_name,
+                                                                      {acc_pids, acc_joins} ->
           case start_gateway(cluster_name) do
-            {:ok, pid} -> Map.put(acc, cluster_name, pid)
-            _ -> acc
+            {:ok, pid} ->
+              Logger.info("Successfully started gateway for #{cluster_name}")
+              {Map.put(acc_pids, cluster_name, pid), MapSet.put(acc_joins, cluster_name)}
+
+            {:error, reason} ->
+              Logger.error(
+                "Failed to start gateway for #{cluster_name}: #{inspect(reason)} - will retry on next metadata event"
+              )
+
+              {acc_pids, acc_joins}
           end
         end)
 
@@ -180,8 +193,19 @@ defmodule EdgeAdmin.EdgeClusters do
           end
         end)
 
+      # Only mark as current if we successfully joined
+      # Start with clusters that were already current and not being removed
+      new_current_clusters =
+        state.current_clusters
+        |> MapSet.difference(to_leave)
+        |> MapSet.union(successful_joins)
+
+      Logger.debug(
+        "EdgeClusters state update: current_clusters=#{inspect(MapSet.to_list(new_current_clusters))}, gateway_pids=#{inspect(Map.keys(new_gateway_pids))}"
+      )
+
       # Update parent state
-      send(parent, {:update_clusters, new_clusters_set, new_gateway_pids})
+      send(parent, {:update_clusters, new_current_clusters, new_gateway_pids})
 
       # Notify completion
       send(parent, :reconciliation_complete)

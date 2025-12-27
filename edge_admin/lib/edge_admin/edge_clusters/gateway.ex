@@ -475,30 +475,177 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   # Private Helpers
   # ===========================================================================
 
-  defp join_network(cluster_name, host_id) do
+  defp join_network(cluster_name, host_id, attempt \\ 1, max_attempts \\ 3) do
     # cluster_name is already normalized (e.g., "cluster-default")
     # Add this host to the cluster network via direct API
     # Netmaker handles DNS automatically (no custom DNS entries needed)
     case Vpn.add_host_to_network(host_id, cluster_name) do
       {:ok, _node} ->
-        Logger.info("Gateway joined network #{cluster_name}")
-        :ok
+        # Verify that we actually joined the network
+        case verify_joined_network(host_id, cluster_name) do
+          :ok ->
+            Logger.info("Gateway joined network #{cluster_name} (verified)")
+            :ok
+
+          {:error, :not_found} ->
+            Logger.warning(
+              "Gateway join API succeeded but verification failed for #{cluster_name} (attempt #{attempt}/#{max_attempts})"
+            )
+
+            if attempt < max_attempts do
+              # Exponential backoff: 500ms, 1000ms, 2000ms
+              delay_ms = 500 * :math.pow(2, attempt - 1) |> trunc()
+              Logger.info("Retrying join for #{cluster_name} in #{delay_ms}ms...")
+              :timer.sleep(delay_ms)
+              join_network(cluster_name, host_id, attempt + 1, max_attempts)
+            else
+              Logger.error(
+                "Failed to verify join for #{cluster_name} after #{max_attempts} attempts"
+              )
+
+              {:error, :join_verification_failed}
+            end
+
+          {:error, reason} ->
+            Logger.error("Failed to verify join for #{cluster_name}: #{inspect(reason)}")
+            {:error, reason}
+        end
 
       {:error, reason} ->
-        Logger.error("Failed to join network #{cluster_name}: #{inspect(reason)}")
+        Logger.warning(
+          "Failed to join network #{cluster_name}: #{inspect(reason)} (attempt #{attempt}/#{max_attempts})"
+        )
+
+        if attempt < max_attempts do
+          # Exponential backoff: 500ms, 1000ms, 2000ms
+          delay_ms = 500 * :math.pow(2, attempt - 1) |> trunc()
+          Logger.info("Retrying join for #{cluster_name} in #{delay_ms}ms...")
+          :timer.sleep(delay_ms)
+          join_network(cluster_name, host_id, attempt + 1, max_attempts)
+        else
+          Logger.error("Failed to join network #{cluster_name} after #{max_attempts} attempts")
+          {:error, reason}
+        end
+    end
+  end
+
+  defp leave_network(netmaker_host_id, cluster_name, attempt \\ 1, max_attempts \\ 3) do
+    case Vpn.remove_host_from_network(netmaker_host_id, cluster_name) do
+      {:ok, _} ->
+        # Verify that we actually left the network
+        case verify_left_network(netmaker_host_id, cluster_name) do
+          :ok ->
+            Logger.info("Gateway left network #{cluster_name} (verified)")
+            :ok
+
+          {:error, :still_present} ->
+            Logger.warning(
+              "Gateway leave API succeeded but node still present in #{cluster_name} (attempt #{attempt}/#{max_attempts})"
+            )
+
+            if attempt < max_attempts do
+              # Exponential backoff: 500ms, 1000ms, 2000ms
+              delay_ms = 500 * :math.pow(2, attempt - 1) |> trunc()
+              Logger.info("Retrying leave for #{cluster_name} in #{delay_ms}ms...")
+              :timer.sleep(delay_ms)
+              leave_network(netmaker_host_id, cluster_name, attempt + 1, max_attempts)
+            else
+              Logger.error(
+                "Node still present in #{cluster_name} after #{max_attempts} leave attempts - may require manual cleanup"
+              )
+
+              # Don't crash terminate - just log and continue
+              :ok
+            end
+
+          {:error, reason} ->
+            Logger.warning(
+              "Failed to verify leave for #{cluster_name}: #{inspect(reason)} - assuming success"
+            )
+
+            # Don't crash terminate on verification errors
+            :ok
+        end
+
+      {:error, reason} ->
+        Logger.warning(
+          "Failed to leave network #{cluster_name}: #{inspect(reason)} (attempt #{attempt}/#{max_attempts})"
+        )
+
+        if attempt < max_attempts do
+          # Exponential backoff: 500ms, 1000ms, 2000ms
+          delay_ms = 500 * :math.pow(2, attempt - 1) |> trunc()
+          Logger.info("Retrying leave for #{cluster_name} in #{delay_ms}ms...")
+          :timer.sleep(delay_ms)
+          leave_network(netmaker_host_id, cluster_name, attempt + 1, max_attempts)
+        else
+          Logger.error(
+            "Failed to leave network #{cluster_name} after #{max_attempts} attempts - may require manual cleanup"
+          )
+
+          # Don't crash terminate - just log and continue
+          :ok
+        end
+    end
+  end
+
+  defp verify_joined_network(host_id, cluster_name) do
+    # Wait briefly for Netmaker to process the operation
+    :timer.sleep(500)
+
+    # Check if our host has a node in this network
+    case Vpn.list_nodes(cluster_name) do
+      {:ok, nodes} ->
+        node_exists =
+          Enum.any?(nodes, fn node ->
+            node["hostid"] == host_id
+          end)
+
+        if node_exists do
+          Logger.debug("Verified: host #{host_id} found in network #{cluster_name}")
+          :ok
+        else
+          Logger.debug("Verification failed: host #{host_id} not found in network #{cluster_name}")
+          {:error, :not_found}
+        end
+
+      {:error, reason} ->
+        Logger.error("Failed to list nodes for verification: #{inspect(reason)}")
         {:error, reason}
     end
   end
 
-  defp leave_network(netmaker_host_id, cluster_name) do
-    case Vpn.remove_host_from_network(netmaker_host_id, cluster_name) do
-      {:ok, _} ->
-        Logger.info("Gateway left network #{cluster_name}")
+  defp verify_left_network(host_id, cluster_name) do
+    # Wait briefly for Netmaker to process the operation
+    :timer.sleep(500)
+
+    # Check if our host still has a node in this network
+    case Vpn.list_nodes(cluster_name) do
+      {:ok, nodes} ->
+        node_still_exists =
+          Enum.any?(nodes, fn node ->
+            node["hostid"] == host_id
+          end)
+
+        if node_still_exists do
+          Logger.debug(
+            "Verification failed: host #{host_id} still present in network #{cluster_name}"
+          )
+
+          {:error, :still_present}
+        else
+          Logger.debug("Verified: host #{host_id} removed from network #{cluster_name}")
+          :ok
+        end
+
+      {:error, :not_found} ->
+        # Network doesn't exist anymore - that's fine, we're definitely not in it
+        Logger.debug("Network #{cluster_name} not found - assuming successful leave")
         :ok
 
       {:error, reason} ->
-        Logger.error("Failed to leave network #{cluster_name}: #{inspect(reason)}")
-        :ok
+        Logger.warning("Failed to list nodes for leave verification: #{inspect(reason)}")
+        {:error, reason}
     end
   end
 

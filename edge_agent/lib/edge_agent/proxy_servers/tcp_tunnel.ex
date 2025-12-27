@@ -7,6 +7,9 @@ defmodule EdgeAgent.ProxyServers.TcpTunnel do
   Directly connects to target and forwards data in both directions.
   """
 
+  alias EdgeAgent.ProxyServers.Config
+  alias EdgeAgent.ProxyServers.ErrorHandler
+
   require Logger
 
   @doc """
@@ -40,7 +43,10 @@ defmodule EdgeAgent.ProxyServers.TcpTunnel do
         {:ok, target_socket}
 
       {:error, reason} = error ->
-        Logger.error("Failed to connect to #{target_host}:#{target_port}: #{inspect(reason)}")
+        ErrorHandler.log_error(reason, %{
+          target_host: target_host,
+          target_port: target_port
+        })
         error
     end
   end
@@ -53,7 +59,7 @@ defmodule EdgeAgent.ProxyServers.TcpTunnel do
            target_host_charlist,
            target_port,
            [:binary, packet: :raw, active: false],
-           30_000
+           Config.connection_timeout()
          ) do
       {:ok, socket} ->
         {:ok, socket}

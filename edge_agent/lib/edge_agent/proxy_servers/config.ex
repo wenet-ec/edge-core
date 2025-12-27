@@ -24,4 +24,29 @@ defmodule EdgeAgent.ProxyServers.Config do
   def listen_address do
     Application.get_env(:edge_agent, :proxy_listen_address, {0, 0, 0, 0})
   end
+
+  @doc """
+  Returns the TCP connection timeout in milliseconds.
+
+  Used when establishing connections to target hosts.
+  Default: 30000ms (30 seconds)
+  """
+  def connection_timeout do
+    get_timeout(:connection, 30_000)
+  end
+
+  @doc """
+  Returns the socket read timeout in milliseconds.
+
+  Used for reading from client/target sockets.
+  Default: 10000ms (10 seconds)
+  """
+  def read_timeout do
+    get_timeout(:read, 10_000)
+  end
+
+  defp get_timeout(key, default) do
+    Application.get_env(:edge_agent, :proxy_timeouts, [])
+    |> Keyword.get(key, default)
+  end
 end

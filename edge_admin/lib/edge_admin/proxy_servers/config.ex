@@ -24,4 +24,39 @@ defmodule EdgeAdmin.ProxyServers.Config do
   def listen_address do
     {0, 0, 0, 0}
   end
+
+  @doc """
+  Returns the TCP connection timeout in milliseconds.
+
+  Used when establishing connections to target hosts.
+  Default: 5000ms (5 seconds)
+  """
+  def connection_timeout do
+    get_timeout(:connection, 5_000)
+  end
+
+  @doc """
+  Returns the proxy handshake timeout in milliseconds.
+
+  Used for SOCKS5 and HTTP proxy handshakes (multi-step operations).
+  Default: 10000ms (10 seconds)
+  """
+  def handshake_timeout do
+    get_timeout(:handshake, 10_000)
+  end
+
+  @doc """
+  Returns the socket read timeout in milliseconds.
+
+  Used for reading from client/target sockets.
+  Default: 10000ms (10 seconds)
+  """
+  def read_timeout do
+    get_timeout(:read, 10_000)
+  end
+
+  defp get_timeout(key, default) do
+    Application.get_env(:edge_admin, :proxy_timeouts, [])
+    |> Keyword.get(key, default)
+  end
 end

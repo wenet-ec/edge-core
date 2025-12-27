@@ -8,6 +8,8 @@ defmodule EdgeAdmin.ProxyServers.RemoteTunnel do
   that owns the socket and forwards data via messages.
   """
 
+  alias EdgeAdmin.ProxyServers.Config
+
   require Logger
 
   @doc """
@@ -92,7 +94,7 @@ defmodule EdgeAdmin.ProxyServers.RemoteTunnel do
       {:tcp_error, ^socket, reason} ->
         {:error, reason}
     after
-      5000 ->
+      Config.connection_timeout() ->
         {:error, :timeout}
     end
   end
@@ -129,7 +131,7 @@ defmodule EdgeAdmin.ProxyServers.RemoteTunnel do
       {:tcp_error, ^socket, reason} ->
         {:error, reason}
     after
-      5000 ->
+      Config.connection_timeout() ->
         {:error, :timeout}
     end
   end

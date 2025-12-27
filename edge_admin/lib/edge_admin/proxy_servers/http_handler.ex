@@ -14,6 +14,8 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
   @behaviour :ranch_protocol
 
   alias EdgeAdmin.ProxyServers.Authentication
+  alias EdgeAdmin.ProxyServers.Config
+  alias EdgeAdmin.ProxyServers.ErrorHandler
   alias EdgeAdmin.ProxyServers.TcpTunnel
 
   require Logger
@@ -56,11 +58,13 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
 
         transport.close(socket)
 
-      {:error, _reason} ->
+      {:error, reason} ->
+        _error_category = ErrorHandler.log_error(reason, %{protocol: :http})
+
         :telemetry.execute(
           [:edge_admin, :proxy, :connection],
           %{count: 1, total: 1},
-          %{protocol: :http, result: :failure}
+          ErrorHandler.telemetry_metadata(reason, :http) |> Map.put(:result, :failure)
         )
 
         transport.close(socket)
@@ -172,14 +176,16 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
             transport.setopts(socket, active: true)
             handle_remote_streaming(socket, transport, proxy_pid)
 
-          {:error, _reason} ->
-            send_error(socket, transport, 502, "Bad Gateway")
-            {:error, :connect_failed}
+          {:error, reason} ->
+            {status, message} = ErrorHandler.http_error_response(reason)
+            send_error(socket, transport, status, message)
+            {:error, reason}
         end
 
-      {:error, _reason} ->
-        send_error(socket, transport, 400, "Bad Request")
-        {:error, :invalid_uri}
+      {:error, reason} ->
+        {status, message} = ErrorHandler.http_error_response(reason)
+        send_error(socket, transport, status, message)
+        {:error, reason}
     end
   end
 
@@ -208,9 +214,10 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
           exit_node
         )
 
-      {:error, _reason} ->
-        send_error(socket, transport, 400, "Bad Request")
-        {:error, :invalid_uri}
+      {:error, reason} ->
+        {status, message} = ErrorHandler.http_error_response(reason)
+        send_error(socket, transport, status, message)
+        {:error, reason}
     end
   end
 
@@ -254,22 +261,24 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
         transport.setopts(socket, active: true)
         handle_remote_streaming(socket, transport, proxy_pid)
 
-      {:error, _reason} ->
-        send_error(socket, transport, 502, "Bad Gateway")
-        {:error, :connect_failed}
+      {:error, reason} ->
+        {status, message} = ErrorHandler.http_error_response(reason)
+        send_error(socket, transport, status, message)
+        {:error, reason}
     end
   end
 
   defp direct_http_request(socket, transport, host, port, request) do
-    case :gen_tcp.connect(String.to_charlist(host), port, [:binary, active: false], 5000) do
+    case :gen_tcp.connect(String.to_charlist(host), port, [:binary, active: false], Config.connection_timeout()) do
       {:ok, target_socket} ->
         :gen_tcp.send(target_socket, request)
         setup_bidirectional_forwarding(socket, target_socket)
         :timer.sleep(:infinity)
 
-      {:error, _reason} ->
-        send_error(socket, transport, 502, "Bad Gateway")
-        {:error, :connect_failed}
+      {:error, reason} ->
+        {status, message} = ErrorHandler.http_error_response(reason)
+        send_error(socket, transport, status, message)
+        {:error, reason}
     end
   end
 
@@ -370,7 +379,7 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
   end
 
   defp read_until_double_crlf(socket, transport, buffer) do
-    case transport.recv(socket, 0, 10_000) do
+    case transport.recv(socket, 0, Config.read_timeout()) do
       {:ok, data} ->
         new_buffer = buffer <> data
         if String.contains?(new_buffer, "\r\n\r\n") do

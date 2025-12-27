@@ -17,6 +17,8 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
   @behaviour :ranch_protocol
 
   alias EdgeAdmin.ProxyServers.Authentication
+  alias EdgeAdmin.ProxyServers.Config
+  alias EdgeAdmin.ProxyServers.ErrorHandler
   alias EdgeAdmin.ProxyServers.TcpTunnel
 
   require Logger
@@ -29,14 +31,6 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
   @atyp_ipv4 1
   @atyp_domain 3
   @atyp_ipv6 4
-
-  @reply_success 0
-  @reply_general_failure 1
-  @reply_network_unreachable 3
-  @reply_host_unreachable 4
-  @reply_connection_refused 5
-  @reply_command_not_supported 7
-  @reply_address_type_not_supported 8
 
   @impl true
   def start_link(ref, transport, opts) do
@@ -76,11 +70,13 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
 
         transport.close(socket)
 
-      {:error, _reason} ->
+      {:error, reason} ->
+        _error_category = ErrorHandler.log_error(reason, %{protocol: :socks5})
+
         :telemetry.execute(
           [:edge_admin, :proxy, :connection],
           %{count: 1, total: 1},
-          %{protocol: :socks5, result: :failure}
+          ErrorHandler.telemetry_metadata(reason, :socks5) |> Map.put(:result, :failure)
         )
 
         transport.close(socket)
@@ -101,9 +97,9 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
 
   # Step 1: Read client greeting
   defp read_greeting(socket, transport) do
-    case transport.recv(socket, 2, 10_000) do
+    case transport.recv(socket, 2, Config.read_timeout()) do
       {:ok, <<@socks_version, nmethods>>} ->
-        case transport.recv(socket, nmethods, 10_000) do
+        case transport.recv(socket, nmethods, Config.read_timeout()) do
           {:ok, methods} -> {:ok, :binary.bin_to_list(methods)}
           {:error, reason} -> {:error, reason}
         end
@@ -133,11 +129,11 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
 
   # Step 3: Username/Password authentication (RFC 1929)
   defp handle_authentication(socket, transport) do
-    case transport.recv(socket, 2, 10_000) do
+    case transport.recv(socket, 2, Config.read_timeout()) do
       {:ok, <<1, ulen>>} ->
-        with {:ok, username_bin} <- transport.recv(socket, ulen, 10_000),
-             {:ok, <<plen>>} <- transport.recv(socket, 1, 10_000),
-             {:ok, password_bin} <- transport.recv(socket, plen, 10_000) do
+        with {:ok, username_bin} <- transport.recv(socket, ulen, Config.read_timeout()),
+             {:ok, <<plen>>} <- transport.recv(socket, 1, Config.read_timeout()),
+             {:ok, password_bin} <- transport.recv(socket, plen, Config.read_timeout()) do
           username = to_string(username_bin)
           password = to_string(password_bin)
 
@@ -178,13 +174,13 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
 
   # Step 4: Read connection request
   defp read_connect_request(socket, transport) do
-    case transport.recv(socket, 4, 10_000) do
+    case transport.recv(socket, 4, Config.read_timeout()) do
       {:ok, <<@socks_version, @cmd_connect, 0, atyp>>} ->
         read_destination_address(socket, transport, atyp)
 
       {:ok, <<@socks_version, cmd, 0, _atyp>>} ->
         Logger.warning("Unsupported SOCKS5 command: #{cmd}")
-        send_reply(socket, transport, @reply_command_not_supported, "0.0.0.0", 0)
+        send_reply(socket, transport, 7, "0.0.0.0", 0)  # Command not supported
         {:error, :unsupported_command}
 
       {:ok, <<version, _cmd, _rsv, _atyp>>} ->
@@ -197,7 +193,7 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
   end
 
   defp read_destination_address(socket, transport, @atyp_ipv4) do
-    case transport.recv(socket, 6, 10_000) do
+    case transport.recv(socket, 6, Config.read_timeout()) do
       {:ok, <<a, b, c, d, port::16>>} ->
         host = "#{a}.#{b}.#{c}.#{d}"
         {:ok, host, port}
@@ -208,9 +204,9 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
   end
 
   defp read_destination_address(socket, transport, @atyp_domain) do
-    case transport.recv(socket, 1, 10_000) do
+    case transport.recv(socket, 1, Config.read_timeout()) do
       {:ok, <<domain_len>>} ->
-        case transport.recv(socket, domain_len + 2, 10_000) do
+        case transport.recv(socket, domain_len + 2, Config.read_timeout()) do
           {:ok, data} ->
             <<domain_bin::binary-size(domain_len), port::16>> = data
             host = to_string(domain_bin)
@@ -226,7 +222,7 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
   end
 
   defp read_destination_address(socket, transport, @atyp_ipv6) do
-    case transport.recv(socket, 18, 10_000) do
+    case transport.recv(socket, 18, Config.read_timeout()) do
       {:ok, <<ipv6::binary-size(16), port::16>>} ->
         <<a::16, b::16, c::16, d::16, e::16, f::16, g::16, h::16>> = ipv6
 
@@ -252,7 +248,7 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
 
   defp read_destination_address(socket, transport, atyp) do
     Logger.warning("Unsupported address type: #{atyp}")
-    send_reply(socket, transport, @reply_address_type_not_supported, "0.0.0.0", 0)
+    send_reply(socket, transport, 8, "0.0.0.0", 0)  # Address type not supported
     {:error, :unsupported_address_type}
   end
 
@@ -262,29 +258,18 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
 
     case TcpTunnel.connect_and_forward(socket, target_host, target_port, self(), nil, opts) do
       {:ok, :local, _target_socket} ->
-        send_reply(socket, transport, @reply_success, target_host, target_port)
+        send_reply(socket, transport, 0, target_host, target_port)  # Success
         {:ok, :local}
 
       {:ok, :remote, proxy_pid} ->
-        send_reply(socket, transport, @reply_success, target_host, target_port)
+        send_reply(socket, transport, 0, target_host, target_port)  # Success
         transport.setopts(socket, active: true)
         handle_remote_streaming(socket, transport, proxy_pid)
 
-      {:error, :econnrefused} ->
-        send_reply(socket, transport, @reply_connection_refused, target_host, target_port)
-        {:error, :connection_refused}
-
-      {:error, :ehostunreach} ->
-        send_reply(socket, transport, @reply_host_unreachable, target_host, target_port)
-        {:error, :host_unreachable}
-
-      {:error, :enetunreach} ->
-        send_reply(socket, transport, @reply_network_unreachable, target_host, target_port)
-        {:error, :network_unreachable}
-
-      {:error, _reason} ->
-        send_reply(socket, transport, @reply_general_failure, target_host, target_port)
-        {:error, :connect_failed}
+      {:error, reason} ->
+        reply_code = ErrorHandler.socks5_reply_code(reason)
+        send_reply(socket, transport, reply_code, target_host, target_port)
+        {:error, reason}
     end
   end
 

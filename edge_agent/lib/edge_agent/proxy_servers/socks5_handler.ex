@@ -17,6 +17,8 @@ defmodule EdgeAgent.ProxyServers.Socks5Handler do
   @behaviour :ranch_protocol
 
   alias EdgeAgent.ProxyServers.Authentication
+  alias EdgeAgent.ProxyServers.Config
+  alias EdgeAgent.ProxyServers.ErrorHandler
   alias EdgeAgent.ProxyServers.TcpTunnel
 
   require Logger
@@ -31,10 +33,6 @@ defmodule EdgeAgent.ProxyServers.Socks5Handler do
   @atyp_ipv6 4
 
   @reply_success 0
-  @reply_general_failure 1
-  @reply_network_unreachable 3
-  @reply_host_unreachable 4
-  @reply_connection_refused 5
   @reply_command_not_supported 7
   @reply_address_type_not_supported 8
 
@@ -57,7 +55,7 @@ defmodule EdgeAgent.ProxyServers.Socks5Handler do
           :ok
 
         {:error, reason} ->
-          Logger.debug("SOCKS5 handler error: #{inspect(reason)}")
+          _error_category = ErrorHandler.log_error(reason, %{protocol: :socks5})
           transport.close(socket)
           {:error, reason}
       end
@@ -65,17 +63,20 @@ defmodule EdgeAgent.ProxyServers.Socks5Handler do
     duration = System.monotonic_time(:millisecond) - start_time
 
     # Emit connection telemetry
-    conn_result =
+    {conn_result, telemetry_meta} =
       case result do
-        :ok -> :success
-        {:error, :auth_failed} -> :auth_failed
-        {:error, _} -> :failure
+        :ok ->
+          {:success, %{result: :success, protocol: :socks5}}
+        {:error, :auth_failed} ->
+          {:auth_failed, %{result: :auth_failed, protocol: :socks5}}
+        {:error, reason} ->
+          {:failure, ErrorHandler.telemetry_metadata(reason, :socks5) |> Map.put(:result, :failure)}
       end
 
     :telemetry.execute(
       [:edge_agent, :proxy, :socks5, :connection],
       %{count: 1, total: 1},
-      %{result: conn_result}
+      telemetry_meta
     )
 
     # Emit session duration telemetry if connection was successful
@@ -111,9 +112,9 @@ defmodule EdgeAgent.ProxyServers.Socks5Handler do
   # | 1  |    1     | 1 to 255 |
   # +----+----------+----------+
   defp read_greeting(socket, transport) do
-    case transport.recv(socket, 2, 10_000) do
+    case transport.recv(socket, 2, Config.read_timeout()) do
       {:ok, <<@socks_version, nmethods>>} ->
-        case transport.recv(socket, nmethods, 10_000) do
+        case transport.recv(socket, nmethods, Config.read_timeout()) do
           {:ok, methods} ->
             {:ok, :binary.bin_to_list(methods)}
 
@@ -158,15 +159,15 @@ defmodule EdgeAgent.ProxyServers.Socks5Handler do
   # | 1  |  1   | 1 to 255 |  1   | 1 to 255 |
   # +----+------+----------+------+----------+
   defp handle_authentication(socket, transport) do
-    case transport.recv(socket, 2, 10_000) do
+    case transport.recv(socket, 2, Config.read_timeout()) do
       {:ok, <<1, ulen>>} ->
         # Read username
-        case transport.recv(socket, ulen, 10_000) do
+        case transport.recv(socket, ulen, Config.read_timeout()) do
           {:ok, username_bin} ->
             # Read password length and password
-            case transport.recv(socket, 1, 10_000) do
+            case transport.recv(socket, 1, Config.read_timeout()) do
               {:ok, <<plen>>} ->
-                case transport.recv(socket, plen, 10_000) do
+                case transport.recv(socket, plen, Config.read_timeout()) do
                   {:ok, password_bin} ->
                     username = :binary.bin_to_list(username_bin) |> to_string()
                     password = :binary.bin_to_list(password_bin) |> to_string()
@@ -229,7 +230,7 @@ defmodule EdgeAgent.ProxyServers.Socks5Handler do
   # | 1  |  1  | X'00' |  1   | Variable |    2     |
   # +----+-----+-------+------+----------+----------+
   defp read_connect_request(socket, transport) do
-    case transport.recv(socket, 4, 10_000) do
+    case transport.recv(socket, 4, Config.read_timeout()) do
       {:ok, <<@socks_version, @cmd_connect, 0, atyp>>} ->
         read_destination_address(socket, transport, atyp)
 
@@ -248,7 +249,7 @@ defmodule EdgeAgent.ProxyServers.Socks5Handler do
   end
 
   defp read_destination_address(socket, transport, @atyp_ipv4) do
-    case transport.recv(socket, 6, 10_000) do
+    case transport.recv(socket, 6, Config.read_timeout()) do
       {:ok, <<a, b, c, d, port::16>>} ->
         host = "#{a}.#{b}.#{c}.#{d}"
         {:ok, host, port}
@@ -259,9 +260,9 @@ defmodule EdgeAgent.ProxyServers.Socks5Handler do
   end
 
   defp read_destination_address(socket, transport, @atyp_domain) do
-    case transport.recv(socket, 1, 10_000) do
+    case transport.recv(socket, 1, Config.read_timeout()) do
       {:ok, <<domain_len>>} ->
-        case transport.recv(socket, domain_len + 2, 10_000) do
+        case transport.recv(socket, domain_len + 2, Config.read_timeout()) do
           {:ok, data} ->
             <<domain_bin::binary-size(domain_len), port::16>> = data
             host = :binary.bin_to_list(domain_bin) |> to_string()
@@ -278,7 +279,7 @@ defmodule EdgeAgent.ProxyServers.Socks5Handler do
   end
 
   defp read_destination_address(socket, transport, @atyp_ipv6) do
-    case transport.recv(socket, 18, 10_000) do
+    case transport.recv(socket, 18, Config.read_timeout()) do
       {:ok, <<ipv6::binary-size(16), port::16>>} ->
         # Format IPv6 address
         <<a::16, b::16, c::16, d::16, e::16, f::16, g::16, h::16>> = ipv6
@@ -316,21 +317,10 @@ defmodule EdgeAgent.ProxyServers.Socks5Handler do
         send_reply(socket, transport, @reply_success, target_host, target_port)
         {:ok, target_socket}
 
-      {:error, :econnrefused} ->
-        send_reply(socket, transport, @reply_connection_refused, target_host, target_port)
-        {:error, :connection_refused}
-
-      {:error, :ehostunreach} ->
-        send_reply(socket, transport, @reply_host_unreachable, target_host, target_port)
-        {:error, :host_unreachable}
-
-      {:error, :enetunreach} ->
-        send_reply(socket, transport, @reply_network_unreachable, target_host, target_port)
-        {:error, :network_unreachable}
-
-      {:error, _reason} ->
-        send_reply(socket, transport, @reply_general_failure, target_host, target_port)
-        {:error, :connect_failed}
+      {:error, reason} ->
+        reply_code = ErrorHandler.socks5_reply_code(reason)
+        send_reply(socket, transport, reply_code, target_host, target_port)
+        {:error, reason}
     end
   end
 

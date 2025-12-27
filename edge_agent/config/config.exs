@@ -57,6 +57,11 @@ config :edge_agent,
   ecto_repos: [EdgeAgent.Repo],
   version: version
 
+# Proxy server timeouts (in milliseconds)
+config :edge_agent, :proxy_timeouts,
+  connection: 30_000,
+  read: 10_000
+
 config :phoenix, :json_library, Jason
 
 # Import environment configuration

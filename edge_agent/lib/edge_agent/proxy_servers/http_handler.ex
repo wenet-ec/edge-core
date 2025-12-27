@@ -13,6 +13,8 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
   @behaviour :ranch_protocol
 
   alias EdgeAgent.ProxyServers.Authentication
+  alias EdgeAgent.ProxyServers.Config
+  alias EdgeAgent.ProxyServers.ErrorHandler
   alias EdgeAgent.ProxyServers.TcpTunnel
 
   require Logger
@@ -36,7 +38,7 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
           :ok
 
         {:error, reason} ->
-          Logger.debug("HTTP proxy handler error: #{inspect(reason)}")
+          _error_category = ErrorHandler.log_error(reason, %{protocol: :http})
           transport.close(socket)
           {:error, reason}
       end
@@ -44,17 +46,20 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
     duration = System.monotonic_time(:millisecond) - start_time
 
     # Emit connection telemetry
-    conn_result =
+    {conn_result, telemetry_meta} =
       case result do
-        :ok -> :success
-        {:error, :auth_failed} -> :auth_failed
-        {:error, _} -> :failure
+        :ok ->
+          {:success, %{result: :success, protocol: :http}}
+        {:error, :auth_failed} ->
+          {:auth_failed, %{result: :auth_failed, protocol: :http}}
+        {:error, reason} ->
+          {:failure, ErrorHandler.telemetry_metadata(reason, :http) |> Map.put(:result, :failure)}
       end
 
     :telemetry.execute(
       [:edge_agent, :proxy, :http, :connection],
       %{count: 1, total: 1},
-      %{result: conn_result}
+      telemetry_meta
     )
 
     # Emit session duration telemetry if connection was successful
@@ -151,14 +156,16 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
             # Keep the handler process alive
             :timer.sleep(:infinity)
 
-          {:error, _reason} ->
-            send_error(socket, transport, 502, "Bad Gateway")
-            {:error, :connect_failed}
+          {:error, reason} ->
+            {status, message} = ErrorHandler.http_error_response(reason)
+            send_error(socket, transport, status, message)
+            {:error, reason}
         end
 
-      {:error, _reason} ->
-        send_error(socket, transport, 400, "Bad Request")
-        {:error, :invalid_uri}
+      {:error, reason} ->
+        {status, message} = ErrorHandler.http_error_response(reason)
+        send_error(socket, transport, status, message)
+        {:error, reason}
     end
   end
 
@@ -170,9 +177,10 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
         Logger.info("HTTP #{method} to #{host}:#{port}#{path}")
         forward_http_request(socket, transport, method, host, port, path, http_version, headers)
 
-      {:error, _reason} ->
-        send_error(socket, transport, 400, "Bad Request")
-        {:error, :invalid_uri}
+      {:error, reason} ->
+        {status, message} = ErrorHandler.http_error_response(reason)
+        send_error(socket, transport, status, message)
+        {:error, reason}
     end
   end
 
@@ -206,9 +214,10 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
         # Socket forwarding already set up with request sent, keep alive
         :timer.sleep(:infinity)
 
-      {:error, _reason} ->
-        send_error(socket, transport, 502, "Bad Gateway")
-        {:error, :connect_failed}
+      {:error, reason} ->
+        {status, message} = ErrorHandler.http_error_response(reason)
+        send_error(socket, transport, status, message)
+        {:error, reason}
     end
   end
 
@@ -236,7 +245,7 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
   end
 
   defp read_until_double_crlf(socket, transport, buffer) do
-    case transport.recv(socket, 0, 10_000) do
+    case transport.recv(socket, 0, Config.read_timeout()) do
       {:ok, data} ->
         new_buffer = buffer <> data
 

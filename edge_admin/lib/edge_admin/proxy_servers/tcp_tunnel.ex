@@ -10,6 +10,8 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
   """
 
   alias EdgeAdmin.EdgeClusters.Gateway
+  alias EdgeAdmin.ProxyServers.Config
+  alias EdgeAdmin.ProxyServers.ErrorHandler
 
   require Logger
 
@@ -42,9 +44,9 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
       {:ok, cluster_name} ->
         connect_via_gateway(client_socket, cluster_name, target_host, target_port, caller_pid, initial_data)
 
-      {:error, :not_vpn_target} ->
-        Logger.error("Invalid target hostname: #{target_host}")
-        {:error, :invalid_target}
+      {:error, :not_vpn_target} = error ->
+        ErrorHandler.log_error(:invalid_target, %{target_host: target_host})
+        error
     end
   end
 
@@ -72,13 +74,13 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
           initial_data
         )
 
-      {:error, :no_owner} ->
-        Logger.error("No admin owns cluster #{cluster_name}")
-        {:error, :no_cluster_owner}
+      {:error, :no_owner} = error ->
+        ErrorHandler.log_error(:no_cluster_owner, %{cluster_name: cluster_name})
+        error
 
-      {:error, :gateway_not_found} ->
-        Logger.error("No Gateway found for cluster #{cluster_name}")
-        {:error, :no_gateway}
+      {:error, :gateway_not_found} = error ->
+        ErrorHandler.log_error(:no_gateway, %{cluster_name: cluster_name})
+        error
     end
   end
 
@@ -95,9 +97,13 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
         if initial_data, do: send(proxy_pid, {:send_to_target, initial_data})
         {:ok, :remote, proxy_pid}
 
-      {:error, reason} ->
-        Logger.error("Gateway failed to connect to #{target_host}:#{target_port}: #{inspect(reason)}")
-        {:error, reason}
+      {:error, reason} = error ->
+        ErrorHandler.log_error(reason, %{
+          target_host: target_host,
+          target_port: target_port,
+          source: :gateway
+        })
+        error
     end
   end
 
@@ -156,13 +162,19 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
           proxy_password
         )
 
-      {:error, :no_owner} ->
-        Logger.error("No admin owns cluster #{cluster_name}")
-        {:error, :no_cluster_owner}
+      {:error, :no_owner} = error ->
+        ErrorHandler.log_error(:no_cluster_owner, %{
+          cluster_name: cluster_name,
+          context: :proxy_chaining
+        })
+        error
 
-      {:error, :gateway_not_found} ->
-        Logger.error("No Gateway found for exit node cluster #{cluster_name}")
-        {:error, :no_gateway}
+      {:error, :gateway_not_found} = error ->
+        ErrorHandler.log_error(:no_gateway, %{
+          cluster_name: cluster_name,
+          context: :proxy_chaining
+        })
+        error
     end
   end
 
@@ -223,7 +235,10 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
               if initial_data, do: :gen_tcp.send(socket, initial_data)
               :ok
             else
-              Logger.error("Agent proxy rejected CONNECT: #{inspect(response)}")
+              ErrorHandler.log_error(:proxy_rejected, %{
+                response: response,
+                protocol: :http
+              })
               {:error, :proxy_rejected}
             end
 
@@ -250,7 +265,7 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
 
     case :gen_tcp.send(socket, greeting) do
       :ok ->
-        case :gen_tcp.recv(socket, 2, 5000) do
+        case :gen_tcp.recv(socket, 2, Config.connection_timeout()) do
           {:ok, <<5, 2>>} -> :ok
           {:ok, <<5, 0>>} -> :ok  # No auth required
           {:error, reason} -> {:error, reason}
@@ -269,7 +284,7 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
 
     case :gen_tcp.send(socket, auth_request) do
       :ok ->
-        case :gen_tcp.recv(socket, 2, 5000) do
+        case :gen_tcp.recv(socket, 2, Config.connection_timeout()) do
           {:ok, <<1, 0>>} -> :ok
           {:ok, <<1, _status>>} -> {:error, :socks5_auth_failed}
           {:error, reason} -> {:error, reason}
@@ -285,7 +300,7 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
 
     case :gen_tcp.send(socket, request) do
       :ok ->
-        case :gen_tcp.recv(socket, 10, 5000) do
+        case :gen_tcp.recv(socket, 10, Config.connection_timeout()) do
           {:ok, <<5, 0, _::binary>>} ->
             if initial_data, do: :gen_tcp.send(socket, initial_data)
             :ok
@@ -304,7 +319,7 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
 
   # Read HTTP response headers (until \r\n\r\n)
   defp read_http_response(socket, buffer \\ "") do
-    case :gen_tcp.recv(socket, 0, 5000) do
+    case :gen_tcp.recv(socket, 0, Config.connection_timeout()) do
       {:ok, data} ->
         new_buffer = buffer <> data
         if String.contains?(new_buffer, "\r\n\r\n") do
@@ -334,10 +349,14 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
             :ok
 
           {:http_response_consumed, ^proxy_pid, {:error, reason}} ->
-            Logger.error("Agent proxy rejected CONNECT (remote): #{inspect(reason)}")
+            ErrorHandler.log_error(:proxy_rejected, %{
+              reason: reason,
+              protocol: :http,
+              mode: :remote
+            })
             {:error, :proxy_rejected}
         after
-          10_000 ->
+          Config.handshake_timeout() ->
             {:error, :timeout}
         end
 
@@ -350,10 +369,14 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
             :ok
 
           {:socks5_response_consumed, ^proxy_pid, {:error, reason}} ->
-            Logger.error("Agent proxy rejected SOCKS5 (remote): #{inspect(reason)}")
+            ErrorHandler.log_error(:proxy_rejected, %{
+              reason: reason,
+              protocol: :socks5,
+              mode: :remote
+            })
             {:error, :proxy_rejected}
         after
-          10_000 ->
+          Config.handshake_timeout() ->
             {:error, :timeout}
         end
     end

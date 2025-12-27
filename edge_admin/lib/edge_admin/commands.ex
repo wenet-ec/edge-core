@@ -12,6 +12,7 @@ defmodule EdgeAdmin.Commands do
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Commands.Forms
+  alias EdgeAdmin.Commands.Rules
   alias EdgeAdmin.Commands.Workers.ExecutionCreationWorker
   alias EdgeAdmin.EdgeClusters.Gateway
   alias EdgeAdmin.Nodes
@@ -43,7 +44,10 @@ defmodule EdgeAdmin.Commands do
   end
 
   def delete_command(%Command{} = command) do
-    Repo.delete(command)
+    with :ok <- Rules.DeletionRules.validate_command_deletion(command),
+         {:ok, deleted} <- Repo.delete(command) do
+      {:ok, deleted}
+    end
   end
 
   def change_command(%Command{} = command, attrs \\ %{}) do
@@ -100,13 +104,9 @@ defmodule EdgeAdmin.Commands do
   end
 
   def delete_command_execution(%CommandExecution{} = command_execution) do
-    # Validate deletion is allowed (only completed executions)
-    changeset = CommandExecution.deletion_changeset(command_execution)
-
-    if changeset.valid? do
-      Repo.delete(command_execution)
-    else
-      {:error, changeset}
+    with :ok <- Rules.DeletionRules.validate_execution_deletion(command_execution),
+         {:ok, deleted} <- Repo.delete(command_execution) do
+      {:ok, deleted}
     end
   end
 

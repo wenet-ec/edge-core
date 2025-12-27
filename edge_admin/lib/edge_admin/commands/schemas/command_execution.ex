@@ -59,34 +59,6 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   end
 
   @doc """
-  Validates that a command execution can be deleted.
-
-  Only completed executions can be deleted to prevent data loss
-  for pending or in-flight commands.
-
-  Returns the changeset with an error if status is not "completed".
-  """
-  def deletion_changeset(command_execution) do
-    command_execution
-    |> change()
-    |> validate_deletion_allowed()
-  end
-
-  defp validate_deletion_allowed(changeset) do
-    status = get_field(changeset, :status)
-
-    if status == "completed" do
-      changeset
-    else
-      add_error(
-        changeset,
-        :status,
-        "cannot delete execution with status '#{status}' - only completed executions can be deleted"
-      )
-    end
-  end
-
-  @doc """
   Returns the command text for this execution.
   Requires command association to be preloaded.
   """

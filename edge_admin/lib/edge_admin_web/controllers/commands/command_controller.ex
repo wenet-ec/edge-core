@@ -125,7 +125,12 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
 
   operation(:delete,
     summary: "Delete a command",
-    description: "Delete a command and all its related command executions (cascaded deletion)",
+    description: """
+    Delete a command and all its related command executions (cascaded deletion).
+
+    Only commands where ALL executions are completed can be deleted.
+    Attempting to delete a command with pending or sent executions will return 422.
+    """,
     parameters: [
       id: [
         in: :path,
@@ -135,7 +140,10 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
     ],
     responses: %{
       204 => {"Command deleted successfully", "", nil},
-      404 => {"Command not found", "application/json", CommonSchemas.NotFoundResponse}
+      404 => {"Command not found", "application/json", CommonSchemas.NotFoundResponse},
+      422 =>
+        {"Cannot delete command with non-completed executions", "application/json",
+         CommonSchemas.ChangesetErrorResponse}
     }
   )
 

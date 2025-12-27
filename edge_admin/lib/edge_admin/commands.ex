@@ -100,7 +100,14 @@ defmodule EdgeAdmin.Commands do
   end
 
   def delete_command_execution(%CommandExecution{} = command_execution) do
-    Repo.delete(command_execution)
+    # Validate deletion is allowed (only completed executions)
+    changeset = CommandExecution.deletion_changeset(command_execution)
+
+    if changeset.valid? do
+      Repo.delete(command_execution)
+    else
+      {:error, changeset}
+    end
   end
 
   def change_command_execution(%CommandExecution{} = command_execution, attrs \\ %{}) do

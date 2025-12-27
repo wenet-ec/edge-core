@@ -133,7 +133,11 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
 
   operation(:delete,
     summary: "Delete a command execution",
-    description: "Delete a specific command execution",
+    description: """
+    Delete a specific command execution.
+
+    Only completed executions can be deleted. Attempting to delete pending or sent executions will return 422.
+    """,
     parameters: [
       id: [
         in: :path,
@@ -143,7 +147,10 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
     ],
     responses: %{
       204 => {"Command execution deleted successfully", "", nil},
-      404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse}
+      404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse},
+      422 =>
+        {"Cannot delete non-completed execution", "application/json",
+         CommonSchemas.ErrorResponse}
     }
   )
 

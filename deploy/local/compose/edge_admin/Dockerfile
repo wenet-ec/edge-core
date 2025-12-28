@@ -35,39 +35,53 @@ ENV MIX_ENV=dev
 
 WORKDIR ${APP_HOME}
 
-# Install apt packages
+# Install apt packages in single layer
 RUN apt-get update && apt-get install --no-install-recommends -y \
-  # dependencies for building
+  # Erlang runtime dependencies
+  libstdc++6 \
+  openssl \
+  libncurses6 \
+  locales \
+  ca-certificates \
+  # Build dependencies (dev only)
   build-essential \
   git \
-  ca-certificates \
-  # psycopg dependencies
+  # PostgreSQL dependencies
   libpq-dev \
-  # development utilities
+  postgresql-client \
+  # Development utilities
   sudo \
   bash-completion \
   nano \
   ssh \
-  # postgresql client
-  postgresql-client \
-  # requests and pings
+  # Essential tools (healthcheck, troubleshooting, capability checks)
   curl \
   iputils-ping \
-  # file system watching for live reload
+  libcap2-bin \
+  # File system watching for live reload (dev only)
   inotify-tools \
-  # networking debugging tools
+  # Network debugging (comprehensive set for development)
   iproute2 \
-  net-tools \
   dnsutils \
   netcat-openbsd \
   tcpdump \
-  # cleaning up unused files
-  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-  && rm -rf /var/lib/apt/lists/*
+  iptables && \
+  # Set locale in same layer
+  sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen && \
+  # Clean up in same layer to reduce image size
+  apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false && \
+  rm -rf /var/lib/apt/lists/*
+
+# Set locale environment variables
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
 
 # Copy patched netclient binary from builder stage
 COPY --from=netclient-builder /build/netclient /usr/local/bin/netclient
-RUN chmod +x /usr/local/bin/netclient
+RUN chmod +x /usr/local/bin/netclient && \
+    mkdir -p /etc/netclient && \
+    chmod 0775 /etc/netclient
 
 # Create devcontainer user and add it to sudoers
 RUN groupadd --gid 1000 dev-user \
@@ -95,3 +109,5 @@ RUN chmod +x /migrate
 RUN mix deps.get --only hex rebar || true
 
 ENTRYPOINT ["/entrypoint"]
+
+CMD ["/start"]

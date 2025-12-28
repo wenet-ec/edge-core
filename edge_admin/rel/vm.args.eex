@@ -2,23 +2,103 @@
 ## Customize flags given to the VM: http://erlang.org/doc/man/erl.html
 ## -mode/-name/-sname/-setcookie are configured via env vars, do not set them here
 
-## Number of dirty schedulers doing IO work (file, sockets, etc)
-+SDio 10
+## =============================================================================
+## Scheduler Configuration
+## =============================================================================
+
+## Number of dirty schedulers doing IO work (file, sockets, netclient CLI, HTTP calls)
+## EdgeAdmin: Heavy network I/O (Netmaker API, netclient, proxies)
+## Default: CPU core count, we boost for I/O-bound workload
++SDio 32
+
+## Number of dirty CPU schedulers for computationally intensive NIFs
+## EdgeAdmin: Minimal CPU-heavy work (mostly I/O)
++SDcpu 4
+
+## Scheduler bind type - spread across CPU cores for better distribution
+## Options: s (spread), db (default bind), u (unbound)
++sbt db
+
+## Scheduler busy wait threshold (microseconds)
+## Lower = more responsive, higher = less CPU when idle
++sbwt very_short
+
+## =============================================================================
+## Network & Distribution
+## =============================================================================
 
 ## Increase number of concurrent ports/sockets
+## EdgeAdmin: Many simultaneous connections (Netmaker, proxies, distributed Erlang)
 +Q 65536
 
-## Additional async threads for heavy operations
-+A 16
+## Distribution buffer busy limit (KB)
+## EdgeAdmin: Heavy inter-admin traffic via :syn registry and PubSub
+## Default 1024KB too low for distributed multi-admin setup
++zdbbl 32768
 
-## Heap memory strategy for better allocation
+## Distribution fragment size (bytes) - how large messages are chunked
+## Larger = fewer fragments for big messages (metadata updates)
++zdbbl_batch_size 8192
+
+## Kernel poll - use efficient epoll/kqueue for socket events
++K true
+
+## Async thread pool size for file I/O and non-NIF operations
+## EdgeAdmin: Database, log files, config files, netclient operations
++A 32
+
+## =============================================================================
+## Memory Management
+## =============================================================================
+
+## Heap memory strategy - allocate this much (words) before first GC
+## Default 233, we increase for processes handling large messages
 +hms 8192
 
-## Binary heap management
-+hmbs 4096
+## Binary heap management - threshold for storing binaries off-heap
+## Default 64, we increase since we handle large JSON responses from Netmaker API
++hmbs 8192
 
-## Distribution buffer busy limit
-+zdbbl 8192
+## Maximum number of processes
+## EdgeAdmin: Each Gateway is a GenServer, plus Oban workers, proxies, Phoenix connections
+## Default 262144, we keep default (sufficient for 100s of clusters)
+## Uncomment if you expect 1000s of concurrent clusters:
+##+P 1048576
 
-## Tweak GC to run more often
+## =============================================================================
+## Distribution Port Configuration
+## =============================================================================
+
+## Fixed Erlang distribution port (configurable via ERLANG_DIST_PORT)
+## Default: random port, we pin for easier firewall rules
+-kernel inet_dist_listen_min <%= System.get_env("ERLANG_DIST_PORT") || "49125" %>
+-kernel inet_dist_listen_max <%= System.get_env("ERLANG_DIST_PORT") || "49125" %>
+
+## Distribution connection timeout (ms)
+## EdgeAdmin: Cross-datacenter admin communication may have higher latency
+-kernel net_ticktime 60
+
+## Distribution connection backlog
+-kernel inet_dist_listen_options [{backlog,4096}]
+
+## =============================================================================
+## Garbage Collection
+## =============================================================================
+
+## Tweak GC to run more often (reduces memory spikes)
+## Uncomment if you see memory bloat in long-running processes
 ##-env ERL_FULLSWEEP_AFTER 10
+
+## Enable more aggressive GC for binaries
+##-env ERL_MAX_PORTS 65536
+
+## =============================================================================
+## Telemetry & Debugging
+## =============================================================================
+
+## Enable kernel polling statistics (for runtime introspection)
++KP true
+
+## Crash dump settings
+-env ERL_CRASH_DUMP /tmp/erl_crash_<%= System.get_env("HOSTNAME") || "admin" %>.dump
+-env ERL_CRASH_DUMP_SECONDS 30

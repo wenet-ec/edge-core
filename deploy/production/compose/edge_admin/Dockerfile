@@ -1,7 +1,7 @@
 # deploy/production/compose/edge_admin/Dockerfile
 
 # -----------------------------------------------
-# Stage: Build the OTP release
+# Stage 1: Build the OTP release
 # -----------------------------------------------
 FROM elixir:1.19.4-otp-28-slim AS builder
 
@@ -61,28 +61,32 @@ RUN --mount=type=cache,target=/root/.hex \
     mix release
 
 # -----------------------------------------------
-# Stage: Production runtime image (optimized)
+# Stage 2: Production runtime image (optimized)
 # -----------------------------------------------
 FROM debian:stable-20250520-slim
 
-ENV NETCLIENT_VERSION="1.4.0"
+ARG NETCLIENT_VERSION=v1.4.0
 
 # Install runtime dependencies in single layer
+# Grouped by purpose for maintainability
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
+    # Erlang runtime dependencies
     libstdc++6 \
     openssl \
     libncurses6 \
     locales \
-    curl \
-    iputils-ping \
     ca-certificates \
-    wget && \
-    # Install netclient in same layer to reduce image size
-    wget -qO /tmp/netclient https://github.com/gravitl/netclient/releases/download/v${NETCLIENT_VERSION}/netclient-linux-amd64 && \
-    mv /tmp/netclient /usr/local/bin/netclient && \
-    chmod +x /usr/local/bin/netclient && \
-    mkdir -p /etc/netclient && \
+    # Essential tools (healthcheck, troubleshooting, netclient download, capability checks)
+    curl \
+    wget \
+    libcap2-bin \
+    # Network debugging (minimal set for production troubleshooting)
+    iproute2 \
+    iputils-ping \
+    iptables \
+    # Proxy troubleshooting
+    netcat-openbsd && \
     # Set locale in same layer
     sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen && \
     # Clean up in same layer to reduce image size
@@ -94,21 +98,36 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-# Copy the entrypoint script
-COPY ./deploy/production/compose/edge_admin/entrypoint /entrypoint
-RUN sed -i 's/\r$//g' /entrypoint
-RUN chmod +x /entrypoint
+# Download official netclient binary
+RUN wget -q "https://github.com/gravitl/netclient/releases/download/${NETCLIENT_VERSION}/netclient-linux-amd64" -O /usr/local/bin/netclient && \
+    chmod +x /usr/local/bin/netclient && \
+    mkdir -p /etc/netclient && \
+    chmod 0775 /etc/netclient
 
+# Create app user (non-root)
+RUN groupadd --gid 1000 app && \
+    useradd --uid 1000 --gid app --shell /bin/bash --create-home app
+
+# Copy the entrypoint and start scripts
+COPY ./deploy/production/compose/edge_admin/entrypoint /entrypoint
 COPY ./deploy/production/compose/edge_admin/start /start
-RUN sed -i 's/\r$//g' /start
-RUN chmod +x /start
+RUN sed -i 's/\r$//g' /entrypoint /start && \
+    chmod +x /entrypoint /start
 
 # Copy the release from builder stage
 COPY --from=builder /app/_build/prod/rel/edge_admin /app
+RUN chmod +x /app/bin/migrate /app/bin/server && \
+    chown -R app:app /app
 
-RUN chmod +x /app/bin/migrate /app/bin/server
+# Create directories with proper permissions
+RUN mkdir -p /app/data /tmp/erl_crash && \
+    chown -R app:app /app/data /tmp/erl_crash
 
-# Switch to app user
+# Switch to app user for security
+# NOTE: Will run as root at runtime due to NET_ADMIN capability requirements
+# But the release files are owned by app user
 WORKDIR /app
 
 ENTRYPOINT ["/entrypoint"]
+
+CMD ["/start"]

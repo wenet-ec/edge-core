@@ -53,6 +53,7 @@ EPHEMERAL_KEY_CLEANUP_ENABLED=true
 ADMIN_CLUSTER_NAME=1  # Will be prefixed with "admin-cluster-" → admin-cluster-1 (max 16 chars for suffix)
 ADMIN_MAX_CAPACITY=200  # Maximum number of nodes this admin can handle
 ERLANG_COOKIE=prod-cookie  # Shared secret for Erlang distribution (MUST be same across all admins in cluster)
+ERLANG_DIST_PORT=49125 # Port for Admin nodes to communicate
 ADMIN_DISCOVERY_PORT=44000  # Port to scan for admin discovery endpoint
 NETMAKER_DEFAULT_DOMAIN=nm.internal  # DNS domain suffix for hostname construction
 

@@ -1,4 +1,4 @@
-# deploy/local/web.yml
+# deploy/local/cloud.yml
 networks:
   local_edge_core:
     name: local_edge_core
@@ -10,12 +10,8 @@ volumes:
   local_edge_admin_build: {}
   local_edge_admin_2_deps: {}
   local_edge_admin_2_build: {}
-  local_edge_agent_data: {}
-  local_edge_agent_deps: {}
-  local_edge_agent_build: {}
-  local_edge_agent_netclient_data: {}
-  local_edge_metrics_storage_data: {}
-  local_edge_metrics_collector_data: {}
+  local_edge_admin_3_deps: {}
+  local_edge_admin_3_build: {}
   local_edge_vpn_data: {}
   local_edge_vpn_db_data: {}
   local_edge_vpn_dns_config: {}
@@ -24,6 +20,8 @@ volumes:
   local_edge_vpn_broker_logs: {}
   local_edge_vpn_proxy_data: {}
   local_edge_vpn_proxy_config: {}
+  local_edge_metrics_storage_data: {}
+  local_edge_metrics_collector_data: {}
 
 services:
   # Edge Admin
@@ -82,7 +80,6 @@ services:
       timeout: 5s
       retries: 6
       start_period: 45s
-    command: /start
 
   edge_admin_2:
     build:
@@ -124,7 +121,50 @@ services:
       timeout: 5s
       retries: 6
       start_period: 45s
-    command: /start
+
+  edge_admin_3:
+    build:
+      context: ../..
+      dockerfile: ./deploy/local/compose/edge_admin/Dockerfile
+    image: local_edge_admin
+    container_name: local_edge_admin_3
+    networks:
+      - local_edge_core
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+      edge_admin_db:
+        condition: service_healthy
+      edge_admin:
+        condition: service_healthy
+    volumes:
+      - ../../edge_admin:/app:z
+      - ../../nexmaker:/nexmaker:z
+      - local_edge_admin_3_deps:/app/deps
+      - local_edge_admin_3_build:/app/_build
+      - /dev/net/tun:/dev/net/tun
+    env_file:
+      - ./.envs/.edge_admin
+    environment:
+      - ADMIN_CLUSTER_NAME=b
+      - ADMIN_CLUSTER_SUBNET=100.63.1.0/24
+    ports:
+      - "4003:44000"
+      - "3130:43128"
+      - "1082:41080"
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
+      interval: 60s
+      timeout: 5s
+      retries: 6
+      start_period: 45s
 
   edge_admin_test:
     build:
@@ -221,7 +261,11 @@ services:
       edge_vpn_broker:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/api/server/status"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --spider http://localhost:8081/api/server/status",
+        ]
       interval: 10s
       timeout: 5s
       retries: 1
@@ -278,54 +322,16 @@ services:
       - edge_vpn
     command: caddy run --config /etc/caddy/Caddyfile
 
-  # Edge Agent
-  edge_agent:
-    build:
-      context: ../..
-      dockerfile: ./deploy/local/compose/edge_agent/Dockerfile
-    image: local_edge_agent
-    container_name: local_edge_agent
-    volumes:
-      - ../../edge_agent:/app:z
-      - ../../nexmaker:/nexmaker:z
-      - local_edge_agent_deps:/app/deps
-      - local_edge_agent_build:/app/_build
-      - local_edge_agent_data:/app/data
-      - local_edge_agent_netclient_data:/etc/netclient
-      - /etc/resolv.conf:/etc/resolv.conf:rw
-      - /:/host:ro
-    env_file:
-      - ./.envs/.edge_agent
-    network_mode: host
-    privileged: true
-    command: /start
-
-  edge_agent_test:
-    build:
-      context: ../..
-      dockerfile: ./deploy/local/compose/edge_agent/Dockerfile
-    image: local_edge_agent
-    container_name: local_edge_agent_test
-    network_mode: host
+  edge_vpn_ui:
+    container_name: edge_vpn_ui
+    image: gravitl/netmaker-ui:v1.4.0
     depends_on:
-      edge_admin:
-        condition: service_healthy
       edge_vpn:
         condition: service_healthy
-    volumes:
-      - ../../edge_agent:/app:z
-      - ../../nexmaker:/nexmaker:z
-      - local_edge_agent_deps:/app/deps
-      - local_edge_agent_build:/app/_build
-      - local_edge_agent_data:/app/data
-      - local_edge_agent_netclient_data:/etc/netclient
-      - /:/host:ro
-    env_file:
-      - ./.envs/.edge_agent_test
-    profiles:
-      - test
-    privileged: true
-    command: mix test
+    environment:
+      - BACKEND_URL=http://localhost:8081
+    ports:
+      - "8080:80"
 
   # Metrics
   edge_metrics_storage:
@@ -340,8 +346,8 @@ services:
     env_file:
       - ./.envs/.edge_metrics_storage
     command:
-      - '-envflag.enable'
-      - '-envflag.prefix=VM_'
+      - "-envflag.enable"
+      - "-envflag.prefix=VM_"
 
   edge_metrics_collector:
     image: victoriametrics/vmagent:v1.132.0
@@ -358,5 +364,5 @@ services:
     ports:
       - "8429:8429"
     command:
-      - '-envflag.enable'
-      - '-envflag.prefix=VM_'
+      - "-envflag.enable"
+      - "-envflag.prefix=VM_"

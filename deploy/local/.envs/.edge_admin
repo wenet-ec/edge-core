@@ -92,7 +92,7 @@ PUBLIC_ENROLLMENT_KEY_ENABLED=true
 # =============================================================================
 
 # Admin cluster (VPN network for multi-admin coordination)
-ADMIN_CLUSTER_NAME=1  # Will be prefixed with "admin-cluster-" → admin-cluster-1 (max 16 chars for suffix)
+ADMIN_CLUSTER_NAME=a  # Will be prefixed with "admin-cluster-" → admin-cluster-a (max 16 chars for suffix)
 ADMIN_CLUSTER_SUBNET=100.63.0.0/24  # IPv4 CIDR for admin cluster network (separate from edge clusters)
 
 # Maximum number of nodes this admin can handle

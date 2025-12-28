@@ -15,12 +15,11 @@ services:
       dockerfile: ./deploy/production/compose/edge_agent/Dockerfile
     image: production_edge_agent
     container_name: production_edge_agent
-    network_mode: host
     volumes:
       - production_edge_agent_data:/app/data
       - production_edge_agent_netclient_data:/etc/netclient
       - /:/host:ro
     env_file:
       - ./.envs/.edge_agent
+    network_mode: host
     privileged: true
-    command: /start

@@ -1,16 +1,8 @@
 # deploy/production/.envs/.edge_admin
 
-# Server configuration
-CORS_ALLOWED_ORIGINS=*
-API_PORT=44000
-SECRET_KEY_BASE=zsIbO5eGH9IJ1p+E6M1a1VL4bIGrwLeTS8W7q8QDAOE/o3Ucy0si768bJxmF4A1Q
-
-# Authentication configuration
-AUTH_ENABLED=true
-MASTER_KEY=supersecretkey123456789
-# METRICS_KEY=  # Optional: Scoped key for metrics endpoints (defaults to MASTER_KEY)
-
-# Database configuration
+# =============================================================================
+# Database
+# =============================================================================
 DB_HOST=edge_admin_db
 DB_PORT=5432
 DB_NAME=edge_admin_production
@@ -18,50 +10,119 @@ DB_USER=edge_admin_user
 DB_PASSWORD=edge_admin_password
 DB_POOL_SIZE=15
 DB_SSL=false
+# DB_IPV6=false  # Enable IPv6 socket options (optional)
 
-# Basic Authentication (optional for internal service)
+# =============================================================================
+# Phoenix / Web Server
+# =============================================================================
+API_PORT=44000
+SECRET_KEY_BASE=zsIbO5eGH9IJ1p+E6M1a1VL4bIGrwLeTS8W7q8QDAOE/o3Ucy0si768bJxmF4A1Q
+CORS_ALLOWED_ORIGINS=*
+# PHX_SERVER=true  # Auto-start Phoenix server (set by start script, not needed here)
+
+# =============================================================================
+# Basic Authentication (Optional)
+# =============================================================================
 BASIC_AUTH_USERNAME=admin
 BASIC_AUTH_PASSWORD=admin
 
-# Phoenix Live Dashboard
+# =============================================================================
+# LiveDashboard
+# =============================================================================
 LIVE_DASHBOARD_ENABLED=true
 
-# Sentry configuration
-# SENTRY_DSN=
-SENTRY_ENVIRONMENT_NAME=local
+# =============================================================================
+# Authentication & Authorization
+# =============================================================================
+AUTH_ENABLED=true
+MASTER_KEY=supersecretkey123456789
+# METRICS_KEY=  # Optional: Scoped key for metrics endpoints (defaults to MASTER_KEY)
+# PROXY_KEY=  # Optional: Scoped key for proxy endpoints (defaults to MASTER_KEY)
 
-# Netmaker
+# =============================================================================
+# Proxy Servers
+# =============================================================================
+HTTP_PROXY_PORT=43128
+SOCKS5_PROXY_PORT=41080
+
+# =============================================================================
+# Observability (Metrics, Telemetry, Sentry)
+# =============================================================================
+METRICS_BASE_URL=edge_admin:44000
+# SENTRY_DSN=  # Optional: Sentry DSN for error tracking
+SENTRY_ENVIRONMENT_NAME=production
+
+# =============================================================================
+# VPN / Netmaker
+# =============================================================================
+
+# --- Nexmaker Client (Netmaker API Client) ---
 NETMAKER_API_URL=http://edge_vpn:8081
 NETMAKER_MASTER_KEY=supersecretkey123456789
+
+# --- Netmaker Superadmin (UI Access) ---
 NETMAKER_SUPERADMIN_USERNAME=admin
 NETMAKER_SUPERADMIN_PASSWORD=admin
+
+# --- WireGuard Mode ---
+# Options: wireguard-go (userspace), unset for kernel mode
+# Agent runs host network + privileged: use kernel mode (faster)
+# Admin runs container network: may need userspace mode
 WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
 
-# Metrics configuration
-METRICS_BASE_URL=edge_admin:44000
+# --- Cluster Network Configuration ---
+# Subnet size for auto-generated clusters (e.g., 24 = /24 = 254 hosts)
+# CLUSTER_SUBNET_PREFIX=24
 
-# Default cluster
+# CIDR ranges for auto-generated cluster subnets (CGNAT space: 100.64.0.0/10)
+# CLUSTER_AUTO_GENERATED_RANGES=100.64.0.0/10
+
+# Optional: Pre-defined default cluster for agent enrollment
 DEFAULT_CLUSTER_NAME=default
 # DEFAULT_CLUSTER_SUBNET=100.64.0.0/24
 
-# Ephemeral key cleanup configuration
-EPHEMERAL_KEY_TTL_HOURS=168  # 7 days
-EPHEMERAL_KEY_CLEANUP_SCHEDULE=0 0 * * *  # Daily at midnight
-EPHEMERAL_KEY_CLEANUP_ENABLED=true
+# Allow public enrollment without authentication (DISABLE IN PRODUCTION!)
+# PUBLIC_ENROLLMENT_KEY_ENABLED=false
 
-# Admin clustering configuration
+# Netmaker DNS domain suffix (used for hostname construction)
+# NETMAKER_DEFAULT_DOMAIN=nm.internal
+
+# =============================================================================
+# Admin Cluster & Distribution
+# =============================================================================
+
+# Admin cluster (VPN network for multi-admin coordination)
 ADMIN_CLUSTER_NAME=1  # Will be prefixed with "admin-cluster-" → admin-cluster-1 (max 16 chars for suffix)
-ADMIN_MAX_CAPACITY=200  # Maximum number of nodes this admin can handle
+ADMIN_CLUSTER_SUBNET=100.63.0.0/24  # IPv4 CIDR for admin cluster network (separate from edge clusters)
+
+# Maximum number of nodes this admin can handle
+ADMIN_MAX_CAPACITY=200
+
+# Erlang distribution (for multi-admin clustering)
 ERLANG_COOKIE=prod-cookie  # Shared secret for Erlang distribution (MUST be same across all admins in cluster)
-ERLANG_DIST_PORT=49125 # Port for Admin nodes to communicate
+ERLANG_DIST_PORT=49125  # Fixed port for Erlang distribution (set in vm.args.eex)
+
+# Admin discovery
 ADMIN_DISCOVERY_PORT=44000  # Port to scan for admin discovery endpoint
-NETMAKER_DEFAULT_DOMAIN=nm.internal  # DNS domain suffix for hostname construction
 
-# Node health check configuration
-NODE_HEALTH_CHECK_SCHEDULE=* * * * *  # Cron schedule (default: every minute)
+# =============================================================================
+# Background Workers & Schedulers
+# =============================================================================
+
+# --- Ephemeral Key Cleanup (Oban Cron) ---
+EPHEMERAL_KEY_CLEANUP_ENABLED=true
+EPHEMERAL_KEY_CLEANUP_SCHEDULE=0 0 * * *  # Daily at midnight
+
+# --- Cluster Reconciliation (Oban Cron) ---
+# Syncs cluster state with Netmaker to recover from inconsistencies
+# CLUSTER_RECONCILIATION_ENABLED=true
+# CLUSTER_RECONCILIATION_SCHEDULE=0 */6 * * *  # Every 6 hours
+
+# --- Zombie Admin Cleanup (Oban Cron) ---
+ZOMBIE_ADMIN_CLEANUP_SCHEDULE=*/30 * * * *  # Every 30 minutes
+ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES=120  # Minutes since last checkin to consider dead (2 hours)
+
+# --- Node Health Check (Quantum LocalScheduler) ---
+NODE_HEALTH_CHECK_SCHEDULE=* * * * *  # Every minute
 NODE_HEALTH_CHECK_CONCURRENCY=100  # Number of parallel health check requests
-NODE_HEALTH_CHECK_TIMEOUT_MS=5000  # Timeout per health check in milliseconds (5 seconds)
-
-# Zombie admin cleanup configuration
-ZOMBIE_ADMIN_CLEANUP_SCHEDULE=*/30 * * * *  # Cron schedule (default: every 30 minutes)
-ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES=120  # Minutes since last checkin to consider dead (default: 120 = 2 hours)
+NODE_HEALTH_CHECK_TIMEOUT_MS=5000  # Timeout per health check (5 seconds)

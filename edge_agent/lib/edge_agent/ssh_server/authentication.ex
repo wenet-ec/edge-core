@@ -79,9 +79,7 @@ defmodule EdgeAgent.SshServer.Authentication do
             false
 
           {:error, reason} ->
-            Logger.error(
-              "SSH public key authentication error for user #{username}: #{inspect(reason)}"
-            )
+            Logger.error("SSH public key authentication error for user #{username}: #{inspect(reason)}")
 
             false
         end
@@ -105,8 +103,7 @@ defmodule EdgeAgent.SshServer.Authentication do
 
   # Private functions - Key formatting (Erlang SSH format -> OpenSSH string)
 
-  defp format_public_key({key_type, key_data, _comment})
-       when is_list(key_type) and is_binary(key_data) do
+  defp format_public_key({key_type, key_data, _comment}) when is_list(key_type) and is_binary(key_data) do
     key_type_string = charlist_to_string(key_type)
     key_data_base64 = Base.encode64(key_data)
     "#{key_type_string} #{key_data_base64}"

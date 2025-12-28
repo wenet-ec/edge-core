@@ -16,18 +16,18 @@ end
 config :edge_agent, EdgeAgentWeb.Endpoint,
   http: [
     ip: {0, 0, 0, 0, 0, 0, 0, 0},
-    port: get_env("API_PORT", :integer, 44000)
+    port: get_env("API_PORT", :integer, 44_000)
   ],
   # Generate ephemeral secret_key_base (agent is stateless API, no sessions)
   secret_key_base: Base.encode64(:crypto.strong_rand_bytes(48))
 
 config :edge_agent,
-  ssh_port: get_env("SSH_PORT", :integer, 40022),
-  host_metrics_port: get_env("HOST_METRICS_PORT", :integer, 49100),
-  wireguard_metrics_port: get_env("WIREGUARD_METRICS_PORT", :integer, 49586),
-  http_proxy_port: get_env("HTTP_PROXY_PORT", :integer, 43128),
-  socks5_proxy_port: get_env("SOCKS5_PROXY_PORT", :integer, 41080),
-  admin_discovery_port: get_env("ADMIN_DISCOVERY_PORT", :integer, 44000),
+  ssh_port: get_env("SSH_PORT", :integer, 40_022),
+  host_metrics_port: get_env("HOST_METRICS_PORT", :integer, 49_100),
+  wireguard_metrics_port: get_env("WIREGUARD_METRICS_PORT", :integer, 49_586),
+  http_proxy_port: get_env("HTTP_PROXY_PORT", :integer, 43_128),
+  socks5_proxy_port: get_env("SOCKS5_PROXY_PORT", :integer, 41_080),
+  admin_discovery_port: get_env("ADMIN_DISCOVERY_PORT", :integer, 44_000),
   netmaker_default_domain: get_env("NETMAKER_DEFAULT_DOMAIN", :string, "nm.internal"),
   use_random_id: get_env("USE_RANDOM_ID", :boolean, false),
   enrollment_key: get_env("ENROLLMENT_KEY", :string, nil),

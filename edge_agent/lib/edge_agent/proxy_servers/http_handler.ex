@@ -50,10 +50,12 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
       case result do
         :ok ->
           {:success, %{result: :success, protocol: :http}}
+
         {:error, :auth_failed} ->
           {:auth_failed, %{result: :auth_failed, protocol: :http}}
+
         {:error, reason} ->
-          {:failure, ErrorHandler.telemetry_metadata(reason, :http) |> Map.put(:result, :failure)}
+          {:failure, reason |> ErrorHandler.telemetry_metadata(:http) |> Map.put(:result, :failure)}
       end
 
     :telemetry.execute(
@@ -189,7 +191,7 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
     case URI.parse(uri) do
       %URI{scheme: scheme, host: host, port: port, path: path} when scheme in ["http", "https"] ->
         # Use default port if not specified
-        port = port || (if scheme == "https", do: 443, else: 80)
+        port = port || if scheme == "https", do: 443, else: 80
         path = path || "/"
         {:ok, host, port, path}
 
@@ -200,9 +202,10 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
 
   defp forward_http_request(socket, transport, method, host, port, path, http_version, headers) do
     # Build the HTTP request to send to target
-    filtered_headers = Enum.reject(headers, fn {k, _v} ->
-      String.downcase(k) in ["proxy-authorization", "proxy-connection"]
-    end)
+    filtered_headers =
+      Enum.reject(headers, fn {k, _v} ->
+        String.downcase(k) in ["proxy-authorization", "proxy-connection"]
+      end)
 
     request_line = "#{method} #{path} #{http_version}\r\n"
     header_lines = Enum.map(filtered_headers, fn {k, v} -> "#{k}: #{v}\r\n" end)
@@ -297,10 +300,11 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
   end
 
   defp parse_headers(lines) do
-    Enum.reduce(lines, [], fn line, acc ->
+    lines
+    |> Enum.reduce([], fn line, acc ->
       case String.split(line, ":", parts: 2) do
         [key, value] ->
-          [{String.trim(key) |> String.downcase(), String.trim(value)} | acc]
+          [{key |> String.trim() |> String.downcase(), String.trim(value)} | acc]
 
         _ ->
           acc

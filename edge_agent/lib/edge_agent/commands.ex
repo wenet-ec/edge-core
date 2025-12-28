@@ -1,7 +1,83 @@
 # edge_agent/lib/edge_agent/commands.ex
 defmodule EdgeAgent.Commands do
   @moduledoc """
-  The Commands context.
+  Command execution context for edge agents.
+
+  This module handles receiving commands from the admin server, executing them
+  via hostscript, and reporting results back. Commands flow through a queue-based
+  execution pipeline with cancellation support.
+
+  ## Architecture
+
+  The module uses a **queue-based execution model** with the following components:
+
+  1. **Local Database** - Stores command executions (pending → completed)
+  2. **Oban Jobs** - Manages execution queue with uniqueness constraints
+  3. **ExecutionRegistry** - Tracks running tasks for cancellation
+  4. **AdminClient** - Reports execution results to admin server
+
+  ## Execution Flow
+
+  ```
+  1. Admin sends command → Agent creates CommandExecution (status: "pending")
+  2. Enqueue Oban job → ExecutionEnqueueWorker triggers CommandExecutionWorker
+  3. Worker calls execute_single_command → Runs via /usr/local/bin/hostscript
+  4. Execution completes → Updates status to "completed" with output/exit_code
+  5. Report to admin → Sends result via AdminClient.update_command_execution
+  6. Delete local copy → Removes from agent database after successful report
+  ```
+
+  ## Command Cancellation
+
+  Commands can be cancelled at any stage:
+  - **Pending (not running)** - Marks as cancelled without killing task
+  - **Pending (running)** - Kills task via Process.exit and marks cancelled
+  - **Completed** - No action (already finished)
+
+  Cancellation involves:
+  1. Killing running task (if executing)
+  2. Cancelling Oban job (prevents future execution)
+  3. Updating status to completed with exit code 143
+
+  ## Reporting
+
+  Executions are reported back to admin in batches:
+  - Report ordered by creation time (FIFO)
+  - Handle 404/422 errors (execution deleted/completed on admin side)
+  - Stop on network errors and retry later
+  - Delete local copy after successful report
+
+  ## Key Concepts
+
+  - **CommandExecution**: Database record tracking command state
+  - **ExecutionRegistry**: ETS table mapping execution_id → task_pid
+  - **Hostscript**: Sandboxed script execution environment
+  - **FIFO Ordering**: Commands executed in order received
+
+  ## Examples
+
+      # List all command executions
+      iex> Commands.list_command_executions()
+      [%CommandExecution{id: "...", status: "pending", ...}]
+
+      # Create and enqueue execution
+      iex> Commands.create_command_execution_and_enqueue_worker(%{
+        id: "exec-123",
+        command_id: "cmd-456",
+        node_id: "node-789",
+        command_text: "uptime",
+        timeout: 30000
+      })
+      {:ok, %CommandExecution{}}
+
+      # Cancel running execution
+      iex> execution = Commands.get_command_execution("exec-123")
+      iex> Commands.cancel_execution(execution)
+      {:ok, %{action: :cancelled, task_kill: :task_killed, oban_result: :job_cancelled}}
+
+      # Report completed executions to admin
+      iex> Commands.report_unreported_executions()
+      :ok
   """
 
   import Ecto.Query, warn: false
@@ -14,10 +90,22 @@ defmodule EdgeAgent.Commands do
 
   require Logger
 
+  @doc """
+  Lists all command executions from the database.
+
+  Returns all executions regardless of status (pending or completed).
+  """
+  @spec list_command_executions() :: [CommandExecution.t()]
   def list_command_executions do
     Repo.all(CommandExecution)
   end
 
+  @doc """
+  Gets a command execution by ID.
+
+  Returns `{:ok, execution}` if found, `{:error, :not_found}` otherwise.
+  """
+  @spec get_command_execution(String.t()) :: {:ok, CommandExecution.t()} | {:error, :not_found}
   def get_command_execution(id) do
     case Repo.get(CommandExecution, id) do
       nil -> {:error, :not_found}
@@ -27,6 +115,14 @@ defmodule EdgeAgent.Commands do
     Ecto.Query.CastError -> {:error, :not_found}
   end
 
+  @doc """
+  Creates a command execution and enqueues worker for execution.
+
+  This is the primary entry point for creating new command executions.
+  Validates params, creates the execution record, and triggers the execution pipeline.
+  """
+  @spec create_command_execution_and_enqueue_worker(map()) ::
+          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   def create_command_execution_and_enqueue_worker(params \\ %{}) do
     with {:ok, attrs} <- CreateCommandExecutionForm.changeset(params),
          {:ok, command_execution} <- create_command_execution(attrs) do
@@ -40,26 +136,59 @@ defmodule EdgeAgent.Commands do
     end
   end
 
+  @doc """
+  Creates a command execution record.
+
+  Lower-level function for creating executions without enqueueing workers.
+  Most callers should use `create_command_execution_and_enqueue_worker/1` instead.
+  """
+  @spec create_command_execution(map()) ::
+          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   def create_command_execution(attrs \\ %{}) do
     %CommandExecution{}
     |> CommandExecution.changeset(attrs)
     |> Repo.insert()
   end
 
+  @doc """
+  Updates a command execution with new attributes.
+
+  Typically used to update status, output, exit_code, and completed_at after execution.
+  """
+  @spec update_command_execution(CommandExecution.t(), map()) ::
+          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   def update_command_execution(%CommandExecution{} = command_execution, attrs) do
     command_execution
     |> CommandExecution.changeset(attrs)
     |> Repo.update()
   end
 
+  @doc """
+  Deletes a command execution from the database.
+
+  Used after successfully reporting execution to admin.
+  """
+  @spec delete_command_execution(CommandExecution.t()) ::
+          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   def delete_command_execution(%CommandExecution{} = command_execution) do
     Repo.delete(command_execution)
   end
 
+  @doc """
+  Returns a changeset for tracking command execution changes.
+  """
+  @spec change_command_execution(CommandExecution.t(), map()) :: Ecto.Changeset.t()
   def change_command_execution(%CommandExecution{} = command_execution, attrs \\ %{}) do
     CommandExecution.changeset(command_execution, attrs)
   end
 
+  @doc """
+  Enqueues all pending command executions as Oban jobs.
+
+  Called periodically to ensure pending commands are processed.
+  Oban's unique constraints prevent duplicate job creation.
+  """
+  @spec enqueue_pending_executions() :: :ok
   def enqueue_pending_executions do
     Logger.debug("Enqueueing pending command executions")
 
@@ -80,6 +209,19 @@ defmodule EdgeAgent.Commands do
     end
   end
 
+  @doc """
+  Executes a single command via hostscript.
+
+  Runs the command in a separate task with timeout support, registers it for cancellation,
+  and updates the execution record with output, exit code, and completion time.
+
+  Exit codes:
+  - 0: Success
+  - 124: Timeout
+  - >0: Failure
+  - 143: Cancelled (SIGTERM)
+  """
+  @spec execute_single_command(CommandExecution.t()) :: :ok
   def execute_single_command(execution) do
     Logger.info("Executing command: #{execution.id}")
 
@@ -150,6 +292,14 @@ defmodule EdgeAgent.Commands do
     :ok
   end
 
+  @doc """
+  Reports all completed but unreported executions back to admin.
+
+  Attempts to report completed executions in FIFO order (oldest first).
+  Stops on network errors and retries later. Deletes executions after successful report
+  or when admin returns 404/422 (execution no longer exists or already completed).
+  """
+  @spec report_unreported_executions() :: :ok
   def report_unreported_executions do
     Logger.info("Starting unreported executions report")
 
@@ -242,6 +392,7 @@ defmodule EdgeAgent.Commands do
           Logger.warning(
             "Admin rejected update for execution #{execution.id} with HTTP #{status}: #{inspect(body)}. Discarding execution."
           )
+
           delete_execution_after_report(execution)
           {:cont, :ok}
 
@@ -268,12 +419,9 @@ defmodule EdgeAgent.Commands do
         Logger.debug("Deleted execution #{execution.id} from local database")
 
       {:error, changeset} ->
-        Logger.warning(
-          "Failed to delete execution #{execution.id}: #{inspect(changeset.errors)}"
-        )
+        Logger.warning("Failed to delete execution #{execution.id}: #{inspect(changeset.errors)}")
     end
   end
-
 
   # Enqueues a worker, handling duplicates gracefully
   def enqueue_worker(worker_module, worker_name) do
@@ -294,11 +442,7 @@ defmodule EdgeAgent.Commands do
 
   # Queries command executions by status, ordered by insertion time (FIFO)
   defp get_executions_by_status(status) do
-    from(ce in CommandExecution,
-      where: ce.status == ^status,
-      order_by: [asc: ce.inserted_at]
-    )
-    |> Repo.all()
+    Repo.all(from(ce in CommandExecution, where: ce.status == ^status, order_by: [asc: ce.inserted_at]))
   end
 
   defp get_pending_executions, do: get_executions_by_status("pending")

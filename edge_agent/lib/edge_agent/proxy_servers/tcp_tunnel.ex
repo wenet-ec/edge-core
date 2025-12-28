@@ -47,6 +47,7 @@ defmodule EdgeAgent.ProxyServers.TcpTunnel do
           target_host: target_host,
           target_port: target_port
         })
+
         error
     end
   end

@@ -67,10 +67,12 @@ defmodule EdgeAgent.ProxyServers.Socks5Handler do
       case result do
         :ok ->
           {:success, %{result: :success, protocol: :socks5}}
+
         {:error, :auth_failed} ->
           {:auth_failed, %{result: :auth_failed, protocol: :socks5}}
+
         {:error, reason} ->
-          {:failure, ErrorHandler.telemetry_metadata(reason, :socks5) |> Map.put(:result, :failure)}
+          {:failure, reason |> ErrorHandler.telemetry_metadata(:socks5) |> Map.put(:result, :failure)}
       end
 
     :telemetry.execute(
@@ -99,9 +101,6 @@ defmodule EdgeAgent.ProxyServers.Socks5Handler do
          {:ok, _target_socket} <- establish_tunnel(socket, transport, target_host, target_port) do
       # Tunnel is active, keep handler alive
       :timer.sleep(:infinity)
-    else
-      {:error, reason} ->
-        {:error, reason}
     end
   end
 
@@ -169,8 +168,8 @@ defmodule EdgeAgent.ProxyServers.Socks5Handler do
               {:ok, <<plen>>} ->
                 case transport.recv(socket, plen, Config.read_timeout()) do
                   {:ok, password_bin} ->
-                    username = :binary.bin_to_list(username_bin) |> to_string()
-                    password = :binary.bin_to_list(password_bin) |> to_string()
+                    username = username_bin |> :binary.bin_to_list() |> to_string()
+                    password = password_bin |> :binary.bin_to_list() |> to_string()
 
                     case Authentication.authenticate(username, password) do
                       :ok ->
@@ -265,7 +264,7 @@ defmodule EdgeAgent.ProxyServers.Socks5Handler do
         case transport.recv(socket, domain_len + 2, Config.read_timeout()) do
           {:ok, data} ->
             <<domain_bin::binary-size(domain_len), port::16>> = data
-            host = :binary.bin_to_list(domain_bin) |> to_string()
+            host = domain_bin |> :binary.bin_to_list() |> to_string()
             Logger.info("SOCKS5 CONNECT to #{host}:#{port} (domain)")
             {:ok, host, port}
 
@@ -285,7 +284,8 @@ defmodule EdgeAgent.ProxyServers.Socks5Handler do
         <<a::16, b::16, c::16, d::16, e::16, f::16, g::16, h::16>> = ipv6
 
         host =
-          :io_lib.format("~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b", [
+          "~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b"
+          |> :io_lib.format([
             a,
             b,
             c,

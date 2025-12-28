@@ -23,16 +23,13 @@ defmodule EdgeAgent.ProxyServers.ErrorHandler do
       :etimedout -> {504, "Gateway Timeout"}
       :timeout -> {504, "Gateway Timeout"}
       :nxdomain -> {502, "Bad Gateway - Domain Not Found"}
-
       # Protocol/validation errors
       :invalid_target -> {400, "Bad Request - Invalid Target"}
       :invalid_uri -> {400, "Bad Request - Invalid URI"}
       :invalid_request -> {400, "Bad Request"}
-
       # Connection failures
       :connect_failed -> {502, "Bad Gateway - Connection Failed"}
       :closed -> {502, "Bad Gateway - Connection Closed"}
-
       # Generic fallback
       _ -> {502, "Bad Gateway"}
     end
@@ -45,13 +42,17 @@ defmodule EdgeAgent.ProxyServers.ErrorHandler do
   """
   def socks5_reply_code(reason) do
     case reason do
-      :econnrefused -> 5  # Connection refused
+      # Connection refused
+      :econnrefused -> 5
       :connection_refused -> 5
-      :ehostunreach -> 4  # Host unreachable
+      # Host unreachable
+      :ehostunreach -> 4
       :host_unreachable -> 4
-      :enetunreach -> 3  # Network unreachable
+      # Network unreachable
+      :enetunreach -> 3
       :network_unreachable -> 3
-      _ -> 1  # General failure
+      # General failure
+      _ -> 1
     end
   end
 
@@ -68,15 +69,38 @@ defmodule EdgeAgent.ProxyServers.ErrorHandler do
   def categorize_error(reason) do
     case reason do
       # Network errors
-      r when r in [:econnrefused, :ehostunreach, :enetunreach, :nxdomain, :closed, :connection_refused, :host_unreachable, :network_unreachable] ->
+      r
+      when r in [
+             :econnrefused,
+             :ehostunreach,
+             :enetunreach,
+             :nxdomain,
+             :closed,
+             :connection_refused,
+             :host_unreachable,
+             :network_unreachable
+           ] ->
         :network
 
       # Protocol errors
-      r when r in [:invalid_target, :invalid_uri, :invalid_request, :invalid_format, :invalid_port, :unsupported_version, :unsupported_command, :unsupported_address_type, :invalid_base64, :invalid_auth_type] ->
+      r
+      when r in [
+             :invalid_target,
+             :invalid_uri,
+             :invalid_request,
+             :invalid_format,
+             :invalid_port,
+             :unsupported_version,
+             :unsupported_command,
+             :unsupported_address_type,
+             :invalid_base64,
+             :invalid_auth_type
+           ] ->
         :protocol
 
       # Authentication errors
-      r when r in [:auth_failed, :no_auth_header, :invalid_credentials, :no_acceptable_methods, :unsupported_auth_version] ->
+      r
+      when r in [:auth_failed, :no_auth_header, :invalid_credentials, :no_acceptable_methods, :unsupported_auth_version] ->
         :authentication
 
       # Timeout errors
@@ -125,9 +149,7 @@ defmodule EdgeAgent.ProxyServers.ErrorHandler do
     base = "Proxy error: #{inspect(reason)}"
 
     details =
-      context
-      |> Enum.map(fn {k, v} -> "#{k}=#{inspect(v)}" end)
-      |> Enum.join(", ")
+      Enum.map_join(context, ", ", fn {k, v} -> "#{k}=#{inspect(v)}" end)
 
     if details == "" do
       base

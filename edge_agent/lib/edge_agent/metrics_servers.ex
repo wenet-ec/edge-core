@@ -268,7 +268,9 @@ defmodule EdgeAgent.MetricsServers do
 
     # Stop both exporters
     node_result = ProcessSupervisor.stop_node_exporter(state.node_exporter_pid, state.node_exporter_port_ref)
-    wg_result = ProcessSupervisor.stop_wireguard_exporter(state.wireguard_exporter_pid, state.wireguard_exporter_port_ref)
+
+    wg_result =
+      ProcessSupervisor.stop_wireguard_exporter(state.wireguard_exporter_pid, state.wireguard_exporter_port_ref)
 
     case {node_result, wg_result} do
       {:ok, :ok} ->
@@ -277,7 +279,10 @@ defmodule EdgeAgent.MetricsServers do
         {:ok, new_state}
 
       {node_err, wg_err} ->
-        Logger.error("Failed to stop exporters - node_exporter: #{inspect(node_err)}, wireguard_exporter: #{inspect(wg_err)}")
+        Logger.error(
+          "Failed to stop exporters - node_exporter: #{inspect(node_err)}, wireguard_exporter: #{inspect(wg_err)}"
+        )
+
         {:error, {:stop_failed, %{node_exporter: node_err, wireguard_exporter: wg_err}}, state}
     end
   end

@@ -4,9 +4,9 @@ defmodule EdgeAgent.SshServer.Shell do
   Manages the SSH shell interface with full bash integration.
   """
 
-  require Logger
-
   alias EdgeAgent.Settings
+
+  require Logger
 
   @bashrc_path "/usr/local/bin/edge_bashrc"
 
@@ -29,11 +29,12 @@ defmodule EdgeAgent.SshServer.Shell do
     # This is necessary for proper job control and terminal handling
     port =
       Port.open({:spawn_executable, "/usr/bin/script"}, [
-        {:args, [
-          "-qfc",
-          "/bin/bash --rcfile #{@bashrc_path} -i",
-          "/dev/null"
-        ]},
+        {:args,
+         [
+           "-qfc",
+           "/bin/bash --rcfile #{@bashrc_path} -i",
+           "/dev/null"
+         ]},
         {:env,
          [
            {~c"TERM", ~c"xterm"},

@@ -45,9 +45,7 @@ defmodule EdgeAgent.Commands.Workers.CommandExecutionWorker do
 
         :ok
       else
-        Logger.debug(
-          "Execution #{execution_id} already processed (status: #{execution.status}), skipping"
-        )
+        Logger.debug("Execution #{execution_id} already processed (status: #{execution.status}), skipping")
 
         :ok
       end

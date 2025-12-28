@@ -1,19 +1,68 @@
 # edge_agent/lib/edge_agent/edge_clusters/discovery.ex
 defmodule EdgeAgent.EdgeClusters.Discovery do
   @moduledoc """
-  Admin discovery via WireGuard peer inspection.
+  Admin server discovery via WireGuard peer inspection.
 
-  Uses netclient peers command to discover admins on the VPN network.
-  This is more efficient than subnet scanning since we directly query
-  WireGuard for connected peers instead of scanning entire subnets.
+  This module discovers admin servers on the VPN network by inspecting WireGuard peers
+  and querying their discovery endpoints. This is more efficient than subnet scanning
+  since we directly query WireGuard for connected peers instead of scanning entire CIDR blocks.
 
-  This module combines cluster info retrieval and admin discovery
-  into a single operation.
+  ## Key Concepts
+
+  - **Peer Discovery**: Query WireGuard for list of connected peers via `netclient peers`
+  - **Admin Identification**: HTTP GET to each peer's `/api/admins/self/discovery` endpoint
+  - **DNS Resolution**: Build DNS hostnames from admin names for stable addressing
+  - **Multi-Network**: Scan all connected networks and aggregate discovered admins
+  - **Settings Storage**: Store discovered admin URLs in Settings table for AdminClient
+
+  ## Discovery Process
+
+  ```
+  1. Query WireGuard for peer list (netclient peers)
+  2. For each network's peers:
+     a. Extract peer VPN IP and hostname
+     b. Query HTTP://ip:44000/api/admins/self/discovery
+     c. Extract admin name from JSON response
+     d. Build DNS hostname (e.g., admin-abc123.cluster-xyz.nm.internal)
+  3. Aggregate all discovered admins across all networks
+  4. Store admin URLs in Settings table
+  ```
+
+  ## Discovery Modes
+
+  - **Bootstrap Mode** (`fail_on_empty: true`) - Fail fast if no admins found (used during startup)
+  - **Periodic Mode** (`fail_on_empty: false`) - Log warning but don't fail (used in periodic worker)
+
+  ## Admin Discovery Endpoint
+
+  Admins expose a discovery endpoint at `/api/admins/self/discovery` that returns:
+  ```json
+  {"name": "admin-abc123"}
+  ```
+
+  This allows agents to discover admins without hardcoded addresses.
+
+  ## Examples
+
+      # Bootstrap mode - fail if no admins found
+      iex> Discovery.discover_admins(fail_on_empty: true)
+      {:ok, "cluster-default", ["http://admin-abc.cluster-default.nm.internal:44000"]}
+
+      # Periodic mode - log warning but don't fail
+      iex> Discovery.discover_admins(fail_on_empty: false)
+      {:ok, nil, []}
+
+      # Multi-network discovery
+      iex> Discovery.discover_admins()
+      {:ok, "cluster-prod", [
+        "http://admin-abc.cluster-prod.nm.internal:44000",
+        "http://admin-def.cluster-dev.nm.internal:44000"
+      ]}
   """
 
-  require Logger
-
   alias EdgeAgent.Settings
+
+  require Logger
 
   @doc """
   Discover admins in the cluster.
@@ -31,6 +80,8 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   ## Options
   - `fail_on_empty` - If true, returns error when no admins found. If false, returns empty list. Defaults to false.
   """
+  @spec discover_admins(keyword()) ::
+          {:ok, String.t() | nil, [String.t()]} | {:error, String.t()}
   def discover_admins(opts \\ []) do
     fail_on_empty = Keyword.get(opts, :fail_on_empty, false)
 
@@ -50,7 +101,8 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
 
           # Scan all networks and collect all discovered admins
           results =
-            Enum.map(peers_by_network, fn {network_name, peers} ->
+            peers_by_network
+            |> Enum.map(fn {network_name, peers} ->
               cluster_id = String.replace_prefix(network_name, "cluster-", "")
 
               case discover_admins_from_peers(peers, cluster_id, network_name) do
@@ -64,11 +116,9 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
             [{network_name, _admin_urls} | _rest] ->
               # Aggregate all discovered admins from all networks
               all_admin_urls =
-                Enum.flat_map(results, fn {_network, urls} -> urls end) |> Enum.uniq()
+                results |> Enum.flat_map(fn {_network, urls} -> urls end) |> Enum.uniq()
 
-              Logger.info(
-                "Discovered total of #{length(all_admin_urls)} unique admin(s) across all networks"
-              )
+              Logger.info("Discovered total of #{length(all_admin_urls)} unique admin(s) across all networks")
 
               # Store in Settings for AdminClient to use
               Settings.set_admin_urls(all_admin_urls)
@@ -91,7 +141,7 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
 
   # Discover admins from peer list
   defp discover_admins_from_peers(peers, cluster_id, network_name) when is_list(peers) do
-    discovery_port = Application.get_env(:edge_agent, :admin_discovery_port, 44000)
+    discovery_port = Application.get_env(:edge_agent, :admin_discovery_port, 44_000)
     default_domain = Application.get_env(:edge_agent, :netmaker_default_domain, "nm.internal")
 
     Logger.info("Checking #{length(peers)} peer(s) on network #{network_name} for admins...")

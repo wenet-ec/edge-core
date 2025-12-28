@@ -3,8 +3,69 @@ defmodule EdgeAgent.Vpn do
   @moduledoc """
   VPN network operations for the edge agent.
 
-  Provides functions for joining VPN networks and verifying connections
-  using Nexmaker CLI.
+  This module handles joining edge cluster VPN networks via Netmaker enrollment keys
+  and verifying connection health. It wraps the Nexmaker CLI tool and provides
+  enrollment key retrieval from multiple sources.
+
+  ## Key Concepts
+
+  - **Enrollment Key**: Token provided by admin for joining cluster network
+  - **Health Check**: Verify netclient connection status (healthy/degraded/unhealthy)
+  - **Public Enrollment**: Optional public URL for fetching enrollment keys
+  - **Connection Verification**: 5-second wait after join to verify connection
+
+  ## Enrollment Key Sources
+
+  The module supports multiple enrollment key sources with priority order:
+
+  1. **Explicit Key** (`:enrollment_key` config) - Highest priority
+  2. **Public URL** (`:public_enrollment_key_url` config) - Fetch via HTTP POST
+  3. **Custom Path** (`:public_enrollment_key_path` config) - Extract from nested JSON
+
+  ## Public Enrollment Key Patterns
+
+  When fetching from public URL, the module supports multiple JSON response patterns:
+  - Phoenix/Rails/Laravel: `{"data": {"token": "..."}}`
+  - Django/Express/NestJS: `{"token": "..."}`
+  - Alternative keys: `{"enrollment_key": "..."}`, `{"enrollment_token": "..."}`
+  - Deep nesting: `{"result": {"data": {"token": "..."}}}`
+  - Custom paths: `"data.attributes.token"` via config
+
+  ## Connection States
+
+  - **Healthy**: All networks connected and operational
+  - **Degraded**: Connected but with warnings (acceptable for fresh joins)
+  - **Unhealthy**: No networks connected or critical errors
+
+  ## Configuration
+
+  - `:enrollment_key` - Netmaker enrollment token (env: ENROLLMENT_KEY)
+  - `:public_enrollment_key_url` - URL to fetch public enrollment key (env: PUBLIC_ENROLLMENT_KEY_URL)
+  - `:public_enrollment_key_path` - Custom JSON path for extraction (env: PUBLIC_ENROLLMENT_KEY_PATH)
+
+  ## Examples
+
+      # Join with explicit enrollment key
+      config :edge_agent, enrollment_key: "TOKEN=eyJzZXJ2ZXI..."
+      iex> Vpn.join_if_needed("node-abc123")
+      :ok
+
+      # Join with public URL
+      config :edge_agent,
+        public_enrollment_key_url: "https://admin.example.com/api/enrollment_keys/public"
+      iex> Vpn.join_if_needed("node-abc123")
+      :ok
+
+      # Custom extraction path
+      config :edge_agent,
+        public_enrollment_key_url: "https://api.example.com/enrollment",
+        public_enrollment_key_path: "data.attributes.token"
+      iex> Vpn.join_if_needed("node-abc123")
+      :ok
+
+      # Already connected - skip join
+      iex> Vpn.join_if_needed("node-abc123")
+      :ok  # Logs: "Already connected to network, skipping join..."
   """
 
   require Logger
@@ -12,10 +73,17 @@ defmodule EdgeAgent.Vpn do
   @doc """
   Joins VPN network using enrollment key if not already connected.
 
-  Returns:
+  Checks health status first and only joins if unhealthy (not connected).
+  Accepts both healthy and degraded states as "already connected".
+
+  ## Parameters
+  - `node_id` - Node identifier used to build node name (e.g., "node-abc123")
+
+  ## Returns
   - `:ok` - Successfully joined or already connected
   - `{:error, reason}` - Failed to join
   """
+  @spec join_if_needed(String.t()) :: :ok | {:error, String.t()}
   def join_if_needed(node_id) do
     Logger.info("Checking VPN connection status...")
 
@@ -37,14 +105,21 @@ defmodule EdgeAgent.Vpn do
   @doc """
   Joins VPN network using enrollment key and verifies connection.
 
-  Priority:
+  Fetches enrollment key from configured source, joins network via netclient,
+  waits 5 seconds for connection to stabilize, then verifies health.
+
+  ## Priority
   1. Uses ENROLLMENT_KEY from env if provided
   2. Falls back to fetching key from PUBLIC_ENROLLMENT_KEY_URL if configured
 
-  Returns:
+  ## Parameters
+  - `node_id` - Node identifier (e.g., "abc123")
+
+  ## Returns
   - `:ok` - Successfully joined and verified
   - `{:error, reason}` - Join or verification failed
   """
+  @spec join_network(String.t()) :: :ok | {:error, String.t()}
   def join_network(node_id) do
     node_name = "node-#{node_id}"
 
@@ -68,10 +143,11 @@ defmodule EdgeAgent.Vpn do
   1. ENROLLMENT_KEY from config (highest priority)
   2. Fetch from PUBLIC_ENROLLMENT_KEY_URL if configured
 
-  Returns:
+  ## Returns
   - `{:ok, token}` - Enrollment key retrieved
   - `{:error, reason}` - No key available
   """
+  @spec get_enrollment_key() :: {:ok, String.t()} | {:error, String.t()}
   def get_enrollment_key do
     enrollment_key = Application.get_env(:edge_agent, :enrollment_key)
     public_key_url = Application.get_env(:edge_agent, :public_enrollment_key_url)
@@ -103,17 +179,13 @@ defmodule EdgeAgent.Vpn do
             {:ok, token}
 
           {:error, reason} ->
-            Logger.error(
-              "Failed to extract enrollment token from response body: #{reason}. Body: #{inspect(body)}"
-            )
+            Logger.error("Failed to extract enrollment token from response body: #{reason}. Body: #{inspect(body)}")
 
             {:error, "Could not extract enrollment token from response: #{reason}"}
         end
 
       {:ok, %{status: status, body: body}} ->
-        Logger.error(
-          "Failed to fetch public enrollment key: HTTP #{status}, body: #{inspect(body)}"
-        )
+        Logger.error("Failed to fetch public enrollment key: HTTP #{status}, body: #{inspect(body)}")
 
         {:error, "Public enrollment key request failed: HTTP #{status}"}
 
@@ -134,21 +206,20 @@ defmodule EdgeAgent.Vpn do
   5. Alternative key names: {"enrollment_key": "..."}, {"enrollment_token": "..."}
   6. Deep nesting: {"result": {"data": {"token": "..."}}}
 
-  Returns:
+  ## Returns
   - `{:ok, token}` - Successfully extracted token
   - `{:error, reason}` - Could not find token in response
   """
+  @spec extract_enrollment_token(map() | String.t()) :: {:ok, String.t()} | {:error, String.t()}
   def extract_enrollment_token(body) when is_map(body) do
     # Try custom path from config first (highest priority)
     custom_path = Application.get_env(:edge_agent, :public_enrollment_key_path)
 
-    cond do
-      custom_path != nil and custom_path != "" ->
-        extract_by_path(body, custom_path)
-
-      true ->
-        # Try common patterns in order of popularity
-        try_extraction_patterns(body)
+    if custom_path != nil and custom_path != "" do
+      extract_by_path(body, custom_path)
+    else
+      # Try common patterns in order of popularity
+      try_extraction_patterns(body)
     end
   end
 
@@ -242,11 +313,13 @@ defmodule EdgeAgent.Vpn do
   Waits and verifies VPN connection was established after join.
 
   Waits 5 seconds for the network to stabilize, then performs health check.
+  Accepts both healthy and degraded states as successful (degraded is common after fresh join).
 
-  Returns:
-  - `:ok` - Connection verified and healthy
-  - `{:error, reason}` - Connection not established
+  ## Returns
+  - `:ok` - Connection verified (healthy or degraded)
+  - `{:error, reason}` - Connection not established (unhealthy)
   """
+  @spec verify_connection_after_join() :: :ok | {:error, String.t()}
   def verify_connection_after_join do
     Logger.info("Join command completed, verifying connection...")
     Process.sleep(5000)

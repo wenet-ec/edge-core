@@ -1,36 +1,105 @@
 # edge_agent/lib/edge_agent/bootstrap.ex
 defmodule EdgeAgent.Bootstrap do
   @moduledoc """
-  Bootstrap orchestrator for edge agent startup.
+  One-time bootstrap orchestrator for edge agent startup.
 
-  Coordinates node identity determination, VPN join, admin discovery,
-  registration, and command sync. Exits program on any failure.
+  This GenServer runs exactly once during application startup and performs critical
+  initialization tasks to establish agent identity, join the VPN network, discover
+  and register with admin servers, and sync pending commands.
+
+  ## Key Concepts
+
+  - **Node Identity**: Persistent or random UUID identifying this agent
+  - **VPN Join**: Connects to cluster network via Netmaker enrollment token
+  - **Admin Discovery**: Finds admin servers via Netmaker API (no hardcoded addresses)
+  - **Registration**: Registers node with admin and receives API token
+  - **Command Sync**: Downloads pending command executions from admin
+
+  ## Responsibilities
+
+  1. **Identity Determination**
+     - Try persistent system ID (machine-id, hardware UUID)
+     - Fall back to random UUID if persistent ID unavailable
+     - Store identity in Settings database for persistence
+
+  2. **VPN Network Join**
+     - Join edge cluster network using enrollment token
+     - Verify netclient connection and health
+     - Obtain VPN IP address for communication
+
+  3. **Admin Discovery**
+     - Query Netmaker for hosts in admin cluster network
+     - Extract admin URLs from host metadata
+     - Validate at least one admin is available (fail fast)
+
+  4. **Node Registration**
+     - Send registration payload to admin API
+     - Receive API token for authentication
+     - Receive proxy password for proxy server authentication
+     - Store credentials in Settings
+
+  5. **Command Sync**
+     - Download pending command executions from admin
+     - Store in local database and enqueue for execution
+     - Handle duplicates gracefully
 
   ## Bootstrap Sequence
 
-  1. Determine node identity
-  2. Join VPN network
-  3. Discover admins
-  4. Register with admin
-  5. Get sent command executions
+  ```
+  1. Determine node identity (persistent → random)
+  2. Join VPN network via enrollment token
+  3. Discover admin URLs from Netmaker API
+  4. Register with admin and receive credentials
+  5. Sync pending command executions
+  ```
+
+  ## Failure Handling
+
+  Bootstrap failures are **FATAL** and crash the supervision tree:
+  - Identity determination failure → Can't identify node
+  - VPN join failure → Can't communicate with admins
+  - Admin discovery failure → No admin servers available
+  - Registration failure → Can't authenticate with admin
+
+  Command sync failures are **NON-FATAL** (logged as warning, bootstrap continues).
 
   ## Configuration
 
   All values read from Application config (set in runtime.exs):
   - `:enrollment_key` - Netmaker enrollment token
   - `:run_bootstrap` - Whether to run bootstrap (default: true)
+  - `:use_random_id` - Force random UUID instead of persistent ID
+  - `:http_port` - Agent HTTP API port (default: 44000)
+  - `:ssh_port` - Agent SSH server port (default: 40022)
+  - `:host_metrics_port` - Node exporter port (default: 49100)
+  - `:wireguard_metrics_port` - WireGuard exporter port (default: 49586)
+  - `:http_proxy_port` - HTTP proxy port (default: 43128)
+  - `:socks5_proxy_port` - SOCKS5 proxy port (default: 41080)
+
+  ## Examples
+
+      # Bootstrap runs automatically on application start
+      # Success: Application continues
+      # Failure: Application crashes with detailed error
+
+      # Check if bootstrap completed
+      iex> Bootstrap.initialized?()
+      true
+
+      # Skip bootstrap in test environment
+      config :edge_agent, run_bootstrap: false
   """
 
   use GenServer
 
-  require Logger
-
-  alias EdgeAgent.Identity
-  alias EdgeAgent.Vpn
-  alias EdgeAgent.EdgeClusters.Discovery
-  alias EdgeAgent.EdgeClusters.AdminClient
-  alias EdgeAgent.Settings
   alias EdgeAgent.Commands
+  alias EdgeAgent.EdgeClusters.AdminClient
+  alias EdgeAgent.EdgeClusters.Discovery
+  alias EdgeAgent.Identity
+  alias EdgeAgent.Settings
+  alias EdgeAgent.Vpn
+
+  require Logger
 
   # =============================================================================
   # Public API
@@ -39,6 +108,7 @@ defmodule EdgeAgent.Bootstrap do
   @doc """
   Starts the Bootstrap GenServer.
   """
+  @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
@@ -47,6 +117,7 @@ defmodule EdgeAgent.Bootstrap do
   Returns true if bootstrap completed successfully.
   Used by health checks.
   """
+  @spec initialized?() :: boolean()
   def initialized? do
     case Process.whereis(__MODULE__) do
       nil ->
@@ -257,9 +328,7 @@ defmodule EdgeAgent.Bootstrap do
                 Logger.debug("Command execution #{command["id"]} already exists, skipping")
 
               {:error, changeset} ->
-                Logger.warning(
-                  "Failed to store command execution #{command["id"]}: #{inspect(changeset.errors)}"
-                )
+                Logger.warning("Failed to store command execution #{command["id"]}: #{inspect(changeset.errors)}")
             end
           end)
 
@@ -295,13 +364,13 @@ defmodule EdgeAgent.Bootstrap do
       node_id: node_id,
       id_type: id_type,
       network_name: network_name,
-      http_port: Application.get_env(:edge_agent, :http_port, 44000),
-      ssh_port: Application.get_env(:edge_agent, :ssh_port, 40022),
-      host_metrics_port: Application.get_env(:edge_agent, :host_metrics_port, 49100),
-      wireguard_metrics_port: Application.get_env(:edge_agent, :wireguard_metrics_port, 49586),
-      http_proxy_port: Application.get_env(:edge_agent, :http_proxy_port, 43128),
-      socks5_proxy_port: Application.get_env(:edge_agent, :socks5_proxy_port, 41080),
-      version: Application.spec(:edge_agent, :vsn) |> to_string(),
+      http_port: Application.get_env(:edge_agent, :http_port, 44_000),
+      ssh_port: Application.get_env(:edge_agent, :ssh_port, 40_022),
+      host_metrics_port: Application.get_env(:edge_agent, :host_metrics_port, 49_100),
+      wireguard_metrics_port: Application.get_env(:edge_agent, :wireguard_metrics_port, 49_586),
+      http_proxy_port: Application.get_env(:edge_agent, :http_proxy_port, 43_128),
+      socks5_proxy_port: Application.get_env(:edge_agent, :socks5_proxy_port, 41_080),
+      version: :edge_agent |> Application.spec(:vsn) |> to_string(),
       self_update_enabled: true
     }
   end

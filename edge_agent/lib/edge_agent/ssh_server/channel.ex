@@ -7,9 +7,9 @@ defmodule EdgeAgent.SshServer.Channel do
 
   @behaviour :ssh_server_channel
 
-  require Logger
-
   alias EdgeAgent.Settings
+
+  require Logger
 
   @bashrc_path "/usr/local/bin/edge_bashrc"
 
@@ -65,6 +65,7 @@ defmodule EdgeAgent.SshServer.Channel do
     if Map.has_key?(state, :port) do
       Port.command(state.port, data)
     end
+
     {:ok, state}
   end
 
@@ -88,22 +89,25 @@ defmodule EdgeAgent.SshServer.Channel do
     Logger.info("Starting shell for user: #{username}")
 
     # Use script to allocate a PTY, then run bash
-    port = Port.open({:spawn_executable, "/usr/bin/script"}, [
-      {:args, [
-        "-qfc",
-        "/bin/bash --rcfile #{@bashrc_path} -i",
-        "/dev/null"
-      ]},
-      {:env, [
-        {~c"TERM", ~c"xterm"},
-        {~c"EDGE_NODE_ID", to_charlist(node_id)},
-        {~c"USER", to_charlist(username)}
-      ]},
-      :binary,
-      :use_stdio,
-      :exit_status,
-      :stderr_to_stdout
-    ])
+    port =
+      Port.open({:spawn_executable, "/usr/bin/script"}, [
+        {:args,
+         [
+           "-qfc",
+           "/bin/bash --rcfile #{@bashrc_path} -i",
+           "/dev/null"
+         ]},
+        {:env,
+         [
+           {~c"TERM", ~c"xterm"},
+           {~c"EDGE_NODE_ID", to_charlist(node_id)},
+           {~c"USER", to_charlist(username)}
+         ]},
+        :binary,
+        :use_stdio,
+        :exit_status,
+        :stderr_to_stdout
+      ])
 
     {:ok, Map.merge(state, %{port: port, connection_ref: connection_ref, channel_id: channel_id})}
   end
@@ -111,9 +115,11 @@ defmodule EdgeAgent.SshServer.Channel do
   @impl true
   def handle_ssh_msg({:ssh_cm, _connection_ref, {:eof, _channel_id}}, state) do
     Logger.debug("EOF received from client")
+
     if Map.has_key?(state, :port) do
       Port.close(state.port)
     end
+
     {:ok, state}
   end
 

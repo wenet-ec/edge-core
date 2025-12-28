@@ -49,6 +49,11 @@ config :edge_agent, Oban,
     {Oban.Plugins.Pruner, max_age: 86_400}
   ]
 
+# Proxy server timeouts (in milliseconds)
+config :edge_agent, :proxy_timeouts,
+  connection: 30_000,
+  read: 10_000
+
 config :edge_agent,
   ecto_repos: [EdgeAgent.Repo],
   generators: [timestamp_type: :utc_datetime, binary_id: true]
@@ -56,11 +61,6 @@ config :edge_agent,
 config :edge_agent,
   ecto_repos: [EdgeAgent.Repo],
   version: version
-
-# Proxy server timeouts (in milliseconds)
-config :edge_agent, :proxy_timeouts,
-  connection: 30_000,
-  read: 10_000
 
 config :phoenix, :json_library, Jason
 

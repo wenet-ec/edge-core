@@ -2,17 +2,98 @@
 defmodule EdgeAgent.EdgeClusters.AdminClient do
   @moduledoc """
   HTTP client for communicating with EdgeAdmin API.
-  Queries Settings table for admin list and tries each admin URL until one succeeds.
-  """
 
-  require Logger
+  This module provides a high-level interface for agent-to-admin communication,
+  handling authentication, fallback across multiple admin URLs, and error recovery.
+
+  ## Key Concepts
+
+  - **Admin URLs**: List of discovered admin servers from Settings table
+  - **Fallback Logic**: Try each admin URL until one succeeds
+  - **Authentication**: Bearer token authentication for protected endpoints
+  - **Automatic Retry**: Falls back to next admin if request fails
+  - **Error Handling**: Categorizes errors (HTTP errors, validation, network failures)
+
+  ## Architecture
+
+  The client implements two request patterns:
+
+  1. **Unauthenticated Requests** (`request_with_fallback/2`)
+     - Used for registration (no token yet)
+     - Queries Settings for admin URLs
+     - Tries each URL until one succeeds
+
+  2. **Authenticated Requests** (`request_with_auth/2`)
+     - Used for all post-registration endpoints
+     - Requires API token from Settings
+     - Adds `Authorization: Bearer <token>` header
+     - Falls back across admin URLs on network errors
+
+  ## API Endpoints
+
+  - **POST /api/agents/nodes** - Register node and receive API token
+  - **GET /api/agents/command_executions** - Fetch pending commands
+  - **PATCH /api/agents/command_executions/:id** - Report execution results
+  - **POST /api/agents/ssh_usernames/verify_credentials** - Verify SSH credentials
+
+  ## Error Handling
+
+  The module returns structured errors:
+  - `{:error, :no_admin_urls}` - No admin URLs in Settings (discovery failed)
+  - `{:error, :no_api_token}` - Missing API token (not registered yet)
+  - `{:error, {:http_error, status, body}}` - HTTP error response
+  - `{:error, {:request_failed, reason}}` - Network/connection error
+  - `{:error, {:all_requests_failed, msg}}` - All admin URLs failed
+  - `{:error, {:validation_error, body}}` - Validation error (422)
+
+  ## Examples
+
+      # Register node (unauthenticated)
+      iex> AdminClient.register_node(%{
+        node_id: "abc-123",
+        id_type: "persistent",
+        network_name: "cluster-default",
+        http_port: 44000
+      })
+      {:ok, %{"api_token" => "eyJ...", "proxy_password" => "secret"}}
+
+      # Fetch pending commands (authenticated)
+      iex> AdminClient.get_sent_command_executions()
+      {:ok, [%{"id" => "exec-123", "command_text" => "uptime"}]}
+
+      # Update command execution (authenticated)
+      iex> AdminClient.update_command_execution("exec-123", %{
+        status: "completed",
+        exit_code: 0,
+        output: "14:23:45 up 3 days"
+      })
+      :ok
+
+      # Verify SSH credentials (authenticated)
+      iex> AdminClient.verify_ssh_credentials("ubuntu", {:password, "secret"})
+      {:ok, true}
+  """
 
   alias EdgeAgent.Settings
 
+  require Logger
+
   @doc """
   Register this node with an admin.
+
+  Sends node metadata to admin server and receives API token and proxy password.
+  This is the only unauthenticated endpoint (no token yet).
+
+  ## Parameters
+  - `node_params` - Map with node metadata (node_id, id_type, network_name, ports, version)
+
+  ## Returns
+  - `{:ok, node_data}` - Registration succeeded, node_data includes api_token and proxy_password
+  - `{:error, reason}` - Registration failed
+
   POST /api/agents/nodes
   """
+  @spec register_node(map()) :: {:ok, map()} | {:error, term()}
   def register_node(node_params) do
     path = "/api/agents/nodes"
     payload = %{node: node_params}
@@ -33,17 +114,23 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   @doc """
   Verify SSH credentials (password or public key) for the authenticated node.
-  POST /api/agents/ssh_usernames/verify_credentials
+
+  Queries admin server to verify if given username and credential are valid
+  for SSH access to this node.
 
   ## Parameters
-  - `username` - SSH username
+  - `username` - SSH username (string)
   - `credential` - Either `{:password, password}` or `{:public_key, public_key}`
 
   ## Returns
-  - `{:ok, true}` - credential verified
+  - `{:ok, true}` - credential verified and valid
   - `{:ok, false}` - username not found or credential incorrect
   - `{:error, reason}` - request or validation error
+
+  POST /api/agents/ssh_usernames/verify_credentials
   """
+  @spec verify_ssh_credentials(String.t(), {:password, String.t()} | {:public_key, String.t()}) ::
+          {:ok, boolean()} | {:error, term()}
   def verify_ssh_credentials(username, credential) do
     path = "/api/agents/ssh_usernames/verify_credentials"
 
@@ -78,8 +165,18 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   @doc """
   Get sent command executions for the authenticated node.
+
+  Fetches list of pending command executions that admin has sent to this node.
+  Used during bootstrap and periodic sync to download new commands.
+
+  ## Returns
+  - `{:ok, command_executions}` - List of command execution maps
+  - `{:error, :not_found}` - Node not found or no commands
+  - `{:error, reason}` - Request failed
+
   GET /api/agents/command_executions
   """
+  @spec get_sent_command_executions() :: {:ok, [map()]} | {:error, term()}
   def get_sent_command_executions do
     path = "/api/agents/command_executions"
 
@@ -103,9 +200,24 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   end
 
   @doc """
-  Update a command execution.
+  Update a command execution with results.
+
+  Reports execution results (output, exit_code, completed_at) back to admin server.
+  Called after command execution completes or fails.
+
+  ## Parameters
+  - `execution_id` - Command execution ID (string)
+  - `command_execution_params` - Map with status, output, exit_code, completed_at
+
+  ## Returns
+  - `:ok` - Update succeeded
+  - `{:error, {:http_error, 404, _}}` - Execution deleted on admin side
+  - `{:error, {:http_error, 422, _}}` - Validation error (already completed)
+  - `{:error, reason}` - Update failed
+
   PATCH /api/agents/command_executions/:id
   """
+  @spec update_command_execution(String.t(), map()) :: :ok | {:error, term()}
   def update_command_execution(execution_id, command_execution_params) do
     path = "/api/agents/command_executions/#{execution_id}"
     payload = %{command_execution: command_execution_params}

@@ -6,6 +6,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
 
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
+
   require OpenApiSpex
 
   defmodule CommandResponse do
@@ -30,7 +31,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
           type: :integer,
           nullable: true,
           description: "Command timeout in milliseconds (optional, null means no timeout)",
-          example: 30000
+          example: 30_000
         },
         targeting: %Schema{
           type: :object,
@@ -56,7 +57,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
       example: %{
         id: "01234567-89ab-cdef-0123-456789abcdef",
         command_text: "ABC=value\necho $ABC\nsystemctl restart nginx",
-        timeout: 30000,
+        timeout: 30_000,
         targeting: %{
           type: "nodes",
           node_ids: ["01234567-89ab-cdef-0123-456789abcdef"],
@@ -127,7 +128,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
               type: :integer,
               nullable: true,
               description: "Command timeout in milliseconds (optional, null or omitted means no timeout, must be > 0)",
-              example: 30000
+              example: 30_000
             },
             targeting: %Schema{
               type: :object,
@@ -135,13 +136,13 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
                 type: %Schema{
                   type: :string,
                   enum: ["all", "nodes", "clusters"],
-                  description: "Targeting strategy: 'all' for all nodes, 'nodes' for specific nodes, 'clusters' for specific clusters"
+                  description:
+                    "Targeting strategy: 'all' for all nodes, 'nodes' for specific nodes, 'clusters' for specific clusters"
                 },
                 node_ids: %Schema{
                   type: :array,
                   items: %Schema{type: :string, format: :uuid},
-                  description:
-                    "Array of node IDs (required when type is 'nodes') (will always be deduplicated)",
+                  description: "Array of node IDs (required when type is 'nodes') (will always be deduplicated)",
                   example: [
                     "01234567-89ab-cdef-0123-456789abcdef",
                     "fedcba98-7654-3210-fedc-ba9876543210"
@@ -156,7 +157,8 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
                 },
                 node_filters: %Schema{
                   type: :object,
-                  description: "Optional filters to apply to target nodes (AND logic with cluster_filters). Supports all node list filters except cluster_name.",
+                  description:
+                    "Optional filters to apply to target nodes (AND logic with cluster_filters). Supports all node list filters except cluster_name.",
                   properties: %{
                     id_type: %Schema{
                       type: :string,
@@ -205,7 +207,8 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
                 },
                 cluster_filters: %Schema{
                   type: :object,
-                  description: "Optional filters to apply to target clusters (AND logic with node_filters). Supports all cluster list filters.",
+                  description:
+                    "Optional filters to apply to target clusters (AND logic with node_filters). Supports all cluster list filters.",
                   properties: %{
                     name: %Schema{
                       type: :string,

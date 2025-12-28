@@ -4,6 +4,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
   OpenAPI schemas for admin metrics endpoints
   """
   alias OpenApiSpex.Schema
+
   require OpenApiSpex
 
   defmodule AdminMetricsResponse do
@@ -289,7 +290,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
             uptime_human: "23m",
             process_count: 811,
             port_count: 31,
-            atom_count: 38522,
+            atom_count: 38_522,
             ets_count: 144,
             memory_total_bytes: 101_185_152,
             memory_total_mb: 96.5,

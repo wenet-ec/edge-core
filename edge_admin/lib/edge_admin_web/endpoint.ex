@@ -63,7 +63,8 @@ defmodule EdgeAdminWeb.Endpoint do
 
   # Request Logger for LiveDashboard (always enabled when LiveDashboard is mounted)
   plug(Phoenix.LiveDashboard.RequestLogger,
-    param_key: "request_logger")
+    param_key: "request_logger"
+  )
 
   plug(EdgeAdminWeb.Router)
 

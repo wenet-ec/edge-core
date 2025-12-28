@@ -16,15 +16,19 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminControllerTest do
     end
 
     # Insert test admin data
-    :ets.insert(:metadata, {:admin, %{
-      id: "test123456",
-      name: "admin-test123456",
-      max_capacity: 100,
-      erlang_node_name: :"admin@admin-test123456.admin-cluster-test.nm.internal",
-      dns_hostname: "admin-test123456.admin-cluster-test.nm.internal",
-      admin_cluster_name: "admin-cluster-test",
-      last_computed_at: ~U[2025-01-15 12:00:00Z]
-    }})
+    :ets.insert(
+      :metadata,
+      {:admin,
+       %{
+         id: "test123456",
+         name: "admin-test123456",
+         max_capacity: 100,
+         erlang_node_name: :"admin@admin-test123456.admin-cluster-test.nm.internal",
+         dns_hostname: "admin-test123456.admin-cluster-test.nm.internal",
+         admin_cluster_name: "admin-cluster-test",
+         last_computed_at: ~U[2025-01-15 12:00:00Z]
+       }}
+    )
   end
 
   describe "GET /api/admins/self" do
@@ -51,15 +55,19 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminControllerTest do
 
     test "handles nil last_computed_at", %{conn: conn} do
       # Update ETS with nil last_computed_at
-      :ets.insert(:metadata, {:admin, %{
-        id: "test123456",
-        name: "admin-test123456",
-        max_capacity: 100,
-        erlang_node_name: :"admin@admin-test123456.admin-cluster-test.nm.internal",
-        dns_hostname: "admin-test123456.admin-cluster-test.nm.internal",
-        admin_cluster_name: "admin-cluster-test",
-        last_computed_at: nil
-      }})
+      :ets.insert(
+        :metadata,
+        {:admin,
+         %{
+           id: "test123456",
+           name: "admin-test123456",
+           max_capacity: 100,
+           erlang_node_name: :"admin@admin-test123456.admin-cluster-test.nm.internal",
+           dns_hostname: "admin-test123456.admin-cluster-test.nm.internal",
+           admin_cluster_name: "admin-cluster-test",
+           last_computed_at: nil
+         }}
+      )
 
       conn = get(conn, ~p"/api/admins/self")
       response = json_response(conn, 200)

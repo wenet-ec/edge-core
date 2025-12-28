@@ -44,11 +44,11 @@ defmodule EdgeAdmin.NodesFixtures do
       cluster_id: unique_node_id(),
       id_type: "persistent",
       status: "online",
-      http_port: 44000,
-      ssh_port: 42222,
-      metrics_port: 49100,
-      http_proxy_port: 44880,
-      socks5_proxy_port: 44180,
+      http_port: 44_000,
+      ssh_port: 42_222,
+      metrics_port: 49_100,
+      http_proxy_port: 44_880,
+      socks5_proxy_port: 44_180,
       last_seen_at: ~U[2025-06-08 08:12:00Z]
     }
 

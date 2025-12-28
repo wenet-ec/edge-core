@@ -32,9 +32,8 @@ defmodule EdgeAdmin.Metrics.AgentMetrics do
 
     with {:ok, cluster_name, _admin_name} <- Metadata.find_node_cluster(node_name),
          {:ok, gateway_pid} <- Gateway.lookup(cluster_name),
-         {:ok, node} <- Nodes.get_node(node_id),
-         {:ok, metrics_text} <- Gateway.scrape_agent_metrics(gateway_pid, node) do
-      {:ok, metrics_text}
+         {:ok, node} <- Nodes.get_node(node_id) do
+      Gateway.scrape_agent_metrics(gateway_pid, node)
     end
   end
 
@@ -50,8 +49,8 @@ defmodule EdgeAdmin.Metrics.AgentMetrics do
   """
   def get(node_id) do
     with {:ok, raw_text} <- scrape_raw(node_id),
-         {:ok, node} <- Nodes.get_node(node_id),
-         parsed_metrics <- AgentMetricsParser.parse(raw_text) do
+         {:ok, node} <- Nodes.get_node(node_id) do
+      parsed_metrics = AgentMetricsParser.parse(raw_text)
       # Add cluster_name to parsed metrics for from_raw_metrics
       parsed_metrics = Map.put(parsed_metrics, "cluster_name", node.cluster.name)
 

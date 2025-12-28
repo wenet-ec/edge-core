@@ -7,8 +7,8 @@ defmodule EdgeAdmin.Commands.Rules.DeletionRules do
   and prevent deletion of active/in-flight commands and executions.
   """
 
-  import Ecto.Query
   import Ecto.Changeset
+  import Ecto.Query
 
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Commands.Schemas.CommandExecution
@@ -27,12 +27,13 @@ defmodule EdgeAdmin.Commands.Rules.DeletionRules do
   def validate_command_deletion(%Command{id: command_id}) do
     # Query to count non-completed executions
     non_completed_count =
-      from(ce in CommandExecution,
-        where: ce.command_id == ^command_id,
-        where: ce.status in ["pending", "sent"],
-        select: count(ce.id)
+      Repo.one(
+        from(ce in CommandExecution,
+          where: ce.command_id == ^command_id,
+          where: ce.status in ["pending", "sent"],
+          select: count(ce.id)
+        )
       )
-      |> Repo.one()
 
     if non_completed_count == 0 do
       :ok

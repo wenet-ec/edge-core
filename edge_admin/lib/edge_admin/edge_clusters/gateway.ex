@@ -1,38 +1,80 @@
 # edge_admin/lib/edge_admin/edge_clusters/gateway.ex
 defmodule EdgeAdmin.EdgeClusters.Gateway do
   @moduledoc """
-  Gateway process for managing admin's connection to an edge cluster network.
+  Gateway GenServer managing VPN connection and HTTP communication with an edge cluster.
 
-  One Gateway process runs per cluster assigned to this admin. The Gateway:
-  - Joins the cluster's VPN network using direct API (no enrollment keys)
-  - Registers in syn for cross-admin routing
-  - Provides HTTP client functions for admin-to-agent communication
+  One Gateway process runs per cluster assigned to this admin. Each Gateway maintains
+  a persistent VPN connection to its cluster and provides HTTP client functions for
+  admin-to-agent communication.
 
-  ## VPN Lifecycle
+  ## Key Concepts
 
-  - **Join**: Uses Vpn.add_host_to_network (direct API, no enrollment key)
-  - **Leave**: Uses Vpn.remove_host_from_network (removes Node, preserves Host)
+  - **VPN Connection**: Direct host-to-network join via Netmaker API (no enrollment keys)
+  - **Cross-Admin Routing**: syn registry enables routing requests to the correct admin
+  - **HTTP Client**: Provides helper functions for metrics scraping and agent commands
+  - **Lifecycle**: Started/stopped by EdgeClusters coordinator based on metadata assignments
+
+  ## Responsibilities
+
+  1. **VPN Management**
+     - Join cluster network on startup (creates Netmaker node)
+     - Leave cluster network on shutdown (deletes node, preserves host)
+     - Monitor network connectivity
+
+  2. **syn Registration**
+     - Register with key `{:gateway, admin_name, cluster_name}`
+     - Enable cross-admin request routing
+     - Automatic deregistration on process exit
+
+  3. **HTTP Communication**
+     - Scrape host metrics (Node Exporter)
+     - Scrape agent metrics (PromEx)
+     - Scrape WireGuard metrics
+     - Trigger agent self-updates
+     - Send command executions
+     - Request SSH credential verification
 
   ## Cross-Admin Routing
 
-  Registered in syn with key `{:gateway, admin_name, cluster_name}` for cross-admin routing.
-  Other admins can route requests to this Gateway via:
+  Gateways register in syn to enable distributed request routing:
 
-      :syn.lookup(:cluster_scope, {:gateway, admin_name, cluster_name})
+      # Find the Gateway that owns a cluster
+      :syn.lookup(:cluster_scope, {:gateway, "admin-abc", "cluster-prod"})
+      #=> {pid, metadata}
 
-  ## HTTP Client Functions
+      # Use from code
+      {:ok, gateway_pid} = Gateway.lookup("cluster-prod")
+      Gateway.scrape_host_metrics(gateway_pid, node)
 
-  - scrape_metrics/2 - Scrape metrics from node exporter
-  - trigger_self_update/2 - Trigger self-update on agent
+  ## VPN Lifecycle
+
+  - **Join**: `Vpn.add_host_to_network(host_id, network_name)` - Direct API call
+  - **Leave**: `Vpn.remove_host_from_network(host_id, network_name)` - Removes node, keeps host
+  - **No Enrollment Keys**: Uses existing host credentials from admin cluster
+
+  ## Examples
+
+      # Gateway is started by EdgeClusters coordinator
+      DynamicSupervisor.start_child(Supervisor, {Gateway, "cluster-prod"})
+
+      # Lookup and use Gateway
+      {:ok, gateway_pid} = Gateway.lookup("cluster-prod")
+      {:ok, metrics} = Gateway.scrape_host_metrics(gateway_pid, node)
+
+      # Cross-admin routing (automatic)
+      # Admin A owns cluster-prod
+      # Admin B needs to scrape metrics from node in cluster-prod
+      # Admin B's request automatically routes to Admin A's Gateway
   """
 
   use GenServer
-  require Logger
 
-  alias EdgeAdmin.Vpn
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.ProxyServers.RemoteTunnel
+  alias EdgeAdmin.Vpn
+
+  require Logger
 
   # ===========================================================================
   # Client API
@@ -220,6 +262,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
         # Emit active count (this will be overwritten by other gateways, but that's ok)
         active_count = length(:syn.members(:cluster_scope, {:gateway, admin_name}))
+
         :telemetry.execute(
           [:edge_admin, :gateway, :active_count],
           %{active_count: active_count},
@@ -235,9 +278,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
          }}
 
       {:error, reason} ->
-        Logger.error(
-          "Failed to initialize Gateway for cluster #{cluster_name}: #{inspect(reason)}"
-        )
+        Logger.error("Failed to initialize Gateway for cluster #{cluster_name}: #{inspect(reason)}")
 
         {:stop, reason}
     end
@@ -245,9 +286,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
   @impl true
   def terminate(reason, state) do
-    Logger.info(
-      "Gateway terminating for cluster #{state.cluster_name}, reason: #{inspect(reason)}"
-    )
+    Logger.info("Gateway terminating for cluster #{state.cluster_name}, reason: #{inspect(reason)}")
 
     # Leave the network on shutdown
     leave_network(state.netmaker_host_id, state.cluster_name)
@@ -270,35 +309,39 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   def handle_call({:scrape_host_metrics, node}, _from, state) do
     url = "http://#{Node.dns_hostname(node)}:#{node.host_metrics_port}/metrics"
 
-    result = case Req.get(url, retry: false) do
-      {:ok, %{status: 200, body: metrics_text}} ->
-        # Emit success telemetry
-        :telemetry.execute(
-          [:edge_admin, :gateway, :scrape],
-          %{count: 1},
-          %{cluster: state.cluster_name, metrics_type: :host, result: :success}
-        )
-        {:reply, {:ok, metrics_text}, state}
+    result =
+      case Req.get(url, retry: false) do
+        {:ok, %{status: 200, body: metrics_text}} ->
+          # Emit success telemetry
+          :telemetry.execute(
+            [:edge_admin, :gateway, :scrape],
+            %{count: 1},
+            %{cluster: state.cluster_name, metrics_type: :host, result: :success}
+          )
 
-      {:ok, %{status: status}} ->
-        # Emit error telemetry
-        :telemetry.execute(
-          [:edge_admin, :gateway, :scrape],
-          %{count: 1},
-          %{cluster: state.cluster_name, metrics_type: :host, result: :error}
-        )
-        {:reply, {:error, "HTTP #{status}"}, state}
+          {:reply, {:ok, metrics_text}, state}
 
-      {:error, reason} ->
-        Logger.error("HTTP request failed: #{inspect(reason)}")
-        # Emit error telemetry
-        :telemetry.execute(
-          [:edge_admin, :gateway, :scrape],
-          %{count: 1},
-          %{cluster: state.cluster_name, metrics_type: :host, result: :error}
-        )
-        {:reply, {:error, :service_unavailable}, state}
-    end
+        {:ok, %{status: status}} ->
+          # Emit error telemetry
+          :telemetry.execute(
+            [:edge_admin, :gateway, :scrape],
+            %{count: 1},
+            %{cluster: state.cluster_name, metrics_type: :host, result: :error}
+          )
+
+          {:reply, {:error, "HTTP #{status}"}, state}
+
+        {:error, reason} ->
+          Logger.error("HTTP request failed: #{inspect(reason)}")
+          # Emit error telemetry
+          :telemetry.execute(
+            [:edge_admin, :gateway, :scrape],
+            %{count: 1},
+            %{cluster: state.cluster_name, metrics_type: :host, result: :error}
+          )
+
+          {:reply, {:error, :service_unavailable}, state}
+      end
 
     result
   end
@@ -307,35 +350,39 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   def handle_call({:scrape_agent_metrics, node}, _from, state) do
     url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/agents/metrics/self/raw"
 
-    result = case Req.get(url, auth: {:bearer, node.api_token}, retry: false) do
-      {:ok, %{status: 200, body: metrics_text}} ->
-        # Emit success telemetry
-        :telemetry.execute(
-          [:edge_admin, :gateway, :scrape],
-          %{count: 1},
-          %{cluster: state.cluster_name, metrics_type: :agent, result: :success}
-        )
-        {:reply, {:ok, metrics_text}, state}
+    result =
+      case Req.get(url, auth: {:bearer, node.api_token}, retry: false) do
+        {:ok, %{status: 200, body: metrics_text}} ->
+          # Emit success telemetry
+          :telemetry.execute(
+            [:edge_admin, :gateway, :scrape],
+            %{count: 1},
+            %{cluster: state.cluster_name, metrics_type: :agent, result: :success}
+          )
 
-      {:ok, %{status: status}} ->
-        # Emit error telemetry
-        :telemetry.execute(
-          [:edge_admin, :gateway, :scrape],
-          %{count: 1},
-          %{cluster: state.cluster_name, metrics_type: :agent, result: :error}
-        )
-        {:reply, {:error, "HTTP #{status}"}, state}
+          {:reply, {:ok, metrics_text}, state}
 
-      {:error, reason} ->
-        Logger.error("HTTP request failed: #{inspect(reason)}")
-        # Emit error telemetry
-        :telemetry.execute(
-          [:edge_admin, :gateway, :scrape],
-          %{count: 1},
-          %{cluster: state.cluster_name, metrics_type: :agent, result: :error}
-        )
-        {:reply, {:error, :service_unavailable}, state}
-    end
+        {:ok, %{status: status}} ->
+          # Emit error telemetry
+          :telemetry.execute(
+            [:edge_admin, :gateway, :scrape],
+            %{count: 1},
+            %{cluster: state.cluster_name, metrics_type: :agent, result: :error}
+          )
+
+          {:reply, {:error, "HTTP #{status}"}, state}
+
+        {:error, reason} ->
+          Logger.error("HTTP request failed: #{inspect(reason)}")
+          # Emit error telemetry
+          :telemetry.execute(
+            [:edge_admin, :gateway, :scrape],
+            %{count: 1},
+            %{cluster: state.cluster_name, metrics_type: :agent, result: :error}
+          )
+
+          {:reply, {:error, :service_unavailable}, state}
+      end
 
     result
   end
@@ -344,35 +391,39 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   def handle_call({:scrape_wireguard_metrics, node}, _from, state) do
     url = "http://#{Node.dns_hostname(node)}:#{node.wireguard_metrics_port}/metrics"
 
-    result = case Req.get(url, retry: false) do
-      {:ok, %{status: 200, body: metrics_text}} ->
-        # Emit success telemetry
-        :telemetry.execute(
-          [:edge_admin, :gateway, :scrape],
-          %{count: 1},
-          %{cluster: state.cluster_name, metrics_type: :wireguard, result: :success}
-        )
-        {:reply, {:ok, metrics_text}, state}
+    result =
+      case Req.get(url, retry: false) do
+        {:ok, %{status: 200, body: metrics_text}} ->
+          # Emit success telemetry
+          :telemetry.execute(
+            [:edge_admin, :gateway, :scrape],
+            %{count: 1},
+            %{cluster: state.cluster_name, metrics_type: :wireguard, result: :success}
+          )
 
-      {:ok, %{status: status}} ->
-        # Emit error telemetry
-        :telemetry.execute(
-          [:edge_admin, :gateway, :scrape],
-          %{count: 1},
-          %{cluster: state.cluster_name, metrics_type: :wireguard, result: :error}
-        )
-        {:reply, {:error, "HTTP #{status}"}, state}
+          {:reply, {:ok, metrics_text}, state}
 
-      {:error, reason} ->
-        Logger.error("HTTP request failed: #{inspect(reason)}")
-        # Emit error telemetry
-        :telemetry.execute(
-          [:edge_admin, :gateway, :scrape],
-          %{count: 1},
-          %{cluster: state.cluster_name, metrics_type: :wireguard, result: :error}
-        )
-        {:reply, {:error, :service_unavailable}, state}
-    end
+        {:ok, %{status: status}} ->
+          # Emit error telemetry
+          :telemetry.execute(
+            [:edge_admin, :gateway, :scrape],
+            %{count: 1},
+            %{cluster: state.cluster_name, metrics_type: :wireguard, result: :error}
+          )
+
+          {:reply, {:error, "HTTP #{status}"}, state}
+
+        {:error, reason} ->
+          Logger.error("HTTP request failed: #{inspect(reason)}")
+          # Emit error telemetry
+          :telemetry.execute(
+            [:edge_admin, :gateway, :scrape],
+            %{count: 1},
+            %{cluster: state.cluster_name, metrics_type: :wireguard, result: :error}
+          )
+
+          {:reply, {:error, :service_unavailable}, state}
+      end
 
     result
   end
@@ -494,14 +545,12 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
             if attempt < max_attempts do
               # Exponential backoff: 500ms, 1000ms, 2000ms
-              delay_ms = 500 * :math.pow(2, attempt - 1) |> trunc()
+              delay_ms = trunc(500 * :math.pow(2, attempt - 1))
               Logger.info("Retrying join for #{cluster_name} in #{delay_ms}ms...")
               :timer.sleep(delay_ms)
               join_network(cluster_name, host_id, attempt + 1, max_attempts)
             else
-              Logger.error(
-                "Failed to verify join for #{cluster_name} after #{max_attempts} attempts"
-              )
+              Logger.error("Failed to verify join for #{cluster_name} after #{max_attempts} attempts")
 
               {:error, :join_verification_failed}
             end
@@ -518,7 +567,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
         if attempt < max_attempts do
           # Exponential backoff: 500ms, 1000ms, 2000ms
-          delay_ms = 500 * :math.pow(2, attempt - 1) |> trunc()
+          delay_ms = trunc(500 * :math.pow(2, attempt - 1))
           Logger.info("Retrying join for #{cluster_name} in #{delay_ms}ms...")
           :timer.sleep(delay_ms)
           join_network(cluster_name, host_id, attempt + 1, max_attempts)
@@ -545,7 +594,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
             if attempt < max_attempts do
               # Exponential backoff: 500ms, 1000ms, 2000ms
-              delay_ms = 500 * :math.pow(2, attempt - 1) |> trunc()
+              delay_ms = trunc(500 * :math.pow(2, attempt - 1))
               Logger.info("Retrying leave for #{cluster_name} in #{delay_ms}ms...")
               :timer.sleep(delay_ms)
               leave_network(netmaker_host_id, cluster_name, attempt + 1, max_attempts)
@@ -559,9 +608,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
             end
 
           {:error, reason} ->
-            Logger.warning(
-              "Failed to verify leave for #{cluster_name}: #{inspect(reason)} - assuming success"
-            )
+            Logger.warning("Failed to verify leave for #{cluster_name}: #{inspect(reason)} - assuming success")
 
             # Don't crash terminate on verification errors
             :ok
@@ -574,7 +621,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
         if attempt < max_attempts do
           # Exponential backoff: 500ms, 1000ms, 2000ms
-          delay_ms = 500 * :math.pow(2, attempt - 1) |> trunc()
+          delay_ms = trunc(500 * :math.pow(2, attempt - 1))
           Logger.info("Retrying leave for #{cluster_name} in #{delay_ms}ms...")
           :timer.sleep(delay_ms)
           leave_network(netmaker_host_id, cluster_name, attempt + 1, max_attempts)
@@ -628,9 +675,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
           end)
 
         if node_still_exists do
-          Logger.debug(
-            "Verification failed: host #{host_id} still present in network #{cluster_name}"
-          )
+          Logger.debug("Verification failed: host #{host_id} still present in network #{cluster_name}")
 
           {:error, :still_present}
         else
@@ -648,5 +693,4 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
         {:error, reason}
     end
   end
-
 end

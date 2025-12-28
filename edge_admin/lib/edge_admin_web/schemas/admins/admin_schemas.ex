@@ -5,6 +5,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
   """
 
   alias OpenApiSpex.Schema
+
   require OpenApiSpex
 
   defmodule AdminResponse do

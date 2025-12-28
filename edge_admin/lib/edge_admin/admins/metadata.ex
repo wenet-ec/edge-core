@@ -1,42 +1,78 @@
 # edge_admin/lib/edge_admin/admins/metadata.ex
 defmodule EdgeAdmin.Admins.Metadata do
   @moduledoc """
-  Core coordination GenServer for admin cluster metadata.
+  Distributed metadata coordinator for admin cluster state and edge cluster assignments.
 
-  Responsibilities:
-  - ETS table ownership and lifecycle management
-  - Event subscription (syn for admin topology, Phoenix PubSub for PostgreSQL changes)
-  - Recompute state machine logic (pending flag pattern)
-  - Recomputation orchestration (triggers Algorithm module)
-  - ETS updates (write assignments, topology, system state)
-  - Public API for ETS queries
+  This GenServer maintains a distributed ETS table containing the current state of the
+  admin cluster topology and cluster assignment decisions. It recomputes assignments
+  when topology or edge cluster state changes, broadcasting updates to all admins.
+
+  ## Key Concepts
+
+  - **Metadata**: Distributed state shared across all admins via ETS + replication
+  - **Admin Topology**: Which admins exist, their capacity, and health status
+  - **Cluster Assignments**: Which admin owns which edge clusters
+  - **Recomputation**: Algorithm that redistributes clusters when topology changes
+  - **Anti-Thrashing**: Flag pattern prevents rapid recomputation cycles
+
+  ## Responsibilities
+
+  1. **ETS Table Management**
+     - Create and own `:metadata` ETS table
+     - Provide public read API for queries
+     - Update table atomically during recomputations
+
+  2. **Event Subscription**
+     - syn: Admin join/leave events (topology changes)
+     - PubSub: Cluster/node CRUD events (PostgreSQL changes)
+     - Triggers recomputation when relevant changes occur
+
+  3. **Recomputation Orchestration**
+     - Detect when recomputation needed
+     - Spawn async task to run Algorithm
+     - Update ETS with new assignments
+     - Broadcast completion to other admins
+
+  4. **State Machine**
+     - `recomputing?: false` - Idle, ready for events
+     - `recomputing?: true, pending_recompute: false` - Computing
+     - `recomputing?: true, pending_recompute: true` - Computing, redo queued
+
   ## ETS Schema
 
   The `:metadata` table contains 4 keys:
 
+  ### `:admin` - This Admin's Info
   ```elixir
-  :admin => %{
+  %{
     id: "abc123",
     name: "admin-abc123",
     max_capacity: 200,
     erlang_node_name: :"admin@admin-abc123.admin-cluster-1.nm.internal",
     dns_hostname: "admin-abc123.admin-cluster-1.nm.internal",
     admin_cluster_name: "admin-cluster-1",
-    netmaker_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505",
+    netmaker_host_id: "95e2707e-...",
     last_computed_at: ~U[2025-01-15 12:00:00Z]
   }
+  ```
 
-  :admin_cluster => %{
+  ### `:admin_cluster` - Full Topology
+  ```elixir
+  %{
     name: "admin-cluster-1",
     total_admins: 2,
-    degraded: false,
+    degraded: false,  # true if any admin unhealthy
     topology: [
-      %{name: "admin-abc123", max_capacity: 200, dns_hostname: ..., erlang_node_name: ..., netmaker_host_id: "..."},
-      %{name: "admin-def456", max_capacity: 300, dns_hostname: ..., erlang_node_name: ..., netmaker_host_id: "..."}
+      %{name: "admin-abc123", max_capacity: 200, dns_hostname: ...,
+        erlang_node_name: ..., netmaker_host_id: "..."},
+      %{name: "admin-def456", max_capacity: 300, ...}
     ]
   }
+  ```
 
-  :edge_clusters => %{
+  ### `:edge_clusters` - Assignment Map
+  ```elixir
+  %{
     "admin-abc123" => %{
       "cluster-a" => ["node-1", "node-2"],
       "cluster-b" => []
@@ -45,23 +81,59 @@ defmodule EdgeAdmin.Admins.Metadata do
       "cluster-c" => ["node-3"]
     }
   }
+  ```
 
-  :orphaned_clusters => %{
+  ### `:orphaned_clusters` - Unassigned Clusters
+  ```elixir
+  %{
     "cluster-orphaned-1" => ["node-5", "node-6"],
     "cluster-orphaned-2" => ["node-7"]
   }
-
-  Note: edge_clusters uses admin_name (e.g., "admin-abc123") as keys, not admin_id.
   ```
+
+  ## Recomputation Triggers
+
+  - Admin joins/leaves (syn event)
+  - Cluster created/deleted (PubSub event)
+  - Node created/deleted (PubSub event)
+  - Node cluster changed (PubSub event)
+  - Periodic reconciliation (future)
+
+  ## Anti-Thrashing Pattern
+
+  Uses simple boolean flags to prevent rapid recomputation cycles:
+  - If recomputing, set `pending_recompute: true` (don't interrupt)
+  - When done, check flag and recompute again if needed
+  - No locks, timers, or debouncing - just flags
+
+  ## Public API
+
+  All query functions are safe to call from any process (ETS reads are concurrent):
+  - `get_admin/0` - This admin's info
+  - `get_admin_cluster/0` - Full topology
+  - `get_my_clusters/0` - Clusters assigned to this admin
+  - `get_cluster_owner/1` - Which admin owns a cluster
+  - `find_node_cluster/1` - Which cluster contains a node
+
+  ## Examples
+
+      # Query metadata (from any process)
+      iex> Metadata.get_my_clusters()
+      %{"cluster-prod" => ["node-1", "node-2"], "cluster-dev" => []}
+
+      # Trigger recomputation (from PubSub event)
+      send(Metadata, {:cluster_created, cluster_id})
+
+      # Result: Algorithm runs, assignments updated, broadcast sent
   """
 
   use GenServer
 
-  require Logger
-
   alias EdgeAdmin.Admins.Metadata.Algorithm
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Vpn
+
+  require Logger
 
   @table :metadata
 
@@ -91,7 +163,7 @@ defmodule EdgeAdmin.Admins.Metadata do
     erlang_node_name = node()
 
     # Fetch Netmaker host ID
-    {:ok, netmaker_host_id} = EdgeAdmin.Vpn.get_host_id(admin_name)
+    {:ok, netmaker_host_id} = Vpn.get_host_id(admin_name)
     Logger.info("Fetched Netmaker host ID: #{netmaker_host_id}")
 
     # Initial ETS state (placeholders - will be populated by first computation)
@@ -389,9 +461,7 @@ defmodule EdgeAdmin.Admins.Metadata do
     try do
       case :syn.members(:admin_scope, admin_cluster_name) do
         members when is_list(members) ->
-          members
-          |> Enum.map(fn {_pid, metadata} -> {metadata.name, metadata} end)
-          |> Map.new()
+          Map.new(members, fn {_pid, metadata} -> {metadata.name, metadata} end)
 
         _ ->
           %{}
@@ -435,7 +505,7 @@ defmodule EdgeAdmin.Admins.Metadata do
 
     updated_admin = %{
       admin
-      | last_computed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      | last_computed_at: DateTime.truncate(DateTime.utc_now(), :second)
     }
 
     :ets.insert(@table, {:admin, updated_admin})

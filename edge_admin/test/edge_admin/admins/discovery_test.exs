@@ -5,6 +5,7 @@ defmodule EdgeAdmin.Admins.DiscoveryTest do
   import Mox
 
   alias EdgeAdmin.Admins.Discovery
+  alias Nexmaker.Api.NodesMock
 
   setup :verify_on_exit!
 
@@ -19,7 +20,7 @@ defmodule EdgeAdmin.Admins.DiscoveryTest do
       :ets.insert(:metadata, {:admin_cluster, %{name: "test-cluster"}})
 
       # Mock the Nexmaker.Api.Nodes.list call
-      Mox.expect(Nexmaker.Api.NodesMock, :list, fn "test-cluster", _opts ->
+      Mox.expect(NodesMock, :list, fn "test-cluster", _opts ->
         {:ok, []}
       end)
 
@@ -35,7 +36,7 @@ defmodule EdgeAdmin.Admins.DiscoveryTest do
       :ets.insert(:metadata, {:admin_cluster, %{name: "test-cluster"}})
 
       # Mock the Nexmaker.Api.Nodes.list call to return error
-      Mox.expect(Nexmaker.Api.NodesMock, :list, fn "test-cluster", _opts ->
+      Mox.expect(NodesMock, :list, fn "test-cluster", _opts ->
         {:error, :connection_refused}
       end)
 
@@ -51,13 +52,14 @@ defmodule EdgeAdmin.Admins.DiscoveryTest do
       :ets.insert(:metadata, {:admin_cluster, %{name: "test-cluster"}})
 
       # Mock the Nexmaker.Api.Nodes.list call with mixed addresses
-      Mox.expect(Nexmaker.Api.NodesMock, :list, fn "test-cluster", _opts ->
-        {:ok, [
-          %{"address" => "100.64.0.1", "node_id" => "node-1"},
-          %{"address" => "", "node_id" => "node-2"},
-          %{"address" => nil, "node_id" => "node-3"},
-          %{"address" => "100.64.0.4", "node_id" => "node-4"}
-        ]}
+      Mox.expect(NodesMock, :list, fn "test-cluster", _opts ->
+        {:ok,
+         [
+           %{"address" => "100.64.0.1", "node_id" => "node-1"},
+           %{"address" => "", "node_id" => "node-2"},
+           %{"address" => nil, "node_id" => "node-3"},
+           %{"address" => "100.64.0.4", "node_id" => "node-4"}
+         ]}
       end)
 
       # Should return :ok (probing will fail but that's expected in test)

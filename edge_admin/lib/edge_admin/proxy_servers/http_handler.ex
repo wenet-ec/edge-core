@@ -64,7 +64,7 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
         :telemetry.execute(
           [:edge_admin, :proxy, :connection],
           %{count: 1, total: 1},
-          ErrorHandler.telemetry_metadata(reason, :http) |> Map.put(:result, :failure)
+          reason |> ErrorHandler.telemetry_metadata(:http) |> Map.put(:result, :failure)
         )
 
         transport.close(socket)
@@ -133,16 +133,7 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
     end
   end
 
-  defp handle_authenticated_request(
-         socket,
-         transport,
-         method,
-         uri,
-         http_version,
-         headers,
-         routing_mode,
-         exit_node
-       ) do
+  defp handle_authenticated_request(socket, transport, method, uri, http_version, headers, routing_mode, exit_node) do
     case method do
       "CONNECT" ->
         handle_connect_method(socket, transport, uri, routing_mode, exit_node)
@@ -189,16 +180,7 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
     end
   end
 
-  defp handle_regular_http_method(
-         socket,
-         transport,
-         method,
-         uri,
-         http_version,
-         headers,
-         routing_mode,
-         exit_node
-       ) do
+  defp handle_regular_http_method(socket, transport, method, uri, http_version, headers, routing_mode, exit_node) do
     case parse_http_uri(uri) do
       {:ok, host, port, path} ->
         forward_http_request(
@@ -221,18 +203,7 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
     end
   end
 
-  defp forward_http_request(
-         socket,
-         transport,
-         method,
-         host,
-         port,
-         path,
-         http_version,
-         headers,
-         routing_mode,
-         exit_node
-       ) do
+  defp forward_http_request(socket, transport, method, host, port, path, http_version, headers, routing_mode, exit_node) do
     # Build HTTP request to send to target
     filtered_headers = filter_proxy_headers(headers)
     request = build_http_request(method, path, http_version, filtered_headers)
@@ -382,6 +353,7 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
     case transport.recv(socket, 0, Config.read_timeout()) do
       {:ok, data} ->
         new_buffer = buffer <> data
+
         if String.contains?(new_buffer, "\r\n\r\n") do
           {:ok, new_buffer}
         else
@@ -430,10 +402,11 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
   end
 
   defp parse_headers(lines) do
-    Enum.reduce(lines, [], fn line, acc ->
+    lines
+    |> Enum.reduce([], fn line, acc ->
       case String.split(line, ":", parts: 2) do
         [key, value] ->
-          [{String.trim(key) |> String.downcase(), String.trim(value)} | acc]
+          [{key |> String.trim() |> String.downcase(), String.trim(value)} | acc]
 
         _ ->
           acc

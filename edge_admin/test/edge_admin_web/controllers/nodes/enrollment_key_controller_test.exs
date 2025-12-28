@@ -2,8 +2,10 @@
 defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyControllerTest do
   use EdgeAdminWeb.ConnCase
 
-  import Mox
   import EdgeAdmin.NodesFixtures
+  import Mox
+
+  alias EdgeAdmin.Nodes.EphemeralEnrollmentKey
 
   setup :verify_on_exit!
 
@@ -18,13 +20,14 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyControllerTest do
 
       # Mock listing all enrollment keys - returns keys with "default": true field
       expect(NexmakerMock, :list_enrollment_keys, fn ->
-        {:ok, [
-          %{
-            "token" => "eyJ0b2tlbi1kZWZhdWx0LWFiYzEyMyJ9",
-            "networks" => ["cluster-#{cluster.name}"],
-            "default" => true
-          }
-        ]}
+        {:ok,
+         [
+           %{
+             "token" => "eyJ0b2tlbi1kZWZhdWx0LWFiYzEyMyJ9",
+             "networks" => ["cluster-#{cluster.name}"],
+             "default" => true
+           }
+         ]}
       end)
 
       conn =
@@ -37,7 +40,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyControllerTest do
 
       # Verify NOT tracked in DB
       ephemeral_key =
-        EdgeAdmin.Repo.get_by(EdgeAdmin.Nodes.EphemeralEnrollmentKey,
+        EdgeAdmin.Repo.get_by(EphemeralEnrollmentKey,
           token: "eyJ0b2tlbi1kZWZhdWx0LWFiYzEyMyJ9"
         )
 
@@ -72,7 +75,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyControllerTest do
 
       # Verify tracked in DB
       ephemeral_key =
-        EdgeAdmin.Repo.get_by(EdgeAdmin.Nodes.EphemeralEnrollmentKey,
+        EdgeAdmin.Repo.get_by(EphemeralEnrollmentKey,
           token: "eyJ0b2tlbi1lcGhlbWVyYWwtYWJjMTIzIn0="
         )
 
@@ -86,13 +89,14 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyControllerTest do
 
       # Mock listing all enrollment keys
       expect(NexmakerMock, :list_enrollment_keys, fn ->
-        {:ok, [
-          %{
-            "token" => "eyJ0b2tlbi1kZWZhdWx0LWtleSJ9",
-            "networks" => ["cluster-#{cluster.name}"],
-            "default" => true
-          }
-        ]}
+        {:ok,
+         [
+           %{
+             "token" => "eyJ0b2tlbi1kZWZhdWx0LWtleSJ9",
+             "networks" => ["cluster-#{cluster.name}"],
+             "default" => true
+           }
+         ]}
       end)
 
       conn = post(conn, ~p"/api/clusters/#{cluster.id}/enrollment_keys", %{})
@@ -120,13 +124,14 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyControllerTest do
 
       # Mock listing enrollment keys with no default key for this network
       expect(NexmakerMock, :list_enrollment_keys, fn ->
-        {:ok, [
-          %{
-            "token" => "eyJ0b2tlbi1vdGhlciJ9",
-            "networks" => ["other-network"],
-            "default" => true
-          }
-        ]}
+        {:ok,
+         [
+           %{
+             "token" => "eyJ0b2tlbi1vdGhlciJ9",
+             "networks" => ["other-network"],
+             "default" => true
+           }
+         ]}
       end)
 
       conn = post(conn, ~p"/api/clusters/#{cluster.id}/enrollment_keys", %{})
@@ -145,13 +150,14 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyControllerTest do
 
       # Mock listing all enrollment keys
       expect(NexmakerMock, :list_enrollment_keys, fn ->
-        {:ok, [
-          %{
-            "token" => "eyJ0b2tlbi1kZWZhdWx0LWNsdXN0ZXIifQ==",
-            "networks" => ["cluster-default"],
-            "default" => true
-          }
-        ]}
+        {:ok,
+         [
+           %{
+             "token" => "eyJ0b2tlbi1kZWZhdWx0LWNsdXN0ZXIifQ==",
+             "networks" => ["cluster-default"],
+             "default" => true
+           }
+         ]}
       end)
 
       conn =
@@ -194,7 +200,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyControllerTest do
 
       # Verify tracked in DB
       ephemeral_key =
-        EdgeAdmin.Repo.get_by(EdgeAdmin.Nodes.EphemeralEnrollmentKey,
+        EdgeAdmin.Repo.get_by(EphemeralEnrollmentKey,
           token: "eyJ0b2tlbi1kZWZhdWx0LWVwaGVtZXJhbCJ9"
         )
 

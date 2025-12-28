@@ -1,15 +1,57 @@
 # edge_admin/lib/edge_admin/vpn.ex
 defmodule EdgeAdmin.Vpn do
   @moduledoc """
-  Centralized VPN/Netmaker utilities for Edge Admin.
+  VPN integration and Netmaker API wrapper for Edge Admin.
 
-  This module provides:
-  - DNS hostname building
-  - Network name construction and validation
-  - IPv4/CIDR parsing and subnet generation
-  - Netmaker API wrappers
-  - Config accessors for VPN-related settings
+  This module provides a centralized interface for all VPN-related operations, including:
+  - **DNS/Hostname Building**: Construct DNS names and hostnames for nodes and admins
+  - **Network Management**: Create, delete, and validate Netmaker networks
+  - **IPv4/CIDR Utilities**: Parse and generate IP addresses and subnet ranges
+  - **Host Management**: Add/remove hosts from networks, manage host lifecycle
+  - **Enrollment Keys**: Create and manage network enrollment keys
+  - **DNS Entries**: Create custom DNS entries for nodes (aliases)
+  - **Error Normalization**: Consistent error handling across Netmaker API calls
+
+  ## Key Concepts
+
+  - **Network**: A VPN network in Netmaker (e.g., `cluster-prod`, `admin-cluster-main`)
+  - **Host**: A physical/virtual machine running netclient
+  - **Node**: A host's connection to a specific network
+  - **DNS Name**: Short hostname (e.g., `node-abc123`, `admin-xyz789`)
+  - **Hostname**: Fully qualified domain name (e.g., `node-abc123.cluster-prod.nm.internal`)
+  - **Enrollment Key**: Token used to join a network
+
+  ## Architecture
+
+  - **Thin Wrapper**: Wraps Nexmaker API client with error normalization
+  - **Stateless**: No state, all operations are direct API calls
+  - **Error Handling**: Normalizes Netmaker errors to `:service_unavailable` or `:not_found`
+
+  ## Examples
+
+      # Create a network
+      iex> Vpn.create_network("cluster-prod", %{addressrange: "100.64.1.0/24"})
+      {:ok, %{"name" => "cluster-prod", ...}}
+
+      # Build a hostname
+      iex> Vpn.build_hostname("node-abc", "cluster-prod")
+      "node-abc.cluster-prod.nm.internal"
+
+      # Get enrollment key
+      iex> Vpn.get_default_enrollment_key("cluster-prod")
+      {:ok, "TOKEN_VALUE"}
+
+      # Add host to network
+      iex> Vpn.add_host_to_network(host_id, "cluster-prod")
+      {:ok, %{}}
   """
+
+  alias Nexmaker.Api.DNS
+  alias Nexmaker.Api.EnrollmentKeys
+  alias Nexmaker.Api.Hosts
+  alias Nexmaker.Api.Networks
+  alias Nexmaker.Api.Nodes
+  alias Nexmaker.Api.Superadmin
 
   require Logger
 
@@ -21,6 +63,7 @@ defmodule EdgeAdmin.Vpn do
   Returns the default Netmaker DNS domain suffix.
   Configured via NETMAKER_DEFAULT_DOMAIN (default: "nm.internal")
   """
+  @spec default_domain() :: String.t()
   def default_domain do
     Application.get_env(:edge_admin, :netmaker_default_domain, "nm.internal")
   end
@@ -70,6 +113,7 @@ defmodule EdgeAdmin.Vpn do
       iex> EdgeAdmin.Vpn.build_dns_name("k7m3n2p9", prefix: :admin)
       "admin-k7m3n2p9"
   """
+  @spec build_dns_name(String.t(), keyword()) :: String.t()
   def build_dns_name(name, opts \\ []) when is_binary(name) do
     prefix = Keyword.get(opts, :prefix, :node)
 
@@ -98,6 +142,7 @@ defmodule EdgeAdmin.Vpn do
       iex> EdgeAdmin.Vpn.build_network_name("prod", prefix: :admin)
       "admin-cluster-prod"
   """
+  @spec build_network_name(String.t(), keyword()) :: String.t()
   def build_network_name(name, opts \\ []) when is_binary(name) do
     prefix = Keyword.get(opts, :prefix, :node)
 
@@ -124,7 +169,7 @@ defmodule EdgeAdmin.Vpn do
     prefix = "admin-cluster-"
     max_total_length = 32
 
-    unless Regex.match?(~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, suffix) do
+    if !Regex.match?(~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, suffix) do
       raise ArgumentError, """
       Admin cluster name suffix must match format: lowercase alphanumeric with hyphens
       Got: #{suffix}
@@ -154,6 +199,7 @@ defmodule EdgeAdmin.Vpn do
       iex> EdgeAdmin.Vpn.build_domain("cluster-xyz")
       "cluster-xyz.nm.internal"
   """
+  @spec build_domain(String.t(), String.t() | nil) :: String.t()
   def build_domain(network, domain \\ nil) do
     domain = domain || default_domain()
 
@@ -177,6 +223,7 @@ defmodule EdgeAdmin.Vpn do
       iex> EdgeAdmin.Vpn.build_hostname("node-abc", "cluster-xyz", "")
       "node-abc.cluster-xyz"
   """
+  @spec build_hostname(String.t(), String.t(), String.t() | nil) :: String.t()
   def build_hostname(host, network, domain \\ nil) do
     "#{host}.#{build_domain(network, domain)}"
   end
@@ -209,8 +256,7 @@ defmodule EdgeAdmin.Vpn do
         {:error, "network name exceeds 32 character limit"}
 
       not Regex.match?(~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, name) ->
-        {:error,
-         "network name must be lowercase alphanumeric with hyphens, no leading/trailing hyphens"}
+        {:error, "network name must be lowercase alphanumeric with hyphens, no leading/trailing hyphens"}
 
       true ->
         :ok
@@ -232,6 +278,7 @@ defmodule EdgeAdmin.Vpn do
       iex> EdgeAdmin.Vpn.parse_cidr("invalid")
       {:error, "invalid CIDR format"}
   """
+  @spec parse_cidr(String.t()) :: {:ok, {:inet.ip4_address(), 0..32}} | {:error, String.t()}
   def parse_cidr(cidr) when is_binary(cidr) do
     case String.split(cidr, "/") do
       [ip_str, prefix_str] ->
@@ -259,6 +306,7 @@ defmodule EdgeAdmin.Vpn do
       iex> EdgeAdmin.Vpn.parse_ipv4("invalid")
       {:error, "invalid IPv4 address"}
   """
+  @spec parse_ipv4(String.t()) :: {:ok, :inet.ip4_address()} | {:error, String.t()}
   def parse_ipv4(ip_str) when is_binary(ip_str) do
     case String.split(ip_str, ".") do
       [a, b, c, d] ->
@@ -311,13 +359,16 @@ defmodule EdgeAdmin.Vpn do
       "100.64.1.0/24"
   """
   def find_available_subnet(base_cidr, target_prefix, existing_ranges) do
-    with {:ok, {base_ip, base_prefix}} <- parse_cidr(base_cidr),
-         subnets <- generate_subnets(base_ip, base_prefix, target_prefix) do
-      Enum.find(subnets, fn subnet ->
-        subnet not in existing_ranges
-      end)
-    else
-      _ -> nil
+    case parse_cidr(base_cidr) do
+      {:ok, {base_ip, base_prefix}} ->
+        subnets = generate_subnets(base_ip, base_prefix, target_prefix)
+
+        Enum.find(subnets, fn subnet ->
+          subnet not in existing_ranges
+        end)
+
+      _ ->
+        nil
     end
   end
 
@@ -407,9 +458,10 @@ defmodule EdgeAdmin.Vpn do
 
   Returns `{:ok, network}` or `{:error, :service_unavailable}`.
   """
+  @spec create_network(String.t(), map()) :: {:ok, map()} | {:error, :service_unavailable | String.t()}
   def create_network(network_name, opts \\ %{}) do
-    with :ok <- validate_network_name(network_name),
-         result <- Nexmaker.Api.Networks.create(network_name, opts) do
+    with :ok <- validate_network_name(network_name) do
+      result = Networks.create(network_name, opts)
       normalize_netmaker_error(result)
     end
   end
@@ -419,9 +471,10 @@ defmodule EdgeAdmin.Vpn do
 
   Returns `{:ok, response}` or `{:error, :service_unavailable}`.
   """
+  @spec delete_network(String.t()) :: {:ok, map()} | {:error, :service_unavailable}
   def delete_network(network_name) do
     network_name
-    |> Nexmaker.Api.Networks.delete()
+    |> Networks.delete()
     |> normalize_netmaker_error()
   end
 
@@ -430,9 +483,10 @@ defmodule EdgeAdmin.Vpn do
 
   Returns `{:ok, network}`, `{:error, :not_found}`, or `{:error, :service_unavailable}`.
   """
+  @spec get_network(String.t()) :: {:ok, map()} | {:error, :not_found | :service_unavailable}
   def get_network(network_name) do
     network_name
-    |> Nexmaker.Api.Networks.get()
+    |> Networks.get()
     |> normalize_netmaker_error()
   end
 
@@ -463,7 +517,8 @@ defmodule EdgeAdmin.Vpn do
   Returns `{:ok, node}`, `{:error, :not_found}`, or `{:error, :service_unavailable}`.
   """
   def get_node(network_name, node_id) do
-    Nexmaker.Api.Nodes.get(network_name, node_id)
+    network_name
+    |> Nodes.get(node_id)
     |> normalize_netmaker_error()
   end
 
@@ -473,7 +528,8 @@ defmodule EdgeAdmin.Vpn do
   Returns `{:ok, nodes}` or `{:error, :service_unavailable}`.
   """
   def list_nodes(network_name) do
-    Nexmaker.Api.Nodes.list(network_name)
+    network_name
+    |> Nodes.list()
     |> normalize_netmaker_error()
   end
 
@@ -486,7 +542,7 @@ defmodule EdgeAdmin.Vpn do
   Returns `{:ok, nodes}` or `{:error, :service_unavailable}`.
   """
   def list_nodes_by_tag(tag) do
-    case Nexmaker.Api.Nodes.list_all() |> normalize_netmaker_error() do
+    case normalize_netmaker_error(Nodes.list_all()) do
       {:ok, nodes} ->
         filtered =
           Enum.filter(nodes, fn node ->
@@ -516,8 +572,10 @@ defmodule EdgeAdmin.Vpn do
       iex> Vpn.remove_host_from_network("f272e703-...", "cluster-prod")
       {:ok, %{}}
   """
+  @spec remove_host_from_network(String.t(), String.t()) :: {:ok, map()} | {:error, :service_unavailable}
   def remove_host_from_network(host_id, network_name) do
-    Nexmaker.Api.Hosts.remove_from_network(host_id, network_name)
+    host_id
+    |> Hosts.remove_from_network(network_name)
     |> normalize_netmaker_error()
   end
 
@@ -526,8 +584,10 @@ defmodule EdgeAdmin.Vpn do
 
   Returns `{:ok, response}` or `{:error, :service_unavailable}`.
   """
+  @spec add_host_to_network(String.t(), String.t()) :: {:ok, map()} | {:error, :service_unavailable}
   def add_host_to_network(host_id, network_name) do
-    Nexmaker.Api.Hosts.add_to_network(host_id, network_name)
+    host_id
+    |> Hosts.add_to_network(network_name)
     |> normalize_netmaker_error()
   end
 
@@ -587,7 +647,7 @@ defmodule EdgeAdmin.Vpn do
   Returns `{:ok, hosts}` or `{:error, :service_unavailable}`.
   """
   def list_hosts(network_name \\ nil) do
-    with {:ok, hosts} <- Nexmaker.Api.Hosts.list() |> normalize_netmaker_error() do
+    with {:ok, hosts} <- normalize_netmaker_error(Hosts.list()) do
       if is_binary(network_name) do
         # Get all nodes in the network and extract their host IDs
         case list_nodes(network_name) do
@@ -618,7 +678,8 @@ defmodule EdgeAdmin.Vpn do
   Returns `{:ok, host}`, `{:error, :not_found}`, or `{:error, :service_unavailable}`.
   """
   def get_host(host_id) do
-    Nexmaker.Api.Hosts.get(host_id)
+    host_id
+    |> Hosts.get()
     |> normalize_netmaker_error()
   end
 
@@ -628,7 +689,8 @@ defmodule EdgeAdmin.Vpn do
   Returns `{:ok, response}` or `{:error, :service_unavailable}`.
   """
   def delete_host(host_id) do
-    Nexmaker.Api.Hosts.delete(host_id)
+    host_id
+    |> Hosts.delete()
     |> normalize_netmaker_error()
   end
 
@@ -638,7 +700,8 @@ defmodule EdgeAdmin.Vpn do
   Returns `{:ok, response}` or `{:error, :service_unavailable}`.
   """
   def delete_host(network_name, host_id) do
-    Nexmaker.Api.Hosts.delete(network_name, host_id)
+    network_name
+    |> Hosts.delete(host_id)
     |> normalize_netmaker_error()
   end
 
@@ -648,7 +711,8 @@ defmodule EdgeAdmin.Vpn do
   Returns `{:ok, key}` or `{:error, :service_unavailable}`.
   """
   def create_enrollment_key(network_name, opts \\ %{}) do
-    Nexmaker.Api.EnrollmentKeys.create(network_name, opts)
+    network_name
+    |> EnrollmentKeys.create(opts)
     |> normalize_netmaker_error()
   end
 
@@ -658,8 +722,7 @@ defmodule EdgeAdmin.Vpn do
   Returns `{:ok, keys}` or `{:error, :service_unavailable}`.
   """
   def list_enrollment_keys do
-    Nexmaker.Api.EnrollmentKeys.list()
-    |> normalize_netmaker_error()
+    normalize_netmaker_error(EnrollmentKeys.list())
   end
 
   @doc """
@@ -698,7 +761,8 @@ defmodule EdgeAdmin.Vpn do
   Returns `{:ok, response}` or `{:error, :service_unavailable}`.
   """
   def delete_enrollment_key(key_value) do
-    Nexmaker.Api.EnrollmentKeys.delete(key_value)
+    key_value
+    |> EnrollmentKeys.delete()
     |> normalize_netmaker_error()
   end
 
@@ -723,7 +787,7 @@ defmodule EdgeAdmin.Vpn do
   Returns `:ok` or `{:error, :service_unavailable}`.
   """
   def health_check(opts \\ []) do
-    case Nexmaker.Api.Server.status(opts) |> normalize_netmaker_error() do
+    case opts |> Nexmaker.Api.Server.status() |> normalize_netmaker_error() do
       {:ok, _status} -> :ok
       error -> error
     end
@@ -735,8 +799,7 @@ defmodule EdgeAdmin.Vpn do
   Returns `{:ok, result}` or `{:error, :service_unavailable}`.
   """
   def check_superadmin do
-    Nexmaker.Api.Superadmin.check()
-    |> normalize_netmaker_error()
+    normalize_netmaker_error(Superadmin.check())
   end
 
   @doc """
@@ -745,7 +808,8 @@ defmodule EdgeAdmin.Vpn do
   Returns `{:ok, superadmin}` or `{:error, :service_unavailable}`.
   """
   def create_superadmin(attrs) do
-    Nexmaker.Api.Superadmin.create(attrs)
+    attrs
+    |> Superadmin.create()
     |> normalize_netmaker_error()
   end
 
@@ -754,8 +818,10 @@ defmodule EdgeAdmin.Vpn do
 
   Returns `{:ok, dns_entry}` or `{:error, :service_unavailable}`.
   """
+  @spec create_dns_entry(String.t(), map()) :: {:ok, map()} | {:error, :service_unavailable}
   def create_dns_entry(network_name, attrs) do
-    Nexmaker.Api.DNS.create(network_name, attrs)
+    network_name
+    |> DNS.create(attrs)
     |> normalize_netmaker_error()
   end
 
@@ -764,8 +830,10 @@ defmodule EdgeAdmin.Vpn do
 
   Returns `{:ok, response}`, `{:error, :not_found}`, or `{:error, :service_unavailable}`.
   """
+  @spec delete_dns_entry(String.t(), String.t()) :: {:ok, map()} | {:error, :not_found | :service_unavailable}
   def delete_dns_entry(network_name, dns_name) do
-    Nexmaker.Api.DNS.delete(network_name, dns_name)
+    network_name
+    |> DNS.delete(dns_name)
     |> normalize_netmaker_error()
   end
 
@@ -788,6 +856,7 @@ defmodule EdgeAdmin.Vpn do
 
       {:ok, 3} = Vpn.cleanup_zombie_admins()
   """
+  @spec cleanup_zombie_admins() :: {:ok, non_neg_integer()} | {:error, term()}
   def cleanup_zombie_admins do
     admin_cluster_name = admin_cluster_name()
 
@@ -810,16 +879,13 @@ defmodule EdgeAdmin.Vpn do
 
         # Find zombie nodes (not checked in for threshold, host not protected)
         zombie_nodes =
-          nodes
-          |> Enum.filter(fn node ->
+          Enum.filter(nodes, fn node ->
             age_seconds = current_time - node["lastcheckin"]
             is_zombie = age_seconds > threshold_seconds
             is_protected = node["hostid"] in protected_host_ids
 
             if is_zombie and not is_protected do
-              Logger.debug(
-                "Zombie found: node=#{node["id"]}, host=#{node["hostid"]} (age: #{age_seconds}s)"
-              )
+              Logger.debug("Zombie found: node=#{node["id"]}, host=#{node["hostid"]} (age: #{age_seconds}s)")
 
               true
             else

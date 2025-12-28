@@ -129,8 +129,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
   end
 
   defp validate_port(changeset, field) do
-    changeset
-    |> validate_number(field, greater_than: 0, less_than_or_equal_to: 65535)
+    validate_number(changeset, field, greater_than: 0, less_than_or_equal_to: 65_535)
   end
 
   @doc """

@@ -6,6 +6,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
 
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
+
   require OpenApiSpex
 
   defmodule NodeResponse do
@@ -134,12 +135,12 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         id_type: "persistent",
         status: "healthy",
         dns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
-        http_port: 44000,
-        ssh_port: 42222,
-        host_metrics_port: 49100,
-        wireguard_metrics_port: 49586,
-        http_proxy_port: 44880,
-        socks5_proxy_port: 44180,
+        http_port: 44_000,
+        ssh_port: 42_222,
+        host_metrics_port: 49_100,
+        wireguard_metrics_port: 49_586,
+        http_proxy_port: 44_880,
+        socks5_proxy_port: 44_180,
         api_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
         proxy_password: "securepassword123",
         version: "0.1.0",
@@ -176,12 +177,12 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
             status: "healthy",
             dns_hostname:
               "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
-            http_port: 44000,
-            ssh_port: 42222,
-            host_metrics_port: 49100,
-            wireguard_metrics_port: 49586,
-            http_proxy_port: 44880,
-            socks5_proxy_port: 44180,
+            http_port: 44_000,
+            ssh_port: 42_222,
+            host_metrics_port: 49_100,
+            wireguard_metrics_port: 49_586,
+            http_proxy_port: 44_880,
+            socks5_proxy_port: 44_180,
             api_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
             proxy_password: "securepassword123",
             version: "0.1.0",
@@ -228,12 +229,12 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           status: "healthy",
           dns_hostname:
             "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
-          http_port: 44000,
-          ssh_port: 42222,
-          host_metrics_port: 49100,
-          wireguard_metrics_port: 49586,
-          http_proxy_port: 44880,
-          socks5_proxy_port: 44180,
+          http_port: 44_000,
+          ssh_port: 42_222,
+          host_metrics_port: 49_100,
+          wireguard_metrics_port: 49_586,
+          http_proxy_port: 44_880,
+          socks5_proxy_port: 44_180,
           api_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
           proxy_password: "securepassword123",
           version: "0.1.0",

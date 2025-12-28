@@ -12,6 +12,8 @@ defmodule EdgeAdmin.Repo.Migrations.CreateSshPublicKeys do
       timestamps(type: :utc_datetime)
     end
 
-    create unique_index(:ssh_public_keys, [:ssh_username_id, :key_name], name: :ssh_public_keys_ssh_username_id_key_name_index)
+    create unique_index(:ssh_public_keys, [:ssh_username_id, :key_name],
+             name: :ssh_public_keys_ssh_username_id_key_name_index
+           )
   end
 end

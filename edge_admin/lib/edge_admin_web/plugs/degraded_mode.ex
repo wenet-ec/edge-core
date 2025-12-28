@@ -24,8 +24,8 @@ defmodule EdgeAdminWeb.Plugs.DegradedMode do
   - `:allow` - No-op (default behavior, for documentation/clarity)
   """
 
-  import Plug.Conn
   import Phoenix.Controller
+  import Plug.Conn
 
   alias EdgeAdmin.Admins.Metadata
 

@@ -1,41 +1,85 @@
 # edge_admin/lib/edge_admin/admins/bootstrap.ex
 defmodule EdgeAdmin.Admins.Bootstrap do
   @moduledoc """
-  One-time initialization GenServer for admin cluster bootstrap.
+  One-time initialization for admin cluster membership and distributed Erlang setup.
 
-  Responsibilities:
-  - VPN network join (admin cluster)
-  - Erlang distribution startup
-  - Peer admin discovery and connection
-  - Syn registry initialization
+  This GenServer runs exactly once during application startup and performs critical
+  initialization tasks to join the admin cluster and enable distributed coordination.
 
-  Bootstrap runs exactly once on application startup and blocks until complete.
-  Any failure is fatal and crashes the supervision tree.
+  ## Key Concepts
+
+  - **Admin Cluster**: VPN network connecting all admin instances for HA coordination
+  - **Bootstrap**: One-time setup that must succeed or application crashes
+  - **Erlang Distribution**: Enables inter-admin RPC, syn registry, and clustering
+  - **Peer Discovery**: Finds other admins in the cluster via Netmaker API
+
+  ## Responsibilities
+
+  1. **VPN Network Join**
+     - Join admin cluster VPN network
+     - Create network if this is the first admin (bootstrap mode)
+     - Obtain Netmaker host ID for this admin
+
+  2. **Erlang Distribution**
+     - Start distributed Erlang with configured cookie
+     - Set node name based on admin DNS hostname
+     - Enable inter-admin communication
+
+  3. **Peer Discovery**
+     - Query Netmaker for other admins in the cluster
+     - Connect to peer Erlang nodes
+     - Enable distributed syn registry
+
+  4. **syn Initialization**
+     - Join cluster_scope for Gateway registration
+     - Enable cross-admin request routing
 
   ## Bootstrap Sequence
 
-  1. Join VPN network (create if needed)
-  2. Start Erlang distribution
-  3. Discover and connect peer admins
-  4. Initialize syn registry
+  ```
+  1. Ensure Netmaker superadmin exists
+  2. Join admin cluster network (create if needed)
+  3. Get Netmaker host ID
+  4. Start Erlang distribution
+  5. Discover peer admins via Netmaker API
+  6. Connect to peer Erlang nodes
+  7. Initialize syn registry
+  ```
+
+  ## Failure Handling
+
+  Bootstrap failures are **FATAL** and crash the supervision tree:
+  - VPN join failure → Can't communicate with peers
+  - Erlang distribution failure → Can't coordinate
+  - syn initialization failure → Can't route requests
 
   ## Configuration
 
   All values read from Application config (set in runtime.exs):
-  - `:admin_id` - Random 12-char identifier
-  - `:admin_name` - "admin-{id}"
-  - `:admin_cluster_name` - Peer admin cluster name
-  - `:admin_max_capacity` - Max nodes this admin can handle
+  - `:admin_id` - Random 12-char identifier (e.g., "7k3m9p2n")
+  - `:admin_name` - Prefixed name (e.g., "admin-7k3m9p2n")
+  - `:admin_cluster_name` - Shared cluster name (e.g., "admin-cluster-main")
+  - `:admin_max_capacity` - Max nodes this admin can handle (e.g., 200)
   - `:erlang_cookie` - Shared secret for Erlang distribution
-  - `:admin_cluster_subnet` - Subnet for admin cluster (optional, auto-generates)
+  - `:admin_cluster_subnet` - Optional subnet (auto-generates if missing)
+
+  ## Examples
+
+      # Bootstrap runs automatically on application start
+      # Success: Application continues
+      # Failure: Application crashes with detailed error
+
+      # Check if bootstrap completed
+      iex> Bootstrap.initialized?()
+      true
   """
 
   use GenServer
 
-  require Logger
-
   alias EdgeAdmin.Admins.Discovery
   alias EdgeAdmin.Vpn
+
+  require Logger
 
   # =============================================================================
   # Public API
@@ -212,8 +256,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
           Logger.info("Netclient verified: connected to #{network_name}")
           :ok
         else
-          {:error,
-           "Netclient connected but not to #{network_name}, networks: #{inspect(info[:networks])}"}
+          {:error, "Netclient connected but not to #{network_name}, networks: #{inspect(info[:networks])}"}
         end
 
       {:ok, :unhealthy, info} ->
@@ -249,9 +292,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
             :ok
 
           {:error, reason} ->
-            Logger.warning(
-              "Failed to start Erlang distribution (will retry later): #{inspect(reason)}"
-            )
+            Logger.warning("Failed to start Erlang distribution (will retry later): #{inspect(reason)}")
 
             :ok
         end

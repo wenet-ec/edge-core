@@ -38,8 +38,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
       ],
       order_directions: [
         in: :query,
-        description:
-          "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
+        description: "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
         schema: %OpenApiSpex.Schema{type: :string},
         example: "desc,asc"
       ],
@@ -50,8 +49,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
       ],
       public_key: [
         in: :query,
-        description:
-          "Filter by public key content (useful for searching email comments: *@example.com)",
+        description: "Filter by public key content (useful for searching email comments: *@example.com)",
         schema: %OpenApiSpex.Schema{type: :string}
       ],
       ssh_username_id: [
@@ -72,8 +70,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
     ],
     responses: %{
       200 =>
-        {"Paginated list of SSH public keys", "application/json",
-         SshPublicKeySchemas.SshPublicKeyPaginatedResponse}
+        {"Paginated list of SSH public keys", "application/json", SshPublicKeySchemas.SshPublicKeyPaginatedResponse}
     }
   )
 
@@ -95,16 +92,12 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
         schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ]
     ],
-    request_body:
-      {"SSH public key creation data", "application/json",
-       SshPublicKeySchemas.SshPublicKeyCreateRequest},
+    request_body: {"SSH public key creation data", "application/json", SshPublicKeySchemas.SshPublicKeyCreateRequest},
     responses: %{
-      201 =>
-        {"SSH public key created", "application/json",
-         SshPublicKeySchemas.SshPublicKeySingleResponse},
+      201 => {"SSH public key created", "application/json", SshPublicKeySchemas.SshPublicKeySingleResponse},
       422 =>
-        {"Validation error - Invalid key format, unsupported algorithm, or duplicate key name",
-         "application/json", CommonSchemas.ChangesetErrorResponse},
+        {"Validation error - Invalid key format, unsupported algorithm, or duplicate key name", "application/json",
+         CommonSchemas.ChangesetErrorResponse},
       404 => {"SSH username not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
@@ -131,9 +124,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
       ]
     ],
     responses: %{
-      200 =>
-        {"SSH public key details", "application/json",
-         SshPublicKeySchemas.SshPublicKeySingleResponse},
+      200 => {"SSH public key details", "application/json", SshPublicKeySchemas.SshPublicKeySingleResponse},
       404 => {"SSH public key not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )

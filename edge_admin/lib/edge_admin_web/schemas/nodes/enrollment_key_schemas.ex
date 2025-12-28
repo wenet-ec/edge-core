@@ -5,6 +5,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
   """
 
   alias OpenApiSpex.Schema
+
   require OpenApiSpex
 
   defmodule EnrollmentKeyData do

@@ -4,13 +4,14 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Nodes
+  alias EdgeAdminWeb.Plugs.DegradedMode
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Nodes.ClusterSchemas
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug EdgeAdminWeb.Plugs.DegradedMode, :block when action in [:create, :delete]
-  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :show]
+  plug DegradedMode, :block when action in [:create, :delete]
+  plug DegradedMode, :allow when action in [:index, :show]
 
   tags(["Nodes.Cluster"])
 
@@ -38,45 +39,43 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
       ],
       order_directions: [
         in: :query,
-        description:
-          "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
+        description: "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
         schema: %OpenApiSpex.Schema{type: :string},
         example: "desc,asc"
       ],
       name: [
         in: :query,
         description: "Filter by cluster name (exact match or wildcard: prod*, *tion, *rod*)",
-        schema: %OpenApiSpex.Schema{type: :string},
+        schema: %OpenApiSpex.Schema{type: :string}
       ],
       ipv4_range: [
         in: :query,
         description: "Filter by IPv4 range (exact match or wildcard)",
-        schema: %OpenApiSpex.Schema{type: :string},
+        schema: %OpenApiSpex.Schema{type: :string}
       ],
       inserted_at__gte: [
         in: :query,
         description: "Filter clusters inserted after or on this date",
-        schema: %OpenApiSpex.Schema{type: :string, format: :date},
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
       ],
       inserted_at__lte: [
         in: :query,
         description: "Filter clusters inserted before or on this date",
-        schema: %OpenApiSpex.Schema{type: :string, format: :date},
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
       ],
       node_count__gte: [
         in: :query,
         description: "Filter by minimum node count",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 0},
+        schema: %OpenApiSpex.Schema{type: :integer, minimum: 0}
       ],
       node_count__lte: [
         in: :query,
         description: "Filter by maximum node count",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 0},
+        schema: %OpenApiSpex.Schema{type: :integer, minimum: 0}
       ]
     ],
     responses: %{
-      200 =>
-        {"Paginated cluster list", "application/json", ClusterSchemas.ClusterPaginatedResponse}
+      200 => {"Paginated cluster list", "application/json", ClusterSchemas.ClusterPaginatedResponse}
     }
   )
 
@@ -110,12 +109,11 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
 
   operation(:create,
     summary: "Create a new cluster",
-    description: "Create a new edge cluster with optional IP range.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
-    request_body:
-      {"Cluster creation parameters", "application/json", ClusterSchemas.ClusterCreateRequest},
+    description:
+      "Create a new edge cluster with optional IP range.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+    request_body: {"Cluster creation parameters", "application/json", ClusterSchemas.ClusterCreateRequest},
     responses: %{
-      201 =>
-        {"Cluster created successfully", "application/json", ClusterSchemas.ClusterSingleResponse},
+      201 => {"Cluster created successfully", "application/json", ClusterSchemas.ClusterSingleResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
@@ -133,7 +131,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
 
   operation(:delete,
     summary: "Delete a cluster",
-    description: "Delete an empty cluster (must have no nodes).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+    description:
+      "Delete an empty cluster (must have no nodes).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
     parameters: [
       name: [
         in: :path,

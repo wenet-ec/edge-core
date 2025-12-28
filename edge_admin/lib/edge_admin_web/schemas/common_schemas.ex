@@ -4,8 +4,9 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
   Common OpenAPI schemas shared across the application
   """
 
-  require OpenApiSpex
   alias OpenApiSpex.Schema
+
+  require OpenApiSpex
 
   defmodule ChangesetErrorResponse do
     @moduledoc false

@@ -6,6 +6,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas do
 
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
+
   require OpenApiSpex
 
   defmodule SshPublicKeyResponse do

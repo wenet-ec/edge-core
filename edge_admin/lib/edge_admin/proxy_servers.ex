@@ -1,18 +1,47 @@
 # edge_admin/lib/edge_admin/proxy_servers.ex
 defmodule EdgeAdmin.ProxyServers do
   @moduledoc """
-  Proxy servers supervisor managing HTTP and SOCKS5 forward proxies for admin.
+  HTTP and SOCKS5 forward proxy servers for admin access to edge nodes.
 
-  Runs two separate Ranch listeners:
-  - HTTP forward proxy on port 43128 (configurable)
-  - SOCKS5 proxy on port 41080 (configurable)
+  Runs two Ranch listeners providing proxy access to the VPN network, allowing
+  users to route traffic through the admin to reach edge nodes.
+
+  ## Proxy Modes
+
+  ### Mode 1 (Admin Proxy) - Currently Implemented
+  - Admin acts as proxy server
+  - Client connects to admin's proxy ports
+  - Admin routes traffic through VPN Gateway to nodes
+  - Direct VPN access to all nodes in assigned clusters
+
+  ### Mode 2 (Agent Proxy) - TODO
+  - Proxy chaining through specific agent as exit node
+  - Client → Admin → Agent → Internet
+  - Allows using agent's network/IP as exit point
+
+  ## Listeners
+
+  - **HTTP Forward Proxy**: Port 43128 (configurable via `HTTP_PROXY_PORT`)
+  - **SOCKS5 Proxy**: Port 41080 (configurable via `SOCKS5_PROXY_PORT`)
 
   Both proxies use simple authentication:
-  - Username: "_" (underscore) for Mode 1
-  - Password: proxy_password from config (or master_key)
+  - **Username**: `_` (underscore) for Mode 1
+  - **Password**: From `PROXY_PASSWORD` config (or `MASTER_KEY` fallback)
 
-  Mode 1 (Admin Proxy): Direct VPN access to nodes via Gateway routing
-  Mode 2 (TODO): Proxy chaining through agents as exit nodes
+  ## Architecture
+
+  - **GenServer**: Manages lifecycle of both Ranch listeners
+  - **Ranch Listeners**: One for HTTP, one for SOCKS5
+  - **Protocol Handlers**: `HttpHandler` and `Socks5Handler`
+  - **Gateway Integration**: Routes traffic through Gateway GenServers
+
+  ## Examples
+
+      # Configure HTTP proxy in browser/curl
+      export http_proxy=http://_:PASSWORD@admin-host:43128
+
+      # Configure SOCKS5 proxy
+      curl --socks5 _:PASSWORD@admin-host:41080 http://node-abc.cluster-prod.nm.internal:8080
   """
 
   use GenServer

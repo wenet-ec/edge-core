@@ -16,23 +16,27 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminClusterControllerTest do
     end
 
     # Insert test admin cluster data
-    :ets.insert(:metadata, {:admin_cluster, %{
-      name: "admin-cluster-test",
-      total_admins: 2,
-      degraded: false,
-      topology: [
-        %{
-          name: "admin-test123456",
-          max_capacity: 100,
-          erlang_node_name: :"admin@admin-test123456.admin-cluster-test.nm.internal"
-        },
-        %{
-          name: "admin-peer789012",
-          max_capacity: 200,
-          erlang_node_name: :"admin@admin-peer789012.admin-cluster-test.nm.internal"
-        }
-      ]
-    }})
+    :ets.insert(
+      :metadata,
+      {:admin_cluster,
+       %{
+         name: "admin-cluster-test",
+         total_admins: 2,
+         degraded: false,
+         topology: [
+           %{
+             name: "admin-test123456",
+             max_capacity: 100,
+             erlang_node_name: :"admin@admin-test123456.admin-cluster-test.nm.internal"
+           },
+           %{
+             name: "admin-peer789012",
+             max_capacity: 200,
+             erlang_node_name: :"admin@admin-peer789012.admin-cluster-test.nm.internal"
+           }
+         ]
+       }}
+    )
   end
 
   describe "GET /api/admins/admin_cluster" do
@@ -68,18 +72,22 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminClusterControllerTest do
 
     test "handles degraded mode", %{conn: conn} do
       # Update ETS with degraded state
-      :ets.insert(:metadata, {:admin_cluster, %{
-        name: "admin-cluster-test",
-        total_admins: 1,
-        degraded: true,
-        topology: [
-          %{
-            name: "admin-test123456",
-            max_capacity: 100,
-            erlang_node_name: :"admin@admin-test123456.admin-cluster-test.nm.internal"
-          }
-        ]
-      }})
+      :ets.insert(
+        :metadata,
+        {:admin_cluster,
+         %{
+           name: "admin-cluster-test",
+           total_admins: 1,
+           degraded: true,
+           topology: [
+             %{
+               name: "admin-test123456",
+               max_capacity: 100,
+               erlang_node_name: :"admin@admin-test123456.admin-cluster-test.nm.internal"
+             }
+           ]
+         }}
+      )
 
       conn = get(conn, ~p"/api/admins/admin_cluster")
       response = json_response(conn, 200)
@@ -90,12 +98,16 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminClusterControllerTest do
 
     test "handles empty topology", %{conn: conn} do
       # Update ETS with empty topology
-      :ets.insert(:metadata, {:admin_cluster, %{
-        name: "admin-cluster-test",
-        total_admins: 0,
-        degraded: false,
-        topology: []
-      }})
+      :ets.insert(
+        :metadata,
+        {:admin_cluster,
+         %{
+           name: "admin-cluster-test",
+           total_admins: 0,
+           degraded: false,
+           topology: []
+         }}
+      )
 
       conn = get(conn, ~p"/api/admins/admin_cluster")
       response = json_response(conn, 200)

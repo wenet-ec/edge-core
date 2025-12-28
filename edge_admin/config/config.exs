@@ -5,7 +5,6 @@
 # This configuration file is loaded before any dependency and
 # is restricted to this project.
 
-# General application configuration
 import Config
 
 version = Mix.Project.config()[:version]
@@ -32,26 +31,21 @@ config :edge_admin, EdgeAdminWeb.Endpoint,
 
 config :edge_admin, EdgeAdminWeb.Plugs.Security, allow_unsafe_scripts: false
 
-config :edge_admin,
-  ecto_repos: [EdgeAdmin.Repo],
-  generators: [timestamp_type: :utc_datetime, binary_id: true],
-  version: version
-
-config :edge_admin,
-  ecto_repos: [EdgeAdmin.Repo],
-  version: version
-
 # Proxy server timeouts (in milliseconds)
 config :edge_admin, :proxy_timeouts,
   connection: 5_000,
   handshake: 10_000,
   read: 10_000
 
+config :edge_admin,
+  ecto_repos: [EdgeAdmin.Repo],
+  generators: [timestamp_type: :utc_datetime, binary_id: true],
+  version: version
+
 config :flop, repo: EdgeAdmin.Repo
 
 config :phoenix, :json_library, Jason
 
-# Import environment configuration
 config :sentry,
   root_source_code_path: File.cwd!(),
   release: version

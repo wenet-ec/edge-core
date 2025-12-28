@@ -30,9 +30,8 @@ defmodule EdgeAdmin.Metrics.WireguardMetrics do
 
     with {:ok, cluster_name, _admin_name} <- Metadata.find_node_cluster(node_name),
          {:ok, gateway_pid} <- Gateway.lookup(cluster_name),
-         {:ok, node} <- Nodes.get_node(node_id),
-         {:ok, metrics_text} <- Gateway.scrape_wireguard_metrics(gateway_pid, node) do
-      {:ok, metrics_text}
+         {:ok, node} <- Nodes.get_node(node_id) do
+      Gateway.scrape_wireguard_metrics(gateway_pid, node)
     end
   end
 end

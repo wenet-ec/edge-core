@@ -7,6 +7,7 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
   This form validates external API inputs before passing to the domain layer.
   """
   use Ecto.Schema
+
   import Ecto.Changeset
 
   embedded_schema do
@@ -127,12 +128,13 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
 
   defp to_map(%__MODULE__{} = form, original_attrs) do
     # Build the base command attrs
-    base_attrs = %{
-      "command_text" => form.command_text,
-      "timeout" => form.timeout
-    }
-    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
-    |> Map.new()
+    base_attrs =
+      %{
+        "command_text" => form.command_text,
+        "timeout" => form.timeout
+      }
+      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+      |> Map.new()
 
     # Get original targeting to preserve all fields
     original_targeting = Map.get(original_attrs, "targeting", %{})

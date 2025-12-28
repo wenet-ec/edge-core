@@ -4,6 +4,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
   OpenAPI schemas for node metrics endpoints
   """
   alias OpenApiSpex.Schema
+
   require OpenApiSpex
 
   defmodule HostMetricsResponse do

@@ -1,11 +1,39 @@
 # edge_admin/lib/edge_admin/nodes/schemas/alias.ex
 defmodule EdgeAdmin.Nodes.Schemas.Alias do
   @moduledoc """
-  Schema for node aliases. Each alias creates a custom DNS entry for a node.
+  Schema for node aliases.
+
+  Each alias creates a custom DNS entry for a node, allowing it to be addressed
+  by a human-friendly name instead of its UUID.
+
+  ## Fields
+
+  - `name` - Alias name (lowercase alphanumeric with hyphens, 1-63 chars)
+  - `node_id` - Foreign key to node
+  - `cluster_id` - Foreign key to cluster (denormalized for uniqueness constraint)
+  - `dns_hostname` - Virtual field: Full DNS hostname for this alias
+
+  ## Constraints
+
+  Aliases are unique per cluster (same name can exist in different clusters).
   """
   use EdgeAdmin.Schema
 
+  alias Ecto.Association.NotLoaded
+  alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Vpn
+
+  @type t :: %__MODULE__{
+          id: String.t(),
+          name: String.t(),
+          dns_hostname: String.t() | nil,
+          node_id: String.t(),
+          cluster_id: String.t(),
+          node: EdgeAdmin.Nodes.Schemas.Node.t() | NotLoaded.t(),
+          cluster: Cluster.t() | NotLoaded.t(),
+          inserted_at: DateTime.t(),
+          updated_at: DateTime.t()
+        }
 
   @derive {
     Flop.Schema,
@@ -22,7 +50,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
     field(:dns_hostname, :string, virtual: true)
 
     belongs_to(:node, EdgeAdmin.Nodes.Schemas.Node, type: :binary_id)
-    belongs_to(:cluster, EdgeAdmin.Nodes.Schemas.Cluster, type: :binary_id)
+    belongs_to(:cluster, Cluster, type: :binary_id)
 
     timestamps()
   end
@@ -43,11 +71,21 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
 
   @doc """
   Returns the full DNS hostname for this alias.
-  Format: node-{name}.cluster-{cluster_name}.{domain}
-  where domain is configured via NETMAKER_DEFAULT_DOMAIN (default: nm.internal)
 
+  ## Format
+  `node-{name}.cluster-{cluster_name}.{domain}`
+
+  where domain is configured via `NETMAKER_DEFAULT_DOMAIN` (default: `nm.internal`)
+
+  ## Requirements
   Requires cluster association to be preloaded.
+
+  ## Examples
+
+      iex> dns_hostname(%Alias{name: "web", cluster: %Cluster{name: "prod"}})
+      "node-web.cluster-prod.nm.internal"
   """
+  @spec dns_hostname(t()) :: String.t()
   def dns_hostname(%__MODULE__{name: name, cluster: %{name: cluster_name}}) do
     short_name = Vpn.build_dns_name(name, prefix: :node)
     network_name = Vpn.build_network_name(cluster_name, prefix: :node)

@@ -475,7 +475,7 @@ defmodule EdgeAdmin.CommandsTest do
       assert updated.status == "completed"
       assert updated.output == "Command executed successfully"
       assert updated.exit_code == 0
-      assert updated.completed_at != nil
+      assert updated.completed_at
     end
 
     test "returns forbidden error when node_id doesn't match" do
@@ -591,7 +591,7 @@ defmodule EdgeAdmin.CommandsTest do
       assert {:ok, updated} =
                Commands.update_command_execution_result(execution.id, node.id, attrs)
 
-      assert updated.completed_at != nil
+      assert updated.completed_at
       assert DateTime.compare(updated.completed_at, before_update) in [:gt, :eq]
     end
   end

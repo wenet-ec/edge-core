@@ -7,8 +7,8 @@ defmodule EdgeAdmin.Nodes.Rules.DeletionRules do
   and prevent deletion of non-empty clusters.
   """
 
-  import Ecto.Query
   import Ecto.Changeset
+  import Ecto.Query
 
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
@@ -25,12 +25,7 @@ defmodule EdgeAdmin.Nodes.Rules.DeletionRules do
   - `{:error, changeset}` - Cluster cannot be deleted (has nodes)
   """
   def validate_cluster_deletion(%Cluster{id: cluster_id} = cluster) do
-    node_count =
-      from(n in Node,
-        where: n.cluster_id == ^cluster_id,
-        select: count(n.id)
-      )
-      |> Repo.one()
+    node_count = Repo.one(from(n in Node, where: n.cluster_id == ^cluster_id, select: count(n.id)))
 
     if node_count == 0 do
       :ok

@@ -18,7 +18,8 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AgentMetricsDiscoveryController do
     metrics_base_url = Application.get_env(:edge_admin, :metrics_base_url)
 
     target_groups =
-      Nodes.list_cluster_node_mappings(prefix: false, filter_status: ["healthy", "unhealthy"])
+      [prefix: false, filter_status: ["healthy", "unhealthy"]]
+      |> Nodes.list_cluster_node_mappings()
       |> Enum.map(fn %{name: cluster_name, nodes: node_ids} ->
         targets =
           Enum.map(node_ids, fn node_id ->

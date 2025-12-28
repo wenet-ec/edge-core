@@ -6,6 +6,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
 
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
+
   require OpenApiSpex
 
   defmodule CommandExecutionResponse do

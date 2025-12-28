@@ -42,15 +42,16 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
     changeset
     |> validate_length(:name, max: 24)
     |> validate_format(:name, ~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
-         message: "must be lowercase alphanumeric with hyphens, cannot start/end with hyphen")
+      message: "must be lowercase alphanumeric with hyphens, cannot start/end with hyphen"
+    )
   end
 
   defp validate_ipv4_range(changeset) do
     # Basic CIDR format validation (x.x.x.x/prefix)
     # Deeper validation happens in Cluster schema using Vpn.parse_cidr
-    changeset
-    |> validate_format(:ipv4_range, ~r/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/\d{1,2}$/,
-         message: "must be in CIDR format (e.g., 100.64.0.0/24)")
+    validate_format(changeset, :ipv4_range, ~r/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/\d{1,2}$/,
+      message: "must be in CIDR format (e.g., 100.64.0.0/24)"
+    )
   end
 
   defp to_map(%__MODULE__{} = form) do

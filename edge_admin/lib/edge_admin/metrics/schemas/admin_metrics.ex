@@ -4,7 +4,15 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   Schema for human-friendly admin application metrics.
   """
 
-  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.{Application, Metadata, Bootstrap, Nodes, Quantum, Vpn, Commands, Gateways, ObanQueue}
+  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Application
+  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Bootstrap
+  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Commands
+  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Gateways
+  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Metadata
+  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Nodes
+  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.ObanQueue
+  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Quantum
+  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Vpn
 
   @derive Jason.Encoder
   defstruct [
@@ -92,18 +100,21 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
     defp bytes_to_mb(bytes), do: Float.round(bytes / 1_048_576, 2)
 
     defp format_uptime(seconds) when seconds < 60, do: "#{seconds}s"
+
     defp format_uptime(seconds) when seconds < 3600 do
       minutes = div(seconds, 60)
       "#{minutes}m"
     end
-    defp format_uptime(seconds) when seconds < 86400 do
+
+    defp format_uptime(seconds) when seconds < 86_400 do
       hours = div(seconds, 3600)
       minutes = div(rem(seconds, 3600), 60)
       "#{hours}h #{minutes}m"
     end
+
     defp format_uptime(seconds) do
-      days = div(seconds, 86400)
-      hours = div(rem(seconds, 86400), 3600)
+      days = div(seconds, 86_400)
+      hours = div(rem(seconds, 86_400), 3600)
       minutes = div(rem(seconds, 3600), 60)
       "#{days}d #{hours}h #{minutes}m"
     end

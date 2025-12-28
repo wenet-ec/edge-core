@@ -37,8 +37,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
       ],
       order_directions: [
         in: :query,
-        description:
-          "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
+        description: "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
         schema: %OpenApiSpex.Schema{type: :string},
         example: "desc,asc"
       ],
@@ -69,20 +68,17 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
       ],
       output: [
         in: :query,
-        description:
-          "Text search in output (exact match or wildcard: *error*, *failed, etc.)",
+        description: "Text search in output (exact match or wildcard: *error*, *failed, etc.)",
         schema: %OpenApiSpex.Schema{type: :string}
       ],
       cluster_name: [
         in: :query,
-        description:
-          "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *staging, etc.)",
+        description: "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *staging, etc.)",
         schema: %OpenApiSpex.Schema{type: :string}
       ],
       has_cluster: [
         in: :query,
-        description:
-          "Filter by cluster_id presence (true = cluster-wide executions, false = non-cluster-wide)",
+        description: "Filter by cluster_id presence (true = cluster-wide executions, false = non-cluster-wide)",
         schema: %OpenApiSpex.Schema{type: :boolean}
       ],
       inserted_at__gte: [
@@ -120,9 +116,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
       ]
     ],
     responses: %{
-      200 =>
-        {"Command execution details", "application/json",
-         CommandExecutionSchemas.CommandExecutionSingleResponse},
+      200 => {"Command execution details", "application/json", CommandExecutionSchemas.CommandExecutionSingleResponse},
       404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
@@ -150,9 +144,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
     responses: %{
       204 => {"Command execution deleted successfully", "", nil},
       404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 =>
-        {"Cannot delete non-completed execution", "application/json",
-         CommonSchemas.ChangesetErrorResponse}
+      422 => {"Cannot delete non-completed execution", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )
 
@@ -182,15 +174,12 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
       ]
     ],
     responses: %{
-      200 =>
-        {"Cancellation request sent", "application/json",
-         CommandExecutionSchemas.CancelExecutionResponse},
+      200 => {"Cancellation request sent", "application/json", CommandExecutionSchemas.CancelExecutionResponse},
       404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse},
       422 =>
         {"Validation failed - execution status not cancellable", "application/json",
          CommonSchemas.ChangesetErrorResponse},
-      503 =>
-        {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
+      503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 

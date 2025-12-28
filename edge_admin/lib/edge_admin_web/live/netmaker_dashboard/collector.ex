@@ -7,11 +7,12 @@ defmodule EdgeAdminWeb.NetmakerDashboard.Collector do
   """
 
   use GenServer
+
   require Logger
 
   @table_name :netmaker_dashboard_stats
-  @cleanup_interval :timer.minutes(5)
-  @retention_period :timer.hours(1)
+  @cleanup_interval to_timeout(minute: 5)
+  @retention_period to_timeout(hour: 1)
 
   # Client API
 
@@ -36,12 +37,14 @@ defmodule EdgeAdminWeb.NetmakerDashboard.Collector do
     # Create ETS table
     :ets.new(@table_name, [:named_table, :set, :public, read_concurrency: true])
     :ets.insert(@table_name, {:stats, default_stats()})
+
     :ets.new(:netmaker_request_history, [
       :named_table,
       :ordered_set,
       :public,
       read_concurrency: true
     ])
+
     :ets.new(:netmaker_error_history, [
       :named_table,
       :ordered_set,
@@ -213,7 +216,8 @@ defmodule EdgeAdminWeb.NetmakerDashboard.Collector do
   defp update_p95_duration(stats) do
     # Get recent durations from history and calculate P95
     recent_durations =
-      :ets.tab2list(:netmaker_request_history)
+      :netmaker_request_history
+      |> :ets.tab2list()
       |> Enum.filter(fn {_ts, type, _data} -> type == :stop end)
       |> Enum.map(fn {_ts, _type, data} -> data.duration end)
       |> Enum.sort()
@@ -224,7 +228,8 @@ defmodule EdgeAdminWeb.NetmakerDashboard.Collector do
 
   defp update_error_list(stats) do
     recent_errors =
-      :ets.tab2list(:netmaker_error_history)
+      :netmaker_error_history
+      |> :ets.tab2list()
       |> Enum.sort_by(fn {ts, _error} -> ts end, :desc)
       |> Enum.take(20)
       |> Enum.map(fn {_ts, error} -> error end)

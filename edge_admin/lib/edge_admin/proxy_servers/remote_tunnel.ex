@@ -112,8 +112,6 @@ defmodule EdgeAdmin.ProxyServers.RemoteTunnel do
          {:ok, connect_response} <- recv_socks5_data(socket, 10),
          :ok <- validate_socks5_connect(connect_response) do
       {:ok, :accepted}
-    else
-      {:error, reason} -> {:error, reason}
     end
   end
 

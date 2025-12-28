@@ -221,7 +221,6 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
           description: "Number of zombie admins deleted in last cleanup",
           measurement: :deleted_count
         ),
-
         counter(
           [:edge_admin, :commands, :delivery, :total],
           event_name: [:edge_admin, :commands, :delivery],
@@ -290,7 +289,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
 
   defp get_quantum_exception_tags(metadata) do
     job_name = metadata[:job] |> Map.get(:name) |> to_string()
-    kind = metadata[:kind] |> to_string()
+    kind = to_string(metadata[:kind])
     %{job_name: job_name, kind: kind}
   end
 

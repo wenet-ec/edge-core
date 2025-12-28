@@ -7,6 +7,7 @@ defmodule EdgeAdmin.Commands.Forms.CancelExecutionForm do
   """
 
   use Ecto.Schema
+
   import Ecto.Changeset
 
   @primary_key false

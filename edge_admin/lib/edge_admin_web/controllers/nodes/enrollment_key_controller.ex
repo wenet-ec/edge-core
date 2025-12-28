@@ -36,12 +36,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
         schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"}
       ]
     ],
-    request_body:
-      {"Enrollment key parameters", "application/json",
-       EnrollmentKeySchemas.EnrollmentKeyCreateRequest},
+    request_body: {"Enrollment key parameters", "application/json", EnrollmentKeySchemas.EnrollmentKeyCreateRequest},
     responses: %{
-      201 =>
-        {"Enrollment key retrieved/created", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
+      201 => {"Enrollment key retrieved/created", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
       404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
@@ -61,12 +58,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     summary: "Get enrollment key for default cluster",
     description:
       "Convenience endpoint that gets an enrollment key for the default cluster (configured via DEFAULT_CLUSTER_NAME env).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
-    request_body:
-      {"Enrollment key parameters", "application/json",
-       EnrollmentKeySchemas.EnrollmentKeyCreateRequest},
+    request_body: {"Enrollment key parameters", "application/json", EnrollmentKeySchemas.EnrollmentKeyCreateRequest},
     responses: %{
-      201 =>
-        {"Enrollment key retrieved/created", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
+      201 => {"Enrollment key retrieved/created", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
       403 => {"Default cluster not configured", "application/json", CommonSchemas.ForbiddenResponse},
       404 => {"Default cluster not found", "application/json", CommonSchemas.NotFoundResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
@@ -108,8 +102,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     **Note:** This endpoint is unavailable during degraded mode (503).
     """,
     responses: %{
-      200 =>
-        {"Public enrollment key", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
+      200 => {"Public enrollment key", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
       403 => {"Public enrollment disabled", "application/json", CommonSchemas.ForbiddenResponse},
       404 => {"Default cluster not found", "application/json", CommonSchemas.NotFoundResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}

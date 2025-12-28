@@ -1,11 +1,57 @@
 # edge_admin/lib/edge_admin/admins/discovery.ex
 defmodule EdgeAdmin.Admins.Discovery do
   @moduledoc """
-  Admin cluster peer discovery.
+  Peer admin discovery and Erlang node connection.
 
-  Handles:
-  - Querying Netmaker API for peer admin discovery
-  - Erlang node connection to discovered peers
+  This module handles discovering other admin instances in the admin cluster and
+  establishing Erlang distribution connections to enable distributed coordination.
+
+  ## Key Concepts
+
+  - **Peer Admin**: Another admin instance in the same admin cluster
+  - **Erlang Node**: Distributed Erlang runtime identified by name (e.g., `admin@host`)
+  - **Discovery**: Finding peers via Netmaker API (no hardcoded addresses)
+  - **Connection**: Establishing distributed Erlang connection via `Node.connect/1`
+
+  ## Discovery Process
+
+  ```
+  1. Query Netmaker for all nodes in admin cluster network
+  2. Filter to online/connected nodes only
+  3. Query Netmaker for hosts corresponding to those nodes
+  4. Extract hostnames from hosts
+  5. Exclude self from list
+  6. Build Erlang node names from hostnames
+  7. Attempt connection to each peer
+  ```
+
+  ## DNS Retry Logic
+
+  Handles timing issues when VPN just joined:
+  - DNS entries may not be propagated yet
+  - Retries DNS resolution with exponential backoff
+  - Skips connection if DNS fails after retries
+
+  ## Connection States
+
+  - `true` - New connection established successfully
+  - `false` - Connection failed (DNS ok, node unreachable)
+  - `:ignored` - Already connected to this node
+
+  ## Used By
+
+  - `Bootstrap` - Initial peer discovery during startup
+  - Periodic scheduler (future) - Ongoing peer discovery for new admins
+
+  ## Examples
+
+      # Called during bootstrap
+      iex> Discovery.scan_and_connect_admins()
+      :ok
+
+      # Result: Connected to peer admins
+      iex> Node.list()
+      [:"admin@admin-def456.admin-cluster-main.nm.internal"]
   """
 
   alias EdgeAdmin.Vpn
@@ -26,8 +72,7 @@ defmodule EdgeAdmin.Admins.Discovery do
       online_node_host_ids =
         nodes
         |> Enum.filter(&(&1["connected"] == true and &1["status"] == "online"))
-        |> Enum.map(& &1["hostid"])
-        |> MapSet.new()
+        |> MapSet.new(& &1["hostid"])
 
       # Filter hosts that have online nodes, extract hostnames, exclude self
       peer_hostnames =
@@ -50,8 +95,7 @@ defmodule EdgeAdmin.Admins.Discovery do
 
       # Connect to any new peers
       new_peers =
-        peer_nodes
-        |> Enum.reject(fn peer -> peer in connected_nodes end)
+        Enum.reject(peer_nodes, fn peer -> peer in connected_nodes end)
 
       if length(new_peers) > 0 do
         Logger.info("Found #{length(new_peers)} new peer admin(s) to connect")
@@ -104,9 +148,7 @@ defmodule EdgeAdmin.Admins.Discovery do
               end
 
             {:error, :nxdomain} ->
-              Logger.warning(
-                "DNS not ready for #{peer_hostname} (will retry in next discovery cycle)"
-              )
+              Logger.warning("DNS not ready for #{peer_hostname} (will retry in next discovery cycle)")
 
               :telemetry.execute(
                 [:edge_admin, :discovery, :dns_resolution],

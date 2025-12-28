@@ -2,8 +2,10 @@
 defmodule EdgeAdminWeb.Router do
   use EdgeAdminWeb, :router
 
+  import Phoenix.LiveDashboard.Router
   import Phoenix.LiveView.Router
 
+  alias EdgeAdminWeb.Controllers.Agents
   alias OpenApiSpex.Plug.PutApiSpec
 
   pipeline :browser do
@@ -43,8 +45,6 @@ defmodule EdgeAdminWeb.Router do
     plug(PutApiSpec, module: EdgeAdminWeb.ApiSpec)
     plug(EdgeAdminWeb.Plugs.AgentAuth)
   end
-
-  import Phoenix.LiveDashboard.Router
 
   scope "/" do
     pipe_through(:browser)
@@ -134,7 +134,7 @@ defmodule EdgeAdminWeb.Router do
   end
 
   # Agent API endpoints (no authentication for registration)
-  scope "/api/agents", EdgeAdminWeb.Controllers.Agents do
+  scope "/api/agents", Agents do
     pipe_through(:public_api)
 
     # Node registration (no auth required)
@@ -142,7 +142,7 @@ defmodule EdgeAdminWeb.Router do
   end
 
   # Agent API endpoints (requires agent api_token)
-  scope "/api/agents", EdgeAdminWeb.Controllers.Agents do
+  scope "/api/agents", Agents do
     pipe_through(:agent_api)
 
     # SSH credentials verification

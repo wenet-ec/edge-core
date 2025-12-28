@@ -23,6 +23,9 @@ end
 # This config is to output keys instead of translated message in test
 config :edge_admin, EdgeAdmin.Gettext, priv: "priv/null", interpolation: EdgeAdmin.GettextInterpolation
 
+# Disable Quantum during tests:
+config :edge_admin, EdgeAdmin.LocalScheduler, jobs: []
+
 config :edge_admin, EdgeAdmin.Repo,
   username: System.get_env("DB_USER"),
   password: System.get_env("DB_PASSWORD"),
@@ -37,9 +40,6 @@ config :edge_admin, EdgeAdminWeb.Endpoint, server: false
 # Disable Oban during tests:
 config :edge_admin, Oban, testing: :manual
 
-# Disable Quantum during tests:
-config :edge_admin, EdgeAdmin.LocalScheduler, jobs: []
-
 # Disable admin clustering during tests
 config :edge_admin,
   run_bootstrap: false,
@@ -48,7 +48,7 @@ config :edge_admin,
   admin_cluster_name: "admin-cluster-test",
   admin_max_capacity: 100,
   erlang_cookie: :test_cookie,
-  admin_discovery_port: 44000,
+  admin_discovery_port: 44_000,
   netmaker_default_domain: "nm.internal"
 
 config :logger, level: :warning

@@ -48,7 +48,7 @@ defmodule EdgeAdmin.Config do
   defp parse_env("", :list), do: []
 
   defp parse_env(value, :list) when is_bitstring(value) do
-    String.split(value, ",") |> Enum.map(&String.trim/1)
+    value |> String.split(",") |> Enum.map(&String.trim/1)
   end
 
   defp parse_env(value, :atom) when is_bitstring(value) do
@@ -70,7 +70,8 @@ defmodule EdgeAdmin.Config do
     # Generate more bytes than needed to ensure we get enough characters after encoding
     byte_count = ceil(length * 5 / 8)
 
-    :crypto.strong_rand_bytes(byte_count)
+    byte_count
+    |> :crypto.strong_rand_bytes()
     |> Base.encode32(case: :lower, padding: false)
     |> String.slice(0..(length - 1))
   end

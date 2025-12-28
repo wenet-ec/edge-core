@@ -47,8 +47,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.SshUsernameControllerTest do
       {:ok, key2} =
         Nodes.create_ssh_public_key(%{
           key_name: "ci",
-          public_key:
-            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 ci@example.com",
+          public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 ci@example.com",
           ssh_username_id: username2.id
         })
 

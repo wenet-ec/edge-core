@@ -74,14 +74,13 @@ defmodule EdgeAdmin.RequestParser do
       }
   """
   def parse(params) when is_map(params) do
-    %{
+    compact(%{
       filters: parse_filters(params),
       page: parse_page(params),
       page_size: parse_page_size(params),
       order_by: parse_order_by(params),
       order_directions: parse_order_directions(params)
-    }
-    |> compact()
+    })
   end
 
   # Parse filters from params
@@ -94,29 +93,26 @@ defmodule EdgeAdmin.RequestParser do
 
   # Parse a single filter parameter
   defp parse_filter(key, value) when is_binary(key) and is_binary(value) do
-    cond do
-      # Range operators: field__gte, field__lte, etc.
-      String.contains?(key, "__") ->
-        case String.split(key, "__", parts: 2) do
-          [field_str, op_str] ->
-            with {:ok, field} <- parse_field(field_str),
-                 {:ok, op} <- parse_operator(op_str) do
-              [%{field: field, op: op, value: value}]
-            else
-              _ -> []
-            end
+    # Range operators: field__gte, field__lte, etc.
+    if String.contains?(key, "__") do
+      case String.split(key, "__", parts: 2) do
+        [field_str, op_str] ->
+          with {:ok, field} <- parse_field(field_str),
+               {:ok, op} <- parse_operator(op_str) do
+            [%{field: field, op: op, value: value}]
+          else
+            _ -> []
+          end
 
-          _ ->
-            []
-        end
-
+        _ ->
+          []
+      end
+    else
       # Regular field filters
-      true ->
-        with {:ok, field} <- parse_field(key) do
-          parse_value_filter(field, value)
-        else
-          _ -> []
-        end
+      case parse_field(key) do
+        {:ok, field} -> parse_value_filter(field, value)
+        _ -> []
+      end
     end
   end
 
@@ -147,11 +143,9 @@ defmodule EdgeAdmin.RequestParser do
 
   # Parse field name to atom
   defp parse_field(field_str) when is_binary(field_str) do
-    try do
-      {:ok, String.to_existing_atom(field_str)}
-    rescue
-      ArgumentError -> {:error, :invalid_field}
-    end
+    {:ok, String.to_existing_atom(field_str)}
+  rescue
+    ArgumentError -> {:error, :invalid_field}
   end
 
   # Parse operator string to Flop operator
@@ -238,5 +232,4 @@ defmodule EdgeAdmin.RequestParser do
     end)
     |> Map.new()
   end
-
 end

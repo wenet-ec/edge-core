@@ -4,20 +4,20 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Nodes
+  alias EdgeAdminWeb.Plugs.DegradedMode
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Nodes.NodeSchemas
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug EdgeAdminWeb.Plugs.DegradedMode, :block when action in [:change_cluster, :delete]
-  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :show]
+  plug DegradedMode, :block when action in [:change_cluster, :delete]
+  plug DegradedMode, :allow when action in [:index, :show]
 
   tags(["Nodes.Node"])
 
   operation(:index,
     summary: "List all nodes",
-    description:
-      "Returns a paginated list of all registered edge nodes with filtering and sorting",
+    description: "Returns a paginated list of all registered edge nodes with filtering and sorting",
     parameters: [
       page: [
         in: :query,
@@ -39,8 +39,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
       ],
       order_directions: [
         in: :query,
-        description:
-          "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
+        description: "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
         schema: %OpenApiSpex.Schema{type: :string},
         example: "desc,asc"
       ],
@@ -134,8 +133,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
         schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ]
     ],
-    request_body:
-      {"Cluster change parameters", "application/json", NodeSchemas.ChangeClusterRequest},
+    request_body: {"Cluster change parameters", "application/json", NodeSchemas.ChangeClusterRequest},
     responses: %{
       200 => {"Node cluster changed successfully", "application/json", NodeSchemas.NodeSingleResponse},
       404 => {"Node or cluster not found", "application/json", CommonSchemas.NotFoundResponse},
@@ -165,8 +163,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
     responses: %{
       204 => {"Node deleted successfully", "", nil},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 =>
-        {"Failed to delete node from Netmaker", "application/json", CommonSchemas.ChangesetErrorResponse},
+      422 => {"Failed to delete node from Netmaker", "application/json", CommonSchemas.ChangesetErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )

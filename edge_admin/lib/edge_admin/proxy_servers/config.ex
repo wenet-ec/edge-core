@@ -56,7 +56,8 @@ defmodule EdgeAdmin.ProxyServers.Config do
   end
 
   defp get_timeout(key, default) do
-    Application.get_env(:edge_admin, :proxy_timeouts, [])
+    :edge_admin
+    |> Application.get_env(:proxy_timeouts, [])
     |> Keyword.get(key, default)
   end
 end

@@ -135,9 +135,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
 
       # Count clusters per admin
       cluster_counts =
-        result.edge_clusters
-        |> Enum.map(fn {admin_name, clusters} -> {admin_name, map_size(clusters)} end)
-        |> Map.new()
+        Map.new(result.edge_clusters, fn {admin_name, clusters} -> {admin_name, map_size(clusters)} end)
 
       # Should be balanced (3 and 3)
       assert cluster_counts["admin-1"] == 3
@@ -167,8 +165,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
 
       # Two admins should have empty maps
       empty_count =
-        result.edge_clusters
-        |> Enum.count(fn {_admin_name, clusters} -> map_size(clusters) == 0 end)
+        Enum.count(result.edge_clusters, fn {_admin_name, clusters} -> map_size(clusters) == 0 end)
 
       assert empty_count == 2
     end

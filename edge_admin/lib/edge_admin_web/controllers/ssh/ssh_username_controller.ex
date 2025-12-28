@@ -39,8 +39,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
       ],
       order_directions: [
         in: :query,
-        description:
-          "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
+        description: "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
         schema: %OpenApiSpex.Schema{type: :string},
         example: "desc,asc"
       ],
@@ -71,9 +70,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
       ]
     ],
     responses: %{
-      200 =>
-        {"Paginated list of SSH usernames", "application/json",
-         SshUsernameSchemas.SshUsernamePaginatedResponse}
+      200 => {"Paginated list of SSH usernames", "application/json", SshUsernameSchemas.SshUsernamePaginatedResponse}
     }
   )
 
@@ -85,8 +82,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
 
   operation(:create,
     summary: "Create SSH username",
-    description:
-      "Create a new SSH username for a specific node, optionally with public keys and/or password",
+    description: "Create a new SSH username for a specific node, optionally with public keys and/or password",
     parameters: [
       node_id: [
         in: :path,
@@ -94,12 +90,9 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
         schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ]
     ],
-    request_body:
-      {"SSH username creation data", "application/json",
-       SshUsernameSchemas.SshUsernameCreateRequest},
+    request_body: {"SSH username creation data", "application/json", SshUsernameSchemas.SshUsernameCreateRequest},
     responses: %{
-      201 =>
-        {"SSH username created", "application/json", SshUsernameSchemas.SshUsernameSingleResponse},
+      201 => {"SSH username created", "application/json", SshUsernameSchemas.SshUsernameSingleResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )
@@ -108,7 +101,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
     with {:ok, node} <- Nodes.get_node(node_id),
          {:ok, %SshUsername{} = ssh_username} <- Ssh.create_ssh_username_with_keys(node, params) do
       # Ensure keys are loaded for response
-      ssh_username = ssh_username |> EdgeAdmin.Repo.preload(:ssh_public_keys)
+      ssh_username = EdgeAdmin.Repo.preload(ssh_username, :ssh_public_keys)
 
       conn
       |> put_status(:created)
@@ -128,8 +121,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
       ]
     ],
     responses: %{
-      200 =>
-        {"SSH username details", "application/json", SshUsernameSchemas.SshUsernameSingleResponse},
+      200 => {"SSH username details", "application/json", SshUsernameSchemas.SshUsernameSingleResponse},
       404 => {"SSH username not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )

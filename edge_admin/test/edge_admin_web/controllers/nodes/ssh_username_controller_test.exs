@@ -212,16 +212,19 @@ defmodule EdgeAdminWeb.Controllers.Nodes.SshUsernameControllerTest do
       ssh_username = ssh_username_fixture(%{node_id: node.id, username: "testuser"})
 
       # Create public keys
-      key1 = ssh_public_key_fixture(%{
-        ssh_username_id: ssh_username.id,
-        key_name: "laptop",
-        public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop"
-      })
-      key2 = ssh_public_key_fixture(%{
-        ssh_username_id: ssh_username.id,
-        key_name: "server",
-        public_key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC7Z8nFkX+7rT9uJ2p9lH8... ci@server"
-      })
+      key1 =
+        ssh_public_key_fixture(%{
+          ssh_username_id: ssh_username.id,
+          key_name: "laptop",
+          public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop"
+        })
+
+      key2 =
+        ssh_public_key_fixture(%{
+          ssh_username_id: ssh_username.id,
+          key_name: "server",
+          public_key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC7Z8nFkX+7rT9uJ2p9lH8... ci@server"
+        })
 
       conn = get(conn, ~p"/api/ssh_usernames/#{ssh_username.id}")
       response = json_response(conn, 200)["data"]

@@ -2,8 +2,8 @@
 defmodule EdgeAdminWeb.Controllers.Nodes.ClusterControllerTest do
   use EdgeAdminWeb.ConnCase
 
-  import Mox
   import EdgeAdmin.NodesFixtures
+  import Mox
 
   setup :verify_on_exit!
 
@@ -19,7 +19,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterControllerTest do
       conn = get(conn, ~p"/api/clusters")
       response = json_response(conn, 200)
 
-      assert response["data"] |> length() >= 1
+      assert length(response["data"]) >= 1
       assert response["pagination"]["page"] == 1
       assert response["pagination"]["total"] >= 1
 

@@ -1,55 +1,163 @@
 # edge_admin/lib/edge_admin/commands.ex
 defmodule EdgeAdmin.Commands do
   @moduledoc """
-  The Commands context.
+  The Commands context handles distributed command execution across edge nodes.
 
-  Manages command creation, execution tracking, and provides query helpers
-  for the distributed command execution system.
+  This module provides the core functionality for creating commands, managing their
+  execution lifecycle, and delivering them to target nodes. Commands are executed
+  asynchronously with status tracking.
+
+  ## Key Concepts
+
+  - **Command**: A shell command to be executed (e.g., `"uptime"`, `"systemctl restart nginx"`)
+  - **Command Execution**: A single instance of a command targeted at a specific node
+  - **Targeting**: Specification of which nodes should execute a command (all/specific nodes/clusters)
+  - **Delivery**: Process of sending pending executions to healthy nodes via HTTP
+  - **Status Lifecycle**: `pending` → `sent` → `completed`
+
+  ## Architecture
+
+  ### Async Execution Flow
+  1. Command created with targeting specification
+  2. Background worker creates execution records for targeted nodes
+  3. Scheduler delivers pending executions to healthy nodes (every 10s)
+  4. Nodes execute commands and report results back
+  5. Executions marked as completed with output and exit code
+
+  ### Distributed Ownership
+  - Commands are globally visible (all admins can see them)
+  - Execution delivery is distributed (each admin delivers to its owned clusters)
+  - Uses Metadata ETS to determine cluster ownership
+
+  ## Examples
+
+      # Create a command for all nodes
+      iex> create_command_and_executions(%{
+      ...>   "command_text" => "uptime",
+      ...>   "targeting" => %{"type" => "all"}
+      ...> })
+      {:ok, %Command{}}
+
+      # Create a command for specific nodes
+      iex> create_command_and_executions(%{
+      ...>   "command_text" => "systemctl restart nginx",
+      ...>   "targeting" => %{"type" => "nodes", "node_ids" => ["abc-123", "def-456"]}
+      ...> })
+      {:ok, %Command{}}
+
+      # List executions for a command
+      iex> list_command_executions(%{"command_id" => command.id})
+      {:ok, {[%CommandExecution{}, ...], %Flop.Meta{}}}
+
+      # Cancel a pending execution
+      iex> cancel_command_execution(execution)
+      {:ok, %{result: "cancellation request sent"}}
   """
 
   import Ecto.Query, warn: false
 
-  alias EdgeAdmin.Commands.Schemas.Command
-  alias EdgeAdmin.Commands.Schemas.CommandExecution
+  alias Ecto.Query.CastError
+  alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Commands.Forms
   alias EdgeAdmin.Commands.Rules
+  alias EdgeAdmin.Commands.Schemas.Command
+  alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Commands.Workers.ExecutionCreationWorker
   alias EdgeAdmin.EdgeClusters.Gateway
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.Schemas.Node
-  alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Repo
 
   require Logger
 
+  @doc """
+  Gets a single command by ID.
+
+  ## Parameters
+  - `id` - The command's UUID
+
+  ## Returns
+  - `{:ok, command}` - Command found
+  - `{:error, :not_found}` - Command doesn't exist or invalid UUID
+
+  ## Examples
+
+      iex> get_command(command_id)
+      {:ok, %Command{command_text: "uptime"}}
+  """
+  @spec get_command(String.t()) :: {:ok, Command.t()} | {:error, :not_found}
   def get_command(id) do
     case Repo.get(Command, id) do
       nil -> {:error, :not_found}
       command -> {:ok, command}
     end
   rescue
-    Ecto.Query.CastError -> {:error, :not_found}
+    CastError -> {:error, :not_found}
   end
 
+  @doc """
+  Creates a new command.
+
+  ## Parameters
+  - `attrs` - Map of command attributes
+
+  ## Returns
+  - `{:ok, command}` - Command created successfully
+  - `{:error, changeset}` - Validation failed
+  """
+  @spec create_command(map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
   def create_command(attrs \\ %{}) do
     %Command{}
     |> Command.changeset(attrs)
     |> Repo.insert()
   end
 
+  @doc """
+  Updates a command.
+
+  ## Parameters
+  - `command` - The command struct to update
+  - `attrs` - Map of attributes to update
+
+  ## Returns
+  - `{:ok, command}` - Update succeeded
+  - `{:error, changeset}` - Validation failed
+  """
+  @spec update_command(Command.t(), map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
   def update_command(%Command{} = command, attrs) do
     command
     |> Command.changeset(attrs)
     |> Repo.update()
   end
 
+  @doc """
+  Deletes a command.
+
+  Validates that command has no associated executions before deletion.
+
+  ## Parameters
+  - `command` - The command struct to delete
+
+  ## Returns
+  - `{:ok, command}` - Deletion succeeded
+  - `{:error, changeset}` - Validation failed (has executions)
+  """
+  @spec delete_command(Command.t()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
   def delete_command(%Command{} = command) do
-    with :ok <- Rules.DeletionRules.validate_command_deletion(command),
-         {:ok, deleted} <- Repo.delete(command) do
-      {:ok, deleted}
+    with :ok <- Rules.DeletionRules.validate_command_deletion(command) do
+      Repo.delete(command)
     end
   end
 
+  @doc """
+  Returns a changeset for tracking command changes (for forms).
+
+  ## Examples
+
+      iex> change_command(command)
+      %Ecto.Changeset{data: %Command{}}
+  """
+  @spec change_command(Command.t(), map()) :: Ecto.Changeset.t()
   def change_command(%Command{} = command, attrs \\ %{}) do
     Command.changeset(command, attrs)
   end
@@ -65,6 +173,7 @@ defmodule EdgeAdmin.Commands do
   - `{:ok, {commands, meta}}` - List of commands with Flop.Meta pagination info
   - `{:error, meta}` - Validation errors (when replace_invalid_params: false)
   """
+  @spec list_commands(map()) :: {:ok, {[Command.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list_commands(params \\ %{}) do
     # Parse params into Flop format
     flop_params = EdgeAdmin.RequestParser.parse(params)
@@ -82,34 +191,90 @@ defmodule EdgeAdmin.Commands do
     end
   end
 
+  @doc """
+  Gets a single command execution by ID.
+
+  ## Parameters
+  - `id` - The execution's UUID
+
+  ## Returns
+  - `{:ok, execution}` - Execution found (with command preloaded)
+  - `{:error, :not_found}` - Execution doesn't exist or invalid UUID
+  """
+  @spec get_command_execution(String.t()) :: {:ok, CommandExecution.t()} | {:error, :not_found}
   def get_command_execution(id) do
     case Repo.get(CommandExecution, id) do
       nil -> {:error, :not_found}
       command_execution -> {:ok, Repo.preload(command_execution, :command)}
     end
   rescue
-    Ecto.Query.CastError -> {:error, :not_found}
+    CastError -> {:error, :not_found}
   end
 
+  @doc """
+  Creates a new command execution.
+
+  ## Parameters
+  - `attrs` - Map of execution attributes
+
+  ## Returns
+  - `{:ok, execution}` - Execution created successfully
+  - `{:error, changeset}` - Validation failed
+  """
+  @spec create_command_execution(map()) :: {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   def create_command_execution(attrs \\ %{}) do
     %CommandExecution{}
     |> CommandExecution.changeset(attrs)
     |> Repo.insert()
   end
 
+  @doc """
+  Updates a command execution.
+
+  ## Parameters
+  - `command_execution` - The execution struct to update
+  - `attrs` - Map of attributes to update
+
+  ## Returns
+  - `{:ok, execution}` - Update succeeded
+  - `{:error, changeset}` - Validation failed
+  """
+  @spec update_command_execution(CommandExecution.t(), map()) ::
+          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   def update_command_execution(%CommandExecution{} = command_execution, attrs) do
     command_execution
     |> CommandExecution.changeset(attrs)
     |> Repo.update()
   end
 
+  @doc """
+  Deletes a command execution.
+
+  Validates that execution is in a deletable state.
+
+  ## Parameters
+  - `command_execution` - The execution struct to delete
+
+  ## Returns
+  - `{:ok, execution}` - Deletion succeeded
+  - `{:error, changeset}` - Validation failed
+  """
+  @spec delete_command_execution(CommandExecution.t()) :: {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   def delete_command_execution(%CommandExecution{} = command_execution) do
-    with :ok <- Rules.DeletionRules.validate_execution_deletion(command_execution),
-         {:ok, deleted} <- Repo.delete(command_execution) do
-      {:ok, deleted}
+    with :ok <- Rules.DeletionRules.validate_execution_deletion(command_execution) do
+      Repo.delete(command_execution)
     end
   end
 
+  @doc """
+  Returns a changeset for tracking execution changes (for forms).
+
+  ## Examples
+
+      iex> change_command_execution(execution)
+      %Ecto.Changeset{data: %CommandExecution{}}
+  """
+  @spec change_command_execution(CommandExecution.t(), map()) :: Ecto.Changeset.t()
   def change_command_execution(%CommandExecution{} = command_execution, attrs \\ %{}) do
     CommandExecution.changeset(command_execution, attrs)
   end
@@ -132,6 +297,7 @@ defmodule EdgeAdmin.Commands do
   - `{:ok, {command_executions, meta}}` - List of command executions with Flop.Meta pagination info
   - `{:error, meta}` - Validation errors (when replace_invalid_params: false)
   """
+  @spec list_command_executions(map()) :: {:ok, {[CommandExecution.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list_command_executions(params \\ %{}) do
     # Parse params into Flop format
     flop_params = EdgeAdmin.RequestParser.parse(params)
@@ -158,18 +324,18 @@ defmodule EdgeAdmin.Commands do
 
     # Apply cluster_name filters if present
     query_with_cluster_name =
-      if cluster_name_filters != [] do
-        apply_execution_cluster_name_filters(base_query, cluster_name_filters)
-      else
+      if cluster_name_filters == [] do
         base_query
+      else
+        apply_execution_cluster_name_filters(base_query, cluster_name_filters)
       end
 
     # Apply has_cluster filters if present
     query_with_has_cluster =
-      if has_cluster_filters != [] do
-        apply_has_cluster_filters(query_with_cluster_name, has_cluster_filters)
-      else
+      if has_cluster_filters == [] do
         query_with_cluster_name
+      else
+        apply_has_cluster_filters(query_with_cluster_name, has_cluster_filters)
       end
 
     # Remove cluster_name and has_cluster filters from Flop params (handled above)
@@ -195,13 +361,11 @@ defmodule EdgeAdmin.Commands do
     end)
   end
 
-  defp apply_execution_cluster_name_filter(query, %{op: :==, value: value})
-       when is_binary(value) do
+  defp apply_execution_cluster_name_filter(query, %{op: :==, value: value}) when is_binary(value) do
     from([ce, n, c] in query, where: c.name == ^value)
   end
 
-  defp apply_execution_cluster_name_filter(query, %{op: :ilike, value: value})
-       when is_binary(value) do
+  defp apply_execution_cluster_name_filter(query, %{op: :ilike, value: value}) when is_binary(value) do
     from([ce, n, c] in query, where: ilike(c.name, ^value))
   end
 
@@ -253,6 +417,7 @@ defmodule EdgeAdmin.Commands do
   - `{:ok, command}` - Command created successfully
   - `{:error, changeset}` - Validation failed
   """
+  @spec create_command_and_executions(map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
   def create_command_and_executions(params) do
     with {:ok, attrs} <- Forms.CreateCommandForm.changeset(params),
          {:ok, command} <- create_command(attrs) do
@@ -296,9 +461,7 @@ defmodule EdgeAdmin.Commands do
           }
 
         _ ->
-          Logger.warning(
-            "Invalid targeting type for command #{command.id}: #{inspect(targeting)}"
-          )
+          Logger.warning("Invalid targeting type for command #{command.id}: #{inspect(targeting)}")
 
           nil
       end
@@ -320,9 +483,7 @@ defmodule EdgeAdmin.Commands do
   end
 
   defp enqueue_execution_creation(command, attrs) do
-    Logger.warning(
-      "No targeting specification found for command #{command.id}, attrs: #{inspect(attrs)}"
-    )
+    Logger.warning("No targeting specification found for command #{command.id}, attrs: #{inspect(attrs)}")
 
     :ok
   end
@@ -350,6 +511,7 @@ defmodule EdgeAdmin.Commands do
   - Uses bulk insert for efficiency
   - Returns {:ok, executions} or {:error, reason}
   """
+  @spec create_command_executions(map()) :: {:ok, [CommandExecution.t()]} | {:error, String.t()}
   def create_command_executions(args) do
     command_id = args["command_id"]
     targeting_type = args["targeting_type"]
@@ -424,7 +586,7 @@ defmodule EdgeAdmin.Commands do
   defp bulk_create_executions(command, nodes, target_all, cluster_id, targeting_type) do
     Logger.info("Creating executions for #{length(nodes)} node(s)")
 
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    now = DateTime.truncate(DateTime.utc_now(), :second)
 
     executions =
       Enum.map(nodes, fn node ->
@@ -540,12 +702,7 @@ defmodule EdgeAdmin.Commands do
   end
 
   # Get all nodes from a list of cluster names with node filters
-  defp get_nodes_from_cluster_list(
-         cluster_names,
-         node_filters,
-         page \\ 1,
-         accumulated_nodes \\ []
-       ) do
+  defp get_nodes_from_cluster_list(cluster_names, node_filters, page \\ 1, accumulated_nodes \\ []) do
     cluster_name_set = MapSet.new(cluster_names)
 
     params =
@@ -576,20 +733,12 @@ defmodule EdgeAdmin.Commands do
   end
 
   # Helper function to get all nodes across all pages
-  defp get_all_filtered_nodes(
-         node_filters,
-         cluster_filters,
-         page \\ 1,
-         accumulated_nodes \\ [],
-         cluster_names \\ nil
-       ) do
+  defp get_all_filtered_nodes(node_filters, cluster_filters, page \\ 1, accumulated_nodes \\ [], cluster_names \\ nil) do
     # Get cluster names from filters on first call (cached for pagination)
     cluster_names =
       cluster_names ||
         if map_size(cluster_filters) > 0 do
           get_all_filtered_cluster_names(cluster_filters)
-        else
-          nil
         end
 
     # Build params with node_filters
@@ -650,6 +799,7 @@ defmodule EdgeAdmin.Commands do
 
   Always returns `:ok` - errors are logged but don't halt the scheduler.
   """
+  @spec deliver_local_executions() :: :ok
   def deliver_local_executions do
     # Get clusters owned by this admin from metadata (ETS)
     my_clusters = Metadata.get_my_clusters()
@@ -657,9 +807,7 @@ defmodule EdgeAdmin.Commands do
 
     Logger.debug("Execution delivery - my_clusters: #{inspect(my_clusters)}")
 
-    Logger.debug(
-      "Execution delivery - my_cluster_network_names: #{inspect(my_cluster_network_names)}"
-    )
+    Logger.debug("Execution delivery - my_cluster_network_names: #{inspect(my_cluster_network_names)}")
 
     if Enum.empty?(my_cluster_network_names) do
       Logger.debug("No clusters assigned to this admin, skipping execution delivery")
@@ -706,8 +854,8 @@ defmodule EdgeAdmin.Commands do
         )
 
         # Process nodes in parallel
-        Task.async_stream(
-          executions_by_node,
+        executions_by_node
+        |> Task.async_stream(
           fn {_node_id, executions} ->
             node = hd(executions).node
             deliver_executions_to_node(node, executions)
@@ -733,16 +881,17 @@ defmodule EdgeAdmin.Commands do
   end
 
   defp get_pending_executions_for_my_clusters(cluster_names) do
-    from(ce in CommandExecution,
-      join: n in assoc(ce, :node),
-      join: c in assoc(n, :cluster),
-      where: ce.status == "pending",
-      where: c.name in ^cluster_names,
-      where: n.status == "healthy",
-      order_by: [asc: ce.node_id, asc: ce.inserted_at],
-      preload: [node: :cluster, command: []]
+    Repo.all(
+      from(ce in CommandExecution,
+        join: n in assoc(ce, :node),
+        join: c in assoc(n, :cluster),
+        where: ce.status == "pending",
+        where: c.name in ^cluster_names,
+        where: n.status == "healthy",
+        order_by: [asc: ce.node_id, asc: ce.inserted_at],
+        preload: [node: :cluster, command: []]
+      )
     )
-    |> Repo.all()
   end
 
   defp deliver_executions_to_node(node, executions) do
@@ -774,9 +923,7 @@ defmodule EdgeAdmin.Commands do
           )
 
         {:error, reason} ->
-          Logger.warning(
-            "Failed to deliver execution #{execution.id} to node #{node.id}: #{inspect(reason)}"
-          )
+          Logger.warning("Failed to deliver execution #{execution.id} to node #{node.id}: #{inspect(reason)}")
 
           :telemetry.execute(
             [:edge_admin, :commands, :execution, :delivered],
@@ -817,6 +964,8 @@ defmodule EdgeAdmin.Commands do
   ## Returns
   - `{:ok, {executions, meta}}` - List of command executions with Flop.Meta pagination info
   """
+  @spec list_sent_command_executions_for_node(String.t()) ::
+          {:ok, {[CommandExecution.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list_sent_command_executions_for_node(node_id) do
     params = %{
       "node_id" => node_id,
@@ -830,18 +979,17 @@ defmodule EdgeAdmin.Commands do
   end
 
   @doc """
-  Updates command execution result from agent.
+  Verifies that an execution belongs to a specific node.
 
-  Validates:
-  - Execution belongs to the specified node
-  - Execution is in "sent" status
+  ## Parameters
+  - `execution` - The execution struct
+  - `node_id` - The node ID to verify against
 
-  Returns:
-  - {:ok, execution} on success
-  - {:error, :forbidden} if execution doesn't belong to node
-  - {:error, :invalid_status} if execution is not in "sent" status
-  - {:error, changeset} on validation errors
+  ## Returns
+  - `:ok` - Execution belongs to the node
+  - `{:error, :forbidden}` - Execution doesn't belong to the node
   """
+  @spec verify_execution_belongs_to_node(CommandExecution.t(), String.t()) :: :ok | {:error, :forbidden}
   def verify_execution_belongs_to_node(execution, node_id) do
     if execution.node_id == node_id do
       :ok
@@ -850,6 +998,30 @@ defmodule EdgeAdmin.Commands do
     end
   end
 
+  @doc """
+  Updates command execution result from agent.
+
+  Validates execution status and updates with output and exit code.
+  Automatically marks execution as completed.
+
+  ## Parameters
+  - `execution` - The execution struct
+  - `params` - Map with "output" and "exit_code"
+
+  ## Returns
+  - `{:ok, execution}` - Update succeeded
+  - `{:error, changeset}` - Validation failed
+
+  ## Examples
+
+      iex> update_command_execution_result(execution, %{
+      ...>   "output" => "Command output",
+      ...>   "exit_code" => 0
+      ...> })
+      {:ok, %CommandExecution{status: "completed", exit_code: 0}}
+  """
+  @spec update_command_execution_result(CommandExecution.t(), map()) ::
+          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   def update_command_execution_result(execution, params) do
     with {:ok, attrs} <-
            Forms.UpdateCommandExecutionResultForm.changeset(params, execution.status, execution.exit_code) do
@@ -905,6 +1077,8 @@ defmodule EdgeAdmin.Commands do
     - `{:error, changeset}` - Validation failed (status not pending/sent)
     - `{:error, :service_unavailable}` - Agent unreachable (sent status only)
   """
+  @spec cancel_command_execution(CommandExecution.t()) ::
+          {:ok, map()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
   def cancel_command_execution(execution) do
     # Validate execution is cancellable (status must be pending or sent)
     with {:ok, _attrs} <- Forms.CancelExecutionForm.changeset(execution.status) do
@@ -928,9 +1102,7 @@ defmodule EdgeAdmin.Commands do
               {:ok, %{result: "cancellation request sent"}}
 
             {:error, reason} ->
-              Logger.warning(
-                "Failed to send cancellation to agent for execution #{execution.id}: #{inspect(reason)}"
-              )
+              Logger.warning("Failed to send cancellation to agent for execution #{execution.id}: #{inspect(reason)}")
 
               {:error, :service_unavailable}
           end
@@ -942,16 +1114,14 @@ defmodule EdgeAdmin.Commands do
     # Get node to send cancellation request
     with {:ok, node} <- Nodes.get_node(execution.node_id),
          # Build node name for ETS lookup
-         node_name <- Node.node_name(node),
+         node_name = Node.node_name(node),
          # Lookup cluster name from ETS metadata
          {:ok, cluster_name, _admin_name} <- Metadata.find_node_cluster(node_name),
          # Lookup gateway via ETS metadata
          {:ok, gateway_pid} <- Gateway.lookup(cluster_name),
          # Send cancellation request via Gateway
          :ok <- Gateway.cancel_execution(gateway_pid, node, execution.id) do
-      Logger.info(
-        "Successfully sent cancellation request to agent for execution #{execution.id}"
-      )
+      Logger.info("Successfully sent cancellation request to agent for execution #{execution.id}")
 
       :ok
     else
@@ -968,9 +1138,7 @@ defmodule EdgeAdmin.Commands do
         {:error, :no_owner}
 
       {:error, reason} ->
-        Logger.warning(
-          "Failed to send cancellation to agent for execution #{execution.id}: #{inspect(reason)}"
-        )
+        Logger.warning("Failed to send cancellation to agent for execution #{execution.id}: #{inspect(reason)}")
 
         {:error, reason}
     end

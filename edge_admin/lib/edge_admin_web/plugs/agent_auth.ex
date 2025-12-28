@@ -17,8 +17,8 @@ defmodule EdgeAdminWeb.Plugs.AgentAuth do
   The token is validated against the agents table in the database.
   """
 
-  import Plug.Conn
   import Phoenix.Controller
+  import Plug.Conn
 
   def init(opts), do: opts
 

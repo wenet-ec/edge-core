@@ -15,8 +15,8 @@ defmodule EdgeAdminWeb.Plugs.MasterKeyAuth do
   Requires `Authorization: Bearer <MASTER_KEY>` header.
   """
 
-  import Plug.Conn
   import Phoenix.Controller
+  import Plug.Conn
 
   def init(opts), do: opts
 
@@ -24,7 +24,8 @@ defmodule EdgeAdminWeb.Plugs.MasterKeyAuth do
     if Application.get_env(:edge_admin, :auth_enabled, true) do
       validate_master_key(conn)
     else
-      conn  # Auth disabled - pass through
+      # Auth disabled - pass through
+      conn
     end
   end
 

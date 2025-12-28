@@ -11,15 +11,15 @@ defmodule EdgeAdmin.Admins.MetadataTest do
 
       # Check :admin key
       [{:admin, admin}] = :ets.lookup(:metadata, :admin)
-      assert admin.id != nil
+      assert admin.id
       assert admin.max_capacity > 0
       assert admin.erlang_node_name == Node.self()
-      assert admin.dns_hostname != nil
-      assert admin.admin_cluster_name != nil
+      assert admin.dns_hostname
+      assert admin.admin_cluster_name
 
       # Check :admin_cluster key
       [{:admin_cluster, admin_cluster}] = :ets.lookup(:metadata, :admin_cluster)
-      assert admin_cluster.name != nil
+      assert admin_cluster.name
       assert admin_cluster.degraded == false
 
       # Check :edge_clusters key (uses admin_name as key)
@@ -37,7 +37,7 @@ defmodule EdgeAdmin.Admins.MetadataTest do
   describe "get_admin/0" do
     test "returns full admin info" do
       admin = Metadata.get_admin()
-      assert admin.id != nil
+      assert admin.id
       assert admin.max_capacity > 0
       assert admin.erlang_node_name == Node.self()
     end

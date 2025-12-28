@@ -164,9 +164,7 @@ defmodule EdgeAdmin.Release do
 
     case EdgeAdmin.Nodes.create_cluster(attrs) do
       {:ok, cluster} ->
-        Logger.info(
-          "Successfully created default cluster: #{cluster.name} (#{cluster.ipv4_range})"
-        )
+        Logger.info("Successfully created default cluster: #{cluster.name} (#{cluster.ipv4_range})")
 
         :ok
 

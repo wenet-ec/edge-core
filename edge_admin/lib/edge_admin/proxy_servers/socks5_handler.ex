@@ -76,7 +76,7 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
         :telemetry.execute(
           [:edge_admin, :proxy, :connection],
           %{count: 1, total: 1},
-          ErrorHandler.telemetry_metadata(reason, :socks5) |> Map.put(:result, :failure)
+          reason |> ErrorHandler.telemetry_metadata(:socks5) |> Map.put(:result, :failure)
         )
 
         transport.close(socket)
@@ -90,8 +90,6 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
          {:ok, target_host, target_port} <- read_connect_request(socket, transport),
          {:ok, _target_socket} <- establish_tunnel(socket, transport, target_host, target_port, routing_mode, exit_node) do
       :timer.sleep(:infinity)
-    else
-      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -180,7 +178,8 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
 
       {:ok, <<@socks_version, cmd, 0, _atyp>>} ->
         Logger.warning("Unsupported SOCKS5 command: #{cmd}")
-        send_reply(socket, transport, 7, "0.0.0.0", 0)  # Command not supported
+        # Command not supported
+        send_reply(socket, transport, 7, "0.0.0.0", 0)
         {:error, :unsupported_command}
 
       {:ok, <<version, _cmd, _rsv, _atyp>>} ->
@@ -227,7 +226,8 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
         <<a::16, b::16, c::16, d::16, e::16, f::16, g::16, h::16>> = ipv6
 
         host =
-          :io_lib.format("~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b", [
+          "~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b"
+          |> :io_lib.format([
             a,
             b,
             c,
@@ -248,7 +248,8 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
 
   defp read_destination_address(socket, transport, atyp) do
     Logger.warning("Unsupported address type: #{atyp}")
-    send_reply(socket, transport, 8, "0.0.0.0", 0)  # Address type not supported
+    # Address type not supported
+    send_reply(socket, transport, 8, "0.0.0.0", 0)
     {:error, :unsupported_address_type}
   end
 
@@ -258,11 +259,13 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
 
     case TcpTunnel.connect_and_forward(socket, target_host, target_port, self(), nil, opts) do
       {:ok, :local, _target_socket} ->
-        send_reply(socket, transport, 0, target_host, target_port)  # Success
+        # Success
+        send_reply(socket, transport, 0, target_host, target_port)
         {:ok, :local}
 
       {:ok, :remote, proxy_pid} ->
-        send_reply(socket, transport, 0, target_host, target_port)  # Success
+        # Success
+        send_reply(socket, transport, 0, target_host, target_port)
         transport.setopts(socket, active: true)
         handle_remote_streaming(socket, transport, proxy_pid)
 

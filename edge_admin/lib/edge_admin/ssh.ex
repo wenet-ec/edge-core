@@ -1,14 +1,47 @@
 # edge_admin/lib/edge_admin/ssh.ex
 defmodule EdgeAdmin.Ssh do
   @moduledoc """
-  The SSH context.
+  SSH credential management for edge nodes.
 
-  Handles SSH username and public key management for edge nodes.
-  Provides credential verification for agent SSH authentication.
+  This module manages SSH access to edge nodes by maintaining username and public key records.
+  Agents use this to verify authentication attempts and allow/deny SSH connections.
+
+  ## Key Concepts
+
+  - **SSH Username**: A Linux username allowed to SSH into a node
+  - **SSH Public Key**: An authorized SSH public key for a username
+  - **Password Authentication**: Argon2-hashed passwords for username/password SSH login
+  - **Public Key Authentication**: Verification against stored public keys
+  - **Credential Verification**: Agent calls to validate SSH login attempts
+
+  ## Architecture
+
+  - **Node-Scoped**: Each username belongs to a specific node
+  - **Multiple Auth Methods**: Supports password and/or public key authentication
+  - **Secure Storage**: Passwords are Argon2-hashed, never stored in plaintext
+  - **Agent-Driven**: Agents call API to verify credentials during SSH login attempts
+
+  ## Examples
+
+      # Create SSH username with public keys
+      iex> create_ssh_username_with_keys(node, %{
+      ...>   "username" => "deploy",
+      ...>   "public_keys" => [%{"key_name" => "laptop", "public_key" => "ssh-rsa..."}]
+      ...> })
+      {:ok, %SshUsername{username: "deploy", ssh_public_keys: [...]}}
+
+      # Verify credentials (from agent)
+      iex> verify_ssh_credentials(node_id, %{"username" => "deploy", "public_key" => "ssh-rsa..."})
+      {:ok, true}
+
+      # List usernames for a node
+      iex> list_ssh_usernames(%{"node_id" => node_id})
+      {:ok, {[%SshUsername{}, ...], %Flop.Meta{}}}
   """
 
   import Ecto.Query, warn: false
 
+  alias Ecto.Query.CastError
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Ssh.Forms
@@ -26,15 +59,15 @@ defmodule EdgeAdmin.Ssh do
   - `{:ok, ssh_username}` - SSH username found with public keys preloaded
   - `{:error, :not_found}` - SSH username does not exist or invalid UUID format
   """
+  @spec get_ssh_username(String.t()) :: {:ok, SshUsername.t()} | {:error, :not_found}
   def get_ssh_username(id) do
     case Repo.get(SshUsername, id) do
       nil -> {:error, :not_found}
       ssh_username -> {:ok, Repo.preload(ssh_username, :ssh_public_keys)}
     end
   rescue
-    Ecto.Query.CastError -> {:error, :not_found}
+    CastError -> {:error, :not_found}
   end
-
 
   @doc """
   Creates an SSH username.
@@ -56,6 +89,7 @@ defmodule EdgeAdmin.Ssh do
   - `{:ok, ssh_username}` - SSH username created successfully with keys loaded
   - `{:error, changeset}` - Validation or creation failed
   """
+  @spec create_ssh_username_with_keys(Node.t(), map()) :: {:ok, SshUsername.t()} | {:error, Ecto.Changeset.t()}
   def create_ssh_username_with_keys(%Node{} = node, params) do
     with {:ok, attrs} <- Forms.CreateSshUsernameForm.changeset(params) do
       # Extract public_keys (if present) and prepare username attrs
@@ -127,6 +161,7 @@ defmodule EdgeAdmin.Ssh do
   - `{:ok, false}` - Username not found or credential incorrect
   - `{:error, changeset}` - Validation failed
   """
+  @spec verify_ssh_credentials(String.t(), map()) :: {:ok, boolean()} | {:error, Ecto.Changeset.t()}
   def verify_ssh_credentials(node_id, params) do
     with {:ok, attrs} <- Forms.VerifySshCredentialsForm.changeset(params) do
       username = Map.get(attrs, "username")
@@ -199,6 +234,7 @@ defmodule EdgeAdmin.Ssh do
   - `{:ok, {ssh_usernames, meta}}` - List of SSH usernames with Flop.Meta pagination info
   - `{:error, meta}` - Validation errors (when replace_invalid_params: false)
   """
+  @spec list_ssh_usernames(map()) :: {:ok, {[SshUsername.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list_ssh_usernames(params \\ %{}) do
     # Parse params into Flop format
     flop_params = EdgeAdmin.RequestParser.parse(params)
@@ -214,10 +250,10 @@ defmodule EdgeAdmin.Ssh do
 
     # Apply has_password filter if present
     query_with_password_filter =
-      if has_password_filters != [] do
-        apply_has_password_filters(base_query, has_password_filters)
-      else
+      if has_password_filters == [] do
         base_query
+      else
+        apply_has_password_filters(base_query, has_password_filters)
       end
 
     # Remove has_password filters from Flop params (handled above)
@@ -278,7 +314,7 @@ defmodule EdgeAdmin.Ssh do
       ssh_public_key -> {:ok, ssh_public_key}
     end
   rescue
-    Ecto.Query.CastError -> {:error, :not_found}
+    CastError -> {:error, :not_found}
   end
 
   @doc """
@@ -292,6 +328,7 @@ defmodule EdgeAdmin.Ssh do
   - `{:ok, ssh_public_key}` - SSH public key created successfully
   - `{:error, changeset}` - Validation or creation failed
   """
+  @spec create_ssh_public_key(SshUsername.t(), map()) :: {:ok, SshPublicKey.t()} | {:error, Ecto.Changeset.t()}
   def create_ssh_public_key(%SshUsername{} = ssh_username, params) do
     with {:ok, attrs} <- Forms.CreateSshPublicKeyForm.changeset(params) do
       attrs = Map.put(attrs, "ssh_username_id", ssh_username.id)
@@ -342,6 +379,7 @@ defmodule EdgeAdmin.Ssh do
   - `{:ok, {ssh_public_keys, meta}}` - List of SSH public keys with Flop.Meta pagination info
   - `{:error, meta}` - Validation errors (when replace_invalid_params: false)
   """
+  @spec list_ssh_public_keys(map()) :: {:ok, {[SshPublicKey.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list_ssh_public_keys(params \\ %{}) do
     # Parse params into Flop format
     flop_params = EdgeAdmin.RequestParser.parse(params)

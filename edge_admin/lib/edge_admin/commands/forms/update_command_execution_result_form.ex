@@ -112,12 +112,12 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
     completed_at =
       case form.completed_at do
         nil ->
-          DateTime.utc_now() |> DateTime.truncate(:second)
+          DateTime.truncate(DateTime.utc_now(), :second)
 
         timestamp when is_binary(timestamp) ->
           case DateTime.from_iso8601(timestamp) do
             {:ok, dt, _offset} -> DateTime.truncate(dt, :second)
-            _ -> DateTime.utc_now() |> DateTime.truncate(:second)
+            _ -> DateTime.truncate(DateTime.utc_now(), :second)
           end
 
         %DateTime{} = dt ->

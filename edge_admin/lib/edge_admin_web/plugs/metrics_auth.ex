@@ -17,8 +17,8 @@ defmodule EdgeAdminWeb.Plugs.MetricsAuth do
   - `Authorization: Bearer <METRICS_KEY>` (scoped to metrics endpoints)
   """
 
-  import Plug.Conn
   import Phoenix.Controller
+  import Plug.Conn
 
   def init(opts), do: opts
 
@@ -26,7 +26,8 @@ defmodule EdgeAdminWeb.Plugs.MetricsAuth do
     if Application.get_env(:edge_admin, :auth_enabled, true) do
       validate_metrics_key(conn)
     else
-      conn  # Auth disabled - pass through
+      # Auth disabled - pass through
+      conn
     end
   end
 
@@ -36,10 +37,12 @@ defmodule EdgeAdminWeb.Plugs.MetricsAuth do
 
     case get_req_header(conn, "authorization") do
       ["Bearer " <> ^master_key] ->
-        conn  # Master key works (omnipotent)
+        # Master key works (omnipotent)
+        conn
 
       ["Bearer " <> ^metrics_key] ->
-        conn  # Metrics key works (scoped)
+        # Metrics key works (scoped)
+        conn
 
       _ ->
         conn

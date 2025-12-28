@@ -5,6 +5,7 @@ defmodule EdgeAdmin.NodesTest do
   import EdgeAdmin.NodesFixtures
 
   alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Nodes.EphemeralEnrollmentKey
   alias EdgeAdmin.Nodes.Node
   alias EdgeAdmin.Nodes.SshUsername
 
@@ -90,11 +91,11 @@ defmodule EdgeAdmin.NodesTest do
                  id: valid_uuid,
                  cluster_id: cluster_id,
                  id_type: "persistent",
-                 http_port: 44000,
-                 ssh_port: 42222,
-                 metrics_port: 49100,
-                 http_proxy_port: 44880,
-                 socks5_proxy_port: 44180
+                 http_port: 44_000,
+                 ssh_port: 42_222,
+                 metrics_port: 49_100,
+                 http_proxy_port: 44_880,
+                 socks5_proxy_port: 44_180
                })
 
       # Invalid UUID formats
@@ -116,11 +117,11 @@ defmodule EdgeAdmin.NodesTest do
           id: invalid_id,
           cluster_id: cluster_id,
           id_type: "persistent",
-          http_port: 44000,
-          ssh_port: 42222,
-          metrics_port: 49100,
-          http_proxy_port: 44880,
-          socks5_proxy_port: 44180
+          http_port: 44_000,
+          ssh_port: 42_222,
+          metrics_port: 49_100,
+          http_proxy_port: 44_880,
+          socks5_proxy_port: 44_180
         }
 
         assert {:error, %Ecto.Changeset{} = changeset} = Nodes.create_node(invalid_attrs)
@@ -138,11 +139,11 @@ defmodule EdgeAdmin.NodesTest do
           id: uuid,
           cluster_id: cluster_id,
           id_type: id_type,
-          http_port: 44000,
-          ssh_port: 42222,
-          metrics_port: 49100,
-          http_proxy_port: 44880,
-          socks5_proxy_port: 44180
+          http_port: 44_000,
+          ssh_port: 42_222,
+          metrics_port: 49_100,
+          http_proxy_port: 44_880,
+          socks5_proxy_port: 44_180
         }
 
         assert {:ok, %Node{}} = Nodes.create_node(valid_attrs)
@@ -156,11 +157,11 @@ defmodule EdgeAdmin.NodesTest do
         id: invalid_uuid,
         cluster_id: cluster_id,
         id_type: "invalid_type",
-        http_port: 44000,
-        ssh_port: 42222,
-        metrics_port: 49100,
-        http_proxy_port: 44880,
-        socks5_proxy_port: 44180
+        http_port: 44_000,
+        ssh_port: 42_222,
+        metrics_port: 49_100,
+        http_proxy_port: 44_880,
+        socks5_proxy_port: 44_180
       }
 
       assert {:error, %Ecto.Changeset{} = changeset} = Nodes.create_node(invalid_attrs)
@@ -178,11 +179,11 @@ defmodule EdgeAdmin.NodesTest do
           cluster_id: cluster_id,
           id_type: "persistent",
           status: "online",
-          http_port: 44000,
-          ssh_port: 42222,
-          metrics_port: 49100,
-          http_proxy_port: 44880,
-          socks5_proxy_port: 44180
+          http_port: 44_000,
+          ssh_port: 42_222,
+          metrics_port: 49_100,
+          http_proxy_port: 44_880,
+          socks5_proxy_port: 44_180
         })
 
       {:ok, _node2} =
@@ -191,11 +192,11 @@ defmodule EdgeAdmin.NodesTest do
           cluster_id: cluster_id,
           id_type: "random",
           status: "offline",
-          http_port: 44000,
-          ssh_port: 42222,
-          metrics_port: 49100,
-          http_proxy_port: 44880,
-          socks5_proxy_port: 44180
+          http_port: 44_000,
+          ssh_port: 42_222,
+          metrics_port: 49_100,
+          http_proxy_port: 44_880,
+          socks5_proxy_port: 44_180
         })
 
       # Test basic functionality
@@ -225,11 +226,11 @@ defmodule EdgeAdmin.NodesTest do
           cluster_id: cluster_id,
           id_type: "persistent",
           status: "online",
-          http_port: 44000,
-          ssh_port: 42222,
-          metrics_port: 49100,
-          http_proxy_port: 44880,
-          socks5_proxy_port: 44180
+          http_port: 44_000,
+          ssh_port: 42_222,
+          metrics_port: 49_100,
+          http_proxy_port: 44_880,
+          socks5_proxy_port: 44_180
         })
 
       {:ok, _node2} =
@@ -238,11 +239,11 @@ defmodule EdgeAdmin.NodesTest do
           cluster_id: cluster_id,
           id_type: "random",
           status: "offline",
-          http_port: 44000,
-          ssh_port: 42222,
-          metrics_port: 49100,
-          http_proxy_port: 44880,
-          socks5_proxy_port: 44180
+          http_port: 44_000,
+          ssh_port: 42_222,
+          metrics_port: 49_100,
+          http_proxy_port: 44_880,
+          socks5_proxy_port: 44_180
         })
 
       # Valid sortable field
@@ -263,11 +264,11 @@ defmodule EdgeAdmin.NodesTest do
           cluster_id: cluster_id,
           id_type: "persistent",
           status: "online",
-          http_port: 44000,
-          ssh_port: 42222,
-          metrics_port: 49100,
-          http_proxy_port: 44880,
-          socks5_proxy_port: 44180
+          http_port: 44_000,
+          ssh_port: 42_222,
+          metrics_port: 49_100,
+          http_proxy_port: 44_880,
+          socks5_proxy_port: 44_180
         })
 
       {:ok, _node2} =
@@ -276,11 +277,11 @@ defmodule EdgeAdmin.NodesTest do
           cluster_id: cluster_id,
           id_type: "random",
           status: "offline",
-          http_port: 44000,
-          ssh_port: 42222,
-          metrics_port: 49100,
-          http_proxy_port: 44880,
-          socks5_proxy_port: 44180
+          http_port: 44_000,
+          ssh_port: 42_222,
+          metrics_port: 49_100,
+          http_proxy_port: 44_880,
+          socks5_proxy_port: 44_180
         })
 
       # Test DNS hostnames are computed correctly
@@ -308,11 +309,11 @@ defmodule EdgeAdmin.NodesTest do
           id: Ecto.UUID.generate(),
           cluster_id: cluster_id,
           id_type: "persistent",
-          http_port: 44000,
-          ssh_port: 42222,
-          metrics_port: 49100,
-          http_proxy_port: 44880,
-          socks5_proxy_port: 44180
+          http_port: 44_000,
+          ssh_port: 42_222,
+          metrics_port: 49_100,
+          http_proxy_port: 44_880,
+          socks5_proxy_port: 44_180
         })
 
       invalid_id = Ecto.UUID.generate()
@@ -331,11 +332,11 @@ defmodule EdgeAdmin.NodesTest do
           id: Ecto.UUID.generate(),
           cluster_id: cluster_id,
           id_type: "random",
-          http_port: 44000,
-          ssh_port: 42222,
-          metrics_port: 49100,
-          http_proxy_port: 44880,
-          socks5_proxy_port: 44180
+          http_port: 44_000,
+          ssh_port: 42_222,
+          metrics_port: 49_100,
+          http_proxy_port: 44_880,
+          socks5_proxy_port: 44_180
         })
 
       results = Nodes.get_nodes_by_ids([valid_node.id, valid_node2.id])
@@ -534,8 +535,7 @@ defmodule EdgeAdmin.NodesTest do
       ssh_username = ssh_username_fixture()
 
       valid_attrs = %{
-        public_key:
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 test@example.com",
+        public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 test@example.com",
         key_name: "laptop_key",
         ssh_username_id: ssh_username.id
       }
@@ -554,8 +554,7 @@ defmodule EdgeAdmin.NodesTest do
       ssh_username = ssh_username_fixture()
 
       attrs = %{
-        public_key:
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 test@example.com",
+        public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 test@example.com",
         key_name: "laptop_key",
         ssh_username_id: ssh_username.id
       }
@@ -624,8 +623,7 @@ defmodule EdgeAdmin.NodesTest do
 
       # Test that different algorithms are detected correctly
       algorithm_tests = [
-        {"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8",
-         "ssh-ed25519"}
+        {"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8", "ssh-ed25519"}
         # You can add more when you have valid test keys for other algorithms
       ]
 
@@ -985,11 +983,11 @@ defmodule EdgeAdmin.NodesTest do
         "node_id" => "test-node-123",
         "cluster_id" => cluster.id,
         "id_type" => "persistent",
-        "http_port" => 44000,
-        "ssh_port" => 42222,
-        "metrics_port" => 49100,
-        "http_proxy_port" => 44880,
-        "socks5_proxy_port" => 44180,
+        "http_port" => 44_000,
+        "ssh_port" => 42_222,
+        "metrics_port" => 49_100,
+        "http_proxy_port" => 44_880,
+        "socks5_proxy_port" => 44_180,
         "version" => "1.0.0",
         "self_update_enabled" => true
       }
@@ -999,7 +997,7 @@ defmodule EdgeAdmin.NodesTest do
       assert node.cluster_id == cluster.id
       assert node.netmaker_host_id == "netmaker-host-456"
       assert node.status == "online"
-      assert node.last_seen_at != nil
+      assert node.last_seen_at
       assert is_binary(api_token)
       assert is_binary(proxy_password)
       assert byte_size(api_token) > 0
@@ -1018,11 +1016,11 @@ defmodule EdgeAdmin.NodesTest do
         "node_id" => "test-node-789",
         "cluster_id" => cluster.id,
         "id_type" => "persistent",
-        "http_port" => 44000,
-        "ssh_port" => 42222,
-        "metrics_port" => 49100,
-        "http_proxy_port" => 44880,
-        "socks5_proxy_port" => 44180,
+        "http_port" => 44_000,
+        "ssh_port" => 42_222,
+        "metrics_port" => 49_100,
+        "http_proxy_port" => 44_880,
+        "socks5_proxy_port" => 44_180,
         "version" => "1.0.0",
         "self_update_enabled" => true
       }
@@ -1046,11 +1044,11 @@ defmodule EdgeAdmin.NodesTest do
         "node_id" => "test-node",
         "cluster_id" => Ecto.UUID.generate(),
         "id_type" => "persistent",
-        "http_port" => 44000,
-        "ssh_port" => 42222,
-        "metrics_port" => 49100,
-        "http_proxy_port" => 44880,
-        "socks5_proxy_port" => 44180,
+        "http_port" => 44_000,
+        "ssh_port" => 42_222,
+        "metrics_port" => 49_100,
+        "http_proxy_port" => 44_880,
+        "socks5_proxy_port" => 44_180,
         "version" => "1.0.0",
         "self_update_enabled" => true
       }
@@ -1072,11 +1070,11 @@ defmodule EdgeAdmin.NodesTest do
         "node_id" => "nonexistent-node",
         "cluster_id" => cluster.id,
         "id_type" => "persistent",
-        "http_port" => 44000,
-        "ssh_port" => 42222,
-        "metrics_port" => 49100,
-        "http_proxy_port" => 44880,
-        "socks5_proxy_port" => 44180,
+        "http_port" => 44_000,
+        "ssh_port" => 42_222,
+        "metrics_port" => 49_100,
+        "http_proxy_port" => 44_880,
+        "socks5_proxy_port" => 44_180,
         "version" => "1.0.0",
         "self_update_enabled" => true
       }
@@ -1096,11 +1094,11 @@ defmodule EdgeAdmin.NodesTest do
         "node_id" => "test-node-update",
         "cluster_id" => cluster.id,
         "id_type" => "persistent",
-        "http_port" => 44000,
-        "ssh_port" => 42222,
-        "metrics_port" => 49100,
-        "http_proxy_port" => 44880,
-        "socks5_proxy_port" => 44180,
+        "http_port" => 44_000,
+        "ssh_port" => 42_222,
+        "metrics_port" => 49_100,
+        "http_proxy_port" => 44_880,
+        "socks5_proxy_port" => 44_180,
         "version" => "1.0.0",
         "self_update_enabled" => false
       }
@@ -1133,11 +1131,11 @@ defmodule EdgeAdmin.NodesTest do
         "node_id" => "test-node-timestamps",
         "cluster_id" => cluster.id,
         "id_type" => "persistent",
-        "http_port" => 44000,
-        "ssh_port" => 42222,
-        "metrics_port" => 49100,
-        "http_proxy_port" => 44880,
-        "socks5_proxy_port" => 44180,
+        "http_port" => 44_000,
+        "ssh_port" => 42_222,
+        "metrics_port" => 49_100,
+        "http_proxy_port" => 44_880,
+        "socks5_proxy_port" => 44_180,
         "version" => "1.0.0",
         "self_update_enabled" => true
       }
@@ -1145,7 +1143,7 @@ defmodule EdgeAdmin.NodesTest do
       {:ok, node, _, _} = Nodes.register_agent_node(attrs)
 
       assert node.status == "online"
-      assert node.last_seen_at != nil
+      assert node.last_seen_at
       assert DateTime.compare(node.last_seen_at, before_registration) in [:gt, :eq]
     end
   end
@@ -1173,7 +1171,7 @@ defmodule EdgeAdmin.NodesTest do
 
       # Verify it was tracked in DB
       ephemeral_key =
-        EdgeAdmin.Repo.get_by(EdgeAdmin.Nodes.EphemeralEnrollmentKey,
+        EdgeAdmin.Repo.get_by(EphemeralEnrollmentKey,
           key_value: "nmkey-ephemeral123"
         )
 
@@ -1203,7 +1201,7 @@ defmodule EdgeAdmin.NodesTest do
 
       # Verify it was NOT tracked in DB
       ephemeral_key =
-        EdgeAdmin.Repo.get_by(EdgeAdmin.Nodes.EphemeralEnrollmentKey,
+        EdgeAdmin.Repo.get_by(EphemeralEnrollmentKey,
           key_value: "nmkey-permanent123"
         )
 
@@ -1215,7 +1213,7 @@ defmodule EdgeAdmin.NodesTest do
       cluster = cluster_fixture()
 
       expect(NexmakerMock, :create_enrollment_key, fn _network_name, params ->
-        assert params[:expiration] == 86400
+        assert params[:expiration] == 86_400
         # Verify unique tag is generated with "permanent" prefix (default)
         assert is_list(params[:tags])
         assert length(params[:tags]) == 1
@@ -1283,15 +1281,16 @@ defmodule EdgeAdmin.NodesTest do
 
       # Get the tracked ephemeral key from DB
       ephemeral_key =
-        EdgeAdmin.Repo.get_by!(EdgeAdmin.Nodes.EphemeralEnrollmentKey,
+        EdgeAdmin.Repo.get_by!(EphemeralEnrollmentKey,
           key_value: result.key_value
         )
 
       # Manually update inserted_at to be 2 hours ago (expired)
       two_hours_ago = DateTime.add(DateTime.utc_now(), -2 * 3600, :second)
 
-      from(ek in EdgeAdmin.Nodes.EphemeralEnrollmentKey, where: ek.id == ^ephemeral_key.id)
-      |> EdgeAdmin.Repo.update_all(set: [inserted_at: two_hours_ago])
+      EdgeAdmin.Repo.update_all(from(ek in EphemeralEnrollmentKey, where: ek.id == ^ephemeral_key.id),
+        set: [inserted_at: two_hours_ago]
+      )
 
       # Mock Netmaker responses
       expect(NexmakerMock, :list_hosts, fn _network_name ->
@@ -1321,7 +1320,7 @@ defmodule EdgeAdmin.NodesTest do
       assert cleanup_result.deleted_hosts == 1
 
       # Verify ephemeral enrollment key was deleted
-      refute EdgeAdmin.Repo.get(EdgeAdmin.Nodes.EphemeralEnrollmentKey, ephemeral_key.id)
+      refute EdgeAdmin.Repo.get(EphemeralEnrollmentKey, ephemeral_key.id)
 
       # Reset config
       Application.put_env(:edge_admin, :ephemeral_key_ttl_hours, 168)
@@ -1339,7 +1338,7 @@ defmodule EdgeAdmin.NodesTest do
 
       # Get the tracked ephemeral key from DB
       ephemeral_key =
-        EdgeAdmin.Repo.get_by!(EdgeAdmin.Nodes.EphemeralEnrollmentKey,
+        EdgeAdmin.Repo.get_by!(EphemeralEnrollmentKey,
           key_value: result.key_value
         )
 
@@ -1352,7 +1351,7 @@ defmodule EdgeAdmin.NodesTest do
       assert cleanup_result.deleted_nodes == 0
 
       # Verify ephemeral enrollment key still exists
-      assert EdgeAdmin.Repo.get(EdgeAdmin.Nodes.EphemeralEnrollmentKey, ephemeral_key.id)
+      assert EdgeAdmin.Repo.get(EphemeralEnrollmentKey, ephemeral_key.id)
     end
 
     test "cleanup_ephemeral_nodes/0 does NOT delete permanent keys" do
@@ -1393,20 +1392,21 @@ defmodule EdgeAdmin.NodesTest do
 
       # Get tracked keys
       key1 =
-        EdgeAdmin.Repo.get_by!(EdgeAdmin.Nodes.EphemeralEnrollmentKey,
+        EdgeAdmin.Repo.get_by!(EphemeralEnrollmentKey,
           key_value: result1.key_value
         )
 
       key2 =
-        EdgeAdmin.Repo.get_by!(EdgeAdmin.Nodes.EphemeralEnrollmentKey,
+        EdgeAdmin.Repo.get_by!(EphemeralEnrollmentKey,
           key_value: result2.key_value
         )
 
       # Make both expired
       two_hours_ago = DateTime.add(DateTime.utc_now(), -2 * 3600, :second)
 
-      from(ek in EdgeAdmin.Nodes.EphemeralEnrollmentKey, where: ek.id in [^key1.id, ^key2.id])
-      |> EdgeAdmin.Repo.update_all(set: [inserted_at: two_hours_ago])
+      EdgeAdmin.Repo.update_all(from(ek in EphemeralEnrollmentKey, where: ek.id in [^key1.id, ^key2.id]),
+        set: [inserted_at: two_hours_ago]
+      )
 
       # Mock Netmaker responses
       expect(NexmakerMock, :list_hosts, 2, fn _network_name ->

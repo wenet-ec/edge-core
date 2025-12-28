@@ -103,6 +103,7 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
           target_port: target_port,
           source: :gateway
         })
+
         error
     end
   end
@@ -132,8 +133,8 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
     end
   end
 
-  defp get_agent_proxy_port(:http), do: Application.get_env(:edge_agent, :http_proxy_port, 43128)
-  defp get_agent_proxy_port(:socks5), do: Application.get_env(:edge_agent, :socks5_proxy_port, 41080)
+  defp get_agent_proxy_port(:http), do: Application.get_env(:edge_agent, :http_proxy_port, 43_128)
+  defp get_agent_proxy_port(:socks5), do: Application.get_env(:edge_agent, :socks5_proxy_port, 41_080)
 
   defp route_through_agent_proxy(
          client_socket,
@@ -167,6 +168,7 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
           cluster_name: cluster_name,
           context: :proxy_chaining
         })
+
         error
 
       {:error, :gateway_not_found} = error ->
@@ -174,6 +176,7 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
           cluster_name: cluster_name,
           context: :proxy_chaining
         })
+
         error
     end
   end
@@ -221,6 +224,7 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
   # HTTP CONNECT handshake with agent proxy
   defp send_proxy_handshake(socket, :http, target_host, target_port, proxy_password, initial_data) do
     auth_header = "Proxy-Authorization: Basic #{Base.encode64("_:#{proxy_password}")}\r\n"
+
     request =
       "CONNECT #{target_host}:#{target_port} HTTP/1.1\r\n" <>
         "Host: #{target_host}:#{target_port}\r\n" <>
@@ -239,6 +243,7 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
                 response: response,
                 protocol: :http
               })
+
               {:error, :proxy_rejected}
             end
 
@@ -254,20 +259,21 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
   # SOCKS5 handshake with agent proxy
   defp send_proxy_handshake(socket, :socks5, target_host, target_port, proxy_password, initial_data) do
     with :ok <- send_socks5_greeting(socket),
-         :ok <- send_socks5_auth(socket, proxy_password),
-         :ok <- send_socks5_connect(socket, target_host, target_port, initial_data) do
-      :ok
+         :ok <- send_socks5_auth(socket, proxy_password) do
+      send_socks5_connect(socket, target_host, target_port, initial_data)
     end
   end
 
   defp send_socks5_greeting(socket) do
-    greeting = <<5, 1, 2>>  # Version 5, 1 method, method 2 (username/password)
+    # Version 5, 1 method, method 2 (username/password)
+    greeting = <<5, 1, 2>>
 
     case :gen_tcp.send(socket, greeting) do
       :ok ->
         case :gen_tcp.recv(socket, 2, Config.connection_timeout()) do
           {:ok, <<5, 2>>} -> :ok
-          {:ok, <<5, 0>>} -> :ok  # No auth required
+          # No auth required
+          {:ok, <<5, 0>>} -> :ok
           {:error, reason} -> {:error, reason}
         end
 
@@ -278,8 +284,10 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
 
   defp send_socks5_auth(socket, proxy_password) do
     username = "_"
+
     auth_request =
-      <<1, byte_size(username)::8>> <> username <>
+      <<1, byte_size(username)::8>> <>
+        username <>
         <<byte_size(proxy_password)::8>> <> proxy_password
 
     case :gen_tcp.send(socket, auth_request) do
@@ -322,6 +330,7 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
     case :gen_tcp.recv(socket, 0, Config.connection_timeout()) do
       {:ok, data} ->
         new_buffer = buffer <> data
+
         if String.contains?(new_buffer, "\r\n\r\n") do
           {:ok, new_buffer}
         else
@@ -354,6 +363,7 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
               protocol: :http,
               mode: :remote
             })
+
             {:error, :proxy_rejected}
         after
           Config.handshake_timeout() ->
@@ -374,6 +384,7 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
               protocol: :socks5,
               mode: :remote
             })
+
             {:error, :proxy_rejected}
         after
           Config.handshake_timeout() ->
@@ -384,6 +395,7 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
 
   defp build_proxy_handshake(:http, target_host, target_port, proxy_password) do
     auth_header = "Proxy-Authorization: Basic #{Base.encode64("_:#{proxy_password}")}\r\n"
+
     "CONNECT #{target_host}:#{target_port} HTTP/1.1\r\n" <>
       "Host: #{target_host}:#{target_port}\r\n" <>
       auth_header <>

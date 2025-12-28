@@ -2,8 +2,8 @@
 defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionControllerTest do
   use EdgeAdminWeb.ConnCase
 
-  import EdgeAdmin.NodesFixtures
   import EdgeAdmin.CommandsFixtures
+  import EdgeAdmin.NodesFixtures
 
   alias EdgeAdmin.Commands
 
@@ -201,7 +201,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionControllerTest do
       assert updated.status == "completed"
       assert updated.output == "Command executed successfully"
       assert updated.exit_code == 0
-      assert updated.completed_at != nil
+      assert updated.completed_at
     end
 
     test "returns 403 when execution belongs to different node", %{conn: conn, execution: execution} do

@@ -12,6 +12,7 @@ defmodule EdgeAdmin.EdgeClusters.Supervisor do
   """
 
   use DynamicSupervisor
+
   require Logger
 
   # ===========================================================================

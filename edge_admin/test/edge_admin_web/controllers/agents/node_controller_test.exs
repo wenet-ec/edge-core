@@ -12,11 +12,11 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeControllerTest do
     "id_type" => "persistent",
     "cluster_id" => nil,
     # Will be set in setup
-    "http_port" => 44000,
-    "ssh_port" => 42222,
-    "metrics_port" => 49100,
-    "http_proxy_port" => 44880,
-    "socks5_proxy_port" => 44180,
+    "http_port" => 44_000,
+    "ssh_port" => 42_222,
+    "metrics_port" => 49_100,
+    "http_proxy_port" => 44_880,
+    "socks5_proxy_port" => 44_180,
     "version" => "1.0.0",
     "self_update_enabled" => true
   }
@@ -25,8 +25,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeControllerTest do
     cluster = cluster_fixture()
     attrs = Map.put(@valid_attrs, "cluster_id", cluster.id)
 
-    {:ok,
-     conn: put_req_header(conn, "accept", "application/json"), cluster: cluster, attrs: attrs}
+    {:ok, conn: put_req_header(conn, "accept", "application/json"), cluster: cluster, attrs: attrs}
   end
 
   describe "POST /api/agents/nodes (node registration)" do

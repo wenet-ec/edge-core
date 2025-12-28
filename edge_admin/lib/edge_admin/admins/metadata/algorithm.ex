@@ -69,8 +69,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
             # Assign cluster to admin
             %{
               cluster_assignments: Map.put(state.cluster_assignments, cluster.name, best_admin),
-              admin_node_counts:
-                Map.update!(state.admin_node_counts, best_admin, &(&1 + cluster_size)),
+              admin_node_counts: Map.update!(state.admin_node_counts, best_admin, &(&1 + cluster_size)),
               orphaned_clusters: state.orphaned_clusters
             }
 
@@ -120,8 +119,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   def bootstrap_empty_cluster(admins, current_assignments, cluster_name) do
     # Check if already assigned (search in edge_clusters)
     existing_owner =
-      current_assignments.edge_clusters
-      |> Enum.find_value(fn {admin_name, clusters} ->
+      Enum.find_value(current_assignments.edge_clusters, fn {admin_name, clusters} ->
         if Map.has_key?(clusters, cluster_name), do: admin_name
       end)
 
@@ -163,8 +161,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
       admins_list ->
         # Score each admin: prefer fewer clusters managed, then higher remaining capacity
         best_admin =
-          admins_list
-          |> Enum.min_by(fn admin_name ->
+          Enum.min_by(admins_list, fn admin_name ->
             admin_score(admin_name, admins, cluster_assignments, admin_node_counts)
           end)
 
@@ -179,8 +176,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   defp admin_score(admin_name, admins, cluster_assignments, admin_node_counts) do
     # How many clusters is this admin currently managing?
     clusters_managed =
-      cluster_assignments
-      |> Enum.count(fn {_cluster_name, assigned_admin} -> assigned_admin == admin_name end)
+      Enum.count(cluster_assignments, fn {_cluster_name, assigned_admin} -> assigned_admin == admin_name end)
 
     # How much remaining capacity does this admin have?
     remaining_capacity = admins[admin_name].max_capacity - admin_node_counts[admin_name]
@@ -195,8 +191,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
     initial_map = Map.new(admins, fn {admin_name, _} -> {admin_name, %{}} end)
 
     # Group clusters by admin
-    cluster_assignments
-    |> Enum.reduce(initial_map, fn {cluster_name, admin_name}, acc ->
+    Enum.reduce(cluster_assignments, initial_map, fn {cluster_name, admin_name}, acc ->
       cluster_nodes = Map.get(cluster_nodes_map, cluster_name, [])
 
       Map.update!(acc, admin_name, fn admin_clusters ->
@@ -228,11 +223,9 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   """
   def calculate_admin_node_counts(edge_clusters) do
     # Count total nodes per admin
-    edge_clusters
-    |> Enum.map(fn {admin_name, clusters} ->
+    Map.new(edge_clusters, fn {admin_name, clusters} ->
       node_count = clusters |> Map.values() |> Enum.flat_map(& &1) |> length()
       {admin_name, node_count}
     end)
-    |> Map.new()
   end
 end

@@ -31,19 +31,23 @@ defmodule EdgeAdmin.VpnTest do
 
       # Invalid formats - should raise
       assert_raise ArgumentError, fn ->
-        Vpn.build_network_name("PROD", prefix: :admin)  # Uppercase
+        # Uppercase
+        Vpn.build_network_name("PROD", prefix: :admin)
       end
 
       assert_raise ArgumentError, fn ->
-        Vpn.build_network_name("prod_env", prefix: :admin)  # Underscore
+        # Underscore
+        Vpn.build_network_name("prod_env", prefix: :admin)
       end
 
       assert_raise ArgumentError, fn ->
-        Vpn.build_network_name("-prod", prefix: :admin)  # Leading hyphen
+        # Leading hyphen
+        Vpn.build_network_name("-prod", prefix: :admin)
       end
 
       assert_raise ArgumentError, fn ->
-        Vpn.build_network_name("prod-", prefix: :admin)  # Trailing hyphen
+        # Trailing hyphen
+        Vpn.build_network_name("prod-", prefix: :admin)
       end
     end
 

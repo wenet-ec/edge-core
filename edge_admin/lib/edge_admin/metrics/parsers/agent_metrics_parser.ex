@@ -55,7 +55,9 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
     lines
     |> Enum.find(fn line -> String.starts_with?(line, metric_name <> " ") end)
     |> case do
-      nil -> nil
+      nil ->
+        nil
+
       line ->
         line
         |> String.split(" ")
@@ -81,20 +83,17 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
 
   # Parse a number string that could be an integer or float
   defp parse_number(str) do
-    cond do
-      String.contains?(str, ".") ->
-        str |> String.to_float() |> trunc()
-
-      true ->
-        String.to_integer(str)
+    if String.contains?(str, ".") do
+      str |> String.to_float() |> trunc()
+    else
+      String.to_integer(str)
     end
   end
 
   # Extract Oban queue counts by state
   defp extract_oban_queues(lines) do
     oban_lines =
-      lines
-      |> Enum.filter(fn line ->
+      Enum.filter(lines, fn line ->
         String.starts_with?(line, "edge_agent_prom_ex_oban_queue_length_count{")
       end)
 

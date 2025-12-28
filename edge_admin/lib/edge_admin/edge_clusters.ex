@@ -1,42 +1,61 @@
 # edge_admin/lib/edge_admin/edge_clusters.ex
 defmodule EdgeAdmin.EdgeClusters do
   @moduledoc """
-  Coordinator GenServer that manages Gateway processes lifecycle.
+  Gateway coordinator that manages VPN connections to edge clusters.
 
-  Responsibilities:
-  - Subscribes to metadata recomputation events
-  - Reads ETS to discover cluster assignments
-  - Diffs old vs new assignments
-  - Orchestrates Gateway start/stop via DynamicSupervisor
-  - Prevents thrashing with reconciliation flag pattern
+  This GenServer orchestrates Gateway processes (one per assigned cluster) based on
+  metadata assignments. It subscribes to cluster assignment changes and dynamically
+  starts/stops Gateway processes to match the current topology.
+
+  ## Key Concepts
+
+  - **Gateway**: A GenServer that maintains VPN connection to a single cluster
+  - **Metadata Assignment**: ETS-based mapping of which admin owns which clusters
+  - **Reconciliation**: Process of starting/stopping Gateways to match assignments
+  - **Anti-Thrashing**: Flag pattern prevents rapid start/stop cycles
+
+  ## Responsibilities
+
+  - Subscribe to metadata recomputation events (`PubSub`)
+  - Read cluster assignments from ETS (`Metadata`)
+  - Diff old vs new assignments (start/stop logic)
+  - Orchestrate Gateway lifecycle via `DynamicSupervisor`
+  - Prevent thrashing with reconciliation flag pattern
 
   ## Architecture
 
-  This GenServer coordinates with EdgeAdmin.EdgeClusters.Supervisor (DynamicSupervisor)
-  which actually supervises the Gateway processes.
+  **Coordinator Pattern**: This module coordinates, `EdgeClusters.Supervisor` supervises:
+  - `EdgeClusters` (this module): Coordinator GenServer
+  - `EdgeClusters.Supervisor`: DynamicSupervisor for Gateway processes
+  - `EdgeClusters.Gateway`: Per-cluster GenServer managing VPN connection
 
-  ## Initialization Race Condition Handling
+  **Race Condition Handling**: Starts after Metadata but handles timing gracefully:
+  - Subscribe to PubSub first
+  - Then read ETS immediately
+  - Result: Never miss assignments regardless of startup order
 
-  The coordinator starts after Metadata in application.ex, but there's a potential
-  race condition where Metadata computes and broadcasts before we subscribe.
-
-  Solution: Subscribe to PubSub, then immediately read ETS. This ensures we never
-  miss assignments regardless of timing:
-  - If Metadata computed first → We read ETS and see assignments
-  - If we start first → ETS empty, we wait for first broadcast
-
-  ## Reconciliation Pattern
-
-  Uses simple boolean flag to prevent Gateway thrashing:
+  **Anti-Thrashing**: Simple boolean flag prevents rapid reconciliation cycles:
   - If reconciling, set `pending_reconcile: true` (don't interrupt)
   - When done, check flag and reconcile again if needed
   - No locks, timers, or debouncing - just a flag
+
+  ## Examples
+
+      # Coordinator receives metadata event
+      {:metadata_recomputed, ...} -> reconcile_gateways()
+
+      # Result: Start Gateway for new cluster
+      DynamicSupervisor.start_child(GatewaySupervisor, {Gateway, cluster: "prod"})
+
+      # Result: Stop Gateway for removed cluster
+      DynamicSupervisor.terminate_child(GatewaySupervisor, gateway_pid)
   """
 
   use GenServer
-  require Logger
 
   alias EdgeAdmin.EdgeClusters.Supervisor, as: GatewaySupervisor
+
+  require Logger
 
   # ===========================================================================
   # Client API
@@ -136,7 +155,8 @@ defmodule EdgeAdmin.EdgeClusters do
     assignments = EdgeAdmin.Admins.Metadata.get_edge_clusters()
 
     # Extract cluster IDs for this admin (keyed by admin_name, not admin_id)
-    Map.get(assignments, admin_name, %{})
+    assignments
+    |> Map.get(admin_name, %{})
     |> Map.keys()
   end
 
@@ -152,9 +172,7 @@ defmodule EdgeAdmin.EdgeClusters do
       to_join = MapSet.difference(new_clusters_set, state.current_clusters)
       to_leave = MapSet.difference(state.current_clusters, new_clusters_set)
 
-      Logger.info(
-        "EdgeClusters reconciliation: +#{MapSet.size(to_join)} clusters, -#{MapSet.size(to_leave)} clusters"
-      )
+      Logger.info("EdgeClusters reconciliation: +#{MapSet.size(to_join)} clusters, -#{MapSet.size(to_leave)} clusters")
 
       # Track successful joins separately
       successful_joins = MapSet.new()
@@ -164,8 +182,7 @@ defmodule EdgeAdmin.EdgeClusters do
 
       # Apply changes (VPN operations happen here - slow)
       {new_gateway_pids, successful_joins} =
-        Enum.reduce(to_join, {new_gateway_pids, successful_joins}, fn cluster_name,
-                                                                      {acc_pids, acc_joins} ->
+        Enum.reduce(to_join, {new_gateway_pids, successful_joins}, fn cluster_name, {acc_pids, acc_joins} ->
           case start_gateway(cluster_name) do
             {:ok, pid} ->
               Logger.info("Successfully started gateway for #{cluster_name}")

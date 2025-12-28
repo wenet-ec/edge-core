@@ -35,8 +35,8 @@ defmodule EdgeAdmin.Metrics.AdminMetrics do
   - {:error, reason} - Various error reasons
   """
   def get do
-    with {:ok, raw_text} <- scrape_raw(),
-         parsed_metrics <- AdminMetricsParser.parse(raw_text) do
+    with {:ok, raw_text} <- scrape_raw() do
+      parsed_metrics = AdminMetricsParser.parse(raw_text)
       metrics = AdminMetrics.from_raw_metrics(parsed_metrics)
 
       {:ok, metrics}

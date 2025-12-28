@@ -16,26 +16,34 @@ defmodule EdgeAdminWeb.Controllers.Admins.EdgeClustersControllerTest do
     end
 
     # Insert test admin data
-    :ets.insert(:metadata, {:admin, %{
-      id: "admin-test123456",
-      max_capacity: 100,
-      erlang_node_name: :"admin@admin-test123456.admin-cluster-test.nm.internal",
-      dns_hostname: "admin-test123456.admin-cluster-test.nm.internal",
-      admin_cluster_name: "admin-cluster-test",
-      last_computed_at: ~U[2025-01-15 12:00:00Z]
-    }})
+    :ets.insert(
+      :metadata,
+      {:admin,
+       %{
+         id: "admin-test123456",
+         max_capacity: 100,
+         erlang_node_name: :"admin@admin-test123456.admin-cluster-test.nm.internal",
+         dns_hostname: "admin-test123456.admin-cluster-test.nm.internal",
+         admin_cluster_name: "admin-cluster-test",
+         last_computed_at: ~U[2025-01-15 12:00:00Z]
+       }}
+    )
 
     # Insert test edge clusters data
-    :ets.insert(:metadata, {:edge_clusters, %{
-      "admin-test123456" => %{
-        "cluster-abc123" => ["node-uuid-1", "node-uuid-2"],
-        "cluster-def456" => ["node-uuid-x"]
-      },
-      "admin-peer789012" => %{
-        "cluster-ghi789" => [],
-        "cluster-jkl012" => ["node-uuid-3"]
-      }
-    }})
+    :ets.insert(
+      :metadata,
+      {:edge_clusters,
+       %{
+         "admin-test123456" => %{
+           "cluster-abc123" => ["node-uuid-1", "node-uuid-2"],
+           "cluster-def456" => ["node-uuid-x"]
+         },
+         "admin-peer789012" => %{
+           "cluster-ghi789" => [],
+           "cluster-jkl012" => ["node-uuid-3"]
+         }
+       }}
+    )
   end
 
   describe "GET /api/admins/edge_clusters" do
@@ -74,12 +82,16 @@ defmodule EdgeAdminWeb.Controllers.Admins.EdgeClustersControllerTest do
     end
 
     test "handles admin with no clusters", %{conn: conn} do
-      :ets.insert(:metadata, {:edge_clusters, %{
-        "admin-test123456" => %{},
-        "admin-peer789012" => %{
-          "cluster-ghi789" => ["node-1"]
-        }
-      }})
+      :ets.insert(
+        :metadata,
+        {:edge_clusters,
+         %{
+           "admin-test123456" => %{},
+           "admin-peer789012" => %{
+             "cluster-ghi789" => ["node-1"]
+           }
+         }}
+      )
 
       conn = get(conn, ~p"/api/admins/edge_clusters")
       response = json_response(conn, 200)
@@ -89,11 +101,15 @@ defmodule EdgeAdminWeb.Controllers.Admins.EdgeClustersControllerTest do
     end
 
     test "handles empty node lists", %{conn: conn} do
-      :ets.insert(:metadata, {:edge_clusters, %{
-        "admin-test123456" => %{
-          "cluster-empty" => []
-        }
-      }})
+      :ets.insert(
+        :metadata,
+        {:edge_clusters,
+         %{
+           "admin-test123456" => %{
+             "cluster-empty" => []
+           }
+         }}
+      )
 
       conn = get(conn, ~p"/api/admins/edge_clusters")
       response = json_response(conn, 200)
@@ -102,17 +118,21 @@ defmodule EdgeAdminWeb.Controllers.Admins.EdgeClustersControllerTest do
     end
 
     test "returns multiple admins with various cluster configurations", %{conn: conn} do
-      :ets.insert(:metadata, {:edge_clusters, %{
-        "admin-1" => %{
-          "cluster-a" => ["n1", "n2", "n3", "n4", "n5"],
-          "cluster-b" => ["n6"]
-        },
-        "admin-2" => %{
-          "cluster-c" => [],
-          "cluster-d" => ["n7", "n8"]
-        },
-        "admin-3" => %{}
-      }})
+      :ets.insert(
+        :metadata,
+        {:edge_clusters,
+         %{
+           "admin-1" => %{
+             "cluster-a" => ["n1", "n2", "n3", "n4", "n5"],
+             "cluster-b" => ["n6"]
+           },
+           "admin-2" => %{
+             "cluster-c" => [],
+             "cluster-d" => ["n7", "n8"]
+           },
+           "admin-3" => %{}
+         }}
+      )
 
       conn = get(conn, ~p"/api/admins/edge_clusters")
       response = json_response(conn, 200)

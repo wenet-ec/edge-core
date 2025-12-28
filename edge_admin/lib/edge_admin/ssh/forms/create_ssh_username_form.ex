@@ -80,7 +80,8 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameForm do
   defp validate_public_keys(keys_attrs) when is_list(keys_attrs) do
     # Validate each key individually
     results =
-      Enum.with_index(keys_attrs)
+      keys_attrs
+      |> Enum.with_index()
       |> Enum.map(fn {key_attrs, index} ->
         case CreateSshPublicKeyForm.changeset(key_attrs) do
           {:ok, validated_key} -> {:ok, validated_key}
@@ -96,9 +97,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameForm do
       {:ok, validated_keys}
     else
       # Build error changeset with indexed errors
-      changeset =
-        %__MODULE__{}
-        |> cast(%{}, [])
+      changeset = cast(%__MODULE__{}, %{}, [])
 
       changeset =
         Enum.reduce(errors, changeset, fn {:error, {index, key_changeset}}, acc ->

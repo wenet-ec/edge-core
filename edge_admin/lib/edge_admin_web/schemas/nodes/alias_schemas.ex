@@ -6,6 +6,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
 
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
+
   require OpenApiSpex
 
   defmodule AliasResponse do

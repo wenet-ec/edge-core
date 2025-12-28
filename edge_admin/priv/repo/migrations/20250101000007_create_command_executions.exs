@@ -19,7 +19,10 @@ defmodule EdgeAdmin.Repo.Migrations.CreateCommandExecutions do
       timestamps(type: :utc_datetime)
     end
 
-    create unique_index(:command_executions, [:node_id, :command_id], name: :command_executions_node_id_command_id_index)
+    create unique_index(:command_executions, [:node_id, :command_id],
+             name: :command_executions_node_id_command_id_index
+           )
+
     create index(:command_executions, [:command_id])
     create index(:command_executions, [:cluster_id])
     create index(:command_executions, [:status])

@@ -1,12 +1,34 @@
 # edge_admin/lib/edge_admin/nodes/schemas/cluster.ex
 defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   @moduledoc """
-  Schema for edge clusters. Each cluster represents an isolated Netmaker network
-  with its own IPv4 range.
+  Schema for edge clusters.
+
+  Each cluster represents an isolated Netmaker network (VPN) with its own IPv4 range.
+  Nodes within a cluster can communicate with each other via the VPN.
+
+  ## Fields
+
+  - `name` - Cluster name (lowercase alphanumeric with hyphens, max 24 chars)
+  - `ipv4_range` - CIDR notation for the cluster's VPN network (e.g., "100.64.1.0/24")
+  - `network_name` - Virtual field: Netmaker network name (cluster-{name})
+  - `dns_domain` - Virtual field: DNS domain suffix for nodes in this cluster
+  - `node_count` - Virtual field: Number of nodes in this cluster
   """
   use EdgeAdmin.Schema
 
   alias EdgeAdmin.Vpn
+
+  @type t :: %__MODULE__{
+          id: String.t(),
+          name: String.t(),
+          ipv4_range: String.t(),
+          network_name: String.t() | nil,
+          dns_domain: String.t() | nil,
+          node_count: integer() | nil,
+          nodes: [EdgeAdmin.Nodes.Schemas.Node.t()] | Ecto.Association.NotLoaded.t(),
+          inserted_at: DateTime.t(),
+          updated_at: DateTime.t()
+        }
 
   @derive {
     Flop.Schema,
@@ -47,23 +69,55 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
 
   @doc """
   Returns the Netmaker network name for this cluster.
-  Format: cluster-{name}
+
+  ## Format
+  `cluster-{name}`
+
+  ## Examples
+
+      iex> network_name(%Cluster{name: "prod"})
+      "cluster-prod"
   """
+  @spec network_name(t()) :: String.t()
   def network_name(%__MODULE__{name: name}), do: Vpn.build_network_name(name, prefix: :node)
 
   @doc """
   Returns the DNS domain suffix for nodes in this cluster.
-  Format: cluster-{name}.{domain}
-  where domain is configured via NETMAKER_DEFAULT_DOMAIN (default: nm.internal)
+
+  ## Format
+  `cluster-{name}.{domain}`
+
+  where domain is configured via `NETMAKER_DEFAULT_DOMAIN` (default: `nm.internal`)
+
+  ## Examples
+
+      iex> dns_domain(%Cluster{name: "prod"})
+      "cluster-prod.nm.internal"
   """
+  @spec dns_domain(t()) :: String.t()
   def dns_domain(%__MODULE__{name: name}) do
     Vpn.build_domain(Vpn.build_network_name(name, prefix: :node))
   end
 
   @doc """
   Returns the number of nodes in this cluster.
+
+  ## Requirements
   Requires nodes association to be preloaded.
+
+  ## Returns
+  - Integer count if nodes preloaded
+  - `0` if nodes not loaded
+
+  ## Examples
+
+      iex> node_count(%Cluster{nodes: [%Node{}, %Node{}]})
+      2
+
+      iex> node_count(%Cluster{nodes: %Ecto.Association.NotLoaded{}})
+      0
   """
+  @spec node_count(t()) :: non_neg_integer()
   def node_count(%__MODULE__{nodes: nodes}) when is_list(nodes), do: length(nodes)
   def node_count(%__MODULE__{}), do: 0
 
@@ -75,7 +129,8 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
     else
       # Generate 12-char random alphanumeric name
       random_name =
-        :crypto.strong_rand_bytes(9)
+        9
+        |> :crypto.strong_rand_bytes()
         |> Base.encode32(case: :lower, padding: false)
         |> String.slice(0..11)
 

@@ -54,22 +54,28 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
     results = Task.await_many(tasks, 5_000)
 
     # Extract host metrics
-    host_data = case Enum.at(results, 0) do
-      {:ok, metrics} ->
-        Map.from_struct(metrics)
-        |> Map.put(:available, true)
-      {:error, _} ->
-        %{available: false, error: "unavailable"}
-    end
+    host_data =
+      case Enum.at(results, 0) do
+        {:ok, metrics} ->
+          metrics
+          |> Map.from_struct()
+          |> Map.put(:available, true)
+
+        {:error, _} ->
+          %{available: false, error: "unavailable"}
+      end
 
     # Extract agent metrics
-    agent_data = case Enum.at(results, 1) do
-      {:ok, metrics} ->
-        Map.from_struct(metrics)
-        |> Map.put(:available, true)
-      {:error, _} ->
-        %{available: false, error: "unavailable"}
-    end
+    agent_data =
+      case Enum.at(results, 1) do
+        {:ok, metrics} ->
+          metrics
+          |> Map.from_struct()
+          |> Map.put(:available, true)
+
+        {:error, _} ->
+          %{available: false, error: "unavailable"}
+      end
 
     unified_metrics = %{
       node_id: node_id,

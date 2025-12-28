@@ -4,7 +4,11 @@ defmodule EdgeAdminWeb.ApiSpec do
   @behaviour OpenApiSpex.OpenApi
 
   alias EdgeAdminWeb.Router
-  alias OpenApiSpex.{Components, Info, OpenApi, Paths, SecurityScheme}
+  alias OpenApiSpex.Components
+  alias OpenApiSpex.Info
+  alias OpenApiSpex.OpenApi
+  alias OpenApiSpex.Paths
+  alias OpenApiSpex.SecurityScheme
 
   @impl OpenApi
   def spec do

@@ -7,6 +7,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas
   alias OpenApiSpex.Schema
+
   require OpenApiSpex
 
   defmodule SshUsernameResponse do
@@ -39,8 +40,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
         },
         public_keys: %Schema{
           type: :array,
-          description:
-            "SSH public keys associated with this username (only included when preloaded)",
+          description: "SSH public keys associated with this username (only included when preloaded)",
           items: SshPublicKeySchemas.SshPublicKeyResponse,
           nullable: true
         },
@@ -65,8 +65,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
           %{
             id: "fedcba98-7654-3210-fedc-ba9876543210",
             key_name: "laptop",
-            public_key:
-              "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
+            public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
             ssh_username_id: "01234567-89ab-cdef-0123-456789abcdef",
             inserted_at: "2025-06-23T10:30:00Z",
             updated_at: "2025-06-23T10:30:00Z"
@@ -130,8 +129,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
 
     OpenApiSpex.schema(%{
       title: "SSH Username Create Request",
-      description:
-        "Create a new SSH username for a node, optionally with password and/or public keys",
+      description: "Create a new SSH username for a node, optionally with password and/or public keys",
       type: :object,
       properties: %{
         ssh_username: %Schema{

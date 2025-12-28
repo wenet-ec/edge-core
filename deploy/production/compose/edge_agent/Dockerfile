@@ -1,16 +1,15 @@
 # deploy/production/compose/edge_agent/Dockerfile
+
 # -----------------------------------------------
-# Stage: Build the OTP release
+# Stage 1: Build the OTP release
 # -----------------------------------------------
-FROM elixir:1.19.4-otp-28-alpine AS builder
+FROM elixir:1.19.4-otp-28-slim AS builder
 
 # Install build dependencies
-RUN apk add --no-cache \
-    build-base \
-    git \
-    sqlite-dev \
-    ca-certificates \
-    && rm -rf /var/cache/apk/*
+RUN apt-get update -y && \
+    apt-get install -y build-essential git sqlite3 libsqlite3-dev && \
+    apt-get clean && \
+    rm -f /var/lib/apt/lists/*_*
 
 WORKDIR /app
 
@@ -62,62 +61,83 @@ RUN --mount=type=cache,target=/root/.hex \
     mix release
 
 # -----------------------------------------------
-# Stage: Production runtime image (optimized)
+# Stage 2: Production runtime image (optimized)
 # -----------------------------------------------
-FROM alpine:3.23.0
+FROM debian:stable-20250520-slim
 
-# Install runtime dependencies and node_exporter in single layer
+ARG NETCLIENT_VERSION=v1.4.0
 ENV NODE_EXPORTER_VERSION="1.10.2"
-ENV NETCLIENT_VERSION="1.4.0"
 
-RUN apk add --no-cache \
+# Install runtime dependencies in single layer
+# Agent leverages host tools via hostscript (nsenter/chroot to /host)
+# So we only install what the AGENT itself needs, not what commands need
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends \
+    # Erlang runtime dependencies
+    libstdc++6 \
     openssl \
-    ncurses-libs \
-    sqlite \
-    bash \
+    libncurses6 \
+    locales \
+    ca-certificates \
+    # Essential tools (healthcheck, metrics download, SSH server, capability checks)
     curl \
-    iputils \
     wget \
-    libstdc++ \
-    libgcc \
-    su-exec \
-    util-linux \
-    wireguard-tools-wg && \
-    # Install node_exporter in same layer to reduce image size
+    libcap2-bin \
+    # Process management (pgrep, pkill for netclient cleanup)
+    procps \
+    # Agent database (SQLite)
+    sqlite3 \
+    # Agent-specific: WireGuard management (VPN + wireguard_exporter)
+    wireguard-tools \
+    # Agent-specific: nsenter for hostscript (part of util-linux)
+    util-linux && \
+    # Set locale in same layer
+    sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen && \
+    # Install node_exporter in same layer
     wget -q https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz && \
     tar xzf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz && \
     mv node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64/node_exporter /usr/local/bin/ && \
     chmod +x /usr/local/bin/node_exporter && \
-    # Install netclient in same layer to reduce image size
-    wget -qO /tmp/netclient https://github.com/gravitl/netclient/releases/download/v${NETCLIENT_VERSION}/netclient-linux-amd64 && \
-    mv /tmp/netclient /usr/local/bin/netclient && \
+    # Install netclient in same layer
+    wget -q "https://github.com/gravitl/netclient/releases/download/${NETCLIENT_VERSION}/netclient-linux-amd64" -O /usr/local/bin/netclient && \
     chmod +x /usr/local/bin/netclient && \
-    mkdir -p /app/data /etc/netclient && \
+    mkdir -p /etc/netclient && \
+    chmod 0775 /etc/netclient && \
     # Clean up in same layer to reduce image size
-    rm -rf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64* /var/cache/apk/* /tmp/* /var/tmp/*
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/* node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64*
 
-# Copy the release from builder stage
-COPY --from=builder /app/_build/prod/rel/edge_agent /app
+# Set locale environment variables
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
 
 # Copy wireguard_exporter binary from official Docker image
 COPY --from=mindflavor/prometheus-wireguard-exporter:3.6.6 /usr/local/bin/prometheus_wireguard_exporter /usr/local/bin/prometheus_wireguard_exporter
 RUN chmod +x /usr/local/bin/prometheus_wireguard_exporter
 
+# Copy the release from builder stage
+COPY --from=builder /app/_build/prod/rel/edge_agent /app
 RUN chmod +x /app/bin/migrate /app/bin/server
 
-# Copy entrypoint script
+# Create directories with proper permissions
+RUN mkdir -p /app/data /tmp/erl_crash && \
+    chmod -R 755 /app/data /tmp/erl_crash
+
+# Copy entrypoint and utility scripts
 COPY ./deploy/production/compose/edge_agent/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint && \
     chmod +x /entrypoint
 
-# Copy hostscript utility
-COPY ./deploy/production/compose/edge_agent/hostscript /usr/local/bin/hostscript
-RUN sed -i 's/\r$//g' /usr/local/bin/hostscript && \
-    chmod +x /usr/local/bin/hostscript
-
 COPY ./deploy/production/compose/edge_agent/start /start
 RUN sed -i 's/\r$//g' /start && \
     chmod +x /start
+
+# hostscript: nsenter/chroot to execute commands on host
+# This is how agent leverages host tools instead of bundling them
+COPY ./deploy/production/compose/edge_agent/hostscript /usr/local/bin/hostscript
+RUN sed -i 's/\r$//g' /usr/local/bin/hostscript && \
+    chmod +x /usr/local/bin/hostscript
 
 COPY ./deploy/production/compose/edge_agent/edge_bashrc /usr/local/bin/edge_bashrc
 RUN sed -i 's/\r$//g' /usr/local/bin/edge_bashrc && \
@@ -126,3 +146,5 @@ RUN sed -i 's/\r$//g' /usr/local/bin/edge_bashrc && \
 WORKDIR /app
 
 ENTRYPOINT ["/entrypoint"]
+
+CMD ["/start"]

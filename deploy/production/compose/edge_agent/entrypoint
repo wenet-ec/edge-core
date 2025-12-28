@@ -5,5 +5,39 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-echo "Starting Edge Agent..."
+echo "=== Edge Agent Entrypoint ==="
+
+# Ensure /etc/netclient directory exists with proper permissions
+# (Mitigation for netclient TOCTOU race condition)
+mkdir -p /etc/netclient
+chmod 0775 /etc/netclient
+
+# Check if running in privileged mode (agent typically runs privileged for hostscript + VPN)
+if [ -e /proc/1/ns/pid ] && [ "$(readlink /proc/1/ns/pid)" = "$(readlink /proc/self/ns/pid)" ]; then
+    echo "Running in privileged mode: YES (full capabilities)"
+elif capsh --print 2>/dev/null | grep -q "Current: .*cap_net_admin"; then
+    echo "Running with NET_ADMIN capability (VPN will work, hostscript limited to chroot)"
+else
+    echo "WARNING: No privileged mode or NET_ADMIN capability detected"
+    echo "VPN operations and hostscript may fail"
+fi
+
+# Note: Netclient has WireGuard-Go compiled in (golang.zx2c4.com/wireguard library)
+# WG_QUICK_USERSPACE_IMPLEMENTATION just tells netclient which mode to use
+echo "WireGuard mode: ${WG_QUICK_USERSPACE_IMPLEMENTATION:-kernel (default)}"
+
+# Check if netclient is available
+if ! command -v netclient &> /dev/null; then
+    echo "ERROR: netclient not found in PATH"
+    exit 1
+fi
+
+echo "Netclient version: $(netclient version 2>&1 || echo 'unknown')"
+
+# Check if hostscript is available (agent-specific utility)
+if ! command -v hostscript &> /dev/null; then
+    echo "WARNING: hostscript not found - command execution will fail"
+fi
+
+echo "All prerequisites ready, starting application..."
 exec "$@"

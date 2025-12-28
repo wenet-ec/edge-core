@@ -2,11 +2,96 @@
 ## Customize flags given to the VM: http://erlang.org/doc/man/erl.html
 ## -mode/-name/-sname/-setcookie are configured via env vars, do not set them here
 
-## Number of dirty schedulers doing IO work (file, sockets, etc)
-##+SDio 5
+## =============================================================================
+## Scheduler Configuration
+## =============================================================================
+
+## Number of dirty schedulers doing IO work (file, sockets, SSH, proxy, shell commands)
+## EdgeAgent: Heavy I/O workload (SSH tunnels, proxy connections, shell execution)
+## Higher than default but lower than admin (no Netmaker API polling)
++SDio 16
+
+## Number of dirty CPU schedulers for computationally intensive NIFs
+## EdgeAgent: Minimal CPU-heavy work (mostly I/O)
++SDcpu 2
+
+## Scheduler bind type - spread across CPU cores for better distribution
++sbt db
+
+## Scheduler busy wait threshold (microseconds)
+## Lower = more responsive for proxy and SSH connections
++sbwt very_short
+
+## =============================================================================
+## Network & Distribution
+## =============================================================================
 
 ## Increase number of concurrent ports/sockets
-##+Q 65536
+## EdgeAgent: SSH tunnels, proxy connections, metrics collection
++Q 32768
 
-## Tweak GC to run more often
+## Distribution buffer busy limit (KB)
+## EdgeAgent: Only connects to ONE admin (no peer-to-peer traffic)
+## Keep default since no heavy inter-node traffic
++zdbbl 8192
+
+## Kernel poll - use efficient epoll/kqueue for socket events
++K true
+
+## Async thread pool size for file I/O and non-NIF operations
+## EdgeAgent: SQLite operations, shell command I/O, log files
+## Lower than admin (SQLite lighter than PostgreSQL)
++A 16
+
+## =============================================================================
+## Memory Management
+## =============================================================================
+
+## Heap memory strategy - allocate this much (words) before first GC
+## Default 233, we increase for processes handling command output
++hms 4096
+
+## Binary heap management - threshold for storing binaries off-heap
+## EdgeAgent: Shell command output can be large
++hmbs 4096
+
+## Maximum number of processes
+## EdgeAgent: Each command execution spawns a Task, plus SSH sessions, proxy connections
+## Default 262144 should be sufficient for typical agent workload
+##+P 524288
+
+## =============================================================================
+## Distribution Port Configuration
+## =============================================================================
+
+## Fixed Erlang distribution port (configurable via ERLANG_DIST_PORT)
+## EdgeAgent only connects to admin (not listening for other agents)
+## But admin needs to connect TO agent, so we still need a fixed port
+-kernel inet_dist_listen_min <%= System.get_env("ERLANG_DIST_PORT") || "49126" %>
+-kernel inet_dist_listen_max <%= System.get_env("ERLANG_DIST_PORT") || "49126" %>
+
+## Distribution connection timeout (ms)
+## EdgeAgent: Only connects to one admin in same cluster network
+## Lower timeout acceptable (not cross-datacenter)
+-kernel net_ticktime 30
+
+## Distribution connection backlog
+-kernel inet_dist_listen_options [{backlog,1024}]
+
+## =============================================================================
+## Garbage Collection
+## =============================================================================
+
+## Tweak GC to run more often (reduces memory spikes from large command outputs)
 ##-env ERL_FULLSWEEP_AFTER 10
+
+## =============================================================================
+## Telemetry & Debugging
+## =============================================================================
+
+## Enable kernel polling statistics (for runtime introspection)
++KP true
+
+## Crash dump settings
+-env ERL_CRASH_DUMP /tmp/erl_crash_<%= System.get_env("HOSTNAME") || "agent" %>.dump
+-env ERL_CRASH_DUMP_SECONDS 30

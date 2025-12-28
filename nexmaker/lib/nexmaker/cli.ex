@@ -38,6 +38,104 @@ defmodule Nexmaker.Cli do
   import Bitwise
   require Logger
 
+  # Netclient config directory path
+  @netclient_config_dir "/etc/netclient"
+
+  # ===========================================================================
+  # Netclient TOCTOU Bug Mitigation
+  # ===========================================================================
+  #
+  # Netclient v1.4.0 has a TOCTOU (Time-of-check Time-of-use) race condition
+  # in WriteJSONAtomic (config.go:537-604):
+  #
+  # 1. Directory check happens BEFORE acquiring lock (line 541-552)
+  # 2. Lock acquired (line 555)
+  # 3. File operations use the directory (line 561, 599)
+  #
+  # Race: Directory can be deleted between check and use, causing:
+  # "rename /etc/netclient/netclient.json.tmp /etc/netclient/netclient.json:
+  #  no such file or directory"
+  #
+  # Mitigation Strategy:
+  # - ensure_netclient_dir/0: Pre-create directory before each netclient call
+  # - run_with_retry/3: Retry on TOCTOU error (exponential backoff)
+  #
+  # This doesn't eliminate the race but significantly reduces occurrence.
+  # ===========================================================================
+
+  # Ensures /etc/netclient directory exists with proper permissions.
+  #
+  # Mitigates netclient's TOCTOU race condition by pre-creating the directory
+  # right before netclient operations.
+  #
+  # Returns :ok always (logs error but doesn't fail if mkdir fails).
+  defp ensure_netclient_dir do
+    case System.cmd("mkdir", ["-p", @netclient_config_dir], stderr_to_stdout: true) do
+      {_, 0} ->
+        # Also ensure proper permissions
+        case System.cmd("chmod", ["0775", @netclient_config_dir], stderr_to_stdout: true) do
+          {_, 0} -> :ok
+          {output, _} -> Logger.debug("chmod failed for #{@netclient_config_dir}: #{output}")
+        end
+        :ok
+
+      {output, _exit_code} ->
+        Logger.debug("mkdir failed for #{@netclient_config_dir}: #{output}")
+        :ok
+    end
+  rescue
+    _ -> :ok
+  end
+
+  # Checks if error output indicates netclient TOCTOU race condition.
+  #
+  # Returns true if the error message matches the netclient config directory
+  # "no such file or directory" pattern.
+  defp netclient_toctou_error?(output) when is_binary(output) do
+    String.contains?(output, "no such file or directory") and
+      String.contains?(output, @netclient_config_dir)
+  end
+
+  defp netclient_toctou_error?(_), do: false
+
+  # Runs a netclient command with retry logic for TOCTOU errors.
+  #
+  # Automatically retries up to max_attempts times when the netclient TOCTOU
+  # race condition is detected, with exponential backoff between attempts.
+  #
+  # ## Parameters
+  #   - command_fn: Function that runs the netclient command (must return {output, exit_code})
+  #   - max_attempts: Maximum retry attempts (default: 3)
+  #   - base_delay_ms: Base delay for exponential backoff (default: 50ms)
+  #
+  # ## Returns
+  #   - {output, exit_code} from the successful attempt or final failure
+  defp run_with_retry(command_fn, max_attempts \\ 3, base_delay_ms \\ 50) do
+    run_with_retry_impl(command_fn, 1, max_attempts, base_delay_ms)
+  end
+
+  defp run_with_retry_impl(command_fn, attempt, max_attempts, base_delay_ms) do
+    # Ensure directory exists before each attempt
+    ensure_netclient_dir()
+
+    {output, exit_code} = command_fn.()
+
+    # Check if we hit the TOCTOU bug and should retry
+    if exit_code != 0 and netclient_toctou_error?(output) and attempt < max_attempts do
+      delay_ms = base_delay_ms * :math.pow(2, attempt - 1) |> trunc()
+
+      Logger.warning(
+        "Netclient TOCTOU race condition detected (attempt #{attempt}/#{max_attempts}), " <>
+          "retrying in #{delay_ms}ms..."
+      )
+
+      :timer.sleep(delay_ms)
+      run_with_retry_impl(command_fn, attempt + 1, max_attempts, base_delay_ms)
+    else
+      {output, exit_code}
+    end
+  end
+
   @doc """
   Joins a network using an enrollment token.
 
@@ -75,7 +173,9 @@ defmodule Nexmaker.Cli do
 
     task =
       Task.async(fn ->
-        System.cmd("netclient", ["join" | args], stderr_to_stdout: true)
+        run_with_retry(fn ->
+          System.cmd("netclient", ["join" | args], stderr_to_stdout: true)
+        end)
       end)
 
     case Task.await(task, 30_000) do
@@ -125,7 +225,12 @@ defmodule Nexmaker.Cli do
   """
   @spec pull() :: :ok | {:error, any()}
   def pull do
-    case System.cmd("netclient", ["pull"], stderr_to_stdout: true) do
+    {output, exit_code} =
+      run_with_retry(fn ->
+        System.cmd("netclient", ["pull"], stderr_to_stdout: true)
+      end)
+
+    case {output, exit_code} do
       {_output, 0} ->
         Logger.debug("Successfully pulled netclient configuration from server")
         :ok
@@ -159,7 +264,12 @@ defmodule Nexmaker.Cli do
   """
   @spec leave_network(String.t()) :: :ok | {:error, any()}
   def leave_network(network_name) when is_binary(network_name) do
-    case System.cmd("netclient", ["leave", network_name], stderr_to_stdout: true) do
+    {output, exit_code} =
+      run_with_retry(fn ->
+        System.cmd("netclient", ["leave", network_name], stderr_to_stdout: true)
+      end)
+
+    case {output, exit_code} do
       {_output, 0} ->
         Logger.info("Successfully left network: #{network_name}")
         :ok
@@ -200,7 +310,12 @@ defmodule Nexmaker.Cli do
   """
   @spec list_networks() :: {:ok, [map()]} | {:error, any()}
   def list_networks do
-    case System.cmd("netclient", ["list"], stderr_to_stdout: true) do
+    {output, exit_code} =
+      run_with_retry(fn ->
+        System.cmd("netclient", ["list"], stderr_to_stdout: true)
+      end)
+
+    case {output, exit_code} do
       {output, 0} ->
         # Check for "no such network" message first (happens when exit code is 0)
         if String.contains?(output, "no such network") do

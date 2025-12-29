@@ -6,6 +6,9 @@ scrape_configs:
   - job_name: "node-host-metrics"
     http_sd_configs:
       - url: "http://edge_admin:44000/api/nodes/metrics/host/discovery"
+        authorization:
+          type: Bearer
+          credentials: supersecretkey123456789
     authorization:
       type: Bearer
       credentials: supersecretkey123456789
@@ -13,6 +16,9 @@ scrape_configs:
   - job_name: "node-agent-metrics"
     http_sd_configs:
       - url: "http://edge_admin:44000/api/nodes/metrics/agent/discovery"
+        authorization:
+          type: Bearer
+          credentials: supersecretkey123456789
     authorization:
       type: Bearer
       credentials: supersecretkey123456789
@@ -20,6 +26,9 @@ scrape_configs:
   - job_name: "node-wireguard-metrics"
     http_sd_configs:
       - url: "http://edge_admin:44000/api/nodes/metrics/wireguard/discovery"
+        authorization:
+          type: Bearer
+          credentials: supersecretkey123456789
     authorization:
       type: Bearer
       credentials: supersecretkey123456789
@@ -38,3 +47,6 @@ scrape_configs:
     static_configs:
       - targets: ["edge_admin:44000"]
     metrics_path: "/api/admins/metrics/self/raw"
+    authorization:
+      type: Bearer
+      credentials: supersecretkey123456789

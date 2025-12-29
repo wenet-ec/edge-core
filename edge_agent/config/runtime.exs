@@ -32,4 +32,7 @@ config :edge_agent,
   use_random_id: get_env("USE_RANDOM_ID", :boolean, false),
   enrollment_key: get_env("ENROLLMENT_KEY", :string, nil),
   public_enrollment_key_url: get_env("PUBLIC_ENROLLMENT_KEY_URL", :string, nil),
-  public_enrollment_key_path: get_env("PUBLIC_ENROLLMENT_KEY_PATH", :string, nil)
+  public_enrollment_key_path: get_env("PUBLIC_ENROLLMENT_KEY_PATH", :string, nil),
+  self_update_enabled: get_env("SELF_UPDATE_ENABLED", :boolean, false),
+  watchtower_url: get_env("WATCHTOWER_URL", :string, "http://watchtower:8080"),
+  watchtower_http_api_token: get_env("WATCHTOWER_HTTP_API_TOKEN", :string, "")

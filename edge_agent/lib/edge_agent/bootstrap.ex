@@ -371,7 +371,7 @@ defmodule EdgeAgent.Bootstrap do
       http_proxy_port: Application.get_env(:edge_agent, :http_proxy_port, 43_128),
       socks5_proxy_port: Application.get_env(:edge_agent, :socks5_proxy_port, 41_080),
       version: :edge_agent |> Application.spec(:vsn) |> to_string(),
-      self_update_enabled: true
+      self_update_enabled: Application.get_env(:edge_agent, :self_update_enabled, false)
     }
   end
 end

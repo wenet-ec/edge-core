@@ -6,14 +6,14 @@ networks:
 volumes:
   production_edge_agent_data: {}
   production_edge_agent_netclient_data: {}
+  production_registry_data: {}
 
 services:
-  # Edge Agent
   edge_agent:
     build:
       context: ../..
       dockerfile: ./deploy/production/compose/edge_agent/Dockerfile
-    image: production_edge_agent
+    image: localhost:45000/edge_agent:stable
     container_name: production_edge_agent
     volumes:
       - production_edge_agent_data:/app/data
@@ -23,3 +23,31 @@ services:
       - ./.envs/.edge_agent
     network_mode: host
     privileged: true
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  watchtower:
+    image: nickfedor/watchtower:latest
+    container_name: production_watchtower
+    command:
+      - --http-api-update
+      - --label-enable
+      - --cleanup
+    env_file:
+      - ./.envs/.edge_agent
+    networks:
+      - production_edge_core
+    ports:
+      - "48080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  registry:
+    image: registry:2
+    container_name: production_registry
+    networks:
+      - production_edge_core
+    ports:
+      - "45000:5000"
+    volumes:
+      - production_registry_data:/var/lib/registry

@@ -4,6 +4,7 @@ networks:
     name: local_edge_core
 
 volumes:
+  local_registry_data: {}
   local_edge_agent_data: {}
   local_edge_agent_deps: {}
   local_edge_agent_build: {}
@@ -19,7 +20,7 @@ services:
     build:
       context: ../..
       dockerfile: ./deploy/local/compose/edge_agent/Dockerfile
-    image: local_edge_agent
+    image: localhost:45000/edge_agent:stable
     container_name: local_edge_agent
     volumes:
       - ../../edge_agent:/app:z
@@ -38,6 +39,34 @@ services:
       - "44000:44000"
       - "43128:43128"
       - "41080:41080"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  watchtower:
+    image: nickfedor/watchtower:latest
+    container_name: local_watchtower
+    command:
+      - --http-api-update
+      - --label-enable
+      - --cleanup
+    env_file:
+      - ./.envs/.edge_agent
+    networks:
+      - local_edge_core
+    ports:
+      - "48080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  registry:
+    image: registry:2
+    container_name: local_registry
+    networks:
+      - local_edge_core
+    ports:
+      - "45000:5000"
+    volumes:
+      - local_registry_data:/var/lib/registry
 
   edge_agent_2:
     build:
@@ -73,6 +102,8 @@ services:
       - "41081:41080"
     privileged: true
     pid: "host"
+    profiles:
+      - test
 
   edge_agent_test:
     build:

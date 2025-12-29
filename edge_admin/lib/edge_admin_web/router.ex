@@ -195,5 +195,7 @@ defmodule EdgeAdminWeb.Router do
       delete("/command_executions/:id", CommandExecutionController, :delete)
       patch("/command_executions/:id/cancel", CommandExecutionController, :cancel)
     end
+
+    resources("/self_update_requests", SelfUpdates.SelfUpdateRequestController, only: [:index, :create, :show, :delete])
   end
 end

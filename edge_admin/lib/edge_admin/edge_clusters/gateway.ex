@@ -430,22 +430,30 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
   @impl true
   def handle_call({:trigger_self_update, node}, _from, state) do
-    url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/self_updates/"
+    url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/self_updates/trigger"
 
     case Req.post(url,
            auth: {:bearer, node.api_token},
-           receive_timeout: 5000,
+           receive_timeout: 15_000,
            retry: false
          ) do
-      {:ok, %{status: 200}} ->
+      {:ok, %{status: 202}} ->
         {:reply, :ok, state}
+
+      {:ok, %{status: 403}} ->
+        {:reply, {:error, :self_update_disabled}, state}
 
       {:ok, %{status: status}} ->
         {:reply, {:error, "HTTP #{status}"}, state}
 
       {:error, reason} ->
-        Logger.error("HTTP request failed: #{inspect(reason)}")
-        {:reply, {:error, reason}, state}
+        Logger.debug("HTTP request failed (likely agent restarted): #{inspect(reason)}")
+        # Treat connection errors as success (watchtower likely restarted the agent)
+        if reason in [:timeout, :econnrefused, :closed] do
+          {:reply, :ok, state}
+        else
+          {:reply, {:error, reason}, state}
+        end
     end
   end
 

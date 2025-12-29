@@ -12,5 +12,7 @@ defmodule EdgeAgentWeb.Router do
 
     resources "/command_executions", CommandExecutionController, only: [:create]
     patch "/command_executions/:id/cancel", CommandExecutionController, :cancel
+
+    post "/self_updates/trigger", SelfUpdateController, :trigger
   end
 end

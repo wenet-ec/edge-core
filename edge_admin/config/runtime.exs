@@ -124,7 +124,8 @@ config :edge_admin, Oban,
     execution_creation: 10,
     key_cleanup: 1,
     zombie_admin_cleanup: 1,
-    cluster_reconciliation: 1
+    cluster_reconciliation: 1,
+    self_updates: 3
   ],
   repo: EdgeAdmin.Repo,
   peer: Oban.Peers.Global,

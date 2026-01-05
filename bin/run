@@ -1,5 +1,10 @@
 #!/bin/bash
-# bin/run
+# bin/run - Edge Core Management Script
+#
+# Usage:
+#   ./bin/run cloud <command>     # Manage cloud infrastructure (admin, VPN, metrics)
+#   ./bin/run edge <command>      # Manage edge services (agent)
+#   ./bin/run all <command>       # Manage all services together
 
 # Exit on any error
 set -e
@@ -9,26 +14,29 @@ cd "$(dirname "$0")/.."
 
 # Use ENV from environment or default to local
 ENV=${ENV:-local}
-COMPOSE_FILE="deploy/${ENV}/web.yml"
+CLOUD_COMPOSE_FILE="deploy/${ENV}/cloud.yml"
+EDGE_COMPOSE_FILE="deploy/${ENV}/edge.yml"
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Helper functions
 log() { echo -e "${GREEN}[INFO]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+section() { echo -e "${CYAN}=== $1 ===${NC}"; }
 
 # Check if Docker is installed and running
 check_docker() {
     if ! command -v docker &> /dev/null; then
         error "Docker is not installed"
     fi
-    
+
     if ! docker info > /dev/null 2>&1; then
         error "Docker is not running"
     fi
@@ -39,399 +47,561 @@ validate_env() {
     if [ "$ENV" != "local" ] && [ "$ENV" != "production" ]; then
         error "Invalid environment. Must be 'local' or 'production'"
     fi
+}
 
-    if [ ! -f "$COMPOSE_FILE" ]; then
-        error "Compose file not found: $COMPOSE_FILE"
+# Validate compose file exists
+validate_compose_file() {
+    local file=$1
+    if [ ! -f "$file" ]; then
+        error "Compose file not found: $file"
     fi
-    
-    log "Using environment: $ENV"
+}
+
+# Show help for cloud commands
+show_cloud_help() {
+    echo -e "${BLUE}Cloud Infrastructure Commands${NC}"
+    echo "Manages: Edge Admin, VPN (Netmaker), Database, Metrics, Message Broker"
+    echo ""
+    echo "Usage: ./bin/run cloud <command> [options]"
+    echo ""
+    echo -e "${YELLOW}Container Management:${NC}"
+    echo "  up [options]           - Start cloud services"
+    echo "  down [options]         - Stop and remove cloud services"
+    echo "  start                  - Build and start cloud services"
+    echo "  stop [services]        - Stop cloud services"
+    echo "  restart [services]     - Restart cloud services"
+    echo "  build [services]       - Build cloud service images"
+    echo "  logs [service]         - View cloud service logs"
+    echo "  ps                     - List running cloud services"
+    echo ""
+    echo -e "${YELLOW}Edge Admin Commands:${NC}"
+    echo "  admin <mix-cmd>        - Run Mix command in Edge Admin"
+    echo "  admin:shell            - Open Edge Admin IEx shell"
+    echo "  admin:format           - Format Edge Admin code"
+    echo "  admin:lint             - Lint Edge Admin code"
+    echo "  admin:test [opts]      - Run Edge Admin tests"
+    echo "  admin:quality          - Run quality checks"
+    echo "  admin:security         - Run security checks"
+    echo ""
+    echo -e "${YELLOW}Database Commands:${NC}"
+    echo "  db:migrate [opts]      - Run database migrations"
+    echo "  db:setup               - Setup database"
+    echo "  db:reset               - Reset database (destructive)"
+    echo ""
+    echo -e "${YELLOW}Utilities:${NC}"
+    echo "  exec <svc> <cmd>       - Execute command in service"
+    echo "  shell <service>        - Open bash shell in service"
+    echo "  clean                  - Clean up volumes and containers"
+    echo ""
+    echo -e "${GREEN}Examples:${NC}"
+    echo "  ./bin/run cloud up -d"
+    echo "  ./bin/run cloud admin:test"
+    echo "  ./bin/run cloud logs edge_admin"
+    echo "  ENV=production ./bin/run cloud start"
+}
+
+# Show help for edge commands
+show_edge_help() {
+    echo -e "${BLUE}Edge Services Commands${NC}"
+    echo "Manages: Edge Agent, Local Registry, Watchtower"
+    echo ""
+    echo "Usage: ./bin/run edge <command> [options]"
+    echo ""
+    echo -e "${YELLOW}Container Management:${NC}"
+    echo "  up [options]           - Start edge services"
+    echo "  down [options]         - Stop and remove edge services"
+    echo "  start                  - Build and start edge services"
+    echo "  stop [services]        - Stop edge services"
+    echo "  restart [services]     - Restart edge services"
+    echo "  build [services]       - Build edge service images"
+    echo "  logs [service]         - View edge service logs"
+    echo "  ps                     - List running edge services"
+    echo ""
+    echo -e "${YELLOW}Edge Agent Commands:${NC}"
+    echo "  agent <mix-cmd>        - Run Mix command in Edge Agent"
+    echo "  agent:shell            - Open Edge Agent IEx shell"
+    echo "  agent:format           - Format Edge Agent code"
+    echo "  agent:lint             - Lint Edge Agent code"
+    echo "  agent:test [opts]      - Run Edge Agent tests"
+    echo "  agent:quality          - Run quality checks"
+    echo "  agent:security         - Run security checks"
+    echo ""
+    echo -e "${YELLOW}Database Commands:${NC}"
+    echo "  db:migrate [opts]      - Run database migrations"
+    echo "  db:setup               - Setup database"
+    echo "  db:reset               - Reset database (destructive)"
+    echo ""
+    echo -e "${YELLOW}Utilities:${NC}"
+    echo "  exec <svc> <cmd>       - Execute command in service"
+    echo "  shell <service>        - Open bash shell in service"
+    echo "  clean                  - Clean up volumes and containers"
+    echo ""
+    echo -e "${GREEN}Examples:${NC}"
+    echo "  ./bin/run edge up -d"
+    echo "  ./bin/run edge agent:test"
+    echo "  ./bin/run edge logs edge_agent"
+    echo "  ENV=production ./bin/run edge start"
+}
+
+# Show help for all commands
+show_all_help() {
+    echo -e "${BLUE}All Services Commands${NC}"
+    echo "Manages: All cloud and edge services together"
+    echo ""
+    echo "Usage: ./bin/run all <command> [options]"
+    echo ""
+    echo -e "${YELLOW}Container Management:${NC}"
+    echo "  up [options]           - Start all services"
+    echo "  down [options]         - Stop and remove all services"
+    echo "  start                  - Build and start all services"
+    echo "  stop [services]        - Stop services"
+    echo "  restart [services]     - Restart services"
+    echo "  build [services]       - Build service images"
+    echo "  logs [service]         - View service logs"
+    echo "  ps                     - List all running services"
+    echo ""
+    echo -e "${YELLOW}Combined Quality Commands:${NC}"
+    echo "  format                 - Format all code (admin + agent)"
+    echo "  lint                   - Lint all code (admin + agent)"
+    echo "  test                   - Run all tests (admin + agent)"
+    echo "  quality                - Run quality checks on all services"
+    echo "  security               - Run security checks on all services"
+    echo ""
+    echo -e "${YELLOW}Database Commands:${NC}"
+    echo "  db:setup               - Setup all databases"
+    echo "  db:reset               - Reset all databases (destructive)"
+    echo ""
+    echo -e "${YELLOW}Utilities:${NC}"
+    echo "  clean                  - Clean up all volumes and containers"
+    echo ""
+    echo -e "${GREEN}Examples:${NC}"
+    echo "  ./bin/run all up -d"
+    echo "  ./bin/run all format"
+    echo "  ./bin/run all test"
+    echo "  ENV=production ./bin/run all start"
+}
+
+# Show main help
+show_help() {
+    echo -e "${BLUE}Edge Core Management Script${NC}"
+    echo "===================================="
+    echo ""
+    echo "Usage: ./bin/run <scope> <command> [options]"
+    echo ""
+    echo -e "${YELLOW}Scopes:${NC}"
+    echo "  cloud     - Manage cloud infrastructure (admin, VPN, DB, metrics)"
+    echo "  edge      - Manage edge services (agent, registry, watchtower)"
+    echo "  all       - Manage all services together"
+    echo ""
+    echo -e "${YELLOW}Global Options:${NC}"
+    echo "  ENV=production    - Use production environment (default: local)"
+    echo ""
+    echo -e "${YELLOW}Common Commands:${NC}"
+    echo "  check             - Check Docker installation and environment"
+    echo ""
+    echo -e "${GREEN}Examples:${NC}"
+    echo "  ./bin/run check"
+    echo "  ./bin/run cloud up -d"
+    echo "  ./bin/run edge agent:test"
+    echo "  ./bin/run all format"
+    echo "  ENV=production ./bin/run cloud start"
+    echo ""
+    echo "For scope-specific help, run:"
+    echo "  ./bin/run cloud"
+    echo "  ./bin/run edge"
+    echo "  ./bin/run all"
+}
+
+# Handle cloud infrastructure commands
+handle_cloud() {
+    local compose_file="-f $CLOUD_COMPOSE_FILE"
+    local command=$1
+    shift || true
+
+    case "$command" in
+        "")
+            show_cloud_help
+            ;;
+        up|down|start|stop|restart|build|ps)
+            check_docker
+            case "$command" in
+                start)
+                    log "Building and starting cloud services..."
+                    docker compose $compose_file up --build "$@"
+                    ;;
+                *)
+                    log "Running: docker compose $compose_file $command $@"
+                    docker compose $compose_file "$command" "$@"
+                    ;;
+            esac
+            ;;
+        logs)
+            check_docker
+            if [ $# -eq 0 ]; then
+                docker compose $compose_file logs -f
+            else
+                docker compose $compose_file logs -f "$@"
+            fi
+            ;;
+        admin)
+            check_docker
+            if [ $# -eq 0 ]; then
+                warn "No admin command specified"
+                exit 1
+            fi
+            log "Running Edge Admin command: mix $*"
+            docker compose $compose_file run --rm edge_admin mix "$@"
+            ;;
+        admin:shell)
+            check_docker
+            log "Opening Edge Admin IEx shell..."
+            docker compose $compose_file run --rm edge_admin iex -S mix
+            ;;
+        admin:format)
+            check_docker
+            log "Formatting Edge Admin code..."
+            docker compose $compose_file run --rm edge_admin mix format
+            ;;
+        admin:lint)
+            check_docker
+            log "Linting Edge Admin code..."
+            docker compose $compose_file run --rm edge_admin mix lint
+            ;;
+        admin:test)
+            check_docker
+            log "Running Edge Admin tests..."
+            docker compose $compose_file run --rm edge_admin_test "$@"
+            ;;
+        admin:quality)
+            check_docker
+            log "Running Edge Admin quality checks..."
+            docker compose $compose_file run --rm edge_admin mix quality
+            ;;
+        admin:security)
+            check_docker
+            log "Running Edge Admin security checks..."
+            docker compose $compose_file run --rm edge_admin mix security
+            ;;
+        db:migrate)
+            check_docker
+            log "Running Edge Admin database migrations..."
+            docker compose $compose_file run --rm edge_admin mix ecto.migrate "$@"
+            ;;
+        db:setup)
+            check_docker
+            log "Setting up Edge Admin database..."
+            docker compose $compose_file run --rm edge_admin mix ecto.setup
+            ;;
+        db:reset)
+            check_docker
+            warn "This will delete all Edge Admin data! Press Ctrl+C to cancel, Enter to continue..."
+            read -r
+            log "Resetting Edge Admin database..."
+            docker compose $compose_file run --rm edge_admin mix ecto.reset
+            ;;
+        exec)
+            check_docker
+            if [ $# -lt 2 ]; then
+                warn "Usage: ./bin/run cloud exec <service> <command>"
+                exit 1
+            fi
+            service=$1
+            shift
+            log "Executing in $service: $*"
+            docker compose $compose_file exec "$service" "$@"
+            ;;
+        shell)
+            check_docker
+            if [ $# -eq 0 ]; then
+                warn "Usage: ./bin/run cloud shell <service>"
+                echo "Available services: edge_admin, edge_vpn, edge_vpn_db, etc."
+                exit 1
+            fi
+            service=$1
+            log "Opening shell in $service..."
+            docker compose $compose_file exec "$service" /bin/bash
+            ;;
+        clean)
+            check_docker
+            log "Cleaning up cloud infrastructure..."
+            docker compose $compose_file down --volumes --remove-orphans
+            ;;
+        *)
+            error "Unknown cloud command: $command"
+            show_cloud_help
+            ;;
+    esac
+}
+
+# Handle edge services commands
+handle_edge() {
+    local compose_file="-f $EDGE_COMPOSE_FILE"
+    local command=$1
+    shift || true
+
+    case "$command" in
+        "")
+            show_edge_help
+            ;;
+        up|down|start|stop|restart|build|ps)
+            check_docker
+            case "$command" in
+                start)
+                    log "Building and starting edge services..."
+                    docker compose $compose_file up --build "$@"
+                    ;;
+                *)
+                    log "Running: docker compose $compose_file $command $@"
+                    docker compose $compose_file "$command" "$@"
+                    ;;
+            esac
+            ;;
+        logs)
+            check_docker
+            if [ $# -eq 0 ]; then
+                docker compose $compose_file logs -f
+            else
+                docker compose $compose_file logs -f "$@"
+            fi
+            ;;
+        agent)
+            check_docker
+            if [ $# -eq 0 ]; then
+                warn "No agent command specified"
+                exit 1
+            fi
+            log "Running Edge Agent command: mix $*"
+            docker compose $compose_file run --rm edge_agent mix "$@"
+            ;;
+        agent:shell)
+            check_docker
+            log "Opening Edge Agent IEx shell..."
+            docker compose $compose_file run --rm edge_agent iex -S mix
+            ;;
+        agent:format)
+            check_docker
+            log "Formatting Edge Agent code..."
+            docker compose $compose_file run --rm edge_agent mix format
+            ;;
+        agent:lint)
+            check_docker
+            log "Linting Edge Agent code..."
+            docker compose $compose_file run --rm edge_agent mix lint
+            ;;
+        agent:test)
+            check_docker
+            log "Running Edge Agent tests..."
+            docker compose $compose_file run --rm edge_agent_test "$@"
+            ;;
+        agent:quality)
+            check_docker
+            log "Running Edge Agent quality checks..."
+            docker compose $compose_file run --rm edge_agent mix quality
+            ;;
+        agent:security)
+            check_docker
+            log "Running Edge Agent security checks..."
+            docker compose $compose_file run --rm edge_agent mix security
+            ;;
+        db:migrate)
+            check_docker
+            log "Running Edge Agent database migrations..."
+            docker compose $compose_file run --rm edge_agent mix ecto.migrate "$@"
+            ;;
+        db:setup)
+            check_docker
+            log "Setting up Edge Agent database..."
+            docker compose $compose_file run --rm edge_agent mix ecto.setup
+            ;;
+        db:reset)
+            check_docker
+            warn "This will delete all Edge Agent data! Press Ctrl+C to cancel, Enter to continue..."
+            read -r
+            log "Resetting Edge Agent database..."
+            docker compose $compose_file run --rm edge_agent mix ecto.reset
+            ;;
+        exec)
+            check_docker
+            if [ $# -lt 2 ]; then
+                warn "Usage: ./bin/run edge exec <service> <command>"
+                exit 1
+            fi
+            service=$1
+            shift
+            log "Executing in $service: $*"
+            docker compose $compose_file exec "$service" "$@"
+            ;;
+        shell)
+            check_docker
+            if [ $# -eq 0 ]; then
+                warn "Usage: ./bin/run edge shell <service>"
+                echo "Available services: edge_agent, local_registry, watchtower"
+                exit 1
+            fi
+            service=$1
+            log "Opening shell in $service..."
+            docker compose $compose_file exec "$service" /bin/bash
+            ;;
+        clean)
+            check_docker
+            log "Cleaning up edge services..."
+            docker compose $compose_file down --volumes --remove-orphans
+            ;;
+        *)
+            error "Unknown edge command: $command"
+            show_edge_help
+            ;;
+    esac
+}
+
+# Handle all services commands
+handle_all() {
+    local compose_files="-f $CLOUD_COMPOSE_FILE -f $EDGE_COMPOSE_FILE"
+    local command=$1
+    shift || true
+
+    case "$command" in
+        "")
+            show_all_help
+            ;;
+        up|down|start|stop|restart|build|ps)
+            check_docker
+            case "$command" in
+                start)
+                    log "Building and starting all services..."
+                    docker compose $compose_files up --build "$@"
+                    ;;
+                *)
+                    log "Running: docker compose $compose_files $command $@"
+                    docker compose $compose_files "$command" "$@"
+                    ;;
+            esac
+            ;;
+        logs)
+            check_docker
+            if [ $# -eq 0 ]; then
+                docker compose $compose_files logs -f
+            else
+                docker compose $compose_files logs -f "$@"
+            fi
+            ;;
+        format)
+            check_docker
+            section "Formatting all code"
+            log "Formatting Edge Admin..."
+            docker compose $compose_files run --rm edge_admin mix format
+            log "Formatting Edge Agent..."
+            docker compose $compose_files run --rm edge_agent mix format
+            log "All code formatted!"
+            ;;
+        lint)
+            check_docker
+            section "Linting all code"
+            log "Linting Edge Admin..."
+            docker compose $compose_files run --rm edge_admin mix lint
+            log "Linting Edge Agent..."
+            docker compose $compose_files run --rm edge_agent mix lint
+            log "All code linted!"
+            ;;
+        test)
+            check_docker
+            section "Running all tests"
+            log "Testing Edge Admin..."
+            docker compose $compose_files run --rm edge_admin_test
+            log "Testing Edge Agent..."
+            docker compose $compose_files run --rm edge_agent_test
+            log "All tests completed!"
+            ;;
+        quality)
+            check_docker
+            section "Running quality checks"
+            log "Edge Admin quality checks..."
+            docker compose $compose_files run --rm edge_admin mix quality
+            log "Edge Agent quality checks..."
+            docker compose $compose_files run --rm edge_agent mix quality
+            log "All quality checks completed!"
+            ;;
+        security)
+            check_docker
+            section "Running security checks"
+            log "Edge Admin security checks..."
+            docker compose $compose_files run --rm edge_admin mix security
+            log "Edge Agent security checks..."
+            docker compose $compose_files run --rm edge_agent mix security
+            log "All security checks completed!"
+            ;;
+        db:setup)
+            check_docker
+            section "Setting up all databases"
+            log "Setting up Edge Admin database..."
+            docker compose $compose_files run --rm edge_admin mix ecto.setup
+            log "Setting up Edge Agent database..."
+            docker compose $compose_files run --rm edge_agent mix ecto.setup
+            log "All databases set up!"
+            ;;
+        db:reset)
+            check_docker
+            warn "This will delete ALL data! Press Ctrl+C to cancel, Enter to continue..."
+            read -r
+            section "Resetting all databases"
+            log "Resetting Edge Admin database..."
+            docker compose $compose_files run --rm edge_admin mix ecto.reset
+            log "Resetting Edge Agent database..."
+            docker compose $compose_files run --rm edge_agent mix ecto.reset
+            log "All databases reset!"
+            ;;
+        clean)
+            check_docker
+            log "Cleaning up all services..."
+            docker compose $compose_files down --volumes --remove-orphans
+            docker system prune -f
+            log "Cleanup complete!"
+            ;;
+        *)
+            error "Unknown all command: $command"
+            show_all_help
+            ;;
+    esac
 }
 
 # Initialize
 validate_env
 
+# Main command routing
 case "$1" in
-    "check")
-        log "Checking Docker installations..."
+    check)
+        log "Checking Docker installation..."
         docker --version
         docker compose version
         log "Environment: $ENV"
-        log "Compose file: $COMPOSE_FILE"
+        log "Cloud compose: $CLOUD_COMPOSE_FILE"
+        log "Edge compose: $EDGE_COMPOSE_FILE"
+        validate_compose_file "$CLOUD_COMPOSE_FILE"
+        validate_compose_file "$EDGE_COMPOSE_FILE"
+        log "All compose files found!"
         ;;
-
-    "build")
-        check_docker
+    cloud)
         shift
-        if [ $# -eq 0 ]; then
-            log "Building all containers..."
-            docker compose -f $COMPOSE_FILE build
-        else
-            log "Building containers: $*"
-            docker compose -f $COMPOSE_FILE build "$@"
-        fi
+        validate_compose_file "$CLOUD_COMPOSE_FILE"
+        handle_cloud "$@"
         ;;
-
-    "up")
-        check_docker
-        shift  # Remove 'up' from arguments
-        log "Starting containers..."
-        docker compose -f $COMPOSE_FILE up "$@"
-        ;;
-
-    "start")
-        check_docker
-        shift  # Remove 'start' from arguments
-        log "Building and starting containers..."
-        docker compose -f $COMPOSE_FILE up --build --remove-orphans "$@"
-        ;;
-
-    "stop")
-        check_docker
-        shift  # Remove 'stop' from arguments
-        log "Stopping containers..."
-        docker compose -f $COMPOSE_FILE stop "$@"
-        ;;
-
-    "down")
-        check_docker
-        shift  # Remove 'down' from arguments
-        log "Stopping and removing containers..."
-        docker compose -f $COMPOSE_FILE down "$@"
-        ;;
-
-    "logs")
-        check_docker
+    edge)
         shift
-        if [ $# -eq 0 ]; then
-            docker compose -f $COMPOSE_FILE logs -f
-        else
-            docker compose -f $COMPOSE_FILE logs -f "$@"
-        fi
+        validate_compose_file "$EDGE_COMPOSE_FILE"
+        handle_edge "$@"
         ;;
-
-    "ps")
-        check_docker
-        docker compose -f $COMPOSE_FILE ps
-        ;;
-
-    "restart")
-        check_docker
+    all)
         shift
-        if [ $# -eq 0 ]; then
-            docker compose -f $COMPOSE_FILE restart
-        else
-            docker compose -f $COMPOSE_FILE restart "$@"
-        fi
+        validate_compose_file "$CLOUD_COMPOSE_FILE"
+        validate_compose_file "$EDGE_COMPOSE_FILE"
+        handle_all "$@"
         ;;
-
-    # Edge Admin commands
-    "admin")
-        check_docker
-        shift
-        if [ $# -eq 0 ]; then
-            warn "No admin command specified"
-            exit 1
-        fi
-        log "Running Edge Admin command: mix $*"
-        docker compose -f $COMPOSE_FILE run --rm edge_admin mix "$@"
+    ""|help|--help|-h)
+        show_help
         ;;
-
-    "admin:shell")
-        check_docker
-        log "Opening Edge Admin IEx shell..."
-        docker compose -f $COMPOSE_FILE run --rm edge_admin iex -S mix
-        ;;
-
-    "admin:format")
-        check_docker
-        log "Formatting Edge Admin code..."
-        docker compose -f $COMPOSE_FILE run --rm edge_admin mix format
-        ;;
-
-    "admin:lint")
-        check_docker
-        log "Linting Edge Admin code..."
-        docker compose -f $COMPOSE_FILE run --rm edge_admin mix lint
-        ;;
-
-    "admin:test")
-        check_docker
-        shift
-        log "Running Edge Admin tests..."
-        docker compose -f $COMPOSE_FILE run --rm edge_admin_test "$@"
-        ;;
-
-    "admin:check")
-        check_docker
-        log "Running Edge Admin comprehensive checks..."
-        docker compose -f $COMPOSE_FILE run --rm edge_admin mix check
-        ;;
-
-    "admin:quality")
-        check_docker
-        log "Running Edge Admin quality checks..."
-        docker compose -f $COMPOSE_FILE run --rm edge_admin mix quality
-        ;;
-
-    "admin:security")
-        check_docker
-        log "Running Edge Admin security checks..."
-        docker compose -f $COMPOSE_FILE run --rm edge_admin mix security
-        ;;
-
-    "admin:precommit")
-        check_docker
-        log "Running Edge Admin precommit checks..."
-        docker compose -f $COMPOSE_FILE run --rm edge_admin mix precommit
-        ;;
-
-    # Edge Agent commands
-    "agent")
-        check_docker
-        shift
-        if [ $# -eq 0 ]; then
-            warn "No agent command specified"
-            exit 1
-        fi
-        log "Running Edge Agent command: mix $*"
-        docker compose -f $COMPOSE_FILE run --rm edge_agent mix "$@"
-        ;;
-
-    "agent:shell")
-        check_docker
-        log "Opening Edge Agent IEx shell..."
-        docker compose -f $COMPOSE_FILE run --rm edge_agent iex -S mix
-        ;;
-
-    "agent:format")
-        check_docker
-        log "Formatting Edge Agent code..."
-        docker compose -f $COMPOSE_FILE run --rm edge_agent mix format
-        ;;
-
-    "agent:lint")
-        check_docker
-        log "Linting Edge Agent code..."
-        docker compose -f $COMPOSE_FILE run --rm edge_agent mix lint
-        ;;
-
-    "agent:test")
-        check_docker
-        shift
-        log "Running Edge Agent tests..."
-        docker compose -f $COMPOSE_FILE run --rm edge_agent_test "$@"
-        ;;
-
-    "agent:check")
-        check_docker
-        log "Running Edge Agent comprehensive checks..."
-        docker compose -f $COMPOSE_FILE run --rm edge_agent mix check
-        ;;
-
-    "agent:quality")
-        check_docker
-        log "Running Edge Agent quality checks..."
-        docker compose -f $COMPOSE_FILE run --rm edge_agent mix quality
-        ;;
-
-    "agent:security")
-        check_docker
-        log "Running Edge Agent security checks..."
-        docker compose -f $COMPOSE_FILE run --rm edge_agent mix security
-        ;;
-
-    "agent:precommit")
-        check_docker
-        log "Running Edge Agent precommit checks..."
-        docker compose -f $COMPOSE_FILE run --rm edge_agent mix precommit
-        ;;
-
-    # Combined commands for both services
-    "format")
-        check_docker
-        log "Formatting all Elixir code..."
-        docker compose -f $COMPOSE_FILE run --rm edge_admin mix format
-        docker compose -f $COMPOSE_FILE run --rm edge_agent mix format
-        log "All code formatted!"
-        ;;
-
-    "lint")
-        check_docker
-        log "Linting all Elixir code..."
-        docker compose -f $COMPOSE_FILE run --rm edge_admin mix lint
-        docker compose -f $COMPOSE_FILE run --rm edge_agent mix lint
-        log "All code linted!"
-        ;;
-
-    "test")
-        check_docker
-        log "Running all tests..."
-        docker compose -f $COMPOSE_FILE run --rm edge_admin_test
-        docker compose -f $COMPOSE_FILE run --rm edge_agent_test
-        log "All tests completed!"
-        ;;
-
-    "quality")
-        check_docker
-        log "Running quality checks on all services..."
-        docker compose -f $COMPOSE_FILE run --rm edge_admin mix quality
-        docker compose -f $COMPOSE_FILE run --rm edge_agent mix quality
-        log "All quality checks completed!"
-        ;;
-
-    "security")
-        check_docker
-        log "Running security checks on all services..."
-        docker compose -f $COMPOSE_FILE run --rm edge_admin mix security
-        docker compose -f $COMPOSE_FILE run --rm edge_agent mix security
-        log "All security checks completed!"
-        ;;
-
-    "precommit")
-        check_docker
-        log "Running precommit checks on all services..."
-        docker compose -f $COMPOSE_FILE run --rm edge_admin mix precommit
-        docker compose -f $COMPOSE_FILE run --rm edge_agent mix precommit
-        log "All precommit checks completed!"
-        ;;
-
-    # Database and migration commands
-    "db:migrate")
-        check_docker
-        shift
-        log "Running database migrations..."
-        docker compose -f $COMPOSE_FILE run --rm edge_admin mix ecto.migrate "$@"
-        ;;
-
-    "db:setup")
-        check_docker
-        log "Setting up databases..."
-        docker compose -f $COMPOSE_FILE run --rm edge_admin mix ecto.setup
-        docker compose -f $COMPOSE_FILE run --rm edge_agent mix ecto.setup
-        ;;
-
-    "db:reset")
-        check_docker
-        warn "This will delete all data! Press Ctrl+C to cancel, Enter to continue..."
-        read -r
-        log "Resetting databases..."
-        docker compose -f $COMPOSE_FILE run --rm edge_admin mix ecto.reset
-        docker compose -f $COMPOSE_FILE run --rm edge_agent mix ecto.reset
-        ;;
-
-    # Utility commands
-    "exec")
-        check_docker
-        shift
-        if [ $# -lt 2 ]; then
-            warn "Usage: ./bin/run exec <service> <command>"
-            exit 1
-        fi
-        service=$1
-        shift
-        log "Executing in $service: $*"
-        docker compose -f $COMPOSE_FILE exec "$service" "$@"
-        ;;
-
-    "shell")
-        check_docker
-        shift
-        if [ $# -eq 0 ]; then
-            warn "Usage: ./bin/run shell <service>"
-            echo "Available services: edge_admin, edge_agent"
-            exit 1
-        fi
-        service=$1
-        log "Opening shell in $service..."
-        docker compose -f $COMPOSE_FILE exec "$service" /bin/bash
-        ;;
-
-    "clean")
-        check_docker
-        log "Cleaning up Docker resources..."
-        docker compose -f $COMPOSE_FILE down --volumes --remove-orphans
-        docker system prune -f
-        ;;
-
-    # API testing commands
-    "api:test")
-        check_docker
-        shift
-        if [ $# -eq 0 ]; then
-            log "Testing Edge Admin API endpoints..."
-            # Add curl commands to test API endpoints based on the JSON files
-            warn "API testing not yet implemented"
-        else
-            log "Testing specific endpoint: $1"
-            warn "API testing not yet implemented"
-        fi
-        ;;
-
     *)
-        echo -e "${BLUE}Edge Core Management Commands${NC}"
-        echo "===================================="
-        echo "Usage:"
-        echo "  ./bin/run <command>                # Uses local environment"
-        echo "  ENV=production ./bin/run <command> # Uses production environment"
-        echo ""
-        echo -e "${YELLOW}Basic Docker Commands:${NC}"
-        echo "  check                    - Check Docker installations and environment"
-        echo "  build [services]         - Build containers (all or specific)"
-        echo "  up [options]             - Start containers in attached mode"
-        echo "  start [options]          - Build and start containers"
-        echo "  stop [services]          - Stop containers (all or specific)"
-        echo "  down [options]           - Stop and remove containers"
-        echo "  logs [service]           - View container logs (all services or specific)"
-        echo "  ps                       - List running containers"
-        echo "  restart [service]        - Restart containers (all or specific)"
-        echo ""
-        echo -e "${YELLOW}Edge Admin Commands:${NC}"
-        echo "  admin <mix-command>      - Run any Mix command in Edge Admin"
-        echo "  admin:shell              - Open Edge Admin IEx shell"
-        echo "  admin:format             - Format Edge Admin code"
-        echo "  admin:lint               - Lint Edge Admin code"
-        echo "  admin:test [options]     - Run Edge Admin tests"
-        echo "  admin:check              - Run comprehensive checks"
-        echo "  admin:quality            - Run quality checks (format + lint + dialyzer)"
-        echo "  admin:security           - Run security checks (deps.audit + sobelow)"
-        echo "  admin:precommit          - Run precommit checks"
-        echo ""
-        echo -e "${YELLOW}Edge Agent Commands:${NC}"
-        echo "  agent <mix-command>      - Run any Mix command in Edge Agent"
-        echo "  agent:shell              - Open Edge Agent IEx shell"
-        echo "  agent:format             - Format Edge Agent code"
-        echo "  agent:lint               - Lint Edge Agent code"
-        echo "  agent:test [options]     - Run Edge Agent tests"
-        echo "  agent:check              - Run comprehensive checks"
-        echo "  agent:quality            - Run quality checks (format + lint + dialyzer)"
-        echo "  agent:security           - Run security checks (deps.audit + sobelow)"
-        echo "  agent:precommit          - Run precommit checks"
-        echo ""
-        echo -e "${YELLOW}Combined Commands:${NC}"
-        echo "  format                   - Format all Elixir code (admin + agent)"
-        echo "  lint                     - Lint all Elixir code (admin + agent)"
-        echo "  test                     - Run all tests (admin + agent)"
-        echo "  quality                  - Run quality checks on all services"
-        echo "  security                 - Run security checks on all services"
-        echo "  precommit                - Run precommit checks on all services"
-        echo ""
-        echo -e "${YELLOW}Database Commands:${NC}"
-        echo "  db:migrate [options]     - Run database migrations"
-        echo "  db:setup                 - Set up databases for both services"
-        echo "  db:reset                 - Reset databases (WARNING: deletes all data)"
-        echo ""
-        echo -e "${YELLOW}Utilities:${NC}"
-        echo "  exec <service> <command> - Execute command in running container"
-        echo "  shell <service>          - Open bash shell in container"
-        echo "  clean                    - Clean up Docker resources and volumes"
-        echo "  api:test [endpoint]      - Test API endpoints (planned)"
-        echo ""
-        echo -e "${GREEN}Examples:${NC}"
-        echo "  ./bin/run start                    # Start all services"
-        echo "  ./bin/run admin:test               # Run Edge Admin tests"
-        echo "  ./bin/run admin ecto.migrate       # Run Edge Admin migrations"
-        echo "  ./bin/run format                   # Format all code"
-        echo "  ./bin/run logs edge_admin          # View Edge Admin logs"
-        echo "  ENV=production ./bin/run up        # Start in production mode"
+        error "Unknown scope: $1"
+        show_help
+        exit 1
         ;;
 esac

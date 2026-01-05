@@ -1,12 +1,28 @@
 # deploy/production/compose/edge_vpn_proxy/Caddyfile
-http://netmaker.localtest.me {
+http://netmaker.yourdomain.com {
     reverse_proxy edge_vpn:8081
 }
 
-http://broker.netmaker.localtest.me {
-    @ws {
-        header Connection *Upgrade*
-        header Upgrade websocket
-    }
-    reverse_proxy @ws edge_vpn_broker:8083
+http://netmaker-ui.yourdomain.com {
+    reverse_proxy edge_vpn_ui:80
+}
+
+http://edge-admin.yourdomain.com {
+    reverse_proxy edge_admin:44000
+}
+
+http://edge-admin2.yourdomain.com {
+    reverse_proxy edge_admin_2:44000
+}
+
+http://edge-admin3.yourdomain.com {
+    reverse_proxy edge_admin_3:44000
+}
+
+http://broker.yourdomain.com {
+    reverse_proxy edge_vpn_broker:8083
+}
+
+http://broker-ui.yourdomain.com {
+    reverse_proxy edge_vpn_broker:18083
 }

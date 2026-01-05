@@ -71,9 +71,9 @@ echo "Bootstrapping Netmaker superadmin..."
 echo "Bootstrapping default cluster..."
 /app/bin/create_default_cluster
 
-# Start EPMD daemon for Erlang distribution
+# Start EPMD daemon for Erlang distribution (required for admin clustering)
 echo "Starting EPMD daemon..."
-epmd -daemon
+/app/erts-*/bin/epmd -daemon
 
 # Start netclient daemon in the background
 echo "Starting netclient daemon..."

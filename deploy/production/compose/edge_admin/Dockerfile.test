@@ -1,4 +1,33 @@
-# deploy/production/compose/edge_admin/Dockerfile
+# deploy/production/compose/edge_admin/Dockerfile.test
+# Test variant with patched netclient for local testing without HTTPS
+
+# -----------------------------------------------
+# Stage 0: Build patched netclient (for testing)
+# -----------------------------------------------
+FROM golang:1.25-alpine AS netclient-builder
+
+ARG NETCLIENT_VERSION=v1.4.0
+
+# Install git
+RUN apk add --no-cache git
+
+# Clone the netclient repository and checkout specific version
+WORKDIR /build
+RUN git clone https://github.com/gravitl/netclient.git . && \
+    git checkout ${NETCLIENT_VERSION}
+
+# Patch ONLY API-related https:// to http:// (surgical patches for local dev/testing)
+# Using find to apply patches to all relevant files
+RUN find . -type f -name '*.go' -exec sed -i \
+    -e 's|"https://" + server\.API|"http://" + server.API|g' \
+    -e 's|"https://" + serverData\.Server|"http://" + serverData.Server|g' \
+    -e 's|"https://" + api|"http://" + api|g' \
+    -e 's|fmt\.Sprintf("https://%s/|fmt.Sprintf("http://%s/|g' \
+    {} \;
+
+# Build the patched netclient
+RUN go mod download && \
+    CGO_ENABLED=0 GOOS=linux go build -o netclient .
 
 # -----------------------------------------------
 # Stage 1: Build the OTP release
@@ -65,8 +94,6 @@ RUN --mount=type=cache,target=/root/.hex \
 # -----------------------------------------------
 FROM debian:stable-20250520-slim
 
-ARG NETCLIENT_VERSION=v1.4.0
-
 # Install runtime dependencies in single layer
 # Grouped by purpose for maintainability
 RUN apt-get update -y && \
@@ -77,7 +104,7 @@ RUN apt-get update -y && \
     libncurses6 \
     locales \
     ca-certificates \
-    # Essential tools (healthcheck, troubleshooting, netclient download, capability checks)
+    # Essential tools (healthcheck, troubleshooting, capability checks)
     curl \
     wget \
     libcap2-bin \
@@ -99,9 +126,9 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-# Download official netclient binary
-RUN wget -q "https://github.com/gravitl/netclient/releases/download/${NETCLIENT_VERSION}/netclient-linux-amd64" -O /usr/local/bin/netclient && \
-    chmod +x /usr/local/bin/netclient && \
+# Copy patched netclient binary from builder stage (TEST VARIANT)
+COPY --from=netclient-builder /build/netclient /usr/local/bin/netclient
+RUN chmod +x /usr/local/bin/netclient && \
     mkdir -p /etc/netclient && \
     chmod 0775 /etc/netclient
 

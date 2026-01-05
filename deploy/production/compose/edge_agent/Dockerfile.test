@@ -1,0 +1,179 @@
+# deploy/production/compose/edge_agent/Dockerfile.test
+# Test variant with patched netclient for local testing without HTTPS
+
+# -----------------------------------------------
+# Stage 0: Build patched netclient (for testing)
+# -----------------------------------------------
+FROM golang:1.25-alpine AS netclient-builder
+
+ARG NETCLIENT_VERSION=v1.4.0
+
+# Install git
+RUN apk add --no-cache git
+
+# Clone the netclient repository and checkout specific version
+WORKDIR /build
+RUN git clone https://github.com/gravitl/netclient.git . && \
+    git checkout ${NETCLIENT_VERSION}
+
+# Patch ONLY API-related https:// to http:// (surgical patches for local dev/testing)
+# Using find to apply patches to all relevant files
+RUN find . -type f -name '*.go' -exec sed -i \
+    -e 's|"https://" + server\.API|"http://" + server.API|g' \
+    -e 's|"https://" + serverData\.Server|"http://" + serverData.Server|g' \
+    -e 's|"https://" + api|"http://" + api|g' \
+    -e 's|fmt\.Sprintf("https://%s/|fmt.Sprintf("http://%s/|g' \
+    {} \;
+
+# Build the patched netclient
+RUN go mod download && \
+    CGO_ENABLED=0 GOOS=linux go build -o netclient .
+
+# -----------------------------------------------
+# Stage 1: Build the OTP release
+# -----------------------------------------------
+FROM elixir:1.19.4-otp-28-slim AS builder
+
+# Install build dependencies
+RUN apt-get update -y && \
+    apt-get install -y build-essential git sqlite3 libsqlite3-dev && \
+    apt-get clean && \
+    rm -f /var/lib/apt/lists/*_*
+
+WORKDIR /app
+
+# Install Hex and Rebar
+RUN mix local.hex --force && \
+    mix local.rebar --force
+
+ENV MIX_ENV=prod
+ENV ERL_MAX_PORTS=65536
+ENV ELIXIR_MAKE_PARALLEL=true
+
+# First, build the nexmaker library with caching
+WORKDIR /nexmaker
+COPY nexmaker/mix.exs nexmaker/mix.lock ./
+RUN --mount=type=cache,target=/root/.hex \
+    --mount=type=cache,target=/root/.mix \
+    mix deps.get --only $MIX_ENV
+COPY nexmaker/lib lib/
+RUN --mount=type=cache,target=/root/.hex \
+    --mount=type=cache,target=/root/.mix \
+    mix deps.compile --parallel && mix compile --parallel
+
+# Then build the main application
+WORKDIR /app
+
+# Copy mix files and install dependencies with caching
+COPY edge_agent/mix.exs edge_agent/mix.lock ./
+RUN --mount=type=cache,target=/root/.hex \
+    --mount=type=cache,target=/root/.mix \
+    mix deps.get --only $MIX_ENV
+
+# Copy config files (needed for compilation)
+COPY edge_agent/config config/
+RUN --mount=type=cache,target=/root/.hex \
+    --mount=type=cache,target=/root/.mix \
+    mix deps.compile --parallel
+
+# Copy source code and compile
+COPY edge_agent/lib lib/
+COPY edge_agent/priv priv/
+COPY edge_agent/rel rel/
+RUN --mount=type=cache,target=/root/.hex \
+    --mount=type=cache,target=/root/.mix \
+    mix compile --parallel
+
+# Create release
+RUN --mount=type=cache,target=/root/.hex \
+    --mount=type=cache,target=/root/.mix \
+    mix release
+
+# -----------------------------------------------
+# Stage 2: Production runtime image (optimized)
+# -----------------------------------------------
+FROM debian:stable-20250520-slim
+
+ENV NODE_EXPORTER_VERSION="1.10.2"
+
+# Install runtime dependencies in single layer
+# Agent leverages host tools via hostscript (nsenter/chroot to /host)
+# So we only install what the AGENT itself needs, not what commands need
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends \
+    # Erlang runtime dependencies
+    libstdc++6 \
+    openssl \
+    libncurses6 \
+    locales \
+    ca-certificates \
+    # Essential tools (healthcheck, metrics download, SSH server, capability checks)
+    curl \
+    wget \
+    libcap2-bin \
+    # Process management (pgrep, pkill for netclient cleanup)
+    procps \
+    # Agent database (SQLite)
+    sqlite3 \
+    # Agent-specific: WireGuard management (VPN + wireguard_exporter)
+    wireguard-tools \
+    # Agent-specific: nsenter for hostscript (part of util-linux)
+    util-linux && \
+    # Set locale in same layer
+    sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen && \
+    # Install node_exporter in same layer
+    wget -q https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz && \
+    tar xzf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz && \
+    mv node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64/node_exporter /usr/local/bin/ && \
+    chmod +x /usr/local/bin/node_exporter && \
+    # Clean up in same layer to reduce image size
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/* node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64*
+
+# Set locale environment variables
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+
+# Copy patched netclient binary from builder stage (TEST VARIANT)
+COPY --from=netclient-builder /build/netclient /usr/local/bin/netclient
+RUN chmod +x /usr/local/bin/netclient && \
+    mkdir -p /etc/netclient && \
+    chmod 0775 /etc/netclient
+
+# Copy wireguard_exporter binary from official Docker image
+COPY --from=mindflavor/prometheus-wireguard-exporter:3.6.6 /usr/local/bin/prometheus_wireguard_exporter /usr/local/bin/prometheus_wireguard_exporter
+RUN chmod +x /usr/local/bin/prometheus_wireguard_exporter
+
+# Copy the release from builder stage
+COPY --from=builder /app/_build/prod/rel/edge_agent /app
+RUN chmod +x /app/bin/migrate /app/bin/server
+
+# Create directories with proper permissions
+RUN mkdir -p /app/data /tmp/erl_crash && \
+    chmod -R 755 /app/data /tmp/erl_crash
+
+# Copy entrypoint and utility scripts
+COPY ./deploy/production/compose/edge_agent/entrypoint /entrypoint
+RUN sed -i 's/\r$//g' /entrypoint && \
+    chmod +x /entrypoint
+
+COPY ./deploy/production/compose/edge_agent/start /start
+RUN sed -i 's/\r$//g' /start && \
+    chmod +x /start
+
+# hostscript: nsenter/chroot to execute commands on host
+# This is how agent leverages host tools instead of bundling them
+COPY ./deploy/production/compose/edge_agent/hostscript /usr/local/bin/hostscript
+RUN sed -i 's/\r$//g' /usr/local/bin/hostscript && \
+    chmod +x /usr/local/bin/hostscript
+
+COPY ./deploy/production/compose/edge_agent/edge_bashrc /usr/local/bin/edge_bashrc
+RUN sed -i 's/\r$//g' /usr/local/bin/edge_bashrc && \
+    chmod +r /usr/local/bin/edge_bashrc
+
+WORKDIR /app
+
+ENTRYPOINT ["/entrypoint"]
+
+CMD ["/start"]

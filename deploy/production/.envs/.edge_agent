@@ -1,8 +1,8 @@
 # deploy/production/.envs/.edge_agent
 ENROLLMENT_KEY=
-PUBLIC_ENROLLMENT_KEY_URL=http://localhost:4000/api/clusters/default/enrollment_keys/public
+PUBLIC_ENROLLMENT_KEY_URL=https://edge-admin.yourdomain.com/api/clusters/default/enrollment_keys/public
 
 # Self-update configuration
-SELF_UPDATE_ENABLED=false
+SELF_UPDATE_ENABLED=true
 WATCHTOWER_URL=http://localhost:48080
 WATCHTOWER_HTTP_API_TOKEN=change-me-in-production

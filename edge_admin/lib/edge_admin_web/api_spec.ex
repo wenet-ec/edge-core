@@ -35,7 +35,7 @@ defmodule EdgeAdminWeb.ApiSpec do
         spec
         | components: %Components{
             securitySchemes: %{
-              "masterKey" => %SecurityScheme{
+              "Master Key" => %SecurityScheme{
                 type: "http",
                 scheme: "bearer",
                 bearerFormat: "opaque",
@@ -43,7 +43,7 @@ defmodule EdgeAdminWeb.ApiSpec do
               }
             }
           },
-          security: [%{"masterKey" => []}]
+          security: [%{"Master Key" => []}]
       }
     else
       spec

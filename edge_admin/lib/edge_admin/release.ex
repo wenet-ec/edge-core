@@ -39,8 +39,35 @@ defmodule EdgeAdmin.Release do
     load_app()
 
     for repo <- repos() do
-      {:ok, _, _} = Migrator.with_repo(repo, &Migrator.run(&1, :up, all: true))
+      # Retry logic to handle transient connection issues and lock contention
+      migrate_with_retry(repo, max_attempts: 10, backoff: 2000)
     end
+  end
+
+  defp migrate_with_retry(repo, opts) do
+    max_attempts = Keyword.get(opts, :max_attempts, 10)
+    backoff = Keyword.get(opts, :backoff, 2000)
+
+    Enum.reduce_while(1..max_attempts, nil, fn attempt, _acc ->
+      case Migrator.with_repo(repo, &Migrator.run(&1, :up, all: true)) do
+        {:ok, _, _} = result ->
+          Logger.info("Migrations completed successfully")
+          {:halt, result}
+
+        {:error, error} ->
+          Logger.warning("Migration attempt #{attempt}/#{max_attempts} failed: #{inspect(error)}")
+
+          if attempt < max_attempts do
+            wait_time = backoff * attempt
+            Logger.info("Retrying in #{wait_time}ms...")
+            Process.sleep(wait_time)
+            {:cont, nil}
+          else
+            Logger.error("Migration failed after #{max_attempts} attempts")
+            raise "Migration failed: #{inspect(error)}"
+          end
+      end
+    end)
   end
 
   def rollback(repo, version) do

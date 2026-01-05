@@ -10,7 +10,11 @@ config :edge_admin, EdgeAdmin.Repo,
   port: get_env!("DB_PORT", :integer),
   ssl: get_env("DB_SSL", :boolean),
   pool_size: get_env!("DB_POOL_SIZE", :integer),
-  socket_options: if(get_env("DB_IPV6", :boolean), do: [:inet6], else: [])
+  socket_options: if(get_env("DB_IPV6", :boolean), do: [:inet6], else: []),
+  queue_target: 5_000,
+  queue_interval: 1_000,
+  timeout: 15_000,
+  connect_timeout: 15_000
 
 # NOTE: Only set `server` to `true` if `PHX_SERVER` is present. We cannot set
 # it to `false` otherwise because `mix phx.server` will stop working without it.

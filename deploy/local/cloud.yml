@@ -284,25 +284,6 @@ services:
       - local_edge_vpn_dns_config:/root/config/dnsconfig
     command: -conf /root/config/dnsconfig/Corefile
 
-  edge_vpn_dns_proxy:
-    image: alpine/socat:latest
-    container_name: local_edge_vpn_dns_proxy
-    networks:
-      local_edge_core:
-        aliases:
-          - dns.netmaker.localtest.me
-    ports:
-      - "5353:5353/udp"
-      - "5353:5353/tcp"
-    depends_on:
-      - edge_vpn_dns
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        socat -d -d UDP4-LISTEN:5353,reuseaddr,fork UDP4:edge_vpn_dns:53 &
-        socat -d -d TCP4-LISTEN:5353,reuseaddr,fork TCP4:edge_vpn_dns:53 &
-        wait
-
   edge_vpn_proxy:
     image: caddy:2.10-alpine
     container_name: local_edge_vpn_proxy
@@ -310,12 +291,11 @@ services:
       local_edge_core:
         aliases:
           - netmaker.localtest.me
-          - broker.netmaker.localtest.me
+          - broker.localtest.me
     ports:
-      - "443:443"
       - "80:80"
     volumes:
-      - ../../deploy/production/compose/edge_vpn_proxy/Caddyfile:/etc/caddy/Caddyfile
+      - ../../deploy/local/compose/edge_vpn_proxy/Caddyfile:/etc/caddy/Caddyfile
       - local_edge_vpn_proxy_data:/data
       - local_edge_vpn_proxy_config:/config
     depends_on:

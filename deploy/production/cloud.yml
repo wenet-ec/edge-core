@@ -40,6 +40,7 @@ services:
     build:
       context: ../..
       dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
+      # dockerfile: ./deploy/production/compose/edge_admin/Dockerfile.test
     image: production_edge_admin
     container_name: production_edge_admin
     networks:
@@ -54,9 +55,9 @@ services:
     env_file:
       - ./.envs/.edge_admin
     ports:
-      - "4000:44000"
-      - "3128:43128"  # HTTP proxy
-      - "1080:41080"  # SOCKS5 proxy
+      - "34000:44000"
+      - "33128:43128"  # HTTP proxy
+      - "31080:41080"  # SOCKS5 proxy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
       interval: 60s
@@ -75,6 +76,7 @@ services:
     build:
       context: ../..
       dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
+      # dockerfile: ./deploy/production/compose/edge_admin/Dockerfile.test
     image: production_edge_admin
     container_name: production_edge_admin_2
     networks:
@@ -91,9 +93,9 @@ services:
     env_file:
       - ./.envs/.edge_admin
     ports:
-      - "4001:44000"
-      - "3129:43128"  # HTTP proxy
-      - "1081:41080"  # SOCKS5 proxy
+      - "34001:44000"
+      - "33129:43128"  # HTTP proxy
+      - "31081:41080"  # SOCKS5 proxy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
       interval: 60s
@@ -112,6 +114,7 @@ services:
     build:
       context: ../..
       dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
+      # dockerfile: ./deploy/production/compose/edge_admin/Dockerfile.test
     image: production_edge_admin
     container_name: production_edge_admin_3
     networks:
@@ -131,9 +134,9 @@ services:
       - ADMIN_CLUSTER_NAME=b
       - ADMIN_CLUSTER_SUBNET=100.63.1.0/24
     ports:
-      - "4002:44000"
-      - "3130:43128"  # HTTP proxy
-      - "1082:41080"  # SOCKS5 proxy
+      - "34002:44000"
+      - "33130:43128"  # HTTP proxy
+      - "31082:41080"  # SOCKS5 proxy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
       interval: 60s
@@ -170,10 +173,6 @@ services:
     container_name: production_edge_vpn_broker
     networks:
       - production_edge_core
-    ports:
-      - "8083:8083"
-      - "8084:8084"
-      - "18083:18083"
     volumes:
       - production_edge_vpn_broker_data:/opt/emqx/data
       - production_edge_vpn_broker_etc:/opt/emqx/etc
@@ -206,8 +205,6 @@ services:
       - /dev/net/tun:/dev/net/tun:rw
     env_file:
       - ./.envs/.edge_vpn
-    ports:
-      - "8081:8081"
     depends_on:
       edge_vpn_db:
         condition: service_healthy
@@ -217,8 +214,17 @@ services:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/api/server/status"]
       interval: 10s
       timeout: 5s
-      retries: 1
+      retries: 3
       start_period: 10s
+
+  edge_vpn_ui:
+    container_name: edge_vpn_ui
+    image: gravitl/netmaker-ui:v1.4.0
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+    environment:
+      - BACKEND_URL=https://netmaker.yourdomain.com
 
   edge_vpn_dns:
     image: coredns/coredns:1.13.2
@@ -231,9 +237,6 @@ services:
         condition: service_healthy
     volumes:
       - production_edge_vpn_dns_config:/root/config/dnsconfig
-    ports:
-      - "5353:53/udp"
-      - "5353:53/tcp"
     command: -conf /root/config/dnsconfig/Corefile
 
   edge_vpn_proxy:
@@ -245,7 +248,6 @@ services:
           - netmaker.yourdomain.com
           - broker.yourdomain.com
     ports:
-      - "443:443"
       - "80:80"
     volumes:
       - ./compose/edge_vpn_proxy/Caddyfile:/etc/caddy/Caddyfile
@@ -262,7 +264,7 @@ services:
     networks:
       - production_edge_core
     ports:
-      - "8428:8428"
+      - "48428:8428"
     volumes:
       - production_edge_metrics_storage_data:/storage
     env_file:
@@ -287,7 +289,7 @@ services:
     env_file:
       - ./.envs/.edge_metrics_collector
     ports:
-      - "8429:8429"
+      - "48429:8429"
     command:
       - '-envflag.enable'
       - '-envflag.prefix=VM_'

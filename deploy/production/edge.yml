@@ -13,11 +13,13 @@ services:
     build:
       context: ../..
       dockerfile: ./deploy/production/compose/edge_agent/Dockerfile
-    image: localhost:45000/edge_agent:stable
+      # dockerfile: ./deploy/production/compose/edge_agent/Dockerfile.test
+    image: registry.yourdomain.com/edge_agent:stable
     container_name: production_edge_agent
     volumes:
       - production_edge_agent_data:/app/data
       - production_edge_agent_netclient_data:/etc/netclient
+      - /etc/resolv.conf:/etc/resolv.conf:rw
       - /:/host:ro
     env_file:
       - ./.envs/.edge_agent

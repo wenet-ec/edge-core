@@ -46,6 +46,13 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
       iex> changeset(%{"output" => "Error"}, "completed", 1)
       {:error, %Ecto.Changeset{}}
   """
+  # Handle wrapped params (from API controller)
+  def changeset(%{"command_execution" => command_execution_attrs}, current_status, current_exit_code)
+      when is_map(command_execution_attrs) do
+    # Unwrap command_execution
+    changeset(command_execution_attrs, current_status, current_exit_code)
+  end
+
   def changeset(attrs, current_status, current_exit_code) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:output, :exit_code, :completed_at])

@@ -203,7 +203,7 @@ defmodule EdgeAgent.MetricsServers do
 
   @impl true
   def terminate(_reason, state) do
-    if state.node_exporter_pid or state.wireguard_exporter_pid do
+    if state.node_exporter_pid != nil or state.wireguard_exporter_pid != nil do
       Logger.info("Cleaning up metrics exporter processes on shutdown...")
       do_stop_servers(state)
     end

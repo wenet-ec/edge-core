@@ -13,6 +13,13 @@ defmodule EdgeAdminWeb.Router do
     plug(:fetch_live_flash)
   end
 
+  # Browser pipeline with basic auth (for LiveDashboard only)
+  pipeline :browser_with_basic_auth do
+    plug(:fetch_session)
+    plug(:fetch_live_flash)
+    plug(:basic_auth)
+  end
+
   # Public API pipeline (no authentication required)
   pipeline :public_api do
     plug(:accepts, ["json"])
@@ -54,6 +61,11 @@ defmodule EdgeAdminWeb.Router do
 
     # Serve ReDoc - alternative API documentation UI
     get("/redoc", Redoc.Plug.RedocUI, spec_url: "/api/openapi")
+  end
+
+  # LiveDashboard with basic auth protection
+  scope "/" do
+    pipe_through(:browser_with_basic_auth)
 
     # LiveDashboard (always mounted, but can be disabled via endpoint check)
     live_dashboard("/live_dashboard",
@@ -197,5 +209,16 @@ defmodule EdgeAdminWeb.Router do
     end
 
     resources("/self_update_requests", SelfUpdates.SelfUpdateRequestController, only: [:index, :create, :show, :delete])
+  end
+
+  # Basic auth helper for LiveDashboard
+  defp basic_auth(conn, _opts) do
+    basic_auth_config = Application.get_env(:edge_admin, :basic_auth)
+
+    if basic_auth_config[:username] do
+      Plug.BasicAuth.basic_auth(conn, basic_auth_config)
+    else
+      conn
+    end
   end
 end

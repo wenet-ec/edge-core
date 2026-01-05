@@ -1,0 +1,8 @@
+# deploy/local/compose/edge_vpn_proxy/Caddyfile
+http://netmaker.localtest.me {
+    reverse_proxy edge_vpn:8081
+}
+
+http://broker.localtest.me {
+    reverse_proxy edge_vpn_broker:8083
+}

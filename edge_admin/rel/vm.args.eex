@@ -36,10 +36,6 @@
 ## Default 1024KB too low for distributed multi-admin setup
 +zdbbl 32768
 
-## Distribution fragment size (bytes) - how large messages are chunked
-## Larger = fewer fragments for big messages (metadata updates)
-+zdbbl_batch_size 8192
-
 ## Kernel poll - use efficient epoll/kqueue for socket events
 +K true
 

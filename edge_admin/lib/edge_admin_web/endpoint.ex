@@ -14,7 +14,6 @@ defmodule EdgeAdminWeb.Endpoint do
   plug(:ping)
   plug(:livez)
   plug(:cors)
-  plug(:basic_auth)
 
   # Serve static files
   plug(Plug.Static,
@@ -121,16 +120,6 @@ defmodule EdgeAdminWeb.Endpoint do
     opts = Corsica.init(Application.get_env(:edge_admin, Corsica))
 
     Corsica.call(conn, opts)
-  end
-
-  defp basic_auth(conn, _opts) do
-    basic_auth_config = Application.get_env(:edge_admin, :basic_auth)
-
-    if basic_auth_config[:username] do
-      Plug.BasicAuth.basic_auth(conn, basic_auth_config)
-    else
-      conn
-    end
   end
 
   # Splitting routers in separate modules has a negative side effect:

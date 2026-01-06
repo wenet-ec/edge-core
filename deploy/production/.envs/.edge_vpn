@@ -24,5 +24,5 @@ EMQX_REST_ENDPOINT=http://edge_vpn_broker:18083
 MQ_USERNAME=admin
 MQ_PASSWORD=netmaker123
 VERBOSITY=1
-STUN_LIST=stun1.l.google.com:19302,stun2.l.google.com:19302,stun.netmaker.io:3478
+STUN_LIST=stun1.l.google.com:19302,stun2.l.google.com:19302,stun.stunprotocol.org:3478,stun.nextcloud.com:443,stun.netmaker.io:3478
 SERVER_API_CONN_STRING=netmaker.yourdomain.com

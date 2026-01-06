@@ -100,7 +100,13 @@ defmodule EdgeAgent.ProxyServers.ErrorHandler do
 
       # Authentication errors
       r
-      when r in [:auth_failed, :no_auth_header, :invalid_credentials, :no_acceptable_methods, :unsupported_auth_version] ->
+      when r in [
+             :auth_failed,
+             :no_auth_header,
+             :invalid_credentials,
+             :no_acceptable_methods,
+             :unsupported_auth_version
+           ] ->
         :authentication
 
       # Timeout errors

@@ -454,7 +454,8 @@ defmodule EdgeAdmin.Admins.Metadata do
   defp read_admins_from_syn do
     # Get all admins from syn process group
     # :syn.members/2 returns list of {pid, metadata} tuples
-    # Metadata contains: %{name: admin_name, max_capacity: capacity, erlang_node_name: ..., dns_hostname: ..., netmaker_host_id: ...}
+    # Metadata contains: %{name: admin_name, max_capacity: capacity,
+    #   erlang_node_name: ..., dns_hostname: ..., netmaker_host_id: ...}
     [{:admin, admin_info}] = :ets.lookup(@table, :admin)
     admin_cluster_name = admin_info.admin_cluster_name
 

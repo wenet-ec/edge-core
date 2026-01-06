@@ -74,7 +74,7 @@ defmodule EdgeAgent.Mixfile do
       {:req, "~> 0.5"},
 
       # HTTP server
-      {:bandit, "~> 1.9"},
+      {:bandit, "~> 1.10"},
       {:ranch, "~> 2.2"},
       {:phoenix, "~> 1.8"},
       {:phoenix_live_reload, "~> 1.6", only: :dev},
@@ -89,6 +89,7 @@ defmodule EdgeAgent.Mixfile do
 
       # Background jobs
       {:oban, "~> 2.20"},
+
       # Telemetry
       {:prom_ex, "~> 1.11"},
 

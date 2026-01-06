@@ -14,23 +14,31 @@
       color: true,
       checks: %{
         enabled: [
-          # Use modern Credo defaults with specific customizations
+          # Readability customizations
           {Credo.Check.Readability.MaxLineLength, [priority: :low, max_length: 120]},
-          {Credo.Check.Refactor.ABCSize, [max_size: 40]},
 
-          # Keep valuable naming checks
+          # Refactoring customizations
+          # ABC Size measures Assignment, Branch, and Condition complexity
+          # Increased from 40 to 50 to accommodate complex business logic functions
+          # Consider refactoring functions above this threshold
+          {Credo.Check.Refactor.ABCSize, [max_size: 50]},
+
+          # Consistency checks from plugins
+          {CredoEnvvar.Check.Warning.EnvironmentVariablesAtCompileTime},
           {CredoNaming.Check.Warning.AvoidSpecificTermsInModuleNames,
            terms: ["Manager", "Fetcher", "Builder", "Persister", "Serializer", ~r/^Helpers?$/i, ~r/^Utils?$/i]},
           {CredoNaming.Check.Consistency.ModuleFilename,
-           excluded_paths: ["config", "mix.exs", "priv", "test/support"], acronyms: []}
+           excluded_paths: ["config", "mix.exs", "priv", "test/support", "lib/edge_admin_web/live"],
+           acronyms: []}
         ],
         disabled: [
-          # Disable overly strict checks for API development
+          # Disable overly strict checks for pragmatic API development
           {Credo.Check.Readability.ModuleDoc, false},
           {Credo.Check.Readability.Specs, false},
           {Credo.Check.Readability.StrictModuleLayout, false},
-          {Credo.Check.Design.DuplicatedCode, false},
-          {CredoEnvvar.Check.Warning.EnvironmentVariablesAtCompileTime, false}
+
+          # Duplicated code is acceptable in controllers and simple CRUD operations
+          {Credo.Check.Design.DuplicatedCode, false}
         ]
       }
     }

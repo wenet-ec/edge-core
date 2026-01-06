@@ -851,11 +851,21 @@ defmodule Nexmaker.Cli do
             {:ok, peer_data} when is_map(peer_data) ->
               {:ok, peer_data}
 
-            {:ok, _other} ->
+            {:ok, []} ->
+              # Empty array means no peers - return empty peer map structure
+              Logger.warning("netclient peers returned empty array (no peers found)")
+              {:ok, %{"peers" => %{}}}
+
+            {:ok, other} ->
+              Logger.error("netclient peers returned unexpected JSON format (expected map, got #{inspect(other)})")
+              Logger.debug("Raw output: #{output}")
+              Logger.debug("Cleaned output: #{cleaned_output}")
               {:error, :invalid_output_format}
 
             {:error, reason} ->
               Logger.error("Failed to parse netclient peers output: #{inspect(reason)}")
+              Logger.debug("Raw output: #{output}")
+              Logger.debug("Cleaned output: #{cleaned_output}")
               {:error, {:json_parse_error, reason}}
           end
         else

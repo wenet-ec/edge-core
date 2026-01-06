@@ -75,7 +75,7 @@ defmodule EdgeAdmin.Mixfile do
       {:req, "~> 0.5"},
 
       # HTTP server
-      {:bandit, "~> 1.9"},
+      {:bandit, "~> 1.10"},
       {:corsica, "~> 2.1"},
       {:ranch, "~> 2.2"},
 

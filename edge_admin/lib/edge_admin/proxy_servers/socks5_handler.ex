@@ -88,7 +88,8 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
          :ok <- send_auth_method(socket, transport, methods),
          {:ok, routing_mode, exit_node} <- handle_authentication(socket, transport),
          {:ok, target_host, target_port} <- read_connect_request(socket, transport),
-         {:ok, _target_socket} <- establish_tunnel(socket, transport, target_host, target_port, routing_mode, exit_node) do
+         {:ok, _target_socket} <-
+           establish_tunnel(socket, transport, target_host, target_port, routing_mode, exit_node) do
       :timer.sleep(:infinity)
     end
   end

@@ -137,6 +137,22 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
           ]
         ),
 
+        # Proxy security metrics - blocked requests
+        counter(
+          [:edge_agent, :proxy, :http, :blocked, :total],
+          event_name: [:edge_agent, :proxy, :http, :blocked],
+          description: "Total HTTP proxy requests blocked by security rules",
+          tags: [:reason],
+          tag_values: &get_reason_tag/1
+        ),
+        counter(
+          [:edge_agent, :proxy, :socks5, :blocked, :total],
+          event_name: [:edge_agent, :proxy, :socks5, :blocked],
+          description: "Total SOCKS5 proxy requests blocked by security rules",
+          tags: [:reason],
+          tag_values: &get_reason_tag/1
+        ),
+
         # SSH server metrics
         counter(
           [:edge_agent, :ssh, :connection, :total],
@@ -195,5 +211,9 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
 
   defp get_ssh_auth_tags(%{username: username, auth_method: auth_method, result: result}) do
     %{username: to_string(username), auth_method: to_string(auth_method), result: to_string(result)}
+  end
+
+  defp get_reason_tag(%{reason: reason}) do
+    %{reason: to_string(reason)}
   end
 end

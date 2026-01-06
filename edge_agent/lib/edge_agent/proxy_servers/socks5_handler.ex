@@ -18,6 +18,7 @@ defmodule EdgeAgent.ProxyServers.Socks5Handler do
 
   alias EdgeAgent.ProxyServers.Authentication
   alias EdgeAgent.ProxyServers.Config
+  alias EdgeAgent.ProxyServers.DestinationValidator
   alias EdgeAgent.ProxyServers.ErrorHandler
   alias EdgeAgent.ProxyServers.TcpTunnel
 
@@ -312,14 +313,30 @@ defmodule EdgeAgent.ProxyServers.Socks5Handler do
 
   # Step 5: Establish tunnel
   defp establish_tunnel(socket, transport, target_host, target_port) do
-    case TcpTunnel.connect_and_forward(socket, target_host, target_port) do
-      {:ok, target_socket} ->
-        send_reply(socket, transport, @reply_success, target_host, target_port)
-        {:ok, target_socket}
+    # Validate destination before connecting
+    case DestinationValidator.validate_destination(target_host, target_port) do
+      :ok ->
+        case TcpTunnel.connect_and_forward(socket, target_host, target_port) do
+          {:ok, target_socket} ->
+            send_reply(socket, transport, @reply_success, target_host, target_port)
+            {:ok, target_socket}
+
+          {:error, reason} ->
+            reply_code = ErrorHandler.socks5_reply_code(reason)
+            send_reply(socket, transport, reply_code, target_host, target_port)
+            {:error, reason}
+        end
 
       {:error, reason} ->
-        reply_code = ErrorHandler.socks5_reply_code(reason)
-        send_reply(socket, transport, reply_code, target_host, target_port)
+        # Emit telemetry for blocked request
+        :telemetry.execute(
+          [:edge_agent, :proxy, :socks5, :blocked],
+          %{count: 1},
+          %{reason: reason, host: target_host, port: target_port}
+        )
+
+        # Send SOCKS5 forbidden reply (connection not allowed by ruleset)
+        send_reply(socket, transport, 2, target_host, target_port)
         {:error, reason}
     end
   end

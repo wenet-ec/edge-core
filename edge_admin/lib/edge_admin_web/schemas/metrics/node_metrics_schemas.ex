@@ -326,37 +326,49 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
             },
             proxy: %Schema{
               type: :object,
-              description: "Proxy server connection metrics",
+              description: "Proxy server connection and security metrics",
               properties: %{
                 http_connections_total: %Schema{
                   type: :integer,
                   nullable: true,
                   description: "Total HTTP proxy connections"
                 },
-                http_connections_success: %Schema{
+                http_blocked_total: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Successful HTTP connections"
+                  description: "Total HTTP requests blocked by security rules"
                 },
-                http_connections_failed: %Schema{
-                  type: :integer,
+                http_blocked_by_reason: %Schema{
+                  type: :object,
                   nullable: true,
-                  description: "Failed HTTP connections"
+                  description: "HTTP blocked requests grouped by reason",
+                  additionalProperties: %Schema{type: :integer},
+                  example: %{
+                    "localhost_blocked" => 5,
+                    "docker_network_blocked" => 3,
+                    "metadata_service_blocked" => 2,
+                    "docker_port_blocked" => 1
+                  }
                 },
                 socks5_connections_total: %Schema{
                   type: :integer,
                   nullable: true,
                   description: "Total SOCKS5 proxy connections"
                 },
-                socks5_connections_success: %Schema{
+                socks5_blocked_total: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Successful SOCKS5 connections"
+                  description: "Total SOCKS5 requests blocked by security rules"
                 },
-                socks5_connections_failed: %Schema{
-                  type: :integer,
+                socks5_blocked_by_reason: %Schema{
+                  type: :object,
                   nullable: true,
-                  description: "Failed SOCKS5 connections"
+                  description: "SOCKS5 blocked requests grouped by reason",
+                  additionalProperties: %Schema{type: :integer},
+                  example: %{
+                    "localhost_blocked" => 3,
+                    "kubernetes_port_blocked" => 2
+                  }
                 }
               }
             },
@@ -460,11 +472,19 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
           },
           proxy: %{
             http_connections_total: 523,
-            http_connections_success: 520,
-            http_connections_failed: 3,
+            http_blocked_total: 15,
+            http_blocked_by_reason: %{
+              "localhost_blocked" => 8,
+              "docker_network_blocked" => 4,
+              "metadata_service_blocked" => 2,
+              "agent_port_blocked" => 1
+            },
             socks5_connections_total: 87,
-            socks5_connections_success: 85,
-            socks5_connections_failed: 2
+            socks5_blocked_total: 5,
+            socks5_blocked_by_reason: %{
+              "localhost_blocked" => 3,
+              "docker_port_blocked" => 2
+            }
           },
           ssh: %{
             authentications_total: 45,

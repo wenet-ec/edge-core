@@ -43,6 +43,10 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
       # Proxy
       "proxy_http_connections" => extract_counter(lines, "edge_agent_proxy_http_connection_total"),
       "proxy_socks5_connections" => extract_counter(lines, "edge_agent_proxy_socks5_connection_total"),
+      "proxy_http_blocked" => extract_counter(lines, "edge_agent_proxy_http_blocked_total"),
+      "proxy_socks5_blocked" => extract_counter(lines, "edge_agent_proxy_socks5_blocked_total"),
+      "proxy_http_blocked_by_reason" => extract_counter_by_label(lines, "edge_agent_proxy_http_blocked_total", "reason"),
+      "proxy_socks5_blocked_by_reason" => extract_counter_by_label(lines, "edge_agent_proxy_socks5_blocked_total", "reason"),
 
       # SSH
       "ssh_authentications" => extract_counter(lines, "edge_agent_ssh_authentication_total"),
@@ -79,6 +83,30 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
       |> parse_number()
     end)
     |> Enum.sum()
+  end
+
+  # Extract counter values grouped by label
+  # Returns a map like %{"localhost_blocked" => 5, "docker_network_blocked" => 3}
+  defp extract_counter_by_label(lines, metric_name, label_name) do
+    lines
+    |> Enum.filter(fn line ->
+      String.starts_with?(line, metric_name <> "{")
+    end)
+    |> Enum.reduce(%{}, fn line, acc ->
+      case Regex.run(~r/#{label_name}="([^"]+)"/, line) do
+        [_, label_value] ->
+          value =
+            line
+            |> String.split(" ")
+            |> List.last()
+            |> parse_number()
+
+          Map.update(acc, label_value, value, &(&1 + value))
+
+        _ ->
+          acc
+      end
+    end)
   end
 
   # Parse a number string that could be an integer or float

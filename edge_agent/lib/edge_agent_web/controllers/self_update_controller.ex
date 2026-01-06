@@ -1,6 +1,7 @@
 # edge_agent/lib/edge_agent_web/controllers/self_update_controller.ex
 defmodule EdgeAgentWeb.Controllers.SelfUpdateController do
   use EdgeAgentWeb, :controller
+
   require Logger
 
   action_fallback(EdgeAgentWeb.Controllers.FallbackController)
@@ -59,10 +60,10 @@ defmodule EdgeAgentWeb.Controllers.SelfUpdateController do
 
     # Make GET request to self-update service with Bearer token (10 second timeout)
     headers =
-      if api_token != "" do
-        [{"authorization", "Bearer #{api_token}"}]
-      else
+      if api_token == "" do
         []
+      else
+        [{"authorization", "Bearer #{api_token}"}]
       end
 
     case Req.get(update_endpoint, headers: headers, receive_timeout: 10_000, retry: false) do

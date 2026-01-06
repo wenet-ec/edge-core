@@ -14,6 +14,7 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
 
   alias EdgeAgent.ProxyServers.Authentication
   alias EdgeAgent.ProxyServers.Config
+  alias EdgeAgent.ProxyServers.DestinationValidator
   alias EdgeAgent.ProxyServers.ErrorHandler
   alias EdgeAgent.ProxyServers.TcpTunnel
 
@@ -151,16 +152,32 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
       {:ok, host, port} ->
         Logger.info("HTTP CONNECT to #{host}:#{port}")
 
-        case TcpTunnel.connect_and_forward(socket, host, port) do
-          {:ok, _target_socket} ->
-            send_connect_success(socket, transport)
-            # Tunnel is now active, forwarding tasks are running
-            # Keep the handler process alive
-            :timer.sleep(:infinity)
+        # Validate destination before connecting
+        case DestinationValidator.validate_destination(host, port) do
+          :ok ->
+            case TcpTunnel.connect_and_forward(socket, host, port) do
+              {:ok, _target_socket} ->
+                send_connect_success(socket, transport)
+                # Tunnel is now active, forwarding tasks are running
+                # Keep the handler process alive
+                :timer.sleep(:infinity)
+
+              {:error, reason} ->
+                {status, message} = ErrorHandler.http_error_response(reason)
+                send_error(socket, transport, status, message)
+                {:error, reason}
+            end
 
           {:error, reason} ->
-            {status, message} = ErrorHandler.http_error_response(reason)
-            send_error(socket, transport, status, message)
+            # Emit telemetry for blocked request
+            :telemetry.execute(
+              [:edge_agent, :proxy, :http, :blocked],
+              %{count: 1},
+              %{reason: reason, host: host, port: port, method: "CONNECT"}
+            )
+
+            error_msg = DestinationValidator.error_message(reason)
+            send_error(socket, transport, 403, "Forbidden - #{error_msg}")
             {:error, reason}
         end
 
@@ -177,7 +194,24 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
     case parse_http_uri(uri) do
       {:ok, host, port, path} ->
         Logger.info("HTTP #{method} to #{host}:#{port}#{path}")
-        forward_http_request(socket, transport, method, host, port, path, http_version, headers)
+
+        # Validate destination before connecting
+        case DestinationValidator.validate_destination(host, port) do
+          :ok ->
+            forward_http_request(socket, transport, method, host, port, path, http_version, headers)
+
+          {:error, reason} ->
+            # Emit telemetry for blocked request
+            :telemetry.execute(
+              [:edge_agent, :proxy, :http, :blocked],
+              %{count: 1},
+              %{reason: reason, host: host, port: port, method: method}
+            )
+
+            error_msg = DestinationValidator.error_message(reason)
+            send_error(socket, transport, 403, "Forbidden - #{error_msg}")
+            {:error, reason}
+        end
 
       {:error, reason} ->
         {status, message} = ErrorHandler.http_error_response(reason)

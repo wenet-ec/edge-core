@@ -145,13 +145,21 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
     @derive Jason.Encoder
     defstruct [
       :http_connections_total,
-      :socks5_connections_total
+      :http_blocked_total,
+      :http_blocked_by_reason,
+      :socks5_connections_total,
+      :socks5_blocked_total,
+      :socks5_blocked_by_reason
     ]
 
     def from_raw(raw) do
       %__MODULE__{
         http_connections_total: raw["proxy_http_connections"] || 0,
-        socks5_connections_total: raw["proxy_socks5_connections"] || 0
+        http_blocked_total: raw["proxy_http_blocked"] || 0,
+        http_blocked_by_reason: raw["proxy_http_blocked_by_reason"] || %{},
+        socks5_connections_total: raw["proxy_socks5_connections"] || 0,
+        socks5_blocked_total: raw["proxy_socks5_blocked"] || 0,
+        socks5_blocked_by_reason: raw["proxy_socks5_blocked_by_reason"] || %{}
       }
     end
   end

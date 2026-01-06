@@ -19,7 +19,9 @@ config :edge_admin, EdgeAdmin.PromEx,
   grafana: :disabled,
   metrics_server: :disabled
 
-config :edge_admin, EdgeAdmin.Repo, start_apps_before_migration: [:ssl]
+config :edge_admin, EdgeAdmin.Repo,
+  migration_lock: nil,
+  start_apps_before_migration: [:ssl]
 
 config :edge_admin, EdgeAdminWeb.Endpoint,
   adapter: Bandit.PhoenixAdapter,

@@ -243,12 +243,9 @@ services:
     image: caddy:2.10-alpine
     container_name: production_edge_vpn_proxy
     networks:
-      production_edge_core:
-        aliases:
-          - netmaker.yourdomain.com
-          - broker.yourdomain.com
+      - production_edge_core
     ports:
-      - "80:80"
+      - "44880:80"
     volumes:
       - ./compose/edge_vpn_proxy/Caddyfile:/etc/caddy/Caddyfile
       - production_edge_vpn_proxy_data:/data

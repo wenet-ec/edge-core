@@ -57,7 +57,7 @@ SENTRY_ENVIRONMENT_NAME=production
 # =============================================================================
 
 # --- Nexmaker Client (Netmaker API Client) ---
-NETMAKER_API_URL=http://edge_vpn:8081
+NETMAKER_API_URL=https://netmaker.yourdomain.com
 NETMAKER_MASTER_KEY=supersecretkey123456789
 
 # --- Netmaker Superadmin (UI Access) ---

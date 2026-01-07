@@ -99,6 +99,10 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
+# Erlang distribution settings
+# Admins always use dynamic clustering (started after VPN join)
+ENV RELEASE_DISTRIBUTION=none
+
 # Download official netclient binary
 RUN wget -q "https://github.com/gravitl/netclient/releases/download/${NETCLIENT_VERSION}/netclient-linux-amd64" -O /usr/local/bin/netclient && \
     chmod +x /usr/local/bin/netclient && \

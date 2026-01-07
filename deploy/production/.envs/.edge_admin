@@ -99,7 +99,6 @@ ADMIN_CLUSTER_SUBNET=100.63.0.0/24  # IPv4 CIDR for admin cluster network (separ
 ADMIN_MAX_CAPACITY=200
 
 # Erlang distribution (for multi-admin clustering)
-RELEASE_DISTRIBUTION=none  # Don't start distribution at boot - will be started dynamically in bootstrap.ex after VPN join
 ERLANG_COOKIE=prod-cookie  # Shared secret for Erlang distribution (MUST be same across all admins in cluster)
 ERLANG_DIST_PORT=49125  # Fixed port for Erlang distribution (set in vm.args.eex)
 

@@ -2,7 +2,8 @@
 defmodule EdgeAdmin.Repo do
   use Ecto.Repo,
     adapter: Ecto.Adapters.Postgres,
-    otp_app: :edge_admin
+    otp_app: :edge_admin,
+    telemetry_prefix: [:edge_admin, :repo]
 
   @doc """
   Dynamically loads the repository url from the

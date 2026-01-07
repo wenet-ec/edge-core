@@ -47,6 +47,8 @@ defmodule EdgeAdminWeb.Router do
     plug(EdgeAdminWeb.Plugs.AgentAuth)
   end
 
+  import Phoenix.LiveDashboard.Router
+
   scope "/" do
     pipe_through(:browser)
 
@@ -55,6 +57,17 @@ defmodule EdgeAdminWeb.Router do
 
     # Serve ReDoc - alternative API documentation UI
     get("/redoc", Redoc.Plug.RedocUI, spec_url: "/api/openapi")
+
+    # LiveDashboard (always mounted, but can be disabled via endpoint check)
+    live_dashboard("/live_dashboard",
+      metrics: EdgeAdminWeb.Telemetry,
+      ecto_repos: [EdgeAdmin.Repo],
+      on_mount: EdgeAdminWeb.LiveDashboardAuth,
+      additional_pages: [
+        oban: Oban.LiveDashboard,
+        netmaker: EdgeAdminWeb.NetmakerDashboard
+      ]
+    )
   end
 
   # Serve OpenAPI spec through the open_api pipeline

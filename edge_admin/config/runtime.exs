@@ -33,7 +33,10 @@ config :edge_admin, EdgeAdminWeb.Endpoint,
   ],
   secret_key_base: get_env!("SECRET_KEY_BASE"),
   session_key: get_env!("SESSION_KEY"),
-  session_signing_salt: get_env!("SESSION_SIGNING_SALT")
+  session_signing_salt: get_env!("SESSION_SIGNING_SALT"),
+  live_view: [
+    signing_salt: generate_random_string(16)
+  ]
 
 config :edge_admin, Corsica, origins: get_env("CORS_ALLOWED_ORIGINS", :cors)
 
@@ -42,6 +45,13 @@ config :edge_admin,
     username: get_env("BASIC_AUTH_USERNAME"),
     password: get_env("BASIC_AUTH_PASSWORD")
   ]
+
+# =============================================================================
+# LiveDashboard
+# =============================================================================
+
+config :edge_admin,
+  live_dashboard_enabled: get_env("LIVE_DASHBOARD_ENABLED", :boolean, false)
 
 # =============================================================================
 # Authentication

@@ -25,6 +25,9 @@ DB_SSL=false
 # BASIC_AUTH_USERNAME=
 # BASIC_AUTH_PASSWORD=
 
+# Phoenix Live Dashboard
+LIVE_DASHBOARD_ENABLED=true
+
 # Sentry configuration
 # Sentry requires an environment name (but not a DSN)
 # SENTRY_DSN=

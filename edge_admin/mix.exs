@@ -24,7 +24,7 @@ defmodule EdgeAdmin.Mixfile do
   def application do
     [
       mod: {EdgeAdmin.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :os_mon]
     ]
   end
 
@@ -100,6 +100,9 @@ defmodule EdgeAdmin.Mixfile do
 
       # Telemetry
       {:prom_ex, "~> 1.11"},
+      {:phoenix_live_dashboard, "~> 0.8"},
+      {:ecto_psql_extras, "~> 0.8"},
+      {:oban_live_dashboard, "~> 0.2.1"},
 
       # Linting
       {:credo, "~> 1.7", only: [:dev, :test], override: true},

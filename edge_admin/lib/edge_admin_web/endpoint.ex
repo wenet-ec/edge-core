@@ -60,6 +60,9 @@ defmodule EdgeAdminWeb.Endpoint do
   plug(:metrics_auth_conditional)
   plug(PromEx.Plug, prom_ex_module: EdgeAdmin.PromEx, path: "/api/admins/metrics/self/raw")
 
+  # Request Logger for LiveDashboard (always enabled when LiveDashboard is mounted)
+  plug(Phoenix.LiveDashboard.RequestLogger, param_key: "request_logger")
+
   plug(EdgeAdminWeb.Router)
 
   # Apply metrics auth only for the metrics endpoint

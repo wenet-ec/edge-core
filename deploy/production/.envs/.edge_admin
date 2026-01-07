@@ -26,8 +26,11 @@ DB_POOL_SIZE=15
 DB_SSL=false
 
 # Basic Authentication (optional for internal service)
-# BASIC_AUTH_USERNAME=
-# BASIC_AUTH_PASSWORD=
+BASIC_AUTH_USERNAME=admin
+BASIC_AUTH_PASSWORD=admin
+
+# Phoenix Live Dashboard
+LIVE_DASHBOARD_ENABLED=true
 
 # Sentry configuration
 # SENTRY_DSN=

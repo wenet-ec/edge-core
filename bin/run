@@ -14,8 +14,17 @@ cd "$(dirname "$0")/.."
 
 # Use ENV from environment or default to local
 ENV=${ENV:-local}
-CLOUD_COMPOSE_FILE="deploy/${ENV}/cloud.yml"
-EDGE_COMPOSE_FILE="deploy/${ENV}/edge.yml"
+
+# Support custom compose file suffix (e.g., VARIANT=test -> cloud.test.yml)
+# Usage: VARIANT=test ./bin/run cloud up
+VARIANT=${VARIANT:-}
+if [ -n "$VARIANT" ]; then
+    CLOUD_COMPOSE_FILE="deploy/${ENV}/cloud.${VARIANT}.yml"
+    EDGE_COMPOSE_FILE="deploy/${ENV}/edge.${VARIANT}.yml"
+else
+    CLOUD_COMPOSE_FILE="deploy/${ENV}/cloud.yml"
+    EDGE_COMPOSE_FILE="deploy/${ENV}/edge.yml"
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -195,6 +204,7 @@ show_help() {
     echo ""
     echo -e "${YELLOW}Global Options:${NC}"
     echo "  ENV=production    - Use production environment (default: local)"
+    echo "  VARIANT=test      - Use variant compose files (e.g., cloud.test.yml)"
     echo ""
     echo -e "${YELLOW}Common Commands:${NC}"
     echo "  check             - Check Docker installation and environment"
@@ -205,6 +215,7 @@ show_help() {
     echo "  ./bin/run edge agent:test"
     echo "  ./bin/run all format"
     echo "  ENV=production ./bin/run cloud start"
+    echo "  ENV=production VARIANT=test ./bin/run cloud up -d"
     echo ""
     echo "For scope-specific help, run:"
     echo "  ./bin/run cloud"
@@ -574,6 +585,9 @@ case "$1" in
         docker --version
         docker compose version
         log "Environment: $ENV"
+        if [ -n "$VARIANT" ]; then
+            log "Variant: $VARIANT"
+        fi
         log "Cloud compose: $CLOUD_COMPOSE_FILE"
         log "Edge compose: $EDGE_COMPOSE_FILE"
         validate_compose_file "$CLOUD_COMPOSE_FILE"

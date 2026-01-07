@@ -1,0 +1,28 @@
+# deploy/production/compose/edge_vpn_proxy/Caddyfile.test
+http://netmaker.localtest.me {
+    reverse_proxy edge_vpn:8081
+}
+
+http://netmaker-ui.localtest.me {
+    reverse_proxy edge_vpn_ui:80
+}
+
+http://edge-admin.localtest.me {
+    reverse_proxy edge_admin:44000
+}
+
+http://edge-admin2.localtest.me {
+    reverse_proxy edge_admin_2:44000
+}
+
+http://edge-admin3.localtest.me {
+    reverse_proxy edge_admin_3:44000
+}
+
+http://broker.localtest.me {
+    reverse_proxy edge_vpn_broker:8083
+}
+
+http://broker-ui.localtest.me {
+    reverse_proxy edge_vpn_broker:18083
+}

@@ -39,7 +39,7 @@ services:
   edge_admin:
     build:
       context: ../..
-      dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
+      dockerfile: ./deploy/production/compose/edge_admin/Dockerfile.test
     image: production_edge_admin
     container_name: production_edge_admin
     networks:
@@ -53,6 +53,8 @@ services:
       - /dev/net/tun:/dev/net/tun
     env_file:
       - ./.envs/.edge_admin
+    environment:
+      - NETMAKER_API_URL=http://netmaker.localtest.me
     ports:
       - "34000:44000"
       - "33128:43128"  # HTTP proxy
@@ -74,7 +76,7 @@ services:
   edge_admin_2:
     build:
       context: ../..
-      dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
+      dockerfile: ./deploy/production/compose/edge_admin/Dockerfile.test
     image: production_edge_admin
     container_name: production_edge_admin_2
     networks:
@@ -90,6 +92,8 @@ services:
       - /dev/net/tun:/dev/net/tun
     env_file:
       - ./.envs/.edge_admin
+    environment:
+      - NETMAKER_API_URL=http://netmaker.localtest.me
     ports:
       - "34001:44000"
       - "33129:43128"  # HTTP proxy
@@ -111,7 +115,7 @@ services:
   edge_admin_3:
     build:
       context: ../..
-      dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
+      dockerfile: ./deploy/production/compose/edge_admin/Dockerfile.test
     image: production_edge_admin
     container_name: production_edge_admin_3
     networks:
@@ -130,6 +134,7 @@ services:
     environment:
       - ADMIN_CLUSTER_NAME=b
       - ADMIN_CLUSTER_SUBNET=100.63.1.0/24
+      - NETMAKER_API_URL=http://netmaker.localtest.me
     ports:
       - "34002:44000"
       - "33130:43128"  # HTTP proxy
@@ -202,6 +207,11 @@ services:
       - /dev/net/tun:/dev/net/tun:rw
     env_file:
       - ./.envs/.edge_vpn
+    environment:
+      - SERVER_HOST=netmaker.localtest.me
+      - SERVER_HTTP_HOST=netmaker.localtest.me
+      - BROKER_ENDPOINT=ws://broker.localtest.me/mqtt
+      - SERVER_API_CONN_STRING=netmaker.localtest.me
     depends_on:
       edge_vpn_db:
         condition: service_healthy
@@ -240,11 +250,14 @@ services:
     image: caddy:2.10-alpine
     container_name: production_edge_vpn_proxy
     networks:
-      - production_edge_core
+      production_edge_core:
+        aliases:
+          - netmaker.localtest.me
+          - broker.localtest.me
     ports:
-      - "44880:80"
+      - "80:80"
     volumes:
-      - ./compose/edge_vpn_proxy/Caddyfile:/etc/caddy/Caddyfile
+      - ./compose/edge_vpn_proxy/Caddyfile.test:/etc/caddy/Caddyfile
       - production_edge_vpn_proxy_data:/data
       - production_edge_vpn_proxy_config:/config
     depends_on:

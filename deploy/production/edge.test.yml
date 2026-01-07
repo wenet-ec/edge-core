@@ -12,8 +12,8 @@ services:
   edge_agent:
     build:
       context: ../..
-      dockerfile: ./deploy/production/compose/edge_agent/Dockerfile
-    image: registry.yourdomain.com/edge_agent:stable
+      dockerfile: ./deploy/production/compose/edge_agent/Dockerfile.test
+    image: localhost:45000/edge_agent:stable
     container_name: production_edge_agent
     volumes:
       - production_edge_agent_data:/app/data
@@ -22,6 +22,8 @@ services:
       - /:/host:ro
     env_file:
       - ./.envs/.edge_agent
+    environment:
+      - PUBLIC_ENROLLMENT_KEY_URL=http://edge-admin.localtest.me/api/clusters/default/enrollment_keys/public
     network_mode: host
     privileged: true
     labels:

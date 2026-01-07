@@ -36,8 +36,18 @@ defmodule EdgeAdmin.Application do
   defp runtime_mode do
     case System.get_env("EDGE_ADMIN_MODE") do
       "task" -> :task
+      "test" -> :test
       _ -> :server
     end
+  end
+
+  defp build_children(:test) do
+    [
+      EdgeAdmin.Repo,
+      {Phoenix.PubSub, name: EdgeAdmin.PubSub},
+      {Oban, Application.fetch_env!(:edge_admin, Oban)},
+      EdgeAdminWeb.Endpoint
+    ]
   end
 
   defp build_children(:task) do

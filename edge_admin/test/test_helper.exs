@@ -2,6 +2,9 @@
 # Ensure ExMachina is started
 {:ok, _} = Application.ensure_all_started(:ex_machina)
 
+# Define mocks
+Mox.defmock(EdgeAdmin.NodesMock, for: EdgeAdmin.NodesBehaviour)
+
 # Start ExUnit with better configuration
 ExUnit.start(
   # Capture log output during tests to avoid noise

@@ -10,9 +10,9 @@ defmodule EdgeAdmin.ProxyServers.Authentication do
   Password is always proxy_key for admin authentication.
   """
 
-  alias EdgeAdmin.Nodes
-
   require Logger
+
+  @nodes_module Application.compile_env(:edge_admin, :nodes_module, EdgeAdmin.Nodes)
 
   @doc """
   Authenticate and parse proxy request.
@@ -70,7 +70,7 @@ defmodule EdgeAdmin.ProxyServers.Authentication do
   end
 
   defp lookup_node_in_cluster(cluster_name, identifier, node_dns) do
-    case Nodes.list_node_identifiers_by_cluster(cluster_name) do
+    case @nodes_module.list_node_identifiers_by_cluster(cluster_name) do
       {:ok, identifiers_map} ->
         case Map.get(identifiers_map, identifier) do
           nil ->

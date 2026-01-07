@@ -52,3 +52,6 @@ config :edge_admin,
   netmaker_default_domain: "nm.internal"
 
 config :logger, level: :warning
+
+# Use mock for Nodes module in tests
+config :edge_admin, :nodes_module, EdgeAdmin.NodesMock

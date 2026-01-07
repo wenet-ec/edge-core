@@ -49,7 +49,7 @@ defmodule EdgeAdmin.Mixfile do
       setup: ["deps.get", "ecto.setup"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.create --quiet", "ecto.migrate", "test --warnings-as-errors"],
+      test: ["ecto.create --quiet", "ecto.migrate", "test --warnings-as-errors --max-failures 1"],
       lint: ["compile --warnings-as-errors", "credo --strict"],
       quality: ["format --check-formatted", "credo --strict", "dialyzer"],
       security: ["deps.audit", "sobelow --config"],

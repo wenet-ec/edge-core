@@ -5,13 +5,12 @@ defmodule EdgeAgent.ProxyServers.DestinationValidator do
 
   Security Model:
   - BLOCK: Localhost/loopback (127.0.0.0/8, ::1, localhost)
-  - BLOCK: Cloud metadata services (169.254.169.254, metadata.google.internal, etc.)
+  - BLOCK: Cloud metadata services (169.254.169.254, 100.100.100.200, metadata.google.internal, etc.)
   - BLOCK: Link-local addresses (169.254.0.0/16)
-  - BLOCK: Docker networks (10.0.0.0/8, 172.16.0.0/12)
   - BLOCK: Docker API ports (2375, 2376, 2377)
-  - BLOCK: Kubernetes API ports (6443, 8080, 10250, 10255)
+  - BLOCK: Kubernetes API ports (6443, 10250, 10255, 2379, 2380)
   - BLOCK: Agent's own service ports (configurable)
-  - ALLOW: LAN networks only (192.168.0.0/16)
+  - ALLOW: Private networks (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16)
   - ALLOW: Public internet
   - ALLOW: Custom allow list (overrides all blocks)
 
@@ -40,7 +39,8 @@ defmodule EdgeAgent.ProxyServers.DestinationValidator do
   @metadata_hostnames [
     "metadata.google.internal",
     "metadata.azure.com",
-    "169.254.169.254"
+    "169.254.169.254",
+    "100.100.100.200"
   ]
 
   # Docker API ports
@@ -50,8 +50,6 @@ defmodule EdgeAgent.ProxyServers.DestinationValidator do
   @kubernetes_ports [
     # K8s API server
     6443,
-    # K8s API server (insecure)
-    8080,
     # Kubelet API
     10_250,
     # Kubelet read-only
@@ -90,11 +88,6 @@ defmodule EdgeAgent.ProxyServers.DestinationValidator do
       link_local?(host) ->
         Logger.warning("Proxy destination BLOCKED (link-local address): #{host}:#{port}")
         {:error, :link_local_blocked}
-
-      # Check Docker internal networks (10.0.0.0/8, 172.16.0.0/12)
-      docker_network?(host) ->
-        Logger.warning("Proxy destination BLOCKED (Docker/container network): #{host}:#{port}")
-        {:error, :docker_network_blocked}
 
       # Check Docker API ports
       docker_port?(port) ->
@@ -172,28 +165,6 @@ defmodule EdgeAgent.ProxyServers.DestinationValidator do
     case parse_ipv4(host) do
       {169, 254, _, _} -> true
       _ -> false
-    end
-  end
-
-  @doc """
-  Check if host is in Docker internal networks.
-
-  Blocks:
-  - 10.0.0.0/8 (Docker default bridge networks)
-  - 172.16.0.0/12 (Docker user-defined bridge networks)
-  """
-  def docker_network?(host) do
-    case parse_ipv4(host) do
-      # 10.0.0.0/8
-      {10, _, _, _} ->
-        true
-
-      # 172.16.0.0/12 (172.16.0.0 - 172.31.255.255)
-      {172, second, _, _} when second >= 16 and second <= 31 ->
-        true
-
-      _ ->
-        false
     end
   end
 
@@ -296,9 +267,6 @@ defmodule EdgeAgent.ProxyServers.DestinationValidator do
 
       :link_local_blocked ->
         "Access to link-local addresses is blocked for security"
-
-      :docker_network_blocked ->
-        "Access to Docker/container internal networks is blocked for security"
 
       :docker_port_blocked ->
         "Access to Docker API ports is blocked for security"

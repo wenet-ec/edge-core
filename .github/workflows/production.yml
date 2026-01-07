@@ -24,21 +24,12 @@ jobs:
 
     strategy:
       fail-fast: false
-      max-parallel: 3
+      max-parallel: 2
       matrix:
         service:
           - name: edge_admin
             dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
             image: edge_admin
-          - name: edge_vpn
-            dockerfile: ./deploy/production/compose/edge_vpn/Dockerfile
-            image: edge_vpn
-          - name: edge_metrics_storage
-            dockerfile: ./deploy/production/compose/edge_metrics_storage/Dockerfile
-            image: edge_metrics_storage
-          - name: edge_metrics_collector
-            dockerfile: ./deploy/production/compose/edge_metrics_collector/Dockerfile
-            image: edge_metrics_collector
           - name: edge_agent
             dockerfile: ./deploy/production/compose/edge_agent/Dockerfile
             image: edge_agent
@@ -96,7 +87,4 @@ jobs:
           echo ""
           echo "Built images:"
           echo "• ${{ env.REGISTRY }}/edge_admin:${{ env.IMAGE_TAG }}"
-          echo "• ${{ env.REGISTRY }}/edge_vpn:${{ env.IMAGE_TAG }}"
-          echo "• ${{ env.REGISTRY }}/edge_metrics_storage:${{ env.IMAGE_TAG }}"
-          echo "• ${{ env.REGISTRY }}/edge_metrics_collector:${{ env.IMAGE_TAG }}"
           echo "• ${{ env.REGISTRY }}/edge_agent:${{ env.IMAGE_TAG }}"

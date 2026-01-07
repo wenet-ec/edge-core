@@ -10,6 +10,7 @@ updates:
     labels:
       - "dependencies"
       - "elixir"
+      - "edge_admin"
 
   # Elixir/Phoenix dependencies for edge_agent
   - package-ecosystem: "mix"
@@ -20,36 +21,73 @@ updates:
     labels:
       - "dependencies"
       - "elixir"
+      - "edge_agent"
 
-  # Go dependencies for edge_vpn
-  - package-ecosystem: "gomod"
-    directory: "/edge_vpn"
+  # Elixir library dependencies for nexmaker
+  - package-ecosystem: "mix"
+    directory: "/nexmaker"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
-      - "golang"
+      - "elixir"
+      - "nexmaker"
 
-  # Go dependencies for edge_metrics_collector
-  - package-ecosystem: "gomod"
-    directory: "/edge_metrics_collector"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-      - "golang"
-
-  # Docker base images
+  # Docker base images - edge_admin
   - package-ecosystem: "docker"
-    directory: "/deploy/production/compose"
+    directory: "/deploy/production/compose/edge_admin"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
       - "docker"
+      - "edge_admin"
+
+  # Docker base images - edge_agent
+  - package-ecosystem: "docker"
+    directory: "/deploy/production/compose/edge_agent"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+      - "edge_agent"
+
+  # Docker base images - edge_metrics_collector
+  - package-ecosystem: "docker"
+    directory: "/deploy/production/compose/edge_metrics_collector"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+      - "metrics"
+
+  # Docker base images - edge_vpn_broker
+  - package-ecosystem: "docker"
+    directory: "/deploy/production/compose/edge_vpn_broker"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+      - "vpn"
+
+  # Docker base images - edge_vpn_proxy
+  - package-ecosystem: "docker"
+    directory: "/deploy/production/compose/edge_vpn_proxy"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+      - "vpn"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"

@@ -198,6 +198,10 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
                 nil
               end
 
+            {:ok, %{status: status}} ->
+              Logger.debug("✗ #{ip} (#{hostname}) returned non-200 status: #{status}")
+              nil
+
             {:error, reason} ->
               Logger.debug("✗ #{ip} (#{hostname}) HTTP request failed: #{inspect(reason)}")
               nil

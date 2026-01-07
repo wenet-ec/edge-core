@@ -2,6 +2,10 @@
 networks:
   local_edge_core:
     name: local_edge_core
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
 
 volumes:
   local_edge_admin_db_data: {}
@@ -289,6 +293,7 @@ services:
     container_name: local_edge_vpn_proxy
     networks:
       local_edge_core:
+        ipv4_address: 172.18.0.8
         aliases:
           - netmaker.localtest.me
           - broker.localtest.me

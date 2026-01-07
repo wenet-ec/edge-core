@@ -2,6 +2,10 @@
 networks:
   local_edge_core:
     name: local_edge_core
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
 
 volumes:
   local_registry_data: {}
@@ -89,6 +93,11 @@ services:
       - PUBLIC_ENROLLMENT_KEY_URL=http://edge_admin:44000/api/clusters/default/enrollment_keys/public
       - WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
       - USE_RANDOM_ID=true
+      - HOST_METRICS_PORT=49101
+      - WIREGUARD_METRICS_PORT=49587
+    extra_hosts:
+      - "netmaker.localtest.me:172.18.0.8"
+      - "broker.localtest.me:172.18.0.8"
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -101,9 +110,8 @@ services:
       - "43129:43128"
       - "41081:41080"
     privileged: true
-    pid: "host"
     profiles:
-      - test
+      - agent-2
 
   edge_agent_test:
     build:

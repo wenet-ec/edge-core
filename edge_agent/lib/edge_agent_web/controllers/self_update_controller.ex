@@ -20,24 +20,18 @@ defmodule EdgeAgentWeb.Controllers.SelfUpdateController do
   """
   def trigger(conn, _params) do
     if self_update_enabled?() do
-      case trigger_watchtower_update() do
-        {:ok, response} ->
-          Logger.info("Self-update triggered successfully: #{inspect(response)}")
+      # Trigger the update asynchronously so we can respond to the admin before shutdown
+      Task.start(fn ->
+        Logger.info("Triggering self-update asynchronously")
+        trigger_watchtower_update()
+      end)
 
-          conn
-          |> put_status(:accepted)
-          |> json(%{
-            message: "Self-update triggered successfully",
-            service_response: response
-          })
-
-        {:error, reason} ->
-          Logger.error("Failed to trigger self-update: #{inspect(reason)}")
-
-          conn
-          |> put_status(:service_unavailable)
-          |> json(%{error: "Failed to trigger self-update", reason: inspect(reason)})
-      end
+      # Respond immediately with 202 Accepted
+      conn
+      |> put_status(:accepted)
+      |> json(%{
+        message: "Self-update triggered successfully"
+      })
     else
       conn
       |> put_status(:forbidden)

@@ -90,6 +90,9 @@ RUN apt-get update -y && \
     netcat-openbsd && \
     # Set locale in same layer
     sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen && \
+    # Create dummy /sbin/init to suppress netclient init system detection error
+    # Netclient checks init type for service installation, not needed in containers
+    mkdir -p /sbin && ln -s /bin/true /sbin/init && \
     # Clean up in same layer to reduce image size
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/*

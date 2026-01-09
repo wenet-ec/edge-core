@@ -676,107 +676,33 @@ defmodule Nexmaker.Cli do
 
   defp extract_subnet(_), do: nil
 
-  # Extract JSON array from output that may contain log lines
-  # Netclient sometimes outputs error logs (as JSON objects) before the actual JSON array
-  defp extract_json_from_output(output) do
-    # netclient output can be either:
-    # 1. JSON array starting with '[' (e.g., list)
-    # 2. JSON object starting with '{' (e.g., peers, ping)
-    # However, error logs (also JSON objects) may appear before the actual data
-    # Error logs typically have "time", "level", "msg" keys
-    # Actual data objects have domain-specific keys like "interface", "peers", network names, etc.
+  # Extract JSON from netclient output that may contain error log lines.
+  #
+  # Netclient sometimes outputs error logs (JSON objects with "level" key) before
+  # the actual data. This function strips those error logs and returns clean JSON.
+  #
+  # Strategy:
+  # 1. Split output into lines
+  # 2. Skip any line that looks like an error log (has "level" key)
+  # 3. Find first line starting with '{' or '[' (the real data)
+  # 4. Return from that point onwards (handles multi-line JSON)
+  #
+  # This is simpler and more robust than pattern matching on content.
+  defp extract_json_from_output(output) when is_binary(output) do
+    # Strategy: Remove all lines that are error logs (contain "level" key)
+    # Keep all other lines intact (including lines that start mid-JSON)
+    lines = String.split(output, "\n")
 
-    # First, try to find a complete JSON object by looking for patterns
-    cond do
-      String.contains?(output, "\"interface\"") ->
-        # This is a peers command output - find the '{' before "interface"
-        case :binary.match(output, "{\"interface\"") do
-          {pos, _} ->
-            binary_part(output, pos, byte_size(output) - pos)
+    # Filter out error log lines
+    clean_lines =
+      Enum.reject(lines, fn line ->
+        # Skip empty lines and error logs
+        trimmed = String.trim(line)
+        trimmed == "" or String.contains?(line, "\"level\"")
+      end)
 
-          :nomatch ->
-            # Try finding any '{' that comes before "interface"
-            interface_pos = :binary.match(output, "\"interface\"")
-
-            case interface_pos do
-              {ipos, _} ->
-                # Search backwards from interface position to find opening '{'
-                before = binary_part(output, 0, ipos)
-
-                case :binary.matches(before, "{") do
-                  [] ->
-                    output
-
-                  matches ->
-                    {last_brace_pos, _} = List.last(matches)
-                    binary_part(output, last_brace_pos, byte_size(output) - last_brace_pos)
-                end
-
-              :nomatch ->
-                output
-            end
-        end
-
-      String.contains?(output, "\"networks\"") or String.contains?(output, "\"network\"") ->
-        # This is a list command output - look for array that starts a line
-        lines = String.split(output, "\n", trim: true)
-
-        json_line = Enum.find(lines, fn line ->
-          trimmed = String.trim(line)
-          String.starts_with?(trimmed, "[")
-        end)
-
-        case json_line do
-          nil ->
-            # Fallback: find first '['
-            case :binary.match(output, "[") do
-              {pos, _} -> binary_part(output, pos, byte_size(output) - pos)
-              :nomatch -> output
-            end
-          line ->
-            case String.split(output, line, parts: 2) do
-              [_before, rest] -> line <> rest
-              _ -> output
-            end
-        end
-
-      true ->
-        # Fallback: could be ping (object) or other array output
-        # Try to find first valid JSON start ('{' or '[')
-        # Skip error log objects by looking for the first '{' or '[' that's NOT a log line
-        lines = String.split(output, "\n", trim: true)
-
-        # Find first line that starts with '{' or '[' and doesn't look like an error log
-        json_line =
-          Enum.find(lines, fn line ->
-            trimmed = String.trim(line)
-
-            (String.starts_with?(trimmed, "{") and not String.contains?(trimmed, "\"level\"")) or
-              String.starts_with?(trimmed, "[")
-          end)
-
-        case json_line do
-          nil ->
-            # Ultimate fallback: just find first '{' or '['
-            case :binary.match(output, "{") do
-              {pos, _} ->
-                binary_part(output, pos, byte_size(output) - pos)
-
-              :nomatch ->
-                case :binary.match(output, "[") do
-                  {pos, _} -> binary_part(output, pos, byte_size(output) - pos)
-                  :nomatch -> output
-                end
-            end
-
-          line ->
-            # Found valid JSON line, return from this point onwards
-            case String.split(output, line, parts: 2) do
-              [_before, rest] -> line <> rest
-              _ -> output
-            end
-        end
-    end
+    # Rejoin the remaining lines
+    Enum.join(clean_lines, "\n")
   end
 
   @doc """

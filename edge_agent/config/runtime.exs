@@ -37,6 +37,7 @@ config :edge_agent,
   watchtower_url: get_env("WATCHTOWER_URL", :string, "http://watchtower:8080"),
   watchtower_http_api_token: get_env("WATCHTOWER_HTTP_API_TOKEN", :string, ""),
   relay_enabled: get_env("RELAY_ENABLED", :boolean, false),
+  vpn_ready_wait_seconds: get_env("VPN_READY_WAIT_SECONDS", :integer, 0),
   proxy_blocked_ports: get_env("PROXY_BLOCKED_PORTS", :list, []),
   proxy_custom_blocked_hosts: get_env("PROXY_CUSTOM_BLOCKED_HOSTS", :list, []),
   proxy_custom_allowed_hosts: get_env("PROXY_CUSTOM_ALLOWED_HOSTS", :list, [])

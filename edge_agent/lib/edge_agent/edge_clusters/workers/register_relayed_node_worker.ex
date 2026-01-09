@@ -3,8 +3,6 @@ defmodule EdgeAgent.EdgeClusters.Workers.RegisterRelayedNodeWorker do
   Oban worker that periodically registers agent to relay gateways.
 
   Delegates to EdgeAgent.EdgeClusters.Relay.check_and_register/0 for the actual relay logic.
-
-  Runs every 1 minute.
   """
 
   use Oban.Worker,

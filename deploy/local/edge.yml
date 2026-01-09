@@ -80,6 +80,9 @@ services:
     container_name: local_edge_agent_2
     networks:
       - local_edge_core
+    extra_hosts:
+      - "netmaker.localtest.me:172.18.0.8"
+      - "broker.localtest.me:172.18.0.8"
     volumes:
       - ../../edge_agent:/app:z
       - ../../nexmaker:/nexmaker:z
@@ -95,9 +98,6 @@ services:
       - USE_RANDOM_ID=true
       - HOST_METRICS_PORT=49101
       - WIREGUARD_METRICS_PORT=49587
-    extra_hosts:
-      - "netmaker.localtest.me:172.18.0.8"
-      - "broker.localtest.me:172.18.0.8"
     cap_add:
       - NET_ADMIN
       - SYS_MODULE

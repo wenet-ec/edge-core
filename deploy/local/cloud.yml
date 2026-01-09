@@ -54,6 +54,9 @@ services:
     container_name: local_edge_admin
     networks:
       - local_edge_core
+    extra_hosts:
+      - "netmaker.localtest.me:172.18.0.8"
+      - "broker.localtest.me:172.18.0.8"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -93,6 +96,9 @@ services:
     container_name: local_edge_admin_2
     networks:
       - local_edge_core
+    extra_hosts:
+      - "netmaker.localtest.me:172.18.0.8"
+      - "broker.localtest.me:172.18.0.8"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -134,6 +140,9 @@ services:
     container_name: local_edge_admin_3
     networks:
       - local_edge_core
+    extra_hosts:
+      - "netmaker.localtest.me:172.18.0.8"
+      - "broker.localtest.me:172.18.0.8"
     depends_on:
       edge_vpn:
         condition: service_healthy

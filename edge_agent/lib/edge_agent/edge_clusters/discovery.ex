@@ -67,9 +67,9 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   @doc """
   Discover admins in the cluster.
 
-  Uses WireGuard peer information to discover admins on connected networks.
-  This is more efficient than subnet scanning since we directly query
-  WireGuard for the list of connected peers.
+  Uses WireGuard ping to discover admins on connected networks.
+  When relay is enabled, we can only SEE the relay gateway in peer list,
+  but PING can reach all peers that the relay can reach (including admins).
 
   Returns `{:ok, network_name, admin_urls}` where:
   - network_name is the full Netmaker network name (e.g., "cluster-default")
@@ -85,9 +85,9 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   def discover_admins(opts \\ []) do
     fail_on_empty = Keyword.get(opts, :fail_on_empty, false)
 
-    case Nexmaker.Cli.list_peers() do
-      {:ok, peer_data} when is_map(peer_data) ->
-        peers_by_network = Map.get(peer_data, "peers", %{})
+    case Nexmaker.Cli.ping_peers() do
+      {:ok, ping_data} when is_map(ping_data) ->
+        peers_by_network = ping_data
 
         if map_size(peers_by_network) == 0 do
           if fail_on_empty do
@@ -135,36 +135,36 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
         end
 
       {:error, reason} ->
-        {:error, "Failed to list peers: #{inspect(reason)}"}
+        {:error, "Failed to ping peers: #{inspect(reason)}"}
     end
   end
 
-  # Discover admins from peer list
-  defp discover_admins_from_peers(peers, cluster_id, network_name) when is_list(peers) do
+  # Discover admins from ping results
+  defp discover_admins_from_peers(ping_results, cluster_id, network_name) when is_list(ping_results) do
     discovery_port = Application.get_env(:edge_agent, :admin_discovery_port, 44_000)
     default_domain = Application.get_env(:edge_agent, :netmaker_default_domain, "nm.internal")
 
-    Logger.info("Checking #{length(peers)} peer(s) on network #{network_name} for admins...")
+    Logger.info("Checking #{length(ping_results)} peer(s) on network #{network_name} for admins...")
 
-    # Query each peer's allowed IPs to find admin nodes
+    # Query each peer with "admin-" prefix to find admin nodes
+    # Check ALL peers with admin prefix regardless of connected status
     admin_urls =
-      peers
+      ping_results
+      |> Enum.filter(fn peer ->
+        # Only check peers whose name starts with "admin-"
+        case peer["name"] do
+          "admin-" <> _rest -> true
+          _ -> false
+        end
+      end)
       |> Enum.map(fn peer ->
-        # Get the first allowed IP (usually the VPN IP)
-        ip =
-          case peer["allowed_ips"] do
-            [first_ip | _rest] ->
-              # Strip CIDR notation if present (e.g., "100.64.0.1/32" -> "100.64.0.1")
-              first_ip |> String.split("/") |> List.first()
-
-            _ ->
-              nil
-          end
-
-        hostname = peer["host_name"]
+        # Ping results have "address" directly (no CIDR notation)
+        ip = peer["address"]
+        hostname = peer["name"]
 
         if ip && hostname do
           # Try to query the peer's discovery endpoint
+          # Try even if connected=false, as HTTP might still work
           url = "http://#{ip}:#{discovery_port}/api/admins/self/discovery"
 
           case Req.get(url, receive_timeout: 5000, retry: false) do

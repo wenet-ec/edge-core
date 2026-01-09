@@ -75,15 +75,16 @@ defmodule EdgeAgent.EdgeClusters.Relay do
 
   defp check_relay_health(ping_data, current_relay) do
     # Find relay admin in ping results
+    # Ping data format: %{"cluster-default" => [%{"name" => "admin-xyz", "connected" => true, ...}]}
     relay_peer =
       ping_data
       |> Enum.flat_map(fn {_network, peers} -> peers end)
       |> Enum.find(fn peer -> peer["name"] == current_relay end)
 
     cond do
-      # Relay not found in ping results
+      # Relay not found in ping results (unreachable)
       is_nil(relay_peer) ->
-        Logger.info("Relay admin #{current_relay} not found in ping, registering new relay")
+        Logger.warning("Relay admin #{current_relay} not reachable via ping, registering new relay")
 
         :telemetry.execute(
           [:edge_agent, :relay, :health_check],
@@ -95,7 +96,7 @@ defmodule EdgeAgent.EdgeClusters.Relay do
 
       # Relay found but not connected
       not relay_peer["connected"] ->
-        Logger.info("Relay admin #{current_relay} not connected, registering new relay")
+        Logger.warning("Relay admin #{current_relay} not connected (latency check failed), registering new relay")
 
         :telemetry.execute(
           [:edge_agent, :relay, :health_check],
@@ -107,7 +108,7 @@ defmodule EdgeAgent.EdgeClusters.Relay do
 
       # Relay still connected
       true ->
-        Logger.debug("Relay admin #{current_relay} still connected")
+        Logger.debug("Relay admin #{current_relay} still connected (latency: #{relay_peer["latency_ms"]}ms)")
 
         :telemetry.execute(
           [:edge_agent, :relay, :health_check],

@@ -357,18 +357,18 @@ defmodule Nexmaker.Cli do
 
   This is the recommended way to verify netclient health. It checks multiple layers:
   1. Network membership (via list_networks)
-  2. WireGuard interface health (via list_peers, if peers exist)
-  3. Peer handshake activity (if peers are configured)
+  2. Peer reachability (via ping_peers, if peers exist)
+  3. Actual connectivity to peers (not just WireGuard handshakes)
 
   ## Health Check Levels
 
   - **`:healthy`** - All checks passed
     - Connected to at least one network
-    - If peers exist, WireGuard has established handshakes
+    - If peers exist, at least one peer is reachable via ping
 
   - **`:degraded`** - Network connected but peer issues
     - On network but peers check failed (non-critical)
-    - Or peers exist but no handshakes (WireGuard may have issues)
+    - Or peers exist but none are reachable
 
   - **`:unhealthy`** - Critical failure
     - Not connected to any network
@@ -382,14 +382,14 @@ defmodule Nexmaker.Cli do
 
   The `info` map contains:
     - `:networks` - List of connected networks
-    - `:peer_count` - Number of peers (if available)
-    - `:handshake_count` - Number of peers with successful handshakes
+    - `:peer_count` - Number of peers discovered via ping (if available)
+    - `:connected_count` - Number of peers actually reachable
     - `:warnings` - List of warning messages
     - `:timestamp` - When check was performed
 
   ## Options
     - `:skip_peers` - Skip peer health check (default: true)
-    - `:require_handshakes` - Fail if no peer handshakes (default: false)
+    - `:require_connectivity` - Fail if no peers are reachable (default: false)
 
   ## Examples
 
@@ -397,18 +397,18 @@ defmodule Nexmaker.Cli do
       {:ok, :healthy, %{networks: ["cluster-default"], peer_count: nil}} =
         Nexmaker.Cli.health_check()
 
-      # Full health check with peer diagnostics
+      # Full health check with peer connectivity diagnostics
       {:ok, :healthy, _info} = Nexmaker.Cli.health_check(skip_peers: false)
 
-      # Require peer handshakes (strict mode)
-      {:ok, :degraded, %{warnings: ["No peer handshakes"]}} =
-        Nexmaker.Cli.health_check(require_handshakes: true)
+      # Require peer connectivity (strict mode)
+      {:ok, :degraded, %{warnings: ["No peers reachable"]}} =
+        Nexmaker.Cli.health_check(require_connectivity: true)
   """
   @spec health_check(keyword()) ::
           {:ok, :healthy | :degraded | :unhealthy, map()} | {:error, any()}
   def health_check(opts \\ []) do
     skip_peers = Keyword.get(opts, :skip_peers, true)
-    require_handshakes = Keyword.get(opts, :require_handshakes, false)
+    require_connectivity = Keyword.get(opts, :require_connectivity, false)
 
     timestamp = DateTime.utc_now()
 
@@ -421,13 +421,13 @@ defmodule Nexmaker.Cli do
            %{
              networks: Enum.map(networks, & &1["network"]),
              peer_count: nil,
-             handshake_count: nil,
+             connected_count: nil,
              warnings: [],
              timestamp: timestamp
            }}
         else
-          # Layer 2: Check WireGuard peer health
-          check_peer_health(networks, require_handshakes, timestamp)
+          # Layer 2: Check peer connectivity via ping
+          check_peer_health(networks, require_connectivity, timestamp)
         end
 
       {:ok, []} ->
@@ -436,7 +436,7 @@ defmodule Nexmaker.Cli do
          %{
            networks: [],
            peer_count: nil,
-           handshake_count: nil,
+           connected_count: nil,
            warnings: ["Not connected to any network"],
            timestamp: timestamp
          }}
@@ -447,66 +447,57 @@ defmodule Nexmaker.Cli do
          %{
            networks: [],
            peer_count: nil,
-           handshake_count: nil,
+           connected_count: nil,
            warnings: ["Failed to list networks: #{inspect(reason)}"],
            timestamp: timestamp
          }}
     end
   end
 
-  defp check_peer_health(networks, require_handshakes, timestamp) do
+  defp check_peer_health(networks, require_connectivity, timestamp) do
     network_names = Enum.map(networks, & &1["network"])
 
-    case list_peers() do
-      {:ok, %{"peers" => peers_by_network}} when map_size(peers_by_network) > 0 ->
-        # Count total peers and those with handshakes
-        {total_peers, handshake_count} =
-          Enum.reduce(peers_by_network, {0, 0}, fn {_network, peers}, {total, hs_count} ->
+    case ping_peers() do
+      {:ok, ping_data} when map_size(ping_data) > 0 ->
+        # Count total peers and those actually reachable via ping
+        {total_peers, connected_count} =
+          Enum.reduce(ping_data, {0, 0}, fn {_network, peers}, {total, conn_count} ->
             peer_count = length(peers)
-
-            handshakes =
-              Enum.count(peers, fn peer ->
-                case peer["last_handshake"] do
-                  "never" -> false
-                  handshake when is_binary(handshake) -> true
-                  _ -> false
-                end
-              end)
-
-            {total + peer_count, hs_count + handshakes}
+            connected = Enum.count(peers, fn peer -> peer["connected"] end)
+            {total + peer_count, conn_count + connected}
           end)
 
         cond do
-          handshake_count > 0 ->
-            # Have peers with handshakes - healthy
+          connected_count > 0 ->
+            # Have reachable peers - healthy
             {:ok, :healthy,
              %{
                networks: network_names,
                peer_count: total_peers,
-               handshake_count: handshake_count,
+               connected_count: connected_count,
                warnings: [],
                timestamp: timestamp
              }}
 
-          require_handshakes ->
-            # Peers exist but no handshakes and handshakes are required - degraded
+          require_connectivity ->
+            # Peers exist but none reachable and connectivity is required - degraded
             {:ok, :degraded,
              %{
                networks: network_names,
                peer_count: total_peers,
-               handshake_count: 0,
-               warnings: ["Peers configured but no handshake activity"],
+               connected_count: 0,
+               warnings: ["Peers exist but none are reachable"],
                timestamp: timestamp
              }}
 
           true ->
-            # No handshakes but not required - still healthy (peers might be offline)
+            # No connectivity but not required - still healthy (peers might be offline)
             {:ok, :healthy,
              %{
                networks: network_names,
                peer_count: total_peers,
-               handshake_count: 0,
-               warnings: ["Peers exist but no handshakes yet"],
+               connected_count: 0,
+               warnings: ["Peers exist but no connectivity yet"],
                timestamp: timestamp
              }}
         end
@@ -517,7 +508,7 @@ defmodule Nexmaker.Cli do
          %{
            networks: network_names,
            peer_count: 0,
-           handshake_count: 0,
+           connected_count: 0,
            warnings: [],
            timestamp: timestamp
          }}
@@ -528,8 +519,8 @@ defmodule Nexmaker.Cli do
          %{
            networks: network_names,
            peer_count: nil,
-           handshake_count: nil,
-           warnings: ["Failed to check peers: #{inspect(reason)}"],
+           connected_count: nil,
+           warnings: ["Failed to ping peers: #{inspect(reason)}"],
            timestamp: timestamp
          }}
     end
@@ -683,22 +674,33 @@ defmodule Nexmaker.Cli do
   #
   # Strategy:
   # 1. Split output into lines
-  # 2. Skip any line that looks like an error log (has "level" key)
-  # 3. Find first line starting with '{' or '[' (the real data)
-  # 4. Return from that point onwards (handles multi-line JSON)
+  # 2. Remove any line that is a complete error log (starts with '{', contains "level", ends with '}')
+  # 3. Keep all data lines intact (including multi-line JSON)
   #
-  # This is simpler and more robust than pattern matching on content.
+  # Error logs are always complete single-line JSON objects like:
+  # {"level":"ERROR","msg":"...","error":"..."}
+  #
+  # Data can be single-line or multi-line JSON.
   defp extract_json_from_output(output) when is_binary(output) do
-    # Strategy: Remove all lines that are error logs (contain "level" key)
-    # Keep all other lines intact (including lines that start mid-JSON)
     lines = String.split(output, "\n")
 
-    # Filter out error log lines
+    # Filter out complete error log lines
     clean_lines =
       Enum.reject(lines, fn line ->
-        # Skip empty lines and error logs
         trimmed = String.trim(line)
-        trimmed == "" or String.contains?(line, "\"level\"")
+
+        # Skip empty lines
+        if trimmed == "" do
+          true
+        else
+          # Check if this is a complete error log line
+          # Error logs start with '{', contain "level", and end with '}'
+          # This ensures we don't filter out multi-line JSON that happens to contain "level"
+          String.starts_with?(trimmed, "{") and
+            String.ends_with?(trimmed, "}") and
+            String.contains?(trimmed, "\"level\"") and
+            String.contains?(trimmed, "\"msg\"")
+        end
       end)
 
     # Rejoin the remaining lines

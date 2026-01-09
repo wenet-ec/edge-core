@@ -4,8 +4,8 @@ defmodule EdgeAdmin.SelfUpdates.Rules.DeletionRules do
   Deletion validation rules for self-update requests.
   """
 
-  alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
   alias Ecto.Changeset
+  alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
 
   @doc """
   Validates that a self-update request can be deleted.

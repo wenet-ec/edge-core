@@ -247,6 +247,9 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     # cluster_name is already normalized (e.g., "cluster-default")
     case join_network(cluster_name, netmaker_host_id) do
       :ok ->
+        # Configure this admin as a relay gateway (with empty relayed nodes initially)
+        configure_as_gateway(cluster_name, netmaker_host_id)
+
         # Register in syn with admin_name to avoid overriding other admins' Gateways
         :syn.register(:cluster_scope, {:gateway, admin_name, cluster_name}, self())
         Logger.debug("Gateway registered in syn for #{admin_name} -> #{cluster_name}")
@@ -699,6 +702,27 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
       {:error, reason} ->
         Logger.warning("Failed to list nodes for leave verification: #{inspect(reason)}")
         {:error, reason}
+    end
+  end
+
+  defp configure_as_gateway(cluster_name, netmaker_host_id) do
+    # Find our Netmaker node ID
+    case Vpn.find_node_id_by_host(cluster_name, netmaker_host_id) do
+      {:ok, node_id} ->
+        # Configure as ingress gateway (includes relay capability with empty relayed_nodes)
+        case Vpn.create_ingress_gateway(cluster_name, node_id) do
+          {:ok, _node} ->
+            Logger.info("Configured as relay gateway for cluster #{cluster_name}")
+            :ok
+
+          {:error, reason} ->
+            Logger.error("Failed to configure as gateway for cluster #{cluster_name}: #{inspect(reason)}")
+            {:error, {:gateway_config_failed, reason}}
+        end
+
+      {:error, reason} ->
+        Logger.error("Failed to find node ID for gateway config in cluster #{cluster_name}: #{inspect(reason)}")
+        {:error, {:node_lookup_failed, reason}}
     end
   end
 end

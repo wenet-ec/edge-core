@@ -20,6 +20,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     field(:socks5_proxy_port, :integer)
     field(:version, :string)
     field(:self_update_enabled, :boolean)
+    field(:relay_enabled, :boolean)
   end
 
   @doc """
@@ -53,7 +54,8 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
       :http_proxy_port,
       :socks5_proxy_port,
       :version,
-      :self_update_enabled
+      :self_update_enabled,
+      :relay_enabled
     ])
     |> validate_required([
       :node_id,
@@ -66,7 +68,8 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
       :http_proxy_port,
       :socks5_proxy_port,
       :version,
-      :self_update_enabled
+      :self_update_enabled,
+      :relay_enabled
     ])
     |> validate_uuid_format(:node_id)
     |> validate_network_name()
@@ -159,7 +162,8 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
       "http_proxy_port" => form.http_proxy_port,
       "socks5_proxy_port" => form.socks5_proxy_port,
       "version" => form.version,
-      "self_update_enabled" => form.self_update_enabled
+      "self_update_enabled" => form.self_update_enabled,
+      "relay_enabled" => form.relay_enabled
     }
     |> Enum.reject(fn {_k, v} -> is_nil(v) end)
     |> Map.new()

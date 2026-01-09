@@ -63,7 +63,6 @@ defmodule EdgeAdmin.SelfUpdates do
     Ecto.Query.CastError -> {:error, :not_found}
   end
 
-
   @doc """
   Creates a new self-update request and enqueues trigger job.
 
@@ -81,7 +80,7 @@ defmodule EdgeAdmin.SelfUpdates do
   @spec create_self_update_request(map()) :: {:ok, SelfUpdateRequest.t()} | {:error, Ecto.Changeset.t()}
   def create_self_update_request(attrs \\ %{}) do
     with {:ok, validated_attrs} <- Forms.CreateSelfUpdateRequestForm.changeset(attrs),
-         changeset <- SelfUpdateRequest.changeset(%SelfUpdateRequest{}, validated_attrs),
+         changeset = SelfUpdateRequest.changeset(%SelfUpdateRequest{}, validated_attrs),
          {:ok, request} <- Repo.insert(changeset) do
       enqueue_trigger_worker(request)
       {:ok, request}
@@ -190,9 +189,7 @@ defmodule EdgeAdmin.SelfUpdates do
 
       :ok
     else
-      Logger.info(
-        "Triggering self-update for #{length(nodes)} nodes (targeting type: #{targeting_type})"
-      )
+      Logger.info("Triggering self-update for #{length(nodes)} nodes (targeting type: #{targeting_type})")
 
       # Trigger updates based on targeting type
       results =

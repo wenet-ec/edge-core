@@ -20,6 +20,9 @@ defmodule EdgeAdminWeb.Plugs.AgentAuth do
   import Phoenix.Controller
   import Plug.Conn
 
+  alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.Repo
+
   def init(opts), do: opts
 
   def call(conn, _opts) do
@@ -36,11 +39,11 @@ defmodule EdgeAdminWeb.Plugs.AgentAuth do
   end
 
   defp validate_agent_token(conn, token) do
-    alias EdgeAdmin.Nodes.Schemas.Node
-    alias EdgeAdmin.Repo
-
     case Repo.get_by(Node, api_token: token) do
       %Node{} = node ->
+        # Preload cluster association for agent endpoints that need it
+        node = Repo.preload(node, :cluster)
+
         # Assign node to connection (like current_user pattern)
         assign(conn, :current_node, node)
 

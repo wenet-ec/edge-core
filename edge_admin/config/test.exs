@@ -40,6 +40,9 @@ config :edge_admin, EdgeAdminWeb.Endpoint, server: false
 # Disable Oban during tests:
 config :edge_admin, Oban, testing: :manual
 
+# Use mock for Nodes module in tests
+config :edge_admin, :nodes_module, EdgeAdmin.NodesMock
+
 # Disable admin clustering during tests
 config :edge_admin,
   run_bootstrap: false,
@@ -52,6 +55,3 @@ config :edge_admin,
   netmaker_default_domain: "nm.internal"
 
 config :logger, level: :warning
-
-# Use mock for Nodes module in tests
-config :edge_admin, :nodes_module, EdgeAdmin.NodesMock

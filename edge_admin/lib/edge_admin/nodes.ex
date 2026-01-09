@@ -734,7 +734,8 @@ defmodule EdgeAdmin.Nodes do
             api_token: api_token,
             proxy_password: proxy_password,
             version: attrs["version"],
-            self_update_enabled: attrs["self_update_enabled"]
+            self_update_enabled: attrs["self_update_enabled"],
+            relay_enabled: attrs["relay_enabled"]
           }
 
           result =
@@ -1696,46 +1697,36 @@ defmodule EdgeAdmin.Nodes do
             # 5. Query Netmaker for node's IP address
             network_name = node_network_name(node.cluster)
 
-            case Vpn.list_nodes(network_name) do
-              {:ok, netmaker_nodes} ->
-                # Find node by hostid
-                netmaker_node =
-                  Enum.find(netmaker_nodes, fn n ->
-                    n["hostid"] == node.netmaker_host_id
-                  end)
+            case Vpn.find_node_by_host(network_name, node.netmaker_host_id) do
+              {:ok, %{"address" => address}} when is_binary(address) and address != "" ->
+                # 6. Create DNS entry in Netmaker
+                # Strip CIDR suffix if present (e.g., "100.64.1.5/32" -> "100.64.1.5")
+                ip_address = address |> String.split("/") |> List.first()
+                dns_hostname = Alias.dns_hostname(alias_record)
 
-                case netmaker_node do
-                  nil ->
-                    Logger.error("Node #{node.netmaker_host_id} not found in Netmaker")
-                    Repo.rollback(:service_unavailable)
+                case Vpn.create_dns_entry(network_name, %{
+                       name: dns_hostname,
+                       address: ip_address
+                     }) do
+                  {:ok, _} ->
+                    Logger.info("Created DNS entry for alias #{alias_record.name}: #{dns_hostname} -> #{address}")
+                    alias_record
 
-                  %{"address" => address} when is_binary(address) and address != "" ->
-                    # 6. Create DNS entry in Netmaker
-                    # Strip CIDR suffix if present (e.g., "100.64.1.5/32" -> "100.64.1.5")
-                    ip_address = address |> String.split("/") |> List.first()
-                    dns_hostname = Alias.dns_hostname(alias_record)
-
-                    case Vpn.create_dns_entry(network_name, %{
-                           name: dns_hostname,
-                           address: ip_address
-                         }) do
-                      {:ok, _} ->
-                        Logger.info("Created DNS entry for alias #{alias_record.name}: #{dns_hostname} -> #{address}")
-
-                        alias_record
-
-                      {:error, :service_unavailable} ->
-                        Logger.error("Failed to create DNS entry in Netmaker")
-                        Repo.rollback(:service_unavailable)
-                    end
-
-                  _ ->
-                    Logger.error("Node #{node.netmaker_host_id} has no IP address in Netmaker")
+                  {:error, :service_unavailable} ->
+                    Logger.error("Failed to create DNS entry in Netmaker")
                     Repo.rollback(:service_unavailable)
                 end
 
-              {:error, _reason} ->
-                Logger.error("Failed to list Netmaker nodes")
+              {:ok, _node} ->
+                Logger.error("Node #{node.netmaker_host_id} has no IP address in Netmaker")
+                Repo.rollback(:service_unavailable)
+
+              {:error, :not_found} ->
+                Logger.error("Node #{node.netmaker_host_id} not found in Netmaker")
+                Repo.rollback(:service_unavailable)
+
+              {:error, :service_unavailable} ->
+                Logger.error("Failed to query Netmaker nodes")
                 Repo.rollback(:service_unavailable)
             end
 

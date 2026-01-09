@@ -19,6 +19,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   - `last_seen_at` - Last successful health check timestamp
   - `version` - EdgeAgent version string
   - `self_update_enabled` - Whether auto-updates are enabled
+  - `relay_enabled` - Whether this node requires relay gateway for connectivity
   """
   use EdgeAdmin.Schema
 
@@ -44,6 +45,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
           api_token: String.t(),
           proxy_password: String.t(),
           self_update_enabled: boolean(),
+          relay_enabled: boolean(),
           netmaker_host_id: String.t(),
           node_name: String.t() | nil,
           dns_hostname: String.t() | nil,
@@ -59,8 +61,17 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
 
   @derive {
     Flop.Schema,
-    filterable: [:id_type, :status, :version, :self_update_enabled, :last_seen_at, :inserted_at],
-    sortable: [:id_type, :status, :version, :self_update_enabled, :last_seen_at, :inserted_at, :updated_at],
+    filterable: [:id_type, :status, :version, :self_update_enabled, :relay_enabled, :last_seen_at, :inserted_at],
+    sortable: [
+      :id_type,
+      :status,
+      :version,
+      :self_update_enabled,
+      :relay_enabled,
+      :last_seen_at,
+      :inserted_at,
+      :updated_at
+    ],
     default_order: %{
       order_by: [:inserted_at],
       order_directions: [:desc]
@@ -86,6 +97,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     field(:api_token, :string)
     field(:proxy_password, :string)
     field(:self_update_enabled, :boolean, default: false)
+    field(:relay_enabled, :boolean, default: false)
 
     # Netmaker references
     field(:netmaker_host_id, :binary_id)

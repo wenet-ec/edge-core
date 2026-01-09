@@ -45,8 +45,10 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
       "proxy_socks5_connections" => extract_counter(lines, "edge_agent_proxy_socks5_connection_total"),
       "proxy_http_blocked" => extract_counter(lines, "edge_agent_proxy_http_blocked_total"),
       "proxy_socks5_blocked" => extract_counter(lines, "edge_agent_proxy_socks5_blocked_total"),
-      "proxy_http_blocked_by_reason" => extract_counter_by_label(lines, "edge_agent_proxy_http_blocked_total", "reason"),
-      "proxy_socks5_blocked_by_reason" => extract_counter_by_label(lines, "edge_agent_proxy_socks5_blocked_total", "reason"),
+      "proxy_http_blocked_by_reason" =>
+        extract_counter_by_label(lines, "edge_agent_proxy_http_blocked_total", "reason"),
+      "proxy_socks5_blocked_by_reason" =>
+        extract_counter_by_label(lines, "edge_agent_proxy_socks5_blocked_total", "reason"),
 
       # SSH
       "ssh_authentications" => extract_counter(lines, "edge_agent_ssh_authentication_total"),

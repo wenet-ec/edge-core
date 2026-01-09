@@ -5,13 +5,14 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
 
   alias EdgeAdmin.SelfUpdates
   alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
+  alias EdgeAdminWeb.Plugs.DegradedMode
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug EdgeAdminWeb.Plugs.DegradedMode, :block when action in [:create]
-  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :show, :delete]
+  plug DegradedMode, :block when action in [:create]
+  plug DegradedMode, :allow when action in [:index, :show, :delete]
 
   tags(["SelfUpdates.Request"])
 
@@ -118,8 +119,7 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
     ],
     responses: %{
       200 =>
-        {"Self-update request details", "application/json",
-         SelfUpdateRequestSchemas.SelfUpdateRequestSingleResponse},
+        {"Self-update request details", "application/json", SelfUpdateRequestSchemas.SelfUpdateRequestSingleResponse},
       404 => {"Self-update request not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
@@ -148,9 +148,7 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
     responses: %{
       204 => {"Self-update request deleted successfully", "", nil},
       404 => {"Self-update request not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 =>
-        {"Cannot delete non-completed request", "application/json",
-         CommonSchemas.ChangesetErrorResponse}
+      422 => {"Cannot delete non-completed request", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )
 

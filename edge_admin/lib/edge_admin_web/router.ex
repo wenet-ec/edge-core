@@ -157,6 +157,9 @@ defmodule EdgeAdminWeb.Router do
   scope "/api/agents", Agents do
     pipe_through(:agent_api)
 
+    # Relay gateway registration
+    post("/relays", RelayController, :create)
+
     # SSH credentials verification
     post("/ssh_usernames/verify_credentials", SshUsernameController, :verify_credentials)
 

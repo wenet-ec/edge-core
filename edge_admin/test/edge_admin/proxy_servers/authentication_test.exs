@@ -46,10 +46,12 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
 
       # Mock returns node by alias name
       expect(EdgeAdmin.NodesMock, :list_node_identifiers_by_cluster, fn "staging" ->
-        {:ok, %{
-          "node-123" => mock_node,
-          "web-server" => mock_node  # alias points to same node
-        }}
+        {:ok,
+         %{
+           "node-123" => mock_node,
+           # alias points to same node
+           "web-server" => mock_node
+         }}
       end)
 
       result = Authentication.authenticate_and_parse("node-web-server.cluster-staging.nm.internal", "any_password")
@@ -63,10 +65,11 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
       node2 = %{id: "node-2", dns_hostname: "node-2.cluster-prod.nm.internal"}
 
       expect(EdgeAdmin.NodesMock, :list_node_identifiers_by_cluster, fn "prod" ->
-        {:ok, %{
-          "1" => node1,
-          "2" => node2
-        }}
+        {:ok,
+         %{
+           "1" => node1,
+           "2" => node2
+         }}
       end)
 
       result = Authentication.authenticate_and_parse("node-2.cluster-prod.nm.internal", "any_password")

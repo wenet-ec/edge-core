@@ -48,6 +48,8 @@ defmodule EdgeAdmin.Vpn do
 
   alias Nexmaker.Api.DNS
   alias Nexmaker.Api.EnrollmentKeys
+  alias Nexmaker.Api.Gateways.Ingress
+  alias Nexmaker.Api.Gateways.Relay
   alias Nexmaker.Api.Hosts
   alias Nexmaker.Api.Networks
   alias Nexmaker.Api.Nodes
@@ -983,5 +985,126 @@ defmodule EdgeAdmin.Vpn do
     _ ->
       Logger.warning("Failed to get admin_cluster metadata")
       []
+  end
+
+  # ===========================================================================
+  # Gateway & Relay Management
+  # ===========================================================================
+
+  @doc """
+  Creates an ingress gateway on a node with empty relayed nodes.
+
+  This configures the admin as a relay-capable gateway without initially
+  relaying any agents. Agents can be assigned later.
+
+  ## Parameters
+    - network_name: String - Network name (e.g., "cluster-default")
+    - node_id: String - Netmaker node ID (UUID) to make gateway
+
+  ## Returns
+    - `{:ok, node}` - Updated node with gateway configuration
+    - `{:error, :service_unavailable}` - Netmaker unavailable
+    - `{:error, :not_found}` - Node not found
+
+  ## Examples
+
+      iex> Vpn.create_ingress_gateway("cluster-default", "node-uuid-123")
+      {:ok, %{"id" => "node-uuid-123", "is_gw" => true, ...}}
+  """
+  @spec create_ingress_gateway(String.t(), String.t()) :: {:ok, map()} | {:error, :service_unavailable | :not_found}
+  def create_ingress_gateway(network_name, node_id) do
+    network_name
+    |> Ingress.create_gateway(node_id)
+    |> normalize_netmaker_error()
+  end
+
+  @doc """
+  Assigns an agent node to a gateway for relay.
+
+  This makes all traffic from the agent route through the gateway node.
+  Only the last assignment matters - assigning to a new gateway overwrites the previous one.
+
+  ## Parameters
+    - network_name: String - Network name
+    - agent_node_id: String - Agent's Netmaker node ID (UUID)
+    - gateway_node_id: String - Gateway's Netmaker node ID (UUID)
+
+  ## Returns
+    - `{:ok, response}` - Agent assigned to gateway
+    - `{:error, :service_unavailable}` - Netmaker unavailable
+    - `{:error, :not_found}` - Node or gateway not found
+
+  ## Examples
+
+      iex> Vpn.assign_to_gateway("cluster-default", "agent-uuid", "gateway-uuid")
+      {:ok, %{"id" => "agent-uuid", "is_relayed" => true, ...}}
+  """
+  @spec assign_to_gateway(String.t(), String.t(), String.t()) ::
+          {:ok, map()} | {:error, :service_unavailable | :not_found}
+  def assign_to_gateway(network_name, agent_node_id, gateway_node_id) do
+    network_name
+    |> Relay.assign(agent_node_id, gateway_node_id)
+    |> normalize_netmaker_error()
+  end
+
+  @doc """
+  Finds a node by host ID in a network.
+
+  Queries the network's nodes and finds the one matching the given host_id.
+  Returns the full node map for accessing any node property (id, address, etc).
+
+  ## Parameters
+    - network_name: String - Network name
+    - host_id: String - Netmaker host ID (UUID)
+
+  ## Returns
+    - `{:ok, node}` - Found node map
+    - `{:error, :not_found}` - Node with this host_id not found in network
+    - `{:error, :service_unavailable}` - Netmaker unavailable
+
+  ## Examples
+
+      iex> Vpn.find_node_by_host("cluster-default", "host-uuid-123")
+      {:ok, %{"id" => "node-uuid-456", "hostid" => "host-uuid-123", "address" => "100.64.0.1/24", ...}}
+  """
+  @spec find_node_by_host(String.t(), String.t()) :: {:ok, map()} | {:error, :not_found | :service_unavailable}
+  def find_node_by_host(network_name, host_id) do
+    case list_nodes(network_name) do
+      {:ok, nodes} when is_list(nodes) ->
+        case Enum.find(nodes, fn node -> node["hostid"] == host_id end) do
+          nil -> {:error, :not_found}
+          node -> {:ok, node}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  Finds a node's Netmaker node ID by host ID.
+
+  Convenience wrapper around `find_node_by_host/2` that returns only the node ID.
+
+  ## Parameters
+    - network_name: String - Network name
+    - host_id: String - Netmaker host ID (UUID)
+
+  ## Returns
+    - `{:ok, node_id}` - Found node ID
+    - `{:error, :not_found}` - Node with this host_id not found in network
+    - `{:error, :service_unavailable}` - Netmaker unavailable
+
+  ## Examples
+
+      iex> Vpn.find_node_id_by_host("cluster-default", "host-uuid-123")
+      {:ok, "node-uuid-456"}
+  """
+  @spec find_node_id_by_host(String.t(), String.t()) :: {:ok, String.t()} | {:error, :not_found | :service_unavailable}
+  def find_node_id_by_host(network_name, host_id) do
+    case find_node_by_host(network_name, host_id) do
+      {:ok, %{"id" => node_id}} -> {:ok, node_id}
+      {:error, reason} -> {:error, reason}
+    end
   end
 end

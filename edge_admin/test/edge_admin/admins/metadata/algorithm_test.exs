@@ -142,7 +142,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       admin2_count = map_size(result.edge_clusters["admin-2"])
 
       assert admin1_count + admin2_count == 3
-      assert [admin1_count, admin2_count] |> Enum.sort() == [1, 2]
+      assert Enum.sort([admin1_count, admin2_count]) == [1, 2]
     end
 
     test "respects capacity constraints during distribution" do

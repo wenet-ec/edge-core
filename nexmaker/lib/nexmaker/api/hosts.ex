@@ -242,4 +242,68 @@ defmodule Nexmaker.Api.Hosts do
   def upgrade(host_id, opts \\ []) do
     Api.request(:post, "/api/hosts/#{host_id}/upgrade", opts)
   end
+
+  @doc """
+  Upgrades all hosts to latest netclient version.
+
+  Triggers netclient upgrade on all registered hosts.
+
+  ## Parameters
+    - opts: Keyword - API options (base_url, master_key)
+
+  ## Returns
+    - `{:ok, response}` - Upgrade triggered for all hosts
+    - `{:error, reason}` - Error occurred
+
+  ## Examples
+
+      {:ok, _} = Nexmaker.Api.Hosts.upgrade_all()
+  """
+  @spec upgrade_all(keyword()) :: {:ok, any()} | {:error, any()}
+  def upgrade_all(opts \\ []) do
+    Api.request(:post, "/api/hosts/upgrade", opts)
+  end
+
+  @doc """
+  Syncs all hosts (triggers config pull on all hosts).
+
+  Sends sync command to all registered hosts, forcing them to pull
+  latest configuration from Netmaker server.
+
+  ## Parameters
+    - opts: Keyword - API options (base_url, master_key)
+
+  ## Returns
+    - `{:ok, response}` - Sync triggered for all hosts
+    - `{:error, reason}` - Error occurred
+
+  ## Examples
+
+      {:ok, _} = Nexmaker.Api.Hosts.sync_all()
+  """
+  @spec sync_all(keyword()) :: {:ok, any()} | {:error, any()}
+  def sync_all(opts \\ []) do
+    Api.request(:post, "/api/hosts/sync", opts)
+  end
+
+  @doc """
+  Regenerates keys for all hosts.
+
+  Triggers key regeneration for all registered hosts.
+
+  ## Parameters
+    - opts: Keyword - API options (base_url, master_key)
+
+  ## Returns
+    - `{:ok, response}` - Key regeneration triggered for all hosts
+    - `{:error, reason}` - Error occurred
+
+  ## Examples
+
+      {:ok, _} = Nexmaker.Api.Hosts.regenerate_all_keys()
+  """
+  @spec regenerate_all_keys(keyword()) :: {:ok, any()} | {:error, any()}
+  def regenerate_all_keys(opts \\ []) do
+    Api.request(:put, "/api/hosts/keys", opts)
+  end
 end

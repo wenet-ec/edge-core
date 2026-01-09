@@ -28,14 +28,28 @@ defmodule Nexmaker.Api do
 
   ## Modules
 
+  ### Core VPN
   - `Nexmaker.Api.Networks` - Network management (6 endpoints)
   - `Nexmaker.Api.EnrollmentKeys` - Enrollment key management (4 endpoints)
   - `Nexmaker.Api.Hosts` - Host management (11 endpoints)
   - `Nexmaker.Api.Nodes` - Node management (6 endpoints)
-  - `Nexmaker.Api.DNS` - DNS management (8 endpoints)
+  - `Nexmaker.Api.Server` - Server info and health (4 endpoints)
   - `Nexmaker.Api.Superadmin` - Superadmin bootstrap (3 endpoints)
 
-  Additional modules: ACLs, Gateways, Server, etc. (see planning docs)
+  ### Management Features
+  - `Nexmaker.Api.ACLs` - Network ACLs (3 endpoints)
+  - `Nexmaker.Api.DNS` - DNS management (8 endpoints)
+  - `Nexmaker.Api.Gateways.Ingress` - Ingress gateways (4 endpoints)
+  - `Nexmaker.Api.Gateways.Egress` - Egress gateways (3 endpoints)
+  - `Nexmaker.Api.Gateways.Relay` - Relay nodes (2 endpoints)
+
+  ### Advanced Features
+  - `Nexmaker.Api.AdvancedEgress` - Advanced egress routes (4 endpoints)
+  - `Nexmaker.Api.InternetGateway` - Internet gateways (3 endpoints)
+  - `Nexmaker.Api.ExternalClients` - Remote access clients (8 endpoints)
+
+  ### Integration
+  - `Nexmaker.Api.EMQX` - EMQX broker integration (1 endpoint)
   """
 
   require Logger

@@ -175,4 +175,113 @@ defmodule Nexmaker.Api.DNS do
   def sync(network_name, opts \\ []) do
     Api.request(:post, "/api/dns/#{network_name}/sync", opts)
   end
+
+  @doc """
+  Gets DNS entries for a network (admin endpoint).
+
+  Alternative admin-specific endpoint for retrieving network DNS entries.
+
+  ## Parameters
+    - network_name: String - Network name
+    - opts: Keyword - API options (base_url, master_key)
+
+  ## Returns
+    - `{:ok, dns_entries}` - List of DNS entry maps
+    - `{:error, reason}` - Error occurred
+
+  ## Examples
+
+      {:ok, entries} = Nexmaker.Api.DNS.get_adm_network("admin-cluster")
+  """
+  @spec get_adm_network(String.t(), keyword()) :: {:ok, [map()]} | {:error, any()}
+  def get_adm_network(network_name, opts \\ []) do
+    Api.request(:get, "/api/dns/adm/#{network_name}", opts)
+  end
+
+  @doc """
+  Gets node DNS entries for a network.
+
+  Returns DNS entries for nodes (automatically created by Netmaker).
+
+  ## Parameters
+    - network_name: String - Network name
+    - opts: Keyword - API options (base_url, master_key)
+
+  ## Returns
+    - `{:ok, dns_entries}` - List of node DNS entry maps
+    - `{:error, reason}` - Error occurred
+
+  ## Examples
+
+      {:ok, node_entries} = Nexmaker.Api.DNS.get_node_entries("cluster-abc")
+  """
+  @spec get_node_entries(String.t(), keyword()) :: {:ok, [map()]} | {:error, any()}
+  def get_node_entries(network_name, opts \\ []) do
+    Api.request(:get, "/api/dns/adm/#{network_name}/nodes", opts)
+  end
+
+  @doc """
+  Gets custom DNS entries for a network.
+
+  Returns only custom DNS entries (created via API, not auto-generated).
+
+  ## Parameters
+    - network_name: String - Network name
+    - opts: Keyword - API options (base_url, master_key)
+
+  ## Returns
+    - `{:ok, dns_entries}` - List of custom DNS entry maps
+    - `{:error, reason}` - Error occurred
+
+  ## Examples
+
+      {:ok, custom_entries} = Nexmaker.Api.DNS.get_custom_entries("cluster-abc")
+  """
+  @spec get_custom_entries(String.t(), keyword()) :: {:ok, [map()]} | {:error, any()}
+  def get_custom_entries(network_name, opts \\ []) do
+    Api.request(:get, "/api/dns/adm/#{network_name}/custom", opts)
+  end
+
+  @doc """
+  Pushes DNS updates to all nodes (admin endpoint).
+
+  Alternative admin-specific endpoint for pushing DNS changes.
+
+  ## Parameters
+    - opts: Keyword - API options (base_url, master_key)
+
+  ## Returns
+    - `{:ok, response}` - DNS push triggered
+    - `{:error, reason}` - Error occurred
+
+  ## Examples
+
+      {:ok, _} = Nexmaker.Api.DNS.push_adm()
+  """
+  @spec push_adm(keyword()) :: {:ok, any()} | {:error, any()}
+  def push_adm(opts \\ []) do
+    Api.request(:post, "/api/dns/adm/pushdns", opts)
+  end
+
+  @doc """
+  Syncs DNS for a network (admin endpoint).
+
+  Alternative admin-specific endpoint for DNS sync.
+
+  ## Parameters
+    - network_name: String - Network name
+    - opts: Keyword - API options (base_url, master_key)
+
+  ## Returns
+    - `{:ok, response}` - DNS sync triggered
+    - `{:error, reason}` - Error occurred
+
+  ## Examples
+
+      {:ok, _} = Nexmaker.Api.DNS.sync_adm("admin-cluster")
+  """
+  @spec sync_adm(String.t(), keyword()) :: {:ok, any()} | {:error, any()}
+  def sync_adm(network_name, opts \\ []) do
+    Api.request(:post, "/api/dns/adm/#{network_name}/sync", opts)
+  end
 end

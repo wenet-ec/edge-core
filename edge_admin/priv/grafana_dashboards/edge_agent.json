@@ -143,6 +143,178 @@
         "x": 0,
         "y": 9
       },
+      "id": 3.5,
+      "panels": [],
+      "title": "Relay Management",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Relay assignment attempts by status",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 10
+      },
+      "id": 3.6,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(edge_agent_relay_assignment_total[$__rate_interval])",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Relay Assignment Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Relay health check results (connected/disconnected/not_found)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 10
+      },
+      "id": 3.7,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(edge_agent_relay_health_check_total[$__rate_interval])",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Relay Health Check Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Number of relay admin failovers (network instability indicator)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 10
+      },
+      "id": 3.8,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "targets": [
+        {
+          "expr": "edge_agent_relay_failover_count",
+          "legendFormat": "Failover Count",
+          "refId": "A"
+        }
+      ],
+      "title": "Relay Failover Count",
+      "type": "gauge"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
       "id": 4,
       "panels": [],
       "title": "Command Execution",
@@ -176,7 +348,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 10
+        "y": 19
       },
       "id": 5,
       "options": {
@@ -226,7 +398,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 10
+        "y": 19
       },
       "id": 6,
       "options": {
@@ -286,7 +458,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 18
+        "y": 27
       },
       "id": 7,
       "options": {
@@ -319,7 +491,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 35
       },
       "id": 8,
       "panels": [],
@@ -354,7 +526,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 27
+        "y": 36
       },
       "id": 9,
       "options": {
@@ -404,7 +576,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 27
+        "y": 36
       },
       "id": 10,
       "options": {
@@ -454,7 +626,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 27
+        "y": 36
       },
       "id": 11,
       "options": {
@@ -504,7 +676,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 35
+        "y": 44
       },
       "id": 11.5,
       "options": {
@@ -554,7 +726,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 35
+        "y": 44
       },
       "id": 11.6,
       "options": {
@@ -582,7 +754,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 52
       },
       "id": 12,
       "panels": [],
@@ -617,7 +789,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 36
+        "y": 53
       },
       "id": 13,
       "options": {
@@ -667,7 +839,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 36
+        "y": 53
       },
       "id": 14,
       "options": {
@@ -717,7 +889,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 36
+        "y": 53
       },
       "id": 15,
       "options": {
@@ -747,7 +919,7 @@
   ],
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["edge_agent", "commands", "proxy", "ssh"],
+  "tags": ["edge_agent", "commands", "proxy", "ssh", "relay"],
   "templating": {
     "list": [
       {

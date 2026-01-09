@@ -31,7 +31,8 @@ config :edge_agent, Oban,
     command_execution: [limit: 10],
     execution_report: 1,
     admin_discovery: 1,
-    vpn_config_pull: 1
+    vpn_config_pull: 1,
+    relayed_node: 1
   ],
   plugins: [
     {Oban.Plugins.Cron,
@@ -40,6 +41,8 @@ config :edge_agent, Oban,
        {"* * * * *", EdgeAgent.Commands.Workers.ExecutionEnqueueWorker},
        # Every minute for reporting (safety net)
        {"* * * * *", EdgeAgent.Commands.Workers.ExecutionReportWorker},
+       # Every minute to create relayed node
+       {"* * * * *", EdgeAgent.EdgeClusters.Workers.RegisterRelayedNodeWorker},
        # Every 5 minutes for admin discovery
        {"*/5 * * * *", EdgeAgent.EdgeClusters.Workers.AdminDiscoveryWorker},
        # Every 30 minutes to pull VPN config from Netmaker

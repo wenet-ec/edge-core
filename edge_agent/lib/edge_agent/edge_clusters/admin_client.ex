@@ -35,6 +35,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   - **GET /api/agents/command_executions** - Fetch pending commands
   - **PATCH /api/agents/command_executions/:id** - Report execution results
   - **POST /api/agents/ssh_usernames/verify_credentials** - Verify SSH credentials
+  - **POST /api/agents/relays** - Request relay gateway assignment
 
   ## Error Handling
 
@@ -194,6 +195,43 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
         {:error, reason} ->
           Logger.warning("Failed to get command executions: #{inspect(reason)}")
+          {:error, {:request_failed, reason}}
+      end
+    end)
+  end
+
+  @doc """
+  Creates a relayed node assignment from admin.
+
+  Sends a request to assign this agent to an admin's relay gateway.
+  Falls back across all available admin URLs until one succeeds.
+  Only the last assignment matters (last write wins).
+
+  ## Returns
+  - `{:ok, response}` - Assignment succeeded, response includes relay_admin_name
+  - `{:error, :no_api_token}` - No API token found
+  - `{:error, :no_admin_urls}` - No admin URLs available
+  - `{:error, {:http_error, status, body}}` - HTTP error
+  - `{:error, {:all_requests_failed, msg}}` - All admin URLs failed
+
+  POST /api/agents/relays
+  """
+  @spec create_relayed_node() :: {:ok, map()} | {:error, term()}
+  def create_relayed_node do
+    path = "/api/agents/relays"
+
+    request_with_auth(path, fn url, headers ->
+      case Req.post(url, json: %{}, headers: headers, receive_timeout: 5000, retry: false) do
+        {:ok, %{status: 200, body: response}} ->
+          Logger.debug("Successfully create relayed node")
+          {:ok, response}
+
+        {:ok, %{status: status, body: body}} ->
+          Logger.warning("Failed to create relayed node, HTTP #{status}: #{inspect(body)}")
+          {:error, {:http_error, status, body}}
+
+        {:error, reason} ->
+          Logger.warning("Failed to create relayed node: #{inspect(reason)}")
           {:error, {:request_failed, reason}}
       end
     end)

@@ -191,6 +191,28 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
           event_name: [:edge_agent, :discovery, :scan],
           description: "Number of admins found in last discovery scan",
           measurement: :admins_found
+        ),
+
+        # Relay worker metrics
+        counter(
+          [:edge_agent, :relay, :assignment, :total],
+          event_name: [:edge_agent, :relay, :assignment],
+          description: "Total number of relay assignment attempts",
+          tags: [:status],
+          tag_values: &get_status_tag/1
+        ),
+        counter(
+          [:edge_agent, :relay, :health_check, :total],
+          event_name: [:edge_agent, :relay, :health_check],
+          description: "Total number of relay health checks",
+          tags: [:status],
+          tag_values: &get_relay_health_status_tag/1
+        ),
+        last_value(
+          [:edge_agent, :relay, :failover_count],
+          event_name: [:edge_agent, :relay, :assignment],
+          description: "Number of relay admin changes (failovers)",
+          measurement: :failover_count
         )
       ]
     )
@@ -215,5 +237,9 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
 
   defp get_reason_tag(%{reason: reason}) do
     %{reason: to_string(reason)}
+  end
+
+  defp get_relay_health_status_tag(%{status: status}) do
+    %{status: to_string(status)}
   end
 end

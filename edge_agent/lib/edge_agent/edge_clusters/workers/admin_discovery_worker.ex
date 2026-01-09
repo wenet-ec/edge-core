@@ -11,7 +11,7 @@ defmodule EdgeAgent.EdgeClusters.Workers.AdminDiscoveryWorker do
     queue: :admin_discovery,
     max_attempts: 1,
     unique: [
-      period: 300,
+      period: :infinity,
       states: [:available, :scheduled, :executing, :retryable]
     ]
 

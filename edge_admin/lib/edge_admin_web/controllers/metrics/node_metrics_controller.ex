@@ -19,7 +19,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
     description: """
     Returns aggregated metrics from all available sources for a node:
     - Host metrics (Node Exporter): CPU, memory, disk, uptime
-    - Agent metrics (agent PromEx): BEAM stats, commands, proxy, SSH, Oban
+    - Agent metrics (agent PromEx): BEAM stats, commands, proxy, SSH, relay, Oban
 
     Provides a complete view of node health and performance in a single request.
     Uses best-effort fetching - if one source fails, others are still returned.
@@ -129,6 +129,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
     - Discovery: admin discovery scan metrics
     - Proxy: HTTP and SOCKS5 connection statistics
     - SSH: authentication and session metrics
+    - Relay: relay assignment and failover statistics
     - Oban: job queue states (available, scheduled, executing, etc.)
     """,
     parameters: [

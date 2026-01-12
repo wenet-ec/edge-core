@@ -304,19 +304,26 @@ defmodule EdgeAdmin.Nodes do
   Creates a cluster and its Netmaker network.
 
   Flow:
-  1. Validate input and generate IP range if needed
-  2. Create DB record FIRST (validates uniqueness constraints)
-  3. Create Netmaker network
-  4. Emit event for metadata recomputation
+  1. Check Netmaker health (fail fast if service unavailable)
+  2. Validate input and generate IP range if needed
+  3. Create DB record FIRST (validates uniqueness constraints)
+  4. Create Netmaker network (rollback DB on failure)
+  5. Emit event for metadata recomputation
 
+  If health check fails, returns service unavailable immediately (no DB call).
   If DB creation fails, returns validation error immediately (no Netmaker call).
   If Netmaker creation fails, deletes DB record and returns service unavailable.
 
-  Returns `{:ok, cluster}`, `{:error, changeset}` (validation), or `{:error, :service_unavailable}` (Netmaker failure).
+  This ensures "cluster in DB but network not in Netmaker" always means failed deletion,
+  allowing reconciliation to safely delete orphaned DB clusters.
+
+  Returns `{:ok, cluster}`, `{:error, changeset}` (validation), or `{:error, :service_unavailable}` (health check or Netmaker failure).
   """
   @spec create_cluster(map()) :: {:ok, Cluster.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
   def create_cluster(attrs \\ %{}) do
     with {:ok, validated_attrs} <- Forms.CreateClusterForm.changeset(attrs),
+         # Check Netmaker health before proceeding
+         :ok <- Vpn.health_check(),
          existing_ranges = Repo.all(from(c in Cluster, select: c.ipv4_range)),
          ipv4_range = validated_attrs["ipv4_range"] || Vpn.generate_next_subnet(existing_ranges),
          cluster_attrs = Map.put(validated_attrs, "ipv4_range", ipv4_range),
@@ -326,13 +333,13 @@ defmodule EdgeAdmin.Nodes do
 
       case Vpn.create_network(network_name, %{addressrange: ipv4_range}) do
         {:ok, _} ->
+          Logger.info("Created Netmaker network: #{network_name}")
           broadcast_metadata_event({:cluster_created, cluster.id})
           {:ok, cluster}
 
         {:error, :service_unavailable} = error ->
           # Netmaker failed - rollback DB insert
           Logger.warning("Netmaker network creation failed, rolling back DB cluster: #{cluster.name}")
-
           Repo.delete(cluster)
           error
       end
@@ -366,58 +373,56 @@ defmodule EdgeAdmin.Nodes do
   Deletes a cluster and its Netmaker network.
   Fails if cluster has nodes.
 
-  Flow:
+  Flow (Netmaker-first):
   1. Verify cluster is empty (deletion rule)
-  2. Delete from DB FIRST (source of truth) - wrapped in transaction
-  3. Delete Netmaker network (external cleanup)
+  2. Delete network from Netmaker FIRST
+  3. Delete from DB
   4. Emit event for metadata recomputation
 
-  Uses transaction to ensure:
-  - If Netmaker deletion fails → DB deletion rolls back (both fail together)
-  - If DB deletion fails → Netmaker never called
-  - Atomic operation - both succeed or both fail
+  If Netmaker deletion fails (except :not_found), operation stops and returns error.
+  If Netmaker returns :not_found, continues with DB deletion (network already gone).
 
-  Returns `{:ok, cluster}`, `{:error, changeset}` (validation), or `{:error, :service_unavailable}` (Netmaker failure).
+  This ensures "cluster in DB but network not in Netmaker" always means failed deletion,
+  allowing reconciliation to safely delete orphaned DB clusters.
+
+  Returns `{:ok, cluster}`, `{:error, changeset}` (validation/DB failure), or `{:error, :service_unavailable}` (Netmaker failure).
   """
   @spec delete_cluster(Cluster.t()) ::
           {:ok, Cluster.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
   def delete_cluster(%Cluster{} = cluster) do
     case DeletionRules.validate_cluster_deletion(cluster) do
       :ok ->
-        Repo.transaction(fn ->
-          network_name = node_network_name(cluster)
+        network_name = node_network_name(cluster)
 
-          # 1. Delete from DB first
-          case Repo.delete(cluster) do
-            {:ok, deleted_cluster} ->
-              # 2. Delete from Netmaker (external cleanup)
-              case Vpn.delete_network(network_name) do
-                {:ok, _} ->
-                  # Success - both deleted
-                  broadcast_metadata_event({:cluster_deleted, cluster.id})
-                  deleted_cluster
+        # 1. Delete network from Netmaker FIRST
+        case Vpn.delete_network(network_name) do
+          {:ok, _} ->
+            Logger.info("Deleted network #{network_name} from Netmaker")
+            delete_cluster_from_db(cluster)
 
-                {:error, :not_found} ->
-                  # Network already gone - acceptable, DB deletion succeeds
-                  Logger.info("Netmaker network #{network_name} already deleted")
-                  broadcast_metadata_event({:cluster_deleted, cluster.id})
-                  deleted_cluster
+          {:error, :not_found} ->
+            # Network already gone - continue with DB deletion
+            Logger.info("Netmaker network #{network_name} already deleted")
+            delete_cluster_from_db(cluster)
 
-                {:error, :service_unavailable} ->
-                  # Netmaker failed - rollback DB deletion
-                  Logger.error("Failed to delete Netmaker network #{network_name}, rolling back DB deletion")
-
-                  Repo.rollback(:service_unavailable)
-              end
-
-            {:error, changeset} ->
-              # DB deletion failed - rollback transaction
-              Repo.rollback(changeset)
-          end
-        end)
+          {:error, :service_unavailable} = error ->
+            # Netmaker failed - stop operation
+            Logger.error("Failed to delete Netmaker network #{network_name}, aborting cluster deletion")
+            error
+        end
 
       {:error, changeset} ->
-        # Validation failed - return error without transaction
+        {:error, changeset}
+    end
+  end
+
+  defp delete_cluster_from_db(%Cluster{} = cluster) do
+    case Repo.delete(cluster) do
+      {:ok, deleted_cluster} ->
+        broadcast_metadata_event({:cluster_deleted, cluster.id})
+        {:ok, deleted_cluster}
+
+      {:error, changeset} ->
         {:error, changeset}
     end
   end
@@ -611,56 +616,53 @@ defmodule EdgeAdmin.Nodes do
   @doc """
   Deletes a node and its Netmaker host.
 
-  Flow:
-  1. Clean up DNS records (aliases) from Netmaker FIRST (best-effort, outside transaction)
-  2. Delete from DB FIRST (source of truth) - wrapped in transaction
-  3. Delete host from Netmaker (external cleanup)
+  Flow (Netmaker-first):
+  1. Clean up DNS records (aliases) from Netmaker (best-effort)
+  2. Delete host from Netmaker FIRST
+  3. Delete from DB (cascades to ssh_usernames, ssh_public_keys, command_executions, aliases)
   4. Emit event for metadata recomputation
 
-  Uses transaction to ensure:
-  - If Netmaker deletion fails → DB deletion rolls back (both fail together)
-  - If DB deletion fails → Netmaker never called
-  - DB cascades to ssh_usernames, ssh_public_keys, command_executions, aliases
+  If Netmaker deletion fails (except :not_found), operation stops and returns error.
+  If Netmaker returns :not_found, continues with DB deletion (already gone).
 
-  Returns `{:ok, node}` or `{:error, :service_unavailable}`.
+  This ensures "node in DB but host not in Netmaker" always means failed deletion,
+  allowing reconciliation to safely delete orphaned DB nodes.
+
+  Returns `{:ok, node}`, `{:error, changeset}` (DB failure), or `{:error, :service_unavailable}` (Netmaker failure).
   """
-  @spec delete_node(Node.t()) :: {:ok, Node.t()} | {:error, :service_unavailable}
+  @spec delete_node(Node.t()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
   def delete_node(%Node{} = node) do
-    # 1. Clean up DNS records (aliases) from Netmaker FIRST
-    # Best-effort - logs warnings on failures but continues
-    # Done OUTSIDE transaction so DNS cleanup doesn't affect atomicity
+    # 1. Clean up DNS records (aliases) from Netmaker (best-effort, outside main flow)
     cleanup_node_aliases(node)
 
-    # 2. Use transaction for DB + Netmaker deletion
-    Repo.transaction(fn ->
-      # 3. Delete from DB first (cascades to ssh_usernames, ssh_public_keys, command_executions, aliases)
-      case Repo.delete(node) do
-        {:ok, deleted_node} ->
-          # 4. Delete host from Netmaker (external cleanup)
-          case Vpn.delete_host(node.netmaker_host_id) do
-            {:ok, _} ->
-              Logger.info("Deleted host #{node.netmaker_host_id} from Netmaker")
-              broadcast_metadata_event({:node_deleted, node.id, node.cluster_id})
-              deleted_node
+    # 2. Delete host from Netmaker FIRST
+    case Vpn.delete_host(node.netmaker_host_id) do
+      {:ok, _} ->
+        Logger.info("Deleted host #{node.netmaker_host_id} from Netmaker")
+        delete_node_from_db(node)
 
-            {:error, :not_found} ->
-              # Host already gone - acceptable, DB deletion succeeds
-              Logger.info("Netmaker host #{node.netmaker_host_id} already deleted")
-              broadcast_metadata_event({:node_deleted, node.id, node.cluster_id})
-              deleted_node
+      {:error, :not_found} ->
+        # Host already gone - continue with DB deletion
+        Logger.info("Netmaker host #{node.netmaker_host_id} already deleted")
+        delete_node_from_db(node)
 
-            {:error, :service_unavailable} ->
-              # Netmaker failed - rollback DB deletion
-              Logger.error("Failed to delete Netmaker host #{node.netmaker_host_id}, rolling back DB deletion")
+      {:error, :service_unavailable} = error ->
+        # Netmaker failed - stop operation
+        Logger.error("Failed to delete Netmaker host #{node.netmaker_host_id}, aborting node deletion")
+        error
+    end
+  end
 
-              Repo.rollback(:service_unavailable)
-          end
+  defp delete_node_from_db(%Node{} = node) do
+    # Delete from DB (cascades to ssh_usernames, ssh_public_keys, command_executions, aliases)
+    case Repo.delete(node) do
+      {:ok, deleted_node} ->
+        broadcast_metadata_event({:node_deleted, node.id, node.cluster_id})
+        {:ok, deleted_node}
 
-        {:error, changeset} ->
-          # DB deletion failed - rollback transaction
-          Repo.rollback(changeset)
-      end
-    end)
+      {:error, changeset} ->
+        {:error, changeset}
+    end
   end
 
   @doc """
@@ -1158,16 +1160,24 @@ defmodule EdgeAdmin.Nodes do
 
   Flow for each expired key:
   1. Query Netmaker for hosts enrolled with this key (best-effort)
-  2. Delete Netmaker hosts - count successes, log failures (best-effort)
-  3. Delete DB nodes associated with those hosts (best-effort)
-  4. Delete enrollment key from Netmaker (best-effort)
-  5. Delete ephemeral key tracker from DB (only fails if this step errors)
+  2. Separate hosts into two categories:
+     - **Ephemeral edge nodes**: Hosts with DB records (registered agents)
+     - **Staff hosts**: Hosts without DB records (staff joined via netclient)
+  3. Delete ephemeral edge nodes using delete_node/1 (handles aliases, events, Netmaker-first)
+  4. Delete staff hosts directly from Netmaker (no DB cleanup needed)
+  5. Delete enrollment key from Netmaker (best-effort)
+  6. Delete ephemeral key tracker from DB (only fails if this step errors)
 
   Why best-effort (no transaction)?
   - This is garbage collection - partial cleanup is better than no cleanup
   - Already-deleted resources should be treated as success (idempotent)
   - One failure shouldn't block cleanup of other resources
   - Will retry on next run if cleanup is incomplete
+
+  Why delete_node/1 for ephemeral edge nodes?
+  - Ensures aliases are cleaned up (DNS entries removed)
+  - Emits metadata events for cluster recomputation
+  - Follows Netmaker-first deletion pattern (consistency with other delete operations)
 
   Returns statistics about the cleanup operation.
   """
@@ -1203,9 +1213,7 @@ defmodule EdgeAdmin.Nodes do
     Logger.debug("Processing expired key: #{enrollment_key.token} with tag: #{enrollment_key.tag}")
 
     # Best-effort cleanup - continue even if some steps fail
-    # 1. Query Netmaker for nodes using this tag
-    network_name = node_network_name(enrollment_key.cluster)
-
+    # 1. Query Netmaker for all hosts enrolled with this tag
     netmaker_nodes =
       case Vpn.list_nodes_by_tag(enrollment_key.tag) do
         {:ok, nodes} ->
@@ -1213,11 +1221,10 @@ defmodule EdgeAdmin.Nodes do
 
         {:error, :service_unavailable} ->
           Logger.warning("Failed to query nodes by tag #{enrollment_key.tag}: Netmaker unavailable")
-
           []
       end
 
-    # Extract unique host IDs from nodes
+    # Extract unique host IDs from Netmaker nodes
     host_ids =
       netmaker_nodes
       |> Enum.map(& &1["hostid"])
@@ -1226,33 +1233,55 @@ defmodule EdgeAdmin.Nodes do
 
     Logger.debug("Found #{length(host_ids)} unique hosts with tag #{enrollment_key.tag}")
 
-    # 2. Delete each Netmaker host (best-effort, count successes)
-    deleted_hosts =
-      Enum.count(host_ids, fn host_id ->
-        case Vpn.delete_host(network_name, host_id) do
-          {:ok, _} ->
-            Logger.info("Deleted Netmaker host #{host_id} from cluster #{enrollment_key.cluster.name}")
+    # 2. Find which hosts have DB records (ephemeral edge nodes vs staff hosts)
+    db_nodes = Repo.all(from(n in Node, where: n.netmaker_host_id in ^host_ids, preload: [:cluster]))
+    db_node_host_ids = MapSet.new(db_nodes, & &1.netmaker_host_id)
 
+    # 3. Separate hosts into ephemeral edge nodes (has DB record) vs staff hosts (no DB record)
+    staff_host_ids = Enum.reject(host_ids, fn host_id -> MapSet.member?(db_node_host_ids, host_id) end)
+
+    Logger.debug("Found #{length(db_nodes)} ephemeral edge node(s) and #{length(staff_host_ids)} staff host(s)")
+
+    # 4. Delete ephemeral edge nodes using delete_node/1 (handles aliases, events, Netmaker-first)
+    deleted_nodes_count =
+      Enum.reduce(db_nodes, 0, fn node, count ->
+        case delete_node(node) do
+          {:ok, _} ->
+            Logger.info(
+              "Deleted ephemeral edge node #{node.id} (host: #{node.netmaker_host_id}) from cluster #{enrollment_key.cluster.name}"
+            )
+
+            count + 1
+
+          {:error, :service_unavailable} ->
+            Logger.warning("Netmaker unavailable, skipping ephemeral node #{node.id}")
+            count
+
+          {:error, changeset} ->
+            Logger.error("Failed to delete ephemeral node #{node.id}: #{inspect(changeset)}")
+            count
+        end
+      end)
+
+    # 5. Delete staff hosts directly from Netmaker (no DB records to clean)
+    deleted_staff_hosts =
+      Enum.count(staff_host_ids, fn host_id ->
+        case Vpn.delete_host(host_id) do
+          {:ok, _} ->
+            Logger.info("Deleted staff host #{host_id} from cluster #{enrollment_key.cluster.name}")
             true
 
           {:error, :not_found} ->
-            Logger.info("Netmaker host #{host_id} already deleted (not found)")
+            Logger.info("Staff host #{host_id} already deleted")
             true
 
           {:error, :service_unavailable} ->
-            Logger.error("Failed to delete host #{host_id}: Netmaker unavailable")
+            Logger.error("Failed to delete staff host #{host_id}: Netmaker unavailable")
             false
         end
       end)
 
-    # 3. Delete our DB nodes associated with these hosts (if they exist)
-    {deleted_nodes, _} = Repo.delete_all(from(n in Node, where: n.netmaker_host_id in ^host_ids))
-
-    if deleted_nodes > 0 do
-      Logger.info("Deleted #{deleted_nodes} ephemeral edge node(s) from DB (netmaker_host_id in #{inspect(host_ids)})")
-    end
-
-    # 4. Delete the enrollment key from Netmaker (best-effort)
+    # 6. Delete enrollment key from Netmaker (best-effort)
     case Vpn.delete_enrollment_key(enrollment_key.token) do
       {:ok, _} ->
         Logger.info("Deleted enrollment key from Netmaker: #{enrollment_key.token}")
@@ -1264,7 +1293,7 @@ defmodule EdgeAdmin.Nodes do
         Logger.warning("Failed to delete enrollment key from Netmaker: service unavailable")
     end
 
-    # 5. Delete the ephemeral enrollment key tracker from our DB
+    # 7. Delete ephemeral key tracker from DB
     case Repo.delete(enrollment_key) do
       {:ok, _} ->
         Logger.debug("Deleted ephemeral enrollment key tracker: #{enrollment_key.id}")
@@ -1272,19 +1301,18 @@ defmodule EdgeAdmin.Nodes do
         # Return stats for this key
         %{
           deleted_keys: acc.deleted_keys + 1,
-          deleted_hosts: acc.deleted_hosts + deleted_hosts,
-          deleted_nodes: acc.deleted_nodes + deleted_nodes
+          deleted_hosts: acc.deleted_hosts + deleted_nodes_count + deleted_staff_hosts,
+          deleted_nodes: acc.deleted_nodes + deleted_nodes_count
         }
 
       {:error, changeset} ->
         Logger.error("Failed to delete ephemeral key tracker #{enrollment_key.id}: #{inspect(changeset)}")
-
         acc
     end
   end
 
   @doc """
-  Reconciles cluster node membership between database (source of truth) and Netmaker.
+  Reconciles clusters and their node membership between database (source of truth) and Netmaker.
 
   For each cluster:
   1. Gets nodes that SHOULD be in the network (from DB)
@@ -1292,43 +1320,70 @@ defmodule EdgeAdmin.Nodes do
   3. Cleans up orphaned aliases (nodes not in DB or not in Netmaker)
   4. Adds missing nodes (DB says yes, Netmaker says no)
   5. Removes extra nodes (Netmaker says yes, DB says no)
+  6. Cleans up orphaned clusters (exist in DB but network doesn't exist in Netmaker)
+  7. Cleans up ghost aliases (exist in DB but DNS doesn't exist in Netmaker)
 
   Only processes edge nodes (those belonging to edge agents, identified by having a DB record).
   Admin nodes and staff machines are not touched.
 
+  Processes all clusters in batches of 500.
+
   Returns statistics about the reconciliation operation.
   """
-  @spec reconcile_cluster_nodes() :: map()
-  def reconcile_cluster_nodes do
-    {:ok, {clusters, _meta}} = list_clusters(%{"page_size" => "10000"})
-
-    # Get all DB nodes grouped by cluster
-    db_nodes_by_cluster =
-      from(n in Node, preload: [:cluster])
-      |> Repo.all()
-      |> Enum.group_by(& &1.cluster_id)
-
-    Logger.info("Starting cluster reconciliation for #{length(clusters)} clusters")
-
-    result = %{
+  @spec reconcile_clusters() :: map()
+  def reconcile_clusters do
+    reconcile_clusters_paginated(1, %{
       clusters_processed: 0,
       nodes_added: 0,
       nodes_removed: 0,
       nodes_deleted: 0,
       clusters_deleted: 0,
       aliases_cleaned: 0,
+      ghost_aliases_cleaned: 0,
       errors: 0
-    }
+    })
+  end
 
-    result =
-      Enum.reduce(clusters, result, fn cluster, acc ->
-        reconcile_single_cluster(cluster, db_nodes_by_cluster[cluster.id] || [], acc)
-      end)
+  defp reconcile_clusters_paginated(page, acc) do
+    {:ok, {clusters, meta}} = list_clusters(%{"page_size" => "500", "page" => to_string(page)})
 
-    # Clean up orphaned clusters (exist in DB but network doesn't exist in Netmaker)
-    result_with_clusters = cleanup_orphaned_clusters(clusters, result)
+    if Enum.empty?(clusters) do
+      # No more clusters to process
+      Logger.info("Cluster reconciliation completed: #{inspect(acc)}")
+      acc
+    else
+      # Get all DB nodes for this batch of clusters
+      cluster_ids = Enum.map(clusters, & &1.id)
 
-    result_with_clusters
+      db_nodes_by_cluster =
+        from(n in Node, where: n.cluster_id in ^cluster_ids, preload: [:cluster])
+        |> Repo.all()
+        |> Enum.group_by(& &1.cluster_id)
+
+      Logger.info("Processing page #{page}: #{length(clusters)} clusters")
+
+      # Process this batch of clusters
+      result =
+        Enum.reduce(clusters, acc, fn cluster, cluster_acc ->
+          reconcile_single_cluster(cluster, db_nodes_by_cluster[cluster.id] || [], cluster_acc)
+        end)
+
+      # Clean up orphaned clusters for this batch
+      result_with_clusters = cleanup_orphaned_clusters(clusters, result)
+
+      # Clean up ghost aliases for this batch
+      result_with_ghost_aliases = cleanup_ghost_aliases(clusters, result_with_clusters)
+
+      # Check if there are more pages
+      if meta.has_next_page? do
+        # Process next page
+        reconcile_clusters_paginated(page + 1, result_with_ghost_aliases)
+      else
+        # All pages processed
+        Logger.info("Cluster reconciliation completed: #{inspect(result_with_ghost_aliases)}")
+        result_with_ghost_aliases
+      end
+    end
   end
 
   defp reconcile_single_cluster(cluster, db_nodes, acc) do
@@ -1657,6 +1712,21 @@ defmodule EdgeAdmin.Nodes do
   @doc """
   Creates an alias for a node and its DNS entry.
 
+  Flow:
+  1. Check Netmaker health (fail fast if service unavailable)
+  2. Validate input
+  3. Query node IP from Netmaker (required for DNS entry)
+  4. Create DB record
+  5. Create DNS entry in Netmaker (rollback DB on failure)
+
+  If health check fails, returns service unavailable immediately.
+  If node not found in Netmaker or has no IP, returns service unavailable.
+  If DB creation fails, returns validation error.
+  If DNS creation fails, deletes DB record and returns service unavailable.
+
+  This ensures "alias in DB but DNS not in Netmaker" always means failed deletion,
+  allowing reconciliation to safely delete orphaned DB aliases.
+
   ## Parameters
   - `node` - The node to create an alias for (must have cluster preloaded)
   - `params` - Map with "name" key
@@ -1664,7 +1734,7 @@ defmodule EdgeAdmin.Nodes do
   ## Returns
   - `{:ok, alias}` - Alias created successfully
   - `{:error, changeset}` - Validation failed
-  - `{:error, :service_unavailable}` - Netmaker DNS creation failed
+  - `{:error, :service_unavailable}` - Netmaker health check failed, node not found, or DNS creation failed
 
   ## Examples
 
@@ -1674,116 +1744,116 @@ defmodule EdgeAdmin.Nodes do
   @spec create_alias(Node.t(), map()) ::
           {:ok, Alias.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
   def create_alias(%Node{} = node, params) do
-    with {:ok, attrs} <- Forms.CreateAliasForm.changeset(params) do
-      Repo.transaction(fn ->
-        # 1. Ensure node has cluster preloaded
-        node = Repo.preload(node, :cluster)
+    with {:ok, attrs} <- Forms.CreateAliasForm.changeset(params),
+         # Check Netmaker health before proceeding
+         :ok <- Vpn.health_check() do
+      # 1. Ensure node has cluster preloaded
+      node = Repo.preload(node, :cluster)
 
-        # 2. Build attrs with node_id and cluster_id
-        alias_attrs =
-          Map.merge(attrs, %{
-            "node_id" => node.id,
-            "cluster_id" => node.cluster_id
-          })
+      # 2. Query Netmaker for node's IP address (required for DNS entry)
+      network_name = node_network_name(node.cluster)
 
-        # 3. Validate with changeset
-        changeset = Alias.changeset(%Alias{}, alias_attrs)
+      case Vpn.find_node_by_host(network_name, node.netmaker_host_id) do
+        {:ok, %{"address" => address}} when is_binary(address) and address != "" ->
+          # 3. Build attrs with node_id and cluster_id
+          alias_attrs =
+            Map.merge(attrs, %{
+              "node_id" => node.id,
+              "cluster_id" => node.cluster_id
+            })
 
-        case Repo.insert(changeset) do
-          {:ok, alias_record} ->
-            # 4. Preload cluster for virtual fields
-            alias_record = Repo.preload(alias_record, :cluster)
+          # 4. Create DB record
+          changeset = Alias.changeset(%Alias{}, alias_attrs)
 
-            # 5. Query Netmaker for node's IP address
-            network_name = node_network_name(node.cluster)
+          case Repo.insert(changeset) do
+            {:ok, alias_record} ->
+              alias_record = Repo.preload(alias_record, :cluster)
 
-            case Vpn.find_node_by_host(network_name, node.netmaker_host_id) do
-              {:ok, %{"address" => address}} when is_binary(address) and address != "" ->
-                # 6. Create DNS entry in Netmaker
-                # Strip CIDR suffix if present (e.g., "100.64.1.5/32" -> "100.64.1.5")
-                ip_address = address |> String.split("/") |> List.first()
-                dns_hostname = Alias.dns_hostname(alias_record)
+              # 5. Create DNS entry in Netmaker (rollback DB on failure)
+              ip_address = address |> String.split("/") |> List.first()
+              dns_hostname = Alias.dns_hostname(alias_record)
 
-                case Vpn.create_dns_entry(network_name, %{
-                       name: dns_hostname,
-                       address: ip_address
-                     }) do
-                  {:ok, _} ->
-                    Logger.info("Created DNS entry for alias #{alias_record.name}: #{dns_hostname} -> #{address}")
-                    alias_record
+              case Vpn.create_dns_entry(network_name, %{
+                     name: dns_hostname,
+                     address: ip_address
+                   }) do
+                {:ok, _} ->
+                  Logger.info("Created DNS entry for alias #{alias_record.name}: #{dns_hostname} -> #{ip_address}")
+                  {:ok, alias_record}
 
-                  {:error, :service_unavailable} ->
-                    Logger.error("Failed to create DNS entry in Netmaker")
-                    Repo.rollback(:service_unavailable)
-                end
+                {:error, :service_unavailable} = error ->
+                  # Netmaker DNS creation failed - rollback DB insert
+                  Logger.warning("Netmaker DNS creation failed, rolling back DB alias: #{alias_record.name}")
+                  Repo.delete(alias_record)
+                  error
+              end
 
-              {:ok, _node} ->
-                Logger.error("Node #{node.netmaker_host_id} has no IP address in Netmaker")
-                Repo.rollback(:service_unavailable)
+            {:error, changeset} ->
+              {:error, changeset}
+          end
 
-              {:error, :not_found} ->
-                Logger.error("Node #{node.netmaker_host_id} not found in Netmaker")
-                Repo.rollback(:service_unavailable)
+        {:ok, _node} ->
+          Logger.error("Node #{node.netmaker_host_id} has no IP address in Netmaker")
+          {:error, :service_unavailable}
 
-              {:error, :service_unavailable} ->
-                Logger.error("Failed to query Netmaker nodes")
-                Repo.rollback(:service_unavailable)
-            end
+        {:error, :not_found} ->
+          Logger.error("Node #{node.netmaker_host_id} not found in Netmaker")
+          {:error, :service_unavailable}
 
-          {:error, changeset} ->
-            Repo.rollback(changeset)
-        end
-      end)
+        {:error, :service_unavailable} ->
+          Logger.error("Failed to query Netmaker nodes")
+          {:error, :service_unavailable}
+      end
     end
   end
 
   @doc """
   Deletes an alias and its DNS entry.
 
-  Flow:
-  1. Delete from DB FIRST (source of truth) - wrapped in transaction
-  2. Delete DNS entry from Netmaker (external cleanup)
+  Flow (Netmaker-first):
+  1. Delete DNS entry from Netmaker FIRST
+  2. Delete from DB
 
-  Uses transaction to ensure:
-  - If Netmaker deletion fails → DB deletion rolls back (both fail together)
-  - If DNS not found → Acceptable, DB deletion succeeds
-  - Atomic operation - both succeed or both fail
+  If Netmaker deletion fails (except :not_found), operation stops and returns error.
+  If Netmaker returns :not_found, continues with DB deletion (DNS already gone).
 
-  Returns `{:ok, alias}` or `{:error, :service_unavailable}`.
+  This ensures "alias in DB but DNS not in Netmaker" always means failed deletion,
+  allowing reconciliation to safely delete orphaned DB aliases.
+
+  Returns `{:ok, alias}`, `{:error, changeset}` (DB failure), or `{:error, :service_unavailable}` (Netmaker failure).
   """
-  @spec delete_alias(Alias.t()) :: {:ok, Alias.t()} | {:error, :service_unavailable}
+  @spec delete_alias(Alias.t()) :: {:ok, Alias.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
   def delete_alias(%Alias{} = alias_record) do
-    Repo.transaction(fn ->
-      alias_record = Repo.preload(alias_record, :cluster)
-      network_name = node_network_name(alias_record.cluster)
-      dns_hostname = Alias.dns_hostname(alias_record)
+    alias_record = Repo.preload(alias_record, :cluster)
+    network_name = node_network_name(alias_record.cluster)
+    dns_hostname = Alias.dns_hostname(alias_record)
 
-      # 1. Delete from DB first
-      case Repo.delete(alias_record) do
-        {:ok, deleted_alias} ->
-          # 2. Delete DNS entry from Netmaker (external cleanup)
-          case Vpn.delete_dns_entry(network_name, dns_hostname) do
-            {:ok, _} ->
-              Logger.info("Deleted DNS entry for alias #{deleted_alias.name}: #{dns_hostname}")
-              deleted_alias
+    # 1. Delete DNS entry from Netmaker FIRST
+    case Vpn.delete_dns_entry(network_name, dns_hostname) do
+      {:ok, _} ->
+        Logger.info("Deleted DNS entry for alias #{alias_record.name}: #{dns_hostname}")
+        delete_alias_from_db(alias_record)
 
-            {:error, :not_found} ->
-              # DNS already gone - acceptable, DB deletion succeeds
-              Logger.info("DNS entry already deleted for alias #{deleted_alias.name}: #{dns_hostname}")
-              deleted_alias
+      {:error, :not_found} ->
+        # DNS already gone - continue with DB deletion
+        Logger.info("DNS entry already deleted for alias #{alias_record.name}: #{dns_hostname}")
+        delete_alias_from_db(alias_record)
 
-            {:error, :service_unavailable} ->
-              # Netmaker failed - rollback DB deletion
-              Logger.error("Failed to delete DNS entry for alias #{deleted_alias.name}, rolling back DB deletion")
+      {:error, :service_unavailable} = error ->
+        # Netmaker failed - stop operation
+        Logger.error("Failed to delete DNS entry for alias #{alias_record.name}, aborting alias deletion")
+        error
+    end
+  end
 
-              Repo.rollback(:service_unavailable)
-          end
+  defp delete_alias_from_db(%Alias{} = alias_record) do
+    case Repo.delete(alias_record) do
+      {:ok, deleted_alias} ->
+        {:ok, deleted_alias}
 
-        {:error, changeset} ->
-          # DB deletion failed - rollback transaction
-          Repo.rollback(changeset)
-      end
-    end)
+      {:error, changeset} ->
+        {:error, changeset}
+    end
   end
 
   @doc """
@@ -1797,5 +1867,87 @@ defmodule EdgeAdmin.Nodes do
   @spec change_alias(Alias.t(), map()) :: Ecto.Changeset.t()
   def change_alias(%Alias{} = alias_record, attrs \\ %{}) do
     Alias.changeset(alias_record, attrs)
+  end
+
+  @doc """
+  Cleans up ghost aliases (exist in DB but DNS doesn't exist in Netmaker).
+
+  For each cluster:
+  1. Gets all aliases from DB
+  2. Gets all DNS entries from Netmaker
+  3. Identifies ghost aliases (in DB but not in Netmaker DNS)
+  4. Deletes ghost aliases from DB
+
+  This handles cases where:
+  - Alias deletion succeeded in Netmaker but DB deletion failed
+  - DNS entry was manually deleted from Netmaker
+  - Netmaker network was recreated, losing all custom DNS entries
+
+  Given our delete-first flow (Netmaker → DB), "alias in DB but DNS not in Netmaker"
+  indicates a failed deletion that should be cleaned up by removing the DB record.
+
+  Returns count of cleaned ghost aliases.
+  """
+  @spec cleanup_ghost_aliases([Cluster.t()], map()) :: map()
+  def cleanup_ghost_aliases(clusters, acc) do
+    Enum.reduce(clusters, acc, fn cluster, result ->
+      network_name = node_network_name(cluster)
+
+      # Get all aliases for this cluster from DB
+      db_aliases = Repo.all(from(a in Alias, where: a.cluster_id == ^cluster.id, preload: [:cluster]))
+
+      if Enum.empty?(db_aliases) do
+        # No aliases to check
+        result
+      else
+        # Get all DNS entries from Netmaker for this network
+        case Vpn.list_dns_entries(network_name) do
+          {:ok, netmaker_dns_entries} ->
+            # Build set of DNS hostnames that exist in Netmaker
+            netmaker_dns_names = MapSet.new(netmaker_dns_entries, & &1["name"])
+
+            # Find ghost aliases (in DB but DNS not in Netmaker)
+            ghost_aliases =
+              Enum.filter(db_aliases, fn alias_record ->
+                dns_hostname = Alias.dns_hostname(alias_record)
+                not MapSet.member?(netmaker_dns_names, dns_hostname)
+              end)
+
+            if Enum.empty?(ghost_aliases) do
+              result
+            else
+              Logger.info("Found #{length(ghost_aliases)} ghost alias(es) in cluster #{cluster.name}")
+
+              # Delete ghost aliases from DB (DNS already doesn't exist)
+              deleted_count =
+                Enum.reduce(ghost_aliases, 0, fn alias_record, count ->
+                  case Repo.delete(alias_record) do
+                    {:ok, _} ->
+                      Logger.info(
+                        "Reconciliation: Deleted ghost alias #{alias_record.name} from DB " <>
+                          "(DNS entry doesn't exist in Netmaker)"
+                      )
+
+                      count + 1
+
+                    {:error, changeset} ->
+                      Logger.error(
+                        "Reconciliation: Failed to delete ghost alias #{alias_record.name}: #{inspect(changeset)}"
+                      )
+
+                      count
+                  end
+                end)
+
+              %{result | ghost_aliases_cleaned: result.ghost_aliases_cleaned + deleted_count}
+            end
+
+          {:error, reason} ->
+            Logger.warning("Reconciliation: Failed to list DNS entries for cluster #{cluster.name}: #{inspect(reason)}")
+
+            %{result | errors: result.errors + 1}
+        end
+      end
+    end)
   end
 end

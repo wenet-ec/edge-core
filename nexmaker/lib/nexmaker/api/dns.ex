@@ -83,7 +83,7 @@ defmodule Nexmaker.Api.DNS do
   """
   @spec list(String.t(), keyword()) :: {:ok, [map()]} | {:error, any()}
   def list(network_name, opts \\ []) do
-    Api.request(:get, "/api/dns/#{network_name}", opts)
+    Api.request(:get, "/api/dns/adm/#{network_name}", opts)
   end
 
   @doc """
@@ -137,10 +137,12 @@ defmodule Nexmaker.Api.DNS do
   end
 
   @doc """
-  Pushes DNS changes to all nodes in a network.
+  Pushes DNS changes to all nodes across all networks.
+
+  NOTE: This endpoint does NOT take a network parameter - it pushes to ALL networks.
+  Use push_adm/0 for the same functionality (alternative endpoint).
 
   ## Parameters
-    - network_name: String - Network name
     - opts: Keyword - API options (base_url, master_key)
 
   ## Returns
@@ -149,15 +151,22 @@ defmodule Nexmaker.Api.DNS do
 
   ## Examples
 
-      {:ok, _} = Nexmaker.Api.DNS.push("admin-cluster")
+      {:ok, _} = Nexmaker.Api.DNS.push()
   """
-  @spec push(String.t(), keyword()) :: {:ok, any()} | {:error, any()}
-  def push(network_name, opts \\ []) do
-    Api.request(:post, "/api/dns/#{network_name}/push", opts)
+  @spec push(keyword()) :: {:ok, any()} | {:error, any()}
+  def push(opts \\ []) do
+    Api.request(:post, "/api/dns/adm/pushdns", opts)
   end
 
   @doc """
-  Syncs DNS for a network.
+  @deprecated "Use push/1 or push_adm/1 instead - this function signature is incorrect"
+  """
+  def push(_network_name, opts) when is_list(opts) do
+    push(opts)
+  end
+
+  @doc """
+  Syncs DNS for a network (admin endpoint).
 
   ## Parameters
     - network_name: String - Network name
@@ -173,7 +182,7 @@ defmodule Nexmaker.Api.DNS do
   """
   @spec sync(String.t(), keyword()) :: {:ok, any()} | {:error, any()}
   def sync(network_name, opts \\ []) do
-    Api.request(:post, "/api/dns/#{network_name}/sync", opts)
+    Api.request(:post, "/api/dns/adm/#{network_name}/sync", opts)
   end
 
   @doc """

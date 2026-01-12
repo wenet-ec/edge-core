@@ -828,6 +828,18 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
+  Lists all DNS entries for a network.
+
+  Returns `{:ok, dns_entries}` or `{:error, :service_unavailable}`.
+  """
+  @spec list_dns_entries(String.t()) :: {:ok, [map()]} | {:error, :service_unavailable}
+  def list_dns_entries(network_name) do
+    network_name
+    |> DNS.list()
+    |> normalize_netmaker_error()
+  end
+
+  @doc """
   Deletes a DNS entry from Netmaker.
 
   Returns `{:ok, response}`, `{:error, :not_found}`, or `{:error, :service_unavailable}`.

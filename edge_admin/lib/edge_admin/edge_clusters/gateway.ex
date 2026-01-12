@@ -76,6 +76,15 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
   require Logger
 
+  # HTTP request timeout options for agent communication
+  defp agent_request_options do
+    [
+      receive_timeout: Application.get_env(:edge_admin, :http_agent_receive_timeout, 30_000),
+      connect_options: [timeout: Application.get_env(:edge_admin, :http_agent_connect_timeout, 20_000)],
+      retry: false
+    ]
+  end
+
   # ===========================================================================
   # Client API
   # ===========================================================================
@@ -312,134 +321,125 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   def handle_call({:scrape_host_metrics, node}, _from, state) do
     url = "http://#{Node.dns_hostname(node)}:#{node.host_metrics_port}/metrics"
 
-    result =
-      case Req.get(url, retry: false) do
-        {:ok, %{status: 200, body: metrics_text}} ->
-          # Emit success telemetry
-          :telemetry.execute(
-            [:edge_admin, :gateway, :scrape],
-            %{count: 1},
-            %{cluster: state.cluster_name, metrics_type: :host, result: :success}
-          )
+    case Req.get(url, agent_request_options()) do
+      {:ok, %{status: 200, body: metrics_text}} ->
+        :telemetry.execute(
+          [:edge_admin, :gateway, :scrape],
+          %{count: 1},
+          %{cluster: state.cluster_name, metrics_type: :host, result: :success}
+        )
 
-          {:reply, {:ok, metrics_text}, state}
+        {:reply, {:ok, metrics_text}, state}
 
-        {:ok, %{status: status}} ->
-          # Emit error telemetry
-          :telemetry.execute(
-            [:edge_admin, :gateway, :scrape],
-            %{count: 1},
-            %{cluster: state.cluster_name, metrics_type: :host, result: :error}
-          )
+      {:ok, %{status: status}} ->
+        :telemetry.execute(
+          [:edge_admin, :gateway, :scrape],
+          %{count: 1},
+          %{cluster: state.cluster_name, metrics_type: :host, result: :error}
+        )
 
-          {:reply, {:error, "HTTP #{status}"}, state}
+        {:reply, {:error, "HTTP #{status}"}, state}
 
-        {:error, reason} ->
-          Logger.error("HTTP request failed: #{inspect(reason)}")
-          # Emit error telemetry
-          :telemetry.execute(
-            [:edge_admin, :gateway, :scrape],
-            %{count: 1},
-            %{cluster: state.cluster_name, metrics_type: :host, result: :error}
-          )
+      {:error, reason} ->
+        Logger.error("HTTP request failed: #{inspect(reason)}")
 
-          {:reply, {:error, :service_unavailable}, state}
-      end
+        :telemetry.execute(
+          [:edge_admin, :gateway, :scrape],
+          %{count: 1},
+          %{cluster: state.cluster_name, metrics_type: :host, result: :error}
+        )
 
-    result
+        {:reply, {:error, :service_unavailable}, state}
+    end
   end
 
   @impl true
   def handle_call({:scrape_agent_metrics, node}, _from, state) do
     url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/agents/metrics/self/raw"
 
-    result =
-      case Req.get(url, auth: {:bearer, node.api_token}, retry: false) do
-        {:ok, %{status: 200, body: metrics_text}} ->
-          # Emit success telemetry
-          :telemetry.execute(
-            [:edge_admin, :gateway, :scrape],
-            %{count: 1},
-            %{cluster: state.cluster_name, metrics_type: :agent, result: :success}
-          )
+    opts =
+      Keyword.merge(
+        [auth: {:bearer, node.api_token}],
+        agent_request_options()
+      )
 
-          {:reply, {:ok, metrics_text}, state}
+    case Req.get(url, opts) do
+      {:ok, %{status: 200, body: metrics_text}} ->
+        # Emit success telemetry
+        :telemetry.execute(
+          [:edge_admin, :gateway, :scrape],
+          %{count: 1},
+          %{cluster: state.cluster_name, metrics_type: :agent, result: :success}
+        )
 
-        {:ok, %{status: status}} ->
-          # Emit error telemetry
-          :telemetry.execute(
-            [:edge_admin, :gateway, :scrape],
-            %{count: 1},
-            %{cluster: state.cluster_name, metrics_type: :agent, result: :error}
-          )
+        {:reply, {:ok, metrics_text}, state}
 
-          {:reply, {:error, "HTTP #{status}"}, state}
+      {:ok, %{status: status}} ->
+        # Emit error telemetry
+        :telemetry.execute(
+          [:edge_admin, :gateway, :scrape],
+          %{count: 1},
+          %{cluster: state.cluster_name, metrics_type: :agent, result: :error}
+        )
 
-        {:error, reason} ->
-          Logger.error("HTTP request failed: #{inspect(reason)}")
-          # Emit error telemetry
-          :telemetry.execute(
-            [:edge_admin, :gateway, :scrape],
-            %{count: 1},
-            %{cluster: state.cluster_name, metrics_type: :agent, result: :error}
-          )
+        {:reply, {:error, "HTTP #{status}"}, state}
 
-          {:reply, {:error, :service_unavailable}, state}
-      end
+      {:error, reason} ->
+        Logger.error("HTTP request failed: #{inspect(reason)}")
+        # Emit error telemetry
+        :telemetry.execute(
+          [:edge_admin, :gateway, :scrape],
+          %{count: 1},
+          %{cluster: state.cluster_name, metrics_type: :agent, result: :error}
+        )
 
-    result
+        {:reply, {:error, :service_unavailable}, state}
+    end
   end
 
   @impl true
   def handle_call({:scrape_wireguard_metrics, node}, _from, state) do
     url = "http://#{Node.dns_hostname(node)}:#{node.wireguard_metrics_port}/metrics"
 
-    result =
-      case Req.get(url, retry: false) do
-        {:ok, %{status: 200, body: metrics_text}} ->
-          # Emit success telemetry
-          :telemetry.execute(
-            [:edge_admin, :gateway, :scrape],
-            %{count: 1},
-            %{cluster: state.cluster_name, metrics_type: :wireguard, result: :success}
-          )
+    case Req.get(url, agent_request_options()) do
+      {:ok, %{status: 200, body: metrics_text}} ->
+        :telemetry.execute(
+          [:edge_admin, :gateway, :scrape],
+          %{count: 1},
+          %{cluster: state.cluster_name, metrics_type: :wireguard, result: :success}
+        )
 
-          {:reply, {:ok, metrics_text}, state}
+        {:reply, {:ok, metrics_text}, state}
 
-        {:ok, %{status: status}} ->
-          # Emit error telemetry
-          :telemetry.execute(
-            [:edge_admin, :gateway, :scrape],
-            %{count: 1},
-            %{cluster: state.cluster_name, metrics_type: :wireguard, result: :error}
-          )
+      {:ok, %{status: status}} ->
+        :telemetry.execute(
+          [:edge_admin, :gateway, :scrape],
+          %{count: 1},
+          %{cluster: state.cluster_name, metrics_type: :wireguard, result: :error}
+        )
 
-          {:reply, {:error, "HTTP #{status}"}, state}
+        {:reply, {:error, "HTTP #{status}"}, state}
 
-        {:error, reason} ->
-          Logger.error("HTTP request failed: #{inspect(reason)}")
-          # Emit error telemetry
-          :telemetry.execute(
-            [:edge_admin, :gateway, :scrape],
-            %{count: 1},
-            %{cluster: state.cluster_name, metrics_type: :wireguard, result: :error}
-          )
+      {:error, reason} ->
+        Logger.error("HTTP request failed: #{inspect(reason)}")
 
-          {:reply, {:error, :service_unavailable}, state}
-      end
+        :telemetry.execute(
+          [:edge_admin, :gateway, :scrape],
+          %{count: 1},
+          %{cluster: state.cluster_name, metrics_type: :wireguard, result: :error}
+        )
 
-    result
+        {:reply, {:error, :service_unavailable}, state}
+    end
   end
 
   @impl true
   def handle_call({:trigger_self_update, node}, _from, state) do
     url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/self_updates/trigger"
 
-    case Req.post(url,
-           auth: {:bearer, node.api_token},
-           receive_timeout: 15_000,
-           retry: false
-         ) do
+    opts = Keyword.merge([auth: {:bearer, node.api_token}], agent_request_options())
+
+    case Req.post(url, opts) do
       {:ok, %{status: 202}} ->
         {:reply, :ok, state}
 
@@ -464,11 +464,9 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   def handle_call({:cancel_execution, node, execution_id}, _from, state) do
     url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/command_executions/#{execution_id}/cancel"
 
-    case Req.patch(url,
-           auth: {:bearer, node.api_token},
-           receive_timeout: 5000,
-           retry: false
-         ) do
+    opts = Keyword.merge([auth: {:bearer, node.api_token}], agent_request_options())
+
+    case Req.patch(url, opts) do
       {:ok, %{status: status}} when status in 200..299 ->
         {:reply, :ok, state}
 

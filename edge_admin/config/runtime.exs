@@ -135,10 +135,6 @@ config :edge_admin, Oban,
     {Oban.Plugins.Pruner, max_age: 86_400}
   ]
 
-config :edge_admin, :node_health_check,
-  concurrency: get_env("NODE_HEALTH_CHECK_CONCURRENCY", :integer, 100),
-  timeout_ms: get_env("NODE_HEALTH_CHECK_TIMEOUT_MS", :integer, 5_000)
-
 config :edge_admin,
   # === Admin Identity ===
   admin_id: admin_id,
@@ -169,6 +165,12 @@ config :edge_admin,
   cluster_reconciliation_schedule: cluster_reconciliation_schedule,
   zombie_admin_cleanup_schedule: zombie_admin_cleanup_schedule,
   zombie_admin_checkin_threshold_minutes: zombie_admin_checkin_threshold_minutes,
+  # === HTTP Request Timeouts ===
+  # Agent communication: health checks, metrics scraping, command execution
+  http_agent_receive_timeout: get_env("HTTP_AGENT_RECEIVE_TIMEOUT_MS", :integer, 30_000),
+  http_agent_connect_timeout: get_env("HTTP_AGENT_CONNECT_TIMEOUT_MS", :integer, 20_000),
+  # === Node Health Check ===
+  node_health_check_concurrency: get_env("NODE_HEALTH_CHECK_CONCURRENCY", :integer, 100),
   # === Proxy Server Ports ===
   http_proxy_port: get_env("HTTP_PROXY_PORT", :integer, 43_128),
   socks5_proxy_port: get_env("SOCKS5_PROXY_PORT", :integer, 41_080),

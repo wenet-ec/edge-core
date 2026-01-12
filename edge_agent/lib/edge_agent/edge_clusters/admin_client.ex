@@ -79,6 +79,15 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   require Logger
 
+  # HTTP request timeout options for all admin communication
+  defp http_options do
+    [
+      receive_timeout: Application.get_env(:edge_agent, :http_receive_timeout, 30_000),
+      connect_options: [timeout: Application.get_env(:edge_agent, :http_connect_timeout, 20_000)],
+      retry: false
+    ]
+  end
+
   @doc """
   Register this node with an admin.
 
@@ -100,7 +109,8 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     payload = %{node: node_params}
 
     request_with_fallback(path, fn url ->
-      case Req.post(url, json: payload) do
+      opts = Keyword.merge([json: payload], http_options())
+      case Req.post(url, opts) do
         {:ok, %{status: 201, body: %{"data" => node_data}}} ->
           {:ok, node_data}
 
@@ -145,7 +155,8 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
       end
 
     request_with_auth(path, fn url, headers ->
-      case Req.post(url, json: payload, headers: headers, receive_timeout: 5000, retry: false) do
+      opts = Keyword.merge([json: payload, headers: headers], http_options())
+      case Req.post(url, opts) do
         {:ok, %{status: 200, body: %{"data" => %{"verified" => verified}}}} ->
           {:ok, verified}
 
@@ -182,7 +193,8 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     path = "/api/agents/command_executions"
 
     request_with_auth(path, fn url, headers ->
-      case Req.get(url, headers: headers) do
+      opts = Keyword.merge([headers: headers], http_options())
+      case Req.get(url, opts) do
         {:ok, %{status: 200, body: %{"data" => command_executions}}} ->
           {:ok, command_executions}
 
@@ -221,7 +233,8 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     path = "/api/agents/relays"
 
     request_with_auth(path, fn url, headers ->
-      case Req.post(url, json: %{}, headers: headers, receive_timeout: 5000, retry: false) do
+      opts = Keyword.merge([json: %{}, headers: headers], http_options())
+      case Req.post(url, opts) do
         {:ok, %{status: 200, body: response}} ->
           Logger.debug("Successfully create relayed node")
           {:ok, response}
@@ -261,7 +274,8 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     payload = %{command_execution: command_execution_params}
 
     request_with_auth(path, fn url, headers ->
-      case Req.patch(url, json: payload, headers: headers, receive_timeout: 5000, retry: false) do
+      opts = Keyword.merge([json: payload, headers: headers], http_options())
+      case Req.patch(url, opts) do
         {:ok, %{status: status}} when status in 200..299 ->
           Logger.debug("Successfully updated command execution #{execution_id}")
           :ok

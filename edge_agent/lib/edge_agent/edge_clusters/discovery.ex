@@ -167,7 +167,13 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
           # Try even if connected=false, as HTTP might still work
           url = "http://#{ip}:#{discovery_port}/api/admins/self/discovery"
 
-          case Req.get(url, receive_timeout: 5000, retry: false) do
+          opts = [
+            receive_timeout: Application.get_env(:edge_agent, :http_receive_timeout, 30_000),
+            connect_options: [timeout: Application.get_env(:edge_agent, :http_connect_timeout, 20_000)],
+            retry: false
+          ]
+
+          case Req.get(url, opts) do
             {:ok, %{status: 200, body: body}} ->
               admin_name =
                 cond do

@@ -939,12 +939,15 @@ defmodule EdgeAdmin.Commands do
   defp create_execution_with_node(node, execution_data) do
     url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/command_executions"
 
-    case Req.post(url,
-           json: execution_data,
-           auth: {:bearer, node.api_token},
-           receive_timeout: 5000,
-           retry: false
-         ) do
+    opts = [
+      json: execution_data,
+      auth: {:bearer, node.api_token},
+      receive_timeout: Application.get_env(:edge_admin, :http_agent_receive_timeout, 30_000),
+      connect_options: [timeout: Application.get_env(:edge_admin, :http_agent_connect_timeout, 20_000)],
+      retry: false
+    ]
+
+    case Req.post(url, opts) do
       {:ok, %{status: status}} when status in 200..299 ->
         {:ok, :sent}
 

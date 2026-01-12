@@ -125,4 +125,9 @@ ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES=120  # Minutes since last checkin to cons
 # --- Node Health Check (Quantum LocalScheduler) ---
 NODE_HEALTH_CHECK_SCHEDULE=* * * * *  # Every minute
 NODE_HEALTH_CHECK_CONCURRENCY=100  # Number of parallel health check requests
-NODE_HEALTH_CHECK_TIMEOUT_MS=5000  # Timeout per health check (5 seconds)
+
+# --- HTTP Request Timeouts (Agent Communication) ---
+# Health checks, metrics scraping, command execution, self-update triggers
+# Generous timeouts for relay connections + intercontinental latency
+HTTP_AGENT_RECEIVE_TIMEOUT_MS=30000  # 30s for receiving response
+HTTP_AGENT_CONNECT_TIMEOUT_MS=20000  # 20s for establishing connection

@@ -40,4 +40,7 @@ config :edge_agent,
   vpn_ready_wait_seconds: get_env("VPN_READY_WAIT_SECONDS", :integer, 0),
   proxy_blocked_ports: get_env("PROXY_BLOCKED_PORTS", :list, []),
   proxy_custom_blocked_hosts: get_env("PROXY_CUSTOM_BLOCKED_HOSTS", :list, []),
-  proxy_custom_allowed_hosts: get_env("PROXY_CUSTOM_ALLOWED_HOSTS", :list, [])
+  proxy_custom_allowed_hosts: get_env("PROXY_CUSTOM_ALLOWED_HOSTS", :list, []),
+  # HTTP request timeouts for admin communication (in milliseconds)
+  http_receive_timeout: get_env("HTTP_RECEIVE_TIMEOUT_MS", :integer, 30_000),
+  http_connect_timeout: get_env("HTTP_CONNECT_TIMEOUT_MS", :integer, 20_000)

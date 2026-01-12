@@ -170,7 +170,13 @@ defmodule EdgeAgent.Vpn do
   end
 
   defp get_public_enrollment_key(url) do
-    case Req.post(url) do
+    opts = [
+      receive_timeout: Application.get_env(:edge_agent, :http_receive_timeout, 30_000),
+      connect_options: [timeout: Application.get_env(:edge_agent, :http_connect_timeout, 20_000)],
+      retry: false
+    ]
+
+    case Req.post(url, opts) do
       {:ok, %{status: status, body: body}} when status in [200, 201] ->
         # Try to extract token from response body using multiple patterns
         case extract_enrollment_token(body) do

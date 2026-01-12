@@ -43,8 +43,8 @@ config :edge_agent, Oban,
        {"* * * * *", EdgeAgent.Commands.Workers.ExecutionReportWorker},
        # Every 3 minutes to create relayed node
        {"*/3 * * * *", EdgeAgent.EdgeClusters.Workers.RegisterRelayedNodeWorker},
-       # Every 5 minutes for admin discovery
-       {"*/5 * * * *", EdgeAgent.EdgeClusters.Workers.AdminDiscoveryWorker},
+       # Every 3 minutes for admin discovery
+       {"*/3 * * * *", EdgeAgent.EdgeClusters.Workers.AdminDiscoveryWorker},
        # Every 30 minutes to pull VPN config from Netmaker
        {"*/30 * * * *", EdgeAgent.Vpn.Workers.VpnConfigPullWorker}
      ]},

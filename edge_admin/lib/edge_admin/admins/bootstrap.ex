@@ -196,8 +196,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
       with :ok <- ensure_network_exists(network_name),
            {:ok, token} <- Vpn.get_default_enrollment_key(network_name),
            {:ok, _} <- Vpn.join_network(token: token, name: admin_name),
-           :ok <- wait_for_host(admin_name),
-           :ok <- verify_netclient_connection(network_name) do
+           :ok <- wait_for_host(admin_name) do
         Logger.info("Successfully joined admin cluster network")
         :ok
       else
@@ -243,24 +242,6 @@ defmodule EdgeAdmin.Admins.Bootstrap do
       _ ->
         Process.sleep(1000)
         wait_for_host(admin_name)
-    end
-  end
-
-  defp verify_netclient_connection(network_name) do
-    Logger.info("Verifying netclient connection to #{network_name}...")
-    Process.sleep(5000)
-
-    case Nexmaker.Cli.health_check() do
-      {:ok, status, info} when status in [:healthy, :degraded] ->
-        if network_name in info[:networks] do
-          Logger.info("Netclient verified: connected to #{network_name}")
-          :ok
-        else
-          {:error, "Netclient connected but not to #{network_name}, networks: #{inspect(info[:networks])}"}
-        end
-
-      {:ok, :unhealthy, info} ->
-        {:error, "Netclient unhealthy after join: #{inspect(info[:warnings])}"}
     end
   end
 

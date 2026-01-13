@@ -61,10 +61,6 @@ end
 
 admin_id = generate_random_string(12)
 
-# Ephemeral key cleanup configuration
-ephemeral_key_cleanup_enabled = get_env("EPHEMERAL_KEY_CLEANUP_ENABLED", :boolean, true)
-ephemeral_key_cleanup_schedule = get_env("EPHEMERAL_KEY_CLEANUP_SCHEDULE", :string, "0 0 * * *")
-
 # Cluster reconciliation configuration
 cluster_reconciliation_enabled = get_env("CLUSTER_RECONCILIATION_ENABLED", :boolean, true)
 
@@ -81,8 +77,6 @@ zombie_admin_checkin_threshold_minutes =
 crontab =
   [
     {true, {zombie_admin_cleanup_schedule, EdgeAdmin.Vpn.Workers.ZombieAdminCleaner}},
-    {ephemeral_key_cleanup_enabled,
-     {ephemeral_key_cleanup_schedule, EdgeAdmin.Nodes.Workers.EphemeralKeyCleanupWorker}},
     {cluster_reconciliation_enabled,
      {cluster_reconciliation_schedule, EdgeAdmin.Nodes.Workers.ClusterReconciliationWorker}}
   ]
@@ -122,7 +116,6 @@ config :edge_admin, Oban,
   engine: Oban.Engines.Basic,
   queues: [
     execution_creation: 10,
-    key_cleanup: 1,
     zombie_admin_cleanup: 1,
     cluster_reconciliation: 1,
     self_updates: 3
@@ -159,8 +152,6 @@ config :edge_admin,
   # Netmaker DNS domain suffix (used for hostname construction)
   netmaker_default_domain: get_env("NETMAKER_DEFAULT_DOMAIN", :string, "nm.internal"),
   # === Cleanup & Reconciliation Schedules ===
-  ephemeral_key_cleanup_enabled: ephemeral_key_cleanup_enabled,
-  ephemeral_key_cleanup_schedule: ephemeral_key_cleanup_schedule,
   cluster_reconciliation_enabled: cluster_reconciliation_enabled,
   cluster_reconciliation_schedule: cluster_reconciliation_schedule,
   zombie_admin_cleanup_schedule: zombie_admin_cleanup_schedule,

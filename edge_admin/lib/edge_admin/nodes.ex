@@ -52,7 +52,6 @@ defmodule EdgeAdmin.Nodes do
   alias EdgeAdmin.Nodes.Rules.DeletionRules
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Cluster
-  alias EdgeAdmin.Nodes.Schemas.EphemeralEnrollmentKey
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
   alias EdgeAdmin.RequestParser
@@ -1046,6 +1045,7 @@ defmodule EdgeAdmin.Nodes do
 
   @doc """
   Creates or retrieves an enrollment key for a cluster.
+
   ## Key Types
 
   ### Default (default behavior)
@@ -1061,13 +1061,6 @@ defmodule EdgeAdmin.Nodes do
   - Configurable uses (default: 1)
   - Not tracked in DB (tagged for audit trail in Netmaker)
   - Use for: Controlled/time-limited registrations
-
-  ### Ephemeral
-  Creates a tracked key for automatic cleanup after TTL.
-  - Configurable expiration (default: 1 hour)
-  - Configurable uses (default: 1)
-  - Tracked in DB for auto-cleanup
-  - Use for: Temporary troubleshooting, testing, demos
   """
   @spec create_enrollment_key(Cluster.t(), map()) ::
           {:ok, map()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
@@ -1108,206 +1101,7 @@ defmodule EdgeAdmin.Nodes do
             {:error, _reason} ->
               {:error, :service_unavailable}
           end
-
-        "ephemeral" ->
-          # Create ephemeral key tracked in DB for automatic cleanup
-          time_to_live = Map.fetch!(attrs, "time_to_live")
-
-          Repo.transaction(fn ->
-            # Generate unique tag for this key
-            timestamp = System.system_time(:millisecond)
-            random = 4 |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower)
-            tag = "ephemeral-#{timestamp}-#{random}"
-
-            case Vpn.create_enrollment_key(network_name, %{
-                   expiration: expiration,
-                   uses_remaining: uses_remaining,
-                   tags: [tag]
-                 }) do
-              {:ok, netmaker_key} ->
-                token = netmaker_key["token"]
-
-                # Track in DB for cleanup (store tag and TTL for later queries)
-                case %EphemeralEnrollmentKey{}
-                     |> EphemeralEnrollmentKey.changeset(%{
-                       token: token,
-                       tag: tag,
-                       time_to_live: time_to_live,
-                       cluster_id: cluster.id
-                     })
-                     |> Repo.insert() do
-                  {:ok, _} ->
-                    %{token: token, key_type: "ephemeral", time_to_live: time_to_live}
-
-                  {:error, changeset} ->
-                    Repo.rollback(changeset)
-                end
-
-              {:error, _reason} ->
-                Repo.rollback(:service_unavailable)
-            end
-          end)
       end
-    end
-  end
-
-  @doc """
-  Cleans up expired ephemeral enrollment keys and their associated resources.
-
-  This is a **best-effort garbage collection** operation that should make progress
-  even if some steps fail. Uses NO transactions - continues cleanup even if individual
-  deletions fail.
-
-  Flow for each expired key:
-  1. Query Netmaker for hosts enrolled with this key (best-effort)
-  2. Separate hosts into two categories:
-     - **Ephemeral edge nodes**: Hosts with DB records (registered agents)
-     - **Staff hosts**: Hosts without DB records (staff joined via netclient)
-  3. Delete ephemeral edge nodes using delete_node/1 (handles aliases, events, Netmaker-first)
-  4. Delete staff hosts directly from Netmaker (no DB cleanup needed)
-  5. Delete enrollment key from Netmaker (best-effort)
-  6. Delete ephemeral key tracker from DB (only fails if this step errors)
-
-  Why best-effort (no transaction)?
-  - This is garbage collection - partial cleanup is better than no cleanup
-  - Already-deleted resources should be treated as success (idempotent)
-  - One failure shouldn't block cleanup of other resources
-  - Will retry on next run if cleanup is incomplete
-
-  Why delete_node/1 for ephemeral edge nodes?
-  - Ensures aliases are cleaned up (DNS entries removed)
-  - Emits metadata events for cluster recomputation
-  - Follows Netmaker-first deletion pattern (consistency with other delete operations)
-
-  Returns statistics about the cleanup operation.
-  """
-  @spec cleanup_ephemeral_keys() :: map()
-  def cleanup_ephemeral_keys do
-    current_time = DateTime.utc_now()
-
-    # Find expired tracked keys (using per-key TTL)
-    # Calculate cutoff time for each key: inserted_at + time_to_live (minutes)
-    expired_keys =
-      Repo.all(
-        from(ek in EphemeralEnrollmentKey,
-          where: fragment("? + (? || ' minutes')::interval < ?", ek.inserted_at, ek.time_to_live, ^current_time),
-          preload: [:cluster]
-        )
-      )
-
-    Logger.info("Found #{length(expired_keys)} expired ephemeral enrollment keys")
-
-    result = %{
-      deleted_keys: 0,
-      deleted_hosts: 0,
-      deleted_nodes: 0
-    }
-
-    # Process each expired key
-    Enum.reduce(expired_keys, result, fn enrollment_key, acc ->
-      cleanup_enrollment_key(enrollment_key, acc)
-    end)
-  end
-
-  defp cleanup_enrollment_key(enrollment_key, acc) do
-    Logger.debug("Processing expired key: #{enrollment_key.token} with tag: #{enrollment_key.tag}")
-
-    # Best-effort cleanup - continue even if some steps fail
-    # 1. Query Netmaker for all hosts enrolled with this tag
-    netmaker_nodes =
-      case Vpn.list_nodes_by_tag(enrollment_key.tag) do
-        {:ok, nodes} ->
-          nodes
-
-        {:error, :service_unavailable} ->
-          Logger.warning("Failed to query nodes by tag #{enrollment_key.tag}: Netmaker unavailable")
-          []
-      end
-
-    # Extract unique host IDs from Netmaker nodes
-    host_ids =
-      netmaker_nodes
-      |> Enum.map(& &1["hostid"])
-      |> Enum.uniq()
-      |> Enum.reject(&is_nil/1)
-
-    Logger.debug("Found #{length(host_ids)} unique hosts with tag #{enrollment_key.tag}")
-
-    # 2. Find which hosts have DB records (ephemeral edge nodes vs staff hosts)
-    db_nodes = Repo.all(from(n in Node, where: n.netmaker_host_id in ^host_ids, preload: [:cluster]))
-    db_node_host_ids = MapSet.new(db_nodes, & &1.netmaker_host_id)
-
-    # 3. Separate hosts into ephemeral edge nodes (has DB record) vs staff hosts (no DB record)
-    staff_host_ids = Enum.reject(host_ids, fn host_id -> MapSet.member?(db_node_host_ids, host_id) end)
-
-    Logger.debug("Found #{length(db_nodes)} ephemeral edge node(s) and #{length(staff_host_ids)} staff host(s)")
-
-    # 4. Delete ephemeral edge nodes using delete_node/1 (handles aliases, events, Netmaker-first)
-    deleted_nodes_count =
-      Enum.reduce(db_nodes, 0, fn node, count ->
-        case delete_node(node) do
-          {:ok, _} ->
-            Logger.info(
-              "Deleted ephemeral edge node #{node.id} (host: #{node.netmaker_host_id}) from cluster #{enrollment_key.cluster.name}"
-            )
-
-            count + 1
-
-          {:error, :service_unavailable} ->
-            Logger.warning("Netmaker unavailable, skipping ephemeral node #{node.id}")
-            count
-
-          {:error, changeset} ->
-            Logger.error("Failed to delete ephemeral node #{node.id}: #{inspect(changeset)}")
-            count
-        end
-      end)
-
-    # 5. Delete staff hosts directly from Netmaker (no DB records to clean)
-    deleted_staff_hosts =
-      Enum.count(staff_host_ids, fn host_id ->
-        case Vpn.delete_host(host_id) do
-          {:ok, _} ->
-            Logger.info("Deleted staff host #{host_id} from cluster #{enrollment_key.cluster.name}")
-            true
-
-          {:error, :not_found} ->
-            Logger.info("Staff host #{host_id} already deleted")
-            true
-
-          {:error, :service_unavailable} ->
-            Logger.error("Failed to delete staff host #{host_id}: Netmaker unavailable")
-            false
-        end
-      end)
-
-    # 6. Delete enrollment key from Netmaker (best-effort)
-    case Vpn.delete_enrollment_key(enrollment_key.token) do
-      {:ok, _} ->
-        Logger.info("Deleted enrollment key from Netmaker: #{enrollment_key.token}")
-
-      {:error, :not_found} ->
-        Logger.info("Enrollment key already deleted from Netmaker: #{enrollment_key.token}")
-
-      {:error, :service_unavailable} ->
-        Logger.warning("Failed to delete enrollment key from Netmaker: service unavailable")
-    end
-
-    # 7. Delete ephemeral key tracker from DB
-    case Repo.delete(enrollment_key) do
-      {:ok, _} ->
-        Logger.debug("Deleted ephemeral enrollment key tracker: #{enrollment_key.id}")
-
-        # Return stats for this key
-        %{
-          deleted_keys: acc.deleted_keys + 1,
-          deleted_hosts: acc.deleted_hosts + deleted_nodes_count + deleted_staff_hosts,
-          deleted_nodes: acc.deleted_nodes + deleted_nodes_count
-        }
-
-      {:error, changeset} ->
-        Logger.error("Failed to delete ephemeral key tracker #{enrollment_key.id}: #{inspect(changeset)}")
-        acc
     end
   end
 

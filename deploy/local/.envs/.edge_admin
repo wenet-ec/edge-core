@@ -109,10 +109,6 @@ ADMIN_DISCOVERY_PORT=44000  # Port to scan for admin discovery endpoint
 # Background Workers & Schedulers
 # =============================================================================
 
-# --- Ephemeral Key Cleanup (Oban Cron) ---
-EPHEMERAL_KEY_CLEANUP_ENABLED=true
-EPHEMERAL_KEY_CLEANUP_SCHEDULE=0 0 * * *  # Daily at midnight
-
 # --- Cluster Reconciliation (Oban Cron) ---
 # Syncs cluster state with Netmaker to recover from inconsistencies
 # CLUSTER_RECONCILIATION_ENABLED=true

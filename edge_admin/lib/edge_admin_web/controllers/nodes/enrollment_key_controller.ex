@@ -24,9 +24,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     **Custom**: Creates a new key with user-specified expiry and uses (not tracked in DB, tagged for audit trail).
     Use for controlled/time-limited registrations.
 
-    **Ephemeral**: Creates a tracked key for automatic cleanup (configurable expiry/uses, tracked in DB).
-    Use for temporary troubleshooting, testing, or demos.
-
     **Note:** This endpoint is unavailable during degraded mode (503).
     """,
     parameters: [

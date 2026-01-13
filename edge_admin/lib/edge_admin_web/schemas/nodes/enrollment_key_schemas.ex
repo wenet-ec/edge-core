@@ -23,9 +23,8 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
         },
         key_type: %Schema{
           type: :string,
-          description:
-            "Key type: 'default' (Netmaker default, unlimited), 'custom' (user-specified limits), or 'ephemeral' (auto-cleanup)",
-          enum: ["default", "custom", "ephemeral"],
+          description: "Key type: 'default' (Netmaker default, unlimited) or 'custom' (user-specified limits)",
+          enum: ["default", "custom"],
           example: "default"
         }
       },
@@ -68,8 +67,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
       **Default**: Retrieves the Netmaker auto-generated default key (unlimited uses, no expiration).
 
       **Custom**: Creates a new key with user-specified expiry and uses (not tracked in DB, tagged for audit).
-
-      **Ephemeral**: Creates a tracked key for automatic cleanup (configurable expiry/uses, tracked in DB).
       """,
       type: :object,
       properties: %{
@@ -80,41 +77,35 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
               type: :string,
               nullable: true,
               description:
-                "Key type: 'default' (retrieves default key), 'custom' (user-specified limits), or 'ephemeral' (auto-cleanup). Default: 'default'",
-              enum: ["default", "custom", "ephemeral"],
+                "Key type: 'default' (retrieves default key) or 'custom' (user-specified limits). Default: 'default'",
+              enum: ["default", "custom"],
               example: "default"
             },
             expiration: %Schema{
               type: :integer,
               nullable: true,
-              description: "Expiration time in seconds (only for custom/ephemeral). Default: 3600 (1 hour)",
+              description: "Expiration time in seconds (only for custom). Default: 3600 (1 hour)",
               example: 3600
             },
             uses_remaining: %Schema{
               type: :integer,
               nullable: true,
-              description: "Number of allowed uses (only for custom/ephemeral). Default: 1",
+              description: "Number of allowed uses (only for custom). Default: 1",
               example: 1
-            },
-            time_to_live: %Schema{
-              type: :integer,
-              nullable: true,
-              description: "Time to live in minutes (required for ephemeral keys only)",
-              example: 60
             }
           },
           example: %{
-            key_type: "ephemeral",
-            time_to_live: 60
+            key_type: "custom",
+            expiration: 3600,
+            uses_remaining: 1
           }
         }
       },
       example: %{
         enrollment_key: %{
-          key_type: "ephemeral",
+          key_type: "custom",
           expiration: 3600,
-          uses_remaining: 1,
-          time_to_live: 60
+          uses_remaining: 1
         }
       }
     })

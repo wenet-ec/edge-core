@@ -226,7 +226,7 @@ services:
       start_period: 10s
 
   edge_vpn_broker:
-    image: emqx/emqx:5.8.8
+    image: emqx/emqx:5.8.9
     container_name: local_edge_vpn_broker
     networks:
       - local_edge_core
@@ -285,7 +285,7 @@ services:
       start_period: 10s
 
   edge_vpn_dns:
-    image: coredns/coredns:1.13.2
+    image: coredns/coredns:1.14.0
     container_name: local_edge_vpn_dns
     networks:
       - local_edge_core
@@ -329,7 +329,7 @@ services:
 
   # Metrics
   edge_metrics_storage:
-    image: victoriametrics/victoria-metrics:v1.132.0
+    image: victoriametrics/victoria-metrics:v1.133.0
     container_name: local_edge_metrics_storage
     networks:
       - local_edge_core
@@ -344,7 +344,7 @@ services:
       - "-envflag.prefix=VM_"
 
   edge_metrics_collector:
-    image: victoriametrics/vmagent:v1.132.0
+    image: victoriametrics/vmagent:v1.133.0
     container_name: local_edge_metrics_collector
     networks:
       - local_edge_core

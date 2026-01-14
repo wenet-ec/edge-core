@@ -5,7 +5,7 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.18.0.0/16
+        - subnet: 172.19.0.0/16
 
 volumes:
   local_registry_data: {}
@@ -81,8 +81,8 @@ services:
     networks:
       - local_edge_core
     extra_hosts:
-      - "netmaker.localtest.me:172.18.0.8"
-      - "broker.localtest.me:172.18.0.8"
+      - "netmaker.localtest.me:172.19.0.100"
+      - "broker.localtest.me:172.19.0.100"
     volumes:
       - ../../edge_agent:/app:z
       - ../../nexmaker:/nexmaker:z

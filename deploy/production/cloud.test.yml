@@ -5,7 +5,7 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.19.0.0/16
+        - subnet: 172.25.0.0/16
 
 volumes:
   production_edge_admin_db_data: {}
@@ -49,8 +49,8 @@ services:
     networks:
       - production_edge_core
     extra_hosts:
-      - "netmaker.localtest.me:172.19.0.8"
-      - "broker.localtest.me:172.19.0.8"
+      - "netmaker.localtest.me:172.25.0.100"
+      - "broker.localtest.me:172.25.0.100"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -89,8 +89,8 @@ services:
     networks:
       - production_edge_core
     extra_hosts:
-      - "netmaker.localtest.me:172.19.0.8"
-      - "broker.localtest.me:172.19.0.8"
+      - "netmaker.localtest.me:172.25.0.100"
+      - "broker.localtest.me:172.25.0.100"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -131,8 +131,8 @@ services:
     networks:
       - production_edge_core
     extra_hosts:
-      - "netmaker.localtest.me:172.19.0.8"
-      - "broker.localtest.me:172.19.0.8"
+      - "netmaker.localtest.me:172.25.0.100"
+      - "broker.localtest.me:172.25.0.100"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -184,7 +184,7 @@ services:
       start_period: 10s
 
   edge_vpn_broker:
-    image: emqx/emqx:5.8.8
+    image: emqx/emqx:5.8.9
     container_name: production_edge_vpn_broker
     networks:
       - production_edge_core
@@ -264,7 +264,7 @@ services:
     container_name: production_edge_vpn_proxy
     networks:
       production_edge_core:
-        ipv4_address: 172.19.0.8
+        ipv4_address: 172.25.0.100
         aliases:
           - netmaker.localtest.me
           - broker.localtest.me

@@ -196,7 +196,8 @@ defmodule EdgeAdmin.Admins.Bootstrap do
       with :ok <- ensure_network_exists(network_name),
            {:ok, token} <- Vpn.get_default_enrollment_key(network_name),
            {:ok, _} <- Vpn.join_network(token: token, name: admin_name),
-           :ok <- wait_for_host(admin_name) do
+           :ok <- wait_for_netmaker(admin_name),
+           :ok <- wait_for_netclient(network_name) do
         Logger.info("Successfully joined admin cluster network")
         :ok
       else
@@ -233,15 +234,34 @@ defmodule EdgeAdmin.Admins.Bootstrap do
     Vpn.ensure_network_exists(network_name, %{addressrange: subnet})
   end
 
-  defp wait_for_host(admin_name) do
+  defp wait_for_netmaker(admin_name) do
     case Vpn.get_host_id(admin_name) do
       {:ok, _host_id} ->
         Logger.info("Host #{admin_name} registered in Netmaker API")
         :ok
 
       _ ->
-        Process.sleep(1000)
-        wait_for_host(admin_name)
+        Process.sleep(2000)
+        wait_for_netmaker(admin_name)
+    end
+  end
+
+  defp wait_for_netclient(network_name) do
+    case Nexmaker.Cli.health_check() do
+      {:ok, status, info} when status in [:healthy, :degraded] ->
+        if network_name in info[:networks] do
+          Logger.info("Netclient connected to #{network_name}")
+          :ok
+        else
+          Logger.debug("Waiting for netclient to join #{network_name}, current networks: #{inspect(info[:networks])}")
+          Process.sleep(2000)
+          wait_for_netclient(network_name)
+        end
+
+      {:ok, :unhealthy, _info} ->
+        Logger.debug("Waiting for netclient to become healthy...")
+        Process.sleep(2000)
+        wait_for_netclient(network_name)
     end
   end
 

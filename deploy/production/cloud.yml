@@ -107,7 +107,7 @@ services:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1
       - net.ipv6.conf.all.forwarding=1
-  
+
   edge_admin_3:
     build:
       context: ../..
@@ -224,7 +224,7 @@ services:
       - BACKEND_URL=https://netmaker.yourdomain.com
 
   edge_vpn_dns:
-    image: coredns/coredns:1.14.0
+    image: coredns/coredns:latest
     container_name: production_edge_vpn_dns
     networks:
       - production_edge_core
@@ -253,7 +253,7 @@ services:
 
   # Metrics Storage
   edge_metrics_storage:
-    image: victoriametrics/victoria-metrics:v1.133.0
+    image: victoriametrics/victoria-metrics:latest
     container_name: production_edge_metrics_storage
     networks:
       - production_edge_core
@@ -269,7 +269,7 @@ services:
 
   # Metrics Collector
   edge_metrics_collector:
-    image: victoriametrics/vmagent:v1.133.0
+    image: victoriametrics/vmagent:latest
     container_name: production_edge_metrics_collector
     networks:
       - production_edge_core

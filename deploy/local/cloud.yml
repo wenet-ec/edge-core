@@ -116,6 +116,7 @@ services:
     env_file:
       - ./.envs/.edge_admin
     environment:
+      - AUTH_ENABLED=false
       - WIREGUARD_PORT=51822
     ports:
       - "4001:44000"       # API

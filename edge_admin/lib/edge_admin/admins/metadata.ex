@@ -323,14 +323,8 @@ defmodule EdgeAdmin.Admins.Metadata do
 
   @impl true
   def handle_call({:recompute_now, trigger}, _from, state) do
-    if state.recomputing? do
-      # Already working - mark pending
-      {:reply, :ok, %{state | pending_recompute: true}}
-    else
-      # Start recomputation
-      spawn_recomputation_task(state, trigger)
-      {:reply, :ok, %{state | recomputing?: true}}
-    end
+    {:noreply, new_state} = request_recomputation(state, trigger)
+    {:reply, :ok, new_state}
   end
 
   # === Event Handlers ===

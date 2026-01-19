@@ -54,9 +54,10 @@ services:
     env_file:
       - ./.envs/.edge_admin
     ports:
-      - "34000:44000"
-      - "33128:43128"  # HTTP proxy
-      - "31080:41080"  # SOCKS5 proxy
+      - "34000:44000"      # API
+      - "33128:43128"      # HTTP proxy
+      - "31080:41080"      # SOCKS5 proxy
+      - "51821:51821/udp"  # WireGuard
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
       interval: 60s
@@ -90,10 +91,13 @@ services:
       - /dev/net/tun:/dev/net/tun
     env_file:
       - ./.envs/.edge_admin
+    environment:
+      - WIREGUARD_PORT=51822
     ports:
-      - "34001:44000"
-      - "33129:43128"  # HTTP proxy
-      - "31081:41080"  # SOCKS5 proxy
+      - "34001:44000"      # API
+      - "33129:43128"      # HTTP proxy
+      - "31081:41080"      # SOCKS5 proxy
+      - "51822:51822/udp"  # WireGuard
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
       interval: 60s
@@ -130,10 +134,12 @@ services:
     environment:
       - ADMIN_CLUSTER_NAME=b
       - ADMIN_CLUSTER_SUBNET=100.63.1.0/24
+      - WIREGUARD_PORT=51823
     ports:
-      - "34002:44000"
-      - "33130:43128"  # HTTP proxy
-      - "31082:41080"  # SOCKS5 proxy
+      - "34002:44000"      # API
+      - "33130:43128"      # HTTP proxy
+      - "31082:41080"      # SOCKS5 proxy
+      - "51823:51823/udp"  # WireGuard
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
       interval: 60s

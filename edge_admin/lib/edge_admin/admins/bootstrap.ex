@@ -143,6 +143,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
   defp admin_cluster_subnet, do: Application.get_env(:edge_admin, :admin_cluster_subnet)
   defp max_capacity, do: Application.get_env(:edge_admin, :admin_max_capacity)
   defp erlang_cookie, do: Application.get_env(:edge_admin, :erlang_cookie)
+  defp wireguard_port, do: Application.get_env(:edge_admin, :wireguard_port)
 
   # =============================================================================
   # Bootstrap Flow
@@ -192,10 +193,13 @@ defmodule EdgeAdmin.Admins.Bootstrap do
 
     start_time = System.monotonic_time(:millisecond)
 
+    # Build join options, adding static port if configured
+    join_opts = build_join_opts(admin_name)
+
     result =
       with :ok <- ensure_network_exists(network_name),
            {:ok, token} <- Vpn.get_default_enrollment_key(network_name),
-           {:ok, _} <- Vpn.join_network(token: token, name: admin_name),
+           {:ok, _} <- Vpn.join_network([{:token, token} | join_opts]),
            :ok <- wait_for_netmaker(admin_name),
            :ok <- wait_for_netclient(network_name) do
         Logger.info("Successfully joined admin cluster network")
@@ -232,6 +236,22 @@ defmodule EdgeAdmin.Admins.Bootstrap do
       end
 
     Vpn.ensure_network_exists(network_name, %{addressrange: subnet})
+  end
+
+  defp build_join_opts(admin_name) do
+    base_opts = [name: admin_name]
+
+    # Add static port if WIREGUARD_PORT is configured
+    # This ensures the admin listens on a predictable port for external agent connectivity
+    case wireguard_port() do
+      nil ->
+        Logger.info("No WIREGUARD_PORT configured, using dynamic port assignment")
+        base_opts
+
+      port when is_integer(port) ->
+        Logger.info("Using static WireGuard port: #{port}")
+        base_opts ++ [port: port, static_port: true]
+    end
   end
 
   defp wait_for_netmaker(admin_name) do

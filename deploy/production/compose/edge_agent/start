@@ -71,10 +71,6 @@ echo "Netclient daemon started with PID: $NETCLIENT_PID"
 echo "Waiting for netclient to initialize..."
 sleep 5
 
-# Sync latest config and recover from any stale state
-echo "Pulling latest network configuration..."
-netclient pull || echo "Pull failed (expected on first run)"
-
 echo "Starting server..."
 /app/bin/server &
 SERVER_PID=$!

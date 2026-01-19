@@ -44,9 +44,7 @@ config :edge_agent, Oban,
        # Every 3 minutes to create relayed node
        {"*/3 * * * *", EdgeAgent.EdgeClusters.Workers.RegisterRelayedNodeWorker},
        # Every 3 minutes for admin discovery
-       {"*/3 * * * *", EdgeAgent.EdgeClusters.Workers.AdminDiscoveryWorker},
-       # Every 6 hours to pull VPN config from Netmaker (safety net for MQTT message loss)
-       {"0 */6 * * *", EdgeAgent.Vpn.Workers.VpnConfigPullWorker}
+       {"*/3 * * * *", EdgeAgent.EdgeClusters.Workers.AdminDiscoveryWorker}
      ]},
     Oban.Plugins.Lifeline,
     {Oban.Plugins.Pruner, max_age: 86_400}

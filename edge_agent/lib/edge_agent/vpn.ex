@@ -122,11 +122,23 @@ defmodule EdgeAgent.Vpn do
   @spec join_network(String.t()) :: :ok | {:error, String.t()}
   def join_network(node_id) do
     node_name = "node-#{node_id}"
+    agent_wireguard_port = Application.get_env(:edge_agent, :agent_wireguard_port)
 
-    Logger.info("Joining VPN network as #{node_name}...")
+    # Build join options - only include port/static_port if wireguard port is configured
+    join_opts =
+      case agent_wireguard_port do
+        nil ->
+          Logger.info("Joining VPN network as #{node_name} (dynamic port)...")
+          [token: nil, name: node_name]
+
+        port when is_integer(port) ->
+          Logger.info("Joining VPN network as #{node_name} (WireGuard port: #{port})...")
+          [token: nil, name: node_name, port: port, static_port: true]
+      end
 
     with {:ok, enrollment_key} <- get_enrollment_key(),
-         {:ok, _} <- Nexmaker.Cli.join_network(token: enrollment_key, name: node_name),
+         join_opts_with_token = Keyword.put(join_opts, :token, enrollment_key),
+         {:ok, _} <- Nexmaker.Cli.join_network(join_opts_with_token),
          :ok <- verify_connection_after_join() do
       Logger.info("Successfully joined VPN network")
       :ok

@@ -1,4 +1,4 @@
-# deploy/production/cloud.yml
+# deploy/production/cloud.test.yml
 networks:
   production_edge_core:
     name: production_edge_core

@@ -143,7 +143,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
   defp admin_cluster_subnet, do: Application.get_env(:edge_admin, :admin_cluster_subnet)
   defp max_capacity, do: Application.get_env(:edge_admin, :admin_max_capacity)
   defp erlang_cookie, do: Application.get_env(:edge_admin, :erlang_cookie)
-  defp wireguard_port, do: Application.get_env(:edge_admin, :wireguard_port)
+  defp admin_wireguard_port, do: Application.get_env(:edge_admin, :admin_wireguard_port)
 
   # =============================================================================
   # Bootstrap Flow
@@ -241,11 +241,11 @@ defmodule EdgeAdmin.Admins.Bootstrap do
   defp build_join_opts(admin_name) do
     base_opts = [name: admin_name]
 
-    # Add static port if WIREGUARD_PORT is configured
+    # Add static port if ADMIN_WIREGUARD_PORT is configured
     # This ensures the admin listens on a predictable port for external agent connectivity
-    case wireguard_port() do
+    case admin_wireguard_port() do
       nil ->
-        Logger.info("No WIREGUARD_PORT configured, using dynamic port assignment")
+        Logger.info("No ADMIN_WIREGUARD_PORT configured, using dynamic port assignment")
         base_opts
 
       port when is_integer(port) ->

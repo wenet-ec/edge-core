@@ -1,7 +1,11 @@
-# deploy/production/edge.yml
+# deploy/production/edge.test.yml
 networks:
   production_edge_core:
     name: production_edge_core
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
 
 volumes:
   production_edge_agent_data: {}

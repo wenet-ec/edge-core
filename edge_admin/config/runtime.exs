@@ -138,7 +138,7 @@ config :edge_admin,
   admin_cluster_subnet: get_env("ADMIN_CLUSTER_SUBNET"),
   # === WireGuard Configuration ===
   # Static port for WireGuard (must match UDP port mapping in docker-compose for external connectivity)
-  wireguard_port: get_env("WIREGUARD_PORT", :integer),
+  admin_wireguard_port: get_env("ADMIN_WIREGUARD_PORT", :integer),
   # === Erlang Distribution (for multi-admin clustering) ===
   erlang_cookie: get_env("ERLANG_COOKIE", :atom, :edge_admin_default_cookie),
   admin_discovery_port: get_env("ADMIN_DISCOVERY_PORT", :integer, 44_000),

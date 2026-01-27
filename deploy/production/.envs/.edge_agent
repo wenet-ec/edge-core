@@ -1,6 +1,7 @@
 # deploy/production/.envs/.edge_agent
 ENROLLMENT_KEY=
-PUBLIC_ENROLLMENT_KEY_URL=https://edge-admin.yourdomain.com/api/clusters/default/enrollment_keys/public
+PUBLIC_ENROLLMENT_KEY_URL=https://edge-admin-test.wenet.vn/api/clusters/default/enrollment_keys/public
+AGENT_WIREGUARD_PORT=51821
 
 # Self-update configuration
 SELF_UPDATE_ENABLED=true

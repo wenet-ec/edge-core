@@ -92,7 +92,7 @@ services:
     env_file:
       - ./.envs/.edge_admin
     environment:
-      - WIREGUARD_PORT=51822
+      - ADMIN_WIREGUARD_PORT=51822
     ports:
       - "34001:44000"      # API
       - "33129:43128"      # HTTP proxy
@@ -134,7 +134,7 @@ services:
     environment:
       - ADMIN_CLUSTER_NAME=b
       - ADMIN_CLUSTER_SUBNET=100.63.1.0/24
-      - WIREGUARD_PORT=51823
+      - ADMIN_WIREGUARD_PORT=51823
     ports:
       - "34002:44000"      # API
       - "33130:43128"      # HTTP proxy

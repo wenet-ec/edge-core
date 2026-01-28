@@ -12,7 +12,7 @@ defmodule EdgeAgent.EdgeClusters.Workers.RegisterRelayedNodeWorker do
   """
 
   use Oban.Worker,
-    queue: :relayed_node,
+    queue: :register_relayed_node,
     max_attempts: 1,
     unique: [
       period: :infinity,

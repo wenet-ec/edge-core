@@ -16,7 +16,7 @@ defmodule EdgeAgent.Commands.Workers.SyncUnprocessedExecutionWorker do
   """
 
   use Oban.Worker,
-    queue: :execution_syncing,
+    queue: :sync_executions,
     max_attempts: 1,
     unique: [
       period: :infinity,

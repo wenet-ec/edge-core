@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/commands/workers/execution_enqueue_worker.ex
-defmodule EdgeAgent.Commands.Workers.ExecutionEnqueueWorker do
+# edge_agent/lib/edge_agent/commands/workers/enqueue_execution_worker.ex
+defmodule EdgeAgent.Commands.Workers.EnqueueExecutionWorker do
   @moduledoc """
   Scheduler worker that enqueues pending command executions.
 
@@ -7,13 +7,13 @@ defmodule EdgeAgent.Commands.Workers.ExecutionEnqueueWorker do
   - Cron scheduler every 10 seconds
   - New command arrival
 
-  Finds all pending executions and spawns a CommandExecutionWorker for each.
+  Finds all pending executions and spawns a ExecuteCommandWorker for each.
   Uses Oban's unique constraint to ensure only one enqueue worker runs at a time
-  and prevent duplicate CommandExecutionWorker jobs.
+  and prevent duplicate ExecuteCommandWorker jobs.
   """
 
   use Oban.Worker,
-    queue: :execution_enqueue,
+    queue: :enqueue_executions,
     max_attempts: 1,
     unique: [
       period: :infinity,
@@ -26,12 +26,12 @@ defmodule EdgeAgent.Commands.Workers.ExecutionEnqueueWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: _args}) do
-    Logger.debug("ExecutionEnqueueWorker started")
+    Logger.debug("EnqueueExecutionWorker started")
 
     # Enqueue all pending executions as individual jobs
     Commands.enqueue_pending_executions()
 
-    Logger.debug("ExecutionEnqueueWorker completed")
+    Logger.debug("EnqueueExecutionWorker completed")
     :ok
   end
 end

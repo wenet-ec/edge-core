@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/commands/workers/command_execution_worker.ex
-defmodule EdgeAgent.Commands.Workers.CommandExecutionWorker do
+# edge_agent/lib/edge_agent/commands/workers/execute_command_worker.ex
+defmodule EdgeAgent.Commands.Workers.ExecuteCommandWorker do
   @moduledoc """
   Worker that executes a single command.
 
@@ -9,7 +9,7 @@ defmodule EdgeAgent.Commands.Workers.CommandExecutionWorker do
   """
 
   use Oban.Worker,
-    queue: :command_execution,
+    queue: :execute_command,
     max_attempts: 1,
     unique: [
       period: :infinity,
@@ -39,8 +39,8 @@ defmodule EdgeAgent.Commands.Workers.CommandExecutionWorker do
 
         # Trigger reporting worker
         Commands.enqueue_worker(
-          EdgeAgent.Commands.Workers.ExecutionReportWorker,
-          "ExecutionReportWorker"
+          EdgeAgent.Commands.Workers.ReportExecutionWorker,
+          "ReportExecutionWorker"
         )
 
         :ok

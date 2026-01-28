@@ -27,21 +27,21 @@ config :edge_agent, Oban,
   engine: Oban.Engines.Lite,
   repo: EdgeAgent.Repo,
   queues: [
-    execution_enqueue: 1,
-    command_execution: [limit: 10],
-    execution_report: 1,
-    execution_syncing: 1,
+    enqueue_executions: 1,
+    execute_command: [limit: 10],
+    report_executions: 1,
+    sync_executions: 1,
     report_health_check: 1,
-    admin_discovery: 1,
-    relayed_node: 1
+    discover_admins: 1,
+    register_relayed_node: 1
   ],
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [
        # Every minute to enqueue pending executions
-       {"* * * * *", EdgeAgent.Commands.Workers.ExecutionEnqueueWorker},
+       {"* * * * *", EdgeAgent.Commands.Workers.EnqueueExecutionWorker},
        # Every minute for reporting (safety net)
-       {"* * * * *", EdgeAgent.Commands.Workers.ExecutionReportWorker},
+       {"* * * * *", EdgeAgent.Commands.Workers.ReportExecutionWorker},
        # Every 2 minutes to sync unprocessed executions (HTTP fallback mode)
        {"*/2 * * * *", EdgeAgent.Commands.Workers.SyncUnprocessedExecutionWorker},
        # Every 2 minutes to report health check (HTTP fallback mode)
@@ -49,7 +49,7 @@ config :edge_agent, Oban,
        # Every 3 minutes to create relayed node
        {"*/3 * * * *", EdgeAgent.EdgeClusters.Workers.RegisterRelayedNodeWorker},
        # Every 3 minutes for admin discovery
-       {"*/3 * * * *", EdgeAgent.EdgeClusters.Workers.AdminDiscoveryWorker}
+       {"*/3 * * * *", EdgeAgent.EdgeClusters.Workers.DiscoverAdminWorker}
      ]},
     Oban.Plugins.Lifeline,
     {Oban.Plugins.Pruner, max_age: 86_400}

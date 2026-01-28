@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/edge_clusters/workers/admin_discovery_worker.ex
-defmodule EdgeAgent.EdgeClusters.Workers.AdminDiscoveryWorker do
+# edge_agent/lib/edge_agent/edge_clusters/workers/discover_admin_worker.ex
+defmodule EdgeAgent.EdgeClusters.Workers.DiscoverAdminWorker do
   @moduledoc """
   Worker that discovers admins in the cluster network.
 
@@ -8,7 +8,7 @@ defmodule EdgeAgent.EdgeClusters.Workers.AdminDiscoveryWorker do
   """
 
   use Oban.Worker,
-    queue: :admin_discovery,
+    queue: :discover_admins,
     max_attempts: 1,
     unique: [
       period: :infinity,
@@ -21,12 +21,12 @@ defmodule EdgeAgent.EdgeClusters.Workers.AdminDiscoveryWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: _args}) do
-    Logger.debug("AdminDiscoveryWorker started")
+    Logger.debug("DiscoverAdminWorker started")
 
     # Discovery always succeeds - returns empty list if no admins found
     {:ok, _network_name, admin_urls} = Discovery.discover_admins()
 
-    Logger.debug("AdminDiscoveryWorker completed - discovered #{length(admin_urls)} admin(s)")
+    Logger.debug("DiscoverAdminWorker completed - discovered #{length(admin_urls)} admin(s)")
 
     :telemetry.execute(
       [:edge_agent, :discovery, :scan],

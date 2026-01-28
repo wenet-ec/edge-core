@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/commands/workers/execution_report_worker.ex
-defmodule EdgeAgent.Commands.Workers.ExecutionReportWorker do
+# edge_agent/lib/edge_agent/commands/workers/report_execution_worker.ex
+defmodule EdgeAgent.Commands.Workers.ReportExecutionWorker do
   @moduledoc """
   Worker that reports completed command execution results to admin.
 
@@ -18,7 +18,7 @@ defmodule EdgeAgent.Commands.Workers.ExecutionReportWorker do
   """
 
   use Oban.Worker,
-    queue: :execution_report,
+    queue: :report_executions,
     max_attempts: 1,
     unique: [
       period: :infinity,
@@ -31,12 +31,12 @@ defmodule EdgeAgent.Commands.Workers.ExecutionReportWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: _args}) do
-    Logger.debug("ExecutionReportWorker started")
+    Logger.debug("ReportExecutionWorker started")
 
     # Report unreported executions in order
     Commands.report_unreported_executions()
 
-    Logger.debug("ExecutionReportWorker completed")
+    Logger.debug("ReportExecutionWorker completed")
     :ok
   end
 end

@@ -20,7 +20,7 @@ defmodule EdgeAgent.Commands do
 
   ```
   1. Admin sends command → Agent creates CommandExecution (status: "pending")
-  2. Enqueue Oban job → ExecutionEnqueueWorker triggers CommandExecutionWorker
+  2. Enqueue Oban job → EnqueueExecutionWorker triggers ExecuteCommandWorker
   3. Worker calls execute_single_command → Runs via /usr/local/bin/hostscript
   4. Execution completes → Updates status to "completed" with output/exit_code
   5. Report to admin → Sends result via AdminClient.update_command_execution_result
@@ -129,8 +129,8 @@ defmodule EdgeAgent.Commands do
          {:ok, command_execution} <- create_command_execution(attrs) do
       # Trigger enqueue worker (Oban's unique constraint prevents duplicates)
       enqueue_worker(
-        EdgeAgent.Commands.Workers.ExecutionEnqueueWorker,
-        "ExecutionEnqueueWorker"
+        EdgeAgent.Commands.Workers.EnqueueExecutionWorker,
+        "EnqueueExecutionWorker"
       )
 
       {:ok, command_execution}
@@ -335,7 +335,7 @@ defmodule EdgeAgent.Commands do
 
   defp enqueue_execution_job(execution) do
     %{execution_id: execution.id}
-    |> EdgeAgent.Commands.Workers.CommandExecutionWorker.new()
+    |> EdgeAgent.Commands.Workers.ExecuteCommandWorker.new()
     |> Oban.insert()
     |> case do
       {:ok, _job} ->
@@ -513,7 +513,7 @@ defmodule EdgeAgent.Commands do
     query =
       from(j in Oban.Job,
         where: j.queue == "command_execution",
-        where: j.worker == "EdgeAgent.Commands.Workers.CommandExecutionWorker",
+        where: j.worker == "EdgeAgent.Commands.Workers.ExecuteCommandWorker",
         where: fragment("?->>'execution_id' = ?", j.args, ^execution_id),
         where: j.state in ["available", "scheduled", "executing"]
       )

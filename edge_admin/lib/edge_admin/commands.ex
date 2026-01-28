@@ -961,27 +961,6 @@ defmodule EdgeAdmin.Commands do
   end
 
   @doc """
-  Lists command executions for a specific node with status "sent".
-  Used by agent to fetch pending commands.
-
-  ## Returns
-  - `{:ok, {executions, meta}}` - List of command executions with Flop.Meta pagination info
-  """
-  @spec list_sent_command_executions_for_node(String.t()) ::
-          {:ok, {[CommandExecution.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  def list_sent_command_executions_for_node(node_id) do
-    params = %{
-      "node_id" => node_id,
-      "status" => "sent",
-      "order_by" => "inserted_at",
-      "order_directions" => "asc",
-      "page_size" => "1000"
-    }
-
-    list_command_executions(params)
-  end
-
-  @doc """
   Verifies that an execution belongs to a specific node.
 
   ## Parameters
@@ -998,6 +977,34 @@ defmodule EdgeAdmin.Commands do
       :ok
     else
       {:error, :forbidden}
+    end
+  end
+
+  @doc """
+  Acknowledges command execution receipt from agent.
+
+  Validates execution is in "pending" status and transitions it to "sent".
+  Called when agent receives and stores a pending command execution.
+
+  ## Parameters
+  - `execution` - The execution struct
+  - `params` - Map (can be empty, no params needed)
+
+  ## Returns
+  - `{:ok, execution}` - Acknowledgment succeeded
+  - `{:error, changeset}` - Validation failed (not pending)
+
+  ## Examples
+
+      iex> acknowledge_execution(execution, %{})
+      {:ok, %CommandExecution{status: "sent"}}
+  """
+  @spec acknowledge_execution(CommandExecution.t(), map()) ::
+          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
+  def acknowledge_execution(execution, params) do
+    with {:ok, _attrs} <- Forms.AcknowledgeCommandExecutionForm.changeset(params, execution.status) do
+      # Update status from "pending" to "sent"
+      update_command_execution(execution, %{"status" => "sent", "sent_at" => DateTime.utc_now()})
     end
   end
 

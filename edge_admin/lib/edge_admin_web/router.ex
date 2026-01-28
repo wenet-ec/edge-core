@@ -157,6 +157,9 @@ defmodule EdgeAdminWeb.Router do
   scope "/api/agents", Agents do
     pipe_through(:agent_api)
 
+    # Node health check reporting
+    patch("/nodes/me/health_check", NodeController, :update_health_check)
+
     # Relay gateway registration
     post("/relays", RelayController, :create)
 
@@ -165,7 +168,8 @@ defmodule EdgeAdminWeb.Router do
 
     # Command sync and result reporting
     get("/command_executions", CommandExecutionController, :index)
-    patch("/command_executions/:id", CommandExecutionController, :update)
+    patch("/command_executions/:id/acknowledge", CommandExecutionController, :acknowledge)
+    patch("/command_executions/:id/result", CommandExecutionController, :update_result)
   end
 
   # Protected API endpoints (requires MASTER_KEY)

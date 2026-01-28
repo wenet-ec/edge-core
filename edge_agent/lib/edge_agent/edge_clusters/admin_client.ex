@@ -8,7 +8,9 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   ## Key Concepts
 
-  - **Admin URLs**: List of discovered admin servers from Settings table
+  - **Admin URLs**: List of discovered admin servers from Settings table (VPN)
+  - **HTTP Fallback**: Falls back to `FALLBACK_ADMIN_URL` if no VPN admins found
+  - **Fallback Control**: Some operations (relay) require VPN and disable HTTP fallback
   - **Fallback Logic**: Try each admin URL until one succeeds
   - **Authentication**: Bearer token authentication for protected endpoints
   - **Automatic Retry**: Falls back to next admin if request fails
@@ -16,24 +18,32 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   ## Architecture
 
-  The client implements two request patterns:
+  The client implements two request patterns with optional HTTP fallback:
 
-  1. **Unauthenticated Requests** (`request_with_fallback/2`)
+  1. **Unauthenticated Requests** (`request_with_fallback/3`)
      - Used for registration (no token yet)
-     - Queries Settings for admin URLs
+     - Tries VPN admin URLs from Settings first
+     - Falls back to `FALLBACK_ADMIN_URL` env var if VPN URLs empty
      - Tries each URL until one succeeds
 
-  2. **Authenticated Requests** (`request_with_auth/2`)
+  2. **Authenticated Requests** (`request_with_auth/3`)
      - Used for all post-registration endpoints
      - Requires API token from Settings
      - Adds `Authorization: Bearer <token>` header
+     - Tries VPN admin URLs, then HTTP fallback (if `fallback_enabled: true`)
      - Falls back across admin URLs on network errors
+
+  ## Fallback Control
+
+  By default, all operations support HTTP fallback (`fallback_enabled: true`).
+  Some operations like relay registration must use VPN and pass `fallback_enabled: false`.
 
   ## API Endpoints
 
   - **POST /api/agents/nodes** - Register node and receive API token
-  - **GET /api/agents/command_executions** - Fetch pending commands
-  - **PATCH /api/agents/command_executions/:id** - Report execution results
+  - **GET /api/agents/command_executions** - Fetch sent and pending command executions
+  - **PATCH /api/agents/command_executions/:id/acknowledge** - Acknowledge pending execution receipt
+  - **PATCH /api/agents/command_executions/:id/result** - Report execution results
   - **POST /api/agents/ssh_usernames/verify_credentials** - Verify SSH credentials
   - **POST /api/agents/relays** - Request relay gateway assignment
 
@@ -58,12 +68,12 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
       })
       {:ok, %{"api_token" => "eyJ...", "proxy_password" => "secret"}}
 
-      # Fetch pending commands (authenticated)
-      iex> AdminClient.get_sent_command_executions()
-      {:ok, [%{"id" => "exec-123", "command_text" => "uptime"}]}
+      # Fetch sent commands (authenticated)
+      iex> AdminClient.list_sent_command_executions()
+      {:ok, %{data: [%{"id" => "exec-123", "command_text" => "uptime"}], meta: %{}}}
 
       # Update command execution (authenticated)
-      iex> AdminClient.update_command_execution("exec-123", %{
+      iex> AdminClient.update_command_execution_result("exec-123", %{
         status: "completed",
         exit_code: 0,
         output: "14:23:45 up 3 days"
@@ -93,9 +103,12 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   Sends node metadata to admin server and receives API token and proxy password.
   This is the only unauthenticated endpoint (no token yet).
+  Supports HTTP fallback by default.
 
   ## Parameters
   - `node_params` - Map with node metadata (node_id, id_type, network_name, ports, version)
+  - `opts` - Options keyword list:
+    - `fallback_enabled` - Allow HTTP fallback if VPN URLs empty (default: true)
 
   ## Returns
   - `{:ok, node_data}` - Registration succeeded, node_data includes api_token and proxy_password
@@ -103,12 +116,13 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   POST /api/agents/nodes
   """
-  @spec register_node(map()) :: {:ok, map()} | {:error, term()}
-  def register_node(node_params) do
+  @spec register_node(map(), keyword()) :: {:ok, map()} | {:error, term()}
+  def register_node(node_params, opts \\ []) do
     path = "/api/agents/nodes"
     payload = %{node: node_params}
+    fallback_enabled = Keyword.get(opts, :fallback_enabled, true)
 
-    request_with_fallback(path, fn url ->
+    request_with_fallback(path, fallback_enabled, fn url ->
       opts = Keyword.merge([json: payload], http_options())
       case Req.post(url, opts) do
         {:ok, %{status: 201, body: %{"data" => node_data}}} ->
@@ -128,10 +142,13 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   Queries admin server to verify if given username and credential are valid
   for SSH access to this node.
+  Supports HTTP fallback by default.
 
   ## Parameters
   - `username` - SSH username (string)
   - `credential` - Either `{:password, password}` or `{:public_key, public_key}`
+  - `opts` - Options keyword list:
+    - `fallback_enabled` - Allow HTTP fallback if VPN URLs empty (default: true)
 
   ## Returns
   - `{:ok, true}` - credential verified and valid
@@ -140,10 +157,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   POST /api/agents/ssh_usernames/verify_credentials
   """
-  @spec verify_ssh_credentials(String.t(), {:password, String.t()} | {:public_key, String.t()}) ::
+  @spec verify_ssh_credentials(String.t(), {:password, String.t()} | {:public_key, String.t()}, keyword()) ::
           {:ok, boolean()} | {:error, term()}
-  def verify_ssh_credentials(username, credential) do
+  def verify_ssh_credentials(username, credential, opts \\ []) do
     path = "/api/agents/ssh_usernames/verify_credentials"
+    fallback_enabled = Keyword.get(opts, :fallback_enabled, true)
 
     payload =
       case credential do
@@ -154,7 +172,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
           %{ssh_username: %{username: username, public_key: public_key}}
       end
 
-    request_with_auth(path, fn url, headers ->
+    request_with_auth(path, fallback_enabled, fn url, headers ->
       opts = Keyword.merge([json: payload, headers: headers], http_options())
       case Req.post(url, opts) do
         {:ok, %{status: 200, body: %{"data" => %{"verified" => verified}}}} ->
@@ -176,40 +194,94 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   end
 
   @doc """
-  Get sent command executions for the authenticated node.
+  Lists command executions from admin with filtering and pagination.
 
-  Fetches list of pending command executions that admin has sent to this node.
-  Used during bootstrap and periodic sync to download new commands.
+  Base function for fetching command executions with configurable status filter.
+  Used during bootstrap and periodic sync to download commands.
+  Supports HTTP fallback by default.
+
+  ## Parameters
+  - `opts` - Options keyword list:
+    - `fallback_enabled` - Allow HTTP fallback if VPN URLs empty (default: true)
+    - `status` - Filter by status: "sent", "pending", or "completed" (required)
+    - `page` - Page number (default: 1)
+    - `page_size` - Results per page (default: 100)
+    - `order_by` - Sort field (default: "inserted_at")
+    - `order_directions` - Sort direction: "asc" or "desc" (default: "asc")
 
   ## Returns
-  - `{:ok, command_executions}` - List of command execution maps
+  - `{:ok, %{data: [command_executions], meta: pagination_meta}}` - Command executions with pagination
   - `{:error, :not_found}` - Node not found or no commands
   - `{:error, reason}` - Request failed
 
   GET /api/agents/command_executions
   """
-  @spec get_sent_command_executions() :: {:ok, [map()]} | {:error, term()}
-  def get_sent_command_executions do
+  @spec list_command_executions(keyword()) :: {:ok, map()} | {:error, term()}
+  def list_command_executions(opts \\ []) do
     path = "/api/agents/command_executions"
+    fallback_enabled = Keyword.get(opts, :fallback_enabled, true)
 
-    request_with_auth(path, fn url, headers ->
-      opts = Keyword.merge([headers: headers], http_options())
+    # Build query params (status is required)
+    query_params = %{
+      "status" => Keyword.fetch!(opts, :status),
+      "page" => Keyword.get(opts, :page, 1),
+      "page_size" => Keyword.get(opts, :page_size, 100),
+      "order_by" => Keyword.get(opts, :order_by, "inserted_at"),
+      "order_directions" => Keyword.get(opts, :order_directions, "asc")
+    }
+
+    request_with_auth(path, fallback_enabled, fn url, headers ->
+      opts = Keyword.merge([headers: headers, params: query_params], http_options())
       case Req.get(url, opts) do
-        {:ok, %{status: 200, body: %{"data" => command_executions}}} ->
-          {:ok, command_executions}
+        {:ok, %{status: 200, body: %{"data" => command_executions, "meta" => meta}}} ->
+          {:ok, %{data: command_executions, meta: meta}}
 
         {:ok, %{status: 404}} ->
           {:error, :not_found}
 
         {:ok, %{status: status, body: body}} ->
-          Logger.warning("Failed to get command executions, HTTP #{status}: #{inspect(body)}")
+          Logger.warning("Failed to list command executions, HTTP #{status}: #{inspect(body)}")
           {:error, {:http_error, status, body}}
 
         {:error, reason} ->
-          Logger.warning("Failed to get command executions: #{inspect(reason)}")
+          Logger.warning("Failed to list command executions: #{inspect(reason)}")
           {:error, {:request_failed, reason}}
       end
     end)
+  end
+
+  @doc """
+  Lists command executions with status "pending" from admin.
+
+  Convenience wrapper around `list_command_executions/1`.
+  Used to fetch unacknowledged commands that need to be stored and acknowledged.
+
+  ## Parameters
+  - `opts` - Options keyword list (see `list_command_executions/1` for details)
+
+  ## Returns
+  - Same as `list_command_executions/1`
+  """
+  @spec list_pending_command_executions(keyword()) :: {:ok, map()} | {:error, term()}
+  def list_pending_command_executions(opts \\ []) do
+    list_command_executions(Keyword.put(opts, :status, "pending"))
+  end
+
+  @doc """
+  Lists command executions with status "sent" from admin.
+
+  Convenience wrapper around `list_command_executions/1`.
+  Used to fetch acknowledged but not yet executed commands (if needed for reconciliation).
+
+  ## Parameters
+  - `opts` - Options keyword list (see `list_command_executions/1` for details)
+
+  ## Returns
+  - Same as `list_command_executions/1`
+  """
+  @spec list_sent_command_executions(keyword()) :: {:ok, map()} | {:error, term()}
+  def list_sent_command_executions(opts \\ []) do
+    list_command_executions(Keyword.put(opts, :status, "sent"))
   end
 
   @doc """
@@ -219,20 +291,28 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   Falls back across all available admin URLs until one succeeds.
   Only the last assignment matters (last write wins).
 
+  **IMPORTANT**: This operation REQUIRES VPN and does NOT support HTTP fallback.
+  Relay nodes must reach admins inside the VPN mesh to establish gateway connections.
+
+  ## Parameters
+  - `opts` - Options keyword list:
+    - `fallback_enabled` - Allow HTTP fallback (default: false - relay requires VPN)
+
   ## Returns
   - `{:ok, response}` - Assignment succeeded, response includes relay_admin_name
   - `{:error, :no_api_token}` - No API token found
-  - `{:error, :no_admin_urls}` - No admin URLs available
+  - `{:error, :no_admin_urls}` - No admin URLs available (VPN not connected)
   - `{:error, {:http_error, status, body}}` - HTTP error
   - `{:error, {:all_requests_failed, msg}}` - All admin URLs failed
 
   POST /api/agents/relays
   """
-  @spec create_relayed_node() :: {:ok, map()} | {:error, term()}
-  def create_relayed_node do
+  @spec create_relayed_node(keyword()) :: {:ok, map()} | {:error, term()}
+  def create_relayed_node(opts \\ []) do
     path = "/api/agents/relays"
+    fallback_enabled = Keyword.get(opts, :fallback_enabled, false)
 
-    request_with_auth(path, fn url, headers ->
+    request_with_auth(path, fallback_enabled, fn url, headers ->
       opts = Keyword.merge([json: %{}, headers: headers], http_options())
       case Req.post(url, opts) do
         {:ok, %{status: 200, body: response}} ->
@@ -251,14 +331,104 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   end
 
   @doc """
+  Acknowledge a command execution.
+
+  Notifies admin that agent has received and stored a pending command execution.
+  Transitions execution status from "pending" to "sent" on admin side.
+  Supports HTTP fallback by default.
+
+  ## Parameters
+  - `execution_id` - Command execution ID (string)
+  - `opts` - Options keyword list:
+    - `fallback_enabled` - Allow HTTP fallback if VPN URLs empty (default: true)
+
+  ## Returns
+  - `:ok` - Acknowledgment succeeded
+  - `{:error, {:http_error, 404, _}}` - Execution not found
+  - `{:error, {:http_error, 422, _}}` - Validation error (not pending)
+  - `{:error, reason}` - Acknowledgment failed
+
+  PATCH /api/agents/command_executions/:id/acknowledge
+  """
+  @spec acknowledge_command_execution(String.t(), keyword()) :: :ok | {:error, term()}
+  def acknowledge_command_execution(execution_id, opts \\ []) do
+    path = "/api/agents/command_executions/#{execution_id}/acknowledge"
+    fallback_enabled = Keyword.get(opts, :fallback_enabled, true)
+
+    request_with_auth(path, fallback_enabled, fn url, headers ->
+      opts = Keyword.merge([json: %{}, headers: headers], http_options())
+      case Req.patch(url, opts) do
+        {:ok, %{status: status}} when status in 200..299 ->
+          Logger.debug("Successfully acknowledged command execution #{execution_id}")
+          :ok
+
+        {:ok, %{status: status, body: body}} ->
+          Logger.warning("Failed to acknowledge command execution #{execution_id}, HTTP #{status}: #{inspect(body)}")
+          {:error, {:http_error, status, body}}
+
+        {:error, reason} ->
+          Logger.warning("Failed to acknowledge command execution #{execution_id}: #{inspect(reason)}")
+          {:error, {:request_failed, reason}}
+      end
+    end)
+  end
+
+  @doc """
+  Reports node health check status to admin.
+
+  Sends health status (healthy/unhealthy) when using HTTP fallback mode.
+  Allows admin to track node health when direct VPN pinging is unavailable.
+  Supports HTTP fallback by default.
+
+  ## Parameters
+  - `status` - Health status string: "healthy" or "unhealthy"
+  - `opts` - Options keyword list:
+    - `fallback_enabled` - Allow HTTP fallback if VPN URLs empty (default: true)
+
+  ## Returns
+  - `{:ok, node}` - Health check reported successfully
+  - `{:error, {:http_error, 422, _}}` - Validation error (invalid status)
+  - `{:error, reason}` - Report failed
+
+  PATCH /api/agents/nodes/me/health_check
+  """
+  @spec report_health_check(String.t(), keyword()) :: {:ok, map()} | {:error, term()}
+  def report_health_check(status, opts \\ []) do
+    path = "/api/agents/nodes/me/health_check"
+    fallback_enabled = Keyword.get(opts, :fallback_enabled, true)
+
+    request_with_auth(path, fallback_enabled, fn url, headers ->
+      body = %{status: status}
+      opts = Keyword.merge([json: body, headers: headers], http_options())
+
+      case Req.patch(url, opts) do
+        {:ok, %{status: 200, body: %{"data" => node}}} ->
+          Logger.debug("Successfully reported health check: #{status}")
+          {:ok, node}
+
+        {:ok, %{status: status_code, body: body}} ->
+          Logger.warning("Failed to report health check, HTTP #{status_code}: #{inspect(body)}")
+          {:error, {:http_error, status_code, body}}
+
+        {:error, reason} ->
+          Logger.warning("Failed to report health check: #{inspect(reason)}")
+          {:error, {:request_failed, reason}}
+      end
+    end)
+  end
+
+  @doc """
   Update a command execution with results.
 
   Reports execution results (output, exit_code, completed_at) back to admin server.
   Called after command execution completes or fails.
+  Supports HTTP fallback by default.
 
   ## Parameters
   - `execution_id` - Command execution ID (string)
   - `command_execution_params` - Map with status, output, exit_code, completed_at
+  - `opts` - Options keyword list:
+    - `fallback_enabled` - Allow HTTP fallback if VPN URLs empty (default: true)
 
   ## Returns
   - `:ok` - Update succeeded
@@ -266,14 +436,15 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   - `{:error, {:http_error, 422, _}}` - Validation error (already completed)
   - `{:error, reason}` - Update failed
 
-  PATCH /api/agents/command_executions/:id
+  PATCH /api/agents/command_executions/:id/result
   """
-  @spec update_command_execution(String.t(), map()) :: :ok | {:error, term()}
-  def update_command_execution(execution_id, command_execution_params) do
-    path = "/api/agents/command_executions/#{execution_id}"
+  @spec update_command_execution_result(String.t(), map(), keyword()) :: :ok | {:error, term()}
+  def update_command_execution_result(execution_id, command_execution_params, opts \\ []) do
+    path = "/api/agents/command_executions/#{execution_id}/result"
     payload = %{command_execution: command_execution_params}
+    fallback_enabled = Keyword.get(opts, :fallback_enabled, true)
 
-    request_with_auth(path, fn url, headers ->
+    request_with_auth(path, fallback_enabled, fn url, headers ->
       opts = Keyword.merge([json: payload, headers: headers], http_options())
       case Req.patch(url, opts) do
         {:ok, %{status: status}} when status in 200..299 ->
@@ -293,18 +464,22 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   # Private functions
 
-  defp request_with_fallback(path, request_fn) do
-    case Settings.get_admin_urls() do
+  defp request_with_fallback(path, fallback_enabled, request_fn) do
+    admin_urls = Settings.get_admin_urls() || []
+
+    urls_to_try = get_urls_to_try(admin_urls, fallback_enabled)
+
+    case urls_to_try do
       [] ->
-        Logger.warning("No admin URLs found in Settings")
+        Logger.warning("No admin URLs available (VPN: #{inspect(admin_urls)}, Fallback: #{fallback_enabled})")
         {:error, :no_admin_urls}
 
-      admin_urls ->
-        try_request(admin_urls, path, request_fn)
+      urls ->
+        try_request(urls, path, request_fn)
     end
   end
 
-  defp request_with_auth(path, request_fn) do
+  defp request_with_auth(path, fallback_enabled, request_fn) do
     case Settings.get_api_token() do
       nil ->
         Logger.warning("No API token found in Settings")
@@ -312,15 +487,38 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
       api_token ->
         headers = [{"authorization", "Bearer #{api_token}"}]
+        admin_urls = Settings.get_admin_urls() || []
 
-        case Settings.get_admin_urls() do
+        urls_to_try = get_urls_to_try(admin_urls, fallback_enabled)
+
+        case urls_to_try do
           [] ->
-            Logger.warning("No admin URLs found in Settings")
+            Logger.warning("No admin URLs available (VPN: #{inspect(admin_urls)}, Fallback: #{fallback_enabled})")
             {:error, :no_admin_urls}
 
-          admin_urls ->
-            try_request_with_auth(admin_urls, path, headers, request_fn)
+          urls ->
+            try_request_with_auth(urls, path, headers, request_fn)
         end
+    end
+  end
+
+  # Get list of URLs to try: VPN admin URLs first, then fallback URL if enabled
+  defp get_urls_to_try(admin_urls, fallback_enabled) do
+    fallback_url = Application.get_env(:edge_agent, :fallback_admin_url)
+
+    cond do
+      # VPN admins available - use them
+      admin_urls != [] ->
+        admin_urls
+
+      # No VPN admins, but fallback enabled and configured
+      fallback_enabled and fallback_url != nil ->
+        Logger.info("No VPN admin URLs, using HTTP fallback: #{fallback_url}")
+        [fallback_url]
+
+      # No VPN admins and fallback disabled or not configured
+      true ->
+        []
     end
   end
 

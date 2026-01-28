@@ -23,34 +23,17 @@ defmodule EdgeAgent.EdgeClusters.Workers.AdminDiscoveryWorker do
   def perform(%Oban.Job{args: _args}) do
     Logger.debug("AdminDiscoveryWorker started")
 
-    # Always return :ok to prevent job from getting stuck in failed state
-    # Discovery errors are logged but don't block the worker
-    result =
-      case Discovery.discover_admins() do
-        {:ok, _network_name, admin_urls} ->
-          Logger.debug("AdminDiscoveryWorker completed - discovered #{length(admin_urls)} admin(s)")
+    # Discovery always succeeds - returns empty list if no admins found
+    {:ok, _network_name, admin_urls} = Discovery.discover_admins()
 
-          :telemetry.execute(
-            [:edge_agent, :discovery, :scan],
-            %{admins_found: length(admin_urls), count: 1, total: 1},
-            %{status: :success}
-          )
+    Logger.debug("AdminDiscoveryWorker completed - discovered #{length(admin_urls)} admin(s)")
 
-          :ok
+    :telemetry.execute(
+      [:edge_agent, :discovery, :scan],
+      %{admins_found: length(admin_urls), count: 1, total: 1},
+      %{status: if(length(admin_urls) > 0, do: :success, else: :empty)}
+    )
 
-        {:error, reason} ->
-          Logger.warning("AdminDiscoveryWorker failed to discover admins: #{inspect(reason)}")
-
-          :telemetry.execute(
-            [:edge_agent, :discovery, :scan],
-            %{admins_found: 0, count: 1, total: 1},
-            %{status: :failure}
-          )
-
-          # Return :ok anyway so job completes and next cron run can try again
-          :ok
-      end
-
-    result
+    :ok
   end
 end

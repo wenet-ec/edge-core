@@ -7,6 +7,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
   plug EdgeAdminWeb.Plugs.DegradedMode, :block when action in [:create]
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:update_health_check]
 
   @doc """
   Node registration endpoint (no authentication required).
@@ -18,6 +19,21 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
       conn
       |> put_status(:created)
       |> render(:show, node: node)
+    end
+  end
+
+  @doc """
+  Node health check report endpoint (requires authentication).
+
+  Agent reports its health status when using HTTP fallback mode.
+  Node ID is inferred from conn.assigns.current_node (authenticated via API token).
+  """
+  def update_health_check(conn, params) do
+    # Get node from authenticated context (set by AgentAuth plug)
+    node = conn.assigns.current_node
+
+    with {:ok, updated_node} <- Nodes.update_node_health_check(node, params) do
+      render(conn, :show, node: updated_node)
     end
   end
 end

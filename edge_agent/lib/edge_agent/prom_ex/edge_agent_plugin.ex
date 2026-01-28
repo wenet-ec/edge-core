@@ -38,28 +38,24 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
           ]
         ),
 
-        # Admin discovery metrics
-        counter(
-          [:edge_agent, :discovery, :admin, :found, :total],
-          event_name: [:edge_agent, :discovery, :admin, :found],
-          description: "Total number of successful admin discoveries",
-          tags: [:status],
-          tag_values: &get_status_tag/1
-        ),
-
         # Command sync metrics
         counter(
           [:edge_agent, :commands, :sync, :total],
           event_name: [:edge_agent, :commands, :sync],
           description: "Total number of command sync attempts with admin",
-          tags: [:status],
-          tag_values: &get_status_tag/1
+          measurement: :total
         ),
         last_value(
-          [:edge_agent, :commands, :sync, :fetched_count],
+          [:edge_agent, :commands, :sync, :sent_count],
           event_name: [:edge_agent, :commands, :sync],
-          description: "Number of command executions fetched in last sync",
-          measurement: :count
+          description: "Number of sent command executions fetched in last sync",
+          measurement: :sent_count
+        ),
+        last_value(
+          [:edge_agent, :commands, :sync, :pending_count],
+          event_name: [:edge_agent, :commands, :sync],
+          description: "Number of pending command executions fetched in last sync",
+          measurement: :pending_count
         ),
 
         # Command execution metrics

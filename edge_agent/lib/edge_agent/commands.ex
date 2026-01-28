@@ -23,7 +23,7 @@ defmodule EdgeAgent.Commands do
   2. Enqueue Oban job → ExecutionEnqueueWorker triggers CommandExecutionWorker
   3. Worker calls execute_single_command → Runs via /usr/local/bin/hostscript
   4. Execution completes → Updates status to "completed" with output/exit_code
-  5. Report to admin → Sends result via AdminClient.update_command_execution
+  5. Report to admin → Sends result via AdminClient.update_command_execution_result
   6. Delete local copy → Removes from agent database after successful report
   ```
 
@@ -87,6 +87,7 @@ defmodule EdgeAgent.Commands do
   alias EdgeAgent.Commands.Forms.CreateCommandExecutionForm
   alias EdgeAgent.EdgeClusters.AdminClient
   alias EdgeAgent.Repo
+  alias EdgeAgent.Settings
 
   require Logger
 
@@ -379,7 +380,7 @@ defmodule EdgeAgent.Commands do
     Enum.reduce_while(executions, :ok, fn execution, _acc ->
       params = build_report_params(execution)
 
-      case AdminClient.update_command_execution(execution.id, params) do
+      case AdminClient.update_command_execution_result(execution.id, params) do
         :ok ->
           Logger.debug("Successfully reported execution #{execution.id}")
           delete_execution_after_report(execution)
@@ -529,6 +530,124 @@ defmodule EdgeAgent.Commands do
       {:ok, count} when count > 1 ->
         Logger.warning("Cancelled #{count} Oban jobs for execution #{execution_id} (expected 1)")
         :job_cancelled
+    end
+  end
+
+  @doc """
+  Syncs unprocessed command executions from admin.
+
+  Fetches both "sent" and "pending" command executions and stores them locally.
+  This provides a comprehensive sync mechanism that handles:
+  1. Already acknowledged commands (sent) - stores them for execution
+  2. Unacknowledged commands (pending) - acknowledges then stores them
+
+  Used by:
+  - Bootstrap (initial sync on startup)
+  - SyncUnprocessedExecutionWorker (periodic sync when using HTTP fallback)
+
+  ## Flow
+  1. Fetch "sent" executions → store locally (already acknowledged)
+  2. Fetch "pending" executions → acknowledge with admin → store locally
+  3. Skip duplicates (already exist in local DB)
+  4. Continue on individual failures (retry on next sync)
+
+  ## Returns
+  - `:ok` - Sync completed (success or partial success)
+  - `{:error, reason}` - Sync failed completely
+
+  ## Examples
+
+      iex> Commands.sync_unprocessed_command_executions()
+      :ok
+  """
+  @spec sync_unprocessed_command_executions() :: :ok | {:error, term()}
+  def sync_unprocessed_command_executions do
+    node_id = Settings.get_node_id()
+
+    # Step 1: Sync "sent" executions (already acknowledged)
+    sent_result =
+      case AdminClient.list_sent_command_executions() do
+        {:ok, %{data: commands, meta: _meta}} ->
+          Logger.info("Syncing #{length(commands)} sent command execution(s)")
+
+          Enum.each(commands, fn command ->
+            store_command_execution_locally(command, node_id)
+          end)
+
+          {:ok, length(commands)}
+
+        {:error, reason} ->
+          Logger.warning("Failed to list sent command executions: #{inspect(reason)}")
+          {:error, reason}
+      end
+
+    # Step 2: Sync "pending" executions (need acknowledgment)
+    pending_result =
+      case AdminClient.list_pending_command_executions() do
+        {:ok, %{data: commands, meta: _meta}} ->
+          Logger.info("Syncing #{length(commands)} pending command execution(s)")
+
+          Enum.each(commands, fn command ->
+            # Acknowledge with admin first (pending → sent)
+            case AdminClient.acknowledge_command_execution(command["id"]) do
+              :ok ->
+                Logger.debug("Acknowledged command execution: #{command["id"]}")
+                # Then store locally
+                store_command_execution_locally(command, node_id)
+
+              {:error, reason} ->
+                Logger.warning(
+                  "Failed to acknowledge command execution #{command["id"]}: #{inspect(reason)} - will retry next sync"
+                )
+            end
+          end)
+
+          {:ok, length(commands)}
+
+        {:error, reason} ->
+          Logger.warning("Failed to list pending command executions: #{inspect(reason)}")
+          {:error, reason}
+      end
+
+    # Emit telemetry
+    sent_count = if match?({:ok, _count}, sent_result), do: elem(sent_result, 1), else: 0
+    pending_count = if match?({:ok, _count}, pending_result), do: elem(pending_result, 1), else: 0
+
+    :telemetry.execute(
+      [:edge_agent, :commands, :sync],
+      %{sent_count: sent_count, pending_count: pending_count, total: sent_count + pending_count},
+      %{}
+    )
+
+    Logger.info(
+      "Command sync completed: #{sent_count} sent, #{pending_count} pending (total: #{sent_count + pending_count})"
+    )
+
+    :ok
+  end
+
+  # Private helper: stores a command execution locally
+  defp store_command_execution_locally(command, node_id) do
+    attrs = %{
+      id: command["id"],
+      command_id: command["command_id"],
+      node_id: node_id,
+      command_text: command["command_text"],
+      timeout: command["timeout"],
+      status: "pending"
+    }
+
+    case create_command_execution_and_enqueue_worker(attrs) do
+      {:ok, _execution} ->
+        Logger.debug("Stored command execution: #{command["id"]}")
+
+      {:error, %Ecto.Changeset{errors: [id: {"has already been taken", _}]}} ->
+        Logger.debug("Command execution #{command["id"]} already exists, skipping")
+
+      {:error, changeset} ->
+        Logger.warning(
+          "Failed to store command execution #{command["id"]}: #{inspect(changeset.errors)} - will retry next sync"
+        )
     end
   end
 end

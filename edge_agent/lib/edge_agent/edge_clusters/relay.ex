@@ -2,30 +2,33 @@ defmodule EdgeAgent.EdgeClusters.Relay do
   @moduledoc """
   Manages relay node assignments for the agent.
 
-  This module handles periodic relay node registration. When relay is enabled,
-  the agent periodically checks relay connectivity and requests relay assignment
-  when needed.
+  This module handles relay node registration logic. The worker calls this module
+  only when relay is enabled AND VPN admin URLs are available.
 
   ## How It Works
 
-  1. Check if RELAY_ENABLED=true (if false, cleans up and returns)
-  2. Check if relay_admin_name is nil -> create relayed node
-  3. If relay_admin_name exists, ping to check if still connected
-  4. If relay admin not found in ping OR connected=false -> create relayed node
-  5. If relay admin still connected -> do nothing
+  1. Check if relay_admin_name is nil -> create relayed node
+  2. If relay_admin_name exists, ping to check if still connected
+  3. If relay admin not found in ping OR connected=false -> create relayed node
+  4. If relay admin still connected -> do nothing
+
+  ## VPN Requirement
+
+  Relay assignment REQUIRES VPN connectivity to admins. This module uses
+  `AdminClient.create_relayed_node(fallback_enabled: false)` to ensure
+  relay requests only go through VPN-discovered admin URLs, not HTTP fallback.
 
   ## Trust Model
 
   - **Discovery worker validates admins** - Only reachable admins are in `admin_urls`
-  - **AdminClient handles fallback** - Tries each validated admin URL until one succeeds
+  - **AdminClient tries each admin** - Tries each VPN admin URL until one succeeds
   - **Ping checks relay health** - Ensures current relay is still reachable
   - **Last write wins** - Only the most recent relay assignment matters
 
   ## Idempotency
 
   This module is designed to be idempotent and can be called repeatedly:
-  - If relay is disabled, ensures clean state (relay_admin_name = nil)
-  - If relay is enabled but relay admin still connected, does nothing
+  - If relay admin still connected, does nothing
   - If relay admin disconnected, requests new assignment
   - Safe to run every minute without side effects
   """
@@ -40,36 +43,26 @@ defmodule EdgeAgent.EdgeClusters.Relay do
   Checks relay health and registers if needed.
 
   This is the main entry point called by the RegisterRelayedNodeWorker.
+  Worker ensures this is only called when relay is enabled and VPN admin URLs exist.
   """
   @spec check_and_register() :: :ok
   def check_and_register do
-    relay_enabled = Application.get_env(:edge_agent, :relay_enabled, false)
+    current_relay = Settings.get_relay_admin_name()
 
-    if relay_enabled do
-      # Relay enabled - check health and assign if needed
-      current_relay = Settings.get_relay_admin_name()
-
-      if is_nil(current_relay) or current_relay == "" do
-        # No relay assigned yet - create one
-        Logger.info("No relay assigned, creating relayed node")
-        create_and_store_relay()
-      else
-        # Check if current relay is still connected
-        case Cli.ping_peers() do
-          {:ok, ping_data} ->
-            check_relay_health(ping_data, current_relay)
-
-          {:error, reason} ->
-            Logger.error("Failed to ping peers: #{inspect(reason)}, creating new relay")
-            create_and_store_relay()
-        end
-
-        # Relay disabled - ensure clean state
-      end
+    if is_nil(current_relay) or current_relay == "" do
+      # No relay assigned yet - create one
+      Logger.info("No relay assigned, creating relayed node")
+      create_and_store_relay()
     else
-      Settings.set_relay_admin_name(nil)
-      Logger.debug("Relay disabled, set relay_admin_name to null")
-      :ok
+      # Check if current relay is still connected
+      case Cli.ping_peers() do
+        {:ok, ping_data} ->
+          check_relay_health(ping_data, current_relay)
+
+        {:error, reason} ->
+          Logger.error("Failed to ping peers: #{inspect(reason)}, creating new relay")
+          create_and_store_relay()
+      end
     end
   end
 
@@ -124,7 +117,8 @@ defmodule EdgeAgent.EdgeClusters.Relay do
     # Get current relay to detect failover
     old_relay = Settings.get_relay_admin_name()
 
-    case AdminClient.create_relayed_node() do
+    # IMPORTANT: Relay requires VPN - disable HTTP fallback
+    case AdminClient.create_relayed_node(fallback_enabled: false) do
       {:ok, %{"data" => %{"relay_admin_name" => relay_admin_name}}} ->
         Settings.set_relay_admin_name(relay_admin_name)
         Logger.info("Successfully register to relay admin: #{relay_admin_name}")

@@ -774,6 +774,34 @@ defmodule EdgeAdmin.Nodes do
   end
 
   @doc """
+  Updates node health status from agent health check report.
+
+  Called when agent reports its health via HTTP fallback mode.
+  Updates node status and last_seen_at timestamp.
+
+  ## Parameters
+  - `node` - The node struct
+  - `params` - Health check parameters (validated through NodeHealthCheckForm)
+
+  ## Returns
+  - `{:ok, node}` - Node updated successfully
+  - `{:error, changeset}` - Validation or update failed
+  """
+  @spec update_node_health_check(Node.t(), map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
+  def update_node_health_check(node, params) do
+    with {:ok, attrs} <- Forms.NodeHealthCheckForm.changeset(params) do
+      now = DateTime.truncate(DateTime.utc_now(), :second)
+
+      update_attrs = %{
+        status: attrs["status"],
+        last_seen_at: now
+      }
+
+      update_node(node, update_attrs)
+    end
+  end
+
+  @doc """
   Performs health check on all nodes assigned to this admin.
 
   Called by Quantum scheduler periodically. Reads from Metadata ETS to determine
@@ -782,7 +810,8 @@ defmodule EdgeAdmin.Nodes do
   Health check logic:
   - 200 response => status: "healthy", update last_seen_at
   - 503 response => status: "unhealthy", update last_seen_at (we reached it)
-  - Network error/timeout => status: "unreachable", don't update last_seen_at
+  - Network error/timeout => status: "unreachable" only if last_seen_at > 5 minutes ago,
+    otherwise keep existing status (agent might be reporting via HTTP fallback)
 
   Logs warnings for unreachable and unhealthy nodes.
   """
@@ -869,15 +898,11 @@ defmodule EdgeAdmin.Nodes do
             :unhealthy
 
           _ ->
-            Logger.warning("Node #{node.id} is unreachable")
-            update_node(node, %{status: "unreachable"})
-            :unreachable
+            handle_unreachable_node(node)
         end
       catch
         _, _ ->
-          Logger.warning("Node #{node.id} is unreachable")
-          update_node(node, %{status: "unreachable"})
-          :unreachable
+          handle_unreachable_node(node)
       end
 
     duration = System.monotonic_time(:millisecond) - start_time
@@ -889,6 +914,28 @@ defmodule EdgeAdmin.Nodes do
     )
 
     result
+  end
+
+  # Only mark as unreachable if last_seen_at is > 5 minutes ago
+  # Otherwise keep existing status (agent might be using HTTP fallback to report health)
+  defp handle_unreachable_node(node) do
+    five_minutes_ago = DateTime.add(DateTime.utc_now(), -5, :minute)
+
+    should_mark_unreachable =
+      case node.last_seen_at do
+        nil -> true  # Never seen before
+        last_seen -> DateTime.compare(last_seen, five_minutes_ago) == :lt
+      end
+
+    if should_mark_unreachable do
+      Logger.warning("Node #{node.id} is unreachable (no contact for > 5 minutes)")
+      update_node(node, %{status: "unreachable"})
+      :unreachable
+    else
+      Logger.debug("Node #{node.id} ping failed but last_seen_at is recent, keeping status: #{node.status}")
+      # Keep existing status - might be using HTTP fallback
+      String.to_atom(node.status)
+    end
   end
 
   @doc """

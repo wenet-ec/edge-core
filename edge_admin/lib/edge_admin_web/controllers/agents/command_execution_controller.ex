@@ -6,21 +6,54 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
-  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :update]
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :acknowledge, :update_result]
 
   @doc """
   Command sync endpoint (requires authentication).
 
-  Agent fetches pending commands (status = "sent").
+  Agent fetches command executions with optional filtering and pagination.
   Node ID is inferred from conn.assigns.current_node.
+
+  Supports query params:
+  - `status` - Filter by status: "sent", "pending", or "completed" (required - agent decides)
+  - `page` - Page number (default: 1)
+  - `page_size` - Results per page (default: 100)
+  - `order_by` - Sort field (default: "inserted_at")
+  - `order_directions` - Sort direction: "asc" or "desc" (default: "asc")
   """
-  def index(conn, _params) do
+  def index(conn, params) do
     # Get node ID from authenticated context (set by AgentAuth plug)
     node_id = conn.assigns.current_node.id
 
-    # Query pending commands for this node using context function
-    with {:ok, {command_executions, _meta}} <- Commands.list_sent_command_executions_for_node(node_id) do
-      render(conn, :index, command_executions: command_executions)
+    # Merge node_id and defaults into params (status controlled by agent)
+    query_params =
+      params
+      |> Map.put("node_id", node_id)
+      |> Map.put_new("order_by", "inserted_at")
+      |> Map.put_new("order_directions", "asc")
+      |> Map.put_new("page_size", "100")
+
+    # Use existing list_command_executions with filtering
+    with {:ok, {command_executions, meta}} <- Commands.list_command_executions(query_params) do
+      render(conn, :index, command_executions: command_executions, meta: meta)
+    end
+  end
+
+  @doc """
+  Command acknowledgment endpoint (requires authentication).
+
+  Agent acknowledges receipt of a pending command execution.
+  Transitions status from "pending" to "sent".
+  Verifies command belongs to the authenticated node.
+  """
+  def acknowledge(conn, %{"id" => id} = params) do
+    # Get node ID from authenticated context (set by AgentAuth plug)
+    node_id = conn.assigns.current_node.id
+
+    with {:ok, execution} <- Commands.get_command_execution(id),
+         :ok <- Commands.verify_execution_belongs_to_node(execution, node_id),
+         {:ok, updated_execution} <- Commands.acknowledge_execution(execution, params) do
+      render(conn, :show, command_execution: updated_execution)
     end
   end
 
@@ -30,7 +63,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
   Agent reports command results (output, exit_code, status).
   Verifies command belongs to the authenticated node.
   """
-  def update(conn, %{"id" => id} = params) do
+  def update_result(conn, %{"id" => id} = params) do
     # Get node ID from authenticated context (set by AgentAuth plug)
     node_id = conn.assigns.current_node.id
 

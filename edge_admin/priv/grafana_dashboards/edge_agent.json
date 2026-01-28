@@ -473,7 +473,7 @@
       "targets": [
         {
           "expr": "rate(edge_agent_commands_sync_total[$__rate_interval])",
-          "legendFormat": "sync - {{status}}",
+          "legendFormat": "sync",
           "refId": "A"
         },
         {
@@ -483,6 +483,61 @@
         }
       ],
       "title": "Command Sync & Report Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Command executions synced from admin (sent + pending)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "auto"
+          },
+          "mappings": [],
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 27
+      },
+      "id": 15,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "expr": "edge_agent_commands_sync_sent_count",
+          "legendFormat": "sent (already acked)",
+          "refId": "A"
+        },
+        {
+          "expr": "edge_agent_commands_sync_pending_count",
+          "legendFormat": "pending (needs ack)",
+          "refId": "B"
+        }
+      ],
+      "title": "Command Sync Counts (Last Sync)",
       "type": "timeseries"
     },
     {

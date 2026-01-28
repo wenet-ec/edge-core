@@ -44,4 +44,6 @@ config :edge_agent,
   proxy_custom_allowed_hosts: get_env("PROXY_CUSTOM_ALLOWED_HOSTS", :list, []),
   # HTTP request timeouts for admin communication (in milliseconds)
   http_receive_timeout: get_env("HTTP_RECEIVE_TIMEOUT_MS", :integer, 30_000),
-  http_connect_timeout: get_env("HTTP_CONNECT_TIMEOUT_MS", :integer, 20_000)
+  http_connect_timeout: get_env("HTTP_CONNECT_TIMEOUT_MS", :integer, 20_000),
+  # HTTP fallback configuration (when VPN is unavailable)
+  fallback_admin_url: get_env("FALLBACK_ADMIN_URL", :string, nil)

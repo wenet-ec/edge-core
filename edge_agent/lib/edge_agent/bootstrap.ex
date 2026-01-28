@@ -5,7 +5,7 @@ defmodule EdgeAgent.Bootstrap do
 
   This GenServer runs exactly once during application startup and performs critical
   initialization tasks to establish agent identity, join the VPN network, discover
-  and register with admin servers, and sync pending commands.
+  and register with admin servers, and sync unprocessed command executions.
 
   ## Key Concepts
 
@@ -13,7 +13,7 @@ defmodule EdgeAgent.Bootstrap do
   - **VPN Join**: Connects to cluster network via Netmaker enrollment token
   - **Admin Discovery**: Finds admin servers via Netmaker API (no hardcoded addresses)
   - **Registration**: Registers node with admin and receives API token
-  - **Command Sync**: Downloads pending command executions from admin
+  - **Command Sync**: Syncs unprocessed command executions (both sent and pending)
 
   ## Responsibilities
 
@@ -27,19 +27,15 @@ defmodule EdgeAgent.Bootstrap do
      - Verify netclient connection and health
      - Obtain VPN IP address for communication
 
-  3. **Admin Discovery**
+  3. **Admin Discovery and Registration**
      - Query Netmaker for hosts in admin cluster network
-     - Extract admin URLs from host metadata
-     - Validate at least one admin is available (fail fast)
+     - Extract admin URLs from host metadata (or use HTTP fallback if none found)
+     - Register with admin and receive credentials
 
-  4. **Node Registration**
-     - Send registration payload to admin API
-     - Receive API token for authentication
-     - Receive proxy password for proxy server authentication
-     - Store credentials in Settings
-
-  5. **Command Sync**
-     - Download pending command executions from admin
+  4. **Command Sync**
+     - Sync unprocessed command executions from admin
+     - Fetches both "sent" (already acknowledged) and "pending" (needs acknowledgment)
+     - Acknowledges pending executions before storing locally
      - Store in local database and enqueue for execution
      - Handle duplicates gracefully
 
@@ -48,9 +44,8 @@ defmodule EdgeAgent.Bootstrap do
   ```
   1. Determine node identity (persistent → random)
   2. Join VPN network via enrollment token
-  3. Discover admin URLs from Netmaker API
-  4. Register with admin and receive credentials
-  5. Sync pending command executions
+  3. Discover admin URLs and register with admin (with HTTP fallback)
+  4. Sync unprocessed command executions (sent + pending)
   ```
 
   ## Failure Handling
@@ -58,10 +53,11 @@ defmodule EdgeAgent.Bootstrap do
   Bootstrap failures are **FATAL** and crash the supervision tree:
   - Identity determination failure → Can't identify node
   - VPN join failure → Can't communicate with admins
-  - Admin discovery failure → No admin servers available
   - Registration failure → Can't authenticate with admin
 
-  Command sync failures are **NON-FATAL** (logged as warning, bootstrap continues).
+  Non-fatal conditions (logged as warning, bootstrap continues):
+  - Admin discovery returns empty → Triggers HTTP fallback mode
+  - Command sync failures → Will retry later via SyncUnprocessedExecutionWorker
 
   ## Configuration
 
@@ -75,6 +71,7 @@ defmodule EdgeAgent.Bootstrap do
   - `:wireguard_metrics_port` - WireGuard exporter port (default: 49586)
   - `:http_proxy_port` - HTTP proxy port (default: 43128)
   - `:socks5_proxy_port` - SOCKS5 proxy port (default: 41080)
+  - `:fallback_admin_url` - HTTP fallback URL when VPN unavailable
 
   ## Examples
 
@@ -168,9 +165,8 @@ defmodule EdgeAgent.Bootstrap do
   defp do_bootstrap do
     with {:ok, node_id, id_type} <- step_1_determine_identity(),
          :ok <- step_2_join_vpn(node_id),
-         {:ok, network_name, _admin_urls} <- step_3_discover_admins(),
-         :ok <- step_4_register_node(node_id, id_type, network_name),
-         :ok <- step_5_get_sent_command_executions(node_id) do
+         :ok <- step_3_discover_and_register(node_id, id_type),
+         :ok <- step_4_sync_unprocessed_command_executions(node_id) do
       Logger.info("All bootstrap steps completed")
       :ok
     else
@@ -228,45 +224,29 @@ defmodule EdgeAgent.Bootstrap do
   end
 
   # =============================================================================
-  # Step 3: Discover Admins
+  # Step 3: Discover Admins and Register Node
   # =============================================================================
 
-  defp step_3_discover_admins do
-    Logger.info("Step 3: Discovering admins...")
+  defp step_3_discover_and_register(node_id, id_type) do
+    Logger.info("Step 3: Discovering admins and registering...")
 
-    # Bootstrap requires at least one admin to be discovered (fail fast)
-    result =
-      case Discovery.discover_admins(fail_on_empty: true) do
-        {:ok, network_name, admin_urls} ->
-          Logger.info("Network: #{network_name}")
-          Logger.info("Discovered #{length(admin_urls)} admin(s)")
-          {:ok, network_name, admin_urls}
+    # Discovery always succeeds - returns empty list if no admins found
+    {:ok, network_name, admin_urls} = Discovery.discover_admins()
 
-        {:error, reason} ->
-          {:error, "Admin discovery failed: #{inspect(reason)}"}
-      end
+    if network_name do
+      Logger.info("Network: #{network_name}")
+    end
 
-    status =
-      case result do
-        {:ok, _, _} -> :success
-        {:error, _} -> :failure
-      end
+    case admin_urls do
+      [] ->
+        Logger.warning("No admins discovered in VPN - will use HTTP fallback if configured")
 
-    :telemetry.execute(
-      [:edge_agent, :discovery, :admin, :found],
-      %{count: 1, total: 1},
-      %{status: status}
-    )
+      urls ->
+        Logger.info("Discovered #{length(urls)} admin(s)")
+    end
 
-    result
-  end
-
-  # =============================================================================
-  # Step 4: Register Node
-  # =============================================================================
-
-  defp step_4_register_node(node_id, id_type, network_name) do
-    Logger.info("Step 4: Registering with admin...")
+    # Register with admin (uses discovered URLs or fallback)
+    Logger.info("Registering with admin...")
 
     start_time = System.monotonic_time(:millisecond)
     payload = build_registration_payload(node_id, id_type, network_name)
@@ -314,61 +294,17 @@ defmodule EdgeAgent.Bootstrap do
   end
 
   # =============================================================================
-  # Step 5: Get Sent Command Executions
+  # Step 4: Sync Unprocessed Command Executions
   # =============================================================================
 
-  defp step_5_get_sent_command_executions(_node_id) do
-    Logger.info("Step 5: Syncing commands...")
+  defp step_4_sync_unprocessed_command_executions(_node_id) do
+    Logger.info("Step 4: Syncing unprocessed command executions...")
 
-    result =
-      case AdminClient.get_sent_command_executions() do
-        {:ok, commands} ->
-          Logger.info("Synced #{length(commands)} command(s)")
+    # Use shared sync function (also used by SyncUnprocessedExecutionWorker)
+    Commands.sync_unprocessed_command_executions()
 
-          # Store each command in local database and trigger execution
-          Enum.each(commands, fn command ->
-            attrs = %{
-              id: command["id"],
-              command_id: command["command_id"],
-              node_id: Settings.get_node_id(),
-              command_text: command["command_text"],
-              timeout: command["timeout"],
-              status: "pending"
-            }
-
-            case Commands.create_command_execution_and_enqueue_worker(attrs) do
-              {:ok, _execution} ->
-                Logger.debug("Stored command execution: #{command["id"]}")
-
-              {:error, %Ecto.Changeset{errors: [id: {"has already been taken", _}]}} ->
-                Logger.debug("Command execution #{command["id"]} already exists, skipping")
-
-              {:error, changeset} ->
-                Logger.warning("Failed to store command execution #{command["id"]}: #{inspect(changeset.errors)}")
-            end
-          end)
-
-          :telemetry.execute(
-            [:edge_agent, :commands, :sync],
-            %{count: length(commands), total: length(commands)},
-            %{status: :success}
-          )
-
-          :ok
-
-        {:error, reason} ->
-          Logger.warning("Command sync failed (non-fatal): #{inspect(reason)}")
-
-          :telemetry.execute(
-            [:edge_agent, :commands, :sync],
-            %{count: 0, total: 0},
-            %{status: :failure}
-          )
-
-          :ok
-      end
-
-    result
+    # Always return :ok (sync failures are non-fatal)
+    :ok
   end
 
   # =============================================================================

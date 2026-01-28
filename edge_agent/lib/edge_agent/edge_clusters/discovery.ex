@@ -28,10 +28,11 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   4. Store admin URLs in Settings table
   ```
 
-  ## Discovery Modes
+  ## Discovery Behavior
 
-  - **Bootstrap Mode** (`fail_on_empty: true`) - Fail fast if no admins found (used during startup)
-  - **Periodic Mode** (`fail_on_empty: false`) - Log warning but don't fail (used in periodic worker)
+  - Always returns `{:ok, network_name | nil, admin_urls}` - never fails
+  - Stores results (even empty list) in Settings to signal discovery completion
+  - Empty list indicates VPN is up but no admins found (triggers HTTP fallback mode)
 
   ## Admin Discovery Endpoint
 
@@ -44,12 +45,12 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
 
   ## Examples
 
-      # Bootstrap mode - fail if no admins found
-      iex> Discovery.discover_admins(fail_on_empty: true)
+      # Successful discovery
+      iex> Discovery.discover_admins()
       {:ok, "cluster-default", ["http://admin-abc.cluster-default.nm.internal:44000"]}
 
-      # Periodic mode - log warning but don't fail
-      iex> Discovery.discover_admins(fail_on_empty: false)
+      # No admins found (empty list stored in Settings)
+      iex> Discovery.discover_admins()
       {:ok, nil, []}
 
       # Multi-network discovery
@@ -72,30 +73,23 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   but PING can reach all peers that the relay can reach (including admins).
 
   Returns `{:ok, network_name, admin_urls}` where:
-  - network_name is the full Netmaker network name (e.g., "cluster-default")
-  - admin_urls is a list of HTTP URLs: ["http://admin-xyz.cluster-abc.nm.internal:44000", ...]
+  - network_name is the full Netmaker network name (e.g., "cluster-default"), or nil if no admins found
+  - admin_urls is a list of HTTP URLs: ["http://admin-xyz.cluster-abc.nm.internal:44000", ...], or empty list if none found
 
-  Stores discovered admins in Settings table as JSON-encoded list.
-
-  ## Options
-  - `fail_on_empty` - If true, returns error when no admins found. If false, returns empty list. Defaults to false.
+  Always stores discovered admins (even empty list) in Settings table as JSON-encoded list.
+  This allows other components to distinguish between "never discovered" vs "discovered but found none".
   """
-  @spec discover_admins(keyword()) ::
-          {:ok, String.t() | nil, [String.t()]} | {:error, String.t()}
-  def discover_admins(opts \\ []) do
-    fail_on_empty = Keyword.get(opts, :fail_on_empty, false)
+  @spec discover_admins(keyword()) :: {:ok, String.t() | nil, [String.t()]}
+  def discover_admins(_opts \\ []) do
 
     case Nexmaker.Cli.ping_peers() do
       {:ok, ping_data} when is_map(ping_data) ->
         peers_by_network = ping_data
 
         if map_size(peers_by_network) == 0 do
-          if fail_on_empty do
-            {:error, "No peers found on any network"}
-          else
-            Logger.warning("No peers found on any network")
-            {:ok, nil, []}
-          end
+          Logger.warning("No peers found on any network")
+          Settings.set_admin_urls([])
+          {:ok, nil, []}
         else
           Logger.info("Inspecting peers on #{map_size(peers_by_network)} network(s) for admins...")
 
@@ -125,17 +119,15 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
               {:ok, network_name, all_admin_urls}
 
             [] ->
-              if fail_on_empty do
-                {:error, "No admins discovered across any network"}
-              else
-                Logger.warning("No admins discovered across any network")
-                {:ok, nil, []}
-              end
+              Logger.warning("No admins discovered across any network")
+              Settings.set_admin_urls([])
+              {:ok, nil, []}
           end
         end
 
       {:error, reason} ->
-        {:error, "Failed to ping peers: #{inspect(reason)}"}
+        Logger.error("Failed to ping peers: #{inspect(reason)}")
+        {:ok, nil, []}
     end
   end
 

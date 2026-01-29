@@ -144,7 +144,8 @@ defmodule EdgeAgent.Bootstrap do
           {:ok, %{status: :complete, initialized: true}}
 
         {:error, reason} ->
-          Logger.error("Bootstrap failed: #{inspect(reason)}")
+          Logger.error("Bootstrap failed (FATAL): #{inspect(reason)}")
+          Logger.error("Agent cannot continue without successful bootstrap - shutting down")
           {:stop, reason}
       end
     else
@@ -204,23 +205,7 @@ defmodule EdgeAgent.Bootstrap do
 
   defp step_2_join_vpn(node_id) do
     Logger.info("Step 2: Joining VPN network...")
-
-    case Vpn.join_if_needed(node_id) do
-      :ok ->
-        # Wait for VPN network to stabilize if configured
-        wait_seconds = Application.get_env(:edge_agent, :vpn_ready_wait_seconds, 0)
-
-        if wait_seconds > 0 do
-          Logger.info("Waiting #{wait_seconds}s for VPN network to stabilize...")
-          Process.sleep(wait_seconds * 1000)
-          Logger.info("VPN stabilization wait completed")
-        end
-
-        :ok
-
-      error ->
-        error
-    end
+    Vpn.join_if_needed(node_id)
   end
 
   # =============================================================================

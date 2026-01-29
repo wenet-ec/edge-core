@@ -3,8 +3,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
   use EdgeAdminWeb, :controller
   use OpenApiSpex.ControllerSpecs
 
-  alias EdgeAdmin.Metrics.AgentMetrics
-  alias EdgeAdmin.Metrics.HostMetrics
+  alias EdgeAdmin.Metrics
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas
 
@@ -47,8 +46,8 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
   def show_unified(conn, %{"node_id" => node_id}) do
     # Fetch all metrics in parallel
     tasks = [
-      Task.async(fn -> HostMetrics.get(node_id) end),
-      Task.async(fn -> AgentMetrics.get(node_id) end)
+      Task.async(fn -> Metrics.get_host_metrics(node_id) end),
+      Task.async(fn -> Metrics.get_agent_metrics(node_id) end)
     ]
 
     results = Task.await_many(tasks, 5_000)
@@ -115,7 +114,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
   Returns host-level metrics only (Node Exporter).
   """
   def show_host(conn, %{"node_id" => node_id}) do
-    with {:ok, metrics} <- HostMetrics.get(node_id) do
+    with {:ok, metrics} <- Metrics.get_host_metrics(node_id) do
       render(conn, :show_host, metrics: metrics)
     end
   end
@@ -150,7 +149,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
   Returns agent application metrics (PromEx).
   """
   def show_agent(conn, %{"node_id" => node_id}) do
-    with {:ok, metrics} <- AgentMetrics.get(node_id) do
+    with {:ok, metrics} <- Metrics.get_agent_metrics(node_id) do
       render(conn, :show_agent, metrics: metrics)
     end
   end

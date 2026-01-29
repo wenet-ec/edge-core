@@ -173,6 +173,9 @@ defmodule EdgeAdminWeb.Router do
 
     # Self-update check
     get("/self_updates/check", SelfUpdateController, :check)
+
+    # Metrics cache push
+    post("/metrics/push", MetricsController, :push)
   end
 
   # Protected API endpoints (requires MASTER_KEY)

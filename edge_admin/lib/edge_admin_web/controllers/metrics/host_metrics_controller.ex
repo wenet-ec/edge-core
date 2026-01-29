@@ -2,7 +2,7 @@
 defmodule EdgeAdminWeb.Controllers.Metrics.HostMetricsController do
   use EdgeAdminWeb, :controller
 
-  alias EdgeAdmin.Metrics.HostMetrics
+  alias EdgeAdmin.Metrics
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
@@ -15,7 +15,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.HostMetricsController do
   This endpoint is NOT documented in Swagger.
   """
   def show(conn, %{"node_id" => node_id}) do
-    with {:ok, metrics_text} <- HostMetrics.scrape_raw(node_id) do
+    with {:ok, metrics_text} <- Metrics.scrape_host_metrics(node_id) do
       conn
       |> put_resp_content_type("text/plain; version=0.0.4")
       |> send_resp(200, metrics_text)

@@ -398,8 +398,8 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     fallback_enabled = Keyword.get(opts, :fallback_enabled, true)
 
     request_with_auth(path, fallback_enabled, fn url, headers ->
-      body = %{status: status}
-      opts = Keyword.merge([json: body, headers: headers], http_options())
+      payload = %{"node" => %{"status" => status}}
+      opts = Keyword.merge([json: payload, headers: headers], http_options())
 
       case Req.patch(url, opts) do
         {:ok, %{status: 200, body: %{"data" => node}}} ->
@@ -506,6 +506,59 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
         {:error, reason} ->
           Logger.warning("Failed to update command execution #{execution_id}: #{inspect(reason)}")
+          {:error, {:request_failed, reason}}
+      end
+    end)
+  end
+
+  @doc """
+  Pushes metrics cache to admin for HTTP fallback mode.
+
+  When VPN is unavailable, agents push metrics to admin for temporary storage.
+  Admin caches the metrics and serves them to collectors when they scrape.
+
+  ## Parameters
+  - `metrics_type` - Type of metrics: "host", "agent", or "wireguard"
+  - `metrics_text` - Raw Prometheus metrics in text format
+  - `opts` - Options (supports `:fallback_enabled`, default: `true`)
+
+  ## Returns
+  - `{:ok, cache}` - Cache record created/updated
+  - `{:error, reason}` - Push failed
+
+  ## Examples
+
+      iex> push_metrics("host", "# HELP node_cpu_seconds_total...")
+      {:ok, %{"id" => "cache-123", "node_id" => "node-456", "metrics_type" => "host", "updated_at" => "2025-01-29T12:00:00Z"}}
+
+  POST /api/agents/metrics/push
+  """
+  @spec push_metrics(String.t(), String.t(), keyword()) :: {:ok, map()} | {:error, term()}
+  def push_metrics(metrics_type, metrics_text, opts \\ []) do
+    path = "/api/agents/metrics/push"
+    fallback_enabled = Keyword.get(opts, :fallback_enabled, true)
+
+    request_with_auth(path, fallback_enabled, fn url, headers ->
+      payload = %{
+        "metrics" => %{
+          "metrics_type" => metrics_type,
+          "metrics_text" => metrics_text
+        }
+      }
+
+      opts = Keyword.merge([json: payload, headers: headers], http_options())
+
+      case Req.post(url, opts) do
+        {:ok, %{status: 200, body: %{"data" => data}}} ->
+          Logger.debug("Pushed #{metrics_type} metrics to admin")
+          {:ok, data}
+
+        {:ok, %{status: status_code, body: body}} ->
+          Logger.warning("Failed to push #{metrics_type} metrics, HTTP #{status_code}: #{inspect(body)}")
+          {:error, {:http_error, status_code, body}}
+
+        {:error, reason} ->
+          Logger.warning("Failed to push #{metrics_type} metrics: #{inspect(reason)}")
           {:error, {:request_failed, reason}}
       end
     end)

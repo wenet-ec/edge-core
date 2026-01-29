@@ -3,7 +3,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AdminMetricsController do
   use EdgeAdminWeb, :controller
   use OpenApiSpex.ControllerSpecs
 
-  alias EdgeAdmin.Metrics.AdminMetrics
+  alias EdgeAdmin.Metrics
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas
 
@@ -34,7 +34,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AdminMetricsController do
   Returns admin application metrics (PromEx).
   """
   def show_self(conn, _params) do
-    with {:ok, metrics} <- AdminMetrics.get() do
+    with {:ok, metrics} <- Metrics.get_admin_metrics() do
       render(conn, :show_self, metrics: metrics)
     end
   end

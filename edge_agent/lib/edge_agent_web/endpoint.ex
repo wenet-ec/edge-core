@@ -59,9 +59,15 @@ defmodule EdgeAgentWeb.Endpoint do
     end
   end
 
-  # Apply api_token auth only for the metrics endpoint
+  # Apply api_token auth only for the metrics endpoint (if enabled)
   defp metrics_auth_conditional(%{request_path: "/api/agents/metrics/self/raw"} = conn, _opts) do
-    EdgeAgentWeb.Plugs.ApiTokenAuth.call(conn, [])
+    auth_enabled = Application.get_env(:edge_agent, :agent_metrics_auth_enabled, true)
+
+    if auth_enabled do
+      EdgeAgentWeb.Plugs.ApiTokenAuth.call(conn, [])
+    else
+      conn
+    end
   end
 
   defp metrics_auth_conditional(conn, _opts), do: conn

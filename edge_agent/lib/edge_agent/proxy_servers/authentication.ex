@@ -16,8 +16,20 @@ defmodule EdgeAgent.ProxyServers.Authentication do
   Authenticate proxy request.
 
   Returns :ok if credentials are valid, {:error, reason} otherwise.
+  If authentication is disabled, always returns :ok.
   """
   def authenticate(username, password) do
+    auth_enabled = Application.get_env(:edge_agent, :proxy_servers_auth_enabled, true)
+
+    if auth_enabled do
+      authenticate_credentials(username, password)
+    else
+      Logger.debug("Proxy authentication bypassed (auth disabled)")
+      :ok
+    end
+  end
+
+  defp authenticate_credentials(username, password) do
     case Settings.get("proxy_password") do
       nil ->
         Logger.warning("Proxy authentication failed: no password configured")

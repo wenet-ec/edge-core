@@ -418,6 +418,55 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   end
 
   @doc """
+  Checks if the latest self-update request includes this node.
+
+  Used by HTTP fallback mechanism for agents to poll for self-updates
+  when VPN connectivity is unavailable.
+  Supports HTTP fallback by default.
+
+  ## Parameters
+  - `opts` - Options keyword list:
+    - `fallback_enabled` - Allow HTTP fallback if VPN URLs empty (default: true)
+
+  ## Returns
+  - `{:ok, %{including_me: boolean, inserted_at: DateTime.t() | nil}}` - Check succeeded
+  - `{:error, reason}` - Request failed
+
+  ## Examples
+
+      iex> check_self_update()
+      {:ok, %{"including_me" => true, "inserted_at" => "2026-01-29T10:30:45Z"}}
+
+      iex> check_self_update()
+      {:ok, %{"including_me" => false, "inserted_at" => nil}}
+
+  GET /api/agents/self_updates/check
+  """
+  @spec check_self_update(keyword()) :: {:ok, map()} | {:error, term()}
+  def check_self_update(opts \\ []) do
+    path = "/api/agents/self_updates/check"
+    fallback_enabled = Keyword.get(opts, :fallback_enabled, true)
+
+    request_with_auth(path, fallback_enabled, fn url, headers ->
+      opts = Keyword.merge([headers: headers], http_options())
+
+      case Req.get(url, opts) do
+        {:ok, %{status: 200, body: %{"data" => data}}} ->
+          Logger.debug("Self-update check completed: including_me=#{data["including_me"]}")
+          {:ok, data}
+
+        {:ok, %{status: status_code, body: body}} ->
+          Logger.warning("Failed to check self-update, HTTP #{status_code}: #{inspect(body)}")
+          {:error, {:http_error, status_code, body}}
+
+        {:error, reason} ->
+          Logger.warning("Failed to check self-update: #{inspect(reason)}")
+          {:error, {:request_failed, reason}}
+      end
+    end)
+  end
+
+  @doc """
   Update a command execution with results.
 
   Reports execution results (output, exit_code, completed_at) back to admin server.

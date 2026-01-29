@@ -33,7 +33,8 @@ config :edge_agent, Oban,
     sync_executions: 1,
     report_health_check: 1,
     discover_admins: 1,
-    register_relayed_node: 1
+    register_relayed_node: 1,
+    check_self_update: 1
   ],
   plugins: [
     {Oban.Plugins.Cron,
@@ -49,7 +50,9 @@ config :edge_agent, Oban,
        # Every 3 minutes to create relayed node
        {"*/3 * * * *", EdgeAgent.EdgeClusters.Workers.RegisterRelayedNodeWorker},
        # Every 3 minutes for admin discovery
-       {"*/3 * * * *", EdgeAgent.EdgeClusters.Workers.DiscoverAdminWorker}
+       {"*/3 * * * *", EdgeAgent.EdgeClusters.Workers.DiscoverAdminWorker},
+       # Every 2 hours to check for self-updates (HTTP fallback mode)
+       {"0 */2 * * *", EdgeAgent.SelfUpdates.Workers.CheckSelfUpdateWorker}
      ]},
     Oban.Plugins.Lifeline,
     {Oban.Plugins.Pruner, max_age: 86_400}

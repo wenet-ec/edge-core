@@ -170,6 +170,9 @@ defmodule EdgeAdminWeb.Router do
     get("/command_executions", CommandExecutionController, :index)
     patch("/command_executions/:id/acknowledge", CommandExecutionController, :acknowledge)
     patch("/command_executions/:id/result", CommandExecutionController, :update_result)
+
+    # Self-update check
+    get("/self_updates/check", SelfUpdateController, :check)
   end
 
   # Protected API endpoints (requires MASTER_KEY)

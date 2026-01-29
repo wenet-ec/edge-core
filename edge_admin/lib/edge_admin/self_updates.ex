@@ -137,6 +137,55 @@ defmodule EdgeAdmin.SelfUpdates do
   end
 
   @doc """
+  Checks if the latest self-update request includes the given node.
+
+  This is used by the HTTP fallback mechanism for agents to poll for self-updates
+  when VPN connectivity is unavailable.
+
+  ## Parameters
+  - `node` - The node struct to check
+
+  ## Returns
+  - `{:ok, %{including_me: boolean, inserted_at: DateTime.t() | nil}}`
+
+  ## Behavior
+  - If no self-update requests exist: `{:ok, %{including_me: false, inserted_at: nil}}`
+  - If latest request doesn't match node: `{:ok, %{including_me: false, inserted_at: datetime}}`
+  - If latest request matches node: `{:ok, %{including_me: true, inserted_at: datetime}}`
+
+  ## Examples
+
+      iex> check_for_latest_request(node)
+      {:ok, %{including_me: true, inserted_at: ~U[2026-01-29 10:30:45Z]}}
+
+      iex> check_for_latest_request(node)
+      {:ok, %{including_me: false, inserted_at: nil}}
+  """
+  @spec check_for_latest_request(Node.t()) ::
+          {:ok, %{including_me: boolean(), inserted_at: DateTime.t() | nil}}
+  def check_for_latest_request(%Node{} = node) do
+    # Get the absolute latest self-update request by inserted_at (no status filter)
+    latest_request =
+      SelfUpdateRequest
+      |> order_by([r], desc: r.inserted_at)
+      |> limit(1)
+      |> Repo.one()
+
+    case latest_request do
+      nil ->
+        # No self-update requests exist
+        {:ok, %{including_me: false, inserted_at: nil}}
+
+      request ->
+        # Check if node matches this request's targeting filters
+        nodes = resolve_targeting_and_filter(request.targeting)
+        including_me = Enum.any?(nodes, fn n -> n.id == node.id end)
+
+        {:ok, %{including_me: including_me, inserted_at: request.inserted_at}}
+    end
+  end
+
+  @doc """
   Deletes a self-update request.
 
   Validates that the request is completed before deletion.

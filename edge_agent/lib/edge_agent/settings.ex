@@ -250,4 +250,43 @@ defmodule EdgeAgent.Settings do
           {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
   def set_relay_admin_name(nil), do: set("relay_admin_name", "")
   def set_relay_admin_name(value) when is_binary(value), do: set("relay_admin_name", value)
+
+  @doc """
+  Get the last self-update check timestamp.
+
+  Returns a DateTime when the agent last checked for self-updates,
+  or nil if never checked.
+  """
+  @spec get_last_check_self_update_at() :: DateTime.t() | nil
+  def get_last_check_self_update_at do
+    case get("last_check_self_update_at") do
+      nil ->
+        nil
+
+      iso_string when is_binary(iso_string) ->
+        case DateTime.from_iso8601(iso_string) do
+          {:ok, dt, _offset} -> dt
+          {:error, _} -> nil
+        end
+
+      _ ->
+        nil
+    end
+  end
+
+  @doc """
+  Set the last self-update check timestamp.
+
+  Stores the datetime when the agent last checked for self-updates.
+  Accepts a DateTime struct and stores it as an ISO8601 string.
+
+  Note: Always pass `DateTime.truncate(DateTime.utc_now(), :second)` to ensure
+  second precision matching admin's `:utc_datetime` format.
+  """
+  @spec set_last_check_self_update_at(DateTime.t()) ::
+          {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
+  def set_last_check_self_update_at(%DateTime{} = datetime) do
+    iso_string = DateTime.to_iso8601(datetime)
+    set("last_check_self_update_at", iso_string)
+  end
 end

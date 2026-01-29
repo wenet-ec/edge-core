@@ -272,7 +272,7 @@ defmodule EdgeAgent.Commands do
         status: "completed",
         output: output,
         exit_code: exit_code,
-        completed_at: DateTime.utc_now()
+        completed_at: DateTime.truncate(DateTime.utc_now(), :second)
       })
 
     # Categorize result
@@ -488,7 +488,7 @@ defmodule EdgeAgent.Commands do
             status: "completed",
             output: "Command cancelled",
             exit_code: 143,
-            completed_at: DateTime.utc_now()
+            completed_at: DateTime.truncate(DateTime.utc_now(), :second)
           })
 
         Logger.info("Execution #{execution.id} cancelled successfully")

@@ -47,7 +47,7 @@ defmodule EdgeAgent.SelfUpdates do
   """
   @spec trigger_update :: {:ok, map() | binary()} | {:error, binary()}
   def trigger_update do
-    watchtower_url = Application.get_env(:edge_agent, :watchtower_url, "http://watchtower:8080")
+    watchtower_url = Application.get_env(:edge_agent, :watchtower_url, "")
     api_token = Application.get_env(:edge_agent, :watchtower_http_api_token, "")
     update_endpoint = "#{watchtower_url}/v1/update"
 

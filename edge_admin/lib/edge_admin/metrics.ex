@@ -198,6 +198,72 @@ defmodule EdgeAdmin.Metrics do
     end
   end
 
+  @doc """
+  Returns unified metrics from all sources (host, agent) with graceful fallback.
+
+  Fetches metrics in parallel from multiple sources with timeout protection.
+  Uses best-effort approach - partial failures return unavailable status per source.
+
+  ## Parameters
+  - `node_id` - Node UUID (string)
+
+  ## Returns
+  - `{:ok, unified_metrics}` - Map with host and agent metrics (may be unavailable)
+  - Never returns error - always returns best available data
+  """
+  @spec get_unified_metrics(binary()) :: {:ok, map()}
+  def get_unified_metrics(node_id) do
+    # Fetch all metrics in parallel
+    tasks = [
+      Task.async(fn -> get_host_metrics(node_id) end),
+      Task.async(fn -> get_agent_metrics(node_id) end)
+    ]
+
+    # Catch timeout exceptions - Task.await_many raises on timeout
+    results =
+      try do
+        Task.await_many(tasks, 10_000)
+      catch
+        :exit, {:timeout, _} ->
+          # Timeout - return error tuples for both metrics
+          [{:error, :timeout}, {:error, :timeout}]
+      end
+
+    # Extract host metrics
+    host_data =
+      case Enum.at(results, 0) do
+        {:ok, metrics} ->
+          metrics
+          |> Map.from_struct()
+          |> Map.put(:available, true)
+
+        {:error, _} ->
+          %{available: false, error: "unavailable"}
+      end
+
+    # Extract agent metrics
+    agent_data =
+      case Enum.at(results, 1) do
+        {:ok, metrics} ->
+          metrics
+          |> Map.from_struct()
+          |> Map.put(:available, true)
+
+        {:error, _} ->
+          %{available: false, error: "unavailable"}
+      end
+
+    unified_metrics = %{
+      node_id: node_id,
+      timestamp: DateTime.utc_now(),
+      cluster_name: host_data[:cluster_name] || agent_data[:cluster_name],
+      host: host_data,
+      agent: agent_data
+    }
+
+    {:ok, unified_metrics}
+  end
+
   # ===========================================================================
   # Node WireGuard Metrics (wireguard_exporter)
   # ===========================================================================
@@ -233,15 +299,25 @@ defmodule EdgeAdmin.Metrics do
     with {:ok, cluster_name, _admin_name} <- Metadata.find_node_cluster(node_name),
          {:ok, gateway_pid} <- Gateway.lookup(cluster_name),
          {:ok, node} <- Nodes.get_node(node_id) do
-      # Try VPN scrape via Gateway
-      case gateway_scrape_fn.(gateway_pid, node) do
-        {:ok, metrics_text} ->
-          {:ok, metrics_text}
+      # Try VPN scrape via Gateway - catch GenServer.call timeout exceptions
+      try do
+        case gateway_scrape_fn.(gateway_pid, node) do
+          {:ok, metrics_text} ->
+            {:ok, metrics_text}
 
-        {:error, reason} ->
-          # VPN scrape failed - try cache fallback
+          {:error, reason} ->
+            # VPN scrape failed - try cache fallback
+            Logger.warning(
+              "VPN scrape failed for node #{node_id} (#{metrics_type}): #{inspect(reason)}, trying cache"
+            )
+
+            fallback_to_cache(node_id, metrics_type)
+        end
+      catch
+        :exit, {:timeout, _} ->
+          # GenServer.call timeout - fallback to cache
           Logger.warning(
-            "VPN scrape failed for node #{node_id} (#{metrics_type}): #{inspect(reason)}, trying cache"
+            "VPN scrape timeout for node #{node_id} (#{metrics_type}), trying cache"
           )
 
           fallback_to_cache(node_id, metrics_type)

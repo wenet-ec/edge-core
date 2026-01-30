@@ -161,8 +161,8 @@ config :edge_admin,
   zombie_admin_checkin_threshold_minutes: zombie_admin_checkin_threshold_minutes,
   # === HTTP Request Timeouts ===
   # Agent communication: health checks, metrics scraping, command execution
-  http_agent_receive_timeout: get_env("HTTP_AGENT_RECEIVE_TIMEOUT_MS", :integer, 30_000),
-  http_agent_connect_timeout: get_env("HTTP_AGENT_CONNECT_TIMEOUT_MS", :integer, 20_000),
+  http_agent_receive_timeout: get_env("HTTP_AGENT_RECEIVE_TIMEOUT_MS", :integer, 10_000),
+  http_agent_connect_timeout: get_env("HTTP_AGENT_CONNECT_TIMEOUT_MS", :integer, 10_000),
   # === Node Health Check ===
   node_health_check_concurrency: get_env("NODE_HEALTH_CHECK_CONCURRENCY", :integer, 100),
   # === Proxy Server Ports ===

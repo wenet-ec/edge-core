@@ -79,8 +79,8 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   # HTTP request timeout options for agent communication
   defp agent_request_options do
     [
-      receive_timeout: Application.get_env(:edge_admin, :http_agent_receive_timeout, 30_000),
-      connect_options: [timeout: Application.get_env(:edge_admin, :http_agent_connect_timeout, 20_000)],
+      receive_timeout: Application.get_env(:edge_admin, :http_agent_receive_timeout),
+      connect_options: [timeout: Application.get_env(:edge_admin, :http_agent_connect_timeout)],
       retry: false
     ]
   end
@@ -144,7 +144,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - {:error, reason} - HTTP error or network failure
   """
   def scrape_host_metrics(gateway_pid, node) do
-    GenServer.call(gateway_pid, {:scrape_host_metrics, node}, 30_000)
+    GenServer.call(gateway_pid, {:scrape_host_metrics, node}, 10_000)
   end
 
   @doc """
@@ -161,7 +161,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - {:error, reason} - HTTP error or network failure
   """
   def scrape_agent_metrics(gateway_pid, node) do
-    GenServer.call(gateway_pid, {:scrape_agent_metrics, node}, 30_000)
+    GenServer.call(gateway_pid, {:scrape_agent_metrics, node}, 10_000)
   end
 
   @doc """
@@ -178,7 +178,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - {:error, reason} - HTTP error or network failure
   """
   def scrape_wireguard_metrics(gateway_pid, node) do
-    GenServer.call(gateway_pid, {:scrape_wireguard_metrics, node}, 30_000)
+    GenServer.call(gateway_pid, {:scrape_wireguard_metrics, node}, 10_000)
   end
 
   @doc """

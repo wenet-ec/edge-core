@@ -93,6 +93,9 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
         else
           Logger.info("Inspecting peers on #{map_size(peers_by_network)} network(s) for admins...")
 
+          # Get the first network name (we're connected to at least one network)
+          first_network_name = peers_by_network |> Map.keys() |> List.first()
+
           # Scan all networks and collect all discovered admins
           results =
             peers_by_network
@@ -119,9 +122,11 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
               {:ok, network_name, all_admin_urls}
 
             [] ->
+              # No admins found, but we're still connected to a network
+              # Return the first network name to enable HTTP fallback registration
               Logger.warning("No admins discovered across any network")
               Settings.set_admin_urls([])
-              {:ok, nil, []}
+              {:ok, first_network_name, []}
           end
         end
 

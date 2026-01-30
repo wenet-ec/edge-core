@@ -44,46 +44,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
   Uses best-effort approach - partial failures don't fail the entire request.
   """
   def show_unified(conn, %{"node_id" => node_id}) do
-    # Fetch all metrics in parallel
-    tasks = [
-      Task.async(fn -> Metrics.get_host_metrics(node_id) end),
-      Task.async(fn -> Metrics.get_agent_metrics(node_id) end)
-    ]
-
-    results = Task.await_many(tasks, 5_000)
-
-    # Extract host metrics
-    host_data =
-      case Enum.at(results, 0) do
-        {:ok, metrics} ->
-          metrics
-          |> Map.from_struct()
-          |> Map.put(:available, true)
-
-        {:error, _} ->
-          %{available: false, error: "unavailable"}
-      end
-
-    # Extract agent metrics
-    agent_data =
-      case Enum.at(results, 1) do
-        {:ok, metrics} ->
-          metrics
-          |> Map.from_struct()
-          |> Map.put(:available, true)
-
-        {:error, _} ->
-          %{available: false, error: "unavailable"}
-      end
-
-    unified_metrics = %{
-      node_id: node_id,
-      timestamp: DateTime.utc_now(),
-      cluster_name: host_data[:cluster_name] || agent_data[:cluster_name],
-      host: host_data,
-      agent: agent_data
-    }
-
+    {:ok, unified_metrics} = Metrics.get_unified_metrics(node_id)
     render(conn, :show_unified, metrics: unified_metrics)
   end
 

@@ -407,19 +407,17 @@ defmodule EdgeAgent.Vpn do
             )
 
             # Exponential backoff: 1.5x multiplier, capped at 30 seconds
-            next_interval = min(interval * 1.5, 30) |> trunc()
+            next_interval = (interval * 1.5) |> min(30) |> trunc()
             verify_connection_with_retry(deadline, next_interval)
           end
 
         {:ok, :unhealthy, info} ->
           warnings = info[:warnings] || []
 
-          Logger.debug(
-            "Health check unhealthy (#{remaining}s remaining): #{Enum.join(warnings, "; ")}"
-          )
+          Logger.debug("Health check unhealthy (#{remaining}s remaining): #{Enum.join(warnings, "; ")}")
 
           # Exponential backoff: 1.5x multiplier, capped at 30 seconds
-          next_interval = min(interval * 1.5, 30) |> trunc()
+          next_interval = (interval * 1.5) |> min(30) |> trunc()
           verify_connection_with_retry(deadline, next_interval)
       end
     end

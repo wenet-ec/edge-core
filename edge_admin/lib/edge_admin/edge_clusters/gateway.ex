@@ -12,6 +12,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - **VPN Connection**: Direct host-to-network join via Netmaker API (no enrollment keys)
   - **Cross-Admin Routing**: syn registry enables routing requests to the correct admin
   - **HTTP Client**: Provides helper functions for metrics scraping and agent commands
+  - **Non-blocking Operations**: All HTTP/TCP operations use Task.async to prevent head-of-line blocking
   - **Lifecycle**: Started/stopped by EdgeClusters coordinator based on metadata assignments
 
   ## Responsibilities
@@ -319,198 +320,246 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   # ===========================================================================
 
   @impl true
-  def handle_call({:scrape_host_metrics, node}, _from, state) do
-    url = "http://#{Node.dns_hostname(node)}:#{node.host_metrics_port}/metrics"
+  def handle_call({:scrape_host_metrics, node}, from, state) do
+    # Spawn async task to avoid blocking the GenServer
+    cluster_name = state.cluster_name
 
-    case Req.get(url, agent_request_options()) do
-      {:ok, %{status: 200, body: metrics_text}} ->
-        :telemetry.execute(
-          [:edge_admin, :gateway, :scrape],
-          %{count: 1},
-          %{cluster: state.cluster_name, metrics_type: :host, result: :success}
-        )
+    Task.start(fn ->
+      url = "http://#{Node.dns_hostname(node)}:#{node.host_metrics_port}/metrics"
 
-        {:reply, {:ok, metrics_text}, state}
+      result =
+        case Req.get(url, agent_request_options()) do
+          {:ok, %{status: 200, body: metrics_text}} ->
+            :telemetry.execute(
+              [:edge_admin, :gateway, :scrape],
+              %{count: 1},
+              %{cluster: cluster_name, metrics_type: :host, result: :success}
+            )
 
-      {:ok, %{status: status}} ->
-        :telemetry.execute(
-          [:edge_admin, :gateway, :scrape],
-          %{count: 1},
-          %{cluster: state.cluster_name, metrics_type: :host, result: :error}
-        )
+            {:ok, metrics_text}
 
-        {:reply, {:error, "HTTP #{status}"}, state}
+          {:ok, %{status: status}} ->
+            :telemetry.execute(
+              [:edge_admin, :gateway, :scrape],
+              %{count: 1},
+              %{cluster: cluster_name, metrics_type: :host, result: :error}
+            )
 
-      {:error, reason} ->
-        Logger.error("HTTP request failed: #{inspect(reason)}")
+            {:error, "HTTP #{status}"}
 
-        :telemetry.execute(
-          [:edge_admin, :gateway, :scrape],
-          %{count: 1},
-          %{cluster: state.cluster_name, metrics_type: :host, result: :error}
-        )
+          {:error, reason} ->
+            Logger.error("HTTP request failed: #{inspect(reason)}")
 
-        {:reply, {:error, :service_unavailable}, state}
-    end
-  end
+            :telemetry.execute(
+              [:edge_admin, :gateway, :scrape],
+              %{count: 1},
+              %{cluster: cluster_name, metrics_type: :host, result: :error}
+            )
 
-  @impl true
-  def handle_call({:scrape_agent_metrics, node}, _from, state) do
-    url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/agents/metrics/self/raw"
-
-    opts =
-      Keyword.merge(
-        [auth: {:bearer, node.api_token}],
-        agent_request_options()
-      )
-
-    case Req.get(url, opts) do
-      {:ok, %{status: 200, body: metrics_text}} ->
-        # Emit success telemetry
-        :telemetry.execute(
-          [:edge_admin, :gateway, :scrape],
-          %{count: 1},
-          %{cluster: state.cluster_name, metrics_type: :agent, result: :success}
-        )
-
-        {:reply, {:ok, metrics_text}, state}
-
-      {:ok, %{status: status}} ->
-        # Emit error telemetry
-        :telemetry.execute(
-          [:edge_admin, :gateway, :scrape],
-          %{count: 1},
-          %{cluster: state.cluster_name, metrics_type: :agent, result: :error}
-        )
-
-        {:reply, {:error, "HTTP #{status}"}, state}
-
-      {:error, reason} ->
-        Logger.error("HTTP request failed: #{inspect(reason)}")
-        # Emit error telemetry
-        :telemetry.execute(
-          [:edge_admin, :gateway, :scrape],
-          %{count: 1},
-          %{cluster: state.cluster_name, metrics_type: :agent, result: :error}
-        )
-
-        {:reply, {:error, :service_unavailable}, state}
-    end
-  end
-
-  @impl true
-  def handle_call({:scrape_wireguard_metrics, node}, _from, state) do
-    url = "http://#{Node.dns_hostname(node)}:#{node.wireguard_metrics_port}/metrics"
-
-    case Req.get(url, agent_request_options()) do
-      {:ok, %{status: 200, body: metrics_text}} ->
-        :telemetry.execute(
-          [:edge_admin, :gateway, :scrape],
-          %{count: 1},
-          %{cluster: state.cluster_name, metrics_type: :wireguard, result: :success}
-        )
-
-        {:reply, {:ok, metrics_text}, state}
-
-      {:ok, %{status: status}} ->
-        :telemetry.execute(
-          [:edge_admin, :gateway, :scrape],
-          %{count: 1},
-          %{cluster: state.cluster_name, metrics_type: :wireguard, result: :error}
-        )
-
-        {:reply, {:error, "HTTP #{status}"}, state}
-
-      {:error, reason} ->
-        Logger.error("HTTP request failed: #{inspect(reason)}")
-
-        :telemetry.execute(
-          [:edge_admin, :gateway, :scrape],
-          %{count: 1},
-          %{cluster: state.cluster_name, metrics_type: :wireguard, result: :error}
-        )
-
-        {:reply, {:error, :service_unavailable}, state}
-    end
-  end
-
-  @impl true
-  def handle_call({:trigger_self_update, node}, _from, state) do
-    url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/self_updates/trigger"
-
-    opts = Keyword.merge([auth: {:bearer, node.api_token}], agent_request_options())
-
-    case Req.post(url, opts) do
-      {:ok, %{status: 202}} ->
-        {:reply, :ok, state}
-
-      {:ok, %{status: 403}} ->
-        {:reply, {:error, :self_update_disabled}, state}
-
-      {:ok, %{status: status}} ->
-        {:reply, {:error, "HTTP #{status}"}, state}
-
-      {:error, reason} ->
-        Logger.debug("HTTP request failed (likely agent restarted): #{inspect(reason)}")
-        # Treat connection errors as success (watchtower likely restarted the agent)
-        if reason in [:timeout, :econnrefused, :closed] do
-          {:reply, :ok, state}
-        else
-          {:reply, {:error, reason}, state}
-        end
-    end
-  end
-
-  @impl true
-  def handle_call({:cancel_execution, node, execution_id}, _from, state) do
-    url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/command_executions/#{execution_id}/cancel"
-
-    opts = Keyword.merge([auth: {:bearer, node.api_token}], agent_request_options())
-
-    case Req.patch(url, opts) do
-      {:ok, %{status: status}} when status in 200..299 ->
-        {:reply, :ok, state}
-
-      {:ok, %{status: status}} ->
-        {:reply, {:error, "HTTP #{status}"}, state}
-
-      {:error, reason} ->
-        Logger.error("HTTP request failed: #{inspect(reason)}")
-        {:reply, {:error, reason}, state}
-    end
-  end
-
-  @impl true
-  def handle_call({:tcp_connect, target_host, target_port, caller_pid}, _from, state) do
-    Logger.debug("Gateway connecting to #{target_host}:#{target_port}")
-
-    # Connect through this Gateway's VPN interface
-    case :gen_tcp.connect(
-           String.to_charlist(target_host),
-           target_port,
-           [:binary, packet: :raw, active: false],
-           10_000
-         ) do
-      {:ok, socket} ->
-        Logger.debug("Gateway established connection to #{target_host}:#{target_port}")
-
-        # Check if caller is on same node (local) or different node (remote)
-        if node(caller_pid) == node() do
-          # Local: transfer socket ownership directly to caller
-          :gen_tcp.controlling_process(socket, caller_pid)
-          Logger.debug("Socket transferred to local caller")
-          {:reply, {:ok, socket}, state}
-        else
-          # Remote: spawn proxy process on this node to manage socket
-          {:ok, proxy_pid} = RemoteTunnel.start_proxy(socket, caller_pid)
-          Logger.debug("Remote proxy started: #{inspect(proxy_pid)}")
-          {:reply, {:ok, :remote, proxy_pid}, state}
+            {:error, :service_unavailable}
         end
 
-      {:error, reason} ->
-        Logger.error("Gateway failed to connect to #{target_host}:#{target_port}: #{inspect(reason)}")
-        {:reply, {:error, reason}, state}
-    end
+      # Reply to caller when HTTP request completes
+      GenServer.reply(from, result)
+    end)
+
+    # Return immediately without replying - task will reply later
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_call({:scrape_agent_metrics, node}, from, state) do
+    cluster_name = state.cluster_name
+
+    Task.start(fn ->
+      url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/agents/metrics/self/raw"
+
+      opts =
+        Keyword.merge(
+          [auth: {:bearer, node.api_token}],
+          agent_request_options()
+        )
+
+      result =
+        case Req.get(url, opts) do
+          {:ok, %{status: 200, body: metrics_text}} ->
+            :telemetry.execute(
+              [:edge_admin, :gateway, :scrape],
+              %{count: 1},
+              %{cluster: cluster_name, metrics_type: :agent, result: :success}
+            )
+
+            {:ok, metrics_text}
+
+          {:ok, %{status: status}} ->
+            :telemetry.execute(
+              [:edge_admin, :gateway, :scrape],
+              %{count: 1},
+              %{cluster: cluster_name, metrics_type: :agent, result: :error}
+            )
+
+            {:error, "HTTP #{status}"}
+
+          {:error, reason} ->
+            Logger.error("HTTP request failed: #{inspect(reason)}")
+
+            :telemetry.execute(
+              [:edge_admin, :gateway, :scrape],
+              %{count: 1},
+              %{cluster: cluster_name, metrics_type: :agent, result: :error}
+            )
+
+            {:error, :service_unavailable}
+        end
+
+      GenServer.reply(from, result)
+    end)
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_call({:scrape_wireguard_metrics, node}, from, state) do
+    cluster_name = state.cluster_name
+
+    Task.start(fn ->
+      url = "http://#{Node.dns_hostname(node)}:#{node.wireguard_metrics_port}/metrics"
+
+      result =
+        case Req.get(url, agent_request_options()) do
+          {:ok, %{status: 200, body: metrics_text}} ->
+            :telemetry.execute(
+              [:edge_admin, :gateway, :scrape],
+              %{count: 1},
+              %{cluster: cluster_name, metrics_type: :wireguard, result: :success}
+            )
+
+            {:ok, metrics_text}
+
+          {:ok, %{status: status}} ->
+            :telemetry.execute(
+              [:edge_admin, :gateway, :scrape],
+              %{count: 1},
+              %{cluster: cluster_name, metrics_type: :wireguard, result: :error}
+            )
+
+            {:error, "HTTP #{status}"}
+
+          {:error, reason} ->
+            Logger.error("HTTP request failed: #{inspect(reason)}")
+
+            :telemetry.execute(
+              [:edge_admin, :gateway, :scrape],
+              %{count: 1},
+              %{cluster: cluster_name, metrics_type: :wireguard, result: :error}
+            )
+
+            {:error, :service_unavailable}
+        end
+
+      GenServer.reply(from, result)
+    end)
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_call({:trigger_self_update, node}, from, state) do
+    Task.start(fn ->
+      url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/self_updates/trigger"
+
+      opts = Keyword.merge([auth: {:bearer, node.api_token}], agent_request_options())
+
+      result =
+        case Req.post(url, opts) do
+          {:ok, %{status: 202}} ->
+            :ok
+
+          {:ok, %{status: 403}} ->
+            {:error, :self_update_disabled}
+
+          {:ok, %{status: status}} ->
+            {:error, "HTTP #{status}"}
+
+          {:error, reason} ->
+            Logger.debug("HTTP request failed (likely agent restarted): #{inspect(reason)}")
+            # Treat connection errors as success (watchtower likely restarted the agent)
+            if reason in [:timeout, :econnrefused, :closed] do
+              :ok
+            else
+              {:error, reason}
+            end
+        end
+
+      GenServer.reply(from, result)
+    end)
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_call({:cancel_execution, node, execution_id}, from, state) do
+    Task.start(fn ->
+      url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/command_executions/#{execution_id}/cancel"
+
+      opts = Keyword.merge([auth: {:bearer, node.api_token}], agent_request_options())
+
+      result =
+        case Req.patch(url, opts) do
+          {:ok, %{status: status}} when status in 200..299 ->
+            :ok
+
+          {:ok, %{status: status}} ->
+            {:error, "HTTP #{status}"}
+
+          {:error, reason} ->
+            Logger.error("HTTP request failed: #{inspect(reason)}")
+            {:error, reason}
+        end
+
+      GenServer.reply(from, result)
+    end)
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_call({:tcp_connect, target_host, target_port, caller_pid}, from, state) do
+    Task.start(fn ->
+      Logger.debug("Gateway connecting to #{target_host}:#{target_port}")
+
+      result =
+        case :gen_tcp.connect(
+               String.to_charlist(target_host),
+               target_port,
+               [:binary, packet: :raw, active: false],
+               10_000
+             ) do
+          {:ok, socket} ->
+            Logger.debug("Gateway established connection to #{target_host}:#{target_port}")
+
+            # Check if caller is on same node (local) or different node (remote)
+            if node(caller_pid) == node() do
+              # Local: transfer socket ownership directly to caller
+              :gen_tcp.controlling_process(socket, caller_pid)
+              Logger.debug("Socket transferred to local caller")
+              {:ok, socket}
+            else
+              # Remote: spawn proxy process on this node to manage socket
+              {:ok, proxy_pid} = RemoteTunnel.start_proxy(socket, caller_pid)
+              Logger.debug("Remote proxy started: #{inspect(proxy_pid)}")
+              {:ok, :remote, proxy_pid}
+            end
+
+          {:error, reason} ->
+            Logger.error("Gateway failed to connect to #{target_host}:#{target_port}: #{inspect(reason)}")
+            {:error, reason}
+        end
+
+      GenServer.reply(from, result)
+    end)
+
+    {:noreply, state}
   end
 
   # Handle EXIT messages from linked processes (RemoteTunnel proxies)

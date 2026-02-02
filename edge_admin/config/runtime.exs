@@ -181,13 +181,13 @@ config :nexmaker,
   base_url: get_env!("NETMAKER_API_URL"),
   master_key: get_env!("NETMAKER_MASTER_KEY")
 
-config :sentry,
-  dsn: get_env("SENTRY_DSN"),
-  environment_name: get_env("SENTRY_ENVIRONMENT_NAME")
-
 # Disable memsup (memory supervisor) from :os_mon
 # We use PromEx + VictoriaMetrics for memory monitoring instead.
 # memsup causes false alarms on Linux systems due to not understanding
 # that cached memory is reclaimable (looks at MemFree instead of MemAvailable).
 config :os_mon,
   start_memsup: false
+
+config :sentry,
+  dsn: get_env("SENTRY_DSN"),
+  environment_name: get_env("SENTRY_ENVIRONMENT_NAME")

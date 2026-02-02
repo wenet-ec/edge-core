@@ -307,27 +307,21 @@ defmodule EdgeAdmin.Metrics do
 
           {:error, reason} ->
             # VPN scrape failed - try cache fallback
-            Logger.warning(
-              "VPN scrape failed for node #{node_id} (#{metrics_type}): #{inspect(reason)}, trying cache"
-            )
+            Logger.warning("VPN scrape failed for node #{node_id} (#{metrics_type}): #{inspect(reason)}, trying cache")
 
             fallback_to_cache(node_id, metrics_type)
         end
       catch
         :exit, {:timeout, _} ->
           # GenServer.call timeout - fallback to cache
-          Logger.warning(
-            "VPN scrape timeout for node #{node_id} (#{metrics_type}), trying cache"
-          )
+          Logger.warning("VPN scrape timeout for node #{node_id} (#{metrics_type}), trying cache")
 
           fallback_to_cache(node_id, metrics_type)
       end
     else
       # Node lookup failed - try cache directly
       error ->
-        Logger.warning(
-          "Node lookup failed for #{node_id} (#{metrics_type}): #{inspect(error)}, trying cache"
-        )
+        Logger.warning("Node lookup failed for #{node_id} (#{metrics_type}): #{inspect(error)}, trying cache")
 
         fallback_to_cache(node_id, metrics_type)
     end

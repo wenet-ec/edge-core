@@ -3,11 +3,12 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
   use EdgeAdminWeb, :controller
 
   alias EdgeAdmin.Nodes
+  alias EdgeAdminWeb.Plugs.DegradedMode
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug EdgeAdminWeb.Plugs.DegradedMode, :block when action in [:create]
-  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:update_health_check]
+  plug DegradedMode, :block when action in [:create]
+  plug DegradedMode, :allow when action in [:update_health_check]
 
   @doc """
   Node registration endpoint (no authentication required).

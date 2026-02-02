@@ -923,8 +923,9 @@ defmodule EdgeAdmin.Nodes do
 
     should_mark_unreachable =
       case node.last_seen_at do
-        nil -> true  # Never seen before
-        last_seen -> DateTime.compare(last_seen, five_minutes_ago) == :lt
+        # Never seen before
+        nil -> true
+        last_seen -> DateTime.before?(last_seen, five_minutes_ago)
       end
 
     if should_mark_unreachable do

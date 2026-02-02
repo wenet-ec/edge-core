@@ -7,10 +7,10 @@ defmodule EdgeAgent.SelfUpdates do
   through the Watchtower service.
   """
 
-  require Logger
-
   alias EdgeAgent.EdgeClusters.AdminClient
   alias EdgeAgent.Settings
+
+  require Logger
 
   @doc """
   Checks if self-update feature is enabled.
@@ -158,7 +158,7 @@ defmodule EdgeAgent.SelfUpdates do
   # Determine if update should be triggered
   defp should_trigger_update?(inserted_at, last_check) do
     # Trigger if never checked before OR new update available
-    last_check == nil or DateTime.compare(inserted_at, last_check) == :gt
+    last_check == nil or DateTime.after?(inserted_at, last_check)
   end
 
   # Parse ISO8601 datetime string

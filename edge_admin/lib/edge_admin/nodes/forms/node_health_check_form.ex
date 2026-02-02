@@ -39,12 +39,10 @@ defmodule EdgeAdmin.Nodes.Forms.NodeHealthCheckForm do
     %__MODULE__{}
     |> cast(attrs, [:status])
     |> validate_required([:status])
-    |> validate_inclusion(:status, ["healthy", "unhealthy"],
-      message: "must be either 'healthy' or 'unhealthy'"
-    )
+    |> validate_inclusion(:status, ["healthy", "unhealthy"], message: "must be either 'healthy' or 'unhealthy'")
     |> apply_action(:insert)
     |> case do
-      {:ok, form} -> {:ok, Map.take(form, [:status]) |> stringify_keys()}
+      {:ok, form} -> {:ok, form |> Map.take([:status]) |> stringify_keys()}
       {:error, changeset} -> {:error, changeset}
     end
   end

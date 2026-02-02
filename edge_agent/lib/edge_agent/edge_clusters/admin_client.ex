@@ -124,6 +124,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
     request_with_fallback(path, fallback_enabled, fn url ->
       opts = Keyword.merge([json: payload], http_options())
+
       case Req.post(url, opts) do
         {:ok, %{status: 201, body: %{"data" => node_data}}} ->
           {:ok, node_data}
@@ -174,6 +175,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
     request_with_auth(path, fallback_enabled, fn url, headers ->
       opts = Keyword.merge([json: payload, headers: headers], http_options())
+
       case Req.post(url, opts) do
         {:ok, %{status: 200, body: %{"data" => %{"verified" => verified}}}} ->
           {:ok, verified}
@@ -232,6 +234,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
     request_with_auth(path, fallback_enabled, fn url, headers ->
       opts = Keyword.merge([headers: headers, params: query_params], http_options())
+
       case Req.get(url, opts) do
         {:ok, %{status: 200, body: %{"data" => command_executions, "meta" => meta}}} ->
           {:ok, %{data: command_executions, meta: meta}}
@@ -314,6 +317,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
     request_with_auth(path, fallback_enabled, fn url, headers ->
       opts = Keyword.merge([json: %{}, headers: headers], http_options())
+
       case Req.post(url, opts) do
         {:ok, %{status: 200, body: response}} ->
           Logger.debug("Successfully create relayed node")
@@ -357,6 +361,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
     request_with_auth(path, fallback_enabled, fn url, headers ->
       opts = Keyword.merge([json: %{}, headers: headers], http_options())
+
       case Req.patch(url, opts) do
         {:ok, %{status: status}} when status in 200..299 ->
           Logger.debug("Successfully acknowledged command execution #{execution_id}")
@@ -495,6 +500,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
     request_with_auth(path, fallback_enabled, fn url, headers ->
       opts = Keyword.merge([json: payload, headers: headers], http_options())
+
       case Req.patch(url, opts) do
         {:ok, %{status: status}} when status in 200..299 ->
           Logger.debug("Successfully updated command execution #{execution_id}")

@@ -31,8 +31,9 @@ defmodule EdgeAgent.Metrics do
       {:ok, %{total: 3, success: 2, failed: 1}}
   """
 
-  require Logger
   alias EdgeAgent.EdgeClusters.AdminClient
+
+  require Logger
 
   @doc """
   Scrapes all local metrics and pushes to admin.

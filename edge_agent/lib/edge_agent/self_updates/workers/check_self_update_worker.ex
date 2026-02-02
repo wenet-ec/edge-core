@@ -28,10 +28,10 @@ defmodule EdgeAgent.SelfUpdates.Workers.CheckSelfUpdateWorker do
       states: [:available, :scheduled, :executing, :retryable]
     ]
 
-  require Logger
-
-  alias EdgeAgent.Settings
   alias EdgeAgent.SelfUpdates
+  alias EdgeAgent.Settings
+
+  require Logger
 
   @impl Oban.Worker
   def perform(_job) do

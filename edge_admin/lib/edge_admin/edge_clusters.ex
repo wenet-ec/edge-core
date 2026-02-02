@@ -117,7 +117,6 @@ defmodule EdgeAdmin.EdgeClusters do
 
   @impl true
   def handle_info(:reconciliation_complete, state) do
-
     if state.pending_reconcile do
       # Something changed while we worked - do it again
       spawn_reconciliation_task(state)

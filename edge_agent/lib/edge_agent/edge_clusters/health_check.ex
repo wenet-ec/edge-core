@@ -43,12 +43,13 @@ defmodule EdgeAgent.EdgeClusters.HealthCheck do
     checks = EdgeAgentHealth.checks()
 
     # Run all checks and see if any fail
-    all_healthy = Enum.all?(checks, fn check ->
-      case apply(check.module, check.function, []) do
-        :ok -> true
-        {:error, _reason} -> false
-      end
-    end)
+    all_healthy =
+      Enum.all?(checks, fn check ->
+        case apply(check.module, check.function, []) do
+          :ok -> true
+          {:error, _reason} -> false
+        end
+      end)
 
     if all_healthy do
       "healthy"

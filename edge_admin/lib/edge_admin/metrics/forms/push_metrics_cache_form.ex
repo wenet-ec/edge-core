@@ -46,7 +46,7 @@ defmodule EdgeAdmin.Metrics.Forms.PushMetricsCacheForm do
     )
     |> apply_action(:insert)
     |> case do
-      {:ok, form} -> {:ok, Map.take(form, [:metrics_type, :metrics_text]) |> stringify_keys()}
+      {:ok, form} -> {:ok, form |> Map.take([:metrics_type, :metrics_text]) |> stringify_keys()}
       {:error, changeset} -> {:error, changeset}
     end
   end

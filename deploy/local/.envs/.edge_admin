@@ -108,6 +108,11 @@ ERLANG_DIST_PORT=49125  # Fixed port for Erlang distribution (set in vm.args.eex
 # Admin discovery
 ADMIN_DISCOVERY_PORT=44000  # Port to scan for admin discovery endpoint
 
+# --- VPN Sync After Reconciliation ---
+# Pull VPN config after gateway changes to ensure consistency (default: true).
+# Disable on resource-starved machines to prevent interface reset loops causing cascading failures.
+# SYNC_VPN_AFTER_RECONCILIATION=true
+
 # =============================================================================
 # Background Workers & Schedulers
 # =============================================================================

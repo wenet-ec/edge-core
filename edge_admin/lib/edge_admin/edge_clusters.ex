@@ -117,6 +117,29 @@ defmodule EdgeAdmin.EdgeClusters do
 
   @impl true
   def handle_info(:reconciliation_complete, state) do
+    # Sync VPN config after reconciliation to ensure consistency between Netmaker and WireGuard.
+    #
+    # On resource-starved machines with limited network bandwidth, this can cause cascading failures:
+    # 1. Pull triggers WireGuard interface reset (30s on slow machines)
+    # 2. Interface reset causes syn heartbeat timeouts
+    # 3. Timeouts trigger metadata recomputation (admin appears dead)
+    # 4. Recomputation triggers more reconciliations
+    # 5. Loop continues until machine recovers
+    #
+    # Disable via SYNC_VPN_AFTER_RECONCILIATION=false to accept eventual consistency
+    # instead of guaranteed consistency at the cost of stability.
+    if Application.get_env(:edge_admin, :sync_vpn_after_reconciliation, true) do
+      case Nexmaker.Cli.pull() do
+        :ok ->
+          Logger.debug("EdgeClusters: Netclient pull completed successfully")
+
+        {:error, reason} ->
+          Logger.warning("EdgeClusters: Netclient pull failed: #{inspect(reason)}")
+      end
+    else
+      Logger.debug("EdgeClusters: VPN sync skipped (SYNC_VPN_AFTER_RECONCILIATION=false)")
+    end
+
     if state.pending_reconcile do
       # Something changed while we worked - do it again
       spawn_reconciliation_task(state)

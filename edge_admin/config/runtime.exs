@@ -159,6 +159,10 @@ config :edge_admin,
   cluster_reconciliation_schedule: cluster_reconciliation_schedule,
   zombie_admin_cleanup_schedule: zombie_admin_cleanup_schedule,
   zombie_admin_checkin_threshold_minutes: zombie_admin_checkin_threshold_minutes,
+  # === VPN Sync Configuration ===
+  # Sync VPN config after gateway reconciliation (default: true)
+  # Disable on resource-starved machines to prevent cascading failures from interface resets
+  sync_vpn_after_reconciliation: get_env("SYNC_VPN_AFTER_RECONCILIATION", :boolean, true),
   # === HTTP Request Timeouts ===
   # Agent communication: health checks, metrics scraping, command execution
   http_agent_receive_timeout: get_env("HTTP_AGENT_RECEIVE_TIMEOUT_MS", :integer, 10_000),

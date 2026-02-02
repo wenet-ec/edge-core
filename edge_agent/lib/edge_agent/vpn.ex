@@ -330,44 +330,98 @@ defmodule EdgeAgent.Vpn do
   @doc """
   Waits and verifies VPN connection was established after join.
 
-  Retries health check for up to 30 seconds (6 attempts x 5 second intervals).
-  Accepts both healthy and degraded states as successful (degraded is common after fresh join).
+  Uses exponential backoff to verify connection. Accepts both healthy and
+  degraded states as successful (degraded is common after fresh join when peers
+  haven't fully connected yet).
+
+  ## Behavior
+  - Initial interval: 2 seconds
+  - Exponential backoff: 1.5x multiplier per retry
+  - Maximum interval: 30 seconds (prevents excessive waiting between checks)
+  - Default timeout: 30 seconds (matching original 6 attempts × 5s)
+  - Configurable via VPN_READY_TIMEOUT_SECONDS environment variable
+
+  ## Configuration
+  - `VPN_READY_TIMEOUT_SECONDS` - Wait time in seconds (default: 30)
+    - 30 = Default timeout with exponential backoff
+    - 180 = Extended timeout for slow networks (3 minutes)
+    - 300 = Very slow networks (5 minutes)
 
   ## Returns
-  - `:ok` - Connection verified (healthy or degraded)
-  - `{:error, reason}` - Connection not established after all retries
+  - `:ok` - Connection verified (healthy or degraded with networks listed)
+  - `{:error, reason}` - Connection not established after timeout
   """
   @spec verify_connection_after_join() :: :ok | {:error, String.t()}
   def verify_connection_after_join do
     Logger.info("Join command completed, verifying connection...")
-    verify_connection_with_retry(6, 5000)
+
+    # Get timeout from config (default: 30s)
+    timeout_seconds = Application.get_env(:edge_agent, :vpn_ready_timeout_seconds, 30)
+
+    Logger.info("Will verify VPN connection for up to #{timeout_seconds} seconds")
+
+    verify_connection_with_timeout(timeout_seconds)
   end
 
-  defp verify_connection_with_retry(0, _interval) do
-    {:error, "Join command succeeded but health check failed after all retries: Not connected to any network"}
+  defp verify_connection_with_timeout(timeout_seconds) do
+    start_time = System.monotonic_time(:second)
+    deadline = start_time + timeout_seconds
+
+    # Start with 2 second interval
+    verify_connection_with_retry(deadline, 2)
   end
 
-  defp verify_connection_with_retry(attempts_left, interval) do
-    Process.sleep(interval)
+  defp verify_connection_with_retry(deadline, interval) do
+    now = System.monotonic_time(:second)
+    remaining = deadline - now
 
-    case Nexmaker.Cli.health_check() do
-      {:ok, :healthy, info} ->
-        networks = info[:networks] || []
-        Logger.info("VPN connection verified: joined #{length(networks)} network(s)")
-        :ok
+    if remaining <= 0 do
+      {:error, "VPN join verification timed out: Not connected to any network"}
+    else
+      # Sleep for the current interval (but not more than remaining time)
+      sleep_time = min(interval, remaining)
+      Process.sleep(sleep_time * 1000)
 
-      {:ok, :degraded, info} ->
-        # Degraded but connected - acceptable for fresh join
-        networks = info[:networks] || []
-        warnings = info[:warnings] || []
-        Logger.warning("VPN connected but degraded: #{inspect(warnings)}")
-        Logger.info("Joined #{length(networks)} network(s), continuing despite warnings")
-        :ok
+      case Nexmaker.Cli.health_check() do
+        {:ok, :healthy, info} ->
+          networks = info[:networks] || []
+          Logger.info("VPN connection verified: joined #{length(networks)} network(s)")
+          :ok
 
-      {:ok, :unhealthy, info} ->
-        warnings = info[:warnings] || []
-        Logger.debug("Health check unhealthy (#{attempts_left - 1} attempts remaining): #{Enum.join(warnings, "; ")}")
-        verify_connection_with_retry(attempts_left - 1, interval)
+        {:ok, :degraded, info} ->
+          # IMPORTANT: Degraded with networks listed means we're ON the network
+          # WireGuard might not have peered yet, but netclient successfully joined
+          networks = info[:networks] || []
+
+          if length(networks) > 0 do
+            warnings = info[:warnings] || []
+            Logger.warning("VPN connected but degraded: #{inspect(warnings)}")
+            Logger.info("Joined #{length(networks)} network(s), continuing despite warnings")
+            :ok
+          else
+            # Degraded but no networks - keep waiting
+            warnings = info[:warnings] || []
+
+            Logger.debug(
+              "Health check degraded without networks (#{remaining}s remaining): #{Enum.join(warnings, "; ")}"
+            )
+
+            # Exponential backoff: 1.5x multiplier, capped at 30 seconds
+            next_interval = min(interval * 1.5, 30) |> trunc()
+            verify_connection_with_retry(deadline, next_interval)
+          end
+
+        {:ok, :unhealthy, info} ->
+          warnings = info[:warnings] || []
+
+          Logger.debug(
+            "Health check unhealthy (#{remaining}s remaining): #{Enum.join(warnings, "; ")}"
+          )
+
+          # Exponential backoff: 1.5x multiplier, capped at 30 seconds
+          next_interval = min(interval * 1.5, 30) |> trunc()
+          verify_connection_with_retry(deadline, next_interval)
+      end
     end
   end
 end

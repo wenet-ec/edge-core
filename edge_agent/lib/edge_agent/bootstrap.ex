@@ -72,6 +72,7 @@ defmodule EdgeAgent.Bootstrap do
   - `:http_proxy_port` - HTTP proxy port (default: 43128)
   - `:socks5_proxy_port` - SOCKS5 proxy port (default: 41080)
   - `:fallback_admin_urls` - HTTP fallback URLs when VPN unavailable (list)
+  - `:vpn_ready_timeout_seconds` - VPN verification timeout in seconds (default: 30)
 
   ## Examples
 

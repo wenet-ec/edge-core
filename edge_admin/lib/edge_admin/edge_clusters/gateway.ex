@@ -195,7 +195,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - {:error, reason} - HTTP error or network failure
   """
   def trigger_self_update(gateway_pid, node) do
-    GenServer.call(gateway_pid, {:trigger_self_update, node}, 30_000)
+    GenServer.call(gateway_pid, {:trigger_self_update, node}, 15_000)
   end
 
   @doc """
@@ -213,7 +213,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - {:error, reason} - HTTP error or network failure
   """
   def cancel_execution(gateway_pid, node, execution_id) do
-    GenServer.call(gateway_pid, {:cancel_execution, node, execution_id}, 30_000)
+    GenServer.call(gateway_pid, {:cancel_execution, node, execution_id}, 15_000)
   end
 
   @doc """
@@ -232,7 +232,8 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - caller_pid: PID of the process that will own the socket
   """
   def tcp_connect(gateway_pid, target_host, target_port, caller_pid) do
-    GenServer.call(gateway_pid, {:tcp_connect, target_host, target_port, caller_pid}, 30_000)
+    # Timeout must be longer than gen_tcp.connect timeout (10s) to avoid race condition
+    GenServer.call(gateway_pid, {:tcp_connect, target_host, target_port, caller_pid}, 15_000)
   end
 
   # ===========================================================================
@@ -488,7 +489,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
            String.to_charlist(target_host),
            target_port,
            [:binary, packet: :raw, active: false],
-           30_000
+           10_000
          ) do
       {:ok, socket} ->
         Logger.debug("Gateway established connection to #{target_host}:#{target_port}")

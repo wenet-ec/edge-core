@@ -4,7 +4,7 @@ defmodule EdgeAgent.Config do
   This modules provides various helpers to handle environment variables
   """
 
-  @type value_type :: :string | :integer | :boolean | :uri | :cors
+  @type value_type :: :string | :integer | :boolean | :uri | :cors | :list
   @type config_type :: String.t() | integer() | boolean() | URI.t() | [String.t()]
 
   @spec get_env(String.t()) :: config_type()
@@ -56,4 +56,11 @@ defmodule EdgeAgent.Config do
   defp parse_env(nil, :uri), do: nil
   defp parse_env("", :uri), do: nil
   defp parse_env(value, :uri), do: URI.parse(value)
+
+  defp parse_env(nil, :list), do: []
+  defp parse_env("", :list), do: []
+
+  defp parse_env(value, :list) when is_bitstring(value) do
+    value |> String.split(",") |> Enum.map(&String.trim/1)
+  end
 end

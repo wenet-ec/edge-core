@@ -9,7 +9,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   ## Key Concepts
 
   - **Admin URLs**: List of discovered admin servers from Settings table (VPN)
-  - **HTTP Fallback**: Falls back to `FALLBACK_ADMIN_URL` if no VPN admins found
+  - **HTTP Fallback**: Falls back to `FALLBACK_ADMIN_URLS` list if no VPN admins found
   - **Fallback Control**: Some operations (relay) require VPN and disable HTTP fallback
   - **Fallback Logic**: Try each admin URL until one succeeds
   - **Authentication**: Bearer token authentication for protected endpoints
@@ -23,7 +23,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   1. **Unauthenticated Requests** (`request_with_fallback/3`)
      - Used for registration (no token yet)
      - Tries VPN admin URLs from Settings first
-     - Falls back to `FALLBACK_ADMIN_URL` env var if VPN URLs empty
+     - Falls back to `FALLBACK_ADMIN_URLS` env var list if VPN URLs empty
      - Tries each URL until one succeeds
 
   2. **Authenticated Requests** (`request_with_auth/3`)
@@ -604,9 +604,9 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     end
   end
 
-  # Get list of URLs to try: VPN admin URLs first, then fallback URL if enabled
+  # Get list of URLs to try: VPN admin URLs first, then fallback URLs if enabled
   defp get_urls_to_try(admin_urls, fallback_enabled) do
-    fallback_url = Application.get_env(:edge_agent, :fallback_admin_url)
+    fallback_urls = Application.get_env(:edge_agent, :fallback_admin_urls, [])
 
     cond do
       # VPN admins available - use them
@@ -614,9 +614,9 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
         admin_urls
 
       # No VPN admins, but fallback enabled and configured
-      fallback_enabled and fallback_url != nil ->
-        Logger.info("No VPN admin URLs, using HTTP fallback: #{fallback_url}")
-        [fallback_url]
+      fallback_enabled and fallback_urls != [] ->
+        Logger.info("No VPN admin URLs, using HTTP fallback: #{inspect(fallback_urls)}")
+        fallback_urls
 
       # No VPN admins and fallback disabled or not configured
       true ->

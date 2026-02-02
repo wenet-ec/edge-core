@@ -45,7 +45,7 @@ config :edge_agent,
   http_receive_timeout: get_env("HTTP_RECEIVE_TIMEOUT_MS", :integer, 30_000),
   http_connect_timeout: get_env("HTTP_CONNECT_TIMEOUT_MS", :integer, 20_000),
   # HTTP fallback configuration (when VPN is unavailable)
-  fallback_admin_url: get_env("FALLBACK_ADMIN_URL", :string, nil),
+  fallback_admin_urls: get_env("FALLBACK_ADMIN_URLS", :list, []),
   # Authentication toggles
   agent_metrics_auth_enabled: get_env("AGENT_METRICS_AUTH_ENABLED", :boolean, true),
   proxy_servers_auth_enabled: get_env("PROXY_SERVERS_AUTH_ENABLED", :boolean, true)

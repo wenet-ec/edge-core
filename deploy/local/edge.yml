@@ -35,6 +35,7 @@ services:
       - local_edge_agent_netclient_data:/etc/netclient
       - /etc/resolv.conf:/etc/resolv.conf:rw
       - /:/host:ro
+      - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:ro
     env_file:
       - ./.envs/.edge_agent
     network_mode: host

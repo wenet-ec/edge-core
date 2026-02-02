@@ -62,7 +62,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   # Agent-specific: WireGuard management tools (for VPN and wireguard_exporter)
   wireguard-tools \
   # Agent-specific: nsenter for hostscript (part of util-linux)
-  util-linux && \
+  util-linux \
+  # systemd-resolved: provides resolvectl for netclient DNS management on systemd hosts
+  systemd-resolved && \
   # Set locale in same layer
   sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen && \
   # Create dummies to suppress netclient init system detection errors

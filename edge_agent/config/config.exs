@@ -35,7 +35,8 @@ config :edge_agent, Oban,
     discover_admins: 1,
     register_relayed_node: 1,
     check_self_update: 1,
-    push_metrics: 1
+    push_metrics: 1,
+    pull_vpn_config: 1
   ],
   plugins: [
     {Oban.Plugins.Cron,
@@ -55,7 +56,9 @@ config :edge_agent, Oban,
        # Every 2 hours to check for self-updates (HTTP fallback mode)
        {"0 */2 * * *", EdgeAgent.SelfUpdates.Workers.CheckSelfUpdateWorker},
        # Every 2 minutes to push metrics (HTTP fallback mode)
-       {"*/2 * * * *", EdgeAgent.Metrics.Workers.PushMetricsWorker}
+       {"*/2 * * * *", EdgeAgent.Metrics.Workers.PushMetricsWorker},
+       # Every 6 hours to pull VPN config from Netmaker (safety net for MQTT message loss)
+       {"0 */6 * * *", EdgeAgent.Vpn.Workers.PullVpnConfigWorker}
      ]},
     Oban.Plugins.Lifeline,
     {Oban.Plugins.Pruner, max_age: 86_400}

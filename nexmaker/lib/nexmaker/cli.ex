@@ -319,25 +319,8 @@ defmodule Nexmaker.Cli do
 
     case {output, exit_code} do
       {output, 0} ->
-        # Check for "no such network" message first (happens when exit code is 0)
-        if String.contains?(output, "no such network") do
-          {:ok, []}
-        else
-          # Strip error logs before JSON
-          cleaned_output = extract_json_from_output(output)
-
-          case Jason.decode(cleaned_output) do
-            {:ok, networks} when is_list(networks) ->
-              {:ok, networks}
-
-            {:ok, _} ->
-              {:error, :invalid_output_format}
-
-            {:error, reason} ->
-              Logger.error("Failed to parse netclient output: #{inspect(reason)}")
-              {:error, {:json_parse_error, reason}}
-          end
-        end
+        # Use robust parser based on netclient source code
+        Nexmaker.CliParser.parse_list_output(output)
 
       {output, exit_code} ->
         # Check if it's the "no such network" message with non-zero exit
@@ -552,11 +535,8 @@ defmodule Nexmaker.Cli do
   def check_connection(network_name) when is_binary(network_name) do
     case System.cmd("netclient", ["list", network_name], stderr_to_stdout: true) do
       {output, 0} ->
-        # Strip any log lines that appear before the JSON array
-        # Netclient sometimes outputs error logs before the actual JSON
-        cleaned_output = extract_json_from_output(output)
-
-        case Jason.decode(cleaned_output) do
+        # Use robust parser based on netclient source code
+        case Nexmaker.CliParser.parse_list_output(output) do
           {:ok, [network_info | _]} when is_map(network_info) ->
             # Check if actually connected
             connected = Map.get(network_info, "connected", false)
@@ -669,229 +649,27 @@ defmodule Nexmaker.Cli do
 
   defp extract_subnet(_), do: nil
 
-  # Extract JSON from netclient output that may contain error log lines or debug output.
-  #
-  # Netclient sometimes outputs:
-  # 1. Structured logs (JSON objects with "level" key) before actual data
-  # 2. Debug printf statements from Go code (non-JSON text)
-  # 3. Info/warning messages (non-JSON text)
-  #
-  # Strategy:
-  # 1. Try to find JSON array/object boundaries using bracket matching
-  # 2. If bracket matching fails, fall back to line-by-line filtering
-  # 3. Filter out known log patterns (structured logs, debug output)
-  #
-  # This ensures we extract valid JSON even when debug output pollutes stdout/stderr.
-  defp extract_json_from_output(output) when is_binary(output) do
-    # Strategy 1: Try to extract JSON via bracket matching (most reliable)
-    case extract_json_by_brackets(output) do
-      {:ok, json} ->
-        json
-
-      :not_found ->
-        # Strategy 2: Fall back to line-by-line filtering
-        extract_json_by_line_filtering(output)
-    end
-  end
-
-  # Extract JSON by finding the first valid JSON array or object.
-  #
-  # Scans through the output character by character, tracking bracket depth.
-  # Returns the first complete JSON structure found (either [...] or {...}).
-  #
-  # This is more robust than line-based filtering because it handles:
-  # - Multi-line JSON
-  # - Debug output mixed with JSON
-  # - Partial JSON fragments
-  defp extract_json_by_brackets(output) do
-    # Find the first '[' or '{' character
-    start_index = find_json_start(output, 0)
-
-    if start_index do
-      extract_json_from_position(output, start_index)
-    else
-      :not_found
-    end
-  end
-
-  # Find the position of the first '[' or '{' character that could start JSON
-  defp find_json_start(output, index) when index < byte_size(output) do
-    case :binary.at(output, index) do
-      ?[ -> index
-      ?{ -> index
-      _ -> find_json_start(output, index + 1)
-    end
-  end
-
-  defp find_json_start(_output, _index), do: nil
-
-  # Extract a complete JSON structure starting at the given position
-  defp extract_json_from_position(output, start_index) do
-    starting_char = :binary.at(output, start_index)
-    closing_char = if starting_char == ?[, do: ?], else: ?}
-
-    case find_matching_bracket(output, start_index + 1, starting_char, closing_char, 1) do
-      {:ok, end_index} ->
-        json_length = end_index - start_index + 1
-        json = :binary.part(output, start_index, json_length)
-        {:ok, json}
-
-      :not_found ->
-        :not_found
-    end
-  end
-
-  # Find the matching closing bracket, tracking nested brackets
-  defp find_matching_bracket(output, index, open_char, close_char, depth)
-       when index < byte_size(output) do
-    char = :binary.at(output, index)
-
-    cond do
-      # Found closing bracket and depth is 0 - we're done
-      char == close_char and depth == 1 ->
-        {:ok, index}
-
-      # Found another opening bracket - increase depth
-      char == open_char ->
-        find_matching_bracket(output, index + 1, open_char, close_char, depth + 1)
-
-      # Found a closing bracket - decrease depth
-      char == close_char ->
-        find_matching_bracket(output, index + 1, open_char, close_char, depth - 1)
-
-      # Handle escaped characters and strings (skip them to avoid false matches)
-      char == ?" ->
-        # Skip to the end of the string
-        case skip_json_string(output, index + 1) do
-          {:ok, new_index} ->
-            find_matching_bracket(output, new_index, open_char, close_char, depth)
-
-          :not_found ->
-            :not_found
-        end
-
-      # Any other character - continue
-      true ->
-        find_matching_bracket(output, index + 1, open_char, close_char, depth)
-    end
-  end
-
-  defp find_matching_bracket(_output, _index, _open_char, _close_char, _depth), do: :not_found
-
-  # Skip over a JSON string (handling escaped quotes)
-  defp skip_json_string(output, index) when index < byte_size(output) do
-    char = :binary.at(output, index)
-
-    cond do
-      # Found unescaped closing quote
-      char == ?" ->
-        {:ok, index + 1}
-
-      # Found escape sequence - skip next character
-      char == ?\\ ->
-        skip_json_string(output, index + 2)
-
-      # Regular character - continue
-      true ->
-        skip_json_string(output, index + 1)
-    end
-  end
-
-  defp skip_json_string(_output, _index), do: :not_found
-
-  # Fallback: Extract JSON by filtering out known log patterns line-by-line.
-  #
-  # This is less reliable than bracket matching but handles edge cases where
-  # JSON is corrupted or incomplete.
-  defp extract_json_by_line_filtering(output) do
-    lines = String.split(output, "\n")
-
-    # Filter out known log patterns
-    clean_lines =
-      Enum.reject(lines, fn line ->
-        trimmed = String.trim(line)
-
-        # Skip empty lines
-        if trimmed == "" do
-          true
-        else
-          # Filter out structured logs (JSON with "level" and "msg")
-          is_structured_log = String.starts_with?(trimmed, "{") and
-            String.ends_with?(trimmed, "}") and
-            String.contains?(trimmed, "\"level\"") and
-            String.contains?(trimmed, "\"msg\"")
-
-          # Filter out common debug patterns
-          is_debug_output = String.starts_with?(trimmed, "DEBUG:") or
-            String.starts_with?(trimmed, "INFO:") or
-            String.starts_with?(trimmed, "WARN:") or
-            String.starts_with?(trimmed, "ERROR:") or
-            String.contains?(trimmed, "magicsock:") or
-            String.contains?(trimmed, "derp:") or
-            String.contains?(trimmed, "wireguard:")
-
-          is_structured_log or is_debug_output
-        end
-      end)
-
-    # Rejoin the remaining lines
-    Enum.join(clean_lines, "\n")
-  end
-
   @doc """
-  Lists WireGuard peer information including public keys, endpoints, traffic stats, and more.
+  Lists detailed WireGuard peer information from the local netclient daemon.
 
-  Returns detailed peer information from the WireGuard interface with data enriched from
-  the Netmaker server (hostnames, network associations, etc.).
+  Returns comprehensive peer data including handshake times, traffic statistics,
+  and endpoint information for all networks or a specific network.
 
   ## Options
-    - `:network` - Filter peers by network name (optional)
-    - `:json` - Return raw JSON output (default: true for programmatic access)
+    - `:network` - Filter by network name (optional)
+    - `:json` - Return JSON output (default: true)
 
   ## Returns
-    - `{:ok, peer_info}` - Peer information map
+    - `{:ok, peer_data}` - Map with "interface" and "peers" keys
     - `{:error, reason}` - Failed to get peer information
-
-  ## Peer Info Structure (when json: true)
-      %{
-        "interface" => %{
-          "name" => "netmaker",
-          "port" => 51821,
-          "public_key" => "abc123..."
-        },
-        "peers" => %{
-          "admin-cluster-1" => [
-            %{
-              "public_key" => "xyz789...",
-              "host_name" => "admin-abc123",
-              "network" => "admin-cluster-1",
-              "endpoint" => "192.168.1.5:51821",
-              "last_handshake" => "2 minutes ago",
-              "last_handshake_time" => "2025-12-25T08:00:00Z",
-              "receive_bytes" => 1024000,
-              "transmit_bytes" => 2048000,
-              "allowed_ips" => ["100.63.0.1/32"],
-              "is_extclient" => false,
-              "username" => ""
-            }
-          ],
-          "cluster-default" => [...]
-        }
-      }
 
   ## Examples
 
-      # Get all peers across all networks
-      {:ok, peer_info} = Nexmaker.Cli.list_peers()
+      # List all peers across all networks
+      {:ok, %{"peers" => peers}} = Nexmaker.Cli.list_peers()
 
-      # Get peers for specific network
-      {:ok, peer_info} = Nexmaker.Cli.list_peers(network: "admin-cluster-1")
-
-      # Access interface info
-      %{"interface" => %{"name" => iface}} = peer_info
-
-      # Access peers by network
-      admin_peers = peer_info["peers"]["admin-cluster-1"]
+      # List peers for specific network
+      {:ok, data} = Nexmaker.Cli.list_peers(network: "cluster-default")
   """
   @spec list_peers(keyword()) :: {:ok, map()} | {:error, any()}
   def list_peers(opts \\ []) do
@@ -903,30 +681,8 @@ defmodule Nexmaker.Cli do
     case System.cmd("netclient", ["peers" | args], stderr_to_stdout: true) do
       {output, 0} ->
         if json do
-          # Extract JSON from output (skip any error logs)
-          cleaned_output = extract_json_from_output(output)
-
-          case Jason.decode(cleaned_output) do
-            {:ok, peer_data} when is_map(peer_data) ->
-              {:ok, peer_data}
-
-            {:ok, []} ->
-              # Empty array means no peers - return empty peer map structure
-              Logger.warning("netclient peers returned empty array (no peers found)")
-              {:ok, %{"peers" => %{}}}
-
-            {:ok, other} ->
-              Logger.error("netclient peers returned unexpected JSON format (expected map, got #{inspect(other)})")
-              Logger.debug("Raw output: #{output}")
-              Logger.debug("Cleaned output: #{cleaned_output}")
-              {:error, :invalid_output_format}
-
-            {:error, reason} ->
-              Logger.error("Failed to parse netclient peers output: #{inspect(reason)}")
-              Logger.debug("Raw output: #{output}")
-              Logger.debug("Cleaned output: #{cleaned_output}")
-              {:error, {:json_parse_error, reason}}
-          end
+          # Use robust parser based on netclient source code
+          Nexmaker.CliParser.parse_peers_output(output)
         else
           # Return raw text output
           {:ok, output}
@@ -1015,20 +771,8 @@ defmodule Nexmaker.Cli do
     case System.cmd("netclient", ["ping" | args], stderr_to_stdout: true) do
       {output, 0} ->
         if json do
-          # Extract JSON from output (skip any error logs)
-          cleaned_output = extract_json_from_output(output)
-
-          case Jason.decode(cleaned_output) do
-            {:ok, ping_results} when is_map(ping_results) ->
-              {:ok, ping_results}
-
-            {:ok, _other} ->
-              {:error, :invalid_output_format}
-
-            {:error, reason} ->
-              Logger.error("Failed to parse netclient ping output: #{inspect(reason)}")
-              {:error, {:json_parse_error, reason}}
-          end
+          # Use robust parser based on netclient source code
+          Nexmaker.CliParser.parse_ping_output(output)
         else
           # Return raw text output
           {:ok, output}

@@ -330,17 +330,25 @@ defmodule EdgeAgent.Vpn do
   @doc """
   Waits and verifies VPN connection was established after join.
 
-  Waits 5 seconds for the network to stabilize, then performs health check.
+  Retries health check for up to 30 seconds (6 attempts x 5 second intervals).
   Accepts both healthy and degraded states as successful (degraded is common after fresh join).
 
   ## Returns
   - `:ok` - Connection verified (healthy or degraded)
-  - `{:error, reason}` - Connection not established (unhealthy)
+  - `{:error, reason}` - Connection not established after all retries
   """
   @spec verify_connection_after_join() :: :ok | {:error, String.t()}
   def verify_connection_after_join do
     Logger.info("Join command completed, verifying connection...")
-    Process.sleep(5000)
+    verify_connection_with_retry(6, 5000)
+  end
+
+  defp verify_connection_with_retry(0, _interval) do
+    {:error, "Join command succeeded but health check failed after all retries: Not connected to any network"}
+  end
+
+  defp verify_connection_with_retry(attempts_left, interval) do
+    Process.sleep(interval)
 
     case Nexmaker.Cli.health_check() do
       {:ok, :healthy, info} ->
@@ -358,7 +366,8 @@ defmodule EdgeAgent.Vpn do
 
       {:ok, :unhealthy, info} ->
         warnings = info[:warnings] || []
-        {:error, "Join command succeeded but health check failed: #{Enum.join(warnings, "; ")}"}
+        Logger.debug("Health check unhealthy (#{attempts_left - 1} attempts remaining): #{Enum.join(warnings, "; ")}")
+        verify_connection_with_retry(attempts_left - 1, interval)
     end
   end
 end

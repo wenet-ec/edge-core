@@ -81,6 +81,8 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   """
   @spec discover_admins(keyword()) :: {:ok, String.t() | nil, [String.t()]}
   def discover_admins(_opts \\ []) do
+    # Get network name from list_networks first (more reliable than ping)
+    network_name = get_network_name_from_list()
 
     case Nexmaker.Cli.ping_peers() do
       {:ok, ping_data} when is_map(ping_data) ->
@@ -89,28 +91,28 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
         if map_size(peers_by_network) == 0 do
           Logger.warning("No peers found on any network")
           Settings.set_admin_urls([])
-          {:ok, nil, []}
+          {:ok, network_name, []}
         else
           Logger.info("Inspecting peers on #{map_size(peers_by_network)} network(s) for admins...")
 
-          # Get the first network name (we're connected to at least one network)
+          # Get the first network name from ping data (prefer this if available)
           first_network_name = peers_by_network |> Map.keys() |> List.first()
 
           # Scan all networks and collect all discovered admins
           results =
             peers_by_network
-            |> Enum.map(fn {network_name, peers} ->
-              cluster_id = String.replace_prefix(network_name, "cluster-", "")
+            |> Enum.map(fn {net_name, peers} ->
+              cluster_id = String.replace_prefix(net_name, "cluster-", "")
 
-              case discover_admins_from_peers(peers, cluster_id, network_name) do
-                {:ok, admin_urls} -> {network_name, admin_urls}
+              case discover_admins_from_peers(peers, cluster_id, net_name) do
+                {:ok, admin_urls} -> {net_name, admin_urls}
                 {:error, _reason} -> nil
               end
             end)
             |> Enum.reject(&is_nil/1)
 
           case results do
-            [{network_name, _admin_urls} | _rest] ->
+            [{net_name, _admin_urls} | _rest] ->
               # Aggregate all discovered admins from all networks
               all_admin_urls =
                 results |> Enum.flat_map(fn {_network, urls} -> urls end) |> Enum.uniq()
@@ -119,20 +121,36 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
 
               # Store in Settings for AdminClient to use
               Settings.set_admin_urls(all_admin_urls)
-              {:ok, network_name, all_admin_urls}
+              {:ok, net_name, all_admin_urls}
 
             [] ->
               # No admins found, but we're still connected to a network
-              # Return the first network name to enable HTTP fallback registration
+              # Use network_name from list or ping data
+              result_network = first_network_name || network_name
               Logger.warning("No admins discovered across any network")
               Settings.set_admin_urls([])
-              {:ok, first_network_name, []}
+              {:ok, result_network, []}
           end
         end
 
       {:error, reason} ->
         Logger.error("Failed to ping peers: #{inspect(reason)}")
-        {:ok, nil, []}
+        Logger.info("Falling back to network name from list command")
+        Settings.set_admin_urls([])
+        {:ok, network_name, []}
+    end
+  end
+
+  # Get network name from netclient list (fallback when ping fails)
+  defp get_network_name_from_list do
+    case Nexmaker.Cli.list_networks() do
+      {:ok, networks} when is_list(networks) and length(networks) > 0 ->
+        # Get the first network name
+        first_network = List.first(networks)
+        first_network["network"]
+
+      _ ->
+        nil
     end
   end
 

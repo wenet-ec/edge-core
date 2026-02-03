@@ -70,11 +70,12 @@ services:
       - /dev/net/tun:/dev/net/tun
     env_file:
       - ./.envs/.edge_admin
+    environment:
+      - ADMIN_WIREGUARD_PORT=51821
     ports:
       - "4000:44000"       # API 
       - "3128:43128"       # HTTP Proxy
       - "31080:41080"      # SOCKS5 Proxy
-      - "51821:51821/udp"  # WireGuard
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -122,7 +123,6 @@ services:
       - "4001:44000"       # API
       - "3129:43128"       # HTTP Proxy
       - "1081:41080"       # SOCKS5 Proxy
-      - "51822:51822/udp"  # WireGuard
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -171,7 +171,6 @@ services:
       - "4002:44000"       # API
       - "3130:43128"       # HTTP Proxy
       - "1082:41080"       # SOCKS5 Proxy
-      - "51823:51823/udp"  # WireGuard
     cap_add:
       - NET_ADMIN
       - SYS_MODULE

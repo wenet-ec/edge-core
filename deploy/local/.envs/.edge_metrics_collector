@@ -4,3 +4,4 @@ VM_promscrape_httpSDCheckInterval=60s
 VM_remoteWrite_url=http://edge_metrics_storage:8428/api/v1/write
 VM_httpListenAddr=:8429
 VM_loggerLevel=WARN
+VM_promscrape_suppressScrapeErrorsDelay=5m

@@ -47,32 +47,74 @@ alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
 
-# Variable to track if we're in the middle of a command
-IN_COMMAND=0
+# List of bash builtins that should NOT be routed to the host
+# These must run in the current shell context
+BASH_BUILTINS="cd exit logout source . alias unalias export set unset declare local readonly typeset eval exec history jobs bg fg wait disown suspend trap"
 
-# This function runs before each command
-preexec() {
-    if [[ $IN_COMMAND -eq 0 ]]; then
-        IN_COMMAND=1
+# Check if a command is a bash builtin
+_is_builtin() {
+    case " $BASH_BUILTINS " in
+        *" $1 "*)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
 
-        # Get the command being executed
-        local cmd="${BASH_COMMAND}"
+# Override command_not_found_handle - called when command doesn't exist in container
+command_not_found_handle() {
+    # Route to host for execution
+    hostscript "$@"
+    return $?
+}
 
-        # Skip hostscript call for certain internal commands to avoid recursion
-        if [[ ! "$cmd" =~ ^(precmd|preexec|history|PROMPT_COMMAND) ]]; then
-            # Call hostscript with the command as argument
-            hostscript "$cmd" 2>/dev/null || true
-        fi
+# Create a general command wrapper using the DEBUG trap
+# This intercepts EVERY command before execution
+_debug_trap() {
+    local cmd="${BASH_COMMAND}"
+
+    # Extract the command name (first word)
+    local cmd_name="${cmd%% *}"
+
+    # Skip if it's a builtin, function, or internal bash operation
+    if _is_builtin "$cmd_name"; then
+        return 0
     fi
+
+    # Skip bash internal operations
+    if [[ "$cmd" =~ ^(PROMPT_COMMAND|_debug_trap|command_not_found_handle) ]]; then
+        return 0
+    fi
+
+    # Execute the command on the host and prevent local execution
+    # Note: We can't actually prevent execution from DEBUG trap,
+    # so we rely on command_not_found_handle for missing commands
+    # and explicit aliases for commands that exist in both places
+    return 0
 }
 
-# This function runs after each command
-precmd() {
-    IN_COMMAND=0
-}
+# We can't reliably intercept ALL commands without breaking bash
+# So we use a hybrid approach:
+# 1. command_not_found_handle for commands not in container
+# 2. Explicit functions for common commands that exist in both places
 
-# Set up the DEBUG trap to run before each command
-trap 'preexec' DEBUG
-
-# Set up PROMPT_COMMAND to run after each command
-PROMPT_COMMAND='precmd'
+# List of common commands to always route to host
+# This is a pragmatic approach - cover the most common cases
+for cmd in docker docker-compose podman crictl ctr nerdctl buildah systemctl journalctl service \
+           ip ss netstat iptables nft route ifconfig ping traceroute dig nslookup \
+           ps top htop pgrep pkill kill killall pidof \
+           free vmstat iostat mpstat sar dmesg \
+           df du lsblk fdisk parted mkfs mount umount blkid wipefs \
+           lsmod modprobe rmmod insmod lspci lsusb lscpu \
+           uname hostnamectl hostname \
+           systemd-analyze timedatectl localectl networkctl nmcli \
+           firewall-cmd ufw fail2ban-client \
+           apt apt-get dpkg yum dnf rpm zypper pacman \
+           snap flatpak \
+           wg wg-quick \
+           useradd userdel usermod groupadd groupdel passwd chpasswd \
+           kubectl k3s microk8s; do
+    eval "function $cmd() { hostscript $cmd \"\$@\"; }"
+done

@@ -2,13 +2,14 @@
 # deploy/production/compose/edge_agent/hostscript
 
 if [ $# -eq 0 ]; then
-    # Interactive mode - try nsenter, fallback to chroot
-    nsenter -t 1 -m -u -i -n -p bash 2>/dev/null || \
-    nsenter -t 1 -m -u -n -p bash 2>/dev/null || \
-    chroot /host bash 2>/dev/null || \
-    chroot /host sh 2>&1
+    # Interactive mode - enter host namespace with interactive bash
+    # The -i flag makes bash interactive and reads environment variables
+    nsenter -t 1 -m -u -i -n -p bash -i 2>/dev/null || \
+    nsenter -t 1 -m -u -n -p bash -i 2>/dev/null || \
+    chroot /host bash -i 2>/dev/null || \
+    chroot /host sh -i 2>&1
 else
-    # Command execution - try nsenter, fallback to chroot  
+    # Command execution - try nsenter, fallback to chroot
     nsenter -t 1 -m -u -i -n -p bash -c "$*" 2>/dev/null || \
     nsenter -t 1 -m -u -n -p bash -c "$*" 2>/dev/null || \
     chroot /host bash -c "$*" 2>/dev/null || \

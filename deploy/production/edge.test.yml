@@ -9,7 +9,6 @@ networks:
 
 volumes:
   production_edge_agent_data: {}
-  production_edge_agent_netclient_data: {}
   production_registry_data: {}
 
 services:
@@ -21,7 +20,6 @@ services:
     container_name: production_edge_agent
     volumes:
       - production_edge_agent_data:/app/data
-      - production_edge_agent_netclient_data:/etc/netclient
       - /etc/resolv.conf:/etc/resolv.conf:rw
       - /:/host:ro
       - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:ro

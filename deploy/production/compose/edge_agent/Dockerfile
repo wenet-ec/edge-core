@@ -106,8 +106,6 @@ RUN apt-get update -y && \
     # Install netclient in same layer
     wget -q "https://github.com/gravitl/netclient/releases/download/${NETCLIENT_VERSION}/netclient-linux-amd64" -O /usr/local/bin/netclient && \
     chmod +x /usr/local/bin/netclient && \
-    mkdir -p /etc/netclient && \
-    chmod 0775 /etc/netclient && \
     # Clean up in same layer to reduce image size
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/* node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64*
@@ -125,8 +123,9 @@ RUN chmod +x /usr/local/bin/prometheus_wireguard_exporter
 COPY --from=builder /app/_build/prod/rel/edge_agent /app
 RUN chmod +x /app/bin/migrate /app/bin/server
 
-# Create directories with proper permissions
-RUN mkdir -p /app/data /tmp/erl_crash && \
+# Create unified data directory structure with symlink for netclient
+RUN mkdir -p /app/data/edge /app/data/vpn /tmp/erl_crash && \
+    ln -sfn /app/data/vpn /etc/netclient && \
     chmod -R 755 /app/data /tmp/erl_crash
 
 # Copy entrypoint and utility scripts

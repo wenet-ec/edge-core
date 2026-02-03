@@ -4,7 +4,7 @@ import EdgeAgent.Config
 
 # Optional environment variables with defaults
 config :edge_agent, EdgeAgent.Repo,
-  database: get_env("DATABASE_PATH", :string, "/app/data/edge_agent.db"),
+  database: get_env("DATABASE_PATH", :string, "/app/data/agent/edge_agent.db"),
   pool_size: get_env("DATABASE_POOL_SIZE", :integer, 3)
 
 # NOTE: Only set `server` to `true` if `PHX_SERVER` is present. We cannot set

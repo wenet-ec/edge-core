@@ -142,9 +142,7 @@ ENV LC_ALL=en_US.UTF-8
 
 # Copy patched netclient binary from builder stage (TEST VARIANT)
 COPY --from=netclient-builder /build/netclient /usr/local/bin/netclient
-RUN chmod +x /usr/local/bin/netclient && \
-    mkdir -p /etc/netclient && \
-    chmod 0775 /etc/netclient
+RUN chmod +x /usr/local/bin/netclient
 
 # Copy wireguard_exporter binary from official Docker image
 COPY --from=mindflavor/prometheus-wireguard-exporter:3.6.6 /usr/local/bin/prometheus_wireguard_exporter /usr/local/bin/prometheus_wireguard_exporter
@@ -154,8 +152,9 @@ RUN chmod +x /usr/local/bin/prometheus_wireguard_exporter
 COPY --from=builder /app/_build/prod/rel/edge_agent /app
 RUN chmod +x /app/bin/migrate /app/bin/server
 
-# Create directories with proper permissions
-RUN mkdir -p /app/data /tmp/erl_crash && \
+# Create unified data directory structure with symlink for netclient
+RUN mkdir -p /app/data/edge /app/data/vpn /tmp/erl_crash && \
+    ln -sfn /app/data/vpn /etc/netclient && \
     chmod -R 755 /app/data /tmp/erl_crash
 
 # Copy entrypoint and utility scripts

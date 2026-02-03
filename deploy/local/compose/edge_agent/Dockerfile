@@ -89,18 +89,17 @@ RUN wget -q https://github.com/prometheus/node_exporter/releases/download/v${NOD
 
 # Copy patched netclient binary from builder stage
 COPY --from=netclient-builder /build/netclient /usr/local/bin/netclient
-RUN chmod +x /usr/local/bin/netclient && \
-    mkdir -p /etc/netclient && \
-    chmod 0775 /etc/netclient
+RUN chmod +x /usr/local/bin/netclient
 
 # Copy wireguard_exporter binary from official Docker image
 COPY --from=mindflavor/prometheus-wireguard-exporter:3.6.6 /usr/local/bin/prometheus_wireguard_exporter /usr/local/bin/prometheus_wireguard_exporter
 RUN chmod +x /usr/local/bin/prometheus_wireguard_exporter
 
-# Create app user
+# Create app user and unified data directory structure with symlink for netclient
 RUN groupadd --gid 1000 app && \
     useradd --uid 1000 --gid app --shell /bin/bash --create-home app && \
-    mkdir -p /app/data && \
+    mkdir -p /app/data/edge /app/data/vpn && \
+    ln -sfn /app/data/vpn /etc/netclient && \
     chown -R app:app /app
 
 # Install Hex and Rebar

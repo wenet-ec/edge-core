@@ -39,7 +39,8 @@ config :edge_admin,
   ]
 
 config :edge_admin,
-  live_dashboard_enabled: get_env("LIVE_DASHBOARD_ENABLED", :boolean, false)
+  live_dashboard_enabled: get_env("LIVE_DASHBOARD_ENABLED", :boolean, false),
+  api_docs_enabled: get_env("API_DOCS_ENABLED", :boolean, true)
 
 if auth_enabled do
   master_key = get_env!("MASTER_KEY")

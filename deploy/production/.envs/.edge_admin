@@ -27,9 +27,13 @@ BASIC_AUTH_USERNAME=admin
 BASIC_AUTH_PASSWORD=admin
 
 # =============================================================================
-# LiveDashboard
+# Development & Debugging Tools
 # =============================================================================
 LIVE_DASHBOARD_ENABLED=true
+
+# API Documentation (SwaggerUI, ReDoc, OpenAPI spec)
+# SECURITY: Disable in production to prevent API endpoint discovery
+# API_DOCS_ENABLED=false
 
 # =============================================================================
 # Authentication & Authorization

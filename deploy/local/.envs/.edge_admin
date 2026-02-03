@@ -27,9 +27,13 @@ CORS_ALLOWED_ORIGINS=*
 # BASIC_AUTH_PASSWORD=admin
 
 # =============================================================================
-# LiveDashboard
+# Development & Debugging Tools
 # =============================================================================
 LIVE_DASHBOARD_ENABLED=true
+
+# API Documentation (SwaggerUI, ReDoc, OpenAPI spec)
+# Enabled by default for development (set to false to test production behavior)
+# API_DOCS_ENABLED=true
 
 # =============================================================================
 # Authentication & Authorization

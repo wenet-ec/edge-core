@@ -8,11 +8,6 @@ defmodule EdgeAdminWeb.Router do
   alias EdgeAdminWeb.Controllers.Agents
   alias OpenApiSpex.Plug.PutApiSpec
 
-  pipeline :browser do
-    plug(:fetch_session)
-    plug(:fetch_live_flash)
-  end
-
   # Browser pipeline with basic auth (for LiveDashboard only)
   pipeline :browser_with_basic_auth do
     plug(:fetch_session)
@@ -44,6 +39,14 @@ defmodule EdgeAdminWeb.Router do
   pipeline :open_api do
     plug(:accepts, ["json"])
     plug(PutApiSpec, module: EdgeAdminWeb.ApiSpec)
+    plug(EdgeAdminWeb.Plugs.ApiDocsEnabled)
+  end
+
+  # API documentation UI pipeline (SwaggerUI, ReDoc)
+  pipeline :api_docs_ui do
+    plug(:fetch_session)
+    plug(:fetch_live_flash)
+    plug(EdgeAdminWeb.Plugs.ApiDocsEnabled)
   end
 
   # Agent API pipeline (requires agent api_token)
@@ -53,8 +56,10 @@ defmodule EdgeAdminWeb.Router do
     plug(EdgeAdminWeb.Plugs.AgentAuth)
   end
 
+  # API documentation endpoints (SwaggerUI, ReDoc)
+  # Disabled in production via API_DOCS_ENABLED=false
   scope "/" do
-    pipe_through(:browser)
+    pipe_through(:api_docs_ui)
 
     # Serve SwaggerUI - this is what you'll navigate to see the docs
     get("/swaggerui", OpenApiSpex.Plug.SwaggerUI, path: "/api/openapi")

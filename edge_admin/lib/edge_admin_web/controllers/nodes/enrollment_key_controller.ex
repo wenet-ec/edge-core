@@ -27,7 +27,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     **Note:** This endpoint is unavailable during degraded mode (503).
     """,
     parameters: [
-      name: [
+      cluster_name: [
         in: :path,
         description: "Cluster name",
         schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"}
@@ -42,7 +42,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     }
   )
 
-  def create(conn, %{"name" => cluster_name} = params) do
+  def create(conn, %{"cluster_name" => cluster_name} = params) do
     with {:ok, cluster} <- Nodes.get_cluster(cluster_name),
          {:ok, enrollment_key} <- Nodes.create_enrollment_key(cluster, params) do
       conn

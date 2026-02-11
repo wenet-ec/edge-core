@@ -242,7 +242,7 @@ services:
     command: -conf /root/config/dnsconfig/Corefile
 
   edge_vpn_proxy:
-    image: caddy:2.10-alpine
+    image: caddy:alpine
     container_name: production_edge_vpn_proxy
     networks:
       - production_edge_core

@@ -217,37 +217,89 @@ defmodule Nexmaker.CliParser do
     |> Enum.join("\n")
   end
 
-  # Extract JSON using regex patterns
-  defp extract_json_by_regex(output, :array) do
-    # Match complete JSON array: [ ... ]
-    # This regex finds balanced brackets
-    case Regex.run(~r/(\[(?:[^\[\]]|\[(?:[^\[\]]|\[[^\[\]]*\])*\])*\])/s, output) do
-      [_, json] ->
-        # Validate it's actually valid JSON before returning
+  # Extract JSON by scanning for the first balanced bracket/brace structure.
+  # Uses a character-by-character scan so it handles arbitrary nesting depth,
+  # unlike regex which only handles a fixed number of levels.
+  defp extract_json_by_regex(output, type) do
+    {open, close, not_found_error} =
+      case type do
+        :array -> {?[, ?], :no_array_found}
+        :object -> {?{, ?}, :no_object_found}
+      end
+
+    case find_balanced(output, open, close) do
+      {:ok, json} ->
         case Jason.decode(json) do
           {:ok, _} -> {:ok, json}
           {:error, _} -> {:error, :no_valid_json_found}
         end
 
-      nil ->
-        {:error, :no_array_found}
+      :not_found ->
+        {:error, not_found_error}
     end
   end
 
-  defp extract_json_by_regex(output, :object) do
-    # Match complete JSON object: { ... }
-    # This regex finds balanced braces
-    case Regex.run(~r/(\{(?:[^\{\}]|\{(?:[^\{\}]|\{[^\{\}]*\})*\})*\})/s, output) do
-      [_, json] ->
-        # Validate it's actually valid JSON before returning
-        case Jason.decode(json) do
-          {:ok, _} -> {:ok, json}
-          {:error, _} -> {:error, :no_valid_json_found}
+  # Scans `str` for the first occurrence of `open` then finds its matching
+  # `close`, correctly handling nested structures and string literals.
+  defp find_balanced(str, open, close) do
+    chars = String.to_charlist(str)
+
+    case Enum.find_index(chars, &(&1 == open)) do
+      nil ->
+        :not_found
+
+      start_idx ->
+        chars_from_start = Enum.drop(chars, start_idx)
+
+        case scan_balanced(chars_from_start, open, close, 0, []) do
+          {:ok, json_chars} -> {:ok, List.to_string(json_chars)}
+          :not_found -> :not_found
+        end
+    end
+  end
+
+  # Walk through chars tracking depth, respecting JSON string escaping.
+  # Returns {:ok, accumulated_chars} when depth returns to 0 after opening.
+  defp scan_balanced([], _open, _close, _depth, _acc), do: :not_found
+
+  defp scan_balanced([h | rest], open, close, depth, acc) do
+    cond do
+      h == ?" ->
+        {string_chars, remaining} = consume_string(rest, [?"])
+        scan_balanced(remaining, open, close, depth, acc ++ string_chars)
+
+      h == open ->
+        scan_balanced(rest, open, close, depth + 1, acc ++ [h])
+
+      h == close ->
+        new_depth = depth - 1
+        new_acc = acc ++ [h]
+
+        if new_depth == 0 do
+          {:ok, new_acc}
+        else
+          scan_balanced(rest, open, close, new_depth, new_acc)
         end
 
-      nil ->
-        {:error, :no_object_found}
+      true ->
+        scan_balanced(rest, open, close, depth, acc ++ [h])
     end
+  end
+
+  # Consume chars until the closing `"`, handling `\"` escapes.
+  # Returns {consumed_chars_including_quotes, remaining_chars}.
+  defp consume_string([], acc), do: {acc ++ [?"], []}
+
+  defp consume_string([?\\, next | rest], acc) do
+    consume_string(rest, acc ++ [?\\, next])
+  end
+
+  defp consume_string([?" | rest], acc) do
+    {acc ++ [?"], rest}
+  end
+
+  defp consume_string([h | rest], acc) do
+    consume_string(rest, acc ++ [h])
   end
 
   # Validate ping result structure: %{network_name => [%{name, address, connected, ...}]}

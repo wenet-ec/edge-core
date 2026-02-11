@@ -535,17 +535,13 @@ defmodule Nexmaker.Cli do
   def check_connection(network_name) when is_binary(network_name) do
     case System.cmd("netclient", ["list", network_name], stderr_to_stdout: true) do
       {output, 0} ->
-        # Use robust parser based on netclient source code
         case Nexmaker.CliParser.parse_list_output(output) do
-          {:ok, [network_info | _]} when is_map(network_info) ->
-            # Check if actually connected
+          {:ok, [network_info | _]} ->
             connected = Map.get(network_info, "connected", false)
 
             if connected do
-              # Extract subnet from ipv4_addr (e.g., "100.63.0.5/24" -> "100.63.0.0/24")
               subnet = extract_subnet(Map.get(network_info, "ipv4_addr", ""))
 
-              # Convert to atom keys for easier access
               processed_info = %{
                 network: Map.get(network_info, "network"),
                 node_id: Map.get(network_info, "node_id"),
@@ -560,53 +556,23 @@ defmodule Nexmaker.Cli do
               {:error, :not_connected}
             end
 
-          {:ok, decoded} when is_map(decoded) ->
-            # Single network returned as map instead of list
-            connected = Map.get(decoded, "connected", false)
-
-            if connected do
-              subnet = extract_subnet(Map.get(decoded, "ipv4_addr", ""))
-
-              processed_info = %{
-                network: Map.get(decoded, "network"),
-                node_id: Map.get(decoded, "node_id"),
-                connected: connected,
-                ipv4_addr: Map.get(decoded, "ipv4_addr"),
-                ipv6_addr: Map.get(decoded, "ipv6_addr"),
-                subnet: subnet
-              }
-
-              {:ok, processed_info}
-            else
-              {:error, :not_connected}
-            end
-
           {:ok, []} ->
             {:error, :not_found}
 
-          {:ok, other} ->
-            Logger.error("Unexpected netclient list output format: #{inspect(other)}")
-            {:error, :invalid_output_format}
-
           {:error, json_error} ->
-            # Check if it's a "no such network" message that isn't valid JSON
             if String.contains?(output, "no such network") do
               {:error, :not_found}
             else
               Logger.error(
-                "Failed to parse netclient output as JSON: #{inspect(json_error)}, output: #{output}"
+                "Failed to parse netclient output: #{inspect(json_error)}, output: #{output}"
               )
 
               {:error, {:json_parse_error, json_error}}
             end
         end
 
-      {output, _exit_code} ->
-        if String.contains?(output, "no such network") do
-          {:error, :not_found}
-        else
-          {:error, :not_found}
-        end
+      {_output, _exit_code} ->
+        {:error, :not_found}
     end
   rescue
     e in ErlangError ->

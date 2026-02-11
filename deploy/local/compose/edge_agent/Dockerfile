@@ -3,7 +3,7 @@
 # Build netclient from our fork (DERP support + NETMAKER_API_SCHEME)
 FROM golang:1.25-bookworm AS netclient-builder
 
-ARG NETCLIENT_REPO=https://github.com/WENETVIETNAM/netclient.git
+ARG NETCLIENT_REPO=https://github.com/wenet-ec/netclient.git
 ARG NETCLIENT_VERSION=v1.4.0-derp
 
 WORKDIR /build

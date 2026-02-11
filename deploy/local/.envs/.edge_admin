@@ -70,9 +70,13 @@ NETMAKER_SUPERADMIN_PASSWORD=admin
 
 # --- WireGuard Mode ---
 # Options: wireguard-go (userspace), unset for kernel mode
-# Agent runs host network + privileged: use kernel mode (faster)
-# Admin runs container network: may need userspace mode
+# Agent runs host network + privileged: use kernel mode (faster) or userspace mode (derp support)
+# Admin runs container network: use userspace mode
 WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
+
+# --- Netclient API Scheme ---
+# Use http for local dev (no TLS certs). Production uses https (default).
+NETMAKER_API_SCHEME=http
 
 # --- Cluster Network Configuration ---
 # Subnet size for auto-generated clusters (e.g., 24 = /24 = 254 hosts)

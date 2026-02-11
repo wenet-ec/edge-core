@@ -1,6 +1,24 @@
 # deploy/production/compose/edge_agent/Dockerfile
 
 # -----------------------------------------------
+# Stage 0: Build netclient with DERP support
+# -----------------------------------------------
+FROM golang:1.25-bookworm AS netclient-builder
+
+ARG NETCLIENT_REPO=https://github.com/WENETVIETNAM/netclient.git
+ARG NETCLIENT_VERSION=v1.4.0-derp
+
+WORKDIR /build
+
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends git ca-certificates && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 1 --branch ${NETCLIENT_VERSION} ${NETCLIENT_REPO} .
+RUN go mod tidy && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o netclient -ldflags="-s -w" .
+
+# -----------------------------------------------
 # Stage 1: Build the OTP release
 # -----------------------------------------------
 FROM elixir:1.19.5-otp-28-slim AS builder
@@ -65,7 +83,6 @@ RUN --mount=type=cache,target=/root/.hex \
 # -----------------------------------------------
 FROM debian:stable-20250520-slim
 
-ARG NETCLIENT_VERSION=v1.4.0
 ENV NODE_EXPORTER_VERSION="1.10.2"
 
 # Install runtime dependencies in single layer
@@ -103,12 +120,14 @@ RUN apt-get update -y && \
     tar xzf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz && \
     mv node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64/node_exporter /usr/local/bin/ && \
     chmod +x /usr/local/bin/node_exporter && \
-    # Install netclient in same layer
-    wget -q "https://github.com/gravitl/netclient/releases/download/${NETCLIENT_VERSION}/netclient-linux-amd64" -O /usr/local/bin/netclient && \
-    chmod +x /usr/local/bin/netclient && \
     # Clean up in same layer to reduce image size
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/* node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64*
+
+# Copy netclient built from source
+COPY --from=netclient-builder /build/netclient /usr/local/bin/netclient
+RUN chmod +x /usr/local/bin/netclient
+ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
 
 # Set locale environment variables
 ENV LANG=en_US.UTF-8

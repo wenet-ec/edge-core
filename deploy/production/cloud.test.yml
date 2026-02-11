@@ -43,7 +43,7 @@ services:
   edge_admin:
     build:
       context: ../..
-      dockerfile: ./deploy/production/compose/edge_admin/Dockerfile.test
+      dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
     image: production_edge_admin
     container_name: production_edge_admin
     networks:
@@ -63,6 +63,7 @@ services:
     environment:
       - NETMAKER_API_URL=http://netmaker.localtest.me
       - ADMIN_WIREGUARD_PORT=51821
+      - NETMAKER_API_SCHEME=http
     ports:
       - "34000:44000"
       - "33128:43128"  # HTTP proxy
@@ -84,7 +85,7 @@ services:
   edge_admin_2:
     build:
       context: ../..
-      dockerfile: ./deploy/production/compose/edge_admin/Dockerfile.test
+      dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
     image: production_edge_admin
     container_name: production_edge_admin_2
     networks:
@@ -105,6 +106,7 @@ services:
       - ./.envs/.edge_admin
     environment:
       - NETMAKER_API_URL=http://netmaker.localtest.me
+      - NETMAKER_API_SCHEME=http
     ports:
       - "34001:44000"
       - "33129:43128"  # HTTP proxy
@@ -126,7 +128,7 @@ services:
   edge_admin_3:
     build:
       context: ../..
-      dockerfile: ./deploy/production/compose/edge_admin/Dockerfile.test
+      dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
     image: production_edge_admin
     container_name: production_edge_admin_3
     networks:
@@ -149,6 +151,7 @@ services:
       - ADMIN_CLUSTER_NAME=b
       - ADMIN_CLUSTER_SUBNET=100.63.1.0/24
       - NETMAKER_API_URL=http://netmaker.localtest.me
+      - NETMAKER_API_SCHEME=http
     ports:
       - "34002:44000"
       - "33130:43128"  # HTTP proxy

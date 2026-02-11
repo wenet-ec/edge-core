@@ -1,6 +1,24 @@
 # deploy/production/compose/edge_admin/Dockerfile
 
 # -----------------------------------------------
+# Stage 0: Build netclient with DERP support
+# -----------------------------------------------
+FROM golang:1.25-bookworm AS netclient-builder
+
+ARG NETCLIENT_REPO=https://github.com/WENETVIETNAM/netclient.git
+ARG NETCLIENT_VERSION=v1.4.0-derp
+
+WORKDIR /build
+
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends git ca-certificates && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 1 --branch ${NETCLIENT_VERSION} ${NETCLIENT_REPO} .
+RUN go mod tidy && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o netclient -ldflags="-s -w" .
+
+# -----------------------------------------------
 # Stage 1: Build the OTP release
 # -----------------------------------------------
 FROM elixir:1.19.5-otp-28-slim AS builder
@@ -65,8 +83,6 @@ RUN --mount=type=cache,target=/root/.hex \
 # -----------------------------------------------
 FROM debian:stable-20250520-slim
 
-ARG NETCLIENT_VERSION=v1.4.0
-
 # Install runtime dependencies in single layer
 # Grouped by purpose for maintainability
 RUN apt-get update -y && \
@@ -86,6 +102,8 @@ RUN apt-get update -y && \
     iproute2 \
     iputils-ping \
     iptables \
+    # WireGuard management (wg show, wg showconf)
+    wireguard-tools \
     # Proxy troubleshooting
     netcat-openbsd && \
     # Set locale in same layer
@@ -106,9 +124,9 @@ ENV LC_ALL=en_US.UTF-8
 # Admins always use dynamic clustering (started after VPN join)
 ENV RELEASE_DISTRIBUTION=none
 
-# Download official netclient binary
-RUN wget -q "https://github.com/gravitl/netclient/releases/download/${NETCLIENT_VERSION}/netclient-linux-amd64" -O /usr/local/bin/netclient && \
-    chmod +x /usr/local/bin/netclient && \
+# Copy netclient built from source
+COPY --from=netclient-builder /build/netclient /usr/local/bin/netclient
+RUN chmod +x /usr/local/bin/netclient && \
     mkdir -p /etc/netclient && \
     chmod 0775 /etc/netclient
 

@@ -1,26 +1,20 @@
 # deploy/local/compose/edge_agent/Dockerfile
 
-# Build netclient with HTTP patches (for local development)
-FROM golang:1.25-alpine AS netclient-builder
+# Build netclient from our fork (DERP support + NETMAKER_API_SCHEME)
+FROM golang:1.25-bookworm AS netclient-builder
 
-ARG NETCLIENT_VERSION=v1.4.0
-
-RUN apk add --no-cache git
+ARG NETCLIENT_REPO=https://github.com/WENETVIETNAM/netclient.git
+ARG NETCLIENT_VERSION=v1.4.0-derp
 
 WORKDIR /build
-RUN git clone https://github.com/gravitl/netclient.git . && \
-    git checkout ${NETCLIENT_VERSION}
 
-# Patch ONLY API-related https:// to http:// (surgical patches for local dev)
-RUN find . -type f -name '*.go' -exec sed -i \
-    -e 's|"https://" + server\.API|"http://" + server.API|g' \
-    -e 's|"https://" + serverData\.Server|"http://" + serverData.Server|g' \
-    -e 's|"https://" + api|"http://" + api|g' \
-    -e 's|fmt\.Sprintf("https://%s/|fmt.Sprintf("http://%s/|g' \
-    {} \;
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends git ca-certificates && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN go mod download && \
-    CGO_ENABLED=0 GOOS=linux go build -o netclient .
+RUN git clone --depth 1 --branch ${NETCLIENT_VERSION} ${NETCLIENT_REPO} .
+RUN go mod tidy && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o netclient -ldflags="-s -w" .
 
 # Main Elixir stage - Use Debian slim (better Elixir/Erlang compatibility than Alpine)
 FROM elixir:1.19.5-otp-28-slim AS elixir-dev-stage
@@ -87,7 +81,10 @@ RUN wget -q https://github.com/prometheus/node_exporter/releases/download/v${NOD
     chmod +x /usr/local/bin/node_exporter && \
     rm -rf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64*
 
-# Copy patched netclient binary from builder stage
+# Use HTTP for Netmaker API (local dev — no TLS certs)
+ENV NETMAKER_API_SCHEME=http
+
+# Copy netclient binary from builder stage
 COPY --from=netclient-builder /build/netclient /usr/local/bin/netclient
 RUN chmod +x /usr/local/bin/netclient
 

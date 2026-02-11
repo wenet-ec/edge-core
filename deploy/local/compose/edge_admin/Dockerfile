@@ -1,31 +1,20 @@
 # deploy/local/compose/edge_admin/Dockerfile
 
-# Build netclient with HTTP patches (for local development)
-FROM golang:1.25-alpine AS netclient-builder
+# Build netclient from our fork (DERP support + NETMAKER_API_SCHEME)
+FROM golang:1.25-bookworm AS netclient-builder
 
-# Define version inside the build stage
-ARG NETCLIENT_VERSION=v1.4.0
+ARG NETCLIENT_REPO=https://github.com/WENETVIETNAM/netclient.git
+ARG NETCLIENT_VERSION=v1.4.0-derp
 
-# Install git
-RUN apk add --no-cache git
-
-# Clone the netclient repository and checkout specific version
 WORKDIR /build
-RUN git clone https://github.com/gravitl/netclient.git . && \
-    git checkout ${NETCLIENT_VERSION}
 
-# Patch ONLY API-related https:// to http:// (surgical patches for local dev)
-# Using find to apply patches to all relevant files
-RUN find . -type f -name '*.go' -exec sed -i \
-    -e 's|"https://" + server\.API|"http://" + server.API|g' \
-    -e 's|"https://" + serverData\.Server|"http://" + serverData.Server|g' \
-    -e 's|"https://" + api|"http://" + api|g' \
-    -e 's|fmt\.Sprintf("https://%s/|fmt.Sprintf("http://%s/|g' \
-    {} \;
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends git ca-certificates && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Build the patched netclient
-RUN go mod download && \
-    CGO_ENABLED=0 GOOS=linux go build -o netclient .
+RUN git clone --depth 1 --branch ${NETCLIENT_VERSION} ${NETCLIENT_REPO} .
+RUN go mod tidy && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o netclient -ldflags="-s -w" .
 
 # Main Elixir stage
 FROM elixir:1.19.5-otp-28-slim AS elixir-dev-stage
@@ -80,7 +69,10 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-# Copy patched netclient binary from builder stage
+# Use HTTP for Netmaker API (local dev — no TLS certs)
+ENV NETMAKER_API_SCHEME=http
+
+# Copy netclient binary from builder stage
 COPY --from=netclient-builder /build/netclient /usr/local/bin/netclient
 RUN chmod +x /usr/local/bin/netclient && \
     mkdir -p /etc/netclient && \

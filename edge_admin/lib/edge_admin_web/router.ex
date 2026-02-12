@@ -6,6 +6,7 @@ defmodule EdgeAdminWeb.Router do
   import Phoenix.LiveView.Router
 
   alias EdgeAdminWeb.Controllers.Agents
+  alias EdgeAdminWeb.Plugs.ApiDocsEnabled
   alias OpenApiSpex.Plug.PutApiSpec
 
   # Browser pipeline with basic auth (for LiveDashboard only)
@@ -39,14 +40,14 @@ defmodule EdgeAdminWeb.Router do
   pipeline :open_api do
     plug(:accepts, ["json"])
     plug(PutApiSpec, module: EdgeAdminWeb.ApiSpec)
-    plug(EdgeAdminWeb.Plugs.ApiDocsEnabled)
+    plug(ApiDocsEnabled)
   end
 
   # API documentation UI pipeline (SwaggerUI, ReDoc)
   pipeline :api_docs_ui do
     plug(:fetch_session)
     plug(:fetch_live_flash)
-    plug(EdgeAdminWeb.Plugs.ApiDocsEnabled)
+    plug(ApiDocsEnabled)
   end
 
   # Agent API pipeline (requires agent api_token)

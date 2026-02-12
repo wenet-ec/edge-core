@@ -13,6 +13,7 @@ defmodule EdgeAdmin.ProxyServers.Authentication do
   require Logger
 
   @nodes_module Application.compile_env(:edge_admin, :nodes_module, EdgeAdmin.Nodes)
+  @compile {:no_warn_undefined, @nodes_module}
 
   @doc """
   Authenticate and parse proxy request.

@@ -194,8 +194,6 @@ services:
     networks:
       - local_edge_core
     depends_on:
-      edge_vpn:
-        condition: service_healthy
       edge_admin_db:
         condition: service_healthy
     volumes:
@@ -203,15 +201,10 @@ services:
       - ../../nexmaker:/nexmaker:z
       - local_edge_admin_deps:/app/deps
       - local_edge_admin_build:/app/_build
-      - /dev/net/tun:/dev/net/tun
     env_file:
       - ./.envs/.edge_admin_test
     profiles:
       - test
-    cap_add:
-      - NET_ADMIN
-    sysctls:
-      - net.ipv4.ip_forward=1
     command: mix test
 
   # Netmaker VPN Stack

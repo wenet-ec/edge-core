@@ -1,0 +1,180 @@
+defmodule EdgeAdmin.Nodes.Forms.CreateClusterFormTest do
+  use ExUnit.Case, async: true
+
+  alias EdgeAdmin.Nodes.Forms.CreateClusterForm
+
+  # ---------------------------------------------------------------------------
+  # helpers
+  # ---------------------------------------------------------------------------
+
+  defp errors_on(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
+  end
+
+  defp valid_attrs(overrides \\ %{}) do
+    Map.merge(%{"name" => "prod", "ipv4_range" => "100.64.1.0/24"}, overrides)
+  end
+
+  # ---------------------------------------------------------------------------
+  # changeset/1 — valid cases
+  # ---------------------------------------------------------------------------
+
+  describe "changeset/1 — valid cases" do
+    test "valid name and ipv4_range succeeds" do
+      assert {:ok, result} = CreateClusterForm.changeset(valid_attrs())
+      assert result["name"] == "prod"
+      assert result["ipv4_range"] == "100.64.1.0/24"
+    end
+
+    test "name is optional (form does not require it)" do
+      # name has no validate_required — schema generates one if missing
+      assert {:ok, result} = CreateClusterForm.changeset(%{"ipv4_range" => "100.64.1.0/24"})
+      refute Map.has_key?(result, "name")
+    end
+
+    test "ipv4_range is optional at form level" do
+      assert {:ok, result} = CreateClusterForm.changeset(%{"name" => "prod"})
+      refute Map.has_key?(result, "ipv4_range")
+    end
+
+    test "wrapped cluster params are unwrapped" do
+      assert {:ok, _result} = CreateClusterForm.changeset(%{"cluster" => valid_attrs()})
+    end
+
+    test "24-character name is valid (max length boundary)" do
+      name = String.duplicate("a", 24)
+      assert {:ok, result} = CreateClusterForm.changeset(valid_attrs(%{"name" => name}))
+      assert result["name"] == name
+    end
+
+    test "name with hyphens succeeds" do
+      assert {:ok, result} =
+               CreateClusterForm.changeset(valid_attrs(%{"name" => "my-cluster"}))
+
+      assert result["name"] == "my-cluster"
+    end
+
+    test "name with digits succeeds" do
+      assert {:ok, result} = CreateClusterForm.changeset(valid_attrs(%{"name" => "cluster01"}))
+      assert result["name"] == "cluster01"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # changeset/1 — name format validation
+  # ---------------------------------------------------------------------------
+
+  describe "changeset/1 — name format validation" do
+    test "uppercase letters are rejected" do
+      assert {:error, changeset} = CreateClusterForm.changeset(valid_attrs(%{"name" => "Prod"}))
+      assert %{name: [_msg]} = errors_on(changeset)
+    end
+
+    test "leading hyphen is rejected" do
+      assert {:error, changeset} =
+               CreateClusterForm.changeset(valid_attrs(%{"name" => "-prod"}))
+
+      assert %{name: [msg]} = errors_on(changeset)
+      assert msg =~ "hyphen"
+    end
+
+    test "trailing hyphen is rejected" do
+      assert {:error, changeset} =
+               CreateClusterForm.changeset(valid_attrs(%{"name" => "prod-"}))
+
+      assert %{name: [_msg]} = errors_on(changeset)
+    end
+
+    test "underscore is rejected" do
+      assert {:error, changeset} =
+               CreateClusterForm.changeset(valid_attrs(%{"name" => "my_cluster"}))
+
+      assert %{name: [_msg]} = errors_on(changeset)
+    end
+
+    test "25-character name exceeds max length" do
+      name = String.duplicate("a", 25)
+
+      assert {:error, changeset} = CreateClusterForm.changeset(valid_attrs(%{"name" => name}))
+      assert %{name: [_msg]} = errors_on(changeset)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # changeset/1 — ipv4_range format validation (shallow regex check)
+  # ---------------------------------------------------------------------------
+
+  describe "changeset/1 — ipv4_range format validation" do
+    test "valid /24 CIDR passes" do
+      assert {:ok, _} = CreateClusterForm.changeset(valid_attrs(%{"ipv4_range" => "10.0.0.0/24"}))
+    end
+
+    test "valid /10 CIDR passes" do
+      assert {:ok, _} =
+               CreateClusterForm.changeset(valid_attrs(%{"ipv4_range" => "100.64.0.0/10"}))
+    end
+
+    test "missing prefix slash is rejected" do
+      assert {:error, changeset} =
+               CreateClusterForm.changeset(valid_attrs(%{"ipv4_range" => "100.64.0.0"}))
+
+      assert %{ipv4_range: [msg]} = errors_on(changeset)
+      assert msg =~ "CIDR"
+    end
+
+    test "text string is rejected" do
+      assert {:error, changeset} =
+               CreateClusterForm.changeset(valid_attrs(%{"ipv4_range" => "not-a-cidr"}))
+
+      assert %{ipv4_range: [_msg]} = errors_on(changeset)
+    end
+
+    test "missing octets is rejected" do
+      assert {:error, changeset} =
+               CreateClusterForm.changeset(valid_attrs(%{"ipv4_range" => "100.64/24"}))
+
+      assert %{ipv4_range: [_msg]} = errors_on(changeset)
+    end
+
+    test "form regex allows out-of-range octets (deep validation is schema's job)" do
+      # The form only checks the pattern x.x.x.x/xx — semantic validation happens in Cluster schema
+      assert {:ok, _} =
+               CreateClusterForm.changeset(valid_attrs(%{"ipv4_range" => "999.999.999.999/99"}))
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # changeset/1 — to_map output
+  # ---------------------------------------------------------------------------
+
+  describe "changeset/1 — to_map output" do
+    test "nil values are excluded from result" do
+      {:ok, result} = CreateClusterForm.changeset(%{"name" => "prod"})
+      refute Map.has_key?(result, "ipv4_range")
+    end
+
+    test "both fields present when both provided" do
+      {:ok, result} = CreateClusterForm.changeset(valid_attrs())
+      assert Map.has_key?(result, "name")
+      assert Map.has_key?(result, "ipv4_range")
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # changeset/1 — invalid param types
+  # ---------------------------------------------------------------------------
+
+  describe "changeset/1 — invalid params" do
+    test "non-map params raise (apply_action! in fallback clause)" do
+      assert_raise Ecto.InvalidChangesetError, fn ->
+        CreateClusterForm.changeset("not_a_map")
+      end
+    end
+
+    test "nil params raise (apply_action! in fallback clause)" do
+      assert_raise Ecto.InvalidChangesetError, fn ->
+        CreateClusterForm.changeset(nil)
+      end
+    end
+  end
+end

@@ -1062,6 +1062,7 @@ defmodule EdgeAdmin.Nodes do
       #   "def-456" => %Node{id: "def-456", ...}
       # }
   """
+  @callback list_node_identifiers_by_cluster(String.t()) :: {:ok, map()} | {:error, :not_found}
   @spec list_node_identifiers_by_cluster(String.t()) :: {:ok, map()} | {:error, :not_found}
   def list_node_identifiers_by_cluster(cluster_name) do
     case get_cluster(cluster_name) do

@@ -1,3 +1,4 @@
+# edge_admin/lib/edge_admin_web/live/netmaker_dashboard.ex
 defmodule EdgeAdminWeb.NetmakerDashboard do
   @moduledoc """
   LiveDashboard page for monitoring Netmaker API integration health.

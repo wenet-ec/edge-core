@@ -23,12 +23,21 @@ defmodule EdgeAdminWeb.Plugs.AgentAuth do
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
 
-  def init(opts), do: opts
+  def init(opts) do
+    Keyword.get(opts, :node_lookup, &__MODULE__.default_lookup/1)
+  end
 
-  def call(conn, _opts) do
+  def default_lookup(token) do
+    case Repo.get_by(Node, api_token: token) do
+      %Node{} = node -> {:ok, Repo.preload(node, :cluster)}
+      nil -> :error
+    end
+  end
+
+  def call(conn, node_lookup) do
     case get_req_header(conn, "authorization") do
       ["Bearer " <> token] ->
-        validate_agent_token(conn, token)
+        validate_agent_token(conn, token, node_lookup)
 
       _ ->
         conn
@@ -38,16 +47,12 @@ defmodule EdgeAdminWeb.Plugs.AgentAuth do
     end
   end
 
-  defp validate_agent_token(conn, token) do
-    case Repo.get_by(Node, api_token: token) do
-      %Node{} = node ->
-        # Preload cluster association for agent endpoints that need it
-        node = Repo.preload(node, :cluster)
-
-        # Assign node to connection (like current_user pattern)
+  defp validate_agent_token(conn, token, node_lookup) do
+    case node_lookup.(token) do
+      {:ok, node} ->
         assign(conn, :current_node, node)
 
-      nil ->
+      :error ->
         conn
         |> put_status(:unauthorized)
         |> json(%{error: "Unauthorized"})

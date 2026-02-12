@@ -27,7 +27,8 @@ defmodule EdgeAdminWeb.Plugs.DegradedMode do
   import Phoenix.Controller
   import Plug.Conn
 
-  alias EdgeAdmin.Admins.Metadata
+  @metadata_module Application.compile_env(:edge_admin, :metadata_module, EdgeAdmin.Admins.Metadata)
+  @compile {:no_warn_undefined, @metadata_module}
 
   def init(mode), do: mode
 
@@ -37,7 +38,7 @@ defmodule EdgeAdminWeb.Plugs.DegradedMode do
   end
 
   def call(conn, :block) do
-    if Metadata.degraded?() do
+    if @metadata_module.degraded?() do
       conn
       |> put_status(:service_unavailable)
       |> put_view(json: EdgeAdminWeb.Controllers.ErrorJSON)

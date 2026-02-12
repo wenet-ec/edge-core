@@ -17,3 +17,4 @@ Ecto.Adapters.SQL.Sandbox.mode(EdgeAdmin.Repo, :manual)
 
 # Define Mox mocks
 Mox.defmock(EdgeAdmin.NodesMock, for: EdgeAdmin.Nodes)
+Mox.defmock(EdgeAdmin.MetadataMock, for: EdgeAdmin.Admins.Metadata)

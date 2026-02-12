@@ -40,6 +40,9 @@ config :edge_admin, EdgeAdminWeb.Endpoint, server: false
 # Disable Oban during tests:
 config :edge_admin, Oban, testing: :manual
 
+# Use mock for Metadata module in tests
+config :edge_admin, :metadata_module, EdgeAdmin.MetadataMock
+
 # Use mock for Nodes module in tests
 config :edge_admin, :nodes_module, EdgeAdmin.NodesMock
 

@@ -135,6 +135,8 @@ defmodule EdgeAdmin.Admins.Metadata do
 
   require Logger
 
+  @callback degraded?() :: boolean()
+
   @table :metadata
 
   # === Lifecycle ===

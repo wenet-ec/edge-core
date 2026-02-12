@@ -101,8 +101,10 @@ defmodule EdgeAgent.SshServer.Channel do
          [
            {~c"TERM", ~c"xterm"},
            {~c"EDGE_NODE_ID", to_charlist(node_id)},
-           {~c"USER", to_charlist(username)}
+           {~c"USER", to_charlist(username)},
+           {~c"HOME", ~c"/root"}
          ]},
+        {:cd, "/root"},
         :binary,
         :use_stdio,
         :exit_status,

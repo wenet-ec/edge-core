@@ -4,7 +4,7 @@
 FROM golang:1.25-bookworm AS netclient-builder
 
 ARG NETCLIENT_REPO=https://github.com/wenet-ec/netclient.git
-ARG NETCLIENT_VERSION=v1.4.0-derp
+ARG NETCLIENT_VERSION=v1.5.0-derp
 
 WORKDIR /build
 

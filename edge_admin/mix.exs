@@ -94,6 +94,7 @@ defmodule EdgeAdmin.Mixfile do
       # Database
       {:ecto_sql, "~> 3.13"},
       {:postgrex, "~> 0.22"},
+      {:uniq, "~> 0.6"},
       {:flop, "~> 0.26"},
 
       # Database check

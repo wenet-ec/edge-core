@@ -52,7 +52,7 @@ services:
       retries: 5
 
   netmaker:
-    image: gravitl/netmaker:v1.4.0
+    image: gravitl/netmaker:v1.5.0
     cap_add:
       - NET_ADMIN
       - SYS_MODULE

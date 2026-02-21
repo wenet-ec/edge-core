@@ -82,7 +82,8 @@ defmodule Nexmaker.CliParser do
 
   ## Returns
   - `{:ok, peers_data}` - Map with "interface" and "peers" keys
-  - `{:ok, %{"peers" => %{}}}` - No peers found (empty array)
+  - `{:ok, %{"peers" => %{}}}` - No peers found (plaintext "No peers found...")
+  - `{:error, {:peers_failed, reason}}` - Command-level failure (e.g. HTTP call to fetch peer metadata failed)
   - `{:error, reason}` - Parse failure
 
   ## Examples
@@ -95,10 +96,21 @@ defmodule Nexmaker.CliParser do
 
       iex> parse_peers_output("\\nNo peers found on interface nm-0")
       {:ok, %{"peers" => %{}}}
+
+      iex> parse_peers_output("\\nFailed to get peer information: connection refused")
+      {:error, {:peers_failed, "connection refused"}}
   """
   @spec parse_peers_output(String.t()) :: {:ok, map()} | {:error, term()}
   def parse_peers_output(output) when is_binary(output) do
     cond do
+      # Check for command-level error (e.g. HTTP call to fetch peer metadata failed)
+      # Format: "\nFailed to get peer information: <reason>"
+      String.contains?(output, "Failed to get peer information:") ->
+        case Regex.run(~r/Failed to get peer information:\s*(.+)/i, output) do
+          [_, error_msg] -> {:error, {:peers_failed, String.trim(error_msg)}}
+          _ -> {:error, {:peers_failed, "unknown error"}}
+        end
+
       # Check for "No peers found" patterns
       String.contains?(output, "No peers found") ->
         {:ok, %{"peers" => %{}}}

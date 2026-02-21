@@ -117,11 +117,6 @@ services:
     image: local_edge_agent
     container_name: local_edge_agent_test
     network_mode: host
-    depends_on:
-      edge_admin:
-        condition: service_healthy
-      edge_vpn:
-        condition: service_healthy
     volumes:
       - ../../edge_agent:/app:z
       - ../../nexmaker:/nexmaker:z

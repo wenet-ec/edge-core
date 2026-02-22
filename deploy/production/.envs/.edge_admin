@@ -88,9 +88,6 @@ DEFAULT_CLUSTER_NAME=default
 # Allow public enrollment without authentication (DISABLE IN PRODUCTION!)
 PUBLIC_ENROLLMENT_KEY_ENABLED=true
 
-# Netmaker DNS domain suffix (used for hostname construction)
-# NETMAKER_DEFAULT_DOMAIN=nm.internal
-
 # =============================================================================
 # Admin Cluster & Distribution
 # =============================================================================

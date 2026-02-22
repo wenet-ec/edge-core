@@ -46,7 +46,7 @@ defmodule EdgeAgent.Metrics.Workers.PushMetricsWorker do
 
   defp should_run? do
     admin_urls = Settings.get_admin_urls() || []
-    fallback_urls = Application.get_env(:edge_agent, :fallback_admin_urls, [])
+    fallback_urls = Application.get_env(:edge_agent, :admin_fallback_urls, [])
 
     admin_urls == [] and fallback_urls != []
   end

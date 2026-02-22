@@ -47,7 +47,7 @@ defmodule EdgeAgent.SelfUpdates.Workers.CheckSelfUpdateWorker do
   # Check if worker should run
   defp should_run? do
     admin_urls = Settings.get_admin_urls() || []
-    fallback_urls = Application.get_env(:edge_agent, :fallback_admin_urls, [])
+    fallback_urls = Application.get_env(:edge_agent, :admin_fallback_urls, [])
     self_update_enabled = Application.get_env(:edge_agent, :self_update_enabled, false)
 
     # Only run if: VPN down + fallback configured + self-update enabled

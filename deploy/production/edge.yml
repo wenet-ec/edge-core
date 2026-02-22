@@ -18,7 +18,6 @@ services:
       - production_edge_agent_data:/app/data
       - /etc/resolv.conf:/etc/resolv.conf:rw
       - /:/host:ro
-      # Mount D-Bus socket so resolvectl can communicate with systemd-resolved
       - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:ro
     env_file:
       - ./.envs/.edge_agent

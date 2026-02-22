@@ -8,7 +8,7 @@ defmodule EdgeAgent.EdgeClusters.Workers.ReportHealthCheckWorker do
 
   Only runs when:
   - VPN is down (admin_urls is empty list)
-  - HTTP fallback is configured (fallback_admin_urls is set)
+  - HTTP fallback is configured (admin_fallback_urls is set)
 
   Reports node health status (healthy/unhealthy) to admin, allowing admin
   to track node health when direct VPN pinging is unavailable.
@@ -42,7 +42,7 @@ defmodule EdgeAgent.EdgeClusters.Workers.ReportHealthCheckWorker do
 
   defp should_run? do
     admin_urls = Settings.get_admin_urls() || []
-    fallback_urls = Application.get_env(:edge_agent, :fallback_admin_urls, [])
+    fallback_urls = Application.get_env(:edge_agent, :admin_fallback_urls, [])
 
     admin_urls == [] and fallback_urls != []
   end

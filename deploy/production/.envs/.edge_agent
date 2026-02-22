@@ -1,7 +1,7 @@
 # deploy/production/.envs/.edge_agent
 ENROLLMENT_KEY=
-PUBLIC_ENROLLMENT_KEY_URL=http://103.176.22.187:34000/api/clusters/default/enrollment_keys/public
-FALLBACK_ADMIN_URLS=http://103.176.22.187:34000
+PUBLIC_ENROLLMENT_KEY_URL=https://edge-admin.yourdomain.com/api/clusters/default/enrollment_keys/public
+ADMIN_FALLBACK_URLS=https://edge-admin.yourdomain.com
 
 # Self-update configuration
 SELF_UPDATE_ENABLED=true

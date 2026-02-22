@@ -58,7 +58,8 @@ defmodule EdgeAdminWeb.Router do
   end
 
   # API documentation endpoints (SwaggerUI, ReDoc)
-  # Disabled in production via API_DOCS_ENABLED=false
+  # OpenAPI spec (/api/openapi) is also disabled via the :open_api pipeline
+  # All three are disabled in production via API_DOCS_ENABLED=false
   scope "/" do
     pipe_through(:api_docs_ui)
 

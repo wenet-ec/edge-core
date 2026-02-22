@@ -3,29 +3,17 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   @moduledoc """
   Admin server discovery via WireGuard peer inspection.
 
-  This module discovers admin servers on the VPN network by inspecting WireGuard peers
-  and querying their discovery endpoints. This is more efficient than subnet scanning
-  since we directly query WireGuard for connected peers instead of scanning entire CIDR blocks.
-
-  ## Key Concepts
-
-  - **Peer Discovery**: Query WireGuard for list of connected peers via `netclient peers`
-  - **Admin Identification**: HTTP GET to each peer's `/api/admins/self/discovery` endpoint
-  - **DNS Resolution**: Build DNS hostnames from admin names for stable addressing
-  - **Multi-Network**: Scan all connected networks and aggregate discovered admins
-  - **Settings Storage**: Store discovered admin URLs in Settings table for AdminClient
+  Discovers admin servers on the VPN network by inspecting WireGuard peers
+  and querying their discovery endpoints. More efficient than subnet scanning
+  since we directly query known peers instead of scanning entire CIDR blocks.
 
   ## Discovery Process
 
   ```
-  1. Query WireGuard for peer list (netclient peers)
-  2. For each network's peers:
-     a. Extract peer VPN IP and hostname
-     b. Query HTTP://ip:44000/api/admins/self/discovery
-     c. Extract admin name from JSON response
-     d. Build DNS hostname (e.g., admin-abc123.cluster-xyz.nm.internal)
-  3. Aggregate all discovered admins across all networks
-  4. Store admin URLs in Settings table
+  1. Query WireGuard for peer list (netclient ping)
+  2. Filter peers whose name starts with "admin-"
+  3. HTTP GET http://ip:port/api/admins/self/discovery on each candidate
+  4. Store confirmed admin URLs (http://ip:port) in Settings for AdminClient
   ```
 
   ## Discovery Behavior
@@ -36,29 +24,21 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
 
   ## Admin Discovery Endpoint
 
-  Admins expose a discovery endpoint at `/api/admins/self/discovery` that returns:
+  Admins expose `/api/admins/self/discovery` returning:
   ```json
   {"name": "admin-abc123"}
   ```
 
-  This allows agents to discover admins without hardcoded addresses.
-
   ## Examples
 
-      # Successful discovery
       iex> Discovery.discover_admins()
-      {:ok, "cluster-default", ["http://admin-abc.cluster-default.nm.internal:44000"]}
+      {:ok, "cluster-default", ["http://100.64.0.4:44000"]}
 
-      # No admins found (empty list stored in Settings)
       iex> Discovery.discover_admins()
       {:ok, nil, []}
 
-      # Multi-network discovery
       iex> Discovery.discover_admins()
-      {:ok, "cluster-prod", [
-        "http://admin-abc.cluster-prod.nm.internal:44000",
-        "http://admin-def.cluster-dev.nm.internal:44000"
-      ]}
+      {:ok, "cluster-prod", ["http://100.64.0.4:44000", "http://100.64.0.5:44000"]}
   """
 
   alias EdgeAgent.Settings
@@ -68,181 +48,93 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   @doc """
   Discover admins in the cluster.
 
-  Uses WireGuard ping to discover admins on connected networks.
-  When relay is enabled, we can only SEE the relay gateway in peer list,
-  but PING can reach all peers that the relay can reach (including admins).
+  Returns `{:ok, network_name, admin_urls}` where network_name is the Netmaker
+  network name (e.g. "cluster-default") or nil if none found, and admin_urls is
+  a list of HTTP URLs using VPN IPs (e.g. ["http://100.64.0.4:44000"]).
 
-  Returns `{:ok, network_name, admin_urls}` where:
-  - network_name is the full Netmaker network name (e.g., "cluster-default"), or nil if no admins found
-  - admin_urls is a list of HTTP URLs: ["http://admin-xyz.cluster-abc.nm.internal:44000", ...], or empty list if none found
-
-  Always stores discovered admins (even empty list) in Settings table as JSON-encoded list.
-  This allows other components to distinguish between "never discovered" vs "discovered but found none".
+  Always stores discovered admins (even empty list) in Settings so other
+  components can distinguish "never discovered" from "discovered but none found".
   """
   @spec discover_admins(keyword()) :: {:ok, String.t() | nil, [String.t()]}
   def discover_admins(_opts \\ []) do
-    # Get network name from list_networks first (more reliable than ping)
     network_name = get_network_name_from_list()
 
     case Nexmaker.Cli.ping_peers() do
-      {:ok, ping_data} when is_map(ping_data) ->
-        peers_by_network = ping_data
+      {:ok, ping_data} when map_size(ping_data) == 0 ->
+        Logger.warning("No peers found on any network")
+        Settings.set_admin_urls([])
+        {:ok, network_name, []}
 
-        if map_size(peers_by_network) == 0 do
-          Logger.warning("No peers found on any network")
+      {:ok, ping_data} ->
+        Logger.info("Inspecting peers on #{map_size(ping_data)} network(s) for admins...")
+
+        discovery_port = Application.get_env(:edge_agent, :admin_discovery_port, 44_000)
+
+        {found_network, admin_urls} =
+          Enum.reduce(ping_data, {nil, []}, fn {net_name, peers}, {_net, acc_urls} ->
+            urls = Enum.flat_map(peers, &probe_peer(&1, net_name, discovery_port))
+            {net_name, acc_urls ++ urls}
+          end)
+
+        admin_urls = Enum.uniq(admin_urls)
+
+        if admin_urls == [] do
+          Logger.warning("No admins discovered across any network")
+          result_network = found_network || network_name
           Settings.set_admin_urls([])
-          {:ok, network_name, []}
+          {:ok, result_network, []}
         else
-          Logger.info("Inspecting peers on #{map_size(peers_by_network)} network(s) for admins...")
-
-          # Get the first network name from ping data (prefer this if available)
-          first_network_name = peers_by_network |> Map.keys() |> List.first()
-
-          # Scan all networks and collect all discovered admins
-          results =
-            peers_by_network
-            |> Enum.map(fn {net_name, peers} ->
-              cluster_id = String.replace_prefix(net_name, "cluster-", "")
-
-              case discover_admins_from_peers(peers, cluster_id, net_name) do
-                {:ok, admin_urls} -> {net_name, admin_urls}
-                {:error, _reason} -> nil
-              end
-            end)
-            |> Enum.reject(&is_nil/1)
-
-          case results do
-            [{net_name, _admin_urls} | _rest] ->
-              # Aggregate all discovered admins from all networks
-              all_admin_urls =
-                results |> Enum.flat_map(fn {_network, urls} -> urls end) |> Enum.uniq()
-
-              Logger.info("Discovered total of #{length(all_admin_urls)} unique admin(s) across all networks")
-
-              # Store in Settings for AdminClient to use
-              Settings.set_admin_urls(all_admin_urls)
-              {:ok, net_name, all_admin_urls}
-
-            [] ->
-              # No admins found, but we're still connected to a network
-              # Use network_name from list or ping data
-              result_network = first_network_name || network_name
-              Logger.warning("No admins discovered across any network")
-              Settings.set_admin_urls([])
-              {:ok, result_network, []}
-          end
+          Logger.info("Discovered #{length(admin_urls)} unique admin(s) across all networks")
+          Settings.set_admin_urls(admin_urls)
+          {:ok, found_network, admin_urls}
         end
 
       {:error, reason} ->
         Logger.error("Failed to ping peers: #{inspect(reason)}")
-        Logger.info("Falling back to network name from list command")
         Settings.set_admin_urls([])
         {:ok, network_name, []}
     end
   end
 
-  # Get network name from netclient list (fallback when ping fails)
   defp get_network_name_from_list do
     case Nexmaker.Cli.list_networks() do
-      {:ok, networks} when is_list(networks) and length(networks) > 0 ->
-        # Get the first network name
-        first_network = List.first(networks)
-        first_network["network"]
-
-      _ ->
-        nil
+      {:ok, [first | _]} -> first["network"]
+      _ -> nil
     end
   end
 
-  # Discover admins from ping results
-  defp discover_admins_from_peers(ping_results, cluster_id, network_name) when is_list(ping_results) do
-    discovery_port = Application.get_env(:edge_agent, :admin_discovery_port, 44_000)
-    default_domain = Application.get_env(:edge_agent, :netmaker_default_domain, "nm.internal")
+  # Returns a list of 0 or 1 admin URL for this peer
+  defp probe_peer(%{"name" => "admin-" <> _, "address" => ip}, network_name, port) when is_binary(ip) do
+    url = "http://#{ip}:#{port}/api/admins/self/discovery"
 
-    Logger.info("Checking #{length(ping_results)} peer(s) on network #{network_name} for admins...")
+    opts = [
+      receive_timeout: Application.get_env(:edge_agent, :http_receive_timeout, 30_000),
+      connect_options: [timeout: Application.get_env(:edge_agent, :http_connect_timeout, 20_000)],
+      retry: false
+    ]
 
-    # Query each peer with "admin-" prefix to find admin nodes
-    # Check ALL peers with admin prefix regardless of connected status
-    admin_urls =
-      ping_results
-      |> Enum.filter(fn peer ->
-        # Only check peers whose name starts with "admin-"
-        case peer["name"] do
-          "admin-" <> _rest -> true
-          _ -> false
-        end
-      end)
-      |> Enum.map(fn peer ->
-        # Ping results have "address" directly (no CIDR notation)
-        ip = peer["address"]
-        hostname = peer["name"]
+    case Req.get(url, opts) do
+      {:ok, %{status: 200, body: %{"name" => admin_name}}} ->
+        admin_url = "http://#{ip}:#{port}"
+        Logger.info("✓ Discovered admin: #{admin_name} (#{ip}) on #{network_name}")
+        [admin_url]
 
-        if ip && hostname do
-          # Try to query the peer's discovery endpoint
-          # Try even if connected=false, as HTTP might still work
-          url = "http://#{ip}:#{discovery_port}/api/admins/self/discovery"
+      {:ok, %{status: 200}} ->
+        Logger.debug("✗ #{ip} on #{network_name} returned 200 but no name field")
+        []
 
-          opts = [
-            receive_timeout: Application.get_env(:edge_agent, :http_receive_timeout, 30_000),
-            connect_options: [timeout: Application.get_env(:edge_agent, :http_connect_timeout, 20_000)],
-            retry: false
-          ]
+      {:ok, %{status: status}} ->
+        Logger.debug("✗ #{ip} on #{network_name} returned status #{status}")
+        []
 
-          case Req.get(url, opts) do
-            {:ok, %{status: 200, body: body}} ->
-              admin_name =
-                cond do
-                  is_map(body) and Map.has_key?(body, "name") ->
-                    body["name"]
-
-                  is_binary(body) ->
-                    case Jason.decode(body) do
-                      {:ok, %{"name" => name}} -> name
-                      _ -> nil
-                    end
-
-                  true ->
-                    nil
-                end
-
-              if admin_name do
-                # Construct DNS hostname for this cluster
-                dns_hostname =
-                  build_hostname(admin_name, "cluster-#{cluster_id}", default_domain)
-
-                admin_url = "http://#{dns_hostname}:#{discovery_port}"
-
-                Logger.info("✓ Discovered admin: #{admin_name} at #{admin_url}")
-                admin_url
-              else
-                Logger.debug("✗ #{ip} (#{hostname}) returned invalid JSON response")
-                nil
-              end
-
-            {:ok, %{status: status}} ->
-              Logger.debug("✗ #{ip} (#{hostname}) returned non-200 status: #{status}")
-              nil
-
-            {:error, reason} ->
-              Logger.debug("✗ #{ip} (#{hostname}) HTTP request failed: #{inspect(reason)}")
-              nil
-          end
-        else
-          Logger.debug("✗ Peer has no usable IP or hostname: #{inspect(peer)}")
-          nil
-        end
-      end)
-      |> Enum.reject(&is_nil/1)
-
-    if Enum.empty?(admin_urls) do
-      {:error, "No admins discovered from peers on network #{network_name}"}
-    else
-      Logger.info("Discovered #{length(admin_urls)} admin(s) on network #{network_name}")
-      {:ok, admin_urls}
+      {:error, reason} ->
+        Logger.debug("✗ #{ip} on #{network_name} HTTP failed: #{inspect(reason)}")
+        []
     end
   end
 
-  # Build DNS hostname
-  defp build_hostname(host, network, ""), do: "#{host}.#{network}"
-  defp build_hostname(host, network, domain), do: "#{host}.#{network}.#{domain}"
+  defp probe_peer(peer, network_name, _port) do
+    Logger.debug("✗ Skipping peer on #{network_name} (not admin or no IP): #{inspect(peer)}")
+    []
+  end
 end

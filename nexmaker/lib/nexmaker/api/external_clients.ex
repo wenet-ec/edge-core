@@ -211,7 +211,8 @@ defmodule Nexmaker.Api.ExternalClients do
       # Get WireGuard format
       {:ok, config} = Nexmaker.Api.ExternalClients.get_config("cluster-abc", "laptop-alice", "wireguard")
   """
-  @spec get_config(String.t(), String.t(), String.t(), keyword()) :: {:ok, any()} | {:error, any()}
+  @spec get_config(String.t(), String.t(), String.t(), keyword()) ::
+          {:ok, any()} | {:error, any()}
   def get_config(network_name, client_id, config_type, opts \\ []) do
     Api.request(:get, "/api/extclients/#{network_name}/#{client_id}/#{config_type}", opts)
   end

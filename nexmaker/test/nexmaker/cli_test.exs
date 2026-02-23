@@ -285,6 +285,7 @@ defmodule Nexmaker.CliTest do
       Task.start(fn ->
         System.cmd("netclient", ["daemon"], stderr_to_stdout: true)
       end)
+
       on_exit(fn -> System.cmd("pkill", ["-f", "netclient daemon"], stderr_to_stdout: true) end)
       # Give daemon a moment to start
       Process.sleep(2_000)
@@ -343,6 +344,7 @@ defmodule Nexmaker.CliTest do
       # Verify the network now appears in list
       {:ok, after_join} = Nexmaker.Cli.list_networks()
       after_names = Enum.map(after_join, & &1["network"])
+
       assert network_name in after_names,
              "Expected #{network_name} in network list after join. Got: #{inspect(after_names)}"
 

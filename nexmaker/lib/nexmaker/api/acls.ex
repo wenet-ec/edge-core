@@ -82,7 +82,11 @@ defmodule Nexmaker.Api.ACLs do
   """
   @spec update(String.t(), map(), keyword()) :: {:ok, map()} | {:error, any()}
   def update(network_name, acl_container, opts \\ []) do
-    Api.request(:put, "/api/networks/#{network_name}/acls", Keyword.put(opts, :body, acl_container))
+    Api.request(
+      :put,
+      "/api/networks/#{network_name}/acls",
+      Keyword.put(opts, :body, acl_container)
+    )
   end
 
   @doc """
@@ -105,6 +109,10 @@ defmodule Nexmaker.Api.ACLs do
   """
   @spec update_v2(String.t(), map(), keyword()) :: {:ok, map()} | {:error, any()}
   def update_v2(network_name, acl_container, opts \\ []) do
-    Api.request(:put, "/api/networks/#{network_name}/acls/v2", Keyword.put(opts, :body, acl_container))
+    Api.request(
+      :put,
+      "/api/networks/#{network_name}/acls/v2",
+      Keyword.put(opts, :body, acl_container)
+    )
   end
 end

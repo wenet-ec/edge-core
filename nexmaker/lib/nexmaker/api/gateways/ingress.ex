@@ -99,7 +99,12 @@ defmodule Nexmaker.Api.Gateways.Ingress do
   def create_gateway(network_name, node_id, attrs \\ %{}, opts \\ []) do
     # Gateway creation requires a body with relayaddrs (defaults to empty array)
     body = Map.put_new(attrs, :relayaddrs, [])
-    Api.request(:post, "/api/nodes/#{network_name}/#{node_id}/gateway", Keyword.put(opts, :body, body))
+
+    Api.request(
+      :post,
+      "/api/nodes/#{network_name}/#{node_id}/gateway",
+      Keyword.put(opts, :body, body)
+    )
   end
 
   @doc """

@@ -48,7 +48,9 @@ defmodule Nexmaker.CliParserTest do
     end
 
     test "parses compact (no whitespace) JSON" do
-      output = ~s([{"network":"x","node_id":"1","connected":true,"ipv4_addr":"10.0.0.1/24","ipv6_addr":""}])
+      output =
+        ~s([{"network":"x","node_id":"1","connected":true,"ipv4_addr":"10.0.0.1/24","ipv6_addr":""}])
+
       assert {:ok, [net]} = CliParser.parse_list_output(output)
       assert net["network"] == "x"
     end
@@ -94,7 +96,9 @@ defmodule Nexmaker.CliParserTest do
     end
 
     test "handles network with empty ipv6_addr" do
-      output = ~s([{"network":"x","node_id":"1","connected":true,"ipv4_addr":"10.0.0.5/24","ipv6_addr":""}])
+      output =
+        ~s([{"network":"x","node_id":"1","connected":true,"ipv4_addr":"10.0.0.5/24","ipv6_addr":""}])
+
       assert {:ok, [net]} = CliParser.parse_list_output(output)
       assert net["ipv6_addr"] == ""
     end
@@ -472,7 +476,9 @@ defmodule Nexmaker.CliParserTest do
   describe "parse_peers_output/1 - error patterns" do
     test "handles 'Failed to get peer information' error" do
       assert {:error, {:peers_failed, "connection refused"}} =
-               CliParser.parse_peers_output("\nFailed to get peer information: connection refused")
+               CliParser.parse_peers_output(
+                 "\nFailed to get peer information: connection refused"
+               )
     end
 
     test "extracts reason after colon" do

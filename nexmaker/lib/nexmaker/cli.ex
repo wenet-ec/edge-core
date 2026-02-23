@@ -77,6 +77,7 @@ defmodule Nexmaker.Cli do
           {_, 0} -> :ok
           {output, _} -> Logger.debug("chmod failed for #{@netclient_config_dir}: #{output}")
         end
+
         :ok
 
       {output, _exit_code} ->
@@ -122,7 +123,7 @@ defmodule Nexmaker.Cli do
 
     # Check if we hit the TOCTOU bug and should retry
     if exit_code != 0 and netclient_toctou_error?(output) and attempt < max_attempts do
-      delay_ms = base_delay_ms * :math.pow(2, attempt - 1) |> trunc()
+      delay_ms = (base_delay_ms * :math.pow(2, attempt - 1)) |> trunc()
 
       Logger.warning(
         "Netclient TOCTOU race condition detected (attempt #{attempt}/#{max_attempts}), " <>

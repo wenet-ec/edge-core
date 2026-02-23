@@ -180,7 +180,11 @@ defmodule Nexmaker.Api.Hosts do
 
     query_params = if force, do: "?force=true", else: ""
 
-    Api.request(:delete, "/api/hosts/#{host_id}/networks/#{network_name}#{query_params}", api_opts)
+    Api.request(
+      :delete,
+      "/api/hosts/#{host_id}/networks/#{network_name}#{query_params}",
+      api_opts
+    )
   end
 
   @doc """

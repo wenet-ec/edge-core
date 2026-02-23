@@ -403,7 +403,9 @@ defmodule Nexmaker.ApiTest do
       {:ok, entries} = Nexmaker.Api.DNS.list(net, api_opts())
       # Netmaker may append .nm.internal to the stored name; match on address instead
       found = Enum.find(entries, fn e -> e["address"] == ip end)
-      assert found != nil, "Expected entry with address #{ip} in list entries: #{inspect(entries)}"
+
+      assert found != nil,
+             "Expected entry with address #{ip} in list entries: #{inspect(entries)}"
 
       on_exit(fn -> Nexmaker.Api.DNS.delete(net, dns_name, api_opts()) end)
     end
@@ -419,7 +421,9 @@ defmodule Nexmaker.ApiTest do
       {:ok, all_entries} = Nexmaker.Api.DNS.get_all(api_opts())
       # Netmaker may append .nm.internal to the stored name; match on address instead
       found = Enum.find(all_entries, fn e -> e["address"] == ip end)
-      assert found != nil, "Expected entry with address #{ip} in get_all entries: #{inspect(all_entries)}"
+
+      assert found != nil,
+             "Expected entry with address #{ip} in get_all entries: #{inspect(all_entries)}"
 
       on_exit(fn -> Nexmaker.Api.DNS.delete(net, dns_name, api_opts()) end)
     end

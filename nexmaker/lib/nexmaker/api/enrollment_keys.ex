@@ -77,11 +77,14 @@ defmodule Nexmaker.Api.EnrollmentKeys do
   """
   @spec create(String.t(), map(), keyword()) :: {:ok, map()} | {:error, any()}
   def create(network_name, attrs \\ %{}, opts \\ []) do
-    # Tags are required by the API - default to ["default"] if not provided
+    # Tags are required by the API - default to ["default"] if not provided.
+    # uses_remaining defaults to 1 — Netmaker rejects keys with uses_remaining: 0
+    # and no expiration set.
     body =
       attrs
       |> Map.put(:networks, [network_name])
       |> Map.put_new(:tags, ["default"])
+      |> Map.put_new(:uses_remaining, 1)
 
     Api.request(:post, "/api/v1/enrollment-keys", Keyword.put(opts, :body, body))
   end

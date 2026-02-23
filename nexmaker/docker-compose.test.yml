@@ -7,14 +7,22 @@ services:
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
     environment:
       - MIX_ENV=test
-      - NETMAKER_BASE_URL=http://netmaker:8081
+      - NETMAKER_BASE_URL=http://netmaker_proxy:80
       - NETMAKER_MASTER_KEY=supersecretkey123456789
-    command: sh -c "sleep 30 && mix test --include integration"
+    command: mix test --include integration
     depends_on:
       netmaker:
         condition: service_healthy
+      coredns:
+        condition: service_started
+      netmaker_proxy:
+        condition: service_started
     networks:
       - test_network
 
@@ -62,9 +70,12 @@ services:
       - net.ipv6.conf.all.forwarding=1
     volumes:
       - netmaker_data:/root/data
+      - netmaker_dns_config:/root/config/dnsconfig
     environment:
-      - SERVER_NAME=test-netmaker
-      - SERVER_HOST=netmaker
+      - SERVER_NAME=netmaker
+      - SERVER_HOST=netmaker_proxy
+      - SERVER_HTTP_HOST=netmaker_proxy
+      - SERVER_API_CONN_STRING=netmaker_proxy
       - MASTER_KEY=supersecretkey123456789
       - CORS_ALLOWED_ORIGIN=*
       - DISPLAY_KEYS=on
@@ -76,7 +87,8 @@ services:
       - SQL_DB=netmaker
       - SQL_SSL_MODE=disable
       - API_PORT=8081
-      - DNS_MODE=off
+      - DNS_MODE=on
+      - COREDNS_ADDR=coredns:53
       - DISABLE_REMOTE_IP_CHECK=on
       - TELEMETRY=off
       - SERVER_BROKER_ENDPOINT=ws://netmaker_broker:8083/mqtt
@@ -86,8 +98,7 @@ services:
       - MQ_USERNAME=admin
       - MQ_PASSWORD=netmaker123
       - VERBOSITY=1
-    ports:
-      - "8081:8081"
+      - STUN_LIST=stun1.l.google.com:19302,stun2.l.google.com:19302,stun.stunprotocol.org:3478,stun.nextcloud.com:443,stun.netmaker.io:3478
     depends_on:
       netmaker_db:
         condition: service_healthy
@@ -96,11 +107,35 @@ services:
     networks:
       - test_network
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/api/server/health || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/api/server/status || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
+
+  netmaker_proxy:
+    image: caddy:alpine
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+    depends_on:
+      netmaker:
+        condition: service_healthy
+    networks:
+      - test_network
+    command: caddy run --config /etc/caddy/Caddyfile
+
+  coredns:
+    image: coredns/coredns:latest
+    user: "0:0"
+    volumes:
+      - netmaker_dns_config:/root/config/dnsconfig
+    command: -conf /root/config/dnsconfig/Corefile
+    depends_on:
+      netmaker:
+        condition: service_healthy
+    networks:
+      - test_network
+    restart: on-failure
 
 networks:
   test_network:
@@ -108,6 +143,7 @@ networks:
 
 volumes:
   netmaker_data:
+  netmaker_dns_config:
   netmaker_broker_data:
   netmaker_broker_etc:
   netmaker_broker_logs:

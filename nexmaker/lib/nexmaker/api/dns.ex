@@ -54,6 +54,10 @@ defmodule Nexmaker.Api.DNS do
         # API returns null when no DNS entries exist
         {:ok, []}
 
+      {:ok, %{body: nil}} ->
+        # Req decodes empty 200 body as %{body: nil}
+        {:ok, []}
+
       {:ok, entries} when is_list(entries) ->
         {:ok, entries}
 
@@ -83,7 +87,12 @@ defmodule Nexmaker.Api.DNS do
   """
   @spec list(String.t(), keyword()) :: {:ok, [map()]} | {:error, any()}
   def list(network_name, opts \\ []) do
-    Api.request(:get, "/api/dns/adm/#{network_name}", opts)
+    case Api.request(:get, "/api/dns/adm/#{network_name}", opts) do
+      {:ok, nil} -> {:ok, []}
+      {:ok, %{body: nil}} -> {:ok, []}
+      {:ok, entries} when is_list(entries) -> {:ok, entries}
+      other -> other
+    end
   end
 
   @doc """
@@ -204,7 +213,12 @@ defmodule Nexmaker.Api.DNS do
   """
   @spec get_adm_network(String.t(), keyword()) :: {:ok, [map()]} | {:error, any()}
   def get_adm_network(network_name, opts \\ []) do
-    Api.request(:get, "/api/dns/adm/#{network_name}", opts)
+    case Api.request(:get, "/api/dns/adm/#{network_name}", opts) do
+      {:ok, nil} -> {:ok, []}
+      {:ok, %{body: nil}} -> {:ok, []}
+      {:ok, entries} when is_list(entries) -> {:ok, entries}
+      other -> other
+    end
   end
 
   @doc """

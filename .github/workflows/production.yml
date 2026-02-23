@@ -16,7 +16,7 @@ concurrency:
 
 env:
   REGISTRY: docker-hub.wenet.vn
-  IMAGE_TAG: beta1
+  IMAGE_TAG: v0.2.0
 
 jobs:
   build-and-push:

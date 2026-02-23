@@ -23,7 +23,8 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Run check suite
-        run: docker compose -f deploy/local/cloud.yml run --rm edge_admin mix check
+        # Use edge_admin_test (depends only on edge_admin_db, not the full VPN stack)
+        run: docker compose -f deploy/local/cloud.yml --profile test run --rm edge_admin_test mix check
 
       - name: Run tests
         run: docker compose -f deploy/local/cloud.yml --profile test run --rm edge_admin_test
@@ -39,7 +40,8 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Run check suite
-        run: docker compose -f deploy/local/edge.yml run --rm edge_agent mix check
+        # Use edge_agent_test (no privileged mounts needed for format/lint/dialyzer)
+        run: docker compose -f deploy/local/edge.yml --profile test run --rm edge_agent_test mix check
 
       - name: Run tests
         run: docker compose -f deploy/local/edge.yml --profile test run --rm edge_agent_test

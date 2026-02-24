@@ -164,6 +164,95 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       assert Enum.sort(result.edge_clusters["a1"]["cluster-prod"]) ==
                Enum.sort(node_names)
     end
+
+    # ---------------------------------------------------------------------------
+    # total_nodes and total_capacity
+    # ---------------------------------------------------------------------------
+
+    test "total_nodes is sum of all nodes across all clusters" do
+      admins = admins(a1: 100)
+      clusters = clusters(c1: ~w[n1 n2], c2: ~w[n3 n4 n5])
+
+      result = Algorithm.compute_assignments(admins, clusters)
+
+      assert result.total_nodes == 5
+    end
+
+    test "total_nodes counts orphaned cluster nodes too" do
+      # a1 can only hold 2 nodes; c2 has 3 and gets orphaned
+      admins = admins(a1: 2)
+      clusters = clusters(c1: ~w[n1 n2], c2: ~w[n3 n4 n5])
+
+      result = Algorithm.compute_assignments(admins, clusters)
+
+      # 2 assigned + 3 orphaned = 5 total
+      assert result.total_nodes == 5
+    end
+
+    test "total_capacity is sum of max_capacity across all admins" do
+      admins = admins(a1: 200, a2: 300)
+      clusters = clusters(c1: ~w[n1])
+
+      result = Algorithm.compute_assignments(admins, clusters)
+
+      assert result.total_capacity == 500
+    end
+
+    test "total_capacity is zero when no admins" do
+      clusters = clusters(c1: ~w[n1])
+
+      result = Algorithm.compute_assignments(%{}, clusters)
+
+      assert result.total_capacity == 0
+    end
+
+    test "total_nodes is zero when no clusters" do
+      admins = admins(a1: 100)
+
+      result = Algorithm.compute_assignments(admins, [])
+
+      assert result.total_nodes == 0
+    end
+
+    test "degraded false when total_nodes equals total_capacity exactly" do
+      admins = admins(a1: 5)
+      clusters = clusters(c1: ~w[n1 n2 n3 n4 n5])
+
+      result = Algorithm.compute_assignments(admins, clusters)
+
+      assert result.total_nodes == 5
+      assert result.total_capacity == 5
+      assert result.orphaned_clusters == %{}
+      assert result.degraded == false
+    end
+
+    test "degraded true when total_nodes exceeds total_capacity" do
+      # 2 admins with capacity 3 each = 6 total; 7 nodes = degraded
+      admins = admins(a1: 3, a2: 3)
+      clusters = clusters(c1: ~w[n1 n2 n3], c2: ~w[n4 n5 n6 n7])
+
+      result = Algorithm.compute_assignments(admins, clusters)
+
+      assert result.total_nodes == 7
+      assert result.total_capacity == 6
+      # orphaned_clusters > 0 and total_nodes > total_capacity are equivalent
+      assert map_size(result.orphaned_clusters) > 0
+      assert result.degraded == true
+    end
+
+    test "degraded true when total_nodes exceeds total_capacity due to cluster fragmentation" do
+      # a1 capacity 5: c1 (3 nodes) fits, c2 (3 nodes) gets orphaned because only 2 slots remain.
+      # total_nodes (6) > total_capacity (5), orphaned_clusters non-empty — both signal degraded.
+      admins = admins(a1: 5)
+      clusters = clusters(c1: ~w[n1 n2 n3], c2: ~w[n4 n5 n6])
+
+      result = Algorithm.compute_assignments(admins, clusters)
+
+      assert result.total_nodes == 6
+      assert result.total_capacity == 5
+      assert map_size(result.orphaned_clusters) > 0
+      assert result.degraded == true
+    end
   end
 
   # ---------------------------------------------------------------------------

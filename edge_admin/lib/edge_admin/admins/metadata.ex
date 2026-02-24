@@ -61,7 +61,9 @@ defmodule EdgeAdmin.Admins.Metadata do
   %{
     name: "admin-cluster-1",
     total_admins: 2,
-    degraded: false,  # true if any admin unhealthy
+    total_nodes: 5,      # total nodes across all clusters in the system
+    total_capacity: 500, # sum of max_capacity across all admins
+    degraded: false,     # true when total_nodes > total_capacity
     topology: [
       %{name: "admin-abc123", max_capacity: 200, dns_hostname: ...,
         erlang_node_name: ..., netmaker_host_id: "..."},
@@ -188,6 +190,8 @@ defmodule EdgeAdmin.Admins.Metadata do
       %{
         name: admin_cluster_name,
         total_admins: 0,
+        total_nodes: 0,
+        total_capacity: 0,
         degraded: false,
         topology: []
       }
@@ -487,11 +491,12 @@ defmodule EdgeAdmin.Admins.Metadata do
     # Extract metadata values
     topology = Map.values(all_admins)
 
-    # Use degraded flag from algorithm result
     updated_admin_cluster = %{
       admin_cluster
       | topology: topology,
         total_admins: map_size(all_admins),
+        total_nodes: result.total_nodes,
+        total_capacity: result.total_capacity,
         degraded: result.degraded
     }
 

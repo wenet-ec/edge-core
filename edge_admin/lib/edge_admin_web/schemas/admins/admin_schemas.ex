@@ -121,9 +121,17 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           type: :integer,
           description: "Total number of admins in the cluster"
         },
+        total_nodes: %Schema{
+          type: :integer,
+          description: "Total nodes registered in the system across all clusters"
+        },
+        total_capacity: %Schema{
+          type: :integer,
+          description: "Sum of max_capacity across all admins in this admin cluster"
+        },
         degraded: %Schema{
           type: :boolean,
-          description: "Whether the cluster is in degraded mode (capacity exceeded)"
+          description: "True when total_nodes exceeds total_capacity"
         },
         topology: %Schema{
           type: :array,
@@ -131,10 +139,12 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           description: "List of all admins in the cluster"
         }
       },
-      required: [:name, :total_admins, :degraded, :topology],
+      required: [:name, :total_admins, :total_nodes, :total_capacity, :degraded, :topology],
       example: %{
         name: "admin-cluster-1",
         total_admins: 2,
+        total_nodes: 42,
+        total_capacity: 500,
         degraded: false,
         topology: [
           %{

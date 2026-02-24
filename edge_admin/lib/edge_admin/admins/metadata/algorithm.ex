@@ -21,7 +21,9 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   %{
     edge_clusters: %{admin_name => %{cluster_name => [node_names]}},
     orphaned_clusters: %{cluster_name => [node_names]},
-    degraded: boolean  # true if any cluster couldn't be assigned
+    total_nodes: integer,     # total nodes across all clusters in the system
+    total_capacity: integer,  # sum of max_capacity across all admins
+    degraded: boolean         # true when total_nodes > total_capacity
   }
 
   ## Example
@@ -40,12 +42,20 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
           "admin-2" => %{"cluster-a" => ["node-1", "node-2", "node-3"]}
         },
         orphaned_clusters: %{},
+        total_nodes: 5,
+        total_capacity: 500,
         degraded: false
       }
   """
   def compute_assignments(admins, clusters) do
     # Build cluster lookup map (cluster_name => nodes)
     cluster_nodes_map = Map.new(clusters, fn cluster -> {cluster.name, cluster.nodes} end)
+
+    # Total nodes in the system (all clusters, assigned or orphaned)
+    total_nodes = Enum.reduce(clusters, 0, fn cluster, acc -> acc + length(cluster.nodes) end)
+
+    # Total capacity across all admins in this admin cluster
+    total_capacity = Enum.reduce(admins, 0, fn {_name, admin}, acc -> acc + admin.max_capacity end)
 
     # Start with empty assignments
     initial_state = %{
@@ -93,7 +103,9 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
     %{
       edge_clusters: edge_clusters,
       orphaned_clusters: intermediate_result.orphaned_clusters,
-      degraded: map_size(intermediate_result.orphaned_clusters) > 0
+      total_nodes: total_nodes,
+      total_capacity: total_capacity,
+      degraded: total_nodes > total_capacity
     }
   end
 

@@ -102,7 +102,7 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
     with {:ok, %SelfUpdateRequest{} = request} <- SelfUpdates.create_self_update_request(params) do
       conn
       |> put_status(:created)
-      |> put_resp_header("location", ~p"/api/self_update_requests/#{request.id}")
+      |> put_resp_header("location", ~p"/api/v1/self_update_requests/#{request.id}")
       |> render(:show, request: request)
     end
   end

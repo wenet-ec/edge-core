@@ -124,7 +124,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
          {:ok, cluster} <- Nodes.get_cluster(cluster.name) do
       conn
       |> put_status(:created)
-      |> put_resp_header("location", ~p"/api/clusters/#{cluster.name}")
+      |> put_resp_header("location", ~p"/api/v1/clusters/#{cluster.name}")
       |> render(:show, cluster: cluster)
     end
   end

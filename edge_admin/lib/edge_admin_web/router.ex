@@ -95,7 +95,7 @@ defmodule EdgeAdminWeb.Router do
   end
 
   # Public API endpoints (no authentication required)
-  scope "/api", EdgeAdminWeb.Controllers do
+  scope "/api/v1", EdgeAdminWeb.Controllers do
     pipe_through(:public_api)
 
     scope "/admins", Admins do
@@ -108,7 +108,7 @@ defmodule EdgeAdminWeb.Router do
   end
 
   # Protected admin metadata endpoints (requires MASTER_KEY)
-  scope "/api", EdgeAdminWeb.Controllers do
+  scope "/api/v1", EdgeAdminWeb.Controllers do
     pipe_through(:protected_api)
 
     scope "/admins", Admins do
@@ -120,7 +120,7 @@ defmodule EdgeAdminWeb.Router do
   end
 
   # Metrics endpoints (accepts MASTER_KEY or METRICS_KEY)
-  scope "/api", EdgeAdminWeb.Controllers do
+  scope "/api/v1", EdgeAdminWeb.Controllers do
     pipe_through(:protected_metrics)
 
     scope "/", Metrics do
@@ -153,7 +153,7 @@ defmodule EdgeAdminWeb.Router do
   end
 
   # Agent API endpoints (no authentication for registration)
-  scope "/api/agents", Agents do
+  scope "/api/v1/agents", Agents do
     pipe_through(:public_api)
 
     # Node registration (no auth required)
@@ -161,7 +161,7 @@ defmodule EdgeAdminWeb.Router do
   end
 
   # Agent API endpoints (requires agent api_token)
-  scope "/api/agents", Agents do
+  scope "/api/v1/agents", Agents do
     pipe_through(:agent_api)
 
     # Node health check reporting
@@ -186,7 +186,7 @@ defmodule EdgeAdminWeb.Router do
   end
 
   # Protected API endpoints (requires MASTER_KEY)
-  scope "/api", EdgeAdminWeb.Controllers do
+  scope "/api/v1", EdgeAdminWeb.Controllers do
     pipe_through(:protected_api)
 
     scope "/", Nodes do

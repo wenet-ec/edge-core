@@ -92,7 +92,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
            Commands.create_command_and_executions(params) do
       conn
       |> put_status(:created)
-      |> put_resp_header("location", ~p"/api/commands/#{command}")
+      |> put_resp_header("location", ~p"/api/v1/commands/#{command}")
       |> render(:show, command: command)
     end
   end

@@ -105,7 +105,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
 
       conn
       |> put_status(:created)
-      |> put_resp_header("location", ~p"/api/ssh_usernames/#{ssh_username}")
+      |> put_resp_header("location", ~p"/api/v1/ssh_usernames/#{ssh_username}")
       |> render(:show, ssh_username: ssh_username)
     end
   end

@@ -23,18 +23,18 @@ defmodule EdgeAdminWeb.Plugs.SecurityTest do
 
   describe "regular routes" do
     test "sets content-security-policy header" do
-      conn = call("/api/nodes")
+      conn = call("/api/v1/nodes")
       assert csp(conn) =~ "default-src"
     end
 
     test "default-src is 'none'" do
-      conn = call("/api/nodes")
+      conn = call("/api/v1/nodes")
       assert csp(conn) =~ "default-src 'none'"
     end
 
     test "script-src is 'self' only when allow_unsafe_scripts not set" do
       Application.delete_env(:edge_admin, Security)
-      conn = call("/api/nodes")
+      conn = call("/api/v1/nodes")
       policy = csp(conn)
       assert policy =~ "script-src 'self'"
       refute policy =~ "'unsafe-eval'"
@@ -42,20 +42,20 @@ defmodule EdgeAdminWeb.Plugs.SecurityTest do
 
     test "script-src includes unsafe directives when allow_unsafe_scripts is true" do
       Application.put_env(:edge_admin, Security, allow_unsafe_scripts: true)
-      conn = call("/api/nodes")
+      conn = call("/api/v1/nodes")
       policy = csp(conn)
       assert policy =~ "'unsafe-eval'"
       assert policy =~ "'unsafe-inline'"
     end
 
     test "does not include CDN sources in style-src" do
-      conn = call("/api/nodes")
+      conn = call("/api/v1/nodes")
       policy = csp(conn)
       refute policy =~ "cdnjs.cloudflare.com"
     end
 
     test "includes all required directive keys" do
-      conn = call("/api/nodes")
+      conn = call("/api/v1/nodes")
       policy = csp(conn)
       assert policy =~ "default-src"
       assert policy =~ "form-action"
@@ -69,7 +69,7 @@ defmodule EdgeAdminWeb.Plugs.SecurityTest do
     end
 
     test "does not halt the connection" do
-      conn = call("/api/nodes")
+      conn = call("/api/v1/nodes")
       refute conn.halted
     end
   end
@@ -137,13 +137,13 @@ defmodule EdgeAdminWeb.Plugs.SecurityTest do
 
   describe "regular vs docs CSP differ" do
     test "docs has more permissive script-src than regular" do
-      regular_policy = "/api/nodes" |> call() |> csp()
+      regular_policy = "/api/v1/nodes" |> call() |> csp()
       docs_policy = "/swaggerui" |> call() |> csp()
       refute regular_policy == docs_policy
     end
 
     test "regular route does not include CDN sources that docs do" do
-      regular_policy = "/api/nodes" |> call() |> csp()
+      regular_policy = "/api/v1/nodes" |> call() |> csp()
       refute regular_policy =~ "cdn.jsdelivr.net"
     end
   end

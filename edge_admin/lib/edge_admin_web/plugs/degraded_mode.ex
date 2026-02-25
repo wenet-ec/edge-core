@@ -8,7 +8,7 @@ defmodule EdgeAdminWeb.Plugs.DegradedMode do
   and safe operations to continue.
 
   Returns 503 Service Unavailable during degraded mode.
-  Clients can check the metadata endpoint (/api/admins/self) for degraded status.
+  Clients can check the metadata endpoint (/api/v1/admins/self) for degraded status.
 
   ## Usage in controllers
 

@@ -32,7 +32,7 @@ defmodule EdgeAgentWeb.Endpoint do
 
   # PromEx metrics with api_token authentication
   plug(:metrics_auth_conditional)
-  plug(PromEx.Plug, prom_ex_module: EdgeAgent.PromEx, path: "/api/agents/metrics/self/raw")
+  plug(PromEx.Plug, prom_ex_module: EdgeAgent.PromEx, path: "/api/v1/agents/metrics/self/raw")
 
   plug(EdgeAgentWeb.Router)
 
@@ -60,7 +60,7 @@ defmodule EdgeAgentWeb.Endpoint do
   end
 
   # Apply api_token auth only for the metrics endpoint (if enabled)
-  defp metrics_auth_conditional(%{request_path: "/api/agents/metrics/self/raw"} = conn, _opts) do
+  defp metrics_auth_conditional(%{request_path: "/api/v1/agents/metrics/self/raw"} = conn, _opts) do
     auth_enabled = Application.get_env(:edge_agent, :agent_metrics_auth_enabled, true)
 
     if auth_enabled do

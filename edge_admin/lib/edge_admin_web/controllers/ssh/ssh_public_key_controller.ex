@@ -108,7 +108,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
            Ssh.create_ssh_public_key(ssh_username, params) do
       conn
       |> put_status(:created)
-      |> put_resp_header("location", ~p"/api/ssh_public_keys/#{ssh_public_key}")
+      |> put_resp_header("location", ~p"/api/v1/ssh_public_keys/#{ssh_public_key}")
       |> render(:show, ssh_public_key: ssh_public_key)
     end
   end

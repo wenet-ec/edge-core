@@ -7,7 +7,7 @@ defmodule EdgeAgentWeb.Router do
     plug(EdgeAgentWeb.Plugs.ApiTokenAuth)
   end
 
-  scope "/api", EdgeAgentWeb.Controllers do
+  scope "/api/v1", EdgeAgentWeb.Controllers do
     pipe_through(:api)
 
     resources "/command_executions", CommandExecutionController, only: [:create]

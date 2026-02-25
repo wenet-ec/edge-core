@@ -23,7 +23,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.HostMetricsDiscoveryController do
       |> Enum.map(fn %{name: cluster_name, nodes: node_ids} ->
         targets =
           Enum.map(node_ids, fn node_id ->
-            "#{metrics_base_url}/api/nodes/#{node_id}/metrics/host/raw"
+            "#{metrics_base_url}/api/v1/nodes/#{node_id}/metrics/host/raw"
           end)
 
         %{

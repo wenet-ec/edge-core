@@ -372,7 +372,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     cluster_name = state.cluster_name
 
     Task.start(fn ->
-      url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/agents/metrics/self/raw"
+      url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/v1/agents/metrics/self/raw"
 
       opts =
         Keyword.merge(
@@ -466,7 +466,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   @impl true
   def handle_call({:trigger_self_update, node}, from, state) do
     Task.start(fn ->
-      url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/self_updates/trigger"
+      url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/v1/self_updates/trigger"
 
       opts = Keyword.merge([auth: {:bearer, node.api_token}], agent_request_options())
 
@@ -500,7 +500,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   @impl true
   def handle_call({:cancel_execution, node, execution_id}, from, state) do
     Task.start(fn ->
-      url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/command_executions/#{execution_id}/cancel"
+      url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/v1/command_executions/#{execution_id}/cancel"
 
       opts = Keyword.merge([auth: {:bearer, node.api_token}], agent_request_options())
 

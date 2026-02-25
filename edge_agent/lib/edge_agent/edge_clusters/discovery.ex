@@ -12,7 +12,7 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   ```
   1. Query WireGuard for peer list (netclient ping)
   2. Filter peers whose name starts with "admin-"
-  3. HTTP GET http://ip:port/api/admins/self/discovery on each candidate
+  3. HTTP GET http://ip:port/api/v1/admins/self/discovery on each candidate
   4. Store confirmed admin URLs (http://ip:port) in Settings for AdminClient
   ```
 
@@ -24,7 +24,7 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
 
   ## Admin Discovery Endpoint
 
-  Admins expose `/api/admins/self/discovery` returning:
+  Admins expose `/api/v1/admins/self/discovery` returning:
   ```json
   {"name": "admin-abc123"}
   ```
@@ -105,7 +105,7 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
 
   # Returns a list of 0 or 1 admin URL for this peer
   defp probe_peer(%{"name" => "admin-" <> _, "address" => ip}, network_name, port) when is_binary(ip) do
-    url = "http://#{ip}:#{port}/api/admins/self/discovery"
+    url = "http://#{ip}:#{port}/api/v1/admins/self/discovery"
 
     opts = [
       receive_timeout: Application.get_env(:edge_agent, :http_receive_timeout, 30_000),

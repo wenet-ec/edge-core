@@ -26,7 +26,7 @@ services:
     env_file:
       - ./.envs/.edge_agent
     environment:
-      - PUBLIC_ENROLLMENT_KEY_URL=http://edge-admin.localtest.me/api/clusters/default/enrollment_keys/public
+      - PUBLIC_ENROLLMENT_KEY_URL=http://edge-admin.localtest.me/api/v1/clusters/default/enrollment_keys/public
       - NETMAKER_API_SCHEME=http
     network_mode: host
     privileged: true

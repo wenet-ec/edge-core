@@ -40,12 +40,12 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   ## API Endpoints
 
-  - **POST /api/agents/nodes** - Register node and receive API token
-  - **GET /api/agents/command_executions** - Fetch sent and pending command executions
-  - **PATCH /api/agents/command_executions/:id/acknowledge** - Acknowledge pending execution receipt
-  - **PATCH /api/agents/command_executions/:id/result** - Report execution results
-  - **POST /api/agents/ssh_usernames/verify_credentials** - Verify SSH credentials
-  - **POST /api/agents/relays** - Request relay gateway assignment
+  - **POST /api/v1/agents/nodes** - Register node and receive API token
+  - **GET /api/v1/agents/command_executions** - Fetch sent and pending command executions
+  - **PATCH /api/v1/agents/command_executions/:id/acknowledge** - Acknowledge pending execution receipt
+  - **PATCH /api/v1/agents/command_executions/:id/result** - Report execution results
+  - **POST /api/v1/agents/ssh_usernames/verify_credentials** - Verify SSH credentials
+  - **POST /api/v1/agents/relays** - Request relay gateway assignment
 
   ## Error Handling
 
@@ -114,11 +114,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   - `{:ok, node_data}` - Registration succeeded, node_data includes api_token and proxy_password
   - `{:error, reason}` - Registration failed
 
-  POST /api/agents/nodes
+  POST /api/v1/agents/nodes
   """
   @spec register_node(map(), keyword()) :: {:ok, map()} | {:error, term()}
   def register_node(node_params, opts \\ []) do
-    path = "/api/agents/nodes"
+    path = "/api/v1/agents/nodes"
     payload = %{node: node_params}
     fallback_enabled = Keyword.get(opts, :fallback_enabled, true)
 
@@ -156,12 +156,12 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   - `{:ok, false}` - username not found or credential incorrect
   - `{:error, reason}` - request or validation error
 
-  POST /api/agents/ssh_usernames/verify_credentials
+  POST /api/v1/agents/ssh_usernames/verify_credentials
   """
   @spec verify_ssh_credentials(String.t(), {:password, String.t()} | {:public_key, String.t()}, keyword()) ::
           {:ok, boolean()} | {:error, term()}
   def verify_ssh_credentials(username, credential, opts \\ []) do
-    path = "/api/agents/ssh_usernames/verify_credentials"
+    path = "/api/v1/agents/ssh_usernames/verify_credentials"
     fallback_enabled = Keyword.get(opts, :fallback_enabled, true)
 
     payload =
@@ -216,11 +216,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   - `{:error, :not_found}` - Node not found or no commands
   - `{:error, reason}` - Request failed
 
-  GET /api/agents/command_executions
+  GET /api/v1/agents/command_executions
   """
   @spec list_command_executions(keyword()) :: {:ok, map()} | {:error, term()}
   def list_command_executions(opts \\ []) do
-    path = "/api/agents/command_executions"
+    path = "/api/v1/agents/command_executions"
     fallback_enabled = Keyword.get(opts, :fallback_enabled, true)
 
     # Build query params (status is required)
@@ -308,11 +308,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   - `{:error, {:http_error, status, body}}` - HTTP error
   - `{:error, {:all_requests_failed, msg}}` - All admin URLs failed
 
-  POST /api/agents/relays
+  POST /api/v1/agents/relays
   """
   @spec create_relayed_node(keyword()) :: {:ok, map()} | {:error, term()}
   def create_relayed_node(opts \\ []) do
-    path = "/api/agents/relays"
+    path = "/api/v1/agents/relays"
     fallback_enabled = Keyword.get(opts, :fallback_enabled, false)
 
     request_with_auth(path, fallback_enabled, fn url, headers ->
@@ -352,11 +352,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   - `{:error, {:http_error, 422, _}}` - Validation error (not pending)
   - `{:error, reason}` - Acknowledgment failed
 
-  PATCH /api/agents/command_executions/:id/acknowledge
+  PATCH /api/v1/agents/command_executions/:id/acknowledge
   """
   @spec acknowledge_command_execution(String.t(), keyword()) :: :ok | {:error, term()}
   def acknowledge_command_execution(execution_id, opts \\ []) do
-    path = "/api/agents/command_executions/#{execution_id}/acknowledge"
+    path = "/api/v1/agents/command_executions/#{execution_id}/acknowledge"
     fallback_enabled = Keyword.get(opts, :fallback_enabled, true)
 
     request_with_auth(path, fallback_enabled, fn url, headers ->
@@ -395,11 +395,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   - `{:error, {:http_error, 422, _}}` - Validation error (invalid status)
   - `{:error, reason}` - Report failed
 
-  PATCH /api/agents/nodes/me/health_check
+  PATCH /api/v1/agents/nodes/me/health_check
   """
   @spec report_health_check(String.t(), keyword()) :: {:ok, map()} | {:error, term()}
   def report_health_check(status, opts \\ []) do
-    path = "/api/agents/nodes/me/health_check"
+    path = "/api/v1/agents/nodes/me/health_check"
     fallback_enabled = Keyword.get(opts, :fallback_enabled, true)
 
     request_with_auth(path, fallback_enabled, fn url, headers ->
@@ -445,11 +445,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
       iex> check_self_update()
       {:ok, %{"including_me" => false, "inserted_at" => nil}}
 
-  GET /api/agents/self_updates/check
+  GET /api/v1/agents/self_updates/check
   """
   @spec check_self_update(keyword()) :: {:ok, map()} | {:error, term()}
   def check_self_update(opts \\ []) do
-    path = "/api/agents/self_updates/check"
+    path = "/api/v1/agents/self_updates/check"
     fallback_enabled = Keyword.get(opts, :fallback_enabled, true)
 
     request_with_auth(path, fallback_enabled, fn url, headers ->
@@ -490,11 +490,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   - `{:error, {:http_error, 422, _}}` - Validation error (already completed)
   - `{:error, reason}` - Update failed
 
-  PATCH /api/agents/command_executions/:id/result
+  PATCH /api/v1/agents/command_executions/:id/result
   """
   @spec update_command_execution_result(String.t(), map(), keyword()) :: :ok | {:error, term()}
   def update_command_execution_result(execution_id, command_execution_params, opts \\ []) do
-    path = "/api/agents/command_executions/#{execution_id}/result"
+    path = "/api/v1/agents/command_executions/#{execution_id}/result"
     payload = %{command_execution: command_execution_params}
     fallback_enabled = Keyword.get(opts, :fallback_enabled, true)
 
@@ -537,11 +537,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
       iex> push_metrics("host", "# HELP node_cpu_seconds_total...")
       {:ok, %{"id" => "cache-123", "node_id" => "node-456", "metrics_type" => "host", "updated_at" => "2025-01-29T12:00:00Z"}}
 
-  POST /api/agents/metrics/push
+  POST /api/v1/agents/metrics/push
   """
   @spec push_metrics(String.t(), String.t(), keyword()) :: {:ok, map()} | {:error, term()}
   def push_metrics(metrics_type, metrics_text, opts \\ []) do
-    path = "/api/agents/metrics/push"
+    path = "/api/v1/agents/metrics/push"
     fallback_enabled = Keyword.get(opts, :fallback_enabled, true)
 
     request_with_auth(path, fallback_enabled, fn url, headers ->

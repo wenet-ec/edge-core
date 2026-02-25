@@ -937,7 +937,7 @@ defmodule EdgeAdmin.Commands do
   end
 
   defp create_execution_with_node(node, execution_data) do
-    url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/command_executions"
+    url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/v1/command_executions"
 
     opts = [
       json: execution_data,

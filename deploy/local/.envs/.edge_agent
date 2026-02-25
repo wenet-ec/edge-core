@@ -1,6 +1,6 @@
 # deploy/local/.envs/.edge_agent
 ENROLLMENT_KEY=
-PUBLIC_ENROLLMENT_KEY_URL=http://localhost:4000/api/clusters/default/enrollment_keys/public
+PUBLIC_ENROLLMENT_KEY_URL=http://localhost:4000/api/v1/clusters/default/enrollment_keys/public
 ADMIN_FALLBACK_URLS=http://localhost:4000
 
 # Self-update configuration

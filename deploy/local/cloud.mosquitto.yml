@@ -1,0 +1,355 @@
+# deploy/local/cloud.yml
+networks:
+  local_edge_core:
+    name: local_edge_core
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  local_edge_admin_db_data: {}
+  local_edge_admin_db_data_backups: {}
+  local_edge_admin_deps: {}
+  local_edge_admin_build: {}
+  local_edge_admin_2_deps: {}
+  local_edge_admin_2_build: {}
+  local_edge_admin_3_deps: {}
+  local_edge_admin_3_build: {}
+  local_edge_vpn_data: {}
+  local_edge_vpn_db_data: {}
+  local_edge_vpn_dns_config: {}
+  local_edge_vpn_broker_data: {}
+  local_edge_vpn_proxy_data: {}
+  local_edge_vpn_proxy_config: {}
+  local_edge_metrics_storage_data: {}
+  local_edge_metrics_collector_data: {}
+
+services:
+  # Edge Admin
+  edge_admin_db:
+    image: docker.io/postgres:18
+    container_name: local_edge_admin_db
+    networks:
+      - local_edge_core
+    volumes:
+      - local_edge_admin_db_data:/var/lib/postgresql
+      - local_edge_admin_db_data_backups:/backups
+    env_file:
+      - ./.envs/.edge_admin_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  edge_admin:
+    build:
+      context: ../..
+      dockerfile: ./deploy/local/compose/edge_admin/Dockerfile
+    image: local_edge_admin
+    container_name: local_edge_admin
+    networks:
+      - local_edge_core
+    extra_hosts:
+      - "netmaker.localtest.me:172.20.0.101"
+      - "broker.localtest.me:172.20.0.101"
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+      edge_admin_db:
+        condition: service_healthy
+    volumes:
+      - ../../edge_admin:/app:z
+      - ../../nexmaker:/nexmaker:z
+      - local_edge_admin_deps:/app/deps
+      - local_edge_admin_build:/app/_build
+      - /dev/net/tun:/dev/net/tun
+    env_file:
+      - ./.envs/.edge_admin
+    environment:
+      - ADMIN_WIREGUARD_PORT=51821
+    ports:
+      - "4000:44000"       # API 
+      - "3128:43128"       # HTTP Proxy
+      - "31080:41080"      # SOCKS5 Proxy
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
+      interval: 60s
+      timeout: 5s
+      retries: 6
+      start_period: 45s
+
+  edge_admin_2:
+    build:
+      context: ../..
+      dockerfile: ./deploy/local/compose/edge_admin/Dockerfile
+    image: local_edge_admin
+    container_name: local_edge_admin_2
+    networks:
+      - local_edge_core
+    extra_hosts:
+      - "netmaker.localtest.me:172.20.0.101"
+      - "broker.localtest.me:172.20.0.101"
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+      edge_admin_db:
+        condition: service_healthy
+      edge_admin:
+        condition: service_healthy
+    volumes:
+      - ../../edge_admin:/app:z
+      - ../../nexmaker:/nexmaker:z
+      - local_edge_admin_2_deps:/app/deps
+      - local_edge_admin_2_build:/app/_build
+      - /dev/net/tun:/dev/net/tun
+    env_file:
+      - ./.envs/.edge_admin
+    environment:
+      - AUTH_ENABLED=false
+      - ADMIN_WIREGUARD_PORT=51822
+    ports:
+      - "4001:44000"       # API
+      - "3129:43128"       # HTTP Proxy
+      - "1081:41080"       # SOCKS5 Proxy
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
+      interval: 60s
+      timeout: 5s
+      retries: 6
+      start_period: 45s
+
+  edge_admin_3:
+    build:
+      context: ../..
+      dockerfile: ./deploy/local/compose/edge_admin/Dockerfile
+    image: local_edge_admin
+    container_name: local_edge_admin_3
+    networks:
+      - local_edge_core
+    extra_hosts:
+      - "netmaker.localtest.me:172.20.0.101"
+      - "broker.localtest.me:172.20.0.101"
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+      edge_admin_db:
+        condition: service_healthy
+      edge_admin:
+        condition: service_healthy
+    volumes:
+      - ../../edge_admin:/app:z
+      - ../../nexmaker:/nexmaker:z
+      - local_edge_admin_3_deps:/app/deps
+      - local_edge_admin_3_build:/app/_build
+      - /dev/net/tun:/dev/net/tun
+    env_file:
+      - ./.envs/.edge_admin
+    environment:
+      - ADMIN_CLUSTER_NAME=b
+      - ADMIN_CLUSTER_SUBNET=100.63.1.0/24
+      - ADMIN_WIREGUARD_PORT=51823
+    ports:
+      - "4002:44000"       # API
+      - "3130:43128"       # HTTP Proxy
+      - "1082:41080"       # SOCKS5 Proxy
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
+      interval: 60s
+      timeout: 5s
+      retries: 6
+      start_period: 45s
+
+  edge_admin_test:
+    build:
+      context: ../..
+      dockerfile: ./deploy/local/compose/edge_admin/Dockerfile
+    image: local_edge_admin
+    container_name: local_edge_admin_test
+    networks:
+      - local_edge_core
+    depends_on:
+      edge_admin_db:
+        condition: service_healthy
+    volumes:
+      - ../../edge_admin:/app:z
+      - ../../nexmaker:/nexmaker:z
+      - local_edge_admin_deps:/app/deps
+      - local_edge_admin_build:/app/_build
+    env_file:
+      - ./.envs/.edge_admin_test
+    profiles:
+      - test
+    command: mix test
+
+  # Netmaker VPN Stack
+  edge_vpn_db:
+    image: postgres:18
+    container_name: local_edge_vpn_db
+    networks:
+      - local_edge_core
+    volumes:
+      - local_edge_vpn_db_data:/var/lib/postgresql
+    env_file:
+      - ./.envs/.edge_vpn_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  edge_vpn_broker:
+    image: eclipse-mosquitto:latest
+    container_name: local_edge_vpn_broker
+    networks:
+      - local_edge_core
+    ports:
+      - "8083:8083"
+    volumes:
+      - ../../deploy/production/compose/edge_vpn_broker/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - local_edge_vpn_broker_data:/mosquitto/data
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  edge_vpn:
+    image: gravitl/netmaker:v1.5.0
+    container_name: local_edge_vpn
+    networks:
+      - local_edge_core
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
+    volumes:
+      - local_edge_vpn_data:/root/data
+      - local_edge_vpn_dns_config:/root/config/dnsconfig
+      - /dev/net/tun:/dev/net/tun:rw
+    env_file:
+      - ./.envs/.edge_vpn
+    environment:
+      - BROKER_TYPE=mosquitto
+    ports:
+      - "8081:8081"
+    depends_on:
+      edge_vpn_db:
+        condition: service_healthy
+      edge_vpn_broker:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --spider http://localhost:8081/api/server/status",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 1
+      start_period: 10s
+
+  edge_vpn_dns:
+    image: coredns/coredns:latest
+    container_name: local_edge_vpn_dns
+    networks:
+      - local_edge_core
+    user: "0:0"
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+    volumes:
+      - local_edge_vpn_dns_config:/root/config/dnsconfig
+    command: -conf /root/config/dnsconfig/Corefile
+
+  edge_vpn_proxy:
+    image: caddy:alpine
+    container_name: local_edge_vpn_proxy
+    networks:
+      local_edge_core:
+        ipv4_address: 172.20.0.101
+        aliases:
+          - netmaker.localtest.me
+          - broker.localtest.me
+    ports:
+      - "80:80"
+    volumes:
+      - ../../deploy/local/compose/edge_vpn_proxy/Caddyfile:/etc/caddy/Caddyfile
+      - local_edge_vpn_proxy_data:/data
+      - local_edge_vpn_proxy_config:/config
+    depends_on:
+      - edge_vpn
+    command: caddy run --config /etc/caddy/Caddyfile
+
+  edge_vpn_ui:
+    container_name: edge_vpn_ui
+    image: gravitl/netmaker-ui:v1.5.0
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+    environment:
+      - BACKEND_URL=http://localhost:8081
+    ports:
+      - "8080:80"
+
+  # Metrics
+  edge_metrics_storage:
+    image: victoriametrics/victoria-metrics:latest
+    container_name: local_edge_metrics_storage
+    networks:
+      - local_edge_core
+    ports:
+      - "8428:8428"
+    volumes:
+      - local_edge_metrics_storage_data:/storage
+    env_file:
+      - ./.envs/.edge_metrics_storage
+    command:
+      - "-envflag.enable"
+      - "-envflag.prefix=VM_"
+
+  edge_metrics_collector:
+    image: victoriametrics/vmagent:latest
+    container_name: local_edge_metrics_collector
+    networks:
+      - local_edge_core
+    depends_on:
+      edge_metrics_storage:
+        condition: service_started
+    volumes:
+      - ../../deploy/production/compose/edge_metrics_collector/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    env_file:
+      - ./.envs/.edge_metrics_collector
+    ports:
+      - "8429:8429"
+    command:
+      - "-envflag.enable"
+      - "-envflag.prefix=VM_"

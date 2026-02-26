@@ -1,7 +1,7 @@
 # deploy/production/.envs/.edge_vpn
 SERVER_NAME=production-netmaker
-SERVER_HOST=netmaker.localtest.me
-SERVER_HTTP_HOST=netmaker.localtest.me
+SERVER_HOST=netmaker.yourdomain.com
+SERVER_HTTP_HOST=netmaker.yourdomain.com
 MASTER_KEY=supersecretkey123456789
 CORS_ALLOWED_ORIGIN=*
 DISPLAY_KEYS=on
@@ -18,11 +18,11 @@ COREDNS_ADDR=edge_vpn_dns:53
 DISABLE_REMOTE_IP_CHECK=on
 TELEMETRY=off
 SERVER_BROKER_ENDPOINT=ws://edge_vpn_broker:8083/mqtt
-BROKER_ENDPOINT=ws://broker.localtest.me/mqtt
+BROKER_ENDPOINT=ws://broker.yourdomain.com/mqtt
 BROKER_TYPE=emqx
 EMQX_REST_ENDPOINT=http://edge_vpn_broker:18083
 MQ_USERNAME=admin
 MQ_PASSWORD=netmaker123
 VERBOSITY=1
 STUN_LIST=stun1.l.google.com:19302,stun2.l.google.com:19302,stun.stunprotocol.org:3478,stun.nextcloud.com:443,stun.netmaker.io:3478
-SERVER_API_CONN_STRING=netmaker.localtest.me
+SERVER_API_CONN_STRING=netmaker.yourdomain.com

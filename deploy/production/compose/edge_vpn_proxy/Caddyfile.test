@@ -22,7 +22,3 @@ http://edge-admin3.localtest.me {
 http://broker.localtest.me {
     reverse_proxy edge_vpn_broker:8083
 }
-
-http://broker-ui.localtest.me {
-    reverse_proxy edge_vpn_broker:18083
-}

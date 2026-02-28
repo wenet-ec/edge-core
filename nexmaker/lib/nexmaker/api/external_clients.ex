@@ -1,3 +1,4 @@
+# nexmaker/lib/nexmaker/api/external_clients.ex
 defmodule Nexmaker.Api.ExternalClients do
   @moduledoc """
   External client (Remote Access Client) management for Netmaker API.

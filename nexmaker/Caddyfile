@@ -1,3 +1,4 @@
+# nexmaker/Caddyfile
 http://netmaker_proxy {
     reverse_proxy netmaker:8081
 }

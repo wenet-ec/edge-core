@@ -1,3 +1,4 @@
+# nexmaker/test/nexmaker_test.exs
 # Integration tests have been split into focused files:
 #
 #   test/nexmaker/api_test.exs  — Netmaker REST API (Networks, EnrollmentKeys, Hosts, Nodes, DNS, Server, Superadmin)

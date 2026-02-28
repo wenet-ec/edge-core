@@ -1,3 +1,4 @@
+# edge_agent/test/edge_agent_web/controllers/self_update_controller_test.exs
 defmodule EdgeAgentWeb.Controllers.SelfUpdateControllerTest do
   use EdgeAgentWeb.ConnCase
 

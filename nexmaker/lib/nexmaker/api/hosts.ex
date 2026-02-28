@@ -1,3 +1,4 @@
+# nexmaker/lib/nexmaker/api/hosts.ex
 defmodule Nexmaker.Api.Hosts do
   @moduledoc """
   Host management for Netmaker API.

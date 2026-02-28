@@ -1,3 +1,4 @@
+# edge_admin/test/edge_admin/config_test.exs
 defmodule EdgeAdmin.ConfigTest do
   use ExUnit.Case, async: true
 

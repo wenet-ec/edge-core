@@ -1,3 +1,4 @@
+# nexmaker/Dockerfile
 # Stage 1: Build netclient from our fork (DERP support + NETMAKER_API_SCHEME)
 FROM golang:1.25-bookworm AS netclient_builder
 

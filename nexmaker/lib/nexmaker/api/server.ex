@@ -1,3 +1,4 @@
+# nexmaker/lib/nexmaker/api/server.ex
 defmodule Nexmaker.Api.Server do
   @moduledoc """
   Netmaker server info and health check endpoints.

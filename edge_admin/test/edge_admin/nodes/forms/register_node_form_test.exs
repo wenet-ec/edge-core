@@ -1,3 +1,4 @@
+# edge_admin/test/edge_admin/nodes/forms/register_node_form_test.exs
 defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
   use ExUnit.Case, async: true
 

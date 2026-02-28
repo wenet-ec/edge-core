@@ -1,3 +1,4 @@
+# nexmaker/lib/nexmaker/api/advanced_egress.ex
 defmodule Nexmaker.Api.AdvancedEgress do
   @moduledoc """
   Advanced egress gateway management for Netmaker API.

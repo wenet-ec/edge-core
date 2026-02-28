@@ -1,3 +1,4 @@
+# nexmaker/lib/nexmaker/api/nodes.ex
 defmodule Nexmaker.Api.Nodes do
   @moduledoc """
   Node management for Netmaker API.

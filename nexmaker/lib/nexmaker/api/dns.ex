@@ -1,3 +1,4 @@
+# nexmaker/lib/nexmaker/api/dns.ex
 defmodule Nexmaker.Api.DNS do
   @moduledoc """
   DNS management for Netmaker API.

@@ -1,3 +1,4 @@
+# edge_admin/test/edge_admin/self_updates/checks/delete_request_check_test.exs
 defmodule EdgeAdmin.SelfUpdates.Checks.DeleteRequestCheckTest do
   use ExUnit.Case, async: true
 

@@ -1,3 +1,4 @@
+# edge_admin/test/edge_admin/nodes/schemas/cluster_test.exs
 defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
   use ExUnit.Case, async: true
 

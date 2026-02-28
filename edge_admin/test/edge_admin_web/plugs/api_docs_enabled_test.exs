@@ -1,3 +1,4 @@
+# edge_admin/test/edge_admin_web/plugs/api_docs_enabled_test.exs
 defmodule EdgeAdminWeb.Plugs.ApiDocsEnabledTest do
   use ExUnit.Case, async: false
 

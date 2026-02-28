@@ -1,3 +1,4 @@
+# nexmaker/lib/nexmaker/api/superadmin.ex
 defmodule Nexmaker.Api.Superadmin do
   @moduledoc """
   Superadmin management for Netmaker API.

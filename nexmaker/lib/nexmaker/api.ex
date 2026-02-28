@@ -1,3 +1,4 @@
+# nexmaker/lib/nexmaker/api.ex
 defmodule Nexmaker.Api do
   @moduledoc """
   HTTP client for Netmaker REST API.

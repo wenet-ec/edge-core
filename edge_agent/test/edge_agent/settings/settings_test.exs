@@ -1,3 +1,4 @@
+# edge_agent/test/edge_agent/settings/settings_test.exs
 defmodule EdgeAgent.SettingsTest do
   use EdgeAgent.DataCase
 

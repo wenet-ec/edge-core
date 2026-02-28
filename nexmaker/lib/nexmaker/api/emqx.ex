@@ -1,3 +1,4 @@
+# nexmaker/lib/nexmaker/api/emqx.ex
 defmodule Nexmaker.Api.EMQX do
   @moduledoc """
   EMQX integration management for Netmaker API.

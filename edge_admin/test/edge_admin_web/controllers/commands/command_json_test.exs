@@ -1,3 +1,4 @@
+# edge_admin/test/edge_admin_web/controllers/commands/command_json_test.exs
 defmodule EdgeAdminWeb.Controllers.Commands.CommandJSONTest do
   use ExUnit.Case, async: true
 

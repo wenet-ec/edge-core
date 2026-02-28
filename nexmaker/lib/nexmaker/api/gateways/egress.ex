@@ -1,3 +1,4 @@
+# nexmaker/lib/nexmaker/api/gateways/egress.ex
 defmodule Nexmaker.Api.Gateways.Egress do
   @moduledoc """
   Egress gateway management for Netmaker API.

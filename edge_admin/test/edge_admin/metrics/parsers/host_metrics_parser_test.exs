@@ -1,3 +1,4 @@
+# edge_admin/test/edge_admin/metrics/parsers/host_metrics_parser_test.exs
 defmodule EdgeAdmin.Metrics.Parsers.HostMetricsParserTest do
   use ExUnit.Case, async: true
 

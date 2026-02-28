@@ -1,3 +1,4 @@
+# nexmaker/lib/nexmaker/api/internet_gateway.ex
 defmodule Nexmaker.Api.InternetGateway do
   @moduledoc """
   Internet gateway management for Netmaker API.

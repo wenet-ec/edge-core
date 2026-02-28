@@ -1,3 +1,4 @@
+# edge_admin/test/edge_admin_web/controllers/nodes/node_json_test.exs
 defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
   use ExUnit.Case, async: true
 

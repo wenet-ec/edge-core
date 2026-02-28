@@ -1,3 +1,4 @@
+# nexmaker/lib/nexmaker.ex
 defmodule Nexmaker do
   @moduledoc """
   Elixir library for interacting with Netmaker infrastructure.

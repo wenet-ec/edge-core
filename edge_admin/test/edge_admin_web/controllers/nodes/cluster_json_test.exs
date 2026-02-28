@@ -1,3 +1,4 @@
+# edge_admin/test/edge_admin_web/controllers/nodes/cluster_json_test.exs
 defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSONTest do
   use ExUnit.Case, async: true
 

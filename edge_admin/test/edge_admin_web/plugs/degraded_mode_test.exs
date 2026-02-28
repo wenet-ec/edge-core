@@ -1,3 +1,4 @@
+# edge_admin/test/edge_admin_web/plugs/degraded_mode_test.exs
 defmodule EdgeAdminWeb.Plugs.DegradedModeTest do
   use EdgeAdminWeb.ConnCase, async: true
 

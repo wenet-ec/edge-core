@@ -1,3 +1,4 @@
+# nexmaker/lib/nexmaker/cli.ex
 defmodule Nexmaker.Cli do
   @moduledoc """
   Thin Elixir wrapper around netclient CLI for VPN operations.

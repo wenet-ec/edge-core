@@ -136,7 +136,7 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
     Delete a self-update request.
 
     Only completed requests can be deleted.
-    Attempting to delete a pending or processing request will return 422.
+    Attempting to delete a pending or processing request will return 409.
     """,
     parameters: [
       id: [
@@ -148,7 +148,7 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
     responses: %{
       204 => {"Self-update request deleted successfully", "", nil},
       404 => {"Self-update request not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Cannot delete non-completed request", "application/json", CommonSchemas.ChangesetErrorResponse}
+      409 => {"Cannot delete non-completed request", "application/json", CommonSchemas.ConflictResponse}
     }
   )
 

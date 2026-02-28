@@ -141,8 +141,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
     request_body: {"Cluster change parameters", "application/json", NodeSchemas.ChangeClusterRequest},
     responses: %{
       200 => {"Node cluster changed successfully", "application/json", NodeSchemas.NodeSingleResponse},
-      404 => {"Node or cluster not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
+      404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
+      422 =>
+        {"Validation error (incl. cluster name not found)", "application/json", CommonSchemas.ChangesetErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
@@ -168,7 +169,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
     responses: %{
       204 => {"Node deleted successfully", "", nil},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Failed to delete node from Netmaker", "application/json", CommonSchemas.ChangesetErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )

@@ -112,7 +112,13 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameForm do
     end
   end
 
-  defp validate_public_keys(_), do: {:ok, []}
+  defp validate_public_keys(_) do
+    {:error,
+     %__MODULE__{}
+     |> cast(%{}, [])
+     |> add_error(:public_keys, "must be an array")
+     |> apply_action!(:insert)}
+  end
 
   defp to_map(%__MODULE__{} = form) do
     %{

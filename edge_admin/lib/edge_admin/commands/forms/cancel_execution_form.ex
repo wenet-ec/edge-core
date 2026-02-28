@@ -6,11 +6,8 @@ defmodule EdgeAdmin.Commands.Forms.CancelExecutionForm do
   Validates that execution is in a cancellable state (pending or sent).
   """
 
-  use Ecto.Schema
+  use EdgeAdmin.Form
 
-  import Ecto.Changeset
-
-  @primary_key false
   embedded_schema do
   end
 

@@ -48,8 +48,8 @@ defmodule EdgeAdmin.Nodes do
   import Ecto.Query, warn: false
 
   alias Ecto.Query.CastError
+  alias EdgeAdmin.Nodes.Checks
   alias EdgeAdmin.Nodes.Forms
-  alias EdgeAdmin.Nodes.Rules.DeletionRules
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
@@ -326,7 +326,11 @@ defmodule EdgeAdmin.Nodes do
          existing_ranges = Repo.all(from(c in Cluster, select: c.ipv4_range)),
          ipv4_range = validated_attrs["ipv4_range"] || Vpn.generate_next_subnet(existing_ranges),
          cluster_attrs = Map.put(validated_attrs, "ipv4_range", ipv4_range),
-         {:ok, cluster} <- %Cluster{} |> Cluster.changeset(cluster_attrs) |> Repo.insert() do
+         {:ok, cluster} <-
+           %Cluster{}
+           |> Cluster.changeset(cluster_attrs)
+           |> Repo.insert()
+           |> Repo.normalize_conflict([:name, :ipv4_range]) do
       # DB insert succeeded - now create Netmaker network
       network_name = node_network_name(cluster)
 
@@ -384,12 +388,12 @@ defmodule EdgeAdmin.Nodes do
   This ensures "cluster in DB but network not in Netmaker" always means failed deletion,
   allowing reconciliation to safely delete orphaned DB clusters.
 
-  Returns `{:ok, cluster}`, `{:error, changeset}` (validation/DB failure), or `{:error, :service_unavailable}` (Netmaker failure).
+  Returns `{:ok, cluster}`, `{:error, {:conflict, reason}}` (cluster has nodes), or `{:error, :service_unavailable}` (Netmaker failure).
   """
   @spec delete_cluster(Cluster.t()) ::
-          {:ok, Cluster.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
+          {:ok, Cluster.t()} | {:error, {:conflict, String.t()}} | {:error, :service_unavailable}
   def delete_cluster(%Cluster{} = cluster) do
-    case DeletionRules.validate_cluster_deletion(cluster) do
+    case Checks.DeleteClusterCheck.check(cluster) do
       :ok ->
         network_name = node_network_name(cluster)
 
@@ -410,8 +414,8 @@ defmodule EdgeAdmin.Nodes do
             error
         end
 
-      {:error, changeset} ->
-        {:error, changeset}
+      {:error, {:conflict, _}} = error ->
+        error
     end
   end
 
@@ -561,7 +565,8 @@ defmodule EdgeAdmin.Nodes do
   @spec change_node_cluster(Node.t(), map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
   def change_node_cluster(%Node{} = node, params) do
     with {:ok, new_cluster_name} <- Forms.ChangeNodeClusterForm.changeset(params),
-         {:ok, new_cluster} <- get_cluster(new_cluster_name) do
+         {:ok, new_cluster} <- get_cluster(new_cluster_name),
+         :ok <- check_cluster_changed(node, new_cluster) do
       old_cluster_id = node.cluster_id
 
       # 1. Delete all aliases (they're cluster-specific and DNS entries are in old network)
@@ -1632,7 +1637,7 @@ defmodule EdgeAdmin.Nodes do
               end
 
             {:error, changeset} ->
-              {:error, changeset}
+              Repo.normalize_conflict({:error, changeset}, [:name, :cluster_id])
           end
 
         {:ok, _node} ->
@@ -1793,4 +1798,9 @@ defmodule EdgeAdmin.Nodes do
       end
     end)
   end
+
+  defp check_cluster_changed(%Node{cluster_id: same_id}, %{id: same_id}),
+    do: {:error, "node is already in this cluster"}
+
+  defp check_cluster_changed(_, _), do: :ok
 end

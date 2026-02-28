@@ -4,6 +4,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Nodes.Policies.EnrollmentKeyPolicy
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas
 
@@ -66,23 +67,12 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   )
 
   def create_for_default(conn, params) do
-    # Get default cluster name from config
-    default_cluster_name = Application.get_env(:edge_admin, :default_cluster_name)
-
-    if is_nil(default_cluster_name) do
+    with :ok <- EnrollmentKeyPolicy.authorize(:create_for_default),
+         {:ok, cluster} <- Nodes.get_cluster(EnrollmentKeyPolicy.default_cluster_name()),
+         {:ok, enrollment_key} <- Nodes.create_enrollment_key(cluster, params) do
       conn
-      |> put_status(:forbidden)
-      |> json(%{
-        error: "Default cluster not configured",
-        message: "DEFAULT_CLUSTER_NAME environment variable is not set"
-      })
-    else
-      with {:ok, cluster} <- Nodes.get_cluster(default_cluster_name),
-           {:ok, enrollment_key} <- Nodes.create_enrollment_key(cluster, params) do
-        conn
-        |> put_status(:created)
-        |> render(:show, enrollment_key: enrollment_key)
-      end
+      |> put_status(:created)
+      |> render(:show, enrollment_key: enrollment_key)
     end
   end
 
@@ -107,34 +97,11 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   )
 
   def create_for_public(conn, _params) do
-    # Check if public enrollment is enabled
-    public_enabled = Application.get_env(:edge_admin, :public_enrollment_key_enabled, false)
-    default_cluster_name = Application.get_env(:edge_admin, :default_cluster_name)
-
-    cond do
-      not public_enabled ->
-        conn
-        |> put_status(:forbidden)
-        |> json(%{
-          error: "Public enrollment disabled",
-          message: "PUBLIC_ENROLLMENT_KEY_ENABLED is not set to true"
-        })
-
-      is_nil(default_cluster_name) ->
-        conn
-        |> put_status(:forbidden)
-        |> json(%{
-          error: "Default cluster not configured",
-          message: "DEFAULT_CLUSTER_NAME environment variable is not set"
-        })
-
-      true ->
-        # Get default enrollment key (key_type: "default")
-        with {:ok, cluster} <- Nodes.get_cluster(default_cluster_name),
-             {:ok, enrollment_key} <-
-               Nodes.create_enrollment_key(cluster, %{"enrollment_key" => %{"key_type" => "default"}}) do
-          render(conn, :show, enrollment_key: enrollment_key)
-        end
+    with :ok <- EnrollmentKeyPolicy.authorize(:create_for_public),
+         {:ok, cluster} <- Nodes.get_cluster(EnrollmentKeyPolicy.default_cluster_name()),
+         {:ok, enrollment_key} <-
+           Nodes.create_enrollment_key(cluster, %{"enrollment_key" => %{"key_type" => "default"}}) do
+      render(conn, :show, enrollment_key: enrollment_key)
     end
   end
 end

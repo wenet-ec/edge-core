@@ -65,7 +65,7 @@ defmodule EdgeAdmin.Application do
       EdgeAdmin.Repo,
       {Phoenix.PubSub, name: EdgeAdmin.PubSub},
       EdgeAdminWeb.Telemetry,
-      EdgeAdminWeb.NetmakerDashboard.Collector,
+      EdgeAdminWeb.Live.NetmakerDashboard.Collector,
       {Oban, Application.fetch_env!(:edge_admin, Oban)},
       EdgeAdmin.Admins.Bootstrap,
       EdgeAdmin.EdgeClusters.Supervisor,

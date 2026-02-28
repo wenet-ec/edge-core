@@ -19,20 +19,13 @@ defmodule EdgeAgentWeb.Controllers.SelfUpdateController do
   - 503 Service Unavailable: Self-update service unreachable or error
   """
   def trigger(conn, _params) do
-    if SelfUpdates.enabled?() do
+    with :ok <- SelfUpdates.check_enabled() do
       # Trigger the update asynchronously so we can respond to the admin before shutdown
       SelfUpdates.trigger_update_async()
 
-      # Respond immediately with 202 Accepted
       conn
       |> put_status(:accepted)
-      |> json(%{
-        message: "Self-update triggered successfully"
-      })
-    else
-      conn
-      |> put_status(:forbidden)
-      |> json(%{error: "Self-update feature is not enabled"})
+      |> json(%{data: %{message: "Self-update triggered successfully"}})
     end
   end
 end

@@ -95,10 +95,11 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
     request_body: {"SSH public key creation data", "application/json", SshPublicKeySchemas.SshPublicKeyCreateRequest},
     responses: %{
       201 => {"SSH public key created", "application/json", SshPublicKeySchemas.SshPublicKeySingleResponse},
+      404 => {"SSH username not found", "application/json", CommonSchemas.NotFoundResponse},
+      409 => {"Key name already exists for this username", "application/json", CommonSchemas.ConflictResponse},
       422 =>
-        {"Validation error - Invalid key format, unsupported algorithm, or duplicate key name", "application/json",
-         CommonSchemas.ChangesetErrorResponse},
-      404 => {"SSH username not found", "application/json", CommonSchemas.NotFoundResponse}
+        {"Validation error - invalid key format or unsupported algorithm", "application/json",
+         CommonSchemas.ChangesetErrorResponse}
     }
   )
 
@@ -146,7 +147,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
       ]
     ],
     responses: %{
-      204 => {"SSH public key deleted", "application/json", nil},
+      204 => {"SSH public key deleted", "", nil},
       404 => {"SSH public key not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )

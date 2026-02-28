@@ -114,6 +114,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     request_body: {"Cluster creation parameters", "application/json", ClusterSchemas.ClusterCreateRequest},
     responses: %{
       201 => {"Cluster created successfully", "application/json", ClusterSchemas.ClusterSingleResponse},
+      409 => {"Cluster name or IP range already exists", "application/json", CommonSchemas.ConflictResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
@@ -143,7 +144,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     responses: %{
       204 => "Cluster deleted successfully",
       404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Cannot delete cluster with nodes", "application/json", CommonSchemas.ChangesetErrorResponse},
+      409 => {"Cannot delete cluster with nodes", "application/json", CommonSchemas.ConflictResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )

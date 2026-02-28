@@ -34,7 +34,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateAliasForm do
     %__MODULE__{}
     |> cast(attrs, [:name])
     |> validate_required([:name])
-    |> validate_length(:name, min: 1, max: 63)
+    |> validate_length(:name, max: 63)
     |> validate_format(:name, ~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
       message: "must be lowercase alphanumeric with hyphens, no leading/trailing hyphens"
     )
@@ -54,10 +54,6 @@ defmodule EdgeAdmin.Nodes.Forms.CreateAliasForm do
   end
 
   defp to_map(%__MODULE__{} = form) do
-    %{
-      "name" => form.name
-    }
-    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
-    |> Map.new()
+    %{"name" => form.name}
   end
 end

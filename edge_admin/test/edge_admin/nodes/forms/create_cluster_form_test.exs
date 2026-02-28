@@ -26,10 +26,9 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterFormTest do
       assert result["ipv4_range"] == "100.64.1.0/24"
     end
 
-    test "name is optional (form does not require it)" do
-      # name has no validate_required — schema generates one if missing
-      assert {:ok, result} = CreateClusterForm.changeset(%{"ipv4_range" => "100.64.1.0/24"})
-      refute Map.has_key?(result, "name")
+    test "name is required" do
+      assert {:error, changeset} = CreateClusterForm.changeset(%{"ipv4_range" => "100.64.1.0/24"})
+      assert %{name: [_msg]} = errors_on(changeset)
     end
 
     test "ipv4_range is optional at form level" do

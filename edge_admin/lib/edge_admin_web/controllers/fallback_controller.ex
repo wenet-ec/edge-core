@@ -51,6 +51,13 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> render(:"409")
   end
 
+  # 5a. Handle conflict errors (409) with a specific reason (from checks/ modules)
+  def call(conn, {:error, {:conflict, reason}}) do
+    conn
+    |> put_status(:conflict)
+    |> json(%{errors: %{detail: reason}})
+  end
+
   # 6. Handle service unavailable errors (503) - downstream services (VPN, metrics, etc.)
   def call(conn, {:error, :service_unavailable}) do
     conn

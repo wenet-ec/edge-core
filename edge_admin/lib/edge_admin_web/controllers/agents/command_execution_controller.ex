@@ -3,6 +3,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
   use EdgeAdminWeb, :controller
 
   alias EdgeAdmin.Commands
+  alias EdgeAdmin.Commands.Policies.CommandExecutionPolicy
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
@@ -47,11 +48,8 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
   Verifies command belongs to the authenticated node.
   """
   def acknowledge(conn, %{"id" => id} = params) do
-    # Get node ID from authenticated context (set by AgentAuth plug)
-    node_id = conn.assigns.current_node.id
-
     with {:ok, execution} <- Commands.get_command_execution(id),
-         :ok <- Commands.verify_execution_belongs_to_node(execution, node_id),
+         :ok <- CommandExecutionPolicy.authorize({:update, conn.assigns.current_node, execution}),
          {:ok, updated_execution} <- Commands.acknowledge_execution(execution, params) do
       render(conn, :show, command_execution: updated_execution)
     end
@@ -64,11 +62,8 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
   Verifies command belongs to the authenticated node.
   """
   def update_result(conn, %{"id" => id} = params) do
-    # Get node ID from authenticated context (set by AgentAuth plug)
-    node_id = conn.assigns.current_node.id
-
     with {:ok, execution} <- Commands.get_command_execution(id),
-         :ok <- Commands.verify_execution_belongs_to_node(execution, node_id),
+         :ok <- CommandExecutionPolicy.authorize({:update, conn.assigns.current_node, execution}),
          {:ok, updated_execution} <- Commands.update_command_execution_result(execution, params) do
       render(conn, :show, command_execution: updated_execution)
     end

@@ -81,7 +81,7 @@ defmodule EdgeAdminWeb.Router do
       on_mount: EdgeAdminWeb.LiveDashboardAuth,
       additional_pages: [
         oban: Oban.LiveDashboard,
-        netmaker: EdgeAdminWeb.NetmakerDashboard
+        netmaker: EdgeAdminWeb.Live.NetmakerDashboard
       ]
     )
   end

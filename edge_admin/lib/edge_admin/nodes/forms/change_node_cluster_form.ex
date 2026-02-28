@@ -60,7 +60,7 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterForm do
     if cluster_name && changeset.valid? do
       case get_cluster_fn.(cluster_name) do
         {:ok, _cluster} -> changeset
-        {:error, :not_found} -> add_error(changeset, :cluster_name, "does not exist")
+        {:error, :not_found} -> add_error(changeset, :cluster_name, "not found")
       end
     else
       changeset

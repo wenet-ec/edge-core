@@ -27,8 +27,8 @@ defmodule EdgeAdminWeb.Controllers.Agents.SelfUpdateController do
   def check(conn, _params) do
     node = conn.assigns.current_node
 
-    {:ok, result} = SelfUpdates.check_for_latest_request(node)
-
-    render(conn, :check, result: result)
+    with {:ok, result} <- SelfUpdates.check_for_latest_request(node) do
+      render(conn, :check, result: result)
+    end
   end
 end

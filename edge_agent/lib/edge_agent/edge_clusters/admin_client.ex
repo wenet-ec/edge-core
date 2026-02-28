@@ -319,7 +319,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
       opts = Keyword.merge([json: %{}, headers: headers], http_options())
 
       case Req.post(url, opts) do
-        {:ok, %{status: 200, body: response}} ->
+        {:ok, %{status: 201, body: response}} ->
           Logger.debug("Successfully create relayed node")
           {:ok, response}
 

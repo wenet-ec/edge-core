@@ -20,7 +20,9 @@ defmodule EdgeAdminWeb.Controllers.Agents.RelayController do
     edge_node = conn.assigns.current_node
 
     with {:ok, admin_name} <- EdgeClusters.assign_agent_to_relay(edge_node) do
-      render(conn, :create, relay_admin_name: admin_name)
+      conn
+      |> put_status(:created)
+      |> render(:create, relay_admin_name: admin_name)
     end
   end
 end

@@ -1,4 +1,5 @@
-defmodule EdgeAdminWeb.NetmakerDashboard.Collector do
+# edge_admin_web/live/netmaker_dashboard/collector.ex
+defmodule EdgeAdminWeb.Live.NetmakerDashboard.Collector do
   @moduledoc """
   Telemetry event collector for Netmaker API metrics.
 

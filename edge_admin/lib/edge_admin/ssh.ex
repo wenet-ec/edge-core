@@ -76,6 +76,7 @@ defmodule EdgeAdmin.Ssh do
     %SshUsername{}
     |> SshUsername.changeset(attrs)
     |> Repo.insert()
+    |> Repo.normalize_conflict([:username])
   end
 
   @doc """
@@ -89,7 +90,8 @@ defmodule EdgeAdmin.Ssh do
   - `{:ok, ssh_username}` - SSH username created successfully with keys loaded
   - `{:error, changeset}` - Validation or creation failed
   """
-  @spec create_ssh_username_with_keys(Node.t(), map()) :: {:ok, SshUsername.t()} | {:error, Ecto.Changeset.t()}
+  @spec create_ssh_username_with_keys(Node.t(), map()) ::
+          {:ok, SshUsername.t()} | {:error, Ecto.Changeset.t()} | {:error, :conflict}
   def create_ssh_username_with_keys(%Node{} = node, params) do
     with {:ok, attrs} <- Forms.CreateSshUsernameForm.changeset(params) do
       # Extract public_keys (if present) and prepare username attrs
@@ -112,19 +114,21 @@ defmodule EdgeAdmin.Ssh do
       # Create username
       case create_ssh_username(username_attrs) do
         {:ok, username} ->
-          # Create public keys (already validated by CreateSshUsernameForm, fail silently on DB errors)
-          keys =
-            Enum.flat_map(public_keys_attrs, fn key_attrs ->
+          # Create public keys (already validated by CreateSshUsernameForm)
+          key_results =
+            Enum.map(public_keys_attrs, fn key_attrs ->
               key_attrs = Map.put(key_attrs, "ssh_username_id", username.id)
-
-              case insert_ssh_public_key(key_attrs) do
-                {:ok, key} -> [key]
-                {:error, _changeset} -> []
-              end
+              insert_ssh_public_key(key_attrs)
             end)
 
-          # Return username with loaded keys (only successfully created keys)
-          {:ok, %{username | ssh_public_keys: keys}}
+          case Enum.find(key_results, &match?({:error, _}, &1)) do
+            nil ->
+              keys = Enum.map(key_results, fn {:ok, key} -> key end)
+              {:ok, %{username | ssh_public_keys: keys}}
+
+            {:error, reason} ->
+              {:error, reason}
+          end
 
         {:error, changeset} ->
           {:error, changeset}
@@ -328,7 +332,8 @@ defmodule EdgeAdmin.Ssh do
   - `{:ok, ssh_public_key}` - SSH public key created successfully
   - `{:error, changeset}` - Validation or creation failed
   """
-  @spec create_ssh_public_key(SshUsername.t(), map()) :: {:ok, SshPublicKey.t()} | {:error, Ecto.Changeset.t()}
+  @spec create_ssh_public_key(SshUsername.t(), map()) ::
+          {:ok, SshPublicKey.t()} | {:error, Ecto.Changeset.t()} | {:error, :conflict}
   def create_ssh_public_key(%SshUsername{} = ssh_username, params) do
     with {:ok, attrs} <- Forms.CreateSshPublicKeyForm.changeset(params) do
       attrs = Map.put(attrs, "ssh_username_id", ssh_username.id)
@@ -341,6 +346,7 @@ defmodule EdgeAdmin.Ssh do
     %SshPublicKey{}
     |> SshPublicKey.changeset(attrs)
     |> Repo.insert()
+    |> Repo.normalize_conflict([:key_name])
   end
 
   @doc """

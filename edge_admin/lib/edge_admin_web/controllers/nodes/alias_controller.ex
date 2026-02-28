@@ -110,6 +110,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
     responses: %{
       201 => {"Alias created successfully", "application/json", AliasSchemas.AliasResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
+      409 => {"Alias name already exists in this cluster", "application/json", CommonSchemas.ConflictResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
@@ -135,7 +136,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
       ]
     ],
     responses: %{
-      204 => {"Alias deleted successfully", "application/json", nil},
+      204 => {"Alias deleted successfully", "", nil},
       404 => {"Alias not found", "application/json", CommonSchemas.NotFoundResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }

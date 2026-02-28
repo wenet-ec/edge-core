@@ -125,7 +125,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
     Delete a command and all its related command executions (cascaded deletion).
 
     Only commands where ALL executions are completed can be deleted.
-    Attempting to delete a command with pending or sent executions will return 422.
+    Attempting to delete a command with pending or sent executions will return 409.
     """,
     parameters: [
       id: [
@@ -137,9 +137,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
     responses: %{
       204 => {"Command deleted successfully", "", nil},
       404 => {"Command not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 =>
-        {"Cannot delete command with non-completed executions", "application/json",
-         CommonSchemas.ChangesetErrorResponse}
+      409 => {"Cannot delete command with non-completed executions", "application/json", CommonSchemas.ConflictResponse}
     }
   )
 

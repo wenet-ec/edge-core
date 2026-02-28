@@ -23,7 +23,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackController do
   def call(conn, {:error, :not_found}) do
     conn
     |> put_status(:not_found)
-    |> put_view(html: EdgeAgentWeb.ErrorHTML, json: ErrorJSON)
+    |> put_view(json: ErrorJSON)
     |> render(:"404")
   end
 
@@ -43,12 +43,19 @@ defmodule EdgeAgentWeb.Controllers.FallbackController do
     |> render(:"401")
   end
 
-  # 5. Handle conflict errors (409)
+  # 5. Handle conflict errors (409) - duplicate resources, unique constraints
   def call(conn, {:error, :conflict}) do
     conn
     |> put_status(:conflict)
     |> put_view(json: ErrorJSON)
     |> render(:"409")
+  end
+
+  # 5a. Handle conflict errors (409) with a specific reason (from checks/ modules)
+  def call(conn, {:error, {:conflict, reason}}) do
+    conn
+    |> put_status(:conflict)
+    |> json(%{errors: %{detail: reason}})
   end
 
   # 6. Handle service unavailable errors (503)

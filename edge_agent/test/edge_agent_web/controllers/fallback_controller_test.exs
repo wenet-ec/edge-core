@@ -92,6 +92,23 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
   end
 
   # -----------------------------------------------------------------------
+  # Clause 5a: {:conflict, reason} → 409 with specific reason
+  # -----------------------------------------------------------------------
+
+  describe "call/2 — {:conflict, reason} → 409 with reason" do
+    test "returns 409", %{conn: conn} do
+      conn = call(conn, {:error, {:conflict, "cannot delete with active nodes"}})
+      assert conn.status == 409
+    end
+
+    test "response errors.detail contains the specific reason", %{conn: conn} do
+      conn = call(conn, {:error, {:conflict, "cannot delete with active nodes"}})
+      body = Jason.decode!(conn.resp_body)
+      assert get_in(body, ["errors", "detail"]) == "cannot delete with active nodes"
+    end
+  end
+
+  # -----------------------------------------------------------------------
   # Clause 6: :service_unavailable → 503
   # -----------------------------------------------------------------------
 

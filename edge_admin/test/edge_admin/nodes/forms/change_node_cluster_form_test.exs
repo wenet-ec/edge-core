@@ -115,7 +115,7 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterFormTest do
                )
 
       assert %{cluster_name: [msg]} = errors_on(changeset)
-      assert msg =~ "does not exist"
+      assert msg =~ "not found"
     end
 
     test "cluster found returns :ok" do

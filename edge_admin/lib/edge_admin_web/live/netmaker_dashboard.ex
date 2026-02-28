@@ -1,5 +1,5 @@
 # edge_admin/lib/edge_admin_web/live/netmaker_dashboard.ex
-defmodule EdgeAdminWeb.NetmakerDashboard do
+defmodule EdgeAdminWeb.Live.NetmakerDashboard do
   @moduledoc """
   LiveDashboard page for monitoring Netmaker API integration health.
 
@@ -22,7 +22,7 @@ defmodule EdgeAdminWeb.NetmakerDashboard do
   - `[:finch, :connect, :stop]`
   - `[:finch, :reused_connection]`
 
-  Events are collected in ETS by `EdgeAdminWeb.NetmakerDashboard.Collector`.
+  Events are collected in ETS by `EdgeAdminWeb.Live.NetmakerDashboard.Collector`.
   """
 
   use Phoenix.LiveDashboard.PageBuilder
@@ -39,7 +39,7 @@ defmodule EdgeAdminWeb.NetmakerDashboard do
 
   @impl true
   def render(assigns) do
-    stats = EdgeAdminWeb.NetmakerDashboard.Collector.get_stats()
+    stats = EdgeAdminWeb.Live.NetmakerDashboard.Collector.get_stats()
     assigns = assign(assigns, stats: stats, now: DateTime.utc_now())
 
     ~H"""

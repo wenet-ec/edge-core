@@ -58,8 +58,8 @@ defmodule EdgeAdmin.Commands do
 
   alias Ecto.Query.CastError
   alias EdgeAdmin.Admins.Metadata
+  alias EdgeAdmin.Commands.Checks
   alias EdgeAdmin.Commands.Forms
-  alias EdgeAdmin.Commands.Rules
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Commands.Workers.ExecutionCreationWorker
@@ -140,11 +140,11 @@ defmodule EdgeAdmin.Commands do
 
   ## Returns
   - `{:ok, command}` - Deletion succeeded
-  - `{:error, changeset}` - Validation failed (has executions)
+  - `{:error, {:conflict, reason}}` - Command has non-completed executions
   """
-  @spec delete_command(Command.t()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
+  @spec delete_command(Command.t()) :: {:ok, Command.t()} | {:error, {:conflict, String.t()}}
   def delete_command(%Command{} = command) do
-    with :ok <- Rules.DeletionRules.validate_command_deletion(command) do
+    with :ok <- Checks.DeleteCommandCheck.check(command) do
       Repo.delete(command)
     end
   end
@@ -257,11 +257,12 @@ defmodule EdgeAdmin.Commands do
 
   ## Returns
   - `{:ok, execution}` - Deletion succeeded
-  - `{:error, changeset}` - Validation failed
+  - `{:error, {:conflict, reason}}` - Execution is not completed
   """
-  @spec delete_command_execution(CommandExecution.t()) :: {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
+  @spec delete_command_execution(CommandExecution.t()) ::
+          {:ok, CommandExecution.t()} | {:error, {:conflict, String.t()}}
   def delete_command_execution(%CommandExecution{} = command_execution) do
-    with :ok <- Rules.DeletionRules.validate_execution_deletion(command_execution) do
+    with :ok <- Checks.DeleteExecutionCheck.check(command_execution) do
       Repo.delete(command_execution)
     end
   end
@@ -961,26 +962,6 @@ defmodule EdgeAdmin.Commands do
   end
 
   @doc """
-  Verifies that an execution belongs to a specific node.
-
-  ## Parameters
-  - `execution` - The execution struct
-  - `node_id` - The node ID to verify against
-
-  ## Returns
-  - `:ok` - Execution belongs to the node
-  - `{:error, :forbidden}` - Execution doesn't belong to the node
-  """
-  @spec verify_execution_belongs_to_node(CommandExecution.t(), String.t()) :: :ok | {:error, :forbidden}
-  def verify_execution_belongs_to_node(execution, node_id) do
-    if execution.node_id == node_id do
-      :ok
-    else
-      {:error, :forbidden}
-    end
-  end
-
-  @doc """
   Acknowledges command execution receipt from agent.
 
   Validates execution is in "pending" status and transitions it to "sent".
@@ -1103,7 +1084,7 @@ defmodule EdgeAdmin.Commands do
               completed_at: DateTime.utc_now()
             })
 
-          {:ok, %{result: "cancellation request sent"}}
+          {:ok, %{result: "execution cancelled"}}
 
         "sent" ->
           # Send cancellation request to agent (best-effort)

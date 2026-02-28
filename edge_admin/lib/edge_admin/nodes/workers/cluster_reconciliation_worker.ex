@@ -1,4 +1,4 @@
-# lib/edge_admin/nodes/workers/cluster_reconciliation_worker.ex
+# edge_admin/lib/edge_admin/nodes/workers/cluster_reconciliation_worker.ex
 defmodule EdgeAdmin.Nodes.Workers.ClusterReconciliationWorker do
   @moduledoc """
   Oban worker that periodically reconciles clusters and node membership between database and Netmaker.

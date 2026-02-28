@@ -36,8 +36,8 @@ defmodule EdgeAdmin.SelfUpdates do
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
+  alias EdgeAdmin.SelfUpdates.Checks
   alias EdgeAdmin.SelfUpdates.Forms
-  alias EdgeAdmin.SelfUpdates.Rules
   alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
   alias EdgeAdmin.SelfUpdates.Workers.SelfUpdateTriggerWorker
 
@@ -195,12 +195,12 @@ defmodule EdgeAdmin.SelfUpdates do
 
   ## Returns
   - `{:ok, request}` - Deletion succeeded
-  - `{:error, changeset}` - Validation failed (not completed)
+  - `{:error, {:conflict, reason}}` - Request is not completed
   """
   @spec delete_self_update_request(SelfUpdateRequest.t()) ::
-          {:ok, SelfUpdateRequest.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, SelfUpdateRequest.t()} | {:error, {:conflict, String.t()}}
   def delete_self_update_request(%SelfUpdateRequest{} = request) do
-    with :ok <- Rules.DeletionRules.validate_request_deletion(request) do
+    with :ok <- Checks.DeleteRequestCheck.check(request) do
       Repo.delete(request)
     end
   end

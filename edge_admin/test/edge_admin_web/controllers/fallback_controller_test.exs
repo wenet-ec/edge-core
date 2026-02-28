@@ -74,7 +74,7 @@ defmodule EdgeAdminWeb.Controllers.FallbackControllerTest do
     end
   end
 
-  describe "{:error, :conflict} — 409 Conflict" do
+  describe "{:error, :conflict} — 409 Conflict (generic)" do
     test "returns 409", ctx do
       conn = call(ctx, {:error, :conflict})
       assert conn.status == 409
@@ -83,6 +83,18 @@ defmodule EdgeAdminWeb.Controllers.FallbackControllerTest do
     test "body has errors.detail", ctx do
       conn = call(ctx, {:error, :conflict})
       assert get_in(body(conn), ["errors", "detail"]) =~ "Conflict"
+    end
+  end
+
+  describe "{:error, {:conflict, reason}} — 409 Conflict with reason" do
+    test "returns 409", ctx do
+      conn = call(ctx, {:error, {:conflict, "cannot delete cluster with active nodes"}})
+      assert conn.status == 409
+    end
+
+    test "body errors.detail contains the specific reason", ctx do
+      conn = call(ctx, {:error, {:conflict, "cannot delete cluster with active nodes"}})
+      assert get_in(body(conn), ["errors", "detail"]) == "cannot delete cluster with active nodes"
     end
   end
 

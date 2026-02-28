@@ -1,4 +1,4 @@
-# lib/edge_admin_web/controllers/metrics/host_metrics_discovery_controller.ex
+# edge_admin/lib/edge_admin_web/controllers/metrics/host_metrics_discovery_controller.ex
 defmodule EdgeAdminWeb.Controllers.Metrics.HostMetricsDiscoveryController do
   use EdgeAdminWeb, :controller
 

@@ -93,6 +93,8 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
     request_body: {"SSH username creation data", "application/json", SshUsernameSchemas.SshUsernameCreateRequest},
     responses: %{
       201 => {"SSH username created", "application/json", SshUsernameSchemas.SshUsernameSingleResponse},
+      404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
+      409 => {"Username already exists for this node", "application/json", CommonSchemas.ConflictResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )
@@ -143,7 +145,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
       ]
     ],
     responses: %{
-      204 => {"SSH username deleted", "application/json", nil},
+      204 => {"SSH username deleted", "", nil},
       404 => {"SSH username not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )

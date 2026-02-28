@@ -40,6 +40,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
 
   defp validate_name(changeset) do
     changeset
+    |> validate_required([:name])
     |> validate_length(:name, max: 24)
     |> validate_format(:name, ~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
       message: "must be lowercase alphanumeric with hyphens, cannot start/end with hyphen"

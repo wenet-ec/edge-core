@@ -35,19 +35,11 @@ defmodule EdgeAgentWeb.Controllers.SelfUpdateControllerTest do
       end)
     end
 
-    test "response body has error key when disabled", %{conn: conn} do
+    test "response body has errors.detail key when disabled", %{conn: conn} do
       with_self_update_enabled(false, fn ->
         conn = post(authed(conn), ~p"/api/v1/self_updates/trigger")
         body = Jason.decode!(conn.resp_body)
-        assert Map.has_key?(body, "error")
-      end)
-    end
-
-    test "error message mentions self-update not enabled", %{conn: conn} do
-      with_self_update_enabled(false, fn ->
-        conn = post(authed(conn), ~p"/api/v1/self_updates/trigger")
-        body = Jason.decode!(conn.resp_body)
-        assert body["error"] =~ "not enabled"
+        assert get_in(body, ["errors", "detail"])
       end)
     end
 
@@ -70,11 +62,11 @@ defmodule EdgeAgentWeb.Controllers.SelfUpdateControllerTest do
       end)
     end
 
-    test "response body has message key when enabled", %{conn: conn} do
+    test "response body has data.message key when enabled", %{conn: conn} do
       with_self_update_enabled(true, fn ->
         conn = post(authed(conn), ~p"/api/v1/self_updates/trigger")
         body = Jason.decode!(conn.resp_body)
-        assert Map.has_key?(body, "message")
+        assert get_in(body, ["data", "message"])
       end)
     end
 
@@ -82,7 +74,7 @@ defmodule EdgeAgentWeb.Controllers.SelfUpdateControllerTest do
       with_self_update_enabled(true, fn ->
         conn = post(authed(conn), ~p"/api/v1/self_updates/trigger")
         body = Jason.decode!(conn.resp_body)
-        assert body["message"] =~ "triggered"
+        assert get_in(body, ["data", "message"]) =~ "triggered"
       end)
     end
   end

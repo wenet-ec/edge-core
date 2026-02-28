@@ -25,6 +25,16 @@ defmodule EdgeAgent.SelfUpdates do
   end
 
   @doc """
+  Returns `:ok` if self-update is enabled, `{:error, :forbidden}` otherwise.
+
+  Used by the controller to let the fallback handle the 403 response uniformly.
+  """
+  @spec check_enabled() :: :ok | {:error, :forbidden}
+  def check_enabled do
+    if enabled?(), do: :ok, else: {:error, :forbidden}
+  end
+
+  @doc """
   Triggers a self-update by calling the Watchtower HTTP API.
 
   ## Behavior

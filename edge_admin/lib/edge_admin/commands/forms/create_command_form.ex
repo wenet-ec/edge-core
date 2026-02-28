@@ -6,9 +6,7 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
   Handles input validation for creating commands with flexible targeting options.
   This form validates external API inputs before passing to the domain layer.
   """
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use EdgeAdmin.Form
 
   embedded_schema do
     field(:command_text, :string)
@@ -83,18 +81,10 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
   end
 
   defp validate_timeout(changeset) do
-    validate_change(changeset, :timeout, fn :timeout, timeout ->
-      cond do
-        is_nil(timeout) ->
-          []
-
-        timeout <= 0 ->
-          [timeout: "must be a positive number (in milliseconds)"]
-
-        true ->
-          []
-      end
-    end)
+    validate_number(changeset, :timeout,
+      greater_than: 0,
+      message: "must be a positive number (in milliseconds)"
+    )
   end
 
   defp validate_targeting_type(changeset) do

@@ -6,9 +6,7 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestForm do
   Handles input validation for creating self-update requests with flexible targeting options.
   This form validates external API inputs before passing to the domain layer.
   """
-  use Ecto.Schema
-
-  import Ecto.Changeset
+  use EdgeAdmin.Form
 
   embedded_schema do
     field(:targeting_type, :string)

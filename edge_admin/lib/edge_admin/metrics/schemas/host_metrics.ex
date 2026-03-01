@@ -11,6 +11,8 @@ defmodule EdgeAdmin.Metrics.Schemas.HostMetrics do
   alias EdgeAdmin.Metrics.Schemas.HostMetrics.Memory
   alias EdgeAdmin.Metrics.Schemas.HostMetrics.Uptime
 
+  @type t :: %__MODULE__{}
+
   @derive Jason.Encoder
   defstruct [
     :node_id,

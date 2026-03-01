@@ -283,10 +283,6 @@ defmodule EdgeAdmin.EdgeClusters do
       {:error, :not_found} ->
         Logger.debug("Gateway already stopped for cluster #{cluster_name}")
         :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to stop Gateway for cluster #{cluster_name}: #{inspect(reason)}")
-        {:error, reason}
     end
   end
 

@@ -14,6 +14,8 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest do
   """
   use EdgeAdmin.Schema
 
+  @type t :: %__MODULE__{}
+
   @derive {
     Flop.Schema,
     filterable: [:status, :inserted_at],

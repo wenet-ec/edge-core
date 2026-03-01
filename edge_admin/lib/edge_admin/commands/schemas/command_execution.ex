@@ -3,6 +3,8 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   @moduledoc false
   use EdgeAdmin.Schema
 
+  @type t :: %__MODULE__{}
+
   @derive {
     Flop.Schema,
     filterable: [:status, :target_all, :exit_code, :command_id, :node_id, :output, :inserted_at],

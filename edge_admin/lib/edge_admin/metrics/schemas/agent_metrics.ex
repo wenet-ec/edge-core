@@ -12,6 +12,8 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Relay
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Ssh
 
+  @type t :: %__MODULE__{}
+
   @derive Jason.Encoder
   defstruct [
     :node_id,

@@ -218,6 +218,7 @@ defmodule EdgeAdmin.ProxyServers do
   end
 
   # Helper to format IP tuple for logging
+  @dialyzer {:nowarn_function, format_ip: 1}
   defp format_ip({a, b, c, d}), do: "#{a}.#{b}.#{c}.#{d}"
   defp format_ip(ip) when is_binary(ip), do: ip
 end

@@ -481,14 +481,18 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
           {:ok, %{status: status}} ->
             {:error, "HTTP #{status}"}
 
-          {:error, reason} ->
-            Logger.debug("HTTP request failed (likely agent restarted): #{inspect(reason)}")
+          {:error, %Req.TransportError{reason: reason} = error} ->
+            Logger.debug("HTTP request failed (likely agent restarted): #{inspect(error)}")
             # Treat connection errors as success (watchtower likely restarted the agent)
             if reason in [:timeout, :econnrefused, :closed] do
               :ok
             else
-              {:error, reason}
+              {:error, error}
             end
+
+          {:error, reason} ->
+            Logger.debug("HTTP request failed: #{inspect(reason)}")
+            {:error, reason}
         end
 
       GenServer.reply(from, result)

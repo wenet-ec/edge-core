@@ -3,6 +3,8 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
   @moduledoc false
   use EdgeAdmin.Schema
 
+  @type t :: %__MODULE__{}
+
   @derive {
     Flop.Schema,
     filterable: [:command_text, :inserted_at],

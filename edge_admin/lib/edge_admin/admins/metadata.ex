@@ -460,13 +460,8 @@ defmodule EdgeAdmin.Admins.Metadata do
     admin_cluster_name = admin_info.admin_cluster_name
 
     try do
-      case :syn.members(:admin_scope, admin_cluster_name) do
-        members when is_list(members) ->
-          Map.new(members, fn {_pid, metadata} -> {metadata.name, metadata} end)
-
-        _ ->
-          %{}
-      end
+      members = :syn.members(:admin_scope, admin_cluster_name)
+      Map.new(members, fn {_pid, metadata} -> {metadata.name, metadata} end)
     rescue
       ErlangError ->
         Logger.debug("Syn scope :admin_scope not initialized, returning empty admin list")

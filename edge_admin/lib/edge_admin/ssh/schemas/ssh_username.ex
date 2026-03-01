@@ -3,6 +3,8 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
   @moduledoc false
   use EdgeAdmin.Schema
 
+  @type t :: %__MODULE__{}
+
   @derive {
     Flop.Schema,
     filterable: [:username, :node_id, :inserted_at],

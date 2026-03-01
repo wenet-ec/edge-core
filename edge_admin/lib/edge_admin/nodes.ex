@@ -580,51 +580,50 @@ defmodule EdgeAdmin.Nodes do
          :ok <- Checks.NodeLimitCheck.check(new_cluster) do
       old_cluster_id = node.cluster_id
 
-      # 1. Delete all aliases (they're cluster-specific and DNS entries are in old network)
       cleanup_node_aliases(node)
 
-      # 2. Update database first (source of truth)
-      case node
-           |> Ecto.Changeset.change(cluster_id: new_cluster.id)
-           |> Repo.update() do
+      case node |> Ecto.Changeset.change(cluster_id: new_cluster.id) |> Repo.update() do
         {:ok, updated_node} ->
           updated_node = Repo.preload(updated_node, [:cluster, aliases: :cluster], force: true)
-
-          # 3. Emit PubSub event for metadata recomputation
           broadcast_metadata_event({:node_updated, node.id, old_cluster_id, new_cluster.id})
-
-          # 4. Best-effort Netmaker sync (don't fail if this doesn't work)
-          # The reconciliation worker will fix any inconsistencies
-          old_network_name = node_network_name(node.cluster)
-          new_network_name = node_network_name(new_cluster)
-
-          case Vpn.add_host_to_network(node.netmaker_host_id, new_network_name) do
-            {:ok, _} ->
-              Logger.info("Added host #{node.netmaker_host_id} to network #{new_network_name}")
-
-              case Vpn.remove_host_from_network(node.netmaker_host_id, old_network_name) do
-                {:ok, _} ->
-                  Logger.info("Removed host #{node.netmaker_host_id} from network #{old_network_name}")
-
-                {:error, reason} ->
-                  Logger.warning(
-                    "Failed to remove host #{node.netmaker_host_id} from old network #{old_network_name}: #{inspect(reason)}. " <>
-                      "Reconciliation worker will handle cleanup."
-                  )
-              end
-
-            {:error, reason} ->
-              Logger.warning(
-                "Failed to add host #{node.netmaker_host_id} to new network #{new_network_name}: #{inspect(reason)}. " <>
-                  "Reconciliation worker will handle sync."
-              )
-          end
-
+          sync_node_cluster_networks(node, new_cluster)
           {:ok, updated_node}
 
         {:error, changeset} ->
           {:error, changeset}
       end
+    end
+  end
+
+  # Best-effort Netmaker network sync after a cluster change.
+  # The reconciliation worker will fix any inconsistencies.
+  defp sync_node_cluster_networks(node, new_cluster) do
+    old_network_name = node_network_name(node.cluster)
+    new_network_name = node_network_name(new_cluster)
+
+    case Vpn.add_host_to_network(node.netmaker_host_id, new_network_name) do
+      {:ok, _} ->
+        Logger.info("Added host #{node.netmaker_host_id} to network #{new_network_name}")
+        remove_host_from_old_network(node.netmaker_host_id, old_network_name)
+
+      {:error, reason} ->
+        Logger.warning(
+          "Failed to add host #{node.netmaker_host_id} to new network #{new_network_name}: #{inspect(reason)}. " <>
+            "Reconciliation worker will handle sync."
+        )
+    end
+  end
+
+  defp remove_host_from_old_network(host_id, old_network_name) do
+    case Vpn.remove_host_from_network(host_id, old_network_name) do
+      {:ok, _} ->
+        Logger.info("Removed host #{host_id} from network #{old_network_name}")
+
+      {:error, reason} ->
+        Logger.warning(
+          "Failed to remove host #{host_id} from old network #{old_network_name}: #{inspect(reason)}. " <>
+            "Reconciliation worker will handle cleanup."
+        )
     end
   end
 
@@ -721,44 +720,49 @@ defmodule EdgeAdmin.Nodes do
       with :ok <- if(is_new_node, do: Checks.NodeLimitCheck.check(cluster), else: :ok),
            {:ok, netmaker_host_id} <-
              Vpn.get_host_id(Vpn.build_dns_name(node_id, prefix: :node), network_name: network_name) do
-        api_token = generate_token()
-        proxy_password = generate_token()
-        now = DateTime.truncate(DateTime.utc_now(), :second)
-
-        node_attrs = %{
-          id: node_id,
-          cluster_id: cluster.id,
-          netmaker_host_id: netmaker_host_id,
-          id_type: attrs["id_type"],
-          status: "healthy",
-          last_seen_at: now,
-          http_port: attrs["http_port"],
-          ssh_port: attrs["ssh_port"],
-          host_metrics_port: attrs["host_metrics_port"],
-          wireguard_metrics_port: attrs["wireguard_metrics_port"],
-          http_proxy_port: attrs["http_proxy_port"],
-          socks5_proxy_port: attrs["socks5_proxy_port"],
-          api_token: api_token,
-          proxy_password: proxy_password,
-          version: attrs["version"],
-          self_update_enabled: attrs["self_update_enabled"],
-          relay_enabled: attrs["relay_enabled"]
-        }
-
-        result = if is_new_node, do: create_node(node_attrs), else: update_node(existing_node, node_attrs)
-
-        case result do
-          {:ok, node} ->
-            if is_new_node, do: broadcast_metadata_event({:node_created, node_id, cluster.id})
-            {:ok, node}
-
-          {:error, changeset} ->
-            {:error, changeset}
-        end
+        node_attrs = build_node_attrs(node_id, cluster, netmaker_host_id, attrs)
+        upsert_node(node_attrs, existing_node, is_new_node, cluster)
       else
         {:error, _reason} -> Forms.RegisterNodeForm.add_netmaker_not_found_error()
-        error -> error
       end
+    end
+  end
+
+  defp build_node_attrs(node_id, cluster, netmaker_host_id, attrs) do
+    now = DateTime.truncate(DateTime.utc_now(), :second)
+
+    %{
+      id: node_id,
+      cluster_id: cluster.id,
+      netmaker_host_id: netmaker_host_id,
+      id_type: attrs["id_type"],
+      status: "healthy",
+      last_seen_at: now,
+      http_port: attrs["http_port"],
+      ssh_port: attrs["ssh_port"],
+      host_metrics_port: attrs["host_metrics_port"],
+      wireguard_metrics_port: attrs["wireguard_metrics_port"],
+      http_proxy_port: attrs["http_proxy_port"],
+      socks5_proxy_port: attrs["socks5_proxy_port"],
+      api_token: generate_token(),
+      proxy_password: generate_token(),
+      version: attrs["version"],
+      self_update_enabled: attrs["self_update_enabled"],
+      relay_enabled: attrs["relay_enabled"]
+    }
+  end
+
+  defp upsert_node(node_attrs, existing_node, is_new_node, cluster) do
+    node_id = node_attrs.id
+    result = if is_new_node, do: create_node(node_attrs), else: update_node(existing_node, node_attrs)
+
+    case result do
+      {:ok, node} ->
+        if is_new_node, do: broadcast_metadata_event({:node_created, node_id, cluster.id})
+        {:ok, node}
+
+      {:error, changeset} ->
+        {:error, changeset}
     end
   end
 
@@ -928,7 +932,7 @@ defmodule EdgeAdmin.Nodes do
     else
       Logger.debug("Node #{node.id} ping failed but last_seen_at is recent, keeping status: #{node.status}")
       # Keep existing status - might be using HTTP fallback
-      String.to_atom(node.status)
+      String.to_existing_atom(node.status)
     end
   end
 
@@ -1227,75 +1231,63 @@ defmodule EdgeAdmin.Nodes do
 
     Logger.debug("Reconciling cluster #{cluster.name} (network: #{network_name})")
 
-    # Get what SHOULD be in this network (from DB)
     expected_host_ids = MapSet.new(db_nodes, & &1.netmaker_host_id)
 
-    # Get what IS in this network (from Netmaker)
     case Vpn.list_nodes(network_name) do
       {:ok, netmaker_nodes} ->
-        # Extract host IDs from Netmaker nodes
-        # These are all nodes in the network, including admin nodes and staff machines
         actual_host_ids =
           netmaker_nodes
           |> Enum.map(& &1["hostid"])
           |> Enum.reject(&is_nil/1)
           |> MapSet.new()
 
-        # Nodes in DB but NOT in this Netmaker network
-        # Could be: deleted (host gone), in limbo (changing clusters), or moved to another cluster
-        orphaned_in_db = MapSet.difference(expected_host_ids, actual_host_ids)
-
-        orphaned_nodes =
-          Enum.filter(db_nodes, fn node -> node.netmaker_host_id in orphaned_in_db end)
-
-        # Clean up aliases for orphaned nodes
-        aliases_cleaned = cleanup_orphaned_aliases(orphaned_nodes)
-
-        # Delete orphaned nodes from DB if host doesn't exist in Netmaker at all
-        deleted = delete_orphaned_nodes(orphaned_nodes)
-
-        # Add missing nodes (DB says yes, Netmaker says no, but host exists in Netmaker)
-        # These are hosts in limbo between cluster changes
-        missing = MapSet.difference(expected_host_ids, actual_host_ids)
-        added = add_missing_nodes(missing, network_name, cluster.name)
-
-        # Extra hosts: in Netmaker but not expected in this cluster
-        extra_in_netmaker = MapSet.difference(actual_host_ids, expected_host_ids)
-
-        # Build hostname map from already-fetched nodes (no extra API call)
-        host_hostname_map = Map.new(netmaker_nodes, fn n -> {n["hostid"], n["name"] || ""} end)
-
-        # Split into managed (known to DB) vs unmanaged (total strangers)
-        all_db_host_ids =
-          from(n in Node, select: n.netmaker_host_id)
-          |> Repo.all()
-          |> MapSet.new()
-
-        managed_extra = MapSet.intersection(extra_in_netmaker, all_db_host_ids)
-        unmanaged_extra = MapSet.difference(extra_in_netmaker, all_db_host_ids)
-
-        # Managed extras: moved to another cluster but not removed from old network - just remove from network
-        removed = remove_extra_nodes(managed_extra, network_name, cluster.name)
-
-        # Unmanaged extras: joined VPN but never registered with admin - evict globally
-        evicted = evict_rogue_hosts(unmanaged_extra, host_hostname_map, network_name, cluster.name)
+        counts = reconcile_cluster_nodes(cluster, db_nodes, netmaker_nodes, expected_host_ids, actual_host_ids)
 
         %{
           clusters_processed: acc.clusters_processed + 1,
-          nodes_added: acc.nodes_added + added,
-          nodes_removed: acc.nodes_removed + removed,
-          nodes_deleted: acc.nodes_deleted + deleted + evicted,
+          nodes_added: acc.nodes_added + counts.added,
+          nodes_removed: acc.nodes_removed + counts.removed,
+          nodes_deleted: acc.nodes_deleted + counts.deleted,
           clusters_deleted: acc.clusters_deleted,
-          aliases_cleaned: acc.aliases_cleaned + aliases_cleaned,
+          aliases_cleaned: acc.aliases_cleaned + counts.aliases_cleaned,
           ghost_aliases_cleaned: acc.ghost_aliases_cleaned,
           errors: acc.errors
         }
 
       {:error, reason} ->
         Logger.error("Failed to list nodes for cluster #{cluster.name}: #{inspect(reason)}")
-
         %{acc | errors: acc.errors + 1}
     end
+  end
+
+  defp reconcile_cluster_nodes(cluster, db_nodes, netmaker_nodes, expected_host_ids, actual_host_ids) do
+    orphaned_in_db = MapSet.difference(expected_host_ids, actual_host_ids)
+    orphaned_nodes = Enum.filter(db_nodes, fn node -> node.netmaker_host_id in orphaned_in_db end)
+
+    aliases_cleaned = cleanup_orphaned_aliases(orphaned_nodes)
+    deleted = delete_orphaned_nodes(orphaned_nodes)
+    added = add_missing_nodes(orphaned_in_db, node_network_name(cluster), cluster.name)
+
+    extra_in_netmaker = MapSet.difference(actual_host_ids, expected_host_ids)
+    host_hostname_map = Map.new(netmaker_nodes, fn n -> {n["hostid"], n["name"] || ""} end)
+
+    all_db_host_ids =
+      from(n in Node, select: n.netmaker_host_id)
+      |> Repo.all()
+      |> MapSet.new()
+
+    managed_extra = MapSet.intersection(extra_in_netmaker, all_db_host_ids)
+    unmanaged_extra = MapSet.difference(extra_in_netmaker, all_db_host_ids)
+
+    removed = remove_extra_nodes(managed_extra, node_network_name(cluster), cluster.name)
+    evicted = evict_rogue_hosts(unmanaged_extra, host_hostname_map, node_network_name(cluster), cluster.name)
+
+    %{
+      added: added,
+      removed: removed,
+      deleted: deleted + evicted,
+      aliases_cleaned: aliases_cleaned
+    }
   end
 
   defp add_missing_nodes(host_ids, network_name, cluster_name) do

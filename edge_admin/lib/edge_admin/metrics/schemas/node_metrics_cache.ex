@@ -9,6 +9,8 @@ defmodule EdgeAdmin.Metrics.Schemas.NodeMetricsCache do
   """
   use EdgeAdmin.Schema
 
+  @type t :: %__MODULE__{}
+
   schema "node_metrics_cache" do
     field :metrics_type, :string
     field :metrics_text, :string

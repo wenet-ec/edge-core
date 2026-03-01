@@ -14,6 +14,8 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Quantum
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Vpn
 
+  @type t :: %__MODULE__{}
+
   @derive Jason.Encoder
   defstruct [
     :timestamp,

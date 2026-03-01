@@ -301,7 +301,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
 
     result =
       try do
-        case Node.start(node_name, :longnames) do
+        case Node.start(node_name, name_domain: :longnames) do
           {:ok, _pid} ->
             :erlang.set_cookie(node(), erlang_cookie())
             Logger.info("Erlang distribution started: #{node()}")
@@ -356,32 +356,18 @@ defmodule EdgeAdmin.Admins.Bootstrap do
       netmaker_host_id: netmaker_host_id
     }
 
-    result =
-      case :syn.join(:admin_scope, admin_cluster_name(), self(), metadata) do
-        :ok ->
-          Logger.info("Joined syn group :admin_scope/#{admin_cluster_name()} with metadata")
-          :ok
-
-        {:error, reason} ->
-          Logger.error("Failed to join syn group: #{inspect(reason)}")
-          {:error, {:syn_join_failed, reason}}
-      end
+    :ok = :syn.join(:admin_scope, admin_cluster_name(), self(), metadata)
+    Logger.info("Joined syn group :admin_scope/#{admin_cluster_name()} with metadata")
 
     duration = System.monotonic_time(:millisecond) - start_time
-
-    status =
-      case result do
-        :ok -> :success
-        {:error, _} -> :failure
-      end
 
     :telemetry.execute(
       [:edge_admin, :bootstrap, :step],
       %{duration: duration, count: 1, total: 1},
-      %{step: :initialize_syn, status: status}
+      %{step: :initialize_syn, status: :success}
     )
 
-    result
+    :ok
   end
 
   # =============================================================================

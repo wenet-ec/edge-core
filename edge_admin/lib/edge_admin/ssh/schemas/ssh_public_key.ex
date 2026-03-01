@@ -3,6 +3,8 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
   @moduledoc false
   use EdgeAdmin.Schema
 
+  @type t :: %__MODULE__{}
+
   # Supported SSH key algorithms
   @supported_algorithms [
     "ssh-ed25519",

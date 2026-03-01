@@ -27,11 +27,8 @@ defmodule EdgeAdmin.Config do
   defp parse_env(value, :string), do: value
   defp parse_env(value, :integer), do: String.to_integer(value)
 
-  defp parse_env(nil, :boolean), do: false
   defp parse_env("", :boolean), do: false
   defp parse_env(value, :boolean), do: String.downcase(value) in ~w(true 1)
-
-  defp parse_env(nil, :cors), do: nil
 
   defp parse_env(value, :cors) when is_bitstring(value) do
     case String.split(value, ",") do
@@ -40,11 +37,9 @@ defmodule EdgeAdmin.Config do
     end
   end
 
-  defp parse_env(nil, :uri), do: nil
   defp parse_env("", :uri), do: nil
   defp parse_env(value, :uri), do: URI.parse(value)
 
-  defp parse_env(nil, :list), do: []
   defp parse_env("", :list), do: []
 
   defp parse_env(value, :list) when is_bitstring(value) do

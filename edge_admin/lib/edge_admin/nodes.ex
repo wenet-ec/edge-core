@@ -78,6 +78,10 @@ defmodule EdgeAdmin.Nodes do
   defp node_network_name(cluster_name) when is_binary(cluster_name),
     do: Vpn.build_network_name(cluster_name, prefix: :node)
 
+  # Adds nodelimit to Netmaker network opts when a limit is set
+  defp maybe_put_nodelimit(opts, nil), do: opts
+  defp maybe_put_nodelimit(opts, limit), do: Map.put(opts, :nodelimit, limit)
+
   # ===========================================================================
   # Cluster functions
   # ===========================================================================
@@ -334,7 +338,9 @@ defmodule EdgeAdmin.Nodes do
       # DB insert succeeded - now create Netmaker network
       network_name = node_network_name(cluster)
 
-      case Vpn.create_network(network_name, %{addressrange: ipv4_range}) do
+      netmaker_opts = maybe_put_nodelimit(%{addressrange: ipv4_range}, cluster.node_limit)
+
+      case Vpn.create_network(network_name, netmaker_opts) do
         {:ok, _} ->
           Logger.info("Created Netmaker network: #{network_name}")
           broadcast_metadata_event({:cluster_created, cluster.id})
@@ -352,24 +358,27 @@ defmodule EdgeAdmin.Nodes do
   @doc """
   Updates a cluster.
 
+  node_limit is enforced by this system only. Netmaker has the field on its network
+  model but no server-side update endpoint or enforcement logic as of the current version.
+
   ## Parameters
   - `cluster` - The cluster struct to update
-  - `attrs` - Map of attributes to update
+  - `params` - Raw request params (validated through UpdateClusterForm)
 
   ## Returns
   - `{:ok, cluster}` - Update succeeded
   - `{:error, changeset}` - Validation failed
-
-  ## Examples
-
-      iex> update_cluster(cluster, %{"name" => "new-name"})
-      {:ok, %Cluster{name: "new-name"}}
   """
-  @spec update_cluster(Cluster.t(), map()) :: {:ok, Cluster.t()} | {:error, Ecto.Changeset.t()}
-  def update_cluster(%Cluster{} = cluster, attrs) do
-    cluster
-    |> Cluster.changeset(attrs)
-    |> Repo.update()
+  @spec update_cluster(Cluster.t(), map()) ::
+          {:ok, Cluster.t()} | {:error, Ecto.Changeset.t()}
+  def update_cluster(%Cluster{} = cluster, params) do
+    with {:ok, attrs} <- Forms.UpdateClusterForm.changeset(params),
+         {:ok, updated_cluster} <-
+           cluster
+           |> Cluster.changeset(attrs)
+           |> Repo.update() do
+      {:ok, Repo.preload(updated_cluster, :nodes)}
+    end
   end
 
   @doc """
@@ -562,11 +571,13 @@ defmodule EdgeAdmin.Nodes do
   - `{:ok, updated_node}` - Node cluster changed successfully
   - `{:error, changeset}` - Validation failed
   """
-  @spec change_node_cluster(Node.t(), map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
+  @spec change_node_cluster(Node.t(), map()) ::
+          {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
   def change_node_cluster(%Node{} = node, params) do
     with {:ok, new_cluster_name} <- Forms.ChangeNodeClusterForm.changeset(params),
          {:ok, new_cluster} <- get_cluster(new_cluster_name),
-         :ok <- check_cluster_changed(node, new_cluster) do
+         :ok <- check_cluster_changed(node, new_cluster),
+         :ok <- Checks.NodeLimitCheck.check(new_cluster) do
       old_cluster_id = node.cluster_id
 
       # 1. Delete all aliases (they're cluster-specific and DNS entries are in old network)
@@ -695,81 +706,58 @@ defmodule EdgeAdmin.Nodes do
   - `{:ok, node}` - Node registered/updated successfully
   - `{:error, changeset}` - Validation or registration failed
   """
-  @spec register_node(map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
+  @spec register_node(map()) ::
+          {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
   def register_node(params) do
     with {:ok, attrs} <- Forms.RegisterNodeForm.changeset(params) do
-      %{
-        "node_id" => node_id,
-        "network_name" => network_name
-      } = attrs
+      %{"node_id" => node_id, "network_name" => network_name} = attrs
 
-      # 1. Parse cluster name from network name (e.g., "cluster-default" -> "default")
       cluster_name = String.replace_prefix(network_name, "cluster-", "")
-
-      # 2. Get cluster
       {:ok, cluster} = get_cluster(cluster_name)
 
-      # 3. Verify node exists in Netmaker and get host ID
-      node_hostname = Vpn.build_dns_name(node_id, prefix: :node)
+      existing_node = Repo.get(Node, node_id)
+      is_new_node = is_nil(existing_node)
 
-      case Vpn.get_host_id(node_hostname, network_name: network_name) do
-        {:ok, netmaker_host_id} ->
-          # 4. Generate new tokens on every registration
-          existing_node = Repo.get(Node, node_id)
-          is_new_node = is_nil(existing_node)
+      with :ok <- if(is_new_node, do: Checks.NodeLimitCheck.check(cluster), else: :ok),
+           {:ok, netmaker_host_id} <-
+             Vpn.get_host_id(Vpn.build_dns_name(node_id, prefix: :node), network_name: network_name) do
+        api_token = generate_token()
+        proxy_password = generate_token()
+        now = DateTime.truncate(DateTime.utc_now(), :second)
 
-          api_token = generate_token()
-          proxy_password = generate_token()
+        node_attrs = %{
+          id: node_id,
+          cluster_id: cluster.id,
+          netmaker_host_id: netmaker_host_id,
+          id_type: attrs["id_type"],
+          status: "healthy",
+          last_seen_at: now,
+          http_port: attrs["http_port"],
+          ssh_port: attrs["ssh_port"],
+          host_metrics_port: attrs["host_metrics_port"],
+          wireguard_metrics_port: attrs["wireguard_metrics_port"],
+          http_proxy_port: attrs["http_proxy_port"],
+          socks5_proxy_port: attrs["socks5_proxy_port"],
+          api_token: api_token,
+          proxy_password: proxy_password,
+          version: attrs["version"],
+          self_update_enabled: attrs["self_update_enabled"],
+          relay_enabled: attrs["relay_enabled"]
+        }
 
-          now = DateTime.truncate(DateTime.utc_now(), :second)
+        result = if is_new_node, do: create_node(node_attrs), else: update_node(existing_node, node_attrs)
 
-          # 5. Create or update node record
-          node_attrs = %{
-            id: node_id,
-            cluster_id: cluster.id,
-            netmaker_host_id: netmaker_host_id,
-            id_type: attrs["id_type"],
-            status: "healthy",
-            last_seen_at: now,
-            http_port: attrs["http_port"],
-            ssh_port: attrs["ssh_port"],
-            host_metrics_port: attrs["host_metrics_port"],
-            wireguard_metrics_port: attrs["wireguard_metrics_port"],
-            http_proxy_port: attrs["http_proxy_port"],
-            socks5_proxy_port: attrs["socks5_proxy_port"],
-            api_token: api_token,
-            proxy_password: proxy_password,
-            version: attrs["version"],
-            self_update_enabled: attrs["self_update_enabled"],
-            relay_enabled: attrs["relay_enabled"]
-          }
+        case result do
+          {:ok, node} ->
+            if is_new_node, do: broadcast_metadata_event({:node_created, node_id, cluster.id})
+            {:ok, node}
 
-          result =
-            case existing_node do
-              nil ->
-                # New node - create it
-                create_node(node_attrs)
-
-              node ->
-                # Existing node - update it
-                update_node(node, node_attrs)
-            end
-
-          case result do
-            {:ok, node} ->
-              # Emit event only for new nodes (Metadata will recompute assignments)
-              if is_new_node do
-                broadcast_metadata_event({:node_created, node_id, cluster.id})
-              end
-
-              {:ok, node}
-
-            {:error, changeset} ->
-              {:error, changeset}
-          end
-
-        {:error, _reason} ->
-          Forms.RegisterNodeForm.add_netmaker_not_found_error()
+          {:error, changeset} ->
+            {:error, changeset}
+        end
+      else
+        {:error, _reason} -> Forms.RegisterNodeForm.add_netmaker_not_found_error()
+        error -> error
       end
     end
   end
@@ -1271,26 +1259,35 @@ defmodule EdgeAdmin.Nodes do
         missing = MapSet.difference(expected_host_ids, actual_host_ids)
         added = add_missing_nodes(missing, network_name, cluster.name)
 
-        # Remove extra nodes (Netmaker says yes, but DB says this cluster shouldn't have them)
-        # These are nodes that moved to another cluster but weren't removed from old network
+        # Extra hosts: in Netmaker but not expected in this cluster
         extra_in_netmaker = MapSet.difference(actual_host_ids, expected_host_ids)
 
-        # Only remove if we manage this host (it's in our DB somewhere)
+        # Build hostname map from already-fetched nodes (no extra API call)
+        host_hostname_map = Map.new(netmaker_nodes, fn n -> {n["hostid"], n["name"] || ""} end)
+
+        # Split into managed (known to DB) vs unmanaged (total strangers)
         all_db_host_ids =
           from(n in Node, select: n.netmaker_host_id)
           |> Repo.all()
           |> MapSet.new()
 
         managed_extra = MapSet.intersection(extra_in_netmaker, all_db_host_ids)
+        unmanaged_extra = MapSet.difference(extra_in_netmaker, all_db_host_ids)
+
+        # Managed extras: moved to another cluster but not removed from old network - just remove from network
         removed = remove_extra_nodes(managed_extra, network_name, cluster.name)
+
+        # Unmanaged extras: joined VPN but never registered with admin - evict globally
+        evicted = evict_rogue_hosts(unmanaged_extra, host_hostname_map, network_name, cluster.name)
 
         %{
           clusters_processed: acc.clusters_processed + 1,
           nodes_added: acc.nodes_added + added,
           nodes_removed: acc.nodes_removed + removed,
-          nodes_deleted: acc.nodes_deleted + deleted,
+          nodes_deleted: acc.nodes_deleted + deleted + evicted,
           clusters_deleted: acc.clusters_deleted,
           aliases_cleaned: acc.aliases_cleaned + aliases_cleaned,
+          ghost_aliases_cleaned: acc.ghost_aliases_cleaned,
           errors: acc.errors
         }
 
@@ -1313,6 +1310,41 @@ defmodule EdgeAdmin.Nodes do
           Logger.warning("Reconciliation: Failed to add host #{host_id} to network #{network_name}: #{inspect(reason)}")
 
           count
+      end
+    end)
+  end
+
+  defp evict_rogue_hosts(host_ids, host_hostname_map, network_name, cluster_name) do
+    Enum.reduce(host_ids, 0, fn host_id, count ->
+      hostname = Map.get(host_hostname_map, host_id, "")
+
+      if String.starts_with?(hostname, "admin-") do
+        # Admin nodes are handled by the zombie admin cleaner - never touch them
+        Logger.debug(
+          "Reconciliation: Skipping admin host #{host_id} (#{hostname}) in network #{network_name} - handled by zombie cleaner"
+        )
+
+        count
+      else
+        case Vpn.delete_host(host_id) do
+          {:ok, _} ->
+            Logger.info(
+              "Reconciliation: Evicted rogue host #{host_id} (#{hostname}) from network #{network_name} (cluster: #{cluster_name})"
+            )
+
+            count + 1
+
+          {:error, :not_found} ->
+            Logger.debug("Reconciliation: Rogue host #{host_id} already gone from network #{network_name}")
+            count
+
+          {:error, reason} ->
+            Logger.warning(
+              "Reconciliation: Failed to evict rogue host #{host_id} (#{hostname}) from network #{network_name}: #{inspect(reason)}"
+            )
+
+            count
+        end
       end
     end)
   end

@@ -74,6 +74,11 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
           description: "IPv4 CIDR range for this cluster",
           example: "100.64.0.0/24"
         },
+        node_limit: %Schema{
+          type: :integer,
+          nullable: true,
+          description: "Maximum number of nodes allowed in this cluster (null means no limit enforced)"
+        },
         node_count: %Schema{
           type: :integer,
           description: "Number of nodes in this cluster"
@@ -108,6 +113,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         :id,
         :name,
         :ipv4_range,
+        :node_limit,
         :node_count,
         :nodes,
         :network_name,
@@ -119,6 +125,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         id: "abc12345-1234-1234-1234-123456789abc",
         name: "prod-east",
         ipv4_range: "100.64.0.0/24",
+        node_limit: 50,
         node_count: 2,
         nodes: [
           %{
@@ -170,6 +177,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
           id: "abc12345-1234-1234-1234-123456789abc",
           name: "prod-east",
           ipv4_range: "100.64.0.0/24",
+          node_limit: 50,
           node_count: 2,
           nodes: [
             %{
@@ -191,6 +199,33 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
           updated_at: "2025-06-09T08:00:00Z"
         }
       }
+    })
+  end
+
+  defmodule ClusterUpdateRequest do
+    @moduledoc false
+
+    OpenApiSpex.schema(%{
+      title: "Cluster Update Request",
+      description:
+        "Parameters for updating a cluster. Only provided fields are updated. Pass null to unset a nullable field.",
+      type: :object,
+      properties: %{
+        cluster: %Schema{
+          type: :object,
+          properties: %{
+            node_limit: %Schema{
+              type: :integer,
+              nullable: true,
+              description: "Maximum nodes allowed in this cluster (null means no limit enforced)",
+              minimum: 1,
+              example: 50
+            }
+          },
+          example: %{node_limit: 50}
+        }
+      },
+      required: [:cluster]
     })
   end
 
@@ -218,11 +253,19 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
               nullable: true,
               description: "IPv4 CIDR range (auto-generated if not provided)",
               example: "100.64.0.0/24"
+            },
+            node_limit: %Schema{
+              type: :integer,
+              nullable: true,
+              description: "Maximum nodes allowed in this cluster (null means no limit enforced)",
+              minimum: 1,
+              example: 50
             }
           },
           example: %{
             name: "prod-east",
-            ipv4_range: "100.64.1.0/24"
+            ipv4_range: "100.64.1.0/24",
+            node_limit: 50
           }
         }
       },

@@ -10,7 +10,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug DegradedMode, :block when action in [:create, :delete]
+  plug DegradedMode, :block when action in [:create, :update, :delete]
   plug DegradedMode, :allow when action in [:index, :show]
 
   tags(["Nodes.Cluster"])
@@ -72,6 +72,21 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
         in: :query,
         description: "Filter by maximum node count",
         schema: %OpenApiSpex.Schema{type: :integer, minimum: 0}
+      ],
+      node_limit: [
+        in: :query,
+        description: "Filter by exact node limit (use node_limit__null=true to find unlimited clusters)",
+        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1}
+      ],
+      node_limit__gte: [
+        in: :query,
+        description: "Filter by minimum node limit",
+        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1}
+      ],
+      node_limit__lte: [
+        in: :query,
+        description: "Filter by maximum node limit",
+        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1}
       ]
     ],
     responses: %{
@@ -127,6 +142,33 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/v1/clusters/#{cluster.name}")
       |> render(:show, cluster: cluster)
+    end
+  end
+
+  operation(:update,
+    summary: "Update a cluster",
+    description:
+      "Update a cluster's settings. Only provided fields are changed. Pass null to unset a nullable field.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+    parameters: [
+      name: [
+        in: :path,
+        description: "Cluster name",
+        schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"}
+      ]
+    ],
+    request_body: {"Cluster update parameters", "application/json", ClusterSchemas.ClusterUpdateRequest},
+    responses: %{
+      200 => {"Cluster updated successfully", "application/json", ClusterSchemas.ClusterSingleResponse},
+      404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},
+      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
+      503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
+    }
+  )
+
+  def update(conn, %{"name" => name} = params) do
+    with {:ok, cluster} <- Nodes.get_cluster(name),
+         {:ok, updated_cluster} <- Nodes.update_cluster(cluster, params) do
+      render(conn, :show, cluster: updated_cluster)
     end
   end
 

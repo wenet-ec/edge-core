@@ -32,6 +32,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSON do
       id: cluster.id,
       name: cluster.name,
       ipv4_range: cluster.ipv4_range,
+      node_limit: cluster.node_limit,
       node_count: Cluster.node_count(cluster),
       nodes: Enum.map(nodes, &node_data(&1, cluster)),
       network_name: Cluster.network_name(cluster),

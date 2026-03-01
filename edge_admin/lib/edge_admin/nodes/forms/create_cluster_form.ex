@@ -11,6 +11,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
   embedded_schema do
     field(:name, :string)
     field(:ipv4_range, :string)
+    field(:node_limit, :integer)
   end
 
   def changeset(%{"cluster" => cluster_attrs}) when is_map(cluster_attrs) do
@@ -20,9 +21,10 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
 
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
-    |> cast(attrs, [:name, :ipv4_range])
+    |> cast(attrs, [:name, :ipv4_range, :node_limit])
     |> validate_name()
     |> validate_ipv4_range()
+    |> validate_node_limit()
     |> apply_action(:insert)
     |> case do
       {:ok, form} -> {:ok, to_map(form)}
@@ -55,11 +57,16 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
     )
   end
 
+  defp validate_node_limit(changeset) do
+    validate_number(changeset, :node_limit, greater_than: 0)
+  end
+
   defp to_map(%__MODULE__{} = form) do
     # Convert to map with string keys, removing nil values
     %{
       "name" => form.name,
-      "ipv4_range" => form.ipv4_range
+      "ipv4_range" => form.ipv4_range,
+      "node_limit" => form.node_limit
     }
     |> Enum.reject(fn {_k, v} -> is_nil(v) end)
     |> Map.new()

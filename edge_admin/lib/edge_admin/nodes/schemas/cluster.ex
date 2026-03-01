@@ -10,6 +10,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
 
   - `name` - Cluster name (lowercase alphanumeric with hyphens, max 24 chars)
   - `ipv4_range` - CIDR notation for the cluster's VPN network (e.g., "100.64.1.0/24")
+  - `node_limit` - Maximum nodes allowed in this cluster (null means no limit)
   - `network_name` - Virtual field: Netmaker network name (cluster-{name})
   - `dns_domain` - Virtual field: DNS domain suffix for nodes in this cluster
   - `node_count` - Virtual field: Number of nodes in this cluster
@@ -22,6 +23,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
           id: String.t(),
           name: String.t(),
           ipv4_range: String.t(),
+          node_limit: integer() | nil,
           network_name: String.t() | nil,
           dns_domain: String.t() | nil,
           node_count: integer() | nil,
@@ -32,8 +34,8 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
 
   @derive {
     Flop.Schema,
-    filterable: [:name, :ipv4_range, :inserted_at],
-    sortable: [:name, :ipv4_range, :inserted_at, :updated_at],
+    filterable: [:name, :ipv4_range, :node_limit, :inserted_at],
+    sortable: [:name, :ipv4_range, :node_limit, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],
       order_directions: [:desc]
@@ -43,6 +45,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   schema "clusters" do
     field(:name, :string)
     field(:ipv4_range, :string)
+    field(:node_limit, :integer)
     field(:network_name, :string, virtual: true)
     field(:dns_domain, :string, virtual: true)
     field(:node_count, :integer, virtual: true)
@@ -55,12 +58,13 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   @doc false
   def changeset(cluster, attrs) do
     cluster
-    |> cast(attrs, [:name, :ipv4_range])
+    |> cast(attrs, [:name, :ipv4_range, :node_limit])
     |> maybe_generate_name()
     |> maybe_generate_ipv4_range()
     |> validate_required([:name, :ipv4_range])
     |> validate_length(:name, max: 24)
     |> validate_format(:name, ~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/)
+    |> validate_number(:node_limit, greater_than: 0)
     |> validate_ipv4_cidr_format()
     |> validate_ipv4_exclusions()
     |> unique_constraint(:name)

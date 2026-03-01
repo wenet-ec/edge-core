@@ -203,6 +203,7 @@ defmodule EdgeAdminWeb.Router do
         resources("/aliases", AliasController, only: [:create])
       end
 
+      patch("/clusters/:name", ClusterController, :update)
       patch("/nodes/:id/change_cluster", NodeController, :change_cluster)
       delete("/nodes/:id", NodeController, :delete)
 

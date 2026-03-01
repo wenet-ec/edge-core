@@ -7,6 +7,7 @@ defmodule EdgeAdmin.Repo.Migrations.CreateClusters do
       add :id, :binary_id, primary_key: true
       add :name, :string, null: false
       add :ipv4_range, :string, null: false
+      add :node_limit, :integer, null: true
 
       timestamps(type: :utc_datetime)
     end

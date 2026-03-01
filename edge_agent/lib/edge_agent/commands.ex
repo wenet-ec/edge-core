@@ -227,16 +227,34 @@ defmodule EdgeAgent.Commands do
     Logger.info("Executing command: #{execution.id}")
 
     start_time = System.monotonic_time(:millisecond)
+    {output, exit_code} = run_command(execution)
+    duration = System.monotonic_time(:millisecond) - start_time
+
+    Logger.info("Command #{execution.id} completed with exit code: #{exit_code}")
+
+    {:ok, _updated_execution} =
+      update_command_execution(execution, %{
+        status: "completed",
+        output: output,
+        exit_code: exit_code,
+        completed_at: DateTime.truncate(DateTime.utc_now(), :second)
+      })
+
+    :telemetry.execute(
+      [:edge_agent, :commands, :execution, :completed],
+      %{duration: duration, exit_code: exit_code, count: 1, total: 1},
+      %{result: categorize_exit_code(exit_code)}
+    )
+
+    :ok
+  end
+
+  defp run_command(execution) do
     timeout_ms = execution.timeout || :infinity
 
     result =
       try do
-        task =
-          Task.async(fn ->
-            System.cmd("/usr/local/bin/hostscript", [execution.command_text])
-          end)
-
-        # Register task for potential cancellation
+        task = Task.async(fn -> System.cmd("/usr/local/bin/hostscript", [execution.command_text]) end)
         ExecutionRegistry.register(execution.id, task.pid)
 
         case Task.yield(task, timeout_ms) || Task.shutdown(task, :brutal_kill) do
@@ -252,45 +270,23 @@ defmodule EdgeAgent.Commands do
           Logger.error("Command #{execution.id} crashed: #{inspect(e)}")
           {:error, "Command crashed: #{Exception.message(e)}", 1}
       after
-        # Always unregister after completion/timeout/crash
         ExecutionRegistry.unregister(execution.id)
       end
 
-    {output, exit_code} =
-      case result do
-        {:ok, out, code} -> {out, code}
-        {:timeout, out, code} -> {out, code}
-        {:error, out, code} -> {out, code}
-      end
+    case result do
+      {:ok, out, code} -> {out, code}
+      {:timeout, out, code} -> {out, code}
+      {:error, out, code} -> {out, code}
+    end
+  end
 
-    duration = System.monotonic_time(:millisecond) - start_time
-
-    Logger.info("Command #{execution.id} completed with exit code: #{exit_code}")
-
-    {:ok, _updated_execution} =
-      update_command_execution(execution, %{
-        status: "completed",
-        output: output,
-        exit_code: exit_code,
-        completed_at: DateTime.truncate(DateTime.utc_now(), :second)
-      })
-
-    # Categorize result
-    exec_result =
-      cond do
-        exit_code == 0 -> :success
-        exit_code == 124 -> :timeout
-        exit_code > 0 -> :failure
-        true -> :unknown
-      end
-
-    :telemetry.execute(
-      [:edge_agent, :commands, :execution, :completed],
-      %{duration: duration, exit_code: exit_code, count: 1, total: 1},
-      %{result: exec_result}
-    )
-
-    :ok
+  defp categorize_exit_code(exit_code) do
+    cond do
+      exit_code == 0 -> :success
+      exit_code == 124 -> :timeout
+      exit_code > 0 -> :failure
+      true -> :unknown
+    end
   end
 
   @doc """

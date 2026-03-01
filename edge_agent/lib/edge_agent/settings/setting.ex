@@ -3,6 +3,14 @@ defmodule EdgeAgent.Settings.Setting do
   @moduledoc false
   use EdgeAgent.Schema
 
+  @type t :: %__MODULE__{
+          id: Ecto.UUID.t() | nil,
+          key: String.t() | nil,
+          value: String.t() | nil,
+          inserted_at: DateTime.t() | nil,
+          updated_at: DateTime.t() | nil
+        }
+
   schema "settings" do
     field :key, :string
     field :value, :string

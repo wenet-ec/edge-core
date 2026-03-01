@@ -50,7 +50,6 @@ defmodule EdgeAgent.SshServer.Shell do
   rescue
     e ->
       Logger.error("Failed to start bash shell: #{inspect(e)}")
-      exit(:error)
   end
 
   defp shell_loop(port) do

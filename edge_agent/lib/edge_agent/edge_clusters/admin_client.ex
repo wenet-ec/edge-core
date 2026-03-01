@@ -573,7 +573,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   # Private functions
 
   defp request_with_fallback(path, fallback_enabled, request_fn) do
-    admin_urls = Settings.get_admin_urls() || []
+    admin_urls = Settings.get_admin_urls()
 
     urls_to_try = get_urls_to_try(admin_urls, fallback_enabled)
 
@@ -595,7 +595,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
       api_token ->
         headers = [{"authorization", "Bearer #{api_token}"}]
-        admin_urls = Settings.get_admin_urls() || []
+        admin_urls = Settings.get_admin_urls()
 
         urls_to_try = get_urls_to_try(admin_urls, fallback_enabled)
 

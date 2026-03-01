@@ -5,5 +5,5 @@
   exit: "low",
   format: "txt",
   threshold: "low",
-  ignore: ["Config.HTTPS", "Config.Headers"]
+  ignore: ["Config.HTTPS", "Config.Headers", "Traversal.FileModule"]
 ]

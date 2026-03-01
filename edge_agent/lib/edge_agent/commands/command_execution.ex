@@ -3,6 +3,20 @@ defmodule EdgeAgent.Commands.CommandExecution do
   @moduledoc false
   use EdgeAgent.Schema
 
+  @type t :: %__MODULE__{
+          id: Ecto.UUID.t() | nil,
+          output: String.t() | nil,
+          status: String.t() | nil,
+          exit_code: integer() | nil,
+          command_id: Ecto.UUID.t() | nil,
+          node_id: Ecto.UUID.t() | nil,
+          command_text: String.t() | nil,
+          timeout: integer() | nil,
+          completed_at: DateTime.t() | nil,
+          inserted_at: DateTime.t() | nil,
+          updated_at: DateTime.t() | nil
+        }
+
   schema "command_executions" do
     field(:output, :string)
     field(:status, :string)

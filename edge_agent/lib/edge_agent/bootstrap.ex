@@ -185,19 +185,14 @@ defmodule EdgeAgent.Bootstrap do
   defp step_1_determine_identity do
     Logger.info("Step 1: Determining node identity...")
 
-    case Identity.determine() do
-      {:ok, node_id, id_type} ->
-        Logger.info("Node identity: #{String.slice(node_id, 0, 8)}... (#{id_type})")
+    {:ok, node_id, id_type} = Identity.determine()
+    Logger.info("Node identity: #{String.slice(node_id, 0, 8)}... (#{id_type})")
 
-        # Store identity in settings for persistence across restarts
-        Settings.set_node_id(node_id)
-        Settings.set_id_type(id_type)
+    # Store identity in settings for persistence across restarts
+    Settings.set_node_id(node_id)
+    Settings.set_id_type(id_type)
 
-        {:ok, node_id, id_type}
-
-      {:error, reason} ->
-        {:error, "Failed to determine node identity: #{inspect(reason)}"}
-    end
+    {:ok, node_id, id_type}
   end
 
   # =============================================================================

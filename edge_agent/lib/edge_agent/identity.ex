@@ -201,6 +201,4 @@ defmodule EdgeAgent.Identity do
       id != "0" and
       id != "00000000-0000-0000-0000-000000000000"
   end
-
-  defp valid_persistent_id?(_), do: false
 end

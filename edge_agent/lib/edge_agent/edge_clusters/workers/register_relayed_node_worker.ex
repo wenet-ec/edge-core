@@ -39,7 +39,7 @@ defmodule EdgeAgent.EdgeClusters.Workers.RegisterRelayedNodeWorker do
 
   defp should_run? do
     relay_enabled = Application.get_env(:edge_agent, :relay_enabled, false)
-    admin_urls = Settings.get_admin_urls() || []
+    admin_urls = Settings.get_admin_urls()
 
     relay_enabled and admin_urls != []
   end

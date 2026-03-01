@@ -78,6 +78,9 @@ WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
 # Use http for local dev (no TLS certs). Production uses https (default).
 NETMAKER_API_SCHEME=http
 
+# Netmaker DNS domain suffix (used for hostname construction, cannot be changed once set)
+# NETMAKER_DEFAULT_DOMAIN=nm.internal
+
 # --- Cluster Network Configuration ---
 # Subnet size for auto-generated clusters (e.g., 24 = /24 = 254 hosts)
 # CLUSTER_SUBNET_PREFIX=24

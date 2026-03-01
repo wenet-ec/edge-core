@@ -68,6 +68,9 @@ NETMAKER_MASTER_KEY=supersecretkey123456789
 NETMAKER_SUPERADMIN_USERNAME=admin
 NETMAKER_SUPERADMIN_PASSWORD=admin
 
+# Netmaker DNS domain suffix (used for hostname construction, cannot be changed once set)
+# NETMAKER_DEFAULT_DOMAIN=nm.internal
+
 # --- WireGuard Mode ---
 # Options: wireguard-go (userspace), unset for kernel mode
 # Agent runs host network + privileged: use kernel mode (faster) or userspace mode (derp support)

@@ -26,3 +26,4 @@ MQ_PASSWORD=netmaker123
 VERBOSITY=1
 STUN_LIST=stun1.l.google.com:19302,stun2.l.google.com:19302,stun.stunprotocol.org:3478,stun.nextcloud.com:443,stun.netmaker.io:3478
 SERVER_API_CONN_STRING=netmaker.localtest.me
+DEFAULT_DOMAIN=nm.internal

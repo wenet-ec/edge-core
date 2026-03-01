@@ -161,6 +161,42 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
   end
 
   # ---------------------------------------------------------------------------
+  # changeset/2 — node_limit validation
+  # ---------------------------------------------------------------------------
+
+  describe "changeset/2 — node_limit field" do
+    test "nil node_limit is allowed (no limit)" do
+      assert {:ok, cluster} = apply(%{"name" => "prod", "ipv4_range" => "100.64.1.0/24", "node_limit" => nil})
+      assert cluster.node_limit == nil
+    end
+
+    test "positive node_limit is accepted" do
+      assert {:ok, cluster} = apply(%{"name" => "prod", "ipv4_range" => "100.64.1.0/24", "node_limit" => 5})
+      assert cluster.node_limit == 5
+    end
+
+    test "node_limit of 1 is accepted (boundary)" do
+      assert {:ok, cluster} = apply(%{"name" => "prod", "ipv4_range" => "100.64.1.0/24", "node_limit" => 1})
+      assert cluster.node_limit == 1
+    end
+
+    test "node_limit of 0 is rejected" do
+      changeset = build_changeset(%{"name" => "prod", "ipv4_range" => "100.64.1.0/24", "node_limit" => 0})
+      assert %{node_limit: [_msg]} = errors_on(changeset)
+    end
+
+    test "negative node_limit is rejected" do
+      changeset = build_changeset(%{"name" => "prod", "ipv4_range" => "100.64.1.0/24", "node_limit" => -1})
+      assert %{node_limit: [_msg]} = errors_on(changeset)
+    end
+
+    test "omitted node_limit defaults to nil" do
+      assert {:ok, cluster} = apply(%{"name" => "prod", "ipv4_range" => "100.64.1.0/24"})
+      assert cluster.node_limit == nil
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # node_count/1
   # ---------------------------------------------------------------------------
 

@@ -17,6 +17,42 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterFormTest do
   end
 
   # ---------------------------------------------------------------------------
+  # changeset/1 — node_limit validation
+  # ---------------------------------------------------------------------------
+
+  describe "changeset/1 — node_limit field" do
+    test "valid node_limit is accepted" do
+      assert {:ok, result} = CreateClusterForm.changeset(valid_attrs(%{"node_limit" => 10}))
+      assert result["node_limit"] == 10
+    end
+
+    test "node_limit of 1 is accepted (minimum allowed)" do
+      assert {:ok, result} = CreateClusterForm.changeset(valid_attrs(%{"node_limit" => 1}))
+      assert result["node_limit"] == 1
+    end
+
+    test "node_limit of 0 is rejected (must be greater than 0)" do
+      assert {:error, changeset} = CreateClusterForm.changeset(valid_attrs(%{"node_limit" => 0}))
+      assert %{node_limit: [_msg]} = errors_on(changeset)
+    end
+
+    test "negative node_limit is rejected" do
+      assert {:error, changeset} = CreateClusterForm.changeset(valid_attrs(%{"node_limit" => -1}))
+      assert %{node_limit: [_msg]} = errors_on(changeset)
+    end
+
+    test "nil node_limit is excluded from result (no limit means unlimited)" do
+      {:ok, result} = CreateClusterForm.changeset(valid_attrs())
+      refute Map.has_key?(result, "node_limit")
+    end
+
+    test "omitted node_limit is excluded from result" do
+      {:ok, result} = CreateClusterForm.changeset(valid_attrs())
+      refute Map.has_key?(result, "node_limit")
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # changeset/1 — valid cases
   # ---------------------------------------------------------------------------
 

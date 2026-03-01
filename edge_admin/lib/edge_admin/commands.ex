@@ -981,10 +981,9 @@ defmodule EdgeAdmin.Commands do
       {:ok, %CommandExecution{status: "sent"}}
   """
   @spec acknowledge_execution(CommandExecution.t(), map()) ::
-          {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
-  def acknowledge_execution(execution, params) do
-    with {:ok, _attrs} <- Forms.AcknowledgeCommandExecutionForm.changeset(params, execution.status) do
-      # Update status from "pending" to "sent"
+          {:ok, CommandExecution.t()} | {:error, {:conflict, String.t()}}
+  def acknowledge_execution(execution, _params) do
+    with :ok <- Checks.AcknowledgeExecutionCheck.check(execution) do
       update_command_execution(execution, %{"status" => "sent", "sent_at" => DateTime.utc_now()})
     end
   end
@@ -1014,8 +1013,8 @@ defmodule EdgeAdmin.Commands do
   @spec update_command_execution_result(CommandExecution.t(), map()) ::
           {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   def update_command_execution_result(execution, params) do
-    with {:ok, attrs} <-
-           Forms.UpdateCommandExecutionResultForm.changeset(params, execution.status, execution.exit_code) do
+    with :ok <- Checks.UpdateExecutionResultCheck.check(execution),
+         {:ok, attrs} <- Forms.UpdateCommandExecutionResultForm.changeset(params) do
       # Hardcode status to "completed" since form validated current status is "sent" or "completed" (race condition)
       attrs = Map.put(attrs, "status", "completed")
       result = update_command_execution(execution, attrs)
@@ -1065,14 +1064,13 @@ defmodule EdgeAdmin.Commands do
 
   ## Returns
     - `{:ok, %{result: "cancellation request sent"}}` - Success
-    - `{:error, changeset}` - Validation failed (status not pending/sent)
+    - `{:error, {:conflict, reason}}` - Execution not in cancellable state
     - `{:error, :service_unavailable}` - Agent unreachable (sent status only)
   """
   @spec cancel_command_execution(CommandExecution.t()) ::
-          {:ok, map()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
+          {:ok, map()} | {:error, {:conflict, String.t()}} | {:error, :service_unavailable}
   def cancel_command_execution(execution) do
-    # Validate execution is cancellable (status must be pending or sent)
-    with {:ok, _attrs} <- Forms.CancelExecutionForm.changeset(execution.status) do
+    with :ok <- Checks.CancelExecutionCheck.check(execution) do
       case execution.status do
         "pending" ->
           # Cancel immediately in DB (use regular update, not agent result update)

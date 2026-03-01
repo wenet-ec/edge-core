@@ -65,6 +65,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSONTest do
       assert Map.has_key?(data, :id)
       assert Map.has_key?(data, :name)
       assert Map.has_key?(data, :ipv4_range)
+      assert Map.has_key?(data, :node_limit)
       assert Map.has_key?(data, :node_count)
       assert Map.has_key?(data, :nodes)
       assert Map.has_key?(data, :network_name)
@@ -81,6 +82,16 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSONTest do
       assert data.ipv4_range == "100.64.2.0/24"
       assert data.inserted_at == @now
       assert data.updated_at == @now
+    end
+
+    test "node_limit is passed through as nil when not set" do
+      data = ClusterJSON.show(%{cluster: fake_cluster()}).data
+      assert data.node_limit == nil
+    end
+
+    test "node_limit is passed through when set" do
+      data = ClusterJSON.show(%{cluster: fake_cluster(%{node_limit: 25})}).data
+      assert data.node_limit == 25
     end
 
     test "node_count is 0 when nodes is empty list" do

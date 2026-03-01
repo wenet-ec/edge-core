@@ -576,7 +576,7 @@ defmodule EdgeAdmin.Nodes do
   def change_node_cluster(%Node{} = node, params) do
     with {:ok, new_cluster_name} <- Forms.ChangeNodeClusterForm.changeset(params),
          {:ok, new_cluster} <- get_cluster(new_cluster_name),
-         :ok <- check_cluster_changed(node, new_cluster),
+         :ok <- Checks.NodeClusterChangeCheck.check(node, new_cluster),
          :ok <- Checks.NodeLimitCheck.check(new_cluster) do
       old_cluster_id = node.cluster_id
 
@@ -1830,9 +1830,4 @@ defmodule EdgeAdmin.Nodes do
       end
     end)
   end
-
-  defp check_cluster_changed(%Node{cluster_id: same_id}, %{id: same_id}),
-    do: {:error, "node is already in this cluster"}
-
-  defp check_cluster_changed(_, _), do: :ok
 end

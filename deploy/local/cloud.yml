@@ -70,8 +70,6 @@ services:
       - /dev/net/tun:/dev/net/tun
     env_file:
       - ./.envs/.edge_admin
-    environment:
-      - ADMIN_WIREGUARD_PORT=51821
     ports:
       - "4000:44000"       # API 
       - "3128:43128"       # HTTP Proxy
@@ -118,7 +116,6 @@ services:
       - ./.envs/.edge_admin
     environment:
       - AUTH_ENABLED=false
-      - ADMIN_WIREGUARD_PORT=51822
     ports:
       - "4001:44000"       # API
       - "3129:43128"       # HTTP Proxy
@@ -166,7 +163,6 @@ services:
     environment:
       - ADMIN_CLUSTER_NAME=b
       - ADMIN_CLUSTER_SUBNET=100.63.1.0/24
-      - ADMIN_WIREGUARD_PORT=51823
     ports:
       - "4002:44000"       # API
       - "3130:43128"       # HTTP Proxy

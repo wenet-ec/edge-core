@@ -10,7 +10,7 @@ DB_USER=edge_admin_user
 DB_PASSWORD=edge_admin_password
 DB_POOL_SIZE=10
 DB_SSL=false
-# DB_IPV6=false  # Enable IPv6 socket options (optional)
+# DB_IPV6=false
 
 # =============================================================================
 # Phoenix / Web Server
@@ -18,11 +18,13 @@ DB_SSL=false
 API_PORT=44000
 SECRET_KEY_BASE=zsIbO5eGH9IJ1p+E6M1a1VL4bIGrwLeTS8W7q8QDAOE/o3Ucy0si768bJxmF4A1Q
 CORS_ALLOWED_ORIGINS=*
-# PHX_SERVER=true  # Auto-start Phoenix server (set by mix phx.server, not needed here)
+# PHX_SERVER=true  # Set by mix phx.server automatically; not needed here
 
 # =============================================================================
-# Basic Authentication (Optional)
+# Basic Authentication (LiveDashboard)
 # =============================================================================
+# Protects /live_dashboard with HTTP Basic Auth.
+# Leave unset in local dev to skip the password prompt.
 # BASIC_AUTH_USERNAME=admin
 # BASIC_AUTH_PASSWORD=admin
 
@@ -31,17 +33,21 @@ CORS_ALLOWED_ORIGINS=*
 # =============================================================================
 LIVE_DASHBOARD_ENABLED=true
 
-# API Documentation (SwaggerUI, ReDoc, OpenAPI spec)
-# Enabled by default for development (set to false to test production behavior)
+# Enables SwaggerUI (/swaggerui), ReDoc (/redoc), and OpenAPI spec (/api/openapi).
+# Set to false to test production behavior locally.
 # API_DOCS_ENABLED=true
 
 # =============================================================================
 # Authentication & Authorization
 # =============================================================================
 AUTH_ENABLED=true
+
+# Full admin access — required. Grants access to all management API endpoints.
 MASTER_KEY=supersecretkey123456789
-# METRICS_KEY=  # Optional: Scoped key for metrics endpoints (defaults to MASTER_KEY)
-# PROXY_KEY=  # Optional: Scoped key for proxy endpoints (defaults to MASTER_KEY)
+
+# Optional scoped keys. Both default to MASTER_KEY if unset.
+# METRICS_KEY=  # Read-only: metrics endpoints
+# PROXY_KEY=    # Proxy tunnel endpoints
 
 # =============================================================================
 # Proxy Servers
@@ -50,96 +56,117 @@ HTTP_PROXY_PORT=43128
 SOCKS5_PROXY_PORT=41080
 
 # =============================================================================
-# Observability (Metrics, Telemetry, Sentry)
+# Observability
 # =============================================================================
+# Admin's own Prometheus metrics scrape target (host:port, no scheme).
 METRICS_BASE_URL=edge_admin:44000
-# SENTRY_DSN=  # Optional: Sentry DSN for error tracking
+
+# SENTRY_DSN=https://...@sentry.io/...
 SENTRY_ENVIRONMENT_NAME=local
 
 # =============================================================================
 # VPN / Netmaker
 # =============================================================================
 
-# --- Nexmaker Client (Netmaker API Client) ---
+# --- Netmaker API Client ---
 NETMAKER_API_URL=http://edge_vpn:8081
 NETMAKER_MASTER_KEY=supersecretkey123456789
 
-# --- Netmaker Superadmin (UI Access) ---
+# --- Netmaker Superadmin ---
+# Bootstraps the Netmaker UI admin account on first run.
 NETMAKER_SUPERADMIN_USERNAME=admin
 NETMAKER_SUPERADMIN_PASSWORD=admin
 
-# --- WireGuard Mode ---
-# Options: wireguard-go (userspace), unset for kernel mode
-# Agent runs host network + privileged: use kernel mode (faster) or userspace mode (derp support)
-# Admin runs container network: use userspace mode
+# --- WireGuard Implementation ---
+# wireguard-go = userspace (required for admin in a container — no NET_ADMIN cap needed)
+# unset        = kernel mode (faster; needs privileged + host network; used by agents)
 WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
 
 # --- Netclient API Scheme ---
-# Use http for local dev (no TLS certs). Production uses https (default).
+# http  = local dev (no TLS certs)
+# https = production default
 NETMAKER_API_SCHEME=http
 
-# Netmaker DNS domain suffix (used for hostname construction, cannot be changed once set)
+# --- Netmaker DNS Domain ---
+# Appended to all admin/node hostnames (e.g. admin-abc123.nm.internal).
+# Cannot be changed after nodes have enrolled — pick once.
 # NETMAKER_DEFAULT_DOMAIN=nm.internal
 
-# --- Cluster Network Configuration ---
-# Subnet size for auto-generated clusters (e.g., 24 = /24 = 254 hosts)
+# --- Edge Cluster Network Allocation ---
+# Subnet prefix length for auto-generated cluster networks (24 = /24 = 254 usable hosts).
 # CLUSTER_SUBNET_PREFIX=24
 
-# CIDR ranges for auto-generated cluster subnets (CGNAT space: 100.64.0.0/10)
+# CIDR pool from which cluster subnets are carved (CGNAT space by default).
 # CLUSTER_AUTO_GENERATED_RANGES=100.64.0.0/10
 
-# Optional: Pre-defined default cluster for agent enrollment
+# Pre-create a named default cluster so agents can enroll without specifying a cluster.
 DEFAULT_CLUSTER_NAME=default
 # DEFAULT_CLUSTER_SUBNET=100.64.0.0/24
 
-# Allow public enrollment without authentication (dev/testing only - INSECURE!)
+# Allow agent enrollment without a signed token — dev/testing only, never production.
 PUBLIC_ENROLLMENT_KEY_ENABLED=true
 
 # =============================================================================
-# Admin Cluster & Distribution
+# Admin Cluster & Erlang Distribution
 # =============================================================================
+# Admins form an Erlang cluster over the VPN for HA coordination:
+#   - syn distributed registry for cross-admin request routing
+#   - Oban Global peer leader election (Cron/Lifeline run on leader only)
+#   - periodic peer discovery and reconnection
+# A single-instance setup still boots correctly with these set.
 
-# Admin cluster (VPN network for multi-admin coordination)
-ADMIN_CLUSTER_NAME=a  # Will be prefixed with "admin-cluster-" → admin-cluster-a (max 16 chars for suffix)
-ADMIN_CLUSTER_SUBNET=100.63.0.0/24  # IPv4 CIDR for admin cluster network (separate from edge clusters)
+# Name suffix for the admin cluster VPN network.
+# Prefixed internally → "admin-cluster-a". Suffix must be ≤16 chars.
+# Must be identical across all admin instances in the same deployment.
+ADMIN_CLUSTER_NAME=a
 
-# Maximum number of nodes this admin can handle
+# IPv4 CIDR for the admin cluster VPN. Must not overlap with edge cluster ranges.
+ADMIN_CLUSTER_SUBNET=100.63.0.0/24
+
+# Max edge nodes this admin instance will own.
+# Used for distributed cluster ownership across multiple admins.
 ADMIN_MAX_CAPACITY=200
 
-# Admin WireGuard port
+# Static WireGuard listen port for the admin VPN interface.
+# Required when admin is behind NAT and agents need a predictable UDP port.
+# Must match the UDP port mapping in docker-compose.
 # ADMIN_WIREGUARD_PORT=51821
 
-# Erlang distribution (for multi-admin clustering)
-ERLANG_COOKIE=local-cookie  # Shared secret for Erlang distribution (MUST be same across all admins)
-ERLANG_DIST_PORT=49125  # Fixed port for Erlang distribution (set in vm.args.eex)
+# Shared Erlang cookie — must be identical across all admin instances in the cluster.
+ERLANG_COOKIE=local-cookie
 
-# Admin discovery
-ADMIN_DISCOVERY_PORT=44000  # Port to scan for admin discovery endpoint
+# Fixed Erlang distribution port (epmd replacement). Configured in vm.args.eex.
+ERLANG_DIST_PORT=49125
 
-# --- VPN Sync After Reconciliation ---
-# Pull VPN config after gateway changes to ensure consistency (default: true).
-# Disable on resource-starved machines to prevent interface reset loops causing cascading failures.
+# Port on which admin instances expose their discovery/health endpoint to each other.
+ADMIN_DISCOVERY_PORT=44000
+
+# Re-pull VPN config from netclient after gateway reconciliation (default: true).
+# Disable on memory-constrained machines — interface resets can cascade into failures.
 # SYNC_VPN_AFTER_RECONCILIATION=true
 
 # =============================================================================
 # Background Workers & Schedulers
 # =============================================================================
 
-# --- Cluster Reconciliation (Oban Cron) ---
-# Syncs cluster state with Netmaker to recover from inconsistencies
+# --- Cluster Reconciliation (Oban Cron — runs on leader only) ---
+# Heals drift between DB and Netmaker: adds/removes nodes from VPN networks,
+# cleans up orphaned clusters and ghost DNS aliases.
 # CLUSTER_RECONCILIATION_ENABLED=true
-# CLUSTER_RECONCILIATION_SCHEDULE=0 */6 * * *  # Every 6 hours
+# CLUSTER_RECONCILIATION_SCHEDULE=0 */6 * * *  # default: every 6 hours
 
-# --- Zombie Admin Cleanup (Oban Cron) ---
-ZOMBIE_ADMIN_CLEANUP_SCHEDULE=*/30 * * * *  # Every 30 minutes
-ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES=120  # Minutes since last checkin to consider dead (2 hours)
+# --- Zombie Admin Cleanup (Oban Cron — runs on leader only) ---
+# Removes stale admin hosts from the admin VPN that haven't checked in recently.
+ZOMBIE_ADMIN_CLEANUP_SCHEDULE=*/30 * * * *
+ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES=120
 
-# --- Node Health Check (Quantum LocalScheduler) ---
-NODE_HEALTH_CHECK_SCHEDULE=* * * * *  # Every minute
-NODE_HEALTH_CHECK_CONCURRENCY=100  # Number of parallel health check requests
+# --- Node Health Check (Quantum LocalScheduler — runs on every instance) ---
+# Each admin independently pings the nodes it owns to detect unhealthy/unreachable status.
+NODE_HEALTH_CHECK_SCHEDULE=* * * * *
+NODE_HEALTH_CHECK_CONCURRENCY=100
 
-# --- HTTP Request Timeouts (Agent Communication) ---
-# Health checks, metrics scraping, command execution, self-update triggers
-# Generous timeouts for relay connections + intercontinental latency
-HTTP_AGENT_RECEIVE_TIMEOUT_MS=30000  # 30s for receiving response
-HTTP_AGENT_CONNECT_TIMEOUT_MS=20000  # 20s for establishing connection
+# --- HTTP Timeouts for Agent Communication ---
+# Covers health checks, metrics scraping, command delivery, and self-update triggers.
+# Set generously to tolerate relay hops and intercontinental latency.
+HTTP_AGENT_RECEIVE_TIMEOUT_MS=30000
+HTTP_AGENT_CONNECT_TIMEOUT_MS=20000

@@ -1260,7 +1260,7 @@ defmodule EdgeAdmin.Nodes do
     end
   end
 
-  defp reconcile_cluster_nodes(cluster, db_nodes, netmaker_nodes, expected_host_ids, actual_host_ids) do
+  defp reconcile_cluster_nodes(cluster, db_nodes, _netmaker_nodes, expected_host_ids, actual_host_ids) do
     orphaned_in_db = MapSet.difference(expected_host_ids, actual_host_ids)
     orphaned_nodes = Enum.filter(db_nodes, fn node -> node.netmaker_host_id in orphaned_in_db end)
 
@@ -1269,7 +1269,6 @@ defmodule EdgeAdmin.Nodes do
     added = add_missing_nodes(orphaned_in_db, node_network_name(cluster), cluster.name)
 
     extra_in_netmaker = MapSet.difference(actual_host_ids, expected_host_ids)
-    host_hostname_map = Map.new(netmaker_nodes, fn n -> {n["hostid"], n["name"] || ""} end)
 
     all_db_host_ids =
       from(n in Node, select: n.netmaker_host_id)
@@ -1280,6 +1279,14 @@ defmodule EdgeAdmin.Nodes do
     unmanaged_extra = MapSet.difference(extra_in_netmaker, all_db_host_ids)
 
     removed = remove_extra_nodes(managed_extra, node_network_name(cluster), cluster.name)
+
+    # Build hostname map from actual host objects (hosts have "name"; node objects do not)
+    host_hostname_map =
+      case Vpn.list_hosts(node_network_name(cluster)) do
+        {:ok, hosts} -> Map.new(hosts, fn h -> {h["id"], h["name"] || ""} end)
+        {:error, _} -> %{}
+      end
+
     evicted = evict_rogue_hosts(unmanaged_extra, host_hostname_map, node_network_name(cluster), cluster.name)
 
     %{

@@ -1,13 +1,12 @@
-# deploy/production/cloud.yml (Mosquitto broker)
+# deploy/production/cloud.lite.yml
+# Use for hobbyist / single-node deployments.
 networks:
   production_edge_core:
     name: production_edge_core
 
 volumes:
   production_edge_admin_db_data: {}
-  production_edge_admin_db_data_backups: {}
   production_edge_vpn_data: {}
-  production_edge_vpn_db_data: {}
   production_edge_vpn_dns_config: {}
   production_edge_vpn_broker_data: {}
   production_edge_vpn_proxy_data: {}
@@ -24,7 +23,6 @@ services:
       - production_edge_core
     volumes:
       - production_edge_admin_db_data:/var/lib/postgresql
-      - production_edge_admin_db_data_backups:/backups
     env_file:
       - ./.envs/.edge_admin_db
     healthcheck:
@@ -70,104 +68,8 @@ services:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1
       - net.ipv6.conf.all.forwarding=1
-    
-  edge_admin_2:
-    build:
-      context: ../..
-      dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
-    image: production_edge_admin
-    container_name: production_edge_admin_2
-    networks:
-      - production_edge_core
-    depends_on:
-      edge_vpn:
-        condition: service_healthy
-      edge_admin_db:
-        condition: service_healthy
-      edge_admin:
-        condition: service_healthy
-    volumes:
-      - /dev/net/tun:/dev/net/tun
-    env_file:
-      - ./.envs/.edge_admin
-    environment:
-      - ADMIN_WIREGUARD_PORT=51822
-    ports:
-      - "34001:44000"      # API
-      - "33129:43128"      # HTTP proxy
-      - "31081:41080"      # SOCKS5 proxy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
-      interval: 60s
-      timeout: 5s
-      retries: 6
-      start_period: 45s
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    sysctls:
-      - net.ipv4.ip_forward=1
-      - net.ipv4.conf.all.src_valid_mark=1
-      - net.ipv6.conf.all.forwarding=1
-
-  edge_admin_3:
-    build:
-      context: ../..
-      dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
-    image: production_edge_admin
-    container_name: production_edge_admin_3
-    networks:
-      - production_edge_core
-    depends_on:
-      edge_vpn:
-        condition: service_healthy
-      edge_admin_db:
-        condition: service_healthy
-      edge_admin:
-        condition: service_healthy
-    volumes:
-      - /dev/net/tun:/dev/net/tun
-    env_file:
-      - ./.envs/.edge_admin
-    environment:
-      - ADMIN_CLUSTER_NAME=b
-      - ADMIN_CLUSTER_SUBNET=100.63.1.0/24
-      - ADMIN_WIREGUARD_PORT=51823
-    ports:
-      - "34002:44000"      # API
-      - "33130:43128"      # HTTP proxy
-      - "31082:41080"      # SOCKS5 proxy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
-      interval: 60s
-      timeout: 5s
-      retries: 6
-      start_period: 45s
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    sysctls:
-      - net.ipv4.ip_forward=1
-      - net.ipv4.conf.all.src_valid_mark=1
-      - net.ipv6.conf.all.forwarding=1
 
   # Netmaker VPN Stack
-  edge_vpn_db:
-    image: postgres:18
-    container_name: production_edge_vpn_db
-    networks:
-      - production_edge_core
-    volumes:
-      - production_edge_vpn_db_data:/var/lib/postgresql
-    env_file:
-      - ./.envs/.edge_vpn_db
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
   edge_vpn_broker:
     image: eclipse-mosquitto:latest
     container_name: production_edge_vpn_broker
@@ -203,9 +105,8 @@ services:
       - ./.envs/.edge_vpn
     environment:
       - BROKER_TYPE=mosquitto
+      - DATABASE=sqlite
     depends_on:
-      edge_vpn_db:
-        condition: service_healthy
       edge_vpn_broker:
         condition: service_healthy
     healthcheck:

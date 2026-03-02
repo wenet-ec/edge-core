@@ -6,7 +6,7 @@ defmodule TestEnvironment do
   @database_name_suffix "_test.db"
 
   def get_database_path do
-    path = System.get_env("DATABASE_PATH")
+    path = System.get_env("DB_PATH")
 
     if is_nil(path) || String.ends_with?(path, @database_name_suffix) do
       path

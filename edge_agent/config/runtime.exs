@@ -4,8 +4,8 @@ import EdgeAgent.Config
 
 # Optional environment variables with defaults
 config :edge_agent, EdgeAgent.Repo,
-  database: get_env("DATABASE_PATH", :string, "/app/data/agent/edge_agent.db"),
-  pool_size: get_env("DATABASE_POOL_SIZE", :integer, 3)
+  database: get_env("DB_PATH", :string, "/app/data/agent/edge_agent.db"),
+  pool_size: get_env("DB_POOL_SIZE", :integer, 3)
 
 # NOTE: Only set `server` to `true` if `PHX_SERVER` is present. We cannot set
 # it to `false` otherwise because `mix phx.server` will stop working without it.

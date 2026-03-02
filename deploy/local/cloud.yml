@@ -9,7 +9,6 @@ networks:
 
 volumes:
   local_edge_admin_db_data: {}
-  local_edge_admin_db_data_backups: {}
   local_edge_admin_deps: {}
   local_edge_admin_build: {}
   local_edge_admin_2_deps: {}
@@ -36,7 +35,6 @@ services:
       - local_edge_core
     volumes:
       - local_edge_admin_db_data:/var/lib/postgresql
-      - local_edge_admin_db_data_backups:/backups
     env_file:
       - ./.envs/.edge_admin_db
     healthcheck:

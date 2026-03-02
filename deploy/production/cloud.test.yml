@@ -9,7 +9,6 @@ networks:
 
 volumes:
   production_edge_admin_db_data: {}
-  production_edge_admin_db_data_backups: {}
   production_edge_vpn_data: {}
   production_edge_vpn_db_data: {}
   production_edge_vpn_dns_config: {}
@@ -30,7 +29,6 @@ services:
       - production_edge_core
     volumes:
       - production_edge_admin_db_data:/var/lib/postgresql
-      - production_edge_admin_db_data_backups:/backups
     env_file:
       - ./.envs/.edge_admin_db
     healthcheck:

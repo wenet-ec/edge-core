@@ -592,6 +592,7 @@ defmodule EdgeAdmin.Commands do
     executions =
       Enum.map(nodes, fn node ->
         %{
+          id: Uniq.UUID.uuid7(),
           command_id: command.id,
           node_id: node.id,
           cluster_id: cluster_id,

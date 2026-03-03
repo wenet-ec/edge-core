@@ -16,8 +16,9 @@ defmodule EdgeAdmin.Commands.Workers.ExecutionCreationWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
-    # Just pass the args to Commands context - it handles everything
-    Commands.create_command_executions(args)
-    :ok
+    case Commands.create_command_executions(args) do
+      {:ok, _executions} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
   end
 end

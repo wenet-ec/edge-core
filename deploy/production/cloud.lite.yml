@@ -49,8 +49,6 @@ services:
       - /dev/net/tun:/dev/net/tun
     env_file:
       - ./.envs/.edge_admin
-    environment:
-      - ADMIN_WIREGUARD_PORT=51821
     ports:
       - "34000:44000"      # API
       - "33128:43128"      # HTTP proxy

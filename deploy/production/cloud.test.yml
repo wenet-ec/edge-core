@@ -60,7 +60,6 @@ services:
       - ./.envs/.edge_admin
     environment:
       - NETMAKER_API_URL=http://netmaker.localtest.me
-      - ADMIN_WIREGUARD_PORT=51821
       - NETMAKER_API_SCHEME=http
     ports:
       - "34000:44000"

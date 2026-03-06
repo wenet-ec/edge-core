@@ -58,6 +58,18 @@ trap cleanup EXIT INT TERM
 echo "Running migrations..."
 /app/bin/migrate
 
+# Only unload the kernel WireGuard module when running in userspace mode.
+# In userspace mode (wireguard-go), if the kernel wireguard module is loaded
+# (e.g. contaminated by a prior agent run on the same host), netlink.LinkAdd
+# returns EINVAL after the TUN device is created, which destroys the UAPI
+# socket and breaks DERP. rmmod clears this before netclient daemon starts.
+# In kernel mode, netclient's Create() self-heals by doing LinkDel+LinkAdd
+# on the existing interface — rmmod must NOT run or it breaks that path.
+if [ "${WG_QUICK_USERSPACE_IMPLEMENTATION:-}" = "wireguard-go" ]; then
+    echo "Userspace WireGuard mode: unloading kernel wireguard module (if present)..."
+    rmmod wireguard 2>/dev/null || true
+fi
+
 # Clean up any stale WireGuard interface from previous run
 echo "Cleaning up stale WireGuard interface..."
 ip link delete netmaker 2>/dev/null || true

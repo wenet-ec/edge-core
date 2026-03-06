@@ -51,6 +51,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
     field(:node_count, :integer, virtual: true)
 
     has_many(:nodes, EdgeAdmin.Nodes.Schemas.Node)
+    has_many(:enrollment_keys, EdgeAdmin.Nodes.Schemas.EnrollmentKey)
 
     timestamps()
   end

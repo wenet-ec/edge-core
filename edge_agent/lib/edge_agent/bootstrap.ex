@@ -7,52 +7,21 @@ defmodule EdgeAgent.Bootstrap do
   initialization tasks to establish agent identity, join the VPN network, discover
   and register with admin servers, and sync unprocessed command executions.
 
-  ## Key Concepts
-
-  - **Node Identity**: Persistent or random UUID identifying this agent
-  - **VPN Join**: Connects to cluster network via Netmaker enrollment token
-  - **Admin Discovery**: Finds admin servers via Netmaker API (no hardcoded addresses)
-  - **Registration**: Registers node with admin and receives API token
-  - **Command Sync**: Syncs unprocessed command executions (both sent and pending)
-
-  ## Responsibilities
-
-  1. **Identity Determination**
-     - Try persistent system ID (machine-id, hardware UUID)
-     - Fall back to random UUID if persistent ID unavailable
-     - Store identity in Settings database for persistence
-
-  2. **VPN Network Join**
-     - Join edge cluster network using enrollment token
-     - Verify netclient connection and health
-     - Obtain VPN IP address for communication
-
-  3. **Admin Discovery and Registration**
-     - Query Netmaker for hosts in admin cluster network
-     - Extract admin URLs from host metadata (or use HTTP fallback if none found)
-     - Register with admin and receive credentials
-
-  4. **Command Sync**
-     - Sync unprocessed command executions from admin
-     - Fetches both "sent" (already acknowledged) and "pending" (needs acknowledgment)
-     - Acknowledges pending executions before storing locally
-     - Store in local database and enqueue for execution
-     - Handle duplicates gracefully
-
   ## Bootstrap Sequence
 
   ```
   1. Determine node identity (persistent → random)
-  2. Join VPN network via enrollment token
-  3. Discover admin URLs and register with admin (with HTTP fallback)
-  4. Sync unprocessed command executions (sent + pending)
+  2. Verify enrollment key with admin
+  3. Join VPN network
+  4. Discover admin URLs and register with admin (with HTTP fallback)
+  5. Sync unprocessed command executions (sent + pending)
   ```
 
   ## Failure Handling
 
   Bootstrap failures are **FATAL** and crash the supervision tree:
   - Identity determination failure → Can't identify node
-  - VPN join failure → Can't communicate with admins
+  - Enrollment / VPN join failure → Can't communicate with admins
   - Registration failure → Can't authenticate with admin
 
   Non-fatal conditions (logged as warning, bootstrap continues):
@@ -62,16 +31,15 @@ defmodule EdgeAgent.Bootstrap do
   ## Configuration
 
   All values read from Application config (set in runtime.exs):
-  - `:enrollment_key` - Netmaker enrollment token
+  - `:enrollment_key` - Admin enrollment key blob (base64)
+  - `:public_enrollment_key_url` - URL to fetch enrollment key blob if env not set
   - `:run_bootstrap` - Whether to run bootstrap (default: true)
-  - `:use_random_id` - Force random UUID instead of persistent ID
   - `:http_port` - Agent HTTP API port (default: 44000)
   - `:ssh_port` - Agent SSH server port (default: 40022)
   - `:host_metrics_port` - Node exporter port (default: 49100)
   - `:wireguard_metrics_port` - WireGuard exporter port (default: 49586)
   - `:http_proxy_port` - HTTP proxy port (default: 43128)
   - `:socks5_proxy_port` - SOCKS5 proxy port (default: 41080)
-  - `:admin_fallback_urls` - HTTP fallback URLs when VPN unavailable (list)
   - `:vpn_ready_timeout_seconds` - VPN verification timeout in seconds (default: 30)
 
   ## Examples
@@ -93,6 +61,7 @@ defmodule EdgeAgent.Bootstrap do
   alias EdgeAgent.Commands
   alias EdgeAgent.EdgeClusters.AdminClient
   alias EdgeAgent.EdgeClusters.Discovery
+  alias EdgeAgent.Enrollment
   alias EdgeAgent.Identity
   alias EdgeAgent.Settings
   alias EdgeAgent.Vpn
@@ -166,9 +135,10 @@ defmodule EdgeAgent.Bootstrap do
 
   defp do_bootstrap do
     with {:ok, node_id, id_type} <- step_1_determine_identity(),
-         :ok <- step_2_join_vpn(node_id),
-         :ok <- step_3_discover_and_register(node_id, id_type),
-         :ok <- step_4_sync_unprocessed_command_executions(node_id) do
+         :ok <- step_2_verify_enrollment(),
+         :ok <- step_3_join_vpn(node_id),
+         :ok <- step_4_discover_and_register(node_id, id_type),
+         :ok <- step_5_sync_unprocessed_command_executions(node_id) do
       Logger.info("All bootstrap steps completed")
       :ok
     else
@@ -188,7 +158,6 @@ defmodule EdgeAgent.Bootstrap do
     {:ok, node_id, id_type} = Identity.determine()
     Logger.info("Node identity: #{String.slice(node_id, 0, 8)}... (#{id_type})")
 
-    # Store identity in settings for persistence across restarts
     Settings.set_node_id(node_id)
     Settings.set_id_type(id_type)
 
@@ -196,22 +165,30 @@ defmodule EdgeAgent.Bootstrap do
   end
 
   # =============================================================================
-  # Step 2: Join VPN
+  # Step 2: Verify Enrollment Key
   # =============================================================================
 
-  defp step_2_join_vpn(node_id) do
-    Logger.info("Step 2: Joining VPN network...")
+  defp step_2_verify_enrollment do
+    Logger.info("Step 2: Verifying enrollment key...")
+    Enrollment.ensure_verified()
+  end
+
+  # =============================================================================
+  # Step 3: Join VPN
+  # =============================================================================
+
+  defp step_3_join_vpn(node_id) do
+    Logger.info("Step 3: Joining VPN network...")
     Vpn.join_if_needed(node_id)
   end
 
   # =============================================================================
-  # Step 3: Discover Admins and Register Node
+  # Step 4: Discover Admins and Register Node
   # =============================================================================
 
-  defp step_3_discover_and_register(node_id, id_type) do
-    Logger.info("Step 3: Discovering admins and registering...")
+  defp step_4_discover_and_register(node_id, id_type) do
+    Logger.info("Step 4: Discovering admins and registering...")
 
-    # Discovery always succeeds - returns empty list if no admins found
     {:ok, network_name, admin_urls} = Discovery.discover_admins()
 
     if network_name do
@@ -219,14 +196,10 @@ defmodule EdgeAgent.Bootstrap do
     end
 
     case admin_urls do
-      [] ->
-        Logger.warning("No admins discovered in VPN - will use HTTP fallback if configured")
-
-      urls ->
-        Logger.info("Discovered #{length(urls)} admin(s)")
+      [] -> Logger.warning("No admins discovered in VPN - will use HTTP fallback if configured")
+      urls -> Logger.info("Discovered #{length(urls)} admin(s)")
     end
 
-    # Register with admin (uses discovered URLs or fallback)
     Logger.info("Registering with admin...")
 
     start_time = System.monotonic_time(:millisecond)
@@ -235,7 +208,6 @@ defmodule EdgeAgent.Bootstrap do
     result =
       case AdminClient.register_node(payload) do
         {:ok, node_data} ->
-          # Store API token and proxy password from registration response
           api_token = node_data["api_token"]
           proxy_password = node_data["proxy_password"]
 
@@ -259,11 +231,7 @@ defmodule EdgeAgent.Bootstrap do
 
     duration = System.monotonic_time(:millisecond) - start_time
 
-    status =
-      case result do
-        :ok -> :success
-        {:error, _} -> :failure
-      end
+    status = if result == :ok, do: :success, else: :failure
 
     :telemetry.execute(
       [:edge_agent, :bootstrap, :registration],
@@ -275,13 +243,12 @@ defmodule EdgeAgent.Bootstrap do
   end
 
   # =============================================================================
-  # Step 4: Sync Unprocessed Command Executions
+  # Step 5: Sync Unprocessed Command Executions
   # =============================================================================
 
-  defp step_4_sync_unprocessed_command_executions(_node_id) do
-    Logger.info("Step 4: Syncing unprocessed command executions...")
+  defp step_5_sync_unprocessed_command_executions(_node_id) do
+    Logger.info("Step 5: Syncing unprocessed command executions...")
 
-    # Use shared sync function (also used by SyncUnprocessedExecutionWorker)
     Commands.sync_unprocessed_command_executions()
 
     # Always return :ok (sync failures are non-fatal)

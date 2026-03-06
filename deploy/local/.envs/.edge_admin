@@ -106,6 +106,9 @@ DEFAULT_CLUSTER_NAME=default
 # Allow agent enrollment without a signed token — dev/testing only, never production.
 PUBLIC_ENROLLMENT_KEY_ENABLED=true
 
+# Admin URLs for enrollment key generation and agent fallback (required).
+ADMIN_URLS=http://localhost:4000
+
 # =============================================================================
 # Admin Cluster & Erlang Distribution
 # =============================================================================
@@ -154,6 +157,11 @@ ADMIN_DISCOVERY_PORT=44000
 # cleans up orphaned clusters and ghost DNS aliases.
 # CLUSTER_RECONCILIATION_ENABLED=true
 # CLUSTER_RECONCILIATION_SCHEDULE=0 */6 * * *  # default: every 6 hours
+
+# --- Rogue Host Eviction ---
+# During reconciliation, delete hosts in a cluster network that have no DB record.
+# Disable temporarily if you need direct Netmaker access (e.g. manual debugging).
+# EVICT_ROGUE_HOSTS=true
 
 # --- Zombie Admin Cleanup (Oban Cron — runs on leader only) ---
 # Removes stale admin hosts from the admin VPN that haven't checked in recently.

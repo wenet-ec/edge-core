@@ -10,23 +10,130 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug EdgeAdminWeb.Plugs.DegradedMode, :block when action in [:create, :create_for_default, :create_for_public]
+  plug EdgeAdminWeb.Plugs.DegradedMode,
+       :block when action in [:create, :create_for_default, :create_for_public, :delete, :update]
 
   tags(["Nodes.EnrollmentKey"])
 
+  operation(:index,
+    summary: "List enrollment keys",
+    description: "Returns a paginated list of enrollment keys with filtering and sorting.",
+    parameters: [
+      page: [
+        in: :query,
+        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, default: 1}
+      ],
+      page_size: [
+        in: :query,
+        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, maximum: 100, default: 20}
+      ],
+      order_by: [
+        in: :query,
+        schema: %OpenApiSpex.Schema{type: :string},
+        example: "inserted_at"
+      ],
+      order_directions: [
+        in: :query,
+        schema: %OpenApiSpex.Schema{type: :string},
+        example: "desc"
+      ],
+      cluster_name: [
+        in: :query,
+        description: "Filter by cluster name (exact match or wildcard: prod*, *east, etc.)",
+        schema: %OpenApiSpex.Schema{type: :string}
+      ],
+      key: [
+        in: :query,
+        description: "Filter by exact key value",
+        schema: %OpenApiSpex.Schema{type: :string}
+      ],
+      uses_remaining: [
+        in: :query,
+        description: "Filter by exact uses_remaining",
+        schema: %OpenApiSpex.Schema{type: :integer}
+      ],
+      uses_remaining__gte: [
+        in: :query,
+        description: "Filter by minimum uses_remaining",
+        schema: %OpenApiSpex.Schema{type: :integer}
+      ],
+      uses_remaining__lte: [
+        in: :query,
+        description: "Filter by maximum uses_remaining",
+        schema: %OpenApiSpex.Schema{type: :integer}
+      ],
+      expired_at__gte: [
+        in: :query,
+        description: "Filter keys expiring after this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+      ],
+      expired_at__lte: [
+        in: :query,
+        description: "Filter keys expiring before this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+      ],
+      last_used_at__gte: [
+        in: :query,
+        description: "Filter keys last used after this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+      ],
+      last_used_at__lte: [
+        in: :query,
+        description: "Filter keys last used before this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+      ],
+      inserted_at__gte: [
+        in: :query,
+        description: "Filter keys created after this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+      ],
+      inserted_at__lte: [
+        in: :query,
+        description: "Filter keys created before this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+      ],
+      updated_at__gte: [
+        in: :query,
+        description: "Filter keys updated after this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+      ],
+      updated_at__lte: [
+        in: :query,
+        description: "Filter keys updated before this date",
+        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+      ]
+    ],
+    responses: %{
+      200 => {"Paginated enrollment key list", "application/json", EnrollmentKeySchemas.EnrollmentKeyPaginatedResponse}
+    }
+  )
+
+  def index(conn, params) do
+    with {:ok, {keys, meta}} <- Nodes.list_enrollment_keys(params) do
+      render(conn, :index, enrollment_keys: keys, meta: meta)
+    end
+  end
+
+  operation(:show,
+    summary: "Get an enrollment key",
+    parameters: [
+      id: [in: :path, description: "Enrollment key ID", schema: %OpenApiSpex.Schema{type: :string, format: :uuid}]
+    ],
+    responses: %{
+      200 => {"Enrollment key", "application/json", EnrollmentKeySchemas.EnrollmentKeySingleResponse},
+      404 => {"Not found", "application/json", CommonSchemas.NotFoundResponse}
+    }
+  )
+
+  def show(conn, %{"id" => id}) do
+    with {:ok, key} <- Nodes.get_enrollment_key(id) do
+      render(conn, :show, enrollment_key: key)
+    end
+  end
+
   operation(:create,
-    summary: "Get enrollment key for cluster",
-    description: """
-    Creates or retrieves an enrollment key for a cluster.
-
-    **Default**: Retrieves the Netmaker auto-generated default key (unlimited uses, no expiration).
-    Use for production edge nodes and mass deployments.
-
-    **Custom**: Creates a new key with user-specified expiry and uses (not tracked in DB, tagged for audit trail).
-    Use for controlled/time-limited registrations.
-
-    **Note:** This endpoint is unavailable during degraded mode (503).
-    """,
+    summary: "Create an enrollment key for a cluster",
+    description: "**Note:** This endpoint is unavailable during degraded mode (503).",
     parameters: [
       cluster_name: [
         in: :path,
@@ -36,7 +143,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     ],
     request_body: {"Enrollment key parameters", "application/json", EnrollmentKeySchemas.EnrollmentKeyCreateRequest},
     responses: %{
-      201 => {"Enrollment key retrieved/created", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
+      201 => {"Enrollment key created", "application/json", EnrollmentKeySchemas.EnrollmentKeySingleResponse},
       404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
@@ -45,20 +152,21 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
 
   def create(conn, %{"cluster_name" => cluster_name} = params) do
     with {:ok, cluster} <- Nodes.get_cluster(cluster_name),
-         {:ok, enrollment_key} <- Nodes.create_enrollment_key(cluster, params) do
+         {:ok, key} <- Nodes.create_enrollment_key(cluster, params) do
       conn
       |> put_status(:created)
-      |> render(:show, enrollment_key: enrollment_key)
+      |> put_resp_header("location", ~p"/api/v1/enrollment_keys/#{key.id}")
+      |> render(:show, enrollment_key: key)
     end
   end
 
   operation(:create_for_default,
-    summary: "Get enrollment key for default cluster",
+    summary: "Create an enrollment key for the default cluster",
     description:
-      "Convenience endpoint that gets an enrollment key for the default cluster (configured via DEFAULT_CLUSTER_NAME env).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+      "Convenience endpoint for the default cluster (configured via DEFAULT_CLUSTER_NAME env).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
     request_body: {"Enrollment key parameters", "application/json", EnrollmentKeySchemas.EnrollmentKeyCreateRequest},
     responses: %{
-      201 => {"Enrollment key retrieved/created", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
+      201 => {"Enrollment key created", "application/json", EnrollmentKeySchemas.EnrollmentKeySingleResponse},
       403 => {"Default cluster not configured", "application/json", CommonSchemas.ForbiddenResponse},
       404 => {"Default cluster not found", "application/json", CommonSchemas.NotFoundResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
@@ -69,27 +177,24 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   def create_for_default(conn, params) do
     with :ok <- EnrollmentKeyPolicy.authorize(:create_for_default),
          {:ok, cluster} <- Nodes.get_cluster(EnrollmentKeyPolicy.default_cluster_name()),
-         {:ok, enrollment_key} <- Nodes.create_enrollment_key(cluster, params) do
+         {:ok, key} <- Nodes.create_enrollment_key(cluster, params) do
       conn
       |> put_status(:created)
-      |> render(:show, enrollment_key: enrollment_key)
+      |> put_resp_header("location", ~p"/api/v1/enrollment_keys/#{key.id}")
+      |> render(:show, enrollment_key: key)
     end
   end
 
   operation(:create_for_public,
-    summary: "Get public enrollment key for default cluster",
+    summary: "Get a public enrollment key for the default cluster",
     description: """
-    Public endpoint (no authentication required) that retrieves the default enrollment key
-    for the default cluster. This endpoint is only enabled when both:
-    - PUBLIC_ENROLLMENT_KEY_ENABLED=true
-    - DEFAULT_CLUSTER_NAME is configured
-
-    Use this for public/demo environments where agents can auto-enroll without pre-configured keys.
+    Public endpoint (no authentication required). Only enabled when both
+    PUBLIC_ENROLLMENT_KEY_ENABLED=true and DEFAULT_CLUSTER_NAME are configured.
 
     **Note:** This endpoint is unavailable during degraded mode (503).
     """,
     responses: %{
-      200 => {"Public enrollment key", "application/json", EnrollmentKeySchemas.EnrollmentKeyResponse},
+      201 => {"Enrollment key created", "application/json", EnrollmentKeySchemas.EnrollmentKeySingleResponse},
       403 => {"Public enrollment disabled", "application/json", CommonSchemas.ForbiddenResponse},
       404 => {"Default cluster not found", "application/json", CommonSchemas.NotFoundResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
@@ -99,9 +204,53 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   def create_for_public(conn, _params) do
     with :ok <- EnrollmentKeyPolicy.authorize(:create_for_public),
          {:ok, cluster} <- Nodes.get_cluster(EnrollmentKeyPolicy.default_cluster_name()),
-         {:ok, enrollment_key} <-
-           Nodes.create_enrollment_key(cluster, %{"enrollment_key" => %{"key_type" => "default"}}) do
-      render(conn, :show, enrollment_key: enrollment_key)
+         {:ok, key} <- Nodes.create_enrollment_key(cluster, %{}) do
+      conn
+      |> put_status(:created)
+      |> render(:show, enrollment_key: key)
+    end
+  end
+
+  operation(:update,
+    summary: "Update an enrollment key",
+    description:
+      "Update expired_at or uses_remaining. Pass null to unset a nullable field.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+    parameters: [
+      id: [in: :path, description: "Enrollment key ID", schema: %OpenApiSpex.Schema{type: :string, format: :uuid}]
+    ],
+    request_body: {"Update parameters", "application/json", EnrollmentKeySchemas.EnrollmentKeyUpdateRequest},
+    responses: %{
+      200 => {"Updated enrollment key", "application/json", EnrollmentKeySchemas.EnrollmentKeySingleResponse},
+      404 => {"Not found", "application/json", CommonSchemas.NotFoundResponse},
+      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
+      503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
+    }
+  )
+
+  def update(conn, %{"id" => id} = params) do
+    with {:ok, key} <- Nodes.get_enrollment_key(id),
+         {:ok, updated_key} <- Nodes.update_enrollment_key(key, params) do
+      render(conn, :show, enrollment_key: updated_key)
+    end
+  end
+
+  operation(:delete,
+    summary: "Delete an enrollment key",
+    description: "**Note:** This endpoint is unavailable during degraded mode (503).",
+    parameters: [
+      id: [in: :path, description: "Enrollment key ID", schema: %OpenApiSpex.Schema{type: :string, format: :uuid}]
+    ],
+    responses: %{
+      204 => "Enrollment key deleted",
+      404 => {"Not found", "application/json", CommonSchemas.NotFoundResponse},
+      503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
+    }
+  )
+
+  def delete(conn, %{"id" => id}) do
+    with {:ok, key} <- Nodes.get_enrollment_key(id),
+         {:ok, _} <- Nodes.delete_enrollment_key(key) do
+      send_resp(conn, :no_content, "")
     end
   end
 end

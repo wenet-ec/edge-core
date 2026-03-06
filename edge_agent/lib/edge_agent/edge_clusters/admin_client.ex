@@ -99,6 +99,62 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   end
 
   @doc """
+  Verify an enrollment key with admin before joining the VPN.
+
+  Called during bootstrap before netclient join. Tries each URL in `admin_urls`
+  (from the decoded enrollment key blob) in order. On 503 (degraded mode) or
+  network error, tries the next URL. Returns the first successful response.
+
+  ## Parameters
+  - `token` - Raw token string extracted from the decoded enrollment key blob
+  - `admin_urls` - List of admin URLs from the enrollment key blob
+
+  ## Returns
+  - `{:ok, %{verified: bool, error: String.t(), netmaker_key: String.t()}}` - Response from admin
+  - `{:error, reason}` - All URLs failed or non-retryable error
+
+  POST /api/v1/agents/enrollment_keys/verify
+  """
+  @spec verify_enrollment_key(String.t(), [String.t()]) :: {:ok, map()} | {:error, term()}
+  def verify_enrollment_key(key_blob, admin_urls) do
+    path = "/api/v1/agents/enrollment_keys/verify"
+    payload = %{enrollment_key: %{key: key_blob}}
+
+    try_verify(admin_urls, path, payload)
+  end
+
+  defp try_verify([], _path, _payload) do
+    {:error, {:all_requests_failed, "All admin URLs failed during enrollment key verification"}}
+  end
+
+  defp try_verify([url | rest], path, payload) do
+    full_url = "#{url}#{path}"
+    opts = Keyword.merge([json: payload], http_options())
+
+    case Req.post(full_url, opts) do
+      {:ok, %{status: 200, body: %{"data" => data}}} ->
+        {:ok,
+         %{
+           verified: data["verified"],
+           error: data["error"] || "",
+           netmaker_key: data["netmaker_key"] || ""
+         }}
+
+      {:ok, %{status: 503}} ->
+        Logger.warning("Admin at #{url} is in degraded mode, trying next URL...")
+        try_verify(rest, path, payload)
+
+      {:ok, %{status: status, body: body}} ->
+        Logger.warning("Enrollment key verification failed at #{url}, HTTP #{status}: #{inspect(body)}")
+        {:error, {:http_error, status, body}}
+
+      {:error, reason} ->
+        Logger.warning("Enrollment key verification request failed at #{url}: #{inspect(reason)}, trying next URL...")
+        try_verify(rest, path, payload)
+    end
+  end
+
+  @doc """
   Register this node with an admin.
 
   Sends node metadata to admin server and receives API token and proxy password.
@@ -610,9 +666,14 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     end
   end
 
-  # Get list of URLs to try: VPN admin URLs first, then fallback URLs if enabled
+  # Get list of URLs to try: VPN admin URLs first, then fallback URLs if enabled.
+  # Fallback priority: env var (ADMIN_FALLBACK_URLS) overrides Settings DB.
   defp get_urls_to_try(admin_urls, fallback_enabled) do
-    fallback_urls = Application.get_env(:edge_agent, :admin_fallback_urls, [])
+    env_fallback_urls = Application.get_env(:edge_agent, :admin_fallback_urls, [])
+    settings_fallback_urls = Settings.get_admin_fallback_urls()
+
+    fallback_urls =
+      if env_fallback_urls == [], do: settings_fallback_urls, else: env_fallback_urls
 
     cond do
       # VPN admins available - use them

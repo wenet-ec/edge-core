@@ -158,6 +158,9 @@ defmodule EdgeAdminWeb.Router do
 
     # Node registration (no auth required)
     post("/nodes", NodeController, :create)
+
+    # Enrollment key verification (no auth required, blocked during degraded mode)
+    post("/enrollment_keys/verify", EnrollmentKeyController, :verify)
   end
 
   # Agent API endpoints (requires agent api_token)
@@ -190,20 +193,24 @@ defmodule EdgeAdminWeb.Router do
     pipe_through(:protected_api)
 
     scope "/", Nodes do
-      # Convenience endpoint for default cluster (must come BEFORE resources)
+      # Convenience endpoint for default cluster (must come BEFORE cluster resources)
       post("/clusters/default/enrollment_keys", EnrollmentKeyController, :create_for_default)
 
       # Cluster routes using name as parameter instead of id
       resources("/clusters", ClusterController, only: [:index, :show, :create, :delete], param: "name") do
-        # Enrollment keys nested under clusters
+        # Enrollment key creation nested under cluster
         post("/enrollment_keys", EnrollmentKeyController, :create)
       end
+
+      patch("/clusters/:name", ClusterController, :update)
+
+      resources("/enrollment_keys", EnrollmentKeyController, only: [:index, :show, :delete])
+      patch("/enrollment_keys/:id", EnrollmentKeyController, :update)
 
       resources("/nodes", NodeController, only: [:index, :show]) do
         resources("/aliases", AliasController, only: [:create])
       end
 
-      patch("/clusters/:name", ClusterController, :update)
       patch("/nodes/:id/change_cluster", NodeController, :change_cluster)
       delete("/nodes/:id", NodeController, :delete)
 

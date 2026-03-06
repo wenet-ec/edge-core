@@ -52,6 +52,7 @@ defmodule EdgeAdmin.Nodes do
   alias EdgeAdmin.Nodes.Forms
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Cluster
+  alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
   alias EdgeAdmin.RequestParser
@@ -370,9 +371,10 @@ defmodule EdgeAdmin.Nodes do
   - `{:error, changeset}` - Validation failed
   """
   @spec update_cluster(Cluster.t(), map()) ::
-          {:ok, Cluster.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, Cluster.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
   def update_cluster(%Cluster{} = cluster, params) do
     with {:ok, attrs} <- Forms.UpdateClusterForm.changeset(params),
+         :ok <- Checks.UpdateClusterCheck.check(cluster, Map.get(attrs, "node_limit")),
          {:ok, updated_cluster} <-
            cluster
            |> Cluster.changeset(attrs)
@@ -1090,64 +1092,210 @@ defmodule EdgeAdmin.Nodes do
   # ===========================================================================
 
   @doc """
-  Creates or retrieves an enrollment key for a cluster.
+  Lists enrollment keys with filtering, sorting, and pagination.
 
-  ## Key Types
+  Supports filtering by:
+  - `token` - Exact match
+  - `uses_remaining` - Exact, `__gte`, `__lte`
+  - `expired_at`, `last_used_at`, `inserted_at`, `updated_at` - Date range (`__gte`, `__lte`)
+  - `cluster_name` - Text search with wildcard support (requires join)
+  """
+  @spec list_enrollment_keys(map()) ::
+          {:ok, {[EnrollmentKey.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
+  def list_enrollment_keys(params \\ %{}) do
+    flop_params = RequestParser.parse(params)
 
-  ### Default (default behavior)
-  Retrieves the Netmaker auto-generated default enrollment key.
-  - Unlimited uses
-  - No expiration
-  - Not tracked in our DB
-  - Use for: Production edge nodes, mass deployments
+    {cluster_name_filters, other_filters} =
+      Enum.split_with(flop_params[:filters] || [], &(&1.field == :cluster_name))
 
-  ### Custom
-  Creates a new key with user-specified expiry and uses.
-  - Configurable expiration (default: 1 hour)
-  - Configurable uses (default: 1)
-  - Not tracked in DB (tagged for audit trail in Netmaker)
-  - Use for: Controlled/time-limited registrations
+    base_query =
+      from(k in EnrollmentKey,
+        join: c in assoc(k, :cluster),
+        preload: [cluster: c]
+      )
+
+    query =
+      if cluster_name_filters == [] do
+        base_query
+      else
+        apply_cluster_name_filters(base_query, cluster_name_filters)
+      end
+
+    flop_params = Map.put(flop_params, :filters, other_filters)
+
+    case Flop.validate_and_run(query, flop_params,
+           for: EnrollmentKey,
+           replace_invalid_params: true
+         ) do
+      {:ok, {keys, meta}} -> {:ok, {keys, meta}}
+      {:error, meta} -> {:error, meta}
+    end
+  end
+
+  @doc """
+  Gets a single enrollment key by ID.
+  """
+  @spec get_enrollment_key(String.t()) :: {:ok, EnrollmentKey.t()} | {:error, :not_found}
+  def get_enrollment_key(id) do
+    case Repo.get(EnrollmentKey, id) do
+      nil -> {:error, :not_found}
+      key -> {:ok, Repo.preload(key, :cluster)}
+    end
+  rescue
+    CastError -> {:error, :not_found}
+  end
+
+  @doc """
+  Creates an enrollment key for a cluster.
+
+  Generates a base64 JSON blob stored in the `key` column and returned to the
+  operator for placement in the agent's ENROLLMENT_KEY env var:
+
+      base64({"admin_urls": [...], "nonce": "<random_32_bytes_base64>"})
+
+  The agent decodes the blob to extract `admin_urls` (for routing) and sends
+  the full blob to the verify endpoint. Admin looks up by the blob directly —
+  no inner nonce comparison needed.
+
+  The nonce exists solely to make each key unique and unguessable.
   """
   @spec create_enrollment_key(Cluster.t(), map()) ::
-          {:ok, map()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
+          {:ok, EnrollmentKey.t()} | {:error, Ecto.Changeset.t()}
   def create_enrollment_key(%Cluster{} = cluster, params \\ %{}) do
     with {:ok, attrs} <- Forms.CreateEnrollmentKeyForm.changeset(params) do
-      # Get key_type (required) and apply defaults for optional fields
-      key_type = Map.fetch!(attrs, "key_type")
-      expiration = Map.get(attrs, "expiration", 3600)
-      uses_remaining = Map.get(attrs, "uses_remaining", 1)
-      network_name = node_network_name(cluster)
+      admin_urls = Application.fetch_env!(:edge_admin, :admin_urls)
+      nonce = generate_token()
 
-      case key_type do
-        "default" ->
-          # Retrieve the default key from Netmaker (created automatically with network)
-          case Vpn.get_default_enrollment_key(network_name) do
-            {:ok, token} ->
-              {:ok, %{token: token, key_type: "default"}}
+      key =
+        %{"admin_urls" => admin_urls, "nonce" => nonce}
+        |> Jason.encode!()
+        |> Base.encode64()
 
-            {:error, _reason} ->
-              {:error, :service_unavailable}
-          end
+      key_attrs =
+        attrs
+        |> Map.put("key", key)
+        |> Map.put("cluster_id", cluster.id)
 
-        "custom" ->
-          # Create a custom key with user-specified expiry/uses
-          # Generate tag for audit trail (not tracked in DB)
-          timestamp = System.system_time(:millisecond)
-          random = 4 |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower)
-          tag = "custom-#{timestamp}-#{random}"
-
-          case Vpn.create_enrollment_key(network_name, %{
-                 expiration: expiration,
-                 uses_remaining: uses_remaining,
-                 tags: [tag]
-               }) do
-            {:ok, netmaker_key} ->
-              {:ok, %{token: netmaker_key["token"], key_type: "custom"}}
-
-            {:error, _reason} ->
-              {:error, :service_unavailable}
-          end
+      case %EnrollmentKey{} |> EnrollmentKey.changeset(key_attrs) |> Repo.insert() do
+        {:ok, enrollment_key} -> {:ok, Repo.preload(enrollment_key, :cluster)}
+        {:error, changeset} -> {:error, changeset}
       end
+    end
+  end
+
+  @doc """
+  Updates an enrollment key's `uses_remaining` and/or `expired_at`.
+
+  Only fields explicitly provided are updated. Pass null to unset `expired_at`.
+  """
+  @spec update_enrollment_key(EnrollmentKey.t(), map()) ::
+          {:ok, EnrollmentKey.t()} | {:error, Ecto.Changeset.t()}
+  def update_enrollment_key(%EnrollmentKey{} = key, params) do
+    with {:ok, attrs} <- Forms.UpdateEnrollmentKeyForm.changeset(params) do
+      case key |> EnrollmentKey.changeset(attrs) |> Repo.update() do
+        {:ok, updated_key} -> {:ok, Repo.preload(updated_key, :cluster)}
+        {:error, changeset} -> {:error, changeset}
+      end
+    end
+  end
+
+  @doc """
+  Deletes an enrollment key.
+  """
+  @spec delete_enrollment_key(EnrollmentKey.t()) ::
+          {:ok, EnrollmentKey.t()} | {:error, Ecto.Changeset.t()}
+  def delete_enrollment_key(%EnrollmentKey{} = key) do
+    Repo.delete(key)
+  end
+
+  @doc """
+  Verifies an enrollment key blob presented by an agent before it joins the VPN.
+
+  The agent sends the full key blob (the base64 JSON string). Admin looks it up
+  directly in the DB — no decoding required on the admin side.
+
+  Performs the following checks in order:
+  1. Key blob exists in DB
+  2. Key is not expired
+  3. Key is not spent (uses_remaining == 0)
+  4. Cluster has capacity (NodeLimitCheck)
+
+  On success, atomically decrements `uses_remaining` (unless unlimited) and sets
+  `last_used_at`, then fetches the Netmaker default enrollment key for the cluster.
+
+  The decrement uses a conditional UPDATE to prevent race conditions when two agents
+  simultaneously attempt to consume the last use of a key.
+
+  Returns a result map always shaped as:
+  `%{verified: bool, error: String.t(), netmaker_key: String.t()}`
+  """
+  @spec verify_enrollment_key(map()) :: {:ok, map()}
+  def verify_enrollment_key(params) do
+    with {:ok, key_blob} <- Forms.VerifyEnrollmentKeyForm.changeset(params) do
+      result =
+        case Repo.get_by(EnrollmentKey, key: key_blob) do
+          nil ->
+            %{verified: false, error: "invalid_key", netmaker_key: ""}
+
+          enrollment_key ->
+            enrollment_key = Repo.preload(enrollment_key, :cluster)
+            verify_key(enrollment_key)
+        end
+
+      {:ok, result}
+    end
+  end
+
+  defp verify_key(%EnrollmentKey{} = key) do
+    cond do
+      EnrollmentKey.expired?(key) ->
+        %{verified: false, error: "key_expired", netmaker_key: ""}
+
+      EnrollmentKey.spent?(key) ->
+        %{verified: false, error: "key_spent", netmaker_key: ""}
+
+      true ->
+        case Checks.NodeLimitCheck.check(key.cluster) do
+          {:error, _} ->
+            %{verified: false, error: "node_limit_reached", netmaker_key: ""}
+
+          :ok ->
+            consume_key(key)
+        end
+    end
+  end
+
+  defp consume_key(%EnrollmentKey{} = key) do
+    now = DateTime.truncate(DateTime.utc_now(), :second)
+
+    # Atomic decrement: only decrements if uses_remaining > 0, skips if -1 (unlimited)
+    {rows_updated, _} =
+      if EnrollmentKey.unlimited?(key) do
+        Repo.update_all(
+          from(k in EnrollmentKey, where: k.id == ^key.id),
+          set: [last_used_at: now]
+        )
+      else
+        Repo.update_all(
+          from(k in EnrollmentKey, where: k.id == ^key.id and k.uses_remaining > 0),
+          inc: [uses_remaining: -1],
+          set: [last_used_at: now]
+        )
+      end
+
+    if rows_updated == 0 do
+      # Another agent consumed the last use between our read and this update
+      %{verified: false, error: "key_spent", netmaker_key: ""}
+    else
+      network_name = node_network_name(key.cluster)
+
+      netmaker_key =
+        case Vpn.get_default_enrollment_key(network_name) do
+          {:ok, token} -> token
+          {:error, _} -> ""
+        end
+
+      %{verified: true, error: "", netmaker_key: netmaker_key}
     end
   end
 
@@ -1280,14 +1428,25 @@ defmodule EdgeAdmin.Nodes do
 
     removed = remove_extra_nodes(managed_extra, node_network_name(cluster), cluster.name)
 
-    # Build hostname map from actual host objects (hosts have "name"; node objects do not)
-    host_hostname_map =
-      case Vpn.list_hosts(node_network_name(cluster)) do
-        {:ok, hosts} -> Map.new(hosts, fn h -> {h["id"], h["name"] || ""} end)
-        {:error, _} -> %{}
-      end
+    evicted =
+      if Application.get_env(:edge_admin, :evict_rogue_hosts, true) do
+        # Build hostname map from actual host objects (hosts have "name"; node objects do not)
+        host_hostname_map =
+          case Vpn.list_hosts(node_network_name(cluster)) do
+            {:ok, hosts} -> Map.new(hosts, fn h -> {h["id"], h["name"] || ""} end)
+            {:error, _} -> %{}
+          end
 
-    evicted = evict_rogue_hosts(unmanaged_extra, host_hostname_map, node_network_name(cluster), cluster.name)
+        evict_rogue_hosts(unmanaged_extra, host_hostname_map, node_network_name(cluster), cluster.name)
+      else
+        if not MapSet.equal?(unmanaged_extra, MapSet.new()) do
+          Logger.info(
+            "Reconciliation: #{MapSet.size(unmanaged_extra)} unrecognized host(s) in #{node_network_name(cluster)} — eviction disabled (EVICT_ROGUE_HOSTS=false)"
+          )
+        end
+
+        0
+      end
 
     %{
       added: added,

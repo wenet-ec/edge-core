@@ -153,6 +153,8 @@ config :edge_admin,
   default_cluster_subnet: get_env("DEFAULT_CLUSTER_SUBNET"),
   # Allow public enrollment without authentication (dev/testing only)
   public_enrollment_key_enabled: get_env("PUBLIC_ENROLLMENT_KEY_ENABLED", :boolean, false),
+  # Admin URLs for enrollment key generation and agent fallback (required).
+  admin_urls: get_env("ADMIN_URLS", :list),
   # Netmaker DNS domain suffix (used for hostname construction)
   netmaker_default_domain: get_env("NETMAKER_DEFAULT_DOMAIN", :string, "nm.internal"),
   # === Cleanup & Reconciliation Schedules ===
@@ -164,6 +166,8 @@ config :edge_admin,
   # Sync VPN config after gateway reconciliation (default: true)
   # Disable on resource-starved machines to prevent cascading failures from interface resets
   sync_vpn_after_reconciliation: get_env("SYNC_VPN_AFTER_RECONCILIATION", :boolean, true),
+  # Delete unrecognized hosts from cluster networks during reconciliation (default: true).
+  evict_rogue_hosts: get_env("EVICT_ROGUE_HOSTS", :boolean, true),
   # === HTTP Request Timeouts ===
   # Agent communication: health checks, metrics scraping, command execution
   http_agent_receive_timeout: get_env("HTTP_AGENT_RECEIVE_TIMEOUT_MS", :integer, 10_000),

@@ -252,6 +252,21 @@ defmodule EdgeAgent.Settings do
   def set_relay_admin_name(value) when is_binary(value), do: set("relay_admin_name", value)
 
   @doc """
+  Get the Netmaker enrollment key for VPN join.
+
+  Stored after a successful admin enrollment key verification so the agent
+  can rejoin the VPN on restart without re-verifying.
+  """
+  @spec get_netmaker_key() :: String.t() | nil
+  def get_netmaker_key, do: get("netmaker_key")
+
+  @doc """
+  Set the Netmaker enrollment key.
+  """
+  @spec set_netmaker_key(String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
+  def set_netmaker_key(value), do: set("netmaker_key", value)
+
+  @doc """
   Get the last self-update check timestamp.
 
   Returns a DateTime when the agent last checked for self-updates,
@@ -271,6 +286,65 @@ defmodule EdgeAgent.Settings do
 
       _ ->
         nil
+    end
+  end
+
+  @doc """
+  Get whether enrollment has been verified.
+
+  Returns true if the agent has successfully verified an enrollment key and
+  joined the VPN at least once. Used to skip re-verification on restarts
+  when the VPN connection is still healthy.
+  """
+  @spec get_enrollment_verified() :: boolean()
+  def get_enrollment_verified do
+    get("enrollment_verified") == "true"
+  end
+
+  @doc """
+  Set whether enrollment has been verified.
+  """
+  @spec set_enrollment_verified(boolean()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
+  def set_enrollment_verified(value) when is_boolean(value) do
+    set("enrollment_verified", to_string(value))
+  end
+
+  @doc """
+  Get admin fallback URLs as a list.
+
+  These are the URLs embedded in the enrollment key blob and stored on first
+  successful verify. Used when VPN is down and no admin URLs are in Settings.
+  Falls back to empty list if not set.
+  """
+  @spec get_admin_fallback_urls() :: [String.t()]
+  def get_admin_fallback_urls do
+    case get("admin_fallback_urls") do
+      nil ->
+        []
+
+      json when is_binary(json) ->
+        case Jason.decode(json) do
+          {:ok, urls} when is_list(urls) -> urls
+          _ -> []
+        end
+
+      _ ->
+        []
+    end
+  end
+
+  @doc """
+  Set admin fallback URLs.
+
+  Stores the URLs from the enrollment key blob so the agent can reach admin
+  without pre-configuring ADMIN_FALLBACK_URLS in the environment.
+  """
+  @spec set_admin_fallback_urls([String.t()]) ::
+          {:ok, Setting.t()} | {:error, Ecto.Changeset.t() | String.t()}
+  def set_admin_fallback_urls(urls) when is_list(urls) do
+    case Jason.encode(urls) do
+      {:ok, json} -> set("admin_fallback_urls", json)
+      {:error, _} -> {:error, "Failed to encode admin fallback URLs"}
     end
   end
 

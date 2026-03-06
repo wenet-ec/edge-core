@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/nodes/forms/create_enrollment_key_form.ex
-defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyForm do
+# edge_admin/lib/edge_admin/nodes/forms/update_enrollment_key_form.ex
+defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyForm do
   @moduledoc false
   use EdgeAdmin.Form
 
@@ -16,14 +16,14 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyForm do
     %__MODULE__{}
     |> cast(attrs, [:uses_remaining, :expired_at])
     |> validate_uses_remaining()
-    |> apply_action(:insert)
+    |> apply_action(:update)
     |> case do
-      {:ok, form} -> {:ok, to_map(form)}
+      {:ok, form} -> {:ok, to_map(attrs, form)}
       {:error, changeset} -> {:error, changeset}
     end
   end
 
-  def changeset(_), do: changeset(%{})
+  def changeset(_), do: {:ok, %{}}
 
   defp validate_uses_remaining(changeset) do
     validate_change(changeset, :uses_remaining, fn _, value ->
@@ -35,9 +35,14 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyForm do
     end)
   end
 
-  defp to_map(%__MODULE__{} = form) do
-    %{"uses_remaining" => form.uses_remaining, "expired_at" => form.expired_at}
-    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
-    |> Map.new()
+  # Preserve explicit null (key present, value nil) vs omitted (key absent)
+  defp to_map(raw_attrs, %__MODULE__{} = form) do
+    %{}
+    |> maybe_put(raw_attrs, "uses_remaining", form.uses_remaining)
+    |> maybe_put(raw_attrs, "expired_at", form.expired_at)
+  end
+
+  defp maybe_put(result, raw_attrs, key, value) do
+    if Map.has_key?(raw_attrs, key), do: Map.put(result, key, value), else: result
   end
 end

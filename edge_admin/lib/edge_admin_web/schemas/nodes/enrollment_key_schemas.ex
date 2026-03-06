@@ -16,43 +16,67 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
       description: "Enrollment key information",
       type: :object,
       properties: %{
-        token: %Schema{
+        id: %Schema{type: :string, format: :uuid, description: "Enrollment key ID"},
+        cluster_name: %Schema{type: :string, description: "Cluster this key belongs to"},
+        key: %Schema{
           type: :string,
-          description: "The enrollment token used by netclient to join the network",
-          example: "eyJzZXJ2ZXIiOiIxMC4wLjAuMSIsInZhbHVlIjoiQUJDMTIzIn0="
+          description: "Enrollment key blob (base64 JSON). Set as ENROLLMENT_KEY on the agent."
         },
-        key_type: %Schema{
+        uses_remaining: %Schema{
+          type: :integer,
+          description: "Remaining uses. -1 means unlimited."
+        },
+        expired_at: %Schema{
           type: :string,
-          description: "Key type: 'default' (Netmaker default, unlimited) or 'custom' (user-specified limits)",
-          enum: ["default", "custom"],
-          example: "default"
-        }
+          format: :"date-time",
+          nullable: true,
+          description: "Expiry datetime (ISO 8601). null means never expires."
+        },
+        last_used_at: %Schema{
+          type: :string,
+          format: :"date-time",
+          nullable: true,
+          description: "When the key was last used. null if unused."
+        },
+        inserted_at: %Schema{type: :string, format: :"date-time"},
+        updated_at: %Schema{type: :string, format: :"date-time"}
       },
-      required: [:token, :key_type],
-      example: %{
-        token: "eyJzZXJ2ZXIiOiIxMC4wLjAuMSIsInZhbHVlIjoiQUJDMTIzIn0=",
-        key_type: "default"
-      }
+      required: [:id, :cluster_name, :key, :uses_remaining, :inserted_at, :updated_at]
     })
   end
 
-  defmodule EnrollmentKeyResponse do
+  defmodule EnrollmentKeySingleResponse do
     @moduledoc false
 
     OpenApiSpex.schema(%{
-      title: "Enrollment Key Response",
-      description: "Single enrollment key response",
+      title: "EnrollmentKeySingleResponse",
+      type: :object,
+      properties: %{data: EnrollmentKeyData},
+      required: [:data]
+    })
+  end
+
+  defmodule EnrollmentKeyPaginatedResponse do
+    @moduledoc false
+
+    OpenApiSpex.schema(%{
+      title: "EnrollmentKeyPaginatedResponse",
       type: :object,
       properties: %{
-        data: EnrollmentKeyData
-      },
-      required: [:data],
-      example: %{
-        data: %{
-          token: "eyJzZXJ2ZXIiOiIxMC4wLjAuMSIsInZhbHVlIjoiQUJDMTIzIn0=",
-          key_type: "default"
+        data: %Schema{type: :array, items: EnrollmentKeyData},
+        pagination: %Schema{
+          type: :object,
+          properties: %{
+            page: %Schema{type: :integer},
+            page_size: %Schema{type: :integer},
+            total: %Schema{type: :integer},
+            total_pages: %Schema{type: :integer},
+            has_next: %Schema{type: :boolean},
+            has_prev: %Schema{type: :boolean}
+          }
         }
-      }
+      },
+      required: [:data, :pagination]
     })
   end
 
@@ -60,54 +84,57 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
     @moduledoc false
 
     OpenApiSpex.schema(%{
-      title: "Enrollment Key Request",
-      description: """
-      Parameters for creating or retrieving an enrollment key.
-
-      **Default**: Retrieves the Netmaker auto-generated default key (unlimited uses, no expiration).
-
-      **Custom**: Creates a new key with user-specified expiry and uses (not tracked in DB, tagged for audit).
-      """,
+      title: "EnrollmentKeyCreateRequest",
       type: :object,
       properties: %{
         enrollment_key: %Schema{
           type: :object,
           properties: %{
-            key_type: %Schema{
-              type: :string,
-              nullable: true,
-              description:
-                "Key type: 'default' (retrieves default key) or 'custom' (user-specified limits). Default: 'default'",
-              enum: ["default", "custom"],
-              example: "default"
-            },
-            expiration: %Schema{
-              type: :integer,
-              nullable: true,
-              description: "Expiration time in seconds (only for custom). Default: 3600 (1 hour)",
-              example: 3600
-            },
             uses_remaining: %Schema{
               type: :integer,
               nullable: true,
-              description: "Number of allowed uses (only for custom). Default: 1",
-              example: 1
+              description: "Number of uses. -1 for unlimited. Defaults to 1."
+            },
+            expired_at: %Schema{
+              type: :string,
+              format: :"date-time",
+              nullable: true,
+              description: "Expiry datetime (ISO 8601). Omit for no expiry.",
+              example: "2026-12-31T23:59:59Z"
             }
-          },
-          example: %{
-            key_type: "custom",
-            expiration: 3600,
-            uses_remaining: 1
           }
         }
       },
-      example: %{
-        enrollment_key: %{
-          key_type: "custom",
-          expiration: 3600,
-          uses_remaining: 1
+      example: %{enrollment_key: %{uses_remaining: 1, expired_at: "2026-12-31T23:59:59Z"}}
+    })
+  end
+
+  defmodule EnrollmentKeyUpdateRequest do
+    @moduledoc false
+
+    OpenApiSpex.schema(%{
+      title: "EnrollmentKeyUpdateRequest",
+      type: :object,
+      properties: %{
+        enrollment_key: %Schema{
+          type: :object,
+          properties: %{
+            uses_remaining: %Schema{
+              type: :integer,
+              nullable: true,
+              description: "Number of uses. -1 for unlimited."
+            },
+            expired_at: %Schema{
+              type: :string,
+              format: :"date-time",
+              nullable: true,
+              description: "Expiry datetime (ISO 8601). Pass null to remove expiry.",
+              example: "2026-12-31T23:59:59Z"
+            }
+          }
         }
-      }
+      },
+      example: %{enrollment_key: %{expired_at: "2026-12-31T23:59:59Z"}}
     })
   end
 end

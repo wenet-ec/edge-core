@@ -17,125 +17,49 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyFormTest do
   # ---------------------------------------------------------------------------
 
   describe "changeset/1 — valid cases" do
-    test "default key_type with no optional fields succeeds" do
-      assert {:ok, result} = CreateEnrollmentKeyForm.changeset(%{"key_type" => "default"})
-      assert result["key_type"] == "default"
-    end
-
-    test "custom key_type succeeds" do
-      assert {:ok, result} = CreateEnrollmentKeyForm.changeset(%{"key_type" => "custom"})
-      assert result["key_type"] == "custom"
-    end
-
-    test "expiration is accepted when positive" do
-      assert {:ok, result} =
-               CreateEnrollmentKeyForm.changeset(%{"key_type" => "default", "expiration" => 3600})
-
-      assert result["expiration"] == 3600
-    end
-
-    test "uses_remaining is accepted when positive" do
-      assert {:ok, result} =
-               CreateEnrollmentKeyForm.changeset(%{
-                 "key_type" => "default",
-                 "uses_remaining" => 5
-               })
-
-      assert result["uses_remaining"] == 5
-    end
-
-    test "both optional fields accepted together" do
-      assert {:ok, result} =
-               CreateEnrollmentKeyForm.changeset(%{
-                 "key_type" => "custom",
-                 "expiration" => 7200,
-                 "uses_remaining" => 10
-               })
-
-      assert result["key_type"] == "custom"
-      assert result["expiration"] == 7200
-      assert result["uses_remaining"] == 10
-    end
-
-    test "wrapped enrollment_key params are unwrapped" do
-      assert {:ok, _result} =
-               CreateEnrollmentKeyForm.changeset(%{
-                 "enrollment_key" => %{"key_type" => "default"}
-               })
-    end
-
-    test "expiration of 1 second is accepted (boundary)" do
-      assert {:ok, result} =
-               CreateEnrollmentKeyForm.changeset(%{"key_type" => "default", "expiration" => 1})
-
-      assert result["expiration"] == 1
+    test "empty attrs succeeds (both fields optional)" do
+      assert {:ok, result} = CreateEnrollmentKeyForm.changeset(%{})
+      assert result == %{}
     end
 
     test "uses_remaining of 1 is accepted (boundary)" do
-      assert {:ok, result} =
-               CreateEnrollmentKeyForm.changeset(%{
-                 "key_type" => "default",
-                 "uses_remaining" => 1
-               })
-
+      assert {:ok, result} = CreateEnrollmentKeyForm.changeset(%{"uses_remaining" => 1})
       assert result["uses_remaining"] == 1
     end
-  end
 
-  # ---------------------------------------------------------------------------
-  # changeset/1 — key_type validation
-  # ---------------------------------------------------------------------------
-
-  describe "changeset/1 — key_type validation" do
-    test "missing key_type is rejected" do
-      assert {:error, changeset} = CreateEnrollmentKeyForm.changeset(%{})
-      assert %{key_type: [_msg]} = errors_on(changeset)
+    test "uses_remaining of positive integer is accepted" do
+      assert {:ok, result} = CreateEnrollmentKeyForm.changeset(%{"uses_remaining" => 10})
+      assert result["uses_remaining"] == 10
     end
 
-    test "invalid key_type is rejected" do
-      assert {:error, changeset} =
-               CreateEnrollmentKeyForm.changeset(%{"key_type" => "unlimited"})
-
-      assert %{key_type: [_msg]} = errors_on(changeset)
+    test "uses_remaining of -1 (unlimited) is accepted" do
+      assert {:ok, result} = CreateEnrollmentKeyForm.changeset(%{"uses_remaining" => -1})
+      assert result["uses_remaining"] == -1
     end
 
-    test "uppercase key_type is rejected" do
-      assert {:error, changeset} =
-               CreateEnrollmentKeyForm.changeset(%{"key_type" => "Default"})
-
-      assert %{key_type: [_msg]} = errors_on(changeset)
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # changeset/1 — expiration validation
-  # ---------------------------------------------------------------------------
-
-  describe "changeset/1 — expiration validation" do
-    test "zero expiration is rejected" do
-      assert {:error, changeset} =
-               CreateEnrollmentKeyForm.changeset(%{"key_type" => "default", "expiration" => 0})
-
-      assert %{expiration: [_msg]} = errors_on(changeset)
+    test "expired_at is accepted when a valid datetime" do
+      dt = ~U[2027-01-01 00:00:00Z]
+      assert {:ok, result} = CreateEnrollmentKeyForm.changeset(%{"expired_at" => dt})
+      assert result["expired_at"] == dt
     end
 
-    test "negative expiration is rejected" do
-      assert {:error, changeset} =
-               CreateEnrollmentKeyForm.changeset(%{"key_type" => "default", "expiration" => -1})
+    test "both optional fields accepted together" do
+      dt = ~U[2027-06-01 12:00:00Z]
 
-      assert %{expiration: [_msg]} = errors_on(changeset)
-    end
-
-    test "nil expiration is allowed (optional field)" do
       assert {:ok, result} =
-               CreateEnrollmentKeyForm.changeset(%{"key_type" => "default", "expiration" => nil})
+               CreateEnrollmentKeyForm.changeset(%{"uses_remaining" => 5, "expired_at" => dt})
 
-      refute Map.has_key?(result, "expiration")
+      assert result["uses_remaining"] == 5
+      assert result["expired_at"] == dt
     end
 
-    test "absent expiration is allowed (optional field)" do
-      assert {:ok, result} = CreateEnrollmentKeyForm.changeset(%{"key_type" => "default"})
-      refute Map.has_key?(result, "expiration")
+    test "wrapped enrollment_key params are unwrapped" do
+      assert {:ok, result} =
+               CreateEnrollmentKeyForm.changeset(%{
+                 "enrollment_key" => %{"uses_remaining" => 3}
+               })
+
+      assert result["uses_remaining"] == 3
     end
   end
 
@@ -145,37 +69,28 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyFormTest do
 
   describe "changeset/1 — uses_remaining validation" do
     test "zero uses_remaining is rejected" do
-      assert {:error, changeset} =
-               CreateEnrollmentKeyForm.changeset(%{
-                 "key_type" => "default",
-                 "uses_remaining" => 0
-               })
-
+      assert {:error, changeset} = CreateEnrollmentKeyForm.changeset(%{"uses_remaining" => 0})
       assert %{uses_remaining: [_msg]} = errors_on(changeset)
     end
 
-    test "negative uses_remaining is rejected" do
-      assert {:error, changeset} =
-               CreateEnrollmentKeyForm.changeset(%{
-                 "key_type" => "default",
-                 "uses_remaining" => -1
-               })
-
+    test "negative uses_remaining (other than -1) is rejected" do
+      assert {:error, changeset} = CreateEnrollmentKeyForm.changeset(%{"uses_remaining" => -2})
       assert %{uses_remaining: [_msg]} = errors_on(changeset)
     end
 
-    test "nil uses_remaining is allowed (optional field)" do
-      assert {:ok, result} =
-               CreateEnrollmentKeyForm.changeset(%{
-                 "key_type" => "default",
-                 "uses_remaining" => nil
-               })
+    test "error message mentions -1 and positive integer" do
+      {:error, changeset} = CreateEnrollmentKeyForm.changeset(%{"uses_remaining" => 0})
+      [msg] = errors_on(changeset).uses_remaining
+      assert msg =~ "-1"
+    end
 
+    test "nil uses_remaining is allowed (excluded from result)" do
+      assert {:ok, result} = CreateEnrollmentKeyForm.changeset(%{"uses_remaining" => nil})
       refute Map.has_key?(result, "uses_remaining")
     end
 
-    test "absent uses_remaining is allowed (optional field)" do
-      assert {:ok, result} = CreateEnrollmentKeyForm.changeset(%{"key_type" => "default"})
+    test "absent uses_remaining is allowed (excluded from result)" do
+      assert {:ok, result} = CreateEnrollmentKeyForm.changeset(%{})
       refute Map.has_key?(result, "uses_remaining")
     end
   end
@@ -186,40 +101,35 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyFormTest do
 
   describe "changeset/1 — to_map output" do
     test "nil optional fields are excluded from result map" do
-      {:ok, result} = CreateEnrollmentKeyForm.changeset(%{"key_type" => "default"})
-      refute Map.has_key?(result, "expiration")
+      {:ok, result} = CreateEnrollmentKeyForm.changeset(%{})
       refute Map.has_key?(result, "uses_remaining")
+      refute Map.has_key?(result, "expired_at")
     end
 
-    test "present optional fields are included in result map" do
-      {:ok, result} =
-        CreateEnrollmentKeyForm.changeset(%{
-          "key_type" => "custom",
-          "expiration" => 3600,
-          "uses_remaining" => 2
-        })
+    test "present fields are included in result map" do
+      dt = ~U[2027-01-01 00:00:00Z]
 
-      assert result["key_type"] == "custom"
-      assert result["expiration"] == 3600
+      {:ok, result} =
+        CreateEnrollmentKeyForm.changeset(%{"uses_remaining" => 2, "expired_at" => dt})
+
       assert result["uses_remaining"] == 2
+      assert result["expired_at"] == dt
     end
   end
 
   # ---------------------------------------------------------------------------
-  # changeset/1 — invalid param types
+  # changeset/1 — invalid param types (fallback clause returns empty map)
   # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid params" do
-    test "non-map params raise (apply_action! in fallback clause)" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        CreateEnrollmentKeyForm.changeset("bad")
-      end
+    test "non-map params fall through to empty map (changeset(_) clause)" do
+      assert {:ok, result} = CreateEnrollmentKeyForm.changeset("bad")
+      assert result == %{}
     end
 
-    test "nil params raise (apply_action! in fallback clause)" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        CreateEnrollmentKeyForm.changeset(nil)
-      end
+    test "nil params fall through to empty map (changeset(_) clause)" do
+      assert {:ok, result} = CreateEnrollmentKeyForm.changeset(nil)
+      assert result == %{}
     end
   end
 end

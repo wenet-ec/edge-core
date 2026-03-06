@@ -234,6 +234,100 @@ defmodule EdgeAgent.SettingsTest do
   end
 
   # -----------------------------------------------------------------------
+  # enrollment_verified — boolean stored as "true"/"false" string
+  # -----------------------------------------------------------------------
+
+  describe "enrollment_verified accessors" do
+    test "get_enrollment_verified returns false when not set" do
+      assert Settings.get_enrollment_verified() == false
+    end
+
+    test "set_enrollment_verified(true) then get returns true" do
+      {:ok, _} = Settings.set_enrollment_verified(true)
+      assert Settings.get_enrollment_verified() == true
+    end
+
+    test "set_enrollment_verified(false) then get returns false" do
+      {:ok, _} = Settings.set_enrollment_verified(true)
+      {:ok, _} = Settings.set_enrollment_verified(false)
+      assert Settings.get_enrollment_verified() == false
+    end
+
+    test "stored value is the string 'true' not a boolean" do
+      {:ok, _} = Settings.set_enrollment_verified(true)
+      assert Settings.get("enrollment_verified") == "true"
+    end
+
+    test "stored value is the string 'false' not a boolean" do
+      {:ok, _} = Settings.set_enrollment_verified(false)
+      assert Settings.get("enrollment_verified") == "false"
+    end
+
+    test "missing key returns false (not true)" do
+      refute Settings.get_enrollment_verified()
+    end
+  end
+
+  # -----------------------------------------------------------------------
+  # netmaker_key — plain string roundtrip
+  # -----------------------------------------------------------------------
+
+  describe "netmaker_key accessors" do
+    test "get_netmaker_key returns nil when not set" do
+      assert Settings.get_netmaker_key() == nil
+    end
+
+    test "set_netmaker_key then get roundtrips" do
+      {:ok, _} = Settings.set_netmaker_key("TOKEN=abc123xyz")
+      assert Settings.get_netmaker_key() == "TOKEN=abc123xyz"
+    end
+
+    test "set_netmaker_key can overwrite previous value" do
+      {:ok, _} = Settings.set_netmaker_key("TOKEN=old")
+      {:ok, _} = Settings.set_netmaker_key("TOKEN=new")
+      assert Settings.get_netmaker_key() == "TOKEN=new"
+    end
+  end
+
+  # -----------------------------------------------------------------------
+  # admin_fallback_urls — JSON encode/decode (same as admin_urls)
+  # -----------------------------------------------------------------------
+
+  describe "admin_fallback_urls accessors" do
+    test "get_admin_fallback_urls returns empty list when not set" do
+      assert Settings.get_admin_fallback_urls() == []
+    end
+
+    test "set_admin_fallback_urls then get roundtrips a list" do
+      urls = ["https://admin1.example.com", "https://admin2.example.com"]
+      {:ok, _} = Settings.set_admin_fallback_urls(urls)
+      assert Settings.get_admin_fallback_urls() == urls
+    end
+
+    test "set_admin_fallback_urls with empty list roundtrips" do
+      {:ok, _} = Settings.set_admin_fallback_urls([])
+      assert Settings.get_admin_fallback_urls() == []
+    end
+
+    test "set_admin_fallback_urls with single URL roundtrips" do
+      {:ok, _} = Settings.set_admin_fallback_urls(["https://admin.example.com"])
+      assert Settings.get_admin_fallback_urls() == ["https://admin.example.com"]
+    end
+
+    test "returns empty list for corrupted stored JSON" do
+      {:ok, _} = Settings.set("admin_fallback_urls", "not valid json {{{")
+      assert Settings.get_admin_fallback_urls() == []
+    end
+
+    test "stored value is a JSON string" do
+      {:ok, _} = Settings.set_admin_fallback_urls(["https://admin.example.com"])
+      raw = Settings.get("admin_fallback_urls")
+      assert is_binary(raw)
+      assert {:ok, _} = Jason.decode(raw)
+    end
+  end
+
+  # -----------------------------------------------------------------------
   # last_check_self_update_at — ISO8601 encode/decode
   # -----------------------------------------------------------------------
 

@@ -81,7 +81,7 @@ RUN --mount=type=cache,target=/root/.hex \
 # -----------------------------------------------
 # Stage 2: Production runtime image (optimized)
 # -----------------------------------------------
-FROM debian:stable-20250520-slim
+FROM debian:stable-20260223-slim
 
 ENV NODE_EXPORTER_VERSION="1.10.2"
 

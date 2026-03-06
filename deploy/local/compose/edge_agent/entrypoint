@@ -28,9 +28,19 @@ else
     echo "VPN operations and hostscript may fail"
 fi
 
-# Note: Netclient has WireGuard-Go compiled in (golang.zx2c4.com/wireguard library)
-# WG_QUICK_USERSPACE_IMPLEMENTATION just tells netclient which mode to use
-echo "WireGuard mode: ${WG_QUICK_USERSPACE_IMPLEMENTATION:-kernel (default)}"
+# WG_QUICK_USERSPACE_IMPLEMENTATION controls netclient's WireGuard backend:
+#   "wireguard-go" → userspace wireguard-go (DERP relay support enabled)
+#   unset          → kernel WireGuard module (better performance, no DERP)
+#   anything else  → treated as kernel mode by netclient
+_wg_val="${WG_QUICK_USERSPACE_IMPLEMENTATION:-}"
+if [ "$_wg_val" = "wireguard-go" ]; then
+    echo "WireGuard mode: wireguard-go (userspace, DERP enabled)"
+elif [ -z "$_wg_val" ]; then
+    echo "WireGuard mode: kernel (default)"
+else
+    echo "WireGuard mode: $_wg_val (unrecognised value — netclient will use kernel detection)"
+fi
+unset _wg_val
 
 # Check if netclient is available
 if ! command -v netclient &> /dev/null; then

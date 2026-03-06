@@ -13,7 +13,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
     @moduledoc false
 
     OpenApiSpex.schema(%{
-      title: "Command Execution",
+      title: "Command Execution Response",
       description: "Command execution information",
       type: :object,
       properties: %{
@@ -67,24 +67,24 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
         },
         sent_at: %Schema{
           type: :string,
-          format: :datetime,
+          format: :"date-time",
           nullable: true,
           description: "When the command was sent to the agent"
         },
         completed_at: %Schema{
           type: :string,
-          format: :datetime,
+          format: :"date-time",
           nullable: true,
           description: "When the command execution was completed"
         },
         inserted_at: %Schema{
           type: :string,
-          format: :datetime,
+          format: :"date-time",
           description: "When the execution was created"
         },
         updated_at: %Schema{
           type: :string,
-          format: :datetime,
+          format: :"date-time",
           description: "When the execution was last updated"
         }
       },

@@ -13,7 +13,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
     @moduledoc false
 
     OpenApiSpex.schema(%{
-      title: "Command",
+      title: "Command Response",
       description: "Command information",
       type: :object,
       properties: %{
@@ -44,12 +44,12 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
         },
         inserted_at: %Schema{
           type: :string,
-          format: :datetime,
+          format: :"date-time",
           description: "When the command was created"
         },
         updated_at: %Schema{
           type: :string,
-          format: :datetime,
+          format: :"date-time",
           description: "When the command was last updated"
         }
       },
@@ -188,12 +188,12 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
                     },
                     last_seen_at__gte: %Schema{
                       type: :string,
-                      format: :datetime,
+                      format: :"date-time",
                       description: "Filter nodes last seen after or on this datetime"
                     },
                     last_seen_at__lte: %Schema{
                       type: :string,
-                      format: :datetime,
+                      format: :"date-time",
                       description: "Filter nodes last seen before or on this datetime"
                     },
                     inserted_at__gte: %Schema{

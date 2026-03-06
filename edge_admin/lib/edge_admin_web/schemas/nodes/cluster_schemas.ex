@@ -53,7 +53,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
     @moduledoc false
 
     OpenApiSpex.schema(%{
-      title: "Cluster",
+      title: "Cluster Response",
       description: "Edge cluster information",
       type: :object,
       properties: %{
@@ -100,12 +100,12 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         },
         inserted_at: %Schema{
           type: :string,
-          format: :datetime,
+          format: :"date-time",
           description: "When the cluster was created"
         },
         updated_at: %Schema{
           type: :string,
-          format: :datetime,
+          format: :"date-time",
           description: "When the cluster was last updated"
         }
       },

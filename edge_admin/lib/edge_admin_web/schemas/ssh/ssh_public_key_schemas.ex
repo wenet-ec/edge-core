@@ -39,12 +39,12 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas do
         },
         inserted_at: %Schema{
           type: :string,
-          format: :datetime,
+          format: :"date-time",
           description: "When the SSH public key was created"
         },
         updated_at: %Schema{
           type: :string,
-          format: :datetime,
+          format: :"date-time",
           description: "When the SSH public key was last updated"
         }
       },

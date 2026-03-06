@@ -185,7 +185,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
       ]
     ],
     responses: %{
-      204 => "Cluster deleted successfully",
+      204 => {"Cluster deleted successfully", "", nil},
       404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},
       409 => {"Cannot delete cluster with nodes", "application/json", CommonSchemas.ConflictResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}

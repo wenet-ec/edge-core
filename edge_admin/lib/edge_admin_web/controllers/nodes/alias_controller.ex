@@ -63,7 +63,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
       ]
     ],
     responses: %{
-      200 => {"Paginated list of aliases", "application/json", AliasSchemas.AliasListResponse}
+      200 => {"Paginated list of aliases", "application/json", AliasSchemas.AliasPaginatedResponse}
     }
   )
 
@@ -84,7 +84,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
       ]
     ],
     responses: %{
-      200 => {"Alias details", "application/json", AliasSchemas.AliasResponse},
+      200 => {"Alias details", "application/json", AliasSchemas.AliasSingleResponse},
       404 => {"Alias not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
@@ -108,7 +108,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
     ],
     request_body: {"Alias creation parameters", "application/json", AliasSchemas.CreateAliasRequest},
     responses: %{
-      201 => {"Alias created successfully", "application/json", AliasSchemas.AliasResponse},
+      201 => {"Alias created successfully", "application/json", AliasSchemas.AliasSingleResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
       409 => {"Alias name already exists in this cluster", "application/json", CommonSchemas.ConflictResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},

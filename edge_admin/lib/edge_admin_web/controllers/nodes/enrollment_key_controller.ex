@@ -21,19 +21,25 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     parameters: [
       page: [
         in: :query,
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, default: 1}
+        description: "Page number",
+        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, default: 1},
+        example: 1
       ],
       page_size: [
         in: :query,
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, maximum: 100, default: 20}
+        description: "Items per page",
+        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, maximum: 100, default: 20},
+        example: 20
       ],
       order_by: [
         in: :query,
+        description: "Comma-separated list of fields to sort by",
         schema: %OpenApiSpex.Schema{type: :string},
         example: "inserted_at"
       ],
       order_directions: [
         in: :query,
+        description: "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
         schema: %OpenApiSpex.Schema{type: :string},
         example: "desc"
       ],
@@ -116,6 +122,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
 
   operation(:show,
     summary: "Get an enrollment key",
+    description: "Returns details for a specific enrollment key by ID",
     parameters: [
       id: [in: :path, description: "Enrollment key ID", schema: %OpenApiSpex.Schema{type: :string, format: :uuid}]
     ],
@@ -236,12 +243,12 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
 
   operation(:delete,
     summary: "Delete an enrollment key",
-    description: "**Note:** This endpoint is unavailable during degraded mode (503).",
+    description: "Permanently deletes an enrollment key. **Note:** This endpoint is unavailable during degraded mode (503).",
     parameters: [
       id: [in: :path, description: "Enrollment key ID", schema: %OpenApiSpex.Schema{type: :string, format: :uuid}]
     ],
     responses: %{
-      204 => "Enrollment key deleted",
+      204 => {"Enrollment key deleted", "", nil},
       404 => {"Not found", "application/json", CommonSchemas.NotFoundResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }

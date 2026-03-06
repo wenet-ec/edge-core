@@ -556,43 +556,48 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
           properties: %{
             node_id: %Schema{
               type: :string,
-              format: :uuid
+              format: :uuid,
+              description: "Node unique identifier"
             },
             cluster_name: %Schema{
-              type: :string
+              type: :string,
+              description: "Name of the cluster this node belongs to"
             },
             timestamp: %Schema{
               type: :string,
-              format: :"date-time"
+              format: :"date-time",
+              description: "When the metrics were collected (ISO 8601 format)"
             },
             host: %Schema{
               type: :object,
               description: "Host-level metrics from Node Exporter",
               properties: %{
-                available: %Schema{type: :boolean},
-                cpu: %Schema{type: :object, nullable: true},
-                memory: %Schema{type: :object, nullable: true},
-                disk: %Schema{type: :object, nullable: true},
-                uptime: %Schema{type: :object, nullable: true}
+                available: %Schema{type: :boolean, description: "Whether host metrics were successfully fetched"},
+                cpu: %Schema{type: :object, nullable: true, description: "CPU metrics"},
+                memory: %Schema{type: :object, nullable: true, description: "Memory metrics"},
+                disk: %Schema{type: :object, nullable: true, description: "Disk metrics"},
+                uptime: %Schema{type: :object, nullable: true, description: "Uptime information"}
               }
             },
             agent: %Schema{
               type: :object,
               description: "Agent application metrics from PromEx",
               properties: %{
-                available: %Schema{type: :boolean},
-                application: %Schema{type: :object, nullable: true},
-                commands: %Schema{type: :object, nullable: true},
-                discovery: %Schema{type: :object, nullable: true},
-                proxy: %Schema{type: :object, nullable: true},
-                ssh: %Schema{type: :object, nullable: true},
-                relay: %Schema{type: :object, nullable: true},
-                oban_queues: %Schema{type: :array, nullable: true}
+                available: %Schema{type: :boolean, description: "Whether agent metrics were successfully fetched"},
+                application: %Schema{type: :object, nullable: true, description: "BEAM VM stats"},
+                commands: %Schema{type: :object, nullable: true, description: "Command execution metrics"},
+                discovery: %Schema{type: :object, nullable: true, description: "Admin discovery metrics"},
+                proxy: %Schema{type: :object, nullable: true, description: "Proxy server metrics"},
+                ssh: %Schema{type: :object, nullable: true, description: "SSH server metrics"},
+                relay: %Schema{type: :object, nullable: true, description: "Relay connectivity metrics"},
+                oban_queues: %Schema{type: :array, nullable: true, description: "Oban job queue states"}
               }
             }
-          }
+          },
+          required: [:node_id, :cluster_name, :timestamp]
         }
-      }
+      },
+      required: [:data]
     })
   end
 end

@@ -12,7 +12,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
     @moduledoc false
 
     OpenApiSpex.schema(%{
-      title: "EnrollmentKey",
+      title: "Enrollment Key Response",
       description: "Enrollment key information",
       type: :object,
       properties: %{
@@ -38,8 +38,8 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
           nullable: true,
           description: "When the key was last used. null if unused."
         },
-        inserted_at: %Schema{type: :string, format: :"date-time"},
-        updated_at: %Schema{type: :string, format: :"date-time"}
+        inserted_at: %Schema{type: :string, format: :"date-time", description: "When the enrollment key was created"},
+        updated_at: %Schema{type: :string, format: :"date-time", description: "When the enrollment key was last updated"}
       },
       required: [:id, :cluster_name, :key, :uses_remaining, :inserted_at, :updated_at]
     })
@@ -49,7 +49,8 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
     @moduledoc false
 
     OpenApiSpex.schema(%{
-      title: "EnrollmentKeySingleResponse",
+      title: "Enrollment Key Single Response",
+      description: "Single enrollment key response",
       type: :object,
       properties: %{data: EnrollmentKeyData},
       required: [:data]
@@ -59,32 +60,21 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
   defmodule EnrollmentKeyPaginatedResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
-      title: "EnrollmentKeyPaginatedResponse",
-      type: :object,
-      properties: %{
-        data: %Schema{type: :array, items: EnrollmentKeyData},
-        pagination: %Schema{
-          type: :object,
-          properties: %{
-            page: %Schema{type: :integer},
-            page_size: %Schema{type: :integer},
-            total: %Schema{type: :integer},
-            total_pages: %Schema{type: :integer},
-            has_next: %Schema{type: :boolean},
-            has_prev: %Schema{type: :boolean}
-          }
-        }
-      },
-      required: [:data, :pagination]
-    })
+    OpenApiSpex.schema(
+      EdgeAdminWeb.Schemas.CommonSchemas.paginated_response(
+        EnrollmentKeyData,
+        "Enrollment Key Paginated Response",
+        "Paginated list of enrollment keys with filtering and sorting metadata"
+      )
+    )
   end
 
   defmodule EnrollmentKeyCreateRequest do
     @moduledoc false
 
     OpenApiSpex.schema(%{
-      title: "EnrollmentKeyCreateRequest",
+      title: "Enrollment Key Create Request",
+      description: "Parameters for creating a new enrollment key for a cluster",
       type: :object,
       properties: %{
         enrollment_key: %Schema{
@@ -113,7 +103,8 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
     @moduledoc false
 
     OpenApiSpex.schema(%{
-      title: "EnrollmentKeyUpdateRequest",
+      title: "Enrollment Key Update Request",
+      description: "Parameters for updating an enrollment key. Only provided fields are updated. Pass null to unset a nullable field.",
       type: :object,
       properties: %{
         enrollment_key: %Schema{

@@ -13,7 +13,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
     @moduledoc false
 
     OpenApiSpex.schema(%{
-      title: "Node",
+      title: "Node Response",
       description: "Edge node information",
       type: :object,
       properties: %{
@@ -101,18 +101,18 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         },
         last_seen_at: %Schema{
           type: :string,
-          format: :datetime,
+          format: :"date-time",
           nullable: true,
           description: "Last heartbeat timestamp from the node"
         },
         inserted_at: %Schema{
           type: :string,
-          format: :datetime,
+          format: :"date-time",
           description: "When the node was created"
         },
         updated_at: %Schema{
           type: :string,
-          format: :datetime,
+          format: :"date-time",
           description: "When the node was last updated"
         }
       },

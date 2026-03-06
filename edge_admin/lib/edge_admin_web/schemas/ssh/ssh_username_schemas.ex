@@ -46,12 +46,12 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
         },
         inserted_at: %Schema{
           type: :string,
-          format: :datetime,
+          format: :"date-time",
           description: "When the SSH username was created"
         },
         updated_at: %Schema{
           type: :string,
-          format: :datetime,
+          format: :"date-time",
           description: "When the SSH username was last updated"
         }
       },

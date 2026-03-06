@@ -82,9 +82,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
 
   operation(:create,
     summary: "Create SSH public key",
-    description: """
-    Create a new SSH public key for a specific SSH username.
-    """,
+    description: "Create a new SSH public key for a specific SSH username. The key must be in valid OpenSSH format.",
     parameters: [
       ssh_username_id: [
         in: :path,
@@ -138,7 +136,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
 
   operation(:delete,
     summary: "Delete SSH public key",
-    description: "Delete a SSH public key",
+    description: "Delete an SSH public key",
     parameters: [
       id: [
         in: :path,

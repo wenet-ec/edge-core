@@ -13,7 +13,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
     @moduledoc false
 
     OpenApiSpex.schema(%{
-      title: "Alias",
+      title: "Alias Response",
       description: "Node alias with custom DNS entry",
       type: :object,
       properties: %{
@@ -67,13 +67,38 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
     })
   end
 
-  defmodule AliasListResponse do
+  defmodule AliasSingleResponse do
+    @moduledoc false
+
+    OpenApiSpex.schema(%{
+      title: "Alias Single Response",
+      description: "Single alias response",
+      type: :object,
+      properties: %{
+        data: AliasResponse
+      },
+      required: [:data],
+      example: %{
+        data: %{
+          id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+          name: "web-server",
+          dns_hostname: "node-web-server.cluster-prod.nm.internal",
+          node_id: "01234567-89ab-cdef-0123-456789abcdef",
+          cluster_name: "prod",
+          inserted_at: "2024-01-15T10:30:00Z",
+          updated_at: "2024-01-15T10:30:00Z"
+        }
+      }
+    })
+  end
+
+  defmodule AliasPaginatedResponse do
     @moduledoc false
 
     OpenApiSpex.schema(
       CommonSchemas.paginated_response(
         AliasResponse,
-        "Alias List Response",
+        "Alias Paginated Response",
         "Paginated list of aliases with filtering and sorting metadata"
       )
     )
@@ -84,6 +109,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
 
     OpenApiSpex.schema(%{
       title: "Create Alias Request",
+      description: "Parameters for creating a new DNS alias for a node",
       type: :object,
       properties: %{
         alias: %Schema{

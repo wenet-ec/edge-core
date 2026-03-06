@@ -136,7 +136,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
 
   operation(:delete,
     summary: "Delete SSH username",
-    description: "Delete a SSH username and all associated public keys",
+    description: "Delete an SSH username and all associated public keys",
     parameters: [
       id: [
         in: :path,

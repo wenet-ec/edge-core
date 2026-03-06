@@ -13,7 +13,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
     @moduledoc false
 
     OpenApiSpex.schema(%{
-      title: "SelfUpdateRequest",
+      title: "Self-Update Request Response",
       description: "Self-update request information",
       type: :object,
       properties: %{
@@ -55,12 +55,12 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
         },
         inserted_at: %Schema{
           type: :string,
-          format: :datetime,
+          format: :"date-time",
           description: "When the request was created"
         },
         updated_at: %Schema{
           type: :string,
-          format: :datetime,
+          format: :"date-time",
           description: "When the request was last updated"
         }
       },
@@ -92,7 +92,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
     OpenApiSpex.schema(
       CommonSchemas.paginated_response(
         SelfUpdateRequestResponse,
-        "SelfUpdateRequest Paginated Response",
+        "Self-Update Request Paginated Response",
         "Paginated list of self-update requests"
       )
     )
@@ -102,7 +102,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
     @moduledoc false
 
     OpenApiSpex.schema(%{
-      title: "SelfUpdateRequest Single Response",
+      title: "Self-Update Request Single Response",
       description: "Single self-update request response",
       type: :object,
       properties: %{
@@ -133,7 +133,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
     @moduledoc false
 
     OpenApiSpex.schema(%{
-      title: "SelfUpdateRequest Create Request",
+      title: "Self-Update Request Create Request",
       description: """
       Create a new self-update request.
 
@@ -193,12 +193,12 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
                 },
                 last_seen_at__gte: %Schema{
                   type: :string,
-                  format: :datetime,
+                  format: :"date-time",
                   description: "Filter nodes last seen after or on this datetime"
                 },
                 last_seen_at__lte: %Schema{
                   type: :string,
-                  format: :datetime,
+                  format: :"date-time",
                   description: "Filter nodes last seen before or on this datetime"
                 },
                 inserted_at__gte: %Schema{

@@ -6,7 +6,7 @@ defmodule EdgeAdmin.Mixfile do
     [
       app: :edge_admin,
       version: "0.2.0",
-      erlang: "~> 28.3",
+      erlang: "~> 28.4",
       elixir: "~> 1.19",
       elixirc_paths: elixirc_paths(Mix.env()),
       test_paths: ["test"],
@@ -105,7 +105,7 @@ defmodule EdgeAdmin.Mixfile do
 
       # Errors
       {:hackney, "~> 1.25"},
-      {:sentry, "~> 11.0"},
+      {:sentry, "~> 12.0"},
 
       # Telemetry
       {:prom_ex, "~> 1.11"},
@@ -117,7 +117,7 @@ defmodule EdgeAdmin.Mixfile do
       {:credo, "~> 1.7", only: [:dev, :test], override: true},
       {:credo_envvar, "~> 0.1", only: [:dev, :test], runtime: false},
       {:credo_naming, "~> 2.1", only: [:dev, :test], runtime: false},
-      {:styler, "~> 1.10", only: [:dev, :test], runtime: false},
+      {:styler, "~> 1.11", only: [:dev, :test], runtime: false},
 
       # Security check
       {:sobelow, "~> 0.14", only: [:dev, :test], runtime: true},
@@ -142,7 +142,7 @@ defmodule EdgeAdmin.Mixfile do
       {:quantum, "~> 3.5"},
 
       # Erlang Distribution
-      {:syn, "~> 3.3"},
+      {:syn, "~> 3.4"},
 
       # Nexmaker library
       {:nexmaker, path: "../nexmaker"}

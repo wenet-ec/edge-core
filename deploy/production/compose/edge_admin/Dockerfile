@@ -39,21 +39,10 @@ ENV MIX_ENV=prod
 ENV ERL_MAX_PORTS=65536
 ENV ELIXIR_MAKE_PARALLEL=true
 
-# First, build the nexmaker library with caching
-WORKDIR /nexmaker
-COPY nexmaker/mix.exs nexmaker/mix.lock ./
-RUN --mount=type=cache,target=/root/.hex \
-    --mount=type=cache,target=/root/.mix \
-    mix deps.get --only $MIX_ENV
-COPY nexmaker/lib lib/
-RUN --mount=type=cache,target=/root/.hex \
-    --mount=type=cache,target=/root/.mix \
-    mix deps.compile --parallel && mix compile --parallel
+# Copy nexmaker (path dependency) so mix deps.get can resolve it and its transitive deps
+COPY nexmaker /nexmaker
 
-# Then build the main application
-WORKDIR /app
-
-# Copy mix files and install dependencies with caching
+# Copy mix files and install all dependencies (including nexmaker's transitive deps) with caching
 COPY edge_admin/mix.exs edge_admin/mix.lock ./
 RUN --mount=type=cache,target=/root/.hex \
     --mount=type=cache,target=/root/.mix \

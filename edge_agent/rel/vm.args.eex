@@ -6,10 +6,10 @@
 ## Scheduler Configuration
 ## =============================================================================
 
-## Number of dirty schedulers doing IO work (file, sockets, SSH, proxy, shell commands)
-## EdgeAgent: Heavy I/O workload (SSH tunnels, proxy connections, shell execution)
-## Higher than default but lower than admin (no Netmaker API polling)
-+SDio 16
+## Number of dirty schedulers doing IO work (shell command execution via ports, SQLite file ops)
+## Dirty IO schedulers do NOT handle gen_tcp socket I/O (SSH tunnels, proxy connections) —
+## that goes through BEAM epoll/kqueue polling. Only System.cmd and file ops use these.
++SDio 4
 
 ## Number of dirty CPU schedulers for computationally intensive NIFs
 ## EdgeAgent: Minimal CPU-heavy work (mostly I/O)
@@ -38,18 +38,18 @@
 ## Kernel poll - use efficient epoll/kqueue for socket events
 +K true
 
-## Async thread pool size for file I/O and non-NIF operations
-## EdgeAgent: SQLite operations, shell command I/O, log files
-## Lower than admin (SQLite lighter than PostgreSQL)
-+A 16
+## Async thread pool size for legacy async file I/O operations
+## Handles SQLite file ops and log files. Socket I/O goes through BEAM polling, not here.
++A 8
 
 ## =============================================================================
 ## Memory Management
 ## =============================================================================
 
-## Heap memory strategy - allocate this much (words) before first GC
-## Default 233, we increase for processes handling command output
-+hms 4096
+## Heap memory strategy - initial heap size (words) before first GC
+## Proxy forward loop processes are tiny. Large command output goes to binary heap (+hmbs).
+## 4096 words pre-allocated per process is wasteful at high proxy concurrency.
++hms 1024
 
 ## Binary heap management - threshold for storing binaries off-heap
 ## EdgeAgent: Shell command output can be large
@@ -64,19 +64,10 @@
 ## Distribution Port Configuration
 ## =============================================================================
 
-## Fixed Erlang distribution port (configurable via ERLANG_DIST_PORT)
-## EdgeAgent only connects to admin (not listening for other agents)
-## But admin needs to connect TO agent, so we still need a fixed port
--kernel inet_dist_listen_min <%= System.get_env("ERLANG_DIST_PORT") || "49126" %>
--kernel inet_dist_listen_max <%= System.get_env("ERLANG_DIST_PORT") || "49126" %>
-
-## Distribution connection timeout (ms)
-## EdgeAgent: Only connects to one admin in same cluster network
-## Lower timeout acceptable (not cross-datacenter)
--kernel net_ticktime 30
-
-## Distribution connection backlog
--kernel inet_dist_listen_options [{backlog,1024}]
+## Agents are NOT Erlang distribution nodes.
+## From design docs: "Agents have no Erlang cookie, no epmd, no Node.connect."
+## Admin -> Agent communication is HTTP only (API token auth, VPN DNS name).
+## The settings below are intentionally omitted — distribution is never started on agents.
 
 ## =============================================================================
 ## Garbage Collection

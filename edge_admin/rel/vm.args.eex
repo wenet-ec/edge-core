@@ -6,10 +6,12 @@
 ## Scheduler Configuration
 ## =============================================================================
 
-## Number of dirty schedulers doing IO work (file, sockets, netclient CLI, HTTP calls)
-## EdgeAdmin: Heavy network I/O (Netmaker API, netclient, proxies)
-## Default: CPU core count, we boost for I/O-bound workload
-+SDio 32
+## Number of dirty schedulers doing IO work (file, netclient CLI calls, some crypto NIFs)
+## EdgeAdmin: Dirty IO schedulers handle blocking NIFs tagged dirty-io (System.cmd, file ops).
+## They do NOT handle gen_tcp socket I/O — that goes through BEAM epoll/kqueue polling.
+## Proxy workload (thousands of concurrent TCP connections) uses zero dirty IO schedulers.
+## 30 admin instances × 32 threads = 960 competing threads. Wasteful, hurts context switching.
++SDio 8
 
 ## Number of dirty CPU schedulers for computationally intensive NIFs
 ## EdgeAdmin: Minimal CPU-heavy work (mostly I/O)
@@ -32,24 +34,29 @@
 +Q 65536
 
 ## Distribution buffer busy limit (KB)
-## EdgeAdmin: Heavy inter-admin traffic via :syn registry and PubSub
-## Default 1024KB too low for distributed multi-admin setup
-+zdbbl 32768
+## EdgeAdmin: Mode 2 proxy traffic crosses Erlang distribution for every byte both directions.
+## Under sustained high-throughput cross-admin proxy sessions this buffer is the first
+## backpressure point on the distribution link. Raised to 64MB for heavy proxy load.
++zdbbl 65536
 
 ## Kernel poll - use efficient epoll/kqueue for socket events
 +K true
 
-## Async thread pool size for file I/O and non-NIF operations
-## EdgeAdmin: Database, log files, config files, netclient operations
-+A 32
+## Async thread pool size for legacy async file I/O operations
+## Modern ERTS uses its own I/O polling for sockets — async threads handle file ops only.
+## 30 admin instances × 32 threads = 960 threads. Drop to 8 (sufficient for file/log/config ops).
++A 8
 
 ## =============================================================================
 ## Memory Management
 ## =============================================================================
 
-## Heap memory strategy - allocate this much (words) before first GC
-## Default 233, we increase for processes handling large messages
-+hms 8192
+## Heap memory strategy - initial heap size (words) before first GC
+## Proxy forward loop processes are tiny (~1-2KB working set: two socket refs + loop state).
+## 8192 words = ~64KB pre-allocated per process. At 10k concurrent forwarding processes:
+## 10,000 × 64KB = 640MB wasted pre-allocation. Large binaries go to +hmbs, not here.
+## Drop back to a modest value — GC will grow heaps for the few processes that need it.
++hms 2048
 
 ## Binary heap management - threshold for storing binaries off-heap
 ## Default 64, we increase since we handle large JSON responses from Netmaker API
@@ -71,7 +78,11 @@
 -kernel inet_dist_listen_max <%= System.get_env("ERLANG_DIST_PORT") || "49125" %>
 
 ## Distribution connection timeout (ms)
-## EdgeAdmin: Cross-datacenter admin communication may have higher latency
+## Failure detection window = 4 × net_ticktime = 240s (~4 minutes).
+## When an admin dies, surviving admins wait up to 4 min before :syn triggers rebalancing.
+## This is intentional: proxy connections to dead clusters fail immediately (socket errors),
+## but false positives at lower ticktime cause unnecessary rebalancing churn on transient blips.
+## 60s is the right tradeoff — do not lower this.
 -kernel net_ticktime 60
 
 ## Distribution connection backlog

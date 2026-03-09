@@ -22,7 +22,7 @@ defmodule EdgeAdmin.Nodes.Checks.UpdateClusterCheck do
   Returns an error if the proposed limit would make the cluster permanently over-capacity,
   locking out all future registrations with no way to resolve it short of deleting nodes.
   """
-  @spec check(Cluster.t(), integer() | nil) :: :ok | {:error, {:conflict, String.t()}}
+  @spec check(Cluster.t(), integer() | nil) :: :ok | {:error, {:unprocessable, String.t()}}
   def check(_cluster, nil), do: :ok
 
   def check(%Cluster{id: cluster_id}, new_limit) do
@@ -31,7 +31,7 @@ defmodule EdgeAdmin.Nodes.Checks.UpdateClusterCheck do
     if new_limit >= count do
       :ok
     else
-      {:error, {:conflict, "node_limit (#{new_limit}) cannot be less than current node count (#{count})"}}
+      {:error, {:unprocessable, "node_limit (#{new_limit}) cannot be less than current node count (#{count})"}}
     end
   end
 end

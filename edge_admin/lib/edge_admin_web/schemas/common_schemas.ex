@@ -146,6 +146,34 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
     })
   end
 
+  defmodule UnprocessableResponse do
+    @moduledoc false
+
+    OpenApiSpex.schema(%{
+      title: "Unprocessable Response",
+      description: "Semantically invalid request that cannot succeed regardless of retry (422)",
+      type: :object,
+      properties: %{
+        errors: %Schema{
+          type: :object,
+          properties: %{
+            detail: %Schema{
+              type: :string,
+              description: "Error detail message"
+            }
+          },
+          required: [:detail]
+        }
+      },
+      required: [:errors],
+      example: %{
+        errors: %{
+          detail: "node is already in this cluster"
+        }
+      }
+    })
+  end
+
   defmodule ServiceUnavailableResponse do
     @moduledoc false
 

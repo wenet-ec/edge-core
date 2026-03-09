@@ -58,6 +58,16 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> json(%{errors: %{detail: reason}})
   end
 
+  # 5b. Handle unprocessable errors (422) - semantically invalid requests (from checks/ modules)
+  # Unlike changeset errors, these are not field-level but operation-level: the request
+  # is logically contradictory regardless of when it's sent (e.g. moving a node to its
+  # current cluster, setting node_limit below existing node count).
+  def call(conn, {:error, {:unprocessable, reason}}) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{errors: %{detail: reason}})
+  end
+
   # 6. Handle service unavailable errors (503) - downstream services (VPN, metrics, etc.)
   def call(conn, {:error, :service_unavailable}) do
     conn

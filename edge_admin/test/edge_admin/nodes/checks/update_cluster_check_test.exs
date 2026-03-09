@@ -96,7 +96,7 @@ defmodule EdgeAdmin.Nodes.Checks.UpdateClusterCheckTest do
       cluster = insert_cluster()
       insert_node(cluster.id)
       insert_node(cluster.id)
-      assert {:error, {:conflict, reason}} = UpdateClusterCheck.check(cluster, 1)
+      assert {:error, {:unprocessable, reason}} = UpdateClusterCheck.check(cluster, 1)
       assert is_binary(reason)
     end
 
@@ -104,7 +104,7 @@ defmodule EdgeAdmin.Nodes.Checks.UpdateClusterCheckTest do
       cluster = insert_cluster()
       insert_node(cluster.id)
       insert_node(cluster.id)
-      {:error, {:conflict, reason}} = UpdateClusterCheck.check(cluster, 1)
+      {:error, {:unprocessable, reason}} = UpdateClusterCheck.check(cluster, 1)
       assert reason =~ "1"
     end
 
@@ -112,14 +112,14 @@ defmodule EdgeAdmin.Nodes.Checks.UpdateClusterCheckTest do
       cluster = insert_cluster()
       insert_node(cluster.id)
       insert_node(cluster.id)
-      {:error, {:conflict, reason}} = UpdateClusterCheck.check(cluster, 1)
+      {:error, {:unprocessable, reason}} = UpdateClusterCheck.check(cluster, 1)
       assert reason =~ "2"
     end
 
     test "zero new_limit is always below a non-empty cluster" do
       cluster = insert_cluster()
       insert_node(cluster.id)
-      assert {:error, {:conflict, _reason}} = UpdateClusterCheck.check(cluster, 0)
+      assert {:error, {:unprocessable, _reason}} = UpdateClusterCheck.check(cluster, 0)
     end
   end
 end

@@ -10,9 +10,9 @@ defmodule EdgeAdmin.Nodes.Checks.NodeClusterChangeCheck do
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
 
-  @spec check(Node.t(), Cluster.t()) :: :ok | {:error, {:conflict, String.t()}}
+  @spec check(Node.t(), Cluster.t()) :: :ok | {:error, {:unprocessable, String.t()}}
   def check(%Node{cluster_id: same_id}, %Cluster{id: same_id}) do
-    {:error, {:conflict, "node is already in this cluster"}}
+    {:error, {:unprocessable, "node is already in this cluster"}}
   end
 
   def check(%Node{}, %Cluster{}), do: :ok

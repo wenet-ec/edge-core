@@ -57,6 +57,10 @@ services:
       - "34000:44000"      # API
       - "33128:43128"      # HTTP proxy
       - "31080:41080"      # SOCKS5 proxy
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
       interval: 60s
@@ -96,6 +100,10 @@ services:
       - "34001:44000"      # API
       - "33129:43128"      # HTTP proxy
       - "31081:41080"      # SOCKS5 proxy
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
       interval: 60s
@@ -137,6 +145,10 @@ services:
       - "34002:44000"      # API
       - "33130:43128"      # HTTP proxy
       - "31082:41080"      # SOCKS5 proxy
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
       interval: 60s

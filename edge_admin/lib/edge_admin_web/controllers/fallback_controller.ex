@@ -11,7 +11,7 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
 
   require Logger
 
-  # 1. Handle validation errors from Ecto changesets (422)
+  # 1. Changeset validation errors (422) - field-level errors from forms
   def call(conn, {:error, %Ecto.Changeset{} = changeset}) do
     conn
     |> put_status(:unprocessable_entity)
@@ -19,7 +19,7 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> render(:error, changeset: changeset)
   end
 
-  # 2. Handle not found errors (404)
+  # 2. Not found (404)
   def call(conn, {:error, :not_found}) do
     conn
     |> put_status(:not_found)
@@ -27,7 +27,7 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> render(:"404")
   end
 
-  # 3. Handle forbidden errors (403)
+  # 3. Forbidden (403)
   def call(conn, {:error, :forbidden}) do
     conn
     |> put_status(:forbidden)
@@ -35,7 +35,7 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> render(:"403")
   end
 
-  # 4. Handle unauthorized errors (401) - rare, usually handled in plugs
+  # 4. Unauthorized (401) - rare, usually handled upstream in plugs
   def call(conn, {:error, :unauthorized}) do
     conn
     |> put_status(:unauthorized)
@@ -43,7 +43,8 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> render(:"401")
   end
 
-  # 5. Handle conflict errors (409) - duplicate resources, unique constraints
+  # 5. Conflict (409) - state-dependent: duplicate resource, unique constraint,
+  #    or operation blocked by current state (may succeed after state changes)
   def call(conn, {:error, :conflict}) do
     conn
     |> put_status(:conflict)
@@ -51,24 +52,23 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> render(:"409")
   end
 
-  # 5a. Handle conflict errors (409) with a specific reason (from checks/ modules)
+  # 6. Conflict with reason (409) - from checks/ modules returning {:conflict, reason}
   def call(conn, {:error, {:conflict, reason}}) do
     conn
     |> put_status(:conflict)
     |> json(%{errors: %{detail: reason}})
   end
 
-  # 5b. Handle unprocessable errors (422) - semantically invalid requests (from checks/ modules)
-  # Unlike changeset errors, these are not field-level but operation-level: the request
-  # is logically contradictory regardless of when it's sent (e.g. moving a node to its
-  # current cluster, setting node_limit below existing node count).
+  # 7. Unprocessable with reason (422) - from checks/ modules returning {:unprocessable, reason}
+  #    Semantically invalid: the request is logically contradictory regardless of when it is sent.
+  #    Unlike changeset errors (field-level), these are operation-level rejections.
   def call(conn, {:error, {:unprocessable, reason}}) do
     conn
     |> put_status(:unprocessable_entity)
     |> json(%{errors: %{detail: reason}})
   end
 
-  # 6. Handle service unavailable errors (503) - downstream services (VPN, metrics, etc.)
+  # 8. Service unavailable (503) - downstream dependency unreachable (VPN, metrics, etc.)
   def call(conn, {:error, :service_unavailable}) do
     conn
     |> put_status(:service_unavailable)
@@ -76,7 +76,7 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> render(:"503")
   end
 
-  # 7. Handle bad request errors (400) - malformed input
+  # 9. Bad request (400) - malformed input
   def call(conn, {:error, :bad_request}) do
     conn
     |> put_status(:bad_request)
@@ -84,16 +84,8 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> render(:"400")
   end
 
-  # 8. Handle business logic errors with descriptive messages (422)
-  # Keep as 422 since these are often validation-like errors from form inputs
-  def call(conn, {:error, reason}) when is_binary(reason) do
-    conn
-    |> put_status(:unprocessable_entity)
-    |> json(%{errors: %{detail: reason}})
-  end
-
-  # 9. CATCH-ALL: Unknown errors → 500 Internal Server Error
-  # These indicate bugs or unhandled edge cases - log them for investigation
+  # 10. CATCH-ALL: unhandled error → 500
+  #     Indicates a bug or missing error-handling path. Always investigate these.
   def call(conn, {:error, reason}) do
     Logger.error("Unhandled error in controller: #{inspect(reason)}")
 

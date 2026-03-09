@@ -123,20 +123,15 @@ defmodule EdgeAdminWeb.Controllers.FallbackControllerTest do
     end
   end
 
-  describe "{:error, binary} — 422 with custom message" do
+  describe "{:error, {:unprocessable, reason}} — 422 with reason" do
     test "returns 422", ctx do
-      conn = call(ctx, {:error, "node is already registered"})
+      conn = call(ctx, {:error, {:unprocessable, "node is already in this cluster"}})
       assert conn.status == 422
     end
 
-    test "body errors.detail contains the exact message", ctx do
-      conn = call(ctx, {:error, "node is already registered"})
-      assert get_in(body(conn), ["errors", "detail"]) == "node is already registered"
-    end
-
-    test "empty string message still returns 422", ctx do
-      conn = call(ctx, {:error, ""})
-      assert conn.status == 422
+    test "body errors.detail contains the specific reason", ctx do
+      conn = call(ctx, {:error, {:unprocessable, "node is already in this cluster"}})
+      assert get_in(body(conn), ["errors", "detail"]) == "node is already in this cluster"
     end
   end
 
@@ -151,8 +146,8 @@ defmodule EdgeAdminWeb.Controllers.FallbackControllerTest do
       assert conn.status == 500
     end
 
-    test "returns 500 for unexpected tuple", ctx do
-      conn = call(ctx, {:error, {:nested, :error}})
+    test "returns 500 for bare binary string (no longer a named error)", ctx do
+      conn = call(ctx, {:error, "untagged error string"})
       assert conn.status == 500
     end
 

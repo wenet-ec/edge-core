@@ -264,7 +264,6 @@ services:
     container_name: production_edge_vpn_dns
     networks:
       - production_edge_core
-    user: "0:0"
     depends_on:
       edge_vpn:
         condition: service_healthy

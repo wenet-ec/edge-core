@@ -38,6 +38,18 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
     end
   end
 
+  @doc """
+  Returns the cluster name parsed from a VPN hostname, or nil if not a VPN target.
+
+  Used by handlers to attach cluster attribution to telemetry after a successful tunnel.
+  """
+  def cluster_name_from_hostname(target_host) do
+    case parse_cluster_from_hostname(target_host) do
+      {:ok, cluster_name} -> cluster_name
+      {:error, _} -> nil
+    end
+  end
+
   # Direct VPN routing
   defp connect_direct(client_socket, target_host, target_port, caller_pid, initial_data) do
     case parse_cluster_from_hostname(target_host) do

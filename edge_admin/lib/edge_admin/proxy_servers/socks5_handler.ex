@@ -43,14 +43,28 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
     {:ok, {client_ip, client_port}} = :inet.peername(socket)
     Logger.info("SOCKS5 client connected from #{:inet.ntoa(client_ip)}:#{client_port}")
 
+    start_time = System.monotonic_time()
     result = handle_socks5_handshake(socket, transport)
+    duration_ms = System.convert_time_unit(System.monotonic_time() - start_time, :native, :millisecond)
 
     case result do
-      :ok ->
+      {:ok, routing_mode, proxy_mode, cluster_name} ->
         :telemetry.execute(
           [:edge_admin, :proxy, :connection],
           %{count: 1, total: 1},
-          %{protocol: :socks5, result: :success}
+          %{
+            protocol: :socks5,
+            result: :success,
+            routing_mode: routing_mode,
+            proxy_mode: proxy_mode,
+            cluster: cluster_name
+          }
+        )
+
+        :telemetry.execute(
+          [:edge_admin, :proxy, :session, :duration],
+          %{duration: duration_ms},
+          %{protocol: :socks5, routing_mode: routing_mode, proxy_mode: proxy_mode, cluster: cluster_name}
         )
 
         :ok
@@ -65,7 +79,7 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
         :telemetry.execute(
           [:edge_admin, :proxy, :connection],
           %{count: 1, total: 1},
-          %{protocol: :socks5, result: :auth_failed}
+          %{protocol: :socks5, result: :auth_failed, routing_mode: :unknown, proxy_mode: :unknown, cluster: "unknown"}
         )
 
         transport.close(socket)
@@ -76,21 +90,22 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
         :telemetry.execute(
           [:edge_admin, :proxy, :connection],
           %{count: 1, total: 1},
-          reason |> ErrorHandler.telemetry_metadata(:socks5) |> Map.put(:result, :failure)
+          reason
+          |> ErrorHandler.telemetry_metadata(:socks5)
+          |> Map.merge(%{result: :failure, routing_mode: :unknown, proxy_mode: :unknown, cluster: "unknown"})
         )
 
         transport.close(socket)
     end
   end
 
+  # Returns {:ok, routing_mode, proxy_mode, cluster_name} | {:error, reason}
   defp handle_socks5_handshake(socket, transport) do
     with {:ok, methods} <- read_greeting(socket, transport),
          :ok <- send_auth_method(socket, transport, methods),
          {:ok, routing_mode, exit_node} <- handle_authentication(socket, transport),
-         {:ok, target_host, target_port} <- read_connect_request(socket, transport),
-         {:ok, _target_socket} <-
-           establish_tunnel(socket, transport, target_host, target_port, routing_mode, exit_node) do
-      :timer.sleep(:infinity)
+         {:ok, target_host, target_port} <- read_connect_request(socket, transport) do
+      establish_tunnel(socket, transport, target_host, target_port, routing_mode, exit_node)
     end
   end
 
@@ -249,20 +264,23 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
   end
 
   # Step 5: Establish tunnel
+  # Returns {:ok, routing_mode, proxy_mode, cluster_name} | {:error, reason}
   defp establish_tunnel(socket, transport, target_host, target_port, routing_mode, exit_node) do
     opts = build_tunnel_opts(routing_mode, exit_node)
+    proxy_mode = if routing_mode == :chain, do: :chain, else: :direct
+    cluster_name = TcpTunnel.cluster_name_from_hostname(target_host) || "unknown"
 
     case TcpTunnel.connect_and_forward(socket, target_host, target_port, self(), nil, opts) do
       {:ok, :local, _target_socket} ->
-        # Success
         send_reply(socket, transport, 0, target_host, target_port)
-        {:ok, :local}
+        :timer.sleep(:infinity)
+        {:ok, :local, proxy_mode, cluster_name}
 
       {:ok, :remote, proxy_pid} ->
-        # Success
         send_reply(socket, transport, 0, target_host, target_port)
         transport.setopts(socket, active: true)
-        handle_remote_streaming(socket, transport, proxy_pid)
+        result = handle_remote_streaming(socket, transport, proxy_pid)
+        if match?({:ok, _}, result), do: {:ok, :remote, proxy_mode, cluster_name}, else: result
 
       {:error, reason} ->
         reply_code = ErrorHandler.socks5_reply_code(reason)

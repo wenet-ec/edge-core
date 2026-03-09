@@ -31,14 +31,28 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
     {:ok, {client_ip, client_port}} = :inet.peername(socket)
     Logger.info("HTTP proxy client connected from #{:inet.ntoa(client_ip)}:#{client_port}")
 
+    start_time = System.monotonic_time()
     result = handle_http_request(socket, transport)
+    duration_ms = System.convert_time_unit(System.monotonic_time() - start_time, :native, :millisecond)
 
     case result do
-      :ok ->
+      {:ok, routing_mode, proxy_mode, cluster_name} ->
         :telemetry.execute(
           [:edge_admin, :proxy, :connection],
           %{count: 1, total: 1},
-          %{protocol: :http, result: :success}
+          %{
+            protocol: :http,
+            result: :success,
+            routing_mode: routing_mode,
+            proxy_mode: proxy_mode,
+            cluster: cluster_name
+          }
+        )
+
+        :telemetry.execute(
+          [:edge_admin, :proxy, :session, :duration],
+          %{duration: duration_ms},
+          %{protocol: :http, routing_mode: routing_mode, proxy_mode: proxy_mode, cluster: cluster_name}
         )
 
         :ok
@@ -53,7 +67,7 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
         :telemetry.execute(
           [:edge_admin, :proxy, :connection],
           %{count: 1, total: 1},
-          %{protocol: :http, result: :auth_failed}
+          %{protocol: :http, result: :auth_failed, routing_mode: :unknown, proxy_mode: :unknown, cluster: "unknown"}
         )
 
         transport.close(socket)
@@ -64,13 +78,16 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
         :telemetry.execute(
           [:edge_admin, :proxy, :connection],
           %{count: 1, total: 1},
-          reason |> ErrorHandler.telemetry_metadata(:http) |> Map.put(:result, :failure)
+          reason
+          |> ErrorHandler.telemetry_metadata(:http)
+          |> Map.merge(%{result: :failure, routing_mode: :unknown, proxy_mode: :unknown, cluster: "unknown"})
         )
 
         transport.close(socket)
     end
   end
 
+  # Returns {:ok, routing_mode, proxy_mode, cluster_name} | {:error, reason}
   defp handle_http_request(socket, transport) do
     case read_http_request(socket, transport) do
       {:ok, method, uri, http_version, headers, _body} ->
@@ -156,16 +173,20 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
     case parse_host_port(uri) do
       {:ok, host, port} ->
         opts = build_tunnel_opts(routing_mode, exit_node, :http)
+        proxy_mode = if routing_mode == :chain, do: :chain, else: :direct
+        cluster_name = TcpTunnel.cluster_name_from_hostname(host) || "unknown"
 
         case TcpTunnel.connect_and_forward(socket, host, port, self(), nil, opts) do
           {:ok, :local, _target_socket} ->
             send_connect_success(socket, transport)
             :timer.sleep(:infinity)
+            {:ok, :local, proxy_mode, cluster_name}
 
           {:ok, :remote, proxy_pid} ->
             send_connect_success(socket, transport)
             transport.setopts(socket, active: true)
-            handle_remote_streaming(socket, transport, proxy_pid)
+            result = handle_remote_streaming(socket, transport, proxy_pid)
+            if result == :ok, do: {:ok, :remote, proxy_mode, cluster_name}, else: result
 
           {:error, reason} ->
             {status, message} = ErrorHandler.http_error_response(reason)
@@ -216,21 +237,26 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
     if routing_mode == :chain or is_vpn_target do
       # Use TcpTunnel for VPN targets or proxy chaining
       opts = build_tunnel_opts(routing_mode, exit_node, :http)
-      tunnel_http_request(socket, transport, host, port, request, opts)
+      proxy_mode = if routing_mode == :chain, do: :chain, else: :direct
+      tunnel_http_request(socket, transport, host, port, request, opts, proxy_mode)
     else
       # Direct connection for non-VPN targets
       direct_http_request(socket, transport, host, port, request)
     end
   end
 
-  defp tunnel_http_request(socket, transport, host, port, request, opts) do
+  defp tunnel_http_request(socket, transport, host, port, request, opts, proxy_mode) do
+    cluster_name = TcpTunnel.cluster_name_from_hostname(host) || "unknown"
+
     case TcpTunnel.connect_and_forward(socket, host, port, self(), request, opts) do
       {:ok, :local, _target_socket} ->
         :timer.sleep(:infinity)
+        {:ok, :local, proxy_mode, cluster_name}
 
       {:ok, :remote, proxy_pid} ->
         transport.setopts(socket, active: true)
-        handle_remote_streaming(socket, transport, proxy_pid)
+        result = handle_remote_streaming(socket, transport, proxy_pid)
+        if result == :ok, do: {:ok, :remote, proxy_mode, cluster_name}, else: result
 
       {:error, reason} ->
         {status, message} = ErrorHandler.http_error_response(reason)
@@ -245,6 +271,7 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
         :gen_tcp.send(target_socket, request)
         setup_bidirectional_forwarding(socket, target_socket)
         :timer.sleep(:infinity)
+        {:ok, :local, :direct, "external"}
 
       {:error, reason} ->
         {status, message} = ErrorHandler.http_error_response(reason)

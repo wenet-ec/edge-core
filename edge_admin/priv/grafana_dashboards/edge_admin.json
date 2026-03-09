@@ -255,7 +255,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "showThresholdLabels": false,
@@ -519,7 +521,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "showThresholdLabels": false,
@@ -584,7 +588,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "showThresholdLabels": false,
@@ -664,7 +670,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "text": {},
@@ -838,7 +846,9 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "showThresholdLabels": false,
@@ -860,12 +870,302 @@
       "type": "gauge"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Proxy session duration percentiles (p50, p95, p99) across all protocols, routing modes, and clusters. Short sessions (<1s) indicate connection failures or misconfigured clients. Long sessions (>5m) are healthy persistent tunnels.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "id": 34,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.50, sum(rate(edge_admin_proxy_session_duration_milliseconds_bucket{otp_app=\"$otp_app\"}[$__rate_interval])) by (le, protocol, routing_mode, proxy_mode))",
+          "legendFormat": "p50 {{protocol}} {{routing_mode}}/{{proxy_mode}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum(rate(edge_admin_proxy_session_duration_milliseconds_bucket{otp_app=\"$otp_app\"}[$__rate_interval])) by (le, protocol, routing_mode, proxy_mode))",
+          "legendFormat": "p95 {{protocol}} {{routing_mode}}/{{proxy_mode}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum(rate(edge_admin_proxy_session_duration_milliseconds_bucket{otp_app=\"$otp_app\"}[$__rate_interval])) by (le, protocol, routing_mode, proxy_mode))",
+          "legendFormat": "p99 {{protocol}} {{routing_mode}}/{{proxy_mode}}",
+          "refId": "C"
+        }
+      ],
+      "title": "Proxy Session Duration (p50/p95/p99)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Breakdown of successful proxy connections by routing mode. local = connection handled on this admin (Gateway owns the cluster, zero-copy socket transfer). remote = connection routed cross-admin via Erlang distribution. High remote % means clients are hitting the wrong admin for their cluster.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "percent"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 35
+      },
+      "id": 35,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(edge_admin_proxy_connection_total{otp_app=\"$otp_app\", result=\"success\"}[$__rate_interval])) by (routing_mode, proxy_mode)",
+          "legendFormat": "{{routing_mode}} / {{proxy_mode}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Proxy Routing Mode Split (local vs remote, direct vs chain)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Proxy connection rate broken down by cluster. Identifies which clusters are generating proxy load.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 35
+      },
+      "id": 36,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(edge_admin_proxy_connection_total{otp_app=\"$otp_app\", result=\"success\"}[$__rate_interval])) by (cluster)",
+          "legendFormat": "{{cluster}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Proxy Connection Rate by Cluster",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 44
       },
       "id": 12,
       "panels": [],
@@ -931,7 +1231,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 28
+        "y": 45
       },
       "id": 13,
       "options": {
@@ -1007,14 +1307,16 @@
         "h": 8,
         "w": 6,
         "x": 12,
-        "y": 28
+        "y": 45
       },
       "id": 14,
       "options": {
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "showThresholdLabels": false,
@@ -1094,7 +1396,7 @@
         "h": 8,
         "w": 6,
         "x": 18,
-        "y": 28
+        "y": 45
       },
       "id": 15,
       "options": {
@@ -1129,7 +1431,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 53
       },
       "id": 16,
       "panels": [],
@@ -1195,7 +1497,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 37
+        "y": 54
       },
       "id": 17,
       "options": {
@@ -1301,7 +1603,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 37
+        "y": 54
       },
       "id": 18,
       "options": {
@@ -1354,7 +1656,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 45
+        "y": 62
       },
       "id": 21,
       "panels": [],
@@ -1420,7 +1722,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 46
+        "y": 63
       },
       "id": 22,
       "options": {
@@ -1508,7 +1810,7 @@
         "h": 8,
         "w": 6,
         "x": 12,
-        "y": 46
+        "y": 63
       },
       "id": 23,
       "options": {
@@ -1600,7 +1902,7 @@
         "h": 8,
         "w": 6,
         "x": 18,
-        "y": 46
+        "y": 63
       },
       "id": 24,
       "options": {
@@ -1635,7 +1937,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 54
+        "y": 71
       },
       "id": 25,
       "panels": [],
@@ -1701,7 +2003,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 55
+        "y": 72
       },
       "id": 26,
       "options": {
@@ -1767,14 +2069,16 @@
         "h": 8,
         "w": 4,
         "x": 8,
-        "y": 55
+        "y": 72
       },
       "id": 27,
       "options": {
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "showThresholdLabels": false,
@@ -1854,7 +2158,7 @@
         "h": 8,
         "w": 8,
         "x": 12,
-        "y": 55
+        "y": 72
       },
       "id": 28,
       "options": {
@@ -1912,14 +2216,16 @@
         "h": 8,
         "w": 4,
         "x": 20,
-        "y": 55
+        "y": 72
       },
       "id": 29,
       "options": {
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "showThresholdLabels": false,
@@ -1946,7 +2252,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 63
+        "y": 80
       },
       "id": 30,
       "panels": [],
@@ -2012,7 +2318,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 64
+        "y": 81
       },
       "id": 31,
       "options": {
@@ -2074,14 +2380,16 @@
         "h": 8,
         "w": 4,
         "x": 8,
-        "y": 64
+        "y": 81
       },
       "id": 32,
       "options": {
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": ""
         },
         "showThresholdLabels": false,
@@ -2161,7 +2469,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 64
+        "y": 81
       },
       "id": 33,
       "options": {
@@ -2194,7 +2502,10 @@
   "refresh": "",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["edge_admin", "prometheus"],
+  "tags": [
+    "edge_admin",
+    "prometheus"
+  ],
   "templating": {
     "list": [
       {

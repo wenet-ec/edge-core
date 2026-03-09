@@ -118,18 +118,30 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
   defp proxy_metrics do
     [
       counter(
-        [:edge_admin, :proxy, :http, :connection, :total],
-        event_name: [:edge_admin, :proxy, :http, :connection],
-        description: "Total HTTP proxy connections",
-        tags: [:result],
-        tag_values: &get_result_tag/1
+        [:edge_admin, :proxy, :connection, :total],
+        event_name: [:edge_admin, :proxy, :connection],
+        description: "Total proxy connections by protocol, result, routing mode, proxy mode, and cluster",
+        tags: [:protocol, :result, :routing_mode, :proxy_mode, :cluster],
+        tag_values: &get_proxy_connection_tags/1
       ),
       counter(
-        [:edge_admin, :proxy, :socks5, :connection, :total],
-        event_name: [:edge_admin, :proxy, :socks5, :connection],
-        description: "Total SOCKS5 proxy connections",
-        tags: [:result],
-        tag_values: &get_result_tag/1
+        [:edge_admin, :proxy, :auth_failure, :total],
+        event_name: [:edge_admin, :proxy, :auth_failure],
+        description: "Total proxy authentication failures by protocol",
+        tags: [:protocol],
+        tag_values: &get_protocol_tag/1
+      ),
+      distribution(
+        [:edge_admin, :proxy, :session, :duration, :milliseconds],
+        event_name: [:edge_admin, :proxy, :session, :duration],
+        description:
+          "Proxy session duration in milliseconds, tagged by protocol, routing mode (local/remote), proxy mode (direct/chain), and cluster",
+        measurement: :duration,
+        tags: [:protocol, :routing_mode, :proxy_mode, :cluster],
+        tag_values: &get_proxy_session_tags/1,
+        reporter_options: [
+          buckets: [100, 500, 1_000, 5_000, 15_000, 30_000, 60_000, 300_000, 900_000]
+        ]
       ),
       last_value(
         [:edge_admin, :proxy, :active_connections],
@@ -324,5 +336,39 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
 
   defp get_gateway_scrape_tags(%{cluster: cluster, metrics_type: metrics_type, result: result}) do
     %{cluster: to_string(cluster), metrics_type: to_string(metrics_type), result: to_string(result)}
+  end
+
+  defp get_proxy_connection_tags(%{
+         protocol: protocol,
+         result: result,
+         routing_mode: routing_mode,
+         proxy_mode: proxy_mode,
+         cluster: cluster
+       }) do
+    %{
+      protocol: to_string(protocol),
+      result: to_string(result),
+      routing_mode: to_string(routing_mode),
+      proxy_mode: to_string(proxy_mode),
+      cluster: to_string(cluster)
+    }
+  end
+
+  defp get_proxy_session_tags(%{
+         protocol: protocol,
+         routing_mode: routing_mode,
+         proxy_mode: proxy_mode,
+         cluster: cluster
+       }) do
+    %{
+      protocol: to_string(protocol),
+      routing_mode: to_string(routing_mode),
+      proxy_mode: to_string(proxy_mode),
+      cluster: to_string(cluster)
+    }
+  end
+
+  defp get_protocol_tag(%{protocol: protocol}) do
+    %{protocol: to_string(protocol)}
   end
 end

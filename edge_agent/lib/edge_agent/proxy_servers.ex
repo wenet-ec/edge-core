@@ -125,9 +125,10 @@ defmodule EdgeAgent.ProxyServers do
     transport_opts = %{
       socket_opts: [
         {:ip, state.listen_address},
-        {:port, state.http_port}
+        {:port, state.http_port},
+        {:reuseaddr, true}
       ],
-      num_acceptors: 10
+      num_acceptors: Config.num_acceptors()
     }
 
     case :ranch.start_listener(
@@ -151,9 +152,10 @@ defmodule EdgeAgent.ProxyServers do
     transport_opts = %{
       socket_opts: [
         {:ip, state.listen_address},
-        {:port, state.socks5_port}
+        {:port, state.socks5_port},
+        {:reuseaddr, true}
       ],
-      num_acceptors: 10
+      num_acceptors: Config.num_acceptors()
     }
 
     case :ranch.start_listener(

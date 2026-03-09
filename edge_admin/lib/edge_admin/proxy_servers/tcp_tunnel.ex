@@ -410,9 +410,11 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
     IO.iodata_to_binary([greeting, auth, connect])
   end
 
-  # Forwarding loop: recv from source, send to destination
+  # Forwarding loop: recv from source, send to destination.
+  # recv_timeout closes half-open connections where the peer disappeared without
+  # a proper TCP close (NAT timeout, process kill, network cut).
   defp forward_loop(source_socket, dest_socket) do
-    case :gen_tcp.recv(source_socket, 0) do
+    case :gen_tcp.recv(source_socket, 0, Config.recv_timeout()) do
       {:ok, data} ->
         case :gen_tcp.send(dest_socket, data) do
           :ok -> forward_loop(source_socket, dest_socket)

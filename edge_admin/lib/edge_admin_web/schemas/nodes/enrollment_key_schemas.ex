@@ -39,7 +39,11 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
           description: "When the key was last used. null if unused."
         },
         inserted_at: %Schema{type: :string, format: :"date-time", description: "When the enrollment key was created"},
-        updated_at: %Schema{type: :string, format: :"date-time", description: "When the enrollment key was last updated"}
+        updated_at: %Schema{
+          type: :string,
+          format: :"date-time",
+          description: "When the enrollment key was last updated"
+        }
       },
       required: [:id, :cluster_name, :key, :uses_remaining, :inserted_at, :updated_at]
     })
@@ -104,7 +108,8 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
 
     OpenApiSpex.schema(%{
       title: "Enrollment Key Update Request",
-      description: "Parameters for updating an enrollment key. Only provided fields are updated. Pass null to unset a nullable field.",
+      description:
+        "Parameters for updating an enrollment key. Only provided fields are updated. Pass null to unset a nullable field.",
       type: :object,
       properties: %{
         enrollment_key: %Schema{

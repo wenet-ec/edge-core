@@ -153,11 +153,13 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
         Logger.info("HTTP CONNECT to #{host}:#{port}")
 
         # Validate destination before connecting
-        case DestinationValidator.validate_destination(host, port) do
-          :ok ->
-            case TcpTunnel.connect_and_forward(socket, host, port) do
-              {:ok, _target_socket} ->
+        case DestinationValidator.resolve_and_validate(host, port) do
+          {:ok, ip_tuple} ->
+            case TcpTunnel.connect_to_target(ip_tuple, port) do
+              {:ok, target_socket} ->
+                # Send 200 before handing off socket ownership to the forwarder
                 send_connect_success(socket, transport)
+                TcpTunnel.forward(socket, target_socket)
                 # Tunnel is now active, forwarding tasks are running
                 # Keep the handler process alive
                 :timer.sleep(:infinity)
@@ -169,7 +171,6 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
             end
 
           {:error, reason} ->
-            # Emit telemetry for blocked request
             :telemetry.execute(
               [:edge_agent, :proxy, :http, :blocked],
               %{count: 1},
@@ -196,12 +197,11 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
         Logger.info("HTTP #{method} to #{host}:#{port}#{path}")
 
         # Validate destination before connecting
-        case DestinationValidator.validate_destination(host, port) do
-          :ok ->
-            forward_http_request(socket, transport, method, host, port, path, http_version, headers)
+        case DestinationValidator.resolve_and_validate(host, port) do
+          {:ok, ip_tuple} ->
+            forward_http_request(socket, transport, method, ip_tuple, port, path, http_version, headers)
 
           {:error, reason} ->
-            # Emit telemetry for blocked request
             :telemetry.execute(
               [:edge_agent, :proxy, :http, :blocked],
               %{count: 1},
@@ -234,7 +234,7 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
     end
   end
 
-  defp forward_http_request(socket, transport, method, host, port, path, http_version, headers) do
+  defp forward_http_request(socket, transport, method, ip_tuple, port, path, http_version, headers) do
     # Build the HTTP request to send to target
     filtered_headers =
       Enum.reject(headers, fn {k, _v} ->
@@ -246,7 +246,7 @@ defmodule EdgeAgent.ProxyServers.HttpHandler do
     request = IO.iodata_to_binary([request_line | header_lines] ++ ["\r\n"])
 
     # Establish tunnel and send HTTP request through it
-    case TcpTunnel.connect_and_forward(socket, host, port, request) do
+    case TcpTunnel.connect_and_forward(socket, ip_tuple, port, request) do
       {:ok, _target_socket} ->
         # Socket forwarding already set up with request sent, keep alive
         :timer.sleep(:infinity)

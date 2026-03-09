@@ -61,6 +61,33 @@ defmodule EdgeAgent.ProxyServers.DestinationValidator do
   ]
 
   @doc """
+  Resolves a hostname once, validates the resulting IP, and returns the IP tuple.
+
+  Eliminates the DNS rebinding window that exists when validate_destination/2 is
+  called on a hostname string and :gen_tcp.connect resolves it again independently.
+
+  Returns:
+  - {:ok, ip_tuple} — hostname resolved, IP passed validation
+  - {:error, reason} — blocked, or DNS resolution failed
+
+  For IP address strings (already no DNS), parses and validates directly.
+  """
+  def resolve_and_validate(host, port) when is_binary(host) and is_integer(port) do
+    case resolve_host(host) do
+      {:ok, ip_tuple} ->
+        ip_string = ip_tuple |> :inet.ntoa() |> to_string()
+
+        case validate_destination(ip_string, port) do
+          :ok -> {:ok, ip_tuple}
+          {:error, reason} -> {:error, reason}
+        end
+
+      {:error, _reason} ->
+        {:error, :dns_resolution_failed}
+    end
+  end
+
+  @doc """
   Validates a destination host and port.
 
   Returns:
@@ -236,6 +263,23 @@ defmodule EdgeAgent.ProxyServers.DestinationValidator do
     end)
   end
 
+  # Resolve a hostname to an IP tuple via DNS.
+  # For literal IP strings, parses directly without a DNS lookup.
+  defp resolve_host(host) do
+    charlist = String.to_charlist(host)
+
+    case :inet.parse_address(charlist) do
+      {:ok, ip_tuple} ->
+        {:ok, ip_tuple}
+
+      {:error, _} ->
+        case :inet.getaddr(charlist, :inet) do
+          {:ok, ip_tuple} -> {:ok, ip_tuple}
+          {:error, reason} -> {:error, reason}
+        end
+    end
+  end
+
   # Parse IPv4 address string to tuple
   defp parse_ipv4(host) do
     case String.split(host, ".") do
@@ -279,6 +323,9 @@ defmodule EdgeAgent.ProxyServers.DestinationValidator do
 
       :custom_blocked ->
         "Access to this destination is blocked by policy"
+
+      :dns_resolution_failed ->
+        "Hostname could not be resolved"
 
       _ ->
         "Access blocked"

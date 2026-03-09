@@ -125,10 +125,32 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
       admin_name ->
         case :syn.lookup(:cluster_scope, {:gateway, admin_name, cluster_name}) do
-          :undefined -> {:error, :gateway_not_found}
-          {pid, _metadata} -> {:ok, pid}
+          {pid, _metadata} ->
+            {:ok, pid}
+
+          :undefined ->
+            # Ownership may have changed between the ETS read above and the syn lookup
+            # (TOCTOU window during topology recomputation). Fall back to a direct syn
+            # scan across all registered gateways for this cluster_name.
+            scan_for_gateway(cluster_name)
         end
     end
+  end
+
+  defp scan_for_gateway(cluster_name) do
+    # Ownership changed between the ETS read and the syn lookup. Try all known
+    # admins to find whichever one now owns the gateway for this cluster.
+    admin_names = Map.keys(Metadata.get_edge_clusters())
+
+    result =
+      Enum.find_value(admin_names, fn admin_name ->
+        case :syn.lookup(:cluster_scope, {:gateway, admin_name, cluster_name}) do
+          {pid, _metadata} -> {:ok, pid}
+          :undefined -> nil
+        end
+      end)
+
+    result || {:error, :gateway_not_found}
   end
 
   @doc """

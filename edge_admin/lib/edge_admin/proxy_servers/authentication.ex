@@ -71,7 +71,7 @@ defmodule EdgeAdmin.ProxyServers.Authentication do
   end
 
   defp lookup_node_in_cluster(cluster_name, identifier, node_dns) do
-    case @nodes_module.list_node_identifiers_by_cluster(cluster_name) do
+    case @nodes_module.list_proxy_chain_identifiers(cluster_name) do
       {:ok, identifiers_map} ->
         case Map.get(identifiers_map, identifier) do
           nil ->

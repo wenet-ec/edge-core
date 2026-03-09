@@ -260,7 +260,7 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
   end
 
   defp forward_loop(source_socket, dest_socket) do
-    case :gen_tcp.recv(source_socket, 0) do
+    case :gen_tcp.recv(source_socket, 0, Config.recv_timeout()) do
       {:ok, data} ->
         :gen_tcp.send(dest_socket, data)
         forward_loop(source_socket, dest_socket)

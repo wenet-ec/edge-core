@@ -243,7 +243,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
 
   operation(:delete,
     summary: "Delete an enrollment key",
-    description: "Permanently deletes an enrollment key. **Note:** This endpoint is unavailable during degraded mode (503).",
+    description:
+      "Permanently deletes an enrollment key. **Note:** This endpoint is unavailable during degraded mode (503).",
     parameters: [
       id: [in: :path, description: "Enrollment key ID", schema: %OpenApiSpex.Schema{type: :string, format: :uuid}]
     ],

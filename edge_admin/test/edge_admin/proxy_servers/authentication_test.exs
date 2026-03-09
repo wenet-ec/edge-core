@@ -131,7 +131,7 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
 
     test "valid DNS format hits DB lookup" do
       # identifier captured by regex is "abc123" (after stripping "node-" prefix)
-      stub(EdgeAdmin.NodesMock, :list_node_identifiers_by_cluster, fn "default" ->
+      stub(EdgeAdmin.NodesMock, :list_proxy_chain_identifiers, fn "default" ->
         {:ok, %{"abc123" => stub_node()}}
       end)
 
@@ -146,7 +146,7 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
       Application.put_env(:edge_admin, :netmaker_default_domain, "custom.vpn")
 
       # DNS: node-xyz.cluster-prod.custom.vpn → identifier "xyz"
-      stub(EdgeAdmin.NodesMock, :list_node_identifiers_by_cluster, fn "prod" ->
+      stub(EdgeAdmin.NodesMock, :list_proxy_chain_identifiers, fn "prod" ->
         {:ok, %{"xyz" => stub_node("xyz")}}
       end)
 
@@ -180,7 +180,7 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
 
       # DNS: node-abc123.cluster-default.nm.internal
       # regex captures identifier "abc123" (everything after "node-" up to next dot)
-      expect(EdgeAdmin.NodesMock, :list_node_identifiers_by_cluster, fn "default" ->
+      expect(EdgeAdmin.NodesMock, :list_proxy_chain_identifiers, fn "default" ->
         {:ok, %{"abc123" => node}}
       end)
 
@@ -195,7 +195,7 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
       node = stub_node("abc123")
 
       # DNS: node-web.cluster-default.nm.internal → identifier "web"
-      expect(EdgeAdmin.NodesMock, :list_node_identifiers_by_cluster, fn "default" ->
+      expect(EdgeAdmin.NodesMock, :list_proxy_chain_identifiers, fn "default" ->
         {:ok, %{"abc123" => node, "web" => node}}
       end)
 
@@ -207,7 +207,7 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
     end
 
     test "unknown identifier returns node_not_found" do
-      expect(EdgeAdmin.NodesMock, :list_node_identifiers_by_cluster, fn "default" ->
+      expect(EdgeAdmin.NodesMock, :list_proxy_chain_identifiers, fn "default" ->
         {:ok, %{"other" => stub_node("other")}}
       end)
 
@@ -219,7 +219,7 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
     end
 
     test "cluster not found returns cluster_not_found" do
-      expect(EdgeAdmin.NodesMock, :list_node_identifiers_by_cluster, fn "nonexistent" ->
+      expect(EdgeAdmin.NodesMock, :list_proxy_chain_identifiers, fn "nonexistent" ->
         {:error, :not_found}
       end)
 
@@ -232,7 +232,7 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
 
     test "cluster name is extracted without cluster- prefix before DB call" do
       # DNS: node-n1.cluster-prod.nm.internal → cluster_name passed to DB is "prod", not "cluster-prod"
-      expect(EdgeAdmin.NodesMock, :list_node_identifiers_by_cluster, fn cluster_name ->
+      expect(EdgeAdmin.NodesMock, :list_proxy_chain_identifiers, fn cluster_name ->
         assert cluster_name == "prod"
         {:ok, %{"n1" => stub_node("n1")}}
       end)

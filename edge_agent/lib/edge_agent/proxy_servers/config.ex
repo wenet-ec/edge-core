@@ -45,6 +45,26 @@ defmodule EdgeAgent.ProxyServers.Config do
     get_timeout(:read, 10_000)
   end
 
+  @doc """
+  Returns the inactivity recv timeout for forwarding loops in milliseconds.
+
+  Applied to each :gen_tcp.recv call in the forwarding loop. Closes half-open
+  connections after this period of inactivity.
+  Default: 300000ms (5 minutes)
+  """
+  def recv_timeout do
+    get_timeout(:recv, 300_000)
+  end
+
+  @doc """
+  Returns the number of Ranch acceptor processes for each proxy listener.
+
+  Default: 100
+  """
+  def num_acceptors do
+    Application.get_env(:edge_agent, :proxy_num_acceptors, 100)
+  end
+
   defp get_timeout(key, default) do
     :edge_agent
     |> Application.get_env(:proxy_timeouts, [])

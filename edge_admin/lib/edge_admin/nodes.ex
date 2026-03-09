@@ -1054,33 +1054,68 @@ defmodule EdgeAdmin.Nodes do
   - `{:error, :not_found}` - Cluster doesn't exist
 
   ## Example
-      {:ok, map} = list_node_identifiers_by_cluster("default")
+      {:ok, map} = list_proxy_chain_identifiers("default")
       # map = %{
       #   "abc-123" => %Node{id: "abc-123", ...},
       #   "test" => %Node{id: "abc-123", ...},  # alias
       #   "def-456" => %Node{id: "def-456", ...}
       # }
   """
-  @callback list_node_identifiers_by_cluster(String.t()) :: {:ok, map()} | {:error, :not_found}
-  @spec list_node_identifiers_by_cluster(String.t()) :: {:ok, map()} | {:error, :not_found}
-  def list_node_identifiers_by_cluster(cluster_name) do
-    case get_cluster(cluster_name) do
-      {:error, :not_found} ->
-        {:error, :not_found}
+  @callback list_proxy_chain_identifiers(String.t()) :: {:ok, map()} | {:error, :not_found}
+  @spec list_proxy_chain_identifiers(String.t()) :: {:ok, map()} | {:error, :not_found}
+  def list_proxy_chain_identifiers(cluster_name) do
+    # Single join query: cluster lookup + node fields + alias names in one round trip.
+    # Returns only the fields needed for proxy chain auth:
+    #   node.id, node.proxy_password, node.http_proxy_port, node.socks5_proxy_port,
+    #   cluster.name (for dns_hostname/1), alias.name (as additional lookup keys).
+    rows =
+      Repo.all(
+        from n in Node,
+          join: c in Cluster,
+          on: c.id == n.cluster_id,
+          left_join: a in Alias,
+          on: a.node_id == n.id,
+          where: c.name == ^cluster_name,
+          select: %{
+            id: n.id,
+            proxy_password: n.proxy_password,
+            http_proxy_port: n.http_proxy_port,
+            socks5_proxy_port: n.socks5_proxy_port,
+            cluster_name: c.name,
+            alias_name: a.name
+          }
+      )
 
-      {:ok, cluster} ->
-        nodes = Repo.all(from(n in Node, where: n.cluster_id == ^cluster.id, preload: [:cluster, aliases: :cluster]))
+    # Distinguish between cluster-not-found and cluster-with-no-nodes.
+    # The join returns rows only when the cluster exists; an empty result means
+    # the cluster name doesn't match any row (i.e. cluster doesn't exist).
+    # A cluster with nodes but none matching the identifier is handled upstream.
+    case rows do
+      [] ->
+        # Verify whether the cluster exists at all to return the right error.
+        if Repo.exists?(from c in Cluster, where: c.name == ^cluster_name) do
+          {:ok, %{}}
+        else
+          {:error, :not_found}
+        end
 
-        # Build map of all identifiers (node IDs + aliases) => node
+      _ ->
         identifiers_map =
-          Enum.reduce(nodes, %{}, fn node, acc ->
-            # Add node ID
-            acc = Map.put(acc, node.id, node)
+          Enum.reduce(rows, %{}, fn row, acc ->
+            node = %Node{
+              id: row.id,
+              proxy_password: row.proxy_password,
+              http_proxy_port: row.http_proxy_port,
+              socks5_proxy_port: row.socks5_proxy_port,
+              cluster: %Cluster{name: row.cluster_name}
+            }
 
-            # Add all aliases
-            Enum.reduce(node.aliases, acc, fn alias_record, inner_acc ->
-              Map.put(inner_acc, alias_record.name, node)
-            end)
+            acc = Map.put_new(acc, row.id, node)
+
+            case row.alias_name do
+              nil -> acc
+              name -> Map.put(acc, name, node)
+            end
           end)
 
         {:ok, identifiers_map}

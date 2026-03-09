@@ -224,21 +224,15 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
   defp read_destination_address(socket, transport, @atyp_ipv6) do
     case transport.recv(socket, 18, Config.read_timeout()) do
       {:ok, <<ipv6::binary-size(16), port::16>>} ->
+        # Format IPv6 address as colon-separated hex groups
         <<a::16, b::16, c::16, d::16, e::16, f::16, g::16, h::16>> = ipv6
 
         host =
-          "~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b:~4.16.0b"
-          |> :io_lib.format([
-            a,
-            b,
-            c,
-            d,
-            e,
-            f,
-            g,
-            h
-          ])
-          |> to_string()
+          Enum.map_join(
+            [a, b, c, d, e, f, g, h],
+            ":",
+            &(&1 |> Integer.to_string(16) |> String.downcase() |> String.pad_leading(4, "0"))
+          )
 
         {:ok, host, port}
 

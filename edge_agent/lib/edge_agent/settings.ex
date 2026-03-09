@@ -337,7 +337,7 @@ defmodule EdgeAgent.Settings do
   Set admin fallback URLs.
 
   Stores the URLs from the enrollment key blob so the agent can reach admin
-  without pre-configuring ADMIN_FALLBACK_URLS in the environment.
+  when VPN is down.
   """
   @spec set_admin_fallback_urls([String.t()]) ::
           {:ok, Setting.t()} | {:error, Ecto.Changeset.t() | String.t()}

@@ -8,7 +8,7 @@ defmodule EdgeAgent.Commands.Workers.SyncUnprocessedExecutionWorker do
 
   Only runs when:
   - VPN is down (admin_urls is empty list)
-  - HTTP fallback is configured (admin_fallback_urls is set)
+  - HTTP fallback is configured (admin_fallback_urls stored in Settings)
 
   Fetches both "sent" and "pending" executions from admin, acknowledges pending
   executions, and stores them locally. Provides safety net for command delivery
@@ -43,7 +43,7 @@ defmodule EdgeAgent.Commands.Workers.SyncUnprocessedExecutionWorker do
 
   defp should_run? do
     admin_urls = Settings.get_admin_urls()
-    fallback_urls = Application.get_env(:edge_agent, :admin_fallback_urls, [])
+    fallback_urls = Settings.get_admin_fallback_urls()
 
     admin_urls == [] and fallback_urls != []
   end

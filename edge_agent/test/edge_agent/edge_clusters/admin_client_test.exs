@@ -6,27 +6,6 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
   alias EdgeAgent.Settings
 
   # ---------------------------------------------------------------------------
-  # helpers
-  # ---------------------------------------------------------------------------
-
-  defp with_app_env(key, value, fun) do
-    old = Application.get_env(:edge_agent, key)
-    Application.put_env(:edge_agent, key, value)
-
-    try do
-      fun.()
-    after
-      if old == nil,
-        do: Application.delete_env(:edge_agent, key),
-        else: Application.put_env(:edge_agent, key, old)
-    end
-  end
-
-  defp clear_fallback_env do
-    Application.delete_env(:edge_agent, :admin_fallback_urls)
-  end
-
-  # ---------------------------------------------------------------------------
   # get_urls_to_try/2 — fallback URL priority logic
   #
   # The function is private, so we test it via the public API by observing
@@ -41,11 +20,9 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
 
   describe "get_urls_to_try/2 — VPN admin URLs take priority" do
     setup do
-      clear_fallback_env()
       Settings.set_api_token("test-token")
 
       on_exit(fn ->
-        clear_fallback_env()
         Settings.set_admin_urls([])
         Settings.set_admin_fallback_urls([])
       end)
@@ -79,10 +56,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
 
   describe "get_urls_to_try/2 — Settings fallback URLs (admin_fallback_urls)" do
     setup do
-      clear_fallback_env()
-
       on_exit(fn ->
-        clear_fallback_env()
         Settings.set_admin_urls([])
         Settings.set_admin_fallback_urls([])
       end)
@@ -97,42 +71,13 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
       assert result != {:error, :no_admin_urls}
       assert match?({:error, _}, result)
     end
-
-    test "env var fallback takes priority over Settings fallback" do
-      # Settings has a real-ish URL; env has an unreachable one.
-      # If env wins, we get a network error; if Settings wins, same.
-      # We verify env is consulted: set env to empty list → should fall back to Settings
-      Settings.set_admin_urls([])
-      Settings.set_admin_fallback_urls(["http://127.0.0.1:1"])
-      Settings.set_api_token("test-token")
-
-      with_app_env(:admin_fallback_urls, [], fn ->
-        # Empty env list → falls back to Settings URLs → network error
-        result = AdminClient.list_pending_command_executions()
-        assert result != {:error, :no_admin_urls}
-      end)
-    end
-
-    test "non-empty env fallback overrides Settings fallback URLs" do
-      Settings.set_admin_urls([])
-      Settings.set_admin_fallback_urls(["http://settings-fallback:1"])
-      Settings.set_api_token("test-token")
-
-      with_app_env(:admin_fallback_urls, ["http://env-fallback:1"], fn ->
-        # Env overrides Settings — still gets a network error (URL attempted)
-        result = AdminClient.list_pending_command_executions()
-        assert result != {:error, :no_admin_urls}
-      end)
-    end
   end
 
   describe "get_urls_to_try/2 — no URLs available" do
     setup do
-      clear_fallback_env()
       Settings.set_api_token("test-token")
 
       on_exit(fn ->
-        clear_fallback_env()
         Settings.set_admin_urls([])
         Settings.set_admin_fallback_urls([])
       end)

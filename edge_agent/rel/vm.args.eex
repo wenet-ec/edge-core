@@ -18,9 +18,10 @@
 ## Scheduler bind type - spread across CPU cores for better distribution
 +sbt db
 
-## Scheduler busy wait threshold (microseconds)
-## Lower = more responsive for proxy and SSH connections
-+sbwt very_short
+## Disable scheduler compaction of load — spreads work across all schedulers
+## rather than parking idle ones. Better latency for many concurrent connections (SSH, proxy).
+## Stable flag (no removal warning unlike +sbwt which was previously here).
++scl false
 
 ## =============================================================================
 ## Network & Distribution
@@ -29,11 +30,6 @@
 ## Increase number of concurrent ports/sockets
 ## EdgeAgent: SSH tunnels, proxy connections, metrics collection
 +Q 32768
-
-## Distribution buffer busy limit (KB)
-## EdgeAgent: Only connects to ONE admin (no peer-to-peer traffic)
-## Keep default since no heavy inter-node traffic
-+zdbbl 8192
 
 ## Kernel poll - use efficient epoll/kqueue for socket events
 +K true
@@ -79,9 +75,6 @@
 ## =============================================================================
 ## Telemetry & Debugging
 ## =============================================================================
-
-## Enable kernel polling statistics (for runtime introspection)
-+KP true
 
 ## Crash dump settings
 -env ERL_CRASH_DUMP /tmp/erl_crash_<%= System.get_env("HOSTNAME") || "agent" %>.dump

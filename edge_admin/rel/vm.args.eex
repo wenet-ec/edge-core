@@ -21,9 +21,10 @@
 ## Options: s (spread), db (default bind), u (unbound)
 +sbt db
 
-## Scheduler busy wait threshold (microseconds)
-## Lower = more responsive, higher = less CPU when idle
-+sbwt very_short
+## Disable scheduler compaction of load — spreads work across all schedulers
+## rather than parking idle ones. Better latency for many concurrent proxy connections.
+## Stable flag (no removal warning unlike +sbwt which was previously here).
++scl false
 
 ## =============================================================================
 ## Network & Distribution
@@ -102,9 +103,6 @@
 ## =============================================================================
 ## Telemetry & Debugging
 ## =============================================================================
-
-## Enable kernel polling statistics (for runtime introspection)
-+KP true
 
 ## Crash dump settings
 -env ERL_CRASH_DUMP /tmp/erl_crash_<%= System.get_env("HOSTNAME") || "admin" %>.dump

@@ -93,7 +93,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
   end
 
   # -----------------------------------------------------------------------
-  # Clause 5a: {:conflict, reason} → 409 with specific reason
+  # Clause 6: {:conflict, reason} → 409 with specific reason
   # -----------------------------------------------------------------------
 
   describe "call/2 — {:conflict, reason} → 409 with reason" do
@@ -110,7 +110,24 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
   end
 
   # -----------------------------------------------------------------------
-  # Clause 6: :service_unavailable → 503
+  # Clause 7: {:unprocessable, reason} → 422 with reason
+  # -----------------------------------------------------------------------
+
+  describe "call/2 — {:unprocessable, reason} → 422 with reason" do
+    test "returns 422", %{conn: conn} do
+      conn = call(conn, {:error, {:unprocessable, "node is already in this cluster"}})
+      assert conn.status == 422
+    end
+
+    test "body errors.detail contains the specific reason", %{conn: conn} do
+      conn = call(conn, {:error, {:unprocessable, "node is already in this cluster"}})
+      body = Jason.decode!(conn.resp_body)
+      assert get_in(body, ["errors", "detail"]) == "node is already in this cluster"
+    end
+  end
+
+  # -----------------------------------------------------------------------
+  # Clause 8: :service_unavailable → 503
   # -----------------------------------------------------------------------
 
   describe "call/2 — :service_unavailable → 503" do
@@ -121,7 +138,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
   end
 
   # -----------------------------------------------------------------------
-  # Clause 7: :bad_request → 400
+  # Clause 9: :bad_request → 400
   # -----------------------------------------------------------------------
 
   describe "call/2 — :bad_request → 400" do
@@ -132,29 +149,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
   end
 
   # -----------------------------------------------------------------------
-  # Clause 8: binary reason → 422 with exact message
-  # -----------------------------------------------------------------------
-
-  describe "call/2 — binary reason → 422" do
-    test "returns 422 for binary error reason", %{conn: conn} do
-      conn = call(conn, {:error, "something went wrong"})
-      assert conn.status == 422
-    end
-
-    test "response body contains the exact binary message", %{conn: conn} do
-      conn = call(conn, {:error, "something went wrong"})
-      body = Jason.decode!(conn.resp_body)
-      assert get_in(body, ["errors", "detail"]) == "something went wrong"
-    end
-
-    test "binary reason hits clause 8, not catch-all (422 not 500)", %{conn: conn} do
-      conn = call(conn, {:error, "any string"})
-      assert conn.status == 422
-    end
-  end
-
-  # -----------------------------------------------------------------------
-  # Clause 9: catch-all → 500
+  # Clause 10: catch-all → 500
   # -----------------------------------------------------------------------
 
   describe "call/2 — catch-all → 500" do
@@ -168,8 +163,8 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
       assert conn.status == 500
     end
 
-    test "tuple error returns 500", %{conn: conn} do
-      conn = call(conn, {:error, {:nested, :tuple}})
+    test "returns 500 for bare binary string (no longer a named error)", %{conn: conn} do
+      conn = call(conn, {:error, "untagged error string"})
       assert conn.status == 500
     end
 

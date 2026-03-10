@@ -18,7 +18,7 @@ defmodule EdgeAgent.Vpn.Workers.PullVpnConfigWorker do
     max_attempts: 1,
     unique: [
       period: :infinity,
-      states: [:available, :scheduled, :executing, :retryable]
+      states: [:available, :scheduled]
     ]
 
   require Logger

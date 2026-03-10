@@ -25,7 +25,7 @@ defmodule EdgeAgent.SelfUpdates.Workers.CheckSelfUpdateWorker do
     max_attempts: 3,
     unique: [
       period: :infinity,
-      states: [:available, :scheduled, :executing, :retryable]
+      states: [:available, :scheduled, :retryable]
     ]
 
   alias EdgeAgent.SelfUpdates

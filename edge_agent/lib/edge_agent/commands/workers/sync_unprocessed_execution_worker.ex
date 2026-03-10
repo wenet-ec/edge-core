@@ -20,7 +20,7 @@ defmodule EdgeAgent.Commands.Workers.SyncUnprocessedExecutionWorker do
     max_attempts: 1,
     unique: [
       period: :infinity,
-      states: [:available, :scheduled, :executing, :retryable]
+      states: [:available, :scheduled]
     ]
 
   alias EdgeAgent.Commands

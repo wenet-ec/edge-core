@@ -157,8 +157,7 @@ defmodule EdgeAdmin.ProxyServers do
     transport_opts = %{
       socket_opts: [
         {:ip, state.listen_address},
-        {:port, state.http_port},
-        {:reuseaddr, true}
+        {:port, state.http_port}
       ],
       num_acceptors: Config.num_acceptors()
     }
@@ -184,8 +183,7 @@ defmodule EdgeAdmin.ProxyServers do
     transport_opts = %{
       socket_opts: [
         {:ip, state.listen_address},
-        {:port, state.socks5_port},
-        {:reuseaddr, true}
+        {:port, state.socks5_port}
       ],
       num_acceptors: Config.num_acceptors()
     }

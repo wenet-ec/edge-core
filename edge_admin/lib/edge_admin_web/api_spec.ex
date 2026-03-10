@@ -9,6 +9,7 @@ defmodule EdgeAdminWeb.ApiSpec do
   alias OpenApiSpex.OpenApi
   alias OpenApiSpex.Paths
   alias OpenApiSpex.SecurityScheme
+  alias OpenApiSpex.Tag
 
   @impl OpenApi
   def spec do
@@ -23,7 +24,21 @@ defmodule EdgeAdminWeb.ApiSpec do
         functionality for edge computing systems.
         """
       },
-      paths: Paths.from_router(Router)
+      paths: Paths.from_router(Router),
+      tags: [
+        %Tag{name: "Admins.Metadata"},
+        %Tag{name: "Admins.Metrics"},
+        %Tag{name: "Nodes.Cluster"},
+        %Tag{name: "Nodes.EnrollmentKey"},
+        %Tag{name: "Nodes.Node"},
+        %Tag{name: "Nodes.Alias"},
+        %Tag{name: "Nodes.Metrics"},
+        %Tag{name: "Commands.Command"},
+        %Tag{name: "Commands.CommandExecution"},
+        %Tag{name: "Ssh.SshUsername"},
+        %Tag{name: "Ssh.SshPublicKey"},
+        %Tag{name: "SelfUpdates.Request"}
+      ]
     }
     |> maybe_add_security()
     |> OpenApiSpex.resolve_schema_modules()

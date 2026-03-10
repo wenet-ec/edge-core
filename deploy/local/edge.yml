@@ -61,7 +61,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   registry:
-    image: registry:2
+    image: registry:latest
     container_name: local_registry
     networks:
       - local_edge_core

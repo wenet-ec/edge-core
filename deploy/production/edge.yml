@@ -43,7 +43,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   registry:
-    image: registry:2
+    image: registry:latest
     container_name: production_registry
     networks:
       - production_edge_core

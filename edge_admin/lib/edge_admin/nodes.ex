@@ -1680,9 +1680,10 @@ defmodule EdgeAdmin.Nodes do
   defp cleanup_single_alias(%Alias{} = alias_record) do
     network_name = node_network_name(alias_record.cluster)
     dns_hostname = Alias.dns_hostname(alias_record)
+    netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
 
     # 1. Try to delete DNS entry (best-effort)
-    case Vpn.delete_dns_entry(network_name, dns_hostname) do
+    case Vpn.delete_dns_entry(network_name, netmaker_dns_name) do
       {:ok, _} ->
         Logger.info("Deleted DNS entry for alias #{alias_record.name}: #{dns_hostname}")
 
@@ -1845,9 +1846,10 @@ defmodule EdgeAdmin.Nodes do
               # 5. Create DNS entry in Netmaker (rollback DB on failure)
               ip_address = address |> String.split("/") |> List.first()
               dns_hostname = Alias.dns_hostname(alias_record)
+              netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
 
               case Vpn.create_dns_entry(network_name, %{
-                     name: dns_hostname,
+                     name: netmaker_dns_name,
                      address: ip_address
                    }) do
                 {:ok, _} ->
@@ -1900,9 +1902,10 @@ defmodule EdgeAdmin.Nodes do
     alias_record = Repo.preload(alias_record, :cluster)
     network_name = node_network_name(alias_record.cluster)
     dns_hostname = Alias.dns_hostname(alias_record)
+    netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
 
     # 1. Delete DNS entry from Netmaker FIRST
-    case Vpn.delete_dns_entry(network_name, dns_hostname) do
+    case Vpn.delete_dns_entry(network_name, netmaker_dns_name) do
       {:ok, _} ->
         Logger.info("Deleted DNS entry for alias #{alias_record.name}: #{dns_hostname}")
         delete_alias_from_db(alias_record)
@@ -1979,11 +1982,13 @@ defmodule EdgeAdmin.Nodes do
             # Build set of DNS hostnames that exist in Netmaker
             netmaker_dns_names = MapSet.new(netmaker_dns_entries, & &1["name"])
 
-            # Find ghost aliases (in DB but DNS not in Netmaker)
+            # Find ghost aliases (in DB but DNS not in Netmaker).
+            # Compare using netmaker_dns_name/1 (without domain suffix) because
+            # Netmaker stores and returns custom entries without the default domain.
             ghost_aliases =
               Enum.filter(db_aliases, fn alias_record ->
-                dns_hostname = Alias.dns_hostname(alias_record)
-                not MapSet.member?(netmaker_dns_names, dns_hostname)
+                netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
+                not MapSet.member?(netmaker_dns_names, netmaker_dns_name)
               end)
 
             if Enum.empty?(ghost_aliases) do

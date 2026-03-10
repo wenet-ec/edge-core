@@ -91,4 +91,27 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
     network_name = Vpn.build_network_name(cluster_name, prefix: :node)
     Vpn.build_hostname(short_name, network_name)
   end
+
+  @doc """
+  Returns the DNS name as stored in Netmaker (without the domain suffix).
+
+  Netmaker stores custom DNS entries WITHOUT the default domain and appends
+  it in `GetCustomDNS` when serving entries. Sending the full FQDN causes
+  double-suffixing (e.g. `node-web.cluster-prod.nm.internal.nm.internal`).
+
+  Use this when creating or deleting DNS entries via the Netmaker API.
+  Use `dns_hostname/1` for the user-facing fully qualified hostname.
+
+  ## Format
+  `node-{name}.cluster-{cluster_name}`
+
+  ## Examples
+
+      iex> netmaker_dns_name(%Alias{name: "web", cluster: %Cluster{name: "prod"}})
+      "node-web.cluster-prod"
+  """
+  @spec netmaker_dns_name(t()) :: String.t()
+  def netmaker_dns_name(%__MODULE__{name: name, cluster: %{name: cluster_name}}) do
+    "#{Vpn.build_dns_name(name, prefix: :node)}.#{Vpn.build_network_name(cluster_name, prefix: :node)}"
+  end
 end

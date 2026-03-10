@@ -51,3 +51,7 @@ services:
       - "45000:5000"
     volumes:
       - production_registry_data:/var/lib/registry
+    environment:
+      - OTEL_TRACES_EXPORTER=none
+      - OTEL_SDK_DISABLED=true
+      - REGISTRY_LOG_LEVEL=warn

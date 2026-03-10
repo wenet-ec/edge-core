@@ -133,6 +133,7 @@ defmodule EdgeAgent.Mixfile do
         version: {:from_app, :edge_agent},
         applications: [edge_agent: :permanent],
         include_executables_for: [:unix],
+        distribution: :none,
         steps: [:assemble, :tar]
       ]
     ]

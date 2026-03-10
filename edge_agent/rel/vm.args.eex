@@ -34,10 +34,6 @@
 ## Kernel poll - use efficient epoll/kqueue for socket events
 +K true
 
-## Async thread pool size for legacy async file I/O operations
-## Handles SQLite file ops and log files. Socket I/O goes through BEAM polling, not here.
-+A 8
-
 ## =============================================================================
 ## Memory Management
 ## =============================================================================
@@ -57,13 +53,12 @@
 ##+P 524288
 
 ## =============================================================================
-## Distribution Port Configuration
+## Distribution
 ## =============================================================================
 
-## Agents are NOT Erlang distribution nodes.
-## From design docs: "Agents have no Erlang cookie, no epmd, no Node.connect."
+## Erlang distribution is explicitly disabled via `distribution: :none` in mix.exs.
+## No epmd, no node name, no cookie. Agent is a standalone BEAM process.
 ## Admin -> Agent communication is HTTP only (API token auth, VPN DNS name).
-## The settings below are intentionally omitted — distribution is never started on agents.
 
 ## =============================================================================
 ## Garbage Collection

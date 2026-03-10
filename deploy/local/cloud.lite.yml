@@ -47,8 +47,8 @@ services:
     networks:
       - local_edge_core
     extra_hosts:
-      - "netmaker.localtest.me:172.20.0.101"
-      - "broker.localtest.me:172.20.0.101"
+      - "edge-vpn.localtest.me:172.20.0.101"
+      - "edge-vpn-broker.localtest.me:172.20.0.101"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -154,8 +154,8 @@ services:
       local_edge_core:
         ipv4_address: 172.20.0.101
         aliases:
-          - netmaker.localtest.me
-          - broker.localtest.me
+          - edge-vpn.localtest.me
+          - edge-vpn-broker.localtest.me
     ports:
       - "80:80"
     volumes:

@@ -76,6 +76,9 @@ services:
     volumes:
       - ./compose/edge_vpn_broker/mosquitto.conf:/mosquitto/config/mosquitto.conf
       - production_edge_vpn_broker_data:/mosquitto/data
+    ports:
+      - "48083:8083"    # WebSocket
+      - "48085:18083"    # REST API + UI
     healthcheck:
       test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
       interval: 10s
@@ -107,6 +110,8 @@ services:
     depends_on:
       edge_vpn_broker:
         condition: service_healthy
+    ports:
+      - "48081:8081"    # API
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/api/server/status"]
       interval: 10s
@@ -120,8 +125,10 @@ services:
     depends_on:
       edge_vpn:
         condition: service_healthy
+    ports:
+      - "48080:80"
     environment:
-      - BACKEND_URL=https://netmaker.yourdomain.com
+      - BACKEND_URL=https://edge-vpn.yourdomain.com
 
   edge_vpn_dns:
     image: coredns/coredns:latest
@@ -141,7 +148,7 @@ services:
     networks:
       - production_edge_core
     ports:
-      - "44880:80"
+      - "40080:80"
     volumes:
       - ./compose/edge_vpn_proxy/Caddyfile:/etc/caddy/Caddyfile
       - production_edge_vpn_proxy_data:/data

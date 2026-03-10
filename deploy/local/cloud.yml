@@ -53,8 +53,8 @@ services:
     networks:
       - local_edge_core
     extra_hosts:
-      - "netmaker.localtest.me:172.20.0.101"
-      - "broker.localtest.me:172.20.0.101"
+      - "edge-vpn.localtest.me:172.20.0.101"
+      - "edge-vpn-broker.localtest.me:172.20.0.101"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -69,9 +69,9 @@ services:
     env_file:
       - ./.envs/.edge_admin
     ports:
-      - "4000:44000"       # API 
-      - "3128:43128"       # HTTP Proxy
-      - "31080:41080"      # SOCKS5 Proxy
+      - "4000:44000" # API
+      - "3128:43128" # HTTP Proxy
+      - "31080:41080" # SOCKS5 Proxy
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -95,8 +95,8 @@ services:
     networks:
       - local_edge_core
     extra_hosts:
-      - "netmaker.localtest.me:172.20.0.101"
-      - "broker.localtest.me:172.20.0.101"
+      - "edge-vpn.localtest.me:172.20.0.101"
+      - "edge-vpn-broker.localtest.me:172.20.0.101"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -115,9 +115,9 @@ services:
     environment:
       - AUTH_ENABLED=false
     ports:
-      - "4001:44000"       # API
-      - "3129:43128"       # HTTP Proxy
-      - "1081:41080"       # SOCKS5 Proxy
+      - "4001:44000" # API
+      - "3129:43128" # HTTP Proxy
+      - "1081:41080" # SOCKS5 Proxy
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -141,8 +141,8 @@ services:
     networks:
       - local_edge_core
     extra_hosts:
-      - "netmaker.localtest.me:172.20.0.101"
-      - "broker.localtest.me:172.20.0.101"
+      - "edge-vpn.localtest.me:172.20.0.101"
+      - "edge-vpn-broker.localtest.me:172.20.0.101"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -162,9 +162,9 @@ services:
       - ADMIN_CLUSTER_NAME=b
       - ADMIN_CLUSTER_SUBNET=100.63.1.0/24
     ports:
-      - "4002:44000"       # API
-      - "3130:43128"       # HTTP Proxy
-      - "1082:41080"       # SOCKS5 Proxy
+      - "4002:44000" # API
+      - "3130:43128" # HTTP Proxy
+      - "1082:41080" # SOCKS5 Proxy
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -224,9 +224,8 @@ services:
     networks:
       - local_edge_core
     ports:
-      - "8083:8083"
-      - "8084:8084"
-      - "18083:18083"
+      - "48083:8083"
+      - "48085:18083"
     volumes:
       - local_edge_vpn_broker_data:/opt/emqx/data
       - local_edge_vpn_broker_etc:/opt/emqx/etc
@@ -260,7 +259,7 @@ services:
     env_file:
       - ./.envs/.edge_vpn
     ports:
-      - "8081:8081"
+      - "48081:8081"
     depends_on:
       edge_vpn_db:
         condition: service_healthy
@@ -289,6 +288,17 @@ services:
       - local_edge_vpn_dns_config:/root/config/dnsconfig
     command: -conf /root/config/dnsconfig/Corefile
 
+  edge_vpn_ui:
+    container_name: edge_vpn_ui
+    image: gravitl/netmaker-ui:v1.5.0
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+    environment:
+      - BACKEND_URL=http://localhost:48081
+    ports:
+      - "48080:80"
+
   edge_vpn_proxy:
     image: caddy:alpine
     container_name: local_edge_vpn_proxy
@@ -296,8 +306,8 @@ services:
       local_edge_core:
         ipv4_address: 172.20.0.101
         aliases:
-          - netmaker.localtest.me
-          - broker.localtest.me
+          - edge-vpn.localtest.me
+          - edge-vpn-broker.localtest.me
     ports:
       - "80:80"
     volumes:
@@ -307,17 +317,6 @@ services:
     depends_on:
       - edge_vpn
     command: caddy run --config /etc/caddy/Caddyfile
-
-  edge_vpn_ui:
-    container_name: edge_vpn_ui
-    image: gravitl/netmaker-ui:v1.5.0
-    depends_on:
-      edge_vpn:
-        condition: service_healthy
-    environment:
-      - BACKEND_URL=http://localhost:8081
-    ports:
-      - "8080:80"
 
   # Metrics
   edge_metrics_storage:

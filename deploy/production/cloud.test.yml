@@ -47,8 +47,8 @@ services:
     networks:
       - production_edge_core
     extra_hosts:
-      - "netmaker.localtest.me:172.25.0.100"
-      - "broker.localtest.me:172.25.0.100"
+      - "edge-vpn.localtest.me:172.25.0.100"
+      - "edge-vpn-broker.localtest.me:172.25.0.100"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -59,7 +59,7 @@ services:
     env_file:
       - ./.envs/.edge_admin
     environment:
-      - NETMAKER_API_URL=http://netmaker.localtest.me
+      - NETMAKER_API_URL=http://edge-vpn.localtest.me
       - NETMAKER_API_SCHEME=http
     ports:
       - "34000:44000"
@@ -92,8 +92,8 @@ services:
     networks:
       - production_edge_core
     extra_hosts:
-      - "netmaker.localtest.me:172.25.0.100"
-      - "broker.localtest.me:172.25.0.100"
+      - "edge-vpn.localtest.me:172.25.0.100"
+      - "edge-vpn-broker.localtest.me:172.25.0.100"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -106,7 +106,7 @@ services:
     env_file:
       - ./.envs/.edge_admin
     environment:
-      - NETMAKER_API_URL=http://netmaker.localtest.me
+      - NETMAKER_API_URL=http://edge-vpn.localtest.me
       - NETMAKER_API_SCHEME=http
     ports:
       - "34001:44000"
@@ -139,8 +139,8 @@ services:
     networks:
       - production_edge_core
     extra_hosts:
-      - "netmaker.localtest.me:172.25.0.100"
-      - "broker.localtest.me:172.25.0.100"
+      - "edge-vpn.localtest.me:172.25.0.100"
+      - "edge-vpn-broker.localtest.me:172.25.0.100"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -155,7 +155,7 @@ services:
     environment:
       - ADMIN_CLUSTER_NAME=b
       - ADMIN_CLUSTER_SUBNET=100.63.1.0/24
-      - NETMAKER_API_URL=http://netmaker.localtest.me
+      - NETMAKER_API_URL=http://edge-vpn.localtest.me
       - NETMAKER_API_SCHEME=http
     ports:
       - "34002:44000"
@@ -208,6 +208,9 @@ services:
       - ./compose/edge_vpn_broker/emqx.conf:/opt/emqx/data/configs/cluster.hocon
     env_file:
       - ./.envs/.edge_vpn_broker
+    ports:
+      - "48083:8083"    # WebSocket
+      - "48085:18083"    # REST API + UI
     healthcheck:
       test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
       interval: 10s
@@ -234,15 +237,17 @@ services:
     env_file:
       - ./.envs/.edge_vpn
     environment:
-      - SERVER_HOST=netmaker.localtest.me
-      - SERVER_HTTP_HOST=netmaker.localtest.me
-      - BROKER_ENDPOINT=ws://broker.localtest.me/mqtt
-      - SERVER_API_CONN_STRING=netmaker.localtest.me
+      - SERVER_HOST=edge-vpn.localtest.me
+      - SERVER_HTTP_HOST=edge-vpn.localtest.me
+      - BROKER_ENDPOINT=ws://edge-vpn-broker.localtest.me/mqtt
+      - SERVER_API_CONN_STRING=edge-vpn.localtest.me
     depends_on:
       edge_vpn_db:
         condition: service_healthy
       edge_vpn_broker:
         condition: service_healthy
+    ports:
+      - "48081:8081"
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/api/server/status"]
       interval: 10s
@@ -256,8 +261,10 @@ services:
     depends_on:
       edge_vpn:
         condition: service_healthy
+    ports:
+      - "48080:80"
     environment:
-      - BACKEND_URL=https://netmaker.yourdomain.com
+      - BACKEND_URL=https://edge-vpn.yourdomain.com
 
   edge_vpn_dns:
     image: coredns/coredns:latest
@@ -278,8 +285,8 @@ services:
       production_edge_core:
         ipv4_address: 172.25.0.100
         aliases:
-          - netmaker.localtest.me
-          - broker.localtest.me
+          - edge-vpn.localtest.me
+          - edge-vpn-broker.localtest.me
     ports:
       - "80:80"
     volumes:

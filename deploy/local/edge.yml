@@ -79,8 +79,8 @@ services:
     networks:
       - local_edge_core
     extra_hosts:
-      - "netmaker.localtest.me:172.19.0.101"
-      - "broker.localtest.me:172.19.0.101"
+      - "edge-vpn.localtest.me:172.19.0.101"
+      - "edge-vpn-broker.localtest.me:172.19.0.101"
     volumes:
       - ../../edge_agent:/app:z
       - ../../nexmaker:/nexmaker:z

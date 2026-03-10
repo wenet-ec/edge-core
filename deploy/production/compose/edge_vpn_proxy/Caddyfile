@@ -1,9 +1,9 @@
 # deploy/production/compose/edge_vpn_proxy/Caddyfile
-http://netmaker.yourdomain.com {
+http://edge-vpn.yourdomain.com {
     reverse_proxy edge_vpn:8081
 }
 
-http://netmaker-ui.yourdomain.com {
+http://edge-vpn-ui.yourdomain.com {
     reverse_proxy edge_vpn_ui:80
 }
 
@@ -19,6 +19,6 @@ http://edge-admin3.yourdomain.com {
     reverse_proxy edge_admin_3:44000
 }
 
-http://broker.yourdomain.com {
+http://edge-vpn-broker.yourdomain.com {
     reverse_proxy edge_vpn_broker:8083
 }

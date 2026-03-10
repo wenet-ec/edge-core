@@ -109,6 +109,19 @@ defmodule EdgeAgent.SshServer.Authentication do
     "#{key_type_string} #{key_data_base64}"
   end
 
+  # Raw RSA public key from Erlang's public_key module — encode to OpenSSH wire format
+  # SSH wire format: length-prefixed "ssh-rsa" + mpint(exponent) + mpint(modulus)
+  defp format_public_key({:RSAPublicKey, modulus, exponent})
+       when is_integer(modulus) and is_integer(exponent) do
+    type_bin = "ssh-rsa"
+    wire =
+      ssh_string(type_bin) <>
+        ssh_mpint(exponent) <>
+        ssh_mpint(modulus)
+
+    "ssh-rsa #{Base.encode64(wire)}"
+  end
+
   defp format_public_key({{:ECPoint, point_data}, {:namedCurve, {1, 3, 101, 112}}}) do
     ssh_ed25519_prefix = "ssh-ed25519"
     algorithm_length = byte_size(ssh_ed25519_prefix)
@@ -133,6 +146,28 @@ defmodule EdgeAgent.SshServer.Authentication do
   defp format_public_key(other) do
     Logger.warning("Unknown public key format: #{inspect(other)}")
     ""
+  end
+
+  # Encode a binary as an SSH length-prefixed string
+  defp ssh_string(bin) when is_binary(bin) do
+    len = byte_size(bin)
+    <<len::32>> <> bin
+  end
+
+  # Encode an integer as an SSH mpint (big-endian, with leading zero if high bit set)
+  defp ssh_mpint(0), do: <<0::32>>
+
+  defp ssh_mpint(n) when is_integer(n) and n > 0 do
+    bin = :binary.encode_unsigned(n)
+    # Prepend 0x00 if high bit is set to keep it positive
+    bin =
+      if :binary.first(bin) >= 0x80 do
+        <<0>> <> bin
+      else
+        bin
+      end
+
+    ssh_string(bin)
   end
 
   # Helper to convert SSH key type charlist to string

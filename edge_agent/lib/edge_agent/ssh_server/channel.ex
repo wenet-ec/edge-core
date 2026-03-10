@@ -77,6 +77,27 @@ defmodule EdgeAgent.SshServer.Channel do
   end
 
   @impl true
+  def handle_ssh_msg({:ssh_cm, connection_ref, {:exec, channel_id, want_reply, command}}, state) do
+    Logger.info("Exec requested: #{inspect(command)}")
+    :ssh_connection.reply_request(connection_ref, want_reply, :success, channel_id)
+
+    cmd_string = to_string(command)
+
+    port =
+      Port.open({:spawn_executable, "/bin/sh"}, [
+        {:args, ["-c", cmd_string]},
+        {:env, [{~c"HOME", ~c"/root"}, {~c"PATH", ~c"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}]},
+        {:cd, "/root"},
+        :binary,
+        :use_stdio,
+        :exit_status,
+        :stderr_to_stdout
+      ])
+
+    {:ok, Map.merge(state, %{port: port, connection_ref: connection_ref, channel_id: channel_id})}
+  end
+
+  @impl true
   def handle_ssh_msg({:ssh_cm, connection_ref, {:shell, channel_id, want_reply}}, state) do
     Logger.info("Shell requested")
     :ssh_connection.reply_request(connection_ref, want_reply, :success, channel_id)

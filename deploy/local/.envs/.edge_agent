@@ -4,5 +4,5 @@ PUBLIC_ENROLLMENT_KEY_URL=http://localhost:4000/api/v1/clusters/default/enrollme
 
 # Self-update configuration
 SELF_UPDATE_ENABLED=true
-WATCHTOWER_URL=http://localhost:48080
+WATCHTOWER_URL=http://localhost:58080
 WATCHTOWER_HTTP_API_TOKEN=local-dev-token

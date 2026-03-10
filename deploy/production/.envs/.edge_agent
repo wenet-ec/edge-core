@@ -4,5 +4,5 @@ PUBLIC_ENROLLMENT_KEY_URL=https://edge-admin.yourdomain.com/api/v1/clusters/defa
 
 # Self-update configuration
 SELF_UPDATE_ENABLED=true
-WATCHTOWER_URL=http://localhost:48080
+WATCHTOWER_URL=http://localhost:58080
 WATCHTOWER_HTTP_API_TOKEN=change-me-in-production

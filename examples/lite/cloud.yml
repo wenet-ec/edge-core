@@ -1,0 +1,186 @@
+# examples/lite/cloud.yml
+#
+# Lite setup — single admin, SQLite-backed Netmaker, Mosquitto broker.
+# Intended for homelab / hobbyist use. No metrics stack included.
+#
+# Usage:
+#   docker compose -f cloud.yml up -d
+#
+# Prerequisites:
+#   1. Copy .env.example to .env and fill in your values
+#   2. Make sure ports 48081, 48083, 48080, 34000 are reachable from the internet
+#      (Netmaker and the admin API need to be publicly accessible)
+
+networks:
+  edge_core:
+    name: edge_core
+
+volumes:
+  edge_admin_db_data: {}
+  edge_vpn_data: {}
+  edge_vpn_dns_config: {}
+  edge_vpn_broker_data: {}
+  edge_vpn_proxy_data: {}
+  edge_vpn_proxy_config: {}
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — Edge Admin database
+  # ---------------------------------------------------------------------------
+  edge_admin_db:
+    image: postgres:18
+    container_name: edge_admin_db
+    networks:
+      - edge_core
+    volumes:
+      - edge_admin_db_data:/var/lib/postgresql
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Edge Admin — management server
+  # ---------------------------------------------------------------------------
+  edge_admin:
+    image: ghcr.io/wenet-ec/edge_admin:v0.2.0
+    container_name: edge_admin
+    networks:
+      - edge_core
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+      edge_admin_db:
+        condition: service_healthy
+    volumes:
+      - /dev/net/tun:/dev/net/tun
+    env_file:
+      - .env
+    ports:
+      - "34000:44000"     # Admin API
+      - "33128:43128"     # HTTP proxy
+      - "31080:41080"     # SOCKS5 proxy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
+      interval: 60s
+      timeout: 5s
+      retries: 6
+      start_period: 45s
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
+
+  # ---------------------------------------------------------------------------
+  # Mosquitto — lightweight MQTT broker for Netmaker
+  # ---------------------------------------------------------------------------
+  edge_vpn_broker:
+    image: eclipse-mosquitto:latest
+    container_name: edge_vpn_broker
+    networks:
+      - edge_core
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - edge_vpn_broker_data:/mosquitto/data
+    ports:
+      - "48083:8083"      # WebSocket (used by Netmaker)
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Netmaker — WireGuard VPN mesh server
+  # ---------------------------------------------------------------------------
+  edge_vpn:
+    image: gravitl/netmaker:v1.5.0
+    container_name: edge_vpn
+    networks:
+      - edge_core
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
+    volumes:
+      - edge_vpn_data:/root/data
+      - edge_vpn_dns_config:/root/config/dnsconfig
+      - /dev/net/tun:/dev/net/tun:rw
+    env_file:
+      - .env
+    environment:
+      - BROKER_TYPE=mosquitto
+      - DATABASE=sqlite
+    depends_on:
+      edge_vpn_broker:
+        condition: service_healthy
+    ports:
+      - "48081:8081"      # Netmaker API
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/api/server/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Netmaker UI — web dashboard
+  # ---------------------------------------------------------------------------
+  edge_vpn_ui:
+    image: gravitl/netmaker-ui:v1.5.0
+    container_name: edge_vpn_ui
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+    ports:
+      - "48080:80"
+    environment:
+      - BACKEND_URL=${NETMAKER_API_URL}
+
+  # ---------------------------------------------------------------------------
+  # CoreDNS — internal DNS for VPN mesh hostnames
+  # ---------------------------------------------------------------------------
+  edge_vpn_dns:
+    image: coredns/coredns:latest
+    container_name: edge_vpn_dns
+    networks:
+      - edge_core
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+    volumes:
+      - edge_vpn_dns_config:/root/config/dnsconfig
+    command: -conf /root/config/dnsconfig/Corefile
+
+  # ---------------------------------------------------------------------------
+  # Caddy — reverse proxy / TLS termination for Netmaker API
+  # ---------------------------------------------------------------------------
+  edge_vpn_proxy:
+    image: caddy:alpine
+    container_name: edge_vpn_proxy
+    networks:
+      - edge_core
+    ports:
+      - "40080:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - edge_vpn_proxy_data:/data
+      - edge_vpn_proxy_config:/config
+    depends_on:
+      - edge_vpn
+    command: caddy run --config /etc/caddy/Caddyfile

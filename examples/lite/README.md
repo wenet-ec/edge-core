@@ -1,0 +1,75 @@
+# Edge Core — Lite Setup
+
+A minimal single-server deployment of Edge Core. Designed for homelab, hobbyists, and anyone who wants to try things out without a full production setup.
+
+**What's included:**
+- 1 Edge Admin instance
+- Netmaker VPN (SQLite-backed, Mosquitto broker)
+- Netmaker UI
+- CoreDNS
+
+**What's NOT included (vs standard):**
+- No metrics stack (VictoriaMetrics / vmagent)
+- No EMQX (uses Mosquitto instead — simpler, less overhead)
+- No Netmaker PostgreSQL (uses SQLite — fine for small deployments)
+- No multiple admin instances
+
+## Requirements
+
+- A Linux server (VPS or bare metal) with Docker and Docker Compose installed
+- Ports open to the internet: `48081` (Netmaker API), `48083` (MQTT/WebSocket), `34000` (Admin API)
+- Optional: a domain name for TLS (Caddy will handle certs automatically)
+
+## Quick Start
+
+**On your server (cloud.yml):**
+
+```bash
+# 1. Copy and edit the env file
+cp .env.example .env
+nano .env   # fill in your domain/IP and secrets
+
+# 2. Start the cloud stack
+docker compose -f cloud.yml up -d
+
+# 3. Check everything is healthy
+docker compose -f cloud.yml ps
+```
+
+**On each edge node (edge.yml):**
+
+```bash
+# 1. Copy and edit the same env file
+cp .env.example .env
+nano .env   # set PUBLIC_ENROLLMENT_KEY_URL to your admin's IP
+
+# 2. Start the agent
+docker compose -f edge.yml up -d
+```
+
+## Configuration
+
+All configuration lives in a single `.env` file. Copy `.env.example` to `.env` and fill in the values marked `REQUIRED`.
+
+The minimum you must change:
+- `your-server-ip-or-domain.com` — replace everywhere with your actual server address
+- `change-me` passwords and keys — use strong random values
+- `SECRET_KEY_BASE` — generate with `openssl rand -base64 48`
+
+## API Docs
+
+Once the admin is running, the API documentation is available at:
+
+- `/api/swaggerui` — Swagger UI (interactive)
+- `/api/redoc` — ReDoc
+
+## Upgrading
+
+The edge agent updates itself automatically via Watchtower when a new image is published to `ghcr.io/wenet-ec/edge_agent:stable`.
+
+To update the admin manually:
+
+```bash
+docker compose -f cloud.yml pull
+docker compose -f cloud.yml up -d
+```

@@ -1,0 +1,9 @@
+# examples/lite/Caddyfile
+#
+# Caddy reverse proxy for Netmaker API.
+# Replace YOUR_DOMAIN with your actual domain or IP.
+# Caddy will auto-provision TLS if you use a real domain.
+
+:80 {
+    reverse_proxy edge_vpn:8081
+}

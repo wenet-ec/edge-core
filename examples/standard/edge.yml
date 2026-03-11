@@ -1,0 +1,53 @@
+# examples/standard/edge.yml
+#
+# Edge agent setup — runs on each edge node you want to manage.
+# Deploy this on every machine you want to connect to your Edge Core cluster.
+#
+# Usage:
+#   docker compose -f edge.yml up -d
+#
+# Prerequisites:
+#   1. Copy .env.example to .env and fill in your values
+#   2. The cloud stack (cloud.yml) must be running and reachable
+
+networks:
+  edge_core:
+    name: edge_core
+
+volumes:
+  edge_agent_data: {}
+
+services:
+  # ---------------------------------------------------------------------------
+  # Edge Agent — lightweight agent that connects this machine to Edge Core
+  # ---------------------------------------------------------------------------
+  edge_agent:
+    image: ghcr.io/wenet-ec/edge_agent:stable
+    container_name: edge_agent
+    volumes:
+      - edge_agent_data:/app/data
+      - /etc/resolv.conf:/etc/resolv.conf:rw
+      - /:/host:ro
+      - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:ro
+    env_file:
+      - .env
+    network_mode: host
+    privileged: true
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ---------------------------------------------------------------------------
+  # Watchtower — auto-updates the edge agent when a new image is published
+  # ---------------------------------------------------------------------------
+  watchtower:
+    image: nickfedor/watchtower:latest
+    container_name: edge_watchtower
+    command:
+      - --http-api-update
+      - --label-enable
+      - --cleanup
+    env_file:
+      - .env
+    network_mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro

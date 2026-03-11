@@ -1,0 +1,423 @@
+# examples/standard/cloud.yml
+#
+# Standard setup — 4 admin instances across 2 clusters (a1, a2, b1, b2),
+# PostgreSQL-backed Netmaker, EMQX broker, full metrics stack.
+# Intended for production or serious self-hosted deployments.
+#
+# Cluster layout:
+#   Cluster A: edge_admin_a1 (primary), edge_admin_a2 (replica)
+#   Cluster B: edge_admin_b1 (primary), edge_admin_b2 (replica)
+#
+# Usage:
+#   docker compose -f cloud.yml up -d
+#
+# Prerequisites:
+#   1. Copy .env.example to .env and fill in your values
+#   2. Ports that need to be publicly reachable:
+#      - 48081 (Netmaker API)
+#      - 48083 (EMQX WebSocket / MQTT)
+#      - 34000-34003 (Admin APIs)
+
+networks:
+  edge_core:
+    name: edge_core
+
+volumes:
+  edge_admin_db_data: {}
+  edge_vpn_data: {}
+  edge_vpn_db_data: {}
+  edge_vpn_dns_config: {}
+  edge_vpn_broker_data: {}
+  edge_vpn_broker_etc: {}
+  edge_vpn_broker_logs: {}
+  edge_vpn_proxy_data: {}
+  edge_vpn_proxy_config: {}
+  edge_metrics_storage_data: {}
+  edge_metrics_collector_data: {}
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — Edge Admin database (shared by all admin instances)
+  # ---------------------------------------------------------------------------
+  edge_admin_db:
+    image: postgres:18
+    container_name: edge_admin_db
+    networks:
+      - edge_core
+    volumes:
+      - edge_admin_db_data:/var/lib/postgresql
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Cluster A — Admin A1
+  # ---------------------------------------------------------------------------
+  edge_admin_a1:
+    image: ghcr.io/wenet-ec/edge_admin:v0.2.0
+    container_name: edge_admin_a1
+    networks:
+      - edge_core
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+      edge_admin_db:
+        condition: service_healthy
+    volumes:
+      - /dev/net/tun:/dev/net/tun
+    env_file:
+      - .env
+    environment:
+      - ADMIN_CLUSTER_NAME=a
+      - ADMIN_CLUSTER_SUBNET=${ADMIN_A_CLUSTER_SUBNET}
+      - ADMIN_WIREGUARD_PORT=51821
+    ports:
+      - "34000:44000"     # API
+      - "33128:43128"     # HTTP proxy
+      - "31080:41080"     # SOCKS5 proxy
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
+      interval: 60s
+      timeout: 5s
+      retries: 6
+      start_period: 45s
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
+
+  # ---------------------------------------------------------------------------
+  # Cluster A — Admin A2
+  # ---------------------------------------------------------------------------
+  edge_admin_a2:
+    image: ghcr.io/wenet-ec/edge_admin:v0.2.0
+    container_name: edge_admin_a2
+    networks:
+      - edge_core
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+      edge_admin_db:
+        condition: service_healthy
+      edge_admin_a1:
+        condition: service_healthy  # startup ordering only — all instances are peers
+    volumes:
+      - /dev/net/tun:/dev/net/tun
+    env_file:
+      - .env
+    environment:
+      - ADMIN_CLUSTER_NAME=a
+      - ADMIN_CLUSTER_SUBNET=${ADMIN_A_CLUSTER_SUBNET}
+      - ADMIN_WIREGUARD_PORT=51822
+    ports:
+      - "34001:44000"     # API
+      - "33129:43128"     # HTTP proxy
+      - "31081:41080"     # SOCKS5 proxy
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
+      interval: 60s
+      timeout: 5s
+      retries: 6
+      start_period: 45s
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
+
+  # ---------------------------------------------------------------------------
+  # Cluster B — Admin B1
+  # ---------------------------------------------------------------------------
+  edge_admin_b1:
+    image: ghcr.io/wenet-ec/edge_admin:v0.2.0
+    container_name: edge_admin_b1
+    networks:
+      - edge_core
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+      edge_admin_db:
+        condition: service_healthy
+      edge_admin_a1:
+        condition: service_healthy  # startup ordering only — all instances are peers
+    volumes:
+      - /dev/net/tun:/dev/net/tun
+    env_file:
+      - .env
+    environment:
+      - ADMIN_CLUSTER_NAME=b
+      - ADMIN_CLUSTER_SUBNET=${ADMIN_B_CLUSTER_SUBNET}
+      - ADMIN_WIREGUARD_PORT=51823
+    ports:
+      - "34002:44000"     # API
+      - "33130:43128"     # HTTP proxy
+      - "31082:41080"     # SOCKS5 proxy
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
+      interval: 60s
+      timeout: 5s
+      retries: 6
+      start_period: 45s
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
+
+  # ---------------------------------------------------------------------------
+  # Cluster B — Admin B2
+  # ---------------------------------------------------------------------------
+  edge_admin_b2:
+    image: ghcr.io/wenet-ec/edge_admin:v0.2.0
+    container_name: edge_admin_b2
+    networks:
+      - edge_core
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+      edge_admin_db:
+        condition: service_healthy
+      edge_admin_a1:
+        condition: service_healthy  # startup ordering only — all instances are peers
+    volumes:
+      - /dev/net/tun:/dev/net/tun
+    env_file:
+      - .env
+    environment:
+      - ADMIN_CLUSTER_NAME=b
+      - ADMIN_CLUSTER_SUBNET=${ADMIN_B_CLUSTER_SUBNET}
+      - ADMIN_WIREGUARD_PORT=51824
+    ports:
+      - "34003:44000"     # API
+      - "33131:43128"     # HTTP proxy
+      - "31083:41080"     # SOCKS5 proxy
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
+      interval: 60s
+      timeout: 5s
+      retries: 6
+      start_period: 45s
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — Netmaker VPN database
+  # ---------------------------------------------------------------------------
+  edge_vpn_db:
+    image: postgres:18
+    container_name: edge_vpn_db
+    networks:
+      - edge_core
+    volumes:
+      - edge_vpn_db_data:/var/lib/postgresql
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${VPN_DB_NAME}
+      POSTGRES_USER: ${VPN_DB_USER}
+      POSTGRES_PASSWORD: ${VPN_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # EMQX — production-grade MQTT broker for Netmaker
+  # ---------------------------------------------------------------------------
+  edge_vpn_broker:
+    image: emqx/emqx:5.8.9
+    container_name: edge_vpn_broker
+    networks:
+      - edge_core
+    volumes:
+      - edge_vpn_broker_data:/opt/emqx/data
+      - edge_vpn_broker_etc:/opt/emqx/etc
+      - edge_vpn_broker_logs:/opt/emqx/log
+      - ./configs/emqx.conf:/opt/emqx/data/configs/cluster.hocon
+    env_file:
+      - .env
+    environment:
+      EMQX_NAME: emqx
+      EMQX_DASHBOARD__DEFAULT_USERNAME: ${EMQX_DASHBOARD_USERNAME}
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD}
+      EMQX_NODE__COOKIE: ${EMQX_NODE_COOKIE}
+    ports:
+      - "48083:8083"      # WebSocket
+      - "48085:18083"     # EMQX Dashboard
+    healthcheck:
+      test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # Netmaker — WireGuard VPN mesh server
+  # ---------------------------------------------------------------------------
+  edge_vpn:
+    image: gravitl/netmaker:v1.5.0
+    container_name: edge_vpn
+    networks:
+      - edge_core
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
+    volumes:
+      - edge_vpn_data:/root/data
+      - edge_vpn_dns_config:/root/config/dnsconfig
+      - /dev/net/tun:/dev/net/tun:rw
+    env_file:
+      - .env
+    depends_on:
+      edge_vpn_db:
+        condition: service_healthy
+      edge_vpn_broker:
+        condition: service_healthy
+    ports:
+      - "48081:8081"      # Netmaker API
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/api/server/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Netmaker UI — web dashboard
+  # ---------------------------------------------------------------------------
+  edge_vpn_ui:
+    image: gravitl/netmaker-ui:v1.5.0
+    container_name: edge_vpn_ui
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+    ports:
+      - "48080:80"
+    environment:
+      - BACKEND_URL=${NETMAKER_API_URL}
+
+  # ---------------------------------------------------------------------------
+  # CoreDNS — internal DNS for VPN mesh hostnames
+  # ---------------------------------------------------------------------------
+  edge_vpn_dns:
+    image: coredns/coredns:latest
+    container_name: edge_vpn_dns
+    networks:
+      - edge_core
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+    volumes:
+      - edge_vpn_dns_config:/root/config/dnsconfig
+    command: -conf /root/config/dnsconfig/Corefile
+
+  # ---------------------------------------------------------------------------
+  # Caddy — reverse proxy / TLS termination for Netmaker API
+  # ---------------------------------------------------------------------------
+  edge_vpn_proxy:
+    image: caddy:alpine
+    container_name: edge_vpn_proxy
+    networks:
+      - edge_core
+    ports:
+      - "40080:80"
+    volumes:
+      - ./configs/Caddyfile:/etc/caddy/Caddyfile
+      - edge_vpn_proxy_data:/data
+      - edge_vpn_proxy_config:/config
+    depends_on:
+      - edge_vpn
+    command: caddy run --config /etc/caddy/Caddyfile
+
+  # ---------------------------------------------------------------------------
+  # VictoriaMetrics — time-series metrics storage
+  # ---------------------------------------------------------------------------
+  edge_metrics_storage:
+    image: victoriametrics/victoria-metrics:latest
+    container_name: edge_metrics_storage
+    networks:
+      - edge_core
+    ports:
+      - "48428:8428"
+    volumes:
+      - edge_metrics_storage_data:/storage
+    environment:
+      - VM_storageDataPath=/storage
+      - VM_retentionPeriod=${METRICS_RETENTION_PERIOD:-7d}
+      - VM_selfScrapeInterval=10s
+      - VM_httpListenAddr=:8428
+      - VM_loggerLevel=WARN
+    command:
+      - '-envflag.enable'
+      - '-envflag.prefix=VM_'
+
+  # ---------------------------------------------------------------------------
+  # vmagent — Prometheus-compatible metrics collector / scraper
+  # ---------------------------------------------------------------------------
+  edge_metrics_collector:
+    image: victoriametrics/vmagent:latest
+    container_name: edge_metrics_collector
+    networks:
+      - edge_core
+    depends_on:
+      edge_admin_a1:
+        condition: service_healthy
+      edge_metrics_storage:
+        condition: service_started
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    environment:
+      - VM_promscrape_config=/etc/prometheus/prometheus.yml
+      - VM_promscrape_httpSDCheckInterval=60s
+      - VM_remoteWrite_url=http://edge_metrics_storage:8428/api/v1/write
+      - VM_httpListenAddr=:8429
+      - VM_loggerLevel=WARN
+      - VM_promscrape_suppressScrapeErrorsDelay=5m
+    ports:
+      - "48429:8429"
+    command:
+      - '-envflag.enable'
+      - '-envflag.prefix=VM_'

@@ -125,7 +125,7 @@ config :edge_admin, Oban,
     self_updates: 3
   ],
   repo: EdgeAdmin.Repo,
-  peer: Oban.Peers.Global,
+  peer: Oban.Peers.Database,
   plugins: [
     {Oban.Plugins.Cron, crontab: crontab},
     Oban.Plugins.Lifeline,

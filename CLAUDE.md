@@ -1,0 +1,439 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+Edge Core is a distributed edge computing infrastructure management platform built with Elixir and Phoenix. It enables centralized control of geographically distributed edge nodes through five core capabilities: edge mesh networking, remote command execution, SSH backdoor access, metrics observability, and cloud-edge TCP/HTTP proxying.
+
+- **Edge Admin** (cloud server) - Orchestrates nodes, commands, SSH access, proxies, and metrics. Runs as multiple peer instances sharing one PostgreSQL database.
+- **Edge Agent** (edge nodes) - Standalone binary running one per machine (`network_mode: host`). Bundles netclient, SSH server, Prometheus exporters, and forward proxies.
+- **Nexmaker** (shared library) - Elixir wrapper for Netmaker API and netclient CLI
+- **Netmaker VPN** - WireGuard mesh connecting all components. EMQX/Mosquitto is Netmaker-internal infrastructure only — not used by Edge Admin/Agent application code.
+
+For full architecture detail see `docs/architecture.md`.
+
+## VPN Source Code Reference
+
+**It is strongly recommended to clone the VPN source code into `./edge_vpn/` so AI agents can read the actual implementation instead of hallucinating.**
+
+```bash
+# Netmaker server (upstream, read-only reference)
+git clone --branch v1.5.0 https://github.com/gravitl/netmaker edge_vpn/netmaker
+
+# Netclient (our fork — includes DERP relay integration)
+git clone --branch v1.5.0-derp https://github.com/wenet-ec/netclient edge_vpn/netclient
+```
+
+When working on anything related to Netmaker API, netclient enrollment, DERP relay, or WireGuard mesh behavior, read the source directly from `edge_vpn/` rather than guessing. The Netmaker OpenAPI spec is also available at `docs/netmaker-v1.5.0.yml`.
+
+## Architecture
+
+**Key Architectural Principles:**
+
+1. PostgreSQL is the only source of truth — admins are stateless compute workers
+2. Admin clustering is masterless peer-to-peer — no leader election, no primary/replica. Admins coordinate via Erlang distribution + `:syn` registry within the same admin cluster.
+3. Cluster ownership sharding — exactly one admin owns each edge cluster at a time (one-admin-per-cluster algorithm). HA comes from spinning up additional independent admin clusters sharing the same PostgreSQL.
+4. Agent is one-per-machine — `network_mode: host`, privileged. Multiple agents on one host is for testing only.
+5. Admin↔Agent communication is HTTP over WireGuard VPN, with graceful fallback: raw WireGuard → DERP relay → HTTP polling.
+6. Context pattern: Business logic organized in contexts (Commands, Nodes, Vpn, Ssh, etc.)
+7. API-first: Both admin and agent expose REST APIs; admin API uses OpenApiSpex for documentation
+
+## Development Commands
+
+All operations use Docker Compose through the `./bin/run` script. No local Elixir/Erlang installation required.
+
+### Starting Services
+
+```bash
+# Start cloud infrastructure (admin + VPN + metrics + DB)
+./bin/run cloud up
+
+# Start edge agents (in separate terminal)
+./bin/run edge up
+
+# Start everything together
+./bin/run all up -d
+```
+
+### Code Quality
+
+```bash
+# Format code
+./bin/run cloud admin:format
+./bin/run edge agent:format
+./bin/run all format
+
+# Lint (Credo)
+./bin/run cloud admin:lint
+./bin/run edge agent:lint
+
+# Quality checks (format + lint + dialyzer)
+./bin/run cloud admin:quality
+./bin/run edge agent:quality
+./bin/run all quality
+
+# Security checks (Sobelow + mix audit)
+./bin/run cloud admin:security
+./bin/run edge agent:security
+./bin/run all security
+
+# Complete check (format, deps, security, lint, dialyzer)
+./bin/run cloud admin check
+./bin/run edge agent check
+
+# Pre-commit hook (runs check + test)
+./bin/run cloud admin precommit
+./bin/run edge agent precommit
+```
+
+### Database Operations
+
+```bash
+# Run migrations
+./bin/run cloud db:migrate
+./bin/run edge db:migrate
+
+# Reset database (destructive)
+./bin/run cloud db:reset
+./bin/run edge db:reset
+
+# Setup fresh database
+./bin/run cloud db:setup
+```
+
+### Development Shell
+
+```bash
+# Open IEx shell
+./bin/run cloud admin:shell
+./bin/run edge agent:shell
+
+# Open bash shell in running container
+./bin/run cloud shell edge_admin
+./bin/run edge shell edge_agent
+
+# Execute arbitrary mix command
+./bin/run cloud admin <mix-command>
+./bin/run edge agent <mix-command>
+```
+
+### Logs and Monitoring
+
+```bash
+# View logs
+./bin/run cloud logs edge_admin
+./bin/run edge logs edge_agent
+./bin/run all logs
+
+# List running services
+./bin/run cloud ps
+./bin/run edge ps
+```
+
+## Key Interaction Flows
+
+### Node Enrollment
+
+1. Agent starts and runs `EdgeAgent.Bootstrap`
+2. Agent determines node identity (hostname, MAC address, etc.)
+3. Agent joins VPN using enrollment token: `Nexmaker.EnrollmentKeys.enroll/2`
+4. Agent discovers admin URL from Netmaker metadata
+5. Agent registers with admin: `POST /api/agents/nodes`
+6. Admin returns API token and config
+7. Agent downloads pending command executions
+8. Agent ready to receive commands
+
+### Command Execution
+
+1. Admin receives command request: `POST /api/commands`
+2. `EdgeAdmin.Commands.create_command/1` creates Command record
+3. Oban worker creates CommandExecution records per target node
+4. Background scheduler identifies healthy nodes (every 10s)
+5. Admin sends executions to agents: `POST /api/agents/command_executions`
+6. Agent executes via `EdgeAgent.Commands.execute/1`
+7. Agent reports results: `PATCH /api/agents/command_executions/:id`
+8. Results visible through admin API
+
+### SSH Access
+
+1. User SSH connects to agent port 40022
+2. Agent's `EdgeAgent.SshServer` receives connection
+3. Agent calls admin to verify credentials: `POST /api/agents/ssh_verifications`
+4. Admin checks `ssh_usernames` + `ssh_public_keys` tables
+5. Admin returns approval/denial
+6. Agent grants/denies SSH access accordingly
+
+## Important Implementation Details
+
+### Database Schemas
+
+**Edge Admin (PostgreSQL):**
+
+- `clusters` - VPN network definitions
+- `nodes` - Edge device registrations with health status
+- `aliases` - DNS name mappings for nodes
+- `commands` - Commands to execute across nodes
+- `command_executions` - Per-node execution tracking
+- `ssh_usernames` - SSH login credentials
+- `ssh_public_keys` - Authorized keys for SSH users
+- `self_update_requests` - Container update scheduling
+- `oban_jobs` - Background job queue
+
+**Edge Agent (SQLite):**
+
+- `settings` - Key-value configuration store
+- `command_executions` - Local execution tracking
+- `oban_jobs` - Local background jobs
+
+### Authentication
+
+**Admin API:**
+
+- `MASTER_KEY` header - Full admin access (cluster management, commands)
+- `METRICS_KEY` header - Read-only metrics access
+- Agent API token - Per-agent authentication for status reporting
+
+**Agent API:**
+
+- API token from registration - Admin-to-agent communication
+
+### Project Structure
+
+```
+edge_core/
+├── edge_admin/          # Phoenix admin server
+│   ├── lib/
+│   │   ├── edge_admin/          # Business logic contexts
+│   │   │   ├── commands/        # Command execution system
+│   │   │   ├── nodes/           # Node management
+│   │   │   ├── ssh/             # SSH credential management
+│   │   │   ├── vpn/             # Netmaker VPN integration
+│   │   │   ├── proxy_servers/   # Proxy coordination
+│   │   │   ├── metrics/         # Metrics aggregation
+│   │   │   └── edge_clusters/   # Cluster management + Erlang peer coordination
+│   │   └── edge_admin_web/      # Phoenix web layer
+│   │       ├── controllers/     # REST API controllers
+│   │       ├── schemas/         # OpenAPI schemas
+│   │       └── router.ex        # Route definitions
+│   ├── priv/
+│   │   └── repo/migrations/     # Database migrations
+│   └── test/                    # Test files mirror lib/
+├── edge_agent/          # Phoenix agent server
+│   ├── lib/
+│   │   ├── edge_agent/          # Agent business logic
+│   │   │   ├── bootstrap.ex     # Startup and registration
+│   │   │   ├── commands/        # Local command execution
+│   │   │   ├── ssh_server/      # Embedded SSH server
+│   │   │   ├── settings/        # Persistent config (SQLite)
+│   │   │   └── edge_clusters/   # Admin discovery and health
+│   │   └── edge_agent_web/      # Agent API
+│   └── test/
+├── nexmaker/            # Shared Netmaker library
+│   └── lib/nexmaker/
+│       ├── enrollment_keys.ex   # VPN enrollment
+│       ├── networks.ex          # Network management
+│       ├── hosts.ex             # Host management
+│       └── nodes.ex             # Node management
+├── edge_vpn/            # Reference VPN source (Go, read-only)
+│   ├── netmaker/        # Netmaker server source + swagger.yaml
+│   └── netclient/       # Netclient CLI source (our fork adds DERP)
+├── deploy/              # Docker Compose configurations
+│   ├── local/           # Local development
+│   │   ├── cloud.yml    # Admin + infrastructure
+│   │   ├── edge.yml     # Agent services
+│   │   └── .envs/       # Environment files
+│   └── production/      # Production configs
+├── examples/            # Deployment examples for users
+│   ├── lite/            # Single admin, Mosquitto, no metrics
+│   └── standard/        # 4 admins (2 clusters), EMQX, full metrics
+├── docs/                # Architecture docs and API specs
+│   ├── architecture.md
+│   ├── admin-v0.2.0.json
+│   └── netmaker-v1.5.0.yml
+├── integration/         # Integration test suite (Python/pytest)
+└── bin/
+    └── run              # Management script
+```
+
+### Key Modules
+
+**Edge Admin (`edge_admin/lib/edge_admin/`):**
+
+- `nodes.ex` - Node enrollment, discovery, health monitoring
+- `commands.ex` - Command orchestration (detailed in Command Execution flow)
+- `ssh.ex` - SSH credential management
+- `vpn.ex` - Netmaker API wrapper
+- `proxy_servers.ex` - HTTP/SOCKS5 proxy coordination
+- `metrics.ex` - Metrics aggregation
+- `edge_clusters.ex` - Cluster management and metadata
+
+**Edge Agent (`edge_agent/lib/edge_agent/`):**
+
+- `bootstrap.ex` - Startup orchestration, VPN enrollment, admin discovery
+- `commands.ex` - Local command execution via System.cmd
+- `ssh_server.ex` - Embedded SSH server (port 40022)
+- `proxy_servers.ex` - Local HTTP/SOCKS5 proxy servers
+- `settings.ex` - Persistent configuration (SQLite key-value store)
+- `identity.ex` - Node identity determination (hostname, MAC, etc.)
+
+**Nexmaker (`nexmaker/lib/nexmaker/`):**
+
+- Wraps Netmaker REST API for networks, hosts, nodes, DNS, gateways
+- Wraps netclient CLI for enrollment and connectivity
+- Shared dependency used by both admin and agent
+- HTTP client using `Req` library
+
+### Background Jobs (Oban)
+
+**Admin Workers:**
+
+- `EdgeAdmin.Commands.Workers.ExecutionCreationWorker` - Creates CommandExecution records for each targeted node
+- `EdgeAdmin.Nodes.Workers.ClusterReconciliationWorker` - Syncs node state with Netmaker VPN
+- `EdgeAdmin.Vpn.Workers.ZombieAdminCleaner` - Cleans up orphaned admin entries in Netmaker
+- `EdgeAdmin.SelfUpdates.Workers.SelfUpdateTriggerWorker` - Coordinates container updates
+
+**Agent Workers:**
+
+- `EdgeAgent.Commands.Workers.EnqueueExecutionWorker` - Receives executions from admin
+- `EdgeAgent.Commands.Workers.ExecuteCommandWorker` - Executes commands locally
+- `EdgeAgent.Commands.Workers.ReportExecutionWorker` - Reports results to admin
+- `EdgeAgent.Commands.Workers.SyncUnprocessedExecutionWorker` - Syncs pending executions
+- `EdgeAgent.EdgeClusters.Workers.DiscoverAdminWorker` - Discovers admin URL from VPN metadata
+- `EdgeAgent.EdgeClusters.Workers.RegisterRelayedNodeWorker` - Registers node with admin
+- `EdgeAgent.EdgeClusters.Workers.ReportHealthCheckWorker` - Sends health status to admin
+
+### Testing Patterns
+
+- Use `EdgeAdmin.Factory` / `EdgeAgent.Factory` (ExMachina) for test data
+  - `build/2` for structs, `insert/2` for database records
+  - Factories include: nodes, commands, executions, clusters, SSH credentials
+- Mock external services (Netmaker API) with `Mox`
+  - Define behaviors in test environment
+  - Use `expect/4` and `stub/3` for mock expectations
+- Database sandboxing via `Ecto.Adapters.SQL.Sandbox`
+  - Each test runs in a transaction
+  - Use `DataCase` for database tests, `ConnCase` for controller tests
+- Test async jobs with `Oban.Testing`
+  - Use `perform_job/2` to test worker logic synchronously
+  - Verify job enqueueing with `assert_enqueued`
+- Test organization: `test/edge_admin/` mirrors `lib/edge_admin/` structure
+
+## Service Endpoints
+
+**Cloud Services:**
+
+- Edge Admin API: http://localhost:44000 (external: 34000, 34001, ...)
+- Netmaker UI: http://localhost:48080
+- Netmaker API: http://localhost:48081
+- EMQX Dashboard: http://localhost:48085
+- VictoriaMetrics: http://localhost:48428
+- PostgreSQL: localhost:5432
+
+**Edge Services:**
+
+- Edge Agent 1: http://localhost:44000
+- Edge Agent 2: http://localhost:44001
+- Docker Registry: http://localhost:45000
+
+## Configuration
+
+**Environment variable files (`deploy/local/.envs/`):**
+
+- `.edge_admin` - Edge Admin application config
+- `.edge_admin_db` - PostgreSQL database config
+- `.edge_admin_test` - Test environment config
+- `.edge_agent` - Edge Agent application config
+- `.edge_agent_test` - Agent test environment config
+- `.edge_vpn` - Netmaker VPN config
+- `.edge_vpn_db` - Netmaker database config
+- `.edge_vpn_broker` - EMQX message broker config
+- `.edge_metrics_storage` - VictoriaMetrics storage config
+- `.edge_metrics_collector` - Metrics collector config
+
+Production files follow the same pattern in `deploy/production/.envs/`
+
+**Critical environment variables:**
+
+- `MASTER_KEY` - Admin API authentication (full access)
+- `METRICS_KEY` - Metrics API authentication (read-only)
+- `DB_URL` - PostgreSQL connection string (admin, alternative to individual DB\_\* vars)
+- `NETMAKER_*` - Netmaker API credentials, URLs, and tokens
+- `ENROLLMENT_TOKEN` - Agent VPN enrollment key
+- `SECRET_KEY_BASE` - Phoenix secret for sessions and encryption
+- `PHX_HOST` - Public hostname for admin API
+
+## Technology Stack
+
+- **Framework:** Elixir 1.19+, Erlang 28.3+, Phoenix 1.8
+- **Databases:** PostgreSQL 18 (admin), SQLite 0.22 (agent), Ecto 3.13
+- **VPN:** Netmaker (Go), netclient, WireGuard
+- **Jobs:** Oban 2.20, Quantum 3.5
+- **Metrics:** Prometheus exporters, VictoriaMetrics, PromEx 1.11
+- **HTTP:** Req 0.5, Bandit server
+- **API:** OpenApiSpex 3.22 (OpenAPI/Swagger)
+- **Auth:** Argon2, JWT-like tokens
+- **Testing:** ExUnit, ExMachina, Mox, Faker
+- **Quality:** Credo, Dialyxir, Sobelow, Mix Audit
+
+## API Documentation
+
+OpenAPI specs auto-generated and served at:
+
+- `/api/openapi` - OpenAPI JSON
+- `/api/swaggerui` - Swagger UI
+- `/api/redoc` - ReDoc UI
+
+Major API endpoints documented inline with `@doc` tags and OpenApiSpex schemas.
+
+## Common Development Workflows
+
+### Adding a New Feature
+
+1. Start services: `./bin/run all up -d`
+2. Make code changes in `edge_admin/lib/` or `edge_agent/lib/`
+3. Create migrations if needed: `./bin/run cloud admin ecto.gen.migration migration_name`
+4. Run migrations: `./bin/run cloud db:migrate`
+5. Add tests in corresponding `test/` directory
+6. Run tests: `./bin/run cloud admin:test` or for specific file
+7. Format code: `./bin/run all format`
+8. Run quality checks: `./bin/run all quality`
+
+### Debugging
+
+```bash
+# Attach to running admin with IEx
+./bin/run cloud shell edge_admin
+iex -S mix
+
+# View real-time logs
+./bin/run cloud logs edge_admin
+./bin/run edge logs edge_agent
+
+# Inspect database
+./bin/run cloud admin ecto.migrate --log-sql
+./bin/run cloud admin dbconsole
+
+# Check Oban jobs
+# In IEx: Oban.check_queue(queue: :default)
+```
+
+### Troubleshooting
+
+**VPN connectivity issues:**
+
+- Check Netmaker is healthy: `./bin/run cloud logs edge_vpn`
+- Verify enrollment token in `.edge_agent` env file
+- Check agent VPN status: `./bin/run edge shell edge_agent` then `netclient list`
+
+**Database connection errors:**
+
+- Ensure database is running: `./bin/run cloud ps`
+- Reset database: `./bin/run cloud db:reset`
+- Check DB_URL or DB_HOST/DB_PORT/DB_NAME in `.edge_admin` env file
+
+**Failed tests:**
+
+- Clean test database: `./bin/run cloud admin ecto.drop` then `./bin/run cloud admin:test`
+- Check for async test conflicts (use `async: false` if needed)
+- Verify mocks are properly configured in `test/test_helper.exs`

@@ -1,1 +1,20 @@
+# ==============================================================================
+# AI Agents & Coding Assistants
+# ==============================================================================
 .claude/
+.gemini/
+.aider*
+.cursor/
+.copilot/
+.codeium/
+.continue/
+.bmad/
+.windsurf/
+.bolt/
+.v0/
+.lovable/
+.devin/
+.opencode/
+.qodo/
+.supermaven/
+.tabnine/

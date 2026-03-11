@@ -37,3 +37,22 @@
 **/cover/
 **/erl_crash.dump
 **/.DS_Store
+
+# AI agents & coding assistants (already excluded by * above, explicit for clarity)
+.claude/
+.gemini/
+.aider*
+.cursor/
+.copilot/
+.codeium/
+.continue/
+.bmad/
+.windsurf/
+.bolt/
+.v0/
+.lovable/
+.devin/
+.opencode/
+.qodo/
+.supermaven/
+.tabnine/

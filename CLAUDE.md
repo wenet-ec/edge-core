@@ -279,10 +279,20 @@ edge_core/
 
 **Nexmaker (`nexmaker/lib/nexmaker/`):**
 
-- Wraps Netmaker REST API for networks, hosts, nodes, DNS, gateways
-- Wraps netclient CLI for enrollment and connectivity
-- Shared dependency used by both admin and agent
-- HTTP client using `Req` library
+Shared path dependency used by both admin and agent. Neither ever calls Netmaker or netclient directly — all interaction goes through Nexmaker.
+
+Two interfaces:
+- `Nexmaker.Api.*` — HTTP client (`Req`) for the full Netmaker REST API. Auth via MASTER_KEY bearer token. Modules: `Networks`, `EnrollmentKeys`, `Hosts`, `Nodes`, `DNS`, `Superadmin`, `Gateways.*`, `EMQX`.
+- `Nexmaker.Cli` — Wrapper around the `netclient` binary (shelled out via `System.cmd`). Functions: `join_network/1`, `leave_network/1`, `list_networks/0`, `check_connection/1`, `health_check/1`, `pull/0`, `list_peers/1`, `ping_peers/1`.
+
+Notable: netclient v1.4.0 has a TOCTOU race on `/etc/netclient/` — Nexmaker handles this transparently with pre-creation + retry logic in `Nexmaker.Cli`.
+
+Config:
+```elixir
+config :nexmaker,
+  base_url: System.get_env("NETMAKER_API_URL"),
+  master_key: System.get_env("NETMAKER_MASTER_KEY")
+```
 
 ### Background Jobs (Oban)
 

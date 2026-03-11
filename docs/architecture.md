@@ -81,6 +81,54 @@ netclient is the WireGuard client bundled inside the Edge Agent container. It ha
 
 ---
 
+## Nexmaker
+
+Nexmaker is the shared Elixir library that abstracts all interaction with the Netmaker/netclient layer. Both Edge Admin and Edge Agent depend on it as a local path dependency (`{:nexmaker, path: "../nexmaker"}`). Neither Admin nor Agent ever call Netmaker or netclient directly — everything goes through Nexmaker.
+
+It has two distinct interfaces:
+
+### `Nexmaker.Api.*` — Netmaker REST API
+
+HTTP client built on `Req`. All requests use MASTER_KEY bearer token auth. Covers the full Netmaker API surface:
+
+| Module | Responsibility |
+|---|---|
+| `Nexmaker.Api.Networks` | Create/delete/list VPN networks (one per edge cluster) |
+| `Nexmaker.Api.EnrollmentKeys` | Create enrollment keys for agent bootstrapping |
+| `Nexmaker.Api.Hosts` | Manage physical host registrations |
+| `Nexmaker.Api.Nodes` | Manage node memberships within networks |
+| `Nexmaker.Api.DNS` | Create/delete DNS entries (`.nm.internal`) |
+| `Nexmaker.Api.Superadmin` | Bootstrap Netmaker admin account on first run |
+| `Nexmaker.Api.Gateways.*` | Ingress, egress, relay gateway management |
+| `Nexmaker.Api.EMQX` | EMQX broker provisioning (Netmaker-internal use) |
+
+Config is read from application env or passed per-call:
+
+```elixir
+config :nexmaker,
+  base_url: System.get_env("NETMAKER_API_URL"),
+  master_key: System.get_env("NETMAKER_MASTER_KEY")
+```
+
+### `Nexmaker.Cli` — netclient CLI wrapper
+
+Thin wrapper around the `netclient` binary (which must be present in the container). Handles VPN lifecycle operations by shelling out to the CLI:
+
+| Function | What it does |
+|---|---|
+| `join_network/1` | Enroll this host into a VPN network using an enrollment token |
+| `leave_network/1` | Remove this host from a network |
+| `list_networks/0` | List all networks this host is currently joined to (reads local file, no API call) |
+| `check_connection/1` | Check connection status for a specific network |
+| `health_check/1` | Multi-layer health check: network membership → peer reachability |
+| `pull/0` | Force-pull latest config from Netmaker server |
+| `list_peers/1` | List WireGuard peer details |
+| `ping_peers/1` | Ping peers through WireGuard tunnel, check connectivity and latency |
+
+**Known quirk — TOCTOU race condition:** netclient v1.4.0 has a race condition in `WriteJSONAtomic` where `/etc/netclient/` can be deleted between a directory check and file write. Nexmaker mitigates this with `ensure_netclient_dir/0` (pre-creates the dir before each call) and `run_with_retry/3` (exponential backoff retry on detection). This is handled transparently — callers don't need to worry about it.
+
+---
+
 ## Edge Admin
 
 Edge Admin is an Elixir/Phoenix application. It is the control plane — it owns the database, orchestrates command execution, manages SSH credentials, and runs the forward proxy.

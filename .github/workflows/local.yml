@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Fetch dependencies
         run: docker compose -f deploy/local/cloud.yml --profile test run --rm edge_admin_test mix deps.get
@@ -40,7 +40,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Fetch dependencies
         run: docker compose -f deploy/local/edge.yml --profile test run --rm edge_agent_test mix deps.get

@@ -44,6 +44,11 @@ updates:
       - "dependencies"
       - "docker"
       - "edge_admin"
+    ignore:
+      # We pin to exact patch versions (e.g. 1.19.5-otp-28-slim).
+      # Dependabot incorrectly suggests floating tags like 1.19-otp-28-slim as "updates" — ignore them.
+      - dependency-name: "elixir"
+        update-types: ["version-update:semver-patch", "version-update:semver-minor"]
 
   # Docker base images - edge_agent
   - package-ecosystem: "docker"
@@ -55,6 +60,10 @@ updates:
       - "dependencies"
       - "docker"
       - "edge_agent"
+    ignore:
+      # Same as above — we manage Elixir base image upgrades manually.
+      - dependency-name: "elixir"
+        update-types: ["version-update:semver-patch", "version-update:semver-minor"]
 
   # Docker base images - edge_metrics_collector
   - package-ecosystem: "docker"
@@ -88,6 +97,34 @@ updates:
       - "dependencies"
       - "docker"
       - "vpn"
+
+  # Docker base images - local edge_admin
+  - package-ecosystem: "docker"
+    directory: "/deploy/local/compose/edge_admin"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+      - "edge_admin"
+    ignore:
+      - dependency-name: "elixir"
+        update-types: ["version-update:semver-patch", "version-update:semver-minor"]
+
+  # Docker base images - local edge_agent
+  - package-ecosystem: "docker"
+    directory: "/deploy/local/compose/edge_agent"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+      - "edge_agent"
+    ignore:
+      - dependency-name: "elixir"
+        update-types: ["version-update:semver-patch", "version-update:semver-minor"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"

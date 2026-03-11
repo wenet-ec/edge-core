@@ -1,193 +1,107 @@
 # Edge Core
 
-A comprehensive edge computing infrastructure management platform that provides secure command execution, VPN connectivity, proxy servers, SSH access, and metrics collection across distributed edge nodes.
+Make your machines cloud manageable.
+
+Edge Core is an infrastructure management platform for geographically distributed edge nodes. It gives you centralized control over remote machines through a secure WireGuard mesh — run commands, access machines via SSH, proxy traffic through them, and scrape their metrics — all through a simple HTTP API.
+
+## What it does
+
+- **Remote command execution** — run shell commands across hundreds of machines from a single API call
+- **SSH backdoor** — SSH into any edge node through the admin, with centralized key management
+- **Cloud-edge proxy** — HTTP and SOCKS5 forward proxies tunnel traffic to edge nodes and their local networks
+- **Metrics observability** — Prometheus-compatible scraping of host, agent, and WireGuard metrics through admin service discovery
+- **Edge mesh networking** — all nodes in the same cluster form a full WireGuard mesh via Netmaker
 
 ## Architecture
 
-Edge Core consists of two main applications and shared libraries:
+```
+Cloud Server
+├── Edge Admin (×N peers)     Elixir/Phoenix, shared PostgreSQL
+│   ├── Erlang peer cluster   masterless P2P, no leader election
+│   ├── Cluster ownership     one admin owns each edge cluster (sharding)
+│   └── Forward proxies       HTTP + SOCKS5, routes traffic to edge nodes
+│
+└── Netmaker VPN Stack        WireGuard mesh (EMQX/Mosquitto + CoreDNS)
 
-### Applications
-- **Edge Admin** (`./edge_admin/`) - Central management server (Elixir/Phoenix)
-  - Node enrollment and management
-  - Command orchestration and execution tracking
-  - SSH credential management
-  - Proxy server coordination
-  - Metrics aggregation
-  - VPN cluster management
-
-- **Edge Agent** (`./edge_agent/`) - Lightweight agent for edge nodes (Elixir/Phoenix)
-  - Command execution
-  - Local proxy servers (HTTP/SOCKS5)
-  - SSH server
-  - Metrics collection and reporting
-  - VPN connectivity via Netmaker
-
-### Shared Libraries
-- **Nexmaker** (`./nexmaker/`) - Shared library for interacting with Netmaker API and netclient CLI
-- **Reference Code** (`./netmaker/`) - Latest Netmaker and netclient source code for reference
-
-### Infrastructure
-- **VPN** - Netmaker-based secure mesh networking
-- **Metrics** - VictoriaMetrics for storage and querying
-- **Message Broker** - EMQX for agent-admin communication
-
-## Quick Start
-
-### Prerequisites
-
-- Docker and Docker Compose installed
-- Development on WSL or Linux is recommended
-- No Elixir, Mix, or Go required - all operations run through Docker Compose
-
-```sh
-docker --version
-docker compose version
+Edge Nodes (one agent per machine)
+└── Edge Agent                network_mode: host, privileged
+    ├── netclient             WireGuard VPN client (with DERP relay fallback)
+    ├── SSH server            port 40022, keys managed centrally by admin
+    ├── Forward proxies       HTTP + SOCKS5
+    └── Metrics exporters     node exporter + WireGuard metrics
 ```
 
-### Development Environment
+**Admin clustering** is masterless peer-to-peer — admins within the same cluster coordinate via Erlang distribution and share a PostgreSQL database. Exactly one admin owns each edge cluster at a time (shard assignment, not replication). HA comes from running additional independent admin clusters.
 
-Edge Core has two deployment configurations:
+**Agent↔Admin communication** is HTTP over WireGuard, with graceful fallback: raw WireGuard UDP → DERP relay (transparent, handles symmetric NAT) → HTTP polling (last resort, eventual consistency).
 
-#### Cloud Services (Admin + Infrastructure)
-Start the admin server and supporting infrastructure:
+For full detail see [`docs/architecture.md`](docs/architecture.md).
 
-```sh
-docker compose -f deploy/local/cloud.yml up --build
+## Components
+
+| Directory | Description |
+|---|---|
+| `edge_admin/` | Phoenix admin server (PostgreSQL, Oban, OpenAPI) |
+| `edge_agent/` | Phoenix agent (SQLite, embedded SSH, Oban) |
+| `nexmaker/` | Shared Elixir lib — Netmaker API + netclient CLI wrapper |
+| `deploy/local/` | Local development Docker Compose |
+| `deploy/production/` | Production Docker Compose |
+| `examples/lite/` | Single-admin homelab setup |
+| `examples/standard/` | 4-admin (2-cluster) production setup |
+| `docs/` | Architecture docs and API specs |
+
+## Getting Started
+
+No local Elixir or Go required. Everything runs through Docker Compose via the `./bin/run` script.
+
+### 1. Start the cloud stack (admin + VPN + DB)
+
+```bash
+./bin/run cloud up
 ```
 
-#### Edge Services (Agent)
-Start edge agents in a separate terminal:
+### 2. Start the edge agents (separate terminal)
 
-```sh
-docker compose -f deploy/local/edge.yml up --build
+```bash
+./bin/run edge up
 ```
 
-#### Helper Script
-Use the convenience script to manage both configurations:
+### 3. Explore the API
 
-```sh
-./bin/run cloud up    # Start cloud services
-./bin/run edge up     # Start edge services
-./bin/run cloud down  # Stop cloud services
+```
+Admin API:      http://localhost:44000
+Swagger UI:     http://localhost:44000/api/swaggerui
+ReDoc:          http://localhost:44000/api/redoc
+Netmaker UI:    http://localhost:48080
 ```
 
-### Service Endpoints
+### Common commands
 
-**Cloud Services:**
-- **Edge Admin API**: http://localhost:4000
-- **Netmaker API**: http://localhost:8081
-- **Netmaker UI**: http://localhost:8082
-- **EMQX Broker**: http://localhost:1883 (MQTT), http://localhost:18083 (Dashboard)
-- **Metrics Storage**: http://localhost:8428
-- **Postgres DB**: localhost:5432
-
-**Edge Services:**
-- **Edge Agent API**: http://localhost:4400
-- **Edge Agent 2 API**: http://localhost:4401
-- **Container Registry**: http://localhost:45000
-- **Watchtower**: (auto-updates containers)
-
-## Development
-
-### Running Tests
-
-Run admin tests:
-```sh
-docker compose -f deploy/local/cloud.yml run --rm edge_admin_test
+```bash
+./bin/run all up -d          # Start everything detached
+./bin/run cloud logs edge_admin
+./bin/run cloud admin:shell  # IEx shell inside admin container
+./bin/run cloud admin:test   # Run admin tests
+./bin/run all format         # Format code
+./bin/run all quality        # Lint + dialyzer
 ```
 
-Run agent tests:
-```sh
-docker compose -f deploy/local/edge.yml run --rm edge_agent_test
+## Deployment Examples
+
+Ready-to-use Docker Compose setups are in `examples/`:
+
+- **[`examples/lite/`](examples/lite/)** — single admin, Mosquitto broker, no metrics stack. For homelab and hobbyists.
+- **[`examples/standard/`](examples/standard/)** — 4 admin instances across 2 clusters, EMQX, full VictoriaMetrics stack. For production.
+
+Both use pre-built images from `ghcr.io/wenet-ec/`.
+
+## VPN Source Reference
+
+To work on anything VPN-related without hallucinating, clone the source locally:
+
+```bash
+git clone --branch v1.5.0 https://github.com/gravitl/netmaker edge_vpn/netmaker
+git clone --branch v1.5.0-derp https://github.com/wenet-ec/netclient edge_vpn/netclient
 ```
 
-### Working with the Codebase
-
-All development operations use Docker Compose:
-
-```sh
-# Compile admin
-docker compose -f deploy/local/cloud.yml run --rm edge_admin mix compile
-
-# Compile agent
-docker compose -f deploy/local/edge.yml run --rm edge_agent mix compile
-
-# Run Elixir shell in admin
-docker compose -f deploy/local/cloud.yml run --rm edge_admin iex -S mix
-
-# Execute commands in running containers
-docker compose -f deploy/local/cloud.yml exec edge_admin bash
-
-# View logs
-docker compose -f deploy/local/cloud.yml logs -f edge_admin
-docker compose -f deploy/local/edge.yml logs -f edge_agent
-```
-
-## Features
-
-### Node Management
-- Automatic node enrollment with enrollment keys
-- Node discovery via MQTT and VPN mesh
-- SSH key and username management
-- Node health monitoring and metrics
-- Cluster-based node grouping
-
-### Command Execution
-- Remote command execution across nodes
-- Target-specific or broadcast commands
-- Command execution tracking and results collection
-- Retry logic and error handling
-- Real-time command status updates
-
-### Proxy Servers
-- HTTP and SOCKS5 proxy servers on agents
-- Admin-coordinated proxy management
-- Configurable proxy destinations
-- Automatic proxy health checking
-- Sensitive destination blocking
-
-### SSH Access
-- Dynamic SSH server on agents
-- Credential management via admin
-- Username and public key distribution
-- Secure remote shell access to edge nodes
-
-### VPN Connectivity
-- Netmaker-based secure mesh networking
-- Automatic enrollment and cluster management
-- Connectivity checking and auto-reconnection
-- Multi-cluster support
-- Integration with netclient CLI
-
-### Metrics Collection
-- Prometheus-based metrics collection
-- CPU, memory, disk, and network monitoring
-- VictoriaMetrics for efficient storage and querying
-- Metrics aggregation at admin level
-- Per-node and cluster-wide metrics
-
-### Self-Updates
-- Watchtower integration for automatic container updates
-- Version tracking and rollback support
-- Coordinated update scheduling
-
-## Production Deployment
-
-Production configuration is available in `deploy/production/`:
-- `cloud.yml` - Admin and infrastructure services
-- `edge.yml` - Agent services
-- Environment-specific configurations in `.envs/`
-
-## Technology Stack
-
-- **Backend**: Elixir/Phoenix (Admin & Agent)
-- **VPN**: Netmaker (Go-based mesh VPN)
-- **Message Broker**: EMQX (MQTT)
-- **Metrics**: VictoriaMetrics, Prometheus exporters
-- **Database**: PostgreSQL
-- **Container Orchestration**: Docker Compose
-- **Shared Library**: Nexmaker (Elixir)
-
-## Contributing
-
-All development must be done through Docker Compose to ensure consistency. The project does not require local Elixir, Mix, or Go installations.
+The Netmaker OpenAPI spec is at [`docs/netmaker-v1.5.0.yml`](docs/netmaker-v1.5.0.yml).

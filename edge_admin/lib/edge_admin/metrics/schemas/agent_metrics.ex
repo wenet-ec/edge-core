@@ -9,7 +9,6 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Discovery
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.ObanQueue
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Proxy
-  alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Relay
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Ssh
 
   @type t :: %__MODULE__{}
@@ -24,7 +23,6 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
     :discovery,
     :proxy,
     :ssh,
-    :relay,
     :oban_queues
   ]
 
@@ -41,7 +39,6 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
       discovery: Discovery.from_raw(raw_metrics),
       proxy: Proxy.from_raw(raw_metrics),
       ssh: Ssh.from_raw(raw_metrics),
-      relay: Relay.from_raw(raw_metrics),
       oban_queues: ObanQueue.from_raw(raw_metrics)
     }
   end
@@ -182,23 +179,6 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
       %__MODULE__{
         authentications_total: raw["ssh_authentications"] || 0,
         connections_total: raw["ssh_connections"] || 0
-      }
-    end
-  end
-
-  defmodule Relay do
-    @moduledoc "Relay connectivity metrics"
-
-    @derive Jason.Encoder
-    defstruct [
-      :assignments_total,
-      :failovers_total
-    ]
-
-    def from_raw(raw) do
-      %__MODULE__{
-        assignments_total: raw["relay_assignments"] || 0,
-        failovers_total: raw["relay_failover_count"] || 0
       }
     end
   end

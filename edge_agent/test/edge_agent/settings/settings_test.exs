@@ -208,32 +208,6 @@ defmodule EdgeAgent.SettingsTest do
   end
 
   # -----------------------------------------------------------------------
-  # relay_admin_name — nil handling
-  # -----------------------------------------------------------------------
-
-  describe "relay_admin_name accessors" do
-    test "get_relay_admin_name returns nil when not set" do
-      assert Settings.get_relay_admin_name() == nil
-    end
-
-    test "set_relay_admin_name then get roundtrips" do
-      {:ok, _} = Settings.set_relay_admin_name("admin-abc123")
-      assert Settings.get_relay_admin_name() == "admin-abc123"
-    end
-
-    test "set_relay_admin_name(nil) fails — empty string rejected by schema" do
-      assert {:error, changeset} = Settings.set_relay_admin_name(nil)
-      assert changeset.errors[:value]
-    end
-
-    test "set_relay_admin_name can overwrite previous value" do
-      {:ok, _} = Settings.set_relay_admin_name("admin-old")
-      {:ok, _} = Settings.set_relay_admin_name("admin-new")
-      assert Settings.get_relay_admin_name() == "admin-new"
-    end
-  end
-
-  # -----------------------------------------------------------------------
   # enrollment_verified — boolean stored as "true"/"false" string
   # -----------------------------------------------------------------------
 

@@ -63,11 +63,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
         description: "Filter by self-update enabled status",
         schema: %OpenApiSpex.Schema{type: :boolean}
       ],
-      relay_enabled: [
-        in: :query,
-        description: "Filter by relay enabled status",
-        schema: %OpenApiSpex.Schema{type: :boolean}
-      ],
       last_seen_at__gte: [
         in: :query,
         description: "Filter nodes last seen after or on this datetime",

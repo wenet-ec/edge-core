@@ -110,10 +110,6 @@
                         "format": "date-time",
                         "type": "string"
                       },
-                      "relay_enabled": {
-                        "description": "Filter by relay enabled status",
-                        "type": "boolean"
-                      },
                       "self_update_enabled": {
                         "description": "Filter by self-update enabled status",
                         "type": "boolean"
@@ -192,7 +188,6 @@
           "netmaker_host_id": "def67890-5678-5678-5678-567890abcdef",
           "node_name": "node-01234567-89ab-cdef-0123-456789abcdef",
           "proxy_password": "securepassword123",
-          "relay_enabled": false,
           "self_update_enabled": false,
           "socks5_proxy_port": 44180,
           "ssh_port": 42222,
@@ -261,10 +256,6 @@
           "proxy_password": {
             "description": "Password for proxy authentication (username is always '_')",
             "type": "string"
-          },
-          "relay_enabled": {
-            "description": "Whether relay gateway is required for connectivity",
-            "type": "boolean"
           },
           "self_update_enabled": {
             "description": "Whether self-updates are enabled",
@@ -1444,11 +1435,6 @@
                     "nullable": true,
                     "type": "object"
                   },
-                  "relay": {
-                    "description": "Relay connectivity metrics",
-                    "nullable": true,
-                    "type": "object"
-                  },
                   "ssh": {
                     "description": "SSH server metrics",
                     "nullable": true,
@@ -1762,10 +1748,6 @@
                     "description": "Filter nodes last seen before or on this datetime",
                     "format": "date-time",
                     "type": "string"
-                  },
-                  "relay_enabled": {
-                    "description": "Filter by relay enabled status",
-                    "type": "boolean"
                   },
                   "self_update_enabled": {
                     "description": "Filter by self-update enabled status",
@@ -2460,7 +2442,6 @@
               "socks5_blocked_total": 5,
               "socks5_connections_total": 87
             },
-            "relay": { "assignments_total": 3, "failovers_total": 1 },
             "ssh": {
               "authentications_failed": 1,
               "authentications_success": 44,
@@ -2668,22 +2649,6 @@
                   },
                   "socks5_connections_total": {
                     "description": "Total SOCKS5 proxy connections",
-                    "nullable": true,
-                    "type": "integer"
-                  }
-                },
-                "type": "object"
-              },
-              "relay": {
-                "description": "Relay connectivity metrics",
-                "properties": {
-                  "assignments_total": {
-                    "description": "Total relay assignment attempts",
-                    "nullable": true,
-                    "type": "integer"
-                  },
-                  "failovers_total": {
-                    "description": "Total relay admin changes (network instability indicator)",
                     "nullable": true,
                     "type": "integer"
                   }
@@ -2925,14 +2890,6 @@
         "title": "Admin Response",
         "type": "object"
       }
-    },
-    "securitySchemes": {
-      "masterKey": {
-        "bearerFormat": "opaque",
-        "description": "Master key for full API access",
-        "scheme": "bearer",
-        "type": "http"
-      }
     }
   },
   "info": {
@@ -3035,13 +2992,6 @@
             "description": "Filter by self-update enabled status",
             "in": "query",
             "name": "self_update_enabled",
-            "required": false,
-            "schema": { "type": "boolean" }
-          },
-          {
-            "description": "Filter by relay enabled status",
-            "in": "query",
-            "name": "relay_enabled",
             "required": false,
             "schema": { "type": "boolean" }
           },
@@ -4255,7 +4205,7 @@
     "/api/v1/nodes/{node_id}/metrics/agent": {
       "get": {
         "callbacks": {},
-        "description": "Returns application-level metrics from the edge_agent PromEx:\n- Application: uptime, BEAM stats (processes, memory, schedulers)\n- Commands: sync/enqueue/execute/report statistics\n- Discovery: admin discovery scan metrics\n- Proxy: HTTP and SOCKS5 connection statistics\n- SSH: authentication and session metrics\n- Relay: relay assignment and failover statistics\n- Oban: job queue states (available, scheduled, executing, etc.)\n",
+        "description": "Returns application-level metrics from the edge_agent PromEx:\n- Application: uptime, BEAM stats (processes, memory, schedulers)\n- Commands: sync/enqueue/execute/report statistics\n- Discovery: admin discovery scan metrics\n- Proxy: HTTP and SOCKS5 connection statistics\n- SSH: authentication and session metrics\n- Oban: job queue states (available, scheduled, executing, etc.)\n",
         "operationId": "EdgeAdminWeb.Controllers.Metrics.NodeMetricsController.show_agent",
         "parameters": [
           {
@@ -4532,7 +4482,7 @@
     "/api/v1/nodes/{node_id}/metrics": {
       "get": {
         "callbacks": {},
-        "description": "Returns aggregated metrics from all available sources for a node:\n- Host metrics (Node Exporter): CPU, memory, disk, uptime\n- Agent metrics (agent PromEx): BEAM stats, commands, proxy, SSH, relay, Oban\n\nProvides a complete view of node health and performance in a single request.\nUses best-effort fetching - if one source fails, others are still returned.\n",
+        "description": "Returns aggregated metrics from all available sources for a node:\n- Host metrics (Node Exporter): CPU, memory, disk, uptime\n- Agent metrics (agent PromEx): BEAM stats, commands, proxy, SSH, Oban\n\nProvides a complete view of node health and performance in a single request.\nUses best-effort fetching - if one source fails, others are still returned.\n",
         "operationId": "EdgeAdminWeb.Controllers.Metrics.NodeMetricsController.show_unified",
         "parameters": [
           {
@@ -5681,7 +5631,7 @@
       }
     }
   },
-  "security": [{ "masterKey": [] }],
+  "security": [],
   "servers": [],
   "tags": [
     { "name": "Admins.Metadata" },

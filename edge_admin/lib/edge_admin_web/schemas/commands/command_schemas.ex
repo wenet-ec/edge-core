@@ -182,10 +182,6 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
                       type: :boolean,
                       description: "Filter by self-update enabled status"
                     },
-                    relay_enabled: %Schema{
-                      type: :boolean,
-                      description: "Filter by relay enabled status"
-                    },
                     last_seen_at__gte: %Schema{
                       type: :string,
                       format: :"date-time",

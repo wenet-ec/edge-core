@@ -95,10 +95,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           type: :boolean,
           description: "Whether self-updates are enabled"
         },
-        relay_enabled: %Schema{
-          type: :boolean,
-          description: "Whether relay gateway is required for connectivity"
-        },
         last_seen_at: %Schema{
           type: :string,
           format: :"date-time",
@@ -149,7 +145,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         proxy_password: "securepassword123",
         version: "0.1.0",
         self_update_enabled: false,
-        relay_enabled: false,
         last_seen_at: "2025-06-09T08:20:00Z",
         inserted_at: "2025-06-09T08:00:00Z",
         updated_at: "2025-06-09T08:20:00Z"

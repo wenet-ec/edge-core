@@ -28,8 +28,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
         "http_proxy_port" => 8080,
         "socks5_proxy_port" => 1080,
         "version" => "1.0.0",
-        "self_update_enabled" => false,
-        "relay_enabled" => false
+        "self_update_enabled" => false
       },
       overrides
     )
@@ -52,16 +51,6 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
                RegisterNodeForm.changeset(valid_attrs(%{"id_type" => "random"}), &cluster_found/1)
 
       assert result["id_type"] == "random"
-    end
-
-    test "relay_enabled true succeeds" do
-      assert {:ok, result} =
-               RegisterNodeForm.changeset(
-                 valid_attrs(%{"relay_enabled" => true}),
-                 &cluster_found/1
-               )
-
-      assert result["relay_enabled"] == true
     end
 
     test "self_update_enabled true succeeds" do
@@ -109,8 +98,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
           "http_proxy_port",
           "socks5_proxy_port",
           "version",
-          "self_update_enabled",
-          "relay_enabled"
+          "self_update_enabled"
         ] do
       test "missing #{field} is rejected" do
         attrs = Map.delete(valid_attrs(), unquote(field))
@@ -308,8 +296,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
             "http_proxy_port",
             "socks5_proxy_port",
             "version",
-            "self_update_enabled",
-            "relay_enabled"
+            "self_update_enabled"
           ] do
         assert Map.has_key?(result, key), "expected key #{key} in result"
       end

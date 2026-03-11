@@ -23,8 +23,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         command_report_metrics() ++
         proxy_metrics() ++
         ssh_metrics() ++
-        discovery_metrics() ++
-        relay_metrics()
+        discovery_metrics()
     )
   end
 
@@ -210,31 +209,6 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
     ]
   end
 
-  defp relay_metrics do
-    [
-      counter(
-        [:edge_agent, :relay, :assignment, :total],
-        event_name: [:edge_agent, :relay, :assignment],
-        description: "Total number of relay assignment attempts",
-        tags: [:status],
-        tag_values: &get_status_tag/1
-      ),
-      counter(
-        [:edge_agent, :relay, :health_check, :total],
-        event_name: [:edge_agent, :relay, :health_check],
-        description: "Total number of relay health checks",
-        tags: [:status],
-        tag_values: &get_relay_health_status_tag/1
-      ),
-      last_value(
-        [:edge_agent, :relay, :failover_count],
-        event_name: [:edge_agent, :relay, :assignment],
-        description: "Number of relay admin changes (failovers)",
-        measurement: :failover_count
-      )
-    ]
-  end
-
   # Tag extraction functions
   defp get_status_tag(%{status: status}) do
     %{status: to_string(status)}
@@ -254,9 +228,5 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
 
   defp get_reason_tag(%{reason: reason}) do
     %{reason: to_string(reason)}
-  end
-
-  defp get_relay_health_status_tag(%{status: status}) do
-    %{status: to_string(status)}
   end
 end

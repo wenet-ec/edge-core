@@ -749,8 +749,7 @@ defmodule EdgeAdmin.Nodes do
       api_token: generate_token(),
       proxy_password: generate_token(),
       version: attrs["version"],
-      self_update_enabled: attrs["self_update_enabled"],
-      relay_enabled: attrs["relay_enabled"]
+      self_update_enabled: attrs["self_update_enabled"]
     }
   end
 

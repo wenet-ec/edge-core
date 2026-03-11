@@ -33,8 +33,6 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
     edge_agent_ssh_authentication_total{result="ok"} 4
     edge_agent_ssh_authentication_total{result="failed"} 1
     edge_agent_ssh_connection_total{result="ok"} 3
-    edge_agent_relay_assignment_total{result="ok"} 2
-    edge_agent_relay_failover_count 1
     edge_agent_prom_ex_oban_queue_length_count{queue="commands",state="available"} 3
     edge_agent_prom_ex_oban_queue_length_count{queue="commands",state="executing"} 1
     edge_agent_prom_ex_oban_queue_length_count{queue="commands",state="completed"} 50
@@ -67,11 +65,6 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
     test "extracts admins_found gauge" do
       result = AgentMetricsParser.parse(sample_prometheus_text())
       assert result["admins_found"] == 3
-    end
-
-    test "extracts relay_failover_count gauge" do
-      result = AgentMetricsParser.parse(sample_prometheus_text())
-      assert result["relay_failover_count"] == 1
     end
 
     test "gauge returns nil when metric not present" do
@@ -206,7 +199,6 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert %AgentMetrics.Discovery{} = metrics.discovery
       assert %AgentMetrics.Proxy{} = metrics.proxy
       assert %AgentMetrics.Ssh{} = metrics.ssh
-      assert %AgentMetrics.Relay{} = metrics.relay
       assert is_list(metrics.oban_queues)
     end
 
@@ -264,14 +256,6 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert metrics.ssh.connections_total == 3
     end
 
-    test "relay struct has correct totals" do
-      raw = AgentMetricsParser.parse(sample_prometheus_text())
-      raw = Map.put(raw, "cluster_name", "prod")
-      metrics = AgentMetrics.from_raw_metrics(raw, "node-abc")
-      assert metrics.relay.assignments_total == 2
-      assert metrics.relay.failovers_total == 1
-    end
-
     test "oban_queues is a list of ObanQueue structs" do
       raw = AgentMetricsParser.parse(sample_prometheus_text())
       raw = Map.put(raw, "cluster_name", "prod")
@@ -289,7 +273,6 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert metrics.proxy.http_connections_total == 0
       assert metrics.proxy.http_blocked_by_reason == %{}
       assert metrics.ssh.authentications_total == 0
-      assert metrics.relay.assignments_total == 0
     end
 
     test "nil uptime_ms defaults to 0 seconds" do

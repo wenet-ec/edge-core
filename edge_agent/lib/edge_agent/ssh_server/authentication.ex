@@ -111,9 +111,9 @@ defmodule EdgeAgent.SshServer.Authentication do
 
   # Raw RSA public key from Erlang's public_key module — encode to OpenSSH wire format
   # SSH wire format: length-prefixed "ssh-rsa" + mpint(exponent) + mpint(modulus)
-  defp format_public_key({:RSAPublicKey, modulus, exponent})
-       when is_integer(modulus) and is_integer(exponent) do
+  defp format_public_key({:RSAPublicKey, modulus, exponent}) when is_integer(modulus) and is_integer(exponent) do
     type_bin = "ssh-rsa"
+
     wire =
       ssh_string(type_bin) <>
         ssh_mpint(exponent) <>

@@ -33,7 +33,6 @@ config :edge_agent, Oban,
     sync_executions: 1,
     report_health_check: 1,
     discover_admins: 1,
-    register_relayed_node: 1,
     check_self_update: 1,
     push_metrics: 1,
     pull_vpn_config: 1
@@ -49,8 +48,6 @@ config :edge_agent, Oban,
        {"*/2 * * * *", EdgeAgent.Commands.Workers.SyncUnprocessedExecutionWorker},
        # Every 2 minutes to report health check (HTTP fallback mode)
        {"*/2 * * * *", EdgeAgent.EdgeClusters.Workers.ReportHealthCheckWorker},
-       # Every 3 minutes to create relayed node
-       {"*/3 * * * *", EdgeAgent.EdgeClusters.Workers.RegisterRelayedNodeWorker},
        # Every 3 minutes for admin discovery
        {"*/3 * * * *", EdgeAgent.EdgeClusters.Workers.DiscoverAdminWorker},
        # Every 2 hours to check for self-updates (HTTP fallback mode)

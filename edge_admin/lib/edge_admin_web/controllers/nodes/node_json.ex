@@ -46,7 +46,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSON do
       proxy_password: node.proxy_password,
       version: node.version,
       self_update_enabled: node.self_update_enabled,
-      relay_enabled: node.relay_enabled,
       last_seen_at: node.last_seen_at,
       aliases: Enum.map(aliases, &alias_data/1),
       inserted_at: node.inserted_at,

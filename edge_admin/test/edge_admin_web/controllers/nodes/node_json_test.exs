@@ -30,7 +30,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
         proxy_password: "proxy-pass",
         version: "1.2.3",
         self_update_enabled: false,
-        relay_enabled: false,
         last_seen_at: @now,
         aliases: [],
         cluster: fake_cluster(),
@@ -101,7 +100,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
             :proxy_password,
             :version,
             :self_update_enabled,
-            :relay_enabled,
             :last_seen_at,
             :aliases,
             :inserted_at,
@@ -120,7 +118,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
           ssh_port: 22,
           version: "2.0.0",
           self_update_enabled: true,
-          relay_enabled: true,
           api_token: "tok-xyz",
           proxy_password: "secret"
         })
@@ -133,7 +130,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
       assert data.ssh_port == 22
       assert data.version == "2.0.0"
       assert data.self_update_enabled == true
-      assert data.relay_enabled == true
       assert data.api_token == "tok-xyz"
       assert data.proxy_password == "secret"
       assert data.inserted_at == @now

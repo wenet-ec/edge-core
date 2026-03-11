@@ -20,7 +20,7 @@ defmodule EdgeAgent.Settings do
   - `id_type` - Type of ID ("persistent" or "random")
   - `api_token` - JWT token for authenticating with admin API
   - `proxy_password` - Password for proxy server authentication
-  - `admin_urls` - JSON-encoded list of admin server URLs
+  - `admin_urls` - JSON-encoded list of admin server URLs (discovered via VPN)
 
   ## Architecture
 
@@ -230,26 +230,6 @@ defmodule EdgeAgent.Settings do
       {:error, _} -> {:error, "Failed to encode admin URLs"}
     end
   end
-
-  @doc """
-  Get the relay admin name.
-
-  Returns the name of the admin node currently serving as relay gateway,
-  or nil if no relay is assigned.
-  """
-  @spec get_relay_admin_name() :: String.t() | nil
-  def get_relay_admin_name, do: get("relay_admin_name")
-
-  @doc """
-  Set the relay admin name.
-
-  Stores the name of the admin node serving as relay gateway.
-  Pass nil to clear the relay assignment.
-  """
-  @spec set_relay_admin_name(String.t() | nil) ::
-          {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
-  def set_relay_admin_name(nil), do: set("relay_admin_name", "")
-  def set_relay_admin_name(value) when is_binary(value), do: set("relay_admin_name", value)
 
   @doc """
   Get the Netmaker enrollment key for VPN join.

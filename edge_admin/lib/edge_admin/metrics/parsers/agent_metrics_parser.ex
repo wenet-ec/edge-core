@@ -52,11 +52,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
 
       # SSH
       "ssh_authentications" => extract_counter(lines, "edge_agent_ssh_authentication_total"),
-      "ssh_connections" => extract_counter(lines, "edge_agent_ssh_connection_total"),
-
-      # Relay
-      "relay_assignments" => extract_counter(lines, "edge_agent_relay_assignment_total"),
-      "relay_failover_count" => extract_gauge(lines, "edge_agent_relay_failover_count")
+      "ssh_connections" => extract_counter(lines, "edge_agent_ssh_connection_total")
     }
   end
 

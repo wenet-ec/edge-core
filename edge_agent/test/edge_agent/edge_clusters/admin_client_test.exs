@@ -6,7 +6,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
   alias EdgeAgent.Settings
 
   # ---------------------------------------------------------------------------
-  # get_urls_to_try/2 — fallback URL priority logic
+  # get_urls_to_try/0 — fallback URL priority logic
   #
   # The function is private, so we test it via the public API by observing
   # which error is returned: {:error, :no_admin_urls} means the URL list was
@@ -18,7 +18,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
   # but that proves the URL was resolved).
   # ---------------------------------------------------------------------------
 
-  describe "get_urls_to_try/2 — VPN admin URLs take priority" do
+  describe "get_urls_to_try/0 — VPN admin URLs take priority" do
     setup do
       Settings.set_api_token("test-token")
 
@@ -38,15 +38,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
       assert match?({:error, _}, result)
     end
 
-    test "when no VPN URLs and fallback disabled → :no_admin_urls" do
-      Settings.set_admin_urls([])
-      Settings.set_admin_fallback_urls([])
-
-      # register_node is unauthenticated — only needs URLs, not a token
-      assert {:error, :no_admin_urls} = AdminClient.register_node(%{node_id: "test"}, fallback_enabled: false)
-    end
-
-    test "when no VPN URLs and fallback enabled but no fallback configured → :no_admin_urls" do
+    test "when no VPN URLs and no fallback configured → :no_admin_urls" do
       Settings.set_admin_urls([])
       Settings.set_admin_fallback_urls([])
 
@@ -54,7 +46,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
     end
   end
 
-  describe "get_urls_to_try/2 — Settings fallback URLs (admin_fallback_urls)" do
+  describe "get_urls_to_try/0 — Settings fallback URLs (admin_fallback_urls)" do
     setup do
       on_exit(fn ->
         Settings.set_admin_urls([])
@@ -73,7 +65,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
     end
   end
 
-  describe "get_urls_to_try/2 — no URLs available" do
+  describe "get_urls_to_try/0 — no URLs available" do
     setup do
       Settings.set_api_token("test-token")
 
@@ -83,20 +75,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
       end)
     end
 
-    test "no VPN, no env fallback, no Settings fallback → :no_admin_urls (unauthenticated path)" do
+    test "no VPN, no Settings fallback → :no_admin_urls (unauthenticated path)" do
       Settings.set_admin_urls([])
       Settings.set_admin_fallback_urls([])
 
-      # register_node is unauthenticated — hits the URL-check path directly
       assert {:error, :no_admin_urls} = AdminClient.register_node(%{node_id: "test"})
-    end
-
-    test "no VPN URLs and fallback disabled → :no_admin_urls even when Settings fallback exists" do
-      Settings.set_admin_urls([])
-      Settings.set_admin_fallback_urls(["http://fallback:1"])
-
-      # relay requires VPN (fallback_enabled: false by default)
-      assert {:error, :no_admin_urls} = AdminClient.create_relayed_node()
     end
   end
 

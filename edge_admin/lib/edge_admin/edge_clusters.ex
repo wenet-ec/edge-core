@@ -55,8 +55,6 @@ defmodule EdgeAdmin.EdgeClusters do
 
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.EdgeClusters.Supervisor, as: GatewaySupervisor
-  alias EdgeAdmin.Nodes.Schemas.Cluster
-  alias EdgeAdmin.Vpn
 
   require Logger
 
@@ -283,45 +281,6 @@ defmodule EdgeAdmin.EdgeClusters do
       {:error, :not_found} ->
         Logger.debug("Gateway already stopped for cluster #{cluster_name}")
         :ok
-    end
-  end
-
-  @doc """
-  Assigns an agent node to this admin's relay gateway.
-
-  Looks up both the agent's and admin's Netmaker node IDs, then assigns
-  the agent to use this admin as its relay gateway.
-
-  ## Parameters
-    - agent_node: Node struct - The authenticated agent node
-
-  ## Returns
-    - `{:ok, admin_name}` - Agent successfully assigned, returns admin name
-    - `{:error, :not_found}` - Agent or admin node not found in Netmaker
-    - `{:error, :service_unavailable}` - Netmaker unavailable
-
-  ## Examples
-
-      {:ok, admin_name} = EdgeClusters.assign_agent_to_relay(agent_node, "cluster-default")
-  """
-  def assign_agent_to_relay(agent_node) do
-    agent_host_id = agent_node.netmaker_host_id
-    cluster_name = Cluster.network_name(agent_node.cluster)
-
-    # Get admin info
-    admin_info = Metadata.get_admin()
-    admin_host_id = admin_info.netmaker_host_id
-    admin_name = admin_info.name
-
-    Logger.info("Assigning agent #{agent_node.id} to relay gateway in cluster: #{cluster_name}")
-
-    # Find agent's and admin's Netmaker node IDs, then assign
-    with {:ok, agent_node_id} <- Vpn.find_node_id_by_host(cluster_name, agent_host_id),
-         {:ok, admin_node_id} <- Vpn.find_node_id_by_host(cluster_name, admin_host_id),
-         {:ok, _response} <- Vpn.assign_to_gateway(cluster_name, agent_node_id, admin_node_id) do
-      Logger.info("Agent #{agent_node.id} assigned to relay gateway #{admin_name} in cluster: #{cluster_name}")
-
-      {:ok, admin_name}
     end
   end
 end

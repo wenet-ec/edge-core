@@ -170,9 +170,6 @@ defmodule EdgeAdminWeb.Router do
     # Node health check reporting
     patch("/nodes/me/health_check", NodeController, :update_health_check)
 
-    # Relay gateway registration
-    post("/relays", RelayController, :create)
-
     # SSH credentials verification
     post("/ssh_usernames/verify_credentials", SshUsernameController, :verify_credentials)
 

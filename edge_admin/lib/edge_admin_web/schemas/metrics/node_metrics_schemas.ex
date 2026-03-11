@@ -398,22 +398,6 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                 }
               }
             },
-            relay: %Schema{
-              type: :object,
-              description: "Relay connectivity metrics",
-              properties: %{
-                assignments_total: %Schema{
-                  type: :integer,
-                  nullable: true,
-                  description: "Total relay assignment attempts"
-                },
-                failovers_total: %Schema{
-                  type: :integer,
-                  nullable: true,
-                  description: "Total relay admin changes (network instability indicator)"
-                }
-              }
-            },
             oban_queues: %Schema{
               type: :array,
               description: "Oban job queue states",
@@ -508,10 +492,6 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
             authentications_failed: 1,
             connections_total: 44
           },
-          relay: %{
-            assignments_total: 3,
-            failovers_total: 1
-          },
           oban_queues: [
             %{
               queue: "default",
@@ -589,7 +569,6 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                 discovery: %Schema{type: :object, nullable: true, description: "Admin discovery metrics"},
                 proxy: %Schema{type: :object, nullable: true, description: "Proxy server metrics"},
                 ssh: %Schema{type: :object, nullable: true, description: "SSH server metrics"},
-                relay: %Schema{type: :object, nullable: true, description: "Relay connectivity metrics"},
                 oban_queues: %Schema{type: :array, nullable: true, description: "Oban job queue states"}
               }
             }

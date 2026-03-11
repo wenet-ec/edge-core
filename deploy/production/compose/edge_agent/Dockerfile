@@ -21,7 +21,7 @@ RUN go mod tidy && \
 # -----------------------------------------------
 # Stage 1: Build the OTP release
 # -----------------------------------------------
-FROM elixir:1.19.5-otp-28-slim AS builder
+FROM elixir:1.19-otp-28-slim AS builder
 
 # Install build dependencies
 RUN apt-get update -y && \

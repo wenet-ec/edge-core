@@ -45,9 +45,10 @@ AUTH_ENABLED=true
 # Full admin access — required. Grants access to all management API endpoints.
 MASTER_KEY=supersecretkey123456789
 
-# Optional scoped keys. Both default to MASTER_KEY if unset.
+# Optional scoped keys. All default to MASTER_KEY if unset.
 # METRICS_KEY=  # Read-only: metrics endpoints
 # PROXY_KEY=    # Proxy tunnel endpoints
+# MCP_KEY=      # MCP server endpoint
 
 # =============================================================================
 # Proxy Servers

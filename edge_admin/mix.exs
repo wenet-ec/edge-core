@@ -87,9 +87,10 @@ defmodule EdgeAdmin.Mixfile do
       {:jason, "~> 1.4"},
       {:argon2_elixir, "~> 4.1"},
 
-      # API
+      # API and MCP
       {:open_api_spex, "~> 3.22"},
       {:redoc_ui_plug, "~> 0.2"},
+      {:anubis_mcp, "~> 0.17"},
 
       # Database
       {:ecto_sql, "~> 3.13"},

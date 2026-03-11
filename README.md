@@ -39,16 +39,16 @@ For full detail see [`docs/architecture.md`](docs/architecture.md).
 
 ## Components
 
-| Directory | Description |
-|---|---|
-| `edge_admin/` | Phoenix admin server (PostgreSQL, Oban, OpenAPI) |
-| `edge_agent/` | Phoenix agent (SQLite, embedded SSH, Oban) |
-| `nexmaker/` | Shared Elixir lib — Netmaker API + netclient CLI wrapper |
-| `deploy/local/` | Local development Docker Compose |
-| `deploy/production/` | Production Docker Compose |
-| `examples/lite/` | Single-admin homelab setup |
-| `examples/standard/` | 4-admin (2-cluster) production setup |
-| `docs/` | Architecture docs and API specs |
+| Directory            | Description                                              |
+| -------------------- | -------------------------------------------------------- |
+| `edge_admin/`        | Phoenix admin server (PostgreSQL, Oban, OpenAPI)         |
+| `edge_agent/`        | Phoenix agent (SQLite, embedded SSH, Oban)               |
+| `nexmaker/`          | Shared Elixir lib — Netmaker API + netclient CLI wrapper |
+| `deploy/local/`      | Local development Docker Compose                         |
+| `deploy/production/` | Production Docker Compose                                |
+| `examples/lite/`     | Single-admin homelab setup                               |
+| `examples/standard/` | 4-admin (2-cluster) production setup                     |
+| `docs/`              | Architecture docs and API specs                          |
 
 ## Getting Started
 
@@ -72,8 +72,27 @@ No local Elixir or Go required. Everything runs through Docker Compose via the `
 Admin API:      http://localhost:44000
 Swagger UI:     http://localhost:44000/api/swaggerui
 ReDoc:          http://localhost:44000/api/redoc
+MCP server:     http://localhost:44000/mcp
 Netmaker UI:    http://localhost:48080
 ```
+
+### 4. Connect an AI assistant (optional)
+
+Edge Admin exposes an MCP server at `/mcp` for AI assistants (Claude Desktop, Cursor, etc.). Point your MCP client at the admin with your `MCP_KEY`:
+
+```json
+{
+  "mcpServers": {
+    "edge-admin": {
+      "type": "http",
+      "url": "http://localhost:44000/mcp",
+      "headers": { "Authorization": "Bearer your-mcp-key" }
+    }
+  }
+}
+```
+
+47 tools cover the full management surface — nodes, clusters, commands, SSH, metrics, and health checks. Tools are discovered dynamically via `tools/list` (MCP standard — no static spec file needed).
 
 ### Common commands
 

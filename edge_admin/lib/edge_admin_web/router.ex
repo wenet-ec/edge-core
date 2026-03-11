@@ -29,6 +29,11 @@ defmodule EdgeAdminWeb.Router do
     plug(EdgeAdminWeb.Plugs.MasterKeyAuth)
   end
 
+  # MCP pipeline (accepts MCP_KEY or MASTER_KEY fallback — MCP manages its own content types)
+  pipeline :mcp do
+    plug(EdgeAdminWeb.Plugs.McpAuth)
+  end
+
   # Metrics API pipeline (accepts MASTER_KEY or METRICS_KEY)
   pipeline :protected_metrics do
     plug(:accepts, ["json"])
@@ -234,6 +239,13 @@ defmodule EdgeAdminWeb.Router do
     end
 
     resources("/self_update_requests", SelfUpdates.SelfUpdateRequestController, only: [:index, :create, :show, :delete])
+  end
+
+  # MCP server endpoint (requires MASTER_KEY)
+  scope "/" do
+    pipe_through(:mcp)
+
+    forward("/mcp", Anubis.Server.Transport.StreamableHTTP.Plug, server: EdgeAdmin.MCP.Server)
   end
 
   # Basic auth helper for LiveDashboard

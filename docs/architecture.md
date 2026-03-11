@@ -62,6 +62,7 @@ The VPN is the foundation everything else is built on. It creates a secure mesh 
 Netmaker manages the WireGuard mesh. Each edge cluster maps to a dedicated Netmaker network named `cluster-{cluster_id}`. Admin instances join multiple networks: their own admin cluster network plus every edge cluster they manage.
 
 DNS identities follow a consistent pattern:
+
 - Admin: `admin-{id}.admin-cluster-{name}.nm.internal`
 - Node: `node-{id}.cluster-{cluster_id}.nm.internal`
 
@@ -91,16 +92,16 @@ It has two distinct interfaces:
 
 HTTP client built on `Req`. All requests use MASTER_KEY bearer token auth. Covers the full Netmaker API surface:
 
-| Module | Responsibility |
-|---|---|
-| `Nexmaker.Api.Networks` | Create/delete/list VPN networks (one per edge cluster) |
-| `Nexmaker.Api.EnrollmentKeys` | Create enrollment keys for agent bootstrapping |
-| `Nexmaker.Api.Hosts` | Manage physical host registrations |
-| `Nexmaker.Api.Nodes` | Manage node memberships within networks |
-| `Nexmaker.Api.DNS` | Create/delete DNS entries (`.nm.internal`) |
-| `Nexmaker.Api.Superadmin` | Bootstrap Netmaker admin account on first run |
-| `Nexmaker.Api.Gateways.*` | Ingress, egress, relay gateway management |
-| `Nexmaker.Api.EMQX` | EMQX broker provisioning (Netmaker-internal use) |
+| Module                        | Responsibility                                         |
+| ----------------------------- | ------------------------------------------------------ |
+| `Nexmaker.Api.Networks`       | Create/delete/list VPN networks (one per edge cluster) |
+| `Nexmaker.Api.EnrollmentKeys` | Create enrollment keys for agent bootstrapping         |
+| `Nexmaker.Api.Hosts`          | Manage physical host registrations                     |
+| `Nexmaker.Api.Nodes`          | Manage node memberships within networks                |
+| `Nexmaker.Api.DNS`            | Create/delete DNS entries (`.nm.internal`)             |
+| `Nexmaker.Api.Superadmin`     | Bootstrap Netmaker admin account on first run          |
+| `Nexmaker.Api.Gateways.*`     | Ingress, egress, relay gateway management              |
+| `Nexmaker.Api.EMQX`           | EMQX broker provisioning (Netmaker-internal use)       |
 
 Config is read from application env or passed per-call:
 
@@ -114,16 +115,16 @@ config :nexmaker,
 
 Thin wrapper around the `netclient` binary (which must be present in the container). Handles VPN lifecycle operations by shelling out to the CLI:
 
-| Function | What it does |
-|---|---|
-| `join_network/1` | Enroll this host into a VPN network using an enrollment token |
-| `leave_network/1` | Remove this host from a network |
-| `list_networks/0` | List all networks this host is currently joined to (reads local file, no API call) |
-| `check_connection/1` | Check connection status for a specific network |
-| `health_check/1` | Multi-layer health check: network membership → peer reachability |
-| `pull/0` | Force-pull latest config from Netmaker server |
-| `list_peers/1` | List WireGuard peer details |
-| `ping_peers/1` | Ping peers through WireGuard tunnel, check connectivity and latency |
+| Function             | What it does                                                                       |
+| -------------------- | ---------------------------------------------------------------------------------- |
+| `join_network/1`     | Enroll this host into a VPN network using an enrollment token                      |
+| `leave_network/1`    | Remove this host from a network                                                    |
+| `list_networks/0`    | List all networks this host is currently joined to (reads local file, no API call) |
+| `check_connection/1` | Check connection status for a specific network                                     |
+| `health_check/1`     | Multi-layer health check: network membership → peer reachability                   |
+| `pull/0`             | Force-pull latest config from Netmaker server                                      |
+| `list_peers/1`       | List WireGuard peer details                                                        |
+| `ping_peers/1`       | Ping peers through WireGuard tunnel, check connectivity and latency                |
 
 **Known quirk — TOCTOU race condition:** netclient v1.4.0 has a race condition in `WriteJSONAtomic` where `/etc/netclient/` can be deleted between a directory check and file write. Nexmaker mitigates this with `ensure_netclient_dir/0` (pre-creates the dir before each call) and `run_with_retry/3` (exponential backoff retry on detection). This is handled transparently — callers don't need to worry about it.
 
@@ -158,6 +159,7 @@ Erlang distribution is **intra-cluster only** (admins within the same peer clust
 WireGuard mesh overhead makes it expensive for multiple admins to all join the same edge cluster. The one-admin-per-cluster algorithm ensures exactly one admin manages each edge cluster at any time.
 
 How it works:
+
 - Each admin maintains a local ETS table of the current topology (who owns what, remaining capacity)
 - When topology changes (admin joins or leaves, node counts shift), every admin independently runs the **same deterministic algorithm** on the same inputs — no coordination round needed
 - Assignment strategy: new clusters go to the admin with the most remaining capacity; overloaded admins shed their smallest clusters
@@ -250,46 +252,86 @@ Only `wireguard-go` (userspace) supports DERP relay. Kernel-mode WireGuard does 
 
 **Layer 3 — HTTP Polling:** When the VPN is completely down, agents poll the admin HTTP API directly via `FALLBACK_ADMIN_URLS`. This is unidirectional (agent → admin only) and eventually consistent. Commands are fetched every 2 minutes, health and metrics pushed on the same interval.
 
-| Feature | Layer 1 + 2 | Layer 3 (HTTP polling) |
-|---|---|---|
-| Command execution | ✅ real-time | ✅ 0–120s latency |
-| Health reporting | ✅ real-time | ✅ 0–120s latency |
-| Metrics | ✅ real-time | ✅ cached, ~5min staleness |
-| Proxy servers | ✅ | ❌ requires VPN |
-| SSH access | ✅ | ❌ requires VPN |
+| Feature           | Layer 1 + 2  | Layer 3 (HTTP polling)     |
+| ----------------- | ------------ | -------------------------- |
+| Command execution | ✅ real-time | ✅ 0–120s latency          |
+| Health reporting  | ✅ real-time | ✅ 0–120s latency          |
+| Metrics           | ✅ real-time | ✅ cached, ~5min staleness |
+| Proxy servers     | ✅           | ❌ requires VPN            |
+| SSH access        | ✅           | ❌ requires VPN            |
 
 Proxy and SSH have no fallback below Layer 2. Both require raw TCP streaming — the correct answer for better availability is more DERP nodes, not a new relay mechanism.
 
 ---
 
+## AI / MCP Interface
+
+Edge Admin exposes a [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server at `POST /mcp` alongside the REST API. This gives AI assistants (Claude, Cursor, etc.) direct, structured access to the full infrastructure management surface — the same operations available through the REST API, but designed for AI consumption rather than human HTTP clients.
+
+### Transport
+
+Streamable HTTP (MCP standard). Any MCP-compatible client connects by pointing at the admin's `/mcp` endpoint with an `Authorization: Bearer` header.
+
+### Authentication
+
+Accepts `MCP_KEY` bearer token or falls back to `MASTER_KEY`. Auth is handled by `EdgeAdminWeb.Plugs.McpAuth` before Anubis processes the request.
+
+### Tool Discovery
+
+MCP clients discover available tools dynamically via the standard `tools/list` method — no static spec file. This is the MCP equivalent of `/api/openapi`. Call `POST /mcp` with `{"method": "tools/list"}` to get the full tool list with input schemas.
+
+### Tool Surface (47 tools)
+
+| Group              | Tools                                                                                                                   |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Admin info         | `get_admin`, `get_admin_cluster`, `list_edge_clusters`, `list_orphaned_clusters`, `check_admin_health`                  |
+| Clusters           | `list_clusters`, `get_cluster`, `create_cluster`, `update_cluster`, `delete_cluster`                                    |
+| Nodes              | `list_nodes`, `get_node`, `delete_node`, `change_node_cluster`                                                          |
+| Aliases            | `list_aliases`, `get_alias`, `create_alias`, `delete_alias`                                                             |
+| Enrollment keys    | `list_enrollment_keys`, `get_enrollment_key`, `create_enrollment_key`, `update_enrollment_key`, `delete_enrollment_key` |
+| Commands           | `list_commands`, `get_command`, `create_command`, `delete_command`                                                      |
+| Command executions | `list_command_executions`, `get_command_execution`, `cancel_command_execution`, `delete_command_execution`              |
+| SSH usernames      | `list_ssh_usernames`, `get_ssh_username`, `create_ssh_username`, `delete_ssh_username`                                  |
+| SSH public keys    | `list_ssh_public_keys`, `get_ssh_public_key`, `create_ssh_public_key`, `delete_ssh_public_key`                          |
+| Self-updates       | `list_self_update_requests`, `get_self_update_request`, `create_self_update_request`, `delete_self_update_request`      |
+| Metrics            | `get_node_metrics`, `get_host_metrics`, `get_agent_metrics`, `get_admin_metrics`                                        |
+
+`check_admin_health` runs all subsystem checks (Database, Bootstrap, Metadata, Netmaker API, Netclient VPN, Proxy Servers) in parallel and returns a structured pass/fail per component — useful for diagnosing enrollment or command delivery failures.
+
+### Proxy Access
+
+The admin's HTTP proxy (port 43128) and SOCKS5 proxy (port 41080) are independent of MCP but complement it. An AI client configured to route its own HTTP requests through the proxy can reach any service on any VPN-connected node or its local network — without any MCP tool call. Configure the proxy URL once at the client level using the `PROXY_KEY` credential; the AI then has unrestricted HTTP access to the entire edge mesh.
+
+---
+
 ## Authentication
 
-| Path | Mechanism |
-|---|---|
-| Admin API (full access) | `MASTER_KEY` bearer token |
-| Admin API (metrics only) | `METRICS_KEY` bearer token |
-| Admin API (proxy only) | `PROXY_KEY` bearer token |
-| Admin → Netmaker | `MASTER_KEY` bearer token |
-| Agent → Admin | Per-node API token (issued at enrollment) |
-| Admin → Agent | Per-node API token (same token, stored in admin DB) |
-| Admin ↔ Admin (Erlang) | Shared `ERLANG_COOKIE` + connection verified against PostgreSQL + Netmaker |
-| SSH | Username/password or public key, verified by admin on each connection attempt |
+| Path                     | Mechanism                                                                     |
+| ------------------------ | ----------------------------------------------------------------------------- |
+| Admin API (full access)  | `MASTER_KEY` bearer token                                                     |
+| Admin API (metrics only) | `METRICS_KEY` bearer token                                                    |
+| Admin API (proxy only)   | `PROXY_KEY` bearer token                                                      |
+| Admin → Netmaker         | `MASTER_KEY` bearer token                                                     |
+| Agent → Admin            | Per-node API token (issued at enrollment)                                     |
+| Admin → Agent            | Per-node API token (same token, stored in admin DB)                           |
+| Admin ↔ Admin (Erlang)   | Shared `ERLANG_COOKIE` + connection verified against PostgreSQL + Netmaker    |
+| SSH                      | Username/password or public key, verified by admin on each connection attempt |
 
 ---
 
 ## Port Reference
 
-| Service | Port | Notes |
-|---|---|---|
-| Admin HTTP API | `44000` | External: `34000`, `34001`, ... per instance |
-| Admin HTTP proxy | `43128` | |
-| Admin SOCKS5 proxy | `41080` | |
-| Agent HTTP API | `44000` | |
-| Agent SSH server | `40022` | |
-| Agent HTTP proxy | `43128` | |
-| Agent SOCKS5 proxy | `41080` | |
-| Agent host metrics | `49100` | Prometheus node exporter |
-| Agent WireGuard metrics | `49586` | |
+| Service                 | Port    | Notes                                        |
+| ----------------------- | ------- | -------------------------------------------- |
+| Admin HTTP API          | `44000` | External: `34000`, `34001`, ... per instance |
+| Admin HTTP proxy        | `43128` |                                              |
+| Admin SOCKS5 proxy      | `41080` |                                              |
+| Agent HTTP API          | `44000` |                                              |
+| Agent SSH server        | `40022` |                                              |
+| Agent HTTP proxy        | `43128` |                                              |
+| Agent SOCKS5 proxy      | `41080` |                                              |
+| Agent host metrics      | `49100` | Prometheus node exporter                     |
+| Agent WireGuard metrics | `49586` |                                              |
 
 ---
 

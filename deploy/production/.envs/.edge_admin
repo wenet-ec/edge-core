@@ -46,10 +46,11 @@ AUTH_ENABLED=true
 # Full admin access — required. Grants access to all management API endpoints.
 MASTER_KEY=supersecretkey123456789
 
-# Optional scoped keys. Both default to MASTER_KEY if unset.
+# Optional scoped keys. All default to MASTER_KEY if unset.
 # Recommended in production to limit blast radius per client type.
 # METRICS_KEY=  # Read-only metrics endpoints (give to Prometheus scrapers)
 # PROXY_KEY=    # Proxy tunnel endpoints (give to proxy clients)
+# MCP_KEY=      # MCP server endpoint
 
 # =============================================================================
 # Proxy Servers

@@ -46,18 +46,21 @@ if auth_enabled do
   master_key = get_env!("MASTER_KEY")
   metrics_key = get_env("METRICS_KEY") || master_key
   proxy_key = get_env("PROXY_KEY") || master_key
+  mcp_key = get_env("MCP_KEY") || master_key
 
   config :edge_admin,
     auth_enabled: true,
     master_key: master_key,
     metrics_key: metrics_key,
-    proxy_key: proxy_key
+    proxy_key: proxy_key,
+    mcp_key: mcp_key
 else
   config :edge_admin,
     auth_enabled: false,
     master_key: nil,
     metrics_key: nil,
-    proxy_key: ""
+    proxy_key: "",
+    mcp_key: nil
 end
 
 admin_id = generate_random_string(12)

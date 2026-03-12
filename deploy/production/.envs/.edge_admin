@@ -62,7 +62,7 @@ SOCKS5_PROXY_PORT=41080
 # Observability
 # =============================================================================
 # Admin's own Prometheus metrics scrape target (host:port, no scheme).
-METRICS_BASE_URL=edge_admin:44000
+METRICS_BASE_URL=edge_admin_a1:44000
 
 # SENTRY_DSN=https://...@sentry.io/...
 SENTRY_ENVIRONMENT_NAME=production

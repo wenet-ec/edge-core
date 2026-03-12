@@ -50,9 +50,9 @@ services:
   # ---------------------------------------------------------------------------
   # Edge Admin — management server
   # ---------------------------------------------------------------------------
-  edge_admin:
+  edge_admin_a1:
     image: ghcr.io/wenet-ec/edge_admin:v0.2.0
-    container_name: edge_admin
+    container_name: edge_admin_a1
     networks:
       - edge_core
     depends_on:

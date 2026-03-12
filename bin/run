@@ -105,7 +105,7 @@ show_cloud_help() {
     echo -e "${GREEN}Examples:${NC}"
     echo "  ./bin/run cloud up -d"
     echo "  ./bin/run cloud admin:test"
-    echo "  ./bin/run cloud logs edge_admin"
+    echo "  ./bin/run cloud logs edge_admin_a1"
     echo "  ENV=production ./bin/run cloud start"
 }
 
@@ -261,22 +261,22 @@ handle_cloud() {
                 exit 1
             fi
             log "Running Edge Admin command: mix $*"
-            docker compose $compose_file run --rm edge_admin mix "$@"
+            docker compose $compose_file run --rm edge_admin_a1 mix "$@"
             ;;
         admin:shell)
             check_docker
             log "Opening Edge Admin IEx shell..."
-            docker compose $compose_file run --rm edge_admin iex -S mix
+            docker compose $compose_file run --rm edge_admin_a1 iex -S mix
             ;;
         admin:format)
             check_docker
             log "Formatting Edge Admin code..."
-            docker compose $compose_file run --rm edge_admin mix format
+            docker compose $compose_file run --rm edge_admin_a1 mix format
             ;;
         admin:lint)
             check_docker
             log "Linting Edge Admin code..."
-            docker compose $compose_file run --rm edge_admin mix lint
+            docker compose $compose_file run --rm edge_admin_a1 mix lint
             ;;
         admin:test)
             check_docker
@@ -286,29 +286,29 @@ handle_cloud() {
         admin:quality)
             check_docker
             log "Running Edge Admin quality checks..."
-            docker compose $compose_file run --rm edge_admin mix quality
+            docker compose $compose_file run --rm edge_admin_a1 mix quality
             ;;
         admin:security)
             check_docker
             log "Running Edge Admin security checks..."
-            docker compose $compose_file run --rm edge_admin mix security
+            docker compose $compose_file run --rm edge_admin_a1 mix security
             ;;
         db:migrate)
             check_docker
             log "Running Edge Admin database migrations..."
-            docker compose $compose_file run --rm edge_admin mix ecto.migrate "$@"
+            docker compose $compose_file run --rm edge_admin_a1 mix ecto.migrate "$@"
             ;;
         db:setup)
             check_docker
             log "Setting up Edge Admin database..."
-            docker compose $compose_file run --rm edge_admin mix ecto.setup
+            docker compose $compose_file run --rm edge_admin_a1 mix ecto.setup
             ;;
         db:reset)
             check_docker
             warn "This will delete all Edge Admin data! Press Ctrl+C to cancel, Enter to continue..."
             read -r
             log "Resetting Edge Admin database..."
-            docker compose $compose_file run --rm edge_admin mix ecto.reset
+            docker compose $compose_file run --rm edge_admin_a1 mix ecto.reset
             ;;
         exec)
             check_docker
@@ -325,7 +325,7 @@ handle_cloud() {
             check_docker
             if [ $# -eq 0 ]; then
                 warn "Usage: ./bin/run cloud shell <service>"
-                echo "Available services: edge_admin, edge_vpn, edge_vpn_db, etc."
+                echo "Available services: edge_admin_a1, edge_admin_a2, edge_admin_b1, edge_vpn, edge_vpn_db, etc."
                 exit 1
             fi
             service=$1
@@ -500,7 +500,7 @@ handle_all() {
             check_docker
             section "Formatting all code"
             log "Formatting Edge Admin..."
-            docker compose $compose_files run --rm edge_admin mix format
+            docker compose $compose_files run --rm edge_admin_a1 mix format
             log "Formatting Edge Agent..."
             docker compose $compose_files run --rm edge_agent mix format
             log "All code formatted!"
@@ -509,7 +509,7 @@ handle_all() {
             check_docker
             section "Linting all code"
             log "Linting Edge Admin..."
-            docker compose $compose_files run --rm edge_admin mix lint
+            docker compose $compose_files run --rm edge_admin_a1 mix lint
             log "Linting Edge Agent..."
             docker compose $compose_files run --rm edge_agent mix lint
             log "All code linted!"
@@ -527,7 +527,7 @@ handle_all() {
             check_docker
             section "Running quality checks"
             log "Edge Admin quality checks..."
-            docker compose $compose_files run --rm edge_admin mix quality
+            docker compose $compose_files run --rm edge_admin_a1 mix quality
             log "Edge Agent quality checks..."
             docker compose $compose_files run --rm edge_agent mix quality
             log "All quality checks completed!"
@@ -536,7 +536,7 @@ handle_all() {
             check_docker
             section "Running security checks"
             log "Edge Admin security checks..."
-            docker compose $compose_files run --rm edge_admin mix security
+            docker compose $compose_files run --rm edge_admin_a1 mix security
             log "Edge Agent security checks..."
             docker compose $compose_files run --rm edge_agent mix security
             log "All security checks completed!"
@@ -545,7 +545,7 @@ handle_all() {
             check_docker
             section "Setting up all databases"
             log "Setting up Edge Admin database..."
-            docker compose $compose_files run --rm edge_admin mix ecto.setup
+            docker compose $compose_files run --rm edge_admin_a1 mix ecto.setup
             log "Setting up Edge Agent database..."
             docker compose $compose_files run --rm edge_agent mix ecto.setup
             log "All databases set up!"
@@ -556,7 +556,7 @@ handle_all() {
             read -r
             section "Resetting all databases"
             log "Resetting Edge Admin database..."
-            docker compose $compose_files run --rm edge_admin mix ecto.reset
+            docker compose $compose_files run --rm edge_admin_a1 mix ecto.reset
             log "Resetting Edge Agent database..."
             docker compose $compose_files run --rm edge_agent mix ecto.reset
             log "All databases reset!"

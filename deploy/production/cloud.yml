@@ -34,12 +34,12 @@ services:
       retries: 5
       start_period: 10s
 
-  edge_admin:
+  edge_admin_a1:
     build:
       context: ../..
       dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
     image: production_edge_admin
-    container_name: production_edge_admin
+    container_name: production_edge_admin_a1
     networks:
       - production_edge_core
     depends_on:
@@ -74,13 +74,13 @@ services:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1
       - net.ipv6.conf.all.forwarding=1
-    
-  edge_admin_2:
+
+  edge_admin_a2:
     build:
       context: ../..
       dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
     image: production_edge_admin
-    container_name: production_edge_admin_2
+    container_name: production_edge_admin_a2
     networks:
       - production_edge_core
     depends_on:
@@ -88,7 +88,7 @@ services:
         condition: service_healthy
       edge_admin_db:
         condition: service_healthy
-      edge_admin:
+      edge_admin_a1:
         condition: service_healthy
     volumes:
       - /dev/net/tun:/dev/net/tun
@@ -118,12 +118,12 @@ services:
       - net.ipv4.conf.all.src_valid_mark=1
       - net.ipv6.conf.all.forwarding=1
 
-  edge_admin_3:
+  edge_admin_b1:
     build:
       context: ../..
       dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
     image: production_edge_admin
-    container_name: production_edge_admin_3
+    container_name: production_edge_admin_b1
     networks:
       - production_edge_core
     depends_on:
@@ -131,7 +131,7 @@ services:
         condition: service_healthy
       edge_admin_db:
         condition: service_healthy
-      edge_admin:
+      edge_admin_a1:
         condition: service_healthy
     volumes:
       - /dev/net/tun:/dev/net/tun
@@ -194,7 +194,7 @@ services:
       - ./.envs/.edge_vpn_broker
     ports:
       - "48083:8083"    # WebSocket
-      - "48085:18083"    # REST API + UI
+      - "48085:18083"   # REST API + UI
     healthcheck:
       test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
       interval: 10s
@@ -311,12 +311,12 @@ services:
     networks:
       - production_edge_core
     depends_on:
-      edge_admin:
+      edge_admin_a1:
         condition: service_healthy
       edge_metrics_storage:
         condition: service_started
     volumes:
-      - ../../deploy/production/compose/edge_metrics_collector/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./compose/edge_metrics_collector/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     env_file:
       - ./.envs/.edge_metrics_collector
     ports:

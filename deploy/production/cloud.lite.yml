@@ -32,12 +32,12 @@ services:
       retries: 5
       start_period: 10s
 
-  edge_admin:
+  edge_admin_a1:
     build:
       context: ../..
       dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
     image: production_edge_admin
-    container_name: production_edge_admin
+    container_name: production_edge_admin_a1
     networks:
       - production_edge_core
     depends_on:
@@ -195,12 +195,12 @@ services:
     networks:
       - production_edge_core
     depends_on:
-      edge_admin:
+      edge_admin_a1:
         condition: service_healthy
       edge_metrics_storage:
         condition: service_started
     volumes:
-      - ../../deploy/production/compose/edge_metrics_collector/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./compose/edge_metrics_collector/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     env_file:
       - ./.envs/.edge_metrics_collector
     ports:

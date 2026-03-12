@@ -10,11 +10,9 @@ networks:
 volumes:
   local_edge_admin_db_data: {}
   local_edge_admin_deps: {}
-  local_edge_admin_build: {}
-  local_edge_admin_2_deps: {}
-  local_edge_admin_2_build: {}
-  local_edge_admin_3_deps: {}
-  local_edge_admin_3_build: {}
+  local_edge_admin_a1_build: {}
+  local_edge_admin_a2_build: {}
+  local_edge_admin_b1_build: {}
   local_edge_vpn_data: {}
   local_edge_vpn_db_data: {}
   local_edge_vpn_dns_config: {}
@@ -44,12 +42,12 @@ services:
       retries: 3
       start_period: 10s
 
-  edge_admin:
+  edge_admin_a1:
     build:
       context: ../..
       dockerfile: ./deploy/local/compose/edge_admin/Dockerfile
     image: local_edge_admin
-    container_name: local_edge_admin
+    container_name: local_edge_admin_a1
     networks:
       - local_edge_core
     extra_hosts:
@@ -64,7 +62,7 @@ services:
       - ../../edge_admin:/app:z
       - ../../nexmaker:/nexmaker:z
       - local_edge_admin_deps:/app/deps
-      - local_edge_admin_build:/app/_build
+      - local_edge_admin_a1_build:/app/_build
       - /dev/net/tun:/dev/net/tun
     env_file:
       - ./.envs/.edge_admin
@@ -86,12 +84,12 @@ services:
       retries: 6
       start_period: 45s
 
-  edge_admin_2:
+  edge_admin_a2:
     build:
       context: ../..
       dockerfile: ./deploy/local/compose/edge_admin/Dockerfile
     image: local_edge_admin
-    container_name: local_edge_admin_2
+    container_name: local_edge_admin_a2
     networks:
       - local_edge_core
     extra_hosts:
@@ -102,13 +100,13 @@ services:
         condition: service_healthy
       edge_admin_db:
         condition: service_healthy
-      edge_admin:
+      edge_admin_a1:
         condition: service_healthy
     volumes:
       - ../../edge_admin:/app:z
       - ../../nexmaker:/nexmaker:z
-      - local_edge_admin_2_deps:/app/deps
-      - local_edge_admin_2_build:/app/_build
+      - local_edge_admin_deps:/app/deps
+      - local_edge_admin_a2_build:/app/_build
       - /dev/net/tun:/dev/net/tun
     env_file:
       - ./.envs/.edge_admin
@@ -132,12 +130,12 @@ services:
       retries: 6
       start_period: 45s
 
-  edge_admin_3:
+  edge_admin_b1:
     build:
       context: ../..
       dockerfile: ./deploy/local/compose/edge_admin/Dockerfile
     image: local_edge_admin
-    container_name: local_edge_admin_3
+    container_name: local_edge_admin_b1
     networks:
       - local_edge_core
     extra_hosts:
@@ -148,13 +146,13 @@ services:
         condition: service_healthy
       edge_admin_db:
         condition: service_healthy
-      edge_admin:
+      edge_admin_a1:
         condition: service_healthy
     volumes:
       - ../../edge_admin:/app:z
       - ../../nexmaker:/nexmaker:z
-      - local_edge_admin_3_deps:/app/deps
-      - local_edge_admin_3_build:/app/_build
+      - local_edge_admin_deps:/app/deps
+      - local_edge_admin_b1_build:/app/_build
       - /dev/net/tun:/dev/net/tun
     env_file:
       - ./.envs/.edge_admin
@@ -194,7 +192,7 @@ services:
       - ../../edge_admin:/app:z
       - ../../nexmaker:/nexmaker:z
       - local_edge_admin_deps:/app/deps
-      - local_edge_admin_build:/app/_build
+      - local_edge_admin_a1_build:/app/_build
     env_file:
       - ./.envs/.edge_admin_test
     profiles:
@@ -312,6 +310,7 @@ services:
         aliases:
           - edge-vpn.localtest.me
           - edge-vpn-broker.localtest.me
+          - edge-admin.localtest.me
     ports:
       - "80:80"
     volumes:

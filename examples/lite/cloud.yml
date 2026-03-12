@@ -158,6 +158,7 @@ services:
   edge_vpn_dns:
     image: coredns/coredns:latest
     container_name: edge_vpn_dns
+    user: "0:0"
     networks:
       - edge_core
     depends_on:

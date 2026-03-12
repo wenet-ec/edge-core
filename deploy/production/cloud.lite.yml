@@ -133,6 +133,7 @@ services:
   edge_vpn_dns:
     image: coredns/coredns:latest
     container_name: production_edge_vpn_dns
+    user: "0:0"
     networks:
       - production_edge_core
     depends_on:

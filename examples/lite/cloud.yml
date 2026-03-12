@@ -20,8 +20,8 @@ volumes:
   edge_vpn_data: {}
   edge_vpn_dns_config: {}
   edge_vpn_broker_data: {}
-  edge_vpn_proxy_data: {}
-  edge_vpn_proxy_config: {}
+  edge_http_proxy_data: {}
+  edge_http_proxy_config: {}
 
 services:
   # ---------------------------------------------------------------------------
@@ -144,6 +144,8 @@ services:
   edge_vpn_ui:
     image: gravitl/netmaker-ui:v1.5.0
     container_name: edge_vpn_ui
+    networks:
+      - edge_core
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -169,19 +171,33 @@ services:
     command: -conf /root/config/dnsconfig/Corefile
 
   # ---------------------------------------------------------------------------
-  # Caddy — reverse proxy / TLS termination for Netmaker API
+  # Caddy — HTTP reverse proxy for Netmaker API
   # ---------------------------------------------------------------------------
-  edge_vpn_proxy:
+  edge_http_proxy:
     image: caddy:alpine
-    container_name: edge_vpn_proxy
+    container_name: edge_http_proxy
     networks:
       - edge_core
     ports:
       - "40080:80"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - edge_vpn_proxy_data:/data
-      - edge_vpn_proxy_config:/config
+      - ./configs/Caddyfile:/etc/caddy/Caddyfile
+      - edge_http_proxy_data:/data
+      - edge_http_proxy_config:/config
     depends_on:
       - edge_vpn
     command: caddy run --config /etc/caddy/Caddyfile
+
+  # ---------------------------------------------------------------------------
+  # HAProxy — TCP load balancer for HTTP/SOCKS5 forward proxies
+  # ---------------------------------------------------------------------------
+  edge_tcp_proxy:
+    image: haproxy:latest
+    container_name: edge_tcp_proxy
+    networks:
+      - edge_core
+    volumes:
+      - ./configs/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "43128:43128"     # HTTP forward proxy
+      - "41080:41080"     # SOCKS5 proxy

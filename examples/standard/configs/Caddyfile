@@ -1,8 +1,7 @@
 # examples/standard/configs/Caddyfile
 #
-# Caddy reverse proxy for Netmaker API, UI, admin instances, and MQTT broker.
+# HTTP reverse proxy for Netmaker API, UI, admin instances, and MQTT broker.
 # Replace yourdomain.com with your actual domain throughout.
-# Caddy will auto-provision TLS certificates via Let's Encrypt.
 
 http://edge-vpn.yourdomain.com {
     reverse_proxy edge_vpn:8081

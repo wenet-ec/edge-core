@@ -1,0 +1,17 @@
+# deploy/production/compose/edge_http_proxy/Caddyfile.lite
+
+http://edge-vpn.yourdomain.com {
+    reverse_proxy edge_vpn:8081
+}
+
+http://edge-vpn-ui.yourdomain.com {
+    reverse_proxy edge_vpn_ui:80
+}
+
+http://edge-vpn-broker.yourdomain.com {
+    reverse_proxy edge_vpn_broker:8083
+}
+
+http://edge-admin.yourdomain.com {
+    reverse_proxy edge_admin:44000
+}

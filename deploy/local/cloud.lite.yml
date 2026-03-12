@@ -15,8 +15,8 @@ volumes:
   local_edge_vpn_data: {}
   local_edge_vpn_dns_config: {}
   local_edge_vpn_broker_data: {}
-  local_edge_vpn_proxy_data: {}
-  local_edge_vpn_proxy_config: {}
+  local_edge_http_proxy_data: {}
+  local_edge_http_proxy_config: {}
   local_edge_metrics_storage_data: {}
   local_edge_metrics_collector_data: {}
 
@@ -148,9 +148,23 @@ services:
       - local_edge_vpn_dns_config:/root/config/dnsconfig
     command: -conf /root/config/dnsconfig/Corefile
 
-  edge_vpn_proxy:
+  edge_vpn_ui:
+    container_name: edge_vpn_ui
+    image: gravitl/netmaker-ui:v1.5.0
+    networks:
+      - local_edge_core
+    depends_on:
+      edge_vpn:
+        condition: service_healthy
+    environment:
+      - BACKEND_URL=http://edge-vpn.localtest.me
+    ports:
+      - "8080:80"
+
+  # HTTP Reverse Proxy
+  edge_http_proxy:
     image: caddy:alpine
-    container_name: local_edge_vpn_proxy
+    container_name: local_edge_http_proxy
     networks:
       local_edge_core:
         ipv4_address: 172.20.0.101
@@ -160,23 +174,24 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ../../deploy/local/compose/edge_vpn_proxy/Caddyfile:/etc/caddy/Caddyfile
-      - local_edge_vpn_proxy_data:/data
-      - local_edge_vpn_proxy_config:/config
+      - ./compose/edge_http_proxy/Caddyfile:/etc/caddy/Caddyfile
+      - local_edge_http_proxy_data:/data
+      - local_edge_http_proxy_config:/config
     depends_on:
       - edge_vpn
     command: caddy run --config /etc/caddy/Caddyfile
 
-  edge_vpn_ui:
-    container_name: edge_vpn_ui
-    image: gravitl/netmaker-ui:v1.5.0
-    depends_on:
-      edge_vpn:
-        condition: service_healthy
-    environment:
-      - BACKEND_URL=http://localhost:8081
+  # TCP Forward Proxy Load Balancer
+  edge_tcp_proxy:
+    image: haproxy:latest
+    container_name: local_edge_tcp_proxy
+    networks:
+      - local_edge_core
+    volumes:
+      - ./compose/edge_tcp_proxy/haproxy.lite.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:
-      - "8080:80"
+      - "43128:43128"     # HTTP forward proxy
+      - "41080:41080"     # SOCKS5 proxy
 
   # Metrics
   edge_metrics_storage:

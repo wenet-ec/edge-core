@@ -1,4 +1,5 @@
-# deploy/local/compose/edge_vpn_proxy/Caddyfile
+# deploy/local/compose/edge_http_proxy/Caddyfile
+
 http://edge-vpn.localtest.me {
     reverse_proxy edge_vpn:8081
 }

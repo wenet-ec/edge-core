@@ -1,0 +1,8 @@
+# examples/lite/configs/Caddyfile
+#
+# HTTP reverse proxy for Netmaker API.
+# Replace YOUR_DOMAIN with your actual domain.
+
+http://YOUR_DOMAIN {
+    reverse_proxy edge_vpn:8081
+}

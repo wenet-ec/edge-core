@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/mcp/tools/metrics/admin_metrics.ex
+# edge_admin/lib/edge_admin/mcp/tools/metrics/get_admin_metrics.ex
 defmodule EdgeAdmin.MCP.Tools.Metrics.GetAdminMetrics do
   @moduledoc "Get metrics for this admin instance from edge_admin PromEx — BEAM stats, cluster metadata, Oban queues."
   use EdgeAdmin.MCP, :tool

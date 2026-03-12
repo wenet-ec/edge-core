@@ -91,6 +91,7 @@ show_cloud_help() {
     echo "  admin:test [opts]      - Run Edge Admin tests"
     echo "  admin:quality          - Run quality checks"
     echo "  admin:security         - Run security checks"
+    echo "  admin:precommit        - Run pre-commit checks (check + test)"
     echo ""
     echo -e "${YELLOW}Database Commands:${NC}"
     echo "  db:migrate [opts]      - Run database migrations"
@@ -134,6 +135,7 @@ show_edge_help() {
     echo "  agent:test [opts]      - Run Edge Agent tests"
     echo "  agent:quality          - Run quality checks"
     echo "  agent:security         - Run security checks"
+    echo "  agent:precommit        - Run pre-commit checks (check + test)"
     echo ""
     echo -e "${YELLOW}Database Commands:${NC}"
     echo "  db:migrate [opts]      - Run database migrations"
@@ -293,6 +295,11 @@ handle_cloud() {
             log "Running Edge Admin security checks..."
             docker compose $compose_file run --rm edge_admin_a1 mix security
             ;;
+        admin:precommit)
+            check_docker
+            log "Running Edge Admin pre-commit checks..."
+            docker compose $compose_file run --rm edge_admin_a1 mix precommit
+            ;;
         db:migrate)
             check_docker
             log "Running Edge Admin database migrations..."
@@ -413,6 +420,11 @@ handle_edge() {
             check_docker
             log "Running Edge Agent security checks..."
             docker compose $compose_file run --rm edge_agent mix security
+            ;;
+        agent:precommit)
+            check_docker
+            log "Running Edge Agent pre-commit checks..."
+            docker compose $compose_file run --rm edge_agent mix precommit
             ;;
         db:migrate)
             check_docker

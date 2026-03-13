@@ -21,8 +21,10 @@ defmodule EdgeAdmin.Mcp.SessionStore do
 
   use GenServer
 
+  alias Anubis.Server.Session.Store
+
   @table __MODULE__
-  @default_ttl :timer.minutes(30)
+  @default_ttl to_timeout(minute: 30)
 
   # --- GenServer ---
 
@@ -33,14 +35,14 @@ defmodule EdgeAdmin.Mcp.SessionStore do
     {:ok, %{ttl: ttl}}
   end
 
-  @impl Anubis.Server.Session.Store
+  @impl Store
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
   # --- Store callbacks ---
 
-  @impl Anubis.Server.Session.Store
+  @impl Store
   def save(session_id, state, opts) do
     ttl = Keyword.get(opts, :ttl, @default_ttl)
     expires_at = System.monotonic_time(:millisecond) + ttl
@@ -48,7 +50,7 @@ defmodule EdgeAdmin.Mcp.SessionStore do
     :ok
   end
 
-  @impl Anubis.Server.Session.Store
+  @impl Store
   def load(session_id, _opts) do
     now = System.monotonic_time(:millisecond)
 
@@ -59,25 +61,26 @@ defmodule EdgeAdmin.Mcp.SessionStore do
     end
   end
 
-  @impl Anubis.Server.Session.Store
+  @impl Store
   def delete(session_id, _opts) do
     :ets.delete(@table, session_id)
     :ok
   end
 
-  @impl Anubis.Server.Session.Store
+  @impl Store
   def list_active(_opts) do
     now = System.monotonic_time(:millisecond)
 
     ids =
-      :ets.tab2list(@table)
+      @table
+      |> :ets.tab2list()
       |> Enum.filter(fn {_id, _state, expires_at} -> expires_at > now end)
       |> Enum.map(fn {id, _state, _expires_at} -> id end)
 
     {:ok, ids}
   end
 
-  @impl Anubis.Server.Session.Store
+  @impl Store
   def update_ttl(session_id, ttl_ms, _opts) do
     now = System.monotonic_time(:millisecond)
 
@@ -91,7 +94,7 @@ defmodule EdgeAdmin.Mcp.SessionStore do
     end
   end
 
-  @impl Anubis.Server.Session.Store
+  @impl Store
   def update(session_id, updates, _opts) do
     case :ets.lookup(@table, session_id) do
       [{^session_id, state, expires_at}] ->
@@ -103,12 +106,13 @@ defmodule EdgeAdmin.Mcp.SessionStore do
     end
   end
 
-  @impl Anubis.Server.Session.Store
+  @impl Store
   def cleanup_expired(_opts) do
     now = System.monotonic_time(:millisecond)
 
     expired =
-      :ets.tab2list(@table)
+      @table
+      |> :ets.tab2list()
       |> Enum.filter(fn {_id, _state, expires_at} -> expires_at <= now end)
 
     Enum.each(expired, fn {id, _state, _expires_at} -> :ets.delete(@table, id) end)

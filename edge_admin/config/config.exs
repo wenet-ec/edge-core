@@ -9,6 +9,11 @@ import Config
 
 version = Mix.Project.config()[:version]
 
+config :anubis_mcp, :session_store,
+  adapter: EdgeAdmin.Mcp.SessionStore,
+  enabled: true,
+  ttl: to_timeout(minute: 30)
+
 config :edge_admin, Corsica, allow_headers: :all
 config :edge_admin, EdgeAdmin.Gettext, default_locale: "en"
 
@@ -43,11 +48,6 @@ config :edge_admin,
   ecto_repos: [EdgeAdmin.Repo],
   generators: [timestamp_type: :utc_datetime, binary_id: true],
   version: version
-
-config :anubis_mcp, :session_store,
-  adapter: EdgeAdmin.Mcp.SessionStore,
-  enabled: true,
-  ttl: :timer.minutes(30)
 
 config :flop, repo: EdgeAdmin.Repo
 

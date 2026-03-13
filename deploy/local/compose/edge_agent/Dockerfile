@@ -84,6 +84,12 @@ RUN wget -q https://github.com/prometheus/node_exporter/releases/download/v${NOD
 # Use HTTP for Netmaker API (local dev — no TLS certs)
 ENV NETMAKER_API_SCHEME=http
 
+# Agent defaults to userspace WireGuard; override to unset for kernel mode on bare metal
+ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
+
+# Keep epmd in the 40k port range to avoid colliding with user-deployed Erlang/Elixir apps
+ENV ERL_EPMD_PORT=44369
+
 # Copy netclient binary from builder stage
 COPY --from=netclient-builder /build/netclient /usr/local/bin/netclient
 RUN chmod +x /usr/local/bin/netclient

@@ -78,11 +78,6 @@ NETMAKER_MASTER_KEY=supersecretkey123456789
 NETMAKER_SUPERADMIN_USERNAME=admin
 NETMAKER_SUPERADMIN_PASSWORD=admin
 
-# --- WireGuard Implementation ---
-# wireguard-go = userspace (required for admin in a container — no NET_ADMIN cap needed)
-# unset        = kernel mode (faster; needs privileged + host network; used by agents)
-WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
-
 # --- Netclient API Scheme ---
 # http  = local dev (no TLS certs)
 # https = production default
@@ -138,6 +133,9 @@ ADMIN_MAX_CAPACITY=200
 
 # Shared Erlang cookie — must be identical across all admin instances in the cluster.
 ERLANG_COOKIE=local-cookie
+
+# epmd port — default 44369, baked into the Dockerfile. Override here only if needed.
+# ERL_EPMD_PORT=44369
 
 # Fixed Erlang distribution port (epmd replacement). Configured in vm.args.eex.
 ERLANG_DIST_PORT=49125

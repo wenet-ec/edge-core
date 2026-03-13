@@ -72,6 +72,12 @@ ENV LC_ALL=en_US.UTF-8
 # Use HTTP for Netmaker API (local dev — no TLS certs)
 ENV NETMAKER_API_SCHEME=http
 
+# Admin always runs userspace WireGuard
+ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
+
+# Keep epmd in the 40k port range to avoid colliding with user-deployed Erlang/Elixir apps
+ENV ERL_EPMD_PORT=44369
+
 # Copy netclient binary from builder stage
 COPY --from=netclient-builder /build/netclient /usr/local/bin/netclient
 RUN chmod +x /usr/local/bin/netclient && \

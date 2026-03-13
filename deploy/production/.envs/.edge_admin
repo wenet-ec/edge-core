@@ -85,11 +85,6 @@ NETMAKER_SUPERADMIN_PASSWORD=admin
 # Cannot be changed after nodes have enrolled — pick once and do not change.
 # NETMAKER_DEFAULT_DOMAIN=nm.internal
 
-# --- WireGuard Implementation ---
-# wireguard-go = userspace (required for admin in a container — no NET_ADMIN cap needed)
-# unset        = kernel mode (faster; needs privileged + host network; used by agents)
-WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
-
 # --- Edge Cluster Network Allocation ---
 # Subnet prefix length for auto-generated cluster networks (24 = /24 = 254 usable hosts).
 # CLUSTER_SUBNET_PREFIX=24
@@ -136,6 +131,9 @@ ADMIN_MAX_CAPACITY=200
 
 # Shared Erlang cookie — must be identical across all admin instances in the cluster.
 ERLANG_COOKIE=prod-cookie
+
+# epmd port — default 44369, baked into the Dockerfile. Override here only if needed.
+# ERL_EPMD_PORT=44369
 
 # Fixed Erlang distribution port (epmd replacement). Configured in vm.args.eex.
 ERLANG_DIST_PORT=49125

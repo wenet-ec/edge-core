@@ -1,6 +1,8 @@
 # deploy/production/.envs/.edge_agent
 ENROLLMENT_KEY=
-PUBLIC_ENROLLMENT_KEY_URL=https://edge-admin.yourdomain.com/api/v1/clusters/default/enrollment_keys/public
+PUBLIC_ENROLLMENT_KEY_URL=https://admin-187.wenet.vn/api/v1/clusters/default/enrollment_keys/public
+# PUBLIC_ENROLLMENT_KEY_URL=http://103.95.198.155:34000/api/v1/clusters/default/enrollment_keys/public
+# PUBLIC_ENROLLMENT_KEY_URL=http://103.176.22.187:34000/api/v1/clusters/default/enrollment_keys/public
 
 # Self-update configuration
 SELF_UPDATE_ENABLED=true

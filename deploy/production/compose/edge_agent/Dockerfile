@@ -123,6 +123,9 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
+# Keep epmd in the 40k port range to avoid colliding with user-deployed Erlang/Elixir apps
+ENV ERL_EPMD_PORT=44369
+
 # Copy wireguard_exporter binary from official Docker image
 COPY --from=mindflavor/prometheus-wireguard-exporter:3.6.6 /usr/local/bin/prometheus_wireguard_exporter /usr/local/bin/prometheus_wireguard_exporter
 RUN chmod +x /usr/local/bin/prometheus_wireguard_exporter

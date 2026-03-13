@@ -109,9 +109,15 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
+# Admin always runs userspace WireGuard
+ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
+
 # Erlang distribution settings
 # Admins always use dynamic clustering (started after VPN join)
 ENV RELEASE_DISTRIBUTION=none
+
+# Keep epmd in the 40k port range to avoid colliding with user-deployed Erlang/Elixir apps
+ENV ERL_EPMD_PORT=44369
 
 # Copy netclient built from source
 COPY --from=netclient-builder /build/netclient /usr/local/bin/netclient

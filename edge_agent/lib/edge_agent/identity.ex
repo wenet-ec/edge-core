@@ -19,28 +19,14 @@ defmodule EdgeAgent.Identity do
   The module follows this priority order:
 
   1. **Existing ID in Settings** - Use stored node_id and id_type from previous runs
-  2. **VPS/VM Detection** - If running on a virtualized host, skip persistent ID entirely
-     and fall through to random UUID. VPS providers often clone base images, so
-     machine-id/DMI UUIDs are frequently identical across many instances.
-  3. **Persistent System ID** - Search system files for stable identifiers (bare metal only):
+  2. **Persistent System ID** - Search system files for stable identifiers:
      - `/host/etc/machine-id` - systemd machine ID
      - `/host/var/lib/dbus/machine-id` - D-Bus machine ID
      - `/host/sys/class/dmi/id/product_uuid` - DMI product UUID
      - `/host/sys/class/dmi/id/board_serial` - Motherboard serial
      - `/host/sys/class/dmi/id/product_serial` - Product serial
      - `/host/proc/sys/kernel/random/boot_id` - Boot ID (changes per boot)
-  4. **Random UUID** - Generate new random UUID
-
-  ## VPS Detection
-
-  Detects virtualization by reading system files (no binary execution required):
-  - `/host/proc/cpuinfo` - `hypervisor` flag in CPU flags (set on KVM, Xen HVM, VMware, Hyper-V, etc.)
-  - `/host/sys/class/dmi/id/sys_vendor` - Hypervisor/cloud vendor strings
-  - `/host/sys/class/dmi/id/product_name` - VM product name strings
-  - `/host/sys/class/dmi/id/chassis_asset_tag` - Cloud provider asset tags (Azure, DigitalOcean, Vultr)
-  - `/host/sys/class/dmi/id/board_vendor` - Board vendor strings (AWS Nitro)
-  - `/host/sys/hypervisor/type` - Xen paravirtualization (no CPUID hypervisor flag on Xen PV)
-  - `/host/proc/vz` - OpenVZ/Virtuozzo container detection
+  3. **Random UUID** - Generate new random UUID
 
   ## Configuration
 
@@ -79,10 +65,6 @@ defmodule EdgeAgent.Identity do
       Application.put_env(:edge_agent, :use_random_id, true)
       iex> Identity.determine()
       {:ok, "7c8d9e0f-1a2b-3c4d-5e6f-708192a3b4c5", "random"}
-
-      # VPS detected — automatic random ID
-      iex> Identity.determine()
-      {:ok, "3f2a1b0c-4d5e-6f7a-8b9c-0d1e2f3a4b5c", "random"}
   """
 
   alias EdgeAgent.Settings
@@ -124,149 +106,23 @@ defmodule EdgeAgent.Identity do
   defp determine_new_identity do
     use_random_id = Application.get_env(:edge_agent, :use_random_id, false)
 
-    cond do
-      use_random_id ->
-        Logger.info("USE_RANDOM_ID enabled, generating random UUID")
-        {:ok, Ecto.UUID.generate(), "random"}
+    if use_random_id do
+      Logger.info("USE_RANDOM_ID enabled, generating random UUID")
+      {:ok, Ecto.UUID.generate(), "random"}
+    else
+      # Try persistent ID first, fall back to random
+      case try_persistent_id() do
+        {:ok, id} ->
+          # Normalize to UUID format with hyphens
+          normalized_id = normalize_to_uuid(id)
+          Logger.info("Found persistent ID: #{String.slice(normalized_id, 0, 8)}...")
+          {:ok, normalized_id, "persistent"}
 
-      running_on_vps?() ->
-        Logger.info("VPS/VM environment detected, generating random UUID")
-        {:ok, Ecto.UUID.generate(), "random"}
-
-      true ->
-        # Try persistent ID first, fall back to random
-        case try_persistent_id() do
-          {:ok, id} ->
-            normalized_id = normalize_to_uuid(id)
-            Logger.info("Found persistent ID: #{String.slice(normalized_id, 0, 8)}...")
-            {:ok, normalized_id, "persistent"}
-
-          :error ->
-            Logger.warning("No persistent ID found, generating random UUID")
-            {:ok, Ecto.UUID.generate(), "random"}
-        end
+        :error ->
+          Logger.warning("No persistent ID found, generating random UUID")
+          {:ok, Ecto.UUID.generate(), "random"}
+      end
     end
-  end
-
-  # Returns true if the host appears to be a VPS or virtual machine.
-  #
-  # VPS providers frequently clone base images, meaning machine-id and DMI UUIDs
-  # are often identical across many instances from the same provider. A persistent
-  # ID on a VPS is therefore not reliably unique, so we fall back to a random UUID.
-  #
-  # Detection strategy (file reads only, no binary execution):
-  #   1. /proc/cpuinfo hypervisor flag — set by nearly all type-1/type-2 hypervisors
-  #      (KVM, Xen HVM, VMware, VirtualBox, Hyper-V). NOT set on Xen PV or bare metal.
-  #   2. DMI sys_vendor — hypervisor or cloud vendor string (QEMU, Amazon EC2, etc.)
-  #   3. DMI product_name — VM product name (VirtualBox, HVM domU, Droplet, etc.)
-  #   4. DMI chassis_asset_tag — cloud provider tags (Azure, DigitalOcean, Vultr)
-  #   5. DMI board_vendor — AWS Nitro uses "Amazon EC2" here
-  #   6. /sys/hypervisor/type — Xen PV guests (no CPUID hypervisor flag on Xen PV)
-  #   7. /proc/vz — OpenVZ/Virtuozzo containers
-  defp running_on_vps? do
-    cpuinfo_has_hypervisor_flag?() or
-      dmi_indicates_vm?() or
-      xen_hypervisor_present?() or
-      openvz_present?()
-  end
-
-  # Checks /proc/cpuinfo for the x86 hypervisor CPUID bit (ECX bit 31).
-  # This is set by KVM, Xen HVM, VMware, VirtualBox, Hyper-V, and bhyve.
-  # One "hypervisor" token per logical CPU core will appear in flags lines.
-  defp cpuinfo_has_hypervisor_flag? do
-    case read_file_safely("/host/proc/cpuinfo") do
-      {:ok, content} ->
-        content
-        |> String.split("\n")
-        |> Enum.any?(fn line ->
-          String.starts_with?(line, "flags") and
-            String.contains?(line, "hypervisor")
-        end)
-
-      :error ->
-        false
-    end
-  end
-
-  # Checks DMI/SMBIOS identity files under /sys/class/dmi/id/ for known
-  # hypervisor and cloud provider strings.
-  defp dmi_indicates_vm? do
-    vm_vendor_strings = [
-      # Generic hypervisors
-      "qemu",
-      "kvm",
-      "vmware",
-      "virtualbox",
-      "innotek gmbh",
-      "bochs",
-      "bhyve",
-      "parallels",
-      "xen",
-      # Cloud providers
-      "amazon ec2",
-      "google",
-      "microsoft corporation",
-      "digitalocean",
-      "hetzner",
-      "linode",
-      "vultr",
-      "alibaba cloud",
-      "tencent cloud",
-      "ovh"
-    ]
-
-    vm_product_strings = [
-      "virtualbox",
-      "vmware virtual platform",
-      "vmware7,1",
-      "hvm domu",
-      "standard pc",
-      "virtual machine",
-      "droplet",
-      "google compute engine",
-      "vserver",
-      "openstack nova",
-      "alibaba cloud ecs"
-    ]
-
-    vm_asset_tags = [
-      # Azure hardcoded asset tag (used by cloud-init as primary Azure signal)
-      "7783-7084-3265-9085-8269-3286-77",
-      "digitalocean",
-      "vultr",
-      "openstack nova",
-      "amazon ec2"
-    ]
-
-    dmi_field_matches?("/host/sys/class/dmi/id/sys_vendor", vm_vendor_strings) or
-      dmi_field_matches?("/host/sys/class/dmi/id/board_vendor", vm_vendor_strings) or
-      dmi_field_matches?("/host/sys/class/dmi/id/product_name", vm_product_strings) or
-      dmi_field_matches?("/host/sys/class/dmi/id/chassis_asset_tag", vm_asset_tags)
-  end
-
-  defp dmi_field_matches?(path, known_strings) do
-    case read_file_safely(path) do
-      {:ok, content} ->
-        value = content |> String.trim() |> String.downcase()
-        Enum.any?(known_strings, fn s -> String.contains?(value, s) end)
-
-      :error ->
-        false
-    end
-  end
-
-  # Xen PV guests don't set the CPUID hypervisor flag — the only reliable
-  # signal is the presence of /sys/hypervisor/type containing "xen".
-  defp xen_hypervisor_present? do
-    case read_file_safely("/host/sys/hypervisor/type") do
-      {:ok, content} -> String.trim(content) == "xen"
-      :error -> false
-    end
-  end
-
-  # OpenVZ/Virtuozzo exposes /proc/vz on the host kernel when running as a container.
-  defp openvz_present? do
-    File.dir?("/host/proc/vz")
   end
 
   # Normalize a string to UUID format (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)

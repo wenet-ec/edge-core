@@ -143,6 +143,8 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
     end
 
     test "custom domain in config is respected" do
+      original = Application.get_env(:edge_admin, :netmaker_default_domain)
+      on_exit(fn -> Application.put_env(:edge_admin, :netmaker_default_domain, original) end)
       Application.put_env(:edge_admin, :netmaker_default_domain, "custom.vpn")
 
       # DNS: node-xyz.cluster-prod.custom.vpn → identifier "xyz"
@@ -155,8 +157,6 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
                  "node-xyz.cluster-prod.custom.vpn",
                  "any"
                )
-
-      Application.put_env(:edge_admin, :netmaker_default_domain, "nm.internal")
     end
   end
 

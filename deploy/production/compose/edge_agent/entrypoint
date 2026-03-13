@@ -48,7 +48,7 @@ if ! command -v netclient &> /dev/null; then
     exit 1
 fi
 
-echo "Netclient version: $(netclient version 2>&1 || echo 'unknown')"
+echo "Netclient version: $(netclient version 2>/dev/null || echo 'unknown')"
 
 # Check if hostscript is available (agent-specific utility)
 if ! command -v hostscript &> /dev/null; then

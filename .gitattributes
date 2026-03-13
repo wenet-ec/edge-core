@@ -17,3 +17,5 @@ bin/*.sh text eol=lf executable
 *.{json,yml,yaml,toml} text eol=lf
 *.md text eol=lf
 Dockerfile* text eol=lf
+
+bin/run text eol=lf executable

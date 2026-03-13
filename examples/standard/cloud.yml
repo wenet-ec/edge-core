@@ -406,6 +406,9 @@ services:
     container_name: edge_metrics_storage
     networks:
       - edge_core
+    depends_on:
+      edge_admin_a1:
+        condition: service_healthy
     ports:
       - "48428:8428"
     volumes:

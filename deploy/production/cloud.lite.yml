@@ -185,6 +185,9 @@ services:
     container_name: production_edge_metrics_storage
     networks:
       - production_edge_core
+    depends_on:
+      edge_admin_a1:
+        condition: service_healthy
     ports:
       - "48428:8428"
     volumes:

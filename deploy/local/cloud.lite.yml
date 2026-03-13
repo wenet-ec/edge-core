@@ -203,6 +203,9 @@ services:
     container_name: local_edge_metrics_storage
     networks:
       - local_edge_core
+    depends_on:
+      edge_admin_a1:
+        condition: service_healthy
     ports:
       - "8428:8428"
     volumes:

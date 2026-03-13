@@ -196,6 +196,9 @@ services:
     container_name: edge_tcp_proxy
     networks:
       - edge_core
+    depends_on:
+      edge_admin_a1:
+        condition: service_healthy
     volumes:
       - ./configs/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:

@@ -307,6 +307,13 @@ services:
     container_name: production_edge_tcp_proxy
     networks:
       - production_edge_core
+    depends_on:
+      edge_admin_a1:
+        condition: service_healthy
+      edge_admin_a2:
+        condition: service_healthy
+      edge_admin_b1:
+        condition: service_healthy
     volumes:
       - ./compose/edge_tcp_proxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:

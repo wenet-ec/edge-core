@@ -4,15 +4,15 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
   OpenAPI schemas for SelfUpdateRequest resources
   """
 
+  use EdgeAdminWeb.Schema
+
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
-
-  require OpenApiSpex
 
   defmodule SelfUpdateRequestResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Self-Update Request Response",
       description: "Self-update request information",
       type: :object,
@@ -89,7 +89,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
   defmodule SelfUpdateRequestPaginatedResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(
+    schema(
       CommonSchemas.paginated_response(
         SelfUpdateRequestResponse,
         "Self-Update Request Paginated Response",
@@ -101,7 +101,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
   defmodule SelfUpdateRequestSingleResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Self-Update Request Single Response",
       description: "Single self-update request response",
       type: :object,
@@ -132,7 +132,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
   defmodule SelfUpdateRequestCreateRequest do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Self-Update Request Create Request",
       description: """
       Create a new self-update request.

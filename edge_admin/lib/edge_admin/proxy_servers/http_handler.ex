@@ -185,8 +185,8 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
           {:ok, :remote, proxy_pid} ->
             send_connect_success(socket, transport)
             transport.setopts(socket, active: true)
-            result = handle_remote_streaming(socket, transport, proxy_pid)
-            if result == :ok, do: {:ok, :remote, proxy_mode, cluster_name}, else: result
+            handle_remote_streaming(socket, transport, proxy_pid)
+            {:ok, :remote, proxy_mode, cluster_name}
 
           {:error, reason} ->
             {status, message} = ErrorHandler.http_error_response(reason)
@@ -255,8 +255,8 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
 
       {:ok, :remote, proxy_pid} ->
         transport.setopts(socket, active: true)
-        result = handle_remote_streaming(socket, transport, proxy_pid)
-        if result == :ok, do: {:ok, :remote, proxy_mode, cluster_name}, else: result
+        handle_remote_streaming(socket, transport, proxy_pid)
+        {:ok, :remote, proxy_mode, cluster_name}
 
       {:error, reason} ->
         {status, message} = ErrorHandler.http_error_response(reason)

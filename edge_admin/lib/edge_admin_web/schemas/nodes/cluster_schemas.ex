@@ -4,14 +4,14 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
   OpenAPI schemas for Cluster resources
   """
 
-  alias OpenApiSpex.Schema
+  use EdgeAdminWeb.Schema
 
-  require OpenApiSpex
+  alias OpenApiSpex.Schema
 
   defmodule NodeSummary do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Node Summary",
       description: "Brief node information within cluster response",
       type: :object,
@@ -52,7 +52,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
   defmodule ClusterResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Cluster Response",
       description: "Edge cluster information",
       type: :object,
@@ -152,7 +152,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
   defmodule ClusterPaginatedResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(
+    schema(
       EdgeAdminWeb.Schemas.CommonSchemas.paginated_response(
         ClusterResponse,
         "Cluster Paginated Response",
@@ -164,7 +164,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
   defmodule ClusterSingleResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Cluster Single Response",
       description: "Single cluster response",
       type: :object,
@@ -205,7 +205,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
   defmodule ClusterUpdateRequest do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Cluster Update Request",
       description:
         "Parameters for updating a cluster. Only provided fields are updated. Pass null to unset a nullable field.",
@@ -232,7 +232,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
   defmodule ClusterCreateRequest do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Cluster Create Request",
       description: "Parameters for creating a new cluster (all fields optional for auto-generation)",
       type: :object,

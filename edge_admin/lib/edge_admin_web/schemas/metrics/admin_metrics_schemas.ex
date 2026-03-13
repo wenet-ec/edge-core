@@ -3,14 +3,14 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
   @moduledoc """
   OpenAPI schemas for admin metrics endpoints
   """
-  alias OpenApiSpex.Schema
+  use EdgeAdminWeb.Schema
 
-  require OpenApiSpex
+  alias OpenApiSpex.Schema
 
   defmodule AdminMetricsResponse do
     @moduledoc "Admin application metrics response"
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Admin Metrics Response",
       description: """
       Application-level metrics from edge_admin PromEx (BEAM stats, metadata, Oban, etc.).

@@ -4,13 +4,13 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
   Common OpenAPI schemas shared across the application
   """
 
-  alias OpenApiSpex.Schema
+  use EdgeAdminWeb.Schema
 
-  require OpenApiSpex
+  alias OpenApiSpex.Schema
 
   defmodule ChangesetErrorResponse do
     @moduledoc false
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Changeset Error Response",
       description: "Validation error response from Ecto changeset (422 Unprocessable Entity)",
       type: :object,
@@ -37,7 +37,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
   defmodule NotFoundResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Not Found Response",
       description: "Resource not found error (404)",
       type: :object,
@@ -65,7 +65,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
   defmodule UnauthorizedResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Unauthorized Response",
       description: "Authentication required or invalid credentials (401)",
       type: :object,
@@ -93,7 +93,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
   defmodule ForbiddenResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Forbidden Response",
       description: "Insufficient permissions to access resource (403)",
       type: :object,
@@ -121,7 +121,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
   defmodule ConflictResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Conflict Response",
       description: "Resource conflict, usually duplicate or constraint violation (409)",
       type: :object,
@@ -149,7 +149,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
   defmodule UnprocessableResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Unprocessable Response",
       description: "Semantically invalid request that cannot succeed regardless of retry (422)",
       type: :object,
@@ -177,7 +177,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
   defmodule ServiceUnavailableResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Service Unavailable Response",
       description: "Downstream service unavailable (503)",
       type: :object,
@@ -205,7 +205,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
   defmodule BadRequestResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Bad Request Response",
       description: "Malformed request or invalid input (400)",
       type: :object,
@@ -233,7 +233,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
   defmodule InternalServerErrorResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Internal Server Error Response",
       description: "Unexpected server error (500)",
       type: :object,
@@ -261,7 +261,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
   defmodule PaginationMeta do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Pagination Metadata",
       description: "Pagination information for paginated responses",
       type: :object,
@@ -295,9 +295,9 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
 
   ## Example
       defmodule NodePaginatedResponse do
-        require OpenApiSpex
+        use EdgeAdminWeb.Schema
 
-        OpenApiSpex.schema(
+        schema(
           CommonSchemas.paginated_response(
             NodeResponse,
             "Node Paginated Response",

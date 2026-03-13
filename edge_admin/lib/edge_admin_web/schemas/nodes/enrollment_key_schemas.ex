@@ -4,14 +4,14 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
   OpenAPI schemas for EnrollmentKey resources
   """
 
-  alias OpenApiSpex.Schema
+  use EdgeAdminWeb.Schema
 
-  require OpenApiSpex
+  alias OpenApiSpex.Schema
 
   defmodule EnrollmentKeyData do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Enrollment Key Response",
       description: "Enrollment key information",
       type: :object,
@@ -52,7 +52,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
   defmodule EnrollmentKeySingleResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Enrollment Key Single Response",
       description: "Single enrollment key response",
       type: :object,
@@ -64,7 +64,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
   defmodule EnrollmentKeyPaginatedResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(
+    schema(
       EdgeAdminWeb.Schemas.CommonSchemas.paginated_response(
         EnrollmentKeyData,
         "Enrollment Key Paginated Response",
@@ -76,7 +76,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
   defmodule EnrollmentKeyCreateRequest do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Enrollment Key Create Request",
       description: "Parameters for creating a new enrollment key for a cluster",
       type: :object,
@@ -106,7 +106,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
   defmodule EnrollmentKeyUpdateRequest do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Enrollment Key Update Request",
       description:
         "Parameters for updating an enrollment key. Only provided fields are updated. Pass null to unset a nullable field.",

@@ -4,15 +4,15 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
   OpenAPI schemas for Command resources
   """
 
+  use EdgeAdminWeb.Schema
+
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
-
-  require OpenApiSpex
 
   defmodule CommandResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Command Response",
       description: "Command information",
       type: :object,
@@ -72,7 +72,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
   defmodule CommandPaginatedResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(
+    schema(
       CommonSchemas.paginated_response(
         CommandResponse,
         "Command Paginated Response",
@@ -84,7 +84,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
   defmodule CommandSingleResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Command Single Response",
       description: "Single command response",
       type: :object,
@@ -111,7 +111,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
   defmodule CommandCreateRequest do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Command Create Request",
       description: "Create a new command with flexible targeting options",
       type: :object,

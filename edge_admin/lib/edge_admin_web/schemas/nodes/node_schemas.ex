@@ -4,15 +4,15 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
   OpenAPI schemas for Node resources
   """
 
+  use EdgeAdminWeb.Schema
+
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
-
-  require OpenApiSpex
 
   defmodule NodeResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Node Response",
       description: "Edge node information",
       type: :object,
@@ -155,7 +155,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
   defmodule NodeListResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Node List Response",
       description: "List of nodes",
       type: :object,
@@ -199,7 +199,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
   defmodule NodePaginatedResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(
+    schema(
       CommonSchemas.paginated_response(
         NodeResponse,
         "Node Paginated Response",
@@ -211,7 +211,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
   defmodule NodeSingleResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Node Single Response",
       description: "Single node response",
       type: :object,
@@ -250,7 +250,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
   defmodule ChangeClusterRequest do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Change Cluster Request",
       description:
         "Request to move a node to a different cluster. " <>

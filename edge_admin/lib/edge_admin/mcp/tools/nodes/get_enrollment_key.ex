@@ -17,7 +17,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.GetEnrollmentKey do
          Response.json(Response.tool(), %{
            id: k.id,
            key: k.key,
-           cluster_name: k.cluster && k.cluster.name,
+           cluster_name: k.cluster.name,
            uses_remaining: k.uses_remaining,
            expired_at: k.expired_at,
            last_used_at: k.last_used_at,

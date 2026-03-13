@@ -4,15 +4,15 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
   OpenAPI schemas for Command Execution resources
   """
 
+  use EdgeAdminWeb.Schema
+
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
-
-  require OpenApiSpex
 
   defmodule CommandExecutionResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Command Execution Response",
       description: "Command execution information",
       type: :object,
@@ -112,7 +112,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
   defmodule CommandExecutionPaginatedResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(
+    schema(
       CommonSchemas.paginated_response(
         CommandExecutionResponse,
         "Command Execution Paginated Response",
@@ -124,7 +124,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
   defmodule CommandExecutionSingleResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Command Execution Single Response",
       description: "Single command execution response",
       type: :object,
@@ -156,7 +156,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
   defmodule CancelExecutionResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Cancel Execution Response",
       description: "Response from command execution cancellation request",
       type: :object,

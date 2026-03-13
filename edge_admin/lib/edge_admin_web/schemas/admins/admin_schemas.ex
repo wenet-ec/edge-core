@@ -4,14 +4,14 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
   OpenAPI schemas for admin metadata endpoints.
   """
 
-  alias OpenApiSpex.Schema
+  use EdgeAdminWeb.Schema
 
-  require OpenApiSpex
+  alias OpenApiSpex.Schema
 
   defmodule AdminResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Admin Response",
       description: "This admin's identity and configuration",
       type: :object,
@@ -68,7 +68,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
   defmodule AdminTopologyEntry do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Admin Topology Entry",
       description: "A peer admin in the cluster topology",
       type: :object,
@@ -108,7 +108,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
   defmodule AdminClusterResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Admin Cluster Response",
       description: "Admin cluster topology and state",
       type: :object,
@@ -169,7 +169,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
   defmodule EdgeClustersResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Edge Clusters Response",
       description: "All edge cluster assignments across all admins",
       type: :object,
@@ -198,7 +198,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
   defmodule OrphanedClustersResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Orphaned Clusters Response",
       description:
         "Clusters that could not be assigned to any admin due to capacity constraints. Empty map when system is not degraded.",

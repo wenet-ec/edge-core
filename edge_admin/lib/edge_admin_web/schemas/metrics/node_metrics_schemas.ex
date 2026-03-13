@@ -3,14 +3,14 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
   @moduledoc """
   OpenAPI schemas for node metrics endpoints
   """
-  alias OpenApiSpex.Schema
+  use EdgeAdminWeb.Schema
 
-  require OpenApiSpex
+  alias OpenApiSpex.Schema
 
   defmodule HostMetricsResponse do
     @moduledoc "Host-level metrics response"
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Host Metrics Response",
       description: """
       Host-level system metrics from Node Exporter (CPU, memory, disk, uptime).
@@ -197,7 +197,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
   defmodule AgentMetricsResponse do
     @moduledoc "Agent application metrics response"
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Agent Metrics Response",
       description: """
       Application-level metrics from edge_agent PromEx (BEAM stats, Oban, business metrics).
@@ -522,7 +522,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
   defmodule UnifiedMetricsResponse do
     @moduledoc "Unified metrics from all sources"
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Unified Metrics Response",
       description: """
       Complete metrics from all sources: host (Node Exporter) and agent (PromEx).

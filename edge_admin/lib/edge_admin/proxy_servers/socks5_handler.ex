@@ -279,8 +279,8 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
       {:ok, :remote, proxy_pid} ->
         send_reply(socket, transport, 0, target_host, target_port)
         transport.setopts(socket, active: true)
-        result = handle_remote_streaming(socket, transport, proxy_pid)
-        if match?({:ok, _}, result), do: {:ok, :remote, proxy_mode, cluster_name}, else: result
+        handle_remote_streaming(socket, transport, proxy_pid)
+        {:ok, :remote, proxy_mode, cluster_name}
 
       {:error, reason} ->
         reply_code = ErrorHandler.socks5_reply_code(reason)

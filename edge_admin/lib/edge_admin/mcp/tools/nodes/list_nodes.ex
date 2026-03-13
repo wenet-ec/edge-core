@@ -43,7 +43,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.ListNodes do
     do: %{
       id: n.id,
       name: Node.node_name(n),
-      cluster: n.cluster && n.cluster.name,
+      cluster: n.cluster.name,
       status: n.status,
       last_seen_at: n.last_seen_at,
       http_port: n.http_port,

@@ -4,15 +4,15 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
   OpenAPI schemas for Alias resources
   """
 
+  use EdgeAdminWeb.Schema
+
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
-
-  require OpenApiSpex
 
   defmodule AliasResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Alias Response",
       description: "Node alias with custom DNS entry",
       type: :object,
@@ -70,7 +70,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
   defmodule AliasSingleResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Alias Single Response",
       description: "Single alias response",
       type: :object,
@@ -95,7 +95,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
   defmodule AliasPaginatedResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(
+    schema(
       CommonSchemas.paginated_response(
         AliasResponse,
         "Alias Paginated Response",
@@ -107,7 +107,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
   defmodule CreateAliasRequest do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "Create Alias Request",
       description: "Parameters for creating a new DNS alias for a node",
       type: :object,

@@ -4,15 +4,15 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas do
   OpenAPI schemas for SSH Public Key resources
   """
 
+  use EdgeAdminWeb.Schema
+
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
-
-  require OpenApiSpex
 
   defmodule SshPublicKeyResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "SSH Public Key",
       description: "SSH public key information for username access",
       type: :object,
@@ -63,7 +63,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas do
   defmodule SshPublicKeyPaginatedResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(
+    schema(
       CommonSchemas.paginated_response(
         SshPublicKeyResponse,
         "SSH Public Key Paginated Response",
@@ -75,7 +75,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas do
   defmodule SshPublicKeySingleResponse do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "SSH Public Key Single Response",
       description: "Single SSH public key response",
       type: :object,
@@ -99,7 +99,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas do
   defmodule SshPublicKeyCreateRequest do
     @moduledoc false
 
-    OpenApiSpex.schema(%{
+    schema(%{
       title: "SSH Public Key Create Request",
       description: "Create a new SSH public key for a username. The key must be in valid OpenSSH format.",
       type: :object,

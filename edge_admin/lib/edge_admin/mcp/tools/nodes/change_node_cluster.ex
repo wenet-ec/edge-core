@@ -16,7 +16,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.ChangeNodeCluster do
       {:ok, node} ->
         case Nodes.change_node_cluster(node, %{"cluster_name" => cluster_name}) do
           {:ok, n} ->
-            {:reply, Response.json(Response.tool(), %{node_id: n.id, new_cluster: n.cluster && n.cluster.name}), frame}
+            {:reply, Response.json(Response.tool(), %{node_id: n.id, new_cluster: n.cluster.name}), frame}
 
           {:error, reason} ->
             {:reply, Response.error(Response.tool(), "Failed to change cluster: #{inspect(reason)}"), frame}

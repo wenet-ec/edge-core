@@ -103,7 +103,7 @@ DEFAULT_CLUSTER_NAME=default
 PUBLIC_ENROLLMENT_KEY_ENABLED=true
 
 # Admin URLs for enrollment key generation and agent fallback (required).
-ADMIN_URLS=http://localhost:4000
+ADMIN_URLS=http://edge-admin.localtest.me
 
 # =============================================================================
 # Admin Cluster & Erlang Distribution

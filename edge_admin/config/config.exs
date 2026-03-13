@@ -44,6 +44,11 @@ config :edge_admin,
   generators: [timestamp_type: :utc_datetime, binary_id: true],
   version: version
 
+config :anubis_mcp, :session_store,
+  adapter: EdgeAdmin.Mcp.SessionStore,
+  enabled: true,
+  ttl: :timer.minutes(30)
+
 config :flop, repo: EdgeAdmin.Repo
 
 config :phoenix, :json_library, Jason

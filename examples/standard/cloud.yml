@@ -395,8 +395,8 @@ services:
     volumes:
       - ./configs/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:
-      - "43128:43128"     # HTTP forward proxy
-      - "41080:41080"     # SOCKS5 proxy
+      - "53128:43128"     # HTTP forward proxy
+      - "51080:41080"     # SOCKS5 proxy
 
   # ---------------------------------------------------------------------------
   # VictoriaMetrics — time-series metrics storage

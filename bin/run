@@ -91,7 +91,7 @@ show_cloud_help() {
     echo "  admin:test [opts]      - Run Edge Admin tests"
     echo "  admin:quality          - Run quality checks"
     echo "  admin:security         - Run security checks"
-    echo "  admin:precommit        - Run pre-commit checks (check + test)"
+    echo "  admin:check            - Run all checks (format, deps, security, lint, dialyzer)"
     echo ""
     echo -e "${YELLOW}Database Commands:${NC}"
     echo "  db:migrate [opts]      - Run database migrations"
@@ -135,7 +135,7 @@ show_edge_help() {
     echo "  agent:test [opts]      - Run Edge Agent tests"
     echo "  agent:quality          - Run quality checks"
     echo "  agent:security         - Run security checks"
-    echo "  agent:precommit        - Run pre-commit checks (check + test)"
+    echo "  agent:check            - Run all checks (format, deps, security, lint, dialyzer, test)"
     echo ""
     echo -e "${YELLOW}Database Commands:${NC}"
     echo "  db:migrate [opts]      - Run database migrations"
@@ -295,10 +295,10 @@ handle_cloud() {
             log "Running Edge Admin security checks..."
             docker compose $compose_file run --rm edge_admin_a1 mix security
             ;;
-        admin:precommit)
+        admin:check)
             check_docker
-            log "Running Edge Admin pre-commit checks..."
-            docker compose $compose_file run --rm edge_admin_a1 mix precommit
+            log "Running Edge Admin checks..."
+            docker compose $compose_file run --rm edge_admin_a1 mix check
             ;;
         db:migrate)
             check_docker
@@ -421,10 +421,10 @@ handle_edge() {
             log "Running Edge Agent security checks..."
             docker compose $compose_file run --rm edge_agent mix security
             ;;
-        agent:precommit)
+        agent:check)
             check_docker
-            log "Running Edge Agent pre-commit checks..."
-            docker compose $compose_file run --rm edge_agent mix precommit
+            log "Running Edge Agent checks..."
+            docker compose $compose_file run --rm edge_agent mix check
             ;;
         db:migrate)
             check_docker
@@ -552,6 +552,15 @@ handle_all() {
             log "Edge Agent security checks..."
             docker compose $compose_files run --rm edge_agent mix security
             log "All security checks completed!"
+            ;;
+        check)
+            check_docker
+            section "Running all checks"
+            log "Edge Admin checks..."
+            docker compose $compose_files run --rm edge_admin_a1 mix check
+            log "Edge Agent checks..."
+            docker compose $compose_files run --rm edge_agent mix check
+            log "All checks completed!"
             ;;
         db:setup)
             check_docker

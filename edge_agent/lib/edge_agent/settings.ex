@@ -192,6 +192,20 @@ defmodule EdgeAgent.Settings do
   def set_proxy_password(value), do: set("proxy_password", value)
 
   @doc """
+  Get the LAN DNS authority domain (e.g. "edge.local").
+
+  Injected by admin at registration. Returns nil if not yet received.
+  """
+  @spec get_lan_domain() :: String.t() | nil
+  def get_lan_domain, do: get("lan_domain")
+
+  @doc """
+  Set the LAN DNS authority domain.
+  """
+  @spec set_lan_domain(String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
+  def set_lan_domain(value), do: set("lan_domain", value)
+
+  @doc """
   Get admin URLs as a list.
 
   Returns a list of admin URL strings, or empty list if not set.

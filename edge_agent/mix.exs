@@ -115,6 +115,9 @@ defmodule EdgeAgent.Mixfile do
       # Dialyzer
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
 
+      # LAN discovery and DNS
+      {:mdns_lite, "~> 0.9"},
+
       # Nexmaker library
       {:nexmaker, path: "../nexmaker"}
     ]
@@ -133,7 +136,6 @@ defmodule EdgeAgent.Mixfile do
         version: {:from_app, :edge_agent},
         applications: [edge_agent: :permanent],
         include_executables_for: [:unix],
-        distribution: :none,
         steps: [:assemble, :tar]
       ]
     ]

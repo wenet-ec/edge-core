@@ -74,6 +74,11 @@ config :edge_agent,
   ecto_repos: [EdgeAgent.Repo],
   version: version
 
+config :mdns_lite,
+  if_monitor: MdnsLite.InetMonitor,
+  hosts: [:hostname],
+  ttl: 120
+
 config :phoenix, :json_library, Jason
 
 # Import environment configuration

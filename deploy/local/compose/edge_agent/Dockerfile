@@ -58,7 +58,11 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   # Agent-specific: nsenter for hostscript (part of util-linux)
   util-linux \
   # systemd-resolved: provides resolvectl for netclient DNS management on systemd hosts
-  systemd-resolved && \
+  systemd-resolved \
+  # mDNS resolution: enables .local hostname resolution via nss-mdns
+  libnss-mdns && \
+  # Enable mDNS resolution in nsswitch.conf
+  sed -i 's/^hosts:.*/hosts: files mdns4_minimal [NOTFOUND=return] dns/' /etc/nsswitch.conf && \
   # Set locale in same layer
   sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen && \
   # Create dummies to suppress netclient init system detection errors

@@ -73,10 +73,10 @@
 ## Distribution Port Configuration
 ## =============================================================================
 
-## Fixed Erlang distribution port (configurable via ERLANG_DIST_PORT)
+## Fixed Erlang distribution port (configurable via VPN_CLUSTER_PORT)
 ## Default: random port, we pin for easier firewall rules
--kernel inet_dist_listen_min <%= System.get_env("ERLANG_DIST_PORT") || "49125" %>
--kernel inet_dist_listen_max <%= System.get_env("ERLANG_DIST_PORT") || "49125" %>
+-kernel inet_dist_listen_min <%= System.get_env("VPN_CLUSTER_PORT") || "49125" %>
+-kernel inet_dist_listen_max <%= System.get_env("VPN_CLUSTER_PORT") || "49125" %>
 
 ## Distribution connection timeout (ms)
 ## Failure detection window = 4 × net_ticktime = 240s (~4 minutes).

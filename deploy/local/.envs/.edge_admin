@@ -137,8 +137,8 @@ VPN_CLUSTER_COOKIE=local-cookie
 # epmd port — default 44369, baked into the Dockerfile. Override here only if needed.
 # ERL_EPMD_PORT=44369
 
-# Fixed Erlang distribution port (epmd replacement). Configured in vm.args.eex.
-ERLANG_DIST_PORT=49125
+# Fixed Erlang distribution port for VPN cluster (epmd replacement). Configured in vm.args.eex.
+VPN_CLUSTER_PORT=49125
 
 # Port on which admin instances expose their discovery/health endpoint to each other.
 ADMIN_DISCOVERY_PORT=44000

@@ -127,6 +127,9 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
+# Disable automatic distribution startup — agent starts it dynamically after detecting LAN IP
+ENV RELEASE_DISTRIBUTION=none
+
 # Keep epmd in the 40k port range to avoid colliding with user-deployed Erlang/Elixir apps
 ENV ERL_EPMD_PORT=44369
 

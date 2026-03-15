@@ -91,6 +91,9 @@ ENV NETMAKER_API_SCHEME=http
 # Agent defaults to userspace WireGuard; override to unset for kernel mode on bare metal
 ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
 
+# Disable automatic distribution startup — agent starts it dynamically after detecting LAN IP
+ENV RELEASE_DISTRIBUTION=none
+
 # Keep epmd in the 40k port range to avoid colliding with user-deployed Erlang/Elixir apps
 ENV ERL_EPMD_PORT=44369
 

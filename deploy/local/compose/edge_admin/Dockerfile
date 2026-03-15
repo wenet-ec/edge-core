@@ -75,6 +75,10 @@ ENV NETMAKER_API_SCHEME=http
 # Admin always runs userspace WireGuard
 ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
 
+# Erlang distribution settings
+# Admins always use dynamic clustering (started after VPN join)
+ENV RELEASE_DISTRIBUTION=none
+
 # Keep epmd in the 40k port range to avoid colliding with user-deployed Erlang/Elixir apps
 ENV ERL_EPMD_PORT=44369
 

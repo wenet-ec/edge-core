@@ -1,6 +1,6 @@
 ## edge_agent/rel/vm.args.eex
 ## Customize flags given to the VM: http://erlang.org/doc/man/erl.html
-## -mode/-name/-sname/-setcookie are configured via env vars, do not set them here
+## -mode/-name/-sname are configured via env vars, do not set them here
 
 ## =============================================================================
 ## Scheduler Configuration
@@ -53,12 +53,22 @@
 ##+P 524288
 
 ## =============================================================================
-## Distribution
+## Distribution (LAN Cluster)
 ## =============================================================================
 
-## Erlang distribution is explicitly disabled via `distribution: :none` in mix.exs.
-## No epmd, no node name, no cookie. Agent is a standalone BEAM process.
-## Admin -> Agent communication is HTTP only (API token auth, VPN DNS name).
+## Erlang distribution is used for LAN clustering between agents on the same subnet.
+## Node name = edge_agent@{primary LAN IP}. Cookie gates membership (default: "edge").
+## Override LAN_CLUSTER_COOKIE to segment or isolate agents. Admin↔Agent communication remains HTTP only.
+
+## LAN cluster cookie — default "edge" enables auto-clustering out of the box.
+-setcookie <%= System.get_env("LAN_CLUSTER_COOKIE") || "edge" %>
+
+## Fixed Erlang distribution port for LAN cluster (configurable via LAN_CLUSTER_PORT).
+-kernel inet_dist_listen_min <%= System.get_env("LAN_CLUSTER_PORT") || "49126" %>
+-kernel inet_dist_listen_max <%= System.get_env("LAN_CLUSTER_PORT") || "49126" %>
+
+## Distribution connection timeout (ms) — agents on LAN so short ticktime is fine.
+-kernel net_ticktime 15
 
 ## =============================================================================
 ## Garbage Collection

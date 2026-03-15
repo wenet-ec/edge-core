@@ -314,7 +314,7 @@ The admin's HTTP proxy (port 43128) and SOCKS5 proxy (port 41080) are independen
 | Admin → Netmaker         | `MASTER_KEY` bearer token                                                     |
 | Agent → Admin            | Per-node API token (issued at enrollment)                                     |
 | Admin → Agent            | Per-node API token (same token, stored in admin DB)                           |
-| Admin ↔ Admin (Erlang)   | Shared `ERLANG_COOKIE` + connection verified against PostgreSQL + Netmaker    |
+| Admin ↔ Admin (Erlang)   | Shared `VPN_CLUSTER_COOKIE` + connection verified against PostgreSQL + Netmaker |
 | SSH                      | Username/password or public key, verified by admin on each connection attempt |
 
 ---

@@ -42,7 +42,7 @@ HTTP_PROXY_PORT=43128
 SOCKS5_PROXY_PORT=41080
 
 # Erlang distribution
-ERLANG_COOKIE=test_cookie
+VPN_CLUSTER_COOKIE=test_cookie
 ADMIN_DISCOVERY_PORT=44000
 
 # Optional: Enable detailed test output

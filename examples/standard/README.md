@@ -68,7 +68,7 @@ Key things to configure:
 - Replace all `your-server-ip-or-domain.com` with your actual domain
 - Replace all `change-me` with strong random values
 - `SECRET_KEY_BASE` — generate with `openssl rand -base64 48`
-- `ERLANG_COOKIE` — must be the same across all 4 admin instances
+- `VPN_CLUSTER_COOKIE` — must be the same across all 4 admin instances
 - `MQ_PASSWORD` and `EMQX_DASHBOARD_PASSWORD` — must match each other
 - Update `configs/Caddyfile` with your actual domain names
 - Update `configs/prometheus.yml` with your actual `METRICS_KEY`

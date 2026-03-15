@@ -60,7 +60,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
   - `:admin_name` - Prefixed name (e.g., "admin-7k3m9p2n")
   - `:admin_cluster_name` - Shared cluster name (e.g., "admin-cluster-main")
   - `:admin_max_capacity` - Max nodes this admin can handle (e.g., 200)
-  - `:erlang_cookie` - Shared secret for Erlang distribution
+  - `:vpn_cluster_cookie` - Shared secret for Erlang distribution over the VPN cluster
   - `:admin_cluster_subnet` - Optional subnet (auto-generates if missing)
 
   ## Examples
@@ -142,7 +142,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
   defp admin_cluster_name, do: Application.get_env(:edge_admin, :admin_cluster_name)
   defp admin_cluster_subnet, do: Application.get_env(:edge_admin, :admin_cluster_subnet)
   defp max_capacity, do: Application.get_env(:edge_admin, :admin_max_capacity)
-  defp erlang_cookie, do: Application.get_env(:edge_admin, :erlang_cookie)
+  defp vpn_cluster_cookie, do: Application.get_env(:edge_admin, :vpn_cluster_cookie)
   defp admin_wireguard_port, do: Application.get_env(:edge_admin, :admin_wireguard_port)
 
   # =============================================================================
@@ -303,12 +303,12 @@ defmodule EdgeAdmin.Admins.Bootstrap do
       try do
         case Node.start(node_name, name_domain: :longnames) do
           {:ok, _pid} ->
-            :erlang.set_cookie(node(), erlang_cookie())
+            :erlang.set_cookie(node(), vpn_cluster_cookie())
             Logger.info("Erlang distribution started: #{node()}")
             :ok
 
           {:error, {:already_started, _pid}} ->
-            :erlang.set_cookie(node(), erlang_cookie())
+            :erlang.set_cookie(node(), vpn_cluster_cookie())
             Logger.info("Erlang distribution already started: #{node()}")
             :ok
 

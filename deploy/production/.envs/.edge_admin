@@ -129,8 +129,8 @@ ADMIN_MAX_CAPACITY=200
 # Must match the UDP port mapping in docker-compose.
 # ADMIN_WIREGUARD_PORT=51821
 
-# Shared Erlang cookie — must be identical across all admin instances in the cluster.
-ERLANG_COOKIE=prod-cookie
+# Shared Erlang cookie for VPN cluster — must be identical across all admin instances.
+VPN_CLUSTER_COOKIE=prod-cookie
 
 # epmd port — default 44369, baked into the Dockerfile. Override here only if needed.
 # ERL_EPMD_PORT=44369

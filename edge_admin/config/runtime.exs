@@ -144,7 +144,7 @@ config :edge_admin,
   # Static port for WireGuard (must match UDP port mapping in docker-compose for external connectivity)
   admin_wireguard_port: get_env("ADMIN_WIREGUARD_PORT", :integer),
   # === Erlang Distribution (for multi-admin clustering) ===
-  erlang_cookie: get_env("ERLANG_COOKIE", :atom, :edge_admin_default_cookie),
+  vpn_cluster_cookie: get_env("VPN_CLUSTER_COOKIE", :atom, :edge_admin_default_cookie),
   admin_discovery_port: get_env("ADMIN_DISCOVERY_PORT", :integer, 44_000),
   # === VPN & Cluster Configuration ===
   # Subnet size for auto-generated clusters (e.g., 24 = /24 = 254 hosts)
@@ -160,6 +160,9 @@ config :edge_admin,
   admin_urls: get_env("ADMIN_URLS", :list),
   # Netmaker DNS domain suffix (used for hostname construction)
   netmaker_default_domain: get_env("NETMAKER_DEFAULT_DOMAIN", :string, "nm.internal"),
+  # LAN DNS authority domain (e.g. "edge.local") — injected into agent config at registration.
+  # Used to compute lan_hostname for display. Nil if not configured.
+  lan_domain: get_env("LAN_DOMAIN", :string, "edge.local"),
   # === Cleanup & Reconciliation Schedules ===
   cluster_reconciliation_enabled: cluster_reconciliation_enabled,
   cluster_reconciliation_schedule: cluster_reconciliation_schedule,

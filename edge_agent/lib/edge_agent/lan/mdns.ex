@@ -46,7 +46,15 @@ defmodule EdgeAgent.Lan.Mdns do
       port = Application.get_env(:edge_agent, :http_port, 44_000)
 
       MdnsLite.set_hosts([hostname])
-      MdnsLite.add_mdns_service(%{id: @service_id, protocol: "edge_agent", transport: "tcp", port: port})
+
+      MdnsLite.add_mdns_service(%{
+        id: @service_id,
+        instance_name: hostname,
+        protocol: "edge_agent",
+        transport: "tcp",
+        port: port
+      })
+
       Logger.info("mDNS: advertising as #{hostname}.local on port #{port}")
       {:ok, %{node_id: node_id, hostname: hostname}}
     else

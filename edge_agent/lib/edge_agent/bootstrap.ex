@@ -211,6 +211,7 @@ defmodule EdgeAgent.Bootstrap do
           api_token = node_data["api_token"]
           proxy_password = node_data["proxy_password"]
           lan_domain = node_data["lan_domain"]
+          admin_urls = node_data["admin_urls"]
 
           cond do
             is_nil(api_token) ->
@@ -223,6 +224,7 @@ defmodule EdgeAgent.Bootstrap do
               Settings.set_api_token(api_token)
               Settings.set_proxy_password(proxy_password)
               if lan_domain, do: Settings.set_lan_domain(lan_domain)
+              if admin_urls not in [nil, []], do: Settings.set_admin_fallback_urls(admin_urls)
               Logger.info("Successfully registered with admin")
               :ok
           end

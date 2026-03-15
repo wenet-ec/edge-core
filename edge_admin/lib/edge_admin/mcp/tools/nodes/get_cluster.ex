@@ -3,6 +3,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.GetCluster do
   @moduledoc "Get a cluster by name."
   use EdgeAdmin.MCP, :tool
 
+  alias EdgeAdmin.MCP.Tools.Nodes.ClusterData
   alias EdgeAdmin.Nodes
 
   schema do
@@ -12,15 +13,8 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.GetCluster do
   @impl true
   def execute(%{cluster_name: name}, frame) do
     case Nodes.get_cluster(name) do
-      {:ok, c} ->
-        {:reply,
-         Response.json(Response.tool(), %{
-           name: c.name,
-           ipv4_range: c.ipv4_range,
-           node_count: c.node_count,
-           node_limit: c.node_limit,
-           inserted_at: c.inserted_at
-         }), frame}
+      {:ok, cluster} ->
+        {:reply, Response.json(Response.tool(), ClusterData.data(cluster)), frame}
 
       {:error, :not_found} ->
         {:reply, Response.error(Response.tool(), "Cluster #{name} not found"), frame}

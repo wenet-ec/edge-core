@@ -3,6 +3,7 @@ defmodule EdgeAdmin.MCP.Tools.Ssh.ListSshUsernames do
   @moduledoc "List SSH usernames. Filter by node_id to see credentials for a specific node."
   use EdgeAdmin.MCP, :tool
 
+  alias EdgeAdmin.MCP.Tools.Ssh.SshUsernameData
   alias EdgeAdmin.Ssh
 
   schema do
@@ -23,18 +24,21 @@ defmodule EdgeAdmin.MCP.Tools.Ssh.ListSshUsernames do
       {:ok, {usernames, meta}} ->
         {:reply,
          Response.json(Response.tool(), %{
-           ssh_usernames: Enum.map(usernames, &format/1),
-           total: meta.total_count,
-           page: meta.current_page
+           data: Enum.map(usernames, &SshUsernameData.data/1),
+           pagination: %{
+             page: meta.current_page,
+             page_size: meta.page_size,
+             total: meta.total_count,
+             total_pages: meta.total_pages,
+             has_next: meta.has_next_page?,
+             has_prev: meta.has_previous_page?
+           }
          }), frame}
 
       {:error, reason} ->
         {:reply, Response.error(Response.tool(), "Failed to list SSH usernames: #{inspect(reason)}"), frame}
     end
   end
-
-  defp format(u),
-    do: %{id: u.id, username: u.username, has_password: u.has_password, node_id: u.node_id, inserted_at: u.inserted_at}
 
   defp maybe_put(m, _k, nil), do: m
   defp maybe_put(m, k, v), do: Map.put(m, k, v)

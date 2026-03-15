@@ -3,6 +3,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.ListEnrollmentKeys do
   @moduledoc "List enrollment keys. Keys are used by agents to join a cluster's VPN network."
   use EdgeAdmin.MCP, :tool
 
+  alias EdgeAdmin.MCP.Tools.Nodes.EnrollmentKeyData
   alias EdgeAdmin.Nodes
 
   schema do
@@ -24,26 +25,21 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.ListEnrollmentKeys do
       {:ok, {keys, meta}} ->
         {:reply,
          Response.json(Response.tool(), %{
-           enrollment_keys: Enum.map(keys, &format/1),
-           total: meta.total_count,
-           page: meta.current_page
+           data: Enum.map(keys, &EnrollmentKeyData.data/1),
+           pagination: %{
+             page: meta.current_page,
+             page_size: meta.page_size,
+             total: meta.total_count,
+             total_pages: meta.total_pages,
+             has_next: meta.has_next_page?,
+             has_prev: meta.has_previous_page?
+           }
          }), frame}
 
       {:error, reason} ->
         {:reply, Response.error(Response.tool(), "Failed to list enrollment keys: #{inspect(reason)}"), frame}
     end
   end
-
-  defp format(k),
-    do: %{
-      id: k.id,
-      key: k.key,
-      cluster_name: k.cluster && k.cluster.name,
-      uses_remaining: k.uses_remaining,
-      expired_at: k.expired_at,
-      last_used_at: k.last_used_at,
-      inserted_at: k.inserted_at
-    }
 
   defp maybe_put(m, _k, nil), do: m
   defp maybe_put(m, k, v), do: Map.put(m, k, v)

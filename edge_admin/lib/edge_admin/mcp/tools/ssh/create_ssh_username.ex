@@ -7,6 +7,7 @@ defmodule EdgeAdmin.MCP.Tools.Ssh.CreateSshUsername do
   """
   use EdgeAdmin.MCP, :tool
 
+  alias EdgeAdmin.MCP.Tools.Ssh.SshUsernameData
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Ssh
 
@@ -27,14 +28,8 @@ defmodule EdgeAdmin.MCP.Tools.Ssh.CreateSshUsername do
           |> maybe_put("ssh_public_keys", params[:public_keys])
 
         case Ssh.create_ssh_username_with_keys(node, attrs) do
-          {:ok, u} ->
-            {:reply,
-             Response.json(Response.tool(), %{
-               id: u.id,
-               username: u.username,
-               has_password: u.has_password,
-               node_id: u.node_id
-             }), frame}
+          {:ok, username} ->
+            {:reply, Response.json(Response.tool(), SshUsernameData.data(username)), frame}
 
           {:error, reason} ->
             {:reply, Response.error(Response.tool(), "Failed to create SSH username: #{inspect(reason)}"), frame}

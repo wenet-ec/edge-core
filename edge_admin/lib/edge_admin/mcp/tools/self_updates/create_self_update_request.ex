@@ -12,6 +12,7 @@ defmodule EdgeAdmin.MCP.Tools.SelfUpdates.CreateSelfUpdateRequest do
   """
   use EdgeAdmin.MCP, :tool
 
+  alias EdgeAdmin.MCP.Tools.SelfUpdates.SelfUpdateRequestData
   alias EdgeAdmin.SelfUpdates
 
   schema do
@@ -21,14 +22,8 @@ defmodule EdgeAdmin.MCP.Tools.SelfUpdates.CreateSelfUpdateRequest do
   @impl true
   def execute(params, frame) do
     case SelfUpdates.create_self_update_request(%{"targeting" => params.targeting}) do
-      {:ok, r} ->
-        {:reply,
-         Response.json(Response.tool(), %{
-           id: r.id,
-           status: r.status,
-           targeting: r.targeting,
-           inserted_at: r.inserted_at
-         }), frame}
+      {:ok, request} ->
+        {:reply, Response.json(Response.tool(), SelfUpdateRequestData.data(request)), frame}
 
       {:error, reason} ->
         {:reply, Response.error(Response.tool(), "Failed to create self-update request: #{inspect(reason)}"), frame}

@@ -3,6 +3,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.CreateEnrollmentKey do
   @moduledoc "Create an enrollment key for a cluster. Agents use this key to join the VPN mesh."
   use EdgeAdmin.MCP, :tool
 
+  alias EdgeAdmin.MCP.Tools.Nodes.EnrollmentKeyData
   alias EdgeAdmin.Nodes
 
   schema do
@@ -16,19 +17,13 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.CreateEnrollmentKey do
     case Nodes.get_cluster(params.cluster_name) do
       {:ok, cluster} ->
         attrs =
-          %{} |> maybe_put("uses_remaining", params[:uses_remaining]) |> maybe_put("expired_at", params[:expired_at])
+          %{}
+          |> maybe_put("uses_remaining", params[:uses_remaining])
+          |> maybe_put("expired_at", params[:expired_at])
 
         case Nodes.create_enrollment_key(cluster, attrs) do
-          {:ok, k} ->
-            {:reply,
-             Response.json(Response.tool(), %{
-               id: k.id,
-               key: k.key,
-               cluster_name: params.cluster_name,
-               uses_remaining: k.uses_remaining,
-               expired_at: k.expired_at,
-               inserted_at: k.inserted_at
-             }), frame}
+          {:ok, key} ->
+            {:reply, Response.json(Response.tool(), EnrollmentKeyData.data(key)), frame}
 
           {:error, reason} ->
             {:reply, Response.error(Response.tool(), "Failed to create enrollment key: #{inspect(reason)}"), frame}

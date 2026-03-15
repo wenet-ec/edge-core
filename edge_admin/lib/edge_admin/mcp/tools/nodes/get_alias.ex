@@ -3,6 +3,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.GetAlias do
   @moduledoc "Get a DNS alias by ID."
   use EdgeAdmin.MCP, :tool
 
+  alias EdgeAdmin.MCP.Tools.Nodes.AliasData
   alias EdgeAdmin.Nodes
 
   schema do
@@ -12,15 +13,8 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.GetAlias do
   @impl true
   def execute(%{alias_id: id}, frame) do
     case Nodes.get_alias(id) do
-      {:ok, a} ->
-        {:reply,
-         Response.json(Response.tool(), %{
-           id: a.id,
-           name: a.name,
-           node_id: a.node_id,
-           vpn_hostname: a.vpn_hostname,
-           inserted_at: a.inserted_at
-         }), frame}
+      {:ok, alias_record} ->
+        {:reply, Response.json(Response.tool(), AliasData.data(alias_record)), frame}
 
       {:error, :not_found} ->
         {:reply, Response.error(Response.tool(), "Alias #{id} not found"), frame}

@@ -13,6 +13,7 @@ defmodule EdgeAdmin.MCP.Tools.Commands.CreateCommand do
   use EdgeAdmin.MCP, :tool
 
   alias EdgeAdmin.Commands
+  alias EdgeAdmin.MCP.Tools.Commands.CommandData
 
   schema do
     field :command_text, :string, required: true
@@ -29,15 +30,8 @@ defmodule EdgeAdmin.MCP.Tools.Commands.CreateCommand do
     }
 
     case Commands.create_command_and_executions(attrs) do
-      {:ok, c} ->
-        {:reply,
-         Response.json(Response.tool(), %{
-           id: c.id,
-           command_text: c.command_text,
-           timeout: c.timeout,
-           targeting: c.targeting,
-           inserted_at: c.inserted_at
-         }), frame}
+      {:ok, command} ->
+        {:reply, Response.json(Response.tool(), CommandData.data(command)), frame}
 
       {:error, reason} ->
         {:reply, Response.error(Response.tool(), "Failed to create command: #{inspect(reason)}"), frame}

@@ -3,6 +3,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.ListAliases do
   @moduledoc "List DNS aliases. Aliases let you refer to nodes by a friendly name within the VPN mesh."
   use EdgeAdmin.MCP, :tool
 
+  alias EdgeAdmin.MCP.Tools.Nodes.AliasData
   alias EdgeAdmin.Nodes
 
   schema do
@@ -16,16 +17,19 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.ListAliases do
       {:ok, {aliases, meta}} ->
         {:reply,
          Response.json(Response.tool(), %{
-           aliases: Enum.map(aliases, &format/1),
-           total: meta.total_count,
-           page: meta.current_page
+           data: Enum.map(aliases, &AliasData.data/1),
+           pagination: %{
+             page: meta.current_page,
+             page_size: meta.page_size,
+             total: meta.total_count,
+             total_pages: meta.total_pages,
+             has_next: meta.has_next_page?,
+             has_prev: meta.has_previous_page?
+           }
          }), frame}
 
       {:error, reason} ->
         {:reply, Response.error(Response.tool(), "Failed to list aliases: #{inspect(reason)}"), frame}
     end
   end
-
-  defp format(a),
-    do: %{id: a.id, name: a.name, node_id: a.node_id, vpn_hostname: a.vpn_hostname, inserted_at: a.inserted_at}
 end

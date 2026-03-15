@@ -19,7 +19,7 @@ defmodule EdgeAdmin.MCP.Tools.Commands.CancelCommandExecution do
   def execute(%{execution_id: id}, frame) do
     with {:ok, execution} <- Commands.get_command_execution(id),
          {:ok, result} <- Commands.cancel_command_execution(execution) do
-      {:reply, Response.json(Response.tool(), %{cancelled: true, result: inspect(result)}), frame}
+      {:reply, Response.json(Response.tool(), result), frame}
     else
       {:error, :not_found} -> {:reply, Response.error(Response.tool(), "Command execution #{id} not found"), frame}
       {:error, reason} -> {:reply, Response.error(Response.tool(), "Cancel failed: #{inspect(reason)}"), frame}

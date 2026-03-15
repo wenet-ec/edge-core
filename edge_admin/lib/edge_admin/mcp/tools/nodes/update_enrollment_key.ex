@@ -3,6 +3,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.UpdateEnrollmentKey do
   @moduledoc "Update an enrollment key's uses_remaining or expired_at. Pass null to clear a field."
   use EdgeAdmin.MCP, :tool
 
+  alias EdgeAdmin.MCP.Tools.Nodes.EnrollmentKeyData
   alias EdgeAdmin.Nodes
 
   schema do
@@ -16,18 +17,13 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.UpdateEnrollmentKey do
     case Nodes.get_enrollment_key(params.enrollment_key_id) do
       {:ok, key} ->
         attrs =
-          %{} |> maybe_put("uses_remaining", params[:uses_remaining]) |> maybe_put("expired_at", params[:expired_at])
+          %{}
+          |> maybe_put("uses_remaining", params[:uses_remaining])
+          |> maybe_put("expired_at", params[:expired_at])
 
         case Nodes.update_enrollment_key(key, attrs) do
-          {:ok, k} ->
-            {:reply,
-             Response.json(Response.tool(), %{
-               id: k.id,
-               key: k.key,
-               uses_remaining: k.uses_remaining,
-               expired_at: k.expired_at,
-               last_used_at: k.last_used_at
-             }), frame}
+          {:ok, updated} ->
+            {:reply, Response.json(Response.tool(), EnrollmentKeyData.data(updated)), frame}
 
           {:error, reason} ->
             {:reply, Response.error(Response.tool(), "Update failed: #{inspect(reason)}"), frame}

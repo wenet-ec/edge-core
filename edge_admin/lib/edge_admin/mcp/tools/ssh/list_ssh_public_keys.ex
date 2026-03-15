@@ -3,6 +3,7 @@ defmodule EdgeAdmin.MCP.Tools.Ssh.ListSshPublicKeys do
   @moduledoc "List SSH public keys. Filter by ssh_username_id to scope to a specific user."
   use EdgeAdmin.MCP, :tool
 
+  alias EdgeAdmin.MCP.Tools.Ssh.SshPublicKeyData
   alias EdgeAdmin.Ssh
 
   schema do
@@ -23,24 +24,21 @@ defmodule EdgeAdmin.MCP.Tools.Ssh.ListSshPublicKeys do
       {:ok, {keys, meta}} ->
         {:reply,
          Response.json(Response.tool(), %{
-           ssh_public_keys: Enum.map(keys, &format/1),
-           total: meta.total_count,
-           page: meta.current_page
+           data: Enum.map(keys, &SshPublicKeyData.data/1),
+           pagination: %{
+             page: meta.current_page,
+             page_size: meta.page_size,
+             total: meta.total_count,
+             total_pages: meta.total_pages,
+             has_next: meta.has_next_page?,
+             has_prev: meta.has_previous_page?
+           }
          }), frame}
 
       {:error, reason} ->
         {:reply, Response.error(Response.tool(), "Failed to list SSH public keys: #{inspect(reason)}"), frame}
     end
   end
-
-  defp format(k),
-    do: %{
-      id: k.id,
-      key_name: k.key_name,
-      public_key: k.public_key,
-      ssh_username_id: k.ssh_username_id,
-      inserted_at: k.inserted_at
-    }
 
   defp maybe_put(m, _k, nil), do: m
   defp maybe_put(m, k, v), do: Map.put(m, k, v)

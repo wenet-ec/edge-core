@@ -3,6 +3,7 @@ defmodule EdgeAdmin.MCP.Tools.Ssh.CreateSshPublicKey do
   @moduledoc "Add an SSH public key to an existing SSH username. Key must be valid OpenSSH format."
   use EdgeAdmin.MCP, :tool
 
+  alias EdgeAdmin.MCP.Tools.Ssh.SshPublicKeyData
   alias EdgeAdmin.Ssh
 
   schema do
@@ -18,14 +19,8 @@ defmodule EdgeAdmin.MCP.Tools.Ssh.CreateSshPublicKey do
         attrs = maybe_put(%{"public_key" => params.public_key}, "key_name", params[:key_name])
 
         case Ssh.create_ssh_public_key(ssh_username, attrs) do
-          {:ok, k} ->
-            {:reply,
-             Response.json(Response.tool(), %{
-               id: k.id,
-               key_name: k.key_name,
-               public_key: k.public_key,
-               ssh_username_id: k.ssh_username_id
-             }), frame}
+          {:ok, key} ->
+            {:reply, Response.json(Response.tool(), SshPublicKeyData.data(key)), frame}
 
           {:error, reason} ->
             {:reply, Response.error(Response.tool(), "Failed to add public key: #{inspect(reason)}"), frame}

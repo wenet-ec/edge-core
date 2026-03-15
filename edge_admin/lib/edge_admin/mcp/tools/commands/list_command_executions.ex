@@ -4,6 +4,7 @@ defmodule EdgeAdmin.MCP.Tools.Commands.ListCommandExecutions do
   use EdgeAdmin.MCP, :tool
 
   alias EdgeAdmin.Commands
+  alias EdgeAdmin.MCP.Tools.Commands.CommandExecutionData
 
   schema do
     field :page, :integer, default: 1
@@ -25,27 +26,21 @@ defmodule EdgeAdmin.MCP.Tools.Commands.ListCommandExecutions do
       {:ok, {executions, meta}} ->
         {:reply,
          Response.json(Response.tool(), %{
-           command_executions: Enum.map(executions, &format/1),
-           total: meta.total_count,
-           page: meta.current_page
+           data: Enum.map(executions, &CommandExecutionData.data/1),
+           pagination: %{
+             page: meta.current_page,
+             page_size: meta.page_size,
+             total: meta.total_count,
+             total_pages: meta.total_pages,
+             has_next: meta.has_next_page?,
+             has_prev: meta.has_previous_page?
+           }
          }), frame}
 
       {:error, reason} ->
         {:reply, Response.error(Response.tool(), "Failed to list executions: #{inspect(reason)}"), frame}
     end
   end
-
-  defp format(e),
-    do: %{
-      id: e.id,
-      status: e.status,
-      exit_code: e.exit_code,
-      output: e.output,
-      command_id: e.command_id,
-      node_id: e.node_id,
-      sent_at: e.sent_at,
-      completed_at: e.completed_at
-    }
 
   defp maybe_put(m, _k, nil), do: m
   defp maybe_put(m, k, v), do: Map.put(m, k, v)

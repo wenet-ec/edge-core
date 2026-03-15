@@ -3,6 +3,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.CreateAlias do
   @moduledoc "Create a DNS alias for a node. Resolves as <name>.<cluster-domain> within the VPN mesh."
   use EdgeAdmin.MCP, :tool
 
+  alias EdgeAdmin.MCP.Tools.Nodes.AliasData
   alias EdgeAdmin.Nodes
 
   schema do
@@ -15,10 +16,8 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.CreateAlias do
     case Nodes.get_node(node_id) do
       {:ok, node} ->
         case Nodes.create_alias(node, %{"name" => name}) do
-          {:ok, a} ->
-            {:reply,
-             Response.json(Response.tool(), %{id: a.id, name: a.name, node_id: a.node_id, vpn_hostname: a.vpn_hostname}),
-             frame}
+          {:ok, alias_record} ->
+            {:reply, Response.json(Response.tool(), AliasData.data(alias_record)), frame}
 
           {:error, reason} ->
             {:reply, Response.error(Response.tool(), "Failed to create alias: #{inspect(reason)}"), frame}

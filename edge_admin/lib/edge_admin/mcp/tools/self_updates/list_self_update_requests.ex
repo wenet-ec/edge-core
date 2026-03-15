@@ -3,6 +3,7 @@ defmodule EdgeAdmin.MCP.Tools.SelfUpdates.ListSelfUpdateRequests do
   @moduledoc "List self-update requests. These trigger agent container updates across the fleet."
   use EdgeAdmin.MCP, :tool
 
+  alias EdgeAdmin.MCP.Tools.SelfUpdates.SelfUpdateRequestData
   alias EdgeAdmin.SelfUpdates
 
   schema do
@@ -20,18 +21,21 @@ defmodule EdgeAdmin.MCP.Tools.SelfUpdates.ListSelfUpdateRequests do
       {:ok, {requests, meta}} ->
         {:reply,
          Response.json(Response.tool(), %{
-           self_update_requests: Enum.map(requests, &format/1),
-           total: meta.total_count,
-           page: meta.current_page
+           data: Enum.map(requests, &SelfUpdateRequestData.data/1),
+           pagination: %{
+             page: meta.current_page,
+             page_size: meta.page_size,
+             total: meta.total_count,
+             total_pages: meta.total_pages,
+             has_next: meta.has_next_page?,
+             has_prev: meta.has_previous_page?
+           }
          }), frame}
 
       {:error, reason} ->
         {:reply, Response.error(Response.tool(), "Failed to list self-update requests: #{inspect(reason)}"), frame}
     end
   end
-
-  defp format(r),
-    do: %{id: r.id, status: r.status, targeting: r.targeting, summary: r.summary, inserted_at: r.inserted_at}
 
   defp maybe_put(m, _k, nil), do: m
   defp maybe_put(m, k, v), do: Map.put(m, k, v)

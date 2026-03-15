@@ -3,6 +3,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.CreateCluster do
   @moduledoc "Create a new edge cluster. ipv4_range is auto-assigned if omitted. node_limit caps how many nodes can enroll."
   use EdgeAdmin.MCP, :tool
 
+  alias EdgeAdmin.MCP.Tools.Nodes.ClusterData
   alias EdgeAdmin.Nodes
 
   schema do
@@ -19,14 +20,8 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.CreateCluster do
       |> maybe_put("node_limit", params[:node_limit])
 
     case Nodes.create_cluster(attrs) do
-      {:ok, c} ->
-        {:reply,
-         Response.json(Response.tool(), %{
-           name: c.name,
-           ipv4_range: c.ipv4_range,
-           node_limit: c.node_limit,
-           inserted_at: c.inserted_at
-         }), frame}
+      {:ok, cluster} ->
+        {:reply, Response.json(Response.tool(), ClusterData.data(cluster)), frame}
 
       {:error, :service_unavailable} ->
         {:reply, Response.error(Response.tool(), "Netmaker VPN unavailable — cluster not created"), frame}

@@ -3,8 +3,8 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.ListNodes do
   @moduledoc "List edge nodes. Filter by cluster_name and/or status (healthy/unhealthy/unreachable)."
   use EdgeAdmin.MCP, :tool
 
+  alias EdgeAdmin.MCP.Tools.Nodes.NodeData
   alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Nodes.Schemas.Node
 
   schema do
     field :cluster_name, :string
@@ -26,9 +26,15 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.ListNodes do
       {:ok, {nodes, meta}} ->
         {:reply,
          Response.json(Response.tool(), %{
-           nodes: Enum.map(nodes, &format/1),
-           total: meta.total_count,
-           page: meta.current_page
+           data: Enum.map(nodes, &NodeData.data/1),
+           pagination: %{
+             page: meta.current_page,
+             page_size: meta.page_size,
+             total: meta.total_count,
+             total_pages: meta.total_pages,
+             has_next: meta.has_next_page?,
+             has_prev: meta.has_previous_page?
+           }
          }), frame}
 
       {:error, reason} ->
@@ -38,17 +44,4 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.ListNodes do
 
   defp maybe_put(m, _k, nil), do: m
   defp maybe_put(m, k, v), do: Map.put(m, k, v)
-
-  defp format(n),
-    do: %{
-      id: n.id,
-      name: Node.node_name(n),
-      cluster: n.cluster.name,
-      status: n.status,
-      last_seen_at: n.last_seen_at,
-      http_port: n.http_port,
-      mdns_hostname: Node.mdns_hostname(n),
-      lan_hostname: Node.lan_hostname(n),
-      version: n.version
-    }
 end

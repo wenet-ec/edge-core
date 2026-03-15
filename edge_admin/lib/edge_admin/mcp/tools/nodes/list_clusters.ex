@@ -3,6 +3,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.ListClusters do
   @moduledoc "List all edge clusters. Each cluster is an isolated VPN network that groups nodes together."
   use EdgeAdmin.MCP, :tool
 
+  alias EdgeAdmin.MCP.Tools.Nodes.ClusterData
   alias EdgeAdmin.Nodes
 
   schema do
@@ -16,22 +17,19 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.ListClusters do
       {:ok, {clusters, meta}} ->
         {:reply,
          Response.json(Response.tool(), %{
-           clusters: Enum.map(clusters, &format/1),
-           total: meta.total_count,
-           page: meta.current_page
+           data: Enum.map(clusters, &ClusterData.data/1),
+           pagination: %{
+             page: meta.current_page,
+             page_size: meta.page_size,
+             total: meta.total_count,
+             total_pages: meta.total_pages,
+             has_next: meta.has_next_page?,
+             has_prev: meta.has_previous_page?
+           }
          }), frame}
 
       {:error, reason} ->
         {:reply, Response.error(Response.tool(), "Failed to list clusters: #{inspect(reason)}"), frame}
     end
   end
-
-  defp format(c),
-    do: %{
-      name: c.name,
-      ipv4_range: c.ipv4_range,
-      node_count: c.node_count,
-      node_limit: c.node_limit,
-      inserted_at: c.inserted_at
-    }
 end

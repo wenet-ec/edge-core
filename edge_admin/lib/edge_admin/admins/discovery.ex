@@ -94,7 +94,7 @@ defmodule EdgeAdmin.Admins.Discovery do
 
     peer_nodes =
       peer_hostnames
-      |> Enum.map(&Vpn.build_hostname(&1, network_name))
+      |> Enum.map(&Vpn.build_vpn_hostname(&1, network_name))
       |> Enum.map(&Vpn.build_admin_erlang_node_name/1)
 
     connected_nodes = Node.list()

@@ -49,7 +49,7 @@ defmodule EdgeAdmin.Admins.Metadata do
     name: "admin-abc123",
     max_capacity: 200,
     erlang_node_name: :"admin@admin-abc123.admin-cluster-1.nm.internal",
-    dns_hostname: "admin-abc123.admin-cluster-1.nm.internal",
+    vpn_hostname: "admin-abc123.admin-cluster-1.nm.internal",
     admin_cluster_name: "admin-cluster-1",
     netmaker_host_id: "95e2707e-...",
     last_computed_at: ~U[2025-01-15 12:00:00Z]
@@ -65,7 +65,7 @@ defmodule EdgeAdmin.Admins.Metadata do
     total_capacity: 500, # sum of max_capacity across all admins
     degraded: false,     # true when total_nodes > total_capacity
     topology: [
-      %{name: "admin-abc123", max_capacity: 200, dns_hostname: ...,
+      %{name: "admin-abc123", max_capacity: 200, vpn_hostname: ...,
         erlang_node_name: ..., netmaker_host_id: "..."},
       %{name: "admin-def456", max_capacity: 300, ...}
     ]
@@ -163,7 +163,7 @@ defmodule EdgeAdmin.Admins.Metadata do
     :ets.new(@table, [:set, :public, :named_table, read_concurrency: true])
 
     # Compute derived values
-    dns_hostname = Vpn.build_hostname(admin_name, admin_cluster_name)
+    vpn_hostname = Vpn.build_vpn_hostname(admin_name, admin_cluster_name)
     erlang_node_name = node()
 
     # Fetch Netmaker host ID
@@ -178,7 +178,7 @@ defmodule EdgeAdmin.Admins.Metadata do
         name: admin_name,
         max_capacity: max_capacity,
         erlang_node_name: erlang_node_name,
-        dns_hostname: dns_hostname,
+        vpn_hostname: vpn_hostname,
         admin_cluster_name: admin_cluster_name,
         netmaker_host_id: netmaker_host_id,
         last_computed_at: nil
@@ -455,7 +455,7 @@ defmodule EdgeAdmin.Admins.Metadata do
     # Get all admins from syn process group
     # :syn.members/2 returns list of {pid, metadata} tuples
     # Metadata contains: %{name: admin_name, max_capacity: capacity,
-    #   erlang_node_name: ..., dns_hostname: ..., netmaker_host_id: ...}
+    #   erlang_node_name: ..., vpn_hostname: ..., netmaker_host_id: ...}
     [{:admin, admin_info}] = :ets.lookup(@table, :admin)
     admin_cluster_name = admin_info.admin_cluster_name
 

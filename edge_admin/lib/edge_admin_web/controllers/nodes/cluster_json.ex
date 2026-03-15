@@ -36,7 +36,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSON do
       node_count: Cluster.node_count(cluster),
       nodes: Enum.map(nodes, &node_data(&1, cluster)),
       network_name: Cluster.network_name(cluster),
-      dns_domain: Cluster.dns_domain(cluster),
+      vpn_domain: Cluster.vpn_domain(cluster),
       inserted_at: cluster.inserted_at,
       updated_at: cluster.updated_at
     }
@@ -44,15 +44,15 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSON do
 
   defp node_data(node, cluster) do
     # Build DNS hostname using cluster we already have (avoid circular preload)
-    short_name = Vpn.build_dns_name(node.id, prefix: :node)
+    short_name = Vpn.build_vpn_name(node.id, prefix: :node)
     network_name = Vpn.build_network_name(cluster.name, prefix: :node)
-    dns_hostname = Vpn.build_hostname(short_name, network_name)
+    vpn_hostname = Vpn.build_vpn_hostname(short_name, network_name)
 
     %{
       id: node.id,
       status: node.status,
       id_type: node.id_type,
-      dns_hostname: dns_hostname
+      vpn_hostname: vpn_hostname
     }
   end
 end

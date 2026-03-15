@@ -57,7 +57,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasJSONTest do
     test "data contains all required fields" do
       data = AliasJSON.show(%{alias: fake_alias()}).data
 
-      for key <- [:id, :name, :dns_hostname, :node_id, :cluster_name, :inserted_at, :updated_at] do
+      for key <- [:id, :name, :vpn_hostname, :node_id, :cluster_name, :inserted_at, :updated_at] do
         assert Map.has_key?(data, key), "expected key #{inspect(key)} to be present"
       end
     end
@@ -87,32 +87,32 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasJSONTest do
   end
 
   # -----------------------------------------------------------------------
-  # show/1 — dns_hostname delegation
+  # show/1 — vpn_hostname delegation
   # -----------------------------------------------------------------------
 
-  describe "show/1 — dns_hostname" do
-    test "dns_hostname is node-{alias_name}.cluster-{cluster_name}.nm.internal" do
+  describe "show/1 — vpn_hostname" do
+    test "vpn_hostname is node-{alias_name}.cluster-{cluster_name}.nm.internal" do
       alias_record = fake_alias(%{name: "web", cluster: fake_cluster(%{name: "prod"})})
       data = AliasJSON.show(%{alias: alias_record}).data
-      assert data.dns_hostname == "node-web.cluster-prod.nm.internal"
+      assert data.vpn_hostname == "node-web.cluster-prod.nm.internal"
     end
 
-    test "dns_hostname reflects the alias name, not the node id" do
+    test "vpn_hostname reflects the alias name, not the node id" do
       alias_record = fake_alias(%{name: "my-service", cluster: fake_cluster(%{name: "prod"})})
       data = AliasJSON.show(%{alias: alias_record}).data
-      assert data.dns_hostname == "node-my-service.cluster-prod.nm.internal"
+      assert data.vpn_hostname == "node-my-service.cluster-prod.nm.internal"
     end
 
-    test "dns_hostname uses the cluster name from preloaded cluster" do
+    test "vpn_hostname uses the cluster name from preloaded cluster" do
       alias_record = fake_alias(%{name: "web", cluster: fake_cluster(%{name: "staging"})})
       data = AliasJSON.show(%{alias: alias_record}).data
-      assert data.dns_hostname =~ "cluster-staging"
+      assert data.vpn_hostname =~ "cluster-staging"
     end
 
-    test "dns_hostname has node- prefix on alias name" do
+    test "vpn_hostname has node- prefix on alias name" do
       alias_record = fake_alias(%{name: "db"})
       data = AliasJSON.show(%{alias: alias_record}).data
-      assert String.starts_with?(data.dns_hostname, "node-db.")
+      assert String.starts_with?(data.vpn_hostname, "node-db.")
     end
   end
 

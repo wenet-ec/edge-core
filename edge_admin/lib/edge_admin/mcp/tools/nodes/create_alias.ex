@@ -17,7 +17,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.CreateAlias do
         case Nodes.create_alias(node, %{"name" => name}) do
           {:ok, a} ->
             {:reply,
-             Response.json(Response.tool(), %{id: a.id, name: a.name, node_id: a.node_id, dns_hostname: a.dns_hostname}),
+             Response.json(Response.tool(), %{id: a.id, name: a.name, node_id: a.node_id, vpn_hostname: a.vpn_hostname}),
              frame}
 
           {:error, reason} ->

@@ -135,7 +135,7 @@ config :edge_admin, Oban,
 config :edge_admin,
   # === Admin Identity ===
   admin_id: admin_id,
-  admin_name: EdgeAdmin.Vpn.build_dns_name(admin_id, prefix: :admin),
+  admin_name: EdgeAdmin.Vpn.build_vpn_name(admin_id, prefix: :admin),
   admin_max_capacity: get_env!("ADMIN_MAX_CAPACITY", :positive_integer),
   # === Admin Cluster (VPN network for multi-admin coordination) ===
   admin_cluster_name: EdgeAdmin.Vpn.build_network_name(get_env!("ADMIN_CLUSTER_NAME"), prefix: :admin),
@@ -160,8 +160,7 @@ config :edge_admin,
   admin_urls: get_env("ADMIN_URLS", :list),
   # Netmaker DNS domain suffix (used for hostname construction)
   netmaker_default_domain: get_env("NETMAKER_DEFAULT_DOMAIN", :string, "nm.internal"),
-  # LAN DNS authority domain (e.g. "edge.local") — injected into agent config at registration.
-  # Used to compute lan_hostname for display. Nil if not configured.
+  # LAN DNS authority domain (e.g. "edge.local") (used to compute lan_hostname)
   lan_domain: get_env("LAN_DOMAIN", :string, "edge.local"),
   # === Cleanup & Reconciliation Schedules ===
   cluster_reconciliation_enabled: cluster_reconciliation_enabled,

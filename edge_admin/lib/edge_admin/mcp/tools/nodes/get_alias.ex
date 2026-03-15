@@ -18,7 +18,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.GetAlias do
            id: a.id,
            name: a.name,
            node_id: a.node_id,
-           dns_hostname: a.dns_hostname,
+           vpn_hostname: a.vpn_hostname,
            inserted_at: a.inserted_at
          }), frame}
 

@@ -12,7 +12,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   - `ipv4_range` - CIDR notation for the cluster's VPN network (e.g., "100.64.1.0/24")
   - `node_limit` - Maximum nodes allowed in this cluster (null means no limit)
   - `network_name` - Virtual field: Netmaker network name (cluster-{name})
-  - `dns_domain` - Virtual field: DNS domain suffix for nodes in this cluster
+  - `vpn_domain` - Virtual field: VPN domain suffix for nodes in this cluster
   - `node_count` - Virtual field: Number of nodes in this cluster
   """
   use EdgeAdmin.Schema
@@ -25,7 +25,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
           ipv4_range: String.t(),
           node_limit: integer() | nil,
           network_name: String.t() | nil,
-          dns_domain: String.t() | nil,
+          vpn_domain: String.t() | nil,
           node_count: integer() | nil,
           nodes: [EdgeAdmin.Nodes.Schemas.Node.t()] | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t(),
@@ -47,7 +47,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
     field(:ipv4_range, :string)
     field(:node_limit, :integer)
     field(:network_name, :string, virtual: true)
-    field(:dns_domain, :string, virtual: true)
+    field(:vpn_domain, :string, virtual: true)
     field(:node_count, :integer, virtual: true)
 
     has_many(:nodes, EdgeAdmin.Nodes.Schemas.Node)
@@ -87,7 +87,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   def network_name(%__MODULE__{name: name}), do: Vpn.build_network_name(name, prefix: :node)
 
   @doc """
-  Returns the DNS domain suffix for nodes in this cluster.
+  Returns the VPN domain suffix for nodes in this cluster.
 
   ## Format
   `cluster-{name}.{domain}`
@@ -96,12 +96,12 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
 
   ## Examples
 
-      iex> dns_domain(%Cluster{name: "prod"})
+      iex> vpn_domain(%Cluster{name: "prod"})
       "cluster-prod.nm.internal"
   """
-  @spec dns_domain(t()) :: String.t()
-  def dns_domain(%__MODULE__{name: name}) do
-    Vpn.build_domain(Vpn.build_network_name(name, prefix: :node))
+  @spec vpn_domain(t()) :: String.t()
+  def vpn_domain(%__MODULE__{name: name}) do
+    Vpn.build_vpn_domain(Vpn.build_network_name(name, prefix: :node))
   end
 
   @doc """

@@ -89,7 +89,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
             :netmaker_host_id,
             :id_type,
             :status,
-            :dns_hostname,
+            :vpn_hostname,
+            :mdns_hostname,
+            :lan_hostname,
             :http_port,
             :ssh_port,
             :host_metrics_port,
@@ -172,11 +174,11 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
   end
 
   # -----------------------------------------------------------------------
-  # show/1 — dns_hostname delegation
+  # show/1 — vpn_hostname delegation
   # -----------------------------------------------------------------------
 
-  describe "show/1 — dns_hostname" do
-    test "dns_hostname is node-{id}.cluster-{cluster_name}.nm.internal" do
+  describe "show/1 — vpn_hostname" do
+    test "vpn_hostname is node-{id}.cluster-{cluster_name}.nm.internal" do
       node =
         fake_node(%{
           id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
@@ -184,10 +186,10 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
         })
 
       data = NodeJSON.show(%{node: node}).data
-      assert data.dns_hostname == "node-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.cluster-prod.nm.internal"
+      assert data.vpn_hostname == "node-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.cluster-prod.nm.internal"
     end
 
-    test "dns_hostname changes when cluster name changes" do
+    test "vpn_hostname changes when cluster name changes" do
       node =
         fake_node(%{
           id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
@@ -195,7 +197,64 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
         })
 
       data = NodeJSON.show(%{node: node}).data
-      assert data.dns_hostname =~ "cluster-dev"
+      assert data.vpn_hostname =~ "cluster-dev"
+    end
+  end
+
+  # -----------------------------------------------------------------------
+  # show/1 — mdns_hostname delegation
+  # -----------------------------------------------------------------------
+
+  describe "show/1 — mdns_hostname" do
+    test "mdns_hostname is node-{id}.local" do
+      node = fake_node(%{id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"})
+      data = NodeJSON.show(%{node: node}).data
+      assert data.mdns_hostname == "node-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.local"
+    end
+
+    test "mdns_hostname uses the node id not the cluster name" do
+      node = fake_node(%{id: "11111111-2222-3333-4444-555555555555", cluster: fake_cluster(%{name: "staging"})})
+      data = NodeJSON.show(%{node: node}).data
+      assert data.mdns_hostname == "node-11111111-2222-3333-4444-555555555555.local"
+    end
+
+    test "mdns_hostname ends in .local" do
+      data = NodeJSON.show(%{node: fake_node()}).data
+      assert String.ends_with?(data.mdns_hostname, ".local")
+    end
+
+    test "mdns_hostname starts with node-" do
+      data = NodeJSON.show(%{node: fake_node()}).data
+      assert String.starts_with?(data.mdns_hostname, "node-")
+    end
+  end
+
+  # -----------------------------------------------------------------------
+  # show/1 — lan_hostname delegation
+  # -----------------------------------------------------------------------
+
+  describe "show/1 — lan_hostname" do
+    test "lan_hostname is node-{id}.edge.local by default" do
+      node = fake_node(%{id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"})
+      data = NodeJSON.show(%{node: node}).data
+      assert data.lan_hostname == "node-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.edge.local"
+    end
+
+    test "lan_hostname uses the node id not the cluster name" do
+      node = fake_node(%{id: "11111111-2222-3333-4444-555555555555", cluster: fake_cluster(%{name: "staging"})})
+      data = NodeJSON.show(%{node: node}).data
+      assert data.lan_hostname == "node-11111111-2222-3333-4444-555555555555.edge.local"
+    end
+
+    test "lan_hostname starts with node-" do
+      data = NodeJSON.show(%{node: fake_node()}).data
+      assert String.starts_with?(data.lan_hostname, "node-")
+    end
+
+    test "lan_hostname domain is distinct from vpn_hostname domain" do
+      data = NodeJSON.show(%{node: fake_node()}).data
+      refute data.lan_hostname == data.vpn_hostname
+      refute data.lan_hostname == data.mdns_hostname
     end
   end
 
@@ -209,22 +268,22 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
       assert data.aliases == []
     end
 
-    test "each alias has id, name, dns_hostname" do
+    test "each alias has id, name, vpn_hostname" do
       alias_record = fake_alias(%{name: "web"})
       node = fake_node(%{aliases: [alias_record]})
       data = NodeJSON.show(%{node: node}).data
       alias_data = hd(data.aliases)
       assert Map.has_key?(alias_data, :id)
       assert Map.has_key?(alias_data, :name)
-      assert Map.has_key?(alias_data, :dns_hostname)
+      assert Map.has_key?(alias_data, :vpn_hostname)
     end
 
-    test "alias dns_hostname is node-{alias_name}.cluster-{cluster_name}.nm.internal" do
+    test "alias vpn_hostname is node-{alias_name}.cluster-{cluster_name}.nm.internal" do
       alias_record = fake_alias(%{name: "web", cluster: fake_cluster(%{name: "prod"})})
       node = fake_node(%{aliases: [alias_record]})
       data = NodeJSON.show(%{node: node}).data
       alias_data = hd(data.aliases)
-      assert alias_data.dns_hostname == "node-web.cluster-prod.nm.internal"
+      assert alias_data.vpn_hostname == "node-web.cluster-prod.nm.internal"
     end
 
     test "alias name is passed through" do
@@ -244,7 +303,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
       assert Enum.map(data.aliases, & &1.id) == ["alias-1", "alias-2"]
     end
 
-    test "alias_data has exactly id, name, dns_hostname — no extra fields" do
+    test "alias_data has exactly id, name, vpn_hostname — no extra fields" do
       alias_record = fake_alias()
       node = fake_node(%{aliases: [alias_record]})
       data = NodeJSON.show(%{node: node}).data
@@ -252,7 +311,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
 
       assert MapSet.equal?(
                MapSet.new(Map.keys(alias_data)),
-               MapSet.new([:id, :name, :dns_hostname])
+               MapSet.new([:id, :name, :vpn_hostname])
              )
     end
   end

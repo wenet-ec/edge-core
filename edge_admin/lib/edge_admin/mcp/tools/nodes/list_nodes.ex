@@ -47,6 +47,8 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.ListNodes do
       status: n.status,
       last_seen_at: n.last_seen_at,
       http_port: n.http_port,
+      mdns_hostname: Node.mdns_hostname(n),
+      lan_hostname: Node.lan_hostname(n),
       version: n.version
     }
 end

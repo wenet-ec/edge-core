@@ -122,7 +122,7 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
 
   # Proxy chaining: Connect to agent's proxy server
   defp connect_via_agent_proxy(client_socket, exit_node, target_host, target_port, caller_pid, initial_data, protocol) do
-    node_dns = EdgeAdmin.Nodes.Schemas.Node.dns_hostname(exit_node)
+    node_dns = EdgeAdmin.Nodes.Schemas.Node.vpn_hostname(exit_node)
     agent_proxy_port = get_agent_proxy_port(protocol)
 
     case parse_cluster_from_hostname(node_dns) do

@@ -27,5 +27,5 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.ListAliases do
   end
 
   defp format(a),
-    do: %{id: a.id, name: a.name, node_id: a.node_id, dns_hostname: a.dns_hostname, inserted_at: a.inserted_at}
+    do: %{id: a.id, name: a.name, node_id: a.node_id, vpn_hostname: a.vpn_hostname, inserted_at: a.inserted_at}
 end

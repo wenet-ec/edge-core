@@ -35,7 +35,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSON do
       netmaker_host_id: node.netmaker_host_id,
       id_type: node.id_type,
       status: node.status,
-      dns_hostname: Node.dns_hostname(node),
+      vpn_hostname: Node.vpn_hostname(node),
+      mdns_hostname: Node.mdns_hostname(node),
+      lan_hostname: Node.lan_hostname(node),
       http_port: node.http_port,
       ssh_port: node.ssh_port,
       host_metrics_port: node.host_metrics_port,
@@ -57,7 +59,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSON do
     %{
       id: alias_record.id,
       name: alias_record.name,
-      dns_hostname: Alias.dns_hostname(alias_record)
+      vpn_hostname: Alias.vpn_hostname(alias_record)
     }
   end
 end

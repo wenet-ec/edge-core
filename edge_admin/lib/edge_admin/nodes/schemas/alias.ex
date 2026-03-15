@@ -11,7 +11,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
   - `name` - Alias name (lowercase alphanumeric with hyphens, 1-63 chars)
   - `node_id` - Foreign key to node
   - `cluster_id` - Foreign key to cluster (denormalized for uniqueness constraint)
-  - `dns_hostname` - Virtual field: Full DNS hostname for this alias
+  - `vpn_hostname` - Virtual field: Full VPN hostname for this alias
 
   ## Constraints
 
@@ -26,7 +26,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
   @type t :: %__MODULE__{
           id: String.t(),
           name: String.t(),
-          dns_hostname: String.t() | nil,
+          vpn_hostname: String.t() | nil,
           node_id: String.t(),
           cluster_id: String.t(),
           node: EdgeAdmin.Nodes.Schemas.Node.t() | NotLoaded.t(),
@@ -47,7 +47,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
 
   schema "aliases" do
     field(:name, :string)
-    field(:dns_hostname, :string, virtual: true)
+    field(:vpn_hostname, :string, virtual: true)
 
     belongs_to(:node, EdgeAdmin.Nodes.Schemas.Node, type: :binary_id)
     belongs_to(:cluster, Cluster, type: :binary_id)
@@ -70,7 +70,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
   end
 
   @doc """
-  Returns the full DNS hostname for this alias.
+  Returns the full VPN hostname for this alias.
 
   ## Format
   `node-{name}.cluster-{cluster_name}.{domain}`
@@ -82,14 +82,14 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
 
   ## Examples
 
-      iex> dns_hostname(%Alias{name: "web", cluster: %Cluster{name: "prod"}})
+      iex> vpn_hostname(%Alias{name: "web", cluster: %Cluster{name: "prod"}})
       "node-web.cluster-prod.nm.internal"
   """
-  @spec dns_hostname(t()) :: String.t()
-  def dns_hostname(%__MODULE__{name: name, cluster: %{name: cluster_name}}) do
-    short_name = Vpn.build_dns_name(name, prefix: :node)
+  @spec vpn_hostname(t()) :: String.t()
+  def vpn_hostname(%__MODULE__{name: name, cluster: %{name: cluster_name}}) do
+    short_name = Vpn.build_vpn_name(name, prefix: :node)
     network_name = Vpn.build_network_name(cluster_name, prefix: :node)
-    Vpn.build_hostname(short_name, network_name)
+    Vpn.build_vpn_hostname(short_name, network_name)
   end
 
   @doc """
@@ -100,7 +100,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
   double-suffixing (e.g. `node-web.cluster-prod.nm.internal.nm.internal`).
 
   Use this when creating or deleting DNS entries via the Netmaker API.
-  Use `dns_hostname/1` for the user-facing fully qualified hostname.
+  Use `vpn_hostname/1` for the user-facing fully qualified hostname.
 
   ## Format
   `node-{name}.cluster-{cluster_name}`
@@ -112,6 +112,6 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
   """
   @spec netmaker_dns_name(t()) :: String.t()
   def netmaker_dns_name(%__MODULE__{name: name, cluster: %{name: cluster_name}}) do
-    "#{Vpn.build_dns_name(name, prefix: :node)}.#{Vpn.build_network_name(cluster_name, prefix: :node)}"
+    "#{Vpn.build_vpn_name(name, prefix: :node)}.#{Vpn.build_network_name(cluster_name, prefix: :node)}"
   end
 end

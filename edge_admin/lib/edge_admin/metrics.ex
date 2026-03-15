@@ -294,7 +294,7 @@ defmodule EdgeAdmin.Metrics do
   # Unified scraping logic with VPN + cache fallback
   defp scrape_node_metrics(node_id, metrics_type, gateway_scrape_fn) do
     # Build node name for ETS lookup
-    node_name = Vpn.build_dns_name(node_id, prefix: :node)
+    node_name = Vpn.build_vpn_name(node_id, prefix: :node)
 
     with {:ok, cluster_name, _admin_name} <- Metadata.find_node_cluster(node_name),
          {:ok, gateway_pid} <- Gateway.lookup(cluster_name),

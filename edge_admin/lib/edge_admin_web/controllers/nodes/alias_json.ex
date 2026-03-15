@@ -30,7 +30,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasJSON do
     %{
       id: alias_record.id,
       name: alias_record.name,
-      dns_hostname: Alias.dns_hostname(alias_record),
+      vpn_hostname: Alias.vpn_hostname(alias_record),
       node_id: alias_record.node_id,
       cluster_name: cluster.name,
       inserted_at: alias_record.inserted_at,

@@ -5,24 +5,24 @@ defmodule EdgeAdmin.VpnTest do
   alias EdgeAdmin.Vpn
 
   # ---------------------------------------------------------------------------
-  # build_dns_name/2
+  # build_vpn_name/2
   # ---------------------------------------------------------------------------
 
-  describe "build_dns_name/2" do
+  describe "build_vpn_name/2" do
     test "defaults to node prefix" do
-      assert Vpn.build_dns_name("abc123") == "node-abc123"
+      assert Vpn.build_vpn_name("abc123") == "node-abc123"
     end
 
     test "explicit node prefix" do
-      assert Vpn.build_dns_name("abc123", prefix: :node) == "node-abc123"
+      assert Vpn.build_vpn_name("abc123", prefix: :node) == "node-abc123"
     end
 
     test "admin prefix" do
-      assert Vpn.build_dns_name("k7m3n2p9", prefix: :admin) == "admin-k7m3n2p9"
+      assert Vpn.build_vpn_name("k7m3n2p9", prefix: :admin) == "admin-k7m3n2p9"
     end
 
     test "preserves hyphens in name" do
-      assert Vpn.build_dns_name("abc-def-123") == "node-abc-def-123"
+      assert Vpn.build_vpn_name("abc-def-123") == "node-abc-def-123"
     end
   end
 
@@ -162,41 +162,41 @@ defmodule EdgeAdmin.VpnTest do
   end
 
   # ---------------------------------------------------------------------------
-  # build_domain/2
+  # build_vpn_domain/2
   # ---------------------------------------------------------------------------
 
-  describe "build_domain/2" do
+  describe "build_vpn_domain/2" do
     test "combines network and default domain from config" do
       # test.exs sets netmaker_default_domain to "nm.internal"
-      assert Vpn.build_domain("cluster-xyz") == "cluster-xyz.nm.internal"
+      assert Vpn.build_vpn_domain("cluster-xyz") == "cluster-xyz.nm.internal"
     end
 
     test "uses explicit domain argument over config" do
-      assert Vpn.build_domain("cluster-xyz", "custom.vpn") == "cluster-xyz.custom.vpn"
+      assert Vpn.build_vpn_domain("cluster-xyz", "custom.vpn") == "cluster-xyz.custom.vpn"
     end
 
     test "empty domain returns just the network name" do
-      assert Vpn.build_domain("cluster-xyz", "") == "cluster-xyz"
+      assert Vpn.build_vpn_domain("cluster-xyz", "") == "cluster-xyz"
     end
   end
 
   # ---------------------------------------------------------------------------
-  # build_hostname/3
+  # build_vpn_hostname/3
   # ---------------------------------------------------------------------------
 
-  describe "build_hostname/3" do
+  describe "build_vpn_hostname/3" do
     test "builds FQDN from host, network and default domain" do
-      assert Vpn.build_hostname("node-abc", "cluster-xyz") ==
+      assert Vpn.build_vpn_hostname("node-abc", "cluster-xyz") ==
                "node-abc.cluster-xyz.nm.internal"
     end
 
     test "uses explicit domain" do
-      assert Vpn.build_hostname("node-abc", "cluster-xyz", "custom.domain") ==
+      assert Vpn.build_vpn_hostname("node-abc", "cluster-xyz", "custom.domain") ==
                "node-abc.cluster-xyz.custom.domain"
     end
 
     test "empty domain produces host.network" do
-      assert Vpn.build_hostname("node-abc", "cluster-xyz", "") ==
+      assert Vpn.build_vpn_hostname("node-abc", "cluster-xyz", "") ==
                "node-abc.cluster-xyz"
     end
   end

@@ -46,7 +46,9 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
           self_update_enabled: boolean(),
           netmaker_host_id: String.t(),
           node_name: String.t() | nil,
-          dns_hostname: String.t() | nil,
+          vpn_hostname: String.t() | nil,
+          mdns_hostname: String.t() | nil,
+          lan_hostname: String.t() | nil,
           cluster_id: String.t(),
           cluster: Cluster.t() | NotLoaded.t(),
           ssh_usernames: [SshUsername.t()] | NotLoaded.t(),
@@ -100,7 +102,9 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
 
     # Computed fields
     field(:node_name, :string, virtual: true)
-    field(:dns_hostname, :string, virtual: true)
+    field(:vpn_hostname, :string, virtual: true)
+    field(:mdns_hostname, :string, virtual: true)
+    field(:lan_hostname, :string, virtual: true)
 
     # Associations
     belongs_to(:cluster, Cluster)
@@ -178,11 +182,11 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   """
   @spec node_name(t()) :: String.t()
   def node_name(%__MODULE__{id: id}) do
-    Vpn.build_dns_name(id, prefix: :node)
+    Vpn.build_vpn_name(id, prefix: :node)
   end
 
   @doc """
-  Returns the DNS hostname for this node.
+  Returns the VPN hostname for this node.
 
   ## Format
   `node-{id}.cluster-{cluster_name}.{domain}`
@@ -194,13 +198,48 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
 
   ## Examples
 
-      iex> dns_hostname(%Node{id: "abc-123", cluster: %Cluster{name: "prod"}})
+      iex> vpn_hostname(%Node{id: "abc-123", cluster: %Cluster{name: "prod"}})
       "node-abc-123.cluster-prod.nm.internal"
   """
-  @spec dns_hostname(t()) :: String.t()
-  def dns_hostname(%__MODULE__{id: id, cluster: %{name: cluster_name}}) do
-    short_name = Vpn.build_dns_name(id, prefix: :node)
+  @spec vpn_hostname(t()) :: String.t()
+  def vpn_hostname(%__MODULE__{id: id, cluster: %{name: cluster_name}}) do
+    short_name = Vpn.build_vpn_name(id, prefix: :node)
     network_name = Vpn.build_network_name(cluster_name, prefix: :node)
-    Vpn.build_hostname(short_name, network_name)
+    Vpn.build_vpn_hostname(short_name, network_name)
+  end
+
+  @doc """
+  Returns the mDNS hostname for this node.
+
+  ## Format
+  `node-{id}.local`
+
+  ## Examples
+
+      iex> mdns_hostname(%Node{id: "abc-123"})
+      "node-abc-123.local"
+  """
+  @spec mdns_hostname(t()) :: String.t()
+  def mdns_hostname(%__MODULE__{id: id}) do
+    "node-#{id}.local"
+  end
+
+  @doc """
+  Returns the LAN DNS authority hostname for this node.
+
+  ## Format
+  `node-{id}.{lan_domain}`
+
+  Default domain is `edge.local` (configurable via `LAN_DOMAIN`).
+
+  ## Examples
+
+      iex> lan_hostname(%Node{id: "abc-123"})
+      "node-abc-123.edge.local"
+  """
+  @spec lan_hostname(t()) :: String.t()
+  def lan_hostname(%__MODULE__{id: id}) do
+    domain = Application.get_env(:edge_admin, :lan_domain, "edge.local")
+    "node-#{id}.#{domain}"
   end
 end

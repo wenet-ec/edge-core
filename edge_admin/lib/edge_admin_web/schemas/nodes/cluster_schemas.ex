@@ -33,18 +33,18 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
           enum: ["hostname", "mac"],
           example: "hostname"
         },
-        dns_hostname: %Schema{
+        vpn_hostname: %Schema{
           type: :string,
           description: "DNS hostname for this node",
           example: "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
         }
       },
-      required: [:id, :status, :id_type, :dns_hostname],
+      required: [:id, :status, :id_type, :vpn_hostname],
       example: %{
         id: "abc12345-1234-1234-1234-123456789abc",
         status: "healthy",
         id_type: "hostname",
-        dns_hostname: "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
+        vpn_hostname: "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
       }
     })
   end
@@ -93,7 +93,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
           description: "Netmaker network name",
           example: "cluster-prod-east"
         },
-        dns_domain: %Schema{
+        vpn_domain: %Schema{
           type: :string,
           description: "DNS domain suffix for nodes in this cluster",
           example: "cluster-prod-east.nm.internal"
@@ -117,7 +117,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         :node_count,
         :nodes,
         :network_name,
-        :dns_domain,
+        :vpn_domain,
         :inserted_at,
         :updated_at
       ],
@@ -132,17 +132,17 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
             id: "abc12345-1234-1234-1234-123456789abc",
             status: "healthy",
             id_type: "hostname",
-            dns_hostname: "abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
+            vpn_hostname: "abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
           },
           %{
             id: "node-def12345-1234-1234-1234-123456789def",
             status: "healthy",
             id_type: "hostname",
-            dns_hostname: "node-def12345-1234-1234-1234-123456789def.cluster-prod-east.nm.internal"
+            vpn_hostname: "node-def12345-1234-1234-1234-123456789def.cluster-prod-east.nm.internal"
           }
         ],
         network_name: "cluster-prod-east",
-        dns_domain: "cluster-prod-east.nm.internal",
+        vpn_domain: "cluster-prod-east.nm.internal",
         inserted_at: "2025-06-09T08:00:00Z",
         updated_at: "2025-06-09T08:00:00Z"
       }
@@ -184,17 +184,17 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
               id: "abc12345-1234-1234-1234-123456789abc",
               status: "healthy",
               id_type: "hostname",
-              dns_hostname: "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
+              vpn_hostname: "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
             },
             %{
               id: "node-def12345-1234-1234-1234-123456789def",
               status: "healthy",
               id_type: "hostname",
-              dns_hostname: "node-def12345-1234-1234-1234-123456789def.cluster-prod-east.nm.internal"
+              vpn_hostname: "node-def12345-1234-1234-1234-123456789def.cluster-prod-east.nm.internal"
             }
           ],
           network_name: "cluster-prod-east",
-          dns_domain: "cluster-prod-east.nm.internal",
+          vpn_domain: "cluster-prod-east.nm.internal",
           inserted_at: "2025-06-09T08:00:00Z",
           updated_at: "2025-06-09T08:00:00Z"
         }

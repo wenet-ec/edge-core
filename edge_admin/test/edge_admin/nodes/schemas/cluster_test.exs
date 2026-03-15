@@ -197,6 +197,45 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
   end
 
   # ---------------------------------------------------------------------------
+  # network_name/1
+  # ---------------------------------------------------------------------------
+
+  describe "network_name/1" do
+    test "returns cluster-{name} format" do
+      cluster = %Cluster{name: "prod"}
+      assert Cluster.network_name(cluster) == "cluster-prod"
+    end
+
+    test "hyphenated cluster name is preserved" do
+      cluster = %Cluster{name: "prod-east"}
+      assert Cluster.network_name(cluster) == "cluster-prod-east"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # vpn_domain/1
+  # ---------------------------------------------------------------------------
+
+  describe "vpn_domain/1" do
+    test "returns cluster-{name}.nm.internal by default" do
+      # test.exs sets netmaker_default_domain to "nm.internal"
+      cluster = %Cluster{name: "prod"}
+      assert Cluster.vpn_domain(cluster) == "cluster-prod.nm.internal"
+    end
+
+    test "hyphenated cluster name is preserved in domain" do
+      cluster = %Cluster{name: "prod-east"}
+      assert Cluster.vpn_domain(cluster) == "cluster-prod-east.nm.internal"
+    end
+
+    test "vpn_domain is distinct from network_name (has domain suffix)" do
+      cluster = %Cluster{name: "prod"}
+      assert Cluster.vpn_domain(cluster) != Cluster.network_name(cluster)
+      assert String.starts_with?(Cluster.vpn_domain(cluster), Cluster.network_name(cluster))
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # node_count/1
   # ---------------------------------------------------------------------------
 

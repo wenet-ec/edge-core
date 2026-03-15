@@ -33,8 +33,8 @@ defmodule EdgeAdmin.Vpn do
       iex> Vpn.create_network("cluster-prod", %{addressrange: "100.64.1.0/24"})
       {:ok, %{"name" => "cluster-prod", ...}}
 
-      # Build a hostname
-      iex> Vpn.build_hostname("node-abc", "cluster-prod")
+      # Build a VPN hostname
+      iex> Vpn.build_vpn_hostname("node-abc", "cluster-prod")
       "node-abc.cluster-prod.nm.internal"
 
       # Get enrollment key
@@ -95,7 +95,7 @@ defmodule EdgeAdmin.Vpn do
   # ===========================================================================
 
   @doc """
-  Builds a DNS name with a prefix.
+  Builds a VPN name with a prefix.
   Format: {prefix}-{name}
 
   ## Options
@@ -104,17 +104,17 @@ defmodule EdgeAdmin.Vpn do
 
   ## Examples
 
-      iex> EdgeAdmin.Vpn.build_dns_name("abc123")
+      iex> EdgeAdmin.Vpn.build_vpn_name("abc123")
       "node-abc123"
 
-      iex> EdgeAdmin.Vpn.build_dns_name("abc123", prefix: :node)
+      iex> EdgeAdmin.Vpn.build_vpn_name("abc123", prefix: :node)
       "node-abc123"
 
-      iex> EdgeAdmin.Vpn.build_dns_name("k7m3n2p9", prefix: :admin)
+      iex> EdgeAdmin.Vpn.build_vpn_name("k7m3n2p9", prefix: :admin)
       "admin-k7m3n2p9"
   """
-  @spec build_dns_name(String.t(), keyword()) :: String.t()
-  def build_dns_name(name, opts \\ []) when is_binary(name) do
+  @spec build_vpn_name(String.t(), keyword()) :: String.t()
+  def build_vpn_name(name, opts \\ []) when is_binary(name) do
     prefix = Keyword.get(opts, :prefix, :node)
 
     case prefix do
@@ -192,15 +192,15 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Builds a DNS domain from network name.
+  Builds a VPN domain from network name.
 
   ## Examples
 
-      iex> EdgeAdmin.Vpn.build_domain("cluster-xyz")
+      iex> EdgeAdmin.Vpn.build_vpn_domain("cluster-xyz")
       "cluster-xyz.nm.internal"
   """
-  @spec build_domain(String.t(), String.t() | nil) :: String.t()
-  def build_domain(network, domain \\ nil) do
+  @spec build_vpn_domain(String.t(), String.t() | nil) :: String.t()
+  def build_vpn_domain(network, domain \\ nil) do
     domain = domain || default_domain()
 
     case domain do
@@ -210,22 +210,22 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Builds a DNS hostname from components.
+  Builds a VPN hostname from components.
 
   ## Examples
 
-      iex> EdgeAdmin.Vpn.build_hostname("node-abc", "cluster-xyz")
+      iex> EdgeAdmin.Vpn.build_vpn_hostname("node-abc", "cluster-xyz")
       "node-abc.cluster-xyz.nm.internal"
 
-      iex> EdgeAdmin.Vpn.build_hostname("node-abc", "cluster-xyz", "custom.domain")
+      iex> EdgeAdmin.Vpn.build_vpn_hostname("node-abc", "cluster-xyz", "custom.domain")
       "node-abc.cluster-xyz.custom.domain"
 
-      iex> EdgeAdmin.Vpn.build_hostname("node-abc", "cluster-xyz", "")
+      iex> EdgeAdmin.Vpn.build_vpn_hostname("node-abc", "cluster-xyz", "")
       "node-abc.cluster-xyz"
   """
-  @spec build_hostname(String.t(), String.t(), String.t() | nil) :: String.t()
-  def build_hostname(host, network, domain \\ nil) do
-    "#{host}.#{build_domain(network, domain)}"
+  @spec build_vpn_hostname(String.t(), String.t(), String.t() | nil) :: String.t()
+  def build_vpn_hostname(host, network, domain \\ nil) do
+    "#{host}.#{build_vpn_domain(network, domain)}"
   end
 
   @doc """

@@ -266,7 +266,7 @@ defmodule EdgeAdmin.Nodes do
       fn row ->
         case row.node_id do
           nil -> nil
-          id -> if use_prefix, do: Vpn.build_dns_name(id, prefix: :node), else: id
+          id -> if use_prefix, do: Vpn.build_vpn_name(id, prefix: :node), else: id
         end
       end
     )
@@ -474,7 +474,7 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec node_http_url(Node.t()) :: String.t()
   def node_http_url(%Node{http_port: port} = node) do
-    "http://#{Node.dns_hostname(node)}:#{port}"
+    "http://#{Node.vpn_hostname(node)}:#{port}"
   end
 
   @doc """
@@ -721,7 +721,7 @@ defmodule EdgeAdmin.Nodes do
 
       with :ok <- if(is_new_node, do: Checks.NodeLimitCheck.check(cluster), else: :ok),
            {:ok, netmaker_host_id} <-
-             Vpn.get_host_id(Vpn.build_dns_name(node_id, prefix: :node), network_name: network_name) do
+             Vpn.get_host_id(Vpn.build_vpn_name(node_id, prefix: :node), network_name: network_name) do
         node_attrs = build_node_attrs(node_id, cluster, netmaker_host_id, attrs)
         upsert_node(node_attrs, existing_node, is_new_node, cluster)
       else
@@ -1066,7 +1066,7 @@ defmodule EdgeAdmin.Nodes do
     # Single join query: cluster lookup + node fields + alias names in one round trip.
     # Returns only the fields needed for proxy chain auth:
     #   node.id, node.proxy_password, node.http_proxy_port, node.socks5_proxy_port,
-    #   cluster.name (for dns_hostname/1), alias.name (as additional lookup keys).
+    #   cluster.name (for vpn_hostname/1), alias.name (as additional lookup keys).
     rows =
       Repo.all(
         from n in Node,
@@ -1678,16 +1678,16 @@ defmodule EdgeAdmin.Nodes do
 
   defp cleanup_single_alias(%Alias{} = alias_record) do
     network_name = node_network_name(alias_record.cluster)
-    dns_hostname = Alias.dns_hostname(alias_record)
+    vpn_hostname = Alias.vpn_hostname(alias_record)
     netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
 
     # 1. Try to delete DNS entry (best-effort)
     case Vpn.delete_dns_entry(network_name, netmaker_dns_name) do
       {:ok, _} ->
-        Logger.info("Deleted DNS entry for alias #{alias_record.name}: #{dns_hostname}")
+        Logger.info("Deleted DNS entry for alias #{alias_record.name}: #{vpn_hostname}")
 
       {:error, :not_found} ->
-        Logger.debug("DNS entry already deleted for alias #{alias_record.name}: #{dns_hostname}")
+        Logger.debug("DNS entry already deleted for alias #{alias_record.name}: #{vpn_hostname}")
 
       {:error, :service_unavailable} ->
         Logger.warning("Failed to delete DNS entry for alias #{alias_record.name}: service unavailable")
@@ -1844,7 +1844,7 @@ defmodule EdgeAdmin.Nodes do
 
               # 5. Create DNS entry in Netmaker (rollback DB on failure)
               ip_address = address |> String.split("/") |> List.first()
-              dns_hostname = Alias.dns_hostname(alias_record)
+              vpn_hostname = Alias.vpn_hostname(alias_record)
               netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
 
               case Vpn.create_dns_entry(network_name, %{
@@ -1852,7 +1852,7 @@ defmodule EdgeAdmin.Nodes do
                      address: ip_address
                    }) do
                 {:ok, _} ->
-                  Logger.info("Created DNS entry for alias #{alias_record.name}: #{dns_hostname} -> #{ip_address}")
+                  Logger.info("Created DNS entry for alias #{alias_record.name}: #{vpn_hostname} -> #{ip_address}")
                   {:ok, alias_record}
 
                 {:error, :service_unavailable} = error ->
@@ -1900,18 +1900,18 @@ defmodule EdgeAdmin.Nodes do
   def delete_alias(%Alias{} = alias_record) do
     alias_record = Repo.preload(alias_record, :cluster)
     network_name = node_network_name(alias_record.cluster)
-    dns_hostname = Alias.dns_hostname(alias_record)
+    vpn_hostname = Alias.vpn_hostname(alias_record)
     netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
 
     # 1. Delete DNS entry from Netmaker FIRST
     case Vpn.delete_dns_entry(network_name, netmaker_dns_name) do
       {:ok, _} ->
-        Logger.info("Deleted DNS entry for alias #{alias_record.name}: #{dns_hostname}")
+        Logger.info("Deleted DNS entry for alias #{alias_record.name}: #{vpn_hostname}")
         delete_alias_from_db(alias_record)
 
       {:error, :not_found} ->
         # DNS already gone - continue with DB deletion
-        Logger.info("DNS entry already deleted for alias #{alias_record.name}: #{dns_hostname}")
+        Logger.info("DNS entry already deleted for alias #{alias_record.name}: #{vpn_hostname}")
         delete_alias_from_db(alias_record)
 
       {:error, :service_unavailable} = error ->

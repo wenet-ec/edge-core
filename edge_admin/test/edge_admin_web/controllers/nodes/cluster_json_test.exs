@@ -69,7 +69,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSONTest do
       assert Map.has_key?(data, :node_count)
       assert Map.has_key?(data, :nodes)
       assert Map.has_key?(data, :network_name)
-      assert Map.has_key?(data, :dns_domain)
+      assert Map.has_key?(data, :vpn_domain)
       assert Map.has_key?(data, :inserted_at)
       assert Map.has_key?(data, :updated_at)
     end
@@ -110,9 +110,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSONTest do
       assert data.network_name == "cluster-prod"
     end
 
-    test "dns_domain follows cluster-{name}.nm.internal format" do
+    test "vpn_domain follows cluster-{name}.nm.internal format" do
       data = ClusterJSON.show(%{cluster: fake_cluster(%{name: "prod"})}).data
-      assert data.dns_domain == "cluster-prod.nm.internal"
+      assert data.vpn_domain == "cluster-prod.nm.internal"
     end
 
     test "nodes list is empty when cluster has no nodes" do
@@ -126,7 +126,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSONTest do
   # -----------------------------------------------------------------------
 
   describe "show/1 — node_data inside cluster" do
-    test "each node has id, status, id_type, dns_hostname" do
+    test "each node has id, status, id_type, vpn_hostname" do
       node = fake_node()
       cluster = fake_cluster(%{name: "prod", nodes: [node]})
       data = ClusterJSON.show(%{cluster: cluster}).data
@@ -134,23 +134,23 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSONTest do
       assert Map.has_key?(node_data, :id)
       assert Map.has_key?(node_data, :status)
       assert Map.has_key?(node_data, :id_type)
-      assert Map.has_key?(node_data, :dns_hostname)
+      assert Map.has_key?(node_data, :vpn_hostname)
     end
 
-    test "node dns_hostname uses node-{id}.cluster-{name}.nm.internal format" do
+    test "node vpn_hostname uses node-{id}.cluster-{name}.nm.internal format" do
       node = fake_node(%{id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"})
       cluster = fake_cluster(%{name: "prod", nodes: [node]})
       data = ClusterJSON.show(%{cluster: cluster}).data
       node_data = hd(data.nodes)
-      assert node_data.dns_hostname == "node-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.cluster-prod.nm.internal"
+      assert node_data.vpn_hostname == "node-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.cluster-prod.nm.internal"
     end
 
-    test "node dns_hostname uses cluster name from the parent cluster (not node's own cluster assoc)" do
+    test "node vpn_hostname uses cluster name from the parent cluster (not node's own cluster assoc)" do
       node = fake_node(%{id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"})
       cluster = fake_cluster(%{name: "staging", nodes: [node]})
       data = ClusterJSON.show(%{cluster: cluster}).data
       node_data = hd(data.nodes)
-      assert node_data.dns_hostname =~ "cluster-staging"
+      assert node_data.vpn_hostname =~ "cluster-staging"
     end
 
     test "node status and id_type are passed through" do
@@ -175,7 +175,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSONTest do
              ]
     end
 
-    test "node_data does NOT have keys beyond id, status, id_type, dns_hostname" do
+    test "node_data does NOT have keys beyond id, status, id_type, vpn_hostname" do
       node = fake_node()
       cluster = fake_cluster(%{nodes: [node]})
       data = ClusterJSON.show(%{cluster: cluster}).data
@@ -183,7 +183,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSONTest do
 
       assert MapSet.equal?(
                MapSet.new(Map.keys(node_data)),
-               MapSet.new([:id, :status, :id_type, :dns_hostname])
+               MapSet.new([:id, :status, :id_type, :vpn_hostname])
              )
     end
   end

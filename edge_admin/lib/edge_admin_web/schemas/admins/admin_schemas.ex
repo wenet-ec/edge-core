@@ -32,7 +32,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           type: :string,
           description: "Erlang distribution node name"
         },
-        dns_hostname: %Schema{
+        vpn_hostname: %Schema{
           type: :string,
           description: "DNS hostname for this admin"
         },
@@ -51,13 +51,13 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           nullable: true
         }
       },
-      required: [:id, :name, :max_capacity, :erlang_node_name, :dns_hostname, :admin_cluster_name, :netmaker_host_id],
+      required: [:id, :name, :max_capacity, :erlang_node_name, :vpn_hostname, :admin_cluster_name, :netmaker_host_id],
       example: %{
         id: "k7m3n2p9x4j6",
         name: "admin-k7m3n2p9x4j6",
         max_capacity: 200,
         erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
-        dns_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
+        vpn_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
         admin_cluster_name: "admin-cluster-1",
         netmaker_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505",
         last_computed_at: "2025-01-15T12:00:00Z"
@@ -81,7 +81,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           type: :integer,
           description: "Maximum node capacity"
         },
-        dns_hostname: %Schema{
+        vpn_hostname: %Schema{
           type: :string,
           description: "Netmaker dns hostname"
         },
@@ -98,7 +98,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
       example: %{
         name: "admin-k7m3n2p9x4j6",
         max_capacity: 200,
-        dns_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
+        vpn_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
         erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
         netmaker_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505"
       }
@@ -150,14 +150,14 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           %{
             name: "admin-k7m3n2p9x4j6",
             max_capacity: 200,
-            dns_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
+            vpn_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
             erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
             netmaker_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505"
           },
           %{
             name: "admin-x9j4p2k7m8n3",
             max_capacity: 300,
-            dns_hostname: "admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal",
+            vpn_hostname: "admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal",
             erlang_node_name: "admin@admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal",
             netmaker_host_id: "7f3c8d4e-9a1b-4c2d-8e3f-5a6b7c8d9e0f"
           }

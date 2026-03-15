@@ -28,7 +28,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
           pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
           example: "web-server"
         },
-        dns_hostname: %Schema{
+        vpn_hostname: %Schema{
           type: :string,
           description: "Full DNS hostname (FQDN)",
           example: "node-web-server.cluster-prod.nm.internal"
@@ -54,11 +54,11 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
           description: "Timestamp when the alias was last updated"
         }
       },
-      required: [:id, :name, :dns_hostname, :node_id, :cluster_name],
+      required: [:id, :name, :vpn_hostname, :node_id, :cluster_name],
       example: %{
         id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         name: "web-server",
-        dns_hostname: "node-web-server.cluster-prod.nm.internal",
+        vpn_hostname: "node-web-server.cluster-prod.nm.internal",
         node_id: "01234567-89ab-cdef-0123-456789abcdef",
         cluster_name: "prod",
         inserted_at: "2024-01-15T10:30:00Z",
@@ -82,7 +82,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
         data: %{
           id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
           name: "web-server",
-          dns_hostname: "node-web-server.cluster-prod.nm.internal",
+          vpn_hostname: "node-web-server.cluster-prod.nm.internal",
           node_id: "01234567-89ab-cdef-0123-456789abcdef",
           cluster_name: "prod",
           inserted_at: "2024-01-15T10:30:00Z",

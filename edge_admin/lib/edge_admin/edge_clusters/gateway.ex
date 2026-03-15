@@ -159,7 +159,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   ## Parameters
 
   - gateway_pid: Gateway process
-  - node: Node struct with dns_hostname, host_metrics_port
+  - node: Node struct with vpn_hostname, host_metrics_port
 
   ## Returns
 
@@ -176,7 +176,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   ## Parameters
 
   - gateway_pid: Gateway process
-  - node: Node struct with dns_hostname, http_port, api_token
+  - node: Node struct with vpn_hostname, http_port, api_token
 
   ## Returns
 
@@ -193,7 +193,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   ## Parameters
 
   - gateway_pid: Gateway process
-  - node: Node struct with dns_hostname, wireguard_metrics_port
+  - node: Node struct with vpn_hostname, wireguard_metrics_port
 
   ## Returns
 
@@ -210,7 +210,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   ## Parameters
 
   - gateway_pid: Gateway process
-  - node: Node struct with dns_hostname, http_port, api_token
+  - node: Node struct with vpn_hostname, http_port, api_token
 
   ## Returns
 
@@ -227,7 +227,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   ## Parameters
 
   - gateway_pid: Gateway process
-  - node: Node struct with dns_hostname, http_port, api_token
+  - node: Node struct with vpn_hostname, http_port, api_token
   - execution_id: Command execution ID to cancel
 
   ## Returns
@@ -344,7 +344,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     cluster_name = state.cluster_name
 
     Task.start(fn ->
-      url = "http://#{Node.dns_hostname(node)}:#{node.host_metrics_port}/metrics"
+      url = "http://#{Node.vpn_hostname(node)}:#{node.host_metrics_port}/metrics"
 
       result =
         case Req.get(url, agent_request_options()) do
@@ -391,7 +391,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     cluster_name = state.cluster_name
 
     Task.start(fn ->
-      url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/v1/agents/metrics/self/raw"
+      url = "http://#{Node.vpn_hostname(node)}:#{node.http_port}/api/v1/agents/metrics/self/raw"
 
       opts =
         Keyword.merge(
@@ -442,7 +442,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     cluster_name = state.cluster_name
 
     Task.start(fn ->
-      url = "http://#{Node.dns_hostname(node)}:#{node.wireguard_metrics_port}/metrics"
+      url = "http://#{Node.vpn_hostname(node)}:#{node.wireguard_metrics_port}/metrics"
 
       result =
         case Req.get(url, agent_request_options()) do
@@ -485,7 +485,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   @impl true
   def handle_call({:trigger_self_update, node}, from, state) do
     Task.start(fn ->
-      url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/v1/self_updates/trigger"
+      url = "http://#{Node.vpn_hostname(node)}:#{node.http_port}/api/v1/self_updates/trigger"
 
       opts = Keyword.merge([auth: {:bearer, node.api_token}], agent_request_options())
 
@@ -523,7 +523,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   @impl true
   def handle_call({:cancel_execution, node, execution_id}, from, state) do
     Task.start(fn ->
-      url = "http://#{Node.dns_hostname(node)}:#{node.http_port}/api/v1/command_executions/#{execution_id}/cancel"
+      url = "http://#{Node.vpn_hostname(node)}:#{node.http_port}/api/v1/command_executions/#{execution_id}/cancel"
 
       opts = Keyword.merge([auth: {:bearer, node.api_token}], agent_request_options())
 

@@ -26,6 +26,8 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.GetNode do
            http_proxy_port: n.http_proxy_port,
            socks5_proxy_port: n.socks5_proxy_port,
            netmaker_host_id: n.netmaker_host_id,
+           mdns_hostname: Node.mdns_hostname(n),
+           lan_hostname: Node.lan_hostname(n),
            version: n.version,
            inserted_at: n.inserted_at
          }), frame}

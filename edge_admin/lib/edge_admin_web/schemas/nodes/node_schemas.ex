@@ -49,10 +49,21 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           enum: ["healthy", "unhealthy", "unreachable"],
           description: "Current node status"
         },
-        dns_hostname: %Schema{
+        vpn_hostname: %Schema{
           type: :string,
           description: "DNS hostname for this node",
           example: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc.nm.internal"
+        },
+        mdns_hostname: %Schema{
+          type: :string,
+          description: "mDNS hostname — resolvable on the local LAN via multicast DNS",
+          example: "node-01234567-89ab-cdef-0123-456789abcdef.local"
+        },
+        lan_hostname: %Schema{
+          type: :string,
+          description:
+            "LAN DNS authority hostname — resolvable via the agent's DNS authority server. Domain defaults to edge.local (configurable via LAN_DOMAIN)",
+          example: "node-01234567-89ab-cdef-0123-456789abcdef.edge.local"
         },
         http_port: %Schema{
           type: :integer,
@@ -134,7 +145,9 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
         id_type: "persistent",
         status: "healthy",
-        dns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
+        vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
+        mdns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.local",
+        lan_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.edge.local",
         http_port: 44_000,
         ssh_port: 42_222,
         host_metrics_port: 49_100,
@@ -175,8 +188,10 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
             netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
             id_type: "persistent",
             status: "healthy",
-            dns_hostname:
+            vpn_hostname:
               "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
+            mdns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.local",
+            lan_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.edge.local",
             http_port: 44_000,
             ssh_port: 42_222,
             host_metrics_port: 49_100,
@@ -227,7 +242,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
           id_type: "persistent",
           status: "healthy",
-          dns_hostname:
+          vpn_hostname:
             "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
           http_port: 44_000,
           ssh_port: 42_222,

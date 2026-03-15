@@ -177,14 +177,15 @@
         "example": {
           "api_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
           "cluster_name": "prod-east",
-          "dns_hostname": "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
           "host_metrics_port": 49100,
           "http_port": 44000,
           "http_proxy_port": 44880,
           "id": "01234567-89ab-cdef-0123-456789abcdef",
           "id_type": "persistent",
           "inserted_at": "2025-06-09T08:00:00Z",
+          "lan_hostname": "node-01234567-89ab-cdef-0123-456789abcdef.edge.local",
           "last_seen_at": "2025-06-09T08:20:00Z",
+          "mdns_hostname": "node-01234567-89ab-cdef-0123-456789abcdef.local",
           "netmaker_host_id": "def67890-5678-5678-5678-567890abcdef",
           "node_name": "node-01234567-89ab-cdef-0123-456789abcdef",
           "proxy_password": "securepassword123",
@@ -194,6 +195,7 @@
           "status": "healthy",
           "updated_at": "2025-06-09T08:20:00Z",
           "version": "0.1.0",
+          "vpn_hostname": "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
           "wireguard_metrics_port": 49586
         },
         "properties": {
@@ -205,11 +207,6 @@
             "description": "Name of the cluster this node belongs to",
             "example": "prod-east",
             "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-            "type": "string"
-          },
-          "dns_hostname": {
-            "description": "DNS hostname for this node",
-            "example": "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc.nm.internal",
             "type": "string"
           },
           "host_metrics_port": {
@@ -236,10 +233,20 @@
             "format": "date-time",
             "type": "string"
           },
+          "lan_hostname": {
+            "description": "LAN DNS authority hostname — resolvable via the agent's DNS authority server. Domain defaults to edge.local (configurable via LAN_DOMAIN)",
+            "example": "node-01234567-89ab-cdef-0123-456789abcdef.edge.local",
+            "type": "string"
+          },
           "last_seen_at": {
             "description": "Last heartbeat timestamp from the node",
             "format": "date-time",
             "nullable": true,
+            "type": "string"
+          },
+          "mdns_hostname": {
+            "description": "mDNS hostname — resolvable on the local LAN via multicast DNS",
+            "example": "node-01234567-89ab-cdef-0123-456789abcdef.local",
             "type": "string"
           },
           "netmaker_host_id": {
@@ -279,6 +286,11 @@
           "version": {
             "description": "Agent version",
             "nullable": true,
+            "type": "string"
+          },
+          "vpn_hostname": {
+            "description": "DNS hostname for this node",
+            "example": "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc.nm.internal",
             "type": "string"
           },
           "wireguard_metrics_port": {
@@ -365,7 +377,6 @@
       "Cluster Response": {
         "description": "Edge cluster information",
         "example": {
-          "dns_domain": "cluster-prod-east.nm.internal",
           "id": "abc12345-1234-1234-1234-123456789abc",
           "inserted_at": "2025-06-09T08:00:00Z",
           "ipv4_range": "100.64.0.0/24",
@@ -375,26 +386,22 @@
           "node_limit": 50,
           "nodes": [
             {
-              "dns_hostname": "abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal",
               "id": "abc12345-1234-1234-1234-123456789abc",
               "id_type": "hostname",
-              "status": "healthy"
+              "status": "healthy",
+              "vpn_hostname": "abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
             },
             {
-              "dns_hostname": "node-def12345-1234-1234-1234-123456789def.cluster-prod-east.nm.internal",
               "id": "node-def12345-1234-1234-1234-123456789def",
               "id_type": "hostname",
-              "status": "healthy"
+              "status": "healthy",
+              "vpn_hostname": "node-def12345-1234-1234-1234-123456789def.cluster-prod-east.nm.internal"
             }
           ],
-          "updated_at": "2025-06-09T08:00:00Z"
+          "updated_at": "2025-06-09T08:00:00Z",
+          "vpn_domain": "cluster-prod-east.nm.internal"
         },
         "properties": {
-          "dns_domain": {
-            "description": "DNS domain suffix for nodes in this cluster",
-            "example": "cluster-prod-east.nm.internal",
-            "type": "string"
-          },
           "id": {
             "description": "Unique cluster identifier (UUID for database compatibility, use name for API operations)",
             "format": "uuid",
@@ -439,6 +446,11 @@
             "description": "When the cluster was last updated",
             "format": "date-time",
             "type": "string"
+          },
+          "vpn_domain": {
+            "description": "DNS domain suffix for nodes in this cluster",
+            "example": "cluster-prod-east.nm.internal",
+            "type": "string"
           }
         },
         "required": [
@@ -449,7 +461,7 @@
           "node_count",
           "nodes",
           "network_name",
-          "dns_domain",
+          "vpn_domain",
           "inserted_at",
           "updated_at"
         ],
@@ -541,22 +553,17 @@
         "description": "Node alias with custom DNS entry",
         "example": {
           "cluster_name": "prod",
-          "dns_hostname": "node-web-server.cluster-prod.nm.internal",
           "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
           "inserted_at": "2024-01-15T10:30:00Z",
           "name": "web-server",
           "node_id": "01234567-89ab-cdef-0123-456789abcdef",
-          "updated_at": "2024-01-15T10:30:00Z"
+          "updated_at": "2024-01-15T10:30:00Z",
+          "vpn_hostname": "node-web-server.cluster-prod.nm.internal"
         },
         "properties": {
           "cluster_name": {
             "description": "Name of the cluster",
             "example": "prod-east",
-            "type": "string"
-          },
-          "dns_hostname": {
-            "description": "Full DNS hostname (FQDN)",
-            "example": "node-web-server.cluster-prod.nm.internal",
             "type": "string"
           },
           "id": {
@@ -584,14 +591,19 @@
             "description": "Timestamp when the alias was last updated",
             "format": "date-time",
             "type": "string"
+          },
+          "vpn_hostname": {
+            "description": "Full DNS hostname (FQDN)",
+            "example": "node-web-server.cluster-prod.nm.internal",
+            "type": "string"
           }
         },
-        "required": ["id", "name", "dns_hostname", "node_id", "cluster_name"],
+        "required": ["id", "name", "vpn_hostname", "node_id", "cluster_name"],
         "title": "Alias Response",
         "type": "object"
       },
       "Host Metrics Response": {
-        "description": "Host-level system metrics from Node Exporter (CPU, memory, disk, uptime).\n",
+        "description": "Host-level system metrics from Node Exporter (CPU, memory, disk, uptime).\r\n",
         "example": {
           "cluster_name": "production",
           "cpu": {
@@ -798,7 +810,7 @@
         "type": "object"
       },
       "Admin Metrics Response": {
-        "description": "Application-level metrics from edge_admin PromEx (BEAM stats, metadata, Oban, etc.).\n",
+        "description": "Application-level metrics from edge_admin PromEx (BEAM stats, metadata, Oban, etc.).\r\n",
         "example": {
           "data": {
             "application": {
@@ -1383,12 +1395,12 @@
         "example": {
           "data": {
             "cluster_name": "prod",
-            "dns_hostname": "node-web-server.cluster-prod.nm.internal",
             "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
             "inserted_at": "2024-01-15T10:30:00Z",
             "name": "web-server",
             "node_id": "01234567-89ab-cdef-0123-456789abcdef",
-            "updated_at": "2024-01-15T10:30:00Z"
+            "updated_at": "2024-01-15T10:30:00Z",
+            "vpn_hostname": "node-web-server.cluster-prod.nm.internal"
           }
         },
         "properties": {
@@ -1399,7 +1411,7 @@
         "type": "object"
       },
       "Unified Metrics Response": {
-        "description": "Complete metrics from all sources: host (Node Exporter) and agent (PromEx).\nProvides a unified view of node health and performance.\nUses best-effort fetching - if one source fails, it's marked as unavailable.\n",
+        "description": "Complete metrics from all sources: host (Node Exporter) and agent (PromEx).\r\nProvides a unified view of node health and performance.\r\nUses best-effort fetching - if one source fails, it's marked as unavailable.\r\n",
         "properties": {
           "data": {
             "properties": {
@@ -1666,7 +1678,7 @@
         "type": "object"
       },
       "Self-Update Request Create Request": {
-        "description": "Create a new self-update request.\n\nUses the same targeting system as commands. Only healthy nodes with self_update_enabled=true will be updated.\n",
+        "description": "Create a new self-update request.\r\n\r\nUses the same targeting system as commands. Only healthy nodes with self_update_enabled=true will be updated.\r\n",
         "example": {
           "targeting": { "node_filters": { "version": "0.1.*" }, "type": "all" }
         },
@@ -1807,7 +1819,6 @@
         "description": "Single cluster response",
         "example": {
           "data": {
-            "dns_domain": "cluster-prod-east.nm.internal",
             "id": "abc12345-1234-1234-1234-123456789abc",
             "inserted_at": "2025-06-09T08:00:00Z",
             "ipv4_range": "100.64.0.0/24",
@@ -1817,19 +1828,20 @@
             "node_limit": 50,
             "nodes": [
               {
-                "dns_hostname": "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal",
                 "id": "abc12345-1234-1234-1234-123456789abc",
                 "id_type": "hostname",
-                "status": "healthy"
+                "status": "healthy",
+                "vpn_hostname": "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
               },
               {
-                "dns_hostname": "node-def12345-1234-1234-1234-123456789def.cluster-prod-east.nm.internal",
                 "id": "node-def12345-1234-1234-1234-123456789def",
                 "id_type": "hostname",
-                "status": "healthy"
+                "status": "healthy",
+                "vpn_hostname": "node-def12345-1234-1234-1234-123456789def.cluster-prod-east.nm.internal"
               }
             ],
-            "updated_at": "2025-06-09T08:00:00Z"
+            "updated_at": "2025-06-09T08:00:00Z",
+            "vpn_domain": "cluster-prod-east.nm.internal"
           }
         },
         "properties": {
@@ -1842,17 +1854,12 @@
       "Node Summary": {
         "description": "Brief node information within cluster response",
         "example": {
-          "dns_hostname": "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal",
           "id": "abc12345-1234-1234-1234-123456789abc",
           "id_type": "hostname",
-          "status": "healthy"
+          "status": "healthy",
+          "vpn_hostname": "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
         },
         "properties": {
-          "dns_hostname": {
-            "description": "DNS hostname for this node",
-            "example": "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal",
-            "type": "string"
-          },
           "id": {
             "description": "Node ID",
             "example": "abc12345-1234-1234-1234-123456789abc",
@@ -1869,9 +1876,14 @@
             "enum": ["healthy", "unhealthy"],
             "example": "healthy",
             "type": "string"
+          },
+          "vpn_hostname": {
+            "description": "DNS hostname for this node",
+            "example": "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal",
+            "type": "string"
           }
         },
-        "required": ["id", "status", "id_type", "dns_hostname"],
+        "required": ["id", "status", "id_type", "vpn_hostname"],
         "title": "Node Summary",
         "type": "object"
       },
@@ -2008,18 +2020,18 @@
           "name": "admin-cluster-1",
           "topology": [
             {
-              "dns_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
               "erlang_node_name": "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
               "max_capacity": 200,
               "name": "admin-k7m3n2p9x4j6",
-              "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505"
+              "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
+              "vpn_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
             },
             {
-              "dns_hostname": "admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal",
               "erlang_node_name": "admin@admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal",
               "max_capacity": 300,
               "name": "admin-x9j4p2k7m8n3",
-              "netmaker_host_id": "7f3c8d4e-9a1b-4c2d-8e3f-5a6b7c8d9e0f"
+              "netmaker_host_id": "7f3c8d4e-9a1b-4c2d-8e3f-5a6b7c8d9e0f",
+              "vpn_hostname": "admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal"
             }
           ],
           "total_admins": 2,
@@ -2379,7 +2391,7 @@
         "type": "object"
       },
       "Agent Metrics Response": {
-        "description": "Application-level metrics from edge_agent PromEx (BEAM stats, Oban, business metrics).\n",
+        "description": "Application-level metrics from edge_agent PromEx (BEAM stats, Oban, business metrics).\r\n",
         "example": {
           "data": {
             "application": {
@@ -2722,7 +2734,6 @@
           "data": {
             "api_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
             "cluster_id": "abc12345-1234-1234-1234-123456789abc",
-            "dns_hostname": "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
             "host_metrics_port": 49100,
             "http_port": 44000,
             "http_proxy_port": 44880,
@@ -2739,6 +2750,7 @@
             "status": "healthy",
             "updated_at": "2025-06-09T08:20:00Z",
             "version": "0.1.0",
+            "vpn_hostname": "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
             "wireguard_metrics_port": 49586
           }
         },
@@ -2771,17 +2783,13 @@
       "Admin Topology Entry": {
         "description": "A peer admin in the cluster topology",
         "example": {
-          "dns_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
           "erlang_node_name": "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
           "max_capacity": 200,
           "name": "admin-k7m3n2p9x4j6",
-          "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505"
+          "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
+          "vpn_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
         },
         "properties": {
-          "dns_hostname": {
-            "description": "Netmaker dns hostname",
-            "type": "string"
-          },
           "erlang_node_name": {
             "description": "Erlang distribution node name",
             "type": "string"
@@ -2796,6 +2804,10 @@
           },
           "netmaker_host_id": {
             "description": "Netmaker host ID for this admin (UUID format)",
+            "type": "string"
+          },
+          "vpn_hostname": {
+            "description": "Netmaker dns hostname",
             "type": "string"
           }
         },
@@ -2834,21 +2846,17 @@
         "description": "This admin's identity and configuration",
         "example": {
           "admin_cluster_name": "admin-cluster-1",
-          "dns_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
           "erlang_node_name": "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
           "id": "k7m3n2p9x4j6",
           "last_computed_at": "2025-01-15T12:00:00Z",
           "max_capacity": 200,
           "name": "admin-k7m3n2p9x4j6",
-          "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505"
+          "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
+          "vpn_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
         },
         "properties": {
           "admin_cluster_name": {
             "description": "Name of the admin cluster this admin belongs to",
-            "type": "string"
-          },
-          "dns_hostname": {
-            "description": "DNS hostname for this admin",
             "type": "string"
           },
           "erlang_node_name": {
@@ -2876,6 +2884,10 @@
           "netmaker_host_id": {
             "description": "Netmaker host ID for this admin (UUID format)",
             "type": "string"
+          },
+          "vpn_hostname": {
+            "description": "DNS hostname for this admin",
+            "type": "string"
           }
         },
         "required": [
@@ -2883,12 +2895,20 @@
           "name",
           "max_capacity",
           "erlang_node_name",
-          "dns_hostname",
+          "vpn_hostname",
           "admin_cluster_name",
           "netmaker_host_id"
         ],
         "title": "Admin Response",
         "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "masterKey": {
+        "bearerFormat": "opaque",
+        "description": "Master key for full API access",
+        "scheme": "bearer",
+        "type": "http"
       }
     }
   },
@@ -5631,7 +5651,7 @@
       }
     }
   },
-  "security": [],
+  "security": [{ "masterKey": [] }],
   "servers": [],
   "tags": [
     { "name": "Admins.Metadata" },

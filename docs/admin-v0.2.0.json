@@ -779,6 +779,30 @@
         "title": "Host Metrics Response",
         "type": "object"
       },
+      "Edge Clusters": {
+        "additionalProperties": {
+          "additionalProperties": {
+            "description": "List of node names in this cluster",
+            "items": { "type": "string" },
+            "type": "array"
+          },
+          "description": "Clusters managed by this admin",
+          "type": "object"
+        },
+        "description": "All edge cluster assignments across all admins",
+        "example": {
+          "admin-k7m3n2p9x4j6": {
+            "cluster-p4k7n2m9x3j6": ["node-uuid-x"],
+            "cluster-x7j2p9k4m8n3": ["node-uuid-1", "node-uuid-2"]
+          },
+          "admin-x9j4p2k7m8n3": {
+            "cluster-j6m8n3p7k2x4": [],
+            "cluster-m3n9p2k8x7j4": ["node-uuid-3"]
+          }
+        },
+        "title": "Edge Clusters",
+        "type": "object"
+      },
       "Enrollment Key Create Request": {
         "description": "Parameters for creating a new enrollment key for a cluster",
         "example": {
@@ -1220,6 +1244,20 @@
         "title": "SSH Username Paginated Response",
         "type": "object"
       },
+      "Orphaned Clusters": {
+        "additionalProperties": {
+          "description": "List of node names in this orphaned cluster",
+          "items": { "type": "string" },
+          "type": "array"
+        },
+        "description": "Clusters that could not be assigned to any admin due to capacity constraints. Empty map when system is not degraded.",
+        "example": {
+          "cluster-orphaned-1": ["node-uuid-5", "node-uuid-6"],
+          "cluster-orphaned-2": ["node-uuid-7"]
+        },
+        "title": "Orphaned Clusters",
+        "type": "object"
+      },
       "SSH Username": {
         "description": "SSH username information for node access",
         "example": {
@@ -1571,6 +1609,66 @@
         "title": "SSH Username Single Response",
         "type": "object"
       },
+      "Admin Cluster": {
+        "description": "Admin cluster topology and state",
+        "example": {
+          "degraded": false,
+          "name": "admin-cluster-1",
+          "topology": [
+            {
+              "erlang_node_name": "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
+              "max_capacity": 200,
+              "name": "admin-k7m3n2p9x4j6",
+              "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
+              "vpn_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
+            },
+            {
+              "erlang_node_name": "admin@admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal",
+              "max_capacity": 300,
+              "name": "admin-x9j4p2k7m8n3",
+              "netmaker_host_id": "7f3c8d4e-9a1b-4c2d-8e3f-5a6b7c8d9e0f",
+              "vpn_hostname": "admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal"
+            }
+          ],
+          "total_admins": 2,
+          "total_capacity": 500,
+          "total_nodes": 42
+        },
+        "properties": {
+          "degraded": {
+            "description": "True when total_nodes exceeds total_capacity",
+            "type": "boolean"
+          },
+          "name": { "description": "Admin cluster name", "type": "string" },
+          "topology": {
+            "description": "List of all admins in the cluster",
+            "items": { "$ref": "#/components/schemas/Admin Topology Entry" },
+            "type": "array"
+          },
+          "total_admins": {
+            "description": "Total number of admins in the cluster",
+            "type": "integer"
+          },
+          "total_capacity": {
+            "description": "Sum of max_capacity across all admins in this admin cluster",
+            "type": "integer"
+          },
+          "total_nodes": {
+            "description": "Total nodes registered in the system across all clusters",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "total_admins",
+          "total_nodes",
+          "total_capacity",
+          "degraded",
+          "topology"
+        ],
+        "title": "Admin Cluster",
+        "type": "object"
+      },
       "Change Cluster Request": {
         "description": "Request to move a node to a different cluster. Performs cluster migration via Netmaker (best-effort, reconciliation worker handles failures).",
         "example": { "node": { "cluster_name": "prod-west" } },
@@ -1654,26 +1752,23 @@
         "type": "object"
       },
       "Edge Clusters Response": {
-        "additionalProperties": {
-          "additionalProperties": {
-            "description": "List of node IDs in this cluster",
-            "items": { "type": "string" },
-            "type": "array"
-          },
-          "description": "Clusters managed by this admin",
-          "type": "object"
-        },
         "description": "All edge cluster assignments across all admins",
         "example": {
-          "admin-k7m3n2p9x4j6": {
-            "cluster-p4k7n2m9x3j6": ["node-uuid-x"],
-            "cluster-x7j2p9k4m8n3": ["node-uuid-1", "node-uuid-2"]
-          },
-          "admin-x9j4p2k7m8n3": {
-            "cluster-j6m8n3p7k2x4": [],
-            "cluster-m3n9p2k8x7j4": ["node-uuid-3"]
+          "data": {
+            "admin-k7m3n2p9x4j6": {
+              "cluster-p4k7n2m9x3j6": ["node-uuid-x"],
+              "cluster-x7j2p9k4m8n3": ["node-uuid-1", "node-uuid-2"]
+            },
+            "admin-x9j4p2k7m8n3": {
+              "cluster-j6m8n3p7k2x4": [],
+              "cluster-m3n9p2k8x7j4": ["node-uuid-3"]
+            }
           }
         },
+        "properties": {
+          "data": { "$ref": "#/components/schemas/Edge Clusters" }
+        },
+        "required": ["data"],
         "title": "Edge Clusters Response",
         "type": "object"
       },
@@ -2014,62 +2109,29 @@
         "type": "object"
       },
       "Admin Cluster Response": {
-        "description": "Admin cluster topology and state",
+        "description": "Single admin cluster topology response",
         "example": {
-          "degraded": false,
-          "name": "admin-cluster-1",
-          "topology": [
-            {
-              "erlang_node_name": "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
-              "max_capacity": 200,
-              "name": "admin-k7m3n2p9x4j6",
-              "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
-              "vpn_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
-            },
-            {
-              "erlang_node_name": "admin@admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal",
-              "max_capacity": 300,
-              "name": "admin-x9j4p2k7m8n3",
-              "netmaker_host_id": "7f3c8d4e-9a1b-4c2d-8e3f-5a6b7c8d9e0f",
-              "vpn_hostname": "admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal"
-            }
-          ],
-          "total_admins": 2,
-          "total_capacity": 500,
-          "total_nodes": 42
-        },
-        "properties": {
-          "degraded": {
-            "description": "True when total_nodes exceeds total_capacity",
-            "type": "boolean"
-          },
-          "name": { "description": "Admin cluster name", "type": "string" },
-          "topology": {
-            "description": "List of all admins in the cluster",
-            "items": { "$ref": "#/components/schemas/Admin Topology Entry" },
-            "type": "array"
-          },
-          "total_admins": {
-            "description": "Total number of admins in the cluster",
-            "type": "integer"
-          },
-          "total_capacity": {
-            "description": "Sum of max_capacity across all admins in this admin cluster",
-            "type": "integer"
-          },
-          "total_nodes": {
-            "description": "Total nodes registered in the system across all clusters",
-            "type": "integer"
+          "data": {
+            "degraded": false,
+            "name": "admin-cluster-1",
+            "topology": [
+              {
+                "erlang_node_name": "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
+                "max_capacity": 200,
+                "name": "admin-k7m3n2p9x4j6",
+                "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
+                "vpn_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
+              }
+            ],
+            "total_admins": 2,
+            "total_capacity": 500,
+            "total_nodes": 42
           }
         },
-        "required": [
-          "name",
-          "total_admins",
-          "total_nodes",
-          "total_capacity",
-          "degraded",
-          "topology"
-        ],
+        "properties": {
+          "data": { "$ref": "#/components/schemas/Admin Cluster" }
+        },
+        "required": ["data"],
         "title": "Admin Cluster Response",
         "type": "object"
       },
@@ -2138,16 +2200,17 @@
         "type": "object"
       },
       "Orphaned Clusters Response": {
-        "additionalProperties": {
-          "description": "List of node IDs in this orphaned cluster",
-          "items": { "type": "string" },
-          "type": "array"
-        },
-        "description": "Clusters that could not be assigned to any admin due to capacity constraints. Empty map when system is not degraded.",
+        "description": "Clusters with no assigned admin instance",
         "example": {
-          "cluster-orphaned-1": ["node-uuid-5", "node-uuid-6"],
-          "cluster-orphaned-2": ["node-uuid-7"]
+          "data": {
+            "cluster-orphaned-1": ["node-uuid-5", "node-uuid-6"],
+            "cluster-orphaned-2": ["node-uuid-7"]
+          }
         },
+        "properties": {
+          "data": { "$ref": "#/components/schemas/Orphaned Clusters" }
+        },
+        "required": ["data"],
         "title": "Orphaned Clusters Response",
         "type": "object"
       },
@@ -2388,6 +2451,66 @@
         },
         "required": ["data", "pagination"],
         "title": "Command Paginated Response",
+        "type": "object"
+      },
+      "Admin": {
+        "description": "This admin's identity and configuration",
+        "example": {
+          "admin_cluster_name": "admin-cluster-1",
+          "erlang_node_name": "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
+          "id": "k7m3n2p9x4j6",
+          "last_computed_at": "2025-01-15T12:00:00Z",
+          "max_capacity": 200,
+          "name": "admin-k7m3n2p9x4j6",
+          "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
+          "vpn_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
+        },
+        "properties": {
+          "admin_cluster_name": {
+            "description": "Name of the admin cluster this admin belongs to",
+            "type": "string"
+          },
+          "erlang_node_name": {
+            "description": "Erlang distribution node name",
+            "type": "string"
+          },
+          "id": {
+            "description": "Admin ID (e.g., k7m3n2p9x4j6)",
+            "type": "string"
+          },
+          "last_computed_at": {
+            "description": "Last time metadata was computed",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "max_capacity": {
+            "description": "Maximum node capacity for this admin",
+            "type": "integer"
+          },
+          "name": {
+            "description": "Admin name (e.g., admin-k7m3n2p9x4j6)",
+            "type": "string"
+          },
+          "netmaker_host_id": {
+            "description": "Netmaker host ID for this admin (UUID format)",
+            "type": "string"
+          },
+          "vpn_hostname": {
+            "description": "DNS hostname for this admin",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "max_capacity",
+          "erlang_node_name",
+          "vpn_hostname",
+          "admin_cluster_name",
+          "netmaker_host_id"
+        ],
+        "title": "Admin",
         "type": "object"
       },
       "Agent Metrics Response": {
@@ -2843,72 +2966,23 @@
         "type": "object"
       },
       "Admin Response": {
-        "description": "This admin's identity and configuration",
+        "description": "Single admin identity response",
         "example": {
-          "admin_cluster_name": "admin-cluster-1",
-          "erlang_node_name": "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
-          "id": "k7m3n2p9x4j6",
-          "last_computed_at": "2025-01-15T12:00:00Z",
-          "max_capacity": 200,
-          "name": "admin-k7m3n2p9x4j6",
-          "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
-          "vpn_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
-        },
-        "properties": {
-          "admin_cluster_name": {
-            "description": "Name of the admin cluster this admin belongs to",
-            "type": "string"
-          },
-          "erlang_node_name": {
-            "description": "Erlang distribution node name",
-            "type": "string"
-          },
-          "id": {
-            "description": "Admin ID (e.g., k7m3n2p9x4j6)",
-            "type": "string"
-          },
-          "last_computed_at": {
-            "description": "Last time metadata was computed",
-            "format": "date-time",
-            "nullable": true,
-            "type": "string"
-          },
-          "max_capacity": {
-            "description": "Maximum node capacity for this admin",
-            "type": "integer"
-          },
-          "name": {
-            "description": "Admin name (e.g., admin-k7m3n2p9x4j6)",
-            "type": "string"
-          },
-          "netmaker_host_id": {
-            "description": "Netmaker host ID for this admin (UUID format)",
-            "type": "string"
-          },
-          "vpn_hostname": {
-            "description": "DNS hostname for this admin",
-            "type": "string"
+          "data": {
+            "admin_cluster_name": "admin-cluster-1",
+            "erlang_node_name": "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
+            "id": "k7m3n2p9x4j6",
+            "last_computed_at": "2025-01-15T12:00:00Z",
+            "max_capacity": 200,
+            "name": "admin-k7m3n2p9x4j6",
+            "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
+            "vpn_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "max_capacity",
-          "erlang_node_name",
-          "vpn_hostname",
-          "admin_cluster_name",
-          "netmaker_host_id"
-        ],
+        "properties": { "data": { "$ref": "#/components/schemas/Admin" } },
+        "required": ["data"],
         "title": "Admin Response",
         "type": "object"
-      }
-    },
-    "securitySchemes": {
-      "masterKey": {
-        "bearerFormat": "opaque",
-        "description": "Master key for full API access",
-        "scheme": "bearer",
-        "type": "http"
       }
     }
   },
@@ -5651,7 +5725,7 @@
       }
     }
   },
-  "security": [{ "masterKey": [] }],
+  "security": [],
   "servers": [],
   "tags": [
     { "name": "Admins.Metadata" },

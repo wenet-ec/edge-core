@@ -53,22 +53,12 @@
 ##+P 524288
 
 ## =============================================================================
-## Distribution (LAN Cluster)
+## Distribution
 ## =============================================================================
 
-## Erlang distribution is used for LAN clustering between agents on the same subnet.
-## Node name = edge_agent@{primary LAN IP}. Cookie gates membership (default: "edge").
-## Override LAN_CLUSTER_COOKIE to segment or isolate agents. Admin↔Agent communication remains HTTP only.
-
-## LAN cluster cookie — default "edge" enables auto-clustering out of the box.
--setcookie <%= System.get_env("LAN_CLUSTER_COOKIE") || "edge" %>
-
-## Fixed Erlang distribution port for LAN cluster (configurable via LAN_CLUSTER_PORT).
--kernel inet_dist_listen_min <%= System.get_env("LAN_CLUSTER_PORT") || "49126" %>
--kernel inet_dist_listen_max <%= System.get_env("LAN_CLUSTER_PORT") || "49126" %>
-
-## Distribution connection timeout (ms) — agents on LAN so short ticktime is fine.
--kernel net_ticktime 15
+## Erlang distribution is explicitly disabled via RELEASE_DISTRIBUTION=none.
+## No epmd, no node name, no cookie. Agent is a standalone BEAM process.
+## Admin↔Agent communication is HTTP only (API token auth, VPN DNS name).
 
 ## =============================================================================
 ## Garbage Collection

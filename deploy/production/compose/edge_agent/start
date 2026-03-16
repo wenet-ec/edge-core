@@ -100,10 +100,6 @@ echo "Netclient daemon started with PID: $NETCLIENT_PID"
 echo "Waiting for netclient to initialize..."
 sleep 5
 
-# Start EPMD daemon for Erlang distribution (required for LAN clustering)
-echo "Starting EPMD daemon..."
-/app/erts-*/bin/epmd -daemon
-
 echo "Starting server..."
 /app/bin/server &
 SERVER_PID=$!

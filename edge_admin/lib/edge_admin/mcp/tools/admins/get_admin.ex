@@ -10,6 +10,6 @@ defmodule EdgeAdmin.MCP.Tools.Admins.GetAdmin do
 
   @impl true
   def execute(_params, frame) do
-    {:reply, Response.json(Response.tool(), Metadata.get_admin()), frame}
+    {:reply, Response.json(Response.tool(), %{data: Metadata.get_admin()}), frame}
   end
 end

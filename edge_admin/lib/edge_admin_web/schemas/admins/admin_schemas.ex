@@ -8,11 +8,11 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
 
   alias OpenApiSpex.Schema
 
-  defmodule AdminResponse do
+  defmodule Admin do
     @moduledoc false
 
     schema(%{
-      title: "Admin Response",
+      title: "Admin",
       description: "This admin's identity and configuration",
       type: :object,
       properties: %{
@@ -65,6 +65,32 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
     })
   end
 
+  defmodule AdminResponse do
+    @moduledoc false
+
+    schema(%{
+      title: "Admin Response",
+      description: "Single admin identity response",
+      type: :object,
+      properties: %{
+        data: Admin
+      },
+      required: [:data],
+      example: %{
+        data: %{
+          id: "k7m3n2p9x4j6",
+          name: "admin-k7m3n2p9x4j6",
+          max_capacity: 200,
+          erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
+          vpn_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
+          admin_cluster_name: "admin-cluster-1",
+          netmaker_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505",
+          last_computed_at: "2025-01-15T12:00:00Z"
+        }
+      }
+    })
+  end
+
   defmodule AdminTopologyEntry do
     @moduledoc false
 
@@ -105,11 +131,11 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
     })
   end
 
-  defmodule AdminClusterResponse do
+  defmodule AdminCluster do
     @moduledoc false
 
     schema(%{
-      title: "Admin Cluster Response",
+      title: "Admin Cluster",
       description: "Admin cluster topology and state",
       type: :object,
       properties: %{
@@ -166,11 +192,43 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
     })
   end
 
-  defmodule EdgeClustersResponse do
+  defmodule AdminClusterResponse do
     @moduledoc false
 
     schema(%{
-      title: "Edge Clusters Response",
+      title: "Admin Cluster Response",
+      description: "Single admin cluster topology response",
+      type: :object,
+      properties: %{
+        data: AdminCluster
+      },
+      required: [:data],
+      example: %{
+        data: %{
+          name: "admin-cluster-1",
+          total_admins: 2,
+          total_nodes: 42,
+          total_capacity: 500,
+          degraded: false,
+          topology: [
+            %{
+              name: "admin-k7m3n2p9x4j6",
+              max_capacity: 200,
+              vpn_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
+              erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
+              netmaker_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505"
+            }
+          ]
+        }
+      }
+    })
+  end
+
+  defmodule EdgeClusters do
+    @moduledoc false
+
+    schema(%{
+      title: "Edge Clusters",
       description: "All edge cluster assignments across all admins",
       type: :object,
       additionalProperties: %Schema{
@@ -179,7 +237,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
         additionalProperties: %Schema{
           type: :array,
           items: %Schema{type: :string},
-          description: "List of node IDs in this cluster"
+          description: "List of node names in this cluster"
         }
       },
       example: %{
@@ -195,22 +253,68 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
     })
   end
 
-  defmodule OrphanedClustersResponse do
+  defmodule EdgeClustersResponse do
     @moduledoc false
 
     schema(%{
-      title: "Orphaned Clusters Response",
+      title: "Edge Clusters Response",
+      description: "All edge cluster assignments across all admins",
+      type: :object,
+      properties: %{
+        data: EdgeClusters
+      },
+      required: [:data],
+      example: %{
+        data: %{
+          "admin-k7m3n2p9x4j6" => %{
+            "cluster-x7j2p9k4m8n3" => ["node-uuid-1", "node-uuid-2"],
+            "cluster-p4k7n2m9x3j6" => ["node-uuid-x"]
+          },
+          "admin-x9j4p2k7m8n3" => %{
+            "cluster-j6m8n3p7k2x4" => [],
+            "cluster-m3n9p2k8x7j4" => ["node-uuid-3"]
+          }
+        }
+      }
+    })
+  end
+
+  defmodule OrphanedClusters do
+    @moduledoc false
+
+    schema(%{
+      title: "Orphaned Clusters",
       description:
         "Clusters that could not be assigned to any admin due to capacity constraints. Empty map when system is not degraded.",
       type: :object,
       additionalProperties: %Schema{
         type: :array,
         items: %Schema{type: :string},
-        description: "List of node IDs in this orphaned cluster"
+        description: "List of node names in this orphaned cluster"
       },
       example: %{
         "cluster-orphaned-1" => ["node-uuid-5", "node-uuid-6"],
         "cluster-orphaned-2" => ["node-uuid-7"]
+      }
+    })
+  end
+
+  defmodule OrphanedClustersResponse do
+    @moduledoc false
+
+    schema(%{
+      title: "Orphaned Clusters Response",
+      description: "Clusters with no assigned admin instance",
+      type: :object,
+      properties: %{
+        data: OrphanedClusters
+      },
+      required: [:data],
+      example: %{
+        data: %{
+          "cluster-orphaned-1" => ["node-uuid-5", "node-uuid-6"],
+          "cluster-orphaned-2" => ["node-uuid-7"]
+        }
       }
     })
   end

@@ -10,6 +10,6 @@ defmodule EdgeAdmin.MCP.Tools.Admins.ListEdgeClusters do
 
   @impl true
   def execute(_params, frame) do
-    {:reply, Response.json(Response.tool(), %{edge_clusters: Metadata.get_edge_clusters()}), frame}
+    {:reply, Response.json(Response.tool(), %{data: Metadata.get_edge_clusters()}), frame}
   end
 end

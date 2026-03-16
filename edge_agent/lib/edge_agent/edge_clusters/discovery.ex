@@ -26,7 +26,7 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
 
   Admins expose `/api/v1/admins/self/discovery` returning:
   ```json
-  {"name": "admin-abc123"}
+  {"data": {"name": "admin-abc123"}}
   ```
 
   ## Examples
@@ -114,13 +114,13 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
     ]
 
     case Req.get(url, opts) do
-      {:ok, %{status: 200, body: %{"name" => admin_name}}} ->
+      {:ok, %{status: 200, body: %{"data" => %{"name" => admin_name}}}} ->
         admin_url = "http://#{ip}:#{port}"
         Logger.info("✓ Discovered admin: #{admin_name} (#{ip}) on #{network_name}")
         [admin_url]
 
       {:ok, %{status: 200}} ->
-        Logger.debug("✗ #{ip} on #{network_name} returned 200 but no name field")
+        Logger.debug("✗ #{ip} on #{network_name} returned 200 but unexpected body shape")
         []
 
       {:ok, %{status: status}} ->

@@ -10,6 +10,9 @@ defmodule EdgeAdminWeb.Plugs.MasterKeyAuthTest do
   @opts MasterKeyAuth.init([])
 
   setup do
+    Application.put_env(:edge_admin, :auth_enabled, true)
+    Application.delete_env(:edge_admin, :master_key)
+
     on_exit(fn ->
       Application.put_env(:edge_admin, :auth_enabled, true)
       Application.delete_env(:edge_admin, :master_key)

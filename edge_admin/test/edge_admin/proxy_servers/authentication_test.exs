@@ -1,7 +1,7 @@
 # edge_admin/test/edge_admin/proxy_servers/authentication_test.exs
 # credo:disable-for-this-file CredoEnvvar.Check.Warning.EnvironmentVariablesAtCompileTime
 defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   import Mox
 

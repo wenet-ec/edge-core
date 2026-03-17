@@ -7,16 +7,22 @@ set -o nounset
 
 echo "=== Edge Agent Entrypoint ==="
 
+# Unified data directory — all persistent state lives here.
+# DATA_DIR can be overridden via env; defaults to /app/data.
+#   ${DATA_DIR}/agent/  — SQLite database
+#   ${DATA_DIR}/vpn/    — netclient state (/etc/netclient symlinks here)
+DATA_DIR="${DATA_DIR:-/app/data}"
+
 # Ensure unified data directory structure exists
-# /etc/netclient is a symlink to /app/data/vpn (created at build time)
+# /etc/netclient is a symlink to ${DATA_DIR}/vpn (created at build time)
 # Validate and recreate if needed (handles volume mount edge cases)
 if [ ! -L /etc/netclient ]; then
     echo "WARNING: /etc/netclient is not a symlink, recreating unified structure..."
     rm -rf /etc/netclient
-    mkdir -p /app/data/vpn
-    ln -sfn /app/data/vpn /etc/netclient
+    mkdir -p "${DATA_DIR}/vpn"
+    ln -sfn "${DATA_DIR}/vpn" /etc/netclient
 fi
-chmod 0775 /app/data/vpn
+chmod 0775 "${DATA_DIR}/vpn"
 
 # Check if running in privileged mode (agent typically runs privileged for hostscript + VPN)
 if [ -e /proc/1/ns/pid ] && [ "$(readlink /proc/1/ns/pid)" = "$(readlink /proc/self/ns/pid)" ]; then

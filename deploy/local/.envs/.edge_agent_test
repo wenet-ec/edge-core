@@ -1,4 +1,4 @@
 # deploy/local/.envs/.edge_agent_test
 MIX_ENV=test
 EDGE_AGENT_MODE=test
-DB_PATH=/app/data/agent/edge_agent_test.db
+DATA_DIR=/app/data/test

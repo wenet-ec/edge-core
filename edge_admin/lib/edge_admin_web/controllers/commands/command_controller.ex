@@ -75,10 +75,11 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
     Create a new command for execution on nodes using flexible targeting options.
 
     Targeting types:
-    - 'all': Target all nodes, optionally with node_filters
-    - 'nodes': Target specific nodes by IDs, optionally with node_filters
+    - 'all': Target all nodes (with optional filters)
+    - 'nodes': Target specific nodes by IDs (with optional filters)
+    - 'clusters': Target specific clusters by names (with optional filters)
 
-    Node filters can be applied to any targeting type to further refine which nodes receive the command.
+    Node and cluster filters can be applied to further refine targeting.
     """,
     request_body: {"Command creation parameters", "application/json", CommandSchemas.CommandCreateRequest},
     responses: %{

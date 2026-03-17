@@ -5516,7 +5516,7 @@
       },
       "post": {
         "callbacks": {},
-        "description": "Create a new command for execution on nodes using flexible targeting options.\n\nTargeting types:\n- 'all': Target all nodes, optionally with node_filters\n- 'nodes': Target specific nodes by IDs, optionally with node_filters\n\nNode filters can be applied to any targeting type to further refine which nodes receive the command.\n",
+        "description": "Create a new command for execution on nodes using flexible targeting options.\n\nTargeting types:\n- 'all': Target all nodes (with optional filters)\n- 'nodes': Target specific nodes by IDs (with optional filters)\n- 'clusters': Target specific clusters by names (with optional filters)\n\nNode and cluster filters can be applied to further refine targeting.\n",
         "operationId": "EdgeAdminWeb.Controllers.Commands.CommandController.create",
         "parameters": [],
         "requestBody": {

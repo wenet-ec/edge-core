@@ -48,7 +48,6 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
           node_name: String.t() | nil,
           vpn_hostname: String.t() | nil,
           mdns_hostname: String.t() | nil,
-          lan_hostname: String.t() | nil,
           cluster_id: String.t(),
           cluster: Cluster.t() | NotLoaded.t(),
           ssh_usernames: [SshUsername.t()] | NotLoaded.t(),
@@ -104,7 +103,6 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     field(:node_name, :string, virtual: true)
     field(:vpn_hostname, :string, virtual: true)
     field(:mdns_hostname, :string, virtual: true)
-    field(:lan_hostname, :string, virtual: true)
 
     # Associations
     belongs_to(:cluster, Cluster)
@@ -222,24 +220,5 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   @spec mdns_hostname(t()) :: String.t()
   def mdns_hostname(%__MODULE__{id: id}) do
     "node-#{id}.local"
-  end
-
-  @doc """
-  Returns the LAN DNS authority hostname for this node.
-
-  ## Format
-  `node-{id}.{lan_domain}`
-
-  Default domain is `edge.local` (configurable via `LAN_DOMAIN`).
-
-  ## Examples
-
-      iex> lan_hostname(%Node{id: "abc-123"})
-      "node-abc-123.edge.local"
-  """
-  @spec lan_hostname(t()) :: String.t()
-  def lan_hostname(%__MODULE__{id: id}) do
-    domain = Application.get_env(:edge_admin, :lan_domain, "edge.local")
-    "node-#{id}.#{domain}"
   end
 end

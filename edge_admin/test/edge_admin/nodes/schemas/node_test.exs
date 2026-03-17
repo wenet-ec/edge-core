@@ -107,55 +107,13 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
   end
 
   # ---------------------------------------------------------------------------
-  # lan_hostname/1
-  # ---------------------------------------------------------------------------
-
-  describe "lan_hostname/1" do
-    test "returns node-{id}.edge.local by default" do
-      node = fake_node(%{id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"})
-      assert Node.lan_hostname(node) == "node-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.edge.local"
-    end
-
-    test "always starts with node-" do
-      assert String.starts_with?(Node.lan_hostname(fake_node()), "node-")
-    end
-
-    test "contains the node id" do
-      node = fake_node(%{id: "11111111-2222-3333-4444-555555555555"})
-      assert Node.lan_hostname(node) =~ "11111111-2222-3333-4444-555555555555"
-    end
-
-    test "does not contain cluster name" do
-      node = fake_node(%{cluster: fake_cluster(%{name: "prod"})})
-      refute Node.lan_hostname(node) =~ "cluster"
-    end
-
-    test "is independent of cluster — same id gives same lan_hostname regardless of cluster" do
-      node_prod = fake_node(%{id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", cluster: fake_cluster(%{name: "prod"})})
-      node_dev = fake_node(%{id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", cluster: fake_cluster(%{name: "dev"})})
-      assert Node.lan_hostname(node_prod) == Node.lan_hostname(node_dev)
-    end
-
-    test "lan_hostname is distinct from vpn_hostname" do
-      node = fake_node()
-      refute Node.lan_hostname(node) == Node.vpn_hostname(node)
-    end
-
-    test "lan_hostname is distinct from mdns_hostname" do
-      node = fake_node()
-      refute Node.lan_hostname(node) == Node.mdns_hostname(node)
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # three hostname types are all distinct
+  # hostname distinctness
   # ---------------------------------------------------------------------------
 
   describe "hostname distinctness" do
-    test "vpn_hostname, mdns_hostname, and lan_hostname are all different" do
+    test "vpn_hostname and mdns_hostname are different" do
       node = fake_node()
-      hostnames = [Node.vpn_hostname(node), Node.mdns_hostname(node), Node.lan_hostname(node)]
-      assert length(Enum.uniq(hostnames)) == 3
+      refute Node.vpn_hostname(node) == Node.mdns_hostname(node)
     end
   end
 end

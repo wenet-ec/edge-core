@@ -91,7 +91,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
             :status,
             :vpn_hostname,
             :mdns_hostname,
-            :lan_hostname,
             :http_port,
             :ssh_port,
             :host_metrics_port,
@@ -226,35 +225,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
     test "mdns_hostname starts with node-" do
       data = NodeJSON.show(%{node: fake_node()}).data
       assert String.starts_with?(data.mdns_hostname, "node-")
-    end
-  end
-
-  # -----------------------------------------------------------------------
-  # show/1 — lan_hostname delegation
-  # -----------------------------------------------------------------------
-
-  describe "show/1 — lan_hostname" do
-    test "lan_hostname is node-{id}.edge.local by default" do
-      node = fake_node(%{id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"})
-      data = NodeJSON.show(%{node: node}).data
-      assert data.lan_hostname == "node-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.edge.local"
-    end
-
-    test "lan_hostname uses the node id not the cluster name" do
-      node = fake_node(%{id: "11111111-2222-3333-4444-555555555555", cluster: fake_cluster(%{name: "staging"})})
-      data = NodeJSON.show(%{node: node}).data
-      assert data.lan_hostname == "node-11111111-2222-3333-4444-555555555555.edge.local"
-    end
-
-    test "lan_hostname starts with node-" do
-      data = NodeJSON.show(%{node: fake_node()}).data
-      assert String.starts_with?(data.lan_hostname, "node-")
-    end
-
-    test "lan_hostname domain is distinct from vpn_hostname domain" do
-      data = NodeJSON.show(%{node: fake_node()}).data
-      refute data.lan_hostname == data.vpn_hostname
-      refute data.lan_hostname == data.mdns_hostname
     end
   end
 

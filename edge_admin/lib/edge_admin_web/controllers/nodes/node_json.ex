@@ -37,7 +37,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSON do
       status: node.status,
       vpn_hostname: Node.vpn_hostname(node),
       mdns_hostname: Node.mdns_hostname(node),
-      lan_hostname: Node.lan_hostname(node),
       http_port: node.http_port,
       ssh_port: node.ssh_port,
       host_metrics_port: node.host_metrics_port,

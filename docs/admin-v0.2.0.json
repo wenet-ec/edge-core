@@ -183,7 +183,6 @@
           "id": "01234567-89ab-cdef-0123-456789abcdef",
           "id_type": "persistent",
           "inserted_at": "2025-06-09T08:00:00Z",
-          "lan_hostname": "node-01234567-89ab-cdef-0123-456789abcdef.edge.local",
           "last_seen_at": "2025-06-09T08:20:00Z",
           "mdns_hostname": "node-01234567-89ab-cdef-0123-456789abcdef.local",
           "netmaker_host_id": "def67890-5678-5678-5678-567890abcdef",
@@ -231,11 +230,6 @@
           "inserted_at": {
             "description": "When the node was created",
             "format": "date-time",
-            "type": "string"
-          },
-          "lan_hostname": {
-            "description": "LAN DNS authority hostname — resolvable via the agent's DNS authority server. Domain defaults to edge.local (configurable via LAN_DOMAIN)",
-            "example": "node-01234567-89ab-cdef-0123-456789abcdef.edge.local",
             "type": "string"
           },
           "last_seen_at": {

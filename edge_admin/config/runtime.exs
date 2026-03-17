@@ -160,8 +160,6 @@ config :edge_admin,
   admin_urls: get_env("ADMIN_URLS", :list),
   # Netmaker DNS domain suffix (used for hostname construction)
   netmaker_default_domain: get_env("NETMAKER_DEFAULT_DOMAIN", :string, "nm.internal"),
-  # LAN DNS authority domain (e.g. "edge.local") (used to compute lan_hostname)
-  lan_domain: get_env("LAN_DOMAIN", :string, "edge.local"),
   # === Cleanup & Reconciliation Schedules ===
   cluster_reconciliation_enabled: cluster_reconciliation_enabled,
   cluster_reconciliation_schedule: cluster_reconciliation_schedule,

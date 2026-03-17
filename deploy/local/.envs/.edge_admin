@@ -88,11 +88,6 @@ NETMAKER_API_SCHEME=http
 # Cannot be changed after nodes have enrolled — pick once.
 # NETMAKER_DEFAULT_DOMAIN=nm.internal
 
-# --- LAN DNS Authority Domain ---
-# Subdomain served by the agent's DNS authority server for local LAN name resolution.
-# Injected into agent config at registration. All agents in this deployment share it.
-LAN_DOMAIN=edge.local
-
 # --- Edge Cluster Network Allocation ---
 # Subnet prefix length for auto-generated cluster networks (24 = /24 = 254 usable hosts).
 # CLUSTER_SUBNET_PREFIX=24

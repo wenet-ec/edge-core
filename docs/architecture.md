@@ -1,24 +1,48 @@
 # Edge Core — Architecture
 
-**Updated: 2026-03-11**
+**Updated: 2026-03-18**
 
 Edge Core is an infrastructure management platform for geographically distributed edge machines. It gives you centralized control over remote nodes through a secure VPN mesh — running commands, accessing machines via SSH, proxying traffic through them, and scraping their metrics — all through a simple HTTP API.
 
 ---
 
-## The Five Operating Principles
+## Functionalities and Connectivity
 
-Everything Edge Core does flows from five core capabilities:
+Edge Core is organized around two groups — functional capabilities and connectivity layers.
 
-1. **Edge Mesh Network** — All nodes in the same edge cluster form a full WireGuard mesh. Every node can reach every other node directly, without routing through a central gateway.
+### Functionalities
 
-2. **Remote Command Execution** — Run shell commands across hundreds of machines from a single API call. Commands are distributed, executed in parallel, and results are collected back centrally.
+**1. Remote Command Execution**
 
-3. **SSH Backdoor** — SSH access to any edge node as a first-class feature. Admin holds centralized SSH keys and usernames; agents run an embedded SSH server. Combined with the proxy layer, you get full tunneled SSH access through the admin.
+Run shell commands across hundreds of machines from a single API call. Commands are distributed to target nodes, executed in parallel, and results are collected back centrally. Supports both shell and exec modes. Works in real-time over VPN (Layer 1/2) or with eventual consistency when only HTTP polling is available (Layer 3, ~60s latency).
 
-4. **Metrics Observability** — Admin instances act as aggregators. Prometheus-compatible scrapers can collect host, agent, and WireGuard metrics from all nodes through the admin's service discovery endpoints — without needing direct access to each node.
+**2. SSH Backdoor**
 
-5. **Cloud-Edge Connectivity** — Admin runs HTTP and SOCKS5 forward proxies. Any TCP connection can be tunneled from the cloud side through an agent to reach the agent's local network. No MQTT brokers, no WebSocket — raw TCP proxy over the VPN.
+SSH access to any edge node as a first-class feature. Admin holds centralized SSH usernames, passwords, and public keys. Agents run an embedded SSH server on port 40022. Combined with the admin's forward proxy, you get full tunneled SSH access through the admin to any node in the mesh — without exposing any SSH port to the public internet.
+
+**3. Metrics Aggregation**
+
+Admin instances act as Prometheus-compatible aggregators. Scrapers collect host, agent, and WireGuard metrics from all nodes through the admin's service discovery endpoints — without needing direct network access to each node. Metrics are proxied on demand (Layer 1/2) or served from a local cache pushed by agents (Layer 3).
+
+### Connectivity
+
+**4. Cloud ↔ Edge (Forward Proxy + Proxy Chaining)**
+
+Admin runs HTTP (port 43128) and SOCKS5 (port 41080) forward proxies. Because SOCKS5 supports any TCP connection, this covers any protocol — not just HTTP. Two modes: route directly to a VPN node (Mode 1, username `_`), or chain through a specific agent as the exit node to reach internet or LAN targets from that agent's network location (Mode 2, proxy chaining). No MQTT, no WebSocket — raw TCP over the VPN. In production, a HAProxy instance load-balances proxy traffic across all admin instances.
+
+**5. Edge ↔ Edge (VPN Mesh)**
+
+All nodes in the same cluster form a full WireGuard mesh via Netmaker. Every node can reach every other node directly, P2P, without routing through a central gateway. This is the transport layer that everything else runs on. Three-layer fallback handles adverse network conditions: raw WireGuard UDP → DERP relay (symmetric NAT) → HTTP polling (last resort). See [Admin ↔ Agent Communication](#admin--agent-communication) for detail.
+
+**6. Edge ↔ Local Devices / End Users (Local Network Discovery)**
+
+This covers how edge nodes make themselves discoverable and accessible to devices on the same LAN — without requiring those devices to join the VPN.
+
+**What is supported today:** Agents advertise themselves via mDNS (Multicast DNS). A node's `mdns_hostname` is resolved by any device on the same local network using standard zero-conf discovery (Bonjour/Avahi). No configuration needed on the local device side.
+
+**What is not in scope (and why):** Full LAN DNS control — running a DNS server that authoritative-answers for local devices, intercepting local traffic, or acting as a LAN gateway — is architecturally feasible but deliberately out of scope for now. LAN networks are heterogeneous and largely outside our control: corporate networks have existing DNS policies, home routers have varying DNS behavior, and managing DNS conflicts across different environments is a reliability problem we are not ready to take on responsibly. We would rather support mDNS well and expand carefully than break existing LAN setups. If you need full LAN DNS integration, the agent's local IP and mDNS hostname are stable enough to configure your own DNS server to point at.
+
+**Future direction:** A managed in-agent DNS server (CoreDNS or similar) that resolves `.edge.local` names for local clients is a natural next step, gated on having a reliable way to co-exist with existing LAN DNS without conflict.
 
 ---
 
@@ -246,7 +270,7 @@ Layer 3: HTTP Polling          ← Agent polls admin, eventual        ✅ Produc
 
 **Layer 1 — Raw WireGuard:** Standard operation. Admin pushes to agent, scrapes metrics, opens proxy and SSH connections. Full feature support, sub-100ms latency.
 
-**Layer 2 — DERP Relay:** When direct UDP fails (symmetric NAT, ISP UDP blocking), netclient transparently routes WireGuard packets through DERP relay servers. This is entirely inside the netclient binary — the Elixir application sees no difference. VPN DNS names, IPs, and HTTP communication are all unchanged. Proxy and SSH continue to work. For HA, self-hosted DERP nodes can be added alongside Tailscale's public DERP servers; DERP is stateless and cheap to run.
+**Layer 2 — DERP/TURN Relay:** When direct UDP fails (symmetric NAT, ISP UDP blocking), netclient transparently routes WireGuard packets through a relay server. The relay protocol is DERP (Designated Encrypted Relay for Packets) — Tailscale's open-source relay protocol, conceptually similar to TURN/coturn but designed specifically for WireGuard tunnels and operating over HTTPS/TCP port 443. This is entirely inside the netclient binary — the Elixir application sees no difference. VPN DNS names, IPs, and HTTP communication are all unchanged. Proxy and SSH continue to work. For HA, self-hosted DERP nodes can be added alongside Tailscale's public DERP servers; DERP is stateless and cheap to run.
 
 Only `wireguard-go` (userspace) supports DERP relay. Kernel-mode WireGuard does not. Admin always uses `wireguard-go`. Agent can use kernel-mode WireGuard for maximum performance, but this disables DERP fallback.
 
@@ -280,7 +304,7 @@ Accepts `MCP_KEY` bearer token or falls back to `MASTER_KEY`. Auth is handled by
 
 MCP clients discover available tools dynamically via the standard `tools/list` method — no static spec file. This is the MCP equivalent of `/api/openapi`. Call `POST /mcp` with `{"method": "tools/list"}` to get the full tool list with input schemas.
 
-### Tool Surface (47 tools)
+### Tool Surface
 
 | Group              | Tools                                                                                                                   |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
@@ -306,16 +330,16 @@ The admin's HTTP proxy (port 43128) and SOCKS5 proxy (port 41080) are independen
 
 ## Authentication
 
-| Path                     | Mechanism                                                                     |
-| ------------------------ | ----------------------------------------------------------------------------- |
-| Admin API (full access)  | `MASTER_KEY` bearer token                                                     |
-| Admin API (metrics only) | `METRICS_KEY` bearer token                                                    |
-| Admin API (proxy only)   | `PROXY_KEY` bearer token                                                      |
-| Admin → Netmaker         | `MASTER_KEY` bearer token                                                     |
-| Agent → Admin            | Per-node API token (issued at enrollment)                                     |
-| Admin → Agent            | Per-node API token (same token, stored in admin DB)                           |
+| Path                     | Mechanism                                                                       |
+| ------------------------ | ------------------------------------------------------------------------------- |
+| Admin API (full access)  | `MASTER_KEY` bearer token                                                       |
+| Admin API (metrics only) | `METRICS_KEY` bearer token                                                      |
+| Admin API (proxy only)   | `PROXY_KEY` bearer token                                                        |
+| Admin → Netmaker         | `MASTER_KEY` bearer token                                                       |
+| Agent → Admin            | Per-node API token (issued at enrollment)                                       |
+| Admin → Agent            | Per-node API token (same token, stored in admin DB)                             |
 | Admin ↔ Admin (Erlang)   | Shared `VPN_CLUSTER_COOKIE` + connection verified against PostgreSQL + Netmaker |
-| SSH                      | Username/password or public key, verified by admin on each connection attempt |
+| SSH                      | Username/password or public key, verified by admin on each connection attempt   |
 
 ---
 

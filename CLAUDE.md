@@ -4,7 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Edge Core is a distributed edge computing infrastructure management platform built with Elixir and Phoenix. It enables centralized control of geographically distributed edge nodes through five core capabilities: edge mesh networking, remote command execution, SSH backdoor access, metrics observability, and cloud-edge TCP/HTTP proxying.
+Edge Core is a distributed edge computing infrastructure management platform built with Elixir and Phoenix. It enables centralized control of geographically distributed edge nodes through two groups of capabilities:
+
+**Functionalities:** remote command execution, SSH backdoor access, metrics aggregation, self-update.
+**Connectivity:** cloud↔edge TCP proxying (forward proxy + proxy chaining), edge↔edge WireGuard VPN mesh, edge↔local devices (mDNS today; LAN DNS is future scope — see `docs/architecture.md`).
 
 - **Edge Admin** (cloud server) - Orchestrates nodes, commands, SSH access, proxies, and metrics. Runs as multiple peer instances sharing one PostgreSQL database.
 - **Edge Agent** (edge nodes) - Standalone binary running one per machine (`network_mode: host`). Bundles netclient, SSH server, Prometheus exporters, and forward proxies.
@@ -251,7 +254,6 @@ edge_core/
 │   ├── architecture.md
 │   ├── admin-v0.2.0.json
 │   └── netmaker-v1.5.0.yml
-├── integration/         # Integration test suite (Python/pytest)
 └── bin/
     └── run              # Management script
 ```

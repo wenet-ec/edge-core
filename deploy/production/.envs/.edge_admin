@@ -92,6 +92,13 @@ NETMAKER_SUPERADMIN_PASSWORD=admin
 # CIDR pool from which cluster subnets are carved (CGNAT space by default).
 # CLUSTER_AUTO_GENERATED_RANGES=100.64.0.0/10
 
+# Slots reserved for admin gateway nodes (e.g. split-brain flooding) — tune to match total admin instances across
+# all admin clusters per core. With 50-100 admins per core, set this to 50-100 accordingly.
+# ADMIN_SLOT_RESERVATION=10
+
+# Slots reserved for node churn headroom (reconciliation re-adds, transient failures).
+# NODE_SLOT_RESERVATION=10
+
 # Pre-create a named default cluster so agents can enroll without specifying a cluster.
 DEFAULT_CLUSTER_NAME=default
 # DEFAULT_CLUSTER_SUBNET=100.64.0.0/24

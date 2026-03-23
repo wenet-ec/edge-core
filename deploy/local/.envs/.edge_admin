@@ -95,6 +95,12 @@ NETMAKER_API_SCHEME=http
 # CIDR pool from which cluster subnets are carved (CGNAT space by default).
 # CLUSTER_AUTO_GENERATED_RANGES=100.64.0.0/10
 
+# Slots reserved for admin gateway nodes (e.g. split-brain flooding) — tune to match admin instance count per core.
+# ADMIN_SLOT_RESERVATION=10
+
+# Slots reserved for node churn headroom (reconciliation re-adds, transient failures).
+# NODE_SLOT_RESERVATION=10
+
 # Pre-create a named default cluster so agents can enroll without specifying a cluster.
 DEFAULT_CLUSTER_NAME=default
 # DEFAULT_CLUSTER_SUBNET=100.64.0.0/24

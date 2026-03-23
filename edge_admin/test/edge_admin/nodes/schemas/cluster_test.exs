@@ -96,8 +96,18 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
       assert {:ok, _} = apply(%{"name" => "prod", "ipv4_range" => "100.64.1.0/0"})
     end
 
-    test "prefix /32 is valid format" do
-      assert {:ok, _} = apply(%{"name" => "prod", "ipv4_range" => "100.64.1.0/32"})
+    test "prefix /32 is rejected (too small for any node to enroll)" do
+      changeset = build_changeset(%{"name" => "prod", "ipv4_range" => "100.64.1.0/32"})
+      assert %{ipv4_range: [_msg]} = errors_on(changeset)
+    end
+
+    test "prefix /31 is rejected (too small for any node to enroll)" do
+      changeset = build_changeset(%{"name" => "prod", "ipv4_range" => "100.64.1.0/31"})
+      assert %{ipv4_range: [_msg]} = errors_on(changeset)
+    end
+
+    test "prefix /30 is valid (minimum usable prefix)" do
+      assert {:ok, _} = apply(%{"name" => "prod", "ipv4_range" => "100.64.1.0/30"})
     end
 
     test "prefix > 32 is rejected" do

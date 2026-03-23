@@ -92,6 +92,21 @@ defmodule EdgeAdmin.Vpn do
     Application.get_env(:edge_admin, :cluster_subnet_prefix)
   end
 
+  @doc """
+  Returns the number of IP slots reserved for admin gateway nodes.
+  Should be tuned to match the total number of admin instances across all admin clusters per core.
+  """
+  def admin_slot_reservation do
+    Application.get_env(:edge_admin, :admin_slot_reservation, 10)
+  end
+
+  @doc """
+  Returns the number of IP slots reserved for node churn headroom.
+  """
+  def node_slot_reservation do
+    Application.get_env(:edge_admin, :node_slot_reservation, 10)
+  end
+
   # ===========================================================================
   # DNS/Hostname Building
   # ===========================================================================

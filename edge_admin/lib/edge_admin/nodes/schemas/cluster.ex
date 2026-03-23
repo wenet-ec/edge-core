@@ -19,6 +19,10 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
 
   alias EdgeAdmin.Vpn
 
+  # /31 and /32 are unusable: /32 has 1 IP (consumed by the first admin gateway),
+  # /31 has 2 IPs (both consumed before any edge node can enroll).
+  @min_prefix 30
+
   @type t :: %__MODULE__{
           id: String.t(),
           name: String.t(),
@@ -68,6 +72,8 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
     |> validate_number(:node_limit, greater_than: 0)
     |> validate_ipv4_cidr_format()
     |> validate_ipv4_exclusions()
+    |> validate_cidr_minimum_prefix()
+    |> validate_node_limit_fits_cidr()
     |> unique_constraint(:name)
     |> unique_constraint(:ipv4_range)
   end
@@ -182,4 +188,46 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   defp excluded_range?({a, _, _, _}) do
     a in [0, 10, 127, 169, 172, 192, 224, 240, 255]
   end
+
+  defp validate_cidr_minimum_prefix(changeset) do
+    validate_change(changeset, :ipv4_range, fn _, value ->
+      case Vpn.parse_cidr(value) do
+        {:ok, {_ip, prefix}} when prefix > @min_prefix ->
+          [
+            ipv4_range:
+              "prefix /#{prefix} is too small — minimum is /#{@min_prefix} (#{cidr_capacity(@min_prefix)} IPs)"
+          ]
+
+        _ ->
+          []
+      end
+    end)
+  end
+
+  # Validates node_limit does not exceed usable CIDR capacity after reservations.
+  # Only fires when both fields are present and the CIDR is already valid.
+  defp validate_node_limit_fits_cidr(changeset) do
+    with limit when not is_nil(limit) <- get_field(changeset, :node_limit),
+         cidr when not is_nil(cidr) <- get_field(changeset, :ipv4_range),
+         {:ok, {_ip, prefix}} <- Vpn.parse_cidr(cidr) do
+      reservation = Vpn.admin_slot_reservation() + Vpn.node_slot_reservation()
+      max_limit = cidr_capacity(prefix) - reservation
+
+      if limit > max_limit do
+        add_error(
+          changeset,
+          :node_limit,
+          "cannot exceed #{max_limit} for /#{prefix} (#{cidr_capacity(prefix)} IPs minus #{reservation} reserved slots)"
+        )
+      else
+        changeset
+      end
+    else
+      _ -> changeset
+    end
+  end
+
+  # 2^(32 - prefix) — full address count, no broadcast/network exclusion
+  # (WireGuard assigns all addresses including .0 and .255)
+  defp cidr_capacity(prefix), do: Integer.pow(2, 32 - prefix)
 end

@@ -79,12 +79,13 @@
 -kernel inet_dist_listen_max <%= System.get_env("VPN_CLUSTER_PORT") || "49125" %>
 
 ## Distribution connection timeout (ms)
-## Failure detection window = 4 × net_ticktime = 240s (~4 minutes).
+## Failure detection window = 4 × net_ticktime = 240s (~4 minutes) at the default of 60.
 ## When an admin dies, surviving admins wait up to 4 min before :syn triggers rebalancing.
 ## This is intentional: proxy connections to dead clusters fail immediately (socket errors),
 ## but false positives at lower ticktime cause unnecessary rebalancing churn on transient blips.
-## 60s is the right tradeoff — do not lower this.
--kernel net_ticktime 60
+## 60s is the right tradeoff — do not lower this without understanding the consequences.
+## Configurable via ERL_NET_TICKTIME env var (default: 60).
+-kernel net_ticktime <%= System.get_env("ERL_NET_TICKTIME") || "60" %>
 
 ## Distribution connection backlog
 -kernel inet_dist_listen_options [{backlog,4096}]

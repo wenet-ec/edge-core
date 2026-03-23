@@ -138,6 +138,11 @@ VPN_CLUSTER_COOKIE=prod-cookie
 # Fixed Erlang distribution port for VPN cluster (epmd replacement). Configured in vm.args.eex.
 VPN_CLUSTER_PORT=49125
 
+# Erlang net_ticktime (seconds). Failure detection window = 4 × this value (default 60 → 240s).
+# Lower values detect dead nodes faster but risk false positives on transient network blips.
+# Must be identical across all admin instances in the same Erlang cluster.
+# ERL_NET_TICKTIME=60
+
 # Port on which admin instances expose their discovery/health endpoint to each other.
 ADMIN_DISCOVERY_PORT=44000
 

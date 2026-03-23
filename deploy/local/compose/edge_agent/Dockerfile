@@ -46,7 +46,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   nano \
   # Essential tools (healthcheck, metrics, SSH server, capability checks)
   curl \
-  wget \
   iputils-ping \
   libcap2-bin \
   # Process management (pgrep, pkill for netclient cleanup)
@@ -79,11 +78,11 @@ ENV LC_ALL=en_US.UTF-8
 
 # Install node_exporter for host metrics collection
 ENV NODE_EXPORTER_VERSION="1.10.2"
-RUN wget -q https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz && \
-    tar xzf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz && \
+RUN curl -fsSL https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz -o node_exporter.tar.gz && \
+    tar xzf node_exporter.tar.gz && \
     mv node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64/node_exporter /usr/local/bin/ && \
     chmod +x /usr/local/bin/node_exporter && \
-    rm -rf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64*
+    rm -rf node_exporter.tar.gz node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64*
 
 # Use HTTP for Netmaker API (local dev — no TLS certs)
 ENV NETMAKER_API_SCHEME=http

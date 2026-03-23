@@ -84,7 +84,6 @@ RUN apt-get update -y && \
     ca-certificates \
     # Essential tools (healthcheck, troubleshooting, netclient download, capability checks)
     curl \
-    wget \
     libcap2-bin \
     procps \
     # Network debugging (minimal set for production troubleshooting)

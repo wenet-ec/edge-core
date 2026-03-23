@@ -87,7 +87,6 @@ RUN apt-get update -y && \
     ca-certificates \
     # Essential tools (healthcheck, metrics download, SSH server, capability checks)
     curl \
-    wget \
     libcap2-bin \
     # Process management (pgrep, pkill for netclient cleanup)
     procps \
@@ -109,13 +108,13 @@ RUN apt-get update -y && \
     # Netclient checks init type for service installation, not needed in containers
     mkdir -p /sbin /bin && ln -s /bin/true /sbin/init && ln -s /bin/true /bin/busybox && \
     # Install node_exporter in same layer
-    wget -q https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz && \
-    tar xzf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz && \
+    curl -fsSL https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz -o node_exporter.tar.gz && \
+    tar xzf node_exporter.tar.gz && \
     mv node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64/node_exporter /usr/local/bin/ && \
     chmod +x /usr/local/bin/node_exporter && \
     # Clean up in same layer to reduce image size
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/* node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64*
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/* node_exporter.tar.gz node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64*
 
 # Copy netclient built from source
 COPY --from=netclient-builder /build/netclient /usr/local/bin/netclient

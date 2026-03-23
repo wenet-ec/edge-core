@@ -74,6 +74,17 @@ EDGE_ADMIN_MODE=task mix run --no-start -e "EdgeAdmin.Release.create_netmaker_su
 echo "Bootstrapping default cluster..."
 EDGE_ADMIN_MODE=task mix run --no-start -e "EdgeAdmin.Release.create_default_cluster()"
 
+# Resolve WireGuard port for StatefulSet deployments.
+# If POD_INDEX is set (injected by K8s Downward API), auto-compute the port
+# from ADMIN_WIREGUARD_PORT_BASE + POD_INDEX — unless ADMIN_WIREGUARD_PORT is
+# already explicitly set, which always takes precedence.
+if [ -n "${POD_INDEX:-}" ] && [ -z "${ADMIN_WIREGUARD_PORT:-}" ]; then
+    _base="${ADMIN_WIREGUARD_PORT_BASE:-51820}"
+    export ADMIN_WIREGUARD_PORT=$(( _base + POD_INDEX ))
+    echo "StatefulSet mode: POD_INDEX=${POD_INDEX}, ADMIN_WIREGUARD_PORT=${ADMIN_WIREGUARD_PORT} (base=${_base})"
+    unset _base
+fi
+
 # Start EPMD daemon for Erlang distribution
 echo "Starting EPMD daemon..."
 epmd -daemon

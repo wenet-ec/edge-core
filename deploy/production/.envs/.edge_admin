@@ -127,7 +127,15 @@ ADMIN_MAX_CAPACITY=200
 # Static WireGuard listen port for the admin VPN interface.
 # Required when admin is behind NAT and agents need a predictable UDP port.
 # Must match the UDP port mapping in docker-compose.
+# When set explicitly, always takes precedence over StatefulSet auto-assignment.
 # ADMIN_WIREGUARD_PORT=51821
+
+# K8s StatefulSet: base WireGuard port for auto-assignment.
+# When POD_INDEX is injected by the K8s Downward API, the start script computes:
+#   ADMIN_WIREGUARD_PORT = ADMIN_WIREGUARD_PORT_BASE + POD_INDEX
+# Pod 0 → 51820, pod 1 → 51821, pod 2 → 51822, etc.
+# No-op when POD_INDEX is absent (Docker Compose / non-StatefulSet deployments).
+# ADMIN_WIREGUARD_PORT_BASE=51820
 
 # Shared Erlang cookie for VPN cluster — must be identical across all admin instances.
 VPN_CLUSTER_COOKIE=prod-cookie

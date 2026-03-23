@@ -13,13 +13,15 @@ echo "=== Edge Agent Entrypoint ==="
 #   ${DATA_DIR}/vpn/    — netclient state (/etc/netclient symlinks here)
 DATA_DIR="${DATA_DIR:-/app/data}"
 
-# Ensure unified data directory structure exists
-# /etc/netclient is a symlink to ${DATA_DIR}/vpn (created at build time)
-# Validate and recreate if needed (handles volume mount edge cases)
-if [ ! -L /etc/netclient ]; then
-    echo "WARNING: /etc/netclient is not a symlink, recreating unified structure..."
+# Ensure unified data directory structure exists.
+# Always create the vpn dir — DATA_DIR may differ from the /app/data baked at build time
+# (e.g. DATA_DIR=/app/data/test in the test container).
+mkdir -p "${DATA_DIR}/vpn"
+# /etc/netclient must be a symlink pointing to ${DATA_DIR}/vpn.
+# Recreate if missing, not a symlink, or pointing at the wrong target.
+if [ "$(readlink /etc/netclient 2>/dev/null)" != "${DATA_DIR}/vpn" ]; then
+    echo "Updating /etc/netclient symlink → ${DATA_DIR}/vpn"
     rm -rf /etc/netclient
-    mkdir -p "${DATA_DIR}/vpn"
     ln -sfn "${DATA_DIR}/vpn" /etc/netclient
 fi
 chmod 0775 "${DATA_DIR}/vpn"

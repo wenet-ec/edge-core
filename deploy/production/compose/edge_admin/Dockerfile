@@ -70,7 +70,7 @@ RUN --mount=type=cache,target=/root/.hex \
 # -----------------------------------------------
 # Stage 2: Production runtime image (optimized)
 # -----------------------------------------------
-FROM debian:stable-20260223-slim
+FROM debian:stable-20260316-slim
 
 # Install runtime dependencies in single layer
 # Grouped by purpose for maintainability

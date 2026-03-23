@@ -1,0 +1,77 @@
+# examples/sidecar/docker-compose.yml
+#
+# Edge Agent as a sidecar container — bridge network, no network_mode: host.
+#
+# This pattern is useful when you want to add VPN mesh access and proxy
+# servers to an existing containerised workload without touching the host
+# network. The agent joins the WireGuard mesh and the other containers in
+# the same network can reach any VPN node through its proxy.
+#
+# What you get:
+#   - WireGuard VPN mesh membership for the pod/stack
+#   - HTTP proxy  at localhost:43128  (or agent container name:43128)
+#   - SOCKS5 proxy at localhost:41080 (or agent container name:41080)
+#   - SSH access into the agent container on port 40022
+#
+# What is not useful in this mode:
+#   - Command execution runs inside the agent container, not your app container
+#   - Host metrics reflect the container view, not the underlying machine
+#
+# Requirements:
+#   - NET_ADMIN + SYS_MODULE capabilities
+#   - /dev/net/tun device (wireguard-go needs it to create a TUN interface)
+#   - The sysctls below (WireGuard routing rules)
+#   - USE_RANDOM_ID=true so identity is not tied to the host MAC address
+#
+# Usage:
+#   cp .env.example .env
+#   # fill in PUBLIC_ENROLLMENT_KEY_URL
+#   docker compose up -d
+
+networks:
+  app:
+    name: my_app_network
+
+volumes:
+  edge_agent_data: {}
+
+services:
+  # ---------------------------------------------------------------------------
+  # Your application container — replace with your actual workload
+  # ---------------------------------------------------------------------------
+  app:
+    image: nginx:alpine
+    container_name: my_app
+    networks:
+      - app
+    # To reach a VPN node through the agent proxy from inside this container:
+    #   curl -x http://edge_agent:43128 http://node-abc.cluster-prod.nm.internal:8080/
+    # Or set globally:
+    #   environment:
+    #     - http_proxy=http://edge_agent:43128
+
+  # ---------------------------------------------------------------------------
+  # Edge Agent sidecar — joins the VPN mesh, exposes proxy to the stack
+  # ---------------------------------------------------------------------------
+  edge_agent:
+    image: ghcr.io/wenet-ec/edge_agent:stable
+    container_name: edge_agent_sidecar
+    networks:
+      - app
+    volumes:
+      - edge_agent_data:/app/data
+      - /dev/net/tun:/dev/net/tun
+    env_file:
+      - .env
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
+    privileged: true
+    ports:
+      - "40022:40022"   # SSH into the agent
+      - "43128:43128"   # HTTP proxy (expose to host if needed)
+      - "41080:41080"   # SOCKS5 proxy (expose to host if needed)

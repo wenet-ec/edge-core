@@ -49,6 +49,7 @@ services:
     extra_hosts:
       - "edge-vpn.localtest.me:172.25.0.100"
       - "edge-vpn-broker.localtest.me:172.25.0.100"
+      - "edge-admin.localtest.me:172.25.0.100"
     depends_on:
       edge_vpn:
         condition: service_healthy

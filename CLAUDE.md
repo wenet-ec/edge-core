@@ -10,7 +10,7 @@ Edge Core is a distributed edge computing infrastructure management platform bui
 **Connectivity:** cloud↔edge TCP proxying (forward proxy + proxy chaining), edge↔edge WireGuard VPN mesh, edge↔local devices (mDNS today; LAN DNS is future scope — see `docs/architecture.md`).
 
 - **Edge Admin** (cloud server) - Orchestrates nodes, commands, SSH access, proxies, and metrics. Runs as multiple peer instances sharing one PostgreSQL database.
-- **Edge Agent** (edge nodes) - Standalone binary running one per machine (`network_mode: host`). Bundles netclient, SSH server, Prometheus exporters, and forward proxies.
+- **Edge Agent** (edge nodes) - Standalone binary, primary deployment is one per machine (`network_mode: host`). Also works as a sidecar container on bridge networking. Bundles netclient, SSH server, Prometheus exporters, and forward proxies.
 - **Nexmaker** (shared library) - Elixir wrapper for Netmaker API and netclient CLI
 - **Netmaker VPN** - WireGuard mesh connecting all components. EMQX/Mosquitto is Netmaker-internal infrastructure only — not used by Edge Admin/Agent application code.
 
@@ -37,7 +37,7 @@ When working on anything related to Netmaker API, netclient enrollment, DERP rel
 1. PostgreSQL is the only source of truth — admins are stateless compute workers
 2. Admin clustering is masterless peer-to-peer — no leader election, no primary/replica. Admins coordinate via Erlang distribution + `:syn` registry within the same admin cluster.
 3. Cluster ownership sharding — exactly one admin owns each edge cluster at a time (one-admin-per-cluster algorithm). HA comes from spinning up additional independent admin clusters sharing the same PostgreSQL.
-4. Agent is one-per-machine — `network_mode: host`, privileged. Multiple agents on one host is for testing only.
+4. Agent primary deployment is one-per-machine — `network_mode: host`, privileged. Also works as a sidecar container on bridge networking (see `examples/sidecar/`). Multiple agents on one host is for testing only.
 5. Admin↔Agent communication is HTTP over WireGuard VPN, with graceful fallback: raw WireGuard → DERP relay → HTTP polling.
 6. Context pattern: Business logic organized in contexts (Commands, Nodes, Vpn, Ssh, etc.)
 7. API-first: Both admin and agent expose REST APIs; admin API uses OpenApiSpex for documentation

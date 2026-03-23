@@ -222,9 +222,30 @@ Admin never acts as an exit node — only agents can. This prevents SSRF.
 
 ## Edge Agent
 
-Edge Agent is a standalone binary that runs on each edge machine. **One agent per machine** — this is the only supported deployment pattern. Multiple agents on the same machine is used for testing only.
+Edge Agent is a standalone binary that runs on each edge machine. The primary deployment model is one agent per physical machine using `network_mode: host`.
 
-The official deployment is `network_mode: host` with `privileged: true`, giving it full access to the host network interfaces — required for WireGuard tunnel management. It runs as a real infrastructure tool, not a sandboxed application.
+The standard deployment is `network_mode: host` with `privileged: true`, giving it full access to the host network interfaces — required for WireGuard tunnel management.
+
+### Sidecar deployment
+
+The agent also works as a sidecar container on bridge networking (no `network_mode: host`). In this mode it runs in the pod's or container's network namespace rather than the host's. This was not the original design intent but has been tested and works.
+
+What you get from a sidecar agent:
+- **VPN mesh access** — the pod/container joins the WireGuard mesh
+- **Proxy servers** — HTTP/SOCKS5 proxy accessible at `localhost` from other containers in the same pod
+- **SSH access** — SSH into the pod's network namespace
+
+What doesn't apply in sidecar mode:
+- **Command execution** — commands run inside the agent container, not the application container
+- **Host metrics** — reflects the container's view, not the host machine
+
+Requirements for sidecar mode (same as host mode minus `network_mode: host`):
+- `USE_RANDOM_ID=true` — avoids identity collisions when multiple sidecars run on the same node (host-derived identity is not meaningful in a container)
+- `cap_add: [NET_ADMIN, SYS_MODULE]`
+- `sysctls: net.ipv4.ip_forward=1, net.ipv4.conf.all.src_valid_mark=1, net.ipv6.conf.all.forwarding=1`
+- `/dev/net/tun:/dev/net/tun` — required for wireguard-go to create a TUN interface
+
+See `examples/sidecar/` for a ready-to-use Docker Compose example.
 
 ### What the Agent Contains
 

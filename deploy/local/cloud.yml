@@ -220,7 +220,9 @@ services:
     image: emqx/emqx:5.8.9
     container_name: local_edge_vpn_broker
     networks:
-      - local_edge_core
+      local_edge_core:
+        aliases:
+          - emqx-1.emqx
     ports:
       - "48083:8083"
       - "48085:18083"

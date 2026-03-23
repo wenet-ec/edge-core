@@ -1,5 +1,36 @@
 # deploy/production/.envs/.edge_vpn_broker
+
+# Node identity
+# EMQX_NAME + EMQX_HOST together form the Erlang node name: emqx@<EMQX_HOST>
+# EMQX_HOST must be a dotted name (FQDN-style) so Erlang uses longnames (-name).
+# Longnames are required for clustering across Docker network namespaces.
+# We use a network alias (set in cloud.yml) rather than changing `hostname:`,
+# so the Docker service name (edge_vpn_broker) remains intact for other services.
+# Single-node: EMQX_HOST is just the alias for this one node.
+# Multi-node: each node gets its own alias (emqx-1.emqx, emqx-2.emqx, ...).
 EMQX_NAME=emqx
+EMQX_HOST=emqx-1.emqx
+
+# Dashboard credentials
 EMQX_DASHBOARD__DEFAULT_USERNAME=admin
 EMQX_DASHBOARD__DEFAULT_PASSWORD=netmaker123
+
+# Clustering — Mria (EMQX v5 distributed database, built on rlog)
+# EMQX_NODE__COOKIE: shared secret for Erlang distribution — ALL cluster nodes must match.
+# EMQX_NODE__DB_BACKEND: rlog enables Mria replication (no-op on single node, required for cluster).
+# EMQX_NODE__ROLE: core = full voting member. All nodes are core in OSS 5.8.x.
+# EMQX_CLUSTER__DISCOVERY_STRATEGY: static = explicit seed list. Switch to `k8s` on Kubernetes.
+# EMQX_CLUSTER__STATIC__SEEDS: list of all node names in the cluster.
+#   Single node: just this node. Multi-node: add all nodes here.
+# EMQX_CLUSTER__AUTOHEAL: automatically rejoin after net-split recovery.
+# EMQX_RPC__PORT_DISCOVERY: manual = fixed RPC ports, avoids dynamic port negotiation issues.
 EMQX_NODE__COOKIE=production-cookie
+EMQX_NODE__DB_BACKEND=rlog
+EMQX_NODE__ROLE=core
+EMQX_CLUSTER__DISCOVERY_STRATEGY=static
+EMQX_CLUSTER__STATIC__SEEDS=[emqx@emqx-1.emqx]
+EMQX_CLUSTER__AUTOHEAL=true
+EMQX_RPC__PORT_DISCOVERY=manual
+
+# Telemetry
+EMQX_TELEMETRY__ENABLE=false

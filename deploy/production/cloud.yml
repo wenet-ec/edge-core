@@ -184,7 +184,9 @@ services:
     image: emqx/emqx:5.8.9
     container_name: production_edge_vpn_broker
     networks:
-      - production_edge_core
+      production_edge_core:
+        aliases:
+          - emqx-1.emqx
     volumes:
       - production_edge_vpn_broker_data:/opt/emqx/data
       - production_edge_vpn_broker_etc:/opt/emqx/etc

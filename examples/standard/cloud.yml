@@ -267,7 +267,9 @@ services:
     image: emqx/emqx:5.8.9
     container_name: edge_vpn_broker
     networks:
-      - edge_core
+      edge_core:
+        aliases:
+          - emqx-1.emqx
     volumes:
       - edge_vpn_broker_data:/opt/emqx/data
       - edge_vpn_broker_etc:/opt/emqx/etc
@@ -277,9 +279,17 @@ services:
       - .env
     environment:
       EMQX_NAME: emqx
+      EMQX_HOST: emqx-1.emqx
       EMQX_DASHBOARD__DEFAULT_USERNAME: ${EMQX_DASHBOARD_USERNAME}
       EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD}
       EMQX_NODE__COOKIE: ${EMQX_NODE_COOKIE}
+      EMQX_NODE__DB_BACKEND: rlog
+      EMQX_NODE__ROLE: core
+      EMQX_CLUSTER__DISCOVERY_STRATEGY: static
+      EMQX_CLUSTER__STATIC__SEEDS: "[emqx@emqx-1.emqx]"
+      EMQX_CLUSTER__AUTOHEAL: "true"
+      EMQX_RPC__PORT_DISCOVERY: manual
+      EMQX_TELEMETRY__ENABLE: "false"
     ports:
       - "48083:8083"      # WebSocket
       - "48085:18083"     # EMQX Dashboard

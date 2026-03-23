@@ -168,6 +168,10 @@ defmodule EdgeAdmin.Release do
 
         :ok
 
+      {:error, {:conflict, reason}} ->
+        Logger.warning("Default cluster creation skipped: #{reason}")
+        :ok
+
       {:error, %Ecto.Changeset{} = changeset} ->
         errors = Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
         Logger.error("Failed to create default cluster: #{inspect(errors)}")

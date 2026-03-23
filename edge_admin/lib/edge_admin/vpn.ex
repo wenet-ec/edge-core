@@ -46,6 +46,8 @@ defmodule EdgeAdmin.Vpn do
       {:ok, %{}}
   """
 
+  import Bitwise
+
   alias Nexmaker.Api.DNS
   alias Nexmaker.Api.EnrollmentKeys
   alias Nexmaker.Api.Hosts
@@ -364,13 +366,49 @@ defmodule EdgeAdmin.Vpn do
         subnets = generate_subnets(base_ip, base_prefix, target_prefix)
 
         Enum.find(subnets, fn subnet ->
-          subnet not in existing_ranges
+          not cidrs_overlap?(subnet, existing_ranges)
         end)
 
       _ ->
         nil
     end
   end
+
+  @doc """
+  Returns true if the given CIDR string overlaps with any range in the list.
+  Overlap means one network contains the other's network address (either direction).
+  """
+  @spec cidrs_overlap?(String.t(), [String.t()]) :: boolean()
+  def cidrs_overlap?(cidr, existing_ranges) do
+    case parse_cidr(cidr) do
+      {:ok, {ip, prefix}} ->
+        Enum.any?(existing_ranges, fn existing ->
+          case parse_cidr(existing) do
+            {:ok, {ex_ip, ex_prefix}} -> cidr_intersect?({ip, prefix}, {ex_ip, ex_prefix})
+            _ -> false
+          end
+        end)
+
+      _ ->
+        false
+    end
+  end
+
+  # Two CIDRs intersect if one network address falls inside the other's range.
+  defp cidr_intersect?({ip1, prefix1}, {ip2, prefix2}) do
+    ip_contains?(ip1, prefix1, ip2) or ip_contains?(ip2, prefix2, ip1)
+  end
+
+  # Returns true if ip_addr falls within the network defined by net_ip/prefix.
+  defp ip_contains?({a, b, c, d}, prefix, {ta, tb, tc, td}) do
+    mask = prefix_to_mask(prefix)
+    band(ip_to_int({a, b, c, d}), mask) == band(ip_to_int({ta, tb, tc, td}), mask)
+  end
+
+  defp ip_to_int({a, b, c, d}), do: a * 16_777_216 + b * 65_536 + c * 256 + d
+
+  defp prefix_to_mask(0), do: 0
+  defp prefix_to_mask(prefix), do: 0xFFFFFFFF |> bsl(32 - prefix) |> band(0xFFFFFFFF)
 
   @doc """
   Generates all possible subnets within a base range.

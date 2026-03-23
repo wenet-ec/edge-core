@@ -129,7 +129,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     request_body: {"Cluster creation parameters", "application/json", ClusterSchemas.ClusterCreateRequest},
     responses: %{
       201 => {"Cluster created successfully", "application/json", ClusterSchemas.ClusterSingleResponse},
-      409 => {"Cluster name or IP range already exists", "application/json", CommonSchemas.ConflictResponse},
+      409 =>
+        {"Cluster name already exists, or IP range conflicts with an existing cluster", "application/json",
+         CommonSchemas.ConflictResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }

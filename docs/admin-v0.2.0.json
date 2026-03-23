@@ -3290,7 +3290,7 @@
                 "schema": { "$ref": "#/components/schemas/Conflict Response" }
               }
             },
-            "description": "Cluster name or IP range already exists"
+            "description": "Cluster name already exists, or IP range conflicts with an existing cluster"
           },
           "422": {
             "content": {

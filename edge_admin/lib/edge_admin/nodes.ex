@@ -321,14 +321,19 @@ defmodule EdgeAdmin.Nodes do
   This ensures "cluster in DB but network not in Netmaker" always means failed deletion,
   allowing reconciliation to safely delete orphaned DB clusters.
 
-  Returns `{:ok, cluster}`, `{:error, changeset}` (validation), or `{:error, :service_unavailable}` (health check or Netmaker failure).
+  Returns `{:ok, cluster}`, `{:error, changeset}` (validation), `{:error, {:conflict, reason}}` (CIDR overlap), or `{:error, :service_unavailable}` (health check or Netmaker failure).
   """
-  @spec create_cluster(map()) :: {:ok, Cluster.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
+  @spec create_cluster(map()) ::
+          {:ok, Cluster.t()}
+          | {:error, Ecto.Changeset.t()}
+          | {:error, {:conflict, String.t()}}
+          | {:error, :service_unavailable}
   def create_cluster(attrs \\ %{}) do
     with {:ok, validated_attrs} <- Forms.CreateClusterForm.changeset(attrs),
          # Check Netmaker health before proceeding
          :ok <- Vpn.health_check(),
          existing_ranges = Repo.all(from(c in Cluster, select: c.ipv4_range)),
+         :ok <- Checks.CreateClusterCheck.check(validated_attrs["ipv4_range"], existing_ranges),
          ipv4_range = validated_attrs["ipv4_range"] || Vpn.generate_next_subnet(existing_ranges),
          cluster_attrs = Map.put(validated_attrs, "ipv4_range", ipv4_range),
          {:ok, cluster} <-

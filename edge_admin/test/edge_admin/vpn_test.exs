@@ -376,6 +376,78 @@ defmodule EdgeAdmin.VpnTest do
       result = Vpn.find_available_subnet("100.64.0.0/10", 24, existing)
       assert result == "100.64.1.0/24"
     end
+
+    test "skips /24 that is contained within an existing wider /16" do
+      # 100.64.1.0/24 is inside 100.64.0.0/16, so it must be skipped
+      existing = ["100.64.0.0/16"]
+      result = Vpn.find_available_subnet("100.64.0.0/10", 24, existing)
+      # All 100.64.x.0/24 candidates fall inside the /16 — no available subnet
+      assert result == nil
+    end
+
+    test "skips /24 that overlaps a wider /8" do
+      existing = ["100.0.0.0/8"]
+      result = Vpn.find_available_subnet("100.64.0.0/10", 24, existing)
+      assert result == nil
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # cidrs_overlap?/2
+  # ---------------------------------------------------------------------------
+
+  describe "cidrs_overlap?/2" do
+    test "identical ranges overlap" do
+      assert Vpn.cidrs_overlap?("100.64.1.0/24", ["100.64.1.0/24"])
+    end
+
+    test "narrower range inside wider range overlaps" do
+      # /24 is fully inside the /16
+      assert Vpn.cidrs_overlap?("100.64.1.0/24", ["100.64.0.0/16"])
+    end
+
+    test "wider range containing narrower range overlaps" do
+      # /16 contains the existing /24's network address
+      assert Vpn.cidrs_overlap?("100.64.0.0/16", ["100.64.1.0/24"])
+    end
+
+    test "completely different ranges do not overlap" do
+      refute Vpn.cidrs_overlap?("10.0.0.0/24", ["192.168.1.0/24"])
+    end
+
+    test "adjacent /24 ranges in same /16 do not overlap each other" do
+      refute Vpn.cidrs_overlap?("100.64.2.0/24", ["100.64.1.0/24"])
+    end
+
+    test "returns false when existing list is empty" do
+      refute Vpn.cidrs_overlap?("100.64.1.0/24", [])
+    end
+
+    test "returns false on unparseable candidate CIDR" do
+      refute Vpn.cidrs_overlap?("invalid", ["100.64.0.0/16"])
+    end
+
+    test "ignores unparseable entries in existing list" do
+      refute Vpn.cidrs_overlap?("10.0.0.0/24", ["bad-cidr", "192.168.1.0/24"])
+    end
+
+    test "detects overlap when one of many existing ranges matches" do
+      existing = ["10.0.0.0/24", "10.0.1.0/24", "100.64.0.0/16"]
+      assert Vpn.cidrs_overlap?("100.64.5.0/24", existing)
+    end
+
+    test "returns false when none of many existing ranges overlap" do
+      existing = ["10.0.0.0/24", "10.0.1.0/24", "192.168.1.0/24"]
+      refute Vpn.cidrs_overlap?("172.16.0.0/24", existing)
+    end
+
+    test "/32 host route inside a /24 overlaps" do
+      assert Vpn.cidrs_overlap?("10.0.0.5/32", ["10.0.0.0/24"])
+    end
+
+    test "/0 default route overlaps everything" do
+      assert Vpn.cidrs_overlap?("0.0.0.0/0", ["100.64.1.0/24"])
+    end
   end
 
   # ---------------------------------------------------------------------------

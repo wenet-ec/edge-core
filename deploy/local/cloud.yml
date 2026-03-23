@@ -222,7 +222,7 @@ services:
     networks:
       local_edge_core:
         aliases:
-          - emqx-1.emqx
+          - edge-vpn-broker-1.edge
     ports:
       - "48083:8083"
       - "48085:18083"

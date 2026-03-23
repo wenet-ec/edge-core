@@ -7,9 +7,9 @@
 # We use a network alias (set in cloud.yml) rather than changing `hostname:`,
 # so the Docker service name (edge_vpn_broker) remains intact for other services.
 # Single-node: EMQX_HOST is just the alias for this one node.
-# Multi-node: each node gets its own alias (emqx-1.emqx, emqx-2.emqx, ...).
+# Multi-node: each node gets its own alias (edge-vpn-broker-1.edge, edge-vpn-broker-2.edge, ...).
 EMQX_NAME=emqx
-EMQX_HOST=emqx-1.emqx
+EMQX_HOST=edge-vpn-broker-1.edge
 
 # Dashboard credentials
 EMQX_DASHBOARD__DEFAULT_USERNAME=admin
@@ -28,7 +28,7 @@ EMQX_NODE__COOKIE=production-cookie
 EMQX_NODE__DB_BACKEND=rlog
 EMQX_NODE__ROLE=core
 EMQX_CLUSTER__DISCOVERY_STRATEGY=static
-EMQX_CLUSTER__STATIC__SEEDS=[emqx@emqx-1.emqx]
+EMQX_CLUSTER__STATIC__SEEDS=[emqx@edge-vpn-broker-1.edge]
 EMQX_CLUSTER__AUTOHEAL=true
 EMQX_RPC__PORT_DISCOVERY=manual
 

@@ -16,8 +16,8 @@ defmodule EdgeAdmin.MCP.Tools.Commands.CreateCommand do
   alias EdgeAdmin.MCP.Tools.Commands.CommandData
 
   schema do
-    field :command_text, :string, required: true
-    field :targeting, :map, required: true
+    field :command_text, {:required, :string}
+    field :targeting, {:required, :map}
     field :timeout, :integer, default: 30
   end
 

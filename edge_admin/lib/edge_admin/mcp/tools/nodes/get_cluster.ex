@@ -7,7 +7,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.GetCluster do
   alias EdgeAdmin.Nodes
 
   schema do
-    field :cluster_name, :string, required: true
+    field :cluster_name, {:required, :string}
   end
 
   @impl true

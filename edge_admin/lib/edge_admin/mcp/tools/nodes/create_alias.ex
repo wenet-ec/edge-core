@@ -7,8 +7,8 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.CreateAlias do
   alias EdgeAdmin.Nodes
 
   schema do
-    field :node_id, :string, required: true
-    field :name, :string, required: true
+    field :node_id, {:required, :string}
+    field :name, {:required, :string}
   end
 
   @impl true

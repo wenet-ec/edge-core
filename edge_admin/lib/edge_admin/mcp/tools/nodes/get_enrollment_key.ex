@@ -7,7 +7,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.GetEnrollmentKey do
   alias EdgeAdmin.Nodes
 
   schema do
-    field :enrollment_key_id, :string, required: true
+    field :enrollment_key_id, {:required, :string}
   end
 
   @impl true

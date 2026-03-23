@@ -7,7 +7,7 @@ defmodule EdgeAdmin.MCP.Tools.Ssh.GetSshUsername do
   alias EdgeAdmin.Ssh
 
   schema do
-    field :ssh_username_id, :string, required: true
+    field :ssh_username_id, {:required, :string}
   end
 
   @impl true

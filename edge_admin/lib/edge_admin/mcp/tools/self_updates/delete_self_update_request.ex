@@ -6,7 +6,7 @@ defmodule EdgeAdmin.MCP.Tools.SelfUpdates.DeleteSelfUpdateRequest do
   alias EdgeAdmin.SelfUpdates
 
   schema do
-    field :request_id, :string, required: true
+    field :request_id, {:required, :string}
   end
 
   @impl true

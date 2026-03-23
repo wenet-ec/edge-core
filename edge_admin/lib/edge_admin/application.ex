@@ -73,7 +73,6 @@ defmodule EdgeAdmin.Application do
       EdgeAdmin.Admins.Metadata,
       EdgeAdmin.LocalScheduler,
       EdgeAdmin.ProxyServers,
-      Anubis.Server.Registry,
       {EdgeAdmin.MCP.Server, transport: :streamable_http},
       EdgeAdminWeb.Endpoint
     ]

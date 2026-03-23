@@ -7,7 +7,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.UpdateCluster do
   alias EdgeAdmin.Nodes
 
   schema do
-    field :cluster_name, :string, required: true
+    field :cluster_name, {:required, :string}
     field :node_limit, :integer
   end
 

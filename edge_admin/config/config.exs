@@ -9,11 +9,6 @@ import Config
 
 version = Mix.Project.config()[:version]
 
-config :anubis_mcp, :session_store,
-  adapter: EdgeAdmin.Mcp.SessionStore,
-  enabled: true,
-  ttl: to_timeout(minute: 30)
-
 config :edge_admin, Corsica, allow_headers: :all
 config :edge_admin, EdgeAdmin.Gettext, default_locale: "en"
 

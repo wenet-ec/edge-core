@@ -6,7 +6,7 @@ defmodule EdgeAdmin.MCP.Tools.Ssh.DeleteSshPublicKey do
   alias EdgeAdmin.Ssh
 
   schema do
-    field :ssh_public_key_id, :string, required: true
+    field :ssh_public_key_id, {:required, :string}
   end
 
   @impl true

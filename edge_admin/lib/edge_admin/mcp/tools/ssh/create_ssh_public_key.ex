@@ -7,8 +7,8 @@ defmodule EdgeAdmin.MCP.Tools.Ssh.CreateSshPublicKey do
   alias EdgeAdmin.Ssh
 
   schema do
-    field :ssh_username_id, :string, required: true
-    field :public_key, :string, required: true
+    field :ssh_username_id, {:required, :string}
+    field :public_key, {:required, :string}
     field :key_name, :string
   end
 

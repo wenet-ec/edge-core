@@ -12,7 +12,7 @@ defmodule EdgeAdmin.MCP.Tools.Commands.CancelCommandExecution do
   alias EdgeAdmin.Commands
 
   schema do
-    field :execution_id, :string, required: true
+    field :execution_id, {:required, :string}
   end
 
   @impl true

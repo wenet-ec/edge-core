@@ -6,7 +6,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.DeleteAlias do
   alias EdgeAdmin.Nodes
 
   schema do
-    field :alias_id, :string, required: true
+    field :alias_id, {:required, :string}
   end
 
   @impl true

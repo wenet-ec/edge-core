@@ -7,7 +7,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.CreateEnrollmentKey do
   alias EdgeAdmin.Nodes
 
   schema do
-    field :cluster_name, :string, required: true
+    field :cluster_name, {:required, :string}
     field :uses_remaining, :integer
     field :expired_at, :string
   end

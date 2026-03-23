@@ -16,7 +16,7 @@ defmodule EdgeAdmin.MCP.Tools.SelfUpdates.CreateSelfUpdateRequest do
   alias EdgeAdmin.SelfUpdates
 
   schema do
-    field :targeting, :map, required: true
+    field :targeting, {:required, :map}
   end
 
   @impl true

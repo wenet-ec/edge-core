@@ -12,7 +12,7 @@ defmodule EdgeAdmin.MCP.Tools.Metrics.GetNodeMetrics do
   alias EdgeAdmin.Metrics
 
   schema do
-    field :node_id, :string, required: true
+    field :node_id, {:required, :string}
   end
 
   @impl true

@@ -7,8 +7,8 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.ChangeNodeCluster do
   alias EdgeAdmin.Nodes
 
   schema do
-    field :node_id, :string, required: true
-    field :cluster_name, :string, required: true
+    field :node_id, {:required, :string}
+    field :cluster_name, {:required, :string}
   end
 
   @impl true

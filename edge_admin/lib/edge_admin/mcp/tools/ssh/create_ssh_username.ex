@@ -12,10 +12,10 @@ defmodule EdgeAdmin.MCP.Tools.Ssh.CreateSshUsername do
   alias EdgeAdmin.Ssh
 
   schema do
-    field :node_id, :string, required: true
-    field :username, :string, required: true
+    field :node_id, {:required, :string}
+    field :username, {:required, :string}
     field :password, :string
-    field :public_keys, {:array, :map}
+    field :public_keys, {:list, :map}
   end
 
   @impl true

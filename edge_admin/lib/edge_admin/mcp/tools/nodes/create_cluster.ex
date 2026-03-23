@@ -7,7 +7,7 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.CreateCluster do
   alias EdgeAdmin.Nodes
 
   schema do
-    field :name, :string, required: true
+    field :name, {:required, :string}
     field :ipv4_range, :string
     field :node_limit, :integer
   end

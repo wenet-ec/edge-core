@@ -6,7 +6,7 @@ defmodule EdgeAdmin.MCP.Tools.Commands.DeleteCommand do
   alias EdgeAdmin.Commands
 
   schema do
-    field :command_id, :string, required: true
+    field :command_id, {:required, :string}
   end
 
   @impl true

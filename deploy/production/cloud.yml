@@ -186,7 +186,7 @@ services:
     networks:
       production_edge_core:
         aliases:
-          - emqx-1.emqx
+          - edge-vpn-broker-1.edge
     volumes:
       - production_edge_vpn_broker_data:/opt/emqx/data
       - production_edge_vpn_broker_etc:/opt/emqx/etc

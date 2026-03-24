@@ -1,0 +1,33 @@
+{{- /* deploy/k8s/charts/edge-admin-proxy/templates/service.yaml */ -}}
+{{/* Core-level TCP proxy Service.
+     Selects ALL admin pods in the namespace via the shared edge-core label,
+     regardless of which admin cluster (a, b, ...) they belong to.
+     k8s kube-proxy load-balances across all matching pods automatically. */}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: edge-admin-proxy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: edge-admin-proxy
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: edge-admin-proxy
+spec:
+  type: {{ .Values.type }}
+  selector:
+    edge-core: {{ .Values.coreLabel | quote }}
+  ports:
+    - name: http-proxy
+      port: 43128
+      targetPort: 43128
+      protocol: TCP
+      {{- if and (eq .Values.type "NodePort") .Values.nodePorts.httpProxy }}
+      nodePort: {{ .Values.nodePorts.httpProxy }}
+      {{- end }}
+    - name: socks5-proxy
+      port: 41080
+      targetPort: 41080
+      protocol: TCP
+      {{- if and (eq .Values.type "NodePort") .Values.nodePorts.socks5Proxy }}
+      nodePort: {{ .Values.nodePorts.socks5Proxy }}
+      {{- end }}

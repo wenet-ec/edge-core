@@ -1,0 +1,48 @@
+{{- /* deploy/k8s/charts/edge-admin/templates/service.yaml */ -}}
+{{/* ClusterIP — API + proxy ports */}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "edge-admin.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "edge-admin.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "edge-admin.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: api
+      port: 44000
+      targetPort: api
+      protocol: TCP
+    - name: http-proxy
+      port: 43128
+      targetPort: http-proxy
+      protocol: TCP
+    - name: socks5-proxy
+      port: 41080
+      targetPort: socks5-proxy
+      protocol: TCP
+
+---
+{{/* Headless — stable per-pod DNS for Erlang distribution.
+     Erlang nodes address each other via VPN DNS (nm.internal), but this service
+     is harmless as Deployment (no ordinal DNS) and required as StatefulSet. */}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "edge-admin.fullname" . }}-headless
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "edge-admin.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    {{- include "edge-admin.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: api
+      port: 44000
+      targetPort: api
+      protocol: TCP

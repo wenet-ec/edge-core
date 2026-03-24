@@ -1,0 +1,23 @@
+# deploy/k8s/values/prod/edge-admin.yaml.gotmpl
+replicaCount: 2
+config:
+  phxHost: "edge-admin.yourdomain.com"
+  adminUrls: "edge-admin.yourdomain.com"
+  dbHost: "edge-admin-db-rw"
+  dbPort: "5432"
+  dbName: "edge_admin_production"
+  dbUser: "edge_admin_user"
+  dbPoolSize: "15"
+  dbSsl: "false"
+  netmakerApiUrl: "http://edge-vpn:8081"
+  netmakerDefaultDomain: "nm.internal"
+  netmakerSuperadminUsername: "admin"
+  adminMaxCapacity: "200"
+  defaultClusterName: "default"
+  publicEnrollmentKeyEnabled: "true"
+secrets:
+  secretKeyBase: {{ requiredEnv "EDGE_ADMIN_SECRET_KEY_BASE" | quote }}
+  masterKey: {{ requiredEnv "EDGE_ADMIN_MASTER_KEY" | quote }}
+  dbPassword: {{ requiredEnv "DB_PASSWORD" | quote }}
+  netmakerMasterKey: {{ requiredEnv "NETMAKER_MASTER_KEY" | quote }}
+  netmakerSuperadminPassword: {{ requiredEnv "NETMAKER_SUPERADMIN_PASSWORD" | quote }}

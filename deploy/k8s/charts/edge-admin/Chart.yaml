@@ -1,0 +1,7 @@
+# deploy/k8s/charts/edge-admin/Chart.yaml
+apiVersion: v2
+name: edge-admin
+description: Edge Admin — distributed edge node management
+type: application
+version: 0.2.0
+appVersion: "v0.2.0"

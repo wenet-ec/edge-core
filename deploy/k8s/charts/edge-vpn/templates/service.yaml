@@ -1,0 +1,87 @@
+{{- /* deploy/k8s/charts/edge-vpn/templates/service.yaml */ -}}
+{{/* ClusterIP — Netmaker REST API, reachable by edge-admin at http://netmaker:8081 */}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "netmaker.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "netmaker.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "netmaker.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: api
+      port: 8081
+      targetPort: api
+      protocol: TCP
+
+---
+{{/* Headless — stable per-pod DNS for StatefulSet (netmaker-0, netmaker-1) */}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "netmaker.fullname" . }}-headless
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "netmaker.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    {{- include "netmaker.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: api
+      port: 8081
+      targetPort: api
+      protocol: TCP
+
+---
+{{- if .Values.nodePort.enabled }}
+---
+{{/* NodePort — local testing only. Exposes Netmaker API, EMQX WebSocket, EMQX Dashboard
+     to the host via kind extraPortMappings. Do not use in production. */}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "netmaker.fullname" . }}-nodeport
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "netmaker.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  selector:
+    {{- include "netmaker.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: netmaker-api
+      port: 8081
+      targetPort: api
+      nodePort: {{ .Values.nodePort.netmakerApi }}
+      protocol: TCP
+{{- end }}
+
+---
+{{/* DNS service — exposes CoreDNS sidecar to the cluster for .nm.internal resolution.
+     edge-admin pods must set dnsConfig.nameservers to this service's ClusterIP
+     (or use the service name) to resolve VPN node hostnames. */}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "netmaker.fullname" . }}-dns
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "netmaker.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "netmaker.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: dns-udp
+      port: 53
+      targetPort: dns-udp
+      protocol: UDP
+    - name: dns-tcp
+      port: 53
+      targetPort: dns-tcp
+      protocol: TCP

@@ -1,0 +1,7 @@
+# deploy/k8s/charts/edge-vpn/Chart.yaml
+apiVersion: v2
+name: netmaker
+description: Netmaker VPN server with CoreDNS sidecar
+type: application
+version: 0.1.0
+appVersion: "v1.5.0"

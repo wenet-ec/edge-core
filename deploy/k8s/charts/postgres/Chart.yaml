@@ -1,0 +1,7 @@
+# deploy/k8s/charts/postgres/Chart.yaml
+apiVersion: v2
+name: postgres
+description: CloudNativePG Cluster — reusable for any database instance
+type: application
+version: 0.1.0
+appVersion: "18"

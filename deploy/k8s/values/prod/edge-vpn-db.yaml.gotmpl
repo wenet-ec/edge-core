@@ -1,0 +1,8 @@
+# deploy/k8s/values/prod/edge-vpn-db.yaml.gotmpl
+instances: 2
+storage:
+  size: 5Gi
+  storageClass: "local-path"
+database: "netmaker"
+owner: "netmaker_user"
+password: {{ requiredEnv "EDGE_VPN_DB_PASSWORD" | quote }}

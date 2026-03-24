@@ -1,0 +1,142 @@
+{{- /* deploy/k8s/charts/edge-vpn/templates/statefulset.yaml */ -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "netmaker.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "netmaker.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  serviceName: {{ include "netmaker.fullname" . }}-headless
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      {{- include "netmaker.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "netmaker.selectorLabels" . | nindent 8 }}
+    spec:
+      # Prevent Netmaker's own CoreDNS sidecar from being used for its own DNS lookups.
+      # Without this, DNS queries loop back to the sidecar before it's ready, causing
+      # startup failures. kube-dns resolves internal service names; 8.8.8.8 handles external.
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+          - {{ .Values.dns.kubeDnsIp }}
+          - 8.8.8.8
+        searches:
+          - {{ .Release.Namespace }}.svc.cluster.local
+          - svc.cluster.local
+          - cluster.local
+
+      volumes:
+        # Shared between Netmaker (writes netmaker.hosts) and CoreDNS (reads netmaker.hosts)
+        - name: dnsconfig
+          emptyDir: {}
+        # CoreDNS Corefile config
+        - name: coredns-config
+          configMap:
+            name: {{ include "netmaker.fullname" . }}-corefile
+        # EMQX auth/ACL hocon — mounted into EMQX data dir so it is loaded at startup
+        - name: emqx-hocon
+          configMap:
+            name: {{ include "netmaker.fullname" . }}-emqx-hocon
+
+      containers:
+        # --- Netmaker ---
+        - name: netmaker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: api
+              containerPort: 8081
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "netmaker.fullname" . }}-env
+            - secretRef:
+                name: {{ include "netmaker.secretName" . }}
+          volumeMounts:
+            - name: dnsconfig
+              mountPath: /root/config/dnsconfig
+            - name: netmaker-data
+              mountPath: /root/data
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /api/server/status
+              port: api
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /api/server/status
+              port: api
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+        # --- CoreDNS sidecar ---
+        # Reads /dnsconfig/netmaker.hosts written by Netmaker above.
+        # Exposes .nm.internal resolution to the cluster via the dns-svc Service.
+        - name: coredns
+          image: "{{ .Values.coredns.image }}:{{ .Values.coredns.tag }}"
+          imagePullPolicy: {{ if eq .Values.coredns.tag "latest" }}Always{{ else }}IfNotPresent{{ end }}
+          args:
+            - "-conf"
+            - "/etc/coredns/Corefile"
+          # NET_BIND_SERVICE is required to bind port 53 (privileged port) as non-root
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              add:
+                - NET_BIND_SERVICE
+              drop:
+                - ALL
+          ports:
+            - name: dns-udp
+              containerPort: 53
+              protocol: UDP
+            - name: dns-tcp
+              containerPort: 53
+              protocol: TCP
+          volumeMounts:
+            - name: dnsconfig
+              mountPath: /dnsconfig
+            - name: coredns-config
+              mountPath: /etc/coredns
+          resources:
+            {{- toYaml .Values.corednsResources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8181
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+  volumeClaimTemplates:
+    - metadata:
+        name: netmaker-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: {{ .Values.persistence.storageClassName }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}

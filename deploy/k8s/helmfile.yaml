@@ -1,0 +1,140 @@
+# deploy/k8s/helmfile.yaml
+repositories:
+  - name: cnpg
+    url: https://cloudnative-pg.github.io/charts
+  - name: emqx
+    url: https://repos.emqx.io/charts
+
+---
+
+releases:
+  # ============================================================================
+  # 1. CloudNativePG operator — installs CRDs + controller, cluster-wide
+  # ============================================================================
+  - name: cnpg-operator
+    chart: cnpg/cloudnative-pg
+    version: "0.27.1"
+    namespace: edge-core
+    createNamespace: true
+
+  # ============================================================================
+  # 2a. PostgreSQL cluster — edge-admin (1 primary + 2 replicas)
+  #     -rw service = always primary (writes)
+  #     -ro service = replicas (reads)
+  # ============================================================================
+  - name: edge-admin-db
+    chart: ./charts/postgres
+    namespace: edge-core
+    disableValidation: true
+    needs:
+      - cnpg-operator
+    values:
+      - values/prod/edge-admin-db.yaml.gotmpl
+
+  # ============================================================================
+  # 2b. PostgreSQL cluster — edge-vpn / Netmaker (1 primary + 1 replica)
+  #     Separate cluster — admin and VPN failures are isolated from each other
+  # ============================================================================
+  - name: edge-vpn-db
+    chart: ./charts/postgres
+    namespace: edge-core
+    disableValidation: true
+    needs:
+      - cnpg-operator
+    values:
+      - values/prod/edge-vpn-db.yaml.gotmpl
+
+  # ============================================================================
+  # 3. EMQX — MQTT broker for Netmaker VPN mesh
+  #    Apache 2.0 license up to 5.8.9, clustering requires k8s discovery mode
+  # ============================================================================
+  - name: edge-vpn-broker
+    chart: emqx/emqx
+    version: "5.8.9"
+    namespace: edge-core
+    needs:
+      - cnpg-operator
+    values:
+      - fullnameOverride: "edge-vpn-broker"
+        replicaCount: 1
+        image:
+          tag: "5.8.9"
+        # k8s discovery — chart auto-injects all required EMQX_CLUSTER__K8S__* vars
+        emqxConfig:
+          EMQX_CLUSTER__DISCOVERY_STRATEGY: "k8s"
+          EMQX_DASHBOARD__DEFAULT_USERNAME: "netmaker"
+          EMQX_DASHBOARD__DEFAULT_PASSWORD: {{ requiredEnv "EMQX_DASHBOARD_PASSWORD" | quote }}
+          EMQX_NODE__COOKIE: {{ requiredEnv "EMQX_NODE_COOKIE" | quote }}
+          EMQX_TELEMETRY__ENABLE: "false"
+        # Real ClusterIP so Netmaker can reach ws://edge-vpn-broker:1883
+        service:
+          type: ClusterIP
+          clusterIP: ""
+        persistence:
+          enabled: true
+          size: 1Gi
+          storageClassName: "local-path"
+
+  # ============================================================================
+  # 4. Netmaker — WireGuard VPN mesh server + CoreDNS sidecar
+  # ============================================================================
+  - name: edge-vpn
+    chart: ./charts/edge-vpn
+    namespace: edge-core
+    needs:
+      - edge-vpn-db
+      - edge-vpn-broker
+    values:
+      - values/prod/edge-vpn.yaml.gotmpl
+
+  # ============================================================================
+  # 5a. Edge Admin — cluster A
+  # ============================================================================
+  - name: edge-admin-a
+    chart: ./charts/edge-admin
+    namespace: edge-core
+    needs:
+      - edge-admin-db
+      - edge-vpn
+    values:
+      - values/prod/edge-admin.yaml.gotmpl
+      - config:
+          adminClusterName: "a"
+          adminClusterSubnet: "100.63.0.0/24"
+          metricsBaseUrl: "edge-admin-a:44000"
+        secrets:
+          vpnClusterCookie: {{ requiredEnv "VPN_CLUSTER_COOKIE_A" | quote }}
+
+  # ============================================================================
+  # 5b. Edge Admin — cluster B
+  # ============================================================================
+  - name: edge-admin-b
+    chart: ./charts/edge-admin
+    namespace: edge-core
+    needs:
+      - edge-admin-db
+      - edge-vpn
+    values:
+      - values/prod/edge-admin.yaml.gotmpl
+      - config:
+          adminClusterName: "b"
+          adminClusterSubnet: "100.63.1.0/24"
+          metricsBaseUrl: "edge-admin-b:44000"
+        secrets:
+          vpnClusterCookie: {{ requiredEnv "VPN_CLUSTER_COOKIE_B" | quote }}
+
+  # ============================================================================
+  # 6. Edge Admin Proxy — single NodePort/LB across all admin clusters
+  # ============================================================================
+  - name: edge-admin-proxy
+    chart: ./charts/edge-admin-proxy
+    namespace: edge-core
+    needs:
+      - edge-admin-a
+      - edge-admin-b
+    values:
+      - coreLabel: "edge-core"
+        type: NodePort
+        nodePorts:
+          httpProxy: 30128
+          socks5Proxy: 30080

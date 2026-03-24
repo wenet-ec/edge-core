@@ -1,0 +1,15 @@
+# deploy/k8s/charts/edge-admin-proxy/values.yaml
+# Selects all admin pods across all clusters in this core.
+# Must match the coreLabel value set in every edge-admin release for this core.
+coreLabel: "edge-core"
+
+# Service type:
+#   NodePort    — bare metal default, entry point is <node-ip>:<nodePort>
+#   LoadBalancer — cloud providers (Hetzner CCM, AWS, GCP, etc.)
+type: NodePort
+
+# Fixed NodePorts for stable external addressing.
+# Only used when type=NodePort. Range: 30000-32767.
+nodePorts:
+  httpProxy: 30128    # maps to Ranch HTTP CONNECT port 43128
+  socks5Proxy: 30080  # maps to Ranch SOCKS5 port 41080

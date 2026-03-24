@@ -1,0 +1,40 @@
+{{- /* deploy/k8s/charts/edge-vpn/templates/wait-for-db.yaml */ -}}
+{{/* Pre-install/upgrade hook: wait for PostgreSQL to be ready before Netmaker starts.
+     Runs before the migration hook (weight -10 vs migration's -5).
+     If DB never comes up, upgrade is aborted — Netmaker never starts with no DB. */}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "netmaker.fullname" . }}-wait-for-db
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "netmaker.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: wait-for-db
+          image: postgres:18-alpine
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for PostgreSQL at {{ .Values.config.db.host }}:{{ .Values.config.db.port }}..."
+              until pg_isready -h {{ .Values.config.db.host }} -p {{ .Values.config.db.port }} -U {{ .Values.config.db.user }}; do
+                echo "PostgreSQL not ready yet, retrying in 5s..."
+                sleep 5
+              done
+              echo "PostgreSQL is ready."
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"

@@ -1,0 +1,29 @@
+# deploy/k8s/values/test/edge-vpn.yaml
+replicaCount: 1
+nodePort:
+  enabled: true
+  netmakerApi: 30081
+dns:
+  kubeDnsIp: "10.96.0.10"
+persistence:
+  storageClassName: "standard"
+  size: 128Mi
+config:
+  baseDomain: "edge-vpn.localtest.me"
+  serverHttpHost: "edge-vpn:8081"
+  serverApiConnString: "edge-vpn:8081"
+  brokerEndpoint: "ws://edge-vpn-broker.localtest.me/mqtt"
+  serverBrokerEndpoint: "ws://edge-vpn-broker:8083/mqtt"
+  emqxRestEndpoint: "http://edge-vpn-broker:18083"
+  mqUsername: "netmaker"
+  defaultDomain: "nm.internal"
+  db:
+    host: "edge-vpn-db-rw"
+    port: "5432"
+    name: "netmaker"
+    user: "netmaker_user"
+    sslmode: "disable"
+secrets:
+  masterKey: "supersecretkey123456789"
+  dbPassword: "netmaker_password"
+  mqPassword: "netmaker123"

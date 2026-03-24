@@ -1,0 +1,16 @@
+# deploy/k8s/charts/postgres/values.yaml
+# Number of PostgreSQL instances (1 primary + N-1 replicas)
+instances: 3
+
+image: "ghcr.io/cloudnative-pg/postgresql:18"
+
+storage:
+  size: 10Gi
+  storageClass: "local-path"
+
+# Database and owner created on initdb
+database: "edge_admin_production"
+owner: "edge_admin_user"
+
+# Password for the owner user — override in prod values
+password: "changeme"

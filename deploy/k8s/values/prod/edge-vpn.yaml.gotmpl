@@ -1,0 +1,19 @@
+# deploy/k8s/values/prod/edge-vpn.yaml.gotmpl
+replicaCount: 2
+config:
+  baseDomain: "edge-vpn.yourdomain.com"
+  brokerEndpoint: "wss://edge-vpn-broker.yourdomain.com/mqtt"
+  serverBrokerEndpoint: "ws://edge-vpn-broker:8083/mqtt"
+  emqxRestEndpoint: "http://edge-vpn-broker:18083"
+  mqUsername: "netmaker"
+  defaultDomain: "nm.internal"
+  db:
+    host: "edge-vpn-db-rw"
+    port: "5432"
+    name: "netmaker"
+    user: "netmaker_user"
+    sslmode: "disable"
+secrets:
+  masterKey: {{ requiredEnv "NETMAKER_MASTER_KEY" | quote }}
+  dbPassword: {{ requiredEnv "EDGE_VPN_DB_PASSWORD" | quote }}
+  mqPassword: {{ requiredEnv "EMQX_MQ_PASSWORD" | quote }}

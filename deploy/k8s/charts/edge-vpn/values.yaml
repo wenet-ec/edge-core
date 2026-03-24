@@ -1,0 +1,98 @@
+# deploy/k8s/charts/edge-vpn/values.yaml
+nameOverride: ""
+fullnameOverride: "edge-vpn"
+
+replicaCount: 2
+
+image:
+  repository: gravitl/netmaker
+  tag: "v1.5.0"
+  pullPolicy: IfNotPresent
+
+coredns:
+  image: coredns/coredns
+  tag: "latest"
+  # Must match Netmaker DEFAULT_DOMAIN and the NETMAKER_DEFAULT_DOMAIN on edge-admin
+  zone: "nm.internal"
+
+config:
+  # Public hostname for Netmaker API (SERVER_NAME, SERVER_HTTP_HOST)
+  # e.g. edge-vpn.yourdomain.com
+  baseDomain: "edge-vpn.yourdomain.com"
+  # SERVER_HTTP_HOST — used by Netmaker to generate enrollment token server field.
+  # netclient uses this to reach the Netmaker API during enrollment.
+  # In prod: same as baseDomain (public hostname).
+  # In local k8s testing: set to internal service name "edge-vpn:8081" so admin pods
+  # can reach Netmaker without an external DNS record.
+  # Defaults to baseDomain if unset.
+  serverHttpHost: ""
+  # SERVER_API_CONN_STRING — used for other API references.
+  # Defaults to baseDomain if unset.
+  serverApiConnString: ""
+  # Public WebSocket endpoint agents use when enrolling — baked into enrollment keys
+  # e.g. wss://edge-vpn-broker.yourdomain.com/mqtt
+  brokerEndpoint: "wss://edge-vpn-broker.yourdomain.com/mqtt"
+  # Internal endpoint Netmaker server uses to connect to EMQX (ClusterDNS)
+  serverBrokerEndpoint: "ws://edge-vpn-broker:8083/mqtt"
+  # Internal EMQX REST API (ClusterDNS)
+  emqxRestEndpoint: "http://edge-vpn-broker:18083"
+  # EMQX credentials Netmaker uses to authenticate against EMQX REST API + MQTT
+  mqUsername: "netmaker"
+  # VPN DNS domain — must match NETMAKER_DEFAULT_DOMAIN on edge-admin
+  defaultDomain: "nm.internal"
+  db:
+    host: "postgres-rw"
+    port: "5432"
+    name: "netmaker"
+    user: "postgres"
+    sslmode: "disable"
+
+secrets:
+  # Set existingSecret to the name of a pre-created Secret to skip chart-managed secret creation.
+  # The Secret must contain: MASTER_KEY, SQL_PASS, MQ_PASSWORD
+  existingSecret: ""
+  masterKey: "changeme"
+  dbPassword: "changeme"
+  mqPassword: "changeme"
+
+persistence:
+  storageClassName: "local-path"
+  size: 128Mi
+
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+  # Broker hostname for the EMQX WebSocket ingress — matches the host in brokerEndpoint
+  # e.g. edge-vpn-broker.yourdomain.com
+  brokerDomain: "edge-vpn-broker.yourdomain.com"
+  tls: []
+
+# NodePort exposure — for local kind/k3s testing only, not for production.
+# Exposes Netmaker API, EMQX WebSocket, and EMQX Dashboard on fixed node ports
+# so they are reachable via kind's extraPortMappings from the host.
+nodePort:
+  enabled: false
+  netmakerApi: 30081
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+corednsResources:
+  requests:
+    cpu: "50m"
+    memory: "64Mi"
+  limits:
+    cpu: "100m"
+    memory: "128Mi"
+
+# kube-dns ClusterIP — used as first nameserver so internal service names resolve.
+# Get it with: kubectl get svc kube-dns -n kube-system -o jsonpath='{.spec.clusterIP}'
+# Standard default is 10.96.0.10 but verify for your cluster.
+dns:
+  kubeDnsIp: "10.96.0.10"

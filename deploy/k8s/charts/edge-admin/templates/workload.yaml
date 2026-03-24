@@ -1,0 +1,136 @@
+{{- /* deploy/k8s/charts/edge-admin/templates/workload.yaml */ -}}
+{{- $isStatefulSet := eq .Values.workload.kind "StatefulSet" }}
+apiVersion: apps/v1
+kind: {{ .Values.workload.kind }}
+metadata:
+  name: {{ include "edge-admin.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "edge-admin.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  {{- if $isStatefulSet }}
+  serviceName: {{ include "edge-admin.fullname" . }}-headless
+  # Parallel so all pods start simultaneously — admin instances are peers, not leader/follower
+  podManagementPolicy: Parallel
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "edge-admin.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "edge-admin.selectorLabels" . | nindent 8 }}
+        edge-core: {{ .Values.coreLabel | quote }}
+    spec:
+      # Admin needs to resolve .nm.internal VPN hostnames to reach agents.
+      # Point DNS at the CoreDNS sidecar inside the edge-vpn StatefulSet.
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+          - {{ required "dns.nameserverIp is required — set it to the ClusterIP of edge-vpn-dns (kubectl get svc edge-vpn-dns -n edge-core -o jsonpath='{.spec.clusterIP}')" .Values.dns.nameserverIp | quote }}
+          - {{ .Values.dns.kubeDnsIp | quote }}
+        searches:
+          - {{ .Release.Namespace }}.svc.cluster.local
+          - svc.cluster.local
+          - cluster.local
+
+      {{- if .Values.sysctls.enabled }}
+      securityContext:
+        sysctls:
+          - name: net.ipv4.ip_forward
+            value: "1"
+          - name: net.ipv4.conf.all.src_valid_mark
+            value: "1"
+          - name: net.ipv6.conf.all.forwarding
+            value: "1"
+      {{- end }}
+
+      volumes:
+        - name: tun
+          hostPath:
+            path: /dev/net/tun
+
+      containers:
+        - name: edge-admin
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+                - SYS_MODULE
+          {{- if $isStatefulSet }}
+          env:
+            - name: POD_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.annotations['apps.kubernetes.io/pod-index']
+          {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "edge-admin.fullname" . }}-config
+            - secretRef:
+                name: {{ include "edge-admin.secretName" . }}
+          volumeMounts:
+            - name: tun
+              mountPath: /dev/net/tun
+            {{- if $isStatefulSet }}
+            - name: netclient-state
+              mountPath: /etc/netclient
+            {{- end }}
+          ports:
+            - name: api
+              containerPort: 44000
+              protocol: TCP
+            - name: http-proxy
+              containerPort: 43128
+              protocol: TCP
+            - name: socks5-proxy
+              containerPort: 41080
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+
+          # Allow up to 5 minutes for VPN enrollment before liveness kicks in
+          startupProbe:
+            httpGet:
+              path: /livez
+              port: api
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+
+          # BEAM responsive — no external checks
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: api
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          # Full health: DB + Bootstrap + Metadata + Netmaker + netclient + proxies
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: api
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+  {{- if $isStatefulSet }}
+  volumeClaimTemplates:
+    - metadata:
+        name: netclient-state
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: {{ .Values.statefulset.persistence.storageClassName }}
+        resources:
+          requests:
+            storage: {{ .Values.statefulset.persistence.size }}
+  {{- end }}

@@ -1,0 +1,8 @@
+# deploy/k8s/values/prod/edge-admin-db.yaml.gotmpl
+instances: 3
+storage:
+  size: 10Gi
+  storageClass: "local-path"
+database: "edge_admin_production"
+owner: "edge_admin_user"
+password: {{ requiredEnv "EDGE_ADMIN_DB_PASSWORD" | quote }}

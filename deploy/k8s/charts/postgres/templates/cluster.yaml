@@ -1,0 +1,31 @@
+{{- /* deploy/k8s/charts/postgres/templates/cluster.yaml */ -}}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  instances: {{ .Values.instances }}
+  imageName: {{ .Values.image | quote }}
+
+  storage:
+    size: {{ .Values.storage.size }}
+    storageClass: {{ .Values.storage.storageClass }}
+
+  bootstrap:
+    initdb:
+      database: {{ .Values.database | quote }}
+      owner: {{ .Values.owner | quote }}
+      secret:
+        name: {{ .Release.Name }}-credentials
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Release.Name }}-credentials
+  namespace: {{ .Release.Namespace }}
+type: kubernetes.io/basic-auth
+stringData:
+  username: {{ .Values.owner | quote }}
+  password: {{ .Values.password | quote }}

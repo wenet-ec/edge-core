@@ -1,0 +1,67 @@
+{{- /* deploy/k8s/charts/edge-vpn/templates/ingress.yaml */ -}}
+{{- if .Values.ingress.enabled }}
+{{/* API ingress — netclient connects here to enroll and fetch config */}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "netmaker.fullname" . }}-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "netmaker.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- toYaml .Values.ingress.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.config.baseDomain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "netmaker.fullname" . }}
+                port:
+                  name: api
+
+---
+{{/* Broker ingress — agents connect via WebSocket (wss://broker.<domain>/mqtt).
+     Requires an ingress controller that supports WebSocket upgrades (nginx does by default).
+     The /mqtt path prefix is what EMQX WebSocket listener expects. */}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "netmaker.fullname" . }}-broker
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "netmaker.labels" . | nindent 4 }}
+  annotations:
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- toYaml .Values.ingress.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.brokerDomain }}
+      http:
+        paths:
+          - path: /mqtt
+            pathType: Prefix
+            backend:
+              service:
+                name: edge-vpn-broker
+                port:
+                  number: 8083
+{{- end }}

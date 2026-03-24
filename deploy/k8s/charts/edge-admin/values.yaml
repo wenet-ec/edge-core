@@ -1,0 +1,123 @@
+# deploy/k8s/charts/edge-admin/values.yaml
+nameOverride: ""
+fullnameOverride: ""
+
+# Shared label applied to all admin pods in this core.
+# The edge-admin-proxy chart selects on this to route across all admin clusters.
+# Must be identical for every edge-admin release belonging to the same core.
+coreLabel: "edge-core"
+
+# "Deployment" (default, k8s with proper storage) or "StatefulSet" (weak VPS, local-path storage)
+workload:
+  kind: Deployment
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/wenet-ec/edge_admin
+  tag: "v0.2.0"
+  pullPolicy: IfNotPresent
+
+config:
+  # Public hostname for the admin API — baked into enrollment keys (ADMIN_URLS)
+  # e.g. edge-admin.yourdomain.com
+  phxHost: "edge-admin.yourdomain.com"
+  adminUrls: "edge-admin.yourdomain.com"
+
+  # Database (CNPG -rw service = always primary)
+  dbHost: "edge-admin-db-rw"
+  dbPort: "5432"
+  dbName: "edge_admin_production"
+  dbUser: "edge_admin_user"
+  dbPoolSize: "15"
+  dbSsl: "false"
+
+  # Netmaker API (ClusterDNS — matches edge-vpn service name)
+  netmakerApiUrl: "http://edge-vpn:8081"
+  netmakerApiScheme: "https"
+  netmakerDefaultDomain: "nm.internal"
+  netmakerSuperadminUsername: "admin"
+
+  # Admin cluster Erlang identity
+  adminClusterName: "a"
+  adminClusterSubnet: "100.63.0.0/24"
+  adminMaxCapacity: "200"
+
+  # WireGuard port base — used only when workload.kind=StatefulSet
+  # Pod 0 → base, Pod 1 → base+1, etc.
+  wireguardPortBase: "51820"
+
+  # Erlang distribution
+  vpnClusterPort: "49125"
+  adminDiscoveryPort: "44000"
+
+  # Proxy ports
+  httpProxyPort: "43128"
+  socks5ProxyPort: "41080"
+
+  # Default cluster pre-created on first boot
+  defaultClusterName: "default"
+  publicEnrollmentKeyEnabled: "true"
+
+  # Metrics — self-referential scrape URL for this admin instance
+  # In k8s: ClusterIP service name + port, e.g. "edge-admin-a:44000"
+  # Must be set per-release in helmfile.yaml (release-specific value)
+  metricsBaseUrl: ""
+
+  # Misc
+  corsAllowedOrigins: "*"
+  logLevel: "info"
+
+# ClusterIP of the edge-vpn-dns Service.
+# Required: dnsConfig.nameservers only accepts IPs, not service names.
+# Get it after deploying edge-vpn: kubectl get svc edge-vpn-dns -n edge-core -o jsonpath='{.spec.clusterIP}'
+# In prod, pin this via: kubectl patch svc edge-vpn-dns -n edge-core -p '{"spec":{"clusterIP":"<ip>"}}'
+dns:
+  # ClusterIP of the edge-vpn-dns Service (resolves .nm.internal VPN hostnames)
+  # Get it: kubectl get svc edge-vpn-dns -n edge-core -o jsonpath='{.spec.clusterIP}'
+  nameserverIp: ""
+  # ClusterIP of kube-dns (resolves k8s internal service names like edge-admin-db-rw)
+  # Standard default is 10.96.0.10 — verify: kubectl get svc kube-dns -n kube-system -o jsonpath='{.spec.clusterIP}'
+  kubeDnsIp: "10.96.0.10"
+
+# WireGuard requires these sysctls. Set to false in kind/local testing where
+# the cluster node doesn't allow unsafe sysctls.
+sysctls:
+  enabled: true
+
+secrets:
+  # Set existingSecret to the name of a pre-created Secret to skip chart-managed secret creation.
+  # The Secret must contain: SECRET_KEY_BASE, MASTER_KEY, DB_PASSWORD,
+  #   NETMAKER_MASTER_KEY, NETMAKER_SUPERADMIN_PASSWORD, VPN_CLUSTER_COOKIE
+  existingSecret: ""
+  secretKeyBase: "changeme"
+  masterKey: "changeme"
+  dbPassword: "changeme"
+  netmakerMasterKey: "changeme"
+  netmakerSuperadminPassword: "changeme"
+  vpnClusterCookie: "changeme"
+
+migration:
+  # Set to false when the image doesn't exist yet (e.g. local kind testing without a built image)
+  enabled: true
+
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+  tls: []
+
+resources:
+  requests:
+    cpu: "250m"
+    memory: "512Mi"
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+
+# StatefulSet-only: persistent volume for /etc/netclient state
+# Ignored when workload.kind=Deployment
+statefulset:
+  persistence:
+    storageClassName: "local-path"
+    size: 128Mi

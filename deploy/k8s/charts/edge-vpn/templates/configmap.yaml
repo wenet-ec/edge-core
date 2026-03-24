@@ -1,0 +1,93 @@
+{{- /* deploy/k8s/charts/edge-vpn/templates/configmap.yaml */ -}}
+{{/* ConfigMap 1 — Netmaker env vars */}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "netmaker.fullname" . }}-env
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "netmaker.labels" . | nindent 4 }}
+data:
+  SERVER_NAME: {{ .Values.config.baseDomain | quote }}
+  SERVER_HTTP_HOST: {{ .Values.config.serverHttpHost | default .Values.config.baseDomain | quote }}
+  SERVER_API_CONN_STRING: {{ .Values.config.serverApiConnString | default .Values.config.baseDomain | quote }}
+  BROKER_ENDPOINT: {{ .Values.config.brokerEndpoint | quote }}
+  SERVER_BROKER_ENDPOINT: {{ .Values.config.serverBrokerEndpoint | quote }}
+  BROKER_TYPE: "emqx"
+  EMQX_REST_ENDPOINT: {{ .Values.config.emqxRestEndpoint | quote }}
+  MQ_USERNAME: {{ .Values.config.mqUsername | quote }}
+  COREDNS_ADDR: "127.0.0.1"
+  DNS_MODE: "on"
+  MANAGE_DNS: "true"
+  API_PORT: "8081"
+  MESSAGEQUEUE_BACKEND: "on"
+  DATABASE: "postgres"
+  SQL_HOST: {{ .Values.config.db.host | quote }}
+  SQL_PORT: {{ .Values.config.db.port | quote }}
+  SQL_DB: {{ .Values.config.db.name | quote }}
+  SQL_USER: {{ .Values.config.db.user | quote }}
+  SQL_SSL_MODE: {{ .Values.config.db.sslmode | quote }}
+  DEFAULT_DOMAIN: {{ .Values.config.defaultDomain | quote }}
+  CACHING_ENABLED: "false"
+  IS_HA: "true"
+  K8s: "true"
+  VERBOSITY: "1"
+  CORS_ALLOWED_ORIGIN: "*"
+  DISPLAY_KEYS: "on"
+  DISABLE_REMOTE_IP_CHECK: "on"
+  TELEMETRY: "off"
+  STUN_LIST: "stun1.l.google.com:19302,stun2.l.google.com:19302,stun.stunprotocol.org:3478,stun.nextcloud.com:443,stun.netmaker.io:3478"
+
+---
+{{/* ConfigMap 2 — CoreDNS Corefile */}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "netmaker.fullname" . }}-corefile
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "netmaker.labels" . | nindent 4 }}
+data:
+  Corefile: |
+    {{ .Values.coredns.zone }}:53 {
+        errors
+        health
+        ready
+        hosts /dnsconfig/netmaker.hosts {
+            fallthrough
+        }
+        forward . 8.8.8.8
+        cache 30
+        reload 15s
+        loop
+        loadbalance
+    }
+
+---
+{{/* ConfigMap 3 — EMQX cluster.hocon (auth/ACL config) */}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "netmaker.fullname" . }}-emqx-hocon
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "netmaker.labels" . | nindent 4 }}
+data:
+  cluster.hocon: |
+    authentication = [
+      {
+        backend = "built_in_database"
+        mechanism = "password_based"
+        password_hash_algorithm {
+          name = "sha256"
+          salt_position = "suffix"
+        }
+        user_id_type = "username"
+      }
+    ]
+
+    authorization {
+      deny_action = ignore
+      no_match = allow
+      sources = []
+    }

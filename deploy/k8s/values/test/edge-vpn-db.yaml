@@ -1,0 +1,8 @@
+# deploy/k8s/values/test/edge-vpn-db.yaml
+instances: 1
+storage:
+  size: 1Gi
+  storageClass: "standard"
+database: "netmaker"
+owner: "netmaker_user"
+password: "netmaker_password"

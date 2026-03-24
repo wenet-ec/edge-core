@@ -1,0 +1,45 @@
+# deploy/k8s/kind-config.yaml
+# Local kind cluster config for testing the k8s setup.
+# Mirrors the same philosophy as deploy/production/cloud.test.yml —
+# real production images, localtest.me domains, everything local.
+#
+# Usage:
+#   kind create cluster --name edge-core --config deploy/k8s/kind-config.yaml
+#   helmfile apply -f deploy/k8s/helmfile.test.yaml
+#   kind delete cluster --name edge-core
+#
+# Port mappings expose NodePort services to localhost so you can hit them
+# without kubectl port-forward for every service.
+apiVersion: kind.x-k8s.io/v1alpha4
+kind: Cluster
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # Edge Admin API (cluster a)
+      - containerPort: 30000
+        hostPort: 34000
+        protocol: TCP
+      # Edge Admin API (cluster b)
+      - containerPort: 30001
+        hostPort: 34001
+        protocol: TCP
+      # Netmaker API
+      - containerPort: 30081
+        hostPort: 48081
+        protocol: TCP
+      # EMQX WebSocket
+      - containerPort: 30083
+        hostPort: 48083
+        protocol: TCP
+      # EMQX Dashboard
+      - containerPort: 30085
+        hostPort: 48085
+        protocol: TCP
+      # Edge Admin HTTP proxy (core-level)
+      - containerPort: 30128
+        hostPort: 53128
+        protocol: TCP
+      # Edge Admin SOCKS5 proxy (core-level)
+      - containerPort: 30080
+        hostPort: 51080
+        protocol: TCP

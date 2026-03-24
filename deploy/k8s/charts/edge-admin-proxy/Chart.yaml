@@ -1,0 +1,6 @@
+# deploy/k8s/charts/edge-admin-proxy/Chart.yaml
+apiVersion: v2
+name: edge-admin-proxy
+description: Core-level TCP proxy Service — routes Ranch HTTP CONNECT and SOCKS5 ports across all admin clusters in the core
+type: application
+version: 0.1.0

@@ -238,7 +238,7 @@ services:
       - net.ipv6.conf.all.forwarding=1
 
   # ---------------------------------------------------------------------------
-  # PostgreSQL — Netmaker VPN database
+  # PostgreSQL — Edge VPN database
   # ---------------------------------------------------------------------------
   edge_vpn_db:
     image: postgres:18
@@ -261,7 +261,7 @@ services:
       start_period: 10s
 
   # ---------------------------------------------------------------------------
-  # EMQX — production-grade MQTT broker for Netmaker
+  # EMQX — production-grade MQTT broker for Edge VPN
   # ---------------------------------------------------------------------------
   edge_vpn_broker:
     image: emqx/emqx:5.8.9
@@ -278,7 +278,7 @@ services:
     env_file:
       - .env
     environment:
-      EMQX_NAME: emqx
+      EMQX_NAME: edge-vpn-broker
       EMQX_HOST: edge-vpn-broker-1.edge
       EMQX_DASHBOARD__DEFAULT_USERNAME: ${EMQX_DASHBOARD_USERNAME}
       EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD}
@@ -286,7 +286,7 @@ services:
       EMQX_NODE__DB_BACKEND: rlog
       EMQX_NODE__ROLE: core
       EMQX_CLUSTER__DISCOVERY_STRATEGY: static
-      EMQX_CLUSTER__STATIC__SEEDS: "[emqx@edge-vpn-broker-1.edge]"
+      EMQX_CLUSTER__STATIC__SEEDS: "[edge-vpn-broker@edge-vpn-broker-1.edge]"
       EMQX_CLUSTER__AUTOHEAL: "true"
       EMQX_RPC__PORT_DISCOVERY: manual
       EMQX_TELEMETRY__ENABLE: "false"
@@ -301,7 +301,7 @@ services:
       start_period: 30s
 
   # ---------------------------------------------------------------------------
-  # Netmaker — WireGuard VPN mesh server
+  # Edge VPN — WireGuard VPN mesh server
   # ---------------------------------------------------------------------------
   edge_vpn:
     image: gravitl/netmaker:v1.5.0
@@ -327,7 +327,7 @@ services:
       edge_vpn_broker:
         condition: service_healthy
     ports:
-      - "48081:8081"      # Netmaker API
+      - "48081:8081"      # Edge VPN API
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/api/server/status"]
       interval: 10s
@@ -336,7 +336,7 @@ services:
       start_period: 10s
 
   # ---------------------------------------------------------------------------
-  # Netmaker UI — web dashboard
+  # Edge VPN UI — web dashboard
   # ---------------------------------------------------------------------------
   edge_vpn_ui:
     image: gravitl/netmaker-ui:v1.5.0
@@ -352,7 +352,7 @@ services:
       - BACKEND_URL=${NETMAKER_API_URL}
 
   # ---------------------------------------------------------------------------
-  # CoreDNS — internal DNS for VPN mesh hostnames
+  # Edge VPN DNS — internal DNS for VPN mesh hostnames
   # ---------------------------------------------------------------------------
   edge_vpn_dns:
     image: coredns/coredns:latest
@@ -368,7 +368,7 @@ services:
     command: -conf /root/config/dnsconfig/Corefile
 
   # ---------------------------------------------------------------------------
-  # Caddy — HTTP reverse proxy for Netmaker API and admin instances
+  # Caddy — HTTP reverse proxy for Edge VPN API and admin instances
   # ---------------------------------------------------------------------------
   edge_http_proxy:
     image: caddy:alpine

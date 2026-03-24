@@ -32,7 +32,7 @@ config:
   dbPoolSize: "15"
   dbSsl: "false"
 
-  # Netmaker API (ClusterDNS — matches edge-vpn service name)
+  # Edge VPN API (ClusterDNS — matches edge-vpn service name)
   netmakerApiUrl: "http://edge-vpn:8081"
   netmakerApiScheme: "https"
   netmakerDefaultDomain: "nm.internal"

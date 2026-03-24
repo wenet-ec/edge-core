@@ -34,7 +34,7 @@ releases:
       - values/test/edge-admin-db.yaml
 
   # ============================================================================
-  # 2b. PostgreSQL — edge-vpn / Netmaker (single instance for local testing)
+  # 2b. PostgreSQL — edge-vpn (single instance for local testing)
   # ============================================================================
   - name: edge-vpn-db
     chart: ./charts/postgres
@@ -61,8 +61,8 @@ releases:
           tag: "5.8.9"
         emqxConfig:
           EMQX_CLUSTER__DISCOVERY_STRATEGY: "k8s"
-          EMQX_DASHBOARD__DEFAULT_USERNAME: "netmaker"
-          EMQX_DASHBOARD__DEFAULT_PASSWORD: "netmaker123"
+          EMQX_DASHBOARD__DEFAULT_USERNAME: "admin"
+          EMQX_DASHBOARD__DEFAULT_PASSWORD: "edge_vpn123"
           EMQX_NODE__COOKIE: "test-cookie"
           EMQX_TELEMETRY__ENABLE: "false"
         service:
@@ -76,7 +76,7 @@ releases:
           storageClassName: "standard"
 
   # ============================================================================
-  # 4. Edge VPN (Netmaker + CoreDNS sidecar) — single replica
+  # 4. Edge VPN (VPN server + Edge VPN DNS sidecar) — single replica
   # ============================================================================
   - name: edge-vpn
     chart: ./charts/edge-vpn

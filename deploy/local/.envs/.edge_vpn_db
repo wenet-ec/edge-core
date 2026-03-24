@@ -1,4 +1,4 @@
 # deploy/local/.envs/.edge_vpn_db
-POSTGRES_DB=netmaker
-POSTGRES_USER=netmaker
-POSTGRES_PASSWORD=netmaker123
+POSTGRES_DB=edge_vpn
+POSTGRES_USER=edge_vpn
+POSTGRES_PASSWORD=edge_vpn123

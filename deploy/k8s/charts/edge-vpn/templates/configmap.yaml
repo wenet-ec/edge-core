@@ -1,12 +1,12 @@
 {{- /* deploy/k8s/charts/edge-vpn/templates/configmap.yaml */ -}}
-{{/* ConfigMap 1 — Netmaker env vars */}}
+{{/* ConfigMap 1 — Edge VPN env vars */}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "netmaker.fullname" . }}-env
+  name: {{ include "edge-vpn.fullname" . }}-env
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "netmaker.labels" . | nindent 4 }}
+    {{- include "edge-vpn.labels" . | nindent 4 }}
 data:
   SERVER_NAME: {{ .Values.config.baseDomain | quote }}
   SERVER_HTTP_HOST: {{ .Values.config.serverHttpHost | default .Values.config.baseDomain | quote }}
@@ -36,24 +36,24 @@ data:
   DISPLAY_KEYS: "on"
   DISABLE_REMOTE_IP_CHECK: "on"
   TELEMETRY: "off"
-  STUN_LIST: "stun1.l.google.com:19302,stun2.l.google.com:19302,stun.stunprotocol.org:3478,stun.nextcloud.com:443,stun.netmaker.io:3478"
+  STUN_LIST: "stun1.l.google.com:19302,stun2.l.google.com:19302,stun.stunprotocol.org:3478,stun.nextcloud.com:443,stun.edge-vpn.io:3478"
 
 ---
-{{/* ConfigMap 2 — CoreDNS Corefile */}}
+{{/* ConfigMap 2 — Edge VPN DNS Corefile */}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "netmaker.fullname" . }}-corefile
+  name: {{ include "edge-vpn.fullname" . }}-corefile
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "netmaker.labels" . | nindent 4 }}
+    {{- include "edge-vpn.labels" . | nindent 4 }}
 data:
   Corefile: |
     {{ .Values.coredns.zone }}:53 {
         errors
         health
         ready
-        hosts /dnsconfig/netmaker.hosts {
+        hosts /dnsconfig/edge-vpn.hosts {
             fallthrough
         }
         forward . 8.8.8.8
@@ -64,14 +64,14 @@ data:
     }
 
 ---
-{{/* ConfigMap 3 — EMQX cluster.hocon (auth/ACL config) */}}
+{{/* ConfigMap 3 — Edge VPN Broker cluster.hocon (auth/ACL config) */}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "netmaker.fullname" . }}-emqx-hocon
+  name: {{ include "edge-vpn.fullname" . }}-emqx-hocon
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "netmaker.labels" . | nindent 4 }}
+    {{- include "edge-vpn.labels" . | nindent 4 }}
 data:
   cluster.hocon: |
     authentication = [

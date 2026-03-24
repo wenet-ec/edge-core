@@ -1,14 +1,14 @@
 {{- /* deploy/k8s/charts/edge-vpn/templates/wait-for-db.yaml */ -}}
-{{/* Pre-install/upgrade hook: wait for PostgreSQL to be ready before Netmaker starts.
+{{/* Pre-install/upgrade hook: wait for PostgreSQL to be ready before Edge VPN starts.
      Runs before the migration hook (weight -10 vs migration's -5).
-     If DB never comes up, upgrade is aborted — Netmaker never starts with no DB. */}}
+     If DB never comes up, upgrade is aborted — Edge VPN never starts with no DB. */}}
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "netmaker.fullname" . }}-wait-for-db
+  name: {{ include "edge-vpn.fullname" . }}-wait-for-db
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "netmaker.labels" . | nindent 4 }}
+    {{- include "edge-vpn.labels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-weight": "-10"

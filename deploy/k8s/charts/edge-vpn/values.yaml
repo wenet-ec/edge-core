@@ -12,18 +12,18 @@ image:
 coredns:
   image: coredns/coredns
   tag: "latest"
-  # Must match Netmaker DEFAULT_DOMAIN and the NETMAKER_DEFAULT_DOMAIN on edge-admin
+  # Must match DEFAULT_DOMAIN on edge-vpn and NETMAKER_DEFAULT_DOMAIN on edge-admin
   zone: "nm.internal"
 
 config:
-  # Public hostname for Netmaker API (SERVER_NAME, SERVER_HTTP_HOST)
+  # Public hostname for Edge VPN API (SERVER_NAME, SERVER_HTTP_HOST)
   # e.g. edge-vpn.yourdomain.com
   baseDomain: "edge-vpn.yourdomain.com"
-  # SERVER_HTTP_HOST — used by Netmaker to generate enrollment token server field.
-  # netclient uses this to reach the Netmaker API during enrollment.
+  # SERVER_HTTP_HOST — used by the Edge VPN server to generate enrollment token server field.
+  # netclient uses this to reach the Edge VPN API during enrollment.
   # In prod: same as baseDomain (public hostname).
   # In local k8s testing: set to internal service name "edge-vpn:8081" so admin pods
-  # can reach Netmaker without an external DNS record.
+  # can reach the Edge VPN server without an external DNS record.
   # Defaults to baseDomain if unset.
   serverHttpHost: ""
   # SERVER_API_CONN_STRING — used for other API references.
@@ -32,18 +32,18 @@ config:
   # Public WebSocket endpoint agents use when enrolling — baked into enrollment keys
   # e.g. wss://edge-vpn-broker.yourdomain.com/mqtt
   brokerEndpoint: "wss://edge-vpn-broker.yourdomain.com/mqtt"
-  # Internal endpoint Netmaker server uses to connect to EMQX (ClusterDNS)
+  # Internal endpoint Edge VPN server uses to connect to EMQX (ClusterDNS)
   serverBrokerEndpoint: "ws://edge-vpn-broker:8083/mqtt"
   # Internal EMQX REST API (ClusterDNS)
   emqxRestEndpoint: "http://edge-vpn-broker:18083"
-  # EMQX credentials Netmaker uses to authenticate against EMQX REST API + MQTT
-  mqUsername: "netmaker"
+  # EMQX credentials the Edge VPN server uses to authenticate against EMQX REST API + MQTT
+  mqUsername: "admin"
   # VPN DNS domain — must match NETMAKER_DEFAULT_DOMAIN on edge-admin
   defaultDomain: "nm.internal"
   db:
     host: "postgres-rw"
     port: "5432"
-    name: "netmaker"
+    name: "edge_vpn"
     user: "postgres"
     sslmode: "disable"
 
@@ -69,11 +69,11 @@ ingress:
   tls: []
 
 # NodePort exposure — for local kind/k3s testing only, not for production.
-# Exposes Netmaker API, EMQX WebSocket, and EMQX Dashboard on fixed node ports
+# Exposes Edge VPN API, EMQX WebSocket, and EMQX Dashboard on fixed node ports
 # so they are reachable via kind's extraPortMappings from the host.
 nodePort:
   enabled: false
-  netmakerApi: 30081
+  vpnApi: 30081
 
 resources:
   requests:

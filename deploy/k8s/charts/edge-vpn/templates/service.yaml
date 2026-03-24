@@ -1,16 +1,16 @@
 {{- /* deploy/k8s/charts/edge-vpn/templates/service.yaml */ -}}
-{{/* ClusterIP — Netmaker REST API, reachable by edge-admin at http://netmaker:8081 */}}
+{{/* ClusterIP — Edge VPN REST API, reachable by edge-admin at http://edge-vpn:8081 */}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "netmaker.fullname" . }}
+  name: {{ include "edge-vpn.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "netmaker.labels" . | nindent 4 }}
+    {{- include "edge-vpn.labels" . | nindent 4 }}
 spec:
   type: ClusterIP
   selector:
-    {{- include "netmaker.selectorLabels" . | nindent 4 }}
+    {{- include "edge-vpn.selectorLabels" . | nindent 4 }}
   ports:
     - name: api
       port: 8081
@@ -18,19 +18,19 @@ spec:
       protocol: TCP
 
 ---
-{{/* Headless — stable per-pod DNS for StatefulSet (netmaker-0, netmaker-1) */}}
+{{/* Headless — stable per-pod DNS for StatefulSet (edge-vpn-0, edge-vpn-1) */}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "netmaker.fullname" . }}-headless
+  name: {{ include "edge-vpn.fullname" . }}-headless
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "netmaker.labels" . | nindent 4 }}
+    {{- include "edge-vpn.labels" . | nindent 4 }}
 spec:
   type: ClusterIP
   clusterIP: None
   selector:
-    {{- include "netmaker.selectorLabels" . | nindent 4 }}
+    {{- include "edge-vpn.selectorLabels" . | nindent 4 }}
   ports:
     - name: api
       port: 8081
@@ -40,42 +40,42 @@ spec:
 ---
 {{- if .Values.nodePort.enabled }}
 ---
-{{/* NodePort — local testing only. Exposes Netmaker API, EMQX WebSocket, EMQX Dashboard
+{{/* NodePort — local testing only. Exposes Edge VPN API, EMQX WebSocket, EMQX Dashboard
      to the host via kind extraPortMappings. Do not use in production. */}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "netmaker.fullname" . }}-nodeport
+  name: {{ include "edge-vpn.fullname" . }}-nodeport
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "netmaker.labels" . | nindent 4 }}
+    {{- include "edge-vpn.labels" . | nindent 4 }}
 spec:
   type: NodePort
   selector:
-    {{- include "netmaker.selectorLabels" . | nindent 4 }}
+    {{- include "edge-vpn.selectorLabels" . | nindent 4 }}
   ports:
-    - name: netmaker-api
+    - name: edge-vpn-api
       port: 8081
       targetPort: api
-      nodePort: {{ .Values.nodePort.netmakerApi }}
+      nodePort: {{ .Values.nodePort.vpnApi }}
       protocol: TCP
 {{- end }}
 
 ---
-{{/* DNS service — exposes CoreDNS sidecar to the cluster for .nm.internal resolution.
+{{/* DNS service — exposes Edge VPN DNS sidecar to the cluster for .nm.internal resolution.
      edge-admin pods must set dnsConfig.nameservers to this service's ClusterIP
      (or use the service name) to resolve VPN node hostnames. */}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "netmaker.fullname" . }}-dns
+  name: {{ include "edge-vpn.fullname" . }}-dns
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "netmaker.labels" . | nindent 4 }}
+    {{- include "edge-vpn.labels" . | nindent 4 }}
 spec:
   type: ClusterIP
   selector:
-    {{- include "netmaker.selectorLabels" . | nindent 4 }}
+    {{- include "edge-vpn.selectorLabels" . | nindent 4 }}
   ports:
     - name: dns-udp
       port: 53

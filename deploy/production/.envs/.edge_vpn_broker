@@ -8,12 +8,12 @@
 # so the Docker service name (edge_vpn_broker) remains intact for other services.
 # Single-node: EMQX_HOST is just the alias for this one node.
 # Multi-node: each node gets its own alias (edge-vpn-broker-1.edge, edge-vpn-broker-2.edge, ...).
-EMQX_NAME=emqx
+EMQX_NAME=edge-vpn-broker
 EMQX_HOST=edge-vpn-broker-1.edge
 
 # Dashboard credentials
 EMQX_DASHBOARD__DEFAULT_USERNAME=admin
-EMQX_DASHBOARD__DEFAULT_PASSWORD=netmaker123
+EMQX_DASHBOARD__DEFAULT_PASSWORD=edge_vpn123
 
 # Clustering — Mria (EMQX v5 distributed database, built on rlog)
 # EMQX_NODE__COOKIE: shared secret for Erlang distribution — ALL cluster nodes must match.
@@ -28,7 +28,7 @@ EMQX_NODE__COOKIE=production-cookie
 EMQX_NODE__DB_BACKEND=rlog
 EMQX_NODE__ROLE=core
 EMQX_CLUSTER__DISCOVERY_STRATEGY=static
-EMQX_CLUSTER__STATIC__SEEDS=[emqx@edge-vpn-broker-1.edge]
+EMQX_CLUSTER__STATIC__SEEDS=[edge-vpn-broker@edge-vpn-broker-1.edge]
 EMQX_CLUSTER__AUTOHEAL=true
 EMQX_RPC__PORT_DISCOVERY=manual
 

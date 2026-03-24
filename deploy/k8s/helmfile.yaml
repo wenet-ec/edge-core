@@ -32,7 +32,7 @@ releases:
       - values/prod/edge-admin-db.yaml.gotmpl
 
   # ============================================================================
-  # 2b. PostgreSQL cluster — edge-vpn / Netmaker (1 primary + 1 replica)
+  # 2b. PostgreSQL cluster — edge-vpn (1 primary + 1 replica)
   #     Separate cluster — admin and VPN failures are isolated from each other
   # ============================================================================
   - name: edge-vpn-db
@@ -45,7 +45,7 @@ releases:
       - values/prod/edge-vpn-db.yaml.gotmpl
 
   # ============================================================================
-  # 3. EMQX — MQTT broker for Netmaker VPN mesh
+  # 3. EMQX — MQTT broker for Edge VPN mesh
   #    Apache 2.0 license up to 5.8.9, clustering requires k8s discovery mode
   # ============================================================================
   - name: edge-vpn-broker
@@ -62,11 +62,11 @@ releases:
         # k8s discovery — chart auto-injects all required EMQX_CLUSTER__K8S__* vars
         emqxConfig:
           EMQX_CLUSTER__DISCOVERY_STRATEGY: "k8s"
-          EMQX_DASHBOARD__DEFAULT_USERNAME: "netmaker"
+          EMQX_DASHBOARD__DEFAULT_USERNAME: "admin"
           EMQX_DASHBOARD__DEFAULT_PASSWORD: {{ requiredEnv "EMQX_DASHBOARD_PASSWORD" | quote }}
           EMQX_NODE__COOKIE: {{ requiredEnv "EMQX_NODE_COOKIE" | quote }}
           EMQX_TELEMETRY__ENABLE: "false"
-        # Real ClusterIP so Netmaker can reach ws://edge-vpn-broker:1883
+        # Real ClusterIP so the Edge VPN server can reach ws://edge-vpn-broker:1883
         service:
           type: ClusterIP
           clusterIP: ""
@@ -76,7 +76,7 @@ releases:
           storageClassName: "local-path"
 
   # ============================================================================
-  # 4. Netmaker — WireGuard VPN mesh server + CoreDNS sidecar
+  # 4. Edge VPN — WireGuard VPN mesh server + Edge VPN DNS sidecar
   # ============================================================================
   - name: edge-vpn
     chart: ./charts/edge-vpn

@@ -19,7 +19,7 @@ data:
   DB_POOL_SIZE: {{ .Values.config.dbPoolSize | quote }}
   DB_SSL: {{ .Values.config.dbSsl | quote }}
 
-  # Netmaker
+  # VPN
   NETMAKER_API_URL: {{ .Values.config.netmakerApiUrl | quote }}
   NETMAKER_API_SCHEME: {{ .Values.config.netmakerApiScheme | quote }}
   NETMAKER_DEFAULT_DOMAIN: {{ .Values.config.netmakerDefaultDomain | quote }}

@@ -1,6 +1,6 @@
 # examples/lite/cloud.yml
 #
-# Lite setup — single admin, SQLite-backed Netmaker, Mosquitto broker.
+# Lite setup — single admin, SQLite-backed Edge VPN, Mosquitto broker.
 # Intended for homelab / hobbyist use. No metrics stack included.
 #
 # Usage:
@@ -9,7 +9,7 @@
 # Prerequisites:
 #   1. Copy .env.example to .env and fill in your values
 #   2. Make sure ports 48081, 48083, 48080, 34000 are reachable from the internet
-#      (Netmaker and the admin API need to be publicly accessible)
+#      (the Edge VPN server and the admin API need to be publicly accessible)
 
 networks:
   edge_core:
@@ -83,7 +83,7 @@ services:
       - net.ipv6.conf.all.forwarding=1
 
   # ---------------------------------------------------------------------------
-  # Mosquitto — lightweight MQTT broker for Netmaker
+  # Mosquitto — lightweight MQTT broker for Edge VPN
   # ---------------------------------------------------------------------------
   edge_vpn_broker:
     image: eclipse-mosquitto:latest
@@ -94,7 +94,7 @@ services:
       - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
       - edge_vpn_broker_data:/mosquitto/data
     ports:
-      - "48083:8083"      # WebSocket (used by Netmaker)
+      - "48083:8083"      # WebSocket (used by Edge VPN)
     healthcheck:
       test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
       interval: 10s
@@ -103,7 +103,7 @@ services:
       start_period: 10s
 
   # ---------------------------------------------------------------------------
-  # Netmaker — WireGuard VPN mesh server
+  # Edge VPN — WireGuard VPN mesh server
   # ---------------------------------------------------------------------------
   edge_vpn:
     image: gravitl/netmaker:v1.5.0
@@ -130,7 +130,7 @@ services:
       edge_vpn_broker:
         condition: service_healthy
     ports:
-      - "48081:8081"      # Netmaker API
+      - "48081:8081"      # Edge VPN API
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/api/server/status"]
       interval: 10s
@@ -139,7 +139,7 @@ services:
       start_period: 10s
 
   # ---------------------------------------------------------------------------
-  # Netmaker UI — web dashboard
+  # Edge VPN UI — web dashboard
   # ---------------------------------------------------------------------------
   edge_vpn_ui:
     image: gravitl/netmaker-ui:v1.5.0
@@ -155,7 +155,7 @@ services:
       - BACKEND_URL=${NETMAKER_API_URL}
 
   # ---------------------------------------------------------------------------
-  # CoreDNS — internal DNS for VPN mesh hostnames
+  # Edge VPN DNS — internal DNS for VPN mesh hostnames
   # ---------------------------------------------------------------------------
   edge_vpn_dns:
     image: coredns/coredns:latest
@@ -171,7 +171,7 @@ services:
     command: -conf /root/config/dnsconfig/Corefile
 
   # ---------------------------------------------------------------------------
-  # Caddy — HTTP reverse proxy for Netmaker API
+  # Caddy — HTTP reverse proxy for Edge VPN API
   # ---------------------------------------------------------------------------
   edge_http_proxy:
     image: caddy:alpine

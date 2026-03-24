@@ -24,7 +24,7 @@ spec:
         edge-core: {{ .Values.coreLabel | quote }}
     spec:
       # Admin needs to resolve .nm.internal VPN hostnames to reach agents.
-      # Point DNS at the CoreDNS sidecar inside the edge-vpn StatefulSet.
+      # Point DNS at the Edge VPN DNS sidecar inside the edge-vpn StatefulSet.
       dnsPolicy: None
       dnsConfig:
         nameservers:
@@ -112,7 +112,7 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
 
-          # Full health: DB + Bootstrap + Metadata + Netmaker + netclient + proxies
+          # Full health: DB + Bootstrap + Metadata + VPN + netclient + proxies
           readinessProbe:
             httpGet:
               path: /readyz

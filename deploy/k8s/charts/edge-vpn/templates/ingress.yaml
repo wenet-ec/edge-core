@@ -4,10 +4,10 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "netmaker.fullname" . }}-api
+  name: {{ include "edge-vpn.fullname" . }}-api
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "netmaker.labels" . | nindent 4 }}
+    {{- include "edge-vpn.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -26,7 +26,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ include "netmaker.fullname" . }}
+                name: {{ include "edge-vpn.fullname" . }}
                 port:
                   name: api
 
@@ -37,10 +37,10 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "netmaker.fullname" . }}-broker
+  name: {{ include "edge-vpn.fullname" . }}-broker
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "netmaker.labels" . | nindent 4 }}
+    {{- include "edge-vpn.labels" . | nindent 4 }}
   annotations:
     {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}

@@ -23,7 +23,7 @@ nodes:
       - containerPort: 30001
         hostPort: 34001
         protocol: TCP
-      # Netmaker API
+      # Edge VPN API
       - containerPort: 30081
         hostPort: 48081
         protocol: TCP

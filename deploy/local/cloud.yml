@@ -199,7 +199,7 @@ services:
       - test
     command: mix test
 
-  # Netmaker VPN Stack
+  # Edge VPN Stack
   edge_vpn_db:
     image: postgres:18
     container_name: local_edge_vpn_db
@@ -290,7 +290,7 @@ services:
     command: -conf /root/config/dnsconfig/Corefile
 
   edge_vpn_ui:
-    container_name: edge_vpn_ui
+    container_name: local_edge_vpn_ui
     image: gravitl/netmaker-ui:v1.5.0
     networks:
       - local_edge_core

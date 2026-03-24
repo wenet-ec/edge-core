@@ -2,23 +2,23 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ include "netmaker.fullname" . }}
+  name: {{ include "edge-vpn.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "netmaker.labels" . | nindent 4 }}
+    {{- include "edge-vpn.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
-  serviceName: {{ include "netmaker.fullname" . }}-headless
+  serviceName: {{ include "edge-vpn.fullname" . }}-headless
   podManagementPolicy: Parallel
   selector:
     matchLabels:
-      {{- include "netmaker.selectorLabels" . | nindent 6 }}
+      {{- include "edge-vpn.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "netmaker.selectorLabels" . | nindent 8 }}
+        {{- include "edge-vpn.selectorLabels" . | nindent 8 }}
     spec:
-      # Prevent Netmaker's own CoreDNS sidecar from being used for its own DNS lookups.
+      # Prevent the Edge VPN DNS sidecar from being used for its own DNS lookups.
       # Without this, DNS queries loop back to the sidecar before it's ready, causing
       # startup failures. kube-dns resolves internal service names; 8.8.8.8 handles external.
       dnsPolicy: None
@@ -32,21 +32,21 @@ spec:
           - cluster.local
 
       volumes:
-        # Shared between Netmaker (writes netmaker.hosts) and CoreDNS (reads netmaker.hosts)
+        # Shared between Edge VPN server (writes netmaker.hosts) and Edge VPN DNS (reads netmaker.hosts)
         - name: dnsconfig
           emptyDir: {}
-        # CoreDNS Corefile config
-        - name: coredns-config
+        # Edge VPN DNS Corefile config
+        - name: edge-vpn-dns-config
           configMap:
-            name: {{ include "netmaker.fullname" . }}-corefile
+            name: {{ include "edge-vpn.fullname" . }}-corefile
         # EMQX auth/ACL hocon — mounted into EMQX data dir so it is loaded at startup
         - name: emqx-hocon
           configMap:
-            name: {{ include "netmaker.fullname" . }}-emqx-hocon
+            name: {{ include "edge-vpn.fullname" . }}-emqx-hocon
 
       containers:
-        # --- Netmaker ---
-        - name: netmaker
+        # --- Edge VPN Server ---
+        - name: edge-vpn-server
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
@@ -55,13 +55,13 @@ spec:
               protocol: TCP
           envFrom:
             - configMapRef:
-                name: {{ include "netmaker.fullname" . }}-env
+                name: {{ include "edge-vpn.fullname" . }}-env
             - secretRef:
-                name: {{ include "netmaker.secretName" . }}
+                name: {{ include "edge-vpn.secretName" . }}
           volumeMounts:
             - name: dnsconfig
               mountPath: /root/config/dnsconfig
-            - name: netmaker-data
+            - name: edge-vpn-server-data
               mountPath: /root/data
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
@@ -82,10 +82,10 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
 
-        # --- CoreDNS sidecar ---
-        # Reads /dnsconfig/netmaker.hosts written by Netmaker above.
+        # --- Edge VPN DNS sidecar ---
+        # Reads /dnsconfig/netmaker.hosts written by the Edge VPN server above.
         # Exposes .nm.internal resolution to the cluster via the dns-svc Service.
-        - name: coredns
+        - name: edge-vpn-dns
           image: "{{ .Values.coredns.image }}:{{ .Values.coredns.tag }}"
           imagePullPolicy: {{ if eq .Values.coredns.tag "latest" }}Always{{ else }}IfNotPresent{{ end }}
           args:
@@ -109,7 +109,7 @@ spec:
           volumeMounts:
             - name: dnsconfig
               mountPath: /dnsconfig
-            - name: coredns-config
+            - name: edge-vpn-dns-config
               mountPath: /etc/coredns
           resources:
             {{- toYaml .Values.corednsResources | nindent 12 }}
@@ -132,7 +132,7 @@ spec:
 
   volumeClaimTemplates:
     - metadata:
-        name: netmaker-data
+        name: edge-vpn-data
       spec:
         accessModes:
           - ReadWriteOnce

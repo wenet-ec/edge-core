@@ -48,4 +48,7 @@ config :edge_agent,
   vpn_ready_timeout_seconds: get_env("VPN_READY_TIMEOUT_SECONDS", :integer, 30),
   # Authentication toggles
   agent_metrics_auth_enabled: get_env("AGENT_METRICS_AUTH_ENABLED", :boolean, true),
-  proxy_servers_auth_enabled: get_env("PROXY_SERVERS_AUTH_ENABLED", :boolean, true)
+  proxy_servers_auth_enabled: get_env("PROXY_SERVERS_AUTH_ENABLED", :boolean, true),
+  # VPN config pull toggle — disable on resource-starved machines where netclient pull
+  # causes disruptive interface resets. MQTT retained messages provide eventual consistency.
+  pull_vpn_config_enabled: get_env("PULL_VPN_CONFIG_ENABLED", :boolean, true)

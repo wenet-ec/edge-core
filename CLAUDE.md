@@ -193,8 +193,11 @@ All operations use Docker Compose through the `./bin/run` script. No local Elixi
 
 **Admin API:**
 
-- `MASTER_KEY` header - Full admin access (cluster management, commands)
+- `MASTER_KEY` header - Full access, fallback for all other keys
+- `API_KEY` header - REST API access (clusters, nodes, commands, SSH, enrollment keys)
 - `METRICS_KEY` header - Read-only metrics access
+- `PROXY_KEY` header - Proxy tunnel access
+- `MCP_KEY` header - MCP server access
 - Agent API token - Per-agent authentication for status reporting
 
 **Agent API:**
@@ -284,12 +287,14 @@ edge_core/
 Shared path dependency used by both admin and agent. Neither ever calls Netmaker or netclient directly — all interaction goes through Nexmaker.
 
 Two interfaces:
+
 - `Nexmaker.Api.*` — HTTP client (`Req`) for the full Netmaker REST API. Auth via MASTER_KEY bearer token. Modules: `Networks`, `EnrollmentKeys`, `Hosts`, `Nodes`, `DNS`, `Superadmin`, `Gateways.*`, `EMQX`.
 - `Nexmaker.Cli` — Wrapper around the `netclient` binary (shelled out via `System.cmd`). Functions: `join_network/1`, `leave_network/1`, `list_networks/0`, `check_connection/1`, `health_check/1`, `pull/0`, `list_peers/1`, `ping_peers/1`.
 
 Notable: netclient v1.4.0 has a TOCTOU race on `/etc/netclient/` — Nexmaker handles this transparently with pre-creation + retry logic in `Nexmaker.Cli`.
 
 Config:
+
 ```elixir
 config :nexmaker,
   base_url: System.get_env("NETMAKER_API_URL"),
@@ -367,8 +372,9 @@ Production files follow the same pattern in `deploy/production/.envs/`
 
 **Critical environment variables:**
 
-- `MASTER_KEY` - Admin API authentication (full access)
-- `METRICS_KEY` - Metrics API authentication (read-only)
+- `MASTER_KEY` - Full access, fallback for all scoped keys
+- `API_KEY` - REST API authentication (scoped; defaults to MASTER_KEY)
+- `METRICS_KEY` - Metrics API authentication (read-only; defaults to MASTER_KEY)
 - `DB_URL` - PostgreSQL connection string (admin, alternative to individual DB\_\* vars)
 - `NETMAKER_*` - Netmaker API credentials, URLs, and tokens
 - `ENROLLMENT_TOKEN` - Agent VPN enrollment key

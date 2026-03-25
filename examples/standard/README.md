@@ -68,6 +68,9 @@ Key things to configure:
 - Replace all `your-server-ip-or-domain.com` with your actual domain
 - Replace all `change-me` with strong random values
 - `SECRET_KEY_BASE` — generate with `openssl rand -base64 48`
+- `MASTER_KEY` — omnipotent key, fallback for all scoped keys
+- `API_KEY` — scoped to REST API clients (optional, defaults to `MASTER_KEY`)
+- `METRICS_KEY` — scoped to metrics scrapers (optional, defaults to `MASTER_KEY`)
 - `VPN_CLUSTER_COOKIE` — must be the same across all 4 admin instances
 - `MQ_PASSWORD` and `EMQX_DASHBOARD_PASSWORD` — must match each other
 - Update `configs/Caddyfile` with your actual domain names

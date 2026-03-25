@@ -22,11 +22,11 @@ defmodule EdgeAdminWeb.Router do
     plug(PutApiSpec, module: EdgeAdminWeb.ApiSpec)
   end
 
-  # Protected API pipeline (requires MASTER_KEY)
+  # Protected API pipeline (requires API_KEY or MASTER_KEY)
   pipeline :protected_api do
     plug(:accepts, ["json"])
     plug(PutApiSpec, module: EdgeAdminWeb.ApiSpec)
-    plug(EdgeAdminWeb.Plugs.MasterKeyAuth)
+    plug(EdgeAdminWeb.Plugs.ApiKeyAuth)
   end
 
   # MCP pipeline (accepts MCP_KEY or MASTER_KEY fallback — MCP manages its own content types)
@@ -112,7 +112,7 @@ defmodule EdgeAdminWeb.Router do
     end
   end
 
-  # Protected admin metadata endpoints (requires MASTER_KEY)
+  # Protected admin metadata endpoints (requires API_KEY or MASTER_KEY)
   scope "/api/v1", EdgeAdminWeb.Controllers do
     pipe_through(:protected_api)
 
@@ -190,7 +190,7 @@ defmodule EdgeAdminWeb.Router do
     post("/metrics/push", MetricsController, :push)
   end
 
-  # Protected API endpoints (requires MASTER_KEY)
+  # Protected API endpoints (requires API_KEY or MASTER_KEY)
   scope "/api/v1", EdgeAdminWeb.Controllers do
     pipe_through(:protected_api)
 

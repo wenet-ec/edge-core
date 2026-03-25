@@ -48,6 +48,7 @@ MASTER_KEY=supersecretkey123456789
 
 # Optional scoped keys. All default to MASTER_KEY if unset.
 # Recommended in production to limit blast radius per client type.
+# API_KEY=      # REST API endpoints (nodes, commands, SSH, clusters)
 # METRICS_KEY=  # Read-only metrics endpoints (give to Prometheus scrapers)
 # PROXY_KEY=    # Proxy tunnel endpoints (give to proxy clients)
 # MCP_KEY=      # MCP server endpoint

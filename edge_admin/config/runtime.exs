@@ -44,6 +44,7 @@ config :edge_admin,
 
 if auth_enabled do
   master_key = get_env!("MASTER_KEY")
+  api_key = get_env("API_KEY") || master_key
   metrics_key = get_env("METRICS_KEY") || master_key
   proxy_key = get_env("PROXY_KEY") || master_key
   mcp_key = get_env("MCP_KEY") || master_key
@@ -51,6 +52,7 @@ if auth_enabled do
   config :edge_admin,
     auth_enabled: true,
     master_key: master_key,
+    api_key: api_key,
     metrics_key: metrics_key,
     proxy_key: proxy_key,
     mcp_key: mcp_key
@@ -58,6 +60,7 @@ else
   config :edge_admin,
     auth_enabled: false,
     master_key: nil,
+    api_key: nil,
     metrics_key: nil,
     proxy_key: "",
     mcp_key: nil

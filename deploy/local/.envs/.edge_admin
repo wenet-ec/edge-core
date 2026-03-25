@@ -46,6 +46,7 @@ AUTH_ENABLED=true
 MASTER_KEY=supersecretkey123456789
 
 # Optional scoped keys. All default to MASTER_KEY if unset.
+# API_KEY=      # REST API endpoints (nodes, commands, SSH, clusters)
 # METRICS_KEY=  # Read-only: metrics endpoints
 # PROXY_KEY=    # Proxy tunnel endpoints
 # MCP_KEY=      # MCP server endpoint

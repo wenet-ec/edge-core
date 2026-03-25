@@ -354,8 +354,10 @@ The admin's HTTP proxy (port 43128) and SOCKS5 proxy (port 41080) are independen
 | Path                     | Mechanism                                                                       |
 | ------------------------ | ------------------------------------------------------------------------------- |
 | Admin API (full access)  | `MASTER_KEY` bearer token                                                       |
-| Admin API (metrics only) | `METRICS_KEY` bearer token                                                      |
-| Admin API (proxy only)   | `PROXY_KEY` bearer token                                                        |
+| Admin API (REST only)    | `API_KEY` bearer token (defaults to `MASTER_KEY`)                               |
+| Admin API (metrics only) | `METRICS_KEY` bearer token (defaults to `MASTER_KEY`)                           |
+| Admin API (proxy only)   | `PROXY_KEY` bearer token (defaults to `MASTER_KEY`)                             |
+| Admin API (MCP only)     | `MCP_KEY` bearer token (defaults to `MASTER_KEY`)                               |
 | Admin → Netmaker         | `MASTER_KEY` bearer token                                                       |
 | Agent → Admin            | Per-node API token (issued at enrollment)                                       |
 | Admin → Agent            | Per-node API token (same token, stored in admin DB)                             |

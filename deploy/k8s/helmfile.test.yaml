@@ -49,31 +49,23 @@ releases:
   # 3. EMQX — single node
   # ============================================================================
   - name: edge-vpn-broker
-    chart: emqx/emqx
-    version: "5.8.9"
+    chart: ./charts/edge-vpn-broker
     namespace: edge-core
     needs:
       - cnpg-operator
     values:
-      - fullnameOverride: "edge-vpn-broker"
-        replicaCount: 1
-        image:
-          tag: "5.8.9"
-        emqxConfig:
-          EMQX_CLUSTER__DISCOVERY_STRATEGY: "k8s"
-          EMQX_DASHBOARD__DEFAULT_USERNAME: "admin"
-          EMQX_DASHBOARD__DEFAULT_PASSWORD: "edge_vpn123"
-          EMQX_NODE__COOKIE: "test-cookie"
-          EMQX_TELEMETRY__ENABLE: "false"
-        service:
-          type: NodePort
-          nodePorts:
-            dashboard: 30085
-            ws: 30083
-        persistence:
-          enabled: true
-          size: 128Mi
-          storageClassName: "standard"
+      - emqx:
+          emqxConfig:
+            EMQX_DASHBOARD__DEFAULT_PASSWORD: "edge_vpn123"
+            EMQX_NODE__COOKIE: "test-cookie"
+          service:
+            type: NodePort
+            nodePorts:
+              dashboard: 30085
+              ws: 30083
+          persistence:
+            size: 128Mi
+            storageClassName: "standard"
 
   # ============================================================================
   # 4. Edge VPN (VPN server + Edge VPN DNS sidecar) — single replica
@@ -104,6 +96,11 @@ releases:
           metricsBaseUrl: "edge-admin-a:44000"
         secrets:
           vpnClusterCookie: "test-cookie-a"
+        nodePort:
+          enabled: true
+          apiPort: 30000
+          httpProxyPort: 30100
+          socks5Port: 30101
 
   # ============================================================================
   # 5b. Edge Admin — cluster B (single pod)
@@ -122,6 +119,11 @@ releases:
           metricsBaseUrl: "edge-admin-b:44000"
         secrets:
           vpnClusterCookie: "test-cookie-b"
+        nodePort:
+          enabled: true
+          apiPort: 30002
+          httpProxyPort: 30102
+          socks5Port: 30103
 
   # ============================================================================
   # 6. Edge Admin Proxy — NodePort matching kind-config.yaml port mappings

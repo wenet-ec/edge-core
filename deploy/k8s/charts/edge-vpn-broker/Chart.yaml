@@ -1,0 +1,11 @@
+# deploy/k8s/charts/edge-vpn-broker/Chart.yaml
+apiVersion: v2
+name: edge-vpn-broker
+description: EMQX message broker for the Edge VPN mesh, with pre-configured auth/ACL.
+type: application
+version: 0.1.0
+appVersion: "5.8.9"
+dependencies:
+  - name: emqx
+    version: "5.8.9"
+    repository: https://repos.emqx.io/charts

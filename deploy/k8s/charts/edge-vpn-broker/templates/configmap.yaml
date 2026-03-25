@@ -1,0 +1,31 @@
+{{- /* deploy/k8s/charts/edge-vpn-broker/templates/configmap.yaml */ -}}
+# Pre-declare EMQX authenticator and authorizer via HOCON config file.
+# EMQX 5.8.9 requires password_hash_algorithm — the VPN server omits it when
+# calling the REST API, causing a 400 and a fatal crash on first boot.
+# Mounting this file means the authenticator exists before the VPN server starts.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-hocon
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "edge-vpn-broker.labels" . | nindent 4 }}
+data:
+  cluster.hocon: |
+    authentication = [
+      {
+        backend = "built_in_database"
+        mechanism = "password_based"
+        password_hash_algorithm {
+          name = "sha256"
+          salt_position = "suffix"
+        }
+        user_id_type = "username"
+      }
+    ]
+
+    authorization {
+      deny_action = ignore
+      no_match = allow
+      sources = []
+    }

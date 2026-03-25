@@ -15,13 +15,25 @@ kind: Cluster
 nodes:
   - role: control-plane
     extraPortMappings:
-      # Edge Admin API (cluster a)
+      # Edge Admin cluster-a: API, HTTP proxy, SOCKS5
       - containerPort: 30000
         hostPort: 34000
         protocol: TCP
-      # Edge Admin API (cluster b)
-      - containerPort: 30001
-        hostPort: 34001
+      - containerPort: 30100
+        hostPort: 33128
+        protocol: TCP
+      - containerPort: 30101
+        hostPort: 31080
+        protocol: TCP
+      # Edge Admin cluster-b: API, HTTP proxy, SOCKS5
+      - containerPort: 30002
+        hostPort: 34002
+        protocol: TCP
+      - containerPort: 30102
+        hostPort: 33130
+        protocol: TCP
+      - containerPort: 30103
+        hostPort: 31082
         protocol: TCP
       # Edge VPN API
       - containerPort: 30081
@@ -34,12 +46,4 @@ nodes:
       # EMQX Dashboard
       - containerPort: 30085
         hostPort: 48085
-        protocol: TCP
-      # Edge Admin HTTP proxy (core-level)
-      - containerPort: 30128
-        hostPort: 53128
-        protocol: TCP
-      # Edge Admin SOCKS5 proxy (core-level)
-      - containerPort: 30080
-        hostPort: 51080
         protocol: TCP

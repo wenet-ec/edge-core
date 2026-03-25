@@ -1,0 +1,39 @@
+# deploy/k8s/charts/edge-vpn-broker/values.yaml
+
+emqx:
+  fullnameOverride: "edge-vpn-broker"
+  replicaCount: 1
+  image:
+    tag: "5.8.9"
+    pullPolicy: IfNotPresent
+  emqxConfig:
+    EMQX_CLUSTER__DISCOVERY_STRATEGY: "k8s"
+    EMQX_TELEMETRY__ENABLE: "false"
+    EMQX_DASHBOARD__DEFAULT_USERNAME: "admin"
+    EMQX_DASHBOARD__DEFAULT_PASSWORD: "changeme"
+    EMQX_NODE__COOKIE: "changeme"
+  # Real ClusterIP so the Edge VPN server can reach ws://edge-vpn-broker:1883.
+  # The upstream chart defaults to clusterIP: None (headless) which breaks this.
+  service:
+    type: ClusterIP
+    clusterIP: ""
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClassName: "local-path"
+  extraVolumes:
+    - name: emqx-hocon
+      configMap:
+        name: edge-vpn-broker-hocon
+  initContainers:
+    - name: hocon-init
+      image: busybox:1.36
+      command:
+        - sh
+        - -c
+        - "mkdir -p /data/configs && cp -f /hocon/cluster.hocon /data/configs/cluster.hocon && chown 1000:1000 /data/configs/cluster.hocon"
+      volumeMounts:
+        - name: emqx-data
+          mountPath: /data
+        - name: emqx-hocon
+          mountPath: /hocon

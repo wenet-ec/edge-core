@@ -25,6 +25,38 @@ spec:
       targetPort: socks5-proxy
       protocol: TCP
 
+{{- if .Values.nodePort.enabled }}
+---
+{{/* NodePort — exposes all ports to host via kind port mappings (local testing only). */}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "edge-admin.fullname" . }}-nodeport
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "edge-admin.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  selector:
+    {{- include "edge-admin.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: api
+      port: 44000
+      targetPort: api
+      protocol: TCP
+      nodePort: {{ .Values.nodePort.apiPort }}
+    - name: http-proxy
+      port: 43128
+      targetPort: http-proxy
+      protocol: TCP
+      nodePort: {{ .Values.nodePort.httpProxyPort }}
+    - name: socks5-proxy
+      port: 41080
+      targetPort: socks5-proxy
+      protocol: TCP
+      nodePort: {{ .Values.nodePort.socks5Port }}
+{{- end }}
+
 ---
 {{/* Headless — stable per-pod DNS for Erlang distribution.
      Erlang nodes address each other via VPN DNS (nm.internal), but this service

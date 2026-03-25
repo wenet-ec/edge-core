@@ -1,9 +1,12 @@
 # deploy/k8s/values/test/edge-admin.yaml
 replicaCount: 2
+image:
+  tag: "local"
+  pullPolicy: Never
 migration:
   enabled: false
 dns:
-  nameserverIp: "10.96.157.153"
+  nameserverIp: "10.96.216.46"
 sysctls:
   enabled: false
 config:

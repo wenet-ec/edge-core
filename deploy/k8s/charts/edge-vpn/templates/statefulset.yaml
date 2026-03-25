@@ -39,11 +39,6 @@ spec:
         - name: edge-vpn-dns-config
           configMap:
             name: {{ include "edge-vpn.fullname" . }}-corefile
-        # EMQX auth/ACL hocon — mounted into EMQX data dir so it is loaded at startup
-        - name: emqx-hocon
-          configMap:
-            name: {{ include "edge-vpn.fullname" . }}-emqx-hocon
-
       containers:
         # --- Edge VPN Server ---
         - name: edge-vpn-server
@@ -61,7 +56,7 @@ spec:
           volumeMounts:
             - name: dnsconfig
               mountPath: /root/config/dnsconfig
-            - name: edge-vpn-server-data
+            - name: edge-vpn-data
               mountPath: /root/data
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

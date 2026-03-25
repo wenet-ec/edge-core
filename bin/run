@@ -5,6 +5,7 @@
 #   ./bin/run cloud <command>     # Manage cloud infrastructure (admin, VPN, metrics)
 #   ./bin/run edge <command>      # Manage edge services (agent)
 #   ./bin/run all <command>       # Manage all services together
+#   ./bin/run k8s <command>       # Manage k8s test cluster (kind + helmfile)
 
 # Exit on any error
 set -e
@@ -203,6 +204,7 @@ show_help() {
     echo "  cloud     - Manage cloud infrastructure (admin, VPN, DB, metrics)"
     echo "  edge      - Manage edge services (agent, registry, watchtower)"
     echo "  all       - Manage all services together"
+    echo "  k8s       - Manage k8s test cluster (kind + helmfile)"
     echo ""
     echo -e "${YELLOW}Global Options:${NC}"
     echo "  ENV=production    - Use production environment (default: local)"
@@ -223,6 +225,7 @@ show_help() {
     echo "  ./bin/run cloud"
     echo "  ./bin/run edge"
     echo "  ./bin/run all"
+    echo "  ./bin/run k8s"
 }
 
 # Handle cloud infrastructure commands
@@ -596,6 +599,189 @@ handle_all() {
     esac
 }
 
+# k8s constants
+K8S_CLUSTER_NAME="edge-core"
+K8S_HELMFILE="deploy/k8s/helmfile.test.yaml"
+K8S_KIND_CONFIG="deploy/k8s/kind-config.yaml"
+K8S_NAMESPACE="edge-core"
+# Images to build locally and load into kind
+# Format: "local-tag:dockerfile-path"
+K8S_IMAGES=(
+    "ghcr.io/wenet-ec/edge_admin:local:deploy/production/compose/edge_admin/Dockerfile"
+)
+
+check_k8s_tools() {
+    if ! command -v kind &> /dev/null; then
+        error "kind is not installed. Install: curl -Lo ./kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64 && chmod +x kind && mv kind /usr/local/bin/"
+    fi
+    if ! command -v kubectl &> /dev/null; then
+        error "kubectl is not installed"
+    fi
+    if ! command -v helmfile &> /dev/null; then
+        error "helmfile is not installed"
+    fi
+    if ! command -v helm &> /dev/null; then
+        error "helm is not installed"
+    fi
+}
+
+k8s_cluster_exists() {
+    kind get clusters 2>/dev/null | grep -q "^${K8S_CLUSTER_NAME}$"
+}
+
+show_k8s_help() {
+    echo -e "${BLUE}k8s Test Cluster Commands${NC}"
+    echo "Manages: kind cluster + Helm/Helmfile stack (edge-admin, edge-vpn, postgres, emqx)"
+    echo ""
+    echo "Usage: ./bin/run k8s <command> [options]"
+    echo ""
+    echo -e "${YELLOW}Cluster Lifecycle:${NC}"
+    echo "  up                     - Create cluster, build images, load into kind, helmfile apply"
+    echo "  down                   - Delete kind cluster (destroys everything)"
+    echo "  build                  - Build images and load into kind (cluster must exist)"
+    echo "  apply                  - helmfile apply only (cluster + images must exist)"
+    echo "  apply -l name=<rel>    - helmfile apply for a specific release only"
+    echo ""
+    echo -e "${YELLOW}Inspection:${NC}"
+    echo "  ps                     - kubectl get pods -n edge-core"
+    echo "  status                 - kubectl get all -n edge-core"
+    echo "  logs <pod>             - kubectl logs -n edge-core <pod>"
+    echo ""
+    echo -e "${GREEN}Examples:${NC}"
+    echo "  ./bin/run k8s up"
+    echo "  ./bin/run k8s down"
+    echo "  ./bin/run k8s build"
+    echo "  ./bin/run k8s apply"
+    echo "  ./bin/run k8s apply -l name=edge-admin-a"
+    echo "  ./bin/run k8s ps"
+    echo "  ./bin/run k8s logs edge-admin-a-xxx-yyy"
+}
+
+k8s_build_and_load() {
+    section "Building images and loading into kind"
+    for entry in "${K8S_IMAGES[@]}"; do
+        local image="${entry%%:deploy/*}"
+        local dockerfile="deploy/${entry##*:deploy/}"
+        log "Building $image from $dockerfile..."
+        docker build -t "$image" -f "$dockerfile" .
+        log "Loading $image into kind cluster '$K8S_CLUSTER_NAME'..."
+        kind load docker-image "$image" --name "$K8S_CLUSTER_NAME"
+        log "$image loaded."
+    done
+}
+
+handle_k8s() {
+    local command=$1
+    shift || true
+
+    case "$command" in
+        "")
+            show_k8s_help
+            ;;
+        up)
+            check_docker
+            check_k8s_tools
+            local k8s_existing=false
+            if k8s_cluster_exists; then
+                warn "kind cluster '$K8S_CLUSTER_NAME' already exists — skipping creation."
+                k8s_existing=true
+            else
+                log "Creating kind cluster '$K8S_CLUSTER_NAME'..."
+                kind create cluster --name "$K8S_CLUSTER_NAME" --config "$K8S_KIND_CONFIG"
+            fi
+            k8s_build_and_load
+            log "Installing CNPG operator (step 1/2)..."
+            helmfile apply -f "$K8S_HELMFILE" -l name=cnpg-operator
+            log "Waiting for CNPG operator pod to be ready..."
+            kubectl rollout status deployment/cnpg-operator-cloudnative-pg -n edge-core --timeout=120s
+            log "Waiting for CNPG webhook to accept connections (webhook cert provisioning)..."
+            for i in $(seq 1 30); do
+                if kubectl get clusters.postgresql.cnpg.io --all-namespaces >/dev/null 2>&1; then
+                    log "CNPG webhook is ready."
+                    break
+                fi
+                if [ "$i" -eq 30 ]; then
+                    error "CNPG webhook did not become ready in time."
+                fi
+                sleep 5
+            done
+            log "Applying infra releases (step 2/3): DBs, EMQX, edge-vpn..."
+            helmfile apply -f "$K8S_HELMFILE" -l name=edge-admin-db
+            helmfile apply -f "$K8S_HELMFILE" -l name=edge-vpn-db
+            helmfile apply -f "$K8S_HELMFILE" -l name=edge-vpn-broker
+            helmfile apply -f "$K8S_HELMFILE" -l name=edge-vpn
+            log "Waiting for edge-vpn pod to be ready (both containers)..."
+            kubectl rollout status statefulset/edge-vpn -n "$K8S_NAMESPACE" --timeout=120s
+            log "Resolving edge-vpn-dns ClusterIP for edge-admin DNS config..."
+            EDGE_VPN_DNS_IP=$(kubectl get svc edge-vpn-dns -n "$K8S_NAMESPACE" -o jsonpath='{.spec.clusterIP}')
+            log "edge-vpn-dns ClusterIP: $EDGE_VPN_DNS_IP — updating values/test/edge-admin.yaml"
+            sed -i "s/nameserverIp: .*/nameserverIp: \"$EDGE_VPN_DNS_IP\"/" deploy/k8s/values/test/edge-admin.yaml
+            log "Applying edge-admin releases (step 3/3)..."
+            helmfile apply -f "$K8S_HELMFILE" -l name=edge-admin-a
+            helmfile apply -f "$K8S_HELMFILE" -l name=edge-admin-b
+            helmfile apply -f "$K8S_HELMFILE" -l name=edge-admin-proxy
+            # On a re-up (cluster already existed), edge-vpn may have been restarted which
+            # causes netclient to rewrite /etc/resolv.conf in already-running edge-admin pods.
+            # Roll them to pick up fresh DNS state. On first boot this is skipped — the pods
+            # are brand new and start correctly.
+            if [ "$k8s_existing" = true ]; then
+                log "Re-up detected: rolling edge-admin to pick up fresh VPN state..."
+                kubectl rollout restart deployment/edge-admin-a deployment/edge-admin-b -n "$K8S_NAMESPACE"
+            fi
+            log "Waiting for edge-admin to be ready..."
+            kubectl rollout status deployment/edge-admin-a -n "$K8S_NAMESPACE" --timeout=300s
+            kubectl rollout status deployment/edge-admin-b -n "$K8S_NAMESPACE" --timeout=300s
+            log "k8s test stack is up."
+            ;;
+        down)
+            check_k8s_tools
+            if k8s_cluster_exists; then
+                log "Deleting kind cluster '$K8S_CLUSTER_NAME'..."
+                kind delete cluster --name "$K8S_CLUSTER_NAME"
+                log "Cluster deleted."
+            else
+                warn "kind cluster '$K8S_CLUSTER_NAME' does not exist."
+            fi
+            ;;
+        build)
+            check_docker
+            check_k8s_tools
+            if ! k8s_cluster_exists; then
+                error "kind cluster '$K8S_CLUSTER_NAME' does not exist. Run './bin/run k8s up' first."
+            fi
+            k8s_build_and_load
+            ;;
+        apply)
+            check_k8s_tools
+            if ! k8s_cluster_exists; then
+                error "kind cluster '$K8S_CLUSTER_NAME' does not exist. Run './bin/run k8s up' first."
+            fi
+            log "Running helmfile apply..."
+            helmfile apply -f "$K8S_HELMFILE" "$@"
+            ;;
+        ps)
+            check_k8s_tools
+            kubectl get pods -n "$K8S_NAMESPACE"
+            ;;
+        status)
+            check_k8s_tools
+            kubectl get all -n "$K8S_NAMESPACE"
+            ;;
+        logs)
+            check_k8s_tools
+            if [ $# -eq 0 ]; then
+                warn "Usage: ./bin/run k8s logs <pod-name>"
+                exit 1
+            fi
+            kubectl logs -n "$K8S_NAMESPACE" "$@"
+            ;;
+        *)
+            error "Unknown k8s command: $command"
+            show_k8s_help
+            ;;
+    esac
+}
+
 # Initialize
 validate_env
 
@@ -630,6 +816,10 @@ case "$1" in
         validate_compose_file "$CLOUD_COMPOSE_FILE"
         validate_compose_file "$EDGE_COMPOSE_FILE"
         handle_all "$@"
+        ;;
+    k8s)
+        shift
+        handle_k8s "$@"
         ;;
     ""|help|--help|-h)
         show_help

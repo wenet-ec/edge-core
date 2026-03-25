@@ -101,6 +101,15 @@ migration:
   # Set to false when the image doesn't exist yet (e.g. local kind testing without a built image)
   enabled: true
 
+nodePort:
+  # Enable a NodePort service — needed for kind local testing.
+  # In prod, use ingress instead.
+  enabled: false
+  # NodePort numbers (30000-32767). Must match kind-config.yaml extraPortMappings.
+  apiPort: 30000
+  httpProxyPort: 30100
+  socks5Port: 30101
+
 ingress:
   enabled: false
   className: "nginx"

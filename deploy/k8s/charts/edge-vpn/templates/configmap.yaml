@@ -63,31 +63,3 @@ data:
         loadbalance
     }
 
----
-{{/* ConfigMap 3 — Edge VPN Broker cluster.hocon (auth/ACL config) */}}
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ include "edge-vpn.fullname" . }}-emqx-hocon
-  namespace: {{ .Release.Namespace }}
-  labels:
-    {{- include "edge-vpn.labels" . | nindent 4 }}
-data:
-  cluster.hocon: |
-    authentication = [
-      {
-        backend = "built_in_database"
-        mechanism = "password_based"
-        password_hash_algorithm {
-          name = "sha256"
-          salt_position = "suffix"
-        }
-        user_id_type = "username"
-      }
-    ]
-
-    authorization {
-      deny_action = ignore
-      no_match = allow
-      sources = []
-    }

@@ -49,31 +49,15 @@ releases:
   #    Apache 2.0 license up to 5.8.9, clustering requires k8s discovery mode
   # ============================================================================
   - name: edge-vpn-broker
-    chart: emqx/emqx
-    version: "5.8.9"
+    chart: ./charts/edge-vpn-broker
     namespace: edge-core
     needs:
       - cnpg-operator
     values:
-      - fullnameOverride: "edge-vpn-broker"
-        replicaCount: 1
-        image:
-          tag: "5.8.9"
-        # k8s discovery — chart auto-injects all required EMQX_CLUSTER__K8S__* vars
-        emqxConfig:
-          EMQX_CLUSTER__DISCOVERY_STRATEGY: "k8s"
-          EMQX_DASHBOARD__DEFAULT_USERNAME: "admin"
-          EMQX_DASHBOARD__DEFAULT_PASSWORD: {{ requiredEnv "EMQX_DASHBOARD_PASSWORD" | quote }}
-          EMQX_NODE__COOKIE: {{ requiredEnv "EMQX_NODE_COOKIE" | quote }}
-          EMQX_TELEMETRY__ENABLE: "false"
-        # Real ClusterIP so the Edge VPN server can reach ws://edge-vpn-broker:1883
-        service:
-          type: ClusterIP
-          clusterIP: ""
-        persistence:
-          enabled: true
-          size: 1Gi
-          storageClassName: "local-path"
+      - emqx:
+          emqxConfig:
+            EMQX_DASHBOARD__DEFAULT_PASSWORD: {{ requiredEnv "EMQX_DASHBOARD_PASSWORD" | quote }}
+            EMQX_NODE__COOKIE: {{ requiredEnv "EMQX_NODE_COOKIE" | quote }}
 
   # ============================================================================
   # 4. Edge VPN — WireGuard VPN mesh server + Edge VPN DNS sidecar

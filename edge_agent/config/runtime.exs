@@ -7,7 +7,8 @@ data_dir = System.get_env("DATA_DIR", "/app/data")
 
 config :edge_agent, EdgeAgent.Repo,
   database: "#{data_dir}/agent/edge_agent.db",
-  pool_size: get_env("DB_POOL_SIZE", :integer, 3)
+  pool_size: get_env("DB_POOL_SIZE", :integer, 5),
+  busy_timeout: 5_000
 
 # NOTE: Only set `server` to `true` if `PHX_SERVER` is present. We cannot set
 # it to `false` otherwise because `mix phx.server` will stop working without it.

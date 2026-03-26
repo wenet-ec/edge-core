@@ -79,7 +79,6 @@ services:
     environment:
       - ADMIN_CLUSTER_NAME=a
       - ADMIN_CLUSTER_SUBNET=${ADMIN_A_CLUSTER_SUBNET}
-      - ADMIN_WIREGUARD_PORT=51821
     ports:
       - "34000:44000"     # API
       - "33128:43128"     # HTTP proxy
@@ -124,7 +123,6 @@ services:
     environment:
       - ADMIN_CLUSTER_NAME=a
       - ADMIN_CLUSTER_SUBNET=${ADMIN_A_CLUSTER_SUBNET}
-      - ADMIN_WIREGUARD_PORT=51822
     ports:
       - "34001:44000"     # API
       - "33129:43128"     # HTTP proxy
@@ -169,7 +167,6 @@ services:
     environment:
       - ADMIN_CLUSTER_NAME=b
       - ADMIN_CLUSTER_SUBNET=${ADMIN_B_CLUSTER_SUBNET}
-      - ADMIN_WIREGUARD_PORT=51823
     ports:
       - "34002:44000"     # API
       - "33130:43128"     # HTTP proxy
@@ -214,7 +211,6 @@ services:
     environment:
       - ADMIN_CLUSTER_NAME=b
       - ADMIN_CLUSTER_SUBNET=${ADMIN_B_CLUSTER_SUBNET}
-      - ADMIN_WIREGUARD_PORT=51824
     ports:
       - "34003:44000"     # API
       - "33131:43128"     # HTTP proxy

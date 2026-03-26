@@ -51,8 +51,6 @@ services:
       - /dev/net/tun:/dev/net/tun
     env_file:
       - ./.envs/.edge_admin
-    environment:
-      - ADMIN_WIREGUARD_PORT=51821
     ports:
       - "34000:44000"      # API
       - "33128:43128"      # HTTP proxy
@@ -94,8 +92,6 @@ services:
       - /dev/net/tun:/dev/net/tun
     env_file:
       - ./.envs/.edge_admin
-    environment:
-      - ADMIN_WIREGUARD_PORT=51822
     ports:
       - "34001:44000"      # API
       - "33129:43128"      # HTTP proxy
@@ -140,7 +136,6 @@ services:
     environment:
       - ADMIN_CLUSTER_NAME=b
       - ADMIN_CLUSTER_SUBNET=100.63.1.0/24
-      - ADMIN_WIREGUARD_PORT=51823
     ports:
       - "34002:44000"      # API
       - "33130:43128"      # HTTP proxy

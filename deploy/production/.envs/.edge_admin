@@ -133,8 +133,10 @@ ADMIN_CLUSTER_SUBNET=100.63.0.0/24
 ADMIN_MAX_CAPACITY=200
 
 # Static WireGuard listen port for the admin VPN interface.
-# Required when admin is behind NAT and agents need a predictable UDP port.
-# Must match the UDP port mapping in docker-compose.
+# By default WireGuard picks ports dynamically and negotiates the best path per peer.
+# Pin this only on resource-constrained machines or heavily firewalled/NAT environments
+# where dynamic port negotiation is unreliable or blocked — pinning trades flexibility
+# for predictability at the cost of always using a fixed UDP port.
 # When set explicitly, always takes precedence over StatefulSet auto-assignment.
 # ADMIN_WIREGUARD_PORT=51821
 

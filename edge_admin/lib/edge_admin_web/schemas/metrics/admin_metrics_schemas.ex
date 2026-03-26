@@ -11,7 +11,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
     @moduledoc "Admin application metrics response"
 
     schema(%{
-      title: "Admin Metrics Response",
+      title: "AdminMetricsResponse",
       description: """
       Application-level metrics from edge_admin PromEx (BEAM stats, metadata, Oban, etc.).
       """,

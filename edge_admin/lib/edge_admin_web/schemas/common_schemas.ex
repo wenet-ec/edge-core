@@ -11,7 +11,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
   defmodule ChangesetErrorResponse do
     @moduledoc false
     schema(%{
-      title: "Changeset Error Response",
+      title: "ChangesetErrorResponse",
       description: "Validation error response from Ecto changeset (422 Unprocessable Entity)",
       type: :object,
       properties: %{
@@ -38,7 +38,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Not Found Response",
+      title: "NotFoundResponse",
       description: "Resource not found error (404)",
       type: :object,
       properties: %{
@@ -66,7 +66,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Unauthorized Response",
+      title: "UnauthorizedResponse",
       description: "Authentication required or invalid credentials (401)",
       type: :object,
       properties: %{
@@ -94,7 +94,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Forbidden Response",
+      title: "ForbiddenResponse",
       description: "Insufficient permissions to access resource (403)",
       type: :object,
       properties: %{
@@ -122,7 +122,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Conflict Response",
+      title: "ConflictResponse",
       description: "Resource conflict, usually duplicate or constraint violation (409)",
       type: :object,
       properties: %{
@@ -150,7 +150,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Unprocessable Response",
+      title: "UnprocessableResponse",
       description: "Semantically invalid request that cannot succeed regardless of retry (422)",
       type: :object,
       properties: %{
@@ -178,7 +178,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Service Unavailable Response",
+      title: "ServiceUnavailableResponse",
       description: "Downstream service unavailable (503)",
       type: :object,
       properties: %{
@@ -206,7 +206,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Bad Request Response",
+      title: "BadRequestResponse",
       description: "Malformed request or invalid input (400)",
       type: :object,
       properties: %{
@@ -234,7 +234,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Internal Server Error Response",
+      title: "InternalServerErrorResponse",
       description: "Unexpected server error (500)",
       type: :object,
       properties: %{
@@ -262,7 +262,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Pagination Metadata",
+      title: "PaginationMetadata",
       description: "Pagination information for paginated responses",
       type: :object,
       properties: %{

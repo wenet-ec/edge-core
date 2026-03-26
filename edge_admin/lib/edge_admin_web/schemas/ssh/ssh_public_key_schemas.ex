@@ -13,7 +13,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas do
     @moduledoc false
 
     schema(%{
-      title: "SSH Public Key",
+      title: "SshPublicKey",
       description: "SSH public key information for username access",
       type: :object,
       properties: %{
@@ -66,7 +66,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas do
     schema(
       CommonSchemas.paginated_response(
         SshPublicKeyResponse,
-        "SSH Public Key Paginated Response",
+        "SshPublicKeyPaginatedResponse",
         "Paginated list of SSH public keys with filtering and sorting metadata"
       )
     )
@@ -76,7 +76,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas do
     @moduledoc false
 
     schema(%{
-      title: "SSH Public Key Single Response",
+      title: "SshPublicKeySingleResponse",
       description: "Single SSH public key response",
       type: :object,
       properties: %{
@@ -100,7 +100,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas do
     @moduledoc false
 
     schema(%{
-      title: "SSH Public Key Create Request",
+      title: "SshPublicKeyCreateRequest",
       description: "Create a new SSH public key for a username. The key must be in valid OpenSSH format.",
       type: :object,
       properties: %{

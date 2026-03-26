@@ -12,7 +12,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
     @moduledoc false
 
     schema(%{
-      title: "Enrollment Key Response",
+      title: "EnrollmentKeyResponse",
       description: "Enrollment key information",
       type: :object,
       properties: %{
@@ -53,7 +53,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
     @moduledoc false
 
     schema(%{
-      title: "Enrollment Key Single Response",
+      title: "EnrollmentKeySingleResponse",
       description: "Single enrollment key response",
       type: :object,
       properties: %{data: EnrollmentKeyData},
@@ -67,7 +67,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
     schema(
       EdgeAdminWeb.Schemas.CommonSchemas.paginated_response(
         EnrollmentKeyData,
-        "Enrollment Key Paginated Response",
+        "EnrollmentKeyPaginatedResponse",
         "Paginated list of enrollment keys with filtering and sorting metadata"
       )
     )
@@ -77,7 +77,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
     @moduledoc false
 
     schema(%{
-      title: "Enrollment Key Create Request",
+      title: "EnrollmentKeyCreateRequest",
       description: "Parameters for creating a new enrollment key for a cluster",
       type: :object,
       properties: %{
@@ -107,7 +107,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
     @moduledoc false
 
     schema(%{
-      title: "Enrollment Key Update Request",
+      title: "EnrollmentKeyUpdateRequest",
       description:
         "Parameters for updating an enrollment key. Only provided fields are updated. Pass null to unset a nullable field.",
       type: :object,

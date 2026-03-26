@@ -69,7 +69,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Admin Response",
+      title: "AdminResponse",
       description: "Single admin identity response",
       type: :object,
       properties: %{
@@ -95,7 +95,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Admin Topology Entry",
+      title: "AdminTopologyEntry",
       description: "A peer admin in the cluster topology",
       type: :object,
       properties: %{
@@ -135,7 +135,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Admin Cluster",
+      title: "AdminCluster",
       description: "Admin cluster topology and state",
       type: :object,
       properties: %{
@@ -196,7 +196,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Admin Cluster Response",
+      title: "AdminClusterResponse",
       description: "Single admin cluster topology response",
       type: :object,
       properties: %{
@@ -228,7 +228,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Edge Clusters",
+      title: "EdgeClusters",
       description: "All edge cluster assignments across all admins",
       type: :object,
       additionalProperties: %Schema{
@@ -257,7 +257,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Edge Clusters Response",
+      title: "EdgeClustersResponse",
       description: "All edge cluster assignments across all admins",
       type: :object,
       properties: %{
@@ -283,7 +283,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Orphaned Clusters",
+      title: "OrphanedClusters",
       description:
         "Clusters that could not be assigned to any admin due to capacity constraints. Empty map when system is not degraded.",
       type: :object,
@@ -303,7 +303,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Orphaned Clusters Response",
+      title: "OrphanedClustersResponse",
       description: "Clusters with no assigned admin instance",
       type: :object,
       properties: %{

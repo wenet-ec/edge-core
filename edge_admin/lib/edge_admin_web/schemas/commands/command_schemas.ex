@@ -13,7 +13,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Command Response",
+      title: "CommandResponse",
       description: "Command information",
       type: :object,
       properties: %{
@@ -75,7 +75,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
     schema(
       CommonSchemas.paginated_response(
         CommandResponse,
-        "Command Paginated Response",
+        "CommandPaginatedResponse",
         "Paginated list of commands with filtering and sorting metadata"
       )
     )
@@ -85,7 +85,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Command Single Response",
+      title: "CommandSingleResponse",
       description: "Single command response",
       type: :object,
       properties: %{
@@ -112,7 +112,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Command Create Request",
+      title: "CommandCreateRequest",
       description: "Create a new command with flexible targeting options",
       type: :object,
       properties: %{

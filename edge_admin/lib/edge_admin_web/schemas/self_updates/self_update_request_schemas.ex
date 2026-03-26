@@ -13,7 +13,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Self-Update Request Response",
+      title: "SelfUpdateRequestResponse",
       description: "Self-update request information",
       type: :object,
       properties: %{
@@ -92,7 +92,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
     schema(
       CommonSchemas.paginated_response(
         SelfUpdateRequestResponse,
-        "Self-Update Request Paginated Response",
+        "SelfUpdateRequestPaginatedResponse",
         "Paginated list of self-update requests"
       )
     )
@@ -102,7 +102,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Self-Update Request Single Response",
+      title: "SelfUpdateRequestSingleResponse",
       description: "Single self-update request response",
       type: :object,
       properties: %{
@@ -133,7 +133,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Self-Update Request Create Request",
+      title: "SelfUpdateRequestCreateRequest",
       description: """
       Create a new self-update request.
 

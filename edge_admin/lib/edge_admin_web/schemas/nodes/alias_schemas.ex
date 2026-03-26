@@ -13,7 +13,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Alias Response",
+      title: "AliasResponse",
       description: "Node alias with custom DNS entry",
       type: :object,
       properties: %{
@@ -71,7 +71,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Alias Single Response",
+      title: "AliasSingleResponse",
       description: "Single alias response",
       type: :object,
       properties: %{
@@ -98,7 +98,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
     schema(
       CommonSchemas.paginated_response(
         AliasResponse,
-        "Alias Paginated Response",
+        "AliasPaginatedResponse",
         "Paginated list of aliases with filtering and sorting metadata"
       )
     )
@@ -108,7 +108,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Create Alias Request",
+      title: "CreateAliasRequest",
       description: "Parameters for creating a new DNS alias for a node",
       type: :object,
       properties: %{

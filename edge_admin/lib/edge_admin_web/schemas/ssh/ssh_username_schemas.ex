@@ -14,7 +14,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
     @moduledoc false
 
     schema(%{
-      title: "SSH Username",
+      title: "SshUsername",
       description: "SSH username information for node access",
       type: :object,
       properties: %{
@@ -83,7 +83,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
     schema(
       CommonSchemas.paginated_response(
         SshUsernameResponse,
-        "SSH Username Paginated Response",
+        "SshUsernamePaginatedResponse",
         "Paginated list of SSH usernames with filtering and sorting metadata"
       )
     )
@@ -93,7 +93,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
     @moduledoc false
 
     schema(%{
-      title: "SSH Username Single Response",
+      title: "SshUsernameSingleResponse",
       description: "Single SSH username response",
       type: :object,
       properties: %{
@@ -128,7 +128,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
     @moduledoc false
 
     schema(%{
-      title: "SSH Username Create Request",
+      title: "SshUsernameCreateRequest",
       description: "Create a new SSH username for a node, optionally with password and/or public keys",
       type: :object,
       properties: %{

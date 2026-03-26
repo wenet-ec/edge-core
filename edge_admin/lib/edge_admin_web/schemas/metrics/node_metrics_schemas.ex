@@ -11,7 +11,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
     @moduledoc "Host-level metrics response"
 
     schema(%{
-      title: "Host Metrics Response",
+      title: "HostMetricsResponse",
       description: """
       Host-level system metrics from Node Exporter (CPU, memory, disk, uptime).
       """,
@@ -198,7 +198,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
     @moduledoc "Agent application metrics response"
 
     schema(%{
-      title: "Agent Metrics Response",
+      title: "AgentMetricsResponse",
       description: """
       Application-level metrics from edge_agent PromEx (BEAM stats, Oban, business metrics).
       """,
@@ -523,7 +523,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
     @moduledoc "Unified metrics from all sources"
 
     schema(%{
-      title: "Unified Metrics Response",
+      title: "UnifiedMetricsResponse",
       description: """
       Complete metrics from all sources: host (Node Exporter) and agent (PromEx).
       Provides a unified view of node health and performance.
@@ -569,7 +569,12 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                 discovery: %Schema{type: :object, nullable: true, description: "Admin discovery metrics"},
                 proxy: %Schema{type: :object, nullable: true, description: "Proxy server metrics"},
                 ssh: %Schema{type: :object, nullable: true, description: "SSH server metrics"},
-                oban_queues: %Schema{type: :array, nullable: true, description: "Oban job queue states"}
+                oban_queues: %Schema{
+                  type: :array,
+                  nullable: true,
+                  description: "Oban job queue states",
+                  items: %Schema{type: :object}
+                }
               }
             }
           },

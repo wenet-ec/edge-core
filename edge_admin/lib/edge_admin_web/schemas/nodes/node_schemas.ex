@@ -13,7 +13,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Node Response",
+      title: "NodeResponse",
       description: "Edge node information",
       type: :object,
       properties: %{
@@ -162,7 +162,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Node List Response",
+      title: "NodeListResponse",
       description: "List of nodes",
       type: :object,
       properties: %{
@@ -209,7 +209,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
     schema(
       CommonSchemas.paginated_response(
         NodeResponse,
-        "Node Paginated Response",
+        "NodePaginatedResponse",
         "Paginated list of nodes with filtering and sorting metadata"
       )
     )
@@ -219,7 +219,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Node Single Response",
+      title: "NodeSingleResponse",
       description: "Single node response",
       type: :object,
       properties: %{
@@ -258,7 +258,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Change Cluster Request",
+      title: "ChangeClusterRequest",
       description:
         "Request to move a node to a different cluster. " <>
           "Performs cluster migration via Netmaker (best-effort, reconciliation worker handles failures).",

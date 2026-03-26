@@ -13,7 +13,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Command Execution Response",
+      title: "CommandExecutionResponse",
       description: "Command execution information",
       type: :object,
       properties: %{
@@ -115,7 +115,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
     schema(
       CommonSchemas.paginated_response(
         CommandExecutionResponse,
-        "Command Execution Paginated Response",
+        "CommandExecutionPaginatedResponse",
         "Paginated list of command executions with filtering and sorting metadata"
       )
     )
@@ -125,7 +125,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Command Execution Single Response",
+      title: "CommandExecutionSingleResponse",
       description: "Single command execution response",
       type: :object,
       properties: %{
@@ -157,7 +157,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Cancel Execution Response",
+      title: "CancelExecutionResponse",
       description: "Response from command execution cancellation request",
       type: :object,
       properties: %{

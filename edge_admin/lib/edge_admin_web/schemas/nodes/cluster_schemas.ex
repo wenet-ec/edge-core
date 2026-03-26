@@ -12,7 +12,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Node Summary",
+      title: "NodeSummary",
       description: "Brief node information within cluster response",
       type: :object,
       properties: %{
@@ -53,7 +53,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Cluster Response",
+      title: "ClusterResponse",
       description: "Edge cluster information",
       type: :object,
       properties: %{
@@ -155,7 +155,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
     schema(
       EdgeAdminWeb.Schemas.CommonSchemas.paginated_response(
         ClusterResponse,
-        "Cluster Paginated Response",
+        "ClusterPaginatedResponse",
         "Paginated list of clusters with metadata"
       )
     )
@@ -165,7 +165,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Cluster Single Response",
+      title: "ClusterSingleResponse",
       description: "Single cluster response",
       type: :object,
       properties: %{
@@ -206,7 +206,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Cluster Update Request",
+      title: "ClusterUpdateRequest",
       description:
         "Parameters for updating a cluster. Only provided fields are updated. Pass null to unset a nullable field.",
       type: :object,
@@ -233,7 +233,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
     @moduledoc false
 
     schema(%{
-      title: "Cluster Create Request",
+      title: "ClusterCreateRequest",
       description: "Parameters for creating a new cluster (all fields optional for auto-generation)",
       type: :object,
       properties: %{

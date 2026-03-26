@@ -71,8 +71,10 @@ WATCHTOWER_HTTP_API_TOKEN=local-dev-token
 # VPN
 # =============================================================================
 # VPN_READY_TIMEOUT_SECONDS=30   # How long to wait for VPN to be ready before aborting (default: 30)
-# PULL_VPN_CONFIG_ENABLED=true   # Set to false on resource-starved machines where netclient pull
-#                                # causes disruptive WireGuard interface resets (default: true)
+# PULL_VPN_CONFIG_ENABLED=true   # Last-resort backstop for DNS recovery after netclient daemon
+#                                # restarts. Disable only on severely resource-starved machines
+#                                # where netclient pull causes disruptive WireGuard interface
+#                                # resets — broken DNS can then persist indefinitely. (default: true)
 
 # =============================================================================
 # VPN / WireGuard

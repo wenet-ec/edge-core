@@ -18,7 +18,28 @@ defmodule EdgeAdminHealth.Router do
           checks: EdgeAdminHealth.checks(),
           error_code: EdgeAdminHealth.error_code(),
           timeout: to_timeout(second: 5),
-          pretty: false
+          pretty: true
+        )
+    )
+  end
+
+  defmodule ClusterHealth do
+    @moduledoc false
+    use Plug.Router
+
+    plug(:match)
+    plug(:dispatch)
+
+    forward(
+      "/",
+      to: PlugCheckup,
+      init_opts:
+        PlugCheckup.Options.new(
+          json_encoder: Jason,
+          checks: EdgeAdminHealth.ClusterHealth.checks(),
+          error_code: EdgeAdminHealth.ClusterHealth.error_code(),
+          timeout: to_timeout(second: 5),
+          pretty: true
         )
     )
   end
@@ -33,7 +54,10 @@ defmodule EdgeAdminHealth.Router do
   # Kubernetes general health check - alias to readyz for compatibility
   forward("/healthz", to: Health)
 
-  # Legacy health endpoint - kept for backward compatibility
+  # Cluster-level health — used by load balancer to stop routing to degraded clusters
+  forward("/health/cluster", to: ClusterHealth)
+
+  # General health check
   forward("/health", to: Health)
 
   match(_, do: conn)

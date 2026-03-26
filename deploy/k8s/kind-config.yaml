@@ -15,6 +15,11 @@ kind: Cluster
 nodes:
   - role: control-plane
     extraPortMappings:
+      # Caddy reverse proxy — makes edge-vpn.localtest.me / edge-vpn-broker.localtest.me
+      # reachable from the host on port 80 (localtest.me resolves to 127.0.0.1)
+      - containerPort: 30088
+        hostPort: 80
+        protocol: TCP
       # Edge Admin cluster-a: API, HTTP proxy, SOCKS5
       - containerPort: 30000
         hostPort: 34000
@@ -27,13 +32,17 @@ nodes:
         protocol: TCP
       # Edge Admin cluster-b: API, HTTP proxy, SOCKS5
       - containerPort: 30002
-        hostPort: 34002
+        hostPort: 34001
         protocol: TCP
       - containerPort: 30102
         hostPort: 33130
         protocol: TCP
       - containerPort: 30103
         hostPort: 31082
+        protocol: TCP
+      # Edge VPN UI
+      - containerPort: 30079
+        hostPort: 48080
         protocol: TCP
       # Edge VPN API
       - containerPort: 30081

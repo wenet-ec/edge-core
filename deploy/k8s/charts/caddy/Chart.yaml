@@ -1,0 +1,7 @@
+# deploy/k8s/charts/caddy/Chart.yaml
+apiVersion: v2
+name: caddy
+description: Caddy reverse proxy — gives Netmaker and EMQX a real hostname resolvable both from host and inside admin pods
+type: application
+version: 0.1.0
+appVersion: "2"

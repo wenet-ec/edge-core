@@ -1,0 +1,43 @@
+{{- /* deploy/k8s/charts/caddy/templates/service.yaml */ -}}
+{{/* ClusterIP — admin pods use this via hostAliases to reach Netmaker by hostname */}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: caddy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "caddy.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "caddy.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+
+{{- if .Values.nodePort.enabled }}
+---
+{{/* NodePort — exposes Caddy on the host via kind port mapping.
+     localtest.me resolves to 127.0.0.1 on the host, so
+     http://edge-vpn.localtest.me hits kind → this NodePort → Caddy → edge-vpn:8081.
+     This makes the same hostname work from the host (future agents) AND inside admin pods. */}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: caddy-nodeport
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "caddy.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  selector:
+    {{- include "caddy.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      nodePort: {{ .Values.nodePort.port }}
+      protocol: TCP
+{{- end }}

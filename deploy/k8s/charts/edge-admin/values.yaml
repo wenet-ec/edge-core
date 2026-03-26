@@ -68,17 +68,18 @@ config:
   corsAllowedOrigins: "*"
   logLevel: "info"
 
-# ClusterIP of the edge-vpn-dns Service.
-# Required: dnsConfig.nameservers only accepts IPs, not service names.
-# Get it after deploying edge-vpn: kubectl get svc edge-vpn-dns -n edge-core -o jsonpath='{.spec.clusterIP}'
-# In prod, pin this via: kubectl patch svc edge-vpn-dns -n edge-core -p '{"spec":{"clusterIP":"<ip>"}}'
-dns:
-  # ClusterIP of the edge-vpn-dns Service (resolves .nm.internal VPN hostnames)
-  # Get it: kubectl get svc edge-vpn-dns -n edge-core -o jsonpath='{.spec.clusterIP}'
-  nameserverIp: ""
-  # ClusterIP of kube-dns (resolves k8s internal service names like edge-admin-db-rw)
-  # Standard default is 10.96.0.10 — verify: kubectl get svc kube-dns -n kube-system -o jsonpath='{.spec.clusterIP}'
-  kubeDnsIp: "10.96.0.10"
+# hostAliases — injected into /etc/hosts, bypasses DNS entirely.
+# Use this to map Netmaker's public hostname (e.g. edge-vpn.localtest.me) to the
+# Caddy reverse proxy ClusterIP, so admin pods resolve it correctly even after
+# netclient rewrites /etc/resolv.conf.
+# In test: set to Caddy's ClusterIP (resolved by bin/run k8s up after Caddy deploys).
+# In prod: leave empty — real DNS handles it.
+# Format:
+#   - ip: "10.96.x.x"
+#     hostnames:
+#       - edge-vpn.yourdomain.com
+#       - edge-vpn-broker.yourdomain.com
+hostAliases: []
 
 # WireGuard requires these sysctls. Set to false in kind/local testing where
 # the cluster node doesn't allow unsafe sysctls.

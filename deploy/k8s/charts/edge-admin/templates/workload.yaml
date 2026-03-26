@@ -23,17 +23,11 @@ spec:
         {{- include "edge-admin.selectorLabels" . | nindent 8 }}
         edge-core: {{ .Values.coreLabel | quote }}
     spec:
-      # Admin needs to resolve .nm.internal VPN hostnames to reach agents.
-      # Point DNS at the Edge VPN DNS sidecar inside the edge-vpn StatefulSet.
-      dnsPolicy: None
-      dnsConfig:
-        nameservers:
-          - {{ required "dns.nameserverIp is required — set it to the ClusterIP of edge-vpn-dns (kubectl get svc edge-vpn-dns -n edge-core -o jsonpath='{.spec.clusterIP}')" .Values.dns.nameserverIp | quote }}
-          - {{ .Values.dns.kubeDnsIp | quote }}
-        searches:
-          - {{ .Release.Namespace }}.svc.cluster.local
-          - svc.cluster.local
-          - cluster.local
+      # dnsPolicy: ClusterFirst (k8s default) — netclient rewrites /etc/resolv.conf on VPN join,
+      # prepending the WireGuard DNS IP and appending the original entries as fallback.
+      # With ClusterFirst, the original /etc/resolv.conf contains kube-dns, so after netclient
+      # rewrites it: VPN DNS (nm.internal) first, kube-dns fallback (service names, etc.).
+      # This mirrors exactly how Docker Compose works — no hardcoded IPs needed.
 
       {{- if .Values.sysctls.enabled }}
       securityContext:
@@ -44,6 +38,22 @@ spec:
             value: "1"
           - name: net.ipv6.conf.all.forwarding
             value: "1"
+      {{- end }}
+
+      {{- if .Values.hostAliases }}
+      # hostAliases injects entries into /etc/hosts — resolved before DNS.
+      # Netclient's embedded DNS only knows .nm.internal — k8s service names and
+      # localtest.me hostnames would fall through to kube-dns, but netclient's DNS
+      # returns empty success (not NXDOMAIN) for unknown names, blocking fallback.
+      # /etc/hosts bypasses DNS entirely so these names always resolve correctly.
+      hostAliases:
+        {{- range .Values.hostAliases }}
+        - ip: {{ .ip | quote }}
+          hostnames:
+            {{- range .hostnames }}
+            - {{ . | quote }}
+            {{- end }}
+        {{- end }}
       {{- end }}
 
       volumes:

@@ -681,10 +681,8 @@ handle_k8s() {
         up)
             check_docker
             check_k8s_tools
-            local k8s_existing=false
             if k8s_cluster_exists; then
                 warn "kind cluster '$K8S_CLUSTER_NAME' already exists — skipping creation."
-                k8s_existing=true
             else
                 log "Creating kind cluster '$K8S_CLUSTER_NAME'..."
                 kind create cluster --name "$K8S_CLUSTER_NAME" --config "$K8S_KIND_CONFIG"
@@ -710,24 +708,19 @@ handle_k8s() {
             helmfile apply -f "$K8S_HELMFILE" -l name=edge-vpn-db
             helmfile apply -f "$K8S_HELMFILE" -l name=edge-vpn-broker
             helmfile apply -f "$K8S_HELMFILE" -l name=edge-vpn
-            log "Waiting for edge-vpn pod to be ready (both containers)..."
+            log "Waiting for edge-vpn pod to be ready..."
             kubectl rollout status statefulset/edge-vpn -n "$K8S_NAMESPACE" --timeout=120s
-            log "Resolving edge-vpn-dns ClusterIP for edge-admin DNS config..."
-            EDGE_VPN_DNS_IP=$(kubectl get svc edge-vpn-dns -n "$K8S_NAMESPACE" -o jsonpath='{.spec.clusterIP}')
-            log "edge-vpn-dns ClusterIP: $EDGE_VPN_DNS_IP — updating values/test/edge-admin.yaml"
-            sed -i "s/nameserverIp: .*/nameserverIp: \"$EDGE_VPN_DNS_IP\"/" deploy/k8s/values/test/edge-admin.yaml
+            log "Applying Caddy reverse proxy..."
+            helmfile apply -f "$K8S_HELMFILE" -l name=caddy
+            kubectl rollout status deployment/caddy -n "$K8S_NAMESPACE" --timeout=60s
+            log "Resolving Caddy ClusterIP for admin pod hostAliases..."
+            CADDY_IP=$(kubectl get svc caddy -n "$K8S_NAMESPACE" -o jsonpath='{.spec.clusterIP}')
+            log "Caddy ClusterIP: $CADDY_IP"
             log "Applying edge-admin releases (step 3/3)..."
-            helmfile apply -f "$K8S_HELMFILE" -l name=edge-admin-a
-            helmfile apply -f "$K8S_HELMFILE" -l name=edge-admin-b
+            CADDY_HOST_ALIASES="hostAliases[0].ip=$CADDY_IP,hostAliases[0].hostnames[0]=edge-vpn.localtest.me,hostAliases[0].hostnames[1]=edge-vpn-broker.localtest.me"
+            helmfile apply -f "$K8S_HELMFILE" -l name=edge-admin-a --set "$CADDY_HOST_ALIASES"
+            helmfile apply -f "$K8S_HELMFILE" -l name=edge-admin-b --set "$CADDY_HOST_ALIASES"
             helmfile apply -f "$K8S_HELMFILE" -l name=edge-admin-proxy
-            # On a re-up (cluster already existed), edge-vpn may have been restarted which
-            # causes netclient to rewrite /etc/resolv.conf in already-running edge-admin pods.
-            # Roll them to pick up fresh DNS state. On first boot this is skipped — the pods
-            # are brand new and start correctly.
-            if [ "$k8s_existing" = true ]; then
-                log "Re-up detected: rolling edge-admin to pick up fresh VPN state..."
-                kubectl rollout restart deployment/edge-admin-a deployment/edge-admin-b -n "$K8S_NAMESPACE"
-            fi
             log "Waiting for edge-admin to be ready..."
             kubectl rollout status deployment/edge-admin-a -n "$K8S_NAMESPACE" --timeout=300s
             kubectl rollout status deployment/edge-admin-b -n "$K8S_NAMESPACE" --timeout=300s

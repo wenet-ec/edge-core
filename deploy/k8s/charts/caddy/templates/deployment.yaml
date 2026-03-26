@@ -1,0 +1,46 @@
+{{- /* deploy/k8s/charts/caddy/templates/deployment.yaml */ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: caddy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "caddy.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "caddy.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "caddy.selectorLabels" . | nindent 8 }}
+    spec:
+      volumes:
+        - name: caddyfile
+          configMap:
+            name: caddy-caddyfile
+      containers:
+        - name: caddy
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - caddy
+            - run
+            - --config
+            - /etc/caddy/Caddyfile
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          volumeMounts:
+            - name: caddyfile
+              mountPath: /etc/caddy
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            failureThreshold: 3

@@ -74,6 +74,7 @@ ingress:
 nodePort:
   enabled: false
   vpnApi: 30081
+  vpnUi: 30079
 
 resources:
   requests:
@@ -90,6 +91,23 @@ corednsResources:
   limits:
     cpu: "100m"
     memory: "128Mi"
+
+ui:
+  enabled: true
+  image: gravitl/netmaker-ui
+  tag: "v1.5.0"
+  pullPolicy: IfNotPresent
+  # BACKEND_URL — the URL the browser uses to reach the Netmaker API.
+  # In prod: https://edge-vpn.yourdomain.com
+  # In local kind: http://localhost:48081
+  backendUrl: "http://localhost:48081"
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "32Mi"
+    limits:
+      cpu: "100m"
+      memory: "64Mi"
 
 # kube-dns ClusterIP — used as first nameserver so internal service names resolve.
 # Get it with: kubectl get svc kube-dns -n kube-system -o jsonpath='{.spec.clusterIP}'

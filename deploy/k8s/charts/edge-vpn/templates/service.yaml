@@ -40,8 +40,8 @@ spec:
 ---
 {{- if .Values.nodePort.enabled }}
 ---
-{{/* NodePort — local testing only. Exposes Edge VPN API, EMQX WebSocket, EMQX Dashboard
-     to the host via kind extraPortMappings. Do not use in production. */}}
+{{/* NodePort — local testing only. Exposes Edge VPN API and UI to the host
+     via kind extraPortMappings. Do not use in production. */}}
 apiVersion: v1
 kind: Service
 metadata:
@@ -59,6 +59,13 @@ spec:
       targetPort: api
       nodePort: {{ .Values.nodePort.vpnApi }}
       protocol: TCP
+    {{- if .Values.ui.enabled }}
+    - name: edge-vpn-ui
+      port: 80
+      targetPort: ui
+      nodePort: {{ .Values.nodePort.vpnUi }}
+      protocol: TCP
+    {{- end }}
 {{- end }}
 
 ---

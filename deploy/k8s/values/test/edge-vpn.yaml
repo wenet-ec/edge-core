@@ -3,6 +3,9 @@ replicaCount: 1
 nodePort:
   enabled: true
   vpnApi: 30081
+  vpnUi: 30079
+ui:
+  backendUrl: "http://localhost:48081"
 dns:
   kubeDnsIp: "10.96.0.10"
 persistence:
@@ -10,8 +13,8 @@ persistence:
   size: 128Mi
 config:
   baseDomain: "edge-vpn.localtest.me"
-  serverHttpHost: "edge-vpn:8081"
-  serverApiConnString: "edge-vpn:8081"
+  serverHttpHost: "edge-vpn.localtest.me"
+  serverApiConnString: "edge-vpn.localtest.me"
   brokerEndpoint: "ws://edge-vpn-broker.localtest.me/mqtt"
   serverBrokerEndpoint: "ws://edge-vpn-broker:8083/mqtt"
   emqxRestEndpoint: "http://edge-vpn-broker:18083"

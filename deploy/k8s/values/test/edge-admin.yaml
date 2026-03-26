@@ -5,8 +5,6 @@ image:
   pullPolicy: Never
 migration:
   enabled: false
-dns:
-  nameserverIp: "10.96.216.46"
 sysctls:
   enabled: false
 config:

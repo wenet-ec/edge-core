@@ -125,6 +125,32 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
 
+        # --- Edge VPN UI sidecar ---
+        # Serves the Netmaker React SPA. Browser points BACKEND_URL at the externally
+        # reachable Netmaker API (nodeport in test, ingress in prod).
+        {{- if .Values.ui.enabled }}
+        - name: edge-vpn-ui
+          image: "{{ .Values.ui.image }}:{{ .Values.ui.tag }}"
+          imagePullPolicy: {{ .Values.ui.pullPolicy }}
+          env:
+            - name: BACKEND_URL
+              value: {{ .Values.ui.backendUrl | quote }}
+          ports:
+            - name: ui
+              containerPort: 80
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.ui.resources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: ui
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+        {{- end }}
+
   volumeClaimTemplates:
     - metadata:
         name: edge-vpn-data

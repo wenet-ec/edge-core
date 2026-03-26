@@ -1,0 +1,34 @@
+# deploy/k8s/charts/caddy/values.yaml
+
+image:
+  repository: caddy
+  tag: "alpine"
+  pullPolicy: IfNotPresent
+
+# Routes: each entry becomes one Caddy virtual host block.
+# upstream is a k8s service name:port inside the cluster.
+routes:
+  - host: "edge-vpn.localtest.me"
+    upstream: "edge-vpn:8081"
+  - host: "edge-vpn-ui.localtest.me"
+    upstream: "edge-vpn:80"
+  - host: "edge-vpn-broker.localtest.me"
+    upstream: "edge-vpn-broker:8083"
+  - host: "edge-vpn-broker-ui.localtest.me"
+    upstream: "edge-vpn-broker:18083"
+  - host: "edge-admin.localtest.me"
+    upstream: "edge-admin-a:44000"
+
+# NodePort for host access. Must match kind-config.yaml extraPortMapping.
+# Caddy listens on port 80 inside the pod; this exposes it on the host.
+nodePort:
+  enabled: false
+  port: 30088   # maps to host port 80 via kind-config.yaml
+
+resources:
+  requests:
+    cpu: "50m"
+    memory: "32Mi"
+  limits:
+    cpu: "100m"
+    memory: "64Mi"

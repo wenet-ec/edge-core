@@ -80,6 +80,24 @@ releases:
       - values/test/edge-vpn.yaml
 
   # ============================================================================
+  # 4b. Caddy — reverse proxy giving Netmaker a real hostname.
+  #     edge-vpn.localtest.me → edge-vpn:8081
+  #     edge-vpn-broker.localtest.me → edge-vpn-broker:8083
+  #     Exposed on host port 80 via kind (localtest.me → 127.0.0.1 on host).
+  #     Admin pods use hostAliases to reach Caddy by hostname via /etc/hosts,
+  #     bypassing netclient's DNS entirely.
+  # ============================================================================
+  - name: caddy
+    chart: ./charts/caddy
+    namespace: edge-core
+    needs:
+      - edge-vpn
+    values:
+      - nodePort:
+          enabled: true
+          port: 30088
+
+  # ============================================================================
   # 5a. Edge Admin — cluster A (single pod)
   # ============================================================================
   - name: edge-admin-a
@@ -88,6 +106,7 @@ releases:
     needs:
       - edge-admin-db
       - edge-vpn
+      - caddy
     values:
       - values/test/edge-admin.yaml
       - config:
@@ -111,6 +130,7 @@ releases:
     needs:
       - edge-admin-db
       - edge-vpn
+      - caddy
     values:
       - values/test/edge-admin.yaml
       - config:

@@ -1,0 +1,15 @@
+{{- /* deploy/k8s/charts/caddy/templates/configmap.yaml */ -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: caddy-caddyfile
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "caddy.labels" . | nindent 4 }}
+data:
+  Caddyfile: |
+    {{- range .Values.routes }}
+    http://{{ .host }} {
+        reverse_proxy {{ .upstream }}
+    }
+    {{ end }}

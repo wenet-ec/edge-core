@@ -1,0 +1,56 @@
+# deploy/production/relay.yml
+networks:
+  production_edge_core:
+    name: production_edge_core
+
+volumes:
+  production_edge_relay_data: {}
+  production_edge_relay_map_data: {}
+
+services:
+  # DERP Relay Server
+  edge_relay:
+    build:
+      context: ../..
+      dockerfile: ./deploy/production/compose/edge_relay/Dockerfile
+    image: production_edge_relay
+    container_name: production_edge_relay
+    networks:
+      - production_edge_core
+    volumes:
+      - production_edge_relay_data:/var/lib/derper
+    env_file:
+      - ./.envs/.edge_relay
+    ports:
+      - "443:443" # HTTPS / DERP
+      - "80:80" # HTTP (ACME challenge + redirect)
+      - "3478:3478/udp" # STUN
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/generate_204"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # DERP Map Server
+  edge_relay_map:
+    image: caddy:alpine
+    container_name: production_edge_relay_map
+    networks:
+      - production_edge_core
+    volumes:
+      - production_edge_relay_map_data:/data
+      - ./compose/edge_relay_map/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./compose/edge_relay_map/derp-map.json:/srv/derp-map.json:ro
+    env_file:
+      - ./.envs/.edge_relay_map
+    ports:
+      - "80:80" # ACME challenge
+      - "443:443" # HTTPS
+    command: caddy run --config /etc/caddy/Caddyfile
+    healthcheck:
+      test:
+        ["CMD", "wget", "-q", "--spider", "http://localhost:80/derpmap/default"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

@@ -1,4 +1,4 @@
-# .github/workflows/edge_relay.yml
+# .github/workflows/relay.yml
 name: Edge Relay Build and Push
 
 on:

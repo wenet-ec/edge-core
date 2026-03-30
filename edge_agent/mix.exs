@@ -89,7 +89,7 @@ defmodule EdgeAgent.Mixfile do
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
 
       # Background jobs
-      {:oban, "~> 2.20"},
+      {:oban, "~> 2.21"},
 
       # Telemetry
       {:prom_ex, "~> 1.11"},

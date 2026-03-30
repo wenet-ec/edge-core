@@ -139,7 +139,7 @@ defmodule EdgeAdmin.Mixfile do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
 
       # Background Jobs
-      {:oban, "~> 2.20"},
+      {:oban, "~> 2.21"},
       {:quantum, "~> 3.5"},
 
       # Erlang Distribution

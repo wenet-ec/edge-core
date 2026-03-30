@@ -24,6 +24,44 @@ config :edge_agent, EdgeAgentWeb.Endpoint,
   # Generate ephemeral secret_key_base (agent is stateless API, no sessions)
   secret_key_base: Base.encode64(:crypto.strong_rand_bytes(48))
 
+config :edge_agent, Oban,
+  engine: Oban.Engines.Lite,
+  repo: EdgeAgent.Repo,
+  queues: [
+    enqueue_executions: 1,
+    execute_command: [limit: 10],
+    report_executions: 1,
+    sync_executions: 1,
+    report_health_check: 1,
+    discover_admins: 1,
+    check_self_update: 1,
+    push_metrics: 1,
+    pull_vpn_config: 1
+  ],
+  plugins: [
+    {Oban.Plugins.Cron,
+     crontab: [
+       # Every minute to enqueue pending executions
+       {"* * * * *", EdgeAgent.Commands.Workers.EnqueueExecutionWorker},
+       # Every minute for reporting (safety net)
+       {"* * * * *", EdgeAgent.Commands.Workers.ReportExecutionWorker},
+       # Every 2 minutes to sync unprocessed executions (HTTP fallback mode)
+       {"*/2 * * * *", EdgeAgent.Commands.Workers.SyncUnprocessedExecutionWorker},
+       # Every 2 minutes to report health check (HTTP fallback mode)
+       {"*/2 * * * *", EdgeAgent.EdgeClusters.Workers.ReportHealthCheckWorker},
+       # Every 3 minutes for admin discovery
+       {"*/3 * * * *", EdgeAgent.EdgeClusters.Workers.DiscoverAdminWorker},
+       # Every 2 hours to check for self-updates (HTTP fallback mode)
+       {"0 */2 * * *", EdgeAgent.SelfUpdates.Workers.CheckSelfUpdateWorker},
+       # Every 2 minutes to push metrics (HTTP fallback mode)
+       {"*/2 * * * *", EdgeAgent.Metrics.Workers.PushMetricsWorker},
+       # Every 24 hours to pull VPN config from Netmaker (safety net for MQTT message loss)
+       {"0 0 * * *", EdgeAgent.Vpn.Workers.PullVpnConfigWorker}
+     ]},
+    Oban.Plugins.Lifeline,
+    {Oban.Plugins.Pruner, max_age: 86_400}
+  ]
+
 config :edge_agent,
   ssh_port: get_env("SSH_PORT", :integer, 40_022),
   host_metrics_port: get_env("HOST_METRICS_PORT", :integer, 49_100),

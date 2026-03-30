@@ -37,7 +37,7 @@ defmodule EdgeAgent.Vpn.Workers.PullVpnConfigWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: _args}) do
-    if Application.get_env(:edge_agent, :pull_vpn_config_enabled, true) do
+    if should_run?() do
       Logger.debug("PullVpnConfigWorker started")
 
       case Nexmaker.Cli.pull() do
@@ -54,5 +54,9 @@ defmodule EdgeAgent.Vpn.Workers.PullVpnConfigWorker do
       Logger.debug("PullVpnConfigWorker skipped (PULL_VPN_CONFIG_ENABLED=false)")
       :ok
     end
+  end
+
+  defp should_run? do
+    Application.get_env(:edge_agent, :pull_vpn_config_enabled, true)
   end
 end

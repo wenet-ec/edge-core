@@ -68,27 +68,15 @@ end
 
 admin_id = generate_random_string(12)
 
-# Cluster reconciliation configuration
-cluster_reconciliation_enabled = get_env("CLUSTER_RECONCILIATION_ENABLED", :boolean, true)
-
-cluster_reconciliation_schedule =
-  get_env("CLUSTER_RECONCILIATION_SCHEDULE", :string, "0 */6 * * *")
-
 # Zombie admin cleanup configuration
 zombie_admin_cleanup_schedule = get_env("ZOMBIE_ADMIN_CLEANUP_SCHEDULE", :string, "*/30 * * * *")
 
 zombie_admin_checkin_threshold_minutes =
   get_env("ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES", :integer, 120)
 
-# Oban crontab
-crontab =
-  [
-    {true, {zombie_admin_cleanup_schedule, EdgeAdmin.Vpn.Workers.ZombieAdminCleaner}},
-    {cluster_reconciliation_enabled,
-     {cluster_reconciliation_schedule, EdgeAdmin.Nodes.Workers.ClusterReconciliationWorker}}
-  ]
-  |> Enum.filter(&elem(&1, 0))
-  |> Enum.map(&elem(&1, 1))
+# Cluster reconciliation configuration
+cluster_reconciliation_schedule =
+  get_env("CLUSTER_RECONCILIATION_SCHEDULE", :string, "0 */6 * * *")
 
 config :edge_admin, EdgeAdmin.LocalScheduler,
   jobs: [
@@ -130,7 +118,13 @@ config :edge_admin, Oban,
   repo: EdgeAdmin.Repo,
   peer: Oban.Peers.Database,
   plugins: [
-    {Oban.Plugins.Cron, crontab: crontab},
+    {Oban.Plugins.Cron,
+     crontab: [
+       # Every 30 minutes to clean up zombie admins that haven't checked in within the threshold
+       {zombie_admin_cleanup_schedule, EdgeAdmin.Vpn.Workers.ZombieAdminCleaner},
+       # Every 6 hours to reconcile clusters and clean up inconsistencies between DB and Netmaker
+       {cluster_reconciliation_schedule, EdgeAdmin.Nodes.Workers.ClusterReconciliationWorker}
+     ]},
     Oban.Plugins.Lifeline,
     {Oban.Plugins.Pruner, max_age: 86_400}
   ]
@@ -170,7 +164,7 @@ config :edge_admin,
   # Netmaker DNS domain suffix (used for hostname construction)
   netmaker_default_domain: get_env("NETMAKER_DEFAULT_DOMAIN", :string, "nm.internal"),
   # === Cleanup & Reconciliation Schedules ===
-  cluster_reconciliation_enabled: cluster_reconciliation_enabled,
+  cluster_reconciliation_enabled: get_env("CLUSTER_RECONCILIATION_ENABLED", :boolean, true),
   cluster_reconciliation_schedule: cluster_reconciliation_schedule,
   zombie_admin_cleanup_schedule: zombie_admin_cleanup_schedule,
   zombie_admin_checkin_threshold_minutes: zombie_admin_checkin_threshold_minutes,

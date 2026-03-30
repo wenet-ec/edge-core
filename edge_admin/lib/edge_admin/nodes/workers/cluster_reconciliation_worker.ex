@@ -45,7 +45,11 @@ defmodule EdgeAdmin.Nodes.Workers.ClusterReconciliationWorker do
         Logger.info("Cluster reconciliation skipped - system in degraded mode")
         {:discard, "skipped during degraded mode"}
 
-      Application.get_env(:edge_admin, :cluster_reconciliation_enabled, true) ->
+      not should_run?() ->
+        Logger.info("Cluster reconciliation is disabled, skipping")
+        {:ok, %{clusters_processed: 0, skipped: true}}
+
+      true ->
         Logger.info("Starting cluster reconciliation")
 
         result = Nodes.reconcile_clusters()
@@ -59,10 +63,10 @@ defmodule EdgeAdmin.Nodes.Workers.ClusterReconciliationWorker do
         )
 
         {:ok, result}
-
-      true ->
-        Logger.info("Cluster reconciliation is disabled, skipping")
-        {:ok, %{clusters_processed: 0, skipped: true}}
     end
+  end
+
+  defp should_run? do
+    Application.get_env(:edge_admin, :cluster_reconciliation_enabled, true)
   end
 end

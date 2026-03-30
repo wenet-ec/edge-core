@@ -23,7 +23,6 @@ config :edge_agent, EdgeAgentWeb.Endpoint,
 
 config :edge_agent, EdgeAgentWeb.Plugs.Security, allow_unsafe_scripts: false
 
-
 config :edge_agent,
   ecto_repos: [EdgeAgent.Repo],
   generators: [timestamp_type: :utc_datetime, binary_id: true]

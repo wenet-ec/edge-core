@@ -186,26 +186,26 @@ ADMIN_DISCOVERY_PORT=44000
 # Background Workers & Schedulers
 # =============================================================================
 
-# --- Cluster Reconciliation (Oban Cron — runs on leader only) ---
-# Heals drift between DB and Netmaker: adds/removes nodes from VPN networks,
-# cleans up orphaned clusters and ghost DNS aliases.
+# --- Quantum LocalScheduler (runs on every instance) ---
+# ADMIN_DISCOVERY_SCHEDULE=*/5 * * * *        # Scan VPN for other admin peers (default: every 5min)
+# METADATA_RECOMPUTATION_SCHEDULE=* * * * *   # Recompute cluster ownership assignments (default: every 1min)
+NODE_HEALTH_CHECK_SCHEDULE=* * * * *           # Ping owned nodes to detect unhealthy status (default: every 1min)
+NODE_HEALTH_CHECK_CONCURRENCY=100
+# EXECUTION_DELIVERY_SCHEDULE=* * * * *        # Deliver pending commands to agents (default: every 1min)
+
+# --- Oban Cron (job inserted by leader; any instance competes to execute) ---
+
+# Cluster Reconciliation: heals drift between DB and Netmaker
 # CLUSTER_RECONCILIATION_ENABLED=true
 # CLUSTER_RECONCILIATION_SCHEDULE=0 */6 * * *  # default: every 6 hours
 
-# --- Rogue Host Eviction ---
-# During reconciliation, delete hosts in a cluster network that have no DB record.
+# Rogue Host Eviction: delete hosts in a cluster network with no DB record
 # Disable temporarily if you need direct Netmaker access (e.g. manual debugging).
 # EVICT_ROGUE_HOSTS=true
 
-# --- Zombie Admin Cleanup (Oban Cron — runs on leader only) ---
-# Removes stale admin hosts from the admin VPN that haven't checked in recently.
+# Zombie Admin Cleanup: removes stale admin hosts that haven't checked in recently
 ZOMBIE_ADMIN_CLEANUP_SCHEDULE=*/30 * * * *
 ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES=120
-
-# --- Node Health Check (Quantum LocalScheduler — runs on every instance) ---
-# Each admin independently pings the nodes it owns to detect unhealthy/unreachable status.
-NODE_HEALTH_CHECK_SCHEDULE=* * * * *
-NODE_HEALTH_CHECK_CONCURRENCY=100
 
 # --- HTTP Timeouts for Agent Communication ---
 # HEALTH_CHECK_TIMEOUT_MS=3000       # Health check pings (every minute, all owned nodes)

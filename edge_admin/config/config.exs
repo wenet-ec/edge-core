@@ -33,7 +33,6 @@ config :edge_admin, EdgeAdminWeb.Endpoint,
 
 config :edge_admin, EdgeAdminWeb.Plugs.Security, allow_unsafe_scripts: false
 
-
 config :edge_admin,
   ecto_repos: [EdgeAdmin.Repo],
   generators: [timestamp_type: :utc_datetime, binary_id: true],

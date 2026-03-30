@@ -68,36 +68,37 @@ end
 
 admin_id = generate_random_string(12)
 
-# Zombie admin cleanup configuration
+# =============================================================================
+# Background Job Schedules
+# =============================================================================
+
+# --- Quantum (LocalScheduler) ---
+admin_discovery_schedule = get_env("ADMIN_DISCOVERY_SCHEDULE", :string, "*/5 * * * *")
+metadata_recomputation_schedule = get_env("METADATA_RECOMPUTATION_SCHEDULE", :string, "* * * * *")
+node_health_check_schedule = get_env("NODE_HEALTH_CHECK_SCHEDULE", :string, "* * * * *")
+execution_delivery_schedule = get_env("EXECUTION_DELIVERY_SCHEDULE", :string, "* * * * *")
+
+# --- Oban Cron ---
 zombie_admin_cleanup_schedule = get_env("ZOMBIE_ADMIN_CLEANUP_SCHEDULE", :string, "*/30 * * * *")
-
-zombie_admin_checkin_threshold_minutes =
-  get_env("ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES", :integer, 120)
-
-# Cluster reconciliation configuration
-cluster_reconciliation_schedule =
-  get_env("CLUSTER_RECONCILIATION_SCHEDULE", :string, "0 */6 * * *")
+zombie_admin_checkin_threshold_minutes = get_env("ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES", :integer, 120)
+cluster_reconciliation_schedule = get_env("CLUSTER_RECONCILIATION_SCHEDULE", :string, "0 */6 * * *")
 
 config :edge_admin, EdgeAdmin.LocalScheduler,
   jobs: [
-    # Admin discovery - scan network for other admin nodes (every 5min)
     admin_discovery: [
-      schedule: "*/5 * * * *",
+      schedule: admin_discovery_schedule,
       task: {EdgeAdmin.Admins.Discovery, :scan_and_connect_admins, []}
     ],
-    # Metadata recomputation - update cluster assignments (every 1min)
     metadata_recomputation: [
-      schedule: "* * * * *",
+      schedule: metadata_recomputation_schedule,
       task: {EdgeAdmin.Admins.Metadata, :recompute_now, []}
     ],
-    # Node health check - ping agents to verify connectivity (configurable)
     node_health_check: [
-      schedule: get_env("NODE_HEALTH_CHECK_SCHEDULE", :string, "* * * * *"),
+      schedule: node_health_check_schedule,
       task: {EdgeAdmin.Nodes, :check_node_health, []}
     ],
-    # Execution delivery - deliver pending commands to agents (every 1min)
     execution_delivery: [
-      schedule: "* * * * *",
+      schedule: execution_delivery_schedule,
       task: {EdgeAdmin.Commands, :deliver_local_executions, []}
     ]
   ]
@@ -120,14 +121,21 @@ config :edge_admin, Oban,
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [
-       # Every 30 minutes to clean up zombie admins that haven't checked in within the threshold
+       # Remove stale admin hosts from the admin VPN that haven't checked in recently
        {zombie_admin_cleanup_schedule, EdgeAdmin.Vpn.Workers.CleanupZombieAdminsWorker},
-       # Every 6 hours to reconcile clusters and clean up inconsistencies between DB and Netmaker
+       # Reconcile clusters and nodes between DB and Netmaker
        {cluster_reconciliation_schedule, EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker}
      ]},
     Oban.Plugins.Lifeline,
     {Oban.Plugins.Pruner, max_age: 86_400}
   ]
+
+# Proxy server per-operation timeouts (in milliseconds)
+config :edge_admin, :proxy_timeouts,
+  connection: get_env("PROXY_CONNECTION_TIMEOUT_MS", :integer, 5_000),
+  handshake: get_env("PROXY_HANDSHAKE_TIMEOUT_MS", :integer, 10_000),
+  read: get_env("PROXY_READ_TIMEOUT_MS", :integer, 10_000),
+  recv: get_env("PROXY_RECV_TIMEOUT_MS", :integer, 300_000)
 
 config :edge_admin,
   # === Admin Identity ===
@@ -163,7 +171,11 @@ config :edge_admin,
   derp_map_url: get_env("DERP_MAP_URL"),
   # Netmaker DNS domain suffix (used for hostname construction)
   netmaker_default_domain: get_env("NETMAKER_DEFAULT_DOMAIN", :string, "nm.internal"),
-  # === Cleanup & Reconciliation Schedules ===
+  # === Background Job Schedules ===
+  admin_discovery_schedule: admin_discovery_schedule,
+  metadata_recomputation_schedule: metadata_recomputation_schedule,
+  node_health_check_schedule: node_health_check_schedule,
+  execution_delivery_schedule: execution_delivery_schedule,
   cluster_reconciliation_enabled: get_env("CLUSTER_RECONCILIATION_ENABLED", :boolean, true),
   cluster_reconciliation_schedule: cluster_reconciliation_schedule,
   zombie_admin_cleanup_schedule: zombie_admin_cleanup_schedule,
@@ -190,13 +202,6 @@ config :edge_admin,
   metrics_base_url: get_env!("METRICS_BASE_URL"),
   netmaker_superadmin_username: get_env!("NETMAKER_SUPERADMIN_USERNAME"),
   netmaker_superadmin_password: get_env!("NETMAKER_SUPERADMIN_PASSWORD")
-
-# Proxy server per-operation timeouts (in milliseconds)
-config :edge_admin, :proxy_timeouts,
-  connection: get_env("PROXY_CONNECTION_TIMEOUT_MS", :integer, 5_000),
-  handshake: get_env("PROXY_HANDSHAKE_TIMEOUT_MS", :integer, 10_000),
-  read: get_env("PROXY_READ_TIMEOUT_MS", :integer, 10_000),
-  recv: get_env("PROXY_RECV_TIMEOUT_MS", :integer, 300_000)
 
 config :nexmaker,
   base_url: get_env!("NETMAKER_API_URL"),

@@ -16,6 +16,18 @@ if get_env("PHX_SERVER", :boolean, false) == true do
   config :edge_agent, EdgeAgentWeb.Endpoint, server: true
 end
 
+# =============================================================================
+# Background Job Schedules
+# =============================================================================
+enqueue_executions_schedule = get_env("ENQUEUE_EXECUTIONS_SCHEDULE", :string, "* * * * *")
+report_executions_schedule = get_env("REPORT_EXECUTIONS_SCHEDULE", :string, "* * * * *")
+sync_executions_schedule = get_env("SYNC_EXECUTIONS_SCHEDULE", :string, "*/2 * * * *")
+report_health_check_schedule = get_env("REPORT_HEALTH_CHECK_SCHEDULE", :string, "*/2 * * * *")
+discover_admins_schedule = get_env("DISCOVER_ADMINS_SCHEDULE", :string, "*/3 * * * *")
+check_self_update_schedule = get_env("CHECK_SELF_UPDATE_SCHEDULE", :string, "0 */2 * * *")
+push_metrics_schedule = get_env("PUSH_METRICS_SCHEDULE", :string, "*/2 * * * *")
+pull_vpn_config_schedule = get_env("PULL_VPN_CONFIG_SCHEDULE", :string, "0 0 * * *")
+
 config :edge_agent, EdgeAgentWeb.Endpoint,
   http: [
     ip: {0, 0, 0, 0, 0, 0, 0, 0},
@@ -41,26 +53,32 @@ config :edge_agent, Oban,
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [
-       # Every minute to enqueue pending executions
-       {"* * * * *", EdgeAgent.Commands.Workers.EnqueueExecutionWorker},
-       # Every minute for reporting (safety net)
-       {"* * * * *", EdgeAgent.Commands.Workers.ReportExecutionWorker},
-       # Every 2 minutes to sync unprocessed executions (HTTP fallback mode)
-       {"*/2 * * * *", EdgeAgent.Commands.Workers.SyncUnprocessedExecutionWorker},
-       # Every 2 minutes to report health check (HTTP fallback mode)
-       {"*/2 * * * *", EdgeAgent.EdgeClusters.Workers.ReportHealthCheckWorker},
-       # Every 3 minutes for admin discovery
-       {"*/3 * * * *", EdgeAgent.EdgeClusters.Workers.DiscoverAdminWorker},
-       # Every 2 hours to check for self-updates (HTTP fallback mode)
-       {"0 */2 * * *", EdgeAgent.SelfUpdates.Workers.CheckSelfUpdateWorker},
-       # Every 2 minutes to push metrics (HTTP fallback mode)
-       {"*/2 * * * *", EdgeAgent.Metrics.Workers.PushMetricsWorker},
-       # Every 24 hours to pull VPN config from Netmaker (safety net for MQTT message loss)
-       {"0 0 * * *", EdgeAgent.Vpn.Workers.PullVpnConfigWorker}
+       # Enqueue pending command executions
+       {enqueue_executions_schedule, EdgeAgent.Commands.Workers.EnqueueExecutionWorker},
+       # Report completed executions to admin (safety net)
+       {report_executions_schedule, EdgeAgent.Commands.Workers.ReportExecutionWorker},
+       # Sync unprocessed executions from admin (HTTP fallback mode)
+       {sync_executions_schedule, EdgeAgent.Commands.Workers.SyncUnprocessedExecutionWorker},
+       # Report node health to admin (HTTP fallback mode)
+       {report_health_check_schedule, EdgeAgent.EdgeClusters.Workers.ReportHealthCheckWorker},
+       # Probe VPN for admin peers
+       {discover_admins_schedule, EdgeAgent.EdgeClusters.Workers.DiscoverAdminWorker},
+       # Poll admin for self-update requests (HTTP fallback mode)
+       {check_self_update_schedule, EdgeAgent.SelfUpdates.Workers.CheckSelfUpdateWorker},
+       # Push metrics to admin (HTTP fallback mode)
+       {push_metrics_schedule, EdgeAgent.Metrics.Workers.PushMetricsWorker},
+       # Pull full VPN config from Netmaker (safety net for MQTT message loss / daemon-restart DNS loss)
+       {pull_vpn_config_schedule, EdgeAgent.Vpn.Workers.PullVpnConfigWorker}
      ]},
     Oban.Plugins.Lifeline,
     {Oban.Plugins.Pruner, max_age: 86_400}
   ]
+
+# Proxy server per-operation timeouts (in milliseconds)
+config :edge_agent, :proxy_timeouts,
+  connection: get_env("PROXY_CONNECTION_TIMEOUT_MS", :integer, 5_000),
+  read: get_env("PROXY_READ_TIMEOUT_MS", :integer, 10_000),
+  recv: get_env("PROXY_RECV_TIMEOUT_MS", :integer, 300_000)
 
 config :edge_agent,
   ssh_port: get_env("SSH_PORT", :integer, 40_022),
@@ -93,9 +111,3 @@ config :edge_agent,
   # VPN config pull toggle — disable on resource-starved machines where netclient pull
   # causes disruptive interface resets. MQTT retained messages provide eventual consistency.
   pull_vpn_config_enabled: get_env("PULL_VPN_CONFIG_ENABLED", :boolean, true)
-
-# Proxy server per-operation timeouts (in milliseconds)
-config :edge_agent, :proxy_timeouts,
-  connection: get_env("PROXY_CONNECTION_TIMEOUT_MS", :integer, 5_000),
-  read: get_env("PROXY_READ_TIMEOUT_MS", :integer, 10_000),
-  recv: get_env("PROXY_RECV_TIMEOUT_MS", :integer, 300_000)

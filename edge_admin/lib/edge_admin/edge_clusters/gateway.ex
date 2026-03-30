@@ -79,7 +79,9 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
   defp metrics_scrape_timeout, do: Application.get_env(:edge_admin, :metrics_scrape_timeout, 8_000)
   defp command_delivery_timeout, do: Application.get_env(:edge_admin, :command_delivery_timeout, 10_000)
-  defp tcp_connect_timeout, do: Application.get_env(:edge_admin, :proxy_timeouts, []) |> Keyword.get(:connection, 5_000)
+
+  defp tcp_connect_timeout,
+    do: :edge_admin |> Application.get_env(:proxy_timeouts, []) |> Keyword.get(:connection, 5_000)
 
   defp metrics_scrape_options do
     timeout = metrics_scrape_timeout()

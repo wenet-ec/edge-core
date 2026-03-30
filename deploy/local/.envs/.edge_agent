@@ -76,6 +76,18 @@ WATCHTOWER_HTTP_API_TOKEN=local-dev-token
 # PROXY_RECV_TIMEOUT_MS=300000        # Forwarding loop inactivity — closes half-open connections (default: 5min)
 
 # =============================================================================
+# Background Job Schedules
+# =============================================================================
+# ENQUEUE_EXECUTIONS_SCHEDULE=* * * * *      # Enqueue pending command executions (default: every 1min)
+# REPORT_EXECUTIONS_SCHEDULE=* * * * *       # Report completed executions to admin (default: every 1min)
+# SYNC_EXECUTIONS_SCHEDULE=*/2 * * * *       # Sync unprocessed executions via HTTP fallback (default: every 2min)
+# REPORT_HEALTH_CHECK_SCHEDULE=*/2 * * * *   # Report node health via HTTP fallback (default: every 2min)
+# DISCOVER_ADMINS_SCHEDULE=*/3 * * * *       # Probe VPN for admin peers (default: every 3min)
+# CHECK_SELF_UPDATE_SCHEDULE=0 */2 * * *     # Poll admin for self-update requests via HTTP fallback (default: every 2h)
+# PUSH_METRICS_SCHEDULE=*/2 * * * *          # Push metrics to admin via HTTP fallback (default: every 2min)
+# PULL_VPN_CONFIG_SCHEDULE=0 0 * * *         # Pull full VPN config from Netmaker as DNS recovery backstop (default: daily)
+
+# =============================================================================
 # VPN
 # =============================================================================
 # VPN_READY_TIMEOUT_SECONDS=30   # How long to wait for VPN to be ready before aborting (default: 30)

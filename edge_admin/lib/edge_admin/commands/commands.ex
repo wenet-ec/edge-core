@@ -944,8 +944,8 @@ defmodule EdgeAdmin.Commands do
     opts = [
       json: execution_data,
       auth: {:bearer, node.api_token},
-      receive_timeout: Application.get_env(:edge_admin, :http_agent_receive_timeout),
-      connect_options: [timeout: Application.get_env(:edge_admin, :http_agent_connect_timeout)],
+      receive_timeout: Application.get_env(:edge_admin, :command_delivery_timeout, 10_000),
+      connect_options: [timeout: Application.get_env(:edge_admin, :command_delivery_timeout, 10_000)],
       retry: false
     ]
 

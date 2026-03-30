@@ -107,9 +107,11 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   defp probe_peer(%{"name" => "admin-" <> _, "address" => ip}, network_name, port) when is_binary(ip) do
     url = "http://#{ip}:#{port}/api/v1/admins/self/discovery"
 
+    timeout = Application.get_env(:edge_agent, :admin_discovery_timeout, 3_000)
+
     opts = [
-      receive_timeout: Application.get_env(:edge_agent, :http_receive_timeout, 30_000),
-      connect_options: [timeout: Application.get_env(:edge_agent, :http_connect_timeout, 20_000)],
+      receive_timeout: timeout,
+      connect_options: [timeout: timeout],
       retry: false
     ]
 

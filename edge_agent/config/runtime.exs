@@ -80,9 +80,11 @@ config :edge_agent,
   proxy_blocked_ports: get_env("PROXY_BLOCKED_PORTS", :list, []),
   proxy_custom_blocked_hosts: get_env("PROXY_CUSTOM_BLOCKED_HOSTS", :list, []),
   proxy_custom_allowed_hosts: get_env("PROXY_CUSTOM_ALLOWED_HOSTS", :list, []),
-  # HTTP request timeouts for admin communication (in milliseconds)
-  http_receive_timeout: get_env("HTTP_RECEIVE_TIMEOUT_MS", :integer, 30_000),
-  http_connect_timeout: get_env("HTTP_CONNECT_TIMEOUT_MS", :integer, 20_000),
+  # === HTTP Request Timeouts (agent → admin) ===
+  # All regular admin API calls: registration, command acks, health reporting, metrics push.
+  admin_call_timeout: get_env("ADMIN_CALL_TIMEOUT_MS", :integer, 10_000),
+  # Admin discovery probing — short, probing many peers in parallel.
+  admin_discovery_timeout: get_env("ADMIN_DISCOVERY_TIMEOUT_MS", :integer, 3_000),
   # VPN connection verification timeout (in seconds)
   vpn_ready_timeout_seconds: get_env("VPN_READY_TIMEOUT_SECONDS", :integer, 30),
   # Authentication toggles
@@ -91,3 +93,9 @@ config :edge_agent,
   # VPN config pull toggle — disable on resource-starved machines where netclient pull
   # causes disruptive interface resets. MQTT retained messages provide eventual consistency.
   pull_vpn_config_enabled: get_env("PULL_VPN_CONFIG_ENABLED", :boolean, true)
+
+# Proxy server per-operation timeouts (in milliseconds)
+config :edge_agent, :proxy_timeouts,
+  connection: get_env("PROXY_CONNECTION_TIMEOUT_MS", :integer, 5_000),
+  read: get_env("PROXY_READ_TIMEOUT_MS", :integer, 10_000),
+  recv: get_env("PROXY_RECV_TIMEOUT_MS", :integer, 300_000)

@@ -33,11 +33,6 @@ config :edge_admin, EdgeAdminWeb.Endpoint,
 
 config :edge_admin, EdgeAdminWeb.Plugs.Security, allow_unsafe_scripts: false
 
-# Proxy server timeouts (in milliseconds)
-config :edge_admin, :proxy_timeouts,
-  connection: 5_000,
-  handshake: 10_000,
-  read: 10_000
 
 config :edge_admin,
   ecto_repos: [EdgeAdmin.Repo],

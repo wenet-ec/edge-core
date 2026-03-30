@@ -282,7 +282,7 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
 
     case :gen_tcp.send(socket, greeting) do
       :ok ->
-        case :gen_tcp.recv(socket, 2, Config.connection_timeout()) do
+        case :gen_tcp.recv(socket, 2, Config.handshake_timeout()) do
           {:ok, <<5, 2>>} -> :ok
           # No auth required
           {:ok, <<5, 0>>} -> :ok
@@ -304,7 +304,7 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
 
     case :gen_tcp.send(socket, auth_request) do
       :ok ->
-        case :gen_tcp.recv(socket, 2, Config.connection_timeout()) do
+        case :gen_tcp.recv(socket, 2, Config.handshake_timeout()) do
           {:ok, <<1, 0>>} -> :ok
           {:ok, <<1, _status>>} -> {:error, :socks5_auth_failed}
           {:error, reason} -> {:error, reason}
@@ -320,7 +320,7 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
 
     case :gen_tcp.send(socket, request) do
       :ok ->
-        case :gen_tcp.recv(socket, 10, Config.connection_timeout()) do
+        case :gen_tcp.recv(socket, 10, Config.handshake_timeout()) do
           {:ok, <<5, 0, _::binary>>} ->
             if initial_data, do: :gen_tcp.send(socket, initial_data)
             :ok
@@ -339,7 +339,7 @@ defmodule EdgeAdmin.ProxyServers.TcpTunnel do
 
   # Read HTTP response headers (until \r\n\r\n)
   defp read_http_response(socket, buffer \\ "") do
-    case :gen_tcp.recv(socket, 0, Config.connection_timeout()) do
+    case :gen_tcp.recv(socket, 0, Config.handshake_timeout()) do
       {:ok, data} ->
         new_buffer = buffer <> data
 

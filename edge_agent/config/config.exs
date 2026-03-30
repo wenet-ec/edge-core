@@ -23,10 +23,6 @@ config :edge_agent, EdgeAgentWeb.Endpoint,
 
 config :edge_agent, EdgeAgentWeb.Plugs.Security, allow_unsafe_scripts: false
 
-# Proxy server timeouts (in milliseconds)
-config :edge_agent, :proxy_timeouts,
-  connection: 30_000,
-  read: 10_000
 
 config :edge_agent,
   ecto_repos: [EdgeAgent.Repo],

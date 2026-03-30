@@ -77,13 +77,18 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
   require Logger
 
-  # HTTP request timeout options for agent communication
-  defp agent_request_options do
-    [
-      receive_timeout: Application.get_env(:edge_admin, :http_agent_receive_timeout),
-      connect_options: [timeout: Application.get_env(:edge_admin, :http_agent_connect_timeout)],
-      retry: false
-    ]
+  defp metrics_scrape_timeout, do: Application.get_env(:edge_admin, :metrics_scrape_timeout, 8_000)
+  defp command_delivery_timeout, do: Application.get_env(:edge_admin, :command_delivery_timeout, 10_000)
+  defp tcp_connect_timeout, do: Application.get_env(:edge_admin, :proxy_timeouts, []) |> Keyword.get(:connection, 5_000)
+
+  defp metrics_scrape_options do
+    timeout = metrics_scrape_timeout()
+    [receive_timeout: timeout, connect_options: [timeout: timeout], retry: false]
+  end
+
+  defp command_options do
+    timeout = command_delivery_timeout()
+    [receive_timeout: timeout, connect_options: [timeout: timeout], retry: false]
   end
 
   # ===========================================================================
@@ -167,7 +172,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - {:error, reason} - HTTP error or network failure
   """
   def scrape_host_metrics(gateway_pid, node) do
-    GenServer.call(gateway_pid, {:scrape_host_metrics, node}, 10_000)
+    GenServer.call(gateway_pid, {:scrape_host_metrics, node}, metrics_scrape_timeout() + 2_000)
   end
 
   @doc """
@@ -184,7 +189,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - {:error, reason} - HTTP error or network failure
   """
   def scrape_agent_metrics(gateway_pid, node) do
-    GenServer.call(gateway_pid, {:scrape_agent_metrics, node}, 10_000)
+    GenServer.call(gateway_pid, {:scrape_agent_metrics, node}, metrics_scrape_timeout() + 2_000)
   end
 
   @doc """
@@ -201,7 +206,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - {:error, reason} - HTTP error or network failure
   """
   def scrape_wireguard_metrics(gateway_pid, node) do
-    GenServer.call(gateway_pid, {:scrape_wireguard_metrics, node}, 10_000)
+    GenServer.call(gateway_pid, {:scrape_wireguard_metrics, node}, metrics_scrape_timeout() + 2_000)
   end
 
   @doc """
@@ -218,7 +223,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - {:error, reason} - HTTP error or network failure
   """
   def trigger_self_update(gateway_pid, node) do
-    GenServer.call(gateway_pid, {:trigger_self_update, node}, 15_000)
+    GenServer.call(gateway_pid, {:trigger_self_update, node}, command_delivery_timeout() + 2_000)
   end
 
   @doc """
@@ -236,7 +241,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - {:error, reason} - HTTP error or network failure
   """
   def cancel_execution(gateway_pid, node, execution_id) do
-    GenServer.call(gateway_pid, {:cancel_execution, node, execution_id}, 15_000)
+    GenServer.call(gateway_pid, {:cancel_execution, node, execution_id}, command_delivery_timeout() + 2_000)
   end
 
   @doc """
@@ -255,8 +260,8 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - caller_pid: PID of the process that will own the socket
   """
   def tcp_connect(gateway_pid, target_host, target_port, caller_pid) do
-    # Timeout must be longer than gen_tcp.connect timeout (10s) to avoid race condition
-    GenServer.call(gateway_pid, {:tcp_connect, target_host, target_port, caller_pid}, 15_000)
+    # GenServer timeout must exceed the gen_tcp.connect timeout inside handle_call
+    GenServer.call(gateway_pid, {:tcp_connect, target_host, target_port, caller_pid}, tcp_connect_timeout() + 2_000)
   end
 
   # ===========================================================================
@@ -347,7 +352,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
       url = "http://#{Node.vpn_hostname(node)}:#{node.host_metrics_port}/metrics"
 
       result =
-        case Req.get(url, agent_request_options()) do
+        case Req.get(url, metrics_scrape_options()) do
           {:ok, %{status: 200, body: metrics_text}} ->
             :telemetry.execute(
               [:edge_admin, :gateway, :scrape],
@@ -396,7 +401,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
       opts =
         Keyword.merge(
           [auth: {:bearer, node.api_token}],
-          agent_request_options()
+          metrics_scrape_options()
         )
 
       result =
@@ -445,7 +450,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
       url = "http://#{Node.vpn_hostname(node)}:#{node.wireguard_metrics_port}/metrics"
 
       result =
-        case Req.get(url, agent_request_options()) do
+        case Req.get(url, metrics_scrape_options()) do
           {:ok, %{status: 200, body: metrics_text}} ->
             :telemetry.execute(
               [:edge_admin, :gateway, :scrape],
@@ -487,7 +492,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     Task.start(fn ->
       url = "http://#{Node.vpn_hostname(node)}:#{node.http_port}/api/v1/self_updates/trigger"
 
-      opts = Keyword.merge([auth: {:bearer, node.api_token}], agent_request_options())
+      opts = Keyword.merge([auth: {:bearer, node.api_token}], command_options())
 
       result =
         case Req.post(url, opts) do
@@ -525,7 +530,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     Task.start(fn ->
       url = "http://#{Node.vpn_hostname(node)}:#{node.http_port}/api/v1/command_executions/#{execution_id}/cancel"
 
-      opts = Keyword.merge([auth: {:bearer, node.api_token}], agent_request_options())
+      opts = Keyword.merge([auth: {:bearer, node.api_token}], command_options())
 
       result =
         case Req.patch(url, opts) do
@@ -556,7 +561,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
                String.to_charlist(target_host),
                target_port,
                [:binary, packet: :raw, active: false],
-               10_000
+               tcp_connect_timeout()
              ) do
           {:ok, socket} ->
             Logger.debug("Gateway established connection to #{target_host}:#{target_port}")

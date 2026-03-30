@@ -821,8 +821,7 @@ defmodule EdgeAdmin.Nodes do
   @spec check_node_health() :: :ok
   def check_node_health do
     concurrency = Application.get_env(:edge_admin, :node_health_check_concurrency, 100)
-    # Use HTTP agent timeouts for health checks
-    timeout = Application.get_env(:edge_admin, :http_agent_receive_timeout)
+    timeout = Application.get_env(:edge_admin, :health_check_timeout, 3_000)
 
     # Get nodes this admin governs from ETS
     # Returns %{cluster_name => ["node-{id}", "node-{id2}"]}

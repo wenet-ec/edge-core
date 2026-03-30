@@ -174,10 +174,13 @@ config :edge_admin,
   sync_vpn_after_reconciliation: get_env("SYNC_VPN_AFTER_RECONCILIATION", :boolean, true),
   # Delete unrecognized hosts from cluster networks during reconciliation (default: true).
   evict_rogue_hosts: get_env("EVICT_ROGUE_HOSTS", :boolean, true),
-  # === HTTP Request Timeouts ===
-  # Agent communication: health checks, metrics scraping, command execution
-  http_agent_receive_timeout: get_env("HTTP_AGENT_RECEIVE_TIMEOUT_MS", :integer, 10_000),
-  http_agent_connect_timeout: get_env("HTTP_AGENT_CONNECT_TIMEOUT_MS", :integer, 10_000),
+  # === HTTP Request Timeouts (admin → agent) ===
+  # Health checks run every minute across all owned nodes — keep tight.
+  health_check_timeout: get_env("HEALTH_CHECK_TIMEOUT_MS", :integer, 3_000),
+  # Metrics scraping — allow a little more for slow exporters.
+  metrics_scrape_timeout: get_env("METRICS_SCRAPE_TIMEOUT_MS", :integer, 8_000),
+  # Command delivery — agent may be busy, allow a bit more time.
+  command_delivery_timeout: get_env("COMMAND_DELIVERY_TIMEOUT_MS", :integer, 10_000),
   # === Node Health Check ===
   node_health_check_concurrency: get_env("NODE_HEALTH_CHECK_CONCURRENCY", :integer, 100),
   # === Proxy Server Ports ===
@@ -187,6 +190,13 @@ config :edge_admin,
   metrics_base_url: get_env!("METRICS_BASE_URL"),
   netmaker_superadmin_username: get_env!("NETMAKER_SUPERADMIN_USERNAME"),
   netmaker_superadmin_password: get_env!("NETMAKER_SUPERADMIN_PASSWORD")
+
+# Proxy server per-operation timeouts (in milliseconds)
+config :edge_admin, :proxy_timeouts,
+  connection: get_env("PROXY_CONNECTION_TIMEOUT_MS", :integer, 5_000),
+  handshake: get_env("PROXY_HANDSHAKE_TIMEOUT_MS", :integer, 10_000),
+  read: get_env("PROXY_READ_TIMEOUT_MS", :integer, 10_000),
+  recv: get_env("PROXY_RECV_TIMEOUT_MS", :integer, 300_000)
 
 config :nexmaker,
   base_url: get_env!("NETMAKER_API_URL"),

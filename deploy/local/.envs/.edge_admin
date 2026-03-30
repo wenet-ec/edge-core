@@ -57,6 +57,12 @@ MASTER_KEY=supersecretkey123456789
 HTTP_PROXY_PORT=43128
 SOCKS5_PROXY_PORT=41080
 
+# Per-operation proxy timeouts (in milliseconds)
+# PROXY_CONNECTION_TIMEOUT_MS=5000    # TCP connect to target host (default: 5s)
+# PROXY_HANDSHAKE_TIMEOUT_MS=10000    # SOCKS5/HTTP proxy handshake (default: 10s)
+# PROXY_READ_TIMEOUT_MS=10000         # Socket read (default: 10s)
+# PROXY_RECV_TIMEOUT_MS=300000        # Forwarding loop inactivity — closes half-open connections (default: 5min)
+
 # =============================================================================
 # Observability
 # =============================================================================
@@ -202,7 +208,6 @@ NODE_HEALTH_CHECK_SCHEDULE=* * * * *
 NODE_HEALTH_CHECK_CONCURRENCY=100
 
 # --- HTTP Timeouts for Agent Communication ---
-# Covers health checks, metrics scraping, command delivery, and self-update triggers.
-# Set generously to tolerate relay hops and intercontinental latency.
-HTTP_AGENT_RECEIVE_TIMEOUT_MS=30000
-HTTP_AGENT_CONNECT_TIMEOUT_MS=20000
+# HEALTH_CHECK_TIMEOUT_MS=3000       # Health check pings (every minute, all owned nodes)
+# METRICS_SCRAPE_TIMEOUT_MS=8000     # Metrics scraping from agent exporters
+# COMMAND_DELIVERY_TIMEOUT_MS=10000  # Command delivery to agents

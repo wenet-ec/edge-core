@@ -62,10 +62,18 @@ WATCHTOWER_HTTP_API_TOKEN=change-me-in-production
 # PROXY_SERVERS_AUTH_ENABLED=true     # Require auth on proxy endpoints (default: true)
 
 # =============================================================================
-# HTTP Timeouts (admin communication)
+# HTTP Timeouts (agent → admin communication)
 # =============================================================================
-# HTTP_RECEIVE_TIMEOUT_MS=30000    # Max time to wait for a response (default: 30s)
-# HTTP_CONNECT_TIMEOUT_MS=20000    # Max time to establish a connection (default: 20s)
+# ADMIN_CALL_TIMEOUT_MS=10000        # Registration, command acks, health reporting, metrics push
+# ADMIN_DISCOVERY_TIMEOUT_MS=3000    # Admin peer probing during discovery
+
+# =============================================================================
+# Proxy Server Timeouts
+# =============================================================================
+# Per-operation proxy timeouts (in milliseconds)
+# PROXY_CONNECTION_TIMEOUT_MS=5000    # TCP connect to target host (default: 5s)
+# PROXY_READ_TIMEOUT_MS=10000         # Socket read (default: 10s)
+# PROXY_RECV_TIMEOUT_MS=300000        # Forwarding loop inactivity — closes half-open connections (default: 5min)
 
 # =============================================================================
 # VPN

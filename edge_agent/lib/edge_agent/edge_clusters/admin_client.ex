@@ -82,11 +82,13 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   require Logger
 
-  # HTTP request timeout options for all admin communication
+  # HTTP request timeout options for all admin API calls
   defp http_options do
+    timeout = Application.get_env(:edge_agent, :admin_call_timeout, 10_000)
+
     [
-      receive_timeout: Application.get_env(:edge_agent, :http_receive_timeout, 30_000),
-      connect_options: [timeout: Application.get_env(:edge_agent, :http_connect_timeout, 20_000)],
+      receive_timeout: timeout,
+      connect_options: [timeout: timeout],
       retry: false
     ]
   end

@@ -104,9 +104,11 @@ defmodule EdgeAgent.Enrollment do
   end
 
   defp fetch_from_url(url) do
+    timeout = Application.get_env(:edge_agent, :admin_call_timeout, 10_000)
+
     opts = [
-      receive_timeout: Application.get_env(:edge_agent, :http_receive_timeout, 30_000),
-      connect_options: [timeout: Application.get_env(:edge_agent, :http_connect_timeout, 20_000)],
+      receive_timeout: timeout,
+      connect_options: [timeout: timeout],
       retry: false
     ]
 

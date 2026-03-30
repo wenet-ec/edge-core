@@ -39,7 +39,7 @@ defmodule EdgeAdmin.SelfUpdates do
   alias EdgeAdmin.SelfUpdates.Checks
   alias EdgeAdmin.SelfUpdates.Forms
   alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
-  alias EdgeAdmin.SelfUpdates.Workers.SelfUpdateTriggerWorker
+  alias EdgeAdmin.SelfUpdates.Workers.TriggerSelfUpdateWorker
 
   require Logger
 
@@ -208,7 +208,7 @@ defmodule EdgeAdmin.SelfUpdates do
   @doc """
   Processes a self-update request by triggering updates for targeted nodes.
 
-  This is called by the SelfUpdateTriggerWorker. Resolves targeting, filters nodes,
+  This is called by the TriggerSelfUpdateWorker. Resolves targeting, filters nodes,
   groups by cluster, and triggers updates via Gateway.
 
   ## Parameters
@@ -279,7 +279,7 @@ defmodule EdgeAdmin.SelfUpdates do
 
   defp enqueue_trigger_worker(request) do
     %{request_id: request.id}
-    |> SelfUpdateTriggerWorker.new()
+    |> TriggerSelfUpdateWorker.new()
     |> Oban.insert()
 
     Logger.info("Enqueued self-update trigger worker for request #{request.id}")

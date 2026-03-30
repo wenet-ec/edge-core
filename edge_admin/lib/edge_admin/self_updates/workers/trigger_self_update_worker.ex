@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/self_updates/workers/self_update_trigger_worker.ex
-defmodule EdgeAdmin.SelfUpdates.Workers.SelfUpdateTriggerWorker do
+# edge_admin/lib/edge_admin/self_updates/workers/trigger_self_update_worker.ex
+defmodule EdgeAdmin.SelfUpdates.Workers.TriggerSelfUpdateWorker do
   @moduledoc """
   Worker that processes self-update requests.
 

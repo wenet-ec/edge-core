@@ -1371,6 +1371,32 @@ defmodule EdgeAdmin.Nodes do
     })
   end
 
+  @doc """
+  Reconciles a single cluster's state between the DB and Netmaker.
+
+  Called by ReconcileClusterWorker — one job per cluster, allowing independent
+  retries and parallel processing. Performs the same steps as reconcile_clusters/0
+  but scoped to a single cluster struct.
+  """
+  @spec reconcile_cluster(Cluster.t()) :: map()
+  def reconcile_cluster(%Cluster{} = cluster) do
+    acc = %{
+      nodes_added: 0,
+      nodes_removed: 0,
+      nodes_deleted: 0,
+      clusters_deleted: 0,
+      aliases_cleaned: 0,
+      ghost_aliases_cleaned: 0,
+      errors: 0
+    }
+
+    db_nodes = Repo.all(from(n in Node, where: n.cluster_id == ^cluster.id, preload: [:cluster]))
+
+    result = reconcile_single_cluster(cluster, db_nodes, acc)
+    result = cleanup_orphaned_clusters([cluster], result)
+    cleanup_ghost_aliases([cluster], result)
+  end
+
   defp reconcile_clusters_paginated(page, acc) do
     {:ok, {clusters, meta}} = list_clusters(%{"page_size" => "500", "page" => to_string(page)})
 

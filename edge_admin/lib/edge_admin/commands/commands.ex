@@ -62,7 +62,7 @@ defmodule EdgeAdmin.Commands do
   alias EdgeAdmin.Commands.Forms
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Commands.Schemas.CommandExecution
-  alias EdgeAdmin.Commands.Workers.ExecutionCreationWorker
+  alias EdgeAdmin.Commands.Workers.CreateExecutionsWorker
   alias EdgeAdmin.EdgeClusters.Gateway
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.Schemas.Node
@@ -469,14 +469,14 @@ defmodule EdgeAdmin.Commands do
 
     if args do
       args
-      |> ExecutionCreationWorker.new()
+      |> CreateExecutionsWorker.new()
       |> Oban.insert()
       |> case do
         {:ok, _job} ->
           :ok
 
         {:error, reason} ->
-          Logger.error("Failed to enqueue ExecutionCreationWorker: #{inspect(reason)}")
+          Logger.error("Failed to enqueue CreateExecutionsWorker: #{inspect(reason)}")
       end
     else
       :ok

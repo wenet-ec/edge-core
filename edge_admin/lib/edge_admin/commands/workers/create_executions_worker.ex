@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/commands/workers/execution_creation_worker.ex
-defmodule EdgeAdmin.Commands.Workers.ExecutionCreationWorker do
+# edge_admin/lib/edge_admin/commands/workers/create_executions_worker.ex
+defmodule EdgeAdmin.Commands.Workers.CreateExecutionsWorker do
   @moduledoc """
   Worker that creates command executions in bulk.
 

@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/vpn/workers/zombie_admin_cleaner.ex
-defmodule EdgeAdmin.Vpn.Workers.ZombieAdminCleaner do
+# edge_admin/lib/edge_admin/vpn/workers/cleanup_zombie_admins_worker.ex
+defmodule EdgeAdmin.Vpn.Workers.CleanupZombieAdminsWorker do
   @moduledoc """
   Periodic cleanup of stale admin hosts in the admin cluster.
 
@@ -29,18 +29,16 @@ defmodule EdgeAdmin.Vpn.Workers.ZombieAdminCleaner do
   @impl Oban.Worker
   def perform(_job) do
     if Metadata.degraded?() do
-      Logger.info("Zombie admin cleanup skipped - system in degraded mode")
+      Logger.info("CleanupZombieAdminsWorker: skipped — system in degraded mode")
       {:discard, "skipped during degraded mode"}
     else
-      # Call Vpn context function - all logic lives there
       case Vpn.cleanup_zombie_admins() do
         {:ok, deleted_count} ->
-          Logger.info("Zombie admin cleanup completed: #{deleted_count} host(s) deleted")
+          Logger.info("CleanupZombieAdminsWorker: completed — #{deleted_count} host(s) deleted")
           :ok
 
         {:error, reason} ->
-          Logger.error("Zombie admin cleanup failed: #{inspect(reason)}")
-          # Return :ok anyway so job completes and next run can try again
+          Logger.error("CleanupZombieAdminsWorker: failed — #{inspect(reason)}")
           :ok
       end
     end

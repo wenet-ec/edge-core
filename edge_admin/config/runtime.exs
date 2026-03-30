@@ -112,7 +112,7 @@ config :edge_admin, Oban,
   queues: [
     execution_creation: 10,
     zombie_admin_cleanup: 1,
-    cluster_reconciliation: 1,
+    cluster_reconciliation: 10,
     self_updates: 3
   ],
   repo: EdgeAdmin.Repo,
@@ -121,9 +121,9 @@ config :edge_admin, Oban,
     {Oban.Plugins.Cron,
      crontab: [
        # Every 30 minutes to clean up zombie admins that haven't checked in within the threshold
-       {zombie_admin_cleanup_schedule, EdgeAdmin.Vpn.Workers.ZombieAdminCleaner},
+       {zombie_admin_cleanup_schedule, EdgeAdmin.Vpn.Workers.CleanupZombieAdminsWorker},
        # Every 6 hours to reconcile clusters and clean up inconsistencies between DB and Netmaker
-       {cluster_reconciliation_schedule, EdgeAdmin.Nodes.Workers.ClusterReconciliationWorker}
+       {cluster_reconciliation_schedule, EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker}
      ]},
     Oban.Plugins.Lifeline,
     {Oban.Plugins.Pruner, max_age: 86_400}

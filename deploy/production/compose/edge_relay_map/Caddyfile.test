@@ -1,0 +1,15 @@
+# deploy/production/compose/edge_relay_map/Caddyfile.test
+# Test mode: plain HTTP, fixed port, no TLS, no hostname required.
+
+:47713 {
+    handle /derpmap/default {
+        root * /srv
+        rewrite * /derp-map.json
+        file_server
+        header Content-Type application/json
+    }
+
+    handle {
+        respond 404
+    }
+}

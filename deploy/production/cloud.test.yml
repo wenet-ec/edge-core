@@ -19,6 +19,8 @@ volumes:
   production_edge_http_proxy_config: {}
   production_edge_metrics_storage_data: {}
   production_edge_metrics_collector_data: {}
+  production_edge_relay_data: {}
+  production_edge_relay_map_data: {}
 
 services:
   # Edge Admin
@@ -339,6 +341,48 @@ services:
     command:
       - '-envflag.enable'
       - '-envflag.prefix=VM_'
+
+  # Edge Relay (dev mode — no TLS, plain HTTP)
+  edge_relay:
+    build:
+      context: ../..
+      dockerfile: ./deploy/production/compose/edge_relay/Dockerfile
+    image: production_edge_relay
+    container_name: production_edge_relay
+    networks:
+      - production_edge_core
+    volumes:
+      - production_edge_relay_data:/var/lib/derper
+    environment:
+      DERP_DEV_MODE: "true"
+    ports:
+      - "43340:3340"    # DERP (dev mode, plain HTTP)
+      - "43478:3478/udp" # STUN
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3340/derp/probe"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # Edge Relay Map
+  edge_relay_map:
+    image: caddy:alpine
+    container_name: production_edge_relay_map
+    networks:
+      - production_edge_core
+    volumes:
+      - production_edge_relay_map_data:/data
+      - ./compose/edge_relay_map/Caddyfile.test:/etc/caddy/Caddyfile:ro
+      - ./compose/edge_relay_map/derp-map.test.json:/srv/derp-map.json:ro
+    ports:
+      - "47713:47713"   # Edge relay map (plain HTTP, dev mode)
+    command: caddy run --config /etc/caddy/Caddyfile
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:47713/derpmap/default"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   # Metrics Collector
   edge_metrics_collector:

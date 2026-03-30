@@ -166,6 +166,7 @@ config :edge_admin,
   public_enrollment_key_enabled: get_env("PUBLIC_ENROLLMENT_KEY_ENABLED", :boolean, false),
   # Admin URLs for enrollment key generation and agent fallback (required).
   admin_urls: get_env("ADMIN_URLS", :list),
+  derp_map_url: get_env("DERP_MAP_URL"),
   # Netmaker DNS domain suffix (used for hostname construction)
   netmaker_default_domain: get_env("NETMAKER_DEFAULT_DOMAIN", :string, "nm.internal"),
   # === Cleanup & Reconciliation Schedules ===

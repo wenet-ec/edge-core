@@ -1,0 +1,98 @@
+# deploy/production/.envs/.edge_relay
+# Environment variables for the edge_relay (DERP) service.
+# All flags have sane defaults — only set what you need to override.
+
+# --- Core ---
+# TLS hostname. Required for letsencrypt. Can be an IP when certmode=manual.
+DERP_HOSTNAME=edge-relay-1.yourdomain.com
+
+# Listen address for HTTPS/DERP. Default: :443
+# DERP_ADDR=:443
+
+# HTTP listener port for ACME challenge and redirect. Set -1 to disable. Default: 80
+# DERP_HTTP_PORT=80
+
+# STUN UDP port. Default: 3478
+# DERP_STUN_PORT=3478
+
+# Path to the derper private key file. Persisted via volume. Auto-created on first run.
+DERP_CONFIG_PATH=/var/lib/derper/derper.key
+
+# --- TLS / Certificates ---
+# Certificate mode: letsencrypt (default), manual, gcp
+DERP_CERT_MODE=letsencrypt
+
+# Directory to store ACME certs. Backed by the production_edge_relay_data volume.
+DERP_CERT_DIR=/var/lib/derper/certs
+
+# Contact email for Let's Encrypt account. Optional for letsencrypt, required for gcp.
+DERP_ACME_EMAIL=you@yourdomain.com
+
+# GCP ACME External Account Binding — only needed for certmode=gcp
+# DERP_ACME_EAB_KID=
+# DERP_ACME_EAB_KEY=
+
+# --- Feature Toggles ---
+# Set to "false" to disable the STUN server. Default: true (enabled)
+# DERP_ENABLE_STUN=false
+
+# Set to "false" to disable DERP relaying (e.g. decommissioning). Default: true (enabled)
+# DERP_ENABLE_DERP=false
+
+# Set to "true" for localhost dev mode (overrides addr to :3340). Default: false
+# DERP_DEV_MODE=true
+
+# --- Home page ---
+# What to serve at "/". Leave unset for the default derper page.
+# Options: unset (default page), "blank" (empty), or a full https:// URL to redirect to.
+# DERP_HOME=
+
+# --- Mesh (multi-node region) ---
+# Path to the 64-char hex mesh pre-shared key file.
+# Only needed when running multiple derper nodes in one region.
+# DERP_MESH_PSK_FILE=/var/lib/derper/mesh.key
+
+# Comma-separated hostnames to mesh with. Use "host/dial-host" for alternate dial address.
+# DERP_MESH_WITH=derp2.yourdomain.com
+
+# --- SETEC secrets (Tailscale-internal; not needed for self-hosting) ---
+# DERP_SECRETS_URL=
+# DERP_SECRETS_PATH_PREFIX=prod/derp
+# DERP_SECRETS_CACHE_DIR=
+
+# --- Bootstrap DNS ---
+# Comma-separated hostnames to resolve and publish at /bootstrap-dns.
+# DERP_BOOTSTRAP_DNS_NAMES=
+
+# Comma-separated hostnames served at /bootstrap-dns but not published in the list.
+# DERP_UNPUBLISHED_DNS_NAMES=
+
+# --- Client verification ---
+# Set to "true" to restrict relay to your tailnet only.
+# Requires a tailscaled running alongside derper.
+# DERP_VERIFY_CLIENTS=false
+
+# Admission controller URL for per-client connection decisions.
+# DERP_VERIFY_CLIENT_URL=
+
+# Set to "false" to block connections when the admission controller is unreachable.
+# Default: true (fail open)
+# DERP_VERIFY_FAIL_OPEN=true
+
+# Alternate path to tailscaled socket (only with DERP_VERIFY_CLIENTS=true).
+# DERP_SOCKET=
+
+# --- Rate limiting ---
+# Max new connections per second (float). Unset = unlimited.
+# DERP_ACCEPT_CONN_LIMIT=
+# Burst size for the connection rate limiter. Unset = unlimited.
+# DERP_ACCEPT_CONN_BURST=
+
+# --- TCP tuning ---
+# Go duration strings: e.g. "10m", "30s", "500ms"
+# TCP keepalive interval. Default: 10m
+# DERP_TCP_KEEPALIVE_TIME=10m
+# TCP user timeout for dead connection detection. Default: 15s
+# DERP_TCP_USER_TIMEOUT=15s
+# Write timeout for client TCP connections. "0" = no timeout. Default: 5s
+# DERP_TCP_WRITE_TIMEOUT=5s

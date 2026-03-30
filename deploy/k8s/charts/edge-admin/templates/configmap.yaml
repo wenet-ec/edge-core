@@ -43,6 +43,11 @@ data:
   DEFAULT_CLUSTER_NAME: {{ .Values.config.defaultClusterName | quote }}
   PUBLIC_ENROLLMENT_KEY_ENABLED: {{ .Values.config.publicEnrollmentKeyEnabled | quote }}
 
+  # Edge relay map — optional, leave empty to skip DERP overlay
+  {{- if .Values.config.derpMapUrl }}
+  DERP_MAP_URL: {{ .Values.config.derpMapUrl | quote }}
+  {{- end }}
+
   # StatefulSet WireGuard port base — no-op when POD_INDEX is absent
   ADMIN_WIREGUARD_PORT_BASE: {{ .Values.config.wireguardPortBase | quote }}
 

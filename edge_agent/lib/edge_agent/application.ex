@@ -55,6 +55,7 @@ defmodule EdgeAgent.Application do
       EdgeAgent.MetricsServers,
       EdgeAgent.ProxyServers,
       EdgeAgent.Bootstrap,
+      EdgeAgent.Vpn.DerpMapCache,
       EdgeAgent.Lan.Mdns,
       EdgeAgentWeb.Endpoint
     ]

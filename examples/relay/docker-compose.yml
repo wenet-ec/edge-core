@@ -1,0 +1,74 @@
+# examples/relay/docker-compose.yml
+#
+# Standalone relay stack — two services, each on its own machine.
+#
+# Machine A (edge_relay):     DERP_HOSTNAME=edge-relay-1.yourdomain.com
+#                             Ports: 80, 443 (TCP), 3478 (UDP)
+# Machine B (edge_relay_map): DERP_MAP_HOSTNAME=edge-relay-map-1.yourdomain.com
+#                             Ports: 80, 443 (TCP)
+#
+# edge_relay owns 80+443 exclusively — ACME and DERP protocol upgrades inside
+# TLS cannot share a port with any other service.
+#
+# Usage:
+#   cp .env.example .env
+#   edit derp-map.json        # set HostName to DERP_HOSTNAME, update RegionCode/RegionName
+#   docker compose up -d edge_relay      # on machine A
+#   docker compose up -d edge_relay_map  # on machine B
+
+networks:
+  edge_relay:
+    name: edge_relay
+    driver: bridge
+
+volumes:
+  edge_relay_data: {}
+  edge_relay_map_data: {}
+
+services:
+  edge_relay:
+    image: ghcr.io/wenet-ec/edge_relay:stable
+    container_name: edge_relay
+    networks:
+      - edge_relay
+    volumes:
+      - edge_relay_data:/var/lib/derper
+    environment:
+      DERP_HOSTNAME: ${DERP_HOSTNAME}
+      DERP_ACME_EMAIL: ${DERP_ACME_EMAIL}
+      DERP_CERT_MODE: ${DERP_CERT_MODE:-letsencrypt}
+      DERP_CONFIG_PATH: /var/lib/derper/derper.key
+      DERP_CERT_DIR: /var/lib/derper/certs
+    ports:
+      - "443:443"       # HTTPS / relay
+      - "80:80"         # ACME challenge
+      - "3478:3478/udp" # STUN
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:80/generate_204"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  edge_relay_map:
+    image: caddy:alpine
+    container_name: edge_relay_map
+    networks:
+      - edge_relay
+    volumes:
+      - edge_relay_map_data:/data
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./derp-map.json:/srv/derp-map.json:ro
+    environment:
+      DERP_MAP_HOSTNAME: ${DERP_MAP_HOSTNAME}
+    ports:
+      - "443:443" # HTTPS
+      - "80:80"   # ACME challenge
+    command: caddy run --config /etc/caddy/Caddyfile
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost/derpmap/default"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

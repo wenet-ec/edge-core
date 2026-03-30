@@ -1,0 +1,5 @@
+# deploy/production/.envs/.edge_relay_map
+# Caddy hostname for the DERP map server.
+# Caddy auto-obtains TLS via Let's Encrypt for this hostname.
+# DNS must point this hostname at the machine running this container.
+DERP_MAP_HOSTNAME=edge-relay-map-1.yourdomain.com

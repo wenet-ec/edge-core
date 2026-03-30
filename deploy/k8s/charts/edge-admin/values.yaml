@@ -64,6 +64,11 @@ config:
   # Must be set per-release in helmfile.yaml (release-specific value)
   metricsBaseUrl: ""
 
+  # DERP map server URL. Optional — leave empty to skip DERP overlay (Tailscale fallback).
+  # Edge relay infra runs outside k8s (separate machine, direct ports 80/443).
+  # e.g. https://edge-relay-map-1.yourdomain.com/derpmap/default
+  derpMapUrl: ""
+
   # Misc
   corsAllowedOrigins: "*"
   logLevel: "info"

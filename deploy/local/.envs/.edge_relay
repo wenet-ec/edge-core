@@ -1,0 +1,11 @@
+# deploy/local/.envs/.edge_relay
+# Dev mode: no TLS, no domain, no certs needed.
+# derper listens on :3340 (plain HTTP).
+
+DERP_DEV_MODE=true
+
+# STUN still runs on 3478/udp in dev mode — leave at default.
+# DERP_STUN_PORT=3478
+
+# Mesh key available via env in dev mode if you want to test meshing locally.
+# TAILSCALE_DERPER_MESH_KEY=

@@ -86,6 +86,13 @@ fi
 echo "Starting EPMD daemon..."
 /app/erts-*/bin/epmd -daemon
 
+# Tell netclient where to fetch the DERP map overlay.
+# Admin has DERP_MAP_URL at start time (deploy-time config) — export directly.
+# Must be set before netclient daemon starts; cannot be pushed into a running process.
+if [ -n "${DERP_MAP_URL:-}" ]; then
+    export DERP_MAP_URLS="${DERP_MAP_URL}"
+fi
+
 # Start netclient daemon in the background
 echo "Starting netclient daemon..."
 netclient daemon &

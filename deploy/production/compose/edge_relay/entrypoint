@@ -1,0 +1,153 @@
+#!/bin/sh
+# deploy/production/compose/edge_relay/entrypoint
+
+set -eu
+
+echo "=== Edge Relay (derper) Entrypoint ==="
+
+# -----------------------------------------------
+# Build args from environment variables
+# -----------------------------------------------
+
+ARGS=""
+
+# --- Core ---
+# DERP_HOSTNAME: TLS hostname for certs. Required for letsencrypt mode.
+# When certmode=manual this can be an IP address to skip SNI checks.
+[ -n "${DERP_HOSTNAME:-}" ]         && ARGS="$ARGS -hostname=${DERP_HOSTNAME}"
+
+# DERP_ADDR: Listen address for HTTPS/DERP. Default: :443
+# Format: ":port", "ip:port", or "[ip]:port" for IPv6.
+# Serves HTTPS if port is 443 or certmode=manual, otherwise plain HTTP.
+[ -n "${DERP_ADDR:-}" ]             && ARGS="$ARGS -a=${DERP_ADDR}"
+
+# DERP_HTTP_PORT: Port for plain HTTP listener (ACME challenge + redirect).
+# Set to -1 to disable the HTTP listener entirely. Default: 80
+[ -n "${DERP_HTTP_PORT:-}" ]        && ARGS="$ARGS -http-port=${DERP_HTTP_PORT}"
+
+# DERP_STUN_PORT: UDP port for the STUN server. Default: 3478
+[ -n "${DERP_STUN_PORT:-}" ]        && ARGS="$ARGS -stun-port=${DERP_STUN_PORT}"
+
+# DERP_CONFIG_PATH: Path to the derper key file (JSON with PrivateKey).
+# Auto-created on first run. Persist this file across restarts via a volume.
+# Default when running as root: /var/lib/derper/derper.key
+[ -n "${DERP_CONFIG_PATH:-}" ]      && ARGS="$ARGS -c=${DERP_CONFIG_PATH}"
+
+# --- TLS / Certificates ---
+# DERP_CERT_MODE: How to obtain TLS certificates.
+# Options: letsencrypt (default), manual (bring your own cert), gcp
+[ -n "${DERP_CERT_MODE:-}" ]        && ARGS="$ARGS -certmode=${DERP_CERT_MODE}"
+
+# DERP_CERT_DIR: Directory to store ACME (Let's Encrypt) certs.
+# Default: $XDG_CONFIG_HOME/acme/certs or ~/.config/acme/certs
+[ -n "${DERP_CERT_DIR:-}" ]         && ARGS="$ARGS -certdir=${DERP_CERT_DIR}"
+
+# DERP_ACME_EMAIL: Contact email for ACME account.
+# Optional for letsencrypt, required for gcp certmode.
+[ -n "${DERP_ACME_EMAIL:-}" ]       && ARGS="$ARGS -acme-email=${DERP_ACME_EMAIL}"
+
+# DERP_ACME_EAB_KID: ACME External Account Binding Key ID.
+# Required only for certmode=gcp.
+[ -n "${DERP_ACME_EAB_KID:-}" ]     && ARGS="$ARGS -acme-eab-kid=${DERP_ACME_EAB_KID}"
+
+# DERP_ACME_EAB_KEY: ACME External Account Binding HMAC key, base64-encoded.
+# Required only for certmode=gcp.
+[ -n "${DERP_ACME_EAB_KEY:-}" ]     && ARGS="$ARGS -acme-eab-key=${DERP_ACME_EAB_KEY}"
+
+# --- Feature Toggles ---
+# DERP_ENABLE_STUN: Set to "false" to disable the STUN server. Default: true
+[ "${DERP_ENABLE_STUN:-}" = "false" ]  && ARGS="$ARGS -stun=false"
+
+# DERP_ENABLE_DERP: Set to "false" to disable DERP relaying while keeping
+# bootstrap DNS running (useful when decommissioning). Default: true
+[ "${DERP_ENABLE_DERP:-}" = "false" ]  && ARGS="$ARGS -derp=false"
+
+# DERP_DEV_MODE: Set to "true" for localhost dev mode.
+# Overrides -a to :3340, skips key file requirement, enables debug UI. Default: false
+[ "${DERP_DEV_MODE:-}" = "true" ]      && ARGS="$ARGS -dev"
+
+# --- Home page ---
+# DERP_HOME: What to serve at "/".
+# Leave empty for the default derper homepage, set to "blank" for an empty page,
+# or provide an http(s):// URL to redirect to.
+[ -n "${DERP_HOME:-}" ]             && ARGS="$ARGS -home=${DERP_HOME}"
+
+# --- Mesh (multi-node DERP region) ---
+# DERP_MESH_PSK_FILE: Path to a file containing the 64-char hex mesh pre-shared key.
+# Required when running multiple derper nodes in one region that need to mesh together.
+[ -n "${DERP_MESH_PSK_FILE:-}" ]    && ARGS="$ARGS -mesh-psk-file=${DERP_MESH_PSK_FILE}"
+
+# DERP_MESH_WITH: Comma-separated list of hostnames to mesh with.
+# The server's own hostname may be included. Use "host/dial-host" format to
+# specify an alternate dial address for a target.
+[ -n "${DERP_MESH_WITH:-}" ]        && ARGS="$ARGS -mesh-with=${DERP_MESH_WITH}"
+
+# --- SETEC secrets (Tailscale-internal; unlikely needed for self-hosting) ---
+# DERP_SECRETS_URL: SETEC server URL for retrieving the mesh key as a managed secret.
+[ -n "${DERP_SECRETS_URL:-}" ]      && ARGS="$ARGS -secrets-url=${DERP_SECRETS_URL}"
+
+# DERP_SECRETS_PATH_PREFIX: SETEC path prefix for the mesh key secret.
+# Default: prod/derp
+[ -n "${DERP_SECRETS_PATH_PREFIX:-}" ] && ARGS="$ARGS -secrets-path-prefix=${DERP_SECRETS_PATH_PREFIX}"
+
+# DERP_SECRETS_CACHE_DIR: Directory to cache SETEC secrets locally.
+# Required when DERP_SECRETS_URL is set.
+[ -n "${DERP_SECRETS_CACHE_DIR:-}" ] && ARGS="$ARGS -secrets-cache-dir=${DERP_SECRETS_CACHE_DIR}"
+
+# --- Bootstrap DNS ---
+# DERP_BOOTSTRAP_DNS_NAMES: Comma-separated hostnames to resolve and publish at /bootstrap-dns.
+# Used by Tailscale clients as a fallback DNS resolution mechanism.
+[ -n "${DERP_BOOTSTRAP_DNS_NAMES:-}" ] && ARGS="$ARGS -bootstrap-dns-names=${DERP_BOOTSTRAP_DNS_NAMES}"
+
+# DERP_UNPUBLISHED_DNS_NAMES: Comma-separated hostnames served at /bootstrap-dns but NOT
+# included in the published list. Supports "hostname/dns-record" format for TXT-based
+# rollout percentage (0–100).
+[ -n "${DERP_UNPUBLISHED_DNS_NAMES:-}" ] && ARGS="$ARGS -unpublished-bootstrap-dns-names=${DERP_UNPUBLISHED_DNS_NAMES}"
+
+# --- Client verification ---
+# DERP_VERIFY_CLIENTS: Set to "true" to require clients be members of your tailnet.
+# Requires a tailscaled running alongside derper on the same machine/container.
+# Default: false
+[ "${DERP_VERIFY_CLIENTS:-}" = "true" ] && ARGS="$ARGS -verify-clients"
+
+# DERP_VERIFY_CLIENT_URL: Admission controller URL for permitting client connections.
+# When set, each connecting client is checked against this URL (DERPAdmitClientRequest).
+[ -n "${DERP_VERIFY_CLIENT_URL:-}" ]    && ARGS="$ARGS -verify-client-url=${DERP_VERIFY_CLIENT_URL}"
+
+# DERP_VERIFY_FAIL_OPEN: Set to "false" to deny connections when the verify URL is unreachable.
+# Default: true (fail open — allow connections if admission controller is down)
+[ "${DERP_VERIFY_FAIL_OPEN:-}" = "false" ] && ARGS="$ARGS -verify-client-url-fail-open=false"
+
+# DERP_SOCKET: Alternate path to the tailscaled socket.
+# Only relevant when DERP_VERIFY_CLIENTS=true. Default: /var/run/tailscale/tailscaled.sock
+[ -n "${DERP_SOCKET:-}" ]           && ARGS="$ARGS -socket=${DERP_SOCKET}"
+
+# --- Rate limiting ---
+# DERP_ACCEPT_CONN_LIMIT: Max new connections per second (float). Default: unlimited
+[ -n "${DERP_ACCEPT_CONN_LIMIT:-}" ] && ARGS="$ARGS -accept-connection-limit=${DERP_ACCEPT_CONN_LIMIT}"
+
+# DERP_ACCEPT_CONN_BURST: Burst size for connection rate limiter. Default: unlimited
+[ -n "${DERP_ACCEPT_CONN_BURST:-}" ] && ARGS="$ARGS -accept-connection-burst=${DERP_ACCEPT_CONN_BURST}"
+
+# --- TCP tuning ---
+# DERP_TCP_KEEPALIVE_TIME: TCP keepalive interval. Intentionally long to save battery.
+# Format: Go duration string e.g. "10m", "30s". Default: 10m
+[ -n "${DERP_TCP_KEEPALIVE_TIME:-}" ] && ARGS="$ARGS -tcp-keepalive-time=${DERP_TCP_KEEPALIVE_TIME}"
+
+# DERP_TCP_USER_TIMEOUT: TCP user timeout for detecting dead connections.
+# Intentionally short — DERPs should be nearby users. Default: 15s
+[ -n "${DERP_TCP_USER_TIMEOUT:-}" ]  && ARGS="$ARGS -tcp-user-timeout=${DERP_TCP_USER_TIMEOUT}"
+
+# DERP_TCP_WRITE_TIMEOUT: Timeout for writing to client TCP connections.
+# Does not apply to mesh connections. Set to "0" for no timeout. Default: 5s
+[ -n "${DERP_TCP_WRITE_TIMEOUT:-}" ] && ARGS="$ARGS -tcp-write-timeout=${DERP_TCP_WRITE_TIMEOUT}"
+
+# -----------------------------------------------
+# Startup
+# -----------------------------------------------
+
+echo "Hostname: ${DERP_HOSTNAME:-<not set>}"
+echo "Cert mode: ${DERP_CERT_MODE:-letsencrypt (default)}"
+echo "Args: derper$ARGS"
+
+exec derper $ARGS

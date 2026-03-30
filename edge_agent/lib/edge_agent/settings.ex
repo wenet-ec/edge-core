@@ -329,6 +329,24 @@ defmodule EdgeAgent.Settings do
   end
 
   @doc """
+  Get the DERP map server URL pushed down from admin at registration.
+
+  Returns the URL string if set, nil otherwise.
+  """
+  @spec get_derp_map_url() :: String.t() | nil
+  def get_derp_map_url, do: get("derp_map_url")
+
+  @doc """
+  Set the DERP map server URL.
+
+  Pass nil to clear (admin has no DERP map configured).
+  """
+  @spec set_derp_map_url(String.t() | nil) ::
+          {:ok, Setting.t()} | {:error, Ecto.Changeset.t() | String.t()}
+  def set_derp_map_url(nil), do: delete("derp_map_url")
+  def set_derp_map_url(url) when is_binary(url), do: set("derp_map_url", url)
+
+  @doc """
   Set the last self-update check timestamp.
 
   Stores the datetime when the agent last checked for self-updates.

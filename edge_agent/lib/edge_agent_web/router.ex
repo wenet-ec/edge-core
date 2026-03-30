@@ -7,6 +7,16 @@ defmodule EdgeAgentWeb.Router do
     plug(EdgeAgentWeb.Plugs.ApiTokenAuth)
   end
 
+  pipeline :public do
+    plug(:accepts, ["json"])
+  end
+
+  scope "/api/v1", EdgeAgentWeb.Controllers do
+    pipe_through(:public)
+
+    get "/derp_map", DerpMapController, :show
+  end
+
   scope "/api/v1", EdgeAgentWeb.Controllers do
     pipe_through(:api)
 

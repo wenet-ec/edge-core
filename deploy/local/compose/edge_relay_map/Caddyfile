@@ -1,0 +1,15 @@
+# deploy/local/compose/edge_relay_map/Caddyfile
+# Local dev: plain HTTP, no TLS, fixed port 3341.
+
+:47713 {
+    handle /derpmap/default {
+        root * /srv
+        rewrite * /derp-map.json
+        file_server
+        header Content-Type application/json
+    }
+
+    handle {
+        respond 404
+    }
+}

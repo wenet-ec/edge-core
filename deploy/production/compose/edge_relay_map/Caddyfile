@@ -1,0 +1,16 @@
+# deploy/production/compose/edge_relay_map/Caddyfile
+# Serves the DERP map JSON at the Tailscale-convention path /derpmap/default.
+# DERP_MAP_HOSTNAME is injected by Caddy's environment variable substitution.
+
+{env.DERP_MAP_HOSTNAME} {
+    handle /derpmap/default {
+        root * /srv
+        rewrite * /derp-map.json
+        file_server
+        header Content-Type application/json
+    }
+
+    handle {
+        respond 404
+    }
+}

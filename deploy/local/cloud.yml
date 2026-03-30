@@ -23,6 +23,8 @@ volumes:
   local_edge_http_proxy_config: {}
   local_edge_metrics_storage_data: {}
   local_edge_metrics_collector_data: {}
+  local_edge_relay_data: {}
+  local_edge_relay_map_data: {}
 
 services:
   # Edge Admin
@@ -339,8 +341,50 @@ services:
     volumes:
       - ./compose/edge_tcp_proxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:
-      - "53128:43128"     # HTTP forward proxy
-      - "51080:41080"     # SOCKS5 proxy
+      - "53128:43128" # HTTP forward proxy
+      - "51080:41080" # SOCKS5 proxy
+
+  # DERP Relay Server
+  edge_relay:
+    build:
+      context: ../..
+      dockerfile: ./deploy/production/compose/edge_relay/Dockerfile
+    image: local_edge_relay
+    container_name: local_edge_relay
+    networks:
+      - local_edge_core
+    volumes:
+      - local_edge_relay_data:/var/lib/derper
+    env_file:
+      - ./.envs/.edge_relay
+    ports:
+      - "43340:3340" # DERP (dev mode, plain HTTP)
+      - "43478:3478/udp" # STUN
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3340/derp/probe"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # DERP Map Server
+  edge_relay_map:
+    image: caddy:alpine
+    container_name: local_edge_relay_map
+    networks:
+      - local_edge_core
+    volumes:
+      - local_edge_relay_map_data:/data
+      - ./compose/edge_relay_map/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./compose/edge_relay_map/derp-map.json:/srv/derp-map.json:ro
+    ports:
+      - "47713:47713" # Edge relay map (plain HTTP, dev mode)
+    command: caddy run --config /etc/caddy/Caddyfile
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:47713/derpmap/default"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   # Metrics
   edge_metrics_storage:

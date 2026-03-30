@@ -112,6 +112,13 @@ PUBLIC_ENROLLMENT_KEY_ENABLED=true
 # Admin URLs for enrollment key generation and agent fallback (required).
 ADMIN_URLS=http://edge-admin.localtest.me
 
+# DERP map server URL. Optional — leave unset to skip DERP overlay (Tailscale fallback).
+# This is the map server that describes relay locations, NOT the relay server itself.
+# Upfront decision: on first enrollment, agent doesn't have the map yet so VPN peer path
+# won't work — registration falls back to HTTP via admin_fallback_urls. Agent gets the map
+# after registering and converges on the same DERP. Adding/removing later has the same effect.
+# DERP_MAP_URL=http://localhost:47713/derpmap/default
+
 # =============================================================================
 # Admin Cluster & Erlang Distribution
 # =============================================================================

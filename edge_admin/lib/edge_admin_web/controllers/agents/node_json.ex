@@ -12,7 +12,8 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeJSON do
       node_id: node.id,
       api_token: node.api_token,
       proxy_password: node.proxy_password,
-      admin_urls: Application.get_env(:edge_admin, :admin_urls, [])
+      admin_urls: Application.get_env(:edge_admin, :admin_urls, []),
+      derp_map_url: Application.get_env(:edge_admin, :derp_map_url)
     }
   end
 end

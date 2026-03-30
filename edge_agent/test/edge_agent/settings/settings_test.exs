@@ -302,6 +302,37 @@ defmodule EdgeAgent.SettingsTest do
   end
 
   # -----------------------------------------------------------------------
+  # derp_map_url — plain string, nil clears via delete
+  # -----------------------------------------------------------------------
+
+  describe "derp_map_url accessors" do
+    test "get_derp_map_url returns nil when not set" do
+      assert Settings.get_derp_map_url() == nil
+    end
+
+    test "set_derp_map_url then get roundtrips" do
+      {:ok, _} = Settings.set_derp_map_url("https://config.example.com/derp-map.json")
+      assert Settings.get_derp_map_url() == "https://config.example.com/derp-map.json"
+    end
+
+    test "set_derp_map_url nil deletes the key" do
+      {:ok, _} = Settings.set_derp_map_url("https://config.example.com/derp-map.json")
+      {:ok, _} = Settings.set_derp_map_url(nil)
+      assert Settings.get_derp_map_url() == nil
+    end
+
+    test "set_derp_map_url nil on missing key is safe" do
+      assert {:ok, nil} = Settings.set_derp_map_url(nil)
+    end
+
+    test "set_derp_map_url can overwrite previous value" do
+      {:ok, _} = Settings.set_derp_map_url("https://config1.example.com/derp-map.json")
+      {:ok, _} = Settings.set_derp_map_url("https://config2.example.com/derp-map.json")
+      assert Settings.get_derp_map_url() == "https://config2.example.com/derp-map.json"
+    end
+  end
+
+  # -----------------------------------------------------------------------
   # last_check_self_update_at — ISO8601 encode/decode
   # -----------------------------------------------------------------------
 

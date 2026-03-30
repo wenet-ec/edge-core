@@ -1,0 +1,18 @@
+{
+  "Regions": {
+    "900": {
+      "RegionID": 900,
+      "RegionCode": "us-east",
+      "RegionName": "US East Relay",
+      "Nodes": [
+        {
+          "Name": "900a",
+          "RegionID": 900,
+          "HostName": "edge-relay-1.yourdomain.com",
+          "DERPPort": 443,
+          "CanPort80": true
+        }
+      ]
+    }
+  }
+}

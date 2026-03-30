@@ -24,6 +24,7 @@ services:
   edge_agent:
     image: ghcr.io/wenet-ec/edge_agent:stable
     container_name: edge_agent
+    restart: unless-stopped
     volumes:
       - edge_agent_data:/app/data
       - /etc/resolv.conf:/etc/resolv.conf:rw
@@ -42,6 +43,7 @@ services:
   watchtower:
     image: nickfedor/watchtower:latest
     container_name: edge_watchtower
+    restart: unless-stopped
     command:
       - --http-api-update
       - --label-enable

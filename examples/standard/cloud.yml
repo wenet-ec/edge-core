@@ -42,6 +42,7 @@ services:
   edge_admin_db:
     image: postgres:18
     container_name: edge_admin_db
+    restart: unless-stopped
     networks:
       - edge_core
     volumes:
@@ -65,6 +66,7 @@ services:
   edge_admin_a1:
     image: ghcr.io/wenet-ec/edge_admin:v0.2.0
     container_name: edge_admin_a1
+    restart: unless-stopped
     networks:
       - edge_core
     depends_on:
@@ -107,6 +109,7 @@ services:
   edge_admin_a2:
     image: ghcr.io/wenet-ec/edge_admin:v0.2.0
     container_name: edge_admin_a2
+    restart: unless-stopped
     networks:
       - edge_core
     depends_on:
@@ -151,6 +154,7 @@ services:
   edge_admin_b1:
     image: ghcr.io/wenet-ec/edge_admin:v0.2.0
     container_name: edge_admin_b1
+    restart: unless-stopped
     networks:
       - edge_core
     depends_on:
@@ -195,6 +199,7 @@ services:
   edge_admin_b2:
     image: ghcr.io/wenet-ec/edge_admin:v0.2.0
     container_name: edge_admin_b2
+    restart: unless-stopped
     networks:
       - edge_core
     depends_on:
@@ -239,6 +244,7 @@ services:
   edge_vpn_db:
     image: postgres:18
     container_name: edge_vpn_db
+    restart: unless-stopped
     networks:
       - edge_core
     volumes:
@@ -262,6 +268,7 @@ services:
   edge_vpn_broker:
     image: emqx/emqx:5.8.9
     container_name: edge_vpn_broker
+    restart: unless-stopped
     networks:
       edge_core:
         aliases:
@@ -302,6 +309,7 @@ services:
   edge_vpn:
     image: gravitl/netmaker:v1.5.0
     container_name: edge_vpn
+    restart: unless-stopped
     networks:
       - edge_core
     cap_add:
@@ -337,6 +345,7 @@ services:
   edge_vpn_ui:
     image: gravitl/netmaker-ui:v1.5.0
     container_name: edge_vpn_ui
+    restart: unless-stopped
     networks:
       - edge_core
     depends_on:
@@ -353,6 +362,7 @@ services:
   edge_vpn_dns:
     image: coredns/coredns:latest
     container_name: edge_vpn_dns
+    restart: unless-stopped
     user: "0:0"
     networks:
       - edge_core
@@ -369,6 +379,7 @@ services:
   edge_http_proxy:
     image: caddy:alpine
     container_name: edge_http_proxy
+    restart: unless-stopped
     networks:
       - edge_core
     ports:
@@ -387,6 +398,7 @@ services:
   edge_tcp_proxy:
     image: haproxy:latest
     container_name: edge_tcp_proxy
+    restart: unless-stopped
     networks:
       - edge_core
     depends_on:
@@ -410,6 +422,7 @@ services:
   edge_metrics_storage:
     image: victoriametrics/victoria-metrics:latest
     container_name: edge_metrics_storage
+    restart: unless-stopped
     networks:
       - edge_core
     depends_on:
@@ -435,6 +448,7 @@ services:
   edge_metrics_collector:
     image: victoriametrics/vmagent:latest
     container_name: edge_metrics_collector
+    restart: unless-stopped
     networks:
       - edge_core
     depends_on:

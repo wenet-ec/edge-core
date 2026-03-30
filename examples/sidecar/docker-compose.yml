@@ -42,6 +42,7 @@ services:
   app:
     image: nginx:alpine
     container_name: my_app
+    restart: unless-stopped
     networks:
       - app
     # To reach a VPN node through the agent proxy from inside this container:
@@ -56,6 +57,7 @@ services:
   edge_agent:
     image: ghcr.io/wenet-ec/edge_agent:stable
     container_name: edge_agent_sidecar
+    restart: unless-stopped
     networks:
       - app
     volumes:

@@ -66,8 +66,8 @@ services:
       - NETMAKER_API_SCHEME=http
     ports:
       - "34000:44000"
-      - "33128:43128"  # HTTP proxy
-      - "31080:41080"  # SOCKS5 proxy
+      - "33128:43128" # HTTP proxy
+      - "31080:41080" # SOCKS5 proxy
     ulimits:
       nofile:
         soft: 1048576
@@ -113,8 +113,8 @@ services:
       - NETMAKER_API_SCHEME=http
     ports:
       - "34001:44000"
-      - "33129:43128"  # HTTP proxy
-      - "31081:41080"  # SOCKS5 proxy
+      - "33129:43128" # HTTP proxy
+      - "31081:41080" # SOCKS5 proxy
     ulimits:
       nofile:
         soft: 1048576
@@ -162,8 +162,8 @@ services:
       - NETMAKER_API_SCHEME=http
     ports:
       - "34002:44000"
-      - "33130:43128"  # HTTP proxy
-      - "31082:41080"  # SOCKS5 proxy
+      - "33130:43128" # HTTP proxy
+      - "31082:41080" # SOCKS5 proxy
     ulimits:
       nofile:
         soft: 1048576
@@ -212,8 +212,8 @@ services:
     env_file:
       - ./.envs/.edge_vpn_broker
     ports:
-      - "48083:8083"    # WebSocket
-      - "48085:18083"   # REST API + UI
+      - "48083:8083" # WebSocket
+      - "48085:18083" # REST API + UI
     healthcheck:
       test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
       interval: 10s
@@ -252,7 +252,11 @@ services:
     ports:
       - "48081:8081"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/api/server/status"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --spider http://localhost:8081/api/server/status",
+        ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -320,8 +324,8 @@ services:
     volumes:
       - ./compose/edge_tcp_proxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:
-      - "53128:43128"     # HTTP forward proxy
-      - "51080:41080"     # SOCKS5 proxy
+      - "53128:43128" # HTTP forward proxy
+      - "51080:41080" # SOCKS5 proxy
 
   # Metrics Storage
   edge_metrics_storage:
@@ -339,8 +343,8 @@ services:
     env_file:
       - ./.envs/.edge_metrics_storage
     command:
-      - '-envflag.enable'
-      - '-envflag.prefix=VM_'
+      - "-envflag.enable"
+      - "-envflag.prefix=VM_"
 
   # Edge Relay (dev mode — no TLS, plain HTTP)
   edge_relay:
@@ -356,7 +360,7 @@ services:
     environment:
       DERP_DEV_MODE: "true"
     ports:
-      - "43340:3340"    # DERP (dev mode, plain HTTP)
+      - "43340:3340" # DERP (dev mode, plain HTTP)
       - "43478:3478/udp" # STUN
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:3340/derp/probe"]
@@ -376,10 +380,11 @@ services:
       - ./compose/edge_relay_map/Caddyfile.test:/etc/caddy/Caddyfile:ro
       - ./compose/edge_relay_map/derp-map.test.json:/srv/derp-map.json:ro
     ports:
-      - "47713:47713"   # Edge relay map (plain HTTP, dev mode)
+      - "47713:47713" # Edge relay map (plain HTTP, dev mode)
     command: caddy run --config /etc/caddy/Caddyfile
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:47713/derpmap/default"]
+      test:
+        ["CMD-SHELL", "wget -q --spider http://localhost:47713/derpmap/default"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -402,5 +407,5 @@ services:
     ports:
       - "48429:8429"
     command:
-      - '-envflag.enable'
-      - '-envflag.prefix=VM_'
+      - "-envflag.enable"
+      - "-envflag.prefix=VM_"

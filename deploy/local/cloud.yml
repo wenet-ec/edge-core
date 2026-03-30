@@ -381,7 +381,8 @@ services:
       - "47713:47713" # Edge relay map (plain HTTP, dev mode)
     command: caddy run --config /etc/caddy/Caddyfile
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:47713/derpmap/default"]
+      test:
+        ["CMD-SHELL", "wget -q --spider http://localhost:47713/derpmap/default"]
       interval: 30s
       timeout: 5s
       retries: 3

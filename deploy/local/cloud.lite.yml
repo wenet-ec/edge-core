@@ -63,9 +63,9 @@ services:
     env_file:
       - ./.envs/.edge_admin
     ports:
-      - "4000:44000"       # API 
-      - "3128:43128"       # HTTP Proxy
-      - "31080:41080"      # SOCKS5 Proxy
+      - "4000:44000" # API
+      - "3128:43128" # HTTP Proxy
+      - "31080:41080" # SOCKS5 Proxy
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -92,7 +92,19 @@ services:
       - ../../deploy/production/compose/edge_vpn_broker/mosquitto.conf:/mosquitto/config/mosquitto.conf
       - local_edge_vpn_broker_data:/mosquitto/data
     healthcheck:
-      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      test:
+        [
+          "CMD",
+          "mosquitto_sub",
+          "-t",
+          "$$SYS/#",
+          "-C",
+          "1",
+          "-i",
+          "healthcheck",
+          "-W",
+          "3",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -194,8 +206,8 @@ services:
     volumes:
       - ./compose/edge_tcp_proxy/haproxy.lite.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:
-      - "53128:43128"     # HTTP forward proxy
-      - "51080:41080"     # SOCKS5 proxy
+      - "53128:43128" # HTTP forward proxy
+      - "51080:41080" # SOCKS5 proxy
 
   # Metrics
   edge_metrics_storage:

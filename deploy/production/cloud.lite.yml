@@ -50,9 +50,9 @@ services:
     env_file:
       - ./.envs/.edge_admin
     ports:
-      - "34000:44000"      # API
-      - "33128:43128"      # HTTP proxy
-      - "31080:41080"      # SOCKS5 proxy
+      - "34000:44000" # API
+      - "33128:43128" # HTTP proxy
+      - "31080:41080" # SOCKS5 proxy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
       interval: 60s
@@ -77,9 +77,21 @@ services:
       - ./compose/edge_vpn_broker/mosquitto.conf:/mosquitto/config/mosquitto.conf
       - production_edge_vpn_broker_data:/mosquitto/data
     ports:
-      - "48083:8083"    # WebSocket
+      - "48083:8083" # WebSocket
     healthcheck:
-      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      test:
+        [
+          "CMD",
+          "mosquitto_sub",
+          "-t",
+          "$$SYS/#",
+          "-C",
+          "1",
+          "-i",
+          "healthcheck",
+          "-W",
+          "3",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -110,9 +122,13 @@ services:
       edge_vpn_broker:
         condition: service_healthy
     ports:
-      - "48081:8081"    # API
+      - "48081:8081" # API
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/api/server/status"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --spider http://localhost:8081/api/server/status",
+        ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -176,8 +192,8 @@ services:
     volumes:
       - ./compose/edge_tcp_proxy/haproxy.lite.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:
-      - "53128:43128"     # HTTP forward proxy
-      - "51080:41080"     # SOCKS5 proxy
+      - "53128:43128" # HTTP forward proxy
+      - "51080:41080" # SOCKS5 proxy
 
   # Metrics Storage
   edge_metrics_storage:
@@ -195,8 +211,8 @@ services:
     env_file:
       - ./.envs/.edge_metrics_storage
     command:
-      - '-envflag.enable'
-      - '-envflag.prefix=VM_'
+      - "-envflag.enable"
+      - "-envflag.prefix=VM_"
 
   # Metrics Collector
   edge_metrics_collector:
@@ -216,5 +232,5 @@ services:
     ports:
       - "48429:8429"
     command:
-      - '-envflag.enable'
-      - '-envflag.prefix=VM_'
+      - "-envflag.enable"
+      - "-envflag.prefix=VM_"

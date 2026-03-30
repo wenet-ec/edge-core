@@ -74,6 +74,6 @@ services:
       - net.ipv6.conf.all.forwarding=1
     privileged: true
     ports:
-      - "40022:40022"   # SSH into the agent
-      - "43128:43128"   # HTTP proxy (expose to host if needed)
-      - "41080:41080"   # SOCKS5 proxy (expose to host if needed)
+      - "40022:40022" # SSH into the agent
+      - "43128:43128" # HTTP proxy (expose to host if needed)
+      - "41080:41080" # SOCKS5 proxy (expose to host if needed)

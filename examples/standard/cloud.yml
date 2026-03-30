@@ -82,9 +82,9 @@ services:
       - ADMIN_CLUSTER_NAME=a
       - ADMIN_CLUSTER_SUBNET=${ADMIN_A_CLUSTER_SUBNET}
     ports:
-      - "34000:44000"     # API
-      - "33128:43128"     # HTTP proxy
-      - "31080:41080"     # SOCKS5 proxy
+      - "34000:44000" # API
+      - "33128:43128" # HTTP proxy
+      - "31080:41080" # SOCKS5 proxy
     ulimits:
       nofile:
         soft: 1048576
@@ -118,7 +118,7 @@ services:
       edge_admin_db:
         condition: service_healthy
       edge_admin_a1:
-        condition: service_healthy  # startup ordering only — all instances are peers
+        condition: service_healthy # startup ordering only — all instances are peers
     volumes:
       - /dev/net/tun:/dev/net/tun
     env_file:
@@ -127,9 +127,9 @@ services:
       - ADMIN_CLUSTER_NAME=a
       - ADMIN_CLUSTER_SUBNET=${ADMIN_A_CLUSTER_SUBNET}
     ports:
-      - "34001:44000"     # API
-      - "33129:43128"     # HTTP proxy
-      - "31081:41080"     # SOCKS5 proxy
+      - "34001:44000" # API
+      - "33129:43128" # HTTP proxy
+      - "31081:41080" # SOCKS5 proxy
     ulimits:
       nofile:
         soft: 1048576
@@ -163,7 +163,7 @@ services:
       edge_admin_db:
         condition: service_healthy
       edge_admin_a1:
-        condition: service_healthy  # startup ordering only — all instances are peers
+        condition: service_healthy # startup ordering only — all instances are peers
     volumes:
       - /dev/net/tun:/dev/net/tun
     env_file:
@@ -172,9 +172,9 @@ services:
       - ADMIN_CLUSTER_NAME=b
       - ADMIN_CLUSTER_SUBNET=${ADMIN_B_CLUSTER_SUBNET}
     ports:
-      - "34002:44000"     # API
-      - "33130:43128"     # HTTP proxy
-      - "31082:41080"     # SOCKS5 proxy
+      - "34002:44000" # API
+      - "33130:43128" # HTTP proxy
+      - "31082:41080" # SOCKS5 proxy
     ulimits:
       nofile:
         soft: 1048576
@@ -208,7 +208,7 @@ services:
       edge_admin_db:
         condition: service_healthy
       edge_admin_a1:
-        condition: service_healthy  # startup ordering only — all instances are peers
+        condition: service_healthy # startup ordering only — all instances are peers
     volumes:
       - /dev/net/tun:/dev/net/tun
     env_file:
@@ -217,9 +217,9 @@ services:
       - ADMIN_CLUSTER_NAME=b
       - ADMIN_CLUSTER_SUBNET=${ADMIN_B_CLUSTER_SUBNET}
     ports:
-      - "34003:44000"     # API
-      - "33131:43128"     # HTTP proxy
-      - "31083:41080"     # SOCKS5 proxy
+      - "34003:44000" # API
+      - "33131:43128" # HTTP proxy
+      - "31083:41080" # SOCKS5 proxy
     ulimits:
       nofile:
         soft: 1048576
@@ -294,8 +294,8 @@ services:
       EMQX_RPC__PORT_DISCOVERY: manual
       EMQX_TELEMETRY__ENABLE: "false"
     ports:
-      - "48083:8083"      # WebSocket
-      - "48085:18083"     # EMQX Dashboard
+      - "48083:8083" # WebSocket
+      - "48085:18083" # EMQX Dashboard
     healthcheck:
       test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
       interval: 10s
@@ -331,9 +331,13 @@ services:
       edge_vpn_broker:
         condition: service_healthy
     ports:
-      - "48081:8081"      # Edge VPN API
+      - "48081:8081" # Edge VPN API
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/api/server/status"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --spider http://localhost:8081/api/server/status",
+        ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -413,8 +417,8 @@ services:
     volumes:
       - ./configs/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:
-      - "53128:43128"     # HTTP forward proxy
-      - "51080:41080"     # SOCKS5 proxy
+      - "53128:43128" # HTTP forward proxy
+      - "51080:41080" # SOCKS5 proxy
 
   # ---------------------------------------------------------------------------
   # VictoriaMetrics — time-series metrics storage
@@ -439,8 +443,8 @@ services:
       - VM_httpListenAddr=:8428
       - VM_loggerLevel=WARN
     command:
-      - '-envflag.enable'
-      - '-envflag.prefix=VM_'
+      - "-envflag.enable"
+      - "-envflag.prefix=VM_"
 
   # ---------------------------------------------------------------------------
   # vmagent — Prometheus-compatible metrics collector / scraper
@@ -468,5 +472,5 @@ services:
     ports:
       - "48429:8429"
     command:
-      - '-envflag.enable'
-      - '-envflag.prefix=VM_'
+      - "-envflag.enable"
+      - "-envflag.prefix=VM_"

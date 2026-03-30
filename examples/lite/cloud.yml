@@ -67,9 +67,9 @@ services:
     env_file:
       - .env
     ports:
-      - "34000:44000"     # Admin API
-      - "33128:43128"     # HTTP proxy
-      - "31080:41080"     # SOCKS5 proxy
+      - "34000:44000" # Admin API
+      - "33128:43128" # HTTP proxy
+      - "31080:41080" # SOCKS5 proxy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
       interval: 60s
@@ -97,9 +97,21 @@ services:
       - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
       - edge_vpn_broker_data:/mosquitto/data
     ports:
-      - "48083:8083"      # WebSocket (used by Edge VPN)
+      - "48083:8083" # WebSocket (used by Edge VPN)
     healthcheck:
-      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      test:
+        [
+          "CMD",
+          "mosquitto_sub",
+          "-t",
+          "$$SYS/#",
+          "-C",
+          "1",
+          "-i",
+          "healthcheck",
+          "-W",
+          "3",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -134,9 +146,13 @@ services:
       edge_vpn_broker:
         condition: service_healthy
     ports:
-      - "48081:8081"      # Edge VPN API
+      - "48081:8081" # Edge VPN API
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/api/server/status"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --spider http://localhost:8081/api/server/status",
+        ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -210,5 +226,5 @@ services:
     volumes:
       - ./configs/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:
-      - "53128:43128"     # HTTP forward proxy
-      - "51080:41080"     # SOCKS5 proxy
+      - "53128:43128" # HTTP forward proxy
+      - "51080:41080" # SOCKS5 proxy

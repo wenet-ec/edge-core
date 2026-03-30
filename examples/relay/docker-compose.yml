@@ -40,8 +40,8 @@ services:
       DERP_CONFIG_PATH: /var/lib/derper/derper.key
       DERP_CERT_DIR: /var/lib/derper/certs
     ports:
-      - "443:443"       # HTTPS / relay
-      - "80:80"         # ACME challenge
+      - "443:443" # HTTPS / relay
+      - "80:80" # ACME challenge
       - "3478:3478/udp" # STUN
     restart: unless-stopped
     healthcheck:
@@ -64,7 +64,7 @@ services:
       DERP_MAP_HOSTNAME: ${DERP_MAP_HOSTNAME}
     ports:
       - "443:443" # HTTPS
-      - "80:80"   # ACME challenge
+      - "80:80" # ACME challenge
     command: caddy run --config /etc/caddy/Caddyfile
     restart: unless-stopped
     healthcheck:

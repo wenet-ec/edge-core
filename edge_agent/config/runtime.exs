@@ -3,7 +3,7 @@ import Config
 import EdgeAgent.Config
 
 # Optional environment variables with defaults
-data_dir = System.get_env("DATA_DIR", "/app/data")
+data_dir = get_env("DATA_DIR", :string, "/app/data")
 
 config :edge_agent, EdgeAgent.Repo,
   database: "#{data_dir}/agent/edge_agent.db",

@@ -289,24 +289,34 @@ defmodule EdgeAdmin.RequestParserTest do
   # ---------------------------------------------------------------------------
 
   describe "parse/1 — range operator filters" do
-    test "__gte produces >= filter" do
+    test "__gte with full datetime passes through unchanged" do
+      result = RequestParser.parse(%{"inserted_at__gte" => "2025-01-01T00:00:00Z"})
+      assert_filter(result, :inserted_at, :>=, "2025-01-01T00:00:00Z")
+    end
+
+    test "__gte with date-only expands to start of day" do
       result = RequestParser.parse(%{"inserted_at__gte" => "2025-01-01"})
-      assert_filter(result, :inserted_at, :>=, "2025-01-01")
+      assert_filter(result, :inserted_at, :>=, "2025-01-01T00:00:00Z")
     end
 
-    test "__gt produces > filter" do
+    test "__gt with date-only expands to start of day" do
       result = RequestParser.parse(%{"inserted_at__gt" => "2025-01-01"})
-      assert_filter(result, :inserted_at, :>, "2025-01-01")
+      assert_filter(result, :inserted_at, :>, "2025-01-01T00:00:00Z")
     end
 
-    test "__lte produces <= filter" do
+    test "__lte with full datetime passes through unchanged" do
+      result = RequestParser.parse(%{"inserted_at__lte" => "2025-12-31T23:59:59Z"})
+      assert_filter(result, :inserted_at, :<=, "2025-12-31T23:59:59Z")
+    end
+
+    test "__lte with date-only expands to end of day" do
       result = RequestParser.parse(%{"inserted_at__lte" => "2025-12-31"})
-      assert_filter(result, :inserted_at, :<=, "2025-12-31")
+      assert_filter(result, :inserted_at, :<=, "2025-12-31T23:59:59Z")
     end
 
-    test "__lt produces < filter" do
+    test "__lt with date-only expands to end of day" do
       result = RequestParser.parse(%{"inserted_at__lt" => "2025-12-31"})
-      assert_filter(result, :inserted_at, :<, "2025-12-31")
+      assert_filter(result, :inserted_at, :<, "2025-12-31T23:59:59Z")
     end
 
     test "__ne produces != filter" do
@@ -327,6 +337,16 @@ defmodule EdgeAdmin.RequestParserTest do
     test "__like produces :like filter" do
       result = RequestParser.parse(%{"name__like" => "%prod%"})
       assert_filter(result, :name, :like, "%prod%")
+    end
+
+    test "__null=true produces :empty filter" do
+      result = RequestParser.parse(%{"node_limit__null" => "true"})
+      assert_filter(result, :node_limit, :empty, true)
+    end
+
+    test "__null=false produces :not_empty filter" do
+      result = RequestParser.parse(%{"node_limit__null" => "false"})
+      assert_filter(result, :node_limit, :not_empty, true)
     end
 
     test "unknown operator suffix is silently dropped" do
@@ -357,7 +377,7 @@ defmodule EdgeAdmin.RequestParserTest do
       filters = result[:filters]
       assert length(filters) == 2
       assert Enum.any?(filters, &(&1.field == :status and &1.op == :== and &1.value == "active"))
-      assert Enum.any?(filters, &(&1.field == :inserted_at and &1.op == :>= and &1.value == "2025-01-01"))
+      assert Enum.any?(filters, &(&1.field == :inserted_at and &1.op == :>= and &1.value == "2025-01-01T00:00:00Z"))
     end
 
     test "mix of filters and pagination" do

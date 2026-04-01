@@ -70,43 +70,51 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
       ],
       expired_at__gte: [
         in: :query,
-        description: "Filter keys expiring after this date",
-        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+        description:
+          "Filter keys expiring after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+        schema: %OpenApiSpex.Schema{type: :string, format: :"date-time"}
       ],
       expired_at__lte: [
         in: :query,
-        description: "Filter keys expiring before this date",
-        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+        description:
+          "Filter keys expiring before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+        schema: %OpenApiSpex.Schema{type: :string, format: :"date-time"}
       ],
       last_used_at__gte: [
         in: :query,
-        description: "Filter keys last used after this date",
-        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+        description:
+          "Filter keys last used after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+        schema: %OpenApiSpex.Schema{type: :string, format: :"date-time"}
       ],
       last_used_at__lte: [
         in: :query,
-        description: "Filter keys last used before this date",
-        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+        description:
+          "Filter keys last used before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+        schema: %OpenApiSpex.Schema{type: :string, format: :"date-time"}
       ],
       inserted_at__gte: [
         in: :query,
-        description: "Filter keys created after this date",
-        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+        description:
+          "Filter keys created after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+        schema: %OpenApiSpex.Schema{type: :string, format: :"date-time"}
       ],
       inserted_at__lte: [
         in: :query,
-        description: "Filter keys created before this date",
-        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+        description:
+          "Filter keys created before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+        schema: %OpenApiSpex.Schema{type: :string, format: :"date-time"}
       ],
       updated_at__gte: [
         in: :query,
-        description: "Filter keys updated after this date",
-        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+        description:
+          "Filter keys updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+        schema: %OpenApiSpex.Schema{type: :string, format: :"date-time"}
       ],
       updated_at__lte: [
         in: :query,
-        description: "Filter keys updated before this date",
-        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+        description:
+          "Filter keys updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+        schema: %OpenApiSpex.Schema{type: :string, format: :"date-time"}
       ]
     ],
     responses: %{

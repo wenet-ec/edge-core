@@ -53,13 +53,15 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
       ],
       inserted_at__gte: [
         in: :query,
-        description: "Filter aliases inserted after or on this date",
-        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+        description:
+          "Filter aliases inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+        schema: %OpenApiSpex.Schema{type: :string, format: :"date-time"}
       ],
       inserted_at__lte: [
         in: :query,
-        description: "Filter aliases inserted before or on this date",
-        schema: %OpenApiSpex.Schema{type: :string, format: :date}
+        description:
+          "Filter aliases inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+        schema: %OpenApiSpex.Schema{type: :string, format: :"date-time"}
       ]
     ],
     responses: %{

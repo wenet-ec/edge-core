@@ -10,7 +10,7 @@ defmodule EdgeAdmin.RequestParser do
     %{
       filters: [
         %{field: :name, op: :ilike, value: "prod%"},
-        %{field: :inserted_at, op: :>=, value: "2025-01-01"}
+        %{field: :inserted_at, op: :>=, value: "2025-01-01T00:00:00Z"}
       ],
       order_by: [:inserted_at],
       order_directions: [:desc],
@@ -32,6 +32,10 @@ defmodule EdgeAdmin.RequestParser do
   - `field__lte=value` - Less than or equal (<=)
   - `field__lt=value` - Less than (<)
   - `field__ne=value` - Not equal (!=)
+
+  ### Null checks
+  - `field__null=true` - Field is null (:empty)
+  - `field__null=false` - Field is not null (:not_empty)
 
   ### Other
   - `field=true/false` - Boolean exact match
@@ -66,7 +70,7 @@ defmodule EdgeAdmin.RequestParser do
       iex> parse(%{"inserted_at__gte" => "2025-01-01", "status" => "active"})
       %{
         filters: [
-          %{field: :inserted_at, op: :>=, value: "2025-01-01"},
+          %{field: :inserted_at, op: :>=, value: "2025-01-01T00:00:00Z"},
           %{field: :status, op: :==, value: "active"}
         ],
         page: 1,
@@ -99,7 +103,7 @@ defmodule EdgeAdmin.RequestParser do
         [field_str, op_str] ->
           with {:ok, field} <- parse_field(field_str),
                {:ok, op} <- parse_operator(op_str) do
-            [%{field: field, op: op, value: value}]
+            [build_filter(field, op, value, op_str)]
           else
             _ -> []
           end
@@ -117,6 +121,33 @@ defmodule EdgeAdmin.RequestParser do
   end
 
   defp parse_filter(_key, _value), do: []
+
+  # Build a filter, applying any value coercions needed for the operator
+  defp build_filter(field, :null, "false", _op_str) do
+    %{field: field, op: :not_empty, value: true}
+  end
+
+  defp build_filter(field, :null, _value, _op_str) do
+    %{field: field, op: :empty, value: true}
+  end
+
+  defp build_filter(field, op, value, op_str) when op_str in ~w(gte gt) do
+    %{field: field, op: op, value: maybe_expand_date(value, "T00:00:00Z")}
+  end
+
+  defp build_filter(field, op, value, op_str) when op_str in ~w(lte lt) do
+    %{field: field, op: op, value: maybe_expand_date(value, "T23:59:59Z")}
+  end
+
+  defp build_filter(field, op, value, _op_str) do
+    %{field: field, op: op, value: value}
+  end
+
+  # Expands a date-only string (YYYY-MM-DD) to a full UTC datetime by appending
+  # the given suffix. Full datetime strings are passed through unchanged.
+  defp maybe_expand_date(value, suffix) do
+    if Regex.match?(~r/^\d{4}-\d{2}-\d{2}$/, value), do: value <> suffix, else: value
+  end
 
   # Parse filter based on value pattern
   defp parse_value_filter(field, value) do
@@ -158,6 +189,7 @@ defmodule EdgeAdmin.RequestParser do
   defp parse_operator("in"), do: {:ok, :in}
   defp parse_operator("ilike"), do: {:ok, :ilike}
   defp parse_operator("like"), do: {:ok, :like}
+  defp parse_operator("null"), do: {:ok, :null}
   defp parse_operator(_), do: {:error, :invalid_operator}
 
   # Parse page number

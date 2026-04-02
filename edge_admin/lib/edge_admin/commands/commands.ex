@@ -178,8 +178,14 @@ defmodule EdgeAdmin.Commands do
     # Parse params into Flop format
     flop_params = EdgeAdmin.RequestParser.parse(params)
 
-    # Run Flop query
-    case Flop.validate_and_run(Command, flop_params,
+    {ilike_filters, flop_params} = EdgeAdmin.RequestParser.split_ilike_filters(flop_params, [:command_text])
+
+    base_query =
+      Enum.reduce(ilike_filters, Command, fn %{field: field, value: value}, acc ->
+        from(c in acc, where: ilike(field(c, ^field), ^value))
+      end)
+
+    case Flop.validate_and_run(base_query, flop_params,
            for: Command,
            replace_invalid_params: true
          ) do
@@ -339,11 +345,19 @@ defmodule EdgeAdmin.Commands do
         apply_has_cluster_filters(query_with_cluster_name, has_cluster_filters)
       end
 
-    # Remove cluster_name and has_cluster filters from Flop params (handled above)
-    flop_params = Map.put(flop_params, :filters, other_filters)
+    {ilike_filters, flop_params} =
+      EdgeAdmin.RequestParser.split_ilike_filters(
+        Map.put(flop_params, :filters, other_filters),
+        [:output]
+      )
+
+    query_with_ilike =
+      Enum.reduce(ilike_filters, query_with_has_cluster, fn %{field: field, value: value}, acc ->
+        from(ce in acc, where: ilike(field(ce, ^field), ^value))
+      end)
 
     # Run Flop query
-    case Flop.validate_and_run(query_with_has_cluster, flop_params,
+    case Flop.validate_and_run(query_with_ilike, flop_params,
            for: CommandExecution,
            replace_invalid_params: true
          ) do

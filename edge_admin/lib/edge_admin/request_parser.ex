@@ -87,6 +87,39 @@ defmodule EdgeAdmin.RequestParser do
     })
   end
 
+  @doc """
+  Splits ilike filters for the given fields out of a Flop params map.
+
+  Flop's `:ilike` operator calls `add_wildcard/1` internally, which escapes any
+  `%` characters in the value and wraps the whole thing in `%..%`. This breaks
+  user-supplied wildcard patterns like `"prod%"` (starts-with) because the `%`
+  gets escaped before the SQL executes.
+
+  Call this after `parse/1` to extract ilike filters for fields you want to
+  apply as raw Ecto `ilike/2` clauses instead of letting Flop handle them.
+
+  ## Returns
+  `{ilike_filters, updated_flop_params}` where `ilike_filters` is a list of
+  `%{field: atom, op: :ilike, value: binary}` maps and `updated_flop_params`
+  has those filters removed.
+
+  ## Example
+
+      flop_params = RequestParser.parse(params)
+      {ilike_filters, flop_params} = RequestParser.split_ilike_filters(flop_params, [:name, :version])
+      query = Enum.reduce(ilike_filters, base_query, fn %{field: f, value: v}, q ->
+        from(r in q, where: ilike(field(r, ^f), ^v))
+      end)
+  """
+  def split_ilike_filters(flop_params, fields) when is_list(fields) do
+    {ilike, other} =
+      Enum.split_with(flop_params[:filters] || [], fn filter ->
+        filter.op == :ilike and filter.field in fields
+      end)
+
+    {ilike, Map.put(flop_params, :filters, other)}
+  end
+
   # Parse filters from params
   defp parse_filters(params) do
     params

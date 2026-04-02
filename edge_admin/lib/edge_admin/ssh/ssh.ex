@@ -260,11 +260,19 @@ defmodule EdgeAdmin.Ssh do
         apply_has_password_filters(base_query, has_password_filters)
       end
 
-    # Remove has_password filters from Flop params (handled above)
-    flop_params = Map.put(flop_params, :filters, other_filters)
+    {ilike_filters, flop_params} =
+      EdgeAdmin.RequestParser.split_ilike_filters(
+        Map.put(flop_params, :filters, other_filters),
+        [:username]
+      )
+
+    query_with_ilike =
+      Enum.reduce(ilike_filters, query_with_password_filter, fn %{field: field, value: value}, acc ->
+        from(u in acc, where: ilike(field(u, ^field), ^value))
+      end)
 
     # Run Flop query
-    case Flop.validate_and_run(query_with_password_filter, flop_params,
+    case Flop.validate_and_run(query_with_ilike, flop_params,
            for: SshUsername,
            replace_invalid_params: true
          ) do
@@ -390,8 +398,14 @@ defmodule EdgeAdmin.Ssh do
     # Parse params into Flop format
     flop_params = EdgeAdmin.RequestParser.parse(params)
 
-    # Run Flop query
-    case Flop.validate_and_run(SshPublicKey, flop_params,
+    {ilike_filters, flop_params} = EdgeAdmin.RequestParser.split_ilike_filters(flop_params, [:key_name, :public_key])
+
+    base_query =
+      Enum.reduce(ilike_filters, SshPublicKey, fn %{field: field, value: value}, acc ->
+        from(k in acc, where: ilike(field(k, ^field), ^value))
+      end)
+
+    case Flop.validate_and_run(base_query, flop_params,
            for: SshPublicKey,
            replace_invalid_params: true
          ) do

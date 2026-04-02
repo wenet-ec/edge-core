@@ -126,6 +126,21 @@ defmodule EdgeAdmin.Nodes do
         filter.field == :node_count
       end)
 
+    # Extract has_node_limit filter (virtual field, handle separately)
+    {has_node_limit_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter ->
+        filter.field == :has_node_limit
+      end)
+
+    # Extract ilike filters for string fields — Flop's :ilike wraps values in %..%
+    # and escapes any existing % characters, breaking wildcard patterns like "def%".
+    # Apply these as raw Ecto ilike/2 clauses instead.
+    {ilike_filters, flop_params} =
+      RequestParser.split_ilike_filters(
+        Map.put(flop_params, :filters, other_filters),
+        [:name, :ipv4_range]
+      )
+
     # Build base query with node_count if filtering/sorting on it
     base_query =
       if node_count_filters == [] do
@@ -141,7 +156,16 @@ defmodule EdgeAdmin.Nodes do
         )
       end
 
-    flop_params = Map.put(flop_params, :filters, other_filters)
+    # Apply has_node_limit filter if present
+    base_query =
+      if has_node_limit_filters == [] do
+        base_query
+      else
+        apply_has_node_limit_filters(base_query, has_node_limit_filters)
+      end
+
+    # Apply ilike filters directly via Ecto (bypassing Flop's add_wildcard)
+    base_query = apply_cluster_ilike_filters(base_query, ilike_filters)
 
     case Flop.validate_and_run(base_query, flop_params,
            for: Cluster,
@@ -155,6 +179,28 @@ defmodule EdgeAdmin.Nodes do
       {:error, meta} ->
         {:error, meta}
     end
+  end
+
+  defp apply_has_node_limit_filters(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc -> apply_has_node_limit_filter(acc, filter) end)
+  end
+
+  defp apply_has_node_limit_filter(query, %{op: :==, value: v}) when v in [true, "true"] do
+    from(c in query, where: not is_nil(c.node_limit))
+  end
+
+  defp apply_has_node_limit_filter(query, %{op: :==, value: v}) when v in [false, "false"] do
+    from(c in query, where: is_nil(c.node_limit))
+  end
+
+  defp apply_has_node_limit_filter(query, _), do: query
+
+  # Apply ilike filters for string fields directly via Ecto, bypassing Flop's add_wildcard
+  # which escapes % characters and wraps values in %..%, breaking user-supplied patterns.
+  defp apply_cluster_ilike_filters(query, filters) do
+    Enum.reduce(filters, query, fn %{field: field, value: value}, acc ->
+      from(c in acc, where: ilike(field(c, ^field), ^value))
+    end)
   end
 
   # Apply node_count filters using HAVING clause
@@ -968,6 +1014,15 @@ defmodule EdgeAdmin.Nodes do
         filter.field == :cluster_name
       end)
 
+    # Extract ilike filters for string fields — Flop's :ilike wraps values in %..%
+    # and escapes any existing % characters, breaking wildcard patterns like "1.*".
+    # Apply these as raw Ecto ilike/2 clauses instead.
+    {ilike_filters, flop_params} =
+      RequestParser.split_ilike_filters(
+        Map.put(flop_params, :filters, other_filters),
+        [:version]
+      )
+
     # Build base query with cluster preload
     base_query =
       from(n in Node,
@@ -983,8 +1038,8 @@ defmodule EdgeAdmin.Nodes do
         apply_cluster_name_filters(base_query, cluster_name_filters)
       end
 
-    # Remove cluster_name filters from Flop params (handled above)
-    flop_params = Map.put(flop_params, :filters, other_filters)
+    # Apply ilike filters directly via Ecto (bypassing Flop's add_wildcard)
+    query_with_cluster_filter = apply_node_ilike_filters(query_with_cluster_filter, ilike_filters)
 
     # Run Flop query
     case Flop.validate_and_run(query_with_cluster_filter, flop_params,
@@ -1015,6 +1070,13 @@ defmodule EdgeAdmin.Nodes do
   end
 
   defp apply_cluster_name_filter(query, _), do: query
+
+  # Apply ilike filters for node string fields directly via Ecto, bypassing Flop's add_wildcard.
+  defp apply_node_ilike_filters(query, filters) do
+    Enum.reduce(filters, query, fn %{field: field, value: value}, acc ->
+      from(n in acc, where: ilike(field(n, ^field), ^value))
+    end)
+  end
 
   @doc """
   Gets multiple nodes by their IDs.
@@ -1159,7 +1221,16 @@ defmodule EdgeAdmin.Nodes do
         apply_cluster_name_filters(base_query, cluster_name_filters)
       end
 
-    flop_params = Map.put(flop_params, :filters, other_filters)
+    {ilike_filters, flop_params} =
+      RequestParser.split_ilike_filters(
+        Map.put(flop_params, :filters, other_filters),
+        [:key]
+      )
+
+    query =
+      Enum.reduce(ilike_filters, query, fn %{field: field, value: value}, acc ->
+        from(k in acc, where: ilike(field(k, ^field), ^value))
+      end)
 
     case Flop.validate_and_run(query, flop_params,
            for: EnrollmentKey,
@@ -1771,11 +1842,19 @@ defmodule EdgeAdmin.Nodes do
         apply_cluster_name_filters(base_query, cluster_name_filters)
       end
 
-    # Remove cluster_name filters from Flop params (handled above)
-    flop_params = Map.put(flop_params, :filters, other_filters)
+    {ilike_filters, flop_params} =
+      RequestParser.split_ilike_filters(
+        Map.put(flop_params, :filters, other_filters),
+        [:name]
+      )
+
+    query_with_ilike =
+      Enum.reduce(ilike_filters, query_with_cluster_filter, fn %{field: field, value: value}, acc ->
+        from(a in acc, where: ilike(field(a, ^field), ^value))
+      end)
 
     # Run Flop query
-    case Flop.validate_and_run(query_with_cluster_filter, flop_params,
+    case Flop.validate_and_run(query_with_ilike, flop_params,
            for: Alias,
            replace_invalid_params: true
          ) do

@@ -77,8 +77,14 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
       ],
       node_limit: [
         in: :query,
-        description: "Filter by exact node limit (use node_limit__null=true to find unlimited clusters)",
+        description: "Filter by exact node limit",
         schema: %OpenApiSpex.Schema{type: :integer, minimum: 1}
+      ],
+      has_node_limit: [
+        in: :query,
+        description:
+          "Filter by whether a node limit is set: true returns clusters with a limit, false returns unlimited clusters",
+        schema: %OpenApiSpex.Schema{type: :boolean}
       ],
       node_limit__gte: [
         in: :query,

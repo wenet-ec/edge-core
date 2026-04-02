@@ -7,7 +7,7 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
 
   @derive {
     Flop.Schema,
-    filterable: [:username, :node_id, :inserted_at],
+    filterable: [:username, :node_id, :inserted_at, :updated_at],
     sortable: [:username, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],

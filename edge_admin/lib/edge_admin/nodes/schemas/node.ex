@@ -60,7 +60,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
 
   @derive {
     Flop.Schema,
-    filterable: [:id_type, :status, :version, :self_update_enabled, :last_seen_at, :inserted_at],
+    filterable: [:id_type, :status, :version, :self_update_enabled, :last_seen_at, :inserted_at, :updated_at],
     sortable: [
       :id_type,
       :status,

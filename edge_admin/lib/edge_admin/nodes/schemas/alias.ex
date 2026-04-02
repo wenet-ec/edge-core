@@ -37,7 +37,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
 
   @derive {
     Flop.Schema,
-    filterable: [:name, :inserted_at],
+    filterable: [:name, :inserted_at, :updated_at],
     sortable: [:name, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],

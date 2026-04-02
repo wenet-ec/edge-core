@@ -38,7 +38,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
 
   @derive {
     Flop.Schema,
-    filterable: [:name, :ipv4_range, :node_limit, :inserted_at],
+    filterable: [:name, :ipv4_range, :node_limit, :inserted_at, :updated_at],
     sortable: [:name, :ipv4_range, :node_limit, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],

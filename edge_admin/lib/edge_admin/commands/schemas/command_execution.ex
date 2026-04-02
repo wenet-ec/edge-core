@@ -7,7 +7,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
 
   @derive {
     Flop.Schema,
-    filterable: [:status, :target_all, :exit_code, :command_id, :node_id, :output, :inserted_at],
+    filterable: [:status, :target_all, :exit_code, :command_id, :node_id, :output, :inserted_at, :updated_at],
     sortable: [:status, :exit_code, :sent_at, :completed_at, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],

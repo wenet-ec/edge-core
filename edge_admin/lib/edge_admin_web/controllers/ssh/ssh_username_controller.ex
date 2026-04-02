@@ -62,13 +62,45 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
         in: :query,
         description:
           "Filter SSH usernames inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{anyOf: [%OpenApiSpex.Schema{type: :string, format: :"date-time"}, %OpenApiSpex.Schema{type: :string, format: :date}]}
+        schema: %OpenApiSpex.Schema{
+          anyOf: [
+            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
+            %OpenApiSpex.Schema{type: :string, format: :date}
+          ]
+        }
       ],
       inserted_at__lte: [
         in: :query,
         description:
           "Filter SSH usernames inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{anyOf: [%OpenApiSpex.Schema{type: :string, format: :"date-time"}, %OpenApiSpex.Schema{type: :string, format: :date}]}
+        schema: %OpenApiSpex.Schema{
+          anyOf: [
+            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
+            %OpenApiSpex.Schema{type: :string, format: :date}
+          ]
+        }
+      ],
+      updated_at__gte: [
+        in: :query,
+        description:
+          "Filter SSH usernames updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+        schema: %OpenApiSpex.Schema{
+          anyOf: [
+            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
+            %OpenApiSpex.Schema{type: :string, format: :date}
+          ]
+        }
+      ],
+      updated_at__lte: [
+        in: :query,
+        description:
+          "Filter SSH usernames updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+        schema: %OpenApiSpex.Schema{
+          anyOf: [
+            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
+            %OpenApiSpex.Schema{type: :string, format: :date}
+          ]
+        }
       ]
     ],
     responses: %{

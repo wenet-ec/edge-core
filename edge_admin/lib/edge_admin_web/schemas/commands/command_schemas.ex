@@ -183,24 +183,46 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
                       description: "Filter by self-update enabled status"
                     },
                     last_seen_at__gte: %Schema{
-                      type: :string,
-                      format: :"date-time",
+                      anyOf: [
+                        %Schema{type: :string, format: :"date-time"},
+                        %Schema{type: :string, format: :date}
+                      ],
                       description: "Filter nodes last seen after or on this datetime"
                     },
                     last_seen_at__lte: %Schema{
-                      type: :string,
-                      format: :"date-time",
+                      anyOf: [
+                        %Schema{type: :string, format: :"date-time"},
+                        %Schema{type: :string, format: :date}
+                      ],
                       description: "Filter nodes last seen before or on this datetime"
                     },
                     inserted_at__gte: %Schema{
-                      type: :string,
-                      format: :date,
+                      anyOf: [
+                        %Schema{type: :string, format: :"date-time"},
+                        %Schema{type: :string, format: :date}
+                      ],
                       description: "Filter nodes inserted after or on this date"
                     },
                     inserted_at__lte: %Schema{
-                      type: :string,
-                      format: :date,
+                      anyOf: [
+                        %Schema{type: :string, format: :"date-time"},
+                        %Schema{type: :string, format: :date}
+                      ],
                       description: "Filter nodes inserted before or on this date"
+                    },
+                    updated_at__gte: %Schema{
+                      anyOf: [
+                        %Schema{type: :string, format: :"date-time"},
+                        %Schema{type: :string, format: :date}
+                      ],
+                      description: "Filter nodes updated after or on this datetime"
+                    },
+                    updated_at__lte: %Schema{
+                      anyOf: [
+                        %Schema{type: :string, format: :"date-time"},
+                        %Schema{type: :string, format: :date}
+                      ],
+                      description: "Filter nodes updated before or on this datetime"
                     }
                   },
                   additionalProperties: false
@@ -230,15 +252,37 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
                       type: :integer,
                       description: "Filter by node count less than or equal to"
                     },
+                    has_node_limit: %Schema{
+                      type: :boolean,
+                      description: "Filter clusters that have (true) or do not have (false) a node limit set"
+                    },
                     inserted_at__gte: %Schema{
-                      type: :string,
-                      format: :date,
+                      anyOf: [
+                        %Schema{type: :string, format: :"date-time"},
+                        %Schema{type: :string, format: :date}
+                      ],
                       description: "Filter clusters inserted after or on this date"
                     },
                     inserted_at__lte: %Schema{
-                      type: :string,
-                      format: :date,
+                      anyOf: [
+                        %Schema{type: :string, format: :"date-time"},
+                        %Schema{type: :string, format: :date}
+                      ],
                       description: "Filter clusters inserted before or on this date"
+                    },
+                    updated_at__gte: %Schema{
+                      anyOf: [
+                        %Schema{type: :string, format: :"date-time"},
+                        %Schema{type: :string, format: :date}
+                      ],
+                      description: "Filter clusters updated after or on this datetime"
+                    },
+                    updated_at__lte: %Schema{
+                      anyOf: [
+                        %Schema{type: :string, format: :"date-time"},
+                        %Schema{type: :string, format: :date}
+                      ],
+                      description: "Filter clusters updated before or on this datetime"
                     }
                   },
                   additionalProperties: false

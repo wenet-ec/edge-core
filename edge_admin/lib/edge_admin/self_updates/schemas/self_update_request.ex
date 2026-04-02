@@ -18,7 +18,7 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest do
 
   @derive {
     Flop.Schema,
-    filterable: [:status, :inserted_at],
+    filterable: [:status, :inserted_at, :updated_at],
     sortable: [:inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],

@@ -19,7 +19,7 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
 
   @derive {
     Flop.Schema,
-    filterable: [:key_name, :public_key, :ssh_username_id, :inserted_at],
+    filterable: [:key_name, :public_key, :ssh_username_id, :inserted_at, :updated_at],
     sortable: [:key_name, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],

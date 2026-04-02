@@ -18,8 +18,6 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
 
   alias EdgeAdmin.Nodes.Schemas.Cluster
 
-  @unlimited -1
-
   @derive {
     Flop.Schema,
     filterable: [:key, :uses_remaining, :expired_at, :last_used_at, :inserted_at, :updated_at],
@@ -35,7 +33,7 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
           key: String.t(),
           cluster_id: String.t(),
           cluster: Cluster.t() | Ecto.Association.NotLoaded.t(),
-          uses_remaining: integer(),
+          uses_remaining: integer() | nil,
           expired_at: DateTime.t() | nil,
           last_used_at: DateTime.t() | nil,
           inserted_at: DateTime.t(),
@@ -65,7 +63,7 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
 
   @doc """
   Returns true if this key has been fully consumed (uses_remaining == 0).
-  Keys with uses_remaining == -1 (unlimited) or > 0 are not spent.
+  Keys with uses_remaining == nil (unlimited) or > 0 are not spent.
   """
   @spec spent?(t()) :: boolean()
   def spent?(%__MODULE__{uses_remaining: 0}), do: true
@@ -83,18 +81,18 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
   end
 
   @doc """
-  Returns true if this key is unlimited use (uses_remaining == -1).
+  Returns true if this key is unlimited use (uses_remaining == nil).
   """
   @spec unlimited?(t()) :: boolean()
-  def unlimited?(%__MODULE__{uses_remaining: @unlimited}), do: true
+  def unlimited?(%__MODULE__{uses_remaining: nil}), do: true
   def unlimited?(%__MODULE__{}), do: false
 
   defp validate_uses_remaining(changeset) do
     validate_change(changeset, :uses_remaining, fn _, value ->
-      if value == @unlimited or value > 0 do
+      if value > 0 do
         []
       else
-        [uses_remaining: "must be -1 (unlimited) or a positive integer"]
+        [uses_remaining: "must be a positive integer (or null for unlimited)"]
       end
     end)
   end

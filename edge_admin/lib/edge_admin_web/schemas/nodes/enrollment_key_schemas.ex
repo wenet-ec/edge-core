@@ -24,7 +24,8 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
         },
         uses_remaining: %Schema{
           type: :integer,
-          description: "Remaining uses. -1 means unlimited."
+          nullable: true,
+          description: "Remaining uses. null means unlimited."
         },
         expired_at: %Schema{
           type: :string,
@@ -87,7 +88,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
             uses_remaining: %Schema{
               type: :integer,
               nullable: true,
-              description: "Number of uses. -1 for unlimited. Defaults to 1."
+              description: "Number of uses. null for unlimited. Defaults to 1."
             },
             expired_at: %Schema{
               type: :string,
@@ -118,7 +119,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
             uses_remaining: %Schema{
               type: :integer,
               nullable: true,
-              description: "Number of uses. -1 for unlimited."
+              description: "Number of uses. null for unlimited. Pass null to make unlimited."
             },
             expired_at: %Schema{
               type: :string,

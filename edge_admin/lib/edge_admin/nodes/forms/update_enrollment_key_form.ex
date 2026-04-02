@@ -3,8 +3,6 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyForm do
   @moduledoc false
   use EdgeAdmin.Form
 
-  @unlimited -1
-
   embedded_schema do
     field(:uses_remaining, :integer)
     field(:expired_at, :utc_datetime)
@@ -27,10 +25,10 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyForm do
 
   defp validate_uses_remaining(changeset) do
     validate_change(changeset, :uses_remaining, fn _, value ->
-      if value == @unlimited or value > 0 do
+      if value > 0 do
         []
       else
-        [uses_remaining: "must be -1 (unlimited) or a positive integer"]
+        [uses_remaining: "must be a positive integer (or null for unlimited)"]
       end
     end)
   end

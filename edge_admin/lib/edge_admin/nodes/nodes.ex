@@ -1071,6 +1071,20 @@ defmodule EdgeAdmin.Nodes do
 
   defp apply_cluster_name_filter(query, _), do: query
 
+  defp apply_is_unlimited_filters(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc -> apply_is_unlimited_filter(acc, filter) end)
+  end
+
+  defp apply_is_unlimited_filter(query, %{op: :==, value: v}) when v in [true, "true"] do
+    from(k in query, where: is_nil(k.uses_remaining))
+  end
+
+  defp apply_is_unlimited_filter(query, %{op: :==, value: v}) when v in [false, "false"] do
+    from(k in query, where: not is_nil(k.uses_remaining))
+  end
+
+  defp apply_is_unlimited_filter(query, _), do: query
+
   # Apply ilike filters for node string fields directly via Ecto, bypassing Flop's add_wildcard.
   defp apply_node_ilike_filters(query, filters) do
     Enum.reduce(filters, query, fn %{field: field, value: value}, acc ->
@@ -1195,8 +1209,9 @@ defmodule EdgeAdmin.Nodes do
   Lists enrollment keys with filtering, sorting, and pagination.
 
   Supports filtering by:
-  - `token` - Exact match
-  - `uses_remaining` - Exact, `__gte`, `__lte`
+  - `key` - Exact match or wildcard
+  - `uses_remaining` - Exact, `__gte`, `__lte` (null = unlimited)
+  - `is_unlimited` - Boolean: true returns unlimited keys (uses_remaining is null)
   - `expired_at`, `last_used_at`, `inserted_at`, `updated_at` - Date range (`__gte`, `__lte`)
   - `cluster_name` - Text search with wildcard support (requires join)
   """
@@ -1207,6 +1222,9 @@ defmodule EdgeAdmin.Nodes do
 
     {cluster_name_filters, other_filters} =
       Enum.split_with(flop_params[:filters] || [], &(&1.field == :cluster_name))
+
+    {is_unlimited_filters, other_filters} =
+      Enum.split_with(other_filters, &(&1.field == :is_unlimited))
 
     base_query =
       from(k in EnrollmentKey,
@@ -1219,6 +1237,13 @@ defmodule EdgeAdmin.Nodes do
         base_query
       else
         apply_cluster_name_filters(base_query, cluster_name_filters)
+      end
+
+    query =
+      if is_unlimited_filters == [] do
+        query
+      else
+        apply_is_unlimited_filters(query, is_unlimited_filters)
       end
 
     {ilike_filters, flop_params} =
@@ -1326,7 +1351,7 @@ defmodule EdgeAdmin.Nodes do
   Performs the following checks in order:
   1. Key blob exists in DB
   2. Key is not expired
-  3. Key is not spent (uses_remaining == 0)
+  3. Key is not spent (uses_remaining == 0; null means unlimited)
   4. Cluster has capacity (NodeLimitCheck)
 
   On success, atomically decrements `uses_remaining` (unless unlimited) and sets
@@ -1377,7 +1402,7 @@ defmodule EdgeAdmin.Nodes do
   defp consume_key(%EnrollmentKey{} = key) do
     now = DateTime.truncate(DateTime.utc_now(), :second)
 
-    # Atomic decrement: only decrements if uses_remaining > 0, skips if -1 (unlimited)
+    # Atomic decrement: only decrements if uses_remaining > 0, skips if nil (unlimited)
     {rows_updated, _} =
       if EnrollmentKey.unlimited?(key) do
         Repo.update_all(

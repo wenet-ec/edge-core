@@ -55,18 +55,24 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
       ],
       uses_remaining: [
         in: :query,
-        description: "Filter by exact uses_remaining",
-        schema: %OpenApiSpex.Schema{type: :integer}
+        description: "Filter by exact uses_remaining (positive integer; use is_unlimited=true to find unlimited keys)",
+        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1}
       ],
       uses_remaining__gte: [
         in: :query,
         description: "Filter by minimum uses_remaining",
-        schema: %OpenApiSpex.Schema{type: :integer}
+        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1}
       ],
       uses_remaining__lte: [
         in: :query,
         description: "Filter by maximum uses_remaining",
-        schema: %OpenApiSpex.Schema{type: :integer}
+        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1}
+      ],
+      is_unlimited: [
+        in: :query,
+        description:
+          "Filter by whether the key has unlimited uses: true returns unlimited keys (uses_remaining is null), false returns keys with a finite use count",
+        schema: %OpenApiSpex.Schema{type: :boolean}
       ],
       expired_at__gte: [
         in: :query,

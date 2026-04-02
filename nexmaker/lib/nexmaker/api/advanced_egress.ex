@@ -72,15 +72,17 @@ defmodule Nexmaker.Api.AdvancedEgress do
   """
   @spec create(map(), keyword()) :: {:ok, map()} | {:error, any()}
   def create(attrs, opts \\ []) do
-    Api.request(:post, "/api/v1/egress", Keyword.put(opts, :body, attrs))
+    case Api.request(:post, "/api/v1/egress", Keyword.put(opts, :body, attrs)) do
+      {:ok, %{"Response" => egress}} -> {:ok, egress}
+      other -> other
+    end
   end
 
   @doc """
-  Lists all advanced egress routes.
-
-  Returns all advanced egress routes across all networks.
+  Lists advanced egress routes for a network.
 
   ## Parameters
+    - network_name: String - Network name (required)
     - opts: Keyword - API options (base_url, master_key)
 
   ## Returns
@@ -89,11 +91,14 @@ defmodule Nexmaker.Api.AdvancedEgress do
 
   ## Examples
 
-      {:ok, routes} = Nexmaker.Api.AdvancedEgress.list()
+      {:ok, routes} = Nexmaker.Api.AdvancedEgress.list("cluster-abc")
   """
-  @spec list(keyword()) :: {:ok, [map()]} | {:error, any()}
-  def list(opts \\ []) do
-    Api.request(:get, "/api/v1/egress", opts)
+  @spec list(String.t(), keyword()) :: {:ok, [map()]} | {:error, any()}
+  def list(network_name, opts \\ []) do
+    case Api.request(:get, "/api/v1/egress?network=#{network_name}", opts) do
+      {:ok, %{"Response" => egresses}} -> {:ok, egresses}
+      other -> other
+    end
   end
 
   @doc """
@@ -120,7 +125,10 @@ defmodule Nexmaker.Api.AdvancedEgress do
   @spec update(String.t(), map(), keyword()) :: {:ok, map()} | {:error, any()}
   def update(egress_id, attrs, opts \\ []) do
     body = Map.put(attrs, :id, egress_id)
-    Api.request(:put, "/api/v1/egress", Keyword.put(opts, :body, body))
+    case Api.request(:put, "/api/v1/egress", Keyword.put(opts, :body, body)) do
+      {:ok, %{"Response" => egress}} -> {:ok, egress}
+      other -> other
+    end
   end
 
   @doc """
@@ -142,6 +150,6 @@ defmodule Nexmaker.Api.AdvancedEgress do
   """
   @spec delete(String.t(), keyword()) :: {:ok, any()} | {:error, any()}
   def delete(egress_id, opts \\ []) do
-    Api.request(:delete, "/api/v1/egress", Keyword.put(opts, :body, %{id: egress_id}))
+    Api.request(:delete, "/api/v1/egress?id=#{egress_id}", opts)
   end
 end

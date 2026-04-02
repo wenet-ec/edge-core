@@ -24,8 +24,7 @@ defmodule Nexmaker.ApiTest do
   defp unique_cidr do
     id = unique_id()
     third = rem(id, 254) + 1
-    fourth = 0
-    "100.64.#{third}.#{fourth}/24"
+    "100.64.#{third}.0/24"
   end
 
   defp unique_network_name(prefix \\ "test") do
@@ -92,7 +91,6 @@ defmodule Nexmaker.ApiTest do
     test "get_server_info/1 returns server info map" do
       assert {:ok, info} = Nexmaker.Api.Server.get_server_info(api_opts())
       assert is_map(info)
-      # Go JSON encoding uses struct field names; verify the response is a non-empty map
       assert map_size(info) > 0
     end
 
@@ -150,17 +148,13 @@ defmodule Nexmaker.ApiTest do
                Nexmaker.Api.Networks.get("does-not-exist-at-all", api_opts())
     end
 
-    test "delete/2 removes a network so get returns not_found" do
+    test "delete/2 removes a network so get returns error" do
       name = unique_network_name("net")
       cidr = unique_cidr()
       {:ok, _} = Nexmaker.Api.Networks.create(name, %{addressrange: cidr}, api_opts())
 
       assert {:ok, _} = Nexmaker.Api.Networks.delete(name, api_opts())
-
-      result = Nexmaker.Api.Networks.get(name, api_opts())
-
-      # Netmaker may return :not_found (404) or a 500 with "no result" body
-      assert match?({:error, _}, result)
+      assert match?({:error, _}, Nexmaker.Api.Networks.get(name, api_opts()))
     end
 
     test "created network appears in list/1" do
@@ -186,20 +180,35 @@ defmodule Nexmaker.ApiTest do
       refute name in names
     end
 
-    test "create + delete lifecycle with force: true" do
+    test "delete/2 with force: true" do
       name = unique_network_name("net")
       cidr = unique_cidr()
       {:ok, _} = Nexmaker.Api.Networks.create(name, %{addressrange: cidr}, api_opts())
-
       assert {:ok, _} = Nexmaker.Api.Networks.delete(name, api_opts() ++ [force: true])
     end
 
-    test "create + delete lifecycle with force: false" do
+    test "delete/2 with force: false" do
+      name = unique_network_name("net")
+      cidr = unique_cidr()
+      {:ok, _} = Nexmaker.Api.Networks.create(name, %{addressrange: cidr}, api_opts())
+      assert {:ok, _} = Nexmaker.Api.Networks.delete(name, api_opts() ++ [force: false])
+    end
+
+    test "stats/1 returns a map" do
+      assert {:ok, stats} = Nexmaker.Api.Networks.stats(api_opts())
+      assert is_map(stats)
+    end
+
+    test "egress_routes/2 returns a map for an existing network" do
       name = unique_network_name("net")
       cidr = unique_cidr()
       {:ok, _} = Nexmaker.Api.Networks.create(name, %{addressrange: cidr}, api_opts())
 
-      assert {:ok, _} = Nexmaker.Api.Networks.delete(name, api_opts() ++ [force: false])
+      assert {:ok, routes} = Nexmaker.Api.Networks.egress_routes(name, api_opts())
+      # No egress nodes yet — routes is an empty map or nil; either is valid
+      assert is_map(routes) or is_nil(routes)
+
+      on_exit(fn -> Nexmaker.Api.Networks.delete(name, api_opts()) end)
     end
   end
 
@@ -226,11 +235,8 @@ defmodule Nexmaker.ApiTest do
                  api_opts()
                )
 
-      # Key must have a value (token string)
       assert is_binary(key["value"]) and key["value"] != ""
-      # Key must have a token (base64 enrollment token for netclient)
       assert is_binary(key["token"]) and key["token"] != ""
-      # Key must list the network it was created for
       assert net in key["networks"]
 
       on_exit(fn -> Nexmaker.Api.EnrollmentKeys.delete(key["value"], api_opts()) end)
@@ -257,9 +263,7 @@ defmodule Nexmaker.ApiTest do
 
       assert {:ok, keys} = Nexmaker.Api.EnrollmentKeys.list(api_opts())
       assert is_list(keys)
-
-      found = Enum.find(keys, fn k -> k["value"] == key["value"] end)
-      assert found != nil
+      assert Enum.any?(keys, fn k -> k["value"] == key["value"] end)
 
       on_exit(fn -> Nexmaker.Api.EnrollmentKeys.delete(key["value"], api_opts()) end)
     end
@@ -271,16 +275,12 @@ defmodule Nexmaker.ApiTest do
       assert {:ok, _} = Nexmaker.Api.EnrollmentKeys.delete(key["value"], api_opts())
 
       {:ok, keys} = Nexmaker.Api.EnrollmentKeys.list(api_opts())
-      found = Enum.find(keys, fn k -> k["value"] == key["value"] end)
-      assert found == nil
+      refute Enum.any?(keys, fn k -> k["value"] == key["value"] end)
     end
 
-    test "create/3 uses default tag 'default' when not specified", %{network_name: net} do
+    test "create/3 assigns tags list", %{network_name: net} do
       {:ok, key} = Nexmaker.Api.EnrollmentKeys.create(net, %{uses_remaining: 1}, api_opts())
-
-      # Should have been given default tag by the API module
       assert is_list(key["tags"])
-
       on_exit(fn -> Nexmaker.Api.EnrollmentKeys.delete(key["value"], api_opts()) end)
     end
   end
@@ -290,24 +290,47 @@ defmodule Nexmaker.ApiTest do
   # ---------------------------------------------------------------------------
 
   describe "Nexmaker.Api.Hosts" do
-    test "list/1 returns list of hosts" do
-      assert {:ok, hosts} = Nexmaker.Api.Hosts.list(api_opts())
-      assert is_list(hosts)
+    # list/1 now returns the unwrapped paginated map: %{"data" => [...], "total_pages" => N, ...}
+    test "list/1 returns paginated response map" do
+      assert {:ok, result} = Nexmaker.Api.Hosts.list(api_opts())
+      assert is_map(result)
+      assert Map.has_key?(result, "data")
+      assert is_list(result["data"])
+      assert Map.has_key?(result, "total_pages")
     end
 
-    test "get/2 returns an error for nonexistent host" do
-      # Netmaker v1.5 returns 405 for GET /api/hosts/{id} (method not allowed)
-      fake_id = "00000000-0000-0000-0000-000000000000"
-      assert {:error, _} = Nexmaker.Api.Hosts.get(fake_id, api_opts())
-    end
-
-    test "each host in list has required fields" do
-      {:ok, hosts} = Nexmaker.Api.Hosts.list(api_opts())
+    test "list/1 data entries have required fields" do
+      {:ok, %{"data" => hosts}} = Nexmaker.Api.Hosts.list(api_opts())
 
       for host <- hosts do
         assert Map.has_key?(host, "id"), "host missing 'id': #{inspect(host)}"
         assert Map.has_key?(host, "name"), "host missing 'name': #{inspect(host)}"
         assert Map.has_key?(host, "os"), "host missing 'os': #{inspect(host)}"
+      end
+    end
+
+    test "list/1 respects per_page option" do
+      assert {:ok, result} = Nexmaker.Api.Hosts.list(api_opts() ++ [per_page: 1])
+      assert result["per_page"] == 1
+    end
+
+    test "get/2 returns :not_found for nonexistent host ID" do
+      fake_id = "00000000-0000-0000-0000-000000000000"
+      assert {:error, :not_found} = Nexmaker.Api.Hosts.get(fake_id, api_opts())
+    end
+
+    test "get/2 returns host when it exists" do
+      {:ok, %{"data" => hosts}} = Nexmaker.Api.Hosts.list(api_opts())
+
+      case hosts do
+        [] ->
+          # No hosts registered yet — skip
+          :ok
+
+        [host | _] ->
+          assert {:ok, fetched} = Nexmaker.Api.Hosts.get(host["id"], api_opts())
+          assert fetched["id"] == host["id"]
+          assert fetched["name"] == host["name"]
       end
     end
   end
@@ -328,12 +351,11 @@ defmodule Nexmaker.ApiTest do
       for node <- nodes do
         assert Map.has_key?(node, "id"), "node missing 'id': #{inspect(node)}"
         assert Map.has_key?(node, "network"), "node missing 'network': #{inspect(node)}"
-        assert Map.has_key?(node, "hostid"), "node missing 'hostid' (host ref): #{inspect(node)}"
+        assert Map.has_key?(node, "hostid"), "node missing 'hostid': #{inspect(node)}"
       end
     end
 
     test "list/2 returns list of nodes for a network" do
-      # Create a temporary network; even with no nodes the call should succeed
       name = unique_network_name("nodes")
       cidr = unique_cidr()
       {:ok, _} = Nexmaker.Api.Networks.create(name, %{addressrange: cidr}, api_opts())
@@ -344,7 +366,7 @@ defmodule Nexmaker.ApiTest do
       on_exit(fn -> Nexmaker.Api.Networks.delete(name, api_opts()) end)
     end
 
-    test "get/3 returns :not_found for nonexistent node" do
+    test "get/3 returns error for nonexistent node" do
       name = unique_network_name("nodes")
       cidr = unique_cidr()
       {:ok, _} = Nexmaker.Api.Networks.create(name, %{addressrange: cidr}, api_opts())
@@ -353,6 +375,67 @@ defmodule Nexmaker.ApiTest do
       assert {:error, _} = Nexmaker.Api.Nodes.get(name, fake_node_id, api_opts())
 
       on_exit(fn -> Nexmaker.Api.Networks.delete(name, api_opts()) end)
+    end
+
+    test "network_status/2 returns a map for an existing network" do
+      name = unique_network_name("nodes")
+      cidr = unique_cidr()
+      {:ok, _} = Nexmaker.Api.Networks.create(name, %{addressrange: cidr}, api_opts())
+
+      assert {:ok, status} = Nexmaker.Api.Nodes.network_status(name, api_opts())
+      # No nodes yet — returns empty map
+      assert is_map(status)
+
+      on_exit(fn -> Nexmaker.Api.Networks.delete(name, api_opts()) end)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Nexmaker.Api.Nodes — metadata round-trip
+  # (used by admin discovery — the most critical integration path)
+  # ---------------------------------------------------------------------------
+
+  describe "Nexmaker.Api.Nodes - metadata round-trip" do
+    test "update metadata on a node and read it back" do
+      {:ok, nodes} = Nexmaker.Api.Nodes.list_all(api_opts())
+
+      case nodes do
+        [] ->
+          # No nodes registered yet — cannot test update round-trip
+          :ok
+
+        [node | _] ->
+          network = node["network"]
+          node_id = node["id"]
+
+          test_value = "test-admin-#{unique_id()}"
+          metadata = %{"admin_url" => test_value, "cluster" => "test-cluster"}
+
+          assert {:ok, _updated} =
+                   Nexmaker.Api.Nodes.update(
+                     network,
+                     node_id,
+                     Map.put(node, "metadata", Jason.encode!(metadata)),
+                     api_opts()
+                   )
+
+          assert {:ok, fetched} = Nexmaker.Api.Nodes.get(network, node_id, api_opts())
+          raw_meta = fetched["metadata"]
+
+          assert is_binary(raw_meta) and raw_meta != "",
+                 "Expected metadata to be a non-empty string, got: #{inspect(raw_meta)}"
+
+          decoded = Jason.decode!(raw_meta)
+          assert decoded["admin_url"] == test_value
+
+          # Restore original metadata
+          Nexmaker.Api.Nodes.update(
+            network,
+            node_id,
+            Map.put(node, "metadata", node["metadata"] || ""),
+            api_opts()
+          )
+      end
     end
   end
 
@@ -398,11 +481,9 @@ defmodule Nexmaker.ApiTest do
       ip = "10.99.0.2"
       {:ok, _} = Nexmaker.Api.DNS.create(net, %{name: dns_name, address: ip}, api_opts())
 
-      # Wait for Netmaker to propagate the DNS entry
       Process.sleep(2_000)
 
       {:ok, entries} = Nexmaker.Api.DNS.list(net, api_opts())
-      # Netmaker may append .nm.internal to the stored name; match on address instead
       found = Enum.find(entries, fn e -> e["address"] == ip end)
 
       assert found != nil,
@@ -416,11 +497,9 @@ defmodule Nexmaker.ApiTest do
       ip = "10.99.0.3"
       {:ok, _} = Nexmaker.Api.DNS.create(net, %{name: dns_name, address: ip}, api_opts())
 
-      # Wait for Netmaker to propagate the DNS entry
       Process.sleep(2_000)
 
       {:ok, all_entries} = Nexmaker.Api.DNS.get_all(api_opts())
-      # Netmaker may append .nm.internal to the stored name; match on address instead
       found = Enum.find(all_entries, fn e -> e["address"] == ip end)
 
       assert found != nil,
@@ -436,70 +515,17 @@ defmodule Nexmaker.ApiTest do
       {:ok, _} = Nexmaker.Api.DNS.delete(net, dns_name, api_opts())
 
       {:ok, entries} = Nexmaker.Api.DNS.list(net, api_opts())
-      found = Enum.find(entries, fn e -> e["name"] == dns_name end)
-      assert found == nil
+      refute Enum.any?(entries, fn e -> e["name"] == dns_name end)
     end
 
-    test "get_adm_network/2 returns same entries as list/2", %{network_name: net} do
-      assert {:ok, list_entries} = Nexmaker.Api.DNS.list(net, api_opts())
-      assert {:ok, adm_entries} = Nexmaker.Api.DNS.get_adm_network(net, api_opts())
-      assert list_entries == adm_entries
+    test "list_node_entries/2 returns list", %{network_name: net} do
+      assert {:ok, entries} = Nexmaker.Api.DNS.list_node_entries(net, api_opts())
+      assert is_list(entries)
     end
-  end
 
-  # ---------------------------------------------------------------------------
-  # Nexmaker.Api.Nodes metadata round-trip
-  # (used by admin discovery — the most critical integration path)
-  # ---------------------------------------------------------------------------
-
-  describe "Nexmaker.Api.Nodes - metadata round-trip" do
-    # This test requires a real node on the network. We skip if none exist.
-    # The test verifies that Nodes.update/4 + Nodes.get/3 round-trips metadata,
-    # which is the mechanism admin discovery relies on.
-    test "update metadata on a node and read it back" do
-      {:ok, nodes} = Nexmaker.Api.Nodes.list_all(api_opts())
-
-      case nodes do
-        [] ->
-          # No nodes registered yet — cannot test update round-trip
-          :ok
-
-        [node | _] ->
-          network = node["network"]
-          node_id = node["id"]
-
-          test_value = "test-admin-#{unique_id()}"
-          metadata = %{"admin_url" => test_value, "cluster" => "test-cluster"}
-
-          # Write metadata
-          assert {:ok, updated} =
-                   Nexmaker.Api.Nodes.update(
-                     network,
-                     node_id,
-                     Map.put(node, "metadata", Jason.encode!(metadata)),
-                     api_opts()
-                   )
-
-          # Read back and verify
-          assert {:ok, fetched} = Nexmaker.Api.Nodes.get(network, node_id, api_opts())
-          raw_meta = fetched["metadata"]
-
-          assert is_binary(raw_meta) and raw_meta != "",
-                 "Expected metadata to be a non-empty string, got: #{inspect(raw_meta)}"
-
-          decoded = Jason.decode!(raw_meta)
-          assert decoded["admin_url"] == test_value
-
-          # Restore original metadata to avoid side effects
-          Nexmaker.Api.Nodes.update(
-            network,
-            node_id,
-            Map.put(node, "metadata", node["metadata"] || ""),
-            api_opts()
-          )
-
-          _ = updated
-      end
+    test "list_custom_entries/2 returns list", %{network_name: net} do
+      assert {:ok, entries} = Nexmaker.Api.DNS.list_custom_entries(net, api_opts())
+      assert is_list(entries)
     end
   end
 end

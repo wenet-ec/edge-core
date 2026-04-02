@@ -171,7 +171,10 @@ defmodule Nexmaker.Api.DNS do
   """
   @spec list_nameservers(keyword()) :: {:ok, [map()]} | {:error, any()}
   def list_nameservers(opts \\ []) do
-    Api.request(:get, "/api/v1/nameserver", opts)
+    case Api.request(:get, "/api/v1/nameserver", opts) do
+      {:ok, %{"Response" => nameservers}} -> {:ok, nameservers}
+      other -> other
+    end
   end
 
   @doc """
@@ -185,7 +188,10 @@ defmodule Nexmaker.Api.DNS do
   """
   @spec get_global_nameservers(keyword()) :: {:ok, map()} | {:error, any()}
   def get_global_nameservers(opts \\ []) do
-    Api.request(:get, "/api/v1/nameserver/global", opts)
+    case Api.request(:get, "/api/v1/nameserver/global", opts) do
+      {:ok, %{"Response" => nameservers}} -> {:ok, nameservers}
+      other -> other
+    end
   end
 
   @doc """
@@ -208,7 +214,10 @@ defmodule Nexmaker.Api.DNS do
   """
   @spec create_nameserver(map(), keyword()) :: {:ok, map()} | {:error, any()}
   def create_nameserver(attrs, opts \\ []) do
-    Api.request(:post, "/api/v1/nameserver", Keyword.put(opts, :body, attrs))
+    case Api.request(:post, "/api/v1/nameserver", Keyword.put(opts, :body, attrs)) do
+      {:ok, %{"Response" => nameserver}} -> {:ok, nameserver}
+      other -> other
+    end
   end
 
   @doc """
@@ -224,7 +233,10 @@ defmodule Nexmaker.Api.DNS do
   """
   @spec update_nameserver(map(), keyword()) :: {:ok, map()} | {:error, any()}
   def update_nameserver(attrs, opts \\ []) do
-    Api.request(:put, "/api/v1/nameserver", Keyword.put(opts, :body, attrs))
+    case Api.request(:put, "/api/v1/nameserver", Keyword.put(opts, :body, attrs)) do
+      {:ok, %{"Response" => nameserver}} -> {:ok, nameserver}
+      other -> other
+    end
   end
 
   @doc """

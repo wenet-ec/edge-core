@@ -207,8 +207,8 @@ All environment variables are documented in the production env files:
 To work on anything VPN-related, clone the source locally so AI tools can read actual code rather than guess:
 
 ```bash
-git clone --branch v1.5.0 https://github.com/gravitl/netmaker edge_vpn/netmaker
-git clone --branch v1.5.0-derp https://github.com/wenet-ec/netclient edge_vpn/netclient
+git clone --branch v1.5.1 https://github.com/gravitl/netmaker edge_vpn/netmaker
+git clone --branch v1.5.1-derp https://github.com/wenet-ec/netclient edge_vpn/netclient
 ```
 
-The Netmaker OpenAPI spec is at [`docs/netmaker-v1.5.0.yml`](docs/netmaker-v1.5.0.yml).
+The Netmaker OpenAPI spec is at [`docs/netmaker-v1.5.1.yml`](docs/netmaker-v1.5.1.yml).

@@ -4,4 +4,4 @@ name: edge-vpn
 description: Edge VPN server with Edge VPN DNS sidecar
 type: application
 version: 0.1.0
-appVersion: "v1.5.0"
+appVersion: "v1.5.1"

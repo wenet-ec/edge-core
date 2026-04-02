@@ -161,22 +161,46 @@ defmodule Nexmaker.Api.Networks do
   end
 
   @doc """
-  Gets network statistics.
+  Gets statistics for all networks.
+
+  Returns node count, host count, and connectivity info per network.
+
+  ## Options
+    - `:base_url` - Netmaker API base URL
+    - `:master_key` - Netmaker master key
+
+  ## Returns
+    - `{:ok, stats}` - Map of network_name => stats
+    - `{:error, reason}` - Error occurred
+
+  ## Examples
+
+      {:ok, stats} = Nexmaker.Api.Networks.stats()
+  """
+  @spec stats(keyword()) :: {:ok, map()} | {:error, any()}
+  def stats(opts \\ []) do
+    case Api.request(:get, "/api/v1/networks/stats", opts) do
+      {:ok, %{"Response" => data}} -> {:ok, data}
+      other -> other
+    end
+  end
+
+  @doc """
+  Gets egress routes for a network.
 
   ## Parameters
     - network_name: String - Network name
     - opts: Keyword - API options (base_url, master_key)
 
   ## Returns
-    - `{:ok, stats}` - Network statistics map
+    - `{:ok, routes}` - Map of node_id => [cidr, ...]
     - `{:error, reason}` - Error occurred
-
-  ## Examples
-
-      {:ok, stats} = Nexmaker.Api.Networks.stats("admin-cluster")
   """
-  @spec stats(String.t(), keyword()) :: {:ok, map()} | {:error, any()}
-  def stats(network_name, opts \\ []) do
-    Api.request(:get, "/api/networks/#{network_name}/stats", opts)
+  @spec egress_routes(String.t(), keyword()) :: {:ok, map()} | {:error, any()}
+  def egress_routes(network_name, opts \\ []) do
+    case Api.request(:get, "/api/networks/#{network_name}/egress_routes", opts) do
+      {:ok, %{"Response" => routes}} -> {:ok, routes}
+      other -> other
+    end
   end
 end

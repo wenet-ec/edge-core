@@ -222,7 +222,7 @@ services:
       start_period: 30s
 
   edge_vpn:
-    image: gravitl/netmaker:v1.5.0
+    image: gravitl/netmaker:v1.5.1
     container_name: production_edge_vpn
     networks:
       - production_edge_core
@@ -264,7 +264,7 @@ services:
 
   edge_vpn_ui:
     container_name: production_edge_vpn_ui
-    image: gravitl/netmaker-ui:v1.5.0
+    image: gravitl/netmaker-ui:v1.5.1
     networks:
       - production_edge_core
     depends_on:

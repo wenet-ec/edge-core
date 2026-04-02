@@ -55,7 +55,7 @@ defmodule EdgeAdminHealth do
   end
 
   def netmaker_api_health do
-    case EdgeAdmin.Vpn.health_check(retries: 2, retry_delay: 200) do
+    case EdgeAdmin.Vpn.netmaker_health_check(retries: 2, retry_delay: 200) do
       :ok ->
         :ok
 
@@ -72,7 +72,7 @@ defmodule EdgeAdminHealth do
   def netclient_health do
     admin_cluster = EdgeAdmin.Vpn.admin_cluster_name()
 
-    case Nexmaker.Cli.health_check() do
+    case EdgeAdmin.Vpn.netclient_health_check() do
       {:ok, :healthy, info} ->
         if admin_cluster in info[:networks] do
           :ok

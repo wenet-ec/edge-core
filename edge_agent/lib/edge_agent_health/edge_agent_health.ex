@@ -47,7 +47,7 @@ defmodule EdgeAgentHealth do
   end
 
   def netclient_health do
-    case Nexmaker.Cli.health_check() do
+    case EdgeAgent.Vpn.netclient_health_check() do
       {:ok, :healthy, _info} ->
         :ok
 

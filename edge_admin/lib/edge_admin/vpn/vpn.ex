@@ -565,17 +565,6 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Gets a node from a Netmaker network.
-
-  Returns `{:ok, node}`, `{:error, :not_found}`, or `{:error, :service_unavailable}`.
-  """
-  def get_node(network_name, node_id) do
-    network_name
-    |> Nodes.get(node_id)
-    |> normalize_netmaker_error()
-  end
-
-  @doc """
   Lists all nodes in a Netmaker network.
 
   Returns `{:ok, nodes}` or `{:error, :service_unavailable}`.
@@ -676,14 +665,12 @@ defmodule EdgeAdmin.Vpn do
   Returns `{:ok, hosts}` or `{:error, :service_unavailable}`.
   """
   def list_hosts(network_name \\ nil) do
-    with {:ok, hosts} <- normalize_netmaker_error(Hosts.list()) do
+    with {:ok, hosts} <- fetch_all_hosts() do
       if is_binary(network_name) do
-        # Get all nodes in the network and extract their host IDs
         case list_nodes(network_name) do
           {:ok, nodes} ->
             host_ids_in_network = MapSet.new(nodes, & &1["hostid"])
 
-            # Filter hosts that have a node in this network
             filtered_hosts =
               Enum.filter(hosts, fn host ->
                 MapSet.member?(host_ids_in_network, host["id"])
@@ -695,9 +682,27 @@ defmodule EdgeAdmin.Vpn do
             error
         end
       else
-        # No filter, return all hosts
         {:ok, hosts}
       end
+    end
+  end
+
+  defp fetch_all_hosts(page \\ 1, acc \\ []) do
+    case normalize_netmaker_error(Hosts.list(page: page, per_page: 100)) do
+      {:ok, %{"data" => hosts, "total_pages" => total_pages}} ->
+        all = acc ++ hosts
+
+        if page >= total_pages do
+          {:ok, all}
+        else
+          fetch_all_hosts(page + 1, all)
+        end
+
+      {:ok, %{"data" => hosts}} ->
+        {:ok, acc ++ hosts}
+
+      error ->
+        error
     end
   end
 
@@ -720,17 +725,6 @@ defmodule EdgeAdmin.Vpn do
   def delete_host(host_id) do
     host_id
     |> Hosts.delete()
-    |> normalize_netmaker_error()
-  end
-
-  @doc """
-  Deletes a Netmaker host from a specific network.
-
-  Returns `{:ok, response}` or `{:error, :service_unavailable}`.
-  """
-  def delete_host(network_name, host_id) do
-    network_name
-    |> Hosts.delete(host_id)
     |> normalize_netmaker_error()
   end
 
@@ -807,6 +801,27 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
+  Checks netclient VPN connection health.
+
+  Returns `{:ok, status, info}` where status is `:healthy`, `:degraded`, or `:unhealthy`.
+  """
+  def netclient_health_check(opts \\ []) do
+    Nexmaker.Cli.health_check(opts)
+  end
+
+  @doc """
+  Pulls latest VPN configuration from Netmaker server.
+
+  Forces netclient to fetch full configuration via HTTP API, bypassing MQTT.
+  Used after reconciliation as a hard consistency guarantee.
+
+  Returns `:ok` or `{:error, reason}`.
+  """
+  def pull do
+    Nexmaker.Cli.pull()
+  end
+
+  @doc """
   Checks Netmaker server health via status endpoint.
 
   ## Options
@@ -815,7 +830,7 @@ defmodule EdgeAdmin.Vpn do
 
   Returns `:ok` or `{:error, :service_unavailable}`.
   """
-  def health_check(opts \\ []) do
+  def netmaker_health_check(opts \\ []) do
     case opts |> Nexmaker.Api.Server.status() |> normalize_netmaker_error() do
       {:ok, _status} -> :ok
       error -> error

@@ -59,7 +59,7 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   def discover_admins(_opts \\ []) do
     network_name = get_network_name_from_list()
 
-    case Nexmaker.Cli.ping_peers() do
+    case EdgeAgent.Vpn.ping_peers() do
       {:ok, ping_data} when map_size(ping_data) == 0 ->
         Logger.warning("No peers found on any network")
         Settings.set_admin_urls([])
@@ -97,7 +97,7 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   end
 
   defp get_network_name_from_list do
-    case Nexmaker.Cli.list_networks() do
+    case EdgeAgent.Vpn.list_networks() do
       {:ok, [first | _]} -> first["network"]
       _ -> nil
     end

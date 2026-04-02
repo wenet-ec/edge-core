@@ -219,24 +219,46 @@ defmodule Nexmaker.Api.ExternalClients do
   end
 
   @doc """
-  Gets HA (High Availability) configuration for external clients.
-
-  Returns configuration that supports multiple ingress gateways for failover.
+  Bulk deletes multiple external clients from a network.
 
   ## Parameters
     - network_name: String - Network name
+    - client_ids: [String] - List of external client IDs
     - opts: Keyword - API options (base_url, master_key)
 
   ## Returns
-    - `{:ok, config}` - HA configuration data
+    - `{:ok, response}` - Bulk delete accepted
     - `{:error, reason}` - Error occurred
-
-  ## Examples
-
-      {:ok, ha_config} = Nexmaker.Api.ExternalClients.get_ha_config("cluster-abc")
   """
-  @spec get_ha_config(String.t(), keyword()) :: {:ok, any()} | {:error, any()}
-  def get_ha_config(network_name, opts \\ []) do
-    Api.request(:get, "/api/v1/client_conf/#{network_name}", opts)
+  @spec bulk_delete(String.t(), [String.t()], keyword()) :: {:ok, any()} | {:error, any()}
+  def bulk_delete(network_name, client_ids, opts \\ []) do
+    Api.request(
+      :delete,
+      "/api/v1/extclients/#{network_name}/bulk",
+      Keyword.put(opts, :body, %{ids: client_ids})
+    )
+  end
+
+  @doc """
+  Bulk updates the enabled/disabled status of external clients in a network.
+
+  ## Parameters
+    - network_name: String - Network name
+    - client_ids: [String] - List of external client IDs
+    - enabled: Boolean - true to enable, false to disable
+    - opts: Keyword - API options (base_url, master_key)
+
+  ## Returns
+    - `{:ok, response}` - Status updated
+    - `{:error, reason}` - Error occurred
+  """
+  @spec bulk_update_status(String.t(), [String.t()], boolean(), keyword()) ::
+          {:ok, any()} | {:error, any()}
+  def bulk_update_status(network_name, client_ids, enabled, opts \\ []) do
+    Api.request(
+      :put,
+      "/api/v1/extclients/#{network_name}/bulk/status",
+      Keyword.put(opts, :body, %{ids: client_ids, enabled: enabled})
+    )
   end
 end

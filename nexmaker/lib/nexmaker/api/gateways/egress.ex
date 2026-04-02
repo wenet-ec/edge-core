@@ -102,8 +102,84 @@ defmodule Nexmaker.Api.Gateways.Egress do
 
       {:ok, routes} = Nexmaker.Api.Gateways.Egress.list_routes("cluster-abc")
   """
-  @spec list_routes(String.t(), keyword()) :: {:ok, [map()]} | {:error, any()}
+  @spec list_routes(String.t(), keyword()) :: {:ok, map()} | {:error, any()}
   def list_routes(network_name, opts \\ []) do
-    Api.request(:get, "/api/networks/#{network_name}/egress_routes", opts)
+    case Api.request(:get, "/api/networks/#{network_name}/egress_routes", opts) do
+      {:ok, %{"Response" => routes}} -> {:ok, routes}
+      other -> other
+    end
+  end
+
+  @doc """
+  Lists egress resources for a network.
+
+  Uses `GET /api/v1/egress?network={network_name}`.
+
+  ## Parameters
+    - network_name: String - Network name (required)
+    - opts: Keyword - API options (base_url, master_key)
+  """
+  @spec list(String.t(), keyword()) :: {:ok, [map()]} | {:error, any()}
+  def list(network_name, opts \\ []) do
+    case Api.request(:get, "/api/v1/egress?network=#{network_name}", opts) do
+      {:ok, %{"Response" => egresses}} -> {:ok, egresses}
+      other -> other
+    end
+  end
+
+  @doc """
+  Creates an egress resource.
+
+  Uses `POST /api/v1/egress`.
+
+  ## Parameters
+    - attrs: Map - EgressReq body:
+      - `network` - Network name (required)
+      - `name` - Egress name
+      - `range` - CIDR range (e.g. "192.168.1.0/24")
+      - `domain` - FQDN (alternative to range)
+      - `nat` - Boolean, enable NAT
+      - `nodes` - Map of node_id => priority
+      - `tags` - Map of tag_id => priority
+      - `is_internet_gateway` - Boolean
+    - opts: Keyword - API options (base_url, master_key)
+  """
+  @spec create_v1(map(), keyword()) :: {:ok, map()} | {:error, any()}
+  def create_v1(attrs, opts \\ []) do
+    case Api.request(:post, "/api/v1/egress", Keyword.put(opts, :body, attrs)) do
+      {:ok, %{"Response" => egress}} -> {:ok, egress}
+      other -> other
+    end
+  end
+
+  @doc """
+  Updates an egress resource.
+
+  Uses `PUT /api/v1/egress`. The `id` field must be included in attrs.
+
+  ## Parameters
+    - attrs: Map - EgressReq body with `id` field
+    - opts: Keyword - API options (base_url, master_key)
+  """
+  @spec update_v1(map(), keyword()) :: {:ok, map()} | {:error, any()}
+  def update_v1(attrs, opts \\ []) do
+    case Api.request(:put, "/api/v1/egress", Keyword.put(opts, :body, attrs)) do
+      {:ok, %{"Response" => egress}} -> {:ok, egress}
+      other -> other
+    end
+  end
+
+  @doc """
+  Deletes an egress resource by ID.
+
+  Uses `DELETE /api/v1/egress?id={id}`.
+
+  ## Parameters
+    - id: String - Egress resource ID
+    - opts: Keyword - API options (base_url, master_key)
+  """
+  @spec delete_v1(String.t(), keyword()) :: {:ok, any()} | {:error, any()}
+  def delete_v1(id, opts \\ []) do
+    Api.request(:delete, "/api/v1/egress?id=#{id}", opts)
   end
 end

@@ -331,7 +331,7 @@ defmodule EdgeAdmin.Nodes do
   def create_cluster(attrs \\ %{}) do
     with {:ok, validated_attrs} <- Forms.CreateClusterForm.changeset(attrs),
          # Check Netmaker health before proceeding
-         :ok <- Vpn.health_check(),
+         :ok <- Vpn.netmaker_health_check(),
          existing_ranges = Repo.all(from(c in Cluster, select: c.ipv4_range)),
          :ok <- Checks.CreateClusterCheck.check(validated_attrs["ipv4_range"], existing_ranges),
          ipv4_range = validated_attrs["ipv4_range"] || Vpn.generate_next_subnet(existing_ranges),
@@ -1849,7 +1849,7 @@ defmodule EdgeAdmin.Nodes do
   def create_alias(%Node{} = node, params) do
     with {:ok, attrs} <- Forms.CreateAliasForm.changeset(params),
          # Check Netmaker health before proceeding
-         :ok <- Vpn.health_check() do
+         :ok <- Vpn.netmaker_health_check() do
       # 1. Ensure node has cluster preloaded
       node = Repo.preload(node, :cluster)
 

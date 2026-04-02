@@ -18,6 +18,47 @@ defmodule EdgeAgent.Vpn do
   require Logger
 
   @doc """
+  Pulls latest VPN configuration from Netmaker server.
+
+  Returns `:ok` or `{:error, reason}`.
+  """
+  @spec pull() :: :ok | {:error, any()}
+  def pull do
+    Nexmaker.Cli.pull()
+  end
+
+  @doc """
+  Lists all networks this host is connected to.
+
+  Returns `{:ok, networks}` or `{:error, reason}`.
+  """
+  @spec list_networks() :: {:ok, [map()]} | {:error, any()}
+  def list_networks do
+    Nexmaker.Cli.list_networks()
+  end
+
+  @doc """
+  Pings peers across networks to check connectivity.
+
+  Returns `{:ok, ping_results}` or `{:error, reason}`.
+  """
+  @spec ping_peers(keyword()) :: {:ok, map()} | {:error, any()}
+  def ping_peers(opts \\ []) do
+    Nexmaker.Cli.ping_peers(opts)
+  end
+
+  @doc """
+  Checks netclient VPN connection health.
+
+  Returns `{:ok, status, info}` where status is `:healthy`, `:degraded`, or `:unhealthy`.
+  """
+  @spec netclient_health_check(keyword()) ::
+          {:ok, :healthy | :degraded | :unhealthy, map()} | {:error, any()}
+  def netclient_health_check(opts \\ []) do
+    Nexmaker.Cli.health_check(opts)
+  end
+
+  @doc """
   Joins the VPN network if not already connected.
 
   Checks health first. If already connected (healthy or degraded), returns `:ok`

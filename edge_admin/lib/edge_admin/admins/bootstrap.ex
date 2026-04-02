@@ -267,7 +267,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
   end
 
   defp wait_for_netclient(network_name) do
-    case Nexmaker.Cli.health_check() do
+    case Vpn.netclient_health_check() do
       {:ok, status, info} when status in [:healthy, :degraded] ->
         if network_name in info[:networks] do
           Logger.info("Netclient connected to #{network_name}")

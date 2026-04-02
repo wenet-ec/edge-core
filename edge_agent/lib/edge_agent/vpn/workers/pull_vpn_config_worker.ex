@@ -40,7 +40,7 @@ defmodule EdgeAgent.Vpn.Workers.PullVpnConfigWorker do
     if should_run?() do
       Logger.debug("PullVpnConfigWorker started")
 
-      case Nexmaker.Cli.pull() do
+      case EdgeAgent.Vpn.pull() do
         :ok ->
           Logger.debug("PullVpnConfigWorker completed successfully")
           :ok

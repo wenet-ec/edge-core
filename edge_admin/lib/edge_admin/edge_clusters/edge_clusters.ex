@@ -55,6 +55,7 @@ defmodule EdgeAdmin.EdgeClusters do
 
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.EdgeClusters.Supervisor, as: GatewaySupervisor
+  alias EdgeAdmin.Vpn
 
   require Logger
 
@@ -127,7 +128,7 @@ defmodule EdgeAdmin.EdgeClusters do
     # Disable via SYNC_VPN_AFTER_RECONCILIATION=false to accept eventual consistency
     # instead of guaranteed consistency at the cost of stability.
     if Application.get_env(:edge_admin, :sync_vpn_after_reconciliation, true) do
-      case Nexmaker.Cli.pull() do
+      case Vpn.pull() do
         :ok ->
           Logger.debug("EdgeClusters: Netclient pull completed successfully")
 

@@ -74,6 +74,18 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
           "Filter by whether the key has unlimited uses: true returns unlimited keys (uses_remaining is null), false returns keys with a finite use count",
         schema: %OpenApiSpex.Schema{type: :boolean}
       ],
+      is_spent: [
+        in: :query,
+        description:
+          "Filter by whether the key is exhausted: true returns keys with uses_remaining == 0, false returns keys with uses remaining",
+        schema: %OpenApiSpex.Schema{type: :boolean}
+      ],
+      is_expired: [
+        in: :query,
+        description:
+          "Filter by whether the key is expired: true returns keys where expired_at is in the past, false returns active keys (including those with no expiry)",
+        schema: %OpenApiSpex.Schema{type: :boolean}
+      ],
       expired_at__gte: [
         in: :query,
         description:

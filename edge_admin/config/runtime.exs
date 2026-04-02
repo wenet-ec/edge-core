@@ -164,6 +164,7 @@ config :edge_admin,
   # Optional: Pre-defined default cluster for agent enrollment
   default_cluster_name: get_env("DEFAULT_CLUSTER_NAME"),
   default_cluster_subnet: get_env("DEFAULT_CLUSTER_SUBNET"),
+  default_cluster_node_limit: get_env("DEFAULT_CLUSTER_NODE_LIMIT", :integer),
   # Allow public enrollment without authentication (dev/testing only)
   public_enrollment_key_enabled: get_env("PUBLIC_ENROLLMENT_KEY_ENABLED", :boolean, false),
   # Admin URLs for enrollment key generation and agent fallback (required).

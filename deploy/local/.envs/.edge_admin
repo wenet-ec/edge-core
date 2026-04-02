@@ -111,6 +111,7 @@ NETMAKER_API_SCHEME=http
 # Pre-create a named default cluster so agents can enroll without specifying a cluster.
 DEFAULT_CLUSTER_NAME=default
 # DEFAULT_CLUSTER_SUBNET=100.64.0.0/24
+# DEFAULT_CLUSTER_NODE_LIMIT=   # Max nodes allowed in the default cluster (unset = no limit)
 
 # Allow agent enrollment without a signed token — dev/testing only, never production.
 PUBLIC_ENROLLMENT_KEY_ENABLED=true

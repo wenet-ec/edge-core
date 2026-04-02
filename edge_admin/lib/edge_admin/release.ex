@@ -31,6 +31,10 @@ defmodule EdgeAdmin.Release do
     Application.get_env(:edge_admin, :default_cluster_subnet)
   end
 
+  defp default_cluster_node_limit do
+    Application.get_env(:edge_admin, :default_cluster_node_limit)
+  end
+
   # =============================================================================
   # Database Migrations
   # =============================================================================
@@ -155,12 +159,12 @@ defmodule EdgeAdmin.Release do
   end
 
   defp do_create_cluster(cluster_name) do
-    # Build attrs - only include subnet if provided
-    attrs =
-      case default_cluster_subnet() do
-        nil -> %{"cluster" => %{"name" => cluster_name}}
-        subnet -> %{"cluster" => %{"name" => cluster_name, "ipv4_range" => subnet}}
-      end
+    cluster_attrs =
+      %{"name" => cluster_name}
+      |> maybe_put("ipv4_range", default_cluster_subnet())
+      |> maybe_put("node_limit", default_cluster_node_limit())
+
+    attrs = %{"cluster" => cluster_attrs}
 
     case EdgeAdmin.Nodes.create_cluster(attrs) do
       {:ok, cluster} ->
@@ -209,6 +213,9 @@ defmodule EdgeAdmin.Release do
       {:ok, _} = repo.start_link()
     end
   end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp start_phoenix_pubsub do
     Application.ensure_all_started(:phoenix_pubsub)

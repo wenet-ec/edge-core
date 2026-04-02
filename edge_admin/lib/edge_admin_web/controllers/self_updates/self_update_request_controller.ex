@@ -53,13 +53,13 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
         in: :query,
         description:
           "Filter requests inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{type: :string, format: :"date-time"}
+        schema: %OpenApiSpex.Schema{anyOf: [%OpenApiSpex.Schema{type: :string, format: :"date-time"}, %OpenApiSpex.Schema{type: :string, format: :date}]}
       ],
       inserted_at__lte: [
         in: :query,
         description:
           "Filter requests inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{type: :string, format: :"date-time"}
+        schema: %OpenApiSpex.Schema{anyOf: [%OpenApiSpex.Schema{type: :string, format: :"date-time"}, %OpenApiSpex.Schema{type: :string, format: :date}]}
       ]
     ],
     responses: %{

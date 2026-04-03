@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/metrics.ex
+# edge_admin/lib/edge_admin/metrics/metrics.ex
 defmodule EdgeAdmin.Metrics do
   @moduledoc """
   The Metrics context handles all metrics operations for Edge Admin.

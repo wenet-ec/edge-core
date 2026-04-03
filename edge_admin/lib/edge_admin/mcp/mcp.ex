@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/mcp.ex
+# edge_admin/lib/edge_admin/mcp/mcp.ex
 defmodule EdgeAdmin.MCP do
   @moduledoc """
   Entrypoint for MCP tool definitions.

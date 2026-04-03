@@ -1,4 +1,4 @@
-# edge_agent/lib/edge_agent/self_updates.ex
+# edge_agent/lib/edge_agent/self_updates/self_updates.ex
 defmodule EdgeAgent.SelfUpdates do
   @moduledoc """
   Context module for managing self-updates via Watchtower.

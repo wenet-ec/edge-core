@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/nodes.ex
+# edge_admin/lib/edge_admin/nodes/nodes.ex
 defmodule EdgeAdmin.Nodes do
   @moduledoc """
   The Nodes context handles edge agent node management.

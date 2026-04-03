@@ -1,4 +1,4 @@
-# edge_agent/lib/edge_agent/vpn.ex
+# edge_agent/lib/edge_agent/vpn/vpn.ex
 defmodule EdgeAgent.Vpn do
   @moduledoc """
   VPN network operations for the edge agent.

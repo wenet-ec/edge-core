@@ -1,4 +1,4 @@
-# edge_agent/lib/edge_agent/settings.ex
+# edge_agent/lib/edge_agent/settings/settings.ex
 defmodule EdgeAgent.Settings do
   @moduledoc """
   Simple key-value settings storage for agent configuration.

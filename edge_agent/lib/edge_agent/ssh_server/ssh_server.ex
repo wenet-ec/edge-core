@@ -1,4 +1,4 @@
-# edge_agent/lib/edge_agent/ssh_server.ex
+# edge_agent/lib/edge_agent/ssh_server/ssh_server.ex
 defmodule EdgeAgent.SshServer do
   @moduledoc """
   SSH server GenServer

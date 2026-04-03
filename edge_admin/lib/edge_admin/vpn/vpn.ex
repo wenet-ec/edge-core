@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/vpn.ex
+# edge_admin/lib/edge_admin/vpn/vpn.ex
 defmodule EdgeAdmin.Vpn do
   @moduledoc """
   VPN integration and Netmaker API wrapper for Edge Admin.

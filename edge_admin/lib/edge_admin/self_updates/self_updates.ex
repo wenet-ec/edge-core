@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/self_updates.ex
+# edge_admin/lib/edge_admin/self_updates/self_updates.ex
 defmodule EdgeAdmin.SelfUpdates do
   @moduledoc """
   The SelfUpdates context handles self-update requests for edge agents.

@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/proxy_servers.ex
+# edge_admin/lib/edge_admin/proxy_servers/proxy_servers.ex
 defmodule EdgeAdmin.ProxyServers do
   @moduledoc """
   HTTP and SOCKS5 forward proxy servers for admin access to edge nodes.

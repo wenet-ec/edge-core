@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/commands.ex
+# edge_admin/lib/edge_admin/commands/commands.ex
 defmodule EdgeAdmin.Commands do
   @moduledoc """
   The Commands context handles distributed command execution across edge nodes.

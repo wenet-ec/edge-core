@@ -1,4 +1,4 @@
-# edge_agent/lib/edge_agent/metrics_servers.ex
+# edge_agent/lib/edge_agent/metrics_servers/metrics_servers.ex
 defmodule EdgeAgent.MetricsServers do
   @moduledoc """
   Metrics servers GenServer

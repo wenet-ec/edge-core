@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/ssh.ex
+# edge_admin/lib/edge_admin/ssh/ssh.ex
 defmodule EdgeAdmin.Ssh do
   @moduledoc """
   SSH credential management for edge nodes.

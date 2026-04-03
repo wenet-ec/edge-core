@@ -1,4 +1,4 @@
-# edge_agent/lib/edge_agent/commands.ex
+# edge_agent/lib/edge_agent/commands/commands.ex
 defmodule EdgeAgent.Commands do
   @moduledoc """
   Command execution context for edge agents.

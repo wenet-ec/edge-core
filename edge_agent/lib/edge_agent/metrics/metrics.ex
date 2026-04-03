@@ -1,4 +1,4 @@
-# edge_agent/lib/edge_agent/metrics.ex
+# edge_agent/lib/edge_agent/metrics/metrics.ex
 defmodule EdgeAgent.Metrics do
   @moduledoc """
   The Metrics context handles metrics operations for Edge Agent.

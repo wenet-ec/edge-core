@@ -1,4 +1,4 @@
-# edge_agent/lib/edge_agent/prom_ex.ex
+# edge_agent/lib/edge_agent/prom_ex/prom_ex.ex
 defmodule EdgeAgent.PromEx do
   @moduledoc """
   PromEx configuration for EdgeAgent application.

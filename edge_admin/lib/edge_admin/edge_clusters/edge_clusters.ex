@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/edge_clusters.ex
+# edge_admin/lib/edge_admin/edge_clusters/edge_clusters.ex
 defmodule EdgeAdmin.EdgeClusters do
   @moduledoc """
   Gateway coordinator that manages VPN connections to edge clusters.

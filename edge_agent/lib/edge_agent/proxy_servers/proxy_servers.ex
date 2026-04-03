@@ -1,4 +1,4 @@
-# edge_agent/lib/edge_agent/proxy_servers.ex
+# edge_agent/lib/edge_agent/proxy_servers/proxy_servers.ex
 defmodule EdgeAgent.ProxyServers do
   @moduledoc """
   Proxy servers supervisor managing HTTP and SOCKS5 forward proxies.

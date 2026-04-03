@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/prom_ex.ex
+# edge_admin/lib/edge_admin/prom_ex/prom_ex.ex
 defmodule EdgeAdmin.PromEx do
   @moduledoc """
   PromEx configuration for EdgeAdmin application.

@@ -58,26 +58,16 @@ defmodule EdgeAdmin.RequestParser do
   @doc """
   Parses flat query params into Flop format.
 
-  ## Examples
+  Accepts both string-keyed params (from CastAndValidate public endpoints) and
+  atom-keyed params (from internal callers). All keys are normalized to strings
+  before processing.
 
-      iex> parse(%{"name" => "prod*", "page" => "1"})
-      %{
-        filters: [%{field: :name, op: :ilike, value: "prod%"}],
-        page: 1,
-        page_size: 20
-      }
-
-      iex> parse(%{"inserted_at__gte" => "2025-01-01", "status" => "active"})
-      %{
-        filters: [
-          %{field: :inserted_at, op: :>=, value: "2025-01-01T00:00:00Z"},
-          %{field: :status, op: :==, value: "active"}
-        ],
-        page: 1,
-        page_size: 20
-      }
+  Values arrive pre-cast from CastAndValidate: integers as integers, booleans as
+  booleans, Date/DateTime structs for date params.
   """
   def parse(params) when is_map(params) do
+    params = stringify_keys(params)
+
     compact(%{
       filters: parse_filters(params),
       page: parse_page(params),
@@ -120,15 +110,12 @@ defmodule EdgeAdmin.RequestParser do
     {ilike, Map.put(flop_params, :filters, other)}
   end
 
-  # Parse filters from params
   defp parse_filters(params) do
     params
     |> Enum.reject(fn {key, _value} -> key in @reserved_params end)
     |> Enum.flat_map(fn {key, value} -> parse_filter(key, value) end)
-    |> Enum.reject(&is_nil/1)
   end
 
-  # When CastAndValidate is active, boolean params arrive as actual booleans.
   defp parse_filter(key, value) when is_binary(key) and is_boolean(value) do
     case parse_field(key) do
       {:ok, field} -> [%{field: field, op: :==, value: value}]
@@ -136,7 +123,6 @@ defmodule EdgeAdmin.RequestParser do
     end
   end
 
-  # When CastAndValidate is active, integer params (node_count__gte etc.) arrive as integers.
   defp parse_filter(key, value) when is_binary(key) and is_integer(value) do
     if String.contains?(key, "__") do
       case String.split(key, "__", parts: 2) do
@@ -159,7 +145,6 @@ defmodule EdgeAdmin.RequestParser do
     end
   end
 
-  # When CastAndValidate is active, anyOf date/datetime params arrive as %Date{} or %DateTime{} structs.
   defp parse_filter(key, %Date{} = value) when is_binary(key) do
     parse_filter(key, Date.to_iso8601(value))
   end
@@ -168,9 +153,7 @@ defmodule EdgeAdmin.RequestParser do
     parse_filter(key, DateTime.to_iso8601(value))
   end
 
-  # Parse a single filter parameter
   defp parse_filter(key, value) when is_binary(key) and is_binary(value) do
-    # Range operators: field__gte, field__lte, etc.
     if String.contains?(key, "__") do
       case String.split(key, "__", parts: 2) do
         [field_str, op_str] ->
@@ -185,7 +168,6 @@ defmodule EdgeAdmin.RequestParser do
           []
       end
     else
-      # Regular field filters
       case parse_field(key) do
         {:ok, field} -> parse_value_filter(field, value)
         _ -> []
@@ -195,7 +177,7 @@ defmodule EdgeAdmin.RequestParser do
 
   defp parse_filter(_key, _value), do: []
 
-  # Build a filter, applying any value coercions needed for the operator
+  # Build a filter for the given field, op, and string value
   defp build_filter(field, :null, "false", _op_str) do
     %{field: field, op: :not_empty, value: true}
   end
@@ -204,31 +186,13 @@ defmodule EdgeAdmin.RequestParser do
     %{field: field, op: :empty, value: true}
   end
 
-  defp build_filter(field, op, value, op_str) when op_str in ~w(gte gt) do
-    %{field: field, op: op, value: maybe_expand_date(value, "T00:00:00Z")}
-  end
-
-  defp build_filter(field, op, value, op_str) when op_str in ~w(lte lt) do
-    %{field: field, op: op, value: maybe_expand_date(value, "T23:59:59Z")}
-  end
-
   defp build_filter(field, op, value, _op_str) do
     %{field: field, op: op, value: value}
-  end
-
-  # Expands a date-only string (YYYY-MM-DD) to a full UTC datetime by appending
-  # the given suffix. Full datetime strings are passed through unchanged.
-  defp maybe_expand_date(value, suffix) do
-    if Regex.match?(~r/^\d{4}-\d{2}-\d{2}$/, value), do: value <> suffix, else: value
   end
 
   # Parse filter based on value pattern
   defp parse_value_filter(field, value) do
     cond do
-      # Boolean values
-      value in ["true", "false"] ->
-        [%{field: field, op: :==, value: value == "true"}]
-
       # Comma-separated list (IN operator)
       String.contains?(value, ",") ->
         values = value |> String.split(",") |> Enum.map(&String.trim/1)
@@ -265,39 +229,10 @@ defmodule EdgeAdmin.RequestParser do
   defp parse_operator("null"), do: {:ok, :null}
   defp parse_operator(_), do: {:error, :invalid_operator}
 
-  # Parse page number
-  # When CastAndValidate is active, page arrives as an integer (already validated >= 1).
-  # Without it (agent/internal endpoints), fall back to string parsing.
   defp parse_page(%{"page" => page}) when is_integer(page) and page > 0, do: page
-
-  defp parse_page(%{"page" => page}) when is_binary(page) do
-    case Integer.parse(page) do
-      {num, ""} when num > 0 -> num
-      _ -> 1
-    end
-  end
-
   defp parse_page(_), do: 1
 
-  # Parse page size
-  # When CastAndValidate is active, page_size arrives as an integer (already validated 1..100).
-  # Without it, apply clamping manually.
-  defp parse_page_size(%{"page_size" => size}) when is_integer(size) and size > 0 and size <= @max_page_size do
-    size
-  end
-
-  defp parse_page_size(%{"page_size" => size}) when is_integer(size) and size > @max_page_size do
-    @max_page_size
-  end
-
-  defp parse_page_size(%{"page_size" => size}) when is_binary(size) do
-    case Integer.parse(size) do
-      {num, ""} when num > 0 and num <= @max_page_size -> num
-      {num, ""} when num > @max_page_size -> @max_page_size
-      _ -> @default_page_size
-    end
-  end
-
+  defp parse_page_size(%{"page_size" => size}) when is_integer(size) and size > 0 and size <= @max_page_size, do: size
   defp parse_page_size(_), do: @default_page_size
 
   # Parse order_by fields
@@ -331,6 +266,12 @@ defmodule EdgeAdmin.RequestParser do
   defp parse_direction("asc"), do: :asc
   defp parse_direction("desc"), do: :desc
   defp parse_direction(_), do: nil
+
+  # Normalize all keys to strings so both atom-keyed (internal) and string-keyed
+  # (CastAndValidate public) params are handled uniformly.
+  defp stringify_keys(map) do
+    Map.new(map, fn {k, v} -> {to_string(k), v} end)
+  end
 
   # Remove nil/empty values from map
   defp compact(map) do

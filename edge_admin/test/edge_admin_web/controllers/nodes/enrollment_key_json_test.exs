@@ -78,9 +78,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyJSONTest do
       assert data.key == blob
     end
 
-    test "uses_remaining is passed through" do
-      data = EnrollmentKeyJSON.show(%{enrollment_key: fake_key(%{uses_remaining: -1})}).data
-      assert data.uses_remaining == -1
+    test "uses_remaining nil (unlimited) is passed through" do
+      data = EnrollmentKeyJSON.show(%{enrollment_key: fake_key(%{uses_remaining: nil})}).data
+      assert data.uses_remaining == nil
     end
 
     test "expired_at is nil when unset" do

@@ -22,7 +22,7 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultFormTest do
     end
 
     test "unwraps command_execution key automatically" do
-      attrs = %{"command_execution" => %{"output" => "hi", "exit_code" => 1}}
+      attrs = %{command_execution: %{output: "hi", exit_code: 1}}
       assert {:ok, result} = UpdateCommandExecutionResultForm.changeset(attrs)
       assert result["output"] == "hi"
       assert result["exit_code"] == 1

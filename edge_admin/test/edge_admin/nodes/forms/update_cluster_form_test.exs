@@ -32,8 +32,8 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateClusterFormTest do
       assert result == %{}
     end
 
-    test "wrapped cluster params are unwrapped" do
-      assert {:ok, result} = UpdateClusterForm.changeset(%{"cluster" => %{"node_limit" => 5}})
+    test "wrapped cluster params are unwrapped (atom key)" do
+      assert {:ok, result} = UpdateClusterForm.changeset(%{cluster: %{node_limit: 5}})
       assert result["node_limit"] == 5
     end
   end

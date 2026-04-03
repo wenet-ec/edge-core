@@ -23,23 +23,18 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyFormTest do
     end
 
     test "uses_remaining of 1 is accepted (boundary)" do
-      assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{"uses_remaining" => 1})
+      assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{uses_remaining: 1})
       assert result["uses_remaining"] == 1
     end
 
     test "uses_remaining of positive integer is accepted" do
-      assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{"uses_remaining" => 5})
+      assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{uses_remaining: 5})
       assert result["uses_remaining"] == 5
-    end
-
-    test "uses_remaining of -1 (unlimited) is accepted" do
-      assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{"uses_remaining" => -1})
-      assert result["uses_remaining"] == -1
     end
 
     test "expired_at is accepted when a valid datetime" do
       dt = ~U[2027-01-01 00:00:00Z]
-      assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{"expired_at" => dt})
+      assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{expired_at: dt})
       assert result["expired_at"] == dt
     end
 
@@ -47,16 +42,16 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyFormTest do
       dt = ~U[2027-06-01 12:00:00Z]
 
       assert {:ok, result} =
-               UpdateEnrollmentKeyForm.changeset(%{"uses_remaining" => 3, "expired_at" => dt})
+               UpdateEnrollmentKeyForm.changeset(%{uses_remaining: 3, expired_at: dt})
 
       assert result["uses_remaining"] == 3
       assert result["expired_at"] == dt
     end
 
-    test "wrapped enrollment_key params are unwrapped" do
+    test "wrapped enrollment_key params are unwrapped (atom key)" do
       assert {:ok, result} =
                UpdateEnrollmentKeyForm.changeset(%{
-                 "enrollment_key" => %{"uses_remaining" => 7}
+                 enrollment_key: %{uses_remaining: 7}
                })
 
       assert result["uses_remaining"] == 7
@@ -69,19 +64,19 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyFormTest do
 
   describe "changeset/1 — uses_remaining validation" do
     test "zero uses_remaining is rejected" do
-      assert {:error, changeset} = UpdateEnrollmentKeyForm.changeset(%{"uses_remaining" => 0})
+      assert {:error, changeset} = UpdateEnrollmentKeyForm.changeset(%{uses_remaining: 0})
       assert %{uses_remaining: [_msg]} = errors_on(changeset)
     end
 
-    test "negative uses_remaining (other than -1) is rejected" do
-      assert {:error, changeset} = UpdateEnrollmentKeyForm.changeset(%{"uses_remaining" => -2})
+    test "negative uses_remaining is rejected" do
+      assert {:error, changeset} = UpdateEnrollmentKeyForm.changeset(%{uses_remaining: -2})
       assert %{uses_remaining: [_msg]} = errors_on(changeset)
     end
 
-    test "error message mentions -1 and positive integer" do
-      {:error, changeset} = UpdateEnrollmentKeyForm.changeset(%{"uses_remaining" => 0})
+    test "error message mentions positive integer and null" do
+      {:error, changeset} = UpdateEnrollmentKeyForm.changeset(%{uses_remaining: 0})
       [msg] = errors_on(changeset).uses_remaining
-      assert msg =~ "-1"
+      assert msg =~ "positive integer"
     end
   end
 
@@ -91,13 +86,13 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyFormTest do
 
   describe "changeset/1 — explicit null vs omitted" do
     test "key present with nil value is preserved in result (explicit null)" do
-      assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{"expired_at" => nil})
+      assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{expired_at: nil})
       assert Map.has_key?(result, "expired_at")
       assert result["expired_at"] == nil
     end
 
-    test "key present with nil uses_remaining is preserved (explicit null)" do
-      assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{"uses_remaining" => nil})
+    test "key present with nil uses_remaining is preserved (explicit null = unlimited)" do
+      assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{uses_remaining: nil})
       assert Map.has_key?(result, "uses_remaining")
       assert result["uses_remaining"] == nil
     end
@@ -109,7 +104,7 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyFormTest do
     end
 
     test "only the provided keys appear in result" do
-      assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{"uses_remaining" => 5})
+      assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{uses_remaining: 5})
       assert Map.has_key?(result, "uses_remaining")
       refute Map.has_key?(result, "expired_at")
     end

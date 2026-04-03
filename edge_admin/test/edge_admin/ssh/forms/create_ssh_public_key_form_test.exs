@@ -45,9 +45,9 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyFormTest do
       assert result["public_key"] == @valid_ecdsa
     end
 
-    test "wrapped ssh_public_key params are unwrapped" do
+    test "wrapped ssh_public_key params are unwrapped (atom key)" do
       assert {:ok, result} =
-               CreateSshPublicKeyForm.changeset(%{"ssh_public_key" => valid_attrs()})
+               CreateSshPublicKeyForm.changeset(%{ssh_public_key: valid_attrs()})
 
       assert result["key_name"] == "my-laptop"
     end

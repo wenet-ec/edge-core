@@ -27,9 +27,9 @@ defmodule EdgeAdmin.Nodes.Forms.NodeHealthCheckFormTest do
       assert result["status"] == "unhealthy"
     end
 
-    test "wrapped node params are unwrapped" do
+    test "wrapped node params are unwrapped (atom key)" do
       assert {:ok, result} =
-               NodeHealthCheckForm.changeset(%{"node" => %{"status" => "healthy"}})
+               NodeHealthCheckForm.changeset(%{node: %{status: "healthy"}})
 
       assert result["status"] == "healthy"
     end

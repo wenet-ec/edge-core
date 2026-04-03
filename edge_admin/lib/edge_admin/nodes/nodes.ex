@@ -1251,18 +1251,24 @@ defmodule EdgeAdmin.Nodes do
           {:ok, {[EnrollmentKey.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list_enrollment_keys(params \\ %{}) do
     flop_params = RequestParser.parse(params)
+    {query, flop_params} = build_enrollment_key_query(flop_params)
 
-    {cluster_name_filters, other_filters} =
-      Enum.split_with(flop_params[:filters] || [], &(&1.field == :cluster_name))
+    case Flop.validate_and_run(query, flop_params,
+           for: EnrollmentKey,
+           replace_invalid_params: true
+         ) do
+      {:ok, {keys, meta}} -> {:ok, {keys, meta}}
+      {:error, meta} -> {:error, meta}
+    end
+  end
 
-    {is_unlimited_filters, other_filters} =
-      Enum.split_with(other_filters, &(&1.field == :is_unlimited))
+  defp build_enrollment_key_query(flop_params) do
+    custom_fields = [:cluster_name, :is_unlimited, :is_spent, :is_expired]
 
-    {is_spent_filters, other_filters} =
-      Enum.split_with(other_filters, &(&1.field == :is_spent))
+    {custom, other_filters} =
+      Enum.split_with(flop_params[:filters] || [], &(&1.field in custom_fields))
 
-    {is_expired_filters, other_filters} =
-      Enum.split_with(other_filters, &(&1.field == :is_expired))
+    custom_by_field = Enum.group_by(custom, & &1.field)
 
     base_query =
       from(k in EnrollmentKey,
@@ -1271,32 +1277,11 @@ defmodule EdgeAdmin.Nodes do
       )
 
     query =
-      if cluster_name_filters == [] do
-        base_query
-      else
-        apply_cluster_name_filters(base_query, cluster_name_filters)
-      end
-
-    query =
-      if is_unlimited_filters == [] do
-        query
-      else
-        apply_is_unlimited_filters(query, is_unlimited_filters)
-      end
-
-    query =
-      if is_spent_filters == [] do
-        query
-      else
-        apply_is_spent_filters(query, is_spent_filters)
-      end
-
-    query =
-      if is_expired_filters == [] do
-        query
-      else
-        apply_is_expired_filters(query, is_expired_filters)
-      end
+      base_query
+      |> maybe_apply_filters(custom_by_field[:cluster_name], &apply_cluster_name_filters/2)
+      |> maybe_apply_filters(custom_by_field[:is_unlimited], &apply_is_unlimited_filters/2)
+      |> maybe_apply_filters(custom_by_field[:is_spent], &apply_is_spent_filters/2)
+      |> maybe_apply_filters(custom_by_field[:is_expired], &apply_is_expired_filters/2)
 
     {ilike_filters, flop_params} =
       RequestParser.split_ilike_filters(
@@ -1309,14 +1294,12 @@ defmodule EdgeAdmin.Nodes do
         from(k in acc, where: ilike(field(k, ^field), ^value))
       end)
 
-    case Flop.validate_and_run(query, flop_params,
-           for: EnrollmentKey,
-           replace_invalid_params: true
-         ) do
-      {:ok, {keys, meta}} -> {:ok, {keys, meta}}
-      {:error, meta} -> {:error, meta}
-    end
+    {query, flop_params}
   end
+
+  defp maybe_apply_filters(query, nil, _fun), do: query
+  defp maybe_apply_filters(query, [], _fun), do: query
+  defp maybe_apply_filters(query, filters, fun), do: fun.(query, filters)
 
   @doc """
   Gets a single enrollment key by ID.

@@ -39,8 +39,8 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKeyTest do
       refute EnrollmentKey.spent?(key(%{uses_remaining: 5}))
     end
 
-    test "uses_remaining == -1 (unlimited) → false (not spent)" do
-      refute EnrollmentKey.spent?(key(%{uses_remaining: -1}))
+    test "uses_remaining == nil (unlimited) → false (not spent)" do
+      refute EnrollmentKey.spent?(key(%{uses_remaining: nil}))
     end
   end
 
@@ -69,8 +69,8 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKeyTest do
   # ---------------------------------------------------------------------------
 
   describe "unlimited?/1" do
-    test "uses_remaining == -1 → true (unlimited)" do
-      assert EnrollmentKey.unlimited?(key(%{uses_remaining: -1}))
+    test "uses_remaining == nil → true (unlimited)" do
+      assert EnrollmentKey.unlimited?(key(%{uses_remaining: nil}))
     end
 
     test "uses_remaining == 1 → false (not unlimited)" do

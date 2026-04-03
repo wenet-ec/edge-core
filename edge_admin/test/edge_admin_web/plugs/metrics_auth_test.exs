@@ -10,6 +10,10 @@ defmodule EdgeAdminWeb.Plugs.MetricsAuthTest do
   @opts MetricsAuth.init([])
 
   setup do
+    Application.put_env(:edge_admin, :auth_enabled, true)
+    Application.delete_env(:edge_admin, :master_key)
+    Application.delete_env(:edge_admin, :metrics_key)
+
     on_exit(fn ->
       Application.put_env(:edge_admin, :auth_enabled, true)
       Application.delete_env(:edge_admin, :master_key)

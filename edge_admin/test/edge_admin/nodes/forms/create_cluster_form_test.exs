@@ -73,8 +73,8 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterFormTest do
       refute Map.has_key?(result, "ipv4_range")
     end
 
-    test "wrapped cluster params are unwrapped" do
-      assert {:ok, _result} = CreateClusterForm.changeset(%{"cluster" => valid_attrs()})
+    test "wrapped cluster params are unwrapped (atom key)" do
+      assert {:ok, _result} = CreateClusterForm.changeset(%{cluster: valid_attrs()})
     end
 
     test "24-character name is valid (max length boundary)" do

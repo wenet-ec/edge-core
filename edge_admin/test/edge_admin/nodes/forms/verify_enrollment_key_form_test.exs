@@ -29,11 +29,11 @@ defmodule EdgeAdmin.Nodes.Forms.VerifyEnrollmentKeyFormTest do
       assert is_binary(result)
     end
 
-    test "wrapped enrollment_key params are unwrapped" do
+    test "wrapped enrollment_key params are unwrapped (atom key)" do
       blob = "somebase64blob=="
 
       assert {:ok, result} =
-               VerifyEnrollmentKeyForm.changeset(%{"enrollment_key" => %{"key" => blob}})
+               VerifyEnrollmentKeyForm.changeset(%{enrollment_key: %{key: blob}})
 
       assert result == blob
     end

@@ -48,11 +48,10 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestFormTest do
       assert result["targeting"]["cluster_names"] == ["prod", "staging"]
     end
 
-    test "wrapped params are unwrapped" do
-      attrs = %{"self_update_request" => valid_attrs()}
-      # wrapped params not natively supported by this form — passes through as missing targeting
-      # (documents actual behavior: no unwrapping, targeting key missing → error)
-      assert {:error, _changeset} = CreateSelfUpdateRequestForm.changeset(attrs)
+    test "non-map params raise via fallback clause" do
+      assert_raise Ecto.InvalidChangesetError, fn ->
+        CreateSelfUpdateRequestForm.changeset("bad")
+      end
     end
   end
 

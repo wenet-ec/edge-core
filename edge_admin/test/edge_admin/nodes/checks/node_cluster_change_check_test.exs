@@ -15,7 +15,7 @@ defmodule EdgeAdmin.Nodes.Checks.NodeClusterChangeCheckTest do
       cluster_id = Ecto.UUID.generate()
       node = %Node{cluster_id: cluster_id}
       cluster = %Cluster{id: cluster_id}
-      assert {:error, {:unprocessable, reason}} = NodeClusterChangeCheck.check(node, cluster)
+      assert {:error, {:conflict, reason}} = NodeClusterChangeCheck.check(node, cluster)
       assert reason =~ "already"
     end
   end

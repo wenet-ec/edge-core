@@ -42,10 +42,10 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterFormTest do
                ChangeNodeClusterForm.changeset(%{"cluster_name" => name}, &cluster_found/1)
     end
 
-    test "wrapped node params are unwrapped" do
+    test "wrapped node params are unwrapped (atom key)" do
       assert {:ok, "prod"} =
                ChangeNodeClusterForm.changeset(
-                 %{"node" => %{"cluster_name" => "prod"}},
+                 %{node: %{cluster_name: "prod"}},
                  &cluster_found/1
                )
     end

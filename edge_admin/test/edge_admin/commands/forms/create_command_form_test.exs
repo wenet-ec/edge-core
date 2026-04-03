@@ -68,8 +68,8 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandFormTest do
       refute Map.has_key?(result, "timeout")
     end
 
-    test "wrapped command params are unwrapped" do
-      attrs = %{"command" => valid_attrs()}
+    test "wrapped command params are unwrapped (atom key)" do
+      attrs = %{command: valid_attrs()}
       assert {:ok, _result} = CreateCommandForm.changeset(attrs)
     end
   end

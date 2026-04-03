@@ -48,11 +48,9 @@ defmodule EdgeAdminWeb.Plugs.RenderPublicSpec do
     %{spec | paths: filtered}
   end
 
-  defp filter_internal_schemas(%OpenApiSpex.OpenApi{components: nil} = spec), do: spec
-
   defp filter_internal_schemas(%OpenApiSpex.OpenApi{components: components} = spec) do
     filtered_schemas =
-      Map.reject(components.schemas || %{}, fn {key, _} ->
+      Map.reject(components.schemas, fn {key, _} ->
         String.starts_with?(to_string(key), @internal_tag_prefix)
       end)
 

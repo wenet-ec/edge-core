@@ -92,34 +92,42 @@ defmodule EdgeAdmin.Nodes.Checks.UpdateClusterCheckTest do
   # ---------------------------------------------------------------------------
 
   describe "check/2 — new_limit below current node count" do
-    test "new_limit below node count returns conflict error" do
+    test "new_limit below node count returns changeset error" do
       cluster = insert_cluster()
       insert_node(cluster.id)
       insert_node(cluster.id)
-      assert {:error, {:unprocessable, reason}} = UpdateClusterCheck.check(cluster, 1)
-      assert is_binary(reason)
+      assert {:error, %Ecto.Changeset{}} = UpdateClusterCheck.check(cluster, 1)
     end
 
-    test "error message includes the proposed limit" do
+    test "error includes the current node count as interpolation opt" do
       cluster = insert_cluster()
       insert_node(cluster.id)
       insert_node(cluster.id)
-      {:error, {:unprocessable, reason}} = UpdateClusterCheck.check(cluster, 1)
-      assert reason =~ "1"
+      {:error, changeset} = UpdateClusterCheck.check(cluster, 1)
+      {_msg, opts} = changeset.errors[:node_limit]
+      assert opts[:count] == 2
     end
 
-    test "error message includes the current node count" do
+    test "rendered error message contains the current node count" do
       cluster = insert_cluster()
       insert_node(cluster.id)
       insert_node(cluster.id)
-      {:error, {:unprocessable, reason}} = UpdateClusterCheck.check(cluster, 1)
-      assert reason =~ "2"
+      {:error, changeset} = UpdateClusterCheck.check(cluster, 1)
+
+      [msg] =
+        Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+          Enum.reduce(opts, msg, fn {key, val}, acc ->
+            String.replace(acc, "%{#{key}}", to_string(val))
+          end)
+        end).node_limit
+
+      assert msg =~ "2"
     end
 
     test "zero new_limit is always below a non-empty cluster" do
       cluster = insert_cluster()
       insert_node(cluster.id)
-      assert {:error, {:unprocessable, _reason}} = UpdateClusterCheck.check(cluster, 0)
+      assert {:error, %Ecto.Changeset{}} = UpdateClusterCheck.check(cluster, 0)
     end
   end
 end

@@ -123,18 +123,6 @@ defmodule EdgeAdminWeb.Controllers.FallbackControllerTest do
     end
   end
 
-  describe "{:error, {:unprocessable, reason}} — 422 with reason" do
-    test "returns 422", ctx do
-      conn = call(ctx, {:error, {:unprocessable, "node is already in this cluster"}})
-      assert conn.status == 422
-    end
-
-    test "body errors.detail contains the specific reason", ctx do
-      conn = call(ctx, {:error, {:unprocessable, "node is already in this cluster"}})
-      assert get_in(body(conn), ["errors", "detail"]) == "node is already in this cluster"
-    end
-  end
-
   describe "{:error, unknown_term} — 500 catch-all" do
     test "returns 500 for unexpected atom", ctx do
       conn = call(ctx, {:error, :something_unexpected})

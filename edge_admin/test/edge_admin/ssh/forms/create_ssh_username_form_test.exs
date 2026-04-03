@@ -47,9 +47,9 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameFormTest do
       assert key["key_name"] == "laptop"
     end
 
-    test "wrapped ssh_username params are unwrapped" do
+    test "wrapped ssh_username params are unwrapped (atom key)" do
       assert {:ok, result} =
-               CreateSshUsernameForm.changeset(%{"ssh_username" => valid_attrs()})
+               CreateSshUsernameForm.changeset(%{ssh_username: valid_attrs()})
 
       assert result["username"] == "deploy"
     end

@@ -36,33 +36,23 @@ defmodule EdgeAdmin.RequestParserTest do
   # ---------------------------------------------------------------------------
 
   describe "parse/1 — page parsing" do
-    test "parses page from string" do
-      result = RequestParser.parse(%{"page" => "3"})
-      assert result[:page] == 3
-    end
-
     test "parses page from integer" do
       result = RequestParser.parse(%{"page" => 5})
       assert result[:page] == 5
     end
 
-    test "invalid page string defaults to 1" do
-      result = RequestParser.parse(%{"page" => "abc"})
-      assert result[:page] == 1
+    test "atom key page is normalized and parsed" do
+      result = RequestParser.parse(%{page: 3})
+      assert result[:page] == 3
     end
 
-    test "zero page defaults to 1" do
-      result = RequestParser.parse(%{"page" => "0"})
+    test "invalid page (zero) defaults to 1" do
+      result = RequestParser.parse(%{"page" => 0})
       assert result[:page] == 1
     end
 
     test "negative page defaults to 1" do
-      result = RequestParser.parse(%{"page" => "-1"})
-      assert result[:page] == 1
-    end
-
-    test "page with trailing chars defaults to 1" do
-      result = RequestParser.parse(%{"page" => "2abc"})
+      result = RequestParser.parse(%{"page" => -1})
       assert result[:page] == 1
     end
   end
@@ -72,43 +62,28 @@ defmodule EdgeAdmin.RequestParserTest do
   # ---------------------------------------------------------------------------
 
   describe "parse/1 — page_size parsing" do
-    test "parses page_size from string" do
-      result = RequestParser.parse(%{"page_size" => "50"})
-      assert result[:page_size] == 50
-    end
-
     test "parses page_size from integer" do
       result = RequestParser.parse(%{"page_size" => 10})
       assert result[:page_size] == 10
     end
 
-    test "page_size above max is capped at 100" do
-      result = RequestParser.parse(%{"page_size" => "999"})
-      assert result[:page_size] == 100
-    end
-
-    test "integer page_size above max is capped at 100" do
-      result = RequestParser.parse(%{"page_size" => 200})
-      assert result[:page_size] == 100
-    end
-
-    test "invalid page_size string defaults to 20" do
-      result = RequestParser.parse(%{"page_size" => "abc"})
-      assert result[:page_size] == 20
+    test "atom key page_size is normalized and parsed" do
+      result = RequestParser.parse(%{page_size: 50})
+      assert result[:page_size] == 50
     end
 
     test "zero page_size defaults to 20" do
-      result = RequestParser.parse(%{"page_size" => "0"})
+      result = RequestParser.parse(%{"page_size" => 0})
       assert result[:page_size] == 20
     end
 
     test "boundary: page_size of 1 is accepted" do
-      result = RequestParser.parse(%{"page_size" => "1"})
+      result = RequestParser.parse(%{"page_size" => 1})
       assert result[:page_size] == 1
     end
 
     test "boundary: page_size of 100 is accepted" do
-      result = RequestParser.parse(%{"page_size" => "100"})
+      result = RequestParser.parse(%{"page_size" => 100})
       assert result[:page_size] == 100
     end
   end
@@ -186,13 +161,13 @@ defmodule EdgeAdmin.RequestParserTest do
 
   describe "parse/1 — reserved params excluded from filters" do
     test "page is not in filters" do
-      result = RequestParser.parse(%{"page" => "2"})
+      result = RequestParser.parse(%{"page" => 2})
       filters = result[:filters] || []
       refute Enum.any?(filters, &(&1.field == :page))
     end
 
     test "page_size is not in filters" do
-      result = RequestParser.parse(%{"page_size" => "10"})
+      result = RequestParser.parse(%{"page_size" => 10})
       filters = result[:filters] || []
       refute Enum.any?(filters, &(&1.field == :page_size))
     end
@@ -220,13 +195,13 @@ defmodule EdgeAdmin.RequestParserTest do
       assert_filter(result, :status, :==, "active")
     end
 
-    test "boolean true string produces == filter with true" do
-      result = RequestParser.parse(%{"self_update_enabled" => "true"})
+    test "boolean true produces == filter with true" do
+      result = RequestParser.parse(%{"self_update_enabled" => true})
       assert_filter(result, :self_update_enabled, :==, true)
     end
 
-    test "boolean false string produces == filter with false" do
-      result = RequestParser.parse(%{"self_update_enabled" => "false"})
+    test "boolean false produces == filter with false" do
+      result = RequestParser.parse(%{"self_update_enabled" => false})
       assert_filter(result, :self_update_enabled, :==, false)
     end
 
@@ -289,34 +264,29 @@ defmodule EdgeAdmin.RequestParserTest do
   # ---------------------------------------------------------------------------
 
   describe "parse/1 — range operator filters" do
-    test "__gte with full datetime passes through unchanged" do
+    test "__gte with full datetime string passes through unchanged" do
       result = RequestParser.parse(%{"inserted_at__gte" => "2025-01-01T00:00:00Z"})
       assert_filter(result, :inserted_at, :>=, "2025-01-01T00:00:00Z")
     end
 
-    test "__gte with date-only expands to start of day" do
-      result = RequestParser.parse(%{"inserted_at__gte" => "2025-01-01"})
+    test "__gte with %Date{} struct produces ISO string filter" do
+      result = RequestParser.parse(%{"inserted_at__gte" => ~D[2025-01-01]})
+      assert_filter(result, :inserted_at, :>=, "2025-01-01")
+    end
+
+    test "__gte with %DateTime{} struct produces ISO string filter" do
+      result = RequestParser.parse(%{"inserted_at__gte" => ~U[2025-01-01 00:00:00Z]})
       assert_filter(result, :inserted_at, :>=, "2025-01-01T00:00:00Z")
     end
 
-    test "__gt with date-only expands to start of day" do
-      result = RequestParser.parse(%{"inserted_at__gt" => "2025-01-01"})
-      assert_filter(result, :inserted_at, :>, "2025-01-01T00:00:00Z")
-    end
-
-    test "__lte with full datetime passes through unchanged" do
+    test "__lte with full datetime string passes through unchanged" do
       result = RequestParser.parse(%{"inserted_at__lte" => "2025-12-31T23:59:59Z"})
       assert_filter(result, :inserted_at, :<=, "2025-12-31T23:59:59Z")
     end
 
-    test "__lte with date-only expands to end of day" do
-      result = RequestParser.parse(%{"inserted_at__lte" => "2025-12-31"})
-      assert_filter(result, :inserted_at, :<=, "2025-12-31T23:59:59Z")
-    end
-
-    test "__lt with date-only expands to end of day" do
-      result = RequestParser.parse(%{"inserted_at__lt" => "2025-12-31"})
-      assert_filter(result, :inserted_at, :<, "2025-12-31T23:59:59Z")
+    test "__lte with %Date{} struct produces ISO string filter" do
+      result = RequestParser.parse(%{"inserted_at__lte" => ~D[2025-12-31]})
+      assert_filter(result, :inserted_at, :<=, "2025-12-31")
     end
 
     test "__ne produces != filter" do
@@ -363,6 +333,31 @@ defmodule EdgeAdmin.RequestParserTest do
   end
 
   # ---------------------------------------------------------------------------
+  # parse/1 — atom key normalization
+  # ---------------------------------------------------------------------------
+
+  describe "parse/1 — atom key normalization" do
+    test "atom key params are normalized to strings and parsed" do
+      result = RequestParser.parse(%{status: "active", page: 2, page_size: 50})
+      assert result[:page] == 2
+      assert result[:page_size] == 50
+      assert_filter(result, :status, :==, "active")
+    end
+
+    test "atom key order_by is parsed" do
+      result = RequestParser.parse(%{order_by: "inserted_at", order_directions: "desc"})
+      assert result[:order_by] == [:inserted_at]
+      assert result[:order_directions] == [:desc]
+    end
+
+    test "mixed atom and string keys both work" do
+      result = RequestParser.parse(%{"status" => "healthy", page: 3})
+      assert result[:page] == 3
+      assert_filter(result, :status, :==, "healthy")
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # parse/1 — multiple filters combined
   # ---------------------------------------------------------------------------
 
@@ -371,21 +366,26 @@ defmodule EdgeAdmin.RequestParserTest do
       result =
         RequestParser.parse(%{
           "status" => "active",
-          "inserted_at__gte" => "2025-01-01"
+          "inserted_at__gte" => "2025-01-01T00:00:00Z"
         })
 
       filters = result[:filters]
       assert length(filters) == 2
       assert Enum.any?(filters, &(&1.field == :status and &1.op == :== and &1.value == "active"))
-      assert Enum.any?(filters, &(&1.field == :inserted_at and &1.op == :>= and &1.value == "2025-01-01T00:00:00Z"))
+
+      assert Enum.any?(
+               filters,
+               &(&1.field == :inserted_at and &1.op == :>= and
+                   &1.value == "2025-01-01T00:00:00Z")
+             )
     end
 
     test "mix of filters and pagination" do
       result =
         RequestParser.parse(%{
           "status" => "healthy",
-          "page" => "2",
-          "page_size" => "50",
+          "page" => 2,
+          "page_size" => 50,
           "order_by" => "inserted_at",
           "order_directions" => "desc"
         })
@@ -414,8 +414,7 @@ defmodule EdgeAdmin.RequestParserTest do
     end
 
     test "filters key omitted when no filters parsed" do
-      # Only reserved params → no filters
-      result = RequestParser.parse(%{"page" => "1", "page_size" => "20"})
+      result = RequestParser.parse(%{"page" => 1, "page_size" => 20})
       filters = result[:filters] || []
       assert filters == []
     end

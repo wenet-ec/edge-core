@@ -63,9 +63,9 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
       assert result["self_update_enabled"] == true
     end
 
-    test "wrapped node params are unwrapped" do
+    test "wrapped node params are unwrapped (atom key)" do
       assert {:ok, _result} =
-               RegisterNodeForm.changeset(%{"node" => valid_attrs()}, &cluster_found/1)
+               RegisterNodeForm.changeset(%{node: valid_attrs()}, &cluster_found/1)
     end
 
     test "port at boundary 1 is valid" do

@@ -579,39 +579,7 @@ defmodule EdgeAgent.Commands do
       end
 
     # Step 2: Sync "pending" executions (need acknowledgment)
-    pending_result =
-      case AdminClient.list_pending_command_executions() do
-        {:ok, %{data: commands, meta: _meta}} ->
-          Logger.info("Syncing #{length(commands)} pending command execution(s)")
-
-          Enum.each(commands, fn command ->
-            # Acknowledge with admin first (pending → sent)
-            case AdminClient.acknowledge_command_execution(command["id"]) do
-              :ok ->
-                Logger.debug("Acknowledged command execution: #{command["id"]}")
-                # Then store locally
-                store_command_execution_locally(command, node_id)
-
-              {:error, {:http_error, status, _body}} when status in [404, 409] ->
-                # 404: execution deleted on admin side
-                # 409: execution was cancelled before we could acknowledge it — discard
-                Logger.debug(
-                  "Discarding command execution #{command["id"]} — admin returned HTTP #{status} (deleted or cancelled)"
-                )
-
-              {:error, reason} ->
-                Logger.warning(
-                  "Failed to acknowledge command execution #{command["id"]}: #{inspect(reason)} - will retry next sync"
-                )
-            end
-          end)
-
-          {:ok, length(commands)}
-
-        {:error, reason} ->
-          Logger.warning("Failed to list pending command executions: #{inspect(reason)}")
-          {:error, reason}
-      end
+    pending_result = sync_pending_executions(node_id)
 
     # Emit telemetry
     sent_count = if match?({:ok, _count}, sent_result), do: elem(sent_result, 1), else: 0
@@ -628,6 +596,41 @@ defmodule EdgeAgent.Commands do
     )
 
     :ok
+  end
+
+  defp sync_pending_executions(node_id) do
+    case AdminClient.list_pending_command_executions() do
+      {:ok, %{data: commands, meta: _meta}} ->
+        Logger.info("Syncing #{length(commands)} pending command execution(s)")
+
+        Enum.each(commands, fn command ->
+          # Acknowledge with admin first (pending → sent)
+          case AdminClient.acknowledge_command_execution(command["id"]) do
+            :ok ->
+              Logger.debug("Acknowledged command execution: #{command["id"]}")
+              # Then store locally
+              store_command_execution_locally(command, node_id)
+
+            {:error, {:http_error, status, _body}} when status in [404, 409] ->
+              # 404: execution deleted on admin side
+              # 409: execution was cancelled before we could acknowledge it — discard
+              Logger.debug(
+                "Discarding command execution #{command["id"]} — admin returned HTTP #{status} (deleted or cancelled)"
+              )
+
+            {:error, reason} ->
+              Logger.warning(
+                "Failed to acknowledge command execution #{command["id"]}: #{inspect(reason)} - will retry next sync"
+              )
+          end
+        end)
+
+        {:ok, length(commands)}
+
+      {:error, reason} ->
+        Logger.warning("Failed to list pending command executions: #{inspect(reason)}")
+        {:error, reason}
+    end
   end
 
   # Private helper: stores a command execution locally

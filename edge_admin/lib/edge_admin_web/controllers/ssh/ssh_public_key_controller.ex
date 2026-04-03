@@ -126,7 +126,9 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
         schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ]
     ],
-    request_body: {"SSH public key creation data", "application/json", SshPublicKeySchemas.SshPublicKeyCreateRequest},
+    request_body:
+      {"SSH public key creation data", "application/json", SshPublicKeySchemas.SshPublicKeyCreateRequest,
+       required: true},
     responses: %{
       201 => {"SSH public key created", "application/json", SshPublicKeySchemas.SshPublicKeySingleResponse},
       404 => {"SSH username not found", "application/json", CommonSchemas.NotFoundResponse},

@@ -126,7 +126,8 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
         schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ]
     ],
-    request_body: {"SSH username creation data", "application/json", SshUsernameSchemas.SshUsernameCreateRequest},
+    request_body:
+      {"SSH username creation data", "application/json", SshUsernameSchemas.SshUsernameCreateRequest, required: true},
     responses: %{
       201 => {"SSH username created", "application/json", SshUsernameSchemas.SshUsernameSingleResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},

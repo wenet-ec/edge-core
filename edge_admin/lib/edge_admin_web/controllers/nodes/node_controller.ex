@@ -182,7 +182,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
         schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ]
     ],
-    request_body: {"Cluster change parameters", "application/json", NodeSchemas.ChangeClusterRequest},
+    request_body: {"Cluster change parameters", "application/json", NodeSchemas.ChangeClusterRequest, required: true},
     responses: %{
       200 => {"Node cluster changed successfully", "application/json", NodeSchemas.NodeSingleResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},

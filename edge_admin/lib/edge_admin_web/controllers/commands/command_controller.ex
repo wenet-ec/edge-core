@@ -117,7 +117,8 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
 
     Node and cluster filters can be applied to further refine targeting.
     """,
-    request_body: {"Command creation parameters", "application/json", CommandSchemas.CommandCreateRequest},
+    request_body:
+      {"Command creation parameters", "application/json", CommandSchemas.CommandCreateRequest, required: true},
     responses: %{
       201 => {"Command created successfully", "application/json", CommandSchemas.CommandSingleResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}

@@ -8,6 +8,94 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
 
   alias OpenApiSpex.Schema
 
+  defmodule NodeRegisterRequest do
+    @moduledoc false
+
+    schema(%{
+      title: "Internal.NodeRegisterRequest",
+      description: "Agent registration payload sent on startup",
+      type: :object,
+      properties: %{
+        node: %Schema{
+          type: :object,
+          properties: %{
+            node_id: %Schema{
+              type: :string,
+              format: :uuid,
+              description: "Netmaker node UUID"
+            },
+            network_name: %Schema{
+              type: :string,
+              description: "Netmaker network name (must start with 'cluster-')",
+              example: "cluster-default"
+            },
+            id_type: %Schema{
+              type: :string,
+              enum: ["persistent", "random"],
+              description: "How the node identity is determined"
+            },
+            http_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "Admin HTTP port"},
+            ssh_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "SSH server port"},
+            host_metrics_port: %Schema{
+              type: :integer,
+              minimum: 1,
+              maximum: 65_535,
+              description: "Host metrics exporter port"
+            },
+            wireguard_metrics_port: %Schema{
+              type: :integer,
+              minimum: 1,
+              maximum: 65_535,
+              description: "WireGuard metrics exporter port"
+            },
+            http_proxy_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "HTTP proxy port"},
+            socks5_proxy_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "SOCKS5 proxy port"},
+            version: %Schema{type: :string, description: "Agent version string", example: "1.2.3"},
+            self_update_enabled: %Schema{type: :boolean, description: "Whether the agent supports self-update"}
+          },
+          required: [
+            :node_id,
+            :network_name,
+            :id_type,
+            :http_port,
+            :ssh_port,
+            :host_metrics_port,
+            :wireguard_metrics_port,
+            :http_proxy_port,
+            :socks5_proxy_port,
+            :version,
+            :self_update_enabled
+          ]
+        }
+      },
+      required: [:node]
+    })
+  end
+
+  defmodule NodeHealthCheckRequest do
+    @moduledoc false
+
+    schema(%{
+      title: "Internal.NodeHealthCheckRequest",
+      description: "Agent health status report",
+      type: :object,
+      properties: %{
+        node: %Schema{
+          type: :object,
+          properties: %{
+            status: %Schema{
+              type: :string,
+              enum: ["healthy", "unhealthy"],
+              description: "Current node health status"
+            }
+          },
+          required: [:status]
+        }
+      },
+      required: [:node]
+    })
+  end
+
   defmodule NodeRegistrationResponse do
     @moduledoc false
 

@@ -19,6 +19,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
   operation(:create,
     summary: "Register a node",
     description: "Agent registers itself with admin, receives api_token and proxy_password.",
+    request_body: {"Node registration parameters", "application/json", NodeSchemas.NodeRegisterRequest, required: true},
     responses: %{
       201 => {"Node registered", "application/json", NodeSchemas.NodeRegistrationResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
@@ -38,6 +39,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
     summary: "Report node health check",
     description:
       "Agent reports its health status when using HTTP fallback mode. Node ID is inferred from the API token.",
+    request_body: {"Health check parameters", "application/json", NodeSchemas.NodeHealthCheckRequest, required: true},
     responses: %{
       200 => {"Health check recorded", "application/json", NodeSchemas.NodeHealthCheckResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}

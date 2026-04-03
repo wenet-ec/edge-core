@@ -169,7 +169,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     summary: "Create a new cluster",
     description:
       "Create a new edge cluster with optional IP range.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
-    request_body: {"Cluster creation parameters", "application/json", ClusterSchemas.ClusterCreateRequest},
+    request_body:
+      {"Cluster creation parameters", "application/json", ClusterSchemas.ClusterCreateRequest, required: true},
     responses: %{
       201 => {"Cluster created successfully", "application/json", ClusterSchemas.ClusterSingleResponse},
       409 =>
@@ -201,7 +202,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
         schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", maxLength: 24}
       ]
     ],
-    request_body: {"Cluster update parameters", "application/json", ClusterSchemas.ClusterUpdateRequest},
+    request_body:
+      {"Cluster update parameters", "application/json", ClusterSchemas.ClusterUpdateRequest, required: true},
     responses: %{
       200 => {"Cluster updated successfully", "application/json", ClusterSchemas.ClusterSingleResponse},
       404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},

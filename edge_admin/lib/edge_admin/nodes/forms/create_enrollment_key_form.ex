@@ -16,7 +16,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyForm do
     |> validate_uses_remaining()
     |> apply_action(:insert)
     |> case do
-      {:ok, form} -> {:ok, to_map(form)}
+      {:ok, form} -> {:ok, to_map(attrs, form)}
       {:error, changeset} -> {:error, changeset}
     end
   end
@@ -33,9 +33,22 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyForm do
     end)
   end
 
-  defp to_map(%__MODULE__{} = form) do
-    %{"uses_remaining" => form.uses_remaining, "expired_at" => form.expired_at}
-    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
-    |> Map.new()
+  # Preserve explicit null (key present, value nil) vs omitted (key absent).
+  # null -> unlimited (uses_remaining: nil in DB)
+  # omitted -> DB default of 1
+  defp to_map(raw_attrs, %__MODULE__{} = form) do
+    %{}
+    |> maybe_put(raw_attrs, "uses_remaining", form.uses_remaining)
+    |> maybe_put(raw_attrs, "expired_at", form.expired_at)
+  end
+
+  defp maybe_put(result, raw_attrs, key, value) do
+    atom_key = String.to_existing_atom(key)
+
+    if Map.has_key?(raw_attrs, key) or Map.has_key?(raw_attrs, atom_key) do
+      Map.put(result, key, value)
+    else
+      result
+    end
   end
 end

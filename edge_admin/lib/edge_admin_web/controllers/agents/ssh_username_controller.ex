@@ -24,6 +24,8 @@ defmodule EdgeAdminWeb.Controllers.Agents.SshUsernameController do
     Always returns 200 — check `verified` field. Returns false for both
     unknown username and wrong credential (security: don't distinguish).
     """,
+    request_body:
+      {"SSH credentials to verify", "application/json", SshUsernameSchemas.SshCredentialsVerifyRequest, required: true},
     responses: %{
       200 => {"Verification result", "application/json", SshUsernameSchemas.SshCredentialsVerifyResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}

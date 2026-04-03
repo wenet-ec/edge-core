@@ -16,6 +16,8 @@ defmodule EdgeAdminWeb.Controllers.Agents.EnrollmentKeyController do
   operation(:verify,
     summary: "Verify an enrollment key",
     description: "Agent calls this before joining the VPN. Always returns 200 — check `verified` and `error` fields.",
+    request_body:
+      {"Enrollment key to verify", "application/json", EnrollmentKeySchemas.EnrollmentKeyVerifyRequest, required: true},
     responses: %{
       200 => {"Verification result", "application/json", EnrollmentKeySchemas.EnrollmentKeyVerifyResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}

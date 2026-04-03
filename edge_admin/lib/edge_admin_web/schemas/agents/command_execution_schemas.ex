@@ -9,6 +9,32 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
+  defmodule UpdateCommandExecutionResultRequest do
+    @moduledoc false
+
+    schema(%{
+      title: "Internal.UpdateCommandExecutionResultRequest",
+      description: "Command execution result reported by the agent. All fields are optional.",
+      type: :object,
+      properties: %{
+        command_execution: %Schema{
+          type: :object,
+          properties: %{
+            output: %Schema{type: :string, nullable: true, description: "Command output text"},
+            exit_code: %Schema{type: :integer, nullable: true, description: "Process exit code"},
+            completed_at: %Schema{
+              type: :string,
+              format: :"date-time",
+              nullable: true,
+              description: "When the command completed (defaults to now if omitted)"
+            }
+          }
+        }
+      },
+      required: [:command_execution]
+    })
+  end
+
   defmodule AgentCommandExecutionResponse do
     @moduledoc false
 

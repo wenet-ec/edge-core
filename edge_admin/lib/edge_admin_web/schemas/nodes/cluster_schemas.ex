@@ -234,7 +234,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
 
     schema(%{
       title: "ClusterCreateRequest",
-      description: "Parameters for creating a new cluster (all fields optional for auto-generation)",
+      description: "Parameters for creating a new cluster",
       type: :object,
       properties: %{
         cluster: %Schema{
@@ -242,10 +242,9 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
           properties: %{
             name: %Schema{
               type: :string,
-              nullable: true,
-              description:
-                "Cluster name - will be used as primary identifier (max 24 chars, auto-generated 12-char alphanumeric if not provided)",
+              description: "Cluster name — primary identifier (max 24 chars, lowercase alphanumeric + hyphens)",
               pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+              maxLength: 24,
               example: "prod-east"
             },
             ipv4_range: %Schema{
@@ -262,6 +261,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
               example: 50
             }
           },
+          required: [:name],
           example: %{
             name: "prod-east",
             ipv4_range: "100.64.1.0/24",

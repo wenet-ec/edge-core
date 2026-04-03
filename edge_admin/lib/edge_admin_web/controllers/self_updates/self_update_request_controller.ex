@@ -125,7 +125,7 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
     """,
     request_body:
       {"Self-update request creation parameters", "application/json",
-       SelfUpdateRequestSchemas.SelfUpdateRequestCreateRequest},
+       SelfUpdateRequestSchemas.SelfUpdateRequestCreateRequest, required: true},
     responses: %{
       201 =>
         {"Self-update request created successfully", "application/json",

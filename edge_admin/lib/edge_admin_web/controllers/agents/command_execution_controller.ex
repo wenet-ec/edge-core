@@ -108,6 +108,9 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
         schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ]
     ],
+    request_body:
+      {"Command execution result", "application/json", CommandExecutionSchemas.UpdateCommandExecutionResultRequest,
+       required: true},
     responses: %{
       200 =>
         {"Command execution updated", "application/json", CommandExecutionSchemas.AgentCommandExecutionSingleResponse},

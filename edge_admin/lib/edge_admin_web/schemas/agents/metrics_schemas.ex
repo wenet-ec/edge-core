@@ -8,6 +8,34 @@ defmodule EdgeAdminWeb.Schemas.Agents.MetricsSchemas do
 
   alias OpenApiSpex.Schema
 
+  defmodule MetricsCachePushRequest do
+    @moduledoc false
+
+    schema(%{
+      title: "Internal.MetricsCachePushRequest",
+      description: "Metrics payload pushed by agent when VPN is unavailable",
+      type: :object,
+      properties: %{
+        metrics: %Schema{
+          type: :object,
+          properties: %{
+            metrics_type: %Schema{
+              type: :string,
+              enum: ["host", "agent", "wireguard"],
+              description: "Type of metrics being pushed"
+            },
+            metrics_text: %Schema{
+              type: :string,
+              description: "Raw Prometheus text format metrics"
+            }
+          },
+          required: [:metrics_type, :metrics_text]
+        }
+      },
+      required: [:metrics]
+    })
+  end
+
   defmodule MetricsCachePushResponse do
     @moduledoc false
 

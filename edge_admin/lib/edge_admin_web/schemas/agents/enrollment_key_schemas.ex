@@ -8,6 +8,26 @@ defmodule EdgeAdminWeb.Schemas.Agents.EnrollmentKeySchemas do
 
   alias OpenApiSpex.Schema
 
+  defmodule EnrollmentKeyVerifyRequest do
+    @moduledoc false
+
+    schema(%{
+      title: "Internal.EnrollmentKeyVerifyRequest",
+      description: "Enrollment key to verify before VPN join",
+      type: :object,
+      properties: %{
+        enrollment_key: %Schema{
+          type: :object,
+          properties: %{
+            key: %Schema{type: :string, description: "Enrollment key blob"}
+          },
+          required: [:key]
+        }
+      },
+      required: [:enrollment_key]
+    })
+  end
+
   defmodule EnrollmentKeyVerifyResponse do
     @moduledoc false
 

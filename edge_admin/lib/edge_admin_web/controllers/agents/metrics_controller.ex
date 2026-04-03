@@ -19,6 +19,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.MetricsController do
     summary: "Push metrics cache",
     description:
       "Agent pushes metrics to admin when VPN is unavailable. Metrics are cached temporarily and served to collectors. Node ID is inferred from the API token.",
+    request_body: {"Metrics payload", "application/json", MetricsSchemas.MetricsCachePushRequest, required: true},
     responses: %{
       200 => {"Metrics cache updated", "application/json", MetricsSchemas.MetricsCachePushResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}

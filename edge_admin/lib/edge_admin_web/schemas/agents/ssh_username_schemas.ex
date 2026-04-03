@@ -8,6 +8,36 @@ defmodule EdgeAdminWeb.Schemas.Agents.SshUsernameSchemas do
 
   alias OpenApiSpex.Schema
 
+  defmodule SshCredentialsVerifyRequest do
+    @moduledoc false
+
+    schema(%{
+      title: "Internal.SshCredentialsVerifyRequest",
+      description: "SSH credentials to verify. Provide either password or public_key, not both.",
+      type: :object,
+      properties: %{
+        ssh_username: %Schema{
+          type: :object,
+          properties: %{
+            username: %Schema{type: :string, description: "SSH username"},
+            password: %Schema{
+              type: :string,
+              nullable: true,
+              description: "Password (mutually exclusive with public_key)"
+            },
+            public_key: %Schema{
+              type: :string,
+              nullable: true,
+              description: "Public key (mutually exclusive with password)"
+            }
+          },
+          required: [:username]
+        }
+      },
+      required: [:ssh_username]
+    })
+  end
+
   defmodule SshCredentialsVerifyResponse do
     @moduledoc false
 

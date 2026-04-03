@@ -232,6 +232,7 @@ defmodule EdgeAdmin.Ssh do
   - `username` - Text search with wildcard support
   - `node_id` - Exact match on node ID
   - `has_password` - Boolean (filters by password_hash presence)
+  - `cluster_name` - Text search with wildcard support (requires join through node)
   - `inserted_at__gte/lte` - Date range filter
 
   ## Returns
@@ -249,8 +250,19 @@ defmodule EdgeAdmin.Ssh do
         filter.field == :has_password
       end)
 
-    # Build base query with preload
-    base_query = from(u in SshUsername, preload: [:ssh_public_keys])
+    # Extract cluster_name filters (join-based, handle separately)
+    {cluster_name_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter ->
+        filter.field == :cluster_name
+      end)
+
+    # Build base query with node→cluster join for cluster_name filtering
+    base_query =
+      from(u in SshUsername,
+        join: n in assoc(u, :node),
+        join: c in assoc(n, :cluster),
+        preload: [:ssh_public_keys]
+      )
 
     # Apply has_password filter if present
     query_with_password_filter =
@@ -260,6 +272,14 @@ defmodule EdgeAdmin.Ssh do
         apply_has_password_filters(base_query, has_password_filters)
       end
 
+    # Apply cluster_name filter if present
+    query_with_cluster_filter =
+      if cluster_name_filters == [] do
+        query_with_password_filter
+      else
+        apply_ssh_username_cluster_name_filters(query_with_password_filter, cluster_name_filters)
+      end
+
     {ilike_filters, flop_params} =
       EdgeAdmin.RequestParser.split_ilike_filters(
         Map.put(flop_params, :filters, other_filters),
@@ -267,7 +287,7 @@ defmodule EdgeAdmin.Ssh do
       )
 
     query_with_ilike =
-      Enum.reduce(ilike_filters, query_with_password_filter, fn %{field: field, value: value}, acc ->
+      Enum.reduce(ilike_filters, query_with_cluster_filter, fn %{field: field, value: value}, acc ->
         from(u in acc, where: ilike(field(u, ^field), ^value))
       end)
 
@@ -308,6 +328,20 @@ defmodule EdgeAdmin.Ssh do
   end
 
   defp apply_has_password_filter(query, _), do: query
+
+  defp apply_ssh_username_cluster_name_filters(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc -> apply_ssh_username_cluster_name_filter(acc, filter) end)
+  end
+
+  defp apply_ssh_username_cluster_name_filter(query, %{op: :==, value: value}) when is_binary(value) do
+    from([_u, _n, c] in query, where: c.name == ^value)
+  end
+
+  defp apply_ssh_username_cluster_name_filter(query, %{op: :ilike, value: value}) when is_binary(value) do
+    from([_u, _n, c] in query, where: ilike(c.name, ^value))
+  end
+
+  defp apply_ssh_username_cluster_name_filter(query, _), do: query
 
   # ===========================================================================
   # SSH Public Key functions
@@ -387,6 +421,9 @@ defmodule EdgeAdmin.Ssh do
   - `key_name` - Text search with wildcard support
   - `public_key` - Text search with wildcard support (useful for searching email comments)
   - `ssh_username_id` - Exact match on SSH username ID
+  - `node_id` - Exact match on node ID (requires join through ssh_username)
+  - `username` - Text search with wildcard support (requires join through ssh_username)
+  - `cluster_name` - Text search with wildcard support (requires join through ssh_username → node)
   - `inserted_at__gte/lte` - Date range filter
 
   ## Returns
@@ -398,10 +435,38 @@ defmodule EdgeAdmin.Ssh do
     # Parse params into Flop format
     flop_params = EdgeAdmin.RequestParser.parse(params)
 
-    {ilike_filters, flop_params} = EdgeAdmin.RequestParser.split_ilike_filters(flop_params, [:key_name, :public_key])
+    # Extract join-based custom filters
+    {node_id_filters, other_filters} =
+      Enum.split_with(flop_params[:filters] || [], fn filter -> filter.field == :node_id end)
+
+    {username_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter -> filter.field == :username end)
+
+    {cluster_name_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter -> filter.field == :cluster_name end)
+
+    {ilike_filters, flop_params} =
+      EdgeAdmin.RequestParser.split_ilike_filters(
+        Map.put(flop_params, :filters, other_filters),
+        [:key_name, :public_key]
+      )
+
+    # Build base query with ssh_username → node → cluster join
+    base_query =
+      from(k in SshPublicKey,
+        join: u in assoc(k, :ssh_username),
+        join: n in assoc(u, :node),
+        join: c in assoc(n, :cluster)
+      )
 
     base_query =
-      Enum.reduce(ilike_filters, SshPublicKey, fn %{field: field, value: value}, acc ->
+      base_query
+      |> apply_public_key_node_id_filters(node_id_filters)
+      |> apply_public_key_username_filters(username_filters)
+      |> apply_public_key_cluster_name_filters(cluster_name_filters)
+
+    base_query =
+      Enum.reduce(ilike_filters, base_query, fn %{field: field, value: value}, acc ->
         from(k in acc, where: ilike(field(k, ^field), ^value))
       end)
 
@@ -415,5 +480,47 @@ defmodule EdgeAdmin.Ssh do
       {:error, meta} ->
         {:error, meta}
     end
+  end
+
+  defp apply_public_key_node_id_filters(query, []), do: query
+
+  defp apply_public_key_node_id_filters(query, filters) do
+    Enum.reduce(filters, query, fn
+      %{op: :==, value: value}, acc when is_binary(value) ->
+        from([_k, _u, n] in acc, where: n.id == ^value)
+
+      _filter, acc ->
+        acc
+    end)
+  end
+
+  defp apply_public_key_username_filters(query, []), do: query
+
+  defp apply_public_key_username_filters(query, filters) do
+    Enum.reduce(filters, query, fn
+      %{op: :==, value: value}, acc when is_binary(value) ->
+        from([_k, u] in acc, where: u.username == ^value)
+
+      %{op: :ilike, value: value}, acc when is_binary(value) ->
+        from([_k, u] in acc, where: ilike(u.username, ^value))
+
+      _filter, acc ->
+        acc
+    end)
+  end
+
+  defp apply_public_key_cluster_name_filters(query, []), do: query
+
+  defp apply_public_key_cluster_name_filters(query, filters) do
+    Enum.reduce(filters, query, fn
+      %{op: :==, value: value}, acc when is_binary(value) ->
+        from([_k, _u, _n, c] in acc, where: c.name == ^value)
+
+      %{op: :ilike, value: value}, acc when is_binary(value) ->
+        from([_k, _u, _n, c] in acc, where: ilike(c.name, ^value))
+
+      _filter, acc ->
+        acc
+    end)
   end
 end

@@ -54,8 +54,24 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
       ],
       exit_code: [
         in: :query,
-        description: "Filter by exit code",
+        description: "Filter by exact exit code",
         schema: %OpenApiSpex.Schema{type: :integer}
+      ],
+      exit_code__gte: [
+        in: :query,
+        description: "Filter executions with exit code greater than or equal to this value (e.g. 1 for all failures)",
+        schema: %OpenApiSpex.Schema{type: :integer}
+      ],
+      exit_code__lte: [
+        in: :query,
+        description: "Filter executions with exit code less than or equal to this value",
+        schema: %OpenApiSpex.Schema{type: :integer}
+      ],
+      has_output: [
+        in: :query,
+        description:
+          "Filter by whether output is present: true returns executions with output, false returns executions with no output",
+        schema: %OpenApiSpex.Schema{type: :boolean}
       ],
       command_id: [
         in: :query,

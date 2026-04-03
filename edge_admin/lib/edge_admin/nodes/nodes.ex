@@ -1115,6 +1115,34 @@ defmodule EdgeAdmin.Nodes do
 
   defp apply_is_expired_filter(query, _), do: query
 
+  defp apply_is_never_used_filters(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc -> apply_is_never_used_filter(acc, filter) end)
+  end
+
+  defp apply_is_never_used_filter(query, %{op: :==, value: v}) when v in [true, "true"] do
+    from(k in query, where: is_nil(k.last_used_at))
+  end
+
+  defp apply_is_never_used_filter(query, %{op: :==, value: v}) when v in [false, "false"] do
+    from(k in query, where: not is_nil(k.last_used_at))
+  end
+
+  defp apply_is_never_used_filter(query, _), do: query
+
+  defp apply_has_expiry_filters(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc -> apply_has_expiry_filter(acc, filter) end)
+  end
+
+  defp apply_has_expiry_filter(query, %{op: :==, value: v}) when v in [true, "true"] do
+    from(k in query, where: not is_nil(k.expired_at))
+  end
+
+  defp apply_has_expiry_filter(query, %{op: :==, value: v}) when v in [false, "false"] do
+    from(k in query, where: is_nil(k.expired_at))
+  end
+
+  defp apply_has_expiry_filter(query, _), do: query
+
   # Apply ilike filters for node string fields directly via Ecto, bypassing Flop's add_wildcard.
   defp apply_node_ilike_filters(query, filters) do
     Enum.reduce(filters, query, fn %{field: field, value: value}, acc ->
@@ -1244,6 +1272,8 @@ defmodule EdgeAdmin.Nodes do
   - `is_unlimited` - Boolean: true returns unlimited keys (uses_remaining is null)
   - `is_spent` - Boolean: true returns exhausted keys (uses_remaining == 0)
   - `is_expired` - Boolean: true returns expired keys (expired_at in the past)
+  - `is_never_used` - Boolean: true returns keys never used (last_used_at is null)
+  - `has_expiry` - Boolean: true returns keys with an expiry set (expired_at is not null)
   - `expired_at`, `last_used_at`, `inserted_at`, `updated_at` - Date range (`__gte`, `__lte`)
   - `cluster_name` - Text search with wildcard support (requires join)
   """
@@ -1263,7 +1293,7 @@ defmodule EdgeAdmin.Nodes do
   end
 
   defp build_enrollment_key_query(flop_params) do
-    custom_fields = [:cluster_name, :is_unlimited, :is_spent, :is_expired]
+    custom_fields = [:cluster_name, :is_unlimited, :is_spent, :is_expired, :is_never_used, :has_expiry]
 
     {custom, other_filters} =
       Enum.split_with(flop_params[:filters] || [], &(&1.field in custom_fields))
@@ -1282,6 +1312,8 @@ defmodule EdgeAdmin.Nodes do
       |> maybe_apply_filters(custom_by_field[:is_unlimited], &apply_is_unlimited_filters/2)
       |> maybe_apply_filters(custom_by_field[:is_spent], &apply_is_spent_filters/2)
       |> maybe_apply_filters(custom_by_field[:is_expired], &apply_is_expired_filters/2)
+      |> maybe_apply_filters(custom_by_field[:is_never_used], &apply_is_never_used_filters/2)
+      |> maybe_apply_filters(custom_by_field[:has_expiry], &apply_has_expiry_filters/2)
 
     {ilike_filters, flop_params} =
       RequestParser.split_ilike_filters(
@@ -1873,6 +1905,7 @@ defmodule EdgeAdmin.Nodes do
 
   Supports filtering by:
   - `name` - Text search with wildcard support
+  - `node_id` - Exact match by node UUID
   - `cluster_name` - Text search with wildcard support (requires join)
   - `inserted_at__gte/lte` - Date range filter
   """

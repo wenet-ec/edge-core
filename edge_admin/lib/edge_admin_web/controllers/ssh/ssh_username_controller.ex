@@ -59,6 +59,11 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
         description: "Filter by whether username has password configured",
         schema: %OpenApiSpex.Schema{type: :boolean}
       ],
+      cluster_name: [
+        in: :query,
+        description: "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *east, etc.)",
+        schema: %OpenApiSpex.Schema{type: :string}
+      ],
       inserted_at__gte: [
         in: :query,
         description:

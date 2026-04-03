@@ -167,6 +167,8 @@ defmodule EdgeAdmin.Commands do
 
   Supports filtering by:
   - `command_text` - Text search with wildcard support
+  - `timeout` - Exact, `__gte`, `__lte` (milliseconds; null = no timeout)
+  - `has_timeout` - Boolean: true returns commands with a timeout set
   - `inserted_at__gte/lte` - Date range filter
 
   ## Returns
@@ -178,12 +180,24 @@ defmodule EdgeAdmin.Commands do
     # Parse params into Flop format
     flop_params = EdgeAdmin.RequestParser.parse(params)
 
-    {ilike_filters, flop_params} = EdgeAdmin.RequestParser.split_ilike_filters(flop_params, [:command_text])
+    # Extract has_timeout filter (virtual, handle separately)
+    {has_timeout_filters, other_filters} =
+      Enum.split_with(flop_params[:filters] || [], fn filter ->
+        filter.field == :has_timeout
+      end)
+
+    {ilike_filters, flop_params} =
+      EdgeAdmin.RequestParser.split_ilike_filters(
+        Map.put(flop_params, :filters, other_filters),
+        [:command_text]
+      )
 
     base_query =
       Enum.reduce(ilike_filters, Command, fn %{field: field, value: value}, acc ->
         from(c in acc, where: ilike(field(c, ^field), ^value))
       end)
+
+    base_query = apply_has_timeout_filters(base_query, has_timeout_filters)
 
     case Flop.validate_and_run(base_query, flop_params,
            for: Command,
@@ -298,6 +312,8 @@ defmodule EdgeAdmin.Commands do
   - `output` - Text search with wildcard support
   - `cluster_name` - Text search with wildcard support (filters by node's cluster name)
   - `has_cluster` - Boolean (filters by cluster_id presence: true = NOT NULL, false = IS NULL)
+  - `exit_code` - Exact, `__gte`, `__lte`
+  - `has_output` - Boolean: true returns executions with output present
   - `inserted_at__gte/lte` - Date range filter
 
   ## Returns
@@ -319,6 +335,12 @@ defmodule EdgeAdmin.Commands do
     {has_cluster_filters, other_filters} =
       Enum.split_with(other_filters, fn filter ->
         filter.field == :has_cluster
+      end)
+
+    # Extract has_output filters (virtual field, handle separately)
+    {has_output_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter ->
+        filter.field == :has_output
       end)
 
     # Build base query with preload and cluster join (needed for cluster_name filter)
@@ -345,6 +367,14 @@ defmodule EdgeAdmin.Commands do
         apply_has_cluster_filters(query_with_cluster_name, has_cluster_filters)
       end
 
+    # Apply has_output filters if present
+    query_with_has_output =
+      if has_output_filters == [] do
+        query_with_has_cluster
+      else
+        apply_has_output_filters(query_with_has_cluster, has_output_filters)
+      end
+
     {ilike_filters, flop_params} =
       EdgeAdmin.RequestParser.split_ilike_filters(
         Map.put(flop_params, :filters, other_filters),
@@ -352,7 +382,7 @@ defmodule EdgeAdmin.Commands do
       )
 
     query_with_ilike =
-      Enum.reduce(ilike_filters, query_with_has_cluster, fn %{field: field, value: value}, acc ->
+      Enum.reduce(ilike_filters, query_with_has_output, fn %{field: field, value: value}, acc ->
         from(ce in acc, where: ilike(field(ce, ^field), ^value))
       end)
 
@@ -370,6 +400,20 @@ defmodule EdgeAdmin.Commands do
   end
 
   # Apply cluster_name filters for command executions using WHERE clause on joined cluster table
+  defp apply_has_timeout_filters(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc -> apply_has_timeout_filter(acc, filter) end)
+  end
+
+  defp apply_has_timeout_filter(query, %{op: :==, value: v}) when v in [true, "true"] do
+    from(c in query, where: not is_nil(c.timeout))
+  end
+
+  defp apply_has_timeout_filter(query, %{op: :==, value: v}) when v in [false, "false"] do
+    from(c in query, where: is_nil(c.timeout))
+  end
+
+  defp apply_has_timeout_filter(query, _), do: query
+
   defp apply_execution_cluster_name_filters(query, filters) do
     Enum.reduce(filters, query, fn filter, acc_query ->
       apply_execution_cluster_name_filter(acc_query, filter)
@@ -410,6 +454,20 @@ defmodule EdgeAdmin.Commands do
   end
 
   defp apply_has_cluster_filter(query, _), do: query
+
+  defp apply_has_output_filters(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc -> apply_has_output_filter(acc, filter) end)
+  end
+
+  defp apply_has_output_filter(query, %{op: :==, value: v}) when v in [true, "true"] do
+    from(ce in query, where: not is_nil(ce.output))
+  end
+
+  defp apply_has_output_filter(query, %{op: :==, value: v}) when v in [false, "false"] do
+    from(ce in query, where: is_nil(ce.output))
+  end
+
+  defp apply_has_output_filter(query, _), do: query
 
   @doc """
   Creates a command and enqueues execution creation job.

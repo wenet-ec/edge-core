@@ -47,6 +47,11 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
         description: "Filter by alias name (exact match or wildcard: prod*, *east, etc.)",
         schema: %OpenApiSpex.Schema{type: :string}
       ],
+      node_id: [
+        in: :query,
+        description: "Filter by node ID (exact match UUID)",
+        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
+      ],
       cluster_name: [
         in: :query,
         description: "Filter by cluster name (exact match or wildcard: prod*, *east, etc.)",

@@ -48,6 +48,22 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
         description: "Filter by command text (exact match or wildcard: ls*, *docker*, etc.)",
         schema: %OpenApiSpex.Schema{type: :string}
       ],
+      timeout__gte: [
+        in: :query,
+        description: "Filter commands with timeout greater than or equal to this value (milliseconds)",
+        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1}
+      ],
+      timeout__lte: [
+        in: :query,
+        description: "Filter commands with timeout less than or equal to this value (milliseconds)",
+        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1}
+      ],
+      has_timeout: [
+        in: :query,
+        description:
+          "Filter by whether a timeout is set: true returns commands with a timeout, false returns commands with no timeout",
+        schema: %OpenApiSpex.Schema{type: :boolean}
+      ],
       inserted_at__gte: [
         in: :query,
         description:

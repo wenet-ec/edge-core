@@ -58,6 +58,21 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
         description: "Filter by SSH username ID",
         schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
       ],
+      node_id: [
+        in: :query,
+        description: "Filter by node ID",
+        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
+      ],
+      username: [
+        in: :query,
+        description: "Filter by SSH username (exact match or wildcard: deploy*, *admin, etc.)",
+        schema: %OpenApiSpex.Schema{type: :string}
+      ],
+      cluster_name: [
+        in: :query,
+        description: "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *east, etc.)",
+        schema: %OpenApiSpex.Schema{type: :string}
+      ],
       inserted_at__gte: [
         in: :query,
         description:

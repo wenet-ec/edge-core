@@ -88,6 +88,18 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
           "Filter by whether the key is expired: true returns keys where expired_at is in the past, false returns active keys (including those with no expiry)",
         schema: %OpenApiSpex.Schema{type: :boolean}
       ],
+      is_never_used: [
+        in: :query,
+        description:
+          "Filter by whether the key has never been used: true returns keys where last_used_at is null, false returns keys that have been used at least once",
+        schema: %OpenApiSpex.Schema{type: :boolean}
+      ],
+      has_expiry: [
+        in: :query,
+        description:
+          "Filter by whether the key has an expiry set: true returns keys with expired_at present, false returns keys with no expiry (unlimited lifetime)",
+        schema: %OpenApiSpex.Schema{type: :boolean}
+      ],
       expired_at__gte: [
         in: :query,
         description:

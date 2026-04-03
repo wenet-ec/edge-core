@@ -7,8 +7,8 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
 
   @derive {
     Flop.Schema,
-    filterable: [:command_text, :inserted_at, :updated_at],
-    sortable: [:inserted_at, :updated_at],
+    filterable: [:command_text, :timeout, :inserted_at, :updated_at],
+    sortable: [:timeout, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],
       order_directions: [:desc]

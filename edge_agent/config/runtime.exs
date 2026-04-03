@@ -102,7 +102,7 @@ config :edge_agent,
   # All regular admin API calls: registration, command acks, health reporting, metrics push.
   admin_call_timeout: get_env("ADMIN_CALL_TIMEOUT_MS", :integer, 10_000),
   # Admin discovery probing — short, probing many peers in parallel.
-  admin_discovery_timeout: get_env("ADMIN_DISCOVERY_TIMEOUT_MS", :integer, 3_000),
+  admin_discovery_timeout: get_env("ADMIN_DISCOVERY_TIMEOUT_MS", :integer, 10_000),
   # VPN connection verification timeout (in seconds)
   vpn_ready_timeout_seconds: get_env("VPN_READY_TIMEOUT_SECONDS", :integer, 30),
   # Authentication toggles

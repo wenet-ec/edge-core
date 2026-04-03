@@ -189,9 +189,9 @@ config :edge_admin,
   evict_rogue_hosts: get_env("EVICT_ROGUE_HOSTS", :boolean, true),
   # === HTTP Request Timeouts (admin → agent) ===
   # Health checks run every minute across all owned nodes — keep tight.
-  health_check_timeout: get_env("HEALTH_CHECK_TIMEOUT_MS", :integer, 3_000),
+  health_check_timeout: get_env("HEALTH_CHECK_TIMEOUT_MS", :integer, 10_000),
   # Metrics scraping — allow a little more for slow exporters.
-  metrics_scrape_timeout: get_env("METRICS_SCRAPE_TIMEOUT_MS", :integer, 8_000),
+  metrics_scrape_timeout: get_env("METRICS_SCRAPE_TIMEOUT_MS", :integer, 10_000),
   # Command delivery — agent may be busy, allow a bit more time.
   command_delivery_timeout: get_env("COMMAND_DELIVERY_TIMEOUT_MS", :integer, 10_000),
   # === Node Health Check ===

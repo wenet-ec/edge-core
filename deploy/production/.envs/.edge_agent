@@ -64,8 +64,8 @@ WATCHTOWER_HTTP_API_TOKEN=change-me-in-production
 # =============================================================================
 # HTTP Timeouts (agent → admin communication)
 # =============================================================================
-# ADMIN_CALL_TIMEOUT_MS=10000        # Registration, command acks, health reporting, metrics push
-# ADMIN_DISCOVERY_TIMEOUT_MS=3000    # Admin peer probing during discovery
+# ADMIN_CALL_TIMEOUT_MS=10000         # Registration, command acks, health reporting, metrics push
+# ADMIN_DISCOVERY_TIMEOUT_MS=10000    # Admin peer probing during discovery
 
 # =============================================================================
 # Proxy Server Timeouts

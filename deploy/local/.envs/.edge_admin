@@ -209,6 +209,6 @@ ZOMBIE_ADMIN_CLEANUP_SCHEDULE=*/30 * * * *
 ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES=120
 
 # --- HTTP Timeouts for Agent Communication ---
-# HEALTH_CHECK_TIMEOUT_MS=3000       # Health check pings (every minute, all owned nodes)
-# METRICS_SCRAPE_TIMEOUT_MS=8000     # Metrics scraping from agent exporters
-# COMMAND_DELIVERY_TIMEOUT_MS=10000  # Command delivery to agents
+# HEALTH_CHECK_TIMEOUT_MS=10000       # Health check pings (every minute, all owned nodes)
+# METRICS_SCRAPE_TIMEOUT_MS=10000     # Metrics scraping from agent exporters
+# COMMAND_DELIVERY_TIMEOUT_MS=10000   # Command delivery to agents

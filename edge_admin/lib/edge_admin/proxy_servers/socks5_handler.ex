@@ -318,6 +318,11 @@ defmodule EdgeAdmin.ProxyServers.Socks5Handler do
       {:tcp_error, ^socket, _reason} ->
         send(proxy_pid, :close)
         {:ok, :closed}
+    after
+      Config.recv_timeout() ->
+        send(proxy_pid, :close)
+        transport.close(socket)
+        {:ok, :closed}
     end
   end
 

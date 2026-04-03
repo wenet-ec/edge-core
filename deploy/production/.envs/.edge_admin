@@ -60,7 +60,7 @@ HTTP_PROXY_PORT=43128
 SOCKS5_PROXY_PORT=41080
 
 # Per-operation proxy timeouts (in milliseconds)
-# PROXY_CONNECTION_TIMEOUT_MS=5000    # TCP connect to target host (default: 5s)
+# PROXY_CONNECTION_TIMEOUT_MS=2000    # TCP connect to target host (default: 2s)
 # PROXY_HANDSHAKE_TIMEOUT_MS=10000    # SOCKS5/HTTP proxy handshake (default: 10s)
 # PROXY_READ_TIMEOUT_MS=10000         # Socket read (default: 10s)
 # PROXY_RECV_TIMEOUT_MS=300000        # Forwarding loop inactivity — closes half-open connections (default: 5min)

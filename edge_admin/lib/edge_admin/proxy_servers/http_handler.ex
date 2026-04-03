@@ -324,6 +324,11 @@ defmodule EdgeAdmin.ProxyServers.HttpHandler do
       {:tcp_error, ^socket, _reason} ->
         send(proxy_pid, :close)
         :ok
+    after
+      Config.recv_timeout() ->
+        send(proxy_pid, :close)
+        transport.close(socket)
+        :ok
     end
   end
 

@@ -132,7 +132,7 @@ config :edge_admin, Oban,
 
 # Proxy server per-operation timeouts (in milliseconds)
 config :edge_admin, :proxy_timeouts,
-  connection: get_env("PROXY_CONNECTION_TIMEOUT_MS", :integer, 5_000),
+  connection: get_env("PROXY_CONNECTION_TIMEOUT_MS", :integer, 2_000),
   handshake: get_env("PROXY_HANDSHAKE_TIMEOUT_MS", :integer, 10_000),
   read: get_env("PROXY_READ_TIMEOUT_MS", :integer, 10_000),
   recv: get_env("PROXY_RECV_TIMEOUT_MS", :integer, 300_000)

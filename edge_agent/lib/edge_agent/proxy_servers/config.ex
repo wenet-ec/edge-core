@@ -29,10 +29,10 @@ defmodule EdgeAgent.ProxyServers.Config do
   Returns the TCP connection timeout in milliseconds.
 
   Used when establishing connections to target hosts.
-  Default: 30000ms (30 seconds)
+  Default: 2000ms (2 seconds)
   """
   def connection_timeout do
-    get_timeout(:connection, 30_000)
+    get_timeout(:connection, 2_000)
   end
 
   @doc """

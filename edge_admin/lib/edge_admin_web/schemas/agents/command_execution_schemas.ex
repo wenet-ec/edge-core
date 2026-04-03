@@ -16,9 +16,11 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
       title: "Internal.UpdateCommandExecutionResultRequest",
       description: "Command execution result reported by the agent. All fields are optional.",
       type: :object,
+      additionalProperties: true,
       properties: %{
         command_execution: %Schema{
           type: :object,
+          additionalProperties: true,
           properties: %{
             output: %Schema{type: :string, nullable: true, description: "Command output text"},
             exit_code: %Schema{type: :integer, nullable: true, description: "Process exit code"},

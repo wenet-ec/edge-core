@@ -15,9 +15,11 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
       title: "Internal.NodeRegisterRequest",
       description: "Agent registration payload sent on startup",
       type: :object,
+      additionalProperties: true,
       properties: %{
         node: %Schema{
           type: :object,
+          additionalProperties: true,
           properties: %{
             node_id: %Schema{
               type: :string,
@@ -79,9 +81,11 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
       title: "Internal.NodeHealthCheckRequest",
       description: "Agent health status report",
       type: :object,
+      additionalProperties: true,
       properties: %{
         node: %Schema{
           type: :object,
+          additionalProperties: true,
           properties: %{
             status: %Schema{
               type: :string,

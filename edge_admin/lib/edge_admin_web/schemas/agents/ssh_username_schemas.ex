@@ -15,9 +15,11 @@ defmodule EdgeAdminWeb.Schemas.Agents.SshUsernameSchemas do
       title: "Internal.SshCredentialsVerifyRequest",
       description: "SSH credentials to verify. Provide either password or public_key, not both.",
       type: :object,
+      additionalProperties: true,
       properties: %{
         ssh_username: %Schema{
           type: :object,
+          additionalProperties: true,
           properties: %{
             username: %Schema{type: :string, description: "SSH username"},
             password: %Schema{

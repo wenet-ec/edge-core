@@ -15,9 +15,11 @@ defmodule EdgeAdminWeb.Schemas.Agents.EnrollmentKeySchemas do
       title: "Internal.EnrollmentKeyVerifyRequest",
       description: "Enrollment key to verify before VPN join",
       type: :object,
+      additionalProperties: true,
       properties: %{
         enrollment_key: %Schema{
           type: :object,
+          additionalProperties: true,
           properties: %{
             key: %Schema{type: :string, description: "Enrollment key blob"}
           },

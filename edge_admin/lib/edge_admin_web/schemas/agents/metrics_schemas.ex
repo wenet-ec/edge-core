@@ -15,9 +15,11 @@ defmodule EdgeAdminWeb.Schemas.Agents.MetricsSchemas do
       title: "Internal.MetricsCachePushRequest",
       description: "Metrics payload pushed by agent when VPN is unavailable",
       type: :object,
+      additionalProperties: true,
       properties: %{
         metrics: %Schema{
           type: :object,
+          additionalProperties: true,
           properties: %{
             metrics_type: %Schema{
               type: :string,

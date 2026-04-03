@@ -95,6 +95,7 @@ defmodule Nexmaker.Api.ACLs do
   @spec update(String.t(), map(), keyword()) :: {:ok, map()} | {:error, any()}
   def update(acl_id, attrs, opts \\ []) do
     body = Map.put(attrs, :id, acl_id)
+
     case Api.request(:put, "/api/v1/acls", Keyword.put(opts, :body, body)) do
       {:ok, %{"Response" => acl}} -> {:ok, acl}
       other -> other

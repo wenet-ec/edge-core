@@ -125,6 +125,7 @@ defmodule Nexmaker.Api.AdvancedEgress do
   @spec update(String.t(), map(), keyword()) :: {:ok, map()} | {:error, any()}
   def update(egress_id, attrs, opts \\ []) do
     body = Map.put(attrs, :id, egress_id)
+
     case Api.request(:put, "/api/v1/egress", Keyword.put(opts, :body, body)) do
       {:ok, %{"Response" => egress}} -> {:ok, egress}
       other -> other

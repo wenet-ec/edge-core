@@ -69,5 +69,4 @@ defmodule Nexmaker.Api.Gateways.Ingress do
   def delete(network_name, node_id, opts \\ []) do
     Api.request(:delete, "/api/nodes/#{network_name}/#{node_id}/deleteingress", opts)
   end
-
 end

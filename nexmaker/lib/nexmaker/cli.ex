@@ -229,175 +229,185 @@ defmodule Nexmaker.Cli do
       {:error, :netclient_not_found}
   end
 
-  @doc """
-  Performs a comprehensive health check on the netclient VPN connection.
+  @nodes_json_path "/etc/netclient/nodes.json"
 
-  This is the recommended way to verify netclient health. It checks multiple layers:
-  1. Network membership (via list_networks)
-  2. Peer reachability (via ping_peers, if peers exist)
-  3. Actual connectivity to peers (not just WireGuard handshakes)
+  @doc """
+  Reads the netclient node state directly from /etc/netclient/nodes.json.
+
+  This is the fast alternative to `list_networks/0` — no subprocess spawn,
+  no geo lookup, no WireGuard interface creation. The file is maintained by
+  the netclient daemon and updated on every network state change (peer joins,
+  reconnects, MQTT updates from Netmaker).
+
+  ## Returns
+    - `{:ok, [network_info]}` - List of network info maps (same shape as list_networks/0)
+    - `{:error, :not_found}` - nodes.json does not exist (netclient not enrolled)
+    - `{:error, reason}` - Failed to read or parse the file
+
+  ## Examples
+
+      {:ok, networks} = Nexmaker.Cli.read_nodes()
+      # => [%{"network" => "cluster-default", "connected" => true, ...}]
+  """
+  @spec read_nodes() :: {:ok, [map()]} | {:error, any()}
+  def read_nodes do
+    path = Application.get_env(:nexmaker, :nodes_json_path, @nodes_json_path)
+
+    case File.read(path) do
+      {:ok, contents} ->
+        case Jason.decode(contents) do
+          {:ok, nodes_map} when is_map(nodes_map) ->
+            networks =
+              Enum.map(nodes_map, fn {_key, node} ->
+                ip = get_in(node, ["address", "IP"]) || ""
+                mask_b64 = get_in(node, ["address", "Mask"])
+                ip6 = get_in(node, ["address6", "IP"]) || ""
+
+                ipv4_addr =
+                  if ip != "" && mask_b64 do
+                    prefix_len =
+                      mask_b64 |> Base.decode64!() |> :binary.bin_to_list() |> count_bits()
+
+                    "#{ip}/#{prefix_len}"
+                  else
+                    ""
+                  end
+
+                %{
+                  "network" => node["network"],
+                  "node_id" => node["id"],
+                  "connected" => node["connected"] == true,
+                  "ipv4_addr" => ipv4_addr,
+                  "ipv6_addr" => ip6
+                }
+              end)
+              |> Enum.reject(&is_nil(&1["network"]))
+
+            {:ok, networks}
+
+          {:ok, _} ->
+            {:ok, []}
+
+          {:error, reason} ->
+            {:error, {:json_parse_error, reason}}
+        end
+
+      {:error, :enoent} ->
+        {:error, :not_found}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  # Count set bits in a netmask byte list (e.g. [255, 255, 255, 0] -> 24)
+  defp count_bits(bytes) when is_list(bytes) do
+    Enum.reduce(bytes, 0, fn byte, acc ->
+      acc + count_byte_bits(byte, 0)
+    end)
+  end
+
+  defp count_byte_bits(0, acc), do: acc
+  defp count_byte_bits(n, acc), do: count_byte_bits(n &&& n - 1, acc + 1)
+
+  @doc """
+  Checks whether the netmaker WireGuard interface is up at the OS level.
+
+  Runs `wg show netmaker` — a kernel ioctl, no network I/O, completes in <5ms.
+  This is ground truth: the interface either exists in the kernel or it doesn't,
+  regardless of what nodes.json says.
+
+  ## Returns
+    - `true` - Interface exists and WireGuard is active
+    - `false` - Interface is missing or WireGuard is not running
+  """
+  @spec wireguard_interface_up?() :: boolean()
+  def wireguard_interface_up? do
+    case System.cmd("wg", ["show", "netmaker"], stderr_to_stdout: true) do
+      {_output, 0} -> true
+      _ -> false
+    end
+  rescue
+    _ -> false
+  end
+
+  @doc """
+  Performs a fast health check on the netclient VPN connection.
+
+  Replaces the previous `netclient list`-based approach which triggered a geo
+  lookup HTTP call (ipapi.is → cloudflare → ipinfo.io) on every invocation due
+  to a regression introduced in netclient v1.5.0 (NM-214).
+
+  Instead, this reads /etc/netclient/nodes.json directly (maintained by the
+  netclient daemon) and verifies the WireGuard interface is up via `wg show`.
 
   ## Health Check Levels
 
-  - **`:healthy`** - All checks passed
-    - Connected to at least one network
-    - If peers exist, at least one peer is reachable via ping
-
-  - **`:degraded`** - Network connected but peer issues
-    - On network but peers check failed (non-critical)
-    - Or peers exist but none are reachable
-
-  - **`:unhealthy`** - Critical failure
-    - Not connected to any network
-    - Unable to determine connection status
+  - **`:healthy`** - nodes.json has connected networks AND WireGuard interface is up
+  - **`:degraded`** - nodes.json has networks but WireGuard interface is missing
+    (daemon may be restarting)
+  - **`:unhealthy`** - No networks in nodes.json or file doesn't exist
 
   ## Returns
     - `{:ok, :healthy, info}` - All checks passed
     - `{:ok, :degraded, info}` - Connected but with warnings
     - `{:ok, :unhealthy, info}` - Critical issues detected
-    - `{:error, reason}` - Health check failed to run
 
   The `info` map contains:
-    - `:networks` - List of connected networks
-    - `:peer_count` - Number of peers discovered via ping (if available)
-    - `:connected_count` - Number of peers actually reachable
+    - `:networks` - List of connected network names
     - `:warnings` - List of warning messages
     - `:timestamp` - When check was performed
 
-  ## Options
-    - `:skip_peers` - Skip peer health check (default: true)
-    - `:require_connectivity` - Fail if no peers are reachable (default: false)
-
   ## Examples
 
-      # Basic health check (fast, skips peers by default)
-      {:ok, :healthy, %{networks: ["cluster-default"], peer_count: nil}} =
-        Nexmaker.Cli.health_check()
-
-      # Full health check with peer connectivity diagnostics
-      {:ok, :healthy, _info} = Nexmaker.Cli.health_check(skip_peers: false)
-
-      # Require peer connectivity (strict mode)
-      {:ok, :degraded, %{warnings: ["No peers reachable"]}} =
-        Nexmaker.Cli.health_check(require_connectivity: true)
+      {:ok, :healthy, %{networks: ["cluster-default"]}} = Nexmaker.Cli.health_check()
   """
   @spec health_check(keyword()) ::
           {:ok, :healthy | :degraded | :unhealthy, map()} | {:error, any()}
-  def health_check(opts \\ []) do
-    skip_peers = Keyword.get(opts, :skip_peers, true)
-    require_connectivity = Keyword.get(opts, :require_connectivity, false)
-
+  def health_check(_opts \\ []) do
     timestamp = DateTime.utc_now()
 
-    # Layer 1: Check network membership (required)
-    case list_networks() do
+    case read_nodes() do
       {:ok, networks} when is_list(networks) and length(networks) > 0 ->
-        # Connected to at least one network
-        if skip_peers do
+        network_names = Enum.map(networks, & &1["network"])
+
+        if wireguard_interface_up?() do
           {:ok, :healthy,
            %{
-             networks: Enum.map(networks, & &1["network"]),
-             peer_count: nil,
-             connected_count: nil,
+             networks: network_names,
              warnings: [],
              timestamp: timestamp
            }}
         else
-          # Layer 2: Check peer connectivity via ping
-          check_peer_health(networks, require_connectivity, timestamp)
+          {:ok, :degraded,
+           %{
+             networks: network_names,
+             warnings: ["WireGuard interface netmaker is not up"],
+             timestamp: timestamp
+           }}
         end
 
       {:ok, []} ->
-        # Not connected to any network - unhealthy
         {:ok, :unhealthy,
          %{
            networks: [],
-           peer_count: nil,
-           connected_count: nil,
-           warnings: ["Not connected to any network"],
+           warnings: ["Not enrolled in any network (nodes.json is empty)"],
+           timestamp: timestamp
+         }}
+
+      {:error, :not_found} ->
+        {:ok, :unhealthy,
+         %{
+           networks: [],
+           warnings: ["nodes.json not found — netclient not enrolled"],
            timestamp: timestamp
          }}
 
       {:error, reason} ->
-        # Failed to determine status - unhealthy
         {:ok, :unhealthy,
          %{
            networks: [],
-           peer_count: nil,
-           connected_count: nil,
-           warnings: ["Failed to list networks: #{inspect(reason)}"],
-           timestamp: timestamp
-         }}
-    end
-  end
-
-  defp check_peer_health(networks, require_connectivity, timestamp) do
-    network_names = Enum.map(networks, & &1["network"])
-
-    case ping_peers() do
-      {:ok, ping_data} when map_size(ping_data) > 0 ->
-        # Count total peers and those actually reachable via ping
-        {total_peers, connected_count} =
-          Enum.reduce(ping_data, {0, 0}, fn {_network, peers}, {total, conn_count} ->
-            peer_count = length(peers)
-            connected = Enum.count(peers, fn peer -> peer["connected"] end)
-            {total + peer_count, conn_count + connected}
-          end)
-
-        cond do
-          connected_count > 0 ->
-            # Have reachable peers - healthy
-            {:ok, :healthy,
-             %{
-               networks: network_names,
-               peer_count: total_peers,
-               connected_count: connected_count,
-               warnings: [],
-               timestamp: timestamp
-             }}
-
-          require_connectivity ->
-            # Peers exist but none reachable and connectivity is required - degraded
-            {:ok, :degraded,
-             %{
-               networks: network_names,
-               peer_count: total_peers,
-               connected_count: 0,
-               warnings: ["Peers exist but none are reachable"],
-               timestamp: timestamp
-             }}
-
-          true ->
-            # No connectivity but not required - still healthy (peers might be offline)
-            {:ok, :healthy,
-             %{
-               networks: network_names,
-               peer_count: total_peers,
-               connected_count: 0,
-               warnings: ["Peers exist but no connectivity yet"],
-               timestamp: timestamp
-             }}
-        end
-
-      {:ok, _} ->
-        # No peers yet - healthy (first/only node on network)
-        {:ok, :healthy,
-         %{
-           networks: network_names,
-           peer_count: 0,
-           connected_count: 0,
-           warnings: [],
-           timestamp: timestamp
-         }}
-
-      {:error, reason} ->
-        # Peer check failed but we have networks - degraded
-        {:ok, :degraded,
-         %{
-           networks: network_names,
-           peer_count: nil,
-           connected_count: nil,
-           warnings: ["Failed to ping peers: #{inspect(reason)}"],
+           warnings: ["Failed to read nodes.json: #{inspect(reason)}"],
            timestamp: timestamp
          }}
     end

@@ -43,7 +43,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
         },
         status: %Schema{
           type: :string,
-          enum: ["pending", "sent", "completed"],
+          enum: ["pending", "sent", "completed", "cancelled"],
           description: "Current execution status"
         },
         command_text: %Schema{
@@ -76,6 +76,12 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
           format: :"date-time",
           nullable: true,
           description: "When the command execution was completed"
+        },
+        cancelled_at: %Schema{
+          type: :string,
+          format: :"date-time",
+          nullable: true,
+          description: "When the command execution was cancelled"
         },
         inserted_at: %Schema{
           type: :string,

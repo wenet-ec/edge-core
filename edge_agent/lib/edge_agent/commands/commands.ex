@@ -284,6 +284,7 @@ defmodule EdgeAgent.Commands do
     cond do
       exit_code == 0 -> :success
       exit_code == 124 -> :timeout
+      exit_code == 143 -> :cancelled
       exit_code > 0 -> :failure
       true -> :unknown
     end
@@ -382,10 +383,11 @@ defmodule EdgeAgent.Commands do
           delete_execution_after_report(execution)
           {:cont, :ok}
 
-        {:error, {:http_error, status, body}} when status in [404, 422] ->
+        {:error, {:http_error, status, body}} when status in [404, 409, 422] ->
           # 404: Execution deleted on admin side
-          # 422: Validation error (execution already completed, can't be updated)
-          # Discard the execution since it can't be reported anymore
+          # 409: Execution already finalized (conflict) — admin has the final state
+          # 422: Validation error — execution not in an updatable state
+          # All three mean the admin will never accept this result — discard locally
           Logger.warning(
             "Admin rejected update for execution #{execution.id} with HTTP #{status}: #{inspect(body)}. Discarding execution."
           )
@@ -590,6 +592,13 @@ defmodule EdgeAgent.Commands do
                 Logger.debug("Acknowledged command execution: #{command["id"]}")
                 # Then store locally
                 store_command_execution_locally(command, node_id)
+
+              {:error, {:http_error, status, _body}} when status in [404, 409] ->
+                # 404: execution deleted on admin side
+                # 409: execution was cancelled before we could acknowledge it — discard
+                Logger.debug(
+                  "Discarding command execution #{command["id"]} — admin returned HTTP #{status} (deleted or cancelled)"
+                )
 
               {:error, reason} ->
                 Logger.warning(

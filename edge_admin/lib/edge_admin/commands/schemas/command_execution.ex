@@ -7,8 +7,20 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
 
   @derive {
     Flop.Schema,
-    filterable: [:status, :target_all, :exit_code, :command_id, :node_id, :output, :inserted_at, :updated_at],
-    sortable: [:status, :exit_code, :sent_at, :completed_at, :inserted_at, :updated_at],
+    filterable: [
+      :status,
+      :target_all,
+      :exit_code,
+      :command_id,
+      :node_id,
+      :output,
+      :inserted_at,
+      :updated_at,
+      :sent_at,
+      :completed_at,
+      :cancelled_at
+    ],
+    sortable: [:status, :exit_code, :sent_at, :completed_at, :cancelled_at, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],
       order_directions: [:desc]
@@ -23,6 +35,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
     field(:target_all, :boolean, default: false)
     field(:sent_at, :utc_datetime)
     field(:completed_at, :utc_datetime)
+    field(:cancelled_at, :utc_datetime)
 
     field(:command_text, :string, virtual: true)
     field(:timeout, :integer, virtual: true)
@@ -46,12 +59,13 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
       :exit_code,
       :sent_at,
       :completed_at,
+      :cancelled_at,
       :command_id,
       :node_id,
       :cluster_id
     ])
     |> validate_required([:status, :node_id])
-    |> validate_inclusion(:status, ["pending", "sent", "completed"])
+    |> validate_inclusion(:status, ["pending", "sent", "completed", "cancelled"])
     |> foreign_key_constraint(:command_id)
     |> foreign_key_constraint(:node_id)
     |> foreign_key_constraint(:cluster_id)

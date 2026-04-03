@@ -46,6 +46,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSON do
       exit_code: command_execution.exit_code,
       sent_at: command_execution.sent_at,
       completed_at: command_execution.completed_at,
+      cancelled_at: command_execution.cancelled_at,
       inserted_at: command_execution.inserted_at,
       updated_at: command_execution.updated_at
     }

@@ -1030,8 +1030,22 @@ defmodule EdgeAdmin.Commands do
   def update_command_execution_result(execution, params) do
     with :ok <- Checks.UpdateExecutionResultCheck.check(execution),
          {:ok, attrs} <- Forms.UpdateCommandExecutionResultForm.changeset(params) do
-      # Hardcode status to "completed" since form validated current status is "sent" or "completed" (race condition)
-      attrs = Map.put(attrs, "status", "completed")
+      # Determine terminal status from exit code — agent is the source of truth.
+      # exit_code 143 (SIGTERM) means the agent honoured a cancellation request.
+      # Everything else is a normal completion regardless of any prior cancel request.
+      terminal_status = if attrs["exit_code"] == 143, do: "cancelled", else: "completed"
+
+      attrs =
+        attrs
+        |> Map.put("status", terminal_status)
+        |> then(fn a ->
+          if terminal_status == "cancelled" do
+            Map.put(a, "cancelled_at", DateTime.truncate(DateTime.utc_now(), :second))
+          else
+            a
+          end
+        end)
+
       result = update_command_execution(execution, attrs)
 
       # Emit completion telemetry
@@ -1049,6 +1063,8 @@ defmodule EdgeAdmin.Commands do
           exit_code_category =
             cond do
               updated_execution.exit_code == 0 -> :success
+              updated_execution.exit_code == 143 -> :cancelled
+              updated_execution.exit_code == 124 -> :timeout
               updated_execution.exit_code > 0 -> :failure
               true -> :unknown
             end
@@ -1088,13 +1104,11 @@ defmodule EdgeAdmin.Commands do
     with :ok <- Checks.CancelExecutionCheck.check(execution) do
       case execution.status do
         "pending" ->
-          # Cancel immediately in DB (use regular update, not agent result update)
+          # Cancel immediately in DB — command never ran, no output or exit code
           {:ok, _updated} =
             update_command_execution(execution, %{
-              status: "completed",
-              output: "Command cancelled",
-              exit_code: 143,
-              completed_at: DateTime.utc_now()
+              status: "cancelled",
+              cancelled_at: DateTime.utc_now()
             })
 
           {:ok, %{result: "execution cancelled"}}

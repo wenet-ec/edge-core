@@ -58,7 +58,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
         },
         status: %Schema{
           type: :string,
-          enum: ["pending", "sent", "completed"],
+          enum: ["pending", "sent", "completed", "cancelled"],
           description: "Current execution status"
         },
         inserted_at: %Schema{type: :string, format: :"date-time", description: "When the execution was created"}

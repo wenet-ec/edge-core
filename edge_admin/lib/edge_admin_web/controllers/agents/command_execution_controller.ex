@@ -22,8 +22,8 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
     parameters: [
       status: [
         in: :query,
-        description: "Filter by status: sent, pending, or completed",
-        schema: %OpenApiSpex.Schema{type: :string, enum: ["sent", "pending", "completed"]},
+        description: "Filter by status: sent, pending, completed, or cancelled",
+        schema: %OpenApiSpex.Schema{type: :string, enum: ["sent", "pending", "completed", "cancelled"]},
         required: true
       ],
       page: [

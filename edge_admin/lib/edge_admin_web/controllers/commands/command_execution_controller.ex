@@ -45,7 +45,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
       status: [
         in: :query,
         description: "Filter by execution status",
-        schema: %OpenApiSpex.Schema{type: :string, enum: ["pending", "sent", "completed"]}
+        schema: %OpenApiSpex.Schema{type: :string, enum: ["pending", "sent", "completed", "cancelled"]}
       ],
       target_all: [
         in: :query,
@@ -125,6 +125,72 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
             %OpenApiSpex.Schema{type: :string, format: :date}
           ]
         }
+      ],
+      sent_at__gte: [
+        in: :query,
+        description:
+          "Filter command executions sent after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+        schema: %OpenApiSpex.Schema{
+          anyOf: [
+            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
+            %OpenApiSpex.Schema{type: :string, format: :date}
+          ]
+        }
+      ],
+      sent_at__lte: [
+        in: :query,
+        description:
+          "Filter command executions sent before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+        schema: %OpenApiSpex.Schema{
+          anyOf: [
+            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
+            %OpenApiSpex.Schema{type: :string, format: :date}
+          ]
+        }
+      ],
+      completed_at__gte: [
+        in: :query,
+        description:
+          "Filter command executions completed after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+        schema: %OpenApiSpex.Schema{
+          anyOf: [
+            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
+            %OpenApiSpex.Schema{type: :string, format: :date}
+          ]
+        }
+      ],
+      completed_at__lte: [
+        in: :query,
+        description:
+          "Filter command executions completed before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+        schema: %OpenApiSpex.Schema{
+          anyOf: [
+            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
+            %OpenApiSpex.Schema{type: :string, format: :date}
+          ]
+        }
+      ],
+      cancelled_at__gte: [
+        in: :query,
+        description:
+          "Filter command executions cancelled after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+        schema: %OpenApiSpex.Schema{
+          anyOf: [
+            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
+            %OpenApiSpex.Schema{type: :string, format: :date}
+          ]
+        }
+      ],
+      cancelled_at__lte: [
+        in: :query,
+        description:
+          "Filter command executions cancelled before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+        schema: %OpenApiSpex.Schema{
+          anyOf: [
+            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
+            %OpenApiSpex.Schema{type: :string, format: :date}
+          ]
+        }
       ]
     ],
     responses: %{
@@ -169,7 +235,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
     description: """
     Delete a specific command execution.
 
-    Only completed executions can be deleted. Attempting to delete pending or sent executions will return 409.
+    Only completed or cancelled executions can be deleted. Attempting to delete pending or sent executions will return 409.
     """,
     parameters: [
       id: [
@@ -198,11 +264,11 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
     description: """
     Attempts to cancel a command execution. Behavior depends on current status:
 
-    - `pending`: Immediately cancelled in database with status "completed" and output "Command cancelled"
-    - `sent`: Sends cancellation request to agent (best-effort, async)
-    - `completed`: Returns 422 validation error (cannot cancel completed execution)
+    - `pending`: Immediately marked `cancelled` in the database (command never ran).
+    - `sent`: Sends cancellation request to agent (best-effort, async). The agent is the source of truth — if it already ran the command, it reports back the real result and the execution is marked `completed`. If the agent honoured the cancellation (exit code 143), it is marked `cancelled`.
+    - `completed` / `cancelled`: Returns 409 conflict (already terminal).
 
-    Returns 200 if cancellation was initiated. For "sent" executions, check status later to confirm cancellation.
+    Returns 200 if cancellation was initiated. For `sent` executions, poll status to confirm the outcome.
     """,
     parameters: [
       id: [

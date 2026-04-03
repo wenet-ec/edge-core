@@ -15,6 +15,7 @@ defmodule EdgeAdmin.Repo.Migrations.CreateCommandExecutions do
       add :target_all, :boolean, null: false, default: false
       add :sent_at, :utc_datetime
       add :completed_at, :utc_datetime
+      add :cancelled_at, :utc_datetime
 
       timestamps(type: :utc_datetime)
     end
@@ -28,5 +29,6 @@ defmodule EdgeAdmin.Repo.Migrations.CreateCommandExecutions do
     create index(:command_executions, [:status])
     create index(:command_executions, [:sent_at])
     create index(:command_executions, [:completed_at])
+    create index(:command_executions, [:cancelled_at])
   end
 end

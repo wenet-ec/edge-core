@@ -10,9 +10,11 @@ defmodule EdgeAdmin.Commands.Checks.DeleteExecutionCheck do
   alias EdgeAdmin.Commands.Schemas.CommandExecution
 
   @spec check(CommandExecution.t()) :: :ok | {:error, {:conflict, String.t()}}
-  def check(%CommandExecution{status: "completed"}), do: :ok
+  def check(%CommandExecution{status: status}) when status in ["completed", "cancelled"], do: :ok
 
   def check(%CommandExecution{status: status}) do
-    {:error, {:conflict, "cannot delete execution with status '#{status}' - only completed executions can be deleted"}}
+    {:error,
+     {:conflict,
+      "cannot delete execution with status '#{status}' - only completed or cancelled executions can be deleted"}}
   end
 end

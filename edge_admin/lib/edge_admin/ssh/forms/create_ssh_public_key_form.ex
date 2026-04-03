@@ -37,6 +37,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyForm do
     %__MODULE__{}
     |> cast(attrs, [:key_name, :public_key])
     |> validate_required([:key_name, :public_key])
+    |> validate_length(:key_name, min: 1, max: 255)
     |> validate_ssh_public_key_format()
     |> apply_action(:insert)
     |> case do

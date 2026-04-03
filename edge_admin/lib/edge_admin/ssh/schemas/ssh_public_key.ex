@@ -42,6 +42,7 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
     ssh_public_key
     |> cast(attrs, [:public_key, :key_name, :ssh_username_id])
     |> validate_required([:public_key, :key_name, :ssh_username_id])
+    |> validate_length(:key_name, min: 1, max: 255)
     |> validate_ssh_public_key_format()
     |> validate_ssh_key_algorithm()
     |> validate_base64_key_data()

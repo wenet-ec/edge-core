@@ -39,6 +39,10 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
     |> cast(attrs, [:username, :password_hash, :node_id])
     |> validate_required([:username, :node_id])
     |> validate_length(:username, min: 3, max: 32)
+    |> validate_format(:username, ~r/^[a-z_][a-z0-9_-]*$/,
+      message:
+        "must start with a letter or underscore and contain only lowercase letters, digits, hyphens, or underscores"
+    )
     |> unique_constraint([:username, :node_id], name: :ssh_usernames_node_id_username_index)
     |> foreign_key_constraint(:node_id)
   end

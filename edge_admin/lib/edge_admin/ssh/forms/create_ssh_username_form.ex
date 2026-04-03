@@ -67,6 +67,10 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameForm do
     |> cast(attrs, [:username, :password])
     |> validate_required([:username])
     |> validate_length(:username, min: 3, max: 32)
+    |> validate_format(:username, ~r/^[a-z_][a-z0-9_-]*$/,
+      message:
+        "must start with a letter or underscore and contain only lowercase letters, digits, hyphens, or underscores"
+    )
     |> validate_length(:password, min: 12, max: 128)
     |> apply_action(:insert)
     |> case do

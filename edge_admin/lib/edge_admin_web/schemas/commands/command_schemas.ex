@@ -121,12 +121,14 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
           properties: %{
             command_text: %Schema{
               type: :string,
+              minLength: 1,
               description: "Multi-line shell script/commands to execute",
               example: "ABC=value\necho $ABC\nsystemctl restart nginx"
             },
             timeout: %Schema{
               type: :integer,
               nullable: true,
+              minimum: 1,
               description: "Command timeout in milliseconds (optional, null or omitted means no timeout, must be > 0)",
               example: 30_000
             },

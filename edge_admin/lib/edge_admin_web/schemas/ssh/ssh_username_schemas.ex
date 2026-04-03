@@ -137,8 +137,10 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
           properties: %{
             username: %Schema{
               type: :string,
-              description: "SSH username for node access (3-32 characters)",
+              description:
+                "SSH username for node access (3-32 characters, must start with letter or underscore, lowercase letters/digits/hyphens/underscores only)",
               example: "admin",
+              pattern: "^[a-z_][a-z0-9_-]*$",
               minLength: 3,
               maxLength: 32
             },

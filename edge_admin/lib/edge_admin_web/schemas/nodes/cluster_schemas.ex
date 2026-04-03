@@ -250,6 +250,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
             ipv4_range: %Schema{
               type: :string,
               nullable: true,
+              pattern: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\/\\d{1,2}$",
               description: "IPv4 CIDR range (auto-generated if not provided)",
               example: "100.64.0.0/24"
             },

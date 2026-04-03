@@ -87,16 +87,16 @@ updates:
       - "docker"
       - "vpn"
 
-  # Docker base images - edge_vpn_proxy
+  # Docker base images - edge_relay
   - package-ecosystem: "docker"
-    directory: "/deploy/production/compose/edge_vpn_proxy"
+    directory: "/deploy/production/compose/edge_relay"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
       - "docker"
-      - "vpn"
+      - "relay"
 
   # Docker base images - local edge_admin
   - package-ecosystem: "docker"

@@ -5,9 +5,15 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "deploy/production/compose/edge_relay/Dockerfile"
+      - "deploy/production/compose/edge_relay/entrypoint"
   pull_request:
     branches:
       - "**"
+    paths:
+      - "deploy/production/compose/edge_relay/Dockerfile"
+      - "deploy/production/compose/edge_relay/entrypoint"
   workflow_dispatch:
 
 concurrency:

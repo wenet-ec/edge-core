@@ -5,9 +5,43 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "edge_admin/lib/**"
+      - "edge_admin/config/**"
+      - "edge_admin/priv/**"
+      - "edge_admin/rel/**"
+      - "edge_admin/mix.exs"
+      - "edge_admin/mix.lock"
+      - "edge_agent/lib/**"
+      - "edge_agent/config/**"
+      - "edge_agent/priv/**"
+      - "edge_agent/rel/**"
+      - "edge_agent/mix.exs"
+      - "edge_agent/mix.lock"
+      - "nexmaker/**"
+      - "deploy/production/compose/edge_admin/**"
+      - "deploy/production/compose/edge_agent/**"
+      - ".github/workflows/production.yml"
   pull_request:
     branches:
       - "**"
+    paths:
+      - "edge_admin/lib/**"
+      - "edge_admin/config/**"
+      - "edge_admin/priv/**"
+      - "edge_admin/rel/**"
+      - "edge_admin/mix.exs"
+      - "edge_admin/mix.lock"
+      - "edge_agent/lib/**"
+      - "edge_agent/config/**"
+      - "edge_agent/priv/**"
+      - "edge_agent/rel/**"
+      - "edge_agent/mix.exs"
+      - "edge_agent/mix.lock"
+      - "nexmaker/**"
+      - "deploy/production/compose/edge_admin/**"
+      - "deploy/production/compose/edge_agent/**"
+      - ".github/workflows/production.yml"
   workflow_dispatch:
 
 concurrency:

@@ -120,11 +120,11 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
     }
   )
 
-  def update_result(conn, %{id: id} = params) do
+  def update_result(conn, %{id: id}) do
     with {:ok, execution} <- Commands.get_command_execution(id),
          :ok <- CommandExecutionPolicy.authorize({:update, conn.assigns.current_node, execution}),
          {:ok, updated_execution} <-
-           Commands.update_command_execution_result(execution, Map.merge(params, conn.body_params)) do
+           Commands.update_command_execution_result(execution, conn.body_params) do
       render(conn, :show, command_execution: updated_execution)
     end
   end

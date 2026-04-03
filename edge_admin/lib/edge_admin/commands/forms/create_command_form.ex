@@ -33,15 +33,21 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
   def changeset(%{command: command_attrs}) when is_map(command_attrs), do: changeset(command_attrs)
 
   def changeset(attrs) when is_map(attrs) do
-    # Extract targeting nested map if present (handle both string and atom keys)
-    targeting = Map.get(attrs, :targeting) || Map.get(attrs, "targeting", %{})
+    # Normalize to string keys so Ecto never sees a mixed-key map
+    attrs = Map.new(attrs, fn {k, v} -> {to_string(k), v} end)
+
+    # Extract targeting nested map if present (now always string keys)
+    targeting = Map.get(attrs, "targeting", %{})
+
+    # Normalize targeting keys too (may come in with atom keys from OpenApiSpex)
+    targeting = Map.new(targeting, fn {k, v} -> {to_string(k), v} end)
 
     # Flatten targeting into top-level fields for validation
     flattened_attrs =
       attrs
-      |> Map.put("targeting_type", Map.get(targeting, :type) || Map.get(targeting, "type"))
-      |> Map.put("node_ids", Map.get(targeting, :node_ids) || Map.get(targeting, "node_ids"))
-      |> Map.put("cluster_names", Map.get(targeting, :cluster_names) || Map.get(targeting, "cluster_names"))
+      |> Map.put("targeting_type", Map.get(targeting, "type"))
+      |> Map.put("node_ids", Map.get(targeting, "node_ids"))
+      |> Map.put("cluster_names", Map.get(targeting, "cluster_names"))
 
     %__MODULE__{}
     |> cast(flattened_attrs, [:command_text, :timeout, :targeting_type, :node_ids, :cluster_names])
@@ -123,8 +129,8 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
       |> Map.new()
 
-    # Get original targeting to preserve all fields (handle both string and atom keys)
-    original_targeting = Map.get(original_attrs, :targeting) || Map.get(original_attrs, "targeting", %{})
+    # original_attrs is already normalized to string keys by changeset/1
+    original_targeting = Map.get(original_attrs, "targeting", %{})
 
     # Build base targeting with validated fields
     base_targeting =

@@ -405,7 +405,6 @@ defmodule EdgeAgent.Commands do
 
   defp build_report_params(execution) do
     %{
-      status: execution.status,
       output: execution.output,
       exit_code: execution.exit_code,
       completed_at: execution.completed_at && DateTime.to_iso8601(execution.completed_at)

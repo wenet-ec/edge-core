@@ -30,21 +30,18 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
   - `{:ok, attrs}` - Validated and normalized attributes as a map with string keys
   - `{:error, changeset}` - Validation errors
   """
-  def changeset(%{"command" => command_attrs}) when is_map(command_attrs) do
-    # Unwrap command
-    changeset(command_attrs)
-  end
+  def changeset(%{command: command_attrs}) when is_map(command_attrs), do: changeset(command_attrs)
 
   def changeset(attrs) when is_map(attrs) do
-    # Extract targeting nested map if present
-    targeting = Map.get(attrs, "targeting", %{})
+    # Extract targeting nested map if present (handle both string and atom keys)
+    targeting = Map.get(attrs, :targeting) || Map.get(attrs, "targeting", %{})
 
     # Flatten targeting into top-level fields for validation
     flattened_attrs =
       attrs
-      |> Map.put("targeting_type", Map.get(targeting, "type"))
-      |> Map.put("node_ids", Map.get(targeting, "node_ids"))
-      |> Map.put("cluster_names", Map.get(targeting, "cluster_names"))
+      |> Map.put("targeting_type", Map.get(targeting, :type) || Map.get(targeting, "type"))
+      |> Map.put("node_ids", Map.get(targeting, :node_ids) || Map.get(targeting, "node_ids"))
+      |> Map.put("cluster_names", Map.get(targeting, :cluster_names) || Map.get(targeting, "cluster_names"))
 
     %__MODULE__{}
     |> cast(flattened_attrs, [:command_text, :timeout, :targeting_type, :node_ids, :cluster_names])
@@ -126,8 +123,8 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
       |> Map.new()
 
-    # Get original targeting to preserve all fields
-    original_targeting = Map.get(original_attrs, "targeting", %{})
+    # Get original targeting to preserve all fields (handle both string and atom keys)
+    original_targeting = Map.get(original_attrs, :targeting) || Map.get(original_attrs, "targeting", %{})
 
     # Build base targeting with validated fields
     base_targeting =

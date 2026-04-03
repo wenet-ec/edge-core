@@ -9,6 +9,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
+  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :show, :delete, :cancel]
 
   tags(["Commands.CommandExecution"])
@@ -129,7 +130,8 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
     responses: %{
       200 =>
         {"Paginated list of command executions", "application/json",
-         CommandExecutionSchemas.CommandExecutionPaginatedResponse}
+         CommandExecutionSchemas.CommandExecutionPaginatedResponse},
+      422 => {"Invalid query parameters", "application/json", OpenApiSpex.JsonErrorResponse}
     }
   )
 
@@ -151,11 +153,12 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
     ],
     responses: %{
       200 => {"Command execution details", "application/json", CommandExecutionSchemas.CommandExecutionSingleResponse},
-      404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse}
+      404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse},
+      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
     }
   )
 
-  def show(conn, %{"id" => id}) do
+  def show(conn, %{id: id}) do
     with {:ok, command_execution} <- Commands.get_command_execution(id) do
       render(conn, :show, command_execution: command_execution)
     end
@@ -178,11 +181,12 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
     responses: %{
       204 => {"Command execution deleted successfully", "", nil},
       404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse},
-      409 => {"Cannot delete non-completed execution", "application/json", CommonSchemas.ConflictResponse}
+      409 => {"Cannot delete non-completed execution", "application/json", CommonSchemas.ConflictResponse},
+      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
     }
   )
 
-  def delete(conn, %{"id" => id}) do
+  def delete(conn, %{id: id}) do
     with {:ok, command_execution} <- Commands.get_command_execution(id),
          {:ok, _command_execution} <- Commands.delete_command_execution(command_execution) do
       send_resp(conn, :no_content, "")
@@ -217,7 +221,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
     }
   )
 
-  def cancel(conn, %{"id" => id}) do
+  def cancel(conn, %{id: id}) do
     with {:ok, execution} <- Commands.get_command_execution(id),
          {:ok, result} <- Commands.cancel_command_execution(execution) do
       render(conn, :cancel, result: result)

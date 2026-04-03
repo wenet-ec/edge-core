@@ -422,7 +422,7 @@ defmodule EdgeAdmin.Nodes do
   - `{:error, changeset}` - Validation failed
   """
   @spec update_cluster(Cluster.t(), map()) ::
-          {:ok, Cluster.t()} | {:error, Ecto.Changeset.t()} | {:error, {:unprocessable, String.t()}}
+          {:ok, Cluster.t()} | {:error, Ecto.Changeset.t()}
   def update_cluster(%Cluster{} = cluster, params) do
     with {:ok, attrs} <- Forms.UpdateClusterForm.changeset(params),
          :ok <- Checks.UpdateClusterCheck.check(cluster, Map.get(attrs, "node_limit")),
@@ -625,7 +625,7 @@ defmodule EdgeAdmin.Nodes do
   - `{:error, changeset}` - Validation failed
   """
   @spec change_node_cluster(Node.t(), map()) ::
-          {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, {:unprocessable, String.t()}}
+          {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
   def change_node_cluster(%Node{} = node, params) do
     with {:ok, new_cluster_name} <- Forms.ChangeNodeClusterForm.changeset(params),
          {:ok, new_cluster} <- get_cluster(new_cluster_name),

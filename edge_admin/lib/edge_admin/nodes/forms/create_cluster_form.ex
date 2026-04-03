@@ -14,10 +14,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
     field(:node_limit, :integer)
   end
 
-  def changeset(%{"cluster" => cluster_attrs}) when is_map(cluster_attrs) do
-    # Unwrap cluster
-    changeset(cluster_attrs)
-  end
+  def changeset(%{cluster: cluster_attrs}) when is_map(cluster_attrs), do: changeset(cluster_attrs)
 
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}

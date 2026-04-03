@@ -11,6 +11,7 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
+  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
   plug DegradedMode, :block when action in [:create]
   plug DegradedMode, :allow when action in [:index, :show, :delete]
 
@@ -97,7 +98,8 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
     responses: %{
       200 =>
         {"Paginated list of self-update requests", "application/json",
-         SelfUpdateRequestSchemas.SelfUpdateRequestPaginatedResponse}
+         SelfUpdateRequestSchemas.SelfUpdateRequestPaginatedResponse},
+      422 => {"Invalid query parameters", "application/json", OpenApiSpex.JsonErrorResponse}
     }
   )
 
@@ -133,7 +135,8 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
   )
 
   def create(conn, params) do
-    with {:ok, %SelfUpdateRequest{} = request} <- SelfUpdates.create_self_update_request(params) do
+    with {:ok, %SelfUpdateRequest{} = request} <-
+           SelfUpdates.create_self_update_request(Map.merge(params, conn.body_params)) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/v1/self_update_requests/#{request.id}")
@@ -154,11 +157,12 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
     responses: %{
       200 =>
         {"Self-update request details", "application/json", SelfUpdateRequestSchemas.SelfUpdateRequestSingleResponse},
-      404 => {"Self-update request not found", "application/json", CommonSchemas.NotFoundResponse}
+      404 => {"Self-update request not found", "application/json", CommonSchemas.NotFoundResponse},
+      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
     }
   )
 
-  def show(conn, %{"id" => id}) do
+  def show(conn, %{id: id}) do
     with {:ok, request} <- SelfUpdates.get_self_update_request(id) do
       render(conn, :show, request: request)
     end
@@ -182,11 +186,12 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
     responses: %{
       204 => {"Self-update request deleted successfully", "", nil},
       404 => {"Self-update request not found", "application/json", CommonSchemas.NotFoundResponse},
-      409 => {"Cannot delete non-completed request", "application/json", CommonSchemas.ConflictResponse}
+      409 => {"Cannot delete non-completed request", "application/json", CommonSchemas.ConflictResponse},
+      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
     }
   )
 
-  def delete(conn, %{"id" => id}) do
+  def delete(conn, %{id: id}) do
     with {:ok, request} <- SelfUpdates.get_self_update_request(id),
          {:ok, _request} <- SelfUpdates.delete_self_update_request(request) do
       send_resp(conn, :no_content, "")

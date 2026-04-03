@@ -10,6 +10,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
+  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+
   plug EdgeAdminWeb.Plugs.DegradedMode,
        :block when action in [:create, :create_for_default, :create_for_public, :delete, :update]
 
@@ -176,7 +178,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
       ]
     ],
     responses: %{
-      200 => {"Paginated enrollment key list", "application/json", EnrollmentKeySchemas.EnrollmentKeyPaginatedResponse}
+      200 => {"Paginated enrollment key list", "application/json", EnrollmentKeySchemas.EnrollmentKeyPaginatedResponse},
+      422 => {"Invalid query parameters", "application/json", OpenApiSpex.JsonErrorResponse}
     }
   )
 
@@ -194,11 +197,12 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     ],
     responses: %{
       200 => {"Enrollment key", "application/json", EnrollmentKeySchemas.EnrollmentKeySingleResponse},
-      404 => {"Not found", "application/json", CommonSchemas.NotFoundResponse}
+      404 => {"Not found", "application/json", CommonSchemas.NotFoundResponse},
+      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
     }
   )
 
-  def show(conn, %{"id" => id}) do
+  def show(conn, %{id: id}) do
     with {:ok, key} <- Nodes.get_enrollment_key(id) do
       render(conn, :show, enrollment_key: key)
     end
@@ -211,7 +215,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
       cluster_name: [
         in: :path,
         description: "Cluster name",
-        schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"}
+        schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", maxLength: 24}
       ]
     ],
     request_body: {"Enrollment key parameters", "application/json", EnrollmentKeySchemas.EnrollmentKeyCreateRequest},
@@ -223,9 +227,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     }
   )
 
-  def create(conn, %{"cluster_name" => cluster_name} = params) do
+  def create(conn, %{cluster_name: cluster_name} = params) do
     with {:ok, cluster} <- Nodes.get_cluster(cluster_name),
-         {:ok, key} <- Nodes.create_enrollment_key(cluster, params) do
+         {:ok, key} <- Nodes.create_enrollment_key(cluster, Map.merge(params, conn.body_params)) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/v1/enrollment_keys/#{key.id}")
@@ -250,7 +254,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   def create_for_default(conn, params) do
     with :ok <- EnrollmentKeyPolicy.authorize(:create_for_default),
          {:ok, cluster} <- Nodes.get_cluster(EnrollmentKeyPolicy.default_cluster_name()),
-         {:ok, key} <- Nodes.create_enrollment_key(cluster, params) do
+         {:ok, key} <- Nodes.create_enrollment_key(cluster, Map.merge(params, conn.body_params)) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/v1/enrollment_keys/#{key.id}")
@@ -300,9 +304,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     }
   )
 
-  def update(conn, %{"id" => id} = params) do
+  def update(conn, %{id: id} = params) do
     with {:ok, key} <- Nodes.get_enrollment_key(id),
-         {:ok, updated_key} <- Nodes.update_enrollment_key(key, params) do
+         {:ok, updated_key} <- Nodes.update_enrollment_key(key, Map.merge(params, conn.body_params)) do
       render(conn, :show, enrollment_key: updated_key)
     end
   end
@@ -317,11 +321,12 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     responses: %{
       204 => {"Enrollment key deleted", "", nil},
       404 => {"Not found", "application/json", CommonSchemas.NotFoundResponse},
+      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 
-  def delete(conn, %{"id" => id}) do
+  def delete(conn, %{id: id}) do
     with {:ok, key} <- Nodes.get_enrollment_key(id),
          {:ok, _} <- Nodes.delete_enrollment_key(key) do
       send_resp(conn, :no_content, "")

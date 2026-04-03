@@ -9,6 +9,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AdminMetricsController do
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
+  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:show_self]
 
   tags(["Admins.Metrics"])

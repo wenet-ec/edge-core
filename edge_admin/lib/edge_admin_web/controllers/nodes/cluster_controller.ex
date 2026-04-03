@@ -10,6 +10,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
+  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
   plug DegradedMode, :block when action in [:create, :update, :delete]
   plug DegradedMode, :allow when action in [:index, :show]
 
@@ -130,7 +131,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
       ]
     ],
     responses: %{
-      200 => {"Paginated cluster list", "application/json", ClusterSchemas.ClusterPaginatedResponse}
+      200 => {"Paginated cluster list", "application/json", ClusterSchemas.ClusterPaginatedResponse},
+      422 => {"Invalid query parameters", "application/json", OpenApiSpex.JsonErrorResponse}
     }
   )
 
@@ -147,16 +149,17 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
       name: [
         in: :path,
         description: "Cluster name",
-        schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"}
+        schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", maxLength: 24}
       ]
     ],
     responses: %{
       200 => {"Cluster details", "application/json", ClusterSchemas.ClusterSingleResponse},
-      404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse}
+      404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},
+      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
     }
   )
 
-  def show(conn, %{"name" => name}) do
+  def show(conn, %{name: name}) do
     with {:ok, cluster} <- Nodes.get_cluster(name) do
       render(conn, :show, cluster: cluster)
     end
@@ -178,7 +181,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
   )
 
   def create(conn, params) do
-    with {:ok, cluster} <- Nodes.create_cluster(params),
+    with {:ok, cluster} <- Nodes.create_cluster(Map.merge(params, conn.body_params)),
          {:ok, cluster} <- Nodes.get_cluster(cluster.name) do
       conn
       |> put_status(:created)
@@ -195,7 +198,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
       name: [
         in: :path,
         description: "Cluster name",
-        schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"}
+        schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", maxLength: 24}
       ]
     ],
     request_body: {"Cluster update parameters", "application/json", ClusterSchemas.ClusterUpdateRequest},
@@ -209,9 +212,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     }
   )
 
-  def update(conn, %{"name" => name} = params) do
+  def update(conn, %{name: name} = params) do
     with {:ok, cluster} <- Nodes.get_cluster(name),
-         {:ok, updated_cluster} <- Nodes.update_cluster(cluster, params) do
+         {:ok, updated_cluster} <- Nodes.update_cluster(cluster, Map.merge(params, conn.body_params)) do
       render(conn, :show, cluster: updated_cluster)
     end
   end
@@ -224,18 +227,19 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
       name: [
         in: :path,
         description: "Cluster name",
-        schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"}
+        schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", maxLength: 24}
       ]
     ],
     responses: %{
       204 => {"Cluster deleted successfully", "", nil},
       404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},
       409 => {"Cannot delete cluster with nodes", "application/json", CommonSchemas.ConflictResponse},
+      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 
-  def delete(conn, %{"name" => name}) do
+  def delete(conn, %{name: name}) do
     with {:ok, cluster} <- Nodes.get_cluster(name),
          {:ok, _cluster} <- Nodes.delete_cluster(cluster) do
       send_resp(conn, :no_content, "")

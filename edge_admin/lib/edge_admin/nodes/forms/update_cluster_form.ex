@@ -11,9 +11,7 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateClusterForm do
     field(:node_limit, :integer)
   end
 
-  def changeset(%{"cluster" => cluster_attrs}) when is_map(cluster_attrs) do
-    changeset(cluster_attrs)
-  end
+  def changeset(%{cluster: cluster_attrs}) when is_map(cluster_attrs), do: changeset(cluster_attrs)
 
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
@@ -43,7 +41,7 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateClusterForm do
     result = %{}
 
     result =
-      if Map.has_key?(raw_attrs, "node_limit") do
+      if Map.has_key?(raw_attrs, "node_limit") or Map.has_key?(raw_attrs, :node_limit) do
         Map.put(result, "node_limit", form.node_limit)
       else
         result

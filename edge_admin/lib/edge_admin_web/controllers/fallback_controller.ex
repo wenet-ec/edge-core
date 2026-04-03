@@ -59,16 +59,7 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> json(%{errors: %{detail: reason}})
   end
 
-  # 7. Unprocessable with reason (422) - from checks/ modules returning {:unprocessable, reason}
-  #    Semantically invalid: the request is logically contradictory regardless of when it is sent.
-  #    Unlike changeset errors (field-level), these are operation-level rejections.
-  def call(conn, {:error, {:unprocessable, reason}}) do
-    conn
-    |> put_status(:unprocessable_entity)
-    |> json(%{errors: %{detail: reason}})
-  end
-
-  # 8. Service unavailable (503) - downstream dependency unreachable (VPN, metrics, etc.)
+  # 7. Service unavailable (503) - downstream dependency unreachable (VPN, metrics, etc.)
   def call(conn, {:error, :service_unavailable}) do
     conn
     |> put_status(:service_unavailable)
@@ -76,7 +67,7 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> render(:"503")
   end
 
-  # 9. Bad request (400) - malformed input
+  # 8. Bad request (400) - malformed input
   def call(conn, {:error, :bad_request}) do
     conn
     |> put_status(:bad_request)
@@ -84,7 +75,7 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> render(:"400")
   end
 
-  # 10. CATCH-ALL: unhandled error → 500
+  # 9. CATCH-ALL: unhandled error → 500
   #     Indicates a bug or missing error-handling path. Always investigate these.
   def call(conn, {:error, reason}) do
     Logger.error("Unhandled error in controller: #{inspect(reason)}")

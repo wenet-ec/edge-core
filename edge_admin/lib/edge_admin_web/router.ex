@@ -95,8 +95,8 @@ defmodule EdgeAdminWeb.Router do
   scope "/api" do
     pipe_through(:open_api)
 
-    # Serve the OpenAPI spec as JSON
-    get("/openapi", OpenApiSpex.Plug.RenderSpec, [])
+    # Serve the public OpenAPI spec as JSON (Internal.* paths filtered out)
+    get("/openapi", EdgeAdminWeb.Plugs.RenderPublicSpec, [])
   end
 
   # Public API endpoints (no authentication required)

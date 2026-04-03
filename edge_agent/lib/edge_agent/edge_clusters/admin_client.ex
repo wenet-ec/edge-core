@@ -393,7 +393,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     path = "/api/v1/agents/nodes/me/health_check"
 
     request_with_auth(path, fn url, headers ->
-      payload = %{"node" => %{"status" => status}}
+      payload = %{node: %{status: status}}
       opts = Keyword.merge([json: payload, headers: headers], http_options())
 
       case Req.patch(url, opts) do
@@ -526,9 +526,9 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
     request_with_auth(path, fn url, headers ->
       payload = %{
-        "metrics" => %{
-          "metrics_type" => metrics_type,
-          "metrics_text" => metrics_text
+        metrics: %{
+          metrics_type: metrics_type,
+          metrics_text: metrics_text
         }
       }
 

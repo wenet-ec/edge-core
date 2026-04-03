@@ -9,6 +9,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
+  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :show, :create, :delete]
 
   tags(["Nodes.Alias"])
@@ -97,7 +98,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
       ]
     ],
     responses: %{
-      200 => {"Paginated list of aliases", "application/json", AliasSchemas.AliasPaginatedResponse}
+      200 => {"Paginated list of aliases", "application/json", AliasSchemas.AliasPaginatedResponse},
+      422 => {"Invalid query parameters", "application/json", OpenApiSpex.JsonErrorResponse}
     }
   )
 
@@ -119,11 +121,12 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
     ],
     responses: %{
       200 => {"Alias details", "application/json", AliasSchemas.AliasSingleResponse},
-      404 => {"Alias not found", "application/json", CommonSchemas.NotFoundResponse}
+      404 => {"Alias not found", "application/json", CommonSchemas.NotFoundResponse},
+      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
     }
   )
 
-  def show(conn, %{"id" => id}) do
+  def show(conn, %{id: id}) do
     with {:ok, alias_record} <- Nodes.get_alias(id) do
       render(conn, :show, alias: alias_record)
     end
@@ -150,9 +153,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
     }
   )
 
-  def create(conn, %{"node_id" => node_id} = params) do
+  def create(conn, %{node_id: node_id} = params) do
     with {:ok, node} <- Nodes.get_node(node_id),
-         {:ok, alias_record} <- Nodes.create_alias(node, params) do
+         {:ok, alias_record} <- Nodes.create_alias(node, Map.merge(params, conn.body_params)) do
       conn
       |> put_status(:created)
       |> render(:show, alias: alias_record)
@@ -172,11 +175,12 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
     responses: %{
       204 => {"Alias deleted successfully", "", nil},
       404 => {"Alias not found", "application/json", CommonSchemas.NotFoundResponse},
+      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 
-  def delete(conn, %{"id" => id}) do
+  def delete(conn, %{id: id}) do
     with {:ok, alias_record} <- Nodes.get_alias(id),
          {:ok, _} <- Nodes.delete_alias(alias_record) do
       send_resp(conn, :no_content, "")

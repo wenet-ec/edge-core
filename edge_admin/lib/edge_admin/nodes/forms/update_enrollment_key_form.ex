@@ -8,7 +8,7 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyForm do
     field(:expired_at, :utc_datetime)
   end
 
-  def changeset(%{"enrollment_key" => key_attrs}) when is_map(key_attrs), do: changeset(key_attrs)
+  def changeset(%{enrollment_key: key_attrs}) when is_map(key_attrs), do: changeset(key_attrs)
 
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
@@ -41,6 +41,12 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyForm do
   end
 
   defp maybe_put(result, raw_attrs, key, value) do
-    if Map.has_key?(raw_attrs, key), do: Map.put(result, key, value), else: result
+    atom_key = String.to_existing_atom(key)
+
+    if Map.has_key?(raw_attrs, key) or Map.has_key?(raw_attrs, atom_key) do
+      Map.put(result, key, value)
+    else
+      result
+    end
   end
 end

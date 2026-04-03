@@ -10,6 +10,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
+  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :show, :create, :delete]
 
   tags(["Commands.Command"])
@@ -93,7 +94,8 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
       ]
     ],
     responses: %{
-      200 => {"Paginated list of commands", "application/json", CommandSchemas.CommandPaginatedResponse}
+      200 => {"Paginated list of commands", "application/json", CommandSchemas.CommandPaginatedResponse},
+      422 => {"Invalid query parameters", "application/json", OpenApiSpex.JsonErrorResponse}
     }
   )
 
@@ -124,7 +126,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
 
   def create(conn, params) do
     with {:ok, %Command{} = command} <-
-           Commands.create_command_and_executions(params) do
+           Commands.create_command_and_executions(Map.merge(params, conn.body_params)) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/v1/commands/#{command}")
@@ -144,11 +146,12 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
     ],
     responses: %{
       200 => {"Command details", "application/json", CommandSchemas.CommandSingleResponse},
-      404 => {"Command not found", "application/json", CommonSchemas.NotFoundResponse}
+      404 => {"Command not found", "application/json", CommonSchemas.NotFoundResponse},
+      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
     }
   )
 
-  def show(conn, %{"id" => id}) do
+  def show(conn, %{id: id}) do
     with {:ok, command} <- Commands.get_command(id) do
       render(conn, :show, command: command)
     end
@@ -172,11 +175,13 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
     responses: %{
       204 => {"Command deleted successfully", "", nil},
       404 => {"Command not found", "application/json", CommonSchemas.NotFoundResponse},
-      409 => {"Cannot delete command with non-completed executions", "application/json", CommonSchemas.ConflictResponse}
+      409 =>
+        {"Cannot delete command with non-completed executions", "application/json", CommonSchemas.ConflictResponse},
+      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
     }
   )
 
-  def delete(conn, %{"id" => id}) do
+  def delete(conn, %{id: id}) do
     with {:ok, command} <- Commands.get_command(id),
          {:ok, _command} <- Commands.delete_command(command) do
       send_resp(conn, :no_content, "")

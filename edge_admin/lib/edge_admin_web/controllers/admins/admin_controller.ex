@@ -7,6 +7,7 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
+  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:show]
 
   tags(["Admins.Metadata"])

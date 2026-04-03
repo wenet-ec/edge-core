@@ -1,29 +1,28 @@
 # edge_admin_web/controllers/agents/self_update_controller.ex
 defmodule EdgeAdminWeb.Controllers.Agents.SelfUpdateController do
-  @moduledoc """
-  Controller for agent self-update HTTP fallback endpoints.
-
-  Provides endpoints for agents to check for pending self-updates when VPN
-  connectivity is unavailable. This enables self-update functionality via
-  HTTP fallback polling.
-  """
-
   use EdgeAdminWeb, :controller
+  use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.SelfUpdates
+  alias EdgeAdminWeb.Schemas.Agents.SelfUpdateSchemas
+  alias EdgeAdminWeb.Schemas.CommonSchemas
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
+  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:check]
 
-  @doc """
-  Checks if the latest self-update request includes the current node.
+  tags(["Internal.Agents"])
 
-  Used by HTTP fallback mechanism for agents to poll for self-updates.
+  operation(:check,
+    summary: "Check for pending self-update",
+    description: "Agent polls for pending self-updates when VPN connectivity is unavailable.",
+    responses: %{
+      200 => {"Self-update check result", "application/json", SelfUpdateSchemas.SelfUpdateCheckResponse},
+      503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
+    }
+  )
 
-  ## Response
-  - 200 OK: Returns `%{including_me: boolean, inserted_at: datetime | nil}`
-  """
   def check(conn, _params) do
     node = conn.assigns.current_node
 

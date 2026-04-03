@@ -1,19 +1,27 @@
 # edge_admin/lib/edge_admin_web/controllers/metrics/wireguard_metrics_discovery_controller.ex
 defmodule EdgeAdminWeb.Controllers.Metrics.WireguardMetricsDiscoveryController do
   use EdgeAdminWeb, :controller
+  use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Nodes
+  alias EdgeAdminWeb.Schemas.Metrics.DiscoverySchemas
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
+  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index]
 
-  @doc """
-  Service discovery endpoint for vmagent HTTP SD (WireGuard metrics).
-  Returns all active nodes grouped by cluster in the format expected by vmagent http_sd_configs.
+  tags(["Internal.Metrics"])
 
-  This endpoint is NOT documented in Swagger.
-  """
+  operation(:index,
+    summary: "WireGuard metrics service discovery",
+    description:
+      "Service discovery endpoint for vmagent HTTP SD (WireGuard metrics). Returns all active nodes grouped by cluster in the format expected by vmagent http_sd_configs.",
+    responses: %{
+      200 => {"Service discovery targets", "application/json", DiscoverySchemas.DiscoveryResponse}
+    }
+  )
+
   def index(conn, _params) do
     metrics_base_url = Application.get_env(:edge_admin, :metrics_base_url)
 

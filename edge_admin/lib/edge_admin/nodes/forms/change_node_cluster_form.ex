@@ -25,10 +25,7 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterForm do
   """
   def changeset(attrs, get_cluster_fn \\ &EdgeAdmin.Nodes.get_cluster/1)
 
-  def changeset(%{"node" => node_attrs}, get_cluster_fn) when is_map(node_attrs) do
-    # Unwrap node
-    changeset(node_attrs, get_cluster_fn)
-  end
+  def changeset(%{node: node_attrs}, get_cluster_fn) when is_map(node_attrs), do: changeset(node_attrs, get_cluster_fn)
 
   def changeset(attrs, get_cluster_fn) when is_map(attrs) do
     %__MODULE__{}

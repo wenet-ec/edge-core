@@ -32,10 +32,7 @@ defmodule EdgeAdmin.Metrics.Forms.PushMetricsCacheForm do
       iex> changeset(%{"metrics" => %{"metrics_type" => "invalid", "metrics_text" => "..."}})
       {:error, %Ecto.Changeset{}}
   """
-  def changeset(%{"metrics" => metrics_attrs}) when is_map(metrics_attrs) do
-    # Unwrap metrics
-    changeset(metrics_attrs)
-  end
+  def changeset(%{metrics: metrics_attrs}) when is_map(metrics_attrs), do: changeset(metrics_attrs)
 
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}

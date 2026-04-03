@@ -27,15 +27,15 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestForm do
   - `{:error, changeset}` - Validation errors
   """
   def changeset(attrs) when is_map(attrs) do
-    # Extract targeting nested map if present
-    targeting = Map.get(attrs, "targeting", %{})
+    # Extract targeting nested map if present (handle both string and atom keys)
+    targeting = Map.get(attrs, :targeting) || Map.get(attrs, "targeting", %{})
 
     # Flatten targeting into top-level fields for validation
     flattened_attrs =
       %{}
-      |> Map.put("targeting_type", Map.get(targeting, "type"))
-      |> Map.put("node_ids", Map.get(targeting, "node_ids"))
-      |> Map.put("cluster_names", Map.get(targeting, "cluster_names"))
+      |> Map.put("targeting_type", Map.get(targeting, :type) || Map.get(targeting, "type"))
+      |> Map.put("node_ids", Map.get(targeting, :node_ids) || Map.get(targeting, "node_ids"))
+      |> Map.put("cluster_names", Map.get(targeting, :cluster_names) || Map.get(targeting, "cluster_names"))
 
     %__MODULE__{}
     |> cast(flattened_attrs, [:targeting_type, :node_ids, :cluster_names])
@@ -88,7 +88,7 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestForm do
 
   defp to_map(%__MODULE__{} = form, original_attrs) do
     # Get original targeting to preserve all fields (node_filters, cluster_filters)
-    original_targeting = Map.get(original_attrs, "targeting", %{})
+    original_targeting = Map.get(original_attrs, :targeting) || Map.get(original_attrs, "targeting", %{})
 
     # Build base targeting with validated fields
     base_targeting =

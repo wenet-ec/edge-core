@@ -30,10 +30,8 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
   - `{:ok, attrs}` - Validated and normalized attributes as a map
   - `{:error, changeset}` - Validation errors
   """
-  # Handle wrapped params (from API controller)
-  def changeset(%{"command_execution" => command_execution_attrs}) when is_map(command_execution_attrs) do
-    changeset(command_execution_attrs)
-  end
+  def changeset(%{command_execution: command_execution_attrs}) when is_map(command_execution_attrs),
+    do: changeset(command_execution_attrs)
 
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}

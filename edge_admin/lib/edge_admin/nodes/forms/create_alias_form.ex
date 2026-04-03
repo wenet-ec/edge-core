@@ -25,10 +25,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateAliasForm do
   - `{:ok, attrs}` - Validated and normalized attributes as a map with string keys
   - `{:error, changeset}` - Validation errors
   """
-  def changeset(%{"alias" => alias_attrs}) when is_map(alias_attrs) do
-    # Unwrap alias
-    changeset(alias_attrs)
-  end
+  def changeset(%{alias: alias_attrs}) when is_map(alias_attrs), do: changeset(alias_attrs)
 
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}

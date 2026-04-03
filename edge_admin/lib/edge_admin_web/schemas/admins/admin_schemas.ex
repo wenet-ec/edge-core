@@ -318,4 +318,27 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
       }
     })
   end
+
+  defmodule DiscoveryResponse do
+    @moduledoc false
+
+    schema(%{
+      title: "Internal.AdminDiscoveryResponse",
+      description: "Admin identity returned during agent VPN bootstrap discovery",
+      type: :object,
+      properties: %{
+        data: %Schema{
+          type: :object,
+          properties: %{
+            name: %Schema{type: :string, description: "Admin name (e.g. admin-k7m3n2p9x4j6)"}
+          },
+          required: [:name]
+        }
+      },
+      required: [:data],
+      example: %{
+        data: %{name: "admin-k7m3n2p9x4j6"}
+      }
+    })
+  end
 end

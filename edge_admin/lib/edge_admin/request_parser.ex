@@ -128,6 +128,46 @@ defmodule EdgeAdmin.RequestParser do
     |> Enum.reject(&is_nil/1)
   end
 
+  # When CastAndValidate is active, boolean params arrive as actual booleans.
+  defp parse_filter(key, value) when is_binary(key) and is_boolean(value) do
+    case parse_field(key) do
+      {:ok, field} -> [%{field: field, op: :==, value: value}]
+      _ -> []
+    end
+  end
+
+  # When CastAndValidate is active, integer params (node_count__gte etc.) arrive as integers.
+  defp parse_filter(key, value) when is_binary(key) and is_integer(value) do
+    if String.contains?(key, "__") do
+      case String.split(key, "__", parts: 2) do
+        [field_str, op_str] ->
+          with {:ok, field} <- parse_field(field_str),
+               {:ok, op} <- parse_operator(op_str) do
+            [%{field: field, op: op, value: value}]
+          else
+            _ -> []
+          end
+
+        _ ->
+          []
+      end
+    else
+      case parse_field(key) do
+        {:ok, field} -> [%{field: field, op: :==, value: value}]
+        _ -> []
+      end
+    end
+  end
+
+  # When CastAndValidate is active, anyOf date/datetime params arrive as %Date{} or %DateTime{} structs.
+  defp parse_filter(key, %Date{} = value) when is_binary(key) do
+    parse_filter(key, Date.to_iso8601(value))
+  end
+
+  defp parse_filter(key, %DateTime{} = value) when is_binary(key) do
+    parse_filter(key, DateTime.to_iso8601(value))
+  end
+
   # Parse a single filter parameter
   defp parse_filter(key, value) when is_binary(key) and is_binary(value) do
     # Range operators: field__gte, field__lte, etc.
@@ -226,6 +266,10 @@ defmodule EdgeAdmin.RequestParser do
   defp parse_operator(_), do: {:error, :invalid_operator}
 
   # Parse page number
+  # When CastAndValidate is active, page arrives as an integer (already validated >= 1).
+  # Without it (agent/internal endpoints), fall back to string parsing.
+  defp parse_page(%{"page" => page}) when is_integer(page) and page > 0, do: page
+
   defp parse_page(%{"page" => page}) when is_binary(page) do
     case Integer.parse(page) do
       {num, ""} when num > 0 -> num
@@ -233,24 +277,25 @@ defmodule EdgeAdmin.RequestParser do
     end
   end
 
-  defp parse_page(%{"page" => page}) when is_integer(page) and page > 0, do: page
   defp parse_page(_), do: 1
 
   # Parse page size
-  defp parse_page_size(%{"page_size" => size}) when is_binary(size) do
-    case Integer.parse(size) do
-      {num, ""} when num > 0 and num <= @max_page_size -> num
-      {num, ""} when num > @max_page_size -> @max_page_size
-      _ -> @default_page_size
-    end
-  end
-
+  # When CastAndValidate is active, page_size arrives as an integer (already validated 1..100).
+  # Without it, apply clamping manually.
   defp parse_page_size(%{"page_size" => size}) when is_integer(size) and size > 0 and size <= @max_page_size do
     size
   end
 
   defp parse_page_size(%{"page_size" => size}) when is_integer(size) and size > @max_page_size do
     @max_page_size
+  end
+
+  defp parse_page_size(%{"page_size" => size}) when is_binary(size) do
+    case Integer.parse(size) do
+      {num, ""} when num > 0 and num <= @max_page_size -> num
+      {num, ""} when num > @max_page_size -> @max_page_size
+      _ -> @default_page_size
+    end
   end
 
   defp parse_page_size(_), do: @default_page_size

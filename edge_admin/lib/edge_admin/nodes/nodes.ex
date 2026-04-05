@@ -765,18 +765,23 @@ defmodule EdgeAdmin.Nodes do
       %{"node_id" => node_id, "network_name" => network_name} = attrs
 
       cluster_name = String.replace_prefix(network_name, "cluster-", "")
-      {:ok, cluster} = get_cluster(cluster_name)
 
-      existing_node = Repo.get(Node, node_id)
-      is_new_node = is_nil(existing_node)
+      case get_cluster(cluster_name) do
+        {:error, :not_found} ->
+          Forms.RegisterNodeForm.add_netmaker_not_found_error()
 
-      with :ok <- if(is_new_node, do: Checks.NodeLimitCheck.check(cluster), else: :ok),
-           {:ok, netmaker_host_id} <-
-             Vpn.get_host_id(Vpn.build_vpn_name(node_id, prefix: :node), network_name: network_name) do
-        node_attrs = build_node_attrs(node_id, cluster, netmaker_host_id, attrs)
-        upsert_node(node_attrs, existing_node, is_new_node, cluster)
-      else
-        {:error, _reason} -> Forms.RegisterNodeForm.add_netmaker_not_found_error()
+        {:ok, cluster} ->
+          existing_node = Repo.get(Node, node_id)
+          is_new_node = is_nil(existing_node)
+
+          with :ok <- if(is_new_node, do: Checks.NodeLimitCheck.check(cluster), else: :ok),
+               {:ok, netmaker_host_id} <-
+                 Vpn.get_host_id(Vpn.build_vpn_name(node_id, prefix: :node), network_name: network_name) do
+            node_attrs = build_node_attrs(node_id, cluster, netmaker_host_id, attrs)
+            upsert_node(node_attrs, existing_node, is_new_node, cluster)
+          else
+            {:error, _reason} -> Forms.RegisterNodeForm.add_netmaker_not_found_error()
+          end
       end
     end
   end
@@ -1543,6 +1548,7 @@ defmodule EdgeAdmin.Nodes do
   @spec reconcile_cluster(Cluster.t()) :: map()
   def reconcile_cluster(%Cluster{} = cluster) do
     acc = %{
+      clusters_processed: 0,
       nodes_added: 0,
       nodes_removed: 0,
       nodes_deleted: 0,
@@ -1640,8 +1646,8 @@ defmodule EdgeAdmin.Nodes do
     orphaned_nodes = Enum.filter(db_nodes, fn node -> node.netmaker_host_id in orphaned_in_db end)
 
     aliases_cleaned = cleanup_orphaned_aliases(orphaned_nodes)
-    deleted = delete_orphaned_nodes(orphaned_nodes)
-    added = add_missing_nodes(orphaned_in_db, node_network_name(cluster), cluster.name)
+    {deleted, unenrolled_host_ids} = delete_orphaned_nodes(orphaned_nodes)
+    added = add_missing_nodes(unenrolled_host_ids, node_network_name(cluster), cluster.name)
 
     extra_in_netmaker = MapSet.difference(actual_host_ids, expected_host_ids)
 
@@ -1752,41 +1758,42 @@ defmodule EdgeAdmin.Nodes do
     end)
   end
 
+  # Returns {deleted_count, unenrolled_host_ids} where unenrolled_host_ids is a MapSet
+  # of host ID strings confirmed to exist in Netmaker but not enrolled in this network.
+  # These are passed to add_missing_nodes to re-enroll them.
+  # Host IDs deleted from DB (host gone from Netmaker entirely) are excluded
+  # so add_missing_nodes never calls add_host_to_network on non-existent hosts.
   defp delete_orphaned_nodes(orphaned_nodes) do
-    Enum.reduce(orphaned_nodes, 0, fn node, count ->
+    Enum.reduce(orphaned_nodes, {0, MapSet.new()}, fn node, {count, unenrolled_ids} ->
       # Check if host exists in Netmaker at all
       case Vpn.get_host(node.netmaker_host_id) do
         {:ok, _host} ->
-          # Host exists in Netmaker (probably in limbo between clusters)
-          # Don't delete from DB - add_missing_nodes will handle re-adding
+          # Host exists in Netmaker but is not enrolled in this network.
+          # Don't delete from DB - add_missing_nodes will re-enroll it.
           Logger.debug(
-            "Reconciliation: Host #{node.netmaker_host_id} exists in Netmaker, skipping DB deletion (node in limbo)"
+            "Reconciliation: Host #{node.netmaker_host_id} exists in Netmaker but is not enrolled in this network, skipping DB deletion"
           )
 
-          count
+          {count, MapSet.put(unenrolled_ids, node.netmaker_host_id)}
 
         {:error, :not_found} ->
-          # Host doesn't exist in Netmaker - safe to delete from DB
-          # This means deletion was attempted and Netmaker succeeded but DB failed
+          # Host doesn't exist in Netmaker at all - safe to delete from DB.
+          # This means deletion was attempted and Netmaker succeeded but DB failed.
           Logger.info("Reconciliation: Deleting orphaned node #{node.id} from DB (host not found in Netmaker)")
 
           case Repo.delete(node) do
             {:ok, _} ->
-              # Emit event for metadata recomputation
               broadcast_metadata_event({:node_deleted, node.id, node.cluster_id})
-
-              count + 1
+              {count + 1, unenrolled_ids}
 
             {:error, changeset} ->
               Logger.error("Reconciliation: Failed to delete orphaned node #{node.id}: #{inspect(changeset)}")
-
-              count
+              {count, unenrolled_ids}
           end
 
         {:error, reason} ->
           Logger.warning("Reconciliation: Failed to check if host #{node.netmaker_host_id} exists: #{inspect(reason)}")
-
-          count
+          {count, unenrolled_ids}
       end
     end)
   end
@@ -2147,84 +2154,108 @@ defmodule EdgeAdmin.Nodes do
   end
 
   @doc """
-  Cleans up ghost aliases (exist in DB but DNS doesn't exist in Netmaker).
+  Cleans up ghost aliases in both directions for each cluster:
 
-  For each cluster:
-  1. Gets all aliases from DB
-  2. Gets all DNS entries from Netmaker
-  3. Identifies ghost aliases (in DB but not in Netmaker DNS)
-  4. Deletes ghost aliases from DB
+  Direction 1 — DB → Netmaker:
+    Aliases in DB whose DNS entry no longer exists in Netmaker.
+    (DNS was deleted first per our flow, DB cleanup failed.)
+    Fix: delete the DB record.
 
-  This handles cases where:
-  - Alias deletion succeeded in Netmaker but DB deletion failed
-  - DNS entry was manually deleted from Netmaker
-  - Netmaker network was recreated, losing all custom DNS entries
-
-  Given our delete-first flow (Netmaker → DB), "alias in DB but DNS not in Netmaker"
-  indicates a failed deletion that should be cleaned up by removing the DB record.
-
-  Returns count of cleaned ghost aliases.
+  Direction 2 — Netmaker → DB:
+    Custom DNS entries in Netmaker with no matching DB alias.
+    This is the common failure path: node deleted (or cluster changed),
+    cleanup_node_aliases failed to reach Netmaker (service unavailable),
+    DB alias was deleted by cascade, DNS entry orphaned in Netmaker.
+    Fix: delete the DNS entry from Netmaker.
   """
   @spec cleanup_ghost_aliases([Cluster.t()], map()) :: map()
   def cleanup_ghost_aliases(clusters, acc) do
     Enum.reduce(clusters, acc, fn cluster, result ->
       network_name = node_network_name(cluster)
 
-      # Get all aliases for this cluster from DB
-      db_aliases = Repo.all(from(a in Alias, where: a.cluster_id == ^cluster.id, preload: [:cluster]))
+      case Vpn.list_custom_dns_entries(network_name) do
+        {:ok, netmaker_custom_entries} ->
+          db_aliases = Repo.all(from(a in Alias, where: a.cluster_id == ^cluster.id, preload: [:cluster]))
 
-      if Enum.empty?(db_aliases) do
-        # No aliases to check
-        result
+          netmaker_dns_names = MapSet.new(netmaker_custom_entries, & &1["name"])
+          db_alias_hostnames = MapSet.new(db_aliases, &Alias.vpn_hostname/1)
+          db_alias_short_names = MapSet.new(db_aliases, &Alias.netmaker_dns_name/1)
+
+          db_deleted = delete_ghost_db_aliases(db_aliases, netmaker_dns_names)
+
+          dns_deleted =
+            delete_orphaned_dns_entries(netmaker_custom_entries, network_name, db_alias_short_names, db_alias_hostnames)
+
+          total_cleaned = db_deleted + dns_deleted
+
+          if total_cleaned > 0 do
+            Logger.info(
+              "Reconciliation: Cleaned #{total_cleaned} ghost alias(es) in cluster #{cluster.name} " <>
+                "(#{db_deleted} DB records, #{dns_deleted} DNS entries)"
+            )
+          end
+
+          %{result | ghost_aliases_cleaned: result.ghost_aliases_cleaned + total_cleaned}
+
+        {:error, reason} ->
+          Logger.warning("Reconciliation: Failed to list DNS entries for cluster #{cluster.name}: #{inspect(reason)}")
+          %{result | errors: result.errors + 1}
+      end
+    end)
+  end
+
+  # Direction 1: DB aliases whose DNS is gone from Netmaker → delete the DB record.
+  # Handles the case where Netmaker-first deletion succeeded but DB deletion failed.
+  defp delete_ghost_db_aliases(db_aliases, netmaker_dns_names) do
+    Enum.reduce(db_aliases, 0, fn alias_record, count ->
+      if MapSet.member?(netmaker_dns_names, Alias.vpn_hostname(alias_record)) do
+        count
       else
-        # Get all DNS entries from Netmaker for this network
-        case Vpn.list_dns_entries(network_name) do
-          {:ok, netmaker_dns_entries} ->
-            # Build set of DNS hostnames that exist in Netmaker
-            netmaker_dns_names = MapSet.new(netmaker_dns_entries, & &1["name"])
+        case Repo.delete(alias_record) do
+          {:ok, _} ->
+            Logger.info("Reconciliation: Deleted ghost alias #{alias_record.name} from DB (DNS gone from Netmaker)")
+            count + 1
 
-            # Find ghost aliases (in DB but DNS not in Netmaker).
-            # Compare using netmaker_dns_name/1 (without domain suffix) because
-            # Netmaker stores and returns custom entries without the default domain.
-            ghost_aliases =
-              Enum.filter(db_aliases, fn alias_record ->
-                netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
-                not MapSet.member?(netmaker_dns_names, netmaker_dns_name)
-              end)
+          {:error, changeset} ->
+            Logger.error("Reconciliation: Failed to delete ghost DB alias #{alias_record.name}: #{inspect(changeset)}")
+            count
+        end
+      end
+    end)
+  end
 
-            if Enum.empty?(ghost_aliases) do
-              result
-            else
-              Logger.info("Found #{length(ghost_aliases)} ghost alias(es) in cluster #{cluster.name}")
+  # Direction 2: Netmaker custom DNS entries with no DB alias → delete the DNS entry.
+  # Handles the case where cleanup_node_aliases couldn't reach Netmaker (service unavailable)
+  # so the DB alias was deleted (cascade) but the DNS entry was orphaned in Netmaker.
+  # Netmaker returns names with domain suffix appended — strip it to get the stored short name
+  # for the delete call.
+  defp delete_orphaned_dns_entries(netmaker_custom_entries, network_name, db_alias_short_names, db_alias_hostnames) do
+    default_domain = Vpn.default_domain()
 
-              # Delete ghost aliases from DB (DNS already doesn't exist)
-              deleted_count =
-                Enum.reduce(ghost_aliases, 0, fn alias_record, count ->
-                  case Repo.delete(alias_record) do
-                    {:ok, _} ->
-                      Logger.info(
-                        "Reconciliation: Deleted ghost alias #{alias_record.name} from DB " <>
-                          "(DNS entry doesn't exist in Netmaker)"
-                      )
+    Enum.reduce(netmaker_custom_entries, 0, fn entry, count ->
+      dns_name = entry["name"]
 
-                      count + 1
+      short_name =
+        case default_domain do
+          "" -> dns_name
+          domain -> String.replace_suffix(dns_name, ".#{domain}", "")
+        end
 
-                    {:error, changeset} ->
-                      Logger.error(
-                        "Reconciliation: Failed to delete ghost alias #{alias_record.name}: #{inspect(changeset)}"
-                      )
+      if MapSet.member?(db_alias_short_names, short_name) or MapSet.member?(db_alias_hostnames, dns_name) do
+        count
+      else
+        case Vpn.delete_dns_entry(network_name, short_name) do
+          {:ok, _} ->
+            Logger.info("Reconciliation: Deleted orphaned DNS entry #{dns_name} from Netmaker (no DB alias)")
+            count + 1
 
-                      count
-                  end
-                end)
-
-              %{result | ghost_aliases_cleaned: result.ghost_aliases_cleaned + deleted_count}
-            end
+          {:error, :not_found} ->
+            Logger.debug("Reconciliation: DNS entry #{dns_name} already gone from Netmaker")
+            count
 
           {:error, reason} ->
-            Logger.warning("Reconciliation: Failed to list DNS entries for cluster #{cluster.name}: #{inspect(reason)}")
-
-            %{result | errors: result.errors + 1}
+            Logger.warning("Reconciliation: Failed to delete orphaned DNS entry #{dns_name}: #{inspect(reason)}")
+            count
         end
       end
     end)

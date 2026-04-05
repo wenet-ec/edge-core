@@ -153,7 +153,8 @@ defmodule EdgeAdmin.Mixfile do
   defp dialyzer do
     [
       plt_file: {:no_warn, "priv/plts/edge_admin.plt"},
-      plt_add_apps: [:mix, :ex_unit]
+      plt_add_apps: [:mix, :ex_unit],
+      plt_add_deps: :app_tree
     ]
   end
 

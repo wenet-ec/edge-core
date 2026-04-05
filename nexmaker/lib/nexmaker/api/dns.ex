@@ -102,7 +102,11 @@ defmodule Nexmaker.Api.DNS do
   """
   @spec list_custom_entries(String.t(), keyword()) :: {:ok, [map()]} | {:error, any()}
   def list_custom_entries(network_name, opts \\ []) do
-    Api.request(:get, "/api/dns/adm/#{network_name}/custom", opts)
+    case Api.request(:get, "/api/dns/adm/#{network_name}/custom", opts) do
+      {:ok, nil} -> {:ok, []}
+      {:ok, entries} when is_list(entries) -> {:ok, entries}
+      other -> other
+    end
   end
 
   @doc """

@@ -769,8 +769,16 @@ defmodule EdgeAdmin.Vpn do
           end)
 
         case default_key do
-          nil -> {:error, :default_key_not_found}
-          key -> {:ok, key["token"]}
+          nil ->
+            {:error, :default_key_not_found}
+
+          %{"token" => token} when is_binary(token) and token != "" ->
+            {:ok, token}
+
+          _ ->
+            # token field is omitempty in Netmaker — absent or empty means the key
+            # hasn't been tokenized yet or was returned without the field
+            {:error, :default_key_not_found}
         end
 
       {:error, reason} ->
@@ -870,7 +878,7 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Lists all DNS entries for a network.
+  Lists all DNS entries for a network (node auto-generated + custom).
 
   Returns `{:ok, dns_entries}` or `{:error, :service_unavailable}`.
   """
@@ -878,6 +886,18 @@ defmodule EdgeAdmin.Vpn do
   def list_dns_entries(network_name) do
     network_name
     |> DNS.list()
+    |> normalize_netmaker_error()
+  end
+
+  @doc """
+  Lists only custom DNS entries for a network (excludes auto-generated node entries).
+
+  Returns `{:ok, dns_entries}` or `{:error, :service_unavailable}`.
+  """
+  @spec list_custom_dns_entries(String.t()) :: {:ok, [map()]} | {:error, :service_unavailable}
+  def list_custom_dns_entries(network_name) do
+    network_name
+    |> DNS.list_custom_entries()
     |> normalize_netmaker_error()
   end
 

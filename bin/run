@@ -277,6 +277,8 @@ handle_cloud() {
             check_docker
             log "Formatting Edge Admin code..."
             docker compose $compose_file run --rm edge_admin_a1 mix format
+            log "Formatting Nexmaker code..."
+            docker compose $compose_file run --rm --workdir /nexmaker edge_admin_a1 mix format
             ;;
         admin:lint)
             check_docker
@@ -514,6 +516,8 @@ handle_all() {
         format)
             check_docker
             section "Formatting all code"
+            log "Formatting Nexmaker..."
+            docker compose $compose_files run --rm --workdir /nexmaker edge_admin_a1 mix format
             log "Formatting Edge Admin..."
             docker compose $compose_files run --rm edge_admin_a1 mix format
             log "Formatting Edge Agent..."

@@ -110,24 +110,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
   end
 
   # -----------------------------------------------------------------------
-  # Clause 7: {:unprocessable, reason} → 422 with reason
-  # -----------------------------------------------------------------------
-
-  describe "call/2 — {:unprocessable, reason} → 422 with reason" do
-    test "returns 422", %{conn: conn} do
-      conn = call(conn, {:error, {:unprocessable, "node is already in this cluster"}})
-      assert conn.status == 422
-    end
-
-    test "body errors.detail contains the specific reason", %{conn: conn} do
-      conn = call(conn, {:error, {:unprocessable, "node is already in this cluster"}})
-      body = Jason.decode!(conn.resp_body)
-      assert get_in(body, ["errors", "detail"]) == "node is already in this cluster"
-    end
-  end
-
-  # -----------------------------------------------------------------------
-  # Clause 8: :service_unavailable → 503
+  # Clause 7: :service_unavailable → 503
   # -----------------------------------------------------------------------
 
   describe "call/2 — :service_unavailable → 503" do
@@ -138,7 +121,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
   end
 
   # -----------------------------------------------------------------------
-  # Clause 9: :bad_request → 400
+  # Clause 8: :bad_request → 400
   # -----------------------------------------------------------------------
 
   describe "call/2 — :bad_request → 400" do
@@ -149,7 +132,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
   end
 
   # -----------------------------------------------------------------------
-  # Clause 10: catch-all → 500
+  # Clause 9: catch-all → 500
   # -----------------------------------------------------------------------
 
   describe "call/2 — catch-all → 500" do

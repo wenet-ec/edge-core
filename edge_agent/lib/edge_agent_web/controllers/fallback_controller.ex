@@ -59,16 +59,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackController do
     |> json(%{errors: %{detail: reason}})
   end
 
-  # 7. Unprocessable with reason (422) - from checks/ modules returning {:unprocessable, reason}
-  #    Semantically invalid: the request is logically contradictory regardless of when it is sent.
-  #    Unlike changeset errors (field-level), these are operation-level rejections.
-  def call(conn, {:error, {:unprocessable, reason}}) do
-    conn
-    |> put_status(:unprocessable_entity)
-    |> json(%{errors: %{detail: reason}})
-  end
-
-  # 8. Service unavailable (503) - downstream dependency unreachable (VPN, metrics, etc.)
+  # 7. Service unavailable (503) - downstream dependency unreachable (VPN, metrics, etc.)
   def call(conn, {:error, :service_unavailable}) do
     conn
     |> put_status(:service_unavailable)

@@ -179,9 +179,6 @@ VPN_CLUSTER_PORT=49125
 # Port on which admin instances expose their discovery/health endpoint to each other.
 ADMIN_DISCOVERY_PORT=44000
 
-# Re-pull VPN config from netclient after gateway reconciliation (default: true).
-# Disable on memory-constrained machines — interface resets can cascade into failures.
-# SYNC_VPN_AFTER_RECONCILIATION=true
 
 # =============================================================================
 # Background Workers & Schedulers
@@ -194,6 +191,11 @@ NODE_HEALTH_CHECK_SCHEDULE=* * * * *           # Ping owned nodes to detect unhe
 NODE_HEALTH_CHECK_CONCURRENCY=100
 # EXECUTION_DELIVERY_SCHEDULE=* * * * *        # Deliver pending commands to agents (default: every 1min)
 # EXECUTION_EXPIRATION_SCHEDULE=* * * * *      # Sweep and expire stale command executions (default: every 1min)
+
+# Periodic netclient pull — decoupled from reconciliation, independent consistency backstop.
+# VPN_CONFIG_SYNC_SCHEDULE=*/2 * * * *
+# Disable on severely resource-starved machines where interface resets cascade into failures.
+# VPN_CONFIG_SYNC_ENABLED=true
 
 # --- Oban Cron (job inserted by leader; any instance competes to execute) ---
 

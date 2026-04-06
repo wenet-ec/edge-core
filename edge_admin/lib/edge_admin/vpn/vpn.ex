@@ -883,6 +883,20 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
+  Pulls latest VPN config from Netmaker as a periodic consistency backstop.
+
+  Respects the VPN_CONFIG_SYNC_ENABLED flag — no-op if disabled.
+  Called by the LocalScheduler `vpn_config_sync` job (default: every 2 minutes).
+  """
+  def sync_vpn_config do
+    if Application.get_env(:edge_admin, :vpn_config_sync_enabled, true) do
+      pull()
+    else
+      :ok
+    end
+  end
+
+  @doc """
   Checks Netmaker server health via status endpoint.
 
   ## Options

@@ -78,6 +78,7 @@ metadata_recomputation_schedule = get_env("METADATA_RECOMPUTATION_SCHEDULE", :st
 node_health_check_schedule = get_env("NODE_HEALTH_CHECK_SCHEDULE", :string, "* * * * *")
 execution_delivery_schedule = get_env("EXECUTION_DELIVERY_SCHEDULE", :string, "* * * * *")
 execution_expiration_schedule = get_env("EXECUTION_EXPIRATION_SCHEDULE", :string, "* * * * *")
+vpn_config_sync_schedule = get_env("VPN_CONFIG_SYNC_SCHEDULE", :string, "*/2 * * * *")
 
 # --- Oban Cron ---
 zombie_admin_cleanup_schedule = get_env("ZOMBIE_ADMIN_CLEANUP_SCHEDULE", :string, "*/30 * * * *")
@@ -105,6 +106,10 @@ config :edge_admin, EdgeAdmin.LocalScheduler,
     execution_expiration: [
       schedule: execution_expiration_schedule,
       task: {EdgeAdmin.Commands, :expire_stale_executions, []}
+    ],
+    vpn_config_sync: [
+      schedule: vpn_config_sync_schedule,
+      task: {EdgeAdmin.Vpn, :sync_vpn_config, []}
     ]
   ]
 
@@ -183,14 +188,14 @@ config :edge_admin,
   node_health_check_schedule: node_health_check_schedule,
   execution_delivery_schedule: execution_delivery_schedule,
   execution_expiration_schedule: execution_expiration_schedule,
+  vpn_config_sync_schedule: vpn_config_sync_schedule,
   cluster_reconciliation_enabled: get_env("CLUSTER_RECONCILIATION_ENABLED", :boolean, true),
   cluster_reconciliation_schedule: cluster_reconciliation_schedule,
   zombie_admin_cleanup_schedule: zombie_admin_cleanup_schedule,
   zombie_admin_checkin_threshold_minutes: zombie_admin_checkin_threshold_minutes,
   # === VPN Sync Configuration ===
-  # Sync VPN config after gateway reconciliation (default: true)
-  # Disable on resource-starved machines to prevent cascading failures from interface resets
-  sync_vpn_after_reconciliation: get_env("SYNC_VPN_AFTER_RECONCILIATION", :boolean, true),
+  # Disable periodic VPN config sync on severely resource-starved machines (default: true)
+  vpn_config_sync_enabled: get_env("VPN_CONFIG_SYNC_ENABLED", :boolean, true),
   # Delete unrecognized hosts from cluster networks during reconciliation (default: true).
   evict_rogue_hosts: get_env("EVICT_ROGUE_HOSTS", :boolean, true),
   # === HTTP Request Timeouts (admin → agent) ===

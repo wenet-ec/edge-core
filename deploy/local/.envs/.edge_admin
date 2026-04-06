@@ -197,6 +197,10 @@ NODE_HEALTH_CHECK_CONCURRENCY=100
 # Disable on severely resource-starved machines where interface resets cascade into failures.
 # VPN_CONFIG_SYNC_ENABLED=true
 
+# Zombie Admin Cleanup — weak leader only, reduces duplicate work across admin instances.
+ZOMBIE_ADMIN_CLEANUP_SCHEDULE=*/30 * * * *
+ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES=120
+
 # --- Oban Cron (job inserted by leader; any instance competes to execute) ---
 
 # Cluster Reconciliation: heals drift between DB and Netmaker
@@ -206,10 +210,6 @@ NODE_HEALTH_CHECK_CONCURRENCY=100
 # Rogue Host Eviction: delete hosts in a cluster network with no DB record
 # Disable temporarily if you need direct Netmaker access (e.g. manual debugging).
 # EVICT_ROGUE_HOSTS=true
-
-# Zombie Admin Cleanup: removes stale admin hosts that haven't checked in recently
-ZOMBIE_ADMIN_CLEANUP_SCHEDULE=*/30 * * * *
-ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES=120
 
 # --- HTTP Timeouts for Agent Communication ---
 # HEALTH_CHECK_TIMEOUT_MS=10000       # Health check pings (every minute, all owned nodes)

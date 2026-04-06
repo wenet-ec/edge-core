@@ -194,7 +194,8 @@ defmodule EdgeAdmin.Admins.Metadata do
         total_nodes: 0,
         total_capacity: 0,
         degraded: false,
-        topology: []
+        topology: [],
+        weak_leader: admin_name
       }
     })
 
@@ -301,6 +302,25 @@ defmodule EdgeAdmin.Admins.Metadata do
   def degraded? do
     [{:admin_cluster, %{degraded: degraded}}] = :ets.lookup(@table, :admin_cluster)
     degraded
+  end
+
+  @doc """
+  Returns true if this admin is the current weak leader of the admin cluster.
+
+  The LocalScheduler runs certain jobs on every admin instance — by design, since
+  there is no central coordinator. The weak leader is a best-effort optimisation
+  to reduce duplicate work: all admins independently elect the same admin
+  (alphabetically first admin ID in the current topology) and only that admin
+  runs the job. Duplicate work is still possible and acceptable — during split
+  brain, each partition elects its own weak leader independently.
+
+  Do not use this for operations that require exactly-once guarantees. If strong
+  leader semantics are ever needed, introduce a :strong_leader key separately.
+  """
+  def am_i_weak_leader? do
+    [{:admin, %{name: my_name}}] = :ets.lookup(@table, :admin)
+    [{:admin_cluster, %{weak_leader: weak_leader}}] = :ets.lookup(@table, :admin_cluster)
+    my_name == weak_leader
   end
 
   def initialized? do
@@ -487,7 +507,8 @@ defmodule EdgeAdmin.Admins.Metadata do
         total_admins: map_size(all_admins),
         total_nodes: result.total_nodes,
         total_capacity: result.total_capacity,
-        degraded: result.degraded
+        degraded: result.degraded,
+        weak_leader: result.weak_leader
     }
 
     :ets.insert(@table, {:admin_cluster, updated_admin_cluster})

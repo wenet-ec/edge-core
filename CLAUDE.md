@@ -22,20 +22,20 @@ For full architecture detail see `docs/architecture.md`.
 
 ```bash
 # Netmaker server (upstream, read-only reference)
-git clone --branch v1.5.0 https://github.com/gravitl/netmaker edge_vpn/netmaker
+git clone --branch v1.5.1 https://github.com/gravitl/netmaker edge_vpn/netmaker
 
 # Netclient (our fork — includes DERP relay integration)
-git clone --branch v1.5.0-derp https://github.com/wenet-ec/netclient edge_vpn/netclient
+git clone --branch v1.5.1-derp https://github.com/wenet-ec/netclient edge_vpn/netclient
 ```
 
-When working on anything related to Netmaker API, netclient enrollment, DERP relay, or WireGuard mesh behavior, read the source directly from `edge_vpn/` rather than guessing. The Netmaker OpenAPI spec is also available at `docs/netmaker-v1.5.0.yml`.
+When working on anything related to Netmaker API, netclient enrollment, DERP relay, or WireGuard mesh behavior, read the source directly from `edge_vpn/` rather than guessing. The Netmaker OpenAPI spec is also available at `docs/netmaker-v1.5.1.yml`.
 
 ## Architecture
 
 **Key Architectural Principles:**
 
 1. PostgreSQL is the only source of truth — admins are stateless compute workers
-2. Admin clustering is masterless peer-to-peer — no leader election, no primary/replica. Admins coordinate via Erlang distribution + `:syn` registry within the same admin cluster.
+2. Admin clustering is masterless peer-to-peer — no strong leader election, no primary/replica. Admins coordinate via Erlang distribution + `:syn` registry within the same admin cluster. A **weak leader** (alphabetically first admin ID in the current topology) is elected deterministically by each admin independently to reduce duplicate work from the LocalScheduler — but this is best-effort only, duplicate work is acceptable. See `EdgeAdmin.Admins.Metadata.am_i_weak_leader?/0`.
 3. Cluster ownership sharding — exactly one admin owns each edge cluster at a time (one-admin-per-cluster algorithm). HA comes from spinning up additional independent admin clusters sharing the same PostgreSQL.
 4. Agent primary deployment is one-per-machine — `network_mode: host`, privileged. Also works as a sidecar container on bridge networking (see `examples/sidecar/`). Multiple agents on one host is for testing only.
 5. Admin↔Agent communication is HTTP over WireGuard VPN, with graceful fallback: raw WireGuard → DERP relay → HTTP polling.
@@ -256,7 +256,7 @@ edge_core/
 ├── docs/                # Architecture docs and API specs
 │   ├── architecture.md
 │   ├── admin-v0.2.0.json
-│   └── netmaker-v1.5.0.yml
+│   └── netmaker-v1.5.1.yml
 └── bin/
     └── run              # Management script
 ```
@@ -301,13 +301,24 @@ config :nexmaker,
   master_key: System.get_env("NETMAKER_MASTER_KEY")
 ```
 
-### Background Jobs (Oban)
+### Background Jobs
 
-**Admin Workers:**
+Admin background work is split between two schedulers with different semantics:
+
+**Quantum LocalScheduler** — runs on every admin instance independently. Jobs that should run cluster-wide use the weak leader guard (`Metadata.am_i_weak_leader?/0`) to reduce duplicate work:
+
+- `EdgeAdmin.Vpn.run_zombie_admin_cleanup/0` - Cleans up orphaned admin entries in Netmaker (weak leader only)
+- `EdgeAdmin.Vpn.sync_vpn_config/0` - Periodic `netclient pull` as a VPN consistency backstop (every admin)
+- `EdgeAdmin.Admins.Metadata.recompute_now/0` - Recomputes cluster ownership assignments (every admin)
+- `EdgeAdmin.Admins.Discovery.scan_and_connect_admins/0` - Discovers and connects to peer admins (every admin)
+- `EdgeAdmin.Nodes.check_node_health/0` - Health checks owned nodes (every admin)
+- `EdgeAdmin.Commands.deliver_local_executions/0` - Delivers pending commands to agents (every admin)
+- `EdgeAdmin.Commands.expire_stale_executions/0` - Sweeps stale command executions (every admin)
+
+**Oban** — jobs inserted by the DB peer leader, competed for by any admin across all clusters sharing the same DB:
 
 - `EdgeAdmin.Commands.Workers.ExecutionCreationWorker` - Creates CommandExecution records for each targeted node
 - `EdgeAdmin.Nodes.Workers.ClusterReconciliationWorker` - Syncs node state with Netmaker VPN
-- `EdgeAdmin.Vpn.Workers.ZombieAdminCleaner` - Cleans up orphaned admin entries in Netmaker
 - `EdgeAdmin.SelfUpdates.Workers.SelfUpdateTriggerWorker` - Coordinates container updates
 
 **Agent Workers:**

@@ -79,9 +79,9 @@ node_health_check_schedule = get_env("NODE_HEALTH_CHECK_SCHEDULE", :string, "* *
 execution_delivery_schedule = get_env("EXECUTION_DELIVERY_SCHEDULE", :string, "* * * * *")
 execution_expiration_schedule = get_env("EXECUTION_EXPIRATION_SCHEDULE", :string, "* * * * *")
 vpn_config_sync_schedule = get_env("VPN_CONFIG_SYNC_SCHEDULE", :string, "*/2 * * * *")
+zombie_admin_cleanup_schedule = get_env("ZOMBIE_ADMIN_CLEANUP_SCHEDULE", :string, "*/30 * * * *")
 
 # --- Oban Cron ---
-zombie_admin_cleanup_schedule = get_env("ZOMBIE_ADMIN_CLEANUP_SCHEDULE", :string, "*/30 * * * *")
 zombie_admin_checkin_threshold_minutes = get_env("ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES", :integer, 120)
 cluster_reconciliation_schedule = get_env("CLUSTER_RECONCILIATION_SCHEDULE", :string, "0 */6 * * *")
 
@@ -110,6 +110,10 @@ config :edge_admin, EdgeAdmin.LocalScheduler,
     vpn_config_sync: [
       schedule: vpn_config_sync_schedule,
       task: {EdgeAdmin.Vpn, :sync_vpn_config, []}
+    ],
+    zombie_admin_cleanup: [
+      schedule: zombie_admin_cleanup_schedule,
+      task: {EdgeAdmin.Vpn, :run_zombie_admin_cleanup, []}
     ]
   ]
 
@@ -122,7 +126,6 @@ config :edge_admin, Oban,
   engine: Oban.Engines.Basic,
   queues: [
     execution_creation: 10,
-    zombie_admin_cleanup: 1,
     cluster_reconciliation: 10,
     self_updates: 3
   ],
@@ -131,8 +134,6 @@ config :edge_admin, Oban,
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [
-       # Remove stale admin hosts from the admin VPN that haven't checked in recently
-       {zombie_admin_cleanup_schedule, EdgeAdmin.Vpn.Workers.CleanupZombieAdminsWorker},
        # Reconcile clusters and nodes between DB and Netmaker
        {cluster_reconciliation_schedule, EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker}
      ]},

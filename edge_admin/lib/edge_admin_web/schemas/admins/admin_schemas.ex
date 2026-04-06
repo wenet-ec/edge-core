@@ -159,19 +159,25 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           type: :boolean,
           description: "True when total_nodes exceeds total_capacity"
         },
+        weak_leader: %Schema{
+          type: :string,
+          description:
+            "Name of the current weak leader admin (alphabetically first admin ID in the cluster). Best-effort duplicate work reduction — not a strong guarantee. Always populated — defaults to self on bootstrap, updated on first metadata recomputation."
+        },
         topology: %Schema{
           type: :array,
           items: AdminTopologyEntry,
           description: "List of all admins in the cluster"
         }
       },
-      required: [:name, :total_admins, :total_nodes, :total_capacity, :degraded, :topology],
+      required: [:name, :total_admins, :total_nodes, :total_capacity, :degraded, :weak_leader, :topology],
       example: %{
         name: "admin-cluster-1",
         total_admins: 2,
         total_nodes: 42,
         total_capacity: 500,
         degraded: false,
+        weak_leader: "admin-k7m3n2p9x4j6",
         topology: [
           %{
             name: "admin-k7m3n2p9x4j6",
@@ -210,6 +216,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           total_nodes: 42,
           total_capacity: 500,
           degraded: false,
+          weak_leader: "admin-k7m3n2p9x4j6",
           topology: [
             %{
               name: "admin-k7m3n2p9x4j6",

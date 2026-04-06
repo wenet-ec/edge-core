@@ -52,6 +52,7 @@ defmodule EdgeAdmin.Vpn do
 
   import Bitwise
 
+  alias EdgeAdmin.Admins.Metadata
   alias Nexmaker.Api.DNS
   alias Nexmaker.Api.EnrollmentKeys
   alias Nexmaker.Api.Hosts
@@ -981,6 +982,36 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
+  Entry point for periodic zombie admin cleanup — called by the LocalScheduler.
+
+  The LocalScheduler runs this on every admin instance. To reduce duplicate work,
+  only the weak leader runs the actual cleanup — all other admins skip it. The weak
+  leader is elected deterministically (alphabetically first admin ID in the current
+  topology) so all admins independently agree on the same result without coordination.
+  Duplicate work is still possible during split brain and is acceptable — cleanup
+  is idempotent.
+
+  Skipped entirely during degraded mode to avoid cascading failures.
+  """
+  def run_zombie_admin_cleanup do
+    if Metadata.degraded?() do
+      Logger.info("run_zombie_admin_cleanup: skipped — system in degraded mode")
+    else
+      if Metadata.am_i_weak_leader?() do
+        case cleanup_zombie_admins() do
+          {:ok, deleted_count} ->
+            Logger.info("run_zombie_admin_cleanup: completed — #{deleted_count} host(s) deleted")
+
+          {:error, reason} ->
+            Logger.error("run_zombie_admin_cleanup: failed — #{inspect(reason)}")
+        end
+      else
+        Logger.debug("run_zombie_admin_cleanup: skipped — not the weak leader")
+      end
+    end
+  end
+
+  @doc """
   Cleans up zombie admin hosts from the admin cluster.
 
   Deletes hosts whose nodes in the admin-cluster haven't checked in for
@@ -1088,7 +1119,7 @@ defmodule EdgeAdmin.Vpn do
 
   # Get protected host IDs from metadata (admin_cluster topology)
   defp get_protected_host_ids do
-    admin_cluster = EdgeAdmin.Admins.Metadata.get_admin_cluster()
+    admin_cluster = Metadata.get_admin_cluster()
 
     # Extract netmaker_host_id from each admin in topology
     # Topology structure: [%{name: "admin-abc123", netmaker_host_id: "...", ...}, ...]

@@ -23,7 +23,8 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
     orphaned_clusters: %{cluster_name => [node_names]},
     total_nodes: integer,     # total nodes across all clusters in the system
     total_capacity: integer,  # sum of max_capacity across all admins
-    degraded: boolean         # true when total_nodes > total_capacity
+    degraded: boolean,        # true when total_nodes > total_capacity
+    weak_leader: admin_name   # alphabetically first admin ID — used to reduce duplicate LocalScheduler work
   }
 
   ## Example
@@ -100,12 +101,18 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
         admins
       )
 
+    weak_leader =
+      admins
+      |> Map.keys()
+      |> Enum.min()
+
     %{
       edge_clusters: edge_clusters,
       orphaned_clusters: intermediate_result.orphaned_clusters,
       total_nodes: total_nodes,
       total_capacity: total_capacity,
-      degraded: total_nodes > total_capacity
+      degraded: total_nodes > total_capacity,
+      weak_leader: weak_leader
     }
   end
 

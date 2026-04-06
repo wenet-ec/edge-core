@@ -14,8 +14,10 @@ defmodule EdgeAdmin.MCP.Tools.Admins.CheckAdminHealth do
 
   @impl true
   def execute(_params, frame) do
+    checks = EdgeAdminHealth.checks()
+
     results =
-      EdgeAdminHealth.checks()
+      checks
       |> Task.async_stream(
         fn check ->
           result =
@@ -33,9 +35,10 @@ defmodule EdgeAdmin.MCP.Tools.Admins.CheckAdminHealth do
         timeout: 6_000,
         on_timeout: :kill_task
       )
+      |> Enum.zip(checks)
       |> Enum.map(fn
-        {:ok, result} -> result
-        {:exit, :timeout} -> %{name: "unknown", status: "error", reason: "timeout"}
+        {{:ok, result}, _check} -> result
+        {{:exit, :timeout}, check} -> %{name: check.name, status: "error", reason: "timeout"}
       end)
 
     healthy = Enum.all?(results, &(&1.status == "ok"))

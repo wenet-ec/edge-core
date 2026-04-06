@@ -7,8 +7,8 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.CreateEnrollmentKey do
   alias EdgeAdmin.Nodes
 
   schema do
-    field :cluster_name, {:required, :string}
-    field :uses_remaining, :integer
+    field :cluster_name, {:required, :string}, min_length: 1
+    field :uses_remaining, :integer, min: 1
     field :expired_at, :string
   end
 
@@ -18,8 +18,8 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.CreateEnrollmentKey do
       {:ok, cluster} ->
         attrs =
           %{}
-          |> maybe_put("uses_remaining", params[:uses_remaining])
-          |> maybe_put("expired_at", params[:expired_at])
+          |> put_if("uses_remaining", params[:uses_remaining])
+          |> put_if("expired_at", params[:expired_at])
 
         case Nodes.create_enrollment_key(cluster, attrs) do
           {:ok, key} ->
@@ -34,6 +34,6 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.CreateEnrollmentKey do
     end
   end
 
-  defp maybe_put(m, _k, nil), do: m
-  defp maybe_put(m, k, v), do: Map.put(m, k, v)
+  defp put_if(m, _k, nil), do: m
+  defp put_if(m, k, v), do: Map.put(m, k, v)
 end

@@ -13,8 +13,8 @@ defmodule EdgeAdmin.MCP.Tools.Ssh.CreateSshUsername do
 
   schema do
     field :node_id, {:required, :string}
-    field :username, {:required, :string}
-    field :password, :string
+    field :username, {:required, :string}, min_length: 1
+    field :password, :string, min_length: 1
     field :public_keys, {:list, :map}
   end
 
@@ -24,8 +24,8 @@ defmodule EdgeAdmin.MCP.Tools.Ssh.CreateSshUsername do
       {:ok, node} ->
         attrs =
           %{"username" => params.username}
-          |> maybe_put("password", params[:password])
-          |> maybe_put("ssh_public_keys", params[:public_keys])
+          |> put_if("password", params[:password])
+          |> put_if("ssh_public_keys", params[:public_keys])
 
         case Ssh.create_ssh_username_with_keys(node, attrs) do
           {:ok, username} ->
@@ -40,6 +40,6 @@ defmodule EdgeAdmin.MCP.Tools.Ssh.CreateSshUsername do
     end
   end
 
-  defp maybe_put(m, _k, nil), do: m
-  defp maybe_put(m, k, v), do: Map.put(m, k, v)
+  defp put_if(m, _k, nil), do: m
+  defp put_if(m, k, v), do: Map.put(m, k, v)
 end

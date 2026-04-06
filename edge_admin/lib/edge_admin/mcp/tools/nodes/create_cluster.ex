@@ -7,17 +7,17 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.CreateCluster do
   alias EdgeAdmin.Nodes
 
   schema do
-    field :name, {:required, :string}
+    field :name, {:required, :string}, min_length: 1
     field :ipv4_range, :string
-    field :node_limit, :integer
+    field :node_limit, :integer, min: 1
   end
 
   @impl true
   def execute(params, frame) do
     attrs =
       %{"name" => params.name}
-      |> maybe_put("ipv4_range", params[:ipv4_range])
-      |> maybe_put("node_limit", params[:node_limit])
+      |> put_if("ipv4_range", params[:ipv4_range])
+      |> put_if("node_limit", params[:node_limit])
 
     case Nodes.create_cluster(attrs) do
       {:ok, cluster} ->
@@ -31,8 +31,8 @@ defmodule EdgeAdmin.MCP.Tools.Nodes.CreateCluster do
     end
   end
 
-  defp maybe_put(m, _k, nil), do: m
-  defp maybe_put(m, k, v), do: Map.put(m, k, v)
+  defp put_if(m, _k, nil), do: m
+  defp put_if(m, k, v), do: Map.put(m, k, v)
 
   defp format_errors(%Ecto.Changeset{} = cs) do
     cs

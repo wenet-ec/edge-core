@@ -9,6 +9,7 @@ defmodule EdgeAdmin.MCP.Tools.Commands.CommandData do
       id: command.id,
       command_text: command.command_text,
       timeout: command.timeout,
+      expired_at: command.expired_at,
       targeting: command.targeting,
       inserted_at: command.inserted_at,
       updated_at: command.updated_at

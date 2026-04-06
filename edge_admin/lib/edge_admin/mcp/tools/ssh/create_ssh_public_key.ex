@@ -8,15 +8,15 @@ defmodule EdgeAdmin.MCP.Tools.Ssh.CreateSshPublicKey do
 
   schema do
     field :ssh_username_id, {:required, :string}
-    field :public_key, {:required, :string}
-    field :key_name, :string
+    field :public_key, {:required, :string}, min_length: 1
+    field :key_name, :string, min_length: 1
   end
 
   @impl true
   def execute(params, frame) do
     case Ssh.get_ssh_username(params.ssh_username_id) do
       {:ok, ssh_username} ->
-        attrs = maybe_put(%{"public_key" => params.public_key}, "key_name", params[:key_name])
+        attrs = put_if(%{"public_key" => params.public_key}, "key_name", params[:key_name])
 
         case Ssh.create_ssh_public_key(ssh_username, attrs) do
           {:ok, key} ->
@@ -31,6 +31,6 @@ defmodule EdgeAdmin.MCP.Tools.Ssh.CreateSshPublicKey do
     end
   end
 
-  defp maybe_put(m, _k, nil), do: m
-  defp maybe_put(m, k, v), do: Map.put(m, k, v)
+  defp put_if(m, _k, nil), do: m
+  defp put_if(m, k, v), do: Map.put(m, k, v)
 end

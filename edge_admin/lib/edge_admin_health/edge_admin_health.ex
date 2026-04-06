@@ -77,18 +77,17 @@ defmodule EdgeAdminHealth do
         if admin_cluster in info[:networks] do
           :ok
         else
-          Logger.error("Connected but not to admin cluster (#{admin_cluster}), networks: #{inspect(info[:networks])}")
+          Logger.error("Not on admin cluster (#{admin_cluster}), networks: #{inspect(info[:networks])}")
           {:error, "Not on admin cluster"}
         end
 
-      {:ok, :degraded, info} ->
-        if admin_cluster in info[:networks] do
-          Logger.warning("Netclient degraded on admin cluster: #{inspect(info[:warnings])}")
-          :ok
-        else
-          Logger.error("Degraded and not on admin cluster (#{admin_cluster}), networks: #{inspect(info[:networks])}")
-          {:error, "Not on admin cluster"}
-        end
+      {:ok, :degraded, _info} ->
+        # WireGuard interface is down — regardless of what nodes.json says, we cannot
+        # route traffic. This is the critical signal for a network-partitioned admin
+        # that has been cleaned up: MQTT auth will fail, WireGuard tears down, but
+        # nodes.json may still list the cluster until the daemon restarts.
+        Logger.error("Netclient WireGuard interface is down")
+        {:error, "WireGuard interface down"}
 
       {:ok, :unhealthy, _info} ->
         {:error, "Not connected to any network"}

@@ -51,11 +51,9 @@ defmodule EdgeAgentHealth do
       {:ok, :healthy, _info} ->
         :ok
 
-      {:ok, :degraded, info} ->
-        # Log warnings but don't fail health check
-        # Degraded state means we're on network but have non-critical issues
-        Logger.warning("Netclient degraded: #{inspect(info[:warnings])}")
-        :ok
+      {:ok, :degraded, _info} ->
+        Logger.error("Netclient WireGuard interface is down")
+        {:error, "WireGuard interface down"}
 
       {:ok, :unhealthy, info} ->
         {:error, Enum.join(info[:warnings], "; ")}

@@ -974,7 +974,7 @@ defmodule EdgeAdmin.Vpn do
 
   ## Configuration
 
-  - ZOMBIE_ADMIN_CHECKIN_THRESHOLD_HOURS: Hours since last checkin (default: 2)
+  - ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES: Minutes since last checkin (default: 120)
 
   ## Returns
 

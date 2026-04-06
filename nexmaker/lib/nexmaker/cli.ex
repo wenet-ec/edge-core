@@ -313,22 +313,21 @@ defmodule Nexmaker.Cli do
   @doc """
   Checks whether the netmaker WireGuard interface is up at the OS level.
 
-  Runs `wg show netmaker` — a kernel ioctl, no network I/O, completes in <5ms.
-  This is ground truth: the interface either exists in the kernel or it doesn't,
-  regardless of what nodes.json says.
+  Reads /proc/net/dev — the kernel's interface table. No binaries required,
+  works identically in admin containers (no `wg`), agent containers (no `ip`),
+  and agent on network_mode: host (shares host /proc). Ground truth: if the
+  interface is registered in the kernel it appears here.
 
   ## Returns
-    - `true` - Interface exists and WireGuard is active
-    - `false` - Interface is missing or WireGuard is not running
+    - `true` - Interface exists in the kernel
+    - `false` - Interface is absent or /proc/net/dev is unreadable
   """
   @spec wireguard_interface_up?() :: boolean()
   def wireguard_interface_up? do
-    case System.cmd("wg", ["show", "netmaker"], stderr_to_stdout: true) do
-      {_output, 0} -> true
+    case File.read("/proc/net/dev") do
+      {:ok, contents} -> String.contains?(contents, "netmaker:")
       _ -> false
     end
-  rescue
-    _ -> false
   end
 
   @doc """
@@ -339,7 +338,7 @@ defmodule Nexmaker.Cli do
   to a regression introduced in netclient v1.5.0 (NM-214).
 
   Instead, this reads /etc/netclient/nodes.json directly (maintained by the
-  netclient daemon) and verifies the WireGuard interface is up via `wg show`.
+  netclient daemon) and verifies the WireGuard interface is up via /proc/net/dev.
 
   ## Health Check Levels
 

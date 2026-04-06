@@ -83,6 +83,14 @@
               "command_text": {
                 "description": "Multi-line shell script/commands to execute",
                 "example": "ABC=value\necho $ABC\nsystemctl restart nginx",
+                "minLength": 1,
+                "type": "string"
+              },
+              "expired_at": {
+                "description": "Deadline after which pending/sent executions are automatically expired. Must be in the future. Immutable after creation.",
+                "example": "2025-12-31T23:59:59Z",
+                "format": "date-time",
+                "nullable": true,
                 "type": "string"
               },
               "targeting": {
@@ -253,6 +261,7 @@
               "timeout": {
                 "description": "Command timeout in milliseconds (optional, null or omitted means no timeout, must be > 0)",
                 "example": 30000,
+                "minimum": 1,
                 "nullable": true,
                 "type": "integer"
               }
@@ -1613,7 +1622,8 @@
           ],
           "total_admins": 2,
           "total_capacity": 500,
-          "total_nodes": 42
+          "total_nodes": 42,
+          "weak_leader": "admin-k7m3n2p9x4j6"
         },
         "properties": {
           "degraded": {
@@ -1637,6 +1647,10 @@
           "total_nodes": {
             "description": "Total nodes registered in the system across all clusters",
             "type": "integer"
+          },
+          "weak_leader": {
+            "description": "Name of the current weak leader admin (alphabetically first admin ID in the cluster). Best-effort duplicate work reduction — not a strong guarantee. Always populated — defaults to self on bootstrap, updated on first metadata recomputation.",
+            "type": "string"
           }
         },
         "required": [
@@ -1645,6 +1659,7 @@
           "total_nodes",
           "total_capacity",
           "degraded",
+          "weak_leader",
           "topology"
         ],
         "title": "AdminCluster",
@@ -1777,10 +1792,11 @@
                 "type": "array"
               },
               "username": {
-                "description": "SSH username for node access (3-32 characters)",
+                "description": "SSH username for node access (3-32 characters, must start with letter or underscore, lowercase letters/digits/hyphens/underscores only)",
                 "example": "admin",
                 "maxLength": 32,
                 "minLength": 3,
+                "pattern": "^[a-z_][a-z0-9_-]*$",
                 "type": "string"
               }
             },
@@ -1809,7 +1825,8 @@
             ],
             "total_admins": 2,
             "total_capacity": 500,
-            "total_nodes": 42
+            "total_nodes": 42,
+            "weak_leader": "admin-k7m3n2p9x4j6"
           }
         },
         "properties": {
@@ -2323,6 +2340,12 @@
             "nullable": true,
             "type": "integer"
           },
+          "expired_at": {
+            "description": "The expiration deadline from the parent command (null if no expiration was set)",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
           "id": {
             "description": "Unique command execution identifier",
             "format": "uuid",
@@ -2352,12 +2375,17 @@
           },
           "status": {
             "description": "Current execution status",
-            "enum": ["pending", "sent", "completed", "cancelled"],
+            "enum": ["pending", "sent", "completed", "cancelled", "expired"],
             "type": "string"
           },
           "target_all": {
             "description": "Whether this execution was created from a system-wide command",
             "type": "boolean"
+          },
+          "timeout": {
+            "description": "Command timeout in milliseconds (null means no timeout)",
+            "nullable": true,
+            "type": "integer"
           },
           "updated_at": {
             "description": "When the execution was last updated",
@@ -2391,6 +2419,7 @@
                 "description": "IPv4 CIDR range (auto-generated if not provided)",
                 "example": "100.64.0.0/24",
                 "nullable": true,
+                "pattern": "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\/\\d{1,2}$",
                 "type": "string"
               },
               "name": {
@@ -2444,6 +2473,7 @@
         "example": {
           "data": {
             "command_text": "echo hello\ndate",
+            "expired_at": null,
             "id": "01234567-89ab-cdef-0123-456789abcdef",
             "inserted_at": "2025-06-17T12:00:00Z",
             "targeting": {
@@ -2484,6 +2514,7 @@
         "description": "Command information",
         "example": {
           "command_text": "ABC=value\necho $ABC\nsystemctl restart nginx",
+          "expired_at": "2025-12-31T23:59:59Z",
           "id": "01234567-89ab-cdef-0123-456789abcdef",
           "inserted_at": "2025-06-17T10:30:00Z",
           "targeting": {
@@ -2498,6 +2529,12 @@
           "command_text": {
             "description": "Multi-line shell script/commands",
             "example": "ABC=value\necho $ABC\nsystemctl restart nginx",
+            "type": "string"
+          },
+          "expired_at": {
+            "description": "Deadline after which pending/sent executions are automatically expired (immutable after creation)",
+            "format": "date-time",
+            "nullable": true,
             "type": "string"
           },
           "id": {
@@ -3126,6 +3163,14 @@
         "title": "SshUsernamePaginatedResponse",
         "type": "object"
       }
+    },
+    "securitySchemes": {
+      "apiKey": {
+        "bearerFormat": "opaque",
+        "description": "API key for REST API access (API_KEY or MASTER_KEY)",
+        "scheme": "bearer",
+        "type": "http"
+      }
     }
   },
   "info": {
@@ -3567,7 +3612,7 @@
     "/api/v1/command_executions/{id}": {
       "delete": {
         "callbacks": {},
-        "description": "Delete a specific command execution.\n\nOnly completed or cancelled executions can be deleted. Attempting to delete pending or sent executions will return 409.\n",
+        "description": "Delete a specific command execution.\n\nOnly completed, cancelled, or expired executions can be deleted. Attempting to delete pending or sent executions will return 409.\n",
         "operationId": "EdgeAdminWeb.Controllers.Commands.CommandExecutionController.delete",
         "parameters": [
           {
@@ -3816,6 +3861,27 @@
             "schema": { "format": "uuid", "type": "string" }
           },
           {
+            "description": "Filter by node ID",
+            "in": "query",
+            "name": "node_id",
+            "required": false,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "description": "Filter by SSH username (exact match or wildcard: deploy*, *admin, etc.)",
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *east, etc.)",
+            "in": "query",
+            "name": "cluster_name",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
             "description": "Filter SSH public keys inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
             "in": "query",
             "name": "inserted_at__gte",
@@ -3937,6 +4003,13 @@
             "name": "name",
             "required": false,
             "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by node ID (exact match UUID)",
+            "in": "query",
+            "name": "node_id",
+            "required": false,
+            "schema": { "format": "uuid", "type": "string" }
           },
           {
             "description": "Filter by cluster name (exact match or wildcard: prod*, *east, etc.)",
@@ -4516,6 +4589,13 @@
             "name": "has_password",
             "required": false,
             "schema": { "type": "boolean" }
+          },
+          {
+            "description": "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *east, etc.)",
+            "in": "query",
+            "name": "cluster_name",
+            "required": false,
+            "schema": { "type": "string" }
           },
           {
             "description": "Filter SSH usernames inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
@@ -5160,7 +5240,7 @@
             "name": "status",
             "required": false,
             "schema": {
-              "enum": ["pending", "sent", "completed", "cancelled"],
+              "enum": ["pending", "sent", "completed", "cancelled", "expired"],
               "type": "string"
             }
           },
@@ -5172,11 +5252,32 @@
             "schema": { "type": "boolean" }
           },
           {
-            "description": "Filter by exit code",
+            "description": "Filter by exact exit code",
             "in": "query",
             "name": "exit_code",
             "required": false,
             "schema": { "type": "integer" }
+          },
+          {
+            "description": "Filter executions with exit code greater than or equal to this value (e.g. 1 for all failures)",
+            "in": "query",
+            "name": "exit_code__gte",
+            "required": false,
+            "schema": { "type": "integer" }
+          },
+          {
+            "description": "Filter executions with exit code less than or equal to this value",
+            "in": "query",
+            "name": "exit_code__lte",
+            "required": false,
+            "schema": { "type": "integer" }
+          },
+          {
+            "description": "Filter by whether output is present: true returns executions with output, false returns executions with no output",
+            "in": "query",
+            "name": "has_output",
+            "required": false,
+            "schema": { "type": "boolean" }
           },
           {
             "description": "Filter by command ID",
@@ -5688,6 +5789,20 @@
             "description": "Filter by whether the key is expired: true returns keys where expired_at is in the past, false returns active keys (including those with no expiry)",
             "in": "query",
             "name": "is_expired",
+            "required": false,
+            "schema": { "type": "boolean" }
+          },
+          {
+            "description": "Filter by whether the key has never been used: true returns keys where last_used_at is null, false returns keys that have been used at least once",
+            "in": "query",
+            "name": "is_never_used",
+            "required": false,
+            "schema": { "type": "boolean" }
+          },
+          {
+            "description": "Filter by whether the key has an expiry set: true returns keys with expired_at present, false returns keys with no expiry (unlimited lifetime)",
+            "in": "query",
+            "name": "has_expiry",
             "required": false,
             "schema": { "type": "boolean" }
           },
@@ -6208,6 +6323,58 @@
             "schema": { "type": "string" }
           },
           {
+            "description": "Filter commands with timeout greater than or equal to this value (milliseconds)",
+            "in": "query",
+            "name": "timeout__gte",
+            "required": false,
+            "schema": { "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Filter commands with timeout less than or equal to this value (milliseconds)",
+            "in": "query",
+            "name": "timeout__lte",
+            "required": false,
+            "schema": { "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Filter by whether a timeout is set: true returns commands with a timeout, false returns commands with no timeout",
+            "in": "query",
+            "name": "has_timeout",
+            "required": false,
+            "schema": { "type": "boolean" }
+          },
+          {
+            "description": "Filter commands with expired_at after this datetime",
+            "in": "query",
+            "name": "expired_at__gte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter commands with expired_at before this datetime",
+            "in": "query",
+            "name": "expired_at__lte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter by whether an expiration is set: true returns commands with expired_at, false returns commands without",
+            "in": "query",
+            "name": "has_expired_at",
+            "required": false,
+            "schema": { "type": "boolean" }
+          },
+          {
             "description": "Filter commands inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
             "in": "query",
             "name": "inserted_at__gte",
@@ -6499,7 +6666,7 @@
       }
     }
   },
-  "security": [],
+  "security": [{ "apiKey": [] }],
   "servers": [],
   "tags": [
     { "name": "Admins.Metadata" },

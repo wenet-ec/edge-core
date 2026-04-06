@@ -10,6 +10,7 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
   use EdgeAdmin.Form
 
   embedded_schema do
+    field(:status, :string)
     field(:output, :string)
     field(:exit_code, :integer)
     field(:completed_at, :utc_datetime)
@@ -35,7 +36,9 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
 
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
-    |> cast(attrs, [:output, :exit_code, :completed_at])
+    |> cast(attrs, [:status, :output, :exit_code, :completed_at])
+    |> validate_required([:status])
+    |> validate_inclusion(:status, ["completed", "expired"])
     |> validate_completed_at()
     |> apply_action(:insert)
     |> case do
@@ -90,6 +93,7 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
       end
 
     %{
+      "status" => form.status,
       "output" => form.output,
       "exit_code" => form.exit_code,
       "completed_at" => completed_at

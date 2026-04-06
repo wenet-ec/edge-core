@@ -64,6 +64,32 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
           "Filter by whether a timeout is set: true returns commands with a timeout, false returns commands with no timeout",
         schema: %OpenApiSpex.Schema{type: :boolean}
       ],
+      expired_at__gte: [
+        in: :query,
+        description: "Filter commands with expired_at after this datetime",
+        schema: %OpenApiSpex.Schema{
+          anyOf: [
+            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
+            %OpenApiSpex.Schema{type: :string, format: :date}
+          ]
+        }
+      ],
+      expired_at__lte: [
+        in: :query,
+        description: "Filter commands with expired_at before this datetime",
+        schema: %OpenApiSpex.Schema{
+          anyOf: [
+            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
+            %OpenApiSpex.Schema{type: :string, format: :date}
+          ]
+        }
+      ],
+      has_expired_at: [
+        in: :query,
+        description:
+          "Filter by whether an expiration is set: true returns commands with expired_at, false returns commands without",
+        schema: %OpenApiSpex.Schema{type: :boolean}
+      ],
       inserted_at__gte: [
         in: :query,
         description:

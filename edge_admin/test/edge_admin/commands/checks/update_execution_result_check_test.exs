@@ -15,8 +15,13 @@ defmodule EdgeAdmin.Commands.Checks.UpdateExecutionResultCheckTest do
       assert :ok = UpdateExecutionResultCheck.check(execution)
     end
 
-    test "cancelled execution with nil exit_code returns :ok (race condition: admin cancelled pending, agent already ran it)" do
+    test "cancelled execution with nil exit_code returns :ok (race: admin cancelled, agent already ran)" do
       execution = %CommandExecution{status: "cancelled", exit_code: nil}
+      assert :ok = UpdateExecutionResultCheck.check(execution)
+    end
+
+    test "expired execution with nil exit_code returns :ok (race: admin expired, agent already ran)" do
+      execution = %CommandExecution{status: "expired", exit_code: nil}
       assert :ok = UpdateExecutionResultCheck.check(execution)
     end
   end
@@ -40,10 +45,16 @@ defmodule EdgeAdmin.Commands.Checks.UpdateExecutionResultCheckTest do
       assert reason =~ "completed"
     end
 
-    test "cancelled execution with a non-nil exit_code returns conflict error (already terminal)" do
+    test "cancelled execution with non-nil exit_code returns conflict error (already terminal)" do
       execution = %CommandExecution{status: "cancelled", exit_code: 143}
       assert {:error, {:conflict, reason}} = UpdateExecutionResultCheck.check(execution)
       assert reason =~ "cancelled"
+    end
+
+    test "expired execution with non-nil exit_code returns conflict error (already terminal)" do
+      execution = %CommandExecution{status: "expired", exit_code: 0}
+      assert {:error, {:conflict, reason}} = UpdateExecutionResultCheck.check(execution)
+      assert reason =~ "expired"
     end
 
     test "error message includes the actual status and exit_code" do

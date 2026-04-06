@@ -192,6 +192,7 @@ ADMIN_DISCOVERY_PORT=44000
 NODE_HEALTH_CHECK_SCHEDULE=* * * * *           # Ping owned nodes to detect unhealthy status (default: every 1min)
 NODE_HEALTH_CHECK_CONCURRENCY=100
 # EXECUTION_DELIVERY_SCHEDULE=* * * * *        # Deliver pending commands to agents (default: every 1min)
+# EXECUTION_EXPIRATION_SCHEDULE=* * * * *      # Sweep and expire stale command executions (default: every 1min)
 
 # --- Oban Cron (job inserted by leader; any instance competes to execute) ---
 

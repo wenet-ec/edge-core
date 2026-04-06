@@ -12,6 +12,7 @@ defmodule EdgeAgent.Commands.CommandExecution do
           node_id: Ecto.UUID.t() | nil,
           command_text: String.t() | nil,
           timeout: integer() | nil,
+          expired_at: DateTime.t() | nil,
           completed_at: DateTime.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -25,6 +26,7 @@ defmodule EdgeAgent.Commands.CommandExecution do
     field(:node_id, :binary_id)
     field(:command_text, :string)
     field(:timeout, :integer)
+    field(:expired_at, :utc_datetime)
     field(:completed_at, :utc_datetime)
 
     timestamps()
@@ -39,6 +41,7 @@ defmodule EdgeAgent.Commands.CommandExecution do
       :node_id,
       :command_text,
       :timeout,
+      :expired_at,
       :status,
       :output,
       :exit_code,
@@ -46,7 +49,7 @@ defmodule EdgeAgent.Commands.CommandExecution do
     ])
     |> validate_required([:id, :command_id, :node_id, :command_text, :status])
     |> validate_uuid_format(:id)
-    |> validate_inclusion(:status, ["pending", "completed"])
+    |> validate_inclusion(:status, ["pending", "completed", "expired"])
     |> unique_constraint(:id, name: :command_executions_id_index)
   end
 

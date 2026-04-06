@@ -77,6 +77,7 @@ admin_discovery_schedule = get_env("ADMIN_DISCOVERY_SCHEDULE", :string, "*/5 * *
 metadata_recomputation_schedule = get_env("METADATA_RECOMPUTATION_SCHEDULE", :string, "* * * * *")
 node_health_check_schedule = get_env("NODE_HEALTH_CHECK_SCHEDULE", :string, "* * * * *")
 execution_delivery_schedule = get_env("EXECUTION_DELIVERY_SCHEDULE", :string, "* * * * *")
+execution_expiration_schedule = get_env("EXECUTION_EXPIRATION_SCHEDULE", :string, "* * * * *")
 
 # --- Oban Cron ---
 zombie_admin_cleanup_schedule = get_env("ZOMBIE_ADMIN_CLEANUP_SCHEDULE", :string, "*/30 * * * *")
@@ -100,6 +101,10 @@ config :edge_admin, EdgeAdmin.LocalScheduler,
     execution_delivery: [
       schedule: execution_delivery_schedule,
       task: {EdgeAdmin.Commands, :deliver_local_executions, []}
+    ],
+    execution_expiration: [
+      schedule: execution_expiration_schedule,
+      task: {EdgeAdmin.Commands, :expire_stale_executions, []}
     ]
   ]
 
@@ -177,6 +182,7 @@ config :edge_admin,
   metadata_recomputation_schedule: metadata_recomputation_schedule,
   node_health_check_schedule: node_health_check_schedule,
   execution_delivery_schedule: execution_delivery_schedule,
+  execution_expiration_schedule: execution_expiration_schedule,
   cluster_reconciliation_enabled: get_env("CLUSTER_RECONCILIATION_ENABLED", :boolean, true),
   cluster_reconciliation_schedule: cluster_reconciliation_schedule,
   zombie_admin_cleanup_schedule: zombie_admin_cleanup_schedule,

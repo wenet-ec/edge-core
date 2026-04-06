@@ -21,6 +21,11 @@ defmodule EdgeAdmin.Commands.Checks.DeleteExecutionCheckTest do
       execution = %CommandExecution{status: "cancelled"}
       assert :ok = DeleteExecutionCheck.check(execution)
     end
+
+    test "expired execution returns :ok" do
+      execution = %CommandExecution{status: "expired"}
+      assert :ok = DeleteExecutionCheck.check(execution)
+    end
   end
 
   describe "check/1 — non-terminal executions" do

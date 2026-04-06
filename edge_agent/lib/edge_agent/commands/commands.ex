@@ -405,6 +405,7 @@ defmodule EdgeAgent.Commands do
 
   defp build_report_params(execution) do
     %{
+      status: execution.status,
       output: execution.output,
       exit_code: execution.exit_code,
       completed_at: execution.completed_at && DateTime.to_iso8601(execution.completed_at)
@@ -641,6 +642,7 @@ defmodule EdgeAgent.Commands do
       node_id: node_id,
       command_text: command["command_text"],
       timeout: command["timeout"],
+      expired_at: command["expired_at"],
       status: "pending"
     }
 

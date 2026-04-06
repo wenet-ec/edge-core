@@ -14,7 +14,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
 
     schema(%{
       title: "Internal.UpdateCommandExecutionResultRequest",
-      description: "Command execution result reported by the agent. All fields are optional.",
+      description: "Command execution result reported by the agent.",
       type: :object,
       additionalProperties: true,
       properties: %{
@@ -22,6 +22,11 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
           type: :object,
           additionalProperties: true,
           properties: %{
+            status: %Schema{
+              type: :string,
+              enum: ["completed", "expired"],
+              description: "Terminal status reported by the agent"
+            },
             output: %Schema{type: :string, nullable: true, description: "Command output text"},
             exit_code: %Schema{type: :integer, nullable: true, description: "Process exit code"},
             completed_at: %Schema{
@@ -30,7 +35,8 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
               nullable: true,
               description: "When the command completed (defaults to now if omitted)"
             }
-          }
+          },
+          required: [:status]
         }
       },
       required: [:command_execution]
@@ -60,8 +66,14 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
         },
         status: %Schema{
           type: :string,
-          enum: ["pending", "sent", "completed", "cancelled"],
+          enum: ["pending", "sent", "completed", "cancelled", "expired"],
           description: "Current execution status"
+        },
+        expired_at: %Schema{
+          type: :string,
+          format: :"date-time",
+          nullable: true,
+          description: "The expiration deadline from the parent command (null if no expiration was set)"
         },
         inserted_at: %Schema{type: :string, format: :"date-time", description: "When the execution was created"}
       },

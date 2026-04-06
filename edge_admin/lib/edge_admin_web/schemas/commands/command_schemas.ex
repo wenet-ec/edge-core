@@ -33,6 +33,13 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
           description: "Command timeout in milliseconds (optional, null means no timeout)",
           example: 30_000
         },
+        expired_at: %Schema{
+          type: :string,
+          format: :"date-time",
+          nullable: true,
+          description:
+            "Deadline after which pending/sent executions are automatically expired (immutable after creation)"
+        },
         targeting: %Schema{
           type: :object,
           description: "Targeting configuration used when creating this command (informational only, not filterable)",
@@ -58,6 +65,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
         id: "01234567-89ab-cdef-0123-456789abcdef",
         command_text: "ABC=value\necho $ABC\nsystemctl restart nginx",
         timeout: 30_000,
+        expired_at: "2025-12-31T23:59:59Z",
         targeting: %{
           type: "nodes",
           node_ids: ["01234567-89ab-cdef-0123-456789abcdef"],
@@ -97,6 +105,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
           id: "01234567-89ab-cdef-0123-456789abcdef",
           command_text: "echo hello\ndate",
           timeout: nil,
+          expired_at: nil,
           targeting: %{
             type: "all",
             node_filters: %{status: "healthy"}
@@ -131,6 +140,14 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
               minimum: 1,
               description: "Command timeout in milliseconds (optional, null or omitted means no timeout, must be > 0)",
               example: 30_000
+            },
+            expired_at: %Schema{
+              type: :string,
+              format: :"date-time",
+              nullable: true,
+              description:
+                "Deadline after which pending/sent executions are automatically expired. Must be in the future. Immutable after creation.",
+              example: "2025-12-31T23:59:59Z"
             },
             targeting: %Schema{
               type: :object,

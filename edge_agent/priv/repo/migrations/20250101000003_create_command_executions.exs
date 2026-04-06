@@ -9,6 +9,7 @@ defmodule EdgeAgent.Repo.Migrations.CreateCommandExecutions do
       add :node_id, :binary_id, null: false
       add :command_text, :text, null: false
       add :timeout, :integer
+      add :expired_at, :utc_datetime
       add :status, :string, null: false
       add :output, :text
       add :exit_code, :integer

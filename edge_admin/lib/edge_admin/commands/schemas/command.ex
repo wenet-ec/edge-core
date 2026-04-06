@@ -7,8 +7,8 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
 
   @derive {
     Flop.Schema,
-    filterable: [:command_text, :timeout, :inserted_at, :updated_at],
-    sortable: [:timeout, :inserted_at, :updated_at],
+    filterable: [:command_text, :timeout, :expired_at, :inserted_at, :updated_at],
+    sortable: [:timeout, :expired_at, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],
       order_directions: [:desc]
@@ -19,6 +19,7 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
     # Maps to TEXT in database
     field(:command_text, :string)
     field(:timeout, :integer)
+    field(:expired_at, :utc_datetime)
     field(:targeting, :map)
 
     # Associations
@@ -30,10 +31,11 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
   @doc false
   def changeset(command, attrs) do
     command
-    |> cast(attrs, [:command_text, :timeout, :targeting])
+    |> cast(attrs, [:command_text, :timeout, :expired_at, :targeting])
     |> validate_required([:command_text, :targeting])
     |> validate_command_text_format()
     |> validate_timeout()
+    |> validate_expired_at()
   end
 
   @doc false
@@ -49,6 +51,17 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
 
         true ->
           []
+      end
+    end)
+  end
+
+  @doc false
+  defp validate_expired_at(changeset) do
+    validate_change(changeset, :expired_at, fn :expired_at, expired_at ->
+      if DateTime.after?(expired_at, DateTime.utc_now()) do
+        []
+      else
+        [expired_at: "must be in the future"]
       end
     end)
   end

@@ -40,6 +40,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
     field(:command_text, :string, virtual: true)
     field(:timeout, :integer, virtual: true)
     field(:cluster_name, :string, virtual: true)
+    field(:expired_at, :utc_datetime, virtual: true)
 
     # Associations
     belongs_to(:command, EdgeAdmin.Commands.Schemas.Command)
@@ -65,7 +66,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
       :cluster_id
     ])
     |> validate_required([:status, :node_id])
-    |> validate_inclusion(:status, ["pending", "sent", "completed", "cancelled"])
+    |> validate_inclusion(:status, ["pending", "sent", "completed", "cancelled", "expired"])
     |> foreign_key_constraint(:command_id)
     |> foreign_key_constraint(:node_id)
     |> foreign_key_constraint(:cluster_id)
@@ -96,4 +97,13 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   """
   def timeout(%__MODULE__{command: %{timeout: timeout}}), do: timeout
   def timeout(%__MODULE__{}), do: nil
+
+  @doc """
+  Returns the expiration deadline for this execution.
+  Derived from the command's expired_at — this is the deadline, not the event timestamp.
+  Requires command association to be preloaded.
+  Returns nil if no expiration is set.
+  """
+  def expired_at(%__MODULE__{command: %{expired_at: expired_at}}), do: expired_at
+  def expired_at(%__MODULE__{}), do: nil
 end

@@ -38,6 +38,14 @@ defmodule EdgeAdmin.Commands.Checks.CancelExecutionCheckTest do
       assert reason =~ "sent"
     end
 
+    test "expired execution returns conflict error" do
+      execution = %CommandExecution{status: "expired"}
+      assert {:error, {:conflict, reason}} = CancelExecutionCheck.check(execution)
+      assert reason =~ "expired"
+      assert reason =~ "pending"
+      assert reason =~ "sent"
+    end
+
     test "unknown status returns conflict error" do
       execution = %CommandExecution{status: "unknown_status"}
       assert {:error, {:conflict, reason}} = CancelExecutionCheck.check(execution)

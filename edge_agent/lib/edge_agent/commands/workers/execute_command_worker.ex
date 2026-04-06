@@ -20,9 +20,13 @@ defmodule EdgeAgent.Commands.Workers.ExecuteCommandWorker do
 
   alias EdgeAgent.Commands
   alias EdgeAgent.Commands.CommandExecution
+  alias EdgeAgent.Commands.Workers.ReportExecutionWorker
   alias EdgeAgent.Repo
 
   require Logger
+
+  defp expired?(%{expired_at: nil}), do: false
+  defp expired?(%{expired_at: expired_at}), do: DateTime.compare(expired_at, DateTime.utc_now()) != :gt
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"execution_id" => execution_id}}) do
@@ -32,22 +36,31 @@ defmodule EdgeAgent.Commands.Workers.ExecuteCommandWorker do
       Logger.warning("Execution #{execution_id} not found, skipping")
       :ok
     else
-      # Check status - only execute if still pending
-      if execution.status == "pending" do
-        # Execute command via Commands context
-        Commands.execute_single_command(execution)
+      cond do
+        execution.status != "pending" ->
+          Logger.debug("Execution #{execution_id} already processed (status: #{execution.status}), skipping")
+          :ok
 
-        # Trigger reporting worker
-        Commands.enqueue_worker(
-          EdgeAgent.Commands.Workers.ReportExecutionWorker,
-          "ReportExecutionWorker"
-        )
+        expired?(execution) ->
+          Logger.info("Execution #{execution_id} expired before running, marking expired")
+          {:ok, _} = Commands.update_command_execution(execution, %{status: "expired"})
 
-        :ok
-      else
-        Logger.debug("Execution #{execution_id} already processed (status: #{execution.status}), skipping")
+          Commands.enqueue_worker(
+            ReportExecutionWorker,
+            "ReportExecutionWorker"
+          )
 
-        :ok
+          :ok
+
+        true ->
+          Commands.execute_single_command(execution)
+
+          Commands.enqueue_worker(
+            ReportExecutionWorker,
+            "ReportExecutionWorker"
+          )
+
+          :ok
       end
     end
   end

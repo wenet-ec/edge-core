@@ -14,6 +14,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionForm do
     field(:node_id, :binary_id)
     field(:command_text, :string)
     field(:timeout, :integer)
+    field(:expired_at, :utc_datetime)
     field(:status, :string)
     field(:output, :string)
     field(:exit_code, :integer)
@@ -46,6 +47,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionForm do
       :node_id,
       :command_text,
       :timeout,
+      :expired_at,
       :status,
       :output,
       :exit_code,
@@ -56,7 +58,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionForm do
     |> validate_uuid_format(:command_id)
     |> validate_uuid_format(:node_id)
     |> validate_command_text_format()
-    |> validate_inclusion(:status, ["pending", "completed"])
+    |> validate_inclusion(:status, ["pending", "completed", "expired"])
     |> validate_timeout()
     |> apply_action(:insert)
     |> case do
@@ -116,6 +118,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionForm do
       "node_id" => form.node_id,
       "command_text" => form.command_text,
       "timeout" => form.timeout,
+      "expired_at" => form.expired_at,
       "status" => form.status,
       "output" => form.output,
       "exit_code" => form.exit_code,

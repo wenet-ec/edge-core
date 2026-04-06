@@ -43,7 +43,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
         },
         status: %Schema{
           type: :string,
-          enum: ["pending", "sent", "completed", "cancelled"],
+          enum: ["pending", "sent", "completed", "cancelled", "expired"],
           description: "Current execution status"
         },
         command_text: %Schema{
@@ -51,6 +51,11 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
           nullable: true,
           description: "The command text being executed (denormalized for convenience)",
           example: "echo hello\nls -la"
+        },
+        timeout: %Schema{
+          type: :integer,
+          nullable: true,
+          description: "Command timeout in milliseconds (null means no timeout)"
         },
         output: %Schema{
           type: :string,
@@ -82,6 +87,12 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
           format: :"date-time",
           nullable: true,
           description: "When the command execution was cancelled"
+        },
+        expired_at: %Schema{
+          type: :string,
+          format: :"date-time",
+          nullable: true,
+          description: "The expiration deadline from the parent command (null if no expiration was set)"
         },
         inserted_at: %Schema{
           type: :string,

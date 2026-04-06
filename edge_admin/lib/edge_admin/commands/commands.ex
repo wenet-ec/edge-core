@@ -186,6 +186,12 @@ defmodule EdgeAdmin.Commands do
         filter.field == :has_timeout
       end)
 
+    # Extract has_expired_at filter (virtual, handle separately)
+    {has_expired_at_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter ->
+        filter.field == :has_expired_at
+      end)
+
     {ilike_filters, flop_params} =
       EdgeAdmin.RequestParser.split_ilike_filters(
         Map.put(flop_params, :filters, other_filters),
@@ -198,6 +204,7 @@ defmodule EdgeAdmin.Commands do
       end)
 
     base_query = apply_has_timeout_filters(base_query, has_timeout_filters)
+    base_query = apply_has_expired_at_filters(base_query, has_expired_at_filters)
 
     case Flop.validate_and_run(base_query, flop_params,
            for: Command,
@@ -413,6 +420,20 @@ defmodule EdgeAdmin.Commands do
   end
 
   defp apply_has_timeout_filter(query, _), do: query
+
+  defp apply_has_expired_at_filters(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc -> apply_has_expired_at_filter(acc, filter) end)
+  end
+
+  defp apply_has_expired_at_filter(query, %{op: :==, value: v}) when v in [true, "true"] do
+    from(c in query, where: not is_nil(c.expired_at))
+  end
+
+  defp apply_has_expired_at_filter(query, %{op: :==, value: v}) when v in [false, "false"] do
+    from(c in query, where: is_nil(c.expired_at))
+  end
+
+  defp apply_has_expired_at_filter(query, _), do: query
 
   defp apply_execution_cluster_name_filters(query, filters) do
     Enum.reduce(filters, query, fn filter, acc_query ->
@@ -955,13 +976,17 @@ defmodule EdgeAdmin.Commands do
   end
 
   defp get_pending_executions_for_my_clusters(cluster_names) do
+    now = DateTime.utc_now()
+
     Repo.all(
       from(ce in CommandExecution,
         join: n in assoc(ce, :node),
         join: c in assoc(n, :cluster),
+        join: cmd in assoc(ce, :command),
         where: ce.status == "pending",
         where: c.name in ^cluster_names,
         where: n.status == "healthy",
+        where: is_nil(cmd.expired_at) or cmd.expired_at > ^now,
         order_by: [asc: ce.node_id, asc: ce.inserted_at],
         preload: [node: :cluster, command: []]
       )
@@ -979,6 +1004,7 @@ defmodule EdgeAdmin.Commands do
         node_id: execution.node_id,
         command_text: CommandExecution.command_text(execution),
         timeout: CommandExecution.timeout(execution),
+        expired_at: CommandExecution.expired_at(execution),
         status: "pending"
       }
 
@@ -1088,10 +1114,16 @@ defmodule EdgeAdmin.Commands do
   def update_command_execution_result(execution, params) do
     with :ok <- Checks.UpdateExecutionResultCheck.check(execution),
          {:ok, attrs} <- Forms.UpdateCommandExecutionResultForm.changeset(params) do
-      # Determine terminal status from exit code — agent is the source of truth.
-      # exit_code 143 (SIGTERM) means the agent honoured a cancellation request.
-      # Everything else is a normal completion regardless of any prior cancel request.
-      terminal_status = if attrs["exit_code"] == 143, do: "cancelled", else: "completed"
+      # Agent is the source of truth for terminal status.
+      # exit_code 143 (SIGTERM) means the agent honoured a cancellation request — override to cancelled.
+      # "expired" means agent detected expiry before running — trust it.
+      # Everything else uses the status the agent reported.
+      terminal_status =
+        cond do
+          attrs["exit_code"] == 143 -> "cancelled"
+          attrs["status"] == "expired" -> "expired"
+          true -> "completed"
+        end
 
       attrs =
         attrs
@@ -1183,6 +1215,85 @@ defmodule EdgeAdmin.Commands do
               {:error, :service_unavailable}
           end
       end
+    end
+  end
+
+  @doc """
+  Expires all stale command executions whose command's `expired_at` has passed.
+
+  Called by the Quantum scheduler (every minute). Processes executions in two passes:
+
+  - `pending` - Command never reached the agent; mark expired immediately in DB.
+  - `sent` - Command was delivered; send best-effort cancellation to agent, then mark
+    expired in DB regardless of whether the agent acknowledged it. If the agent already
+    ran the command and reports back later, `UpdateExecutionResultCheck` will accept the
+    result and overwrite the expired status (agent is source of truth for what ran).
+
+  Always returns `:ok` — errors are logged but never halt the scheduler.
+  """
+  @spec expire_stale_executions() :: :ok
+  def expire_stale_executions do
+    now = DateTime.utc_now()
+
+    stale_executions = get_stale_executions(now)
+
+    if Enum.empty?(stale_executions) do
+      Logger.debug("No stale executions to expire")
+      :ok
+    else
+      Logger.info("Expiring #{length(stale_executions)} stale execution(s)")
+
+      Enum.each(stale_executions, fn execution ->
+        case execution.status do
+          "pending" ->
+            expire_execution(execution, now)
+
+          "sent" ->
+            # Best-effort cancel signal to agent — do not block on result
+            case send_cancel_to_agent(execution) do
+              :ok ->
+                Logger.debug("Sent cancellation to agent for expiring execution #{execution.id}")
+
+              {:error, reason} ->
+                Logger.warning(
+                  "Could not reach agent for expiring execution #{execution.id}: #{inspect(reason)} — marking expired anyway"
+                )
+            end
+
+            expire_execution(execution, now)
+        end
+      end)
+
+      :telemetry.execute(
+        [:edge_admin, :commands, :expiration],
+        %{expired_count: length(stale_executions)},
+        %{}
+      )
+
+      :ok
+    end
+  end
+
+  defp get_stale_executions(now) do
+    Repo.all(
+      from(ce in CommandExecution,
+        join: c in assoc(ce, :command),
+        join: n in assoc(ce, :node),
+        where: ce.status in ["pending", "sent"],
+        where: not is_nil(c.expired_at),
+        where: c.expired_at <= ^now,
+        preload: [node: :cluster, command: []]
+      )
+    )
+  end
+
+  defp expire_execution(execution, _now) do
+    case update_command_execution(execution, %{status: "expired"}) do
+      {:ok, _updated} ->
+        Logger.info("Execution #{execution.id} marked expired")
+
+      {:error, changeset} ->
+        Logger.error("Failed to expire execution #{execution.id}: #{inspect(changeset.errors)}")
     end
   end
 

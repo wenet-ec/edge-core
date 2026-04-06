@@ -13,6 +13,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandJSONTest do
         id: "cmd-uuid-1",
         command_text: "echo hello",
         timeout: nil,
+        expired_at: nil,
         targeting: %{"type" => "all"},
         inserted_at: @now,
         updated_at: @now
@@ -53,6 +54,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandJSONTest do
       assert Map.has_key?(data, :id)
       assert Map.has_key?(data, :command_text)
       assert Map.has_key?(data, :timeout)
+      assert Map.has_key?(data, :expired_at)
       assert Map.has_key?(data, :targeting)
       assert Map.has_key?(data, :inserted_at)
       assert Map.has_key?(data, :updated_at)
@@ -72,6 +74,16 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandJSONTest do
     test "nil timeout is passed through" do
       data = CommandJSON.show(%{command: fake_command(%{timeout: nil})}).data
       assert data.timeout == nil
+    end
+
+    test "expired_at is passed through when set" do
+      data = CommandJSON.show(%{command: fake_command(%{expired_at: @now})}).data
+      assert data.expired_at == @now
+    end
+
+    test "nil expired_at is passed through" do
+      data = CommandJSON.show(%{command: fake_command(%{expired_at: nil})}).data
+      assert data.expired_at == nil
     end
   end
 

@@ -20,6 +20,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSONTest do
         exit_code: nil,
         sent_at: nil,
         completed_at: nil,
+        cancelled_at: nil,
         inserted_at: @now,
         updated_at: @now,
         command: %NotLoaded{},
@@ -31,7 +32,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSONTest do
 
   defp execution_with_assocs(command_text, timeout, cluster_name) do
     bare_execution(%{
-      command: %{command_text: command_text, timeout: timeout},
+      command: %{command_text: command_text, timeout: timeout, expired_at: nil},
       cluster: %{name: cluster_name}
     })
   end
@@ -65,7 +66,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSONTest do
 
     test "data contains all required fields" do
       data = CommandExecutionJSON.show(%{command_execution: bare_execution()}).data
-      # Note: timeout is NOT included in the admin-facing view (unlike the agent-facing view)
+
       expected = [
         :id,
         :command_id,
@@ -74,10 +75,13 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSONTest do
         :target_all,
         :status,
         :command_text,
+        :timeout,
         :output,
         :exit_code,
         :sent_at,
         :completed_at,
+        :cancelled_at,
+        :expired_at,
         :inserted_at,
         :updated_at
       ]
@@ -85,9 +89,30 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSONTest do
       for field <- expected, do: assert(Map.has_key?(data, field), "missing field: #{field}")
     end
 
-    test "timeout is NOT exposed in the admin-facing view" do
+    test "expired_at is nil when command not preloaded" do
       data = CommandExecutionJSON.show(%{command_execution: bare_execution()}).data
-      refute Map.has_key?(data, :timeout)
+      assert data.expired_at == nil
+    end
+
+    test "expired_at is returned from loaded command" do
+      exec =
+        "ls"
+        |> execution_with_assocs(nil, "prod")
+        |> Map.put(:command, %{command_text: "ls", timeout: nil, expired_at: @now})
+
+      data = CommandExecutionJSON.show(%{command_execution: exec}).data
+      assert data.expired_at == @now
+    end
+
+    test "timeout is nil when command not preloaded" do
+      data = CommandExecutionJSON.show(%{command_execution: bare_execution()}).data
+      assert data.timeout == nil
+    end
+
+    test "timeout is returned from loaded command" do
+      exec = execution_with_assocs("ls", 5000, "prod")
+      data = CommandExecutionJSON.show(%{command_execution: exec}).data
+      assert data.timeout == 5000
     end
 
     test "scalar fields are passed through" do

@@ -45,7 +45,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
       status: [
         in: :query,
         description: "Filter by execution status",
-        schema: %OpenApiSpex.Schema{type: :string, enum: ["pending", "sent", "completed", "cancelled"]}
+        schema: %OpenApiSpex.Schema{type: :string, enum: ["pending", "sent", "completed", "cancelled", "expired"]}
       ],
       target_all: [
         in: :query,
@@ -251,7 +251,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
     description: """
     Delete a specific command execution.
 
-    Only completed or cancelled executions can be deleted. Attempting to delete pending or sent executions will return 409.
+    Only completed, cancelled, or expired executions can be deleted. Attempting to delete pending or sent executions will return 409.
     """,
     parameters: [
       id: [

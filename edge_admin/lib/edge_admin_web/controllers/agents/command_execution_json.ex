@@ -32,6 +32,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionJSON do
       command_id: execution.command_id,
       command_text: CommandExecution.command_text(execution),
       timeout: CommandExecution.timeout(execution),
+      expired_at: CommandExecution.expired_at(execution),
       status: execution.status,
       inserted_at: execution.inserted_at
     }

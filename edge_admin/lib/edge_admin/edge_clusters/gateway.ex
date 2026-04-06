@@ -300,8 +300,11 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
           %{cluster: cluster_name, event: :connected}
         )
 
-        # Emit active count (this will be overwritten by other gateways, but that's ok)
-        active_count = length(:syn.members(:cluster_scope, {:gateway, admin_name}))
+        # Emit active count for this admin's gateways.
+        # Uses a direct ETS select_count on syn's registry table with a match pattern
+        # on the name tuple prefix {:gateway, admin_name, _} — O(n) over this admin's
+        # gateways only, no GenServer call, no full-scope scan.
+        active_count = count_local_gateways(admin_name)
 
         :telemetry.execute(
           [:edge_admin, :gateway, :active_count],
@@ -615,12 +618,36 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   # Private Helpers
   # ===========================================================================
 
+  # Count gateways registered by this admin in the syn cluster_scope registry.
+  # Syn stores entries as {Name, Pid, Meta, Time, MRef, Node} in the ETS table
+  # `syn_registry_by_name_cluster_scope`. We match on {:gateway, admin_name, _}
+  # to count only this admin's gateways without touching other scopes or nodes.
+  defp count_local_gateways(admin_name) do
+    table = :syn_backbone.get_table_name(:syn_registry_by_name, :cluster_scope)
+
+    case table do
+      nil ->
+        0
+
+      table_name ->
+        :ets.select_count(table_name, [
+          {{{:gateway, admin_name, :_}, :_, :_, :_, :_, :_}, [], [true]}
+        ])
+    end
+  end
+
   defp join_network(cluster_name, host_id, attempt \\ 1, max_attempts \\ 3) do
     # cluster_name is already normalized (e.g., "cluster-default")
     # Add this host to the cluster network via direct API
     # Netmaker handles DNS automatically (no custom DNS entries needed)
     case Vpn.add_host_to_network(host_id, cluster_name) do
-      {:ok, _node} ->
+      {:ok, :already_joined} ->
+        # Host already has a node in this network (e.g. Gateway restarted without leaving).
+        # Netmaker returns HTTP 500 "host already part of network" for this — treat as success.
+        Logger.info("Gateway already in network #{cluster_name}, skipping join")
+        :ok
+
+      {:ok, _} ->
         # Verify that we actually joined the network
         case verify_joined_network(host_id, cluster_name) do
           :ok ->
@@ -726,9 +753,6 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   end
 
   defp verify_joined_network(host_id, cluster_name) do
-    # Wait briefly for Netmaker to process the operation
-    :timer.sleep(500)
-
     # Check if our host has a node in this network
     case Vpn.list_nodes(cluster_name) do
       {:ok, nodes} ->
@@ -752,9 +776,6 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   end
 
   defp verify_left_network(host_id, cluster_name) do
-    # Wait briefly for Netmaker to process the operation
-    :timer.sleep(500)
-
     # Check if our host still has a node in this network
     case Vpn.list_nodes(cluster_name) do
       {:ok, nodes} ->

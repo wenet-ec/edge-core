@@ -43,7 +43,11 @@ defmodule EdgeAdmin.Vpn do
 
       # Add host to network
       iex> Vpn.add_host_to_network(host_id, "cluster-prod")
-      {:ok, %{}}
+      {:ok, %{body: ""}}
+
+      # If host is already in network (idempotent)
+      iex> Vpn.add_host_to_network(host_id, "cluster-prod")
+      {:ok, :already_joined}
   """
 
   import Bitwise
@@ -476,6 +480,32 @@ defmodule EdgeAdmin.Vpn do
 
   def netmaker_not_found_error?(_), do: false
 
+  @doc """
+  Checks if a Netmaker HTTP error body indicates the host is already a member of the network.
+
+  Netmaker returns HTTP 500 with this message when `POST /api/hosts/{id}/networks/{network}`
+  is called for a host that already has a node in that network. This is an idempotent
+  condition — the host is already joined, so callers should treat it as success.
+
+  ## Examples
+
+      iex> Vpn.netmaker_already_in_network_error?(%{"Message" => "host already part of network cluster-prod"})
+      true
+
+      iex> Vpn.netmaker_already_in_network_error?("host already part of network cluster-prod")
+      true
+  """
+  def netmaker_already_in_network_error?(body) when is_binary(body) do
+    String.contains?(body, "host already part of network")
+  end
+
+  def netmaker_already_in_network_error?(body) when is_map(body) do
+    message = Map.get(body, "Message", "")
+    String.contains?(message, "host already part of network")
+  end
+
+  def netmaker_already_in_network_error?(_), do: false
+
   # ===========================================================================
   # Error Normalization
   # ===========================================================================
@@ -600,14 +630,37 @@ defmodule EdgeAdmin.Vpn do
   @doc """
   Adds a host to a Netmaker network.
 
-  Returns `{:ok, response}` or `{:error, :service_unavailable}`.
+  Returns `{:ok, response}`, `{:ok, :already_joined}`, or `{:error, :service_unavailable}`.
+
+  Netmaker returns HTTP 500 with "host already part of network" if the host already has
+  a node in that network. This is treated as a success — the host is already joined and
+  no further action is needed.
   """
-  @spec add_host_to_network(String.t(), String.t()) :: {:ok, map()} | {:error, :service_unavailable}
+  @spec add_host_to_network(String.t(), String.t()) ::
+          {:ok, map()} | {:ok, :already_joined} | {:error, :service_unavailable}
   def add_host_to_network(host_id, network_name) do
     host_id
     |> Hosts.add_to_network(network_name)
-    |> normalize_netmaker_error()
+    |> normalize_add_host_to_network_error()
   end
+
+  defp normalize_add_host_to_network_error({:ok, result}), do: {:ok, result}
+
+  defp normalize_add_host_to_network_error({:error, {:http_error, 500, body}}) do
+    cond do
+      netmaker_already_in_network_error?(body) ->
+        {:ok, :already_joined}
+
+      netmaker_not_found_error?(body) ->
+        {:error, :not_found}
+
+      true ->
+        {:error, :service_unavailable}
+    end
+  end
+
+  defp normalize_add_host_to_network_error({:error, :not_found}), do: {:error, :not_found}
+  defp normalize_add_host_to_network_error({:error, _reason}), do: {:error, :service_unavailable}
 
   @doc """
   Get the Netmaker host ID using hostname.

@@ -23,7 +23,7 @@ defmodule EdgeAdmin.Admins.Metadata do
      - Update table atomically during recomputations
 
   2. **Event Subscription**
-     - syn: Admin join/leave events (topology changes)
+     - Syn: Admin join/leave events via `SynEventHandler` callback bridge
      - PubSub: Cluster/node CRUD events (PostgreSQL changes)
      - Triggers recomputation when relevant changes occur
 
@@ -95,11 +95,12 @@ defmodule EdgeAdmin.Admins.Metadata do
 
   ## Recomputation Triggers
 
-  - Admin joins/leaves (syn event)
+  - Admin joins/leaves (syn event via `SynEventHandler` callback → `{:syn_admin_topology_changed}`)
   - Cluster created/deleted (PubSub event)
   - Node created/deleted (PubSub event)
   - Node cluster changed (PubSub event)
-  - Periodic reconciliation (future)
+  - Periodic scheduler (every minute via LocalScheduler, safety net)
+  - Manual call via `recompute_now/0`
 
   ## Anti-Thrashing Pattern
 
@@ -335,17 +336,11 @@ defmodule EdgeAdmin.Admins.Metadata do
 
   # === Event Handlers ===
 
-  # Syn events (admin topology changes)
+  # Syn events - Admin topology changes (forwarded by SynEventHandler callback)
   @impl true
-  def handle_info({:syn_event, :admin_scope, {:join, admin_id, _pid, _metadata}}, state) do
-    Logger.info("Admin joined: #{admin_id}, requesting recomputation")
-    request_recomputation(state, :admin_join)
-  end
-
-  @impl true
-  def handle_info({:syn_event, :admin_scope, {:leave, admin_id, _pid, _metadata}}, state) do
-    Logger.info("Admin left: #{admin_id}, requesting recomputation")
-    request_recomputation(state, :admin_leave)
+  def handle_info({:syn_admin_topology_changed, trigger}, state) do
+    Logger.info("Metadata: admin topology changed (#{trigger}), requesting recomputation")
+    request_recomputation(state, trigger)
   end
 
   # PostgreSQL events - Cluster structure changes

@@ -41,13 +41,14 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       assert a1_clusters["c2"] == ~w[n3]
     end
 
-    test "no admins → all clusters are orphaned" do
+    test "admin with zero capacity → all clusters are orphaned" do
+      admins = admins(a1: 0)
       clusters = clusters(c1: ~w[n1 n2], c2: ~w[n3])
 
-      result = Algorithm.compute_assignments(%{}, clusters)
+      result = Algorithm.compute_assignments(admins, clusters)
 
       assert result.degraded == true
-      assert result.edge_clusters == %{}
+      assert result.edge_clusters["a1"] == %{}
       assert Map.has_key?(result.orphaned_clusters, "c1")
       assert Map.has_key?(result.orphaned_clusters, "c2")
     end
@@ -199,10 +200,10 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       assert result.total_capacity == 500
     end
 
-    test "total_capacity is zero when no admins" do
-      clusters = clusters(c1: ~w[n1])
+    test "total_capacity reflects sum of all admin capacities" do
+      admins = admins(a1: 0, a2: 0)
 
-      result = Algorithm.compute_assignments(%{}, clusters)
+      result = Algorithm.compute_assignments(admins, [])
 
       assert result.total_capacity == 0
     end

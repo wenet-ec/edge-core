@@ -84,8 +84,8 @@ defmodule EdgeAgent.SshServer.Channel do
     cmd_string = to_string(command)
 
     port =
-      Port.open({:spawn_executable, "/bin/sh"}, [
-        {:args, ["-c", cmd_string]},
+      Port.open({:spawn_executable, "/usr/local/bin/hostscript"}, [
+        {:args, [cmd_string]},
         {:env, [{~c"HOME", ~c"/root"}, {~c"PATH", ~c"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}]},
         {:cd, "/root"},
         :binary,

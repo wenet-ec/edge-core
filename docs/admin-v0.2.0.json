@@ -3180,6 +3180,48 @@
   },
   "openapi": "3.0.0",
   "paths": {
+    "/api/v1/admins/self": {
+      "get": {
+        "callbacks": {},
+        "description": "Returns this admin's identity and configuration from metadata",
+        "operationId": "EdgeAdminWeb.Controllers.Admins.AdminController.show",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdminResponse" }
+              }
+            },
+            "description": "Admin identity"
+          }
+        },
+        "summary": "Get this admin's identity",
+        "tags": ["Admins.Metadata"]
+      }
+    },
+    "/api/v1/admins/admin_cluster": {
+      "get": {
+        "callbacks": {},
+        "description": "Returns admin cluster metadata and peer topology",
+        "operationId": "EdgeAdminWeb.Controllers.Admins.AdminClusterController.show",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminClusterResponse"
+                }
+              }
+            },
+            "description": "Admin cluster topology"
+          }
+        },
+        "summary": "Get admin cluster topology",
+        "tags": ["Admins.Metadata"]
+      }
+    },
     "/api/v1/admins/edge_clusters": {
       "get": {
         "callbacks": {},
@@ -3200,6 +3242,1053 @@
         },
         "summary": "Get all edge cluster assignments",
         "tags": ["Admins.Metadata"]
+      }
+    },
+    "/api/v1/admins/orphaned_clusters": {
+      "get": {
+        "callbacks": {},
+        "description": "Returns all clusters that could not be assigned to any admin due to capacity constraints. Empty map when system is not degraded.",
+        "operationId": "EdgeAdminWeb.Controllers.Admins.OrphanedClustersController.index",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrphanedClustersResponse"
+                }
+              }
+            },
+            "description": "Orphaned clusters"
+          }
+        },
+        "summary": "Get all orphaned clusters",
+        "tags": ["Admins.Metadata"]
+      }
+    },
+    "/api/v1/admins/metrics/self": {
+      "get": {
+        "callbacks": {},
+        "description": "Returns application-level metrics from the edge_admin PromEx:\n- Application: uptime, BEAM stats (processes, memory, atoms, ETS tables)\n- Metadata: degraded status, orphaned/assigned clusters\n- Bootstrap: initialization step counts\n- Nodes: health check statistics\n- Oban: job queue states (available, scheduled, executing, etc.)\n",
+        "operationId": "EdgeAdminWeb.Controllers.Metrics.AdminMetricsController.show_self",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminMetricsResponse"
+                }
+              }
+            },
+            "description": "Admin metrics retrieved successfully"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                }
+              }
+            },
+            "description": "Metrics unavailable"
+          }
+        },
+        "summary": "Get admin metrics for self",
+        "tags": ["Admins.Metrics"]
+      }
+    },
+    "/api/v1/clusters": {
+      "post": {
+        "callbacks": {},
+        "description": "Create a new edge cluster with optional IP range.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.ClusterController.create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ClusterCreateRequest" }
+            }
+          },
+          "description": "Cluster creation parameters",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClusterSingleResponse"
+                }
+              }
+            },
+            "description": "Cluster created successfully"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConflictResponse" }
+              }
+            },
+            "description": "Cluster name already exists, or IP range conflicts with an existing cluster"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangesetErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Create a new cluster",
+        "tags": ["Nodes.Cluster"]
+      },
+      "get": {
+        "callbacks": {},
+        "description": "Returns a paginated list of all edge clusters with filtering and sorting",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.ClusterController.index",
+        "parameters": [
+          {
+            "description": "Page number",
+            "example": 1,
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": { "default": 1, "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Items per page",
+            "example": 20,
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Comma-separated list of fields to sort by",
+            "example": "inserted_at,name",
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
+            "example": "desc,asc",
+            "in": "query",
+            "name": "order_directions",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by cluster name (exact match or wildcard: prod*, *tion, *rod*)",
+            "in": "query",
+            "name": "name",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by IPv4 range (exact match or wildcard)",
+            "in": "query",
+            "name": "ipv4_range",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter clusters inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "in": "query",
+            "name": "inserted_at__gte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter clusters inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "in": "query",
+            "name": "inserted_at__lte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter clusters updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "in": "query",
+            "name": "updated_at__gte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter clusters updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "in": "query",
+            "name": "updated_at__lte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter by minimum node count",
+            "in": "query",
+            "name": "node_count__gte",
+            "required": false,
+            "schema": { "minimum": 0, "type": "integer" }
+          },
+          {
+            "description": "Filter by maximum node count",
+            "in": "query",
+            "name": "node_count__lte",
+            "required": false,
+            "schema": { "minimum": 0, "type": "integer" }
+          },
+          {
+            "description": "Filter by exact node limit",
+            "in": "query",
+            "name": "node_limit",
+            "required": false,
+            "schema": { "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Filter by whether a node limit is set: true returns clusters with a limit, false returns unlimited clusters",
+            "in": "query",
+            "name": "has_node_limit",
+            "required": false,
+            "schema": { "type": "boolean" }
+          },
+          {
+            "description": "Filter by minimum node limit",
+            "in": "query",
+            "name": "node_limit__gte",
+            "required": false,
+            "schema": { "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Filter by maximum node limit",
+            "in": "query",
+            "name": "node_limit__lte",
+            "required": false,
+            "schema": { "minimum": 1, "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClusterPaginatedResponse"
+                }
+              }
+            },
+            "description": "Paginated cluster list"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+              }
+            },
+            "description": "Invalid query parameters"
+          }
+        },
+        "summary": "List all clusters",
+        "tags": ["Nodes.Cluster"]
+      }
+    },
+    "/api/v1/clusters/{name}": {
+      "get": {
+        "callbacks": {},
+        "description": "Returns details for a specific cluster by name",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.ClusterController.show",
+        "parameters": [
+          {
+            "description": "Cluster name",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "maxLength": 24,
+              "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClusterSingleResponse"
+                }
+              }
+            },
+            "description": "Cluster details"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Cluster not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          }
+        },
+        "summary": "Get a specific cluster",
+        "tags": ["Nodes.Cluster"]
+      },
+      "patch": {
+        "callbacks": {},
+        "description": "Update a cluster's settings. Only provided fields are changed. Pass null to unset a nullable field.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.ClusterController.update",
+        "parameters": [
+          {
+            "description": "Cluster name",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "maxLength": 24,
+              "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ClusterUpdateRequest" }
+            }
+          },
+          "description": "Cluster update parameters",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClusterSingleResponse"
+                }
+              }
+            },
+            "description": "Cluster updated successfully"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Cluster not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangesetErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error or node_limit below current node count"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Update a cluster",
+        "tags": ["Nodes.Cluster"]
+      },
+      "delete": {
+        "callbacks": {},
+        "description": "Delete an empty cluster (must have no nodes).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.ClusterController.delete",
+        "parameters": [
+          {
+            "description": "Cluster name",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "maxLength": 24,
+              "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "content": { "": {} },
+            "description": "Cluster deleted successfully"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Cluster not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConflictResponse" }
+              }
+            },
+            "description": "Cannot delete cluster with nodes"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Delete a cluster",
+        "tags": ["Nodes.Cluster"]
+      }
+    },
+    "/api/v1/clusters/default/enrollment_keys/public": {
+      "post": {
+        "callbacks": {},
+        "description": "Public endpoint (no authentication required). Only enabled when both\nPUBLIC_ENROLLMENT_KEY_ENABLED=true and DEFAULT_CLUSTER_NAME are configured.\n\n**Note:** This endpoint is unavailable during degraded mode (503).\n",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.create_for_public",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentKeySingleResponse"
+                }
+              }
+            },
+            "description": "Enrollment key created"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ForbiddenResponse" }
+              }
+            },
+            "description": "Public enrollment disabled"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Default cluster not found"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get a public enrollment key for the default cluster",
+        "tags": ["Nodes.EnrollmentKey"]
+      }
+    },
+    "/api/v1/clusters/default/enrollment_keys": {
+      "post": {
+        "callbacks": {},
+        "description": "Convenience endpoint for the default cluster (configured via DEFAULT_CLUSTER_NAME env).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.create_for_default",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollmentKeyCreateRequest"
+              }
+            }
+          },
+          "description": "Enrollment key parameters",
+          "required": false
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentKeySingleResponse"
+                }
+              }
+            },
+            "description": "Enrollment key created"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ForbiddenResponse" }
+              }
+            },
+            "description": "Default cluster not configured"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Default cluster not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangesetErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Create an enrollment key for the default cluster",
+        "tags": ["Nodes.EnrollmentKey"]
+      }
+    },
+    "/api/v1/clusters/{cluster_name}/enrollment_keys": {
+      "post": {
+        "callbacks": {},
+        "description": "**Note:** This endpoint is unavailable during degraded mode (503).",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.create",
+        "parameters": [
+          {
+            "description": "Cluster name",
+            "in": "path",
+            "name": "cluster_name",
+            "required": true,
+            "schema": {
+              "maxLength": 24,
+              "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollmentKeyCreateRequest"
+              }
+            }
+          },
+          "description": "Enrollment key parameters",
+          "required": false
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentKeySingleResponse"
+                }
+              }
+            },
+            "description": "Enrollment key created"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Cluster not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangesetErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Create an enrollment key for a cluster",
+        "tags": ["Nodes.EnrollmentKey"]
+      }
+    },
+    "/api/v1/enrollment_keys": {
+      "get": {
+        "callbacks": {},
+        "description": "Returns a paginated list of enrollment keys with filtering and sorting.",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.index",
+        "parameters": [
+          {
+            "description": "Page number",
+            "example": 1,
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": { "default": 1, "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Items per page",
+            "example": 20,
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Comma-separated list of fields to sort by",
+            "example": "inserted_at",
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
+            "example": "desc",
+            "in": "query",
+            "name": "order_directions",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by cluster name (exact match or wildcard: prod*, *east, etc.)",
+            "in": "query",
+            "name": "cluster_name",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by exact key value",
+            "in": "query",
+            "name": "key",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by exact uses_remaining (positive integer; use is_unlimited=true to find unlimited keys)",
+            "in": "query",
+            "name": "uses_remaining",
+            "required": false,
+            "schema": { "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Filter by minimum uses_remaining",
+            "in": "query",
+            "name": "uses_remaining__gte",
+            "required": false,
+            "schema": { "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Filter by maximum uses_remaining",
+            "in": "query",
+            "name": "uses_remaining__lte",
+            "required": false,
+            "schema": { "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Filter by whether the key has unlimited uses: true returns unlimited keys (uses_remaining is null), false returns keys with a finite use count",
+            "in": "query",
+            "name": "is_unlimited",
+            "required": false,
+            "schema": { "type": "boolean" }
+          },
+          {
+            "description": "Filter by whether the key is exhausted: true returns keys with uses_remaining == 0, false returns keys with uses remaining",
+            "in": "query",
+            "name": "is_spent",
+            "required": false,
+            "schema": { "type": "boolean" }
+          },
+          {
+            "description": "Filter by whether the key is expired: true returns keys where expired_at is in the past, false returns active keys (including those with no expiry)",
+            "in": "query",
+            "name": "is_expired",
+            "required": false,
+            "schema": { "type": "boolean" }
+          },
+          {
+            "description": "Filter by whether the key has never been used: true returns keys where last_used_at is null, false returns keys that have been used at least once",
+            "in": "query",
+            "name": "is_never_used",
+            "required": false,
+            "schema": { "type": "boolean" }
+          },
+          {
+            "description": "Filter by whether the key has an expiry set: true returns keys with expired_at present, false returns keys with no expiry (unlimited lifetime)",
+            "in": "query",
+            "name": "has_expiry",
+            "required": false,
+            "schema": { "type": "boolean" }
+          },
+          {
+            "description": "Filter keys expiring after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "in": "query",
+            "name": "expired_at__gte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter keys expiring before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "in": "query",
+            "name": "expired_at__lte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter keys last used after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "in": "query",
+            "name": "last_used_at__gte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter keys last used before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "in": "query",
+            "name": "last_used_at__lte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter keys created after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "in": "query",
+            "name": "inserted_at__gte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter keys created before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "in": "query",
+            "name": "inserted_at__lte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter keys updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "in": "query",
+            "name": "updated_at__gte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter keys updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "in": "query",
+            "name": "updated_at__lte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentKeyPaginatedResponse"
+                }
+              }
+            },
+            "description": "Paginated enrollment key list"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+              }
+            },
+            "description": "Invalid query parameters"
+          }
+        },
+        "summary": "List enrollment keys",
+        "tags": ["Nodes.EnrollmentKey"]
+      }
+    },
+    "/api/v1/enrollment_keys/{id}": {
+      "get": {
+        "callbacks": {},
+        "description": "Returns details for a specific enrollment key by ID",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.show",
+        "parameters": [
+          {
+            "description": "Enrollment key ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentKeySingleResponse"
+                }
+              }
+            },
+            "description": "Enrollment key"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          }
+        },
+        "summary": "Get an enrollment key",
+        "tags": ["Nodes.EnrollmentKey"]
+      },
+      "patch": {
+        "callbacks": {},
+        "description": "Update expired_at or uses_remaining. Pass null to unset a nullable field.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.update",
+        "parameters": [
+          {
+            "description": "Enrollment key ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollmentKeyUpdateRequest"
+              }
+            }
+          },
+          "description": "Update parameters",
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentKeySingleResponse"
+                }
+              }
+            },
+            "description": "Updated enrollment key"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangesetErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Update an enrollment key",
+        "tags": ["Nodes.EnrollmentKey"]
+      },
+      "delete": {
+        "callbacks": {},
+        "description": "Permanently deletes an enrollment key. **Note:** This endpoint is unavailable during degraded mode (503).",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.delete",
+        "parameters": [
+          {
+            "description": "Enrollment key ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": {
+            "content": { "": {} },
+            "description": "Enrollment key deleted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Delete an enrollment key",
+        "tags": ["Nodes.EnrollmentKey"]
       }
     },
     "/api/v1/nodes": {
@@ -3380,164 +4469,36 @@
         "tags": ["Nodes.Node"]
       }
     },
-    "/api/v1/clusters": {
+    "/api/v1/nodes/{id}": {
       "get": {
         "callbacks": {},
-        "description": "Returns a paginated list of all edge clusters with filtering and sorting",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.ClusterController.index",
+        "description": "Returns details for a specific node by ID",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeController.show",
         "parameters": [
           {
-            "description": "Page number",
-            "example": 1,
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "schema": { "default": 1, "minimum": 1, "type": "integer" }
-          },
-          {
-            "description": "Items per page",
-            "example": 20,
-            "in": "query",
-            "name": "page_size",
-            "required": false,
-            "schema": {
-              "default": 20,
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer"
-            }
-          },
-          {
-            "description": "Comma-separated list of fields to sort by",
-            "example": "inserted_at,name",
-            "in": "query",
-            "name": "order_by",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
-            "example": "desc,asc",
-            "in": "query",
-            "name": "order_directions",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by cluster name (exact match or wildcard: prod*, *tion, *rod*)",
-            "in": "query",
-            "name": "name",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by IPv4 range (exact match or wildcard)",
-            "in": "query",
-            "name": "ipv4_range",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter clusters inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-            "in": "query",
-            "name": "inserted_at__gte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter clusters inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-            "in": "query",
-            "name": "inserted_at__lte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter clusters updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-            "in": "query",
-            "name": "updated_at__gte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter clusters updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-            "in": "query",
-            "name": "updated_at__lte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter by minimum node count",
-            "in": "query",
-            "name": "node_count__gte",
-            "required": false,
-            "schema": { "minimum": 0, "type": "integer" }
-          },
-          {
-            "description": "Filter by maximum node count",
-            "in": "query",
-            "name": "node_count__lte",
-            "required": false,
-            "schema": { "minimum": 0, "type": "integer" }
-          },
-          {
-            "description": "Filter by exact node limit",
-            "in": "query",
-            "name": "node_limit",
-            "required": false,
-            "schema": { "minimum": 1, "type": "integer" }
-          },
-          {
-            "description": "Filter by whether a node limit is set: true returns clusters with a limit, false returns unlimited clusters",
-            "in": "query",
-            "name": "has_node_limit",
-            "required": false,
-            "schema": { "type": "boolean" }
-          },
-          {
-            "description": "Filter by minimum node limit",
-            "in": "query",
-            "name": "node_limit__gte",
-            "required": false,
-            "schema": { "minimum": 1, "type": "integer" }
-          },
-          {
-            "description": "Filter by maximum node limit",
-            "in": "query",
-            "name": "node_limit__lte",
-            "required": false,
-            "schema": { "minimum": 1, "type": "integer" }
+            "description": "Node ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
           }
         ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClusterPaginatedResponse"
-                }
+                "schema": { "$ref": "#/components/schemas/NodeSingleResponse" }
               }
             },
-            "description": "Paginated cluster list"
+            "description": "Node details"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Node not found"
           },
           "422": {
             "content": {
@@ -3545,78 +4506,19 @@
                 "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
               }
             },
-            "description": "Invalid query parameters"
+            "description": "Invalid path parameters"
           }
         },
-        "summary": "List all clusters",
-        "tags": ["Nodes.Cluster"]
+        "summary": "Get a specific node",
+        "tags": ["Nodes.Node"]
       },
-      "post": {
-        "callbacks": {},
-        "description": "Create a new edge cluster with optional IP range.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.ClusterController.create",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/ClusterCreateRequest" }
-            }
-          },
-          "description": "Cluster creation parameters",
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClusterSingleResponse"
-                }
-              }
-            },
-            "description": "Cluster created successfully"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/ConflictResponse" }
-              }
-            },
-            "description": "Cluster name already exists, or IP range conflicts with an existing cluster"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChangesetErrorResponse"
-                }
-              }
-            },
-            "description": "Validation error"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        },
-        "summary": "Create a new cluster",
-        "tags": ["Nodes.Cluster"]
-      }
-    },
-    "/api/v1/command_executions/{id}": {
       "delete": {
         "callbacks": {},
-        "description": "Delete a specific command execution.\n\nOnly completed, cancelled, or expired executions can be deleted. Attempting to delete pending or sent executions will return 409.\n",
-        "operationId": "EdgeAdminWeb.Controllers.Commands.CommandExecutionController.delete",
+        "description": "Delete a node from Netmaker and database in a transaction. Cascades to ssh_usernames, ssh_public_keys, and command_executions.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeController.delete",
         "parameters": [
           {
-            "description": "Command Execution ID",
+            "description": "Node ID",
             "in": "path",
             "name": "id",
             "required": true,
@@ -3626,7 +4528,7 @@
         "responses": {
           "204": {
             "content": { "": {} },
-            "description": "Command execution deleted successfully"
+            "description": "Node deleted successfully"
           },
           "404": {
             "content": {
@@ -3634,7 +4536,70 @@
                 "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
               }
             },
-            "description": "Command execution not found"
+            "description": "Node not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Delete a node",
+        "tags": ["Nodes.Node"]
+      }
+    },
+    "/api/v1/nodes/{id}/change_cluster": {
+      "patch": {
+        "callbacks": {},
+        "description": "Move a node to a different cluster. Performs cluster migration via Netmaker (best-effort, reconciliation worker handles failures).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeController.change_cluster",
+        "parameters": [
+          {
+            "description": "Node ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChangeClusterRequest" }
+            }
+          },
+          "description": "Cluster change parameters",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NodeSingleResponse" }
+              }
+            },
+            "description": "Node cluster changed successfully"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Node not found"
           },
           "409": {
             "content": {
@@ -3642,134 +4607,7 @@
                 "schema": { "$ref": "#/components/schemas/ConflictResponse" }
               }
             },
-            "description": "Cannot delete non-completed execution"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
-          }
-        },
-        "summary": "Delete a command execution",
-        "tags": ["Commands.CommandExecution"]
-      },
-      "get": {
-        "callbacks": {},
-        "description": "Returns details for a specific command execution by ID",
-        "operationId": "EdgeAdminWeb.Controllers.Commands.CommandExecutionController.show",
-        "parameters": [
-          {
-            "description": "Command Execution ID",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandExecutionSingleResponse"
-                }
-              }
-            },
-            "description": "Command execution details"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Command execution not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
-          }
-        },
-        "summary": "Get a specific command execution",
-        "tags": ["Commands.CommandExecution"]
-      }
-    },
-    "/api/v1/admins/orphaned_clusters": {
-      "get": {
-        "callbacks": {},
-        "description": "Returns all clusters that could not be assigned to any admin due to capacity constraints. Empty map when system is not degraded.",
-        "operationId": "EdgeAdminWeb.Controllers.Admins.OrphanedClustersController.index",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OrphanedClustersResponse"
-                }
-              }
-            },
-            "description": "Orphaned clusters"
-          }
-        },
-        "summary": "Get all orphaned clusters",
-        "tags": ["Admins.Metadata"]
-      }
-    },
-    "/api/v1/clusters/{cluster_name}/enrollment_keys": {
-      "post": {
-        "callbacks": {},
-        "description": "**Note:** This endpoint is unavailable during degraded mode (503).",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.create",
-        "parameters": [
-          {
-            "description": "Cluster name",
-            "in": "path",
-            "name": "cluster_name",
-            "required": true,
-            "schema": {
-              "maxLength": 24,
-              "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EnrollmentKeyCreateRequest"
-              }
-            }
-          },
-          "description": "Enrollment key parameters",
-          "required": false
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EnrollmentKeySingleResponse"
-                }
-              }
-            },
-            "description": "Enrollment key created"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Cluster not found"
+            "description": "Node is already in the target cluster"
           },
           "422": {
             "content": {
@@ -3792,166 +4630,81 @@
             "description": "Service Unavailable"
           }
         },
-        "summary": "Create an enrollment key for a cluster",
-        "tags": ["Nodes.EnrollmentKey"]
+        "summary": "Change a node's cluster",
+        "tags": ["Nodes.Node"]
       }
     },
-    "/api/v1/ssh_public_keys": {
-      "get": {
+    "/api/v1/nodes/{node_id}/aliases": {
+      "post": {
         "callbacks": {},
-        "description": "Returns a paginated list of SSH public keys with filtering and sorting",
-        "operationId": "EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController.index",
+        "description": "Creates a new alias and corresponding DNS entry for the specified node",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.AliasController.create",
         "parameters": [
           {
-            "description": "Page number",
-            "example": 1,
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "schema": { "default": 1, "minimum": 1, "type": "integer" }
-          },
-          {
-            "description": "Items per page",
-            "example": 20,
-            "in": "query",
-            "name": "page_size",
-            "required": false,
-            "schema": {
-              "default": 20,
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer"
-            }
-          },
-          {
-            "description": "Comma-separated list of fields to sort by",
-            "example": "inserted_at,key_name",
-            "in": "query",
-            "name": "order_by",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
-            "example": "desc,asc",
-            "in": "query",
-            "name": "order_directions",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by key name (exact match or wildcard: my-key*, *prod, etc.)",
-            "in": "query",
-            "name": "key_name",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by public key content (useful for searching email comments: *@example.com)",
-            "in": "query",
-            "name": "public_key",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by SSH username ID",
-            "in": "query",
-            "name": "ssh_username_id",
-            "required": false,
-            "schema": { "format": "uuid", "type": "string" }
-          },
-          {
-            "description": "Filter by node ID",
-            "in": "query",
+            "description": "Node ID",
+            "in": "path",
             "name": "node_id",
-            "required": false,
+            "required": true,
             "schema": { "format": "uuid", "type": "string" }
-          },
-          {
-            "description": "Filter by SSH username (exact match or wildcard: deploy*, *admin, etc.)",
-            "in": "query",
-            "name": "username",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *east, etc.)",
-            "in": "query",
-            "name": "cluster_name",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter SSH public keys inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-            "in": "query",
-            "name": "inserted_at__gte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter SSH public keys inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-            "in": "query",
-            "name": "inserted_at__lte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter SSH public keys updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-            "in": "query",
-            "name": "updated_at__gte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter SSH public keys updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-            "in": "query",
-            "name": "updated_at__lte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateAliasRequest" }
+            }
+          },
+          "description": "Alias creation parameters",
+          "required": true
+        },
         "responses": {
-          "200": {
+          "201": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SshPublicKeyPaginatedResponse"
-                }
+                "schema": { "$ref": "#/components/schemas/AliasSingleResponse" }
               }
             },
-            "description": "Paginated list of SSH public keys"
+            "description": "Alias created successfully"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Node not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConflictResponse" }
+              }
+            },
+            "description": "Alias name already exists in this cluster"
           },
           "422": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ChangesetErrorResponse"
+                }
               }
             },
-            "description": "Invalid query parameters"
+            "description": "Validation error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
-        "summary": "List SSH public keys",
-        "tags": ["Ssh.SshPublicKey"]
+        "summary": "Create a new alias for a node",
+        "tags": ["Nodes.Alias"]
       }
     },
     "/api/v1/aliases": {
@@ -4091,14 +4844,14 @@
         "tags": ["Nodes.Alias"]
       }
     },
-    "/api/v1/command_executions/{id}/cancel": {
-      "patch": {
+    "/api/v1/aliases/{id}": {
+      "get": {
         "callbacks": {},
-        "description": "Attempts to cancel a command execution. Behavior depends on current status:\n\n- `pending`: Immediately marked `cancelled` in the database (command never ran).\n- `sent`: Sends cancellation request to agent (best-effort, async). The agent is the source of truth — if it already ran the command, it reports back the real result and the execution is marked `completed`. If the agent honoured the cancellation (exit code 143), it is marked `cancelled`.\n- `completed` / `cancelled`: Returns 409 conflict (already terminal).\n\nReturns 200 if cancellation was initiated. For `sent` executions, poll status to confirm the outcome.\n",
-        "operationId": "EdgeAdminWeb.Controllers.Commands.CommandExecutionController.cancel",
+        "description": "Returns details for a specific alias by ID",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.AliasController.show",
         "parameters": [
           {
-            "description": "Command Execution ID",
+            "description": "Alias ID",
             "in": "path",
             "name": "id",
             "required": true,
@@ -4109,12 +4862,10 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CancelExecutionResponse"
-                }
+                "schema": { "$ref": "#/components/schemas/AliasSingleResponse" }
               }
             },
-            "description": "Cancellation request sent"
+            "description": "Alias details"
           },
           "404": {
             "content": {
@@ -4122,17 +4873,53 @@
                 "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
               }
             },
-            "description": "Command execution not found"
+            "description": "Alias not found"
           },
           "422": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChangesetErrorResponse"
-                }
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
               }
             },
-            "description": "Validation failed - execution status not cancellable"
+            "description": "Invalid path parameters"
+          }
+        },
+        "summary": "Get a specific alias",
+        "tags": ["Nodes.Alias"]
+      },
+      "delete": {
+        "callbacks": {},
+        "description": "Deletes an alias and its corresponding DNS entry",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.AliasController.delete",
+        "parameters": [
+          {
+            "description": "Alias ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": {
+            "content": { "": {} },
+            "description": "Alias deleted successfully"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Alias not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
           },
           "503": {
             "content": {
@@ -4145,66 +4932,20 @@
             "description": "Service Unavailable"
           }
         },
-        "summary": "Cancel a command execution",
-        "tags": ["Commands.CommandExecution"]
+        "summary": "Delete an alias",
+        "tags": ["Nodes.Alias"]
       }
     },
-    "/api/v1/self_update_requests/{id}": {
-      "delete": {
-        "callbacks": {},
-        "description": "Delete a self-update request.\n\nOnly completed requests can be deleted.\nAttempting to delete a pending or processing request will return 409.\n",
-        "operationId": "EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController.delete",
-        "parameters": [
-          {
-            "description": "Self-update request ID",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
-        "responses": {
-          "204": {
-            "content": { "": {} },
-            "description": "Self-update request deleted successfully"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Self-update request not found"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/ConflictResponse" }
-              }
-            },
-            "description": "Cannot delete non-completed request"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
-          }
-        },
-        "summary": "Delete a self-update request",
-        "tags": ["SelfUpdates.Request"]
-      },
+    "/api/v1/nodes/{node_id}/metrics": {
       "get": {
         "callbacks": {},
-        "description": "Returns details for a specific self-update request by ID",
-        "operationId": "EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController.show",
+        "description": "Returns aggregated metrics from all available sources for a node:\n- Host metrics (Node Exporter): CPU, memory, disk, uptime\n- Agent metrics (agent PromEx): BEAM stats, commands, proxy, SSH, Oban\n\nProvides a complete view of node health and performance in a single request.\nUses best-effort fetching - if one source fails, others are still returned.\n",
+        "operationId": "EdgeAdminWeb.Controllers.Metrics.NodeMetricsController.show_unified",
         "parameters": [
           {
-            "description": "Self-update request ID",
+            "description": "Node UUID",
             "in": "path",
-            "name": "id",
+            "name": "node_id",
             "required": true,
             "schema": { "format": "uuid", "type": "string" }
           }
@@ -4214,11 +4955,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SelfUpdateRequestSingleResponse"
+                  "$ref": "#/components/schemas/UnifiedMetricsResponse"
                 }
               }
             },
-            "description": "Self-update request details"
+            "description": "Unified metrics retrieved successfully"
           },
           "404": {
             "content": {
@@ -4226,37 +4967,7 @@
                 "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
               }
             },
-            "description": "Self-update request not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
-          }
-        },
-        "summary": "Get a specific self-update request",
-        "tags": ["SelfUpdates.Request"]
-      }
-    },
-    "/api/v1/admins/metrics/self": {
-      "get": {
-        "callbacks": {},
-        "description": "Returns application-level metrics from the edge_admin PromEx:\n- Application: uptime, BEAM stats (processes, memory, atoms, ETS tables)\n- Metadata: degraded status, orphaned/assigned clusters\n- Bootstrap: initialization step counts\n- Nodes: health check statistics\n- Oban: job queue states (available, scheduled, executing, etc.)\n",
-        "operationId": "EdgeAdminWeb.Controllers.Metrics.AdminMetricsController.show_self",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminMetricsResponse"
-                }
-              }
-            },
-            "description": "Admin metrics retrieved successfully"
+            "description": "Node not found"
           },
           "503": {
             "content": {
@@ -4269,455 +4980,20 @@
             "description": "Metrics unavailable"
           }
         },
-        "summary": "Get admin metrics for self",
-        "tags": ["Admins.Metrics"]
+        "summary": "Get unified metrics for a node",
+        "tags": ["Nodes.Metrics"]
       }
     },
-    "/api/v1/enrollment_keys/{id}": {
-      "delete": {
-        "callbacks": {},
-        "description": "Permanently deletes an enrollment key. **Note:** This endpoint is unavailable during degraded mode (503).",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.delete",
-        "parameters": [
-          {
-            "description": "Enrollment key ID",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
-        "responses": {
-          "204": {
-            "content": { "": {} },
-            "description": "Enrollment key deleted"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        },
-        "summary": "Delete an enrollment key",
-        "tags": ["Nodes.EnrollmentKey"]
-      },
+    "/api/v1/nodes/{node_id}/metrics/host": {
       "get": {
         "callbacks": {},
-        "description": "Returns details for a specific enrollment key by ID",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.show",
+        "description": "Returns host-level system metrics from Node Exporter:\n- CPU: cores, load averages\n- Memory: usage, total/available/used in bytes and GB\n- Disk: usage, total/available/used for root filesystem\n- Uptime: seconds and human-readable format\n",
+        "operationId": "EdgeAdminWeb.Controllers.Metrics.NodeMetricsController.show_host",
         "parameters": [
           {
-            "description": "Enrollment key ID",
+            "description": "Node UUID",
             "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EnrollmentKeySingleResponse"
-                }
-              }
-            },
-            "description": "Enrollment key"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
-          }
-        },
-        "summary": "Get an enrollment key",
-        "tags": ["Nodes.EnrollmentKey"]
-      },
-      "patch": {
-        "callbacks": {},
-        "description": "Update expired_at or uses_remaining. Pass null to unset a nullable field.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.update",
-        "parameters": [
-          {
-            "description": "Enrollment key ID",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EnrollmentKeyUpdateRequest"
-              }
-            }
-          },
-          "description": "Update parameters",
-          "required": false
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EnrollmentKeySingleResponse"
-                }
-              }
-            },
-            "description": "Updated enrollment key"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChangesetErrorResponse"
-                }
-              }
-            },
-            "description": "Validation error"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        },
-        "summary": "Update an enrollment key",
-        "tags": ["Nodes.EnrollmentKey"]
-      }
-    },
-    "/api/v1/nodes/{id}": {
-      "delete": {
-        "callbacks": {},
-        "description": "Delete a node from Netmaker and database in a transaction. Cascades to ssh_usernames, ssh_public_keys, and command_executions.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeController.delete",
-        "parameters": [
-          {
-            "description": "Node ID",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
-        "responses": {
-          "204": {
-            "content": { "": {} },
-            "description": "Node deleted successfully"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Node not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        },
-        "summary": "Delete a node",
-        "tags": ["Nodes.Node"]
-      },
-      "get": {
-        "callbacks": {},
-        "description": "Returns details for a specific node by ID",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeController.show",
-        "parameters": [
-          {
-            "description": "Node ID",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NodeSingleResponse" }
-              }
-            },
-            "description": "Node details"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Node not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
-          }
-        },
-        "summary": "Get a specific node",
-        "tags": ["Nodes.Node"]
-      }
-    },
-    "/api/v1/ssh_usernames": {
-      "get": {
-        "callbacks": {},
-        "description": "Returns a paginated list of SSH usernames with filtering and sorting",
-        "operationId": "EdgeAdminWeb.Controllers.Ssh.SshUsernameController.index",
-        "parameters": [
-          {
-            "description": "Page number",
-            "example": 1,
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "schema": { "default": 1, "minimum": 1, "type": "integer" }
-          },
-          {
-            "description": "Items per page",
-            "example": 20,
-            "in": "query",
-            "name": "page_size",
-            "required": false,
-            "schema": {
-              "default": 20,
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer"
-            }
-          },
-          {
-            "description": "Comma-separated list of fields to sort by",
-            "example": "inserted_at,username",
-            "in": "query",
-            "name": "order_by",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
-            "example": "desc,asc",
-            "in": "query",
-            "name": "order_directions",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by username (exact match or wildcard: root*, *admin, etc.)",
-            "in": "query",
-            "name": "username",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by node ID",
-            "in": "query",
             "name": "node_id",
-            "required": false,
-            "schema": { "format": "uuid", "type": "string" }
-          },
-          {
-            "description": "Filter by whether username has password configured",
-            "in": "query",
-            "name": "has_password",
-            "required": false,
-            "schema": { "type": "boolean" }
-          },
-          {
-            "description": "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *east, etc.)",
-            "in": "query",
-            "name": "cluster_name",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter SSH usernames inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-            "in": "query",
-            "name": "inserted_at__gte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter SSH usernames inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-            "in": "query",
-            "name": "inserted_at__lte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter SSH usernames updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-            "in": "query",
-            "name": "updated_at__gte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter SSH usernames updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-            "in": "query",
-            "name": "updated_at__lte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SshUsernamePaginatedResponse"
-                }
-              }
-            },
-            "description": "Paginated list of SSH usernames"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid query parameters"
-          }
-        },
-        "summary": "List SSH usernames",
-        "tags": ["Ssh.SshUsername"]
-      }
-    },
-    "/api/v1/ssh_public_keys/{id}": {
-      "delete": {
-        "callbacks": {},
-        "description": "Delete an SSH public key",
-        "operationId": "EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController.delete",
-        "parameters": [
-          {
-            "description": "SSH public key ID",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
-        "responses": {
-          "204": {
-            "content": { "": {} },
-            "description": "SSH public key deleted"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "SSH public key not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
-          }
-        },
-        "summary": "Delete SSH public key",
-        "tags": ["Ssh.SshPublicKey"]
-      },
-      "get": {
-        "callbacks": {},
-        "description": "Get a specific SSH public key by ID",
-        "operationId": "EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController.show",
-        "parameters": [
-          {
-            "description": "SSH public key ID",
-            "in": "path",
-            "name": "id",
             "required": true,
             "schema": { "format": "uuid", "type": "string" }
           }
@@ -4726,12 +5002,10 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SshPublicKeySingleResponse"
-                }
+                "schema": { "$ref": "#/components/schemas/HostMetricsResponse" }
               }
             },
-            "description": "SSH public key details"
+            "description": "Host metrics retrieved successfully"
           },
           "404": {
             "content": {
@@ -4739,103 +5013,21 @@
                 "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
               }
             },
-            "description": "SSH public key not found"
+            "description": "Node not found"
           },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
-          }
-        },
-        "summary": "Get SSH public key",
-        "tags": ["Ssh.SshPublicKey"]
-      }
-    },
-    "/api/v1/ssh_usernames/{id}": {
-      "delete": {
-        "callbacks": {},
-        "description": "Delete an SSH username and all associated public keys",
-        "operationId": "EdgeAdminWeb.Controllers.Ssh.SshUsernameController.delete",
-        "parameters": [
-          {
-            "description": "SSH username ID",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
-        "responses": {
-          "204": {
-            "content": { "": {} },
-            "description": "SSH username deleted"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "SSH username not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
-          }
-        },
-        "summary": "Delete SSH username",
-        "tags": ["Ssh.SshUsername"]
-      },
-      "get": {
-        "callbacks": {},
-        "description": "Get a specific SSH username by ID",
-        "operationId": "EdgeAdminWeb.Controllers.Ssh.SshUsernameController.show",
-        "parameters": [
-          {
-            "description": "SSH username ID",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
-        "responses": {
-          "200": {
+          "503": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SshUsernameSingleResponse"
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
                 }
               }
             },
-            "description": "SSH username details"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "SSH username not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
+            "description": "Metrics unavailable"
           }
         },
-        "summary": "Get SSH username",
-        "tags": ["Ssh.SshUsername"]
+        "summary": "Get host metrics for a node",
+        "tags": ["Nodes.Metrics"]
       }
     },
     "/api/v1/nodes/{node_id}/metrics/agent": {
@@ -4886,53 +5078,31 @@
         "tags": ["Nodes.Metrics"]
       }
     },
-    "/api/v1/nodes/{node_id}/aliases": {
+    "/api/v1/commands": {
       "post": {
         "callbacks": {},
-        "description": "Creates a new alias and corresponding DNS entry for the specified node",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.AliasController.create",
-        "parameters": [
-          {
-            "description": "Node ID",
-            "in": "path",
-            "name": "node_id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
+        "description": "Create a new command for execution on nodes using flexible targeting options.\n\nTargeting types:\n- 'all': Target all nodes (with optional filters)\n- 'nodes': Target specific nodes by IDs (with optional filters)\n- 'clusters': Target specific clusters by names (with optional filters)\n\nNode and cluster filters can be applied to further refine targeting.\n",
+        "operationId": "EdgeAdminWeb.Controllers.Commands.CommandController.create",
+        "parameters": [],
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateAliasRequest" }
+              "schema": { "$ref": "#/components/schemas/CommandCreateRequest" }
             }
           },
-          "description": "Alias creation parameters",
+          "description": "Command creation parameters",
           "required": true
         },
         "responses": {
           "201": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/AliasSingleResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/CommandSingleResponse"
+                }
               }
             },
-            "description": "Alias created successfully"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Node not found"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/ConflictResponse" }
-              }
-            },
-            "description": "Alias name already exists in this cluster"
+            "description": "Command created successfully"
           },
           "422": {
             "content": {
@@ -4943,23 +5113,230 @@
               }
             },
             "description": "Validation error"
+          }
+        },
+        "summary": "Create a new command",
+        "tags": ["Commands.Command"]
+      },
+      "get": {
+        "callbacks": {},
+        "description": "Returns a paginated list of all commands with filtering and sorting",
+        "operationId": "EdgeAdminWeb.Controllers.Commands.CommandController.index",
+        "parameters": [
+          {
+            "description": "Page number",
+            "example": 1,
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": { "default": 1, "minimum": 1, "type": "integer" }
           },
-          "503": {
+          {
+            "description": "Items per page",
+            "example": 20,
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Comma-separated list of fields to sort by",
+            "example": "inserted_at",
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
+            "example": "desc",
+            "in": "query",
+            "name": "order_directions",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by command text (exact match or wildcard: ls*, *docker*, etc.)",
+            "in": "query",
+            "name": "command_text",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter commands with timeout greater than or equal to this value (milliseconds)",
+            "in": "query",
+            "name": "timeout__gte",
+            "required": false,
+            "schema": { "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Filter commands with timeout less than or equal to this value (milliseconds)",
+            "in": "query",
+            "name": "timeout__lte",
+            "required": false,
+            "schema": { "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Filter by whether a timeout is set: true returns commands with a timeout, false returns commands with no timeout",
+            "in": "query",
+            "name": "has_timeout",
+            "required": false,
+            "schema": { "type": "boolean" }
+          },
+          {
+            "description": "Filter commands with expired_at after this datetime",
+            "in": "query",
+            "name": "expired_at__gte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter commands with expired_at before this datetime",
+            "in": "query",
+            "name": "expired_at__lte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter by whether an expiration is set: true returns commands with expired_at, false returns commands without",
+            "in": "query",
+            "name": "has_expired_at",
+            "required": false,
+            "schema": { "type": "boolean" }
+          },
+          {
+            "description": "Filter commands inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "in": "query",
+            "name": "inserted_at__gte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter commands inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "in": "query",
+            "name": "inserted_at__lte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter commands updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "in": "query",
+            "name": "updated_at__gte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter commands updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "in": "query",
+            "name": "updated_at__lte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                  "$ref": "#/components/schemas/CommandPaginatedResponse"
                 }
               }
             },
-            "description": "Service Unavailable"
+            "description": "Paginated list of commands"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+              }
+            },
+            "description": "Invalid query parameters"
           }
         },
-        "summary": "Create a new alias for a node",
-        "tags": ["Nodes.Alias"]
+        "summary": "List all commands",
+        "tags": ["Commands.Command"]
       }
     },
     "/api/v1/commands/{id}": {
+      "get": {
+        "callbacks": {},
+        "description": "Returns details for a specific command by ID",
+        "operationId": "EdgeAdminWeb.Controllers.Commands.CommandController.show",
+        "parameters": [
+          {
+            "description": "Command ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandSingleResponse"
+                }
+              }
+            },
+            "description": "Command details"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Command not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          }
+        },
+        "summary": "Get a specific command",
+        "tags": ["Commands.Command"]
+      },
       "delete": {
         "callbacks": {},
         "description": "Delete a command and all its related command executions (cascaded deletion).\n\nOnly commands where ALL executions are completed can be deleted.\nAttempting to delete a command with pending or sent executions will return 409.\n",
@@ -5005,190 +5382,6 @@
         },
         "summary": "Delete a command",
         "tags": ["Commands.Command"]
-      },
-      "get": {
-        "callbacks": {},
-        "description": "Returns details for a specific command by ID",
-        "operationId": "EdgeAdminWeb.Controllers.Commands.CommandController.show",
-        "parameters": [
-          {
-            "description": "Command ID",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandSingleResponse"
-                }
-              }
-            },
-            "description": "Command details"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Command not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
-          }
-        },
-        "summary": "Get a specific command",
-        "tags": ["Commands.Command"]
-      }
-    },
-    "/api/v1/aliases/{id}": {
-      "delete": {
-        "callbacks": {},
-        "description": "Deletes an alias and its corresponding DNS entry",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.AliasController.delete",
-        "parameters": [
-          {
-            "description": "Alias ID",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
-        "responses": {
-          "204": {
-            "content": { "": {} },
-            "description": "Alias deleted successfully"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Alias not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        },
-        "summary": "Delete an alias",
-        "tags": ["Nodes.Alias"]
-      },
-      "get": {
-        "callbacks": {},
-        "description": "Returns details for a specific alias by ID",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.AliasController.show",
-        "parameters": [
-          {
-            "description": "Alias ID",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/AliasSingleResponse" }
-              }
-            },
-            "description": "Alias details"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Alias not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
-          }
-        },
-        "summary": "Get a specific alias",
-        "tags": ["Nodes.Alias"]
-      }
-    },
-    "/api/v1/nodes/{node_id}/metrics": {
-      "get": {
-        "callbacks": {},
-        "description": "Returns aggregated metrics from all available sources for a node:\n- Host metrics (Node Exporter): CPU, memory, disk, uptime\n- Agent metrics (agent PromEx): BEAM stats, commands, proxy, SSH, Oban\n\nProvides a complete view of node health and performance in a single request.\nUses best-effort fetching - if one source fails, others are still returned.\n",
-        "operationId": "EdgeAdminWeb.Controllers.Metrics.NodeMetricsController.show_unified",
-        "parameters": [
-          {
-            "description": "Node UUID",
-            "in": "path",
-            "name": "node_id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UnifiedMetricsResponse"
-                }
-              }
-            },
-            "description": "Unified metrics retrieved successfully"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Node not found"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
-                }
-              }
-            },
-            "description": "Metrics unavailable"
-          }
-        },
-        "summary": "Get unified metrics for a node",
-        "tags": ["Nodes.Metrics"]
       }
     },
     "/api/v1/command_executions": {
@@ -5459,6 +5652,156 @@
         "tags": ["Commands.CommandExecution"]
       }
     },
+    "/api/v1/command_executions/{id}": {
+      "get": {
+        "callbacks": {},
+        "description": "Returns details for a specific command execution by ID",
+        "operationId": "EdgeAdminWeb.Controllers.Commands.CommandExecutionController.show",
+        "parameters": [
+          {
+            "description": "Command Execution ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandExecutionSingleResponse"
+                }
+              }
+            },
+            "description": "Command execution details"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Command execution not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          }
+        },
+        "summary": "Get a specific command execution",
+        "tags": ["Commands.CommandExecution"]
+      },
+      "delete": {
+        "callbacks": {},
+        "description": "Delete a specific command execution.\n\nOnly completed, cancelled, or expired executions can be deleted. Attempting to delete pending or sent executions will return 409.\n",
+        "operationId": "EdgeAdminWeb.Controllers.Commands.CommandExecutionController.delete",
+        "parameters": [
+          {
+            "description": "Command Execution ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": {
+            "content": { "": {} },
+            "description": "Command execution deleted successfully"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Command execution not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConflictResponse" }
+              }
+            },
+            "description": "Cannot delete non-completed execution"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          }
+        },
+        "summary": "Delete a command execution",
+        "tags": ["Commands.CommandExecution"]
+      }
+    },
+    "/api/v1/command_executions/{id}/cancel": {
+      "patch": {
+        "callbacks": {},
+        "description": "Attempts to cancel a command execution. Behavior depends on current status:\n\n- `pending`: Immediately marked `cancelled` in the database (command never ran).\n- `sent`: Sends cancellation request to agent (best-effort, async). The agent is the source of truth — if it already ran the command, it reports back the real result and the execution is marked `completed`. If the agent honoured the cancellation (exit code 143), it is marked `cancelled`.\n- `completed` / `cancelled`: Returns 409 conflict (already terminal).\n\nReturns 200 if cancellation was initiated. For `sent` executions, poll status to confirm the outcome.\n",
+        "operationId": "EdgeAdminWeb.Controllers.Commands.CommandExecutionController.cancel",
+        "parameters": [
+          {
+            "description": "Command Execution ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelExecutionResponse"
+                }
+              }
+            },
+            "description": "Cancellation request sent"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Command execution not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangesetErrorResponse"
+                }
+              }
+            },
+            "description": "Validation failed - execution status not cancellable"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Cancel a command execution",
+        "tags": ["Commands.CommandExecution"]
+      }
+    },
     "/api/v1/nodes/{node_id}/ssh_usernames": {
       "post": {
         "callbacks": {},
@@ -5526,7 +5869,585 @@
         "tags": ["Ssh.SshUsername"]
       }
     },
+    "/api/v1/ssh_usernames": {
+      "get": {
+        "callbacks": {},
+        "description": "Returns a paginated list of SSH usernames with filtering and sorting",
+        "operationId": "EdgeAdminWeb.Controllers.Ssh.SshUsernameController.index",
+        "parameters": [
+          {
+            "description": "Page number",
+            "example": 1,
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": { "default": 1, "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Items per page",
+            "example": 20,
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Comma-separated list of fields to sort by",
+            "example": "inserted_at,username",
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
+            "example": "desc,asc",
+            "in": "query",
+            "name": "order_directions",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by username (exact match or wildcard: root*, *admin, etc.)",
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by node ID",
+            "in": "query",
+            "name": "node_id",
+            "required": false,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "description": "Filter by whether username has password configured",
+            "in": "query",
+            "name": "has_password",
+            "required": false,
+            "schema": { "type": "boolean" }
+          },
+          {
+            "description": "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *east, etc.)",
+            "in": "query",
+            "name": "cluster_name",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter SSH usernames inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "in": "query",
+            "name": "inserted_at__gte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter SSH usernames inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "in": "query",
+            "name": "inserted_at__lte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter SSH usernames updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "in": "query",
+            "name": "updated_at__gte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter SSH usernames updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "in": "query",
+            "name": "updated_at__lte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SshUsernamePaginatedResponse"
+                }
+              }
+            },
+            "description": "Paginated list of SSH usernames"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+              }
+            },
+            "description": "Invalid query parameters"
+          }
+        },
+        "summary": "List SSH usernames",
+        "tags": ["Ssh.SshUsername"]
+      }
+    },
+    "/api/v1/ssh_usernames/{id}": {
+      "get": {
+        "callbacks": {},
+        "description": "Get a specific SSH username by ID",
+        "operationId": "EdgeAdminWeb.Controllers.Ssh.SshUsernameController.show",
+        "parameters": [
+          {
+            "description": "SSH username ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SshUsernameSingleResponse"
+                }
+              }
+            },
+            "description": "SSH username details"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "SSH username not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          }
+        },
+        "summary": "Get SSH username",
+        "tags": ["Ssh.SshUsername"]
+      },
+      "delete": {
+        "callbacks": {},
+        "description": "Delete an SSH username and all associated public keys",
+        "operationId": "EdgeAdminWeb.Controllers.Ssh.SshUsernameController.delete",
+        "parameters": [
+          {
+            "description": "SSH username ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": {
+            "content": { "": {} },
+            "description": "SSH username deleted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "SSH username not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          }
+        },
+        "summary": "Delete SSH username",
+        "tags": ["Ssh.SshUsername"]
+      }
+    },
+    "/api/v1/ssh_usernames/{ssh_username_id}/ssh_public_keys": {
+      "post": {
+        "callbacks": {},
+        "description": "Create a new SSH public key for a specific SSH username. The key must be in valid OpenSSH format.",
+        "operationId": "EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController.create",
+        "parameters": [
+          {
+            "description": "SSH username ID to create public key for",
+            "in": "path",
+            "name": "ssh_username_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SshPublicKeyCreateRequest"
+              }
+            }
+          },
+          "description": "SSH public key creation data",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SshPublicKeySingleResponse"
+                }
+              }
+            },
+            "description": "SSH public key created"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "SSH username not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConflictResponse" }
+              }
+            },
+            "description": "Key name already exists for this username"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangesetErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error - invalid key format or unsupported algorithm"
+          }
+        },
+        "summary": "Create SSH public key",
+        "tags": ["Ssh.SshPublicKey"]
+      }
+    },
+    "/api/v1/ssh_public_keys": {
+      "get": {
+        "callbacks": {},
+        "description": "Returns a paginated list of SSH public keys with filtering and sorting",
+        "operationId": "EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController.index",
+        "parameters": [
+          {
+            "description": "Page number",
+            "example": 1,
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": { "default": 1, "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Items per page",
+            "example": 20,
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Comma-separated list of fields to sort by",
+            "example": "inserted_at,key_name",
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
+            "example": "desc,asc",
+            "in": "query",
+            "name": "order_directions",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by key name (exact match or wildcard: my-key*, *prod, etc.)",
+            "in": "query",
+            "name": "key_name",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by public key content (useful for searching email comments: *@example.com)",
+            "in": "query",
+            "name": "public_key",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by SSH username ID",
+            "in": "query",
+            "name": "ssh_username_id",
+            "required": false,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "description": "Filter by node ID",
+            "in": "query",
+            "name": "node_id",
+            "required": false,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "description": "Filter by SSH username (exact match or wildcard: deploy*, *admin, etc.)",
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *east, etc.)",
+            "in": "query",
+            "name": "cluster_name",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter SSH public keys inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "in": "query",
+            "name": "inserted_at__gte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter SSH public keys inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "in": "query",
+            "name": "inserted_at__lte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter SSH public keys updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "in": "query",
+            "name": "updated_at__gte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter SSH public keys updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "in": "query",
+            "name": "updated_at__lte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SshPublicKeyPaginatedResponse"
+                }
+              }
+            },
+            "description": "Paginated list of SSH public keys"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+              }
+            },
+            "description": "Invalid query parameters"
+          }
+        },
+        "summary": "List SSH public keys",
+        "tags": ["Ssh.SshPublicKey"]
+      }
+    },
+    "/api/v1/ssh_public_keys/{id}": {
+      "get": {
+        "callbacks": {},
+        "description": "Get a specific SSH public key by ID",
+        "operationId": "EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController.show",
+        "parameters": [
+          {
+            "description": "SSH public key ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SshPublicKeySingleResponse"
+                }
+              }
+            },
+            "description": "SSH public key details"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "SSH public key not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          }
+        },
+        "summary": "Get SSH public key",
+        "tags": ["Ssh.SshPublicKey"]
+      },
+      "delete": {
+        "callbacks": {},
+        "description": "Delete an SSH public key",
+        "operationId": "EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController.delete",
+        "parameters": [
+          {
+            "description": "SSH public key ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": {
+            "content": { "": {} },
+            "description": "SSH public key deleted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "SSH public key not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          }
+        },
+        "summary": "Delete SSH public key",
+        "tags": ["Ssh.SshPublicKey"]
+      }
+    },
     "/api/v1/self_update_requests": {
+      "post": {
+        "callbacks": {},
+        "description": "Create a new self-update request to trigger agent updates.\n\nThe request will be processed asynchronously. Only healthy nodes with self_update_enabled=true will be updated.\n\nTargeting types:\n- 'all': Target all nodes (with optional filters)\n- 'nodes': Target specific nodes by IDs (with optional filters)\n- 'clusters': Target specific clusters by names (with optional filters)\n\nNode and cluster filters can be applied to further refine targeting.\n",
+        "operationId": "EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController.create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelfUpdateRequestCreateRequest"
+              }
+            }
+          },
+          "description": "Self-update request creation parameters",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelfUpdateRequestSingleResponse"
+                }
+              }
+            },
+            "description": "Self-update request created successfully"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangesetErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Create a new self-update request",
+        "tags": ["SelfUpdates.Request"]
+      },
       "get": {
         "callbacks": {},
         "description": "Returns a paginated list of all self-update requests with filtering and sorting",
@@ -5650,25 +6571,24 @@
         },
         "summary": "List all self-update requests",
         "tags": ["SelfUpdates.Request"]
-      },
-      "post": {
+      }
+    },
+    "/api/v1/self_update_requests/{id}": {
+      "get": {
         "callbacks": {},
-        "description": "Create a new self-update request to trigger agent updates.\n\nThe request will be processed asynchronously. Only healthy nodes with self_update_enabled=true will be updated.\n\nTargeting types:\n- 'all': Target all nodes (with optional filters)\n- 'nodes': Target specific nodes by IDs (with optional filters)\n- 'clusters': Target specific clusters by names (with optional filters)\n\nNode and cluster filters can be applied to further refine targeting.\n",
-        "operationId": "EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController.create",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SelfUpdateRequestCreateRequest"
-              }
-            }
-          },
-          "description": "Self-update request creation parameters",
-          "required": true
-        },
+        "description": "Returns details for a specific self-update request by ID",
+        "operationId": "EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController.show",
+        "parameters": [
+          {
+            "description": "Self-update request ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
         "responses": {
-          "201": {
+          "200": {
             "content": {
               "application/json": {
                 "schema": {
@@ -5676,243 +6596,15 @@
                 }
               }
             },
-            "description": "Self-update request created successfully"
+            "description": "Self-update request details"
           },
-          "422": {
+          "404": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChangesetErrorResponse"
-                }
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
               }
             },
-            "description": "Validation error"
-          }
-        },
-        "summary": "Create a new self-update request",
-        "tags": ["SelfUpdates.Request"]
-      }
-    },
-    "/api/v1/enrollment_keys": {
-      "get": {
-        "callbacks": {},
-        "description": "Returns a paginated list of enrollment keys with filtering and sorting.",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.index",
-        "parameters": [
-          {
-            "description": "Page number",
-            "example": 1,
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "schema": { "default": 1, "minimum": 1, "type": "integer" }
-          },
-          {
-            "description": "Items per page",
-            "example": 20,
-            "in": "query",
-            "name": "page_size",
-            "required": false,
-            "schema": {
-              "default": 20,
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer"
-            }
-          },
-          {
-            "description": "Comma-separated list of fields to sort by",
-            "example": "inserted_at",
-            "in": "query",
-            "name": "order_by",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
-            "example": "desc",
-            "in": "query",
-            "name": "order_directions",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by cluster name (exact match or wildcard: prod*, *east, etc.)",
-            "in": "query",
-            "name": "cluster_name",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by exact key value",
-            "in": "query",
-            "name": "key",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by exact uses_remaining (positive integer; use is_unlimited=true to find unlimited keys)",
-            "in": "query",
-            "name": "uses_remaining",
-            "required": false,
-            "schema": { "minimum": 1, "type": "integer" }
-          },
-          {
-            "description": "Filter by minimum uses_remaining",
-            "in": "query",
-            "name": "uses_remaining__gte",
-            "required": false,
-            "schema": { "minimum": 1, "type": "integer" }
-          },
-          {
-            "description": "Filter by maximum uses_remaining",
-            "in": "query",
-            "name": "uses_remaining__lte",
-            "required": false,
-            "schema": { "minimum": 1, "type": "integer" }
-          },
-          {
-            "description": "Filter by whether the key has unlimited uses: true returns unlimited keys (uses_remaining is null), false returns keys with a finite use count",
-            "in": "query",
-            "name": "is_unlimited",
-            "required": false,
-            "schema": { "type": "boolean" }
-          },
-          {
-            "description": "Filter by whether the key is exhausted: true returns keys with uses_remaining == 0, false returns keys with uses remaining",
-            "in": "query",
-            "name": "is_spent",
-            "required": false,
-            "schema": { "type": "boolean" }
-          },
-          {
-            "description": "Filter by whether the key is expired: true returns keys where expired_at is in the past, false returns active keys (including those with no expiry)",
-            "in": "query",
-            "name": "is_expired",
-            "required": false,
-            "schema": { "type": "boolean" }
-          },
-          {
-            "description": "Filter by whether the key has never been used: true returns keys where last_used_at is null, false returns keys that have been used at least once",
-            "in": "query",
-            "name": "is_never_used",
-            "required": false,
-            "schema": { "type": "boolean" }
-          },
-          {
-            "description": "Filter by whether the key has an expiry set: true returns keys with expired_at present, false returns keys with no expiry (unlimited lifetime)",
-            "in": "query",
-            "name": "has_expiry",
-            "required": false,
-            "schema": { "type": "boolean" }
-          },
-          {
-            "description": "Filter keys expiring after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-            "in": "query",
-            "name": "expired_at__gte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter keys expiring before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-            "in": "query",
-            "name": "expired_at__lte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter keys last used after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-            "in": "query",
-            "name": "last_used_at__gte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter keys last used before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-            "in": "query",
-            "name": "last_used_at__lte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter keys created after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-            "in": "query",
-            "name": "inserted_at__gte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter keys created before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-            "in": "query",
-            "name": "inserted_at__lte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter keys updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-            "in": "query",
-            "name": "updated_at__gte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter keys updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-            "in": "query",
-            "name": "updated_at__lte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EnrollmentKeyPaginatedResponse"
-                }
-              }
-            },
-            "description": "Paginated enrollment key list"
+            "description": "Self-update request not found"
           },
           "422": {
             "content": {
@@ -5920,594 +6612,29 @@
                 "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
               }
             },
-            "description": "Invalid query parameters"
+            "description": "Invalid path parameters"
           }
         },
-        "summary": "List enrollment keys",
-        "tags": ["Nodes.EnrollmentKey"]
-      }
-    },
-    "/api/v1/nodes/{id}/change_cluster": {
-      "patch": {
+        "summary": "Get a specific self-update request",
+        "tags": ["SelfUpdates.Request"]
+      },
+      "delete": {
         "callbacks": {},
-        "description": "Move a node to a different cluster. Performs cluster migration via Netmaker (best-effort, reconciliation worker handles failures).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeController.change_cluster",
+        "description": "Delete a self-update request.\n\nOnly completed requests can be deleted.\nAttempting to delete a pending or processing request will return 409.\n",
+        "operationId": "EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController.delete",
         "parameters": [
           {
-            "description": "Node ID",
+            "description": "Self-update request ID",
             "in": "path",
             "name": "id",
             "required": true,
             "schema": { "format": "uuid", "type": "string" }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/ChangeClusterRequest" }
-            }
-          },
-          "description": "Cluster change parameters",
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NodeSingleResponse" }
-              }
-            },
-            "description": "Node cluster changed successfully"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Node not found"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/ConflictResponse" }
-              }
-            },
-            "description": "Node is already in the target cluster"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChangesetErrorResponse"
-                }
-              }
-            },
-            "description": "Validation error"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        },
-        "summary": "Change a node's cluster",
-        "tags": ["Nodes.Node"]
-      }
-    },
-    "/api/v1/ssh_usernames/{ssh_username_id}/ssh_public_keys": {
-      "post": {
-        "callbacks": {},
-        "description": "Create a new SSH public key for a specific SSH username. The key must be in valid OpenSSH format.",
-        "operationId": "EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController.create",
-        "parameters": [
-          {
-            "description": "SSH username ID to create public key for",
-            "in": "path",
-            "name": "ssh_username_id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SshPublicKeyCreateRequest"
-              }
-            }
-          },
-          "description": "SSH public key creation data",
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SshPublicKeySingleResponse"
-                }
-              }
-            },
-            "description": "SSH public key created"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "SSH username not found"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/ConflictResponse" }
-              }
-            },
-            "description": "Key name already exists for this username"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChangesetErrorResponse"
-                }
-              }
-            },
-            "description": "Validation error - invalid key format or unsupported algorithm"
-          }
-        },
-        "summary": "Create SSH public key",
-        "tags": ["Ssh.SshPublicKey"]
-      }
-    },
-    "/api/v1/admins/admin_cluster": {
-      "get": {
-        "callbacks": {},
-        "description": "Returns admin cluster metadata and peer topology",
-        "operationId": "EdgeAdminWeb.Controllers.Admins.AdminClusterController.show",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminClusterResponse"
-                }
-              }
-            },
-            "description": "Admin cluster topology"
-          }
-        },
-        "summary": "Get admin cluster topology",
-        "tags": ["Admins.Metadata"]
-      }
-    },
-    "/api/v1/clusters/default/enrollment_keys/public": {
-      "post": {
-        "callbacks": {},
-        "description": "Public endpoint (no authentication required). Only enabled when both\nPUBLIC_ENROLLMENT_KEY_ENABLED=true and DEFAULT_CLUSTER_NAME are configured.\n\n**Note:** This endpoint is unavailable during degraded mode (503).\n",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.create_for_public",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EnrollmentKeySingleResponse"
-                }
-              }
-            },
-            "description": "Enrollment key created"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/ForbiddenResponse" }
-              }
-            },
-            "description": "Public enrollment disabled"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Default cluster not found"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        },
-        "summary": "Get a public enrollment key for the default cluster",
-        "tags": ["Nodes.EnrollmentKey"]
-      }
-    },
-    "/api/v1/clusters/default/enrollment_keys": {
-      "post": {
-        "callbacks": {},
-        "description": "Convenience endpoint for the default cluster (configured via DEFAULT_CLUSTER_NAME env).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.create_for_default",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EnrollmentKeyCreateRequest"
-              }
-            }
-          },
-          "description": "Enrollment key parameters",
-          "required": false
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EnrollmentKeySingleResponse"
-                }
-              }
-            },
-            "description": "Enrollment key created"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/ForbiddenResponse" }
-              }
-            },
-            "description": "Default cluster not configured"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Default cluster not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChangesetErrorResponse"
-                }
-              }
-            },
-            "description": "Validation error"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        },
-        "summary": "Create an enrollment key for the default cluster",
-        "tags": ["Nodes.EnrollmentKey"]
-      }
-    },
-    "/api/v1/nodes/{node_id}/metrics/host": {
-      "get": {
-        "callbacks": {},
-        "description": "Returns host-level system metrics from Node Exporter:\n- CPU: cores, load averages\n- Memory: usage, total/available/used in bytes and GB\n- Disk: usage, total/available/used for root filesystem\n- Uptime: seconds and human-readable format\n",
-        "operationId": "EdgeAdminWeb.Controllers.Metrics.NodeMetricsController.show_host",
-        "parameters": [
-          {
-            "description": "Node UUID",
-            "in": "path",
-            "name": "node_id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HostMetricsResponse" }
-              }
-            },
-            "description": "Host metrics retrieved successfully"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Node not found"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
-                }
-              }
-            },
-            "description": "Metrics unavailable"
-          }
-        },
-        "summary": "Get host metrics for a node",
-        "tags": ["Nodes.Metrics"]
-      }
-    },
-    "/api/v1/admins/self": {
-      "get": {
-        "callbacks": {},
-        "description": "Returns this admin's identity and configuration from metadata",
-        "operationId": "EdgeAdminWeb.Controllers.Admins.AdminController.show",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/AdminResponse" }
-              }
-            },
-            "description": "Admin identity"
-          }
-        },
-        "summary": "Get this admin's identity",
-        "tags": ["Admins.Metadata"]
-      }
-    },
-    "/api/v1/commands": {
-      "get": {
-        "callbacks": {},
-        "description": "Returns a paginated list of all commands with filtering and sorting",
-        "operationId": "EdgeAdminWeb.Controllers.Commands.CommandController.index",
-        "parameters": [
-          {
-            "description": "Page number",
-            "example": 1,
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "schema": { "default": 1, "minimum": 1, "type": "integer" }
-          },
-          {
-            "description": "Items per page",
-            "example": 20,
-            "in": "query",
-            "name": "page_size",
-            "required": false,
-            "schema": {
-              "default": 20,
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer"
-            }
-          },
-          {
-            "description": "Comma-separated list of fields to sort by",
-            "example": "inserted_at",
-            "in": "query",
-            "name": "order_by",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
-            "example": "desc",
-            "in": "query",
-            "name": "order_directions",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by command text (exact match or wildcard: ls*, *docker*, etc.)",
-            "in": "query",
-            "name": "command_text",
-            "required": false,
-            "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter commands with timeout greater than or equal to this value (milliseconds)",
-            "in": "query",
-            "name": "timeout__gte",
-            "required": false,
-            "schema": { "minimum": 1, "type": "integer" }
-          },
-          {
-            "description": "Filter commands with timeout less than or equal to this value (milliseconds)",
-            "in": "query",
-            "name": "timeout__lte",
-            "required": false,
-            "schema": { "minimum": 1, "type": "integer" }
-          },
-          {
-            "description": "Filter by whether a timeout is set: true returns commands with a timeout, false returns commands with no timeout",
-            "in": "query",
-            "name": "has_timeout",
-            "required": false,
-            "schema": { "type": "boolean" }
-          },
-          {
-            "description": "Filter commands with expired_at after this datetime",
-            "in": "query",
-            "name": "expired_at__gte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter commands with expired_at before this datetime",
-            "in": "query",
-            "name": "expired_at__lte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter by whether an expiration is set: true returns commands with expired_at, false returns commands without",
-            "in": "query",
-            "name": "has_expired_at",
-            "required": false,
-            "schema": { "type": "boolean" }
-          },
-          {
-            "description": "Filter commands inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-            "in": "query",
-            "name": "inserted_at__gte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter commands inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-            "in": "query",
-            "name": "inserted_at__lte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter commands updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-            "in": "query",
-            "name": "updated_at__gte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          },
-          {
-            "description": "Filter commands updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-            "in": "query",
-            "name": "updated_at__lte",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                { "format": "date-time", "type": "string" },
-                { "format": "date", "type": "string" }
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandPaginatedResponse"
-                }
-              }
-            },
-            "description": "Paginated list of commands"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid query parameters"
-          }
-        },
-        "summary": "List all commands",
-        "tags": ["Commands.Command"]
-      },
-      "post": {
-        "callbacks": {},
-        "description": "Create a new command for execution on nodes using flexible targeting options.\n\nTargeting types:\n- 'all': Target all nodes (with optional filters)\n- 'nodes': Target specific nodes by IDs (with optional filters)\n- 'clusters': Target specific clusters by names (with optional filters)\n\nNode and cluster filters can be applied to further refine targeting.\n",
-        "operationId": "EdgeAdminWeb.Controllers.Commands.CommandController.create",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/CommandCreateRequest" }
-            }
-          },
-          "description": "Command creation parameters",
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandSingleResponse"
-                }
-              }
-            },
-            "description": "Command created successfully"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChangesetErrorResponse"
-                }
-              }
-            },
-            "description": "Validation error"
-          }
-        },
-        "summary": "Create a new command",
-        "tags": ["Commands.Command"]
-      }
-    },
-    "/api/v1/clusters/{name}": {
-      "delete": {
-        "callbacks": {},
-        "description": "Delete an empty cluster (must have no nodes).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.ClusterController.delete",
-        "parameters": [
-          {
-            "description": "Cluster name",
-            "in": "path",
-            "name": "name",
-            "required": true,
-            "schema": {
-              "maxLength": 24,
-              "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-              "type": "string"
-            }
-          }
-        ],
         "responses": {
           "204": {
             "content": { "": {} },
-            "description": "Cluster deleted successfully"
+            "description": "Self-update request deleted successfully"
           },
           "404": {
             "content": {
@@ -6515,7 +6642,7 @@
                 "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
               }
             },
-            "description": "Cluster not found"
+            "description": "Self-update request not found"
           },
           "409": {
             "content": {
@@ -6523,65 +6650,7 @@
                 "schema": { "$ref": "#/components/schemas/ConflictResponse" }
               }
             },
-            "description": "Cannot delete cluster with nodes"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        },
-        "summary": "Delete a cluster",
-        "tags": ["Nodes.Cluster"]
-      },
-      "get": {
-        "callbacks": {},
-        "description": "Returns details for a specific cluster by name",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.ClusterController.show",
-        "parameters": [
-          {
-            "description": "Cluster name",
-            "in": "path",
-            "name": "name",
-            "required": true,
-            "schema": {
-              "maxLength": 24,
-              "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClusterSingleResponse"
-                }
-              }
-            },
-            "description": "Cluster details"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Cluster not found"
+            "description": "Cannot delete non-completed request"
           },
           "422": {
             "content": {
@@ -6592,77 +6661,8 @@
             "description": "Invalid path parameters"
           }
         },
-        "summary": "Get a specific cluster",
-        "tags": ["Nodes.Cluster"]
-      },
-      "patch": {
-        "callbacks": {},
-        "description": "Update a cluster's settings. Only provided fields are changed. Pass null to unset a nullable field.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.ClusterController.update",
-        "parameters": [
-          {
-            "description": "Cluster name",
-            "in": "path",
-            "name": "name",
-            "required": true,
-            "schema": {
-              "maxLength": 24,
-              "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/ClusterUpdateRequest" }
-            }
-          },
-          "description": "Cluster update parameters",
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClusterSingleResponse"
-                }
-              }
-            },
-            "description": "Cluster updated successfully"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Cluster not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChangesetErrorResponse"
-                }
-              }
-            },
-            "description": "Validation error or node_limit below current node count"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        },
-        "summary": "Update a cluster",
-        "tags": ["Nodes.Cluster"]
+        "summary": "Delete a self-update request",
+        "tags": ["SelfUpdates.Request"]
       }
     }
   },

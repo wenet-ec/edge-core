@@ -17,14 +17,44 @@ defmodule EdgeAdminWeb.Plugs.RenderPublicSpec do
 
   @impl Plug
   def call(conn, _opts) do
-    spec =
+    json =
       EdgeAdminWeb.ApiSpec.spec()
       |> filter_internal_paths()
       |> filter_internal_schemas()
+      |> OpenApiSpex.OpenApi.to_map()
+      |> sort_paths_in_map()
+      |> Jason.encode!()
 
     conn
     |> Plug.Conn.put_resp_content_type("application/json")
-    |> Plug.Conn.send_resp(200, Jason.encode!(spec))
+    |> Plug.Conn.send_resp(200, json)
+  end
+
+  # Preferred HTTP verb order within a path item: create → list/get → update → delete.
+  @verb_order ~w(post get put patch delete head options trace)
+
+  # Jason.encode! on a plain map uses hash order. By converting paths and their
+  # verb maps to Jason.OrderedObject, we preserve both orders through to the wire.
+  defp sort_paths_in_map(%{"paths" => paths} = spec_map) when is_map(paths) do
+    ordered_paths =
+      paths
+      |> Enum.sort_by(fn {path, _} ->
+        Map.get(EdgeAdminWeb.ApiSpec.paths_order_index(), path, 999_999)
+      end)
+      |> Enum.map(fn {path, path_item} -> {path, sort_verbs(path_item)} end)
+
+    %{spec_map | "paths" => Jason.OrderedObject.new(ordered_paths)}
+  end
+
+  defp sort_paths_in_map(spec_map), do: spec_map
+
+  defp sort_verbs(path_item) when is_map(path_item) do
+    verb_index = @verb_order |> Enum.with_index() |> Map.new()
+
+    ordered =
+      Enum.sort_by(path_item, fn {verb, _} -> Map.get(verb_index, verb, 999) end)
+
+    Jason.OrderedObject.new(ordered)
   end
 
   defp filter_internal_paths(%OpenApiSpex.OpenApi{paths: paths} = spec) do

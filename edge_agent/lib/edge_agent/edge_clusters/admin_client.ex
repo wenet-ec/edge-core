@@ -550,6 +550,35 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     end)
   end
 
+  @doc """
+  Registers an alias (friendly name) for this node with admin.
+
+  Called during bootstrap for each name in the ALIASES env var.
+  Returns :ok on success or if the name is already taken (conflict).
+
+  POST /api/v1/agents/aliases
+  """
+  @spec register_alias(String.t()) :: :ok | {:error, term()}
+  def register_alias(name) do
+    path = "/api/v1/agents/aliases"
+
+    request_with_auth(path, fn url, headers ->
+      payload = %{alias: %{name: name}}
+      opts = Keyword.merge([json: payload, headers: headers], http_options())
+
+      case Req.post(url, opts) do
+        {:ok, %{status: status}} when status in [201, 409] ->
+          :ok
+
+        {:ok, %{status: status, body: body}} ->
+          {:error, {:http_error, status, body}}
+
+        {:error, reason} ->
+          {:error, {:request_failed, reason}}
+      end
+    end)
+  end
+
   # Private functions
 
   defp request_with_fallback(path, request_fn) do

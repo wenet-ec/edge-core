@@ -15,6 +15,7 @@ defmodule EdgeAgent.Bootstrap do
   3. Join VPN network
   4. Discover admin URLs and register with admin (with HTTP fallback)
   5. Sync unprocessed command executions (sent + pending)
+  6. Register node aliases (best-effort, from ALIASES env var)
   ```
 
   ## Failure Handling
@@ -41,6 +42,7 @@ defmodule EdgeAgent.Bootstrap do
   - `:http_proxy_port` - HTTP proxy port (default: 43128)
   - `:socks5_proxy_port` - SOCKS5 proxy port (default: 41080)
   - `:vpn_ready_timeout_seconds` - VPN verification timeout in seconds (default: 30)
+  - `:aliases` - List of friendly name aliases to register with admin (default: [])
 
   ## Examples
 
@@ -138,7 +140,8 @@ defmodule EdgeAgent.Bootstrap do
          :ok <- step_2_verify_enrollment(),
          :ok <- step_3_join_vpn(node_id),
          :ok <- step_4_discover_and_register(node_id, id_type),
-         :ok <- step_5_sync_unprocessed_command_executions(node_id) do
+         :ok <- step_5_sync_unprocessed_command_executions(node_id),
+         :ok <- step_6_register_aliases() do
       Logger.info("All bootstrap steps completed")
       :ok
     else
@@ -256,6 +259,27 @@ defmodule EdgeAgent.Bootstrap do
     Commands.sync_unprocessed_command_executions()
 
     # Always return :ok (sync failures are non-fatal)
+    :ok
+  end
+
+  # =============================================================================
+  # Step 6: Register Aliases (best-effort)
+  # =============================================================================
+
+  defp step_6_register_aliases do
+    aliases = Application.get_env(:edge_agent, :aliases, [])
+
+    if aliases != [] do
+      Logger.info("Step 6: Registering #{length(aliases)} alias(es)...")
+
+      Enum.each(aliases, fn name ->
+        case AdminClient.register_alias(name) do
+          :ok -> Logger.info("Alias registered: #{name}")
+          {:error, reason} -> Logger.warning("Failed to register alias #{inspect(name)}: #{inspect(reason)}")
+        end
+      end)
+    end
+
     :ok
   end
 

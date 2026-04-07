@@ -188,6 +188,9 @@ defmodule EdgeAdminWeb.Router do
 
     # Metrics cache push
     post("/metrics/push", MetricsController, :push)
+
+    # Alias registration
+    post("/aliases", AliasController, :create)
   end
 
   # Protected API endpoints (requires API_KEY or MASTER_KEY)

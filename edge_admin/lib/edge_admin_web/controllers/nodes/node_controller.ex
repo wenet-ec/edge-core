@@ -64,6 +64,11 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
         description: "Filter by self-update enabled status",
         schema: %OpenApiSpex.Schema{type: :boolean}
       ],
+      cluster_name: [
+        in: :query,
+        description: "Filter by cluster name (exact match or wildcard: prod*, *east, etc.)",
+        schema: %OpenApiSpex.Schema{type: :string}
+      ],
       last_seen_at__gte: [
         in: :query,
         description:
@@ -129,11 +134,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
             %OpenApiSpex.Schema{type: :string, format: :date}
           ]
         }
-      ],
-      cluster_name: [
-        in: :query,
-        description: "Filter by cluster name (exact match or wildcard: prod*, *east, etc.)",
-        schema: %OpenApiSpex.Schema{type: :string}
       ]
     ],
     responses: %{

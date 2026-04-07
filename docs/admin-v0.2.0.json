@@ -4366,6 +4366,13 @@
             "schema": { "type": "boolean" }
           },
           {
+            "description": "Filter by cluster name (exact match or wildcard: prod*, *east, etc.)",
+            "in": "query",
+            "name": "cluster_name",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
             "description": "Filter nodes last seen after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
             "in": "query",
             "name": "last_seen_at__gte",
@@ -4436,13 +4443,6 @@
                 { "format": "date", "type": "string" }
               ]
             }
-          },
-          {
-            "description": "Filter by cluster name (exact match or wildcard: prod*, *east, etc.)",
-            "in": "query",
-            "name": "cluster_name",
-            "required": false,
-            "schema": { "type": "string" }
           }
         ],
         "responses": {

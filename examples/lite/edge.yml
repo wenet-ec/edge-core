@@ -34,6 +34,7 @@ services:
       - .env
     network_mode: host
     privileged: true
+    pid: host
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
 

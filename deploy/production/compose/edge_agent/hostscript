@@ -1,17 +1,28 @@
 #!/bin/bash
 # deploy/production/compose/edge_agent/hostscript
+#
+# Executes commands in the host's namespace by entering the host's mount, UTS,
+# IPC, and network namespaces via /host/proc/1 (systemd/init on the host).
+#
+# The container mounts the host root at /host, so /host/proc/1 is the real
+# host PID 1 (systemd), not the container's PID 1.
+#
+# NOTE: snap-installed tools (docker, kubectl via snap, etc.) cannot be called
+# via nsenter due to snap strict confinement requiring DBus + cgroup scope creation.
+# These tools should be installed natively (not via snap) on the host for remote
+# command execution to work.
+
+HOST_NS_ARGS="--mount=/host/proc/1/ns/mnt --uts=/host/proc/1/ns/uts --ipc=/host/proc/1/ns/ipc --net=/host/proc/1/ns/net"
 
 if [ $# -eq 0 ]; then
-    # Interactive mode - enter host namespace with interactive bash
-    # The -i flag makes bash interactive and reads environment variables
-    nsenter -t 1 -m -u -i -n -p bash -i 2>/dev/null || \
-    nsenter -t 1 -m -u -n -p bash -i 2>/dev/null || \
+    # Interactive mode - login shell sources /etc/profile so host PATH is fully set
+    nsenter $HOST_NS_ARGS bash --login -i 2>/dev/null || \
     chroot /host bash -i 2>/dev/null || \
     chroot /host sh -i 2>&1
 else
-    # Command execution - try nsenter, fallback to chroot
-    nsenter -t 1 -m -u -i -n -p bash -c "$*" 2>/dev/null || \
-    nsenter -t 1 -m -u -n -p bash -c "$*" 2>/dev/null || \
+    # bash --login sources /etc/profile and /etc/environment, picking up host-configured
+    # PATH entries for snap, nix, homebrew, etc. without hardcoding anything
+    nsenter $HOST_NS_ARGS bash --login -c "$*" 2>/dev/null || \
     chroot /host bash -c "$*" 2>/dev/null || \
     chroot /host sh -c "$*" 2>&1
 fi

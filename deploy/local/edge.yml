@@ -37,6 +37,7 @@ services:
       - ./.envs/.edge_agent
     network_mode: host
     privileged: true
+    pid: host
     ports:
       - "44000:44000"
       - "43128:43128"

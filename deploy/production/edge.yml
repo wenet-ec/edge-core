@@ -22,6 +22,7 @@ services:
     env_file:
       - ./.envs/.edge_agent
     network_mode: host
+    pid: host
     privileged: true
     labels:
       - "com.centurylinklabs.watchtower.enable=true"

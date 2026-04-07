@@ -83,12 +83,12 @@ The VPN is the foundation everything else is built on. It creates a secure mesh 
 
 ### Netmaker
 
-Netmaker manages the WireGuard mesh. Each edge cluster maps to a dedicated Netmaker network named `cluster-{cluster_id}`. Admin instances join multiple networks: their own admin cluster network plus every edge cluster they manage.
+Netmaker manages the WireGuard mesh. Each edge cluster maps to a dedicated Netmaker network named `cluster-{cluster_name}`. Admin instances join multiple networks: their own admin cluster network plus every edge cluster they manage.
 
 DNS identities follow a consistent pattern:
 
-- Admin: `admin-{id}.admin-cluster-{name}.nm.internal`
-- Node: `node-{id}.cluster-{cluster_id}.nm.internal`
+- Admin: `admin-{id}.admin-cluster-{admin_cluster_name}.nm.internal`
+- Node: `node-{id}.cluster-{cluster_name}.nm.internal`
 
 Cluster sizing is intentionally limited. WireGuard mesh is O(n²) — 100 nodes means ~5,000 peer connections. Clusters are capped at 50–100 nodes; horizontal scale comes from more clusters, not bigger ones.
 
@@ -102,7 +102,7 @@ CoreDNS resolves `.nm.internal` VPN hostnames. Netmaker writes its node table to
 
 ### netclient
 
-netclient is the WireGuard client bundled inside the Edge Agent container. It handles VPN enrollment, peer management, and — critically — transparent DERP relay fallback when direct UDP is blocked. Edge Agent is built on top of our fork of netclient (`github.com/wenet-ec/netclient`, branch `v1.4.0-derp`) which adds DERP relay support and an HTTP scheme override for local development.
+netclient is the WireGuard client bundled inside the Edge Agent container. It handles VPN enrollment, peer management, and — critically — transparent DERP relay fallback when direct UDP is blocked. Edge Agent is built on top of our fork of netclient (`github.com/wenet-ec/netclient`, branch `v1.5.1-derp`) which adds DERP relay support and an HTTP scheme override for local development.
 
 ---
 
@@ -149,8 +149,6 @@ Thin wrapper around the `netclient` binary (which must be present in the contain
 | `pull/0`             | Force-pull latest config from Netmaker server                                      |
 | `list_peers/1`       | List WireGuard peer details                                                        |
 | `ping_peers/1`       | Ping peers through WireGuard tunnel, check connectivity and latency                |
-
-**Known quirk — TOCTOU race condition:** netclient v1.4.0 has a race condition in `WriteJSONAtomic` where `/etc/netclient/` can be deleted between a directory check and file write. Nexmaker mitigates this with `ensure_netclient_dir/0` (pre-creates the dir before each call) and `run_with_retry/3` (exponential backoff retry on detection). This is handled transparently — callers don't need to worry about it.
 
 ---
 
@@ -272,9 +270,9 @@ Agents update themselves via Watchtower. Admin creates a self-update request; it
 Communication between admin and agent is **HTTP over the VPN**. The VPN DNS name and a per-node API token are all that's needed. There is no Erlang distribution to agents — agents are not Erlang nodes.
 
 ```
-Admin → Agent:  POST  http://node-{id}.cluster-{id}.nm.internal:44000/api/command_executions
-Agent → Admin:  PATCH http://admin-{id}.cluster-{id}.nm.internal:44000/api/agents/command_executions/:id
-                POST  http://admin-{id}.cluster-{id}.nm.internal:44000/api/agents/nodes/me/health_check
+Admin → Agent:  POST  http://node-{id}.cluster-{cluster_name}.nm.internal:44000/api/command_executions
+Agent → Admin:  PATCH http://admin-{id}.cluster-{cluster_name}.nm.internal:44000/api/agents/command_executions/:id
+                POST  http://admin-{id}.cluster-{cluster_name}.nm.internal:44000/api/agents/nodes/me/health_check
 ```
 
 ### Connectivity Fallback Layers

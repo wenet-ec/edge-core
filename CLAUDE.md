@@ -144,8 +144,9 @@ All operations use Docker Compose through the `./bin/run` script. No local Elixi
 4. Agent discovers admin URL from Netmaker metadata
 5. Agent registers with admin: `POST /api/agents/nodes`
 6. Admin returns API token and config
-7. Agent downloads pending command executions
-8. Agent ready to receive commands
+7. Agent registers node aliases (best-effort, from `ALIASES` env var — comma-separated friendly names)
+8. Agent downloads pending command executions
+9. Agent ready to receive commands
 
 ### Command Execution
 
@@ -176,8 +177,10 @@ All operations use Docker Compose through the `./bin/run` script. No local Elixi
 - `clusters` - VPN network definitions
 - `nodes` - Edge device registrations with health status
 - `aliases` - DNS name mappings for nodes
+- `enrollment_keys` - VPN enrollment key records
 - `commands` - Commands to execute across nodes
 - `command_executions` - Per-node execution tracking
+- `node_metrics_cache` - Cached metrics for Layer 3 (HTTP polling) mode
 - `ssh_usernames` - SSH login credentials
 - `ssh_public_keys` - Authorized keys for SSH users
 - `self_update_requests` - Container update scheduling
@@ -252,7 +255,9 @@ edge_core/
 │   └── production/      # Production configs
 ├── examples/            # Deployment examples for users
 │   ├── lite/            # Single admin, Mosquitto, no metrics
-│   └── standard/        # 4 admins (2 clusters), EMQX, full metrics
+│   ├── standard/        # 4 admins (2 clusters), EMQX, full metrics
+│   ├── sidecar/         # Agent as sidecar container (bridge networking)
+│   └── relay/           # Self-hosted DERP relay node
 ├── docs/                # Architecture docs and API specs
 │   ├── architecture.md
 │   ├── admin-v0.2.0.json
@@ -275,12 +280,14 @@ edge_core/
 
 **Edge Agent (`edge_agent/lib/edge_agent/`):**
 
-- `bootstrap.ex` - Startup orchestration, VPN enrollment, admin discovery
+- `bootstrap.ex` - Startup orchestration, VPN enrollment, admin discovery, alias registration
 - `commands.ex` - Local command execution via System.cmd
 - `ssh_server.ex` - Embedded SSH server (port 40022)
 - `proxy_servers.ex` - Local HTTP/SOCKS5 proxy servers
 - `settings.ex` - Persistent configuration (SQLite key-value store)
 - `identity.ex` - Node identity determination (hostname, MAC, etc.)
+- `vpn/vpn.ex` - VPN join/health-check operations; `vpn/workers/pull_vpn_config_worker.ex` for periodic pulls
+- `lan/mdns.ex` - mDNS advertisement (`{node_id}.local` + `_edgecore._tcp.local` service record)
 
 **Nexmaker (`nexmaker/lib/nexmaker/`):**
 
@@ -290,8 +297,6 @@ Two interfaces:
 
 - `Nexmaker.Api.*` — HTTP client (`Req`) for the full Netmaker REST API. Auth via MASTER_KEY bearer token. Modules: `Networks`, `EnrollmentKeys`, `Hosts`, `Nodes`, `DNS`, `Superadmin`, `Gateways.*`, `EMQX`.
 - `Nexmaker.Cli` — Wrapper around the `netclient` binary (shelled out via `System.cmd`). Functions: `join_network/1`, `leave_network/1`, `list_networks/0`, `check_connection/1`, `health_check/1`, `pull/0`, `list_peers/1`, `ping_peers/1`.
-
-Notable: netclient v1.4.0 has a TOCTOU race on `/etc/netclient/` — Nexmaker handles this transparently with pre-creation + retry logic in `Nexmaker.Cli`.
 
 Config:
 
@@ -317,9 +322,10 @@ Admin background work is split between two schedulers with different semantics:
 
 **Oban** — jobs inserted by the DB peer leader, competed for by any admin across all clusters sharing the same DB:
 
-- `EdgeAdmin.Commands.Workers.ExecutionCreationWorker` - Creates CommandExecution records for each targeted node
-- `EdgeAdmin.Nodes.Workers.ClusterReconciliationWorker` - Syncs node state with Netmaker VPN
-- `EdgeAdmin.SelfUpdates.Workers.SelfUpdateTriggerWorker` - Coordinates container updates
+- `EdgeAdmin.Commands.Workers.CreateExecutionsWorker` - Creates CommandExecution records for each targeted node
+- `EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker` - Enqueues one `ReconcileClusterWorker` job per cluster
+- `EdgeAdmin.Nodes.Workers.ReconcileClusterWorker` - Syncs a single cluster's node state with Netmaker VPN
+- `EdgeAdmin.SelfUpdates.Workers.TriggerSelfUpdateWorker` - Coordinates container updates
 
 **Agent Workers:**
 
@@ -328,8 +334,8 @@ Admin background work is split between two schedulers with different semantics:
 - `EdgeAgent.Commands.Workers.ReportExecutionWorker` - Reports results to admin
 - `EdgeAgent.Commands.Workers.SyncUnprocessedExecutionWorker` - Syncs pending executions
 - `EdgeAgent.EdgeClusters.Workers.DiscoverAdminWorker` - Discovers admin URL from VPN metadata
-- `EdgeAgent.EdgeClusters.Workers.RegisterRelayedNodeWorker` - Registers node with admin
 - `EdgeAgent.EdgeClusters.Workers.ReportHealthCheckWorker` - Sends health status to admin
+- `EdgeAgent.Vpn.Workers.PullVpnConfigWorker` - Periodic VPN config pull (daily, opt-out via `PULL_VPN_CONFIG_ENABLED`)
 
 ### Testing Patterns
 

@@ -40,7 +40,7 @@ defmodule EdgeAdmin.Admins.Metadata do
 
   ## ETS Schema
 
-  The `:metadata` table contains 4 keys:
+  The `:metadata` table contains 5 keys:
 
   ### `:admin` - This Admin's Info
   ```elixir
@@ -90,6 +90,16 @@ defmodule EdgeAdmin.Admins.Metadata do
   %{
     "cluster-orphaned-1" => ["node-5", "node-6"],
     "cluster-orphaned-2" => ["node-7"]
+  }
+  ```
+
+  ### `:node_index` - Inverted Node Index
+  Rebuilt on every recomputation. O(1) lookup for `find_node_cluster/1`.
+  ```elixir
+  %{
+    "node-abc123" => {"cluster-a", "admin-1"},
+    "node-def456" => {"cluster-a", "admin-1"},
+    "node-xyz789" => {"cluster-b", "admin-2"}
   }
   ```
 
@@ -209,6 +219,11 @@ defmodule EdgeAdmin.Admins.Metadata do
       %{}
     })
 
+    :ets.insert(@table, {
+      :node_index,
+      %{}
+    })
+
     # Subscribe to PubSub events (cluster/node CRUD from this admin cluster)
     Phoenix.PubSub.subscribe(EdgeAdmin.PubSub, "#{admin_cluster_name}:metadata")
 
@@ -256,18 +271,9 @@ defmodule EdgeAdmin.Admins.Metadata do
   - {:error, :not_found} if node not assigned to any cluster
   """
   def find_node_cluster(node_name) do
-    [{:edge_clusters, assignments}] = :ets.lookup(@table, :edge_clusters)
+    [{:node_index, index}] = :ets.lookup(@table, :node_index)
 
-    result =
-      Enum.find_value(assignments, fn {admin_name, clusters} ->
-        Enum.find_value(clusters, fn {cluster_name, node_names} ->
-          if node_name in node_names do
-            {cluster_name, admin_name}
-          end
-        end)
-      end)
-
-    case result do
+    case Map.get(index, node_name) do
       {cluster_name, admin_name} -> {:ok, cluster_name, admin_name}
       nil -> {:error, :not_found}
     end
@@ -494,6 +500,8 @@ defmodule EdgeAdmin.Admins.Metadata do
 
     # Update :orphaned_clusters
     :ets.insert(@table, {:orphaned_clusters, result.orphaned_clusters})
+
+    :ets.insert(@table, {:node_index, result.node_index})
 
     # Update :admin_cluster topology
     [{:admin_cluster, admin_cluster}] = :ets.lookup(@table, :admin_cluster)

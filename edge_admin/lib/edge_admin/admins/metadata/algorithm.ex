@@ -21,6 +21,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   %{
     edge_clusters: %{admin_name => %{cluster_name => [node_names]}},
     orphaned_clusters: %{cluster_name => [node_names]},
+    node_index: %{node_name => {cluster_name, admin_name}},  # inverted index for O(1) node lookups
     total_nodes: integer,     # total nodes across all clusters in the system
     total_capacity: integer,  # sum of max_capacity across all admins
     degraded: boolean,        # true when total_nodes > total_capacity
@@ -113,6 +114,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
 
     %{
       edge_clusters: edge_clusters,
+      node_index: build_node_index(edge_clusters),
       orphaned_clusters: intermediate_result.orphaned_clusters,
       total_nodes: total_nodes,
       total_capacity: total_capacity,
@@ -210,6 +212,16 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
     # Return tuple: (clusters_managed, -remaining_capacity)
     # Lower is better: prefer fewer clusters, then higher remaining capacity
     {clusters_managed, -remaining_capacity}
+  end
+
+  defp build_node_index(edge_clusters) do
+    edge_clusters
+    |> Enum.flat_map(fn {admin_name, clusters} ->
+      Enum.flat_map(clusters, fn {cluster_name, nodes} ->
+        Enum.map(nodes, fn node -> {node, {cluster_name, admin_name}} end)
+      end)
+    end)
+    |> Map.new()
   end
 
   defp build_edge_clusters_map(cluster_assignments, cluster_nodes_map, admins) do

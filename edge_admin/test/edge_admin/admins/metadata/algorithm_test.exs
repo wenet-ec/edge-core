@@ -170,6 +170,42 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       assert result.weak_leader == nil
     end
 
+    test "node_index maps every node to its {cluster, admin}" do
+      admins = admins(a1: 100, a2: 100)
+      clusters = clusters(c1: ~w[n1 n2], c2: ~w[n3])
+
+      result = Algorithm.compute_assignments(admins, clusters)
+
+      # Every node must appear in the index
+      assert map_size(result.node_index) == 3
+
+      # Each entry must point to the correct cluster and admin
+      Enum.each(result.edge_clusters, fn {admin_name, clusters} ->
+        Enum.each(clusters, fn {cluster_name, nodes} ->
+          Enum.each(nodes, fn node ->
+            assert result.node_index[node] == {cluster_name, admin_name}
+          end)
+        end)
+      end)
+    end
+
+    test "node_index is empty when no clusters" do
+      result = Algorithm.compute_assignments(admins(a1: 100), [])
+      assert result.node_index == %{}
+    end
+
+    test "orphaned nodes are not in node_index" do
+      admins = admins(a1: 2)
+      # c1 (2 nodes) fits, c2 (1 node) gets orphaned
+      clusters = clusters(c1: ~w[n1 n2], c2: ~w[n3])
+
+      result = Algorithm.compute_assignments(admins, clusters)
+
+      assert Map.has_key?(result.node_index, "n1")
+      assert Map.has_key?(result.node_index, "n2")
+      refute Map.has_key?(result.node_index, "n3")
+    end
+
     test "empty cluster (no nodes) is assigned without consuming capacity" do
       admins = admins(a1: 0)
       clusters = clusters(c1: [])

@@ -210,12 +210,18 @@ defmodule EdgeAdmin.Nodes do
     end)
   end
 
+  defp apply_node_count_filter(query, %{op: :>=, value: value}) when is_integer(value),
+    do: from([c, n] in query, having: count(n.id) >= ^value)
+
   defp apply_node_count_filter(query, %{op: :>=, value: value}) when is_binary(value) do
     case Integer.parse(value) do
       {num, _} -> from([c, n] in query, having: count(n.id) >= ^num)
       _ -> query
     end
   end
+
+  defp apply_node_count_filter(query, %{op: :>, value: value}) when is_integer(value),
+    do: from([c, n] in query, having: count(n.id) > ^value)
 
   defp apply_node_count_filter(query, %{op: :>, value: value}) when is_binary(value) do
     case Integer.parse(value) do
@@ -224,12 +230,18 @@ defmodule EdgeAdmin.Nodes do
     end
   end
 
+  defp apply_node_count_filter(query, %{op: :<=, value: value}) when is_integer(value),
+    do: from([c, n] in query, having: count(n.id) <= ^value)
+
   defp apply_node_count_filter(query, %{op: :<=, value: value}) when is_binary(value) do
     case Integer.parse(value) do
       {num, _} -> from([c, n] in query, having: count(n.id) <= ^num)
       _ -> query
     end
   end
+
+  defp apply_node_count_filter(query, %{op: :<, value: value}) when is_integer(value),
+    do: from([c, n] in query, having: count(n.id) < ^value)
 
   defp apply_node_count_filter(query, %{op: :<, value: value}) when is_binary(value) do
     case Integer.parse(value) do
@@ -238,12 +250,18 @@ defmodule EdgeAdmin.Nodes do
     end
   end
 
+  defp apply_node_count_filter(query, %{op: :==, value: value}) when is_integer(value),
+    do: from([c, n] in query, having: count(n.id) == ^value)
+
   defp apply_node_count_filter(query, %{op: :==, value: value}) when is_binary(value) do
     case Integer.parse(value) do
       {num, _} -> from([c, n] in query, having: count(n.id) == ^num)
       _ -> query
     end
   end
+
+  defp apply_node_count_filter(query, %{op: :!=, value: value}) when is_integer(value),
+    do: from([c, n] in query, having: count(n.id) != ^value)
 
   defp apply_node_count_filter(query, %{op: :!=, value: value}) when is_binary(value) do
     case Integer.parse(value) do

@@ -91,7 +91,7 @@ defmodule EdgeAdmin.Ssh do
   - `{:error, changeset}` - Validation or creation failed
   """
   @spec create_ssh_username_with_keys(Node.t(), map()) ::
-          {:ok, SshUsername.t()} | {:error, Ecto.Changeset.t()} | {:error, :conflict}
+          {:ok, SshUsername.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
   def create_ssh_username_with_keys(%Node{} = node, params) do
     with {:ok, attrs} <- Forms.CreateSshUsernameForm.changeset(params) do
       # Extract public_keys (if present) and prepare username attrs
@@ -375,7 +375,7 @@ defmodule EdgeAdmin.Ssh do
   - `{:error, changeset}` - Validation or creation failed
   """
   @spec create_ssh_public_key(SshUsername.t(), map()) ::
-          {:ok, SshPublicKey.t()} | {:error, Ecto.Changeset.t()} | {:error, :conflict}
+          {:ok, SshPublicKey.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
   def create_ssh_public_key(%SshUsername{} = ssh_username, params) do
     with {:ok, attrs} <- Forms.CreateSshPublicKeyForm.changeset(params) do
       attrs = Map.put(attrs, "ssh_username_id", ssh_username.id)

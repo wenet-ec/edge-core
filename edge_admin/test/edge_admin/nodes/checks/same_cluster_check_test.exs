@@ -1,8 +1,8 @@
-# edge_admin/test/edge_admin/nodes/checks/node_cluster_change_check_test.exs
-defmodule EdgeAdmin.Nodes.Checks.NodeClusterChangeCheckTest do
+# edge_admin/test/edge_admin/nodes/checks/same_cluster_check_test.exs
+defmodule EdgeAdmin.Nodes.Checks.SameClusterCheckTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAdmin.Nodes.Checks.NodeClusterChangeCheck
+  alias EdgeAdmin.Nodes.Checks.SameClusterCheck
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
 
@@ -15,7 +15,7 @@ defmodule EdgeAdmin.Nodes.Checks.NodeClusterChangeCheckTest do
       cluster_id = Ecto.UUID.generate()
       node = %Node{cluster_id: cluster_id}
       cluster = %Cluster{id: cluster_id}
-      assert {:error, {:conflict, reason}} = NodeClusterChangeCheck.check(node, cluster)
+      assert {:error, {:conflict, reason}} = SameClusterCheck.check(node, cluster)
       assert reason =~ "already"
     end
   end
@@ -24,13 +24,13 @@ defmodule EdgeAdmin.Nodes.Checks.NodeClusterChangeCheckTest do
     test "node moving to a different cluster returns :ok" do
       node = %Node{cluster_id: Ecto.UUID.generate()}
       cluster = %Cluster{id: Ecto.UUID.generate()}
-      assert :ok = NodeClusterChangeCheck.check(node, cluster)
+      assert :ok = SameClusterCheck.check(node, cluster)
     end
 
     test "node with nil cluster_id moving to any cluster returns :ok" do
       node = %Node{cluster_id: nil}
       cluster = %Cluster{id: Ecto.UUID.generate()}
-      assert :ok = NodeClusterChangeCheck.check(node, cluster)
+      assert :ok = SameClusterCheck.check(node, cluster)
     end
   end
 end

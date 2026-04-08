@@ -397,7 +397,7 @@ defmodule EdgeAdmin.Nodes do
          # Check Netmaker health before proceeding
          :ok <- Vpn.netmaker_health_check(),
          existing_ranges = Repo.all(from(c in Cluster, select: c.ipv4_range)),
-         :ok <- Checks.CreateClusterCheck.check(validated_attrs["ipv4_range"], existing_ranges),
+         :ok <- Checks.SubnetOverlapCheck.check(validated_attrs["ipv4_range"], existing_ranges),
          ipv4_range = validated_attrs["ipv4_range"] || Vpn.generate_next_subnet(existing_ranges),
          cluster_attrs = Map.put(validated_attrs, "ipv4_range", ipv4_range),
          {:ok, cluster} <-
@@ -443,7 +443,7 @@ defmodule EdgeAdmin.Nodes do
           {:ok, Cluster.t()} | {:error, Ecto.Changeset.t()}
   def update_cluster(%Cluster{} = cluster, params) do
     with {:ok, attrs} <- Forms.UpdateClusterForm.changeset(params),
-         :ok <- Checks.UpdateClusterCheck.check(cluster, Map.get(attrs, "node_limit")),
+         :ok <- Checks.NodeLimitBelowCountCheck.check(cluster, Map.get(attrs, "node_limit")),
          {:ok, updated_cluster} <-
            cluster
            |> Cluster.changeset(attrs)
@@ -473,7 +473,7 @@ defmodule EdgeAdmin.Nodes do
   @spec delete_cluster(Cluster.t()) ::
           {:ok, Cluster.t()} | {:error, {:conflict, String.t()}} | {:error, :service_unavailable}
   def delete_cluster(%Cluster{} = cluster) do
-    case Checks.DeleteClusterCheck.check(cluster) do
+    case Checks.ClusterNotEmptyCheck.check(cluster) do
       :ok ->
         network_name = node_network_name(cluster)
 
@@ -647,7 +647,7 @@ defmodule EdgeAdmin.Nodes do
   def change_node_cluster(%Node{} = node, params) do
     with {:ok, new_cluster_name} <- Forms.ChangeNodeClusterForm.changeset(params),
          {:ok, new_cluster} <- get_cluster(new_cluster_name),
-         :ok <- Checks.NodeClusterChangeCheck.check(node, new_cluster),
+         :ok <- Checks.SameClusterCheck.check(node, new_cluster),
          :ok <- Checks.NodeLimitCheck.check(new_cluster) do
       old_cluster_id = node.cluster_id
 

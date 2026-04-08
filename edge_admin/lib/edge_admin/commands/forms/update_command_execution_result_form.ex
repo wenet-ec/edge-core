@@ -4,7 +4,7 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
   Form for validating command execution result update inputs from agents.
 
   Handles input validation for updating command execution results received from edge agents.
-  State preconditions (status, exit_code) are enforced by UpdateExecutionResultCheck before
+  State preconditions (status, exit_code) are enforced by ExecutionAcceptsResultCheck before
   this form is called.
   """
   use EdgeAdmin.Form

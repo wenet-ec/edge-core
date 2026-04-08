@@ -1,10 +1,9 @@
-# edge_admin/lib/edge_admin/commands/checks/cancel_execution_check.ex
-defmodule EdgeAdmin.Commands.Checks.CancelExecutionCheck do
+# edge_admin/lib/edge_admin/commands/checks/execution_cancellable_check.ex
+defmodule EdgeAdmin.Commands.Checks.ExecutionCancellableCheck do
   @moduledoc """
-  Precondition check for command execution cancellation.
+  Checks that an execution is in a cancellable status (pending or sent).
 
-  An execution can only be cancelled when it is pending or sent.
-  Completed executions cannot be cancelled.
+  Completed, cancelled, and expired executions cannot be cancelled.
   """
 
   alias EdgeAdmin.Commands.Schemas.CommandExecution

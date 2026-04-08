@@ -1,9 +1,8 @@
-# edge_admin/lib/edge_admin/nodes/checks/create_cluster_check.ex
-defmodule EdgeAdmin.Nodes.Checks.CreateClusterCheck do
+# edge_admin/lib/edge_admin/nodes/checks/subnet_overlap_check.ex
+defmodule EdgeAdmin.Nodes.Checks.SubnetOverlapCheck do
   @moduledoc """
-  Precondition check for cluster creation.
+  Checks that a proposed IPv4 range does not overlap with any existing cluster range.
 
-  Passes when the proposed IPv4 range does not overlap with any existing cluster range.
   Overlap means one network's address falls inside the other's range (either direction),
   which would cause Netmaker to reject the network with "network cidr already in use".
 

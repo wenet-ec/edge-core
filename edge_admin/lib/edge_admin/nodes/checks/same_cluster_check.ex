@@ -1,9 +1,8 @@
-# edge_admin/lib/edge_admin/nodes/checks/node_cluster_change_check.ex
-defmodule EdgeAdmin.Nodes.Checks.NodeClusterChangeCheck do
+# edge_admin/lib/edge_admin/nodes/checks/same_cluster_check.ex
+defmodule EdgeAdmin.Nodes.Checks.SameClusterCheck do
   @moduledoc """
-  Precondition check for changing a node's cluster assignment.
+  Checks that a node is not already in the target cluster.
 
-  Passes when the target cluster is different from the node's current cluster.
   Prevents a no-op cluster change request from proceeding.
   """
 

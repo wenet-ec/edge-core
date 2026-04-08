@@ -1,10 +1,9 @@
-# edge_admin/lib/edge_admin/self_updates/checks/delete_request_check.ex
-defmodule EdgeAdmin.SelfUpdates.Checks.DeleteRequestCheck do
+# edge_admin/lib/edge_admin/self_updates/checks/request_completed_check.ex
+defmodule EdgeAdmin.SelfUpdates.Checks.RequestCompletedCheck do
   @moduledoc """
-  Precondition check for self-update request deletion.
+  Checks that a self-update request is completed before allowing deletion.
 
-  A request can only be deleted when it is completed.
-  This prevents deleting requests that are still being processed.
+  Prevents deleting requests that are still being processed.
   """
 
   alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest

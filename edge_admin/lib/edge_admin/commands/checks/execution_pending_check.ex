@@ -1,10 +1,9 @@
-# edge_admin/lib/edge_admin/commands/checks/acknowledge_execution_check.ex
-defmodule EdgeAdmin.Commands.Checks.AcknowledgeExecutionCheck do
+# edge_admin/lib/edge_admin/commands/checks/execution_pending_check.ex
+defmodule EdgeAdmin.Commands.Checks.ExecutionPendingCheck do
   @moduledoc """
-  Precondition check for command execution acknowledgment.
+  Checks that an execution is in "pending" status.
 
-  An execution can only be acknowledged when it is pending.
-  This transitions the execution from "pending" to "sent".
+  Required before acknowledgment, which transitions the execution from "pending" to "sent".
   """
 
   alias EdgeAdmin.Commands.Schemas.CommandExecution

@@ -144,7 +144,7 @@ defmodule EdgeAdmin.Commands do
   """
   @spec delete_command(Command.t()) :: {:ok, Command.t()} | {:error, {:conflict, String.t()}}
   def delete_command(%Command{} = command) do
-    with :ok <- Checks.DeleteCommandCheck.check(command) do
+    with :ok <- Checks.PendingExecutionsCheck.check(command) do
       Repo.delete(command)
     end
   end
@@ -289,7 +289,7 @@ defmodule EdgeAdmin.Commands do
   @spec delete_command_execution(CommandExecution.t()) ::
           {:ok, CommandExecution.t()} | {:error, {:conflict, String.t()}}
   def delete_command_execution(%CommandExecution{} = command_execution) do
-    with :ok <- Checks.DeleteExecutionCheck.check(command_execution) do
+    with :ok <- Checks.ExecutionTerminalCheck.check(command_execution) do
       Repo.delete(command_execution)
     end
   end
@@ -1082,7 +1082,7 @@ defmodule EdgeAdmin.Commands do
   @spec acknowledge_execution(CommandExecution.t(), map()) ::
           {:ok, CommandExecution.t()} | {:error, {:conflict, String.t()}}
   def acknowledge_execution(execution, _params) do
-    with :ok <- Checks.AcknowledgeExecutionCheck.check(execution) do
+    with :ok <- Checks.ExecutionPendingCheck.check(execution) do
       update_command_execution(execution, %{"status" => "sent", "sent_at" => DateTime.utc_now()})
     end
   end
@@ -1112,7 +1112,7 @@ defmodule EdgeAdmin.Commands do
   @spec update_command_execution_result(CommandExecution.t(), map()) ::
           {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   def update_command_execution_result(execution, params) do
-    with :ok <- Checks.UpdateExecutionResultCheck.check(execution),
+    with :ok <- Checks.ExecutionAcceptsResultCheck.check(execution),
          {:ok, attrs} <- Forms.UpdateCommandExecutionResultForm.changeset(params) do
       # Agent is the source of truth for terminal status.
       # exit_code 143 (SIGTERM) means the agent honoured a cancellation request — override to cancelled.
@@ -1191,7 +1191,7 @@ defmodule EdgeAdmin.Commands do
   @spec cancel_command_execution(CommandExecution.t()) ::
           {:ok, map()} | {:error, {:conflict, String.t()}} | {:error, :service_unavailable}
   def cancel_command_execution(execution) do
-    with :ok <- Checks.CancelExecutionCheck.check(execution) do
+    with :ok <- Checks.ExecutionCancellableCheck.check(execution) do
       case execution.status do
         "pending" ->
           # Cancel immediately in DB — command never ran, no output or exit code
@@ -1226,7 +1226,7 @@ defmodule EdgeAdmin.Commands do
   - `pending` - Command never reached the agent; mark expired immediately in DB.
   - `sent` - Command was delivered; send best-effort cancellation to agent, then mark
     expired in DB regardless of whether the agent acknowledged it. If the agent already
-    ran the command and reports back later, `UpdateExecutionResultCheck` will accept the
+    ran the command and reports back later, `ExecutionAcceptsResultCheck` will accept the
     result and overwrite the expired status (agent is source of truth for what ran).
 
   Always returns `:ok` — errors are logged but never halt the scheduler.

@@ -1,7 +1,7 @@
-# edge_admin/lib/edge_admin/commands/checks/update_execution_result_check.ex
-defmodule EdgeAdmin.Commands.Checks.UpdateExecutionResultCheck do
+# edge_admin/lib/edge_admin/commands/checks/execution_accepts_result_check.ex
+defmodule EdgeAdmin.Commands.Checks.ExecutionAcceptsResultCheck do
   @moduledoc """
-  Precondition check for updating a command execution result from an agent.
+  Checks that an execution is in a state that accepts a result update from an agent.
 
   An execution result can be updated when:
   - Status is "sent" (normal case)

@@ -200,7 +200,7 @@ defmodule EdgeAdmin.SelfUpdates do
   @spec delete_self_update_request(SelfUpdateRequest.t()) ::
           {:ok, SelfUpdateRequest.t()} | {:error, {:conflict, String.t()}}
   def delete_self_update_request(%SelfUpdateRequest{} = request) do
-    with :ok <- Checks.DeleteRequestCheck.check(request) do
+    with :ok <- Checks.RequestCompletedCheck.check(request) do
       Repo.delete(request)
     end
   end

@@ -1,10 +1,9 @@
-# edge_admin/lib/edge_admin/nodes/checks/delete_cluster_check.ex
-defmodule EdgeAdmin.Nodes.Checks.DeleteClusterCheck do
+# edge_admin/lib/edge_admin/nodes/checks/cluster_not_empty_check.ex
+defmodule EdgeAdmin.Nodes.Checks.ClusterNotEmptyCheck do
   @moduledoc """
-  Precondition check for cluster deletion.
+  Checks that a cluster has no nodes before allowing deletion.
 
-  A cluster can only be deleted when it has no nodes.
-  This prevents cascading deletion of active nodes.
+  Prevents cascading deletion of active nodes.
   """
 
   import Ecto.Query

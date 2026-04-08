@@ -1,9 +1,10 @@
-# edge_admin/lib/edge_admin/nodes/checks/update_cluster_check.ex
-defmodule EdgeAdmin.Nodes.Checks.UpdateClusterCheck do
+# edge_admin/lib/edge_admin/nodes/checks/node_limit_below_count_check.ex
+defmodule EdgeAdmin.Nodes.Checks.NodeLimitBelowCountCheck do
   @moduledoc """
-  Precondition check for cluster update operations.
+  Checks that a proposed node_limit is not below the cluster's current node count.
 
-  Validates that the proposed changes to a cluster are compatible with its current state.
+  Prevents setting a limit that would make the cluster permanently over-capacity,
+  locking out all future registrations with no way to resolve it short of deleting nodes.
   """
 
   import Ecto.Query

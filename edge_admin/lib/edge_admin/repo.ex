@@ -14,11 +14,11 @@ defmodule EdgeAdmin.Repo do
   end
 
   @doc """
-  Translates a unique constraint violation on the given fields into `{:error, :conflict}`.
+  Translates a unique constraint violation on the given fields into `{:error, {:conflict, reason}}`.
   All other changeset errors pass through as `{:error, changeset}` for a 422 response.
 
   Call this after `Repo.insert/2` anywhere a unique index collision should be a 409
-  rather than a validation error.
+  rather than a validation error. The first matching field determines the reason message.
 
   ## Examples
 
@@ -28,18 +28,21 @@ defmodule EdgeAdmin.Repo do
   @spec normalize_conflict(
           {:ok, struct()} | {:error, Ecto.Changeset.t()},
           [atom()]
-        ) :: {:ok, struct()} | {:error, :conflict} | {:error, Ecto.Changeset.t()}
+        ) :: {:ok, struct()} | {:error, {:conflict, String.t()}} | {:error, Ecto.Changeset.t()}
   def normalize_conflict({:ok, _} = result, _fields), do: result
 
   def normalize_conflict({:error, %Ecto.Changeset{} = changeset}, fields) do
-    unique_on_fields? =
-      Enum.any?(fields, fn field ->
+    conflicting_field =
+      Enum.find(fields, fn field ->
         case Keyword.get(changeset.errors, field) do
           {_, opts} when is_list(opts) -> Keyword.get(opts, :constraint) == :unique
           _ -> false
         end
       end)
 
-    if unique_on_fields?, do: {:error, :conflict}, else: {:error, changeset}
+    case conflicting_field do
+      nil -> {:error, changeset}
+      field -> {:error, {:conflict, "#{field} has already been taken"}}
+    end
   end
 end

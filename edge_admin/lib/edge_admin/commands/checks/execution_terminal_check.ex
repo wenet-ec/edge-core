@@ -1,10 +1,9 @@
-# edge_admin/lib/edge_admin/commands/checks/delete_execution_check.ex
-defmodule EdgeAdmin.Commands.Checks.DeleteExecutionCheck do
+# edge_admin/lib/edge_admin/commands/checks/execution_terminal_check.ex
+defmodule EdgeAdmin.Commands.Checks.ExecutionTerminalCheck do
   @moduledoc """
-  Precondition check for command execution deletion.
+  Checks that an execution is in a terminal status (completed, cancelled, or expired).
 
-  An execution can only be deleted when it is completed.
-  This prevents deleting pending or in-flight executions.
+  Prevents deletion of pending or in-flight executions.
   """
 
   alias EdgeAdmin.Commands.Schemas.CommandExecution

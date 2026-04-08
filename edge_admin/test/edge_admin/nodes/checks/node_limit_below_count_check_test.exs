@@ -1,8 +1,8 @@
-# edge_admin/test/edge_admin/nodes/checks/update_cluster_check_test.exs
-defmodule EdgeAdmin.Nodes.Checks.UpdateClusterCheckTest do
+# edge_admin/test/edge_admin/nodes/checks/node_limit_below_count_check_test.exs
+defmodule EdgeAdmin.Nodes.Checks.NodeLimitBelowCountCheckTest do
   use EdgeAdmin.DataCase, async: false
 
-  alias EdgeAdmin.Nodes.Checks.UpdateClusterCheck
+  alias EdgeAdmin.Nodes.Checks.NodeLimitBelowCountCheck
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
@@ -52,14 +52,14 @@ defmodule EdgeAdmin.Nodes.Checks.UpdateClusterCheckTest do
   describe "check/2 — nil new_limit (removing the cap)" do
     test "nil new_limit always returns :ok regardless of node count" do
       cluster = insert_cluster()
-      assert :ok = UpdateClusterCheck.check(cluster, nil)
+      assert :ok = NodeLimitBelowCountCheck.check(cluster, nil)
     end
 
     test "nil new_limit returns :ok even when cluster has nodes" do
       cluster = insert_cluster()
       insert_node(cluster.id)
       insert_node(cluster.id)
-      assert :ok = UpdateClusterCheck.check(cluster, nil)
+      assert :ok = NodeLimitBelowCountCheck.check(cluster, nil)
     end
   end
 
@@ -72,18 +72,18 @@ defmodule EdgeAdmin.Nodes.Checks.UpdateClusterCheckTest do
       cluster = insert_cluster()
       insert_node(cluster.id)
       insert_node(cluster.id)
-      assert :ok = UpdateClusterCheck.check(cluster, 2)
+      assert :ok = NodeLimitBelowCountCheck.check(cluster, 2)
     end
 
     test "new_limit greater than node count returns :ok" do
       cluster = insert_cluster()
       insert_node(cluster.id)
-      assert :ok = UpdateClusterCheck.check(cluster, 5)
+      assert :ok = NodeLimitBelowCountCheck.check(cluster, 5)
     end
 
     test "empty cluster with any positive limit returns :ok" do
       cluster = insert_cluster()
-      assert :ok = UpdateClusterCheck.check(cluster, 1)
+      assert :ok = NodeLimitBelowCountCheck.check(cluster, 1)
     end
   end
 
@@ -96,14 +96,14 @@ defmodule EdgeAdmin.Nodes.Checks.UpdateClusterCheckTest do
       cluster = insert_cluster()
       insert_node(cluster.id)
       insert_node(cluster.id)
-      assert {:error, %Ecto.Changeset{}} = UpdateClusterCheck.check(cluster, 1)
+      assert {:error, %Ecto.Changeset{}} = NodeLimitBelowCountCheck.check(cluster, 1)
     end
 
     test "error includes the current node count as interpolation opt" do
       cluster = insert_cluster()
       insert_node(cluster.id)
       insert_node(cluster.id)
-      {:error, changeset} = UpdateClusterCheck.check(cluster, 1)
+      {:error, changeset} = NodeLimitBelowCountCheck.check(cluster, 1)
       {_msg, opts} = changeset.errors[:node_limit]
       assert opts[:count] == 2
     end
@@ -112,7 +112,7 @@ defmodule EdgeAdmin.Nodes.Checks.UpdateClusterCheckTest do
       cluster = insert_cluster()
       insert_node(cluster.id)
       insert_node(cluster.id)
-      {:error, changeset} = UpdateClusterCheck.check(cluster, 1)
+      {:error, changeset} = NodeLimitBelowCountCheck.check(cluster, 1)
 
       [msg] =
         Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
@@ -127,7 +127,7 @@ defmodule EdgeAdmin.Nodes.Checks.UpdateClusterCheckTest do
     test "zero new_limit is always below a non-empty cluster" do
       cluster = insert_cluster()
       insert_node(cluster.id)
-      assert {:error, %Ecto.Changeset{}} = UpdateClusterCheck.check(cluster, 0)
+      assert {:error, %Ecto.Changeset{}} = NodeLimitBelowCountCheck.check(cluster, 0)
     end
   end
 end

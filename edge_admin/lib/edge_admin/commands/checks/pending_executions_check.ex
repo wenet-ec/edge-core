@@ -1,10 +1,9 @@
-# edge_admin/lib/edge_admin/commands/checks/delete_command_check.ex
-defmodule EdgeAdmin.Commands.Checks.DeleteCommandCheck do
+# edge_admin/lib/edge_admin/commands/checks/pending_executions_check.ex
+defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheck do
   @moduledoc """
-  Precondition check for command deletion.
+  Checks that a command has no pending or in-flight executions.
 
-  A command can only be deleted when all its executions are completed.
-  This prevents cascading deletion of pending or in-flight executions.
+  Prevents deletion of a command while executions are still running.
   """
 
   import Ecto.Query

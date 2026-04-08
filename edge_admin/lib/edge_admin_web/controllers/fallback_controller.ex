@@ -43,8 +43,8 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     |> render(:"401")
   end
 
-  # 5. Conflict (409) - state-dependent: duplicate resource, unique constraint,
-  #    or operation blocked by current state (may succeed after state changes)
+  # 5. Conflict (409) - bare atom fallback, no reason available
+  #    Prefer {:error, {:conflict, reason}} for user-facing endpoints (case 6 below)
   def call(conn, {:error, :conflict}) do
     conn
     |> put_status(:conflict)

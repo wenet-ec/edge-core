@@ -30,8 +30,6 @@ defmodule EdgeAdmin.Nodes.Forms.NodeHealthCheckForm do
       iex> changeset(%{"status" => "unreachable"})
       {:error, %Ecto.Changeset{}}
   """
-  def changeset(%{node: node_attrs}) when is_map(node_attrs), do: changeset(node_attrs)
-
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:status])

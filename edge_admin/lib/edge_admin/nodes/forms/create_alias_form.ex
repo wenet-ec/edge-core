@@ -25,8 +25,6 @@ defmodule EdgeAdmin.Nodes.Forms.CreateAliasForm do
   - `{:ok, attrs}` - Validated and normalized attributes as a map with string keys
   - `{:error, changeset}` - Validation errors
   """
-  def changeset(%{alias: alias_attrs}) when is_map(alias_attrs), do: changeset(alias_attrs)
-
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:name])
@@ -46,7 +44,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateAliasForm do
     {:error,
      %__MODULE__{}
      |> cast(%{}, [])
-     |> add_error(:alias, "is required")
+     |> add_error(:base, "invalid parameters - expected a map")
      |> apply_action!(:insert)}
   end
 

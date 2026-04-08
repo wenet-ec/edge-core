@@ -30,8 +30,6 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameForm do
   - `{:ok, attrs}` - Validated and normalized attributes as a map with string keys
   - `{:error, changeset}` - Validation errors
   """
-  def changeset(%{ssh_username: ssh_username_attrs}) when is_map(ssh_username_attrs), do: changeset(ssh_username_attrs)
-
   def changeset(attrs) when is_map(attrs) do
     # Extract public_keys for separate validation (handle both string and atom keys)
     {public_keys_attrs, username_attrs} =
@@ -58,7 +56,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameForm do
     {:error,
      %__MODULE__{}
      |> cast(%{}, [])
-     |> add_error(:ssh_username, "is required")
+     |> add_error(:base, "invalid parameters - expected a map")
      |> apply_action!(:insert)}
   end
 

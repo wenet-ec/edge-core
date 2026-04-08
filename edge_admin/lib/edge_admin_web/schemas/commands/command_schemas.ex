@@ -125,217 +125,202 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
       description: "Create a new command with flexible targeting options",
       type: :object,
       properties: %{
-        command: %Schema{
+        command_text: %Schema{
+          type: :string,
+          minLength: 1,
+          description: "Multi-line shell script/commands to execute",
+          example: "ABC=value\necho $ABC\nsystemctl restart nginx"
+        },
+        timeout: %Schema{
+          type: :integer,
+          nullable: true,
+          minimum: 1,
+          description: "Command timeout in milliseconds (optional, null or omitted means no timeout, must be > 0)",
+          example: 30_000
+        },
+        expired_at: %Schema{
+          type: :string,
+          format: :"date-time",
+          nullable: true,
+          description:
+            "Deadline after which pending/sent executions are automatically expired. Must be in the future. Immutable after creation.",
+          example: "2025-12-31T23:59:59Z"
+        },
+        targeting: %Schema{
           type: :object,
           properties: %{
-            command_text: %Schema{
+            type: %Schema{
               type: :string,
-              minLength: 1,
-              description: "Multi-line shell script/commands to execute",
-              example: "ABC=value\necho $ABC\nsystemctl restart nginx"
-            },
-            timeout: %Schema{
-              type: :integer,
-              nullable: true,
-              minimum: 1,
-              description: "Command timeout in milliseconds (optional, null or omitted means no timeout, must be > 0)",
-              example: 30_000
-            },
-            expired_at: %Schema{
-              type: :string,
-              format: :"date-time",
-              nullable: true,
+              enum: ["all", "nodes", "clusters"],
               description:
-                "Deadline after which pending/sent executions are automatically expired. Must be in the future. Immutable after creation.",
-              example: "2025-12-31T23:59:59Z"
+                "Targeting strategy: 'all' for all nodes, 'nodes' for specific nodes, 'clusters' for specific clusters"
             },
-            targeting: %Schema{
+            node_ids: %Schema{
+              type: :array,
+              items: %Schema{type: :string, format: :uuid},
+              description: "Array of node IDs (required when type is 'nodes') (will always be deduplicated)",
+              example: [
+                "01234567-89ab-cdef-0123-456789abcdef",
+                "fedcba98-7654-3210-fedc-ba9876543210"
+              ]
+            },
+            cluster_names: %Schema{
+              type: :array,
+              items: %Schema{type: :string},
+              description: "Array of cluster names (required when type is 'clusters') (will always be deduplicated)",
+              example: ["prod", "staging"]
+            },
+            node_filters: %Schema{
               type: :object,
+              description:
+                "Optional filters to apply to target nodes (AND logic with cluster_filters). Supports all node list filters except cluster_name.",
               properties: %{
-                type: %Schema{
+                id_type: %Schema{
                   type: :string,
-                  enum: ["all", "nodes", "clusters"],
-                  description:
-                    "Targeting strategy: 'all' for all nodes, 'nodes' for specific nodes, 'clusters' for specific clusters"
+                  enum: ["persistent", "random"],
+                  description: "Filter by node ID type"
                 },
-                node_ids: %Schema{
-                  type: :array,
-                  items: %Schema{type: :string, format: :uuid},
-                  description: "Array of node IDs (required when type is 'nodes') (will always be deduplicated)",
-                  example: [
-                    "01234567-89ab-cdef-0123-456789abcdef",
-                    "fedcba98-7654-3210-fedc-ba9876543210"
-                  ]
+                status: %Schema{
+                  type: :string,
+                  enum: ["healthy", "unhealthy", "unreachable"],
+                  description: "Filter by node status"
                 },
-                cluster_names: %Schema{
-                  type: :array,
-                  items: %Schema{type: :string},
-                  description:
-                    "Array of cluster names (required when type is 'clusters') (will always be deduplicated)",
-                  example: ["prod", "staging"]
+                cluster_name: %Schema{
+                  type: :string,
+                  description: "Filter by cluster name (exact match or wildcard: prod*, *staging, etc.)"
                 },
-                node_filters: %Schema{
-                  type: :object,
-                  description:
-                    "Optional filters to apply to target nodes (AND logic with cluster_filters). Supports all node list filters except cluster_name.",
-                  properties: %{
-                    id_type: %Schema{
-                      type: :string,
-                      enum: ["persistent", "random"],
-                      description: "Filter by node ID type"
-                    },
-                    status: %Schema{
-                      type: :string,
-                      enum: ["healthy", "unhealthy", "unreachable"],
-                      description: "Filter by node status"
-                    },
-                    cluster_name: %Schema{
-                      type: :string,
-                      description: "Filter by cluster name (exact match or wildcard: prod*, *staging, etc.)"
-                    },
-                    version: %Schema{
-                      type: :string,
-                      description: "Filter by node version (exact match or wildcard: 1.0.0, 1.*, etc.)"
-                    },
-                    self_update_enabled: %Schema{
-                      type: :boolean,
-                      description: "Filter by self-update enabled status"
-                    },
-                    last_seen_at__gte: %Schema{
-                      anyOf: [
-                        %Schema{type: :string, format: :"date-time"},
-                        %Schema{type: :string, format: :date}
-                      ],
-                      description: "Filter nodes last seen after or on this datetime"
-                    },
-                    last_seen_at__lte: %Schema{
-                      anyOf: [
-                        %Schema{type: :string, format: :"date-time"},
-                        %Schema{type: :string, format: :date}
-                      ],
-                      description: "Filter nodes last seen before or on this datetime"
-                    },
-                    inserted_at__gte: %Schema{
-                      anyOf: [
-                        %Schema{type: :string, format: :"date-time"},
-                        %Schema{type: :string, format: :date}
-                      ],
-                      description: "Filter nodes inserted after or on this date"
-                    },
-                    inserted_at__lte: %Schema{
-                      anyOf: [
-                        %Schema{type: :string, format: :"date-time"},
-                        %Schema{type: :string, format: :date}
-                      ],
-                      description: "Filter nodes inserted before or on this date"
-                    },
-                    updated_at__gte: %Schema{
-                      anyOf: [
-                        %Schema{type: :string, format: :"date-time"},
-                        %Schema{type: :string, format: :date}
-                      ],
-                      description: "Filter nodes updated after or on this datetime"
-                    },
-                    updated_at__lte: %Schema{
-                      anyOf: [
-                        %Schema{type: :string, format: :"date-time"},
-                        %Schema{type: :string, format: :date}
-                      ],
-                      description: "Filter nodes updated before or on this datetime"
-                    }
-                  },
-                  additionalProperties: false
+                version: %Schema{
+                  type: :string,
+                  description: "Filter by node version (exact match or wildcard: 1.0.0, 1.*, etc.)"
                 },
-                cluster_filters: %Schema{
-                  type: :object,
-                  description:
-                    "Optional filters to apply to target clusters (AND logic with node_filters). Supports all cluster list filters.",
-                  properties: %{
-                    name: %Schema{
-                      type: :string,
-                      description: "Filter by cluster name (exact match or wildcard: prod*, *staging, etc.)"
-                    },
-                    ipv4_range: %Schema{
-                      type: :string,
-                      description: "Filter by IPv4 range (CIDR notation)"
-                    },
-                    node_count: %Schema{
-                      type: :integer,
-                      description: "Filter by exact node count"
-                    },
-                    node_count__gte: %Schema{
-                      type: :integer,
-                      description: "Filter by node count greater than or equal to"
-                    },
-                    node_count__lte: %Schema{
-                      type: :integer,
-                      description: "Filter by node count less than or equal to"
-                    },
-                    has_node_limit: %Schema{
-                      type: :boolean,
-                      description: "Filter clusters that have (true) or do not have (false) a node limit set"
-                    },
-                    inserted_at__gte: %Schema{
-                      anyOf: [
-                        %Schema{type: :string, format: :"date-time"},
-                        %Schema{type: :string, format: :date}
-                      ],
-                      description: "Filter clusters inserted after or on this date"
-                    },
-                    inserted_at__lte: %Schema{
-                      anyOf: [
-                        %Schema{type: :string, format: :"date-time"},
-                        %Schema{type: :string, format: :date}
-                      ],
-                      description: "Filter clusters inserted before or on this date"
-                    },
-                    updated_at__gte: %Schema{
-                      anyOf: [
-                        %Schema{type: :string, format: :"date-time"},
-                        %Schema{type: :string, format: :date}
-                      ],
-                      description: "Filter clusters updated after or on this datetime"
-                    },
-                    updated_at__lte: %Schema{
-                      anyOf: [
-                        %Schema{type: :string, format: :"date-time"},
-                        %Schema{type: :string, format: :date}
-                      ],
-                      description: "Filter clusters updated before or on this datetime"
-                    }
-                  },
-                  additionalProperties: false
+                self_update_enabled: %Schema{
+                  type: :boolean,
+                  description: "Filter by self-update enabled status"
+                },
+                last_seen_at__gte: %Schema{
+                  anyOf: [
+                    %Schema{type: :string, format: :"date-time"},
+                    %Schema{type: :string, format: :date}
+                  ],
+                  description: "Filter nodes last seen after or on this datetime"
+                },
+                last_seen_at__lte: %Schema{
+                  anyOf: [
+                    %Schema{type: :string, format: :"date-time"},
+                    %Schema{type: :string, format: :date}
+                  ],
+                  description: "Filter nodes last seen before or on this datetime"
+                },
+                inserted_at__gte: %Schema{
+                  anyOf: [
+                    %Schema{type: :string, format: :"date-time"},
+                    %Schema{type: :string, format: :date}
+                  ],
+                  description: "Filter nodes inserted after or on this date"
+                },
+                inserted_at__lte: %Schema{
+                  anyOf: [
+                    %Schema{type: :string, format: :"date-time"},
+                    %Schema{type: :string, format: :date}
+                  ],
+                  description: "Filter nodes inserted before or on this date"
+                },
+                updated_at__gte: %Schema{
+                  anyOf: [
+                    %Schema{type: :string, format: :"date-time"},
+                    %Schema{type: :string, format: :date}
+                  ],
+                  description: "Filter nodes updated after or on this datetime"
+                },
+                updated_at__lte: %Schema{
+                  anyOf: [
+                    %Schema{type: :string, format: :"date-time"},
+                    %Schema{type: :string, format: :date}
+                  ],
+                  description: "Filter nodes updated before or on this datetime"
                 }
               },
-              required: [:type],
-              example: %{
-                type: "clusters",
-                cluster_names: ["prod", "staging"],
-                cluster_filters: %{
-                  name: "*prod*"
+              additionalProperties: false
+            },
+            cluster_filters: %Schema{
+              type: :object,
+              description:
+                "Optional filters to apply to target clusters (AND logic with node_filters). Supports all cluster list filters.",
+              properties: %{
+                name: %Schema{
+                  type: :string,
+                  description: "Filter by cluster name (exact match or wildcard: prod*, *staging, etc.)"
                 },
-                node_filters: %{
-                  status: "healthy",
-                  id_type: "persistent"
+                ipv4_range: %Schema{
+                  type: :string,
+                  description: "Filter by IPv4 range (CIDR notation)"
+                },
+                node_count: %Schema{
+                  type: :integer,
+                  description: "Filter by exact node count"
+                },
+                node_count__gte: %Schema{
+                  type: :integer,
+                  description: "Filter by node count greater than or equal to"
+                },
+                node_count__lte: %Schema{
+                  type: :integer,
+                  description: "Filter by node count less than or equal to"
+                },
+                has_node_limit: %Schema{
+                  type: :boolean,
+                  description: "Filter clusters that have (true) or do not have (false) a node limit set"
+                },
+                inserted_at__gte: %Schema{
+                  anyOf: [
+                    %Schema{type: :string, format: :"date-time"},
+                    %Schema{type: :string, format: :date}
+                  ],
+                  description: "Filter clusters inserted after or on this date"
+                },
+                inserted_at__lte: %Schema{
+                  anyOf: [
+                    %Schema{type: :string, format: :"date-time"},
+                    %Schema{type: :string, format: :date}
+                  ],
+                  description: "Filter clusters inserted before or on this date"
+                },
+                updated_at__gte: %Schema{
+                  anyOf: [
+                    %Schema{type: :string, format: :"date-time"},
+                    %Schema{type: :string, format: :date}
+                  ],
+                  description: "Filter clusters updated after or on this datetime"
+                },
+                updated_at__lte: %Schema{
+                  anyOf: [
+                    %Schema{type: :string, format: :"date-time"},
+                    %Schema{type: :string, format: :date}
+                  ],
+                  description: "Filter clusters updated before or on this datetime"
                 }
-              }
+              },
+              additionalProperties: false
             }
           },
-          required: [:command_text, :targeting],
+          required: [:type],
           example: %{
-            command_text: "ABC=value\necho $ABC\nsudo docker ps",
-            targeting: %{
-              type: "nodes",
-              node_ids: ["01234567-89ab-cdef-0123-456789abcdef"],
-              node_filters: %{
-                status: "healthy",
-                id_type: "persistent"
-              }
-            }
+            type: "clusters",
+            cluster_names: ["prod", "staging"],
+            cluster_filters: %{name: "*prod*"},
+            node_filters: %{status: "healthy", id_type: "persistent"}
           }
         }
       },
-      required: [:command]
+      required: [:command_text, :targeting],
+      example: %{
+        command_text: "ABC=value\necho $ABC\nsudo docker ps",
+        targeting: %{
+          type: "nodes",
+          node_ids: ["01234567-89ab-cdef-0123-456789abcdef"],
+          node_filters: %{status: "healthy", id_type: "persistent"}
+        }
+      }
     })
   end
 end

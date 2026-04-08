@@ -17,16 +17,9 @@ defmodule EdgeAdminWeb.Schemas.Agents.EnrollmentKeySchemas do
       type: :object,
       additionalProperties: true,
       properties: %{
-        enrollment_key: %Schema{
-          type: :object,
-          additionalProperties: true,
-          properties: %{
-            key: %Schema{type: :string, description: "Enrollment key blob"}
-          },
-          required: [:key]
-        }
+        key: %Schema{type: :string, description: "Enrollment key blob"}
       },
-      required: [:enrollment_key]
+      required: [:key]
     })
   end
 

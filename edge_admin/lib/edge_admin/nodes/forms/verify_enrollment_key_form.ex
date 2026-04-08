@@ -6,8 +6,6 @@ defmodule EdgeAdmin.Nodes.Forms.VerifyEnrollmentKeyForm do
     field(:key, :string)
   end
 
-  def changeset(%{enrollment_key: key_attrs}) when is_map(key_attrs), do: changeset(key_attrs)
-
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:key])

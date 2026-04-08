@@ -17,26 +17,19 @@ defmodule EdgeAdminWeb.Schemas.Agents.SshUsernameSchemas do
       type: :object,
       additionalProperties: true,
       properties: %{
-        ssh_username: %Schema{
-          type: :object,
-          additionalProperties: true,
-          properties: %{
-            username: %Schema{type: :string, description: "SSH username"},
-            password: %Schema{
-              type: :string,
-              nullable: true,
-              description: "Password (mutually exclusive with public_key)"
-            },
-            public_key: %Schema{
-              type: :string,
-              nullable: true,
-              description: "Public key (mutually exclusive with password)"
-            }
-          },
-          required: [:username]
+        username: %Schema{type: :string, description: "SSH username"},
+        password: %Schema{
+          type: :string,
+          nullable: true,
+          description: "Password (mutually exclusive with public_key)"
+        },
+        public_key: %Schema{
+          type: :string,
+          nullable: true,
+          description: "Public key (mutually exclusive with password)"
         }
       },
-      required: [:ssh_username]
+      required: [:username]
     })
   end
 

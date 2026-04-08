@@ -30,8 +30,6 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyForm do
   - `{:ok, attrs}` - Validated and normalized attributes as a map with string keys
   - `{:error, changeset}` - Validation errors
   """
-  def changeset(%{ssh_public_key: key_attrs}) when is_map(key_attrs), do: changeset(key_attrs)
-
   def changeset(attrs) when is_map(attrs) do
     # Nested in SSH username or already unwrapped
     %__MODULE__{}
@@ -50,7 +48,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyForm do
     {:error,
      %__MODULE__{}
      |> cast(%{}, [])
-     |> add_error(:ssh_public_key, "is required")
+     |> add_error(:base, "invalid parameters - expected a map")
      |> apply_action!(:insert)}
   end
 

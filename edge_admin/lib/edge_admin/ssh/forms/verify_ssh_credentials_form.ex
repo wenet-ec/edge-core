@@ -29,9 +29,6 @@ defmodule EdgeAdmin.Ssh.Forms.VerifySshCredentialsForm do
   """
   def changeset(attrs, opts \\ [])
 
-  def changeset(%{ssh_username: ssh_username_attrs}, opts) when is_map(ssh_username_attrs),
-    do: changeset(ssh_username_attrs, opts)
-
   def changeset(attrs, _opts) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:username, :password, :public_key])
@@ -48,7 +45,7 @@ defmodule EdgeAdmin.Ssh.Forms.VerifySshCredentialsForm do
     {:error,
      %__MODULE__{}
      |> cast(%{}, [])
-     |> add_error(:ssh_username, "is required")
+     |> add_error(:base, "invalid parameters - expected a map")
      |> apply_action!(:insert)}
   end
 

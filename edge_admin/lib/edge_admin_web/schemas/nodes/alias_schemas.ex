@@ -112,27 +112,17 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
       description: "Parameters for creating a new DNS alias for a node",
       type: :object,
       properties: %{
-        alias: %Schema{
-          type: :object,
-          properties: %{
-            name: %Schema{
-              type: :string,
-              pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-              minLength: 1,
-              maxLength: 63,
-              description: "Alias name (lowercase alphanumeric with hyphens)",
-              example: "web-server"
-            }
-          },
-          required: [:name]
+        name: %Schema{
+          type: :string,
+          pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+          minLength: 1,
+          maxLength: 63,
+          description: "Alias name (lowercase alphanumeric with hyphens)",
+          example: "web-server"
         }
       },
-      required: [:alias],
-      example: %{
-        alias: %{
-          name: "web-server"
-        }
-      }
+      required: [:name],
+      example: %{name: "web-server"}
     })
   end
 end

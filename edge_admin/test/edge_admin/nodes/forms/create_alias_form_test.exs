@@ -38,11 +38,6 @@ defmodule EdgeAdmin.Nodes.Forms.CreateAliasFormTest do
       name = String.duplicate("a", 63)
       assert {:ok, %{"name" => ^name}} = CreateAliasForm.changeset(%{"name" => name})
     end
-
-    test "wrapped alias params are unwrapped (atom key)" do
-      assert {:ok, %{"name" => "web"}} =
-               CreateAliasForm.changeset(%{alias: %{name: "web"}})
-    end
   end
 
   # ---------------------------------------------------------------------------

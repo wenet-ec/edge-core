@@ -132,69 +132,58 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
       description: "Create a new SSH username for a node, optionally with password and/or public keys",
       type: :object,
       properties: %{
-        ssh_username: %Schema{
-          type: :object,
-          properties: %{
-            username: %Schema{
-              type: :string,
-              description:
-                "SSH username for node access (3-32 characters, must start with letter or underscore, lowercase letters/digits/hyphens/underscores only)",
-              example: "admin",
-              pattern: "^[a-z_][a-z0-9_-]*$",
-              minLength: 3,
-              maxLength: 32
-            },
-            password: %Schema{
-              type: :string,
-              description:
-                "Optional password for username/password SSH authentication (12-128 characters if provided, will be hashed with Argon2)",
-              example: "MySecurePassword123!",
-              minLength: 12,
-              maxLength: 128,
-              nullable: true
-            },
-            public_keys: %Schema{
-              type: :array,
-              description: "Optional array of SSH public keys to create with this username",
-              items: %Schema{
-                type: :object,
-                properties: %{
-                  key_name: %Schema{
-                    type: :string,
-                    description: "Human-readable name for the SSH key",
-                    example: "laptop"
-                  },
-                  public_key: %Schema{
-                    type: :string,
-                    description: "SSH public key in OpenSSH format",
-                    example:
-                      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop"
-                  }
-                },
-                required: [:key_name, :public_key]
+        username: %Schema{
+          type: :string,
+          description:
+            "SSH username for node access (3-32 characters, must start with letter or underscore, lowercase letters/digits/hyphens/underscores only)",
+          example: "admin",
+          pattern: "^[a-z_][a-z0-9_-]*$",
+          minLength: 3,
+          maxLength: 32
+        },
+        password: %Schema{
+          type: :string,
+          description:
+            "Optional password for username/password SSH authentication (12-128 characters if provided, will be hashed with Argon2)",
+          example: "MySecurePassword123!",
+          minLength: 12,
+          maxLength: 128,
+          nullable: true
+        },
+        public_keys: %Schema{
+          type: :array,
+          description: "Optional array of SSH public keys to create with this username",
+          items: %Schema{
+            type: :object,
+            properties: %{
+              key_name: %Schema{
+                type: :string,
+                description: "Human-readable name for the SSH key",
+                example: "laptop"
               },
-              nullable: true
-            }
-          },
-          required: [:username],
-          example: %{
-            username: "admin",
-            password: "MySecurePassword123!",
-            public_keys: [
-              %{
-                key_name: "laptop",
-                public_key:
-                  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop"
-              },
-              %{
-                key_name: "ci",
-                public_key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ... ci@server"
+              public_key: %Schema{
+                type: :string,
+                description: "SSH public key in OpenSSH format",
+                example: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop"
               }
-            ]
-          }
+            },
+            required: [:key_name, :public_key]
+          },
+          nullable: true
         }
       },
-      required: [:ssh_username]
+      required: [:username],
+      example: %{
+        username: "admin",
+        password: "MySecurePassword123!",
+        public_keys: [
+          %{
+            key_name: "laptop",
+            public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop"
+          },
+          %{key_name: "ci", public_key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ... ci@server"}
+        ]
+      }
     })
   end
 end

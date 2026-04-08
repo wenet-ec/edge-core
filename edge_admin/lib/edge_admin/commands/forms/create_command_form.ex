@@ -31,8 +31,6 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
   - `{:ok, attrs}` - Validated and normalized attributes as a map with string keys
   - `{:error, changeset}` - Validation errors
   """
-  def changeset(%{command: command_attrs}) when is_map(command_attrs), do: changeset(command_attrs)
-
   def changeset(attrs) when is_map(attrs) do
     # Normalize to string keys so Ecto never sees a mixed-key map
     attrs = Map.new(attrs, fn {k, v} -> {to_string(k), v} end)
@@ -69,7 +67,7 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
     {:error,
      %__MODULE__{}
      |> cast(%{}, [])
-     |> add_error(:command, "is required")
+     |> add_error(:base, "invalid parameters - expected a map")
      |> apply_action!(:insert)}
   end
 

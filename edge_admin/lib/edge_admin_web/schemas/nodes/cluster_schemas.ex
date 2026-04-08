@@ -211,21 +211,15 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         "Parameters for updating a cluster. Only provided fields are updated. Pass null to unset a nullable field.",
       type: :object,
       properties: %{
-        cluster: %Schema{
-          type: :object,
-          properties: %{
-            node_limit: %Schema{
-              type: :integer,
-              nullable: true,
-              description: "Maximum nodes allowed in this cluster (null means no limit enforced)",
-              minimum: 1,
-              example: 50
-            }
-          },
-          example: %{node_limit: 50}
+        node_limit: %Schema{
+          type: :integer,
+          nullable: true,
+          description: "Maximum nodes allowed in this cluster (null means no limit enforced)",
+          minimum: 1,
+          example: 50
         }
       },
-      required: [:cluster]
+      example: %{node_limit: 50}
     })
   end
 
@@ -237,40 +231,34 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
       description: "Parameters for creating a new cluster",
       type: :object,
       properties: %{
-        cluster: %Schema{
-          type: :object,
-          properties: %{
-            name: %Schema{
-              type: :string,
-              description: "Cluster name — primary identifier (max 24 chars, lowercase alphanumeric + hyphens)",
-              pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-              maxLength: 24,
-              example: "prod-east"
-            },
-            ipv4_range: %Schema{
-              type: :string,
-              nullable: true,
-              pattern: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\/\\d{1,2}$",
-              description: "IPv4 CIDR range (auto-generated if not provided)",
-              example: "100.64.0.0/24"
-            },
-            node_limit: %Schema{
-              type: :integer,
-              nullable: true,
-              description: "Maximum nodes allowed in this cluster (null means no limit enforced)",
-              minimum: 1,
-              example: 50
-            }
-          },
-          required: [:name],
-          example: %{
-            name: "prod-east",
-            ipv4_range: "100.64.1.0/24",
-            node_limit: 50
-          }
+        name: %Schema{
+          type: :string,
+          description: "Cluster name — primary identifier (max 24 chars, lowercase alphanumeric + hyphens)",
+          pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+          maxLength: 24,
+          example: "prod-east"
+        },
+        ipv4_range: %Schema{
+          type: :string,
+          nullable: true,
+          pattern: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\/\\d{1,2}$",
+          description: "IPv4 CIDR range (auto-generated if not provided)",
+          example: "100.64.0.0/24"
+        },
+        node_limit: %Schema{
+          type: :integer,
+          nullable: true,
+          description: "Maximum nodes allowed in this cluster (null means no limit enforced)",
+          minimum: 1,
+          example: 50
         }
       },
-      required: [:cluster]
+      required: [:name],
+      example: %{
+        name: "prod-east",
+        ipv4_range: "100.64.1.0/24",
+        node_limit: 50
+      }
     })
   end
 end

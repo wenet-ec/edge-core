@@ -18,28 +18,21 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
       type: :object,
       additionalProperties: true,
       properties: %{
-        command_execution: %Schema{
-          type: :object,
-          additionalProperties: true,
-          properties: %{
-            status: %Schema{
-              type: :string,
-              enum: ["completed", "expired"],
-              description: "Terminal status reported by the agent"
-            },
-            output: %Schema{type: :string, nullable: true, description: "Command output text"},
-            exit_code: %Schema{type: :integer, nullable: true, description: "Process exit code"},
-            completed_at: %Schema{
-              type: :string,
-              format: :"date-time",
-              nullable: true,
-              description: "When the command completed (defaults to now if omitted)"
-            }
-          },
-          required: [:status]
+        status: %Schema{
+          type: :string,
+          enum: ["completed", "expired"],
+          description: "Terminal status reported by the agent"
+        },
+        output: %Schema{type: :string, nullable: true, description: "Command output text"},
+        exit_code: %Schema{type: :integer, nullable: true, description: "Process exit code"},
+        completed_at: %Schema{
+          type: :string,
+          format: :"date-time",
+          nullable: true,
+          description: "When the command completed (defaults to now if omitted)"
         }
       },
-      required: [:command_execution]
+      required: [:status]
     })
   end
 

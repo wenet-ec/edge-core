@@ -11,8 +11,6 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateClusterForm do
     field(:node_limit, :integer)
   end
 
-  def changeset(%{cluster: cluster_attrs}) when is_map(cluster_attrs), do: changeset(cluster_attrs)
-
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:node_limit])
@@ -28,7 +26,7 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateClusterForm do
     {:error,
      %__MODULE__{}
      |> cast(%{}, [])
-     |> add_error(:cluster, "is required")
+     |> add_error(:base, "invalid parameters - expected a map")
      |> apply_action!(:update)}
   end
 

@@ -47,15 +47,6 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyFormTest do
       assert result["uses_remaining"] == 5
       assert result["expired_at"] == dt
     end
-
-    test "wrapped enrollment_key params are unwrapped (atom key)" do
-      assert {:ok, result} =
-               CreateEnrollmentKeyForm.changeset(%{
-                 enrollment_key: %{uses_remaining: 3}
-               })
-
-      assert result["uses_remaining"] == 3
-    end
   end
 
   # ---------------------------------------------------------------------------

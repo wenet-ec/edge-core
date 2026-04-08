@@ -31,14 +31,6 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultFormTest do
       assert result["status"] == "expired"
     end
 
-    test "unwraps command_execution key automatically" do
-      attrs = %{command_execution: %{status: "completed", output: "hi", exit_code: 1}}
-      assert {:ok, result} = UpdateCommandExecutionResultForm.changeset(attrs)
-      assert result["status"] == "completed"
-      assert result["output"] == "hi"
-      assert result["exit_code"] == 1
-    end
-
     test "status is required — missing status returns error" do
       assert {:error, changeset} = UpdateCommandExecutionResultForm.changeset(%{})
       assert %{status: [_msg]} = errors_on(changeset)

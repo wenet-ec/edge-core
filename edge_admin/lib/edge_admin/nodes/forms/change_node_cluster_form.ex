@@ -25,8 +25,6 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterForm do
   """
   def changeset(attrs, get_cluster_fn \\ &EdgeAdmin.Nodes.get_cluster/1)
 
-  def changeset(%{node: node_attrs}, get_cluster_fn) when is_map(node_attrs), do: changeset(node_attrs, get_cluster_fn)
-
   def changeset(attrs, get_cluster_fn) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:cluster_name])
@@ -47,7 +45,7 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterForm do
     {:error,
      %__MODULE__{}
      |> cast(%{}, [])
-     |> add_error(:node, "is required")
+     |> add_error(:base, "invalid parameters - expected a map")
      |> apply_action!(:insert)}
   end
 

@@ -113,7 +113,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   @spec verify_enrollment_key(String.t(), [String.t()]) :: {:ok, map()} | {:error, term()}
   def verify_enrollment_key(key_blob, admin_urls) do
     path = "/api/v1/agents/enrollment_keys/verify"
-    payload = %{enrollment_key: %{key: key_blob}}
+    payload = %{key: key_blob}
 
     try_verify(admin_urls, path, payload)
   end
@@ -168,7 +168,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   @spec register_node(map()) :: {:ok, map()} | {:error, term()}
   def register_node(node_params) do
     path = "/api/v1/agents/nodes"
-    payload = %{node: node_params}
+    payload = node_params
 
     request_with_fallback(path, fn url ->
       opts = Keyword.merge([json: payload], http_options())
@@ -212,10 +212,10 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     payload =
       case credential do
         {:password, password} ->
-          %{ssh_username: %{username: username, password: password}}
+          %{username: username, password: password}
 
         {:public_key, public_key} ->
-          %{ssh_username: %{username: username, public_key: public_key}}
+          %{username: username, public_key: public_key}
       end
 
     request_with_auth(path, fn url, headers ->
@@ -393,7 +393,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     path = "/api/v1/agents/nodes/me/health_check"
 
     request_with_auth(path, fn url, headers ->
-      payload = %{node: %{status: status}}
+      payload = %{status: status}
       opts = Keyword.merge([json: payload, headers: headers], http_options())
 
       case Req.patch(url, opts) do
@@ -478,7 +478,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   @spec update_command_execution_result(String.t(), map()) :: :ok | {:error, term()}
   def update_command_execution_result(execution_id, command_execution_params) do
     path = "/api/v1/agents/command_executions/#{execution_id}/result"
-    payload = %{command_execution: command_execution_params}
+    payload = command_execution_params
 
     request_with_auth(path, fn url, headers ->
       opts = Keyword.merge([json: payload, headers: headers], http_options())
@@ -526,10 +526,8 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
     request_with_auth(path, fn url, headers ->
       payload = %{
-        metrics: %{
-          metrics_type: metrics_type,
-          metrics_text: metrics_text
-        }
+        metrics_type: metrics_type,
+        metrics_text: metrics_text
       }
 
       opts = Keyword.merge([json: payload, headers: headers], http_options())
@@ -563,7 +561,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     path = "/api/v1/agents/aliases"
 
     request_with_auth(path, fn url, headers ->
-      payload = %{alias: %{name: name}}
+      payload = %{name: name}
       opts = Keyword.merge([json: payload, headers: headers], http_options())
 
       case Req.post(url, opts) do

@@ -57,17 +57,6 @@ defmodule EdgeAdmin.Ssh.Forms.VerifySshCredentialsFormTest do
     end
   end
 
-  describe "changeset/1 — wrapped params" do
-    test "wrapped ssh_username params are unwrapped (atom key)" do
-      assert {:ok, result} =
-               VerifySshCredentialsForm.changeset(%{
-                 ssh_username: %{username: "deploy", password: "secret"}
-               })
-
-      assert result["username"] == "deploy"
-    end
-  end
-
   # ---------------------------------------------------------------------------
   # changeset/1 — mutual exclusivity: the core logic
   # ---------------------------------------------------------------------------

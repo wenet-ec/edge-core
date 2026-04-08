@@ -17,24 +17,17 @@ defmodule EdgeAdminWeb.Schemas.Agents.MetricsSchemas do
       type: :object,
       additionalProperties: true,
       properties: %{
-        metrics: %Schema{
-          type: :object,
-          additionalProperties: true,
-          properties: %{
-            metrics_type: %Schema{
-              type: :string,
-              enum: ["host", "agent", "wireguard"],
-              description: "Type of metrics being pushed"
-            },
-            metrics_text: %Schema{
-              type: :string,
-              description: "Raw Prometheus text format metrics"
-            }
-          },
-          required: [:metrics_type, :metrics_text]
+        metrics_type: %Schema{
+          type: :string,
+          enum: ["host", "agent", "wireguard"],
+          description: "Type of metrics being pushed"
+        },
+        metrics_text: %Schema{
+          type: :string,
+          description: "Raw Prometheus text format metrics"
         }
       },
-      required: [:metrics]
+      required: [:metrics_type, :metrics_text]
     })
   end
 

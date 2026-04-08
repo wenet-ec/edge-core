@@ -82,27 +82,22 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
       description: "Parameters for creating a new enrollment key for a cluster. All fields are optional.",
       type: :object,
       properties: %{
-        enrollment_key: %Schema{
-          type: :object,
-          properties: %{
-            uses_remaining: %Schema{
-              type: :integer,
-              nullable: true,
-              minimum: 1,
-              description: "Number of uses (must be >= 1). Pass null for unlimited. Omit to use the default of 1.",
-              example: 5
-            },
-            expired_at: %Schema{
-              type: :string,
-              format: :"date-time",
-              nullable: true,
-              description: "Expiry datetime (ISO 8601). Omit or pass null for no expiry.",
-              example: "2026-12-31T23:59:59Z"
-            }
-          }
+        uses_remaining: %Schema{
+          type: :integer,
+          nullable: true,
+          minimum: 1,
+          description: "Number of uses (must be >= 1). Pass null for unlimited. Omit to use the default of 1.",
+          example: 5
+        },
+        expired_at: %Schema{
+          type: :string,
+          format: :"date-time",
+          nullable: true,
+          description: "Expiry datetime (ISO 8601). Omit or pass null for no expiry.",
+          example: "2026-12-31T23:59:59Z"
         }
       },
-      example: %{enrollment_key: %{uses_remaining: 5, expired_at: "2026-12-31T23:59:59Z"}}
+      example: %{uses_remaining: 5, expired_at: "2026-12-31T23:59:59Z"}
     })
   end
 
@@ -119,28 +114,23 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
       """,
       type: :object,
       properties: %{
-        enrollment_key: %Schema{
-          type: :object,
-          properties: %{
-            uses_remaining: %Schema{
-              type: :integer,
-              nullable: true,
-              minimum: 1,
-              description:
-                "Positive integer to set a use limit, or null to make the key unlimited. Omit to leave unchanged.",
-              example: 10
-            },
-            expired_at: %Schema{
-              type: :string,
-              format: :"date-time",
-              nullable: true,
-              description: "Expiry datetime (ISO 8601), or null to remove expiry. Omit to leave unchanged.",
-              example: "2026-12-31T23:59:59Z"
-            }
-          }
+        uses_remaining: %Schema{
+          type: :integer,
+          nullable: true,
+          minimum: 1,
+          description:
+            "Positive integer to set a use limit, or null to make the key unlimited. Omit to leave unchanged.",
+          example: 10
+        },
+        expired_at: %Schema{
+          type: :string,
+          format: :"date-time",
+          nullable: true,
+          description: "Expiry datetime (ISO 8601), or null to remove expiry. Omit to leave unchanged.",
+          example: "2026-12-31T23:59:59Z"
         }
       },
-      example: %{enrollment_key: %{uses_remaining: nil, expired_at: "2026-12-31T23:59:59Z"}}
+      example: %{uses_remaining: nil, expired_at: "2026-12-31T23:59:59Z"}
     })
   end
 end

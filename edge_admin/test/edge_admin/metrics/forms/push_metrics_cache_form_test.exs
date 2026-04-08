@@ -38,12 +38,6 @@ defmodule EdgeAdmin.Metrics.Forms.PushMetricsCacheFormTest do
       assert {:ok, result} = PushMetricsCacheForm.changeset(valid_attrs(%{"metrics_type" => "wireguard"}))
       assert result["metrics_type"] == "wireguard"
     end
-
-    test "wrapped params under 'metrics' key are unwrapped (atom key)" do
-      attrs = %{metrics: valid_attrs()}
-      assert {:ok, result} = PushMetricsCacheForm.changeset(attrs)
-      assert result["metrics_type"] == "host"
-    end
   end
 
   # ---------------------------------------------------------------------------

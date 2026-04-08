@@ -264,25 +264,15 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           "Performs cluster migration via Netmaker (best-effort, reconciliation worker handles failures).",
       type: :object,
       properties: %{
-        node: %Schema{
-          type: :object,
-          properties: %{
-            cluster_name: %Schema{
-              type: :string,
-              pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-              description: "Name of the target cluster to move this node to.",
-              example: "prod-west"
-            }
-          },
-          required: [:cluster_name]
+        cluster_name: %Schema{
+          type: :string,
+          pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+          description: "Name of the target cluster to move this node to.",
+          example: "prod-west"
         }
       },
-      required: [:node],
-      example: %{
-        node: %{
-          cluster_name: "prod-west"
-        }
-      }
+      required: [:cluster_name],
+      example: %{cluster_name: "prod-west"}
     })
   end
 end

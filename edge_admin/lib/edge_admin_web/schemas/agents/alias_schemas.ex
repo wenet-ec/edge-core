@@ -16,20 +16,14 @@ defmodule EdgeAdminWeb.Schemas.Agents.AliasSchemas do
       description: "Alias name to register for this node",
       type: :object,
       properties: %{
-        alias: %Schema{
-          type: :object,
-          properties: %{
-            name: %Schema{
-              type: :string,
-              description: "Alias name (lowercase alphanumeric with hyphens)",
-              example: "web-server"
-            }
-          },
-          required: [:name]
+        name: %Schema{
+          type: :string,
+          description: "Alias name (lowercase alphanumeric with hyphens)",
+          example: "web-server"
         }
       },
-      required: [:alias],
-      example: %{alias: %{name: "web-server"}}
+      required: [:name],
+      example: %{name: "web-server"}
     })
   end
 

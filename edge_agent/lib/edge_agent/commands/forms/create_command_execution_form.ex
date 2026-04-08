@@ -71,7 +71,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionForm do
     {:error,
      %__MODULE__{}
      |> cast(%{}, [])
-     |> add_error(:command_execution, "invalid request format")
+     |> add_error(:base, "invalid parameters - expected a map")
      |> apply_action!(:insert)}
   end
 

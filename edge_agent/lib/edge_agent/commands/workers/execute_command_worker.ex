@@ -19,7 +19,7 @@ defmodule EdgeAgent.Commands.Workers.ExecuteCommandWorker do
     ]
 
   alias EdgeAgent.Commands
-  alias EdgeAgent.Commands.CommandExecution
+  alias EdgeAgent.Commands.Schemas.CommandExecution
   alias EdgeAgent.Commands.Workers.ReportExecutionWorker
   alias EdgeAgent.Repo
 

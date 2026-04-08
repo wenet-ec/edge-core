@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/commands/command_execution.ex
-defmodule EdgeAgent.Commands.CommandExecution do
+# edge_agent/lib/edge_agent/commands/schemas/command_execution.ex
+defmodule EdgeAgent.Commands.Schemas.CommandExecution do
   @moduledoc false
   use EdgeAgent.Schema
 

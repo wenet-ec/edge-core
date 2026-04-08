@@ -2,7 +2,7 @@
 defmodule EdgeAgentWeb.Controllers.CommandExecutionJSONTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAgent.Commands.CommandExecution
+  alias EdgeAgent.Commands.Schemas.CommandExecution
   alias EdgeAgentWeb.Controllers.CommandExecutionJSON
 
   @valid_id "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"

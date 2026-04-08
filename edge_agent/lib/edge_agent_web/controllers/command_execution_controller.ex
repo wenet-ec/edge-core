@@ -3,7 +3,7 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionController do
   use EdgeAgentWeb, :controller
 
   alias EdgeAgent.Commands
-  alias EdgeAgent.Commands.CommandExecution
+  alias EdgeAgent.Commands.Schemas.CommandExecution
 
   action_fallback(EdgeAgentWeb.Controllers.FallbackController)
 

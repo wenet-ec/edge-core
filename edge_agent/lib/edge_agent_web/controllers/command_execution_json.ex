@@ -1,6 +1,6 @@
 # edge_agent/lib/edge_agent_web/controllers/command_execution_json.ex
 defmodule EdgeAgentWeb.Controllers.CommandExecutionJSON do
-  alias EdgeAgent.Commands.CommandExecution
+  alias EdgeAgent.Commands.Schemas.CommandExecution
 
   @doc """
   Renders a single command_execution.

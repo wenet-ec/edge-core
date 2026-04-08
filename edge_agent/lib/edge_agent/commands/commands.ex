@@ -82,9 +82,9 @@ defmodule EdgeAgent.Commands do
 
   import Ecto.Query, warn: false
 
-  alias EdgeAgent.Commands.CommandExecution
   alias EdgeAgent.Commands.ExecutionRegistry
   alias EdgeAgent.Commands.Forms.CreateCommandExecutionForm
+  alias EdgeAgent.Commands.Schemas.CommandExecution
   alias EdgeAgent.EdgeClusters.AdminClient
   alias EdgeAgent.Repo
   alias EdgeAgent.Settings

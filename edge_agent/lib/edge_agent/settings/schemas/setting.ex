@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/settings/setting.ex
-defmodule EdgeAgent.Settings.Setting do
+# edge_agent/lib/edge_agent/settings/schemas/setting.ex
+defmodule EdgeAgent.Settings.Schemas.Setting do
   @moduledoc false
   use EdgeAgent.Schema
 

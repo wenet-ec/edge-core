@@ -69,7 +69,7 @@ defmodule EdgeAgent.Settings do
   import Ecto.Query, warn: false
 
   alias EdgeAgent.Repo
-  alias EdgeAgent.Settings.Setting
+  alias EdgeAgent.Settings.Schemas.Setting
 
   @doc """
   Get a setting value by key.

@@ -65,9 +65,14 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
       orphaned_clusters: %{}
     }
 
+    # Sort clusters by size descending: large clusters get first pick of admins.
+    # This makes assignments stable (a small cluster can't steal the best admin from a
+    # large one) and ensures deterministic output regardless of DB/map iteration order.
+    sorted_clusters = Enum.sort_by(clusters, fn c -> -length(c.nodes) end)
+
     # Assign each cluster
     intermediate_result =
-      Enum.reduce(clusters, initial_state, fn cluster, state ->
+      Enum.reduce(sorted_clusters, initial_state, fn cluster, state ->
         cluster_size = length(cluster.nodes)
 
         case find_best_admin_for_cluster(
@@ -104,7 +109,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
     weak_leader =
       admins
       |> Map.keys()
-      |> Enum.min()
+      |> Enum.min(fn -> nil end)
 
     %{
       edge_clusters: edge_clusters,
@@ -181,7 +186,9 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
         # Score each admin: prefer fewer clusters managed, then higher remaining capacity
         best_admin =
           Enum.min_by(admins_list, fn admin_name ->
-            admin_score(admin_name, admins, cluster_assignments, admin_node_counts)
+            {s1, s2} = admin_score(admin_name, admins, cluster_assignments, admin_node_counts)
+            # admin_name as 3rd key: deterministic tie-breaking, consistent with weak-leader election
+            {s1, s2, admin_name}
           end)
 
         {:ok, best_admin}

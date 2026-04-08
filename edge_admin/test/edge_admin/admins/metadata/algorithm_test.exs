@@ -126,6 +126,50 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       assert result1 == result2
     end
 
+    test "deterministic - cluster input order does not affect assignment" do
+      # Simulates DB returning clusters in different iteration order across admins.
+      # Both orderings must produce identical assignments.
+      admins = admins(a1: 100, a2: 100)
+      c1 = %{name: "c1", nodes: ~w[n1 n2 n3]}
+      c2 = %{name: "c2", nodes: ~w[n4 n5]}
+
+      result_forward = Algorithm.compute_assignments(admins, [c1, c2])
+      result_reversed = Algorithm.compute_assignments(admins, [c2, c1])
+
+      assert result_forward.edge_clusters == result_reversed.edge_clusters
+      assert result_forward.orphaned_clusters == result_reversed.orphaned_clusters
+    end
+
+    test "large clusters get assigned before small ones (greedy bin-packing)" do
+      # a1 has capacity 5 — enough for c_large (4 nodes) but not both.
+      # c_small arrives first in input order, but c_large should win the slot.
+      admins = admins(a1: 5)
+      clusters = clusters(c_small: ~w[n1 n2], c_large: ~w[n3 n4 n5 n6])
+
+      result = Algorithm.compute_assignments(admins, clusters)
+
+      # c_large (4 nodes) fits; c_small (2 nodes) gets orphaned since only 1 slot remains
+      assert Map.has_key?(result.edge_clusters["a1"], "c_large")
+      assert Map.has_key?(result.orphaned_clusters, "c_small")
+    end
+
+    test "tie-breaking by admin name is alphabetical (deterministic with equal scores)" do
+      # Both admins have identical capacity and zero clusters — pure tie.
+      # The alphabetically first admin name should always win.
+      admins = admins("admin-b": 100, "admin-a": 100)
+      clusters = clusters(c1: ~w[n1])
+
+      result = Algorithm.compute_assignments(admins, clusters)
+
+      assert Map.has_key?(result.edge_clusters["admin-a"], "c1")
+      refute Map.has_key?(result.edge_clusters["admin-b"], "c1")
+    end
+
+    test "weak_leader is nil when admins map is empty" do
+      result = Algorithm.compute_assignments(%{}, [])
+      assert result.weak_leader == nil
+    end
+
     test "empty cluster (no nodes) is assigned without consuming capacity" do
       admins = admins(a1: 0)
       clusters = clusters(c1: [])

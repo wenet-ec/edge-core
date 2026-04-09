@@ -1,22 +1,10 @@
 # deploy/production/compose/edge_agent/Dockerfile
 
 # -----------------------------------------------
-# Stage 0: Build netclient with DERP support
+# Stage 0: Pull pre-built netclient (DERP fork)
 # -----------------------------------------------
-FROM golang:1.26-bookworm AS netclient-builder
-
-ARG NETCLIENT_REPO=https://github.com/wenet-ec/netclient.git
 ARG NETCLIENT_VERSION=v1.5.1-derp
-
-WORKDIR /build
-
-RUN apt-get update -y && \
-    apt-get install -y --no-install-recommends git ca-certificates && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
-RUN git clone --depth 1 --branch ${NETCLIENT_VERSION} ${NETCLIENT_REPO} .
-RUN go mod tidy && \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o netclient -ldflags="-s -w" .
+FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 
 # -----------------------------------------------
 # Stage 1: Build the OTP release
@@ -117,7 +105,7 @@ RUN apt-get update -y && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/* node_exporter.tar.gz node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64*
 
 # Copy netclient built from source
-COPY --from=netclient-builder /build/netclient /usr/local/bin/netclient
+COPY --from=netclient-builder /netclient /usr/local/bin/netclient
 RUN chmod +x /usr/local/bin/netclient
 ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
 

@@ -1,20 +1,7 @@
 # nexmaker/Dockerfile
-# Stage 1: Build netclient from our fork (DERP support + NETMAKER_API_SCHEME)
-FROM golang:1.26-bookworm AS netclient_builder
-
-ARG NETCLIENT_REPO=https://github.com/wenet-ec/netclient.git
-ARG NETCLIENT_VERSION=v1.5.0-derp
-
-WORKDIR /build
-
-RUN apt-get update -y && \
-    apt-get install -y --no-install-recommends git ca-certificates && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
-RUN git clone --depth 1 --branch ${NETCLIENT_VERSION} ${NETCLIENT_REPO} .
-
-RUN go mod tidy && \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o netclient -ldflags="-s -w" .
+# Stage 1: Pull pre-built netclient (DERP fork) — built by wenet-ec/netclient CI
+ARG NETCLIENT_VERSION=v1.5.1-derp
+FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient_builder
 
 # Stage 2: Create Elixir test environment with netclient installed
 FROM elixir:1.19-alpine
@@ -38,7 +25,7 @@ RUN apk add --no-cache \
     ca-certificates
 
 # Copy netclient from builder stage
-COPY --from=netclient_builder /build/netclient /usr/local/bin/netclient
+COPY --from=netclient_builder /netclient /usr/local/bin/netclient
 RUN chmod +x /usr/local/bin/netclient
 
 # Use HTTP for Netmaker API (local testing — no TLS certs)

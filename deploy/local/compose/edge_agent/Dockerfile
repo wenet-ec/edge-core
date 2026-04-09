@@ -1,20 +1,8 @@
 # deploy/local/compose/edge_agent/Dockerfile
 
-# Build netclient from our fork (DERP support + NETMAKER_API_SCHEME)
-FROM golang:1.26-bookworm AS netclient-builder
-
-ARG NETCLIENT_REPO=https://github.com/wenet-ec/netclient.git
+# Pull pre-built netclient (DERP fork) — built by wenet-ec/netclient CI
 ARG NETCLIENT_VERSION=v1.5.1-derp
-
-WORKDIR /build
-
-RUN apt-get update -y && \
-    apt-get install -y --no-install-recommends git ca-certificates && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
-RUN git clone --depth 1 --branch ${NETCLIENT_VERSION} ${NETCLIENT_REPO} .
-RUN go mod tidy && \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o netclient -ldflags="-s -w" .
+FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 
 # Main Elixir stage - Use Debian slim (better Elixir/Erlang compatibility than Alpine)
 FROM elixir:1.19.5-otp-28-slim AS elixir-dev-stage
@@ -97,7 +85,7 @@ ENV RELEASE_DISTRIBUTION=none
 ENV ERL_EPMD_PORT=44369
 
 # Copy netclient binary from builder stage
-COPY --from=netclient-builder /build/netclient /usr/local/bin/netclient
+COPY --from=netclient-builder /netclient /usr/local/bin/netclient
 RUN chmod +x /usr/local/bin/netclient
 
 # Copy wireguard_exporter binary from official Docker image

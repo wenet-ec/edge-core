@@ -80,6 +80,18 @@ config :edge_agent, :proxy_timeouts,
   read: get_env("PROXY_READ_TIMEOUT_MS", :integer, 10_000),
   recv: get_env("PROXY_RECV_TIMEOUT_MS", :integer, 300_000)
 
+if get_env("SELF_UPDATE_ENABLED", :boolean, false) do
+  config :edge_agent,
+    self_update_enabled: true,
+    watchtower_url: get_env!("WATCHTOWER_URL"),
+    watchtower_http_api_token: get_env("WATCHTOWER_HTTP_API_TOKEN", :string, "")
+else
+  config :edge_agent,
+    self_update_enabled: false,
+    watchtower_url: "",
+    watchtower_http_api_token: ""
+end
+
 config :edge_agent,
   ssh_port: get_env("SSH_PORT", :integer, 40_022),
   host_metrics_port: get_env("HOST_METRICS_PORT", :integer, 49_100),
@@ -93,9 +105,6 @@ config :edge_agent,
   enrollment_key: get_env("ENROLLMENT_KEY", :string, nil),
   public_enrollment_key_url: get_env("PUBLIC_ENROLLMENT_KEY_URL", :string, nil),
   public_enrollment_key_path: get_env("PUBLIC_ENROLLMENT_KEY_PATH", :string, nil),
-  self_update_enabled: get_env("SELF_UPDATE_ENABLED", :boolean, false),
-  watchtower_url: get_env("WATCHTOWER_URL", :string, ""),
-  watchtower_http_api_token: get_env("WATCHTOWER_HTTP_API_TOKEN", :string, ""),
   proxy_blocked_ports: get_env("PROXY_BLOCKED_PORTS", :list, []),
   proxy_custom_blocked_hosts: get_env("PROXY_CUSTOM_BLOCKED_HOSTS", :list, []),
   proxy_custom_allowed_hosts: get_env("PROXY_CUSTOM_ALLOWED_HOSTS", :list, []),

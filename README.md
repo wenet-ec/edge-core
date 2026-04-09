@@ -1,6 +1,6 @@
 # Edge Core
 
-**Make your machines cloud manageable.**
+**Turn your machines into managed nodes.**
 
 Edge Core is an open-source infrastructure management platform for geographically distributed machines. It gives you centralized control over remote nodes through a secure WireGuard mesh — run commands, SSH into any machine, proxy traffic through them, and scrape their metrics — all through a simple HTTP API.
 

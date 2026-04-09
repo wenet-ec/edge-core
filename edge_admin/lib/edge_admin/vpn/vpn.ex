@@ -538,6 +538,17 @@ defmodule EdgeAdmin.Vpn do
   # ===========================================================================
 
   @doc """
+  Lists all Netmaker networks.
+
+  Returns `{:ok, [network]}` or `{:error, :service_unavailable}`.
+  Each network map includes a `"netid"` field with the network name.
+  """
+  @spec list_networks() :: {:ok, [map()]} | {:error, :service_unavailable}
+  def list_networks do
+    normalize_netmaker_error(Networks.list())
+  end
+
+  @doc """
   Creates a Netmaker network.
 
   Returns `{:ok, network}` or `{:error, :service_unavailable}`.

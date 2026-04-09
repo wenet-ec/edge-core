@@ -16,11 +16,88 @@ defmodule EdgeAdmin.Nodes do
 
   ## Architecture
 
-  The module uses a **database-first approach** with best-effort Netmaker sync:
-  - Database is the source of truth
-  - Netmaker (VPN provider) is synced via external calls
-  - Background reconciliation workers fix any drift between DB and Netmaker
-  - Transactions ensure atomicity of critical operations (create/delete)
+  Two sources of state must be kept in sync: our PostgreSQL DB and Netmaker (the VPN
+  provider). There is no transaction spanning both — every operation that touches both
+  systems has a partial-failure window. The reconciler (`reconcile_clusters/0`, called
+  periodically) is what heals drift. Understand the reconciler before changing any
+  create/delete ordering here.
+
+  ### Ordering rules (why they are what they are)
+
+  **Cluster create — Netmaker first, then DB:**
+  Netmaker does its own full CIDR overlap check across all networks it knows about,
+  including `admin-cluster-*` networks that our DB has no record of. Our local
+  `SubnetOverlapCheck` only checks `cluster-*` ranges in our DB — it cannot detect
+  conflicts with admin networks. Going DB-first would allow a subnet that passes our
+  check but fails Netmaker's, resulting in a wasted DB insert and rollback. Going
+  Netmaker-first lets Netmaker be the authority on IP space. If DB insert fails after
+  Netmaker succeeds, the ghost network is cleaned by `cleanup_ghost_networks/1` in the
+  next reconcile sweep (safe because we only ever delete `cluster-*` prefixed networks).
+
+  **Cluster delete — Netmaker first, then DB:**
+  If we deleted DB first and Netmaker failed, the network would be permanently orphaned
+  (reconciler only iterates DB clusters, so it would never see it). Going Netmaker-first
+  means a DB delete failure leaves "cluster in DB, network gone from Netmaker" — which
+  `cleanup_orphaned_clusters/2` explicitly detects and cleans up.
+
+  **Alias create — read IP from Netmaker, then DB, then write DNS to Netmaker:**
+  The node's VPN IP is only known to Netmaker; we must fetch it. The DB insert anchors
+  the alias record. The DNS write is the final step. If DNS write fails, we rollback the
+  DB insert. If rollback also fails, `cleanup_ghost_aliases/2` in the reconciler will
+  clean the orphaned DB record. Ghost DNS entries (DNS in Netmaker, no DB record) are
+  cleaned by the Netmaker→DB direction of `cleanup_ghost_aliases/2`.
+
+  **Alias delete — Netmaker first, then DB:**
+  Same reasoning as cluster delete — DB-first would create permanently invisible orphans.
+
+  ### Reconciler directions (both are needed)
+
+  `cleanup_orphaned_clusters/2` — DB has cluster, Netmaker doesn't:
+  Handles failed delete (Netmaker succeeded, DB delete failed) and manual Netmaker
+  deletions. Fix: delete the DB record.
+
+  `cleanup_ghost_networks/1` — Netmaker has `cluster-*` network, DB doesn't:
+  Handles failed create (Netmaker succeeded, DB insert failed). Fix: delete the Netmaker
+  network. Safety: we only touch networks with the `cluster-` prefix — `admin-cluster-*`
+  networks are admin infrastructure and are never touched here. The prefix contract is
+  enforced by `Vpn.build_network_name/2`.
+
+  `cleanup_ghost_aliases/2` — bidirectional alias cleanup, same logic applied to DNS.
+
+  ### Subnet pool and scale
+
+  Cluster subnets are carved from `CLUSTER_AUTO_GENERATED_RANGES` (default: CGNAT
+  `100.64.0.0/10`) at `CLUSTER_SUBNET_PREFIX` (default: `/24`). This gives a hard cap
+  of 16,384 clusters per core (4,194,304 addresses ÷ 256 per /24). If the pool is
+  exhausted, start a new core — do not expand the range or change the prefix on an
+  existing core. `GET /api/networks` in Netmaker has no pagination (full table scan);
+  at the 16k ceiling the response is ~5-8MB — acceptable for a periodic reconcile call.
+
+  ### Known brittleness / glue code warnings
+
+  This module is the glue between our DB and Netmaker. It is inherently brittle because:
+
+  - There is no distributed transaction. Every two-phase operation has a failure window.
+    The reconciler heals it eventually but "eventually" can mean up to one reconcile
+    interval (~minutes). Don't assume operations are atomic.
+
+  - `create_alias/2` fetches the node's VPN IP from Netmaker at call time. If the node
+    re-enrolls and gets a new IP, the DNS entry points to the old IP forever — there is
+    no reconciliation path that *updates* DNS entries, only creates or deletes them.
+    This is a known silent correctness gap.
+
+  - `cleanup_ghost_networks/1` deletes by prefix convention, not by any Netmaker-side
+    ownership marker. If something outside this system ever creates a `cluster-*` network
+    in Netmaker, the reconciler will delete it. The prefix contract must be maintained.
+
+  - The reconciler runs `cleanup_orphaned_clusters/2` per page (batched with cluster
+    iteration) but `cleanup_ghost_networks/1` only at the end of the full sweep. This
+    means a ghost network created during a sweep may not be cleaned until the next full
+    run. Acceptable — ghost networks are harmless, just wasteful.
+
+  - `reconcile_cluster/1` (single-cluster worker path) does NOT run
+    `cleanup_ghost_networks/1`. It only has context for one cluster, not the global
+    Netmaker state. Ghost network cleanup only happens in `reconcile_clusters/0`.
 
   ## Examples
 
@@ -1550,6 +1627,7 @@ defmodule EdgeAdmin.Nodes do
       nodes_removed: 0,
       nodes_deleted: 0,
       clusters_deleted: 0,
+      ghost_networks_deleted: 0,
       aliases_cleaned: 0,
       ghost_aliases_cleaned: 0,
       errors: 0
@@ -1571,6 +1649,7 @@ defmodule EdgeAdmin.Nodes do
       nodes_removed: 0,
       nodes_deleted: 0,
       clusters_deleted: 0,
+      ghost_networks_deleted: 0,
       aliases_cleaned: 0,
       ghost_aliases_cleaned: 0,
       errors: 0
@@ -1618,9 +1697,10 @@ defmodule EdgeAdmin.Nodes do
         # Process next page
         reconcile_clusters_paginated(page + 1, result_with_ghost_aliases)
       else
-        # All pages processed
-        Logger.info("Cluster reconciliation completed: #{inspect(result_with_ghost_aliases)}")
-        result_with_ghost_aliases
+        # All pages processed — run the Netmaker→DB ghost network sweep once at the end
+        final_result = cleanup_ghost_networks(result_with_ghost_aliases)
+        Logger.info("Cluster reconciliation completed: #{inspect(final_result)}")
+        final_result
       end
     end
   end
@@ -1852,6 +1932,55 @@ defmodule EdgeAdmin.Nodes do
     end)
   end
 
+  # Cleans up ghost networks: Netmaker has a "cluster-*" network that has no matching
+  # DB cluster record. This is the failure path for Netmaker-first cluster create —
+  # Netmaker succeeded but our DB insert failed.
+  #
+  # Safety contract: we only ever touch networks with the "cluster-" prefix. Networks
+  # with "admin-cluster-" prefix are admin infrastructure and must never be touched here.
+  defp cleanup_ghost_networks(acc) do
+    case Vpn.list_networks() do
+      {:ok, netmaker_networks} ->
+        # All "cluster-*" networks in Netmaker (excludes "admin-cluster-*" by prefix check)
+        netmaker_cluster_names =
+          netmaker_networks
+          |> Enum.map(& &1["netid"])
+          |> Enum.filter(&String.starts_with?(&1, "cluster-"))
+          |> MapSet.new()
+
+        # All expected network names from our DB
+        db_network_names =
+          from(c in Cluster, select: c.name)
+          |> Repo.all()
+          |> MapSet.new(&node_network_name/1)
+
+        ghost_network_names = MapSet.difference(netmaker_cluster_names, db_network_names)
+
+        deleted =
+          Enum.reduce(ghost_network_names, 0, fn network_name, count ->
+            case Vpn.delete_network(network_name) do
+              {:ok, _} ->
+                Logger.info("Reconciliation: Deleted ghost Netmaker network #{network_name} (no matching DB cluster)")
+                count + 1
+
+              {:error, :not_found} ->
+                # Already gone
+                count
+
+              {:error, reason} ->
+                Logger.warning("Reconciliation: Failed to delete ghost network #{network_name}: #{inspect(reason)}")
+                count
+            end
+          end)
+
+        %{acc | ghost_networks_deleted: acc.ghost_networks_deleted + deleted}
+
+      {:error, reason} ->
+        Logger.warning("Reconciliation: Failed to list Netmaker networks for ghost cleanup: #{inspect(reason)}")
+        %{acc | errors: acc.errors + 1}
+    end
+  end
+
   @doc """
   Cleans up all aliases for a single node.
 
@@ -2044,9 +2173,7 @@ defmodule EdgeAdmin.Nodes do
   @spec create_alias(Node.t(), map()) ::
           {:ok, Alias.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
   def create_alias(%Node{} = node, params) do
-    with {:ok, attrs} <- Forms.CreateAliasForm.changeset(params),
-         # Check Netmaker health before proceeding
-         :ok <- Vpn.netmaker_health_check() do
+    with {:ok, attrs} <- Forms.CreateAliasForm.changeset(params) do
       # 1. Ensure node has cluster preloaded
       node = Repo.preload(node, :cluster)
 
@@ -2094,15 +2221,25 @@ defmodule EdgeAdmin.Nodes do
           end
 
         {:ok, _node} ->
-          Logger.error("Node #{node.netmaker_host_id} has no IP address in Netmaker")
-          {:error, :service_unavailable}
+          # Node exists in Netmaker but has no IP yet — still enrolling
+          Logger.warning(
+            "Cannot create alias: node #{node.netmaker_host_id} has no IP address yet in network #{network_name}"
+          )
+
+          {:error, {:conflict, "Node has not been assigned an IP address yet. It may still be enrolling in the VPN."}}
 
         {:error, :not_found} ->
-          Logger.error("Node #{node.netmaker_host_id} not found in Netmaker")
-          {:error, :service_unavailable}
+          # Node is not enrolled in this network at all
+          Logger.warning(
+            "Cannot create alias: node #{node.netmaker_host_id} is not enrolled in network #{network_name}"
+          )
+
+          {:error,
+           {:conflict,
+            "Node is not enrolled in the VPN network. Ensure the agent is connected and has joined the network."}}
 
         {:error, :service_unavailable} ->
-          Logger.error("Failed to query Netmaker nodes")
+          Logger.error("Failed to query Netmaker nodes for network #{network_name}")
           {:error, :service_unavailable}
       end
     end

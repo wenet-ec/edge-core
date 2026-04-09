@@ -4618,7 +4618,7 @@
                 "schema": { "$ref": "#/components/schemas/ConflictResponse" }
               }
             },
-            "description": "Alias name already exists in this cluster"
+            "description": "Alias name already exists in this cluster, or node is not yet enrolled/has no IP in the VPN network"
           },
           "422": {
             "content": {

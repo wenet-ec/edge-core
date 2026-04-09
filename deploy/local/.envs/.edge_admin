@@ -117,7 +117,7 @@ DEFAULT_CLUSTER_NAME=default
 PUBLIC_ENROLLMENT_KEY_ENABLED=true
 
 # Admin URLs for enrollment key generation and agent fallback (required).
-ADMIN_URLS=http://edge-admin.localtest.me
+ADMIN_URLS=http://localhost:4000
 
 # DERP map server URL. Optional — leave unset to skip DERP overlay (Tailscale fallback).
 # This is the map server that describes relay locations, NOT the relay server itself.

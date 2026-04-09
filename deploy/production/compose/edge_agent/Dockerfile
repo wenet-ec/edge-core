@@ -60,7 +60,7 @@ RUN --mount=type=cache,target=/root/.hex \
 # -----------------------------------------------
 FROM debian:stable-20260316-slim
 
-ENV NODE_EXPORTER_VERSION="1.10.2"
+ENV NODE_EXPORTER_VERSION="1.11.1"
 
 # Install runtime dependencies in single layer
 # Agent leverages host tools via hostscript (nsenter/chroot to /host)

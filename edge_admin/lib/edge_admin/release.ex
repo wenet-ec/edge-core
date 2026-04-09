@@ -159,12 +159,10 @@ defmodule EdgeAdmin.Release do
   end
 
   defp do_create_cluster(cluster_name) do
-    cluster_attrs =
+    attrs =
       %{name: cluster_name}
       |> maybe_put(:ipv4_range, default_cluster_subnet())
       |> maybe_put(:node_limit, default_cluster_node_limit())
-
-    attrs = %{cluster: cluster_attrs}
 
     case EdgeAdmin.Nodes.create_cluster(attrs) do
       {:ok, cluster} ->

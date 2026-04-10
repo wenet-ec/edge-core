@@ -343,7 +343,7 @@
         "x": 12,
         "y": 27
       },
-      "id": 15,
+      "id": 16,
       "options": {
         "legend": {
           "displayMode": "list",
@@ -798,6 +798,132 @@
       ],
       "title": "SSH Session Duration",
       "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 61
+      },
+      "id": 17,
+      "panels": [],
+      "title": "VPN",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "VPN config pull attempts (daily backstop for DNS recovery after netclient restart). Success = netclient pull completed; failure = pull returned error.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 62
+      },
+      "id": 18,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(edge_agent_vpn_pull_total[$__rate_interval])",
+          "legendFormat": "{{result}}",
+          "refId": "A"
+        }
+      ],
+      "title": "VPN Config Pull Rate",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 70
+      },
+      "id": 19,
+      "panels": [],
+      "title": "Health Check (HTTP Fallback)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Health check reports sent to admin via HTTP fallback (only fires when VPN is down). Success = admin acknowledged; failure = network error reaching admin.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 71
+      },
+      "id": 20,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(edge_agent_health_check_report_total[$__rate_interval])",
+          "legendFormat": "{{result}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Health Check Report Rate (HTTP Fallback)",
+      "type": "timeseries"
     }
   ],
   "schemaVersion": 38,
@@ -806,7 +932,8 @@
     "edge_agent",
     "commands",
     "proxy",
-    "ssh"
+    "ssh",
+    "vpn"
   ],
   "templating": {
     "list": [
@@ -838,6 +965,6 @@
   "timezone": "",
   "title": "Edge Agent Metrics",
   "uid": "edge_agent",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }

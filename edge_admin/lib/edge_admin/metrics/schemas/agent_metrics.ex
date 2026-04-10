@@ -7,9 +7,11 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Application
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Commands
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Discovery
+  alias EdgeAdmin.Metrics.Schemas.AgentMetrics.HealthCheck
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.ObanQueue
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Proxy
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Ssh
+  alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Vpn
 
   @type t :: %__MODULE__{}
 
@@ -23,6 +25,8 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
     :discovery,
     :proxy,
     :ssh,
+    :vpn,
+    :health_check,
     :oban_queues
   ]
 
@@ -39,6 +43,8 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
       discovery: Discovery.from_raw(raw_metrics),
       proxy: Proxy.from_raw(raw_metrics),
       ssh: Ssh.from_raw(raw_metrics),
+      vpn: Vpn.from_raw(raw_metrics),
+      health_check: HealthCheck.from_raw(raw_metrics),
       oban_queues: ObanQueue.from_raw(raw_metrics)
     }
   end
@@ -179,6 +185,32 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
       %__MODULE__{
         authentications_total: raw["ssh_authentications"] || 0,
         connections_total: raw["ssh_connections"] || 0
+      }
+    end
+  end
+
+  defmodule Vpn do
+    @moduledoc "VPN config pull metrics"
+
+    @derive Jason.Encoder
+    defstruct [:pulls_total]
+
+    def from_raw(raw) do
+      %__MODULE__{
+        pulls_total: raw["vpn_pulls"] || 0
+      }
+    end
+  end
+
+  defmodule HealthCheck do
+    @moduledoc "Health check report metrics (HTTP fallback mode)"
+
+    @derive Jason.Encoder
+    defstruct [:reports_total]
+
+    def from_raw(raw) do
+      %__MODULE__{
+        reports_total: raw["health_check_reports"] || 0
       }
     end
   end

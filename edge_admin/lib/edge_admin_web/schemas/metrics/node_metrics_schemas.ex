@@ -253,32 +253,32 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                 memory_processes_bytes: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Memory used by processes in bytes"
+                  description: "Memory used by BEAM processes in bytes"
                 },
                 memory_processes_mb: %Schema{
                   type: :number,
                   nullable: true,
-                  description: "Memory used by processes in MB"
+                  description: "Memory used by BEAM processes in MB"
                 },
-                schedulers_online: %Schema{
+                memory_ets_bytes: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Number of active BEAM schedulers"
+                  description: "Memory used by ETS tables in bytes"
                 },
-                run_queue: %Schema{
+                memory_ets_mb: %Schema{
+                  type: :number,
+                  nullable: true,
+                  description: "Memory used by ETS tables in MB"
+                },
+                memory_binary_bytes: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Number of processes in the run queue"
+                  description: "Memory used by binaries in bytes"
                 },
-                gc_count: %Schema{
-                  type: :integer,
+                memory_binary_mb: %Schema{
+                  type: :number,
                   nullable: true,
-                  description: "Garbage collection count"
-                },
-                gc_words_reclaimed: %Schema{
-                  type: :integer,
-                  nullable: true,
-                  description: "Words reclaimed by garbage collection"
+                  description: "Memory used by binaries in MB"
                 }
               }
             },
@@ -289,17 +289,17 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                 synced_total: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Total commands synced from admin"
+                  description: "Total command sync calls made to admin"
                 },
                 enqueued_total: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Total commands enqueued for execution"
+                  description: "Total command executions enqueued for local execution"
                 },
-                executed_total: %Schema{
+                completed_total: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Total commands executed"
+                  description: "Total command executions completed"
                 },
                 reported_total: %Schema{
                   type: :integer,
@@ -320,7 +320,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                 admins_found_last: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Total admins discovered during last scan"
+                  description: "Number of admins discovered during the last scan"
                 }
               }
             },
@@ -379,22 +379,36 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                 authentications_total: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Total authentication attempts"
-                },
-                authentications_success: %Schema{
-                  type: :integer,
-                  nullable: true,
-                  description: "Successful authentications"
-                },
-                authentications_failed: %Schema{
-                  type: :integer,
-                  nullable: true,
-                  description: "Failed authentications"
+                  description: "Total SSH authentication attempts (all methods)"
                 },
                 connections_total: %Schema{
                   type: :integer,
                   nullable: true,
                   description: "Total SSH connections established"
+                }
+              }
+            },
+            vpn: %Schema{
+              type: :object,
+              description: "VPN connectivity metrics",
+              properties: %{
+                pulls_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description:
+                    "Total VPN config pulls performed (daily backstop for DNS recovery after netclient restart)"
+                }
+              }
+            },
+            health_check: %Schema{
+              type: :object,
+              description:
+                "Health check report metrics (only active when VPN is down and agent is in HTTP fallback mode)",
+              properties: %{
+                reports_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total health check reports sent to admin via HTTP fallback"
                 }
               }
             },
@@ -408,34 +422,11 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                     type: :string,
                     description: "Queue name (e.g., 'default', 'commands')"
                   },
-                  available: %Schema{
-                    type: :integer,
-                    description: "Jobs available to run"
-                  },
-                  scheduled: %Schema{
-                    type: :integer,
-                    description: "Jobs scheduled for future execution"
-                  },
-                  executing: %Schema{
-                    type: :integer,
-                    description: "Jobs currently executing"
-                  },
-                  retryable: %Schema{
-                    type: :integer,
-                    description: "Jobs awaiting retry"
-                  },
-                  completed: %Schema{
-                    type: :integer,
-                    description: "Completed jobs"
-                  },
-                  discarded: %Schema{
-                    type: :integer,
-                    description: "Discarded jobs (max retries exceeded)"
-                  },
-                  cancelled: %Schema{
-                    type: :integer,
-                    description: "Cancelled jobs"
-                  }
+                  available: %Schema{type: :integer, description: "Jobs available to run"},
+                  executing: %Schema{type: :integer, description: "Jobs currently executing"},
+                  completed: %Schema{type: :integer, description: "Completed jobs"},
+                  discarded: %Schema{type: :integer, description: "Discarded jobs (max retries exceeded)"},
+                  retryable: %Schema{type: :integer, description: "Jobs awaiting retry"}
                 }
               }
             }
@@ -455,15 +446,15 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
             memory_total_mb: 120.0,
             memory_processes_bytes: 83_886_080,
             memory_processes_mb: 80.0,
-            schedulers_online: 4,
-            run_queue: 0,
-            gc_count: 1234,
-            gc_words_reclaimed: 5_678_901
+            memory_ets_bytes: 4_194_304,
+            memory_ets_mb: 4.0,
+            memory_binary_bytes: 2_097_152,
+            memory_binary_mb: 2.0
           },
           commands: %{
             synced_total: 156,
             enqueued_total: 152,
-            executed_total: 150,
+            completed_total: 150,
             reported_total: 150
           },
           discovery: %{
@@ -488,30 +479,30 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
           },
           ssh: %{
             authentications_total: 45,
-            authentications_success: 44,
-            authentications_failed: 1,
             connections_total: 44
+          },
+          vpn: %{
+            pulls_total: 7
+          },
+          health_check: %{
+            reports_total: 0
           },
           oban_queues: [
             %{
               queue: "default",
               available: 0,
-              scheduled: 2,
               executing: 1,
-              retryable: 0,
               completed: 245,
               discarded: 1,
-              cancelled: 0
+              retryable: 0
             },
             %{
               queue: "commands",
               available: 0,
-              scheduled: 5,
               executing: 0,
-              retryable: 0,
               completed: 150,
               discarded: 0,
-              cancelled: 0
+              retryable: 0
             }
           ]
         }
@@ -569,6 +560,12 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                 discovery: %Schema{type: :object, nullable: true, description: "Admin discovery metrics"},
                 proxy: %Schema{type: :object, nullable: true, description: "Proxy server metrics"},
                 ssh: %Schema{type: :object, nullable: true, description: "SSH server metrics"},
+                vpn: %Schema{type: :object, nullable: true, description: "VPN config pull metrics"},
+                health_check: %Schema{
+                  type: :object,
+                  nullable: true,
+                  description: "Health check report metrics (HTTP fallback mode)"
+                },
                 oban_queues: %Schema{
                   type: :array,
                   nullable: true,

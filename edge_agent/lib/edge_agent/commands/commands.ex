@@ -588,7 +588,7 @@ defmodule EdgeAgent.Commands do
 
     :telemetry.execute(
       [:edge_agent, :commands, :sync],
-      %{sent_count: sent_count, pending_count: pending_count, total: sent_count + pending_count},
+      %{count: 1, sent_count: sent_count, pending_count: pending_count},
       %{}
     )
 

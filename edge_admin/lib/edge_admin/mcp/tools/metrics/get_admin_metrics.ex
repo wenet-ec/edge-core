@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/mcp/tools/metrics/get_admin_metrics.ex
 defmodule EdgeAdmin.MCP.Tools.Metrics.GetAdminMetrics do
-  @moduledoc "Get metrics for this admin instance from edge_admin PromEx — BEAM stats, cluster metadata, Oban queues."
+  @moduledoc "Get metrics for this admin instance from edge_admin PromEx — BEAM stats, cluster metadata, commands, SSH verifications, cluster reconciliation, self-updates, Oban queues."
   use EdgeAdmin.MCP, :tool
 
   alias EdgeAdmin.Metrics

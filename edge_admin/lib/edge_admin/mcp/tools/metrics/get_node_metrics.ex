@@ -4,8 +4,9 @@ defmodule EdgeAdmin.MCP.Tools.Metrics.GetNodeMetrics do
   Get unified metrics for a node — host + agent sources combined.
 
   Returns CPU, memory, disk, uptime (from Node Exporter) plus BEAM stats,
-  command pipeline, proxy, SSH, and Oban queues (from agent PromEx).
-  Best-effort: if one source fails, the others are still returned.
+  command pipeline, proxy, SSH, VPN pulls, health check reports, and Oban
+  queues (from agent PromEx). Best-effort: if one source fails, the others
+  are still returned.
   """
   use EdgeAdmin.MCP, :tool
 

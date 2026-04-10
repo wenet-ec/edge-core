@@ -39,9 +39,17 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParser do
 
       # Bootstrap
       "bootstrap_steps" => extract_counter(lines, "edge_admin_bootstrap_step_total"),
+      "bootstrap_complete_total" => extract_counter(lines, "edge_admin_bootstrap_complete_total"),
+
+      # Discovery
+      "discovery_scans_total" => extract_counter(lines, "edge_admin_discovery_scan_complete_total"),
+      "discovery_dns_resolutions_total" => extract_counter(lines, "edge_admin_discovery_dns_resolution_total"),
+      "discovery_peer_connections_total" => extract_counter(lines, "edge_admin_discovery_peer_connection_total"),
 
       # Nodes health checks
       "nodes_health_checks" => extract_counter(lines, "edge_admin_nodes_health_check_total"),
+      "nodes_cluster_reconciliations_total" => extract_counter(lines, "edge_admin_nodes_cluster_reconciliation_total"),
+      "nodes_cluster_reconciliation_errors" => extract_gauge(lines, "edge_admin_nodes_cluster_reconciliation_errors"),
 
       # Quantum scheduler jobs
       "quantum_jobs_executed" => extract_counter(lines, "edge_admin_quantum_job_executed_total"),
@@ -51,9 +59,20 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParser do
       "vpn_zombie_cleanup_total" => extract_counter(lines, "edge_admin_vpn_zombie_admin_cleanup_total"),
       "vpn_zombie_cleanup_deleted_count" => extract_gauge(lines, "edge_admin_vpn_zombie_admin_cleanup_deleted_count"),
 
-      # Commands execution delivery
+      # Commands
       "commands_delivery_total" => extract_counter(lines, "edge_admin_commands_delivery_total"),
       "commands_delivery_delivered_count" => extract_gauge(lines, "edge_admin_commands_delivery_delivered_count"),
+      "commands_execution_delivered_total" => extract_counter(lines, "edge_admin_commands_execution_delivered_total"),
+      "commands_execution_completed_total" => extract_counter(lines, "edge_admin_commands_execution_completed_total"),
+      "commands_expiration_total" => extract_counter(lines, "edge_admin_commands_expiration_total"),
+
+      # SSH
+      "ssh_verifications_total" => extract_counter(lines, "edge_admin_ssh_verification_total"),
+      "ssh_verifications_failed" =>
+        extract_counter_by_label(lines, "edge_admin_ssh_verification_total", "result", "failure"),
+
+      # Self-updates
+      "self_updates_completed_total" => extract_counter(lines, "edge_admin_self_updates_request_completed_total"),
 
       # Gateway
       "gateway_connections_total" => extract_counter(lines, "edge_admin_gateway_connection_total"),
@@ -86,6 +105,23 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParser do
     lines
     |> Enum.filter(fn line ->
       String.starts_with?(line, metric_name <> "{") or String.starts_with?(line, metric_name <> " ")
+    end)
+    |> Enum.map(fn line ->
+      line
+      |> String.split(" ")
+      |> List.last()
+      |> parse_number()
+    end)
+    |> Enum.sum()
+  end
+
+  # Extract counter total filtered to lines where label_name="label_value"
+  defp extract_counter_by_label(lines, metric_name, label_name, label_value) do
+    pattern = ~s(#{label_name}="#{label_value}")
+
+    lines
+    |> Enum.filter(fn line ->
+      String.starts_with?(line, metric_name <> "{") and String.contains?(line, pattern)
     end)
     |> Enum.map(fn line ->
       line

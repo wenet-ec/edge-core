@@ -178,6 +178,12 @@ All environment variables are documented in the production env files:
 - **Admin:** [`deploy/production/.envs/.edge_admin`](deploy/production/.envs/.edge_admin) — keys, ports, cluster sizing, VPN config, DB tuning
 - **Agent:** [`deploy/production/.envs/.edge_agent`](deploy/production/.envs/.edge_agent) — enrollment, SSH, proxy ports, self-update, WireGuard backend
 
+## Grafana dashboards
+
+Dashboard JSON files are in [`edge_admin/priv/grafana_dashboards/`](edge_admin/priv/grafana_dashboards/). See the [README there](edge_admin/priv/grafana_dashboards/README.md) for what each dashboard covers.
+
+To import: in Grafana go to **Dashboards → Import**, upload the JSON file, and select your Prometheus datasource.
+
 ## Components
 
 | Directory            | Description                                              |

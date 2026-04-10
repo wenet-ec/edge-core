@@ -180,40 +180,38 @@ defmodule EdgeAdmin.Ssh do
           {:error, _meta} -> nil
         end
 
-      verified =
-        case {ssh_username, password, public_key} do
-          {nil, _, _} ->
-            # Username not found - return false (don't leak this info)
-            false
+      {verified, auth_method} = check_credential(ssh_username, password, public_key)
 
-          {%SshUsername{password_hash: nil}, password, _} when not is_nil(password) ->
-            # Password auth requested but no password configured
-            false
-
-          {%SshUsername{password_hash: hash}, password, _} when not is_nil(password) ->
-            # Verify password with Argon2
-            Argon2.verify_pass(password, hash)
-
-          {%SshUsername{ssh_public_keys: []}, _, public_key} when not is_nil(public_key) ->
-            # Public key auth requested but no keys configured
-            false
-
-          {%SshUsername{ssh_public_keys: keys}, _, public_key} when not is_nil(public_key) ->
-            # Verify public key - normalize and compare
-            provided_key_normalized = normalize_ssh_key(public_key)
-
-            Enum.any?(keys, fn stored_key ->
-              stored_key_normalized =
-                stored_key.public_key
-                |> String.trim()
-                |> normalize_ssh_key()
-
-              provided_key_normalized == stored_key_normalized
-            end)
-        end
+      :telemetry.execute(
+        [:edge_admin, :ssh, :verification],
+        %{count: 1},
+        %{result: if(verified, do: :success, else: :failure), auth_method: auth_method}
+      )
 
       {:ok, verified}
     end
+  end
+
+  defp check_credential(nil, _password, _public_key), do: {false, :unknown}
+
+  defp check_credential(%SshUsername{password_hash: nil}, password, _) when not is_nil(password), do: {false, :password}
+
+  defp check_credential(%SshUsername{password_hash: hash}, password, _) when not is_nil(password),
+    do: {Argon2.verify_pass(password, hash), :password}
+
+  defp check_credential(%SshUsername{ssh_public_keys: []}, _, public_key) when not is_nil(public_key),
+    do: {false, :public_key}
+
+  defp check_credential(%SshUsername{ssh_public_keys: keys}, _, public_key) when not is_nil(public_key) do
+    provided_key_normalized = normalize_ssh_key(public_key)
+
+    result =
+      Enum.any?(keys, fn stored_key ->
+        stored_key_normalized = stored_key.public_key |> String.trim() |> normalize_ssh_key()
+        provided_key_normalized == stored_key_normalized
+      end)
+
+    {result, :public_key}
   end
 
   # Normalizes SSH key by removing comment (keeps algorithm + key data only)

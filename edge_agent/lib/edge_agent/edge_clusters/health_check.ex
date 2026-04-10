@@ -27,7 +27,17 @@ defmodule EdgeAgent.EdgeClusters.HealthCheck do
 
     Logger.debug("Reporting health check: #{status}")
 
-    case AdminClient.report_health_check(status) do
+    result = AdminClient.report_health_check(status)
+
+    telemetry_result =
+      case result do
+        {:ok, _} -> :success
+        {:error, _} -> :failure
+      end
+
+    :telemetry.execute([:edge_agent, :health_check, :report], %{count: 1}, %{result: telemetry_result})
+
+    case result do
       {:ok, _response} ->
         Logger.debug("Health check reported successfully: #{status}")
         :ok

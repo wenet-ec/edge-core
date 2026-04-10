@@ -23,7 +23,9 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         command_report_metrics() ++
         proxy_metrics() ++
         ssh_metrics() ++
-        discovery_metrics()
+        discovery_metrics() ++
+        vpn_metrics() ++
+        health_check_metrics()
     )
   end
 
@@ -54,7 +56,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :commands, :sync, :total],
         event_name: [:edge_agent, :commands, :sync],
         description: "Total number of command sync attempts with admin",
-        measurement: :total
+        measurement: :count
       ),
       last_value(
         [:edge_agent, :commands, :sync, :sent_count],
@@ -205,6 +207,30 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         event_name: [:edge_agent, :discovery, :scan],
         description: "Number of admins found in last discovery scan",
         measurement: :admins_found
+      )
+    ]
+  end
+
+  defp vpn_metrics do
+    [
+      counter(
+        [:edge_agent, :vpn, :pull, :total],
+        event_name: [:edge_agent, :vpn, :pull],
+        description: "Total number of VPN config pull attempts",
+        tags: [:result],
+        tag_values: &get_result_tag/1
+      )
+    ]
+  end
+
+  defp health_check_metrics do
+    [
+      counter(
+        [:edge_agent, :health_check, :report, :total],
+        event_name: [:edge_agent, :health_check, :report],
+        description: "Total number of health check reports sent to admin (HTTP fallback mode)",
+        tags: [:result],
+        tag_values: &get_result_tag/1
       )
     ]
   end

@@ -52,7 +52,13 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
 
       # SSH
       "ssh_authentications" => extract_counter(lines, "edge_agent_ssh_authentication_total"),
-      "ssh_connections" => extract_counter(lines, "edge_agent_ssh_connection_total")
+      "ssh_connections" => extract_counter(lines, "edge_agent_ssh_connection_total"),
+
+      # VPN
+      "vpn_pulls" => extract_counter(lines, "edge_agent_vpn_pull_total"),
+
+      # Health check (HTTP fallback)
+      "health_check_reports" => extract_counter(lines, "edge_agent_health_check_report_total")
     }
   end
 

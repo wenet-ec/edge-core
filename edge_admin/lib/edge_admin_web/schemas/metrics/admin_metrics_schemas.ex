@@ -154,7 +154,33 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
                 steps_completed_total: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Total bootstrap steps completed"
+                  description: "Total individual bootstrap steps completed across all restarts"
+                },
+                complete_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total full bootstrap sequences completed (success + failure)"
+                }
+              }
+            },
+            discovery: %Schema{
+              type: :object,
+              description: "Peer admin discovery metrics",
+              properties: %{
+                scans_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total peer discovery scan cycles completed"
+                },
+                dns_resolutions_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total DNS resolution attempts during peer discovery"
+                },
+                peer_connections_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total Erlang peer connection attempts (success + failure + already_connected)"
                 }
               }
             },
@@ -208,12 +234,70 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
                 delivery_total: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Total execution delivery runs"
+                  description: "Total delivery batch runs (Quantum scheduler cycles)"
                 },
                 delivery_delivered_count: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Number of executions delivered in last run"
+                  description: "Number of executions queued for delivery in last batch run"
+                },
+                execution_delivered_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total individual execution delivery attempts to agents (success + failure)"
+                },
+                execution_completed_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total executions completed (result reported back by agent)"
+                },
+                expiration_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total stale execution expiration sweeps"
+                }
+              }
+            },
+            ssh: %Schema{
+              type: :object,
+              description: "SSH credential verification metrics",
+              properties: %{
+                verifications_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total SSH credential verification attempts (all auth methods)"
+                },
+                verifications_failed: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total SSH credential verification failures"
+                }
+              }
+            },
+            reconciliation: %Schema{
+              type: :object,
+              description: "Cluster reconciliation metrics (Netmaker ↔ DB sync)",
+              properties: %{
+                total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total cluster reconciliation runs"
+                },
+                errors: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Number of errors in last reconciliation run"
+                }
+              }
+            },
+            self_updates: %Schema{
+              type: :object,
+              description: "Self-update request processing metrics",
+              properties: %{
+                completed_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total self-update requests processed to completion"
                 }
               }
             },
@@ -312,10 +396,16 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
             recomputations_total: 26
           },
           bootstrap: %{
-            steps_completed_total: 4
+            steps_completed_total: 4,
+            complete_total: 1
+          },
+          discovery: %{
+            scans_total: 144,
+            dns_resolutions_total: 12,
+            peer_connections_total: 3
           },
           nodes: %{
-            health_checks_total: 1
+            health_checks_total: 480
           },
           quantum: %{
             jobs_executed_total: 156,
@@ -327,7 +417,21 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
           },
           commands: %{
             delivery_total: 48,
-            delivery_delivered_count: 0
+            delivery_delivered_count: 0,
+            execution_delivered_total: 23,
+            execution_completed_total: 21,
+            expiration_total: 2
+          },
+          ssh: %{
+            verifications_total: 34,
+            verifications_failed: 1
+          },
+          reconciliation: %{
+            total: 12,
+            errors: 0
+          },
+          self_updates: %{
+            completed_total: 3
           },
           gateways: %{
             connections_total: 2,

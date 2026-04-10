@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/mcp/tools/metrics/get_agent_metrics.ex
 defmodule EdgeAdmin.MCP.Tools.Metrics.GetAgentMetrics do
-  @moduledoc "Get agent application metrics for a node from edge_agent PromEx — BEAM stats, commands, proxy, SSH, Oban queues."
+  @moduledoc "Get agent application metrics for a node from edge_agent PromEx — BEAM stats, commands, discovery, proxy, SSH, VPN pulls, health check reports, Oban queues."
   use EdgeAdmin.MCP, :tool
 
   alias EdgeAdmin.Metrics

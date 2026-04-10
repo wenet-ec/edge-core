@@ -7,11 +7,15 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Application
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Bootstrap
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Commands
+  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Discovery
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Gateways
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Metadata
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Nodes
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.ObanQueue
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Quantum
+  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Reconciliation
+  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.SelfUpdates
+  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Ssh
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Vpn
 
   @type t :: %__MODULE__{}
@@ -22,10 +26,14 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
     :application,
     :metadata,
     :bootstrap,
+    :discovery,
     :nodes,
     :quantum,
     :vpn,
     :commands,
+    :ssh,
+    :reconciliation,
+    :self_updates,
     :gateways,
     :oban_queues
   ]
@@ -39,10 +47,14 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
       application: Application.from_raw(raw_metrics),
       metadata: Metadata.from_raw(raw_metrics),
       bootstrap: Bootstrap.from_raw(raw_metrics),
+      discovery: Discovery.from_raw(raw_metrics),
       nodes: Nodes.from_raw(raw_metrics),
       quantum: Quantum.from_raw(raw_metrics),
       vpn: Vpn.from_raw(raw_metrics),
       commands: Commands.from_raw(raw_metrics),
+      ssh: Ssh.from_raw(raw_metrics),
+      reconciliation: Reconciliation.from_raw(raw_metrics),
+      self_updates: SelfUpdates.from_raw(raw_metrics),
       gateways: Gateways.from_raw(raw_metrics),
       oban_queues: ObanQueue.from_raw(raw_metrics)
     }
@@ -148,12 +160,33 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
 
     @derive Jason.Encoder
     defstruct [
-      :steps_completed_total
+      :steps_completed_total,
+      :complete_total
     ]
 
     def from_raw(raw) do
       %__MODULE__{
-        steps_completed_total: raw["bootstrap_steps"]
+        steps_completed_total: raw["bootstrap_steps"],
+        complete_total: raw["bootstrap_complete_total"]
+      }
+    end
+  end
+
+  defmodule Discovery do
+    @moduledoc "Peer admin discovery metrics"
+
+    @derive Jason.Encoder
+    defstruct [
+      :scans_total,
+      :dns_resolutions_total,
+      :peer_connections_total
+    ]
+
+    def from_raw(raw) do
+      %__MODULE__{
+        scans_total: raw["discovery_scans_total"],
+        dns_resolutions_total: raw["discovery_dns_resolutions_total"],
+        peer_connections_total: raw["discovery_peer_connections_total"]
       }
     end
   end
@@ -213,13 +246,68 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
     @derive Jason.Encoder
     defstruct [
       :delivery_total,
-      :delivery_delivered_count
+      :delivery_delivered_count,
+      :execution_delivered_total,
+      :execution_completed_total,
+      :expiration_total
     ]
 
     def from_raw(raw) do
       %__MODULE__{
         delivery_total: raw["commands_delivery_total"],
-        delivery_delivered_count: raw["commands_delivery_delivered_count"]
+        delivery_delivered_count: raw["commands_delivery_delivered_count"],
+        execution_delivered_total: raw["commands_execution_delivered_total"],
+        execution_completed_total: raw["commands_execution_completed_total"],
+        expiration_total: raw["commands_expiration_total"]
+      }
+    end
+  end
+
+  defmodule Ssh do
+    @moduledoc "SSH credential verification metrics"
+
+    @derive Jason.Encoder
+    defstruct [
+      :verifications_total,
+      :verifications_failed
+    ]
+
+    def from_raw(raw) do
+      %__MODULE__{
+        verifications_total: raw["ssh_verifications_total"],
+        verifications_failed: raw["ssh_verifications_failed"]
+      }
+    end
+  end
+
+  defmodule Reconciliation do
+    @moduledoc "Cluster reconciliation metrics"
+
+    @derive Jason.Encoder
+    defstruct [
+      :total,
+      :errors
+    ]
+
+    def from_raw(raw) do
+      %__MODULE__{
+        total: raw["nodes_cluster_reconciliations_total"],
+        errors: raw["nodes_cluster_reconciliation_errors"]
+      }
+    end
+  end
+
+  defmodule SelfUpdates do
+    @moduledoc "Self-update request processing metrics"
+
+    @derive Jason.Encoder
+    defstruct [
+      :completed_total
+    ]
+
+    def from_raw(raw) do
+      %__MODULE__{
+        completed_total: raw["self_updates_completed_total"]
       }
     end
   end

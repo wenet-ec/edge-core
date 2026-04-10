@@ -33,6 +33,10 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
     edge_agent_ssh_authentication_total{result="ok"} 4
     edge_agent_ssh_authentication_total{result="failed"} 1
     edge_agent_ssh_connection_total{result="ok"} 3
+    edge_agent_vpn_pull_total{result="success"} 6
+    edge_agent_vpn_pull_total{result="failure"} 1
+    edge_agent_health_check_report_total{result="success"} 12
+    edge_agent_health_check_report_total{result="failure"} 3
     edge_agent_prom_ex_oban_queue_length_count{queue="commands",state="available"} 3
     edge_agent_prom_ex_oban_queue_length_count{queue="commands",state="executing"} 1
     edge_agent_prom_ex_oban_queue_length_count{queue="commands",state="completed"} 50
@@ -98,11 +102,25 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert result["proxy_http_blocked"] == 8
     end
 
+    test "sums vpn_pulls across result labels" do
+      result = AgentMetricsParser.parse(sample_prometheus_text())
+      # success(6) + failure(1) = 7
+      assert result["vpn_pulls"] == 7
+    end
+
+    test "sums health_check_reports across result labels" do
+      result = AgentMetricsParser.parse(sample_prometheus_text())
+      # success(12) + failure(3) = 15
+      assert result["health_check_reports"] == 15
+    end
+
     test "counter returns 0 when metric not present" do
       result = AgentMetricsParser.parse(empty_prometheus_text())
       assert result["discovery_scans"] == 0
       assert result["commands_synced"] == 0
       assert result["ssh_authentications"] == 0
+      assert result["vpn_pulls"] == 0
+      assert result["health_check_reports"] == 0
     end
   end
 
@@ -199,6 +217,8 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert %AgentMetrics.Discovery{} = metrics.discovery
       assert %AgentMetrics.Proxy{} = metrics.proxy
       assert %AgentMetrics.Ssh{} = metrics.ssh
+      assert %AgentMetrics.Vpn{} = metrics.vpn
+      assert %AgentMetrics.HealthCheck{} = metrics.health_check
       assert is_list(metrics.oban_queues)
     end
 
@@ -256,6 +276,22 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert metrics.ssh.connections_total == 3
     end
 
+    test "vpn struct has correct pull total" do
+      raw = AgentMetricsParser.parse(sample_prometheus_text())
+      raw = Map.put(raw, "cluster_name", "prod")
+      metrics = AgentMetrics.from_raw_metrics(raw, "node-abc")
+      # success(6) + failure(1) = 7
+      assert metrics.vpn.pulls_total == 7
+    end
+
+    test "health_check struct has correct report total" do
+      raw = AgentMetricsParser.parse(sample_prometheus_text())
+      raw = Map.put(raw, "cluster_name", "prod")
+      metrics = AgentMetrics.from_raw_metrics(raw, "node-abc")
+      # success(12) + failure(3) = 15
+      assert metrics.health_check.reports_total == 15
+    end
+
     test "oban_queues is a list of ObanQueue structs" do
       raw = AgentMetricsParser.parse(sample_prometheus_text())
       raw = Map.put(raw, "cluster_name", "prod")
@@ -273,6 +309,8 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert metrics.proxy.http_connections_total == 0
       assert metrics.proxy.http_blocked_by_reason == %{}
       assert metrics.ssh.authentications_total == 0
+      assert metrics.vpn.pulls_total == 0
+      assert metrics.health_check.reports_total == 0
     end
 
     test "nil uptime_ms defaults to 0 seconds" do

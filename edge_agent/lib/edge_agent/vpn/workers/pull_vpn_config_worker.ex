@@ -40,16 +40,19 @@ defmodule EdgeAgent.Vpn.Workers.PullVpnConfigWorker do
     if should_run?() do
       Logger.debug("PullVpnConfigWorker started")
 
-      case EdgeAgent.Vpn.pull() do
-        :ok ->
-          Logger.debug("PullVpnConfigWorker completed successfully")
-          :ok
+      result =
+        case EdgeAgent.Vpn.pull() do
+          :ok ->
+            Logger.debug("PullVpnConfigWorker completed successfully")
+            :success
 
-        {:error, reason} ->
-          Logger.warning("PullVpnConfigWorker failed: #{inspect(reason)}")
-          # Return :ok so Oban doesn't retry - next cron will handle it
-          :ok
-      end
+          {:error, reason} ->
+            Logger.warning("PullVpnConfigWorker failed: #{inspect(reason)}")
+            :failure
+        end
+
+      :telemetry.execute([:edge_agent, :vpn, :pull], %{count: 1}, %{result: result})
+      :ok
     else
       Logger.debug("PullVpnConfigWorker skipped (PULL_VPN_CONFIG_ENABLED=false)")
       :ok

@@ -236,6 +236,12 @@ defmodule EdgeAdmin.SelfUpdates do
         summary: %{total: 0, triggered: 0, failed: 0}
       })
 
+      :telemetry.execute(
+        [:edge_admin, :self_updates, :request_completed],
+        %{total: 0, triggered: 0, failed: 0},
+        %{targeting_type: targeting_type}
+      )
+
       :ok
     else
       Logger.info("Triggering self-update for #{length(nodes)} nodes (targeting type: #{targeting_type})")
@@ -270,6 +276,12 @@ defmodule EdgeAdmin.SelfUpdates do
         })
 
       Logger.info("Self-update request #{request_id} completed: #{inspect(summary)}")
+
+      :telemetry.execute(
+        [:edge_admin, :self_updates, :request_completed],
+        %{total: summary.total, triggered: summary.triggered, failed: summary.failed},
+        %{targeting_type: targeting_type}
+      )
 
       :ok
     end

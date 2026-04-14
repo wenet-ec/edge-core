@@ -41,7 +41,7 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
       ],
       order_directions: [
         in: :query,
-        description: "Comma-separated list of sort directions (asc/desc)",
+        description: "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
         schema: %OpenApiSpex.Schema{type: :string},
         example: "desc"
       ],

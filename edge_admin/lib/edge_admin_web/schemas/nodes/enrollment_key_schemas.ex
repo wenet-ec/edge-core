@@ -46,7 +46,17 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
           description: "When the enrollment key was last updated"
         }
       },
-      required: [:id, :cluster_name, :key, :uses_remaining, :inserted_at, :updated_at]
+      required: [:id, :cluster_name, :key, :uses_remaining, :inserted_at, :updated_at],
+      example: %{
+        id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        cluster_name: "prod-east",
+        key: "eyJzZXJ2ZXIiOiJodHRwczovL25ldG1ha2VyLmV4YW1wbGUuY29tIiwia2V5IjoiYWJjMTIzIn0=",
+        uses_remaining: 5,
+        expired_at: "2026-12-31T23:59:59Z",
+        last_used_at: nil,
+        inserted_at: "2025-06-09T08:00:00Z",
+        updated_at: "2025-06-09T08:00:00Z"
+      }
     })
   end
 
@@ -58,7 +68,19 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
       description: "Single enrollment key response",
       type: :object,
       properties: %{data: EnrollmentKeyData},
-      required: [:data]
+      required: [:data],
+      example: %{
+        data: %{
+          id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+          cluster_name: "prod-east",
+          key: "eyJzZXJ2ZXIiOiJodHRwczovL25ldG1ha2VyLmV4YW1wbGUuY29tIiwia2V5IjoiYWJjMTIzIn0=",
+          uses_remaining: 5,
+          expired_at: "2026-12-31T23:59:59Z",
+          last_used_at: nil,
+          inserted_at: "2025-06-09T08:00:00Z",
+          updated_at: "2025-06-09T08:00:00Z"
+        }
+      }
     })
   end
 

@@ -177,12 +177,11 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           %{
             id: "01234567-89ab-cdef-0123-456789abcdef",
             node_name: "node-01234567-89ab-cdef-0123-456789abcdef",
-            cluster_id: "abc12345-1234-1234-1234-123456789abc",
+            cluster_name: "prod-east",
             netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
             id_type: "persistent",
             status: "healthy",
-            vpn_hostname:
-              "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
+            vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
             mdns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.local",
             http_port: 44_000,
             ssh_port: 42_222,
@@ -230,12 +229,12 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         data: %{
           id: "01234567-89ab-cdef-0123-456789abcdef",
           node_name: "node-01234567-89ab-cdef-0123-456789abcdef",
-          cluster_id: "abc12345-1234-1234-1234-123456789abc",
+          cluster_name: "prod-east",
           netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
           id_type: "persistent",
           status: "healthy",
-          vpn_hostname:
-            "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
+          vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
+          mdns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.local",
           http_port: 44_000,
           ssh_port: 42_222,
           host_metrics_port: 49_100,

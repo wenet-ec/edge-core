@@ -222,7 +222,14 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
 
   operation(:create,
     summary: "Create an enrollment key for a cluster",
-    description: "**Note:** This endpoint is unavailable during degraded mode (503).",
+    description: """
+    Create a new enrollment key for an edge cluster. The returned `key` blob must be set as the `ENROLLMENT_KEY`
+    environment variable on the agent to allow it to join the cluster's VPN network.
+
+    Keys can be limited by use count (`uses_remaining`) or by expiry time (`expired_at`). Omit both for a single-use key with no expiry.
+
+    **Note:** This endpoint is unavailable during degraded mode (503).
+    """,
     parameters: [
       cluster_name: [
         in: :path,

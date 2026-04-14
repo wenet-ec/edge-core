@@ -30,8 +30,8 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         id_type: %Schema{
           type: :string,
           description: "Node ID type",
-          enum: ["hostname", "mac"],
-          example: "hostname"
+          enum: ["persistent", "random"],
+          example: "persistent"
         },
         vpn_hostname: %Schema{
           type: :string,
@@ -43,7 +43,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
       example: %{
         id: "abc12345-1234-1234-1234-123456789abc",
         status: "healthy",
-        id_type: "hostname",
+        id_type: "persistent",
         vpn_hostname: "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
       }
     })
@@ -131,14 +131,14 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
           %{
             id: "abc12345-1234-1234-1234-123456789abc",
             status: "healthy",
-            id_type: "hostname",
-            vpn_hostname: "abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
+            id_type: "persistent",
+            vpn_hostname: "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
           },
           %{
-            id: "node-def12345-1234-1234-1234-123456789def",
+            id: "def67890-5678-5678-5678-567890abcdef",
             status: "healthy",
-            id_type: "hostname",
-            vpn_hostname: "node-def12345-1234-1234-1234-123456789def.cluster-prod-east.nm.internal"
+            id_type: "persistent",
+            vpn_hostname: "node-def67890-5678-5678-5678-567890abcdef.cluster-prod-east.nm.internal"
           }
         ],
         network_name: "cluster-prod-east",
@@ -183,14 +183,14 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
             %{
               id: "abc12345-1234-1234-1234-123456789abc",
               status: "healthy",
-              id_type: "hostname",
+              id_type: "persistent",
               vpn_hostname: "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
             },
             %{
-              id: "node-def12345-1234-1234-1234-123456789def",
+              id: "def67890-5678-5678-5678-567890abcdef",
               status: "healthy",
-              id_type: "hostname",
-              vpn_hostname: "node-def12345-1234-1234-1234-123456789def.cluster-prod-east.nm.internal"
+              id_type: "persistent",
+              vpn_hostname: "node-def67890-5678-5678-5678-567890abcdef.cluster-prod-east.nm.internal"
             }
           ],
           network_name: "cluster-prod-east",

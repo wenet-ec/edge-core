@@ -55,7 +55,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
         timeout: %Schema{
           type: :integer,
           nullable: true,
-          description: "Execution timeout in seconds"
+          description: "Execution timeout in milliseconds (null means no timeout)"
         },
         status: %Schema{
           type: :string,

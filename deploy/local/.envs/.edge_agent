@@ -104,6 +104,15 @@ WATCHTOWER_HTTP_API_TOKEN=local-dev-token
 #                                # resets — broken DNS can then persist indefinitely. (default: true)
 
 # =============================================================================
+# DERP Map Cache
+# =============================================================================
+# DERP_MAP_REFRESH_INTERVAL_MS=300000    # Stable refresh interval once the map has been fetched
+#                                        # (default: 5 min). On startup the cache warms up fast:
+#                                        # first attempt at 5 s, doubling each miss until this
+#                                        # value is reached. Set lower (e.g. 60000) for faster
+#                                        # rotation in test/dev environments.
+
+# =============================================================================
 # VPN / WireGuard
 # =============================================================================
 # Controls netclient's WireGuard backend (checked at entrypoint and by netclient).

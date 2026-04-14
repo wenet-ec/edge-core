@@ -120,4 +120,7 @@ config :edge_agent,
   proxy_servers_auth_enabled: get_env("PROXY_SERVERS_AUTH_ENABLED", :boolean, true),
   # VPN config pull toggle — disable on resource-starved machines where netclient pull
   # causes disruptive interface resets. MQTT retained messages provide eventual consistency.
-  pull_vpn_config_enabled: get_env("PULL_VPN_CONFIG_ENABLED", :boolean, true)
+  pull_vpn_config_enabled: get_env("PULL_VPN_CONFIG_ENABLED", :boolean, true),
+  # DERP map refresh interval at steady state. On startup the cache warms up with a short
+  # interval (5 s) that doubles each miss until this value is reached.
+  derp_map_refresh_interval_ms: get_env("DERP_MAP_REFRESH_INTERVAL_MS", :integer, to_timeout(minute: 5))

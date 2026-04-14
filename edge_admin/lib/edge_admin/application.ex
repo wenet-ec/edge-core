@@ -81,7 +81,7 @@ defmodule EdgeAdmin.Application do
       EdgeAdmin.Admins.Metadata,
       EdgeAdmin.LocalScheduler,
       EdgeAdmin.ProxyServers,
-      {EdgeAdmin.MCP.Server, transport: :streamable_http},
+      {EdgeAdminMcp.Server, transport: :streamable_http},
       EdgeAdminWeb.Endpoint
     ] ++ event_broker_children()
   end

@@ -1,0 +1,30 @@
+# edge_admin/lib/edge_admin_mcp/tools/nodes/change_node_cluster.ex
+defmodule EdgeAdminMcp.Tools.Nodes.ChangeNodeCluster do
+  @moduledoc "Move a node to a different cluster. The node is removed from its current VPN network and added to the new one."
+  use EdgeAdminMcp, :tool
+
+  alias EdgeAdmin.Nodes
+  alias EdgeAdminMcp.Tools.Nodes.NodeData
+
+  schema do
+    field :node_id, {:required, :string}
+    field :cluster_name, {:required, :string}
+  end
+
+  @impl true
+  def execute(%{node_id: id, cluster_name: cluster_name}, frame) do
+    case Nodes.get_node(id) do
+      {:ok, node} ->
+        case Nodes.change_node_cluster(node, %{"cluster_name" => cluster_name}) do
+          {:ok, updated} ->
+            {:reply, Response.json(Response.tool(), NodeData.data(updated)), frame}
+
+          {:error, reason} ->
+            {:reply, Response.error(Response.tool(), "Failed to change cluster: #{inspect(reason)}"), frame}
+        end
+
+      {:error, :not_found} ->
+        {:reply, Response.error(Response.tool(), "Node #{id} not found"), frame}
+    end
+  end
+end

@@ -244,7 +244,7 @@ defmodule EdgeAdminWeb.Router do
   scope "/" do
     pipe_through(:mcp)
 
-    forward("/mcp", Anubis.Server.Transport.StreamableHTTP.Plug, server: EdgeAdmin.MCP.Server)
+    forward("/mcp", Anubis.Server.Transport.StreamableHTTP.Plug, server: EdgeAdminMcp.Server)
   end
 
   # Basic auth helper for LiveDashboard

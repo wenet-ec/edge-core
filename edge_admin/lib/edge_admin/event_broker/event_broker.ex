@@ -20,7 +20,7 @@ defmodule EdgeAdmin.EventBroker do
   ## Usage
 
       # In business logic:
-      EventBroker.publish(%EventBroker.Events.NodeRegistered{node: node})
+      EventBroker.enqueue(%EventBroker.Events.NodeRegistered{node: node})
 
   ## Event envelope
 
@@ -42,6 +42,7 @@ defmodule EdgeAdmin.EventBroker do
   """
 
   alias EdgeAdmin.EventBroker.Events
+  alias EdgeAdmin.EventBroker.Workers.PublishEventWorker
 
   require Logger
 
@@ -75,27 +76,46 @@ defmodule EdgeAdmin.EventBroker do
   end
 
   @doc """
-  Publishes an event to the configured broker.
+  Enqueues an event for async delivery via an Oban worker.
 
-  Always returns `:ok` — failures are logged, never raised.
+  Builds the envelope immediately — capturing the exact state at call time — then
+  inserts an Oban job. The worker publishes to the broker and retries on failure,
+  decoupling broker health from the caller entirely.
+
+  Always returns `:ok`. No-op when the event broker is disabled.
   """
-  @spec publish(event()) :: :ok
-  def publish(event) do
+  @spec enqueue(event()) :: :ok
+  def enqueue(event) do
     if Application.get_env(:edge_admin, :event_broker_enabled, false) do
-      mod = adapter()
       envelope = build_envelope(event)
 
-      case mod.publish(envelope) do
-        :ok ->
-          :ok
+      envelope
+      |> PublishEventWorker.new()
+      |> Oban.insert!()
 
-        {:error, reason} ->
-          Logger.warning("[EventBroker] Failed to publish #{envelope["type"]}: #{inspect(reason)}")
-
-          :ok
-      end
+      :ok
     else
       :ok
+    end
+  end
+
+  @doc """
+  Publishes a pre-built CloudEvents envelope directly to the broker.
+
+  Called by `PublishEventWorker` — not intended for direct use in business logic.
+  Returns `{:error, reason}` on failure so Oban can retry.
+  """
+  @spec publish_envelope(map()) :: :ok | {:error, term()}
+  def publish_envelope(envelope) do
+    mod = adapter()
+
+    case mod.publish(envelope) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("[EventBroker] Failed to publish #{envelope["type"]}: #{inspect(reason)}")
+        {:error, reason}
     end
   end
 

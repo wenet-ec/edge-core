@@ -725,7 +725,7 @@ defmodule EdgeAdmin.Commands do
       Enum.each(inserted_executions, fn execution ->
         cluster_name = Map.get(cluster_name_by_node_id, execution.node_id)
 
-        EventBroker.publish(%Events.ExecutionCreated{
+        EventBroker.enqueue(%Events.ExecutionCreated{
           execution: execution,
           command: command,
           cluster_name: cluster_name
@@ -1381,7 +1381,7 @@ defmodule EdgeAdmin.Commands do
             %Events.ExecutionExpired{execution: execution, command: execution.command, cluster_name: cluster_name}
         end
 
-      EventBroker.publish(event)
+      EventBroker.enqueue(event)
     end
   end
 end

@@ -85,7 +85,7 @@ defmodule EdgeAdmin.SelfUpdates do
          changeset = SelfUpdateRequest.changeset(%SelfUpdateRequest{}, validated_attrs),
          {:ok, request} <- Repo.insert(changeset) do
       enqueue_trigger_worker(request)
-      EventBroker.publish(%Events.SelfUpdateCreated{request: request})
+      EventBroker.enqueue(%Events.SelfUpdateCreated{request: request})
       {:ok, request}
     end
   end
@@ -246,7 +246,7 @@ defmodule EdgeAdmin.SelfUpdates do
         %{targeting_type: targeting_type}
       )
 
-      EventBroker.publish(%Events.SelfUpdateCompleted{request: completed_request})
+      EventBroker.enqueue(%Events.SelfUpdateCompleted{request: completed_request})
       :ok
     else
       Logger.info("Triggering self-update for #{length(nodes)} nodes (targeting type: #{targeting_type})")
@@ -281,7 +281,7 @@ defmodule EdgeAdmin.SelfUpdates do
         })
 
       Logger.info("Self-update request #{request_id} completed: #{inspect(summary)}")
-      EventBroker.publish(%Events.SelfUpdateCompleted{request: completed_request})
+      EventBroker.enqueue(%Events.SelfUpdateCompleted{request: completed_request})
 
       :telemetry.execute(
         [:edge_admin, :self_updates, :request_completed],
@@ -519,7 +519,7 @@ defmodule EdgeAdmin.SelfUpdates do
                {:ok, gateway_pid} <- Gateway.lookup(cluster_name),
                :ok <- Gateway.trigger_self_update(gateway_pid, node) do
             Logger.info("Triggered self-update for node #{node_name}")
-            EventBroker.publish(%Events.NodeUpdateTriggered{node: node, self_update_request_id: request_id})
+            EventBroker.enqueue(%Events.NodeUpdateTriggered{node: node, self_update_request_id: request_id})
             :ok
           else
             {:error, :self_update_disabled} ->
@@ -566,7 +566,7 @@ defmodule EdgeAdmin.SelfUpdates do
                 case Gateway.trigger_self_update(gateway_pid, node) do
                   :ok ->
                     Logger.info("Triggered self-update for node #{Node.node_name(node)}")
-                    EventBroker.publish(%Events.NodeUpdateTriggered{node: node, self_update_request_id: request_id})
+                    EventBroker.enqueue(%Events.NodeUpdateTriggered{node: node, self_update_request_id: request_id})
                     :ok
 
                   {:error, :self_update_disabled} ->

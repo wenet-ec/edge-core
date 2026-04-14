@@ -122,12 +122,23 @@ config :edge_admin, EdgeAdmin.PromEx,
   grafana: :disabled,
   metrics_server: :disabled
 
+# Queue concurrency note:
+# In production, up to 200 admin instances may share the same PostgreSQL.
+# Each admin instance opens one polling connection per queue. Keep concurrency
+# low — the bottleneck is DB connection pressure, not throughput.
+#
+#   execution_creation     — inserts execution records in bulk; 2 is plenty
+#   cluster_reconciliation — one job per cluster every 6h; 1 is enough
+#   self_updates           — rare, triggered manually; 1 is fine
+#   event_broker           — async broker publish with retry; 2 keeps it snappy
+#                          without hammering the broker with parallel calls
 config :edge_admin, Oban,
   engine: Oban.Engines.Basic,
   queues: [
-    execution_creation: 10,
-    cluster_reconciliation: 10,
-    self_updates: 3
+    execution_creation: 2,
+    cluster_reconciliation: 1,
+    self_updates: 1,
+    event_broker: 2
   ],
   repo: EdgeAdmin.Repo,
   peer: Oban.Peers.Database,

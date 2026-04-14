@@ -738,7 +738,7 @@ defmodule EdgeAdmin.Nodes do
           broadcast_metadata_event({:node_updated, node.id, old_cluster_id, new_cluster.id})
           sync_node_cluster_networks(node, new_cluster)
 
-          EventBroker.publish(%Events.NodeClusterChanged{
+          EventBroker.enqueue(%Events.NodeClusterChanged{
             node: updated_node,
             previous_cluster_name: node.cluster.name
           })
@@ -828,7 +828,7 @@ defmodule EdgeAdmin.Nodes do
     case Repo.delete(node) do
       {:ok, deleted_node} ->
         broadcast_metadata_event({:node_deleted, node.id, node.cluster_id})
-        EventBroker.publish(%Events.NodeDeleted{node: deleted_node})
+        EventBroker.enqueue(%Events.NodeDeleted{node: deleted_node})
         {:ok, deleted_node}
 
       {:error, changeset} ->
@@ -923,12 +923,12 @@ defmodule EdgeAdmin.Nodes do
 
         if is_new_node do
           broadcast_metadata_event({:node_created, node_id, cluster.id})
-          EventBroker.publish(%Events.NodeRegistered{node: node})
+          EventBroker.enqueue(%Events.NodeRegistered{node: node})
         else
-          EventBroker.publish(%Events.NodeReregistered{node: node})
+          EventBroker.enqueue(%Events.NodeReregistered{node: node})
 
           if existing_node.version != node_attrs.version do
-            EventBroker.publish(%Events.NodeVersionChanged{
+            EventBroker.enqueue(%Events.NodeVersionChanged{
               node: node,
               previous_version: existing_node.version
             })
@@ -1116,7 +1116,7 @@ defmodule EdgeAdmin.Nodes do
 
   defp maybe_publish_status_changed(node, new_status) do
     if node.status != new_status do
-      EventBroker.publish(%Events.NodeStatusChanged{
+      EventBroker.enqueue(%Events.NodeStatusChanged{
         node: %{node | status: new_status},
         previous_status: node.status
       })

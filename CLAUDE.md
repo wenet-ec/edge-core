@@ -279,6 +279,11 @@ edge_core/
 - `proxy_servers.ex` - HTTP/SOCKS5 proxy coordination
 - `metrics.ex` - Metrics aggregation
 - `edge_clusters.ex` - Cluster management and metadata
+- `event_broker/event_broker.ex` - Public API: `enqueue/1`, `publish_envelope/1`, `healthy?/0`
+- `event_broker/events.ex` - Typed event structs + serialisation
+- `event_broker/adapters/nats_js.ex` - NATS JetStream adapter (gnat)
+- `event_broker/adapters/kafka.ex` - Kafka-compatible adapter (brod)
+- `event_broker/workers/publish_event_worker.ex` - Oban worker for async broker delivery
 
 **Edge Agent (`edge_agent/lib/edge_agent/`):**
 
@@ -328,6 +333,7 @@ Admin background work is split between two schedulers with different semantics:
 - `EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker` - Enqueues one `ReconcileClusterWorker` job per cluster
 - `EdgeAdmin.Nodes.Workers.ReconcileClusterWorker` - Syncs a single cluster's node state with Netmaker VPN
 - `EdgeAdmin.SelfUpdates.Workers.TriggerSelfUpdateWorker` - Coordinates container updates
+- `EdgeAdmin.EventBroker.Workers.PublishEventWorker` - Publishes a CloudEvents envelope to the broker, retries on failure
 
 **Agent Workers:**
 
@@ -365,6 +371,10 @@ Admin background work is split between two schedulers with different semantics:
 - EMQX Dashboard: http://localhost:48085
 - VictoriaMetrics: http://localhost:48428
 - PostgreSQL: localhost:5432
+- NATS (event broker): nats://localhost:44222 (client), http://localhost:48222 (monitoring)
+- NUI (NATS web UI): http://localhost:41311
+- Redpanda (event broker, opt-in): localhost:49092
+- Redpanda Console: http://localhost:49080
 
 **Edge Services:**
 
@@ -399,6 +409,14 @@ Production files follow the same pattern in `deploy/production/.envs/`
 - `ENROLLMENT_TOKEN` - Agent VPN enrollment key
 - `SECRET_KEY_BASE` - Phoenix secret for sessions and encryption
 - `PHX_HOST` - Public hostname for admin API
+- `EVENT_BROKER_ENABLED` - `true` to enable event publishing (default: `false`)
+- `EVENT_BROKER_ADAPTER` - `nats_js` or `kafka` (required when enabled)
+- `EVENT_BROKER_URLS` - Comma-separated broker URLs (`nats://host:port` or `host:port`)
+- `EVENT_BROKER_NATS_TOKEN` - NATS auth token (optional)
+- `EVENT_BROKER_KAFKA_USERNAME` / `EVENT_BROKER_KAFKA_PASSWORD` - SASL credentials (optional)
+- `EVENT_BROKER_KAFKA_SASL_MECHANISM` - `plain` (default), `scram_sha_256`, `scram_sha_512`
+- `EVENT_BROKER_KAFKA_SSL` - `true` for TLS (external/public brokers)
+- `CORE_NAME` - Identifies this core instance in every event envelope (default: `"default"`)
 
 ## Technology Stack
 

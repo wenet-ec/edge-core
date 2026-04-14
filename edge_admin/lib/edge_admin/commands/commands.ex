@@ -64,6 +64,8 @@ defmodule EdgeAdmin.Commands do
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Commands.Workers.CreateExecutionsWorker
   alias EdgeAdmin.EdgeClusters.Gateway
+  alias EdgeAdmin.EventBroker
+  alias EdgeAdmin.EventBroker.Events
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
@@ -250,9 +252,15 @@ defmodule EdgeAdmin.Commands do
   """
   @spec create_command_execution(map()) :: {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   def create_command_execution(attrs \\ %{}) do
-    %CommandExecution{}
-    |> CommandExecution.changeset(attrs)
-    |> Repo.insert()
+    result =
+      %CommandExecution{}
+      |> CommandExecution.changeset(attrs)
+      |> Repo.insert()
+
+    case result do
+      {:ok, execution} -> {:ok, execution}
+      error -> error
+    end
   end
 
   @doc """
@@ -711,6 +719,19 @@ defmodule EdgeAdmin.Commands do
         )
       end)
 
+      # Publish execution.created events — nodes already have cluster preloaded
+      cluster_name_by_node_id = Map.new(nodes, fn node -> {node.id, node.cluster && node.cluster.name} end)
+
+      Enum.each(inserted_executions, fn execution ->
+        cluster_name = Map.get(cluster_name_by_node_id, execution.node_id)
+
+        EventBroker.publish(%Events.ExecutionCreated{
+          execution: execution,
+          command: command,
+          cluster_name: cluster_name
+        })
+      end)
+
       {:ok, inserted_executions}
     rescue
       exception ->
@@ -1011,10 +1032,10 @@ defmodule EdgeAdmin.Commands do
       case create_execution_with_node(node, execution_data) do
         {:ok, :sent} ->
           # Agent received it - update to "sent"
-          update_command_execution(execution, %{
-            status: "sent",
-            sent_at: DateTime.utc_now()
-          })
+          case update_command_execution(execution, %{status: "sent", sent_at: DateTime.utc_now()}) do
+            {:ok, updated} -> publish_execution_event(updated, :sent)
+            _ -> :ok
+          end
 
           :telemetry.execute(
             [:edge_admin, :commands, :execution, :delivered],
@@ -1082,8 +1103,10 @@ defmodule EdgeAdmin.Commands do
   @spec acknowledge_execution(CommandExecution.t(), map()) ::
           {:ok, CommandExecution.t()} | {:error, {:conflict, String.t()}}
   def acknowledge_execution(execution, _params) do
-    with :ok <- Checks.ExecutionPendingCheck.check(execution) do
-      update_command_execution(execution, %{"status" => "sent", "sent_at" => DateTime.utc_now()})
+    with :ok <- Checks.ExecutionPendingCheck.check(execution),
+         {:ok, updated} <- update_command_execution(execution, %{"status" => "sent", "sent_at" => DateTime.utc_now()}) do
+      publish_execution_event(updated, :sent)
+      {:ok, updated}
     end
   end
 
@@ -1165,6 +1188,9 @@ defmodule EdgeAdmin.Commands do
             %{exit_code_category: exit_code_category}
           )
 
+          event_type = if terminal_status == "cancelled", do: :cancelled, else: :completed
+          publish_execution_event(updated_execution, event_type)
+
         _ ->
           :ok
       end
@@ -1195,12 +1221,13 @@ defmodule EdgeAdmin.Commands do
       case execution.status do
         "pending" ->
           # Cancel immediately in DB — command never ran, no output or exit code
-          {:ok, _updated} =
+          {:ok, updated} =
             update_command_execution(execution, %{
               status: "cancelled",
               cancelled_at: DateTime.utc_now()
             })
 
+          publish_execution_event(updated, :cancelled)
           {:ok, %{result: "execution cancelled"}}
 
         "sent" ->
@@ -1289,8 +1316,9 @@ defmodule EdgeAdmin.Commands do
 
   defp expire_execution(execution, _now) do
     case update_command_execution(execution, %{status: "expired"}) do
-      {:ok, _updated} ->
+      {:ok, updated} ->
         Logger.info("Execution #{execution.id} marked expired")
+        publish_execution_event(updated, :expired)
 
       {:error, changeset} ->
         Logger.error("Failed to expire execution #{execution.id}: #{inspect(changeset.errors)}")
@@ -1328,6 +1356,32 @@ defmodule EdgeAdmin.Commands do
         Logger.warning("Failed to send cancellation to agent for execution #{execution.id}: #{inspect(reason)}")
 
         {:error, reason}
+    end
+  end
+
+  # Preloads command and node cluster, then publishes the appropriate execution event.
+  # Only runs when the broker is enabled — avoids unnecessary DB queries otherwise.
+  defp publish_execution_event(execution, type) do
+    if Application.get_env(:edge_admin, :event_broker_enabled, false) do
+      execution = Repo.preload(execution, [:command, node: :cluster], force: true)
+      cluster_name = execution.node && execution.node.cluster && execution.node.cluster.name
+
+      event =
+        case type do
+          :sent ->
+            %Events.ExecutionSent{execution: execution, command: execution.command, cluster_name: cluster_name}
+
+          :completed ->
+            %Events.ExecutionCompleted{execution: execution, command: execution.command, cluster_name: cluster_name}
+
+          :cancelled ->
+            %Events.ExecutionCancelled{execution: execution, command: execution.command, cluster_name: cluster_name}
+
+          :expired ->
+            %Events.ExecutionExpired{execution: execution, command: execution.command, cluster_name: cluster_name}
+        end
+
+      EventBroker.publish(event)
     end
   end
 end

@@ -69,6 +69,15 @@ config:
   # e.g. https://edge-relay-map-1.yourdomain.com/derpmap/default
   derpMapUrl: ""
 
+  # Event Broker — opt-in, broker deployed separately
+  # Set eventBrokerEnabled to "true" and point eventBrokerUrls at your broker to enable.
+  # Adapter: nats_js (NATS JetStream) or kafka (Redpanda / vanilla Kafka)
+  eventBrokerEnabled: "false"
+  eventBrokerAdapter: "nats_js"
+  eventBrokerUrls: ""
+  # coreName is included in every event envelope — identifies this core in multi-core setups
+  coreName: "default"
+
   # Misc
   corsAllowedOrigins: "*"
   logLevel: "info"
@@ -95,6 +104,8 @@ secrets:
   # Set existingSecret to the name of a pre-created Secret to skip chart-managed secret creation.
   # The Secret must contain: SECRET_KEY_BASE, MASTER_KEY, DB_PASSWORD,
   #   NETMAKER_MASTER_KEY, NETMAKER_SUPERADMIN_PASSWORD, VPN_CLUSTER_COOKIE
+  # Optional broker auth (only needed when EVENT_BROKER_ENABLED=true and broker requires auth):
+  #   EVENT_BROKER_NATS_TOKEN, EVENT_BROKER_KAFKA_USERNAME, EVENT_BROKER_KAFKA_PASSWORD
   existingSecret: ""
   secretKeyBase: "changeme"
   masterKey: "changeme"
@@ -102,6 +113,10 @@ secrets:
   netmakerMasterKey: "changeme"
   netmakerSuperadminPassword: "changeme"
   vpnClusterCookie: "changeme"
+  # Broker auth — leave empty to omit from Secret
+  eventBrokerNatsToken: ""
+  eventBrokerKafkaUsername: ""
+  eventBrokerKafkaPassword: ""
 
 migration:
   # Set to false when the image doesn't exist yet (e.g. local kind testing without a built image)

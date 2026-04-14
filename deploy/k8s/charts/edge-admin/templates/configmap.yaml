@@ -54,3 +54,11 @@ data:
   # Metrics — base URL this admin instance uses for self-referential metrics aggregation
   # In k8s this is the ClusterIP service name + port
   METRICS_BASE_URL: {{ .Values.config.metricsBaseUrl | quote }}
+
+  # Event Broker — disabled by default, broker deployed separately
+  EVENT_BROKER_ENABLED: {{ .Values.config.eventBrokerEnabled | quote }}
+  EVENT_BROKER_ADAPTER: {{ .Values.config.eventBrokerAdapter | quote }}
+  {{- if .Values.config.eventBrokerUrls }}
+  EVENT_BROKER_URLS: {{ .Values.config.eventBrokerUrls | quote }}
+  {{- end }}
+  CORE_NAME: {{ .Values.config.coreName | quote }}

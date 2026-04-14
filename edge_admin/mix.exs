@@ -145,6 +145,10 @@ defmodule EdgeAdmin.Mixfile do
       # Erlang Distribution
       {:syn, "~> 3.4"},
 
+      # Event Streaming
+      {:gnat, "~> 1.13"},
+      {:brod, "~> 3.16"},
+
       # Nexmaker library
       {:nexmaker, path: "../nexmaker"}
     ]

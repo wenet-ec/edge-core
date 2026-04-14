@@ -230,3 +230,104 @@ config :os_mon,
 config :sentry,
   dsn: get_env("SENTRY_DSN"),
   environment_name: get_env("SENTRY_ENVIRONMENT_NAME")
+
+# =============================================================================
+# Event Broker
+# =============================================================================
+# Set EVENT_BROKER_ENABLED=true to enable. When disabled (default), all
+# publish calls are immediate no-ops — no connections, no processes started.
+#
+# When enabled, EVENT_BROKER_ADAPTER and EVENT_BROKER_URLS are required.
+#
+# NATS JetStream:
+#   EVENT_BROKER_ENABLED=true
+#   EVENT_BROKER_ADAPTER=nats_js
+#   EVENT_BROKER_URLS=nats://edge_event_broker_nats:4222          # comma-separated for cluster
+#   EVENT_BROKER_NATS_TOKEN=    # optional, set if NATS auth is enabled
+#
+# Kafka / Redpanda:
+#   EVENT_BROKER_ENABLED=true
+#   EVENT_BROKER_ADAPTER=kafka
+#   EVENT_BROKER_URLS=edge_event_broker_kafka:9092                # comma-separated for cluster
+#   EVENT_BROKER_KAFKA_USERNAME=admin    # optional, omit if no auth
+#   EVENT_BROKER_KAFKA_PASSWORD=secret   # optional, omit if no auth
+#   EVENT_BROKER_KAFKA_SASL_MECHANISM=plain   # plain (default), scram_sha_256, scram_sha_512
+#   EVENT_BROKER_KAFKA_SSL=true          # enable TLS — required for external brokers
+#
+# Core identifier — included in every event envelope for multi-core setups:
+#   CORE_NAME=prod-us
+
+if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
+  event_broker_adapter =
+    case get_env!("EVENT_BROKER_ADAPTER") do
+      "nats_js" -> :nats_js
+      "kafka" -> :kafka
+      other -> raise "Unknown EVENT_BROKER_ADAPTER=#{other} — valid values: nats_js, kafka"
+    end
+
+  event_broker_urls = get_env!("EVENT_BROKER_URLS")
+
+  config :edge_admin,
+    event_broker_enabled: true,
+    event_broker_adapter: event_broker_adapter,
+    core_name: get_env("CORE_NAME", :string, "default")
+
+  case event_broker_adapter do
+    :nats_js ->
+      # Parse "nats://host:port" or "nats://host1:port1,nats://host2:port2"
+      urls =
+        event_broker_urls
+        |> String.split(",")
+        |> Enum.map(&String.trim/1)
+
+      config :edge_admin, :event_broker_nats,
+        urls: urls,
+        token: get_env("EVENT_BROKER_NATS_TOKEN")
+
+    :kafka ->
+      # Parse "host:port" or "host1:port1,host2:port2"
+      brokers =
+        event_broker_urls
+        |> String.split(",")
+        |> Enum.map(fn endpoint ->
+          [host, port_str] = String.split(String.trim(endpoint), ":")
+          {host, String.to_integer(port_str)}
+        end)
+
+      kafka_username = get_env("EVENT_BROKER_KAFKA_USERNAME")
+      kafka_password = get_env("EVENT_BROKER_KAFKA_PASSWORD")
+
+      kafka_sasl_mechanism =
+        case get_env("EVENT_BROKER_KAFKA_SASL_MECHANISM", :string, "plain") do
+          "plain" ->
+            :plain
+
+          "scram_sha_256" ->
+            :scram_sha_256
+
+          "scram_sha_512" ->
+            :scram_sha_512
+
+          other ->
+            raise "Unknown EVENT_BROKER_KAFKA_SASL_MECHANISM=#{other} — valid values: plain, scram_sha_256, scram_sha_512"
+        end
+
+      sasl_opts =
+        if kafka_username && kafka_password do
+          [sasl: {kafka_sasl_mechanism, kafka_username, kafka_password}]
+        else
+          []
+        end
+
+      ssl_opts =
+        if get_env("EVENT_BROKER_KAFKA_SSL", :boolean, false) do
+          [ssl: true]
+        else
+          []
+        end
+
+      config :edge_admin, :event_broker_kafka,
+        brokers: brokers,
+        client_config: sasl_opts ++ ssl_opts
+  end
+end

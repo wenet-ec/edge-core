@@ -33,6 +33,14 @@ defmodule EdgeAdmin.Application do
   # Private Helpers
   # ===========================================================================
 
+  defp event_broker_children do
+    if Application.get_env(:edge_admin, :event_broker_enabled, false) do
+      [EdgeAdmin.EventBroker.Supervisor]
+    else
+      []
+    end
+  end
+
   defp runtime_mode do
     case System.get_env("EDGE_ADMIN_MODE") do
       "task" -> :task
@@ -75,6 +83,6 @@ defmodule EdgeAdmin.Application do
       EdgeAdmin.ProxyServers,
       {EdgeAdmin.MCP.Server, transport: :streamable_http},
       EdgeAdminWeb.Endpoint
-    ]
+    ] ++ event_broker_children()
   end
 end

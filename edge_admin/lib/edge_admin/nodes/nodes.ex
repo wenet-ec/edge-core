@@ -125,6 +125,8 @@ defmodule EdgeAdmin.Nodes do
   import Ecto.Query, warn: false
 
   alias Ecto.Query.CastError
+  alias EdgeAdmin.EventBroker
+  alias EdgeAdmin.EventBroker.Events
   alias EdgeAdmin.Nodes.Checks
   alias EdgeAdmin.Nodes.Forms
   alias EdgeAdmin.Nodes.Schemas.Alias
@@ -735,6 +737,12 @@ defmodule EdgeAdmin.Nodes do
           updated_node = Repo.preload(updated_node, [:cluster, aliases: :cluster], force: true)
           broadcast_metadata_event({:node_updated, node.id, old_cluster_id, new_cluster.id})
           sync_node_cluster_networks(node, new_cluster)
+
+          EventBroker.publish(%Events.NodeClusterChanged{
+            node: updated_node,
+            previous_cluster_name: node.cluster.name
+          })
+
           {:ok, updated_node}
 
         {:error, changeset} ->
@@ -820,6 +828,7 @@ defmodule EdgeAdmin.Nodes do
     case Repo.delete(node) do
       {:ok, deleted_node} ->
         broadcast_metadata_event({:node_deleted, node.id, node.cluster_id})
+        EventBroker.publish(%Events.NodeDeleted{node: deleted_node})
         {:ok, deleted_node}
 
       {:error, changeset} ->
@@ -910,7 +919,22 @@ defmodule EdgeAdmin.Nodes do
 
     case result do
       {:ok, node} ->
-        if is_new_node, do: broadcast_metadata_event({:node_created, node_id, cluster.id})
+        node = Repo.preload(node, [:cluster], force: true)
+
+        if is_new_node do
+          broadcast_metadata_event({:node_created, node_id, cluster.id})
+          EventBroker.publish(%Events.NodeRegistered{node: node})
+        else
+          EventBroker.publish(%Events.NodeReregistered{node: node})
+
+          if existing_node.version != node_attrs.version do
+            EventBroker.publish(%Events.NodeVersionChanged{
+              node: node,
+              previous_version: existing_node.version
+            })
+          end
+        end
+
         {:ok, node}
 
       {:error, changeset} ->
@@ -1038,11 +1062,13 @@ defmodule EdgeAdmin.Nodes do
         case Req.get(url, receive_timeout: timeout, connect_options: [timeout: timeout], retry: false) do
           {:ok, %{status: 200}} ->
             update_node(node, %{status: "healthy", last_seen_at: now})
+            maybe_publish_status_changed(node, "healthy")
             :healthy
 
           {:ok, %{status: 503}} ->
             Logger.warning("Node #{node.id} is unhealthy (503 response)")
             update_node(node, %{status: "unhealthy", last_seen_at: now})
+            maybe_publish_status_changed(node, "unhealthy")
             :unhealthy
 
           _ ->
@@ -1079,11 +1105,21 @@ defmodule EdgeAdmin.Nodes do
     if should_mark_unreachable do
       Logger.warning("Node #{node.id} is unreachable (no contact for > 5 minutes)")
       update_node(node, %{status: "unreachable"})
+      maybe_publish_status_changed(node, "unreachable")
       :unreachable
     else
       Logger.debug("Node #{node.id} ping failed but last_seen_at is recent, keeping status: #{node.status}")
       # Keep existing status - might be using HTTP fallback
       String.to_existing_atom(node.status)
+    end
+  end
+
+  defp maybe_publish_status_changed(node, new_status) do
+    if node.status != new_status do
+      EventBroker.publish(%Events.NodeStatusChanged{
+        node: %{node | status: new_status},
+        previous_status: node.status
+      })
     end
   end
 

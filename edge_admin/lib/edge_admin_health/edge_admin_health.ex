@@ -10,6 +10,7 @@ defmodule EdgeAdminHealth do
   - Netmaker API reachability
   - Netclient connection to admin cluster network
   - Proxy servers
+  - Event broker connection (only when EVENT_BROKER_ENABLED=true)
 
   Returns 503 Service Unavailable if any check fails.
   """
@@ -19,7 +20,7 @@ defmodule EdgeAdminHealth do
   @health_check_error_code 503
 
   def checks do
-    [
+    base = [
       %PlugCheckup.Check{name: "Database", module: __MODULE__, function: :database_health},
       %PlugCheckup.Check{name: "Bootstrap", module: __MODULE__, function: :bootstrap_health},
       %PlugCheckup.Check{name: "Metadata", module: __MODULE__, function: :metadata_health},
@@ -27,6 +28,12 @@ defmodule EdgeAdminHealth do
       %PlugCheckup.Check{name: "Netclient", module: __MODULE__, function: :netclient_health},
       %PlugCheckup.Check{name: "Proxy Servers", module: __MODULE__, function: :proxy_servers_health}
     ]
+
+    if Application.get_env(:edge_admin, :event_broker_enabled, false) do
+      base ++ [%PlugCheckup.Check{name: "Event Broker", module: __MODULE__, function: :event_broker_health}]
+    else
+      base
+    end
   end
 
   def error_code, do: @health_check_error_code
@@ -104,5 +111,9 @@ defmodule EdgeAdminHealth do
     else
       {:error, "Proxy servers not initialized"}
     end
+  end
+
+  def event_broker_health do
+    EdgeAdmin.EventBroker.healthy?()
   end
 end

@@ -181,6 +181,30 @@ ADMIN_DISCOVERY_PORT=44000
 
 
 # =============================================================================
+# Event Broker
+# =============================================================================
+# Set EVENT_BROKER_ENABLED=true to enable. Disabled by default — all publish
+# calls are no-ops when disabled.
+
+EVENT_BROKER_ENABLED=true
+
+# NATS JetStream:
+EVENT_BROKER_ADAPTER=nats_js
+EVENT_BROKER_URLS=nats://edge_event_broker_nats:4222   # internal Docker: nats://  — use tls:// for public/external broker
+# EVENT_BROKER_NATS_TOKEN=   # Set if NATS auth is enabled
+
+# Kafka / Redpanda (uncomment to use, comment out nats above):
+# EVENT_BROKER_ADAPTER=kafka
+# EVENT_BROKER_URLS=edge_event_broker_kafka:9092   # comma-separated for cluster
+# EVENT_BROKER_KAFKA_USERNAME=
+# EVENT_BROKER_KAFKA_PASSWORD=
+# EVENT_BROKER_KAFKA_SASL_MECHANISM=plain   # plain (default), scram_sha_256, scram_sha_512
+# EVENT_BROKER_KAFKA_SSL=true               # enable TLS — required for public/external brokers (Redpanda Cloud, Confluent Cloud, Aiven, etc.)
+
+# Core identifier — included in every event envelope for multi-core broker setups. Default to "default"
+# CORE_NAME=
+
+# =============================================================================
 # Background Workers & Schedulers
 # =============================================================================
 

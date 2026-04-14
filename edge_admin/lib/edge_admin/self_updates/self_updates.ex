@@ -33,6 +33,8 @@ defmodule EdgeAdmin.SelfUpdates do
 
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.EdgeClusters.Gateway
+  alias EdgeAdmin.EventBroker
+  alias EdgeAdmin.EventBroker.Events
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
@@ -83,6 +85,7 @@ defmodule EdgeAdmin.SelfUpdates do
          changeset = SelfUpdateRequest.changeset(%SelfUpdateRequest{}, validated_attrs),
          {:ok, request} <- Repo.insert(changeset) do
       enqueue_trigger_worker(request)
+      EventBroker.publish(%Events.SelfUpdateCreated{request: request})
       {:ok, request}
     end
   end
@@ -231,10 +234,11 @@ defmodule EdgeAdmin.SelfUpdates do
     if Enum.empty?(nodes) do
       Logger.info("No matching nodes found for self-update request #{request_id}")
 
-      update_self_update_request(request, %{
-        status: "completed",
-        summary: %{total: 0, triggered: 0, failed: 0}
-      })
+      {:ok, completed_request} =
+        update_self_update_request(request, %{
+          status: "completed",
+          summary: %{total: 0, triggered: 0, failed: 0}
+        })
 
       :telemetry.execute(
         [:edge_admin, :self_updates, :request_completed],
@@ -242,6 +246,7 @@ defmodule EdgeAdmin.SelfUpdates do
         %{targeting_type: targeting_type}
       )
 
+      EventBroker.publish(%Events.SelfUpdateCompleted{request: completed_request})
       :ok
     else
       Logger.info("Triggering self-update for #{length(nodes)} nodes (targeting type: #{targeting_type})")
@@ -251,11 +256,11 @@ defmodule EdgeAdmin.SelfUpdates do
         case targeting_type do
           "nodes" ->
             # For "nodes" targeting: lookup each node individually via Metadata
-            trigger_updates_for_nodes(nodes)
+            trigger_updates_for_nodes(nodes, request_id)
 
           _ ->
             # For "all" and "clusters": group by cluster and use cluster info
-            trigger_updates_for_clusters(nodes)
+            trigger_updates_for_clusters(nodes, request_id)
         end
 
       # Aggregate results
@@ -269,13 +274,14 @@ defmodule EdgeAdmin.SelfUpdates do
       }
 
       # Update request with summary
-      {:ok, _} =
+      {:ok, completed_request} =
         update_self_update_request(request, %{
           status: "completed",
           summary: summary
         })
 
       Logger.info("Self-update request #{request_id} completed: #{inspect(summary)}")
+      EventBroker.publish(%Events.SelfUpdateCompleted{request: completed_request})
 
       :telemetry.execute(
         [:edge_admin, :self_updates, :request_completed],
@@ -502,7 +508,7 @@ defmodule EdgeAdmin.SelfUpdates do
   end
 
   # Trigger updates for "nodes" targeting - lookup each node individually via Metadata
-  defp trigger_updates_for_nodes(nodes) do
+  defp trigger_updates_for_nodes(nodes, request_id) do
     tasks =
       Enum.map(nodes, fn node ->
         Task.async(fn ->
@@ -513,6 +519,7 @@ defmodule EdgeAdmin.SelfUpdates do
                {:ok, gateway_pid} <- Gateway.lookup(cluster_name),
                :ok <- Gateway.trigger_self_update(gateway_pid, node) do
             Logger.info("Triggered self-update for node #{node_name}")
+            EventBroker.publish(%Events.NodeUpdateTriggered{node: node, self_update_request_id: request_id})
             :ok
           else
             {:error, :self_update_disabled} ->
@@ -539,7 +546,7 @@ defmodule EdgeAdmin.SelfUpdates do
   end
 
   # Trigger updates for "all" and "clusters" targeting - use cluster.network_name directly
-  defp trigger_updates_for_clusters(nodes) do
+  defp trigger_updates_for_clusters(nodes, request_id) do
     # Group nodes by cluster
     nodes_by_cluster = Enum.group_by(nodes, & &1.cluster)
 
@@ -559,6 +566,7 @@ defmodule EdgeAdmin.SelfUpdates do
                 case Gateway.trigger_self_update(gateway_pid, node) do
                   :ok ->
                     Logger.info("Triggered self-update for node #{Node.node_name(node)}")
+                    EventBroker.publish(%Events.NodeUpdateTriggered{node: node, self_update_request_id: request_id})
                     :ok
 
                   {:error, :self_update_disabled} ->

@@ -58,6 +58,10 @@ services:
     extra_hosts:
       - "edge-vpn.localtest.me:172.20.0.101"
       - "edge-vpn-broker.localtest.me:172.20.0.101"
+      # Both brokers resolve via /etc/hosts — bypasses Docker DNS which netclient breaks
+      # by rewriting /etc/resolv.conf on VPN join.
+      - "edge_event_broker_nats:172.20.0.109"
+      - "edge_event_broker_kafka:172.20.0.110"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -100,6 +104,10 @@ services:
     extra_hosts:
       - "edge-vpn.localtest.me:172.20.0.101"
       - "edge-vpn-broker.localtest.me:172.20.0.101"
+      # Both brokers resolve via /etc/hosts — bypasses Docker DNS which netclient breaks
+      # by rewriting /etc/resolv.conf on VPN join.
+      - "edge_event_broker_nats:172.20.0.109"
+      - "edge_event_broker_kafka:172.20.0.110"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -146,6 +154,10 @@ services:
     extra_hosts:
       - "edge-vpn.localtest.me:172.20.0.101"
       - "edge-vpn-broker.localtest.me:172.20.0.101"
+      # Both brokers resolve via /etc/hosts — bypasses Docker DNS which netclient breaks
+      # by rewriting /etc/resolv.conf on VPN join.
+      - "edge_event_broker_nats:172.20.0.109"
+      - "edge_event_broker_kafka:172.20.0.110"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -427,12 +439,13 @@ services:
       - "-envflag.enable"
       - "-envflag.prefix=VM_"
 
-  # Event Broker
+  # Event Brokers
   edge_event_broker_nats:
     image: nats:alpine
     container_name: local_edge_event_broker_nats
     networks:
-      - local_edge_core
+      local_edge_core:
+        ipv4_address: 172.20.0.109
     volumes:
       - local_edge_event_broker_nats_data:/data
       - ../../deploy/production/compose/edge_event_broker/nats.conf:/etc/nats/nats.conf:ro
@@ -464,46 +477,47 @@ services:
       - --db-path=/db/nui.db
       - --nats-cli-contexts=/clicontexts
 
-  # edge_event_broker_kafka:
-  #   container_name: local_edge_event_broker_kafka
-  #   image: docker.redpanda.com/redpandadata/redpanda:latest
-  #   volumes:
-  #     - local_edge_event_broker_redpanda_data:/var/lib/redpanda/data
-  #   networks:
-  #     - local_edge_core
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy|Degraded'"]
-  #     interval: 10s
-  #     timeout: 3s
-  #     retries: 5
-  #     start_period: 5s
-  #   ports:
-  #     - "49092:19092"   # Kafka external
-  #   command:
-  #     - redpanda
-  #     - start
-  #     - --mode dev-container
-  #     - --smp 1
-  #     - --memory 1G
-  #     - --node-id 1
-  #     - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
-  #     - --advertise-kafka-addr internal://edge_event_broker_kafka:9092,external://localhost:19092
-  #     - --rpc-addr 0.0.0.0:33145
-  #     - --advertise-rpc-addr edge_event_broker_kafka:33145
-  #     - --set redpanda.default_topic_replications=1
-  #     - --set redpanda.default_topic_partitions=1
+  edge_event_broker_kafka:
+    container_name: local_edge_event_broker_kafka
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    volumes:
+      - local_edge_event_broker_redpanda_data:/var/lib/redpanda/data
+    networks:
+      local_edge_core:
+        ipv4_address: 172.20.0.110
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy|Degraded'"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    ports:
+      - "49092:19092"   # Kafka external
+    command:
+      - redpanda
+      - start
+      - --mode dev-container
+      - --smp 1
+      - --memory 1G
+      - --node-id 1
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://edge_event_broker_kafka:9092,external://localhost:19092
+      - --rpc-addr 0.0.0.0:33145
+      - --advertise-rpc-addr edge_event_broker_kafka:33145
+      - --set redpanda.default_topic_replications=1
+      - --set redpanda.default_topic_partitions=1
   
-  # edge_event_broker_kafka_ui:
-  #   container_name: local_edge_event_broker_kafka_ui
-  #   image: docker.redpanda.com/redpandadata/console:latest
-  #   networks:
-  #     - local_edge_core
-  #   depends_on:
-  #     edge_event_broker_kafka:
-  #       condition: service_healthy
-  #   environment:
-  #     - KAFKA_BROKERS=edge_event_broker_kafka:9092
-  #     - ANALYTICS_ENABLED=false
-  #     - LOGGER_LEVEL=warn
-  #   ports:
-  #     - "49080:8080"   # Redpanda Console
+  edge_event_broker_kafka_ui:
+    container_name: local_edge_event_broker_kafka_ui
+    image: docker.redpanda.com/redpandadata/console:latest
+    networks:
+      - local_edge_core
+    depends_on:
+      edge_event_broker_kafka:
+        condition: service_healthy
+    environment:
+      - KAFKA_BROKERS=edge_event_broker_kafka:9092
+      - ANALYTICS_ENABLED=false
+      - LOGGER_LEVEL=warn
+    ports:
+      - "49080:8080"   # Redpanda Console

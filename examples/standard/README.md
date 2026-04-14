@@ -1,6 +1,6 @@
 # Edge Core — Standard Setup
 
-A full production-grade deployment of Edge Core with 4 admin instances across 2 clusters, PostgreSQL-backed Netmaker, EMQX broker, and a complete metrics stack.
+A multi-admin deployment of Edge Core with 4 admin instances across 2 clusters, PostgreSQL-backed Netmaker, EMQX broker, and a complete metrics stack. Use this when you need resilience (if one admin goes down the others keep running) or more node capacity.
 
 **What's included:**
 
@@ -19,16 +19,16 @@ Cluster A: edge_admin_a1 + edge_admin_a2  →  subnet 100.63.0.0/24
 Cluster B: edge_admin_b1 + edge_admin_b2  →  subnet 100.63.1.0/24
 ```
 
-Each admin instance is a peer — there is no primary/replica or leader/follower relationship. Instances within the same cluster form an Erlang peer mesh over the VPN and share the same PostgreSQL database. Each cluster independently owns and manages its own set of edge nodes. Multiple clusters mean more total capacity and more HA — clusters do not coordinate with each other.
+Each admin instance is a peer — there is no primary/replica or leader/follower relationship. Instances within the same cluster form an Erlang peer mesh over the VPN and share the same PostgreSQL database. Each cluster independently owns and manages its own set of edge nodes. Multiple clusters mean more total capacity — clusters do not coordinate with each other.
 
 ## Requirements
 
 - A Linux server with Docker and Docker Compose installed
-- Ports open to the internet:
-  - `48081` — Netmaker API
+- Three ports reachable from every agent machine (private IP or public — either works):
+  - `48081` — Netmaker VPN API
   - `48083` — EMQX WebSocket / MQTT
   - `34000`–`34003` — Admin APIs (one per instance)
-- A domain with DNS records pointing to this server (for Caddy TLS)
+- Optional: a domain name if you want TLS (Caddy handles certs automatically)
 
 ## Quick Start
 
@@ -37,9 +37,9 @@ Each admin instance is a peer — there is no primary/replica or leader/follower
 ```bash
 # 1. Copy and edit the env file
 cp .env.example .env
-nano .env   # fill in your domain, secrets, and passwords
+nano .env   # fill in your server address, secrets, and passwords
 
-# 2. Edit configs/Caddyfile — replace yourdomain.com with your actual domain
+# 2. If using a domain with TLS: edit configs/Caddyfile — replace yourdomain.com
 
 # 3. Edit configs/prometheus.yml — replace the metrics key with your METRICS_KEY
 
@@ -67,7 +67,7 @@ All configuration lives in a single `.env` file. Copy `.env.example` to `.env` a
 
 Key things to configure:
 
-- Replace all `your-server-ip-or-domain.com` with your actual domain
+- Replace all `your-server-ip-or-domain.com` with your actual server address (private IP or public domain, both work)
 - Replace all `change-me` with strong random values
 - `SECRET_KEY_BASE` — generate with `openssl rand -base64 48`
 - `MASTER_KEY` — omnipotent key, fallback for all scoped keys
@@ -75,8 +75,20 @@ Key things to configure:
 - `METRICS_KEY` — scoped to metrics scrapers (optional, defaults to `MASTER_KEY`)
 - `VPN_CLUSTER_COOKIE` — must be the same across all 4 admin instances
 - `MQ_PASSWORD` and `EMQX_DASHBOARD_PASSWORD` — must match each other
-- Update `configs/Caddyfile` with your actual domain names
 - Update `configs/prometheus.yml` with your actual `METRICS_KEY`
+- If using a domain with TLS: update `configs/Caddyfile` with your domain names
+
+### Private network (no TLS)?
+
+If you're using a plain IP address without TLS, add this to your `.env`:
+
+```env
+NETMAKER_API_SCHEME=http
+```
+
+Set this on **both** the server (`.env` used by `cloud.yml`) and the agent (`.env` used by `edge.yml`). Without it, netclient will try HTTPS and fail even though the server is running plain HTTP.
+
+A plain IP address works fine for `SERVER_HOST`, `SERVER_HTTP_HOST`, and `SERVER_API_CONN_STRING` when using HTTP. If you're using HTTPS (Caddy with a TLS cert), these must be a proper hostname — the TLS cert won't match a bare IP.
 
 ## Event Broker (optional)
 

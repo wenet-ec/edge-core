@@ -4,12 +4,12 @@ This directory contains ready-to-use Docker Compose deployment examples. If you 
 
 ## Available Examples
 
-| Example                  | Use case                                                                                               |
-| ------------------------ | ------------------------------------------------------------------------------------------------------ |
-| [`lite/`](lite/)         | Single admin, Mosquitto broker, SQLite-backed Netmaker. Homelab / hobbyist.                            |
-| [`standard/`](standard/) | 4 admin instances across 2 clusters, EMQX, PostgreSQL-backed Netmaker, full metrics stack. Production. |
-| [`sidecar/`](sidecar/)   | Agent deployed as a sidecar container on bridge networking (instead of host networking).               |
-| [`relay/`](relay/)       | DERP relay server for NAT traversal between admin and agents.                                          |
+| Example                  | Use case                                                                                                                                             |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`lite/`](lite/)         | Single admin, Mosquitto broker, SQLite-backed Netmaker. Homelab / hobbyist.                                                                          |
+| [`standard/`](standard/) | 4 admin instances across 2 clusters, EMQX, PostgreSQL-backed Netmaker, full metrics stack. Production.                                               |
+| [`sidecar/`](sidecar/)   | Agent deployed as a sidecar container on bridge networking (instead of host networking).                                                             |
+| [`relay/`](relay/)       | Self-hosted DERP relay for lower latency or full infra ownership. Not required for NAT traversal — the default Tailscale relay already handles that. |
 
 ## Version Pinning — Important
 
@@ -67,7 +67,40 @@ The examples contain everything needed for a standard deployment. For deeper con
 
 ## Choosing an Example
 
-- **First time / testing**: start with `lite/`. One server, minimal moving parts.
-- **Production**: use `standard/`. Multiple admin instances mean if one goes down, the others keep managing nodes. More clusters = more total node capacity.
-- **Agent on a machine running other containers**: use `sidecar/` as a reference — it shows how to run the agent on bridge networking instead of host networking.
-- **Agents behind strict NAT**: add `relay/` — deploys a DERP relay so admin and agents can reach each other even without direct UDP connectivity.
+**lite/ or standard/ — which one?**
+
+The choice is about scale and resilience, not about whether your deployment is private or public:
+
+- **`lite/`** — one admin instance, Mosquitto, SQLite-backed Netmaker. Start here if you want minimal moving parts: small fleet, first deployment, or a machine with limited RAM.
+- **`standard/`** — four admin instances across two clusters, EMQX, PostgreSQL-backed Netmaker, metrics stack. Use this when you need HA (if one admin goes down the others keep running) or more node capacity (each cluster can own up to 200 nodes, multiply by cluster count).
+
+**Private network or public internet — does it matter?**
+
+No. Both examples work identically on a private network (LAN, internal VPC, corporate WAN) or with public internet exposure. The only thing that changes is what value you put in `ADMIN_URLS` and the Netmaker `SERVER_HOST` variables — a private IP works just as well as a public domain.
+
+For agents to enroll and operate, three things must be reachable from every agent machine:
+
+1. **Netmaker VPN API** — port `48081` (enrollment + WireGuard peer sync)
+2. **MQTT broker** — port `48083` (Mosquitto or EMQX WebSocket; ongoing VPN config updates)
+3. **Admin API** — port `34000` (or `34000–34003` for standard; command delivery + health reporting)
+
+These can all be on a private network — the agent does not need a public IP, and neither does the server, as long as these three ports are routable between them.
+
+**HTTP vs HTTPS — the `NETMAKER_API_SCHEME` variable**
+
+Netclient (the VPN client bundled in the agent) defaults to HTTPS when talking to the Netmaker API. If your deployment does **not** have TLS (no domain, no cert, plain HTTP) you must set:
+
+```env
+NETMAKER_API_SCHEME=http
+```
+
+This must be set on **both** the admin and the agent. If you omit it, netclient will try HTTPS and fail even if the server is running plain HTTP.
+
+- **Private network / no TLS** → set `NETMAKER_API_SCHEME=http` in your `.env`
+- **Public domain with TLS (Caddy auto-cert)** → omit it, HTTPS is the default
+
+**Other deployment patterns**
+
+- **Agent on a machine running other containers**: see `sidecar/` — shows how to run the agent on bridge networking instead of `network_mode: host`.
+- **Self-hosted DERP relay**: see `relay/` — deploy your own relay nodes for lower latency or to avoid depending on Tailscale's public relay infrastructure. Not required for NAT traversal (the default Tailscale fallback already handles that) — only worth it if you want geo-local relays or full infra ownership.
+- **Event streaming**: see `event_brokers/` — add NATS JetStream or Kafka/Redpanda to receive lifecycle events from the admin.

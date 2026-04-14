@@ -14,3 +14,16 @@ owner: "edge_admin_user"
 
 # Password for the owner user — override in prod values
 password: "changeme"
+
+# PgBouncer connection pooler (CNPG Pooler CRD)
+# Enable for deployments with many app instances sharing one PG cluster.
+# When enabled, point DB_HOST at <release-name>-pooler instead of <release-name>-rw.
+pooler:
+  enabled: false
+  instances: 2
+  # max_client_conn: sized for (admin_count × DB_POOL_SIZE) + headroom
+  maxClientConn: "1000"
+  # default_pool_size: physical PG connections — tune to actual concurrent transaction load
+  defaultPoolSize: "25"
+  minPoolSize: "5"
+  reservePoolSize: "5"

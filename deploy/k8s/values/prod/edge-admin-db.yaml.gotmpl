@@ -6,3 +6,15 @@ storage:
 database: "edge_admin_production"
 owner: "edge_admin_user"
 password: {{ requiredEnv "EDGE_ADMIN_DB_PASSWORD" | quote }}
+
+# PgBouncer pooler — enabled for edge-admin which scales to ~60 admin pods.
+# 60 admins x DB_POOL_SIZE(15) = 900 logical connections → pooled down to
+# default_pool_size(25) physical PG connections in transaction mode.
+# App connects to <release-name>-pooler, not <release-name>-rw directly.
+pooler:
+  enabled: true
+  instances: 2
+  maxClientConn: "1000"
+  defaultPoolSize: "25"
+  minPoolSize: "5"
+  reservePoolSize: "5"

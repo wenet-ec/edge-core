@@ -1,9 +1,9 @@
-# edge_admin/lib/edge_admin_web/plugs/render_public_spec.ex
-defmodule EdgeAdminWeb.Plugs.RenderPublicSpec do
+# edge_admin/lib/edge_admin_web/plugs/render_open_api_spec.ex
+defmodule EdgeAdminWeb.Plugs.RenderOpenApiSpec do
   @moduledoc """
   Renders the OpenAPI spec with Internal.* tagged paths removed.
 
-  ApiSpec (full spec) is kept intact for CastAndValidate operationId lookup.
+  OpenApiSpec (full spec) is kept intact for CastAndValidate operationId lookup.
   This plug filters on the fly before rendering so SwaggerUI/ReDoc only show
   public endpoints.
   """
@@ -18,7 +18,7 @@ defmodule EdgeAdminWeb.Plugs.RenderPublicSpec do
   @impl Plug
   def call(conn, _opts) do
     json =
-      EdgeAdminWeb.ApiSpec.spec()
+      EdgeAdminWeb.OpenApiSpec.spec()
       |> filter_internal_paths()
       |> filter_internal_schemas()
       |> OpenApiSpex.OpenApi.to_map()
@@ -39,7 +39,7 @@ defmodule EdgeAdminWeb.Plugs.RenderPublicSpec do
     ordered_paths =
       paths
       |> Enum.sort_by(fn {path, _} ->
-        Map.get(EdgeAdminWeb.ApiSpec.paths_order_index(), path, 999_999)
+        Map.get(EdgeAdminWeb.OpenApiSpec.paths_order_index(), path, 999_999)
       end)
       |> Enum.map(fn {path, path_item} -> {path, sort_verbs(path_item)} end)
 

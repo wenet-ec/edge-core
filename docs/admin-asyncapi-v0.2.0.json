@@ -1,0 +1,1175 @@
+{
+  "asyncapi": "3.1.0",
+  "channels": {
+    "edge.node.registered": {
+      "address": "edge.node.registered",
+      "description": "Node registered for the first time",
+      "messages": {
+        "node.registered": {
+          "$ref": "#/components/messages/nodeRegisteredMessage"
+        }
+      }
+    },
+    "edge.node.reregistered": {
+      "address": "edge.node.reregistered",
+      "description": "Node re-enrolled (reboot, redeploy, etc.)",
+      "messages": {
+        "node.reregistered": {
+          "$ref": "#/components/messages/nodeReregisteredMessage"
+        }
+      }
+    },
+    "edge.node.version_changed": {
+      "address": "edge.node.version_changed",
+      "description": "Node version changed alongside re-enrollment",
+      "messages": {
+        "node.version_changed": {
+          "$ref": "#/components/messages/nodeVersionChangedMessage"
+        }
+      }
+    },
+    "edge.node.status_changed": {
+      "address": "edge.node.status_changed",
+      "description": "Node health status transitioned",
+      "messages": {
+        "node.status_changed": {
+          "$ref": "#/components/messages/nodeStatusChangedMessage"
+        }
+      }
+    },
+    "edge.node.cluster_changed": {
+      "address": "edge.node.cluster_changed",
+      "description": "Node moved to a different cluster",
+      "messages": {
+        "node.cluster_changed": {
+          "$ref": "#/components/messages/nodeClusterChangedMessage"
+        }
+      }
+    },
+    "edge.node.update_triggered": {
+      "address": "edge.node.update_triggered",
+      "description": "Self-update signal sent to this node",
+      "messages": {
+        "node.update_triggered": {
+          "$ref": "#/components/messages/nodeUpdateTriggeredMessage"
+        }
+      }
+    },
+    "edge.node.deleted": {
+      "address": "edge.node.deleted",
+      "description": "Node removed from the system",
+      "messages": {
+        "node.deleted": { "$ref": "#/components/messages/nodeDeletedMessage" }
+      }
+    },
+    "edge.execution.created": {
+      "address": "edge.execution.created",
+      "description": "Execution record created and queued",
+      "messages": {
+        "execution.created": {
+          "$ref": "#/components/messages/executionCreatedMessage"
+        }
+      }
+    },
+    "edge.execution.sent": {
+      "address": "edge.execution.sent",
+      "description": "Execution delivered to agent and ACKed",
+      "messages": {
+        "execution.sent": {
+          "$ref": "#/components/messages/executionSentMessage"
+        }
+      }
+    },
+    "edge.execution.completed": {
+      "address": "edge.execution.completed",
+      "description": "Agent reported result",
+      "messages": {
+        "execution.completed": {
+          "$ref": "#/components/messages/executionCompletedMessage"
+        }
+      }
+    },
+    "edge.execution.cancelled": {
+      "address": "edge.execution.cancelled",
+      "description": "Execution cancelled (explicit or SIGTERM)",
+      "messages": {
+        "execution.cancelled": {
+          "$ref": "#/components/messages/executionCancelledMessage"
+        }
+      }
+    },
+    "edge.execution.expired": {
+      "address": "edge.execution.expired",
+      "description": "Execution swept as stale before running",
+      "messages": {
+        "execution.expired": {
+          "$ref": "#/components/messages/executionExpiredMessage"
+        }
+      }
+    },
+    "edge.self_update.created": {
+      "address": "edge.self_update.created",
+      "description": "Self-update request created",
+      "messages": {
+        "self_update.created": {
+          "$ref": "#/components/messages/selfUpdateCreatedMessage"
+        }
+      }
+    },
+    "edge.self_update.completed": {
+      "address": "edge.self_update.completed",
+      "description": "Self-update batch finished",
+      "messages": {
+        "self_update.completed": {
+          "$ref": "#/components/messages/selfUpdateCompletedMessage"
+        }
+      }
+    }
+  },
+  "components": {
+    "messages": {
+      "executionCancelledMessage": {
+        "bindings": {
+          "kafka": {
+            "bindingVersion": "0.5.0",
+            "key": {
+              "description": "Kafka partition key — `command_id` from the event data",
+              "type": "string"
+            }
+          }
+        },
+        "contentType": "application/json",
+        "examples": [
+          {
+            "name": "example",
+            "payload": {
+              "corename": "prod-us",
+              "data": {
+                "cancelled_at": "2026-04-13T10:00:05Z",
+                "cluster_name": "prod",
+                "command_id": "cmd-xyz789",
+                "command_text": "systemctl restart app",
+                "completed_at": null,
+                "execution_id": "exec-abc123",
+                "exit_code": 143,
+                "expired_at": null,
+                "inserted_at": "2026-04-13T10:00:00Z",
+                "node_id": "node-abc123",
+                "sent_at": "2026-04-13T10:00:01Z",
+                "status": "cancelled",
+                "target_all": false,
+                "timeout": 30000,
+                "updated_at": "2026-04-13T10:00:00Z"
+              },
+              "datacontenttype": "application/json",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "source": "https://github.com/wenet-ec/edge-core",
+              "specversion": "1.0",
+              "time": "2026-04-13T10:00:00Z",
+              "type": "execution.cancelled"
+            }
+          }
+        ],
+        "payload": { "$ref": "#/components/schemas/Envelope" },
+        "summary": "Execution cancelled (explicit or SIGTERM)"
+      },
+      "executionCompletedMessage": {
+        "bindings": {
+          "kafka": {
+            "bindingVersion": "0.5.0",
+            "key": {
+              "description": "Kafka partition key — `command_id` from the event data",
+              "type": "string"
+            }
+          }
+        },
+        "contentType": "application/json",
+        "examples": [
+          {
+            "name": "example",
+            "payload": {
+              "corename": "prod-us",
+              "data": {
+                "cancelled_at": null,
+                "cluster_name": "prod",
+                "command_id": "cmd-xyz789",
+                "command_text": "systemctl restart app",
+                "completed_at": "2026-04-13T10:00:03Z",
+                "execution_id": "exec-abc123",
+                "exit_code": 0,
+                "expired_at": null,
+                "inserted_at": "2026-04-13T10:00:00Z",
+                "node_id": "node-abc123",
+                "sent_at": "2026-04-13T10:00:01Z",
+                "status": "completed",
+                "target_all": false,
+                "timeout": 30000,
+                "updated_at": "2026-04-13T10:00:00Z"
+              },
+              "datacontenttype": "application/json",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "source": "https://github.com/wenet-ec/edge-core",
+              "specversion": "1.0",
+              "time": "2026-04-13T10:00:00Z",
+              "type": "execution.completed"
+            }
+          }
+        ],
+        "payload": { "$ref": "#/components/schemas/Envelope" },
+        "summary": "Agent reported result"
+      },
+      "executionCreatedMessage": {
+        "bindings": {
+          "kafka": {
+            "bindingVersion": "0.5.0",
+            "key": {
+              "description": "Kafka partition key — `command_id` from the event data",
+              "type": "string"
+            }
+          }
+        },
+        "contentType": "application/json",
+        "examples": [
+          {
+            "name": "example",
+            "payload": {
+              "corename": "prod-us",
+              "data": {
+                "cancelled_at": null,
+                "cluster_name": "prod",
+                "command_id": "cmd-xyz789",
+                "command_text": "systemctl restart app",
+                "completed_at": null,
+                "execution_id": "exec-abc123",
+                "exit_code": null,
+                "expired_at": null,
+                "inserted_at": "2026-04-13T10:00:00Z",
+                "node_id": "node-abc123",
+                "sent_at": null,
+                "status": "pending",
+                "target_all": false,
+                "timeout": 30000,
+                "updated_at": "2026-04-13T10:00:00Z"
+              },
+              "datacontenttype": "application/json",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "source": "https://github.com/wenet-ec/edge-core",
+              "specversion": "1.0",
+              "time": "2026-04-13T10:00:00Z",
+              "type": "execution.created"
+            }
+          }
+        ],
+        "payload": { "$ref": "#/components/schemas/Envelope" },
+        "summary": "Execution record created and queued"
+      },
+      "executionExpiredMessage": {
+        "bindings": {
+          "kafka": {
+            "bindingVersion": "0.5.0",
+            "key": {
+              "description": "Kafka partition key — `command_id` from the event data",
+              "type": "string"
+            }
+          }
+        },
+        "contentType": "application/json",
+        "examples": [
+          {
+            "name": "example",
+            "payload": {
+              "corename": "prod-us",
+              "data": {
+                "cancelled_at": null,
+                "cluster_name": "prod",
+                "command_id": "cmd-xyz789",
+                "command_text": "systemctl restart app",
+                "completed_at": null,
+                "execution_id": "exec-abc123",
+                "exit_code": null,
+                "expired_at": "2026-04-13T10:05:00Z",
+                "inserted_at": "2026-04-13T10:00:00Z",
+                "node_id": "node-abc123",
+                "sent_at": null,
+                "status": "expired",
+                "target_all": false,
+                "timeout": 30000,
+                "updated_at": "2026-04-13T10:00:00Z"
+              },
+              "datacontenttype": "application/json",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "source": "https://github.com/wenet-ec/edge-core",
+              "specversion": "1.0",
+              "time": "2026-04-13T10:00:00Z",
+              "type": "execution.expired"
+            }
+          }
+        ],
+        "payload": { "$ref": "#/components/schemas/Envelope" },
+        "summary": "Execution swept as stale before running"
+      },
+      "executionSentMessage": {
+        "bindings": {
+          "kafka": {
+            "bindingVersion": "0.5.0",
+            "key": {
+              "description": "Kafka partition key — `command_id` from the event data",
+              "type": "string"
+            }
+          }
+        },
+        "contentType": "application/json",
+        "examples": [
+          {
+            "name": "example",
+            "payload": {
+              "corename": "prod-us",
+              "data": {
+                "cancelled_at": null,
+                "cluster_name": "prod",
+                "command_id": "cmd-xyz789",
+                "command_text": "systemctl restart app",
+                "completed_at": null,
+                "execution_id": "exec-abc123",
+                "exit_code": null,
+                "expired_at": null,
+                "inserted_at": "2026-04-13T10:00:00Z",
+                "node_id": "node-abc123",
+                "sent_at": "2026-04-13T10:00:01Z",
+                "status": "sent",
+                "target_all": false,
+                "timeout": 30000,
+                "updated_at": "2026-04-13T10:00:00Z"
+              },
+              "datacontenttype": "application/json",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "source": "https://github.com/wenet-ec/edge-core",
+              "specversion": "1.0",
+              "time": "2026-04-13T10:00:00Z",
+              "type": "execution.sent"
+            }
+          }
+        ],
+        "payload": { "$ref": "#/components/schemas/Envelope" },
+        "summary": "Execution delivered to agent and ACKed"
+      },
+      "nodeClusterChangedMessage": {
+        "bindings": {
+          "kafka": {
+            "bindingVersion": "0.5.0",
+            "key": {
+              "description": "Kafka partition key — `node_id` from the event data",
+              "type": "string"
+            }
+          }
+        },
+        "contentType": "application/json",
+        "examples": [
+          {
+            "name": "example",
+            "payload": {
+              "corename": "prod-us",
+              "data": {
+                "cluster_name": "prod",
+                "host_metrics_port": 9100,
+                "http_port": 44000,
+                "http_proxy_port": 44001,
+                "id_type": "hostname",
+                "inserted_at": "2026-04-13T09:00:00Z",
+                "last_seen_at": "2026-04-13T10:00:00Z",
+                "node_id": "node-abc123",
+                "previous_cluster_name": "staging",
+                "self_update_enabled": true,
+                "socks5_proxy_port": 44002,
+                "ssh_port": 40022,
+                "status": "healthy",
+                "updated_at": "2026-04-13T10:00:00Z",
+                "version": "1.2.0",
+                "wireguard_metrics_port": 9101
+              },
+              "datacontenttype": "application/json",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "source": "https://github.com/wenet-ec/edge-core",
+              "specversion": "1.0",
+              "time": "2026-04-13T10:00:00Z",
+              "type": "node.cluster_changed"
+            }
+          }
+        ],
+        "payload": { "$ref": "#/components/schemas/Envelope" },
+        "summary": "Node moved to a different cluster"
+      },
+      "nodeDeletedMessage": {
+        "bindings": {
+          "kafka": {
+            "bindingVersion": "0.5.0",
+            "key": {
+              "description": "Kafka partition key — `node_id` from the event data",
+              "type": "string"
+            }
+          }
+        },
+        "contentType": "application/json",
+        "examples": [
+          {
+            "name": "example",
+            "payload": {
+              "corename": "prod-us",
+              "data": {
+                "cluster_name": "prod",
+                "host_metrics_port": 9100,
+                "http_port": 44000,
+                "http_proxy_port": 44001,
+                "id_type": "hostname",
+                "inserted_at": "2026-04-13T09:00:00Z",
+                "last_seen_at": "2026-04-13T10:00:00Z",
+                "node_id": "node-abc123",
+                "self_update_enabled": true,
+                "socks5_proxy_port": 44002,
+                "ssh_port": 40022,
+                "status": "healthy",
+                "updated_at": "2026-04-13T10:00:00Z",
+                "version": "1.2.0",
+                "wireguard_metrics_port": 9101
+              },
+              "datacontenttype": "application/json",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "source": "https://github.com/wenet-ec/edge-core",
+              "specversion": "1.0",
+              "time": "2026-04-13T10:00:00Z",
+              "type": "node.deleted"
+            }
+          }
+        ],
+        "payload": { "$ref": "#/components/schemas/Envelope" },
+        "summary": "Node removed from the system"
+      },
+      "nodeRegisteredMessage": {
+        "bindings": {
+          "kafka": {
+            "bindingVersion": "0.5.0",
+            "key": {
+              "description": "Kafka partition key — `node_id` from the event data",
+              "type": "string"
+            }
+          }
+        },
+        "contentType": "application/json",
+        "examples": [
+          {
+            "name": "example",
+            "payload": {
+              "corename": "prod-us",
+              "data": {
+                "cluster_name": "prod",
+                "host_metrics_port": 9100,
+                "http_port": 44000,
+                "http_proxy_port": 44001,
+                "id_type": "hostname",
+                "inserted_at": "2026-04-13T09:00:00Z",
+                "last_seen_at": "2026-04-13T10:00:00Z",
+                "node_id": "node-abc123",
+                "self_update_enabled": true,
+                "socks5_proxy_port": 44002,
+                "ssh_port": 40022,
+                "status": "healthy",
+                "updated_at": "2026-04-13T10:00:00Z",
+                "version": "1.2.0",
+                "wireguard_metrics_port": 9101
+              },
+              "datacontenttype": "application/json",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "source": "https://github.com/wenet-ec/edge-core",
+              "specversion": "1.0",
+              "time": "2026-04-13T10:00:00Z",
+              "type": "node.registered"
+            }
+          }
+        ],
+        "payload": { "$ref": "#/components/schemas/Envelope" },
+        "summary": "Node registered for the first time"
+      },
+      "nodeReregisteredMessage": {
+        "bindings": {
+          "kafka": {
+            "bindingVersion": "0.5.0",
+            "key": {
+              "description": "Kafka partition key — `node_id` from the event data",
+              "type": "string"
+            }
+          }
+        },
+        "contentType": "application/json",
+        "examples": [
+          {
+            "name": "example",
+            "payload": {
+              "corename": "prod-us",
+              "data": {
+                "cluster_name": "prod",
+                "host_metrics_port": 9100,
+                "http_port": 44000,
+                "http_proxy_port": 44001,
+                "id_type": "hostname",
+                "inserted_at": "2026-04-13T09:00:00Z",
+                "last_seen_at": "2026-04-13T10:00:00Z",
+                "node_id": "node-abc123",
+                "self_update_enabled": true,
+                "socks5_proxy_port": 44002,
+                "ssh_port": 40022,
+                "status": "healthy",
+                "updated_at": "2026-04-13T10:00:00Z",
+                "version": "1.2.0",
+                "wireguard_metrics_port": 9101
+              },
+              "datacontenttype": "application/json",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "source": "https://github.com/wenet-ec/edge-core",
+              "specversion": "1.0",
+              "time": "2026-04-13T10:00:00Z",
+              "type": "node.reregistered"
+            }
+          }
+        ],
+        "payload": { "$ref": "#/components/schemas/Envelope" },
+        "summary": "Node re-enrolled (reboot, redeploy, etc.)"
+      },
+      "nodeStatusChangedMessage": {
+        "bindings": {
+          "kafka": {
+            "bindingVersion": "0.5.0",
+            "key": {
+              "description": "Kafka partition key — `node_id` from the event data",
+              "type": "string"
+            }
+          }
+        },
+        "contentType": "application/json",
+        "examples": [
+          {
+            "name": "example",
+            "payload": {
+              "corename": "prod-us",
+              "data": {
+                "cluster_name": "prod",
+                "host_metrics_port": 9100,
+                "http_port": 44000,
+                "http_proxy_port": 44001,
+                "id_type": "hostname",
+                "inserted_at": "2026-04-13T09:00:00Z",
+                "last_seen_at": "2026-04-13T10:00:00Z",
+                "node_id": "node-abc123",
+                "previous_status": "healthy",
+                "self_update_enabled": true,
+                "socks5_proxy_port": 44002,
+                "ssh_port": 40022,
+                "status": "unhealthy",
+                "updated_at": "2026-04-13T10:00:00Z",
+                "version": "1.2.0",
+                "wireguard_metrics_port": 9101
+              },
+              "datacontenttype": "application/json",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "source": "https://github.com/wenet-ec/edge-core",
+              "specversion": "1.0",
+              "time": "2026-04-13T10:00:00Z",
+              "type": "node.status_changed"
+            }
+          }
+        ],
+        "payload": { "$ref": "#/components/schemas/Envelope" },
+        "summary": "Node health status transitioned"
+      },
+      "nodeUpdateTriggeredMessage": {
+        "bindings": {
+          "kafka": {
+            "bindingVersion": "0.5.0",
+            "key": {
+              "description": "Kafka partition key — `node_id` from the event data",
+              "type": "string"
+            }
+          }
+        },
+        "contentType": "application/json",
+        "examples": [
+          {
+            "name": "example",
+            "payload": {
+              "corename": "prod-us",
+              "data": {
+                "cluster_name": "prod",
+                "host_metrics_port": 9100,
+                "http_port": 44000,
+                "http_proxy_port": 44001,
+                "id_type": "hostname",
+                "inserted_at": "2026-04-13T09:00:00Z",
+                "last_seen_at": "2026-04-13T10:00:00Z",
+                "node_id": "node-abc123",
+                "self_update_enabled": true,
+                "self_update_request_id": "req-abc123",
+                "socks5_proxy_port": 44002,
+                "ssh_port": 40022,
+                "status": "healthy",
+                "updated_at": "2026-04-13T10:00:00Z",
+                "version": "1.2.0",
+                "wireguard_metrics_port": 9101
+              },
+              "datacontenttype": "application/json",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "source": "https://github.com/wenet-ec/edge-core",
+              "specversion": "1.0",
+              "time": "2026-04-13T10:00:00Z",
+              "type": "node.update_triggered"
+            }
+          }
+        ],
+        "payload": { "$ref": "#/components/schemas/Envelope" },
+        "summary": "Self-update signal sent to this node"
+      },
+      "nodeVersionChangedMessage": {
+        "bindings": {
+          "kafka": {
+            "bindingVersion": "0.5.0",
+            "key": {
+              "description": "Kafka partition key — `node_id` from the event data",
+              "type": "string"
+            }
+          }
+        },
+        "contentType": "application/json",
+        "examples": [
+          {
+            "name": "example",
+            "payload": {
+              "corename": "prod-us",
+              "data": {
+                "cluster_name": "prod",
+                "host_metrics_port": 9100,
+                "http_port": 44000,
+                "http_proxy_port": 44001,
+                "id_type": "hostname",
+                "inserted_at": "2026-04-13T09:00:00Z",
+                "last_seen_at": "2026-04-13T10:00:00Z",
+                "node_id": "node-abc123",
+                "previous_version": "1.1.0",
+                "self_update_enabled": true,
+                "socks5_proxy_port": 44002,
+                "ssh_port": 40022,
+                "status": "healthy",
+                "updated_at": "2026-04-13T10:00:00Z",
+                "version": "1.2.0",
+                "wireguard_metrics_port": 9101
+              },
+              "datacontenttype": "application/json",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "source": "https://github.com/wenet-ec/edge-core",
+              "specversion": "1.0",
+              "time": "2026-04-13T10:00:00Z",
+              "type": "node.version_changed"
+            }
+          }
+        ],
+        "payload": { "$ref": "#/components/schemas/Envelope" },
+        "summary": "Node version changed alongside re-enrollment"
+      },
+      "selfUpdateCompletedMessage": {
+        "bindings": {
+          "kafka": {
+            "bindingVersion": "0.5.0",
+            "key": {
+              "description": "Kafka partition key — `request_id` from the event data",
+              "type": "string"
+            }
+          }
+        },
+        "contentType": "application/json",
+        "examples": [
+          {
+            "name": "example",
+            "payload": {
+              "corename": "prod-us",
+              "data": {
+                "inserted_at": "2026-04-13T10:00:00Z",
+                "request_id": "req-abc123",
+                "status": "completed",
+                "summary": { "failed": 1, "total": 10, "triggered": 9 },
+                "targeting": {
+                  "cluster_filters": {},
+                  "node_filters": { "version": "1.1.*" },
+                  "type": "clusters"
+                },
+                "updated_at": "2026-04-13T10:00:00Z"
+              },
+              "datacontenttype": "application/json",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "source": "https://github.com/wenet-ec/edge-core",
+              "specversion": "1.0",
+              "time": "2026-04-13T10:00:00Z",
+              "type": "self_update.completed"
+            }
+          }
+        ],
+        "payload": { "$ref": "#/components/schemas/Envelope" },
+        "summary": "Self-update batch finished"
+      },
+      "selfUpdateCreatedMessage": {
+        "bindings": {
+          "kafka": {
+            "bindingVersion": "0.5.0",
+            "key": {
+              "description": "Kafka partition key — `request_id` from the event data",
+              "type": "string"
+            }
+          }
+        },
+        "contentType": "application/json",
+        "examples": [
+          {
+            "name": "example",
+            "payload": {
+              "corename": "prod-us",
+              "data": {
+                "inserted_at": "2026-04-13T10:00:00Z",
+                "request_id": "req-abc123",
+                "status": "pending",
+                "summary": null,
+                "targeting": {
+                  "cluster_filters": {},
+                  "node_filters": { "version": "1.1.*" },
+                  "type": "clusters"
+                },
+                "updated_at": "2026-04-13T10:00:00Z"
+              },
+              "datacontenttype": "application/json",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "source": "https://github.com/wenet-ec/edge-core",
+              "specversion": "1.0",
+              "time": "2026-04-13T10:00:00Z",
+              "type": "self_update.created"
+            }
+          }
+        ],
+        "payload": { "$ref": "#/components/schemas/Envelope" },
+        "summary": "Self-update request created"
+      }
+    },
+    "schemas": {
+      "Envelope": {
+        "properties": {
+          "corename": {
+            "description": "Identifies the publishing core instance. Defaults to \"default\". Set via CORE_NAME env var.",
+            "type": "string"
+          },
+          "data": { "type": "object" },
+          "datacontenttype": { "const": "application/json", "type": "string" },
+          "id": {
+            "description": "Unique per event — use for consumer-side dedup",
+            "format": "uuid",
+            "type": "string"
+          },
+          "source": {
+            "const": "https://github.com/wenet-ec/edge-core",
+            "type": "string"
+          },
+          "specversion": { "enum": ["1.0"], "type": "string" },
+          "time": {
+            "description": "When the state change happened in admin",
+            "format": "date-time",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "edge.node.registered",
+              "edge.node.reregistered",
+              "edge.node.version_changed",
+              "edge.node.status_changed",
+              "edge.node.cluster_changed",
+              "edge.node.update_triggered",
+              "edge.node.deleted",
+              "edge.execution.created",
+              "edge.execution.sent",
+              "edge.execution.completed",
+              "edge.execution.cancelled",
+              "edge.execution.expired",
+              "edge.self_update.created",
+              "edge.self_update.completed"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "specversion",
+          "id",
+          "source",
+          "type",
+          "time",
+          "datacontenttype",
+          "data"
+        ],
+        "type": "object"
+      },
+      "ExecutionEvent": {
+        "description": "`output` is excluded — fetch via API if needed",
+        "properties": {
+          "cancelled_at": { "format": "date-time", "type": ["string", "null"] },
+          "cluster_name": { "type": "string" },
+          "command_id": { "format": "uuid", "type": "string" },
+          "command_text": { "type": "string" },
+          "completed_at": { "format": "date-time", "type": ["string", "null"] },
+          "execution_id": { "format": "uuid", "type": "string" },
+          "exit_code": {
+            "description": "null until completed or cancelled; 143 on SIGTERM cancel",
+            "type": ["integer", "null"]
+          },
+          "expired_at": { "format": "date-time", "type": ["string", "null"] },
+          "inserted_at": { "format": "date-time", "type": "string" },
+          "node_id": { "type": "string" },
+          "sent_at": { "format": "date-time", "type": ["string", "null"] },
+          "status": {
+            "enum": ["pending", "sent", "completed", "cancelled", "expired"],
+            "type": "string"
+          },
+          "target_all": { "type": "boolean" },
+          "timeout": { "type": ["integer", "null"] },
+          "updated_at": { "format": "date-time", "type": "string" }
+        },
+        "required": [
+          "execution_id",
+          "command_id",
+          "node_id",
+          "cluster_name",
+          "status"
+        ],
+        "type": "object"
+      },
+      "NodeClusterChangedEvent": {
+        "properties": {
+          "cluster_name": { "type": "string" },
+          "host_metrics_port": { "type": "integer" },
+          "http_port": { "type": "integer" },
+          "http_proxy_port": { "type": "integer" },
+          "id_type": { "type": "string" },
+          "inserted_at": { "format": "date-time", "type": "string" },
+          "last_seen_at": { "format": "date-time", "type": ["string", "null"] },
+          "node_id": { "type": "string" },
+          "previous_cluster_name": {
+            "description": "Cluster before this move",
+            "type": "string"
+          },
+          "self_update_enabled": { "type": "boolean" },
+          "socks5_proxy_port": { "type": "integer" },
+          "ssh_port": { "type": "integer" },
+          "status": {
+            "enum": ["healthy", "unhealthy", "unreachable"],
+            "type": "string"
+          },
+          "updated_at": { "format": "date-time", "type": "string" },
+          "version": { "type": "string" },
+          "wireguard_metrics_port": { "type": "integer" }
+        },
+        "required": [
+          "node_id",
+          "cluster_name",
+          "status",
+          "previous_cluster_name"
+        ],
+        "type": "object"
+      },
+      "NodeEvent": {
+        "properties": {
+          "cluster_name": { "type": "string" },
+          "host_metrics_port": { "type": "integer" },
+          "http_port": { "type": "integer" },
+          "http_proxy_port": { "type": "integer" },
+          "id_type": { "type": "string" },
+          "inserted_at": { "format": "date-time", "type": "string" },
+          "last_seen_at": { "format": "date-time", "type": ["string", "null"] },
+          "node_id": { "type": "string" },
+          "self_update_enabled": { "type": "boolean" },
+          "socks5_proxy_port": { "type": "integer" },
+          "ssh_port": { "type": "integer" },
+          "status": {
+            "enum": ["healthy", "unhealthy", "unreachable"],
+            "type": "string"
+          },
+          "updated_at": { "format": "date-time", "type": "string" },
+          "version": { "type": "string" },
+          "wireguard_metrics_port": { "type": "integer" }
+        },
+        "required": ["node_id", "cluster_name", "status"],
+        "type": "object"
+      },
+      "NodeStatusChangedEvent": {
+        "properties": {
+          "cluster_name": { "type": "string" },
+          "host_metrics_port": { "type": "integer" },
+          "http_port": { "type": "integer" },
+          "http_proxy_port": { "type": "integer" },
+          "id_type": { "type": "string" },
+          "inserted_at": { "format": "date-time", "type": "string" },
+          "last_seen_at": { "format": "date-time", "type": ["string", "null"] },
+          "node_id": { "type": "string" },
+          "previous_status": {
+            "description": "Status before this transition",
+            "enum": ["healthy", "unhealthy", "unreachable"],
+            "type": "string"
+          },
+          "self_update_enabled": { "type": "boolean" },
+          "socks5_proxy_port": { "type": "integer" },
+          "ssh_port": { "type": "integer" },
+          "status": {
+            "enum": ["healthy", "unhealthy", "unreachable"],
+            "type": "string"
+          },
+          "updated_at": { "format": "date-time", "type": "string" },
+          "version": { "type": "string" },
+          "wireguard_metrics_port": { "type": "integer" }
+        },
+        "required": ["node_id", "cluster_name", "status", "previous_status"],
+        "type": "object"
+      },
+      "NodeUpdateTriggeredEvent": {
+        "properties": {
+          "cluster_name": { "type": "string" },
+          "host_metrics_port": { "type": "integer" },
+          "http_port": { "type": "integer" },
+          "http_proxy_port": { "type": "integer" },
+          "id_type": { "type": "string" },
+          "inserted_at": { "format": "date-time", "type": "string" },
+          "last_seen_at": { "format": "date-time", "type": ["string", "null"] },
+          "node_id": { "type": "string" },
+          "self_update_enabled": { "type": "boolean" },
+          "self_update_request_id": {
+            "description": "The self-update request that triggered this",
+            "format": "uuid",
+            "type": "string"
+          },
+          "socks5_proxy_port": { "type": "integer" },
+          "ssh_port": { "type": "integer" },
+          "status": {
+            "enum": ["healthy", "unhealthy", "unreachable"],
+            "type": "string"
+          },
+          "updated_at": { "format": "date-time", "type": "string" },
+          "version": { "type": "string" },
+          "wireguard_metrics_port": { "type": "integer" }
+        },
+        "required": [
+          "node_id",
+          "cluster_name",
+          "status",
+          "self_update_request_id"
+        ],
+        "type": "object"
+      },
+      "NodeVersionChangedEvent": {
+        "properties": {
+          "cluster_name": { "type": "string" },
+          "host_metrics_port": { "type": "integer" },
+          "http_port": { "type": "integer" },
+          "http_proxy_port": { "type": "integer" },
+          "id_type": { "type": "string" },
+          "inserted_at": { "format": "date-time", "type": "string" },
+          "last_seen_at": { "format": "date-time", "type": ["string", "null"] },
+          "node_id": { "type": "string" },
+          "previous_version": {
+            "description": "Version before this re-enrollment",
+            "type": "string"
+          },
+          "self_update_enabled": { "type": "boolean" },
+          "socks5_proxy_port": { "type": "integer" },
+          "ssh_port": { "type": "integer" },
+          "status": {
+            "enum": ["healthy", "unhealthy", "unreachable"],
+            "type": "string"
+          },
+          "updated_at": { "format": "date-time", "type": "string" },
+          "version": { "type": "string" },
+          "wireguard_metrics_port": { "type": "integer" }
+        },
+        "required": ["node_id", "cluster_name", "status", "previous_version"],
+        "type": "object"
+      },
+      "SelfUpdateEvent": {
+        "properties": {
+          "inserted_at": { "format": "date-time", "type": "string" },
+          "request_id": { "format": "uuid", "type": "string" },
+          "status": {
+            "enum": ["pending", "processing", "completed"],
+            "type": "string"
+          },
+          "summary": {
+            "description": "null on self_update.created; populated on self_update.completed",
+            "oneOf": [
+              {
+                "properties": {
+                  "failed": { "type": "integer" },
+                  "total": { "type": "integer" },
+                  "triggered": { "type": "integer" }
+                },
+                "type": "object"
+              },
+              { "type": "null" }
+            ]
+          },
+          "targeting": {
+            "properties": {
+              "cluster_filters": { "type": "object" },
+              "node_filters": { "type": "object" },
+              "type": { "enum": ["all", "nodes", "clusters"], "type": "string" }
+            },
+            "type": "object"
+          },
+          "updated_at": { "format": "date-time", "type": "string" }
+        },
+        "required": ["request_id", "status", "targeting"],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "kafkaSasl": {
+        "description": "Kafka SASL auth. Set via EVENT_BROKER_KAFKA_USERNAME / EVENT_BROKER_KAFKA_PASSWORD / EVENT_BROKER_KAFKA_SASL_MECHANISM.",
+        "type": "scramSha256"
+      },
+      "natsToken": {
+        "description": "NATS token auth. Set via EVENT_BROKER_NATS_TOKEN.",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "defaultContentType": "application/json",
+  "info": {
+    "description": "Lifecycle events published by Edge Admin to a configured message broker (NATS JetStream or Kafka/Redpanda).\n\nEdge Admin publishes and forgets — it has no knowledge of consumers.\nAll messages follow the [CloudEvents 1.0](https://cloudevents.io) spec.\n`corename` is a CloudEvents extension attribute identifying the publishing Edge Admin instance.\n\n```json\n{\n  \"specversion\": \"1.0\",\n  \"id\": \"<uuid v4>\",\n  \"source\": \"https://github.com/wenet-ec/edge-core\",\n  \"type\": \"edge.node.registered\",\n  \"time\": \"2026-04-13T10:00:00Z\",\n  \"datacontenttype\": \"application/json\",\n  \"corename\": \"prod-us\",\n  \"data\": { ... }\n}\n```\n\nEnable publishing by setting `EVENT_BROKER_ENABLED=true` on the admin.\n\n**Explore:**\n- [AsyncAPI viewer](/asyncdoc) — this page\n- [Raw spec](/api/asyncapi) — AsyncAPI JSON\n\n**REST API:** See the [Swagger UI](/swaggerui), [ReDoc](/redoc), or [download the OpenAPI spec](/api/openapi).\n",
+    "title": "Edge Admin AsyncAPI",
+    "version": "0.2.0"
+  },
+  "operations": {
+    "publish_edge_node_registered": {
+      "action": "send",
+      "bindings": {
+        "kafka": { "bindingVersion": "0.5.0" },
+        "nats": { "bindingVersion": "0.1.0" }
+      },
+      "channel": { "$ref": "#/channels/edge.node.registered" }
+    },
+    "publish_edge_node_reregistered": {
+      "action": "send",
+      "bindings": {
+        "kafka": { "bindingVersion": "0.5.0" },
+        "nats": { "bindingVersion": "0.1.0" }
+      },
+      "channel": { "$ref": "#/channels/edge.node.reregistered" }
+    },
+    "publish_edge_node_version_changed": {
+      "action": "send",
+      "bindings": {
+        "kafka": { "bindingVersion": "0.5.0" },
+        "nats": { "bindingVersion": "0.1.0" }
+      },
+      "channel": { "$ref": "#/channels/edge.node.version_changed" }
+    },
+    "publish_edge_node_status_changed": {
+      "action": "send",
+      "bindings": {
+        "kafka": { "bindingVersion": "0.5.0" },
+        "nats": { "bindingVersion": "0.1.0" }
+      },
+      "channel": { "$ref": "#/channels/edge.node.status_changed" }
+    },
+    "publish_edge_node_cluster_changed": {
+      "action": "send",
+      "bindings": {
+        "kafka": { "bindingVersion": "0.5.0" },
+        "nats": { "bindingVersion": "0.1.0" }
+      },
+      "channel": { "$ref": "#/channels/edge.node.cluster_changed" }
+    },
+    "publish_edge_node_update_triggered": {
+      "action": "send",
+      "bindings": {
+        "kafka": { "bindingVersion": "0.5.0" },
+        "nats": { "bindingVersion": "0.1.0" }
+      },
+      "channel": { "$ref": "#/channels/edge.node.update_triggered" }
+    },
+    "publish_edge_node_deleted": {
+      "action": "send",
+      "bindings": {
+        "kafka": { "bindingVersion": "0.5.0" },
+        "nats": { "bindingVersion": "0.1.0" }
+      },
+      "channel": { "$ref": "#/channels/edge.node.deleted" }
+    },
+    "publish_edge_execution_created": {
+      "action": "send",
+      "bindings": {
+        "kafka": { "bindingVersion": "0.5.0" },
+        "nats": { "bindingVersion": "0.1.0" }
+      },
+      "channel": { "$ref": "#/channels/edge.execution.created" }
+    },
+    "publish_edge_execution_sent": {
+      "action": "send",
+      "bindings": {
+        "kafka": { "bindingVersion": "0.5.0" },
+        "nats": { "bindingVersion": "0.1.0" }
+      },
+      "channel": { "$ref": "#/channels/edge.execution.sent" }
+    },
+    "publish_edge_execution_completed": {
+      "action": "send",
+      "bindings": {
+        "kafka": { "bindingVersion": "0.5.0" },
+        "nats": { "bindingVersion": "0.1.0" }
+      },
+      "channel": { "$ref": "#/channels/edge.execution.completed" }
+    },
+    "publish_edge_execution_cancelled": {
+      "action": "send",
+      "bindings": {
+        "kafka": { "bindingVersion": "0.5.0" },
+        "nats": { "bindingVersion": "0.1.0" }
+      },
+      "channel": { "$ref": "#/channels/edge.execution.cancelled" }
+    },
+    "publish_edge_execution_expired": {
+      "action": "send",
+      "bindings": {
+        "kafka": { "bindingVersion": "0.5.0" },
+        "nats": { "bindingVersion": "0.1.0" }
+      },
+      "channel": { "$ref": "#/channels/edge.execution.expired" }
+    },
+    "publish_edge_self_update_created": {
+      "action": "send",
+      "bindings": {
+        "kafka": { "bindingVersion": "0.5.0" },
+        "nats": { "bindingVersion": "0.1.0" }
+      },
+      "channel": { "$ref": "#/channels/edge.self_update.created" }
+    },
+    "publish_edge_self_update_completed": {
+      "action": "send",
+      "bindings": {
+        "kafka": { "bindingVersion": "0.5.0" },
+        "nats": { "bindingVersion": "0.1.0" }
+      },
+      "channel": { "$ref": "#/channels/edge.self_update.completed" }
+    }
+  },
+  "servers": {
+    "kafka": {
+      "description": "Kafka-compatible broker (Redpanda recommended). Configure via EVENT_BROKER_URLS. SASL auth via EVENT_BROKER_KAFKA_USERNAME / EVENT_BROKER_KAFKA_PASSWORD.",
+      "host": "localhost:9092",
+      "protocol": "kafka",
+      "security": [{ "$ref": "#/components/securitySchemes/kafkaSasl" }]
+    },
+    "natsJetStream": {
+      "description": "NATS JetStream broker (default). Configure via EVENT_BROKER_URLS. Optional token auth via EVENT_BROKER_NATS_TOKEN.",
+      "host": "localhost:4222",
+      "protocol": "nats",
+      "security": [{ "$ref": "#/components/securitySchemes/natsToken" }]
+    }
+  }
+}

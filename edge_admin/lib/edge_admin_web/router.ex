@@ -19,13 +19,13 @@ defmodule EdgeAdminWeb.Router do
   # Public API pipeline (no authentication required)
   pipeline :public_api do
     plug(:accepts, ["json"])
-    plug(PutApiSpec, module: EdgeAdminWeb.ApiSpec)
+    plug(PutApiSpec, module: EdgeAdminWeb.OpenApiSpec)
   end
 
   # Protected API pipeline (requires API_KEY or MASTER_KEY)
   pipeline :protected_api do
     plug(:accepts, ["json"])
-    plug(PutApiSpec, module: EdgeAdminWeb.ApiSpec)
+    plug(PutApiSpec, module: EdgeAdminWeb.OpenApiSpec)
     plug(EdgeAdminWeb.Plugs.ApiKeyAuth)
   end
 
@@ -37,14 +37,14 @@ defmodule EdgeAdminWeb.Router do
   # Metrics API pipeline (accepts MASTER_KEY or METRICS_KEY)
   pipeline :protected_metrics do
     plug(:accepts, ["json"])
-    plug(PutApiSpec, module: EdgeAdminWeb.ApiSpec)
+    plug(PutApiSpec, module: EdgeAdminWeb.OpenApiSpec)
     plug(EdgeAdminWeb.Plugs.MetricsAuth)
   end
 
-  # OpenAPI pipeline (no CSRF, no auth for spec access)
-  pipeline :open_api do
+  # API specs pipeline — serves OpenAPI + AsyncAPI JSON specs (gated by API_DOCS_ENABLED)
+  pipeline :api_specs do
     plug(:accepts, ["json"])
-    plug(PutApiSpec, module: EdgeAdminWeb.ApiSpec)
+    plug(PutApiSpec, module: EdgeAdminWeb.OpenApiSpec)
     plug(ApiDocsEnabled)
   end
 
@@ -58,21 +58,17 @@ defmodule EdgeAdminWeb.Router do
   # Agent API pipeline (requires agent api_token)
   pipeline :agent_api do
     plug(:accepts, ["json"])
-    plug(PutApiSpec, module: EdgeAdminWeb.ApiSpec)
+    plug(PutApiSpec, module: EdgeAdminWeb.OpenApiSpec)
     plug(EdgeAdminWeb.Plugs.AgentAuth)
   end
 
-  # API documentation endpoints (SwaggerUI, ReDoc)
-  # OpenAPI spec (/api/openapi) is also disabled via the :open_api pipeline
-  # All three are disabled in production via API_DOCS_ENABLED=false
+  # API documentation UIs — all gated by API_DOCS_ENABLED (disabled in production)
   scope "/" do
     pipe_through(:api_docs_ui)
 
-    # Serve SwaggerUI - this is what you'll navigate to see the docs
     get("/swaggerui", OpenApiSpex.Plug.SwaggerUI, path: "/api/openapi")
-
-    # Serve ReDoc - alternative API documentation UI
     get("/redoc", Redoc.Plug.RedocUI, spec_url: "/api/openapi")
+    get("/asyncdoc", EdgeAdminWeb.Controllers.AsyncApi.DocController, :show)
   end
 
   # LiveDashboard with basic auth protection
@@ -91,12 +87,12 @@ defmodule EdgeAdminWeb.Router do
     )
   end
 
-  # Serve OpenAPI spec through the open_api pipeline
+  # API spec endpoints — gated by API_DOCS_ENABLED (disabled in production)
   scope "/api" do
-    pipe_through(:open_api)
+    pipe_through(:api_specs)
 
-    # Serve the public OpenAPI spec as JSON (Internal.* paths filtered out)
-    get("/openapi", EdgeAdminWeb.Plugs.RenderPublicSpec, [])
+    get("/openapi", EdgeAdminWeb.Plugs.RenderOpenApiSpec, [])
+    get("/asyncapi", EdgeAdminWeb.Controllers.AsyncApi.SpecController, :show)
   end
 
   # Public API endpoints (no authentication required)

@@ -28,7 +28,7 @@ git clone --branch v1.5.1 https://github.com/gravitl/netmaker edge_vpn/netmaker
 git clone --branch v1.5.1-derp https://github.com/wenet-ec/netclient edge_vpn/netclient
 ```
 
-When working on anything related to Netmaker API, netclient enrollment, DERP relay, or WireGuard mesh behavior, read the source directly from `edge_vpn/` rather than guessing. The Netmaker OpenAPI spec is also available at `docs/netmaker-v1.5.1.yml`.
+When working on anything related to Netmaker API, netclient enrollment, DERP relay, or WireGuard mesh behavior, read the source directly from `edge_vpn/` rather than guessing. The Netmaker OpenAPI spec is also available at `docs/netmaker-openapi-v1.5.1.yml`.
 
 ## Architecture
 
@@ -260,8 +260,10 @@ edge_core/
 │   └── relay/           # Self-hosted DERP relay node
 ├── docs/                # Architecture docs and API specs
 │   ├── architecture.md
-│   ├── admin-v0.2.0.json
-│   └── netmaker-v1.5.1.yml
+│   ├── admin-openapi-v0.2.0.json
+│   ├── admin-asyncapi-v0.2.0.json
+│   ├── admin-asyncapi-v0.2.0.md
+│   └── netmaker-openapi-v1.5.1.yml
 └── bin/
     └── run              # Management script
 ```
@@ -416,8 +418,10 @@ Production files follow the same pattern in `deploy/production/.envs/`
 OpenAPI specs auto-generated and served at:
 
 - `/api/openapi` - OpenAPI JSON
-- `/api/swaggerui` - Swagger UI
-- `/api/redoc` - ReDoc UI
+- `/swaggerui` - Swagger UI
+- `/redoc` - ReDoc UI
+- `/api/asyncapi` - AsyncAPI JSON
+- `/asyncdoc` - AsyncAPI viewer
 
 Major API endpoints documented inline with `@doc` tags and OpenApiSpex schemas.
 

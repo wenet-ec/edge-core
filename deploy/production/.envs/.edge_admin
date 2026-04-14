@@ -34,7 +34,8 @@ BASIC_AUTH_PASSWORD=admin
 # The dashboard exposes internal process/memory/DB/Oban info — gate it appropriately.
 LIVE_DASHBOARD_ENABLED=true
 
-# Enables SwaggerUI (/swaggerui), ReDoc (/redoc), OpenAPI spec (/api/openapi).
+# Enables SwaggerUI (/swaggerui), ReDoc (/redoc), AsyncAPI viewer (/asyncdoc),
+# OpenAPI spec (/api/openapi), and AsyncAPI spec (/api/asyncapi).
 # Disable in production to prevent API endpoint discovery.
 # API_DOCS_ENABLED=false
 

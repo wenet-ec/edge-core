@@ -229,15 +229,18 @@ The standard deployment is `network_mode: host` with `privileged: true`, giving 
 The agent also works as a sidecar container on bridge networking (no `network_mode: host`). In this mode it runs in the pod's or container's network namespace rather than the host's. This was not the original design intent but has been tested and works.
 
 What you get from a sidecar agent:
+
 - **VPN mesh access** — the pod/container joins the WireGuard mesh
 - **Proxy servers** — HTTP/SOCKS5 proxy accessible at `localhost` from other containers in the same pod
 - **SSH access** — SSH into the pod's network namespace
 
 What doesn't apply in sidecar mode:
+
 - **Command execution** — commands run inside the agent container, not the application container
 - **Host metrics** — reflects the container's view, not the host machine
 
 Requirements for sidecar mode (same as host mode minus `network_mode: host`):
+
 - `USE_RANDOM_ID=true` — avoids identity collisions when multiple sidecars run on the same node (host-derived identity is not meaningful in a container)
 - `cap_add: [NET_ADMIN, SYS_MODULE]`
 - `sysctls: net.ipv4.ip_forward=1, net.ipv4.conf.all.src_valid_mark=1, net.ipv6.conf.all.forwarding=1`
@@ -304,6 +307,22 @@ Only `wireguard-go` (userspace) supports DERP relay. Kernel-mode WireGuard does 
 | SSH access        | ✅           | ❌ requires VPN            |
 
 Proxy and SSH have no fallback below Layer 2. Both require raw TCP streaming — the correct answer for better availability is more DERP nodes, not a new relay mechanism.
+
+---
+
+## Event Broker
+
+Edge Admin can publish lifecycle events to an external message broker — opt-in, disabled by default, broker deployed separately.
+
+Events span three domains: node lifecycle (registered, status changed, deleted, etc.), command execution lifecycle (created → sent → completed/cancelled/expired), and self-update request lifecycle. All events follow [CloudEvents 1.0](https://cloudevents.io) and carry a full object snapshot in `data`.
+
+Two adapters: `nats_js` (NATS JetStream — recommended) and `kafka` (any Kafka-compatible broker — Redpanda, Kafka, Confluent Cloud, etc.). Vanilla NATS without JetStream is not supported.
+
+The `type` field in the envelope doubles as the NATS subject (`edge.node.status_changed`, `edge.execution.completed`, etc.) — no parsing needed for broker-level filtering.
+
+Duplicate events are possible for `edge.node.status_changed` — the health check runs on every admin instance independently (masterless design). Consumers dedup via the `id` UUID.
+
+For the full event schema and subject/topic reference see [`docs/admin-asyncapi-v0.2.0.md`](admin-asyncapi-v0.2.0.md). Interactive viewer at `/asyncdoc` on a running admin.
 
 ---
 

@@ -1,0 +1,83 @@
+# examples/event_brokers/redpanda.yml
+#
+# Redpanda — Kafka-compatible event broker for Edge Core.
+# Recommended Kafka-compatible option: no JVM, lighter than vanilla Kafka.
+#
+# Usage (alongside your core compose file):
+#   docker compose -f cloud.yml -f ../event_brokers/redpanda.yml up -d
+#
+# Then set in your .env:
+#   EVENT_BROKER_ENABLED=true
+#   EVENT_BROKER_ADAPTER=kafka
+#   EVENT_BROKER_URLS=edge_event_broker:9092
+#   # EVENT_BROKER_KAFKA_USERNAME=admin           # uncomment if SASL is enabled
+#   # EVENT_BROKER_KAFKA_PASSWORD=your-password
+#   # EVENT_BROKER_KAFKA_SASL_MECHANISM=scram_sha_256
+#
+# Ports exposed:
+#   9092  — Kafka (internal Docker, used by Edge Admin)
+#   19092 — Kafka (external / localhost)
+#   8080  — Redpanda Console web UI (http://localhost:8080)
+#
+# Note: Redpanda requires fs.aio-max-nr >= 66543.
+# On Linux: sudo sysctl -w fs.aio-max-nr=1048576
+# On WSL:   add fs.aio-max-nr = 1048576 to /etc/sysctl.d/99-wsl.conf
+
+networks:
+  edge_core:
+    external: true
+    name: edge_core
+
+volumes:
+  edge_event_broker_data: {}
+
+services:
+  edge_event_broker:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    container_name: edge_event_broker
+    restart: unless-stopped
+    networks:
+      - edge_core
+    volumes:
+      - edge_event_broker_data:/var/lib/redpanda/data
+    command:
+      - redpanda
+      - start
+      - --smp 1
+      - --memory 1G
+      - --node-id 1
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://edge_event_broker:9092,external://localhost:19092
+      - --rpc-addr 0.0.0.0:33145
+      - --advertise-rpc-addr edge_event_broker:33145
+      - --set redpanda.enable_transactions=true
+      - --set redpanda.enable_idempotence=true
+      - --set redpanda.default_topic_replications=1
+      - --set redpanda.default_topic_partitions=3
+    ports:
+      - "19092:19092"  # Kafka external
+      - "19644:9644"   # Admin API
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy|Degraded'"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  edge_event_broker_ui:
+    image: docker.redpanda.com/redpandadata/console:latest
+    container_name: edge_event_broker_ui
+    restart: unless-stopped
+    networks:
+      - edge_core
+    environment:
+      KAFKA_BROKERS: edge_event_broker:9092
+      REDPANDA_ADMINAPI_ENABLED: "true"
+      REDPANDA_ADMINAPI_URLS: "http://edge_event_broker:9644"
+      ANALYTICS_ENABLED: "false"
+      LOGGER_LEVEL: warn
+    ports:
+      - "8080:8080"   # Redpanda Console
+    depends_on:
+      edge_event_broker:
+        condition: service_healthy

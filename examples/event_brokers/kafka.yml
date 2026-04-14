@@ -1,0 +1,80 @@
+# examples/event_brokers/kafka.yml
+#
+# Apache Kafka (KRaft mode, no ZooKeeper) — Kafka-compatible event broker for Edge Core.
+# Use this if you prefer vanilla Kafka. Redpanda is lighter if you have no existing preference.
+#
+# Usage (alongside your core compose file):
+#   docker compose -f cloud.yml -f ../event_brokers/kafka.yml up -d
+#
+# Then set in your .env:
+#   EVENT_BROKER_ENABLED=true
+#   EVENT_BROKER_ADAPTER=kafka
+#   EVENT_BROKER_URLS=edge_event_broker:9092
+#   # EVENT_BROKER_KAFKA_USERNAME=admin           # uncomment if SASL is enabled
+#   # EVENT_BROKER_KAFKA_PASSWORD=your-password
+#   # EVENT_BROKER_KAFKA_SASL_MECHANISM=scram_sha_256
+#
+# Ports exposed:
+#   9092  — Kafka (internal Docker, used by Edge Admin)
+#   29092 — Kafka (external / localhost)
+#   8080  — Kafka UI web UI (http://localhost:8080)
+
+networks:
+  edge_core:
+    external: true
+    name: edge_core
+
+volumes:
+  edge_event_broker_data: {}
+
+services:
+  edge_event_broker:
+    image: apache/kafka:latest
+    container_name: edge_event_broker
+    restart: unless-stopped
+    networks:
+      - edge_core
+    volumes:
+      - edge_event_broker_data:/var/lib/kafka/data
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      CLUSTER_ID: MdrH4HbyQWmCpw4MGmTmew
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@edge_event_broker:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://:19092,CONTROLLER://:9093,PLAINTEXT_HOST://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://edge_event_broker:19092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    ports:
+      - "29092:9092"  # Kafka external
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  edge_event_broker_ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: edge_event_broker_ui
+    restart: unless-stopped
+    networks:
+      - edge_core
+    environment:
+      KAFKA_CLUSTERS_0_NAME: edge-event-broker
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: edge_event_broker:19092
+      DYNAMIC_CONFIG_ENABLED: "true"
+      LOGGING_LEVEL_ROOT: warn
+    ports:
+      - "8080:8080"   # Kafka UI
+    depends_on:
+      edge_event_broker:
+        condition: service_healthy

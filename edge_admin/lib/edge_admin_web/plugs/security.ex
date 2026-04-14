@@ -15,7 +15,7 @@ defmodule EdgeAdminWeb.Plugs.Security do
 
   def call(conn, _) do
     # Check if this is a documentation route (SwaggerUI or ReDoc)
-    if conn.request_path in ["/swaggerui", "/redoc"] do
+    if conn.request_path in ["/swaggerui", "/redoc", "/asyncdoc"] do
       # More permissive CSP for documentation UIs
       docs_directives = [
         "default-src #{default_src_directive()}",
@@ -68,18 +68,18 @@ defmodule EdgeAdminWeb.Plugs.Security do
 
   # Documentation UIs CSP directives (SwaggerUI + ReDoc)
   defp docs_style_src_directive do
-    "'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com"
+    "'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://unpkg.com"
   end
 
   defp docs_script_src_directive do
-    "'self' 'unsafe-eval' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net"
+    "'self' 'unsafe-eval' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com"
   end
 
   defp docs_font_src_directive do
     "'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com"
   end
 
-  defp docs_connect_src_directive, do: "'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net"
+  defp docs_connect_src_directive, do: "'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com"
 
   defp docs_image_src_directive do
     "'self' data: https://cdnjs.cloudflare.com https://validator.swagger.io https://cdn.jsdelivr.net"

@@ -3,6 +3,7 @@
 A full production-grade deployment of Edge Core with 4 admin instances across 2 clusters, PostgreSQL-backed Netmaker, EMQX broker, and a complete metrics stack.
 
 **What's included:**
+
 - 4 Edge Admin instances — cluster A (a1, a2) + cluster B (b1, b2)
 - Netmaker VPN (PostgreSQL-backed, EMQX broker)
 - Netmaker UI
@@ -65,6 +66,7 @@ docker compose -f edge.yml up -d
 All configuration lives in a single `.env` file. Copy `.env.example` to `.env` and fill in the values marked `REQUIRED`.
 
 Key things to configure:
+
 - Replace all `your-server-ip-or-domain.com` with your actual domain
 - Replace all `change-me` with strong random values
 - `SECRET_KEY_BASE` — generate with `openssl rand -base64 48`
@@ -76,12 +78,32 @@ Key things to configure:
 - Update `configs/Caddyfile` with your actual domain names
 - Update `configs/prometheus.yml` with your actual `METRICS_KEY`
 
+## Event Broker (optional)
+
+Edge Core can publish lifecycle events (node registered, command completed, etc.) to a message broker. Disabled by default — broker is deployed separately.
+
+```bash
+# Start with NATS JetStream (recommended)
+docker compose -f cloud.yml -f ../event_brokers/nats_js.yml up -d
+```
+
+Then add to your `.env`:
+
+```bash
+EVENT_BROKER_ENABLED=true
+EVENT_BROKER_ADAPTER=nats_js
+EVENT_BROKER_URLS=nats://edge_event_broker:4222
+```
+
+See `examples/event_brokers/` for all supported brokers (NATS JetStream, Redpanda, Kafka).
+
 ## API Docs
 
 Once the admin is running, the API documentation is available at:
 
-- `/api/swaggerui` — Swagger UI (interactive)
-- `/api/redoc` — ReDoc
+- `/swaggerui` — Swagger UI (interactive)
+- `/redoc` — ReDoc
+- `/asyncdoc` — AsyncAPI (event broker schema)
 
 ## Upgrading
 

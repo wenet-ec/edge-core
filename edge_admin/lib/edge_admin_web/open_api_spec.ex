@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin_web/api_spec.ex
-defmodule EdgeAdminWeb.ApiSpec do
+# edge_admin/lib/edge_admin_web/open_api_spec.ex
+defmodule EdgeAdminWeb.OpenApiSpec do
   @moduledoc false
   @behaviour OpenApiSpex.OpenApi
 
@@ -72,12 +72,20 @@ defmodule EdgeAdminWeb.ApiSpec do
     %OpenApi{
       servers: [],
       info: %Info{
-        title: "Edge Admin API",
+        title: "Edge Admin OpenAPI",
         version: "0.2.0",
         description: """
-        Edge Admin API - A backend REST API that serves as a wrapper for various systems.
-        This API is designed for internal network use only and provides administrative
-        functionality for edge computing systems.
+        REST API for Edge Admin — the orchestration server for Edge Core.
+
+        For managing Edge Core operations. All endpoints require an API key.
+
+        **Explore:**
+        - [Swagger UI](/swaggerui) — interactive API explorer
+        - [ReDoc](/redoc) — reference documentation
+        - [Raw spec](/api/openapi) — OpenAPI JSON
+
+        **Event streaming:** Edge Admin also publishes lifecycle events to a message broker.
+        See the [AsyncAPI spec](/asyncdoc) or [download it](/api/asyncapi).
         """
       },
       paths: Paths.from_router(Router),

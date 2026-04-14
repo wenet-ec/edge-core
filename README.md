@@ -21,7 +21,7 @@ Works on any Linux machine: on-premises servers, IoT devices, factory floor equi
 - **Edge ↔ Edge (VPN mesh)** — full WireGuard P2P mesh per cluster, automatic peer discovery, CoreDNS, DERP/TURN relay fallback for NAT
 - **Edge ↔ Local devices (mDNS)** — agents advertise themselves via mDNS for zero-config discovery by devices on the same LAN; full LAN DNS control is a future direction (see [`docs/architecture.md`](docs/architecture.md))
 
-**Plus:** MCP server for AI assistant integration (Claude, Cursor, and any MCP-compatible client).
+**Plus:** Event streaming (lifecycle events to NATS JetStream or Kafka/Redpanda), and an MCP server for AI assistant integration (Claude, Cursor, and any MCP-compatible client).
 
 ## Who is this for
 
@@ -136,7 +136,7 @@ Copy [`examples/standard/`](examples/standard/) — 4 admin instances across 2 i
 ./bin/run edge up
 
 # Explore the API
-open http://localhost:4000/api/swaggerui
+open http://localhost:4000/swaggerui
 ```
 
 ### Enroll your first node
@@ -171,6 +171,20 @@ Edge Admin exposes an MCP server at `/api/v1/mcp`. Point any MCP-compatible clie
 
 Tools are discovered dynamically via `tools/list` — no static spec file needed. Covers the full management surface: nodes, clusters, commands, SSH, metrics, and health checks.
 
+## Event streaming
+
+Edge Admin can publish lifecycle events to a message broker. Disabled by default — opt in by setting `EVENT_BROKER_ENABLED=true` and pointing `EVENT_BROKER_URLS` at your broker.
+
+Events cover node lifecycle, command execution lifecycle, and self-update lifecycle. All follow the [CloudEvents 1.0](https://cloudevents.io) spec. NATS JetStream (recommended) and any Kafka-compatible broker (Redpanda, Kafka) are supported.
+
+```bash
+EVENT_BROKER_ENABLED=true
+EVENT_BROKER_ADAPTER=nats_js          # or: kafka
+EVENT_BROKER_URLS=nats://your-broker:4222
+```
+
+Ready-to-use broker compose files are in [`examples/event_brokers/`](examples/event_brokers/). Full event schema: [`docs/admin-asyncapi-v0.2.0.md`](docs/admin-asyncapi-v0.2.0.md) or browse `/asyncdoc` on a running admin.
+
 ## Configuration reference
 
 All environment variables are documented in the production env files:
@@ -186,16 +200,17 @@ To import: in Grafana go to **Dashboards → Import**, upload the JSON file, and
 
 ## Components
 
-| Directory            | Description                                              |
-| -------------------- | -------------------------------------------------------- |
-| `edge_admin/`        | Phoenix admin server (PostgreSQL, Oban, OpenAPI, MCP)    |
-| `edge_agent/`        | Phoenix agent (SQLite, embedded SSH, Oban)               |
-| `nexmaker/`          | Shared Elixir lib — Netmaker API + netclient CLI wrapper |
-| `deploy/local/`      | Local development Docker Compose                         |
-| `deploy/production/` | Production Docker Compose + all env files                |
-| `examples/lite/`     | Minimal single-admin homelab setup                       |
-| `examples/standard/` | 4-admin (2-cluster) HA production setup                  |
-| `docs/`              | Architecture docs and API specs                          |
+| Directory                 | Description                                              |
+| ------------------------- | -------------------------------------------------------- |
+| `edge_admin/`             | Phoenix admin server (PostgreSQL, Oban, OpenAPI, MCP)    |
+| `edge_agent/`             | Phoenix agent (SQLite, embedded SSH, Oban)               |
+| `nexmaker/`               | Shared Elixir lib — Netmaker API + netclient CLI wrapper |
+| `deploy/local/`           | Local development Docker Compose                         |
+| `deploy/production/`      | Production Docker Compose + all env files                |
+| `examples/lite/`          | Minimal single-admin homelab setup                       |
+| `examples/standard/`      | 4-admin (2-cluster) HA production setup                  |
+| `examples/event_brokers/` | NATS JetStream, Redpanda, and Kafka compose files        |
+| `docs/`                   | Architecture docs and API specs                          |
 
 ## Common dev commands
 
@@ -217,4 +232,4 @@ git clone --branch v1.5.1 https://github.com/gravitl/netmaker edge_vpn/netmaker
 git clone --branch v1.5.1-derp https://github.com/wenet-ec/netclient edge_vpn/netclient
 ```
 
-The Netmaker OpenAPI spec is at [`docs/netmaker-v1.5.1.yml`](docs/netmaker-v1.5.1.yml).
+The Netmaker OpenAPI spec is at [`docs/netmaker-openapi-v1.5.1.yml`](docs/netmaker-openapi-v1.5.1.yml).

@@ -33,7 +33,8 @@ CORS_ALLOWED_ORIGINS=*
 # =============================================================================
 LIVE_DASHBOARD_ENABLED=true
 
-# Enables SwaggerUI (/swaggerui), ReDoc (/redoc), and OpenAPI spec (/api/openapi).
+# Enables SwaggerUI (/swaggerui), ReDoc (/redoc), AsyncAPI viewer (/asyncdoc),
+# OpenAPI spec (/api/openapi), and AsyncAPI spec (/api/asyncapi).
 # Set to false to test production behavior locally.
 # API_DOCS_ENABLED=true
 

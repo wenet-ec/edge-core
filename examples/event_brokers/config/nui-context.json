@@ -1,0 +1,4 @@
+{
+  "description": "Edge Event Broker",
+  "url": "nats://edge_event_broker:4222"
+}

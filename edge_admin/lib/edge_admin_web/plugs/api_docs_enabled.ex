@@ -1,7 +1,14 @@
 # edge_admin/lib/edge_admin_web/plugs/api_docs_enabled.ex
 defmodule EdgeAdminWeb.Plugs.ApiDocsEnabled do
   @moduledoc """
-  Plug to conditionally allow access to API documentation endpoints (SwaggerUI, ReDoc, OpenAPI spec).
+  Plug to conditionally allow access to API documentation endpoints.
+
+  Gates the following routes — returns 404 when disabled:
+  - `/swaggerui` — Swagger UI
+  - `/redoc` — ReDoc
+  - `/asyncdoc` — AsyncAPI viewer
+  - `/api/openapi` — OpenAPI JSON spec
+  - `/api/asyncapi` — AsyncAPI JSON spec
 
   This plug checks the API_DOCS_ENABLED configuration and returns 404 if disabled.
   Useful for production environments where you want to disable API documentation exposure.

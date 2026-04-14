@@ -1,0 +1,65 @@
+# examples/event_brokers/nats_js.yml
+#
+# NATS JetStream — recommended event broker for Edge Core.
+#
+# Usage (alongside your core compose file):
+#   docker compose -f cloud.yml -f ../event_brokers/nats_js.yml up -d
+#
+# Then set in your .env:
+#   EVENT_BROKER_ENABLED=true
+#   EVENT_BROKER_ADAPTER=nats_js
+#   EVENT_BROKER_URLS=nats://edge_event_broker:4222
+#   # EVENT_BROKER_NATS_TOKEN=your-token   # uncomment if auth is enabled in nats.conf
+#
+# Ports exposed:
+#   4222  — NATS client (internal Docker, used by Edge Admin)
+#   8222  — HTTP monitoring / healthz
+#   31311 — NUI web UI (http://localhost:31311)
+
+networks:
+  edge_core:
+    external: true
+    name: edge_core
+
+volumes:
+  edge_event_broker_data: {}
+  edge_event_broker_nui_data: {}
+
+services:
+  edge_event_broker:
+    image: nats:alpine
+    container_name: edge_event_broker
+    restart: unless-stopped
+    networks:
+      - edge_core
+    volumes:
+      - edge_event_broker_data:/data
+      - ./config/nats.conf:/etc/nats/nats.conf:ro
+    command: ["-c", "/etc/nats/nats.conf"]
+    ports:
+      - "4222:4222"   # NATS client
+      - "8222:8222"   # Monitoring
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8222/healthz?js-enabled-only=true | grep -q ok"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  edge_event_broker_ui:
+    image: ghcr.io/nats-nui/nui:latest
+    container_name: edge_event_broker_ui
+    restart: unless-stopped
+    networks:
+      - edge_core
+    volumes:
+      - edge_event_broker_nui_data:/db
+      - ./config/nui-context.json:/clicontexts/edge-event-broker.json:ro
+    command:
+      - --db-path=/db/nui.db
+      - --nats-cli-contexts=/clicontexts
+    ports:
+      - "31311:31311"  # NUI web UI
+    depends_on:
+      edge_event_broker:
+        condition: service_healthy

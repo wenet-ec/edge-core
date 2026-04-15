@@ -36,11 +36,11 @@ defmodule EdgeAgentWeb.Controllers.SelfUpdateControllerTest do
       end)
     end
 
-    test "response body has errors.detail key when disabled", %{conn: conn} do
+    test "response body has error.code forbidden when disabled", %{conn: conn} do
       with_self_update_enabled(false, fn ->
         conn = post(authed(conn), ~p"/api/v1/self_updates/trigger")
         body = Jason.decode!(conn.resp_body)
-        assert get_in(body, ["errors", "detail"])
+        assert get_in(body, ["error", "code"]) == "forbidden"
       end)
     end
 

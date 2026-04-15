@@ -2,20 +2,31 @@
 defmodule EdgeAgentWeb.Controllers.ErrorJSON do
   alias EdgeAgentWeb.ResponseEnvelope
 
-  @error_templates %{
-    "400" => {"bad_request", "Malformed request body"},
-    "401" => {"unauthorized", "Missing or invalid credentials"},
-    "403" => {"forbidden", "Insufficient permissions"},
-    "404" => {"not_found", "Resource not found"},
-    "409" => {"conflict", "Resource already exists"},
-    "500" => {"internal_server_error", "An unexpected error occurred"},
-    "503" => {"service_unavailable", "Downstream dependency unreachable"}
-  }
+  def render("400.json", %{conn: conn}) do
+    ResponseEnvelope.error(conn, "bad_request", "Malformed request body")
+  end
 
-  def render(template, %{conn: conn}) do
-    {code, message} =
-      Map.get(@error_templates, template, {"internal_server_error", "An unexpected error occurred"})
+  def render("401.json", %{conn: conn}) do
+    ResponseEnvelope.error(conn, "unauthorized", "Missing or invalid credentials")
+  end
 
-    ResponseEnvelope.error(conn, code, message)
+  def render("403.json", %{conn: conn}) do
+    ResponseEnvelope.error(conn, "forbidden", "Insufficient permissions")
+  end
+
+  def render("404.json", %{conn: conn}) do
+    ResponseEnvelope.error(conn, "not_found", "Resource not found")
+  end
+
+  def render("409.json", %{conn: conn}) do
+    ResponseEnvelope.error(conn, "conflict", "Resource already exists")
+  end
+
+  def render("503.json", %{conn: conn}) do
+    ResponseEnvelope.error(conn, "service_unavailable", "Downstream dependency unreachable")
+  end
+
+  def render(_, %{conn: conn}) do
+    ResponseEnvelope.error(conn, "internal_server_error", "An unexpected error occurred")
   end
 end

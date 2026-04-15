@@ -2,12 +2,18 @@
 defmodule EdgeAgentWeb.Controllers.CommandExecutionJSONTest do
   use ExUnit.Case, async: true
 
+  import Phoenix.ConnTest
+
   alias EdgeAgent.Commands.Schemas.CommandExecution
   alias EdgeAgentWeb.Controllers.CommandExecutionJSON
 
   @valid_id "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
   @valid_command_id "11111111-2222-3333-4444-555555555555"
   @valid_node_id "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb"
+
+  defp fake_conn do
+    Plug.Conn.assign(build_conn(), :request_id, "test-request-id")
+  end
 
   defp build_execution(overrides \\ %{}) do
     struct(
@@ -33,12 +39,18 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionJSONTest do
 
   describe "show/1" do
     test "wraps data under :data key" do
-      result = CommandExecutionJSON.show(%{command_execution: build_execution()})
+      result = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: build_execution()})
       assert Map.has_key?(result, :data)
     end
 
+    test "meta is present with request_id and timestamp" do
+      result = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: build_execution()})
+      assert result.meta.request_id == "test-request-id"
+      assert is_binary(result.meta.timestamp)
+    end
+
     test "all fields are present" do
-      %{data: data} = CommandExecutionJSON.show(%{command_execution: build_execution()})
+      %{data: data} = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: build_execution()})
 
       for field <- [
             :id,
@@ -58,14 +70,14 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionJSONTest do
     end
 
     test "nil expired_at is included" do
-      %{data: data} = CommandExecutionJSON.show(%{command_execution: build_execution()})
+      %{data: data} = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: build_execution()})
       assert Map.has_key?(data, :expired_at)
       assert data.expired_at == nil
     end
 
     test "expired_at is passed through when set" do
       exec = build_execution(%{expired_at: ~U[2026-12-31 00:00:00Z]})
-      %{data: data} = CommandExecutionJSON.show(%{command_execution: exec})
+      %{data: data} = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: exec})
       assert data.expired_at == ~U[2026-12-31 00:00:00Z]
     end
 
@@ -78,7 +90,7 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionJSONTest do
           timeout: 5_000
         })
 
-      %{data: data} = CommandExecutionJSON.show(%{command_execution: execution})
+      %{data: data} = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: execution})
       assert data.id == @valid_id
       assert data.command_id == @valid_command_id
       assert data.node_id == @valid_node_id
@@ -90,7 +102,7 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionJSONTest do
     end
 
     test "nil output and exit_code are included (not excluded)" do
-      %{data: data} = CommandExecutionJSON.show(%{command_execution: build_execution()})
+      %{data: data} = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: build_execution()})
       assert Map.has_key?(data, :output)
       assert Map.has_key?(data, :exit_code)
       assert data.output == nil
@@ -98,7 +110,7 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionJSONTest do
     end
 
     test "timestamps are passed through" do
-      %{data: data} = CommandExecutionJSON.show(%{command_execution: build_execution()})
+      %{data: data} = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: build_execution()})
       assert data.inserted_at == ~U[2026-01-01 00:00:00Z]
       assert data.updated_at == ~U[2026-01-01 00:00:00Z]
     end
@@ -106,19 +118,25 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionJSONTest do
 
   describe "cancel/1" do
     test "wraps result under :data key" do
-      result = CommandExecutionJSON.cancel(%{result: %{status: "cancelled"}})
+      result = CommandExecutionJSON.cancel(%{conn: fake_conn(), result: %{status: "cancelled"}})
       assert Map.has_key?(result, :data)
+    end
+
+    test "meta is present with request_id and timestamp" do
+      result = CommandExecutionJSON.cancel(%{conn: fake_conn(), result: %{status: "cancelled"}})
+      assert result.meta.request_id == "test-request-id"
+      assert is_binary(result.meta.timestamp)
     end
 
     test "result map is passed through unchanged" do
       payload = %{status: "cancelled", message: "execution cancelled"}
-      %{data: data} = CommandExecutionJSON.cancel(%{result: payload})
+      %{data: data} = CommandExecutionJSON.cancel(%{conn: fake_conn(), result: payload})
       assert data == payload
     end
 
     test "any map is preserved" do
       payload = %{foo: "bar", count: 42}
-      %{data: data} = CommandExecutionJSON.cancel(%{result: payload})
+      %{data: data} = CommandExecutionJSON.cancel(%{conn: fake_conn(), result: payload})
       assert data == payload
     end
   end

@@ -3,8 +3,13 @@ defmodule EdgeAgentWeb.Controllers.ChangesetJSONTest do
   use ExUnit.Case, async: true
 
   import Ecto.Changeset
+  import Phoenix.ConnTest
 
   alias EdgeAgentWeb.Controllers.ChangesetJSON
+
+  defp fake_conn do
+    Plug.Conn.assign(build_conn(), :request_id, "test-request-id")
+  end
 
   defp changeset_with_errors(types, changes, validations_fn) do
     {%{}, types}
@@ -12,36 +17,55 @@ defmodule EdgeAgentWeb.Controllers.ChangesetJSONTest do
     |> validations_fn.()
   end
 
-  describe "error/1" do
-    test "returns map with errors key" do
-      cs =
-        changeset_with_errors(%{name: :string}, %{}, fn cs ->
-          validate_required(cs, [:name])
-        end)
+  defp errors_from(changeset) do
+    %{conn: fake_conn(), changeset: changeset}
+    |> ChangesetJSON.error()
+    |> get_in([:error, :details])
+  end
 
-      result = ChangesetJSON.error(%{changeset: cs})
-      assert Map.has_key?(result, :errors)
+  describe "error/1 — envelope structure" do
+    test "returns a map with :error key" do
+      cs = changeset_with_errors(%{name: :string}, %{}, &validate_required(&1, [:name]))
+      result = ChangesetJSON.error(%{conn: fake_conn(), changeset: cs})
+      assert Map.has_key?(result, :error)
     end
 
-    test "single field error is nested under field name" do
-      cs =
-        changeset_with_errors(%{name: :string}, %{}, fn cs ->
-          validate_required(cs, [:name])
-        end)
-
-      %{errors: errors} = ChangesetJSON.error(%{changeset: cs})
-      assert Map.has_key?(errors, :name)
+    test "error.code is validation_failed" do
+      cs = changeset_with_errors(%{name: :string}, %{}, &validate_required(&1, [:name]))
+      result = ChangesetJSON.error(%{conn: fake_conn(), changeset: cs})
+      assert result.error.code == "validation_failed"
     end
 
-    test "error messages are strings" do
-      cs =
-        changeset_with_errors(%{name: :string}, %{}, fn cs ->
-          validate_required(cs, [:name])
-        end)
+    test "error.message is set" do
+      cs = changeset_with_errors(%{name: :string}, %{}, &validate_required(&1, [:name]))
+      result = ChangesetJSON.error(%{conn: fake_conn(), changeset: cs})
+      assert is_binary(result.error.message)
+    end
 
-      %{errors: %{name: messages}} = ChangesetJSON.error(%{changeset: cs})
-      assert is_list(messages)
-      assert Enum.all?(messages, &is_binary/1)
+    test "meta is present with request_id and timestamp" do
+      cs = changeset_with_errors(%{name: :string}, %{}, &validate_required(&1, [:name]))
+      result = ChangesetJSON.error(%{conn: fake_conn(), changeset: cs})
+      assert result.meta.request_id == "test-request-id"
+      assert is_binary(result.meta.timestamp)
+    end
+
+    test "error.details is a map keyed by field atom" do
+      cs = changeset_with_errors(%{name: :string}, %{}, &validate_required(&1, [:name]))
+      assert Map.has_key?(errors_from(cs), :name)
+    end
+
+    test "each field maps to a list of error strings" do
+      cs = changeset_with_errors(%{name: :string}, %{}, &validate_required(&1, [:name]))
+      errors = errors_from(cs)
+      assert is_list(errors.name)
+      assert Enum.all?(errors.name, &is_binary/1)
+    end
+  end
+
+  describe "error/1 — field errors" do
+    test "single field error" do
+      cs = changeset_with_errors(%{name: :string}, %{}, &validate_required(&1, [:name]))
+      assert %{name: [_ | _]} = errors_from(cs)
     end
 
     test "multiple fields each have their own errors" do
@@ -50,7 +74,7 @@ defmodule EdgeAgentWeb.Controllers.ChangesetJSONTest do
           validate_required(cs, [:name, :email])
         end)
 
-      %{errors: errors} = ChangesetJSON.error(%{changeset: cs})
+      errors = errors_from(cs)
       assert Map.has_key?(errors, :name)
       assert Map.has_key?(errors, :email)
     end
@@ -63,25 +87,19 @@ defmodule EdgeAgentWeb.Controllers.ChangesetJSONTest do
           |> validate_format(:name, ~r/^\d+$/)
         end)
 
-      %{errors: %{name: messages}} = ChangesetJSON.error(%{changeset: cs})
-      assert length(messages) == 2
+      assert length(errors_from(cs).name) == 2
     end
 
     test "empty changeset has no field errors" do
       cs = changeset_with_errors(%{name: :string}, %{}, fn cs -> cs end)
-      %{errors: errors} = ChangesetJSON.error(%{changeset: cs})
-      assert errors == %{}
+      assert errors_from(cs) == %{}
     end
   end
 
-  describe "translate_error/1 — interpolation" do
+  describe "error/1 — translate_error interpolation" do
     test "message with no placeholders is returned as-is" do
-      cs =
-        changeset_with_errors(%{name: :string}, %{}, fn cs ->
-          validate_required(cs, [:name])
-        end)
-
-      %{errors: %{name: [msg | _]}} = ChangesetJSON.error(%{changeset: cs})
+      cs = changeset_with_errors(%{name: :string}, %{}, &validate_required(&1, [:name]))
+      [msg | _] = errors_from(cs).name
       assert is_binary(msg)
     end
 
@@ -91,7 +109,7 @@ defmodule EdgeAgentWeb.Controllers.ChangesetJSONTest do
           validate_length(cs, :name, min: 5)
         end)
 
-      %{errors: %{name: [msg]}} = ChangesetJSON.error(%{changeset: cs})
+      [msg] = errors_from(cs).name
       assert msg =~ "5"
       refute msg =~ "%{count}"
     end
@@ -102,8 +120,7 @@ defmodule EdgeAgentWeb.Controllers.ChangesetJSONTest do
           validate_number(cs, :age, greater_than_or_equal_to: 18, less_than_or_equal_to: 65)
         end)
 
-      %{errors: %{age: [msg]}} = ChangesetJSON.error(%{changeset: cs})
-      # The number value should appear, not the placeholder
+      [msg] = errors_from(cs).age
       assert is_binary(msg)
       refute msg =~ "%{"
     end

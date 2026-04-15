@@ -29,10 +29,16 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
       assert conn.status == 422
     end
 
-    test "response has errors key", %{conn: conn} do
+    test "response has error.code validation_failed", %{conn: conn} do
       conn = call(conn, {:error, empty_changeset()})
       body = Jason.decode!(conn.resp_body)
-      assert Map.has_key?(body, "errors")
+      assert get_in(body, ["error", "code"]) == "validation_failed"
+    end
+
+    test "response has error.details with field errors", %{conn: conn} do
+      conn = call(conn, {:error, empty_changeset()})
+      body = Jason.decode!(conn.resp_body)
+      assert is_map(get_in(body, ["error", "details"]))
     end
   end
 
@@ -46,10 +52,16 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
       assert conn.status == 404
     end
 
-    test "response has errors.detail key", %{conn: conn} do
+    test "response has error.code not_found", %{conn: conn} do
       conn = call(conn, {:error, :not_found})
       body = Jason.decode!(conn.resp_body)
-      assert get_in(body, ["errors", "detail"])
+      assert get_in(body, ["error", "code"]) == "not_found"
+    end
+
+    test "response has error.message", %{conn: conn} do
+      conn = call(conn, {:error, :not_found})
+      body = Jason.decode!(conn.resp_body)
+      assert is_binary(get_in(body, ["error", "message"]))
     end
   end
 
@@ -63,10 +75,10 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
       assert conn.status == 403
     end
 
-    test "response has errors.detail", %{conn: conn} do
+    test "response has error.code forbidden", %{conn: conn} do
       conn = call(conn, {:error, :forbidden})
       body = Jason.decode!(conn.resp_body)
-      assert get_in(body, ["errors", "detail"])
+      assert get_in(body, ["error", "code"]) == "forbidden"
     end
   end
 
@@ -79,6 +91,12 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
       conn = call(conn, {:error, :unauthorized})
       assert conn.status == 401
     end
+
+    test "response has error.code unauthorized", %{conn: conn} do
+      conn = call(conn, {:error, :unauthorized})
+      body = Jason.decode!(conn.resp_body)
+      assert get_in(body, ["error", "code"]) == "unauthorized"
+    end
   end
 
   # -----------------------------------------------------------------------
@@ -89,6 +107,12 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
     test "returns 409", %{conn: conn} do
       conn = call(conn, {:error, :conflict})
       assert conn.status == 409
+    end
+
+    test "response has error.code conflict", %{conn: conn} do
+      conn = call(conn, {:error, :conflict})
+      body = Jason.decode!(conn.resp_body)
+      assert get_in(body, ["error", "code"]) == "conflict"
     end
   end
 
@@ -102,10 +126,10 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
       assert conn.status == 409
     end
 
-    test "response errors.detail contains the specific reason", %{conn: conn} do
+    test "response error.message contains the specific reason", %{conn: conn} do
       conn = call(conn, {:error, {:conflict, "cannot delete with active nodes"}})
       body = Jason.decode!(conn.resp_body)
-      assert get_in(body, ["errors", "detail"]) == "cannot delete with active nodes"
+      assert get_in(body, ["error", "message"]) == "cannot delete with active nodes"
     end
   end
 
@@ -118,6 +142,12 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
       conn = call(conn, {:error, :service_unavailable})
       assert conn.status == 503
     end
+
+    test "response has error.code service_unavailable", %{conn: conn} do
+      conn = call(conn, {:error, :service_unavailable})
+      body = Jason.decode!(conn.resp_body)
+      assert get_in(body, ["error", "code"]) == "service_unavailable"
+    end
   end
 
   # -----------------------------------------------------------------------
@@ -128,6 +158,12 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
     test "returns 400", %{conn: conn} do
       conn = call(conn, {:error, :bad_request})
       assert conn.status == 400
+    end
+
+    test "response has error.code bad_request", %{conn: conn} do
+      conn = call(conn, {:error, :bad_request})
+      body = Jason.decode!(conn.resp_body)
+      assert get_in(body, ["error", "code"]) == "bad_request"
     end
   end
 
@@ -146,15 +182,21 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
       assert conn.status == 500
     end
 
-    test "returns 500 for bare binary string (no longer a named error)", %{conn: conn} do
+    test "returns 500 for bare binary string", %{conn: conn} do
       conn = call(conn, {:error, "untagged error string"})
       assert conn.status == 500
     end
 
-    test "500 response has errors.detail", %{conn: conn} do
+    test "500 response has error.code internal_server_error", %{conn: conn} do
       conn = call(conn, {:error, :some_unknown_atom})
       body = Jason.decode!(conn.resp_body)
-      assert get_in(body, ["errors", "detail"])
+      assert get_in(body, ["error", "code"]) == "internal_server_error"
+    end
+
+    test "500 response has error.message", %{conn: conn} do
+      conn = call(conn, {:error, :some_unknown_atom})
+      body = Jason.decode!(conn.resp_body)
+      assert is_binary(get_in(body, ["error", "message"]))
     end
   end
 end

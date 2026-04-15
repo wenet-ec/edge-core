@@ -32,8 +32,7 @@ volumes:
   edge_vpn_broker_logs: {}
   edge_http_proxy_data: {}
   edge_http_proxy_config: {}
-  edge_metrics_storage_data: {}
-  edge_metrics_collector_data: {}
+  edge_metrics_data: {}
 
 services:
   # ---------------------------------------------------------------------------
@@ -421,11 +420,11 @@ services:
       - "51080:41080" # SOCKS5 proxy
 
   # ---------------------------------------------------------------------------
-  # VictoriaMetrics — time-series metrics storage
+  # Prometheus — metrics scraper and storage
   # ---------------------------------------------------------------------------
-  edge_metrics_storage:
-    image: victoriametrics/victoria-metrics:latest
-    container_name: edge_metrics_storage
+  edge_metrics:
+    image: prom/prometheus:latest
+    container_name: edge_metrics
     restart: unless-stopped
     networks:
       - edge_core
@@ -433,44 +432,12 @@ services:
       edge_admin_a1:
         condition: service_healthy
     ports:
-      - "48428:8428"
+      - "49090:9090"
     volumes:
-      - edge_metrics_storage_data:/storage
-    environment:
-      - VM_storageDataPath=/storage
-      - VM_retentionPeriod=${METRICS_RETENTION_PERIOD:-7d}
-      - VM_selfScrapeInterval=10s
-      - VM_httpListenAddr=:8428
-      - VM_loggerLevel=WARN
-    command:
-      - "-envflag.enable"
-      - "-envflag.prefix=VM_"
-
-  # ---------------------------------------------------------------------------
-  # vmagent — Prometheus-compatible metrics collector / scraper
-  # ---------------------------------------------------------------------------
-  edge_metrics_collector:
-    image: victoriametrics/vmagent:latest
-    container_name: edge_metrics_collector
-    restart: unless-stopped
-    networks:
-      - edge_core
-    depends_on:
-      edge_admin_a1:
-        condition: service_healthy
-      edge_metrics_storage:
-        condition: service_started
-    volumes:
+      - edge_metrics_data:/prometheus
       - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    environment:
-      - VM_promscrape_config=/etc/prometheus/prometheus.yml
-      - VM_promscrape_httpSDCheckInterval=60s
-      - VM_remoteWrite_url=http://edge_metrics_storage:8428/api/v1/write
-      - VM_httpListenAddr=:8429
-      - VM_loggerLevel=WARN
-      - VM_promscrape_suppressScrapeErrorsDelay=5m
-    ports:
-      - "48429:8429"
     command:
-      - "-envflag.enable"
-      - "-envflag.prefix=VM_"
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=14d"
+      - "--web.enable-lifecycle"

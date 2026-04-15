@@ -124,7 +124,7 @@ docker compose -f lite.yml up -d
 
 ### Option B — Production setup (HA, 4 admins, 2 clusters)
 
-Copy [`examples/standard/`](examples/standard/) — 4 admin instances across 2 independent clusters, EMQX, full VictoriaMetrics + vmagent stack. See [`examples/standard/README.md`](examples/standard/README.md).
+Copy [`examples/standard/`](examples/standard/) — 4 admin instances across 2 independent clusters, EMQX, full Prometheus metrics stack. See [`examples/standard/README.md`](examples/standard/README.md).
 
 ### Option C — Local development
 

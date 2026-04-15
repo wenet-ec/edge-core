@@ -16,7 +16,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AgentMetricsDiscoveryController do
   operation(:index,
     summary: "Agent metrics service discovery",
     description:
-      "Service discovery endpoint for vmagent HTTP SD (agent metrics). Returns all active nodes grouped by cluster in the format expected by vmagent http_sd_configs.",
+      "Service discovery endpoint for Prometheus HTTP SD (agent metrics). Returns all active nodes grouped by cluster in the format expected by http_sd_configs.",
     responses: %{
       200 => {"Service discovery targets", "application/json", DiscoverySchemas.DiscoveryResponse}
     }

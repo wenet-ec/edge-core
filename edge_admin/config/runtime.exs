@@ -255,7 +255,7 @@ config :nexmaker,
   master_key: get_env!("NETMAKER_MASTER_KEY")
 
 # Disable memsup (memory supervisor) from :os_mon
-# We use PromEx + VictoriaMetrics for memory monitoring instead.
+# We use PromEx + Prometheus for memory monitoring instead.
 # memsup causes false alarms on Linux systems due to not understanding
 # that cached memory is reclaimable (looks at MemFree instead of MemAvailable).
 config :os_mon,

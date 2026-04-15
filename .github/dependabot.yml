@@ -65,9 +65,9 @@ updates:
       - dependency-name: "elixir"
         update-types: ["version-update:semver-patch", "version-update:semver-minor"]
 
-  # Docker base images - edge_metrics_collector
+  # Docker base images - edge_metrics
   - package-ecosystem: "docker"
-    directory: "/deploy/production/compose/edge_metrics_collector"
+    directory: "/deploy/production/compose/edge_metrics"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5

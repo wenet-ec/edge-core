@@ -13,7 +13,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.DiscoverySchemas do
 
     schema(%{
       title: "Internal.DiscoveryTargetGroup",
-      description: "A group of scrape targets with shared labels, in vmagent http_sd_configs format",
+      description: "A group of scrape targets with shared labels, in Prometheus http_sd_configs format",
       type: :object,
       properties: %{
         targets: %Schema{

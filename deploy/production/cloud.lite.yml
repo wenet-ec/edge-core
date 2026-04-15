@@ -11,8 +11,7 @@ volumes:
   production_edge_vpn_broker_data: {}
   production_edge_http_proxy_data: {}
   production_edge_http_proxy_config: {}
-  production_edge_metrics_storage_data: {}
-  production_edge_metrics_collector_data: {}
+  production_edge_metrics_data: {}
 
 services:
   # Edge Admin
@@ -185,52 +184,28 @@ services:
     depends_on:
       edge_admin_a1:
         condition: service_healthy
-      edge_admin_a2:
-        condition: service_healthy
-      edge_admin_b1:
-        condition: service_healthy
     volumes:
       - ./compose/edge_tcp_proxy/haproxy.lite.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:
       - "53128:43128" # HTTP forward proxy
       - "51080:41080" # SOCKS5 proxy
 
-  # Metrics Storage
-  edge_metrics_storage:
-    image: victoriametrics/victoria-metrics:latest
-    container_name: production_edge_metrics_storage
+  # Metrics
+  edge_metrics:
+    image: prom/prometheus:latest
+    container_name: production_edge_metrics
     networks:
       - production_edge_core
     depends_on:
       edge_admin_a1:
         condition: service_healthy
     ports:
-      - "48428:8428"
+      - "49090:9090"
     volumes:
-      - production_edge_metrics_storage_data:/storage
-    env_file:
-      - ./.envs/.edge_metrics_storage
+      - production_edge_metrics_data:/prometheus
+      - ./compose/edge_metrics/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     command:
-      - "-envflag.enable"
-      - "-envflag.prefix=VM_"
-
-  # Metrics Collector
-  edge_metrics_collector:
-    image: victoriametrics/vmagent:latest
-    container_name: production_edge_metrics_collector
-    networks:
-      - production_edge_core
-    depends_on:
-      edge_admin_a1:
-        condition: service_healthy
-      edge_metrics_storage:
-        condition: service_started
-    volumes:
-      - ./compose/edge_metrics_collector/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    env_file:
-      - ./.envs/.edge_metrics_collector
-    ports:
-      - "48429:8429"
-    command:
-      - "-envflag.enable"
-      - "-envflag.prefix=VM_"
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=14d"
+      - "--web.enable-lifecycle"

@@ -8,8 +8,7 @@ A multi-admin deployment of Edge Core with 4 admin instances across 2 clusters, 
 - Netmaker VPN (PostgreSQL-backed, EMQX broker)
 - Netmaker UI
 - CoreDNS
-- VictoriaMetrics (metrics storage)
-- vmagent (metrics collector)
+- Prometheus (metrics)
 - Caddy (reverse proxy / TLS)
 
 ## Cluster Layout
@@ -41,7 +40,7 @@ nano .env   # fill in your server address, secrets, and passwords
 
 # 2. If using a domain with TLS: edit configs/Caddyfile — replace yourdomain.com
 
-# 3. Edit configs/prometheus.yml — replace the metrics key with your METRICS_KEY
+# 3. Edit configs/prometheus.yml — replace change-me-your-metrics-key with your METRICS_KEY
 
 # 4. Start the cloud stack
 docker compose -f cloud.yml up -d
@@ -75,7 +74,7 @@ Key things to configure:
 - `METRICS_KEY` — scoped to metrics scrapers (optional, defaults to `MASTER_KEY`)
 - `VPN_CLUSTER_COOKIE` — must be the same across all 4 admin instances
 - `MQ_PASSWORD` and `EMQX_DASHBOARD_PASSWORD` — must match each other
-- Update `configs/prometheus.yml` with your actual `METRICS_KEY`
+- Update `configs/prometheus.yml` — replace `change-me-your-metrics-key` with your actual `METRICS_KEY`
 - If using a domain with TLS: update `configs/Caddyfile` with your domain names
 
 ### Private network (no TLS)?

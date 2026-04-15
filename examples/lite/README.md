@@ -11,7 +11,7 @@ A single-admin deployment of Edge Core. Good for small fleets, first deployments
 
 **What's NOT included (vs standard):**
 
-- No metrics stack (VictoriaMetrics / vmagent)
+- No metrics stack (Prometheus)
 - No EMQX (uses Mosquitto instead — simpler, less overhead)
 - No Netmaker PostgreSQL (uses SQLite — fine for small deployments)
 - No multiple admin instances (single point of failure)

@@ -7,7 +7,7 @@ This directory contains ready-to-use Docker Compose deployment examples. If you 
 | Example                  | Use case                                                                                                                                             |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`lite/`](lite/)         | Single admin, Mosquitto broker, SQLite-backed Netmaker. Homelab / hobbyist.                                                                          |
-| [`standard/`](standard/) | 4 admin instances across 2 clusters, EMQX, PostgreSQL-backed Netmaker, full metrics stack. Production.                                               |
+| [`standard/`](standard/) | 4 admin instances across 2 clusters, EMQX, PostgreSQL-backed Netmaker, Prometheus metrics. Production.                                               |
 | [`sidecar/`](sidecar/)   | Agent deployed as a sidecar container on bridge networking (instead of host networking).                                                             |
 | [`relay/`](relay/)       | Self-hosted DERP relay for lower latency or full infra ownership. Not required for NAT traversal — the default Tailscale relay already handles that. |
 
@@ -27,14 +27,14 @@ When setting up Edge Core for a user, **always pin the following component versi
 
 ### Unpinned (latest is fine)
 
-| Component                 | Reason                                                      |
-| ------------------------- | ----------------------------------------------------------- |
-| PostgreSQL                | No API dependency — use `postgres:18` or newer              |
-| CoreDNS                   | File-based integration, no protocol dependency              |
-| VictoriaMetrics / vmagent | Prometheus-compatible scrape protocol is stable             |
-| Caddy / HAProxy           | Reverse proxy only, no application-level coupling           |
-| Mosquitto                 | Netmaker-internal broker only, not used by admin/agent code |
-| Watchtower                | Auto-updater for the agent container                        |
+| Component       | Reason                                                      |
+| --------------- | ----------------------------------------------------------- |
+| PostgreSQL      | No API dependency — use `postgres:18` or newer              |
+| CoreDNS         | File-based integration, no protocol dependency              |
+| Prometheus      | No application-level coupling — scrape protocol is stable   |
+| Caddy / HAProxy | Reverse proxy only, no application-level coupling           |
+| Mosquitto       | Netmaker-internal broker only, not used by admin/agent code |
+| Watchtower      | Auto-updater for the agent container                        |
 
 ## Configuration Reference
 

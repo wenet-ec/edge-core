@@ -369,7 +369,7 @@ Admin background work is split between two schedulers with different semantics:
 - Netmaker UI: http://localhost:48080
 - Netmaker API: http://localhost:48081
 - EMQX Dashboard: http://localhost:48085
-- VictoriaMetrics: http://localhost:48428
+- Prometheus: http://localhost:49090
 - PostgreSQL: localhost:5432
 - NATS (event broker): nats://localhost:44222 (client), http://localhost:48222 (monitoring)
 - NUI (NATS web UI): http://localhost:41311
@@ -394,8 +394,7 @@ Admin background work is split between two schedulers with different semantics:
 - `.edge_vpn` - Netmaker VPN config
 - `.edge_vpn_db` - Netmaker database config
 - `.edge_vpn_broker` - EMQX message broker config
-- `.edge_metrics_storage` - VictoriaMetrics storage config
-- `.edge_metrics_collector` - Metrics collector config
+- `.edge_metrics` - Prometheus metrics config
 
 Production files follow the same pattern in `deploy/production/.envs/`
 
@@ -424,7 +423,7 @@ Production files follow the same pattern in `deploy/production/.envs/`
 - **Databases:** PostgreSQL 18 (admin), SQLite 0.22 (agent), Ecto 3.13
 - **VPN:** Netmaker (Go), netclient, WireGuard
 - **Jobs:** Oban 2.20, Quantum 3.5
-- **Metrics:** Prometheus exporters, VictoriaMetrics, PromEx 1.11
+- **Metrics:** Prometheus exporters, Prometheus, PromEx 1.11
 - **HTTP:** Req 0.5, Bandit server
 - **API:** OpenApiSpex 3.22 (OpenAPI/Swagger)
 - **Auth:** Argon2, JWT-like tokens

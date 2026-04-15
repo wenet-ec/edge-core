@@ -1,6 +1,0 @@
-# deploy/local/.envs/.edge_metrics_storage
-VM_storageDataPath=/storage
-VM_retentionPeriod=7d
-VM_selfScrapeInterval=10s
-VM_httpListenAddr=:8428
-VM_loggerLevel=WARN

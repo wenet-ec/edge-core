@@ -21,8 +21,7 @@ volumes:
   local_edge_vpn_broker_logs: {}
   local_edge_http_proxy_data: {}
   local_edge_http_proxy_config: {}
-  local_edge_metrics_storage_data: {}
-  local_edge_metrics_collector_data: {}
+  local_edge_metrics_data: {}
   local_edge_relay_data: {}
   local_edge_relay_map_data: {}
   local_edge_event_broker_nats_data: {}
@@ -403,41 +402,24 @@ services:
       retries: 3
 
   # Metrics
-  edge_metrics_storage:
-    image: victoriametrics/victoria-metrics:latest
-    container_name: local_edge_metrics_storage
+  edge_metrics:
+    image: prom/prometheus:latest
+    container_name: local_edge_metrics
     networks:
       - local_edge_core
     depends_on:
       edge_admin_a1:
         condition: service_healthy
     ports:
-      - "8428:8428"
+      - "49090:9090"
     volumes:
-      - local_edge_metrics_storage_data:/storage
-    env_file:
-      - ./.envs/.edge_metrics_storage
+      - local_edge_metrics_data:/prometheus
+      - ../../deploy/production/compose/edge_metrics/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     command:
-      - "-envflag.enable"
-      - "-envflag.prefix=VM_"
-
-  edge_metrics_collector:
-    image: victoriametrics/vmagent:latest
-    container_name: local_edge_metrics_collector
-    networks:
-      - local_edge_core
-    depends_on:
-      edge_metrics_storage:
-        condition: service_started
-    volumes:
-      - ../../deploy/production/compose/edge_metrics_collector/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    env_file:
-      - ./.envs/.edge_metrics_collector
-    ports:
-      - "8429:8429"
-    command:
-      - "-envflag.enable"
-      - "-envflag.prefix=VM_"
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=14d"
+      - "--web.enable-lifecycle"
 
   # Event Brokers
   edge_event_broker_nats:

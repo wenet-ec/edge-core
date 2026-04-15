@@ -49,7 +49,7 @@ defmodule EdgeAdminMcp.Server do
 
   ## Metrics Scraping Endpoints
 
-  These endpoints exist for Prometheus-compatible scrapers (VictoriaMetrics, Prometheus).
+  These endpoints exist for Prometheus-compatible scrapers (Prometheus, Grafana Agent, etc.).
   They are not MCP tools — they are HTTP endpoints on the admin API for external collectors.
   Auth: METRICS_KEY or MASTER_KEY bearer token.
 

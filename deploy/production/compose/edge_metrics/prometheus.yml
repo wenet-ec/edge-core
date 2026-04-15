@@ -1,4 +1,4 @@
-# deploy/production/compose/edge_metrics_collector/prometheus.yml
+# deploy/production/compose/edge_metrics/prometheus.yml
 global:
   scrape_interval: 30s
 
@@ -33,16 +33,6 @@ scrape_configs:
       type: Bearer
       credentials: supersecretkey123456789
 
-  - job_name: "edge-metrics-collector"
-    static_configs:
-      - targets: ["localhost:8429"]
-    metrics_path: "/metrics"
-
-  - job_name: "edge-metrics-storage"
-    static_configs:
-      - targets: ["edge_metrics_storage:8428"]
-    metrics_path: "/metrics"
-
   - job_name: "admin-metrics"
     static_configs:
       - targets: ["edge_admin_a1:44000", "edge_admin_a2:44000", "edge_admin_b1:44000"]
@@ -50,3 +40,8 @@ scrape_configs:
     authorization:
       type: Bearer
       credentials: supersecretkey123456789
+
+  - job_name: "edge-metrics"
+    static_configs:
+      - targets: ["localhost:9090"]
+    metrics_path: "/metrics"

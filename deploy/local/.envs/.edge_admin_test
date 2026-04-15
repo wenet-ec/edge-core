@@ -31,7 +31,7 @@ NETMAKER_SUPERADMIN_PASSWORD=password
 NETMAKER_DEFAULT_DOMAIN=nm.internal
 
 # Metrics configuration
-METRICS_BASE_URL=http://edge_metrics_storage:8428
+METRICS_BASE_URL=edge_admin_a1:44000
 
 # Cluster configuration
 CLUSTER_SUBNET_PREFIX=24

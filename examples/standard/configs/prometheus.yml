@@ -1,6 +1,6 @@
 # examples/standard/configs/prometheus.yml
 #
-# vmagent scrape config — collects metrics from all 4 admin instances.
+# Prometheus scrape config — collects metrics from all 4 admin instances.
 # Replace METRICS_KEY value with your actual METRICS_KEY (or MASTER_KEY).
 
 global:
@@ -55,12 +55,7 @@ scrape_configs:
 
   # --- Metrics infrastructure self-metrics ---
 
-  - job_name: "edge-metrics-collector"
+  - job_name: "edge-metrics"
     static_configs:
-      - targets: ["localhost:8429"]
-    metrics_path: "/metrics"
-
-  - job_name: "edge-metrics-storage"
-    static_configs:
-      - targets: ["edge_metrics_storage:8428"]
+      - targets: ["localhost:9090"]
     metrics_path: "/metrics"

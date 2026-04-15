@@ -85,6 +85,29 @@ zombie_admin_cleanup_schedule = get_env("ZOMBIE_ADMIN_CLEANUP_SCHEDULE", :string
 zombie_admin_checkin_threshold_minutes = get_env("ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES", :integer, 120)
 cluster_reconciliation_schedule = get_env("CLUSTER_RECONCILIATION_SCHEDULE", :string, "0 */6 * * *")
 
+# --- Prom Ex Configurations and Grafana Integration ---
+grafana_config =
+  case System.get_env("GRAFANA_HOST") do
+    nil ->
+      :disabled
+
+    host ->
+      auth =
+        if token = System.get_env("GRAFANA_AUTH_TOKEN") do
+          [auth_token: token]
+        else
+          [username: System.get_env("GRAFANA_USERNAME", "admin"), password: System.get_env("GRAFANA_PASSWORD", "")]
+        end
+
+      [
+        host: host,
+        upload_dashboards_on_start: System.get_env("GRAFANA_UPLOAD_ON_START", "true") == "true",
+        folder_name: System.get_env("GRAFANA_FOLDER_NAME", "Edge Core"),
+        annotate_app_lifecycle: System.get_env("GRAFANA_ANNOTATE_LIFECYCLE", "false") == "true"
+      ] ++ auth
+  end
+
+# --- LocalScheduler  ---
 config :edge_admin, EdgeAdmin.LocalScheduler,
   jobs: [
     admin_discovery: [
@@ -118,8 +141,8 @@ config :edge_admin, EdgeAdmin.LocalScheduler,
   ]
 
 config :edge_admin, EdgeAdmin.PromEx,
-  disabled: false,
-  grafana: :disabled,
+  disabled: !get_env("ADMIN_METRICS_ENABLED", :boolean, true),
+  grafana: grafana_config,
   metrics_server: :disabled
 
 # Queue concurrency note:
@@ -238,10 +261,6 @@ config :nexmaker,
 config :os_mon,
   start_memsup: false
 
-config :sentry,
-  dsn: get_env("SENTRY_DSN"),
-  environment_name: get_env("SENTRY_ENVIRONMENT_NAME")
-
 # =============================================================================
 # Event Broker
 # =============================================================================
@@ -267,6 +286,9 @@ config :sentry,
 #
 # Core identifier — included in every event envelope for multi-core setups:
 #   CORE_NAME=prod-us
+config :sentry,
+  dsn: get_env("SENTRY_DSN"),
+  environment_name: get_env("SENTRY_ENVIRONMENT_NAME")
 
 if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
   event_broker_adapter =

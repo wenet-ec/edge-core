@@ -42,7 +42,8 @@ defmodule EdgeAdmin.PromEx do
       {:prom_ex, "phoenix.json"},
       {:prom_ex, "ecto.json"},
       {:prom_ex, "oban.json"},
-      {:edge_admin, "edge_admin.json"}
+      {:edge_admin, "grafana_dashboards/edge_admin.json"},
+      {:edge_admin, "grafana_dashboards/edge_agent.json"}
     ]
   end
 end

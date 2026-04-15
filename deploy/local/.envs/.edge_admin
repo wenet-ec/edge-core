@@ -73,6 +73,24 @@ METRICS_BASE_URL=edge_admin_a1:44000
 # SENTRY_DSN=https://...@sentry.io/...
 SENTRY_ENVIRONMENT_NAME=local
 
+# --- PromEx Metrics Collection ---
+# ADMIN_METRICS_ENABLED=true   # Set to false to disable all admin metrics collection (default: true)
+
+# --- Grafana Dashboard Upload (optional) ---
+# When GRAFANA_HOST is set, PromEx uploads all dashboards to Grafana on startup.
+# Unset (default) → dashboards stay in priv/grafana_dashboards/ for manual import.
+#
+# Auth: set GRAFANA_AUTH_TOKEN (service account token — preferred) OR
+#       GRAFANA_USERNAME + GRAFANA_PASSWORD (basic auth fallback).
+#
+# GRAFANA_HOST=http://localhost:3000
+# GRAFANA_AUTH_TOKEN=glsa_xxxxxxxxxxxxxxxxxxxx
+# GRAFANA_USERNAME=admin
+# GRAFANA_PASSWORD=admin
+# GRAFANA_FOLDER_NAME=Edge Core          # Folder name in Grafana (default: "Edge Core")
+# GRAFANA_UPLOAD_ON_START=true           # Upload dashboards on each boot (default: true)
+# GRAFANA_ANNOTATE_LIFECYCLE=false       # Annotate app start/stop events (default: false)
+
 # =============================================================================
 # VPN / Netmaker
 # =============================================================================

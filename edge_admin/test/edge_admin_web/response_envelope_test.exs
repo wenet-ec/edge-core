@@ -144,10 +144,10 @@ defmodule EdgeAdminWeb.ResponseEnvelopeTest do
       refute Map.has_key?(result.meta.pagination, :current_page)
     end
 
-    test "total_count renamed to total" do
+    test "total_count passed through as total_count" do
       result = ResponseEnvelope.success(fake_conn(), [], fake_flop_meta(total_count: 99))
-      assert result.meta.pagination.total == 99
-      refute Map.has_key?(result.meta.pagination, :total_count)
+      assert result.meta.pagination.total_count == 99
+      refute Map.has_key?(result.meta.pagination, :total)
     end
 
     test "has_next_page? renamed to has_next" do
@@ -197,7 +197,7 @@ defmodule EdgeAdminWeb.ResponseEnvelopeTest do
 
       assert MapSet.equal?(
                MapSet.new(Map.keys(result.meta.pagination)),
-               MapSet.new([:page, :page_size, :total, :total_pages, :has_next, :has_prev, :next_page, :prev_page])
+               MapSet.new([:page, :page_size, :total_count, :total_pages, :has_next, :has_prev, :next_page, :prev_page])
              )
     end
   end

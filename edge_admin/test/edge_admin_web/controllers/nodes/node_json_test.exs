@@ -340,11 +340,11 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
       assert result.meta.pagination.page == 2
     end
 
-    test "total_count is renamed to total" do
+    test "total_count passed through as total_count" do
       result = NodeJSON.index(%{conn: fake_conn(), nodes: [], meta: fake_meta(total_count: 99)})
-      assert Map.has_key?(result.meta.pagination, :total)
-      refute Map.has_key?(result.meta.pagination, :total_count)
-      assert result.meta.pagination.total == 99
+      assert Map.has_key?(result.meta.pagination, :total_count)
+      refute Map.has_key?(result.meta.pagination, :total)
+      assert result.meta.pagination.total_count == 99
     end
 
     test "has_next_page? is renamed to has_next" do
@@ -386,7 +386,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
 
       assert MapSet.equal?(
                MapSet.new(Map.keys(result.meta.pagination)),
-               MapSet.new([:page, :page_size, :total, :total_pages, :has_next, :has_prev, :next_page, :prev_page])
+               MapSet.new([:page, :page_size, :total_count, :total_pages, :has_next, :has_prev, :next_page, :prev_page])
              )
     end
   end

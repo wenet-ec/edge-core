@@ -179,8 +179,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyJSONTest do
       assert p.page_size == 10
     end
 
-    test "total = meta.total_count", %{pagination: p} do
-      assert p.total == 55
+    test "total_count = meta.total_count", %{pagination: p} do
+      assert p.total_count == 55
     end
 
     test "total_pages = meta.total_pages", %{pagination: p} do

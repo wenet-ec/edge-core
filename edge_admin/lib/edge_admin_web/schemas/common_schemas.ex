@@ -51,7 +51,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
       properties: %{
         page: %Schema{type: :integer, description: "Current page number", example: 1},
         page_size: %Schema{type: :integer, description: "Items per page", example: 20},
-        total: %Schema{type: :integer, description: "Total number of items", example: 150},
+        total_count: %Schema{type: :integer, description: "Total number of items", example: 150},
         total_pages: %Schema{type: :integer, description: "Total number of pages", example: 8},
         has_next: %Schema{type: :boolean, description: "Whether a next page exists", example: true},
         has_prev: %Schema{type: :boolean, description: "Whether a previous page exists", example: false},
@@ -68,7 +68,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
           example: nil
         }
       },
-      required: [:page, :page_size, :total, :total_pages, :has_next, :has_prev, :next_page, :prev_page]
+      required: [:page, :page_size, :total_count, :total_pages, :has_next, :has_prev, :next_page, :prev_page]
     })
   end
 

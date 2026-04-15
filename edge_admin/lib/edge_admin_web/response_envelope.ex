@@ -92,7 +92,7 @@ defmodule EdgeAdminWeb.ResponseEnvelope do
     %{
       page: m.current_page,
       page_size: m.page_size,
-      total: m.total_count,
+      total_count: m.total_count,
       total_pages: m.total_pages,
       has_next: m.has_next_page?,
       has_prev: m.has_previous_page?,

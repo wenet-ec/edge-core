@@ -292,11 +292,11 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionJSONTest do
       assert result.meta.pagination.total_pages == 7
     end
 
-    test "total_count passed through as total" do
+    test "total_count passed through as total_count" do
       result =
         CommandExecutionJSON.index(%{conn: fake_conn(), command_executions: [], meta: fake_flop_meta(total_count: 42)})
 
-      assert result.meta.pagination.total == 42
+      assert result.meta.pagination.total_count == 42
     end
   end
 end

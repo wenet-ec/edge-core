@@ -27,7 +27,8 @@ defmodule EdgeAdminWeb.Controllers.Metrics.WireguardMetricsController do
     responses: %{
       200 => {"Raw Prometheus metrics text", "text/plain", %OpenApiSpex.Schema{type: :string}},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
+      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse},
+      503 => {"Metrics unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 

@@ -293,37 +293,46 @@ defmodule EdgeAdmin.Metrics do
 
   # Unified scraping logic with VPN + cache fallback
   defp scrape_node_metrics(node_id, metrics_type, gateway_scrape_fn) do
-    # Build node name for ETS lookup
-    node_name = Vpn.build_vpn_name(node_id, prefix: :node)
+    # Check DB first — a missing node is always 404, regardless of VPN/cache state
+    with {:ok, node} <- Nodes.get_node(node_id) do
+      node_name = Vpn.build_vpn_name(node_id, prefix: :node)
 
-    with {:ok, cluster_name, _admin_name} <- Metadata.find_node_cluster(node_name),
-         {:ok, gateway_pid} <- Gateway.lookup(cluster_name),
-         {:ok, node} <- Nodes.get_node(node_id) do
-      # Try VPN scrape via Gateway - catch GenServer.call timeout exceptions
-      try do
-        case gateway_scrape_fn.(gateway_pid, node) do
-          {:ok, metrics_text} ->
-            {:ok, metrics_text}
+      # Attempt VPN scrape via ETS + Gateway; fall back to cache on any infra failure
+      case Metadata.find_node_cluster(node_name) do
+        {:ok, cluster_name, _admin_name} ->
+          case Gateway.lookup(cluster_name) do
+            {:ok, gateway_pid} ->
+              try do
+                case gateway_scrape_fn.(gateway_pid, node) do
+                  {:ok, metrics_text} ->
+                    {:ok, metrics_text}
 
-          {:error, reason} ->
-            # VPN scrape failed - try cache fallback
-            Logger.warning("VPN scrape failed for node #{node_id} (#{metrics_type}): #{inspect(reason)}, trying cache")
+                  {:error, reason} ->
+                    Logger.warning(
+                      "VPN scrape failed for node #{node_id} (#{metrics_type}): #{inspect(reason)}, trying cache"
+                    )
 
-            fallback_to_cache(node_id, metrics_type)
-        end
-      catch
-        :exit, {:timeout, _} ->
-          # GenServer.call timeout - fallback to cache
-          Logger.warning("VPN scrape timeout for node #{node_id} (#{metrics_type}), trying cache")
+                    fallback_to_cache(node_id, metrics_type)
+                end
+              catch
+                :exit, {:timeout, _} ->
+                  Logger.warning("VPN scrape timeout for node #{node_id} (#{metrics_type}), trying cache")
+                  fallback_to_cache(node_id, metrics_type)
+              end
 
+            {:error, reason} ->
+              Logger.warning(
+                "Gateway not found for node #{node_id} (#{metrics_type}): #{inspect(reason)}, trying cache"
+              )
+
+              fallback_to_cache(node_id, metrics_type)
+          end
+
+        {:error, :not_found} ->
+          # Node exists in DB but not yet in ETS (e.g. owned by another admin cluster)
+          Logger.warning("Node #{node_id} (#{metrics_type}) not in ETS, trying cache")
           fallback_to_cache(node_id, metrics_type)
       end
-    else
-      # Node lookup failed - try cache directly
-      error ->
-        Logger.warning("Node lookup failed for #{node_id} (#{metrics_type}): #{inspect(error)}, trying cache")
-
-        fallback_to_cache(node_id, metrics_type)
     end
   end
 

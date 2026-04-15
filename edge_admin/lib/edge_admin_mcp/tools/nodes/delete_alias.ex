@@ -15,8 +15,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.DeleteAlias do
          {:ok, _} <- Nodes.delete_alias(a) do
       {:reply, Response.text(Response.tool(), "Alias #{id} deleted"), frame}
     else
-      {:error, :not_found} -> {:reply, Response.error(Response.tool(), "Alias #{id} not found"), frame}
-      {:error, reason} -> {:reply, Response.error(Response.tool(), "Delete failed: #{inspect(reason)}"), frame}
+      {:error, :not_found} ->
+        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Alias #{id} not found")), frame}
+
+      {:error, reason} ->
+        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
     end
   end
 end

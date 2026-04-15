@@ -10,6 +10,6 @@ defmodule EdgeAdminMcp.Tools.Admins.GetAdminCluster do
 
   @impl true
   def execute(_params, frame) do
-    {:reply, Response.json(Response.tool(), %{data: Metadata.get_admin_cluster()}), frame}
+    {:reply, Response.json(Response.tool(), Metadata.get_admin_cluster()), frame}
   end
 end

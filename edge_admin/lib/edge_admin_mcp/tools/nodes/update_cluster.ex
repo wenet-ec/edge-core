@@ -20,11 +20,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.UpdateCluster do
             {:reply, Response.json(Response.tool(), ClusterData.data(updated)), frame}
 
           {:error, reason} ->
-            {:reply, Response.error(Response.tool(), "Update failed: #{inspect(reason)}"), frame}
+            {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
         end
 
       {:error, :not_found} ->
-        {:reply, Response.error(Response.tool(), "Cluster #{name} not found"), frame}
+        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Cluster #{name} not found")), frame}
     end
   end
 end

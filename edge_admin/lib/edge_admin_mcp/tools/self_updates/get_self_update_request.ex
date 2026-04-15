@@ -17,7 +17,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.GetSelfUpdateRequest do
         {:reply, Response.json(Response.tool(), SelfUpdateRequestData.data(request)), frame}
 
       {:error, :not_found} ->
-        {:reply, Response.error(Response.tool(), "Self-update request #{id} not found"), frame}
+        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Self-update request #{id} not found")), frame}
     end
   end
 end

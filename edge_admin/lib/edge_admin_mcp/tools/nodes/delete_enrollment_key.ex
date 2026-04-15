@@ -15,8 +15,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.DeleteEnrollmentKey do
          {:ok, _} <- Nodes.delete_enrollment_key(key) do
       {:reply, Response.text(Response.tool(), "Enrollment key #{id} deleted"), frame}
     else
-      {:error, :not_found} -> {:reply, Response.error(Response.tool(), "Enrollment key #{id} not found"), frame}
-      {:error, reason} -> {:reply, Response.error(Response.tool(), "Delete failed: #{inspect(reason)}"), frame}
+      {:error, :not_found} ->
+        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Enrollment key #{id} not found")), frame}
+
+      {:error, reason} ->
+        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
     end
   end
 end

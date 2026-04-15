@@ -10,6 +10,6 @@ defmodule EdgeAdminMcp.Tools.Admins.ListOrphanedClusters do
 
   @impl true
   def execute(_params, frame) do
-    {:reply, Response.json(Response.tool(), %{data: Metadata.get_orphaned_clusters()}), frame}
+    {:reply, Response.json(Response.tool(), Metadata.get_orphaned_clusters()), frame}
   end
 end

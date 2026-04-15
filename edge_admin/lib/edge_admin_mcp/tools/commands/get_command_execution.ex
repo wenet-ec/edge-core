@@ -17,7 +17,7 @@ defmodule EdgeAdminMcp.Tools.Commands.GetCommandExecution do
         {:reply, Response.json(Response.tool(), CommandExecutionData.data(execution)), frame}
 
       {:error, :not_found} ->
-        {:reply, Response.error(Response.tool(), "Command execution #{id} not found"), frame}
+        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Command execution #{id} not found")), frame}
     end
   end
 end

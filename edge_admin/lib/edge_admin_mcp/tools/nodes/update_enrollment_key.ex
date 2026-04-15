@@ -26,14 +26,13 @@ defmodule EdgeAdminMcp.Tools.Nodes.UpdateEnrollmentKey do
             {:reply, Response.json(Response.tool(), EnrollmentKeyData.data(updated)), frame}
 
           {:error, reason} ->
-            {:reply, Response.error(Response.tool(), "Update failed: #{inspect(reason)}"), frame}
+            {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
         end
 
       {:error, :not_found} ->
-        {:reply, Response.error(Response.tool(), "Enrollment key #{params.enrollment_key_id} not found"), frame}
+        {:reply,
+         Response.json(Response.tool(), tool_error(:not_found, "Enrollment key #{params.enrollment_key_id} not found")),
+         frame}
     end
   end
-
-  defp put_if(m, _k, nil), do: m
-  defp put_if(m, k, v), do: Map.put(m, k, v)
 end

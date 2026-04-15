@@ -34,10 +34,7 @@ defmodule EdgeAdminMcp.Tools.Commands.CreateCommand do
         {:reply, Response.json(Response.tool(), CommandData.data(command)), frame}
 
       {:error, reason} ->
-        {:reply, Response.error(Response.tool(), "Failed to create command: #{inspect(reason)}"), frame}
+        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
     end
   end
-
-  defp put_if(m, _k, nil), do: m
-  defp put_if(m, k, v), do: Map.put(m, k, v)
 end

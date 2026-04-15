@@ -20,11 +20,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.ChangeNodeCluster do
             {:reply, Response.json(Response.tool(), NodeData.data(updated)), frame}
 
           {:error, reason} ->
-            {:reply, Response.error(Response.tool(), "Failed to change cluster: #{inspect(reason)}"), frame}
+            {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
         end
 
       {:error, :not_found} ->
-        {:reply, Response.error(Response.tool(), "Node #{id} not found"), frame}
+        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Node #{id} not found")), frame}
     end
   end
 end

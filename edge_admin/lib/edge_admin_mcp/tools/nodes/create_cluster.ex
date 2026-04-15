@@ -24,21 +24,10 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateCluster do
         {:reply, Response.json(Response.tool(), ClusterData.data(cluster)), frame}
 
       {:error, :service_unavailable} ->
-        {:reply, Response.error(Response.tool(), "Netmaker VPN unavailable — cluster not created"), frame}
+        {:reply, Response.json(Response.tool(), tool_error(:service_unavailable)), frame}
 
-      {:error, changeset} ->
-        {:reply, Response.error(Response.tool(), "Validation failed: #{format_errors(changeset)}"), frame}
+      {:error, reason} ->
+        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
     end
-  end
-
-  defp put_if(m, _k, nil), do: m
-  defp put_if(m, k, v), do: Map.put(m, k, v)
-
-  defp format_errors(%Ecto.Changeset{} = cs) do
-    cs
-    |> Ecto.Changeset.traverse_errors(fn {msg, opts} ->
-      Enum.reduce(opts, msg, fn {k, v}, acc -> String.replace(acc, "%{#{k}}", to_string(v)) end)
-    end)
-    |> inspect()
   end
 end

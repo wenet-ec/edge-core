@@ -58,24 +58,10 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshPublicKeys do
 
     case Ssh.list_ssh_public_keys(query) do
       {:ok, {keys, meta}} ->
-        {:reply,
-         Response.json(Response.tool(), %{
-           data: Enum.map(keys, &SshPublicKeyData.data/1),
-           pagination: %{
-             page: meta.current_page,
-             page_size: meta.page_size,
-             total: meta.total_count,
-             total_pages: meta.total_pages,
-             has_next: meta.has_next_page?,
-             has_prev: meta.has_previous_page?
-           }
-         }), frame}
+        {:reply, Response.json(Response.tool(), paginated(keys, meta, &SshPublicKeyData.data/1)), frame}
 
       {:error, reason} ->
-        {:reply, Response.error(Response.tool(), "Failed to list SSH public keys: #{inspect(reason)}"), frame}
+        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
     end
   end
-
-  defp put_if(m, _k, nil), do: m
-  defp put_if(m, k, v), do: Map.put(m, k, v)
 end

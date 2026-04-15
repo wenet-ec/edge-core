@@ -15,8 +15,11 @@ defmodule EdgeAdminMcp.Tools.Commands.DeleteCommand do
          {:ok, _} <- Commands.delete_command(command) do
       {:reply, Response.text(Response.tool(), "Command #{id} deleted"), frame}
     else
-      {:error, :not_found} -> {:reply, Response.error(Response.tool(), "Command #{id} not found"), frame}
-      {:error, reason} -> {:reply, Response.error(Response.tool(), "Delete failed: #{inspect(reason)}"), frame}
+      {:error, :not_found} ->
+        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Command #{id} not found")), frame}
+
+      {:error, reason} ->
+        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
     end
   end
 end

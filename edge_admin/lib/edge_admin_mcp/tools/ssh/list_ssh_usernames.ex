@@ -52,24 +52,10 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
 
     case Ssh.list_ssh_usernames(query) do
       {:ok, {usernames, meta}} ->
-        {:reply,
-         Response.json(Response.tool(), %{
-           data: Enum.map(usernames, &SshUsernameData.data/1),
-           pagination: %{
-             page: meta.current_page,
-             page_size: meta.page_size,
-             total: meta.total_count,
-             total_pages: meta.total_pages,
-             has_next: meta.has_next_page?,
-             has_prev: meta.has_previous_page?
-           }
-         }), frame}
+        {:reply, Response.json(Response.tool(), paginated(usernames, meta, &SshUsernameData.data/1)), frame}
 
       {:error, reason} ->
-        {:reply, Response.error(Response.tool(), "Failed to list SSH usernames: #{inspect(reason)}"), frame}
+        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
     end
   end
-
-  defp put_if(m, _k, nil), do: m
-  defp put_if(m, k, v), do: Map.put(m, k, v)
 end

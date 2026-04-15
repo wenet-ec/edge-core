@@ -15,8 +15,11 @@ defmodule EdgeAdminMcp.Tools.Ssh.DeleteSshUsername do
          {:ok, _} <- Ssh.delete_ssh_username(username) do
       {:reply, Response.text(Response.tool(), "SSH username #{id} deleted"), frame}
     else
-      {:error, :not_found} -> {:reply, Response.error(Response.tool(), "SSH username #{id} not found"), frame}
-      {:error, reason} -> {:reply, Response.error(Response.tool(), "Delete failed: #{inspect(reason)}"), frame}
+      {:error, :not_found} ->
+        {:reply, Response.json(Response.tool(), tool_error(:not_found, "SSH username #{id} not found")), frame}
+
+      {:error, reason} ->
+        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
     end
   end
 end

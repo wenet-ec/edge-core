@@ -20,11 +20,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateAlias do
             {:reply, Response.json(Response.tool(), AliasData.data(alias_record)), frame}
 
           {:error, reason} ->
-            {:reply, Response.error(Response.tool(), "Failed to create alias: #{inspect(reason)}"), frame}
+            {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
         end
 
       {:error, :not_found} ->
-        {:reply, Response.error(Response.tool(), "Node #{node_id} not found"), frame}
+        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Node #{node_id} not found")), frame}
     end
   end
 end

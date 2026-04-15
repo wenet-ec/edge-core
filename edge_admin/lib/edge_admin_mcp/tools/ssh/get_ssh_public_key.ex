@@ -17,7 +17,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.GetSshPublicKey do
         {:reply, Response.json(Response.tool(), SshPublicKeyData.data(key)), frame}
 
       {:error, :not_found} ->
-        {:reply, Response.error(Response.tool(), "SSH public key #{id} not found"), frame}
+        {:reply, Response.json(Response.tool(), tool_error(:not_found, "SSH public key #{id} not found")), frame}
     end
   end
 end

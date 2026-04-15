@@ -15,8 +15,11 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.DeleteSelfUpdateRequest do
          {:ok, _} <- SelfUpdates.delete_self_update_request(request) do
       {:reply, Response.text(Response.tool(), "Self-update request #{id} deleted"), frame}
     else
-      {:error, :not_found} -> {:reply, Response.error(Response.tool(), "Self-update request #{id} not found"), frame}
-      {:error, reason} -> {:reply, Response.error(Response.tool(), "Delete failed: #{inspect(reason)}"), frame}
+      {:error, :not_found} ->
+        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Self-update request #{id} not found")), frame}
+
+      {:error, reason} ->
+        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
     end
   end
 end

@@ -47,7 +47,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
         {:reply, Response.json(Response.tool(), paginated(nodes, meta, &NodeData.data/1)), frame}
 
       {:error, reason} ->
-        {:reply, Response.error(Response.tool(), "Failed to list nodes: #{inspect(reason)}"), frame}
+        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
     end
   end
 
@@ -67,21 +67,4 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
     |> put_if("order_by", params[:order_by])
     |> put_if("order_directions", params[:order_directions])
   end
-
-  defp paginated(items, meta, mapper) do
-    %{
-      data: Enum.map(items, mapper),
-      pagination: %{
-        page: meta.current_page,
-        page_size: meta.page_size,
-        total: meta.total_count,
-        total_pages: meta.total_pages,
-        has_next: meta.has_next_page?,
-        has_prev: meta.has_previous_page?
-      }
-    }
-  end
-
-  defp put_if(m, _k, nil), do: m
-  defp put_if(m, k, v), do: Map.put(m, k, v)
 end

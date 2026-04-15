@@ -17,7 +17,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetEnrollmentKey do
         {:reply, Response.json(Response.tool(), EnrollmentKeyData.data(key)), frame}
 
       {:error, :not_found} ->
-        {:reply, Response.error(Response.tool(), "Enrollment key #{id} not found"), frame}
+        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Enrollment key #{id} not found")), frame}
     end
   end
 end

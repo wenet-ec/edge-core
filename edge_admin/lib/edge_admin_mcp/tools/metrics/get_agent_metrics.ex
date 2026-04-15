@@ -15,8 +15,8 @@ defmodule EdgeAdminMcp.Tools.Metrics.GetAgentMetrics do
       {:ok, metrics} ->
         {:reply, Response.json(Response.tool(), metrics), frame}
 
-      {:error, reason} ->
-        {:reply, Response.error(Response.tool(), "Agent metrics unavailable: #{inspect(reason)}"), frame}
+      {:error, _reason} ->
+        {:reply, Response.json(Response.tool(), tool_error(:service_unavailable)), frame}
     end
   end
 end

@@ -26,7 +26,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.CreateSelfUpdateRequest do
         {:reply, Response.json(Response.tool(), SelfUpdateRequestData.data(request)), frame}
 
       {:error, reason} ->
-        {:reply, Response.error(Response.tool(), "Failed to create self-update request: #{inspect(reason)}"), frame}
+        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
     end
   end
 end

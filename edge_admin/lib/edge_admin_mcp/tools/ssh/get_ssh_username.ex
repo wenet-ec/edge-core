@@ -17,7 +17,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.GetSshUsername do
         {:reply, Response.json(Response.tool(), SshUsernameData.data(username)), frame}
 
       {:error, :not_found} ->
-        {:reply, Response.error(Response.tool(), "SSH username #{id} not found"), frame}
+        {:reply, Response.json(Response.tool(), tool_error(:not_found, "SSH username #{id} not found")), frame}
     end
   end
 end

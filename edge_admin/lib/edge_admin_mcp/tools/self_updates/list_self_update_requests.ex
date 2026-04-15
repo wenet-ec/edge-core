@@ -43,24 +43,10 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.ListSelfUpdateRequests do
 
     case SelfUpdates.list_self_update_requests(query) do
       {:ok, {requests, meta}} ->
-        {:reply,
-         Response.json(Response.tool(), %{
-           data: Enum.map(requests, &SelfUpdateRequestData.data/1),
-           pagination: %{
-             page: meta.current_page,
-             page_size: meta.page_size,
-             total: meta.total_count,
-             total_pages: meta.total_pages,
-             has_next: meta.has_next_page?,
-             has_prev: meta.has_previous_page?
-           }
-         }), frame}
+        {:reply, Response.json(Response.tool(), paginated(requests, meta, &SelfUpdateRequestData.data/1)), frame}
 
       {:error, reason} ->
-        {:reply, Response.error(Response.tool(), "Failed to list self-update requests: #{inspect(reason)}"), frame}
+        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
     end
   end
-
-  defp put_if(m, _k, nil), do: m
-  defp put_if(m, k, v), do: Map.put(m, k, v)
 end

@@ -15,8 +15,11 @@ defmodule EdgeAdminMcp.Tools.Ssh.DeleteSshPublicKey do
          {:ok, _} <- Ssh.delete_ssh_public_key(key) do
       {:reply, Response.text(Response.tool(), "SSH public key #{id} deleted"), frame}
     else
-      {:error, :not_found} -> {:reply, Response.error(Response.tool(), "SSH public key #{id} not found"), frame}
-      {:error, reason} -> {:reply, Response.error(Response.tool(), "Delete failed: #{inspect(reason)}"), frame}
+      {:error, :not_found} ->
+        {:reply, Response.json(Response.tool(), tool_error(:not_found, "SSH public key #{id} not found")), frame}
+
+      {:error, reason} ->
+        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
     end
   end
 end

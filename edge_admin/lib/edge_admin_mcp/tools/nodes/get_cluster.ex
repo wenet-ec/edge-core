@@ -17,7 +17,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetCluster do
         {:reply, Response.json(Response.tool(), ClusterData.data(cluster)), frame}
 
       {:error, :not_found} ->
-        {:reply, Response.error(Response.tool(), "Cluster #{name} not found"), frame}
+        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Cluster #{name} not found")), frame}
     end
   end
 end

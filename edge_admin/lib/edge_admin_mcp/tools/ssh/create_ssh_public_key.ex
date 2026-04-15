@@ -23,14 +23,13 @@ defmodule EdgeAdminMcp.Tools.Ssh.CreateSshPublicKey do
             {:reply, Response.json(Response.tool(), SshPublicKeyData.data(key)), frame}
 
           {:error, reason} ->
-            {:reply, Response.error(Response.tool(), "Failed to add public key: #{inspect(reason)}"), frame}
+            {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
         end
 
       {:error, :not_found} ->
-        {:reply, Response.error(Response.tool(), "SSH username #{params.ssh_username_id} not found"), frame}
+        {:reply,
+         Response.json(Response.tool(), tool_error(:not_found, "SSH username #{params.ssh_username_id} not found")),
+         frame}
     end
   end
-
-  defp put_if(m, _k, nil), do: m
-  defp put_if(m, k, v), do: Map.put(m, k, v)
 end

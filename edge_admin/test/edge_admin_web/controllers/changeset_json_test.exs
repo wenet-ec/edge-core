@@ -2,7 +2,13 @@
 defmodule EdgeAdminWeb.Controllers.ChangesetJSONTest do
   use ExUnit.Case, async: true
 
+  import Phoenix.ConnTest
+
   alias EdgeAdminWeb.Controllers.ChangesetJSON
+
+  defp fake_conn do
+    Plug.Conn.assign(build_conn(), :request_id, "test-request-id")
+  end
 
   # Build a changeset in memory without hitting the DB.
   defp changeset_with(types, attrs, validations_fn) do
@@ -12,24 +18,34 @@ defmodule EdgeAdminWeb.Controllers.ChangesetJSONTest do
   end
 
   defp errors_from(changeset) do
-    %{changeset: changeset}
+    %{conn: fake_conn(), changeset: changeset}
     |> ChangesetJSON.error()
-    |> Map.fetch!(:errors)
+    |> get_in([:error, :details])
   end
 
   describe "error/1 — structure" do
-    test "returns a map with :errors key" do
+    test "returns a map with :error key" do
       cs =
         changeset_with(%{name: :string}, %{}, fn cs ->
           Ecto.Changeset.add_error(cs, :name, "can't be blank")
         end)
 
-      result = ChangesetJSON.error(%{changeset: cs})
+      result = ChangesetJSON.error(%{conn: fake_conn(), changeset: cs})
       assert is_map(result)
-      assert Map.has_key?(result, :errors)
+      assert Map.has_key?(result, :error)
     end
 
-    test "errors value is a map keyed by field atom" do
+    test "error.code is validation_failed" do
+      cs =
+        changeset_with(%{name: :string}, %{}, fn cs ->
+          Ecto.Changeset.add_error(cs, :name, "can't be blank")
+        end)
+
+      result = ChangesetJSON.error(%{conn: fake_conn(), changeset: cs})
+      assert result.error.code == "validation_failed"
+    end
+
+    test "error.details is a map keyed by field atom" do
       cs =
         changeset_with(%{name: :string}, %{}, fn cs ->
           Ecto.Changeset.add_error(cs, :name, "can't be blank")

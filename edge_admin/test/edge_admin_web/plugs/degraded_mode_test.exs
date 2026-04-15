@@ -55,7 +55,7 @@ defmodule EdgeAdminWeb.Plugs.DegradedModeTest do
       opts = DegradedMode.init(:block)
       conn = ctx |> prepared() |> DegradedMode.call(opts)
       body = json_response(conn, 503)
-      assert get_in(body, ["errors", "detail"]) =~ "Service Unavailable"
+      assert get_in(body, ["error", "message"]) =~ "Service Unavailable"
     end
   end
 end

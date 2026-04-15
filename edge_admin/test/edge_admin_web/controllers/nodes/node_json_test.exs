@@ -2,12 +2,18 @@
 defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
   use ExUnit.Case, async: true
 
+  import Phoenix.ConnTest
+
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdminWeb.Controllers.Nodes.NodeJSON
 
   @now ~U[2026-01-01 10:00:00Z]
+
+  defp fake_conn do
+    Plug.Conn.assign(build_conn(), :request_id, "test-request-id")
+  end
 
   defp fake_cluster(overrides \\ %{}) do
     Map.merge(%Cluster{id: "cluster-uuid-1", name: "prod", ipv4_range: "100.64.1.0/24"}, overrides)
@@ -75,12 +81,12 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
 
   describe "show/1" do
     test "wraps node in %{data: ...}" do
-      result = NodeJSON.show(%{node: fake_node()})
+      result = NodeJSON.show(%{conn: fake_conn(), node: fake_node()})
       assert Map.has_key?(result, :data)
     end
 
     test "data contains all required fields" do
-      data = NodeJSON.show(%{node: fake_node()}).data
+      data = NodeJSON.show(%{conn: fake_conn(), node: fake_node()}).data
 
       for key <- [
             :id,
@@ -123,7 +129,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
           proxy_password: "secret"
         })
 
-      data = NodeJSON.show(%{node: node}).data
+      data = NodeJSON.show(%{conn: fake_conn(), node: node}).data
       assert data.id == "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
       assert data.id_type == "random"
       assert data.status == "unhealthy"
@@ -138,7 +144,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
     end
 
     test "nil last_seen_at is passed through" do
-      data = NodeJSON.show(%{node: fake_node(%{last_seen_at: nil})}).data
+      data = NodeJSON.show(%{conn: fake_conn(), node: fake_node(%{last_seen_at: nil})}).data
       assert data.last_seen_at == nil
     end
   end
@@ -149,13 +155,13 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
 
   describe "show/1 — node_name" do
     test "node_name is node-{id} format" do
-      data = NodeJSON.show(%{node: fake_node()}).data
+      data = NodeJSON.show(%{conn: fake_conn(), node: fake_node()}).data
       assert data.node_name == "node-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
     end
 
     test "node_name uses the node id" do
       node = fake_node(%{id: "11111111-2222-3333-4444-555555555555"})
-      data = NodeJSON.show(%{node: node}).data
+      data = NodeJSON.show(%{conn: fake_conn(), node: node}).data
       assert data.node_name == "node-11111111-2222-3333-4444-555555555555"
     end
   end
@@ -167,7 +173,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
   describe "show/1 — cluster_name" do
     test "cluster_name is taken from preloaded cluster" do
       node = fake_node(%{cluster: fake_cluster(%{name: "staging"})})
-      data = NodeJSON.show(%{node: node}).data
+      data = NodeJSON.show(%{conn: fake_conn(), node: node}).data
       assert data.cluster_name == "staging"
     end
   end
@@ -184,7 +190,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
           cluster: fake_cluster(%{name: "prod"})
         })
 
-      data = NodeJSON.show(%{node: node}).data
+      data = NodeJSON.show(%{conn: fake_conn(), node: node}).data
       assert data.vpn_hostname == "node-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.cluster-prod.nm.internal"
     end
 
@@ -195,7 +201,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
           cluster: fake_cluster(%{name: "dev"})
         })
 
-      data = NodeJSON.show(%{node: node}).data
+      data = NodeJSON.show(%{conn: fake_conn(), node: node}).data
       assert data.vpn_hostname =~ "cluster-dev"
     end
   end
@@ -207,23 +213,23 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
   describe "show/1 — mdns_hostname" do
     test "mdns_hostname is node-{id}.local" do
       node = fake_node(%{id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"})
-      data = NodeJSON.show(%{node: node}).data
+      data = NodeJSON.show(%{conn: fake_conn(), node: node}).data
       assert data.mdns_hostname == "node-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.local"
     end
 
     test "mdns_hostname uses the node id not the cluster name" do
       node = fake_node(%{id: "11111111-2222-3333-4444-555555555555", cluster: fake_cluster(%{name: "staging"})})
-      data = NodeJSON.show(%{node: node}).data
+      data = NodeJSON.show(%{conn: fake_conn(), node: node}).data
       assert data.mdns_hostname == "node-11111111-2222-3333-4444-555555555555.local"
     end
 
     test "mdns_hostname ends in .local" do
-      data = NodeJSON.show(%{node: fake_node()}).data
+      data = NodeJSON.show(%{conn: fake_conn(), node: fake_node()}).data
       assert String.ends_with?(data.mdns_hostname, ".local")
     end
 
     test "mdns_hostname starts with node-" do
-      data = NodeJSON.show(%{node: fake_node()}).data
+      data = NodeJSON.show(%{conn: fake_conn(), node: fake_node()}).data
       assert String.starts_with?(data.mdns_hostname, "node-")
     end
   end
@@ -234,14 +240,14 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
 
   describe "show/1 — aliases" do
     test "aliases is empty list when node has no aliases" do
-      data = NodeJSON.show(%{node: fake_node(%{aliases: []})}).data
+      data = NodeJSON.show(%{conn: fake_conn(), node: fake_node(%{aliases: []})}).data
       assert data.aliases == []
     end
 
     test "each alias has id, name, vpn_hostname" do
       alias_record = fake_alias(%{name: "web"})
       node = fake_node(%{aliases: [alias_record]})
-      data = NodeJSON.show(%{node: node}).data
+      data = NodeJSON.show(%{conn: fake_conn(), node: node}).data
       alias_data = hd(data.aliases)
       assert Map.has_key?(alias_data, :id)
       assert Map.has_key?(alias_data, :name)
@@ -251,7 +257,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
     test "alias vpn_hostname is node-{alias_name}.cluster-{cluster_name}.nm.internal" do
       alias_record = fake_alias(%{name: "web", cluster: fake_cluster(%{name: "prod"})})
       node = fake_node(%{aliases: [alias_record]})
-      data = NodeJSON.show(%{node: node}).data
+      data = NodeJSON.show(%{conn: fake_conn(), node: node}).data
       alias_data = hd(data.aliases)
       assert alias_data.vpn_hostname == "node-web.cluster-prod.nm.internal"
     end
@@ -259,7 +265,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
     test "alias name is passed through" do
       alias_record = fake_alias(%{name: "my-service"})
       node = fake_node(%{aliases: [alias_record]})
-      data = NodeJSON.show(%{node: node}).data
+      data = NodeJSON.show(%{conn: fake_conn(), node: node}).data
       alias_data = hd(data.aliases)
       assert alias_data.name == "my-service"
     end
@@ -268,7 +274,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
       alias1 = fake_alias(%{id: "alias-1", name: "web"})
       alias2 = fake_alias(%{id: "alias-2", name: "api"})
       node = fake_node(%{aliases: [alias1, alias2]})
-      data = NodeJSON.show(%{node: node}).data
+      data = NodeJSON.show(%{conn: fake_conn(), node: node}).data
       assert length(data.aliases) == 2
       assert Enum.map(data.aliases, & &1.id) == ["alias-1", "alias-2"]
     end
@@ -276,7 +282,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
     test "alias_data has exactly id, name, vpn_hostname — no extra fields" do
       alias_record = fake_alias()
       node = fake_node(%{aliases: [alias_record]})
-      data = NodeJSON.show(%{node: node}).data
+      data = NodeJSON.show(%{conn: fake_conn(), node: node}).data
       alias_data = hd(data.aliases)
 
       assert MapSet.equal?(
@@ -291,20 +297,20 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
   # -----------------------------------------------------------------------
 
   describe "index/1 — data array" do
-    test "result has :data and :pagination keys" do
-      result = NodeJSON.index(%{nodes: [], meta: fake_meta()})
+    test "result has :data and :meta keys" do
+      result = NodeJSON.index(%{conn: fake_conn(), nodes: [], meta: fake_meta()})
       assert Map.has_key?(result, :data)
-      assert Map.has_key?(result, :pagination)
+      assert Map.has_key?(result, :meta)
     end
 
     test "empty nodes produces empty data list" do
-      result = NodeJSON.index(%{nodes: [], meta: fake_meta()})
+      result = NodeJSON.index(%{conn: fake_conn(), nodes: [], meta: fake_meta()})
       assert result.data == []
     end
 
     test "each node is rendered" do
       node = fake_node(%{status: "healthy"})
-      result = NodeJSON.index(%{nodes: [node], meta: fake_meta()})
+      result = NodeJSON.index(%{conn: fake_conn(), nodes: [node], meta: fake_meta()})
       assert length(result.data) == 1
       assert hd(result.data).status == "healthy"
     end
@@ -312,7 +318,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
     test "multiple nodes rendered in order" do
       node1 = fake_node(%{id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"})
       node2 = fake_node(%{id: "11111111-2222-3333-4444-555555555555"})
-      result = NodeJSON.index(%{nodes: [node1, node2], meta: fake_meta()})
+      result = NodeJSON.index(%{conn: fake_conn(), nodes: [node1, node2], meta: fake_meta()})
       assert length(result.data) == 2
 
       assert Enum.map(result.data, & &1.id) == [
@@ -328,59 +334,59 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSONTest do
 
   describe "index/1 — pagination field renames from Flop.Meta" do
     test "current_page is renamed to page" do
-      result = NodeJSON.index(%{nodes: [], meta: fake_meta(current_page: 2)})
-      assert Map.has_key?(result.pagination, :page)
-      refute Map.has_key?(result.pagination, :current_page)
-      assert result.pagination.page == 2
+      result = NodeJSON.index(%{conn: fake_conn(), nodes: [], meta: fake_meta(current_page: 2)})
+      assert Map.has_key?(result.meta.pagination, :page)
+      refute Map.has_key?(result.meta.pagination, :current_page)
+      assert result.meta.pagination.page == 2
     end
 
     test "total_count is renamed to total" do
-      result = NodeJSON.index(%{nodes: [], meta: fake_meta(total_count: 99)})
-      assert Map.has_key?(result.pagination, :total)
-      refute Map.has_key?(result.pagination, :total_count)
-      assert result.pagination.total == 99
+      result = NodeJSON.index(%{conn: fake_conn(), nodes: [], meta: fake_meta(total_count: 99)})
+      assert Map.has_key?(result.meta.pagination, :total)
+      refute Map.has_key?(result.meta.pagination, :total_count)
+      assert result.meta.pagination.total == 99
     end
 
     test "has_next_page? is renamed to has_next" do
-      result = NodeJSON.index(%{nodes: [], meta: fake_meta(has_next_page?: true)})
-      assert Map.has_key?(result.pagination, :has_next)
-      refute Map.has_key?(result.pagination, :has_next_page?)
-      assert result.pagination.has_next == true
+      result = NodeJSON.index(%{conn: fake_conn(), nodes: [], meta: fake_meta(has_next_page?: true)})
+      assert Map.has_key?(result.meta.pagination, :has_next)
+      refute Map.has_key?(result.meta.pagination, :has_next_page?)
+      assert result.meta.pagination.has_next == true
     end
 
     test "has_previous_page? is renamed to has_prev" do
-      result = NodeJSON.index(%{nodes: [], meta: fake_meta(has_previous_page?: true)})
-      assert Map.has_key?(result.pagination, :has_prev)
-      refute Map.has_key?(result.pagination, :has_previous_page?)
-      assert result.pagination.has_prev == true
+      result = NodeJSON.index(%{conn: fake_conn(), nodes: [], meta: fake_meta(has_previous_page?: true)})
+      assert Map.has_key?(result.meta.pagination, :has_prev)
+      refute Map.has_key?(result.meta.pagination, :has_previous_page?)
+      assert result.meta.pagination.has_prev == true
     end
 
     test "page_size is passed through unchanged" do
-      result = NodeJSON.index(%{nodes: [], meta: fake_meta(page_size: 50)})
-      assert result.pagination.page_size == 50
+      result = NodeJSON.index(%{conn: fake_conn(), nodes: [], meta: fake_meta(page_size: 50)})
+      assert result.meta.pagination.page_size == 50
     end
 
     test "total_pages is passed through unchanged" do
-      result = NodeJSON.index(%{nodes: [], meta: fake_meta(total_pages: 5)})
-      assert result.pagination.total_pages == 5
+      result = NodeJSON.index(%{conn: fake_conn(), nodes: [], meta: fake_meta(total_pages: 5)})
+      assert result.meta.pagination.total_pages == 5
     end
 
     test "has_next false is preserved" do
-      result = NodeJSON.index(%{nodes: [], meta: fake_meta(has_next_page?: false)})
-      assert result.pagination.has_next == false
+      result = NodeJSON.index(%{conn: fake_conn(), nodes: [], meta: fake_meta(has_next_page?: false)})
+      assert result.meta.pagination.has_next == false
     end
 
     test "has_prev false is preserved" do
-      result = NodeJSON.index(%{nodes: [], meta: fake_meta(has_previous_page?: false)})
-      assert result.pagination.has_prev == false
+      result = NodeJSON.index(%{conn: fake_conn(), nodes: [], meta: fake_meta(has_previous_page?: false)})
+      assert result.meta.pagination.has_prev == false
     end
 
     test "pagination has exactly the expected keys" do
-      result = NodeJSON.index(%{nodes: [], meta: fake_meta()})
+      result = NodeJSON.index(%{conn: fake_conn(), nodes: [], meta: fake_meta()})
 
       assert MapSet.equal?(
-               MapSet.new(Map.keys(result.pagination)),
-               MapSet.new([:page, :page_size, :total, :total_pages, :has_next, :has_prev])
+               MapSet.new(Map.keys(result.meta.pagination)),
+               MapSet.new([:page, :page_size, :total, :total_pages, :has_next, :has_prev, :next_page, :prev_page])
              )
     end
   end

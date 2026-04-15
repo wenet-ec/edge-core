@@ -2,11 +2,17 @@
 defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSONTest do
   use ExUnit.Case, async: true
 
+  import Phoenix.ConnTest
+
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdminWeb.Controllers.Commands.CommandExecutionJSON
 
   @now ~U[2026-01-01 10:00:00Z]
+
+  defp fake_conn do
+    Plug.Conn.assign(build_conn(), :request_id, "test-request-id")
+  end
 
   defp bare_execution(overrides \\ %{}) do
     Map.merge(
@@ -60,12 +66,12 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSONTest do
 
   describe "show/1" do
     test "wraps execution in %{data: ...}" do
-      result = CommandExecutionJSON.show(%{command_execution: bare_execution()})
+      result = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: bare_execution()})
       assert Map.has_key?(result, :data)
     end
 
     test "data contains all required fields" do
-      data = CommandExecutionJSON.show(%{command_execution: bare_execution()}).data
+      data = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: bare_execution()}).data
 
       expected = [
         :id,
@@ -90,7 +96,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSONTest do
     end
 
     test "expired_at is nil when command not preloaded" do
-      data = CommandExecutionJSON.show(%{command_execution: bare_execution()}).data
+      data = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: bare_execution()}).data
       assert data.expired_at == nil
     end
 
@@ -100,18 +106,18 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSONTest do
         |> execution_with_assocs(nil, "prod")
         |> Map.put(:command, %{command_text: "ls", timeout: nil, expired_at: @now})
 
-      data = CommandExecutionJSON.show(%{command_execution: exec}).data
+      data = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: exec}).data
       assert data.expired_at == @now
     end
 
     test "timeout is nil when command not preloaded" do
-      data = CommandExecutionJSON.show(%{command_execution: bare_execution()}).data
+      data = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: bare_execution()}).data
       assert data.timeout == nil
     end
 
     test "timeout is returned from loaded command" do
       exec = execution_with_assocs("ls", 5000, "prod")
-      data = CommandExecutionJSON.show(%{command_execution: exec}).data
+      data = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: exec}).data
       assert data.timeout == 5000
     end
 
@@ -126,7 +132,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSONTest do
           completed_at: @now
         })
 
-      data = CommandExecutionJSON.show(%{command_execution: exec}).data
+      data = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: exec}).data
       assert data.id == "exec-uuid-1"
       assert data.command_id == "cmd-uuid-1"
       assert data.node_id == "node-uuid-1"
@@ -148,7 +154,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSONTest do
   describe "cluster_name — cluster association loaded" do
     test "returns cluster name from loaded association" do
       exec = execution_with_assocs("ls", nil, "cluster-prod")
-      data = CommandExecutionJSON.show(%{command_execution: exec}).data
+      data = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: exec}).data
       assert data.cluster_name == "cluster-prod"
     end
   end
@@ -156,7 +162,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSONTest do
   describe "cluster_name — cluster association not loaded" do
     test "returns nil when cluster is not preloaded" do
       exec = bare_execution()
-      data = CommandExecutionJSON.show(%{command_execution: exec}).data
+      data = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: exec}).data
       assert data.cluster_name == nil
     end
   end
@@ -168,7 +174,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSONTest do
   describe "command_text — not loaded" do
     test "nil when command not preloaded" do
       exec = bare_execution()
-      data = CommandExecutionJSON.show(%{command_execution: exec}).data
+      data = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: exec}).data
       assert data.command_text == nil
     end
   end
@@ -176,7 +182,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSONTest do
   describe "command_text — loaded" do
     test "command_text from loaded command" do
       exec = execution_with_assocs("df -h", 3000, "cluster-dev")
-      data = CommandExecutionJSON.show(%{command_execution: exec}).data
+      data = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: exec}).data
       assert data.command_text == "df -h"
     end
   end
@@ -187,62 +193,74 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSONTest do
 
   describe "cancel/1" do
     test "wraps result in %{data: result}" do
-      result = CommandExecutionJSON.cancel(%{result: %{status: "cancelled"}})
-      assert result == %{data: %{status: "cancelled"}}
+      result = CommandExecutionJSON.cancel(%{conn: fake_conn(), result: %{status: "cancelled"}})
+      assert result.data == %{status: "cancelled"}
     end
 
     test "passes result through unchanged" do
       payload = %{some: "map", with: 42}
-      assert CommandExecutionJSON.cancel(%{result: payload}) == %{data: payload}
+      assert CommandExecutionJSON.cancel(%{conn: fake_conn(), result: payload}).data == payload
     end
   end
 
   # -----------------------------------------------------------------------
-  # index/1 — pagination renames
+  # index/1 — pagination field renames
   # -----------------------------------------------------------------------
 
   describe "index/1 — pagination field renames from Flop.Meta" do
     test "current_page renamed to page" do
-      result = CommandExecutionJSON.index(%{command_executions: [], meta: fake_meta(current_page: 2)})
-      assert Map.has_key?(result.pagination, :page)
-      refute Map.has_key?(result.pagination, :current_page)
-      assert result.pagination.page == 2
+      result =
+        CommandExecutionJSON.index(%{conn: fake_conn(), command_executions: [], meta: fake_meta(current_page: 2)})
+
+      assert Map.has_key?(result.meta.pagination, :page)
+      refute Map.has_key?(result.meta.pagination, :current_page)
+      assert result.meta.pagination.page == 2
     end
 
     test "total_count renamed to total" do
-      result = CommandExecutionJSON.index(%{command_executions: [], meta: fake_meta(total_count: 99)})
-      assert Map.has_key?(result.pagination, :total)
-      refute Map.has_key?(result.pagination, :total_count)
-      assert result.pagination.total == 99
+      result =
+        CommandExecutionJSON.index(%{conn: fake_conn(), command_executions: [], meta: fake_meta(total_count: 99)})
+
+      assert Map.has_key?(result.meta.pagination, :total)
+      refute Map.has_key?(result.meta.pagination, :total_count)
+      assert result.meta.pagination.total == 99
     end
 
     test "has_next_page? renamed to has_next" do
-      result = CommandExecutionJSON.index(%{command_executions: [], meta: fake_meta(has_next_page?: true)})
-      assert Map.has_key?(result.pagination, :has_next)
-      refute Map.has_key?(result.pagination, :has_next_page?)
-      assert result.pagination.has_next == true
+      result =
+        CommandExecutionJSON.index(%{conn: fake_conn(), command_executions: [], meta: fake_meta(has_next_page?: true)})
+
+      assert Map.has_key?(result.meta.pagination, :has_next)
+      refute Map.has_key?(result.meta.pagination, :has_next_page?)
+      assert result.meta.pagination.has_next == true
     end
 
     test "has_previous_page? renamed to has_prev" do
-      result = CommandExecutionJSON.index(%{command_executions: [], meta: fake_meta(has_previous_page?: true)})
-      assert Map.has_key?(result.pagination, :has_prev)
-      refute Map.has_key?(result.pagination, :has_previous_page?)
-      assert result.pagination.has_prev == true
+      result =
+        CommandExecutionJSON.index(%{
+          conn: fake_conn(),
+          command_executions: [],
+          meta: fake_meta(has_previous_page?: true)
+        })
+
+      assert Map.has_key?(result.meta.pagination, :has_prev)
+      refute Map.has_key?(result.meta.pagination, :has_previous_page?)
+      assert result.meta.pagination.has_prev == true
     end
 
     test "pagination has exactly the expected keys" do
-      result = CommandExecutionJSON.index(%{command_executions: [], meta: fake_meta()})
+      result = CommandExecutionJSON.index(%{conn: fake_conn(), command_executions: [], meta: fake_meta()})
 
       assert MapSet.equal?(
-               MapSet.new(Map.keys(result.pagination)),
-               MapSet.new([:page, :page_size, :total, :total_pages, :has_next, :has_prev])
+               MapSet.new(Map.keys(result.meta.pagination)),
+               MapSet.new([:page, :page_size, :total, :total_pages, :has_next, :has_prev, :next_page, :prev_page])
              )
     end
   end
 
   describe "index/1 — data array" do
     test "empty list produces empty data" do
-      result = CommandExecutionJSON.index(%{command_executions: [], meta: fake_meta()})
+      result = CommandExecutionJSON.index(%{conn: fake_conn(), command_executions: [], meta: fake_meta()})
       assert result.data == []
     end
 
@@ -252,7 +270,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSONTest do
         bare_execution(%{id: "uuid-2"})
       ]
 
-      result = CommandExecutionJSON.index(%{command_executions: execs, meta: fake_meta()})
+      result = CommandExecutionJSON.index(%{conn: fake_conn(), command_executions: execs, meta: fake_meta()})
       assert length(result.data) == 2
       assert Enum.map(result.data, & &1.id) == ["uuid-1", "uuid-2"]
     end

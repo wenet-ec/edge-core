@@ -2,11 +2,17 @@
 defmodule EdgeAdminWeb.Controllers.Nodes.AliasJSONTest do
   use ExUnit.Case, async: true
 
+  import Phoenix.ConnTest
+
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdminWeb.Controllers.Nodes.AliasJSON
 
   @now ~U[2026-01-01 10:00:00Z]
+
+  defp fake_conn do
+    Plug.Conn.assign(build_conn(), :request_id, "test-request-id")
+  end
 
   defp fake_cluster(overrides \\ %{}) do
     Map.merge(%Cluster{id: "cluster-uuid-1", name: "prod", ipv4_range: "100.64.1.0/24"}, overrides)
@@ -50,12 +56,12 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasJSONTest do
 
   describe "show/1" do
     test "wraps alias in %{data: ...}" do
-      result = AliasJSON.show(%{alias: fake_alias()})
+      result = AliasJSON.show(%{conn: fake_conn(), alias: fake_alias()})
       assert Map.has_key?(result, :data)
     end
 
     test "data contains all required fields" do
-      data = AliasJSON.show(%{alias: fake_alias()}).data
+      data = AliasJSON.show(%{conn: fake_conn(), alias: fake_alias()}).data
 
       for key <- [:id, :name, :vpn_hostname, :node_id, :cluster_name, :inserted_at, :updated_at] do
         assert Map.has_key?(data, key), "expected key #{inspect(key)} to be present"
@@ -70,7 +76,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasJSONTest do
           cluster: fake_cluster(%{name: "staging"})
         })
 
-      data = AliasJSON.show(%{alias: alias_record}).data
+      data = AliasJSON.show(%{conn: fake_conn(), alias: alias_record}).data
       assert data.id == "alias-uuid-1"
       assert data.name == "api"
       assert data.node_id == "11111111-2222-3333-4444-555555555555"
@@ -81,7 +87,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasJSONTest do
 
     test "cluster_name comes from preloaded cluster" do
       alias_record = fake_alias(%{cluster: fake_cluster(%{name: "dev"})})
-      data = AliasJSON.show(%{alias: alias_record}).data
+      data = AliasJSON.show(%{conn: fake_conn(), alias: alias_record}).data
       assert data.cluster_name == "dev"
     end
   end
@@ -93,25 +99,25 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasJSONTest do
   describe "show/1 — vpn_hostname" do
     test "vpn_hostname is node-{alias_name}.cluster-{cluster_name}.nm.internal" do
       alias_record = fake_alias(%{name: "web", cluster: fake_cluster(%{name: "prod"})})
-      data = AliasJSON.show(%{alias: alias_record}).data
+      data = AliasJSON.show(%{conn: fake_conn(), alias: alias_record}).data
       assert data.vpn_hostname == "node-web.cluster-prod.nm.internal"
     end
 
     test "vpn_hostname reflects the alias name, not the node id" do
       alias_record = fake_alias(%{name: "my-service", cluster: fake_cluster(%{name: "prod"})})
-      data = AliasJSON.show(%{alias: alias_record}).data
+      data = AliasJSON.show(%{conn: fake_conn(), alias: alias_record}).data
       assert data.vpn_hostname == "node-my-service.cluster-prod.nm.internal"
     end
 
     test "vpn_hostname uses the cluster name from preloaded cluster" do
       alias_record = fake_alias(%{name: "web", cluster: fake_cluster(%{name: "staging"})})
-      data = AliasJSON.show(%{alias: alias_record}).data
+      data = AliasJSON.show(%{conn: fake_conn(), alias: alias_record}).data
       assert data.vpn_hostname =~ "cluster-staging"
     end
 
     test "vpn_hostname has node- prefix on alias name" do
       alias_record = fake_alias(%{name: "db"})
-      data = AliasJSON.show(%{alias: alias_record}).data
+      data = AliasJSON.show(%{conn: fake_conn(), alias: alias_record}).data
       assert String.starts_with?(data.vpn_hostname, "node-db.")
     end
   end
@@ -121,20 +127,20 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasJSONTest do
   # -----------------------------------------------------------------------
 
   describe "index/1 — data array" do
-    test "result has :data and :pagination keys" do
-      result = AliasJSON.index(%{aliases: [], meta: fake_meta()})
+    test "result has :data and :meta keys" do
+      result = AliasJSON.index(%{conn: fake_conn(), aliases: [], meta: fake_meta()})
       assert Map.has_key?(result, :data)
-      assert Map.has_key?(result, :pagination)
+      assert Map.has_key?(result, :meta)
     end
 
     test "empty aliases produces empty data list" do
-      result = AliasJSON.index(%{aliases: [], meta: fake_meta()})
+      result = AliasJSON.index(%{conn: fake_conn(), aliases: [], meta: fake_meta()})
       assert result.data == []
     end
 
     test "each alias is rendered" do
       alias_record = fake_alias(%{name: "web"})
-      result = AliasJSON.index(%{aliases: [alias_record], meta: fake_meta()})
+      result = AliasJSON.index(%{conn: fake_conn(), aliases: [alias_record], meta: fake_meta()})
       assert length(result.data) == 1
       assert hd(result.data).name == "web"
     end
@@ -142,7 +148,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasJSONTest do
     test "multiple aliases rendered in order" do
       alias1 = fake_alias(%{id: "alias-1", name: "web"})
       alias2 = fake_alias(%{id: "alias-2", name: "api"})
-      result = AliasJSON.index(%{aliases: [alias1, alias2], meta: fake_meta()})
+      result = AliasJSON.index(%{conn: fake_conn(), aliases: [alias1, alias2], meta: fake_meta()})
       assert length(result.data) == 2
       assert Enum.map(result.data, & &1.id) == ["alias-1", "alias-2"]
     end
@@ -154,59 +160,59 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasJSONTest do
 
   describe "index/1 — pagination field renames from Flop.Meta" do
     test "current_page is renamed to page" do
-      result = AliasJSON.index(%{aliases: [], meta: fake_meta(current_page: 4)})
-      assert Map.has_key?(result.pagination, :page)
-      refute Map.has_key?(result.pagination, :current_page)
-      assert result.pagination.page == 4
+      result = AliasJSON.index(%{conn: fake_conn(), aliases: [], meta: fake_meta(current_page: 4)})
+      assert Map.has_key?(result.meta.pagination, :page)
+      refute Map.has_key?(result.meta.pagination, :current_page)
+      assert result.meta.pagination.page == 4
     end
 
     test "total_count is renamed to total" do
-      result = AliasJSON.index(%{aliases: [], meta: fake_meta(total_count: 10)})
-      assert Map.has_key?(result.pagination, :total)
-      refute Map.has_key?(result.pagination, :total_count)
-      assert result.pagination.total == 10
+      result = AliasJSON.index(%{conn: fake_conn(), aliases: [], meta: fake_meta(total_count: 10)})
+      assert Map.has_key?(result.meta.pagination, :total)
+      refute Map.has_key?(result.meta.pagination, :total_count)
+      assert result.meta.pagination.total == 10
     end
 
     test "has_next_page? is renamed to has_next" do
-      result = AliasJSON.index(%{aliases: [], meta: fake_meta(has_next_page?: true)})
-      assert Map.has_key?(result.pagination, :has_next)
-      refute Map.has_key?(result.pagination, :has_next_page?)
-      assert result.pagination.has_next == true
+      result = AliasJSON.index(%{conn: fake_conn(), aliases: [], meta: fake_meta(has_next_page?: true)})
+      assert Map.has_key?(result.meta.pagination, :has_next)
+      refute Map.has_key?(result.meta.pagination, :has_next_page?)
+      assert result.meta.pagination.has_next == true
     end
 
     test "has_previous_page? is renamed to has_prev" do
-      result = AliasJSON.index(%{aliases: [], meta: fake_meta(has_previous_page?: true)})
-      assert Map.has_key?(result.pagination, :has_prev)
-      refute Map.has_key?(result.pagination, :has_previous_page?)
-      assert result.pagination.has_prev == true
+      result = AliasJSON.index(%{conn: fake_conn(), aliases: [], meta: fake_meta(has_previous_page?: true)})
+      assert Map.has_key?(result.meta.pagination, :has_prev)
+      refute Map.has_key?(result.meta.pagination, :has_previous_page?)
+      assert result.meta.pagination.has_prev == true
     end
 
     test "page_size is passed through unchanged" do
-      result = AliasJSON.index(%{aliases: [], meta: fake_meta(page_size: 25)})
-      assert result.pagination.page_size == 25
+      result = AliasJSON.index(%{conn: fake_conn(), aliases: [], meta: fake_meta(page_size: 25)})
+      assert result.meta.pagination.page_size == 25
     end
 
     test "total_pages is passed through unchanged" do
-      result = AliasJSON.index(%{aliases: [], meta: fake_meta(total_pages: 3)})
-      assert result.pagination.total_pages == 3
+      result = AliasJSON.index(%{conn: fake_conn(), aliases: [], meta: fake_meta(total_pages: 3)})
+      assert result.meta.pagination.total_pages == 3
     end
 
     test "has_next false is preserved" do
-      result = AliasJSON.index(%{aliases: [], meta: fake_meta(has_next_page?: false)})
-      assert result.pagination.has_next == false
+      result = AliasJSON.index(%{conn: fake_conn(), aliases: [], meta: fake_meta(has_next_page?: false)})
+      assert result.meta.pagination.has_next == false
     end
 
     test "has_prev false is preserved" do
-      result = AliasJSON.index(%{aliases: [], meta: fake_meta(has_previous_page?: false)})
-      assert result.pagination.has_prev == false
+      result = AliasJSON.index(%{conn: fake_conn(), aliases: [], meta: fake_meta(has_previous_page?: false)})
+      assert result.meta.pagination.has_prev == false
     end
 
     test "pagination has exactly the expected keys" do
-      result = AliasJSON.index(%{aliases: [], meta: fake_meta()})
+      result = AliasJSON.index(%{conn: fake_conn(), aliases: [], meta: fake_meta()})
 
       assert MapSet.equal?(
-               MapSet.new(Map.keys(result.pagination)),
-               MapSet.new([:page, :page_size, :total, :total_pages, :has_next, :has_prev])
+               MapSet.new(Map.keys(result.meta.pagination)),
+               MapSet.new([:page, :page_size, :total, :total_pages, :has_next, :has_prev, :next_page, :prev_page])
              )
     end
   end

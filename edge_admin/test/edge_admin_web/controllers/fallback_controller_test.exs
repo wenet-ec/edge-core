@@ -26,7 +26,7 @@ defmodule EdgeAdminWeb.Controllers.FallbackControllerTest do
       assert conn.status == 422
     end
 
-    test "body has errors key with field messages", ctx do
+    test "body has error.code = validation_failed", ctx do
       cs =
         {%{}, %{name: :string}}
         |> Ecto.Changeset.cast(%{}, [:name])
@@ -34,8 +34,18 @@ defmodule EdgeAdminWeb.Controllers.FallbackControllerTest do
 
       conn = call(ctx, {:error, cs})
       body = body(conn)
-      assert Map.has_key?(body, "errors")
-      assert Map.has_key?(body["errors"], "name")
+      assert get_in(body, ["error", "code"]) == "validation_failed"
+    end
+
+    test "body has error.details with field messages", ctx do
+      cs =
+        {%{}, %{name: :string}}
+        |> Ecto.Changeset.cast(%{}, [:name])
+        |> Ecto.Changeset.validate_required([:name])
+
+      conn = call(ctx, {:error, cs})
+      body = body(conn)
+      assert Map.has_key?(get_in(body, ["error", "details"]), "name")
     end
   end
 
@@ -45,9 +55,14 @@ defmodule EdgeAdminWeb.Controllers.FallbackControllerTest do
       assert conn.status == 404
     end
 
-    test "body has errors.detail", ctx do
+    test "body has error.code = not_found", ctx do
       conn = call(ctx, {:error, :not_found})
-      assert get_in(body(conn), ["errors", "detail"]) =~ "Not Found"
+      assert get_in(body(conn), ["error", "code"]) == "not_found"
+    end
+
+    test "body has error.message mentioning not found", ctx do
+      conn = call(ctx, {:error, :not_found})
+      assert get_in(body(conn), ["error", "message"]) =~ "not found"
     end
   end
 
@@ -57,9 +72,14 @@ defmodule EdgeAdminWeb.Controllers.FallbackControllerTest do
       assert conn.status == 403
     end
 
-    test "body has errors.detail", ctx do
+    test "body has error.code = forbidden", ctx do
       conn = call(ctx, {:error, :forbidden})
-      assert get_in(body(conn), ["errors", "detail"]) =~ "Forbidden"
+      assert get_in(body(conn), ["error", "code"]) == "forbidden"
+    end
+
+    test "body has error.message = Forbidden", ctx do
+      conn = call(ctx, {:error, :forbidden})
+      assert get_in(body(conn), ["error", "message"]) == "Forbidden"
     end
   end
 
@@ -69,9 +89,14 @@ defmodule EdgeAdminWeb.Controllers.FallbackControllerTest do
       assert conn.status == 401
     end
 
-    test "body has errors.detail", ctx do
+    test "body has error.code = unauthorized", ctx do
       conn = call(ctx, {:error, :unauthorized})
-      assert get_in(body(conn), ["errors", "detail"]) =~ "Unauthorized"
+      assert get_in(body(conn), ["error", "code"]) == "unauthorized"
+    end
+
+    test "body has error.message = Unauthorized", ctx do
+      conn = call(ctx, {:error, :unauthorized})
+      assert get_in(body(conn), ["error", "message"]) == "Unauthorized"
     end
   end
 
@@ -81,9 +106,14 @@ defmodule EdgeAdminWeb.Controllers.FallbackControllerTest do
       assert conn.status == 409
     end
 
-    test "body has errors.detail", ctx do
+    test "body has error.code = conflict", ctx do
       conn = call(ctx, {:error, :conflict})
-      assert get_in(body(conn), ["errors", "detail"]) =~ "Conflict"
+      assert get_in(body(conn), ["error", "code"]) == "conflict"
+    end
+
+    test "body has error.message = Conflict", ctx do
+      conn = call(ctx, {:error, :conflict})
+      assert get_in(body(conn), ["error", "message"]) == "Conflict"
     end
   end
 
@@ -93,9 +123,9 @@ defmodule EdgeAdminWeb.Controllers.FallbackControllerTest do
       assert conn.status == 409
     end
 
-    test "body errors.detail contains the specific reason", ctx do
+    test "body error.message contains the specific reason", ctx do
       conn = call(ctx, {:error, {:conflict, "cannot delete cluster with active nodes"}})
-      assert get_in(body(conn), ["errors", "detail"]) == "cannot delete cluster with active nodes"
+      assert get_in(body(conn), ["error", "message"]) == "cannot delete cluster with active nodes"
     end
   end
 
@@ -105,9 +135,14 @@ defmodule EdgeAdminWeb.Controllers.FallbackControllerTest do
       assert conn.status == 503
     end
 
-    test "body has errors.detail", ctx do
+    test "body has error.code = service_unavailable", ctx do
       conn = call(ctx, {:error, :service_unavailable})
-      assert get_in(body(conn), ["errors", "detail"]) =~ "Service Unavailable"
+      assert get_in(body(conn), ["error", "code"]) == "service_unavailable"
+    end
+
+    test "body has error.message = Service Unavailable", ctx do
+      conn = call(ctx, {:error, :service_unavailable})
+      assert get_in(body(conn), ["error", "message"]) == "Service Unavailable"
     end
   end
 
@@ -117,9 +152,14 @@ defmodule EdgeAdminWeb.Controllers.FallbackControllerTest do
       assert conn.status == 400
     end
 
-    test "body has errors.detail", ctx do
+    test "body has error.code = bad_request", ctx do
       conn = call(ctx, {:error, :bad_request})
-      assert get_in(body(conn), ["errors", "detail"]) =~ "Bad Request"
+      assert get_in(body(conn), ["error", "code"]) == "bad_request"
+    end
+
+    test "body has error.message = Bad Request", ctx do
+      conn = call(ctx, {:error, :bad_request})
+      assert get_in(body(conn), ["error", "message"]) == "Bad Request"
     end
   end
 
@@ -139,9 +179,14 @@ defmodule EdgeAdminWeb.Controllers.FallbackControllerTest do
       assert conn.status == 500
     end
 
-    test "body has errors.detail mentioning Internal Server Error", ctx do
+    test "body has error.code = internal_server_error", ctx do
       conn = call(ctx, {:error, :something_unexpected})
-      assert get_in(body(conn), ["errors", "detail"]) =~ "Internal Server Error"
+      assert get_in(body(conn), ["error", "code"]) == "internal_server_error"
+    end
+
+    test "body has error.message = Internal Server Error", ctx do
+      conn = call(ctx, {:error, :something_unexpected})
+      assert get_in(body(conn), ["error", "message"]) == "Internal Server Error"
     end
   end
 end

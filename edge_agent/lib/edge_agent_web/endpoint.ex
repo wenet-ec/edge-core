@@ -15,6 +15,7 @@ defmodule EdgeAgentWeb.Endpoint do
   end
 
   plug(Plug.RequestId)
+  plug(EdgeAgentWeb.Plugs.AssignRequestId)
   plug(Plug.Telemetry, event_prefix: [:phoenix, :endpoint])
 
   plug(

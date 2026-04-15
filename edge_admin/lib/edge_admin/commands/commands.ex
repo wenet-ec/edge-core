@@ -63,6 +63,7 @@ defmodule EdgeAdmin.Commands do
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Commands.Workers.CreateExecutionsWorker
+  alias EdgeAdmin.EdgeClusters.AgentClient
   alias EdgeAdmin.EdgeClusters.Gateway
   alias EdgeAdmin.EventBroker
   alias EdgeAdmin.EventBroker.Events
@@ -1029,7 +1030,7 @@ defmodule EdgeAdmin.Commands do
         status: "pending"
       }
 
-      case create_execution_with_node(node, execution_data) do
+      case AgentClient.deliver_execution(node, execution_data) do
         {:ok, :sent} ->
           # Agent received it - update to "sent"
           case update_command_execution(execution, %{status: "sent", sent_at: DateTime.utc_now()}) do
@@ -1055,30 +1056,6 @@ defmodule EdgeAdmin.Commands do
     end)
 
     :ok
-  end
-
-  defp create_execution_with_node(node, execution_data) do
-    url = "http://#{Node.vpn_hostname(node)}:#{node.http_port}/api/v1/command_executions"
-
-    opts = [
-      json: execution_data,
-      auth: {:bearer, node.api_token},
-      receive_timeout: Application.get_env(:edge_admin, :command_delivery_timeout, 10_000),
-      connect_options: [timeout: Application.get_env(:edge_admin, :command_delivery_timeout, 10_000)],
-      retry: false
-    ]
-
-    case Req.post(url, opts) do
-      {:ok, %{status: status}} when status in 200..299 ->
-        {:ok, :sent}
-
-      {:ok, %{status: status}} ->
-        {:error, "HTTP #{status}"}
-
-      {:error, reason} ->
-        Logger.error("HTTP request failed for node #{node.id}: #{inspect(reason)}")
-        {:error, reason}
-    end
   end
 
   @doc """

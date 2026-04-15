@@ -125,6 +125,7 @@ defmodule EdgeAdmin.Nodes do
   import Ecto.Query, warn: false
 
   alias Ecto.Query.CastError
+  alias EdgeAdmin.EdgeClusters.AgentClient
   alias EdgeAdmin.EventBroker
   alias EdgeAdmin.EventBroker.Events
   alias EdgeAdmin.Nodes.Checks
@@ -1053,29 +1054,23 @@ defmodule EdgeAdmin.Nodes do
   end
 
   defp ping_node(node, timeout) do
-    url = "#{node_http_url(node)}/health"
     now = DateTime.truncate(DateTime.utc_now(), :second)
     start_time = System.monotonic_time(:millisecond)
 
     result =
-      try do
-        case Req.get(url, receive_timeout: timeout, connect_options: [timeout: timeout], retry: false) do
-          {:ok, %{status: 200}} ->
-            update_node(node, %{status: "healthy", last_seen_at: now})
-            maybe_publish_status_changed(node, "healthy")
-            :healthy
+      case AgentClient.ping(node, timeout) do
+        :healthy ->
+          update_node(node, %{status: "healthy", last_seen_at: now})
+          maybe_publish_status_changed(node, "healthy")
+          :healthy
 
-          {:ok, %{status: 503}} ->
-            Logger.warning("Node #{node.id} is unhealthy (503 response)")
-            update_node(node, %{status: "unhealthy", last_seen_at: now})
-            maybe_publish_status_changed(node, "unhealthy")
-            :unhealthy
+        :unhealthy ->
+          Logger.warning("Node #{node.id} is unhealthy (503 response)")
+          update_node(node, %{status: "unhealthy", last_seen_at: now})
+          maybe_publish_status_changed(node, "unhealthy")
+          :unhealthy
 
-          _ ->
-            handle_unreachable_node(node)
-        end
-      catch
-        _, _ ->
+        :unreachable ->
           handle_unreachable_node(node)
       end
 

@@ -41,6 +41,7 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
       {:ok, "cluster-prod", ["http://100.64.0.4:44000", "http://100.64.0.5:44000"]}
   """
 
+  alias EdgeAgent.EdgeClusters.AdminClient
   alias EdgeAgent.Settings
 
   require Logger
@@ -105,27 +106,18 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
 
   # Returns a list of 0 or 1 admin URL for this peer
   defp probe_peer(%{"name" => "admin-" <> _, "address" => ip}, network_name, port) when is_binary(ip) do
-    url = "http://#{ip}:#{port}/api/v1/admins/self/discovery"
+    base_url = "http://#{ip}:#{port}"
 
-    timeout = Application.get_env(:edge_agent, :admin_discovery_timeout, 10_000)
-
-    opts = [
-      receive_timeout: timeout,
-      connect_options: [timeout: timeout],
-      retry: false
-    ]
-
-    case Req.get(url, opts) do
-      {:ok, %{status: 200, body: %{"data" => %{"name" => admin_name}}}} ->
-        admin_url = "http://#{ip}:#{port}"
+    case AdminClient.probe(base_url) do
+      {:ok, admin_name} ->
         Logger.info("✓ Discovered admin: #{admin_name} (#{ip}) on #{network_name}")
-        [admin_url]
+        [base_url]
 
-      {:ok, %{status: 200}} ->
+      {:error, :unexpected_body} ->
         Logger.debug("✗ #{ip} on #{network_name} returned 200 but unexpected body shape")
         []
 
-      {:ok, %{status: status}} ->
+      {:error, {:http_error, status}} ->
         Logger.debug("✗ #{ip} on #{network_name} returned status #{status}")
         []
 

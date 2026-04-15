@@ -71,27 +71,17 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   use GenServer
 
   alias EdgeAdmin.Admins.Metadata
-  alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.EdgeClusters.AgentClient
   alias EdgeAdmin.ProxyServers.RemoteTunnel
   alias EdgeAdmin.Vpn
 
   require Logger
 
-  defp metrics_scrape_timeout, do: Application.get_env(:edge_admin, :metrics_scrape_timeout, 8_000)
-  defp command_delivery_timeout, do: Application.get_env(:edge_admin, :command_delivery_timeout, 10_000)
-
   defp tcp_connect_timeout,
     do: :edge_admin |> Application.get_env(:proxy_timeouts, []) |> Keyword.get(:connection, 5_000)
 
-  defp metrics_scrape_options do
-    timeout = metrics_scrape_timeout()
-    [receive_timeout: timeout, connect_options: [timeout: timeout], retry: false]
-  end
-
-  defp command_options do
-    timeout = command_delivery_timeout()
-    [receive_timeout: timeout, connect_options: [timeout: timeout], retry: false]
-  end
+  defp telemetry_result({:ok, _}), do: :success
+  defp telemetry_result(_), do: :error
 
   # ===========================================================================
   # Client API
@@ -174,7 +164,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - {:error, reason} - HTTP error or network failure
   """
   def scrape_host_metrics(gateway_pid, node) do
-    GenServer.call(gateway_pid, {:scrape_host_metrics, node}, metrics_scrape_timeout() + 2_000)
+    GenServer.call(gateway_pid, {:scrape_host_metrics, node}, AgentClient.metrics_call_timeout())
   end
 
   @doc """
@@ -191,7 +181,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - {:error, reason} - HTTP error or network failure
   """
   def scrape_agent_metrics(gateway_pid, node) do
-    GenServer.call(gateway_pid, {:scrape_agent_metrics, node}, metrics_scrape_timeout() + 2_000)
+    GenServer.call(gateway_pid, {:scrape_agent_metrics, node}, AgentClient.metrics_call_timeout())
   end
 
   @doc """
@@ -208,7 +198,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - {:error, reason} - HTTP error or network failure
   """
   def scrape_wireguard_metrics(gateway_pid, node) do
-    GenServer.call(gateway_pid, {:scrape_wireguard_metrics, node}, metrics_scrape_timeout() + 2_000)
+    GenServer.call(gateway_pid, {:scrape_wireguard_metrics, node}, AgentClient.metrics_call_timeout())
   end
 
   @doc """
@@ -225,7 +215,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - {:error, reason} - HTTP error or network failure
   """
   def trigger_self_update(gateway_pid, node) do
-    GenServer.call(gateway_pid, {:trigger_self_update, node}, command_delivery_timeout() + 2_000)
+    GenServer.call(gateway_pid, {:trigger_self_update, node}, AgentClient.command_call_timeout())
   end
 
   @doc """
@@ -243,7 +233,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   - {:error, reason} - HTTP error or network failure
   """
   def cancel_execution(gateway_pid, node, execution_id) do
-    GenServer.call(gateway_pid, {:cancel_execution, node, execution_id}, command_delivery_timeout() + 2_000)
+    GenServer.call(gateway_pid, {:cancel_execution, node, execution_id}, AgentClient.command_call_timeout())
   end
 
   @doc """
@@ -350,49 +340,20 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
   @impl true
   def handle_call({:scrape_host_metrics, node}, from, state) do
-    # Spawn async task to avoid blocking the GenServer
     cluster_name = state.cluster_name
 
     Task.start(fn ->
-      url = "http://#{Node.vpn_hostname(node)}:#{node.host_metrics_port}/metrics"
+      result = AgentClient.scrape_host_metrics(node)
 
-      result =
-        case Req.get(url, metrics_scrape_options()) do
-          {:ok, %{status: 200, body: metrics_text}} ->
-            :telemetry.execute(
-              [:edge_admin, :gateway, :scrape],
-              %{count: 1},
-              %{cluster: cluster_name, metrics_type: :host, result: :success}
-            )
+      :telemetry.execute(
+        [:edge_admin, :gateway, :scrape],
+        %{count: 1},
+        %{cluster: cluster_name, metrics_type: :host, result: telemetry_result(result)}
+      )
 
-            {:ok, metrics_text}
-
-          {:ok, %{status: status}} ->
-            :telemetry.execute(
-              [:edge_admin, :gateway, :scrape],
-              %{count: 1},
-              %{cluster: cluster_name, metrics_type: :host, result: :error}
-            )
-
-            {:error, "HTTP #{status}"}
-
-          {:error, reason} ->
-            Logger.error("HTTP request failed: #{inspect(reason)}")
-
-            :telemetry.execute(
-              [:edge_admin, :gateway, :scrape],
-              %{count: 1},
-              %{cluster: cluster_name, metrics_type: :host, result: :error}
-            )
-
-            {:error, :service_unavailable}
-        end
-
-      # Reply to caller when HTTP request completes
       GenServer.reply(from, result)
     end)
 
-    # Return immediately without replying - task will reply later
     {:noreply, state}
   end
 
@@ -401,45 +362,13 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     cluster_name = state.cluster_name
 
     Task.start(fn ->
-      url = "http://#{Node.vpn_hostname(node)}:#{node.http_port}/api/v1/agents/metrics/self/raw"
+      result = AgentClient.scrape_agent_metrics(node)
 
-      opts =
-        Keyword.merge(
-          [auth: {:bearer, node.api_token}],
-          metrics_scrape_options()
-        )
-
-      result =
-        case Req.get(url, opts) do
-          {:ok, %{status: 200, body: metrics_text}} ->
-            :telemetry.execute(
-              [:edge_admin, :gateway, :scrape],
-              %{count: 1},
-              %{cluster: cluster_name, metrics_type: :agent, result: :success}
-            )
-
-            {:ok, metrics_text}
-
-          {:ok, %{status: status}} ->
-            :telemetry.execute(
-              [:edge_admin, :gateway, :scrape],
-              %{count: 1},
-              %{cluster: cluster_name, metrics_type: :agent, result: :error}
-            )
-
-            {:error, "HTTP #{status}"}
-
-          {:error, reason} ->
-            Logger.error("HTTP request failed: #{inspect(reason)}")
-
-            :telemetry.execute(
-              [:edge_admin, :gateway, :scrape],
-              %{count: 1},
-              %{cluster: cluster_name, metrics_type: :agent, result: :error}
-            )
-
-            {:error, :service_unavailable}
-        end
+      :telemetry.execute(
+        [:edge_admin, :gateway, :scrape],
+        %{count: 1},
+        %{cluster: cluster_name, metrics_type: :agent, result: telemetry_result(result)}
+      )
 
       GenServer.reply(from, result)
     end)
@@ -452,39 +381,13 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     cluster_name = state.cluster_name
 
     Task.start(fn ->
-      url = "http://#{Node.vpn_hostname(node)}:#{node.wireguard_metrics_port}/metrics"
+      result = AgentClient.scrape_wireguard_metrics(node)
 
-      result =
-        case Req.get(url, metrics_scrape_options()) do
-          {:ok, %{status: 200, body: metrics_text}} ->
-            :telemetry.execute(
-              [:edge_admin, :gateway, :scrape],
-              %{count: 1},
-              %{cluster: cluster_name, metrics_type: :wireguard, result: :success}
-            )
-
-            {:ok, metrics_text}
-
-          {:ok, %{status: status}} ->
-            :telemetry.execute(
-              [:edge_admin, :gateway, :scrape],
-              %{count: 1},
-              %{cluster: cluster_name, metrics_type: :wireguard, result: :error}
-            )
-
-            {:error, "HTTP #{status}"}
-
-          {:error, reason} ->
-            Logger.error("HTTP request failed: #{inspect(reason)}")
-
-            :telemetry.execute(
-              [:edge_admin, :gateway, :scrape],
-              %{count: 1},
-              %{cluster: cluster_name, metrics_type: :wireguard, result: :error}
-            )
-
-            {:error, :service_unavailable}
-        end
+      :telemetry.execute(
+        [:edge_admin, :gateway, :scrape],
+        %{count: 1},
+        %{cluster: cluster_name, metrics_type: :wireguard, result: telemetry_result(result)}
+      )
 
       GenServer.reply(from, result)
     end)
@@ -495,36 +398,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   @impl true
   def handle_call({:trigger_self_update, node}, from, state) do
     Task.start(fn ->
-      url = "http://#{Node.vpn_hostname(node)}:#{node.http_port}/api/v1/self_updates/trigger"
-
-      opts = Keyword.merge([auth: {:bearer, node.api_token}], command_options())
-
-      result =
-        case Req.post(url, opts) do
-          {:ok, %{status: 202}} ->
-            :ok
-
-          {:ok, %{status: 403}} ->
-            {:error, :self_update_disabled}
-
-          {:ok, %{status: status}} ->
-            {:error, "HTTP #{status}"}
-
-          {:error, %Req.TransportError{reason: reason} = error} ->
-            Logger.debug("HTTP request failed (likely agent restarted): #{inspect(error)}")
-            # Treat connection errors as success (watchtower likely restarted the agent)
-            if reason in [:timeout, :econnrefused, :closed] do
-              :ok
-            else
-              {:error, error}
-            end
-
-          {:error, reason} ->
-            Logger.debug("HTTP request failed: #{inspect(reason)}")
-            {:error, reason}
-        end
-
-      GenServer.reply(from, result)
+      GenServer.reply(from, AgentClient.trigger_self_update(node))
     end)
 
     {:noreply, state}
@@ -533,24 +407,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   @impl true
   def handle_call({:cancel_execution, node, execution_id}, from, state) do
     Task.start(fn ->
-      url = "http://#{Node.vpn_hostname(node)}:#{node.http_port}/api/v1/command_executions/#{execution_id}/cancel"
-
-      opts = Keyword.merge([auth: {:bearer, node.api_token}], command_options())
-
-      result =
-        case Req.patch(url, opts) do
-          {:ok, %{status: status}} when status in 200..299 ->
-            :ok
-
-          {:ok, %{status: status}} ->
-            {:error, "HTTP #{status}"}
-
-          {:error, reason} ->
-            Logger.error("HTTP request failed: #{inspect(reason)}")
-            {:error, reason}
-        end
-
-      GenServer.reply(from, result)
+      GenServer.reply(from, AgentClient.cancel_execution(node, execution_id))
     end)
 
     {:noreply, state}

@@ -94,6 +94,44 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   end
 
   @doc """
+  Probes a raw admin URL to check if it is a reachable EdgeAdmin instance.
+
+  Used during VPN peer discovery before any admin URL is stored in Settings.
+  No authentication required — hits the public discovery endpoint.
+
+  ## Parameters
+  - `url` - Full base URL to probe, e.g. `"http://100.64.0.4:44000"`
+
+  ## Returns
+  - `{:ok, admin_name}` - Admin responded and identified itself
+  - `{:error, reason}` - Not reachable or not an admin
+
+  GET /api/v1/admins/self/discovery
+  """
+  @spec probe(String.t()) :: {:ok, String.t()} | {:error, term()}
+  def probe(url) do
+    opts = [
+      receive_timeout: Application.get_env(:edge_agent, :admin_discovery_timeout, 10_000),
+      connect_options: [timeout: Application.get_env(:edge_agent, :admin_discovery_timeout, 10_000)],
+      retry: false
+    ]
+
+    case Req.get("#{url}/api/v1/admins/self/discovery", opts) do
+      {:ok, %{status: 200, body: %{"data" => %{"name" => admin_name}}}} ->
+        {:ok, admin_name}
+
+      {:ok, %{status: 200}} ->
+        {:error, :unexpected_body}
+
+      {:ok, %{status: status}} ->
+        {:error, {:http_error, status}}
+
+      {:error, reason} ->
+        {:error, {:request_failed, reason}}
+    end
+  end
+
+  @doc """
   Verify an enrollment key with admin before joining the VPN.
 
   Called during bootstrap before netclient join. Tries each URL in `admin_urls`

@@ -1,19 +1,14 @@
 # edge_agent/lib/edge_agent_web/controllers/command_execution_json.ex
 defmodule EdgeAgentWeb.Controllers.CommandExecutionJSON do
   alias EdgeAgent.Commands.Schemas.CommandExecution
+  alias EdgeAgentWeb.ResponseEnvelope
 
-  @doc """
-  Renders a single command_execution.
-  """
-  def show(%{command_execution: command_execution}) do
-    %{data: data(command_execution)}
+  def show(%{conn: conn, command_execution: command_execution}) do
+    ResponseEnvelope.success(conn, data(command_execution))
   end
 
-  @doc """
-  Renders cancellation result.
-  """
-  def cancel(%{result: result}) do
-    %{data: result}
+  def cancel(%{conn: conn, result: result}) do
+    ResponseEnvelope.success(conn, result)
   end
 
   defp data(%CommandExecution{} = command_execution) do

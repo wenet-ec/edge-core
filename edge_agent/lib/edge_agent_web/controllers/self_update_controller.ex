@@ -3,6 +3,7 @@ defmodule EdgeAgentWeb.Controllers.SelfUpdateController do
   use EdgeAgentWeb, :controller
 
   alias EdgeAgent.SelfUpdates
+  alias EdgeAgentWeb.ResponseEnvelope
 
   action_fallback(EdgeAgentWeb.Controllers.FallbackController)
 
@@ -25,7 +26,7 @@ defmodule EdgeAgentWeb.Controllers.SelfUpdateController do
 
       conn
       |> put_status(:accepted)
-      |> json(%{data: %{message: "Self-update triggered successfully"}})
+      |> json(ResponseEnvelope.success(conn, %{message: "Self-update triggered successfully"}))
     end
   end
 end

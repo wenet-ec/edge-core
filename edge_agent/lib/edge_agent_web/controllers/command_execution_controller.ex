@@ -16,7 +16,7 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionController do
            Commands.create_command_execution_and_enqueue_worker(command_execution_params) do
       conn
       |> put_status(:created)
-      |> render(:show, command_execution: command_execution)
+      |> render(:show, conn: conn, command_execution: command_execution)
     end
   end
 
@@ -33,7 +33,7 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionController do
   def cancel(conn, %{"id" => id}) do
     with {:ok, execution} <- Commands.get_command_execution(id),
          {:ok, result} <- Commands.cancel_execution(execution) do
-      render(conn, :cancel, result: result)
+      render(conn, :cancel, conn: conn, result: result)
     end
   end
 end

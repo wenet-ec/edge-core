@@ -28,19 +28,18 @@ defmodule EdgeAdminWeb.Controllers.Metrics.HostMetricsDiscoveryController do
     target_groups =
       [prefix: false, filter_status: ["healthy", "unhealthy"]]
       |> Nodes.list_cluster_node_mappings()
-      |> Enum.map(fn %{name: cluster_name, nodes: node_ids} ->
-        targets =
-          Enum.map(node_ids, fn node_id ->
-            "#{metrics_base_url}/api/v1/nodes/#{node_id}/metrics/host/raw"
-          end)
-
-        %{
-          targets: targets,
-          labels: %{
-            cluster: cluster_name,
-            job: "node-host-metrics"
+      |> Enum.flat_map(fn %{name: cluster_name, nodes: node_ids} ->
+        Enum.map(node_ids, fn node_id ->
+          %{
+            targets: [metrics_base_url],
+            labels: %{
+              cluster: cluster_name,
+              job: "node-host-metrics",
+              __metrics_path__: "/api/v1/nodes/#{node_id}/metrics/host/raw",
+              node_id: node_id
+            }
           }
-        }
+        end)
       end)
 
     render(conn, :index, target_groups: target_groups)

@@ -1,10 +1,9 @@
 # edge_admin/lib/edge_admin_web/controllers/agents/metrics_json.ex
 defmodule EdgeAdminWeb.Controllers.Agents.MetricsJSON do
-  @doc """
-  Renders metrics cache record after push.
-  """
-  def show(%{cache: cache}) do
-    %{data: data(cache)}
+  alias EdgeAdminWeb.ResponseEnvelope
+
+  def show(%{conn: conn, cache: cache}) do
+    ResponseEnvelope.success(conn, data(cache))
   end
 
   defp data(cache) do

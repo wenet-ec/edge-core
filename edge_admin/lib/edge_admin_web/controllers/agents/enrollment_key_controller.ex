@@ -9,7 +9,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.EnrollmentKeyController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
 
   tags(["Internal.Agents"])
 
@@ -26,7 +26,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.EnrollmentKeyController do
 
   def verify(conn, params) do
     with {:ok, result} <- Nodes.verify_enrollment_key(Map.merge(params, conn.body_params)) do
-      render(conn, :verify, result: result)
+      render(conn, :verify, conn: conn, result: result)
     end
   end
 end

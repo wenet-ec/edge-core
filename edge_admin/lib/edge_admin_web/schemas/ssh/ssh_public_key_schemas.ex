@@ -75,25 +75,13 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas do
   defmodule SshPublicKeySingleResponse do
     @moduledoc false
 
-    schema(%{
-      title: "SshPublicKeySingleResponse",
-      description: "Single SSH public key response",
-      type: :object,
-      properties: %{
-        data: SshPublicKeyResponse
-      },
-      required: [:data],
-      example: %{
-        data: %{
-          id: "01234567-89ab-cdef-0123-456789abcdef",
-          public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
-          key_name: "laptop-key",
-          ssh_username_id: "fedcba98-7654-3210-fedc-ba9876543210",
-          inserted_at: "2025-06-23T10:30:00Z",
-          updated_at: "2025-06-23T10:30:00Z"
-        }
-      }
-    })
+    schema(
+      CommonSchemas.single_response(
+        SshPublicKeyResponse,
+        "SshPublicKeySingleResponse",
+        "Single SSH public key response"
+      )
+    )
   end
 
   defmodule SshPublicKeyCreateRequest do

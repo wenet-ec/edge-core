@@ -1,29 +1,14 @@
 # edge_admin/lib/edge_admin_web/controllers/nodes/alias_json.ex
 defmodule EdgeAdminWeb.Controllers.Nodes.AliasJSON do
   alias EdgeAdmin.Nodes.Schemas.Alias
+  alias EdgeAdminWeb.ResponseEnvelope
 
-  @doc """
-  Renders a paginated list of aliases.
-  """
-  def index(%{aliases: aliases, meta: %Flop.Meta{} = meta}) do
-    %{
-      data: for(alias_record <- aliases, do: data(alias_record)),
-      pagination: %{
-        page: meta.current_page,
-        page_size: meta.page_size,
-        total: meta.total_count,
-        total_pages: meta.total_pages,
-        has_next: meta.has_next_page?,
-        has_prev: meta.has_previous_page?
-      }
-    }
+  def index(%{conn: conn, aliases: aliases, meta: flop_meta}) do
+    ResponseEnvelope.success(conn, Enum.map(aliases, &data/1), flop_meta)
   end
 
-  @doc """
-  Renders a single alias.
-  """
-  def show(%{alias: alias_record}) do
-    %{data: data(alias_record)}
+  def show(%{conn: conn, alias: alias_record}) do
+    ResponseEnvelope.success(conn, data(alias_record))
   end
 
   defp data(%Alias{cluster: cluster} = alias_record) do

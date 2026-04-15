@@ -70,26 +70,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
   defmodule AliasSingleResponse do
     @moduledoc false
 
-    schema(%{
-      title: "AliasSingleResponse",
-      description: "Single alias response",
-      type: :object,
-      properties: %{
-        data: AliasResponse
-      },
-      required: [:data],
-      example: %{
-        data: %{
-          id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-          name: "web-server",
-          vpn_hostname: "node-web-server.cluster-prod.nm.internal",
-          node_id: "01234567-89ab-cdef-0123-456789abcdef",
-          cluster_name: "prod",
-          inserted_at: "2024-01-15T10:30:00Z",
-          updated_at: "2024-01-15T10:30:00Z"
-        }
-      }
-    })
+    schema(CommonSchemas.single_response(AliasResponse, "AliasSingleResponse", "Single alias response"))
   end
 
   defmodule AliasPaginatedResponse do

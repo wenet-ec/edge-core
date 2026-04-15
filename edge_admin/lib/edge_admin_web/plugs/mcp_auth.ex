@@ -22,6 +22,8 @@ defmodule EdgeAdminWeb.Plugs.McpAuth do
   import Phoenix.Controller
   import Plug.Conn
 
+  alias EdgeAdminWeb.ResponseEnvelope
+
   def init(opts), do: opts
 
   def call(conn, _opts) do
@@ -46,7 +48,7 @@ defmodule EdgeAdminWeb.Plugs.McpAuth do
       _ ->
         conn
         |> put_status(:unauthorized)
-        |> json(%{error: "Unauthorized"})
+        |> json(ResponseEnvelope.error(conn, "unauthorized", "Unauthorized"))
         |> halt()
     end
   end

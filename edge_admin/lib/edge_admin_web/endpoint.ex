@@ -33,6 +33,7 @@ defmodule EdgeAdminWeb.Endpoint do
   end
 
   plug(Plug.RequestId)
+  plug(EdgeAdminWeb.Plugs.AssignRequestId)
   plug(Plug.Telemetry, event_prefix: [:phoenix, :endpoint])
 
   plug(

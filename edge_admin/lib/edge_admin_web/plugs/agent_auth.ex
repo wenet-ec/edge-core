@@ -22,6 +22,7 @@ defmodule EdgeAdminWeb.Plugs.AgentAuth do
 
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
+  alias EdgeAdminWeb.ResponseEnvelope
 
   def init(opts) do
     Keyword.get(opts, :node_lookup, &__MODULE__.default_lookup/1)
@@ -42,7 +43,7 @@ defmodule EdgeAdminWeb.Plugs.AgentAuth do
       _ ->
         conn
         |> put_status(:unauthorized)
-        |> json(%{error: "Unauthorized"})
+        |> json(ResponseEnvelope.error(conn, "unauthorized", "Unauthorized"))
         |> halt()
     end
   end
@@ -55,7 +56,7 @@ defmodule EdgeAdminWeb.Plugs.AgentAuth do
       :error ->
         conn
         |> put_status(:unauthorized)
-        |> json(%{error: "Unauthorized"})
+        |> json(ResponseEnvelope.error(conn, "unauthorized", "Unauthorized"))
         |> halt()
     end
   end

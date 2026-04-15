@@ -576,9 +576,10 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
             }
           },
           required: [:node_id, :cluster_name, :timestamp]
-        }
+        },
+        meta: EdgeAdminWeb.Schemas.CommonSchemas.MetaSchema
       },
-      required: [:data]
+      required: [:data, :meta]
     })
   end
 end

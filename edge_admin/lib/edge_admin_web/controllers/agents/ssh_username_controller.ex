@@ -9,7 +9,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.SshUsernameController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:verify_credentials]
 
   tags(["Internal.Agents"])
@@ -36,7 +36,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.SshUsernameController do
     node_id = conn.assigns.current_node.id
 
     with {:ok, verified} <- Ssh.verify_ssh_credentials(node_id, Map.merge(params, conn.body_params)) do
-      render(conn, :verify_credentials, verified: verified)
+      render(conn, :verify_credentials, conn: conn, verified: verified)
     end
   end
 end

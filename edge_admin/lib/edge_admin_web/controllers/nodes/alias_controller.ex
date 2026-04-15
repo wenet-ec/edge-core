@@ -9,7 +9,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :show, :create, :delete]
 
   tags(["Nodes.Alias"])
@@ -104,13 +104,13 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
     ],
     responses: %{
       200 => {"Paginated list of aliases", "application/json", AliasSchemas.AliasPaginatedResponse},
-      422 => {"Invalid query parameters", "application/json", OpenApiSpex.JsonErrorResponse}
+      400 => {"Invalid query parameters", "application/json", CommonSchemas.BadRequestResponse}
     }
   )
 
   def index(conn, params) do
     with {:ok, {aliases, meta}} <- Nodes.list_aliases(params) do
-      render(conn, :index, aliases: aliases, meta: meta)
+      render(conn, :index, conn: conn, aliases: aliases, meta: meta)
     end
   end
 
@@ -126,14 +126,14 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
     ],
     responses: %{
       200 => {"Alias details", "application/json", AliasSchemas.AliasSingleResponse},
-      404 => {"Alias not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
+      404 => {"Alias not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
 
   def show(conn, %{id: id}) do
     with {:ok, alias_record} <- Nodes.get_alias(id) do
-      render(conn, :show, alias: alias_record)
+      render(conn, :show, conn: conn, alias: alias_record)
     end
   end
 
@@ -165,7 +165,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
          {:ok, alias_record} <- Nodes.create_alias(node, Map.merge(params, conn.body_params)) do
       conn
       |> put_status(:created)
-      |> render(:show, alias: alias_record)
+      |> render(:show, conn: conn, alias: alias_record)
     end
   end
 
@@ -181,8 +181,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
     ],
     responses: %{
       204 => {"Alias deleted successfully", "", nil},
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Alias not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )

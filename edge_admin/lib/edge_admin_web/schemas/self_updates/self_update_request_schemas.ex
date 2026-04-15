@@ -101,32 +101,13 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
   defmodule SelfUpdateRequestSingleResponse do
     @moduledoc false
 
-    schema(%{
-      title: "SelfUpdateRequestSingleResponse",
-      description: "Single self-update request response",
-      type: :object,
-      properties: %{
-        data: SelfUpdateRequestResponse
-      },
-      required: [:data],
-      example: %{
-        data: %{
-          id: "01234567-89ab-cdef-0123-456789abcdef",
-          targeting: %{
-            type: "clusters",
-            cluster_names: ["prod", "staging"]
-          },
-          status: "completed",
-          summary: %{
-            total: 25,
-            triggered: 23,
-            failed: 2
-          },
-          inserted_at: "2025-06-17T10:30:00Z",
-          updated_at: "2025-06-17T10:35:00Z"
-        }
-      }
-    })
+    schema(
+      CommonSchemas.single_response(
+        SelfUpdateRequestResponse,
+        "SelfUpdateRequestSingleResponse",
+        "Single self-update request response"
+      )
+    )
   end
 
   defmodule SelfUpdateRequestCreateRequest do

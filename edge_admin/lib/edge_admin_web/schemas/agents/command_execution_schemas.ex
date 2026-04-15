@@ -85,25 +85,13 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
   defmodule AgentCommandExecutionSingleResponse do
     @moduledoc false
 
-    schema(%{
-      title: "Internal.AgentCommandExecutionSingleResponse",
-      description: "Single command execution response for agent",
-      type: :object,
-      properties: %{
-        data: AgentCommandExecutionResponse
-      },
-      required: [:data],
-      example: %{
-        data: %{
-          id: "01234567-89ab-cdef-0123-456789abcdef",
-          command_id: "fedcba98-7654-3210-fedc-ba9876543210",
-          command_text: "systemctl restart nginx",
-          timeout: 30,
-          status: "pending",
-          inserted_at: "2026-04-02T10:00:00Z"
-        }
-      }
-    })
+    schema(
+      CommonSchemas.single_response(
+        AgentCommandExecutionResponse,
+        "Internal.AgentCommandExecutionSingleResponse",
+        "Single command execution response for agent"
+      )
+    )
   end
 
   defmodule AgentCommandExecutionPaginatedResponse do

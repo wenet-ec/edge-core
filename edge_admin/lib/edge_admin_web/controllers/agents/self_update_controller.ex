@@ -9,7 +9,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.SelfUpdateController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:check]
 
   tags(["Internal.Agents"])
@@ -27,7 +27,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.SelfUpdateController do
     node = conn.assigns.current_node
 
     with {:ok, result} <- SelfUpdates.check_for_latest_request(node) do
-      render(conn, :check, result: result)
+      render(conn, :check, conn: conn, result: result)
     end
   end
 end

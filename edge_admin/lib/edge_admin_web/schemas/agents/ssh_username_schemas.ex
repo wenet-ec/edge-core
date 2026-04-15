@@ -6,6 +6,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.SshUsernameSchemas do
 
   use EdgeAdminWeb.Schema
 
+  alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
   defmodule SshCredentialsVerifyRequest do
@@ -33,32 +34,33 @@ defmodule EdgeAdminWeb.Schemas.Agents.SshUsernameSchemas do
     })
   end
 
-  defmodule SshCredentialsVerifyResponse do
+  defmodule SshCredentialsVerifyData do
     @moduledoc false
 
     schema(%{
-      title: "Internal.SshCredentialsVerifyResponse",
-      description: "Result of SSH credential verification. Always returns 200 — check `verified` field.",
+      title: "Internal.SshCredentialsVerifyData",
+      description: "SSH credential verification result",
       type: :object,
       properties: %{
-        data: %Schema{
-          type: :object,
-          properties: %{
-            verified: %Schema{
-              type: :boolean,
-              description:
-                "Whether the credential is valid. Returns false for both unknown username and wrong credential."
-            }
-          },
-          required: [:verified]
+        verified: %Schema{
+          type: :boolean,
+          description: "Whether the credential is valid. Returns false for both unknown username and wrong credential."
         }
       },
-      required: [:data],
-      example: %{
-        data: %{
-          verified: true
-        }
-      }
+      required: [:verified],
+      example: %{verified: true}
     })
+  end
+
+  defmodule SshCredentialsVerifyResponse do
+    @moduledoc false
+
+    schema(
+      CommonSchemas.single_response(
+        SshCredentialsVerifyData,
+        "Internal.SshCredentialsVerifyResponse",
+        "Result of SSH credential verification. Always returns 200 — check `verified` field."
+      )
+    )
   end
 end

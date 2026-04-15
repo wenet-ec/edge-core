@@ -92,29 +92,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
   defmodule CommandSingleResponse do
     @moduledoc false
 
-    schema(%{
-      title: "CommandSingleResponse",
-      description: "Single command response",
-      type: :object,
-      properties: %{
-        data: CommandResponse
-      },
-      required: [:data],
-      example: %{
-        data: %{
-          id: "01234567-89ab-cdef-0123-456789abcdef",
-          command_text: "echo hello\ndate",
-          timeout: nil,
-          expired_at: nil,
-          targeting: %{
-            type: "all",
-            node_filters: %{status: "healthy"}
-          },
-          inserted_at: "2025-06-17T12:00:00Z",
-          updated_at: "2025-06-17T12:00:00Z"
-        }
-      }
-    })
+    schema(CommonSchemas.single_response(CommandResponse, "CommandSingleResponse", "Single command response"))
   end
 
   defmodule CommandCreateRequest do

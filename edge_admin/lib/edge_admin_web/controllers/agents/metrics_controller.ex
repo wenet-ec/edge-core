@@ -10,7 +10,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.MetricsController do
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:push]
 
   tags(["Internal.Agents"])
@@ -37,7 +37,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.MetricsController do
              validated_attrs["metrics_type"],
              validated_attrs["metrics_text"]
            ) do
-      render(conn, :show, cache: cache)
+      render(conn, :show, conn: conn, cache: cache)
     end
   end
 end

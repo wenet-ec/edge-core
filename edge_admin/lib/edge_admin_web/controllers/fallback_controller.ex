@@ -7,7 +7,9 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
   """
   use EdgeAdminWeb, :controller
 
+  alias EdgeAdminWeb.Controllers.ChangesetJSON
   alias EdgeAdminWeb.Controllers.ErrorJSON
+  alias EdgeAdminWeb.ResponseEnvelope
 
   require Logger
 
@@ -15,8 +17,8 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
   def call(conn, {:error, %Ecto.Changeset{} = changeset}) do
     conn
     |> put_status(:unprocessable_entity)
-    |> put_view(json: EdgeAdminWeb.Controllers.ChangesetJSON)
-    |> render(:error, changeset: changeset)
+    |> put_view(json: ChangesetJSON)
+    |> render(:error, conn: conn, changeset: changeset)
   end
 
   # 2. Not found (404)
@@ -24,7 +26,7 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     conn
     |> put_status(:not_found)
     |> put_view(json: ErrorJSON)
-    |> render(:"404")
+    |> render(:"404", conn: conn)
   end
 
   # 3. Forbidden (403)
@@ -32,7 +34,7 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     conn
     |> put_status(:forbidden)
     |> put_view(json: ErrorJSON)
-    |> render(:"403")
+    |> render(:"403", conn: conn)
   end
 
   # 4. Unauthorized (401) - rare, usually handled upstream in plugs
@@ -40,7 +42,7 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     conn
     |> put_status(:unauthorized)
     |> put_view(json: ErrorJSON)
-    |> render(:"401")
+    |> render(:"401", conn: conn)
   end
 
   # 5. Conflict (409) - bare atom fallback, no reason available
@@ -49,14 +51,14 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     conn
     |> put_status(:conflict)
     |> put_view(json: ErrorJSON)
-    |> render(:"409")
+    |> render(:"409", conn: conn)
   end
 
   # 6. Conflict with reason (409) - from checks/ modules returning {:conflict, reason}
   def call(conn, {:error, {:conflict, reason}}) do
     conn
     |> put_status(:conflict)
-    |> json(%{errors: %{detail: reason}})
+    |> json(ResponseEnvelope.error(conn, "conflict", reason))
   end
 
   # 7. Service unavailable (503) - downstream dependency unreachable (VPN, metrics, etc.)
@@ -64,7 +66,7 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     conn
     |> put_status(:service_unavailable)
     |> put_view(json: ErrorJSON)
-    |> render(:"503")
+    |> render(:"503", conn: conn)
   end
 
   # 8. Bad request (400) - malformed input
@@ -72,7 +74,7 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     conn
     |> put_status(:bad_request)
     |> put_view(json: ErrorJSON)
-    |> render(:"400")
+    |> render(:"400", conn: conn)
   end
 
   # 9. CATCH-ALL: unhandled error → 500
@@ -83,6 +85,6 @@ defmodule EdgeAdminWeb.Controllers.FallbackController do
     conn
     |> put_status(:internal_server_error)
     |> put_view(json: ErrorJSON)
-    |> render(:"500")
+    |> render(:"500", conn: conn)
   end
 end

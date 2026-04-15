@@ -8,7 +8,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.WireguardMetricsController do
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:show]
 
   tags(["Internal.Metrics"])
@@ -26,8 +26,8 @@ defmodule EdgeAdminWeb.Controllers.Metrics.WireguardMetricsController do
     ],
     responses: %{
       200 => {"Raw Prometheus metrics text", "text/plain", %OpenApiSpex.Schema{type: :string}},
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse},
       503 => {"Metrics unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )

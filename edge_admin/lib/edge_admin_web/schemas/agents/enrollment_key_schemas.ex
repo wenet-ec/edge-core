@@ -6,6 +6,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.EnrollmentKeySchemas do
 
   use EdgeAdminWeb.Schema
 
+  alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
   defmodule EnrollmentKeyVerifyRequest do
@@ -23,41 +24,35 @@ defmodule EdgeAdminWeb.Schemas.Agents.EnrollmentKeySchemas do
     })
   end
 
-  defmodule EnrollmentKeyVerifyResponse do
+  defmodule EnrollmentKeyVerifyData do
     @moduledoc false
 
     schema(%{
-      title: "Internal.EnrollmentKeyVerifyResponse",
-      description: "Result of enrollment key verification. Always returns 200 — check `verified` field.",
+      title: "Internal.EnrollmentKeyVerifyData",
+      description: "Result of enrollment key verification",
       type: :object,
       properties: %{
-        data: %Schema{
-          type: :object,
-          properties: %{
-            verified: %Schema{
-              type: :boolean,
-              description: "Whether the enrollment key is valid and unused"
-            },
-            error: %Schema{
-              type: :string,
-              description: "Error message if verification failed, empty string otherwise"
-            },
-            netmaker_key: %Schema{
-              type: :string,
-              description: "Netmaker enrollment key to use for VPN join, empty string if not verified"
-            }
-          },
-          required: [:verified, :error, :netmaker_key]
+        verified: %Schema{type: :boolean, description: "Whether the enrollment key is valid and unused"},
+        error: %Schema{type: :string, description: "Error message if verification failed, empty string otherwise"},
+        netmaker_key: %Schema{
+          type: :string,
+          description: "Netmaker enrollment key to use for VPN join, empty string if not verified"
         }
       },
-      required: [:data],
-      example: %{
-        data: %{
-          verified: true,
-          error: "",
-          netmaker_key: "eyJhbGciOiJIUzI1NiJ9..."
-        }
-      }
+      required: [:verified, :error, :netmaker_key],
+      example: %{verified: true, error: "", netmaker_key: "eyJhbGciOiJIUzI1NiJ9..."}
     })
+  end
+
+  defmodule EnrollmentKeyVerifyResponse do
+    @moduledoc false
+
+    schema(
+      CommonSchemas.single_response(
+        EnrollmentKeyVerifyData,
+        "Internal.EnrollmentKeyVerifyResponse",
+        "Result of enrollment key verification. Always returns 200 — check `verified` field."
+      )
+    )
   end
 end

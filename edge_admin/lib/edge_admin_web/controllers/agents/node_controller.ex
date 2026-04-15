@@ -10,7 +10,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug DegradedMode, :block when action in [:create]
   plug DegradedMode, :allow when action in [:update_health_check]
 
@@ -31,7 +31,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
     with {:ok, node} <- Nodes.register_node(Map.merge(params, conn.body_params)) do
       conn
       |> put_status(:created)
-      |> render(:show, node: node)
+      |> render(:show, conn: conn, node: node)
     end
   end
 
@@ -50,7 +50,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
     node = conn.assigns.current_node
 
     with {:ok, updated_node} <- Nodes.update_node_health_check(node, Map.merge(params, conn.body_params)) do
-      render(conn, :show, node: updated_node)
+      render(conn, :show, conn: conn, node: updated_node)
     end
   end
 end

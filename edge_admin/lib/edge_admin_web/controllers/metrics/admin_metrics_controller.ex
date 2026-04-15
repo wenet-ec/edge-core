@@ -9,7 +9,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AdminMetricsController do
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:show_self]
 
   tags(["Admins.Metrics"])
@@ -42,7 +42,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AdminMetricsController do
   """
   def show_self(conn, _params) do
     with {:ok, metrics} <- Metrics.get_admin_metrics() do
-      render(conn, :show_self, metrics: metrics)
+      render(conn, :show_self, conn: conn, metrics: metrics)
     end
   end
 end

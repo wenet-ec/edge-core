@@ -7,7 +7,7 @@ defmodule EdgeAdminWeb.Controllers.Admins.DiscoveryController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index]
 
   tags(["Internal.Metadata"])
@@ -22,6 +22,6 @@ defmodule EdgeAdminWeb.Controllers.Admins.DiscoveryController do
 
   def index(conn, _params) do
     admin_name = Application.get_env(:edge_admin, :admin_name)
-    render(conn, :index, admin_name: admin_name)
+    render(conn, :index, conn: conn, admin_name: admin_name)
   end
 end

@@ -2,29 +2,14 @@
 defmodule EdgeAdminWeb.Controllers.Nodes.NodeJSON do
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdminWeb.ResponseEnvelope
 
-  @doc """
-  Renders a paginated list of nodes.
-  """
-  def index(%{nodes: nodes, meta: %Flop.Meta{} = meta}) do
-    %{
-      data: for(node <- nodes, do: data(node)),
-      pagination: %{
-        page: meta.current_page,
-        page_size: meta.page_size,
-        total: meta.total_count,
-        total_pages: meta.total_pages,
-        has_next: meta.has_next_page?,
-        has_prev: meta.has_previous_page?
-      }
-    }
+  def index(%{conn: conn, nodes: nodes, meta: flop_meta}) do
+    ResponseEnvelope.success(conn, Enum.map(nodes, &data/1), flop_meta)
   end
 
-  @doc """
-  Renders a single node.
-  """
-  def show(%{node: node}) do
-    %{data: data(node)}
+  def show(%{conn: conn, node: node}) do
+    ResponseEnvelope.success(conn, data(node))
   end
 
   defp data(%Node{cluster: cluster, aliases: aliases} = node) do

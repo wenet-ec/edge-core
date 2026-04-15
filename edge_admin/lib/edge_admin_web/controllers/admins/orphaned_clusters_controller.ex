@@ -7,7 +7,7 @@ defmodule EdgeAdminWeb.Controllers.Admins.OrphanedClustersController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index]
 
   tags(["Admins.Metadata"])
@@ -23,6 +23,6 @@ defmodule EdgeAdminWeb.Controllers.Admins.OrphanedClustersController do
 
   def index(conn, _params) do
     orphaned_clusters = EdgeAdmin.Admins.Metadata.get_orphaned_clusters()
-    render(conn, :index, orphaned_clusters: orphaned_clusters)
+    render(conn, :index, conn: conn, orphaned_clusters: orphaned_clusters)
   end
 end

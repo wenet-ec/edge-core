@@ -6,40 +6,42 @@ defmodule EdgeAdminWeb.Schemas.Agents.SelfUpdateSchemas do
 
   use EdgeAdminWeb.Schema
 
+  alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
+
+  defmodule SelfUpdateCheckData do
+    @moduledoc false
+
+    schema(%{
+      title: "Internal.SelfUpdateCheckData",
+      description: "Whether the latest self-update request targets this node",
+      type: :object,
+      properties: %{
+        including_me: %Schema{
+          type: :boolean,
+          description: "Whether the latest self-update request targets this node"
+        },
+        inserted_at: %Schema{
+          type: :string,
+          format: :"date-time",
+          nullable: true,
+          description: "When the self-update request was created, null if no request exists"
+        }
+      },
+      required: [:including_me, :inserted_at],
+      example: %{including_me: true, inserted_at: "2026-04-02T10:00:00Z"}
+    })
+  end
 
   defmodule SelfUpdateCheckResponse do
     @moduledoc false
 
-    schema(%{
-      title: "Internal.SelfUpdateCheckResponse",
-      description: "Result of checking whether the latest self-update request targets this node",
-      type: :object,
-      properties: %{
-        data: %Schema{
-          type: :object,
-          properties: %{
-            including_me: %Schema{
-              type: :boolean,
-              description: "Whether the latest self-update request targets this node"
-            },
-            inserted_at: %Schema{
-              type: :string,
-              format: :"date-time",
-              nullable: true,
-              description: "When the self-update request was created, null if no request exists"
-            }
-          },
-          required: [:including_me, :inserted_at]
-        }
-      },
-      required: [:data],
-      example: %{
-        data: %{
-          including_me: true,
-          inserted_at: "2026-04-02T10:00:00Z"
-        }
-      }
-    })
+    schema(
+      CommonSchemas.single_response(
+        SelfUpdateCheckData,
+        "Internal.SelfUpdateCheckResponse",
+        "Result of checking whether the latest self-update request targets this node"
+      )
+    )
   end
 end

@@ -10,7 +10,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
 
   plug EdgeAdminWeb.Plugs.DegradedMode,
        :block when action in [:create, :create_for_default, :create_for_public, :delete, :update]
@@ -191,13 +191,13 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     ],
     responses: %{
       200 => {"Paginated enrollment key list", "application/json", EnrollmentKeySchemas.EnrollmentKeyPaginatedResponse},
-      422 => {"Invalid query parameters", "application/json", OpenApiSpex.JsonErrorResponse}
+      400 => {"Invalid query parameters", "application/json", CommonSchemas.BadRequestResponse}
     }
   )
 
   def index(conn, params) do
     with {:ok, {keys, meta}} <- Nodes.list_enrollment_keys(params) do
-      render(conn, :index, enrollment_keys: keys, meta: meta)
+      render(conn, :index, conn: conn, enrollment_keys: keys, meta: meta)
     end
   end
 
@@ -209,14 +209,14 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     ],
     responses: %{
       200 => {"Enrollment key", "application/json", EnrollmentKeySchemas.EnrollmentKeySingleResponse},
-      404 => {"Not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
+      404 => {"Not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
 
   def show(conn, %{id: id}) do
     with {:ok, key} <- Nodes.get_enrollment_key(id) do
-      render(conn, :show, enrollment_key: key)
+      render(conn, :show, conn: conn, enrollment_key: key)
     end
   end
 
@@ -252,7 +252,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/v1/enrollment_keys/#{key.id}")
-      |> render(:show, enrollment_key: key)
+      |> render(:show, conn: conn, enrollment_key: key)
     end
   end
 
@@ -277,7 +277,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/v1/enrollment_keys/#{key.id}")
-      |> render(:show, enrollment_key: key)
+      |> render(:show, conn: conn, enrollment_key: key)
     end
   end
 
@@ -303,7 +303,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
          {:ok, key} <- Nodes.create_enrollment_key(cluster, %{}) do
       conn
       |> put_status(:created)
-      |> render(:show, enrollment_key: key)
+      |> render(:show, conn: conn, enrollment_key: key)
     end
   end
 
@@ -326,7 +326,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   def update(conn, %{id: id} = params) do
     with {:ok, key} <- Nodes.get_enrollment_key(id),
          {:ok, updated_key} <- Nodes.update_enrollment_key(key, Map.merge(params, conn.body_params)) do
-      render(conn, :show, enrollment_key: updated_key)
+      render(conn, :show, conn: conn, enrollment_key: updated_key)
     end
   end
 
@@ -339,8 +339,8 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     ],
     responses: %{
       204 => {"Enrollment key deleted", "", nil},
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )

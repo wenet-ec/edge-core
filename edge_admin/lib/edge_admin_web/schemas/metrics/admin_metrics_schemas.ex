@@ -460,8 +460,10 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
               cancelled: 0
             }
           ]
-        }
-      }
+        },
+        meta: EdgeAdminWeb.Schemas.CommonSchemas.MetaSchema
+      },
+      required: [:data, :meta]
     })
   end
 end

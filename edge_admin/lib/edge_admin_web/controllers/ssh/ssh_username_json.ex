@@ -1,29 +1,14 @@
 # edge_admin/lib/edge_admin_web/controllers/ssh/ssh_username_json.ex
 defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameJSON do
   alias EdgeAdmin.Ssh.Schemas.SshUsername
+  alias EdgeAdminWeb.ResponseEnvelope
 
-  @doc """
-  Renders a paginated list of SSH usernames.
-  """
-  def index(%{ssh_usernames: ssh_usernames, meta: %Flop.Meta{} = meta}) do
-    %{
-      data: for(ssh_username <- ssh_usernames, do: data(ssh_username)),
-      pagination: %{
-        page: meta.current_page,
-        page_size: meta.page_size,
-        total: meta.total_count,
-        total_pages: meta.total_pages,
-        has_next: meta.has_next_page?,
-        has_prev: meta.has_previous_page?
-      }
-    }
+  def index(%{conn: conn, ssh_usernames: ssh_usernames, meta: flop_meta}) do
+    ResponseEnvelope.success(conn, Enum.map(ssh_usernames, &data/1), flop_meta)
   end
 
-  @doc """
-  Renders a single SSH username.
-  """
-  def show(%{ssh_username: ssh_username}) do
-    %{data: data(ssh_username)}
+  def show(%{conn: conn, ssh_username: ssh_username}) do
+    ResponseEnvelope.success(conn, data(ssh_username))
   end
 
   defp data(%SshUsername{ssh_public_keys: ssh_public_keys} = ssh_username) do

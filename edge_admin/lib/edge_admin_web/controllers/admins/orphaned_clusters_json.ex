@@ -1,13 +1,8 @@
 # edge_admin/lib/edge_admin_web/controllers/admins/orphaned_clusters_json.ex
 defmodule EdgeAdminWeb.Controllers.Admins.OrphanedClustersJSON do
-  @moduledoc """
-  JSON rendering for orphaned cluster assignments.
-  """
+  alias EdgeAdminWeb.ResponseEnvelope
 
-  @doc """
-  Renders all clusters with no assigned admin instance.
-  """
-  def index(%{orphaned_clusters: orphaned_clusters}) do
-    %{data: orphaned_clusters}
+  def index(%{conn: conn, orphaned_clusters: orphaned_clusters}) do
+    ResponseEnvelope.success(conn, orphaned_clusters)
   end
 end

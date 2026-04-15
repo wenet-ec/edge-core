@@ -1,7 +1,9 @@
 # edge_admin/lib/edge_admin_web/controllers/agents/alias_json.ex
 defmodule EdgeAdminWeb.Controllers.Agents.AliasJSON do
-  def show(%{alias: alias_record}) do
-    %{data: data(alias_record)}
+  alias EdgeAdminWeb.ResponseEnvelope
+
+  def show(%{conn: conn, alias: alias_record}) do
+    ResponseEnvelope.success(conn, data(alias_record))
   end
 
   defp data(alias_record) do

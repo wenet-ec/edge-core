@@ -10,7 +10,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :show, :create, :delete]
 
   tags(["Ssh.SshPublicKey"])
@@ -121,13 +121,13 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
     responses: %{
       200 =>
         {"Paginated list of SSH public keys", "application/json", SshPublicKeySchemas.SshPublicKeyPaginatedResponse},
-      422 => {"Invalid query parameters", "application/json", OpenApiSpex.JsonErrorResponse}
+      400 => {"Invalid query parameters", "application/json", CommonSchemas.BadRequestResponse}
     }
   )
 
   def index(conn, params) do
     with {:ok, {ssh_public_keys, meta}} <- Ssh.list_ssh_public_keys(params) do
-      render(conn, :index, ssh_public_keys: ssh_public_keys, meta: meta)
+      render(conn, :index, conn: conn, ssh_public_keys: ssh_public_keys, meta: meta)
     end
   end
 
@@ -161,7 +161,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/v1/ssh_public_keys/#{ssh_public_key}")
-      |> render(:show, ssh_public_key: ssh_public_key)
+      |> render(:show, conn: conn, ssh_public_key: ssh_public_key)
     end
   end
 
@@ -177,14 +177,14 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
     ],
     responses: %{
       200 => {"SSH public key details", "application/json", SshPublicKeySchemas.SshPublicKeySingleResponse},
-      404 => {"SSH public key not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
+      404 => {"SSH public key not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
 
   def show(conn, %{id: id}) do
     with {:ok, ssh_public_key} <- Ssh.get_ssh_public_key(id) do
-      render(conn, :show, ssh_public_key: ssh_public_key)
+      render(conn, :show, conn: conn, ssh_public_key: ssh_public_key)
     end
   end
 
@@ -200,8 +200,8 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
     ],
     responses: %{
       204 => {"SSH public key deleted", "", nil},
-      404 => {"SSH public key not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
+      404 => {"SSH public key not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
 

@@ -1,29 +1,14 @@
 # edge_admin_web/controllers/commands/command_json.ex
 defmodule EdgeAdminWeb.Controllers.Commands.CommandJSON do
   alias EdgeAdmin.Commands.Schemas.Command
+  alias EdgeAdminWeb.ResponseEnvelope
 
-  @doc """
-  Renders a paginated list of commands.
-  """
-  def index(%{commands: commands, meta: %Flop.Meta{} = meta}) do
-    %{
-      data: for(command <- commands, do: data(command)),
-      pagination: %{
-        page: meta.current_page,
-        page_size: meta.page_size,
-        total: meta.total_count,
-        total_pages: meta.total_pages,
-        has_next: meta.has_next_page?,
-        has_prev: meta.has_previous_page?
-      }
-    }
+  def index(%{conn: conn, commands: commands, meta: flop_meta}) do
+    ResponseEnvelope.success(conn, Enum.map(commands, &data/1), flop_meta)
   end
 
-  @doc """
-  Renders a single command.
-  """
-  def show(%{command: command}) do
-    %{data: data(command)}
+  def show(%{conn: conn, command: command}) do
+    ResponseEnvelope.success(conn, data(command))
   end
 
   defp data(%Command{} = command) do

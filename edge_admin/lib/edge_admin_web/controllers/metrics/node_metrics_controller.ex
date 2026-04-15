@@ -9,7 +9,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:show_unified, :show_host, :show_agent]
 
   tags(["Nodes.Metrics"])
@@ -46,7 +46,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
   """
   def show_unified(conn, %{node_id: node_id}) do
     {:ok, unified_metrics} = Metrics.get_unified_metrics(node_id)
-    render(conn, :show_unified, metrics: unified_metrics)
+    render(conn, :show_unified, conn: conn, metrics: unified_metrics)
   end
 
   operation(:show_host,
@@ -77,7 +77,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
   """
   def show_host(conn, %{node_id: node_id}) do
     with {:ok, metrics} <- Metrics.get_host_metrics(node_id) do
-      render(conn, :show_host, metrics: metrics)
+      render(conn, :show_host, conn: conn, metrics: metrics)
     end
   end
 
@@ -113,7 +113,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.NodeMetricsController do
   """
   def show_agent(conn, %{node_id: node_id}) do
     with {:ok, metrics} <- Metrics.get_agent_metrics(node_id) do
-      render(conn, :show_agent, metrics: metrics)
+      render(conn, :show_agent, conn: conn, metrics: metrics)
     end
   end
 end

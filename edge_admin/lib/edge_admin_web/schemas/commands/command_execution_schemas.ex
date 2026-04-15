@@ -141,60 +141,43 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
   defmodule CommandExecutionSingleResponse do
     @moduledoc false
 
+    schema(
+      CommonSchemas.single_response(
+        CommandExecutionResponse,
+        "CommandExecutionSingleResponse",
+        "Single command execution response"
+      )
+    )
+  end
+
+  defmodule CancelExecutionData do
+    @moduledoc false
+
     schema(%{
-      title: "CommandExecutionSingleResponse",
-      description: "Single command execution response",
+      title: "CancelExecutionData",
+      description: "Cancellation request result",
       type: :object,
       properties: %{
-        data: CommandExecutionResponse
-      },
-      required: [:data],
-      example: %{
-        data: %{
-          id: "01234567-89ab-cdef-0123-456789abcdef",
-          command_id: "98765432-fedc-ba98-7654-321098765432",
-          node_id: "11111111-2222-3333-4444-555555555555",
-          cluster_name: nil,
-          target_all: false,
-          status: "completed",
-          command_text: "echo hello\npwd",
-          output: "$ echo hello\nhello\n$ pwd\n/home/user",
-          exit_code: 0,
-          sent_at: "2025-06-17T12:00:00Z",
-          completed_at: "2025-06-17T12:00:05Z",
-          inserted_at: "2025-06-17T12:00:00Z",
-          updated_at: "2025-06-17T12:00:05Z"
+        result: %Schema{
+          type: :string,
+          description: "Cancellation request status message",
+          example: "cancellation request sent"
         }
-      }
+      },
+      required: [:result],
+      example: %{result: "cancellation request sent"}
     })
   end
 
   defmodule CancelExecutionResponse do
     @moduledoc false
 
-    schema(%{
-      title: "CancelExecutionResponse",
-      description: "Response from command execution cancellation request",
-      type: :object,
-      properties: %{
-        data: %Schema{
-          type: :object,
-          properties: %{
-            result: %Schema{
-              type: :string,
-              description: "Cancellation request status message",
-              example: "cancellation request sent"
-            }
-          },
-          required: [:result]
-        }
-      },
-      required: [:data],
-      example: %{
-        data: %{
-          result: "cancellation request sent"
-        }
-      }
-    })
+    schema(
+      CommonSchemas.single_response(
+        CancelExecutionData,
+        "CancelExecutionResponse",
+        "Response from command execution cancellation request"
+      )
+    )
   end
 end

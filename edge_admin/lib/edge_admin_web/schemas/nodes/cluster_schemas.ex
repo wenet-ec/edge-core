@@ -6,6 +6,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
 
   use EdgeAdminWeb.Schema
 
+  alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
   defmodule NodeSummary do
@@ -153,7 +154,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
     @moduledoc false
 
     schema(
-      EdgeAdminWeb.Schemas.CommonSchemas.paginated_response(
+      CommonSchemas.paginated_response(
         ClusterResponse,
         "ClusterPaginatedResponse",
         "Paginated list of clusters with metadata"
@@ -164,42 +165,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
   defmodule ClusterSingleResponse do
     @moduledoc false
 
-    schema(%{
-      title: "ClusterSingleResponse",
-      description: "Single cluster response",
-      type: :object,
-      properties: %{
-        data: ClusterResponse
-      },
-      required: [:data],
-      example: %{
-        data: %{
-          id: "abc12345-1234-1234-1234-123456789abc",
-          name: "prod-east",
-          ipv4_range: "100.64.0.0/24",
-          node_limit: 50,
-          node_count: 2,
-          nodes: [
-            %{
-              id: "abc12345-1234-1234-1234-123456789abc",
-              status: "healthy",
-              id_type: "persistent",
-              vpn_hostname: "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
-            },
-            %{
-              id: "def67890-5678-5678-5678-567890abcdef",
-              status: "healthy",
-              id_type: "persistent",
-              vpn_hostname: "node-def67890-5678-5678-5678-567890abcdef.cluster-prod-east.nm.internal"
-            }
-          ],
-          network_name: "cluster-prod-east",
-          vpn_domain: "cluster-prod-east.nm.internal",
-          inserted_at: "2025-06-09T08:00:00Z",
-          updated_at: "2025-06-09T08:00:00Z"
-        }
-      }
-    })
+    schema(CommonSchemas.single_response(ClusterResponse, "ClusterSingleResponse", "Single cluster response"))
   end
 
   defmodule ClusterUpdateRequest do

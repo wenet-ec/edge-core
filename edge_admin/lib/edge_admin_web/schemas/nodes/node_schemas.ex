@@ -158,50 +158,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
     })
   end
 
-  defmodule NodeListResponse do
-    @moduledoc false
-
-    schema(%{
-      title: "NodeListResponse",
-      description: "List of nodes",
-      type: :object,
-      properties: %{
-        data: %Schema{
-          type: :array,
-          items: NodeResponse
-        }
-      },
-      required: [:data],
-      example: %{
-        data: [
-          %{
-            id: "01234567-89ab-cdef-0123-456789abcdef",
-            node_name: "node-01234567-89ab-cdef-0123-456789abcdef",
-            cluster_name: "prod-east",
-            netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
-            id_type: "persistent",
-            status: "healthy",
-            vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
-            mdns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.local",
-            http_port: 44_000,
-            ssh_port: 42_222,
-            host_metrics_port: 49_100,
-            wireguard_metrics_port: 49_586,
-            http_proxy_port: 44_880,
-            socks5_proxy_port: 44_180,
-            api_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-            proxy_password: "securepassword123",
-            version: "0.1.0",
-            self_update_enabled: false,
-            last_seen_at: "2025-06-09T08:20:00Z",
-            inserted_at: "2025-06-09T08:00:00Z",
-            updated_at: "2025-06-09T08:20:00Z"
-          }
-        ]
-      }
-    })
-  end
-
   defmodule NodePaginatedResponse do
     @moduledoc false
 
@@ -217,40 +173,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
   defmodule NodeSingleResponse do
     @moduledoc false
 
-    schema(%{
-      title: "NodeSingleResponse",
-      description: "Single node response",
-      type: :object,
-      properties: %{
-        data: NodeResponse
-      },
-      required: [:data],
-      example: %{
-        data: %{
-          id: "01234567-89ab-cdef-0123-456789abcdef",
-          node_name: "node-01234567-89ab-cdef-0123-456789abcdef",
-          cluster_name: "prod-east",
-          netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
-          id_type: "persistent",
-          status: "healthy",
-          vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
-          mdns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.local",
-          http_port: 44_000,
-          ssh_port: 42_222,
-          host_metrics_port: 49_100,
-          wireguard_metrics_port: 49_586,
-          http_proxy_port: 44_880,
-          socks5_proxy_port: 44_180,
-          api_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-          proxy_password: "securepassword123",
-          version: "0.1.0",
-          self_update_enabled: false,
-          last_seen_at: "2025-06-09T08:20:00Z",
-          inserted_at: "2025-06-09T08:00:00Z",
-          updated_at: "2025-06-09T08:20:00Z"
-        }
-      }
-    })
+    schema(CommonSchemas.single_response(NodeResponse, "NodeSingleResponse", "Single node response"))
   end
 
   defmodule ChangeClusterRequest do

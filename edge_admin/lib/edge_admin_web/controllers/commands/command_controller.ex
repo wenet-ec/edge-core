@@ -10,7 +10,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :show, :create, :delete]
 
   tags(["Commands.Command"])
@@ -137,13 +137,13 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
     ],
     responses: %{
       200 => {"Paginated list of commands", "application/json", CommandSchemas.CommandPaginatedResponse},
-      422 => {"Invalid query parameters", "application/json", OpenApiSpex.JsonErrorResponse}
+      400 => {"Invalid query parameters", "application/json", CommonSchemas.BadRequestResponse}
     }
   )
 
   def index(conn, params) do
     with {:ok, {commands, meta}} <- Commands.list_commands(params) do
-      render(conn, :index, commands: commands, meta: meta)
+      render(conn, :index, conn: conn, commands: commands, meta: meta)
     end
   end
 
@@ -173,7 +173,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/v1/commands/#{command}")
-      |> render(:show, command: command)
+      |> render(:show, conn: conn, command: command)
     end
   end
 
@@ -189,14 +189,14 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
     ],
     responses: %{
       200 => {"Command details", "application/json", CommandSchemas.CommandSingleResponse},
-      404 => {"Command not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
+      404 => {"Command not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
 
   def show(conn, %{id: id}) do
     with {:ok, command} <- Commands.get_command(id) do
-      render(conn, :show, command: command)
+      render(conn, :show, conn: conn, command: command)
     end
   end
 
@@ -217,10 +217,9 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
     ],
     responses: %{
       204 => {"Command deleted successfully", "", nil},
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Command not found", "application/json", CommonSchemas.NotFoundResponse},
-      409 =>
-        {"Cannot delete command with non-completed executions", "application/json", CommonSchemas.ConflictResponse},
-      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
+      409 => {"Cannot delete command with non-completed executions", "application/json", CommonSchemas.ConflictResponse}
     }
   )
 

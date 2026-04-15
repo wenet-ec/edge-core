@@ -1,23 +1,14 @@
 # edge_admin_web/lib/edge_admin_web/controllers/nodes/enrollment_key_json.ex
 defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyJSON do
   alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
+  alias EdgeAdminWeb.ResponseEnvelope
 
-  def index(%{enrollment_keys: keys, meta: %Flop.Meta{} = meta}) do
-    %{
-      data: for(key <- keys, do: data(key)),
-      pagination: %{
-        page: meta.current_page,
-        page_size: meta.page_size,
-        total: meta.total_count,
-        total_pages: meta.total_pages,
-        has_next: meta.has_next_page?,
-        has_prev: meta.has_previous_page?
-      }
-    }
+  def index(%{conn: conn, enrollment_keys: keys, meta: flop_meta}) do
+    ResponseEnvelope.success(conn, Enum.map(keys, &data/1), flop_meta)
   end
 
-  def show(%{enrollment_key: key}) do
-    %{data: data(key)}
+  def show(%{conn: conn, enrollment_key: key}) do
+    ResponseEnvelope.success(conn, data(key))
   end
 
   defp data(%EnrollmentKey{cluster: cluster} = key) do

@@ -2,29 +2,14 @@
 defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSON do
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Vpn
+  alias EdgeAdminWeb.ResponseEnvelope
 
-  @doc """
-  Renders a paginated list of clusters.
-  """
-  def index(%{clusters: clusters, meta: %Flop.Meta{} = meta}) do
-    %{
-      data: for(cluster <- clusters, do: data(cluster)),
-      pagination: %{
-        page: meta.current_page,
-        page_size: meta.page_size,
-        total: meta.total_count,
-        total_pages: meta.total_pages,
-        has_next: meta.has_next_page?,
-        has_prev: meta.has_previous_page?
-      }
-    }
+  def index(%{conn: conn, clusters: clusters, meta: flop_meta}) do
+    ResponseEnvelope.success(conn, Enum.map(clusters, &data/1), flop_meta)
   end
 
-  @doc """
-  Renders a single cluster.
-  """
-  def show(%{cluster: cluster}) do
-    %{data: data(cluster)}
+  def show(%{conn: conn, cluster: cluster}) do
+    ResponseEnvelope.success(conn, data(cluster))
   end
 
   defp data(%Cluster{nodes: nodes} = cluster) do
@@ -43,7 +28,6 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterJSON do
   end
 
   defp node_data(node, cluster) do
-    # Build DNS hostname using cluster we already have (avoid circular preload)
     short_name = Vpn.build_vpn_name(node.id, prefix: :node)
     network_name = Vpn.build_network_name(cluster.name, prefix: :node)
     vpn_hostname = Vpn.build_vpn_hostname(short_name, network_name)

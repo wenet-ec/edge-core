@@ -7,7 +7,7 @@ defmodule EdgeAdminWeb.Controllers.Admins.EdgeClustersController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index]
 
   tags(["Admins.Metadata"])
@@ -22,6 +22,6 @@ defmodule EdgeAdminWeb.Controllers.Admins.EdgeClustersController do
 
   def index(conn, _params) do
     edge_clusters = EdgeAdmin.Admins.Metadata.get_edge_clusters()
-    render(conn, :index, edge_clusters: edge_clusters)
+    render(conn, :index, conn: conn, edge_clusters: edge_clusters)
   end
 end

@@ -1,10 +1,9 @@
 # edge_admin/lib/edge_admin_web/controllers/agents/node_json.ex
 defmodule EdgeAdminWeb.Controllers.Agents.NodeJSON do
-  @doc """
-  Renders node registration response with tokens.
-  """
-  def show(%{node: node}) do
-    %{data: data(node)}
+  alias EdgeAdminWeb.ResponseEnvelope
+
+  def show(%{conn: conn, node: node}) do
+    ResponseEnvelope.success(conn, data(node))
   end
 
   defp data(node) do

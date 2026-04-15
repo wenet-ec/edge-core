@@ -11,7 +11,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :show, :create, :delete]
 
   tags(["Ssh.SshUsername"])
@@ -111,13 +111,13 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
     ],
     responses: %{
       200 => {"Paginated list of SSH usernames", "application/json", SshUsernameSchemas.SshUsernamePaginatedResponse},
-      422 => {"Invalid query parameters", "application/json", OpenApiSpex.JsonErrorResponse}
+      400 => {"Invalid query parameters", "application/json", CommonSchemas.BadRequestResponse}
     }
   )
 
   def index(conn, params) do
     with {:ok, {ssh_usernames, meta}} <- Ssh.list_ssh_usernames(params) do
-      render(conn, :index, ssh_usernames: ssh_usernames, meta: meta)
+      render(conn, :index, conn: conn, ssh_usernames: ssh_usernames, meta: meta)
     end
   end
 
@@ -151,7 +151,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/v1/ssh_usernames/#{ssh_username}")
-      |> render(:show, ssh_username: ssh_username)
+      |> render(:show, conn: conn, ssh_username: ssh_username)
     end
   end
 
@@ -167,14 +167,14 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
     ],
     responses: %{
       200 => {"SSH username details", "application/json", SshUsernameSchemas.SshUsernameSingleResponse},
-      404 => {"SSH username not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
+      404 => {"SSH username not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
 
   def show(conn, %{id: id}) do
     with {:ok, ssh_username} <- Ssh.get_ssh_username(id) do
-      render(conn, :show, ssh_username: ssh_username)
+      render(conn, :show, conn: conn, ssh_username: ssh_username)
     end
   end
 
@@ -190,8 +190,8 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
     ],
     responses: %{
       204 => {"SSH username deleted", "", nil},
-      404 => {"SSH username not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
+      404 => {"SSH username not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
 

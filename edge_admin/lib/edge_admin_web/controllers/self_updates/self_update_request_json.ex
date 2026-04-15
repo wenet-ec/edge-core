@@ -1,29 +1,14 @@
 # edge_admin_web/controllers/self_updates/self_update_request_json.ex
 defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestJSON do
   alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
+  alias EdgeAdminWeb.ResponseEnvelope
 
-  @doc """
-  Renders a paginated list of self-update requests.
-  """
-  def index(%{requests: requests, meta: %Flop.Meta{} = meta}) do
-    %{
-      data: for(request <- requests, do: data(request)),
-      pagination: %{
-        page: meta.current_page,
-        page_size: meta.page_size,
-        total: meta.total_count,
-        total_pages: meta.total_pages,
-        has_next: meta.has_next_page?,
-        has_prev: meta.has_previous_page?
-      }
-    }
+  def index(%{conn: conn, requests: requests, meta: flop_meta}) do
+    ResponseEnvelope.success(conn, Enum.map(requests, &data/1), flop_meta)
   end
 
-  @doc """
-  Renders a single self-update request.
-  """
-  def show(%{request: request}) do
-    %{data: data(request)}
+  def show(%{conn: conn, request: request}) do
+    ResponseEnvelope.success(conn, data(request))
   end
 
   defp data(%SelfUpdateRequest{} = request) do

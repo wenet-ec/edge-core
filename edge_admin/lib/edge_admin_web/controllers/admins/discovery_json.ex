@@ -1,13 +1,8 @@
 # edge_admin/lib/edge_admin_web/controllers/admins/discovery_json.ex
 defmodule EdgeAdminWeb.Controllers.Admins.DiscoveryJSON do
-  @moduledoc """
-  JSON rendering for admin discovery.
-  """
+  alias EdgeAdminWeb.ResponseEnvelope
 
-  @doc """
-  Renders admin discovery information for agent bootstrap.
-  """
-  def index(%{admin_name: admin_name}) do
-    %{data: %{name: admin_name}}
+  def index(%{conn: conn, admin_name: admin_name}) do
+    ResponseEnvelope.success(conn, %{name: admin_name})
   end
 end

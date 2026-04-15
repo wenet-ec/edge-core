@@ -6,6 +6,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
 
   use EdgeAdminWeb.Schema
 
+  alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
   defmodule Admin do
@@ -68,27 +69,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
   defmodule AdminResponse do
     @moduledoc false
 
-    schema(%{
-      title: "AdminResponse",
-      description: "Single admin identity response",
-      type: :object,
-      properties: %{
-        data: Admin
-      },
-      required: [:data],
-      example: %{
-        data: %{
-          id: "k7m3n2p9x4j6",
-          name: "admin-k7m3n2p9x4j6",
-          max_capacity: 200,
-          erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
-          vpn_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
-          admin_cluster_name: "admin-cluster-1",
-          netmaker_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505",
-          last_computed_at: "2025-01-15T12:00:00Z"
-        }
-      }
-    })
+    schema(CommonSchemas.single_response(Admin, "AdminResponse", "Single admin identity response"))
   end
 
   defmodule AdminTopologyEntry do
@@ -201,34 +182,9 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
   defmodule AdminClusterResponse do
     @moduledoc false
 
-    schema(%{
-      title: "AdminClusterResponse",
-      description: "Single admin cluster topology response",
-      type: :object,
-      properties: %{
-        data: AdminCluster
-      },
-      required: [:data],
-      example: %{
-        data: %{
-          name: "admin-cluster-1",
-          total_admins: 2,
-          total_nodes: 42,
-          total_capacity: 500,
-          degraded: false,
-          weak_leader: "admin-k7m3n2p9x4j6",
-          topology: [
-            %{
-              name: "admin-k7m3n2p9x4j6",
-              max_capacity: 200,
-              vpn_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
-              erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
-              netmaker_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505"
-            }
-          ]
-        }
-      }
-    })
+    schema(
+      CommonSchemas.single_response(AdminCluster, "AdminClusterResponse", "Single admin cluster topology response")
+    )
   end
 
   defmodule EdgeClusters do
@@ -263,27 +219,13 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
   defmodule EdgeClustersResponse do
     @moduledoc false
 
-    schema(%{
-      title: "EdgeClustersResponse",
-      description: "All edge cluster assignments across all admins",
-      type: :object,
-      properties: %{
-        data: EdgeClusters
-      },
-      required: [:data],
-      example: %{
-        data: %{
-          "admin-k7m3n2p9x4j6" => %{
-            "cluster-x7j2p9k4m8n3" => ["node-uuid-1", "node-uuid-2"],
-            "cluster-p4k7n2m9x3j6" => ["node-uuid-x"]
-          },
-          "admin-x9j4p2k7m8n3" => %{
-            "cluster-j6m8n3p7k2x4" => [],
-            "cluster-m3n9p2k8x7j4" => ["node-uuid-3"]
-          }
-        }
-      }
-    })
+    schema(
+      CommonSchemas.single_response(
+        EdgeClusters,
+        "EdgeClustersResponse",
+        "All edge cluster assignments across all admins"
+      )
+    )
   end
 
   defmodule OrphanedClusters do
@@ -309,43 +251,39 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
   defmodule OrphanedClustersResponse do
     @moduledoc false
 
+    schema(
+      CommonSchemas.single_response(
+        OrphanedClusters,
+        "OrphanedClustersResponse",
+        "Clusters with no assigned admin instance"
+      )
+    )
+  end
+
+  defmodule AdminDiscoveryData do
+    @moduledoc false
+
     schema(%{
-      title: "OrphanedClustersResponse",
-      description: "Clusters with no assigned admin instance",
+      title: "Internal.AdminDiscoveryData",
+      description: "Admin identity returned during agent VPN bootstrap discovery",
       type: :object,
       properties: %{
-        data: OrphanedClusters
+        name: %Schema{type: :string, description: "Admin name (e.g. admin-k7m3n2p9x4j6)"}
       },
-      required: [:data],
-      example: %{
-        data: %{
-          "cluster-orphaned-1" => ["node-uuid-5", "node-uuid-6"],
-          "cluster-orphaned-2" => ["node-uuid-7"]
-        }
-      }
+      required: [:name],
+      example: %{name: "admin-k7m3n2p9x4j6"}
     })
   end
 
   defmodule DiscoveryResponse do
     @moduledoc false
 
-    schema(%{
-      title: "Internal.AdminDiscoveryResponse",
-      description: "Admin identity returned during agent VPN bootstrap discovery",
-      type: :object,
-      properties: %{
-        data: %Schema{
-          type: :object,
-          properties: %{
-            name: %Schema{type: :string, description: "Admin name (e.g. admin-k7m3n2p9x4j6)"}
-          },
-          required: [:name]
-        }
-      },
-      required: [:data],
-      example: %{
-        data: %{name: "admin-k7m3n2p9x4j6"}
-      }
-    })
+    schema(
+      CommonSchemas.single_response(
+        AdminDiscoveryData,
+        "Internal.AdminDiscoveryResponse",
+        "Admin identity returned during agent VPN bootstrap discovery"
+      )
+    )
   end
 end

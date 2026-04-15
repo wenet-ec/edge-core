@@ -1,18 +1,12 @@
 # edge_admin_web/controllers/agents/self_update_json.ex
 defmodule EdgeAdminWeb.Controllers.Agents.SelfUpdateJson do
-  @moduledoc """
-  JSON rendering for agent self-update endpoints.
-  """
+  @moduledoc false
+  alias EdgeAdminWeb.ResponseEnvelope
 
-  @doc """
-  Renders the result of checking for the latest self-update request.
-  """
-  def check(%{result: result}) do
-    %{
-      data: %{
-        including_me: result.including_me,
-        inserted_at: result.inserted_at
-      }
-    }
+  def check(%{conn: conn, result: result}) do
+    ResponseEnvelope.success(conn, %{
+      including_me: result.including_me,
+      inserted_at: result.inserted_at
+    })
   end
 end

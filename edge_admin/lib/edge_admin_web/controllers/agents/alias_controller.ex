@@ -9,7 +9,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.AliasController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
 
   tags(["Internal.Agents"])
 
@@ -32,7 +32,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.AliasController do
     with {:ok, alias_record} <- Nodes.create_alias(node, Map.merge(params, conn.body_params)) do
       conn
       |> put_status(:created)
-      |> render(:show, alias: alias_record)
+      |> render(:show, conn: conn, alias: alias_record)
     end
   end
 end

@@ -10,7 +10,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :acknowledge, :update_result]
 
   tags(["Internal.Agents"])
@@ -50,7 +50,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
     responses: %{
       200 =>
         {"Command executions list", "application/json", CommandExecutionSchemas.AgentCommandExecutionPaginatedResponse},
-      422 => {"Invalid query parameters", "application/json", OpenApiSpex.JsonErrorResponse}
+      400 => {"Invalid query parameters", "application/json", CommonSchemas.BadRequestResponse}
     }
   )
 
@@ -65,7 +65,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
       |> Map.put_new(:page_size, 100)
 
     with {:ok, {command_executions, meta}} <- Commands.list_command_executions(query_params) do
-      render(conn, :index, command_executions: command_executions, meta: meta)
+      render(conn, :index, conn: conn, command_executions: command_executions, meta: meta)
     end
   end
 
@@ -85,7 +85,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
          CommandExecutionSchemas.AgentCommandExecutionSingleResponse},
       403 => {"Forbidden", "application/json", CommonSchemas.ForbiddenResponse},
       404 => {"Not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse}
     }
   )
 
@@ -93,7 +93,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
     with {:ok, execution} <- Commands.get_command_execution(id),
          :ok <- CommandExecutionPolicy.authorize({:update, conn.assigns.current_node, execution}),
          {:ok, updated_execution} <- Commands.acknowledge_execution(execution, params) do
-      render(conn, :show, command_execution: updated_execution)
+      render(conn, :show, conn: conn, command_execution: updated_execution)
     end
   end
 
@@ -116,7 +116,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
         {"Command execution updated", "application/json", CommandExecutionSchemas.AgentCommandExecutionSingleResponse},
       403 => {"Forbidden", "application/json", CommonSchemas.ForbiddenResponse},
       404 => {"Not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Validation error", "application/json", OpenApiSpex.JsonErrorResponse}
+      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )
 
@@ -125,7 +125,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
          :ok <- CommandExecutionPolicy.authorize({:update, conn.assigns.current_node, execution}),
          {:ok, updated_execution} <-
            Commands.update_command_execution_result(execution, conn.body_params) do
-      render(conn, :show, command_execution: updated_execution)
+      render(conn, :show, conn: conn, command_execution: updated_execution)
     end
   end
 end

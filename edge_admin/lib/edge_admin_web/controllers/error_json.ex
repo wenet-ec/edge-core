@@ -1,13 +1,37 @@
 # edge_admin/lib/edge_admin_web/controllers/error_json.ex
 defmodule EdgeAdminWeb.Controllers.ErrorJSON do
   @moduledoc """
-  This module handles JSON error responses for the API.
+  Renders standard error envelopes for HTTP error responses.
+  All output goes through ResponseEnvelope — no ad-hoc maps here.
   """
 
-  # Keep your existing error handling, but you could now use
-  # verified routes if you need to reference routes in error responses
+  alias EdgeAdminWeb.ResponseEnvelope
 
-  def render(template, _assigns) do
-    %{errors: %{detail: Phoenix.Controller.status_message_from_template(template)}}
+  def render("400.json", %{conn: conn}) do
+    ResponseEnvelope.error(conn, "bad_request", "Bad Request")
+  end
+
+  def render("401.json", %{conn: conn}) do
+    ResponseEnvelope.error(conn, "unauthorized", "Unauthorized")
+  end
+
+  def render("403.json", %{conn: conn}) do
+    ResponseEnvelope.error(conn, "forbidden", "Forbidden")
+  end
+
+  def render("404.json", %{conn: conn}) do
+    ResponseEnvelope.error(conn, "not_found", "Resource not found")
+  end
+
+  def render("409.json", %{conn: conn}) do
+    ResponseEnvelope.error(conn, "conflict", "Conflict")
+  end
+
+  def render("500.json", %{conn: conn}) do
+    ResponseEnvelope.error(conn, "internal_server_error", "Internal Server Error")
+  end
+
+  def render("503.json", %{conn: conn}) do
+    ResponseEnvelope.error(conn, "service_unavailable", "Service Unavailable")
   end
 end

@@ -10,7 +10,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, json_render_error_v2: true
+  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug DegradedMode, :block when action in [:create, :update, :delete]
   plug DegradedMode, :allow when action in [:index, :show]
 
@@ -132,13 +132,13 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     ],
     responses: %{
       200 => {"Paginated cluster list", "application/json", ClusterSchemas.ClusterPaginatedResponse},
-      422 => {"Invalid query parameters", "application/json", OpenApiSpex.JsonErrorResponse}
+      400 => {"Invalid query parameters", "application/json", CommonSchemas.BadRequestResponse}
     }
   )
 
   def index(conn, params) do
     with {:ok, {clusters, meta}} <- Nodes.list_clusters(params) do
-      render(conn, :index, clusters: clusters, meta: meta)
+      render(conn, :index, conn: conn, clusters: clusters, meta: meta)
     end
   end
 
@@ -154,14 +154,14 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     ],
     responses: %{
       200 => {"Cluster details", "application/json", ClusterSchemas.ClusterSingleResponse},
-      404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse}
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
+      404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse}
     }
   )
 
   def show(conn, %{name: name}) do
     with {:ok, cluster} <- Nodes.get_cluster(name) do
-      render(conn, :show, cluster: cluster)
+      render(conn, :show, conn: conn, cluster: cluster)
     end
   end
 
@@ -187,7 +187,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/v1/clusters/#{cluster.name}")
-      |> render(:show, cluster: cluster)
+      |> render(:show, conn: conn, cluster: cluster)
     end
   end
 
@@ -217,7 +217,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
   def update(conn, %{name: name} = params) do
     with {:ok, cluster} <- Nodes.get_cluster(name),
          {:ok, updated_cluster} <- Nodes.update_cluster(cluster, Map.merge(params, conn.body_params)) do
-      render(conn, :show, cluster: updated_cluster)
+      render(conn, :show, conn: conn, cluster: updated_cluster)
     end
   end
 
@@ -234,9 +234,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     ],
     responses: %{
       204 => {"Cluster deleted successfully", "", nil},
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},
       409 => {"Cannot delete cluster with nodes", "application/json", CommonSchemas.ConflictResponse},
-      422 => {"Invalid path parameters", "application/json", OpenApiSpex.JsonErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )

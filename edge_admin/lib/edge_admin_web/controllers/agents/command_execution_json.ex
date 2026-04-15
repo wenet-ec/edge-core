@@ -1,29 +1,14 @@
 # edge_admin/lib/edge_admin_web/controllers/agents/command_execution_json.ex
 defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionJSON do
   alias EdgeAdmin.Commands.Schemas.CommandExecution
+  alias EdgeAdminWeb.ResponseEnvelope
 
-  @doc """
-  Renders a list of command executions with pagination metadata.
-  """
-  def index(%{command_executions: command_executions, meta: meta}) do
-    %{
-      data: for(execution <- command_executions, do: data(execution)),
-      meta: %{
-        current_page: meta.current_page,
-        page_size: meta.page_size,
-        total_pages: meta.total_pages,
-        total_count: meta.total_count,
-        has_next_page: meta.has_next_page?,
-        has_previous_page: meta.has_previous_page?
-      }
-    }
+  def index(%{conn: conn, command_executions: command_executions, meta: flop_meta}) do
+    ResponseEnvelope.success(conn, Enum.map(command_executions, &data/1), flop_meta)
   end
 
-  @doc """
-  Renders a single command execution.
-  """
-  def show(%{command_execution: command_execution}) do
-    %{data: data(command_execution)}
+  def show(%{conn: conn, command_execution: command_execution}) do
+    ResponseEnvelope.success(conn, data(command_execution))
   end
 
   defp data(%CommandExecution{} = execution) do

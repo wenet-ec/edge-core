@@ -6,6 +6,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
 
   use EdgeAdminWeb.Schema
 
+  alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
   defmodule EnrollmentKeyData do
@@ -63,32 +64,16 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
   defmodule EnrollmentKeySingleResponse do
     @moduledoc false
 
-    schema(%{
-      title: "EnrollmentKeySingleResponse",
-      description: "Single enrollment key response",
-      type: :object,
-      properties: %{data: EnrollmentKeyData},
-      required: [:data],
-      example: %{
-        data: %{
-          id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-          cluster_name: "prod-east",
-          key: "eyJzZXJ2ZXIiOiJodHRwczovL25ldG1ha2VyLmV4YW1wbGUuY29tIiwia2V5IjoiYWJjMTIzIn0=",
-          uses_remaining: 5,
-          expired_at: "2026-12-31T23:59:59Z",
-          last_used_at: nil,
-          inserted_at: "2025-06-09T08:00:00Z",
-          updated_at: "2025-06-09T08:00:00Z"
-        }
-      }
-    })
+    schema(
+      CommonSchemas.single_response(EnrollmentKeyData, "EnrollmentKeySingleResponse", "Single enrollment key response")
+    )
   end
 
   defmodule EnrollmentKeyPaginatedResponse do
     @moduledoc false
 
     schema(
-      EdgeAdminWeb.Schemas.CommonSchemas.paginated_response(
+      CommonSchemas.paginated_response(
         EnrollmentKeyData,
         "EnrollmentKeyPaginatedResponse",
         "Paginated list of enrollment keys with filtering and sorting metadata"

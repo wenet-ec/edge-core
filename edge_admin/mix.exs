@@ -147,7 +147,7 @@ defmodule EdgeAdmin.Mixfile do
 
       # Event Streaming
       {:gnat, "~> 1.13"},
-      {:brod, "~> 3.16"},
+      {:brod, "~> 4.5"},
 
       # Nexmaker library
       {:nexmaker, path: "../nexmaker"}

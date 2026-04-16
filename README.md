@@ -81,7 +81,7 @@ The key is the **masterless P2P architecture**. There is no leader election, no 
 
 WireGuard mesh is O(n²), so clusters are capped at 50–100 nodes each. Scale comes from **more clusters**, not bigger ones. Each admin cluster handles ~200 nodes (configurable). Multiple admin clusters share one PostgreSQL database.
 
-For fine-tuning to high node counts, see [`deploy/production/.envs/.edge_admin`](deploy/production/.envs/.edge_admin) and [`deploy/production/.envs/.edge_agent`](deploy/production/.envs/.edge_agent) — all tunables are documented there.
+For fine-tuning to high node counts, see the env files in your chosen setup's directory — all tunables are documented there.
 
 ## Architecture
 
@@ -110,59 +110,29 @@ Edge Nodes (one agent per machine)
 
 For full detail see [`docs/architecture.md`](docs/architecture.md).
 
-## Quick Start
+## Getting started
 
-No local Elixir or Go required. Everything runs in Docker Compose via the `./bin/run` script.
+Everything runs in Docker Compose — no Elixir or Go required on the host.
 
-### Option A — Minimal setup (homelab, single admin)
+Pick the setup that fits your needs and follow its README:
 
-Copy [`examples/lite/`](examples/lite/) — single admin instance, Mosquitto broker, no metrics stack. Edit `.env.example`, rename to `.env`, and run:
+| Setup        | Description                                                                                             | Start here                                          |
+| ------------ | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| **Lite**     | Single admin, Mosquitto broker, no metrics stack. Good for homelab, small fleets, or first deployments. | [`examples/lite/`](examples/lite/README.md)         |
+| **Standard** | 4 admin instances across 2 clusters, EMQX, full Prometheus metrics. Production-ready HA setup.          | [`examples/standard/`](examples/standard/README.md) |
 
-```bash
-docker compose -f lite.yml up -d
-```
-
-### Option B — Production setup (HA, 4 admins, 2 clusters)
-
-Copy [`examples/standard/`](examples/standard/) — 4 admin instances across 2 independent clusters, EMQX, full Prometheus metrics stack. See [`examples/standard/README.md`](examples/standard/README.md).
-
-### Option C — Local development
-
-```bash
-# Start admin + VPN + DB + metrics
-./bin/run cloud up
-
-# Start edge agents (separate terminal)
-./bin/run edge up
-
-# Explore the API
-open http://localhost:4000/swaggerui
-```
-
-### Enroll your first node
-
-```bash
-# Create an enrollment key
-curl -s -X POST http://localhost:4000/api/v1/clusters/default/enrollment_keys \
-  -H "Authorization: Bearer $MASTER_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"uses_remaining": 10}' | jq '.data.key'
-
-# Set ENROLLMENT_KEY=<key> in deploy/production/.envs/.edge_agent
-# then on the edge machine:
-docker compose -f deploy/production/edge.yml up -d
-```
+Each README covers: server requirements, configuration, enrolling your first node, and upgrading.
 
 ## Connect an AI assistant
 
-Edge Admin exposes an MCP server at `/api/v1/mcp`. Point any MCP-compatible client (Claude Desktop, Cursor, etc.) at it:
+Edge Admin exposes an MCP server at `/mcp`. Point any MCP-compatible client (Claude Desktop, Cursor, etc.) at your admin's public address:
 
 ```json
 {
   "mcpServers": {
     "edge-admin": {
       "type": "http",
-      "url": "http://your-admin:44000/api/v1/mcp",
+      "url": "http://your-server:34000/mcp",
       "headers": { "Authorization": "Bearer your-mcp-key" }
     }
   }
@@ -187,10 +157,10 @@ Ready-to-use broker compose files are in [`examples/event_brokers/`](examples/ev
 
 ## Configuration reference
 
-All environment variables are documented in the production env files:
+All environment variables are documented in the `.env.example` file of your chosen setup. For the full list of tunables (cluster sizing, VPN config, DB connection pooling, etc.) see:
 
-- **Admin:** [`deploy/production/.envs/.edge_admin`](deploy/production/.envs/.edge_admin) — keys, ports, cluster sizing, VPN config, DB tuning
-- **Agent:** [`deploy/production/.envs/.edge_agent`](deploy/production/.envs/.edge_agent) — enrollment, SSH, proxy ports, self-update, WireGuard backend
+- [`examples/lite/`](examples/lite/) — `.env.example`
+- [`examples/standard/`](examples/standard/) — `.env.example`
 
 ## Grafana dashboards
 
@@ -200,36 +170,18 @@ To import: in Grafana go to **Dashboards → Import**, upload the JSON file, and
 
 ## Components
 
-| Directory                 | Description                                              |
-| ------------------------- | -------------------------------------------------------- |
-| `edge_admin/`             | Phoenix admin server (PostgreSQL, Oban, OpenAPI, MCP)    |
-| `edge_agent/`             | Phoenix agent (SQLite, embedded SSH, Oban)               |
-| `nexmaker/`               | Shared Elixir lib — Netmaker API + netclient CLI wrapper |
-| `deploy/local/`           | Local development Docker Compose                         |
-| `deploy/production/`      | Production Docker Compose + all env files                |
-| `examples/lite/`          | Minimal single-admin homelab setup                       |
-| `examples/standard/`      | 4-admin (2-cluster) HA production setup                  |
-| `examples/event_brokers/` | NATS JetStream, Redpanda, and Kafka compose files        |
-| `docs/`                   | Architecture docs and API specs                          |
+| Directory                 | Description                                                                                            |
+| ------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `edge_admin/`             | Phoenix admin server — REST API, OpenAPI, AsyncAPI, MCP server, HTTP/SOCKS5 proxies (PostgreSQL, Oban) |
+| `edge_agent/`             | Phoenix agent — embedded SSH server, HTTP/SOCKS5 proxies, metrics exporters (SQLite, Oban)             |
+| `nexmaker/`               | Shared Elixir lib — Netmaker API + netclient CLI wrapper                                               |
+| `examples/lite/`          | Single admin, Mosquitto, no metrics — good for small fleets or resource-constrained servers            |
+| `examples/standard/`      | 4 admins across 2 clusters, EMQX, Prometheus — when you need HA or more node capacity                  |
+| `examples/relay/`         | Self-hosted DERP/TURN relay node — optional, for agents behind strict NAT                              |
+| `examples/sidecar/`       | Agent as a sidecar container (bridge networking) rather than host-networked                            |
+| `examples/event_brokers/` | NATS JetStream, Redpanda, and Kafka compose files                                                      |
+| `docs/`                   | Architecture docs and API specs                                                                        |
 
-## Common dev commands
+## VPN internals
 
-```bash
-./bin/run all up -d           # Start everything detached
-./bin/run cloud logs edge_admin_a1
-./bin/run cloud admin:shell   # IEx shell inside admin container
-./bin/run cloud admin:test    # Run admin tests
-./bin/run all format          # Format code
-./bin/run all quality         # Lint + dialyzer
-```
-
-## VPN source reference
-
-To work on anything VPN-related, clone the source locally so AI tools can read actual code rather than guess:
-
-```bash
-git clone --branch v1.5.1 https://github.com/gravitl/netmaker edge_vpn/netmaker
-git clone --branch v1.5.1-derp https://github.com/wenet-ec/netclient edge_vpn/netclient
-```
-
-The Netmaker OpenAPI spec is at [`docs/netmaker-openapi-v1.5.1.yml`](docs/netmaker-openapi-v1.5.1.yml).
+Edge Core uses [Netmaker](https://github.com/gravitl/netmaker) (v1.5.1) as its WireGuard mesh control plane. The Netmaker OpenAPI spec is included at [`docs/netmaker-openapi-v1.5.1.yml`](docs/netmaker-openapi-v1.5.1.yml) for reference.

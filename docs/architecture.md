@@ -116,16 +116,21 @@ It has two distinct interfaces:
 
 HTTP client built on `Req`. All requests use MASTER_KEY bearer token auth. Covers the full Netmaker API surface:
 
-| Module                        | Responsibility                                         |
-| ----------------------------- | ------------------------------------------------------ |
-| `Nexmaker.Api.Networks`       | Create/delete/list VPN networks (one per edge cluster) |
-| `Nexmaker.Api.EnrollmentKeys` | Create enrollment keys for agent bootstrapping         |
-| `Nexmaker.Api.Hosts`          | Manage physical host registrations                     |
-| `Nexmaker.Api.Nodes`          | Manage node memberships within networks                |
-| `Nexmaker.Api.DNS`            | Create/delete DNS entries (`.nm.internal`)             |
-| `Nexmaker.Api.Superadmin`     | Bootstrap Netmaker admin account on first run          |
-| `Nexmaker.Api.Gateways.*`     | Ingress, egress, relay gateway management              |
-| `Nexmaker.Api.EMQX`           | EMQX broker provisioning (Netmaker-internal use)       |
+| Module                         | Responsibility                                         |
+| ------------------------------ | ------------------------------------------------------ |
+| `Nexmaker.Api.Networks`        | Create/delete/list VPN networks (one per edge cluster) |
+| `Nexmaker.Api.EnrollmentKeys`  | Create enrollment keys for agent bootstrapping         |
+| `Nexmaker.Api.Hosts`           | Manage physical host registrations                     |
+| `Nexmaker.Api.Nodes`           | Manage node memberships within networks                |
+| `Nexmaker.Api.DNS`             | Create/delete DNS entries (`.nm.internal`)             |
+| `Nexmaker.Api.Superadmin`      | Bootstrap Netmaker admin account on first run          |
+| `Nexmaker.Api.Server`          | Server status, info, public IP, log retrieval          |
+| `Nexmaker.Api.Gateways.*`      | Ingress, egress, relay gateway management              |
+| `Nexmaker.Api.Acls`            | ACL policy management                                  |
+| `Nexmaker.Api.AdvancedEgress`  | Advanced egress gateway configuration                  |
+| `Nexmaker.Api.InternetGateway` | Internet gateway management                            |
+| `Nexmaker.Api.ExternalClients` | External (non-netclient) WireGuard client management   |
+| `Nexmaker.Api.EMQX`            | EMQX broker provisioning (Netmaker-internal use)       |
 
 Config is read from application env or passed per-call:
 
@@ -139,16 +144,18 @@ config :nexmaker,
 
 Thin wrapper around the `netclient` binary (which must be present in the container). Handles VPN lifecycle operations by shelling out to the CLI:
 
-| Function             | What it does                                                                       |
-| -------------------- | ---------------------------------------------------------------------------------- |
-| `join_network/1`     | Enroll this host into a VPN network using an enrollment token                      |
-| `leave_network/1`    | Remove this host from a network                                                    |
-| `list_networks/0`    | List all networks this host is currently joined to (reads local file, no API call) |
-| `check_connection/1` | Check connection status for a specific network                                     |
-| `health_check/1`     | Multi-layer health check: network membership → peer reachability                   |
-| `pull/0`             | Force-pull latest config from Netmaker server                                      |
-| `list_peers/1`       | List WireGuard peer details                                                        |
-| `ping_peers/1`       | Ping peers through WireGuard tunnel, check connectivity and latency                |
+| Function                    | What it does                                                                                                    |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `join_network/1`            | Enroll this host into a VPN network using an enrollment token                                                   |
+| `leave_network/1`           | Remove this host from a network                                                                                 |
+| `list_networks/0`           | List all networks this host is joined to (shells out to `netclient list`)                                       |
+| `read_nodes/0`              | Read network state directly from `/etc/netclient/nodes.json` — fast, no subprocess                              |
+| `check_connection/1`        | Check connection status for a specific network                                                                  |
+| `wireguard_interface_up?/0` | Check whether the `netmaker` WireGuard interface exists in `/proc/net/dev`                                      |
+| `health_check/0`            | Health check via `read_nodes/0` + `wireguard_interface_up?/0`: returns `:healthy`, `:degraded`, or `:unhealthy` |
+| `pull/0`                    | Force-pull latest config from Netmaker server (triggers full WireGuard interface restart)                       |
+| `list_peers/1`              | List WireGuard peer details                                                                                     |
+| `ping_peers/1`              | Ping peers through WireGuard tunnel, check connectivity and latency                                             |
 
 ---
 
@@ -184,8 +191,9 @@ How it works:
 
 - Each admin maintains a local ETS table of the current topology (who owns what, remaining capacity)
 - When topology changes (admin joins or leaves, node counts shift), every admin independently runs the **same deterministic algorithm** on the same inputs — no coordination round needed
-- Assignment strategy: new clusters go to the admin with the most remaining capacity; overloaded admins shed their smallest clusters
-- On admin failure: surviving peers detect the disconnect via `:syn`, recompute assignments, and absorb the orphaned clusters using greedy bin-packing (largest clusters first)
+- Assignment is computed from scratch each time: clusters sorted by size descending, each assigned to the best available admin scored by (fewest clusters managed, then highest remaining capacity, then admin ID for tie-breaking)
+- Clusters that exceed total system capacity become orphaned (tracked separately, not assigned to any admin)
+- On admin failure: surviving peers detect the disconnect via `:syn`, recompute assignments from scratch, and pick up the orphaned or previously-assigned clusters naturally through the same algorithm
 
 Replication is achieved not by replicating state within a cluster, but by **spinning up a second independent admin cluster** sharing the same PostgreSQL database. The two clusters are completely independent federations — no Erlang distribution between them, no `:syn` visibility across the boundary.
 
@@ -212,7 +220,7 @@ Two proxy modes:
 - **Mode 1** (username `_`): Admin routes directly to a VPN node. Used to reach services inside the mesh.
 - **Mode 2** (username = node DNS hostname): Admin chains through a specific agent as the exit node. The agent opens the final TCP connection. Used to reach internet targets via an agent's network location.
 
-Cross-admin routing is transparent: a client connecting to any admin proxy gets correctly routed to the agent it wants, regardless of which admin owns that cluster. `:syn.call` routes the request to the correct Gateway GenServer, which may be on a different admin node. Local connections use zero-copy socket transfer; remote connections stream via Erlang distribution messages.
+Cross-admin routing is transparent: a client connecting to any admin proxy gets correctly routed to the agent it wants, regardless of which admin owns that cluster. `Gateway.lookup/1` uses `:syn.lookup` to resolve the Gateway PID for the owning admin — Erlang distribution then routes the subsequent `GenServer.call` transparently to whichever node that PID lives on. Local connections (Gateway on same node as caller) use zero-copy socket ownership transfer via `:gen_tcp.controlling_process/2`; remote connections spawn a `RemoteTunnel` proxy process on the Gateway node that forwards data back to the caller via Erlang distribution messages.
 
 Admin never acts as an exit node — only agents can. This prevents SSRF.
 
@@ -222,7 +230,14 @@ Admin never acts as an exit node — only agents can. This prevents SSRF.
 
 Edge Agent is a standalone binary that runs on each edge machine. The primary deployment model is one agent per physical machine using `network_mode: host`.
 
-The standard deployment is `network_mode: host` with `privileged: true`, giving it full access to the host network interfaces — required for WireGuard tunnel management.
+The standard deployment requires:
+
+- `network_mode: host` — agent shares the host network namespace; required so netclient can manage WireGuard interfaces on the host, and so the proxy and SSH server are reachable without port mapping
+- `pid: host` — agent shares the host PID namespace; required for certain Linux system tools and commands that do not function correctly inside an isolated PID namespace
+- `privileged: true` — required for WireGuard interface creation, routing rule manipulation (`ip rule`), and kernel module management (`rmmod wireguard`)
+- `/etc/resolv.conf:/etc/resolv.conf:rw` — netclient modifies the host's `resolv.conf` to inject VPN DNS on join and restores it on clean shutdown; needs write access to the host file, not a copy
+- `/:/host:ro` — mounts the host filesystem read-only so the Prometheus node exporter can read host proc/sys stats rather than container-scoped ones
+- `/run/dbus/system_bus_socket:/run/dbus/system_bus_socket:ro` — required on systems running `systemd-resolved`; netclient communicates with `systemd-resolved` over D-Bus to configure VPN DNS correctly
 
 ### Sidecar deployment
 
@@ -264,7 +279,13 @@ The agent is currently implemented in Elixir but the interface is purely HTTP �
 
 ### Self-Updates
 
-Agents update themselves via Watchtower. Admin creates a self-update request; its `SelfUpdateTriggerWorker` calls each targeted agent's HTTP API; the agent calls Watchtower's HTTP API to pull the new image and recreate the container. Watchtower tracks the `:stable` tag — this is why the agent image is always pinned to `stable`, not a version tag.
+Agents update themselves via Watchtower. Two delivery paths, mirroring the broader Layer 1/2 vs Layer 3 split:
+
+**Push (VPN up):** Admin creates a self-update request; `SelfUpdateTriggerWorker` pushes it directly to each targeted agent's HTTP API over VPN; the agent calls Watchtower's HTTP API to pull the new image and recreate the container.
+
+**Pull (VPN down, HTTP fallback):** `CheckSelfUpdateWorker` runs every 2 hours and polls the admin's HTTP fallback URL for pending self-update requests. Only activates when VPN discovery returns no admins, a fallback URL is configured, and self-update is enabled — same guard pattern as the other Layer 3 workers.
+
+Watchtower tracks the `:stable` tag — this is why the agent image is always pinned to `stable`, not a version tag.
 
 ---
 
@@ -344,21 +365,9 @@ MCP clients discover available tools dynamically via the standard `tools/list` m
 
 ### Tool Surface
 
-| Group              | Tools                                                                                                                   |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| Admin info         | `get_admin`, `get_admin_cluster`, `list_edge_clusters`, `list_orphaned_clusters`, `check_admin_health`                  |
-| Clusters           | `list_clusters`, `get_cluster`, `create_cluster`, `update_cluster`, `delete_cluster`                                    |
-| Nodes              | `list_nodes`, `get_node`, `delete_node`, `change_node_cluster`                                                          |
-| Aliases            | `list_aliases`, `get_alias`, `create_alias`, `delete_alias`                                                             |
-| Enrollment keys    | `list_enrollment_keys`, `get_enrollment_key`, `create_enrollment_key`, `update_enrollment_key`, `delete_enrollment_key` |
-| Commands           | `list_commands`, `get_command`, `create_command`, `delete_command`                                                      |
-| Command executions | `list_command_executions`, `get_command_execution`, `cancel_command_execution`, `delete_command_execution`              |
-| SSH usernames      | `list_ssh_usernames`, `get_ssh_username`, `create_ssh_username`, `delete_ssh_username`                                  |
-| SSH public keys    | `list_ssh_public_keys`, `get_ssh_public_key`, `create_ssh_public_key`, `delete_ssh_public_key`                          |
-| Self-updates       | `list_self_update_requests`, `get_self_update_request`, `create_self_update_request`, `delete_self_update_request`      |
-| Metrics            | `get_node_metrics`, `get_host_metrics`, `get_agent_metrics`, `get_admin_metrics`                                        |
+The MCP tool surface mirrors the REST API — anything you can do via the REST API you can do via MCP. Tools are grouped by domain: admin info, clusters, nodes, aliases, enrollment keys, commands, command executions, SSH credentials, self-updates, and metrics. `check_admin_health` is MCP-only: it runs all subsystem checks (Database, Bootstrap, Metadata, Netmaker API, Netclient VPN, Proxy Servers) in parallel and returns a structured pass/fail per component — useful for diagnosing enrollment or connectivity failures from an AI assistant.
 
-`check_admin_health` runs all subsystem checks (Database, Bootstrap, Metadata, Netmaker API, Netclient VPN, Proxy Servers) in parallel and returns a structured pass/fail per component — useful for diagnosing enrollment or command delivery failures.
+For the current tool list with full input schemas, call `tools/list` on a running admin — that is always authoritative.
 
 ### Proxy Access
 
@@ -411,6 +420,6 @@ The admin's HTTP proxy (port 43128) and SOCKS5 proxy (port 41080) are independen
 
 **Ranch for the proxy, not Phoenix/Plug.** The proxy is raw TCP. Phoenix is HTTP-only. Ranch gives direct socket control with a clean acceptor pool model — exactly what bidirectional byte streaming needs.
 
-**`:syn` over libcluster.** `:syn` provides scoped distributed registries with built-in `GenServer.call` integration and first-come-first-served conflict resolution. libcluster targets fully-connected mesh clusters; `:syn` fits the selective admin-only distribution topology here.
+**`:syn` over `:pg` for distributed registry.** Both are global process registries, but `:pg` (OTP's built-in) chooses consistency over availability and can become a bottleneck at scale. `:syn` chooses availability over consistency (strong eventual consistency), which is acceptable here since registration keys are unique by construction (one Gateway per cluster, one admin per name) and write throughput matters more than linearizability. `:syn` also supports scoped registries (`:admin_scope`, `:cluster_scope`), metadata attached to registrations, and cluster-wide callbacks on net splits — none of which `:pg` provides.
 
 **DERP over custom WebSocket relay.** A scalable custom WebSocket relay for proxy/SSH would need relay nodes to mesh and forward between each other for any agent connected to a different node. That is DERP. DERP already solves this at the network layer, transparently, for all TCP streams. More DERP nodes for HA is the right answer.

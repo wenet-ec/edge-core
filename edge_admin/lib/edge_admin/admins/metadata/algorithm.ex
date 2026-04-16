@@ -11,7 +11,15 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   """
 
   @doc """
-  Computes cluster assignments from scratch.
+  Computes cluster assignments from scratch on every call — no incremental updates, no shedding.
+
+  Clusters are sorted by size descending so large clusters get first pick of admins.
+  Each cluster is assigned to the best available admin scored by:
+    1. Fewest clusters currently managed (prefer less-loaded admins)
+    2. Highest remaining capacity (tiebreaker)
+    3. Admin ID alphabetically (deterministic final tiebreaker, consistent with weak-leader election)
+
+  Clusters that cannot fit any admin (total capacity exceeded) are placed in `orphaned_clusters`.
 
   ## Arguments
   - admins: %{admin_name => %{max_capacity: int}}

@@ -4,50 +4,42 @@
     "schemas": {
       "SshPublicKeySingleResponse": {
         "description": "Single SSH public key response",
-        "example": {
-          "data": {
-            "id": "01234567-89ab-cdef-0123-456789abcdef",
-            "inserted_at": "2025-06-23T10:30:00Z",
-            "key_name": "laptop-key",
-            "public_key": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ...",
-            "ssh_username_id": "fedcba98-7654-3210-fedc-ba9876543210",
-            "updated_at": "2025-06-23T10:30:00Z"
-          }
-        },
         "properties": {
-          "data": { "$ref": "#/components/schemas/SshPublicKey" }
+          "data": { "$ref": "#/components/schemas/SshPublicKey" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
         },
-        "required": ["data"],
+        "required": ["data", "meta"],
         "title": "SshPublicKeySingleResponse",
         "type": "object"
       },
       "SshUsernameSingleResponse": {
         "description": "Single SSH username response",
-        "example": {
-          "data": {
-            "has_password": true,
-            "id": "01234567-89ab-cdef-0123-456789abcdef",
-            "inserted_at": "2025-06-23T10:30:00Z",
-            "node_id": "fedcba98-7654-3210-fedc-ba9876543210",
-            "public_keys": [
-              {
-                "id": "fedcba98-7654-3210-fedc-ba9876543210",
-                "inserted_at": "2025-06-23T10:30:00Z",
-                "key_name": "laptop",
-                "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
-                "ssh_username_id": "01234567-89ab-cdef-0123-456789abcdef",
-                "updated_at": "2025-06-23T10:30:00Z"
-              }
-            ],
-            "updated_at": "2025-06-23T10:30:00Z",
-            "username": "admin"
+        "properties": {
+          "data": { "$ref": "#/components/schemas/SshUsername" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
+        },
+        "required": ["data", "meta"],
+        "title": "SshUsernameSingleResponse",
+        "type": "object"
+      },
+      "PaginatedMeta": {
+        "description": "Meta object for paginated list responses (includes pagination block)",
+        "properties": {
+          "pagination": { "$ref": "#/components/schemas/Pagination" },
+          "request_id": {
+            "description": "Unique request identifier",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "ISO 8601 UTC response timestamp",
+            "example": "2026-04-15T10:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
           }
         },
-        "properties": {
-          "data": { "$ref": "#/components/schemas/SshUsername" }
-        },
-        "required": ["data"],
-        "title": "SshUsernameSingleResponse",
+        "required": ["request_id", "timestamp", "pagination"],
+        "title": "PaginatedMeta",
         "type": "object"
       },
       "OrphanedClusters": {
@@ -264,83 +256,12 @@
       },
       "ClusterSingleResponse": {
         "description": "Single cluster response",
-        "example": {
-          "data": {
-            "id": "abc12345-1234-1234-1234-123456789abc",
-            "inserted_at": "2025-06-09T08:00:00Z",
-            "ipv4_range": "100.64.0.0/24",
-            "name": "prod-east",
-            "network_name": "cluster-prod-east",
-            "node_count": 2,
-            "node_limit": 50,
-            "nodes": [
-              {
-                "id": "abc12345-1234-1234-1234-123456789abc",
-                "id_type": "hostname",
-                "status": "healthy",
-                "vpn_hostname": "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
-              },
-              {
-                "id": "node-def12345-1234-1234-1234-123456789def",
-                "id_type": "hostname",
-                "status": "healthy",
-                "vpn_hostname": "node-def12345-1234-1234-1234-123456789def.cluster-prod-east.nm.internal"
-              }
-            ],
-            "updated_at": "2025-06-09T08:00:00Z",
-            "vpn_domain": "cluster-prod-east.nm.internal"
-          }
-        },
         "properties": {
-          "data": { "$ref": "#/components/schemas/ClusterResponse" }
+          "data": { "$ref": "#/components/schemas/ClusterResponse" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
         },
-        "required": ["data"],
+        "required": ["data", "meta"],
         "title": "ClusterSingleResponse",
-        "type": "object"
-      },
-      "PaginationMetadata": {
-        "description": "Pagination information for paginated responses",
-        "properties": {
-          "has_next": {
-            "description": "Whether there's a next page",
-            "example": true,
-            "type": "boolean"
-          },
-          "has_prev": {
-            "description": "Whether there's a previous page",
-            "example": false,
-            "type": "boolean"
-          },
-          "page": {
-            "description": "Current page number",
-            "example": 1,
-            "type": "integer"
-          },
-          "page_size": {
-            "description": "Items per page",
-            "example": 20,
-            "type": "integer"
-          },
-          "total": {
-            "description": "Total number of items",
-            "example": 150,
-            "type": "integer"
-          },
-          "total_pages": {
-            "description": "Total number of pages",
-            "example": 8,
-            "type": "integer"
-          }
-        },
-        "required": [
-          "page",
-          "page_size",
-          "total",
-          "total_pages",
-          "has_next",
-          "has_prev"
-        ],
-        "title": "PaginationMetadata",
         "type": "object"
       },
       "AgentCommandExecutionPaginatedResponse": {
@@ -352,30 +273,19 @@
             },
             "type": "array"
           },
-          "pagination": { "$ref": "#/components/schemas/PaginationMetadata" }
+          "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
         },
-        "required": ["data", "pagination"],
+        "required": ["data", "meta"],
         "title": "AgentCommandExecutionPaginatedResponse",
         "type": "object"
       },
       "EdgeClustersResponse": {
         "description": "All edge cluster assignments across all admins",
-        "example": {
-          "data": {
-            "admin-k7m3n2p9x4j6": {
-              "cluster-p4k7n2m9x3j6": ["node-uuid-x"],
-              "cluster-x7j2p9k4m8n3": ["node-uuid-1", "node-uuid-2"]
-            },
-            "admin-x9j4p2k7m8n3": {
-              "cluster-j6m8n3p7k2x4": [],
-              "cluster-m3n9p2k8x7j4": ["node-uuid-3"]
-            }
-          }
-        },
         "properties": {
-          "data": { "$ref": "#/components/schemas/EdgeClusters" }
+          "data": { "$ref": "#/components/schemas/EdgeClusters" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
         },
-        "required": ["data"],
+        "required": ["data", "meta"],
         "title": "EdgeClustersResponse",
         "type": "object"
       },
@@ -411,9 +321,9 @@
             "items": { "$ref": "#/components/schemas/ClusterResponse" },
             "type": "array"
           },
-          "pagination": { "$ref": "#/components/schemas/PaginationMetadata" }
+          "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
         },
-        "required": ["data", "pagination"],
+        "required": ["data", "meta"],
         "title": "ClusterPaginatedResponse",
         "type": "object"
       },
@@ -561,33 +471,16 @@
       },
       "CommandExecutionSingleResponse": {
         "description": "Single command execution response",
-        "example": {
-          "data": {
-            "cluster_id": null,
-            "cluster_name": null,
-            "command_id": "98765432-fedc-ba98-7654-321098765432",
-            "command_text": "echo hello\npwd",
-            "completed_at": "2025-06-17T12:00:05Z",
-            "exit_code": 0,
-            "id": "01234567-89ab-cdef-0123-456789abcdef",
-            "inserted_at": "2025-06-17T12:00:00Z",
-            "node_id": "11111111-2222-3333-4444-555555555555",
-            "output": "$ echo hello\nhello\n$ pwd\n/home/user",
-            "sent_at": "2025-06-17T12:00:00Z",
-            "status": "completed",
-            "target_all": false,
-            "updated_at": "2025-06-17T12:00:05Z"
-          }
-        },
         "properties": {
-          "data": { "$ref": "#/components/schemas/CommandExecutionResponse" }
+          "data": { "$ref": "#/components/schemas/CommandExecutionResponse" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
         },
-        "required": ["data"],
+        "required": ["data", "meta"],
         "title": "CommandExecutionSingleResponse",
         "type": "object"
       },
       "SelfUpdateRequestCreateRequest": {
-        "description": "Create a new self-update request.\r\n\r\nUses the same targeting system as commands. Only healthy nodes with self_update_enabled=true will be updated.\r\n",
+        "description": "Create a new self-update request.\n\nUses the same targeting system as commands. Only healthy nodes with self_update_enabled=true will be updated.\n",
         "example": {
           "targeting": { "node_filters": { "version": "0.1.*" }, "type": "all" }
         },
@@ -828,7 +721,7 @@
         "type": "object"
       },
       "UnifiedMetricsResponse": {
-        "description": "Complete metrics from all sources: host (Node Exporter) and agent (PromEx).\r\nProvides a unified view of node health and performance.\r\nUses best-effort fetching - if one source fails, it's marked as unavailable.\r\n",
+        "description": "Complete metrics from all sources: host (Node Exporter) and agent (PromEx).\nProvides a unified view of node health and performance.\nUses best-effort fetching - if one source fails, it's marked as unavailable.\n",
         "properties": {
           "data": {
             "properties": {
@@ -930,29 +823,20 @@
             },
             "required": ["node_id", "cluster_name", "timestamp"],
             "type": "object"
-          }
+          },
+          "meta": { "$ref": "#/components/schemas/Meta" }
         },
-        "required": ["data"],
+        "required": ["data", "meta"],
         "title": "UnifiedMetricsResponse",
         "type": "object"
       },
       "AliasSingleResponse": {
         "description": "Single alias response",
-        "example": {
-          "data": {
-            "cluster_name": "prod",
-            "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-            "inserted_at": "2024-01-15T10:30:00Z",
-            "name": "web-server",
-            "node_id": "01234567-89ab-cdef-0123-456789abcdef",
-            "updated_at": "2024-01-15T10:30:00Z",
-            "vpn_hostname": "node-web-server.cluster-prod.nm.internal"
-          }
-        },
         "properties": {
-          "data": { "$ref": "#/components/schemas/AliasResponse" }
+          "data": { "$ref": "#/components/schemas/AliasResponse" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
         },
-        "required": ["data"],
+        "required": ["data", "meta"],
         "title": "AliasSingleResponse",
         "type": "object"
       },
@@ -997,29 +881,39 @@
         "type": "object"
       },
       "ChangesetErrorResponse": {
-        "description": "Validation error response from Ecto changeset (422 Unprocessable Entity)",
+        "description": "422 Validation Failed",
         "example": {
-          "errors": {
-            "email": ["has already been taken", "must have the @ sign"],
-            "name": ["can't be blank"]
+          "error": {
+            "code": "validation_failed",
+            "details": {
+              "name": ["can't be blank"],
+              "timeout": ["must be greater than 0"]
+            },
+            "message": "Validation failed"
+          },
+          "meta": {
+            "request_id": "550e8400-e29b-41d4-a716-446655440000",
+            "timestamp": "2026-04-15T10:00:00.000Z"
           }
         },
         "properties": {
-          "errors": {
-            "additionalProperties": {
-              "items": { "type": "string" },
-              "type": "array"
+          "error": {
+            "properties": {
+              "code": { "example": "validation_failed", "type": "string" },
+              "details": { "nullable": true },
+              "message": { "example": "Validation failed", "type": "string" }
             },
-            "description": "Field-specific validation errors",
+            "required": ["code", "message", "details"],
             "type": "object"
-          }
+          },
+          "meta": { "$ref": "#/components/schemas/Meta" }
         },
-        "required": ["errors"],
+        "required": ["error", "meta"],
         "title": "ChangesetErrorResponse",
         "type": "object"
       },
       "HostMetricsResponse": {
-        "description": "Host-level system metrics from Node Exporter (CPU, memory, disk, uptime).\r\n",
+        "description": "Host-level system metrics from Node Exporter (CPU, memory, disk, uptime).\n",
         "example": {
           "cluster_name": "production",
           "cpu": {
@@ -1196,21 +1090,31 @@
         "type": "object"
       },
       "NotFoundResponse": {
-        "description": "Resource not found error (404)",
-        "example": { "errors": { "detail": "Not Found" } },
-        "properties": {
-          "errors": {
-            "properties": {
-              "detail": {
-                "description": "Error detail message",
-                "type": "string"
-              }
-            },
-            "required": ["detail"],
-            "type": "object"
+        "description": "404 Not Found",
+        "example": {
+          "error": {
+            "code": "not_found",
+            "details": null,
+            "message": "Resource not found"
+          },
+          "meta": {
+            "request_id": "550e8400-e29b-41d4-a716-446655440000",
+            "timestamp": "2026-04-15T10:00:00.000Z"
           }
         },
-        "required": ["errors"],
+        "properties": {
+          "error": {
+            "properties": {
+              "code": { "example": "not_found", "type": "string" },
+              "details": { "nullable": true },
+              "message": { "example": "Resource not found", "type": "string" }
+            },
+            "required": ["code", "message", "details"],
+            "type": "object"
+          },
+          "meta": { "$ref": "#/components/schemas/Meta" }
+        },
+        "required": ["error", "meta"],
         "title": "NotFoundResponse",
         "type": "object"
       },
@@ -1230,7 +1134,7 @@
         "type": "object"
       },
       "AgentMetricsResponse": {
-        "description": "Application-level metrics from edge_agent PromEx (BEAM stats, Oban, business metrics).\r\n",
+        "description": "Application-level metrics from edge_agent PromEx (BEAM stats, Oban, business metrics).\n",
         "example": {
           "data": {
             "application": {
@@ -1543,35 +1447,43 @@
       },
       "OrphanedClustersResponse": {
         "description": "Clusters with no assigned admin instance",
-        "example": {
-          "data": {
-            "cluster-orphaned-1": ["node-uuid-5", "node-uuid-6"],
-            "cluster-orphaned-2": ["node-uuid-7"]
-          }
-        },
         "properties": {
-          "data": { "$ref": "#/components/schemas/OrphanedClusters" }
+          "data": { "$ref": "#/components/schemas/OrphanedClusters" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
         },
-        "required": ["data"],
+        "required": ["data", "meta"],
         "title": "OrphanedClustersResponse",
         "type": "object"
       },
       "ServiceUnavailableResponse": {
-        "description": "Downstream service unavailable (503)",
-        "example": { "errors": { "detail": "Service Unavailable" } },
+        "description": "503 Service Unavailable",
+        "example": {
+          "error": {
+            "code": "service_unavailable",
+            "details": null,
+            "message": "Downstream dependency unreachable"
+          },
+          "meta": {
+            "request_id": "550e8400-e29b-41d4-a716-446655440000",
+            "timestamp": "2026-04-15T10:00:00.000Z"
+          }
+        },
         "properties": {
-          "errors": {
+          "error": {
             "properties": {
-              "detail": {
-                "description": "Error detail message",
+              "code": { "example": "service_unavailable", "type": "string" },
+              "details": { "nullable": true },
+              "message": {
+                "example": "Downstream dependency unreachable",
                 "type": "string"
               }
             },
-            "required": ["detail"],
+            "required": ["code", "message", "details"],
             "type": "object"
-          }
+          },
+          "meta": { "$ref": "#/components/schemas/Meta" }
         },
-        "required": ["errors"],
+        "required": ["error", "meta"],
         "title": "ServiceUnavailableResponse",
         "type": "object"
       },
@@ -1641,37 +1553,6 @@
         "title": "AdminCluster",
         "type": "object"
       },
-      "JsonErrorResponse": {
-        "properties": {
-          "errors": {
-            "items": {
-              "properties": {
-                "detail": {
-                  "example": "null value where string expected",
-                  "type": "string"
-                },
-                "source": {
-                  "properties": {
-                    "pointer": {
-                      "example": "/data/attributes/petName",
-                      "type": "string"
-                    }
-                  },
-                  "required": ["pointer"],
-                  "type": "object"
-                },
-                "title": { "example": "Invalid value", "type": "string" }
-              },
-              "required": ["title", "source", "detail"],
-              "type": "object"
-            },
-            "type": "array"
-          }
-        },
-        "required": ["errors"],
-        "title": "JsonErrorResponse",
-        "type": "object"
-      },
       "NodePaginatedResponse": {
         "description": "Paginated list of nodes with filtering and sorting metadata",
         "properties": {
@@ -1679,9 +1560,9 @@
             "items": { "$ref": "#/components/schemas/NodeResponse" },
             "type": "array"
           },
-          "pagination": { "$ref": "#/components/schemas/PaginationMetadata" }
+          "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
         },
-        "required": ["data", "pagination"],
+        "required": ["data", "meta"],
         "title": "NodePaginatedResponse",
         "type": "object"
       },
@@ -1700,6 +1581,25 @@
         "title": "ClusterUpdateRequest",
         "type": "object"
       },
+      "Meta": {
+        "description": "Request metadata present on every response",
+        "properties": {
+          "request_id": {
+            "description": "Unique request identifier (mirrors x-request-id response header)",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "ISO 8601 UTC timestamp of when the response was generated",
+            "example": "2026-04-15T10:00:00.000Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": ["request_id", "timestamp"],
+        "title": "Meta",
+        "type": "object"
+      },
       "EnrollmentKeyPaginatedResponse": {
         "description": "Paginated list of enrollment keys with filtering and sorting metadata",
         "properties": {
@@ -1707,9 +1607,9 @@
             "items": { "$ref": "#/components/schemas/EnrollmentKeyResponse" },
             "type": "array"
           },
-          "pagination": { "$ref": "#/components/schemas/PaginationMetadata" }
+          "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
         },
-        "required": ["data", "pagination"],
+        "required": ["data", "meta"],
         "title": "EnrollmentKeyPaginatedResponse",
         "type": "object"
       },
@@ -1724,7 +1624,7 @@
             },
             {
               "key_name": "ci",
-              "public_key": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ... ci@server"
+              "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... ci@deploy"
             }
           ],
           "username": "admin"
@@ -1774,29 +1674,11 @@
       },
       "AdminClusterResponse": {
         "description": "Single admin cluster topology response",
-        "example": {
-          "data": {
-            "degraded": false,
-            "name": "admin-cluster-1",
-            "topology": [
-              {
-                "erlang_node_name": "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
-                "max_capacity": 200,
-                "name": "admin-k7m3n2p9x4j6",
-                "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
-                "vpn_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
-              }
-            ],
-            "total_admins": 2,
-            "total_capacity": 500,
-            "total_nodes": 42,
-            "weak_leader": "admin-k7m3n2p9x4j6"
-          }
-        },
         "properties": {
-          "data": { "$ref": "#/components/schemas/AdminCluster" }
+          "data": { "$ref": "#/components/schemas/AdminCluster" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
         },
-        "required": ["data"],
+        "required": ["data", "meta"],
         "title": "AdminClusterResponse",
         "type": "object"
       },
@@ -1809,9 +1691,9 @@
             },
             "type": "array"
           },
-          "pagination": { "$ref": "#/components/schemas/PaginationMetadata" }
+          "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
         },
-        "required": ["data", "pagination"],
+        "required": ["data", "meta"],
         "title": "CommandExecutionPaginatedResponse",
         "type": "object"
       },
@@ -1822,14 +1704,14 @@
             "items": { "$ref": "#/components/schemas/AliasResponse" },
             "type": "array"
           },
-          "pagination": { "$ref": "#/components/schemas/PaginationMetadata" }
+          "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
         },
-        "required": ["data", "pagination"],
+        "required": ["data", "meta"],
         "title": "AliasPaginatedResponse",
         "type": "object"
       },
       "AdminMetricsResponse": {
-        "description": "Application-level metrics from edge_admin PromEx (BEAM stats, metadata, Oban, etc.).\r\n",
+        "description": "Application-level metrics from edge_admin PromEx (BEAM stats, metadata, Oban, etc.).\n",
         "example": {
           "data": {
             "application": {
@@ -1911,7 +1793,8 @@
               "zombie_cleanup_deleted_count": 0,
               "zombie_cleanup_total": 81
             }
-          }
+          },
+          "meta": "Elixir.EdgeAdminWeb.Schemas.CommonSchemas.MetaSchema"
         },
         "properties": {
           "data": {
@@ -2263,15 +2146,17 @@
             "type": "object"
           }
         },
+        "required": ["data", "meta"],
         "title": "AdminMetricsResponse",
         "type": "object"
       },
       "EnrollmentKeySingleResponse": {
         "description": "Single enrollment key response",
         "properties": {
-          "data": { "$ref": "#/components/schemas/EnrollmentKeyResponse" }
+          "data": { "$ref": "#/components/schemas/EnrollmentKeyResponse" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
         },
-        "required": ["data"],
+        "required": ["data", "meta"],
         "title": "EnrollmentKeySingleResponse",
         "type": "object"
       },
@@ -2282,78 +2167,60 @@
             "items": { "$ref": "#/components/schemas/CommandResponse" },
             "type": "array"
           },
-          "pagination": { "$ref": "#/components/schemas/PaginationMetadata" }
+          "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
         },
-        "required": ["data", "pagination"],
+        "required": ["data", "meta"],
         "title": "CommandPaginatedResponse",
+        "type": "object"
+      },
+      "CancelExecutionData": {
+        "description": "Cancellation request result",
+        "example": { "result": "cancellation request sent" },
+        "properties": {
+          "result": {
+            "description": "Cancellation request status message",
+            "example": "cancellation request sent",
+            "type": "string"
+          }
+        },
+        "required": ["result"],
+        "title": "CancelExecutionData",
         "type": "object"
       },
       "SelfUpdateRequestSingleResponse": {
         "description": "Single self-update request response",
-        "example": {
-          "data": {
-            "id": "01234567-89ab-cdef-0123-456789abcdef",
-            "inserted_at": "2025-06-17T10:30:00Z",
-            "status": "completed",
-            "summary": { "failed": 2, "total": 25, "triggered": 23 },
-            "targeting": {
-              "cluster_names": ["prod", "staging"],
-              "type": "clusters"
-            },
-            "updated_at": "2025-06-17T10:35:00Z"
-          }
-        },
         "properties": {
-          "data": { "$ref": "#/components/schemas/SelfUpdateRequestResponse" }
+          "data": { "$ref": "#/components/schemas/SelfUpdateRequestResponse" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
         },
-        "required": ["data"],
+        "required": ["data", "meta"],
         "title": "SelfUpdateRequestSingleResponse",
         "type": "object"
       },
       "AdminResponse": {
         "description": "Single admin identity response",
-        "example": {
-          "data": {
-            "admin_cluster_name": "admin-cluster-1",
-            "erlang_node_name": "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
-            "id": "k7m3n2p9x4j6",
-            "last_computed_at": "2025-01-15T12:00:00Z",
-            "max_capacity": 200,
-            "name": "admin-k7m3n2p9x4j6",
-            "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
-            "vpn_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
-          }
+        "properties": {
+          "data": { "$ref": "#/components/schemas/Admin" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
         },
-        "properties": { "data": { "$ref": "#/components/schemas/Admin" } },
-        "required": ["data"],
+        "required": ["data", "meta"],
         "title": "AdminResponse",
         "type": "object"
       },
       "CancelExecutionResponse": {
         "description": "Response from command execution cancellation request",
-        "example": { "data": { "result": "cancellation request sent" } },
         "properties": {
-          "data": {
-            "properties": {
-              "result": {
-                "description": "Cancellation request status message",
-                "example": "cancellation request sent",
-                "type": "string"
-              }
-            },
-            "required": ["result"],
-            "type": "object"
-          }
+          "data": { "$ref": "#/components/schemas/CancelExecutionData" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
         },
-        "required": ["data"],
+        "required": ["data", "meta"],
         "title": "CancelExecutionResponse",
         "type": "object"
       },
       "CommandExecutionResponse": {
         "description": "Command execution information",
         "example": {
-          "cluster_id": "aaaabbbb-cccc-dddd-eeee-ffffffffffff",
-          "cluster_name": "prod",
+          "cluster_name": "prod-east",
           "command_id": "fedcba98-7654-3210-fedc-ba9876543210",
           "command_text": "echo hello\nls -la",
           "completed_at": "2025-06-17T10:31:00Z",
@@ -2375,7 +2242,7 @@
             "type": "string"
           },
           "cluster_name": {
-            "description": "Name of the target cluster (null if cluster_id is null)",
+            "description": "The cluster explicitly targeted when this execution was created. Only set when the command used `clusters` targeting against a single cluster — null for `all`, `nodes`, or multi-cluster targeting.",
             "nullable": true,
             "type": "string"
           },
@@ -2520,44 +2387,79 @@
       },
       "CommandSingleResponse": {
         "description": "Single command response",
-        "example": {
-          "data": {
-            "command_text": "echo hello\ndate",
-            "expired_at": null,
-            "id": "01234567-89ab-cdef-0123-456789abcdef",
-            "inserted_at": "2025-06-17T12:00:00Z",
-            "targeting": {
-              "node_filters": { "status": "healthy" },
-              "type": "all"
-            },
-            "timeout": null,
-            "updated_at": "2025-06-17T12:00:00Z"
-          }
-        },
         "properties": {
-          "data": { "$ref": "#/components/schemas/CommandResponse" }
+          "data": { "$ref": "#/components/schemas/CommandResponse" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
         },
-        "required": ["data"],
+        "required": ["data", "meta"],
         "title": "CommandSingleResponse",
         "type": "object"
       },
       "ConflictResponse": {
-        "description": "Resource conflict, usually duplicate or constraint violation (409)",
-        "example": { "errors": { "detail": "Conflict" } },
+        "description": "409 Conflict",
+        "example": {
+          "error": {
+            "code": "conflict",
+            "details": null,
+            "message": "Resource already exists"
+          },
+          "meta": {
+            "request_id": "550e8400-e29b-41d4-a716-446655440000",
+            "timestamp": "2026-04-15T10:00:00.000Z"
+          }
+        },
         "properties": {
-          "errors": {
+          "error": {
             "properties": {
-              "detail": {
-                "description": "Error detail message",
+              "code": { "example": "conflict", "type": "string" },
+              "details": { "nullable": true },
+              "message": {
+                "example": "Resource already exists",
                 "type": "string"
               }
             },
-            "required": ["detail"],
+            "required": ["code", "message", "details"],
             "type": "object"
+          },
+          "meta": { "$ref": "#/components/schemas/Meta" }
+        },
+        "required": ["error", "meta"],
+        "title": "ConflictResponse",
+        "type": "object"
+      },
+      "BadRequestResponse": {
+        "description": "400 Bad Request",
+        "example": {
+          "error": {
+            "code": "bad_request",
+            "details": {
+              "ipv4_range": ["Invalid format."],
+              "name": ["Invalid format. Expected ~r/^[a-z0-9]/"]
+            },
+            "message": "Invalid request parameters"
+          },
+          "meta": {
+            "request_id": "550e8400-e29b-41d4-a716-446655440000",
+            "timestamp": "2026-04-15T10:00:00.000Z"
           }
         },
-        "required": ["errors"],
-        "title": "ConflictResponse",
+        "properties": {
+          "error": {
+            "properties": {
+              "code": { "example": "bad_request", "type": "string" },
+              "details": { "nullable": true },
+              "message": {
+                "example": "Invalid request parameters",
+                "type": "string"
+              }
+            },
+            "required": ["code", "message", "details"],
+            "type": "object"
+          },
+          "meta": { "$ref": "#/components/schemas/Meta" }
+        },
+        "required": ["error", "meta"],
+        "title": "BadRequestResponse",
         "type": "object"
       },
       "CommandResponse": {
@@ -2653,7 +2555,7 @@
         "type": "object"
       },
       "EnrollmentKeyUpdateRequest": {
-        "description": "Parameters for updating an enrollment key. Only fields that are present in the request body are updated — omitting a field leaves it unchanged.\r\n\r\n- `uses_remaining`: pass a positive integer to set a limit, or `null` to make the key unlimited.\r\n- `expired_at`: pass a datetime to set expiry, or `null` to remove expiry.\r\n",
+        "description": "Parameters for updating an enrollment key. Only fields that are present in the request body are updated — omitting a field leaves it unchanged.\n\n- `uses_remaining`: pass a positive integer to set a limit, or `null` to make the key unlimited.\n- `expired_at`: pass a datetime to set expiry, or `null` to remove expiry.\n",
         "example": {
           "expired_at": "2026-12-31T23:59:59Z",
           "uses_remaining": null
@@ -2681,7 +2583,7 @@
         "description": "Brief node information within cluster response",
         "example": {
           "id": "abc12345-1234-1234-1234-123456789abc",
-          "id_type": "hostname",
+          "id_type": "persistent",
           "status": "healthy",
           "vpn_hostname": "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
         },
@@ -2693,8 +2595,8 @@
           },
           "id_type": {
             "description": "Node ID type",
-            "enum": ["hostname", "mac"],
-            "example": "hostname",
+            "enum": ["persistent", "random"],
+            "example": "persistent",
             "type": "string"
           },
           "status": {
@@ -2715,34 +2617,11 @@
       },
       "NodeSingleResponse": {
         "description": "Single node response",
-        "example": {
-          "data": {
-            "api_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-            "cluster_id": "abc12345-1234-1234-1234-123456789abc",
-            "host_metrics_port": 49100,
-            "http_port": 44000,
-            "http_proxy_port": 44880,
-            "id": "01234567-89ab-cdef-0123-456789abcdef",
-            "id_type": "persistent",
-            "inserted_at": "2025-06-09T08:00:00Z",
-            "last_seen_at": "2025-06-09T08:20:00Z",
-            "netmaker_host_id": "def67890-5678-5678-5678-567890abcdef",
-            "node_name": "node-01234567-89ab-cdef-0123-456789abcdef",
-            "proxy_password": "securepassword123",
-            "self_update_enabled": false,
-            "socks5_proxy_port": 44180,
-            "ssh_port": 42222,
-            "status": "healthy",
-            "updated_at": "2025-06-09T08:20:00Z",
-            "version": "0.1.0",
-            "vpn_hostname": "node-01234567-89ab-cdef-0123-456789abcdef.cluster-abc12345-1234-1234-1234-123456789abc.nm.internal",
-            "wireguard_metrics_port": 49586
-          }
-        },
         "properties": {
-          "data": { "$ref": "#/components/schemas/NodeResponse" }
+          "data": { "$ref": "#/components/schemas/NodeResponse" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
         },
-        "required": ["data"],
+        "required": ["data", "meta"],
         "title": "NodeSingleResponse",
         "type": "object"
       },
@@ -2753,10 +2632,68 @@
             "items": { "$ref": "#/components/schemas/SshPublicKey" },
             "type": "array"
           },
-          "pagination": { "$ref": "#/components/schemas/PaginationMetadata" }
+          "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
         },
-        "required": ["data", "pagination"],
+        "required": ["data", "meta"],
         "title": "SshPublicKeyPaginatedResponse",
+        "type": "object"
+      },
+      "Pagination": {
+        "description": "Pagination metadata for list responses",
+        "properties": {
+          "has_next": {
+            "description": "Whether a next page exists",
+            "example": true,
+            "type": "boolean"
+          },
+          "has_prev": {
+            "description": "Whether a previous page exists",
+            "example": false,
+            "type": "boolean"
+          },
+          "next_page": {
+            "description": "Next page number, null when on the last page",
+            "example": 2,
+            "nullable": true,
+            "type": "integer"
+          },
+          "page": {
+            "description": "Current page number",
+            "example": 1,
+            "type": "integer"
+          },
+          "page_size": {
+            "description": "Items per page",
+            "example": 20,
+            "type": "integer"
+          },
+          "prev_page": {
+            "description": "Previous page number, null when on the first page",
+            "nullable": true,
+            "type": "integer"
+          },
+          "total_count": {
+            "description": "Total number of items",
+            "example": 150,
+            "type": "integer"
+          },
+          "total_pages": {
+            "description": "Total number of pages",
+            "example": 8,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "page_size",
+          "total_count",
+          "total_pages",
+          "has_next",
+          "has_prev",
+          "next_page",
+          "prev_page"
+        ],
+        "title": "Pagination",
         "type": "object"
       },
       "Admin": {
@@ -2828,9 +2765,9 @@
             },
             "type": "array"
           },
-          "pagination": { "$ref": "#/components/schemas/PaginationMetadata" }
+          "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
         },
-        "required": ["data", "pagination"],
+        "required": ["data", "meta"],
         "title": "SelfUpdateRequestPaginatedResponse",
         "type": "object"
       },
@@ -2847,15 +2784,15 @@
           "nodes": [
             {
               "id": "abc12345-1234-1234-1234-123456789abc",
-              "id_type": "hostname",
+              "id_type": "persistent",
               "status": "healthy",
-              "vpn_hostname": "abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
+              "vpn_hostname": "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
             },
             {
-              "id": "node-def12345-1234-1234-1234-123456789def",
-              "id_type": "hostname",
+              "id": "def67890-5678-5678-5678-567890abcdef",
+              "id_type": "persistent",
               "status": "healthy",
-              "vpn_hostname": "node-def12345-1234-1234-1234-123456789def.cluster-prod-east.nm.internal"
+              "vpn_hostname": "node-def67890-5678-5678-5678-567890abcdef.cluster-prod-east.nm.internal"
             }
           ],
           "updated_at": "2025-06-09T08:00:00Z",
@@ -2983,6 +2920,16 @@
       },
       "EnrollmentKeyResponse": {
         "description": "Enrollment key information",
+        "example": {
+          "cluster_name": "prod-east",
+          "expired_at": "2026-12-31T23:59:59Z",
+          "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+          "inserted_at": "2025-06-09T08:00:00Z",
+          "key": "eyJzZXJ2ZXIiOiJodHRwczovL25ldG1ha2VyLmV4YW1wbGUuY29tIiwia2V5IjoiYWJjMTIzIn0=",
+          "last_used_at": null,
+          "updated_at": "2025-06-09T08:00:00Z",
+          "uses_remaining": 5
+        },
         "properties": {
           "cluster_name": {
             "description": "Cluster this key belongs to",
@@ -3037,21 +2984,34 @@
         "type": "object"
       },
       "ForbiddenResponse": {
-        "description": "Insufficient permissions to access resource (403)",
-        "example": { "errors": { "detail": "Forbidden" } },
+        "description": "403 Forbidden",
+        "example": {
+          "error": {
+            "code": "forbidden",
+            "details": null,
+            "message": "Insufficient permissions"
+          },
+          "meta": {
+            "request_id": "550e8400-e29b-41d4-a716-446655440000",
+            "timestamp": "2026-04-15T10:00:00.000Z"
+          }
+        },
         "properties": {
-          "errors": {
+          "error": {
             "properties": {
-              "detail": {
-                "description": "Error detail message",
+              "code": { "example": "forbidden", "type": "string" },
+              "details": { "nullable": true },
+              "message": {
+                "example": "Insufficient permissions",
                 "type": "string"
               }
             },
-            "required": ["detail"],
+            "required": ["code", "message", "details"],
             "type": "object"
-          }
+          },
+          "meta": { "$ref": "#/components/schemas/Meta" }
         },
-        "required": ["errors"],
+        "required": ["error", "meta"],
         "title": "ForbiddenResponse",
         "type": "object"
       },
@@ -3200,9 +3160,9 @@
             "items": { "$ref": "#/components/schemas/SshUsername" },
             "type": "array"
           },
-          "pagination": { "$ref": "#/components/schemas/PaginationMetadata" }
+          "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
         },
-        "required": ["data", "pagination"],
+        "required": ["data", "meta"],
         "title": "SshUsernamePaginatedResponse",
         "type": "object"
       }
@@ -3312,7 +3272,7 @@
     "/api/v1/admins/metrics/self": {
       "get": {
         "callbacks": {},
-        "description": "Returns application-level metrics from the edge_admin PromEx:\r\n- Application: uptime, BEAM stats (processes, memory, atoms, ETS tables)\r\n- Metadata: degraded status, orphaned/assigned clusters\r\n- Bootstrap: step counts and full sequence completions\r\n- Discovery: peer discovery scan, DNS resolution, and connection counts\r\n- Nodes: health check statistics\r\n- Commands: delivery runs, per-execution delivery, completions, expirations\r\n- SSH: credential verification attempts and failures\r\n- Reconciliation: cluster Netmaker↔DB sync runs and errors\r\n- Self-updates: request processing completions\r\n- Gateways: connection events, active count, scrape totals\r\n- Oban: job queue states (available, scheduled, executing, etc.)\r\n",
+        "description": "Returns application-level metrics from the edge_admin PromEx:\n- Application: uptime, BEAM stats (processes, memory, atoms, ETS tables)\n- Metadata: degraded status, orphaned/assigned clusters\n- Bootstrap: step counts and full sequence completions\n- Discovery: peer discovery scan, DNS resolution, and connection counts\n- Nodes: health check statistics\n- Commands: delivery runs, per-execution delivery, completions, expirations\n- SSH: credential verification attempts and failures\n- Reconciliation: cluster Netmaker↔DB sync runs and errors\n- Self-updates: request processing completions\n- Gateways: connection events, active count, scrape totals\n- Oban: job queue states (available, scheduled, executing, etc.)\n",
         "operationId": "EdgeAdminWeb.Controllers.Metrics.AdminMetricsController.show_self",
         "parameters": [],
         "responses": {
@@ -3557,10 +3517,10 @@
             },
             "description": "Paginated cluster list"
           },
-          "422": {
+          "400": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
               }
             },
             "description": "Invalid query parameters"
@@ -3599,6 +3559,14 @@
             },
             "description": "Cluster details"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -3606,14 +3574,6 @@
               }
             },
             "description": "Cluster not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
           }
         },
         "summary": "Get a specific cluster",
@@ -3710,6 +3670,14 @@
             "content": { "": {} },
             "description": "Cluster deleted successfully"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -3725,14 +3693,6 @@
               }
             },
             "description": "Cannot delete cluster with nodes"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
           },
           "503": {
             "content": {
@@ -3752,7 +3712,7 @@
     "/api/v1/clusters/default/enrollment_keys/public": {
       "post": {
         "callbacks": {},
-        "description": "Public endpoint (no authentication required). Only enabled when both\r\nPUBLIC_ENROLLMENT_KEY_ENABLED=true and DEFAULT_CLUSTER_NAME are configured.\r\n\r\n**Note:** This endpoint is unavailable during degraded mode (503).\r\n",
+        "description": "Public endpoint (no authentication required). Only enabled when both\nPUBLIC_ENROLLMENT_KEY_ENABLED=true and DEFAULT_CLUSTER_NAME are configured.\n\n**Note:** This endpoint is unavailable during degraded mode (503).\n",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.create_for_public",
         "parameters": [],
         "responses": {
@@ -3869,7 +3829,7 @@
     "/api/v1/clusters/{cluster_name}/enrollment_keys": {
       "post": {
         "callbacks": {},
-        "description": "**Note:** This endpoint is unavailable during degraded mode (503).",
+        "description": "Create a new enrollment key for an edge cluster. The returned `key` blob must be set as the `ENROLLMENT_KEY`\nenvironment variable on the agent to allow it to join the cluster's VPN network.\n\nKeys can be limited by use count (`uses_remaining`) or by expiry time (`expired_at`). Omit both for a single-use key with no expiry.\n\n**Note:** This endpoint is unavailable during degraded mode (503).\n",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.create",
         "parameters": [
           {
@@ -4160,10 +4120,10 @@
             },
             "description": "Paginated enrollment key list"
           },
-          "422": {
+          "400": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
               }
             },
             "description": "Invalid query parameters"
@@ -4198,6 +4158,14 @@
             },
             "description": "Enrollment key"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -4205,14 +4173,6 @@
               }
             },
             "description": "Not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
           }
         },
         "summary": "Get an enrollment key",
@@ -4303,6 +4263,14 @@
             "content": { "": {} },
             "description": "Enrollment key deleted"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -4310,14 +4278,6 @@
               }
             },
             "description": "Not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
           },
           "503": {
             "content": {
@@ -4499,10 +4459,10 @@
             },
             "description": "Paginated list of nodes"
           },
-          "422": {
+          "400": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
               }
             },
             "description": "Invalid query parameters"
@@ -4535,6 +4495,14 @@
             },
             "description": "Node details"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -4542,14 +4510,6 @@
               }
             },
             "description": "Node not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
           }
         },
         "summary": "Get a specific node",
@@ -4573,6 +4533,14 @@
             "content": { "": {} },
             "description": "Node deleted successfully"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -4580,14 +4548,6 @@
               }
             },
             "description": "Node not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
           },
           "503": {
             "content": {
@@ -4874,10 +4834,10 @@
             },
             "description": "Paginated list of aliases"
           },
-          "422": {
+          "400": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
               }
             },
             "description": "Invalid query parameters"
@@ -4910,6 +4870,14 @@
             },
             "description": "Alias details"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -4917,14 +4885,6 @@
               }
             },
             "description": "Alias not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
           }
         },
         "summary": "Get a specific alias",
@@ -4948,6 +4908,14 @@
             "content": { "": {} },
             "description": "Alias deleted successfully"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -4955,14 +4923,6 @@
               }
             },
             "description": "Alias not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
           },
           "503": {
             "content": {
@@ -4982,7 +4942,7 @@
     "/api/v1/nodes/{node_id}/metrics": {
       "get": {
         "callbacks": {},
-        "description": "Returns aggregated metrics from all available sources for a node:\r\n- Host metrics (Node Exporter): CPU, memory, disk, uptime\r\n- Agent metrics (agent PromEx): BEAM stats, commands, proxy, SSH, VPN, health check, Oban\r\n\r\nProvides a complete view of node health and performance in a single request.\r\nUses best-effort fetching - if one source fails, others are still returned.\r\n",
+        "description": "Returns aggregated metrics from all available sources for a node:\n- Host metrics (Node Exporter): CPU, memory, disk, uptime\n- Agent metrics (agent PromEx): BEAM stats, commands, proxy, SSH, VPN, health check, Oban\n\nProvides a complete view of node health and performance in a single request.\nUses best-effort fetching - if one source fails, others are still returned.\n",
         "operationId": "EdgeAdminWeb.Controllers.Metrics.NodeMetricsController.show_unified",
         "parameters": [
           {
@@ -5030,7 +4990,7 @@
     "/api/v1/nodes/{node_id}/metrics/host": {
       "get": {
         "callbacks": {},
-        "description": "Returns host-level system metrics from Node Exporter:\r\n- CPU: cores, load averages\r\n- Memory: usage, total/available/used in bytes and GB\r\n- Disk: usage, total/available/used for root filesystem\r\n- Uptime: seconds and human-readable format\r\n",
+        "description": "Returns host-level system metrics from Node Exporter:\n- CPU: cores, load averages\n- Memory: usage, total/available/used in bytes and GB\n- Disk: usage, total/available/used for root filesystem\n- Uptime: seconds and human-readable format\n",
         "operationId": "EdgeAdminWeb.Controllers.Metrics.NodeMetricsController.show_host",
         "parameters": [
           {
@@ -5076,7 +5036,7 @@
     "/api/v1/nodes/{node_id}/metrics/agent": {
       "get": {
         "callbacks": {},
-        "description": "Returns application-level metrics from the edge_agent PromEx:\r\n- Application: uptime, BEAM stats (processes, memory breakdown)\r\n- Commands: sync/enqueue/complete/report statistics\r\n- Discovery: admin discovery scan metrics\r\n- Proxy: HTTP and SOCKS5 connection and blocked-request statistics\r\n- SSH: authentication attempts and connection count\r\n- VPN: config pull count (daily backstop for DNS recovery)\r\n- Health Check: fallback health report count (only non-zero when VPN is down)\r\n- Oban: job queue states (available, executing, completed, etc.)\r\n",
+        "description": "Returns application-level metrics from the edge_agent PromEx:\n- Application: uptime, BEAM stats (processes, memory breakdown)\n- Commands: sync/enqueue/complete/report statistics\n- Discovery: admin discovery scan metrics\n- Proxy: HTTP and SOCKS5 connection and blocked-request statistics\n- SSH: authentication attempts and connection count\n- VPN: config pull count (daily backstop for DNS recovery)\n- Health Check: fallback health report count (only non-zero when VPN is down)\n- Oban: job queue states (available, executing, completed, etc.)\n",
         "operationId": "EdgeAdminWeb.Controllers.Metrics.NodeMetricsController.show_agent",
         "parameters": [
           {
@@ -5124,7 +5084,7 @@
     "/api/v1/commands": {
       "post": {
         "callbacks": {},
-        "description": "Create a new command for execution on nodes using flexible targeting options.\r\n\r\nTargeting types:\r\n- 'all': Target all nodes (with optional filters)\r\n- 'nodes': Target specific nodes by IDs (with optional filters)\r\n- 'clusters': Target specific clusters by names (with optional filters)\r\n\r\nNode and cluster filters can be applied to further refine targeting.\r\n",
+        "description": "Create a new command for execution on nodes using flexible targeting options.\n\nTargeting types:\n- 'all': Target all nodes (with optional filters)\n- 'nodes': Target specific nodes by IDs (with optional filters)\n- 'clusters': Target specific clusters by names (with optional filters)\n\nNode and cluster filters can be applied to further refine targeting.\n",
         "operationId": "EdgeAdminWeb.Controllers.Commands.CommandController.create",
         "parameters": [],
         "requestBody": {
@@ -5322,10 +5282,10 @@
             },
             "description": "Paginated list of commands"
           },
-          "422": {
+          "400": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
               }
             },
             "description": "Invalid query parameters"
@@ -5360,6 +5320,14 @@
             },
             "description": "Command details"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -5367,14 +5335,6 @@
               }
             },
             "description": "Command not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
           }
         },
         "summary": "Get a specific command",
@@ -5382,7 +5342,7 @@
       },
       "delete": {
         "callbacks": {},
-        "description": "Delete a command and all its related command executions (cascaded deletion).\r\n\r\nOnly commands where ALL executions are completed can be deleted.\r\nAttempting to delete a command with pending or sent executions will return 409.\r\n",
+        "description": "Delete a command and all its related command executions (cascaded deletion).\n\nOnly commands where ALL executions are completed can be deleted.\nAttempting to delete a command with pending or sent executions will return 409.\n",
         "operationId": "EdgeAdminWeb.Controllers.Commands.CommandController.delete",
         "parameters": [
           {
@@ -5397,6 +5357,14 @@
           "204": {
             "content": { "": {} },
             "description": "Command deleted successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
           },
           "404": {
             "content": {
@@ -5413,14 +5381,6 @@
               }
             },
             "description": "Cannot delete command with non-completed executions"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
           }
         },
         "summary": "Delete a command",
@@ -5682,10 +5642,10 @@
             },
             "description": "Paginated list of command executions"
           },
-          "422": {
+          "400": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
               }
             },
             "description": "Invalid query parameters"
@@ -5720,6 +5680,14 @@
             },
             "description": "Command execution details"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -5727,14 +5695,6 @@
               }
             },
             "description": "Command execution not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
           }
         },
         "summary": "Get a specific command execution",
@@ -5742,7 +5702,7 @@
       },
       "delete": {
         "callbacks": {},
-        "description": "Delete a specific command execution.\r\n\r\nOnly completed, cancelled, or expired executions can be deleted. Attempting to delete pending or sent executions will return 409.\r\n",
+        "description": "Delete a specific command execution.\n\nOnly completed, cancelled, or expired executions can be deleted. Attempting to delete pending or sent executions will return 409.\n",
         "operationId": "EdgeAdminWeb.Controllers.Commands.CommandExecutionController.delete",
         "parameters": [
           {
@@ -5757,6 +5717,14 @@
           "204": {
             "content": { "": {} },
             "description": "Command execution deleted successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
           },
           "404": {
             "content": {
@@ -5773,14 +5741,6 @@
               }
             },
             "description": "Cannot delete non-completed execution"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
           }
         },
         "summary": "Delete a command execution",
@@ -5790,7 +5750,7 @@
     "/api/v1/command_executions/{id}/cancel": {
       "patch": {
         "callbacks": {},
-        "description": "Attempts to cancel a command execution. Behavior depends on current status:\r\n\r\n- `pending`: Immediately marked `cancelled` in the database (command never ran).\r\n- `sent`: Sends cancellation request to agent (best-effort, async). The agent is the source of truth — if it already ran the command, it reports back the real result and the execution is marked `completed`. If the agent honoured the cancellation (exit code 143), it is marked `cancelled`.\r\n- `completed` / `cancelled`: Returns 409 conflict (already terminal).\r\n\r\nReturns 200 if cancellation was initiated. For `sent` executions, poll status to confirm the outcome.\r\n",
+        "description": "Attempts to cancel a command execution. Behavior depends on current status:\n\n- `pending`: Immediately marked `cancelled` in the database (command never ran).\n- `sent`: Sends cancellation request to agent (best-effort, async). The agent is the source of truth — if it already ran the command, it reports back the real result and the execution is marked `completed`. If the agent honoured the cancellation (exit code 143), it is marked `cancelled`.\n- `completed` / `cancelled`: Returns 409 conflict (already terminal).\n\nReturns 200 if cancellation was initiated. For `sent` executions, poll status to confirm the outcome.\n",
         "operationId": "EdgeAdminWeb.Controllers.Commands.CommandExecutionController.cancel",
         "parameters": [
           {
@@ -6043,10 +6003,10 @@
             },
             "description": "Paginated list of SSH usernames"
           },
-          "422": {
+          "400": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
               }
             },
             "description": "Invalid query parameters"
@@ -6081,6 +6041,14 @@
             },
             "description": "SSH username details"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -6088,14 +6056,6 @@
               }
             },
             "description": "SSH username not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
           }
         },
         "summary": "Get SSH username",
@@ -6119,6 +6079,14 @@
             "content": { "": {} },
             "description": "SSH username deleted"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -6126,14 +6094,6 @@
               }
             },
             "description": "SSH username not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
           }
         },
         "summary": "Delete SSH username",
@@ -6352,10 +6312,10 @@
             },
             "description": "Paginated list of SSH public keys"
           },
-          "422": {
+          "400": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
               }
             },
             "description": "Invalid query parameters"
@@ -6390,6 +6350,14 @@
             },
             "description": "SSH public key details"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -6397,14 +6365,6 @@
               }
             },
             "description": "SSH public key not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
           }
         },
         "summary": "Get SSH public key",
@@ -6428,6 +6388,14 @@
             "content": { "": {} },
             "description": "SSH public key deleted"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -6435,14 +6403,6 @@
               }
             },
             "description": "SSH public key not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
           }
         },
         "summary": "Delete SSH public key",
@@ -6452,7 +6412,7 @@
     "/api/v1/self_update_requests": {
       "post": {
         "callbacks": {},
-        "description": "Create a new self-update request to trigger agent updates.\r\n\r\nThe request will be processed asynchronously. Only healthy nodes with self_update_enabled=true will be updated.\r\n\r\nTargeting types:\r\n- 'all': Target all nodes (with optional filters)\r\n- 'nodes': Target specific nodes by IDs (with optional filters)\r\n- 'clusters': Target specific clusters by names (with optional filters)\r\n\r\nNode and cluster filters can be applied to further refine targeting.\r\n",
+        "description": "Create a new self-update request to trigger agent updates.\n\nThe request will be processed asynchronously. Only healthy nodes with self_update_enabled=true will be updated.\n\nTargeting types:\n- 'all': Target all nodes (with optional filters)\n- 'nodes': Target specific nodes by IDs (with optional filters)\n- 'clusters': Target specific clusters by names (with optional filters)\n\nNode and cluster filters can be applied to further refine targeting.\n",
         "operationId": "EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController.create",
         "parameters": [],
         "requestBody": {
@@ -6526,7 +6486,7 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Comma-separated list of sort directions (asc/desc)",
+            "description": "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
             "example": "desc",
             "in": "query",
             "name": "order_directions",
@@ -6603,10 +6563,10 @@
             },
             "description": "Paginated list of self-update requests"
           },
-          "422": {
+          "400": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
               }
             },
             "description": "Invalid query parameters"
@@ -6641,6 +6601,14 @@
             },
             "description": "Self-update request details"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -6648,14 +6616,6 @@
               }
             },
             "description": "Self-update request not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
           }
         },
         "summary": "Get a specific self-update request",
@@ -6663,7 +6623,7 @@
       },
       "delete": {
         "callbacks": {},
-        "description": "Delete a self-update request.\r\n\r\nOnly completed requests can be deleted.\r\nAttempting to delete a pending or processing request will return 409.\r\n",
+        "description": "Delete a self-update request.\n\nOnly completed requests can be deleted.\nAttempting to delete a pending or processing request will return 409.\n",
         "operationId": "EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController.delete",
         "parameters": [
           {
@@ -6678,6 +6638,14 @@
           "204": {
             "content": { "": {} },
             "description": "Self-update request deleted successfully"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
           },
           "404": {
             "content": {
@@ -6694,14 +6662,6 @@
               }
             },
             "description": "Cannot delete non-completed request"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/JsonErrorResponse" }
-              }
-            },
-            "description": "Invalid path parameters"
           }
         },
         "summary": "Delete a self-update request",

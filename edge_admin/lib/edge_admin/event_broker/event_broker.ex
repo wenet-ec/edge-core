@@ -16,6 +16,7 @@ defmodule EdgeAdmin.EventBroker do
   When enabled, `EVENT_BROKER_ADAPTER` and `EVENT_BROKER_URL` are required:
   - `nats` — NATS pub/sub; add `EVENT_BROKER_NATS_JETSTREAM=true` for durable log (recommended)
   - `kafka` — Kafka-compatible protocol (Redpanda recommended)
+  - `rabbitmq` — RabbitMQ topic exchange; consumer queue durability is the consumer's choice
 
   ## Usage
 
@@ -127,6 +128,7 @@ defmodule EdgeAdmin.EventBroker do
     case Application.get_env(:edge_admin, :event_broker_adapter) do
       :nats -> EdgeAdmin.EventBroker.Adapters.Nats
       :kafka -> EdgeAdmin.EventBroker.Adapters.Kafka
+      :rabbitmq -> EdgeAdmin.EventBroker.Adapters.RabbitMQ
     end
   end
 

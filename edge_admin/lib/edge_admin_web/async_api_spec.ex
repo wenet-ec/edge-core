@@ -32,7 +32,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "title" => "Edge Admin AsyncAPI",
         "version" => "0.2.0",
         "description" => """
-        Lifecycle events published by Edge Admin to a configured message broker (NATS or Kafka/Redpanda).
+        Lifecycle events published by Edge Admin to a configured message broker (NATS, Kafka/Redpanda, or RabbitMQ).
 
         Edge Admin publishes and forgets — it has no knowledge of consumers.
         All messages follow the [CloudEvents 1.0](https://cloudevents.io) spec.
@@ -78,14 +78,9 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "host" => "localhost:4222",
         "protocol" => "nats",
         "description" =>
-          "NATS broker — pub/sub mode (default). Set EVENT_BROKER_NATS_JETSTREAM=true to enable durable JetStream log. Configure via EVENT_BROKER_URLS. Optional token auth via EVENT_BROKER_NATS_TOKEN.",
-        "security" => [%{"$ref" => "#/components/securitySchemes/natsToken"}]
-      },
-      "natsJetStream" => %{
-        "host" => "localhost:4222",
-        "protocol" => "nats",
-        "description" =>
-          "NATS JetStream mode — same broker, durable log with replay. Enable with EVENT_BROKER_NATS_JETSTREAM=true. Three streams are auto-created: EDGE_NODE_EVENTS, EDGE_EXECUTION_EVENTS, EDGE_SELF_UPDATE_EVENTS (7-day retention).",
+          "NATS broker. Configure via EVENT_BROKER_URLS. Optional token auth via EVENT_BROKER_NATS_TOKEN. " <>
+            "By default, pub/sub with no persistence. Set EVENT_BROKER_NATS_JETSTREAM=true to enable durable JetStream log — " <>
+            "three streams are auto-created on startup: EDGE_NODE_EVENTS, EDGE_EXECUTION_EVENTS, EDGE_SELF_UPDATE_EVENTS. Retention is configured on the broker.",
         "security" => [%{"$ref" => "#/components/securitySchemes/natsToken"}]
       },
       "kafka" => %{
@@ -94,6 +89,16 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "description" =>
           "Kafka-compatible broker (Redpanda recommended). Configure via EVENT_BROKER_URLS. SASL auth via EVENT_BROKER_KAFKA_USERNAME / EVENT_BROKER_KAFKA_PASSWORD.",
         "security" => [%{"$ref" => "#/components/securitySchemes/kafkaSasl"}]
+      },
+      "rabbitmq" => %{
+        "host" => "localhost:5672",
+        "protocol" => "amqp",
+        "description" =>
+          "RabbitMQ broker. Configure via EVENT_BROKER_URLS (single amqp:// or amqps:// URL). " <>
+            "All events are published to a durable topic exchange (default: `edge.events`). " <>
+            "Routing key = event type (e.g. `edge.node.registered`). " <>
+            "Consumer queue durability is the consumer's choice.",
+        "security" => [%{"$ref" => "#/components/securitySchemes/amqpPlain"}]
       }
     }
   end
@@ -179,7 +184,13 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
          "channel" => %{"$ref" => "#/channels/#{channel_id}"},
          "bindings" => %{
            "nats" => %{"bindingVersion" => "0.1.0"},
-           "kafka" => %{"bindingVersion" => "0.5.0"}
+           "kafka" => %{"bindingVersion" => "0.5.0"},
+           "amqp" => %{
+             "bindingVersion" => "0.3.0",
+             "cc" => [],
+             "deliveryMode" => 1,
+             "mandatory" => false
+           }
          }
        }}
     end)
@@ -400,6 +411,11 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
             "description" => "Kafka partition key — `#{kafka_partition_key}` from the event data"
           },
           "bindingVersion" => "0.5.0"
+        },
+        "amqp" => %{
+          "bindingVersion" => "0.3.0",
+          "contentEncoding" => "UTF-8",
+          "messageType" => "application/json"
         }
       },
       "examples" => [
@@ -632,6 +648,14 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "type" => "scramSha256",
         "description" =>
           "Kafka SASL auth. Set via EVENT_BROKER_KAFKA_USERNAME / EVENT_BROKER_KAFKA_PASSWORD / EVENT_BROKER_KAFKA_SASL_MECHANISM."
+      },
+      "amqpPlain" => %{
+        "type" => "userPassword",
+        "description" =>
+          "RabbitMQ username/password auth. " <>
+            "Embed credentials in EVENT_BROKER_URLS (amqp://user:pass@host:port) or set " <>
+            "EVENT_BROKER_RABBITMQ_USERNAME / EVENT_BROKER_RABBITMQ_PASSWORD separately " <>
+            "(separate vars take precedence). Enable TLS with EVENT_BROKER_RABBITMQ_SSL=true."
       }
     }
   end

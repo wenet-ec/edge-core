@@ -96,7 +96,7 @@ services:
       - /:/host:ro
       - /dev/net/tun:/dev/net/tun
     environment:
-      - PUBLIC_ENROLLMENT_KEY_URL=http://edge-admin.localtest.me/api/v1/clusters/default/enrollment_keys/public
+      - PUBLIC_ENROLLMENT_KEY_URL=http://edge_admin_a1:44000/api/v1/clusters/default/enrollment_keys/public
       - USE_RANDOM_ID=true
     cap_add:
       - NET_ADMIN

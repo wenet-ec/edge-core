@@ -40,27 +40,9 @@ defmodule EdgeAdmin.EventBroker.Adapters.Nats do
   @conn :event_broker_nats
 
   @streams [
-    %JsStream{
-      name: "EDGE_NODE_EVENTS",
-      subjects: ["edge.node.>"],
-      storage: :file,
-      retention: :limits,
-      max_age: 7 * 24 * 60 * 60 * 1_000_000_000
-    },
-    %JsStream{
-      name: "EDGE_EXECUTION_EVENTS",
-      subjects: ["edge.execution.>"],
-      storage: :file,
-      retention: :limits,
-      max_age: 7 * 24 * 60 * 60 * 1_000_000_000
-    },
-    %JsStream{
-      name: "EDGE_SELF_UPDATE_EVENTS",
-      subjects: ["edge.self_update.>"],
-      storage: :file,
-      retention: :limits,
-      max_age: 7 * 24 * 60 * 60 * 1_000_000_000
-    }
+    %JsStream{name: "EDGE_NODE_EVENTS", subjects: ["edge.node.>"], storage: :file},
+    %JsStream{name: "EDGE_EXECUTION_EVENTS", subjects: ["edge.execution.>"], storage: :file},
+    %JsStream{name: "EDGE_SELF_UPDATE_EVENTS", subjects: ["edge.self_update.>"], storage: :file}
   ]
 
   # ---------------------------------------------------------------------------

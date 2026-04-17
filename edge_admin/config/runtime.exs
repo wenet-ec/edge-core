@@ -268,11 +268,15 @@ config :os_mon,
 # publish calls are immediate no-ops — no connections, no processes started.
 #
 # When enabled, EVENT_BROKER_ADAPTER and EVENT_BROKER_URLS are required.
+# CORE_NAME is shared across all adapters — included in every event envelope.
+#
+#   EVENT_BROKER_ENABLED=true
+#   EVENT_BROKER_ADAPTER=nats|kafka|rabbitmq
+#   EVENT_BROKER_URLS=...
+#   CORE_NAME=prod-us   # optional, defaults to "default"
 #
 # NATS (pub/sub):
-#   EVENT_BROKER_ENABLED=true
-#   EVENT_BROKER_ADAPTER=nats
-#   EVENT_BROKER_URLS=nats://edge_event_broker_nats:4222          # comma-separated for cluster
+#   EVENT_BROKER_URLS=nats://edge_event_broker_nats:4222   # comma-separated for cluster
 #   EVENT_BROKER_NATS_JETSTREAM=true   # optional, enable durable JetStream log (default: false)
 #   # Auth — pick one, mutually exclusive:
 #   EVENT_BROKER_NATS_TOKEN=           # shared token (simple deployments)
@@ -282,16 +286,15 @@ config :os_mon,
 #   EVENT_BROKER_NATS_JWT=            # JWT credential — used alongside NKEY_SEED
 #
 # Kafka / Redpanda:
-#   EVENT_BROKER_ENABLED=true
-#   EVENT_BROKER_ADAPTER=kafka
-#   EVENT_BROKER_URLS=edge_event_broker_kafka:9092                # comma-separated for cluster
+#   EVENT_BROKER_URLS=edge_event_broker_kafka:9092   # comma-separated for cluster
 #   EVENT_BROKER_KAFKA_USERNAME=admin    # optional, omit if no auth
 #   EVENT_BROKER_KAFKA_PASSWORD=secret   # optional, omit if no auth
 #   EVENT_BROKER_KAFKA_SASL_MECHANISM=plain   # plain (default), scram_sha_256, scram_sha_512
 #   EVENT_BROKER_KAFKA_SSL=true          # enable TLS — required for external brokers
 #
-# Core identifier — included in every event envelope for multi-core setups:
-#   CORE_NAME=prod-us
+# RabbitMQ:
+#   EVENT_BROKER_URLS=amqp://edge_event_broker_rabbitmq:5672   # embed credentials: amqp://user:pass@host:port
+#   EVENT_BROKER_RABBITMQ_SSL=true   # enable TLS — required for external brokers (CloudAMQP, etc.)
 config :sentry,
   dsn: get_env("SENTRY_DSN"),
   environment_name: get_env("SENTRY_ENVIRONMENT_NAME")
@@ -301,7 +304,8 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
     case get_env!("EVENT_BROKER_ADAPTER") do
       "nats" -> :nats
       "kafka" -> :kafka
-      other -> raise "Unknown EVENT_BROKER_ADAPTER=#{other} — valid values: nats, kafka"
+      "rabbitmq" -> :rabbitmq
+      other -> raise "Unknown EVENT_BROKER_ADAPTER=#{other} — valid values: nats, kafka, rabbitmq"
     end
 
   event_broker_urls = get_env!("EVENT_BROKER_URLS")
@@ -327,6 +331,20 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
         password: get_env("EVENT_BROKER_NATS_PASSWORD"),
         nkey_seed: get_env("EVENT_BROKER_NATS_NKEY_SEED"),
         jwt: get_env("EVENT_BROKER_NATS_JWT")
+
+    :rabbitmq ->
+      # EVENT_BROKER_URLS for RabbitMQ is a single AMQP URL: amqp://host:port[/vhost]
+      # Embed credentials directly: amqp://user:pass@host:port — AMQP parses them natively.
+      # Only the first URL is used — RabbitMQ clustering is handled by the broker, not the client.
+      url =
+        event_broker_urls
+        |> String.split(",")
+        |> List.first()
+        |> String.trim()
+
+      config :edge_admin, :event_broker_rabbitmq,
+        url: url,
+        ssl: get_env("EVENT_BROKER_RABBITMQ_SSL", :boolean, false)
 
     :kafka ->
       # Parse "host:port" or "host1:port1,host2:port2"

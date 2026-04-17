@@ -4,11 +4,14 @@ Edge Core can publish lifecycle events to a message broker. This is opt-in — t
 
 ## Supported Brokers
 
-| Broker             | Adapter | Notes                                                                    |
-| ------------------ | ------- | ------------------------------------------------------------------------ |
-| **NATS**           | `nats`  | Recommended. Lightweight. Add `EVENT_BROKER_NATS_JETSTREAM=true` for durable log with replay. |
-| **Redpanda**       | `kafka` | Recommended Kafka-compatible option. No JVM, lighter than vanilla Kafka. |
-| **Apache Kafka**   | `kafka` | Use if you already run Kafka. Any Kafka-compatible broker works.         |
+| Broker           | Adapter    | Notes                                                                                                       |
+| ---------------- | ---------- | ----------------------------------------------------------------------------------------------------------- |
+| **NATS**         | `nats`     | Lightweight. Pure pub/sub by default. Set `EVENT_BROKER_NATS_JETSTREAM=true` for durable log with replay.   |
+| **Redpanda**     | `kafka`    | Recommended Kafka-compatible option. No JVM, lighter than vanilla Kafka.                                    |
+| **Apache Kafka** | `kafka`    | Use if you already run Kafka. Any Kafka-compatible broker works.                                            |
+| **RabbitMQ**     | `rabbitmq` | Topic exchange `edge.events`, routing key = event type. Consumer queue durability is the consumer's choice. |
+
+Pick whichever broker fits your existing stack — there is no recommended default.
 
 > **NATS modes:** By default, NATS runs as pure pub/sub — messages are lost when no subscriber is connected. Set `EVENT_BROKER_NATS_JETSTREAM=true` to enable JetStream durable log with replay. Both modes use the same `nats` adapter and the same NATS server binary; JetStream is just a server feature flag.
 
@@ -17,7 +20,7 @@ Edge Core can publish lifecycle events to a message broker. This is opt-in — t
 Pick a broker and start it alongside your core:
 
 ```bash
-# NATS (recommended)
+# NATS
 docker compose -f cloud.yml -f ../event_brokers/nats_js.yml up -d
 
 # Redpanda
@@ -25,6 +28,9 @@ docker compose -f cloud.yml -f ../event_brokers/redpanda.yml up -d
 
 # Apache Kafka
 docker compose -f cloud.yml -f ../event_brokers/kafka.yml up -d
+
+# RabbitMQ
+docker compose -f cloud.yml -f ../event_brokers/rabbitmq.yml up -d
 ```
 
 Then enable the broker in your `.env`:
@@ -45,6 +51,11 @@ EVENT_BROKER_NATS_JETSTREAM=true
 EVENT_BROKER_ENABLED=true
 EVENT_BROKER_ADAPTER=kafka
 EVENT_BROKER_URLS=edge_event_broker:9092
+
+# RabbitMQ
+EVENT_BROKER_ENABLED=true
+EVENT_BROKER_ADAPTER=rabbitmq
+EVENT_BROKER_URLS=amqp://edge_event_broker:5672
 ```
 
 ## Files
@@ -54,6 +65,7 @@ event_brokers/
 ├── nats_js.yml         — NATS (JetStream enabled) + NUI web UI
 ├── redpanda.yml        — Redpanda + Redpanda Console
 ├── kafka.yml           — Apache Kafka (KRaft) + Kafka UI
+├── rabbitmq.yml        — RabbitMQ + Management UI
 └── config/
     ├── nats.conf       — NATS server config (JetStream, TLS + cluster blocks commented out)
     └── nui-context.json — NUI pre-configured connection to edge_event_broker
@@ -63,8 +75,8 @@ event_brokers/
 
 ```bash
 EVENT_BROKER_ENABLED=true|false          # gate — all else ignored when false (default: false)
-EVENT_BROKER_ADAPTER=nats|kafka          # required when enabled
-EVENT_BROKER_URLS=...                    # NATS: nats://host:port  |  Kafka: host:port
+EVENT_BROKER_ADAPTER=nats|kafka|rabbitmq # required when enabled
+EVENT_BROKER_URLS=...                    # NATS: nats://host:port  |  Kafka: host:port  |  RabbitMQ: amqp://host:port
 
 # NATS options (optional)
 EVENT_BROKER_NATS_JETSTREAM=true         # enable durable JetStream log (default: false)
@@ -81,13 +93,19 @@ EVENT_BROKER_KAFKA_PASSWORD=
 EVENT_BROKER_KAFKA_SASL_MECHANISM=plain  # plain (default) | scram_sha_256 | scram_sha_512
 EVENT_BROKER_KAFKA_SSL=true              # enable TLS for external/public brokers
 
+EVENT_BROKER_RABBITMQ_SSL=true           # enable TLS for external/public brokers (CloudAMQP, etc.)
+
 # Core identifier — included in every event envelope (default: "default")
 CORE_NAME=prod-us
 ```
 
 ## Bring Your Own Broker
 
-These compose files are for convenience. If you already run a broker, skip them entirely — just point `EVENT_BROKER_URLS` at your existing instance. Any Kafka-compatible broker (Confluent Cloud, Aiven, MSK, Upstash, etc.) works with `EVENT_BROKER_ADAPTER=kafka`. Any NATS server works with `EVENT_BROKER_ADAPTER=nats`; enable JetStream on the server and set `EVENT_BROKER_NATS_JETSTREAM=true` for durable delivery.
+These compose files are for convenience. If you already run a broker, skip them entirely — just point `EVENT_BROKER_URLS` at your existing instance.
+
+- Any Kafka-compatible broker (Confluent Cloud, Aiven, MSK, Upstash, etc.) works with `EVENT_BROKER_ADAPTER=kafka`.
+- Any NATS server works with `EVENT_BROKER_ADAPTER=nats`; enable JetStream on the server and set `EVENT_BROKER_NATS_JETSTREAM=true` for durable delivery.
+- Any RabbitMQ instance works with `EVENT_BROKER_ADAPTER=rabbitmq`; events are published to a durable topic exchange `edge.events` with routing key = event type.
 
 ## Events Published
 

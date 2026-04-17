@@ -23,6 +23,7 @@ volumes:
   production_edge_event_broker_nats_data: {}
   production_edge_event_broker_nui_data: {}
   production_edge_event_broker_redpanda_data: {}
+  production_edge_event_broker_rabbitmq_data: {}
 
 services:
   # Edge Admin
@@ -54,10 +55,11 @@ services:
       - "edge-vpn.localtest.me:172.25.0.100"
       - "edge-vpn-broker.localtest.me:172.25.0.100"
       - "edge-admin.localtest.me:172.25.0.100"
-      # Both brokers resolve via /etc/hosts — bypasses Docker DNS which netclient breaks
+      # All brokers resolve via /etc/hosts — bypasses Docker DNS which netclient breaks
       # by rewriting /etc/resolv.conf on VPN join.
       - "edge_event_broker_nats:172.25.0.110"
       - "edge_event_broker_kafka:172.25.0.111"
+      - "edge_event_broker_rabbitmq:172.25.0.112"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -103,10 +105,11 @@ services:
     extra_hosts:
       - "edge-vpn.localtest.me:172.25.0.100"
       - "edge-vpn-broker.localtest.me:172.25.0.100"
-      # Both brokers resolve via /etc/hosts — bypasses Docker DNS which netclient breaks
+      # All brokers resolve via /etc/hosts — bypasses Docker DNS which netclient breaks
       # by rewriting /etc/resolv.conf on VPN join.
       - "edge_event_broker_nats:172.25.0.110"
       - "edge_event_broker_kafka:172.25.0.111"
+      - "edge_event_broker_rabbitmq:172.25.0.112"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -154,10 +157,11 @@ services:
     extra_hosts:
       - "edge-vpn.localtest.me:172.25.0.100"
       - "edge-vpn-broker.localtest.me:172.25.0.100"
-      # Both brokers resolve via /etc/hosts — bypasses Docker DNS which netclient breaks
+      # All brokers resolve via /etc/hosts — bypasses Docker DNS which netclient breaks
       # by rewriting /etc/resolv.conf on VPN join.
       - "edge_event_broker_nats:172.25.0.110"
       - "edge_event_broker_kafka:172.25.0.111"
+      - "edge_event_broker_rabbitmq:172.25.0.112"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -404,44 +408,43 @@ services:
       timeout: 5s
       retries: 3
 
-
   # Event Brokers
-  edge_event_broker_nats:
-    image: nats:alpine
-    container_name: production_edge_event_broker_nats
-    networks:
-      production_edge_core:
-        ipv4_address: 172.25.0.110
-    volumes:
-      - production_edge_event_broker_nats_data:/data
-      - ./compose/edge_event_broker/nats.conf:/etc/nats/nats.conf:ro
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8222/healthz?js-enabled-only=true | grep -q ok"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 10s
-    ports:
-      - "44222:4222"   # NATS client
-      - "48222:8222"   # NATS monitoring
-    command: ["-c", "/etc/nats/nats.conf"]
+  # edge_event_broker_nats:
+  #   image: nats:alpine
+  #   container_name: production_edge_event_broker_nats
+  #   networks:
+  #     production_edge_core:
+  #       ipv4_address: 172.25.0.110
+  #   volumes:
+  #     - production_edge_event_broker_nats_data:/data
+  #     - ./compose/edge_event_broker/nats.conf:/etc/nats/nats.conf:ro
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "wget -qO- http://localhost:8222/healthz?js-enabled-only=true | grep -q ok"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 5
+  #     start_period: 10s
+  #   ports:
+  #     - "44222:4222"   # NATS client
+  #     - "48222:8222"   # NATS monitoring
+  #   command: ["-c", "/etc/nats/nats.conf"]
 
-  edge_event_broker_nats_ui:
-    image: ghcr.io/nats-nui/nui:latest
-    container_name: production_edge_event_broker_nats_ui
-    networks:
-      - production_edge_core
-    volumes:
-      - production_edge_event_broker_nui_data:/db
-      - ./compose/edge_event_broker/nui-context.json:/clicontexts/edge-event-broker.json:ro
-    depends_on:
-      edge_event_broker_nats:
-        condition: service_healthy
-    ports:
-      - "41311:31311"   # NUI web UI
-    command:
-      - --db-path=/db/nui.db
-      - --nats-cli-contexts=/clicontexts
+  # edge_event_broker_nats_ui:
+  #   image: ghcr.io/nats-nui/nui:latest
+  #   container_name: production_edge_event_broker_nats_ui
+  #   networks:
+  #     - production_edge_core
+  #   volumes:
+  #     - production_edge_event_broker_nui_data:/db
+  #     - ./compose/edge_event_broker/nui-context.json:/clicontexts/edge-event-broker.json:ro
+  #   depends_on:
+  #     edge_event_broker_nats:
+  #       condition: service_healthy
+  #   ports:
+  #     - "41311:31311"   # NUI web UI
+  #   command:
+  #     - --db-path=/db/nui.db
+  #     - --nats-cli-contexts=/clicontexts
 
   # edge_event_broker_kafka:
   #   container_name: production_edge_event_broker_kafka
@@ -487,3 +490,24 @@ services:
   #     - LOGGER_LEVEL=warn
   #   ports:
   #     - "49080:8080"   # Redpanda Console
+
+  # edge_event_broker_rabbitmq:
+  #   image: rabbitmq:4-management-alpine
+  #   container_name: production_edge_event_broker_rabbitmq
+  #   networks:
+  #     production_edge_core:
+  #       ipv4_address: 172.25.0.112
+  #   volumes:
+  #     - production_edge_event_broker_rabbitmq_data:/var/lib/rabbitmq
+  #     - ./compose/edge_event_broker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+  #     - ./compose/edge_event_broker/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+  #   healthcheck:
+  #     test: ["CMD", "rabbitmq-diagnostics", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 30s
+  #   ports:
+  #     - "45672:5672"    # AMQP
+  #     - "41567:15672"   # Management UI
+  #     - "41569:15692"   # Prometheus

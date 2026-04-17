@@ -17,6 +17,12 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
 
     1. `EdgeAdmin.EventBroker.Adapters.Kafka` — GenServer that starts the
        `:brod` client and per-topic producers.
+
+  ## Children (RabbitMQ adapter)
+
+    1. `EdgeAdmin.EventBroker.Adapters.RabbitMQ` — GenServer that opens an
+       AMQP connection + channel, declares the topic exchange, and monitors
+       the connection for auto-reconnect.
   """
 
   use Supervisor
@@ -66,6 +72,10 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
 
   defp build_children(:kafka) do
     [EdgeAdmin.EventBroker.Adapters.Kafka]
+  end
+
+  defp build_children(:rabbitmq) do
+    [EdgeAdmin.EventBroker.Adapters.RabbitMQ]
   end
 
   # Auth precedence: token → username/password → nkey+jwt → nkey only → none

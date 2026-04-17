@@ -8,7 +8,7 @@ Interactive viewer: `/asyncdoc` on a running admin. Raw spec: `GET /api/asyncapi
 
 ## Overview
 
-Edge Admin publishes lifecycle events to a configured message broker (NATS JetStream or Kafka/Redpanda). All events follow the [CloudEvents 1.0](https://cloudevents.io) spec. Edge Admin publishes and forgets — it has no knowledge of consumers.
+Edge Admin publishes lifecycle events to a configured message broker (NATS, Kafka/Redpanda, or RabbitMQ). All events follow the [CloudEvents 1.0](https://cloudevents.io) spec. Edge Admin publishes and forgets — it has no knowledge of consumers.
 
 ### Event Envelope
 
@@ -32,7 +32,7 @@ Every event is wrapped in a CloudEvents envelope:
 | `specversion`     | Always `"1.0"`                                                                                                     |
 | `id`              | UUID v4 — unique per event, use for consumer-side dedup                                                            |
 | `source`          | Always `"https://github.com/wenet-ec/edge-core"`                                                                   |
-| `type`            | Event type — matches NATS subject exactly (see tables below)                                                       |
+| `type`            | Event type — doubles as NATS subject and RabbitMQ routing key (see tables below)                                   |
 | `time`            | When the state change happened in admin (ISO 8601)                                                                 |
 | `datacontenttype` | Always `"application/json"`                                                                                        |
 | `corename`        | CloudEvents extension. Identifies the publishing core instance. Set via `CORE_NAME` env var (default: `"default"`) |
@@ -42,17 +42,9 @@ Every event is wrapped in a CloudEvents envelope:
 
 ## Subjects / Topics
 
-### NATS JetStream
+### NATS
 
-The `type` value is also the NATS subject. Three streams capture all events:
-
-```
-Stream: EDGE_NODE_EVENTS          captures: edge.node.>
-Stream: EDGE_EXECUTION_EVENTS     captures: edge.execution.>
-Stream: EDGE_SELF_UPDATE_EVENTS   captures: edge.self_update.>
-```
-
-Subscription examples:
+The `type` value is also the NATS subject. Subscription examples:
 
 ```
 edge.node.>              ← all node events
@@ -60,6 +52,18 @@ edge.node.status_changed ← only status transitions (server-side filter)
 edge.execution.completed ← only completed executions
 edge.>                   ← everything
 ```
+
+**JetStream mode** (`EVENT_BROKER_NATS_JETSTREAM=true`): three durable streams are auto-created on startup:
+
+```
+Stream: EDGE_NODE_EVENTS          captures: edge.node.>
+Stream: EDGE_EXECUTION_EVENTS     captures: edge.execution.>
+Stream: EDGE_SELF_UPDATE_EVENTS   captures: edge.self_update.>
+```
+
+Retention is configured on the NATS server, not by Edge Core.
+
+**Pub/sub mode** (default): messages are delivered to active subscribers only — no persistence. Missed messages are gone.
 
 ### Kafka / Redpanda
 
@@ -73,6 +77,21 @@ Three topics, one per domain:
 
 Partition key ensures ordering per entity, parallel across entities. Filter by event type using the `type` field in the envelope.
 
+### RabbitMQ
+
+All events are published to a single durable topic exchange: `edge.events`. The routing key is the event `type` (e.g. `edge.node.registered`).
+
+Binding examples:
+
+```
+edge.node.*              ← all node events
+edge.node.status_changed ← only status transitions
+edge.execution.#         ← all execution events
+edge.#                   ← everything
+```
+
+Consumer queue durability is the consumer's choice — bind a durable queue to persist messages across restarts, or a transient queue for live-only consumption. Edge Core publishes with `persistent: true` (messages written to disk before broker ACKs).
+
 ---
 
 ## Event Types
@@ -81,7 +100,7 @@ Partition key ensures ordering per entity, parallel across entities. Filter by e
 
 All node events share the same `data` shape unless noted.
 
-| Type                         | NATS subject                 | Description                                                              |
+| Type                         | NATS subject / RabbitMQ routing key | Description                                                              |
 | ---------------------------- | ---------------------------- | ------------------------------------------------------------------------ |
 | `edge.node.registered`       | `edge.node.registered`       | First-time enrollment — new `node_id` seen for the first time            |
 | `edge.node.reregistered`     | `edge.node.reregistered`     | Re-enrollment — existing node came back (reboot, redeploy, etc.)         |
@@ -183,7 +202,7 @@ Notes:
 
 Both events share the same `data` shape.
 
-| Type                         | NATS subject                 | Description                                           |
+| Type                         | NATS subject / RabbitMQ routing key | Description                                           |
 | ---------------------------- | ---------------------------- | ----------------------------------------------------- |
 | `edge.self_update.created`   | `edge.self_update.created`   | Self-update request created with targeting definition |
 | `edge.self_update.completed` | `edge.self_update.completed` | Batch finished — `summary` populated                  |
@@ -227,11 +246,13 @@ Notes:
 
 ## Semantics
 
-**Durable append-only log** — not fire-and-forget pub/sub.
+Edge Core publishes accurately regardless of broker. Durability, replay, and retention are the broker's and consumer's responsibility.
 
-- Consumers can replay from an offset (NATS JetStream consumer position, Kafka consumer group offset)
-- Multiple independent consumers at different positions
-- Each publish is a full snapshot — not a diff. If events are missed, the next event is still self-contained.
+- **NATS JetStream / Kafka** — durable append-only log. Consumers can replay from an offset (JetStream consumer position, Kafka consumer group offset). Multiple independent consumers at different positions.
+- **NATS pub/sub** — fire-and-forget. Messages are delivered to active subscribers only; missed messages are gone.
+- **RabbitMQ** — delivery semantics depend on consumer queue configuration. Durable queue = messages survive broker restart; transient queue = live-only. Core always publishes with `persistent: true`.
+
+In all cases: each publish is a **full snapshot**, not a diff. If events are missed, the next event is still self-contained.
 
 ---
 

@@ -1,9 +1,6 @@
 # deploy/production/event_broker.yml
 #
-# Event broker services — opt-in, operator uncomments the broker they want.
-# Usage: docker compose -f deploy/production/cloud.yml -f deploy/production/event_broker.yml up -d
-#
-# Set EVENT_BROKER_ENABLED=true and EVENT_BROKER_ADAPTER=nats|kafka
+# Set EVENT_BROKER_ENABLED=true and EVENT_BROKER_ADAPTER=nats|kafka|rabbitmq
 # in .envs/.edge_admin before starting.
 
 networks:
@@ -14,6 +11,7 @@ volumes:
   production_edge_event_broker_nats_data: {}
   production_edge_event_broker_nui_data: {}
   production_edge_event_broker_redpanda_data: {}
+  production_edge_event_broker_rabbitmq_data: {}
 
 services:
 
@@ -64,53 +62,85 @@ services:
   # Set EVENT_BROKER_ADAPTER=kafka in .envs/.edge_admin
   # ---------------------------------------------------------------------------
 
-  # edge_event_broker_kafka:
-  #   container_name: production_edge_event_broker_kafka
-  #   image: docker.redpanda.com/redpandadata/redpanda:latest
-  #   volumes:
-  #     - production_edge_event_broker_redpanda_data:/var/lib/redpanda/data
-  #     # TLS certs — uncomment when enabling TLS (see command flags below):
-  #     # - /etc/redpanda/tls:/etc/redpanda/tls:ro
-  #   networks:
-  #     - production_edge_core
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy|Degraded'"]
-  #     interval: 10s
-  #     timeout: 3s
-  #     retries: 5
-  #     start_period: 5s
-  #   ports:
-  #     - "49092:19092"   # Kafka external
-  #   command:
-  #     - redpanda
-  #     - start
-  #     - --node-id 1
-  #     - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
-  #     - --advertise-kafka-addr internal://edge_event_broker_kafka:9092,external://YOUR_PUBLIC_HOSTNAME:19092
-  #     - --rpc-addr 0.0.0.0:33145
-  #     - --advertise-rpc-addr edge_event_broker_kafka:33145
-  #     - --set redpanda.default_topic_replications=1
-  #     - --set redpanda.default_topic_partitions=1
-  #     # TLS — uncomment to expose the external listener with TLS.
-  #     # Also set EVENT_BROKER_KAFKA_SSL=true in .envs/.edge_admin.
-  #     # Mount your certs first: add "- /etc/redpanda/tls:/etc/redpanda/tls:ro" to volumes above.
-  #     # - --set redpanda.kafka_api_tls[0].name=external
-  #     # - --set redpanda.kafka_api_tls[0].enabled=true
-  #     # - --set redpanda.kafka_api_tls[0].cert_file=/etc/redpanda/tls/server.crt
-  #     # - --set redpanda.kafka_api_tls[0].key_file=/etc/redpanda/tls/server.key
-  #     # - --set redpanda.kafka_api_tls[0].truststore_file=/etc/redpanda/tls/ca.crt   # optional: mTLS / self-signed CA
+  edge_event_broker_kafka:
+    container_name: production_edge_event_broker_kafka
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    volumes:
+      - production_edge_event_broker_redpanda_data:/var/lib/redpanda/data
+      # TLS certs — uncomment when enabling TLS (see command flags below):
+      # - /etc/redpanda/tls:/etc/redpanda/tls:ro
+    networks:
+      - production_edge_core
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy|Degraded'"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    ports:
+      - "49092:19092"   # Kafka external
+    command:
+      - redpanda
+      - start
+      - --node-id 1
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://edge_event_broker_kafka:9092,external://YOUR_PUBLIC_HOSTNAME:19092
+      - --rpc-addr 0.0.0.0:33145
+      - --advertise-rpc-addr edge_event_broker_kafka:33145
+      - --set redpanda.default_topic_replications=1
+      - --set redpanda.default_topic_partitions=1
+      # TLS — uncomment to expose the external listener with TLS.
+      # Also set EVENT_BROKER_KAFKA_SSL=true in .envs/.edge_admin.
+      # Mount your certs first: add "- /etc/redpanda/tls:/etc/redpanda/tls:ro" to volumes above.
+      # - --set redpanda.kafka_api_tls[0].name=external
+      # - --set redpanda.kafka_api_tls[0].enabled=true
+      # - --set redpanda.kafka_api_tls[0].cert_file=/etc/redpanda/tls/server.crt
+      # - --set redpanda.kafka_api_tls[0].key_file=/etc/redpanda/tls/server.key
+      # - --set redpanda.kafka_api_tls[0].truststore_file=/etc/redpanda/tls/ca.crt   # optional: mTLS / self-signed CA
 
-  # edge_event_broker_kafka_ui:
-  #   image: docker.redpanda.com/redpandadata/console:latest
-  #   container_name: production_edge_event_broker_kafka_ui
-  #   networks:
-  #     - production_edge_core
-  #   depends_on:
-  #     edge_event_broker_kafka:
-  #       condition: service_healthy
-  #   environment:
-  #     - KAFKA_BROKERS=edge_event_broker_kafka:9092
-  #     - ANALYTICS_ENABLED=false
-  #     - LOGGER_LEVEL=warn
-  #   ports:
-  #     - "49080:8080"   # Redpanda Console
+  edge_event_broker_kafka_ui:
+    image: docker.redpanda.com/redpandadata/console:latest
+    container_name: production_edge_event_broker_kafka_ui
+    networks:
+      - production_edge_core
+    depends_on:
+      edge_event_broker_kafka:
+        condition: service_healthy
+    environment:
+      - KAFKA_BROKERS=edge_event_broker_kafka:9092
+      - ANALYTICS_ENABLED=false
+      - LOGGER_LEVEL=warn
+    ports:
+      - "49080:8080"   # Redpanda Console
+
+  # ---------------------------------------------------------------------------
+  # RabbitMQ
+  # Set EVENT_BROKER_ADAPTER=rabbitmq in .envs/.edge_admin
+  # ---------------------------------------------------------------------------
+
+  edge_event_broker_rabbitmq:
+    image: rabbitmq:management-alpine
+    container_name: production_edge_event_broker_rabbitmq
+    networks:
+      production_edge_core:
+        ipv4_address: 172.25.0.112
+    volumes:
+      - production_edge_event_broker_rabbitmq_data:/var/lib/rabbitmq
+      - ./compose/edge_event_broker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./compose/edge_event_broker/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      # TLS certs — uncomment when enabling TLS (see rabbitmq.conf TLS block):
+      # - /etc/rabbitmq/tls:/etc/rabbitmq/tls:ro
+    environment:
+      - RABBITMQ_DEFAULT_USER=edge
+      - RABBITMQ_DEFAULT_PASS=edge
+      - RABBITMQ_ERLANG_COOKIE=edge-event-broker-cookie
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    ports:
+      - "45672:5672"    # AMQP
+      - "41567:15672"   # Management UI
+      - "41569:15692"   # Prometheus metrics

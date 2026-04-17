@@ -205,6 +205,7 @@ ADMIN_DISCOVERY_PORT=44000
 # calls are no-ops when disabled.
 
 # EVENT_BROKER_ENABLED=true
+# CORE_NAME=                            # included in every envelope; defaults to "default"
 
 # NATS (pub/sub by default; add EVENT_BROKER_NATS_JETSTREAM=true for durable log):
 # EVENT_BROKER_ADAPTER=nats
@@ -225,8 +226,10 @@ ADMIN_DISCOVERY_PORT=44000
 # EVENT_BROKER_KAFKA_SASL_MECHANISM=plain   # plain (default), scram_sha_256, scram_sha_512
 # EVENT_BROKER_KAFKA_SSL=true               # enable TLS — required for public/external brokers (Redpanda Cloud, Confluent Cloud, Aiven, etc.)
 
-# Core identifier — included in every event envelope for multi-core broker setups.
-# CORE_NAME=
+# RabbitMQ:
+# EVENT_BROKER_ADAPTER=rabbitmq
+# EVENT_BROKER_URLS=amqp://edge_event_broker_rabbitmq:5672   # embed credentials: amqp://user:pass@host:port
+# EVENT_BROKER_RABBITMQ_SSL=true              # enable TLS — required for public/external brokers (CloudAMQP, etc.)
 
 # =============================================================================
 # Background Workers & Schedulers

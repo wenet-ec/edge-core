@@ -130,6 +130,11 @@
     "messages": {
       "executionCancelledMessage": {
         "bindings": {
+          "amqp": {
+            "bindingVersion": "0.3.0",
+            "contentEncoding": "UTF-8",
+            "messageType": "application/json"
+          },
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
@@ -175,6 +180,11 @@
       },
       "executionCompletedMessage": {
         "bindings": {
+          "amqp": {
+            "bindingVersion": "0.3.0",
+            "contentEncoding": "UTF-8",
+            "messageType": "application/json"
+          },
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
@@ -220,6 +230,11 @@
       },
       "executionCreatedMessage": {
         "bindings": {
+          "amqp": {
+            "bindingVersion": "0.3.0",
+            "contentEncoding": "UTF-8",
+            "messageType": "application/json"
+          },
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
@@ -265,6 +280,11 @@
       },
       "executionExpiredMessage": {
         "bindings": {
+          "amqp": {
+            "bindingVersion": "0.3.0",
+            "contentEncoding": "UTF-8",
+            "messageType": "application/json"
+          },
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
@@ -310,6 +330,11 @@
       },
       "executionSentMessage": {
         "bindings": {
+          "amqp": {
+            "bindingVersion": "0.3.0",
+            "contentEncoding": "UTF-8",
+            "messageType": "application/json"
+          },
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
@@ -355,6 +380,11 @@
       },
       "nodeClusterChangedMessage": {
         "bindings": {
+          "amqp": {
+            "bindingVersion": "0.3.0",
+            "contentEncoding": "UTF-8",
+            "messageType": "application/json"
+          },
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
@@ -401,6 +431,11 @@
       },
       "nodeDeletedMessage": {
         "bindings": {
+          "amqp": {
+            "bindingVersion": "0.3.0",
+            "contentEncoding": "UTF-8",
+            "messageType": "application/json"
+          },
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
@@ -446,6 +481,11 @@
       },
       "nodeRegisteredMessage": {
         "bindings": {
+          "amqp": {
+            "bindingVersion": "0.3.0",
+            "contentEncoding": "UTF-8",
+            "messageType": "application/json"
+          },
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
@@ -491,6 +531,11 @@
       },
       "nodeReregisteredMessage": {
         "bindings": {
+          "amqp": {
+            "bindingVersion": "0.3.0",
+            "contentEncoding": "UTF-8",
+            "messageType": "application/json"
+          },
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
@@ -536,6 +581,11 @@
       },
       "nodeStatusChangedMessage": {
         "bindings": {
+          "amqp": {
+            "bindingVersion": "0.3.0",
+            "contentEncoding": "UTF-8",
+            "messageType": "application/json"
+          },
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
@@ -582,6 +632,11 @@
       },
       "nodeUpdateTriggeredMessage": {
         "bindings": {
+          "amqp": {
+            "bindingVersion": "0.3.0",
+            "contentEncoding": "UTF-8",
+            "messageType": "application/json"
+          },
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
@@ -628,6 +683,11 @@
       },
       "nodeVersionChangedMessage": {
         "bindings": {
+          "amqp": {
+            "bindingVersion": "0.3.0",
+            "contentEncoding": "UTF-8",
+            "messageType": "application/json"
+          },
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
@@ -674,6 +734,11 @@
       },
       "selfUpdateCompletedMessage": {
         "bindings": {
+          "amqp": {
+            "bindingVersion": "0.3.0",
+            "contentEncoding": "UTF-8",
+            "messageType": "application/json"
+          },
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
@@ -714,6 +779,11 @@
       },
       "selfUpdateCreatedMessage": {
         "bindings": {
+          "amqp": {
+            "bindingVersion": "0.3.0",
+            "contentEncoding": "UTF-8",
+            "messageType": "application/json"
+          },
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
@@ -1027,6 +1097,10 @@
       }
     },
     "securitySchemes": {
+      "amqpPlain": {
+        "description": "RabbitMQ username/password auth. Embed credentials in EVENT_BROKER_URLS (amqp://user:pass@host:port) or set EVENT_BROKER_RABBITMQ_USERNAME / EVENT_BROKER_RABBITMQ_PASSWORD separately (separate vars take precedence). Enable TLS with EVENT_BROKER_RABBITMQ_SSL=true.",
+        "type": "userPassword"
+      },
       "kafkaSasl": {
         "description": "Kafka SASL auth. Set via EVENT_BROKER_KAFKA_USERNAME / EVENT_BROKER_KAFKA_PASSWORD / EVENT_BROKER_KAFKA_SASL_MECHANISM.",
         "type": "scramSha256"
@@ -1040,7 +1114,7 @@
   },
   "defaultContentType": "application/json",
   "info": {
-    "description": "Lifecycle events published by Edge Admin to a configured message broker (NATS JetStream or Kafka/Redpanda).\n\nEdge Admin publishes and forgets — it has no knowledge of consumers.\nAll messages follow the [CloudEvents 1.0](https://cloudevents.io) spec.\n`corename` is a CloudEvents extension attribute identifying the publishing Edge Admin instance.\n\n```json\n{\n  \"specversion\": \"1.0\",\n  \"id\": \"<uuid v4>\",\n  \"source\": \"https://github.com/wenet-ec/edge-core\",\n  \"type\": \"edge.node.registered\",\n  \"time\": \"2026-04-13T10:00:00Z\",\n  \"datacontenttype\": \"application/json\",\n  \"corename\": \"prod-us\",\n  \"data\": { ... }\n}\n```\n\nEnable publishing by setting `EVENT_BROKER_ENABLED=true` on the admin.\n\n**Explore:**\n- [AsyncAPI viewer](/asyncdoc) — this page\n- [Raw spec](/api/asyncapi) — AsyncAPI JSON\n\n**REST API:** See the [Swagger UI](/swaggerui), [ReDoc](/redoc), or [download the OpenAPI spec](/api/openapi).\n",
+    "description": "Lifecycle events published by Edge Admin to a configured message broker (NATS, Kafka/Redpanda, or RabbitMQ).\n\nEdge Admin publishes and forgets — it has no knowledge of consumers.\nAll messages follow the [CloudEvents 1.0](https://cloudevents.io) spec.\n`corename` is a CloudEvents extension attribute identifying the publishing Edge Admin instance.\n\n```json\n{\n  \"specversion\": \"1.0\",\n  \"id\": \"<uuid v4>\",\n  \"source\": \"https://github.com/wenet-ec/edge-core\",\n  \"type\": \"edge.node.registered\",\n  \"time\": \"2026-04-13T10:00:00Z\",\n  \"datacontenttype\": \"application/json\",\n  \"corename\": \"prod-us\",\n  \"data\": { ... }\n}\n```\n\nEnable publishing by setting `EVENT_BROKER_ENABLED=true` on the admin.\n\n**Explore:**\n- [AsyncAPI viewer](/asyncdoc) — this page\n- [Raw spec](/api/asyncapi) — AsyncAPI JSON\n\n**REST API:** See the [Swagger UI](/swaggerui), [ReDoc](/redoc), or [download the OpenAPI spec](/api/openapi).\n",
     "title": "Edge Admin AsyncAPI",
     "version": "0.2.0"
   },
@@ -1048,6 +1122,12 @@
     "publish_edge_node_registered": {
       "action": "send",
       "bindings": {
+        "amqp": {
+          "bindingVersion": "0.3.0",
+          "cc": [],
+          "deliveryMode": 1,
+          "mandatory": false
+        },
         "kafka": { "bindingVersion": "0.5.0" },
         "nats": { "bindingVersion": "0.1.0" }
       },
@@ -1056,6 +1136,12 @@
     "publish_edge_node_reregistered": {
       "action": "send",
       "bindings": {
+        "amqp": {
+          "bindingVersion": "0.3.0",
+          "cc": [],
+          "deliveryMode": 1,
+          "mandatory": false
+        },
         "kafka": { "bindingVersion": "0.5.0" },
         "nats": { "bindingVersion": "0.1.0" }
       },
@@ -1064,6 +1150,12 @@
     "publish_edge_node_version_changed": {
       "action": "send",
       "bindings": {
+        "amqp": {
+          "bindingVersion": "0.3.0",
+          "cc": [],
+          "deliveryMode": 1,
+          "mandatory": false
+        },
         "kafka": { "bindingVersion": "0.5.0" },
         "nats": { "bindingVersion": "0.1.0" }
       },
@@ -1072,6 +1164,12 @@
     "publish_edge_node_status_changed": {
       "action": "send",
       "bindings": {
+        "amqp": {
+          "bindingVersion": "0.3.0",
+          "cc": [],
+          "deliveryMode": 1,
+          "mandatory": false
+        },
         "kafka": { "bindingVersion": "0.5.0" },
         "nats": { "bindingVersion": "0.1.0" }
       },
@@ -1080,6 +1178,12 @@
     "publish_edge_node_cluster_changed": {
       "action": "send",
       "bindings": {
+        "amqp": {
+          "bindingVersion": "0.3.0",
+          "cc": [],
+          "deliveryMode": 1,
+          "mandatory": false
+        },
         "kafka": { "bindingVersion": "0.5.0" },
         "nats": { "bindingVersion": "0.1.0" }
       },
@@ -1088,6 +1192,12 @@
     "publish_edge_node_update_triggered": {
       "action": "send",
       "bindings": {
+        "amqp": {
+          "bindingVersion": "0.3.0",
+          "cc": [],
+          "deliveryMode": 1,
+          "mandatory": false
+        },
         "kafka": { "bindingVersion": "0.5.0" },
         "nats": { "bindingVersion": "0.1.0" }
       },
@@ -1096,6 +1206,12 @@
     "publish_edge_node_deleted": {
       "action": "send",
       "bindings": {
+        "amqp": {
+          "bindingVersion": "0.3.0",
+          "cc": [],
+          "deliveryMode": 1,
+          "mandatory": false
+        },
         "kafka": { "bindingVersion": "0.5.0" },
         "nats": { "bindingVersion": "0.1.0" }
       },
@@ -1104,6 +1220,12 @@
     "publish_edge_execution_created": {
       "action": "send",
       "bindings": {
+        "amqp": {
+          "bindingVersion": "0.3.0",
+          "cc": [],
+          "deliveryMode": 1,
+          "mandatory": false
+        },
         "kafka": { "bindingVersion": "0.5.0" },
         "nats": { "bindingVersion": "0.1.0" }
       },
@@ -1112,6 +1234,12 @@
     "publish_edge_execution_sent": {
       "action": "send",
       "bindings": {
+        "amqp": {
+          "bindingVersion": "0.3.0",
+          "cc": [],
+          "deliveryMode": 1,
+          "mandatory": false
+        },
         "kafka": { "bindingVersion": "0.5.0" },
         "nats": { "bindingVersion": "0.1.0" }
       },
@@ -1120,6 +1248,12 @@
     "publish_edge_execution_completed": {
       "action": "send",
       "bindings": {
+        "amqp": {
+          "bindingVersion": "0.3.0",
+          "cc": [],
+          "deliveryMode": 1,
+          "mandatory": false
+        },
         "kafka": { "bindingVersion": "0.5.0" },
         "nats": { "bindingVersion": "0.1.0" }
       },
@@ -1128,6 +1262,12 @@
     "publish_edge_execution_cancelled": {
       "action": "send",
       "bindings": {
+        "amqp": {
+          "bindingVersion": "0.3.0",
+          "cc": [],
+          "deliveryMode": 1,
+          "mandatory": false
+        },
         "kafka": { "bindingVersion": "0.5.0" },
         "nats": { "bindingVersion": "0.1.0" }
       },
@@ -1136,6 +1276,12 @@
     "publish_edge_execution_expired": {
       "action": "send",
       "bindings": {
+        "amqp": {
+          "bindingVersion": "0.3.0",
+          "cc": [],
+          "deliveryMode": 1,
+          "mandatory": false
+        },
         "kafka": { "bindingVersion": "0.5.0" },
         "nats": { "bindingVersion": "0.1.0" }
       },
@@ -1144,6 +1290,12 @@
     "publish_edge_self_update_created": {
       "action": "send",
       "bindings": {
+        "amqp": {
+          "bindingVersion": "0.3.0",
+          "cc": [],
+          "deliveryMode": 1,
+          "mandatory": false
+        },
         "kafka": { "bindingVersion": "0.5.0" },
         "nats": { "bindingVersion": "0.1.0" }
       },
@@ -1152,6 +1304,12 @@
     "publish_edge_self_update_completed": {
       "action": "send",
       "bindings": {
+        "amqp": {
+          "bindingVersion": "0.3.0",
+          "cc": [],
+          "deliveryMode": 1,
+          "mandatory": false
+        },
         "kafka": { "bindingVersion": "0.5.0" },
         "nats": { "bindingVersion": "0.1.0" }
       },
@@ -1165,11 +1323,17 @@
       "protocol": "kafka",
       "security": [{ "$ref": "#/components/securitySchemes/kafkaSasl" }]
     },
-    "natsJetStream": {
-      "description": "NATS JetStream broker (default). Configure via EVENT_BROKER_URLS. Optional token auth via EVENT_BROKER_NATS_TOKEN.",
+    "nats": {
+      "description": "NATS broker. Configure via EVENT_BROKER_URLS. Optional token auth via EVENT_BROKER_NATS_TOKEN. By default, pub/sub with no persistence. Set EVENT_BROKER_NATS_JETSTREAM=true to enable durable JetStream log — three streams are auto-created on startup: EDGE_NODE_EVENTS, EDGE_EXECUTION_EVENTS, EDGE_SELF_UPDATE_EVENTS. Retention is configured on the broker.",
       "host": "localhost:4222",
       "protocol": "nats",
       "security": [{ "$ref": "#/components/securitySchemes/natsToken" }]
+    },
+    "rabbitmq": {
+      "description": "RabbitMQ broker. Configure via EVENT_BROKER_URLS (single amqp:// or amqps:// URL). All events are published to a durable topic exchange (default: `edge.events`). Routing key = event type (e.g. `edge.node.registered`). Consumer queue durability is the consumer's choice.",
+      "host": "localhost:5672",
+      "protocol": "amqp",
+      "security": [{ "$ref": "#/components/securitySchemes/amqpPlain" }]
     }
   }
 }

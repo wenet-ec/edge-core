@@ -205,7 +205,8 @@ ADMIN_DISCOVERY_PORT=44000
 # Set EVENT_BROKER_ENABLED=true to enable. Disabled by default — all publish
 # calls are no-ops when disabled.
 
-EVENT_BROKER_ENABLED=true
+# EVENT_BROKER_ENABLED=true
+# CORE_NAME=                            # included in every envelope; defaults to "default"
 
 # NATS (pub/sub by default; add EVENT_BROKER_NATS_JETSTREAM=true for durable log):
 # EVENT_BROKER_ADAPTER=nats
@@ -218,7 +219,7 @@ EVENT_BROKER_ENABLED=true
 # EVENT_BROKER_NATS_NKEY_SEED=         # NKey seed (standalone or with JWT)
 # EVENT_BROKER_NATS_JWT=               # JWT credential — used alongside NKEY_SEED
 
-# Kafka / Redpanda (uncomment to use, comment out nats above):
+# Kafka / Redpanda (uncomment to use, comment out the other brokers):
 # EVENT_BROKER_ADAPTER=kafka
 # EVENT_BROKER_URLS=edge_event_broker_kafka:9092   # comma-separated for cluster
 # EVENT_BROKER_KAFKA_USERNAME=
@@ -226,8 +227,10 @@ EVENT_BROKER_ENABLED=true
 # EVENT_BROKER_KAFKA_SASL_MECHANISM=plain   # plain (default), scram_sha_256, scram_sha_512
 # EVENT_BROKER_KAFKA_SSL=true               # enable TLS — required for public/external brokers (Redpanda Cloud, Confluent Cloud, Aiven, etc.)
 
-# Core identifier — included in every event envelope for multi-core broker setups. Default to "default"
-# CORE_NAME=
+# RabbitMQ (uncomment to use, comment out the other brokers):
+# EVENT_BROKER_ADAPTER=rabbitmq
+# EVENT_BROKER_URLS=amqp://edge_event_broker_rabbitmq:5672   # embed credentials: amqp://user:pass@host:port
+# EVENT_BROKER_RABBITMQ_SSL=true              # enable TLS — required for public/external brokers (CloudAMQP, etc.)         # enable TLS — required for public/external brokers (Redis Cloud, Upstash, etc.)
 
 # =============================================================================
 # Background Workers & Schedulers

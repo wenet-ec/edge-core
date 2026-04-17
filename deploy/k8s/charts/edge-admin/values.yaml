@@ -71,9 +71,12 @@ config:
 
   # Event Broker — opt-in, broker deployed separately
   # Set eventBrokerEnabled to "true" and point eventBrokerUrls at your broker to enable.
-  # Adapter: nats (pub/sub; set eventBrokerNatsJetstream=true for durable log) or kafka (Redpanda / vanilla Kafka)
+  # Adapter: nats | kafka | rabbitmq — pick whichever fits your stack.
+  #   nats:     EVENT_BROKER_URLS=nats://host:port  (add eventBrokerNatsJetstream=true for durable log)
+  #   kafka:    EVENT_BROKER_URLS=host:port          (Redpanda / vanilla Kafka / any Kafka-compatible)
+  #   rabbitmq: EVENT_BROKER_URLS=amqp://host:port   (or amqps:// for TLS)
   eventBrokerEnabled: "false"
-  eventBrokerAdapter: "nats"
+  eventBrokerAdapter: ""
   eventBrokerUrls: ""
   # coreName is included in every event envelope — identifies this core in multi-core setups
   coreName: "default"
@@ -104,8 +107,8 @@ secrets:
   # Set existingSecret to the name of a pre-created Secret to skip chart-managed secret creation.
   # The Secret must contain: SECRET_KEY_BASE, MASTER_KEY, DB_PASSWORD,
   #   NETMAKER_MASTER_KEY, NETMAKER_SUPERADMIN_PASSWORD, VPN_CLUSTER_COOKIE
-  # Optional broker auth (only needed when EVENT_BROKER_ENABLED=true and broker requires auth):
-  #   EVENT_BROKER_NATS_TOKEN, EVENT_BROKER_KAFKA_USERNAME, EVENT_BROKER_KAFKA_PASSWORD
+  # Optional broker auth (only needed when EVENT_BROKER_ENABLED=true and broker requires auth).
+  # Leave fields empty to omit them from the Secret.
   existingSecret: ""
   secretKeyBase: "changeme"
   masterKey: "changeme"
@@ -113,10 +116,14 @@ secrets:
   netmakerMasterKey: "changeme"
   netmakerSuperadminPassword: "changeme"
   vpnClusterCookie: "changeme"
-  # Broker auth — leave empty to omit from Secret
+  # NATS auth
   eventBrokerNatsToken: ""
+  # Kafka/Redpanda auth
   eventBrokerKafkaUsername: ""
   eventBrokerKafkaPassword: ""
+  # RabbitMQ auth (alternative to embedding credentials in EVENT_BROKER_URLS)
+  eventBrokerRabbitmqUsername: ""
+  eventBrokerRabbitmqPassword: ""
 
 migration:
   # Set to false when the image doesn't exist yet (e.g. local kind testing without a built image)

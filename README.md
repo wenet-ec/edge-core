@@ -21,7 +21,7 @@ Works on any Linux machine: on-premises servers, IoT devices, factory floor equi
 - **Edge ↔ Edge (VPN mesh)** — full WireGuard P2P mesh per cluster, automatic peer discovery, CoreDNS, DERP/TURN relay fallback for NAT
 - **Edge ↔ Local devices (mDNS)** — agents advertise themselves via mDNS for zero-config discovery by devices on the same LAN; full LAN DNS control is a future direction (see [`docs/architecture.md`](docs/architecture.md))
 
-**Plus:** Event streaming (lifecycle events to NATS JetStream or Kafka/Redpanda), and an MCP server for AI assistant integration (Claude, Cursor, and any MCP-compatible client).
+**Plus:** Event streaming (lifecycle events to NATS, Kafka/Redpanda, or RabbitMQ), and an MCP server for AI assistant integration (Claude, Cursor, and any MCP-compatible client).
 
 ## Who is this for
 
@@ -145,11 +145,11 @@ Tools are discovered dynamically via `tools/list` — no static spec file needed
 
 Edge Admin can publish lifecycle events to a message broker. Disabled by default — opt in by setting `EVENT_BROKER_ENABLED=true` and pointing `EVENT_BROKER_URLS` at your broker.
 
-Events cover node lifecycle, command execution lifecycle, and self-update lifecycle. All follow the [CloudEvents 1.0](https://cloudevents.io) spec. NATS JetStream (recommended) and any Kafka-compatible broker (Redpanda, Kafka) are supported.
+Events cover node lifecycle, command execution lifecycle, and self-update lifecycle. All follow the [CloudEvents 1.0](https://cloudevents.io) spec. Supported brokers: NATS, Kafka/Redpanda, and RabbitMQ — pick whichever fits your stack.
 
 ```bash
 EVENT_BROKER_ENABLED=true
-EVENT_BROKER_ADAPTER=nats_js          # or: kafka
+EVENT_BROKER_ADAPTER=nats          # or: kafka, rabbitmq
 EVENT_BROKER_URLS=nats://your-broker:4222
 ```
 
@@ -179,7 +179,7 @@ To import: in Grafana go to **Dashboards → Import**, upload the JSON file, and
 | `examples/standard/`      | 4 admins across 2 clusters, EMQX, Prometheus — when you need HA or more node capacity                  |
 | `examples/relay/`         | Self-hosted DERP/TURN relay node — optional, for agents behind strict NAT                              |
 | `examples/sidecar/`       | Agent as a sidecar container (bridge networking) rather than host-networked                            |
-| `examples/event_brokers/` | NATS JetStream, Redpanda, and Kafka compose files                                                      |
+| `examples/event_brokers/` | NATS, Redpanda, Kafka, and RabbitMQ compose files                                                      |
 | `docs/`                   | Architecture docs and API specs                                                                        |
 
 ## VPN internals

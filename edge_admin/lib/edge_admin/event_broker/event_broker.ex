@@ -14,7 +14,7 @@ defmodule EdgeAdmin.EventBroker do
   no connection is made.
 
   When enabled, `EVENT_BROKER_ADAPTER` and `EVENT_BROKER_URL` are required:
-  - `nats_js` — NATS JetStream (recommended)
+  - `nats` — NATS pub/sub; add `EVENT_BROKER_NATS_JETSTREAM=true` for durable log (recommended)
   - `kafka` — Kafka-compatible protocol (Redpanda recommended)
 
   ## Usage
@@ -125,7 +125,7 @@ defmodule EdgeAdmin.EventBroker do
 
   defp adapter do
     case Application.get_env(:edge_admin, :event_broker_adapter) do
-      :nats_js -> EdgeAdmin.EventBroker.Adapters.NatsJs
+      :nats -> EdgeAdmin.EventBroker.Adapters.Nats
       :kafka -> EdgeAdmin.EventBroker.Adapters.Kafka
     end
   end

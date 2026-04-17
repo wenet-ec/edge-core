@@ -32,7 +32,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "title" => "Edge Admin AsyncAPI",
         "version" => "0.2.0",
         "description" => """
-        Lifecycle events published by Edge Admin to a configured message broker (NATS JetStream or Kafka/Redpanda).
+        Lifecycle events published by Edge Admin to a configured message broker (NATS or Kafka/Redpanda).
 
         Edge Admin publishes and forgets — it has no knowledge of consumers.
         All messages follow the [CloudEvents 1.0](https://cloudevents.io) spec.
@@ -74,11 +74,18 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
 
   defp servers do
     %{
+      "nats" => %{
+        "host" => "localhost:4222",
+        "protocol" => "nats",
+        "description" =>
+          "NATS broker — pub/sub mode (default). Set EVENT_BROKER_NATS_JETSTREAM=true to enable durable JetStream log. Configure via EVENT_BROKER_URLS. Optional token auth via EVENT_BROKER_NATS_TOKEN.",
+        "security" => [%{"$ref" => "#/components/securitySchemes/natsToken"}]
+      },
       "natsJetStream" => %{
         "host" => "localhost:4222",
         "protocol" => "nats",
         "description" =>
-          "NATS JetStream broker (default). Configure via EVENT_BROKER_URLS. Optional token auth via EVENT_BROKER_NATS_TOKEN.",
+          "NATS JetStream mode — same broker, durable log with replay. Enable with EVENT_BROKER_NATS_JETSTREAM=true. Three streams are auto-created: EDGE_NODE_EVENTS, EDGE_EXECUTION_EVENTS, EDGE_SELF_UPDATE_EVENTS (7-day retention).",
         "security" => [%{"$ref" => "#/components/securitySchemes/natsToken"}]
       },
       "kafka" => %{

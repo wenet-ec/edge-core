@@ -6,12 +6,12 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
   Only added to the supervision tree when `EVENT_BROKER_ENABLED=true`.
   If disabled, this supervisor is never started and the app is unaffected.
 
-  ## Children (NATS JetStream adapter)
+  ## Children (NATS adapter)
 
     1. `Gnat.ConnectionSupervisor` — maintains a named NATS connection with
        automatic reconnect.
-    2. `EdgeAdmin.EventBroker.Adapters.NatsJs` — GenServer that ensures
-       JetStream streams exist on startup.
+    2. `EdgeAdmin.EventBroker.Adapters.Nats` — GenServer that optionally ensures
+       JetStream streams exist on startup (when `EVENT_BROKER_NATS_JETSTREAM=true`).
 
   ## Children (Kafka adapter)
 
@@ -39,7 +39,7 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
   # Private
   # ---------------------------------------------------------------------------
 
-  defp build_children(:nats_js) do
+  defp build_children(:nats) do
     config = Application.get_env(:edge_admin, :event_broker_nats, [])
     urls = Keyword.get(config, :urls, ["nats://localhost:4222"])
     token = Keyword.get(config, :token)
@@ -58,7 +58,7 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
 
     [
       {Gnat.ConnectionSupervisor, nats_supervisor_settings},
-      EdgeAdmin.EventBroker.Adapters.NatsJs
+      EdgeAdmin.EventBroker.Adapters.Nats
     ]
   end
 

@@ -71,9 +71,9 @@ config:
 
   # Event Broker — opt-in, broker deployed separately
   # Set eventBrokerEnabled to "true" and point eventBrokerUrls at your broker to enable.
-  # Adapter: nats_js (NATS JetStream) or kafka (Redpanda / vanilla Kafka)
+  # Adapter: nats (pub/sub; set eventBrokerNatsJetstream=true for durable log) or kafka (Redpanda / vanilla Kafka)
   eventBrokerEnabled: "false"
-  eventBrokerAdapter: "nats_js"
+  eventBrokerAdapter: "nats"
   eventBrokerUrls: ""
   # coreName is included in every event envelope — identifies this core in multi-core setups
   coreName: "default"

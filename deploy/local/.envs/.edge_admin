@@ -207,10 +207,11 @@ ADMIN_DISCOVERY_PORT=44000
 
 EVENT_BROKER_ENABLED=true
 
-# NATS JetStream:
-EVENT_BROKER_ADAPTER=nats_js
+# NATS (pub/sub by default; add EVENT_BROKER_NATS_JETSTREAM=true for durable log):
+EVENT_BROKER_ADAPTER=nats
 EVENT_BROKER_URLS=nats://edge_event_broker_nats:4222   # internal Docker: nats://  — use tls:// for public/external broker
-# EVENT_BROKER_NATS_TOKEN=   # Set if NATS auth is enabled
+EVENT_BROKER_NATS_JETSTREAM=true   # Enable durable JetStream log (default: false)
+# EVENT_BROKER_NATS_TOKEN=        # Set if NATS auth is enabled
 
 # Kafka / Redpanda (uncomment to use, comment out nats above):
 # EVENT_BROKER_ADAPTER=kafka

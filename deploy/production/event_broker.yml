@@ -3,7 +3,7 @@
 # Event broker services — opt-in, operator uncomments the broker they want.
 # Usage: docker compose -f deploy/production/cloud.yml -f deploy/production/event_broker.yml up -d
 #
-# Set EVENT_BROKER_ENABLED=true and EVENT_BROKER_ADAPTER=nats_js|kafka
+# Set EVENT_BROKER_ENABLED=true and EVENT_BROKER_ADAPTER=nats|kafka
 # in .envs/.edge_admin before starting.
 
 networks:
@@ -18,8 +18,9 @@ volumes:
 services:
 
   # ---------------------------------------------------------------------------
-  # NATS JetStream (recommended default)
-  # Set EVENT_BROKER_ADAPTER=nats_js in .envs/.edge_admin
+  # NATS (recommended default)
+  # Set EVENT_BROKER_ADAPTER=nats in .envs/.edge_admin
+  # Add EVENT_BROKER_NATS_JETSTREAM=true to enable durable log
   # ---------------------------------------------------------------------------
 
   edge_event_broker_nats:

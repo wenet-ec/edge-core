@@ -94,7 +94,7 @@ A plain IP address works fine for `SERVER_HOST`, `SERVER_HTTP_HOST`, and `SERVER
 Edge Core can publish lifecycle events (node registered, command completed, etc.) to a message broker. Disabled by default — broker is deployed separately.
 
 ```bash
-# Start with NATS JetStream (recommended)
+# Start with NATS (recommended)
 docker compose -f cloud.yml -f ../event_brokers/nats_js.yml up -d
 ```
 
@@ -102,11 +102,12 @@ Then add to your `.env`:
 
 ```bash
 EVENT_BROKER_ENABLED=true
-EVENT_BROKER_ADAPTER=nats_js
+EVENT_BROKER_ADAPTER=nats
 EVENT_BROKER_URLS=nats://edge_event_broker:4222
+# EVENT_BROKER_NATS_JETSTREAM=true   # enable durable log (default: false)
 ```
 
-See `examples/event_brokers/` for all supported brokers (NATS JetStream, Redpanda, Kafka).
+See `examples/event_brokers/` for all supported brokers (NATS, Redpanda, Kafka).
 
 ## API Docs
 

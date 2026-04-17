@@ -1,26 +1,26 @@
-# edge_admin/lib/edge_admin/event_broker/adapters/nats_js.ex
-defmodule EdgeAdmin.EventBroker.Adapters.NatsJs do
+# edge_admin/lib/edge_admin/event_broker/adapters/nats.ex
+defmodule EdgeAdmin.EventBroker.Adapters.Nats do
   @moduledoc """
-  NATS JetStream adapter for the event broker.
+  NATS adapter for the event broker. Supports two modes:
 
-  Manages a supervised `Gnat.ConnectionSupervisor` named `:event_broker_nats`.
-  On startup, ensures the three JetStream streams exist (creates them if absent,
-  does nothing if they already exist).
-
-  Publishing uses `Gnat.pub/3` into a JetStream-captured subject. JetStream
-  intercepts the plain `pub` and persists it into the matching stream.
+  - **Pub/sub** (default) — plain `Gnat.pub/3`, fire-and-forget. Messages are
+    lost when no subscriber is connected.
+  - **JetStream** — set `EVENT_BROKER_NATS_JETSTREAM=true`. Same pub call, but
+    JetStream intercepts it and persists the message into a durable stream.
+    On startup, the adapter auto-creates the three streams if absent.
 
   ## Subjects
 
-      edge.node.<event>         → captured by EDGE_NODE_EVENTS stream
-      edge.execution.<event>    → captured by EDGE_EXECUTION_EVENTS stream
-      edge.self_update.<event>  → captured by EDGE_SELF_UPDATE_EVENTS stream
+      edge.node.<event>         → captured by EDGE_NODE_EVENTS stream (JetStream only)
+      edge.execution.<event>    → captured by EDGE_EXECUTION_EVENTS stream (JetStream only)
+      edge.self_update.<event>  → captured by EDGE_SELF_UPDATE_EVENTS stream (JetStream only)
 
   ## Configuration (set in runtime.exs from env vars)
 
       config :edge_admin, :event_broker_nats,
         urls: ["nats://edge_event_broker:4222"],   # list — all used for failover/load balancing
-        token: nil  # set via EVENT_BROKER_NATS_TOKEN if NATS auth is enabled
+        token: nil,        # set via EVENT_BROKER_NATS_TOKEN if NATS auth is enabled
+        jetstream: false   # set via EVENT_BROKER_NATS_JETSTREAM=true to enable durable log
   """
 
   @behaviour EdgeAdmin.EventBroker.Adapter
@@ -76,7 +76,7 @@ defmodule EdgeAdmin.EventBroker.Adapters.NatsJs do
   end
 
   # ---------------------------------------------------------------------------
-  # Adapter callback
+  # Adapter callbacks
   # ---------------------------------------------------------------------------
 
   @impl Adapter
@@ -94,12 +94,17 @@ defmodule EdgeAdmin.EventBroker.Adapters.NatsJs do
   end
 
   # ---------------------------------------------------------------------------
-  # GenServer — startup, stream provisioning
+  # GenServer — startup, JetStream stream provisioning
   # ---------------------------------------------------------------------------
 
   @impl GenServer
   def init([]) do
-    send(self(), :ensure_streams)
+    config = Application.get_env(:edge_admin, :event_broker_nats, [])
+
+    if Keyword.get(config, :jetstream, false) do
+      send(self(), :ensure_streams)
+    end
+
     {:ok, %{}}
   end
 
@@ -111,7 +116,7 @@ defmodule EdgeAdmin.EventBroker.Adapters.NatsJs do
           {:noreply, state}
 
         {:error, reason} ->
-          Logger.warning("[EventBroker.NatsJs] Stream setup failed: #{inspect(reason)} — will retry in 10s")
+          Logger.warning("[EventBroker.Nats] Stream setup failed: #{inspect(reason)} — will retry in 10s")
           Process.send_after(self(), :ensure_streams, 10_000)
           {:noreply, state}
       end
@@ -139,7 +144,7 @@ defmodule EdgeAdmin.EventBroker.Adapters.NatsJs do
   defp create_or_skip(stream) do
     case JsStream.create(@conn, stream) do
       {:ok, _info} ->
-        Logger.info("[EventBroker.NatsJs] Stream created: #{stream.name}")
+        Logger.info("[EventBroker.Nats] Stream created: #{stream.name}")
         :ok
 
       {:error, %{"code" => 400}} ->

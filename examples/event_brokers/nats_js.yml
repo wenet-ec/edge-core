@@ -1,14 +1,15 @@
 # examples/event_brokers/nats_js.yml
 #
-# NATS JetStream — recommended event broker for Edge Core.
+# NATS (JetStream enabled) — recommended event broker for Edge Core.
 #
 # Usage (alongside your core compose file):
 #   docker compose -f cloud.yml -f ../event_brokers/nats_js.yml up -d
 #
 # Then set in your .env:
 #   EVENT_BROKER_ENABLED=true
-#   EVENT_BROKER_ADAPTER=nats_js
+#   EVENT_BROKER_ADAPTER=nats
 #   EVENT_BROKER_URLS=nats://edge_event_broker:4222
+#   EVENT_BROKER_NATS_JETSTREAM=true        # enable durable log (JetStream is on in this server config)
 #   # EVENT_BROKER_NATS_TOKEN=your-token   # uncomment if auth is enabled in nats.conf
 #
 # Ports exposed:

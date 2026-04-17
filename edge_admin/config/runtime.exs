@@ -269,11 +269,12 @@ config :os_mon,
 #
 # When enabled, EVENT_BROKER_ADAPTER and EVENT_BROKER_URLS are required.
 #
-# NATS JetStream:
+# NATS (pub/sub):
 #   EVENT_BROKER_ENABLED=true
-#   EVENT_BROKER_ADAPTER=nats_js
+#   EVENT_BROKER_ADAPTER=nats
 #   EVENT_BROKER_URLS=nats://edge_event_broker_nats:4222          # comma-separated for cluster
-#   EVENT_BROKER_NATS_TOKEN=    # optional, set if NATS auth is enabled
+#   EVENT_BROKER_NATS_TOKEN=           # optional, set if NATS auth is enabled
+#   EVENT_BROKER_NATS_JETSTREAM=true   # optional, enable durable JetStream log (default: false)
 #
 # Kafka / Redpanda:
 #   EVENT_BROKER_ENABLED=true
@@ -293,9 +294,9 @@ config :sentry,
 if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
   event_broker_adapter =
     case get_env!("EVENT_BROKER_ADAPTER") do
-      "nats_js" -> :nats_js
+      "nats" -> :nats
       "kafka" -> :kafka
-      other -> raise "Unknown EVENT_BROKER_ADAPTER=#{other} — valid values: nats_js, kafka"
+      other -> raise "Unknown EVENT_BROKER_ADAPTER=#{other} — valid values: nats, kafka"
     end
 
   event_broker_urls = get_env!("EVENT_BROKER_URLS")
@@ -306,7 +307,7 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
     core_name: get_env("CORE_NAME", :string, "default")
 
   case event_broker_adapter do
-    :nats_js ->
+    :nats ->
       # Parse "nats://host:port" or "nats://host1:port1,nats://host2:port2"
       urls =
         event_broker_urls
@@ -315,7 +316,8 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
 
       config :edge_admin, :event_broker_nats,
         urls: urls,
-        token: get_env("EVENT_BROKER_NATS_TOKEN")
+        token: get_env("EVENT_BROKER_NATS_TOKEN"),
+        jetstream: get_env("EVENT_BROKER_NATS_JETSTREAM", :boolean, false)
 
     :kafka ->
       # Parse "host:port" or "host1:port1,host2:port2"

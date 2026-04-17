@@ -4,20 +4,20 @@ Edge Core can publish lifecycle events to a message broker. This is opt-in — t
 
 ## Supported Brokers
 
-| Broker             | Adapter   | Notes                                                                    |
-| ------------------ | --------- | ------------------------------------------------------------------------ |
-| **NATS JetStream** | `nats_js` | Recommended. Lightweight, durable, built-in replay.                      |
-| **Redpanda**       | `kafka`   | Recommended Kafka-compatible option. No JVM, lighter than vanilla Kafka. |
-| **Apache Kafka**   | `kafka`   | Use if you already run Kafka. Any Kafka-compatible broker works.         |
+| Broker             | Adapter | Notes                                                                    |
+| ------------------ | ------- | ------------------------------------------------------------------------ |
+| **NATS**           | `nats`  | Recommended. Lightweight. Add `EVENT_BROKER_NATS_JETSTREAM=true` for durable log with replay. |
+| **Redpanda**       | `kafka` | Recommended Kafka-compatible option. No JVM, lighter than vanilla Kafka. |
+| **Apache Kafka**   | `kafka` | Use if you already run Kafka. Any Kafka-compatible broker works.         |
 
-> **Important:** The `nats_js` adapter requires JetStream to be enabled on the NATS server. Vanilla NATS (no JetStream) is not supported — messages would be lost when no consumer is subscribed.
+> **NATS modes:** By default, NATS runs as pure pub/sub — messages are lost when no subscriber is connected. Set `EVENT_BROKER_NATS_JETSTREAM=true` to enable JetStream durable log with replay. Both modes use the same `nats` adapter and the same NATS server binary; JetStream is just a server feature flag.
 
 ## Quick Start
 
 Pick a broker and start it alongside your core:
 
 ```bash
-# NATS JetStream (recommended)
+# NATS (recommended)
 docker compose -f cloud.yml -f ../event_brokers/nats_js.yml up -d
 
 # Redpanda
@@ -30,10 +30,16 @@ docker compose -f cloud.yml -f ../event_brokers/kafka.yml up -d
 Then enable the broker in your `.env`:
 
 ```bash
-# NATS JetStream
+# NATS pub/sub
 EVENT_BROKER_ENABLED=true
-EVENT_BROKER_ADAPTER=nats_js
+EVENT_BROKER_ADAPTER=nats
 EVENT_BROKER_URLS=nats://edge_event_broker:4222
+
+# NATS JetStream (durable log)
+EVENT_BROKER_ENABLED=true
+EVENT_BROKER_ADAPTER=nats
+EVENT_BROKER_URLS=nats://edge_event_broker:4222
+EVENT_BROKER_NATS_JETSTREAM=true
 
 # Redpanda or Kafka
 EVENT_BROKER_ENABLED=true
@@ -45,7 +51,7 @@ EVENT_BROKER_URLS=edge_event_broker:9092
 
 ```
 event_brokers/
-├── nats_js.yml         — NATS JetStream + NUI web UI
+├── nats_js.yml         — NATS (JetStream enabled) + NUI web UI
 ├── redpanda.yml        — Redpanda + Redpanda Console
 ├── kafka.yml           — Apache Kafka (KRaft) + Kafka UI
 └── config/
@@ -57,11 +63,12 @@ event_brokers/
 
 ```bash
 EVENT_BROKER_ENABLED=true|false          # gate — all else ignored when false (default: false)
-EVENT_BROKER_ADAPTER=nats_js|kafka       # required when enabled
+EVENT_BROKER_ADAPTER=nats|kafka          # required when enabled
 EVENT_BROKER_URLS=...                    # NATS: nats://host:port  |  Kafka: host:port
 
-# NATS auth (optional)
-EVENT_BROKER_NATS_TOKEN=
+# NATS options (optional)
+EVENT_BROKER_NATS_TOKEN=                 # NATS token auth
+EVENT_BROKER_NATS_JETSTREAM=true         # enable durable JetStream log (default: false)
 
 # Kafka/Redpanda auth (optional)
 EVENT_BROKER_KAFKA_USERNAME=
@@ -75,7 +82,7 @@ CORE_NAME=prod-us
 
 ## Bring Your Own Broker
 
-These compose files are for convenience. If you already run a broker, skip them entirely — just point `EVENT_BROKER_URLS` at your existing instance. Any Kafka-compatible broker (Confluent Cloud, Aiven, MSK, Upstash, etc.) works with `EVENT_BROKER_ADAPTER=kafka`. Any NATS server with JetStream enabled works with `EVENT_BROKER_ADAPTER=nats_js`.
+These compose files are for convenience. If you already run a broker, skip them entirely — just point `EVENT_BROKER_URLS` at your existing instance. Any Kafka-compatible broker (Confluent Cloud, Aiven, MSK, Upstash, etc.) works with `EVENT_BROKER_ADAPTER=kafka`. Any NATS server works with `EVENT_BROKER_ADAPTER=nats`; enable JetStream on the server and set `EVENT_BROKER_NATS_JETSTREAM=true` for durable delivery.
 
 ## Events Published
 

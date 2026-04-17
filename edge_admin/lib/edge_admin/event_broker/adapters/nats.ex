@@ -19,8 +19,13 @@ defmodule EdgeAdmin.EventBroker.Adapters.Nats do
 
       config :edge_admin, :event_broker_nats,
         urls: ["nats://edge_event_broker:4222"],   # list — all used for failover/load balancing
-        token: nil,        # set via EVENT_BROKER_NATS_TOKEN if NATS auth is enabled
-        jetstream: false   # set via EVENT_BROKER_NATS_JETSTREAM=true to enable durable log
+        jetstream: false,   # set via EVENT_BROKER_NATS_JETSTREAM=true to enable durable log
+        # Auth — mutually exclusive, first match wins:
+        token: nil,         # shared token  (EVENT_BROKER_NATS_TOKEN)
+        username: nil,      # username/password  (EVENT_BROKER_NATS_USERNAME / _PASSWORD)
+        password: nil,
+        nkey_seed: nil,     # NKey seed — standalone or paired with jwt  (EVENT_BROKER_NATS_NKEY_SEED)
+        jwt: nil            # JWT credential — used alongside nkey_seed  (EVENT_BROKER_NATS_JWT)
   """
 
   @behaviour EdgeAdmin.EventBroker.Adapter

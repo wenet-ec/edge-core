@@ -42,12 +42,14 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
   defp build_children(:nats) do
     config = Application.get_env(:edge_admin, :event_broker_nats, [])
     urls = Keyword.get(config, :urls, ["nats://localhost:4222"])
-    token = Keyword.get(config, :token)
+
+    auth = nats_auth(config)
 
     connection_settings =
       Enum.map(urls, fn url ->
         uri = URI.parse(url)
-        maybe_put_token(%{host: to_charlist(uri.host || "localhost"), port: uri.port || 4222}, token)
+        base = %{host: to_charlist(uri.host || "localhost"), port: uri.port || 4222}
+        Map.merge(base, auth)
       end)
 
     nats_supervisor_settings = %{
@@ -66,7 +68,28 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
     [EdgeAdmin.EventBroker.Adapters.Kafka]
   end
 
-  defp maybe_put_token(settings, token) when is_binary(token) and token != "", do: Map.put(settings, :token, token)
+  # Auth precedence: token → username/password → nkey+jwt → nkey only → none
+  defp nats_auth(config) do
+    cond do
+      token = present(Keyword.get(config, :token)) ->
+        %{token: token}
 
-  defp maybe_put_token(settings, _), do: settings
+      (username = present(Keyword.get(config, :username))) &&
+          (password = present(Keyword.get(config, :password))) ->
+        %{username: username, password: password}
+
+      (nkey_seed = present(Keyword.get(config, :nkey_seed))) &&
+          (jwt = present(Keyword.get(config, :jwt))) ->
+        %{nkey_seed: nkey_seed, jwt: jwt}
+
+      nkey_seed = present(Keyword.get(config, :nkey_seed)) ->
+        %{nkey_seed: nkey_seed}
+
+      true ->
+        %{}
+    end
+  end
+
+  defp present(value) when is_binary(value) and value != "", do: value
+  defp present(_), do: nil
 end

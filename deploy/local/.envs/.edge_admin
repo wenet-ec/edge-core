@@ -208,10 +208,15 @@ ADMIN_DISCOVERY_PORT=44000
 EVENT_BROKER_ENABLED=true
 
 # NATS (pub/sub by default; add EVENT_BROKER_NATS_JETSTREAM=true for durable log):
-EVENT_BROKER_ADAPTER=nats
-EVENT_BROKER_URLS=nats://edge_event_broker_nats:4222   # internal Docker: nats://  — use tls:// for public/external broker
-EVENT_BROKER_NATS_JETSTREAM=true   # Enable durable JetStream log (default: false)
-# EVENT_BROKER_NATS_TOKEN=        # Set if NATS auth is enabled
+# EVENT_BROKER_ADAPTER=nats
+# EVENT_BROKER_URLS=nats://edge_event_broker_nats:4222   # internal Docker: nats://  — use tls:// for public/external broker
+# EVENT_BROKER_NATS_JETSTREAM=true      # Enable durable JetStream log (default: false)
+# Auth — pick one, mutually exclusive (token takes precedence):
+# EVENT_BROKER_NATS_TOKEN=              # shared token
+# EVENT_BROKER_NATS_USERNAME=           # username + password
+# EVENT_BROKER_NATS_PASSWORD=
+# EVENT_BROKER_NATS_NKEY_SEED=         # NKey seed (standalone or with JWT)
+# EVENT_BROKER_NATS_JWT=               # JWT credential — used alongside NKEY_SEED
 
 # Kafka / Redpanda (uncomment to use, comment out nats above):
 # EVENT_BROKER_ADAPTER=kafka

@@ -67,8 +67,13 @@ EVENT_BROKER_ADAPTER=nats|kafka          # required when enabled
 EVENT_BROKER_URLS=...                    # NATS: nats://host:port  |  Kafka: host:port
 
 # NATS options (optional)
-EVENT_BROKER_NATS_TOKEN=                 # NATS token auth
 EVENT_BROKER_NATS_JETSTREAM=true         # enable durable JetStream log (default: false)
+# Auth — pick one, mutually exclusive (token takes precedence):
+EVENT_BROKER_NATS_TOKEN=                 # shared token
+EVENT_BROKER_NATS_USERNAME=              # username + password
+EVENT_BROKER_NATS_PASSWORD=
+EVENT_BROKER_NATS_NKEY_SEED=            # NKey seed (standalone or with JWT)
+EVENT_BROKER_NATS_JWT=                   # JWT credential — used alongside NKEY_SEED
 
 # Kafka/Redpanda auth (optional)
 EVENT_BROKER_KAFKA_USERNAME=

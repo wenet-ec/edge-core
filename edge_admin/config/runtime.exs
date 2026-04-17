@@ -273,8 +273,13 @@ config :os_mon,
 #   EVENT_BROKER_ENABLED=true
 #   EVENT_BROKER_ADAPTER=nats
 #   EVENT_BROKER_URLS=nats://edge_event_broker_nats:4222          # comma-separated for cluster
-#   EVENT_BROKER_NATS_TOKEN=           # optional, set if NATS auth is enabled
 #   EVENT_BROKER_NATS_JETSTREAM=true   # optional, enable durable JetStream log (default: false)
+#   # Auth — pick one, mutually exclusive:
+#   EVENT_BROKER_NATS_TOKEN=           # shared token (simple deployments)
+#   EVENT_BROKER_NATS_USERNAME=        # username + password (alternative to token)
+#   EVENT_BROKER_NATS_PASSWORD=
+#   EVENT_BROKER_NATS_NKEY_SEED=      # NKey seed (standalone or with JWT)
+#   EVENT_BROKER_NATS_JWT=            # JWT credential — used alongside NKEY_SEED
 #
 # Kafka / Redpanda:
 #   EVENT_BROKER_ENABLED=true
@@ -316,8 +321,12 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
 
       config :edge_admin, :event_broker_nats,
         urls: urls,
+        jetstream: get_env("EVENT_BROKER_NATS_JETSTREAM", :boolean, false),
         token: get_env("EVENT_BROKER_NATS_TOKEN"),
-        jetstream: get_env("EVENT_BROKER_NATS_JETSTREAM", :boolean, false)
+        username: get_env("EVENT_BROKER_NATS_USERNAME"),
+        password: get_env("EVENT_BROKER_NATS_PASSWORD"),
+        nkey_seed: get_env("EVENT_BROKER_NATS_NKEY_SEED"),
+        jwt: get_env("EVENT_BROKER_NATS_JWT")
 
     :kafka ->
       # Parse "host:port" or "host1:port1,host2:port2"

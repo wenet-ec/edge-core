@@ -70,23 +70,18 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
 
   # Auth precedence: token → username/password → nkey+jwt → nkey only → none
   defp nats_auth(config) do
+    token = present(Keyword.get(config, :token))
+    username = present(Keyword.get(config, :username))
+    password = present(Keyword.get(config, :password))
+    nkey_seed = present(Keyword.get(config, :nkey_seed))
+    jwt = present(Keyword.get(config, :jwt))
+
     cond do
-      token = present(Keyword.get(config, :token)) ->
-        %{token: token}
-
-      (username = present(Keyword.get(config, :username))) &&
-          (password = present(Keyword.get(config, :password))) ->
-        %{username: username, password: password}
-
-      (nkey_seed = present(Keyword.get(config, :nkey_seed))) &&
-          (jwt = present(Keyword.get(config, :jwt))) ->
-        %{nkey_seed: nkey_seed, jwt: jwt}
-
-      nkey_seed = present(Keyword.get(config, :nkey_seed)) ->
-        %{nkey_seed: nkey_seed}
-
-      true ->
-        %{}
+      token -> %{token: token}
+      username && password -> %{username: username, password: password}
+      nkey_seed && jwt -> %{nkey_seed: nkey_seed, jwt: jwt}
+      nkey_seed -> %{nkey_seed: nkey_seed}
+      true -> %{}
     end
   end
 

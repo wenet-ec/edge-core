@@ -19,6 +19,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListAliases do
   alias EdgeAdmin.Nodes
   alias EdgeAdminMcp.Tools.Nodes.AliasData
 
+  @impl true
+  def title, do: "List Aliases"
+  @impl true
+  def annotations, do: %{"readOnlyHint" => true}
+
   schema do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
@@ -52,7 +57,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListAliases do
         {:reply, Response.json(Response.tool(), paginated(aliases, meta, &AliasData.data/1)), frame}
 
       {:error, reason} ->
-        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
+        {:reply, error_response(reason), frame}
     end
   end
 end

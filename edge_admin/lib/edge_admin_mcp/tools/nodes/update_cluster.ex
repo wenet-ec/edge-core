@@ -6,6 +6,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.UpdateCluster do
   alias EdgeAdmin.Nodes
   alias EdgeAdminMcp.Tools.Nodes.ClusterData
 
+  @impl true
+  def title, do: "Update Cluster"
+  @impl true
+  def annotations, do: %{"idempotentHint" => true}
+
   schema do
     field :cluster_name, {:required, :string}
     field :node_limit, :integer
@@ -20,11 +25,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.UpdateCluster do
             {:reply, Response.json(Response.tool(), ClusterData.data(updated)), frame}
 
           {:error, reason} ->
-            {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
+            {:reply, error_response(reason), frame}
         end
 
       {:error, :not_found} ->
-        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Cluster #{name} not found")), frame}
+        {:reply, error_response(:not_found, "Cluster #{name} not found"), frame}
     end
   end
 end

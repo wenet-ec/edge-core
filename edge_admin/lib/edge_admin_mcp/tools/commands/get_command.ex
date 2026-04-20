@@ -6,6 +6,11 @@ defmodule EdgeAdminMcp.Tools.Commands.GetCommand do
   alias EdgeAdmin.Commands
   alias EdgeAdminMcp.Tools.Commands.CommandData
 
+  @impl true
+  def title, do: "Get Command"
+  @impl true
+  def annotations, do: %{"readOnlyHint" => true}
+
   schema do
     field :command_id, {:required, :string}
   end
@@ -17,7 +22,7 @@ defmodule EdgeAdminMcp.Tools.Commands.GetCommand do
         {:reply, Response.json(Response.tool(), CommandData.data(command)), frame}
 
       {:error, :not_found} ->
-        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Command #{id} not found")), frame}
+        {:reply, error_response(:not_found, "Command #{id} not found"), frame}
     end
   end
 end

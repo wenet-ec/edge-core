@@ -15,6 +15,11 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.CreateSelfUpdateRequest do
   alias EdgeAdmin.SelfUpdates
   alias EdgeAdminMcp.Tools.SelfUpdates.SelfUpdateRequestData
 
+  @impl true
+  def title, do: "Create Self-Update Request"
+  @impl true
+  def annotations, do: %{"destructiveHint" => false}
+
   schema do
     field :targeting, {:required, :map}
   end
@@ -26,7 +31,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.CreateSelfUpdateRequest do
         {:reply, Response.json(Response.tool(), SelfUpdateRequestData.data(request)), frame}
 
       {:error, reason} ->
-        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
+        {:reply, error_response(reason), frame}
     end
   end
 end

@@ -6,6 +6,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.ChangeNodeCluster do
   alias EdgeAdmin.Nodes
   alias EdgeAdminMcp.Tools.Nodes.NodeData
 
+  @impl true
+  def title, do: "Move Node to Cluster"
+  @impl true
+  def annotations, do: %{"destructiveHint" => false, "idempotentHint" => false}
+
   schema do
     field :node_id, {:required, :string}
     field :cluster_name, {:required, :string}
@@ -20,11 +25,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.ChangeNodeCluster do
             {:reply, Response.json(Response.tool(), NodeData.data(updated)), frame}
 
           {:error, reason} ->
-            {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
+            {:reply, error_response(reason), frame}
         end
 
       {:error, :not_found} ->
-        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Node #{id} not found")), frame}
+        {:reply, error_response(:not_found, "Node #{id} not found"), frame}
     end
   end
 end

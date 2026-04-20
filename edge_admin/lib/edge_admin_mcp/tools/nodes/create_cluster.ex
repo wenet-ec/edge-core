@@ -6,6 +6,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateCluster do
   alias EdgeAdmin.Nodes
   alias EdgeAdminMcp.Tools.Nodes.ClusterData
 
+  @impl true
+  def title, do: "Create Cluster"
+  @impl true
+  def annotations, do: %{"destructiveHint" => false}
+
   schema do
     field :name, {:required, :string}, min_length: 1
     field :ipv4_range, :string
@@ -24,10 +29,10 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateCluster do
         {:reply, Response.json(Response.tool(), ClusterData.data(cluster)), frame}
 
       {:error, :service_unavailable} ->
-        {:reply, Response.json(Response.tool(), tool_error(:service_unavailable)), frame}
+        {:reply, error_response(:service_unavailable), frame}
 
       {:error, reason} ->
-        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
+        {:reply, error_response(reason), frame}
     end
   end
 end

@@ -6,6 +6,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateAlias do
   alias EdgeAdmin.Nodes
   alias EdgeAdminMcp.Tools.Nodes.AliasData
 
+  @impl true
+  def title, do: "Create Alias"
+  @impl true
+  def annotations, do: %{"destructiveHint" => false}
+
   schema do
     field :node_id, {:required, :string}
     field :name, {:required, :string}
@@ -20,11 +25,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateAlias do
             {:reply, Response.json(Response.tool(), AliasData.data(alias_record)), frame}
 
           {:error, reason} ->
-            {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
+            {:reply, error_response(reason), frame}
         end
 
       {:error, :not_found} ->
-        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Node #{node_id} not found")), frame}
+        {:reply, error_response(:not_found, "Node #{node_id} not found"), frame}
     end
   end
 end

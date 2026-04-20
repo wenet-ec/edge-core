@@ -6,6 +6,11 @@ defmodule EdgeAdminMcp.Tools.Ssh.CreateSshPublicKey do
   alias EdgeAdmin.Ssh
   alias EdgeAdminMcp.Tools.Ssh.SshPublicKeyData
 
+  @impl true
+  def title, do: "Create SSH Public Key"
+  @impl true
+  def annotations, do: %{"destructiveHint" => false}
+
   schema do
     field :ssh_username_id, {:required, :string}
     field :public_key, {:required, :string}, min_length: 1
@@ -23,13 +28,11 @@ defmodule EdgeAdminMcp.Tools.Ssh.CreateSshPublicKey do
             {:reply, Response.json(Response.tool(), SshPublicKeyData.data(key)), frame}
 
           {:error, reason} ->
-            {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
+            {:reply, error_response(reason), frame}
         end
 
       {:error, :not_found} ->
-        {:reply,
-         Response.json(Response.tool(), tool_error(:not_found, "SSH username #{params.ssh_username_id} not found")),
-         frame}
+        {:reply, error_response(:not_found, "SSH username #{params.ssh_username_id} not found"), frame}
     end
   end
 end

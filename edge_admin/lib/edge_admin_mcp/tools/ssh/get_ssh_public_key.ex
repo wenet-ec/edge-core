@@ -6,6 +6,11 @@ defmodule EdgeAdminMcp.Tools.Ssh.GetSshPublicKey do
   alias EdgeAdmin.Ssh
   alias EdgeAdminMcp.Tools.Ssh.SshPublicKeyData
 
+  @impl true
+  def title, do: "Get SSH Public Key"
+  @impl true
+  def annotations, do: %{"readOnlyHint" => true}
+
   schema do
     field :ssh_public_key_id, {:required, :string}
   end
@@ -17,7 +22,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.GetSshPublicKey do
         {:reply, Response.json(Response.tool(), SshPublicKeyData.data(key)), frame}
 
       {:error, :not_found} ->
-        {:reply, Response.json(Response.tool(), tool_error(:not_found, "SSH public key #{id} not found")), frame}
+        {:reply, error_response(:not_found, "SSH public key #{id} not found"), frame}
     end
   end
 end

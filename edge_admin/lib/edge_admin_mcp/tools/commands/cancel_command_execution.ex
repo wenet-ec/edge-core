@@ -11,6 +11,11 @@ defmodule EdgeAdminMcp.Tools.Commands.CancelCommandExecution do
 
   alias EdgeAdmin.Commands
 
+  @impl true
+  def title, do: "Cancel Command Execution"
+  @impl true
+  def annotations, do: %{"destructiveHint" => false, "idempotentHint" => false}
+
   schema do
     field :execution_id, {:required, :string}
   end
@@ -22,10 +27,10 @@ defmodule EdgeAdminMcp.Tools.Commands.CancelCommandExecution do
       {:reply, Response.json(Response.tool(), result), frame}
     else
       {:error, :not_found} ->
-        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Command execution #{id} not found")), frame}
+        {:reply, error_response(:not_found, "Command execution #{id} not found"), frame}
 
       {:error, reason} ->
-        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
+        {:reply, error_response(reason), frame}
     end
   end
 end

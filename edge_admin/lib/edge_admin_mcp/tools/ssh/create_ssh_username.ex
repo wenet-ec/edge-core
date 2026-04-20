@@ -11,6 +11,11 @@ defmodule EdgeAdminMcp.Tools.Ssh.CreateSshUsername do
   alias EdgeAdmin.Ssh
   alias EdgeAdminMcp.Tools.Ssh.SshUsernameData
 
+  @impl true
+  def title, do: "Create SSH Username"
+  @impl true
+  def annotations, do: %{"destructiveHint" => false}
+
   schema do
     field :node_id, {:required, :string}
     field :username, {:required, :string}, min_length: 1
@@ -32,11 +37,11 @@ defmodule EdgeAdminMcp.Tools.Ssh.CreateSshUsername do
             {:reply, Response.json(Response.tool(), SshUsernameData.data(username)), frame}
 
           {:error, reason} ->
-            {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
+            {:reply, error_response(reason), frame}
         end
 
       {:error, :not_found} ->
-        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Node #{params.node_id} not found")), frame}
+        {:reply, error_response(:not_found, "Node #{params.node_id} not found"), frame}
     end
   end
 end

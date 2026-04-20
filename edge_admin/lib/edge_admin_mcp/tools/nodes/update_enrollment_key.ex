@@ -6,6 +6,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.UpdateEnrollmentKey do
   alias EdgeAdmin.Nodes
   alias EdgeAdminMcp.Tools.Nodes.EnrollmentKeyData
 
+  @impl true
+  def title, do: "Update Enrollment Key"
+  @impl true
+  def annotations, do: %{"idempotentHint" => true}
+
   schema do
     field :enrollment_key_id, {:required, :string}
     field :uses_remaining, :integer, min: 1
@@ -26,13 +31,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.UpdateEnrollmentKey do
             {:reply, Response.json(Response.tool(), EnrollmentKeyData.data(updated)), frame}
 
           {:error, reason} ->
-            {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
+            {:reply, error_response(reason), frame}
         end
 
       {:error, :not_found} ->
-        {:reply,
-         Response.json(Response.tool(), tool_error(:not_found, "Enrollment key #{params.enrollment_key_id} not found")),
-         frame}
+        {:reply, error_response(:not_found, "Enrollment key #{params.enrollment_key_id} not found"), frame}
     end
   end
 end

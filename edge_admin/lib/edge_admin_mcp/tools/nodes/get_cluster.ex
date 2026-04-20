@@ -6,6 +6,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetCluster do
   alias EdgeAdmin.Nodes
   alias EdgeAdminMcp.Tools.Nodes.ClusterData
 
+  @impl true
+  def title, do: "Get Cluster"
+  @impl true
+  def annotations, do: %{"readOnlyHint" => true}
+
   schema do
     field :cluster_name, {:required, :string}
   end
@@ -17,7 +22,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetCluster do
         {:reply, Response.json(Response.tool(), ClusterData.data(cluster)), frame}
 
       {:error, :not_found} ->
-        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Cluster #{name} not found")), frame}
+        {:reply, error_response(:not_found, "Cluster #{name} not found"), frame}
     end
   end
 end

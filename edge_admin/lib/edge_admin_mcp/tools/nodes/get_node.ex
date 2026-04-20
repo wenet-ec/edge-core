@@ -6,6 +6,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetNode do
   alias EdgeAdmin.Nodes
   alias EdgeAdminMcp.Tools.Nodes.NodeData
 
+  @impl true
+  def title, do: "Get Node"
+  @impl true
+  def annotations, do: %{"readOnlyHint" => true}
+
   schema do
     field :node_id, {:required, :string}
   end
@@ -17,7 +22,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetNode do
         {:reply, Response.json(Response.tool(), NodeData.data(node)), frame}
 
       {:error, :not_found} ->
-        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Node #{id} not found")), frame}
+        {:reply, error_response(:not_found, "Node #{id} not found"), frame}
     end
   end
 end

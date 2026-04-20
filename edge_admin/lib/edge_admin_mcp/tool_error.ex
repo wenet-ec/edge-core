@@ -47,4 +47,19 @@ defmodule EdgeAdminMcp.ToolError do
   def build(:not_found, message) when is_binary(message) do
     %{error: "not_found", message: message}
   end
+
+  def message(%Ecto.Changeset{} = cs) do
+    details =
+      Ecto.Changeset.traverse_errors(cs, fn {msg, opts} ->
+        Enum.reduce(opts, msg, fn {k, v}, acc -> String.replace(acc, "%{#{k}}", to_string(v)) end)
+      end)
+
+    "Validation failed: #{inspect(details)}"
+  end
+
+  def message({:conflict, reason}) when is_binary(reason), do: reason
+  def message(:not_found), do: "Resource not found"
+  def message(:service_unavailable), do: "A downstream dependency is unavailable — try again shortly"
+  def message(%Flop.Meta{}), do: "Invalid filter or sort parameters"
+  def message(_), do: "An unexpected error occurred"
 end

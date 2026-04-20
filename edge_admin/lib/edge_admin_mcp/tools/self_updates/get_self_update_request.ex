@@ -6,6 +6,11 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.GetSelfUpdateRequest do
   alias EdgeAdmin.SelfUpdates
   alias EdgeAdminMcp.Tools.SelfUpdates.SelfUpdateRequestData
 
+  @impl true
+  def title, do: "Get Self-Update Request"
+  @impl true
+  def annotations, do: %{"readOnlyHint" => true}
+
   schema do
     field :request_id, {:required, :string}
   end
@@ -17,7 +22,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.GetSelfUpdateRequest do
         {:reply, Response.json(Response.tool(), SelfUpdateRequestData.data(request)), frame}
 
       {:error, :not_found} ->
-        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Self-update request #{id} not found")), frame}
+        {:reply, error_response(:not_found, "Self-update request #{id} not found"), frame}
     end
   end
 end

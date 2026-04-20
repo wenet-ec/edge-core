@@ -6,6 +6,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetAlias do
   alias EdgeAdmin.Nodes
   alias EdgeAdminMcp.Tools.Nodes.AliasData
 
+  @impl true
+  def title, do: "Get Alias"
+  @impl true
+  def annotations, do: %{"readOnlyHint" => true}
+
   schema do
     field :alias_id, {:required, :string}
   end
@@ -17,7 +22,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetAlias do
         {:reply, Response.json(Response.tool(), AliasData.data(alias_record)), frame}
 
       {:error, :not_found} ->
-        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Alias #{id} not found")), frame}
+        {:reply, error_response(:not_found, "Alias #{id} not found"), frame}
     end
   end
 end

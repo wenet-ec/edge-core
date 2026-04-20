@@ -15,6 +15,11 @@ defmodule EdgeAdminMcp.Tools.Commands.CreateCommand do
   alias EdgeAdmin.Commands
   alias EdgeAdminMcp.Tools.Commands.CommandData
 
+  @impl true
+  def title, do: "Create Command"
+  @impl true
+  def annotations, do: %{"destructiveHint" => false}
+
   schema do
     field :command_text, {:required, :string}, min_length: 1
     field :targeting, {:required, :map}
@@ -34,7 +39,7 @@ defmodule EdgeAdminMcp.Tools.Commands.CreateCommand do
         {:reply, Response.json(Response.tool(), CommandData.data(command)), frame}
 
       {:error, reason} ->
-        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
+        {:reply, error_response(reason), frame}
     end
   end
 end

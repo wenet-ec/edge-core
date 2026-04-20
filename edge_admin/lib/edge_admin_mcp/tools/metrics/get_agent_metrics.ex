@@ -5,6 +5,11 @@ defmodule EdgeAdminMcp.Tools.Metrics.GetAgentMetrics do
 
   alias EdgeAdmin.Metrics
 
+  @impl true
+  def title, do: "Get Agent Metrics"
+  @impl true
+  def annotations, do: %{"readOnlyHint" => true}
+
   schema do
     field :node_id, {:required, :string}
   end
@@ -16,7 +21,7 @@ defmodule EdgeAdminMcp.Tools.Metrics.GetAgentMetrics do
         {:reply, Response.json(Response.tool(), metrics), frame}
 
       {:error, _reason} ->
-        {:reply, Response.json(Response.tool(), tool_error(:service_unavailable)), frame}
+        {:reply, error_response(:service_unavailable), frame}
     end
   end
 end

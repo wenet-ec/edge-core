@@ -9,6 +9,11 @@ defmodule EdgeAdminMcp.Tools.Admins.CheckAdminHealth do
   """
   use EdgeAdminMcp, :tool
 
+  @impl true
+  def title, do: "Check Admin Health"
+  @impl true
+  def annotations, do: %{"readOnlyHint" => true}
+
   schema do
   end
 

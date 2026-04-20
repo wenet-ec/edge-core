@@ -5,6 +5,11 @@ defmodule EdgeAdminMcp.Tools.Admins.ListOrphanedClusters do
 
   alias EdgeAdmin.Admins.Metadata
 
+  @impl true
+  def title, do: "List Orphaned Clusters"
+  @impl true
+  def annotations, do: %{"readOnlyHint" => true}
+
   schema do
   end
 

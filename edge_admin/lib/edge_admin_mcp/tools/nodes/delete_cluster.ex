@@ -5,6 +5,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.DeleteCluster do
 
   alias EdgeAdmin.Nodes
 
+  @impl true
+  def title, do: "Delete Cluster"
+  @impl true
+  def annotations, do: %{"destructiveHint" => true, "idempotentHint" => false}
+
   schema do
     field :cluster_name, {:required, :string}
   end
@@ -16,10 +21,10 @@ defmodule EdgeAdminMcp.Tools.Nodes.DeleteCluster do
       {:reply, Response.text(Response.tool(), "Cluster #{name} deleted"), frame}
     else
       {:error, :not_found} ->
-        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Cluster #{name} not found")), frame}
+        {:reply, error_response(:not_found, "Cluster #{name} not found"), frame}
 
       {:error, reason} ->
-        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
+        {:reply, error_response(reason), frame}
     end
   end
 end

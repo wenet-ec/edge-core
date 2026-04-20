@@ -5,6 +5,11 @@ defmodule EdgeAdminMcp.Tools.Admins.GetAdmin do
 
   alias EdgeAdmin.Admins.Metadata
 
+  @impl true
+  def title, do: "Get Admin Info"
+  @impl true
+  def annotations, do: %{"readOnlyHint" => true}
+
   schema do
   end
 

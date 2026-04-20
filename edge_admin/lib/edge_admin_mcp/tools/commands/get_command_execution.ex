@@ -6,6 +6,11 @@ defmodule EdgeAdminMcp.Tools.Commands.GetCommandExecution do
   alias EdgeAdmin.Commands
   alias EdgeAdminMcp.Tools.Commands.CommandExecutionData
 
+  @impl true
+  def title, do: "Get Command Execution"
+  @impl true
+  def annotations, do: %{"readOnlyHint" => true}
+
   schema do
     field :execution_id, {:required, :string}
   end
@@ -17,7 +22,7 @@ defmodule EdgeAdminMcp.Tools.Commands.GetCommandExecution do
         {:reply, Response.json(Response.tool(), CommandExecutionData.data(execution)), frame}
 
       {:error, :not_found} ->
-        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Command execution #{id} not found")), frame}
+        {:reply, error_response(:not_found, "Command execution #{id} not found"), frame}
     end
   end
 end

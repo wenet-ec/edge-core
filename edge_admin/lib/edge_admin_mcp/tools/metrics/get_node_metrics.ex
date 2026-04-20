@@ -12,6 +12,11 @@ defmodule EdgeAdminMcp.Tools.Metrics.GetNodeMetrics do
 
   alias EdgeAdmin.Metrics
 
+  @impl true
+  def title, do: "Get Node Metrics"
+  @impl true
+  def annotations, do: %{"readOnlyHint" => true}
+
   schema do
     field :node_id, {:required, :string}
   end

@@ -6,6 +6,11 @@ defmodule EdgeAdminMcp.Tools.Ssh.GetSshUsername do
   alias EdgeAdmin.Ssh
   alias EdgeAdminMcp.Tools.Ssh.SshUsernameData
 
+  @impl true
+  def title, do: "Get SSH Username"
+  @impl true
+  def annotations, do: %{"readOnlyHint" => true}
+
   schema do
     field :ssh_username_id, {:required, :string}
   end
@@ -17,7 +22,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.GetSshUsername do
         {:reply, Response.json(Response.tool(), SshUsernameData.data(username)), frame}
 
       {:error, :not_found} ->
-        {:reply, Response.json(Response.tool(), tool_error(:not_found, "SSH username #{id} not found")), frame}
+        {:reply, error_response(:not_found, "SSH username #{id} not found"), frame}
     end
   end
 end

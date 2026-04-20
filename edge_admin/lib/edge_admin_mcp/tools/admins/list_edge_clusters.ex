@@ -5,6 +5,11 @@ defmodule EdgeAdminMcp.Tools.Admins.ListEdgeClusters do
 
   alias EdgeAdmin.Admins.Metadata
 
+  @impl true
+  def title, do: "List Edge Clusters (Admin View)"
+  @impl true
+  def annotations, do: %{"readOnlyHint" => true}
+
   schema do
   end
 

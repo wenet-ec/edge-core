@@ -5,6 +5,11 @@ defmodule EdgeAdminMcp.Tools.Commands.DeleteCommand do
 
   alias EdgeAdmin.Commands
 
+  @impl true
+  def title, do: "Delete Command"
+  @impl true
+  def annotations, do: %{"destructiveHint" => true, "idempotentHint" => false}
+
   schema do
     field :command_id, {:required, :string}
   end
@@ -16,10 +21,10 @@ defmodule EdgeAdminMcp.Tools.Commands.DeleteCommand do
       {:reply, Response.text(Response.tool(), "Command #{id} deleted"), frame}
     else
       {:error, :not_found} ->
-        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Command #{id} not found")), frame}
+        {:reply, error_response(:not_found, "Command #{id} not found"), frame}
 
       {:error, reason} ->
-        {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
+        {:reply, error_response(reason), frame}
     end
   end
 end

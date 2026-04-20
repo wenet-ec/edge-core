@@ -6,6 +6,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateEnrollmentKey do
   alias EdgeAdmin.Nodes
   alias EdgeAdminMcp.Tools.Nodes.EnrollmentKeyData
 
+  @impl true
+  def title, do: "Create Enrollment Key"
+  @impl true
+  def annotations, do: %{"destructiveHint" => false}
+
   schema do
     field :cluster_name, {:required, :string}, min_length: 1
     field :uses_remaining, :integer, min: 1
@@ -26,12 +31,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateEnrollmentKey do
             {:reply, Response.json(Response.tool(), EnrollmentKeyData.data(key)), frame}
 
           {:error, reason} ->
-            {:reply, Response.json(Response.tool(), tool_error(reason)), frame}
+            {:reply, error_response(reason), frame}
         end
 
       {:error, :not_found} ->
-        {:reply, Response.json(Response.tool(), tool_error(:not_found, "Cluster #{params.cluster_name} not found")),
-         frame}
+        {:reply, error_response(:not_found, "Cluster #{params.cluster_name} not found"), frame}
     end
   end
 end

@@ -5,6 +5,11 @@ defmodule EdgeAdminMcp.Tools.Metrics.GetAdminMetrics do
 
   alias EdgeAdmin.Metrics
 
+  @impl true
+  def title, do: "Get Admin Metrics"
+  @impl true
+  def annotations, do: %{"readOnlyHint" => true}
+
   schema do
   end
 
@@ -15,7 +20,7 @@ defmodule EdgeAdminMcp.Tools.Metrics.GetAdminMetrics do
         {:reply, Response.json(Response.tool(), metrics), frame}
 
       {:error, _reason} ->
-        {:reply, Response.json(Response.tool(), tool_error(:service_unavailable)), frame}
+        {:reply, error_response(:service_unavailable), frame}
     end
   end
 end

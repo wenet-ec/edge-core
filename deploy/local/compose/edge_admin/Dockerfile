@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   ca-certificates \
   # Build dependencies (dev only)
   build-essential \
+  cmake \
   git \
   # PostgreSQL dependencies
   libpq-dev \

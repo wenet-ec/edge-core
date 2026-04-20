@@ -13,7 +13,7 @@ FROM elixir:1.19.5-otp-28-slim AS builder
 
 # Install build dependencies
 RUN apt-get update -y && \
-    apt-get install -y build-essential git && \
+    apt-get install -y build-essential cmake git && \
     apt-get clean && \
     rm -f /var/lib/apt/lists/*_*
 

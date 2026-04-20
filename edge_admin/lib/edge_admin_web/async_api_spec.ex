@@ -32,7 +32,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "title" => "Edge Admin AsyncAPI",
         "version" => "0.2.0",
         "description" => """
-        Lifecycle events published by Edge Admin to a configured message broker (NATS, Kafka/Redpanda, or RabbitMQ).
+        Lifecycle events published by Edge Admin to a configured message broker (NATS, Kafka/Redpanda, RabbitMQ, or Redis).
 
         Edge Admin publishes and forgets — it has no knowledge of consumers.
         All messages follow the [CloudEvents 1.0](https://cloudevents.io) spec.
@@ -99,6 +99,16 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
             "Routing key = event type (e.g. `edge.node.registered`). " <>
             "Consumer queue durability is the consumer's choice.",
         "security" => [%{"$ref" => "#/components/securitySchemes/amqpPlain"}]
+      },
+      "redis" => %{
+        "host" => "localhost:6379",
+        "protocol" => "redis",
+        "description" =>
+          "Redis broker. Configure via EVENT_BROKER_URLS (single redis:// or rediss:// URL). " <>
+            "Events are published via Redis Pub/Sub (`PUBLISH`). Channel = event type " <>
+            "(e.g. `edge.node.registered`). Use `SUBSCRIBE` or `PSUBSCRIBE edge.*` to consume. " <>
+            "Fire-and-forget — no durability or replay. Credentials embedded in URL.",
+        "security" => [%{"$ref" => "#/components/securitySchemes/redisAuth"}]
       }
     }
   end
@@ -652,10 +662,16 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
       "amqpPlain" => %{
         "type" => "userPassword",
         "description" =>
-          "RabbitMQ username/password auth. " <>
-            "Embed credentials in EVENT_BROKER_URLS (amqp://user:pass@host:port) or set " <>
-            "EVENT_BROKER_RABBITMQ_USERNAME / EVENT_BROKER_RABBITMQ_PASSWORD separately " <>
-            "(separate vars take precedence). Enable TLS with EVENT_BROKER_RABBITMQ_SSL=true."
+          "RabbitMQ credentials embedded in EVENT_BROKER_URLS: amqp://user:pass@host:port. " <>
+            "The amqp library parses them natively. Enable TLS with EVENT_BROKER_RABBITMQ_SSL=true."
+      },
+      "redisAuth" => %{
+        "type" => "userPassword",
+        "description" =>
+          "Redis auth. Embed credentials in EVENT_BROKER_URLS: " <>
+            "`redis://:password@host:port` (password-only) or " <>
+            "`redis://username:password@host:port` (Redis 6+ ACL). " <>
+            "Enable TLS with EVENT_BROKER_REDIS_SSL=true (use rediss:// URL for external brokers)."
       }
     }
   end

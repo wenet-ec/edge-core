@@ -207,7 +207,7 @@ ADMIN_DISCOVERY_PORT=44000
 # EVENT_BROKER_ENABLED=true
 # CORE_NAME=                            # included in every envelope; defaults to "default"
 
-# NATS (pub/sub by default; add EVENT_BROKER_NATS_JETSTREAM=true for durable log):
+# NATS:
 # EVENT_BROKER_ADAPTER=nats
 # EVENT_BROKER_URLS=nats://edge_event_broker_nats:4222   # internal Docker: nats://  — use tls:// for public/external broker
 # EVENT_BROKER_NATS_JETSTREAM=true      # Enable durable JetStream log (default: false)
@@ -218,7 +218,7 @@ ADMIN_DISCOVERY_PORT=44000
 # EVENT_BROKER_NATS_NKEY_SEED=         # NKey seed (standalone or with JWT)
 # EVENT_BROKER_NATS_JWT=               # JWT credential — used alongside NKEY_SEED
 
-# Kafka-compatible / Redpanda:
+# Kafka / Redpanda:
 # EVENT_BROKER_ADAPTER=kafka
 # EVENT_BROKER_URLS=edge_event_broker_kafka:9092   # internal Docker: host:port — for public/external broker use the public hostname
 # EVENT_BROKER_KAFKA_USERNAME=admin
@@ -230,6 +230,11 @@ ADMIN_DISCOVERY_PORT=44000
 # EVENT_BROKER_ADAPTER=rabbitmq
 # EVENT_BROKER_URLS=amqp://edge_event_broker_rabbitmq:5672   # embed credentials: amqp://user:pass@host:port
 # EVENT_BROKER_RABBITMQ_SSL=true              # enable TLS — required for public/external brokers (CloudAMQP, etc.)
+
+# Redis:
+# EVENT_BROKER_ADAPTER=redis
+# EVENT_BROKER_URLS=redis://edge_event_broker_redis:6379   # embed credentials: redis://:pass@host:port
+# EVENT_BROKER_REDIS_SSL=true                # enable TLS — required for public/external brokers (Redis Cloud, Upstash, etc.)
 
 # =============================================================================
 # Background Workers & Schedulers

@@ -71,13 +71,23 @@ config:
 
   # Event Broker — opt-in, broker deployed separately
   # Set eventBrokerEnabled to "true" and point eventBrokerUrls at your broker to enable.
-  # Adapter: nats | kafka | rabbitmq — pick whichever fits your stack.
+  # Adapter: nats | kafka | rabbitmq | redis — pick whichever fits your stack.
   #   nats:     EVENT_BROKER_URLS=nats://host:port  (add eventBrokerNatsJetstream=true for durable log)
   #   kafka:    EVENT_BROKER_URLS=host:port          (Redpanda / vanilla Kafka / any Kafka-compatible)
   #   rabbitmq: EVENT_BROKER_URLS=amqp://host:port   (or amqps:// for TLS)
+  #   redis:    EVENT_BROKER_URLS=redis://host:port  (or redis://:password@host:port; use rediss:// for TLS)
   eventBrokerEnabled: "false"
   eventBrokerAdapter: ""
   eventBrokerUrls: ""
+  # NATS options
+  eventBrokerNatsJetstream: "false"   # set "true" for durable JetStream log
+  # Kafka/Redpanda options
+  eventBrokerKafkaSaslMechanism: "plain"  # plain | scram_sha_256 | scram_sha_512
+  eventBrokerKafkaSsl: "false"            # set "true" for external/public brokers
+  # RabbitMQ options
+  eventBrokerRabbitmqSsl: "false"         # set "true" for external/public brokers (CloudAMQP, etc.)
+  # Redis options
+  eventBrokerRedisSsl: "false"            # set "true" for external/public brokers (Redis Cloud, Upstash, etc.)
   # coreName is included in every event envelope — identifies this core in multi-core setups
   coreName: "default"
 
@@ -108,6 +118,7 @@ secrets:
   # The Secret must contain: SECRET_KEY_BASE, MASTER_KEY, DB_PASSWORD,
   #   NETMAKER_MASTER_KEY, NETMAKER_SUPERADMIN_PASSWORD, VPN_CLUSTER_COOKIE
   # Optional broker auth (only needed when EVENT_BROKER_ENABLED=true and broker requires auth).
+  # RabbitMQ and Redis embed credentials in EVENT_BROKER_URLS — no separate fields needed.
   # Leave fields empty to omit them from the Secret.
   existingSecret: ""
   secretKeyBase: "changeme"
@@ -116,14 +127,15 @@ secrets:
   netmakerMasterKey: "changeme"
   netmakerSuperadminPassword: "changeme"
   vpnClusterCookie: "changeme"
-  # NATS auth
-  eventBrokerNatsToken: ""
+  # NATS auth — pick one, mutually exclusive (token takes precedence)
+  eventBrokerNatsToken: ""       # shared token (simple/self-hosted)
+  eventBrokerNatsUsername: ""    # username + password
+  eventBrokerNatsPassword: ""
+  eventBrokerNatsNkeySeed: ""    # NKey seed — standalone or paired with JWT
+  eventBrokerNatsJwt: ""         # JWT credential — used alongside NKey seed
   # Kafka/Redpanda auth
   eventBrokerKafkaUsername: ""
   eventBrokerKafkaPassword: ""
-  # RabbitMQ auth (alternative to embedding credentials in EVENT_BROKER_URLS)
-  eventBrokerRabbitmqUsername: ""
-  eventBrokerRabbitmqPassword: ""
 
 migration:
   # Set to false when the image doesn't exist yet (e.g. local kind testing without a built image)

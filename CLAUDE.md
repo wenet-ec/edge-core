@@ -284,6 +284,7 @@ edge_core/
 - `event_broker/adapters/nats.ex` - NATS adapter (gnat); JetStream enabled via `EVENT_BROKER_NATS_JETSTREAM=true`
 - `event_broker/adapters/kafka.ex` - Kafka-compatible adapter (brod)
 - `event_broker/adapters/rabbitmq.ex` - RabbitMQ adapter (amqp); durable topic exchange `edge.events`
+- `event_broker/adapters/redis.ex` - Redis adapter (redix); fire-and-forget pub/sub, channel = event type
 - `event_broker/workers/publish_event_worker.ex` - Oban worker for async broker delivery
 
 **Edge Agent (`edge_agent/lib/edge_agent/`):**
@@ -410,7 +411,7 @@ Production files follow the same pattern in `deploy/production/.envs/`
 - `SECRET_KEY_BASE` - Phoenix secret for sessions and encryption
 - `PHX_HOST` - Public hostname for admin API
 - `EVENT_BROKER_ENABLED` - `true` to enable event publishing (default: `false`)
-- `EVENT_BROKER_ADAPTER` - `nats`, `kafka`, or `rabbitmq` (required when enabled)
+- `EVENT_BROKER_ADAPTER` - `nats`, `kafka`, `rabbitmq`, or `redis` (required when enabled)
 - `EVENT_BROKER_URLS` - Comma-separated broker URLs (`nats://host:port` or `host:port`)
 - `EVENT_BROKER_NATS_TOKEN` - NATS auth token (optional)
 - `EVENT_BROKER_KAFKA_USERNAME` / `EVENT_BROKER_KAFKA_PASSWORD` - SASL credentials (optional)

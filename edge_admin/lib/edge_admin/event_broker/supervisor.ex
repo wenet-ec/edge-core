@@ -23,6 +23,11 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
     1. `EdgeAdmin.EventBroker.Adapters.RabbitMQ` — GenServer that opens an
        AMQP connection + channel, declares the topic exchange, and monitors
        the connection for auto-reconnect.
+
+  ## Children (Redis adapter)
+
+    1. `EdgeAdmin.EventBroker.Adapters.Redis` — GenServer that opens a Redix
+       connection and publishes events via Redis Pub/Sub (`PUBLISH`).
   """
 
   use Supervisor
@@ -76,6 +81,10 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
 
   defp build_children(:rabbitmq) do
     [EdgeAdmin.EventBroker.Adapters.RabbitMQ]
+  end
+
+  defp build_children(:redis) do
+    [EdgeAdmin.EventBroker.Adapters.Redis]
   end
 
   # Auth precedence: token → username/password → nkey+jwt → nkey only → none

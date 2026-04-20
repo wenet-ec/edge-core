@@ -149,6 +149,7 @@ defmodule EdgeAdmin.Mixfile do
       {:gnat, "~> 1.13"},
       {:brod, "~> 3.16"},
       {:amqp, "~> 4.1"},
+      {:redix, "~> 1.5"},
 
       # Nexmaker library
       {:nexmaker, path: "../nexmaker"}

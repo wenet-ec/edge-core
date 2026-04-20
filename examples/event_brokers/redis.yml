@@ -1,0 +1,46 @@
+# examples/event_brokers/redis.yml
+#
+# Redis — fire-and-forget pub/sub event broker for Edge Core.
+# No durability or replay — messages are lost when no subscriber is connected.
+# Pick this only when downstream consumers are always-on and loss is acceptable.
+#
+# Usage (alongside your core compose file):
+#   docker compose -f cloud.yml -f ../event_brokers/redis.yml up -d
+#
+# Then set in your .env:
+#   EVENT_BROKER_ENABLED=true
+#   EVENT_BROKER_ADAPTER=redis
+#   EVENT_BROKER_URLS=redis://edge_event_broker:6379
+#   # EVENT_BROKER_URLS=redis://:password@edge_event_broker:6379  # if auth is enabled
+#
+# To verify events are flowing, subscribe before triggering an action:
+#   docker exec -it edge_event_broker redis-cli PSUBSCRIBE 'edge.*'
+#
+# Ports exposed:
+#   6379  — Redis client (internal Docker, used by Edge Admin)
+
+networks:
+  edge_core:
+    external: true
+    name: edge_core
+
+volumes:
+  edge_event_broker_data: {}
+
+services:
+  edge_event_broker:
+    image: redis:alpine
+    container_name: edge_event_broker
+    restart: unless-stopped
+    networks:
+      - edge_core
+    volumes:
+      - edge_event_broker_data:/data
+    ports:
+      - "6379:6379"   # Redis client
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s

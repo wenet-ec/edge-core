@@ -1,6 +1,6 @@
 # deploy/production/event_broker.yml
 #
-# Set EVENT_BROKER_ENABLED=true and EVENT_BROKER_ADAPTER=nats|kafka|rabbitmq
+# Set EVENT_BROKER_ENABLED=true and EVENT_BROKER_ADAPTER=nats|kafka|rabbitmq|redis
 # in .envs/.edge_admin before starting.
 
 networks:
@@ -12,6 +12,7 @@ volumes:
   production_edge_event_broker_nui_data: {}
   production_edge_event_broker_redpanda_data: {}
   production_edge_event_broker_rabbitmq_data: {}
+  production_edge_event_broker_redis_data: {}
 
 services:
 
@@ -144,3 +145,26 @@ services:
       - "45672:5672"    # AMQP
       - "41567:15672"   # Management UI
       - "41569:15692"   # Prometheus metrics
+
+  # ---------------------------------------------------------------------------
+  # Redis
+  # Set EVENT_BROKER_ADAPTER=redis in .envs/.edge_admin
+  # ---------------------------------------------------------------------------
+
+  edge_event_broker_redis:
+    image: redis:alpine
+    container_name: production_edge_event_broker_redis
+    networks:
+      - production_edge_core
+    volumes:
+      - production_edge_event_broker_redis_data:/data
+      - ./compose/edge_event_broker/redis.conf:/etc/redis/redis.conf:ro
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    ports:
+      - "46379:6379"   # Redis client
+    command: ["redis-server", "/etc/redis/redis.conf"]

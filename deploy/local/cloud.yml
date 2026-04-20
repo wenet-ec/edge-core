@@ -28,6 +28,7 @@ volumes:
   local_edge_event_broker_nui_data: {}
   local_edge_event_broker_redpanda_data: {}
   local_edge_event_broker_rabbitmq_data: {}
+  local_edge_event_broker_redis_data: {}
 
 services:
   # Edge Admin
@@ -63,6 +64,7 @@ services:
       - "edge_event_broker_nats:172.20.0.110"
       - "edge_event_broker_kafka:172.20.0.111"
       - "edge_event_broker_rabbitmq:172.20.0.112"
+      - "edge_event_broker_redis:172.20.0.113"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -110,6 +112,7 @@ services:
       - "edge_event_broker_nats:172.20.0.110"
       - "edge_event_broker_kafka:172.20.0.111"
       - "edge_event_broker_rabbitmq:172.20.0.112"
+      - "edge_event_broker_redis:172.20.0.113"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -161,6 +164,7 @@ services:
       - "edge_event_broker_nats:172.20.0.110"
       - "edge_event_broker_kafka:172.20.0.111"
       - "edge_event_broker_rabbitmq:172.20.0.112"
+      - "edge_event_broker_redis:172.20.0.113"
     depends_on:
       edge_vpn:
         condition: service_healthy
@@ -528,3 +532,22 @@ services:
   #     - "45672:5672"    # AMQP
   #     - "41567:15672"   # Management UI
   #     - "41569:15692"   # Prometheus
+
+  # edge_event_broker_redis:
+  #   image: redis:alpine
+  #   container_name: local_edge_event_broker_redis
+  #   networks:
+  #     local_edge_core:
+  #       ipv4_address: 172.20.0.113
+  #   volumes:
+  #     - local_edge_event_broker_redis_data:/data
+  #     - ../../deploy/production/compose/edge_event_broker/redis.conf:/etc/redis/redis.conf:ro
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 10
+  #     start_period: 10s
+  #   ports:
+  #     - "46379:6379"   # Redis client
+  #   command: ["redis-server", "/etc/redis/redis.conf"]

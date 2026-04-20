@@ -271,7 +271,7 @@ config :os_mon,
 # CORE_NAME is shared across all adapters — included in every event envelope.
 #
 #   EVENT_BROKER_ENABLED=true
-#   EVENT_BROKER_ADAPTER=nats|kafka|rabbitmq
+#   EVENT_BROKER_ADAPTER=nats|kafka|rabbitmq|redis
 #   EVENT_BROKER_URLS=...
 #   CORE_NAME=prod-us   # optional, defaults to "default"
 #
@@ -295,6 +295,10 @@ config :os_mon,
 # RabbitMQ:
 #   EVENT_BROKER_URLS=amqp://edge_event_broker_rabbitmq:5672   # embed credentials: amqp://user:pass@host:port
 #   EVENT_BROKER_RABBITMQ_SSL=true   # enable TLS — required for external brokers (CloudAMQP, etc.)
+#
+# Redis (pub/sub, fire-and-forget):
+#   EVENT_BROKER_URLS=redis://edge_event_broker_redis:6379   # embed credentials: redis://:pass@host:port
+#   EVENT_BROKER_REDIS_SSL=true   # enable TLS — required for external brokers (Redis Cloud, Upstash, etc.)
 config :sentry,
   dsn: get_env("SENTRY_DSN"),
   environment_name: get_env("SENTRY_ENVIRONMENT_NAME")
@@ -305,7 +309,8 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
       "nats" -> :nats
       "kafka" -> :kafka
       "rabbitmq" -> :rabbitmq
-      other -> raise "Unknown EVENT_BROKER_ADAPTER=#{other} — valid values: nats, kafka, rabbitmq"
+      "redis" -> :redis
+      other -> raise "Unknown EVENT_BROKER_ADAPTER=#{other} — valid values: nats, kafka, rabbitmq, redis"
     end
 
   event_broker_urls = get_env!("EVENT_BROKER_URLS")
@@ -391,5 +396,20 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
       config :edge_admin, :event_broker_kafka,
         brokers: brokers,
         client_config: sasl_opts ++ ssl_opts
+
+    :redis ->
+      # EVENT_BROKER_URLS for Redis is a single URL: redis://host:port or rediss://host:port
+      # Credentials can be embedded: redis://:password@host:port (Redis auth)
+      # or redis://username:password@host:port (Redis 6+ ACL).
+      # Only the first URL is used — Redis Pub/Sub is single-node.
+      url =
+        event_broker_urls
+        |> String.split(",")
+        |> List.first()
+        |> String.trim()
+
+      config :edge_admin, :event_broker_redis,
+        url: url,
+        ssl: get_env("EVENT_BROKER_REDIS_SSL", :boolean, false)
   end
 end

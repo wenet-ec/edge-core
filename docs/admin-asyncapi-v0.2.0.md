@@ -8,7 +8,7 @@ Interactive viewer: `/asyncdoc` on a running admin. Raw spec: `GET /api/asyncapi
 
 ## Overview
 
-Edge Admin publishes lifecycle events to a configured message broker (NATS, Kafka/Redpanda, or RabbitMQ). All events follow the [CloudEvents 1.0](https://cloudevents.io) spec. Edge Admin publishes and forgets — it has no knowledge of consumers.
+Edge Admin publishes lifecycle events to a configured message broker (NATS, Kafka/Redpanda, RabbitMQ, or Redis). All events follow the [CloudEvents 1.0](https://cloudevents.io) spec. Edge Admin publishes and forgets — it has no knowledge of consumers.
 
 ### Event Envelope
 
@@ -32,7 +32,7 @@ Every event is wrapped in a CloudEvents envelope:
 | `specversion`     | Always `"1.0"`                                                                                                     |
 | `id`              | UUID v4 — unique per event, use for consumer-side dedup                                                            |
 | `source`          | Always `"https://github.com/wenet-ec/edge-core"`                                                                   |
-| `type`            | Event type — doubles as NATS subject and RabbitMQ routing key (see tables below)                                   |
+| `type`            | Event type — doubles as NATS subject, RabbitMQ routing key, and Redis channel (see tables below)                   |
 | `time`            | When the state change happened in admin (ISO 8601)                                                                 |
 | `datacontenttype` | Always `"application/json"`                                                                                        |
 | `corename`        | CloudEvents extension. Identifies the publishing core instance. Set via `CORE_NAME` env var (default: `"default"`) |
@@ -92,6 +92,18 @@ edge.#                   ← everything
 
 Consumer queue durability is the consumer's choice — bind a durable queue to persist messages across restarts, or a transient queue for live-only consumption. Edge Core publishes with `persistent: true` (messages written to disk before broker ACKs).
 
+### Redis
+
+Channel = event `type` (e.g. `edge.node.registered`). Subscribe using `SUBSCRIBE` for exact channels or `PSUBSCRIBE` for wildcard patterns:
+
+```
+SUBSCRIBE edge.node.registered       ← exact channel
+PSUBSCRIBE edge.node.*               ← all node events
+PSUBSCRIBE edge.*                    ← everything
+```
+
+**No persistence or replay** — messages are delivered to currently connected subscribers only. If no subscriber is connected when Core publishes, the message is gone. Pick Redis only when consumers are always-on and loss is acceptable.
+
 ---
 
 ## Event Types
@@ -101,14 +113,14 @@ Consumer queue durability is the consumer's choice — bind a durable queue to p
 All node events share the same `data` shape unless noted.
 
 | Type                         | NATS subject / RabbitMQ routing key | Description                                                              |
-| ---------------------------- | ---------------------------- | ------------------------------------------------------------------------ |
-| `edge.node.registered`       | `edge.node.registered`       | First-time enrollment — new `node_id` seen for the first time            |
-| `edge.node.reregistered`     | `edge.node.reregistered`     | Re-enrollment — existing node came back (reboot, redeploy, etc.)         |
-| `edge.node.version_changed`  | `edge.node.version_changed`  | Fires alongside `reregistered` when reported version differs from stored |
-| `edge.node.status_changed`   | `edge.node.status_changed`   | Health transition: `healthy` ↔ `unhealthy` ↔ `unreachable`               |
-| `edge.node.cluster_changed`  | `edge.node.cluster_changed`  | Node moved to a different cluster                                        |
-| `edge.node.update_triggered` | `edge.node.update_triggered` | Self-update signal successfully sent to this node's Watchtower           |
-| `edge.node.deleted`          | `edge.node.deleted`          | Node removed from the system                                             |
+| ---------------------------- | ----------------------------------- | ------------------------------------------------------------------------ |
+| `edge.node.registered`       | `edge.node.registered`              | First-time enrollment — new `node_id` seen for the first time            |
+| `edge.node.reregistered`     | `edge.node.reregistered`            | Re-enrollment — existing node came back (reboot, redeploy, etc.)         |
+| `edge.node.version_changed`  | `edge.node.version_changed`         | Fires alongside `reregistered` when reported version differs from stored |
+| `edge.node.status_changed`   | `edge.node.status_changed`          | Health transition: `healthy` ↔ `unhealthy` ↔ `unreachable`               |
+| `edge.node.cluster_changed`  | `edge.node.cluster_changed`         | Node moved to a different cluster                                        |
+| `edge.node.update_triggered` | `edge.node.update_triggered`        | Self-update signal successfully sent to this node's Watchtower           |
+| `edge.node.deleted`          | `edge.node.deleted`                 | Node removed from the system                                             |
 
 **Node `data` schema:**
 
@@ -203,9 +215,9 @@ Notes:
 Both events share the same `data` shape.
 
 | Type                         | NATS subject / RabbitMQ routing key | Description                                           |
-| ---------------------------- | ---------------------------- | ----------------------------------------------------- |
-| `edge.self_update.created`   | `edge.self_update.created`   | Self-update request created with targeting definition |
-| `edge.self_update.completed` | `edge.self_update.completed` | Batch finished — `summary` populated                  |
+| ---------------------------- | ----------------------------------- | ----------------------------------------------------- |
+| `edge.self_update.created`   | `edge.self_update.created`          | Self-update request created with targeting definition |
+| `edge.self_update.completed` | `edge.self_update.completed`        | Batch finished — `summary` populated                  |
 
 **Self-update `data` schema:**
 
@@ -251,6 +263,7 @@ Edge Core publishes accurately regardless of broker. Durability, replay, and ret
 - **NATS JetStream / Kafka** — durable append-only log. Consumers can replay from an offset (JetStream consumer position, Kafka consumer group offset). Multiple independent consumers at different positions.
 - **NATS pub/sub** — fire-and-forget. Messages are delivered to active subscribers only; missed messages are gone.
 - **RabbitMQ** — delivery semantics depend on consumer queue configuration. Durable queue = messages survive broker restart; transient queue = live-only. Core always publishes with `persistent: true`.
+- **Redis** — pure pub/sub (`PUBLISH`/`SUBSCRIBE`). No queue, no persistence, no replay. Messages go only to currently connected subscribers. If no subscriber is connected, the message is gone.
 
 In all cases: each publish is a **full snapshot**, not a diff. If events are missed, the next event is still self-contained.
 

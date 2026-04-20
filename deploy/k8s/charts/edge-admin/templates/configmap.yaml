@@ -61,4 +61,9 @@ data:
   {{- if .Values.config.eventBrokerUrls }}
   EVENT_BROKER_URLS: {{ .Values.config.eventBrokerUrls | quote }}
   {{- end }}
+  EVENT_BROKER_NATS_JETSTREAM: {{ .Values.config.eventBrokerNatsJetstream | quote }}
+  EVENT_BROKER_KAFKA_SASL_MECHANISM: {{ .Values.config.eventBrokerKafkaSaslMechanism | quote }}
+  EVENT_BROKER_KAFKA_SSL: {{ .Values.config.eventBrokerKafkaSsl | quote }}
+  EVENT_BROKER_RABBITMQ_SSL: {{ .Values.config.eventBrokerRabbitmqSsl | quote }}
+  EVENT_BROKER_REDIS_SSL: {{ .Values.config.eventBrokerRedisSsl | quote }}
   CORE_NAME: {{ .Values.config.coreName | quote }}

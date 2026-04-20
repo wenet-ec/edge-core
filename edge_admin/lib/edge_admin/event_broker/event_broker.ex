@@ -17,6 +17,7 @@ defmodule EdgeAdmin.EventBroker do
   - `nats` — NATS pub/sub; add `EVENT_BROKER_NATS_JETSTREAM=true` for durable log (recommended)
   - `kafka` — Kafka-compatible protocol (Redpanda recommended)
   - `rabbitmq` — RabbitMQ topic exchange; consumer queue durability is the consumer's choice
+  - `redis` — Redis Pub/Sub; fire-and-forget, no durability or replay
 
   ## Usage
 
@@ -129,6 +130,7 @@ defmodule EdgeAdmin.EventBroker do
       :nats -> EdgeAdmin.EventBroker.Adapters.Nats
       :kafka -> EdgeAdmin.EventBroker.Adapters.Kafka
       :rabbitmq -> EdgeAdmin.EventBroker.Adapters.RabbitMQ
+      :redis -> EdgeAdmin.EventBroker.Adapters.Redis
     end
   end
 

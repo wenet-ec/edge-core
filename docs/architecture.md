@@ -337,9 +337,9 @@ Edge Admin can publish lifecycle events to an external message broker — opt-in
 
 Events span three domains: node lifecycle (registered, status changed, deleted, etc.), command execution lifecycle (created → sent → completed/cancelled/expired), and self-update request lifecycle. All events follow [CloudEvents 1.0](https://cloudevents.io) and carry a full object snapshot in `data`.
 
-Three adapters: `nats` (NATS — pub/sub by default, set `EVENT_BROKER_NATS_JETSTREAM=true` for durable log), `kafka` (any Kafka-compatible broker — Redpanda, Kafka, Confluent Cloud, etc.), and `rabbitmq` (topic exchange, routing key = event type). Pick the broker that matches your semantics — there is no recommended default.
+Four adapters: `nats` (NATS — pub/sub by default, set `EVENT_BROKER_NATS_JETSTREAM=true` for durable log), `kafka` (any Kafka-compatible broker — Redpanda, Kafka, Confluent Cloud, etc.), `rabbitmq` (topic exchange, routing key = event type), and `redis` (fire-and-forget pub/sub, no persistence). Pick the broker that matches your semantics — there is no recommended default.
 
-The `type` field in the envelope doubles as the NATS subject and RabbitMQ routing key (`edge.node.status_changed`, `edge.execution.completed`, etc.) — no parsing needed for broker-level filtering.
+The `type` field in the envelope doubles as the NATS subject, RabbitMQ routing key, and Redis channel (`edge.node.status_changed`, `edge.execution.completed`, etc.) — no parsing needed for broker-level filtering.
 
 Duplicate events are possible for `edge.node.status_changed` — the health check runs on every admin instance independently (masterless design). Consumers dedup via the `id` UUID.
 

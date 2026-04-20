@@ -1,5 +1,5 @@
 # edge_admin/lib/edge_admin/event_broker/adapters/rabbitmq.ex
-defmodule EdgeAdmin.EventBroker.Adapters.RabbitMQ do
+defmodule EdgeAdmin.EventBroker.Adapters.Rabbitmq do
   @moduledoc """
   RabbitMQ adapter for the event broker.
 
@@ -24,7 +24,7 @@ defmodule EdgeAdmin.EventBroker.Adapters.RabbitMQ do
   ## Configuration (set in runtime.exs from env vars)
 
       config :edge_admin, :event_broker_rabbitmq,
-        url: "amqp://guest:guest@localhost:5672",
+        url: "amqp://user:pass@host:5672",
         ssl: false    # set true for TLS (amqps://)
 
   Controlled by env vars:
@@ -124,7 +124,7 @@ defmodule EdgeAdmin.EventBroker.Adapters.RabbitMQ do
   @impl GenServer
   def handle_info(:connect, state) do
     config = Application.get_env(:edge_admin, :event_broker_rabbitmq, [])
-    url = Keyword.get(config, :url, "amqp://localhost:5672")
+    url = Keyword.fetch!(config, :url)
     ssl = Keyword.get(config, :ssl, false)
 
     conn_opts = if ssl, do: [ssl_options: [verify: :verify_peer, customize_hostname_check: []]], else: []

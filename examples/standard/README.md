@@ -107,7 +107,7 @@ EVENT_BROKER_URLS=nats://edge_event_broker:4222
 # EVENT_BROKER_NATS_JETSTREAM=true   # enable durable log (default: false)
 ```
 
-See `examples/event_brokers/` for all supported brokers (NATS, Redpanda, Kafka).
+See `examples/event_brokers/` for all supported brokers (NATS, Redpanda, Kafka, RabbitMQ, Redis).
 
 ## API Docs
 

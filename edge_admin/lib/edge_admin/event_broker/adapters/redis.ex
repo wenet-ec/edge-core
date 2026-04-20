@@ -21,7 +21,7 @@ defmodule EdgeAdmin.EventBroker.Adapters.Redis do
   ## Configuration (set in runtime.exs from env vars)
 
       config :edge_admin, :event_broker_redis,
-        url: "redis://localhost:6379",
+        url: "redis://host:6379",
         ssl: false
 
   Controlled by env vars:
@@ -115,7 +115,7 @@ defmodule EdgeAdmin.EventBroker.Adapters.Redis do
   @impl GenServer
   def handle_info(:connect, _state) do
     config = Application.get_env(:edge_admin, :event_broker_redis, [])
-    url = Keyword.get(config, :url, "redis://localhost:6379")
+    url = Keyword.fetch!(config, :url)
     ssl = Keyword.get(config, :ssl, false)
 
     opts = if ssl, do: [ssl: true], else: []

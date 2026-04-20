@@ -77,8 +77,10 @@ event_brokers/
 ├── rabbitmq.yml        — RabbitMQ + Management UI
 ├── redis.yml           — Redis (fire-and-forget pub/sub, no UI)
 └── config/
-    ├── nats.conf       — NATS server config (JetStream, TLS + cluster blocks commented out)
-    └── nui-context.json — NUI pre-configured connection to edge_event_broker
+    ├── nats.conf                  — NATS server config (JetStream, TLS + cluster blocks commented out)
+    ├── nui-context.json           — NUI pre-configured connection to edge_event_broker
+    ├── rabbitmq.conf              — RabbitMQ server config (TLS block commented out)
+    └── rabbitmq_enabled_plugins   — enables management plugin
 ```
 
 ## Env Vars Reference

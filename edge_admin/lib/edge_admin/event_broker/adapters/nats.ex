@@ -62,6 +62,27 @@ defmodule EdgeAdmin.EventBroker.Adapters.Nats do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
+  @doc "Returns the `Gnat.ConnectionSupervisor` child spec, built from application config."
+  def connection_supervisor_spec do
+    config = Application.get_env(:edge_admin, :event_broker_nats, [])
+    urls = Keyword.fetch!(config, :urls)
+    auth = build_auth(config)
+
+    connection_settings =
+      Enum.map(urls, fn url ->
+        uri = URI.parse(url)
+        base = %{host: to_charlist(uri.host), port: uri.port || 4222}
+        Map.merge(base, auth)
+      end)
+
+    {Gnat.ConnectionSupervisor,
+     %{
+       name: @conn,
+       backoff_period: 5_000,
+       connection_settings: connection_settings
+     }}
+  end
+
   # ---------------------------------------------------------------------------
   # Adapter callbacks
   # ---------------------------------------------------------------------------
@@ -116,6 +137,26 @@ defmodule EdgeAdmin.EventBroker.Adapters.Nats do
   # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------
+
+  # Auth precedence: token → username/password → nkey+jwt → nkey only → none
+  defp build_auth(config) do
+    token = present(Keyword.get(config, :token))
+    username = present(Keyword.get(config, :username))
+    password = present(Keyword.get(config, :password))
+    nkey_seed = present(Keyword.get(config, :nkey_seed))
+    jwt = present(Keyword.get(config, :jwt))
+
+    cond do
+      token -> %{token: token}
+      username && password -> %{username: username, password: password}
+      nkey_seed && jwt -> %{nkey_seed: nkey_seed, jwt: jwt}
+      nkey_seed -> %{nkey_seed: nkey_seed}
+      true -> %{}
+    end
+  end
+
+  defp present(value) when is_binary(value) and value != "", do: value
+  defp present(_), do: nil
 
   defp connection_ready?, do: healthy?() == :ok
 

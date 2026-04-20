@@ -129,7 +129,7 @@ defmodule EdgeAdmin.EventBroker do
     case Application.get_env(:edge_admin, :event_broker_adapter) do
       :nats -> EdgeAdmin.EventBroker.Adapters.Nats
       :kafka -> EdgeAdmin.EventBroker.Adapters.Kafka
-      :rabbitmq -> EdgeAdmin.EventBroker.Adapters.RabbitMQ
+      :rabbitmq -> EdgeAdmin.EventBroker.Adapters.Rabbitmq
       :redis -> EdgeAdmin.EventBroker.Adapters.Redis
     end
   end

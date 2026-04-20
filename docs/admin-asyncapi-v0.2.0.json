@@ -1098,7 +1098,7 @@
     },
     "securitySchemes": {
       "amqpPlain": {
-        "description": "RabbitMQ username/password auth. Embed credentials in EVENT_BROKER_URLS (amqp://user:pass@host:port) or set EVENT_BROKER_RABBITMQ_USERNAME / EVENT_BROKER_RABBITMQ_PASSWORD separately (separate vars take precedence). Enable TLS with EVENT_BROKER_RABBITMQ_SSL=true.",
+        "description": "RabbitMQ credentials embedded in EVENT_BROKER_URLS: amqp://user:pass@host:port. The amqp library parses them natively. Enable TLS with EVENT_BROKER_RABBITMQ_SSL=true.",
         "type": "userPassword"
       },
       "kafkaSasl": {
@@ -1109,12 +1109,16 @@
         "description": "NATS token auth. Set via EVENT_BROKER_NATS_TOKEN.",
         "scheme": "bearer",
         "type": "http"
+      },
+      "redisAuth": {
+        "description": "Redis auth. Embed credentials in EVENT_BROKER_URLS: `redis://:password@host:port` (password-only) or `redis://username:password@host:port` (Redis 6+ ACL). Enable TLS with EVENT_BROKER_REDIS_SSL=true (use rediss:// URL for external brokers).",
+        "type": "userPassword"
       }
     }
   },
   "defaultContentType": "application/json",
   "info": {
-    "description": "Lifecycle events published by Edge Admin to a configured message broker (NATS, Kafka/Redpanda, or RabbitMQ).\n\nEdge Admin publishes and forgets — it has no knowledge of consumers.\nAll messages follow the [CloudEvents 1.0](https://cloudevents.io) spec.\n`corename` is a CloudEvents extension attribute identifying the publishing Edge Admin instance.\n\n```json\n{\n  \"specversion\": \"1.0\",\n  \"id\": \"<uuid v4>\",\n  \"source\": \"https://github.com/wenet-ec/edge-core\",\n  \"type\": \"edge.node.registered\",\n  \"time\": \"2026-04-13T10:00:00Z\",\n  \"datacontenttype\": \"application/json\",\n  \"corename\": \"prod-us\",\n  \"data\": { ... }\n}\n```\n\nEnable publishing by setting `EVENT_BROKER_ENABLED=true` on the admin.\n\n**Explore:**\n- [AsyncAPI viewer](/asyncdoc) — this page\n- [Raw spec](/api/asyncapi) — AsyncAPI JSON\n\n**REST API:** See the [Swagger UI](/swaggerui), [ReDoc](/redoc), or [download the OpenAPI spec](/api/openapi).\n",
+    "description": "Lifecycle events published by Edge Admin to a configured message broker (NATS, Kafka/Redpanda, RabbitMQ, or Redis).\n\nEdge Admin publishes and forgets — it has no knowledge of consumers.\nAll messages follow the [CloudEvents 1.0](https://cloudevents.io) spec.\n`corename` is a CloudEvents extension attribute identifying the publishing Edge Admin instance.\n\n```json\n{\n  \"specversion\": \"1.0\",\n  \"id\": \"<uuid v4>\",\n  \"source\": \"https://github.com/wenet-ec/edge-core\",\n  \"type\": \"edge.node.registered\",\n  \"time\": \"2026-04-13T10:00:00Z\",\n  \"datacontenttype\": \"application/json\",\n  \"corename\": \"prod-us\",\n  \"data\": { ... }\n}\n```\n\nEnable publishing by setting `EVENT_BROKER_ENABLED=true` on the admin.\n\n**Explore:**\n- [AsyncAPI viewer](/asyncdoc) — this page\n- [Raw spec](/api/asyncapi) — AsyncAPI JSON\n\n**REST API:** See the [Swagger UI](/swaggerui), [ReDoc](/redoc), or [download the OpenAPI spec](/api/openapi).\n",
     "title": "Edge Admin AsyncAPI",
     "version": "0.2.0"
   },
@@ -1129,7 +1133,8 @@
           "mandatory": false
         },
         "kafka": { "bindingVersion": "0.5.0" },
-        "nats": { "bindingVersion": "0.1.0" }
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" }
       },
       "channel": { "$ref": "#/channels/edge.node.registered" }
     },
@@ -1143,7 +1148,8 @@
           "mandatory": false
         },
         "kafka": { "bindingVersion": "0.5.0" },
-        "nats": { "bindingVersion": "0.1.0" }
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" }
       },
       "channel": { "$ref": "#/channels/edge.node.reregistered" }
     },
@@ -1157,7 +1163,8 @@
           "mandatory": false
         },
         "kafka": { "bindingVersion": "0.5.0" },
-        "nats": { "bindingVersion": "0.1.0" }
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" }
       },
       "channel": { "$ref": "#/channels/edge.node.version_changed" }
     },
@@ -1171,7 +1178,8 @@
           "mandatory": false
         },
         "kafka": { "bindingVersion": "0.5.0" },
-        "nats": { "bindingVersion": "0.1.0" }
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" }
       },
       "channel": { "$ref": "#/channels/edge.node.status_changed" }
     },
@@ -1185,7 +1193,8 @@
           "mandatory": false
         },
         "kafka": { "bindingVersion": "0.5.0" },
-        "nats": { "bindingVersion": "0.1.0" }
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" }
       },
       "channel": { "$ref": "#/channels/edge.node.cluster_changed" }
     },
@@ -1199,7 +1208,8 @@
           "mandatory": false
         },
         "kafka": { "bindingVersion": "0.5.0" },
-        "nats": { "bindingVersion": "0.1.0" }
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" }
       },
       "channel": { "$ref": "#/channels/edge.node.update_triggered" }
     },
@@ -1213,7 +1223,8 @@
           "mandatory": false
         },
         "kafka": { "bindingVersion": "0.5.0" },
-        "nats": { "bindingVersion": "0.1.0" }
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" }
       },
       "channel": { "$ref": "#/channels/edge.node.deleted" }
     },
@@ -1227,7 +1238,8 @@
           "mandatory": false
         },
         "kafka": { "bindingVersion": "0.5.0" },
-        "nats": { "bindingVersion": "0.1.0" }
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" }
       },
       "channel": { "$ref": "#/channels/edge.execution.created" }
     },
@@ -1241,7 +1253,8 @@
           "mandatory": false
         },
         "kafka": { "bindingVersion": "0.5.0" },
-        "nats": { "bindingVersion": "0.1.0" }
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" }
       },
       "channel": { "$ref": "#/channels/edge.execution.sent" }
     },
@@ -1255,7 +1268,8 @@
           "mandatory": false
         },
         "kafka": { "bindingVersion": "0.5.0" },
-        "nats": { "bindingVersion": "0.1.0" }
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" }
       },
       "channel": { "$ref": "#/channels/edge.execution.completed" }
     },
@@ -1269,7 +1283,8 @@
           "mandatory": false
         },
         "kafka": { "bindingVersion": "0.5.0" },
-        "nats": { "bindingVersion": "0.1.0" }
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" }
       },
       "channel": { "$ref": "#/channels/edge.execution.cancelled" }
     },
@@ -1283,7 +1298,8 @@
           "mandatory": false
         },
         "kafka": { "bindingVersion": "0.5.0" },
-        "nats": { "bindingVersion": "0.1.0" }
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" }
       },
       "channel": { "$ref": "#/channels/edge.execution.expired" }
     },
@@ -1297,7 +1313,8 @@
           "mandatory": false
         },
         "kafka": { "bindingVersion": "0.5.0" },
-        "nats": { "bindingVersion": "0.1.0" }
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" }
       },
       "channel": { "$ref": "#/channels/edge.self_update.created" }
     },
@@ -1311,29 +1328,36 @@
           "mandatory": false
         },
         "kafka": { "bindingVersion": "0.5.0" },
-        "nats": { "bindingVersion": "0.1.0" }
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" }
       },
       "channel": { "$ref": "#/channels/edge.self_update.completed" }
     }
   },
   "servers": {
     "kafka": {
-      "description": "Kafka-compatible broker (Redpanda recommended). Configure via EVENT_BROKER_URLS. SASL auth via EVENT_BROKER_KAFKA_USERNAME / EVENT_BROKER_KAFKA_PASSWORD.",
-      "host": "localhost:9092",
+      "description": "Redpanda or Apache Kafka (Kafka protocol). Redpanda is the recommended default — no JVM, lighter than vanilla Kafka. Any Kafka-compatible broker works. Configure via EVENT_BROKER_URLS (host:port, comma-separated). SASL auth via EVENT_BROKER_KAFKA_USERNAME / EVENT_BROKER_KAFKA_PASSWORD / EVENT_BROKER_KAFKA_SASL_MECHANISM.",
+      "host": "edge_event_broker_kafka:9092",
       "protocol": "kafka",
       "security": [{ "$ref": "#/components/securitySchemes/kafkaSasl" }]
     },
     "nats": {
       "description": "NATS broker. Configure via EVENT_BROKER_URLS. Optional token auth via EVENT_BROKER_NATS_TOKEN. By default, pub/sub with no persistence. Set EVENT_BROKER_NATS_JETSTREAM=true to enable durable JetStream log — three streams are auto-created on startup: EDGE_NODE_EVENTS, EDGE_EXECUTION_EVENTS, EDGE_SELF_UPDATE_EVENTS. Retention is configured on the broker.",
-      "host": "localhost:4222",
+      "host": "edge_event_broker_nats:4222",
       "protocol": "nats",
       "security": [{ "$ref": "#/components/securitySchemes/natsToken" }]
     },
     "rabbitmq": {
-      "description": "RabbitMQ broker. Configure via EVENT_BROKER_URLS (single amqp:// or amqps:// URL). All events are published to a durable topic exchange (default: `edge.events`). Routing key = event type (e.g. `edge.node.registered`). Consumer queue durability is the consumer's choice.",
-      "host": "localhost:5672",
+      "description": "RabbitMQ (AMQP protocol). Configure via EVENT_BROKER_URLS (single amqp:// or amqps:// URL). All events are published to a durable topic exchange `edge.events`. Routing key = event type (e.g. `edge.node.registered`). Consumer queue durability is the consumer's choice.",
+      "host": "edge_event_broker_rabbitmq:5672",
       "protocol": "amqp",
       "security": [{ "$ref": "#/components/securitySchemes/amqpPlain" }]
+    },
+    "redis": {
+      "description": "Redis broker. Configure via EVENT_BROKER_URLS (single redis:// or rediss:// URL). Events are published via Redis Pub/Sub (`PUBLISH`). Channel = event type (e.g. `edge.node.registered`). Use `SUBSCRIBE` or `PSUBSCRIBE edge.*` to consume. Fire-and-forget — no durability or replay. Credentials embedded in URL.",
+      "host": "edge_event_broker_redis:6379",
+      "protocol": "redis",
+      "security": [{ "$ref": "#/components/securitySchemes/redisAuth" }]
     }
   }
 }

@@ -75,7 +75,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
   defp servers do
     %{
       "nats" => %{
-        "host" => "localhost:4222",
+        "host" => "edge_event_broker_nats:4222",
         "protocol" => "nats",
         "description" =>
           "NATS broker. Configure via EVENT_BROKER_URLS. Optional token auth via EVENT_BROKER_NATS_TOKEN. " <>
@@ -84,24 +84,26 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "security" => [%{"$ref" => "#/components/securitySchemes/natsToken"}]
       },
       "kafka" => %{
-        "host" => "localhost:9092",
+        "host" => "edge_event_broker_kafka:9092",
         "protocol" => "kafka",
         "description" =>
-          "Kafka-compatible broker (Redpanda recommended). Configure via EVENT_BROKER_URLS. SASL auth via EVENT_BROKER_KAFKA_USERNAME / EVENT_BROKER_KAFKA_PASSWORD.",
+          "Redpanda or Apache Kafka (Kafka protocol). Redpanda is the recommended default — no JVM, lighter than vanilla Kafka. " <>
+            "Any Kafka-compatible broker works. Configure via EVENT_BROKER_URLS (host:port, comma-separated). " <>
+            "SASL auth via EVENT_BROKER_KAFKA_USERNAME / EVENT_BROKER_KAFKA_PASSWORD / EVENT_BROKER_KAFKA_SASL_MECHANISM.",
         "security" => [%{"$ref" => "#/components/securitySchemes/kafkaSasl"}]
       },
       "rabbitmq" => %{
-        "host" => "localhost:5672",
+        "host" => "edge_event_broker_rabbitmq:5672",
         "protocol" => "amqp",
         "description" =>
-          "RabbitMQ broker. Configure via EVENT_BROKER_URLS (single amqp:// or amqps:// URL). " <>
-            "All events are published to a durable topic exchange (default: `edge.events`). " <>
+          "RabbitMQ (AMQP protocol). Configure via EVENT_BROKER_URLS (single amqp:// or amqps:// URL). " <>
+            "All events are published to a durable topic exchange `edge.events`. " <>
             "Routing key = event type (e.g. `edge.node.registered`). " <>
             "Consumer queue durability is the consumer's choice.",
         "security" => [%{"$ref" => "#/components/securitySchemes/amqpPlain"}]
       },
       "redis" => %{
-        "host" => "localhost:6379",
+        "host" => "edge_event_broker_redis:6379",
         "protocol" => "redis",
         "description" =>
           "Redis broker. Configure via EVENT_BROKER_URLS (single redis:// or rediss:// URL). " <>
@@ -200,7 +202,8 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
              "cc" => [],
              "deliveryMode" => 1,
              "mandatory" => false
-           }
+           },
+           "redis" => %{"bindingVersion" => "0.1.0"}
          }
        }}
     end)

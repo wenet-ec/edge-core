@@ -103,4 +103,4 @@ This must be set on **both** the admin and the agent. If you omit it, netclient 
 
 - **Agent on a machine running other containers**: see `sidecar/` — shows how to run the agent on bridge networking instead of `network_mode: host`.
 - **Self-hosted DERP relay**: see `relay/` — deploy your own relay nodes for lower latency or to avoid depending on Tailscale's public relay infrastructure. Not required for NAT traversal (the default Tailscale fallback already handles that) — only worth it if you want geo-local relays or full infra ownership.
-- **Event streaming**: see `event_brokers/` — add NATS JetStream or Kafka/Redpanda to receive lifecycle events from the admin.
+- **Event streaming**: see `event_brokers/` — add NATS, Kafka/Redpanda, RabbitMQ, or Redis to receive lifecycle events from the admin.

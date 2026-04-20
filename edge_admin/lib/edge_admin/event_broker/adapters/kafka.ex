@@ -102,7 +102,7 @@ defmodule EdgeAdmin.EventBroker.Adapters.Kafka do
   @impl GenServer
   def handle_info(:start_client, state) do
     config = Application.get_env(:edge_admin, :event_broker_kafka, [])
-    brokers = Keyword.get(config, :brokers, [{"localhost", 9092}])
+    brokers = Keyword.fetch!(config, :brokers)
     client_config = Keyword.get(config, :client_config, [])
 
     # Resolve broker hostnames to IPs before passing to brod. brod does its own

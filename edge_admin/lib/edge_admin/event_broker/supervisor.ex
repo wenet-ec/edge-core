@@ -20,7 +20,7 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
 
   ## Children (RabbitMQ adapter)
 
-    1. `EdgeAdmin.EventBroker.Adapters.RabbitMQ` — GenServer that opens an
+    1. `EdgeAdmin.EventBroker.Adapters.Rabbitmq` — GenServer that opens an
        AMQP connection + channel, declares the topic exchange, and monitors
        the connection for auto-reconnect.
 
@@ -31,6 +31,8 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
   """
 
   use Supervisor
+
+  alias EdgeAdmin.EventBroker.Adapters.Nats
 
   require Logger
 
@@ -51,27 +53,9 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
   # ---------------------------------------------------------------------------
 
   defp build_children(:nats) do
-    config = Application.get_env(:edge_admin, :event_broker_nats, [])
-    urls = Keyword.get(config, :urls, ["nats://localhost:4222"])
-
-    auth = nats_auth(config)
-
-    connection_settings =
-      Enum.map(urls, fn url ->
-        uri = URI.parse(url)
-        base = %{host: to_charlist(uri.host || "localhost"), port: uri.port || 4222}
-        Map.merge(base, auth)
-      end)
-
-    nats_supervisor_settings = %{
-      name: :event_broker_nats,
-      backoff_period: 5_000,
-      connection_settings: connection_settings
-    }
-
     [
-      {Gnat.ConnectionSupervisor, nats_supervisor_settings},
-      EdgeAdmin.EventBroker.Adapters.Nats
+      Nats.connection_supervisor_spec(),
+      Nats
     ]
   end
 
@@ -80,30 +64,10 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
   end
 
   defp build_children(:rabbitmq) do
-    [EdgeAdmin.EventBroker.Adapters.RabbitMQ]
+    [EdgeAdmin.EventBroker.Adapters.Rabbitmq]
   end
 
   defp build_children(:redis) do
     [EdgeAdmin.EventBroker.Adapters.Redis]
   end
-
-  # Auth precedence: token → username/password → nkey+jwt → nkey only → none
-  defp nats_auth(config) do
-    token = present(Keyword.get(config, :token))
-    username = present(Keyword.get(config, :username))
-    password = present(Keyword.get(config, :password))
-    nkey_seed = present(Keyword.get(config, :nkey_seed))
-    jwt = present(Keyword.get(config, :jwt))
-
-    cond do
-      token -> %{token: token}
-      username && password -> %{username: username, password: password}
-      nkey_seed && jwt -> %{nkey_seed: nkey_seed, jwt: jwt}
-      nkey_seed -> %{nkey_seed: nkey_seed}
-      true -> %{}
-    end
-  end
-
-  defp present(value) when is_binary(value) and value != "", do: value
-  defp present(_), do: nil
 end

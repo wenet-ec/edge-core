@@ -1,0 +1,48 @@
+# examples/event_brokers/rabbitmq.yml
+#
+# RabbitMQ — AMQP event broker for Edge Core.
+# All events are published to a durable topic exchange `edge.events`.
+# Routing key = event type (e.g. `edge.node.registered`).
+# Consumer queue durability is the consumer's choice.
+#
+# Usage (alongside your core compose file):
+#   docker compose -f cloud.yml -f ../event_brokers/rabbitmq.yml up -d
+#
+# Then set in your .env:
+#   EVENT_BROKER_ENABLED=true
+#   EVENT_BROKER_ADAPTER=rabbitmq
+#   EVENT_BROKER_URLS=amqp://edge_event_broker:5672
+#   # EVENT_BROKER_URLS=amqp://user:pass@edge_event_broker:5672   # if auth is enabled
+#
+# Ports exposed:
+#   5672  — AMQP (internal Docker, used by Edge Admin)
+#   15672 — Management UI (http://localhost:15672, guest/guest by default)
+
+networks:
+  edge_core:
+    external: true
+    name: edge_core
+
+volumes:
+  edge_event_broker_data: {}
+
+services:
+  edge_event_broker:
+    image: rabbitmq:4-management-alpine
+    container_name: edge_event_broker
+    restart: unless-stopped
+    networks:
+      - edge_core
+    volumes:
+      - edge_event_broker_data:/var/lib/rabbitmq
+      - ./config/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./config/rabbitmq_enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # Management UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s

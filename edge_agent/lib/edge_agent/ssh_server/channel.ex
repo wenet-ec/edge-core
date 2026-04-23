@@ -48,9 +48,14 @@ defmodule EdgeAgent.SshServer.Channel do
   end
 
   @impl true
-  def handle_msg({:EXIT, port, reason}, %{port: port} = state) do
+  def handle_msg({:EXIT, port, reason}, %{port: port, connection_ref: conn_ref, channel_id: ch_id} = state) do
     Logger.info("Port exited: #{inspect(reason)}")
-    {:ok, state}
+
+    # If we see {:EXIT, port, _} without having received {:exit_status, _} first,
+    # the child was killed before it could report its status. Close the SSH
+    # channel cleanly so the client doesn't hang.
+    :ssh_connection.send_eof(conn_ref, ch_id)
+    {:stop, ch_id, state}
   end
 
   @impl true
@@ -139,9 +144,14 @@ defmodule EdgeAgent.SshServer.Channel do
   def handle_ssh_msg({:ssh_cm, _connection_ref, {:eof, _channel_id}}, state) do
     Logger.debug("EOF received from client")
 
-    if Map.has_key?(state, :port) do
-      Port.close(state.port)
-    end
+    # Don't touch the port here. For non-interactive `exec`, the client sends
+    # EOF immediately after starting the command — if we close the port now,
+    # the child is SIGTERM'd before it can produce any output and the client
+    # hangs waiting for our EOF. The port will exit naturally via
+    # `{:exit_status, _}` once the command finishes.
+    #
+    # For interactive shells, the client only sends EOF when the session is
+    # actually done, at which point the port should also be winding down.
 
     {:ok, state}
   end

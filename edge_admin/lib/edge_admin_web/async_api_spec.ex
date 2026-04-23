@@ -470,7 +470,8 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           "id" => %{
             "type" => "string",
             "format" => "uuid",
-            "description" => "Unique per publish. Useful for broker-retry dedup. Not a dedup key for edge.node.status_changed duplicates — use (node_id, previous_status, status, time) for that."
+            "description" =>
+              "Unique per publish. Useful for broker-retry dedup. Not a dedup key for edge.node.status_changed duplicates — use (node_id, previous_status, status, time) for that."
           },
           "source" => %{
             "type" => "string",

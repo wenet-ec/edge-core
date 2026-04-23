@@ -72,7 +72,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.EdgeClusters.AgentClient
-  alias EdgeAdmin.ProxyServers.RemoteTunnel
+  alias EdgeAdmin.ProxyServers.Tunnel.RemoteTunnel
   alias EdgeAdmin.Vpn
 
   require Logger

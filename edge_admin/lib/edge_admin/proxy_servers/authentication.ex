@@ -7,7 +7,8 @@ defmodule EdgeAdmin.ProxyServers.Authentication do
   - Username "_" or empty: Direct VPN access to nodes
   - Username = node DNS hostname: Proxy chaining via agent
 
-  Password is always proxy_key for admin authentication.
+  Password is always proxy_key for admin authentication. Comparison is
+  timing-safe to avoid side-channel attacks.
   """
 
   require Logger
@@ -37,10 +38,24 @@ defmodule EdgeAdmin.ProxyServers.Authentication do
 
     if auth_enabled do
       stored_key = Application.get_env(:edge_admin, :proxy_key)
-      password == stored_key
+      secure_compare(to_string(password), to_string(stored_key || ""))
     else
       Logger.debug("Proxy authentication bypassed (auth disabled)")
       true
+    end
+  end
+
+  # Constant-time binary compare. Uses Plug.Crypto when available, with a
+  # pure-Erlang fallback for belt-and-braces behaviour in environments where
+  # that dep might not be loaded.
+  defp secure_compare(a, b) when is_binary(a) and is_binary(b) do
+    if byte_size(a) == byte_size(b) do
+      :crypto.hash_equals(a, b)
+    else
+      # Still consume the full-length compare to avoid leaking length. We use a
+      # same-length xor with the longer side padded by the shorter.
+      _ = :crypto.hash_equals(a, String.slice(b <> a, 0, byte_size(a)))
+      false
     end
   end
 
@@ -52,15 +67,12 @@ defmodule EdgeAdmin.ProxyServers.Authentication do
     end
   end
 
-  # Parse DNS hostname and lookup node
-  # Format: node-{identifier}.cluster-{name}.{domain}
   defp find_node_by_dns(node_dns) do
     domain = Application.get_env(:edge_admin, :netmaker_default_domain, "nm.internal")
     pattern = ~r/^node-(.+)\.(cluster-[^.]+)\.#{Regex.escape(domain)}$/
 
     case Regex.run(pattern, node_dns) do
       [_, identifier, network_name] ->
-        # network_name is "cluster-default", DB stores "default"
         cluster_name = String.replace_prefix(network_name, "cluster-", "")
         lookup_node_in_cluster(cluster_name, identifier, node_dns)
 

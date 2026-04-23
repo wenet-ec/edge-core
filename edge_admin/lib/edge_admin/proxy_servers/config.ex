@@ -75,6 +75,39 @@ defmodule EdgeAdmin.ProxyServers.Config do
     Application.get_env(:edge_admin, :proxy_num_acceptors, 100)
   end
 
+  @doc """
+  Returns the absolute cap on a single tunnel's lifetime in milliseconds.
+
+  Distinct from `recv_timeout/0` (idle cap). A trickle of activity can hold
+  a tunnel open indefinitely against `recv_timeout`; this ceiling bounds the
+  total duration as a slowloris defence.
+
+  Default: 6h (21_600_000ms). Set to a very large value to effectively disable.
+  """
+  def tunnel_total_timeout do
+    get_timeout(:tunnel_total, 21_600_000)
+  end
+
+  @doc """
+  Maximum number of HTTP requests served over a single keep-alive connection.
+
+  Default: 100. After this many requests, the handler closes the connection.
+  """
+  def max_keepalive_requests do
+    Application.get_env(:edge_admin, :proxy_max_keepalive_requests, 100)
+  end
+
+  @doc """
+  Grace period in milliseconds for established tunnels to finish during
+  graceful drain (deploy / shutdown). Handlers receive `{:drain, grace_ms}`
+  when shutdown starts; after the grace, surviving tunnels are force-closed.
+
+  Default: 30_000 (30s).
+  """
+  def drain_grace_timeout do
+    get_timeout(:drain_grace, 30_000)
+  end
+
   defp get_timeout(key, default) do
     :edge_admin
     |> Application.get_env(:proxy_timeouts, [])

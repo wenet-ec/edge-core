@@ -47,8 +47,9 @@ defmodule EdgeAdmin.ProxyServers do
   use GenServer
 
   alias EdgeAdmin.ProxyServers.Config
-  alias EdgeAdmin.ProxyServers.HttpHandler
-  alias EdgeAdmin.ProxyServers.Socks5Handler
+  alias EdgeAdmin.ProxyServers.Http.Handler, as: HttpHandler
+  alias EdgeAdmin.ProxyServers.Socks5.Handler, as: Socks5Handler
+  alias EdgeAdmin.ProxyServers.Transport.TunnelRegistry
 
   require Logger
 
@@ -131,6 +132,29 @@ defmodule EdgeAdmin.ProxyServers do
   def terminate(_reason, state) do
     Logger.info("Shutting down admin proxy servers...")
     stop_proxy_servers(state)
+    drain_tunnels()
+    :ok
+  end
+
+  # Graceful drain: stop accepting connections (done above), signal all live
+  # tunnel handlers to wind down, wait up to the grace window, then force-close.
+  defp drain_tunnels do
+    grace = Config.drain_grace_timeout()
+    signaled = TunnelRegistry.drain(grace)
+
+    if signaled > 0 do
+      Logger.info("Draining #{signaled} active proxy tunnel(s), grace #{grace}ms")
+
+      case TunnelRegistry.wait_for_empty(grace) do
+        :ok ->
+          Logger.info("All proxy tunnels drained cleanly")
+
+        {:timeout, remaining} ->
+          closed = TunnelRegistry.force_close()
+          Logger.warning("Drain timed out with #{remaining} tunnel(s); force-closed #{closed}")
+      end
+    end
+
     :ok
   end
 

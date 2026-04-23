@@ -76,8 +76,12 @@ defmodule EdgeAdmin.ProxyServers.ErrorHandlerTest do
 
     test "unknown errors return general failure code 1" do
       assert ErrorHandler.socks5_reply_code(:something_else) == 1
-      assert ErrorHandler.socks5_reply_code(:timeout) == 1
       assert ErrorHandler.socks5_reply_code(:no_gateway) == 1
+    end
+
+    test "timeouts return TTL expired code 6" do
+      assert ErrorHandler.socks5_reply_code(:timeout) == 6
+      assert ErrorHandler.socks5_reply_code(:etimedout) == 6
     end
   end
 

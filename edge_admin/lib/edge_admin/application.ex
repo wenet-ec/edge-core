@@ -80,6 +80,7 @@ defmodule EdgeAdmin.Application do
       EdgeAdmin.EdgeClusters,
       EdgeAdmin.Admins.Metadata,
       EdgeAdmin.LocalScheduler,
+      EdgeAdmin.ProxyServers.Transport.TunnelRegistry,
       EdgeAdmin.ProxyServers,
       {EdgeAdminMcp.Server, transport: :streamable_http},
       EdgeAdminWeb.Endpoint

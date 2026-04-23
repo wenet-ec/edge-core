@@ -290,18 +290,6 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
           %{cluster: cluster_name, event: :connected}
         )
 
-        # Emit active count for this admin's gateways.
-        # Uses a direct ETS select_count on syn's registry table with a match pattern
-        # on the name tuple prefix {:gateway, admin_name, _} — O(n) over this admin's
-        # gateways only, no GenServer call, no full-scope scan.
-        active_count = count_local_gateways(admin_name)
-
-        :telemetry.execute(
-          [:edge_admin, :gateway, :active_count],
-          %{active_count: active_count},
-          %{}
-        )
-
         {:ok,
          %{
            cluster_name: cluster_name,
@@ -474,24 +462,6 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   # ===========================================================================
   # Private Helpers
   # ===========================================================================
-
-  # Count gateways registered by this admin in the syn cluster_scope registry.
-  # Syn stores entries as {Name, Pid, Meta, Time, MRef, Node} in the ETS table
-  # `syn_registry_by_name_cluster_scope`. We match on {:gateway, admin_name, _}
-  # to count only this admin's gateways without touching other scopes or nodes.
-  defp count_local_gateways(admin_name) do
-    table = :syn_backbone.get_table_name(:syn_registry_by_name, :cluster_scope)
-
-    case table do
-      nil ->
-        0
-
-      table_name ->
-        :ets.select_count(table_name, [
-          {{{:gateway, admin_name, :_}, :_, :_, :_, :_, :_}, [], [true]}
-        ])
-    end
-  end
 
   defp join_network(cluster_name, host_id, attempt \\ 1, max_attempts \\ 3) do
     # cluster_name is already normalized (e.g., "cluster-default")

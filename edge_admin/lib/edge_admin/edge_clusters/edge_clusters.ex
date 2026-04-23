@@ -128,6 +128,12 @@ defmodule EdgeAdmin.EdgeClusters do
 
   @impl true
   def handle_info({:update_clusters, new_clusters_set, new_gateway_pids}, state) do
+    :telemetry.execute(
+      [:edge_admin, :gateway, :active_count],
+      %{active_count: map_size(new_gateway_pids)},
+      %{}
+    )
+
     {:noreply, %{state | current_clusters: new_clusters_set, gateway_pids: new_gateway_pids}}
   end
 

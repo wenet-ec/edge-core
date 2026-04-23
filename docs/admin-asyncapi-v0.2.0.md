@@ -30,7 +30,7 @@ Every event is wrapped in a CloudEvents envelope:
 | Field             | Description                                                                                                        |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `specversion`     | Always `"1.0"`                                                                                                     |
-| `id`              | UUID v4 — unique per event, use for consumer-side dedup                                                            |
+| `id`              | UUID v4 — unique per publish. Useful for exactly-once delivery dedup (broker retries). Not useful for semantic dedup of `node.status_changed` duplicates — those carry different `id`s. Use `(node_id, previous_status, status, time)` for that. |
 | `source`          | Always `"https://github.com/wenet-ec/edge-core"`                                                                   |
 | `type`            | Event type — doubles as NATS subject, RabbitMQ routing key, and Redis channel (see tables below)                   |
 | `time`            | When the state change happened in admin (ISO 8601)                                                                 |

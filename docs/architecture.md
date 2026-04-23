@@ -341,7 +341,7 @@ Four adapters: `nats` (NATS — pub/sub by default, set `EVENT_BROKER_NATS_JETST
 
 The `type` field in the envelope doubles as the NATS subject, RabbitMQ routing key, and Redis channel (`edge.node.status_changed`, `edge.execution.completed`, etc.) — no parsing needed for broker-level filtering.
 
-Duplicate events are possible for `edge.node.status_changed` — the health check runs on every admin instance independently (masterless design). Consumers dedup via the `id` UUID.
+Duplicate events are possible for `edge.node.status_changed` — the health check runs on every admin instance independently (masterless design). Each duplicate carries a different `id` (UUID4 generated per enqueue), so `id` is not a dedup key here. Consumers dedup by comparing `(node_id, previous_status, status)` and discarding events whose `time` is not newer than the last processed event for that node.
 
 For the full event schema and subject/topic reference see [`docs/admin-asyncapi-v0.2.0.md`](admin-asyncapi-v0.2.0.md). Interactive viewer at `/asyncdoc` on a running admin.
 

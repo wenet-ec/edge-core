@@ -17,6 +17,9 @@ defmodule EdgeAgent.ProxyServers do
   use GenServer
 
   alias EdgeAgent.ProxyServers.Config
+  alias EdgeAgent.ProxyServers.Http.Handler, as: HttpHandler
+  alias EdgeAgent.ProxyServers.Socks5.Handler, as: Socks5Handler
+  alias EdgeAgent.ProxyServers.Transport.TunnelRegistry
 
   require Logger
 
@@ -99,6 +102,27 @@ defmodule EdgeAgent.ProxyServers do
   def terminate(_reason, state) do
     Logger.info("Shutting down proxy servers...")
     stop_proxy_servers(state)
+    drain_tunnels()
+    :ok
+  end
+
+  defp drain_tunnels do
+    grace = Config.drain_grace_timeout()
+    signaled = TunnelRegistry.drain(grace)
+
+    if signaled > 0 do
+      Logger.info("Draining #{signaled} active proxy tunnel(s), grace #{grace}ms")
+
+      case TunnelRegistry.wait_for_empty(grace) do
+        :ok ->
+          Logger.info("All proxy tunnels drained cleanly")
+
+        {:timeout, remaining} ->
+          closed = TunnelRegistry.force_close()
+          Logger.warning("Drain timed out with #{remaining} tunnel(s); force-closed #{closed}")
+      end
+    end
+
     :ok
   end
 
@@ -134,7 +158,7 @@ defmodule EdgeAgent.ProxyServers do
            :http_proxy,
            :ranch_tcp,
            transport_opts,
-           EdgeAgent.ProxyServers.HttpHandler,
+           HttpHandler,
            []
          ) do
       {:ok, _pid} ->
@@ -160,7 +184,7 @@ defmodule EdgeAgent.ProxyServers do
            :socks5_proxy,
            :ranch_tcp,
            transport_opts,
-           EdgeAgent.ProxyServers.Socks5Handler,
+           Socks5Handler,
            []
          ) do
       {:ok, _pid} ->

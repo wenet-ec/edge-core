@@ -1,5 +1,5 @@
-# edge_agent/lib/edge_agent/proxy_servers/destination_validator.ex
-defmodule EdgeAgent.ProxyServers.DestinationValidator do
+# edge_agent/lib/edge_agent/proxy_servers/transport/destination_validator.ex
+defmodule EdgeAgent.ProxyServers.Transport.DestinationValidator do
   @moduledoc """
   Validates proxy destination addresses to prevent SSRF and privilege escalation attacks.
 

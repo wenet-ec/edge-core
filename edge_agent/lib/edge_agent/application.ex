@@ -53,6 +53,7 @@ defmodule EdgeAgent.Application do
       ExecutionRegistry,
       EdgeAgent.SshServer,
       EdgeAgent.MetricsServers,
+      EdgeAgent.ProxyServers.Transport.TunnelRegistry,
       EdgeAgent.ProxyServers,
       EdgeAgent.Bootstrap,
       EdgeAgent.Vpn.DerpMapCache,

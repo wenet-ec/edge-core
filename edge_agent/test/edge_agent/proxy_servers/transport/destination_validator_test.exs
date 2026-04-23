@@ -1,8 +1,8 @@
-# edge_agent/test/edge_agent/proxy_servers/destination_validator_test.exs
-defmodule EdgeAgent.ProxyServers.DestinationValidatorTest do
+# edge_agent/test/edge_agent/proxy_servers/transport/destination_validator_test.exs
+defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
   use ExUnit.Case, async: false
 
-  alias EdgeAgent.ProxyServers.DestinationValidator
+  alias EdgeAgent.ProxyServers.Transport.DestinationValidator
 
   # Helpers to temporarily set Application env then restore
   defp with_app_env(key, value, fun) do

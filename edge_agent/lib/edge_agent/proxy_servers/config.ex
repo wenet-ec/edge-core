@@ -1,69 +1,46 @@
-# edge_agent/lib/edge_agent/proxy_server/config.ex
+# edge_agent/lib/edge_agent/proxy_servers/config.ex
 defmodule EdgeAgent.ProxyServers.Config do
   @moduledoc """
   Configuration for the proxy server (HTTP and SOCKS5).
   """
 
-  @doc """
-  Get HTTP proxy port from environment or config.
-  """
-  def http_proxy_port do
-    Application.get_env(:edge_agent, :http_proxy_port)
-  end
+  def http_proxy_port, do: Application.get_env(:edge_agent, :http_proxy_port)
+  def socks5_proxy_port, do: Application.get_env(:edge_agent, :socks5_proxy_port)
 
-  @doc """
-  Get SOCKS5 proxy port from environment or config.
-  """
-  def socks5_proxy_port do
-    Application.get_env(:edge_agent, :socks5_proxy_port)
-  end
-
-  @doc """
-  Get proxy listen address as a tuple for Ranch.
-  """
   def listen_address do
     Application.get_env(:edge_agent, :proxy_listen_address, {0, 0, 0, 0})
   end
 
   @doc """
-  Returns the TCP connection timeout in milliseconds.
-
-  Used when establishing connections to target hosts.
-  Default: 2000ms (2 seconds)
+  TCP connection timeout in ms. Default 2s.
   """
-  def connection_timeout do
-    get_timeout(:connection, 2_000)
-  end
+  def connection_timeout, do: get_timeout(:connection, 2_000)
 
   @doc """
-  Returns the socket read timeout in milliseconds.
-
-  Used for reading from client/target sockets.
-  Default: 10000ms (10 seconds)
+  Client/target socket read timeout in ms. Default 10s.
   """
-  def read_timeout do
-    get_timeout(:read, 10_000)
-  end
+  def read_timeout, do: get_timeout(:read, 10_000)
 
   @doc """
-  Returns the inactivity recv timeout for forwarding loops in milliseconds.
-
-  Applied to each :gen_tcp.recv call in the forwarding loop. Closes half-open
-  connections after this period of inactivity.
-  Default: 300000ms (5 minutes)
+  Idle timeout per recv call inside the forwarder. Default 5 min.
   """
-  def recv_timeout do
-    get_timeout(:recv, 300_000)
-  end
+  def recv_timeout, do: get_timeout(:recv, 300_000)
 
   @doc """
-  Returns the number of Ranch acceptor processes for each proxy listener.
-
-  Default: 100
+  Absolute ceiling on a single tunnel's lifetime (ms). Default 6h.
+  Slowloris defence: bounds total duration regardless of per-read idle activity.
   """
-  def num_acceptors do
-    Application.get_env(:edge_agent, :proxy_num_acceptors, 100)
-  end
+  def tunnel_total_timeout, do: get_timeout(:tunnel_total, 21_600_000)
+
+  @doc """
+  Grace window for established tunnels to finish on graceful drain. Default 30s.
+  """
+  def drain_grace_timeout, do: get_timeout(:drain_grace, 30_000)
+
+  @doc """
+  Number of Ranch acceptor processes per listener. Default 100.
+  """
+  def num_acceptors, do: Application.get_env(:edge_agent, :proxy_num_acceptors, 100)
 
   defp get_timeout(key, default) do
     :edge_agent

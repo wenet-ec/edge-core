@@ -115,8 +115,9 @@ defmodule EdgeAgent.ProxyServers.ErrorHandlerTest do
       assert ErrorHandler.socks5_reply_code(:some_unknown) == 1
     end
 
-    test "timeout → 1 (general failure, no dedicated socks5 code)" do
-      assert ErrorHandler.socks5_reply_code(:timeout) == 1
+    test "timeout → 6 (TTL expired)" do
+      assert ErrorHandler.socks5_reply_code(:timeout) == 6
+      assert ErrorHandler.socks5_reply_code(:etimedout) == 6
     end
   end
 
@@ -205,12 +206,12 @@ defmodule EdgeAgent.ProxyServers.ErrorHandlerTest do
       assert ErrorHandler.categorize_error(:invalid_credentials) == :authentication
     end
 
-    test "authentication errors: no_acceptable_methods" do
-      assert ErrorHandler.categorize_error(:no_acceptable_methods) == :authentication
+    test "protocol errors: no_acceptable_methods" do
+      assert ErrorHandler.categorize_error(:no_acceptable_methods) == :protocol
     end
 
-    test "authentication errors: unsupported_auth_version" do
-      assert ErrorHandler.categorize_error(:unsupported_auth_version) == :authentication
+    test "protocol errors: unsupported_auth_version" do
+      assert ErrorHandler.categorize_error(:unsupported_auth_version) == :protocol
     end
 
     test "timeout errors: etimedout" do

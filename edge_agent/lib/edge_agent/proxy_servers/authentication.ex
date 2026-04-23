@@ -1,4 +1,4 @@
-# edge_agent/lib/edge_agent/proxy_server/authentication.ex
+# edge_agent/lib/edge_agent/proxy_servers/authentication.ex
 defmodule EdgeAgent.ProxyServers.Authentication do
   @moduledoc """
   Authentication for proxy server.
@@ -6,6 +6,8 @@ defmodule EdgeAgent.ProxyServers.Authentication do
   Agent proxy uses simple username/password authentication:
   - Username: "_" (underscore, always)
   - Password: proxy_password from settings table
+
+  Comparison is timing-safe.
   """
 
   alias EdgeAgent.Settings
@@ -36,12 +38,22 @@ defmodule EdgeAgent.ProxyServers.Authentication do
         {:error, :no_password_configured}
 
       stored_password ->
-        if username == "_" and password == stored_password do
+        if username == "_" and secure_compare(to_string(password), to_string(stored_password)) do
           :ok
         else
           Logger.warning("Proxy authentication failed: invalid credentials")
           {:error, :invalid_credentials}
         end
+    end
+  end
+
+  # Constant-time binary compare.
+  defp secure_compare(a, b) when is_binary(a) and is_binary(b) do
+    if byte_size(a) == byte_size(b) do
+      :crypto.hash_equals(a, b)
+    else
+      _ = :crypto.hash_equals(a, String.slice(b <> a, 0, byte_size(a)))
+      false
     end
   end
 end

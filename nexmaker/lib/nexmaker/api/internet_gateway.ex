@@ -47,7 +47,9 @@ defmodule Nexmaker.Api.InternetGateway do
 
   ## Returns
     - `{:ok, node}` - Updated node map with internet gateway config
-    - `{:error, reason}` - Error occurred
+    - `{:ok, %{"Code" => 200, "Message" => "node is already acting as internet gateway"}}` - idempotent, node was already a gateway
+    - `{:error, {:bad_request, body}}` - invalid params, non-Linux node, or validation failure
+    - `{:error, :service_unavailable}` - DB error
 
   ## Examples
 

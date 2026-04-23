@@ -22,7 +22,9 @@ RUN apk add --no-cache \
     wireguard-tools \
     iptables \
     ip6tables \
-    ca-certificates
+    ca-certificates && \
+    # Netclient checks init system type on startup — override /sbin/init with a no-op
+    ln -sf /bin/true /sbin/init
 
 # Copy netclient from builder stage
 COPY --from=netclient_builder /netclient /usr/local/bin/netclient

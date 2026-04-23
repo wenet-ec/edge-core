@@ -32,7 +32,10 @@ defmodule Nexmaker.Api.Hosts do
   """
   @spec list(keyword()) :: {:ok, map()} | {:error, any()}
   def list(opts \\ []) do
-    case Api.request(:get, "/api/v1/hosts", opts) do
+    {query_keys, api_opts} = Keyword.split(opts, [:page, :per_page, :q, :os])
+    req_opts = if query_keys == [], do: api_opts, else: Keyword.put(api_opts, :query, query_keys)
+
+    case Api.request(:get, "/api/v1/hosts", req_opts) do
       {:ok, %{"Response" => paginated}} -> {:ok, paginated}
       other -> other
     end
@@ -192,9 +195,18 @@ defmodule Nexmaker.Api.Hosts do
   @doc """
   Upgrades netclient on a specific host.
 
+  Note: this is the only host endpoint that correctly returns 404 (not 400 or 500)
+  when the host is not found. `Nexmaker.Api.normalize/1` maps it to `{:error, :not_found}`.
+
   ## Parameters
     - host_id: String - Host UUID
     - opts: Keyword - API options (base_url, master_key)
+
+  ## Returns
+    - `{:ok, %{"Message" => "passed message to upgrade host"}}` - upgrade message sent
+    - `{:error, :not_found}` - host not found
+    - `{:error, {:bad_request, body}}` - invalid host UUID
+    - `{:error, :service_unavailable}` - MQ publish failed
   """
   @spec upgrade(String.t(), keyword()) :: {:ok, any()} | {:error, any()}
   def upgrade(host_id, opts \\ []) do

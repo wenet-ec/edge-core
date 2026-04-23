@@ -141,6 +141,9 @@ defmodule Nexmaker.Api.Superadmin do
             {:ok, response_body}
         end
 
+      {:ok, %{status: 400, body: response_body}} ->
+        {:error, {:bad_request, response_body}}
+
       {:ok, %{status: status, body: response_body}} ->
         {:error, {:http_error, status, response_body}}
 

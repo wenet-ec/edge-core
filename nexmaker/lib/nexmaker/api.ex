@@ -56,6 +56,86 @@ defmodule Nexmaker.Api do
   require Logger
 
   @doc """
+  Normalizes a raw Nexmaker API result into a clean semantic error.
+
+  Call this in `vpn.ex` (or any consumer) instead of inspecting raw
+  `{:error, {:http_error, status, body}}` tuples directly.
+
+  ## Return values
+
+    - `{:ok, result}` — pass-through, unchanged
+    - `{:error, :not_found}` — 404, or 500 with a "no result found" / "could not find" body
+    - `{:error, :already_exists}` — 500 with "host already part of network" body
+    - `{:error, :conflict}` — 409 Conflict
+    - `{:error, {:bad_request, body}}` — 400 Bad Request; body carries the Netmaker message
+    - `{:error, :service_unavailable}` — anything else (5xx, network error, etc.)
+
+  ## Examples
+
+      iex> Nexmaker.Api.normalize({:ok, %{"netid" => "cluster-prod"}})
+      {:ok, %{"netid" => "cluster-prod"}}
+
+      iex> Nexmaker.Api.normalize({:error, :not_found})
+      {:error, :not_found}
+
+      iex> Nexmaker.Api.normalize({:error, {:http_error, 500, %{"Message" => "no result found"}}})
+      {:error, :not_found}
+
+      iex> Nexmaker.Api.normalize({:error, {:http_error, 500, %{"Message" => "host already part of network cluster-prod"}}})
+      {:error, :already_exists}
+
+      iex> Nexmaker.Api.normalize({:error, {:http_error, 400, %{"Message" => "invalid cidr"}}})
+      {:error, {:bad_request, %{"Message" => "invalid cidr"}}}
+
+      iex> Nexmaker.Api.normalize({:error, {:http_error, 409, %{"Message" => "conflict"}}})
+      {:error, :conflict}
+  """
+  @spec normalize({:ok, any()} | {:error, any()}) ::
+          {:ok, any()}
+          | {:error, :not_found}
+          | {:error, :already_exists}
+          | {:error, :conflict}
+          | {:error, {:bad_request, any()}}
+          | {:error, :service_unavailable}
+  def normalize({:ok, result}), do: {:ok, result}
+  def normalize({:error, :not_found}), do: {:error, :not_found}
+  def normalize({:error, :conflict}), do: {:error, :conflict}
+  def normalize({:error, {:bad_request, _} = reason}), do: {:error, reason}
+
+  def normalize({:error, {:http_error, 400, body}}), do: {:error, {:bad_request, body}}
+  def normalize({:error, {:http_error, 404, _body}}), do: {:error, :not_found}
+  def normalize({:error, {:http_error, 409, _body}}), do: {:error, :conflict}
+
+  def normalize({:error, {:http_error, 500, body}}) do
+    message = extract_message(body)
+
+    cond do
+      netmaker_not_found_message?(message) -> {:error, :not_found}
+      netmaker_already_exists_message?(message) -> {:error, :already_exists}
+      true -> {:error, :service_unavailable}
+    end
+  end
+
+  def normalize({:error, _reason}), do: {:error, :service_unavailable}
+
+  # Netmaker returns 500 with these message fragments instead of 404.
+  # Remove these clauses as Netmaker fixes individual endpoints to use 404.
+  defp netmaker_not_found_message?(msg) do
+    String.contains?(msg, "no result found") or
+      String.contains?(msg, "could not find any records")
+  end
+
+  # Netmaker returns 500 with this message instead of 409 for add-host-to-network.
+  # Remove this clause once Netmaker fixes that endpoint.
+  defp netmaker_already_exists_message?(msg) do
+    String.contains?(msg, "host already part of network")
+  end
+
+  defp extract_message(body) when is_map(body), do: Map.get(body, "Message", "")
+  defp extract_message(body) when is_binary(body), do: body
+  defp extract_message(_), do: ""
+
+  @doc """
   Makes an HTTP request to the Netmaker API.
 
   ## Parameters
@@ -69,7 +149,11 @@ defmodule Nexmaker.Api do
 
   ## Returns
     - `{:ok, response_body}` - Success, returns decoded JSON
-    - `{:error, reason}` - Failure
+    - `{:error, :not_found}` - 404 response
+    - `{:error, :conflict}` - 409 response
+    - `{:error, {:bad_request, body}}` - 400 response
+    - `{:error, {:http_error, status, body}}` - Other error response
+    - `{:error, {:http_client_error, reason}}` - Network/transport failure
 
   ## Examples
 
@@ -119,23 +203,28 @@ defmodule Nexmaker.Api do
       {:ok, %{status: status, body: response_body}} when status in 200..299 ->
         cond do
           is_map(response_body) or is_list(response_body) ->
-            # Req already decoded JSON
             {:ok, response_body}
 
           is_binary(response_body) and response_body != "" ->
-            # Try to decode if it's a string
             case Jason.decode(response_body) do
               {:ok, decoded} -> {:ok, decoded}
               {:error, _} -> {:ok, %{body: response_body}}
             end
 
           true ->
-            # Empty or non-JSON response
             {:ok, %{body: response_body}}
         end
 
       {:ok, %{status: 404}} ->
         {:error, :not_found}
+
+      {:ok, %{status: 409, body: response_body}} ->
+        Logger.warning("Netmaker API conflict 409: #{inspect(response_body)}")
+        {:error, :conflict}
+
+      {:ok, %{status: 400, body: response_body}} ->
+        Logger.warning("Netmaker API bad request 400: #{inspect(response_body)}")
+        {:error, {:bad_request, response_body}}
 
       {:ok, %{status: status, body: response_body}} ->
         Logger.error("Netmaker API error #{status}: #{inspect(response_body)}")

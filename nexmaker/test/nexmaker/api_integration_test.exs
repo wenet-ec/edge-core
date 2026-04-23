@@ -1,5 +1,5 @@
-# nexmaker/test/nexmaker/api_test.exs
-defmodule Nexmaker.ApiTest do
+# nexmaker/test/nexmaker/api_integration_test.exs
+defmodule Nexmaker.ApiIntegrationTest do
   use ExUnit.Case
 
   @moduletag :integration
@@ -526,6 +526,140 @@ defmodule Nexmaker.ApiTest do
     test "list_custom_entries/2 returns list", %{network_name: net} do
       assert {:ok, entries} = Nexmaker.Api.DNS.list_custom_entries(net, api_opts())
       assert is_list(entries)
+    end
+
+    test "list_nameservers/2 sends ?network= param and returns list", %{network_name: net} do
+      # Regression: old arity-1 signature never sent ?network= → always 400 from Netmaker.
+      # This test passes network_name as a required positional arg and expects a valid response.
+      assert {:ok, nameservers} = Nexmaker.Api.DNS.list_nameservers(net, api_opts())
+      assert is_list(nameservers)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Nexmaker.Api.normalize/1 — integration-level: against real error shapes
+  # from live Netmaker responses
+  # ---------------------------------------------------------------------------
+
+  describe "Nexmaker.Api.normalize/1 — against real Netmaker responses" do
+    test "normalize passes through {:ok, _} from a successful network get" do
+      name = unique_network_name("norm")
+      cidr = unique_cidr()
+      {:ok, _} = Nexmaker.Api.Networks.create(name, %{addressrange: cidr}, api_opts())
+
+      result = Nexmaker.Api.Networks.get(name, api_opts())
+      assert {:ok, _} = Nexmaker.Api.normalize(result)
+
+      on_exit(fn -> Nexmaker.Api.Networks.delete(name, api_opts()) end)
+    end
+
+    test "normalize maps missing network get to {:error, :not_found}" do
+      result = Nexmaker.Api.Networks.get("definitely-does-not-exist-xyz", api_opts())
+      assert {:error, :not_found} = Nexmaker.Api.normalize(result)
+    end
+
+    test "normalize maps missing host get to {:error, :not_found}" do
+      # Hosts.get returns 500 + 'no result found' for missing host — normalize should catch it
+      fake_id = "00000000-0000-0000-0000-000000000000"
+      result = Nexmaker.Api.Hosts.get(fake_id, api_opts())
+      assert {:error, :not_found} = Nexmaker.Api.normalize(result)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # EnrollmentKeys.delete/2 — not-found returns {:error, {:bad_request, _}}
+  # ---------------------------------------------------------------------------
+
+  describe "Nexmaker.Api.EnrollmentKeys — error shapes" do
+    test "delete/2 of nonexistent key returns {:error, {:bad_request, _}}" do
+      # Netmaker returns HTTP 400 (not 404/500) for a missing enrollment key.
+      # This must NOT normalize to :not_found.
+      result = Nexmaker.Api.EnrollmentKeys.delete("nonexistent-key-id-xyz", api_opts())
+      assert {:error, {:bad_request, _}} = result
+    end
+
+    test "delete/2 of nonexistent key normalizes to {:error, {:bad_request, _}}" do
+      result = Nexmaker.Api.EnrollmentKeys.delete("nonexistent-key-id-xyz", api_opts())
+      assert {:error, {:bad_request, _}} = Nexmaker.Api.normalize(result)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # ExternalClients.delete/3 — idempotent: missing client returns {:ok, _}
+  # ---------------------------------------------------------------------------
+
+  describe "Nexmaker.Api.ExternalClients — idempotency" do
+    setup do
+      name = unique_network_name("extclient")
+      cidr = unique_cidr()
+      {:ok, _} = Nexmaker.Api.Networks.create(name, %{addressrange: cidr}, api_opts())
+      on_exit(fn -> Nexmaker.Api.Networks.delete(name, api_opts()) end)
+      {:ok, network_name: name}
+    end
+
+    test "delete/3 of nonexistent client returns {:ok, _}", %{network_name: net} do
+      # Netmaker returns 200 ReturnSuccessResponse for a missing client — not 404.
+      result =
+        Nexmaker.Api.ExternalClients.delete(net, "client-that-does-not-exist", api_opts())
+
+      assert {:ok, _} = result
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # URL construction integration guards — query params reach Netmaker correctly
+  # These would return {:error, {:bad_request, _}} or wrong results if the
+  # params were embedded in the path instead of sent as query params.
+  # ---------------------------------------------------------------------------
+
+  describe "URL construction — query params sent correctly" do
+    setup do
+      name = unique_network_name("urltest")
+      cidr = unique_cidr()
+      {:ok, _} = Nexmaker.Api.Networks.create(name, %{addressrange: cidr}, api_opts())
+      on_exit(fn -> Nexmaker.Api.Networks.delete(name, api_opts()) end)
+      {:ok, network_name: name}
+    end
+
+    test "ACLs.list/2 reaches Netmaker correctly and returns list", %{network_name: net} do
+      # If ?network= was embedded in path instead of query, Netmaker returns 400/404.
+      assert {:ok, acls} = Nexmaker.Api.ACLs.list(net, api_opts())
+      assert is_list(acls)
+    end
+
+    test "AdvancedEgress.list/2 reaches Netmaker correctly and returns list", %{
+      network_name: net
+    } do
+      assert {:ok, egresses} = Nexmaker.Api.AdvancedEgress.list(net, api_opts())
+      assert is_list(egresses)
+    end
+
+    test "Gateways.Egress.list/2 reaches Netmaker correctly and returns list", %{
+      network_name: net
+    } do
+      assert {:ok, egresses} = Nexmaker.Api.Gateways.Egress.list(net, api_opts())
+      assert is_list(egresses)
+    end
+
+    test "ACLs.delete/2 returns {:error, {:bad_request, _}} for nonexistent ACL (not crash)" do
+      # If acl_id query param is malformed/missing, Netmaker crashes or returns 500.
+      # Getting a clean 400 here means the param was correctly sent as ?acl_id=.
+      result = Nexmaker.Api.ACLs.delete("00000000-0000-0000-0000-000000000000", api_opts())
+      assert {:error, {:bad_request, _}} = result
+    end
+
+    test "AdvancedEgress.delete/2 returns {:error, {:bad_request, _}} for nonexistent ID" do
+      result =
+        Nexmaker.Api.AdvancedEgress.delete("00000000-0000-0000-0000-000000000000", api_opts())
+
+      assert {:error, {:bad_request, _}} = result
+    end
+
+    test "DNS.delete_nameserver/2 returns {:error, {:bad_request, _}} for nonexistent ID" do
+      result =
+        Nexmaker.Api.DNS.delete_nameserver("00000000-0000-0000-0000-000000000000", api_opts())
+
+      assert {:error, {:bad_request, _}} = result
     end
   end
 end

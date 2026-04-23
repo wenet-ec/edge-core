@@ -121,7 +121,7 @@ defmodule Nexmaker.Api.Gateways.Egress do
   """
   @spec list(String.t(), keyword()) :: {:ok, [map()]} | {:error, any()}
   def list(network_name, opts \\ []) do
-    case Api.request(:get, "/api/v1/egress?network=#{network_name}", opts) do
+    case Api.request(:get, "/api/v1/egress", Keyword.put(opts, :query, network: network_name)) do
       {:ok, %{"Response" => egresses}} -> {:ok, egresses}
       other -> other
     end
@@ -180,6 +180,6 @@ defmodule Nexmaker.Api.Gateways.Egress do
   """
   @spec delete_v1(String.t(), keyword()) :: {:ok, any()} | {:error, any()}
   def delete_v1(id, opts \\ []) do
-    Api.request(:delete, "/api/v1/egress?id=#{id}", opts)
+    Api.request(:delete, "/api/v1/egress", Keyword.put(opts, :query, id: id))
   end
 end

@@ -128,8 +128,14 @@ defmodule Nexmaker.Api.ExternalClients do
 
   ## Returns
     - `{:ok, client}` - External client map
-    - `{:error, :not_found}` - Client not found
+    - `{:error, :not_found}` - Client not found (after `normalize/1`)
     - `{:error, reason}` - Error occurred
+
+  ## Notes
+
+  Netmaker returns HTTP 500 (not 404) when the client is not found — it uses
+  `FormatError(err, "internal")` unconditionally. Use `Nexmaker.Api.normalize/1`
+  to map the 500 + "no result found" body to `{:error, :not_found}`.
 
   ## Examples
 
@@ -177,8 +183,14 @@ defmodule Nexmaker.Api.ExternalClients do
     - opts: Keyword - API options (base_url, master_key)
 
   ## Returns
-    - `{:ok, response}` - Client deleted
+    - `{:ok, response}` - Client deleted (or was already absent — see Notes)
     - `{:error, reason}` - Error occurred
+
+  ## Notes
+
+  This operation is idempotent. When the client does not exist, Netmaker returns HTTP 200
+  (`ReturnSuccessResponse`) rather than 404 — the caller cannot distinguish "just deleted"
+  from "did not exist". Both cases return `{:ok, _}`.
 
   ## Examples
 
@@ -197,20 +209,25 @@ defmodule Nexmaker.Api.ExternalClients do
   ## Parameters
     - network_name: String - Network name
     - client_id: String - External client ID
-    - config_type: String - Configuration type ("wireguard", "file", or other formats)
+    - config_type: String - Configuration type: `"file"` (raw .conf text), `"qr"` (PNG image bytes),
+      or any other value (returns JSON ExtClient struct)
     - opts: Keyword - API options (base_url, master_key)
 
   ## Returns
-    - `{:ok, config}` - Configuration data (format depends on config_type)
-    - `{:error, reason}` - Error occurred
+    - `{:ok, %{body: binary()}}` - Raw WireGuard `.conf` text when `config_type` is `"file"`,
+      or raw PNG bytes when `config_type` is `"qr"` — `request/3` wraps non-JSON bodies in
+      `%{body: ...}` since they cannot be decoded as JSON
+    - `{:ok, client}` - JSON ExtClient map for any other `config_type`
+    - `{:error, reason}` - Error occurred (client/network not found → 500, invalid `preferredip`
+      query param → 400)
 
   ## Examples
 
-      # Get as file download
-      {:ok, config} = Nexmaker.Api.ExternalClients.get_config("cluster-abc", "laptop-alice", "file")
+      # Download .conf file (returns %{body: "..."} with raw WireGuard config text)
+      {:ok, %{body: conf}} = Nexmaker.Api.ExternalClients.get_config("cluster-abc", "laptop-alice", "file")
 
-      # Get WireGuard format
-      {:ok, config} = Nexmaker.Api.ExternalClients.get_config("cluster-abc", "laptop-alice", "wireguard")
+      # Download QR code PNG (returns %{body: <<...>>} with raw PNG bytes)
+      {:ok, %{body: png}} = Nexmaker.Api.ExternalClients.get_config("cluster-abc", "laptop-alice", "qr")
   """
   @spec get_config(String.t(), String.t(), String.t(), keyword()) ::
           {:ok, any()} | {:error, any()}

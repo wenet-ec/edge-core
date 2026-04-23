@@ -93,6 +93,10 @@ defmodule Nexmaker.Api.Server do
   """
   @spec get_public_ip(keyword()) :: {:ok, map()} | {:error, any()}
   def get_public_ip(opts \\ []) do
+    # Note: this endpoint returns a plain-text body (not JSON) on both success
+    # and 400 error. Success body is a raw IP string wrapped as %{body: "x.x.x.x"}.
+    # On 400, Nexmaker.Api.normalize/1 returns {:error, {:bad_request, "ip is invalid: ..."}}
+    # where the body is a binary, not a %{"Message" => ...} map.
     Nexmaker.Api.request(:get, "/api/getip", opts)
   end
 

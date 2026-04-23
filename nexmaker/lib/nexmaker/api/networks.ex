@@ -71,7 +71,8 @@ defmodule Nexmaker.Api.Networks do
 
   ## Returns
     - `{:ok, network}` - Created network map
-    - `{:error, reason}` - Error occurred
+    - `{:error, {:bad_request, body}}` - Validation failure (name too long, bad CIDR,
+      missing CIDR, or "network cidr already in use" — all come back as 400)
 
   ## Examples
 
@@ -132,19 +133,19 @@ defmodule Nexmaker.Api.Networks do
   @doc """
   Deletes a network.
 
-  Note: As of Netmaker v1.1.0, the force parameter is accepted but not used in the implementation.
-  It's included here for API completeness and future compatibility.
-
   ## Parameters
     - network_name: String - Network name
     - opts: Keyword - API options (base_url, master_key, force)
 
   ## Options
-    - `:force` - Boolean, intended to bypass node count checks (currently unused by Netmaker) (default: true)
+    - `:force` - Boolean, bypass the "network still has nodes" check (default: true).
+      With `force: false`, Netmaker returns 403 if the network has active nodes.
+      With `force: true` (default), deletion always proceeds.
 
   ## Returns
     - `{:ok, response}` - Network deleted
-    - `{:error, reason}` - Error occurred
+    - `{:error, {:bad_request, body}}` - Validation error
+    - `{:error, :service_unavailable}` - DB error or 403 (nodes still present with force: false)
 
   ## Examples
 
@@ -180,7 +181,8 @@ defmodule Nexmaker.Api.Networks do
   @spec stats(keyword()) :: {:ok, map()} | {:error, any()}
   def stats(opts \\ []) do
     case Api.request(:get, "/api/v1/networks/stats", opts) do
-      {:ok, %{"Response" => data}} -> {:ok, data}
+      {:ok, %{"Response" => data}} when not is_nil(data) -> {:ok, data}
+      {:ok, %{"Response" => nil}} -> {:ok, %{}}
       other -> other
     end
   end

@@ -306,50 +306,6 @@ defmodule EdgeAdmin.VpnTest do
   end
 
   # ---------------------------------------------------------------------------
-  # netmaker_not_found_error?/1
-  # ---------------------------------------------------------------------------
-
-  describe "netmaker_not_found_error?/1" do
-    test "map with 'no result found' message" do
-      assert Vpn.netmaker_not_found_error?(%{"Message" => "no result found"})
-    end
-
-    test "map with 'could not find any records' message" do
-      assert Vpn.netmaker_not_found_error?(%{"Message" => "could not find any records"})
-    end
-
-    test "binary string with 'no result found'" do
-      assert Vpn.netmaker_not_found_error?("no result found")
-    end
-
-    test "binary string with 'could not find any records'" do
-      assert Vpn.netmaker_not_found_error?("could not find any records")
-    end
-
-    test "map with unrelated error message" do
-      refute Vpn.netmaker_not_found_error?(%{"Message" => "internal server error"})
-    end
-
-    test "map with empty message" do
-      refute Vpn.netmaker_not_found_error?(%{"Message" => ""})
-    end
-
-    test "map missing Message key" do
-      refute Vpn.netmaker_not_found_error?(%{"Error" => "something"})
-    end
-
-    test "unrelated binary string" do
-      refute Vpn.netmaker_not_found_error?("internal server error")
-    end
-
-    test "non-string/map value returns false" do
-      refute Vpn.netmaker_not_found_error?(nil)
-      refute Vpn.netmaker_not_found_error?(404)
-      refute Vpn.netmaker_not_found_error?([])
-    end
-  end
-
-  # ---------------------------------------------------------------------------
   # find_available_subnet/3
   # ---------------------------------------------------------------------------
 

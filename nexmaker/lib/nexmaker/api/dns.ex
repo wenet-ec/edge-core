@@ -55,6 +55,7 @@ defmodule Nexmaker.Api.DNS do
   def get_all(opts \\ []) do
     case Api.request(:get, "/api/dns", opts) do
       {:ok, nil} -> {:ok, []}
+      {:ok, %{body: b}} when b in [nil, ""] -> {:ok, []}
       {:ok, entries} when is_list(entries) -> {:ok, entries}
       {:ok, other} -> {:error, {:unexpected_response, other}}
       {:error, reason} -> {:error, reason}
@@ -76,6 +77,7 @@ defmodule Nexmaker.Api.DNS do
   def list(network_name, opts \\ []) do
     case Api.request(:get, "/api/dns/adm/#{network_name}", opts) do
       {:ok, nil} -> {:ok, []}
+      {:ok, %{body: b}} when b in [nil, ""] -> {:ok, []}
       {:ok, entries} when is_list(entries) -> {:ok, entries}
       other -> other
     end
@@ -90,7 +92,12 @@ defmodule Nexmaker.Api.DNS do
   """
   @spec list_node_entries(String.t(), keyword()) :: {:ok, [map()]} | {:error, any()}
   def list_node_entries(network_name, opts \\ []) do
-    Api.request(:get, "/api/dns/adm/#{network_name}/nodes", opts)
+    case Api.request(:get, "/api/dns/adm/#{network_name}/nodes", opts) do
+      {:ok, nil} -> {:ok, []}
+      {:ok, %{body: b}} when b in [nil, ""] -> {:ok, []}
+      {:ok, entries} when is_list(entries) -> {:ok, entries}
+      other -> other
+    end
   end
 
   @doc """
@@ -103,9 +110,23 @@ defmodule Nexmaker.Api.DNS do
   @spec list_custom_entries(String.t(), keyword()) :: {:ok, [map()]} | {:error, any()}
   def list_custom_entries(network_name, opts \\ []) do
     case Api.request(:get, "/api/dns/adm/#{network_name}/custom", opts) do
-      {:ok, nil} -> {:ok, []}
-      {:ok, entries} when is_list(entries) -> {:ok, entries}
-      other -> other
+      {:ok, nil} ->
+        {:ok, []}
+
+      {:ok, %{body: b}} when b in [nil, ""] ->
+        {:ok, []}
+
+      {:ok, entries} when is_list(entries) ->
+        {:ok, entries}
+
+      # Netmaker returns 500 "could not find any records" for empty custom entries
+      {:error, {:http_error, 500, %{"Message" => msg}}} when is_binary(msg) ->
+        if String.contains?(msg, "could not find any records"),
+          do: {:ok, []},
+          else: {:error, {:http_error, 500, %{"Message" => msg}}}
+
+      other ->
+        other
     end
   end
 
@@ -144,6 +165,11 @@ defmodule Nexmaker.Api.DNS do
 
   @doc """
   Pushes DNS changes to all nodes across all networks.
+
+  ## Notes
+
+  Returns `{:error, {:bad_request, body}}` if DNS mode is disabled on the server
+  (`MANAGE_DNS=false`). This is a deployment config condition, not a data error.
   """
   @spec push(keyword()) :: {:ok, any()} | {:error, any()}
   def push(opts \\ []) do
@@ -156,6 +182,10 @@ defmodule Nexmaker.Api.DNS do
   ## Parameters
     - network_name: String - Network name
     - opts: Keyword - API options (base_url, master_key)
+
+  ## Notes
+
+  Returns `{:error, {:bad_request, body}}` if manage DNS is disabled on the server.
   """
   @spec sync(String.t(), keyword()) :: {:ok, any()} | {:error, any()}
   def sync(network_name, opts \\ []) do
@@ -167,15 +197,19 @@ defmodule Nexmaker.Api.DNS do
   # ---------------------------------------------------------------------------
 
   @doc """
-  Lists all configured nameservers.
+  Lists nameservers configured for a network.
+
+  ## Parameters
+    - network_name: String - Network name (required — Netmaker returns 400 without it)
+    - opts: Keyword - API options (base_url, master_key)
 
   ## Returns
     - `{:ok, nameservers}` - List of nameserver maps
     - `{:error, reason}` - Error occurred
   """
-  @spec list_nameservers(keyword()) :: {:ok, [map()]} | {:error, any()}
-  def list_nameservers(opts \\ []) do
-    case Api.request(:get, "/api/v1/nameserver", opts) do
+  @spec list_nameservers(String.t(), keyword()) :: {:ok, [map()]} | {:error, any()}
+  def list_nameservers(network_name, opts \\ []) do
+    case Api.request(:get, "/api/v1/nameserver", Keyword.put(opts, :query, network: network_name)) do
       {:ok, %{"Response" => nameservers}} -> {:ok, nameservers}
       other -> other
     end
@@ -233,7 +267,9 @@ defmodule Nexmaker.Api.DNS do
 
   ## Returns
     - `{:ok, nameserver}` - Updated nameserver map
-    - `{:error, reason}` - Error occurred
+    - `{:error, {:bad_request, body}}` - Nameserver not found, validation failure, or AD domain
+      on fallback nameserver (Netmaker uses 400, not 404, for not-found on update)
+    - `{:error, reason}` - Other error
   """
   @spec update_nameserver(map(), keyword()) :: {:ok, map()} | {:error, any()}
   def update_nameserver(attrs, opts \\ []) do
@@ -249,9 +285,15 @@ defmodule Nexmaker.Api.DNS do
   ## Parameters
     - nameserver_id: String - Nameserver ID
     - opts: Keyword - API options (base_url, master_key)
+
+  ## Notes
+
+  Returns `{:error, {:bad_request, body}}` (not `{:error, :not_found}`) when:
+  - The nameserver ID does not exist
+  - Attempting to delete a default nameserver (protected)
   """
   @spec delete_nameserver(String.t(), keyword()) :: {:ok, any()} | {:error, any()}
   def delete_nameserver(nameserver_id, opts \\ []) do
-    Api.request(:delete, "/api/v1/nameserver?id=#{nameserver_id}", opts)
+    Api.request(:delete, "/api/v1/nameserver", Keyword.put(opts, :query, id: nameserver_id))
   end
 end

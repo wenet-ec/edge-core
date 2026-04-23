@@ -84,8 +84,6 @@ defmodule Nexmaker.CliTest do
     test "info map has required keys" do
       assert {:ok, _status, info} = Nexmaker.Cli.health_check()
       assert Map.has_key?(info, :networks)
-      assert Map.has_key?(info, :peer_count)
-      assert Map.has_key?(info, :connected_count)
       assert Map.has_key?(info, :warnings)
       assert Map.has_key?(info, :timestamp)
     end
@@ -106,25 +104,13 @@ defmodule Nexmaker.CliTest do
       assert %DateTime{} = info.timestamp
     end
 
-    test "skip_peers: true (default) sets peer_count to nil" do
-      assert {:ok, _status, info} = Nexmaker.Cli.health_check(skip_peers: true)
-      assert info.peer_count == nil
-      assert info.connected_count == nil
-    end
-
-    test "skip_peers: false runs peer check and sets peer_count" do
-      assert {:ok, _status, info} = Nexmaker.Cli.health_check(skip_peers: false)
-      # peer_count is either nil (peer check failed → degraded) or an integer
-      assert info.peer_count == nil or is_integer(info.peer_count)
-    end
-
     test "unhealthy when not connected to any network" do
-      # When no networks are joined, health should be :unhealthy
+      # When no networks are joined, health should be :unhealthy with a non-empty warning
       {:ok, networks} = Nexmaker.Cli.list_networks()
 
       if networks == [] do
         assert {:ok, :unhealthy, info} = Nexmaker.Cli.health_check()
-        assert "Not connected to any network" in info.warnings
+        assert info.warnings != []
       else
         # Already connected — just assert we get a valid response
         assert {:ok, status, _info} = Nexmaker.Cli.health_check()

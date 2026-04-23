@@ -12,10 +12,18 @@ services:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1
       - net.ipv6.conf.all.forwarding=1
+    volumes:
+      - /dev/net/tun:/dev/net/tun
     environment:
       - MIX_ENV=test
       - NETMAKER_BASE_URL=http://netmaker_proxy:80
       - NETMAKER_MASTER_KEY=supersecretkey123456789
+    # Netclient rewrites /etc/resolv.conf on VPN join, breaking Docker DNS.
+    # Pin all hostnames netclient needs post-join to static IPs via /etc/hosts,
+    # which survives the resolv.conf rewrite (same pattern as edge_admin).
+    extra_hosts:
+      - "netmaker_proxy:172.28.0.10"
+      - "netmaker_broker:172.28.0.11"
     command: mix test --include integration
     depends_on:
       netmaker:
@@ -53,7 +61,8 @@ services:
       - netmaker_broker_logs:/opt/emqx/log
       - ./emqx.conf:/opt/emqx/data/configs/cluster.hocon
     networks:
-      - test_network
+      test_network:
+        ipv4_address: 172.28.0.11
     healthcheck:
       test: ["CMD-SHELL", "emqx ctl status || exit 1"]
       interval: 10s
@@ -122,7 +131,8 @@ services:
       netmaker:
         condition: service_healthy
     networks:
-      - test_network
+      test_network:
+        ipv4_address: 172.28.0.10
     command: caddy run --config /etc/caddy/Caddyfile
 
   coredns:
@@ -141,6 +151,9 @@ services:
 networks:
   test_network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
 
 volumes:
   netmaker_data:

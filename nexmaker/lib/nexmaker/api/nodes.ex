@@ -131,14 +131,19 @@ defmodule Nexmaker.Api.Nodes do
   @doc """
   Bulk deletes multiple nodes from a network.
 
+  Returns 202 Accepted immediately — deletion runs asynchronously on the server.
+  The `{:ok, body}` response carries a `%{"Message" => "bulk delete of N node(s) accepted"}`
+  confirmation, not a list of deleted nodes.
+
   ## Parameters
     - network_name: String - Network name
     - node_ids: [String] - List of node UUIDs
     - opts: Keyword - API options (base_url, master_key)
 
   ## Returns
-    - `{:ok, response}` - Bulk delete accepted
-    - `{:error, reason}` - Error occurred
+    - `{:ok, response}` - Bulk delete accepted (async, 202)
+    - `{:error, {:bad_request, body}}` - Bad body, empty IDs, or network not found
+    - `{:error, reason}` - Other error
   """
   @spec bulk_delete(String.t(), [String.t()], keyword()) :: {:ok, any()} | {:error, any()}
   def bulk_delete(network_name, node_ids, opts \\ []) do

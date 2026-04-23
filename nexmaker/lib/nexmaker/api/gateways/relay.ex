@@ -104,8 +104,8 @@ defmodule Nexmaker.Api.Gateways.Relay do
   def assign(network_name, node_id, gateway_node_id, opts \\ []) do
     Api.request(
       :post,
-      "/api/nodes/#{network_name}/#{node_id}/gateway/assign?gw_id=#{gateway_node_id}",
-      opts
+      "/api/nodes/#{network_name}/#{node_id}/gateway/assign",
+      Keyword.put(opts, :query, gw_id: gateway_node_id)
     )
   end
 

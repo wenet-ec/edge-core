@@ -46,7 +46,7 @@ defmodule Nexmaker.Api.ACLs do
   """
   @spec list(String.t(), keyword()) :: {:ok, [map()]} | {:error, any()}
   def list(network_id, opts \\ []) do
-    case Api.request(:get, "/api/v1/acls?network=#{network_id}", opts) do
+    case Api.request(:get, "/api/v1/acls", Keyword.put(opts, :query, network: network_id)) do
       {:ok, %{"Response" => acls}} -> {:ok, acls}
       other -> other
     end
@@ -90,7 +90,9 @@ defmodule Nexmaker.Api.ACLs do
 
   ## Returns
     - `{:ok, acl}` - Updated ACL policy map
-    - `{:error, reason}` - Error occurred
+    - `{:error, {:bad_request, body}}` - ACL not found, policy invalid, or network ID mismatch
+      (Netmaker uses 400, not 404, for not-found on update)
+    - `{:error, reason}` - Other error
   """
   @spec update(String.t(), map(), keyword()) :: {:ok, map()} | {:error, any()}
   def update(acl_id, attrs, opts \\ []) do
@@ -111,11 +113,13 @@ defmodule Nexmaker.Api.ACLs do
 
   ## Returns
     - `{:ok, response}` - ACL deleted
-    - `{:error, reason}` - Error occurred
+    - `{:error, {:bad_request, body}}` - ACL not found or attempting to delete a default policy
+      (Netmaker uses 400, not 404, for not-found)
+    - `{:error, reason}` - Other error
   """
   @spec delete(String.t(), keyword()) :: {:ok, any()} | {:error, any()}
   def delete(acl_id, opts \\ []) do
-    Api.request(:delete, "/api/v1/acls?acl_id=#{acl_id}", opts)
+    Api.request(:delete, "/api/v1/acls", Keyword.put(opts, :query, acl_id: acl_id))
   end
 
   @doc """
@@ -131,7 +135,7 @@ defmodule Nexmaker.Api.ACLs do
   """
   @spec list_egress(String.t(), keyword()) :: {:ok, [map()]} | {:error, any()}
   def list_egress(egress_id, opts \\ []) do
-    case Api.request(:get, "/api/v1/acls/egress?egress_id=#{egress_id}", opts) do
+    case Api.request(:get, "/api/v1/acls/egress", Keyword.put(opts, :query, egress_id: egress_id)) do
       {:ok, %{"Response" => acls}} -> {:ok, acls}
       other -> other
     end

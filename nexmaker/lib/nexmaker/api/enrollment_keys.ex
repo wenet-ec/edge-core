@@ -81,6 +81,8 @@ defmodule Nexmaker.Api.EnrollmentKeys do
     # Tags are required by the API - default to ["default"] if not provided.
     # uses_remaining defaults to 1 — Netmaker rejects keys with uses_remaining: 0
     # and no expiration set.
+    # Note: tags must be unique across ALL existing enrollment keys (not just within this
+    # network). Duplicate tag → 400 bad request.
     body =
       attrs
       |> Map.put(:networks, [network_name])
@@ -125,8 +127,16 @@ defmodule Nexmaker.Api.EnrollmentKeys do
     - opts: Keyword - API options (base_url, master_key)
 
   ## Returns
-    - `{:ok, response}` - Key deleted
-    - `{:error, reason}` - Error occurred
+    - `{:ok, %{body: ""}}` - Key deleted (empty body on success)
+    - `{:error, {:bad_request, body}}` - Key not found (Netmaker uses 400, not 404)
+    - `{:error, reason}` - Other error
+
+  ## Notes
+
+  Netmaker returns HTTP 400 (`FormatError(err, "badrequest")`) when the key is not found —
+  not 404 or 500. After `Nexmaker.Api.normalize/1` this becomes `{:error, {:bad_request, body}}`,
+  not `{:error, :not_found}`. Callers wanting to treat a missing key as success must match on
+  `{:error, {:bad_request, _}}` explicitly.
 
   ## Examples
 

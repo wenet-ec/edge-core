@@ -10,7 +10,7 @@ defmodule EdgeAdmin.Vpn do
   - **Host Management**: Add/remove hosts from networks, manage host lifecycle
   - **Enrollment Keys**: Create and manage network enrollment keys
   - **DNS Entries**: Create custom DNS entries for nodes (aliases)
-  - **Error Normalization**: Consistent error handling across Netmaker API calls
+  - **Error Normalization**: Delegates to `Nexmaker.Api.normalize/1`, then collapses to `:not_found` or `:service_unavailable`
 
   ## Key Concepts
 
@@ -25,7 +25,7 @@ defmodule EdgeAdmin.Vpn do
 
   - **Thin Wrapper**: Wraps Nexmaker API client with error normalization
   - **Stateless**: No state, all operations are direct API calls
-  - **Error Handling**: Normalizes Netmaker errors to `:service_unavailable` or `:not_found`
+  - **Error Handling**: Uses `Nexmaker.Api.normalize/1` — collapses to `:service_unavailable` or `:not_found`
 
   ## Examples
 
@@ -53,6 +53,7 @@ defmodule EdgeAdmin.Vpn do
   import Bitwise
 
   alias EdgeAdmin.Admins.Metadata
+  alias Nexmaker.Api
   alias Nexmaker.Api.DNS
   alias Nexmaker.Api.EnrollmentKeys
   alias Nexmaker.Api.Hosts
@@ -450,88 +451,20 @@ defmodule EdgeAdmin.Vpn do
   # Netmaker API Wrappers
   # ===========================================================================
 
-  @doc """
-  Checks if a Netmaker HTTP error body indicates a "not found" condition.
-
-  Netmaker uses HTTP 500 with specific messages for not found errors instead
-  of proper 404 responses. This helper normalizes that behavior.
-
-  ## Examples
-
-      iex> Vpn.netmaker_not_found_error?(%{"Message" => "no result found"})
-      true
-
-      iex> Vpn.netmaker_not_found_error?("could not find any records")
-      true
-
-      iex> Vpn.netmaker_not_found_error?(%{"Message" => "internal server error"})
-      false
-  """
-  def netmaker_not_found_error?(body) when is_binary(body) do
-    String.contains?(body, "no result found") or
-      String.contains?(body, "could not find any records")
-  end
-
-  def netmaker_not_found_error?(body) when is_map(body) do
-    message = Map.get(body, "Message", "")
-
-    String.contains?(message, "no result found") or
-      String.contains?(message, "could not find any records")
-  end
-
-  def netmaker_not_found_error?(_), do: false
-
-  @doc """
-  Checks if a Netmaker HTTP error body indicates the host is already a member of the network.
-
-  Netmaker returns HTTP 500 with this message when `POST /api/hosts/{id}/networks/{network}`
-  is called for a host that already has a node in that network. This is an idempotent
-  condition — the host is already joined, so callers should treat it as success.
-
-  ## Examples
-
-      iex> Vpn.netmaker_already_in_network_error?(%{"Message" => "host already part of network cluster-prod"})
-      true
-
-      iex> Vpn.netmaker_already_in_network_error?("host already part of network cluster-prod")
-      true
-  """
-  def netmaker_already_in_network_error?(body) when is_binary(body) do
-    String.contains?(body, "host already part of network")
-  end
-
-  def netmaker_already_in_network_error?(body) when is_map(body) do
-    message = Map.get(body, "Message", "")
-    String.contains?(message, "host already part of network")
-  end
-
-  def netmaker_already_in_network_error?(_), do: false
-
   # ===========================================================================
   # Error Normalization
   # ===========================================================================
 
-  @doc false
-  # Normalizes Netmaker API errors to standard format for context layer.
-  #
-  # Converts all Nexmaker errors to either:
-  # - `{:error, :not_found}` - Resource not found (404 or "no result found" messages)
-  # - `{:error, :service_unavailable}` - Netmaker unreachable or returned error
-  #
-  # This allows contexts to use clean `with` pipelines without explicit error handling.
-  defp normalize_netmaker_error({:ok, result}), do: {:ok, result}
-
-  defp normalize_netmaker_error({:error, :not_found}), do: {:error, :not_found}
-
-  defp normalize_netmaker_error({:error, {:http_error, 500, body}}) do
-    if netmaker_not_found_error?(body) do
-      {:error, :not_found}
-    else
-      {:error, :service_unavailable}
+  # Delegates to Nexmaker.Api.normalize/1, then collapses anything that isn't
+  # :ok / :not_found into :service_unavailable so callers get a clean two-outcome
+  # contract (same behaviour as the old private normalize_netmaker_error/1).
+  defp normalize_netmaker_error(result) do
+    case Api.normalize(result) do
+      {:ok, _} = ok -> ok
+      {:error, :not_found} -> {:error, :not_found}
+      {:error, _} -> {:error, :service_unavailable}
     end
   end
-
-  defp normalize_netmaker_error({:error, _reason}), do: {:error, :service_unavailable}
 
   # ===========================================================================
   # Netmaker API Wrappers
@@ -651,28 +584,13 @@ defmodule EdgeAdmin.Vpn do
   @spec add_host_to_network(String.t(), String.t()) ::
           {:ok, map()} | {:ok, :already_joined} | {:error, :service_unavailable}
   def add_host_to_network(host_id, network_name) do
-    host_id
-    |> Hosts.add_to_network(network_name)
-    |> normalize_add_host_to_network_error()
-  end
-
-  defp normalize_add_host_to_network_error({:ok, result}), do: {:ok, result}
-
-  defp normalize_add_host_to_network_error({:error, {:http_error, 500, body}}) do
-    cond do
-      netmaker_already_in_network_error?(body) ->
-        {:ok, :already_joined}
-
-      netmaker_not_found_error?(body) ->
-        {:error, :not_found}
-
-      true ->
-        {:error, :service_unavailable}
+    case host_id |> Hosts.add_to_network(network_name) |> Api.normalize() do
+      {:ok, _} = ok -> ok
+      {:error, :already_exists} -> {:ok, :already_joined}
+      {:error, :not_found} -> {:error, :not_found}
+      {:error, _} -> {:error, :service_unavailable}
     end
   end
-
-  defp normalize_add_host_to_network_error({:error, :not_found}), do: {:error, :not_found}
-  defp normalize_add_host_to_network_error({:error, _reason}), do: {:error, :service_unavailable}
 
   @doc """
   Get the Netmaker host ID using hostname.
@@ -849,17 +767,6 @@ defmodule EdgeAdmin.Vpn do
       {:error, reason} ->
         {:error, reason}
     end
-  end
-
-  @doc """
-  Deletes an enrollment key from Netmaker.
-
-  Returns `{:ok, response}` or `{:error, :service_unavailable}`.
-  """
-  def delete_enrollment_key(key_value) do
-    key_value
-    |> EnrollmentKeys.delete()
-    |> normalize_netmaker_error()
   end
 
   @doc """

@@ -1,8 +1,25 @@
 # deploy/local/compose/edge_admin/Dockerfile
 
-# Pull pre-built netclient (DERP fork) — built by wenet-ec/netclient CI
+# Stage 0: netclient (DERP fork)
+#
+# Default: pull the pre-built image from GHCR. The fork's CI publishes a new
+# image on every v*-derp tag push.
 ARG NETCLIENT_VERSION=v1.5.1-derp
 FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
+
+# Debug alternative: build from source in-Dockerfile. Uncomment this block (and
+# comment out the two lines above) when iterating on the netclient fork locally,
+# so you don't need a tag push + CI round-trip per fix. Pair with --no-cache:
+#   docker compose -f deploy/local/cloud.yml build --no-cache edge_admin_a1
+#
+# ARG NETCLIENT_VERSION=v1.5.1-derp
+# FROM golang:1.26-bookworm AS netclient-builder
+# ARG NETCLIENT_VERSION
+# RUN apt-get update && apt-get install --no-install-recommends -y git ca-certificates && rm -rf /var/lib/apt/lists/*
+# WORKDIR /build
+# RUN git clone --depth 1 --branch "${NETCLIENT_VERSION}" https://github.com/wenet-ec/netclient.git . && \
+#     echo "netclient cloned at $(git rev-parse HEAD)"
+# RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /netclient -ldflags="-s -w" .
 
 # Main Elixir stage
 FROM elixir:1.19.5-otp-28-slim AS elixir-dev-stage

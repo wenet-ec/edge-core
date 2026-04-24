@@ -52,7 +52,7 @@ WATCHTOWER_HTTP_API_TOKEN=local-dev-token
 # =============================================================================
 # Friendly DNS names for this node (comma-separated). Best-effort — conflicts silently ignored.
 # Each alias becomes node-{alias}.cluster-{cluster}.{domain} in the VPN mesh.
-# ALIASES=web-server,db-primary
+ALIASES=test
 
 # =============================================================================
 # Proxy Security

@@ -6,13 +6,14 @@
 *
 
 # Include only what's needed for edge_admin builds
-!deploy/
+!deploy/local/compose/
+!deploy/production/compose/
 !edge_admin/mix.exs
 !edge_admin/mix.lock
+!edge_admin/.formatter.exs
 !edge_admin/config/
 !edge_admin/lib/
-!edge_admin/priv/repo/
-!edge_admin/priv/static/robots.txt
+!edge_admin/priv/
 !edge_admin/rel/
 
 # Include nexmaker dependency
@@ -21,10 +22,10 @@
 # For edge_agent builds (only include if needed)
 !edge_agent/mix.exs
 !edge_agent/mix.lock
+!edge_agent/.formatter.exs
 !edge_agent/config/
 !edge_agent/lib/
-!edge_agent/priv/repo/
-!edge_agent/priv/static/robots.txt
+!edge_agent/priv/
 !edge_agent/rel/
 
 # Exclude build artifacts even if parent is included
@@ -37,6 +38,8 @@
 **/cover/
 **/erl_crash.dump
 **/.DS_Store
+# Dialyzer PLT cache lives under priv/plts — large and useless in image
+**/priv/plts/
 
 # AI agents & coding assistants (already excluded by * above, explicit for clarity)
 .claude/

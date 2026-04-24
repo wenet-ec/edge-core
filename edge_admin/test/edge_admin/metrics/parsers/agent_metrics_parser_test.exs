@@ -30,6 +30,14 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
     edge_agent_proxy_http_blocked_total{reason="localhost_blocked"} 5
     edge_agent_proxy_http_blocked_total{reason="docker_network_blocked"} 3
     edge_agent_proxy_socks5_blocked_total{reason="localhost_blocked"} 2
+    edge_agent_proxy_tunnel_closed_total{protocol="http",reason="normal"} 95
+    edge_agent_proxy_tunnel_closed_total{protocol="socks5",reason="normal"} 45
+    edge_agent_proxy_tunnel_closed_total{protocol="http",reason="deadline"} 4
+    edge_agent_proxy_tunnel_closed_total{protocol="http",reason="drain_timeout"} 1
+    edge_agent_proxy_tunnel_bytes_up_total{protocol="http"} 1048576
+    edge_agent_proxy_tunnel_bytes_up_total{protocol="socks5"} 524288
+    edge_agent_proxy_tunnel_bytes_down_total{protocol="http"} 4194304
+    edge_agent_proxy_tunnel_bytes_down_total{protocol="socks5"} 2097152
     edge_agent_ssh_authentication_total{result="ok"} 4
     edge_agent_ssh_authentication_total{result="failed"} 1
     edge_agent_ssh_connection_total{result="ok"} 3
@@ -121,6 +129,30 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert result["ssh_authentications"] == 0
       assert result["vpn_pulls"] == 0
       assert result["health_check_reports"] == 0
+    end
+
+    test "sums proxy tunnels_closed across all reasons and protocols" do
+      result = AgentMetricsParser.parse(sample_prometheus_text())
+      # http/normal(95) + socks5/normal(45) + http/deadline(4) + http/drain_timeout(1) = 145
+      assert result["proxy_tunnels_closed_total"] == 145
+    end
+
+    test "splits proxy tunnels_closed by reason label" do
+      result = AgentMetricsParser.parse(sample_prometheus_text())
+
+      # normal: http(95) + socks5(45) = 140
+      assert result["proxy_tunnels_closed_normal_total"] == 140
+      assert result["proxy_tunnels_closed_deadline_total"] == 4
+      assert result["proxy_tunnels_closed_drain_timeout_total"] == 1
+    end
+
+    test "sums proxy bytes up/down across protocols" do
+      result = AgentMetricsParser.parse(sample_prometheus_text())
+
+      # http(1M) + socks5(512K) = 1.5M
+      assert result["proxy_tunnel_bytes_up_total"] == 1_572_864
+      # http(4M) + socks5(2M) = 6M
+      assert result["proxy_tunnel_bytes_down_total"] == 6_291_456
     end
   end
 
@@ -266,6 +298,30 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert metrics.proxy.http_blocked_by_reason["localhost_blocked"] == 5
       assert metrics.proxy.socks5_connections_total == 50
       assert metrics.proxy.socks5_blocked_total == 2
+    end
+
+    test "proxy struct has tunnel close counts split by reason" do
+      raw = AgentMetricsParser.parse(sample_prometheus_text())
+      raw = Map.put(raw, "cluster_name", "prod")
+      metrics = AgentMetrics.from_raw_metrics(raw, "node-abc")
+
+      assert metrics.proxy.tunnels_closed_total == 145
+      assert metrics.proxy.tunnels_closed_normal_total == 140
+      assert metrics.proxy.tunnels_closed_deadline_total == 4
+      assert metrics.proxy.tunnels_closed_drain_timeout_total == 1
+    end
+
+    test "proxy struct converts bytes to MB" do
+      raw = AgentMetricsParser.parse(sample_prometheus_text())
+      raw = Map.put(raw, "cluster_name", "prod")
+      metrics = AgentMetrics.from_raw_metrics(raw, "node-abc")
+
+      assert metrics.proxy.bytes_up_total == 1_572_864
+      # 1.5 MB
+      assert metrics.proxy.bytes_up_mb == 1.5
+      assert metrics.proxy.bytes_down_total == 6_291_456
+      # 6.0 MB
+      assert metrics.proxy.bytes_down_mb == 6.0
     end
 
     test "ssh struct sums all authentication results" do

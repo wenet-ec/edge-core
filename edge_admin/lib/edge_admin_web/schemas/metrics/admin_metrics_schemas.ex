@@ -322,6 +322,78 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
                 }
               }
             },
+            proxy: %Schema{
+              type: :object,
+              description: "HTTP and SOCKS5 forward proxy metrics (connections, tunnels, bytes transferred)",
+              properties: %{
+                connections_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total proxy connections seen (success + auth_failed + failure)"
+                },
+                connections_success_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total proxy connections that authenticated and established a tunnel"
+                },
+                connections_auth_failed_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total proxy connections rejected at authentication"
+                },
+                connections_failure_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description:
+                    "Total proxy connections that failed for non-auth reasons (protocol, network, gateway, etc.)"
+                },
+                auth_failures_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total proxy authentication failures (mirrors connections_auth_failed_total)"
+                },
+                tunnels_closed_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total tunnels that reached end-of-life (all close reasons combined)"
+                },
+                tunnels_closed_normal_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Tunnels closed normally (both sides EOF'd cleanly)"
+                },
+                tunnels_closed_deadline_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Tunnels force-closed by the total-duration deadline (slowloris defence)"
+                },
+                tunnels_closed_drain_timeout_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Tunnels force-closed after exceeding the graceful drain grace window"
+                },
+                bytes_up_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Cumulative bytes forwarded client→target across all tunnels"
+                },
+                bytes_up_mb: %Schema{
+                  type: :number,
+                  nullable: true,
+                  description: "Cumulative client→target bytes in MB"
+                },
+                bytes_down_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Cumulative bytes forwarded target→client across all tunnels"
+                },
+                bytes_down_mb: %Schema{
+                  type: :number,
+                  nullable: true,
+                  description: "Cumulative target→client bytes in MB"
+                }
+              }
+            },
             oban_queues: %Schema{
               type: :array,
               description: "Oban job queue states",
@@ -437,6 +509,21 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
             connections_total: 2,
             active_count: 0,
             scrapes_total: 0
+          },
+          proxy: %{
+            connections_total: 1245,
+            connections_success_total: 1189,
+            connections_auth_failed_total: 34,
+            connections_failure_total: 22,
+            auth_failures_total: 34,
+            tunnels_closed_total: 1189,
+            tunnels_closed_normal_total: 1140,
+            tunnels_closed_deadline_total: 38,
+            tunnels_closed_drain_timeout_total: 11,
+            bytes_up_total: 1_523_456_789,
+            bytes_up_mb: 1452.9,
+            bytes_down_total: 9_876_543_210,
+            bytes_down_mb: 9419.4
           },
           oban_queues: [
             %{

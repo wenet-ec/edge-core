@@ -163,6 +163,41 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         description: "Total SOCKS5 proxy requests blocked by security rules",
         tags: [:reason],
         tag_values: &get_reason_tag/1
+      ),
+      counter(
+        [:edge_agent, :proxy, :tunnel, :closed, :total],
+        event_name: [:edge_agent, :proxy, :tunnel, :closed],
+        description:
+          "Tunnels that finished forwarding, tagged by protocol and close reason (normal | deadline | drain_timeout)",
+        tags: [:protocol, :reason],
+        tag_values: &get_tunnel_close_tag/1
+      ),
+      sum(
+        [:edge_agent, :proxy, :tunnel, :bytes, :up, :total],
+        event_name: [:edge_agent, :proxy, :tunnel, :closed],
+        description: "Cumulative bytes forwarded client→target, tagged by protocol",
+        measurement: :bytes_up,
+        tags: [:protocol],
+        tag_values: &get_protocol_tag/1
+      ),
+      sum(
+        [:edge_agent, :proxy, :tunnel, :bytes, :down, :total],
+        event_name: [:edge_agent, :proxy, :tunnel, :closed],
+        description: "Cumulative bytes forwarded target→client, tagged by protocol",
+        measurement: :bytes_down,
+        tags: [:protocol],
+        tag_values: &get_protocol_tag/1
+      ),
+      distribution(
+        [:edge_agent, :proxy, :tunnel, :duration, :milliseconds],
+        event_name: [:edge_agent, :proxy, :tunnel, :closed],
+        description: "Tunnel forwarding duration in milliseconds, tagged by protocol",
+        measurement: :duration_ms,
+        tags: [:protocol],
+        tag_values: &get_protocol_tag/1,
+        reporter_options: [
+          buckets: [100, 500, 1_000, 5_000, 15_000, 60_000, 300_000, 900_000, 3_600_000]
+        ]
       )
     ]
   end
@@ -254,5 +289,14 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
 
   defp get_reason_tag(%{reason: reason}) do
     %{reason: to_string(reason)}
+  end
+
+  # Tunnel-close counter: protocol always present, reason only when abnormal
+  # (deadline / drain_timeout). Default to :normal for clean closes.
+  defp get_tunnel_close_tag(metadata) do
+    %{
+      protocol: to_string(Map.get(metadata, :protocol, "unknown")),
+      reason: to_string(Map.get(metadata, :reason, :normal))
+    }
   end
 end

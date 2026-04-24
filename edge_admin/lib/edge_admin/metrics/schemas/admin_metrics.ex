@@ -12,6 +12,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Metadata
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Nodes
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.ObanQueue
+  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Proxy
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Quantum
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Reconciliation
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.SelfUpdates
@@ -35,6 +36,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
     :reconciliation,
     :self_updates,
     :gateways,
+    :proxy,
     :oban_queues
   ]
 
@@ -56,6 +58,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
       reconciliation: Reconciliation.from_raw(raw_metrics),
       self_updates: SelfUpdates.from_raw(raw_metrics),
       gateways: Gateways.from_raw(raw_metrics),
+      proxy: Proxy.from_raw(raw_metrics),
       oban_queues: ObanQueue.from_raw(raw_metrics)
     }
   end
@@ -329,6 +332,51 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
         scrapes_total: raw["gateway_scrapes_total"]
       }
     end
+  end
+
+  defmodule Proxy do
+    @moduledoc "HTTP and SOCKS5 forward proxy metrics"
+
+    @derive Jason.Encoder
+    defstruct [
+      :connections_total,
+      :connections_success_total,
+      :connections_auth_failed_total,
+      :connections_failure_total,
+      :auth_failures_total,
+      :tunnels_closed_total,
+      :tunnels_closed_normal_total,
+      :tunnels_closed_deadline_total,
+      :tunnels_closed_drain_timeout_total,
+      :bytes_up_total,
+      :bytes_up_mb,
+      :bytes_down_total,
+      :bytes_down_mb
+    ]
+
+    def from_raw(raw) do
+      bytes_up = raw["proxy_tunnel_bytes_up_total"]
+      bytes_down = raw["proxy_tunnel_bytes_down_total"]
+
+      %__MODULE__{
+        connections_total: raw["proxy_connections_total"],
+        connections_success_total: raw["proxy_connections_success_total"],
+        connections_auth_failed_total: raw["proxy_connections_auth_failed_total"],
+        connections_failure_total: raw["proxy_connections_failure_total"],
+        auth_failures_total: raw["proxy_auth_failures_total"],
+        tunnels_closed_total: raw["proxy_tunnels_closed_total"],
+        tunnels_closed_normal_total: raw["proxy_tunnels_closed_normal_total"],
+        tunnels_closed_deadline_total: raw["proxy_tunnels_closed_deadline_total"],
+        tunnels_closed_drain_timeout_total: raw["proxy_tunnels_closed_drain_timeout_total"],
+        bytes_up_total: bytes_up,
+        bytes_up_mb: bytes_to_mb(bytes_up),
+        bytes_down_total: bytes_down,
+        bytes_down_mb: bytes_to_mb(bytes_down)
+      }
+    end
+
+    defp bytes_to_mb(nil), do: nil
+    defp bytes_to_mb(bytes), do: Float.round(bytes / 1_048_576, 2)
   end
 
   defmodule ObanQueue do

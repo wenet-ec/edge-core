@@ -803,7 +803,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(edge_admin_proxy_http_connection_total{otp_app=\"$otp_app\"}[$__rate_interval])",
+          "expr": "sum(rate(edge_admin_proxy_connection_total{otp_app=\"$otp_app\", protocol=\"http\"}[$__rate_interval])) by (result)",
           "legendFormat": "HTTP - {{result}}",
           "refId": "A"
         },
@@ -812,7 +812,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(edge_admin_proxy_socks5_connection_total{otp_app=\"$otp_app\"}[$__rate_interval])",
+          "expr": "sum(rate(edge_admin_proxy_connection_total{otp_app=\"$otp_app\", protocol=\"socks5\"}[$__rate_interval])) by (result)",
           "legendFormat": "SOCKS5 - {{result}}",
           "refId": "B"
         }
@@ -1111,12 +1111,303 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Rate of tunnels closing, split by reason. 'normal' is clean EOF from either side. 'deadline' means the total-duration cap fired (possible slowloris). 'drain_timeout' means the graceful-drain grace window expired on shutdown.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 36
+      },
+      "id": 30,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(edge_admin_proxy_tunnel_closed_total{otp_app=\"$otp_app\"}[$__rate_interval])) by (reason)",
+          "legendFormat": "{{reason}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Proxy Tunnel Close Rate (by reason)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Proxy throughput per second, split by direction (up = client→target, down = target→client) and protocol.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
+      "id": 31,
+      "options": {
+        "legend": {
+          "calcs": ["sum"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(edge_admin_proxy_tunnel_bytes_up_total{otp_app=\"$otp_app\"}[$__rate_interval])) by (protocol)",
+          "legendFormat": "{{protocol}} up",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(edge_admin_proxy_tunnel_bytes_down_total{otp_app=\"$otp_app\"}[$__rate_interval])) by (protocol)",
+          "legendFormat": "{{protocol}} down",
+          "refId": "B"
+        }
+      ],
+      "title": "Proxy Throughput (Bytes/sec, by protocol + direction)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Tunnel forwarding duration (time spent actually moving bytes, excluding handshake). p95 spikes indicate long-lived tunnels or stuck connections. Compare with session duration to see handshake overhead.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "id": 32,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.50, sum(rate(edge_admin_proxy_tunnel_duration_milliseconds_bucket{otp_app=\"$otp_app\"}[$__rate_interval])) by (le, protocol, routing_mode))",
+          "legendFormat": "p50 {{protocol}} {{routing_mode}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum(rate(edge_admin_proxy_tunnel_duration_milliseconds_bucket{otp_app=\"$otp_app\"}[$__rate_interval])) by (le, protocol, routing_mode))",
+          "legendFormat": "p95 {{protocol}} {{routing_mode}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum(rate(edge_admin_proxy_tunnel_duration_milliseconds_bucket{otp_app=\"$otp_app\"}[$__rate_interval])) by (le, protocol, routing_mode))",
+          "legendFormat": "p99 {{protocol}} {{routing_mode}}",
+          "refId": "C"
+        }
+      ],
+      "title": "Proxy Tunnel Duration (p50/p95/p99)",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 52
       },
       "id": 12,
       "panels": [],

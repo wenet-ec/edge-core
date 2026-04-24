@@ -369,6 +369,46 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                     "localhost_blocked" => 3,
                     "kubernetes_port_blocked" => 2
                   }
+                },
+                tunnels_closed_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total tunnels that reached end-of-life (all close reasons combined)"
+                },
+                tunnels_closed_normal_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Tunnels closed normally (both sides EOF'd cleanly)"
+                },
+                tunnels_closed_deadline_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Tunnels force-closed by the total-duration deadline (slowloris defence)"
+                },
+                tunnels_closed_drain_timeout_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Tunnels force-closed after exceeding the graceful drain grace window"
+                },
+                bytes_up_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Cumulative bytes forwarded client→target across all tunnels"
+                },
+                bytes_up_mb: %Schema{
+                  type: :number,
+                  nullable: true,
+                  description: "Cumulative client→target bytes in MB"
+                },
+                bytes_down_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Cumulative bytes forwarded target→client across all tunnels"
+                },
+                bytes_down_mb: %Schema{
+                  type: :number,
+                  nullable: true,
+                  description: "Cumulative target→client bytes in MB"
                 }
               }
             },
@@ -475,7 +515,15 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
             socks5_blocked_by_reason: %{
               "localhost_blocked" => 3,
               "docker_port_blocked" => 2
-            }
+            },
+            tunnels_closed_total: 605,
+            tunnels_closed_normal_total: 590,
+            tunnels_closed_deadline_total: 12,
+            tunnels_closed_drain_timeout_total: 3,
+            bytes_up_total: 157_286_400,
+            bytes_up_mb: 150.0,
+            bytes_down_total: 943_718_400,
+            bytes_down_mb: 900.0
           },
           ssh: %{
             authentications_total: 45,

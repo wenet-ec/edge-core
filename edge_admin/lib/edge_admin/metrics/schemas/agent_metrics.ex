@@ -157,19 +157,41 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
       :http_blocked_by_reason,
       :socks5_connections_total,
       :socks5_blocked_total,
-      :socks5_blocked_by_reason
+      :socks5_blocked_by_reason,
+      :tunnels_closed_total,
+      :tunnels_closed_normal_total,
+      :tunnels_closed_deadline_total,
+      :tunnels_closed_drain_timeout_total,
+      :bytes_up_total,
+      :bytes_up_mb,
+      :bytes_down_total,
+      :bytes_down_mb
     ]
 
     def from_raw(raw) do
+      bytes_up = raw["proxy_tunnel_bytes_up_total"] || 0
+      bytes_down = raw["proxy_tunnel_bytes_down_total"] || 0
+
       %__MODULE__{
         http_connections_total: raw["proxy_http_connections"] || 0,
         http_blocked_total: raw["proxy_http_blocked"] || 0,
         http_blocked_by_reason: raw["proxy_http_blocked_by_reason"] || %{},
         socks5_connections_total: raw["proxy_socks5_connections"] || 0,
         socks5_blocked_total: raw["proxy_socks5_blocked"] || 0,
-        socks5_blocked_by_reason: raw["proxy_socks5_blocked_by_reason"] || %{}
+        socks5_blocked_by_reason: raw["proxy_socks5_blocked_by_reason"] || %{},
+        tunnels_closed_total: raw["proxy_tunnels_closed_total"] || 0,
+        tunnels_closed_normal_total: raw["proxy_tunnels_closed_normal_total"] || 0,
+        tunnels_closed_deadline_total: raw["proxy_tunnels_closed_deadline_total"] || 0,
+        tunnels_closed_drain_timeout_total: raw["proxy_tunnels_closed_drain_timeout_total"] || 0,
+        bytes_up_total: bytes_up,
+        bytes_up_mb: bytes_to_mb(bytes_up),
+        bytes_down_total: bytes_down,
+        bytes_down_mb: bytes_to_mb(bytes_down)
       }
     end
+
+    defp bytes_to_mb(0), do: 0.0
+    defp bytes_to_mb(bytes), do: Float.round(bytes / 1_048_576, 2)
   end
 
   defmodule Ssh do

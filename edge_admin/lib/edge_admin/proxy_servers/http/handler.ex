@@ -326,7 +326,14 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
   end
 
   defp direct_http_request(socket, transport, host, port, request) do
-    metadata = %{target: :external, host: host, port: port, protocol: :http}
+    metadata = %{
+      protocol: :http,
+      target_host: host,
+      target_port: port,
+      kind: :request,
+      routing_mode: :direct,
+      cluster: "external"
+    }
 
     with :ok <- validate_external_destination(host, port),
          {:ok, target_socket} <-

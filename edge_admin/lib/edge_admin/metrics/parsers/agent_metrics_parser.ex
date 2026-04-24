@@ -40,7 +40,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
       "commands_completed" => extract_counter(lines, "edge_agent_commands_execution_completed_total"),
       "commands_reported" => extract_counter(lines, "edge_agent_commands_report_total"),
 
-      # Proxy
+      # Proxy — connections
       "proxy_http_connections" => extract_counter(lines, "edge_agent_proxy_http_connection_total"),
       "proxy_socks5_connections" => extract_counter(lines, "edge_agent_proxy_socks5_connection_total"),
       "proxy_http_blocked" => extract_counter(lines, "edge_agent_proxy_http_blocked_total"),
@@ -49,6 +49,17 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
         extract_counter_by_label(lines, "edge_agent_proxy_http_blocked_total", "reason"),
       "proxy_socks5_blocked_by_reason" =>
         extract_counter_by_label(lines, "edge_agent_proxy_socks5_blocked_total", "reason"),
+
+      # Proxy — tunnels
+      "proxy_tunnels_closed_total" => extract_counter(lines, "edge_agent_proxy_tunnel_closed_total"),
+      "proxy_tunnels_closed_normal_total" =>
+        extract_counter_by_label_value(lines, "edge_agent_proxy_tunnel_closed_total", "reason", "normal"),
+      "proxy_tunnels_closed_deadline_total" =>
+        extract_counter_by_label_value(lines, "edge_agent_proxy_tunnel_closed_total", "reason", "deadline"),
+      "proxy_tunnels_closed_drain_timeout_total" =>
+        extract_counter_by_label_value(lines, "edge_agent_proxy_tunnel_closed_total", "reason", "drain_timeout"),
+      "proxy_tunnel_bytes_up_total" => extract_counter(lines, "edge_agent_proxy_tunnel_bytes_up_total"),
+      "proxy_tunnel_bytes_down_total" => extract_counter(lines, "edge_agent_proxy_tunnel_bytes_down_total"),
 
       # SSH
       "ssh_authentications" => extract_counter(lines, "edge_agent_ssh_authentication_total"),
@@ -83,6 +94,24 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
     lines
     |> Enum.filter(fn line ->
       String.starts_with?(line, metric_name <> "{") or String.starts_with?(line, metric_name <> " ")
+    end)
+    |> Enum.map(fn line ->
+      line
+      |> String.split(" ")
+      |> List.last()
+      |> parse_number()
+    end)
+    |> Enum.sum()
+  end
+
+  # Extract counter total filtered to lines where label_name="label_value".
+  # Returns an integer sum.
+  defp extract_counter_by_label_value(lines, metric_name, label_name, label_value) do
+    pattern = ~s(#{label_name}="#{label_value}")
+
+    lines
+    |> Enum.filter(fn line ->
+      String.starts_with?(line, metric_name <> "{") and String.contains?(line, pattern)
     end)
     |> Enum.map(fn line ->
       line

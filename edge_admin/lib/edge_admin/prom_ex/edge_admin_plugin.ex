@@ -166,6 +166,41 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         reporter_options: [
           buckets: [100, 500, 1_000, 5_000, 15_000, 30_000, 60_000, 300_000, 900_000]
         ]
+      ),
+      counter(
+        [:edge_admin, :proxy, :tunnel, :closed, :total],
+        event_name: [:edge_admin, :proxy, :tunnel, :closed],
+        description:
+          "Tunnels that finished forwarding, tagged by protocol, routing mode, cluster, and close reason (normal | deadline | drain_timeout)",
+        tags: [:protocol, :routing_mode, :cluster, :reason],
+        tag_values: &get_proxy_tunnel_close_tags/1
+      ),
+      sum(
+        [:edge_admin, :proxy, :tunnel, :bytes, :up, :total],
+        event_name: [:edge_admin, :proxy, :tunnel, :closed],
+        description: "Cumulative bytes forwarded client→target, tagged by protocol, routing mode, cluster",
+        measurement: :bytes_up,
+        tags: [:protocol, :routing_mode, :cluster],
+        tag_values: &get_proxy_tunnel_bytes_tags/1
+      ),
+      sum(
+        [:edge_admin, :proxy, :tunnel, :bytes, :down, :total],
+        event_name: [:edge_admin, :proxy, :tunnel, :closed],
+        description: "Cumulative bytes forwarded target→client, tagged by protocol, routing mode, cluster",
+        measurement: :bytes_down,
+        tags: [:protocol, :routing_mode, :cluster],
+        tag_values: &get_proxy_tunnel_bytes_tags/1
+      ),
+      distribution(
+        [:edge_admin, :proxy, :tunnel, :duration, :milliseconds],
+        event_name: [:edge_admin, :proxy, :tunnel, :closed],
+        description: "Tunnel forwarding duration in milliseconds, tagged by protocol, routing mode, cluster",
+        measurement: :duration_ms,
+        tags: [:protocol, :routing_mode, :cluster],
+        tag_values: &get_proxy_tunnel_bytes_tags/1,
+        reporter_options: [
+          buckets: [100, 500, 1_000, 5_000, 15_000, 60_000, 300_000, 900_000, 3_600_000]
+        ]
       )
     ]
   end
@@ -482,6 +517,28 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
       routing_mode: to_string(routing_mode),
       proxy_mode: to_string(proxy_mode),
       cluster: to_string(cluster)
+    }
+  end
+
+  # Tunnel-close counter: includes :reason (normal | deadline | drain_timeout) for
+  # alerting on abnormal closes. target_host intentionally excluded — too high
+  # cardinality for Prometheus labels, still available in the raw telemetry event.
+  defp get_proxy_tunnel_close_tags(metadata) do
+    %{
+      protocol: to_string(Map.get(metadata, :protocol, "unknown")),
+      routing_mode: to_string(Map.get(metadata, :routing_mode, "unknown")),
+      cluster: to_string(Map.get(metadata, :cluster, "unknown")),
+      reason: to_string(Map.get(metadata, :reason, :normal))
+    }
+  end
+
+  # Bytes/duration metrics: no :reason tag (lower cardinality, and "how much
+  # did we move" isn't conditional on how the tunnel ended).
+  defp get_proxy_tunnel_bytes_tags(metadata) do
+    %{
+      protocol: to_string(Map.get(metadata, :protocol, "unknown")),
+      routing_mode: to_string(Map.get(metadata, :routing_mode, "unknown")),
+      cluster: to_string(Map.get(metadata, :cluster, "unknown"))
     }
   end
 

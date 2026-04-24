@@ -15,6 +15,12 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParser do
   def parse(metrics_text) do
     lines = String.split(metrics_text, "\n")
 
+    lines
+    |> extract_core_metrics()
+    |> Map.merge(extract_proxy_metrics(lines))
+  end
+
+  defp extract_core_metrics(lines) do
     %{
       # Application uptime
       "uptime_ms" => extract_gauge(lines, "edge_admin_prom_ex_application_uptime_milliseconds_count"),
@@ -81,6 +87,31 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParser do
 
       # Oban queues
       "oban_queues" => extract_oban_queues(lines)
+    }
+  end
+
+  defp extract_proxy_metrics(lines) do
+    %{
+      # Proxy — connections
+      "proxy_connections_total" => extract_counter(lines, "edge_admin_proxy_connection_total"),
+      "proxy_connections_success_total" =>
+        extract_counter_by_label(lines, "edge_admin_proxy_connection_total", "result", "success"),
+      "proxy_connections_auth_failed_total" =>
+        extract_counter_by_label(lines, "edge_admin_proxy_connection_total", "result", "auth_failed"),
+      "proxy_connections_failure_total" =>
+        extract_counter_by_label(lines, "edge_admin_proxy_connection_total", "result", "failure"),
+      "proxy_auth_failures_total" => extract_counter(lines, "edge_admin_proxy_auth_failure_total"),
+
+      # Proxy — tunnels
+      "proxy_tunnels_closed_total" => extract_counter(lines, "edge_admin_proxy_tunnel_closed_total"),
+      "proxy_tunnels_closed_normal_total" =>
+        extract_counter_by_label(lines, "edge_admin_proxy_tunnel_closed_total", "reason", "normal"),
+      "proxy_tunnels_closed_deadline_total" =>
+        extract_counter_by_label(lines, "edge_admin_proxy_tunnel_closed_total", "reason", "deadline"),
+      "proxy_tunnels_closed_drain_timeout_total" =>
+        extract_counter_by_label(lines, "edge_admin_proxy_tunnel_closed_total", "reason", "drain_timeout"),
+      "proxy_tunnel_bytes_up_total" => extract_counter(lines, "edge_admin_proxy_tunnel_bytes_up_total"),
+      "proxy_tunnel_bytes_down_total" => extract_counter(lines, "edge_admin_proxy_tunnel_bytes_down_total")
     }
   end
 

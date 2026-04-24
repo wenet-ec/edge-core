@@ -43,6 +43,21 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     edge_admin_gateway_active_count 3
     edge_admin_gateway_scrape_total{type="host"} 20
     edge_admin_gateway_scrape_total{type="agent"} 20
+    edge_admin_proxy_connection_total{protocol="http",result="success",routing_mode="local",proxy_mode="direct",cluster="prod"} 100
+    edge_admin_proxy_connection_total{protocol="socks5",result="success",routing_mode="local",proxy_mode="direct",cluster="prod"} 50
+    edge_admin_proxy_connection_total{protocol="http",result="auth_failed",routing_mode="unknown",proxy_mode="unknown",cluster="unknown"} 7
+    edge_admin_proxy_connection_total{protocol="socks5",result="auth_failed",routing_mode="unknown",proxy_mode="unknown",cluster="unknown"} 3
+    edge_admin_proxy_connection_total{protocol="http",result="failure",routing_mode="unknown",proxy_mode="unknown",cluster="unknown"} 5
+    edge_admin_proxy_auth_failure_total{protocol="http"} 7
+    edge_admin_proxy_auth_failure_total{protocol="socks5"} 3
+    edge_admin_proxy_tunnel_closed_total{protocol="http",routing_mode="local",cluster="prod",reason="normal"} 95
+    edge_admin_proxy_tunnel_closed_total{protocol="socks5",routing_mode="local",cluster="prod",reason="normal"} 45
+    edge_admin_proxy_tunnel_closed_total{protocol="http",routing_mode="local",cluster="prod",reason="deadline"} 4
+    edge_admin_proxy_tunnel_closed_total{protocol="http",routing_mode="local",cluster="prod",reason="drain_timeout"} 1
+    edge_admin_proxy_tunnel_bytes_up_total{protocol="http",routing_mode="local",cluster="prod"} 1048576
+    edge_admin_proxy_tunnel_bytes_up_total{protocol="socks5",routing_mode="local",cluster="prod"} 524288
+    edge_admin_proxy_tunnel_bytes_down_total{protocol="http",routing_mode="local",cluster="prod"} 4194304
+    edge_admin_proxy_tunnel_bytes_down_total{protocol="socks5",routing_mode="local",cluster="prod"} 2097152
     edge_admin_prom_ex_oban_queue_length_count{queue="default",state="available"} 2
     edge_admin_prom_ex_oban_queue_length_count{queue="default",state="executing"} 1
     edge_admin_prom_ex_oban_queue_length_count{queue="default",state="completed"} 100
@@ -140,6 +155,32 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
       assert result["gateway_scrapes_total"] == 40
     end
 
+    test "extracts proxy connection totals split by result label" do
+      result = AdminMetricsParser.parse(sample_prometheus_text())
+
+      assert result["proxy_connections_total"] == 165
+      assert result["proxy_connections_success_total"] == 150
+      assert result["proxy_connections_auth_failed_total"] == 10
+      assert result["proxy_connections_failure_total"] == 5
+      assert result["proxy_auth_failures_total"] == 10
+    end
+
+    test "extracts proxy tunnel close totals split by reason label" do
+      result = AdminMetricsParser.parse(sample_prometheus_text())
+
+      assert result["proxy_tunnels_closed_total"] == 145
+      assert result["proxy_tunnels_closed_normal_total"] == 140
+      assert result["proxy_tunnels_closed_deadline_total"] == 4
+      assert result["proxy_tunnels_closed_drain_timeout_total"] == 1
+    end
+
+    test "extracts proxy bytes up/down totals" do
+      result = AdminMetricsParser.parse(sample_prometheus_text())
+
+      assert result["proxy_tunnel_bytes_up_total"] == 1_572_864
+      assert result["proxy_tunnel_bytes_down_total"] == 6_291_456
+    end
+
     test "counter returns 0 when metric not present" do
       result = AdminMetricsParser.parse(empty_prometheus_text())
       assert result["metadata_recomputations"] == 0
@@ -205,7 +246,41 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
       assert %AdminMetrics.Vpn{} = metrics.vpn
       assert %AdminMetrics.Commands{} = metrics.commands
       assert %AdminMetrics.Gateways{} = metrics.gateways
+      assert %AdminMetrics.Proxy{} = metrics.proxy
       assert is_list(metrics.oban_queues)
+    end
+
+    test "proxy connection counts reflect parsed totals" do
+      raw = AdminMetricsParser.parse(sample_prometheus_text())
+      metrics = AdminMetrics.from_raw_metrics(raw)
+
+      assert metrics.proxy.connections_total == 165
+      assert metrics.proxy.connections_success_total == 150
+      assert metrics.proxy.connections_auth_failed_total == 10
+      assert metrics.proxy.connections_failure_total == 5
+      assert metrics.proxy.auth_failures_total == 10
+    end
+
+    test "proxy tunnel close counts reflect parsed reasons" do
+      raw = AdminMetricsParser.parse(sample_prometheus_text())
+      metrics = AdminMetrics.from_raw_metrics(raw)
+
+      assert metrics.proxy.tunnels_closed_total == 145
+      assert metrics.proxy.tunnels_closed_normal_total == 140
+      assert metrics.proxy.tunnels_closed_deadline_total == 4
+      assert metrics.proxy.tunnels_closed_drain_timeout_total == 1
+    end
+
+    test "proxy bytes are converted to MB" do
+      raw = AdminMetricsParser.parse(sample_prometheus_text())
+      metrics = AdminMetrics.from_raw_metrics(raw)
+
+      assert metrics.proxy.bytes_up_total == 1_572_864
+      # 1.5 MB
+      assert metrics.proxy.bytes_up_mb == 1.5
+      assert metrics.proxy.bytes_down_total == 6_291_456
+      # 6.0 MB
+      assert metrics.proxy.bytes_down_mb == 6.0
     end
 
     test "application uptime is converted from ms to seconds" do

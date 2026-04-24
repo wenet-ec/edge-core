@@ -9,12 +9,6 @@ image:
   tag: "v1.5.1"
   pullPolicy: IfNotPresent
 
-coredns:
-  image: coredns/coredns
-  tag: "latest"
-  # Must match DEFAULT_DOMAIN on edge-vpn and NETMAKER_DEFAULT_DOMAIN on edge-admin
-  zone: "nm.internal"
-
 config:
   # Public hostname for Edge VPN API (SERVER_NAME, SERVER_HTTP_HOST)
   # e.g. edge-vpn.yourdomain.com
@@ -84,14 +78,6 @@ resources:
     cpu: "500m"
     memory: "512Mi"
 
-corednsResources:
-  requests:
-    cpu: "50m"
-    memory: "64Mi"
-  limits:
-    cpu: "100m"
-    memory: "128Mi"
-
 ui:
   enabled: true
   image: gravitl/netmaker-ui
@@ -109,8 +95,3 @@ ui:
       cpu: "100m"
       memory: "64Mi"
 
-# kube-dns ClusterIP — used as first nameserver so internal service names resolve.
-# Get it with: kubectl get svc kube-dns -n kube-system -o jsonpath='{.spec.clusterIP}'
-# Standard default is 10.96.0.10 but verify for your cluster.
-dns:
-  kubeDnsIp: "10.96.0.10"

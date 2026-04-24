@@ -18,7 +18,7 @@ Works on any Linux machine: on-premises servers, IoT devices, factory floor equi
 **Connectivity**
 
 - **Cloud ↔ Edge (forward proxy + proxy chaining)** — HTTP and SOCKS5 forward proxies tunnel any TCP traffic from the cloud through any agent to its local network or the internet
-- **Edge ↔ Edge (VPN mesh)** — full WireGuard P2P mesh per cluster, automatic peer discovery, CoreDNS, DERP/TURN relay fallback for NAT
+- **Edge ↔ Edge (VPN mesh)** — full WireGuard P2P mesh per cluster, automatic peer discovery, netclient-local DNS for `.nm.internal` hostnames, DERP/TURN relay fallback for NAT
 - **Edge ↔ Local devices (mDNS)** — agents advertise themselves via mDNS for zero-config discovery by devices on the same LAN; full LAN DNS control is a future direction (see [`docs/architecture.md`](docs/architecture.md))
 
 **Plus:** Event streaming (lifecycle events to NATS, Kafka/Redpanda, RabbitMQ, or Redis), and an MCP server for AI assistant integration (Claude, Cursor, and any MCP-compatible client).
@@ -94,7 +94,7 @@ Cloud Server
 │
 ├── HAProxy                   TCP load balancer for proxy ports
 │
-└── Netmaker VPN Stack        WireGuard mesh control plane (EMQX/Mosquitto + CoreDNS)
+└── Netmaker VPN Stack        WireGuard mesh control plane (EMQX/Mosquitto; DNS is netclient-local)
 
 Edge Nodes (one agent per machine)
 └── Edge Agent                network_mode: host, privileged

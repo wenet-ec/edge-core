@@ -8,8 +8,10 @@ defmodule Nexmaker.Api.DNS do
   1. **DNS entries** — hostname → IP mappings scoped to a network.
      Netmaker auto-creates entries for every node; custom entries can be added.
 
-  2. **Nameservers** — upstream DNS server configurations. Define which DNS
-     servers CoreDNS forwards to, per-network or globally. New in v1.5.1.
+  2. **Nameservers** — upstream DNS server configurations. Pushed to each
+     host in the `DnsNameservers` field of HostPeerUpdate/HostPull payloads;
+     netclient installs them into its own local DNS listener, per-network
+     or globally. New in v1.5.1 (replaces the prior CoreDNS-backed setup).
 
   ## DNS entry shape
 

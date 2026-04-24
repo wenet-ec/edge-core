@@ -7,7 +7,6 @@ A multi-admin deployment of Edge Core with 4 admin instances across 2 clusters, 
 - 4 Edge Admin instances — cluster A (a1, a2) + cluster B (b1, b2)
 - Netmaker VPN (PostgreSQL-backed, EMQX broker)
 - Netmaker UI
-- CoreDNS
 - Prometheus (metrics)
 - Caddy (reverse proxy / TLS)
 

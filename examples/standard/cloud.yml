@@ -26,7 +26,6 @@ volumes:
   edge_admin_db_data: {}
   edge_vpn_data: {}
   edge_vpn_db_data: {}
-  edge_vpn_dns_config: {}
   edge_vpn_broker_data: {}
   edge_vpn_broker_etc: {}
   edge_vpn_broker_logs: {}
@@ -320,7 +319,6 @@ services:
       - net.ipv6.conf.all.forwarding=1
     volumes:
       - edge_vpn_data:/root/data
-      - edge_vpn_dns_config:/root/config/dnsconfig
       - /dev/net/tun:/dev/net/tun:rw
     env_file:
       - .env
@@ -358,23 +356,6 @@ services:
       - "48080:80"
     environment:
       - BACKEND_URL=${NETMAKER_API_URL}
-
-  # ---------------------------------------------------------------------------
-  # Edge VPN DNS — internal DNS for VPN mesh hostnames
-  # ---------------------------------------------------------------------------
-  edge_vpn_dns:
-    image: coredns/coredns:latest
-    container_name: edge_vpn_dns
-    restart: unless-stopped
-    user: "0:0"
-    networks:
-      - edge_core
-    depends_on:
-      edge_vpn:
-        condition: service_healthy
-    volumes:
-      - edge_vpn_dns_config:/root/config/dnsconfig
-    command: -conf /root/config/dnsconfig/Corefile
 
   # ---------------------------------------------------------------------------
   # Caddy — HTTP reverse proxy for Edge VPN API and admin instances

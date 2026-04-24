@@ -15,7 +15,6 @@ volumes:
   local_edge_admin_b1_build: {}
   local_edge_vpn_data: {}
   local_edge_vpn_db_data: {}
-  local_edge_vpn_dns_config: {}
   local_edge_vpn_broker_data: {}
   local_edge_vpn_broker_etc: {}
   local_edge_vpn_broker_logs: {}
@@ -278,7 +277,6 @@ services:
       - net.ipv6.conf.all.forwarding=1
     volumes:
       - local_edge_vpn_data:/root/data
-      - local_edge_vpn_dns_config:/root/config/dnsconfig
       - /dev/net/tun:/dev/net/tun:rw
     env_file:
       - ./.envs/.edge_vpn
@@ -299,19 +297,6 @@ services:
       timeout: 5s
       retries: 1
       start_period: 10s
-
-  edge_vpn_dns:
-    image: coredns/coredns:latest
-    container_name: local_edge_vpn_dns
-    user: "0:0"
-    networks:
-      - local_edge_core
-    depends_on:
-      edge_vpn:
-        condition: service_healthy
-    volumes:
-      - local_edge_vpn_dns_config:/root/config/dnsconfig
-    command: -conf /root/config/dnsconfig/Corefile
 
   edge_vpn_ui:
     container_name: local_edge_vpn_ui

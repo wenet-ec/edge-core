@@ -7,7 +7,6 @@ A single-admin deployment of Edge Core. Good for small fleets, first deployments
 - 1 Edge Admin instance
 - Netmaker VPN (SQLite-backed, Mosquitto broker)
 - Netmaker UI
-- CoreDNS
 
 **What's NOT included (vs standard):**
 

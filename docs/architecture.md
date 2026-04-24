@@ -42,7 +42,7 @@ This covers how edge nodes make themselves discoverable and accessible to device
 
 **What is not in scope (and why):** Full LAN DNS control — running a DNS server that authoritative-answers for local devices, intercepting local traffic, or acting as a LAN gateway — is architecturally feasible but deliberately out of scope for now. LAN networks are heterogeneous and largely outside our control: corporate networks have existing DNS policies, home routers have varying DNS behavior, and managing DNS conflicts across different environments is a reliability problem we are not ready to take on responsibly. We would rather support mDNS well and expand carefully than break existing LAN setups. If you need full LAN DNS integration, the agent's local IP and mDNS hostname are stable enough to configure your own DNS server to point at.
 
-**Future direction:** A managed in-agent DNS server (CoreDNS or similar) that resolves `.edge.local` names for local clients is a natural next step, gated on having a reliable way to co-exist with existing LAN DNS without conflict.
+**Future direction:** A managed in-agent DNS server that resolves `.edge.local` names for local clients is a natural next step, gated on having a reliable way to co-exist with existing LAN DNS without conflict.
 
 ---
 
@@ -62,7 +62,7 @@ This covers how edge nodes make themselves discoverable and accessible to device
 │                                                      │
 │  ┌──────────────────────────────────────────────┐   │
 │  │           Netmaker VPN Stack                  │   │
-│  │  Netmaker API + EMQX/Mosquitto + CoreDNS      │   │
+│  │       Netmaker API + EMQX/Mosquitto           │   │
 │  └──────────────────────────────────────────────┘   │
 └────────────────────────┬────────────────────────────┘
                          │ WireGuard mesh (via netclient)
@@ -96,13 +96,17 @@ Cluster sizing is intentionally limited. WireGuard mesh is O(n²) — 100 nodes 
 
 The MQTT broker is Netmaker infrastructure — it handles communication between the Netmaker server and netclient agents running inside each Edge Agent container. It is not part of Edge Admin or Edge Agent application code. EMQX is recommended for production (supports clustering); Mosquitto is simpler and sufficient for small deployments.
 
-### CoreDNS
+### DNS (netclient-local, post-CoreDNS)
 
-CoreDNS resolves `.nm.internal` VPN hostnames. Netmaker writes its node table to a shared volume that CoreDNS reads automatically. Admin and agent communicate using these DNS names over the WireGuard interface.
+`.nm.internal` VPN hostnames are resolved by netclient itself, not by a separate CoreDNS container. Starting in Netmaker `v1.5.1` (rebuilt upstream 2026-04-23), the server-side CoreDNS helper was removed — Netmaker no longer writes `Corefile` / `netmaker.hosts` to a shared volume. Instead, nameserver records live in Netmaker's `schema.Nameserver` table and are pushed to each host in the `DnsNameservers` field of the `HostPeerUpdate` / `HostPull` payloads (MQTT + HTTP pull).
+
+Each netclient daemon binds a UDP DNS listener on its own VPN IP, port 53, and configures the host's resolver (via `systemd-resolved`, `resolvconf`, or direct `/etc/resolv.conf` writes depending on flavor) to point at itself. Admin-to-admin clustering (Erlang distribution using FQDNs like `admin-<id>.admin-cluster-a.nm.internal`) and admin-to-node HTTP (`node-<id>.cluster-<name>.nm.internal`) both flow through this local resolver.
+
+This is gated on `ManageDNS=true` in the Netmaker server config, which is enabled by setting `DNS_MODE=on` in `.edge_vpn`. Leave it on — flipping it off disables the listener and breaks VPN hostname resolution entirely.
 
 ### netclient
 
-netclient is the WireGuard client bundled inside the Edge Agent container. It handles VPN enrollment, peer management, and — critically — transparent DERP relay fallback when direct UDP is blocked. Edge Agent is built on top of our fork of netclient (`github.com/wenet-ec/netclient`, branch `v1.5.1-derp`) which adds DERP relay support and an HTTP scheme override for local development.
+netclient is the WireGuard client bundled inside the Edge Agent container. It handles VPN enrollment, peer management, the local DNS listener described above, and — critically — transparent DERP relay fallback when direct UDP is blocked. Edge Agent is built on top of our fork of netclient (`github.com/wenet-ec/netclient`, branch `v1.5.1-derp`) which adds DERP relay support and an HTTP scheme override for local development.
 
 ---
 

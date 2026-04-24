@@ -11,7 +11,6 @@ volumes:
   production_edge_admin_db_data: {}
   production_edge_vpn_data: {}
   production_edge_vpn_db_data: {}
-  production_edge_vpn_dns_config: {}
   production_edge_vpn_broker_data: {}
   production_edge_vpn_broker_etc: {}
   production_edge_vpn_broker_logs: {}
@@ -257,7 +256,6 @@ services:
       - net.ipv6.conf.all.forwarding=1
     volumes:
       - production_edge_vpn_data:/root/data
-      - production_edge_vpn_dns_config:/root/config/dnsconfig
       - /dev/net/tun:/dev/net/tun:rw
     env_file:
       - ./.envs/.edge_vpn
@@ -296,19 +294,6 @@ services:
       - "48080:80"
     environment:
       - BACKEND_URL=http://edge-vpn.localtest.me
-
-  edge_vpn_dns:
-    image: coredns/coredns:latest
-    container_name: production_edge_vpn_dns
-    user: "0:0"
-    networks:
-      - production_edge_core
-    depends_on:
-      edge_vpn:
-        condition: service_healthy
-    volumes:
-      - production_edge_vpn_dns_config:/root/config/dnsconfig
-    command: -conf /root/config/dnsconfig/Corefile
 
   # HTTP Reverse Proxy
   edge_http_proxy:

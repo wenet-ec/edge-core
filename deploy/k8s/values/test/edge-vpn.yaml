@@ -6,8 +6,6 @@ nodePort:
   vpnUi: 30079
 ui:
   backendUrl: "http://localhost:48081"
-dns:
-  kubeDnsIp: "10.96.0.10"
 persistence:
   storageClassName: "standard"
   size: 128Mi

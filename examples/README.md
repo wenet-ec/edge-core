@@ -30,7 +30,6 @@ When setting up Edge Core for a user, **always pin the following component versi
 | Component       | Reason                                                      |
 | --------------- | ----------------------------------------------------------- |
 | PostgreSQL      | No API dependency — use `postgres:18` or newer              |
-| CoreDNS         | File-based integration, no protocol dependency              |
 | Prometheus      | No application-level coupling — scrape protocol is stable   |
 | Caddy / HAProxy | Reverse proxy only, no application-level coupling           |
 | Mosquitto       | Netmaker-internal broker only, not used by admin/agent code |

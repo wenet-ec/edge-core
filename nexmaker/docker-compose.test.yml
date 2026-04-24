@@ -28,8 +28,6 @@ services:
     depends_on:
       netmaker:
         condition: service_healthy
-      coredns:
-        condition: service_started
       netmaker_proxy:
         condition: service_started
     networks:
@@ -80,7 +78,6 @@ services:
       - net.ipv6.conf.all.forwarding=1
     volumes:
       - netmaker_data:/root/data
-      - netmaker_dns_config:/root/config/dnsconfig
     environment:
       - SERVER_NAME=netmaker
       - SERVER_HOST=netmaker_proxy
@@ -98,7 +95,6 @@ services:
       - SQL_SSL_MODE=disable
       - API_PORT=8081
       - DNS_MODE=on
-      - COREDNS_ADDR=coredns:53
       - DISABLE_REMOTE_IP_CHECK=on
       - TELEMETRY=off
       - SERVER_BROKER_ENDPOINT=ws://netmaker_broker:8083/mqtt
@@ -135,19 +131,6 @@ services:
         ipv4_address: 172.28.0.10
     command: caddy run --config /etc/caddy/Caddyfile
 
-  coredns:
-    image: coredns/coredns:latest
-    user: "0:0"
-    volumes:
-      - netmaker_dns_config:/root/config/dnsconfig
-    command: -conf /root/config/dnsconfig/Corefile
-    depends_on:
-      netmaker:
-        condition: service_healthy
-    networks:
-      - test_network
-    restart: on-failure
-
 networks:
   test_network:
     driver: bridge
@@ -157,7 +140,6 @@ networks:
 
 volumes:
   netmaker_data:
-  netmaker_dns_config:
   netmaker_broker_data:
   netmaker_broker_etc:
   netmaker_broker_logs:

@@ -7,9 +7,7 @@
 # ENROLLMENT_KEY is a static signed token (preferred for production).
 # PUBLIC_ENROLLMENT_KEY_URL fetches a token from the admin at boot (simpler setup).
 ENROLLMENT_KEY=
-PUBLIC_ENROLLMENT_KEY_URL=https://edge-admin-test.wenet.vn/api/v1/clusters/default/enrollment_keys/public
-# PUBLIC_ENROLLMENT_KEY_URL=http://103.95.198.155:34000/api/v1/clusters/default/enrollment_keys/public
-# PUBLIC_ENROLLMENT_KEY_URL=http://103.176.22.187:34000/api/v1/clusters/default/enrollment_keys/public
+PUBLIC_ENROLLMENT_KEY_URL=https://edge-admin.yourdomain.com/api/v1/clusters/default/enrollment_keys/public
 
 # Path to a local file containing the enrollment key (alternative to the above).
 # PUBLIC_ENROLLMENT_KEY_PATH=/etc/edge/enrollment_key

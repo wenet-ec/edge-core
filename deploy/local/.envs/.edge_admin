@@ -250,7 +250,7 @@ NODE_HEALTH_CHECK_CONCURRENCY=100
 # EXECUTION_EXPIRATION_SCHEDULE=* * * * *      # Sweep and expire stale command executions (default: every 1min)
 
 # Periodic netclient pull — decoupled from reconciliation, independent consistency backstop.
-# VPN_CONFIG_SYNC_SCHEDULE=*/2 * * * *
+# VPN_CONFIG_SYNC_SCHEDULE=*/5 * * * *
 # Disable on severely resource-starved machines where interface resets cascade into failures.
 # VPN_CONFIG_SYNC_ENABLED=true
 

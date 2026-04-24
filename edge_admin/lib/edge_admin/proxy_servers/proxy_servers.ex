@@ -6,42 +6,47 @@ defmodule EdgeAdmin.ProxyServers do
   Runs two Ranch listeners providing proxy access to the VPN network, allowing
   users to route traffic through the admin to reach edge nodes.
 
-  ## Proxy Modes
+  ## Routing Modes
 
-  ### Mode 1 (Admin Proxy) - Currently Implemented
-  - Admin acts as proxy server
-  - Client connects to admin's proxy ports
-  - Admin routes traffic through VPN Gateway to nodes
-  - Direct VPN access to all nodes in assigned clusters
+  The routing mode is selected per-connection by the proxy username.
 
-  ### Mode 2 (Agent Proxy) - TODO
-  - Proxy chaining through specific agent as exit node
-  - Client → Admin → Agent → Internet
-  - Allows using agent's network/IP as exit point
+  ### Direct (admin as exit)
+  - Username: `_` or empty string
+  - Admin routes traffic through the VPN Gateway directly to the target
+  - Used for reaching nodes on the VPN mesh from the admin
+
+  ### Chained (agent as exit)
+  - Username: a node's DNS hostname, e.g. `node-<id>.cluster-<name>.nm.internal`
+  - Admin tunnels through the named agent, which then connects to the target
+  - Client → Admin → Agent → target
+  - Useful for exiting from the agent's network/IP
 
   ## Listeners
 
   - **HTTP Forward Proxy**: Port 43128 (configurable via `HTTP_PROXY_PORT`)
   - **SOCKS5 Proxy**: Port 41080 (configurable via `SOCKS5_PROXY_PORT`)
 
-  Both proxies use simple authentication:
-  - **Username**: `_` (underscore) for Mode 1
-  - **Password**: From `PROXY_PASSWORD` config (or `MASTER_KEY` fallback)
+  Authentication (both listeners):
+  - **Username**: `_` / empty for direct, node DNS hostname for chaining
+  - **Password**: `PROXY_KEY` env (falls back to `MASTER_KEY`)
 
   ## Architecture
 
   - **GenServer**: Manages lifecycle of both Ranch listeners
   - **Ranch Listeners**: One for HTTP, one for SOCKS5
-  - **Protocol Handlers**: `HttpHandler` and `Socks5Handler`
+  - **Protocol Handlers**: `Http.Handler` and `Socks5.Handler`
   - **Gateway Integration**: Routes traffic through Gateway GenServers
 
   ## Examples
 
-      # Configure HTTP proxy in browser/curl
-      export http_proxy=http://_:PASSWORD@admin-host:43128
+      # Direct mode via HTTP proxy
+      export http_proxy=http://_:PROXY_KEY@admin-host:43128
 
-      # Configure SOCKS5 proxy
-      curl --socks5 _:PASSWORD@admin-host:41080 http://node-abc.cluster-prod.nm.internal:8080
+      # Direct mode via SOCKS5
+      curl --socks5 _:PROXY_KEY@admin-host:41080 http://node-abc.cluster-prod.nm.internal:8080
+
+      # Chained mode (exit via a specific agent)
+      curl --socks5 node-abc.cluster-prod.nm.internal:PROXY_KEY@admin-host:41080 https://example.com
   """
 
   use GenServer

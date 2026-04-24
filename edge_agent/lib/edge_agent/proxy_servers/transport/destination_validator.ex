@@ -19,7 +19,7 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidator do
   Add to runtime.exs:
 
       config :edge_agent,
-        proxy_blocked_ports: [44000, 44880, 44180],  # Agent's own ports
+        proxy_blocked_ports: [44000, 43128, 41080],  # Agent's own ports
         proxy_custom_blocked_hosts: [],  # Additional hosts to block
         proxy_custom_allowed_hosts: []   # Exceptions to blocking rules
   """

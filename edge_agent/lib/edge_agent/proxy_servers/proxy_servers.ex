@@ -4,14 +4,16 @@ defmodule EdgeAgent.ProxyServers do
   Proxy servers supervisor managing HTTP and SOCKS5 forward proxies.
 
   Runs two separate Ranch listeners:
-  - HTTP forward proxy on port 44880 (configurable)
-  - SOCKS5 proxy on port 44180 (configurable)
+  - HTTP forward proxy on port 43128 (configurable via `HTTP_PROXY_PORT`)
+  - SOCKS5 proxy on port 41080 (configurable via `SOCKS5_PROXY_PORT`)
 
   Both proxies use simple authentication:
   - Username: "_" (underscore)
-  - Password: proxy_password from settings table
+  - Password: `proxy_password` from the settings table
 
-  Pure TCP passthrough - no cluster awareness or routing logic.
+  No cluster awareness: the agent proxies any destination accepted by the
+  SSRF/destination allowlist (see `Transport.DestinationValidator`). It does
+  not resolve cluster membership or route based on it.
   """
 
   use GenServer

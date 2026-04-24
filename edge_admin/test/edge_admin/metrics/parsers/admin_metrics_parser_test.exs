@@ -58,6 +58,12 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     edge_admin_proxy_tunnel_bytes_up_total{protocol="socks5",routing_mode="local",cluster="prod"} 524288
     edge_admin_proxy_tunnel_bytes_down_total{protocol="http",routing_mode="local",cluster="prod"} 4194304
     edge_admin_proxy_tunnel_bytes_down_total{protocol="socks5",routing_mode="local",cluster="prod"} 2097152
+    edge_admin_event_broker_enqueue_total{event_type="node.registered"} 60
+    edge_admin_event_broker_enqueue_total{event_type="execution.completed"} 40
+    edge_admin_event_broker_publish_total{adapter="nats",event_type="node.registered",result="ok"} 58
+    edge_admin_event_broker_publish_total{adapter="nats",event_type="execution.completed",result="ok"} 39
+    edge_admin_event_broker_publish_total{adapter="nats",event_type="node.registered",result="error"} 2
+    edge_admin_event_broker_publish_total{adapter="nats",event_type="execution.completed",result="error"} 1
     edge_admin_prom_ex_oban_queue_length_count{queue="default",state="available"} 2
     edge_admin_prom_ex_oban_queue_length_count{queue="default",state="executing"} 1
     edge_admin_prom_ex_oban_queue_length_count{queue="default",state="completed"} 100
@@ -229,6 +235,40 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
   end
 
   # ---------------------------------------------------------------------------
+  # parse/1 — event broker extraction
+  # ---------------------------------------------------------------------------
+
+  describe "parse/1 — event broker extraction" do
+    test "sums enqueues across event types" do
+      result = AdminMetricsParser.parse(sample_prometheus_text())
+      # node.registered(60) + execution.completed(40) = 100
+      assert result["event_broker_enqueues_total"] == 100
+    end
+
+    test "sums publishes across event types and results" do
+      result = AdminMetricsParser.parse(sample_prometheus_text())
+      # 58 + 39 + 2 + 1 = 100
+      assert result["event_broker_publishes_total"] == 100
+    end
+
+    test "splits publishes by result label" do
+      result = AdminMetricsParser.parse(sample_prometheus_text())
+      # ok: 58 + 39 = 97
+      assert result["event_broker_publishes_ok_total"] == 97
+      # error: 2 + 1 = 3
+      assert result["event_broker_publishes_error_total"] == 3
+    end
+
+    test "counters return 0 when broker metrics are absent" do
+      result = AdminMetricsParser.parse(empty_prometheus_text())
+      assert result["event_broker_enqueues_total"] == 0
+      assert result["event_broker_publishes_total"] == 0
+      assert result["event_broker_publishes_ok_total"] == 0
+      assert result["event_broker_publishes_error_total"] == 0
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # AdminMetrics.from_raw_metrics/1 — struct assembly
   # ---------------------------------------------------------------------------
 
@@ -247,6 +287,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
       assert %AdminMetrics.Commands{} = metrics.commands
       assert %AdminMetrics.Gateways{} = metrics.gateways
       assert %AdminMetrics.Proxy{} = metrics.proxy
+      assert %AdminMetrics.EventBroker{} = metrics.event_broker
       assert is_list(metrics.oban_queues)
     end
 
@@ -330,6 +371,34 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
       assert metrics.gateways.active_count == 3
       assert metrics.gateways.connections_total == 15
       assert metrics.gateways.scrapes_total == 40
+    end
+
+    test "event_broker counters reflect parsed totals" do
+      raw = AdminMetricsParser.parse(sample_prometheus_text())
+      metrics = AdminMetrics.from_raw_metrics(raw)
+
+      assert metrics.event_broker.enqueues_total == 100
+      assert metrics.event_broker.publishes_total == 100
+      assert metrics.event_broker.publishes_ok_total == 97
+      assert metrics.event_broker.publishes_error_total == 3
+    end
+
+    test "event_broker.enabled reflects the application config" do
+      original = Elixir.Application.get_env(:edge_admin, :event_broker_enabled)
+
+      try do
+        Elixir.Application.put_env(:edge_admin, :event_broker_enabled, true)
+        raw = AdminMetricsParser.parse(sample_prometheus_text())
+        assert AdminMetrics.from_raw_metrics(raw).event_broker.enabled == true
+
+        Elixir.Application.put_env(:edge_admin, :event_broker_enabled, false)
+        assert AdminMetrics.from_raw_metrics(raw).event_broker.enabled == false
+      after
+        case original do
+          nil -> Elixir.Application.delete_env(:edge_admin, :event_broker_enabled)
+          val -> Elixir.Application.put_env(:edge_admin, :event_broker_enabled, val)
+        end
+      end
     end
 
     test "oban_queues is a list of ObanQueue structs" do

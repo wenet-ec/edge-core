@@ -28,6 +28,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AdminMetricsController do
     - Reconciliation: cluster Netmaker↔DB sync runs and errors
     - Self-updates: request processing completions
     - Gateways: connection events, active count, scrape totals
+    - Event broker: publish/enqueue counters (zeroed when broker is disabled)
     - Oban: job queue states (available, scheduled, executing, etc.)
     """,
     parameters: [],

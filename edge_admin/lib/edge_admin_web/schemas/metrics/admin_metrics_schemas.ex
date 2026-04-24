@@ -394,6 +394,41 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
                 }
               }
             },
+            event_broker: %Schema{
+              type: :object,
+              description: """
+              Event broker publish metrics. When the broker is disabled (default), `enabled` is `false`
+              and all counters are 0. A sustained gap between `enqueues_total` and `publishes_ok_total`
+              indicates broker failures with events accumulating in Oban for retry.
+              """,
+              properties: %{
+                enabled: %Schema{
+                  type: :boolean,
+                  nullable: true,
+                  description: "Whether the event broker is enabled (mirrors EVENT_BROKER_ENABLED config)"
+                },
+                enqueues_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total events enqueued for async broker delivery (before any publish attempt)"
+                },
+                publishes_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total broker publish attempts (ok + error)"
+                },
+                publishes_ok_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total broker publishes that succeeded"
+                },
+                publishes_error_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total broker publishes that failed (will be retried by Oban)"
+                }
+              }
+            },
             oban_queues: %Schema{
               type: :array,
               description: "Oban job queue states",
@@ -524,6 +559,13 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
             bytes_up_mb: 1452.9,
             bytes_down_total: 9_876_543_210,
             bytes_down_mb: 9419.4
+          },
+          event_broker: %{
+            enabled: true,
+            enqueues_total: 1235,
+            publishes_total: 1234,
+            publishes_ok_total: 1230,
+            publishes_error_total: 4
           },
           oban_queues: [
             %{

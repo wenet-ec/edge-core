@@ -8,6 +8,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Bootstrap
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Commands
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Discovery
+  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.EventBroker
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Gateways
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Metadata
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Nodes
@@ -37,6 +38,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
     :self_updates,
     :gateways,
     :proxy,
+    :event_broker,
     :oban_queues
   ]
 
@@ -59,6 +61,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
       self_updates: SelfUpdates.from_raw(raw_metrics),
       gateways: Gateways.from_raw(raw_metrics),
       proxy: Proxy.from_raw(raw_metrics),
+      event_broker: EventBroker.from_raw(raw_metrics),
       oban_queues: ObanQueue.from_raw(raw_metrics)
     }
   end
@@ -377,6 +380,39 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
 
     defp bytes_to_mb(nil), do: nil
     defp bytes_to_mb(bytes), do: Float.round(bytes / 1_048_576, 2)
+  end
+
+  defmodule EventBroker do
+    @moduledoc """
+    Event broker publish metrics.
+
+    `enabled` reflects the `:event_broker_enabled` application config — when
+    `false`, all counters will be 0 because no telemetry events are emitted
+    (the broker short-circuits at the call site).
+
+    `enqueues_total` minus `publishes_ok_total` is the backlog signal: a
+    sustained gap means events are piling up in Oban because the broker is
+    failing to accept them.
+    """
+
+    @derive Jason.Encoder
+    defstruct [
+      :enabled,
+      :enqueues_total,
+      :publishes_total,
+      :publishes_ok_total,
+      :publishes_error_total
+    ]
+
+    def from_raw(raw) do
+      %__MODULE__{
+        enabled: Elixir.Application.get_env(:edge_admin, :event_broker_enabled, false),
+        enqueues_total: raw["event_broker_enqueues_total"],
+        publishes_total: raw["event_broker_publishes_total"],
+        publishes_ok_total: raw["event_broker_publishes_ok_total"],
+        publishes_error_total: raw["event_broker_publishes_error_total"]
+      }
+    end
   end
 
   defmodule ObanQueue do

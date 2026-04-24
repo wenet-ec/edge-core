@@ -16,6 +16,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
   - SSH credential verification
   - Cluster reconciliation (Oban worker)
   - Self-update request processing
+  - Event broker publishing (opt-in — zero events when disabled)
   """
 
   use PromEx.Plugin
@@ -35,7 +36,8 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         gateway_metrics() ++
         ssh_metrics() ++
         reconciliation_metrics() ++
-        self_update_metrics()
+        self_update_metrics() ++
+        event_broker_metrics()
     )
   end
 
@@ -444,6 +446,35 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
     ]
   end
 
+  defp event_broker_metrics do
+    [
+      counter(
+        [:edge_admin, :event_broker, :enqueue, :total],
+        event_name: [:edge_admin, :event_broker, :enqueue],
+        description: "Total events enqueued for async broker delivery (before broker publish attempt)",
+        tags: [:event_type],
+        tag_values: &get_event_broker_enqueue_tags/1
+      ),
+      counter(
+        [:edge_admin, :event_broker, :publish, :total],
+        event_name: [:edge_admin, :event_broker, :publish],
+        description: "Total broker publish attempts, tagged by adapter, event type, and result (ok | error)",
+        tags: [:adapter, :event_type, :result],
+        tag_values: &get_event_broker_publish_tags/1
+      ),
+      distribution(
+        [:edge_admin, :event_broker, :publish, :duration, :milliseconds],
+        event_name: [:edge_admin, :event_broker, :publish],
+        description: "Duration of broker publish attempts in milliseconds, tagged by adapter and event type",
+        measurement: :duration,
+        unit: {:native, :millisecond},
+        tags: [:adapter, :event_type],
+        tag_values: &get_event_broker_publish_duration_tags/1,
+        reporter_options: [buckets: [1, 5, 10, 25, 50, 100, 250, 500, 1_000, 5_000]]
+      )
+    ]
+  end
+
   # Tag extraction functions
 
   defp get_bootstrap_step_tags(%{step: step, status: status}) do
@@ -552,5 +583,21 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
 
   defp get_reconciliation_tags(%{cluster: cluster, result: result}) do
     %{cluster: to_string(cluster), result: to_string(result)}
+  end
+
+  defp get_event_broker_enqueue_tags(%{event_type: event_type}) do
+    %{event_type: to_string(event_type)}
+  end
+
+  defp get_event_broker_publish_tags(%{adapter: adapter, event_type: event_type, result: result}) do
+    %{
+      adapter: to_string(adapter),
+      event_type: to_string(event_type),
+      result: to_string(result)
+    }
+  end
+
+  defp get_event_broker_publish_duration_tags(%{adapter: adapter, event_type: event_type}) do
+    %{adapter: to_string(adapter), event_type: to_string(event_type)}
   end
 end

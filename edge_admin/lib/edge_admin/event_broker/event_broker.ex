@@ -95,6 +95,12 @@ defmodule EdgeAdmin.EventBroker do
       |> PublishEventWorker.new()
       |> Oban.insert!()
 
+      :telemetry.execute(
+        [:edge_admin, :event_broker, :enqueue],
+        %{count: 1},
+        %{event_type: envelope["type"]}
+      )
+
       :ok
     else
       :ok
@@ -110,13 +116,34 @@ defmodule EdgeAdmin.EventBroker do
   @spec publish_envelope(map()) :: :ok | {:error, term()}
   def publish_envelope(envelope) do
     mod = adapter()
+    adapter_name = adapter_name()
+    event_type = envelope["type"]
 
-    case mod.publish(envelope) do
+    start_time = System.monotonic_time()
+
+    result = mod.publish(envelope)
+
+    duration = System.monotonic_time() - start_time
+
+    case result do
       :ok ->
+        :telemetry.execute(
+          [:edge_admin, :event_broker, :publish],
+          %{duration: duration},
+          %{adapter: adapter_name, event_type: event_type, result: :ok}
+        )
+
         :ok
 
       {:error, reason} ->
-        Logger.warning("[EventBroker] Failed to publish #{envelope["type"]}: #{inspect(reason)}")
+        Logger.warning("[EventBroker] Failed to publish #{event_type}: #{inspect(reason)}")
+
+        :telemetry.execute(
+          [:edge_admin, :event_broker, :publish],
+          %{duration: duration},
+          %{adapter: adapter_name, event_type: event_type, result: :error}
+        )
+
         {:error, reason}
     end
   end
@@ -126,12 +153,16 @@ defmodule EdgeAdmin.EventBroker do
   # ===========================================================================
 
   defp adapter do
-    case Application.get_env(:edge_admin, :event_broker_adapter) do
+    case adapter_name() do
       :nats -> EdgeAdmin.EventBroker.Adapters.Nats
       :kafka -> EdgeAdmin.EventBroker.Adapters.Kafka
       :rabbitmq -> EdgeAdmin.EventBroker.Adapters.Rabbitmq
       :redis -> EdgeAdmin.EventBroker.Adapters.Redis
     end
+  end
+
+  defp adapter_name do
+    Application.get_env(:edge_admin, :event_broker_adapter)
   end
 
   defp build_envelope(event) do

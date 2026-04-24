@@ -18,6 +18,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParser do
     lines
     |> extract_core_metrics()
     |> Map.merge(extract_proxy_metrics(lines))
+    |> Map.merge(extract_event_broker_metrics(lines))
   end
 
   defp extract_core_metrics(lines) do
@@ -112,6 +113,20 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParser do
         extract_counter_by_label(lines, "edge_admin_proxy_tunnel_closed_total", "reason", "drain_timeout"),
       "proxy_tunnel_bytes_up_total" => extract_counter(lines, "edge_admin_proxy_tunnel_bytes_up_total"),
       "proxy_tunnel_bytes_down_total" => extract_counter(lines, "edge_admin_proxy_tunnel_bytes_down_total")
+    }
+  end
+
+  defp extract_event_broker_metrics(lines) do
+    %{
+      # Event broker — enqueue
+      "event_broker_enqueues_total" => extract_counter(lines, "edge_admin_event_broker_enqueue_total"),
+
+      # Event broker — publish
+      "event_broker_publishes_total" => extract_counter(lines, "edge_admin_event_broker_publish_total"),
+      "event_broker_publishes_ok_total" =>
+        extract_counter_by_label(lines, "edge_admin_event_broker_publish_total", "result", "ok"),
+      "event_broker_publishes_error_total" =>
+        extract_counter_by_label(lines, "edge_admin_event_broker_publish_total", "result", "error")
     }
   end
 

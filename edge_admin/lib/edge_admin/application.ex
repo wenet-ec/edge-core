@@ -16,7 +16,7 @@ defmodule EdgeAdmin.Application do
     children = build_children(mode)
 
     :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{
-      config: %{metadata: [:file, :line]}
+      config: %{metadata: [:file, :line, :request_id, :mfa, :domain]}
     })
 
     opts = [strategy: :one_for_one, name: EdgeAdmin.Supervisor]

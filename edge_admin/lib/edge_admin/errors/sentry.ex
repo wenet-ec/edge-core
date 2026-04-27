@@ -1,7 +1,15 @@
 # edge_admin/lib/edge_admin/errors/sentry.ex
 defmodule EdgeAdmin.Errors.Sentry do
   @moduledoc false
-  @scrubbed_keys ["first_name", "last_name", "email"]
+  @scrubbed_keys [
+    "first_name",
+    "last_name",
+    "email",
+    "api_token",
+    "proxy_password",
+    "enrollment_token",
+    "enrollment_key"
+  ]
   @scrubbed_value "*********"
 
   def scrub_params(conn) do
@@ -11,6 +19,19 @@ defmodule EdgeAdmin.Errors.Sentry do
   end
 
   def scrubbed_remote_address(_conn), do: @scrubbed_value
+
+  @dropped_exceptions [
+    "Elixir.Phoenix.Router.NoRouteError",
+    "Elixir.Plug.Parsers.UnsupportedMediaTypeError",
+    "Elixir.Plug.Parsers.RequestTooLargeError",
+    "Elixir.DBConnection.OwnershipError"
+  ]
+
+  def before_send(%Sentry.Event{original_exception: %{__struct__: mod}} = event) do
+    if Atom.to_string(mod) in @dropped_exceptions, do: false, else: event
+  end
+
+  def before_send(event), do: event
 
   # Reference: https://github.com/getsentry/sentry-elixir/blob/9.1.0/lib/sentry/plug_context.ex#L232
   defp scrub_map(map, scrubbed_keys) do

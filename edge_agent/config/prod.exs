@@ -6,4 +6,4 @@ config :edge_agent, EdgeAgentWeb.Endpoint, debug_errors: false
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   level: :info,
-  metadata: ~w(request_id)a
+  metadata: ~w(request_id mfa)a

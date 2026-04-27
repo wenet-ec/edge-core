@@ -47,6 +47,16 @@ config :edge_admin,
 
 config :flop, repo: EdgeAdmin.Repo
 
+config :phoenix, :filter_parameters, [
+  "password",
+  "api_token",
+  "proxy_password",
+  "enrollment_token",
+  "enrollment_key",
+  "secret",
+  "token"
+]
+
 config :phoenix, :json_library, Jason
 
 config :sentry,

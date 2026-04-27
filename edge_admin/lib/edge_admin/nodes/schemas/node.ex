@@ -58,6 +58,8 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
           updated_at: DateTime.t()
         }
 
+  @derive {Inspect, except: [:api_token, :proxy_password]}
+
   @derive {
     Flop.Schema,
     filterable: [:id_type, :status, :version, :self_update_enabled, :last_seen_at, :inserted_at, :updated_at],

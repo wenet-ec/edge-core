@@ -36,7 +36,17 @@ config :mdns_lite,
   hosts: [:hostname],
   ttl: 120
 
+# Import environment configuration
+config :phoenix, :filter_parameters, [
+  "password",
+  "api_token",
+  "proxy_password",
+  "enrollment_token",
+  "enrollment_key",
+  "secret",
+  "token"
+]
+
 config :phoenix, :json_library, Jason
 
-# Import environment configuration
 import_config "#{Mix.env()}.exs"

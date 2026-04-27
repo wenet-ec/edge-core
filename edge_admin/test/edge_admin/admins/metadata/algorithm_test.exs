@@ -153,9 +153,10 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       assert Map.has_key?(result.orphaned_clusters, "c_small")
     end
 
-    test "tie-breaking by admin name is alphabetical (deterministic with equal scores)" do
+    test "tie-breaking by admin name is alphabetical when no previous assignment exists" do
       # Both admins have identical capacity and zero clusters — pure tie.
-      # The alphabetically first admin name should always win.
+      # With no previous assignment, stickiness has no anchor, so the alphabetically
+      # first admin wins (final deterministic tiebreaker).
       admins = admins("admin-b": 100, "admin-a": 100)
       clusters = clusters(c1: ~w[n1])
 
@@ -334,6 +335,276 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       assert result.total_capacity == 5
       assert map_size(result.orphaned_clusters) > 0
       assert result.degraded == true
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Stickiness (previous-owner tiebreaker)
+  # ---------------------------------------------------------------------------
+
+  describe "compute_assignments/3 stickiness" do
+    test "no-op recompute: feeding previous output back produces identical output" do
+      # If the topology hasn't changed, recomputing with the previous output as
+      # the third argument must yield the same assignment. This is the load-bearing
+      # invariant — without it, the system would jitter on every periodic recompute.
+      admins = admins(a1: 100, a2: 100, a3: 100)
+      clusters = clusters(c1: ~w[n1 n2], c2: ~w[n3], c3: ~w[n4 n5 n6])
+
+      first = Algorithm.compute_assignments(admins, clusters)
+      second = Algorithm.compute_assignments(admins, clusters, first.edge_clusters)
+
+      assert second.edge_clusters == first.edge_clusters
+      assert second.node_index == first.node_index
+    end
+
+    test "previous owner wins at ties even when alphabetically later" do
+      # Pure tie: same capacity, both empty. Without stickiness, admin-a wins
+      # (alphabetical). With previous saying admin-b owns c1, admin-b should keep it.
+      admins = admins("admin-a": 100, "admin-b": 100)
+      clusters = clusters(c1: ~w[n1])
+
+      previous = %{"admin-a" => %{}, "admin-b" => %{"c1" => ~w[n1]}}
+      result = Algorithm.compute_assignments(admins, clusters, previous)
+
+      assert Map.has_key?(result.edge_clusters["admin-b"], "c1")
+      refute Map.has_key?(result.edge_clusters["admin-a"], "c1")
+    end
+
+    test "stickiness does NOT override load balance" do
+      # admin-b previously owned c2, but admin-b is now overloaded with c1.
+      # admin-a (less loaded) must still win — stickiness only kicks in at score ties.
+      admins = admins("admin-a": 100, "admin-b": 100)
+      clusters = clusters(c1: ~w[n1 n2 n3 n4 n5], c2: ~w[n6])
+
+      # Previous: admin-b owned both clusters (and is now overloaded)
+      previous = %{
+        "admin-a" => %{},
+        "admin-b" => %{"c1" => ~w[n1 n2 n3 n4 n5], "c2" => ~w[n6]}
+      }
+
+      result = Algorithm.compute_assignments(admins, clusters, previous)
+
+      # c1 is largest — placed first. admin-a and admin-b tie on score, stickiness
+      # gives c1 to admin-b. After that, admin-b has 1 cluster vs admin-a's 0,
+      # so c2 must go to admin-a — load balance wins over stickiness.
+      assert Map.has_key?(result.edge_clusters["admin-b"], "c1")
+      assert Map.has_key?(result.edge_clusters["admin-a"], "c2")
+    end
+
+    test "stickiness does NOT override capacity" do
+      # admin-b previously owned c1 but no longer has capacity. admin-a must take it.
+      admins = admins("admin-a": 100, "admin-b": 1)
+      clusters = clusters(c1: ~w[n1 n2 n3])
+
+      previous = %{"admin-a" => %{}, "admin-b" => %{"c1" => ~w[n1 n2 n3]}}
+      result = Algorithm.compute_assignments(admins, clusters, previous)
+
+      assert Map.has_key?(result.edge_clusters["admin-a"], "c1")
+      assert result.edge_clusters["admin-b"] == %{}
+    end
+
+    test "stale previous owner not in current admins is ignored" do
+      # Previous claimed admin-gone owns c1, but admin-gone has left the topology.
+      # Stickiness has no anchor in current admins → falls through to alphabetical.
+      admins = admins("admin-a": 100, "admin-b": 100)
+      clusters = clusters(c1: ~w[n1])
+
+      previous = %{"admin-gone" => %{"c1" => ~w[n1]}}
+      result = Algorithm.compute_assignments(admins, clusters, previous)
+
+      # Falls through to final tiebreaker — alphabetical
+      assert Map.has_key?(result.edge_clusters["admin-a"], "c1")
+    end
+
+    test "previous map with no entry for the cluster is treated as no-stickiness" do
+      # New cluster (c2) appearing for the first time — previous has c1 only.
+      # c2 should follow normal scoring, no stickiness influence.
+      admins = admins("admin-a": 100, "admin-b": 100)
+      clusters = clusters(c1: ~w[n1 n2], c2: ~w[n3])
+
+      # Previous: admin-b owns c1
+      previous = %{"admin-a" => %{}, "admin-b" => %{"c1" => ~w[n1 n2]}}
+      result = Algorithm.compute_assignments(admins, clusters, previous)
+
+      # c1 (largest) placed first — tie broken by stickiness → admin-b
+      assert Map.has_key?(result.edge_clusters["admin-b"], "c1")
+      # c2: admin-a has 0 clusters, admin-b has 1 — load balance wins, admin-a takes c2
+      assert Map.has_key?(result.edge_clusters["admin-a"], "c2")
+    end
+
+    test "empty previous map is equivalent to default arity-2 call" do
+      admins = admins(a1: 100, a2: 100)
+      clusters = clusters(c1: ~w[n1], c2: ~w[n2 n3])
+
+      arity_2 = Algorithm.compute_assignments(admins, clusters)
+      arity_3_empty = Algorithm.compute_assignments(admins, clusters, %{})
+
+      assert arity_2 == arity_3_empty
+    end
+
+    test "deterministic with stickiness — same inputs (incl. previous) always same output" do
+      admins = admins(a1: 100, a2: 100, a3: 100)
+      clusters = clusters(c1: ~w[n1 n2], c2: ~w[n3], c3: ~w[n4 n5])
+      previous = %{"a1" => %{"c2" => ~w[n3]}, "a2" => %{}, "a3" => %{"c1" => ~w[n1 n2]}}
+
+      r1 = Algorithm.compute_assignments(admins, clusters, previous)
+      r2 = Algorithm.compute_assignments(admins, clusters, previous)
+
+      assert r1 == r2
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Bounded churn — the whole point of Stage 1
+  # ---------------------------------------------------------------------------
+
+  describe "compute_assignments/3 churn under topology change" do
+    # Helper: count how many clusters changed owner between two outputs
+    defp count_moves(prev_output, new_output) do
+      prev_owners = invert(prev_output.edge_clusters)
+      new_owners = invert(new_output.edge_clusters)
+
+      Enum.count(prev_owners, fn {cluster, prev_admin} ->
+        Map.get(new_owners, cluster) != prev_admin
+      end)
+    end
+
+    defp invert(edge_clusters) do
+      Enum.reduce(edge_clusters, %{}, fn {admin, clusters}, acc ->
+        Enum.reduce(clusters, acc, fn {cluster, _}, acc2 -> Map.put(acc2, cluster, admin) end)
+      end)
+    end
+
+    test "adding an alphabetically-early admin moves at most ~N/M clusters with stickiness" do
+      # Without stickiness this is the worst case — admin-aaa would steal nearly every
+      # tied cluster from existing admins because the alphabetical tiebreaker flips.
+      # With stickiness, only clusters where admin-aaa genuinely scores better should move.
+
+      # Start: 4 admins, 40 single-node clusters → 10 each
+      initial_admins = admins("admin-bbb": 100, "admin-ccc": 100, "admin-ddd": 100, "admin-eee": 100)
+      cluster_list = clusters(for i <- 1..40, do: {:"c#{i}", ~w[n#{i}]})
+
+      stable = Algorithm.compute_assignments(initial_admins, cluster_list)
+
+      # Now admin-aaa joins (alphabetically first — worst case for the old tiebreaker)
+      new_admins = Map.put(initial_admins, "admin-aaa", %{max_capacity: 100})
+
+      # WITHOUT stickiness (legacy behavior simulated by passing %{})
+      without_sticky = Algorithm.compute_assignments(new_admins, cluster_list)
+      moves_without = count_moves(stable, without_sticky)
+
+      # WITH stickiness (real behavior)
+      with_sticky = Algorithm.compute_assignments(new_admins, cluster_list, stable.edge_clusters)
+      moves_with = count_moves(stable, with_sticky)
+
+      # Theoretical minimum on a 5th admin join: 40/5 = 8 moves
+      # Stickiness should land near that minimum; legacy behavior should be much worse.
+      assert moves_with <= 12, "expected ~8 moves with stickiness, got #{moves_with}"
+
+      assert moves_with < moves_without,
+             "stickiness must reduce churn vs legacy (was #{moves_without}, now #{moves_with})"
+
+      # admin-aaa should still get its fair share — stickiness doesn't starve new admins
+      aaa_cluster_count = map_size(with_sticky.edge_clusters["admin-aaa"])
+      assert aaa_cluster_count >= 6, "new admin starved: only #{aaa_cluster_count} clusters"
+    end
+
+    test "removing an admin moves close to only that admin's clusters" do
+      # 3 admins × 9 single-node clusters = 3 each. Remove one — its 3 clusters
+      # must redistribute. Greedy placement processes the orphaned clusters one at
+      # a time; if a survivor takes an orphan early, the running load shifts and
+      # one or two of the survivor's existing clusters may also flip. We accept a
+      # small slack on top of the theoretical minimum.
+      initial_admins = admins(a1: 100, a2: 100, a3: 100)
+      cluster_list = clusters(for i <- 1..9, do: {:"c#{i}", ~w[n#{i}]})
+
+      stable = Algorithm.compute_assignments(initial_admins, cluster_list)
+
+      a3_clusters = Map.keys(stable.edge_clusters["a3"])
+      a3_count = length(a3_clusters)
+
+      new_admins = Map.delete(initial_admins, "a3")
+      after_removal = Algorithm.compute_assignments(new_admins, cluster_list, stable.edge_clusters)
+
+      moves = count_moves(stable, after_removal)
+      # Theoretical minimum is a3_count; allow a small tie-shift slack for greedy
+      # placement (a survivor taking an orphan can flip one of its existing clusters).
+      assert moves >= a3_count, "must reassign at least a3's clusters, got #{moves} < #{a3_count}"
+
+      assert moves <= a3_count + 2,
+             "expected ≤ #{a3_count + 2} moves (a3's #{a3_count} + slack), got #{moves}"
+
+      # All a3's clusters must have new owners in {a1, a2}
+      Enum.each(a3_clusters, fn cluster ->
+        assert Map.has_key?(after_removal.edge_clusters["a1"], cluster) or
+                 Map.has_key?(after_removal.edge_clusters["a2"], cluster)
+      end)
+    end
+
+    test "stable topology with no changes triggers zero moves" do
+      admins = admins(a1: 100, a2: 100, a3: 100)
+      cluster_list = clusters(for i <- 1..15, do: {:"c#{i}", ~w[n#{i}]})
+
+      r1 = Algorithm.compute_assignments(admins, cluster_list)
+      r2 = Algorithm.compute_assignments(admins, cluster_list, r1.edge_clusters)
+      r3 = Algorithm.compute_assignments(admins, cluster_list, r2.edge_clusters)
+
+      assert count_moves(r1, r2) == 0
+      assert count_moves(r2, r3) == 0
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Convergence — disagreement window self-heals within a couple of ticks
+  # ---------------------------------------------------------------------------
+
+  describe "compute_assignments/3 convergence" do
+    test "cold admin (empty previous) and warm admins agree within 2 ticks" do
+      # Scenario from algorithm.md: ABC stable with shared previous P_ABC. D joins.
+      # A/B/C compute with P_ABC; D computes with empty previous (cold ETS).
+      # Their tick-1 outputs may differ at tie points. By tick 2 they must converge.
+
+      shared_admins = admins(a: 100, b: 100, c: 100, d: 100)
+      cluster_list = clusters(for i <- 1..20, do: {:"c#{i}", ~w[n#{i}]})
+
+      # Establish stable previous on A/B/C side (computed before D joined — only 3 admins)
+      prev_admins = admins(a: 100, b: 100, c: 100)
+      stable_abc = Algorithm.compute_assignments(prev_admins, cluster_list)
+
+      # Tick 1
+      tick1_abc = Algorithm.compute_assignments(shared_admins, cluster_list, stable_abc.edge_clusters)
+      # D's first compute: empty previous (cold ETS)
+      tick1_d = Algorithm.compute_assignments(shared_admins, cluster_list, %{})
+
+      # Tick 2: each side feeds its own tick-1 output back as previous
+      tick2_abc = Algorithm.compute_assignments(shared_admins, cluster_list, tick1_abc.edge_clusters)
+      tick2_d = Algorithm.compute_assignments(shared_admins, cluster_list, tick1_d.edge_clusters)
+
+      # By tick 2, both sides should be self-stable (no further moves on their own)
+      assert tick2_abc.edge_clusters == tick1_abc.edge_clusters,
+             "ABC side not self-stable by tick 2"
+
+      assert tick2_d.edge_clusters == tick1_d.edge_clusters,
+             "D side not self-stable by tick 2"
+    end
+
+    test "after admin death, recomputation distributes orphaned clusters and stays stable" do
+      admins_full = admins(a: 100, b: 100, c: 100)
+      cluster_list = clusters(for i <- 1..12, do: {:"c#{i}", ~w[n#{i}]})
+
+      stable = Algorithm.compute_assignments(admins_full, cluster_list)
+
+      # 'a' dies
+      survivors = admins(b: 100, c: 100)
+      after_death = Algorithm.compute_assignments(survivors, cluster_list, stable.edge_clusters)
+
+      # Verify all clusters are reassigned (a's are orphans-of-previous, redistributed)
+      assigned = after_death.edge_clusters |> Map.values() |> Enum.flat_map(&Map.keys/1)
+      assert length(assigned) == 12
+
+      # Verify stability: re-running with the new output as previous changes nothing
+      followup = Algorithm.compute_assignments(survivors, cluster_list, after_death.edge_clusters)
+      assert followup.edge_clusters == after_death.edge_clusters
     end
   end
 

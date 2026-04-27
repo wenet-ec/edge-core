@@ -195,7 +195,7 @@ How it works:
 
 - Each admin maintains a local ETS table of the current topology (who owns what, remaining capacity)
 - When topology changes (admin joins or leaves, node counts shift), every admin independently runs the **same deterministic algorithm** on the same inputs — no coordination round needed
-- Assignment is computed from scratch each time: clusters sorted by size descending, each assigned to the best available admin scored by (fewest clusters managed, then highest remaining capacity, then admin ID for tie-breaking)
+- Assignment is computed from scratch each time, with one continuity hint: clusters sorted by size descending, each assigned to the best available admin scored by (fewest clusters managed, then highest remaining capacity, then previous owner wins at ties, then admin ID as final tiebreaker). The previous-owner key keeps reassignment rate near the theoretical minimum on topology change without overriding load balance or capacity
 - Clusters that exceed total system capacity become orphaned (tracked separately, not assigned to any admin)
 - On admin failure: surviving peers detect the disconnect via `:syn`, recompute assignments from scratch, and pick up the orphaned or previously-assigned clusters naturally through the same algorithm
 

@@ -452,8 +452,13 @@ defmodule EdgeAdmin.Admins.Metadata do
     all_admins = read_admins_from_syn()
     clusters_with_names = read_clusters_from_db()
 
+    # Read previous assignment from ETS to feed stickiness tiebreaker.
+    # On first boot ETS is %{admin_name => %{}}, so previous is effectively empty and
+    # behavior reduces to pure scratch placement.
+    [{:edge_clusters, previous_edge_clusters}] = :ets.lookup(@table, :edge_clusters)
+
     # Run algorithm (works with any unique strings - IDs or names, doesn't matter)
-    result = Algorithm.compute_assignments(all_admins, clusters_with_names)
+    result = Algorithm.compute_assignments(all_admins, clusters_with_names, previous_edge_clusters)
 
     # Result already has names - ready for ETS!
     update_ets(result, all_admins)

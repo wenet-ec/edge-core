@@ -23,6 +23,13 @@ config :edge_admin, EdgeAdmin.Repo,
   migration_lock: nil,
   start_apps_before_migration: [:ssl]
 
+# Connection-only repo for Oban.Notifiers.Postgres — not in :ecto_repos so
+# migrations don't run against it. Bypasses PgBouncer in prod.
+config :edge_admin, EdgeAdmin.Repo.Notifier,
+  migration_lock: nil,
+  priv: "priv/repo",
+  start_apps_before_migration: [:ssl]
+
 config :edge_admin, EdgeAdminWeb.Endpoint,
   adapter: Bandit.PhoenixAdapter,
   pubsub_server: EdgeAdmin.PubSub,

@@ -8,9 +8,14 @@ DB_PORT=5432
 DB_NAME=edge_admin_local
 DB_USER=edge_admin_user
 DB_PASSWORD=edge_admin_password
-DB_POOL_SIZE=10
+DB_POOL_SIZE=5
 DB_SSL=false
 # DB_IPV6=false
+
+# Oban notifier connection — falls back to DB_HOST/DB_PORT when unset.
+# Override in prod to bypass PgBouncer (set to the primary -rw service):
+# DB_NOTIFIER_HOST=edge-admin-db-rw
+# DB_NOTIFIER_PORT=5432
 
 # =============================================================================
 # Phoenix / Web Server

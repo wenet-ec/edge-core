@@ -2,6 +2,8 @@
 import Config
 import EdgeAdmin.Config
 
+alias EdgeAdmin.Repo.Notifier
+
 config :edge_admin, EdgeAdmin.Repo,
   username: get_env!("DB_USER"),
   password: get_env!("DB_PASSWORD"),
@@ -10,6 +12,20 @@ config :edge_admin, EdgeAdmin.Repo,
   port: get_env!("DB_PORT", :integer),
   ssl: get_env("DB_SSL", :boolean),
   pool_size: get_env!("DB_POOL_SIZE", :integer),
+  socket_options: if(get_env("DB_IPV6", :boolean), do: [:inet6], else: [])
+
+# Dedicated repo for Oban.Notifiers.Postgres LISTEN connection.
+# Defaults to the same host as the main repo (fine in dev/test). In prod,
+# point DB_NOTIFIER_HOST at the primary -rw service to bypass PgBouncer,
+# whose transaction-mode pooling breaks session-pinned LISTEN.
+config :edge_admin, Notifier,
+  username: get_env!("DB_USER"),
+  password: get_env!("DB_PASSWORD"),
+  hostname: get_env("DB_NOTIFIER_HOST", :string, get_env!("DB_HOST")),
+  database: get_env!("DB_NAME"),
+  port: get_env("DB_NOTIFIER_PORT", :integer, get_env!("DB_PORT", :integer)),
+  ssl: get_env("DB_SSL", :boolean),
+  pool_size: 2,
   socket_options: if(get_env("DB_IPV6", :boolean), do: [:inet6], else: [])
 
 # NOTE: Only set `server` to `true` if `PHX_SERVER` is present. We cannot set
@@ -164,6 +180,10 @@ config :edge_admin, Oban,
     event_broker: 2
   ],
   repo: EdgeAdmin.Repo,
+  # Notifier uses a dedicated repo so its LISTEN connection bypasses PgBouncer.
+  # Cross-admin-cluster wakeups depend on Postgres NOTIFY since admin clusters
+  # don't share Erlang distribution — Notifiers.PG would not work here.
+  notifier: {Oban.Notifiers.Postgres, repo: Notifier},
   peer: Oban.Peers.Database,
   plugins: [
     {Oban.Plugins.Cron,

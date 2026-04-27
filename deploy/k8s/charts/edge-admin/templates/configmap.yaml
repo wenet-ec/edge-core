@@ -18,6 +18,15 @@ data:
   DB_USER: {{ .Values.config.dbUser | quote }}
   DB_POOL_SIZE: {{ .Values.config.dbPoolSize | quote }}
   DB_SSL: {{ .Values.config.dbSsl | quote }}
+  # Oban notifier connects directly to the primary, bypassing PgBouncer.
+  # Transaction-mode pooling breaks session-pinned LISTEN; routing only the
+  # notifier to -rw keeps real-time wakeups working while app traffic stays pooled.
+  {{- if .Values.config.dbNotifierHost }}
+  DB_NOTIFIER_HOST: {{ .Values.config.dbNotifierHost | quote }}
+  {{- end }}
+  {{- if .Values.config.dbNotifierPort }}
+  DB_NOTIFIER_PORT: {{ .Values.config.dbNotifierPort | quote }}
+  {{- end }}
 
   # VPN
   NETMAKER_API_URL: {{ .Values.config.netmakerApiUrl | quote }}

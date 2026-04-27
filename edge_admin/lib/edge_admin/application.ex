@@ -6,6 +6,8 @@ defmodule EdgeAdmin.Application do
 
   use Application
 
+  alias EdgeAdmin.Repo.Notifier
+
   require Logger
 
   @impl true
@@ -52,6 +54,7 @@ defmodule EdgeAdmin.Application do
   defp build_children(:test) do
     [
       EdgeAdmin.Repo,
+      Notifier,
       {Phoenix.PubSub, name: EdgeAdmin.PubSub},
       {Oban, Application.fetch_env!(:edge_admin, Oban)},
       EdgeAdminWeb.Endpoint
@@ -62,6 +65,7 @@ defmodule EdgeAdmin.Application do
     [
       EdgeAdmin.PromEx,
       EdgeAdmin.Repo,
+      Notifier,
       {Phoenix.PubSub, name: EdgeAdmin.PubSub},
       {Oban, Application.fetch_env!(:edge_admin, Oban)}
     ]
@@ -71,6 +75,7 @@ defmodule EdgeAdmin.Application do
     [
       EdgeAdmin.PromEx,
       EdgeAdmin.Repo,
+      Notifier,
       {Phoenix.PubSub, name: EdgeAdmin.PubSub},
       EdgeAdminWeb.Telemetry,
       EdgeAdminWeb.Live.NetmakerDashboard.Collector,

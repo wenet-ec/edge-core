@@ -8,9 +8,17 @@ DB_PORT=5432
 DB_NAME=edge_admin_production
 DB_USER=edge_admin_user
 DB_PASSWORD=edge_admin_password
-DB_POOL_SIZE=15
+DB_POOL_SIZE=10
 DB_SSL=false
 # DB_IPV6=false  # Enable IPv6 socket options (optional)
+
+# Oban notifier connection — defaults to DB_HOST/DB_PORT when unset.
+# Set these only if DB_HOST points at a transaction-mode pooler (PgBouncer,
+# CNPG -pooler service, Supabase pgbouncer, etc.) — pooled connections break
+# session-pinned LISTEN/NOTIFY, which Oban uses for cross-admin wake-ups.
+# When set, point at the primary directly (e.g. CNPG -rw service).
+# DB_NOTIFIER_HOST=edge-admin-db-rw
+# DB_NOTIFIER_PORT=5432
 
 # =============================================================================
 # Phoenix / Web Server

@@ -13,6 +13,18 @@ defmodule EdgeAdmin.Repo do
     {:ok, Keyword.put(opts, :url, Application.get_env(:edge_admin, __MODULE__)[:url])}
   end
 
+  defmodule Notifier do
+    # Dedicated repo used only by Oban.Notifiers.Postgres to hold the long-lived
+    # LISTEN connection. Bypasses PgBouncer (transaction-mode pooling kills
+    # session-pinned LISTEN), pointing straight at the primary. Pool size 2
+    # is enough — Oban opens one notification connection.
+    @moduledoc false
+    use Ecto.Repo,
+      adapter: Ecto.Adapters.Postgres,
+      otp_app: :edge_admin,
+      telemetry_prefix: [:edge_admin, :repo_notifier]
+  end
+
   @doc """
   Translates a unique constraint violation on the given fields into `{:error, {:conflict, reason}}`.
   All other changeset errors pass through as `{:error, changeset}` for a 422 response.

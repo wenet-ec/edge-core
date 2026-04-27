@@ -29,8 +29,13 @@ config:
   dbPort: "5432"
   dbName: "edge_admin_production"
   dbUser: "edge_admin_user"
-  dbPoolSize: "15"
+  dbPoolSize: "10"
   dbSsl: "false"
+  # Optional: when dbHost points at the PgBouncer pooler, set dbNotifierHost
+  # to the primary -rw service so Oban's LISTEN connection bypasses pooling.
+  # Leave empty when dbHost already targets the primary directly.
+  dbNotifierHost: ""
+  dbNotifierPort: ""
 
   # Edge VPN API (ClusterDNS — matches edge-vpn service name)
   netmakerApiUrl: "http://edge-vpn:8081"

@@ -7,20 +7,16 @@ metadata:
   labels:
     {{- include "edge-admin.labels" . | nindent 4 }}
 data:
-  # Phoenix
+  # --- Required: Phoenix / public hostname ---
   PHX_HOST: {{ .Values.config.phxHost | quote }}
-  CORS_ALLOWED_ORIGINS: {{ .Values.config.corsAllowedOrigins | quote }}
+  ADMIN_URLS: {{ .Values.config.adminUrls | quote }}
 
-  # Database
+  # --- Required: Database ---
   DB_HOST: {{ .Values.config.dbHost | quote }}
   DB_PORT: {{ .Values.config.dbPort | quote }}
   DB_NAME: {{ .Values.config.dbName | quote }}
   DB_USER: {{ .Values.config.dbUser | quote }}
   DB_POOL_SIZE: {{ .Values.config.dbPoolSize | quote }}
-  DB_SSL: {{ .Values.config.dbSsl | quote }}
-  # Oban notifier connects directly to the primary, bypassing PgBouncer.
-  # Transaction-mode pooling breaks session-pinned LISTEN; routing only the
-  # notifier to -rw keeps real-time wakeups working while app traffic stays pooled.
   {{- if .Values.config.dbNotifierHost }}
   DB_NOTIFIER_HOST: {{ .Values.config.dbNotifierHost | quote }}
   {{- end }}
@@ -28,51 +24,20 @@ data:
   DB_NOTIFIER_PORT: {{ .Values.config.dbNotifierPort | quote }}
   {{- end }}
 
-  # VPN
+  # --- Required: VPN ---
   NETMAKER_API_URL: {{ .Values.config.netmakerApiUrl | quote }}
-  NETMAKER_API_SCHEME: {{ .Values.config.netmakerApiScheme | quote }}
-  NETMAKER_DEFAULT_DOMAIN: {{ .Values.config.netmakerDefaultDomain | quote }}
   NETMAKER_SUPERADMIN_USERNAME: {{ .Values.config.netmakerSuperadminUsername | quote }}
 
-  # Admin cluster
+  # --- Required: Admin cluster identity ---
   ADMIN_CLUSTER_NAME: {{ .Values.config.adminClusterName | quote }}
   ADMIN_CLUSTER_SUBNET: {{ .Values.config.adminClusterSubnet | quote }}
   ADMIN_MAX_CAPACITY: {{ .Values.config.adminMaxCapacity | quote }}
-  ADMIN_URLS: {{ .Values.config.adminUrls | quote }}
-  ADMIN_DISCOVERY_PORT: {{ .Values.config.adminDiscoveryPort | quote }}
 
-  # Erlang distribution
-  VPN_CLUSTER_PORT: {{ .Values.config.vpnClusterPort | quote }}
-
-  # Proxy ports
-  HTTP_PROXY_PORT: {{ .Values.config.httpProxyPort | quote }}
-  SOCKS5_PROXY_PORT: {{ .Values.config.socks5ProxyPort | quote }}
-
-  # Enrollment
+  # --- Required: enrollment + self-referential metrics ---
   DEFAULT_CLUSTER_NAME: {{ .Values.config.defaultClusterName | quote }}
-  PUBLIC_ENROLLMENT_KEY_ENABLED: {{ .Values.config.publicEnrollmentKeyEnabled | quote }}
-
-  # Edge relay map — optional, leave empty to skip DERP overlay
-  {{- if .Values.config.derpMapUrl }}
-  DERP_MAP_URL: {{ .Values.config.derpMapUrl | quote }}
-  {{- end }}
-
-  # StatefulSet WireGuard port base — no-op when POD_INDEX is absent
-  ADMIN_WIREGUARD_PORT_BASE: {{ .Values.config.wireguardPortBase | quote }}
-
-  # Metrics — base URL this admin instance uses for self-referential metrics aggregation
-  # In k8s this is the ClusterIP service name + port
   METRICS_BASE_URL: {{ .Values.config.metricsBaseUrl | quote }}
 
-  # Event Broker — disabled by default, broker deployed separately
-  EVENT_BROKER_ENABLED: {{ .Values.config.eventBrokerEnabled | quote }}
-  EVENT_BROKER_ADAPTER: {{ .Values.config.eventBrokerAdapter | quote }}
-  {{- if .Values.config.eventBrokerUrls }}
-  EVENT_BROKER_URLS: {{ .Values.config.eventBrokerUrls | quote }}
+  # --- extraEnv: free-form overrides ---
+  {{- range $key, $value := .Values.extraEnv }}
+  {{ $key }}: {{ $value | quote }}
   {{- end }}
-  EVENT_BROKER_NATS_JETSTREAM: {{ .Values.config.eventBrokerNatsJetstream | quote }}
-  EVENT_BROKER_KAFKA_SASL_MECHANISM: {{ .Values.config.eventBrokerKafkaSaslMechanism | quote }}
-  EVENT_BROKER_KAFKA_SSL: {{ .Values.config.eventBrokerKafkaSsl | quote }}
-  EVENT_BROKER_RABBITMQ_SSL: {{ .Values.config.eventBrokerRabbitmqSsl | quote }}
-  EVENT_BROKER_REDIS_SSL: {{ .Values.config.eventBrokerRedisSsl | quote }}
-  CORE_NAME: {{ .Values.config.coreName | quote }}

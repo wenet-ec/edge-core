@@ -4,29 +4,78 @@ import EdgeAdmin.Config
 
 alias EdgeAdmin.Repo.Notifier
 
-config :edge_admin, EdgeAdmin.Repo,
-  username: get_env!("DB_USER"),
-  password: get_env!("DB_PASSWORD"),
-  hostname: get_env!("DB_HOST"),
-  database: get_env!("DB_NAME"),
-  port: get_env!("DB_PORT", :integer),
-  ssl: get_env("DB_SSL", :boolean),
-  pool_size: get_env!("DB_POOL_SIZE", :integer),
-  socket_options: if(get_env("DB_IPV6", :boolean), do: [:inet6], else: [])
+###
+# Each repo can be configured one of two ways:
+#
+#   1. URL form — set DATABASE_URL (and DATABASE_NOTIFIER_URL for the notifier).
+#      The URL encodes host, port, db, user, password. pool_size, ssl, and
+#      ipv6 still come from their dedicated env vars — URLs don't carry those.
+#
+#   2. Fragment form — set DB_HOST / DB_PORT / DB_NAME / DB_USER / DB_PASSWORD
+#      (and DB_NOTIFIER_HOST / DB_NOTIFIER_PORT for the notifier).
+#
+# It's all-or-nothing per repo: if DATABASE_URL is set, every fragment is
+# ignored for that repo. The notifier resolves independently — DATABASE_URL
+# does NOT cascade to the notifier. This is intentional: in prod the main
+# repo points at PgBouncer and the notifier needs a direct primary connection,
+# so they must be configured separately.
+###
 
-# Dedicated repo for Oban.Notifiers.Postgres LISTEN connection.
-# Defaults to the same host as the main repo (fine in dev/test). In prod,
-# point DB_NOTIFIER_HOST at the primary -rw service to bypass PgBouncer,
-# whose transaction-mode pooling breaks session-pinned LISTEN.
-config :edge_admin, Notifier,
-  username: get_env!("DB_USER"),
-  password: get_env!("DB_PASSWORD"),
-  hostname: get_env("DB_NOTIFIER_HOST", :string, get_env!("DB_HOST")),
-  database: get_env!("DB_NAME"),
-  port: get_env("DB_NOTIFIER_PORT", :integer, get_env!("DB_PORT", :integer)),
-  ssl: get_env("DB_SSL", :boolean),
-  pool_size: 2,
-  socket_options: if(get_env("DB_IPV6", :boolean), do: [:inet6], else: [])
+# When DATABASE_URL is set for the main repo, DATABASE_NOTIFIER_URL must be
+# set too. In URL mode the fragment env vars (DB_HOST, etc.) are not
+# guaranteed to exist, so we can't fall back to them for the notifier.
+if get_env("DATABASE_URL") && !get_env("DATABASE_NOTIFIER_URL") do
+  raise """
+  DATABASE_URL is set but DATABASE_NOTIFIER_URL is not.
+
+  These two repos are configured independently. When you use URL mode for
+  the main repo, you must also use URL mode for the notifier — typically
+  pointing it at the primary directly to bypass any pooler.
+
+  Either set DATABASE_NOTIFIER_URL, or switch the main repo back to
+  fragment form (DB_HOST + DB_PORT + DB_NAME + DB_USER + DB_PASSWORD).
+  """
+end
+
+repo_config = fn url_var, host_var, port_var ->
+  base =
+    case get_env(url_var) do
+      nil ->
+        [
+          username: get_env!("DB_USER"),
+          password: get_env!("DB_PASSWORD"),
+          database: get_env!("DB_NAME"),
+          hostname: get_env!(host_var),
+          port: get_env!(port_var, :integer)
+        ]
+
+      url ->
+        [url: url]
+    end
+
+  base ++
+    [
+      ssl: get_env("DB_SSL", :boolean),
+      socket_options: if(get_env("DB_IPV6", :boolean), do: [:inet6], else: [])
+    ]
+end
+
+config :edge_admin,
+       EdgeAdmin.Repo,
+       repo_config.("DATABASE_URL", "DB_HOST", "DB_PORT") ++
+         [pool_size: get_env!("DB_POOL_SIZE", :integer)]
+
+# Dedicated repo for Oban.Notifiers.Postgres LISTEN connection. In prod,
+# point at the primary -rw service to bypass PgBouncer, whose transaction-mode
+# pooling breaks session-pinned LISTEN. Fragment-form fallbacks: DB_NOTIFIER_HOST
+# defaults to DB_HOST, DB_NOTIFIER_PORT defaults to DB_PORT.
+config :edge_admin,
+       Notifier,
+       repo_config.(
+         "DATABASE_NOTIFIER_URL",
+         if(System.get_env("DB_NOTIFIER_HOST"), do: "DB_NOTIFIER_HOST", else: "DB_HOST"),
+         if(System.get_env("DB_NOTIFIER_PORT"), do: "DB_NOTIFIER_PORT", else: "DB_PORT")
+       ) ++ [pool_size: 2]
 
 # NOTE: Only set `server` to `true` if `PHX_SERVER` is present. We cannot set
 # it to `false` otherwise because `mix phx.server` will stop working without it.

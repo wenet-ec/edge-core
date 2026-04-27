@@ -3,6 +3,18 @@
 # =============================================================================
 # Database
 # =============================================================================
+# Two configuration styles, all-or-nothing per repo:
+#
+#   1. URL form:       DATABASE_URL=postgresql://user:pass@host:port/db
+#                      (and DATABASE_NOTIFIER_URL=... — required when using URL form)
+#   2. Fragment form:  DB_HOST + DB_PORT + DB_NAME + DB_USER + DB_PASSWORD
+#                      (and DB_NOTIFIER_HOST + DB_NOTIFIER_PORT for the notifier)
+#
+# When DATABASE_URL is set, the fragments are ignored for that repo and
+# DATABASE_NOTIFIER_URL becomes required. The two repos do not cascade.
+# DB_POOL_SIZE, DB_SSL, DB_IPV6 always come from these env vars regardless of style.
+
+# DATABASE_URL=postgresql://edge_admin_user:edge_admin_password@edge_admin_db:5432/edge_admin_production
 DB_HOST=edge_admin_db
 DB_PORT=5432
 DB_NAME=edge_admin_production
@@ -12,11 +24,13 @@ DB_POOL_SIZE=10
 DB_SSL=false
 # DB_IPV6=false  # Enable IPv6 socket options (optional)
 
-# Oban notifier connection — defaults to DB_HOST/DB_PORT when unset.
-# Set these only if DB_HOST points at a transaction-mode pooler (PgBouncer,
-# CNPG -pooler service, Supabase pgbouncer, etc.) — pooled connections break
+# Oban notifier — falls back to DB_HOST/DB_PORT when unset (fragment form only).
+# Required when DATABASE_URL is set (use DATABASE_NOTIFIER_URL).
+# Set these only if your main DB connection goes through a transaction-mode pooler
+# (PgBouncer, CNPG -pooler, Supabase pgbouncer, etc.) — pooled connections break
 # session-pinned LISTEN/NOTIFY, which Oban uses for cross-admin wake-ups.
-# When set, point at the primary directly (e.g. CNPG -rw service).
+# Point at the primary directly (e.g. CNPG -rw service).
+# DATABASE_NOTIFIER_URL=postgresql://user:pass@edge-admin-db-rw:5432/edge_admin_production
 # DB_NOTIFIER_HOST=edge-admin-db-rw
 # DB_NOTIFIER_PORT=5432
 

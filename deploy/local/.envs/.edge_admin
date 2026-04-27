@@ -3,6 +3,18 @@
 # =============================================================================
 # Database
 # =============================================================================
+# Two configuration styles, all-or-nothing per repo:
+#
+#   1. URL form:       DATABASE_URL=postgresql://user:pass@host:port/db
+#                      (and DATABASE_NOTIFIER_URL=... for the notifier)
+#   2. Fragment form:  DB_HOST + DB_PORT + DB_NAME + DB_USER + DB_PASSWORD
+#                      (and DB_NOTIFIER_HOST + DB_NOTIFIER_PORT for the notifier)
+#
+# When DATABASE_URL is set, the fragments are ignored for that repo.
+# The notifier resolves independently — DATABASE_URL does NOT cascade to it.
+# DB_POOL_SIZE, DB_SSL, DB_IPV6 always come from these env vars regardless of style.
+
+# DATABASE_URL=postgresql://edge_admin_user:edge_admin_password@edge_admin_db:5432/edge_admin_local
 DB_HOST=edge_admin_db
 DB_PORT=5432
 DB_NAME=edge_admin_local
@@ -12,8 +24,9 @@ DB_POOL_SIZE=5
 DB_SSL=false
 # DB_IPV6=false
 
-# Oban notifier connection — falls back to DB_HOST/DB_PORT when unset.
-# Override in prod to bypass PgBouncer (set to the primary -rw service):
+# Oban notifier — falls back to DB_HOST/DB_PORT (or DATABASE_URL's host/port) when unset.
+# Override in prod to bypass PgBouncer (set to the primary -rw service).
+# DATABASE_NOTIFIER_URL=postgresql://user:pass@edge-admin-db-rw:5432/edge_admin_production
 # DB_NOTIFIER_HOST=edge-admin-db-rw
 # DB_NOTIFIER_PORT=5432
 

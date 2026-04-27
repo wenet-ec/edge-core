@@ -15,14 +15,15 @@ config:
   dbName: "edge_admin_production"
   dbUser: "edge_admin_user"
   dbPoolSize: "5"
-  dbSsl: "false"
   netmakerApiUrl: "http://edge-vpn:8081"
-  netmakerApiScheme: "http"
-  netmakerDefaultDomain: "nm.internal"
   netmakerSuperadminUsername: "admin"
   adminMaxCapacity: "200"
   defaultClusterName: "default"
-  publicEnrollmentKeyEnabled: "true"
+extraEnv:
+  # kind cluster has no TLS — talk to Netmaker over plain HTTP.
+  NETMAKER_API_SCHEME: "http"
+  # Open enrollment for testing.
+  PUBLIC_ENROLLMENT_KEY_ENABLED: "true"
 secrets:
   secretKeyBase: "zsIbO5eGH9IJ1p+E6M1a1VL4bIGrwLeTS8W7q8QDAOE/o3Ucy0si768bJxmF4A1Q"
   masterKey: "supersecretkey123456789"

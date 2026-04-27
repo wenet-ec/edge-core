@@ -18,87 +18,69 @@ image:
   tag: "v0.2.0"
   pullPolicy: IfNotPresent
 
+# `config:` lists ONLY env vars that must be set per deployment — no usable
+# default exists, or the value is deployment-specific. Everything else
+# (timeouts, schedules, feature flags, optional integrations) has a sensible
+# default in edge_admin's runtime.exs and is overridable via `extraEnv` below.
+#
+# To discover the full menu of env vars, see deploy/production/.envs/.edge_admin
+# — that file is the canonical documented list.
 config:
+  # --- Phoenix / public hostname ---
   # Public hostname for the admin API — baked into enrollment keys (ADMIN_URLS)
-  # e.g. edge-admin.yourdomain.com
   phxHost: "edge-admin.yourdomain.com"
   adminUrls: "edge-admin.yourdomain.com"
 
-  # Database (CNPG -rw service = always primary)
+  # --- Database (CNPG -rw service = always primary) ---
   dbHost: "edge-admin-db-rw"
   dbPort: "5432"
   dbName: "edge_admin_production"
   dbUser: "edge_admin_user"
   dbPoolSize: "10"
-  dbSsl: "false"
   # Optional: when dbHost points at the PgBouncer pooler, set dbNotifierHost
   # to the primary -rw service so Oban's LISTEN connection bypasses pooling.
   # Leave empty when dbHost already targets the primary directly.
   dbNotifierHost: ""
   dbNotifierPort: ""
 
-  # Edge VPN API (ClusterDNS — matches edge-vpn service name)
+  # --- Edge VPN API (ClusterDNS — matches edge-vpn service name) ---
   netmakerApiUrl: "http://edge-vpn:8081"
-  netmakerApiScheme: "https"
-  netmakerDefaultDomain: "nm.internal"
   netmakerSuperadminUsername: "admin"
 
-  # Admin cluster Erlang identity
+  # --- Admin cluster Erlang identity ---
+  # adminClusterName must be unique per release within the same core.
   adminClusterName: "a"
   adminClusterSubnet: "100.63.0.0/24"
   adminMaxCapacity: "200"
 
-  # WireGuard port base — used only when workload.kind=StatefulSet
-  # Pod 0 → base, Pod 1 → base+1, etc.
-  wireguardPortBase: "51820"
-
-  # Erlang distribution
-  vpnClusterPort: "49125"
-  adminDiscoveryPort: "44000"
-
-  # Proxy ports
-  httpProxyPort: "43128"
-  socks5ProxyPort: "41080"
-
-  # Default cluster pre-created on first boot
+  # --- Default cluster pre-created on first boot ---
   defaultClusterName: "default"
-  publicEnrollmentKeyEnabled: "true"
 
-  # Metrics — self-referential scrape URL for this admin instance
+  # --- Self-referential metrics scrape URL — release-specific ---
   # In k8s: ClusterIP service name + port, e.g. "edge-admin-a:44000"
-  # Must be set per-release in helmfile.yaml (release-specific value)
+  # Must be set per-release in helmfile.yaml.
   metricsBaseUrl: ""
 
-  # DERP map server URL. Optional — leave empty to skip DERP overlay (Tailscale fallback).
-  # Edge relay infra runs outside k8s (separate machine, direct ports 80/443).
-  # e.g. https://edge-relay-map-1.yourdomain.com/derpmap/default
-  derpMapUrl: ""
-
-  # Event Broker — opt-in, broker deployed separately
-  # Set eventBrokerEnabled to "true" and point eventBrokerUrls at your broker to enable.
-  # Adapter: nats | kafka | rabbitmq | redis — pick whichever fits your stack.
-  #   nats:     EVENT_BROKER_URLS=nats://host:port  (add eventBrokerNatsJetstream=true for durable log)
-  #   kafka:    EVENT_BROKER_URLS=host:port          (Redpanda / vanilla Kafka / any Kafka-compatible)
-  #   rabbitmq: EVENT_BROKER_URLS=amqp://host:port   (or amqps:// for TLS)
-  #   redis:    EVENT_BROKER_URLS=redis://host:port  (or redis://:password@host:port; use rediss:// for TLS)
-  eventBrokerEnabled: "false"
-  eventBrokerAdapter: ""
-  eventBrokerUrls: ""
-  # NATS options
-  eventBrokerNatsJetstream: "false"   # set "true" for durable JetStream log
-  # Kafka/Redpanda options
-  eventBrokerKafkaSaslMechanism: "plain"  # plain | scram_sha_256 | scram_sha_512
-  eventBrokerKafkaSsl: "false"            # set "true" for external/public brokers
-  # RabbitMQ options
-  eventBrokerRabbitmqSsl: "false"         # set "true" for external/public brokers (CloudAMQP, etc.)
-  # Redis options
-  eventBrokerRedisSsl: "false"            # set "true" for external/public brokers (Redis Cloud, Upstash, etc.)
-  # coreName is included in every event envelope — identifies this core in multi-core setups
-  coreName: "default"
-
-  # Misc
-  corsAllowedOrigins: "*"
-  logLevel: "info"
+# Free-form env var overrides. Anything documented in
+# deploy/production/.envs/.edge_admin can be set here. Useful for tuning
+# timeouts, schedules, feature flags, or enabling optional integrations
+# (event broker, DERP, Sentry, Grafana upload, etc.) without forking the chart.
+#
+# Keys are env var names exactly as the app expects them.
+# Values are strings — quote integers and booleans.
+#
+# extraEnv:
+#   LIVE_DASHBOARD_ENABLED: "false"
+#   API_DOCS_ENABLED: "false"
+#   HEALTH_CHECK_TIMEOUT_MS: "15000"
+#   NODE_HEALTH_CHECK_CONCURRENCY: "200"
+#   EVENT_BROKER_ENABLED: "true"
+#   EVENT_BROKER_ADAPTER: "nats"
+#   EVENT_BROKER_URLS: "nats://my-nats:4222"
+#   DERP_MAP_URL: "https://relay.example.com/derpmap/default"
+#   SENTRY_DSN: "https://..."
+#   CORE_NAME: "prod-us"
+extraEnv: {}
 
 # hostAliases — injected into /etc/hosts, bypasses DNS entirely.
 # Use this to map Netmaker's public hostname (e.g. edge-vpn.localtest.me) to the

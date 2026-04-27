@@ -10,17 +10,16 @@ config:
   dbName: "edge_admin_production"
   dbUser: "edge_admin_user"
   dbPoolSize: "10"
-  dbSsl: "false"
   # Oban notifier needs a session-pinned LISTEN connection — bypass PgBouncer
   # by pointing it straight at the primary. ~1 extra connection per admin pod.
   dbNotifierHost: "edge-admin-db-rw"
   dbNotifierPort: "5432"
   netmakerApiUrl: "http://edge-vpn:8081"
-  netmakerDefaultDomain: "nm.internal"
   netmakerSuperadminUsername: "admin"
   adminMaxCapacity: "200"
   defaultClusterName: "default"
-  publicEnrollmentKeyEnabled: "true"
+extraEnv:
+  PUBLIC_ENROLLMENT_KEY_ENABLED: "true"
 secrets:
   secretKeyBase: {{ requiredEnv "EDGE_ADMIN_SECRET_KEY_BASE" | quote }}
   masterKey: {{ requiredEnv "EDGE_ADMIN_MASTER_KEY" | quote }}

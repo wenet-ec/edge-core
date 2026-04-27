@@ -106,7 +106,7 @@ defmodule EdgeAdmin.Mixfile do
 
       # Errors
       {:hackney, "~> 1.25"},
-      {:sentry, "~> 12.0"},
+      {:sentry, "~> 13.0"},
 
       # Telemetry
       {:prom_ex, "~> 1.11"},

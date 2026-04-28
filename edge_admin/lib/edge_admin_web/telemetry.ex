@@ -175,10 +175,10 @@ defmodule EdgeAdminWeb.Telemetry do
         description: "Time waiting for available connection"
       ),
 
-      # Custom Business Metrics - Bootstrap/Discovery/Metadata
-      counter("edge_admin.bootstrap.count",
+      # Custom Business Metrics - Membership/Discovery/Metadata
+      counter("edge_admin.membership.count",
         tags: [:status],
-        description: "Count of admin bootstrap attempts"
+        description: "Count of admin-cluster membership attempts"
       ),
       counter("edge_admin.discovery.count",
         tags: [:status],

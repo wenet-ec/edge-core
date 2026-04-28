@@ -32,7 +32,7 @@
       },
       "id": 1,
       "panels": [],
-      "title": "Bootstrap & Discovery",
+      "title": "Membership & Discovery",
       "type": "row"
     },
     {
@@ -40,7 +40,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Bootstrap step execution counts by status",
+      "description": "Membership step execution counts by status",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -115,12 +115,12 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(edge_admin_bootstrap_step_total{otp_app=\"$otp_app\"}[$__rate_interval])",
+          "expr": "rate(edge_admin_membership_step_total{otp_app=\"$otp_app\"}[$__rate_interval])",
           "legendFormat": "{{step}} - {{status}}",
           "refId": "A"
         }
       ],
-      "title": "Bootstrap Steps Rate",
+      "title": "Membership Steps Rate",
       "type": "timeseries"
     },
     {
@@ -128,7 +128,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Bootstrap step duration percentiles",
+      "description": "Membership step duration percentiles",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -203,12 +203,12 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(edge_admin_bootstrap_step_duration_milliseconds_bucket{otp_app=\"$otp_app\"}[$__rate_interval])) by (le, step))",
+          "expr": "histogram_quantile(0.95, sum(rate(edge_admin_membership_step_duration_milliseconds_bucket{otp_app=\"$otp_app\"}[$__rate_interval])) by (le, step))",
           "legendFormat": "{{step}} p95",
           "refId": "A"
         }
       ],
-      "title": "Bootstrap Duration (p95)",
+      "title": "Membership Duration (p95)",
       "type": "timeseries"
     },
     {

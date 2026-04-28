@@ -5,7 +5,7 @@ defmodule EdgeAdminHealth do
 
   Verifies that all critical services have successfully initialized:
   - Database connection
-  - Admin clustering bootstrap
+  - Admin-cluster membership
   - Metadata computation
   - Netmaker API reachability
   - Netclient connection to admin cluster network
@@ -22,7 +22,7 @@ defmodule EdgeAdminHealth do
   def checks do
     base = [
       %PlugCheckup.Check{name: "Database", module: __MODULE__, function: :database_health},
-      %PlugCheckup.Check{name: "Bootstrap", module: __MODULE__, function: :bootstrap_health},
+      %PlugCheckup.Check{name: "Membership", module: __MODULE__, function: :membership_health},
       %PlugCheckup.Check{name: "Metadata", module: __MODULE__, function: :metadata_health},
       %PlugCheckup.Check{name: "Netmaker API", module: __MODULE__, function: :netmaker_api_health},
       %PlugCheckup.Check{name: "Netclient", module: __MODULE__, function: :netclient_health},
@@ -45,11 +45,11 @@ defmodule EdgeAdminHealth do
     end
   end
 
-  def bootstrap_health do
-    if EdgeAdmin.Admins.Bootstrap.initialized?() do
+  def membership_health do
+    if EdgeAdmin.Admins.Membership.initialized?() do
       :ok
     else
-      {:error, "Bootstrap not initialized"}
+      {:error, "Membership not initialized"}
     end
   end
 

@@ -147,19 +147,19 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
                 }
               }
             },
-            bootstrap: %Schema{
+            membership: %Schema{
               type: :object,
-              description: "Bootstrap initialization metrics",
+              description: "Admin-cluster membership initialization metrics",
               properties: %{
                 steps_completed_total: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Total individual bootstrap steps completed across all restarts"
+                  description: "Total individual membership steps completed across all restarts"
                 },
                 complete_total: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Total full bootstrap sequences completed (success + failure)"
+                  description: "Total full membership sequences completed (success + failure)"
                 }
               }
             },
@@ -502,7 +502,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
             assigned_clusters: 0,
             recomputations_total: 26
           },
-          bootstrap: %{
+          membership: %{
             steps_completed_total: 4,
             complete_total: 1
           },

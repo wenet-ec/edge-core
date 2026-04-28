@@ -63,7 +63,7 @@ defmodule EdgeAdmin.Application do
       EdgeAdminWeb.Telemetry,
       EdgeAdminWeb.Live.NetmakerDashboard.Collector,
       {Oban, Application.fetch_env!(:edge_admin, Oban)},
-      EdgeAdmin.Admins.Bootstrap,
+      EdgeAdmin.Admins.Membership,
       EdgeAdmin.EdgeClusters.Supervisor,
       EdgeAdmin.EdgeClusters,
       EdgeAdmin.Admins.Metadata,

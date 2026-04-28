@@ -490,8 +490,8 @@ defmodule EdgeAdmin.Vpn do
 
   Netmaker reports both name collisions ("invalid network name") and CIDR
   collisions ("network cidr already in use") as 400. We map either of those
-  bodies to `:already_exists` so admin replicas racing on bootstrap can treat
-  losers as no-ops instead of fatal errors.
+  bodies to `:already_exists` so admin replicas racing on membership startup
+  can treat losers as no-ops instead of fatal errors.
   """
   @spec create_network(String.t(), map()) ::
           {:ok, map()} | {:error, :already_exists | :service_unavailable | String.t()}

@@ -91,7 +91,7 @@ defmodule EdgeAdmin.Metrics do
   Returns human-friendly admin metrics by parsing raw Prometheus text from admin PromEx.
 
   ## Returns
-  - `{:ok, %AdminMetrics{}}` - Structured metrics with application, metadata, bootstrap, nodes, oban_queues
+  - `{:ok, %AdminMetrics{}}` - Structured metrics with application, metadata, membership, nodes, oban_queues
   - `{:error, reason}` - PromEx unavailable
   """
   @spec get_admin_metrics() :: {:ok, AdminMetrics.t()} | {:error, term()}

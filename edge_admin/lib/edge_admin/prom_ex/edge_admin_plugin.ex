@@ -4,7 +4,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
   Custom PromEx plugin for edge_admin specific metrics.
 
   Provides business-level metrics for:
-  - Bootstrap process (admin initialization)
+  - Membership process (admin-cluster join)
   - Discovery operations (finding other admins)
   - Metadata recomputation (cluster assignments)
   - Proxy server (HTTP/SOCKS5)
@@ -25,7 +25,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
   def event_metrics(_opts) do
     Event.build(
       :edge_admin_event_metrics,
-      bootstrap_metrics() ++
+      membership_metrics() ++
         discovery_metrics() ++
         metadata_metrics() ++
         proxy_metrics() ++
@@ -41,35 +41,35 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
     )
   end
 
-  defp bootstrap_metrics do
+  defp membership_metrics do
     [
       counter(
-        [:edge_admin, :bootstrap, :step, :total],
-        event_name: [:edge_admin, :bootstrap, :step],
-        description: "Total number of bootstrap steps executed",
+        [:edge_admin, :membership, :step, :total],
+        event_name: [:edge_admin, :membership, :step],
+        description: "Total number of membership steps executed",
         tags: [:step, :status],
-        tag_values: &get_bootstrap_step_tags/1
+        tag_values: &get_membership_step_tags/1
       ),
       distribution(
-        [:edge_admin, :bootstrap, :step, :duration, :milliseconds],
-        event_name: [:edge_admin, :bootstrap, :step],
-        description: "Duration of individual bootstrap steps in milliseconds",
+        [:edge_admin, :membership, :step, :duration, :milliseconds],
+        event_name: [:edge_admin, :membership, :step],
+        description: "Duration of individual membership steps in milliseconds",
         measurement: :duration,
         tags: [:step, :status],
-        tag_values: &get_bootstrap_step_tags/1,
+        tag_values: &get_membership_step_tags/1,
         reporter_options: [buckets: [100, 500, 1_000, 2_000, 5_000, 10_000, 30_000]]
       ),
       counter(
-        [:edge_admin, :bootstrap, :complete, :total],
-        event_name: [:edge_admin, :bootstrap, :complete],
-        description: "Total number of completed bootstrap sequences",
+        [:edge_admin, :membership, :complete, :total],
+        event_name: [:edge_admin, :membership, :complete],
+        description: "Total number of completed membership sequences",
         tags: [:status],
         tag_values: &get_status_tag/1
       ),
       distribution(
-        [:edge_admin, :bootstrap, :complete, :duration, :milliseconds],
-        event_name: [:edge_admin, :bootstrap, :complete],
-        description: "Total duration of the full bootstrap sequence in milliseconds",
+        [:edge_admin, :membership, :complete, :duration, :milliseconds],
+        event_name: [:edge_admin, :membership, :complete],
+        description: "Total duration of the full membership sequence in milliseconds",
         measurement: :duration,
         tags: [:status],
         tag_values: &get_status_tag/1,
@@ -477,7 +477,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
 
   # Tag extraction functions
 
-  defp get_bootstrap_step_tags(%{step: step, status: status}) do
+  defp get_membership_step_tags(%{step: step, status: status}) do
     %{step: to_string(step), status: to_string(status)}
   end
 

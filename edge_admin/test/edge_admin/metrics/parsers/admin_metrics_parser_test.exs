@@ -28,8 +28,8 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     edge_admin_metadata_assigned_clusters 5
     edge_admin_metadata_recomputation_total{reason="new_admin"} 3
     edge_admin_metadata_recomputation_total{reason="lost_admin"} 1
-    edge_admin_bootstrap_step_total{step="vpn"} 1
-    edge_admin_bootstrap_step_total{step="db"} 1
+    edge_admin_membership_step_total{step="vpn"} 1
+    edge_admin_membership_step_total{step="db"} 1
     edge_admin_nodes_health_check_total{result="healthy"} 10
     edge_admin_nodes_health_check_total{result="unhealthy"} 2
     edge_admin_quantum_job_executed_total{job="reconcile"} 100
@@ -137,10 +137,10 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
       assert result["metadata_recomputations"] == 4
     end
 
-    test "sums bootstrap_steps across label combinations" do
+    test "sums membership_steps across label combinations" do
       result = AdminMetricsParser.parse(sample_prometheus_text())
       # vpn(1) + db(1) = 2
-      assert result["bootstrap_steps"] == 2
+      assert result["membership_steps"] == 2
     end
 
     test "sums nodes_health_checks across label combinations" do
@@ -190,7 +190,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     test "counter returns 0 when metric not present" do
       result = AdminMetricsParser.parse(empty_prometheus_text())
       assert result["metadata_recomputations"] == 0
-      assert result["bootstrap_steps"] == 0
+      assert result["membership_steps"] == 0
       assert result["nodes_health_checks"] == 0
     end
   end
@@ -280,7 +280,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
       assert %AdminMetrics{} = metrics
       assert %AdminMetrics.Application{} = metrics.application
       assert %AdminMetrics.Metadata{} = metrics.metadata
-      assert %AdminMetrics.Bootstrap{} = metrics.bootstrap
+      assert %AdminMetrics.Membership{} = metrics.membership
       assert %AdminMetrics.Nodes{} = metrics.nodes
       assert %AdminMetrics.Quantum{} = metrics.quantum
       assert %AdminMetrics.Vpn{} = metrics.vpn

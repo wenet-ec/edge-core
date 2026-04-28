@@ -5,11 +5,11 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   """
 
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Application
-  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Bootstrap
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Commands
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Discovery
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.EventBroker
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Gateways
+  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Membership
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Metadata
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Nodes
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.ObanQueue
@@ -27,7 +27,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
     :timestamp,
     :application,
     :metadata,
-    :bootstrap,
+    :membership,
     :discovery,
     :nodes,
     :quantum,
@@ -50,7 +50,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
       timestamp: DateTime.utc_now(),
       application: Application.from_raw(raw_metrics),
       metadata: Metadata.from_raw(raw_metrics),
-      bootstrap: Bootstrap.from_raw(raw_metrics),
+      membership: Membership.from_raw(raw_metrics),
       discovery: Discovery.from_raw(raw_metrics),
       nodes: Nodes.from_raw(raw_metrics),
       quantum: Quantum.from_raw(raw_metrics),
@@ -161,8 +161,8 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
     end
   end
 
-  defmodule Bootstrap do
-    @moduledoc "Bootstrap initialization metrics"
+  defmodule Membership do
+    @moduledoc "Admin-cluster membership initialization metrics"
 
     @derive Jason.Encoder
     defstruct [
@@ -172,8 +172,8 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
 
     def from_raw(raw) do
       %__MODULE__{
-        steps_completed_total: raw["bootstrap_steps"],
-        complete_total: raw["bootstrap_complete_total"]
+        steps_completed_total: raw["membership_steps"],
+        complete_total: raw["membership_complete_total"]
       }
     end
   end

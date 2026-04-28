@@ -1,15 +1,17 @@
-# edge_admin/lib/edge_admin/admins/bootstrap.ex
-defmodule EdgeAdmin.Admins.Bootstrap do
+# edge_admin/lib/edge_admin/admins/membership.ex
+defmodule EdgeAdmin.Admins.Membership do
   @moduledoc """
-  One-time initialization for admin cluster membership and distributed Erlang setup.
+  Establishes this admin's membership in the admin cluster.
 
-  This GenServer runs exactly once during application startup and performs critical
-  initialization tasks to join the admin cluster and enable distributed coordination.
+  Runs as a one-shot GenServer during application startup. Its only job is to
+  put this admin instance on the admin VPN, wire up Erlang distribution, and
+  register with the syn group so peer admins can find it. Once this completes,
+  the admin is a participating member of the cluster; until it does, the rest
+  of the supervision tree is intentionally held back.
 
   ## Key Concepts
 
   - **Admin Cluster**: VPN network connecting all admin instances for HA coordination
-  - **Bootstrap**: One-time setup that must succeed or application crashes
   - **Erlang Distribution**: Enables inter-admin RPC, syn registry, and clustering
   - **Peer Discovery**: Finds other admins in the cluster via Netmaker API
 
@@ -17,7 +19,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
 
   1. **VPN Network Join**
      - Join admin cluster VPN network
-     - Create network if this is the first admin (bootstrap mode)
+     - Create network if this is the first admin in the cluster
      - Obtain Netmaker host ID for this admin
 
   2. **Erlang Distribution**
@@ -34,7 +36,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
      - Join cluster_scope for Gateway registration
      - Enable cross-admin request routing
 
-  ## Bootstrap Sequence
+  ## Membership Sequence
 
   ```
   1. Ensure Netmaker superadmin exists
@@ -48,7 +50,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
 
   ## Failure Handling
 
-  Bootstrap failures are **FATAL** and crash the supervision tree:
+  Membership failures are **FATAL** and crash the supervision tree:
   - VPN join failure → Can't communicate with peers
   - Erlang distribution failure → Can't coordinate
   - syn initialization failure → Can't route requests
@@ -65,12 +67,12 @@ defmodule EdgeAdmin.Admins.Bootstrap do
 
   ## Examples
 
-      # Bootstrap runs automatically on application start
+      # Membership runs automatically on application start
       # Success: Application continues
       # Failure: Application crashes with detailed error
 
-      # Check if bootstrap completed
-      iex> Bootstrap.initialized?()
+      # Check if membership has been established
+      iex> Membership.initialized?()
       true
   """
 
@@ -86,14 +88,14 @@ defmodule EdgeAdmin.Admins.Bootstrap do
   # =============================================================================
 
   @doc """
-  Starts the Bootstrap GenServer.
+  Starts the Membership GenServer.
   """
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
   @doc """
-  Returns true if bootstrap completed successfully.
+  Returns true if admin-cluster membership has been successfully established.
   Used by health checks.
   """
   def initialized? do
@@ -116,15 +118,15 @@ defmodule EdgeAdmin.Admins.Bootstrap do
 
   @impl true
   def init(_opts) do
-    Logger.info("Bootstrap starting...")
+    Logger.info("Membership startup beginning...")
 
-    case do_bootstrap() do
+    case do_establish_membership() do
       :ok ->
-        Logger.info("Bootstrap completed successfully")
+        Logger.info("Admin-cluster membership established")
         {:ok, %{status: :complete, initialized: true}}
 
       {:error, reason} ->
-        Logger.error("Bootstrap failed: #{inspect(reason)}")
+        Logger.error("Failed to establish admin-cluster membership: #{inspect(reason)}")
         {:stop, reason}
     end
   end
@@ -146,10 +148,10 @@ defmodule EdgeAdmin.Admins.Bootstrap do
   defp admin_wireguard_port, do: Application.get_env(:edge_admin, :admin_wireguard_port)
 
   # =============================================================================
-  # Bootstrap Flow
+  # Membership Flow
   # =============================================================================
 
-  defp do_bootstrap do
+  defp do_establish_membership do
     start_time = System.monotonic_time(:millisecond)
 
     result =
@@ -157,11 +159,11 @@ defmodule EdgeAdmin.Admins.Bootstrap do
            :ok <- step_2_start_erlang_distribution(),
            :ok <- step_3_initialize_syn(),
            :ok <- step_4_discover_peers() do
-        Logger.info("All bootstrap steps completed")
+        Logger.info("All membership steps completed")
         :ok
       else
         {:error, reason} = error ->
-          Logger.error("Bootstrap step failed: #{inspect(reason)}")
+          Logger.error("Membership step failed: #{inspect(reason)}")
           error
       end
 
@@ -174,7 +176,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
       end
 
     :telemetry.execute(
-      [:edge_admin, :bootstrap, :complete],
+      [:edge_admin, :membership, :complete],
       %{duration: duration, count: 1, total: 1},
       %{status: status}
     )
@@ -219,7 +221,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
       end
 
     :telemetry.execute(
-      [:edge_admin, :bootstrap, :step],
+      [:edge_admin, :membership, :step],
       %{duration: duration, count: 1, total: 1},
       %{step: :join_vpn, status: status}
     )
@@ -291,8 +293,8 @@ defmodule EdgeAdmin.Admins.Bootstrap do
 
   # Erlang distribution startup can fail transiently (epmd not yet up,
   # VPN hostname not yet resolvable). Retry a few times before giving up —
-  # if it still won't come up, fail bootstrap so the supervisor crashes the
-  # app and the orchestrator restarts the container.
+  # if it still won't come up, fail membership startup so the supervisor
+  # crashes the app and the orchestrator restarts the container.
   @erlang_dist_max_attempts 5
   @erlang_dist_retry_delay_ms 2_000
 
@@ -317,7 +319,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
       end
 
     :telemetry.execute(
-      [:edge_admin, :bootstrap, :step],
+      [:edge_admin, :membership, :step],
       %{duration: duration, count: 1, total: 1},
       %{step: :start_erlang_distribution, status: status}
     )
@@ -396,7 +398,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
     duration = System.monotonic_time(:millisecond) - start_time
 
     :telemetry.execute(
-      [:edge_admin, :bootstrap, :step],
+      [:edge_admin, :membership, :step],
       %{duration: duration, count: 1, total: 1},
       %{step: :initialize_syn, status: :success}
     )
@@ -420,7 +422,7 @@ defmodule EdgeAdmin.Admins.Bootstrap do
     Logger.info("Peer admin discovery completed")
 
     :telemetry.execute(
-      [:edge_admin, :bootstrap, :step],
+      [:edge_admin, :membership, :step],
       %{duration: duration, count: 1, total: 1},
       %{step: :discover_peers, status: :success}
     )

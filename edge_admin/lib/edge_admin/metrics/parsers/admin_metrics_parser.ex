@@ -3,7 +3,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParser do
   @moduledoc """
   Parses Prometheus text format from admin PromEx endpoint.
 
-  Extracts business metrics (metadata, bootstrap, nodes) and
+  Extracts business metrics (metadata, membership, nodes) and
   application health metrics (BEAM stats, Oban queues).
   """
 
@@ -44,9 +44,9 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParser do
       "metadata_assigned_clusters" => extract_gauge(lines, "edge_admin_metadata_assigned_clusters"),
       "metadata_recomputations" => extract_counter(lines, "edge_admin_metadata_recomputation_total"),
 
-      # Bootstrap
-      "bootstrap_steps" => extract_counter(lines, "edge_admin_bootstrap_step_total"),
-      "bootstrap_complete_total" => extract_counter(lines, "edge_admin_bootstrap_complete_total"),
+      # Membership
+      "membership_steps" => extract_counter(lines, "edge_admin_membership_step_total"),
+      "membership_complete_total" => extract_counter(lines, "edge_admin_membership_complete_total"),
 
       # Discovery
       "discovery_scans_total" => extract_counter(lines, "edge_admin_discovery_scan_complete_total"),

@@ -20,7 +20,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AdminMetricsController do
     Returns application-level metrics from the edge_admin PromEx:
     - Application: uptime, BEAM stats (processes, memory, atoms, ETS tables)
     - Metadata: degraded status, orphaned/assigned clusters
-    - Bootstrap: step counts and full sequence completions
+    - Membership: step counts and full sequence completions
     - Discovery: peer discovery scan, DNS resolution, and connection counts
     - Nodes: health check statistics
     - Commands: delivery runs, per-execution delivery, completions, expirations

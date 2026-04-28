@@ -40,12 +40,12 @@ defmodule EdgeAdmin.Admins.Discovery do
 
   ## Used By
 
-  - `Bootstrap` - Initial peer discovery during startup
+  - `Membership` - Initial peer discovery during admin-cluster join
   - Periodic scheduler (future) - Ongoing peer discovery for new admins
 
   ## Examples
 
-      # Called during bootstrap
+      # Called during membership startup
       iex> Discovery.scan_and_connect_admins()
       :ok
 

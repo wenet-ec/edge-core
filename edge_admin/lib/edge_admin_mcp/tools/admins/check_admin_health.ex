@@ -3,7 +3,7 @@ defmodule EdgeAdminMcp.Tools.Admins.CheckAdminHealth do
   @moduledoc """
   Run all admin health checks and return pass/fail per component.
 
-  Checks: Database, Bootstrap, Metadata, Netmaker API, Netclient VPN, Proxy Servers.
+  Checks: Database, Membership, Metadata, Netmaker API, Netclient VPN, Proxy Servers.
   Use this to diagnose why nodes can't enroll, commands aren't reaching nodes,
   or the admin is in a degraded state.
   """

@@ -142,6 +142,6 @@ COPY ./deploy/local/compose/edge_agent/edge_bashrc /usr/local/bin/edge_bashrc
 RUN sed -i 's/\r$//g' /usr/local/bin/edge_bashrc && \
     chmod +r /usr/local/bin/edge_bashrc
 
-ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint"]
+ENTRYPOINT ["/usr/bin/tini", "-s", "--", "/entrypoint"]
 
 CMD ["/start"]

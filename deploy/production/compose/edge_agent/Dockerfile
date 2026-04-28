@@ -159,6 +159,6 @@ RUN sed -i 's/\r$//g' /usr/local/bin/edge_bashrc && \
 
 WORKDIR /app
 
-ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint"]
+ENTRYPOINT ["/usr/bin/tini", "-s", "--", "/entrypoint"]
 
 CMD ["/start"]

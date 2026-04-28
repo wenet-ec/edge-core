@@ -289,6 +289,13 @@ defmodule EdgeAdmin.Admins.Bootstrap do
   # Step 2: Erlang Distribution
   # =============================================================================
 
+  # Erlang distribution startup can fail transiently (epmd not yet up,
+  # VPN hostname not yet resolvable). Retry a few times before giving up —
+  # if it still won't come up, fail bootstrap so the supervisor crashes the
+  # app and the orchestrator restarts the container.
+  @erlang_dist_max_attempts 5
+  @erlang_dist_retry_delay_ms 2_000
+
   defp step_2_start_erlang_distribution do
     Logger.info("Step 2: Starting Erlang distribution")
 
@@ -299,39 +306,66 @@ defmodule EdgeAdmin.Admins.Bootstrap do
 
     Logger.info("Starting distributed node: #{node_name}")
 
-    result =
-      try do
-        case Node.start(node_name, name_domain: :longnames) do
-          {:ok, _pid} ->
-            :erlang.set_cookie(node(), vpn_cluster_cookie())
-            Logger.info("Erlang distribution started: #{node()}")
-            :ok
-
-          {:error, {:already_started, _pid}} ->
-            :erlang.set_cookie(node(), vpn_cluster_cookie())
-            Logger.info("Erlang distribution already started: #{node()}")
-            :ok
-
-          {:error, reason} ->
-            Logger.warning("Failed to start Erlang distribution (will retry later): #{inspect(reason)}")
-
-            :ok
-        end
-      rescue
-        e ->
-          Logger.warning("Failed to start Erlang distribution (will retry later): #{inspect(e)}")
-          :ok
-      end
+    result = try_start_erlang_distribution(node_name, 1)
 
     duration = System.monotonic_time(:millisecond) - start_time
+
+    status =
+      case result do
+        :ok -> :success
+        {:error, _} -> :failure
+      end
 
     :telemetry.execute(
       [:edge_admin, :bootstrap, :step],
       %{duration: duration, count: 1, total: 1},
-      %{step: :start_erlang_distribution, status: :success}
+      %{step: :start_erlang_distribution, status: status}
     )
 
     result
+  end
+
+  defp try_start_erlang_distribution(node_name, attempt) do
+    case do_start_erlang_distribution(node_name) do
+      :ok ->
+        :ok
+
+      {:error, reason} when attempt < @erlang_dist_max_attempts ->
+        Logger.warning(
+          "Erlang distribution startup failed (attempt #{attempt}/#{@erlang_dist_max_attempts}): " <>
+            "#{inspect(reason)} — retrying in #{@erlang_dist_retry_delay_ms}ms"
+        )
+
+        Process.sleep(@erlang_dist_retry_delay_ms)
+        try_start_erlang_distribution(node_name, attempt + 1)
+
+      {:error, reason} ->
+        Logger.error(
+          "Erlang distribution startup failed after #{@erlang_dist_max_attempts} attempts: " <>
+            "#{inspect(reason)}"
+        )
+
+        {:error, {:erlang_distribution_failed, reason}}
+    end
+  end
+
+  defp do_start_erlang_distribution(node_name) do
+    case Node.start(node_name, name_domain: :longnames) do
+      {:ok, _pid} ->
+        :erlang.set_cookie(node(), vpn_cluster_cookie())
+        Logger.info("Erlang distribution started: #{node()}")
+        :ok
+
+      {:error, {:already_started, _pid}} ->
+        :erlang.set_cookie(node(), vpn_cluster_cookie())
+        Logger.info("Erlang distribution already started: #{node()}")
+        :ok
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  rescue
+    e -> {:error, e}
   end
 
   # =============================================================================

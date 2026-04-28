@@ -51,9 +51,6 @@ cleanup() {
     echo "Cleanup complete"
 }
 
-# Trap EXIT, INT, and TERM signals
-trap cleanup EXIT INT TERM
-
 # Wipe netclient credentials to start fresh every boot
 echo "Wiping netclient credentials..."
 rm -rf /etc/netclient/*
@@ -68,11 +65,11 @@ mix ecto.migrate
 
 # Bootstrap Netmaker superadmin
 echo "Bootstrapping Netmaker superadmin..."
-EDGE_ADMIN_MODE=task mix run --no-start -e "EdgeAdmin.Release.create_netmaker_superadmin()"
+mix run --no-start -e "EdgeAdmin.Release.create_netmaker_superadmin()"
 
 # Bootstrap default cluster
 echo "Bootstrapping default cluster..."
-EDGE_ADMIN_MODE=task mix run --no-start -e "EdgeAdmin.Release.create_default_cluster()"
+mix run --no-start -e "EdgeAdmin.Release.create_default_cluster()"
 
 # Resolve WireGuard port for StatefulSet deployments.
 # If POD_INDEX is set (injected by K8s Downward API), auto-compute the port
@@ -84,6 +81,11 @@ if [ -n "${POD_INDEX:-}" ] && [ -z "${ADMIN_WIREGUARD_PORT:-}" ]; then
     echo "StatefulSet mode: POD_INDEX=${POD_INDEX}, ADMIN_WIREGUARD_PORT=${ADMIN_WIREGUARD_PORT} (base=${_base})"
     unset _base
 fi
+
+# Bootstrap is done — from here on we have side effects (netclient, epmd,
+# wireguard interface) worth cleaning up on shutdown. Install the trap now so
+# bootstrap failures don't trigger misleading "cleaning up" log noise.
+trap cleanup EXIT INT TERM
 
 # Start EPMD daemon for Erlang distribution
 echo "Starting EPMD daemon..."
@@ -108,5 +110,16 @@ export PHX_SERVER=true
 mix phx.server &
 PHOENIX_PID=$!
 
-# Wait for Phoenix server to exit
-wait $PHOENIX_PID
+# Wait for either child to exit. If netclient dies, the server is unreachable
+# from the mesh — bail out and let the orchestrator restart us. Disable
+# errexit around `wait -n` so we can capture the exit code and propagate it.
+set +e
+wait -n $NETCLIENT_PID $PHOENIX_PID
+EXIT_CODE=$?
+set -e
+
+if [ "$EXIT_CODE" -ne 0 ]; then
+    echo "Child process exited with code $EXIT_CODE (netclient=$NETCLIENT_PID, phoenix=$PHOENIX_PID)" >&2
+fi
+
+exit $EXIT_CODE

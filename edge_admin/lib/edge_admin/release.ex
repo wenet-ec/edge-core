@@ -40,7 +40,7 @@ defmodule EdgeAdmin.Release do
   # =============================================================================
 
   def migrate do
-    load_app()
+    boot([])
 
     for repo <- repos() do
       {:ok, _, _} = Migrator.with_repo(repo, &Migrator.run(&1, :up, all: true))
@@ -48,7 +48,7 @@ defmodule EdgeAdmin.Release do
   end
 
   def rollback(repo, version) do
-    load_app()
+    boot([])
 
     {:ok, _, _} = Migrator.with_repo(repo, &Migrator.run(&1, :down, to: version))
   end
@@ -71,8 +71,7 @@ defmodule EdgeAdmin.Release do
     - 1: Failure (API error)
   """
   def create_netmaker_superadmin do
-    load_app()
-    start_http_client()
+    boot([:http])
 
     Logger.info("Checking if Netmaker superadmin exists...")
 
@@ -102,12 +101,12 @@ defmodule EdgeAdmin.Release do
         Logger.info("Successfully created Netmaker superadmin: #{netmaker_superadmin_username()}")
         :ok
 
+      {:error, :already_exists} ->
+        Logger.info("Netmaker superadmin already exists (likely created by a peer replica), skipping")
+        :ok
+
       {:error, :service_unavailable} ->
         Logger.error("Failed to create superadmin: Netmaker service unavailable")
-        System.halt(1)
-
-      {:error, reason} ->
-        Logger.error("Failed to create superadmin: #{inspect(reason)}")
         System.halt(1)
     end
   end
@@ -133,10 +132,7 @@ defmodule EdgeAdmin.Release do
     - 1: Failure (validation error, API error)
   """
   def create_default_cluster do
-    load_app()
-    start_http_client()
-    start_repo()
-    start_phoenix_pubsub()
+    boot([:http, :repo])
 
     case default_cluster_name() do
       nil ->
@@ -186,6 +182,34 @@ defmodule EdgeAdmin.Release do
   end
 
   # =============================================================================
+  # Boot Helpers
+  # =============================================================================
+
+  # Loads the app and starts the runtime dependencies a release task needs.
+  # `parts` selects optional capability groups; `:logger` and `:sentry` are
+  # always started so failures are observable in production.
+  defp boot(parts) do
+    Application.load(@app)
+    {:ok, _} = Application.ensure_all_started(:logger)
+    {:ok, _} = Application.ensure_all_started(:sentry)
+
+    Enum.each(parts, &start_part/1)
+  end
+
+  defp start_part(:http) do
+    {:ok, _} = Application.ensure_all_started(:req)
+  end
+
+  defp start_part(:repo) do
+    {:ok, _} = Application.ensure_all_started(:ecto_sql)
+    {:ok, _} = Application.ensure_all_started(:postgrex)
+
+    for repo <- repos() do
+      {:ok, _} = repo.start_link(pool_size: 2)
+    end
+  end
+
+  # =============================================================================
   # Private Helpers
   # =============================================================================
 
@@ -193,35 +217,6 @@ defmodule EdgeAdmin.Release do
     Application.fetch_env!(@app, :ecto_repos)
   end
 
-  defp load_app do
-    Application.load(@app)
-  end
-
-  defp start_http_client do
-    Application.ensure_all_started(:hackney)
-    Application.ensure_all_started(:req)
-  end
-
-  defp start_repo do
-    Application.ensure_all_started(:postgrex)
-    Application.ensure_all_started(:ecto)
-    Application.ensure_all_started(:ecto_sql)
-
-    for repo <- repos() do
-      {:ok, _} = repo.start_link()
-    end
-  end
-
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
-
-  defp start_phoenix_pubsub do
-    Application.ensure_all_started(:phoenix_pubsub)
-
-    children = [
-      {Phoenix.PubSub, name: EdgeAdmin.PubSub}
-    ]
-
-    {:ok, _} = Supervisor.start_link(children, strategy: :one_for_one)
-  end
 end

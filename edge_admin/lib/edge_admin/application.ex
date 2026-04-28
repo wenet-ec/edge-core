@@ -8,12 +8,9 @@ defmodule EdgeAdmin.Application do
 
   alias EdgeAdmin.Repo.Notifier
 
-  require Logger
-
   @impl true
   def start(_type, _args) do
-    mode = runtime_mode()
-    children = build_children(mode)
+    children = build_children(runtime_mode())
 
     :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{
       config: %{metadata: [:file, :line, :request_id, :mfa, :domain]}
@@ -44,11 +41,7 @@ defmodule EdgeAdmin.Application do
   end
 
   defp runtime_mode do
-    case System.get_env("EDGE_ADMIN_MODE") do
-      "task" -> :task
-      "test" -> :test
-      _ -> :server
-    end
+    if System.get_env("EDGE_ADMIN_MODE") == "test", do: :test, else: :server
   end
 
   defp build_children(:test) do
@@ -58,16 +51,6 @@ defmodule EdgeAdmin.Application do
       {Phoenix.PubSub, name: EdgeAdmin.PubSub},
       {Oban, Application.fetch_env!(:edge_admin, Oban)},
       EdgeAdminWeb.Endpoint
-    ]
-  end
-
-  defp build_children(:task) do
-    [
-      EdgeAdmin.PromEx,
-      EdgeAdmin.Repo,
-      Notifier,
-      {Phoenix.PubSub, name: EdgeAdmin.PubSub},
-      {Oban, Application.fetch_env!(:edge_admin, Oban)}
     ]
   end
 

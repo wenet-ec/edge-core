@@ -484,13 +484,40 @@ defmodule EdgeAdmin.Vpn do
   @doc """
   Creates a Netmaker network.
 
-  Returns `{:ok, network}` or `{:error, :service_unavailable}`.
+  Returns `{:ok, network}`, `{:error, :already_exists}` if another caller created
+  it concurrently (or a network with the same CIDR exists), or
+  `{:error, :service_unavailable}` for other Netmaker failures.
+
+  Netmaker reports both name collisions ("invalid network name") and CIDR
+  collisions ("network cidr already in use") as 400. We map either of those
+  bodies to `:already_exists` so admin replicas racing on bootstrap can treat
+  losers as no-ops instead of fatal errors.
   """
-  @spec create_network(String.t(), map()) :: {:ok, map()} | {:error, :service_unavailable | String.t()}
+  @spec create_network(String.t(), map()) ::
+          {:ok, map()} | {:error, :already_exists | :service_unavailable | String.t()}
   def create_network(network_name, opts \\ %{}) do
     with :ok <- validate_network_name(network_name) do
-      result = Networks.create(network_name, opts)
-      normalize_netmaker_error(result)
+      case network_name |> Networks.create(opts) |> Api.normalize() do
+        {:ok, _} = ok -> ok
+        {:error, {:bad_request, body}} -> classify_create_network_400(body)
+        {:error, :conflict} -> {:error, :already_exists}
+        {:error, _} -> {:error, :service_unavailable}
+      end
+    end
+  end
+
+  # Netmaker returns 400 for both validation errors and uniqueness conflicts —
+  # we recognise duplicate names/CIDRs by message body text. "invalid network
+  # name" is only produced by Netmaker's IsNetworkNameUnique check; pure format
+  # errors (bad chars, length) surface different messages and are pre-rejected
+  # by validate_network_name/1 before we ever call Netmaker.
+  defp classify_create_network_400(body) do
+    message = Api.extract_message(body)
+
+    cond do
+      String.contains?(message, "network cidr already in use") -> {:error, :already_exists}
+      String.contains?(message, "invalid network name") -> {:error, :already_exists}
+      true -> {:error, :service_unavailable}
     end
   end
 
@@ -522,6 +549,9 @@ defmodule EdgeAdmin.Vpn do
   Ensures a network exists, creating it if necessary.
 
   Returns `:ok`, `{:error, :service_unavailable}`, or `{:error, reason}` for validation errors.
+
+  Safe to call concurrently from multiple admin replicas: if another replica
+  wins the create race, this returns `:ok` instead of failing.
   """
   def ensure_network_exists(network_name, create_opts \\ %{}) do
     case get_network(network_name) do
@@ -531,6 +561,7 @@ defmodule EdgeAdmin.Vpn do
       {:error, :not_found} ->
         case create_network(network_name, create_opts) do
           {:ok, _} -> :ok
+          {:error, :already_exists} -> :ok
           error -> error
         end
 
@@ -843,12 +874,30 @@ defmodule EdgeAdmin.Vpn do
   @doc """
   Creates Netmaker superadmin.
 
-  Returns `{:ok, superadmin}` or `{:error, :service_unavailable}`.
+  Returns `{:ok, superadmin}`, `{:error, :already_exists}` if a superadmin was
+  created concurrently by another replica, or `{:error, :service_unavailable}`
+  for other Netmaker failures.
+
+  Netmaker rejects createsuperadmin with 400 + `"superadmin user already exists"`
+  when one is already present; we map that to `:already_exists`.
   """
   def create_superadmin(attrs) do
-    attrs
-    |> Superadmin.create()
-    |> normalize_netmaker_error()
+    case attrs |> Superadmin.create() |> Api.normalize() do
+      {:ok, _} = ok ->
+        ok
+
+      {:error, {:bad_request, body}} ->
+        message = Api.extract_message(body)
+
+        if String.contains?(message, "superadmin user already exists") do
+          {:error, :already_exists}
+        else
+          {:error, :service_unavailable}
+        end
+
+      {:error, _} ->
+        {:error, :service_unavailable}
+    end
   end
 
   @doc """

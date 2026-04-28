@@ -51,9 +51,6 @@ cleanup() {
     echo "Cleanup complete"
 }
 
-# Trap EXIT, INT, and TERM signals
-trap cleanup EXIT INT TERM
-
 # Wipe netclient credentials to start fresh every boot
 echo "Wiping netclient credentials..."
 rm -rf /etc/netclient/*
@@ -82,9 +79,20 @@ if [ -n "${POD_INDEX:-}" ] && [ -z "${ADMIN_WIREGUARD_PORT:-}" ]; then
     unset _base
 fi
 
-# Start EPMD daemon for Erlang distribution (required for admin clustering)
+# Bootstrap is done — from here on we have side effects (netclient, epmd,
+# wireguard interface) worth cleaning up on shutdown. Install the trap now so
+# bootstrap failures don't trigger misleading "cleaning up" log noise.
+trap cleanup EXIT INT TERM
+
+# Start EPMD daemon for Erlang distribution (required for admin clustering).
+# Resolve the erts-* path explicitly to avoid glob expansion ambiguity.
 echo "Starting EPMD daemon..."
-/app/erts-*/bin/epmd -daemon
+EPMD_BIN=$(ls -d /app/erts-*/bin/epmd 2>/dev/null | head -n1)
+if [ -z "$EPMD_BIN" ]; then
+    echo "ERROR: epmd binary not found under /app/erts-*/bin/" >&2
+    exit 1
+fi
+"$EPMD_BIN" -daemon
 
 # Tell netclient where to fetch the DERP map overlay.
 # Admin has DERP_MAP_URL at start time (deploy-time config) — export directly.
@@ -103,5 +111,16 @@ echo "Starting server..."
 /app/bin/server &
 SERVER_PID=$!
 
-# Wait for server to exit
-wait $SERVER_PID
+# Wait for either child to exit. If netclient dies, the server is unreachable
+# from the mesh — bail out and let the orchestrator restart us. Disable
+# errexit around `wait -n` so we can capture the exit code and propagate it.
+set +e
+wait -n $NETCLIENT_PID $SERVER_PID
+EXIT_CODE=$?
+set -e
+
+if [ "$EXIT_CODE" -ne 0 ]; then
+    echo "Child process exited with code $EXIT_CODE (netclient=$NETCLIENT_PID, server=$SERVER_PID)" >&2
+fi
+
+exit $EXIT_CODE

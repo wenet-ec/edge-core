@@ -1,4 +1,4 @@
 #!/bin/sh
 # rel/overlays/bin/create_default_cluster
 cd -P -- "$(dirname -- "$0")"
-EDGE_ADMIN_MODE=task exec ./edge_admin eval EdgeAdmin.Release.create_default_cluster
+exec ./edge_admin eval EdgeAdmin.Release.create_default_cluster

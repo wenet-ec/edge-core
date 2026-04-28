@@ -144,13 +144,19 @@ defmodule EdgeAdmin.Nodes do
   # Private Helpers
   # ===========================================================================
 
-  # Broadcasts metadata recomputation event to all admins in this admin cluster
+  # Broadcasts metadata recomputation event to all admins in this admin cluster.
+  # No-op if PubSub isn't running (e.g. inside a one-shot release task) — there
+  # are no peer admins listening on a transient script's BEAM node anyway.
   defp broadcast_metadata_event(event) do
-    Phoenix.PubSub.broadcast(
-      EdgeAdmin.PubSub,
-      "#{Vpn.admin_cluster_name()}:metadata",
-      event
-    )
+    if Process.whereis(EdgeAdmin.PubSub) do
+      Phoenix.PubSub.broadcast(
+        EdgeAdmin.PubSub,
+        "#{Vpn.admin_cluster_name()}:metadata",
+        event
+      )
+    end
+
+    :ok
   end
 
   # Builds network name for a cluster (node network, not admin network)
@@ -493,6 +499,14 @@ defmodule EdgeAdmin.Nodes do
       case Vpn.create_network(network_name, netmaker_opts) do
         {:ok, _} ->
           Logger.info("Created Netmaker network: #{network_name}")
+          broadcast_metadata_event({:cluster_created, cluster.id})
+          {:ok, cluster}
+
+        {:error, :already_exists} ->
+          # The Netmaker network already exists (left over from a previous run,
+          # or another replica created it concurrently). DB and Netmaker are in
+          # sync — proceed as success.
+          Logger.info("Netmaker network #{network_name} already exists, reusing")
           broadcast_metadata_event({:cluster_created, cluster.id})
           {:ok, cluster}
 

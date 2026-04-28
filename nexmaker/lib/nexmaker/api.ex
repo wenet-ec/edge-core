@@ -131,9 +131,17 @@ defmodule Nexmaker.Api do
     String.contains?(msg, "host already part of network")
   end
 
-  defp extract_message(body) when is_map(body), do: Map.get(body, "Message", "")
-  defp extract_message(body) when is_binary(body), do: body
-  defp extract_message(_), do: ""
+  @doc """
+  Extracts a Netmaker error message from a response body.
+
+  Netmaker error responses are JSON objects of the form `%{"Code" => 400,
+  "Message" => "..."}`. Use this to read the message text without re-implementing
+  the body shape handling.
+  """
+  @spec extract_message(any()) :: String.t()
+  def extract_message(body) when is_map(body), do: Map.get(body, "Message", "")
+  def extract_message(body) when is_binary(body), do: body
+  def extract_message(_), do: ""
 
   @doc """
   Makes an HTTP request to the Netmaker API.

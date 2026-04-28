@@ -571,6 +571,46 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
+  Checks whether a Netmaker network's CIDR has room for one more node.
+
+  Returns:
+    - `:ok` — capacity available
+    - `{:error, {:network_full, info}}` — no room; `info` carries `used`,
+      `capacity`, and `network` so callers can log a clear diagnostic
+    - `{:error, :not_found}` — network doesn't exist in Netmaker
+    - `{:error, :service_unavailable}` — Netmaker can't be queried
+
+  Capacity is computed as `2^(32 - prefix) - 1` to account for the network
+  address that Netmaker's allocator (iplib) skips. WireGuard does not reserve
+  the broadcast address, so it remains usable. We treat `used >= capacity`
+  as full so the next allocation attempt is *guaranteed* to fail rather than
+  *probably* fail.
+  """
+  @spec network_has_capacity(String.t()) ::
+          :ok
+          | {:error, {:network_full, %{used: non_neg_integer(), capacity: non_neg_integer(), network: String.t()}}}
+          | {:error, :not_found | :service_unavailable}
+  def network_has_capacity(network_name) do
+    with {:ok, network} <- get_network(network_name),
+         cidr when is_binary(cidr) <- network["addressrange"],
+         {:ok, {_ip, prefix}} <- parse_cidr(cidr),
+         {:ok, nodes} <- list_nodes(network_name) do
+      capacity = Integer.pow(2, 32 - prefix) - 1
+      used = length(nodes)
+
+      if used >= capacity do
+        {:error, {:network_full, %{used: used, capacity: capacity, network: network_name}}}
+      else
+        :ok
+      end
+    else
+      {:error, :not_found} -> {:error, :not_found}
+      {:error, :service_unavailable} -> {:error, :service_unavailable}
+      _ -> {:error, :service_unavailable}
+    end
+  end
+
+  @doc """
   Lists all nodes in a Netmaker network.
 
   Returns `{:ok, nodes}` or `{:error, :service_unavailable}`.

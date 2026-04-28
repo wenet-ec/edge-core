@@ -188,6 +188,17 @@ defmodule EdgeAdmin.Admins.Membership do
   # Step 1: VPN Network Join
   # =============================================================================
 
+  # Bounded waits prevent silent hangs when Netmaker/netclient never produce a
+  # result we expect. The total per-step budget is `:join_timeout_seconds`
+  # (env: `MEMBERSHIP_JOIN_TIMEOUT_SECONDS`, default 60s). Polling cadence is
+  # held at 2s — operators tune the budget, not the cadence.
+  @join_retry_delay_ms 2_000
+
+  defp join_max_attempts do
+    timeout_seconds = Application.get_env(:edge_admin, :join_timeout_seconds, 60)
+    max(1, div(timeout_seconds * 1_000, @join_retry_delay_ms))
+  end
+
   defp step_1_join_vpn do
     network_name = admin_cluster_name()
     admin_name = admin_name()
@@ -198,17 +209,23 @@ defmodule EdgeAdmin.Admins.Membership do
     # Build join options, adding static port if configured
     join_opts = build_join_opts(admin_name)
 
+    max_attempts = join_max_attempts()
+
     result =
       with :ok <- ensure_network_exists(network_name),
+           :ok <- check_capacity(network_name),
            {:ok, token} <- Vpn.get_default_enrollment_key(network_name),
            {:ok, _} <- Vpn.join_network([{:token, token} | join_opts]),
-           :ok <- wait_for_netmaker(admin_name),
-           :ok <- wait_for_netclient(network_name) do
+           :ok <- wait_for_netmaker(admin_name, 1, max_attempts),
+           :ok <- wait_for_netclient(network_name, 1, max_attempts) do
         Logger.info("Successfully joined admin cluster network")
         :ok
       else
         {:error, reason} ->
           Logger.error("Failed to join admin cluster network: #{inspect(reason)}")
+          # If we got far enough that a host might exist in Netmaker, delete
+          # it so we don't leave a hostless orphan eating CIDR slots on retry.
+          maybe_cleanup_orphan_self(admin_name, reason)
           {:error, {:vpn_join_failed, reason}}
       end
 
@@ -227,6 +244,33 @@ defmodule EdgeAdmin.Admins.Membership do
     )
 
     result
+  end
+
+  # Pre-flight: refuse to attempt join if the admin cluster CIDR is exhausted.
+  # Without this check, `wait_for_netclient` would hang because Netmaker accepts
+  # the host registration but never creates a node (IP allocation fails inside
+  # an async goroutine). Bail out early with a clear error instead.
+  defp check_capacity(network_name) do
+    case Vpn.network_has_capacity(network_name) do
+      :ok ->
+        :ok
+
+      {:error, {:network_full, %{used: used, capacity: capacity}}} ->
+        Logger.error(
+          "Admin cluster network #{network_name} is full (#{used}/#{capacity} addresses used). " <>
+            "Expand ADMIN_CLUSTER_SUBNET or evict stale admins before retrying."
+        )
+
+        {:error, {:admin_cluster_full, network_name, used, capacity}}
+
+      {:error, :not_found} ->
+        # Network was just created by ensure_network_exists/1, so this would be
+        # a transient inconsistency. Treat as service_unavailable to retry.
+        {:error, :service_unavailable}
+
+      {:error, _} = error ->
+        error
+    end
   end
 
   defp ensure_network_exists(network_name) do
@@ -256,34 +300,80 @@ defmodule EdgeAdmin.Admins.Membership do
     end
   end
 
-  defp wait_for_netmaker(admin_name) do
+  defp wait_for_netmaker(_admin_name, attempt, max_attempts) when attempt > max_attempts do
+    {:error, :netmaker_registration_timeout}
+  end
+
+  defp wait_for_netmaker(admin_name, attempt, max_attempts) do
     case Vpn.get_host_id(admin_name) do
       {:ok, _host_id} ->
         Logger.info("Host #{admin_name} registered in Netmaker API")
         :ok
 
       _ ->
-        Process.sleep(2000)
-        wait_for_netmaker(admin_name)
+        Logger.debug("Waiting for #{admin_name} to appear in Netmaker (attempt #{attempt}/#{max_attempts})")
+
+        Process.sleep(@join_retry_delay_ms)
+        wait_for_netmaker(admin_name, attempt + 1, max_attempts)
     end
   end
 
-  defp wait_for_netclient(network_name) do
+  defp wait_for_netclient(_network_name, attempt, max_attempts) when attempt > max_attempts do
+    {:error, :netclient_join_timeout}
+  end
+
+  defp wait_for_netclient(network_name, attempt, max_attempts) do
     case Vpn.netclient_health_check() do
       {:ok, status, info} when status in [:healthy, :degraded] ->
         if network_name in info[:networks] do
           Logger.info("Netclient connected to #{network_name}")
           :ok
         else
-          Logger.debug("Waiting for netclient to join #{network_name}, current networks: #{inspect(info[:networks])}")
-          Process.sleep(2000)
-          wait_for_netclient(network_name)
+          Logger.debug(
+            "Waiting for netclient to join #{network_name} (attempt #{attempt}/#{max_attempts}), " <>
+              "current networks: #{inspect(info[:networks])}"
+          )
+
+          Process.sleep(@join_retry_delay_ms)
+          wait_for_netclient(network_name, attempt + 1, max_attempts)
         end
 
       {:ok, :unhealthy, _info} ->
-        Logger.debug("Waiting for netclient to become healthy...")
-        Process.sleep(2000)
-        wait_for_netclient(network_name)
+        Logger.debug("Waiting for netclient to become healthy (attempt #{attempt}/#{max_attempts})")
+
+        Process.sleep(@join_retry_delay_ms)
+        wait_for_netclient(network_name, attempt + 1, max_attempts)
+    end
+  end
+
+  # Step 1 may have registered this admin as a host in Netmaker before failing
+  # (e.g. node creation hung, netclient didn't pick up the network). Such a
+  # host is an orphan: it occupies a slot but provides no functionality. Delete
+  # it before propagating the error so the next restart starts from a clean
+  # slate. Best-effort — failures here are logged but don't change the outcome.
+  #
+  # Skipped for `:admin_cluster_full` because we never attempted the join, so
+  # nothing was created.
+  defp maybe_cleanup_orphan_self(_admin_name, {:admin_cluster_full, _, _, _}), do: :ok
+
+  defp maybe_cleanup_orphan_self(admin_name, _reason) do
+    case Vpn.get_host_id(admin_name) do
+      {:ok, host_id} ->
+        Logger.warning("Cleaning up orphan host #{admin_name} (#{host_id}) before exiting")
+
+        case Vpn.delete_host(host_id) do
+          {:ok, _} ->
+            Logger.info("Deleted orphan host #{host_id}")
+            :ok
+
+          {:error, reason} ->
+            Logger.warning("Failed to delete orphan host #{host_id}: #{inspect(reason)}")
+            :ok
+        end
+
+      _ ->
+        # No host registered (or Netmaker unreachable) — nothing to clean up.
+        :ok
     end
   end
 

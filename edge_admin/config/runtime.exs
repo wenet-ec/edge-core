@@ -297,6 +297,11 @@ config :edge_admin,
   cluster_reconciliation_schedule: cluster_reconciliation_schedule,
   zombie_admin_cleanup_schedule: zombie_admin_cleanup_schedule,
   zombie_admin_checkin_threshold_minutes: zombie_admin_checkin_threshold_minutes,
+  # === Admin-cluster membership startup ===
+  # Per-step timeout for membership join waits (Netmaker host registration,
+  # netclient network join). Pre-flight + bounded waits replace the silent hang
+  # that used to occur when CIDR was exhausted; tune up for slow Netmaker.
+  join_timeout_seconds: get_env("MEMBERSHIP_JOIN_TIMEOUT_SECONDS", :integer, 60),
   # === VPN Sync Configuration ===
   # Disable periodic VPN config sync on severely resource-starved machines (default: true)
   vpn_config_sync_enabled: get_env("VPN_CONFIG_SYNC_ENABLED", :boolean, true),

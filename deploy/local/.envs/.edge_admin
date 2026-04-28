@@ -262,8 +262,8 @@ ADMIN_DISCOVERY_PORT=44000
 # --- Quantum LocalScheduler (runs on every instance) ---
 # ADMIN_DISCOVERY_SCHEDULE=*/5 * * * *        # Scan VPN for other admin peers (default: every 5min)
 # METADATA_RECOMPUTATION_SCHEDULE=* * * * *   # Recompute cluster ownership assignments (default: every 1min)
-NODE_HEALTH_CHECK_SCHEDULE=* * * * *           # Ping owned nodes to detect unhealthy status (default: every 1min)
-NODE_HEALTH_CHECK_CONCURRENCY=100
+# NODE_HEALTH_CHECK_SCHEDULE=* * * * *           # Ping owned nodes to detect unhealthy status (default: every 1min)
+# NODE_HEALTH_CHECK_CONCURRENCY=100
 # EXECUTION_DELIVERY_SCHEDULE=* * * * *        # Deliver pending commands to agents (default: every 1min)
 # EXECUTION_EXPIRATION_SCHEDULE=* * * * *      # Sweep and expire stale command executions (default: every 1min)
 
@@ -273,8 +273,14 @@ NODE_HEALTH_CHECK_CONCURRENCY=100
 # VPN_CONFIG_SYNC_ENABLED=true
 
 # Zombie Admin Cleanup — weak leader only, reduces duplicate work across admin instances.
-ZOMBIE_ADMIN_CLEANUP_SCHEDULE=*/30 * * * *
-ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES=120
+# ZOMBIE_ADMIN_CLEANUP_SCHEDULE=*/30 * * * *
+# ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES=120
+
+# Admin-cluster membership startup — per-step wait budget (seconds) before
+# the admin gives up and crashes the supervision tree. Applies independently
+# to "wait for Netmaker host registration" and "wait for netclient to join
+# the admin VPN network." Bump up if Netmaker is slow on this deployment.
+# MEMBERSHIP_JOIN_TIMEOUT_SECONDS=60
 
 # --- Oban Cron (job inserted by leader; any instance competes to execute) ---
 

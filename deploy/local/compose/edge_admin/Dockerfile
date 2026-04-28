@@ -1,9 +1,7 @@
 # deploy/local/compose/edge_admin/Dockerfile
 
-# Stage 0: netclient (DERP fork)
-#
-# Default: pull the pre-built image from GHCR. The fork's CI publishes a new
-# image on every v*-derp tag push.
+# Stage 0a: Pull pre-built netclient (DERP fork)
+# The fork's CI publishes a new image on every v*-derp tag push.
 ARG NETCLIENT_VERSION=v1.5.1-derp
 FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 
@@ -21,7 +19,7 @@ FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 #     echo "netclient cloned at $(git rev-parse HEAD)"
 # RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /netclient -ldflags="-s -w" .
 
-# Main Elixir stage
+# Stage 1: Devcontainer (live reload, source bind-mounted at runtime)
 FROM elixir:1.19.5-otp-28-slim AS elixir-dev-stage
 
 ARG APP_HOME=/app
@@ -60,7 +58,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   dnsutils \
   netcat-openbsd \
   tcpdump \
-  iptables && \
+  iptables \
+  # PID 1 zombie reaper for the BEAM (matches production for parity)
+  tini && \
   # Set locale in same layer
   sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen && \
   # Create dummies to suppress netclient init system detection errors
@@ -117,8 +117,6 @@ COPY ./deploy/local/compose/edge_admin/migrate /migrate
 RUN sed -i 's/\r$//g' /migrate
 RUN chmod +x /migrate
 
-RUN mix deps.get --only hex rebar || true
-
-ENTRYPOINT ["/entrypoint"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint"]
 
 CMD ["/start"]

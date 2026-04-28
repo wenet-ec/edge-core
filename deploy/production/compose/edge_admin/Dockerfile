@@ -1,21 +1,18 @@
 # deploy/production/compose/edge_admin/Dockerfile
 
-# -----------------------------------------------
-# Stage 0: Pull pre-built netclient (DERP fork)
-# -----------------------------------------------
+# Stage 0a: Pull pre-built netclient (DERP fork)
 ARG NETCLIENT_VERSION=v1.5.1-derp
 FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 
-# -----------------------------------------------
 # Stage 1: Build the OTP release
-# -----------------------------------------------
 FROM elixir:1.19.5-otp-28-slim AS builder
 
 # Install build dependencies
-RUN apt-get update -y && \
-    apt-get install -y build-essential cmake git && \
-    apt-get clean && \
-    rm -f /var/lib/apt/lists/*_*
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
+    apt-get update -y && \
+    apt-get install -y build-essential cmake git
 
 WORKDIR /app
 
@@ -50,25 +47,30 @@ RUN --mount=type=cache,target=/root/.hex \
     --mount=type=cache,target=/root/.mix \
     mix compile --parallel
 
+# Package source code for Sentry so production stack traces include source context
+RUN --mount=type=cache,target=/root/.hex \
+    --mount=type=cache,target=/root/.mix \
+    mix sentry.package_source_code
+
 # Create release
 RUN --mount=type=cache,target=/root/.hex \
     --mount=type=cache,target=/root/.mix \
     mix release
 
-# -----------------------------------------------
-# Stage 2: Production runtime image (optimized)
-# -----------------------------------------------
-FROM debian:stable-20260406-slim
+# Stage 2: Production runtime image
+FROM debian:stable-20260421-slim
 
 # Install runtime dependencies in single layer
 # Grouped by purpose for maintainability
-RUN apt-get update -y && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
+    apt-get update -y && \
     apt-get install -y --no-install-recommends \
     # Erlang runtime dependencies
     libstdc++6 \
     openssl \
     libncurses6 \
-    locales \
     ca-certificates \
     # Essential tools (healthcheck, troubleshooting, netclient download, capability checks)
     curl \
@@ -76,25 +78,20 @@ RUN apt-get update -y && \
     procps \
     # Network debugging (minimal set for production troubleshooting)
     iproute2 \
-    iputils-ping \
     iptables \
     # WireGuard management (wg show, wg showconf)
     wireguard-tools \
-    # Proxy troubleshooting
-    netcat-openbsd && \
-    # Set locale in same layer
-    sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen && \
+    # PID 1 zombie reaper for the BEAM
+    tini \
+    # IANA timezone database — required for timezone-aware Oban/Quantum schedules
+    tzdata && \
     # Create dummies to suppress netclient init system detection errors
     # Netclient checks init type for service installation, not needed in containers
-    mkdir -p /sbin /bin && ln -s /bin/true /sbin/init && ln -s /bin/true /bin/busybox && \
-    # Clean up in same layer to reduce image size
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/*
+    mkdir -p /sbin /bin && ln -s /bin/true /sbin/init && ln -s /bin/true /bin/busybox
 
-# Set locale environment variables
-ENV LANG=en_US.UTF-8
-ENV LANGUAGE=en_US:en
-ENV LC_ALL=en_US.UTF-8
+# Set locale environment variables (C.UTF-8 is built into glibc — no locales pkg needed)
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
 
 # Admin always runs userspace WireGuard
 ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
@@ -106,7 +103,7 @@ ENV RELEASE_DISTRIBUTION=none
 # Keep epmd in the 40k port range to avoid colliding with user-deployed Erlang/Elixir apps
 ENV ERL_EPMD_PORT=44369
 
-# Copy netclient built from source
+# Copy netclient binary from builder stage
 COPY --from=netclient-builder /netclient /usr/local/bin/netclient
 RUN chmod +x /usr/local/bin/netclient && \
     mkdir -p /etc/netclient && \
@@ -136,6 +133,6 @@ RUN mkdir -p /app/data /tmp/erl_crash && \
 # But the release files are owned by app user
 WORKDIR /app
 
-ENTRYPOINT ["/entrypoint"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint"]
 
 CMD ["/start"]

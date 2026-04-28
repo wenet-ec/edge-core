@@ -1,11 +1,12 @@
 # deploy/local/compose/edge_agent/Dockerfile
 
-# Stage 0: netclient (DERP fork)
-#
-# Default: pull the pre-built image from GHCR. The fork's CI publishes a new
-# image on every v*-derp tag push.
+# Stage 0a: Pull pre-built netclient (DERP fork)
+# The fork's CI publishes a new image on every v*-derp tag push.
 ARG NETCLIENT_VERSION=v1.5.1-derp
 FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
+
+# Stage 0b: Pull pre-built node_exporter
+FROM quay.io/prometheus/node-exporter:v1.11.1 AS node-exporter-builder
 
 # Debug alternative: build from source in-Dockerfile. Uncomment this block (and
 # comment out the two lines above) when iterating on the netclient fork locally,
@@ -21,7 +22,7 @@ FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 #     echo "netclient cloned at $(git rev-parse HEAD)"
 # RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /netclient -ldflags="-s -w" .
 
-# Main Elixir stage - Use Debian slim (better Elixir/Erlang compatibility than Alpine)
+# Stage 1: Devcontainer (live reload, source bind-mounted at runtime)
 FROM elixir:1.19.5-otp-28-slim AS elixir-dev-stage
 
 ARG APP_HOME=/app
@@ -64,7 +65,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   # systemd-resolved: provides resolvectl for netclient DNS management on systemd hosts
   systemd-resolved \
   # mDNS resolution: enables .local hostname resolution via nss-mdns
-  libnss-mdns && \
+  libnss-mdns \
+  # PID 1 zombie reaper for the BEAM (matches production for parity)
+  tini && \
   # Enable mDNS resolution in nsswitch.conf
   sed -i 's/^hosts:.*/hosts: files mdns4_minimal [NOTFOUND=return] dns/' /etc/nsswitch.conf && \
   # Set locale in same layer
@@ -81,13 +84,9 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-# Install node_exporter for host metrics collection
-ENV NODE_EXPORTER_VERSION="1.11.1"
-RUN curl -fsSL https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz -o node_exporter.tar.gz && \
-    tar xzf node_exporter.tar.gz && \
-    mv node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64/node_exporter /usr/local/bin/ && \
-    chmod +x /usr/local/bin/node_exporter && \
-    rm -rf node_exporter.tar.gz node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64*
+# Copy node_exporter binary from official Docker image
+COPY --from=node-exporter-builder /bin/node_exporter /usr/local/bin/node_exporter
+RUN chmod +x /usr/local/bin/node_exporter
 
 # Use HTTP for Netmaker API (local dev — no TLS certs)
 ENV NETMAKER_API_SCHEME=http
@@ -143,8 +142,6 @@ COPY ./deploy/local/compose/edge_agent/edge_bashrc /usr/local/bin/edge_bashrc
 RUN sed -i 's/\r$//g' /usr/local/bin/edge_bashrc && \
     chmod +r /usr/local/bin/edge_bashrc
 
-RUN mix deps.get --only hex rebar || true
-
-ENTRYPOINT ["/entrypoint"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint"]
 
 CMD ["/start"]

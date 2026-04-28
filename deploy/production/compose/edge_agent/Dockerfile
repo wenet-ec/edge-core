@@ -1,21 +1,21 @@
 # deploy/production/compose/edge_agent/Dockerfile
 
-# -----------------------------------------------
-# Stage 0: Pull pre-built netclient (DERP fork)
-# -----------------------------------------------
+# Stage 0a: Pull pre-built netclient (DERP fork)
 ARG NETCLIENT_VERSION=v1.5.1-derp
 FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 
-# -----------------------------------------------
+# Stage 0b: Pull pre-built node_exporter
+FROM quay.io/prometheus/node-exporter:v1.11.1 AS node-exporter-builder
+
 # Stage 1: Build the OTP release
-# -----------------------------------------------
 FROM elixir:1.19.5-otp-28-slim AS builder
 
 # Install build dependencies
-RUN apt-get update -y && \
-    apt-get install -y build-essential git sqlite3 libsqlite3-dev && \
-    apt-get clean && \
-    rm -f /var/lib/apt/lists/*_*
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
+    apt-get update -y && \
+    apt-get install -y build-essential git sqlite3 libsqlite3-dev
 
 WORKDIR /app
 
@@ -55,25 +55,23 @@ RUN --mount=type=cache,target=/root/.hex \
     --mount=type=cache,target=/root/.mix \
     mix release
 
-# -----------------------------------------------
-# Stage 2: Production runtime image (optimized)
-# -----------------------------------------------
-FROM debian:stable-20260406-slim
-
-ENV NODE_EXPORTER_VERSION="1.11.1"
+# Stage 2: Production runtime image
+FROM debian:stable-20260421-slim
 
 # Install runtime dependencies in single layer
 # Agent leverages host tools via hostscript (nsenter/chroot to /host)
 # So we only install what the AGENT itself needs, not what commands need
-RUN apt-get update -y && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
+    apt-get update -y && \
     apt-get install -y --no-install-recommends \
     # Erlang runtime dependencies
     libstdc++6 \
     openssl \
     libncurses6 \
-    locales \
     ca-certificates \
-    # Essential tools (healthcheck, metrics download, SSH server, capability checks)
+    # Essential tools (healthcheck, SSH server, capability checks)
     curl \
     libcap2-bin \
     # Process management (pgrep, pkill for netclient cleanup)
@@ -87,38 +85,45 @@ RUN apt-get update -y && \
     # systemd-resolved: provides resolvectl for netclient DNS management on systemd hosts
     systemd-resolved \
     # mDNS resolution: enables .local hostname resolution via nss-mdns
-    libnss-mdns && \
+    libnss-mdns \
+    # PID 1 zombie reaper for the BEAM
+    tini \
+    # IANA timezone database — required for timezone-aware Oban/Quantum schedules
+    tzdata \
+    # Operator debugging — agent is shell-friendly: operators SSH in to troubleshoot
+    iproute2 \
+    iputils-ping \
+    iptables \
+    dnsutils \
+    netcat-openbsd \
+    bash-completion \
+    vim-tiny \
+    less \
+    jq && \
     # Enable mDNS resolution in nsswitch.conf
     sed -i 's/^hosts:.*/hosts: files mdns4_minimal [NOTFOUND=return] dns/' /etc/nsswitch.conf && \
-    # Set locale in same layer
-    sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen && \
     # Create dummies to suppress netclient init system detection errors
     # Netclient checks init type for service installation, not needed in containers
-    mkdir -p /sbin /bin && ln -s /bin/true /sbin/init && ln -s /bin/true /bin/busybox && \
-    # Install node_exporter in same layer
-    curl -fsSL https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz -o node_exporter.tar.gz && \
-    tar xzf node_exporter.tar.gz && \
-    mv node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64/node_exporter /usr/local/bin/ && \
-    chmod +x /usr/local/bin/node_exporter && \
-    # Clean up in same layer to reduce image size
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/* node_exporter.tar.gz node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64*
+    mkdir -p /sbin /bin && ln -s /bin/true /sbin/init && ln -s /bin/true /bin/busybox
 
-# Copy netclient built from source
+# Copy netclient binary from builder stage
 COPY --from=netclient-builder /netclient /usr/local/bin/netclient
 RUN chmod +x /usr/local/bin/netclient
 ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
 
-# Set locale environment variables
-ENV LANG=en_US.UTF-8
-ENV LANGUAGE=en_US:en
-ENV LC_ALL=en_US.UTF-8
+# Set locale environment variables (C.UTF-8 is built into glibc — no locales pkg needed)
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
 
 # Disable automatic distribution startup — agent starts it dynamically after detecting LAN IP
 ENV RELEASE_DISTRIBUTION=none
 
 # Keep epmd in the 40k port range to avoid colliding with user-deployed Erlang/Elixir apps
 ENV ERL_EPMD_PORT=44369
+
+# Copy node_exporter binary from official Docker image
+COPY --from=node-exporter-builder /bin/node_exporter /usr/local/bin/node_exporter
+RUN chmod +x /usr/local/bin/node_exporter
 
 # Copy wireguard_exporter binary from official Docker image
 COPY --from=mindflavor/prometheus-wireguard-exporter:3.6.6 /usr/local/bin/prometheus_wireguard_exporter /usr/local/bin/prometheus_wireguard_exporter
@@ -154,6 +159,6 @@ RUN sed -i 's/\r$//g' /usr/local/bin/edge_bashrc && \
 
 WORKDIR /app
 
-ENTRYPOINT ["/entrypoint"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint"]
 
 CMD ["/start"]

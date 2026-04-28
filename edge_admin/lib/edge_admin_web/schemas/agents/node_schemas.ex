@@ -26,7 +26,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         network_name: %Schema{
           type: :string,
           description: "Netmaker network name (must start with 'cluster-')",
-          example: "cluster-default"
+          example: "cluster-test"
         },
         id_type: %Schema{
           type: :string,

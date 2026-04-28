@@ -13,7 +13,7 @@ defmodule Nexmaker.CliParserTest do
       output = """
       [
         {
-          "network": "cluster-default",
+          "network": "cluster-test",
           "node_id": "abc-123",
           "connected": true,
           "ipv4_addr": "10.0.0.1/24",
@@ -23,7 +23,7 @@ defmodule Nexmaker.CliParserTest do
       """
 
       assert {:ok, [network]} = CliParser.parse_list_output(output)
-      assert network["network"] == "cluster-default"
+      assert network["network"] == "cluster-test"
       assert network["node_id"] == "abc-123"
       assert network["connected"] == true
       assert network["ipv4_addr"] == "10.0.0.1/24"
@@ -159,9 +159,9 @@ defmodule Nexmaker.CliParserTest do
     test "parses single network with one peer" do
       output = """
       {
-        "cluster-default": [
+        "cluster-test": [
           {
-            "network": "cluster-default",
+            "network": "cluster-test",
             "name": "admin-abc",
             "address": "10.0.0.2",
             "is_extclient": false,
@@ -173,8 +173,8 @@ defmodule Nexmaker.CliParserTest do
       """
 
       assert {:ok, results} = CliParser.parse_ping_output(output)
-      assert Map.has_key?(results, "cluster-default")
-      assert [peer] = results["cluster-default"]
+      assert Map.has_key?(results, "cluster-test")
+      assert [peer] = results["cluster-test"]
       assert peer["name"] == "admin-abc"
       assert peer["address"] == "10.0.0.2"
       assert peer["connected"] == true
@@ -414,7 +414,7 @@ defmodule Nexmaker.CliParserTest do
       {
         "interface": {"name": "nm-0", "public_key": "abc123"},
         "peers": {
-          "cluster-default": [
+          "cluster-test": [
             {"public_key": "xyz", "endpoint": "1.2.3.4:51820", "allowed_ips": ["10.0.0.2/32"]}
           ]
         }

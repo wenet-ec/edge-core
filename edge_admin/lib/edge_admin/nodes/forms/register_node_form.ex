@@ -111,7 +111,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     network_name = get_field(changeset, :network_name)
 
     if network_name && changeset.valid? do
-      # Parse cluster name from network name (e.g., "cluster-default" -> "default")
+      # Parse cluster name from network name (e.g., "cluster-prod" -> "prod")
       cluster_name = String.replace_prefix(network_name, "cluster-", "")
 
       case get_cluster_fn.(cluster_name) do

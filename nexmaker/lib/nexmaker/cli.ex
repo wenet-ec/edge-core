@@ -247,7 +247,7 @@ defmodule Nexmaker.Cli do
   ## Examples
 
       {:ok, networks} = Nexmaker.Cli.read_nodes()
-      # => [%{"network" => "cluster-default", "connected" => true, ...}]
+      # => [%{"network" => "cluster-test", "connected" => true, ...}]
   """
   @spec read_nodes() :: {:ok, [map()]} | {:error, any()}
   def read_nodes do
@@ -359,7 +359,7 @@ defmodule Nexmaker.Cli do
 
   ## Examples
 
-      {:ok, :healthy, %{networks: ["cluster-default"]}} = Nexmaker.Cli.health_check()
+      {:ok, :healthy, %{networks: ["cluster-test"]}} = Nexmaker.Cli.health_check()
   """
   @spec health_check(keyword()) ::
           {:ok, :healthy | :degraded | :unhealthy, map()} | {:error, any()}
@@ -536,7 +536,7 @@ defmodule Nexmaker.Cli do
       {:ok, %{"peers" => peers}} = Nexmaker.Cli.list_peers()
 
       # List peers for specific network
-      {:ok, data} = Nexmaker.Cli.list_peers(network: "cluster-default")
+      {:ok, data} = Nexmaker.Cli.list_peers(network: "cluster-test")
   """
   @spec list_peers(keyword()) :: {:ok, map()} | {:error, any()}
   def list_peers(opts \\ []) do
@@ -592,9 +592,9 @@ defmodule Nexmaker.Cli do
 
   ## Ping Result Structure (when json: true)
       %{
-        "cluster-default" => [
+        "cluster-test" => [
           %{
-            "network" => "cluster-default",
+            "network" => "cluster-test",
             "name" => "admin-abc123",
             "address" => "100.64.0.4",
             "is_extclient" => false,

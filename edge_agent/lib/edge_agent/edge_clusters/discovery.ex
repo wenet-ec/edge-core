@@ -32,7 +32,7 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   ## Examples
 
       iex> Discovery.discover_admins()
-      {:ok, "cluster-default", ["http://100.64.0.4:44000"]}
+      {:ok, "cluster-test", ["http://100.64.0.4:44000"]}
 
       iex> Discovery.discover_admins()
       {:ok, nil, []}
@@ -50,7 +50,7 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   Discover admins in the cluster.
 
   Returns `{:ok, network_name, admin_urls}` where network_name is the Netmaker
-  network name (e.g. "cluster-default") or nil if none found, and admin_urls is
+  network name (e.g. "cluster-test") or nil if none found, and admin_urls is
   a list of HTTP URLs using VPN IPs (e.g. ["http://100.64.0.4:44000"]).
 
   Always stores discovered admins (even empty list) in Settings so other

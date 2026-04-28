@@ -77,6 +77,19 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
       assert {:ok, cluster} = apply(%{"ipv4_range" => "100.64.1.0/24"})
       assert cluster.name =~ ~r/^[a-z0-9]+$/
     end
+
+    test "name 'default' is rejected as reserved" do
+      changeset = build_changeset(%{"name" => "default", "ipv4_range" => "100.64.1.0/24"})
+      assert %{name: [msg]} = errors_on(changeset)
+      assert msg =~ "reserved"
+    end
+
+    test "names containing 'default' as a substring are accepted" do
+      assert {:ok, cluster} =
+               apply(%{"name" => "my-default", "ipv4_range" => "100.64.1.0/24"})
+
+      assert cluster.name == "my-default"
+    end
   end
 
   # ---------------------------------------------------------------------------

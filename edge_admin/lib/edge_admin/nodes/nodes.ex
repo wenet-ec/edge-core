@@ -110,7 +110,7 @@ defmodule EdgeAdmin.Nodes do
       {:ok, %Node{id: "abc-123", cluster: %Cluster{}, ...}}
 
       # Register or update a node from agent
-      iex> register_node(%{"node_id" => "abc-123", "network_name" => "cluster-default", ...})
+      iex> register_node(%{"node_id" => "abc-123", "network_name" => "cluster-test", ...})
       {:ok, %Node{}}
 
       # Create a cluster

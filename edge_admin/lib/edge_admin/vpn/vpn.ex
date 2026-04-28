@@ -1217,7 +1217,7 @@ defmodule EdgeAdmin.Vpn do
 
   ## Examples
 
-      iex> Vpn.find_node_by_host("cluster-default", "host-uuid-123")
+      iex> Vpn.find_node_by_host("cluster-test", "host-uuid-123")
       {:ok, %{"id" => "node-uuid-456", "hostid" => "host-uuid-123", "address" => "100.64.0.1/24", ...}}
   """
   @spec find_node_by_host(String.t(), String.t()) :: {:ok, map()} | {:error, :not_found | :service_unavailable}
@@ -1250,7 +1250,7 @@ defmodule EdgeAdmin.Vpn do
 
   ## Examples
 
-      iex> Vpn.find_node_id_by_host("cluster-default", "host-uuid-123")
+      iex> Vpn.find_node_id_by_host("cluster-test", "host-uuid-123")
       {:ok, "node-uuid-456"}
   """
   @spec find_node_id_by_host(String.t(), String.t()) :: {:ok, String.t()} | {:error, :not_found | :service_unavailable}

@@ -109,7 +109,7 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
     test "wrong prefix (host- instead of node-) is invalid" do
       assert {:error, :invalid_dns_format} =
                Authentication.authenticate_and_parse(
-                 "host-abc123.cluster-default.nm.internal",
+                 "host-abc123.cluster-test.nm.internal",
                  "any"
                )
     end
@@ -117,7 +117,7 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
     test "cluster segment missing cluster- prefix is invalid" do
       assert {:error, :invalid_dns_format} =
                Authentication.authenticate_and_parse(
-                 "node-abc123.default.nm.internal",
+                 "node-abc123.test.nm.internal",
                  "any"
                )
     end
@@ -125,20 +125,20 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
     test "wrong domain suffix is invalid" do
       assert {:error, :invalid_dns_format} =
                Authentication.authenticate_and_parse(
-                 "node-abc123.cluster-default.wrong.domain",
+                 "node-abc123.cluster-test.wrong.domain",
                  "any"
                )
     end
 
     test "valid DNS format hits DB lookup" do
       # identifier captured by regex is "abc123" (after stripping "node-" prefix)
-      stub(EdgeAdmin.NodesMock, :list_proxy_chain_identifiers, fn "default" ->
+      stub(EdgeAdmin.NodesMock, :list_proxy_chain_identifiers, fn "test" ->
         {:ok, %{"abc123" => stub_node()}}
       end)
 
       assert {:ok, :chain, _node} =
                Authentication.authenticate_and_parse(
-                 "node-abc123.cluster-default.nm.internal",
+                 "node-abc123.cluster-test.nm.internal",
                  "any"
                )
     end
@@ -179,15 +179,15 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
     test "known node ID resolves to chain mode" do
       node = stub_node("abc123")
 
-      # DNS: node-abc123.cluster-default.nm.internal
+      # DNS: node-abc123.cluster-test.nm.internal
       # regex captures identifier "abc123" (everything after "node-" up to next dot)
-      expect(EdgeAdmin.NodesMock, :list_proxy_chain_identifiers, fn "default" ->
+      expect(EdgeAdmin.NodesMock, :list_proxy_chain_identifiers, fn "test" ->
         {:ok, %{"abc123" => node}}
       end)
 
       assert {:ok, :chain, ^node} =
                Authentication.authenticate_and_parse(
-                 "node-abc123.cluster-default.nm.internal",
+                 "node-abc123.cluster-test.nm.internal",
                  "any"
                )
     end
@@ -195,26 +195,26 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
     test "alias resolves to the node it points to" do
       node = stub_node("abc123")
 
-      # DNS: node-web.cluster-default.nm.internal → identifier "web"
-      expect(EdgeAdmin.NodesMock, :list_proxy_chain_identifiers, fn "default" ->
+      # DNS: node-web.cluster-test.nm.internal → identifier "web"
+      expect(EdgeAdmin.NodesMock, :list_proxy_chain_identifiers, fn "test" ->
         {:ok, %{"abc123" => node, "web" => node}}
       end)
 
       assert {:ok, :chain, ^node} =
                Authentication.authenticate_and_parse(
-                 "node-web.cluster-default.nm.internal",
+                 "node-web.cluster-test.nm.internal",
                  "any"
                )
     end
 
     test "unknown identifier returns node_not_found" do
-      expect(EdgeAdmin.NodesMock, :list_proxy_chain_identifiers, fn "default" ->
+      expect(EdgeAdmin.NodesMock, :list_proxy_chain_identifiers, fn "test" ->
         {:ok, %{"other" => stub_node("other")}}
       end)
 
       assert {:error, :node_not_found} =
                Authentication.authenticate_and_parse(
-                 "node-unknown.cluster-default.nm.internal",
+                 "node-unknown.cluster-test.nm.internal",
                  "any"
                )
     end

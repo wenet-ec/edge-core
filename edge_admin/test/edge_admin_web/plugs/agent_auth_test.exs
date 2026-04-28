@@ -8,7 +8,7 @@ defmodule EdgeAdminWeb.Plugs.AgentAuthTest do
   alias EdgeAdminWeb.Plugs.AgentAuth
 
   defp stub_node(id \\ "node-abc123") do
-    %{id: id, cluster: %{name: "cluster-default"}}
+    %{id: id, cluster: %{name: "cluster-test"}}
   end
 
   defp lookup_returning(result) do

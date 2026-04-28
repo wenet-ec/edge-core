@@ -168,7 +168,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
   operation(:create,
     summary: "Create a new cluster",
     description:
-      "Create a new edge cluster with optional IP range.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+      "Create a new edge cluster with optional IP range. The name `default` is reserved (used as a URL keyword on convenience routes) and will be rejected with HTTP 422.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
     request_body:
       {"Cluster creation parameters", "application/json", ClusterSchemas.ClusterCreateRequest, required: true},
     responses: %{

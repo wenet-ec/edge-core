@@ -133,6 +133,28 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterFormTest do
   end
 
   # ---------------------------------------------------------------------------
+  # changeset/1 — reserved names
+  # ---------------------------------------------------------------------------
+
+  describe "changeset/1 — reserved names" do
+    test "name 'default' is rejected as reserved" do
+      assert {:error, changeset} = CreateClusterForm.changeset(valid_attrs(%{"name" => "default"}))
+      assert %{name: [msg]} = errors_on(changeset)
+      assert msg =~ "reserved"
+    end
+
+    test "names containing 'default' as a substring are accepted" do
+      assert {:ok, result} = CreateClusterForm.changeset(valid_attrs(%{"name" => "my-default"}))
+      assert result["name"] == "my-default"
+    end
+
+    test "name 'default-prod' is accepted (only the bare 'default' is reserved)" do
+      assert {:ok, result} = CreateClusterForm.changeset(valid_attrs(%{"name" => "default-prod"}))
+      assert result["name"] == "default-prod"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # changeset/1 — ipv4_range format validation (shallow regex check)
   # ---------------------------------------------------------------------------
 

@@ -12,14 +12,14 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
   end
 
-  defp cluster_found(_name), do: {:ok, %{name: "default"}}
+  defp cluster_found(_name), do: {:ok, %{name: "test"}}
   defp cluster_not_found(_name), do: {:error, :not_found}
 
   defp valid_attrs(overrides \\ %{}) do
     Map.merge(
       %{
         "node_id" => Ecto.UUID.generate(),
-        "network_name" => "cluster-default",
+        "network_name" => "cluster-test",
         "id_type" => "persistent",
         "http_port" => 4000,
         "ssh_port" => 40_022,
@@ -42,7 +42,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
     test "all required fields present succeeds" do
       assert {:ok, result} = RegisterNodeForm.changeset(valid_attrs(), &cluster_found/1)
       assert result["id_type"] == "persistent"
-      assert result["network_name"] == "cluster-default"
+      assert result["network_name"] == "cluster-test"
       assert result["http_port"] == 4000
     end
 

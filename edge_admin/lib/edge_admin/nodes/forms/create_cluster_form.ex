@@ -35,6 +35,11 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
      |> apply_action!(:insert)}
   end
 
+  # "default" is reserved — it's a URL keyword on `/api/v1/clusters/default/...`
+  # routes that resolves to whichever cluster `DEFAULT_CLUSTER_NAME` points at.
+  # Also enforced in `EdgeAdmin.Nodes.Schemas.Cluster.changeset/2`.
+  @reserved_names ~w(default)
+
   defp validate_name(changeset) do
     changeset
     |> validate_required([:name])
@@ -42,6 +47,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
     |> validate_format(:name, ~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
       message: "must be lowercase alphanumeric with hyphens, cannot start/end with hyphen"
     )
+    |> validate_exclusion(:name, @reserved_names, message: "is reserved")
   end
 
   defp validate_ipv4_range(changeset) do

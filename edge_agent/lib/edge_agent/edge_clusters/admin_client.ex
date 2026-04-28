@@ -56,7 +56,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
       iex> AdminClient.register_node(%{
         node_id: "abc-123",
         id_type: "persistent",
-        network_name: "cluster-default",
+        network_name: "cluster-test",
         http_port: 44000
       })
       {:ok, %{"api_token" => "eyJ...", "proxy_password" => "secret"}}

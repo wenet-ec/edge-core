@@ -69,6 +69,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
     |> validate_required([:name, :ipv4_range])
     |> validate_length(:name, max: 24)
     |> validate_format(:name, ~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/)
+    |> validate_exclusion(:name, ~w(default), message: "is reserved")
     |> validate_number(:node_limit, greater_than: 0)
     |> validate_ipv4_cidr_format()
     |> validate_ipv4_exclusions()

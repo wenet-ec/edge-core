@@ -274,7 +274,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     netmaker_host_id = admin_info.netmaker_host_id
 
     # Join VPN network for this cluster using direct API
-    # cluster_name is already normalized (e.g., "cluster-default")
+    # cluster_name is already normalized (e.g., "cluster-test")
     case join_network(cluster_name, netmaker_host_id) do
       :ok ->
         # Register in syn with admin_name to avoid overriding other admins' Gateways
@@ -464,7 +464,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   # ===========================================================================
 
   defp join_network(cluster_name, host_id, attempt \\ 1, max_attempts \\ 3) do
-    # cluster_name is already normalized (e.g., "cluster-default")
+    # cluster_name is already normalized (e.g., "cluster-test")
     # Add this host to the cluster network via direct API
     # Netmaker handles DNS automatically (no custom DNS entries needed)
     case Vpn.add_host_to_network(host_id, cluster_name) do

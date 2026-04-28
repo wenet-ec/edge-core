@@ -90,7 +90,7 @@ defmodule EdgeAdmin.Mixfile do
       # API and MCP
       {:open_api_spex, "~> 3.22"},
       {:redoc_ui_plug, "~> 0.2"},
-      {:anubis_mcp, "~> 1.1"},
+      {:anubis_mcp, "~> 1.2"},
 
       # Database
       {:ecto_sql, "~> 3.13"},
@@ -146,7 +146,7 @@ defmodule EdgeAdmin.Mixfile do
       {:syn, "~> 3.4"},
 
       # Event Streaming
-      {:gnat, "~> 1.13"},
+      {:gnat, "~> 1.14"},
       {:brod, "~> 4.5"},
       {:amqp, "~> 4.1"},
       {:redix, "~> 1.5"},

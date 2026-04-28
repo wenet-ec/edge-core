@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin_mcp/tools/admins/get_admin_cluster.ex
-defmodule EdgeAdminMcp.Tools.Admins.GetAdminCluster do
+# edge_admin/lib/edge_admin_mcp/tools/admins/get_my_admin_cluster.ex
+defmodule EdgeAdminMcp.Tools.Admins.GetMyAdminCluster do
   @moduledoc "Get the admin cluster this admin belongs to — all peer admin instances, their assigned edge clusters, degraded flag, and current weak leader."
   use EdgeAdminMcp, :tool
 

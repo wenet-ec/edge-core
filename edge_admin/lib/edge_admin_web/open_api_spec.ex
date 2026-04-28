@@ -17,6 +17,7 @@ defmodule EdgeAdminWeb.OpenApiSpec do
     # Admins.Metadata
     "/api/v1/admins/me",
     "/api/v1/admins/my_admin_cluster",
+    "/api/v1/admins/admin_clusters",
     "/api/v1/admins/edge_clusters",
     "/api/v1/admins/orphaned_clusters",
     # Admins.Metrics

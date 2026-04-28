@@ -74,7 +74,8 @@ defmodule EdgeAdminMcp.Server do
 
   # ── Admin info ──────────────────────────────────────────────────────────────
   component(EdgeAdminMcp.Tools.Admins.GetAdmin)
-  component(EdgeAdminMcp.Tools.Admins.GetAdminCluster)
+  component(EdgeAdminMcp.Tools.Admins.GetMyAdminCluster)
+  component(EdgeAdminMcp.Tools.Admins.ListAdminClusters)
   component(EdgeAdminMcp.Tools.Admins.ListEdgeClusters)
   component(EdgeAdminMcp.Tools.Admins.ListOrphanedClusters)
   component(EdgeAdminMcp.Tools.Admins.CheckAdminHealth)

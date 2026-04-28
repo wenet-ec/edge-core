@@ -16,7 +16,7 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminClusterController do
     summary: "Get this admin's admin cluster",
     description: "Returns metadata and peer topology for the admin cluster this admin belongs to.",
     responses: %{
-      200 => {"Admin cluster topology", "application/json", AdminSchemas.AdminClusterResponse}
+      200 => {"Admin cluster topology", "application/json", AdminSchemas.MyAdminClusterResponse}
     }
   )
 

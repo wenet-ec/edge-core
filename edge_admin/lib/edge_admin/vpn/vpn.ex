@@ -482,6 +482,64 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
+  Lists every admin cluster network in Netmaker, joined with its nodes and hosts.
+
+  Filters Netmaker's full network list to those whose name starts with
+  `"admin-cluster-"` (the convention enforced by `build_network_name/2`).
+  For each, fetches the network's nodes and joins them against the global host
+  list so each member carries both node-level (address, lastcheckin) and
+  host-level (name, endpoint, port) detail.
+
+  This is a raw Netmaker proxy: shapes mirror Netmaker's API and may include
+  stale members. Callers in the admin domain should normalise to
+  domain-friendly output (see `EdgeAdmin.Admins.list_admin_clusters/0`).
+
+  Returns `{:ok, [%{network: net_map, members: [%{node: node, host: host}, ...]}]}`
+  or `{:error, :service_unavailable}`.
+  """
+  @spec list_admin_cluster_networks() :: {:ok, [map()]} | {:error, :service_unavailable}
+  def list_admin_cluster_networks do
+    with {:ok, networks} <- list_networks(),
+         {:ok, hosts} <- fetch_all_hosts() do
+      hosts_by_id = Map.new(hosts, fn host -> {host["id"], host} end)
+
+      admin_networks =
+        networks
+        |> Enum.filter(&admin_cluster_network?/1)
+        |> Enum.sort_by(& &1["netid"])
+
+      result =
+        Enum.reduce_while(admin_networks, [], fn network, acc ->
+          case list_nodes(network["netid"]) do
+            {:ok, nodes} ->
+              members =
+                nodes
+                |> Enum.map(fn node ->
+                  %{node: node, host: Map.get(hosts_by_id, node["hostid"])}
+                end)
+                |> Enum.reject(fn %{host: host} -> is_nil(host) end)
+
+              {:cont, [%{network: network, members: members} | acc]}
+
+            {:error, _} = error ->
+              {:halt, error}
+          end
+        end)
+
+      case result do
+        {:error, _} = error -> error
+        list when is_list(list) -> {:ok, Enum.reverse(list)}
+      end
+    end
+  end
+
+  defp admin_cluster_network?(%{"netid" => netid}) when is_binary(netid) do
+    String.starts_with?(netid, "admin-cluster-")
+  end
+
+  defp admin_cluster_network?(_), do: false
+
+  @doc """
   Creates a Netmaker network.
 
   Returns `{:ok, network}`, `{:error, :already_exists}` if another caller created

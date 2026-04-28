@@ -115,6 +115,7 @@ defmodule EdgeAdminWeb.Router do
     scope "/admins", Admins do
       get("/me", AdminController, :show)
       get("/my_admin_cluster", AdminClusterController, :show)
+      get("/admin_clusters", AdminClustersController, :index)
       get("/edge_clusters", EdgeClustersController, :index)
       get("/orphaned_clusters", OrphanedClustersController, :index)
     end

@@ -112,12 +112,12 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
     })
   end
 
-  defmodule AdminCluster do
+  defmodule MyAdminCluster do
     @moduledoc false
 
     schema(%{
-      title: "AdminCluster",
-      description: "Admin cluster topology and state",
+      title: "MyAdminCluster",
+      description: "Topology and state of the admin cluster this admin belongs to.",
       type: :object,
       properties: %{
         name: %Schema{
@@ -179,11 +179,15 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
     })
   end
 
-  defmodule AdminClusterResponse do
+  defmodule MyAdminClusterResponse do
     @moduledoc false
 
     schema(
-      CommonSchemas.single_response(AdminCluster, "AdminClusterResponse", "Single admin cluster topology response")
+      CommonSchemas.single_response(
+        MyAdminCluster,
+        "MyAdminClusterResponse",
+        "Topology and state of the admin cluster this admin belongs to"
+      )
     )
   end
 
@@ -283,6 +287,128 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
         AdminDiscoveryData,
         "Internal.AdminDiscoveryResponse",
         "Admin identity returned during agent VPN bootstrap discovery"
+      )
+    )
+  end
+
+  defmodule AdminClusterMember do
+    @moduledoc false
+
+    schema(%{
+      title: "AdminClusterMember",
+      description:
+        "An admin instance present in a Netmaker admin-cluster network. May include stale/disconnected entries.",
+      type: :object,
+      properties: %{
+        name: %Schema{type: :string, description: "Admin name (e.g., admin-k7m3n2p9x4j6)"},
+        vpn_hostname: %Schema{type: :string, description: "DNS hostname inside the admin cluster network"},
+        netmaker_host_id: %Schema{type: :string, description: "Netmaker host ID (UUID)"},
+        ipv4_address: %Schema{
+          type: :string,
+          description: "IPv4 address assigned within the admin cluster CIDR (without prefix length)",
+          nullable: true
+        },
+        wireguard_ip_address: %Schema{
+          type: :string,
+          description: "IP address WireGuard peers send tunnel packets to (public or LAN-reachable)",
+          nullable: true
+        },
+        wireguard_port: %Schema{
+          type: :integer,
+          description: "WireGuard listen port",
+          nullable: true
+        },
+        use_static_port: %Schema{
+          type: :boolean,
+          description: "True when the admin pins WireGuard to a fixed port across restarts"
+        },
+        status: %Schema{
+          type: :string,
+          enum: ["online", "offline", "disconnected"],
+          description:
+            "Netmaker-derived status: online (recent checkin), offline (stale checkin), disconnected (admin disabled)",
+          nullable: true
+        },
+        last_checked_in: %Schema{
+          type: :string,
+          format: :"date-time",
+          description: "Last time this admin's netclient reported in to Netmaker (ISO 8601)",
+          nullable: true
+        }
+      },
+      required: [:name, :vpn_hostname, :netmaker_host_id],
+      example: %{
+        name: "admin-7k3m9p2n",
+        vpn_hostname: "admin-7k3m9p2n.admin-cluster-main.nm.internal",
+        netmaker_host_id: "f272e703-b48f-4b61-b4c1-bfe4fffde62b",
+        ipv4_address: "100.64.0.1",
+        wireguard_ip_address: "10.0.0.7",
+        wireguard_port: 51_820,
+        use_static_port: true,
+        status: "online",
+        last_checked_in: "2026-04-28T12:34:56Z"
+      }
+    })
+  end
+
+  defmodule AdminCluster do
+    @moduledoc false
+
+    schema(%{
+      title: "AdminCluster",
+      description: "An admin cluster as known to Netmaker, plus its admin members.",
+      type: :object,
+      properties: %{
+        name: %Schema{type: :string, description: "Admin cluster network name (e.g., admin-cluster-main)"},
+        ipv4_range: %Schema{type: :string, description: "IPv4 CIDR for the admin cluster network"},
+        admin_count: %Schema{type: :integer, description: "Number of admins in this cluster"},
+        admins: %Schema{
+          type: :array,
+          items: AdminClusterMember,
+          description: "Admins present in this cluster, sorted by name"
+        }
+      },
+      required: [:name, :ipv4_range, :admin_count, :admins],
+      example: %{
+        name: "admin-cluster-main",
+        ipv4_range: "100.64.0.0/24",
+        admin_count: 1,
+        admins: [
+          %{
+            name: "admin-7k3m9p2n",
+            vpn_hostname: "admin-7k3m9p2n.admin-cluster-main.nm.internal",
+            netmaker_host_id: "f272e703-b48f-4b61-b4c1-bfe4fffde62b",
+            ipv4_address: "100.64.0.1",
+            wireguard_ip_address: "10.0.0.7",
+            wireguard_port: 51_820,
+            use_static_port: true,
+            status: "online",
+            last_checked_in: "2026-04-28T12:34:56Z"
+          }
+        ]
+      }
+    })
+  end
+
+  defmodule AdminClusters do
+    @moduledoc false
+
+    schema(%{
+      title: "AdminClusters",
+      description: "All admin clusters Netmaker knows about, sorted by name.",
+      type: :array,
+      items: AdminCluster
+    })
+  end
+
+  defmodule AdminClustersResponse do
+    @moduledoc false
+
+    schema(
+      CommonSchemas.single_response(
+        AdminClusters,
+        "AdminClustersResponse",
+        "All admin clusters Netmaker knows about"
       )
     )
   end

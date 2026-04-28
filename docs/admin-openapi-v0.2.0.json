@@ -396,6 +396,12 @@
         "title": "SshUsername",
         "type": "object"
       },
+      "AdminClusters": {
+        "description": "All admin clusters Netmaker knows about, sorted by name.",
+        "items": { "$ref": "#/components/schemas/AdminCluster" },
+        "title": "AdminClusters",
+        "type": "array"
+      },
       "SelfUpdateRequestResponse": {
         "description": "Self-update request information",
         "example": {
@@ -1133,6 +1139,16 @@
         "title": "ChangeClusterRequest",
         "type": "object"
       },
+      "MyAdminClusterResponse": {
+        "description": "Topology and state of the admin cluster this admin belongs to",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/MyAdminCluster" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
+        },
+        "required": ["data", "meta"],
+        "title": "MyAdminClusterResponse",
+        "type": "object"
+      },
       "AgentMetricsResponse": {
         "description": "Application-level metrics from edge_agent PromEx (BEAM stats, Oban, business metrics).\n",
         "example": {
@@ -1536,7 +1552,50 @@
         "type": "object"
       },
       "AdminCluster": {
-        "description": "Admin cluster topology and state",
+        "description": "An admin cluster as known to Netmaker, plus its admin members.",
+        "example": {
+          "admin_count": 1,
+          "admins": [
+            {
+              "ipv4_address": "100.64.0.1",
+              "last_checked_in": "2026-04-28T12:34:56Z",
+              "name": "admin-7k3m9p2n",
+              "netmaker_host_id": "f272e703-b48f-4b61-b4c1-bfe4fffde62b",
+              "status": "online",
+              "use_static_port": true,
+              "vpn_hostname": "admin-7k3m9p2n.admin-cluster-main.nm.internal",
+              "wireguard_ip_address": "10.0.0.7",
+              "wireguard_port": 51820
+            }
+          ],
+          "ipv4_range": "100.64.0.0/24",
+          "name": "admin-cluster-main"
+        },
+        "properties": {
+          "admin_count": {
+            "description": "Number of admins in this cluster",
+            "type": "integer"
+          },
+          "admins": {
+            "description": "Admins present in this cluster, sorted by name",
+            "items": { "$ref": "#/components/schemas/AdminClusterMember" },
+            "type": "array"
+          },
+          "ipv4_range": {
+            "description": "IPv4 CIDR for the admin cluster network",
+            "type": "string"
+          },
+          "name": {
+            "description": "Admin cluster network name (e.g., admin-cluster-main)",
+            "type": "string"
+          }
+        },
+        "required": ["name", "ipv4_range", "admin_count", "admins"],
+        "title": "AdminCluster",
+        "type": "object"
+      },
+      "MyAdminCluster": {
+        "description": "Topology and state of the admin cluster this admin belongs to.",
         "example": {
           "degraded": false,
           "name": "admin-cluster-1",
@@ -1598,7 +1657,7 @@
           "weak_leader",
           "topology"
         ],
-        "title": "AdminCluster",
+        "title": "MyAdminCluster",
         "type": "object"
       },
       "NodePaginatedResponse": {
@@ -1661,6 +1720,68 @@
         "title": "EnrollmentKeyPaginatedResponse",
         "type": "object"
       },
+      "AdminClusterMember": {
+        "description": "An admin instance present in a Netmaker admin-cluster network. May include stale/disconnected entries.",
+        "example": {
+          "ipv4_address": "100.64.0.1",
+          "last_checked_in": "2026-04-28T12:34:56Z",
+          "name": "admin-7k3m9p2n",
+          "netmaker_host_id": "f272e703-b48f-4b61-b4c1-bfe4fffde62b",
+          "status": "online",
+          "use_static_port": true,
+          "vpn_hostname": "admin-7k3m9p2n.admin-cluster-main.nm.internal",
+          "wireguard_ip_address": "10.0.0.7",
+          "wireguard_port": 51820
+        },
+        "properties": {
+          "ipv4_address": {
+            "description": "IPv4 address assigned within the admin cluster CIDR (without prefix length)",
+            "nullable": true,
+            "type": "string"
+          },
+          "last_checked_in": {
+            "description": "Last time this admin's netclient reported in to Netmaker (ISO 8601)",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "description": "Admin name (e.g., admin-k7m3n2p9x4j6)",
+            "type": "string"
+          },
+          "netmaker_host_id": {
+            "description": "Netmaker host ID (UUID)",
+            "type": "string"
+          },
+          "status": {
+            "description": "Netmaker-derived status: online (recent checkin), offline (stale checkin), disconnected (admin disabled)",
+            "enum": ["online", "offline", "disconnected"],
+            "nullable": true,
+            "type": "string"
+          },
+          "use_static_port": {
+            "description": "True when the admin pins WireGuard to a fixed port across restarts",
+            "type": "boolean"
+          },
+          "vpn_hostname": {
+            "description": "DNS hostname inside the admin cluster network",
+            "type": "string"
+          },
+          "wireguard_ip_address": {
+            "description": "IP address WireGuard peers send tunnel packets to (public or LAN-reachable)",
+            "nullable": true,
+            "type": "string"
+          },
+          "wireguard_port": {
+            "description": "WireGuard listen port",
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "required": ["name", "vpn_hostname", "netmaker_host_id"],
+        "title": "AdminClusterMember",
+        "type": "object"
+      },
       "SshUsernameCreateRequest": {
         "description": "Create a new SSH username for a node, optionally with password and/or public keys",
         "example": {
@@ -1720,14 +1841,14 @@
         "title": "SshUsernameCreateRequest",
         "type": "object"
       },
-      "AdminClusterResponse": {
-        "description": "Single admin cluster topology response",
+      "AdminClustersResponse": {
+        "description": "All admin clusters Netmaker knows about",
         "properties": {
-          "data": { "$ref": "#/components/schemas/AdminCluster" },
+          "data": { "$ref": "#/components/schemas/AdminClusters" },
           "meta": { "$ref": "#/components/schemas/Meta" }
         },
         "required": ["data", "meta"],
-        "title": "AdminClusterResponse",
+        "title": "AdminClustersResponse",
         "type": "object"
       },
       "CommandExecutionPaginatedResponse": {
@@ -3386,7 +3507,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AdminClusterResponse"
+                  "$ref": "#/components/schemas/MyAdminClusterResponse"
                 }
               }
             },
@@ -3394,6 +3515,38 @@
           }
         },
         "summary": "Get this admin's admin cluster",
+        "tags": ["Admins.Metadata"]
+      }
+    },
+    "/api/v1/admins/admin_clusters": {
+      "get": {
+        "callbacks": {},
+        "description": "Lists every admin cluster Netmaker knows about, with each cluster's admins.\nIncludes admins this instance is not a member of (cross-cluster visibility)\nand may include stale entries — inspect the `status` and `last_checked_in`\nfields per admin to identify them.\n",
+        "operationId": "EdgeAdminWeb.Controllers.Admins.AdminClustersController.index",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminClustersResponse"
+                }
+              }
+            },
+            "description": "Admin clusters"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                }
+              }
+            },
+            "description": "Netmaker unavailable"
+          }
+        },
+        "summary": "List all admin clusters from Netmaker",
         "tags": ["Admins.Metadata"]
       }
     },

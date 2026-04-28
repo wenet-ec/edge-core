@@ -369,7 +369,7 @@ MCP clients discover available tools dynamically via the standard `tools/list` m
 
 ### Tool Surface
 
-The MCP tool surface mirrors the REST API — anything you can do via the REST API you can do via MCP. Tools are grouped by domain: admin info, clusters, nodes, aliases, enrollment keys, commands, command executions, SSH credentials, self-updates, and metrics. `check_admin_health` is MCP-only: it runs all subsystem checks (Database, Bootstrap, Metadata, Netmaker API, Netclient VPN, Proxy Servers) in parallel and returns a structured pass/fail per component — useful for diagnosing enrollment or connectivity failures from an AI assistant.
+The MCP tool surface mirrors the REST API — anything you can do via the REST API you can do via MCP. Tools are grouped by domain: admin info, clusters, nodes, aliases, enrollment keys, commands, command executions, SSH credentials, self-updates, and metrics. `check_admin_health` is MCP-only: it runs all subsystem checks (Database, Membership, Metadata, Netmaker API, Netclient VPN, Proxy Servers) in parallel and returns a structured pass/fail per component — useful for diagnosing enrollment or connectivity failures from an AI assistant.
 
 For the current tool list with full input schemas, call `tools/list` on a running admin — that is always authoritative.
 

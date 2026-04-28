@@ -106,7 +106,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   - `{:ok, admin_name}` - Admin responded and identified itself
   - `{:error, reason}` - Not reachable or not an admin
 
-  GET /api/v1/admins/self/discovery
+  GET /api/v1/admins/me/discovery
   """
   @spec probe(String.t()) :: {:ok, String.t()} | {:error, term()}
   def probe(url) do
@@ -116,7 +116,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
       retry: false
     ]
 
-    case Req.get("#{url}/api/v1/admins/self/discovery", opts) do
+    case Req.get("#{url}/api/v1/admins/me/discovery", opts) do
       {:ok, %{status: 200, body: %{"data" => %{"name" => admin_name}}}} ->
         {:ok, admin_name}
 

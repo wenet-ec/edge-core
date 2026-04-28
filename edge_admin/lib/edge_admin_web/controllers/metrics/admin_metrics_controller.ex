@@ -10,12 +10,12 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AdminMetricsController do
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
   plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
-  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:show_self]
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:show]
 
   tags(["Admins.Metrics"])
 
-  operation(:show_self,
-    summary: "Get admin metrics for self",
+  operation(:show,
+    summary: "Get metrics for this admin",
     description: """
     Returns application-level metrics from the edge_admin PromEx:
     - Application: uptime, BEAM stats (processes, memory, atoms, ETS tables)
@@ -41,9 +41,9 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AdminMetricsController do
   @doc """
   Returns admin application metrics (PromEx).
   """
-  def show_self(conn, _params) do
+  def show(conn, _params) do
     with {:ok, metrics} <- Metrics.get_admin_metrics() do
-      render(conn, :show_self, conn: conn, metrics: metrics)
+      render(conn, :show, conn: conn, metrics: metrics)
     end
   end
 end

@@ -36,7 +36,7 @@ scrape_configs:
   - job_name: "admin-metrics"
     static_configs:
       - targets: ["edge_admin_a1:44000", "edge_admin_a2:44000", "edge_admin_b1:44000"]
-    metrics_path: "/api/v1/admins/metrics/self/raw"
+    metrics_path: "/api/v1/admins/me/metrics/raw"
     authorization:
       type: Bearer
       credentials: supersecretkey123456789

@@ -13,8 +13,8 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminController do
   tags(["Admins.Metadata"])
 
   operation(:show,
-    summary: "Get this admin's identity",
-    description: "Returns this admin's identity and configuration from metadata",
+    summary: "Get the current admin",
+    description: "Returns the current admin's identity and configuration from metadata.",
     responses: %{
       200 => {"Admin identity", "application/json", AdminSchemas.AdminResponse}
     }

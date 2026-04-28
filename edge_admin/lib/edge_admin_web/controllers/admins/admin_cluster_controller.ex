@@ -13,8 +13,8 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminClusterController do
   tags(["Admins.Metadata"])
 
   operation(:show,
-    summary: "Get admin cluster topology",
-    description: "Returns admin cluster metadata and peer topology",
+    summary: "Get this admin's admin cluster",
+    description: "Returns metadata and peer topology for the admin cluster this admin belongs to.",
     responses: %{
       200 => {"Admin cluster topology", "application/json", AdminSchemas.AdminClusterResponse}
     }

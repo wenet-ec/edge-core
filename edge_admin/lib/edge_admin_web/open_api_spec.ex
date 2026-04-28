@@ -15,12 +15,12 @@ defmodule EdgeAdminWeb.OpenApiSpec do
   # Any path not listed here will be appended at the end in their original order.
   @paths_order [
     # Admins.Metadata
-    "/api/v1/admins/self",
-    "/api/v1/admins/admin_cluster",
+    "/api/v1/admins/me",
+    "/api/v1/admins/my_admin_cluster",
     "/api/v1/admins/edge_clusters",
     "/api/v1/admins/orphaned_clusters",
     # Admins.Metrics
-    "/api/v1/admins/metrics/self",
+    "/api/v1/admins/me/metrics",
     # Nodes.Cluster
     "/api/v1/clusters",
     "/api/v1/clusters/{name}",

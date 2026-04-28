@@ -13,8 +13,8 @@ defmodule EdgeAdminWeb.Controllers.Admins.DiscoveryController do
   tags(["Internal.Metadata"])
 
   operation(:index,
-    summary: "Admin self-discovery",
-    description: "Agent calls this to discover the admin's identity during VPN bootstrap.",
+    summary: "Admin discovery",
+    description: "Agent calls this to discover the responding admin's identity during VPN bootstrap.",
     responses: %{
       200 => {"Admin discovery info", "application/json", AdminSchemas.DiscoveryResponse}
     }

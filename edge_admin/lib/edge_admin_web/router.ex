@@ -100,7 +100,7 @@ defmodule EdgeAdminWeb.Router do
     pipe_through(:public_api)
 
     scope "/admins", Admins do
-      get("/self/discovery", DiscoveryController, :index)
+      get("/me/discovery", DiscoveryController, :index)
     end
 
     scope "/", Nodes do
@@ -113,8 +113,8 @@ defmodule EdgeAdminWeb.Router do
     pipe_through(:protected_api)
 
     scope "/admins", Admins do
-      get("/self", AdminController, :show)
-      get("/admin_cluster", AdminClusterController, :show)
+      get("/me", AdminController, :show)
+      get("/my_admin_cluster", AdminClusterController, :show)
       get("/edge_clusters", EdgeClustersController, :index)
       get("/orphaned_clusters", OrphanedClustersController, :index)
     end
@@ -149,7 +149,7 @@ defmodule EdgeAdminWeb.Router do
       get("/nodes/:node_id/metrics/agent", NodeMetricsController, :show_agent)
 
       # Admin metrics endpoints (human-friendly)
-      get("/admins/metrics/self", AdminMetricsController, :show_self)
+      get("/admins/me/metrics", AdminMetricsController, :show)
     end
   end
 

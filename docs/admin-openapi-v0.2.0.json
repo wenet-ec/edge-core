@@ -1179,6 +1179,10 @@
               }
             ],
             "proxy": {
+              "bytes_down_mb": 900.0,
+              "bytes_down_total": 943718400,
+              "bytes_up_mb": 150.0,
+              "bytes_up_total": 157286400,
               "http_blocked_by_reason": {
                 "agent_port_blocked": 1,
                 "docker_network_blocked": 4,
@@ -1192,7 +1196,11 @@
                 "localhost_blocked": 3
               },
               "socks5_blocked_total": 5,
-              "socks5_connections_total": 87
+              "socks5_connections_total": 87,
+              "tunnels_closed_deadline_total": 12,
+              "tunnels_closed_drain_timeout_total": 3,
+              "tunnels_closed_normal_total": 590,
+              "tunnels_closed_total": 605
             },
             "ssh": { "authentications_total": 45, "connections_total": 44 },
             "timestamp": "2025-01-15T15:30:00Z",
@@ -1361,6 +1369,26 @@
               "proxy": {
                 "description": "Proxy server connection and security metrics",
                 "properties": {
+                  "bytes_down_mb": {
+                    "description": "Cumulative target→client bytes in MB",
+                    "nullable": true,
+                    "type": "number"
+                  },
+                  "bytes_down_total": {
+                    "description": "Cumulative bytes forwarded target→client across all tunnels",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "bytes_up_mb": {
+                    "description": "Cumulative client→target bytes in MB",
+                    "nullable": true,
+                    "type": "number"
+                  },
+                  "bytes_up_total": {
+                    "description": "Cumulative bytes forwarded client→target across all tunnels",
+                    "nullable": true,
+                    "type": "integer"
+                  },
                   "http_blocked_by_reason": {
                     "additionalProperties": { "type": "integer" },
                     "description": "HTTP blocked requests grouped by reason",
@@ -1400,6 +1428,26 @@
                   },
                   "socks5_connections_total": {
                     "description": "Total SOCKS5 proxy connections",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "tunnels_closed_deadline_total": {
+                    "description": "Tunnels force-closed by the total-duration deadline (slowloris defence)",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "tunnels_closed_drain_timeout_total": {
+                    "description": "Tunnels force-closed after exceeding the graceful drain grace window",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "tunnels_closed_normal_total": {
+                    "description": "Tunnels closed normally (both sides EOF'd cleanly)",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "tunnels_closed_total": {
+                    "description": "Total tunnels that reached end-of-life (all close reasons combined)",
                     "nullable": true,
                     "type": "integer"
                   }
@@ -1734,7 +1782,6 @@
               "uptime_human": "23m",
               "uptime_seconds": 1404
             },
-            "bootstrap": { "complete_total": 1, "steps_completed_total": 4 },
             "commands": {
               "delivery_delivered_count": 0,
               "delivery_total": 48,
@@ -1747,11 +1794,19 @@
               "peer_connections_total": 3,
               "scans_total": 144
             },
+            "event_broker": {
+              "enabled": true,
+              "enqueues_total": 1235,
+              "publishes_error_total": 4,
+              "publishes_ok_total": 1230,
+              "publishes_total": 1234
+            },
             "gateways": {
               "active_count": 0,
               "connections_total": 2,
               "scrapes_total": 0
             },
+            "membership": { "complete_total": 1, "steps_completed_total": 4 },
             "metadata": {
               "assigned_clusters": 0,
               "degraded": false,
@@ -1781,6 +1836,21 @@
                 "scheduled": 0
               }
             ],
+            "proxy": {
+              "auth_failures_total": 34,
+              "bytes_down_mb": 9419.4,
+              "bytes_down_total": 9876543210,
+              "bytes_up_mb": 1452.9,
+              "bytes_up_total": 1523456789,
+              "connections_auth_failed_total": 34,
+              "connections_failure_total": 22,
+              "connections_success_total": 1189,
+              "connections_total": 1245,
+              "tunnels_closed_deadline_total": 38,
+              "tunnels_closed_drain_timeout_total": 11,
+              "tunnels_closed_normal_total": 1140,
+              "tunnels_closed_total": 1189
+            },
             "quantum": {
               "jobs_exceptions_total": 0,
               "jobs_executed_total": 156
@@ -1895,22 +1965,6 @@
                 },
                 "type": "object"
               },
-              "bootstrap": {
-                "description": "Bootstrap initialization metrics",
-                "properties": {
-                  "complete_total": {
-                    "description": "Total full bootstrap sequences completed (success + failure)",
-                    "nullable": true,
-                    "type": "integer"
-                  },
-                  "steps_completed_total": {
-                    "description": "Total individual bootstrap steps completed across all restarts",
-                    "nullable": true,
-                    "type": "integer"
-                  }
-                },
-                "type": "object"
-              },
               "commands": {
                 "description": "Command execution and delivery metrics",
                 "properties": {
@@ -1963,6 +2017,37 @@
                 },
                 "type": "object"
               },
+              "event_broker": {
+                "description": "Event broker publish metrics. When the broker is disabled (default), `enabled` is `false`\nand all counters are 0. A sustained gap between `enqueues_total` and `publishes_ok_total`\nindicates broker failures with events accumulating in Oban for retry.\n",
+                "properties": {
+                  "enabled": {
+                    "description": "Whether the event broker is enabled (mirrors EVENT_BROKER_ENABLED config)",
+                    "nullable": true,
+                    "type": "boolean"
+                  },
+                  "enqueues_total": {
+                    "description": "Total events enqueued for async broker delivery (before any publish attempt)",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "publishes_error_total": {
+                    "description": "Total broker publishes that failed (will be retried by Oban)",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "publishes_ok_total": {
+                    "description": "Total broker publishes that succeeded",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "publishes_total": {
+                    "description": "Total broker publish attempts (ok + error)",
+                    "nullable": true,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
               "gateways": {
                 "description": "Gateway connection and scrape metrics",
                 "properties": {
@@ -1978,6 +2063,22 @@
                   },
                   "scrapes_total": {
                     "description": "Total metrics scrape operations performed by gateways",
+                    "nullable": true,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "membership": {
+                "description": "Admin-cluster membership initialization metrics",
+                "properties": {
+                  "complete_total": {
+                    "description": "Total full membership sequences completed (success + failure)",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "steps_completed_total": {
+                    "description": "Total individual membership steps completed across all restarts",
                     "nullable": true,
                     "type": "integer"
                   }
@@ -2061,6 +2162,77 @@
                   "type": "object"
                 },
                 "type": "array"
+              },
+              "proxy": {
+                "description": "HTTP and SOCKS5 forward proxy metrics (connections, tunnels, bytes transferred)",
+                "properties": {
+                  "auth_failures_total": {
+                    "description": "Total proxy authentication failures (mirrors connections_auth_failed_total)",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "bytes_down_mb": {
+                    "description": "Cumulative target→client bytes in MB",
+                    "nullable": true,
+                    "type": "number"
+                  },
+                  "bytes_down_total": {
+                    "description": "Cumulative bytes forwarded target→client across all tunnels",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "bytes_up_mb": {
+                    "description": "Cumulative client→target bytes in MB",
+                    "nullable": true,
+                    "type": "number"
+                  },
+                  "bytes_up_total": {
+                    "description": "Cumulative bytes forwarded client→target across all tunnels",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "connections_auth_failed_total": {
+                    "description": "Total proxy connections rejected at authentication",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "connections_failure_total": {
+                    "description": "Total proxy connections that failed for non-auth reasons (protocol, network, gateway, etc.)",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "connections_success_total": {
+                    "description": "Total proxy connections that authenticated and established a tunnel",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "connections_total": {
+                    "description": "Total proxy connections seen (success + auth_failed + failure)",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "tunnels_closed_deadline_total": {
+                    "description": "Tunnels force-closed by the total-duration deadline (slowloris defence)",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "tunnels_closed_drain_timeout_total": {
+                    "description": "Tunnels force-closed after exceeding the graceful drain grace window",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "tunnels_closed_normal_total": {
+                    "description": "Tunnels closed normally (both sides EOF'd cleanly)",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "tunnels_closed_total": {
+                    "description": "Total tunnels that reached end-of-life (all close reasons combined)",
+                    "nullable": true,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
               },
               "quantum": {
                 "description": "Quantum scheduler job execution metrics",
@@ -3183,10 +3355,10 @@
   },
   "openapi": "3.0.0",
   "paths": {
-    "/api/v1/admins/self": {
+    "/api/v1/admins/me": {
       "get": {
         "callbacks": {},
-        "description": "Returns this admin's identity and configuration from metadata",
+        "description": "Returns the current admin's identity and configuration from metadata.",
         "operationId": "EdgeAdminWeb.Controllers.Admins.AdminController.show",
         "parameters": [],
         "responses": {
@@ -3199,14 +3371,14 @@
             "description": "Admin identity"
           }
         },
-        "summary": "Get this admin's identity",
+        "summary": "Get the current admin",
         "tags": ["Admins.Metadata"]
       }
     },
-    "/api/v1/admins/admin_cluster": {
+    "/api/v1/admins/my_admin_cluster": {
       "get": {
         "callbacks": {},
-        "description": "Returns admin cluster metadata and peer topology",
+        "description": "Returns metadata and peer topology for the admin cluster this admin belongs to.",
         "operationId": "EdgeAdminWeb.Controllers.Admins.AdminClusterController.show",
         "parameters": [],
         "responses": {
@@ -3221,7 +3393,7 @@
             "description": "Admin cluster topology"
           }
         },
-        "summary": "Get admin cluster topology",
+        "summary": "Get this admin's admin cluster",
         "tags": ["Admins.Metadata"]
       }
     },
@@ -3269,11 +3441,11 @@
         "tags": ["Admins.Metadata"]
       }
     },
-    "/api/v1/admins/metrics/self": {
+    "/api/v1/admins/me/metrics": {
       "get": {
         "callbacks": {},
-        "description": "Returns application-level metrics from the edge_admin PromEx:\n- Application: uptime, BEAM stats (processes, memory, atoms, ETS tables)\n- Metadata: degraded status, orphaned/assigned clusters\n- Bootstrap: step counts and full sequence completions\n- Discovery: peer discovery scan, DNS resolution, and connection counts\n- Nodes: health check statistics\n- Commands: delivery runs, per-execution delivery, completions, expirations\n- SSH: credential verification attempts and failures\n- Reconciliation: cluster Netmaker↔DB sync runs and errors\n- Self-updates: request processing completions\n- Gateways: connection events, active count, scrape totals\n- Oban: job queue states (available, scheduled, executing, etc.)\n",
-        "operationId": "EdgeAdminWeb.Controllers.Metrics.AdminMetricsController.show_self",
+        "description": "Returns application-level metrics from the edge_admin PromEx:\n- Application: uptime, BEAM stats (processes, memory, atoms, ETS tables)\n- Metadata: degraded status, orphaned/assigned clusters\n- Membership: step counts and full sequence completions\n- Discovery: peer discovery scan, DNS resolution, and connection counts\n- Nodes: health check statistics\n- Commands: delivery runs, per-execution delivery, completions, expirations\n- SSH: credential verification attempts and failures\n- Reconciliation: cluster Netmaker↔DB sync runs and errors\n- Self-updates: request processing completions\n- Gateways: connection events, active count, scrape totals\n- Event broker: publish/enqueue counters (zeroed when broker is disabled)\n- Oban: job queue states (available, scheduled, executing, etc.)\n",
+        "operationId": "EdgeAdminWeb.Controllers.Metrics.AdminMetricsController.show",
         "parameters": [],
         "responses": {
           "200": {
@@ -3297,7 +3469,7 @@
             "description": "Metrics unavailable"
           }
         },
-        "summary": "Get admin metrics for self",
+        "summary": "Get metrics for this admin",
         "tags": ["Admins.Metrics"]
       }
     },

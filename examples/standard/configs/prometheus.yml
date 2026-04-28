@@ -48,7 +48,7 @@ scrape_configs:
           - "edge_admin_a2:44000"
           - "edge_admin_b1:44000"
           - "edge_admin_b2:44000"
-    metrics_path: "/api/v1/admins/metrics/self/raw"
+    metrics_path: "/api/v1/admins/me/metrics/raw"
     authorization:
       type: Bearer
       credentials: change-me-your-metrics-key

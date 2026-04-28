@@ -2,7 +2,7 @@
 defmodule EdgeAdminWeb.Controllers.Metrics.AdminMetricsJSON do
   alias EdgeAdminWeb.ResponseEnvelope
 
-  def show_self(%{conn: conn, metrics: metrics}) do
+  def show(%{conn: conn, metrics: metrics}) do
     ResponseEnvelope.success(conn, metrics)
   end
 end

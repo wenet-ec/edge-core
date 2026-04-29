@@ -18,8 +18,7 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminClustersController do
     description: """
     Lists every admin cluster Netmaker knows about, with each cluster's admins.
     Includes admins this instance is not a member of (cross-cluster visibility)
-    and may include stale entries — inspect the `status` and `last_checked_in`
-    fields per admin to identify them.
+    and may include stale entries.
     """,
     responses: %{
       200 => {"Admin clusters", "application/json", AdminSchemas.AdminClustersResponse},

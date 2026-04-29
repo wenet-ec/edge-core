@@ -3521,7 +3521,7 @@
     "/api/v1/admins/admin_clusters": {
       "get": {
         "callbacks": {},
-        "description": "Lists every admin cluster Netmaker knows about, with each cluster's admins.\nIncludes admins this instance is not a member of (cross-cluster visibility)\nand may include stale entries — inspect the `status` and `last_checked_in`\nfields per admin to identify them.\n",
+        "description": "Lists every admin cluster Netmaker knows about, with each cluster's admins.\nIncludes admins this instance is not a member of (cross-cluster visibility)\nand may include stale entries.\n",
         "operationId": "EdgeAdminWeb.Controllers.Admins.AdminClustersController.index",
         "parameters": [],
         "responses": {
@@ -3629,7 +3629,7 @@
     "/api/v1/clusters": {
       "post": {
         "callbacks": {},
-        "description": "Create a new edge cluster with optional IP range.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "description": "Create a new edge cluster with optional IP range. The name `default` is reserved (used as a URL keyword on convenience routes) and will be rejected with HTTP 422.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.ClusterController.create",
         "parameters": [],
         "requestBody": {

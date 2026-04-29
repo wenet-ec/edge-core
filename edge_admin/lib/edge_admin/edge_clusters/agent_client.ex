@@ -16,7 +16,7 @@ defmodule EdgeAdmin.EdgeClusters.AgentClient do
   - `cancel_execution/2` — PATCH /api/v1/command_executions/:id/cancel
   - `trigger_self_update/1` — POST /api/v1/self_updates/trigger
   - `scrape_host_metrics/1` — GET http://<vpn_hostname>:<host_metrics_port>/metrics
-  - `scrape_agent_metrics/1` — GET /api/v1/agents/metrics/self/raw
+  - `scrape_agent_metrics/1` — GET /api/v1/agents/me/metrics/raw
   - `scrape_wireguard_metrics/1` — GET http://<vpn_hostname>:<wireguard_metrics_port>/metrics
   """
 
@@ -183,7 +183,7 @@ defmodule EdgeAdmin.EdgeClusters.AgentClient do
   """
   @spec scrape_agent_metrics(Node.t()) :: {:ok, String.t()} | {:error, term()}
   def scrape_agent_metrics(%Node{} = node) do
-    url = "http://#{Node.vpn_hostname(node)}:#{node.http_port}/api/v1/agents/metrics/self/raw"
+    url = "http://#{Node.vpn_hostname(node)}:#{node.http_port}/api/v1/agents/me/metrics/raw"
     opts = Keyword.merge([auth: {:bearer, node.api_token}], metrics_opts())
 
     case Req.get(url, opts) do

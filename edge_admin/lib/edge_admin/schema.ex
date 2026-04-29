@@ -9,7 +9,7 @@ defmodule EdgeAdmin.Schema do
 
       alias Ecto.Schema
 
-      @primary_key {:id, Uniq.UUID, version: 7, autogenerate: true}
+      @primary_key {:id, Uniq.UUID, version: 7, autogenerate: true, dump: :raw, type: :uuid}
       @foreign_key_type :binary_id
       @timestamps_opts [type: :utc_datetime]
     end

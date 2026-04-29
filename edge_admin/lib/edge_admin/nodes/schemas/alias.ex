@@ -49,8 +49,8 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
     field(:name, :string)
     field(:vpn_hostname, :string, virtual: true)
 
-    belongs_to(:node, EdgeAdmin.Nodes.Schemas.Node, type: :binary_id)
-    belongs_to(:cluster, Cluster, type: :binary_id)
+    belongs_to(:node, EdgeAdmin.Nodes.Schemas.Node)
+    belongs_to(:cluster, Cluster)
 
     timestamps()
   end

@@ -78,7 +78,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     }
   }
 
-  @primary_key {:id, :binary_id, autogenerate: false}
+  @primary_key {:id, Uniq.UUID, autogenerate: false, dump: :raw, type: :uuid}
 
   schema "nodes" do
     # Informative fields

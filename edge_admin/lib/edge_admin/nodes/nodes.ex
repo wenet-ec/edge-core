@@ -24,15 +24,15 @@ defmodule EdgeAdmin.Nodes do
 
   ### Ordering rules (why they are what they are)
 
-  **Cluster create — Netmaker first, then DB:**
-  Netmaker does its own full CIDR overlap check across all networks it knows about,
-  including `admin-cluster-*` networks that our DB has no record of. Our local
-  `SubnetOverlapCheck` only checks `cluster-*` ranges in our DB — it cannot detect
-  conflicts with admin networks. Going DB-first would allow a subnet that passes our
-  check but fails Netmaker's, resulting in a wasted DB insert and rollback. Going
-  Netmaker-first lets Netmaker be the authority on IP space. If DB insert fails after
-  Netmaker succeeds, the ghost network is cleaned by `cleanup_ghost_networks/1` in the
-  next reconcile sweep (safe because we only ever delete `cluster-*` prefixed networks).
+  **Cluster create — DB first, then Netmaker:**
+  Netmaker is the authority on IP space (it sees `admin-cluster-*` networks our DB
+  doesn't). To make DB-first safe, `create_cluster/1` fetches all Netmaker ranges
+  via `Vpn.list_network_ranges/0` up front and merges them with the DB range list
+  before running `SubnetOverlapCheck` and `Vpn.generate_next_subnet/1`. The fetch
+  doubles as a liveness probe — if Netmaker is unreachable, we fail fast with
+  `:service_unavailable` and never touch the DB. If Netmaker rejects the create
+  anyway (race with a concurrent admin or admin-mesh write), we rollback the DB
+  insert. A DB insert failure with no Netmaker call leaves no state to clean.
 
   **Cluster delete — Netmaker first, then DB:**
   If we deleted DB first and Netmaker failed, the network would be permanently orphaned
@@ -458,13 +458,16 @@ defmodule EdgeAdmin.Nodes do
   Creates a cluster and its Netmaker network.
 
   Flow:
-  1. Check Netmaker health (fail fast if service unavailable)
-  2. Validate input and generate IP range if needed
-  3. Create DB record FIRST (validates uniqueness constraints)
-  4. Create Netmaker network (rollback DB on failure)
-  5. Emit event for metadata recomputation
+  1. Validate input
+  2. Fetch every IPv4 range Netmaker currently knows about (acts as both a
+     liveness probe and the authoritative overlap set — local DB only tracks
+     `cluster-*` ranges, not admin-mesh networks)
+  3. Merge with DB ranges, then validate or auto-generate the IP range
+  4. Create DB record (validates uniqueness constraints)
+  5. Create Netmaker network (rollback DB on failure)
+  6. Emit event for metadata recomputation
 
-  If health check fails, returns service unavailable immediately (no DB call).
+  If Netmaker is unreachable, returns service unavailable immediately (no DB call).
   If DB creation fails, returns validation error immediately (no Netmaker call).
   If Netmaker creation fails, deletes DB record and returns service unavailable.
 
@@ -480,9 +483,9 @@ defmodule EdgeAdmin.Nodes do
           | {:error, :service_unavailable}
   def create_cluster(attrs \\ %{}) do
     with {:ok, validated_attrs} <- Forms.CreateClusterForm.changeset(attrs),
-         # Check Netmaker health before proceeding
-         :ok <- Vpn.netmaker_health_check(),
-         existing_ranges = Repo.all(from(c in Cluster, select: c.ipv4_range)),
+         {:ok, netmaker_ranges} <- Vpn.list_network_ranges(),
+         db_ranges = Repo.all(from(c in Cluster, select: c.ipv4_range)),
+         existing_ranges = Enum.uniq(db_ranges ++ netmaker_ranges),
          :ok <- Checks.SubnetOverlapCheck.check(validated_attrs["ipv4_range"], existing_ranges),
          ipv4_range = validated_attrs["ipv4_range"] || Vpn.generate_next_subnet(existing_ranges),
          cluster_attrs = Map.put(validated_attrs, "ipv4_range", ipv4_range),

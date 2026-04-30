@@ -482,6 +482,28 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
+  Returns every IPv4 range Netmaker currently knows about, across all networks
+  (cluster networks, admin-mesh networks, and anything else).
+
+  Used as the authoritative input to subnet-overlap checks and auto-generation:
+  the local DB only knows about `cluster-*` ranges, so without this an admin
+  network could collide with a generated cluster subnet and only surface at
+  `create_network` time. Strict by design — propagates `:service_unavailable`
+  when Netmaker is unreachable.
+  """
+  @spec list_network_ranges() :: {:ok, [String.t()]} | {:error, :service_unavailable}
+  def list_network_ranges do
+    with {:ok, networks} <- list_networks() do
+      ranges =
+        networks
+        |> Enum.map(& &1["addressrange"])
+        |> Enum.filter(&is_binary/1)
+
+      {:ok, ranges}
+    end
+  end
+
+  @doc """
   Lists every admin cluster network in Netmaker, joined with its nodes and hosts.
 
   Filters Netmaker's full network list to those whose name starts with

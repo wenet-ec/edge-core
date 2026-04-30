@@ -27,7 +27,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Commands
-  alias EdgeAdminMcp.QueryBuilder
+  alias EdgeAdminMcp.FlopParams
   alias EdgeAdminMcp.Tools.Commands.CommandExecutionData
 
   @impl true
@@ -66,7 +66,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
   @impl true
   def execute(params, frame) do
     query =
-      QueryBuilder.build(params,
+      FlopParams.build(params,
         passthrough: [
           :command_id,
           :node_id,

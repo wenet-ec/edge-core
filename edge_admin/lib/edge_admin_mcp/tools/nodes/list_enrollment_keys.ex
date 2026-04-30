@@ -25,7 +25,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdminMcp.QueryBuilder
+  alias EdgeAdminMcp.FlopParams
   alias EdgeAdminMcp.Tools.Nodes.EnrollmentKeyData
 
   @impl true
@@ -61,7 +61,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
   @impl true
   def execute(params, frame) do
     query =
-      QueryBuilder.build(params,
+      FlopParams.build(params,
         passthrough: [
           :cluster_name,
           :key,

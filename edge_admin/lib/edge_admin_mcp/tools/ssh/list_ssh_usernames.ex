@@ -18,7 +18,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Ssh
-  alias EdgeAdminMcp.QueryBuilder
+  alias EdgeAdminMcp.FlopParams
   alias EdgeAdminMcp.Tools.Ssh.SshUsernameData
 
   @impl true
@@ -44,7 +44,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
   @impl true
   def execute(params, frame) do
     query =
-      QueryBuilder.build(params,
+      FlopParams.build(params,
         passthrough: [:username, :node_id, :has_password, :cluster_name],
         ranges: [:inserted_at, :updated_at]
       )

@@ -20,7 +20,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshPublicKeys do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Ssh
-  alias EdgeAdminMcp.QueryBuilder
+  alias EdgeAdminMcp.FlopParams
   alias EdgeAdminMcp.Tools.Ssh.SshPublicKeyData
 
   @impl true
@@ -48,7 +48,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshPublicKeys do
   @impl true
   def execute(params, frame) do
     query =
-      QueryBuilder.build(params,
+      FlopParams.build(params,
         passthrough: [:ssh_username_id, :node_id, :username, :key_name, :public_key, :cluster_name],
         ranges: [:inserted_at, :updated_at]
       )

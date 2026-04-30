@@ -19,7 +19,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommands do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Commands
-  alias EdgeAdminMcp.QueryBuilder
+  alias EdgeAdminMcp.FlopParams
   alias EdgeAdminMcp.Tools.Commands.CommandData
 
   @impl true
@@ -48,7 +48,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommands do
   @impl true
   def execute(params, frame) do
     query =
-      QueryBuilder.build(params,
+      FlopParams.build(params,
         passthrough: [:command_text, :has_timeout, :has_expired_at],
         ranges: [:timeout, :expired_at, :inserted_at, :updated_at]
       )

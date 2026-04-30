@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin_mcp/query_builder.ex
-defmodule EdgeAdminMcp.QueryBuilder do
+# edge_admin/lib/edge_admin_mcp/flop_params.ex
+defmodule EdgeAdminMcp.FlopParams do
   @moduledoc """
   Builds the Flop-shaped query map from MCP tool params.
 

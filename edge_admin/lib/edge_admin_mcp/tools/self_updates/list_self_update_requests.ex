@@ -15,7 +15,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.ListSelfUpdateRequests do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.SelfUpdates
-  alias EdgeAdminMcp.QueryBuilder
+  alias EdgeAdminMcp.FlopParams
   alias EdgeAdminMcp.Tools.SelfUpdates.SelfUpdateRequestData
 
   @impl true
@@ -38,7 +38,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.ListSelfUpdateRequests do
   @impl true
   def execute(params, frame) do
     query =
-      QueryBuilder.build(params,
+      FlopParams.build(params,
         passthrough: [:status],
         ranges: [:inserted_at, :updated_at]
       )

@@ -20,7 +20,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdminMcp.QueryBuilder
+  alias EdgeAdminMcp.FlopParams
   alias EdgeAdminMcp.Tools.Nodes.NodeData
 
   @impl true
@@ -49,7 +49,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
   @impl true
   def execute(params, frame) do
     query =
-      QueryBuilder.build(params,
+      FlopParams.build(params,
         passthrough: [:status, :id_type, :cluster_name, :version, :self_update_enabled],
         ranges: [:last_seen_at, :inserted_at, :updated_at]
       )

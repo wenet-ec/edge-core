@@ -189,7 +189,7 @@ services:
         ipv4_address: 172.25.0.114
     volumes:
       - production_edge_event_broker_mqtt_data:/opt/emqx/data
-      - ./compose/edge_event_broker/mqtt.conf:/opt/emqx/data/configs/cluster.hocon:ro
+      - ./compose/edge_event_broker/emqx.conf:/opt/emqx/data/configs/cluster.hocon:ro
       # TLS certs — uncomment when enabling MQTT/TLS on port 8883:
       # - /etc/mqtt/tls:/etc/mqtt/tls:ro
     environment:

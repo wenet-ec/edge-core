@@ -79,7 +79,7 @@ Edge Core can publish lifecycle events (node registered, command completed, etc.
 
 ```bash
 # Start with NATS (recommended)
-docker compose -f cloud.yml -f ../event_brokers/nats_js.yml up -d
+docker compose -f cloud.yml -f ../event_brokers/nats.yml up -d
 ```
 
 Then add to your `.env`:

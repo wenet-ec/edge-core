@@ -11,6 +11,8 @@ Edge Core can publish lifecycle events to a message broker. This is opt-in — t
 | **Apache Kafka** | `kafka`    | Use if you already run Kafka. Any Kafka-compatible broker works.                                            |
 | **RabbitMQ**     | `rabbitmq` | Topic exchange `edge.events`, routing key = event type. Consumer queue durability is the consumer's choice. |
 | **Redis**        | `redis`    | Fire-and-forget pub/sub. No durability or replay — pick only when consumers are always-on.                  |
+| **EMQX**         | `mqtt`     | Full-featured MQTT broker. Built-in dashboard + REST API on port 18083. Good for IoT-flavoured stacks.      |
+| **Mosquitto**    | `mqtt`     | Minimal MQTT broker (~10MB). No UI, no clustering. The reference MQTT implementation.                       |
 
 Pick whichever broker fits your existing stack — there is no recommended default.
 
@@ -22,7 +24,7 @@ Pick a broker and start it alongside your core:
 
 ```bash
 # NATS
-docker compose -f cloud.yml -f ../event_brokers/nats_js.yml up -d
+docker compose -f cloud.yml -f ../event_brokers/nats.yml up -d
 
 # Redpanda
 docker compose -f cloud.yml -f ../event_brokers/redpanda.yml up -d
@@ -35,6 +37,12 @@ docker compose -f cloud.yml -f ../event_brokers/rabbitmq.yml up -d
 
 # Redis
 docker compose -f cloud.yml -f ../event_brokers/redis.yml up -d
+
+# EMQX (MQTT, with dashboard)
+docker compose -f cloud.yml -f ../event_brokers/emqx.yml up -d
+
+# Mosquitto (MQTT, minimal)
+docker compose -f cloud.yml -f ../event_brokers/mosquitto.yml up -d
 ```
 
 Then enable the broker in your `.env`:
@@ -65,30 +73,40 @@ EVENT_BROKER_URLS=amqp://edge_event_broker:5672
 EVENT_BROKER_ENABLED=true
 EVENT_BROKER_ADAPTER=redis
 EVENT_BROKER_URLS=redis://edge_event_broker:6379
+
+# EMQX or Mosquitto (any MQTT 3.1.1 / 5 broker)
+EVENT_BROKER_ENABLED=true
+EVENT_BROKER_ADAPTER=mqtt
+EVENT_BROKER_URLS=edge_event_broker:1883
+# EVENT_BROKER_MQTT_QOS=1                     # 0|1|2, default 1 (at-least-once with broker ACK)
 ```
 
 ## Files
 
 ```
 event_brokers/
-├── nats_js.yml         — NATS (JetStream enabled) + NUI web UI
+├── nats.yml            — NATS (JetStream enabled) + NUI web UI
 ├── redpanda.yml        — Redpanda + Redpanda Console
 ├── kafka.yml           — Apache Kafka (KRaft) + Kafka UI
 ├── rabbitmq.yml        — RabbitMQ + Management UI
 ├── redis.yml           — Redis (fire-and-forget pub/sub, no UI)
+├── emqx.yml            — EMQX (MQTT) + built-in dashboard
+├── mosquitto.yml       — Mosquitto (MQTT, minimal, no UI)
 └── config/
     ├── nats.conf                  — NATS server config (JetStream, TLS + cluster blocks commented out)
     ├── nui-context.json           — NUI pre-configured connection to edge_event_broker
     ├── rabbitmq.conf              — RabbitMQ server config (TLS block commented out)
-    └── rabbitmq_enabled_plugins   — enables management plugin
+    ├── rabbitmq_enabled_plugins   — enables management plugin
+    ├── emqx.conf                  — EMQX HOCON config (cluster-ready, TLS blocks commented out)
+    └── mosquitto.conf             — Mosquitto config (anonymous-allow, TLS block commented out)
 ```
 
 ## Env Vars Reference
 
 ```bash
 EVENT_BROKER_ENABLED=true|false          # gate — all else ignored when false (default: false)
-EVENT_BROKER_ADAPTER=nats|kafka|rabbitmq|redis # required when enabled
-EVENT_BROKER_URLS=...                    # NATS: nats://host:port  |  Kafka: host:port  |  RabbitMQ: amqp://host:port  |  Redis: redis://host:port
+EVENT_BROKER_ADAPTER=nats|kafka|rabbitmq|redis|mqtt # required when enabled
+EVENT_BROKER_URLS=...                    # NATS: nats://host:port  |  Kafka: host:port  |  RabbitMQ: amqp://host:port  |  Redis: redis://host:port  |  MQTT: host:port
 
 # NATS options (optional)
 EVENT_BROKER_NATS_JETSTREAM=true         # enable durable JetStream log (default: false)
@@ -109,6 +127,18 @@ EVENT_BROKER_RABBITMQ_SSL=true           # enable TLS for external/public broker
 
 EVENT_BROKER_REDIS_SSL=true              # enable TLS for external/public brokers (Redis Cloud, Upstash, etc.)
 
+# MQTT options (optional)
+EVENT_BROKER_MQTT_QOS=1                  # 0|1|2, default 1 (at-least-once with broker ACK)
+# Auth — pick one mode (mutually exclusive, JWT precedence):
+EVENT_BROKER_MQTT_JWT=                   # JWT bearer token, sent in CONNECT password slot
+EVENT_BROKER_MQTT_USERNAME=              # plain credentials
+EVENT_BROKER_MQTT_PASSWORD=
+# TLS:
+EVENT_BROKER_MQTT_SSL=true               # enable TLS — required for external/public brokers
+EVENT_BROKER_MQTT_CACERT_FILE=           # custom CA bundle / pinning
+EVENT_BROKER_MQTT_CLIENT_CERT_FILE=      # mTLS — requires SSL=true
+EVENT_BROKER_MQTT_CLIENT_KEY_FILE=       # mTLS — requires SSL=true
+
 # Core identifier — included in every event envelope (default: "default")
 CORE_NAME=prod-us
 ```
@@ -121,6 +151,11 @@ These compose files are for convenience. If you already run a broker, skip them 
 - Any NATS server works with `EVENT_BROKER_ADAPTER=nats`; enable JetStream on the server and set `EVENT_BROKER_NATS_JETSTREAM=true` for durable delivery.
 - Any RabbitMQ instance works with `EVENT_BROKER_ADAPTER=rabbitmq`; events are published to a durable topic exchange `edge.events` with routing key = event type.
 - Any Redis instance works with `EVENT_BROKER_ADAPTER=redis`; Core publishes to channels matching the event type (`edge.node.registered`, etc.). Embed credentials in the URL: `redis://:password@host:port`.
+- Any MQTT 3.1.1 / 5 broker (HiveMQ, AWS IoT Core, NanoMQ, VerneMQ, etc.) works with `EVENT_BROKER_ADAPTER=mqtt`. Topics use `/`-separated segments (`edge/node/registered`).
+
+### Reusing the bundled Netmaker broker
+
+Edge Core ships an MQTT broker (EMQX or Mosquitto) inside the Netmaker stack — it's used by Netmaker for VPN control-plane traffic (peer updates, host updates, signals). Pointing the event broker at this same instance is **not recommended**: lifecycle, auth, capacity tuning, and operational dashboards all become entangled with VPN internals. Run a dedicated event broker instead.
 
 ## Events Published
 

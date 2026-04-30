@@ -550,7 +550,7 @@ services:
   #       ipv4_address: 172.20.0.114
   #   volumes:
   #     - local_edge_event_broker_mqtt_data:/opt/emqx/data
-  #     - ../../deploy/production/compose/edge_event_broker/mqtt.conf:/opt/emqx/data/configs/cluster.hocon:ro
+  #     - ../../deploy/production/compose/edge_event_broker/emqx.conf:/opt/emqx/data/configs/cluster.hocon:ro
   #   environment:
   #     EMQX_NAME: emqx
   #     EMQX_HOST: edge_event_broker_mqtt

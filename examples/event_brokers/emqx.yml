@@ -1,0 +1,61 @@
+# examples/event_brokers/emqx.yml
+#
+# EMQX — full-featured MQTT broker for Edge Core (built-in dashboard + REST API).
+# Pick this when you want operational visibility into the broker (live clients,
+# topics, message rates) without bolting on a separate UI.
+#
+# Usage (alongside your core compose file):
+#   docker compose -f cloud.yml -f ../event_brokers/emqx.yml up -d
+#
+# Then set in your .env:
+#   EVENT_BROKER_ENABLED=true
+#   EVENT_BROKER_ADAPTER=mqtt
+#   EVENT_BROKER_URLS=edge_event_broker:1883
+#   # EVENT_BROKER_MQTT_USERNAME=...     # if auth is enabled
+#   # EVENT_BROKER_MQTT_PASSWORD=...
+#
+# Dashboard: http://localhost:18083 (admin / public — change on first login).
+#
+# Ports exposed:
+#   1883  — MQTT (internal Docker, used by Edge Admin)
+#   8083  — MQTT over WebSocket
+#   18083 — Dashboard + REST API
+
+networks:
+  edge_core:
+    external: true
+    name: edge_core
+
+volumes:
+  edge_event_broker_data: {}
+
+services:
+  edge_event_broker:
+    image: emqx/emqx:5.8.9
+    container_name: edge_event_broker
+    hostname: edge_event_broker
+    restart: unless-stopped
+    networks:
+      - edge_core
+    volumes:
+      - edge_event_broker_data:/opt/emqx/data
+      - ./config/emqx.conf:/opt/emqx/data/configs/cluster.hocon:ro
+    environment:
+      EMQX_NAME: emqx
+      EMQX_HOST: edge_event_broker
+      EMQX_NODE__COOKIE: edge_event_broker_cookie
+      EMQX_NODE__DB_BACKEND: rlog
+      EMQX_NODE__ROLE: core
+      EMQX_RPC__PORT_DISCOVERY: manual
+      EMQX_DASHBOARD__DEFAULT_USERNAME: admin
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: public
+    ports:
+      - "1883:1883"   # MQTT
+      - "8083:8083"   # MQTT over WebSocket
+      - "18083:18083" # Dashboard + REST API
+    healthcheck:
+      test: ["CMD", "/opt/emqx/bin/emqx_ctl", "status"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s

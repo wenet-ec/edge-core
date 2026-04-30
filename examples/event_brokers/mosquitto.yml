@@ -1,0 +1,50 @@
+# examples/event_brokers/mosquitto.yml
+#
+# Mosquitto — minimal MQTT broker for Edge Core. ~10MB image, no UI, no
+# clustering. Pick this when you want the smallest footprint and don't need
+# operational dashboards. The Eclipse Mosquitto project is the de-facto
+# reference MQTT implementation.
+#
+# Usage (alongside your core compose file):
+#   docker compose -f cloud.yml -f ../event_brokers/mosquitto.yml up -d
+#
+# Then set in your .env:
+#   EVENT_BROKER_ENABLED=true
+#   EVENT_BROKER_ADAPTER=mqtt
+#   EVENT_BROKER_URLS=edge_event_broker:1883
+#   # EVENT_BROKER_MQTT_USERNAME=...     # if auth is enabled in mosquitto.conf
+#   # EVENT_BROKER_MQTT_PASSWORD=...
+#
+# To verify events are flowing, subscribe before triggering an action:
+#   docker run --rm -it --network edge_core eclipse-mosquitto \
+#     mosquitto_sub -h edge_event_broker -p 1883 -t 'edge/#' -v
+#
+# Ports exposed:
+#   1883  — MQTT (internal Docker, used by Edge Admin)
+
+networks:
+  edge_core:
+    external: true
+    name: edge_core
+
+volumes:
+  edge_event_broker_data: {}
+
+services:
+  edge_event_broker:
+    image: eclipse-mosquitto:latest
+    container_name: edge_event_broker
+    restart: unless-stopped
+    networks:
+      - edge_core
+    volumes:
+      - edge_event_broker_data:/mosquitto/data
+      - ./config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    ports:
+      - "1883:1883"   # MQTT
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h localhost -p 1883 -t '$$SYS/#' -C 1 -W 3 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s

@@ -9,8 +9,6 @@ import Config
 
 version = Mix.Project.config()[:version]
 
-config :edge_admin, EdgeAdmin.Gettext, default_locale: "en"
-
 config :edge_admin, EdgeAdmin.PromEx,
   disabled: false,
   manual_metrics_start_delay: :no_delay,

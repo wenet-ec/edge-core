@@ -12,7 +12,6 @@ config :edge_admin, EdgeAdminWeb.Endpoint,
   check_origin: false,
   live_reload: [
     patterns: [
-      ~r{priv/gettext/.*$},
       ~r{lib/edge_admin_web/.*(ee?x)$}
     ]
   ]

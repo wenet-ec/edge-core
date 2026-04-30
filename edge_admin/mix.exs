@@ -90,7 +90,7 @@ defmodule EdgeAdmin.Mixfile do
       # API and MCP
       {:open_api_spex, "~> 3.22"},
       {:redoc_ui_plug, "~> 0.2"},
-      {:anubis_mcp, "~> 1.2"},
+      {:anubis_mcp, "~> 1.3"},
 
       # Database
       {:ecto_sql, "~> 3.13"},
@@ -100,9 +100,6 @@ defmodule EdgeAdmin.Mixfile do
 
       # Database check
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
-
-      # Translations
-      {:gettext, "~> 1.0"},
 
       # Errors
       {:hackney, "~> 1.25"},
@@ -139,7 +136,7 @@ defmodule EdgeAdmin.Mixfile do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
 
       # Background Jobs
-      {:oban, "~> 2.21"},
+      {:oban, "~> 2.22"},
       {:quantum, "~> 3.5"},
 
       # Erlang Distribution

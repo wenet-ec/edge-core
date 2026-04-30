@@ -20,9 +20,6 @@ defmodule TestEnvironment do
   end
 end
 
-# This config is to output keys instead of translated message in test
-config :edge_admin, EdgeAdmin.Gettext, priv: "priv/null", interpolation: EdgeAdmin.GettextInterpolation
-
 # Disable Quantum during tests:
 config :edge_admin, EdgeAdmin.LocalScheduler, jobs: []
 

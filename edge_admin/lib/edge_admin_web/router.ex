@@ -79,10 +79,12 @@ defmodule EdgeAdminWeb.Router do
     live_dashboard("/live_dashboard",
       metrics: EdgeAdminWeb.Telemetry,
       ecto_repos: [EdgeAdmin.Repo],
-      on_mount: EdgeAdminWeb.LiveDashboardAuth,
+      home_app: {"Edge Admin", :edge_admin},
+      on_mount: [EdgeAdminWeb.LiveDashboardAuth, EdgeAdminWeb.LiveDashboardHooks],
       additional_pages: [
         oban: Oban.LiveDashboard,
-        netmaker: EdgeAdminWeb.Live.NetmakerDashboard
+        quantum: EdgeAdminWeb.Live.QuantumDashboard,
+        membership: EdgeAdminWeb.Live.MembershipDashboard
       ]
     )
   end

@@ -52,7 +52,7 @@ defmodule EdgeAdminWeb.Plugs.Security do
   defp default_src_directive, do: "'none'"
   defp form_action_directive, do: "'self'"
   defp media_src_directive, do: "'self'"
-  defp font_src_directive, do: "'self'"
+  defp font_src_directive, do: "'self' data:"
   defp connect_src_directive, do: "'self'"
   defp style_src_directive, do: "'self' 'unsafe-inline'"
   defp frame_src_directive, do: "'self'"

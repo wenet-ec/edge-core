@@ -7,7 +7,7 @@ defmodule EdgeAdminWeb.Endpoint do
 
   socket("/live", Phoenix.LiveView.Socket,
     websocket: [connect_info: [:peer_data, :x_headers]],
-    longpoll: false
+    longpoll: [connect_info: [:peer_data, :x_headers]]
   )
 
   plug(EdgeAdminWeb.Plugs.Security)

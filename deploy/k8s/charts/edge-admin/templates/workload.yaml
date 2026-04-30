@@ -60,6 +60,9 @@ spec:
         - name: tun
           hostPath:
             path: /dev/net/tun
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
 
       containers:
         - name: edge-admin
@@ -88,6 +91,9 @@ spec:
             {{- if $isStatefulSet }}
             - name: netclient-state
               mountPath: /etc/netclient
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           ports:
             - name: api

@@ -77,8 +77,10 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
       "nats" => %{
         "host" => "edge_event_broker_nats:4222",
         "protocol" => "nats",
+        "title" => "NATS",
+        "summary" => "Pub/sub by default; JetStream for durable log + replay.",
         "description" =>
-          "NATS broker. Configure via EVENT_BROKER_URLS. Optional token auth via EVENT_BROKER_NATS_TOKEN. " <>
+          "Configure via EVENT_BROKER_URLS. Optional token auth via EVENT_BROKER_NATS_TOKEN. " <>
             "By default, pub/sub with no persistence. Set EVENT_BROKER_NATS_JETSTREAM=true to enable durable JetStream log — " <>
             "three streams are auto-created on startup: EDGE_NODE_EVENTS, EDGE_EXECUTION_EVENTS, EDGE_SELF_UPDATE_EVENTS. Retention is configured on the broker.",
         "security" => [%{"$ref" => "#/components/securitySchemes/natsToken"}]
@@ -86,17 +88,21 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
       "kafka" => %{
         "host" => "edge_event_broker_kafka:9092",
         "protocol" => "kafka",
+        "title" => "Kafka / Redpanda",
+        "summary" => "Any Kafka-compatible broker (Redpanda recommended — no JVM).",
         "description" =>
-          "Redpanda or Apache Kafka (Kafka protocol). Redpanda is the recommended default — no JVM, lighter than vanilla Kafka. " <>
-            "Any Kafka-compatible broker works. Configure via EVENT_BROKER_URLS (host:port, comma-separated). " <>
+          "Redpanda is the recommended default — no JVM, lighter than vanilla Kafka. " <>
+            "Configure via EVENT_BROKER_URLS (host:port, comma-separated). " <>
             "SASL auth via EVENT_BROKER_KAFKA_USERNAME / EVENT_BROKER_KAFKA_PASSWORD / EVENT_BROKER_KAFKA_SASL_MECHANISM.",
         "security" => [%{"$ref" => "#/components/securitySchemes/kafkaSasl"}]
       },
       "rabbitmq" => %{
         "host" => "edge_event_broker_rabbitmq:5672",
         "protocol" => "amqp",
+        "title" => "RabbitMQ",
+        "summary" => "AMQP topic exchange; routing key = event type.",
         "description" =>
-          "RabbitMQ (AMQP protocol). Configure via EVENT_BROKER_URLS (single amqp:// or amqps:// URL). " <>
+          "Configure via EVENT_BROKER_URLS (single amqp:// or amqps:// URL). " <>
             "All events are published to a durable topic exchange `edge.events`. " <>
             "Routing key = event type (e.g. `edge.node.registered`). " <>
             "Consumer queue durability is the consumer's choice.",
@@ -105,12 +111,35 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
       "redis" => %{
         "host" => "edge_event_broker_redis:6379",
         "protocol" => "redis",
+        "title" => "Redis",
+        "summary" => "Pure pub/sub (`PUBLISH`/`SUBSCRIBE`). Fire-and-forget.",
         "description" =>
-          "Redis broker. Configure via EVENT_BROKER_URLS (single redis:// or rediss:// URL). " <>
+          "Configure via EVENT_BROKER_URLS (single redis:// or rediss:// URL). " <>
             "Events are published via Redis Pub/Sub (`PUBLISH`). Channel = event type " <>
             "(e.g. `edge.node.registered`). Use `SUBSCRIBE` or `PSUBSCRIBE edge.*` to consume. " <>
-            "Fire-and-forget — no durability or replay. Credentials embedded in URL.",
+            "No durability or replay. Credentials embedded in URL.",
         "security" => [%{"$ref" => "#/components/securitySchemes/redisAuth"}]
+      },
+      "mqtt" => %{
+        "host" => "edge_event_broker_mqtt:1883",
+        "protocol" => "mqtt",
+        "title" => "MQTT",
+        "summary" => "Any MQTT 3.1.1 / 5 broker. Configurable QoS, topic = event type with `/` separators.",
+        "description" =>
+          "Works against any MQTT broker (EMQX, Mosquitto, HiveMQ, AWS IoT Core, etc.). " <>
+            "Configure via EVENT_BROKER_URLS (host:port, only the first URL is used). " <>
+            "Topic = event type with `.` rewritten to `/` (e.g. `edge/node/registered`). " <>
+            "Subscribers use MQTT wildcards: `edge/#`, `edge/node/+`, etc. " <>
+            "Default publish QoS is 1; configurable via EVENT_BROKER_MQTT_QOS=0|1|2.",
+        "security" => [%{"$ref" => "#/components/securitySchemes/mqttAuth"}],
+        "bindings" => %{
+          "mqtt" => %{
+            "clientId" => "edge_admin-<node>-<unique>",
+            "cleanSession" => true,
+            "keepAlive" => 60,
+            "bindingVersion" => "0.2.0"
+          }
+        }
       }
     }
   end
@@ -199,11 +228,18 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
            "kafka" => %{"bindingVersion" => "0.5.0"},
            "amqp" => %{
              "bindingVersion" => "0.3.0",
-             "cc" => [],
-             "deliveryMode" => 1,
-             "mandatory" => false
+             "deliveryMode" => 2
            },
-           "redis" => %{"bindingVersion" => "0.1.0"}
+           "redis" => %{"bindingVersion" => "0.1.0"},
+           "mqtt" => %{
+             "qos" => 1,
+             "retain" => false,
+             "bindingVersion" => "0.2.0"
+           }
+           # Note: MQTT topic for each event is the channel address with `.` rewritten
+           # to `/` (e.g. `edge.node.registered` → `edge/node/registered`) so MQTT
+           # segment wildcards (`+`, `#`) work as expected. QoS shown above is the
+           # default; configurable via EVENT_BROKER_MQTT_QOS.
          }
        }}
     end)
@@ -429,6 +465,11 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           "bindingVersion" => "0.3.0",
           "contentEncoding" => "UTF-8",
           "messageType" => "application/json"
+        },
+        "mqtt" => %{
+          "payloadFormatIndicator" => 1,
+          "contentType" => "application/json",
+          "bindingVersion" => "0.2.0"
         }
       },
       "examples" => [
@@ -661,7 +702,9 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
       "kafkaSasl" => %{
         "type" => "scramSha256",
         "description" =>
-          "Kafka SASL auth. Set via EVENT_BROKER_KAFKA_USERNAME / EVENT_BROKER_KAFKA_PASSWORD / EVENT_BROKER_KAFKA_SASL_MECHANISM."
+          "Kafka SASL auth via EVENT_BROKER_KAFKA_USERNAME + EVENT_BROKER_KAFKA_PASSWORD. " <>
+            "Mechanism configurable: EVENT_BROKER_KAFKA_SASL_MECHANISM=plain|scram_sha_256|scram_sha_512. " <>
+            "Enable TLS with EVENT_BROKER_KAFKA_SSL=true."
       },
       "amqpPlain" => %{
         "type" => "userPassword",
@@ -676,6 +719,12 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
             "`redis://:password@host:port` (password-only) or " <>
             "`redis://username:password@host:port` (Redis 6+ ACL). " <>
             "Enable TLS with EVENT_BROKER_REDIS_SSL=true (use rediss:// URL for external brokers)."
+      },
+      "mqttAuth" => %{
+        "type" => "userPassword",
+        "description" =>
+          "MQTT auth via EVENT_BROKER_MQTT_USERNAME + EVENT_BROKER_MQTT_PASSWORD, or EVENT_BROKER_MQTT_JWT. " <>
+            "Enable TLS with EVENT_BROKER_MQTT_SSL=true. mTLS supported via cert file env vars."
       }
     }
   end

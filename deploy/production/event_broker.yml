@@ -13,6 +13,7 @@ volumes:
   production_edge_event_broker_redpanda_data: {}
   production_edge_event_broker_rabbitmq_data: {}
   production_edge_event_broker_redis_data: {}
+  production_edge_event_broker_mqtt_data: {}
 
 services:
 
@@ -168,3 +169,52 @@ services:
     ports:
       - "46379:6379"   # Redis client
     command: ["redis-server", "/etc/redis/redis.conf"]
+
+  # ---------------------------------------------------------------------------
+  # MQTT
+  # Set EVENT_BROKER_ADAPTER=mqtt in .envs/.edge_admin
+  #
+  # Default broker is EMQX (ships with built-in dashboard + REST API on port
+  # 18083 → 48086 host; default creds: admin / public, change on first login).
+  # The MQTT adapter works against any MQTT 3.1.1 / 5 broker — swap the image
+  # for Mosquitto / HiveMQ / etc. and update the env vars accordingly.
+  # ---------------------------------------------------------------------------
+
+  edge_event_broker_mqtt:
+    image: emqx/emqx:5.8.9
+    container_name: production_edge_event_broker_mqtt
+    hostname: edge_event_broker_mqtt
+    networks:
+      production_edge_core:
+        ipv4_address: 172.25.0.114
+    volumes:
+      - production_edge_event_broker_mqtt_data:/opt/emqx/data
+      - ./compose/edge_event_broker/mqtt.conf:/opt/emqx/data/configs/cluster.hocon:ro
+      # TLS certs — uncomment when enabling MQTT/TLS on port 8883:
+      # - /etc/mqtt/tls:/etc/mqtt/tls:ro
+    environment:
+      EMQX_NAME: emqx
+      EMQX_HOST: edge_event_broker_mqtt
+      EMQX_NODE__COOKIE: edge_event_broker_mqtt_cookie
+      EMQX_NODE__DB_BACKEND: rlog
+      EMQX_NODE__ROLE: core
+      EMQX_RPC__PORT_DISCOVERY: manual
+      EMQX_DASHBOARD__DEFAULT_USERNAME: admin
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: public
+      # TLS — uncomment to enable MQTT over TLS on 8883.
+      # Also set EVENT_BROKER_MQTT_SSL=true in .envs/.edge_admin.
+      # Mount your certs first via the volume above.
+      # EMQX_LISTENERS__SSL__DEFAULT__SSL_OPTIONS__CERTFILE: /etc/mqtt/tls/server.crt
+      # EMQX_LISTENERS__SSL__DEFAULT__SSL_OPTIONS__KEYFILE:  /etc/mqtt/tls/server.key
+      # EMQX_LISTENERS__SSL__DEFAULT__SSL_OPTIONS__CACERTFILE: /etc/mqtt/tls/ca.crt
+    healthcheck:
+      test: ["CMD", "/opt/emqx/bin/emqx_ctl", "status"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    ports:
+      - "41883:1883"   # MQTT
+      - "48883:8883"   # MQTT/TLS
+      - "48084:8083"   # MQTT over WebSocket
+      - "48086:18083"  # Dashboard + REST API

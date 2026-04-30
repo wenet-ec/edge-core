@@ -18,6 +18,7 @@ defmodule EdgeAdmin.EventBroker do
   - `kafka` — Kafka-compatible protocol (Redpanda recommended)
   - `rabbitmq` — RabbitMQ topic exchange; consumer queue durability is the consumer's choice
   - `redis` — Redis Pub/Sub; fire-and-forget, no durability or replay
+  - `mqtt` — MQTT 3.1.1 / 5 brokers (EMQX, Mosquitto, HiveMQ, AWS IoT, etc.); pub/sub, configurable QoS
 
   ## Usage
 
@@ -158,6 +159,7 @@ defmodule EdgeAdmin.EventBroker do
       :kafka -> EdgeAdmin.EventBroker.Adapters.Kafka
       :rabbitmq -> EdgeAdmin.EventBroker.Adapters.Rabbitmq
       :redis -> EdgeAdmin.EventBroker.Adapters.Redis
+      :mqtt -> EdgeAdmin.EventBroker.Adapters.Mqtt
     end
   end
 

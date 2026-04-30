@@ -285,6 +285,7 @@ edge_core/
 - `event_broker/adapters/kafka.ex` - Kafka-compatible adapter (brod)
 - `event_broker/adapters/rabbitmq.ex` - RabbitMQ adapter (amqp); durable topic exchange `edge.events`
 - `event_broker/adapters/redis.ex` - Redis adapter (redix); fire-and-forget pub/sub, channel = event type
+- `event_broker/adapters/mqtt.ex` - MQTT adapter (emqtt); pub/sub, configurable QoS, topic = event type with `.` rewritten to `/`
 - `event_broker/workers/publish_event_worker.ex` - Oban worker for async broker delivery
 
 **Edge Agent (`edge_agent/lib/edge_agent/`):**
@@ -377,6 +378,9 @@ Admin background work is split between two schedulers with different semantics:
 - NUI (NATS web UI): http://localhost:41311
 - Redpanda (event broker, opt-in): localhost:49092
 - Redpanda Console: http://localhost:49080
+- RabbitMQ (event broker, opt-in): localhost:45672 (AMQP), http://localhost:41567 (Management UI)
+- Redis (event broker, opt-in): localhost:46379
+- MQTT (event broker, opt-in): localhost:41883 (MQTT), localhost:48084 (WebSocket), http://localhost:48086 (EMQX Dashboard + REST API)
 
 **Edge Services:**
 
@@ -411,12 +415,15 @@ Production files follow the same pattern in `deploy/production/.envs/`
 - `SECRET_KEY_BASE` - Phoenix secret for sessions and encryption
 - `PHX_HOST` - Public hostname for admin API
 - `EVENT_BROKER_ENABLED` - `true` to enable event publishing (default: `false`)
-- `EVENT_BROKER_ADAPTER` - `nats`, `kafka`, `rabbitmq`, or `redis` (required when enabled)
+- `EVENT_BROKER_ADAPTER` - `nats`, `kafka`, `rabbitmq`, `redis`, or `mqtt` (required when enabled)
 - `EVENT_BROKER_URLS` - Comma-separated broker URLs (`nats://host:port` or `host:port`)
 - `EVENT_BROKER_NATS_TOKEN` - NATS auth token (optional)
 - `EVENT_BROKER_KAFKA_USERNAME` / `EVENT_BROKER_KAFKA_PASSWORD` - SASL credentials (optional)
 - `EVENT_BROKER_KAFKA_SASL_MECHANISM` - `plain` (default), `scram_sha_256`, `scram_sha_512`
 - `EVENT_BROKER_KAFKA_SSL` - `true` for TLS (external/public brokers)
+- `EVENT_BROKER_MQTT_QOS` - `0`, `1` (default), or `2` — global QoS for all events
+- `EVENT_BROKER_MQTT_JWT` / `EVENT_BROKER_MQTT_USERNAME` + `EVENT_BROKER_MQTT_PASSWORD` - MQTT auth (mutually exclusive, JWT precedence)
+- `EVENT_BROKER_MQTT_SSL` / `EVENT_BROKER_MQTT_CACERT_FILE` / `EVENT_BROKER_MQTT_CLIENT_CERT_FILE` + `EVENT_BROKER_MQTT_CLIENT_KEY_FILE` - TLS / mTLS
 - `CORE_NAME` - Identifies this core instance in every event envelope (default: `"default"`)
 
 ## Technology Stack

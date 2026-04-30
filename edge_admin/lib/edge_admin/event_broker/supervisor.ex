@@ -28,6 +28,11 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
 
     1. `EdgeAdmin.EventBroker.Adapters.Redis` — GenServer that opens a Redix
        connection and publishes events via Redis Pub/Sub (`PUBLISH`).
+
+  ## Children (MQTT adapter)
+
+    1. `EdgeAdmin.EventBroker.Adapters.Mqtt` — GenServer that opens an `emqtt`
+       client connection and publishes events to topic = event type.
   """
 
   use Supervisor
@@ -69,5 +74,9 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
 
   defp build_children(:redis) do
     [EdgeAdmin.EventBroker.Adapters.Redis]
+  end
+
+  defp build_children(:mqtt) do
+    [EdgeAdmin.EventBroker.Adapters.Mqtt]
   end
 end

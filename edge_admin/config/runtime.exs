@@ -368,7 +368,7 @@ config :os_mon,
 # CORE_NAME is shared across all adapters — included in every event envelope.
 #
 #   EVENT_BROKER_ENABLED=true
-#   EVENT_BROKER_ADAPTER=nats|kafka|rabbitmq|redis
+#   EVENT_BROKER_ADAPTER=nats|kafka|rabbitmq|redis|mqtt
 #   EVENT_BROKER_URLS=...
 #   CORE_NAME=prod-us   # optional, defaults to "default"
 #
@@ -396,6 +396,19 @@ config :os_mon,
 # Redis (pub/sub, fire-and-forget):
 #   EVENT_BROKER_URLS=redis://edge_event_broker_redis:6379   # embed credentials: redis://:pass@host:port
 #   EVENT_BROKER_REDIS_SSL=true   # enable TLS — required for external brokers (Redis Cloud, Upstash, etc.)
+#
+# MQTT (pub/sub):
+#   EVENT_BROKER_URLS=edge_event_broker_mqtt:1883   # host:port — first URL only (one broker per client)
+#   EVENT_BROKER_MQTT_QOS=1                 # 0|1|2, default 1 (at-least-once with broker ACK)
+#   # Auth — mutually exclusive (JWT precedence over username/password):
+#   EVENT_BROKER_MQTT_JWT=                  # JWT bearer token, sent in CONNECT password slot
+#   EVENT_BROKER_MQTT_USERNAME=             # plain credentials
+#   EVENT_BROKER_MQTT_PASSWORD=
+#   # TLS:
+#   EVENT_BROKER_MQTT_SSL=true              # enable TLS — required for external brokers
+#   EVENT_BROKER_MQTT_CACERT_FILE=          # custom CA bundle / pinning
+#   EVENT_BROKER_MQTT_CLIENT_CERT_FILE=     # mTLS — requires SSL=true
+#   EVENT_BROKER_MQTT_CLIENT_KEY_FILE=      # mTLS — requires SSL=true
 config :sentry,
   dsn: get_env("SENTRY_DSN"),
   environment_name: get_env("SENTRY_ENVIRONMENT_NAME"),
@@ -408,7 +421,8 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
       "kafka" -> :kafka
       "rabbitmq" -> :rabbitmq
       "redis" -> :redis
-      other -> raise "Unknown EVENT_BROKER_ADAPTER=#{other} — valid values: nats, kafka, rabbitmq, redis"
+      "mqtt" -> :mqtt
+      other -> raise "Unknown EVENT_BROKER_ADAPTER=#{other} — valid values: nats, kafka, rabbitmq, redis, mqtt"
     end
 
   event_broker_urls = get_env!("EVENT_BROKER_URLS")
@@ -509,5 +523,38 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
       config :edge_admin, :event_broker_redis,
         url: url,
         ssl: get_env("EVENT_BROKER_REDIS_SSL", :boolean, false)
+
+    :mqtt ->
+      # EVENT_BROKER_URLS for MQTT is a single host:port endpoint.
+      # MQTT clients connect to one broker at a time — even clustered brokers
+      # handle failover transparently behind a single endpoint.
+      [host, port_str] =
+        event_broker_urls
+        |> String.split(",")
+        |> List.first()
+        |> String.trim()
+        |> String.split(":")
+
+      mqtt_qos =
+        case get_env("EVENT_BROKER_MQTT_QOS", :string, "1") do
+          "0" -> 0
+          "1" -> 1
+          "2" -> 2
+          other -> raise "Invalid EVENT_BROKER_MQTT_QOS=#{other} — valid values: 0, 1, 2"
+        end
+
+      config :edge_admin, :event_broker_mqtt,
+        host: host,
+        port: String.to_integer(port_str),
+        qos: mqtt_qos,
+        # Auth — mutually exclusive (JWT precedence over username/password):
+        jwt: get_env("EVENT_BROKER_MQTT_JWT"),
+        username: get_env("EVENT_BROKER_MQTT_USERNAME"),
+        password: get_env("EVENT_BROKER_MQTT_PASSWORD"),
+        # TLS:
+        ssl: get_env("EVENT_BROKER_MQTT_SSL", :boolean, false),
+        cacert_file: get_env("EVENT_BROKER_MQTT_CACERT_FILE"),
+        client_cert_file: get_env("EVENT_BROKER_MQTT_CLIENT_CERT_FILE"),
+        client_key_file: get_env("EVENT_BROKER_MQTT_CLIENT_KEY_FILE")
   end
 end

@@ -267,6 +267,20 @@ ADMIN_DISCOVERY_PORT=44000
 # EVENT_BROKER_URLS=redis://edge_event_broker_redis:6379   # embed credentials: redis://:pass@host:port
 # EVENT_BROKER_REDIS_SSL=true                # enable TLS — required for public/external brokers (Redis Cloud, Upstash, etc.)
 
+# MQTT (EMQX, Mosquitto, HiveMQ, AWS IoT, etc.):
+# EVENT_BROKER_ADAPTER=mqtt
+# EVENT_BROKER_URLS=edge_event_broker_mqtt:1883   # host:port — only the first URL is used
+# EVENT_BROKER_MQTT_QOS=1                     # 0|1|2, default 1 (at-least-once with broker ACK)
+# Auth — pick one mode (mutually exclusive, JWT takes precedence):
+# EVENT_BROKER_MQTT_JWT=                      # JWT bearer token, sent in CONNECT password slot
+# EVENT_BROKER_MQTT_USERNAME=                 # plain credentials
+# EVENT_BROKER_MQTT_PASSWORD=
+# TLS:
+# EVENT_BROKER_MQTT_SSL=true                  # enable TLS — required for public/external brokers (HiveMQ Cloud, etc.)
+# EVENT_BROKER_MQTT_CACERT_FILE=              # custom CA bundle / pinning
+# EVENT_BROKER_MQTT_CLIENT_CERT_FILE=         # mTLS — requires SSL=true
+# EVENT_BROKER_MQTT_CLIENT_KEY_FILE=          # mTLS — requires SSL=true
+
 # =============================================================================
 # Background Workers & Schedulers
 # =============================================================================

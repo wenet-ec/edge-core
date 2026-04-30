@@ -75,12 +75,32 @@ config:
 #   HEALTH_CHECK_TIMEOUT_MS: "15000"
 #   NODE_HEALTH_CHECK_CONCURRENCY: "200"
 #   EVENT_BROKER_ENABLED: "true"
-#   EVENT_BROKER_ADAPTER: "nats"
+#   EVENT_BROKER_ADAPTER: "nats"            # nats | kafka | rabbitmq | redis | mqtt
 #   EVENT_BROKER_URLS: "nats://my-nats:4222"
+#   EVENT_BROKER_MQTT_QOS: "1"              # MQTT only — 0|1|2 (default 1)
+#   EVENT_BROKER_MQTT_SSL: "true"           # MQTT only — TLS toggle
+#   EVENT_BROKER_MQTT_CACERT_FILE: "/etc/mqtt/tls/ca.crt"
+#   EVENT_BROKER_MQTT_CLIENT_CERT_FILE: "/etc/mqtt/tls/client.crt"
+#   EVENT_BROKER_MQTT_CLIENT_KEY_FILE: "/etc/mqtt/tls/client.key"
 #   DERP_MAP_URL: "https://relay.example.com/derpmap/default"
 #   SENTRY_DSN: "https://..."
 #   CORE_NAME: "prod-us"
 extraEnv: {}
+
+# Extra volumes / volumeMounts — escape hatch for mounting cert files,
+# CA bundles, JWT key files, etc. Used together with extraEnv to point the
+# app at the mounted paths. Common case: MQTT mTLS certs.
+#
+# extraVolumes:
+#   - name: mqtt-tls
+#     secret:
+#       secretName: my-mqtt-client-certs   # Secret with keys: ca.crt, client.crt, client.key
+# extraVolumeMounts:
+#   - name: mqtt-tls
+#     mountPath: /etc/mqtt/tls
+#     readOnly: true
+extraVolumes: []
+extraVolumeMounts: []
 
 # hostAliases — injected into /etc/hosts, bypasses DNS entirely.
 # Use this to map Netmaker's public hostname (e.g. edge-vpn.localtest.me) to the
@@ -123,6 +143,13 @@ secrets:
   # Kafka/Redpanda auth
   eventBrokerKafkaUsername: ""
   eventBrokerKafkaPassword: ""
+  # MQTT auth — pick one, mutually exclusive (JWT takes precedence)
+  eventBrokerMqttJwt: ""         # JWT bearer token, sent in CONNECT password slot
+  eventBrokerMqttUsername: ""    # plain credentials
+  eventBrokerMqttPassword: ""
+  # mTLS certs are NOT secret string fields — mount them via extraVolumes
+  # (see extraVolumes/extraVolumeMounts above) and point the app at the
+  # mounted paths via extraEnv.EVENT_BROKER_MQTT_*_FILE.
 
 migration:
   # Set to false when the image doesn't exist yet (e.g. local kind testing without a built image)

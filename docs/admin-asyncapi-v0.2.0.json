@@ -141,6 +141,11 @@
               "description": "Kafka partition key — `command_id` from the event data",
               "type": "string"
             }
+          },
+          "mqtt": {
+            "bindingVersion": "0.2.0",
+            "contentType": "application/json",
+            "payloadFormatIndicator": 1
           }
         },
         "contentType": "application/json",
@@ -191,6 +196,11 @@
               "description": "Kafka partition key — `command_id` from the event data",
               "type": "string"
             }
+          },
+          "mqtt": {
+            "bindingVersion": "0.2.0",
+            "contentType": "application/json",
+            "payloadFormatIndicator": 1
           }
         },
         "contentType": "application/json",
@@ -241,6 +251,11 @@
               "description": "Kafka partition key — `command_id` from the event data",
               "type": "string"
             }
+          },
+          "mqtt": {
+            "bindingVersion": "0.2.0",
+            "contentType": "application/json",
+            "payloadFormatIndicator": 1
           }
         },
         "contentType": "application/json",
@@ -291,6 +306,11 @@
               "description": "Kafka partition key — `command_id` from the event data",
               "type": "string"
             }
+          },
+          "mqtt": {
+            "bindingVersion": "0.2.0",
+            "contentType": "application/json",
+            "payloadFormatIndicator": 1
           }
         },
         "contentType": "application/json",
@@ -341,6 +361,11 @@
               "description": "Kafka partition key — `command_id` from the event data",
               "type": "string"
             }
+          },
+          "mqtt": {
+            "bindingVersion": "0.2.0",
+            "contentType": "application/json",
+            "payloadFormatIndicator": 1
           }
         },
         "contentType": "application/json",
@@ -391,6 +416,11 @@
               "description": "Kafka partition key — `node_id` from the event data",
               "type": "string"
             }
+          },
+          "mqtt": {
+            "bindingVersion": "0.2.0",
+            "contentType": "application/json",
+            "payloadFormatIndicator": 1
           }
         },
         "contentType": "application/json",
@@ -442,6 +472,11 @@
               "description": "Kafka partition key — `node_id` from the event data",
               "type": "string"
             }
+          },
+          "mqtt": {
+            "bindingVersion": "0.2.0",
+            "contentType": "application/json",
+            "payloadFormatIndicator": 1
           }
         },
         "contentType": "application/json",
@@ -492,6 +527,11 @@
               "description": "Kafka partition key — `node_id` from the event data",
               "type": "string"
             }
+          },
+          "mqtt": {
+            "bindingVersion": "0.2.0",
+            "contentType": "application/json",
+            "payloadFormatIndicator": 1
           }
         },
         "contentType": "application/json",
@@ -542,6 +582,11 @@
               "description": "Kafka partition key — `node_id` from the event data",
               "type": "string"
             }
+          },
+          "mqtt": {
+            "bindingVersion": "0.2.0",
+            "contentType": "application/json",
+            "payloadFormatIndicator": 1
           }
         },
         "contentType": "application/json",
@@ -592,6 +637,11 @@
               "description": "Kafka partition key — `node_id` from the event data",
               "type": "string"
             }
+          },
+          "mqtt": {
+            "bindingVersion": "0.2.0",
+            "contentType": "application/json",
+            "payloadFormatIndicator": 1
           }
         },
         "contentType": "application/json",
@@ -643,6 +693,11 @@
               "description": "Kafka partition key — `node_id` from the event data",
               "type": "string"
             }
+          },
+          "mqtt": {
+            "bindingVersion": "0.2.0",
+            "contentType": "application/json",
+            "payloadFormatIndicator": 1
           }
         },
         "contentType": "application/json",
@@ -694,6 +749,11 @@
               "description": "Kafka partition key — `node_id` from the event data",
               "type": "string"
             }
+          },
+          "mqtt": {
+            "bindingVersion": "0.2.0",
+            "contentType": "application/json",
+            "payloadFormatIndicator": 1
           }
         },
         "contentType": "application/json",
@@ -745,6 +805,11 @@
               "description": "Kafka partition key — `request_id` from the event data",
               "type": "string"
             }
+          },
+          "mqtt": {
+            "bindingVersion": "0.2.0",
+            "contentType": "application/json",
+            "payloadFormatIndicator": 1
           }
         },
         "contentType": "application/json",
@@ -790,6 +855,11 @@
               "description": "Kafka partition key — `request_id` from the event data",
               "type": "string"
             }
+          },
+          "mqtt": {
+            "bindingVersion": "0.2.0",
+            "contentType": "application/json",
+            "payloadFormatIndicator": 1
           }
         },
         "contentType": "application/json",
@@ -1102,8 +1172,12 @@
         "type": "userPassword"
       },
       "kafkaSasl": {
-        "description": "Kafka SASL auth. Set via EVENT_BROKER_KAFKA_USERNAME / EVENT_BROKER_KAFKA_PASSWORD / EVENT_BROKER_KAFKA_SASL_MECHANISM.",
+        "description": "Kafka SASL auth via EVENT_BROKER_KAFKA_USERNAME + EVENT_BROKER_KAFKA_PASSWORD. Mechanism configurable: EVENT_BROKER_KAFKA_SASL_MECHANISM=plain|scram_sha_256|scram_sha_512. Enable TLS with EVENT_BROKER_KAFKA_SSL=true.",
         "type": "scramSha256"
+      },
+      "mqttAuth": {
+        "description": "MQTT auth via EVENT_BROKER_MQTT_USERNAME + EVENT_BROKER_MQTT_PASSWORD, or EVENT_BROKER_MQTT_JWT. Enable TLS with EVENT_BROKER_MQTT_SSL=true. mTLS supported via cert file env vars.",
+        "type": "userPassword"
       },
       "natsToken": {
         "description": "NATS token auth. Set via EVENT_BROKER_NATS_TOKEN.",
@@ -1126,13 +1200,9 @@
     "publish_edge_node_registered": {
       "action": "send",
       "bindings": {
-        "amqp": {
-          "bindingVersion": "0.3.0",
-          "cc": [],
-          "deliveryMode": 1,
-          "mandatory": false
-        },
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
         "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
         "redis": { "bindingVersion": "0.1.0" }
       },
@@ -1141,13 +1211,9 @@
     "publish_edge_node_reregistered": {
       "action": "send",
       "bindings": {
-        "amqp": {
-          "bindingVersion": "0.3.0",
-          "cc": [],
-          "deliveryMode": 1,
-          "mandatory": false
-        },
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
         "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
         "redis": { "bindingVersion": "0.1.0" }
       },
@@ -1156,13 +1222,9 @@
     "publish_edge_node_version_changed": {
       "action": "send",
       "bindings": {
-        "amqp": {
-          "bindingVersion": "0.3.0",
-          "cc": [],
-          "deliveryMode": 1,
-          "mandatory": false
-        },
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
         "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
         "redis": { "bindingVersion": "0.1.0" }
       },
@@ -1171,13 +1233,9 @@
     "publish_edge_node_status_changed": {
       "action": "send",
       "bindings": {
-        "amqp": {
-          "bindingVersion": "0.3.0",
-          "cc": [],
-          "deliveryMode": 1,
-          "mandatory": false
-        },
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
         "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
         "redis": { "bindingVersion": "0.1.0" }
       },
@@ -1186,13 +1244,9 @@
     "publish_edge_node_cluster_changed": {
       "action": "send",
       "bindings": {
-        "amqp": {
-          "bindingVersion": "0.3.0",
-          "cc": [],
-          "deliveryMode": 1,
-          "mandatory": false
-        },
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
         "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
         "redis": { "bindingVersion": "0.1.0" }
       },
@@ -1201,13 +1255,9 @@
     "publish_edge_node_update_triggered": {
       "action": "send",
       "bindings": {
-        "amqp": {
-          "bindingVersion": "0.3.0",
-          "cc": [],
-          "deliveryMode": 1,
-          "mandatory": false
-        },
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
         "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
         "redis": { "bindingVersion": "0.1.0" }
       },
@@ -1216,13 +1266,9 @@
     "publish_edge_node_deleted": {
       "action": "send",
       "bindings": {
-        "amqp": {
-          "bindingVersion": "0.3.0",
-          "cc": [],
-          "deliveryMode": 1,
-          "mandatory": false
-        },
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
         "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
         "redis": { "bindingVersion": "0.1.0" }
       },
@@ -1231,13 +1277,9 @@
     "publish_edge_execution_created": {
       "action": "send",
       "bindings": {
-        "amqp": {
-          "bindingVersion": "0.3.0",
-          "cc": [],
-          "deliveryMode": 1,
-          "mandatory": false
-        },
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
         "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
         "redis": { "bindingVersion": "0.1.0" }
       },
@@ -1246,13 +1288,9 @@
     "publish_edge_execution_sent": {
       "action": "send",
       "bindings": {
-        "amqp": {
-          "bindingVersion": "0.3.0",
-          "cc": [],
-          "deliveryMode": 1,
-          "mandatory": false
-        },
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
         "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
         "redis": { "bindingVersion": "0.1.0" }
       },
@@ -1261,13 +1299,9 @@
     "publish_edge_execution_completed": {
       "action": "send",
       "bindings": {
-        "amqp": {
-          "bindingVersion": "0.3.0",
-          "cc": [],
-          "deliveryMode": 1,
-          "mandatory": false
-        },
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
         "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
         "redis": { "bindingVersion": "0.1.0" }
       },
@@ -1276,13 +1310,9 @@
     "publish_edge_execution_cancelled": {
       "action": "send",
       "bindings": {
-        "amqp": {
-          "bindingVersion": "0.3.0",
-          "cc": [],
-          "deliveryMode": 1,
-          "mandatory": false
-        },
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
         "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
         "redis": { "bindingVersion": "0.1.0" }
       },
@@ -1291,13 +1321,9 @@
     "publish_edge_execution_expired": {
       "action": "send",
       "bindings": {
-        "amqp": {
-          "bindingVersion": "0.3.0",
-          "cc": [],
-          "deliveryMode": 1,
-          "mandatory": false
-        },
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
         "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
         "redis": { "bindingVersion": "0.1.0" }
       },
@@ -1306,13 +1332,9 @@
     "publish_edge_self_update_created": {
       "action": "send",
       "bindings": {
-        "amqp": {
-          "bindingVersion": "0.3.0",
-          "cc": [],
-          "deliveryMode": 1,
-          "mandatory": false
-        },
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
         "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
         "redis": { "bindingVersion": "0.1.0" }
       },
@@ -1321,13 +1343,9 @@
     "publish_edge_self_update_completed": {
       "action": "send",
       "bindings": {
-        "amqp": {
-          "bindingVersion": "0.3.0",
-          "cc": [],
-          "deliveryMode": 1,
-          "mandatory": false
-        },
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
         "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
         "redis": { "bindingVersion": "0.1.0" }
       },
@@ -1336,28 +1354,52 @@
   },
   "servers": {
     "kafka": {
-      "description": "Redpanda or Apache Kafka (Kafka protocol). Redpanda is the recommended default — no JVM, lighter than vanilla Kafka. Any Kafka-compatible broker works. Configure via EVENT_BROKER_URLS (host:port, comma-separated). SASL auth via EVENT_BROKER_KAFKA_USERNAME / EVENT_BROKER_KAFKA_PASSWORD / EVENT_BROKER_KAFKA_SASL_MECHANISM.",
+      "description": "Redpanda is the recommended default — no JVM, lighter than vanilla Kafka. Configure via EVENT_BROKER_URLS (host:port, comma-separated). SASL auth via EVENT_BROKER_KAFKA_USERNAME / EVENT_BROKER_KAFKA_PASSWORD / EVENT_BROKER_KAFKA_SASL_MECHANISM.",
       "host": "edge_event_broker_kafka:9092",
       "protocol": "kafka",
-      "security": [{ "$ref": "#/components/securitySchemes/kafkaSasl" }]
+      "security": [{ "$ref": "#/components/securitySchemes/kafkaSasl" }],
+      "summary": "Any Kafka-compatible broker (Redpanda recommended — no JVM).",
+      "title": "Kafka / Redpanda"
+    },
+    "mqtt": {
+      "bindings": {
+        "mqtt": {
+          "bindingVersion": "0.2.0",
+          "cleanSession": true,
+          "clientId": "edge_admin-<node>-<unique>",
+          "keepAlive": 60
+        }
+      },
+      "description": "Works against any MQTT broker (EMQX, Mosquitto, HiveMQ, AWS IoT Core, etc.). Configure via EVENT_BROKER_URLS (host:port, only the first URL is used). Topic = event type with `.` rewritten to `/` (e.g. `edge/node/registered`). Subscribers use MQTT wildcards: `edge/#`, `edge/node/+`, etc. Default publish QoS is 1; configurable via EVENT_BROKER_MQTT_QOS=0|1|2.",
+      "host": "edge_event_broker_mqtt:1883",
+      "protocol": "mqtt",
+      "security": [{ "$ref": "#/components/securitySchemes/mqttAuth" }],
+      "summary": "Any MQTT 3.1.1 / 5 broker. Configurable QoS, topic = event type with `/` separators.",
+      "title": "MQTT"
     },
     "nats": {
-      "description": "NATS broker. Configure via EVENT_BROKER_URLS. Optional token auth via EVENT_BROKER_NATS_TOKEN. By default, pub/sub with no persistence. Set EVENT_BROKER_NATS_JETSTREAM=true to enable durable JetStream log — three streams are auto-created on startup: EDGE_NODE_EVENTS, EDGE_EXECUTION_EVENTS, EDGE_SELF_UPDATE_EVENTS. Retention is configured on the broker.",
+      "description": "Configure via EVENT_BROKER_URLS. Optional token auth via EVENT_BROKER_NATS_TOKEN. By default, pub/sub with no persistence. Set EVENT_BROKER_NATS_JETSTREAM=true to enable durable JetStream log — three streams are auto-created on startup: EDGE_NODE_EVENTS, EDGE_EXECUTION_EVENTS, EDGE_SELF_UPDATE_EVENTS. Retention is configured on the broker.",
       "host": "edge_event_broker_nats:4222",
       "protocol": "nats",
-      "security": [{ "$ref": "#/components/securitySchemes/natsToken" }]
+      "security": [{ "$ref": "#/components/securitySchemes/natsToken" }],
+      "summary": "Pub/sub by default; JetStream for durable log + replay.",
+      "title": "NATS"
     },
     "rabbitmq": {
-      "description": "RabbitMQ (AMQP protocol). Configure via EVENT_BROKER_URLS (single amqp:// or amqps:// URL). All events are published to a durable topic exchange `edge.events`. Routing key = event type (e.g. `edge.node.registered`). Consumer queue durability is the consumer's choice.",
+      "description": "Configure via EVENT_BROKER_URLS (single amqp:// or amqps:// URL). All events are published to a durable topic exchange `edge.events`. Routing key = event type (e.g. `edge.node.registered`). Consumer queue durability is the consumer's choice.",
       "host": "edge_event_broker_rabbitmq:5672",
       "protocol": "amqp",
-      "security": [{ "$ref": "#/components/securitySchemes/amqpPlain" }]
+      "security": [{ "$ref": "#/components/securitySchemes/amqpPlain" }],
+      "summary": "AMQP topic exchange; routing key = event type.",
+      "title": "RabbitMQ"
     },
     "redis": {
-      "description": "Redis broker. Configure via EVENT_BROKER_URLS (single redis:// or rediss:// URL). Events are published via Redis Pub/Sub (`PUBLISH`). Channel = event type (e.g. `edge.node.registered`). Use `SUBSCRIBE` or `PSUBSCRIBE edge.*` to consume. Fire-and-forget — no durability or replay. Credentials embedded in URL.",
+      "description": "Configure via EVENT_BROKER_URLS (single redis:// or rediss:// URL). Events are published via Redis Pub/Sub (`PUBLISH`). Channel = event type (e.g. `edge.node.registered`). Use `SUBSCRIBE` or `PSUBSCRIBE edge.*` to consume. No durability or replay. Credentials embedded in URL.",
       "host": "edge_event_broker_redis:6379",
       "protocol": "redis",
-      "security": [{ "$ref": "#/components/securitySchemes/redisAuth" }]
+      "security": [{ "$ref": "#/components/securitySchemes/redisAuth" }],
+      "summary": "Pure pub/sub (`PUBLISH`/`SUBSCRIBE`). Fire-and-forget.",
+      "title": "Redis"
     }
   }
 }

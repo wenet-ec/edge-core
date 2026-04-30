@@ -145,11 +145,11 @@ Tools are discovered dynamically via `tools/list` — no static spec file needed
 
 Edge Admin can publish lifecycle events to a message broker. Disabled by default — opt in by setting `EVENT_BROKER_ENABLED=true` and pointing `EVENT_BROKER_URLS` at your broker.
 
-Events cover node lifecycle, command execution lifecycle, and self-update lifecycle. All follow the [CloudEvents 1.0](https://cloudevents.io) spec. Supported brokers: NATS, Kafka/Redpanda, RabbitMQ, and Redis — pick whichever fits your stack.
+Events cover node lifecycle, command execution lifecycle, and self-update lifecycle. All follow the [CloudEvents 1.0](https://cloudevents.io) spec. Supported brokers: NATS, Kafka/Redpanda, RabbitMQ, Redis, and MQTT — pick whichever fits your stack.
 
 ```bash
 EVENT_BROKER_ENABLED=true
-EVENT_BROKER_ADAPTER=nats          # or: kafka, rabbitmq, redis
+EVENT_BROKER_ADAPTER=nats          # or: kafka, rabbitmq, redis, mqtt
 EVENT_BROKER_URLS=nats://your-broker:4222
 ```
 
@@ -179,7 +179,7 @@ To import: in Grafana go to **Dashboards → Import**, upload the JSON file, and
 | `examples/standard/`      | 4 admins across 2 clusters, EMQX, Prometheus — when you need HA or more node capacity                  |
 | `examples/relay/`         | Self-hosted DERP/TURN relay node — optional, for agents behind strict NAT                              |
 | `examples/sidecar/`       | Agent as a sidecar container (bridge networking) rather than host-networked                            |
-| `examples/event_brokers/` | NATS, Redpanda, Kafka, RabbitMQ, and Redis compose files                                               |
+| `examples/event_brokers/` | NATS, Redpanda, Kafka, RabbitMQ, Redis, and MQTT compose files                                         |
 | `docs/`                   | Architecture docs and API specs                                                                        |
 
 ## VPN internals

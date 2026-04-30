@@ -8,7 +8,7 @@ Interactive viewer: `/asyncdoc` on a running admin. Raw spec: `GET /api/asyncapi
 
 ## Overview
 
-Edge Admin publishes lifecycle events to a configured message broker (NATS, Kafka/Redpanda, RabbitMQ, or Redis). All events follow the [CloudEvents 1.0](https://cloudevents.io) spec. Edge Admin publishes and forgets — it has no knowledge of consumers.
+Edge Admin publishes lifecycle events to a configured message broker (NATS, Kafka/Redpanda, RabbitMQ, Redis, or MQTT). All events follow the [CloudEvents 1.0](https://cloudevents.io) spec. Edge Admin publishes and forgets — it has no knowledge of consumers.
 
 ### Event Envelope
 
@@ -27,16 +27,16 @@ Every event is wrapped in a CloudEvents envelope:
 }
 ```
 
-| Field             | Description                                                                                                        |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `specversion`     | Always `"1.0"`                                                                                                     |
+| Field             | Description                                                                                                                                                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `specversion`     | Always `"1.0"`                                                                                                                                                                                                                                   |
 | `id`              | UUID v4 — unique per publish. Useful for exactly-once delivery dedup (broker retries). Not useful for semantic dedup of `node.status_changed` duplicates — those carry different `id`s. Use `(node_id, previous_status, status, time)` for that. |
-| `source`          | Always `"https://github.com/wenet-ec/edge-core"`                                                                   |
-| `type`            | Event type — doubles as NATS subject, RabbitMQ routing key, and Redis channel (see tables below)                   |
-| `time`            | When the state change happened in admin (ISO 8601)                                                                 |
-| `datacontenttype` | Always `"application/json"`                                                                                        |
-| `corename`        | CloudEvents extension. Identifies the publishing core instance. Set via `CORE_NAME` env var (default: `"default"`) |
-| `data`            | Full object snapshot at moment of event (see schemas below)                                                        |
+| `source`          | Always `"https://github.com/wenet-ec/edge-core"`                                                                                                                                                                                                 |
+| `type`            | Event type — doubles as NATS subject, RabbitMQ routing key, Redis channel, and MQTT topic (with `.` rewritten to `/` for MQTT — see tables below)                                                                                                |
+| `time`            | When the state change happened in admin (ISO 8601)                                                                                                                                                                                               |
+| `datacontenttype` | Always `"application/json"`                                                                                                                                                                                                                      |
+| `corename`        | CloudEvents extension. Identifies the publishing core instance. Set via `CORE_NAME` env var (default: `"default"`)                                                                                                                               |
+| `data`            | Full object snapshot at moment of event (see schemas below)                                                                                                                                                                                      |
 
 ---
 
@@ -103,6 +103,30 @@ PSUBSCRIBE edge.*                    ← everything
 ```
 
 **No persistence or replay** — messages are delivered to currently connected subscribers only. If no subscriber is connected when Core publishes, the message is gone. Pick Redis only when consumers are always-on and loss is acceptable.
+
+### MQTT
+
+Topic = event `type` with `.` rewritten to `/` so MQTT segment wildcards (`+`, `#`) work as expected:
+
+| Event type                 | MQTT topic                 |
+| -------------------------- | -------------------------- |
+| `edge.node.registered`     | `edge/node/registered`     |
+| `edge.node.status_changed` | `edge/node/status_changed` |
+| `edge.execution.completed` | `edge/execution/completed` |
+| ...                        | ...                        |
+
+Subscription examples:
+
+```
+edge/node/+              ← all node events
+edge/node/status_changed ← only status transitions
+edge/execution/#         ← all execution events
+edge/#                   ← everything
+```
+
+Default publish QoS is `1` (at-least-once with broker ACK). Configurable globally via `EVENT_BROKER_MQTT_QOS=0|1|2` — there is no per-event QoS. Consumers should dedup on envelope `id` regardless (multi-admin setups produce duplicate `node.status_changed` events from independent health checkers).
+
+**Durability is the broker's and consumer's concern.** MQTT QoS controls only the publisher↔broker↔subscriber delivery handshake — it does not make messages durable. Subscribers wanting offline queueing connect with `clean_session=false` (MQTT 3) or `Session Expiry Interval > 0` (MQTT 5) on their own connection.
 
 ---
 
@@ -264,6 +288,7 @@ Edge Core publishes accurately regardless of broker. Durability, replay, and ret
 - **NATS pub/sub** — fire-and-forget. Messages are delivered to active subscribers only; missed messages are gone.
 - **RabbitMQ** — delivery semantics depend on consumer queue configuration. Durable queue = messages survive broker restart; transient queue = live-only. Core always publishes with `persistent: true`.
 - **Redis** — pure pub/sub (`PUBLISH`/`SUBSCRIBE`). No queue, no persistence, no replay. Messages go only to currently connected subscribers. If no subscriber is connected, the message is gone.
+- **MQTT** — pub/sub. QoS 0/1/2 governs only the delivery handshake, not durability. The broker itself doesn't retain history (no replay, no consumer offsets). Subscribers wanting offline queueing connect with persistent sessions; subscribers wanting last-message-on-topic semantics rely on broker retained messages (Edge Core does not publish with retain=true).
 
 In all cases: each publish is a **full snapshot**, not a diff. If events are missed, the next event is still self-contained.
 

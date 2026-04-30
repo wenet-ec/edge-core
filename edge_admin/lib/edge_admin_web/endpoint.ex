@@ -66,6 +66,11 @@ defmodule EdgeAdminWeb.Endpoint do
     param_key: "request_logger"
   )
 
+  # Strip ?request_logger=<token> from query params after the RequestLogger plug
+  # has consumed it. Otherwise downstream OpenApiSpex validation rejects it as
+  # an unknown query parameter.
+  plug(EdgeAdminWeb.Plugs.StripRequestLoggerParam)
+
   plug(EdgeAdminWeb.Router)
 
   # Apply metrics auth only for the metrics endpoint

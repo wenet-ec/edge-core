@@ -27,6 +27,10 @@ defmodule EdgeAdminWeb.Plugs.DegradedMode do
   import Phoenix.Controller
   import Plug.Conn
 
+  # Compile-time dispatch: the metadata module is baked into the plug at compile
+  # time via `compile_env`. Tests override it by setting `:metadata_module` in
+  # config/test.exs before compilation. Runtime swaps are NOT supported — change
+  # the config and recompile.
   @metadata_module Application.compile_env(:edge_admin, :metadata_module, EdgeAdmin.Admins.Metadata)
   @compile {:no_warn_undefined, @metadata_module}
 

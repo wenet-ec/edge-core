@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin_web/controllers/metrics/wireguard_metrics_controller.ex
 defmodule EdgeAdminWeb.Controllers.Metrics.WireguardMetricsController do
-  use EdgeAdminWeb, :controller
+  use EdgeAdminWeb, :api_controller
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Metrics
@@ -8,7 +8,6 @@ defmodule EdgeAdminWeb.Controllers.Metrics.WireguardMetricsController do
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
-  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:show]
 
   tags(["Internal.Metrics"])

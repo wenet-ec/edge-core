@@ -1,16 +1,16 @@
 # edge_admin_web/lib/edge_admin_web/controllers/nodes/enrollment_key_controller.ex
 defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
-  use EdgeAdminWeb, :controller
+  use EdgeAdminWeb, :api_controller
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.Policies.EnrollmentKeyPolicy
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas
+  alias EdgeAdminWeb.Schemas.PathParams
+  alias EdgeAdminWeb.Schemas.QueryParams
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
-
-  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
 
   plug EdgeAdminWeb.Plugs.DegradedMode,
        :block when action in [:create, :create_for_default, :create_for_public, :delete, :update]
@@ -20,175 +20,45 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   operation(:index,
     summary: "List enrollment keys",
     description: "Returns a paginated list of enrollment keys with filtering and sorting.",
-    parameters: [
-      page: [
-        in: :query,
-        description: "Page number",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, default: 1},
-        example: 1
-      ],
-      page_size: [
-        in: :query,
-        description: "Items per page",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, maximum: 100, default: 20},
-        example: 20
-      ],
-      order_by: [
-        in: :query,
-        description: "Comma-separated list of fields to sort by",
-        schema: %OpenApiSpex.Schema{type: :string},
-        example: "inserted_at"
-      ],
-      order_directions: [
-        in: :query,
-        description: "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
-        schema: %OpenApiSpex.Schema{type: :string},
-        example: "desc"
-      ],
-      cluster_name: [
-        in: :query,
-        description: "Filter by cluster name (exact match or wildcard: prod*, *east, etc.)",
-        schema: %OpenApiSpex.Schema{type: :string}
-      ],
-      key: [
-        in: :query,
-        description: "Filter by exact key value",
-        schema: %OpenApiSpex.Schema{type: :string}
-      ],
-      uses_remaining: [
-        in: :query,
-        description: "Filter by exact uses_remaining (positive integer; use is_unlimited=true to find unlimited keys)",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1}
-      ],
-      uses_remaining__gte: [
-        in: :query,
-        description: "Filter by minimum uses_remaining",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1}
-      ],
-      uses_remaining__lte: [
-        in: :query,
-        description: "Filter by maximum uses_remaining",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1}
-      ],
-      is_unlimited: [
-        in: :query,
-        description:
-          "Filter by whether the key has unlimited uses: true returns unlimited keys (uses_remaining is null), false returns keys with a finite use count",
-        schema: %OpenApiSpex.Schema{type: :boolean}
-      ],
-      is_spent: [
-        in: :query,
-        description:
-          "Filter by whether the key is exhausted: true returns keys with uses_remaining == 0, false returns keys with uses remaining",
-        schema: %OpenApiSpex.Schema{type: :boolean}
-      ],
-      is_expired: [
-        in: :query,
-        description:
-          "Filter by whether the key is expired: true returns keys where expired_at is in the past, false returns active keys (including those with no expiry)",
-        schema: %OpenApiSpex.Schema{type: :boolean}
-      ],
-      is_never_used: [
-        in: :query,
-        description:
-          "Filter by whether the key has never been used: true returns keys where last_used_at is null, false returns keys that have been used at least once",
-        schema: %OpenApiSpex.Schema{type: :boolean}
-      ],
-      has_expiry: [
-        in: :query,
-        description:
-          "Filter by whether the key has an expiry set: true returns keys with expired_at present, false returns keys with no expiry (unlimited lifetime)",
-        schema: %OpenApiSpex.Schema{type: :boolean}
-      ],
-      expired_at__gte: [
-        in: :query,
-        description:
-          "Filter keys expiring after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      expired_at__lte: [
-        in: :query,
-        description:
-          "Filter keys expiring before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      last_used_at__gte: [
-        in: :query,
-        description:
-          "Filter keys last used after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      last_used_at__lte: [
-        in: :query,
-        description:
-          "Filter keys last used before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      inserted_at__gte: [
-        in: :query,
-        description:
-          "Filter keys created after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      inserted_at__lte: [
-        in: :query,
-        description:
-          "Filter keys created before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      updated_at__gte: [
-        in: :query,
-        description:
-          "Filter keys updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      updated_at__lte: [
-        in: :query,
-        description:
-          "Filter keys updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ]
-    ],
+    parameters:
+      QueryParams.pagination() ++
+        QueryParams.sort() ++
+        [
+          QueryParams.string_filter(:cluster_name,
+            description: "Filter by cluster name (exact match or wildcard: prod*, *east, etc.)"
+          ),
+          QueryParams.string_filter(:key, description: "Filter by exact key value"),
+          QueryParams.int_filter(:uses_remaining,
+            description:
+              "Filter by exact uses_remaining (positive integer; use is_unlimited=true to find unlimited keys)",
+            minimum: 1
+          ),
+          QueryParams.boolean_filter(:is_unlimited,
+            description:
+              "Filter by whether the key has unlimited uses: true returns unlimited keys (uses_remaining is null), false returns keys with a finite use count"
+          ),
+          QueryParams.boolean_filter(:is_spent,
+            description:
+              "Filter by whether the key is exhausted: true returns keys with uses_remaining == 0, false returns keys with uses remaining"
+          ),
+          QueryParams.boolean_filter(:is_expired,
+            description:
+              "Filter by whether the key is expired: true returns keys where expired_at is in the past, false returns active keys (including those with no expiry)"
+          ),
+          QueryParams.boolean_filter(:is_never_used,
+            description:
+              "Filter by whether the key has never been used: true returns keys where last_used_at is null, false returns keys that have been used at least once"
+          ),
+          QueryParams.boolean_filter(:has_expiry,
+            description:
+              "Filter by whether the key has an expiry set: true returns keys with expired_at present, false returns keys with no expiry (unlimited lifetime)"
+          )
+        ] ++
+        QueryParams.int_range_filter(:uses_remaining, minimum: 1) ++
+        QueryParams.datetime_range_filter(:expired_at) ++
+        QueryParams.datetime_range_filter(:last_used_at) ++
+        QueryParams.datetime_range_filter(:inserted_at) ++
+        QueryParams.datetime_range_filter(:updated_at),
     responses: %{
       200 => {"Paginated enrollment key list", "application/json", EnrollmentKeySchemas.EnrollmentKeyPaginatedResponse},
       400 => {"Invalid query parameters", "application/json", CommonSchemas.BadRequestResponse}
@@ -204,9 +74,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   operation(:show,
     summary: "Get an enrollment key",
     description: "Returns details for a specific enrollment key by ID",
-    parameters: [
-      id: [in: :path, description: "Enrollment key ID", schema: %OpenApiSpex.Schema{type: :string, format: :uuid}]
-    ],
+    parameters: [PathParams.uuid(:id, "Enrollment key ID")],
     responses: %{
       200 => {"Enrollment key", "application/json", EnrollmentKeySchemas.EnrollmentKeySingleResponse},
       400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
@@ -230,13 +98,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
 
     **Note:** This endpoint is unavailable during degraded mode (503).
     """,
-    parameters: [
-      cluster_name: [
-        in: :path,
-        description: "Cluster name",
-        schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", maxLength: 24}
-      ]
-    ],
+    parameters: [PathParams.cluster_name(:cluster_name, "Cluster name")],
     request_body: {"Enrollment key parameters", "application/json", EnrollmentKeySchemas.EnrollmentKeyCreateRequest},
     responses: %{
       201 => {"Enrollment key created", "application/json", EnrollmentKeySchemas.EnrollmentKeySingleResponse},
@@ -311,9 +173,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     summary: "Update an enrollment key",
     description:
       "Update expired_at or uses_remaining. Pass null to unset a nullable field.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
-    parameters: [
-      id: [in: :path, description: "Enrollment key ID", schema: %OpenApiSpex.Schema{type: :string, format: :uuid}]
-    ],
+    parameters: [PathParams.uuid(:id, "Enrollment key ID")],
     request_body: {"Update parameters", "application/json", EnrollmentKeySchemas.EnrollmentKeyUpdateRequest},
     responses: %{
       200 => {"Updated enrollment key", "application/json", EnrollmentKeySchemas.EnrollmentKeySingleResponse},
@@ -334,9 +194,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     summary: "Delete an enrollment key",
     description:
       "Permanently deletes an enrollment key. **Note:** This endpoint is unavailable during degraded mode (503).",
-    parameters: [
-      id: [in: :path, description: "Enrollment key ID", schema: %OpenApiSpex.Schema{type: :string, format: :uuid}]
-    ],
+    parameters: [PathParams.uuid(:id, "Enrollment key ID")],
     responses: %{
       204 => {"Enrollment key deleted", "", nil},
       400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},

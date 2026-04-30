@@ -203,7 +203,7 @@ defmodule EdgeAdminWeb.ResponseEnvelopeTest do
   end
 
   # -----------------------------------------------------------------------
-  # error/3 — simple error (details: nil)
+  # error/3 — simple error (details omitted)
   # -----------------------------------------------------------------------
 
   describe "error/3 — simple error" do
@@ -227,9 +227,9 @@ defmodule EdgeAdminWeb.ResponseEnvelopeTest do
       assert result.error.message == "Resource not found"
     end
 
-    test "error.details is nil" do
+    test "error.details is omitted when not provided" do
       result = ResponseEnvelope.error(fake_conn(), "not_found", "Resource not found")
-      assert result.error.details == nil
+      refute Map.has_key?(result.error, :details)
     end
 
     test "meta contains request_id" do
@@ -237,12 +237,12 @@ defmodule EdgeAdminWeb.ResponseEnvelopeTest do
       assert result.meta.request_id == "err-req-id"
     end
 
-    test "error has exactly code, message, details" do
+    test "error has exactly code, message (details omitted)" do
       result = ResponseEnvelope.error(fake_conn(), "not_found", "Resource not found")
 
       assert MapSet.equal?(
                MapSet.new(Map.keys(result.error)),
-               MapSet.new([:code, :message, :details])
+               MapSet.new([:code, :message])
              )
     end
   end
@@ -263,9 +263,9 @@ defmodule EdgeAdminWeb.ResponseEnvelopeTest do
       assert result.error.code == "validation_failed"
     end
 
-    test "nil details is passed through" do
+    test "nil details is omitted (same as not providing it)" do
       result = ResponseEnvelope.error(fake_conn(), "conflict", "Conflict", nil)
-      assert result.error.details == nil
+      refute Map.has_key?(result.error, :details)
     end
 
     test "meta still contains request_id when details provided" do

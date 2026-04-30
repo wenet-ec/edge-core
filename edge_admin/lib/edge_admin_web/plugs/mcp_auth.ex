@@ -39,17 +39,28 @@ defmodule EdgeAdminWeb.Plugs.McpAuth do
     mcp_key = Application.get_env(:edge_admin, :mcp_key)
 
     case get_req_header(conn, "authorization") do
-      ["Bearer " <> ^master_key] ->
-        conn
-
-      ["Bearer " <> ^mcp_key] ->
-        conn
+      ["Bearer " <> token] ->
+        if valid_token?(token, master_key, mcp_key) do
+          conn
+        else
+          reject(conn)
+        end
 
       _ ->
-        conn
-        |> put_status(:unauthorized)
-        |> json(ResponseEnvelope.error(conn, "unauthorized", "Unauthorized"))
-        |> halt()
+        reject(conn)
     end
+  end
+
+  # Constant-time comparison to avoid leaking key length/prefix via timing.
+  defp valid_token?(token, master_key, mcp_key) do
+    (is_binary(master_key) and Plug.Crypto.secure_compare(token, master_key)) or
+      (is_binary(mcp_key) and Plug.Crypto.secure_compare(token, mcp_key))
+  end
+
+  defp reject(conn) do
+    conn
+    |> put_status(:unauthorized)
+    |> json(ResponseEnvelope.error(conn, "unauthorized", "Unauthorized"))
+    |> halt()
   end
 end

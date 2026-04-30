@@ -1,17 +1,18 @@
 # edge_admin/lib/edge_admin_web/controllers/self_updates/self_update_request_controller.ex
 defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
-  use EdgeAdminWeb, :controller
+  use EdgeAdminWeb, :api_controller
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.SelfUpdates
   alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
   alias EdgeAdminWeb.Plugs.DegradedMode
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias EdgeAdminWeb.Schemas.PathParams
+  alias EdgeAdminWeb.Schemas.QueryParams
   alias EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug DegradedMode, :block when action in [:create]
   plug DegradedMode, :allow when action in [:index, :show, :delete]
 
@@ -20,81 +21,14 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
   operation(:index,
     summary: "List all self-update requests",
     description: "Returns a paginated list of all self-update requests with filtering and sorting",
-    parameters: [
-      page: [
-        in: :query,
-        description: "Page number",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, default: 1},
-        example: 1
-      ],
-      page_size: [
-        in: :query,
-        description: "Items per page",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, maximum: 100, default: 20},
-        example: 20
-      ],
-      order_by: [
-        in: :query,
-        description: "Comma-separated list of fields to sort by",
-        schema: %OpenApiSpex.Schema{type: :string},
-        example: "inserted_at"
-      ],
-      order_directions: [
-        in: :query,
-        description: "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
-        schema: %OpenApiSpex.Schema{type: :string},
-        example: "desc"
-      ],
-      status: [
-        in: :query,
-        description: "Filter by status",
-        schema: %OpenApiSpex.Schema{type: :string, enum: ["pending", "processing", "completed"]}
-      ],
-      inserted_at__gte: [
-        in: :query,
-        description:
-          "Filter requests inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      inserted_at__lte: [
-        in: :query,
-        description:
-          "Filter requests inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      updated_at__gte: [
-        in: :query,
-        description:
-          "Filter requests updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      updated_at__lte: [
-        in: :query,
-        description:
-          "Filter requests updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ]
-    ],
+    parameters:
+      QueryParams.pagination() ++
+        QueryParams.sort() ++
+        [
+          QueryParams.enum_filter(:status, ["pending", "processing", "completed"], description: "Filter by status")
+        ] ++
+        QueryParams.datetime_range_filter(:inserted_at) ++
+        QueryParams.datetime_range_filter(:updated_at),
     responses: %{
       200 =>
         {"Paginated list of self-update requests", "application/json",
@@ -147,13 +81,7 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
   operation(:show,
     summary: "Get a specific self-update request",
     description: "Returns details for a specific self-update request by ID",
-    parameters: [
-      id: [
-        in: :path,
-        description: "Self-update request ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ]
-    ],
+    parameters: [PathParams.uuid(:id, "Self-update request ID")],
     responses: %{
       200 =>
         {"Self-update request details", "application/json", SelfUpdateRequestSchemas.SelfUpdateRequestSingleResponse},
@@ -176,13 +104,7 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
     Only completed requests can be deleted.
     Attempting to delete a pending or processing request will return 409.
     """,
-    parameters: [
-      id: [
-        in: :path,
-        description: "Self-update request ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ]
-    ],
+    parameters: [PathParams.uuid(:id, "Self-update request ID")],
     responses: %{
       204 => {"Self-update request deleted successfully", "", nil},
       400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},

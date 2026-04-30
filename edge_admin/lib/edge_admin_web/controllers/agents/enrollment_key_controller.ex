@@ -1,6 +1,6 @@
 # edge_admin_web/controllers/agents/enrollment_key_controller.ex
 defmodule EdgeAdminWeb.Controllers.Agents.EnrollmentKeyController do
-  use EdgeAdminWeb, :controller
+  use EdgeAdminWeb, :api_controller
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Nodes
@@ -8,8 +8,6 @@ defmodule EdgeAdminWeb.Controllers.Agents.EnrollmentKeyController do
   alias EdgeAdminWeb.Schemas.CommonSchemas
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
-
-  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
 
   tags(["Internal.Agents"])
 

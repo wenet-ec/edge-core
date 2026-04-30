@@ -1,16 +1,17 @@
 # edge_admin/lib/edge_admin_web/controllers/ssh/ssh_public_key_controller.ex
 defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
-  use EdgeAdminWeb, :controller
+  use EdgeAdminWeb, :api_controller
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Ssh
   alias EdgeAdmin.Ssh.Schemas.SshPublicKey
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias EdgeAdminWeb.Schemas.PathParams
+  alias EdgeAdminWeb.Schemas.QueryParams
   alias EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :show, :create, :delete]
 
   tags(["Ssh.SshPublicKey"])
@@ -18,106 +19,27 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
   operation(:index,
     summary: "List SSH public keys",
     description: "Returns a paginated list of SSH public keys with filtering and sorting",
-    parameters: [
-      page: [
-        in: :query,
-        description: "Page number",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, default: 1},
-        example: 1
-      ],
-      page_size: [
-        in: :query,
-        description: "Items per page",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, maximum: 100, default: 20},
-        example: 20
-      ],
-      order_by: [
-        in: :query,
-        description: "Comma-separated list of fields to sort by",
-        schema: %OpenApiSpex.Schema{type: :string},
-        example: "inserted_at,key_name"
-      ],
-      order_directions: [
-        in: :query,
-        description: "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
-        schema: %OpenApiSpex.Schema{type: :string},
-        example: "desc,asc"
-      ],
-      key_name: [
-        in: :query,
-        description: "Filter by key name (exact match or wildcard: my-key*, *prod, etc.)",
-        schema: %OpenApiSpex.Schema{type: :string}
-      ],
-      public_key: [
-        in: :query,
-        description: "Filter by public key content (useful for searching email comments: *@example.com)",
-        schema: %OpenApiSpex.Schema{type: :string}
-      ],
-      ssh_username_id: [
-        in: :query,
-        description: "Filter by SSH username ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ],
-      node_id: [
-        in: :query,
-        description: "Filter by node ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ],
-      username: [
-        in: :query,
-        description: "Filter by SSH username (exact match or wildcard: deploy*, *admin, etc.)",
-        schema: %OpenApiSpex.Schema{type: :string}
-      ],
-      cluster_name: [
-        in: :query,
-        description: "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *east, etc.)",
-        schema: %OpenApiSpex.Schema{type: :string}
-      ],
-      inserted_at__gte: [
-        in: :query,
-        description:
-          "Filter SSH public keys inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      inserted_at__lte: [
-        in: :query,
-        description:
-          "Filter SSH public keys inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      updated_at__gte: [
-        in: :query,
-        description:
-          "Filter SSH public keys updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      updated_at__lte: [
-        in: :query,
-        description:
-          "Filter SSH public keys updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ]
-    ],
+    parameters:
+      QueryParams.pagination() ++
+        QueryParams.sort(order_by_example: "inserted_at,key_name", order_directions_example: "desc,asc") ++
+        [
+          QueryParams.string_filter(:key_name,
+            description: "Filter by key name (exact match or wildcard: my-key*, *prod, etc.)"
+          ),
+          QueryParams.string_filter(:public_key,
+            description: "Filter by public key content (useful for searching email comments: *@example.com)"
+          ),
+          QueryParams.uuid_filter(:ssh_username_id, description: "Filter by SSH username ID"),
+          QueryParams.uuid_filter(:node_id, description: "Filter by node ID"),
+          QueryParams.string_filter(:username,
+            description: "Filter by SSH username (exact match or wildcard: deploy*, *admin, etc.)"
+          ),
+          QueryParams.string_filter(:cluster_name,
+            description: "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *east, etc.)"
+          )
+        ] ++
+        QueryParams.datetime_range_filter(:inserted_at) ++
+        QueryParams.datetime_range_filter(:updated_at),
     responses: %{
       200 =>
         {"Paginated list of SSH public keys", "application/json", SshPublicKeySchemas.SshPublicKeyPaginatedResponse},
@@ -134,13 +56,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
   operation(:create,
     summary: "Create SSH public key",
     description: "Create a new SSH public key for a specific SSH username. The key must be in valid OpenSSH format.",
-    parameters: [
-      ssh_username_id: [
-        in: :path,
-        description: "SSH username ID to create public key for",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ]
-    ],
+    parameters: [PathParams.uuid(:ssh_username_id, "SSH username ID to create public key for")],
     request_body:
       {"SSH public key creation data", "application/json", SshPublicKeySchemas.SshPublicKeyCreateRequest,
        required: true},
@@ -168,13 +84,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
   operation(:show,
     summary: "Get SSH public key",
     description: "Get a specific SSH public key by ID",
-    parameters: [
-      id: [
-        in: :path,
-        description: "SSH public key ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ]
-    ],
+    parameters: [PathParams.uuid(:id, "SSH public key ID")],
     responses: %{
       200 => {"SSH public key details", "application/json", SshPublicKeySchemas.SshPublicKeySingleResponse},
       400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
@@ -191,13 +101,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
   operation(:delete,
     summary: "Delete SSH public key",
     description: "Delete an SSH public key",
-    parameters: [
-      id: [
-        in: :path,
-        description: "SSH public key ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ]
-    ],
+    parameters: [PathParams.uuid(:id, "SSH public key ID")],
     responses: %{
       204 => {"SSH public key deleted", "", nil},
       400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},

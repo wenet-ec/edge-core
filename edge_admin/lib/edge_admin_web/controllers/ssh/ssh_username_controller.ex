@@ -1,17 +1,18 @@
 # edge_admin/lib/edge_admin_web/controllers/ssh/ssh_username_controller.ex
 defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
-  use EdgeAdminWeb, :controller
+  use EdgeAdminWeb, :api_controller
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Ssh
   alias EdgeAdmin.Ssh.Schemas.SshUsername
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias EdgeAdminWeb.Schemas.PathParams
+  alias EdgeAdminWeb.Schemas.QueryParams
   alias EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :show, :create, :delete]
 
   tags(["Ssh.SshUsername"])
@@ -19,96 +20,21 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
   operation(:index,
     summary: "List SSH usernames",
     description: "Returns a paginated list of SSH usernames with filtering and sorting",
-    parameters: [
-      page: [
-        in: :query,
-        description: "Page number",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, default: 1},
-        example: 1
-      ],
-      page_size: [
-        in: :query,
-        description: "Items per page",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, maximum: 100, default: 20},
-        example: 20
-      ],
-      order_by: [
-        in: :query,
-        description: "Comma-separated list of fields to sort by",
-        schema: %OpenApiSpex.Schema{type: :string},
-        example: "inserted_at,username"
-      ],
-      order_directions: [
-        in: :query,
-        description: "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
-        schema: %OpenApiSpex.Schema{type: :string},
-        example: "desc,asc"
-      ],
-      username: [
-        in: :query,
-        description: "Filter by username (exact match or wildcard: root*, *admin, etc.)",
-        schema: %OpenApiSpex.Schema{type: :string}
-      ],
-      node_id: [
-        in: :query,
-        description: "Filter by node ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ],
-      has_password: [
-        in: :query,
-        description: "Filter by whether username has password configured",
-        schema: %OpenApiSpex.Schema{type: :boolean}
-      ],
-      cluster_name: [
-        in: :query,
-        description: "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *east, etc.)",
-        schema: %OpenApiSpex.Schema{type: :string}
-      ],
-      inserted_at__gte: [
-        in: :query,
-        description:
-          "Filter SSH usernames inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      inserted_at__lte: [
-        in: :query,
-        description:
-          "Filter SSH usernames inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      updated_at__gte: [
-        in: :query,
-        description:
-          "Filter SSH usernames updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      updated_at__lte: [
-        in: :query,
-        description:
-          "Filter SSH usernames updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ]
-    ],
+    parameters:
+      QueryParams.pagination() ++
+        QueryParams.sort(order_by_example: "inserted_at,username", order_directions_example: "desc,asc") ++
+        [
+          QueryParams.string_filter(:username,
+            description: "Filter by username (exact match or wildcard: root*, *admin, etc.)"
+          ),
+          QueryParams.uuid_filter(:node_id, description: "Filter by node ID"),
+          QueryParams.boolean_filter(:has_password, description: "Filter by whether username has password configured"),
+          QueryParams.string_filter(:cluster_name,
+            description: "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *east, etc.)"
+          )
+        ] ++
+        QueryParams.datetime_range_filter(:inserted_at) ++
+        QueryParams.datetime_range_filter(:updated_at),
     responses: %{
       200 => {"Paginated list of SSH usernames", "application/json", SshUsernameSchemas.SshUsernamePaginatedResponse},
       400 => {"Invalid query parameters", "application/json", CommonSchemas.BadRequestResponse}
@@ -124,13 +50,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
   operation(:create,
     summary: "Create SSH username",
     description: "Create a new SSH username for a specific node, optionally with public keys and/or password",
-    parameters: [
-      node_id: [
-        in: :path,
-        description: "Node ID to create SSH username for",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ]
-    ],
+    parameters: [PathParams.uuid(:node_id, "Node ID to create SSH username for")],
     request_body:
       {"SSH username creation data", "application/json", SshUsernameSchemas.SshUsernameCreateRequest, required: true},
     responses: %{
@@ -158,13 +78,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
   operation(:show,
     summary: "Get SSH username",
     description: "Get a specific SSH username by ID",
-    parameters: [
-      id: [
-        in: :path,
-        description: "SSH username ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ]
-    ],
+    parameters: [PathParams.uuid(:id, "SSH username ID")],
     responses: %{
       200 => {"SSH username details", "application/json", SshUsernameSchemas.SshUsernameSingleResponse},
       400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
@@ -181,13 +95,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
   operation(:delete,
     summary: "Delete SSH username",
     description: "Delete an SSH username and all associated public keys",
-    parameters: [
-      id: [
-        in: :path,
-        description: "SSH username ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ]
-    ],
+    parameters: [PathParams.uuid(:id, "SSH username ID")],
     responses: %{
       204 => {"SSH username deleted", "", nil},
       400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},

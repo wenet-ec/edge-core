@@ -85,7 +85,19 @@ end
 
 auth_enabled = get_env("AUTH_ENABLED", :boolean, true)
 
-config :edge_admin, Corsica, origins: get_env("CORS_ALLOWED_ORIGINS", :cors)
+# CORS — origins and allowed request headers. Set CORS_ALLOWED_HEADERS=*
+# to mirror request headers back (Corsica's :all), or pass a comma-separated
+# explicit list. Defaults to a small safe set covering this API's auth surface.
+cors_headers =
+  case get_env("CORS_ALLOWED_HEADERS") do
+    nil -> ["authorization", "content-type", "x-request-id"]
+    "*" -> :all
+    csv -> csv |> String.split(",") |> Enum.map(&(&1 |> String.trim() |> String.downcase()))
+  end
+
+config :edge_admin, Corsica,
+  origins: get_env("CORS_ALLOWED_ORIGINS", :cors),
+  allow_headers: cors_headers
 
 config :edge_admin, EdgeAdminWeb.Endpoint,
   http: [
@@ -98,6 +110,7 @@ config :edge_admin, EdgeAdminWeb.Endpoint,
   ]
 
 config :edge_admin,
+  basic_auth_enabled: get_env("BASIC_AUTH_ENABLED", :boolean, false),
   basic_auth: [
     username: get_env("BASIC_AUTH_USERNAME"),
     password: get_env("BASIC_AUTH_PASSWORD")

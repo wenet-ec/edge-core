@@ -1,6 +1,6 @@
 # edge_admin_web/controllers/agents/self_update_controller.ex
 defmodule EdgeAdminWeb.Controllers.Agents.SelfUpdateController do
-  use EdgeAdminWeb, :controller
+  use EdgeAdminWeb, :api_controller
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.SelfUpdates
@@ -9,7 +9,6 @@ defmodule EdgeAdminWeb.Controllers.Agents.SelfUpdateController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:check]
 
   tags(["Internal.Agents"])

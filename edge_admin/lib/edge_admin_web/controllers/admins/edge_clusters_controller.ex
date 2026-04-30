@@ -1,13 +1,12 @@
 # edge_admin/lib/edge_admin_web/controllers/admins/edge_clusters_controller.ex
 defmodule EdgeAdminWeb.Controllers.Admins.EdgeClustersController do
-  use EdgeAdminWeb, :controller
+  use EdgeAdminWeb, :api_controller
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdminWeb.Schemas.Admins.AdminSchemas
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index]
 
   tags(["Admins.Metadata"])

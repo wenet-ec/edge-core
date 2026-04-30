@@ -1,16 +1,17 @@
 # edge_admin_web/lib/edge_admin_web/controllers/nodes/cluster_controller.ex
 defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
-  use EdgeAdminWeb, :controller
+  use EdgeAdminWeb, :api_controller
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Nodes
   alias EdgeAdminWeb.Plugs.DegradedMode
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Nodes.ClusterSchemas
+  alias EdgeAdminWeb.Schemas.PathParams
+  alias EdgeAdminWeb.Schemas.QueryParams
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug DegradedMode, :block when action in [:create, :update, :delete]
   plug DegradedMode, :allow when action in [:index, :show]
 
@@ -19,117 +20,24 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
   operation(:index,
     summary: "List all clusters",
     description: "Returns a paginated list of all edge clusters with filtering and sorting",
-    parameters: [
-      page: [
-        in: :query,
-        description: "Page number",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, default: 1},
-        example: 1
-      ],
-      page_size: [
-        in: :query,
-        description: "Items per page",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, maximum: 100, default: 20},
-        example: 20
-      ],
-      order_by: [
-        in: :query,
-        description: "Comma-separated list of fields to sort by",
-        schema: %OpenApiSpex.Schema{type: :string},
-        example: "inserted_at,name"
-      ],
-      order_directions: [
-        in: :query,
-        description: "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
-        schema: %OpenApiSpex.Schema{type: :string},
-        example: "desc,asc"
-      ],
-      name: [
-        in: :query,
-        description: "Filter by cluster name (exact match or wildcard: prod*, *tion, *rod*)",
-        schema: %OpenApiSpex.Schema{type: :string}
-      ],
-      ipv4_range: [
-        in: :query,
-        description: "Filter by IPv4 range (exact match or wildcard)",
-        schema: %OpenApiSpex.Schema{type: :string}
-      ],
-      inserted_at__gte: [
-        in: :query,
-        description:
-          "Filter clusters inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      inserted_at__lte: [
-        in: :query,
-        description:
-          "Filter clusters inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      updated_at__gte: [
-        in: :query,
-        description:
-          "Filter clusters updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      updated_at__lte: [
-        in: :query,
-        description:
-          "Filter clusters updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      node_count__gte: [
-        in: :query,
-        description: "Filter by minimum node count",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 0}
-      ],
-      node_count__lte: [
-        in: :query,
-        description: "Filter by maximum node count",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 0}
-      ],
-      node_limit: [
-        in: :query,
-        description: "Filter by exact node limit",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1}
-      ],
-      has_node_limit: [
-        in: :query,
-        description:
-          "Filter by whether a node limit is set: true returns clusters with a limit, false returns unlimited clusters",
-        schema: %OpenApiSpex.Schema{type: :boolean}
-      ],
-      node_limit__gte: [
-        in: :query,
-        description: "Filter by minimum node limit",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1}
-      ],
-      node_limit__lte: [
-        in: :query,
-        description: "Filter by maximum node limit",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1}
-      ]
-    ],
+    parameters:
+      QueryParams.pagination() ++
+        QueryParams.sort(order_by_example: "inserted_at,name", order_directions_example: "desc,asc") ++
+        [
+          QueryParams.string_filter(:name,
+            description: "Filter by cluster name (exact match or wildcard: prod*, *tion, *rod*)"
+          ),
+          QueryParams.string_filter(:ipv4_range, description: "Filter by IPv4 range (exact match or wildcard)"),
+          QueryParams.int_filter(:node_limit, description: "Filter by exact node limit", minimum: 1),
+          QueryParams.boolean_filter(:has_node_limit,
+            description:
+              "Filter by whether a node limit is set: true returns clusters with a limit, false returns unlimited"
+          )
+        ] ++
+        QueryParams.int_range_filter(:node_count) ++
+        QueryParams.int_range_filter(:node_limit, minimum: 1) ++
+        QueryParams.datetime_range_filter(:inserted_at) ++
+        QueryParams.datetime_range_filter(:updated_at),
     responses: %{
       200 => {"Paginated cluster list", "application/json", ClusterSchemas.ClusterPaginatedResponse},
       400 => {"Invalid query parameters", "application/json", CommonSchemas.BadRequestResponse}
@@ -145,13 +53,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
   operation(:show,
     summary: "Get a specific cluster",
     description: "Returns details for a specific cluster by name",
-    parameters: [
-      name: [
-        in: :path,
-        description: "Cluster name",
-        schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", maxLength: 24}
-      ]
-    ],
+    parameters: [PathParams.cluster_name(:name, "Cluster name")],
     responses: %{
       200 => {"Cluster details", "application/json", ClusterSchemas.ClusterSingleResponse},
       400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
@@ -195,13 +97,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     summary: "Update a cluster",
     description:
       "Update a cluster's settings. Only provided fields are changed. Pass null to unset a nullable field.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
-    parameters: [
-      name: [
-        in: :path,
-        description: "Cluster name",
-        schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", maxLength: 24}
-      ]
-    ],
+    parameters: [PathParams.cluster_name(:name, "Cluster name")],
     request_body:
       {"Cluster update parameters", "application/json", ClusterSchemas.ClusterUpdateRequest, required: true},
     responses: %{
@@ -225,13 +121,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     summary: "Delete a cluster",
     description:
       "Delete an empty cluster (must have no nodes).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
-    parameters: [
-      name: [
-        in: :path,
-        description: "Cluster name",
-        schema: %OpenApiSpex.Schema{type: :string, pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", maxLength: 24}
-      ]
-    ],
+    parameters: [PathParams.cluster_name(:name, "Cluster name")],
     responses: %{
       204 => {"Cluster deleted successfully", "", nil},
       400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},

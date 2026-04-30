@@ -1,16 +1,17 @@
 # edge_admin/lib/edge_admin_web/controllers/agents/command_execution_controller.ex
 defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
-  use EdgeAdminWeb, :controller
+  use EdgeAdminWeb, :api_controller
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Commands
   alias EdgeAdmin.Commands.Policies.CommandExecutionPolicy
   alias EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias EdgeAdminWeb.Schemas.PathParams
+  alias EdgeAdminWeb.Schemas.QueryParams
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
-  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :acknowledge, :update_result]
 
   tags(["Internal.Agents"])
@@ -19,34 +20,28 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
     summary: "List command executions for this node",
     description:
       "Agent fetches command executions with optional filtering and pagination. Node ID is inferred from the API token.",
-    parameters: [
-      status: [
-        in: :query,
-        description: "Filter by status: sent, pending, completed, cancelled, or expired",
-        schema: %OpenApiSpex.Schema{type: :string, enum: ["sent", "pending", "completed", "cancelled", "expired"]},
-        required: true
-      ],
-      page: [
-        in: :query,
-        description: "Page number",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, default: 1}
-      ],
-      page_size: [
-        in: :query,
-        description: "Items per page",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, maximum: 100, default: 100}
-      ],
-      order_by: [
-        in: :query,
-        description: "Field to sort by",
-        schema: %OpenApiSpex.Schema{type: :string, default: "inserted_at"}
-      ],
-      order_directions: [
-        in: :query,
-        description: "Sort direction: asc or desc",
-        schema: %OpenApiSpex.Schema{type: :string, enum: ["asc", "desc"], default: "asc"}
-      ]
-    ],
+    parameters:
+      [
+        status: [
+          in: :query,
+          description: "Filter by status: sent, pending, completed, cancelled, or expired",
+          schema: %OpenApiSpex.Schema{type: :string, enum: ["sent", "pending", "completed", "cancelled", "expired"]},
+          required: true
+        ]
+      ] ++
+        QueryParams.pagination(default_page_size: 100) ++
+        [
+          order_by: [
+            in: :query,
+            description: "Field to sort by",
+            schema: %OpenApiSpex.Schema{type: :string, default: "inserted_at"}
+          ],
+          order_directions: [
+            in: :query,
+            description: "Sort direction: asc or desc",
+            schema: %OpenApiSpex.Schema{type: :string, enum: ["asc", "desc"], default: "asc"}
+          ]
+        ],
     responses: %{
       200 =>
         {"Command executions list", "application/json", CommandExecutionSchemas.AgentCommandExecutionPaginatedResponse},
@@ -72,13 +67,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
   operation(:acknowledge,
     summary: "Acknowledge a command execution",
     description: "Agent acknowledges receipt of a pending command execution. Transitions status from pending to sent.",
-    parameters: [
-      id: [
-        in: :path,
-        description: "Command execution UUID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ]
-    ],
+    parameters: [PathParams.uuid(:id, "Command execution UUID")],
     responses: %{
       200 =>
         {"Command execution acknowledged", "application/json",
@@ -101,13 +90,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
     summary: "Report command execution result",
     description:
       "Agent reports command results (output, exit_code, status). Verifies command belongs to the authenticated node.",
-    parameters: [
-      id: [
-        in: :path,
-        description: "Command execution UUID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ]
-    ],
+    parameters: [PathParams.uuid(:id, "Command execution UUID")],
     request_body:
       {"Command execution result", "application/json", CommandExecutionSchemas.UpdateCommandExecutionResultRequest,
        required: true},

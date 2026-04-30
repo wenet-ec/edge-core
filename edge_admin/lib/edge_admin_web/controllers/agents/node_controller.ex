@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin_web/controllers/agents/node_controller.ex
 defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
-  use EdgeAdminWeb, :controller
+  use EdgeAdminWeb, :api_controller
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Nodes
@@ -10,7 +10,6 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug DegradedMode, :block when action in [:create]
   plug DegradedMode, :allow when action in [:update_health_check]
 

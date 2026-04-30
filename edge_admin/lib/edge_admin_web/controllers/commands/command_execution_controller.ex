@@ -1,15 +1,16 @@
 # edge_admin/lib/edge_admin_web/controllers/commands/command_execution_controller.ex
 defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
-  use EdgeAdminWeb, :controller
+  use EdgeAdminWeb, :api_controller
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Commands
   alias EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias EdgeAdminWeb.Schemas.PathParams
+  alias EdgeAdminWeb.Schemas.QueryParams
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug OpenApiSpex.Plug.CastAndValidate, render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
   plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :show, :delete, :cancel]
 
   tags(["Commands.CommandExecution"])
@@ -17,198 +18,41 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
   operation(:index,
     summary: "List command executions",
     description: "Returns a paginated list of command executions with filtering and sorting",
-    parameters: [
-      page: [
-        in: :query,
-        description: "Page number",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, default: 1},
-        example: 1
-      ],
-      page_size: [
-        in: :query,
-        description: "Items per page",
-        schema: %OpenApiSpex.Schema{type: :integer, minimum: 1, maximum: 100, default: 20},
-        example: 20
-      ],
-      order_by: [
-        in: :query,
-        description: "Comma-separated list of fields to sort by",
-        schema: %OpenApiSpex.Schema{type: :string},
-        example: "inserted_at,status"
-      ],
-      order_directions: [
-        in: :query,
-        description: "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
-        schema: %OpenApiSpex.Schema{type: :string},
-        example: "desc,asc"
-      ],
-      status: [
-        in: :query,
-        description: "Filter by execution status",
-        schema: %OpenApiSpex.Schema{type: :string, enum: ["pending", "sent", "completed", "cancelled", "expired"]}
-      ],
-      target_all: [
-        in: :query,
-        description: "Filter by target_all flag",
-        schema: %OpenApiSpex.Schema{type: :boolean}
-      ],
-      exit_code: [
-        in: :query,
-        description: "Filter by exact exit code",
-        schema: %OpenApiSpex.Schema{type: :integer}
-      ],
-      exit_code__gte: [
-        in: :query,
-        description: "Filter executions with exit code greater than or equal to this value (e.g. 1 for all failures)",
-        schema: %OpenApiSpex.Schema{type: :integer}
-      ],
-      exit_code__lte: [
-        in: :query,
-        description: "Filter executions with exit code less than or equal to this value",
-        schema: %OpenApiSpex.Schema{type: :integer}
-      ],
-      has_output: [
-        in: :query,
-        description:
-          "Filter by whether output is present: true returns executions with output, false returns executions with no output",
-        schema: %OpenApiSpex.Schema{type: :boolean}
-      ],
-      command_id: [
-        in: :query,
-        description: "Filter by command ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ],
-      node_id: [
-        in: :query,
-        description: "Filter by node ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ],
-      output: [
-        in: :query,
-        description: "Text search in output (exact match or wildcard: *error*, *failed, etc.)",
-        schema: %OpenApiSpex.Schema{type: :string}
-      ],
-      cluster_name: [
-        in: :query,
-        description: "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *staging, etc.)",
-        schema: %OpenApiSpex.Schema{type: :string}
-      ],
-      has_cluster: [
-        in: :query,
-        description: "Filter by cluster_id presence (true = cluster-wide executions, false = non-cluster-wide)",
-        schema: %OpenApiSpex.Schema{type: :boolean}
-      ],
-      inserted_at__gte: [
-        in: :query,
-        description:
-          "Filter command executions inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      inserted_at__lte: [
-        in: :query,
-        description:
-          "Filter command executions inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      updated_at__gte: [
-        in: :query,
-        description:
-          "Filter command executions updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      updated_at__lte: [
-        in: :query,
-        description:
-          "Filter command executions updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      sent_at__gte: [
-        in: :query,
-        description:
-          "Filter command executions sent after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      sent_at__lte: [
-        in: :query,
-        description:
-          "Filter command executions sent before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      completed_at__gte: [
-        in: :query,
-        description:
-          "Filter command executions completed after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      completed_at__lte: [
-        in: :query,
-        description:
-          "Filter command executions completed before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      cancelled_at__gte: [
-        in: :query,
-        description:
-          "Filter command executions cancelled after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ],
-      cancelled_at__lte: [
-        in: :query,
-        description:
-          "Filter command executions cancelled before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
-        schema: %OpenApiSpex.Schema{
-          anyOf: [
-            %OpenApiSpex.Schema{type: :string, format: :"date-time"},
-            %OpenApiSpex.Schema{type: :string, format: :date}
-          ]
-        }
-      ]
-    ],
+    parameters:
+      QueryParams.pagination() ++
+        QueryParams.sort(order_by_example: "inserted_at,status", order_directions_example: "desc,asc") ++
+        [
+          QueryParams.enum_filter(:status, ["pending", "sent", "completed", "cancelled", "expired"],
+            description: "Filter by execution status"
+          ),
+          QueryParams.boolean_filter(:target_all, description: "Filter by target_all flag"),
+          QueryParams.int_filter(:exit_code, description: "Filter by exact exit code"),
+          QueryParams.boolean_filter(:has_output,
+            description:
+              "Filter by whether output is present: true returns executions with output, false returns executions with no output"
+          ),
+          QueryParams.uuid_filter(:command_id, description: "Filter by command ID"),
+          QueryParams.uuid_filter(:node_id, description: "Filter by node ID"),
+          QueryParams.string_filter(:output,
+            description: "Text search in output (exact match or wildcard: *error*, *failed, etc.)"
+          ),
+          QueryParams.string_filter(:cluster_name,
+            description: "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *staging, etc.)"
+          ),
+          QueryParams.boolean_filter(:has_cluster,
+            description: "Filter by cluster_id presence (true = cluster-wide executions, false = non-cluster-wide)"
+          )
+        ] ++
+        QueryParams.int_range_filter(:exit_code,
+          gte_description:
+            "Filter executions with exit code greater than or equal to this value (e.g. 1 for all failures)",
+          lte_description: "Filter executions with exit code less than or equal to this value"
+        ) ++
+        QueryParams.datetime_range_filter(:inserted_at) ++
+        QueryParams.datetime_range_filter(:updated_at) ++
+        QueryParams.datetime_range_filter(:sent_at) ++
+        QueryParams.datetime_range_filter(:completed_at) ++
+        QueryParams.datetime_range_filter(:cancelled_at),
     responses: %{
       200 =>
         {"Paginated list of command executions", "application/json",
@@ -226,13 +70,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
   operation(:show,
     summary: "Get a specific command execution",
     description: "Returns details for a specific command execution by ID",
-    parameters: [
-      id: [
-        in: :path,
-        description: "Command Execution ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ]
-    ],
+    parameters: [PathParams.uuid(:id, "Command Execution ID")],
     responses: %{
       200 => {"Command execution details", "application/json", CommandExecutionSchemas.CommandExecutionSingleResponse},
       400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
@@ -253,13 +91,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
 
     Only completed, cancelled, or expired executions can be deleted. Attempting to delete pending or sent executions will return 409.
     """,
-    parameters: [
-      id: [
-        in: :path,
-        description: "Command Execution ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ]
-    ],
+    parameters: [PathParams.uuid(:id, "Command Execution ID")],
     responses: %{
       204 => {"Command execution deleted successfully", "", nil},
       400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
@@ -286,13 +118,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
 
     Returns 200 if cancellation was initiated. For `sent` executions, poll status to confirm the outcome.
     """,
-    parameters: [
-      id: [
-        in: :path,
-        description: "Command Execution ID",
-        schema: %OpenApiSpex.Schema{type: :string, format: :uuid}
-      ]
-    ],
+    parameters: [PathParams.uuid(:id, "Command Execution ID")],
     responses: %{
       200 => {"Cancellation request sent", "application/json", CommandExecutionSchemas.CancelExecutionResponse},
       404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse},

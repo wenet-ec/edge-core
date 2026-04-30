@@ -18,7 +18,9 @@ defmodule EdgeAdminWeb do
   those modules here.
   """
 
-  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
+  # Only files actually present in priv/static — narrowing this list shrinks
+  # the gzip cache and avoids advertising paths that 404.
+  def static_paths, do: ~w(favicon.ico robots.txt)
 
   def router do
     quote do
@@ -41,13 +43,30 @@ defmodule EdgeAdminWeb do
   def controller do
     quote do
       use Phoenix.Controller,
-        # Since this is a pure API
+        # Pure API — no HTML layouts.
         formats: [:json],
         layouts: []
 
       import Plug.Conn
 
       unquote(verified_routes())
+    end
+  end
+
+  @doc """
+  Like `:controller`, but with `OpenApiSpex.Plug.CastAndValidate` already
+  installed against `EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer`.
+
+  Use this for any controller whose actions are documented in the OpenAPI
+  spec. Use plain `:controller` for special cases that don't validate (the
+  fallback controller, OpenAPI/AsyncAPI spec serving, etc.).
+  """
+  def api_controller do
+    quote do
+      unquote(controller())
+
+      plug OpenApiSpex.Plug.CastAndValidate,
+        render_error: EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer
     end
   end
 

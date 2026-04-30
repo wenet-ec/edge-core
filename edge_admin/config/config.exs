@@ -9,7 +9,6 @@ import Config
 
 version = Mix.Project.config()[:version]
 
-config :edge_admin, Corsica, allow_headers: :all
 config :edge_admin, EdgeAdmin.Gettext, default_locale: "en"
 
 config :edge_admin, EdgeAdmin.PromEx,

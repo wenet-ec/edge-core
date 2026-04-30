@@ -40,13 +40,19 @@ DB_SSL=false
 API_PORT=44000
 SECRET_KEY_BASE=zsIbO5eGH9IJ1p+E6M1a1VL4bIGrwLeTS8W7q8QDAOE/o3Ucy0si768bJxmF4A1Q
 CORS_ALLOWED_ORIGINS=*
-# PHX_SERVER=true  # Set by the release start script; not needed here
+# Comma-separated list of allowed request headers, or `*` to mirror whatever
+# the browser asks for in Access-Control-Request-Headers.
+# Defaults to: authorization,content-type,x-request-id
+# CORS_ALLOWED_HEADERS=authorization,content-type,x-request-id
 
 # =============================================================================
 # Basic Authentication (LiveDashboard)
 # =============================================================================
 # Protects /live_dashboard with HTTP Basic Auth.
-# Leave unset to disable password protection on the dashboard.
+# When BASIC_AUTH_ENABLED=true, both username and password must be set or the
+# admin will raise on every dashboard request.
+# Strongly recommended in production whenever LIVE_DASHBOARD_ENABLED=true.
+BASIC_AUTH_ENABLED=true
 BASIC_AUTH_USERNAME=admin
 BASIC_AUTH_PASSWORD=admin
 

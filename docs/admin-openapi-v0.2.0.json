@@ -909,7 +909,7 @@
               "details": { "nullable": true },
               "message": { "example": "Validation failed", "type": "string" }
             },
-            "required": ["code", "message", "details"],
+            "required": ["code", "message"],
             "type": "object"
           },
           "meta": { "$ref": "#/components/schemas/Meta" }
@@ -1098,11 +1098,7 @@
       "NotFoundResponse": {
         "description": "404 Not Found",
         "example": {
-          "error": {
-            "code": "not_found",
-            "details": null,
-            "message": "Resource not found"
-          },
+          "error": { "code": "not_found", "message": "Resource not found" },
           "meta": {
             "request_id": "550e8400-e29b-41d4-a716-446655440000",
             "timestamp": "2026-04-15T10:00:00.000Z"
@@ -1115,7 +1111,7 @@
               "details": { "nullable": true },
               "message": { "example": "Resource not found", "type": "string" }
             },
-            "required": ["code", "message", "details"],
+            "required": ["code", "message"],
             "type": "object"
           },
           "meta": { "$ref": "#/components/schemas/Meta" }
@@ -1524,7 +1520,6 @@
         "example": {
           "error": {
             "code": "service_unavailable",
-            "details": null,
             "message": "Downstream dependency unreachable"
           },
           "meta": {
@@ -1542,7 +1537,7 @@
                 "type": "string"
               }
             },
-            "required": ["code", "message", "details"],
+            "required": ["code", "message"],
             "type": "object"
           },
           "meta": { "$ref": "#/components/schemas/Meta" }
@@ -2691,11 +2686,7 @@
       "ConflictResponse": {
         "description": "409 Conflict",
         "example": {
-          "error": {
-            "code": "conflict",
-            "details": null,
-            "message": "Resource already exists"
-          },
+          "error": { "code": "conflict", "message": "Resource already exists" },
           "meta": {
             "request_id": "550e8400-e29b-41d4-a716-446655440000",
             "timestamp": "2026-04-15T10:00:00.000Z"
@@ -2711,7 +2702,7 @@
                 "type": "string"
               }
             },
-            "required": ["code", "message", "details"],
+            "required": ["code", "message"],
             "type": "object"
           },
           "meta": { "$ref": "#/components/schemas/Meta" }
@@ -2746,7 +2737,7 @@
                 "type": "string"
               }
             },
-            "required": ["code", "message", "details"],
+            "required": ["code", "message"],
             "type": "object"
           },
           "meta": { "$ref": "#/components/schemas/Meta" }
@@ -3281,7 +3272,6 @@
         "example": {
           "error": {
             "code": "forbidden",
-            "details": null,
             "message": "Insufficient permissions"
           },
           "meta": {
@@ -3299,7 +3289,7 @@
                 "type": "string"
               }
             },
-            "required": ["code", "message", "details"],
+            "required": ["code", "message"],
             "type": "object"
           },
           "meta": { "$ref": "#/components/schemas/Meta" }
@@ -3690,7 +3680,7 @@
         "operationId": "EdgeAdminWeb.Controllers.Nodes.ClusterController.index",
         "parameters": [
           {
-            "description": "Page number",
+            "description": "Page number (1-indexed)",
             "example": 1,
             "in": "query",
             "name": "page",
@@ -3741,7 +3731,49 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter clusters inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter by exact node limit",
+            "in": "query",
+            "name": "node_limit",
+            "required": false,
+            "schema": { "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Filter by whether a node limit is set: true returns clusters with a limit, false returns unlimited",
+            "in": "query",
+            "name": "has_node_limit",
+            "required": false,
+            "schema": { "type": "boolean" }
+          },
+          {
+            "description": "Filter by minimum node_count",
+            "in": "query",
+            "name": "node_count__gte",
+            "required": false,
+            "schema": { "minimum": 0, "type": "integer" }
+          },
+          {
+            "description": "Filter by maximum node_count",
+            "in": "query",
+            "name": "node_count__lte",
+            "required": false,
+            "schema": { "minimum": 0, "type": "integer" }
+          },
+          {
+            "description": "Filter by minimum node_limit",
+            "in": "query",
+            "name": "node_limit__gte",
+            "required": false,
+            "schema": { "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Filter by maximum node_limit",
+            "in": "query",
+            "name": "node_limit__lte",
+            "required": false,
+            "schema": { "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Filter records where inserted_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "inserted_at__gte",
             "required": false,
@@ -3753,7 +3785,7 @@
             }
           },
           {
-            "description": "Filter clusters inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where inserted_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "inserted_at__lte",
             "required": false,
@@ -3765,7 +3797,7 @@
             }
           },
           {
-            "description": "Filter clusters updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where updated_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "updated_at__gte",
             "required": false,
@@ -3777,7 +3809,7 @@
             }
           },
           {
-            "description": "Filter clusters updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where updated_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "updated_at__lte",
             "required": false,
@@ -3787,48 +3819,6 @@
                 { "format": "date", "type": "string" }
               ]
             }
-          },
-          {
-            "description": "Filter by minimum node count",
-            "in": "query",
-            "name": "node_count__gte",
-            "required": false,
-            "schema": { "minimum": 0, "type": "integer" }
-          },
-          {
-            "description": "Filter by maximum node count",
-            "in": "query",
-            "name": "node_count__lte",
-            "required": false,
-            "schema": { "minimum": 0, "type": "integer" }
-          },
-          {
-            "description": "Filter by exact node limit",
-            "in": "query",
-            "name": "node_limit",
-            "required": false,
-            "schema": { "minimum": 1, "type": "integer" }
-          },
-          {
-            "description": "Filter by whether a node limit is set: true returns clusters with a limit, false returns unlimited clusters",
-            "in": "query",
-            "name": "has_node_limit",
-            "required": false,
-            "schema": { "type": "boolean" }
-          },
-          {
-            "description": "Filter by minimum node limit",
-            "in": "query",
-            "name": "node_limit__gte",
-            "required": false,
-            "schema": { "minimum": 1, "type": "integer" }
-          },
-          {
-            "description": "Filter by maximum node limit",
-            "in": "query",
-            "name": "node_limit__lte",
-            "required": false,
-            "schema": { "minimum": 1, "type": "integer" }
           }
         ],
         "responses": {
@@ -4231,7 +4221,7 @@
         "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.index",
         "parameters": [
           {
-            "description": "Page number",
+            "description": "Page number (1-indexed)",
             "example": 1,
             "in": "query",
             "name": "page",
@@ -4289,20 +4279,6 @@
             "schema": { "minimum": 1, "type": "integer" }
           },
           {
-            "description": "Filter by minimum uses_remaining",
-            "in": "query",
-            "name": "uses_remaining__gte",
-            "required": false,
-            "schema": { "minimum": 1, "type": "integer" }
-          },
-          {
-            "description": "Filter by maximum uses_remaining",
-            "in": "query",
-            "name": "uses_remaining__lte",
-            "required": false,
-            "schema": { "minimum": 1, "type": "integer" }
-          },
-          {
             "description": "Filter by whether the key has unlimited uses: true returns unlimited keys (uses_remaining is null), false returns keys with a finite use count",
             "in": "query",
             "name": "is_unlimited",
@@ -4338,7 +4314,21 @@
             "schema": { "type": "boolean" }
           },
           {
-            "description": "Filter keys expiring after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter by minimum uses_remaining",
+            "in": "query",
+            "name": "uses_remaining__gte",
+            "required": false,
+            "schema": { "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Filter by maximum uses_remaining",
+            "in": "query",
+            "name": "uses_remaining__lte",
+            "required": false,
+            "schema": { "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Filter records where expired_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "expired_at__gte",
             "required": false,
@@ -4350,7 +4340,7 @@
             }
           },
           {
-            "description": "Filter keys expiring before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where expired_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "expired_at__lte",
             "required": false,
@@ -4362,7 +4352,7 @@
             }
           },
           {
-            "description": "Filter keys last used after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where last_used_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "last_used_at__gte",
             "required": false,
@@ -4374,7 +4364,7 @@
             }
           },
           {
-            "description": "Filter keys last used before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where last_used_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "last_used_at__lte",
             "required": false,
@@ -4386,7 +4376,7 @@
             }
           },
           {
-            "description": "Filter keys created after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where inserted_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "inserted_at__gte",
             "required": false,
@@ -4398,7 +4388,7 @@
             }
           },
           {
-            "description": "Filter keys created before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where inserted_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "inserted_at__lte",
             "required": false,
@@ -4410,7 +4400,7 @@
             }
           },
           {
-            "description": "Filter keys updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where updated_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "updated_at__gte",
             "required": false,
@@ -4422,7 +4412,7 @@
             }
           },
           {
-            "description": "Filter keys updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where updated_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "updated_at__lte",
             "required": false,
@@ -4626,7 +4616,7 @@
         "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeController.index",
         "parameters": [
           {
-            "description": "Page number",
+            "description": "Page number (1-indexed)",
             "example": 1,
             "in": "query",
             "name": "page",
@@ -4701,7 +4691,7 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter nodes last seen after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where last_seen_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "last_seen_at__gte",
             "required": false,
@@ -4713,7 +4703,7 @@
             }
           },
           {
-            "description": "Filter nodes last seen before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where last_seen_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "last_seen_at__lte",
             "required": false,
@@ -4725,7 +4715,7 @@
             }
           },
           {
-            "description": "Filter nodes inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where inserted_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "inserted_at__gte",
             "required": false,
@@ -4737,7 +4727,7 @@
             }
           },
           {
-            "description": "Filter nodes inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where inserted_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "inserted_at__lte",
             "required": false,
@@ -4749,7 +4739,7 @@
             }
           },
           {
-            "description": "Filter nodes updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where updated_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "updated_at__gte",
             "required": false,
@@ -4761,7 +4751,7 @@
             }
           },
           {
-            "description": "Filter nodes updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where updated_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "updated_at__lte",
             "required": false,
@@ -5042,7 +5032,7 @@
         "operationId": "EdgeAdminWeb.Controllers.Nodes.AliasController.index",
         "parameters": [
           {
-            "description": "Page number",
+            "description": "Page number (1-indexed)",
             "example": 1,
             "in": "query",
             "name": "page",
@@ -5100,7 +5090,7 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter aliases inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where inserted_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "inserted_at__gte",
             "required": false,
@@ -5112,7 +5102,7 @@
             }
           },
           {
-            "description": "Filter aliases inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where inserted_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "inserted_at__lte",
             "required": false,
@@ -5124,7 +5114,7 @@
             }
           },
           {
-            "description": "Filter aliases updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where updated_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "updated_at__gte",
             "required": false,
@@ -5136,7 +5126,7 @@
             }
           },
           {
-            "description": "Filter aliases updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where updated_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "updated_at__lte",
             "required": false,
@@ -5452,7 +5442,7 @@
         "operationId": "EdgeAdminWeb.Controllers.Commands.CommandController.index",
         "parameters": [
           {
-            "description": "Page number",
+            "description": "Page number (1-indexed)",
             "example": 1,
             "in": "query",
             "name": "page",
@@ -5496,6 +5486,20 @@
             "schema": { "type": "string" }
           },
           {
+            "description": "Filter by whether a timeout is set: true returns commands with a timeout, false returns commands without",
+            "in": "query",
+            "name": "has_timeout",
+            "required": false,
+            "schema": { "type": "boolean" }
+          },
+          {
+            "description": "Filter by whether an expiration is set: true returns commands with expired_at, false returns commands without",
+            "in": "query",
+            "name": "has_expired_at",
+            "required": false,
+            "schema": { "type": "boolean" }
+          },
+          {
             "description": "Filter commands with timeout greater than or equal to this value (milliseconds)",
             "in": "query",
             "name": "timeout__gte",
@@ -5510,14 +5514,7 @@
             "schema": { "minimum": 1, "type": "integer" }
           },
           {
-            "description": "Filter by whether a timeout is set: true returns commands with a timeout, false returns commands with no timeout",
-            "in": "query",
-            "name": "has_timeout",
-            "required": false,
-            "schema": { "type": "boolean" }
-          },
-          {
-            "description": "Filter commands with expired_at after this datetime",
+            "description": "Filter records where expired_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "expired_at__gte",
             "required": false,
@@ -5529,7 +5526,7 @@
             }
           },
           {
-            "description": "Filter commands with expired_at before this datetime",
+            "description": "Filter records where expired_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "expired_at__lte",
             "required": false,
@@ -5541,14 +5538,7 @@
             }
           },
           {
-            "description": "Filter by whether an expiration is set: true returns commands with expired_at, false returns commands without",
-            "in": "query",
-            "name": "has_expired_at",
-            "required": false,
-            "schema": { "type": "boolean" }
-          },
-          {
-            "description": "Filter commands inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where inserted_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "inserted_at__gte",
             "required": false,
@@ -5560,7 +5550,7 @@
             }
           },
           {
-            "description": "Filter commands inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where inserted_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "inserted_at__lte",
             "required": false,
@@ -5572,7 +5562,7 @@
             }
           },
           {
-            "description": "Filter commands updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where updated_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "updated_at__gte",
             "required": false,
@@ -5584,7 +5574,7 @@
             }
           },
           {
-            "description": "Filter commands updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where updated_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "updated_at__lte",
             "required": false,
@@ -5719,7 +5709,7 @@
         "operationId": "EdgeAdminWeb.Controllers.Commands.CommandExecutionController.index",
         "parameters": [
           {
-            "description": "Page number",
+            "description": "Page number (1-indexed)",
             "example": 1,
             "in": "query",
             "name": "page",
@@ -5777,21 +5767,7 @@
             "in": "query",
             "name": "exit_code",
             "required": false,
-            "schema": { "type": "integer" }
-          },
-          {
-            "description": "Filter executions with exit code greater than or equal to this value (e.g. 1 for all failures)",
-            "in": "query",
-            "name": "exit_code__gte",
-            "required": false,
-            "schema": { "type": "integer" }
-          },
-          {
-            "description": "Filter executions with exit code less than or equal to this value",
-            "in": "query",
-            "name": "exit_code__lte",
-            "required": false,
-            "schema": { "type": "integer" }
+            "schema": { "minimum": 0, "type": "integer" }
           },
           {
             "description": "Filter by whether output is present: true returns executions with output, false returns executions with no output",
@@ -5836,7 +5812,21 @@
             "schema": { "type": "boolean" }
           },
           {
-            "description": "Filter command executions inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter executions with exit code greater than or equal to this value (e.g. 1 for all failures)",
+            "in": "query",
+            "name": "exit_code__gte",
+            "required": false,
+            "schema": { "minimum": 0, "type": "integer" }
+          },
+          {
+            "description": "Filter executions with exit code less than or equal to this value",
+            "in": "query",
+            "name": "exit_code__lte",
+            "required": false,
+            "schema": { "minimum": 0, "type": "integer" }
+          },
+          {
+            "description": "Filter records where inserted_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "inserted_at__gte",
             "required": false,
@@ -5848,7 +5838,7 @@
             }
           },
           {
-            "description": "Filter command executions inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where inserted_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "inserted_at__lte",
             "required": false,
@@ -5860,7 +5850,7 @@
             }
           },
           {
-            "description": "Filter command executions updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where updated_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "updated_at__gte",
             "required": false,
@@ -5872,7 +5862,7 @@
             }
           },
           {
-            "description": "Filter command executions updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where updated_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "updated_at__lte",
             "required": false,
@@ -5884,7 +5874,7 @@
             }
           },
           {
-            "description": "Filter command executions sent after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where sent_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "sent_at__gte",
             "required": false,
@@ -5896,7 +5886,7 @@
             }
           },
           {
-            "description": "Filter command executions sent before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where sent_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "sent_at__lte",
             "required": false,
@@ -5908,7 +5898,7 @@
             }
           },
           {
-            "description": "Filter command executions completed after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where completed_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "completed_at__gte",
             "required": false,
@@ -5920,7 +5910,7 @@
             }
           },
           {
-            "description": "Filter command executions completed before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where completed_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "completed_at__lte",
             "required": false,
@@ -5932,7 +5922,7 @@
             }
           },
           {
-            "description": "Filter command executions cancelled after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where cancelled_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "cancelled_at__gte",
             "required": false,
@@ -5944,7 +5934,7 @@
             }
           },
           {
-            "description": "Filter command executions cancelled before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where cancelled_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "cancelled_at__lte",
             "required": false,
@@ -6204,7 +6194,7 @@
         "operationId": "EdgeAdminWeb.Controllers.Ssh.SshUsernameController.index",
         "parameters": [
           {
-            "description": "Page number",
+            "description": "Page number (1-indexed)",
             "example": 1,
             "in": "query",
             "name": "page",
@@ -6269,7 +6259,7 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter SSH usernames inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where inserted_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "inserted_at__gte",
             "required": false,
@@ -6281,7 +6271,7 @@
             }
           },
           {
-            "description": "Filter SSH usernames inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where inserted_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "inserted_at__lte",
             "required": false,
@@ -6293,7 +6283,7 @@
             }
           },
           {
-            "description": "Filter SSH usernames updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where updated_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "updated_at__gte",
             "required": false,
@@ -6305,7 +6295,7 @@
             }
           },
           {
-            "description": "Filter SSH usernames updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where updated_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "updated_at__lte",
             "required": false,
@@ -6499,7 +6489,7 @@
         "operationId": "EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController.index",
         "parameters": [
           {
-            "description": "Page number",
+            "description": "Page number (1-indexed)",
             "example": 1,
             "in": "query",
             "name": "page",
@@ -6578,7 +6568,7 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter SSH public keys inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where inserted_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "inserted_at__gte",
             "required": false,
@@ -6590,7 +6580,7 @@
             }
           },
           {
-            "description": "Filter SSH public keys inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where inserted_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "inserted_at__lte",
             "required": false,
@@ -6602,7 +6592,7 @@
             }
           },
           {
-            "description": "Filter SSH public keys updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where updated_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "updated_at__gte",
             "required": false,
@@ -6614,7 +6604,7 @@
             }
           },
           {
-            "description": "Filter SSH public keys updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where updated_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "updated_at__lte",
             "required": false,
@@ -6782,7 +6772,7 @@
         "operationId": "EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController.index",
         "parameters": [
           {
-            "description": "Page number",
+            "description": "Page number (1-indexed)",
             "example": 1,
             "in": "query",
             "name": "page",
@@ -6829,7 +6819,7 @@
             }
           },
           {
-            "description": "Filter requests inserted after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where inserted_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "inserted_at__gte",
             "required": false,
@@ -6841,7 +6831,7 @@
             }
           },
           {
-            "description": "Filter requests inserted before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where inserted_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "inserted_at__lte",
             "required": false,
@@ -6853,7 +6843,7 @@
             }
           },
           {
-            "description": "Filter requests updated after this datetime (e.g. 2025-01-01T00:00:00Z; date-only 2025-01-01 is treated as start of day UTC)",
+            "description": "Filter records where updated_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
             "name": "updated_at__gte",
             "required": false,
@@ -6865,7 +6855,7 @@
             }
           },
           {
-            "description": "Filter requests updated before this datetime (e.g. 2025-01-01T23:59:59Z; date-only 2025-01-01 is treated as end of day UTC)",
+            "description": "Filter records where updated_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
             "name": "updated_at__lte",
             "required": false,

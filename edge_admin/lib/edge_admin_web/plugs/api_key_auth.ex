@@ -37,17 +37,28 @@ defmodule EdgeAdminWeb.Plugs.ApiKeyAuth do
     api_key = Application.get_env(:edge_admin, :api_key)
 
     case get_req_header(conn, "authorization") do
-      ["Bearer " <> ^master_key] ->
-        conn
-
-      ["Bearer " <> ^api_key] ->
-        conn
+      ["Bearer " <> token] ->
+        if valid_token?(token, master_key, api_key) do
+          conn
+        else
+          reject(conn)
+        end
 
       _ ->
-        conn
-        |> put_status(:unauthorized)
-        |> json(ResponseEnvelope.error(conn, "unauthorized", "Unauthorized"))
-        |> halt()
+        reject(conn)
     end
+  end
+
+  # Constant-time comparison to avoid leaking key length/prefix via timing.
+  defp valid_token?(token, master_key, api_key) do
+    (is_binary(master_key) and Plug.Crypto.secure_compare(token, master_key)) or
+      (is_binary(api_key) and Plug.Crypto.secure_compare(token, api_key))
+  end
+
+  defp reject(conn) do
+    conn
+    |> put_status(:unauthorized)
+    |> json(ResponseEnvelope.error(conn, "unauthorized", "Unauthorized"))
+    |> halt()
   end
 end

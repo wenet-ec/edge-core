@@ -143,7 +143,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
               }
             }
           },
-          required: [:code, :message, :details]
+          required: [:code, :message]
         },
         meta: MetaSchema
       },
@@ -151,8 +151,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
       example: %{
         error: %{
           code: "not_found",
-          message: "Resource not found",
-          details: nil
+          message: "Resource not found"
         },
         meta: %{
           request_id: "550e8400-e29b-41d4-a716-446655440000",
@@ -183,13 +182,13 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
             message: %Schema{type: :string, example: "Resource not found"},
             details: %Schema{nullable: true}
           },
-          required: [:code, :message, :details]
+          required: [:code, :message]
         },
         meta: MetaSchema
       },
       required: [:error, :meta],
       example: %{
-        error: %{code: "not_found", message: "Resource not found", details: nil},
+        error: %{code: "not_found", message: "Resource not found"},
         meta: %{request_id: "550e8400-e29b-41d4-a716-446655440000", timestamp: "2026-04-15T10:00:00.000Z"}
       }
     })
@@ -211,13 +210,13 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
             message: %Schema{type: :string, example: "Missing or invalid credentials"},
             details: %Schema{nullable: true}
           },
-          required: [:code, :message, :details]
+          required: [:code, :message]
         },
         meta: MetaSchema
       },
       required: [:error, :meta],
       example: %{
-        error: %{code: "unauthorized", message: "Missing or invalid credentials", details: nil},
+        error: %{code: "unauthorized", message: "Missing or invalid credentials"},
         meta: %{request_id: "550e8400-e29b-41d4-a716-446655440000", timestamp: "2026-04-15T10:00:00.000Z"}
       }
     })
@@ -239,13 +238,13 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
             message: %Schema{type: :string, example: "Insufficient permissions"},
             details: %Schema{nullable: true}
           },
-          required: [:code, :message, :details]
+          required: [:code, :message]
         },
         meta: MetaSchema
       },
       required: [:error, :meta],
       example: %{
-        error: %{code: "forbidden", message: "Insufficient permissions", details: nil},
+        error: %{code: "forbidden", message: "Insufficient permissions"},
         meta: %{request_id: "550e8400-e29b-41d4-a716-446655440000", timestamp: "2026-04-15T10:00:00.000Z"}
       }
     })
@@ -267,13 +266,13 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
             message: %Schema{type: :string, example: "Resource already exists"},
             details: %Schema{nullable: true}
           },
-          required: [:code, :message, :details]
+          required: [:code, :message]
         },
         meta: MetaSchema
       },
       required: [:error, :meta],
       example: %{
-        error: %{code: "conflict", message: "Resource already exists", details: nil},
+        error: %{code: "conflict", message: "Resource already exists"},
         meta: %{request_id: "550e8400-e29b-41d4-a716-446655440000", timestamp: "2026-04-15T10:00:00.000Z"}
       }
     })
@@ -295,7 +294,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
             message: %Schema{type: :string, example: "Invalid request parameters"},
             details: %Schema{nullable: true}
           },
-          required: [:code, :message, :details]
+          required: [:code, :message]
         },
         meta: MetaSchema
       },
@@ -327,13 +326,13 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
             message: %Schema{type: :string, example: "Downstream dependency unreachable"},
             details: %Schema{nullable: true}
           },
-          required: [:code, :message, :details]
+          required: [:code, :message]
         },
         meta: MetaSchema
       },
       required: [:error, :meta],
       example: %{
-        error: %{code: "service_unavailable", message: "Downstream dependency unreachable", details: nil},
+        error: %{code: "service_unavailable", message: "Downstream dependency unreachable"},
         meta: %{request_id: "550e8400-e29b-41d4-a716-446655440000", timestamp: "2026-04-15T10:00:00.000Z"}
       }
     })
@@ -355,13 +354,13 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
             message: %Schema{type: :string, example: "An unexpected error occurred"},
             details: %Schema{nullable: true}
           },
-          required: [:code, :message, :details]
+          required: [:code, :message]
         },
         meta: MetaSchema
       },
       required: [:error, :meta],
       example: %{
-        error: %{code: "internal_server_error", message: "An unexpected error occurred", details: nil},
+        error: %{code: "internal_server_error", message: "An unexpected error occurred"},
         meta: %{request_id: "550e8400-e29b-41d4-a716-446655440000", timestamp: "2026-04-15T10:00:00.000Z"}
       }
     })
@@ -383,7 +382,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
             message: %Schema{type: :string, example: "Validation failed"},
             details: %Schema{nullable: true}
           },
-          required: [:code, :message, :details]
+          required: [:code, :message]
         },
         meta: MetaSchema
       },

@@ -3,6 +3,7 @@ defmodule EdgeAdminWeb.Endpoint do
   use Sentry.PlugCapture
   use Phoenix.Endpoint, otp_app: :edge_admin
 
+  alias Phoenix.LiveDashboard.RequestLogger
   alias Plug.Conn
 
   socket("/live", Phoenix.LiveView.Socket,
@@ -32,14 +33,16 @@ defmodule EdgeAdminWeb.Endpoint do
     plug(Phoenix.Ecto.CheckRepoStatus, otp_app: :edge_admin)
   end
 
-  plug(Plug.RequestId)
+  # AssignRequestId both generates a UUIDv7 and sets the response header, so
+  # `Plug.RequestId` is redundant. Admin is a request origin, not a relay —
+  # we don't honor inbound x-request-id from upstream.
   plug(EdgeAdminWeb.Plugs.AssignRequestId)
   plug(Plug.Telemetry, event_prefix: [:phoenix, :endpoint])
 
   plug(
     Plug.Parsers,
-    parsers: [:urlencoded, :multipart, :json],
-    pass: ["*/*"],
+    parsers: [:json],
+    pass: ["application/json"],
     json_decoder: Phoenix.json_library()
   )
 
@@ -57,21 +60,36 @@ defmodule EdgeAdminWeb.Endpoint do
   plug(EdgeAdminHealth.Router)
   plug(:halt_if_sent)
 
+  # Register the OpenAPI spec on every request — every API pipeline needs it,
+  # so doing it once here keeps the router pipelines slim. Negligible overhead
+  # for non-API routes.
+  plug(OpenApiSpex.Plug.PutApiSpec, module: EdgeAdminWeb.OpenApiSpec)
+
   # PromEx metrics with conditional authentication
   plug(:metrics_auth_conditional)
   plug(PromEx.Plug, prom_ex_module: EdgeAdmin.PromEx, path: "/api/v1/admins/me/metrics/raw")
 
-  # Request Logger for LiveDashboard (always enabled when LiveDashboard is mounted)
-  plug(Phoenix.LiveDashboard.RequestLogger,
-    param_key: "request_logger"
-  )
+  # Request Logger only mounted when LiveDashboard is enabled — otherwise it
+  # tags every request with stale metadata for a UI nobody can reach.
+  plug(:request_logger_conditional)
 
   # Strip ?request_logger=<token> from query params after the RequestLogger plug
   # has consumed it. Otherwise downstream OpenApiSpex validation rejects it as
-  # an unknown query parameter.
+  # an unknown query parameter. Safe no-op when RequestLogger is disabled.
   plug(EdgeAdminWeb.Plugs.StripRequestLoggerParam)
 
   plug(EdgeAdminWeb.Router)
+
+  defp request_logger_conditional(conn, _opts) do
+    if Application.get_env(:edge_admin, :live_dashboard_enabled, false) do
+      RequestLogger.call(
+        conn,
+        RequestLogger.init(param_key: "request_logger")
+      )
+    else
+      conn
+    end
+  end
 
   # Apply metrics auth only for the metrics endpoint
   defp metrics_auth_conditional(%{request_path: "/api/v1/admins/me/metrics/raw"} = conn, _opts) do

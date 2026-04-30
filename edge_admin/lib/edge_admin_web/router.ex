@@ -7,7 +7,8 @@ defmodule EdgeAdminWeb.Router do
 
   alias EdgeAdminWeb.Controllers.Agents
   alias EdgeAdminWeb.Plugs.ApiDocsEnabled
-  alias OpenApiSpex.Plug.PutApiSpec
+
+  # PutApiSpec is mounted in the endpoint so every pipeline already has it.
 
   # Browser pipeline with basic auth (for LiveDashboard only)
   pipeline :browser_with_basic_auth do
@@ -19,13 +20,11 @@ defmodule EdgeAdminWeb.Router do
   # Public API pipeline (no authentication required)
   pipeline :public_api do
     plug(:accepts, ["json"])
-    plug(PutApiSpec, module: EdgeAdminWeb.OpenApiSpec)
   end
 
   # Protected API pipeline (requires API_KEY or MASTER_KEY)
   pipeline :protected_api do
     plug(:accepts, ["json"])
-    plug(PutApiSpec, module: EdgeAdminWeb.OpenApiSpec)
     plug(EdgeAdminWeb.Plugs.ApiKeyAuth)
   end
 
@@ -37,14 +36,12 @@ defmodule EdgeAdminWeb.Router do
   # Metrics API pipeline (accepts MASTER_KEY or METRICS_KEY)
   pipeline :protected_metrics do
     plug(:accepts, ["json"])
-    plug(PutApiSpec, module: EdgeAdminWeb.OpenApiSpec)
     plug(EdgeAdminWeb.Plugs.MetricsAuth)
   end
 
   # API specs pipeline — serves OpenAPI + AsyncAPI JSON specs (gated by API_DOCS_ENABLED)
   pipeline :api_specs do
     plug(:accepts, ["json"])
-    plug(PutApiSpec, module: EdgeAdminWeb.OpenApiSpec)
     plug(ApiDocsEnabled)
   end
 
@@ -58,7 +55,6 @@ defmodule EdgeAdminWeb.Router do
   # Agent API pipeline (requires agent api_token)
   pipeline :agent_api do
     plug(:accepts, ["json"])
-    plug(PutApiSpec, module: EdgeAdminWeb.OpenApiSpec)
     plug(EdgeAdminWeb.Plugs.AgentAuth)
   end
 
@@ -250,11 +246,24 @@ defmodule EdgeAdminWeb.Router do
     forward("/mcp", Anubis.Server.Transport.StreamableHTTP.Plug, server: EdgeAdminMcp.Server)
   end
 
-  # Basic auth helper for LiveDashboard
+  # Basic auth helper for LiveDashboard.
+  #
+  # Behaviour is controlled by `:basic_auth_enabled` (default `false`):
+  # - `true`  → require username + password from `:basic_auth` config; raise at
+  #             request time if either is missing (loud failure beats silent open)
+  # - `false` → explicitly bypass basic auth (dev / open-source default)
+  #
+  # The previous behaviour silently passed through when credentials were unset,
+  # which masks a misconfigured prod admin. Set BASIC_AUTH_ENABLED=true in
+  # production deployments.
   defp basic_auth(conn, _opts) do
-    basic_auth_config = Application.get_env(:edge_admin, :basic_auth)
+    if Application.get_env(:edge_admin, :basic_auth_enabled, false) do
+      basic_auth_config = Application.get_env(:edge_admin, :basic_auth, [])
 
-    if basic_auth_config[:username] do
+      if !(basic_auth_config[:username] && basic_auth_config[:password]) do
+        raise "BASIC_AUTH_ENABLED=true but :basic_auth username or password is missing"
+      end
+
       Plug.BasicAuth.basic_auth(conn, basic_auth_config)
     else
       conn

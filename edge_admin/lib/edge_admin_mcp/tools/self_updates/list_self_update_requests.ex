@@ -15,6 +15,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.ListSelfUpdateRequests do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.SelfUpdates
+  alias EdgeAdminMcp.QueryBuilder
   alias EdgeAdminMcp.Tools.SelfUpdates.SelfUpdateRequestData
 
   @impl true
@@ -37,14 +38,10 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.ListSelfUpdateRequests do
   @impl true
   def execute(params, frame) do
     query =
-      %{"page" => params[:page] || 1, "page_size" => params[:page_size] || 20}
-      |> put_if("status", params[:status])
-      |> put_if("inserted_at__gte", params[:inserted_at_gte])
-      |> put_if("inserted_at__lte", params[:inserted_at_lte])
-      |> put_if("updated_at__gte", params[:updated_at_gte])
-      |> put_if("updated_at__lte", params[:updated_at_lte])
-      |> put_if("order_by", params[:order_by])
-      |> put_if("order_directions", params[:order_directions])
+      QueryBuilder.build(params,
+        passthrough: [:status],
+        ranges: [:inserted_at, :updated_at]
+      )
 
     case SelfUpdates.list_self_update_requests(query) do
       {:ok, {requests, meta}} ->

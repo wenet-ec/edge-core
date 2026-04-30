@@ -11,8 +11,8 @@ defmodule EdgeAdminMcp do
   - `use Anubis.Server.Component, type: :tool`
   - `alias Anubis.Server.Response`
   - `paginated/3` — builds the standard MCP list response shape
-  - `error_response/1,2` — builds an MCP error response with `isError: true`
-  - `tool_error/1,2` — builds structured error map (use when you need the map directly)
+  - `error_response/1` — renders a known reason via `EdgeAdminMcp.ToolError.message/1`
+  - `error_response/2` — renders a custom message for any error code
   - `put_if/3` — conditionally adds a key to a map (nil → no-op)
 
   See `EdgeAdminMcp.ToolError` for the full error code table.
@@ -32,8 +32,6 @@ defmodule EdgeAdminMcp do
       defp paginated(items, meta, mapper), do: EdgeAdminMcp.paginated(items, meta, mapper)
       defp error_response(reason), do: EdgeAdminMcp.error_response(reason)
       defp error_response(code, msg), do: EdgeAdminMcp.error_response(code, msg)
-      defp tool_error(reason), do: EdgeAdminMcp.ToolError.build(reason)
-      defp tool_error(code, msg), do: EdgeAdminMcp.ToolError.build(code, msg)
       defp put_if(m, _k, nil), do: m
       defp put_if(m, k, v), do: Map.put(m, k, v)
     end
@@ -51,11 +49,29 @@ defmodule EdgeAdminMcp do
     }
   end
 
+  @doc """
+  Renders a known error reason as an MCP tool error response.
+
+  The `reason` is passed through `EdgeAdminMcp.ToolError.message/1` to produce
+  a human-readable string (`%Ecto.Changeset{}`, `:not_found`, etc.).
+  """
   def error_response(reason) do
     Response.error(Response.tool(), EdgeAdminMcp.ToolError.message(reason))
   end
 
-  def error_response(:not_found, msg) when is_binary(msg) do
+  @doc """
+  Renders an MCP tool error response with a custom message.
+
+  Used when the tool wants a more informative message than the default
+  `ToolError.message/1` would produce (e.g. including the resource id):
+
+      error_response(:not_found, "Command \#{id} not found")
+
+  The `code` is currently informational — it is not surfaced to the client
+  in the response body, but tools should still pass an honest code so the
+  intent is clear at the call site.
+  """
+  def error_response(_code, msg) when is_binary(msg) do
     Response.error(Response.tool(), msg)
   end
 

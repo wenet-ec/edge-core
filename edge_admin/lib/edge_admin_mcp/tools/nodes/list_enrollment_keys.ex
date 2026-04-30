@@ -25,6 +25,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
+  alias EdgeAdminMcp.QueryBuilder
   alias EdgeAdminMcp.Tools.Nodes.EnrollmentKeyData
 
   @impl true
@@ -59,36 +60,27 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
 
   @impl true
   def execute(params, frame) do
-    case Nodes.list_enrollment_keys(build_query(params)) do
+    query =
+      QueryBuilder.build(params,
+        passthrough: [
+          :cluster_name,
+          :key,
+          :uses_remaining,
+          :is_unlimited,
+          :is_spent,
+          :is_expired,
+          :is_never_used,
+          :has_expiry
+        ],
+        ranges: [:uses_remaining, :expired_at, :last_used_at, :inserted_at, :updated_at]
+      )
+
+    case Nodes.list_enrollment_keys(query) do
       {:ok, {keys, meta}} ->
         {:reply, Response.json(Response.tool(), paginated(keys, meta, &EnrollmentKeyData.data/1)), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}
     end
-  end
-
-  defp build_query(params) do
-    %{"page" => params[:page] || 1, "page_size" => params[:page_size] || 20}
-    |> put_if("cluster_name", params[:cluster_name])
-    |> put_if("key", params[:key])
-    |> put_if("uses_remaining", params[:uses_remaining])
-    |> put_if("uses_remaining__gte", params[:uses_remaining_gte])
-    |> put_if("uses_remaining__lte", params[:uses_remaining_lte])
-    |> put_if("is_unlimited", params[:is_unlimited])
-    |> put_if("is_spent", params[:is_spent])
-    |> put_if("is_expired", params[:is_expired])
-    |> put_if("is_never_used", params[:is_never_used])
-    |> put_if("has_expiry", params[:has_expiry])
-    |> put_if("expired_at__gte", params[:expired_at_gte])
-    |> put_if("expired_at__lte", params[:expired_at_lte])
-    |> put_if("last_used_at__gte", params[:last_used_at_gte])
-    |> put_if("last_used_at__lte", params[:last_used_at_lte])
-    |> put_if("inserted_at__gte", params[:inserted_at_gte])
-    |> put_if("inserted_at__lte", params[:inserted_at_lte])
-    |> put_if("updated_at__gte", params[:updated_at_gte])
-    |> put_if("updated_at__lte", params[:updated_at_lte])
-    |> put_if("order_by", params[:order_by])
-    |> put_if("order_directions", params[:order_directions])
   end
 end

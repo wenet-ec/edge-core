@@ -27,6 +27,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Commands
+  alias EdgeAdminMcp.QueryBuilder
   alias EdgeAdminMcp.Tools.Commands.CommandExecutionData
 
   @impl true
@@ -64,39 +65,28 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
 
   @impl true
   def execute(params, frame) do
-    case Commands.list_command_executions(build_query(params)) do
+    query =
+      QueryBuilder.build(params,
+        passthrough: [
+          :command_id,
+          :node_id,
+          :status,
+          :target_all,
+          :exit_code,
+          :output,
+          :has_output,
+          :cluster_name,
+          :has_cluster
+        ],
+        ranges: [:exit_code, :inserted_at, :updated_at, :sent_at, :completed_at, :cancelled_at]
+      )
+
+    case Commands.list_command_executions(query) do
       {:ok, {executions, meta}} ->
         {:reply, Response.json(Response.tool(), paginated(executions, meta, &CommandExecutionData.data/1)), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}
     end
-  end
-
-  defp build_query(params) do
-    %{"page" => params[:page] || 1, "page_size" => params[:page_size] || 20}
-    |> put_if("command_id", params[:command_id])
-    |> put_if("node_id", params[:node_id])
-    |> put_if("status", params[:status])
-    |> put_if("target_all", params[:target_all])
-    |> put_if("exit_code", params[:exit_code])
-    |> put_if("exit_code__gte", params[:exit_code_gte])
-    |> put_if("exit_code__lte", params[:exit_code_lte])
-    |> put_if("output", params[:output])
-    |> put_if("has_output", params[:has_output])
-    |> put_if("cluster_name", params[:cluster_name])
-    |> put_if("has_cluster", params[:has_cluster])
-    |> put_if("inserted_at__gte", params[:inserted_at_gte])
-    |> put_if("inserted_at__lte", params[:inserted_at_lte])
-    |> put_if("updated_at__gte", params[:updated_at_gte])
-    |> put_if("updated_at__lte", params[:updated_at_lte])
-    |> put_if("sent_at__gte", params[:sent_at_gte])
-    |> put_if("sent_at__lte", params[:sent_at_lte])
-    |> put_if("completed_at__gte", params[:completed_at_gte])
-    |> put_if("completed_at__lte", params[:completed_at_lte])
-    |> put_if("cancelled_at__gte", params[:cancelled_at_gte])
-    |> put_if("cancelled_at__lte", params[:cancelled_at_lte])
-    |> put_if("order_by", params[:order_by])
-    |> put_if("order_directions", params[:order_directions])
   end
 end

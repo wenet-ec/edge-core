@@ -18,6 +18,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Ssh
+  alias EdgeAdminMcp.QueryBuilder
   alias EdgeAdminMcp.Tools.Ssh.SshUsernameData
 
   @impl true
@@ -43,17 +44,10 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
   @impl true
   def execute(params, frame) do
     query =
-      %{"page" => params[:page] || 1, "page_size" => params[:page_size] || 20}
-      |> put_if("username", params[:username])
-      |> put_if("node_id", params[:node_id])
-      |> put_if("has_password", params[:has_password])
-      |> put_if("cluster_name", params[:cluster_name])
-      |> put_if("inserted_at__gte", params[:inserted_at_gte])
-      |> put_if("inserted_at__lte", params[:inserted_at_lte])
-      |> put_if("updated_at__gte", params[:updated_at_gte])
-      |> put_if("updated_at__lte", params[:updated_at_lte])
-      |> put_if("order_by", params[:order_by])
-      |> put_if("order_directions", params[:order_directions])
+      QueryBuilder.build(params,
+        passthrough: [:username, :node_id, :has_password, :cluster_name],
+        ranges: [:inserted_at, :updated_at]
+      )
 
     case Ssh.list_ssh_usernames(query) do
       {:ok, {usernames, meta}} ->

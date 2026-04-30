@@ -1,52 +1,23 @@
 # edge_admin/lib/edge_admin_mcp/tool_error.ex
 defmodule EdgeAdminMcp.ToolError do
   @moduledoc """
-  Builds structured error maps for MCP tool responses.
+  Renders error reasons as human-readable strings for MCP tool responses.
 
-  | Value                 | `error` field        | Notes                        |
-  |-----------------------|----------------------|------------------------------|
-  | `%Ecto.Changeset{}`   | `validation_failed`  | includes `details` map       |
-  | `{:conflict, reason}` | `conflict`           | reason string in `message`   |
-  | `:not_found`          | `not_found`          | use 2-arity for resource name|
-  | `:service_unavailable`| `service_unavailable`|                              |
-  | `%Flop.Meta{}`        | `bad_request`        | invalid filter/sort params   |
-  | anything else         | `internal_error`     |                              |
+  Each `message/1` clause maps a domain error reason to the string MCP clients
+  see as the tool's error message:
+
+  | Value                 | Rendered message                                    |
+  |-----------------------|-----------------------------------------------------|
+  | `%Ecto.Changeset{}`   | `"Validation failed: <traversed errors>"`           |
+  | `{:conflict, reason}` | the reason itself (binary)                          |
+  | `:not_found`          | `"Resource not found"`                              |
+  | `:service_unavailable`| `"A downstream dependency is unavailable — try..."` |
+  | `%Flop.Meta{}`        | `"Invalid filter or sort parameters"`               |
+  | anything else         | `"An unexpected error occurred"`                    |
+
+  Tools that need a tailored not-found message (e.g. including the resource id)
+  should use `error_response/2` from `EdgeAdminMcp` rather than this module.
   """
-
-  def build(%Ecto.Changeset{} = cs) do
-    details =
-      Ecto.Changeset.traverse_errors(cs, fn {msg, opts} ->
-        Enum.reduce(opts, msg, fn {k, v}, acc ->
-          String.replace(acc, "%{#{k}}", to_string(v))
-        end)
-      end)
-
-    %{error: "validation_failed", message: "Validation failed", details: details}
-  end
-
-  def build({:conflict, reason}) when is_binary(reason) do
-    %{error: "conflict", message: reason}
-  end
-
-  def build(:not_found) do
-    %{error: "not_found", message: "Resource not found"}
-  end
-
-  def build(:service_unavailable) do
-    %{error: "service_unavailable", message: "A downstream dependency is unavailable — try again shortly"}
-  end
-
-  def build(%Flop.Meta{}) do
-    %{error: "bad_request", message: "Invalid filter or sort parameters"}
-  end
-
-  def build(_) do
-    %{error: "internal_error", message: "An unexpected error occurred"}
-  end
-
-  def build(:not_found, message) when is_binary(message) do
-    %{error: "not_found", message: message}
-  end
 
   def message(%Ecto.Changeset{} = cs) do
     details =

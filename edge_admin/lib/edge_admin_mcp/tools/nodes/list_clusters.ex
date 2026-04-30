@@ -20,6 +20,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListClusters do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
+  alias EdgeAdminMcp.QueryBuilder
   alias EdgeAdminMcp.Tools.Nodes.ClusterData
 
   @impl true
@@ -48,30 +49,18 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListClusters do
 
   @impl true
   def execute(params, frame) do
-    case Nodes.list_clusters(build_query(params)) do
+    query =
+      QueryBuilder.build(params,
+        passthrough: [:name, :ipv4_range, :node_limit, :has_node_limit],
+        ranges: [:node_count, :node_limit, :inserted_at, :updated_at]
+      )
+
+    case Nodes.list_clusters(query) do
       {:ok, {clusters, meta}} ->
         {:reply, Response.json(Response.tool(), paginated(clusters, meta, &ClusterData.data/1)), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}
     end
-  end
-
-  defp build_query(params) do
-    %{"page" => params[:page] || 1, "page_size" => params[:page_size] || 20}
-    |> put_if("name", params[:name])
-    |> put_if("ipv4_range", params[:ipv4_range])
-    |> put_if("node_count__gte", params[:node_count_gte])
-    |> put_if("node_count__lte", params[:node_count_lte])
-    |> put_if("node_limit", params[:node_limit])
-    |> put_if("node_limit__gte", params[:node_limit_gte])
-    |> put_if("node_limit__lte", params[:node_limit_lte])
-    |> put_if("has_node_limit", params[:has_node_limit])
-    |> put_if("inserted_at__gte", params[:inserted_at_gte])
-    |> put_if("inserted_at__lte", params[:inserted_at_lte])
-    |> put_if("updated_at__gte", params[:updated_at_gte])
-    |> put_if("updated_at__lte", params[:updated_at_lte])
-    |> put_if("order_by", params[:order_by])
-    |> put_if("order_directions", params[:order_directions])
   end
 end

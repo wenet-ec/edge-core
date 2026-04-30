@@ -19,6 +19,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommands do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Commands
+  alias EdgeAdminMcp.QueryBuilder
   alias EdgeAdminMcp.Tools.Commands.CommandData
 
   @impl true
@@ -46,29 +47,18 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommands do
 
   @impl true
   def execute(params, frame) do
-    case Commands.list_commands(build_query(params)) do
+    query =
+      QueryBuilder.build(params,
+        passthrough: [:command_text, :has_timeout, :has_expired_at],
+        ranges: [:timeout, :expired_at, :inserted_at, :updated_at]
+      )
+
+    case Commands.list_commands(query) do
       {:ok, {commands, meta}} ->
         {:reply, Response.json(Response.tool(), paginated(commands, meta, &CommandData.data/1)), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}
     end
-  end
-
-  defp build_query(params) do
-    %{"page" => params[:page] || 1, "page_size" => params[:page_size] || 20}
-    |> put_if("command_text", params[:command_text])
-    |> put_if("has_timeout", params[:has_timeout])
-    |> put_if("timeout__gte", params[:timeout_gte])
-    |> put_if("timeout__lte", params[:timeout_lte])
-    |> put_if("has_expired_at", params[:has_expired_at])
-    |> put_if("expired_at__gte", params[:expired_at_gte])
-    |> put_if("expired_at__lte", params[:expired_at_lte])
-    |> put_if("inserted_at__gte", params[:inserted_at_gte])
-    |> put_if("inserted_at__lte", params[:inserted_at_lte])
-    |> put_if("updated_at__gte", params[:updated_at_gte])
-    |> put_if("updated_at__lte", params[:updated_at_lte])
-    |> put_if("order_by", params[:order_by])
-    |> put_if("order_directions", params[:order_directions])
   end
 end

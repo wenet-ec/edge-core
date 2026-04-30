@@ -255,7 +255,9 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
       :delivery_delivered_count,
       :execution_delivered_total,
       :execution_completed_total,
-      :expiration_total
+      :expiration_total,
+      :pruning_total,
+      :pruning_deleted_count
     ]
 
     def from_raw(raw) do
@@ -264,7 +266,9 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
         delivery_delivered_count: raw["commands_delivery_delivered_count"],
         execution_delivered_total: raw["commands_execution_delivered_total"],
         execution_completed_total: raw["commands_execution_completed_total"],
-        expiration_total: raw["commands_expiration_total"]
+        expiration_total: raw["commands_expiration_total"],
+        pruning_total: raw["commands_pruning_total"],
+        pruning_deleted_count: raw["commands_pruning_deleted_count"]
       }
     end
   end

@@ -1798,6 +1798,24 @@
           "expr": "rate(edge_admin_commands_expiration_total{otp_app=\"$otp_app\"}[$__rate_interval])",
           "legendFormat": "Expiration Sweeps",
           "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "rate(edge_admin_commands_pruning_total{otp_app=\"$otp_app\"}[$__rate_interval])",
+          "legendFormat": "Pruning Sweeps",
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "edge_admin_commands_pruning_deleted_count{otp_app=\"$otp_app\"}",
+          "legendFormat": "Pruned (last run)",
+          "refId": "F"
         }
       ],
       "title": "Command Execution Lifecycle",

@@ -276,6 +276,24 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         event_name: [:edge_admin, :commands, :expiration],
         description: "Number of executions expired in last expiration run",
         measurement: :expired_count
+      ),
+      counter(
+        [:edge_admin, :commands, :pruning, :total],
+        event_name: [:edge_admin, :commands, :pruning],
+        description: "Total number of execution pruning runs (delete old finalised rows)"
+      ),
+      last_value(
+        [:edge_admin, :commands, :pruning, :deleted_count],
+        event_name: [:edge_admin, :commands, :pruning],
+        description: "Number of executions deleted in last pruning run",
+        measurement: :deleted_count
+      ),
+      distribution(
+        [:edge_admin, :commands, :pruning, :duration, :milliseconds],
+        event_name: [:edge_admin, :commands, :pruning],
+        description: "Duration of execution pruning runs in milliseconds",
+        measurement: :duration,
+        reporter_options: [buckets: [10, 100, 500, 1_000, 5_000, 30_000, 60_000, 300_000]]
       )
     ]
   end

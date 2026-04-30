@@ -158,10 +158,13 @@ execution_delivery_schedule = get_env("EXECUTION_DELIVERY_SCHEDULE", :string, "*
 execution_expiration_schedule = get_env("EXECUTION_EXPIRATION_SCHEDULE", :string, "* * * * *")
 vpn_config_sync_schedule = get_env("VPN_CONFIG_SYNC_SCHEDULE", :string, "*/5 * * * *")
 zombie_admin_cleanup_schedule = get_env("ZOMBIE_ADMIN_CLEANUP_SCHEDULE", :string, "*/30 * * * *")
+zombie_admin_checkin_threshold_minutes = get_env("ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES", :integer, 120)
 
 # --- Oban Cron ---
-zombie_admin_checkin_threshold_minutes = get_env("ZOMBIE_ADMIN_CHECKIN_THRESHOLD_MINUTES", :integer, 120)
 cluster_reconciliation_schedule = get_env("CLUSTER_RECONCILIATION_SCHEDULE", :string, "0 */6 * * *")
+execution_pruning_enabled = get_env("EXECUTION_PRUNING_ENABLED", :boolean, false)
+execution_pruning_schedule = get_env("EXECUTION_PRUNING_SCHEDULE", :string, "0 0 * * *")
+execution_retention_days = get_env("EXECUTION_RETENTION_DAYS", :integer, 30)
 
 # --- Prom Ex Configurations and Grafana Integration ---
 grafana_config =
@@ -185,6 +188,17 @@ grafana_config =
       ] ++ auth
   end
 
+# Queue concurrency note:
+# In production, up to 200 admin instances may share the same PostgreSQL.
+# Each admin instance opens one polling connection per queue. Keep concurrency
+# low — the bottleneck is DB connection pressure, not throughput.
+#
+#   execution_creation     — inserts execution records in bulk; 2 is plenty
+#   execution_pruning      — daily sweep, batched deletes; 1 is enough
+#   cluster_reconciliation — one job per cluster every 6h; 1 is enough
+#   self_updates           — rare, triggered manually; 1 is fine
+#   event_broker           — async broker publish with retry; 2 keeps it snappy
+#                          without hammering the broker with parallel calls
 # --- LocalScheduler  ---
 config :edge_admin, EdgeAdmin.LocalScheduler,
   jobs: [
@@ -223,20 +237,11 @@ config :edge_admin, EdgeAdmin.PromEx,
   grafana: grafana_config,
   metrics_server: :disabled
 
-# Queue concurrency note:
-# In production, up to 200 admin instances may share the same PostgreSQL.
-# Each admin instance opens one polling connection per queue. Keep concurrency
-# low — the bottleneck is DB connection pressure, not throughput.
-#
-#   execution_creation     — inserts execution records in bulk; 2 is plenty
-#   cluster_reconciliation — one job per cluster every 6h; 1 is enough
-#   self_updates           — rare, triggered manually; 1 is fine
-#   event_broker           — async broker publish with retry; 2 keeps it snappy
-#                          without hammering the broker with parallel calls
 config :edge_admin, Oban,
   engine: Oban.Engines.Basic,
   queues: [
     execution_creation: 2,
+    execution_pruning: 1,
     cluster_reconciliation: 1,
     self_updates: 1,
     event_broker: 2
@@ -251,7 +256,9 @@ config :edge_admin, Oban,
     {Oban.Plugins.Cron,
      crontab: [
        # Reconcile clusters and nodes between DB and Netmaker
-       {cluster_reconciliation_schedule, EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker}
+       {cluster_reconciliation_schedule, EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker},
+       # Delete finalised command executions older than retention
+       {execution_pruning_schedule, EdgeAdmin.Commands.Workers.PruneExecutionsWorker}
      ]},
     Oban.Plugins.Lifeline,
     {Oban.Plugins.Pruner, max_age: 86_400}
@@ -305,6 +312,9 @@ config :edge_admin,
   node_health_check_schedule: node_health_check_schedule,
   execution_delivery_schedule: execution_delivery_schedule,
   execution_expiration_schedule: execution_expiration_schedule,
+  execution_pruning_enabled: execution_pruning_enabled,
+  execution_pruning_schedule: execution_pruning_schedule,
+  execution_retention_days: execution_retention_days,
   vpn_config_sync_schedule: vpn_config_sync_schedule,
   cluster_reconciliation_enabled: get_env("CLUSTER_RECONCILIATION_ENABLED", :boolean, true),
   cluster_reconciliation_schedule: cluster_reconciliation_schedule,

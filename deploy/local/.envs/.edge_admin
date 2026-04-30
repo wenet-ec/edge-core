@@ -301,6 +301,15 @@ ADMIN_DISCOVERY_PORT=44000
 # Disable temporarily if you need direct Netmaker access (e.g. manual debugging).
 # EVICT_ROGUE_HOSTS=true
 
+# Execution Pruning: periodic deletion of finalised command_executions.
+# Disabled by default — set EXECUTION_PRUNING_ENABLED=true to opt in. The cron
+# entry is always registered; the worker no-ops when disabled. In-flight rows
+# (pending, sent) and unsettled cancelled/expired rows (nil exit_code, agent
+# may still report back) are never deleted regardless of age.
+# EXECUTION_PRUNING_ENABLED=false
+# EXECUTION_PRUNING_SCHEDULE=0 0 * * *   # default: daily at 00:00
+# EXECUTION_RETENTION_DAYS=30            # default: 30 days
+
 # --- HTTP Timeouts for Agent Communication ---
 # HEALTH_CHECK_TIMEOUT_MS=10000       # Health check pings (every minute, all owned nodes)
 # METRICS_SCRAPE_TIMEOUT_MS=10000     # Metrics scraping from agent exporters

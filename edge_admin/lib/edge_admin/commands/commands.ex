@@ -1302,6 +1302,63 @@ defmodule EdgeAdmin.Commands do
     end
   end
 
+  @prune_batch_size 1_000
+
+  @doc """
+  Deletes finalised command executions older than `retention_days`.
+
+  An execution is considered finalised — meaning it can no longer receive any
+  updates — when:
+
+    * `status == "completed"` (agent reported result), or
+    * `status in ["cancelled", "expired"]` AND `exit_code IS NOT NULL` (agent
+      reported the result of the cancel/expire signal).
+
+  A `cancelled` or `expired` row with `nil exit_code` is NOT finalised — it's a
+  race-window placeholder that `ExecutionAcceptsResultCheck` still accepts a
+  late agent report for (the agent picked the command up before the admin's
+  cancel/expire reached it). Pruning those would lose the agent's actual
+  result if it eventually arrived. We exclude them, regardless of age.
+
+  In-flight executions (`pending`, `sent`) are never deleted.
+
+  Deletes in batches of #{@prune_batch_size} to avoid long locks on the hot path.
+  Returns `{:ok, total_deleted}`.
+  """
+  @spec prune_executions(pos_integer()) :: {:ok, non_neg_integer()}
+  def prune_executions(retention_days) when is_integer(retention_days) and retention_days > 0 do
+    cutoff = DateTime.add(DateTime.utc_now(), -retention_days * 86_400, :second)
+    total = prune_loop(cutoff, 0)
+    {:ok, total}
+  end
+
+  defp prune_loop(cutoff, acc) do
+    # Postgres does not accept LIMIT directly on DELETE — drive the delete via a
+    # subquery selecting eligible row IDs, capped at @prune_batch_size per pass.
+    #
+    # Eligibility: completed (always finalised), OR cancelled/expired with
+    # exit_code set (agent reported back). Excludes the cancel/expire race
+    # window where exit_code is still nil.
+    subquery =
+      from(ce in CommandExecution,
+        where:
+          ce.inserted_at < ^cutoff and
+            (ce.status == "completed" or
+               (ce.status in ["cancelled", "expired"] and not is_nil(ce.exit_code))),
+        select: ce.id,
+        limit: @prune_batch_size
+      )
+
+    {deleted, _} =
+      Repo.delete_all(from(ce in CommandExecution, where: ce.id in subquery(subquery)))
+
+    if deleted == @prune_batch_size do
+      prune_loop(cutoff, acc + deleted)
+    else
+      acc + deleted
+    end
+  end
+
   defp send_cancel_to_agent(execution) do
     # Get node to send cancellation request
     with {:ok, node} <- Nodes.get_node(execution.node_id),

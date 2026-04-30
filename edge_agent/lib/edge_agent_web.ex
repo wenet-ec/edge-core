@@ -18,7 +18,8 @@ defmodule EdgeAgentWeb do
   those modules here.
   """
 
-  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
+  # Only files actually present in priv/static.
+  def static_paths, do: ~w(favicon.ico robots.txt)
 
   def router do
     quote do
@@ -40,16 +41,17 @@ defmodule EdgeAgentWeb do
   def controller do
     quote do
       use Phoenix.Controller,
-        # Since this is a pure API
+        # Pure API — no HTML layouts.
         formats: [:json],
         layouts: []
 
       import Plug.Conn
-
-      unquote(verified_routes())
     end
   end
 
+  # Verified routes — used by ConnCase tests for `~p"/..."` route construction.
+  # Not imported into controllers because no controller currently builds URLs;
+  # if that changes, add `unquote(verified_routes())` to `controller/0`.
   def verified_routes do
     quote do
       use Phoenix.VerifiedRoutes,

@@ -13,7 +13,6 @@ config :edge_agent, EdgeAgentWeb.Endpoint,
   check_origin: false,
   live_reload: [
     patterns: [
-      ~r{priv/gettext/.*$},
       ~r{lib/edge_agent_web/.*(ee?x)$}
     ]
   ]

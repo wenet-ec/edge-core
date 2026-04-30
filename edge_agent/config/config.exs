@@ -10,9 +10,6 @@ import Config
 
 version = Mix.Project.config()[:version]
 
-config :edge_agent, Corsica, allow_headers: :all
-config :edge_agent, EdgeAgent.Gettext, default_locale: "en"
-
 config :edge_agent, EdgeAgentWeb.Endpoint,
   adapter: Bandit.PhoenixAdapter,
   pubsub_server: EdgeAgent.PubSub,

@@ -16,7 +16,7 @@ defmodule EdgeAgentWeb.Plugs.ApiTokenAuth do
   def call(conn, _opts) do
     with {:ok, token} <- get_token_from_header(conn),
          {:ok, stored_token} <- get_stored_token(),
-         true <- token == stored_token do
+         true <- Plug.Crypto.secure_compare(token, stored_token) do
       conn
     else
       _ ->

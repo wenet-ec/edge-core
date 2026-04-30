@@ -6,7 +6,6 @@ defmodule EdgeAgentWeb.Endpoint do
 
   plug(EdgeAgentWeb.Plugs.Security)
   plug(:ping)
-  plug(:basic_auth)
 
   # Code reloading (dev only)
   if code_reloading? do
@@ -14,14 +13,16 @@ defmodule EdgeAgentWeb.Endpoint do
     plug(Phoenix.Ecto.CheckRepoStatus, otp_app: :edge_agent)
   end
 
-  plug(Plug.RequestId)
+  # AssignRequestId both generates a UUIDv7 and sets the response header, so
+  # `Plug.RequestId` is redundant. Agent is a request origin, not a relay —
+  # we don't honor inbound x-request-id from upstream.
   plug(EdgeAgentWeb.Plugs.AssignRequestId)
   plug(Plug.Telemetry, event_prefix: [:phoenix, :endpoint])
 
   plug(
     Plug.Parsers,
     parsers: [:json],
-    pass: ["*/*"],
+    pass: ["application/json"],
     json_decoder: Phoenix.json_library()
   )
 
@@ -49,16 +50,6 @@ defmodule EdgeAgentWeb.Endpoint do
   end
 
   defp ping(conn, _opts), do: conn
-
-  defp basic_auth(conn, _opts) do
-    basic_auth_config = Application.get_env(:edge_agent, :basic_auth)
-
-    if basic_auth_config[:username] do
-      Plug.BasicAuth.basic_auth(conn, basic_auth_config)
-    else
-      conn
-    end
-  end
 
   # Apply api_token auth only for the metrics endpoint (if enabled)
   defp metrics_auth_conditional(%{request_path: "/api/v1/agents/me/metrics/raw"} = conn, _opts) do

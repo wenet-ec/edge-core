@@ -38,19 +38,18 @@ defmodule EdgeAgentWeb.ResponseEnvelope do
   end
 
   @doc """
-  Builds an error envelope. `details` defaults to `nil` for simple errors.
+  Builds an error envelope. `details` defaults to `nil` for simple errors and
+  is omitted from the response in that case.
   Pass field-level error map for `validation_failed` (output of `Ecto.Changeset.traverse_errors/2`).
   """
   @spec error(Plug.Conn.t(), String.t(), String.t(), map() | nil) :: map()
   def error(conn, code, message, details \\ nil) do
-    %{
-      error: %{
-        code: code,
-        message: message,
-        details: details
-      },
-      meta: request_meta(conn)
-    }
+    error_payload = %{code: code, message: message}
+
+    error_payload =
+      if is_nil(details), do: error_payload, else: Map.put(error_payload, :details, details)
+
+    %{error: error_payload, meta: request_meta(conn)}
   end
 
   # --- Private ---

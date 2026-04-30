@@ -4,9 +4,9 @@
 # PostgreSQL-backed Netmaker, EMQX broker, full metrics stack.
 # Intended for production or serious self-hosted deployments.
 #
-# Cluster layout:
-#   Cluster A: edge_admin_a1 (primary), edge_admin_a2 (replica)
-#   Cluster B: edge_admin_b1 (primary), edge_admin_b2 (replica)
+# Cluster layout (admins within a cluster are masterless peers — no primary/replica):
+#   Cluster A: edge_admin_a1, edge_admin_a2
+#   Cluster B: edge_admin_b1, edge_admin_b2
 #
 # Usage:
 #   docker compose -f cloud.yml up -d
@@ -32,6 +32,40 @@ volumes:
   edge_http_proxy_data: {}
   edge_http_proxy_config: {}
   edge_metrics_data: {}
+
+# Shared config for all admin instances. Admins are masterless peers — they
+# coordinate via :syn + Postgres after boot, so a1/a2/b1/b2 can start in parallel.
+x-edge-admin-base: &edge-admin-base
+  image: ghcr.io/wenet-ec/edge_admin:v0.2.0
+  restart: unless-stopped
+  networks:
+    - edge_core
+  depends_on:
+    edge_vpn:
+      condition: service_healthy
+    edge_admin_db:
+      condition: service_healthy
+  volumes:
+    - /dev/net/tun:/dev/net/tun
+  env_file:
+    - .env
+  ulimits:
+    nofile:
+      soft: 1048576
+      hard: 1048576
+  cap_add:
+    - NET_ADMIN
+    - SYS_MODULE
+  sysctls:
+    - net.ipv4.ip_forward=1
+    - net.ipv4.conf.all.src_valid_mark=1
+    - net.ipv6.conf.all.forwarding=1
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
+    interval: 60s
+    timeout: 5s
+    retries: 6
+    start_period: 45s
 
 services:
   # ---------------------------------------------------------------------------
@@ -62,20 +96,8 @@ services:
   # Cluster A — Admin A1
   # ---------------------------------------------------------------------------
   edge_admin_a1:
-    image: ghcr.io/wenet-ec/edge_admin:v0.2.0
+    <<: *edge-admin-base
     container_name: edge_admin_a1
-    restart: unless-stopped
-    networks:
-      - edge_core
-    depends_on:
-      edge_vpn:
-        condition: service_healthy
-      edge_admin_db:
-        condition: service_healthy
-    volumes:
-      - /dev/net/tun:/dev/net/tun
-    env_file:
-      - .env
     environment:
       - ADMIN_CLUSTER_NAME=a
       - ADMIN_CLUSTER_SUBNET=${ADMIN_A_CLUSTER_SUBNET}
@@ -83,44 +105,13 @@ services:
       - "34000:44000" # API
       - "33128:43128" # HTTP proxy
       - "31080:41080" # SOCKS5 proxy
-    ulimits:
-      nofile:
-        soft: 1048576
-        hard: 1048576
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
-      interval: 60s
-      timeout: 5s
-      retries: 6
-      start_period: 45s
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    sysctls:
-      - net.ipv4.ip_forward=1
-      - net.ipv4.conf.all.src_valid_mark=1
-      - net.ipv6.conf.all.forwarding=1
 
   # ---------------------------------------------------------------------------
   # Cluster A — Admin A2
   # ---------------------------------------------------------------------------
   edge_admin_a2:
-    image: ghcr.io/wenet-ec/edge_admin:v0.2.0
+    <<: *edge-admin-base
     container_name: edge_admin_a2
-    restart: unless-stopped
-    networks:
-      - edge_core
-    depends_on:
-      edge_vpn:
-        condition: service_healthy
-      edge_admin_db:
-        condition: service_healthy
-      edge_admin_a1:
-        condition: service_healthy # startup ordering only — all instances are peers
-    volumes:
-      - /dev/net/tun:/dev/net/tun
-    env_file:
-      - .env
     environment:
       - ADMIN_CLUSTER_NAME=a
       - ADMIN_CLUSTER_SUBNET=${ADMIN_A_CLUSTER_SUBNET}
@@ -128,44 +119,13 @@ services:
       - "34001:44000" # API
       - "33129:43128" # HTTP proxy
       - "31081:41080" # SOCKS5 proxy
-    ulimits:
-      nofile:
-        soft: 1048576
-        hard: 1048576
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
-      interval: 60s
-      timeout: 5s
-      retries: 6
-      start_period: 45s
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    sysctls:
-      - net.ipv4.ip_forward=1
-      - net.ipv4.conf.all.src_valid_mark=1
-      - net.ipv6.conf.all.forwarding=1
 
   # ---------------------------------------------------------------------------
   # Cluster B — Admin B1
   # ---------------------------------------------------------------------------
   edge_admin_b1:
-    image: ghcr.io/wenet-ec/edge_admin:v0.2.0
+    <<: *edge-admin-base
     container_name: edge_admin_b1
-    restart: unless-stopped
-    networks:
-      - edge_core
-    depends_on:
-      edge_vpn:
-        condition: service_healthy
-      edge_admin_db:
-        condition: service_healthy
-      edge_admin_a1:
-        condition: service_healthy # startup ordering only — all instances are peers
-    volumes:
-      - /dev/net/tun:/dev/net/tun
-    env_file:
-      - .env
     environment:
       - ADMIN_CLUSTER_NAME=b
       - ADMIN_CLUSTER_SUBNET=${ADMIN_B_CLUSTER_SUBNET}
@@ -173,44 +133,13 @@ services:
       - "34002:44000" # API
       - "33130:43128" # HTTP proxy
       - "31082:41080" # SOCKS5 proxy
-    ulimits:
-      nofile:
-        soft: 1048576
-        hard: 1048576
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
-      interval: 60s
-      timeout: 5s
-      retries: 6
-      start_period: 45s
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    sysctls:
-      - net.ipv4.ip_forward=1
-      - net.ipv4.conf.all.src_valid_mark=1
-      - net.ipv6.conf.all.forwarding=1
 
   # ---------------------------------------------------------------------------
   # Cluster B — Admin B2
   # ---------------------------------------------------------------------------
   edge_admin_b2:
-    image: ghcr.io/wenet-ec/edge_admin:v0.2.0
+    <<: *edge-admin-base
     container_name: edge_admin_b2
-    restart: unless-stopped
-    networks:
-      - edge_core
-    depends_on:
-      edge_vpn:
-        condition: service_healthy
-      edge_admin_db:
-        condition: service_healthy
-      edge_admin_a1:
-        condition: service_healthy # startup ordering only — all instances are peers
-    volumes:
-      - /dev/net/tun:/dev/net/tun
-    env_file:
-      - .env
     environment:
       - ADMIN_CLUSTER_NAME=b
       - ADMIN_CLUSTER_SUBNET=${ADMIN_B_CLUSTER_SUBNET}
@@ -218,23 +147,6 @@ services:
       - "34003:44000" # API
       - "33131:43128" # HTTP proxy
       - "31083:41080" # SOCKS5 proxy
-    ulimits:
-      nofile:
-        soft: 1048576
-        hard: 1048576
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
-      interval: 60s
-      timeout: 5s
-      retries: 6
-      start_period: 45s
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    sysctls:
-      - net.ipv4.ip_forward=1
-      - net.ipv4.conf.all.src_valid_mark=1
-      - net.ipv6.conf.all.forwarding=1
 
   # ---------------------------------------------------------------------------
   # PostgreSQL — Edge VPN database
@@ -409,9 +321,6 @@ services:
     restart: unless-stopped
     networks:
       - edge_core
-    depends_on:
-      edge_admin_a1:
-        condition: service_healthy
     ports:
       - "49090:9090"
     volumes:

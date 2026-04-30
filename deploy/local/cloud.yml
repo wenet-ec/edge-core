@@ -9,7 +9,9 @@ networks:
 
 volumes:
   local_edge_admin_db_data: {}
-  local_edge_admin_deps: {}
+  local_edge_admin_a1_deps: {}
+  local_edge_admin_a2_deps: {}
+  local_edge_admin_b1_deps: {}
   local_edge_admin_a1_build: {}
   local_edge_admin_a2_build: {}
   local_edge_admin_b1_build: {}
@@ -30,6 +32,44 @@ volumes:
   local_edge_event_broker_redis_data: {}
   local_edge_event_broker_mqtt_data: {}
 
+x-edge-admin-base: &edge-admin-base
+  build:
+    context: ../..
+    dockerfile: ./deploy/local/compose/edge_admin/Dockerfile
+  image: local_edge_admin
+  networks:
+    - local_edge_core
+  extra_hosts:
+    - "edge-vpn.localtest.me:172.20.0.100"
+    - "edge-vpn-broker.localtest.me:172.20.0.100"
+    # All brokers resolve via /etc/hosts — bypasses Docker DNS which netclient breaks
+    # by rewriting /etc/resolv.conf on VPN join.
+    - "edge_event_broker_nats:172.20.0.110"
+    - "edge_event_broker_kafka:172.20.0.111"
+    - "edge_event_broker_rabbitmq:172.20.0.112"
+    - "edge_event_broker_redis:172.20.0.113"
+    - "edge_event_broker_mqtt:172.20.0.114"
+  depends_on:
+    edge_vpn:
+      condition: service_healthy
+    edge_admin_db:
+      condition: service_healthy
+  env_file:
+    - ./.envs/.edge_admin
+  cap_add:
+    - NET_ADMIN
+    - SYS_MODULE
+  sysctls:
+    - net.ipv4.ip_forward=1
+    - net.ipv4.conf.all.src_valid_mark=1
+    - net.ipv6.conf.all.forwarding=1
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
+    interval: 60s
+    timeout: 5s
+    retries: 6
+    start_period: 45s
+
 services:
   # Edge Admin
   edge_admin_db:
@@ -49,140 +89,44 @@ services:
       start_period: 10s
 
   edge_admin_a1:
-    build:
-      context: ../..
-      dockerfile: ./deploy/local/compose/edge_admin/Dockerfile
-    image: local_edge_admin
+    <<: *edge-admin-base
     container_name: local_edge_admin_a1
-    networks:
-      - local_edge_core
-    extra_hosts:
-      - "edge-vpn.localtest.me:172.20.0.100"
-      - "edge-vpn-broker.localtest.me:172.20.0.100"
-      # All brokers resolve via /etc/hosts — bypasses Docker DNS which netclient breaks
-      # by rewriting /etc/resolv.conf on VPN join.
-      - "edge_event_broker_nats:172.20.0.110"
-      - "edge_event_broker_kafka:172.20.0.111"
-      - "edge_event_broker_rabbitmq:172.20.0.112"
-      - "edge_event_broker_redis:172.20.0.113"
-      - "edge_event_broker_mqtt:172.20.0.114"
-    depends_on:
-      edge_vpn:
-        condition: service_healthy
-      edge_admin_db:
-        condition: service_healthy
     volumes:
       - ../../edge_admin:/app:z
       - ../../nexmaker:/nexmaker:z
-      - local_edge_admin_deps:/app/deps
+      - local_edge_admin_a1_deps:/app/deps
       - local_edge_admin_a1_build:/app/_build
       - /dev/net/tun:/dev/net/tun
-    env_file:
-      - ./.envs/.edge_admin
     ports:
       - "4000:44000" # API
       - "3128:43128" # HTTP Proxy
       - "31080:41080" # SOCKS5 Proxy
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    sysctls:
-      - net.ipv4.ip_forward=1
-      - net.ipv4.conf.all.src_valid_mark=1
-      - net.ipv6.conf.all.forwarding=1
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
-      interval: 60s
-      timeout: 5s
-      retries: 6
-      start_period: 45s
 
   edge_admin_a2:
-    build:
-      context: ../..
-      dockerfile: ./deploy/local/compose/edge_admin/Dockerfile
-    image: local_edge_admin
+    <<: *edge-admin-base
     container_name: local_edge_admin_a2
-    networks:
-      - local_edge_core
-    extra_hosts:
-      - "edge-vpn.localtest.me:172.20.0.100"
-      - "edge-vpn-broker.localtest.me:172.20.0.100"
-      # All brokers resolve via /etc/hosts — bypasses Docker DNS which netclient breaks
-      # by rewriting /etc/resolv.conf on VPN join.
-      - "edge_event_broker_nats:172.20.0.110"
-      - "edge_event_broker_kafka:172.20.0.111"
-      - "edge_event_broker_rabbitmq:172.20.0.112"
-      - "edge_event_broker_redis:172.20.0.113"
-      - "edge_event_broker_mqtt:172.20.0.114"
-    depends_on:
-      edge_vpn:
-        condition: service_healthy
-      edge_admin_db:
-        condition: service_healthy
-      edge_admin_a1:
-        condition: service_healthy
     volumes:
       - ../../edge_admin:/app:z
       - ../../nexmaker:/nexmaker:z
-      - local_edge_admin_deps:/app/deps
+      - local_edge_admin_a2_deps:/app/deps
       - local_edge_admin_a2_build:/app/_build
       - /dev/net/tun:/dev/net/tun
-    env_file:
-      - ./.envs/.edge_admin
     environment:
       - AUTH_ENABLED=false
     ports:
       - "4001:44000" # API
       - "3129:43128" # HTTP Proxy
       - "1081:41080" # SOCKS5 Proxy
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    sysctls:
-      - net.ipv4.ip_forward=1
-      - net.ipv4.conf.all.src_valid_mark=1
-      - net.ipv6.conf.all.forwarding=1
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
-      interval: 60s
-      timeout: 5s
-      retries: 6
-      start_period: 45s
 
   edge_admin_b1:
-    build:
-      context: ../..
-      dockerfile: ./deploy/local/compose/edge_admin/Dockerfile
-    image: local_edge_admin
+    <<: *edge-admin-base
     container_name: local_edge_admin_b1
-    networks:
-      - local_edge_core
-    extra_hosts:
-      - "edge-vpn.localtest.me:172.20.0.100"
-      - "edge-vpn-broker.localtest.me:172.20.0.100"
-      # All brokers resolve via /etc/hosts — bypasses Docker DNS which netclient breaks
-      # by rewriting /etc/resolv.conf on VPN join.
-      - "edge_event_broker_nats:172.20.0.110"
-      - "edge_event_broker_kafka:172.20.0.111"
-      - "edge_event_broker_rabbitmq:172.20.0.112"
-      - "edge_event_broker_redis:172.20.0.113"
-      - "edge_event_broker_mqtt:172.20.0.114"
-    depends_on:
-      edge_vpn:
-        condition: service_healthy
-      edge_admin_db:
-        condition: service_healthy
-      edge_admin_a1:
-        condition: service_healthy
     volumes:
       - ../../edge_admin:/app:z
       - ../../nexmaker:/nexmaker:z
-      - local_edge_admin_deps:/app/deps
+      - local_edge_admin_b1_deps:/app/deps
       - local_edge_admin_b1_build:/app/_build
       - /dev/net/tun:/dev/net/tun
-    env_file:
-      - ./.envs/.edge_admin
     environment:
       - ADMIN_CLUSTER_NAME=b
       - ADMIN_CLUSTER_SUBNET=100.63.1.0/24
@@ -190,19 +134,6 @@ services:
       - "4002:44000" # API
       - "3130:43128" # HTTP Proxy
       - "1082:41080" # SOCKS5 Proxy
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    sysctls:
-      - net.ipv4.ip_forward=1
-      - net.ipv4.conf.all.src_valid_mark=1
-      - net.ipv6.conf.all.forwarding=1
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
-      interval: 60s
-      timeout: 5s
-      retries: 6
-      start_period: 45s
 
   edge_admin_test:
     build:
@@ -218,7 +149,7 @@ services:
     volumes:
       - ../../edge_admin:/app:z
       - ../../nexmaker:/nexmaker:z
-      - local_edge_admin_deps:/app/deps
+      - local_edge_admin_a1_deps:/app/deps
       - local_edge_admin_a1_build:/app/_build
     env_file:
       - ./.envs/.edge_admin_test
@@ -404,9 +335,6 @@ services:
     container_name: local_edge_metrics
     networks:
       - local_edge_core
-    depends_on:
-      edge_admin_a1:
-        condition: service_healthy
     ports:
       - "49090:9090"
     volumes:

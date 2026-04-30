@@ -44,13 +44,6 @@ defmodule EdgeAgent.ProxyServers do
     end
   end
 
-  def servers_status do
-    GenServer.call(__MODULE__, :servers_status, 5_000)
-  catch
-    :exit, {:noproc, _} -> :not_started
-    :exit, {:timeout, _} -> :unknown
-  end
-
   # GenServer callbacks
   @impl true
   def init(_opts) do
@@ -66,7 +59,6 @@ defmodule EdgeAgent.ProxyServers do
       http_port: http_port,
       socks5_port: socks5_port,
       listen_address: listen_address,
-      status: :stopped,
       initialized: false
     }
 
@@ -86,18 +78,6 @@ defmodule EdgeAgent.ProxyServers do
   @impl true
   def handle_call(:initialized?, _from, state) do
     {:reply, Map.get(state, :initialized, false), state}
-  end
-
-  @impl true
-  def handle_call(:servers_status, _from, state) do
-    status =
-      if state.http_listener_ref && state.socks5_listener_ref do
-        :running
-      else
-        :stopped
-      end
-
-    {:reply, status, %{state | status: status}}
   end
 
   @impl true
@@ -137,13 +117,12 @@ defmodule EdgeAgent.ProxyServers do
        %{
          state
          | http_listener_ref: http_ref,
-           socks5_listener_ref: socks5_ref,
-           status: :running
+           socks5_listener_ref: socks5_ref
        }}
     else
       {:error, reason} ->
         Logger.error("Failed to start proxy servers: #{inspect(reason)}")
-        {:error, reason, %{state | status: :error}}
+        {:error, reason, state}
     end
   end
 

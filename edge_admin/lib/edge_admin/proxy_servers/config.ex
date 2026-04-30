@@ -89,15 +89,6 @@ defmodule EdgeAdmin.ProxyServers.Config do
   end
 
   @doc """
-  Maximum number of HTTP requests served over a single keep-alive connection.
-
-  Default: 100. After this many requests, the handler closes the connection.
-  """
-  def max_keepalive_requests do
-    Application.get_env(:edge_admin, :proxy_max_keepalive_requests, 100)
-  end
-
-  @doc """
   Grace period in milliseconds for established tunnels to finish during
   graceful drain (deploy / shutdown). Handlers receive `{:drain, grace_ms}`
   when shutdown starts; after the grace, surviving tunnels are force-closed.

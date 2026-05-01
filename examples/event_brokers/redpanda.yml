@@ -9,7 +9,7 @@
 # Then set in your .env:
 #   EVENT_BROKER_ENABLED=true
 #   EVENT_BROKER_ADAPTER=kafka
-#   EVENT_BROKER_URLS=edge_event_broker:9092
+#   EVENT_BROKER_KAFKA_URLS=edge_event_broker:9092
 #   # EVENT_BROKER_KAFKA_USERNAME=admin           # uncomment if SASL is enabled
 #   # EVENT_BROKER_KAFKA_PASSWORD=your-password
 #   # EVENT_BROKER_KAFKA_SASL_MECHANISM=scram_sha_256

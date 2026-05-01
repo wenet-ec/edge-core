@@ -80,7 +80,8 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "title" => "NATS",
         "summary" => "Pub/sub by default; JetStream for durable log + replay.",
         "description" =>
-          "Configure via EVENT_BROKER_URLS. Optional token auth via EVENT_BROKER_NATS_TOKEN. " <>
+          "Configure via EVENT_BROKER_NATS_URLS (comma-separated cluster list). " <>
+            "Optional token auth via EVENT_BROKER_NATS_TOKEN. " <>
             "By default, pub/sub with no persistence. Set EVENT_BROKER_NATS_JETSTREAM=true to enable durable JetStream log — " <>
             "three streams are auto-created on startup: EDGE_NODE_EVENTS, EDGE_EXECUTION_EVENTS, EDGE_SELF_UPDATE_EVENTS. Retention is configured on the broker.",
         "security" => [%{"$ref" => "#/components/securitySchemes/natsToken"}]
@@ -92,7 +93,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "summary" => "Any Kafka-compatible broker (Redpanda recommended — no JVM).",
         "description" =>
           "Redpanda is the recommended default — no JVM, lighter than vanilla Kafka. " <>
-            "Configure via EVENT_BROKER_URLS (host:port, comma-separated). " <>
+            "Configure via EVENT_BROKER_KAFKA_URLS (comma-separated `host:port` cluster list). " <>
             "SASL auth via EVENT_BROKER_KAFKA_USERNAME / EVENT_BROKER_KAFKA_PASSWORD / EVENT_BROKER_KAFKA_SASL_MECHANISM.",
         "security" => [%{"$ref" => "#/components/securitySchemes/kafkaSasl"}]
       },
@@ -102,7 +103,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "title" => "RabbitMQ",
         "summary" => "AMQP topic exchange; routing key = event type.",
         "description" =>
-          "Configure via EVENT_BROKER_URLS (single amqp:// or amqps:// URL). " <>
+          "Configure via EVENT_BROKER_RABBITMQ_URL (single amqp:// or amqps:// URL). " <>
             "All events are published to a durable topic exchange `edge.events`. " <>
             "Routing key = event type (e.g. `edge.node.registered`). " <>
             "Consumer queue durability is the consumer's choice.",
@@ -114,7 +115,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "title" => "Redis",
         "summary" => "Pure pub/sub (`PUBLISH`/`SUBSCRIBE`). Fire-and-forget.",
         "description" =>
-          "Configure via EVENT_BROKER_URLS (single redis:// or rediss:// URL). " <>
+          "Configure via EVENT_BROKER_REDIS_URL (single redis:// or rediss:// URL). " <>
             "Events are published via Redis Pub/Sub (`PUBLISH`). Channel = event type " <>
             "(e.g. `edge.node.registered`). Use `SUBSCRIBE` or `PSUBSCRIBE edge.*` to consume. " <>
             "No durability or replay. Credentials embedded in URL.",
@@ -127,7 +128,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "summary" => "Any MQTT 3.1.1 / 5 broker. Configurable QoS, topic = event type with `/` separators.",
         "description" =>
           "Works against any MQTT broker (EMQX, Mosquitto, HiveMQ, AWS IoT Core, etc.). " <>
-            "Configure via EVENT_BROKER_URLS (host:port, only the first URL is used). " <>
+            "Configure via EVENT_BROKER_MQTT_URL (single host:port). " <>
             "Topic = event type with `.` rewritten to `/` (e.g. `edge/node/registered`). " <>
             "Subscribers use MQTT wildcards: `edge/#`, `edge/node/+`, etc. " <>
             "Default publish QoS is 1; configurable via EVENT_BROKER_MQTT_QOS=0|1|2.",
@@ -709,13 +710,13 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
       "amqpPlain" => %{
         "type" => "userPassword",
         "description" =>
-          "RabbitMQ credentials embedded in EVENT_BROKER_URLS: amqp://user:pass@host:port. " <>
+          "RabbitMQ credentials embedded in EVENT_BROKER_RABBITMQ_URL: amqp://user:pass@host:port. " <>
             "The amqp library parses them natively. Enable TLS with EVENT_BROKER_RABBITMQ_SSL=true."
       },
       "redisAuth" => %{
         "type" => "userPassword",
         "description" =>
-          "Redis auth. Embed credentials in EVENT_BROKER_URLS: " <>
+          "Redis auth. Embed credentials in EVENT_BROKER_REDIS_URL: " <>
             "`redis://:password@host:port` (password-only) or " <>
             "`redis://username:password@host:port` (Redis 6+ ACL). " <>
             "Enable TLS with EVENT_BROKER_REDIS_SSL=true (use rediss:// URL for external brokers)."

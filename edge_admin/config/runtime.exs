@@ -431,16 +431,20 @@ config :os_mon,
 # Set EVENT_BROKER_ENABLED=true to enable. When disabled (default), all
 # publish calls are immediate no-ops — no connections, no processes started.
 #
-# When enabled, EVENT_BROKER_ADAPTER and EVENT_BROKER_URLS are required.
-# CORE_NAME is shared across all adapters — included in every event envelope.
+# When enabled, EVENT_BROKER_ADAPTER is required, plus the adapter-specific
+# endpoint var below. CORE_NAME is shared across all adapters — included in
+# every event envelope.
+#
+# Endpoint env vars are namespaced per adapter:
+#   _URLS  (plural)  — adapter accepts a cluster list (NATS, Kafka)
+#   _URL   (singular) — adapter takes a single endpoint (RabbitMQ, Redis, MQTT)
 #
 #   EVENT_BROKER_ENABLED=true
 #   EVENT_BROKER_ADAPTER=nats|kafka|rabbitmq|redis|mqtt
-#   EVENT_BROKER_URLS=...
 #   CORE_NAME=prod-us   # optional, defaults to "default"
 #
 # NATS (pub/sub):
-#   EVENT_BROKER_URLS=nats://edge_event_broker_nats:4222   # comma-separated for cluster
+#   EVENT_BROKER_NATS_URLS=nats://edge_event_broker_nats:4222   # comma-separated for cluster
 #   EVENT_BROKER_NATS_JETSTREAM=true   # optional, enable durable JetStream log (default: false)
 #   # Auth — pick one, mutually exclusive:
 #   EVENT_BROKER_NATS_TOKEN=           # shared token (simple deployments)
@@ -450,22 +454,22 @@ config :os_mon,
 #   EVENT_BROKER_NATS_JWT=            # JWT credential — used alongside NKEY_SEED
 #
 # Kafka / Redpanda:
-#   EVENT_BROKER_URLS=edge_event_broker_kafka:9092   # comma-separated for cluster
+#   EVENT_BROKER_KAFKA_URLS=edge_event_broker_kafka:9092   # comma-separated for cluster
 #   EVENT_BROKER_KAFKA_USERNAME=admin    # optional, omit if no auth
 #   EVENT_BROKER_KAFKA_PASSWORD=secret   # optional, omit if no auth
 #   EVENT_BROKER_KAFKA_SASL_MECHANISM=plain   # plain (default), scram_sha_256, scram_sha_512
 #   EVENT_BROKER_KAFKA_SSL=true          # enable TLS — required for external brokers
 #
 # RabbitMQ:
-#   EVENT_BROKER_URLS=amqp://edge_event_broker_rabbitmq:5672   # embed credentials: amqp://user:pass@host:port
+#   EVENT_BROKER_RABBITMQ_URL=amqp://edge_event_broker_rabbitmq:5672   # embed credentials: amqp://user:pass@host:port
 #   EVENT_BROKER_RABBITMQ_SSL=true   # enable TLS — required for external brokers (CloudAMQP, etc.)
 #
 # Redis (pub/sub, fire-and-forget):
-#   EVENT_BROKER_URLS=redis://edge_event_broker_redis:6379   # embed credentials: redis://:pass@host:port
+#   EVENT_BROKER_REDIS_URL=redis://edge_event_broker_redis:6379   # embed credentials: redis://:pass@host:port
 #   EVENT_BROKER_REDIS_SSL=true   # enable TLS — required for external brokers (Redis Cloud, Upstash, etc.)
 #
 # MQTT (pub/sub):
-#   EVENT_BROKER_URLS=edge_event_broker_mqtt:1883   # host:port — first URL only (one broker per client)
+#   EVENT_BROKER_MQTT_URL=edge_event_broker_mqtt:1883   # host:port — single endpoint (one broker per client)
 #   EVENT_BROKER_MQTT_QOS=1                 # 0|1|2, default 1 (at-least-once with broker ACK)
 #   # Auth — mutually exclusive (JWT precedence over username/password):
 #   EVENT_BROKER_MQTT_JWT=                  # JWT bearer token, sent in CONNECT password slot
@@ -493,8 +497,6 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
       other -> raise "Unknown EVENT_BROKER_ADAPTER=#{other} — valid values: nats, kafka, rabbitmq, redis, mqtt"
     end
 
-  event_broker_urls = get_env!("EVENT_BROKER_URLS")
-
   config :edge_admin,
     event_broker_enabled: true,
     event_broker_adapter: event_broker_adapter,
@@ -502,9 +504,12 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
 
   case event_broker_adapter do
     :nats ->
-      # Parse "nats://host:port" or "nats://host1:port1,nats://host2:port2"
+      # NATS — gnat's ConnectionSupervisor accepts a list of {host, port} pairs
+      # and rotates through them on reconnect (lib/gnat/connection_supervisor.ex).
+      # EVENT_BROKER_NATS_URLS: comma-separated list of "nats://host:port".
       urls =
-        event_broker_urls
+        "EVENT_BROKER_NATS_URLS"
+        |> get_env!()
         |> String.split(",")
         |> Enum.map(&String.trim/1)
 
@@ -518,23 +523,19 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
         jwt: get_env("EVENT_BROKER_NATS_JWT")
 
     :rabbitmq ->
-      # EVENT_BROKER_URLS for RabbitMQ is a single AMQP URL: amqp://host:port[/vhost]
-      # Embed credentials directly: amqp://user:pass@host:port — AMQP parses them natively.
-      # Only the first URL is used — RabbitMQ clustering is handled by the broker, not the client.
-      url =
-        event_broker_urls
-        |> String.split(",")
-        |> List.first()
-        |> String.trim()
-
+      # RabbitMQ — amqp lib accepts a single URI string. Cluster failover is
+      # handled broker-side (single hostname behind a load balancer or VIP).
+      # Embed credentials directly: amqp://user:pass@host:port.
       config :edge_admin, :event_broker_rabbitmq,
-        url: url,
+        url: "EVENT_BROKER_RABBITMQ_URL" |> get_env!() |> String.trim(),
         ssl: get_env("EVENT_BROKER_RABBITMQ_SSL", :boolean, false)
 
     :kafka ->
-      # Parse "host:port" or "host1:port1,host2:port2"
+      # Kafka — brod takes [endpoint()] for cluster discovery via metadata.
+      # EVENT_BROKER_KAFKA_URLS: comma-separated "host:port" list (no scheme).
       brokers =
-        event_broker_urls
+        "EVENT_BROKER_KAFKA_URLS"
+        |> get_env!()
         |> String.split(",")
         |> Enum.map(fn endpoint ->
           [host, port_str] = String.split(String.trim(endpoint), ":")
@@ -578,28 +579,22 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
         client_config: sasl_opts ++ ssl_opts
 
     :redis ->
-      # EVENT_BROKER_URLS for Redis is a single URL: redis://host:port or rediss://host:port
-      # Credentials can be embedded: redis://:password@host:port (Redis auth)
-      # or redis://username:password@host:port (Redis 6+ ACL).
-      # Only the first URL is used — Redis Pub/Sub is single-node.
-      url =
-        event_broker_urls
-        |> String.split(",")
-        |> List.first()
-        |> String.trim()
-
+      # Redis — redix takes a single URI string. Sentinel cluster mode exists
+      # but uses a different keyword API (not the URI form), so we expose only
+      # the single-URL path here. Credentials can be embedded:
+      # redis://:password@host:port (Redis auth) or
+      # redis://username:password@host:port (Redis 6+ ACL).
       config :edge_admin, :event_broker_redis,
-        url: url,
+        url: "EVENT_BROKER_REDIS_URL" |> get_env!() |> String.trim(),
         ssl: get_env("EVENT_BROKER_REDIS_SSL", :boolean, false)
 
     :mqtt ->
-      # EVENT_BROKER_URLS for MQTT is a single host:port endpoint.
-      # MQTT clients connect to one broker at a time — even clustered brokers
-      # handle failover transparently behind a single endpoint.
+      # MQTT — single host:port endpoint. emqtt accepts a fallback list, but
+      # this adapter uses a single endpoint to match the typical operator
+      # mental model (one broker hostname behind any clustering).
       [host, port_str] =
-        event_broker_urls
-        |> String.split(",")
-        |> List.first()
+        "EVENT_BROKER_MQTT_URL"
+        |> get_env!()
         |> String.trim()
         |> String.split(":")
 

@@ -418,7 +418,9 @@ Production files follow the same pattern in `deploy/production/.envs/`
 - `PHX_HOST` - Public hostname for admin API
 - `EVENT_BROKER_ENABLED` - `true` to enable event publishing (default: `false`)
 - `EVENT_BROKER_ADAPTER` - `nats`, `kafka`, `rabbitmq`, `redis`, or `mqtt` (required when enabled)
-- `EVENT_BROKER_URLS` - Comma-separated broker URLs (`nats://host:port` or `host:port`)
+- Adapter-specific endpoint env var (required when enabled):
+  - `EVENT_BROKER_NATS_URLS` / `EVENT_BROKER_KAFKA_URLS` — comma-separated cluster list (plural)
+  - `EVENT_BROKER_RABBITMQ_URL` / `EVENT_BROKER_REDIS_URL` / `EVENT_BROKER_MQTT_URL` — single endpoint (singular)
 - `EVENT_BROKER_NATS_TOKEN` - NATS auth token (optional)
 - `EVENT_BROKER_KAFKA_USERNAME` / `EVENT_BROKER_KAFKA_PASSWORD` - SASL credentials (optional)
 - `EVENT_BROKER_KAFKA_SASL_MECHANISM` - `plain` (default), `scram_sha_256`, `scram_sha_512`

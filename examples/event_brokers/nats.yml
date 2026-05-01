@@ -8,7 +8,7 @@
 # Then set in your .env:
 #   EVENT_BROKER_ENABLED=true
 #   EVENT_BROKER_ADAPTER=nats
-#   EVENT_BROKER_URLS=nats://edge_event_broker:4222
+#   EVENT_BROKER_NATS_URLS=nats://edge_event_broker:4222
 #   EVENT_BROKER_NATS_JETSTREAM=true        # enable durable log (JetStream is on in this server config)
 #   # EVENT_BROKER_NATS_TOKEN=your-token   # uncomment if auth is enabled in nats.conf
 #

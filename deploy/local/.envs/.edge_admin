@@ -250,7 +250,7 @@ ADMIN_DISCOVERY_PORT=44000
 
 # NATS:
 # EVENT_BROKER_ADAPTER=nats
-# EVENT_BROKER_URLS=nats://edge_event_broker_nats:4222   # internal Docker: nats://  — use tls:// for public/external broker
+# EVENT_BROKER_NATS_URLS=nats://edge_event_broker_nats:4222   # comma-separated for cluster; use tls:// for public/external broker
 # EVENT_BROKER_NATS_JETSTREAM=true      # Enable durable JetStream log (default: false)
 # Auth — pick one, mutually exclusive (token takes precedence):
 # EVENT_BROKER_NATS_TOKEN=              # shared token
@@ -261,7 +261,7 @@ ADMIN_DISCOVERY_PORT=44000
 
 # Kafka / Redpanda:
 # EVENT_BROKER_ADAPTER=kafka
-# EVENT_BROKER_URLS=edge_event_broker_kafka:9092   # comma-separated for cluster
+# EVENT_BROKER_KAFKA_URLS=edge_event_broker_kafka:9092   # comma-separated host:port list for cluster
 # EVENT_BROKER_KAFKA_USERNAME=
 # EVENT_BROKER_KAFKA_PASSWORD=
 # EVENT_BROKER_KAFKA_SASL_MECHANISM=plain   # plain (default), scram_sha_256, scram_sha_512
@@ -269,17 +269,17 @@ ADMIN_DISCOVERY_PORT=44000
 
 # RabbitMQ:
 # EVENT_BROKER_ADAPTER=rabbitmq
-# EVENT_BROKER_URLS=amqp://edge_event_broker_rabbitmq:5672   # embed credentials: amqp://user:pass@host:port
+# EVENT_BROKER_RABBITMQ_URL=amqp://edge_event_broker_rabbitmq:5672   # single URL; embed credentials: amqp://user:pass@host:port
 # EVENT_BROKER_RABBITMQ_SSL=true              # enable TLS — required for public/external brokers (CloudAMQP, etc.)
 
 # Redis:
 # EVENT_BROKER_ADAPTER=redis
-# EVENT_BROKER_URLS=redis://edge_event_broker_redis:6379   # embed credentials: redis://:pass@host:port
+# EVENT_BROKER_REDIS_URL=redis://edge_event_broker_redis:6379   # single URL; embed credentials: redis://:pass@host:port
 # EVENT_BROKER_REDIS_SSL=true                # enable TLS — required for public/external brokers (Redis Cloud, Upstash, etc.)
 
 # MQTT (EMQX, Mosquitto, HiveMQ, AWS IoT, etc.):
 # EVENT_BROKER_ADAPTER=mqtt
-# EVENT_BROKER_URLS=edge_event_broker_mqtt:1883   # host:port — only the first URL is used
+# EVENT_BROKER_MQTT_URL=edge_event_broker_mqtt:1883   # single host:port (no scheme)
 # EVENT_BROKER_MQTT_QOS=1                     # 0|1|2, default 1 (at-least-once with broker ACK)
 # Auth — pick one mode (mutually exclusive, JWT takes precedence):
 # EVENT_BROKER_MQTT_JWT=                      # JWT bearer token, sent in CONNECT password slot

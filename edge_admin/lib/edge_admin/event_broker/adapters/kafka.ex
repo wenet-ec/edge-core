@@ -24,7 +24,7 @@ defmodule EdgeAdmin.EventBroker.Adapters.Kafka do
         ]
 
   Controlled by env vars:
-  - `EVENT_BROKER_URLS` — comma-separated `host:port` list
+  - `EVENT_BROKER_KAFKA_URLS` — comma-separated `host:port` list
   - `EVENT_BROKER_KAFKA_USERNAME` — SASL username (optional)
   - `EVENT_BROKER_KAFKA_PASSWORD` — SASL password (optional)
   - `EVENT_BROKER_KAFKA_SASL_MECHANISM` — `plain` (default), `scram_sha_256`, `scram_sha_512`

@@ -85,7 +85,13 @@ config:
 #   NODE_HEALTH_CHECK_CONCURRENCY: "200"
 #   EVENT_BROKER_ENABLED: "true"
 #   EVENT_BROKER_ADAPTER: "nats"            # nats | kafka | rabbitmq | redis | mqtt
-#   EVENT_BROKER_URLS: "nats://my-nats:4222"
+#   # Endpoint env var is namespaced per adapter (`_URLS` plural for cluster-aware,
+#   # `_URL` singular for single-endpoint). Set the one matching your adapter:
+#   EVENT_BROKER_NATS_URLS: "nats://my-nats:4222"             # NATS — comma-separated cluster
+#   # EVENT_BROKER_KAFKA_URLS: "broker-1:9092,broker-2:9092"  # Kafka — comma-separated cluster
+#   # EVENT_BROKER_RABBITMQ_URL: "amqp://user:pass@host:5672" # RabbitMQ — single URL
+#   # EVENT_BROKER_REDIS_URL: "redis://host:6379"             # Redis — single URL
+#   # EVENT_BROKER_MQTT_URL: "host:1883"                      # MQTT — single host:port (no scheme)
 #   EVENT_BROKER_MQTT_QOS: "1"              # MQTT only — 0|1|2 (default 1)
 #   EVENT_BROKER_MQTT_SSL: "true"           # MQTT only — TLS toggle
 #   EVENT_BROKER_MQTT_CACERT_FILE: "/etc/mqtt/tls/ca.crt"
@@ -134,7 +140,7 @@ secrets:
   # The Secret must contain: SECRET_KEY_BASE, MASTER_KEY, DB_PASSWORD,
   #   NETMAKER_MASTER_KEY, NETMAKER_SUPERADMIN_PASSWORD, VPN_CLUSTER_COOKIE
   # Optional broker auth (only needed when EVENT_BROKER_ENABLED=true and broker requires auth).
-  # RabbitMQ and Redis embed credentials in EVENT_BROKER_URLS — no separate fields needed.
+  # RabbitMQ and Redis embed credentials in EVENT_BROKER_RABBITMQ_URL / EVENT_BROKER_REDIS_URL — no separate fields needed.
   # Leave fields empty to omit them from the Secret.
   existingSecret: ""
   secretKeyBase: "changeme"

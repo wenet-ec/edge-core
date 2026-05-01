@@ -25,8 +25,8 @@ defmodule EdgeAdmin.EventBroker.Adapters.Redis do
         ssl: false
 
   Controlled by env vars:
-  - `EVENT_BROKER_URLS` — Redis URL, e.g. `redis://host:6379` or `rediss://host:6380`
-                          (only the first URL is used — Redis Pub/Sub is single-node)
+  - `EVENT_BROKER_REDIS_URL` — Redis URL, e.g. `redis://host:6379` or `rediss://host:6380`.
+                              Single endpoint — Redis Pub/Sub is single-node.
   - `EVENT_BROKER_REDIS_SSL=true` — enable TLS (default: false)
   """
 

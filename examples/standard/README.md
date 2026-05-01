@@ -102,7 +102,7 @@ Then add to your `.env`:
 ```bash
 EVENT_BROKER_ENABLED=true
 EVENT_BROKER_ADAPTER=nats
-EVENT_BROKER_URLS=nats://edge_event_broker:4222
+EVENT_BROKER_NATS_URLS=nats://edge_event_broker:4222
 # EVENT_BROKER_NATS_JETSTREAM=true   # enable durable log (default: false)
 ```
 

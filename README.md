@@ -143,14 +143,14 @@ Tools are discovered dynamically via `tools/list` — no static spec file needed
 
 ## Event streaming
 
-Edge Admin can publish lifecycle events to a message broker. Disabled by default — opt in by setting `EVENT_BROKER_ENABLED=true` and pointing `EVENT_BROKER_URLS` at your broker.
+Edge Admin can publish lifecycle events to a message broker. Disabled by default — opt in by setting `EVENT_BROKER_ENABLED=true` and the adapter-specific endpoint env var.
 
 Events cover node lifecycle, command execution lifecycle, and self-update lifecycle. All follow the [CloudEvents 1.0](https://cloudevents.io) spec. Supported brokers: NATS, Kafka/Redpanda, RabbitMQ, Redis, and MQTT — pick whichever fits your stack.
 
 ```bash
 EVENT_BROKER_ENABLED=true
-EVENT_BROKER_ADAPTER=nats          # or: kafka, rabbitmq, redis, mqtt
-EVENT_BROKER_URLS=nats://your-broker:4222
+EVENT_BROKER_ADAPTER=nats                   # or: kafka, rabbitmq, redis, mqtt
+EVENT_BROKER_NATS_URLS=nats://your-broker:4222   # endpoint var is namespaced per adapter
 ```
 
 Ready-to-use broker compose files are in [`examples/event_brokers/`](examples/event_brokers/). Full event schema: [`docs/admin-asyncapi-v0.2.0.md`](docs/admin-asyncapi-v0.2.0.md) or browse `/asyncdoc` on a running admin.

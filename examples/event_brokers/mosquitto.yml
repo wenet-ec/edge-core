@@ -11,7 +11,7 @@
 # Then set in your .env:
 #   EVENT_BROKER_ENABLED=true
 #   EVENT_BROKER_ADAPTER=mqtt
-#   EVENT_BROKER_URLS=edge_event_broker:1883
+#   EVENT_BROKER_MQTT_URL=edge_event_broker:1883
 #   # EVENT_BROKER_MQTT_USERNAME=...     # if auth is enabled in mosquitto.conf
 #   # EVENT_BROKER_MQTT_PASSWORD=...
 #

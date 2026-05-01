@@ -10,8 +10,8 @@
 # Then set in your .env:
 #   EVENT_BROKER_ENABLED=true
 #   EVENT_BROKER_ADAPTER=redis
-#   EVENT_BROKER_URLS=redis://edge_event_broker:6379
-#   # EVENT_BROKER_URLS=redis://:password@edge_event_broker:6379  # if auth is enabled
+#   EVENT_BROKER_REDIS_URL=redis://edge_event_broker:6379
+#   # EVENT_BROKER_REDIS_URL=redis://:password@edge_event_broker:6379  # if auth is enabled
 #
 # To verify events are flowing, subscribe before triggering an action:
 #   docker exec -it edge_event_broker redis-cli PSUBSCRIBE 'edge.*'

@@ -11,8 +11,8 @@
 # Then set in your .env:
 #   EVENT_BROKER_ENABLED=true
 #   EVENT_BROKER_ADAPTER=rabbitmq
-#   EVENT_BROKER_URLS=amqp://edge_event_broker:5672
-#   # EVENT_BROKER_URLS=amqp://user:pass@edge_event_broker:5672   # if auth is enabled
+#   EVENT_BROKER_RABBITMQ_URL=amqp://edge_event_broker:5672
+#   # EVENT_BROKER_RABBITMQ_URL=amqp://user:pass@edge_event_broker:5672   # if auth is enabled
 #
 # Ports exposed:
 #   5672  — AMQP (internal Docker, used by Edge Admin)

@@ -28,8 +28,8 @@ defmodule EdgeAdmin.EventBroker.Adapters.Rabbitmq do
         ssl: false    # set true for TLS (amqps://)
 
   Controlled by env vars:
-  - `EVENT_BROKER_URLS` — AMQP URL, e.g. `amqp://host:5672` or `amqp://user:pass@host:5672/vhost`
-                          (only the first URL is used — RabbitMQ clustering is handled by the broker)
+  - `EVENT_BROKER_RABBITMQ_URL` — AMQP URL, e.g. `amqp://host:5672` or `amqp://user:pass@host:5672/vhost`.
+                                 Single endpoint — RabbitMQ clustering is handled broker-side.
   - `EVENT_BROKER_RABBITMQ_SSL=true` — enable TLS (default: false)
   """
 

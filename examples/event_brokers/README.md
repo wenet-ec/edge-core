@@ -51,33 +51,33 @@ Then enable the broker in your `.env`:
 # NATS pub/sub
 EVENT_BROKER_ENABLED=true
 EVENT_BROKER_ADAPTER=nats
-EVENT_BROKER_URLS=nats://edge_event_broker:4222
+EVENT_BROKER_NATS_URLS=nats://edge_event_broker:4222
 
 # NATS JetStream (durable log)
 EVENT_BROKER_ENABLED=true
 EVENT_BROKER_ADAPTER=nats
-EVENT_BROKER_URLS=nats://edge_event_broker:4222
+EVENT_BROKER_NATS_URLS=nats://edge_event_broker:4222
 EVENT_BROKER_NATS_JETSTREAM=true
 
 # Redpanda or Kafka
 EVENT_BROKER_ENABLED=true
 EVENT_BROKER_ADAPTER=kafka
-EVENT_BROKER_URLS=edge_event_broker:9092
+EVENT_BROKER_KAFKA_URLS=edge_event_broker:9092
 
 # RabbitMQ
 EVENT_BROKER_ENABLED=true
 EVENT_BROKER_ADAPTER=rabbitmq
-EVENT_BROKER_URLS=amqp://edge_event_broker:5672
+EVENT_BROKER_RABBITMQ_URL=amqp://edge_event_broker:5672
 
 # Redis
 EVENT_BROKER_ENABLED=true
 EVENT_BROKER_ADAPTER=redis
-EVENT_BROKER_URLS=redis://edge_event_broker:6379
+EVENT_BROKER_REDIS_URL=redis://edge_event_broker:6379
 
 # EMQX or Mosquitto (any MQTT 3.1.1 / 5 broker)
 EVENT_BROKER_ENABLED=true
 EVENT_BROKER_ADAPTER=mqtt
-EVENT_BROKER_URLS=edge_event_broker:1883
+EVENT_BROKER_MQTT_URL=edge_event_broker:1883
 # EVENT_BROKER_MQTT_QOS=1                     # 0|1|2, default 1 (at-least-once with broker ACK)
 ```
 
@@ -106,7 +106,15 @@ event_brokers/
 ```bash
 EVENT_BROKER_ENABLED=true|false          # gate — all else ignored when false (default: false)
 EVENT_BROKER_ADAPTER=nats|kafka|rabbitmq|redis|mqtt # required when enabled
-EVENT_BROKER_URLS=...                    # NATS: nats://host:port  |  Kafka: host:port  |  RabbitMQ: amqp://host:port  |  Redis: redis://host:port  |  MQTT: host:port
+
+# Endpoint env var is namespaced per adapter — name carries the shape:
+#   _URLS  (plural)   — adapter accepts a cluster list (NATS, Kafka)
+#   _URL   (singular) — adapter takes a single endpoint (RabbitMQ, Redis, MQTT)
+EVENT_BROKER_NATS_URLS=nats://host:port      # comma-separated cluster
+EVENT_BROKER_KAFKA_URLS=host:port            # comma-separated cluster (no scheme)
+EVENT_BROKER_RABBITMQ_URL=amqp://host:port   # single URL
+EVENT_BROKER_REDIS_URL=redis://host:port     # single URL
+EVENT_BROKER_MQTT_URL=host:port              # single host:port (no scheme)
 
 # NATS options (optional)
 EVENT_BROKER_NATS_JETSTREAM=true         # enable durable JetStream log (default: false)
@@ -145,7 +153,7 @@ CORE_NAME=prod-us
 
 ## Bring Your Own Broker
 
-These compose files are for convenience. If you already run a broker, skip them entirely — just point `EVENT_BROKER_URLS` at your existing instance.
+These compose files are for convenience. If you already run a broker, skip them entirely — just point the adapter-specific endpoint env var (`EVENT_BROKER_NATS_URLS` / `EVENT_BROKER_KAFKA_URLS` / `EVENT_BROKER_RABBITMQ_URL` / `EVENT_BROKER_REDIS_URL` / `EVENT_BROKER_MQTT_URL`) at your existing instance.
 
 - Any Kafka-compatible broker (Confluent Cloud, Aiven, MSK, Upstash, etc.) works with `EVENT_BROKER_ADAPTER=kafka`.
 - Any NATS server works with `EVENT_BROKER_ADAPTER=nats`; enable JetStream on the server and set `EVENT_BROKER_NATS_JETSTREAM=true` for durable delivery.

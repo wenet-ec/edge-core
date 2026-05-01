@@ -2,80 +2,123 @@
 import Config
 import EdgeAdmin.Config
 
-alias EdgeAdmin.Repo.Notifier
+alias EdgeAdmin.Repo.Postgres
+alias EdgeAdmin.Repo.Postgres.Notifier
+alias EdgeAdmin.Repo.SQLite
 
 ###
-# Each repo can be configured one of two ways:
+# Database adapter selection at RUNTIME via DB_ADAPTER. The same compiled
+# binary supports both modes — both EdgeAdmin.Repo.Postgres and
+# EdgeAdmin.Repo.SQLite are baked in. We pick the impl module here, set
+# :ecto_repos to that module so migrations and the supervisor start the
+# right one, and configure only that impl with DB credentials.
 #
-#   1. URL form — set DATABASE_URL (and DATABASE_NOTIFIER_URL for the notifier).
-#      The URL encodes host, port, db, user, password. pool_size, ssl, and
-#      ipv6 still come from their dedicated env vars — URLs don't carry those.
+#   postgres (default) — required for multi-admin Erlang clustering. Configured
+#                        via DATABASE_URL (URL form) or DB_HOST/DB_PORT/...
+#                        (fragment form). The Oban LISTEN notifier resolves
+#                        independently and must use DATABASE_NOTIFIER_URL when
+#                        the main repo uses URL form.
 #
-#   2. Fragment form — set DB_HOST / DB_PORT / DB_NAME / DB_USER / DB_PASSWORD
-#      (and DB_NOTIFIER_HOST / DB_NOTIFIER_PORT for the notifier).
-#
-# It's all-or-nothing per repo: if DATABASE_URL is set, every fragment is
-# ignored for that repo. The notifier resolves independently — DATABASE_URL
-# does NOT cascade to the notifier. This is intentional: in prod the main
-# repo points at PgBouncer and the notifier needs a direct primary connection,
-# so they must be configured separately.
+#   sqlite             — single-instance only, no external DB. Uses
+#                        SQLITE_DB_PATH (default: /app/data/edge/edge_admin.db).
 ###
 
-# When DATABASE_URL is set for the main repo, DATABASE_NOTIFIER_URL must be
-# set too. In URL mode the fragment env vars (DB_HOST, etc.) are not
-# guaranteed to exist, so we can't fall back to them for the notifier.
-if get_env("DATABASE_URL") && !get_env("DATABASE_NOTIFIER_URL") do
-  raise """
-  DATABASE_URL is set but DATABASE_NOTIFIER_URL is not.
+db_adapter =
+  case get_env("DB_ADAPTER", :string, "postgres") do
+    "sqlite" -> :sqlite
+    _ -> :postgres
+  end
 
-  These two repos are configured independently. When you use URL mode for
-  the main repo, you must also use URL mode for the notifier — typically
-  pointing it at the primary directly to bypass any pooler.
+repo_impl =
+  case db_adapter do
+    :sqlite -> SQLite
+    :postgres -> Postgres
+  end
 
-  Either set DATABASE_NOTIFIER_URL, or switch the main repo back to
-  fragment form (DB_HOST + DB_PORT + DB_NAME + DB_USER + DB_PASSWORD).
-  """
-end
+config :edge_admin, :db_adapter, db_adapter
+config :edge_admin, :repo_impl, repo_impl
+config :edge_admin, ecto_repos: [repo_impl]
 
-repo_config = fn url_var, host_var, port_var ->
-  base =
-    case get_env(url_var) do
-      nil ->
-        [
-          username: get_env!("DB_USER"),
-          password: get_env!("DB_PASSWORD"),
-          database: get_env!("DB_NAME"),
-          hostname: get_env!(host_var),
-          port: get_env!(port_var, :integer)
-        ]
+case db_adapter do
+  :sqlite ->
+    config :edge_admin, SQLite,
+      database: get_env("SQLITE_DB_PATH", :string, "/app/data/edge/edge_admin.db"),
+      pool_size: get_env("DB_POOL_SIZE", :integer, 5)
 
-      url ->
-        [url: url]
+  :postgres ->
+    ###
+    # Postgres has two configuration styles, all-or-nothing per repo:
+    #
+    #   1. URL form — set DATABASE_URL (and DATABASE_NOTIFIER_URL for the notifier).
+    #      The URL encodes host, port, db, user, password. pool_size, ssl, and
+    #      ipv6 still come from their dedicated env vars — URLs don't carry those.
+    #
+    #   2. Fragment form — set DB_HOST / DB_PORT / DB_NAME / DB_USER / DB_PASSWORD
+    #      (and DB_NOTIFIER_HOST / DB_NOTIFIER_PORT for the notifier).
+    #
+    # It's all-or-nothing per repo: if DATABASE_URL is set, every fragment is
+    # ignored for that repo. The notifier resolves independently — DATABASE_URL
+    # does NOT cascade to the notifier. This is intentional: in prod the main
+    # repo points at PgBouncer and the notifier needs a direct primary connection,
+    # so they must be configured separately.
+    ###
+
+    # When DATABASE_URL is set for the main repo, DATABASE_NOTIFIER_URL must be
+    # set too. In URL mode the fragment env vars (DB_HOST, etc.) are not
+    # guaranteed to exist, so we can't fall back to them for the notifier.
+    if get_env("DATABASE_URL") && !get_env("DATABASE_NOTIFIER_URL") do
+      raise """
+      DATABASE_URL is set but DATABASE_NOTIFIER_URL is not.
+
+      These two repos are configured independently. When you use URL mode for
+      the main repo, you must also use URL mode for the notifier — typically
+      pointing it at the primary directly to bypass any pooler.
+
+      Either set DATABASE_NOTIFIER_URL, or switch the main repo back to
+      fragment form (DB_HOST + DB_PORT + DB_NAME + DB_USER + DB_PASSWORD).
+      """
     end
 
-  base ++
-    [
-      ssl: get_env("DB_SSL", :boolean),
-      socket_options: if(get_env("DB_IPV6", :boolean), do: [:inet6], else: [])
-    ]
+    repo_config = fn url_var, host_var, port_var ->
+      base =
+        case get_env(url_var) do
+          nil ->
+            [
+              username: get_env!("DB_USER"),
+              password: get_env!("DB_PASSWORD"),
+              database: get_env!("DB_NAME"),
+              hostname: get_env!(host_var),
+              port: get_env!(port_var, :integer)
+            ]
+
+          url ->
+            [url: url]
+        end
+
+      base ++
+        [
+          ssl: get_env("DB_SSL", :boolean),
+          socket_options: if(get_env("DB_IPV6", :boolean), do: [:inet6], else: [])
+        ]
+    end
+
+    # Dedicated repo for Oban.Notifiers.Postgres LISTEN connection. In prod,
+    # point at the primary -rw service to bypass PgBouncer, whose transaction-mode
+    # pooling breaks session-pinned LISTEN. Fragment-form fallbacks: DB_NOTIFIER_HOST
+    # defaults to DB_HOST, DB_NOTIFIER_PORT defaults to DB_PORT.
+    config :edge_admin,
+           Notifier,
+           repo_config.(
+             "DATABASE_NOTIFIER_URL",
+             if(System.get_env("DB_NOTIFIER_HOST"), do: "DB_NOTIFIER_HOST", else: "DB_HOST"),
+             if(System.get_env("DB_NOTIFIER_PORT"), do: "DB_NOTIFIER_PORT", else: "DB_PORT")
+           ) ++ [pool_size: 2]
+
+    config :edge_admin,
+           Postgres,
+           repo_config.("DATABASE_URL", "DB_HOST", "DB_PORT") ++
+             [pool_size: get_env!("DB_POOL_SIZE", :integer)]
 end
-
-config :edge_admin,
-       EdgeAdmin.Repo,
-       repo_config.("DATABASE_URL", "DB_HOST", "DB_PORT") ++
-         [pool_size: get_env!("DB_POOL_SIZE", :integer)]
-
-# Dedicated repo for Oban.Notifiers.Postgres LISTEN connection. In prod,
-# point at the primary -rw service to bypass PgBouncer, whose transaction-mode
-# pooling breaks session-pinned LISTEN. Fragment-form fallbacks: DB_NOTIFIER_HOST
-# defaults to DB_HOST, DB_NOTIFIER_PORT defaults to DB_PORT.
-config :edge_admin,
-       Notifier,
-       repo_config.(
-         "DATABASE_NOTIFIER_URL",
-         if(System.get_env("DB_NOTIFIER_HOST"), do: "DB_NOTIFIER_HOST", else: "DB_HOST"),
-         if(System.get_env("DB_NOTIFIER_PORT"), do: "DB_NOTIFIER_PORT", else: "DB_PORT")
-       ) ++ [pool_size: 2]
 
 # NOTE: Only set `server` to `true` if `PHX_SERVER` is present. We cannot set
 # it to `false` otherwise because `mix phx.server` will stop working without it.
@@ -188,18 +231,31 @@ grafana_config =
       ] ++ auth
   end
 
-# Queue concurrency note:
-# In production, up to 200 admin instances may share the same PostgreSQL.
-# Each admin instance opens one polling connection per queue. Keep concurrency
-# low — the bottleneck is DB connection pressure, not throughput.
-#
-#   execution_creation     — inserts execution records in bulk; 2 is plenty
-#   execution_pruning      — daily sweep, batched deletes; 1 is enough
-#   cluster_reconciliation — one job per cluster every 6h; 1 is enough
-#   self_updates           — rare, triggered manually; 1 is fine
-#   event_broker           — async broker publish with retry; 2 keeps it snappy
-#                          without hammering the broker with parallel calls
+# --- Oban engine + peer + notifier (DB-adapter dependent) ---
+# SQLite uses Oban.Engines.Lite + Oban.Peers.Isolated (in-memory Agent — no
+# oban_peers table) + Oban.Notifiers.PG (Erlang :pg, no LISTEN/NOTIFY).
+# Postgres keeps Database engine + Database peer + dedicated Notifier repo for
+# cross-admin coordination.
+oban_engine =
+  case db_adapter do
+    :sqlite -> Oban.Engines.Lite
+    _ -> Oban.Engines.Basic
+  end
+
+oban_peer =
+  case db_adapter do
+    :sqlite -> Oban.Peers.Isolated
+    _ -> Oban.Peers.Database
+  end
+
+oban_notifier =
+  case db_adapter do
+    :sqlite -> Oban.Notifiers.PG
+    _ -> {Oban.Notifiers.Postgres, repo: Notifier}
+  end
+
 # --- LocalScheduler  ---
+
 config :edge_admin, EdgeAdmin.LocalScheduler,
   jobs: [
     admin_discovery: [
@@ -237,8 +293,19 @@ config :edge_admin, EdgeAdmin.PromEx,
   grafana: grafana_config,
   metrics_server: :disabled
 
+# Queue concurrency note:
+# In production, up to 200 admin instances may share the same PostgreSQL.
+# Each admin instance opens one polling connection per queue. Keep concurrency
+# low — the bottleneck is DB connection pressure, not throughput.
+#
+#   execution_creation     — inserts execution records in bulk; 2 is plenty
+#   execution_pruning      — daily sweep, batched deletes; 1 is enough
+#   cluster_reconciliation — one job per cluster every 6h; 1 is enough
+#   self_updates           — rare, triggered manually; 1 is fine
+#   event_broker           — async broker publish with retry; 2 keeps it snappy
+#                          without hammering the broker with parallel calls
 config :edge_admin, Oban,
-  engine: Oban.Engines.Basic,
+  engine: oban_engine,
   queues: [
     execution_creation: 2,
     execution_pruning: 1,
@@ -246,12 +313,12 @@ config :edge_admin, Oban,
     self_updates: 1,
     event_broker: 2
   ],
-  repo: EdgeAdmin.Repo,
-  # Notifier uses a dedicated repo so its LISTEN connection bypasses PgBouncer.
-  # Cross-admin-cluster wakeups depend on Postgres NOTIFY since admin clusters
-  # don't share Erlang distribution — Notifiers.PG would not work here.
-  notifier: {Oban.Notifiers.Postgres, repo: Notifier},
-  peer: Oban.Peers.Database,
+  # Oban needs a real Ecto.Repo (calls __adapter__/0, config/0, etc.) so we
+  # hand it the impl module directly, not the dispatcher.
+  repo: repo_impl,
+  # Notifier and peer are adapter-dependent — see oban_notifier / oban_peer above.
+  notifier: oban_notifier,
+  peer: oban_peer,
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [

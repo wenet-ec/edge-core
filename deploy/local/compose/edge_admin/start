@@ -61,7 +61,7 @@ ip link delete netmaker 2>/dev/null || true
 
 mix deps.get
 mix compile
-mix ecto.migrate
+mix run --no-start -e "EdgeAdmin.Release.migrate()"
 
 # Bootstrap Netmaker superadmin
 echo "Bootstrapping Netmaker superadmin..."

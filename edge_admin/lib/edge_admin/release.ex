@@ -47,10 +47,16 @@ defmodule EdgeAdmin.Release do
     end
   end
 
-  def rollback(repo, version) do
+  # The runtime-selected impl is always the single entry in :ecto_repos, so
+  # callers don't pass a repo — DB_ADAPTER picks it. Invoke as:
+  #
+  #   bin/edge_admin eval 'EdgeAdmin.Release.rollback(20250101000001)'
+  def rollback(version) do
     boot([])
 
-    {:ok, _, _} = Migrator.with_repo(repo, &Migrator.run(&1, :down, to: version))
+    for repo <- repos() do
+      {:ok, _, _} = Migrator.with_repo(repo, &Migrator.run(&1, :down, to: version))
+    end
   end
 
   # =============================================================================
@@ -201,11 +207,21 @@ defmodule EdgeAdmin.Release do
   end
 
   defp start_part(:repo) do
+    # Start ecto_sql plus the driver app the active adapter needs. ecto_sql
+    # does not list postgrex/exqlite as required applications (drivers are
+    # optional), so they must be started explicitly per adapter.
     {:ok, _} = Application.ensure_all_started(:ecto_sql)
-    {:ok, _} = Application.ensure_all_started(:postgrex)
+    {:ok, _} = Application.ensure_all_started(driver_app())
 
     for repo <- repos() do
       {:ok, _} = repo.start_link(pool_size: 2)
+    end
+  end
+
+  defp driver_app do
+    case Application.fetch_env!(@app, :db_adapter) do
+      :sqlite -> :exqlite
+      _ -> :postgrex
     end
   end
 

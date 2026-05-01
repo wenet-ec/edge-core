@@ -3,6 +3,13 @@
 # =============================================================================
 # Database
 # =============================================================================
+# Selects the database engine at runtime — no rebuild needed.
+#   postgres (default) — PostgreSQL, required for multi-admin Erlang clustering
+#   sqlite             — SQLite, single-instance only, no external DB needed
+DB_ADAPTER=postgres
+
+# --- PostgreSQL (DB_ADAPTER=postgres) ---
+# Ignored when DB_ADAPTER=sqlite.
 # Two configuration styles, all-or-nothing per repo:
 #
 #   1. URL form:       DATABASE_URL=postgresql://user:pass@host:port/db
@@ -20,6 +27,12 @@ DB_PORT=5432
 DB_NAME=edge_admin_local
 DB_USER=edge_admin_user
 DB_PASSWORD=edge_admin_password
+
+# --- SQLite (DB_ADAPTER=sqlite) ---
+# Ignored when DB_ADAPTER=postgres.
+# SQLITE_DB_PATH=/app/data/edge/edge_admin.db  # default if unset
+
+# --- Shared ---
 DB_POOL_SIZE=5
 DB_SSL=false
 # DB_IPV6=false

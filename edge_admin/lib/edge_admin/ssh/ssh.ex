@@ -40,6 +40,7 @@ defmodule EdgeAdmin.Ssh do
   """
 
   import Ecto.Query, warn: false
+  import EdgeAdmin.Query, only: [case_insensitive_like: 2]
 
   alias Ecto.Query.CastError
   alias EdgeAdmin.Nodes.Schemas.Node
@@ -286,7 +287,7 @@ defmodule EdgeAdmin.Ssh do
 
     query_with_ilike =
       Enum.reduce(ilike_filters, query_with_cluster_filter, fn %{field: field, value: value}, acc ->
-        from(u in acc, where: ilike(field(u, ^field), ^value))
+        from(u in acc, where: case_insensitive_like(field(u, ^field), ^value))
       end)
 
     # Run Flop query
@@ -336,7 +337,7 @@ defmodule EdgeAdmin.Ssh do
   end
 
   defp apply_ssh_username_cluster_name_filter(query, %{op: :ilike, value: value}) when is_binary(value) do
-    from([_u, _n, c] in query, where: ilike(c.name, ^value))
+    from([_u, _n, c] in query, where: case_insensitive_like(c.name, ^value))
   end
 
   defp apply_ssh_username_cluster_name_filter(query, _), do: query
@@ -465,7 +466,7 @@ defmodule EdgeAdmin.Ssh do
 
     base_query =
       Enum.reduce(ilike_filters, base_query, fn %{field: field, value: value}, acc ->
-        from(k in acc, where: ilike(field(k, ^field), ^value))
+        from(k in acc, where: case_insensitive_like(field(k, ^field), ^value))
       end)
 
     case Flop.validate_and_run(base_query, flop_params,
@@ -500,7 +501,7 @@ defmodule EdgeAdmin.Ssh do
         from([_k, u] in acc, where: u.username == ^value)
 
       %{op: :ilike, value: value}, acc when is_binary(value) ->
-        from([_k, u] in acc, where: ilike(u.username, ^value))
+        from([_k, u] in acc, where: case_insensitive_like(u.username, ^value))
 
       _filter, acc ->
         acc
@@ -515,7 +516,7 @@ defmodule EdgeAdmin.Ssh do
         from([_k, _u, _n, c] in acc, where: c.name == ^value)
 
       %{op: :ilike, value: value}, acc when is_binary(value) ->
-        from([_k, _u, _n, c] in acc, where: ilike(c.name, ^value))
+        from([_k, _u, _n, c] in acc, where: case_insensitive_like(c.name, ^value))
 
       _filter, acc ->
         acc

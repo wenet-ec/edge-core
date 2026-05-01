@@ -10,6 +10,7 @@ AUTH_ENABLED=false
 SECRET_KEY_BASE=G0ieeRljoXGzSDPRrYc2q4ADyNHCwxNOkw7YpPNMa+JgP9iGgJKT4K96Bw/Mf/pd
 
 # Database configuration (tests use real DB with Ecto sandbox)
+DB_ADAPTER=postgres
 DB_HOST=edge_admin_db
 DB_PORT=5432
 DB_NAME=edge_admin_test
@@ -17,6 +18,9 @@ DB_USER=edge_admin_user
 DB_PASSWORD=edge_admin_password
 DB_POOL_SIZE=2
 DB_SSL=false
+
+# DB_ADAPTER=sqlite
+# SQLITE_DB_PATH=/app/data/edge_admin_test.db
 
 # Admin configuration (required by runtime.exs)
 ADMIN_MAX_CAPACITY=100

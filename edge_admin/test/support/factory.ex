@@ -7,7 +7,13 @@ defmodule EdgeAdmin.Factory do
   Use `build/2` for structs and `insert/2` for database records.
   """
 
-  use ExMachina.Ecto, repo: EdgeAdmin.Repo
+  # ExMachina.Ecto needs a real Ecto.Repo (calls config/0, __adapter__/0, etc.)
+  # so we hand it the impl module directly. The test suite is mode-locked per
+  # run via config/test.exs setting :repo_impl from DB_ADAPTER. We capture the
+  # value into a module attribute so ExMachina's injected functions can refer
+  # to it without re-expanding the compile_env macro inside their bodies.
+  @repo_impl Application.compile_env!(:edge_admin, :repo_impl)
+  use ExMachina.Ecto, repo: @repo_impl
 
   # Keep the existing name factory but make it more useful
   def name_factory do

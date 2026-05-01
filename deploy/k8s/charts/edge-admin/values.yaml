@@ -31,7 +31,16 @@ config:
   phxHost: "edge-admin.yourdomain.com"
   adminUrls: "edge-admin.yourdomain.com"
 
-  # --- Database (CNPG -rw service = always primary) ---
+  # --- Database ---
+  # Edge Admin's database engine. Kubernetes deployments always use Postgres —
+  # multi-admin HA via cluster ownership sharding requires LISTEN/NOTIFY for
+  # cross-admin coordination, which only Postgres provides. The SQLite adapter
+  # is single-instance only and not appropriate for any k8s topology this chart
+  # produces. Pinned here explicitly rather than leaning on runtime.exs's
+  # default so the rendered manifest is self-describing.
+  dbAdapter: "postgres"
+
+  # CNPG -rw service = always primary
   dbHost: "edge-admin-db-rw"
   dbPort: "5432"
   dbName: "edge_admin_production"

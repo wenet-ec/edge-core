@@ -167,6 +167,37 @@ Thin wrapper around the `netclient` binary (which must be present in the contain
 
 Edge Admin is an Elixir/Phoenix application. It is the control plane — it owns the database, orchestrates command execution, manages SSH credentials, and runs the forward proxy.
 
+### Database Adapter
+
+The admin's database engine is selected at runtime via the `DB_ADAPTER` environment variable. **PostgreSQL is the production default** and the only option that supports multi-admin HA. SQLite is a supported alternative for single-instance hobbyist / homelab deployments.
+
+Both adapters are baked into every compiled binary — no rebuild needed to switch. A dispatcher facade (`EdgeAdmin.Repo`) forwards every Ecto.Repo call to the active impl module (`EdgeAdmin.Repo.Postgres` or `EdgeAdmin.Repo.SQLite`) selected from app env at runtime. Application code never needs to know which adapter is active.
+
+| Concern                       | `DB_ADAPTER=postgres` (default)                                          | `DB_ADAPTER=sqlite`                                                            |
+| ----------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| Multi-admin HA                | ✅ Required for it                                                       | ❌ Single instance only                                                        |
+| Cluster ownership sharding    | ✅                                                                       | ❌                                                                             |
+| Cross-admin coordination      | LISTEN/NOTIFY via dedicated notifier repo                                | None — single instance only                                                    |
+| Oban engine / peer / notifier | `Engines.Basic` + `Peers.Database` + `Notifiers.Postgres`                | `Engines.Lite` + `Peers.Isolated` + `Notifiers.PG`                             |
+| LiveDashboard `ecto_stats`    | Auto-discovered → `EctoPSQLExtras`                                       | Auto-discovered → `EctoSQLite3Extras`                                          |
+| Storage location              | External Postgres server (URL or fragment env vars)                      | `SQLITE_DB_PATH` (default `/app/data/edge/edge_admin.db`)                      |
+| Schema                        | Same migrations, same Ecto schema                                        | Same migrations, same Ecto schema                                              |
+| Recommended for               | Production, anything that might scale, anything you'd be unhappy to lose | Homelab, hobbyist, first-time exploration, fleets that won't exceed ~100 nodes |
+
+See `examples/lite/` for a SQLite single-admin deployment and `examples/standard/` for the production PostgreSQL setup. The general guidance lives in `examples/README.md` ("Choosing an Example").
+
+The rest of this section assumes the production setup (PostgreSQL + multi-admin clustering). Single-admin SQLite mode is functionally a subset — same code paths, just without the peer-cluster and cross-admin coordination layers below.
+
+### Beyond PostgreSQL — future direction
+
+Realistically, Edge Admin is unlikely to outgrow PostgreSQL for most deployments. The data model is bounded (clusters, nodes, SSH credentials are slow-changing; commands and metrics are pruned on a window) and PostgreSQL on a well-tuned host handles tens of thousands of nodes comfortably. CNPG makes in-region HA trivial. The honest assumption is that PostgreSQL is sufficient for the foreseeable future and we are not actively planning around outgrowing it.
+
+That said, the dispatcher pattern leaves the door open. If concrete demand surfaces — typically geo-distributed multi-region admin federation, very high write throughput from agent telemetry, or strict cross-region RPO requirements — **YugabyteDB is the documented future direction**. Yugabyte's YSQL is a fork of PostgreSQL source (not just wire-compatible), which means LISTEN/NOTIFY works, the type system matches, JSONB and transactional DDL behave as expected, and our existing PostgreSQL adapter code path can target it with minimal changes. The core engine is Apache 2.0, which is a meaningful adoption advantage over CockroachDB's CSL — users can self-host the cluster without a paid license. We have not implemented Yugabyte support today and won't without a clear customer ask, but the path is open and shallow.
+
+**MySQL-flavored backends (MySQL, MariaDB, TiDB) are not on the roadmap.** The cost is high and the fit is poor: no LISTEN/NOTIFY (breaks our Oban notifier path and cross-admin coordination), JSON semantics differ from JSONB, no transactional DDL, no native UUID type, and the entire Elixir/Phoenix/Oban ecosystem assumes PostgreSQL semantics deeply enough that a parallel adapter would be ongoing maintenance pain. Users with MySQL-only ops standards are better served by running a small dedicated PostgreSQL instance for Edge Admin alongside their existing MySQL fleet.
+
+**CockroachDB is not on the roadmap either.** It is wire-compatible with PostgreSQL but explicitly does not implement LISTEN/NOTIFY (CRDB issue #41522), which is load-bearing for the multi-admin-cluster federation pattern. It also requires a paid license to operate clusters under the current CSL terms.
+
 ### Deployment
 
 Admin runs containerized, always. It uses `wireguard-go` (userspace WireGuard) inside the container. Kernel-mode WireGuard is not supported in the containerized admin — `wireguard-go` is required. Bare-metal admin is untested and not a supported path.

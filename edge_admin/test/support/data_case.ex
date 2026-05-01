@@ -17,6 +17,11 @@ defmodule EdgeAdmin.DataCase do
 
   alias Ecto.Adapters.SQL.Sandbox
 
+  # Sandbox needs the real Ecto.Repo impl module (Postgres or SQLite),
+  # not the dispatcher. Read at compile time from app env so the test
+  # suite is mode-locked per test run (CI matrix runs each adapter).
+  @repo_impl Application.compile_env!(:edge_admin, :repo_impl)
+
   using do
     quote do
       import Ecto
@@ -43,7 +48,7 @@ defmodule EdgeAdmin.DataCase do
   Sets up the sandbox based on the test tags.
   """
   def setup_sandbox(tags) do
-    pid = Sandbox.start_owner!(EdgeAdmin.Repo, shared: not tags[:async])
+    pid = Sandbox.start_owner!(@repo_impl, shared: not tags[:async])
     on_exit(fn -> Sandbox.stop_owner(pid) end)
   end
 

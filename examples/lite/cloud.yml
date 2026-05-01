@@ -1,7 +1,13 @@
 # examples/lite/cloud.yml
 #
-# Lite setup — single admin, SQLite-backed Edge VPN, Mosquitto broker.
-# Intended for homelab / hobbyist use. No metrics stack included.
+# Lite setup — single admin on SQLite, Mosquitto broker, SQLite-backed Edge VPN.
+# Intended for homelab / hobbyist use. No metrics stack, no external database
+# container. Edge Admin's database lives on the edge_admin_data volume as a
+# single SQLite file.
+#
+# When you outgrow this (need HA, multi-admin clustering, or more than ~100
+# nodes), migrate to examples/standard/ — same admin binary, switched to
+# PostgreSQL via DB_ADAPTER=postgres.
 #
 # Usage:
 #   docker compose -f cloud.yml up -d
@@ -16,7 +22,7 @@ networks:
     name: edge_core
 
 volumes:
-  edge_admin_db_data: {}
+  edge_admin_data: {}
   edge_vpn_data: {}
   edge_vpn_broker_data: {}
   edge_http_proxy_data: {}
@@ -24,31 +30,7 @@ volumes:
 
 services:
   # ---------------------------------------------------------------------------
-  # PostgreSQL — Edge Admin database
-  # ---------------------------------------------------------------------------
-  edge_admin_db:
-    image: postgres:18
-    container_name: edge_admin_db
-    restart: unless-stopped
-    networks:
-      - edge_core
-    volumes:
-      - edge_admin_db_data:/var/lib/postgresql
-    env_file:
-      - .env
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
-  # ---------------------------------------------------------------------------
-  # Edge Admin — management server
+  # Edge Admin — management server (SQLite-backed)
   # ---------------------------------------------------------------------------
   edge_admin_a1:
     image: ghcr.io/wenet-ec/edge_admin:v0.2.0
@@ -59,12 +41,16 @@ services:
     depends_on:
       edge_vpn:
         condition: service_healthy
-      edge_admin_db:
-        condition: service_healthy
     volumes:
+      - edge_admin_data:/app/data
       - /dev/net/tun:/dev/net/tun
     env_file:
       - .env
+    environment:
+      # Lite uses SQLite for Edge Admin — single instance, no external DB.
+      # The DB file lives on the edge_admin_data volume; default path is
+      # /app/data/edge/edge_admin.db (parent dirs created automatically).
+      - DB_ADAPTER=sqlite
     ports:
       - "34000:44000" # Admin API
       - "33128:43128" # HTTP proxy

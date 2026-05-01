@@ -98,8 +98,12 @@ defmodule EdgeAdmin.RequestParser do
       flop_params = RequestParser.parse(params)
       {ilike_filters, flop_params} = RequestParser.split_ilike_filters(flop_params, [:name, :version])
       query = Enum.reduce(ilike_filters, base_query, fn %{field: f, value: v}, q ->
-        from(r in q, where: ilike(field(r, ^f), ^v))
+        from(r in q, where: case_insensitive_like(field(r, ^f), ^v))
       end)
+
+  Use `EdgeAdmin.Query.case_insensitive_like/2` instead of raw `ilike/2` so
+  the query works on both Postgres and SQLite (`ecto_sqlite3` does not
+  support `ilike`).
   """
   def split_ilike_filters(flop_params, fields) when is_list(fields) do
     {ilike, other} =

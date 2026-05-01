@@ -9,7 +9,7 @@ Edge Core is a distributed edge computing infrastructure management platform bui
 **Functionalities:** remote command execution, SSH backdoor access, metrics aggregation, self-update.
 **Connectivity:** cloud↔edge TCP proxying (forward proxy + proxy chaining), edge↔edge WireGuard VPN mesh, edge↔local devices (mDNS today; LAN DNS is future scope — see `docs/architecture.md`).
 
-- **Edge Admin** (cloud server) - Orchestrates nodes, commands, SSH access, proxies, and metrics. Runs as multiple peer instances sharing one PostgreSQL database.
+- **Edge Admin** (cloud server) - Orchestrates nodes, commands, SSH access, proxies, and metrics. PostgreSQL is the production default and the only path that supports multi-admin HA. The same compiled binary also supports SQLite (`DB_ADAPTER=sqlite`) for single-instance hobbyist / homelab deployments — see `examples/README.md` and `examples/lite/`.
 - **Edge Agent** (edge nodes) - Standalone binary, primary deployment is one per machine (`network_mode: host`). Also works as a sidecar container on bridge networking. Bundles netclient, SSH server, Prometheus exporters, and forward proxies.
 - **Nexmaker** (shared library) - Elixir wrapper for Netmaker API and netclient CLI
 - **Netmaker VPN** - WireGuard mesh connecting all components. EMQX/Mosquitto is Netmaker-internal infrastructure only — not used by Edge Admin/Agent application code.
@@ -34,9 +34,9 @@ When working on anything related to Netmaker API, netclient enrollment, DERP rel
 
 **Key Architectural Principles:**
 
-1. PostgreSQL is the only source of truth — admins are stateless compute workers
-2. Admin clustering is masterless peer-to-peer — no strong leader election, no primary/replica. Admins coordinate via Erlang distribution + `:syn` registry within the same admin cluster. A **weak leader** (alphabetically first admin ID in the current topology) is elected deterministically by each admin independently to reduce duplicate work from the LocalScheduler — but this is best-effort only, duplicate work is acceptable. See `EdgeAdmin.Admins.Metadata.am_i_weak_leader?/0`.
-3. Cluster ownership sharding — exactly one admin owns each edge cluster at a time (one-admin-per-cluster algorithm). HA comes from spinning up additional independent admin clusters sharing the same PostgreSQL.
+1. The database is the only source of truth — admins are stateless compute workers. PostgreSQL is the production default; SQLite is supported as a single-instance alternative selected at runtime via `DB_ADAPTER`. Same compiled binary either way. Multi-admin clustering, HA, and cluster ownership sharding all require PostgreSQL (LISTEN/NOTIFY for cross-admin coordination) — SQLite mode is single-admin only.
+2. Admin clustering is masterless peer-to-peer — no strong leader election, no primary/replica. Admins coordinate via Erlang distribution + `:syn` registry within the same admin cluster. A **weak leader** (alphabetically first admin ID in the current topology) is elected deterministically by each admin independently to reduce duplicate work from the LocalScheduler — but this is best-effort only, duplicate work is acceptable. See `EdgeAdmin.Admins.Metadata.am_i_weak_leader?/0`. PostgreSQL only.
+3. Cluster ownership sharding — exactly one admin owns each edge cluster at a time (one-admin-per-cluster algorithm). HA comes from spinning up additional independent admin clusters sharing the same PostgreSQL database. PostgreSQL only.
 4. Agent primary deployment is one-per-machine — `network_mode: host`, privileged. Also works as a sidecar container on bridge networking (see `examples/sidecar/`). Multiple agents on one host is for testing only.
 5. Admin↔Agent communication is HTTP over WireGuard VPN, with graceful fallback: raw WireGuard → DERP relay → HTTP polling.
 6. Context pattern: Business logic organized in contexts (Commands, Nodes, Vpn, Ssh, etc.)
@@ -172,7 +172,7 @@ All operations use Docker Compose through the `./bin/run` script. No local Elixi
 
 ### Database Schemas
 
-**Edge Admin (PostgreSQL):**
+**Edge Admin** (PostgreSQL by default, SQLite when `DB_ADAPTER=sqlite`; same migrations, same Ecto schema, runtime-switched):
 
 - `clusters` - VPN network definitions
 - `nodes` - Edge device registrations with health status
@@ -409,7 +409,9 @@ Production files follow the same pattern in `deploy/production/.envs/`
 - `MASTER_KEY` - Full access, fallback for all scoped keys
 - `API_KEY` - REST API authentication (scoped; defaults to MASTER_KEY)
 - `METRICS_KEY` - Metrics API authentication (read-only; defaults to MASTER_KEY)
-- `DB_URL` - PostgreSQL connection string (admin, alternative to individual DB\_\* vars)
+- `DB_ADAPTER` - `postgres` (default) or `sqlite`. Selects the admin's database engine at runtime — no rebuild needed. SQLite is single-instance only.
+- `DATABASE_URL` - PostgreSQL connection string (admin, alternative to individual DB\_\* vars). Ignored when `DB_ADAPTER=sqlite`.
+- `SQLITE_DB_PATH` - SQLite DB file path (default `/app/data/edge/edge_admin.db`). Ignored when `DB_ADAPTER=postgres`.
 - `NETMAKER_*` - Netmaker API credentials, URLs, and tokens
 - `ENROLLMENT_TOKEN` - Agent VPN enrollment key
 - `SECRET_KEY_BASE` - Phoenix secret for sessions and encryption
@@ -429,7 +431,7 @@ Production files follow the same pattern in `deploy/production/.envs/`
 ## Technology Stack
 
 - **Framework:** Elixir 1.19+, Erlang 28.3+, Phoenix 1.8
-- **Databases:** PostgreSQL 18 (admin), SQLite 0.22 (agent), Ecto 3.13
+- **Databases:** PostgreSQL 18 (admin default; required for multi-admin HA), SQLite 0.22 (admin alternative for single-instance, also the agent's local store), Ecto 3.13. Adapter selected at runtime via `DB_ADAPTER`; same compiled binary serves both.
 - **VPN:** Netmaker (Go), netclient, WireGuard
 - **Jobs:** Oban 2.20, Quantum 3.5
 - **Metrics:** Prometheus exporters, Prometheus, PromEx 1.11
@@ -495,7 +497,7 @@ iex -S mix
 
 - Ensure database is running: `./bin/run cloud ps`
 - Reset database: `./bin/run cloud db:reset`
-- Check DB_URL or DB_HOST/DB_PORT/DB_NAME in `.edge_admin` env file
+- Check DATABASE_URL or DB_HOST/DB_PORT/DB_NAME in `.edge_admin` env file
 
 **Failed tests:**
 

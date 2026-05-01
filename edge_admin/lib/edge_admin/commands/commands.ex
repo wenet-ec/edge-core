@@ -55,6 +55,7 @@ defmodule EdgeAdmin.Commands do
   """
 
   import Ecto.Query, warn: false
+  import EdgeAdmin.Query, only: [case_insensitive_like: 2]
 
   alias Ecto.Query.CastError
   alias EdgeAdmin.Admins.Metadata
@@ -203,7 +204,7 @@ defmodule EdgeAdmin.Commands do
 
     base_query =
       Enum.reduce(ilike_filters, Command, fn %{field: field, value: value}, acc ->
-        from(c in acc, where: ilike(field(c, ^field), ^value))
+        from(c in acc, where: case_insensitive_like(field(c, ^field), ^value))
       end)
 
     base_query = apply_has_timeout_filters(base_query, has_timeout_filters)
@@ -399,7 +400,7 @@ defmodule EdgeAdmin.Commands do
 
     query_with_ilike =
       Enum.reduce(ilike_filters, query_with_has_output, fn %{field: field, value: value}, acc ->
-        from(ce in acc, where: ilike(field(ce, ^field), ^value))
+        from(ce in acc, where: case_insensitive_like(field(ce, ^field), ^value))
       end)
 
     # Run Flop query
@@ -455,7 +456,7 @@ defmodule EdgeAdmin.Commands do
   end
 
   defp apply_execution_cluster_name_filter(query, %{op: :ilike, value: value}) when is_binary(value) do
-    from([ce, n, c] in query, where: ilike(c.name, ^value))
+    from([ce, n, c] in query, where: case_insensitive_like(c.name, ^value))
   end
 
   defp apply_execution_cluster_name_filter(query, _), do: query

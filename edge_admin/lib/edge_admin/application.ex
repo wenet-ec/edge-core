@@ -6,7 +6,8 @@ defmodule EdgeAdmin.Application do
 
   use Application
 
-  alias EdgeAdmin.Repo.Notifier
+  alias EdgeAdmin.Repo.Postgres
+  alias EdgeAdmin.Repo.Postgres.Notifier
 
   @impl true
   def start(_type, _args) do
@@ -44,34 +45,44 @@ defmodule EdgeAdmin.Application do
     if System.get_env("EDGE_ADMIN_MODE") == "test", do: :test, else: :server
   end
 
+  # Start the active repo impl (selected at runtime via DB_ADAPTER → :repo_impl).
+  # Postgres impl also starts a Notifier sub-repo for Oban LISTEN.
+  defp repo_children do
+    case Application.fetch_env!(:edge_admin, :repo_impl) do
+      Postgres ->
+        [Postgres, Notifier]
+
+      impl ->
+        [impl]
+    end
+  end
+
   defp build_children(:test) do
-    [
-      EdgeAdmin.Repo,
-      Notifier,
-      {Phoenix.PubSub, name: EdgeAdmin.PubSub},
-      {Oban, Application.fetch_env!(:edge_admin, Oban)},
-      EdgeAdminWeb.Endpoint
-    ]
+    repo_children() ++
+      [
+        {Phoenix.PubSub, name: EdgeAdmin.PubSub},
+        {Oban, Application.fetch_env!(:edge_admin, Oban)},
+        EdgeAdminWeb.Endpoint
+      ]
   end
 
   defp build_children(:server) do
-    [
-      EdgeAdmin.PromEx,
-      EdgeAdmin.Repo,
-      Notifier,
-      {Phoenix.PubSub, name: EdgeAdmin.PubSub},
-      EdgeAdminWeb.Telemetry,
-      {Oban, Application.fetch_env!(:edge_admin, Oban)},
-      EdgeAdmin.Admins.Membership,
-      EdgeAdmin.EdgeClusters.Supervisor,
-      EdgeAdmin.EdgeClusters,
-      EdgeAdmin.Admins.Metadata,
-      EdgeAdmin.LocalScheduler.History,
-      EdgeAdmin.LocalScheduler,
-      EdgeAdmin.ProxyServers.Transport.TunnelRegistry,
-      EdgeAdmin.ProxyServers,
-      {EdgeAdminMcp.Server, transport: :streamable_http},
-      EdgeAdminWeb.Endpoint
-    ] ++ event_broker_children()
+    [EdgeAdmin.PromEx] ++
+      repo_children() ++
+      [
+        {Phoenix.PubSub, name: EdgeAdmin.PubSub},
+        EdgeAdminWeb.Telemetry,
+        {Oban, Application.fetch_env!(:edge_admin, Oban)},
+        EdgeAdmin.Admins.Membership,
+        EdgeAdmin.EdgeClusters.Supervisor,
+        EdgeAdmin.EdgeClusters,
+        EdgeAdmin.Admins.Metadata,
+        EdgeAdmin.LocalScheduler.History,
+        EdgeAdmin.LocalScheduler,
+        EdgeAdmin.ProxyServers.Transport.TunnelRegistry,
+        EdgeAdmin.ProxyServers,
+        {EdgeAdminMcp.Server, transport: :streamable_http},
+        EdgeAdminWeb.Endpoint
+      ] ++ event_broker_children()
   end
 end

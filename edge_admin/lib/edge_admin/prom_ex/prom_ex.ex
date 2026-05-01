@@ -19,7 +19,7 @@ defmodule EdgeAdmin.PromEx do
       Plugins.Application,
       Plugins.Beam,
       {Plugins.Phoenix, endpoint: EdgeAdminWeb.Endpoint, router: EdgeAdminWeb.Router},
-      {Plugins.Ecto, otp_app: :edge_admin, repos: [EdgeAdmin.Repo]},
+      {Plugins.Ecto, otp_app: :edge_admin, repos: [Application.fetch_env!(:edge_admin, :repo_impl)]},
       {Plugins.Oban, otp_app: :edge_admin},
       EdgeAdmin.PromEx.EdgeAdminPlugin
     ]

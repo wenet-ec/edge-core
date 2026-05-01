@@ -6,8 +6,8 @@ This directory contains ready-to-use Docker Compose deployment examples. If you 
 
 | Example                  | Use case                                                                                                                                             |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`lite/`](lite/)         | Single admin, Mosquitto broker, SQLite-backed Netmaker. Homelab / hobbyist.                                                                          |
-| [`standard/`](standard/) | 4 admin instances across 2 clusters, EMQX, PostgreSQL-backed Netmaker, Prometheus metrics. Production.                                               |
+| [`lite/`](lite/)         | Single admin on SQLite, Mosquitto broker, SQLite-backed Netmaker. Homelab / hobbyist / first-time exploration.                                       |
+| [`standard/`](standard/) | 4 admin instances on PostgreSQL across 2 clusters, EMQX, PostgreSQL-backed Netmaker, Prometheus metrics. Production.                                 |
 | [`sidecar/`](sidecar/)   | Agent deployed as a sidecar container on bridge networking (instead of host networking).                                                             |
 | [`relay/`](relay/)       | Self-hosted DERP relay for lower latency or full infra ownership. Not required for NAT traversal — the default Tailscale relay already handles that. |
 
@@ -47,6 +47,8 @@ deploy/production/.envs/.edge_admin
 
 Read that file when you need to understand what a variable does, what its default is, or when it should be changed. The `.env.example` files in each example directory contain the minimal set needed for that specific setup — the production env file has the full set.
 
+That production env file documents the **PostgreSQL** path in detail (the production default). The SQLite path used by `lite/` is much simpler — just `DB_ADAPTER=sqlite` (pinned in `lite/cloud.yml` already) plus optionally `SQLITE_DB_PATH` (defaults to `/app/data/edge/edge_admin.db`). See `lite/.env.example` for the full lite-specific env set.
+
 ### Agent configuration
 
 The agent is configured through its own env file:
@@ -68,10 +70,20 @@ The examples contain everything needed for a standard deployment. For deeper con
 
 **lite/ or standard/ — which one?**
 
-The choice is about scale and resilience, not about whether your deployment is private or public:
+The choice is about scale, resilience, and operational complexity. It is not about whether your deployment is private or public.
 
-- **`lite/`** — one admin instance, Mosquitto, SQLite-backed Netmaker. Start here if you want minimal moving parts: small fleet, first deployment, or a machine with limited RAM.
-- **`standard/`** — four admin instances across two clusters, EMQX, PostgreSQL-backed Netmaker, metrics stack. Use this when you need HA (if one admin goes down the others keep running) or more node capacity (each cluster can own up to 200 nodes, multiply by cluster count).
+**Edge Admin runs on either PostgreSQL or SQLite — selected at runtime via `DB_ADAPTER`.** Same compiled binary either way; the difference is what the admin can do.
+
+- **PostgreSQL (recommended for most things; what `standard/` ships with).** Required for any of: multi-admin instances, cluster ownership sharding, cross-admin coordination via LISTEN/NOTIFY, HA (one admin dies → others keep running), >~100 nodes total, production observability with `pg_stat_statements`. If you might ever need any of that, even if you only run one admin instance today, **start on PostgreSQL.** Going from "1 admin on Postgres" to "4 admins on Postgres" is just `docker compose scale` plus an extra cluster cookie. Going from SQLite to Postgres is a data migration.
+
+- **SQLite (`lite/` only).** Single admin instance, no external database, no password to manage. Honest scope: hobbyist deployments, homelab, first-time exploration of what Edge Core does, very small fleets (<~100 nodes total) that you're confident will never need HA or sharding. If you're thinking "I just want to try this out" or "I just need to manage 5 Raspberry Pis at home," SQLite is exactly right and you should not feel the need to spin up Postgres for it.
+
+The two examples reflect this split:
+
+- **`lite/`** — one admin instance on SQLite, Mosquitto, SQLite-backed Netmaker, no metrics. Minimum moving parts. **Cap your expectations:** no HA, no sharding, no horizontal scale. If your fleet outgrows ~100 nodes, migrate to `standard/`.
+- **`standard/`** — four admin instances on PostgreSQL across two clusters, EMQX, PostgreSQL-backed Netmaker, Prometheus metrics. Production-shape: HA at the admin layer, capacity for thousands of nodes via more clusters, full observability. Use this if you're running anything you'd be unhappy to lose.
+
+**General recommendation:** if in doubt, use `standard/` — Postgres is the boring, well-understood default, and the operational overhead (one container plus a password) is small compared to the headroom it gives you. Pick `lite/` consciously when you've decided you don't want the extra moving parts and won't ever need to scale.
 
 **Private network or public internet — does it matter?**
 

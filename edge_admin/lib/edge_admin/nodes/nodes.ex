@@ -123,6 +123,7 @@ defmodule EdgeAdmin.Nodes do
   """
 
   import Ecto.Query, warn: false
+  import EdgeAdmin.Query, only: [case_insensitive_like: 2]
 
   alias Ecto.Query.CastError
   alias EdgeAdmin.EdgeClusters.AgentClient
@@ -285,7 +286,7 @@ defmodule EdgeAdmin.Nodes do
   # which escapes % characters and wraps values in %..%, breaking user-supplied patterns.
   defp apply_cluster_ilike_filters(query, filters) do
     Enum.reduce(filters, query, fn %{field: field, value: value}, acc ->
-      from(c in acc, where: ilike(field(c, ^field), ^value))
+      from(c in acc, where: case_insensitive_like(field(c, ^field), ^value))
     end)
   end
 
@@ -1214,7 +1215,7 @@ defmodule EdgeAdmin.Nodes do
   end
 
   defp apply_cluster_name_filter(query, %{op: :ilike, value: value}) when is_binary(value) do
-    from([_main, c] in query, where: ilike(c.name, ^value))
+    from([_main, c] in query, where: case_insensitive_like(c.name, ^value))
   end
 
   defp apply_cluster_name_filter(query, _), do: query
@@ -1294,7 +1295,7 @@ defmodule EdgeAdmin.Nodes do
   # Apply ilike filters for node string fields directly via Ecto, bypassing Flop's add_wildcard.
   defp apply_node_ilike_filters(query, filters) do
     Enum.reduce(filters, query, fn %{field: field, value: value}, acc ->
-      from(n in acc, where: ilike(field(n, ^field), ^value))
+      from(n in acc, where: case_insensitive_like(field(n, ^field), ^value))
     end)
   end
 
@@ -1471,7 +1472,7 @@ defmodule EdgeAdmin.Nodes do
 
     query =
       Enum.reduce(ilike_filters, query, fn %{field: field, value: value}, acc ->
-        from(k in acc, where: ilike(field(k, ^field), ^value))
+        from(k in acc, where: case_insensitive_like(field(k, ^field), ^value))
       end)
 
     {query, flop_params}
@@ -2145,7 +2146,7 @@ defmodule EdgeAdmin.Nodes do
 
     query_with_ilike =
       Enum.reduce(ilike_filters, query_with_cluster_filter, fn %{field: field, value: value}, acc ->
-        from(a in acc, where: ilike(field(a, ^field), ^value))
+        from(a in acc, where: case_insensitive_like(field(a, ^field), ^value))
       end)
 
     # Run Flop query

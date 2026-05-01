@@ -71,10 +71,13 @@ defmodule EdgeAdminWeb.Router do
   scope "/" do
     pipe_through(:browser_with_basic_auth)
 
-    # LiveDashboard (always mounted, but can be disabled via endpoint check)
+    # ecto_stats auto-discovers the running repo at mount time via
+    # Ecto.Repo.all_running/0 (see EctoStatsPage.auto_discover/1). The page
+    # then dispatches per repo's adapter (Postgres → EctoPSQLExtras, SQLite
+    # → EctoSQLite3Extras), so DB_ADAPTER selects the right backend with no
+    # hardcoded list here.
     live_dashboard("/live_dashboard",
       metrics: EdgeAdminWeb.Telemetry,
-      ecto_repos: [EdgeAdmin.Repo],
       home_app: {"Edge Admin", :edge_admin},
       on_mount: [EdgeAdminWeb.LiveDashboardAuth, EdgeAdminWeb.LiveDashboardHooks],
       additional_pages: [

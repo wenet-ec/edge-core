@@ -5,7 +5,7 @@ networks:
     name: production_edge_core
 
 volumes:
-  production_edge_admin_db_data: {}
+  production_edge_admin_data: {}
   production_edge_vpn_data: {}
   production_edge_vpn_broker_data: {}
   production_edge_http_proxy_data: {}
@@ -14,22 +14,6 @@ volumes:
 
 services:
   # Edge Admin
-  edge_admin_db:
-    image: docker.io/postgres:18
-    container_name: production_edge_admin_db
-    networks:
-      - production_edge_core
-    volumes:
-      - production_edge_admin_db_data:/var/lib/postgresql
-    env_file:
-      - ./.envs/.edge_admin_db
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
   edge_admin_a1:
     build:
       context: ../..
@@ -41,12 +25,13 @@ services:
     depends_on:
       edge_vpn:
         condition: service_healthy
-      edge_admin_db:
-        condition: service_healthy
     volumes:
+      - production_edge_admin_data:/app/data
       - /dev/net/tun:/dev/net/tun
     env_file:
       - ./.envs/.edge_admin
+    environment:
+      - DB_ADAPTER=sqlite
     ports:
       - "34000:44000" # API
       - "33128:43128" # HTTP proxy

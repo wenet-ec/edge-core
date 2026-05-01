@@ -12,6 +12,9 @@ data:
   ADMIN_URLS: {{ .Values.config.adminUrls | quote }}
 
   # --- Required: Database ---
+  # Pinned to postgres — k8s deployments require LISTEN/NOTIFY for multi-admin
+  # coordination. SQLite (DB_ADAPTER=sqlite) is single-instance only.
+  DB_ADAPTER: {{ .Values.config.dbAdapter | default "postgres" | quote }}
   DB_HOST: {{ .Values.config.dbHost | quote }}
   DB_PORT: {{ .Values.config.dbPort | quote }}
   DB_NAME: {{ .Values.config.dbName | quote }}

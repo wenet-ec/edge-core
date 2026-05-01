@@ -95,6 +95,7 @@ defmodule EdgeAdmin.Mixfile do
       # Database
       {:ecto_sql, "~> 3.13"},
       {:postgrex, "~> 0.22"},
+      {:ecto_sqlite3, "~> 0.22"},
       {:uniq, "~> 0.6"},
       {:flop, "~> 0.26"},
 
@@ -109,6 +110,7 @@ defmodule EdgeAdmin.Mixfile do
       {:prom_ex, "~> 1.11"},
       {:phoenix_live_dashboard, "~> 0.8"},
       {:ecto_psql_extras, "~> 0.8"},
+      {:ecto_sqlite3_extras, "~> 1.2"},
       {:oban_live_dashboard, "~> 0.2.1"},
 
       # Linting

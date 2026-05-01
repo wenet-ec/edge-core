@@ -1,10 +1,10 @@
 # Edge Core — Lite Setup
 
-A single-admin deployment of Edge Core. Good for small fleets, first deployments, or machines with limited resources. If you later need HA or more node capacity, migrate to `standard/`.
+A single-admin, SQLite-backed deployment of Edge Core. Good for homelab, hobbyist, first-time exploration, or any small fleet that won't need to scale beyond ~100 nodes total.
 
 **What's included:**
 
-- 1 Edge Admin instance
+- 1 Edge Admin instance running on **SQLite** (no external database container)
 - Netmaker VPN (SQLite-backed, Mosquitto broker)
 - Netmaker UI
 
@@ -12,8 +12,11 @@ A single-admin deployment of Edge Core. Good for small fleets, first deployments
 
 - No metrics stack (Prometheus)
 - No EMQX (uses Mosquitto instead — simpler, less overhead)
-- No Netmaker PostgreSQL (uses SQLite — fine for small deployments)
-- No multiple admin instances (single point of failure)
+- No PostgreSQL containers (Edge Admin and Netmaker both run on SQLite)
+- No multiple admin instances (single point of failure, no HA)
+- No multi-cluster sharding (one admin owns all nodes; capped by WireGuard mesh O(n²) overhead at ~100 nodes)
+
+**When to upgrade to `standard/`:** if you need any of HA / multi-admin clustering / cluster ownership sharding / >100 nodes / production observability / cross-admin coordination, switch to `standard/`. The Edge Admin binary is identical; the difference is `DB_ADAPTER=postgres` and the supporting infrastructure (Postgres + EMQX + Prometheus + 4 admin instances across 2 clusters). Migrating existing data from SQLite to Postgres is a one-time table-by-table copy, but most users start fresh on `standard/` rather than carrying state forward.
 
 ## Requirements
 

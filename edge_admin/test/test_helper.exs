@@ -12,5 +12,6 @@ ExUnit.start(
   trace: System.get_env("TRACE_TESTS") == "true"
 )
 
-# Configure the database sandbox
-Ecto.Adapters.SQL.Sandbox.mode(EdgeAdmin.Repo, :manual)
+# Configure the database sandbox — Sandbox needs the real Ecto.Repo impl
+# (Postgres or SQLite), not the dispatcher.
+Ecto.Adapters.SQL.Sandbox.mode(Application.fetch_env!(:edge_admin, :repo_impl), :manual)

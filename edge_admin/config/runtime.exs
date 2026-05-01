@@ -479,7 +479,8 @@ config :os_mon,
 config :sentry,
   dsn: get_env("SENTRY_DSN"),
   environment_name: get_env("SENTRY_ENVIRONMENT_NAME"),
-  before_send: {EdgeAdmin.Errors.Sentry, :before_send}
+  client: EdgeAdmin.Sentry.ReqClient,
+  before_send: {EdgeAdmin.Sentry, :before_send}
 
 if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
   event_broker_adapter =

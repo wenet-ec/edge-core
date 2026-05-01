@@ -47,8 +47,8 @@ defmodule EdgeAdminWeb.Endpoint do
   )
 
   plug(Sentry.PlugContext,
-    body_scrubber: {EdgeAdmin.Errors.Sentry, :scrub_params},
-    remote_address_reader: {EdgeAdmin.Errors.Sentry, :scrubbed_remote_address}
+    body_scrubber: {EdgeAdmin.Sentry, :scrub_params},
+    remote_address_reader: {EdgeAdmin.Sentry, :scrubbed_remote_address}
   )
 
   plug(Plug.MethodOverride)

@@ -103,7 +103,6 @@ defmodule EdgeAdmin.Mixfile do
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
 
       # Errors
-      {:hackney, "~> 1.25"},
       {:sentry, "~> 12.0"},
 
       # Telemetry

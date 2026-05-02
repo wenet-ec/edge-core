@@ -97,6 +97,12 @@ defmodule EdgeAdmin.EventBroker.Adapters.Rabbitmq do
   end
 
   def handle_call(:healthy?, _from, %{channel: channel} = state) do
+    # Local PID check is sufficient — no broker round-trip needed.
+    # AMQP runs heartbeats over the connection (default every 10s, configured by
+    # the amqp lib at AMQP.Connection.open/1). When the broker stops responding,
+    # the underlying :amqp_client process tears down the connection, the channel
+    # pid dies, and Process.alive?/1 flips to false within one heartbeat interval.
+    # So liveness propagates to channel.pid automatically — no explicit ping needed.
     if Process.alive?(channel.pid) do
       {:reply, :ok, state}
     else

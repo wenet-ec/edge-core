@@ -122,11 +122,15 @@ defmodule EdgeAdmin.EventBroker.Adapters.Mqtt do
   end
 
   def handle_call(:healthy?, _from, %{client: client} = state) do
-    if Process.alive?(client) do
-      {:reply, :ok, state}
-    else
-      {:reply, {:error, "MQTT client process is dead"}, state}
-    end
+    # Round-trip PINGREQ/PINGRESP — proves the broker is reachable through
+    # the live socket, not just that the local client process is alive.
+    # Catches half-closed sockets, broker-side disconnects, auth revocation.
+    # `:emqtt.ping/1` is spec'd to always return `:pong` on success; failure
+    # surfaces as a `gen_statem:call` exit (timeout / dead client), caught below.
+    :pong = :emqtt.ping(client)
+    {:reply, :ok, state}
+  catch
+    :exit, reason -> {:reply, {:error, "MQTT client unreachable: #{inspect(reason)}"}, state}
   end
 
   def handle_call({:publish, _envelope}, _from, %{client: nil} = state) do

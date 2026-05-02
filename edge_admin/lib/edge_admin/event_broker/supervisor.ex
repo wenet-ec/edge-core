@@ -33,6 +33,12 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
 
     1. `EdgeAdmin.EventBroker.Adapters.Mqtt` — GenServer that opens an `emqtt`
        client connection and publishes events to topic = event type.
+
+  ## Children (AWS SNS adapter)
+
+    1. `EdgeAdmin.EventBroker.Adapters.AwsSns` — GenServer that holds publish
+       config. SNS is HTTPS-stateless, no persistent connection — every
+       publish is an `ex_aws` request.
   """
 
   use Supervisor
@@ -78,5 +84,9 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
 
   defp build_children(:mqtt) do
     [EdgeAdmin.EventBroker.Adapters.Mqtt]
+  end
+
+  defp build_children(:aws_sns) do
+    [EdgeAdmin.EventBroker.Adapters.AwsSns]
   end
 end

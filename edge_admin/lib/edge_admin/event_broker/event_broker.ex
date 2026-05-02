@@ -19,6 +19,7 @@ defmodule EdgeAdmin.EventBroker do
   - `rabbitmq` — RabbitMQ topic exchange; consumer queue durability is the consumer's choice
   - `redis` — Redis Pub/Sub; fire-and-forget, no durability or replay
   - `mqtt` — MQTT 3.1.1 / 5 brokers (EMQX, Mosquitto, HiveMQ, AWS IoT, etc.); pub/sub, configurable QoS
+  - `aws_sns` — AWS Simple Notification Service; managed pub/sub, fan-out via subscriptions
 
   ## Usage
 
@@ -160,6 +161,7 @@ defmodule EdgeAdmin.EventBroker do
       :rabbitmq -> EdgeAdmin.EventBroker.Adapters.Rabbitmq
       :redis -> EdgeAdmin.EventBroker.Adapters.Redis
       :mqtt -> EdgeAdmin.EventBroker.Adapters.Mqtt
+      :aws_sns -> EdgeAdmin.EventBroker.Adapters.AwsSns
     end
   end
 

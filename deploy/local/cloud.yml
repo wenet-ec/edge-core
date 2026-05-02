@@ -31,6 +31,7 @@ volumes:
   local_edge_event_broker_rabbitmq_data: {}
   local_edge_event_broker_redis_data: {}
   local_edge_event_broker_mqtt_data: {}
+  local_edge_event_broker_aws_sns_data: {}
 
 x-edge-admin-base: &edge-admin-base
   build:
@@ -49,6 +50,7 @@ x-edge-admin-base: &edge-admin-base
     - "edge_event_broker_rabbitmq:172.20.0.112"
     - "edge_event_broker_redis:172.20.0.113"
     - "edge_event_broker_mqtt:172.20.0.114"
+    - "edge_event_broker_aws_sns:172.20.0.115"
   depends_on:
     edge_vpn:
       condition: service_healthy
@@ -65,10 +67,10 @@ x-edge-admin-base: &edge-admin-base
     - net.ipv6.conf.all.forwarding=1
   healthcheck:
     test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
-    interval: 60s
-    timeout: 5s
-    retries: 6
-    start_period: 60s
+    interval: 30s
+    timeout: 15s
+    retries: 10
+    start_period: 240s
 
 services:
   # Edge Admin
@@ -498,3 +500,26 @@ services:
   #     - "41883:1883"   # MQTT
   #     - "48084:8083"   # MQTT over WebSocket
   #     - "48086:18083"  # Dashboard + REST API
+
+  # edge_event_broker_aws_sns:
+  #   image: localstack/localstack:community-archive
+  #   container_name: local_edge_event_broker_aws_sns
+  #   networks:
+  #     local_edge_core:
+  #       ipv4_address: 172.20.0.115
+  #   environment:
+  #     - SERVICES=sns,sqs                      # restrict API surface; SQS used for fan-out smoke tests
+  #     - EAGER_SERVICE_LOADING=1               # warm SNS+SQS at boot so healthcheck reflects readiness
+  #     - DISABLE_EVENTS=1                      # opt out of anonymous usage telemetry
+  #     - AWS_DEFAULT_REGION=us-east-1          # picked up by awslocal in init.sh
+  #   volumes:
+  #     - local_edge_event_broker_aws_sns_data:/var/lib/localstack
+  #     - ./compose/edge_event_broker/aws_sns/init.sh:/etc/localstack/init/ready.d/init.sh:ro
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "curl -sf http://localhost:4566/_localstack/health | grep -q '\"sns\": \"available\"'"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 5
+  #     start_period: 20s
+  #   ports:
+  #     - "44566:4566"   # LocalStack edge port (all AWS services multiplexed here)

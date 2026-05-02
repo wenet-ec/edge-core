@@ -84,7 +84,7 @@ config:
 #   HEALTH_CHECK_TIMEOUT_MS: "15000"
 #   NODE_HEALTH_CHECK_CONCURRENCY: "200"
 #   EVENT_BROKER_ENABLED: "true"
-#   EVENT_BROKER_ADAPTER: "nats"            # nats | kafka | rabbitmq | redis | mqtt
+#   EVENT_BROKER_ADAPTER: "nats"            # nats | kafka | rabbitmq | redis | mqtt | aws_sns
 #   # Endpoint env var is namespaced per adapter (`_URLS` plural for cluster-aware,
 #   # `_URL` singular for single-endpoint). Set the one matching your adapter:
 #   EVENT_BROKER_NATS_URLS: "nats://my-nats:4222"             # NATS — comma-separated cluster
@@ -92,6 +92,9 @@ config:
 #   # EVENT_BROKER_RABBITMQ_URL: "amqp://user:pass@host:5672" # RabbitMQ — single URL
 #   # EVENT_BROKER_REDIS_URL: "redis://host:6379"             # Redis — single URL
 #   # EVENT_BROKER_MQTT_URL: "host:1883"                      # MQTT — single host:port (no scheme)
+#   # AWS SNS — managed service, no broker URL; provision topics out-of-band:
+#   # EVENT_BROKER_AWS_SNS_REGION: "us-east-1"
+#   # EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX: "arn:aws:sns:us-east-1:123456789012:"
 #   EVENT_BROKER_MQTT_QOS: "1"              # MQTT only — 0|1|2 (default 1)
 #   EVENT_BROKER_MQTT_SSL: "true"           # MQTT only — TLS toggle
 #   EVENT_BROKER_MQTT_CACERT_FILE: "/etc/mqtt/tls/ca.crt"
@@ -165,6 +168,13 @@ secrets:
   # mTLS certs are NOT secret string fields — mount them via extraVolumes
   # (see extraVolumes/extraVolumeMounts above) and point the app at the
   # mounted paths via extraEnv.EVENT_BROKER_MQTT_*_FILE.
+  # AWS SNS auth — standard AWS credential chain. Prefer IRSA (IAM Roles for
+  # Service Accounts) on EKS over static keys; leave these blank and annotate
+  # the ServiceAccount instead. Static keys here are an escape hatch for
+  # non-EKS clusters or initial bootstrap.
+  awsAccessKeyId: ""
+  awsSecretAccessKey: ""
+  awsSessionToken: ""            # optional, only when assuming an IAM role via STS
 
 migration:
   # Set to false when the image doesn't exist yet (e.g. local kind testing without a built image)

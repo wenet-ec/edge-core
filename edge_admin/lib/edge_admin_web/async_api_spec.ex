@@ -141,6 +141,22 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
             "bindingVersion" => "0.2.0"
           }
         }
+      },
+      "aws_sns" => %{
+        "host" => "sns.us-east-1.amazonaws.com",
+        "protocol" => "sns",
+        "title" => "AWS SNS",
+        "summary" => "AWS Simple Notification Service — managed fan-out pub/sub.",
+        "description" =>
+          "Managed AWS service; no on-prem broker. Three topics by domain: " <>
+            "`edge-node-events`, `edge-execution-events`, `edge-self-update-events` " <>
+            "— must be pre-provisioned in your AWS account. Configure via " <>
+            "EVENT_BROKER_AWS_SNS_REGION + EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX. " <>
+            "Subscribers filter via subscription filter policies on message attributes " <>
+            "(`type`, `corename`) — SNS has no topic-name wildcards. " <>
+            "Durability is the subscriber's responsibility (typically SQS). " <>
+            "Auth uses the standard AWS credential chain (IAM env vars, instance profile, etc.).",
+        "security" => [%{"$ref" => "#/components/securitySchemes/awsSigV4"}]
       }
     }
   end
@@ -236,16 +252,45 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
              "qos" => 1,
              "retain" => false,
              "bindingVersion" => "0.2.0"
-           }
+           },
+           "sns" => sns_operation_binding(channel_id)
            # Note: MQTT topic for each event is the channel address with `.` rewritten
            # to `/` (e.g. `edge.node.registered` → `edge/node/registered`) so MQTT
            # segment wildcards (`+`, `#`) work as expected. QoS shown above is the
            # default; configurable via EVENT_BROKER_MQTT_QOS.
+           # Note: SNS routes by topic ARN (one of three pre-provisioned domain
+           # topics) and by message attributes — `type` and `corename` are promoted
+           # to attributes so subscription filter policies can match without parsing
+           # the body. The body still carries the full CloudEvents envelope.
          }
        }}
     end)
     |> Jason.OrderedObject.new()
   end
+
+  defp sns_operation_binding(channel_id) do
+    domain = sns_domain_for(channel_id)
+
+    %{
+      "topic" => %{
+        "name" => "edge-#{domain}-events"
+      },
+      "consumers" => [
+        %{
+          "protocol" => "sqs",
+          "endpoint" => %{
+            "name" => "edge-#{domain}-events-debug"
+          },
+          "rawMessageDelivery" => true
+        }
+      ],
+      "bindingVersion" => "0.1.0"
+    }
+  end
+
+  defp sns_domain_for("edge.node." <> _), do: "node"
+  defp sns_domain_for("edge.execution." <> _), do: "execution"
+  defp sns_domain_for("edge.self_update." <> _), do: "self-update"
 
   # ---------------------------------------------------------------------------
   # Components
@@ -726,6 +771,17 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "description" =>
           "MQTT auth via EVENT_BROKER_MQTT_USERNAME + EVENT_BROKER_MQTT_PASSWORD, or EVENT_BROKER_MQTT_JWT. " <>
             "Enable TLS with EVENT_BROKER_MQTT_SSL=true. mTLS supported via cert file env vars."
+      },
+      "awsSigV4" => %{
+        "type" => "httpApiKey",
+        "name" => "Authorization",
+        "in" => "header",
+        "description" =>
+          "AWS SigV4 request signing. Credentials resolved by ex_aws via the standard AWS credential " <>
+            "chain: AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY env vars (with optional AWS_SESSION_TOKEN " <>
+            "for STS / assumed roles), shared credentials file, or EC2/ECS/EKS instance metadata. " <>
+            "AsyncAPI 3 has no first-class SigV4 type — modeled here as httpApiKey for documentation; " <>
+            "the actual signing is handled by ex_aws."
       }
     }
   end

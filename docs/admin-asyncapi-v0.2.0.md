@@ -8,7 +8,7 @@ Interactive viewer: `/asyncdoc` on a running admin. Raw spec: `GET /api/asyncapi
 
 ## Overview
 
-Edge Admin publishes lifecycle events to a configured message broker (NATS, Kafka/Redpanda, RabbitMQ, Redis, or MQTT). All events follow the [CloudEvents 1.0](https://cloudevents.io) spec. Edge Admin publishes and forgets — it has no knowledge of consumers.
+Edge Admin publishes lifecycle events to a configured message broker (NATS, Kafka/Redpanda, RabbitMQ, Redis, MQTT, or AWS SNS). All events follow the [CloudEvents 1.0](https://cloudevents.io) spec. Edge Admin publishes and forgets — it has no knowledge of consumers.
 
 ### Event Envelope
 
@@ -127,6 +127,36 @@ edge/#                   ← everything
 Default publish QoS is `1` (at-least-once with broker ACK). Configurable globally via `EVENT_BROKER_MQTT_QOS=0|1|2` — there is no per-event QoS. Consumers should dedup on envelope `id` regardless (multi-admin setups produce duplicate `node.status_changed` events from independent health checkers).
 
 **Durability is the broker's and consumer's concern.** MQTT QoS controls only the publisher↔broker↔subscriber delivery handshake — it does not make messages durable. Subscribers wanting offline queueing connect with `clean_session=false` (MQTT 3) or `Session Expiry Interval > 0` (MQTT 5) on their own connection.
+
+### AWS SNS
+
+Three SNS topics by domain — must be pre-provisioned in your AWS account, ARNs derived from `EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX`:
+
+| Domain             | Topic name suffix         |
+| ------------------ | ------------------------- |
+| Node events        | `edge-node-events`        |
+| Execution events   | `edge-execution-events`   |
+| Self-update events | `edge-self-update-events` |
+
+SNS has no topic-name wildcards. Subscribers filter via _subscription filter policies_ matched against **message attributes**. The adapter promotes two attributes on every publish:
+
+```
+type      = "edge.node.status_changed"
+corename  = "prod-us"
+```
+
+The body remains the full CloudEvents envelope JSON regardless — body and attributes carry the same routing fields, so consumers reading the body don't need to know about attributes.
+
+Filter policy examples:
+
+```json
+{"type": [{"prefix": "edge.node."}]}                  // all node events
+{"type": ["edge.execution.completed"]}                // only completed executions
+{"corename": ["prod-us"]}                             // only this core
+{"type": [{"anything-but": "edge.node.deleted"}]}     // exclude deletes
+```
+
+**Durability is the subscriber's concern.** SNS itself doesn't store messages. Subscribers buy durability by being SQS queues (the standard SNS+SQS fan-out pattern), Lambda functions, or HTTPS endpoints with their own retention.
 
 ---
 
@@ -289,6 +319,7 @@ Edge Core publishes accurately regardless of broker. Durability, replay, and ret
 - **RabbitMQ** — delivery semantics depend on consumer queue configuration. Durable queue = messages survive broker restart; transient queue = live-only. Core always publishes with `persistent: true`.
 - **Redis** — pure pub/sub (`PUBLISH`/`SUBSCRIBE`). No queue, no persistence, no replay. Messages go only to currently connected subscribers. If no subscriber is connected, the message is gone.
 - **MQTT** — pub/sub. QoS 0/1/2 governs only the delivery handshake, not durability. The broker itself doesn't retain history (no replay, no consumer offsets). Subscribers wanting offline queueing connect with persistent sessions; subscribers wanting last-message-on-topic semantics rely on broker retained messages (Edge Core does not publish with retain=true).
+- **AWS SNS** — fan-out pub/sub. SNS itself stores nothing — once delivered to subscribers (or delivery is exhausted), the message is gone. Durability is the subscriber's responsibility: subscribe an SQS queue for replay (SQS retains up to 14 days), or accept fire-and-forget for Lambda/HTTPS subscribers. SNS retries delivery to its own subscribers on failure (with exponential backoff) but never holds messages for late subscribers.
 
 In all cases: each publish is a **full snapshot**, not a diff. If events are missed, the next event is still self-contained.
 

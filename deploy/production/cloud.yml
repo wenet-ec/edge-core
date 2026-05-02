@@ -43,9 +43,9 @@ x-edge-admin-base: &edge-admin-base
     - net.ipv6.conf.all.forwarding=1
   healthcheck:
     test: ["CMD", "curl", "-f", "http://localhost:44000/health"]
-    interval: 60s
-    timeout: 5s
-    retries: 6
+    interval: 30s
+    timeout: 15s
+    retries: 10
     start_period: 45s
 
 services:

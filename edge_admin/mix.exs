@@ -149,6 +149,9 @@ defmodule EdgeAdmin.Mixfile do
       {:amqp, "~> 4.1"},
       {:redix, "~> 1.5"},
       {:emqtt, "~> 1.15"},
+      {:ex_aws, "~> 2.6"},
+      {:ex_aws_sns, "~> 2.3"},
+      {:sweet_xml, "~> 0.7"},
 
       # Nexmaker library
       {:nexmaker, path: "../nexmaker"}

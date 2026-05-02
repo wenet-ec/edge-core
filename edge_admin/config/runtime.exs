@@ -480,6 +480,21 @@ config :os_mon,
 #   EVENT_BROKER_MQTT_CACERT_FILE=          # custom CA bundle / pinning
 #   EVENT_BROKER_MQTT_CLIENT_CERT_FILE=     # mTLS — requires SSL=true
 #   EVENT_BROKER_MQTT_CLIENT_KEY_FILE=      # mTLS — requires SSL=true
+#
+# AWS SNS (managed service — no on-prem broker):
+#   # Topics must be pre-provisioned in your AWS account: edge-node-events,
+#   # edge-execution-events, edge-self-update-events. The adapter constructs
+#   # ARNs from the prefix below and publishes via the SNS API.
+#   EVENT_BROKER_AWS_SNS_REGION=us-east-1
+#   EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX=arn:aws:sns:us-east-1:123456789012:
+#   # Auth uses the standard AWS credential chain — env vars, shared credentials
+#   # file, or instance profile / IAM role assumption (resolved by ex_aws):
+#   AWS_ACCESS_KEY_ID=
+#   AWS_SECRET_ACCESS_KEY=
+#   AWS_SESSION_TOKEN=                      # optional, when assuming an IAM role
+#   # Endpoint override — leave UNSET in production. Only set in test/staging
+#   # to point at LocalStack or another SNS-compatible emulator.
+#   EVENT_BROKER_AWS_SNS_ENDPOINT_URL=
 config :sentry,
   dsn: get_env("SENTRY_DSN"),
   environment_name: get_env("SENTRY_ENVIRONMENT_NAME"),
@@ -494,7 +509,8 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
       "rabbitmq" -> :rabbitmq
       "redis" -> :redis
       "mqtt" -> :mqtt
-      other -> raise "Unknown EVENT_BROKER_ADAPTER=#{other} — valid values: nats, kafka, rabbitmq, redis, mqtt"
+      "aws_sns" -> :aws_sns
+      other -> raise "Unknown EVENT_BROKER_ADAPTER=#{other} — valid values: nats, kafka, rabbitmq, redis, mqtt, aws_sns"
     end
 
   config :edge_admin,
@@ -619,5 +635,46 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
         cacert_file: get_env("EVENT_BROKER_MQTT_CACERT_FILE"),
         client_cert_file: get_env("EVENT_BROKER_MQTT_CLIENT_CERT_FILE"),
         client_key_file: get_env("EVENT_BROKER_MQTT_CLIENT_KEY_FILE")
+
+    :aws_sns ->
+      # AWS SNS is a managed service — no EVENT_BROKER_URLS, no broker-server endpoint.
+      # The adapter publishes via the AWS SNS API. Topics must be pre-provisioned in
+      # the AWS account (Console / CLI / Terraform); the adapter constructs ARNs from
+      # the configured prefix. Auth uses the AWS standard chain: env vars / shared
+      # credentials file / instance profile / IAM role assumption — handled by ex_aws.
+      # An optional EVENT_BROKER_AWS_SNS_ENDPOINT_URL override points at a non-AWS
+      # endpoint (LocalStack) for testing; never set in production.
+      aws_sns_region = get_env!("EVENT_BROKER_AWS_SNS_REGION")
+      aws_sns_topic_arn_prefix = get_env!("EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX")
+
+      # Configure ex_aws's :sns service with our region + endpoint override.
+      # ex_aws resolves credentials independently from its own AWS_ACCESS_KEY_ID /
+      # AWS_SECRET_ACCESS_KEY / AWS_SESSION_TOKEN env vars + instance metadata —
+      # we don't pass them through here.
+      sns_config = [region: aws_sns_region]
+
+      sns_config =
+        case get_env("EVENT_BROKER_AWS_SNS_ENDPOINT_URL") do
+          nil ->
+            sns_config
+
+          endpoint ->
+            uri = URI.parse(endpoint)
+
+            sns_config ++
+              [
+                scheme: "#{uri.scheme}://",
+                host: uri.host,
+                port: uri.port
+              ]
+        end
+
+      config :edge_admin, :event_broker_aws_sns,
+        region: aws_sns_region,
+        topic_arn_prefix: aws_sns_topic_arn_prefix,
+        endpoint_url: get_env("EVENT_BROKER_AWS_SNS_ENDPOINT_URL")
+
+      config :ex_aws, :http_client, ExAws.Request.Req
+      config :ex_aws, :sns, sns_config
   end
 end

@@ -294,6 +294,19 @@ ADMIN_DISCOVERY_PORT=44000
 # EVENT_BROKER_MQTT_CLIENT_CERT_FILE=         # mTLS — requires SSL=true
 # EVENT_BROKER_MQTT_CLIENT_KEY_FILE=          # mTLS — requires SSL=true
 
+# AWS SNS:
+# Managed AWS service — no on-prem broker. Provision three SNS topics in your
+# AWS account (edge-node-events, edge-execution-events, edge-self-update-events)
+# via Console / CLI / Terraform, grant sns:Publish on them to an IAM principal,
+# and set the env vars below.
+# EVENT_BROKER_ADAPTER=aws_sns
+# EVENT_BROKER_AWS_SNS_REGION=us-east-1
+# EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX=arn:aws:sns:us-east-1:123456789012:   # replace 123456789012 with your AWS account ID
+# AWS_ACCESS_KEY_ID=
+# AWS_SECRET_ACCESS_KEY=
+# AWS_SESSION_TOKEN=                          # optional, only when assuming an IAM role via STS
+# EVENT_BROKER_AWS_SNS_ENDPOINT_URL=          # leave UNSET in production — only set in test/staging to point at LocalStack
+
 # =============================================================================
 # Background Workers & Schedulers
 # =============================================================================

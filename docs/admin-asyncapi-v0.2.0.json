@@ -1171,6 +1171,12 @@
         "description": "RabbitMQ credentials embedded in EVENT_BROKER_RABBITMQ_URL: amqp://user:pass@host:port. The amqp library parses them natively. Enable TLS with EVENT_BROKER_RABBITMQ_SSL=true.",
         "type": "userPassword"
       },
+      "awsSigV4": {
+        "description": "AWS SigV4 request signing. Credentials resolved by ex_aws via the standard AWS credential chain: AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY env vars (with optional AWS_SESSION_TOKEN for STS / assumed roles), shared credentials file, or EC2/ECS/EKS instance metadata. AsyncAPI 3 has no first-class SigV4 type — modeled here as httpApiKey for documentation; the actual signing is handled by ex_aws.",
+        "in": "header",
+        "name": "Authorization",
+        "type": "httpApiKey"
+      },
       "kafkaSasl": {
         "description": "Kafka SASL auth via EVENT_BROKER_KAFKA_USERNAME + EVENT_BROKER_KAFKA_PASSWORD. Mechanism configurable: EVENT_BROKER_KAFKA_SASL_MECHANISM=plain|scram_sha_256|scram_sha_512. Enable TLS with EVENT_BROKER_KAFKA_SSL=true.",
         "type": "scramSha256"
@@ -1204,7 +1210,18 @@
         "kafka": { "bindingVersion": "0.5.0" },
         "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
-        "redis": { "bindingVersion": "0.1.0" }
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-node-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-node-events" }
+        }
       },
       "channel": { "$ref": "#/channels/edge.node.registered" }
     },
@@ -1215,7 +1232,18 @@
         "kafka": { "bindingVersion": "0.5.0" },
         "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
-        "redis": { "bindingVersion": "0.1.0" }
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-node-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-node-events" }
+        }
       },
       "channel": { "$ref": "#/channels/edge.node.reregistered" }
     },
@@ -1226,7 +1254,18 @@
         "kafka": { "bindingVersion": "0.5.0" },
         "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
-        "redis": { "bindingVersion": "0.1.0" }
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-node-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-node-events" }
+        }
       },
       "channel": { "$ref": "#/channels/edge.node.version_changed" }
     },
@@ -1237,7 +1276,18 @@
         "kafka": { "bindingVersion": "0.5.0" },
         "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
-        "redis": { "bindingVersion": "0.1.0" }
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-node-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-node-events" }
+        }
       },
       "channel": { "$ref": "#/channels/edge.node.status_changed" }
     },
@@ -1248,7 +1298,18 @@
         "kafka": { "bindingVersion": "0.5.0" },
         "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
-        "redis": { "bindingVersion": "0.1.0" }
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-node-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-node-events" }
+        }
       },
       "channel": { "$ref": "#/channels/edge.node.cluster_changed" }
     },
@@ -1259,7 +1320,18 @@
         "kafka": { "bindingVersion": "0.5.0" },
         "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
-        "redis": { "bindingVersion": "0.1.0" }
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-node-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-node-events" }
+        }
       },
       "channel": { "$ref": "#/channels/edge.node.update_triggered" }
     },
@@ -1270,7 +1342,18 @@
         "kafka": { "bindingVersion": "0.5.0" },
         "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
-        "redis": { "bindingVersion": "0.1.0" }
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-node-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-node-events" }
+        }
       },
       "channel": { "$ref": "#/channels/edge.node.deleted" }
     },
@@ -1281,7 +1364,18 @@
         "kafka": { "bindingVersion": "0.5.0" },
         "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
-        "redis": { "bindingVersion": "0.1.0" }
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-execution-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-execution-events" }
+        }
       },
       "channel": { "$ref": "#/channels/edge.execution.created" }
     },
@@ -1292,7 +1386,18 @@
         "kafka": { "bindingVersion": "0.5.0" },
         "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
-        "redis": { "bindingVersion": "0.1.0" }
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-execution-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-execution-events" }
+        }
       },
       "channel": { "$ref": "#/channels/edge.execution.sent" }
     },
@@ -1303,7 +1408,18 @@
         "kafka": { "bindingVersion": "0.5.0" },
         "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
-        "redis": { "bindingVersion": "0.1.0" }
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-execution-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-execution-events" }
+        }
       },
       "channel": { "$ref": "#/channels/edge.execution.completed" }
     },
@@ -1314,7 +1430,18 @@
         "kafka": { "bindingVersion": "0.5.0" },
         "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
-        "redis": { "bindingVersion": "0.1.0" }
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-execution-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-execution-events" }
+        }
       },
       "channel": { "$ref": "#/channels/edge.execution.cancelled" }
     },
@@ -1325,7 +1452,18 @@
         "kafka": { "bindingVersion": "0.5.0" },
         "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
-        "redis": { "bindingVersion": "0.1.0" }
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-execution-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-execution-events" }
+        }
       },
       "channel": { "$ref": "#/channels/edge.execution.expired" }
     },
@@ -1336,7 +1474,18 @@
         "kafka": { "bindingVersion": "0.5.0" },
         "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
-        "redis": { "bindingVersion": "0.1.0" }
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-self-update-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-self-update-events" }
+        }
       },
       "channel": { "$ref": "#/channels/edge.self_update.created" }
     },
@@ -1347,12 +1496,31 @@
         "kafka": { "bindingVersion": "0.5.0" },
         "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
         "nats": { "bindingVersion": "0.1.0" },
-        "redis": { "bindingVersion": "0.1.0" }
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-self-update-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-self-update-events" }
+        }
       },
       "channel": { "$ref": "#/channels/edge.self_update.completed" }
     }
   },
   "servers": {
+    "aws_sns": {
+      "description": "Managed AWS service; no on-prem broker. Three topics by domain: `edge-node-events`, `edge-execution-events`, `edge-self-update-events` — must be pre-provisioned in your AWS account. Configure via EVENT_BROKER_AWS_SNS_REGION + EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX. Subscribers filter via subscription filter policies on message attributes (`type`, `corename`) — SNS has no topic-name wildcards. Durability is the subscriber's responsibility (typically SQS). Auth uses the standard AWS credential chain (IAM env vars, instance profile, etc.).",
+      "host": "sns.us-east-1.amazonaws.com",
+      "protocol": "sns",
+      "security": [{ "$ref": "#/components/securitySchemes/awsSigV4" }],
+      "summary": "AWS Simple Notification Service — managed fan-out pub/sub.",
+      "title": "AWS SNS"
+    },
     "kafka": {
       "description": "Redpanda is the recommended default — no JVM, lighter than vanilla Kafka. Configure via EVENT_BROKER_KAFKA_URLS (comma-separated `host:port` cluster list). SASL auth via EVENT_BROKER_KAFKA_USERNAME / EVENT_BROKER_KAFKA_PASSWORD / EVENT_BROKER_KAFKA_SASL_MECHANISM.",
       "host": "edge_event_broker_kafka:9092",

@@ -291,6 +291,18 @@ ADMIN_DISCOVERY_PORT=44000
 # EVENT_BROKER_MQTT_CLIENT_CERT_FILE=         # mTLS — requires SSL=true
 # EVENT_BROKER_MQTT_CLIENT_KEY_FILE=          # mTLS — requires SSL=true
 
+# AWS SNS:
+# Managed AWS service — no on-prem broker. Local dev points at LocalStack
+# (edge_event_broker_aws_sns); production must point at real AWS by leaving
+# EVENT_BROKER_AWS_SNS_ENDPOINT_URL unset and supplying real IAM credentials.
+# EVENT_BROKER_ADAPTER=aws_sns
+# EVENT_BROKER_AWS_SNS_REGION=us-east-1
+# EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX=arn:aws:sns:us-east-1:000000000000:   # LocalStack uses account 000000000000
+# EVENT_BROKER_AWS_SNS_ENDPOINT_URL=http://edge_event_broker_aws_sns:4566     # LocalStack endpoint — leave UNSET in prod
+# AWS_ACCESS_KEY_ID=test
+# AWS_SECRET_ACCESS_KEY=test
+# AWS_SESSION_TOKEN=                          # optional, only when assuming an IAM role via STS
+
 # =============================================================================
 # Background Workers & Schedulers
 # =============================================================================

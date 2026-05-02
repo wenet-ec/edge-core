@@ -21,7 +21,7 @@ Works on any Linux machine: on-premises servers, IoT devices, factory floor equi
 - **Edge ↔ Edge (VPN mesh)** — full WireGuard P2P mesh per cluster, automatic peer discovery, netclient-local DNS for `.nm.internal` hostnames, DERP/TURN relay fallback for NAT
 - **Edge ↔ Local devices (mDNS)** — agents advertise themselves via mDNS for zero-config discovery by devices on the same LAN; full LAN DNS control is a future direction (see [`docs/architecture.md`](docs/architecture.md))
 
-**Plus:** Event streaming (lifecycle events to NATS, Kafka/Redpanda, RabbitMQ, or Redis), and an MCP server for AI assistant integration (Claude, Cursor, and any MCP-compatible client).
+**Plus:** Event streaming (lifecycle events to NATS, Kafka/Redpanda, RabbitMQ, Redis, MQTT, or AWS SNS), and an MCP server for AI assistant integration (Claude, Cursor, and any MCP-compatible client).
 
 ## Who is this for
 
@@ -145,11 +145,11 @@ Tools are discovered dynamically via `tools/list` — no static spec file needed
 
 Edge Admin can publish lifecycle events to a message broker. Disabled by default — opt in by setting `EVENT_BROKER_ENABLED=true` and the adapter-specific endpoint env var.
 
-Events cover node lifecycle, command execution lifecycle, and self-update lifecycle. All follow the [CloudEvents 1.0](https://cloudevents.io) spec. Supported brokers: NATS, Kafka/Redpanda, RabbitMQ, Redis, and MQTT — pick whichever fits your stack.
+Events cover node lifecycle, command execution lifecycle, and self-update lifecycle. All follow the [CloudEvents 1.0](https://cloudevents.io) spec. Supported brokers: NATS, Kafka/Redpanda, RabbitMQ, Redis, MQTT, and AWS SNS — pick whichever fits your stack.
 
 ```bash
 EVENT_BROKER_ENABLED=true
-EVENT_BROKER_ADAPTER=nats                   # or: kafka, rabbitmq, redis, mqtt
+EVENT_BROKER_ADAPTER=nats                   # or: kafka, rabbitmq, redis, mqtt, aws_sns
 EVENT_BROKER_NATS_URLS=nats://your-broker:4222   # endpoint var is namespaced per adapter
 ```
 
@@ -170,17 +170,17 @@ To import: in Grafana go to **Dashboards → Import**, upload the JSON file, and
 
 ## Components
 
-| Directory                 | Description                                                                                            |
-| ------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `edge_admin/`             | Phoenix admin server — REST API, OpenAPI, AsyncAPI, MCP server, HTTP/SOCKS5 proxies (PostgreSQL, Oban) |
-| `edge_agent/`             | Phoenix agent — embedded SSH server, HTTP/SOCKS5 proxies, metrics exporters (SQLite, Oban)             |
-| `nexmaker/`               | Shared Elixir lib — Netmaker API + netclient CLI wrapper                                               |
-| `examples/lite/`          | Single admin, Mosquitto, no metrics — good for small fleets or resource-constrained servers            |
-| `examples/standard/`      | 4 admins across 2 clusters, EMQX, Prometheus — when you need HA or more node capacity                  |
-| `examples/relay/`         | Self-hosted DERP/TURN relay node — optional, for agents behind strict NAT                              |
-| `examples/sidecar/`       | Agent as a sidecar container (bridge networking) rather than host-networked                            |
-| `examples/event_brokers/` | NATS, Redpanda, Kafka, RabbitMQ, Redis, and MQTT compose files                                         |
-| `docs/`                   | Architecture docs and API specs                                                                        |
+| Directory                 | Description                                                                                                     |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `edge_admin/`             | Phoenix admin server — REST API, OpenAPI, AsyncAPI, MCP server, HTTP/SOCKS5 proxies (PostgreSQL, Oban)          |
+| `edge_agent/`             | Phoenix agent — embedded SSH server, HTTP/SOCKS5 proxies, metrics exporters (SQLite, Oban)                      |
+| `nexmaker/`               | Shared Elixir lib — Netmaker API + netclient CLI wrapper                                                        |
+| `examples/lite/`          | Single admin, Mosquitto, no metrics — good for small fleets or resource-constrained servers                     |
+| `examples/standard/`      | 4 admins across 2 clusters, EMQX, Prometheus — when you need HA or more node capacity                           |
+| `examples/relay/`         | Self-hosted DERP/TURN relay node — optional, for agents behind strict NAT                                       |
+| `examples/sidecar/`       | Agent as a sidecar container (bridge networking) rather than host-networked                                     |
+| `examples/event_brokers/` | NATS, Redpanda, Kafka, RabbitMQ, Redis, and MQTT compose files (AWS SNS is managed — provisioning notes inline) |
+| `docs/`                   | Architecture docs and API specs                                                                                 |
 
 ## VPN internals
 

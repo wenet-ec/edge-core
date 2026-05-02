@@ -13,6 +13,7 @@ Edge Core can publish lifecycle events to a message broker. This is opt-in — t
 | **Redis**        | `redis`    | Fire-and-forget pub/sub. No durability or replay — pick only when consumers are always-on.                  |
 | **EMQX**         | `mqtt`     | Full-featured MQTT broker. Built-in dashboard + REST API on port 18083. Good for IoT-flavoured stacks.      |
 | **Mosquitto**    | `mqtt`     | Minimal MQTT broker (~10MB). No UI, no clustering. The reference MQTT implementation.                       |
+| **AWS SNS**      | `aws_sns`  | Managed AWS service — no compose file. Provision topics in your AWS account, point Edge Admin at them.      |
 
 Pick whichever broker fits your existing stack — there is no recommended default.
 
@@ -44,6 +45,8 @@ docker compose -f cloud.yml -f ../event_brokers/emqx.yml up -d
 # Mosquitto (MQTT, minimal)
 docker compose -f cloud.yml -f ../event_brokers/mosquitto.yml up -d
 ```
+
+**AWS SNS** has no compose file — see the [AWS SNS section](#aws-sns) below.
 
 Then enable the broker in your `.env`:
 
@@ -79,6 +82,14 @@ EVENT_BROKER_ENABLED=true
 EVENT_BROKER_ADAPTER=mqtt
 EVENT_BROKER_MQTT_URL=edge_event_broker:1883
 # EVENT_BROKER_MQTT_QOS=1                     # 0|1|2, default 1 (at-least-once with broker ACK)
+
+# AWS SNS (real AWS — see "AWS SNS" section below for provisioning steps)
+EVENT_BROKER_ENABLED=true
+EVENT_BROKER_ADAPTER=aws_sns
+EVENT_BROKER_AWS_SNS_REGION=us-east-1
+EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX=arn:aws:sns:us-east-1:123456789012:
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
 ```
 
 ## Files
@@ -101,11 +112,13 @@ event_brokers/
     └── mosquitto.conf             — Mosquitto config (anonymous-allow, TLS block commented out)
 ```
 
+AWS SNS has no compose file — it's a managed service. See the [AWS SNS section](#aws-sns) below.
+
 ## Env Vars Reference
 
 ```bash
 EVENT_BROKER_ENABLED=true|false          # gate — all else ignored when false (default: false)
-EVENT_BROKER_ADAPTER=nats|kafka|rabbitmq|redis|mqtt # required when enabled
+EVENT_BROKER_ADAPTER=nats|kafka|rabbitmq|redis|mqtt|aws_sns # required when enabled
 
 # Endpoint env var is namespaced per adapter — name carries the shape:
 #   _URLS  (plural)   — adapter accepts a cluster list (NATS, Kafka)
@@ -147,8 +160,84 @@ EVENT_BROKER_MQTT_CACERT_FILE=           # custom CA bundle / pinning
 EVENT_BROKER_MQTT_CLIENT_CERT_FILE=      # mTLS — requires SSL=true
 EVENT_BROKER_MQTT_CLIENT_KEY_FILE=       # mTLS — requires SSL=true
 
+# AWS SNS — managed service, no broker URL. Provision topics in your AWS
+# account (Console / CLI / Terraform), then point Edge Admin at them.
+EVENT_BROKER_AWS_SNS_REGION=us-east-1
+EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX=arn:aws:sns:us-east-1:123456789012:
+# Auth uses the standard AWS credential chain (env vars / shared credentials
+# file / EC2 instance profile / EKS IRSA — whichever your runtime provides):
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_SESSION_TOKEN=                       # optional, when assuming an IAM role via STS
+
 # Core identifier — included in every event envelope (default: "default")
 CORE_NAME=prod-us
+```
+
+## AWS SNS
+
+AWS SNS is a managed pub/sub service — there is no on-prem broker to deploy, and no compose file to ship. The adapter publishes via the SNS API; Edge Core's responsibility ends there.
+
+### Provision the topics
+
+Three SNS topics, one per event domain. Names must match exactly:
+
+```
+edge-node-events
+edge-execution-events
+edge-self-update-events
+```
+
+Pick whichever provisioning tool you use (Console / CLI / Terraform / CDK). CLI example:
+
+```bash
+for t in edge-node-events edge-execution-events edge-self-update-events; do
+  aws sns create-topic --name "$t" --region us-east-1
+done
+```
+
+Note the account ID and region in the returned ARNs — you'll set `EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX` to `arn:aws:sns:<region>:<account-id>:`. Edge Admin appends the suffix per event.
+
+### Grant publish access
+
+Give the IAM principal Edge Admin runs as `sns:Publish` on those three topic ARNs. Minimal policy:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "sns:Publish",
+      "Resource": [
+        "arn:aws:sns:us-east-1:123456789012:edge-node-events",
+        "arn:aws:sns:us-east-1:123456789012:edge-execution-events",
+        "arn:aws:sns:us-east-1:123456789012:edge-self-update-events"
+      ]
+    }
+  ]
+}
+```
+
+For EKS, prefer **IRSA** (IAM Roles for Service Accounts) over static keys — annotate the ServiceAccount with the role ARN and leave `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` unset. ex_aws picks up role credentials automatically. For EC2, the instance profile works the same way. For other environments, set static credentials in the env file.
+
+### Subscribe consumers
+
+SNS itself doesn't store messages. To consume events, attach SNS subscriptions on your side:
+
+- **SQS queues** — most common. Create a queue per consumer, subscribe it to the topic with `RawMessageDelivery=true` so the body lands as JSON without SNS's wrapper.
+- **Lambda** — direct invoke per event.
+- **HTTPS endpoint** — webhook delivery.
+
+SNS has no topic-name wildcards. Each subscription can carry a _filter policy_ matched against message attributes — Edge Admin promotes `type` and `corename` to attributes, so filters like `{"type": [{"prefix": "edge.node."}]}` work without parsing the body.
+
+### Filter policy examples
+
+```json
+{"type": ["edge.node.status_changed"]}             // only health transitions
+{"type": [{"prefix": "edge.node."}]}               // all node events
+{"corename": ["prod-us"]}                          // events from one core instance
+{"type": ["edge.execution.completed"], "corename": ["prod-us"]}
 ```
 
 ## Bring Your Own Broker

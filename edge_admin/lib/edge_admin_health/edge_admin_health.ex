@@ -10,7 +10,7 @@ defmodule EdgeAdminHealth do
   - Netmaker API reachability
   - Netclient connection to admin cluster network
   - Proxy servers
-  - Event broker connection (only when EVENT_BROKER_ENABLED=true)
+  - Event broker connection (no-op when EVENT_BROKER_ENABLED=false)
 
   Returns 503 Service Unavailable if any check fails.
   """
@@ -19,21 +19,21 @@ defmodule EdgeAdminHealth do
 
   @health_check_error_code 503
 
+  # The list is fixed at module load time — `Plug.Router`'s `init_opts:`
+  # snapshots it before `runtime.exs` has set :event_broker_enabled, so a
+  # conditional list would freeze in the wrong state. The Event Broker check
+  # below already short-circuits to `:ok` when the broker is disabled
+  # (see `EdgeAdmin.EventBroker.healthy?/0`), so always-include is safe.
   def checks do
-    base = [
+    [
       %PlugCheckup.Check{name: "Database", module: __MODULE__, function: :database_health},
       %PlugCheckup.Check{name: "Membership", module: __MODULE__, function: :membership_health},
       %PlugCheckup.Check{name: "Metadata", module: __MODULE__, function: :metadata_health},
       %PlugCheckup.Check{name: "Netmaker API", module: __MODULE__, function: :netmaker_api_health},
       %PlugCheckup.Check{name: "Netclient", module: __MODULE__, function: :netclient_health},
-      %PlugCheckup.Check{name: "Proxy Servers", module: __MODULE__, function: :proxy_servers_health}
+      %PlugCheckup.Check{name: "Proxy Servers", module: __MODULE__, function: :proxy_servers_health},
+      %PlugCheckup.Check{name: "Event Broker", module: __MODULE__, function: :event_broker_health}
     ]
-
-    if Application.get_env(:edge_admin, :event_broker_enabled, false) do
-      base ++ [%PlugCheckup.Check{name: "Event Broker", module: __MODULE__, function: :event_broker_health}]
-    else
-      base
-    end
   end
 
   def error_code, do: @health_check_error_code

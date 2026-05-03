@@ -75,7 +75,7 @@ defmodule EdgeAdmin.Mixfile do
       {:req, "~> 0.5"},
 
       # HTTP server
-      {:bandit, "~> 1.10"},
+      {:bandit, "~> 1.11"},
       {:corsica, "~> 2.1"},
       {:ranch, "~> 2.2"},
 
@@ -148,7 +148,11 @@ defmodule EdgeAdmin.Mixfile do
       {:brod, "~> 4.5"},
       {:amqp, "~> 4.1"},
       {:redix, "~> 1.5"},
-      {:emqtt, "~> 1.15"},
+      # Source build instead of Hex so emqtt's rebar.config.script runs on our
+      # compile and honors BUILD_WITHOUT_QUIC=1 (set in the Dockerfiles). Hex
+      # flattens dynamic deps at publish time, so the Hex package always lists
+      # `quicer` as non-optional even though the script would exclude it locally.
+      {:emqtt, github: "emqx/emqtt", tag: "1.15.0"},
       {:ex_aws, "~> 2.6"},
       {:ex_aws_sns, "~> 2.3"},
       {:sweet_xml, "~> 0.7"},

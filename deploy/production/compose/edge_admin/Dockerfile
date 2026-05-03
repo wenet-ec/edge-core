@@ -23,6 +23,9 @@ RUN mix local.hex --force && \
 ENV MIX_ENV=prod
 ENV ERL_MAX_PORTS=65536
 ENV ELIXIR_MAKE_PARALLEL=true
+# Skip emqtt's optional QUIC NIF — our MQTT adapter uses TCP/TLS only, so the
+# `quicer` build (compiles Microsoft's msquic from source) is pure overhead.
+ENV BUILD_WITHOUT_QUIC=1
 
 # Copy nexmaker (path dependency) so mix deps.get can resolve it and its transitive deps
 COPY nexmaker /nexmaker

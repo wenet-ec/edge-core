@@ -39,10 +39,18 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
     1. `EdgeAdmin.EventBroker.Adapters.AwsSns` — GenServer that holds publish
        config. SNS is HTTPS-stateless, no persistent connection — every
        publish is an `ex_aws` request.
+
+  ## Children (Google Cloud Pub/Sub adapter)
+
+    1. `Goth` (named) — OAuth2 token manager for the GCP credential chain.
+       Started only when `auth: :goth` is configured.
+    2. `EdgeAdmin.EventBroker.Adapters.GooglePubsub` — GenServer that holds
+       publish config. Each publish is a Req POST to the v1 REST API.
   """
 
   use Supervisor
 
+  alias EdgeAdmin.EventBroker.Adapters.GooglePubsub
   alias EdgeAdmin.EventBroker.Adapters.Nats
 
   require Logger
@@ -88,5 +96,20 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
 
   defp build_children(:aws_sns) do
     [EdgeAdmin.EventBroker.Adapters.AwsSns]
+  end
+
+  defp build_children(:google_pubsub) do
+    config = Application.get_env(:edge_admin, :event_broker_google_pubsub, [])
+
+    case Keyword.fetch!(config, :auth) do
+      :goth ->
+        [
+          {Goth, name: GooglePubsub.goth_name()},
+          GooglePubsub
+        ]
+
+      :none ->
+        [GooglePubsub]
+    end
   end
 end

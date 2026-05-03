@@ -162,6 +162,7 @@ defmodule EdgeAdmin.EventBroker do
       :redis -> EdgeAdmin.EventBroker.Adapters.Redis
       :mqtt -> EdgeAdmin.EventBroker.Adapters.Mqtt
       :aws_sns -> EdgeAdmin.EventBroker.Adapters.AwsSns
+      :google_pubsub -> EdgeAdmin.EventBroker.Adapters.GooglePubsub
     end
   end
 

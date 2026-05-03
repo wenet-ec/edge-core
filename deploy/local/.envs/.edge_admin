@@ -244,66 +244,65 @@ ADMIN_DISCOVERY_PORT=44000
 # =============================================================================
 # Event Broker
 # =============================================================================
-# Set EVENT_BROKER_ENABLED=true to enable. Disabled by default — all publish
-# calls are no-ops when disabled.
 
 # EVENT_BROKER_ENABLED=true
 # CORE_NAME=                            # included in every envelope; defaults to "default"
 
 # NATS:
 # EVENT_BROKER_ADAPTER=nats
-# EVENT_BROKER_NATS_URLS=nats://edge_event_broker_nats:4222   # comma-separated for cluster; use tls:// for public/external broker
-# EVENT_BROKER_NATS_JETSTREAM=true      # Enable durable JetStream log (default: false)
-# Auth — pick one, mutually exclusive (token takes precedence):
-# EVENT_BROKER_NATS_TOKEN=              # shared token
-# EVENT_BROKER_NATS_USERNAME=           # username + password
+# EVENT_BROKER_NATS_URLS=nats://edge_event_broker_nats:4222   # comma-separated for cluster
+# EVENT_BROKER_NATS_JETSTREAM=true                            # durable JetStream log (default: false)
+# EVENT_BROKER_NATS_TOKEN=                                    # shared token
+# EVENT_BROKER_NATS_USERNAME=                                 # username + password
 # EVENT_BROKER_NATS_PASSWORD=
-# EVENT_BROKER_NATS_NKEY_SEED=         # NKey seed (standalone or with JWT)
-# EVENT_BROKER_NATS_JWT=               # JWT credential — used alongside NKEY_SEED
+# EVENT_BROKER_NATS_NKEY_SEED=                                # NKey seed (standalone or with JWT)
+# EVENT_BROKER_NATS_JWT=                                      # JWT credential, alongside NKEY_SEED
 
 # Kafka / Redpanda:
 # EVENT_BROKER_ADAPTER=kafka
-# EVENT_BROKER_KAFKA_URLS=edge_event_broker_kafka:9092   # comma-separated host:port list for cluster
+# EVENT_BROKER_KAFKA_URLS=edge_event_broker_kafka:9092        # comma-separated host:port list for cluster
 # EVENT_BROKER_KAFKA_USERNAME=
 # EVENT_BROKER_KAFKA_PASSWORD=
-# EVENT_BROKER_KAFKA_SASL_MECHANISM=plain   # plain (default), scram_sha_256, scram_sha_512
-# EVENT_BROKER_KAFKA_SSL=true               # enable TLS — required for public/external brokers (Redpanda Cloud, Confluent Cloud, Aiven, etc.)
+# EVENT_BROKER_KAFKA_SASL_MECHANISM=plain                     # plain | scram_sha_256 | scram_sha_512
+# EVENT_BROKER_KAFKA_SSL=true                                 # TLS, required for public/external brokers
 
 # RabbitMQ:
 # EVENT_BROKER_ADAPTER=rabbitmq
-# EVENT_BROKER_RABBITMQ_URL=amqp://edge_event_broker_rabbitmq:5672   # single URL; embed credentials: amqp://user:pass@host:port
-# EVENT_BROKER_RABBITMQ_SSL=true              # enable TLS — required for public/external brokers (CloudAMQP, etc.)
+# EVENT_BROKER_RABBITMQ_URL=amqp://edge_event_broker_rabbitmq:5672   # embed credentials: amqp://user:pass@host:port
+# EVENT_BROKER_RABBITMQ_SSL=true                              # TLS, required for public/external brokers
 
 # Redis:
 # EVENT_BROKER_ADAPTER=redis
-# EVENT_BROKER_REDIS_URL=redis://edge_event_broker_redis:6379   # single URL; embed credentials: redis://:pass@host:port
-# EVENT_BROKER_REDIS_SSL=true                # enable TLS — required for public/external brokers (Redis Cloud, Upstash, etc.)
+# EVENT_BROKER_REDIS_URL=redis://edge_event_broker_redis:6379   # embed credentials: redis://:pass@host:port
+# EVENT_BROKER_REDIS_SSL=true                                 # TLS, required for public/external brokers
 
 # MQTT (EMQX, Mosquitto, HiveMQ, AWS IoT, etc.):
 # EVENT_BROKER_ADAPTER=mqtt
-# EVENT_BROKER_MQTT_URL=edge_event_broker_mqtt:1883   # single host:port (no scheme)
-# EVENT_BROKER_MQTT_QOS=1                     # 0|1|2, default 1 (at-least-once with broker ACK)
-# Auth — pick one mode (mutually exclusive, JWT takes precedence):
-# EVENT_BROKER_MQTT_JWT=                      # JWT bearer token, sent in CONNECT password slot
-# EVENT_BROKER_MQTT_USERNAME=                 # plain credentials
+# EVENT_BROKER_MQTT_URL=edge_event_broker_mqtt:1883           # single host:port (no scheme)
+# EVENT_BROKER_MQTT_QOS=1                                     # 0|1|2, default 1
+# EVENT_BROKER_MQTT_JWT=                                      # JWT bearer (CONNECT password slot)
+# EVENT_BROKER_MQTT_USERNAME=
 # EVENT_BROKER_MQTT_PASSWORD=
-# TLS:
-# EVENT_BROKER_MQTT_SSL=true                  # enable TLS — required for public/external brokers (HiveMQ Cloud, etc.)
-# EVENT_BROKER_MQTT_CACERT_FILE=              # custom CA bundle / pinning
-# EVENT_BROKER_MQTT_CLIENT_CERT_FILE=         # mTLS — requires SSL=true
-# EVENT_BROKER_MQTT_CLIENT_KEY_FILE=          # mTLS — requires SSL=true
+# EVENT_BROKER_MQTT_SSL=true                                  # TLS, required for public/external brokers
+# EVENT_BROKER_MQTT_CACERT_FILE=                              # custom CA bundle / pinning
+# EVENT_BROKER_MQTT_CLIENT_CERT_FILE=                         # mTLS, requires SSL=true
+# EVENT_BROKER_MQTT_CLIENT_KEY_FILE=                          # mTLS, requires SSL=true
 
 # AWS SNS:
-# Managed AWS service — no on-prem broker. Local dev points at LocalStack
-# (edge_event_broker_aws_sns); production must point at real AWS by leaving
-# EVENT_BROKER_AWS_SNS_ENDPOINT_URL unset and supplying real IAM credentials.
 # EVENT_BROKER_ADAPTER=aws_sns
 # EVENT_BROKER_AWS_SNS_REGION=us-east-1
 # EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX=arn:aws:sns:us-east-1:000000000000:   # LocalStack uses account 000000000000
-# EVENT_BROKER_AWS_SNS_ENDPOINT_URL=http://edge_event_broker_aws_sns:4566     # LocalStack endpoint — leave UNSET in prod
+# EVENT_BROKER_AWS_SNS_ENDPOINT_URL=http://edge_event_broker_aws_sns:4566     # leave UNSET in prod
 # AWS_ACCESS_KEY_ID=test
 # AWS_SECRET_ACCESS_KEY=test
-# AWS_SESSION_TOKEN=                          # optional, only when assuming an IAM role via STS
+# AWS_SESSION_TOKEN=                                          # optional, when assuming an IAM role via STS
+
+# Google Cloud Pub/Sub:
+# EVENT_BROKER_ADAPTER=google_pubsub
+# EVENT_BROKER_GOOGLE_PUBSUB_PROJECT=edge-local               # any string works against the emulator
+# EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX=                 # optional, e.g. "edge-prod-"
+# EVENT_BROKER_GOOGLE_PUBSUB_EMULATOR_HOST=edge_event_broker_google_pubsub:8085   # leave UNSET in prod
+# GOOGLE_APPLICATION_CREDENTIALS=                             # service-account JSON path, real GCP only
 
 # =============================================================================
 # Background Workers & Schedulers

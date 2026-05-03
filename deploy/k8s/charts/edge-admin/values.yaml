@@ -84,7 +84,7 @@ config:
 #   HEALTH_CHECK_TIMEOUT_MS: "15000"
 #   NODE_HEALTH_CHECK_CONCURRENCY: "200"
 #   EVENT_BROKER_ENABLED: "true"
-#   EVENT_BROKER_ADAPTER: "nats"            # nats | kafka | rabbitmq | redis | mqtt | aws_sns
+#   EVENT_BROKER_ADAPTER: "nats"            # nats | kafka | rabbitmq | redis | mqtt | aws_sns | google_pubsub
 #   # Endpoint env var is namespaced per adapter (`_URLS` plural for cluster-aware,
 #   # `_URL` singular for single-endpoint). Set the one matching your adapter:
 #   EVENT_BROKER_NATS_URLS: "nats://my-nats:4222"             # NATS — comma-separated cluster
@@ -95,6 +95,13 @@ config:
 #   # AWS SNS — managed service, no broker URL; provision topics out-of-band:
 #   # EVENT_BROKER_AWS_SNS_REGION: "us-east-1"
 #   # EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX: "arn:aws:sns:us-east-1:123456789012:"
+#   # Google Cloud Pub/Sub — managed service, no broker URL; provision topics out-of-band.
+#   # On GKE, prefer Workload Identity (annotate the ServiceAccount + bind to a GSA);
+#   # leave googleApplicationCredentialsJson blank in secrets and unset GOOGLE_APPLICATION_CREDENTIALS.
+#   # Off-GKE, set secrets.googleApplicationCredentialsJson and reference the mounted file:
+#   # EVENT_BROKER_GOOGLE_PUBSUB_PROJECT: "my-project-123"
+#   # EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX: ""           # optional, e.g. "edge-prod-"
+#   # GOOGLE_APPLICATION_CREDENTIALS: "/etc/gcp/sa.json"       # path the chart mounts the SA JSON at
 #   EVENT_BROKER_MQTT_QOS: "1"              # MQTT only — 0|1|2 (default 1)
 #   EVENT_BROKER_MQTT_SSL: "true"           # MQTT only — TLS toggle
 #   EVENT_BROKER_MQTT_CACERT_FILE: "/etc/mqtt/tls/ca.crt"
@@ -175,6 +182,12 @@ secrets:
   awsAccessKeyId: ""
   awsSecretAccessKey: ""
   awsSessionToken: ""            # optional, only when assuming an IAM role via STS
+  # Google Cloud Pub/Sub auth — standard GCP credential chain. Prefer Workload
+  # Identity on GKE (annotate the ServiceAccount + bind to a GSA); leave this
+  # blank and unset GOOGLE_APPLICATION_CREDENTIALS in extraEnv. Off-GKE, paste
+  # the service-account JSON here — the chart writes it to a Secret and mounts
+  # it at /etc/gcp/sa.json. Set extraEnv.GOOGLE_APPLICATION_CREDENTIALS=/etc/gcp/sa.json.
+  googleApplicationCredentialsJson: ""
 
 migration:
   # Set to false when the image doesn't exist yet (e.g. local kind testing without a built image)

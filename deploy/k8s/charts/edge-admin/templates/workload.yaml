@@ -60,6 +60,14 @@ spec:
         - name: tun
           hostPath:
             path: /dev/net/tun
+        {{- if .Values.secrets.googleApplicationCredentialsJson }}
+        - name: gcp-sa
+          secret:
+            secretName: {{ include "edge-admin.fullname" . }}-gcp-sa
+            items:
+              - key: sa.json
+                path: sa.json
+        {{- end }}
         {{- with .Values.extraVolumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -91,6 +99,11 @@ spec:
             {{- if $isStatefulSet }}
             - name: netclient-state
               mountPath: /etc/netclient
+            {{- end }}
+            {{- if .Values.secrets.googleApplicationCredentialsJson }}
+            - name: gcp-sa
+              mountPath: /etc/gcp
+              readOnly: true
             {{- end }}
             {{- with .Values.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}

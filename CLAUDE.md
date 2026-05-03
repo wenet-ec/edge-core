@@ -286,7 +286,8 @@ edge_core/
 - `event_broker/adapters/rabbitmq.ex` - RabbitMQ adapter (amqp); durable topic exchange `edge.events`
 - `event_broker/adapters/redis.ex` - Redis adapter (redix); fire-and-forget pub/sub, channel = event type
 - `event_broker/adapters/mqtt.ex` - MQTT adapter (emqtt); pub/sub, configurable QoS, topic = event type with `.` rewritten to `/`
-- `event_broker/adapters/aws_sns.ex` - AWS SNS adapter (ex_aws_sns + req); managed pub/sub, three domain topics, `type`/`corename` promoted to message attributes for filter policies
+- `event_broker/adapters/aws_sns.ex` - AWS SNS adapter (ex_aws_sns + req); managed pub/sub, domain topics, `type`/`corename` promoted to message attributes for filter policies
+- `event_broker/adapters/google_pubsub.ex` - Google Cloud Pub/Sub adapter (goth + raw req against the v1 REST API); managed pub/sub, domain topics, `type`/`corename` promoted to message attributes for filter expressions
 - `event_broker/workers/publish_event_worker.ex` - Oban worker for async broker delivery
 
 **Edge Agent (`edge_agent/lib/edge_agent/`):**
@@ -383,6 +384,7 @@ Admin background work is split between two schedulers with different semantics:
 - Redis (event broker, opt-in): localhost:46379
 - MQTT (event broker, opt-in): localhost:41883 (MQTT), localhost:48084 (WebSocket), http://localhost:48086 (EMQX Dashboard + REST API)
 - AWS SNS via LocalStack (event broker, opt-in, local-dev only): http://localhost:44566 — production points at real AWS
+- Google Pub/Sub via emulator (event broker, opt-in, local-dev only): localhost:48087 (gRPC) — production points at real GCP
 
 **Edge Services:**
 
@@ -420,7 +422,7 @@ Production files follow the same pattern in `deploy/production/.envs/`
 - `SECRET_KEY_BASE` - Phoenix secret for sessions and encryption
 - `PHX_HOST` - Public hostname for admin API
 - `EVENT_BROKER_ENABLED` - `true` to enable event publishing (default: `false`)
-- `EVENT_BROKER_ADAPTER` - `nats`, `kafka`, `rabbitmq`, `redis`, `mqtt`, or `aws_sns` (required when enabled)
+- `EVENT_BROKER_ADAPTER` - `nats`, `kafka`, `rabbitmq`, `redis`, `mqtt`, `aws_sns`, or `google_pubsub` (required when enabled)
 - Adapter-specific endpoint env var (required when enabled):
   - `EVENT_BROKER_NATS_URLS` / `EVENT_BROKER_KAFKA_URLS` — comma-separated cluster list (plural)
   - `EVENT_BROKER_RABBITMQ_URL` / `EVENT_BROKER_REDIS_URL` / `EVENT_BROKER_MQTT_URL` — single endpoint (singular)
@@ -434,6 +436,10 @@ Production files follow the same pattern in `deploy/production/.envs/`
 - `EVENT_BROKER_AWS_SNS_REGION` / `EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX` - AWS SNS region + topic ARN prefix (required for `aws_sns` adapter)
 - `EVENT_BROKER_AWS_SNS_ENDPOINT_URL` - override only for LocalStack/CI; leave UNSET in production
 - `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_SESSION_TOKEN` - AWS credentials, resolved by ex_aws's standard chain (env → instance profile → IRSA)
+- `EVENT_BROKER_GOOGLE_PUBSUB_PROJECT` - GCP project ID (required for `google_pubsub` adapter)
+- `EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX` - optional topic-ID prefix when sharing one project across multiple cores
+- `EVENT_BROKER_GOOGLE_PUBSUB_EMULATOR_HOST` - override only for the official Pub/Sub emulator (host:port, no scheme); leave UNSET in production
+- `GOOGLE_APPLICATION_CREDENTIALS` - GCP service-account JSON path, resolved by goth's standard chain (env → metadata server / Workload Identity)
 - `CORE_NAME` - Identifies this core instance in every event envelope (default: `"default"`)
 
 ## Technology Stack

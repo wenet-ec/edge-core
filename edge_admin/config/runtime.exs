@@ -458,92 +458,47 @@ config :nexmaker,
 config :os_mon,
   start_memsup: false
 
-# =============================================================================
-# Event Broker
-# =============================================================================
-# Set EVENT_BROKER_ENABLED=true to enable. When disabled (default), all
-# publish calls are immediate no-ops — no connections, no processes started.
-#
-# When enabled, EVENT_BROKER_ADAPTER is required, plus the adapter-specific
-# endpoint var below. CORE_NAME is shared across all adapters — included in
-# every event envelope.
-#
-# Endpoint env vars are namespaced per adapter:
-#   _URLS  (plural)  — adapter accepts a cluster list (NATS, Kafka)
-#   _URL   (singular) — adapter takes a single endpoint (RabbitMQ, Redis, MQTT)
-#
-#   EVENT_BROKER_ENABLED=true
-#   EVENT_BROKER_ADAPTER=nats|kafka|rabbitmq|redis|mqtt
-#   CORE_NAME=prod-us   # optional, defaults to "default"
-#
-# NATS (pub/sub):
-#   EVENT_BROKER_NATS_URLS=nats://edge_event_broker_nats:4222   # comma-separated for cluster
-#   EVENT_BROKER_NATS_JETSTREAM=true   # optional, enable durable JetStream log (default: false)
-#   # Auth — pick one, mutually exclusive:
-#   EVENT_BROKER_NATS_TOKEN=           # shared token (simple deployments)
-#   EVENT_BROKER_NATS_USERNAME=        # username + password (alternative to token)
-#   EVENT_BROKER_NATS_PASSWORD=
-#   EVENT_BROKER_NATS_NKEY_SEED=      # NKey seed (standalone or with JWT)
-#   EVENT_BROKER_NATS_JWT=            # JWT credential — used alongside NKEY_SEED
-#
-# Kafka / Redpanda:
-#   EVENT_BROKER_KAFKA_URLS=edge_event_broker_kafka:9092   # comma-separated for cluster
-#   EVENT_BROKER_KAFKA_USERNAME=admin    # optional, omit if no auth
-#   EVENT_BROKER_KAFKA_PASSWORD=secret   # optional, omit if no auth
-#   EVENT_BROKER_KAFKA_SASL_MECHANISM=plain   # plain (default), scram_sha_256, scram_sha_512
-#   EVENT_BROKER_KAFKA_SSL=true          # enable TLS — required for external brokers
-#
-# RabbitMQ:
-#   EVENT_BROKER_RABBITMQ_URL=amqp://edge_event_broker_rabbitmq:5672   # embed credentials: amqp://user:pass@host:port
-#   EVENT_BROKER_RABBITMQ_SSL=true   # enable TLS — required for external brokers (CloudAMQP, etc.)
-#
-# Redis (pub/sub, fire-and-forget):
-#   EVENT_BROKER_REDIS_URL=redis://edge_event_broker_redis:6379   # embed credentials: redis://:pass@host:port
-#   EVENT_BROKER_REDIS_SSL=true   # enable TLS — required for external brokers (Redis Cloud, Upstash, etc.)
-#
-# MQTT (pub/sub):
-#   EVENT_BROKER_MQTT_URL=edge_event_broker_mqtt:1883   # host:port — single endpoint (one broker per client)
-#   EVENT_BROKER_MQTT_QOS=1                 # 0|1|2, default 1 (at-least-once with broker ACK)
-#   # Auth — mutually exclusive (JWT precedence over username/password):
-#   EVENT_BROKER_MQTT_JWT=                  # JWT bearer token, sent in CONNECT password slot
-#   EVENT_BROKER_MQTT_USERNAME=             # plain credentials
-#   EVENT_BROKER_MQTT_PASSWORD=
-#   # TLS:
-#   EVENT_BROKER_MQTT_SSL=true              # enable TLS — required for external brokers
-#   EVENT_BROKER_MQTT_CACERT_FILE=          # custom CA bundle / pinning
-#   EVENT_BROKER_MQTT_CLIENT_CERT_FILE=     # mTLS — requires SSL=true
-#   EVENT_BROKER_MQTT_CLIENT_KEY_FILE=      # mTLS — requires SSL=true
-#
-# AWS SNS (managed service — no on-prem broker):
-#   # Topics must be pre-provisioned in your AWS account: edge-node-events,
-#   # edge-execution-events, edge-self-update-events. The adapter constructs
-#   # ARNs from the prefix below and publishes via the SNS API.
-#   EVENT_BROKER_AWS_SNS_REGION=us-east-1
-#   EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX=arn:aws:sns:us-east-1:123456789012:
-#   # Auth uses the standard AWS credential chain — env vars, shared credentials
-#   # file, or instance profile / IAM role assumption (resolved by ex_aws):
-#   AWS_ACCESS_KEY_ID=
-#   AWS_SECRET_ACCESS_KEY=
-#   AWS_SESSION_TOKEN=                      # optional, when assuming an IAM role
-#   # Endpoint override — leave UNSET in production. Only set in test/staging
-#   # to point at LocalStack or another SNS-compatible emulator.
-#   EVENT_BROKER_AWS_SNS_ENDPOINT_URL=
 config :sentry,
   dsn: get_env("SENTRY_DSN"),
   environment_name: get_env("SENTRY_ENVIRONMENT_NAME"),
   client: EdgeAdmin.Sentry.ReqClient,
   before_send: {EdgeAdmin.Sentry, :before_send}
 
+# =============================================================================
+# Event Broker
+# =============================================================================
+# Disabled by default; publish calls are no-ops. Enable with EVENT_BROKER_ENABLED=true,
+# pick one EVENT_BROKER_ADAPTER, and set the adapter's vars (see deploy/.../.envs/.edge_admin
+# for the per-adapter env var lists). Endpoint vars use _URLS (plural) for adapters that
+# take a cluster list (NATS, Kafka) and _URL (singular) for single-endpoint adapters
+# (RabbitMQ, Redis, MQTT). Managed-service adapters (AWS SNS, Google Pub/Sub) have no
+# endpoint var — auth + region/project envs locate the service.
 if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
   event_broker_adapter =
     case get_env!("EVENT_BROKER_ADAPTER") do
-      "nats" -> :nats
-      "kafka" -> :kafka
-      "rabbitmq" -> :rabbitmq
-      "redis" -> :redis
-      "mqtt" -> :mqtt
-      "aws_sns" -> :aws_sns
-      other -> raise "Unknown EVENT_BROKER_ADAPTER=#{other} — valid values: nats, kafka, rabbitmq, redis, mqtt, aws_sns"
+      "nats" ->
+        :nats
+
+      "kafka" ->
+        :kafka
+
+      "rabbitmq" ->
+        :rabbitmq
+
+      "redis" ->
+        :redis
+
+      "mqtt" ->
+        :mqtt
+
+      "aws_sns" ->
+        :aws_sns
+
+      "google_pubsub" ->
+        :google_pubsub
+
+      other ->
+        raise "Unknown EVENT_BROKER_ADAPTER=#{other} — valid values: nats, kafka, rabbitmq, redis, mqtt, aws_sns, google_pubsub"
     end
 
   config :edge_admin,
@@ -709,5 +664,28 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
 
       config :ex_aws, :http_client, ExAws.Request.Req
       config :ex_aws, :sns, sns_config
+
+    :google_pubsub ->
+      # Topics pre-provisioned in the operator's GCP project. Auth is the standard
+      # GCP chain via goth. Emulator handling lives entirely here: setting
+      # EVENT_BROKER_GOOGLE_PUBSUB_EMULATOR_HOST flips base_url + auth so the
+      # adapter has no concept of "emulator".
+      base_url =
+        case get_env("EVENT_BROKER_GOOGLE_PUBSUB_EMULATOR_HOST") do
+          nil -> "https://pubsub.googleapis.com"
+          host -> "http://" <> host
+        end
+
+      auth =
+        case get_env("EVENT_BROKER_GOOGLE_PUBSUB_EMULATOR_HOST") do
+          nil -> :goth
+          _ -> :none
+        end
+
+      config :edge_admin, :event_broker_google_pubsub,
+        project: get_env!("EVENT_BROKER_GOOGLE_PUBSUB_PROJECT"),
+        topic_id_prefix: get_env("EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX", :string, ""),
+        base_url: base_url,
+        auth: auth
   end
 end

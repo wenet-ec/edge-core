@@ -8,7 +8,7 @@ Interactive viewer: `/asyncdoc` on a running admin. Raw spec: `GET /api/asyncapi
 
 ## Overview
 
-Edge Admin publishes lifecycle events to a configured message broker (NATS, Kafka/Redpanda, RabbitMQ, Redis, MQTT, or AWS SNS). All events follow the [CloudEvents 1.0](https://cloudevents.io) spec. Edge Admin publishes and forgets — it has no knowledge of consumers.
+Edge Admin publishes lifecycle events to a configured message broker (NATS, Kafka/Redpanda, RabbitMQ, Redis, MQTT, AWS SNS, or Google Cloud Pub/Sub). All events follow the [CloudEvents 1.0](https://cloudevents.io) spec. Edge Admin publishes and forgets — it has no knowledge of consumers.
 
 ### Event Envelope
 
@@ -53,7 +53,7 @@ edge.execution.completed ← only completed executions
 edge.>                   ← everything
 ```
 
-**JetStream mode** (`EVENT_BROKER_NATS_JETSTREAM=true`): three durable streams are auto-created on startup:
+**JetStream mode** (`EVENT_BROKER_NATS_JETSTREAM=true`): durable streams (one per domain) are auto-created on startup:
 
 ```
 Stream: EDGE_NODE_EVENTS          captures: edge.node.>
@@ -157,6 +157,39 @@ Filter policy examples:
 ```
 
 **Durability is the subscriber's concern.** SNS itself doesn't store messages. Subscribers buy durability by being SQS queues (the standard SNS+SQS fan-out pattern), Lambda functions, or HTTPS endpoints with their own retention.
+
+### Google Cloud Pub/Sub
+
+Three Pub/Sub topics by domain — must be pre-provisioned in your GCP project. The adapter constructs full resource names from `EVENT_BROKER_GOOGLE_PUBSUB_PROJECT` (+ optional `EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX`):
+
+| Domain             | Topic ID                  |
+| ------------------ | ------------------------- |
+| Node events        | `edge-node-events`        |
+| Execution events   | `edge-execution-events`   |
+| Self-update events | `edge-self-update-events` |
+
+Pub/Sub has no topic-name wildcards. Subscribers filter via _subscription filter expressions_ matched against **message attributes**. The adapter promotes two attributes on every publish:
+
+```
+type      = "edge.node.status_changed"
+corename  = "prod-us"
+```
+
+The body is the CloudEvents envelope JSON, base64-encoded inside the Pub/Sub `data` field (the wire format requires base64; client libraries auto-decode for subscribers).
+
+Filter expression examples ([Pub/Sub filtering syntax](https://cloud.google.com/pubsub/docs/subscription-message-filter#filtering_syntax)):
+
+```
+hasPrefix(attributes.type, "edge.node.")                                      # all node events
+attributes.type = "edge.execution.completed"                                  # only completed executions
+attributes.corename = "prod-us"                                               # only this core
+NOT (attributes.type = "edge.node.deleted")                                   # exclude deletes
+attributes.corename = "prod-us" AND hasPrefix(attributes.type, "edge.node.")
+```
+
+Filters are set on subscription creation and **cannot be changed later** — to change a filter, recreate the subscription.
+
+**Durability is built into the subscription.** Pub/Sub buffers messages per subscription (default 7-day retention, max 31) until the subscriber ACKs them. This is closer to SNS+SQS combined than pure SNS — durability is on by default once a subscription exists. If no subscription exists when Edge Core publishes, the message is dropped (same as SNS without subscribers).
 
 ---
 
@@ -320,6 +353,7 @@ Edge Core publishes accurately regardless of broker. Durability, replay, and ret
 - **Redis** — pure pub/sub (`PUBLISH`/`SUBSCRIBE`). No queue, no persistence, no replay. Messages go only to currently connected subscribers. If no subscriber is connected, the message is gone.
 - **MQTT** — pub/sub. QoS 0/1/2 governs only the delivery handshake, not durability. The broker itself doesn't retain history (no replay, no consumer offsets). Subscribers wanting offline queueing connect with persistent sessions; subscribers wanting last-message-on-topic semantics rely on broker retained messages (Edge Core does not publish with retain=true).
 - **AWS SNS** — fan-out pub/sub. SNS itself stores nothing — once delivered to subscribers (or delivery is exhausted), the message is gone. Durability is the subscriber's responsibility: subscribe an SQS queue for replay (SQS retains up to 14 days), or accept fire-and-forget for Lambda/HTTPS subscribers. SNS retries delivery to its own subscribers on failure (with exponential backoff) but never holds messages for late subscribers.
+- **Google Cloud Pub/Sub** — fan-out pub/sub with **per-subscription buffering** built in. Each subscription holds un-ACKed messages for its configured retention (default 7 days, max 31), redelivering until ACKed. Closer to SNS+SQS combined than pure SNS — subscribers get durability for free without standing up a separate queue. If no subscription exists at publish time, the message is dropped (same as SNS without subscribers).
 
 In all cases: each publish is a **full snapshot**, not a diff. If events are missed, the next event is still self-contained.
 

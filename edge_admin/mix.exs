@@ -103,7 +103,7 @@ defmodule EdgeAdmin.Mixfile do
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
 
       # Errors
-      {:sentry, "~> 12.0"},
+      {:sentry, "~> 13.0"},
 
       # Telemetry
       {:prom_ex, "~> 1.11"},
@@ -156,6 +156,10 @@ defmodule EdgeAdmin.Mixfile do
       {:ex_aws, "~> 2.6"},
       {:ex_aws_sns, "~> 2.3"},
       {:sweet_xml, "~> 0.7"},
+      # Google Cloud Pub/Sub auth — OAuth2 token manager + refresh. No
+      # google_api_pub_sub: it's Tesla-bound; we hit the v1 REST API directly
+      # with Req instead, since publish is a single endpoint.
+      {:goth, "~> 1.4"},
 
       # Nexmaker library
       {:nexmaker, path: "../nexmaker"}

@@ -157,6 +157,24 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
             "Durability is the subscriber's responsibility (typically SQS). " <>
             "Auth uses the standard AWS credential chain (IAM env vars, instance profile, etc.).",
         "security" => [%{"$ref" => "#/components/securitySchemes/awsSigV4"}]
+      },
+      "google_pubsub" => %{
+        "host" => "pubsub.googleapis.com",
+        "protocol" => "googlepubsub",
+        "title" => "Google Cloud Pub/Sub",
+        "summary" => "Google Cloud Pub/Sub — managed fan-out pub/sub.",
+        "description" =>
+          "Managed GCP service; no on-prem broker. Three topics by domain: " <>
+            "`edge-node-events`, `edge-execution-events`, `edge-self-update-events` " <>
+            "— must be pre-provisioned in your GCP project. Configure via " <>
+            "EVENT_BROKER_GOOGLE_PUBSUB_PROJECT (+ optional EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX). " <>
+            "Subscribers filter via subscription filter expressions on message attributes " <>
+            "(`type`, `corename`) — Pub/Sub has no topic-name wildcards. " <>
+            "Durability is built in: each subscription buffers messages until ACKed " <>
+            "(default 7-day retention, max 31). " <>
+            "Auth uses the standard GCP credential chain — service-account JSON via " <>
+            "GOOGLE_APPLICATION_CREDENTIALS, Workload Identity on GKE, or the GCE metadata server.",
+        "security" => [%{"$ref" => "#/components/securitySchemes/googleOauth2"}]
       }
     }
   end
@@ -254,14 +272,16 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
              "bindingVersion" => "0.2.0"
            },
            "sns" => sns_operation_binding(channel_id)
-           # Note: MQTT topic for each event is the channel address with `.` rewritten
+           # MQTT topic for each event is the channel address with `.` rewritten
            # to `/` (e.g. `edge.node.registered` → `edge/node/registered`) so MQTT
            # segment wildcards (`+`, `#`) work as expected. QoS shown above is the
            # default; configurable via EVENT_BROKER_MQTT_QOS.
-           # Note: SNS routes by topic ARN (one of three pre-provisioned domain
-           # topics) and by message attributes — `type` and `corename` are promoted
-           # to attributes so subscription filter policies can match without parsing
-           # the body. The body still carries the full CloudEvents envelope.
+           # SNS routes by topic ARN (one of three pre-provisioned domain topics)
+           # and by message attributes — `type` and `corename` are promoted to
+           # attributes so subscription filter policies can match without parsing
+           # the body. Google Cloud Pub/Sub routes the same way; its bindings live
+           # on the channel + message objects (the spec defines no operation-level
+           # bindings for googlepubsub).
          }
        }}
     end)
@@ -508,13 +528,28 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           "bindingVersion" => "0.5.0"
         },
         "amqp" => %{
-          "bindingVersion" => "0.3.0",
-          "contentEncoding" => "UTF-8",
-          "messageType" => "application/json"
+          # Per AsyncAPI's amqp binding spec: `contentEncoding` is a MIME
+          # encoding (gzip/identity/etc), not a charset; `messageType` is an
+          # application-specific type, not a MIME type. We're publishing JSON
+          # bytes with no AMQP-specific application typing, so neither field
+          # applies and we leave them unset. The Message Object's top-level
+          # `contentType: application/json` covers MIME signaling.
+          "bindingVersion" => "0.3.0"
         },
         "mqtt" => %{
           "payloadFormatIndicator" => 1,
           "contentType" => "application/json",
+          "bindingVersion" => "0.2.0"
+        },
+        "googlepubsub" => %{
+          # type + corename are promoted from envelope fields to message
+          # attributes on every publish, so subscription filter expressions
+          # like `hasPrefix(attributes.type, "edge.node.")` can route without
+          # parsing the body. Body remains the full CloudEvents envelope.
+          "attributes" => %{
+            "type" => "string",
+            "corename" => "string"
+          },
           "bindingVersion" => "0.2.0"
         }
       },
@@ -782,6 +817,23 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
             "for STS / assumed roles), shared credentials file, or EC2/ECS/EKS instance metadata. " <>
             "AsyncAPI 3 has no first-class SigV4 type — modeled here as httpApiKey for documentation; " <>
             "the actual signing is handled by ex_aws."
+      },
+      "googleOauth2" => %{
+        "type" => "oauth2",
+        "flows" => %{
+          "clientCredentials" => %{
+            "tokenUrl" => "https://oauth2.googleapis.com/token",
+            "availableScopes" => %{
+              "https://www.googleapis.com/auth/pubsub" => "Publish to Pub/Sub topics"
+            }
+          }
+        },
+        "scopes" => ["https://www.googleapis.com/auth/pubsub"],
+        "description" =>
+          "Google Cloud Pub/Sub OAuth2 bearer tokens. Credentials resolved by goth via the standard GCP " <>
+            "credential chain: GOOGLE_APPLICATION_CREDENTIALS service-account JSON, Workload Identity on GKE, " <>
+            "or the GCE metadata server. The adapter requests tokens from goth on each publish; goth caches " <>
+            "and refreshes them transparently."
       }
     }
   end

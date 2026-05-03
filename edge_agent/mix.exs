@@ -74,7 +74,7 @@ defmodule EdgeAgent.Mixfile do
       {:req, "~> 0.5"},
 
       # HTTP server
-      {:bandit, "~> 1.10"},
+      {:bandit, "~> 1.11"},
       {:ranch, "~> 2.2"},
       {:phoenix, "~> 1.8"},
       {:phoenix_live_reload, "~> 1.6", only: :dev},

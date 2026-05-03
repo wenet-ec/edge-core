@@ -26,6 +26,7 @@ volumes:
   production_edge_event_broker_redis_data: {}
   production_edge_event_broker_mqtt_data: {}
   production_edge_event_broker_aws_sns_data: {}
+  production_edge_event_broker_google_pubsub_data: {}
 
 x-edge-admin-base: &edge-admin-base
   build:
@@ -46,6 +47,7 @@ x-edge-admin-base: &edge-admin-base
     - "edge_event_broker_redis:172.25.0.113"
     - "edge_event_broker_mqtt:172.25.0.114"
     - "edge_event_broker_aws_sns:172.25.0.115"
+    - "edge_event_broker_google_pubsub:172.25.0.116"
   depends_on:
     edge_vpn:
       condition: service_healthy
@@ -493,3 +495,44 @@ services:
   #     start_period: 20s
   #   ports:
   #     - "44566:4566"   # LocalStack edge port
+
+  edge_event_broker_google_pubsub:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    container_name: production_edge_event_broker_google_pubsub
+    networks:
+      production_edge_core:
+        ipv4_address: 172.25.0.116
+    command:
+      - gcloud
+      - beta
+      - emulators
+      - pubsub
+      - start
+      - --host-port=0.0.0.0:8085   # default bind is [::1]:8085 — unreachable from outside container
+      - --data-dir=/data           # persists topic + subscription definitions across restarts
+    volumes:
+      - production_edge_event_broker_google_pubsub_data:/data
+    healthcheck:                                                          # emulator serves gRPC on 8085, but
+      test: ["CMD", "curl", "-fs", "http://127.0.0.1:8085/"]              # curl GET / returns 200 once it's up
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+    ports:
+      - "48087:8085"   # Pub/Sub emulator gRPC
+
+  edge_event_broker_google_pubsub_init:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    container_name: production_edge_event_broker_google_pubsub_init
+    networks:
+      - production_edge_core
+    environment:
+      - PUBSUB_EMULATOR_HOST=edge_event_broker_google_pubsub:8085   # init script hits this directly via curl
+      - PUBSUB_PROJECT_ID=edge-local                                # any string works locally; admin env must match
+    volumes:
+      - ../local/compose/edge_event_broker/google_pubsub/init.sh:/init.sh:ro
+    depends_on:
+      edge_event_broker_google_pubsub:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["/bin/bash", "/init.sh"]

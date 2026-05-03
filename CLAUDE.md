@@ -414,6 +414,7 @@ Production files follow the same pattern in `deploy/production/.envs/`
 - `DB_ADAPTER` - `postgres` (default) or `sqlite`. Selects the admin's database engine at runtime — no rebuild needed. SQLite is single-instance only.
 - `DATABASE_URL` - PostgreSQL connection string (admin, alternative to individual DB\_\* vars). Ignored when `DB_ADAPTER=sqlite`.
 - `SQLITE_DB_PATH` - SQLite DB file path (default `/app/data/edge/edge_admin.db`). Ignored when `DB_ADAPTER=postgres`.
+- `DB_MIGRATION_LOCK` - `pg_advisory_lock` (default) or `disabled`. Selects Ecto's migration locking strategy. `pg_advisory_lock` is correct for direct Postgres connections but needs a session-mode connection (so when running behind PgBouncer transaction-mode pooling, point migrations at the primary directly, same pattern as `DATABASE_NOTIFIER_URL`); `disabled` relies on the migrate sidecar to serialize admins and is the right pick when no direct-to-primary route is available. Ecto's own `:table_lock` default is deliberately not exposed — its two-transaction implementation has historically deadlocked on this codebase under heavy DDL even with a single admin.
 - `NETMAKER_*` - Netmaker API credentials, URLs, and tokens
 - `ENROLLMENT_TOKEN` - Agent VPN enrollment key
 - `SECRET_KEY_BASE` - Phoenix secret for sessions and encryption

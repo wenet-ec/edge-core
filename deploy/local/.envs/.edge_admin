@@ -3,23 +3,15 @@
 # =============================================================================
 # Database
 # =============================================================================
-# Selects the database engine at runtime — no rebuild needed.
-#   postgres (default) — PostgreSQL, required for multi-admin Erlang clustering
-#   sqlite             — SQLite, single-instance only, no external DB needed
+# DB_ADAPTER selects the engine at runtime — no rebuild needed.
+#   postgres (default) — required for multi-admin Erlang clustering
+#   sqlite             — single-instance only, no external DB needed
 DB_ADAPTER=postgres
 
-# --- PostgreSQL (DB_ADAPTER=postgres) ---
-# Ignored when DB_ADAPTER=sqlite.
-# Two configuration styles, all-or-nothing per repo:
-#
-#   1. URL form:       DATABASE_URL=postgresql://user:pass@host:port/db
-#                      (and DATABASE_NOTIFIER_URL=... for the notifier)
-#   2. Fragment form:  DB_HOST + DB_PORT + DB_NAME + DB_USER + DB_PASSWORD
-#                      (and DB_NOTIFIER_HOST + DB_NOTIFIER_PORT for the notifier)
-#
-# When DATABASE_URL is set, the fragments are ignored for that repo.
-# The notifier resolves independently — DATABASE_URL does NOT cascade to it.
-# DB_POOL_SIZE, DB_SSL, DB_IPV6 always come from these env vars regardless of style.
+# --- PostgreSQL connection (DB_ADAPTER=postgres) ---
+# Use either fragment form (the DB_* vars below) or URL form (DATABASE_URL).
+# All-or-nothing per repo: when DATABASE_URL is set, every DB_* fragment is
+# ignored. DB_POOL_SIZE / DB_SSL / DB_IPV6 always apply, regardless of form.
 
 # DATABASE_URL=postgresql://edge_admin_user:edge_admin_password@edge_admin_db:5432/edge_admin_local
 DB_HOST=edge_admin_db
@@ -28,17 +20,27 @@ DB_NAME=edge_admin_local
 DB_USER=edge_admin_user
 DB_PASSWORD=edge_admin_password
 
-# --- SQLite (DB_ADAPTER=sqlite) ---
-# Ignored when DB_ADAPTER=postgres.
-# SQLITE_DB_PATH=/app/data/edge/edge_admin.db  # default if unset
-
-# --- Shared ---
 DB_POOL_SIZE=5
 DB_SSL=false
 # DB_IPV6=false
 
-# Oban notifier — falls back to DB_HOST/DB_PORT (or DATABASE_URL's host/port) when unset.
-# Override in prod to bypass PgBouncer (set to the primary -rw service).
+# --- SQLite connection (DB_ADAPTER=sqlite) ---
+# SQLITE_DB_PATH=/app/data/edge/edge_admin.db  # default if unset
+
+# --- Migrations (postgres only) ---
+# Lock strategy. Default: pg_advisory_lock.
+#   pg_advisory_lock  — Default. Needs a session-mode DB connection (does NOT
+#                       work through PgBouncer transaction pooling — point
+#                       migrations at the primary directly when behind one).
+#   disabled          — No DB-level lock. Migrate sidecar serializes admins.
+# DB_MIGRATION_LOCK=pg_advisory_lock
+
+# --- Oban notifier (postgres only) ---
+# Oban uses LISTEN/NOTIFY for cross-admin wake-ups, which session-pinned
+# poolers (PgBouncer transaction mode, CNPG -pooler, Supabase pgbouncer)
+# break. Set these to point at the primary directly when the main connection
+# goes through a pooler. Required when DATABASE_URL is set (URL-form has no
+# fallback). Falls back to DB_HOST/DB_PORT when unset (fragment form only).
 # DATABASE_NOTIFIER_URL=postgresql://user:pass@edge-admin-db-rw:5432/edge_admin_production
 # DB_NOTIFIER_HOST=edge-admin-db-rw
 # DB_NOTIFIER_PORT=5432

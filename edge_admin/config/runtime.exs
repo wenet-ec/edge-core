@@ -102,6 +102,36 @@ case db_adapter do
         ]
     end
 
+    # Migration lock strategy. Default: pg_advisory_lock.
+    #   pg_advisory_lock  — Default. Uses pg_try_advisory_lock outside any
+    #                       txn. Clean correctness story for direct-to-Postgres
+    #                       deployments. Requires session-mode DB connection,
+    #                       so when running behind PgBouncer transaction-mode
+    #                       pooling, point migrations at the primary directly
+    #                       (same pattern as DATABASE_NOTIFIER_URL).
+    #   disabled          — No DB-level lock. The migrate sidecar
+    #                       (deploy/{local,production}/compose/edge_admin/
+    #                       migrate) is the only thing serializing concurrent
+    #                       admins. Use only when an advisory lock is not
+    #                       viable (e.g. PgBouncer with no direct-to-primary
+    #                       route for migrations).
+    #
+    # Note: Ecto's own :table_lock default is deliberately not exposed here.
+    # Its two-txn implementation (lock-holder + Task running DDL) has
+    # historically deadlocked on this codebase under heavy DDL even with a
+    # single admin.
+    migration_lock =
+      case get_env("DB_MIGRATION_LOCK", :string, "pg_advisory_lock") do
+        "pg_advisory_lock" ->
+          :pg_advisory_lock
+
+        "disabled" ->
+          nil
+
+        other ->
+          raise "invalid DB_MIGRATION_LOCK=#{inspect(other)} (expected: pg_advisory_lock | disabled)"
+      end
+
     # Dedicated repo for Oban.Notifiers.Postgres LISTEN connection. In prod,
     # point at the primary -rw service to bypass PgBouncer, whose transaction-mode
     # pooling breaks session-pinned LISTEN. Fragment-form fallbacks: DB_NOTIFIER_HOST
@@ -117,7 +147,10 @@ case db_adapter do
     config :edge_admin,
            Postgres,
            repo_config.("DATABASE_URL", "DB_HOST", "DB_PORT") ++
-             [pool_size: get_env!("DB_POOL_SIZE", :integer)]
+             [
+               pool_size: get_env!("DB_POOL_SIZE", :integer),
+               migration_lock: migration_lock
+             ]
 end
 
 # NOTE: Only set `server` to `true` if `PHX_SERVER` is present. We cannot set

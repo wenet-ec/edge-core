@@ -17,14 +17,12 @@ config :edge_admin, EdgeAdmin.PromEx,
   metrics_server: :disabled
 
 config :edge_admin, EdgeAdmin.Repo.Postgres,
-  migration_lock: nil,
   priv: "priv/repo",
   start_apps_before_migration: [:ssl]
 
 # Connection-only repo for Oban.Notifiers.Postgres — not in :ecto_repos so
 # migrations don't run against it. Bypasses PgBouncer in prod.
 config :edge_admin, EdgeAdmin.Repo.Postgres.Notifier,
-  migration_lock: nil,
   priv: "priv/repo",
   start_apps_before_migration: [:ssl]
 

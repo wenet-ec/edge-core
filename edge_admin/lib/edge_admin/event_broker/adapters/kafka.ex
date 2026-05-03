@@ -8,9 +8,10 @@ defmodule EdgeAdmin.EventBroker.Adapters.Kafka do
 
   ## Topics
 
-      edge-node-events                  partition key: node_id
-      edge-command-execution-events     partition key: command_id
-      edge-self-update-request-events   partition key: request_id
+      edge-nodes-events           partition key: node_id (or enrollment_key_id for enrollment events)
+      edge-commands-events        partition key: command_execution_id
+      edge-self-updates-events    partition key: self_update_request_id
+      edge-ssh-events             partition key: node_id (verifications partition by the node attempting auth)
 
   ## Configuration (set in runtime.exs from env vars)
 
@@ -41,9 +42,10 @@ defmodule EdgeAdmin.EventBroker.Adapters.Kafka do
   @client :event_broker_kafka
 
   @topics [
-    "edge-node-events",
-    "edge-command-execution-events",
-    "edge-self-update-request-events"
+    "edge-nodes-events",
+    "edge-commands-events",
+    "edge-self-updates-events",
+    "edge-ssh-events"
   ]
 
   # ---------------------------------------------------------------------------
@@ -165,13 +167,32 @@ defmodule EdgeAdmin.EventBroker.Adapters.Kafka do
     end)
   end
 
-  defp topic_for("edge.node." <> _), do: "edge-node-events"
-  defp topic_for("edge.execution." <> _), do: "edge-command-execution-events"
-  defp topic_for("edge.self_update." <> _), do: "edge-self-update-request-events"
+  defp topic_for("edge.node." <> _), do: "edge-nodes-events"
+  defp topic_for("edge.enrollment_key." <> _), do: "edge-nodes-events"
+  defp topic_for("edge.command_execution." <> _), do: "edge-commands-events"
+  defp topic_for("edge.self_update_request." <> _), do: "edge-self-updates-events"
+  defp topic_for("edge.ssh_username." <> _), do: "edge-ssh-events"
 
-  # Partition key — ensures ordering per entity, parallel across entities
+  # Partition key — Kafka uses it for two things: (1) co-locating events with
+  # the same key onto the same partition (in-partition ordering is guaranteed,
+  # cross-partition is not), and (2) hash-distributing across partitions for
+  # parallel consumption. It is NOT a dedup key, NOT a uniqueness constraint —
+  # purely routing.
+  #
+  # Choice rationale: pick whichever id consumers care about ordering by. For
+  # executions we partition by `command_execution_id` so a single execution's
+  # lifecycle (created → sent → completed/expired/cancelled → pruned) stays on
+  # one partition. We do NOT partition by node_id (which would give per-node
+  # command timelines but lose per-execution ordering) or command_id (which
+  # would group fan-out under one partition and bottleneck large rollouts).
+  #
+  # Order of clauses matters since execution events also carry node_id —
+  # command_execution_id must match first. enrollment_key events carry no
+  # node_id; on `:invalid_key` even enrollment_key_id is null and we fall
+  # through to the empty-string default.
+  defp partition_key_for(%{"data" => %{"command_execution_id" => id}}) when is_binary(id), do: id
+  defp partition_key_for(%{"data" => %{"self_update_request_id" => id}}) when is_binary(id), do: id
+  defp partition_key_for(%{"data" => %{"enrollment_key_id" => id}}) when is_binary(id), do: id
   defp partition_key_for(%{"data" => %{"node_id" => id}}) when is_binary(id), do: id
-  defp partition_key_for(%{"data" => %{"command_id" => id}}) when is_binary(id), do: id
-  defp partition_key_for(%{"data" => %{"request_id" => id}}) when is_binary(id), do: id
   defp partition_key_for(_), do: ""
 end

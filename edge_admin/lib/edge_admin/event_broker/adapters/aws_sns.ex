@@ -13,9 +13,9 @@ defmodule EdgeAdmin.EventBroker.Adapters.AwsSns do
 
   Three SNS topics by domain (matches the Kafka adapter convention):
 
-      edge-node-events                  partition: n/a (SNS does not partition)
-      edge-execution-events
-      edge-self-update-events
+      edge-nodes-events           partition: n/a (SNS does not partition)
+      edge-commands-events
+      edge-self-updates-events
 
   Topics must be pre-provisioned in the AWS account (Console / CLI / Terraform);
   the adapter does not create them. The full topic ARN is constructed from
@@ -32,9 +32,9 @@ defmodule EdgeAdmin.EventBroker.Adapters.AwsSns do
 
   Subscribers can write filter policies like:
 
-      {"type":     [{"prefix": "edge.node."}]}    # all node events
-      {"type":     ["edge.execution.completed"]}   # specific event type
-      {"corename": ["prod-us"]}                    # filter by core instance
+      {"type":     [{"prefix": "edge.node."}]}              # all node events
+      {"type":     ["edge.command_execution.completed"]}    # specific event type
+      {"corename": ["prod-us"]}                              # filter by core instance
 
   The body remains the full CloudEvents envelope JSON regardless — body and
   attributes carry the same routing fields, so consumers reading the body
@@ -185,7 +185,9 @@ defmodule EdgeAdmin.EventBroker.Adapters.AwsSns do
   # Helpers
   # ---------------------------------------------------------------------------
 
-  defp topic_suffix_for("edge.node." <> _), do: "edge-node-events"
-  defp topic_suffix_for("edge.execution." <> _), do: "edge-execution-events"
-  defp topic_suffix_for("edge.self_update." <> _), do: "edge-self-update-events"
+  defp topic_suffix_for("edge.node." <> _), do: "edge-nodes-events"
+  defp topic_suffix_for("edge.enrollment_key." <> _), do: "edge-nodes-events"
+  defp topic_suffix_for("edge.command_execution." <> _), do: "edge-commands-events"
+  defp topic_suffix_for("edge.self_update_request." <> _), do: "edge-self-updates-events"
+  defp topic_suffix_for("edge.ssh_username." <> _), do: "edge-ssh-events"
 end

@@ -85,7 +85,6 @@ defmodule EdgeAdmin.SelfUpdates do
          changeset = SelfUpdateRequest.changeset(%SelfUpdateRequest{}, validated_attrs),
          {:ok, request} <- Repo.insert(changeset) do
       enqueue_trigger_worker(request)
-      EventBroker.enqueue(%Events.SelfUpdateCreated{request: request})
       {:ok, request}
     end
   end

@@ -55,80 +55,91 @@
         }
       }
     },
-    "edge.node.deleted": {
-      "address": "edge.node.deleted",
-      "description": "Node removed from the system",
+    "edge.enrollment_key.verified": {
+      "address": "edge.enrollment_key.verified",
+      "description": "Agent attempted to enroll using an enrollment key (success or failure)",
       "messages": {
-        "node.deleted": { "$ref": "#/components/messages/nodeDeletedMessage" }
+        "enrollment_key.verified": {
+          "$ref": "#/components/messages/enrollmentKeyVerifiedMessage"
+        }
       }
     },
-    "edge.execution.created": {
-      "address": "edge.execution.created",
+    "edge.command_execution.created": {
+      "address": "edge.command_execution.created",
       "description": "Execution record created and queued",
       "messages": {
-        "execution.created": {
-          "$ref": "#/components/messages/executionCreatedMessage"
+        "command_execution.created": {
+          "$ref": "#/components/messages/commandExecutionCreatedMessage"
         }
       }
     },
-    "edge.execution.sent": {
-      "address": "edge.execution.sent",
+    "edge.command_execution.sent": {
+      "address": "edge.command_execution.sent",
       "description": "Execution delivered to agent and ACKed",
       "messages": {
-        "execution.sent": {
-          "$ref": "#/components/messages/executionSentMessage"
+        "command_execution.sent": {
+          "$ref": "#/components/messages/commandExecutionSentMessage"
         }
       }
     },
-    "edge.execution.completed": {
-      "address": "edge.execution.completed",
+    "edge.command_execution.completed": {
+      "address": "edge.command_execution.completed",
       "description": "Agent reported result",
       "messages": {
-        "execution.completed": {
-          "$ref": "#/components/messages/executionCompletedMessage"
+        "command_execution.completed": {
+          "$ref": "#/components/messages/commandExecutionCompletedMessage"
         }
       }
     },
-    "edge.execution.cancelled": {
-      "address": "edge.execution.cancelled",
+    "edge.command_execution.cancelled": {
+      "address": "edge.command_execution.cancelled",
       "description": "Execution cancelled (explicit or SIGTERM)",
       "messages": {
-        "execution.cancelled": {
-          "$ref": "#/components/messages/executionCancelledMessage"
+        "command_execution.cancelled": {
+          "$ref": "#/components/messages/commandExecutionCancelledMessage"
         }
       }
     },
-    "edge.execution.expired": {
-      "address": "edge.execution.expired",
+    "edge.command_execution.expired": {
+      "address": "edge.command_execution.expired",
       "description": "Execution swept as stale before running",
       "messages": {
-        "execution.expired": {
-          "$ref": "#/components/messages/executionExpiredMessage"
+        "command_execution.expired": {
+          "$ref": "#/components/messages/commandExecutionExpiredMessage"
         }
       }
     },
-    "edge.self_update.created": {
-      "address": "edge.self_update.created",
-      "description": "Self-update request created",
+    "edge.command_execution.pruned": {
+      "address": "edge.command_execution.pruned",
+      "description": "Execution reaped by background pruning worker",
       "messages": {
-        "self_update.created": {
-          "$ref": "#/components/messages/selfUpdateCreatedMessage"
+        "command_execution.pruned": {
+          "$ref": "#/components/messages/commandExecutionPrunedMessage"
         }
       }
     },
-    "edge.self_update.completed": {
-      "address": "edge.self_update.completed",
+    "edge.self_update_request.completed": {
+      "address": "edge.self_update_request.completed",
       "description": "Self-update batch finished",
       "messages": {
-        "self_update.completed": {
-          "$ref": "#/components/messages/selfUpdateCompletedMessage"
+        "self_update_request.completed": {
+          "$ref": "#/components/messages/selfUpdateRequestCompletedMessage"
+        }
+      }
+    },
+    "edge.ssh_username.verified": {
+      "address": "edge.ssh_username.verified",
+      "description": "Agent verified an SSH credential against admin (success or failure)",
+      "messages": {
+        "ssh_username.verified": {
+          "$ref": "#/components/messages/sshUsernameVerifiedMessage"
         }
       }
     }
   },
   "components": {
     "messages": {
-      "executionCancelledMessage": {
+      "commandExecutionCancelledMessage": {
         "bindings": {
           "amqp": { "bindingVersion": "0.3.0" },
           "googlepubsub": {
@@ -138,7 +149,7 @@
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
-              "description": "Kafka partition key — `command_id` from the event data",
+              "description": "Kafka partition key — `command_execution_id` from the event data",
               "type": "string"
             }
           },
@@ -157,10 +168,10 @@
               "data": {
                 "cancelled_at": "2026-04-13T10:00:05Z",
                 "cluster_name": "prod",
+                "command_execution_id": "cmdexec-abc123",
                 "command_id": "cmd-xyz789",
                 "command_text": "systemctl restart app",
                 "completed_at": null,
-                "execution_id": "exec-abc123",
                 "exit_code": 143,
                 "expired_at": null,
                 "inserted_at": "2026-04-13T10:00:00Z",
@@ -176,14 +187,14 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "execution.cancelled"
+              "type": "command_execution.cancelled"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
         "summary": "Execution cancelled (explicit or SIGTERM)"
       },
-      "executionCompletedMessage": {
+      "commandExecutionCompletedMessage": {
         "bindings": {
           "amqp": { "bindingVersion": "0.3.0" },
           "googlepubsub": {
@@ -193,7 +204,7 @@
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
-              "description": "Kafka partition key — `command_id` from the event data",
+              "description": "Kafka partition key — `command_execution_id` from the event data",
               "type": "string"
             }
           },
@@ -212,10 +223,10 @@
               "data": {
                 "cancelled_at": null,
                 "cluster_name": "prod",
+                "command_execution_id": "cmdexec-abc123",
                 "command_id": "cmd-xyz789",
                 "command_text": "systemctl restart app",
                 "completed_at": "2026-04-13T10:00:03Z",
-                "execution_id": "exec-abc123",
                 "exit_code": 0,
                 "expired_at": null,
                 "inserted_at": "2026-04-13T10:00:00Z",
@@ -231,14 +242,14 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "execution.completed"
+              "type": "command_execution.completed"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
         "summary": "Agent reported result"
       },
-      "executionCreatedMessage": {
+      "commandExecutionCreatedMessage": {
         "bindings": {
           "amqp": { "bindingVersion": "0.3.0" },
           "googlepubsub": {
@@ -248,7 +259,7 @@
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
-              "description": "Kafka partition key — `command_id` from the event data",
+              "description": "Kafka partition key — `command_execution_id` from the event data",
               "type": "string"
             }
           },
@@ -267,10 +278,10 @@
               "data": {
                 "cancelled_at": null,
                 "cluster_name": "prod",
+                "command_execution_id": "cmdexec-abc123",
                 "command_id": "cmd-xyz789",
                 "command_text": "systemctl restart app",
                 "completed_at": null,
-                "execution_id": "exec-abc123",
                 "exit_code": null,
                 "expired_at": null,
                 "inserted_at": "2026-04-13T10:00:00Z",
@@ -286,14 +297,14 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "execution.created"
+              "type": "command_execution.created"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
         "summary": "Execution record created and queued"
       },
-      "executionExpiredMessage": {
+      "commandExecutionExpiredMessage": {
         "bindings": {
           "amqp": { "bindingVersion": "0.3.0" },
           "googlepubsub": {
@@ -303,7 +314,7 @@
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
-              "description": "Kafka partition key — `command_id` from the event data",
+              "description": "Kafka partition key — `command_execution_id` from the event data",
               "type": "string"
             }
           },
@@ -322,10 +333,10 @@
               "data": {
                 "cancelled_at": null,
                 "cluster_name": "prod",
+                "command_execution_id": "cmdexec-abc123",
                 "command_id": "cmd-xyz789",
                 "command_text": "systemctl restart app",
                 "completed_at": null,
-                "execution_id": "exec-abc123",
                 "exit_code": null,
                 "expired_at": "2026-04-13T10:05:00Z",
                 "inserted_at": "2026-04-13T10:00:00Z",
@@ -341,14 +352,14 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "execution.expired"
+              "type": "command_execution.expired"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
         "summary": "Execution swept as stale before running"
       },
-      "executionSentMessage": {
+      "commandExecutionPrunedMessage": {
         "bindings": {
           "amqp": { "bindingVersion": "0.3.0" },
           "googlepubsub": {
@@ -358,7 +369,7 @@
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
-              "description": "Kafka partition key — `command_id` from the event data",
+              "description": "Kafka partition key — `command_execution_id` from the event data",
               "type": "string"
             }
           },
@@ -377,10 +388,65 @@
               "data": {
                 "cancelled_at": null,
                 "cluster_name": "prod",
+                "command_execution_id": "cmdexec-abc123",
+                "command_id": "cmd-xyz789",
+                "command_text": "systemctl restart app",
+                "completed_at": "2026-04-13T10:00:03Z",
+                "exit_code": 0,
+                "expired_at": null,
+                "inserted_at": "2026-04-13T10:00:00Z",
+                "node_id": "node-abc123",
+                "sent_at": "2026-04-13T10:00:01Z",
+                "status": "completed",
+                "target_all": false,
+                "timeout": 30000,
+                "updated_at": "2026-04-13T10:00:00Z"
+              },
+              "datacontenttype": "application/json",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "source": "https://github.com/wenet-ec/edge-core",
+              "specversion": "1.0",
+              "time": "2026-04-13T10:00:00Z",
+              "type": "command_execution.pruned"
+            }
+          }
+        ],
+        "payload": { "$ref": "#/components/schemas/Envelope" },
+        "summary": "Execution reaped by background pruning worker"
+      },
+      "commandExecutionSentMessage": {
+        "bindings": {
+          "amqp": { "bindingVersion": "0.3.0" },
+          "googlepubsub": {
+            "attributes": { "corename": "string", "type": "string" },
+            "bindingVersion": "0.2.0"
+          },
+          "kafka": {
+            "bindingVersion": "0.5.0",
+            "key": {
+              "description": "Kafka partition key — `command_execution_id` from the event data",
+              "type": "string"
+            }
+          },
+          "mqtt": {
+            "bindingVersion": "0.2.0",
+            "contentType": "application/json",
+            "payloadFormatIndicator": 1
+          }
+        },
+        "contentType": "application/json",
+        "examples": [
+          {
+            "name": "example",
+            "payload": {
+              "corename": "prod-us",
+              "data": {
+                "cancelled_at": null,
+                "cluster_name": "prod",
+                "command_execution_id": "cmdexec-abc123",
                 "command_id": "cmd-xyz789",
                 "command_text": "systemctl restart app",
                 "completed_at": null,
-                "execution_id": "exec-abc123",
                 "exit_code": null,
                 "expired_at": null,
                 "inserted_at": "2026-04-13T10:00:00Z",
@@ -396,12 +462,57 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "execution.sent"
+              "type": "command_execution.sent"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
         "summary": "Execution delivered to agent and ACKed"
+      },
+      "enrollmentKeyVerifiedMessage": {
+        "bindings": {
+          "amqp": { "bindingVersion": "0.3.0" },
+          "googlepubsub": {
+            "attributes": { "corename": "string", "type": "string" },
+            "bindingVersion": "0.2.0"
+          },
+          "kafka": {
+            "bindingVersion": "0.5.0",
+            "key": {
+              "description": "Kafka partition key — `enrollment_key_id` from the event data",
+              "type": "string"
+            }
+          },
+          "mqtt": {
+            "bindingVersion": "0.2.0",
+            "contentType": "application/json",
+            "payloadFormatIndicator": 1
+          }
+        },
+        "contentType": "application/json",
+        "examples": [
+          {
+            "name": "example",
+            "payload": {
+              "corename": "prod-us",
+              "data": {
+                "cluster_name": "prod",
+                "enrollment_key_id": "enrkey-abc123",
+                "result": "verified",
+                "uses_remaining": 4,
+                "verified_at": "2026-04-13T10:00:00Z"
+              },
+              "datacontenttype": "application/json",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "source": "https://github.com/wenet-ec/edge-core",
+              "specversion": "1.0",
+              "time": "2026-04-13T10:00:00Z",
+              "type": "enrollment_key.verified"
+            }
+          }
+        ],
+        "payload": { "$ref": "#/components/schemas/Envelope" },
+        "summary": "Agent attempted to enroll using an enrollment key"
       },
       "nodeClusterChangedMessage": {
         "bindings": {
@@ -458,61 +569,6 @@
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
         "summary": "Node moved to a different cluster"
-      },
-      "nodeDeletedMessage": {
-        "bindings": {
-          "amqp": { "bindingVersion": "0.3.0" },
-          "googlepubsub": {
-            "attributes": { "corename": "string", "type": "string" },
-            "bindingVersion": "0.2.0"
-          },
-          "kafka": {
-            "bindingVersion": "0.5.0",
-            "key": {
-              "description": "Kafka partition key — `node_id` from the event data",
-              "type": "string"
-            }
-          },
-          "mqtt": {
-            "bindingVersion": "0.2.0",
-            "contentType": "application/json",
-            "payloadFormatIndicator": 1
-          }
-        },
-        "contentType": "application/json",
-        "examples": [
-          {
-            "name": "example",
-            "payload": {
-              "corename": "prod-us",
-              "data": {
-                "cluster_name": "prod",
-                "host_metrics_port": 9100,
-                "http_port": 44000,
-                "http_proxy_port": 44001,
-                "id_type": "hostname",
-                "inserted_at": "2026-04-13T09:00:00Z",
-                "last_seen_at": "2026-04-13T10:00:00Z",
-                "node_id": "node-abc123",
-                "self_update_enabled": true,
-                "socks5_proxy_port": 44002,
-                "ssh_port": 40022,
-                "status": "healthy",
-                "updated_at": "2026-04-13T10:00:00Z",
-                "version": "1.2.0",
-                "wireguard_metrics_port": 9101
-              },
-              "datacontenttype": "application/json",
-              "id": "550e8400-e29b-41d4-a716-446655440000",
-              "source": "https://github.com/wenet-ec/edge-core",
-              "specversion": "1.0",
-              "time": "2026-04-13T10:00:00Z",
-              "type": "node.deleted"
-            }
-          }
-        ],
-        "payload": { "$ref": "#/components/schemas/Envelope" },
-        "summary": "Node removed from the system"
       },
       "nodeRegisteredMessage": {
         "bindings": {
@@ -716,7 +772,7 @@
                 "last_seen_at": "2026-04-13T10:00:00Z",
                 "node_id": "node-abc123",
                 "self_update_enabled": true,
-                "self_update_request_id": "req-abc123",
+                "self_update_request_id": "selfupd-abc123",
                 "socks5_proxy_port": 44002,
                 "ssh_port": 40022,
                 "status": "healthy",
@@ -792,7 +848,7 @@
         "payload": { "$ref": "#/components/schemas/Envelope" },
         "summary": "Node version changed alongside re-enrollment"
       },
-      "selfUpdateCompletedMessage": {
+      "selfUpdateRequestCompletedMessage": {
         "bindings": {
           "amqp": { "bindingVersion": "0.3.0" },
           "googlepubsub": {
@@ -802,7 +858,7 @@
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
-              "description": "Kafka partition key — `request_id` from the event data",
+              "description": "Kafka partition key — `self_update_request_id` from the event data",
               "type": "string"
             }
           },
@@ -820,7 +876,7 @@
               "corename": "prod-us",
               "data": {
                 "inserted_at": "2026-04-13T10:00:00Z",
-                "request_id": "req-abc123",
+                "self_update_request_id": "selfupd-abc123",
                 "status": "completed",
                 "summary": { "failed": 1, "total": 10, "triggered": 9 },
                 "targeting": {
@@ -835,14 +891,14 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "self_update.completed"
+              "type": "self_update_request.completed"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
         "summary": "Self-update batch finished"
       },
-      "selfUpdateCreatedMessage": {
+      "sshUsernameVerifiedMessage": {
         "bindings": {
           "amqp": { "bindingVersion": "0.3.0" },
           "googlepubsub": {
@@ -852,7 +908,7 @@
           "kafka": {
             "bindingVersion": "0.5.0",
             "key": {
-              "description": "Kafka partition key — `request_id` from the event data",
+              "description": "Kafka partition key — `node_id` from the event data",
               "type": "string"
             }
           },
@@ -869,31 +925,93 @@
             "payload": {
               "corename": "prod-us",
               "data": {
-                "inserted_at": "2026-04-13T10:00:00Z",
-                "request_id": "req-abc123",
-                "status": "pending",
-                "summary": null,
-                "targeting": {
-                  "cluster_filters": {},
-                  "node_filters": { "version": "1.1.*" },
-                  "type": "clusters"
-                },
-                "updated_at": "2026-04-13T10:00:00Z"
+                "auth_method": "public_key",
+                "cluster_name": "prod",
+                "node_id": "node-abc123",
+                "result": "success",
+                "ssh_username_id": "sshuser-abc123",
+                "username": "deploy",
+                "verified_at": "2026-04-13T10:00:00Z"
               },
               "datacontenttype": "application/json",
               "id": "550e8400-e29b-41d4-a716-446655440000",
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "self_update.created"
+              "type": "ssh_username.verified"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
-        "summary": "Self-update request created"
+        "summary": "Agent verified an SSH credential against admin"
       }
     },
     "schemas": {
+      "CommandExecutionEvent": {
+        "description": "`output` is excluded — fetch via API if needed",
+        "properties": {
+          "cancelled_at": { "format": "date-time", "type": ["string", "null"] },
+          "cluster_name": { "type": "string" },
+          "command_execution_id": { "format": "uuid", "type": "string" },
+          "command_id": { "format": "uuid", "type": "string" },
+          "command_text": { "type": "string" },
+          "completed_at": { "format": "date-time", "type": ["string", "null"] },
+          "exit_code": {
+            "description": "null until completed or cancelled; 143 on SIGTERM cancel",
+            "type": ["integer", "null"]
+          },
+          "expired_at": { "format": "date-time", "type": ["string", "null"] },
+          "inserted_at": { "format": "date-time", "type": "string" },
+          "node_id": { "type": "string" },
+          "sent_at": { "format": "date-time", "type": ["string", "null"] },
+          "status": {
+            "enum": ["pending", "sent", "completed", "cancelled", "expired"],
+            "type": "string"
+          },
+          "target_all": { "type": "boolean" },
+          "timeout": { "type": ["integer", "null"] },
+          "updated_at": { "format": "date-time", "type": "string" }
+        },
+        "required": [
+          "command_execution_id",
+          "command_id",
+          "node_id",
+          "cluster_name",
+          "status"
+        ],
+        "type": "object"
+      },
+      "EnrollmentKeyVerifiedEvent": {
+        "description": "Agent presented an enrollment key to admin. The full key blob is intentionally excluded — it's a credential. On `:invalid_key`, `enrollment_key_id` and `cluster_name` are null (no DB row matched).",
+        "properties": {
+          "cluster_name": {
+            "description": "Null when result is invalid_key",
+            "type": ["string", "null"]
+          },
+          "enrollment_key_id": {
+            "description": "Null when result is invalid_key",
+            "format": "uuid",
+            "type": ["string", "null"]
+          },
+          "result": {
+            "enum": [
+              "verified",
+              "invalid_key",
+              "key_expired",
+              "key_spent",
+              "node_limit_reached"
+            ],
+            "type": "string"
+          },
+          "uses_remaining": {
+            "description": "Remaining uses after this attempt; null for unlimited keys or invalid_key",
+            "type": ["integer", "null"]
+          },
+          "verified_at": { "format": "date-time", "type": "string" }
+        },
+        "required": ["result", "verified_at"],
+        "type": "object"
+      },
       "Envelope": {
         "properties": {
           "corename": {
@@ -925,14 +1043,15 @@
               "edge.node.status_changed",
               "edge.node.cluster_changed",
               "edge.node.update_triggered",
-              "edge.node.deleted",
-              "edge.execution.created",
-              "edge.execution.sent",
-              "edge.execution.completed",
-              "edge.execution.cancelled",
-              "edge.execution.expired",
-              "edge.self_update.created",
-              "edge.self_update.completed"
+              "edge.command_execution.created",
+              "edge.command_execution.sent",
+              "edge.command_execution.completed",
+              "edge.command_execution.cancelled",
+              "edge.command_execution.expired",
+              "edge.command_execution.pruned",
+              "edge.self_update_request.completed",
+              "edge.enrollment_key.verified",
+              "edge.ssh_username.verified"
             ],
             "type": "string"
           }
@@ -945,40 +1064,6 @@
           "time",
           "datacontenttype",
           "data"
-        ],
-        "type": "object"
-      },
-      "ExecutionEvent": {
-        "description": "`output` is excluded — fetch via API if needed",
-        "properties": {
-          "cancelled_at": { "format": "date-time", "type": ["string", "null"] },
-          "cluster_name": { "type": "string" },
-          "command_id": { "format": "uuid", "type": "string" },
-          "command_text": { "type": "string" },
-          "completed_at": { "format": "date-time", "type": ["string", "null"] },
-          "execution_id": { "format": "uuid", "type": "string" },
-          "exit_code": {
-            "description": "null until completed or cancelled; 143 on SIGTERM cancel",
-            "type": ["integer", "null"]
-          },
-          "expired_at": { "format": "date-time", "type": ["string", "null"] },
-          "inserted_at": { "format": "date-time", "type": "string" },
-          "node_id": { "type": "string" },
-          "sent_at": { "format": "date-time", "type": ["string", "null"] },
-          "status": {
-            "enum": ["pending", "sent", "completed", "cancelled", "expired"],
-            "type": "string"
-          },
-          "target_all": { "type": "boolean" },
-          "timeout": { "type": ["integer", "null"] },
-          "updated_at": { "format": "date-time", "type": "string" }
-        },
-        "required": [
-          "execution_id",
-          "command_id",
-          "node_id",
-          "cluster_name",
-          "status"
         ],
         "type": "object"
       },
@@ -1130,16 +1215,16 @@
         "required": ["node_id", "cluster_name", "status", "previous_version"],
         "type": "object"
       },
-      "SelfUpdateEvent": {
+      "SelfUpdateRequestEvent": {
         "properties": {
           "inserted_at": { "format": "date-time", "type": "string" },
-          "request_id": { "format": "uuid", "type": "string" },
+          "self_update_request_id": { "format": "uuid", "type": "string" },
           "status": {
             "enum": ["pending", "processing", "completed"],
             "type": "string"
           },
           "summary": {
-            "description": "null on self_update.created; populated on self_update.completed",
+            "description": "Populated on self_update_request.completed",
             "oneOf": [
               {
                 "properties": {
@@ -1162,7 +1247,33 @@
           },
           "updated_at": { "format": "date-time", "type": "string" }
         },
-        "required": ["request_id", "status", "targeting"],
+        "required": ["self_update_request_id", "status", "targeting"],
+        "type": "object"
+      },
+      "SshUsernameVerifiedEvent": {
+        "description": "Agent verified an SSH credential against admin. Password hashes and public-key strings are never echoed. `ssh_username_id` and `cluster_name` are null when no DB row matched the attempted (node_id, username) pair — failed attempts against missing usernames are still emitted as security signal.",
+        "properties": {
+          "auth_method": {
+            "enum": ["password", "public_key", "unknown"],
+            "type": "string"
+          },
+          "cluster_name": { "type": ["string", "null"] },
+          "node_id": { "type": "string" },
+          "result": { "enum": ["success", "failure"], "type": "string" },
+          "ssh_username_id": { "format": "uuid", "type": ["string", "null"] },
+          "username": {
+            "description": "The username the agent attempted to auth as",
+            "type": "string"
+          },
+          "verified_at": { "format": "date-time", "type": "string" }
+        },
+        "required": [
+          "node_id",
+          "username",
+          "auth_method",
+          "result",
+          "verified_at"
+        ],
         "type": "object"
       }
     },
@@ -1228,12 +1339,12 @@
           "bindingVersion": "0.1.0",
           "consumers": [
             {
-              "endpoint": { "name": "edge-node-events-debug" },
+              "endpoint": { "name": "edge-nodes-events-debug" },
               "protocol": "sqs",
               "rawMessageDelivery": true
             }
           ],
-          "topic": { "name": "edge-node-events" }
+          "topic": { "name": "edge-nodes-events" }
         }
       },
       "channel": { "$ref": "#/channels/edge.node.registered" }
@@ -1250,12 +1361,12 @@
           "bindingVersion": "0.1.0",
           "consumers": [
             {
-              "endpoint": { "name": "edge-node-events-debug" },
+              "endpoint": { "name": "edge-nodes-events-debug" },
               "protocol": "sqs",
               "rawMessageDelivery": true
             }
           ],
-          "topic": { "name": "edge-node-events" }
+          "topic": { "name": "edge-nodes-events" }
         }
       },
       "channel": { "$ref": "#/channels/edge.node.reregistered" }
@@ -1272,12 +1383,12 @@
           "bindingVersion": "0.1.0",
           "consumers": [
             {
-              "endpoint": { "name": "edge-node-events-debug" },
+              "endpoint": { "name": "edge-nodes-events-debug" },
               "protocol": "sqs",
               "rawMessageDelivery": true
             }
           ],
-          "topic": { "name": "edge-node-events" }
+          "topic": { "name": "edge-nodes-events" }
         }
       },
       "channel": { "$ref": "#/channels/edge.node.version_changed" }
@@ -1294,12 +1405,12 @@
           "bindingVersion": "0.1.0",
           "consumers": [
             {
-              "endpoint": { "name": "edge-node-events-debug" },
+              "endpoint": { "name": "edge-nodes-events-debug" },
               "protocol": "sqs",
               "rawMessageDelivery": true
             }
           ],
-          "topic": { "name": "edge-node-events" }
+          "topic": { "name": "edge-nodes-events" }
         }
       },
       "channel": { "$ref": "#/channels/edge.node.status_changed" }
@@ -1316,12 +1427,12 @@
           "bindingVersion": "0.1.0",
           "consumers": [
             {
-              "endpoint": { "name": "edge-node-events-debug" },
+              "endpoint": { "name": "edge-nodes-events-debug" },
               "protocol": "sqs",
               "rawMessageDelivery": true
             }
           ],
-          "topic": { "name": "edge-node-events" }
+          "topic": { "name": "edge-nodes-events" }
         }
       },
       "channel": { "$ref": "#/channels/edge.node.cluster_changed" }
@@ -1338,17 +1449,17 @@
           "bindingVersion": "0.1.0",
           "consumers": [
             {
-              "endpoint": { "name": "edge-node-events-debug" },
+              "endpoint": { "name": "edge-nodes-events-debug" },
               "protocol": "sqs",
               "rawMessageDelivery": true
             }
           ],
-          "topic": { "name": "edge-node-events" }
+          "topic": { "name": "edge-nodes-events" }
         }
       },
       "channel": { "$ref": "#/channels/edge.node.update_triggered" }
     },
-    "publish_edge_node_deleted": {
+    "publish_edge_enrollment_key_verified": {
       "action": "send",
       "bindings": {
         "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
@@ -1360,17 +1471,17 @@
           "bindingVersion": "0.1.0",
           "consumers": [
             {
-              "endpoint": { "name": "edge-node-events-debug" },
+              "endpoint": { "name": "edge-nodes-events-debug" },
               "protocol": "sqs",
               "rawMessageDelivery": true
             }
           ],
-          "topic": { "name": "edge-node-events" }
+          "topic": { "name": "edge-nodes-events" }
         }
       },
-      "channel": { "$ref": "#/channels/edge.node.deleted" }
+      "channel": { "$ref": "#/channels/edge.enrollment_key.verified" }
     },
-    "publish_edge_execution_created": {
+    "publish_edge_command_execution_created": {
       "action": "send",
       "bindings": {
         "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
@@ -1382,17 +1493,17 @@
           "bindingVersion": "0.1.0",
           "consumers": [
             {
-              "endpoint": { "name": "edge-execution-events-debug" },
+              "endpoint": { "name": "edge-commands-events-debug" },
               "protocol": "sqs",
               "rawMessageDelivery": true
             }
           ],
-          "topic": { "name": "edge-execution-events" }
+          "topic": { "name": "edge-commands-events" }
         }
       },
-      "channel": { "$ref": "#/channels/edge.execution.created" }
+      "channel": { "$ref": "#/channels/edge.command_execution.created" }
     },
-    "publish_edge_execution_sent": {
+    "publish_edge_command_execution_sent": {
       "action": "send",
       "bindings": {
         "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
@@ -1404,17 +1515,17 @@
           "bindingVersion": "0.1.0",
           "consumers": [
             {
-              "endpoint": { "name": "edge-execution-events-debug" },
+              "endpoint": { "name": "edge-commands-events-debug" },
               "protocol": "sqs",
               "rawMessageDelivery": true
             }
           ],
-          "topic": { "name": "edge-execution-events" }
+          "topic": { "name": "edge-commands-events" }
         }
       },
-      "channel": { "$ref": "#/channels/edge.execution.sent" }
+      "channel": { "$ref": "#/channels/edge.command_execution.sent" }
     },
-    "publish_edge_execution_completed": {
+    "publish_edge_command_execution_completed": {
       "action": "send",
       "bindings": {
         "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
@@ -1426,17 +1537,17 @@
           "bindingVersion": "0.1.0",
           "consumers": [
             {
-              "endpoint": { "name": "edge-execution-events-debug" },
+              "endpoint": { "name": "edge-commands-events-debug" },
               "protocol": "sqs",
               "rawMessageDelivery": true
             }
           ],
-          "topic": { "name": "edge-execution-events" }
+          "topic": { "name": "edge-commands-events" }
         }
       },
-      "channel": { "$ref": "#/channels/edge.execution.completed" }
+      "channel": { "$ref": "#/channels/edge.command_execution.completed" }
     },
-    "publish_edge_execution_cancelled": {
+    "publish_edge_command_execution_cancelled": {
       "action": "send",
       "bindings": {
         "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
@@ -1448,17 +1559,17 @@
           "bindingVersion": "0.1.0",
           "consumers": [
             {
-              "endpoint": { "name": "edge-execution-events-debug" },
+              "endpoint": { "name": "edge-commands-events-debug" },
               "protocol": "sqs",
               "rawMessageDelivery": true
             }
           ],
-          "topic": { "name": "edge-execution-events" }
+          "topic": { "name": "edge-commands-events" }
         }
       },
-      "channel": { "$ref": "#/channels/edge.execution.cancelled" }
+      "channel": { "$ref": "#/channels/edge.command_execution.cancelled" }
     },
-    "publish_edge_execution_expired": {
+    "publish_edge_command_execution_expired": {
       "action": "send",
       "bindings": {
         "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
@@ -1470,17 +1581,17 @@
           "bindingVersion": "0.1.0",
           "consumers": [
             {
-              "endpoint": { "name": "edge-execution-events-debug" },
+              "endpoint": { "name": "edge-commands-events-debug" },
               "protocol": "sqs",
               "rawMessageDelivery": true
             }
           ],
-          "topic": { "name": "edge-execution-events" }
+          "topic": { "name": "edge-commands-events" }
         }
       },
-      "channel": { "$ref": "#/channels/edge.execution.expired" }
+      "channel": { "$ref": "#/channels/edge.command_execution.expired" }
     },
-    "publish_edge_self_update_created": {
+    "publish_edge_command_execution_pruned": {
       "action": "send",
       "bindings": {
         "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
@@ -1492,17 +1603,17 @@
           "bindingVersion": "0.1.0",
           "consumers": [
             {
-              "endpoint": { "name": "edge-self-update-events-debug" },
+              "endpoint": { "name": "edge-commands-events-debug" },
               "protocol": "sqs",
               "rawMessageDelivery": true
             }
           ],
-          "topic": { "name": "edge-self-update-events" }
+          "topic": { "name": "edge-commands-events" }
         }
       },
-      "channel": { "$ref": "#/channels/edge.self_update.created" }
+      "channel": { "$ref": "#/channels/edge.command_execution.pruned" }
     },
-    "publish_edge_self_update_completed": {
+    "publish_edge_self_update_request_completed": {
       "action": "send",
       "bindings": {
         "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
@@ -1514,20 +1625,42 @@
           "bindingVersion": "0.1.0",
           "consumers": [
             {
-              "endpoint": { "name": "edge-self-update-events-debug" },
+              "endpoint": { "name": "edge-self-updates-events-debug" },
               "protocol": "sqs",
               "rawMessageDelivery": true
             }
           ],
-          "topic": { "name": "edge-self-update-events" }
+          "topic": { "name": "edge-self-updates-events" }
         }
       },
-      "channel": { "$ref": "#/channels/edge.self_update.completed" }
+      "channel": { "$ref": "#/channels/edge.self_update_request.completed" }
+    },
+    "publish_edge_ssh_username_verified": {
+      "action": "send",
+      "bindings": {
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
+        "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-ssh-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-ssh-events" }
+        }
+      },
+      "channel": { "$ref": "#/channels/edge.ssh_username.verified" }
     }
   },
   "servers": {
     "aws_sns": {
-      "description": "Managed AWS service; no on-prem broker. Three topics by domain: `edge-node-events`, `edge-execution-events`, `edge-self-update-events` — must be pre-provisioned in your AWS account. Configure via EVENT_BROKER_AWS_SNS_REGION + EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX. Subscribers filter via subscription filter policies on message attributes (`type`, `corename`) — SNS has no topic-name wildcards. Durability is the subscriber's responsibility (typically SQS). Auth uses the standard AWS credential chain (IAM env vars, instance profile, etc.).",
+      "description": "Managed AWS service; no on-prem broker. Four topics by domain: `edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`, `edge-ssh-events` — must be pre-provisioned in your AWS account. Configure via EVENT_BROKER_AWS_SNS_REGION + EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX. Subscribers filter via subscription filter policies on message attributes (`type`, `corename`) — SNS has no topic-name wildcards. Durability is the subscriber's responsibility (typically SQS). Auth uses the standard AWS credential chain (IAM env vars, instance profile, etc.).",
       "host": "sns.us-east-1.amazonaws.com",
       "protocol": "sns",
       "security": [{ "$ref": "#/components/securitySchemes/awsSigV4" }],
@@ -1535,7 +1668,7 @@
       "title": "AWS SNS"
     },
     "google_pubsub": {
-      "description": "Managed GCP service; no on-prem broker. Three topics by domain: `edge-node-events`, `edge-execution-events`, `edge-self-update-events` — must be pre-provisioned in your GCP project. Configure via EVENT_BROKER_GOOGLE_PUBSUB_PROJECT (+ optional EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX). Subscribers filter via subscription filter expressions on message attributes (`type`, `corename`) — Pub/Sub has no topic-name wildcards. Durability is built in: each subscription buffers messages until ACKed (default 7-day retention, max 31). Auth uses the standard GCP credential chain — service-account JSON via GOOGLE_APPLICATION_CREDENTIALS, Workload Identity on GKE, or the GCE metadata server.",
+      "description": "Managed GCP service; no on-prem broker. Four topics by domain: `edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`, `edge-ssh-events` — must be pre-provisioned in your GCP project. Configure via EVENT_BROKER_GOOGLE_PUBSUB_PROJECT (+ optional EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX). Subscribers filter via subscription filter expressions on message attributes (`type`, `corename`) — Pub/Sub has no topic-name wildcards. Durability is built in: each subscription buffers messages until ACKed (default 7-day retention, max 31). Auth uses the standard GCP credential chain — service-account JSON via GOOGLE_APPLICATION_CREDENTIALS, Workload Identity on GKE, or the GCE metadata server.",
       "host": "pubsub.googleapis.com",
       "protocol": "googlepubsub",
       "security": [{ "$ref": "#/components/securitySchemes/googleOauth2" }],
@@ -1567,7 +1700,7 @@
       "title": "MQTT"
     },
     "nats": {
-      "description": "Configure via EVENT_BROKER_NATS_URLS (comma-separated cluster list). Optional token auth via EVENT_BROKER_NATS_TOKEN. By default, pub/sub with no persistence. Set EVENT_BROKER_NATS_JETSTREAM=true to enable durable JetStream log — three streams are auto-created on startup: EDGE_NODE_EVENTS, EDGE_EXECUTION_EVENTS, EDGE_SELF_UPDATE_EVENTS. Retention is configured on the broker.",
+      "description": "Configure via EVENT_BROKER_NATS_URLS (comma-separated cluster list). Optional token auth via EVENT_BROKER_NATS_TOKEN. By default, pub/sub with no persistence. Set EVENT_BROKER_NATS_JETSTREAM=true to enable durable JetStream log — four streams are auto-created on startup: EDGE_NODES_EVENTS (captures edge.node.> + edge.enrollment_key.>), EDGE_COMMANDS_EVENTS, EDGE_SELF_UPDATES_EVENTS, EDGE_SSH_EVENTS. Retention is configured on the broker.",
       "host": "edge_event_broker_nats:4222",
       "protocol": "nats",
       "security": [{ "$ref": "#/components/securitySchemes/natsToken" }],

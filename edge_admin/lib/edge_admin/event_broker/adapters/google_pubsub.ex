@@ -10,9 +10,9 @@ defmodule EdgeAdmin.EventBroker.Adapters.GooglePubsub do
 
   Three Pub/Sub topics by domain (matches the AWS SNS adapter convention):
 
-      edge-node-events
-      edge-execution-events
-      edge-self-update-events
+      edge-nodes-events
+      edge-commands-events
+      edge-self-updates-events
 
   Topics must be pre-provisioned in the GCP project (Console / `gcloud` /
   Terraform); the adapter does not create them. The full resource name is
@@ -32,9 +32,9 @@ defmodule EdgeAdmin.EventBroker.Adapters.GooglePubsub do
 
   Subscribers can write filter expressions like:
 
-      hasPrefix(attributes.type, "edge.node.")          # all node events
-      attributes.type = "edge.execution.completed"       # specific event type
-      attributes.corename = "prod-us"                    # filter by core instance
+      hasPrefix(attributes.type, "edge.node.")              # all node events
+      attributes.type = "edge.command_execution.completed"   # specific event type
+      attributes.corename = "prod-us"                        # filter by core instance
 
   The body remains the full CloudEvents envelope JSON regardless — body and
   attributes carry the same routing fields, so consumers reading the body
@@ -169,7 +169,7 @@ defmodule EdgeAdmin.EventBroker.Adapters.GooglePubsub do
   # network + that the topic actually exists (more meaningful than ListTopics).
   @impl GenServer
   def handle_call(:healthy?, _from, state) do
-    url = topic_url(state, "edge-node-events")
+    url = topic_url(state, "edge-nodes-events")
 
     case Req.get(url, headers: auth_headers(state.auth)) do
       {:ok, %{status: 200}} ->
@@ -211,9 +211,11 @@ defmodule EdgeAdmin.EventBroker.Adapters.GooglePubsub do
   # Helpers
   # ---------------------------------------------------------------------------
 
-  defp topic_id_for("edge.node." <> _), do: "edge-node-events"
-  defp topic_id_for("edge.execution." <> _), do: "edge-execution-events"
-  defp topic_id_for("edge.self_update." <> _), do: "edge-self-update-events"
+  defp topic_id_for("edge.node." <> _), do: "edge-nodes-events"
+  defp topic_id_for("edge.enrollment_key." <> _), do: "edge-nodes-events"
+  defp topic_id_for("edge.command_execution." <> _), do: "edge-commands-events"
+  defp topic_id_for("edge.self_update_request." <> _), do: "edge-self-updates-events"
+  defp topic_id_for("edge.ssh_username." <> _), do: "edge-ssh-events"
 
   defp topic_url(state, topic_id) do
     "#{state.base_url}/v1/projects/#{state.project}/topics/#{state.topic_id_prefix}#{topic_id}"

@@ -11,9 +11,11 @@ defmodule EdgeAdmin.EventBroker.Adapters.Nats do
 
   ## Subjects
 
-      edge.node.<event>         → captured by EDGE_NODE_EVENTS stream (JetStream only)
-      edge.execution.<event>    → captured by EDGE_EXECUTION_EVENTS stream (JetStream only)
-      edge.self_update.<event>  → captured by EDGE_SELF_UPDATE_EVENTS stream (JetStream only)
+      edge.node.<event>                → captured by EDGE_NODES_EVENTS stream (JetStream only)
+      edge.enrollment_key.<event>      → captured by EDGE_NODES_EVENTS stream (JetStream only)
+      edge.command_execution.<event>   → captured by EDGE_COMMANDS_EVENTS stream (JetStream only)
+      edge.self_update_request.<event> → captured by EDGE_SELF_UPDATES_EVENTS stream (JetStream only)
+      edge.ssh_username.<event>        → captured by EDGE_SSH_EVENTS stream (JetStream only)
 
   ## Configuration (set in runtime.exs from env vars)
 
@@ -40,9 +42,14 @@ defmodule EdgeAdmin.EventBroker.Adapters.Nats do
   @conn :event_broker_nats
 
   @streams [
-    %JsStream{name: "EDGE_NODE_EVENTS", subjects: ["edge.node.>"], storage: :file},
-    %JsStream{name: "EDGE_EXECUTION_EVENTS", subjects: ["edge.execution.>"], storage: :file},
-    %JsStream{name: "EDGE_SELF_UPDATE_EVENTS", subjects: ["edge.self_update.>"], storage: :file}
+    %JsStream{
+      name: "EDGE_NODES_EVENTS",
+      subjects: ["edge.node.>", "edge.enrollment_key.>"],
+      storage: :file
+    },
+    %JsStream{name: "EDGE_COMMANDS_EVENTS", subjects: ["edge.command_execution.>"], storage: :file},
+    %JsStream{name: "EDGE_SELF_UPDATES_EVENTS", subjects: ["edge.self_update_request.>"], storage: :file},
+    %JsStream{name: "EDGE_SSH_EVENTS", subjects: ["edge.ssh_username.>"], storage: :file}
   ]
 
   # ---------------------------------------------------------------------------

@@ -831,7 +831,6 @@ defmodule EdgeAdmin.Nodes do
     case Repo.delete(node) do
       {:ok, deleted_node} ->
         Metadata.Events.publish(:node_deleted)
-        EventBroker.enqueue(%Events.NodeDeleted{node: deleted_node})
         {:ok, deleted_node}
 
       {:error, changeset} ->
@@ -1565,19 +1564,35 @@ defmodule EdgeAdmin.Nodes do
   @spec verify_enrollment_key(map()) :: {:ok, map()}
   def verify_enrollment_key(params) do
     with {:ok, key_blob} <- Forms.VerifyEnrollmentKeyForm.changeset(params) do
-      result =
+      {result, enrollment_key} =
         case Repo.get_by(EnrollmentKey, key: key_blob) do
           nil ->
-            %{verified: false, error: "invalid_key", netmaker_key: ""}
+            {%{verified: false, error: "invalid_key", netmaker_key: ""}, nil}
 
           enrollment_key ->
             enrollment_key = Repo.preload(enrollment_key, :cluster)
-            verify_key(enrollment_key)
+            {verify_key(enrollment_key), enrollment_key}
         end
+
+      enqueue_enrollment_key_verified_event(enrollment_key, result, key_blob)
 
       {:ok, result}
     end
   end
+
+  defp enqueue_enrollment_key_verified_event(enrollment_key, %{verified: verified, error: error}, key_blob) do
+    EventBroker.enqueue(%Events.EnrollmentKeyVerified{
+      enrollment_key: enrollment_key,
+      result: enrollment_key_result_atom(verified, error),
+      attempted_key_blob: if(is_nil(enrollment_key), do: key_blob)
+    })
+  end
+
+  defp enrollment_key_result_atom(true, _), do: :verified
+  defp enrollment_key_result_atom(false, "invalid_key"), do: :invalid_key
+  defp enrollment_key_result_atom(false, "key_expired"), do: :key_expired
+  defp enrollment_key_result_atom(false, "key_spent"), do: :key_spent
+  defp enrollment_key_result_atom(false, "node_limit_reached"), do: :node_limit_reached
 
   defp verify_key(%EnrollmentKey{} = key) do
     cond do

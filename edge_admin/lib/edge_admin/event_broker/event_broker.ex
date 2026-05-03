@@ -57,14 +57,15 @@ defmodule EdgeAdmin.EventBroker do
           | Events.NodeStatusChanged.t()
           | Events.NodeClusterChanged.t()
           | Events.NodeUpdateTriggered.t()
-          | Events.NodeDeleted.t()
-          | Events.ExecutionCreated.t()
-          | Events.ExecutionSent.t()
-          | Events.ExecutionCompleted.t()
-          | Events.ExecutionCancelled.t()
-          | Events.ExecutionExpired.t()
-          | Events.SelfUpdateCreated.t()
+          | Events.CommandExecutionCreated.t()
+          | Events.CommandExecutionSent.t()
+          | Events.CommandExecutionCompleted.t()
+          | Events.CommandExecutionCancelled.t()
+          | Events.CommandExecutionExpired.t()
+          | Events.CommandExecutionPruned.t()
           | Events.SelfUpdateCompleted.t()
+          | Events.EnrollmentKeyVerified.t()
+          | Events.SshUsernameVerified.t()
 
   @doc """
   Returns `:ok` if the broker connection is healthy, `{:error, reason}` if not.

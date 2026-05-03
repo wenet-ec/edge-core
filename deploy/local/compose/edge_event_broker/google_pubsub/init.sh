@@ -17,7 +17,7 @@
 #
 #   docker exec local_edge_event_broker_google_pubsub curl -s \
 #     -X POST -H 'Content-Type: application/json' -d '{"maxMessages":10}' \
-#     http://127.0.0.1:8085/v1/projects/edge-local/subscriptions/edge-node-events-debug:pull
+#     http://127.0.0.1:8085/v1/projects/edge-local/subscriptions/edge-nodes-events-debug:pull
 #
 # PUT topic + PUT subscription are idempotent — re-running returns the
 # existing resource, safe across restarts.
@@ -26,7 +26,7 @@ set -euo pipefail
 
 PROJECT="${PUBSUB_PROJECT_ID:-edge-local}"
 HOST="${PUBSUB_EMULATOR_HOST:?PUBSUB_EMULATOR_HOST must be set}"
-TOPICS=(edge-node-events edge-execution-events edge-self-update-events)
+TOPICS=(edge-nodes-events edge-commands-events edge-self-updates-events edge-ssh-events)
 
 api() {
   local method="$1" path="$2" body="${3:-}"

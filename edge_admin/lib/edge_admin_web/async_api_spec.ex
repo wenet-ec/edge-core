@@ -14,14 +14,15 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
     "edge.node.status_changed",
     "edge.node.cluster_changed",
     "edge.node.update_triggered",
-    "edge.node.deleted",
-    "edge.execution.created",
-    "edge.execution.sent",
-    "edge.execution.completed",
-    "edge.execution.cancelled",
-    "edge.execution.expired",
-    "edge.self_update.created",
-    "edge.self_update.completed"
+    "edge.enrollment_key.verified",
+    "edge.command_execution.created",
+    "edge.command_execution.sent",
+    "edge.command_execution.completed",
+    "edge.command_execution.cancelled",
+    "edge.command_execution.expired",
+    "edge.command_execution.pruned",
+    "edge.self_update_request.completed",
+    "edge.ssh_username.verified"
   ]
 
   @doc "Returns the AsyncAPI 3.1.0 document as a map (ready for Jason.encode!)."
@@ -83,7 +84,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           "Configure via EVENT_BROKER_NATS_URLS (comma-separated cluster list). " <>
             "Optional token auth via EVENT_BROKER_NATS_TOKEN. " <>
             "By default, pub/sub with no persistence. Set EVENT_BROKER_NATS_JETSTREAM=true to enable durable JetStream log — " <>
-            "three streams are auto-created on startup: EDGE_NODE_EVENTS, EDGE_EXECUTION_EVENTS, EDGE_SELF_UPDATE_EVENTS. Retention is configured on the broker.",
+            "four streams are auto-created on startup: EDGE_NODES_EVENTS (captures edge.node.> + edge.enrollment_key.>), EDGE_COMMANDS_EVENTS, EDGE_SELF_UPDATES_EVENTS, EDGE_SSH_EVENTS. Retention is configured on the broker.",
         "security" => [%{"$ref" => "#/components/securitySchemes/natsToken"}]
       },
       "kafka" => %{
@@ -151,8 +152,8 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "title" => "AWS SNS",
         "summary" => "AWS Simple Notification Service — managed fan-out pub/sub.",
         "description" =>
-          "Managed AWS service; no on-prem broker. Three topics by domain: " <>
-            "`edge-node-events`, `edge-execution-events`, `edge-self-update-events` " <>
+          "Managed AWS service; no on-prem broker. Four topics by domain: " <>
+            "`edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`, `edge-ssh-events` " <>
             "— must be pre-provisioned in your AWS account. Configure via " <>
             "EVENT_BROKER_AWS_SNS_REGION + EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX. " <>
             "Subscribers filter via subscription filter policies on message attributes " <>
@@ -167,8 +168,8 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "title" => "Google Cloud Pub/Sub",
         "summary" => "Google Cloud Pub/Sub — managed fan-out pub/sub.",
         "description" =>
-          "Managed GCP service; no on-prem broker. Three topics by domain: " <>
-            "`edge-node-events`, `edge-execution-events`, `edge-self-update-events` " <>
+          "Managed GCP service; no on-prem broker. Four topics by domain: " <>
+            "`edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`, `edge-ssh-events` " <>
             "— must be pre-provisioned in your GCP project. Configure via " <>
             "EVENT_BROKER_GOOGLE_PUBSUB_PROJECT (+ optional EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX). " <>
             "Subscribers filter via subscription filter expressions on message attributes " <>
@@ -193,7 +194,16 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
   end
 
   defp raw_channels do
-    Map.merge(node_channels(), Map.merge(execution_channels(), self_update_channels()))
+    Enum.reduce(
+      [
+        node_channels(),
+        command_execution_channels(),
+        self_update_request_channels(),
+        enrollment_key_channels(),
+        ssh_username_channels()
+      ],
+      &Map.merge/2
+    )
   end
 
   defp node_channels do
@@ -209,32 +219,65 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
       "edge.node.cluster_changed" =>
         channel("node.cluster_changed", "nodeClusterChangedMessage", "Node moved to a different cluster"),
       "edge.node.update_triggered" =>
-        channel("node.update_triggered", "nodeUpdateTriggeredMessage", "Self-update signal sent to this node"),
-      "edge.node.deleted" => channel("node.deleted", "nodeDeletedMessage", "Node removed from the system")
+        channel("node.update_triggered", "nodeUpdateTriggeredMessage", "Self-update signal sent to this node")
     }
   end
 
-  defp execution_channels do
+  defp command_execution_channels do
     %{
-      "edge.execution.created" =>
-        channel("execution.created", "executionCreatedMessage", "Execution record created and queued"),
-      "edge.execution.sent" =>
-        channel("execution.sent", "executionSentMessage", "Execution delivered to agent and ACKed"),
-      "edge.execution.completed" =>
-        channel("execution.completed", "executionCompletedMessage", "Agent reported result"),
-      "edge.execution.cancelled" =>
-        channel("execution.cancelled", "executionCancelledMessage", "Execution cancelled (explicit or SIGTERM)"),
-      "edge.execution.expired" =>
-        channel("execution.expired", "executionExpiredMessage", "Execution swept as stale before running")
+      "edge.command_execution.created" =>
+        channel("command_execution.created", "commandExecutionCreatedMessage", "Execution record created and queued"),
+      "edge.command_execution.sent" =>
+        channel("command_execution.sent", "commandExecutionSentMessage", "Execution delivered to agent and ACKed"),
+      "edge.command_execution.completed" =>
+        channel("command_execution.completed", "commandExecutionCompletedMessage", "Agent reported result"),
+      "edge.command_execution.cancelled" =>
+        channel(
+          "command_execution.cancelled",
+          "commandExecutionCancelledMessage",
+          "Execution cancelled (explicit or SIGTERM)"
+        ),
+      "edge.command_execution.expired" =>
+        channel(
+          "command_execution.expired",
+          "commandExecutionExpiredMessage",
+          "Execution swept as stale before running"
+        ),
+      "edge.command_execution.pruned" =>
+        channel(
+          "command_execution.pruned",
+          "commandExecutionPrunedMessage",
+          "Execution reaped by background pruning worker"
+        )
     }
   end
 
-  defp self_update_channels do
+  defp self_update_request_channels do
     %{
-      "edge.self_update.created" =>
-        channel("self_update.created", "selfUpdateCreatedMessage", "Self-update request created"),
-      "edge.self_update.completed" =>
-        channel("self_update.completed", "selfUpdateCompletedMessage", "Self-update batch finished")
+      "edge.self_update_request.completed" =>
+        channel("self_update_request.completed", "selfUpdateRequestCompletedMessage", "Self-update batch finished")
+    }
+  end
+
+  defp enrollment_key_channels do
+    %{
+      "edge.enrollment_key.verified" =>
+        channel(
+          "enrollment_key.verified",
+          "enrollmentKeyVerifiedMessage",
+          "Agent attempted to enroll using an enrollment key (success or failure)"
+        )
+    }
+  end
+
+  defp ssh_username_channels do
+    %{
+      "edge.ssh_username.verified" =>
+        channel(
+          "ssh_username.verified",
+          "sshUsernameVerifiedMessage",
+          "Agent verified an SSH credential against admin (success or failure)"
+        )
     }
   end
 
@@ -311,9 +354,11 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
     }
   end
 
-  defp sns_domain_for("edge.node." <> _), do: "node"
-  defp sns_domain_for("edge.execution." <> _), do: "execution"
-  defp sns_domain_for("edge.self_update." <> _), do: "self-update"
+  defp sns_domain_for("edge.node." <> _), do: "nodes"
+  defp sns_domain_for("edge.enrollment_key." <> _), do: "nodes"
+  defp sns_domain_for("edge.command_execution." <> _), do: "commands"
+  defp sns_domain_for("edge.self_update_request." <> _), do: "self-updates"
+  defp sns_domain_for("edge.ssh_username." <> _), do: "ssh"
 
   # ---------------------------------------------------------------------------
   # Components
@@ -350,7 +395,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
   }
 
   @execution_base_data %{
-    "execution_id" => "exec-abc123",
+    "command_execution_id" => "cmdexec-abc123",
     "command_id" => "cmd-xyz789",
     "node_id" => "node-abc123",
     "cluster_name" => "prod",
@@ -363,7 +408,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
   }
 
   @self_update_base_data %{
-    "request_id" => "req-abc123",
+    "self_update_request_id" => "selfupd-abc123",
     "targeting" => %{
       "type" => "clusters",
       "cluster_filters" => %{},
@@ -411,16 +456,14 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           "node.update_triggered",
           "NodeUpdateTriggeredEvent",
           "Self-update signal sent to this node",
-          Map.put(@node_base_data, "self_update_request_id", "req-abc123")
+          Map.put(@node_base_data, "self_update_request_id", "selfupd-abc123")
         ),
-      "nodeDeletedMessage" =>
-        node_message("node.deleted", "NodeEvent", "Node removed from the system", @node_base_data),
 
-      # Execution messages
-      "executionCreatedMessage" =>
-        execution_message(
-          "execution.created",
-          "ExecutionEvent",
+      # Command execution messages
+      "commandExecutionCreatedMessage" =>
+        command_execution_message(
+          "command_execution.created",
+          "CommandExecutionEvent",
           "Execution record created and queued",
           Map.merge(@execution_base_data, %{
             "status" => "pending",
@@ -430,10 +473,10 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
             "cancelled_at" => nil
           })
         ),
-      "executionSentMessage" =>
-        execution_message(
-          "execution.sent",
-          "ExecutionEvent",
+      "commandExecutionSentMessage" =>
+        command_execution_message(
+          "command_execution.sent",
+          "CommandExecutionEvent",
           "Execution delivered to agent and ACKed",
           Map.merge(@execution_base_data, %{
             "status" => "sent",
@@ -443,10 +486,10 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
             "cancelled_at" => nil
           })
         ),
-      "executionCompletedMessage" =>
-        execution_message(
-          "execution.completed",
-          "ExecutionEvent",
+      "commandExecutionCompletedMessage" =>
+        command_execution_message(
+          "command_execution.completed",
+          "CommandExecutionEvent",
           "Agent reported result",
           Map.merge(@execution_base_data, %{
             "status" => "completed",
@@ -456,10 +499,10 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
             "cancelled_at" => nil
           })
         ),
-      "executionCancelledMessage" =>
-        execution_message(
-          "execution.cancelled",
-          "ExecutionEvent",
+      "commandExecutionCancelledMessage" =>
+        command_execution_message(
+          "command_execution.cancelled",
+          "CommandExecutionEvent",
           "Execution cancelled (explicit or SIGTERM)",
           Map.merge(@execution_base_data, %{
             "status" => "cancelled",
@@ -469,10 +512,10 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
             "cancelled_at" => "2026-04-13T10:00:05Z"
           })
         ),
-      "executionExpiredMessage" =>
-        execution_message(
-          "execution.expired",
-          "ExecutionEvent",
+      "commandExecutionExpiredMessage" =>
+        command_execution_message(
+          "command_execution.expired",
+          "CommandExecutionEvent",
           "Execution swept as stale before running",
           Map.merge(@execution_base_data, %{
             "status" => "expired",
@@ -483,24 +526,62 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
             "expired_at" => "2026-04-13T10:05:00Z"
           })
         ),
-
-      # Self-update messages
-      "selfUpdateCreatedMessage" =>
-        self_update_message(
-          "self_update.created",
-          "SelfUpdateEvent",
-          "Self-update request created",
-          Map.merge(@self_update_base_data, %{"status" => "pending", "summary" => nil})
+      "commandExecutionPrunedMessage" =>
+        command_execution_message(
+          "command_execution.pruned",
+          "CommandExecutionEvent",
+          "Execution reaped by background pruning worker",
+          Map.merge(@execution_base_data, %{
+            "status" => "completed",
+            "exit_code" => 0,
+            "sent_at" => "2026-04-13T10:00:01Z",
+            "completed_at" => "2026-04-13T10:00:03Z",
+            "cancelled_at" => nil
+          })
         ),
-      "selfUpdateCompletedMessage" =>
-        self_update_message(
-          "self_update.completed",
-          "SelfUpdateEvent",
+
+      # Self-update request messages
+      "selfUpdateRequestCompletedMessage" =>
+        self_update_request_message(
+          "self_update_request.completed",
+          "SelfUpdateRequestEvent",
           "Self-update batch finished",
           Map.merge(@self_update_base_data, %{
             "status" => "completed",
             "summary" => %{"total" => 10, "triggered" => 9, "failed" => 1}
           })
+        ),
+
+      # Enrollment key messages
+      "enrollmentKeyVerifiedMessage" =>
+        enrollment_key_message(
+          "enrollment_key.verified",
+          "EnrollmentKeyVerifiedEvent",
+          "Agent attempted to enroll using an enrollment key",
+          %{
+            "enrollment_key_id" => "enrkey-abc123",
+            "cluster_name" => "prod",
+            "uses_remaining" => 4,
+            "result" => "verified",
+            "verified_at" => "2026-04-13T10:00:00Z"
+          }
+        ),
+
+      # SSH username messages
+      "sshUsernameVerifiedMessage" =>
+        ssh_username_message(
+          "ssh_username.verified",
+          "SshUsernameVerifiedEvent",
+          "Agent verified an SSH credential against admin",
+          %{
+            "ssh_username_id" => "sshuser-abc123",
+            "node_id" => "node-abc123",
+            "cluster_name" => "prod",
+            "username" => "deploy",
+            "auth_method" => "public_key",
+            "result" => "success",
+            "verified_at" => "2026-04-13T10:00:00Z"
+          }
         )
     }
   end
@@ -509,12 +590,20 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
     build_message(event_type, schema_ref, summary, "node_id", data)
   end
 
-  defp execution_message(event_type, schema_ref, summary, data) do
-    build_message(event_type, schema_ref, summary, "command_id", data)
+  defp command_execution_message(event_type, schema_ref, summary, data) do
+    build_message(event_type, schema_ref, summary, "command_execution_id", data)
   end
 
-  defp self_update_message(event_type, schema_ref, summary, data) do
-    build_message(event_type, schema_ref, summary, "request_id", data)
+  defp self_update_request_message(event_type, schema_ref, summary, data) do
+    build_message(event_type, schema_ref, summary, "self_update_request_id", data)
+  end
+
+  defp enrollment_key_message(event_type, schema_ref, summary, data) do
+    build_message(event_type, schema_ref, summary, "enrollment_key_id", data)
+  end
+
+  defp ssh_username_message(event_type, schema_ref, summary, data) do
+    build_message(event_type, schema_ref, summary, "node_id", data)
   end
 
   defp build_message(event_type, _schema_ref, summary, kafka_partition_key, data) do
@@ -579,7 +668,17 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
   # ---------------------------------------------------------------------------
 
   defp schemas do
-    Map.merge(envelope_schema(), Map.merge(node_schemas(), Map.merge(execution_schema(), self_update_schema())))
+    Enum.reduce(
+      [
+        envelope_schema(),
+        node_schemas(),
+        command_execution_schema(),
+        self_update_request_schema(),
+        enrollment_key_schema(),
+        ssh_username_schema()
+      ],
+      &Map.merge/2
+    )
   end
 
   defp envelope_schema do
@@ -611,14 +710,15 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
               "edge.node.status_changed",
               "edge.node.cluster_changed",
               "edge.node.update_triggered",
-              "edge.node.deleted",
-              "edge.execution.created",
-              "edge.execution.sent",
-              "edge.execution.completed",
-              "edge.execution.cancelled",
-              "edge.execution.expired",
-              "edge.self_update.created",
-              "edge.self_update.completed"
+              "edge.command_execution.created",
+              "edge.command_execution.sent",
+              "edge.command_execution.completed",
+              "edge.command_execution.cancelled",
+              "edge.command_execution.expired",
+              "edge.command_execution.pruned",
+              "edge.self_update_request.completed",
+              "edge.enrollment_key.verified",
+              "edge.ssh_username.verified"
             ]
           },
           "time" => %{
@@ -709,14 +809,14 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
     }
   end
 
-  defp execution_schema do
+  defp command_execution_schema do
     %{
-      "ExecutionEvent" => %{
+      "CommandExecutionEvent" => %{
         "type" => "object",
-        "required" => ["execution_id", "command_id", "node_id", "cluster_name", "status"],
+        "required" => ["command_execution_id", "command_id", "node_id", "cluster_name", "status"],
         "description" => "`output` is excluded — fetch via API if needed",
         "properties" => %{
-          "execution_id" => %{"type" => "string", "format" => "uuid"},
+          "command_execution_id" => %{"type" => "string", "format" => "uuid"},
           "command_id" => %{"type" => "string", "format" => "uuid"},
           "node_id" => %{"type" => "string"},
           "cluster_name" => %{"type" => "string"},
@@ -739,13 +839,13 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
     }
   end
 
-  defp self_update_schema do
+  defp self_update_request_schema do
     %{
-      "SelfUpdateEvent" => %{
+      "SelfUpdateRequestEvent" => %{
         "type" => "object",
-        "required" => ["request_id", "status", "targeting"],
+        "required" => ["self_update_request_id", "status", "targeting"],
         "properties" => %{
-          "request_id" => %{"type" => "string", "format" => "uuid"},
+          "self_update_request_id" => %{"type" => "string", "format" => "uuid"},
           "status" => %{"type" => "string", "enum" => ["pending", "processing", "completed"]},
           "targeting" => %{
             "type" => "object",
@@ -756,7 +856,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
             }
           },
           "summary" => %{
-            "description" => "null on self_update.created; populated on self_update.completed",
+            "description" => "Populated on self_update_request.completed",
             "oneOf" => [
               %{
                 "type" => "object",
@@ -771,6 +871,63 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           },
           "inserted_at" => %{"type" => "string", "format" => "date-time"},
           "updated_at" => %{"type" => "string", "format" => "date-time"}
+        }
+      }
+    }
+  end
+
+  defp enrollment_key_schema do
+    %{
+      "EnrollmentKeyVerifiedEvent" => %{
+        "type" => "object",
+        "required" => ["result", "verified_at"],
+        "description" =>
+          "Agent presented an enrollment key to admin. The full key blob is " <>
+            "intentionally excluded — it's a credential. On `:invalid_key`, " <>
+            "`enrollment_key_id` and `cluster_name` are null (no DB row matched).",
+        "properties" => %{
+          "enrollment_key_id" => %{
+            "type" => ["string", "null"],
+            "format" => "uuid",
+            "description" => "Null when result is invalid_key"
+          },
+          "cluster_name" => %{
+            "type" => ["string", "null"],
+            "description" => "Null when result is invalid_key"
+          },
+          "uses_remaining" => %{
+            "type" => ["integer", "null"],
+            "description" => "Remaining uses after this attempt; null for unlimited keys or invalid_key"
+          },
+          "result" => %{
+            "type" => "string",
+            "enum" => ["verified", "invalid_key", "key_expired", "key_spent", "node_limit_reached"]
+          },
+          "verified_at" => %{"type" => "string", "format" => "date-time"}
+        }
+      }
+    }
+  end
+
+  defp ssh_username_schema do
+    %{
+      "SshUsernameVerifiedEvent" => %{
+        "type" => "object",
+        "required" => ["node_id", "username", "auth_method", "result", "verified_at"],
+        "description" =>
+          "Agent verified an SSH credential against admin. Password hashes and " <>
+            "public-key strings are never echoed. `ssh_username_id` and " <>
+            "`cluster_name` are null when no DB row matched the attempted " <>
+            "(node_id, username) pair — failed attempts against missing usernames " <>
+            "are still emitted as security signal.",
+        "properties" => %{
+          "ssh_username_id" => %{"type" => ["string", "null"], "format" => "uuid"},
+          "node_id" => %{"type" => "string"},
+          "cluster_name" => %{"type" => ["string", "null"]},
+          "username" => %{"type" => "string", "description" => "The username the agent attempted to auth as"},
+          "auth_method" => %{"type" => "string", "enum" => ["password", "public_key", "unknown"]},
+          "result" => %{"type" => "string", "enum" => ["success", "failure"]},
+          "verified_at" => %{"type" => "string", "format" => "date-time"}
         }
       }
     }

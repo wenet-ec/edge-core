@@ -172,9 +172,9 @@ For managed services there's no compose file — the service exists in your clou
 The topic names are fixed:
 
 ```
-edge-node-events           ← all node lifecycle events
-edge-execution-events      ← all command execution events
-edge-self-update-events    ← all self-update events
+edge-nodes-events           ← all node lifecycle events
+edge-commands-events        ← all command execution events
+edge-self-updates-events    ← all self-update events
 ```
 
 Edge Admin promotes `type` and `corename` from each event envelope into broker-native message attributes. Subscribers filter on those attributes server-side using the cloud's own filter syntax — see the cloud's docs for the syntax (filter policies for SNS, filter expressions for Pub/Sub).
@@ -184,14 +184,14 @@ Edge Admin promotes `type` and `corename` from each event envelope into broker-n
 |                      |                                                                                                                                                                 |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Adapter**          | `aws_sns`                                                                                                                                                       |
-| **Topics to create** | `edge-node-events`, `edge-execution-events`, `edge-self-update-events`                                                                                          |
+| **Topics to create** | `edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`                                                                                         |
 | **IAM action**       | `sns:Publish` on the three topic ARNs                                                                                                                           |
 | **Auth**             | Standard AWS credential chain via `ex_aws`. Prefer **IRSA** on EKS / instance profile on EC2; static keys via env vars are an escape hatch.                     |
 | **Subscriptions**    | SQS queue, Lambda, HTTPS endpoint — your choice. SNS itself stores nothing.                                                                                     |
 | **Filter syntax**    | [SNS subscription filter policies](https://docs.aws.amazon.com/sns/latest/dg/sns-subscription-filter-policies.html) — JSON, matched against message attributes. |
 
 ```bash
-for t in edge-node-events edge-execution-events edge-self-update-events; do
+for t in edge-nodes-events edge-commands-events edge-self-updates-events; do
   aws sns create-topic --name "$t" --region us-east-1
 done
 ```
@@ -206,9 +206,9 @@ Minimal IAM policy:
       "Effect": "Allow",
       "Action": "sns:Publish",
       "Resource": [
-        "arn:aws:sns:us-east-1:123456789012:edge-node-events",
-        "arn:aws:sns:us-east-1:123456789012:edge-execution-events",
-        "arn:aws:sns:us-east-1:123456789012:edge-self-update-events"
+        "arn:aws:sns:us-east-1:123456789012:edge-nodes-events",
+        "arn:aws:sns:us-east-1:123456789012:edge-commands-events",
+        "arn:aws:sns:us-east-1:123456789012:edge-self-updates-events"
       ]
     }
   ]
@@ -218,9 +218,9 @@ Minimal IAM policy:
 Filter policy examples:
 
 ```json
-{"type": [{"prefix": "edge.node."}]}                      // all node events
-{"type": ["edge.execution.completed"]}                    // specific event type
-{"corename": ["prod-us"]}                                 // events from one core
+{"type": [{"prefix": "edge.node."}]}                       // all node events
+{"type": ["edge.command_execution.completed"]}             // specific event type
+{"corename": ["prod-us"]}                                  // events from one core
 ```
 
 ### Google Cloud Pub/Sub
@@ -228,14 +228,14 @@ Filter policy examples:
 |                      |                                                                                                                                                                                                                                |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Adapter**          | `google_pubsub`                                                                                                                                                                                                                |
-| **Topics to create** | `edge-node-events`, `edge-execution-events`, `edge-self-update-events` (prefix optional via `EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX`)                                                                                      |
+| **Topics to create** | `edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events` (prefix optional via `EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX`)                                                                                     |
 | **IAM role**         | `roles/pubsub.publisher` on the three topics                                                                                                                                                                                   |
 | **Auth**             | Standard GCP credential chain via `goth`. Prefer **Workload Identity** on GKE / metadata server on GCE; service-account JSON via `GOOGLE_APPLICATION_CREDENTIALS` is an escape hatch.                                          |
 | **Subscriptions**    | Pull, push (HTTPS / Cloud Run), BigQuery, Cloud Storage. Pub/Sub buffers per subscription (default 7-day retention, max 31).                                                                                                   |
 | **Filter syntax**    | [Pub/Sub subscription filters](https://cloud.google.com/pubsub/docs/subscription-message-filter#filtering_syntax) — query language, matched against message attributes. Set on subscription creation; cannot be changed later. |
 
 ```bash
-for t in edge-node-events edge-execution-events edge-self-update-events; do
+for t in edge-nodes-events edge-commands-events edge-self-updates-events; do
   gcloud pubsub topics create "$t" --project=my-project-123
 done
 ```
@@ -243,7 +243,7 @@ done
 Minimal per-topic role binding:
 
 ```bash
-for t in edge-node-events edge-execution-events edge-self-update-events; do
+for t in edge-nodes-events edge-commands-events edge-self-updates-events; do
   gcloud pubsub topics add-iam-policy-binding "$t" \
     --member=serviceAccount:edge-admin@my-project-123.iam.gserviceaccount.com \
     --role=roles/pubsub.publisher --project=my-project-123
@@ -255,7 +255,7 @@ Filter expression examples:
 ```
 attributes.type = "edge.node.status_changed"
 hasPrefix(attributes.type, "edge.node.")
-attributes.corename = "prod-us" AND hasPrefix(attributes.type, "edge.execution.")
+attributes.corename = "prod-us" AND hasPrefix(attributes.type, "edge.command_execution.")
 ```
 
 ## Events Published

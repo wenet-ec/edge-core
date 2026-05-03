@@ -43,6 +43,8 @@ defmodule EdgeAdmin.Ssh do
   import EdgeAdmin.Query, only: [case_insensitive_like: 2]
 
   alias Ecto.Query.CastError
+  alias EdgeAdmin.EventBroker
+  alias EdgeAdmin.EventBroker.Events
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Ssh.Forms
@@ -182,12 +184,21 @@ defmodule EdgeAdmin.Ssh do
         end
 
       {verified, auth_method} = check_credential(ssh_username, password, public_key)
+      result = if verified, do: :success, else: :failure
 
       :telemetry.execute(
         [:edge_admin, :ssh, :verification],
         %{count: 1},
-        %{result: if(verified, do: :success, else: :failure), auth_method: auth_method}
+        %{result: result, auth_method: auth_method}
       )
+
+      EventBroker.enqueue(%Events.SshUsernameVerified{
+        ssh_username: ssh_username && Repo.preload(ssh_username, node: :cluster),
+        node_id: node_id,
+        attempted_username: username,
+        auth_method: auth_method,
+        result: result
+      })
 
       {:ok, verified}
     end

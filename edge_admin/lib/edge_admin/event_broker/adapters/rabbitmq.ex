@@ -5,7 +5,7 @@ defmodule EdgeAdmin.EventBroker.Adapters.Rabbitmq do
 
   Uses a single topic exchange `edge.events`. Routing key = `envelope["type"]`
   (e.g. `edge.node.registered`). Consumers subscribe to the exchange with any
-  binding key — `edge.node.*`, `edge.execution.#`, `edge.#`, etc.
+  binding key — `edge.node.*`, `edge.command_execution.#`, `edge.#`, etc.
 
   The exchange is declared durable on startup. Consumer queue durability is the
   consumer's choice — Core publishes and forgets.

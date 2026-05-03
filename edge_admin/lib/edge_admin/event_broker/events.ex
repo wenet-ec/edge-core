@@ -1,11 +1,11 @@
 # edge_admin/lib/edge_admin/event_broker/events.ex
 defmodule EdgeAdmin.EventBroker.Events do
   @moduledoc """
-  Typed event structs for all 13 broker events.
+  Typed event structs for the broker catalog.
 
   Each struct carries the raw domain data needed to build the event envelope's
   `data` field. Callers construct the appropriate struct and pass it to
-  `EventBroker.publish/1`.
+  `EventBroker.enqueue/1`.
 
   ## Node events
 
@@ -15,26 +15,37 @@ defmodule EdgeAdmin.EventBroker.Events do
       %Events.NodeStatusChanged{node: node, previous_status: "healthy"}
       %Events.NodeClusterChanged{node: node, previous_cluster_name: "old"}
       %Events.NodeUpdateTriggered{node: node, self_update_request_id: id}
-      %Events.NodeDeleted{node: node}
 
-  ## Execution events
+  ## Command execution events
 
-      %Events.ExecutionCreated{execution: execution, command: command, cluster_name: "prod"}
-      %Events.ExecutionSent{execution: execution, command: command, cluster_name: "prod"}
-      %Events.ExecutionCompleted{execution: execution, command: command, cluster_name: "prod"}
-      %Events.ExecutionCancelled{execution: execution, command: command, cluster_name: "prod"}
-      %Events.ExecutionExpired{execution: execution, command: command, cluster_name: "prod"}
+      %Events.CommandExecutionCreated{execution: execution, command: command, cluster_name: "prod"}
+      %Events.CommandExecutionSent{execution: execution, command: command, cluster_name: "prod"}
+      %Events.CommandExecutionCompleted{execution: execution, command: command, cluster_name: "prod"}
+      %Events.CommandExecutionCancelled{execution: execution, command: command, cluster_name: "prod"}
+      %Events.CommandExecutionExpired{execution: execution, command: command, cluster_name: "prod"}
+      %Events.CommandExecutionPruned{execution: execution, command: command, cluster_name: "prod"}
 
-  ## Self-update events
+  ## Self-update request events
 
-      %Events.SelfUpdateCreated{request: request}
       %Events.SelfUpdateCompleted{request: request}
+
+  ## Enrollment key events
+
+      %Events.EnrollmentKeyVerified{enrollment_key: key, result: :verified}
+      %Events.EnrollmentKeyVerified{enrollment_key: nil, result: :invalid_key, attempted_key_blob: blob}
+
+  ## SSH username events
+
+      %Events.SshUsernameVerified{ssh_username: ssh_username, node_id: node_id, attempted_username: "deploy",
+                                  auth_method: :public_key, result: :success}
   """
 
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Commands.Schemas.CommandExecution
+  alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
+  alias EdgeAdmin.Ssh.Schemas.SshUsername
 
   # ---------------------------------------------------------------------------
   # Node event structs
@@ -82,18 +93,11 @@ defmodule EdgeAdmin.EventBroker.Events do
     @type t :: %__MODULE__{node: Node.t(), self_update_request_id: String.t()}
   end
 
-  defmodule NodeDeleted do
-    @moduledoc false
-    @enforce_keys [:node]
-    defstruct [:node]
-    @type t :: %__MODULE__{node: Node.t()}
-  end
-
   # ---------------------------------------------------------------------------
-  # Execution event structs
+  # Command execution event structs
   # ---------------------------------------------------------------------------
 
-  defmodule ExecutionCreated do
+  defmodule CommandExecutionCreated do
     @moduledoc false
     @enforce_keys [:execution, :command, :cluster_name]
     defstruct [:execution, :command, :cluster_name]
@@ -105,7 +109,7 @@ defmodule EdgeAdmin.EventBroker.Events do
           }
   end
 
-  defmodule ExecutionSent do
+  defmodule CommandExecutionSent do
     @moduledoc false
     @enforce_keys [:execution, :command, :cluster_name]
     defstruct [:execution, :command, :cluster_name]
@@ -117,7 +121,7 @@ defmodule EdgeAdmin.EventBroker.Events do
           }
   end
 
-  defmodule ExecutionCompleted do
+  defmodule CommandExecutionCompleted do
     @moduledoc false
     @enforce_keys [:execution, :command, :cluster_name]
     defstruct [:execution, :command, :cluster_name]
@@ -129,7 +133,7 @@ defmodule EdgeAdmin.EventBroker.Events do
           }
   end
 
-  defmodule ExecutionCancelled do
+  defmodule CommandExecutionCancelled do
     @moduledoc false
     @enforce_keys [:execution, :command, :cluster_name]
     defstruct [:execution, :command, :cluster_name]
@@ -141,7 +145,19 @@ defmodule EdgeAdmin.EventBroker.Events do
           }
   end
 
-  defmodule ExecutionExpired do
+  defmodule CommandExecutionExpired do
+    @moduledoc false
+    @enforce_keys [:execution, :command, :cluster_name]
+    defstruct [:execution, :command, :cluster_name]
+
+    @type t :: %__MODULE__{
+            execution: CommandExecution.t(),
+            command: Command.t(),
+            cluster_name: String.t()
+          }
+  end
+
+  defmodule CommandExecutionPruned do
     @moduledoc false
     @enforce_keys [:execution, :command, :cluster_name]
     defstruct [:execution, :command, :cluster_name]
@@ -157,18 +173,55 @@ defmodule EdgeAdmin.EventBroker.Events do
   # Self-update event structs
   # ---------------------------------------------------------------------------
 
-  defmodule SelfUpdateCreated do
+  defmodule SelfUpdateCompleted do
     @moduledoc false
     @enforce_keys [:request]
     defstruct [:request]
     @type t :: %__MODULE__{request: SelfUpdateRequest.t()}
   end
 
-  defmodule SelfUpdateCompleted do
+  # ---------------------------------------------------------------------------
+  # Enrollment key event structs
+  # ---------------------------------------------------------------------------
+
+  defmodule EnrollmentKeyVerified do
     @moduledoc false
-    @enforce_keys [:request]
-    defstruct [:request]
-    @type t :: %__MODULE__{request: SelfUpdateRequest.t()}
+    @enforce_keys [:result]
+    defstruct [:enrollment_key, :result, :attempted_key_blob]
+
+    @type result ::
+            :verified
+            | :invalid_key
+            | :key_expired
+            | :key_spent
+            | :node_limit_reached
+
+    @type t :: %__MODULE__{
+            enrollment_key: EnrollmentKey.t() | nil,
+            result: result(),
+            attempted_key_blob: String.t() | nil
+          }
+  end
+
+  # ---------------------------------------------------------------------------
+  # SSH event structs
+  # ---------------------------------------------------------------------------
+
+  defmodule SshUsernameVerified do
+    @moduledoc false
+    @enforce_keys [:node_id, :attempted_username, :auth_method, :result]
+    defstruct [:ssh_username, :node_id, :attempted_username, :auth_method, :result]
+
+    @type auth_method :: :password | :public_key | :unknown
+    @type result :: :success | :failure
+
+    @type t :: %__MODULE__{
+            ssh_username: SshUsername.t() | nil,
+            node_id: String.t(),
+            attempted_username: String.t(),
+            auth_method: auth_method(),
+            result: result()
+          }
   end
 
   # ---------------------------------------------------------------------------
@@ -183,14 +236,15 @@ defmodule EdgeAdmin.EventBroker.Events do
   def event_type(%NodeStatusChanged{}), do: "edge.node.status_changed"
   def event_type(%NodeClusterChanged{}), do: "edge.node.cluster_changed"
   def event_type(%NodeUpdateTriggered{}), do: "edge.node.update_triggered"
-  def event_type(%NodeDeleted{}), do: "edge.node.deleted"
-  def event_type(%ExecutionCreated{}), do: "edge.execution.created"
-  def event_type(%ExecutionSent{}), do: "edge.execution.sent"
-  def event_type(%ExecutionCompleted{}), do: "edge.execution.completed"
-  def event_type(%ExecutionCancelled{}), do: "edge.execution.cancelled"
-  def event_type(%ExecutionExpired{}), do: "edge.execution.expired"
-  def event_type(%SelfUpdateCreated{}), do: "edge.self_update.created"
-  def event_type(%SelfUpdateCompleted{}), do: "edge.self_update.completed"
+  def event_type(%CommandExecutionCreated{}), do: "edge.command_execution.created"
+  def event_type(%CommandExecutionSent{}), do: "edge.command_execution.sent"
+  def event_type(%CommandExecutionCompleted{}), do: "edge.command_execution.completed"
+  def event_type(%CommandExecutionCancelled{}), do: "edge.command_execution.cancelled"
+  def event_type(%CommandExecutionExpired{}), do: "edge.command_execution.expired"
+  def event_type(%CommandExecutionPruned{}), do: "edge.command_execution.pruned"
+  def event_type(%SelfUpdateCompleted{}), do: "edge.self_update_request.completed"
+  def event_type(%EnrollmentKeyVerified{}), do: "edge.enrollment_key.verified"
+  def event_type(%SshUsernameVerified{}), do: "edge.ssh_username.verified"
 
   @doc "Builds the `data` map for the event envelope."
   @spec to_data(term()) :: map()
@@ -215,22 +269,29 @@ defmodule EdgeAdmin.EventBroker.Events do
     node |> node_data() |> Map.put("self_update_request_id", req_id)
   end
 
-  def to_data(%NodeDeleted{node: node}), do: node_data(node)
+  # Command execution events — base snapshot (output excluded)
+  def to_data(%CommandExecutionCreated{execution: ex, command: cmd, cluster_name: cn}), do: execution_data(ex, cmd, cn)
 
-  # Execution events — base snapshot (output excluded)
-  def to_data(%ExecutionCreated{execution: ex, command: cmd, cluster_name: cn}), do: execution_data(ex, cmd, cn)
+  def to_data(%CommandExecutionSent{execution: ex, command: cmd, cluster_name: cn}), do: execution_data(ex, cmd, cn)
 
-  def to_data(%ExecutionSent{execution: ex, command: cmd, cluster_name: cn}), do: execution_data(ex, cmd, cn)
+  def to_data(%CommandExecutionCompleted{execution: ex, command: cmd, cluster_name: cn}),
+    do: execution_data(ex, cmd, cn)
 
-  def to_data(%ExecutionCompleted{execution: ex, command: cmd, cluster_name: cn}), do: execution_data(ex, cmd, cn)
+  def to_data(%CommandExecutionCancelled{execution: ex, command: cmd, cluster_name: cn}),
+    do: execution_data(ex, cmd, cn)
 
-  def to_data(%ExecutionCancelled{execution: ex, command: cmd, cluster_name: cn}), do: execution_data(ex, cmd, cn)
+  def to_data(%CommandExecutionExpired{execution: ex, command: cmd, cluster_name: cn}), do: execution_data(ex, cmd, cn)
 
-  def to_data(%ExecutionExpired{execution: ex, command: cmd, cluster_name: cn}), do: execution_data(ex, cmd, cn)
+  def to_data(%CommandExecutionPruned{execution: ex, command: cmd, cluster_name: cn}), do: execution_data(ex, cmd, cn)
 
   # Self-update events
-  def to_data(%SelfUpdateCreated{request: req}), do: self_update_data(req)
   def to_data(%SelfUpdateCompleted{request: req}), do: self_update_data(req)
+
+  # Enrollment key events
+  def to_data(%EnrollmentKeyVerified{} = event), do: enrollment_key_verified_data(event)
+
+  # SSH events
+  def to_data(%SshUsernameVerified{} = event), do: ssh_username_verified_data(event)
 
   # ---------------------------------------------------------------------------
   # Data builders — full object snapshots, no internal/secret fields
@@ -258,7 +319,7 @@ defmodule EdgeAdmin.EventBroker.Events do
 
   defp execution_data(execution, command, cluster_name) do
     %{
-      "execution_id" => execution.id,
+      "command_execution_id" => execution.id,
       "command_id" => execution.command_id,
       "node_id" => execution.node_id,
       "cluster_name" => cluster_name,
@@ -278,7 +339,7 @@ defmodule EdgeAdmin.EventBroker.Events do
 
   defp self_update_data(request) do
     %{
-      "request_id" => request.id,
+      "self_update_request_id" => request.id,
       "status" => request.status,
       "targeting" => request.targeting,
       "summary" => request.summary,
@@ -286,6 +347,72 @@ defmodule EdgeAdmin.EventBroker.Events do
       "updated_at" => format_dt(request.updated_at)
     }
   end
+
+  # The `key` blob is intentionally excluded from the event — it's a credential.
+  # On `:invalid_key` the enrollment_key is nil (no DB row matched); the other
+  # identifying fields fall back to nil too.
+  defp enrollment_key_verified_data(%EnrollmentKeyVerified{enrollment_key: nil, result: result}) do
+    %{
+      "enrollment_key_id" => nil,
+      "cluster_name" => nil,
+      "uses_remaining" => nil,
+      "result" => Atom.to_string(result),
+      "verified_at" => format_dt(DateTime.utc_now())
+    }
+  end
+
+  defp enrollment_key_verified_data(%EnrollmentKeyVerified{enrollment_key: key, result: result}) do
+    %{
+      "enrollment_key_id" => key.id,
+      "cluster_name" => cluster_name(key),
+      "uses_remaining" => key.uses_remaining,
+      "result" => Atom.to_string(result),
+      "verified_at" => format_dt(DateTime.utc_now())
+    }
+  end
+
+  # `password_hash` and the public-key strings are never echoed back. We carry
+  # only the verification decision and identifying metadata. `ssh_username` is
+  # nil when the username doesn't exist for the node (still fired, since failed
+  # attempts against missing usernames are real security signal).
+  defp ssh_username_verified_data(%SshUsernameVerified{
+         ssh_username: nil,
+         node_id: node_id,
+         attempted_username: attempted,
+         auth_method: auth_method,
+         result: result
+       }) do
+    %{
+      "ssh_username_id" => nil,
+      "node_id" => node_id,
+      "cluster_name" => nil,
+      "username" => attempted,
+      "auth_method" => Atom.to_string(auth_method),
+      "result" => Atom.to_string(result),
+      "verified_at" => format_dt(DateTime.utc_now())
+    }
+  end
+
+  defp ssh_username_verified_data(%SshUsernameVerified{
+         ssh_username: ssh_username,
+         node_id: node_id,
+         attempted_username: attempted,
+         auth_method: auth_method,
+         result: result
+       }) do
+    %{
+      "ssh_username_id" => ssh_username.id,
+      "node_id" => node_id,
+      "cluster_name" => ssh_username_cluster_name(ssh_username),
+      "username" => attempted,
+      "auth_method" => Atom.to_string(auth_method),
+      "result" => Atom.to_string(result),
+      "verified_at" => format_dt(DateTime.utc_now())
+    }
+  end
+
+  defp ssh_username_cluster_name(%{node: %{cluster: %{name: name}}}), do: name
+  defp ssh_username_cluster_name(_), do: nil
 
   defp cluster_name(%{cluster: %{name: name}}), do: name
   defp cluster_name(_), do: nil

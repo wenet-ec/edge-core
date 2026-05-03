@@ -727,7 +727,7 @@ defmodule EdgeAdmin.Commands do
       Enum.each(inserted_executions, fn execution ->
         cluster_name = Map.get(cluster_name_by_node_id, execution.node_id)
 
-        EventBroker.enqueue(%Events.ExecutionCreated{
+        EventBroker.enqueue(%Events.CommandExecutionCreated{
           execution: execution,
           command: command,
           cluster_name: cluster_name
@@ -1334,30 +1334,53 @@ defmodule EdgeAdmin.Commands do
   end
 
   defp prune_loop(cutoff, acc) do
-    # Postgres does not accept LIMIT directly on DELETE — drive the delete via a
-    # subquery selecting eligible row IDs, capped at @prune_batch_size per pass.
+    # Load eligible rows (with command + cluster preloaded for the event) so we
+    # can fire `command_execution.pruned` per row before deletion. Then delete
+    # by ID. The two-step is intentional: the only async-deletion path in this
+    # codebase is pruning, and consumers maintaining state mirrors have no
+    # other way to learn that a row went away.
     #
     # Eligibility: completed (always finalised), OR cancelled/expired with
     # exit_code set (agent reported back). Excludes the cancel/expire race
     # window where exit_code is still nil.
-    subquery =
-      from(ce in CommandExecution,
-        where:
-          ce.inserted_at < ^cutoff and
-            (ce.status == "completed" or
-               (ce.status in ["cancelled", "expired"] and not is_nil(ce.exit_code))),
-        select: ce.id,
-        limit: @prune_batch_size
+    eligible =
+      Repo.all(
+        from(ce in CommandExecution,
+          where:
+            ce.inserted_at < ^cutoff and
+              (ce.status == "completed" or
+                 (ce.status in ["cancelled", "expired"] and not is_nil(ce.exit_code))),
+          limit: @prune_batch_size,
+          preload: [:command, node: :cluster]
+        )
       )
 
-    {deleted, _} =
-      Repo.delete_all(from(ce in CommandExecution, where: ce.id in subquery(subquery)))
+    case eligible do
+      [] ->
+        acc
 
-    if deleted == @prune_batch_size do
-      prune_loop(cutoff, acc + deleted)
-    else
-      acc + deleted
+      rows ->
+        Enum.each(rows, &enqueue_pruned_event/1)
+
+        ids = Enum.map(rows, & &1.id)
+        {deleted, _} = Repo.delete_all(from(ce in CommandExecution, where: ce.id in ^ids))
+
+        if deleted == @prune_batch_size do
+          prune_loop(cutoff, acc + deleted)
+        else
+          acc + deleted
+        end
     end
+  end
+
+  defp enqueue_pruned_event(execution) do
+    cluster_name = execution.node && execution.node.cluster && execution.node.cluster.name
+
+    EventBroker.enqueue(%Events.CommandExecutionPruned{
+      execution: execution,
+      command: execution.command,
+      cluster_name: cluster_name
+    })
   end
 
   defp send_cancel_to_agent(execution) do
@@ -1404,16 +1427,28 @@ defmodule EdgeAdmin.Commands do
       event =
         case type do
           :sent ->
-            %Events.ExecutionSent{execution: execution, command: execution.command, cluster_name: cluster_name}
+            %Events.CommandExecutionSent{execution: execution, command: execution.command, cluster_name: cluster_name}
 
           :completed ->
-            %Events.ExecutionCompleted{execution: execution, command: execution.command, cluster_name: cluster_name}
+            %Events.CommandExecutionCompleted{
+              execution: execution,
+              command: execution.command,
+              cluster_name: cluster_name
+            }
 
           :cancelled ->
-            %Events.ExecutionCancelled{execution: execution, command: execution.command, cluster_name: cluster_name}
+            %Events.CommandExecutionCancelled{
+              execution: execution,
+              command: execution.command,
+              cluster_name: cluster_name
+            }
 
           :expired ->
-            %Events.ExecutionExpired{execution: execution, command: execution.command, cluster_name: cluster_name}
+            %Events.CommandExecutionExpired{
+              execution: execution,
+              command: execution.command,
+              cluster_name: cluster_name
+            }
         end
 
       EventBroker.enqueue(event)

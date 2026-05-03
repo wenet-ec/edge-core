@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-TOPICS=(edge-node-events edge-execution-events edge-self-update-events)
+TOPICS=(edge-nodes-events edge-commands-events edge-self-updates-events edge-ssh-events)
 
 for topic in "${TOPICS[@]}"; do
   awslocal sns create-topic --name "$topic" >/dev/null

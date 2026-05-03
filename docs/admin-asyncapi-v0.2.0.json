@@ -1575,12 +1575,13 @@
       "title": "NATS"
     },
     "rabbitmq": {
-      "description": "Configure via EVENT_BROKER_RABBITMQ_URL (single amqp:// or amqps:// URL). All events are published to a durable topic exchange `edge.events`. Routing key = event type (e.g. `edge.node.registered`). Consumer queue durability is the consumer's choice.",
+      "description": "Adapter id: `amqp091` (alias: `rabbitmq`). Works against any AMQP 0-9-1 broker — RabbitMQ, LavinMQ, AmazonMQ for RabbitMQ, CloudAMQP. Configure via EVENT_BROKER_RABBITMQ_URL (single amqp:// or amqps:// URL). All events are published to a durable topic exchange `edge.events`. Routing key = event type (e.g. `edge.node.registered`). Consumer queue durability is the consumer's choice.",
       "host": "edge_event_broker_rabbitmq:5672",
       "protocol": "amqp",
+      "protocolVersion": "0.9.1",
       "security": [{ "$ref": "#/components/securitySchemes/amqpPlain" }],
-      "summary": "AMQP topic exchange; routing key = event type.",
-      "title": "RabbitMQ"
+      "summary": "AMQP 0-9-1 topic exchange; routing key = event type.",
+      "title": "AMQP 0-9-1 (RabbitMQ-compatible)"
     },
     "redis": {
       "description": "Configure via EVENT_BROKER_REDIS_URL (single redis:// or rediss:// URL). Events are published via Redis Pub/Sub (`PUBLISH`). Channel = event type (e.g. `edge.node.registered`). Use `SUBSCRIBE` or `PSUBSCRIBE edge.*` to consume. No durability or replay. Credentials embedded in URL.",

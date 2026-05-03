@@ -8,7 +8,7 @@ Interactive viewer: `/asyncdoc` on a running admin. Raw spec: `GET /api/asyncapi
 
 ## Overview
 
-Edge Admin publishes lifecycle events to a configured message broker (NATS, Kafka/Redpanda, RabbitMQ, Redis, MQTT, AWS SNS, or Google Cloud Pub/Sub). All events follow the [CloudEvents 1.0](https://cloudevents.io) spec. Edge Admin publishes and forgets — it has no knowledge of consumers.
+Edge Admin publishes lifecycle events to a configured message broker (NATS, Kafka/Redpanda, AMQP 0-9-1 (RabbitMQ-compatible), Redis, MQTT, AWS SNS, or Google Cloud Pub/Sub). All events follow the [CloudEvents 1.0](https://cloudevents.io) spec. Edge Admin publishes and forgets — it has no knowledge of consumers.
 
 ### Event Envelope
 
@@ -77,7 +77,9 @@ Three topics, one per domain:
 
 Partition key ensures ordering per entity, parallel across entities. Filter by event type using the `type` field in the envelope.
 
-### RabbitMQ
+### AMQP 0-9-1 (RabbitMQ-compatible)
+
+Adapter id: `amqp091` (alias: `rabbitmq`). Works against any AMQP 0-9-1 broker — RabbitMQ, LavinMQ, AmazonMQ for RabbitMQ, CloudAMQP.
 
 All events are published to a single durable topic exchange: `edge.events`. The routing key is the event `type` (e.g. `edge.node.registered`).
 

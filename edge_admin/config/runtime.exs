@@ -482,6 +482,9 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
       "kafka" ->
         :kafka
 
+      "amqp091" ->
+        :rabbitmq
+
       "rabbitmq" ->
         :rabbitmq
 
@@ -498,7 +501,7 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
         :google_pubsub
 
       other ->
-        raise "Unknown EVENT_BROKER_ADAPTER=#{other} — valid values: nats, kafka, rabbitmq, redis, mqtt, aws_sns, google_pubsub"
+        raise "Unknown EVENT_BROKER_ADAPTER=#{other} — valid values: nats, kafka, amqp091 (alias: rabbitmq), redis, mqtt, aws_sns, google_pubsub"
     end
 
   config :edge_admin,

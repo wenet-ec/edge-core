@@ -265,8 +265,8 @@ ADMIN_DISCOVERY_PORT=44000
 # EVENT_BROKER_KAFKA_SASL_MECHANISM=plain                     # plain | scram_sha_256 | scram_sha_512
 # EVENT_BROKER_KAFKA_SSL=true                                 # TLS, required for public/external brokers
 
-# RabbitMQ:
-# EVENT_BROKER_ADAPTER=rabbitmq
+# AMQP 0-9-1 (RabbitMQ / LavinMQ / AmazonMQ for RabbitMQ / CloudAMQP):
+# EVENT_BROKER_ADAPTER=amqp091     # alias `rabbitmq` also accepted
 # EVENT_BROKER_RABBITMQ_URL=amqp://edge_event_broker_rabbitmq:5672   # embed credentials: amqp://user:pass@host:port
 # EVENT_BROKER_RABBITMQ_SSL=true                              # TLS, required for public/external brokers
 

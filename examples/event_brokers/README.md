@@ -6,15 +6,15 @@ Edge Core publishes and forgets — it has no knowledge of consumers. All messag
 
 ## Adapters
 
-| Adapter         | Protocol family               | Works against                                                                                                                           |
-| --------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `nats`          | NATS / NATS JetStream         | Any NATS server. JetStream-enabled servers gain durable log + replay via `EVENT_BROKER_NATS_JETSTREAM=true`.                            |
-| `kafka`         | Kafka wire protocol           | Apache Kafka, Redpanda, Confluent Cloud, Aiven, AWS MSK, Azure Event Hubs, Upstash, Redpanda Cloud, etc.                                |
-| `rabbitmq`      | AMQP 0-9-1                    | Any RabbitMQ instance, including CloudAMQP.                                                                                             |
-| `redis`         | Redis Pub/Sub                 | Any Redis instance. Fire-and-forget — no durability, no replay.                                                                         |
-| `mqtt`          | MQTT 3.1.1 / 5                | Any MQTT broker — EMQX, Mosquitto, HiveMQ, AWS IoT Core, Azure Event Grid (MQTT broker mode), VerneMQ, NanoMQ, etc.                     |
-| `aws_sns`       | AWS SNS REST API              | AWS SNS (managed). Publishes to three pre-provisioned domain topics; subscribers filter via subscription filter policies.               |
-| `google_pubsub` | Google Cloud Pub/Sub REST API | Google Cloud Pub/Sub (managed). Same shape as SNS — three pre-provisioned domain topics, subscription filter expressions on attributes. |
+| Adapter                            | Protocol family               | Works against                                                                                                                           |
+| ---------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `nats`                             | NATS / NATS JetStream         | Any NATS server. JetStream-enabled servers gain durable log + replay via `EVENT_BROKER_NATS_JETSTREAM=true`.                            |
+| `kafka`                            | Kafka wire protocol           | Apache Kafka, Redpanda, Confluent Cloud, Aiven, AWS MSK, Azure Event Hubs, Upstash, Redpanda Cloud, etc.                                |
+| `amqp091` <br/>(alias: `rabbitmq`) | AMQP 0-9-1                    | Any AMQP 0-9-1 broker — RabbitMQ, LavinMQ (single-node or clustered), AmazonMQ for RabbitMQ, CloudAMQP.                                 |
+| `redis`                            | Redis Pub/Sub                 | Any Redis instance. Fire-and-forget — no durability, no replay.                                                                         |
+| `mqtt`                             | MQTT 3.1.1 / 5                | Any MQTT broker — EMQX, Mosquitto, HiveMQ, AWS IoT Core, Azure Event Grid (MQTT broker mode), VerneMQ, NanoMQ, etc.                     |
+| `aws_sns`                          | AWS SNS REST API              | AWS SNS (managed). Publishes to three pre-provisioned domain topics; subscribers filter via subscription filter policies.               |
+| `google_pubsub`                    | Google Cloud Pub/Sub REST API | Google Cloud Pub/Sub (managed). Same shape as SNS — three pre-provisioned domain topics, subscription filter expressions on attributes. |
 
 Pick whichever adapter matches a broker your stack already runs. There is no recommended default.
 
@@ -80,15 +80,15 @@ EVENT_BROKER_KAFKA_SASL_MECHANISM=plain     # plain (default) | scram_sha_256 | 
 EVENT_BROKER_KAFKA_SSL=true                 # required for public/external brokers
 ```
 
-### RabbitMQ
+### AMQP 0-9-1 (RabbitMQ-compatible)
 
 ```bash
-EVENT_BROKER_ADAPTER=rabbitmq
+EVENT_BROKER_ADAPTER=amqp091                            # alias `rabbitmq` also accepted
 EVENT_BROKER_RABBITMQ_URL=amqp://user:pass@host:5672    # embed credentials in URL
 EVENT_BROKER_RABBITMQ_SSL=true                          # required for external brokers (CloudAMQP, etc.)
 ```
 
-Events publish to a durable topic exchange `edge.events` with routing key = event type.
+Events publish to a durable topic exchange `edge.events` with routing key = event type. Works against RabbitMQ, LavinMQ, AmazonMQ for RabbitMQ, CloudAMQP — anything speaking AMQP 0-9-1.
 
 ### Redis
 

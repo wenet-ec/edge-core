@@ -100,10 +100,13 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
       "rabbitmq" => %{
         "host" => "edge_event_broker_rabbitmq:5672",
         "protocol" => "amqp",
-        "title" => "RabbitMQ",
-        "summary" => "AMQP topic exchange; routing key = event type.",
+        "protocolVersion" => "0.9.1",
+        "title" => "AMQP 0-9-1 (RabbitMQ-compatible)",
+        "summary" => "AMQP 0-9-1 topic exchange; routing key = event type.",
         "description" =>
-          "Configure via EVENT_BROKER_RABBITMQ_URL (single amqp:// or amqps:// URL). " <>
+          "Adapter id: `amqp091` (alias: `rabbitmq`). Works against any AMQP 0-9-1 " <>
+            "broker — RabbitMQ, LavinMQ, AmazonMQ for RabbitMQ, CloudAMQP. " <>
+            "Configure via EVENT_BROKER_RABBITMQ_URL (single amqp:// or amqps:// URL). " <>
             "All events are published to a durable topic exchange `edge.events`. " <>
             "Routing key = event type (e.g. `edge.node.registered`). " <>
             "Consumer queue durability is the consumer's choice.",

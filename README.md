@@ -145,11 +145,11 @@ Tools are discovered dynamically via `tools/list` — no static spec file needed
 
 Edge Admin can publish lifecycle events to a message broker. Disabled by default — opt in by setting `EVENT_BROKER_ENABLED=true` and the adapter-specific endpoint env var.
 
-Events cover node lifecycle, command execution lifecycle, and self-update lifecycle. All follow the [CloudEvents 1.0](https://cloudevents.io) spec. Supported brokers: NATS, Kafka/Redpanda, RabbitMQ, Redis, MQTT, AWS SNS, and Google Cloud Pub/Sub — pick whichever fits your stack.
+Events cover node lifecycle, command execution lifecycle, and self-update lifecycle. All follow the [CloudEvents 1.0](https://cloudevents.io) spec. Supported brokers: NATS, Kafka/Redpanda, AMQP 0-9-1 (RabbitMQ / LavinMQ / etc.), Redis, MQTT, AWS SNS, and Google Cloud Pub/Sub — pick whichever fits your stack.
 
 ```bash
 EVENT_BROKER_ENABLED=true
-EVENT_BROKER_ADAPTER=nats                   # or: kafka, rabbitmq, redis, mqtt, aws_sns, google_pubsub
+EVENT_BROKER_ADAPTER=nats                   # or: kafka, amqp091, redis, mqtt, aws_sns, google_pubsub
 EVENT_BROKER_NATS_URLS=nats://your-broker:4222   # endpoint var is namespaced per adapter
 ```
 

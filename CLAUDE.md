@@ -283,7 +283,7 @@ edge_core/
 - `event_broker/events.ex` - Typed event structs + serialisation
 - `event_broker/adapters/nats.ex` - NATS adapter (gnat); JetStream enabled via `EVENT_BROKER_NATS_JETSTREAM=true`
 - `event_broker/adapters/kafka.ex` - Kafka-compatible adapter (brod)
-- `event_broker/adapters/rabbitmq.ex` - RabbitMQ adapter (amqp); durable topic exchange `edge.events`
+- `event_broker/adapters/rabbitmq.ex` - AMQP 0-9-1 adapter (amqp lib); durable topic exchange `edge.events`. Operator-facing adapter id is `amqp091` (alias: `rabbitmq`); module/file kept under `Rabbitmq` since the protocol's primary deployment is RabbitMQ. Works against RabbitMQ, LavinMQ, AmazonMQ for RabbitMQ, CloudAMQP.
 - `event_broker/adapters/redis.ex` - Redis adapter (redix); fire-and-forget pub/sub, channel = event type
 - `event_broker/adapters/mqtt.ex` - MQTT adapter (emqtt); pub/sub, configurable QoS, topic = event type with `.` rewritten to `/`
 - `event_broker/adapters/aws_sns.ex` - AWS SNS adapter (ex_aws_sns + req); managed pub/sub, domain topics, `type`/`corename` promoted to message attributes for filter policies
@@ -422,7 +422,7 @@ Production files follow the same pattern in `deploy/production/.envs/`
 - `SECRET_KEY_BASE` - Phoenix secret for sessions and encryption
 - `PHX_HOST` - Public hostname for admin API
 - `EVENT_BROKER_ENABLED` - `true` to enable event publishing (default: `false`)
-- `EVENT_BROKER_ADAPTER` - `nats`, `kafka`, `rabbitmq`, `redis`, `mqtt`, `aws_sns`, or `google_pubsub` (required when enabled)
+- `EVENT_BROKER_ADAPTER` - `nats`, `kafka`, `amqp091` (alias: `rabbitmq`), `redis`, `mqtt`, `aws_sns`, or `google_pubsub` (required when enabled)
 - Adapter-specific endpoint env var (required when enabled):
   - `EVENT_BROKER_NATS_URLS` / `EVENT_BROKER_KAFKA_URLS` — comma-separated cluster list (plural)
   - `EVENT_BROKER_RABBITMQ_URL` / `EVENT_BROKER_REDIS_URL` / `EVENT_BROKER_MQTT_URL` — single endpoint (singular)

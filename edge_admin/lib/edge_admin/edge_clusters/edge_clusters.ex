@@ -78,10 +78,9 @@ defmodule EdgeAdmin.EdgeClusters do
     admin_name = Application.get_env(:edge_admin, :admin_name)
 
     # Subscribe to local metadata events
-    topic = "#{admin_name}:metadata"
-    Phoenix.PubSub.subscribe(EdgeAdmin.PubSub, topic)
+    Metadata.Events.subscribe_local()
 
-    Logger.info("EdgeClusters subscribed to #{topic}, waiting for metadata events")
+    Logger.info("EdgeClusters subscribed to local metadata events, waiting")
 
     # Start with empty state - gateways will be spawned when we receive first event
     {:ok,

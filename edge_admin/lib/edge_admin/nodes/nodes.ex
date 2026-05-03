@@ -126,6 +126,7 @@ defmodule EdgeAdmin.Nodes do
   import EdgeAdmin.Query, only: [case_insensitive_like: 2]
 
   alias Ecto.Query.CastError
+  alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.EdgeClusters.AgentClient
   alias EdgeAdmin.EventBroker
   alias EdgeAdmin.EventBroker.Events
@@ -144,21 +145,6 @@ defmodule EdgeAdmin.Nodes do
   # ===========================================================================
   # Private Helpers
   # ===========================================================================
-
-  # Broadcasts metadata recomputation event to all admins in this admin cluster.
-  # No-op if PubSub isn't running (e.g. inside a one-shot release task) — there
-  # are no peer admins listening on a transient script's BEAM node anyway.
-  defp broadcast_metadata_event(event) do
-    if Process.whereis(EdgeAdmin.PubSub) do
-      Phoenix.PubSub.broadcast(
-        EdgeAdmin.PubSub,
-        "#{Vpn.admin_cluster_name()}:metadata",
-        event
-      )
-    end
-
-    :ok
-  end
 
   # Builds network name for a cluster (node network, not admin network)
   defp node_network_name(%Cluster{name: name}), do: Vpn.build_network_name(name, prefix: :node)
@@ -503,7 +489,7 @@ defmodule EdgeAdmin.Nodes do
       case Vpn.create_network(network_name, netmaker_opts) do
         {:ok, _} ->
           Logger.info("Created Netmaker network: #{network_name}")
-          broadcast_metadata_event({:cluster_created, cluster.id})
+          Metadata.Events.publish(:cluster_created)
           {:ok, cluster}
 
         {:error, :already_exists} ->
@@ -511,7 +497,7 @@ defmodule EdgeAdmin.Nodes do
           # or another replica created it concurrently). DB and Netmaker are in
           # sync — proceed as success.
           Logger.info("Netmaker network #{network_name} already exists, reusing")
-          broadcast_metadata_event({:cluster_created, cluster.id})
+          Metadata.Events.publish(:cluster_created)
           {:ok, cluster}
 
         {:error, :service_unavailable} = error ->
@@ -600,7 +586,7 @@ defmodule EdgeAdmin.Nodes do
   defp delete_cluster_from_db(%Cluster{} = cluster) do
     case Repo.delete(cluster) do
       {:ok, deleted_cluster} ->
-        broadcast_metadata_event({:cluster_deleted, cluster.id})
+        Metadata.Events.publish(:cluster_deleted)
         {:ok, deleted_cluster}
 
       {:error, changeset} ->
@@ -747,14 +733,12 @@ defmodule EdgeAdmin.Nodes do
          {:ok, new_cluster} <- get_cluster(new_cluster_name),
          :ok <- Checks.SameClusterCheck.check(node, new_cluster),
          :ok <- Checks.NodeLimitCheck.check(new_cluster) do
-      old_cluster_id = node.cluster_id
-
       cleanup_node_aliases(node)
 
       case node |> Ecto.Changeset.change(cluster_id: new_cluster.id) |> Repo.update() do
         {:ok, updated_node} ->
           updated_node = Repo.preload(updated_node, [:cluster, aliases: :cluster], force: true)
-          broadcast_metadata_event({:node_updated, node.id, old_cluster_id, new_cluster.id})
+          Metadata.Events.publish(:node_updated)
           sync_node_cluster_networks(node, new_cluster)
 
           EventBroker.enqueue(%Events.NodeClusterChanged{
@@ -846,7 +830,7 @@ defmodule EdgeAdmin.Nodes do
     # Delete from DB (cascades to ssh_usernames, ssh_public_keys, command_executions, aliases)
     case Repo.delete(node) do
       {:ok, deleted_node} ->
-        broadcast_metadata_event({:node_deleted, node.id, node.cluster_id})
+        Metadata.Events.publish(:node_deleted)
         EventBroker.enqueue(%Events.NodeDeleted{node: deleted_node})
         {:ok, deleted_node}
 
@@ -932,8 +916,7 @@ defmodule EdgeAdmin.Nodes do
     }
   end
 
-  defp upsert_node(node_attrs, existing_node, is_new_node, cluster) do
-    node_id = node_attrs.id
+  defp upsert_node(node_attrs, existing_node, is_new_node, _cluster) do
     result = if is_new_node, do: create_node(node_attrs), else: update_node(existing_node, node_attrs)
 
     case result do
@@ -941,7 +924,7 @@ defmodule EdgeAdmin.Nodes do
         node = Repo.preload(node, [:cluster], force: true)
 
         if is_new_node do
-          broadcast_metadata_event({:node_created, node_id, cluster.id})
+          Metadata.Events.publish(:node_created)
           EventBroker.enqueue(%Events.NodeRegistered{node: node})
         else
           EventBroker.enqueue(%Events.NodeReregistered{node: node})
@@ -1014,7 +997,7 @@ defmodule EdgeAdmin.Nodes do
 
     # Get nodes this admin governs from ETS
     # Returns %{cluster_name => ["node-{id}", "node-{id2}"]}
-    my_clusters = EdgeAdmin.Admins.Metadata.get_my_clusters()
+    my_clusters = Metadata.get_my_clusters()
     node_names = my_clusters |> Map.values() |> List.flatten()
 
     if Enum.empty?(node_names) do
@@ -1930,7 +1913,7 @@ defmodule EdgeAdmin.Nodes do
 
           case Repo.delete(node) do
             {:ok, _} ->
-              broadcast_metadata_event({:node_deleted, node.id, node.cluster_id})
+              Metadata.Events.publish(:node_deleted)
               {count + 1, unenrolled_ids}
 
             {:error, changeset} ->
@@ -1963,7 +1946,7 @@ defmodule EdgeAdmin.Nodes do
           case Repo.delete(cluster) do
             {:ok, _} ->
               # Emit event for metadata recomputation
-              broadcast_metadata_event({:cluster_deleted, cluster.id})
+              Metadata.Events.publish(:cluster_deleted)
 
               %{result | clusters_deleted: result.clusters_deleted + 1}
 

@@ -135,7 +135,7 @@ defmodule EdgeAdmin.Admins.Metadata do
       %{"cluster-prod" => ["node-1", "node-2"], "cluster-dev" => []}
 
       # Trigger recomputation (from PubSub event)
-      send(Metadata, {:cluster_created, cluster_id})
+      send(Metadata, :cluster_created)
 
       # Result: Algorithm runs, assignments updated, broadcast sent
   """
@@ -143,6 +143,7 @@ defmodule EdgeAdmin.Admins.Metadata do
   use GenServer
 
   alias EdgeAdmin.Admins.Metadata.Algorithm
+  alias EdgeAdmin.Admins.Metadata.Events
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Vpn
 
@@ -225,7 +226,7 @@ defmodule EdgeAdmin.Admins.Metadata do
     })
 
     # Subscribe to PubSub events (cluster/node CRUD from this admin cluster)
-    Phoenix.PubSub.subscribe(EdgeAdmin.PubSub, "#{admin_cluster_name}:metadata")
+    Events.subscribe()
 
     # Initial state with flags
     initial_state = %{
@@ -371,32 +372,32 @@ defmodule EdgeAdmin.Admins.Metadata do
 
   # PostgreSQL events - Cluster structure changes
   @impl true
-  def handle_info({:cluster_created, cluster_name}, state) do
-    Logger.debug("Cluster created: #{cluster_name}, requesting recomputation")
+  def handle_info(:cluster_created, state) do
+    Logger.debug("Cluster created, requesting recomputation")
     request_recomputation(state, :cluster_created)
   end
 
   @impl true
-  def handle_info({:cluster_deleted, cluster_name}, state) do
-    Logger.debug("Cluster deleted: #{cluster_name}, requesting recomputation")
+  def handle_info(:cluster_deleted, state) do
+    Logger.debug("Cluster deleted, requesting recomputation")
     request_recomputation(state, :cluster_deleted)
   end
 
   # PostgreSQL events - Node changes
   @impl true
-  def handle_info({:node_created, _node_id, _cluster_name}, state) do
+  def handle_info(:node_created, state) do
     Logger.debug("Node created, requesting recomputation")
     request_recomputation(state, :node_created)
   end
 
   @impl true
-  def handle_info({:node_deleted, _node_id, _cluster_name}, state) do
+  def handle_info(:node_deleted, state) do
     Logger.debug("Node deleted, requesting recomputation")
     request_recomputation(state, :node_deleted)
   end
 
   @impl true
-  def handle_info({:node_updated, _node_id, _old_cluster_name, _new_cluster_name}, state) do
+  def handle_info(:node_updated, state) do
     Logger.debug("Node updated, requesting recomputation")
     request_recomputation(state, :node_updated)
   end
@@ -464,13 +465,7 @@ defmodule EdgeAdmin.Admins.Metadata do
     update_ets(result, all_admins)
 
     # Emit local event (only this admin's processes receive it)
-    [{:admin, admin_info}] = :ets.lookup(@table, :admin)
-
-    Phoenix.PubSub.local_broadcast(
-      EdgeAdmin.PubSub,
-      "#{admin_info.name}:metadata",
-      :metadata_recomputed
-    )
+    Events.publish_local(:metadata_recomputed)
 
     Logger.debug("Metadata recomputation complete")
 

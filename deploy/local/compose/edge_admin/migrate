@@ -6,4 +6,6 @@ set -o pipefail
 set -o nounset
 
 # Run migrations only, without starting the server
-exec mix ecto.migrate
+mix deps.get
+mix compile
+exec mix run --no-start -e "EdgeAdmin.Release.migrate()"

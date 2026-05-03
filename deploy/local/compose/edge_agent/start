@@ -9,19 +9,18 @@ set -o nounset
 cleanup() {
     echo "Received shutdown signal, cleaning up..."
 
-    # Find all netclient daemon processes and send SIGTERM for graceful shutdown.
+    # Signal only the netclient daemon WE started. Do NOT use pgrep/pkill
+    # by name — this container runs with `pid: host`, so a name match would
+    # find every netclient daemon on the host (including ones owned by admin
+    # containers running on the same machine) and tear them down with us.
     # On clean exit netclient restores /etc/resolv.conf from its backup itself.
-    NETCLIENT_PIDS=$(pgrep -f "netclient daemon" || true)
+    if [ -n "${NETCLIENT_PID:-}" ] && kill -0 "$NETCLIENT_PID" 2>/dev/null; then
+        echo "Stopping netclient daemon (PID: $NETCLIENT_PID)..."
+        kill -TERM "$NETCLIENT_PID" 2>/dev/null || true
 
-    if [ -n "$NETCLIENT_PIDS" ]; then
-        echo "Stopping netclient daemon processes: $NETCLIENT_PIDS"
-        for pid in $NETCLIENT_PIDS; do
-            kill -TERM "$pid" 2>/dev/null || true
-        done
-
-        # Wait for processes to exit gracefully (max 5 seconds)
-        for i in {1..5}; do
-            if ! pgrep -f "netclient daemon" > /dev/null; then
+        # Wait for it to exit gracefully (max 5 seconds)
+        for _ in {1..5}; do
+            if ! kill -0 "$NETCLIENT_PID" 2>/dev/null; then
                 echo "Netclient daemon stopped gracefully"
                 break
             fi
@@ -29,12 +28,12 @@ cleanup() {
         done
 
         # Force kill if still running
-        if pgrep -f "netclient daemon" > /dev/null; then
-            echo "Force killing remaining netclient processes"
-            pkill -9 -f "netclient daemon" 2>/dev/null || true
+        if kill -0 "$NETCLIENT_PID" 2>/dev/null; then
+            echo "Force killing netclient daemon (PID: $NETCLIENT_PID)"
+            kill -9 "$NETCLIENT_PID" 2>/dev/null || true
         fi
     else
-        echo "No netclient daemon processes found"
+        echo "No netclient daemon to stop"
     fi
 
     # Clean up routing policy rules (netmaker creates these with priorities 3000, 2500, 2000)

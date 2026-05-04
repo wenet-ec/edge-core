@@ -289,6 +289,7 @@ edge_core/
 - `event_broker/adapters/aws_sns.ex` - AWS SNS adapter (ex_aws_sns + req); managed pub/sub, domain topics, `type`/`corename` promoted to message attributes for filter policies
 - `event_broker/adapters/google_pubsub.ex` - Google Cloud Pub/Sub adapter (goth + raw req against the v1 REST API); managed pub/sub, domain topics, `type`/`corename` promoted to message attributes for filter expressions
 - `event_broker/workers/publish_event_worker.ex` - Oban worker for async broker delivery
+- **Not currently supported (demand-gated for future):** AMQP 1.0 (different protocol from AMQP 0-9-1 — would be a new adapter, not a flag on `amqp091`) and Apache Pulsar (not Kafka-wire-compatible despite KoP plugin existing). Add only if a real user asks; do not pre-build.
 
 **Edge Agent (`edge_agent/lib/edge_agent/`):**
 

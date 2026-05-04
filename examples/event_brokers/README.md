@@ -18,6 +18,8 @@ Edge Core publishes and forgets — it has no knowledge of consumers. All messag
 
 Pick whichever adapter matches a broker your stack already runs. There is no recommended default.
 
+**Not currently supported, on the table if there's demand:** AMQP 1.0 (different wire protocol from AMQP 0-9-1 despite the similar name — covers ActiveMQ, Azure Service Bus, IBM MQ, Solace) and Apache Pulsar. If you have a concrete use case for either, [open an issue](https://github.com/wenet-ec/edge-core/issues) — adapters are tractable to add and we prioritise based on real user demand.
+
 ## Quick Start
 
 For self-hosted brokers, this directory ships compose files you can layer onto the cloud stack:

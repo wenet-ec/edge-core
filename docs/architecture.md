@@ -380,6 +380,8 @@ Duplicate events are possible for `edge.node.status_changed` — the health chec
 
 For the full event schema and subject/topic reference see [`docs/admin-asyncapi-v0.2.0.md`](admin-asyncapi-v0.2.0.md). Interactive viewer at `/asyncdoc` on a running admin.
 
+**Not currently supported, on the table if there is demand:** AMQP 1.0 (a different wire protocol from AMQP 0-9-1 despite the name — used by ActiveMQ, Azure Service Bus, IBM MQ, Solace) and Apache Pulsar. Neither is shipped today; the existing `amqp091` adapter does not speak AMQP 1.0, and the `kafka` adapter is not wire-compatible with Pulsar. If you have a concrete use case for either, file an issue — adapter additions are tractable and we'll prioritise based on real demand.
+
 ---
 
 ## AI / MCP Interface

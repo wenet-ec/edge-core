@@ -230,6 +230,16 @@ Capacity is modelled honestly against the WireGuard peer table, not invented as 
 
 Adding admins to an admin cluster therefore _reduces_ each admin's `edge_node_capacity` by 1 — the cost of admin HA is now visible instead of hidden.
 
+#### `MAX_WIREGUARD_PEERS` is a budgeting unit, not a physical limit
+
+The honest view: WireGuard peer count is a proxy for admin load, not a measurement of it. The actual constraints are multidimensional — encryption CPU per packet, peer table memory, UDP socket throughput, file descriptors, the netclient polling loop, the BEAM scheduler under proxy/SSH/metrics traffic. None of these map cleanly to "peer count." A peer doing nothing costs almost nothing; a peer pushing proxy bytes, holding SSH sessions, and answering metrics scrapes costs orders of magnitude more. So 250 idle peers and 250 busy peers are not the same load — the same number can describe a sleepy fleet at 5% CPU or a fleet pegging the box.
+
+We picked WireGuard peer count anyway because it's the most human-friendly dimension we could find. It maps directly to the thing operators are actually trying to manage (WG mesh size), it's countable, it's bounded by the obvious constraint (you can't have negative peers, and there's a real upper bound from kernel/netclient resources), and it composes cleanly with the admin-mesh accounting that's already required for sharding. Trying to replace it with a multi-knob model (`max_active_proxy_streams` + `max_metrics_qps` + `max_concurrent_ssh_sessions` + ...) trades one wrong-but-tunable number for several wrong-but-tunable numbers, and operators end up worse off.
+
+This is the same shape as token-based budgeting in other distributed systems — Cassandra tokens, Redis Cluster slots, Kafka partition counts. The token count isn't a measurement; it's a budgeting unit operators tune empirically against real telemetry. We do the same: `MAX_WIREGUARD_PEERS` is the quota; CPU, memory, scheduler utilization, peer table size, proxy/SSH/command throughput are the signals operators watch to decide whether the quota is right for their workload.
+
+Until we find a model that's both more accurate and still human-friendly to tune, this is how it works. Pick a number, watch your telemetry, adjust.
+
 How it works:
 
 - Each admin maintains a local ETS table of the current topology (who owns what, remaining capacity)

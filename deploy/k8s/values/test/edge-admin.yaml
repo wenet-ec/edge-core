@@ -18,7 +18,7 @@ config:
   netmakerApiUrl: "http://edge-vpn:8081"
   netmakerSuperadminUsername: "admin"
   adminMaxCapacity: "200"
-  defaultClusterName: "default"
+  defaultClusterName: "test"
 extraEnv:
   # kind cluster has no TLS — talk to Netmaker over plain HTTP.
   NETMAKER_API_SCHEME: "http"

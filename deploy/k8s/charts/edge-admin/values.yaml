@@ -63,7 +63,9 @@ config:
   adminMaxCapacity: "200"
 
   # --- Default cluster pre-created on first boot ---
-  defaultClusterName: "default"
+  # Note: "default" is reserved (URL keyword on /api/v1/clusters/default/...
+  # routes). Pick anything else.
+  defaultClusterName: "main"
 
   # --- Self-referential metrics scrape URL — release-specific ---
   # In k8s: ClusterIP service name + port, e.g. "edge-admin-a:44000"

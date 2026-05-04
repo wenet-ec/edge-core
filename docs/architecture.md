@@ -1,6 +1,6 @@
 # Edge Core — Architecture
 
-**Updated: 2026-03-18**
+**Last Updated: 2026-05-04**
 
 Edge Core is an infrastructure management platform for geographically distributed edge machines. It gives you centralized control over remote nodes through a secure VPN mesh — running commands, accessing machines via SSH, proxying traffic through them, and scraping their metrics — all through a simple HTTP API.
 

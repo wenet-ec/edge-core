@@ -17,7 +17,8 @@ defmodule EdgeAgent.Mixfile do
       deps: deps(),
       dialyzer: dialyzer(),
       releases: releases(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      package: package()
     ]
   end
 
@@ -42,6 +43,14 @@ defmodule EdgeAgent.Mixfile do
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  defp package do
+    [
+      licenses: ["Apache-2.0"],
+      links: %{},
+      files: ~w(lib priv config mix.exs LICENSE NOTICE)
+    ]
+  end
 
   defp aliases do
     [

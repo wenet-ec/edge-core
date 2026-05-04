@@ -8,7 +8,16 @@ defmodule Nexmaker.MixProject do
       version: "1.5.1",
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      package: package()
+    ]
+  end
+
+  defp package do
+    [
+      licenses: ["Apache-2.0"],
+      links: %{},
+      files: ~w(lib mix.exs LICENSE NOTICE README.md)
     ]
   end
 

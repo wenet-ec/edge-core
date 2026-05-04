@@ -1,10 +1,12 @@
 # Edge Core
 
-**Turn your machines into managed nodes.**
+**Your machines, meshed, proxied, observed, and remotely controlled.**
 
-Edge Core is an open-source infrastructure management platform for geographically distributed machines. It gives you centralized control over remote nodes through a secure WireGuard mesh — run commands, SSH into any machine, proxy traffic through them, and scrape their metrics — all through a simple HTTP API.
+Edge Core is an infrastructure management platform for geographically distributed machines. It gives you centralized control over remote nodes through a secure WireGuard mesh — run commands, SSH into any machine, proxy traffic through them, and scrape their metrics — all through a simple HTTP API.
 
 Works on any Linux machine: on-premises servers, IoT devices, factory floor equipment, Raspberry Pis, cloud VMs, home lab nodes, remote POS terminals, bare metal, containers. No vendor lock-in. Self-hosted.
+
+The **agent** that runs on your machines and the **Nexmaker** shared library are open-source under Apache 2.0. The **admin** server is source-available under the Elastic License 2.0 — free to self-host, modify, and use commercially, but you may not offer it to third parties as a hosted or managed service without a commercial license from us. See [License](#license) below for details.
 
 ## What it does
 
@@ -27,7 +29,7 @@ Works on any Linux machine: on-premises servers, IoT devices, factory floor equi
 
 **If you are looking for:**
 
-- An open-source alternative to Balena that works for general Linux machines, not just IoT
+- A self-hostable alternative to Balena that works for general Linux machines, not just IoT
 - A way to manage remote machines without exposing SSH ports to the internet
 - Fleet management that works on-prem, air-gapped, or across multiple clouds simultaneously
 - Remote access to machines behind strict NAT or firewalls (DERP/TURN relay handles symmetric NAT automatically)
@@ -185,3 +187,31 @@ To import: in Grafana go to **Dashboards → Import**, upload the JSON file, and
 ## VPN internals
 
 Edge Core uses [Netmaker](https://github.com/gravitl/netmaker) (v1.5.1) as its WireGuard mesh control plane. The Netmaker OpenAPI spec is included at [`docs/netmaker-openapi-v1.5.1.yml`](docs/netmaker-openapi-v1.5.1.yml) for reference.
+
+## License
+
+Edge Core ships under multiple licenses depending on the component. See [`LICENSE`](LICENSE) at the repository root for the full overview.
+
+| Component                           | Path          | License                                                      | Posture          |
+| ----------------------------------- | ------------- | ------------------------------------------------------------ | ---------------- |
+| Edge Agent                          | `edge_agent/` | [Apache License 2.0](edge_agent/LICENSE)                     | Open source      |
+| Nexmaker                            | `nexmaker/`   | [Apache License 2.0](nexmaker/LICENSE)                       | Open source      |
+| Edge Admin                          | `edge_admin/` | [Elastic License 2.0](edge_admin/LICENSE)                    | Source available |
+| Examples, docs, deploy, bin scripts | other         | Apache License 2.0 unless a file explicitly states otherwise | Open source      |
+
+**Open source vs. source available — what the difference means here**
+
+The agent and Nexmaker are **open source** under Apache 2.0. You can do anything you want with them — fork, modify, embed in commercial products, redistribute — as long as you preserve the copyright and license notices.
+
+The admin server is **source available** under the Elastic License 2.0. The full source is published, you can read, modify, self-host, run it for your own organization, run it as part of how you deliver services to your own customers, and use it commercially. The license carves out only one significant restriction: you may not offer Edge Admin itself (or its substantial functionality) to third parties as a hosted or managed service. That clause is what makes a hosted Edge Admin tier viable as a commercial product without a hyperscaler reselling it the next day.
+
+What this means in practice:
+
+- **Allowed without asking us:** self-hosting for your own company, using it internally to manage your own fleet, using it as a tool while delivering services to your clients (MSP / consulting / IoT vendor patterns), modifying it, redistributing modified versions under ELv2, building products on top of it that aren't themselves "Edge Admin in the cloud."
+- **Requires a commercial license from us:** offering Edge Admin (or a thin wrapper around it) as a hosted SaaS that customers sign up for and use directly.
+
+Email **licensing@wenetec.com** if your use case needs a commercial license, or if you're not sure whether what you want to build falls inside or outside ELv2 — we'll tell you, and we're not looking to be difficult about it.
+
+Contributions are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the contribution flow and the Developer Certificate of Origin (DCO) sign-off we require on every commit.
+
+Copyright © 2026 WENET VIETNAM JOINT STOCK COMPANY. "Edge Core", "Edge Admin", "Edge Agent", "Nexmaker", "Wenet", and "Wenetec" are trademarks of WENET VIETNAM JOINT STOCK COMPANY. The licenses above grant rights to the software only — not to the trademarks.

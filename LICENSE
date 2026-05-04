@@ -1,0 +1,46 @@
+Edge Core is distributed under multiple licenses. Each component has its own
+LICENSE file in its directory; this top-level file describes the overall layout
+so you can locate the terms that apply to the parts you use.
+
+Copyright (c) 2026 WENET VIETNAM JOINT STOCK COMPANY
+
+Component Path License
+───────────── ───────────── ──────────────────────────────────────────
+Edge Agent edge_agent/ Apache License 2.0
+Nexmaker nexmaker/ Apache License 2.0
+Edge Admin edge_admin/ Elastic License 2.0 (ELv2)
+
+Examples, examples/ Apache License 2.0
+documentation, docs/
+deploy configs, deploy/
+and helper bin/
+scripts README.md, etc.
+
+In short:
+
+- The agent that runs on customer machines is Apache 2.0. Anyone can fork,
+  modify, redistribute, embed in their own products, and use it commercially
+  with no obligation other than preserving copyright and license notices.
+
+- The shared Netmaker wrapper library used by both the admin and the agent
+  is Apache 2.0 on the same terms.
+
+- The admin server is licensed under the Elastic License 2.0. You can read,
+  modify, and self-host it freely. The license restricts offering Edge Admin
+  as a hosted or managed service to third parties, and removing or
+  circumventing the license key functionality. Full terms in
+  edge_admin/LICENSE.
+
+- All other repository contents (examples, deploy configs, documentation,
+  helper scripts) are Apache 2.0 unless a file explicitly states otherwise.
+
+If you want to use Edge Admin in a way that the Elastic License 2.0 does not
+permit (for example, offering a hosted service built on it), contact
+WENET VIETNAM JOINT STOCK COMPANY for a commercial license.
+
+Trademarks. "Edge Core", "Edge Admin", "Edge Agent", "Nexmaker", "Wenet", and
+"Wenetec" are trademarks of WENET VIETNAM JOINT STOCK COMPANY. The licenses
+above grant rights to the software only; they do not grant rights to use the
+trademarks. You may use the marks descriptively to refer to this software, but
+you may not use them as the name of a fork, derivative product, or service in
+a way that suggests endorsement or origin without prior written permission.

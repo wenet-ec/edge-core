@@ -1,0 +1,12 @@
+Edge Admin
+Copyright 2026 WENET VIETNAM JOINT STOCK COMPANY
+
+This product is licensed under the Elastic License 2.0. The full text of that
+license is in the LICENSE file in this directory.
+
+Edge Admin depends on third-party software components, each governed by its
+own license. Their licenses are listed in the dependency lockfile (mix.lock)
+and can be inspected via `mix deps.tree`.
+
+"Edge Admin", "Edge Core", "Wenet", and "Wenetec" are trademarks of WENET
+VIETNAM JOINT STOCK COMPANY.

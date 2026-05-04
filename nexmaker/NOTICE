@@ -1,0 +1,17 @@
+Nexmaker
+Copyright 2026 WENET VIETNAM JOINT STOCK COMPANY
+
+This product includes software developed by WENET VIETNAM JOINT STOCK COMPANY.
+
+Licensed under the Apache License, Version 2.0 (the "License"). You may obtain
+a copy of the License in the LICENSE file in this directory or at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Nexmaker is a thin Elixir client wrapper around the Netmaker REST API and the
+netclient command-line binary. Netmaker and netclient are separate, externally
+maintained projects governed by their own licenses; their source is not
+included in this repository or in any artifact built from it.
+
+"Nexmaker", "Edge Core", "Wenet", and "Wenetec" are trademarks of WENET
+VIETNAM JOINT STOCK COMPANY.

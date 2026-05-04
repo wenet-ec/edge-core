@@ -1,0 +1,16 @@
+Edge Agent
+Copyright 2026 WENET VIETNAM JOINT STOCK COMPANY
+
+This product includes software developed by WENET VIETNAM JOINT STOCK COMPANY.
+
+Licensed under the Apache License, Version 2.0 (the "License"). You may obtain
+a copy of the License in the LICENSE file in this directory or at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+This product depends on third-party software components, each governed by its
+own license. Their licenses are listed in the dependency lockfile (mix.lock)
+and can be inspected via `mix deps.tree`.
+
+"Edge Agent", "Edge Core", "Wenet", and "Wenetec" are trademarks of WENET
+VIETNAM JOINT STOCK COMPANY.

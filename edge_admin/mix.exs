@@ -18,7 +18,8 @@ defmodule EdgeAdmin.Mixfile do
       dialyzer: dialyzer(),
       releases: releases(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      package: package()
     ]
   end
 
@@ -43,6 +44,14 @@ defmodule EdgeAdmin.Mixfile do
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  defp package do
+    [
+      licenses: ["Elastic-2.0"],
+      links: %{},
+      files: ~w(lib priv config mix.exs LICENSE NOTICE)
+    ]
+  end
 
   defp aliases do
     [

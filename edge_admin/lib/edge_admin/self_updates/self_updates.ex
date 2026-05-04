@@ -33,8 +33,8 @@ defmodule EdgeAdmin.SelfUpdates do
 
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.EdgeClusters.Gateway
-  alias EdgeAdmin.EventBroker
-  alias EdgeAdmin.EventBroker.Events
+  alias EdgeAdmin.Events
+  alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
@@ -245,7 +245,7 @@ defmodule EdgeAdmin.SelfUpdates do
         %{targeting_type: targeting_type}
       )
 
-      EventBroker.enqueue(%Events.SelfUpdateCompleted{request: completed_request})
+      Events.publish(%Catalog.SelfUpdateCompleted{request: completed_request})
       :ok
     else
       Logger.info("Triggering self-update for #{length(nodes)} nodes (targeting type: #{targeting_type})")
@@ -280,7 +280,7 @@ defmodule EdgeAdmin.SelfUpdates do
         })
 
       Logger.info("Self-update request #{request_id} completed: #{inspect(summary)}")
-      EventBroker.enqueue(%Events.SelfUpdateCompleted{request: completed_request})
+      Events.publish(%Catalog.SelfUpdateCompleted{request: completed_request})
 
       :telemetry.execute(
         [:edge_admin, :self_updates, :request_completed],
@@ -518,7 +518,7 @@ defmodule EdgeAdmin.SelfUpdates do
                {:ok, gateway_pid} <- Gateway.lookup(cluster_name),
                :ok <- Gateway.trigger_self_update(gateway_pid, node) do
             Logger.info("Triggered self-update for node #{node_name}")
-            EventBroker.enqueue(%Events.NodeUpdateTriggered{node: node, self_update_request_id: request_id})
+            Events.publish(%Catalog.NodeUpdateTriggered{node: node, self_update_request_id: request_id})
             :ok
           else
             {:error, :self_update_disabled} ->
@@ -565,7 +565,7 @@ defmodule EdgeAdmin.SelfUpdates do
                 case Gateway.trigger_self_update(gateway_pid, node) do
                   :ok ->
                     Logger.info("Triggered self-update for node #{Node.node_name(node)}")
-                    EventBroker.enqueue(%Events.NodeUpdateTriggered{node: node, self_update_request_id: request_id})
+                    Events.publish(%Catalog.NodeUpdateTriggered{node: node, self_update_request_id: request_id})
                     :ok
 
                   {:error, :self_update_disabled} ->

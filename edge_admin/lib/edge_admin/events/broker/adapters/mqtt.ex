@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/event_broker/adapters/mqtt.ex
-defmodule EdgeAdmin.EventBroker.Adapters.Mqtt do
+# edge_admin/lib/edge_admin/events/broker/adapters/mqtt.ex
+defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
   @moduledoc """
   MQTT adapter for the event broker.
 
@@ -59,11 +59,11 @@ defmodule EdgeAdmin.EventBroker.Adapters.Mqtt do
         client_id_prefix: "edge_admin"
   """
 
-  @behaviour EdgeAdmin.EventBroker.Adapter
+  @behaviour EdgeAdmin.Events.Broker.Adapter
 
   use GenServer
 
-  alias EdgeAdmin.EventBroker.Adapter
+  alias EdgeAdmin.Events.Broker.Adapter
 
   require Logger
 

@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/event_broker/adapter.ex
-defmodule EdgeAdmin.EventBroker.Adapter do
+# edge_admin/lib/edge_admin/events/broker/adapter.ex
+defmodule EdgeAdmin.Events.Broker.Adapter do
   @moduledoc """
   Behaviour that all event broker adapters must implement.
 
@@ -14,7 +14,8 @@ defmodule EdgeAdmin.EventBroker.Adapter do
   or nested maps. Adapters should JSON-encode and publish it.
 
   Returns `:ok` on success or `{:error, reason}` on failure.
-  The caller (`EventBroker.publish/1`) logs the error; adapters do not need to.
+  The caller (`EdgeAdmin.Events.Broker.publish_envelope/1`) logs the error;
+  adapters do not need to.
   """
   @callback publish(envelope :: map()) :: :ok | {:error, term()}
 

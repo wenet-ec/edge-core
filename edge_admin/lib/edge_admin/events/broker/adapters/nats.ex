@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/event_broker/adapters/nats.ex
-defmodule EdgeAdmin.EventBroker.Adapters.Nats do
+# edge_admin/lib/edge_admin/events/broker/adapters/nats.ex
+defmodule EdgeAdmin.Events.Broker.Adapters.Nats do
   @moduledoc """
   NATS adapter for the event broker. Supports two modes:
 
@@ -30,11 +30,11 @@ defmodule EdgeAdmin.EventBroker.Adapters.Nats do
         jwt: nil            # JWT credential — used alongside nkey_seed  (EVENT_BROKER_NATS_JWT)
   """
 
-  @behaviour EdgeAdmin.EventBroker.Adapter
+  @behaviour EdgeAdmin.Events.Broker.Adapter
 
   use GenServer
 
-  alias EdgeAdmin.EventBroker.Adapter
+  alias EdgeAdmin.Events.Broker.Adapter
   alias Gnat.Jetstream.API.Stream, as: JsStream
 
   require Logger

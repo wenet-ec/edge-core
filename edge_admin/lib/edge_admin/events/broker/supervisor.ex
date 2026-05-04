@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/event_broker/supervisor.ex
-defmodule EdgeAdmin.EventBroker.Supervisor do
+# edge_admin/lib/edge_admin/events/broker/supervisor.ex
+defmodule EdgeAdmin.Events.Broker.Supervisor do
   @moduledoc """
   Starts the event broker connection and adapter process.
 
@@ -10,33 +10,33 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
 
     1. `Gnat.ConnectionSupervisor` — maintains a named NATS connection with
        automatic reconnect.
-    2. `EdgeAdmin.EventBroker.Adapters.Nats` — GenServer that optionally ensures
+    2. `EdgeAdmin.Events.Broker.Adapters.Nats` — GenServer that optionally ensures
        JetStream streams exist on startup (when `EVENT_BROKER_NATS_JETSTREAM=true`).
 
   ## Children (Kafka adapter)
 
-    1. `EdgeAdmin.EventBroker.Adapters.Kafka` — GenServer that starts the
+    1. `EdgeAdmin.Events.Broker.Adapters.Kafka` — GenServer that starts the
        `:brod` client and per-topic producers.
 
   ## Children (RabbitMQ adapter)
 
-    1. `EdgeAdmin.EventBroker.Adapters.Rabbitmq` — GenServer that opens an
+    1. `EdgeAdmin.Events.Broker.Adapters.Rabbitmq` — GenServer that opens an
        AMQP connection + channel, declares the topic exchange, and monitors
        the connection for auto-reconnect.
 
   ## Children (Redis adapter)
 
-    1. `EdgeAdmin.EventBroker.Adapters.Redis` — GenServer that opens a Redix
+    1. `EdgeAdmin.Events.Broker.Adapters.Redis` — GenServer that opens a Redix
        connection and publishes events via Redis Pub/Sub (`PUBLISH`).
 
   ## Children (MQTT adapter)
 
-    1. `EdgeAdmin.EventBroker.Adapters.Mqtt` — GenServer that opens an `emqtt`
+    1. `EdgeAdmin.Events.Broker.Adapters.Mqtt` — GenServer that opens an `emqtt`
        client connection and publishes events to topic = event type.
 
   ## Children (AWS SNS adapter)
 
-    1. `EdgeAdmin.EventBroker.Adapters.AwsSns` — GenServer that holds publish
+    1. `EdgeAdmin.Events.Broker.Adapters.AwsSns` — GenServer that holds publish
        config. SNS is HTTPS-stateless, no persistent connection — every
        publish is an `ex_aws` request.
 
@@ -44,14 +44,14 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
 
     1. `Goth` (named) — OAuth2 token manager for the GCP credential chain.
        Started only when `auth: :goth` is configured.
-    2. `EdgeAdmin.EventBroker.Adapters.GooglePubsub` — GenServer that holds
+    2. `EdgeAdmin.Events.Broker.Adapters.GooglePubsub` — GenServer that holds
        publish config. Each publish is a Req POST to the v1 REST API.
   """
 
   use Supervisor
 
-  alias EdgeAdmin.EventBroker.Adapters.GooglePubsub
-  alias EdgeAdmin.EventBroker.Adapters.Nats
+  alias EdgeAdmin.Events.Broker.Adapters.GooglePubsub
+  alias EdgeAdmin.Events.Broker.Adapters.Nats
 
   require Logger
 
@@ -79,23 +79,23 @@ defmodule EdgeAdmin.EventBroker.Supervisor do
   end
 
   defp build_children(:kafka) do
-    [EdgeAdmin.EventBroker.Adapters.Kafka]
+    [EdgeAdmin.Events.Broker.Adapters.Kafka]
   end
 
   defp build_children(:rabbitmq) do
-    [EdgeAdmin.EventBroker.Adapters.Rabbitmq]
+    [EdgeAdmin.Events.Broker.Adapters.Rabbitmq]
   end
 
   defp build_children(:redis) do
-    [EdgeAdmin.EventBroker.Adapters.Redis]
+    [EdgeAdmin.Events.Broker.Adapters.Redis]
   end
 
   defp build_children(:mqtt) do
-    [EdgeAdmin.EventBroker.Adapters.Mqtt]
+    [EdgeAdmin.Events.Broker.Adapters.Mqtt]
   end
 
   defp build_children(:aws_sns) do
-    [EdgeAdmin.EventBroker.Adapters.AwsSns]
+    [EdgeAdmin.Events.Broker.Adapters.AwsSns]
   end
 
   defp build_children(:google_pubsub) do

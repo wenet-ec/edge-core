@@ -128,8 +128,8 @@ defmodule EdgeAdmin.Nodes do
   alias Ecto.Query.CastError
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.EdgeClusters.AgentClient
-  alias EdgeAdmin.EventBroker
-  alias EdgeAdmin.EventBroker.Events
+  alias EdgeAdmin.Events
+  alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Nodes.Checks
   alias EdgeAdmin.Nodes.Forms
   alias EdgeAdmin.Nodes.Schemas.Alias
@@ -741,7 +741,7 @@ defmodule EdgeAdmin.Nodes do
           Metadata.Events.publish(:node_updated)
           sync_node_cluster_networks(node, new_cluster)
 
-          EventBroker.enqueue(%Events.NodeClusterChanged{
+          Events.publish(%Catalog.NodeClusterChanged{
             node: updated_node,
             previous_cluster_name: node.cluster.name
           })
@@ -924,12 +924,12 @@ defmodule EdgeAdmin.Nodes do
 
         if is_new_node do
           Metadata.Events.publish(:node_created)
-          EventBroker.enqueue(%Events.NodeRegistered{node: node})
+          Events.publish(%Catalog.NodeRegistered{node: node})
         else
-          EventBroker.enqueue(%Events.NodeReregistered{node: node})
+          Events.publish(%Catalog.NodeReregistered{node: node})
 
           if existing_node.version != node_attrs.version do
-            EventBroker.enqueue(%Events.NodeVersionChanged{
+            Events.publish(%Catalog.NodeVersionChanged{
               node: node,
               previous_version: existing_node.version
             })
@@ -1111,7 +1111,7 @@ defmodule EdgeAdmin.Nodes do
 
   defp maybe_publish_status_changed(node, new_status) do
     if node.status != new_status do
-      EventBroker.enqueue(%Events.NodeStatusChanged{
+      Events.publish(%Catalog.NodeStatusChanged{
         node: %{node | status: new_status},
         previous_status: node.status
       })
@@ -1581,7 +1581,7 @@ defmodule EdgeAdmin.Nodes do
   end
 
   defp enqueue_enrollment_key_verified_event(enrollment_key, %{verified: verified, error: error}, key_blob) do
-    EventBroker.enqueue(%Events.EnrollmentKeyVerified{
+    Events.publish(%Catalog.EnrollmentKeyVerified{
       enrollment_key: enrollment_key,
       result: enrollment_key_result_atom(verified, error),
       attempted_key_blob: if(is_nil(enrollment_key), do: key_blob)

@@ -43,8 +43,8 @@ defmodule EdgeAdmin.Ssh do
   import EdgeAdmin.Query, only: [case_insensitive_like: 2]
 
   alias Ecto.Query.CastError
-  alias EdgeAdmin.EventBroker
-  alias EdgeAdmin.EventBroker.Events
+  alias EdgeAdmin.Events
+  alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Ssh.Forms
@@ -192,7 +192,7 @@ defmodule EdgeAdmin.Ssh do
         %{result: result, auth_method: auth_method}
       )
 
-      EventBroker.enqueue(%Events.SshUsernameVerified{
+      Events.publish(%Catalog.SshUsernameVerified{
         ssh_username: ssh_username && Repo.preload(ssh_username, node: :cluster),
         node_id: node_id,
         attempted_username: username,

@@ -23,7 +23,7 @@ defmodule EdgeAdminHealth do
   # snapshots it before `runtime.exs` has set :event_broker_enabled, so a
   # conditional list would freeze in the wrong state. The Event Broker check
   # below already short-circuits to `:ok` when the broker is disabled
-  # (see `EdgeAdmin.EventBroker.healthy?/0`), so always-include is safe.
+  # (see `EdgeAdmin.Events.Broker.healthy?/0`), so always-include is safe.
   def checks do
     [
       %PlugCheckup.Check{name: "Database", module: __MODULE__, function: :database_health},
@@ -114,6 +114,6 @@ defmodule EdgeAdminHealth do
   end
 
   def event_broker_health do
-    EdgeAdmin.EventBroker.healthy?()
+    EdgeAdmin.Events.Broker.healthy?()
   end
 end

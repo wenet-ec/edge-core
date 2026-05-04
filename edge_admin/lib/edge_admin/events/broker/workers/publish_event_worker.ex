@@ -1,10 +1,11 @@
-# edge_admin/lib/edge_admin/event_broker/workers/publish_event_worker.ex
-defmodule EdgeAdmin.EventBroker.Workers.PublishEventWorker do
+# edge_admin/lib/edge_admin/events/broker/workers/publish_event_worker.ex
+defmodule EdgeAdmin.Events.Broker.Workers.PublishEventWorker do
   @moduledoc """
   Oban worker that publishes a pre-built CloudEvents envelope to the configured broker.
 
-  Call sites build the envelope via `EventBroker.enqueue/1` immediately after the
-  business logic succeeds. The worker picks it up asynchronously and handles retries
+  Call sites build the envelope via `EdgeAdmin.Events.publish/1` immediately after
+  the business logic succeeds; that fans out to `EdgeAdmin.Events.Broker.enqueue/1`,
+  which inserts this worker. The worker picks up asynchronously and handles retries
   on broker failure — decoupling broker health from the hot path entirely.
 
   The envelope is stored as-is in Oban job args (a plain JSON-serialisable map).
@@ -28,7 +29,7 @@ defmodule EdgeAdmin.EventBroker.Workers.PublishEventWorker do
     queue: :event_broker,
     max_attempts: 6
 
-  alias EdgeAdmin.EventBroker
+  alias EdgeAdmin.Events.Broker
 
   require Logger
 
@@ -39,7 +40,7 @@ defmodule EdgeAdmin.EventBroker.Workers.PublishEventWorker do
 
     cond do
       max_age == 0 ->
-        EventBroker.publish_envelope(envelope)
+        Broker.publish_envelope(envelope)
 
       age_seconds > max_age ->
         Logger.warning(
@@ -50,7 +51,7 @@ defmodule EdgeAdmin.EventBroker.Workers.PublishEventWorker do
         {:cancel, {:expired, age_seconds: age_seconds, max_age_seconds: max_age}}
 
       true ->
-        EventBroker.publish_envelope(envelope)
+        Broker.publish_envelope(envelope)
     end
   end
 end

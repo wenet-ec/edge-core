@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/event_broker/adapters/aws_sns.ex
-defmodule EdgeAdmin.EventBroker.Adapters.AwsSns do
+# edge_admin/lib/edge_admin/events/broker/adapters/aws_sns.ex
+defmodule EdgeAdmin.Events.Broker.Adapters.AwsSns do
   @moduledoc """
   AWS SNS adapter for the event broker.
 
@@ -78,11 +78,11 @@ defmodule EdgeAdmin.EventBroker.Adapters.AwsSns do
     only. Leave unset to hit real AWS.
   """
 
-  @behaviour EdgeAdmin.EventBroker.Adapter
+  @behaviour EdgeAdmin.Events.Broker.Adapter
 
   use GenServer
 
-  alias EdgeAdmin.EventBroker.Adapter
+  alias EdgeAdmin.Events.Broker.Adapter
 
   require Logger
 

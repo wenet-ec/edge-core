@@ -66,8 +66,8 @@ defmodule EdgeAdmin.Commands do
   alias EdgeAdmin.Commands.Workers.CreateExecutionsWorker
   alias EdgeAdmin.EdgeClusters.AgentClient
   alias EdgeAdmin.EdgeClusters.Gateway
-  alias EdgeAdmin.EventBroker
-  alias EdgeAdmin.EventBroker.Events
+  alias EdgeAdmin.Events
+  alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
@@ -727,7 +727,7 @@ defmodule EdgeAdmin.Commands do
       Enum.each(inserted_executions, fn execution ->
         cluster_name = Map.get(cluster_name_by_node_id, execution.node_id)
 
-        EventBroker.enqueue(%Events.CommandExecutionCreated{
+        Events.publish(%Catalog.CommandExecutionCreated{
           execution: execution,
           command: command,
           cluster_name: cluster_name
@@ -1376,7 +1376,7 @@ defmodule EdgeAdmin.Commands do
   defp enqueue_pruned_event(execution) do
     cluster_name = execution.node && execution.node.cluster && execution.node.cluster.name
 
-    EventBroker.enqueue(%Events.CommandExecutionPruned{
+    Events.publish(%Catalog.CommandExecutionPruned{
       execution: execution,
       command: execution.command,
       cluster_name: cluster_name
@@ -1427,31 +1427,31 @@ defmodule EdgeAdmin.Commands do
       event =
         case type do
           :sent ->
-            %Events.CommandExecutionSent{execution: execution, command: execution.command, cluster_name: cluster_name}
+            %Catalog.CommandExecutionSent{execution: execution, command: execution.command, cluster_name: cluster_name}
 
           :completed ->
-            %Events.CommandExecutionCompleted{
+            %Catalog.CommandExecutionCompleted{
               execution: execution,
               command: execution.command,
               cluster_name: cluster_name
             }
 
           :cancelled ->
-            %Events.CommandExecutionCancelled{
+            %Catalog.CommandExecutionCancelled{
               execution: execution,
               command: execution.command,
               cluster_name: cluster_name
             }
 
           :expired ->
-            %Events.CommandExecutionExpired{
+            %Catalog.CommandExecutionExpired{
               execution: execution,
               command: execution.command,
               cluster_name: cluster_name
             }
         end
 
-      EventBroker.enqueue(event)
+      Events.publish(event)
     end
   end
 end

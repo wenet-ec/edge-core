@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/event_broker/adapters/redis.ex
-defmodule EdgeAdmin.EventBroker.Adapters.Redis do
+# edge_admin/lib/edge_admin/events/broker/adapters/redis.ex
+defmodule EdgeAdmin.Events.Broker.Adapters.Redis do
   @moduledoc """
   Redis adapter for the event broker.
 
@@ -30,11 +30,11 @@ defmodule EdgeAdmin.EventBroker.Adapters.Redis do
   - `EVENT_BROKER_REDIS_SSL=true` — enable TLS (default: false)
   """
 
-  @behaviour EdgeAdmin.EventBroker.Adapter
+  @behaviour EdgeAdmin.Events.Broker.Adapter
 
   use GenServer
 
-  alias EdgeAdmin.EventBroker.Adapter
+  alias EdgeAdmin.Events.Broker.Adapter
 
   require Logger
 

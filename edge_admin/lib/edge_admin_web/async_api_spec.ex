@@ -33,7 +33,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "title" => "Edge Admin AsyncAPI",
         "version" => "0.2.0",
         "description" => """
-        Lifecycle events published by Edge Admin to a configured message broker (NATS, Kafka/Redpanda, RabbitMQ, or Redis).
+        Lifecycle events published by Edge Admin to a configured message broker (NATS, Kafka/Redpanda, RabbitMQ, Redis, MQTT, AWS SNS, or Google Cloud Pub/Sub).
 
         Edge Admin publishes and forgets — it has no knowledge of consumers.
         All messages follow the [CloudEvents 1.0](https://cloudevents.io) spec.

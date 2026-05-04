@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/event_broker/adapters/kafka.ex
-defmodule EdgeAdmin.EventBroker.Adapters.Kafka do
+# edge_admin/lib/edge_admin/events/broker/adapters/kafka.ex
+defmodule EdgeAdmin.Events.Broker.Adapters.Kafka do
   @moduledoc """
   Kafka-compatible adapter for the event broker (Redpanda recommended).
 
@@ -31,11 +31,11 @@ defmodule EdgeAdmin.EventBroker.Adapters.Kafka do
   - `EVENT_BROKER_KAFKA_SASL_MECHANISM` — `plain` (default), `scram_sha_256`, `scram_sha_512`
   """
 
-  @behaviour EdgeAdmin.EventBroker.Adapter
+  @behaviour EdgeAdmin.Events.Broker.Adapter
 
   use GenServer
 
-  alias EdgeAdmin.EventBroker.Adapter
+  alias EdgeAdmin.Events.Broker.Adapter
 
   require Logger
 

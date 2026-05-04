@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/event_broker/adapters/google_pubsub.ex
-defmodule EdgeAdmin.EventBroker.Adapters.GooglePubsub do
+# edge_admin/lib/edge_admin/events/broker/adapters/google_pubsub.ex
+defmodule EdgeAdmin.Events.Broker.Adapters.GooglePubsub do
   @moduledoc """
   Google Cloud Pub/Sub adapter for the event broker.
 
@@ -87,11 +87,11 @@ defmodule EdgeAdmin.EventBroker.Adapters.GooglePubsub do
   `EVENT_BROKER_GOOGLE_PUBSUB_EMULATOR_HOST` knob).
   """
 
-  @behaviour EdgeAdmin.EventBroker.Adapter
+  @behaviour EdgeAdmin.Events.Broker.Adapter
 
   use GenServer
 
-  alias EdgeAdmin.EventBroker.Adapter
+  alias EdgeAdmin.Events.Broker.Adapter
 
   require Logger
 

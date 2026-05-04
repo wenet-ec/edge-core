@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/event_broker/adapters/rabbitmq.ex
-defmodule EdgeAdmin.EventBroker.Adapters.Rabbitmq do
+# edge_admin/lib/edge_admin/events/broker/adapters/rabbitmq.ex
+defmodule EdgeAdmin.Events.Broker.Adapters.Rabbitmq do
   @moduledoc """
   RabbitMQ adapter for the event broker.
 
@@ -33,11 +33,11 @@ defmodule EdgeAdmin.EventBroker.Adapters.Rabbitmq do
   - `EVENT_BROKER_RABBITMQ_SSL=true` — enable TLS (default: false)
   """
 
-  @behaviour EdgeAdmin.EventBroker.Adapter
+  @behaviour EdgeAdmin.Events.Broker.Adapter
 
   use GenServer
 
-  alias EdgeAdmin.EventBroker.Adapter
+  alias EdgeAdmin.Events.Broker.Adapter
 
   require Logger
 

@@ -279,16 +279,17 @@ edge_core/
 - `proxy_servers.ex` - HTTP/SOCKS5 proxy coordination
 - `metrics.ex` - Metrics aggregation
 - `edge_clusters.ex` - Cluster management and metadata
-- `event_broker/event_broker.ex` - Public API: `enqueue/1`, `publish_envelope/1`, `healthy?/0`
-- `event_broker/events.ex` - Typed event structs + serialisation
-- `event_broker/adapters/nats.ex` - NATS adapter (gnat); JetStream enabled via `EVENT_BROKER_NATS_JETSTREAM=true`
-- `event_broker/adapters/kafka.ex` - Kafka-compatible adapter (brod)
-- `event_broker/adapters/rabbitmq.ex` - AMQP 0-9-1 adapter (amqp lib); durable topic exchange `edge.events`. Operator-facing adapter id is `amqp091` (alias: `rabbitmq`); module/file kept under `Rabbitmq` since the protocol's primary deployment is RabbitMQ. Works against RabbitMQ, LavinMQ, AmazonMQ for RabbitMQ, CloudAMQP.
-- `event_broker/adapters/redis.ex` - Redis adapter (redix); fire-and-forget pub/sub, channel = event type
-- `event_broker/adapters/mqtt.ex` - MQTT adapter (emqtt); pub/sub, configurable QoS, topic = event type with `.` rewritten to `/`
-- `event_broker/adapters/aws_sns.ex` - AWS SNS adapter (ex_aws_sns + req); managed pub/sub, domain topics, `type`/`corename` promoted to message attributes for filter policies
-- `event_broker/adapters/google_pubsub.ex` - Google Cloud Pub/Sub adapter (goth + raw req against the v1 REST API); managed pub/sub, domain topics, `type`/`corename` promoted to message attributes for filter expressions
-- `event_broker/workers/publish_event_worker.ex` - Oban worker for async broker delivery
+- `events/events.ex` - Public publish API: `publish/1`, `healthy?/0`. Builds the CloudEvents envelope and fans out to every configured delivery channel.
+- `events/catalog.ex` - Typed event structs + `event_type/1` + `to_data/1` (catalog of all event types)
+- `events/broker/broker.ex` - Broker delivery channel: `enqueue/1` (called by `Events.publish/1`), `publish_envelope/1` (called by the Oban worker), `healthy?/0`
+- `events/broker/adapters/nats.ex` - NATS adapter (gnat); JetStream enabled via `EVENT_BROKER_NATS_JETSTREAM=true`
+- `events/broker/adapters/kafka.ex` - Kafka-compatible adapter (brod)
+- `events/broker/adapters/rabbitmq.ex` - AMQP 0-9-1 adapter (amqp lib); durable topic exchange `edge.events`. Operator-facing adapter id is `amqp091` (alias: `rabbitmq`); module/file kept under `Rabbitmq` since the protocol's primary deployment is RabbitMQ. Works against RabbitMQ, LavinMQ, AmazonMQ for RabbitMQ, CloudAMQP.
+- `events/broker/adapters/redis.ex` - Redis adapter (redix); fire-and-forget pub/sub, channel = event type
+- `events/broker/adapters/mqtt.ex` - MQTT adapter (emqtt); pub/sub, configurable QoS, topic = event type with `.` rewritten to `/`
+- `events/broker/adapters/aws_sns.ex` - AWS SNS adapter (ex_aws_sns + req); managed pub/sub, domain topics, `type`/`corename` promoted to message attributes for filter policies
+- `events/broker/adapters/google_pubsub.ex` - Google Cloud Pub/Sub adapter (goth + raw req against the v1 REST API); managed pub/sub, domain topics, `type`/`corename` promoted to message attributes for filter expressions
+- `events/broker/workers/publish_event_worker.ex` - Oban worker for async broker delivery
 - **Not currently supported (demand-gated for future):** AMQP 1.0 (different protocol from AMQP 0-9-1 — would be a new adapter, not a flag on `amqp091`) and Apache Pulsar (not Kafka-wire-compatible despite KoP plugin existing). Add only if a real user asks; do not pre-build.
 
 **Edge Agent (`edge_agent/lib/edge_agent/`):**
@@ -339,7 +340,7 @@ Admin background work is split between two schedulers with different semantics:
 - `EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker` - Enqueues one `ReconcileClusterWorker` job per cluster
 - `EdgeAdmin.Nodes.Workers.ReconcileClusterWorker` - Syncs a single cluster's node state with Netmaker VPN
 - `EdgeAdmin.SelfUpdates.Workers.TriggerSelfUpdateWorker` - Coordinates container updates
-- `EdgeAdmin.EventBroker.Workers.PublishEventWorker` - Publishes a CloudEvents envelope to the broker, retries on failure
+- `EdgeAdmin.Events.Broker.Workers.PublishEventWorker` - Publishes a CloudEvents envelope to the broker, retries on failure
 
 **Agent Workers:**
 

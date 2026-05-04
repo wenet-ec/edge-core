@@ -1,42 +1,42 @@
-# edge_admin/lib/edge_admin/event_broker/events.ex
-defmodule EdgeAdmin.EventBroker.Events do
+# edge_admin/lib/edge_admin/events/catalog.ex
+defmodule EdgeAdmin.Events.Catalog do
   @moduledoc """
-  Typed event structs for the broker catalog.
+  Typed event structs for the event catalog.
 
-  Each struct carries the raw domain data needed to build the event envelope's
-  `data` field. Callers construct the appropriate struct and pass it to
-  `EventBroker.enqueue/1`.
+  Each struct carries the raw domain data needed to build the CloudEvents
+  envelope's `data` field. Callers construct the appropriate struct and pass
+  it to `EdgeAdmin.Events.publish/1`.
 
   ## Node events
 
-      %Events.NodeRegistered{node: node}
-      %Events.NodeReregistered{node: node}
-      %Events.NodeVersionChanged{node: node, previous_version: "1.1.0"}
-      %Events.NodeStatusChanged{node: node, previous_status: "healthy"}
-      %Events.NodeClusterChanged{node: node, previous_cluster_name: "old"}
-      %Events.NodeUpdateTriggered{node: node, self_update_request_id: id}
+      %Catalog.NodeRegistered{node: node}
+      %Catalog.NodeReregistered{node: node}
+      %Catalog.NodeVersionChanged{node: node, previous_version: "1.1.0"}
+      %Catalog.NodeStatusChanged{node: node, previous_status: "healthy"}
+      %Catalog.NodeClusterChanged{node: node, previous_cluster_name: "old"}
+      %Catalog.NodeUpdateTriggered{node: node, self_update_request_id: id}
 
   ## Command execution events
 
-      %Events.CommandExecutionCreated{execution: execution, command: command, cluster_name: "prod"}
-      %Events.CommandExecutionSent{execution: execution, command: command, cluster_name: "prod"}
-      %Events.CommandExecutionCompleted{execution: execution, command: command, cluster_name: "prod"}
-      %Events.CommandExecutionCancelled{execution: execution, command: command, cluster_name: "prod"}
-      %Events.CommandExecutionExpired{execution: execution, command: command, cluster_name: "prod"}
-      %Events.CommandExecutionPruned{execution: execution, command: command, cluster_name: "prod"}
+      %Catalog.CommandExecutionCreated{execution: execution, command: command, cluster_name: "prod"}
+      %Catalog.CommandExecutionSent{execution: execution, command: command, cluster_name: "prod"}
+      %Catalog.CommandExecutionCompleted{execution: execution, command: command, cluster_name: "prod"}
+      %Catalog.CommandExecutionCancelled{execution: execution, command: command, cluster_name: "prod"}
+      %Catalog.CommandExecutionExpired{execution: execution, command: command, cluster_name: "prod"}
+      %Catalog.CommandExecutionPruned{execution: execution, command: command, cluster_name: "prod"}
 
   ## Self-update request events
 
-      %Events.SelfUpdateCompleted{request: request}
+      %Catalog.SelfUpdateCompleted{request: request}
 
   ## Enrollment key events
 
-      %Events.EnrollmentKeyVerified{enrollment_key: key, result: :verified}
-      %Events.EnrollmentKeyVerified{enrollment_key: nil, result: :invalid_key, attempted_key_blob: blob}
+      %Catalog.EnrollmentKeyVerified{enrollment_key: key, result: :verified}
+      %Catalog.EnrollmentKeyVerified{enrollment_key: nil, result: :invalid_key, attempted_key_blob: blob}
 
   ## SSH username events
 
-      %Events.SshUsernameVerified{ssh_username: ssh_username, node_id: node_id, attempted_username: "deploy",
+      %Catalog.SshUsernameVerified{ssh_username: ssh_username, node_id: node_id, attempted_username: "deploy",
                                   auth_method: :public_key, result: :success}
   """
 

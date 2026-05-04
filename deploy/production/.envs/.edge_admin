@@ -249,6 +249,7 @@ ADMIN_DISCOVERY_PORT=44000
 
 # EVENT_BROKER_ENABLED=true
 # CORE_NAME=                            # included in every envelope; defaults to "default"
+# EVENT_DELIVERY_MAX_AGE_SECONDS=3600   # drop publish jobs older than N seconds; 0 disables (default: 3600)
 
 # NATS:
 # EVENT_BROKER_ADAPTER=nats

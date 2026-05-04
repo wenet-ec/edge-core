@@ -442,6 +442,7 @@ Production files follow the same pattern in `deploy/production/.envs/`
 - `EVENT_BROKER_GOOGLE_PUBSUB_EMULATOR_HOST` - override only for the official Pub/Sub emulator (host:port, no scheme); leave UNSET in production
 - `GOOGLE_APPLICATION_CREDENTIALS` - GCP service-account JSON path, resolved by goth's standard chain (env → metadata server / Workload Identity)
 - `CORE_NAME` - Identifies this core instance in every event envelope (default: `"default"`)
+- `EVENT_DELIVERY_MAX_AGE_SECONDS` - Cancel publish jobs older than N seconds (default: `3600`); checked against Oban's `inserted_at` at the start of `perform/1`. Set to `0` to disable.
 
 ## Technology Stack
 

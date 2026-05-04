@@ -507,7 +507,8 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
   config :edge_admin,
     event_broker_enabled: true,
     event_broker_adapter: event_broker_adapter,
-    core_name: get_env("CORE_NAME", :string, "default")
+    core_name: get_env("CORE_NAME", :string, "default"),
+    event_delivery_max_age_seconds: get_env("EVENT_DELIVERY_MAX_AGE_SECONDS", :integer, 3600)
 
   case event_broker_adapter do
     :nats ->

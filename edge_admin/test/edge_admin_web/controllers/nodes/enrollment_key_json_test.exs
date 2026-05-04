@@ -23,6 +23,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyJSONTest do
       %EnrollmentKey{
         id: "key-uuid-1",
         cluster: fake_cluster(),
+        name: nil,
         key: "eyJhZG1pbl91cmxzIjpbXSwibm9uY2UiOiJhYmMifQ==",
         uses_remaining: 5,
         expired_at: nil,
@@ -61,10 +62,20 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyJSONTest do
       assert Map.has_key?(result, :data)
     end
 
-    test "all 8 expected fields are present" do
+    test "all 9 expected fields are present" do
       data = EnrollmentKeyJSON.show(%{conn: fake_conn(), enrollment_key: fake_key()}).data
-      expected_keys = ~w(id cluster_name key uses_remaining expired_at last_used_at inserted_at updated_at)a
+      expected_keys = ~w(id cluster_name name key uses_remaining expired_at last_used_at inserted_at updated_at)a
       for key <- expected_keys, do: assert(Map.has_key?(data, key), "missing key: #{key}")
+    end
+
+    test "name is nil when unset" do
+      data = EnrollmentKeyJSON.show(%{conn: fake_conn(), enrollment_key: fake_key(%{name: nil})}).data
+      assert data.name == nil
+    end
+
+    test "name is passed through when set" do
+      data = EnrollmentKeyJSON.show(%{conn: fake_conn(), enrollment_key: fake_key(%{name: "prod rollout"})}).data
+      assert data.name == "prod rollout"
     end
 
     test "id is passed through" do

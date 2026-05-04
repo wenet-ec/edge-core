@@ -27,6 +27,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
           QueryParams.string_filter(:cluster_name,
             description: "Filter by cluster name (exact match or wildcard: prod*, *east, etc.)"
           ),
+          QueryParams.string_filter(:name,
+            description: "Filter by enrollment key name (case-insensitive substring or wildcard: prod*, *rollout, etc.)"
+          ),
           QueryParams.string_filter(:key, description: "Filter by exact key value"),
           QueryParams.int_filter(:uses_remaining,
             description:

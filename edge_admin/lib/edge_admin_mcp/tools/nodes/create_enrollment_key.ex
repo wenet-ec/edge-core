@@ -13,6 +13,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateEnrollmentKey do
 
   schema do
     field :cluster_name, {:required, :string}, min_length: 1
+    field :name, :string
     field :uses_remaining, :integer, min: 1
     field :expired_at, :string
   end
@@ -23,6 +24,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateEnrollmentKey do
       {:ok, cluster} ->
         attrs =
           %{}
+          |> put_if("name", params[:name])
           |> put_if("uses_remaining", params[:uses_remaining])
           |> put_if("expired_at", params[:expired_at])
 

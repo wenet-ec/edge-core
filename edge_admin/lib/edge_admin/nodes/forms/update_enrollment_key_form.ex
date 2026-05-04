@@ -4,13 +4,14 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyForm do
   use EdgeAdmin.Form
 
   embedded_schema do
+    field(:name, :string)
     field(:uses_remaining, :integer)
     field(:expired_at, :utc_datetime)
   end
 
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
-    |> cast(attrs, [:uses_remaining, :expired_at])
+    |> cast(attrs, [:name, :uses_remaining, :expired_at])
     |> validate_uses_remaining()
     |> apply_action(:update)
     |> case do
@@ -34,6 +35,7 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyForm do
   # Preserve explicit null (key present, value nil) vs omitted (key absent)
   defp to_map(raw_attrs, %__MODULE__{} = form) do
     %{}
+    |> maybe_put(raw_attrs, "name", form.name)
     |> maybe_put(raw_attrs, "uses_remaining", form.uses_remaining)
     |> maybe_put(raw_attrs, "expired_at", form.expired_at)
   end

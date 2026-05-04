@@ -47,6 +47,22 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyFormTest do
       assert result["uses_remaining"] == 5
       assert result["expired_at"] == dt
     end
+
+    test "name is accepted when present" do
+      assert {:ok, result} = CreateEnrollmentKeyForm.changeset(%{name: "prod rollout"})
+      assert result["name"] == "prod rollout"
+    end
+
+    test "name as null is preserved (explicit null)" do
+      assert {:ok, result} = CreateEnrollmentKeyForm.changeset(%{name: nil})
+      assert Map.has_key?(result, "name")
+      assert result["name"] == nil
+    end
+
+    test "absent name is excluded from result" do
+      assert {:ok, result} = CreateEnrollmentKeyForm.changeset(%{})
+      refute Map.has_key?(result, "name")
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -89,6 +105,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyFormTest do
   describe "changeset/1 — to_map output" do
     test "absent optional fields are excluded from result map" do
       {:ok, result} = CreateEnrollmentKeyForm.changeset(%{})
+      refute Map.has_key?(result, "name")
       refute Map.has_key?(result, "uses_remaining")
       refute Map.has_key?(result, "expired_at")
     end

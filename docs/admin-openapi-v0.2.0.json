@@ -652,6 +652,7 @@
         "description": "Parameters for creating a new enrollment key for a cluster. All fields are optional.",
         "example": {
           "expired_at": "2026-12-31T23:59:59Z",
+          "name": "prod rollout",
           "uses_remaining": 5
         },
         "properties": {
@@ -659,6 +660,12 @@
             "description": "Expiry datetime (ISO 8601). Omit or pass null for no expiry.",
             "example": "2026-12-31T23:59:59Z",
             "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "description": "Optional human-readable label for this key. Display only — not used for lookup.",
+            "example": "prod rollout",
             "nullable": true,
             "type": "string"
           },
@@ -2839,9 +2846,10 @@
         "type": "object"
       },
       "EnrollmentKeyUpdateRequest": {
-        "description": "Parameters for updating an enrollment key. Only fields that are present in the request body are updated — omitting a field leaves it unchanged.\n\n- `uses_remaining`: pass a positive integer to set a limit, or `null` to make the key unlimited.\n- `expired_at`: pass a datetime to set expiry, or `null` to remove expiry.\n",
+        "description": "Parameters for updating an enrollment key. Only fields that are present in the request body are updated — omitting a field leaves it unchanged.\n\n- `name`: pass a string to set a label, or `null` to clear it.\n- `uses_remaining`: pass a positive integer to set a limit, or `null` to make the key unlimited.\n- `expired_at`: pass a datetime to set expiry, or `null` to remove expiry.\n",
         "example": {
           "expired_at": "2026-12-31T23:59:59Z",
+          "name": "prod rollout",
           "uses_remaining": null
         },
         "properties": {
@@ -2849,6 +2857,12 @@
             "description": "Expiry datetime (ISO 8601), or null to remove expiry. Omit to leave unchanged.",
             "example": "2026-12-31T23:59:59Z",
             "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "description": "Human-readable label for this key, or null to clear. Omit to leave unchanged.",
+            "example": "prod rollout",
             "nullable": true,
             "type": "string"
           },
@@ -3211,6 +3225,7 @@
           "inserted_at": "2025-06-09T08:00:00Z",
           "key": "eyJzZXJ2ZXIiOiJodHRwczovL25ldG1ha2VyLmV4YW1wbGUuY29tIiwia2V5IjoiYWJjMTIzIn0=",
           "last_used_at": null,
+          "name": "prod rollout",
           "updated_at": "2025-06-09T08:00:00Z",
           "uses_remaining": 5
         },
@@ -3242,6 +3257,11 @@
           "last_used_at": {
             "description": "When the key was last used. null if unused.",
             "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "description": "Optional human-readable label for this key (display only). null if unset.",
             "nullable": true,
             "type": "string"
           },
@@ -4261,6 +4281,13 @@
             "description": "Filter by cluster name (exact match or wildcard: prod*, *east, etc.)",
             "in": "query",
             "name": "cluster_name",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by enrollment key name (case-insensitive substring or wildcard: prod*, *rollout, etc.)",
+            "in": "query",
+            "name": "name",
             "required": false,
             "schema": { "type": "string" }
           },

@@ -8,6 +8,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.EnrollmentKeyData do
     %{
       id: key.id,
       cluster_name: cluster.name,
+      name: key.name,
       key: key.key,
       uses_remaining: key.uses_remaining,
       expired_at: key.expired_at,

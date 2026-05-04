@@ -70,11 +70,11 @@ Retention is configured on the NATS server, not by Edge Core.
 
 Four topics, one per domain:
 
-| Topic                      | Partition key                                                |
-| -------------------------- | ------------------------------------------------------------ |
-| `edge-nodes-events`        | `node_id` (or `enrollment_key_id` for enrollment events)     |
-| `edge-commands-events`     | `command_execution_id`                                       |
-| `edge-self-updates-events` | `self_update_request_id`                                     |
+| Topic                      | Partition key                                                   |
+| -------------------------- | --------------------------------------------------------------- |
+| `edge-nodes-events`        | `node_id` (or `enrollment_key_id` for enrollment events)        |
+| `edge-commands-events`     | `command_execution_id`                                          |
+| `edge-self-updates-events` | `self_update_request_id`                                        |
 | `edge-ssh-events`          | `node_id` (verifications partition by the node attempting auth) |
 
 Partition key ensures ordering per entity, parallel across entities. Filter by event type using the `type` field in the envelope.
@@ -136,12 +136,12 @@ Default publish QoS is `1` (at-least-once with broker ACK). Configurable globall
 
 Four SNS topics by domain — must be pre-provisioned in your AWS account, ARNs derived from `EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX`:
 
-| Domain                              | Topic name suffix          |
-| ----------------------------------- | -------------------------- |
-| Node + enrollment key events        | `edge-nodes-events`        |
-| Command execution events            | `edge-commands-events`     |
-| Self-update events                  | `edge-self-updates-events` |
-| SSH events                          | `edge-ssh-events`          |
+| Domain                       | Topic name suffix          |
+| ---------------------------- | -------------------------- |
+| Node + enrollment key events | `edge-nodes-events`        |
+| Command execution events     | `edge-commands-events`     |
+| Self-update events           | `edge-self-updates-events` |
+| SSH events                   | `edge-ssh-events`          |
 
 SNS has no topic-name wildcards. Subscribers filter via _subscription filter policies_ matched against **message attributes**. The adapter promotes two attributes on every publish:
 
@@ -167,12 +167,12 @@ Filter policy examples:
 
 Three Pub/Sub topics by domain — must be pre-provisioned in your GCP project. The adapter constructs full resource names from `EVENT_BROKER_GOOGLE_PUBSUB_PROJECT` (+ optional `EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX`):
 
-| Domain                              | Topic ID                   |
-| ----------------------------------- | -------------------------- |
-| Node + enrollment key events        | `edge-nodes-events`        |
-| Command execution events            | `edge-commands-events`     |
-| Self-update events                  | `edge-self-updates-events` |
-| SSH events                          | `edge-ssh-events`          |
+| Domain                       | Topic ID                   |
+| ---------------------------- | -------------------------- |
+| Node + enrollment key events | `edge-nodes-events`        |
+| Command execution events     | `edge-commands-events`     |
+| Self-update events           | `edge-self-updates-events` |
+| SSH events                   | `edge-ssh-events`          |
 
 Pub/Sub has no topic-name wildcards. Subscribers filter via _subscription filter expressions_ matched against **message attributes**. The adapter promotes two attributes on every publish:
 
@@ -308,9 +308,9 @@ Notes:
 
 ### Self-Update Request Events
 
-| Type                                 | NATS subject / RabbitMQ routing key  | Description                                |
-| ------------------------------------ | ------------------------------------ | ------------------------------------------ |
-| `edge.self_update_request.completed` | `edge.self_update_request.completed` | Batch finished — `summary` populated       |
+| Type                                 | NATS subject / RabbitMQ routing key  | Description                          |
+| ------------------------------------ | ------------------------------------ | ------------------------------------ |
+| `edge.self_update_request.completed` | `edge.self_update_request.completed` | Batch finished — `summary` populated |
 
 **Self-update request `data` schema:**
 
@@ -342,9 +342,9 @@ Notes:
 
 ### Enrollment Key Events
 
-| Type                           | NATS subject / RabbitMQ routing key | Description                                                          |
-| ------------------------------ | ----------------------------------- | -------------------------------------------------------------------- |
-| `edge.enrollment_key.verified` | `edge.enrollment_key.verified`      | Agent attempted to enroll using a key (success or failure)           |
+| Type                           | NATS subject / RabbitMQ routing key | Description                                                |
+| ------------------------------ | ----------------------------------- | ---------------------------------------------------------- |
+| `edge.enrollment_key.verified` | `edge.enrollment_key.verified`      | Agent attempted to enroll using a key (success or failure) |
 
 **Enrollment key verified `data` schema:**
 
@@ -352,6 +352,7 @@ Notes:
 {
   "enrollment_key_id": "enrkey-abc123",
   "cluster_name": "prod",
+  "name": "prod rollout",
   "uses_remaining": 4,
   "result": "verified",
   "verified_at": "2026-04-14T10:00:00Z"
@@ -361,7 +362,8 @@ Notes:
 Notes:
 
 - `result` is one of `"verified"`, `"invalid_key"`, `"key_expired"`, `"key_spent"`, `"node_limit_reached"`
-- On `"invalid_key"` the agent presented a blob that does not match any DB row — `enrollment_key_id`, `cluster_name`, and `uses_remaining` are all `null`. The event still fires (failed enrollment attempts are real security signal — port scanners, credential stuffing, expired-key rotation surfaces here)
+- On `"invalid_key"` the agent presented a blob that does not match any DB row — `enrollment_key_id`, `cluster_name`, `name`, and `uses_remaining` are all `null`. The event still fires (failed enrollment attempts are real security signal — port scanners, credential stuffing, expired-key rotation surfaces here)
+- `name` is an optional human-readable label for the key (display only). `null` when the key was created without one
 - The actual key blob is **never** included in the event — it is a credential
 - `uses_remaining` reflects state **after** this attempt; for unlimited keys it is `null`
 
@@ -369,9 +371,9 @@ Notes:
 
 ### SSH Username Events
 
-| Type                         | NATS subject / RabbitMQ routing key | Description                                                       |
-| ---------------------------- | ----------------------------------- | ----------------------------------------------------------------- |
-| `edge.ssh_username.verified` | `edge.ssh_username.verified`        | Agent verified an SSH credential against admin (success/failure)  |
+| Type                         | NATS subject / RabbitMQ routing key | Description                                                      |
+| ---------------------------- | ----------------------------------- | ---------------------------------------------------------------- |
+| `edge.ssh_username.verified` | `edge.ssh_username.verified`        | Agent verified an SSH credential against admin (success/failure) |
 
 **SSH username verified `data` schema:**
 

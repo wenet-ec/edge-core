@@ -498,6 +498,7 @@
               "data": {
                 "cluster_name": "prod",
                 "enrollment_key_id": "enrkey-abc123",
+                "name": "prod rollout",
                 "result": "verified",
                 "uses_remaining": 4,
                 "verified_at": "2026-04-13T10:00:00Z"
@@ -991,6 +992,10 @@
           "enrollment_key_id": {
             "description": "Null when result is invalid_key",
             "format": "uuid",
+            "type": ["string", "null"]
+          },
+          "name": {
+            "description": "Optional human-readable label for the key (display only). Null when unset or when result is invalid_key.",
             "type": ["string", "null"]
           },
           "result": {

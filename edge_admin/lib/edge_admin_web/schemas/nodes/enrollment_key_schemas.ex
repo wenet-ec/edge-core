@@ -19,6 +19,11 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
       properties: %{
         id: %Schema{type: :string, format: :uuid, description: "Enrollment key ID"},
         cluster_name: %Schema{type: :string, description: "Cluster this key belongs to"},
+        name: %Schema{
+          type: :string,
+          nullable: true,
+          description: "Optional human-readable label for this key (display only). null if unset."
+        },
         key: %Schema{
           type: :string,
           description: "Enrollment key blob (base64 JSON). Set as ENROLLMENT_KEY on the agent."
@@ -51,6 +56,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
       example: %{
         id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         cluster_name: "prod-east",
+        name: "prod rollout",
         key: "eyJzZXJ2ZXIiOiJodHRwczovL25ldG1ha2VyLmV4YW1wbGUuY29tIiwia2V5IjoiYWJjMTIzIn0=",
         uses_remaining: 5,
         expired_at: "2026-12-31T23:59:59Z",
@@ -89,6 +95,12 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
       description: "Parameters for creating a new enrollment key for a cluster. All fields are optional.",
       type: :object,
       properties: %{
+        name: %Schema{
+          type: :string,
+          nullable: true,
+          description: "Optional human-readable label for this key. Display only — not used for lookup.",
+          example: "prod rollout"
+        },
         uses_remaining: %Schema{
           type: :integer,
           nullable: true,
@@ -104,7 +116,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
           example: "2026-12-31T23:59:59Z"
         }
       },
-      example: %{uses_remaining: 5, expired_at: "2026-12-31T23:59:59Z"}
+      example: %{name: "prod rollout", uses_remaining: 5, expired_at: "2026-12-31T23:59:59Z"}
     })
   end
 
@@ -116,11 +128,18 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
       description: """
       Parameters for updating an enrollment key. Only fields that are present in the request body are updated — omitting a field leaves it unchanged.
 
+      - `name`: pass a string to set a label, or `null` to clear it.
       - `uses_remaining`: pass a positive integer to set a limit, or `null` to make the key unlimited.
       - `expired_at`: pass a datetime to set expiry, or `null` to remove expiry.
       """,
       type: :object,
       properties: %{
+        name: %Schema{
+          type: :string,
+          nullable: true,
+          description: "Human-readable label for this key, or null to clear. Omit to leave unchanged.",
+          example: "prod rollout"
+        },
         uses_remaining: %Schema{
           type: :integer,
           nullable: true,
@@ -137,7 +156,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
           example: "2026-12-31T23:59:59Z"
         }
       },
-      example: %{uses_remaining: nil, expired_at: "2026-12-31T23:59:59Z"}
+      example: %{name: "prod rollout", uses_remaining: nil, expired_at: "2026-12-31T23:59:59Z"}
     })
   end
 end

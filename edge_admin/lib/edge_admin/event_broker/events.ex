@@ -355,6 +355,7 @@ defmodule EdgeAdmin.EventBroker.Events do
     %{
       "enrollment_key_id" => nil,
       "cluster_name" => nil,
+      "name" => nil,
       "uses_remaining" => nil,
       "result" => Atom.to_string(result),
       "verified_at" => format_dt(DateTime.utc_now())
@@ -365,6 +366,7 @@ defmodule EdgeAdmin.EventBroker.Events do
     %{
       "enrollment_key_id" => key.id,
       "cluster_name" => cluster_name(key),
+      "name" => key.name,
       "uses_remaining" => key.uses_remaining,
       "result" => Atom.to_string(result),
       "verified_at" => format_dt(DateTime.utc_now())

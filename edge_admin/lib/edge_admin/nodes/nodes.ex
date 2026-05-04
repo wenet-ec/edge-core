@@ -1449,7 +1449,7 @@ defmodule EdgeAdmin.Nodes do
     {ilike_filters, flop_params} =
       RequestParser.split_ilike_filters(
         Map.put(flop_params, :filters, other_filters),
-        [:key]
+        [:name, :key]
       )
 
     query =

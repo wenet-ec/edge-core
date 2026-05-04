@@ -20,8 +20,8 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
 
   @derive {
     Flop.Schema,
-    filterable: [:key, :uses_remaining, :expired_at, :last_used_at, :inserted_at, :updated_at],
-    sortable: [:uses_remaining, :expired_at, :last_used_at, :inserted_at, :updated_at],
+    filterable: [:name, :key, :uses_remaining, :expired_at, :last_used_at, :inserted_at, :updated_at],
+    sortable: [:name, :uses_remaining, :expired_at, :last_used_at, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],
       order_directions: [:desc]
@@ -30,6 +30,7 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
 
   @type t :: %__MODULE__{
           id: String.t(),
+          name: String.t() | nil,
           key: String.t(),
           cluster_id: String.t(),
           cluster: Cluster.t() | Ecto.Association.NotLoaded.t(),
@@ -41,6 +42,7 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
         }
 
   schema "enrollment_keys" do
+    field(:name, :string)
     field(:key, :string)
     field(:uses_remaining, :integer, default: 1)
     field(:expired_at, :utc_datetime)
@@ -54,7 +56,7 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
   @doc false
   def changeset(enrollment_key, attrs) do
     enrollment_key
-    |> cast(attrs, [:key, :cluster_id, :uses_remaining, :expired_at])
+    |> cast(attrs, [:name, :key, :cluster_id, :uses_remaining, :expired_at])
     |> validate_required([:key, :cluster_id])
     |> validate_uses_remaining()
     |> unique_constraint(:key)

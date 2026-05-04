@@ -561,6 +561,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           %{
             "enrollment_key_id" => "enrkey-abc123",
             "cluster_name" => "prod",
+            "name" => "prod rollout",
             "uses_remaining" => 4,
             "result" => "verified",
             "verified_at" => "2026-04-13T10:00:00Z"
@@ -894,6 +895,11 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           "cluster_name" => %{
             "type" => ["string", "null"],
             "description" => "Null when result is invalid_key"
+          },
+          "name" => %{
+            "type" => ["string", "null"],
+            "description" =>
+              "Optional human-readable label for the key (display only). Null when unset or when result is invalid_key."
           },
           "uses_remaining" => %{
             "type" => ["integer", "null"],

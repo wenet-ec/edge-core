@@ -5,6 +5,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
 
   ## Filtering
   - `cluster_name` — exact match or wildcard (`prod*`, `*east`)
+  - `name` — case-insensitive substring/wildcard match on the human-readable label
   - `key` — exact key value
   - `uses_remaining` — exact uses remaining count
   - `uses_remaining_gte` / `uses_remaining_lte` — uses remaining range
@@ -19,7 +20,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
   - `updated_at_gte` / `updated_at_lte` — last-updated datetime range (ISO8601)
 
   ## Sorting
-  - `order_by` — comma-separated fields: `uses_remaining`, `expired_at`, `last_used_at`, `inserted_at`, `updated_at`
+  - `order_by` — comma-separated fields: `name`, `uses_remaining`, `expired_at`, `last_used_at`, `inserted_at`, `updated_at`
   - `order_directions` — comma-separated directions: `asc`, `desc`
   """
   use EdgeAdminMcp, :tool
@@ -37,6 +38,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
     field :cluster_name, :string, min_length: 1
+    field :name, :string, min_length: 1
     field :key, :string, min_length: 1
     field :uses_remaining, :integer, min: 1
     field :uses_remaining_gte, :integer, min: 1
@@ -64,6 +66,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
       FlopParams.build(params,
         passthrough: [
           :cluster_name,
+          :name,
           :key,
           :uses_remaining,
           :is_unlimited,

@@ -220,7 +220,8 @@ edge_core/
 │   │   │   ├── vpn/             # Netmaker VPN integration
 │   │   │   ├── proxy_servers/   # Proxy coordination
 │   │   │   ├── metrics/         # Metrics aggregation
-│   │   │   └── edge_clusters/   # Cluster management + Erlang peer coordination
+│   │   │   ├── edge_clusters/   # Cluster management + Erlang peer coordination
+│   │   │   └── vault/           # Cloak vault + encrypted Ecto types
 │   │   └── edge_admin_web/      # Phoenix web layer
 │   │       ├── controllers/     # REST API controllers
 │   │       ├── schemas/         # OpenAPI schemas
@@ -279,9 +280,11 @@ edge_core/
 - `proxy_servers.ex` - HTTP/SOCKS5 proxy coordination
 - `metrics.ex` - Metrics aggregation
 - `edge_clusters.ex` - Cluster management and metadata
-- `events/events.ex` - Public publish API: `publish/1`, `healthy?/0`. Builds the CloudEvents envelope and fans out to every configured delivery channel.
+- `events/events.ex` - Public publish API: `publish/1`. Builds the CloudEvents envelope and fans out to every configured delivery channel. (No `healthy?/0` here — health checks live per-channel: `EdgeAdmin.Events.Broker.healthy?/0`, etc.)
 - `events/catalog.ex` - Typed event structs + `event_type/1` + `to_data/1` (catalog of all event types)
 - `events/broker/broker.ex` - Broker delivery channel: `enqueue/1` (called by `Events.publish/1`), `publish_envelope/1` (called by the Oban worker), `healthy?/0`
+- `vault/vault.ex` - `EdgeAdmin.Vault` (Cloak.Vault) + `encrypted_schemas/0` registry used by the rotation task. Wired via `CLOAK_KEY` + `CLOAK_TAG` in `runtime.exs`, started before the Repo in the supervision tree.
+- `vault/encrypted_binary.ex` / `vault/encrypted_map.ex` - Cloak Ecto types for opaque binary and map columns. Migration column type is always `:binary`; types JSON-encode + AES-GCM-encrypt transparently on the schema side.
 - `events/broker/adapters/nats.ex` - NATS adapter (gnat); JetStream enabled via `EVENT_BROKER_NATS_JETSTREAM=true`
 - `events/broker/adapters/kafka.ex` - Kafka-compatible adapter (brod)
 - `events/broker/adapters/rabbitmq.ex` - AMQP 0-9-1 adapter (amqp lib); durable topic exchange `edge.events`. Operator-facing adapter id is `amqp091` (alias: `rabbitmq`); module/file kept under `Rabbitmq` since the protocol's primary deployment is RabbitMQ. Works against RabbitMQ, LavinMQ, AmazonMQ for RabbitMQ, CloudAMQP.
@@ -422,6 +425,9 @@ Production files follow the same pattern in `deploy/production/.envs/`
 - `NETMAKER_*` - Netmaker API credentials, URLs, and tokens
 - `ENROLLMENT_TOKEN` - Agent VPN enrollment key
 - `SECRET_KEY_BASE` - Phoenix secret for sessions and encryption
+- `CLOAK_KEY` - 32 bytes of base64 (generate with `openssl rand -base64 32`); required at boot. Encryption-at-rest key for sensitive Ecto columns (e.g. webhook secrets/headers when that ships). If lost, every encrypted row is unrecoverable — back it up alongside `MASTER_KEY`/`SECRET_KEY_BASE`.
+- `CLOAK_TAG` - identifier paired 1:1 with `CLOAK_KEY`, prepended to every ciphertext blob so Cloak can find the right cipher on decrypt. Required at boot. Convention: `AES.GCM.V<N>`, bumped on each rotation.
+- `ROTATE_OLD_CLOAK_KEY` / `ROTATE_OLD_CLOAK_TAG` / `ROTATE_NEW_CLOAK_KEY` / `ROTATE_NEW_CLOAK_TAG` - all four set together to trigger Cloak key rotation via `EdgeAdmin.Release.rotate_cloak_key/0` (auto-runs on `start`, also runnable as one-off via `bin/rotate_cloak_key`). Idempotent. Logs skip if any of the four is missing.
 - `PHX_HOST` - Public hostname for admin API
 - `EVENT_BROKER_ENABLED` - `true` to enable event publishing (default: `false`)
 - `EVENT_BROKER_ADAPTER` - `nats`, `kafka`, `amqp091` (alias: `rabbitmq`), `redis`, `mqtt`, `aws_sns`, or `google_pubsub` (required when enabled)

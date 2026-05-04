@@ -68,6 +68,7 @@ Key things to configure:
 - Replace all `your-server-ip-or-domain.com` with your actual server address (private IP or public domain, both work)
 - Replace all `change-me` with strong random values
 - `SECRET_KEY_BASE` — generate with `openssl rand -base64 48`
+- `CLOAK_KEY` — generate with `openssl rand -base64 32` (encryption-at-rest for sensitive columns; back it up with the rest of your secrets — losing it means losing every encrypted row)
 - `MASTER_KEY` — omnipotent key, fallback for all scoped keys
 - `API_KEY` — scoped to REST API clients (optional, defaults to `MASTER_KEY`)
 - `METRICS_KEY` — scoped to metrics scrapers (optional, defaults to `MASTER_KEY`)

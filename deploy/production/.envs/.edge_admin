@@ -94,6 +94,28 @@ MASTER_KEY=supersecretkey123456789
 # MCP_KEY=      # MCP server endpoint
 
 # =============================================================================
+# Cloak — encryption-at-rest for sensitive Ecto columns
+# =============================================================================
+# CLOAK_KEY: 32 bytes of base64 (generate with: openssl rand -base64 32)
+# CLOAK_TAG: identifier paired with CLOAK_KEY, prepended to every ciphertext
+#            so Cloak can find the right cipher on decrypt. Convention is
+#            AES.GCM.V<N>; bump <N> on each rotation.
+# Both required at boot. If CLOAK_KEY is lost, every encrypted row is
+# unrecoverable — back it up alongside MASTER_KEY / SECRET_KEY_BASE.
+CLOAK_KEY=
+CLOAK_TAG=AES.GCM.V1
+
+# Rotation env vars. All four required to trigger rotation; if any is missing
+# the release task logs "skip" and exits cleanly. Operators set these, run
+# the rotation task (auto on `start`, or one-off via the `rotate_cloak_key`
+# script), verify, then strip these and update CLOAK_KEY/CLOAK_TAG to the
+# new values on the next deploy. Idempotent — safe to re-run.
+# ROTATE_OLD_CLOAK_KEY=
+# ROTATE_OLD_CLOAK_TAG=
+# ROTATE_NEW_CLOAK_KEY=
+# ROTATE_NEW_CLOAK_TAG=
+
+# =============================================================================
 # Proxy Servers
 # =============================================================================
 HTTP_PROXY_PORT=43128

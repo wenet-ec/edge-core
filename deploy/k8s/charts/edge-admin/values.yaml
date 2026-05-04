@@ -150,7 +150,8 @@ sysctls:
 secrets:
   # Set existingSecret to the name of a pre-created Secret to skip chart-managed secret creation.
   # The Secret must contain: SECRET_KEY_BASE, MASTER_KEY, DB_PASSWORD,
-  #   NETMAKER_MASTER_KEY, NETMAKER_SUPERADMIN_PASSWORD, VPN_CLUSTER_COOKIE
+  #   NETMAKER_MASTER_KEY, NETMAKER_SUPERADMIN_PASSWORD, VPN_CLUSTER_COOKIE,
+  #   CLOAK_KEY, CLOAK_TAG.
   # Optional broker auth (only needed when EVENT_BROKER_ENABLED=true and broker requires auth).
   # RabbitMQ and Redis embed credentials in EVENT_BROKER_RABBITMQ_URL / EVENT_BROKER_REDIS_URL — no separate fields needed.
   # Leave fields empty to omit them from the Secret.
@@ -161,6 +162,18 @@ secrets:
   netmakerMasterKey: "changeme"
   netmakerSuperadminPassword: "changeme"
   vpnClusterCookie: "changeme"
+  # Cloak vault. cloakKey is 32 bytes of base64; cloakTag is the identifier
+  # paired with the key (convention: AES.GCM.V<N>, bumped on each rotation).
+  # Required at boot — the admin will not start without these set.
+  cloakKey: "changeme"
+  cloakTag: "AES.GCM.V1"
+  # Rotation envs. Set ALL FOUR to trigger rotation on the next admin start (or
+  # via the one-off `rotate_cloak_key` release script). Leave empty otherwise;
+  # they're omitted from the rendered Secret when blank. Idempotent.
+  rotateOldCloakKey: ""
+  rotateOldCloakTag: ""
+  rotateNewCloakKey: ""
+  rotateNewCloakTag: ""
   # NATS auth — pick one, mutually exclusive (token takes precedence)
   eventBrokerNatsToken: ""       # shared token (simple/self-hosted)
   eventBrokerNatsUsername: ""    # username + password

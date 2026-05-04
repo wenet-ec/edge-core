@@ -4,6 +4,7 @@ defmodule EdgeAdmin.Release do
   Release tasks for Edge Admin.
   """
 
+  alias Cloak.Ciphers.AES.GCM
   alias Ecto.Migrator
   alias EdgeAdmin.Vpn
 
@@ -185,6 +186,136 @@ defmodule EdgeAdmin.Release do
         Logger.error("Failed to create default cluster: #{inspect(reason)}")
         System.halt(1)
     end
+  end
+
+  # =============================================================================
+  # Cloak Key Rotation
+  # =============================================================================
+
+  @doc """
+  Rotates the Cloak encryption key.
+
+  Idempotent — safe to run multiple times. Reads four env vars; if any is
+  missing, logs skip and returns `:ok` without touching the DB. When all four
+  are present, re-encrypts every row in every schema returned by
+  `EdgeAdmin.Vault.encrypted_schemas/0` through `old → new`.
+
+  Required env vars (all four, or none):
+    - `ROTATE_OLD_CLOAK_KEY`  — old key, base64-encoded 32 bytes
+    - `ROTATE_OLD_CLOAK_TAG`  — old tag (e.g. "AES.GCM.V1")
+    - `ROTATE_NEW_CLOAK_KEY`  — new key, base64-encoded 32 bytes
+    - `ROTATE_NEW_CLOAK_TAG`  — new tag (e.g. "AES.GCM.V2")
+
+  Idempotent because Cloak's per-row tag prefix tells the migrator which
+  cipher decrypted each row; a row already encrypted under the new tag is
+  decrypted with the new key and re-encrypted with the new key (wasteful
+  but correct). A mid-rotation interruption can be resumed by re-running.
+
+  After the task completes successfully, operators update `CLOAK_KEY` /
+  `CLOAK_TAG` to the new values and remove the four `ROTATE_*` env vars on
+  the next deploy. There is no time pressure — running the task again with
+  the old `ROTATE_*` values would still succeed but do nothing useful.
+
+  ## Exit codes
+    - 0: rotation completed, or skipped because envs missing
+    - 1: rotation attempted but failed (key decode error, DB error, etc.)
+  """
+  def rotate_cloak_key do
+    boot([:repo])
+
+    case read_rotation_envs() do
+      :skip ->
+        :ok
+
+      {:ok, params} ->
+        Logger.info("[CloakRotation] Starting rotation: #{params.old_tag} → #{params.new_tag}")
+
+        Application.put_env(:edge_admin, EdgeAdmin.Vault,
+          ciphers: [
+            default: {GCM, tag: params.new_tag, key: params.new_key},
+            retired: {GCM, tag: params.old_tag, key: params.old_key}
+          ]
+        )
+
+        {:ok, _} = Application.ensure_all_started(:cloak_ecto)
+        {:ok, _} = EdgeAdmin.Vault.start_link()
+
+        do_rotate(EdgeAdmin.Vault.encrypted_schemas())
+    end
+  end
+
+  defp read_rotation_envs do
+    envs = %{
+      old_key: System.get_env("ROTATE_OLD_CLOAK_KEY"),
+      old_tag: System.get_env("ROTATE_OLD_CLOAK_TAG"),
+      new_key: System.get_env("ROTATE_NEW_CLOAK_KEY"),
+      new_tag: System.get_env("ROTATE_NEW_CLOAK_TAG")
+    }
+
+    missing = for {k, nil} <- envs, do: k
+
+    cond do
+      length(missing) == 4 ->
+        Logger.info("[CloakRotation] Skip: no ROTATE_* env vars set")
+        :skip
+
+      missing == [] ->
+        decode_rotation_keys(envs)
+
+      true ->
+        present = envs |> Enum.reject(fn {_k, v} -> is_nil(v) end) |> Enum.map(&elem(&1, 0))
+
+        Logger.info(
+          "[CloakRotation] Skip: incomplete ROTATE_* envs " <>
+            "(present: #{inspect(present)}, missing: #{inspect(missing)}). " <>
+            "All four are required to rotate."
+        )
+
+        :skip
+    end
+  end
+
+  defp decode_rotation_keys(envs) do
+    with {:ok, old_key} <- decode_key(envs.old_key, "ROTATE_OLD_CLOAK_KEY"),
+         {:ok, new_key} <- decode_key(envs.new_key, "ROTATE_NEW_CLOAK_KEY") do
+      {:ok, %{old_key: old_key, old_tag: envs.old_tag, new_key: new_key, new_tag: envs.new_tag}}
+    end
+  end
+
+  defp decode_key(value, name) do
+    case Base.decode64(value) do
+      {:ok, bytes} when byte_size(bytes) == 32 ->
+        {:ok, bytes}
+
+      {:ok, bytes} ->
+        Logger.error(
+          "[CloakRotation] #{name} decoded to #{byte_size(bytes)} bytes — must be 32 (AES-256). " <>
+            "Generate with: openssl rand -base64 32"
+        )
+
+        System.halt(1)
+
+      :error ->
+        Logger.error("[CloakRotation] #{name} is not valid base64")
+        System.halt(1)
+    end
+  end
+
+  defp do_rotate(schemas) do
+    if schemas == [] do
+      Logger.info("[CloakRotation] No encrypted schemas registered; rotation is a no-op.")
+    else
+      [repo] = repos()
+
+      Enum.each(schemas, fn schema ->
+        Logger.info("[CloakRotation] Rotating schema: #{inspect(schema)}")
+        Cloak.Ecto.Migrator.migrate(repo, schema)
+      end)
+
+      Logger.info("[CloakRotation] Rotation complete.")
+    end
+
+    :ok
   end
 
   # =============================================================================

@@ -61,6 +61,9 @@ ip link delete netmaker 2>/dev/null || true
 echo "Running migrations..."
 /app/bin/migrate
 
+echo "Checking Cloak key rotation..."
+/app/bin/rotate_cloak_key
+
 echo "Bootstrapping Netmaker superadmin..."
 /app/bin/create_netmaker_superadmin
 

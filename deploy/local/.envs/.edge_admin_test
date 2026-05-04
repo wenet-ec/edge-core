@@ -9,6 +9,10 @@ AUTH_ENABLED=false
 # Phoenix/Session (needed for controller tests)
 SECRET_KEY_BASE=G0ieeRljoXGzSDPRrYc2q4ADyNHCwxNOkw7YpPNMa+JgP9iGgJKT4K96Bw/Mf/pd
 
+# Cloak vault — required by runtime.exs at boot. Test-only fixed key.
+CLOAK_KEY=X24vg+X8/B2AGUEUFccMjbcvy8TOK2czAhR7rCXjMJo=
+CLOAK_TAG=AES.GCM.V1
+
 # Database configuration (tests use real DB with Ecto sandbox)
 DB_ADAPTER=postgres
 DB_HOST=edge_admin_db

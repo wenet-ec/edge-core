@@ -58,7 +58,8 @@ defmodule EdgeAdmin.Application do
   end
 
   defp build_children(:test) do
-    repo_children() ++
+    [EdgeAdmin.Vault] ++
+      repo_children() ++
       [
         {Phoenix.PubSub, name: EdgeAdmin.PubSub},
         {Oban, Application.fetch_env!(:edge_admin, Oban)},
@@ -67,7 +68,7 @@ defmodule EdgeAdmin.Application do
   end
 
   defp build_children(:server) do
-    [EdgeAdmin.PromEx] ++
+    [EdgeAdmin.PromEx, EdgeAdmin.Vault] ++
       repo_children() ++
       [
         {Phoenix.PubSub, name: EdgeAdmin.PubSub},

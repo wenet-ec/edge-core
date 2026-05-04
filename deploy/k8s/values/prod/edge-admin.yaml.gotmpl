@@ -26,3 +26,9 @@ secrets:
   dbPassword: {{ requiredEnv "DB_PASSWORD" | quote }}
   netmakerMasterKey: {{ requiredEnv "NETMAKER_MASTER_KEY" | quote }}
   netmakerSuperadminPassword: {{ requiredEnv "NETMAKER_SUPERADMIN_PASSWORD" | quote }}
+  cloakKey: {{ requiredEnv "EDGE_ADMIN_CLOAK_KEY" | quote }}
+  cloakTag: {{ env "EDGE_ADMIN_CLOAK_TAG" | default "AES.GCM.V1" | quote }}
+  rotateOldCloakKey: {{ env "EDGE_ADMIN_ROTATE_OLD_CLOAK_KEY" | default "" | quote }}
+  rotateOldCloakTag: {{ env "EDGE_ADMIN_ROTATE_OLD_CLOAK_TAG" | default "" | quote }}
+  rotateNewCloakKey: {{ env "EDGE_ADMIN_ROTATE_NEW_CLOAK_KEY" | default "" | quote }}
+  rotateNewCloakTag: {{ env "EDGE_ADMIN_ROTATE_NEW_CLOAK_TAG" | default "" | quote }}

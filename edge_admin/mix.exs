@@ -107,6 +107,8 @@ defmodule EdgeAdmin.Mixfile do
       {:ecto_sqlite3, "~> 0.22"},
       {:uniq, "~> 0.6"},
       {:flop, "~> 0.26"},
+      {:cloak, "~> 1.1"},
+      {:cloak_ecto, "~> 1.3"},
 
       # Database check
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},

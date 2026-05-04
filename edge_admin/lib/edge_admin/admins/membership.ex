@@ -61,7 +61,9 @@ defmodule EdgeAdmin.Admins.Membership do
   - `:admin_id` - Random 12-char identifier (e.g., "7k3m9p2n")
   - `:admin_name` - Prefixed name (e.g., "admin-7k3m9p2n")
   - `:admin_cluster_name` - Shared cluster name (e.g., "admin-cluster-main")
-  - `:admin_max_capacity` - Max nodes this admin can handle (e.g., 200)
+  - `:admin_max_wireguard_peers` - WireGuard peer budget for this admin (e.g., 250).
+    Counts both admin-mesh peers and edge-node peers. The metadata layer derives
+    `edge_node_capacity = max_wireguard_peers - (total_admins - 1)` from this.
   - `:vpn_cluster_cookie` - Shared secret for Erlang distribution over the VPN cluster
   - `:admin_cluster_subnet` - Optional subnet (auto-generates if missing)
 
@@ -143,7 +145,7 @@ defmodule EdgeAdmin.Admins.Membership do
   defp admin_name, do: Application.get_env(:edge_admin, :admin_name)
   defp admin_cluster_name, do: Application.get_env(:edge_admin, :admin_cluster_name)
   defp admin_cluster_subnet, do: Application.get_env(:edge_admin, :admin_cluster_subnet)
-  defp max_capacity, do: Application.get_env(:edge_admin, :admin_max_capacity)
+  defp max_wireguard_peers, do: Application.get_env(:edge_admin, :admin_max_wireguard_peers)
   defp vpn_cluster_cookie, do: Application.get_env(:edge_admin, :vpn_cluster_cookie)
   defp admin_wireguard_port, do: Application.get_env(:edge_admin, :admin_wireguard_port)
 
@@ -476,7 +478,7 @@ defmodule EdgeAdmin.Admins.Membership do
     # Join the admin cluster group with metadata
     metadata = %{
       name: admin_name(),
-      max_capacity: max_capacity(),
+      max_wireguard_peers: max_wireguard_peers(),
       vpn_hostname: Vpn.build_vpn_hostname(admin_name(), admin_cluster_name()),
       erlang_node_name: node(),
       netmaker_host_id: netmaker_host_id

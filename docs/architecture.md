@@ -212,7 +212,7 @@ admin@admin-abc123.admin-cluster-a.nm.internal
 
 This is **peer-to-peer, masterless**. There is no leader election, no primary, no replica. Every admin instance is equal. They coordinate through:
 
-- **`:syn` distributed registry** — two scopes: `:admin_scope` (who is in the cluster, what capacity) and `:cluster_scope` (which admin's Gateway GenServer owns which edge cluster)
+- **`:syn` distributed registry** — two scopes: `:admin_scope` (who is in the cluster, each admin's WireGuard peer budget) and `:cluster_scope` (which admin's Gateway GenServer owns which edge cluster)
 - **ETS** — local in-memory cache of topology, intentionally ephemeral. Dies with the process, forcing clean recomputation from PostgreSQL on restart. Mnesia is explicitly avoided — its persistence creates split-brain complications.
 - **PostgreSQL** — the only source of truth. All persistent state lives here.
 
@@ -221,6 +221,14 @@ Erlang distribution is **intra-cluster only** (admins within the same peer clust
 ### Cluster Ownership Sharding
 
 WireGuard mesh overhead makes it expensive for multiple admins to all join the same edge cluster. The one-admin-per-cluster algorithm ensures exactly one admin manages each edge cluster at any time.
+
+Capacity is modelled honestly against the WireGuard peer table, not invented as a separate "edge node count":
+
+- Operators set `ADMIN_MAX_WIREGUARD_PEERS` per admin (the physical WG peer budget — admin-mesh peers and edge-node peers both count against it).
+- Each admin derives `admin_peer_count = total_admins - 1` (peers in its admin-mesh) and `edge_node_capacity = max_wireguard_peers - admin_peer_count` (slots left for edge nodes). Both are recomputed on every topology change.
+- The sharding algorithm sees only `edge_node_capacity` per admin. The cluster-level `total_edge_capacity` is the sum across admins; the system is `degraded` when total enrolled nodes exceed it.
+
+Adding admins to an admin cluster therefore _reduces_ each admin's `edge_node_capacity` by 1 — the cost of admin HA is now visible instead of hidden.
 
 How it works:
 

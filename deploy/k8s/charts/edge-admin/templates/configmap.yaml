@@ -34,7 +34,7 @@ data:
   # --- Required: Admin cluster identity ---
   ADMIN_CLUSTER_NAME: {{ .Values.config.adminClusterName | quote }}
   ADMIN_CLUSTER_SUBNET: {{ .Values.config.adminClusterSubnet | quote }}
-  ADMIN_MAX_CAPACITY: {{ .Values.config.adminMaxCapacity | quote }}
+  ADMIN_MAX_WIREGUARD_PEERS: {{ .Values.config.adminMaxWireguardPeers | quote }}
 
   # --- Required: enrollment + self-referential metrics ---
   DEFAULT_CLUSTER_NAME: {{ .Values.config.defaultClusterName | quote }}

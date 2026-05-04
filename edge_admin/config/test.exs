@@ -84,7 +84,7 @@ config :edge_admin,
   admin_id: "test123456",
   admin_name: "admin-test123456",
   admin_cluster_name: "admin-cluster-test",
-  admin_max_capacity: 100,
+  admin_max_wireguard_peers: 100,
   vpn_cluster_cookie: :test_cookie,
   admin_discovery_port: 44_000,
   netmaker_default_domain: "nm.internal"

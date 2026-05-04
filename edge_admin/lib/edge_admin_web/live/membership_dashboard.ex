@@ -113,7 +113,9 @@ defmodule EdgeAdminWeb.Live.MembershipDashboard do
                 <tr><th>Admin ID</th><td><code>{@admin.id}</code></td></tr>
                 <tr><th>Erlang Node</th><td><code>{@admin.erlang_node_name}</code></td></tr>
                 <tr><th>VPN Hostname</th><td>{@admin.vpn_hostname}</td></tr>
-                <tr><th>Max Capacity</th><td>{@admin.max_capacity} nodes</td></tr>
+                <tr><th>Max WireGuard Peers</th><td>{@admin.max_wireguard_peers}</td></tr>
+                <tr><th>Admin Peer Count</th><td>{@admin.admin_peer_count}</td></tr>
+                <tr><th>Edge Node Capacity</th><td>{@admin.edge_node_capacity} nodes</td></tr>
                 <tr>
                   <th>Weak Leader?</th>
                   <td>
@@ -139,13 +141,13 @@ defmodule EdgeAdminWeb.Live.MembershipDashboard do
             <table class="table table-sm mb-0">
               <tbody>
                 <tr><th>Total Admins</th><td>{@admin_cluster.total_admins}</td></tr>
-                <tr><th>Total Capacity</th><td>{@admin_cluster.total_capacity} nodes</td></tr>
+                <tr><th>Total Edge Capacity</th><td>{@admin_cluster.total_edge_capacity} nodes</td></tr>
                 <tr><th>Total Nodes</th><td>{@admin_cluster.total_nodes}</td></tr>
                 <tr>
-                  <th>Capacity</th>
+                  <th>Status</th>
                   <td>
                     <%= if @admin_cluster.degraded do %>
-                      <span class="badge bg-danger">Degraded — over capacity</span>
+                      <span class="badge bg-danger">Degraded — over edge capacity</span>
                     <% else %>
                       <span class="badge bg-success">Healthy</span>
                     <% end %>
@@ -176,7 +178,9 @@ defmodule EdgeAdminWeb.Live.MembershipDashboard do
                     <th>Name</th>
                     <th>Erlang Node</th>
                     <th>VPN Hostname</th>
-                    <th>Max Capacity</th>
+                    <th>Max WG Peers</th>
+                    <th>Admin Peers</th>
+                    <th>Edge Node Capacity</th>
                     <th>Owned Clusters</th>
                     <th>Owned Nodes</th>
                   </tr>
@@ -195,7 +199,9 @@ defmodule EdgeAdminWeb.Live.MembershipDashboard do
                       </td>
                       <td><code>{peer.erlang_node_name}</code></td>
                       <td>{peer.vpn_hostname}</td>
-                      <td>{peer.max_capacity}</td>
+                      <td>{peer.max_wireguard_peers}</td>
+                      <td>{peer.admin_peer_count}</td>
+                      <td>{peer.edge_node_capacity}</td>
                       <td>{owned_cluster_count(@edge_clusters, peer.name)}</td>
                       <td>{owned_node_count(@edge_clusters, peer.name)}</td>
                     </tr>

@@ -856,19 +856,29 @@
       "AdminTopologyEntry": {
         "description": "A peer admin in the cluster topology",
         "example": {
+          "admin_peer_count": 1,
+          "edge_node_capacity": 249,
           "erlang_node_name": "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
-          "max_capacity": 200,
+          "max_wireguard_peers": 250,
           "name": "admin-k7m3n2p9x4j6",
           "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
           "vpn_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
         },
         "properties": {
+          "admin_peer_count": {
+            "description": "Admin-mesh peers for this admin (= total_admins - 1)",
+            "type": "integer"
+          },
+          "edge_node_capacity": {
+            "description": "Edge nodes this admin can own (= max_wireguard_peers - admin_peer_count)",
+            "type": "integer"
+          },
           "erlang_node_name": {
             "description": "Erlang distribution node name",
             "type": "string"
           },
-          "max_capacity": {
-            "description": "Maximum node capacity",
+          "max_wireguard_peers": {
+            "description": "Operator-configured WireGuard peer budget for this admin",
             "type": "integer"
           },
           "name": {
@@ -886,7 +896,9 @@
         },
         "required": [
           "name",
-          "max_capacity",
+          "max_wireguard_peers",
+          "admin_peer_count",
+          "edge_node_capacity",
           "erlang_node_name",
           "netmaker_host_id"
         ],
@@ -1603,28 +1615,32 @@
           "name": "admin-cluster-1",
           "topology": [
             {
+              "admin_peer_count": 1,
+              "edge_node_capacity": 249,
               "erlang_node_name": "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
-              "max_capacity": 200,
+              "max_wireguard_peers": 250,
               "name": "admin-k7m3n2p9x4j6",
               "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
               "vpn_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
             },
             {
+              "admin_peer_count": 1,
+              "edge_node_capacity": 249,
               "erlang_node_name": "admin@admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal",
-              "max_capacity": 300,
+              "max_wireguard_peers": 250,
               "name": "admin-x9j4p2k7m8n3",
               "netmaker_host_id": "7f3c8d4e-9a1b-4c2d-8e3f-5a6b7c8d9e0f",
               "vpn_hostname": "admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal"
             }
           ],
           "total_admins": 2,
-          "total_capacity": 500,
+          "total_edge_capacity": 498,
           "total_nodes": 42,
           "weak_leader": "admin-k7m3n2p9x4j6"
         },
         "properties": {
           "degraded": {
-            "description": "True when total_nodes exceeds total_capacity",
+            "description": "True when total_nodes exceeds total_edge_capacity",
             "type": "boolean"
           },
           "name": { "description": "Admin cluster name", "type": "string" },
@@ -1637,8 +1653,8 @@
             "description": "Total number of admins in the cluster",
             "type": "integer"
           },
-          "total_capacity": {
-            "description": "Sum of max_capacity across all admins in this admin cluster",
+          "total_edge_capacity": {
+            "description": "Sum of edge_node_capacity across all admins in this admin cluster. This is the system's total edge-node sharding budget.",
             "type": "integer"
           },
           "total_nodes": {
@@ -1654,7 +1670,7 @@
           "name",
           "total_admins",
           "total_nodes",
-          "total_capacity",
+          "total_edge_capacity",
           "degraded",
           "weak_leader",
           "topology"
@@ -2995,13 +3011,15 @@
         "type": "object"
       },
       "Admin": {
-        "description": "This admin's identity and configuration",
+        "description": "This admin's identity, configuration, and derived capacity numbers",
         "example": {
           "admin_cluster_name": "admin-cluster-1",
+          "admin_peer_count": 1,
+          "edge_node_capacity": 249,
           "erlang_node_name": "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
           "id": "k7m3n2p9x4j6",
           "last_computed_at": "2025-01-15T12:00:00Z",
-          "max_capacity": 200,
+          "max_wireguard_peers": 250,
           "name": "admin-k7m3n2p9x4j6",
           "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
           "vpn_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
@@ -3010,6 +3028,14 @@
           "admin_cluster_name": {
             "description": "Name of the admin cluster this admin belongs to",
             "type": "string"
+          },
+          "admin_peer_count": {
+            "description": "Number of other admins this admin meshes with (= total_admins - 1). Derived from current topology.",
+            "type": "integer"
+          },
+          "edge_node_capacity": {
+            "description": "Maximum edge nodes this admin can own. Derived: max_wireguard_peers - admin_peer_count. The cluster-sharding algorithm consumes this value.",
+            "type": "integer"
           },
           "erlang_node_name": {
             "description": "Erlang distribution node name",
@@ -3025,8 +3051,8 @@
             "nullable": true,
             "type": "string"
           },
-          "max_capacity": {
-            "description": "Maximum node capacity for this admin",
+          "max_wireguard_peers": {
+            "description": "Operator-configured WireGuard peer budget for this admin. Counts both admin-mesh peers and edge-node peers.",
             "type": "integer"
           },
           "name": {
@@ -3045,7 +3071,9 @@
         "required": [
           "id",
           "name",
-          "max_capacity",
+          "max_wireguard_peers",
+          "admin_peer_count",
+          "edge_node_capacity",
           "erlang_node_name",
           "vpn_hostname",
           "admin_cluster_name",

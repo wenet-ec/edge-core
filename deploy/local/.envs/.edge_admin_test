@@ -23,7 +23,7 @@ DB_SSL=false
 # SQLITE_DB_PATH=/app/data/edge_admin_test.db
 
 # Admin configuration (required by runtime.exs)
-ADMIN_MAX_CAPACITY=100
+ADMIN_MAX_WIREGUARD_PEERS=100
 ADMIN_CLUSTER_NAME=test
 ADMIN_CLUSTER_SUBNET=100.71.0.0/16
 

@@ -60,7 +60,7 @@ config:
   # adminClusterName must be unique per release within the same core.
   adminClusterName: "a"
   adminClusterSubnet: "100.63.0.0/24"
-  adminMaxCapacity: "200"
+  adminMaxWireguardPeers: "250"
 
   # --- Default cluster pre-created on first boot ---
   # Note: "default" is reserved (URL keyword on /api/v1/clusters/default/...

@@ -375,7 +375,7 @@ config :edge_admin,
   # === Admin Identity ===
   admin_id: admin_id,
   admin_name: EdgeAdmin.Vpn.build_vpn_name(admin_id, prefix: :admin),
-  admin_max_capacity: get_env!("ADMIN_MAX_CAPACITY", :positive_integer),
+  admin_max_wireguard_peers: get_env!("ADMIN_MAX_WIREGUARD_PEERS", :positive_integer),
   # === Admin Cluster (VPN network for multi-admin coordination) ===
   admin_cluster_name: EdgeAdmin.Vpn.build_network_name(get_env!("ADMIN_CLUSTER_NAME"), prefix: :admin),
   admin_cluster_subnet: get_env("ADMIN_CLUSTER_SUBNET"),

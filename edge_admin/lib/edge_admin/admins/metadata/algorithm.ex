@@ -8,6 +8,14 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   - Degraded mode support (tracks unassigned nodes when capacity exceeded)
   - Empty cluster bootstrap (pre-assignment before first node joins)
   - Smart load balancing (prefers admins with fewer clusters, then higher remaining capacity)
+
+  ## Capacity model
+
+  The algorithm operates on `edge_node_capacity` per admin — the number of edge nodes
+  this admin can own. This is a derived value. Operators configure
+  `max_wireguard_peers` (the WireGuard peer budget for this admin), and the metadata
+  layer subtracts admin-mesh peers (`total_admins - 1`) to produce `edge_node_capacity`.
+  The algorithm itself doesn't know about WG peers — it just sees the edge budget.
   """
 
   @doc """
@@ -28,7 +36,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   Clusters that cannot fit any admin (total capacity exceeded) are placed in `orphaned_clusters`.
 
   ## Arguments
-  - admins: %{admin_name => %{max_capacity: int}}
+  - admins: %{admin_name => %{edge_node_capacity: int}}
   - clusters: [%{name: cluster_name, nodes: [node_name, ...]}]
   - previous_edge_clusters: previous output's `edge_clusters` map, used as a tiebreaker
     to prefer continuity at tie points. Defaults to `%{}` (no stickiness, pure scratch).
@@ -38,16 +46,16 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
     edge_clusters: %{admin_name => %{cluster_name => [node_names]}},
     orphaned_clusters: %{cluster_name => [node_names]},
     node_index: %{node_name => {cluster_name, admin_name}},  # inverted index for O(1) node lookups
-    total_nodes: integer,     # total nodes across all clusters in the system
-    total_capacity: integer,  # sum of max_capacity across all admins
-    degraded: boolean,        # true when total_nodes > total_capacity
-    weak_leader: admin_name   # alphabetically first admin ID — used to reduce duplicate LocalScheduler work
+    total_nodes: integer,           # total nodes across all clusters in the system
+    total_edge_capacity: integer,   # sum of edge_node_capacity across all admins
+    degraded: boolean,              # true when total_nodes > total_edge_capacity
+    weak_leader: admin_name         # alphabetically first admin ID — used to reduce duplicate LocalScheduler work
   }
 
   ## Example
       iex> admins = %{
-      ...>   "admin-1" => %{max_capacity: 200},
-      ...>   "admin-2" => %{max_capacity: 300}
+      ...>   "admin-1" => %{edge_node_capacity: 199},
+      ...>   "admin-2" => %{edge_node_capacity: 299}
       ...> }
       iex> clusters = [
       ...>   %{name: "cluster-a", nodes: ["node-1", "node-2", "node-3"]},
@@ -61,7 +69,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
         },
         orphaned_clusters: %{},
         total_nodes: 5,
-        total_capacity: 500,
+        total_edge_capacity: 498,
         degraded: false
       }
   """
@@ -75,8 +83,8 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
     # Total nodes in the system (all clusters, assigned or orphaned)
     total_nodes = Enum.reduce(clusters, 0, fn cluster, acc -> acc + length(cluster.nodes) end)
 
-    # Total capacity across all admins in this admin cluster
-    total_capacity = Enum.reduce(admins, 0, fn {_name, admin}, acc -> acc + admin.max_capacity end)
+    # Total edge capacity across all admins in this admin cluster
+    total_edge_capacity = Enum.reduce(admins, 0, fn {_name, admin}, acc -> acc + admin.edge_node_capacity end)
 
     # Start with empty assignments
     initial_state = %{
@@ -138,8 +146,8 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
       node_index: build_node_index(edge_clusters),
       orphaned_clusters: intermediate_result.orphaned_clusters,
       total_nodes: total_nodes,
-      total_capacity: total_capacity,
-      degraded: total_nodes > total_capacity,
+      total_edge_capacity: total_edge_capacity,
+      degraded: total_nodes > total_edge_capacity,
       weak_leader: weak_leader
     }
   end
@@ -150,7 +158,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   Called by REST API when user creates new cluster, before any nodes join.
 
   ## Arguments
-  - admins: %{admin_name => %{max_capacity: int}}
+  - admins: %{admin_name => %{edge_node_capacity: int}}
   - current_assignments: result from compute_assignments/2 (has edge_clusters)
   - cluster_name: cluster to bootstrap
 
@@ -158,7 +166,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   {:ok, admin_name} | {:error, :no_capacity}
 
   ## Example
-      iex> admins = %{"admin-1" => %{max_capacity: 200}}
+      iex> admins = %{"admin-1" => %{edge_node_capacity: 199}}
       iex> current = %{edge_clusters: %{"admin-1" => %{}}}
       iex> EdgeAdmin.Admins.Metadata.Algorithm.bootstrap_empty_cluster(admins, current, "cluster-new")
       {:ok, "admin-1"}
@@ -222,7 +230,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   end
 
   defp can_admin_handle_cluster?(admin, current_node_count, additional_cluster_size) do
-    current_node_count + additional_cluster_size <= admin.max_capacity
+    current_node_count + additional_cluster_size <= admin.edge_node_capacity
   end
 
   defp admin_score(admin_name, admins, cluster_assignments, admin_node_counts) do
@@ -231,7 +239,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
       Enum.count(cluster_assignments, fn {_cluster_name, assigned_admin} -> assigned_admin == admin_name end)
 
     # How much remaining capacity does this admin have?
-    remaining_capacity = admins[admin_name].max_capacity - admin_node_counts[admin_name]
+    remaining_capacity = admins[admin_name].edge_node_capacity - admin_node_counts[admin_name]
 
     # Return tuple: (clusters_managed, -remaining_capacity)
     # Lower is better: prefer fewer clusters, then higher remaining capacity

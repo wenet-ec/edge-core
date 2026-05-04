@@ -14,7 +14,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
 
     schema(%{
       title: "Admin",
-      description: "This admin's identity and configuration",
+      description: "This admin's identity, configuration, and derived capacity numbers",
       type: :object,
       properties: %{
         id: %Schema{
@@ -25,9 +25,20 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           type: :string,
           description: "Admin name (e.g., admin-k7m3n2p9x4j6)"
         },
-        max_capacity: %Schema{
+        max_wireguard_peers: %Schema{
           type: :integer,
-          description: "Maximum node capacity for this admin"
+          description:
+            "Operator-configured WireGuard peer budget for this admin. Counts both admin-mesh peers and edge-node peers."
+        },
+        admin_peer_count: %Schema{
+          type: :integer,
+          description:
+            "Number of other admins this admin meshes with (= total_admins - 1). Derived from current topology."
+        },
+        edge_node_capacity: %Schema{
+          type: :integer,
+          description:
+            "Maximum edge nodes this admin can own. Derived: max_wireguard_peers - admin_peer_count. The cluster-sharding algorithm consumes this value."
         },
         erlang_node_name: %Schema{
           type: :string,
@@ -52,11 +63,23 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           nullable: true
         }
       },
-      required: [:id, :name, :max_capacity, :erlang_node_name, :vpn_hostname, :admin_cluster_name, :netmaker_host_id],
+      required: [
+        :id,
+        :name,
+        :max_wireguard_peers,
+        :admin_peer_count,
+        :edge_node_capacity,
+        :erlang_node_name,
+        :vpn_hostname,
+        :admin_cluster_name,
+        :netmaker_host_id
+      ],
       example: %{
         id: "k7m3n2p9x4j6",
         name: "admin-k7m3n2p9x4j6",
-        max_capacity: 200,
+        max_wireguard_peers: 250,
+        admin_peer_count: 1,
+        edge_node_capacity: 249,
         erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
         vpn_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
         admin_cluster_name: "admin-cluster-1",
@@ -84,9 +107,17 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           type: :string,
           description: "Admin name (e.g., admin-k7m3n2p9x4j6)"
         },
-        max_capacity: %Schema{
+        max_wireguard_peers: %Schema{
           type: :integer,
-          description: "Maximum node capacity"
+          description: "Operator-configured WireGuard peer budget for this admin"
+        },
+        admin_peer_count: %Schema{
+          type: :integer,
+          description: "Admin-mesh peers for this admin (= total_admins - 1)"
+        },
+        edge_node_capacity: %Schema{
+          type: :integer,
+          description: "Edge nodes this admin can own (= max_wireguard_peers - admin_peer_count)"
         },
         vpn_hostname: %Schema{
           type: :string,
@@ -101,10 +132,19 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           description: "Netmaker host ID for this admin (UUID format)"
         }
       },
-      required: [:name, :max_capacity, :erlang_node_name, :netmaker_host_id],
+      required: [
+        :name,
+        :max_wireguard_peers,
+        :admin_peer_count,
+        :edge_node_capacity,
+        :erlang_node_name,
+        :netmaker_host_id
+      ],
       example: %{
         name: "admin-k7m3n2p9x4j6",
-        max_capacity: 200,
+        max_wireguard_peers: 250,
+        admin_peer_count: 1,
+        edge_node_capacity: 249,
         vpn_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
         erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
         netmaker_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505"
@@ -132,13 +172,14 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           type: :integer,
           description: "Total nodes registered in the system across all clusters"
         },
-        total_capacity: %Schema{
+        total_edge_capacity: %Schema{
           type: :integer,
-          description: "Sum of max_capacity across all admins in this admin cluster"
+          description:
+            "Sum of edge_node_capacity across all admins in this admin cluster. This is the system's total edge-node sharding budget."
         },
         degraded: %Schema{
           type: :boolean,
-          description: "True when total_nodes exceeds total_capacity"
+          description: "True when total_nodes exceeds total_edge_capacity"
         },
         weak_leader: %Schema{
           type: :string,
@@ -151,25 +192,29 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           description: "List of all admins in the cluster"
         }
       },
-      required: [:name, :total_admins, :total_nodes, :total_capacity, :degraded, :weak_leader, :topology],
+      required: [:name, :total_admins, :total_nodes, :total_edge_capacity, :degraded, :weak_leader, :topology],
       example: %{
         name: "admin-cluster-1",
         total_admins: 2,
         total_nodes: 42,
-        total_capacity: 500,
+        total_edge_capacity: 498,
         degraded: false,
         weak_leader: "admin-k7m3n2p9x4j6",
         topology: [
           %{
             name: "admin-k7m3n2p9x4j6",
-            max_capacity: 200,
+            max_wireguard_peers: 250,
+            admin_peer_count: 1,
+            edge_node_capacity: 249,
             vpn_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
             erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
             netmaker_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505"
           },
           %{
             name: "admin-x9j4p2k7m8n3",
-            max_capacity: 300,
+            max_wireguard_peers: 250,
+            admin_peer_count: 1,
+            edge_node_capacity: 249,
             vpn_hostname: "admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal",
             erlang_node_name: "admin@admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal",
             netmaker_host_id: "7f3c8d4e-9a1b-4c2d-8e3f-5a6b7c8d9e0f"

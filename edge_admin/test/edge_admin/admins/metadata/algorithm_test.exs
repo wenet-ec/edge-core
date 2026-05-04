@@ -8,9 +8,9 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
   # Helpers
   # ---------------------------------------------------------------------------
 
-  # Build an admins map from a keyword list of {name, max_capacity}
+  # Build an admins map from a keyword list of {name, edge_node_capacity}
   defp admins(pairs) do
-    Map.new(pairs, fn {name, cap} -> {to_string(name), %{max_capacity: cap}} end)
+    Map.new(pairs, fn {name, cap} -> {to_string(name), %{edge_node_capacity: cap}} end)
   end
 
   # Build a cluster list from a keyword list of {name, [node_names]}
@@ -249,7 +249,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
     end
 
     # ---------------------------------------------------------------------------
-    # total_nodes and total_capacity
+    # total_nodes and total_edge_capacity
     # ---------------------------------------------------------------------------
 
     test "total_nodes is sum of all nodes across all clusters" do
@@ -272,21 +272,21 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       assert result.total_nodes == 5
     end
 
-    test "total_capacity is sum of max_capacity across all admins" do
+    test "total_edge_capacity is sum of edge_node_capacity across all admins" do
       admins = admins(a1: 200, a2: 300)
       clusters = clusters(c1: ~w[n1])
 
       result = Algorithm.compute_assignments(admins, clusters)
 
-      assert result.total_capacity == 500
+      assert result.total_edge_capacity == 500
     end
 
-    test "total_capacity reflects sum of all admin capacities" do
+    test "total_edge_capacity reflects sum of all admin capacities" do
       admins = admins(a1: 0, a2: 0)
 
       result = Algorithm.compute_assignments(admins, [])
 
-      assert result.total_capacity == 0
+      assert result.total_edge_capacity == 0
     end
 
     test "total_nodes is zero when no clusters" do
@@ -297,19 +297,19 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       assert result.total_nodes == 0
     end
 
-    test "degraded false when total_nodes equals total_capacity exactly" do
+    test "degraded false when total_nodes equals total_edge_capacity exactly" do
       admins = admins(a1: 5)
       clusters = clusters(c1: ~w[n1 n2 n3 n4 n5])
 
       result = Algorithm.compute_assignments(admins, clusters)
 
       assert result.total_nodes == 5
-      assert result.total_capacity == 5
+      assert result.total_edge_capacity == 5
       assert result.orphaned_clusters == %{}
       assert result.degraded == false
     end
 
-    test "degraded true when total_nodes exceeds total_capacity" do
+    test "degraded true when total_nodes exceeds total_edge_capacity" do
       # 2 admins with capacity 3 each = 6 total; 7 nodes = degraded
       admins = admins(a1: 3, a2: 3)
       clusters = clusters(c1: ~w[n1 n2 n3], c2: ~w[n4 n5 n6 n7])
@@ -317,22 +317,22 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       result = Algorithm.compute_assignments(admins, clusters)
 
       assert result.total_nodes == 7
-      assert result.total_capacity == 6
-      # orphaned_clusters > 0 and total_nodes > total_capacity are equivalent
+      assert result.total_edge_capacity == 6
+      # orphaned_clusters > 0 and total_nodes > total_edge_capacity are equivalent
       assert map_size(result.orphaned_clusters) > 0
       assert result.degraded == true
     end
 
-    test "degraded true when total_nodes exceeds total_capacity due to cluster fragmentation" do
+    test "degraded true when total_nodes exceeds total_edge_capacity due to cluster fragmentation" do
       # a1 capacity 5: c1 (3 nodes) fits, c2 (3 nodes) gets orphaned because only 2 slots remain.
-      # total_nodes (6) > total_capacity (5), orphaned_clusters non-empty — both signal degraded.
+      # total_nodes (6) > total_edge_capacity (5), orphaned_clusters non-empty — both signal degraded.
       admins = admins(a1: 5)
       clusters = clusters(c1: ~w[n1 n2 n3], c2: ~w[n4 n5 n6])
 
       result = Algorithm.compute_assignments(admins, clusters)
 
       assert result.total_nodes == 6
-      assert result.total_capacity == 5
+      assert result.total_edge_capacity == 5
       assert map_size(result.orphaned_clusters) > 0
       assert result.degraded == true
     end
@@ -487,7 +487,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
       stable = Algorithm.compute_assignments(initial_admins, cluster_list)
 
       # Now admin-aaa joins (alphabetically first — worst case for the old tiebreaker)
-      new_admins = Map.put(initial_admins, "admin-aaa", %{max_capacity: 100})
+      new_admins = Map.put(initial_admins, "admin-aaa", %{edge_node_capacity: 100})
 
       # WITHOUT stickiness (legacy behavior simulated by passing %{})
       without_sticky = Algorithm.compute_assignments(new_admins, cluster_list)

@@ -203,9 +203,12 @@ ADMIN_CLUSTER_NAME=a
 # IPv4 CIDR for the admin cluster VPN. Must not overlap with edge cluster ranges.
 ADMIN_CLUSTER_SUBNET=100.63.0.0/24
 
-# Max edge nodes this admin instance will own.
-# With multiple admins, total capacity = sum of all ADMIN_MAX_CAPACITY values.
-ADMIN_MAX_CAPACITY=200
+# Maximum WireGuard peers this admin can sit in a mesh with — the operator-facing
+# physical constraint. Counts both admin-mesh peers (= total_admins - 1) and edge-node
+# peers. The system derives edge_node_capacity = max_wireguard_peers - admin_peer_count
+# at runtime; the cluster total_edge_capacity is the sum of every admin's derived
+# edge_node_capacity.
+ADMIN_MAX_WIREGUARD_PEERS=250
 
 # Static WireGuard listen port for the admin VPN interface.
 # By default WireGuard picks ports dynamically and negotiates the best path per peer.

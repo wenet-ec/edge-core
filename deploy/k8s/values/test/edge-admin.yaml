@@ -17,7 +17,7 @@ config:
   dbPoolSize: "5"
   netmakerApiUrl: "http://edge-vpn:8081"
   netmakerSuperadminUsername: "admin"
-  adminMaxCapacity: "200"
+  adminMaxWireguardPeers: "250"
   defaultClusterName: "test"
 extraEnv:
   # kind cluster has no TLS — talk to Netmaker over plain HTTP.

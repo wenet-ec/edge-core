@@ -47,7 +47,9 @@ defmodule EdgeAdmin.Admins.Metadata do
   %{
     id: "abc123",
     name: "admin-abc123",
-    max_capacity: 200,
+    max_wireguard_peers: 250,   # operator-configured WG peer budget
+    admin_peer_count: 1,        # derived: total_admins - 1 (peers in admin mesh)
+    edge_node_capacity: 249,    # derived: max_wireguard_peers - admin_peer_count
     erlang_node_name: :"admin@admin-abc123.admin-cluster-1.nm.internal",
     vpn_hostname: "admin-abc123.admin-cluster-1.nm.internal",
     admin_cluster_name: "admin-cluster-1",
@@ -56,18 +58,22 @@ defmodule EdgeAdmin.Admins.Metadata do
   }
   ```
 
+  Invariant: `max_wireguard_peers == admin_peer_count + edge_node_capacity`.
+
   ### `:admin_cluster` - Full Topology
   ```elixir
   %{
     name: "admin-cluster-1",
     total_admins: 2,
-    total_nodes: 5,      # total nodes across all clusters in the system
-    total_capacity: 500, # sum of max_capacity across all admins
-    degraded: false,     # true when total_nodes > total_capacity
+    total_nodes: 5,             # total nodes across all clusters in the system
+    total_edge_capacity: 498,   # sum of edge_node_capacity across all admins
+    degraded: false,            # true when total_nodes > total_edge_capacity
     topology: [
-      %{name: "admin-abc123", max_capacity: 200, vpn_hostname: ...,
-        erlang_node_name: ..., netmaker_host_id: "..."},
-      %{name: "admin-def456", max_capacity: 300, ...}
+      %{name: "admin-abc123",
+        max_wireguard_peers: 250, admin_peer_count: 1, edge_node_capacity: 249,
+        vpn_hostname: ..., erlang_node_name: ..., netmaker_host_id: "..."},
+      %{name: "admin-def456",
+        max_wireguard_peers: 350, admin_peer_count: 1, edge_node_capacity: 349, ...}
     ]
   }
   ```
@@ -167,7 +173,7 @@ defmodule EdgeAdmin.Admins.Metadata do
     admin_id = Application.get_env(:edge_admin, :admin_id)
     admin_name = Application.get_env(:edge_admin, :admin_name)
     admin_cluster_name = Application.get_env(:edge_admin, :admin_cluster_name)
-    max_capacity = Application.get_env(:edge_admin, :admin_max_capacity)
+    max_wireguard_peers = Application.get_env(:edge_admin, :admin_max_wireguard_peers)
 
     Logger.info("Metadata initializing for admin #{admin_name}")
 
@@ -182,13 +188,17 @@ defmodule EdgeAdmin.Admins.Metadata do
     {:ok, netmaker_host_id} = Vpn.get_host_id(admin_name)
     Logger.info("Fetched Netmaker host ID: #{netmaker_host_id}")
 
-    # Initial ETS state (placeholders - will be populated by first computation)
+    # Initial ETS state (placeholders - will be populated by first computation).
+    # admin_peer_count and edge_node_capacity reflect a lone admin (no peers yet);
+    # they're recomputed on every metadata recomputation as topology changes.
     :ets.insert(@table, {
       :admin,
       %{
         id: admin_id,
         name: admin_name,
-        max_capacity: max_capacity,
+        max_wireguard_peers: max_wireguard_peers,
+        admin_peer_count: 0,
+        edge_node_capacity: max_wireguard_peers,
         erlang_node_name: erlang_node_name,
         vpn_hostname: vpn_hostname,
         admin_cluster_name: admin_cluster_name,
@@ -203,7 +213,7 @@ defmodule EdgeAdmin.Admins.Metadata do
         name: admin_cluster_name,
         total_admins: 0,
         total_nodes: 0,
-        total_capacity: 0,
+        total_edge_capacity: 0,
         degraded: false,
         topology: [],
         weak_leader: admin_name
@@ -453,16 +463,22 @@ defmodule EdgeAdmin.Admins.Metadata do
     all_admins = read_admins_from_syn()
     clusters_with_names = read_clusters_from_db()
 
+    # Derive edge_node_capacity per admin from max_wireguard_peers and topology size.
+    # admin_peer_count = total_admins - 1 (peers in admin mesh, excluding self).
+    # edge_node_capacity = max_wireguard_peers - admin_peer_count.
+    # This is what the algorithm consumes — admins enriched with all three numbers.
+    enriched_admins = derive_capacity(all_admins)
+
     # Read previous assignment from ETS to feed stickiness tiebreaker.
     # On first boot ETS is %{admin_name => %{}}, so previous is effectively empty and
     # behavior reduces to pure scratch placement.
     [{:edge_clusters, previous_edge_clusters}] = :ets.lookup(@table, :edge_clusters)
 
     # Run algorithm (works with any unique strings - IDs or names, doesn't matter)
-    result = Algorithm.compute_assignments(all_admins, clusters_with_names, previous_edge_clusters)
+    result = Algorithm.compute_assignments(enriched_admins, clusters_with_names, previous_edge_clusters)
 
     # Result already has names - ready for ETS!
-    update_ets(result, all_admins)
+    update_ets(result, enriched_admins)
 
     # Emit local event (only this admin's processes receive it)
     Events.publish_local(:metadata_recomputed)
@@ -475,7 +491,7 @@ defmodule EdgeAdmin.Admins.Metadata do
   defp read_admins_from_syn do
     # Get all admins from syn process group
     # :syn.members/2 returns list of {pid, metadata} tuples
-    # Metadata contains: %{name: admin_name, max_capacity: capacity,
+    # Metadata contains: %{name: admin_name, max_wireguard_peers: int,
     #   erlang_node_name: ..., vpn_hostname: ..., netmaker_host_id: ...}
     [{:admin, admin_info}] = :ets.lookup(@table, :admin)
     admin_cluster_name = admin_info.admin_cluster_name
@@ -488,6 +504,25 @@ defmodule EdgeAdmin.Admins.Metadata do
         Logger.debug("Syn scope :admin_scope not initialized, returning empty admin list")
         %{}
     end
+  end
+
+  # Enrich syn-sourced admin metadata with derived capacity numbers.
+  # admin_peer_count is the same for every admin in a given recompute (total_admins - 1),
+  # but each admin's max_wireguard_peers is its own — and so its edge_node_capacity is too.
+  defp derive_capacity(all_admins) do
+    admin_peer_count = max(map_size(all_admins) - 1, 0)
+
+    Map.new(all_admins, fn {name, metadata} ->
+      max_wg = metadata.max_wireguard_peers
+
+      enriched =
+        Map.merge(metadata, %{
+          admin_peer_count: admin_peer_count,
+          edge_node_capacity: max_wg - admin_peer_count
+        })
+
+      {name, enriched}
+    end)
   end
 
   defp read_clusters_from_db do
@@ -514,19 +549,22 @@ defmodule EdgeAdmin.Admins.Metadata do
       | topology: topology,
         total_admins: map_size(all_admins),
         total_nodes: result.total_nodes,
-        total_capacity: result.total_capacity,
+        total_edge_capacity: result.total_edge_capacity,
         degraded: result.degraded,
         weak_leader: result.weak_leader
     }
 
     :ets.insert(@table, {:admin_cluster, updated_admin_cluster})
 
-    # Update :admin last_computed_at
+    # Update :admin last_computed_at and the derived capacity fields for self
     [{:admin, admin}] = :ets.lookup(@table, :admin)
+    self_enriched = Map.fetch!(all_admins, admin.name)
 
     updated_admin = %{
       admin
-      | last_computed_at: DateTime.truncate(DateTime.utc_now(), :second)
+      | admin_peer_count: self_enriched.admin_peer_count,
+        edge_node_capacity: self_enriched.edge_node_capacity,
+        last_computed_at: DateTime.truncate(DateTime.utc_now(), :second)
     }
 
     :ets.insert(@table, {:admin, updated_admin})

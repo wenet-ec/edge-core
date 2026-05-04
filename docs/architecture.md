@@ -265,6 +265,8 @@ Admin never acts as an exit node — only agents can. This prevents SSRF.
 
 Edge Agent is a standalone binary that runs on each edge machine. The primary deployment model is one agent per physical machine using `network_mode: host`.
 
+**Host OS compatibility.** The agent ships as a Debian-slim container, so its own process is portable. The constraints are on the host: kernel WireGuard support (built-in on ≥ 5.6, DKMS or `wireguard-go` userspace fallback otherwise), a writable `/etc/resolv.conf`, and (when applicable) `systemd-resolved` reachable over D-Bus. Regularly tested on Ubuntu 22.04 / 24.04 and Debian 12 (x86_64 and ARM64). Other glibc + systemd distros (Fedora, Rocky, Alma, openSUSE Leap) should work but are not part of the regular test matrix. Alpine / other musl hosts, immutable distros (Fedora CoreOS, Flatcar, Bottlerocket, Talos, NixOS), and SELinux-enforcing hosts may need additional configuration. Architectures beyond x86_64 / ARM64 are not currently built.
+
 The standard deployment requires:
 
 - `network_mode: host` — agent shares the host network namespace; required so netclient can manage WireGuard interfaces on the host, and so the proxy and SSH server are reachable without port mapping

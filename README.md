@@ -4,7 +4,7 @@
 
 Edge Core is an infrastructure management platform for geographically distributed machines. It gives you centralized control over remote nodes through a secure WireGuard mesh — run commands, SSH into any machine, proxy traffic through them, and scrape their metrics — all through a simple HTTP API.
 
-Works on any Linux machine: on-premises servers, IoT devices, factory floor equipment, Raspberry Pis, cloud VMs, home lab nodes, remote POS terminals, bare metal, containers. No vendor lock-in. Self-hosted.
+Designed to run on Linux machines of all shapes: on-premises servers, IoT devices, factory floor equipment, Raspberry Pis, cloud VMs, home lab nodes, remote POS terminals, bare metal, containers. No vendor lock-in. Self-hosted. (Tested host distros: see [Host compatibility](#host-compatibility) below.)
 
 The **agent** that runs on your machines and the **Nexmaker** shared library are open-source under Apache 2.0. The **admin** server is source-available under the Elastic License 2.0 — free to self-host, modify, and use commercially, but you may not offer it to third parties as a hosted or managed service without a commercial license from us. See [License](#license) below for details.
 
@@ -63,7 +63,7 @@ The **agent** that runs on your machines and the **Nexmaker** shared library are
 
 _¹ Ansible is a complement, not a competitor — see below._
 
-**vs Balena:** Balena is optimized for IoT and requires their cloud or their OS. Edge Core works on any Linux machine, any OS, any cloud or on-prem. You own everything.
+**vs Balena:** Balena is optimized for IoT and requires their cloud or their OS. Edge Core is designed to run on general-purpose Linux (see [Host compatibility](#host-compatibility) for tested distros), any cloud or on-prem. You own everything.
 
 **vs Tailscale / Headscale:** Tailscale and its self-hosted equivalent Headscale are networking-first — they give you a VPN and SSH access. Edge Core is application-first — networking just works out of the box (WireGuard + DERP/TURN relay), but the product is the fleet management layer on top: command execution, centralized SSH credential management, HTTP proxying, metrics aggregation, MCP AI interface.
 
@@ -124,6 +124,24 @@ Pick the setup that fits your needs and follow its README:
 | **Standard** | 4 admin instances across 2 clusters, EMQX, full Prometheus metrics. Production-ready HA setup.          | [`examples/standard/`](examples/standard/README.md) |
 
 Each README covers: server requirements, configuration, enrolling your first node, and upgrading.
+
+## Host compatibility
+
+Edge Agent ships as a Debian-slim container, so the agent process itself is portable. The real constraints come from what it does to the **host**: it runs `network_mode: host` + `privileged`, manages WireGuard interfaces, writes `/etc/resolv.conf`, and (when present) talks to `systemd-resolved` over D-Bus.
+
+**Tested:** Ubuntu 22.04 / 24.04 and Debian 12, on x86_64 and ARM64, with kernel ≥ 5.15 (built-in WireGuard).
+
+**Should work, not regularly tested:** Other glibc-based, systemd-based distros with kernel ≥ 5.6 (Fedora, Rocky, Alma, openSUSE Leap, recent CentOS Stream). If you run agents on these and hit something, please [open an issue](https://github.com/wenet-ec/edge-core/issues) — fixes are usually small.
+
+**Known caveats:**
+
+- **Older kernels (< 5.6)** — RHEL/CentOS 7, old Debian/Ubuntu LTS — need the WireGuard DKMS module. netclient also has a userspace fallback (`wireguard-go`), but it is slower and less commonly tested in this codebase.
+- **Alpine and other musl-based hosts** — works for the agent (it runs in its own container), but if the host network stack expects musl-specific behavior, edge cases may surface.
+- **Immutable / atomic distros** (Fedora CoreOS, Flatcar, Bottlerocket, Talos, NixOS) — the privileged-host-container model still applies, but persistent paths, package layout, and service management differ; expect some integration work.
+- **SELinux enforcing** (RHEL/Fedora/Rocky/Alma defaults) — privileged containers with host networking and raw socket access often need a custom policy or `--security-opt label=disabled`.
+- **Architectures other than x86_64 / ARM64** (RISC-V, ppc64le, s390x) — not currently built or tested.
+
+The admin server is host-distro-agnostic: it runs containerized and uses `wireguard-go` (userspace) inside its container, so it does not depend on the host's WireGuard support.
 
 ## Connect an AI assistant
 

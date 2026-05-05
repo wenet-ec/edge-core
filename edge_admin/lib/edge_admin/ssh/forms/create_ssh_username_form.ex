@@ -53,11 +53,12 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameForm do
   end
 
   def changeset(_params) do
-    {:error,
-     %__MODULE__{}
-     |> cast(%{}, [])
-     |> add_error(:base, "invalid parameters - expected a map")
-     |> apply_action!(:insert)}
+    changeset =
+      %__MODULE__{}
+      |> cast(%{}, [])
+      |> add_error(:base, "invalid parameters - expected a map")
+
+    {:error, %{changeset | action: :insert}}
   end
 
   defp validate_username(attrs) do
@@ -115,11 +116,12 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameForm do
   end
 
   defp validate_public_keys(_) do
-    {:error,
-     %__MODULE__{}
-     |> cast(%{}, [])
-     |> add_error(:public_keys, "must be an array")
-     |> apply_action!(:insert)}
+    changeset =
+      %__MODULE__{}
+      |> cast(%{}, [])
+      |> add_error(:public_keys, "must be an array")
+
+    {:error, %{changeset | action: :insert}}
   end
 
   defp to_map(%__MODULE__{} = form) do

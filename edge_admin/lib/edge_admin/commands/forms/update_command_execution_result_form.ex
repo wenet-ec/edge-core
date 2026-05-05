@@ -45,11 +45,12 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
   end
 
   def changeset(_params) do
-    {:error,
-     %__MODULE__{}
-     |> cast(%{}, [])
-     |> add_error(:base, "invalid parameters - expected a map")
-     |> apply_action!(:insert)}
+    changeset =
+      %__MODULE__{}
+      |> cast(%{}, [])
+      |> add_error(:base, "invalid parameters - expected a map")
+
+    {:error, %{changeset | action: :insert}}
   end
 
   defp validate_completed_at(changeset) do

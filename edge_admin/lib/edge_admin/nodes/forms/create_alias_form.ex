@@ -41,11 +41,12 @@ defmodule EdgeAdmin.Nodes.Forms.CreateAliasForm do
   end
 
   def changeset(_params) do
-    {:error,
-     %__MODULE__{}
-     |> cast(%{}, [])
-     |> add_error(:base, "invalid parameters - expected a map")
-     |> apply_action!(:insert)}
+    changeset =
+      %__MODULE__{}
+      |> cast(%{}, [])
+      |> add_error(:base, "invalid parameters - expected a map")
+
+    {:error, %{changeset | action: :insert}}
   end
 
   defp to_map(%__MODULE__{} = form) do

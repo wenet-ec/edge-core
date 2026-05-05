@@ -81,11 +81,12 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
   end
 
   def changeset(_params, _get_cluster_fn) do
-    {:error,
-     %__MODULE__{}
-     |> cast(%{}, [])
-     |> add_error(:base, "invalid parameters - expected a map")
-     |> apply_action!(:insert)}
+    changeset =
+      %__MODULE__{}
+      |> cast(%{}, [])
+      |> add_error(:base, "invalid parameters - expected a map")
+
+    {:error, %{changeset | action: :insert}}
   end
 
   defp validate_uuid_format(changeset, field) do
@@ -134,11 +135,12 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
   Returns an error changeset that can be returned from context functions.
   """
   def add_netmaker_not_found_error do
-    {:error,
-     %__MODULE__{}
-     |> cast(%{}, [])
-     |> add_error(:node_id, "node not found in Netmaker network")
-     |> apply_action!(:insert)}
+    changeset =
+      %__MODULE__{}
+      |> cast(%{}, [])
+      |> add_error(:node_id, "node not found in Netmaker network")
+
+    {:error, %{changeset | action: :insert}}
   end
 
   defp to_map(%__MODULE__{} = form) do

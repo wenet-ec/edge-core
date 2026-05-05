@@ -138,16 +138,16 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyFormTest do
   # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid params" do
-    test "non-map params raise (apply_action! in fallback clause)" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        CreateSshPublicKeyForm.changeset("bad")
-      end
+    test "non-map params return a base error" do
+      assert {:error, %Ecto.Changeset{} = changeset} = CreateSshPublicKeyForm.changeset("bad")
+      assert %{base: [msg]} = errors_on(changeset)
+      assert msg =~ "expected a map"
     end
 
-    test "nil params raise (apply_action! in fallback clause)" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        CreateSshPublicKeyForm.changeset(nil)
-      end
+    test "nil params return a base error" do
+      assert {:error, %Ecto.Changeset{} = changeset} = CreateSshPublicKeyForm.changeset(nil)
+      assert %{base: [msg]} = errors_on(changeset)
+      assert msg =~ "expected a map"
     end
   end
 end

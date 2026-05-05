@@ -28,11 +28,12 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
   end
 
   def changeset(_params) do
-    {:error,
-     %__MODULE__{}
-     |> cast(%{}, [])
-     |> add_error(:base, "invalid parameters - expected a map")
-     |> apply_action!(:insert)}
+    changeset =
+      %__MODULE__{}
+      |> cast(%{}, [])
+      |> add_error(:base, "invalid parameters - expected a map")
+
+    {:error, %{changeset | action: :insert}}
   end
 
   # "default" is reserved — it's a URL keyword on `/api/v1/clusters/default/...`

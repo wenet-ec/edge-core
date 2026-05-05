@@ -310,22 +310,22 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionFormTest do
   # -----------------------------------------------------------------------
 
   describe "changeset/1 — non-map params" do
-    test "string params raise Ecto.InvalidChangesetError" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        CreateCommandExecutionForm.changeset("not a map")
-      end
+    test "string params return a base error" do
+      assert {:error, %Ecto.Changeset{} = changeset} = CreateCommandExecutionForm.changeset("not a map")
+      assert %{base: [msg]} = errors_on(changeset)
+      assert msg =~ "expected a map"
     end
 
-    test "nil params raise Ecto.InvalidChangesetError" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        CreateCommandExecutionForm.changeset(nil)
-      end
+    test "nil params return a base error" do
+      assert {:error, %Ecto.Changeset{} = changeset} = CreateCommandExecutionForm.changeset(nil)
+      assert %{base: [msg]} = errors_on(changeset)
+      assert msg =~ "expected a map"
     end
 
-    test "list params raise Ecto.InvalidChangesetError" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        CreateCommandExecutionForm.changeset([1, 2, 3])
-      end
+    test "list params return a base error" do
+      assert {:error, %Ecto.Changeset{} = changeset} = CreateCommandExecutionForm.changeset([1, 2, 3])
+      assert %{base: [msg]} = errors_on(changeset)
+      assert msg =~ "expected a map"
     end
   end
 end

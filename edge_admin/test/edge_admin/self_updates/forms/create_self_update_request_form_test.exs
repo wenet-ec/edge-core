@@ -48,10 +48,10 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestFormTest do
       assert result["targeting"]["cluster_names"] == ["prod", "staging"]
     end
 
-    test "non-map params raise via fallback clause" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        CreateSelfUpdateRequestForm.changeset("bad")
-      end
+    test "non-map params return a targeting error via fallback clause" do
+      assert {:error, %Ecto.Changeset{} = changeset} = CreateSelfUpdateRequestForm.changeset("bad")
+      assert %{targeting: [msg]} = errors_on(changeset)
+      assert msg =~ "is required"
     end
   end
 
@@ -219,16 +219,16 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestFormTest do
   # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid params" do
-    test "non-map params raise (apply_action! on fallback clause)" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        CreateSelfUpdateRequestForm.changeset("not_a_map")
-      end
+    test "non-map params return a targeting error" do
+      assert {:error, %Ecto.Changeset{} = changeset} = CreateSelfUpdateRequestForm.changeset("not_a_map")
+      assert %{targeting: [msg]} = errors_on(changeset)
+      assert msg =~ "is required"
     end
 
-    test "nil params raise (apply_action! on fallback clause)" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        CreateSelfUpdateRequestForm.changeset(nil)
-      end
+    test "nil params return a targeting error" do
+      assert {:error, %Ecto.Changeset{} = changeset} = CreateSelfUpdateRequestForm.changeset(nil)
+      assert %{targeting: [msg]} = errors_on(changeset)
+      assert msg =~ "is required"
     end
   end
 end

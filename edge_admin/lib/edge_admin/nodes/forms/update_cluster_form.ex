@@ -23,11 +23,12 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateClusterForm do
   end
 
   def changeset(_params) do
-    {:error,
-     %__MODULE__{}
-     |> cast(%{}, [])
-     |> add_error(:base, "invalid parameters - expected a map")
-     |> apply_action!(:update)}
+    changeset =
+      %__MODULE__{}
+      |> cast(%{}, [])
+      |> add_error(:base, "invalid parameters - expected a map")
+
+    {:error, %{changeset | action: :update}}
   end
 
   defp validate_node_limit(changeset) do

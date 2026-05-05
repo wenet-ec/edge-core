@@ -117,16 +117,16 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultFormTest do
   # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid params" do
-    test "non-map params raise (apply_action! in fallback clause)" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        UpdateCommandExecutionResultForm.changeset("bad")
-      end
+    test "non-map params return a base error" do
+      assert {:error, %Ecto.Changeset{} = changeset} = UpdateCommandExecutionResultForm.changeset("bad")
+      assert %{base: [msg]} = errors_on(changeset)
+      assert msg =~ "expected a map"
     end
 
-    test "nil params raise (apply_action! in fallback clause)" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        UpdateCommandExecutionResultForm.changeset(nil)
-      end
+    test "nil params return a base error" do
+      assert {:error, %Ecto.Changeset{} = changeset} = UpdateCommandExecutionResultForm.changeset(nil)
+      assert %{base: [msg]} = errors_on(changeset)
+      assert msg =~ "expected a map"
     end
   end
 end

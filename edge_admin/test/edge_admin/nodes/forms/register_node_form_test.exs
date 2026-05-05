@@ -265,10 +265,10 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
   # ---------------------------------------------------------------------------
 
   describe "add_netmaker_not_found_error/0" do
-    test "raises on add_netmaker_not_found_error/0 (apply_action! in implementation)" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        RegisterNodeForm.add_netmaker_not_found_error()
-      end
+    test "returns an error changeset with a node_id error" do
+      assert {:error, %Ecto.Changeset{} = changeset} = RegisterNodeForm.add_netmaker_not_found_error()
+      assert %{node_id: [msg]} = errors_on(changeset)
+      assert msg =~ "not found in Netmaker"
     end
   end
 
@@ -303,16 +303,20 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
   # ---------------------------------------------------------------------------
 
   describe "changeset/2 — invalid params" do
-    test "non-map params raise (apply_action! in fallback clause)" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        RegisterNodeForm.changeset("bad", &cluster_found/1)
-      end
+    test "non-map params return a base error" do
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               RegisterNodeForm.changeset("bad", &cluster_found/1)
+
+      assert %{base: [msg]} = errors_on(changeset)
+      assert msg =~ "expected a map"
     end
 
-    test "nil params raise (apply_action! in fallback clause)" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        RegisterNodeForm.changeset(nil, &cluster_found/1)
-      end
+    test "nil params return a base error" do
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               RegisterNodeForm.changeset(nil, &cluster_found/1)
+
+      assert %{base: [msg]} = errors_on(changeset)
+      assert msg =~ "expected a map"
     end
   end
 end

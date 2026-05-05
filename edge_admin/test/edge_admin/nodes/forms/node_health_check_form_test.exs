@@ -83,16 +83,16 @@ defmodule EdgeAdmin.Nodes.Forms.NodeHealthCheckFormTest do
   # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid params" do
-    test "non-map params raise (apply_action! in fallback clause)" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        NodeHealthCheckForm.changeset("not_a_map")
-      end
+    test "non-map params return a base error" do
+      assert {:error, %Ecto.Changeset{} = changeset} = NodeHealthCheckForm.changeset("not_a_map")
+      assert %{base: [msg]} = errors_on(changeset)
+      assert msg =~ "expected a map"
     end
 
-    test "nil params raise (apply_action! in fallback clause)" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        NodeHealthCheckForm.changeset(nil)
-      end
+    test "nil params return a base error" do
+      assert {:error, %Ecto.Changeset{} = changeset} = NodeHealthCheckForm.changeset(nil)
+      assert %{base: [msg]} = errors_on(changeset)
+      assert msg =~ "expected a map"
     end
   end
 end

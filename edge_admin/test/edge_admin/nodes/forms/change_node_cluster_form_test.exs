@@ -149,16 +149,20 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterFormTest do
   # ---------------------------------------------------------------------------
 
   describe "changeset/2 — invalid params" do
-    test "non-map params raise (apply_action! in fallback clause)" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        ChangeNodeClusterForm.changeset("bad", &cluster_found/1)
-      end
+    test "non-map params return a base error" do
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               ChangeNodeClusterForm.changeset("bad", &cluster_found/1)
+
+      assert %{base: [msg]} = errors_on(changeset)
+      assert msg =~ "expected a map"
     end
 
-    test "nil params raise (apply_action! in fallback clause)" do
-      assert_raise Ecto.InvalidChangesetError, fn ->
-        ChangeNodeClusterForm.changeset(nil, &cluster_found/1)
-      end
+    test "nil params return a base error" do
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               ChangeNodeClusterForm.changeset(nil, &cluster_found/1)
+
+      assert %{base: [msg]} = errors_on(changeset)
+      assert msg =~ "expected a map"
     end
   end
 end

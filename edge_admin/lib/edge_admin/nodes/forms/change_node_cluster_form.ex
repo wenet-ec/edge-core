@@ -42,11 +42,12 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterForm do
   end
 
   def changeset(_params, _get_cluster_fn) do
-    {:error,
-     %__MODULE__{}
-     |> cast(%{}, [])
-     |> add_error(:base, "invalid parameters - expected a map")
-     |> apply_action!(:insert)}
+    changeset =
+      %__MODULE__{}
+      |> cast(%{}, [])
+      |> add_error(:base, "invalid parameters - expected a map")
+
+    {:error, %{changeset | action: :insert}}
   end
 
   defp validate_cluster_exists(changeset, get_cluster_fn) do

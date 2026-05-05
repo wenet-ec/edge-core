@@ -56,11 +56,12 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestForm do
   end
 
   def changeset(_params) do
-    {:error,
-     %__MODULE__{}
-     |> cast(%{}, [])
-     |> add_error(:targeting, "is required")
-     |> apply_action!(:insert)}
+    changeset =
+      %__MODULE__{}
+      |> cast(%{}, [])
+      |> add_error(:targeting, "is required")
+
+    {:error, %{changeset | action: :insert}}
   end
 
   defp validate_targeting_type(changeset) do

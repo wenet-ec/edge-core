@@ -477,8 +477,8 @@ config :edge_admin,
   # Delete unrecognized hosts from cluster networks during reconciliation (default: true).
   evict_rogue_hosts: get_env("EVICT_ROGUE_HOSTS", :boolean, true),
   # === HTTP Request Timeouts (admin → agent) ===
-  # Health checks run every minute across all owned nodes — keep tight.
-  health_check_timeout: get_env("HEALTH_CHECK_TIMEOUT_MS", :integer, 10_000),
+  # Health checks run every minute across all owned nodes — keep tight; geo-friendly.
+  health_check_timeout: get_env("HEALTH_CHECK_TIMEOUT_MS", :integer, 5_000),
   # Metrics scraping — allow a little more for slow exporters.
   metrics_scrape_timeout: get_env("METRICS_SCRAPE_TIMEOUT_MS", :integer, 10_000),
   # Command delivery — agent may be busy, allow a bit more time.

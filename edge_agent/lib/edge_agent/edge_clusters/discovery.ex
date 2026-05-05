@@ -70,20 +70,44 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
         Logger.info("Inspecting peers on #{map_size(ping_data)} network(s) for admins...")
 
         discovery_port = Application.get_env(:edge_agent, :admin_discovery_port, 44_000)
+        max_concurrency = Application.get_env(:edge_agent, :admin_discovery_concurrency, 10)
 
-        {found_network, admin_urls} =
-          Enum.reduce(ping_data, {nil, []}, fn {net_name, peers}, {_net, acc_urls} ->
-            urls = Enum.flat_map(peers, &probe_peer(&1, net_name, discovery_port))
-            {net_name, acc_urls ++ urls}
+        # Flatten {network, peer} pairs so probes across all networks run in
+        # one parallel pass instead of network-by-network sequentially.
+        peer_jobs =
+          Enum.flat_map(ping_data, fn {net_name, peers} ->
+            Enum.map(peers, &{net_name, &1})
           end)
 
-        admin_urls = Enum.uniq(admin_urls)
+        results =
+          peer_jobs
+          |> Task.async_stream(
+            fn {net_name, peer} ->
+              {net_name, probe_peer(peer, net_name, discovery_port)}
+            end,
+            max_concurrency: max_concurrency,
+            ordered: false,
+            on_timeout: :kill_task
+          )
+          |> Enum.flat_map(fn
+            {:ok, {net_name, urls}} -> Enum.map(urls, &{net_name, &1})
+            {:exit, _} -> []
+          end)
+
+        admin_urls = results |> Enum.map(fn {_net, url} -> url end) |> Enum.uniq()
+
+        # First network with a successful probe; falls back to whatever we got
+        # from the network list if nothing answered.
+        found_network =
+          case results do
+            [{net, _} | _] -> net
+            [] -> network_name
+          end
 
         if admin_urls == [] do
           Logger.warning("No admins discovered across any network")
-          result_network = found_network || network_name
           Settings.set_admin_urls([])
-          {:ok, result_network, []}
+          {:ok, found_network, []}
         else
           Logger.info("Discovered #{length(admin_urls)} unique admin(s) across all networks")
           Settings.set_admin_urls(admin_urls)

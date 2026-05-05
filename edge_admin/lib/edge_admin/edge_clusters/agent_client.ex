@@ -24,13 +24,17 @@ defmodule EdgeAdmin.EdgeClusters.AgentClient do
 
   require Logger
 
-  def command_call_timeout, do: Application.get_env(:edge_admin, :command_delivery_timeout, 10_000) + 2_000
+  def command_call_timeout, do: command_delivery_timeout() + 2_000
 
-  def metrics_call_timeout, do: Application.get_env(:edge_admin, :metrics_scrape_timeout, 8_000) + 2_000
+  def metrics_call_timeout, do: metrics_scrape_timeout() + 2_000
+
+  def health_check_call_timeout, do: health_check_timeout() + 500
 
   defp command_delivery_timeout, do: Application.get_env(:edge_admin, :command_delivery_timeout, 10_000)
 
-  defp metrics_scrape_timeout, do: Application.get_env(:edge_admin, :metrics_scrape_timeout, 8_000)
+  defp metrics_scrape_timeout, do: Application.get_env(:edge_admin, :metrics_scrape_timeout, 10_000)
+
+  defp health_check_timeout, do: Application.get_env(:edge_admin, :health_check_timeout, 5_000)
 
   defp command_opts do
     t = command_delivery_timeout()
@@ -39,6 +43,11 @@ defmodule EdgeAdmin.EdgeClusters.AgentClient do
 
   defp metrics_opts do
     t = metrics_scrape_timeout()
+    [receive_timeout: t, connect_options: [timeout: t], retry: false]
+  end
+
+  defp health_check_opts do
+    t = health_check_timeout()
     [receive_timeout: t, connect_options: [timeout: t], retry: false]
   end
 
@@ -51,11 +60,11 @@ defmodule EdgeAdmin.EdgeClusters.AgentClient do
 
   Returns `:healthy`, `:unhealthy`, or `:unreachable`.
   """
-  @spec ping(Node.t(), non_neg_integer()) :: :healthy | :unhealthy | :unreachable
-  def ping(%Node{} = node, timeout) do
+  @spec ping(Node.t()) :: :healthy | :unhealthy | :unreachable
+  def ping(%Node{} = node) do
     url = "http://#{Node.vpn_hostname(node)}:#{node.http_port}/health"
 
-    case Req.get(url, receive_timeout: timeout, connect_options: [timeout: timeout], retry: false) do
+    case Req.get(url, health_check_opts()) do
       {:ok, %{status: 200}} -> :healthy
       {:ok, %{status: 503}} -> :unhealthy
       _ -> :unreachable

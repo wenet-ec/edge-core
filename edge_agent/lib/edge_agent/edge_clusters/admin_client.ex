@@ -110,9 +110,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   """
   @spec probe(String.t()) :: {:ok, String.t()} | {:error, term()}
   def probe(url) do
+    timeout = Application.get_env(:edge_agent, :admin_discovery_timeout, 5_000)
+
     opts = [
-      receive_timeout: Application.get_env(:edge_agent, :admin_discovery_timeout, 10_000),
-      connect_options: [timeout: Application.get_env(:edge_agent, :admin_discovery_timeout, 10_000)],
+      receive_timeout: timeout,
+      connect_options: [timeout: timeout],
       retry: false
     ]
 

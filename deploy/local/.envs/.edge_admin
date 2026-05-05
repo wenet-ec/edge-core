@@ -385,6 +385,6 @@ WEBHOOK_ALLOW_PRIVATE_IPS=true        # set true ONLY for homelab/dev — disabl
 # EXECUTION_RETENTION_DAYS=30            # default: 30 days
 
 # --- HTTP Timeouts for Agent Communication ---
-# HEALTH_CHECK_TIMEOUT_MS=10000       # Health check pings (every minute, all owned nodes)
+# HEALTH_CHECK_TIMEOUT_MS=5000        # Health check pings (every minute, all owned nodes; geo-friendly)
 # METRICS_SCRAPE_TIMEOUT_MS=10000     # Metrics scraping from agent exporters
 # COMMAND_DELIVERY_TIMEOUT_MS=10000   # Command delivery to agents

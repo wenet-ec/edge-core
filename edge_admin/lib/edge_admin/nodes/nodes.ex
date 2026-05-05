@@ -992,7 +992,7 @@ defmodule EdgeAdmin.Nodes do
   @spec check_node_health() :: :ok
   def check_node_health do
     concurrency = Application.get_env(:edge_admin, :node_health_check_concurrency, 100)
-    timeout = Application.get_env(:edge_admin, :health_check_timeout, 3_000)
+    task_timeout = AgentClient.health_check_call_timeout()
 
     # Get nodes this admin governs from ETS
     # Returns %{cluster_name => ["node-{id}", "node-{id2}"]}
@@ -1013,7 +1013,7 @@ defmodule EdgeAdmin.Nodes do
       nodes = Repo.all(from(n in Node, where: n.id in ^node_ids, preload: [:cluster]))
 
       Logger.debug(
-        "Starting health check for #{length(nodes)} nodes (concurrency: #{concurrency}, timeout: #{timeout}ms)"
+        "Starting health check for #{length(nodes)} nodes (concurrency: #{concurrency}, task_timeout: #{task_timeout}ms)"
       )
 
       start_time = System.monotonic_time(:millisecond)
@@ -1022,9 +1022,9 @@ defmodule EdgeAdmin.Nodes do
       results =
         nodes
         |> Task.async_stream(
-          &ping_node(&1, timeout),
+          &ping_node/1,
           max_concurrency: concurrency,
-          timeout: timeout + 500,
+          timeout: task_timeout,
           on_timeout: :kill_task
         )
         |> Enum.reduce(%{healthy: 0, unhealthy: 0, unreachable: 0}, fn
@@ -1053,12 +1053,12 @@ defmodule EdgeAdmin.Nodes do
     end
   end
 
-  defp ping_node(node, timeout) do
+  defp ping_node(node) do
     now = DateTime.truncate(DateTime.utc_now(), :second)
     start_time = System.monotonic_time(:millisecond)
 
     result =
-      case AgentClient.ping(node, timeout) do
+      case AgentClient.ping(node) do
         :healthy ->
           update_node(node, %{status: "healthy", last_seen_at: now})
           maybe_publish_status_changed(node, "healthy")

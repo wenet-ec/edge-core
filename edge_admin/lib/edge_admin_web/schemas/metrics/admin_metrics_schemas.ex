@@ -429,6 +429,43 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
                 }
               }
             },
+            webhook: %Schema{
+              type: :object,
+              description: """
+              Webhook delivery metrics. `fan_outs_total` counts publish-time fan-out invocations
+              (one per published event regardless of how many webhooks match). `deliveries_*` count
+              individual HTTP delivery attempts and their outcomes — `ok`, `recoverable` (retried by
+              Oban: 408/429/503/network until `WEBHOOK_MAX_ATTEMPTS` is exhausted), `terminal`
+              (cancelled by the worker, no further retries).
+              """,
+              properties: %{
+                fan_outs_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total fan-out invocations from the publish path"
+                },
+                deliveries_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total webhook delivery attempts (ok + recoverable + terminal)"
+                },
+                deliveries_ok_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total deliveries that returned 2xx"
+                },
+                deliveries_recoverable_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total deliveries that hit a recoverable error (will be retried)"
+                },
+                deliveries_terminal_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total deliveries that hit a terminal error (cancelled, contributes to auto-disable)"
+                }
+              }
+            },
             oban_queues: %Schema{
               type: :array,
               description: "Oban job queue states",
@@ -566,6 +603,13 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
             publishes_total: 1234,
             publishes_ok_total: 1230,
             publishes_error_total: 4
+          },
+          webhook: %{
+            fan_outs_total: 1235,
+            deliveries_total: 2470,
+            deliveries_ok_total: 2400,
+            deliveries_recoverable_total: 60,
+            deliveries_terminal_total: 10
           },
           oban_queues: [
             %{

@@ -64,6 +64,13 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     edge_admin_event_broker_publish_total{adapter="nats",event_type="execution.completed",result="ok"} 39
     edge_admin_event_broker_publish_total{adapter="nats",event_type="node.registered",result="error"} 2
     edge_admin_event_broker_publish_total{adapter="nats",event_type="execution.completed",result="error"} 1
+    edge_admin_webhook_fan_out_total{event_type="edge.node.registered"} 50
+    edge_admin_webhook_fan_out_total{event_type="edge.command_execution.completed"} 30
+    edge_admin_webhook_delivery_total{event_type="edge.node.registered",webhook_id="abc",result="ok"} 48
+    edge_admin_webhook_delivery_total{event_type="edge.node.registered",webhook_id="abc",result="recoverable"} 1
+    edge_admin_webhook_delivery_total{event_type="edge.node.registered",webhook_id="abc",result="terminal"} 1
+    edge_admin_webhook_delivery_total{event_type="edge.command_execution.completed",webhook_id="def",result="ok"} 28
+    edge_admin_webhook_delivery_total{event_type="edge.command_execution.completed",webhook_id="def",result="recoverable"} 2
     edge_admin_prom_ex_oban_queue_length_count{queue="default",state="available"} 2
     edge_admin_prom_ex_oban_queue_length_count{queue="default",state="executing"} 1
     edge_admin_prom_ex_oban_queue_length_count{queue="default",state="completed"} 100
@@ -265,6 +272,35 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
       assert result["event_broker_publishes_total"] == 0
       assert result["event_broker_publishes_ok_total"] == 0
       assert result["event_broker_publishes_error_total"] == 0
+    end
+  end
+
+  describe "parse/1 — webhook extraction" do
+    test "sums fan-out and delivery counters" do
+      result = AdminMetricsParser.parse(sample_prometheus_text())
+      # 50 + 30 = 80
+      assert result["webhook_fan_outs_total"] == 80
+      # 48 + 1 + 1 + 28 + 2 = 80
+      assert result["webhook_deliveries_total"] == 80
+    end
+
+    test "splits deliveries by result" do
+      result = AdminMetricsParser.parse(sample_prometheus_text())
+      # ok: 48 + 28
+      assert result["webhook_deliveries_ok_total"] == 76
+      # recoverable: 1 + 2
+      assert result["webhook_deliveries_recoverable_total"] == 3
+      # terminal: 1
+      assert result["webhook_deliveries_terminal_total"] == 1
+    end
+
+    test "counters return 0 when webhook metrics are absent" do
+      result = AdminMetricsParser.parse(empty_prometheus_text())
+      assert result["webhook_fan_outs_total"] == 0
+      assert result["webhook_deliveries_total"] == 0
+      assert result["webhook_deliveries_ok_total"] == 0
+      assert result["webhook_deliveries_recoverable_total"] == 0
+      assert result["webhook_deliveries_terminal_total"] == 0
     end
   end
 

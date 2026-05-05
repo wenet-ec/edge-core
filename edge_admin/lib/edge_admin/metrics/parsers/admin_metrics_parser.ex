@@ -19,6 +19,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParser do
     |> extract_core_metrics()
     |> Map.merge(extract_proxy_metrics(lines))
     |> Map.merge(extract_event_broker_metrics(lines))
+    |> Map.merge(extract_webhook_metrics(lines))
   end
 
   defp extract_core_metrics(lines) do
@@ -129,6 +130,24 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParser do
         extract_counter_by_label(lines, "edge_admin_event_broker_publish_total", "result", "ok"),
       "event_broker_publishes_error_total" =>
         extract_counter_by_label(lines, "edge_admin_event_broker_publish_total", "result", "error")
+    }
+  end
+
+  defp extract_webhook_metrics(lines) do
+    %{
+      # Webhook — fan-out (per-publish invocation count; the `count` measurement
+      # itself is the webhooks-matched count, exposed as a separate _sum series
+      # by Prometheus for the underlying counter).
+      "webhook_fan_outs_total" => extract_counter(lines, "edge_admin_webhook_fan_out_total"),
+
+      # Webhook — delivery
+      "webhook_deliveries_total" => extract_counter(lines, "edge_admin_webhook_delivery_total"),
+      "webhook_deliveries_ok_total" =>
+        extract_counter_by_label(lines, "edge_admin_webhook_delivery_total", "result", "ok"),
+      "webhook_deliveries_recoverable_total" =>
+        extract_counter_by_label(lines, "edge_admin_webhook_delivery_total", "result", "recoverable"),
+      "webhook_deliveries_terminal_total" =>
+        extract_counter_by_label(lines, "edge_admin_webhook_delivery_total", "result", "terminal")
     }
   end
 

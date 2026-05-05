@@ -161,11 +161,13 @@ Edge Admin exposes an MCP server at `/mcp`. Point any MCP-compatible client (Cla
 
 Tools are discovered dynamically via `tools/list` — no static spec file needed. Covers the full management surface: nodes, clusters, commands, SSH, metrics, and health checks.
 
-## Event streaming
+## Events
 
-Edge Admin can publish lifecycle events to a message broker. Disabled by default — opt in by setting `EVENT_BROKER_ENABLED=true` and the adapter-specific endpoint env var.
+Edge Admin publishes lifecycle events to two independent delivery channels: a message broker (opt-in) and HTTP webhooks (always-on, configured per-row via the API). Both channels receive the same CloudEvents 1.0 envelope; events cover node lifecycle, command execution lifecycle, enrollment-key verification, SSH credential verification, and self-update lifecycle.
 
-Events cover node lifecycle, command execution lifecycle, and self-update lifecycle. All follow the [CloudEvents 1.0](https://cloudevents.io) spec. Supported brokers: NATS, Kafka/Redpanda, AMQP 0-9-1 (RabbitMQ / LavinMQ / etc.), Redis, MQTT, AWS SNS, and Google Cloud Pub/Sub — pick whichever fits your stack.
+### Broker
+
+Disabled by default — opt in by setting `EVENT_BROKER_ENABLED=true` and the adapter-specific endpoint env var. Supported brokers: NATS, Kafka/Redpanda, AMQP 0-9-1 (RabbitMQ / LavinMQ / etc.), Redis, MQTT, AWS SNS, and Google Cloud Pub/Sub.
 
 ```bash
 EVENT_BROKER_ENABLED=true
@@ -174,6 +176,12 @@ EVENT_BROKER_NATS_URLS=nats://your-broker:4222   # endpoint var is namespaced pe
 ```
 
 Ready-to-use broker compose files are in [`examples/event_brokers/`](examples/event_brokers/). Full event schema: [`docs/admin-asyncapi-v0.2.0.md`](docs/admin-asyncapi-v0.2.0.md) or browse `/asyncdoc` on a running admin.
+
+### Webhooks
+
+Register webhook subscriptions through the REST API at `POST /api/v1/webhooks`. Each webhook stores an HTTPS URL, an HMAC-SHA256 `secret`, optional static `headers`, and a list of wildcard `event_filters` (`*` matches any sequence of characters including dots — e.g. `edge.node.*`, `edge.command_execution.completed`, `*` for everything). Webhooks are immutable after create — to change anything, delete and recreate. Retry budget per event is `WEBHOOK_MAX_ATTEMPTS` (default 3).
+
+Sensitive columns (`secret`, `headers`) are encrypted at rest via Cloak — `CLOAK_KEY` and `CLOAK_TAG` are required at boot. Destination URLs are SSRF-checked at create time (loopback, RFC1918, link-local, cloud metadata IPs/hostnames denied; opt out with `WEBHOOK_ALLOW_PRIVATE_IPS=true` for homelab/dev). Each delivery is signed with `X-Edge-Signature: sha256=<hex>`. Each event is retried up to `WEBHOOK_MAX_ATTEMPTS` and then dropped; there is no row-level failure counter or auto-disable.
 
 ## Configuration reference
 

@@ -38,6 +38,7 @@ defmodule EdgeAdmin.Events do
 
   alias EdgeAdmin.Events.Broker
   alias EdgeAdmin.Events.Catalog
+  alias EdgeAdmin.Events.Webhooks
 
   @type event ::
           Catalog.NodeRegistered.t()
@@ -72,6 +73,7 @@ defmodule EdgeAdmin.Events do
   def publish(event) do
     envelope = build_envelope(event)
     Broker.enqueue(envelope)
+    Webhooks.fan_out(envelope)
     :ok
   end
 

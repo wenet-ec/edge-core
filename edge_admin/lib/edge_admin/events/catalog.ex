@@ -7,6 +7,11 @@ defmodule EdgeAdmin.Events.Catalog do
   envelope's `data` field. Callers construct the appropriate struct and pass
   it to `EdgeAdmin.Events.publish/1`.
 
+  ## Enrollment key events
+
+      %Catalog.EnrollmentKeyVerified{enrollment_key: key, result: :verified}
+      %Catalog.EnrollmentKeyVerified{enrollment_key: nil, result: :invalid_key, attempted_key_blob: blob}
+
   ## Node events
 
       %Catalog.NodeRegistered{node: node}
@@ -25,19 +30,14 @@ defmodule EdgeAdmin.Events.Catalog do
       %Catalog.CommandExecutionExpired{execution: execution, command: command, cluster_name: "prod"}
       %Catalog.CommandExecutionPruned{execution: execution, command: command, cluster_name: "prod"}
 
-  ## Self-update request events
-
-      %Catalog.SelfUpdateCompleted{request: request}
-
-  ## Enrollment key events
-
-      %Catalog.EnrollmentKeyVerified{enrollment_key: key, result: :verified}
-      %Catalog.EnrollmentKeyVerified{enrollment_key: nil, result: :invalid_key, attempted_key_blob: blob}
-
   ## SSH username events
 
       %Catalog.SshUsernameVerified{ssh_username: ssh_username, node_id: node_id, attempted_username: "deploy",
                                   auth_method: :public_key, result: :success}
+
+  ## Self-update request events
+
+      %Catalog.SelfUpdateCompleted{request: request}
   """
 
   alias EdgeAdmin.Commands.Schemas.Command
@@ -46,6 +46,29 @@ defmodule EdgeAdmin.Events.Catalog do
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
   alias EdgeAdmin.Ssh.Schemas.SshUsername
+
+  # ---------------------------------------------------------------------------
+  # Enrollment key event structs
+  # ---------------------------------------------------------------------------
+
+  defmodule EnrollmentKeyVerified do
+    @moduledoc false
+    @enforce_keys [:result]
+    defstruct [:enrollment_key, :result, :attempted_key_blob]
+
+    @type result ::
+            :verified
+            | :invalid_key
+            | :key_expired
+            | :key_spent
+            | :node_limit_reached
+
+    @type t :: %__MODULE__{
+            enrollment_key: EnrollmentKey.t() | nil,
+            result: result(),
+            attempted_key_blob: String.t() | nil
+          }
+  end
 
   # ---------------------------------------------------------------------------
   # Node event structs
@@ -170,40 +193,6 @@ defmodule EdgeAdmin.Events.Catalog do
   end
 
   # ---------------------------------------------------------------------------
-  # Self-update event structs
-  # ---------------------------------------------------------------------------
-
-  defmodule SelfUpdateCompleted do
-    @moduledoc false
-    @enforce_keys [:request]
-    defstruct [:request]
-    @type t :: %__MODULE__{request: SelfUpdateRequest.t()}
-  end
-
-  # ---------------------------------------------------------------------------
-  # Enrollment key event structs
-  # ---------------------------------------------------------------------------
-
-  defmodule EnrollmentKeyVerified do
-    @moduledoc false
-    @enforce_keys [:result]
-    defstruct [:enrollment_key, :result, :attempted_key_blob]
-
-    @type result ::
-            :verified
-            | :invalid_key
-            | :key_expired
-            | :key_spent
-            | :node_limit_reached
-
-    @type t :: %__MODULE__{
-            enrollment_key: EnrollmentKey.t() | nil,
-            result: result(),
-            attempted_key_blob: String.t() | nil
-          }
-  end
-
-  # ---------------------------------------------------------------------------
   # SSH event structs
   # ---------------------------------------------------------------------------
 
@@ -225,11 +214,50 @@ defmodule EdgeAdmin.Events.Catalog do
   end
 
   # ---------------------------------------------------------------------------
+  # Self-update event structs
+  # ---------------------------------------------------------------------------
+
+  defmodule SelfUpdateCompleted do
+    @moduledoc false
+    @enforce_keys [:request]
+    defstruct [:request]
+    @type t :: %__MODULE__{request: SelfUpdateRequest.t()}
+  end
+
+  # ---------------------------------------------------------------------------
   # Protocol: event_type/1 and to_data/1
   # ---------------------------------------------------------------------------
 
+  @doc """
+  Returns every event type currently in the catalog as a list of strings.
+
+  Used by webhook filter validation to reject patterns that match no current
+  event type (catches typos at API time).
+  """
+  @spec all_event_types() :: [String.t()]
+  def all_event_types do
+    [
+      "edge.enrollment_key.verified",
+      "edge.node.registered",
+      "edge.node.reregistered",
+      "edge.node.version_changed",
+      "edge.node.status_changed",
+      "edge.node.cluster_changed",
+      "edge.node.update_triggered",
+      "edge.command_execution.created",
+      "edge.command_execution.sent",
+      "edge.command_execution.completed",
+      "edge.command_execution.cancelled",
+      "edge.command_execution.expired",
+      "edge.command_execution.pruned",
+      "edge.ssh_username.verified",
+      "edge.self_update_request.completed"
+    ]
+  end
+
   @doc "Returns the string event type for the given event struct."
   @spec event_type(term()) :: String.t()
+  def event_type(%EnrollmentKeyVerified{}), do: "edge.enrollment_key.verified"
   def event_type(%NodeRegistered{}), do: "edge.node.registered"
   def event_type(%NodeReregistered{}), do: "edge.node.reregistered"
   def event_type(%NodeVersionChanged{}), do: "edge.node.version_changed"
@@ -242,12 +270,14 @@ defmodule EdgeAdmin.Events.Catalog do
   def event_type(%CommandExecutionCancelled{}), do: "edge.command_execution.cancelled"
   def event_type(%CommandExecutionExpired{}), do: "edge.command_execution.expired"
   def event_type(%CommandExecutionPruned{}), do: "edge.command_execution.pruned"
-  def event_type(%SelfUpdateCompleted{}), do: "edge.self_update_request.completed"
-  def event_type(%EnrollmentKeyVerified{}), do: "edge.enrollment_key.verified"
   def event_type(%SshUsernameVerified{}), do: "edge.ssh_username.verified"
+  def event_type(%SelfUpdateCompleted{}), do: "edge.self_update_request.completed"
 
   @doc "Builds the `data` map for the event envelope."
   @spec to_data(term()) :: map()
+
+  # Enrollment key events
+  def to_data(%EnrollmentKeyVerified{} = event), do: enrollment_key_verified_data(event)
 
   # Node events — base snapshot, then overlay any extra fields
   def to_data(%NodeRegistered{node: node}), do: node_data(node)
@@ -284,18 +314,40 @@ defmodule EdgeAdmin.Events.Catalog do
 
   def to_data(%CommandExecutionPruned{execution: ex, command: cmd, cluster_name: cn}), do: execution_data(ex, cmd, cn)
 
-  # Self-update events
-  def to_data(%SelfUpdateCompleted{request: req}), do: self_update_data(req)
-
-  # Enrollment key events
-  def to_data(%EnrollmentKeyVerified{} = event), do: enrollment_key_verified_data(event)
-
   # SSH events
   def to_data(%SshUsernameVerified{} = event), do: ssh_username_verified_data(event)
+
+  # Self-update events
+  def to_data(%SelfUpdateCompleted{request: req}), do: self_update_data(req)
 
   # ---------------------------------------------------------------------------
   # Data builders — full object snapshots, no internal/secret fields
   # ---------------------------------------------------------------------------
+
+  # The `key` blob is intentionally excluded from the event — it's a credential.
+  # On `:invalid_key` the enrollment_key is nil (no DB row matched); the other
+  # identifying fields fall back to nil too.
+  defp enrollment_key_verified_data(%EnrollmentKeyVerified{enrollment_key: nil, result: result}) do
+    %{
+      "enrollment_key_id" => nil,
+      "cluster_name" => nil,
+      "name" => nil,
+      "uses_remaining" => nil,
+      "result" => Atom.to_string(result),
+      "verified_at" => format_dt(DateTime.utc_now())
+    }
+  end
+
+  defp enrollment_key_verified_data(%EnrollmentKeyVerified{enrollment_key: key, result: result}) do
+    %{
+      "enrollment_key_id" => key.id,
+      "cluster_name" => cluster_name(key),
+      "name" => key.name,
+      "uses_remaining" => key.uses_remaining,
+      "result" => Atom.to_string(result),
+      "verified_at" => format_dt(DateTime.utc_now())
+    }
+  end
 
   defp node_data(node) do
     %{
@@ -337,42 +389,6 @@ defmodule EdgeAdmin.Events.Catalog do
     }
   end
 
-  defp self_update_data(request) do
-    %{
-      "self_update_request_id" => request.id,
-      "status" => request.status,
-      "targeting" => request.targeting,
-      "summary" => request.summary,
-      "inserted_at" => format_dt(request.inserted_at),
-      "updated_at" => format_dt(request.updated_at)
-    }
-  end
-
-  # The `key` blob is intentionally excluded from the event — it's a credential.
-  # On `:invalid_key` the enrollment_key is nil (no DB row matched); the other
-  # identifying fields fall back to nil too.
-  defp enrollment_key_verified_data(%EnrollmentKeyVerified{enrollment_key: nil, result: result}) do
-    %{
-      "enrollment_key_id" => nil,
-      "cluster_name" => nil,
-      "name" => nil,
-      "uses_remaining" => nil,
-      "result" => Atom.to_string(result),
-      "verified_at" => format_dt(DateTime.utc_now())
-    }
-  end
-
-  defp enrollment_key_verified_data(%EnrollmentKeyVerified{enrollment_key: key, result: result}) do
-    %{
-      "enrollment_key_id" => key.id,
-      "cluster_name" => cluster_name(key),
-      "name" => key.name,
-      "uses_remaining" => key.uses_remaining,
-      "result" => Atom.to_string(result),
-      "verified_at" => format_dt(DateTime.utc_now())
-    }
-  end
-
   # `password_hash` and the public-key strings are never echoed back. We carry
   # only the verification decision and identifying metadata. `ssh_username` is
   # nil when the username doesn't exist for the node (still fired, since failed
@@ -410,6 +426,17 @@ defmodule EdgeAdmin.Events.Catalog do
       "auth_method" => Atom.to_string(auth_method),
       "result" => Atom.to_string(result),
       "verified_at" => format_dt(DateTime.utc_now())
+    }
+  end
+
+  defp self_update_data(request) do
+    %{
+      "self_update_request_id" => request.id,
+      "status" => request.status,
+      "targeting" => request.targeting,
+      "summary" => request.summary,
+      "inserted_at" => format_dt(request.inserted_at),
+      "updated_at" => format_dt(request.updated_at)
     }
   end
 

@@ -302,19 +302,14 @@ defmodule EdgeAdmin.Release do
   end
 
   defp do_rotate(schemas) do
-    if schemas == [] do
-      Logger.info("[CloakRotation] No encrypted schemas registered; rotation is a no-op.")
-    else
-      [repo] = repos()
+    [repo] = repos()
 
-      Enum.each(schemas, fn schema ->
-        Logger.info("[CloakRotation] Rotating schema: #{inspect(schema)}")
-        Cloak.Ecto.Migrator.migrate(repo, schema)
-      end)
+    Enum.each(schemas, fn schema ->
+      Logger.info("Rotating schema: #{inspect(schema)}")
+      Cloak.Ecto.Migrator.migrate(repo, schema)
+    end)
 
-      Logger.info("[CloakRotation] Rotation complete.")
-    end
-
+    Logger.info("Cloak Rotation complete.")
     :ok
   end
 

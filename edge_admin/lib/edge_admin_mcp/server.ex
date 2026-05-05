@@ -141,4 +141,10 @@ defmodule EdgeAdminMcp.Server do
   component(EdgeAdminMcp.Tools.Metrics.GetHostMetrics)
   component(EdgeAdminMcp.Tools.Metrics.GetAgentMetrics)
   component(EdgeAdminMcp.Tools.Metrics.GetAdminMetrics)
+
+  # ── Webhooks ─────────────────────────────────────────────────────────────────
+  component(EdgeAdminMcp.Tools.Events.ListWebhooks)
+  component(EdgeAdminMcp.Tools.Events.GetWebhook)
+  component(EdgeAdminMcp.Tools.Events.CreateWebhook)
+  component(EdgeAdminMcp.Tools.Events.DeleteWebhook)
 end

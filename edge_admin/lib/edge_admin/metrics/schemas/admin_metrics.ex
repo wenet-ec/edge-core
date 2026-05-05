@@ -19,6 +19,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.SelfUpdates
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Ssh
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Vpn
+  alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Webhook
 
   @type t :: %__MODULE__{}
 
@@ -39,6 +40,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
     :gateways,
     :proxy,
     :event_broker,
+    :webhook,
     :oban_queues
   ]
 
@@ -62,6 +64,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
       gateways: Gateways.from_raw(raw_metrics),
       proxy: Proxy.from_raw(raw_metrics),
       event_broker: EventBroker.from_raw(raw_metrics),
+      webhook: Webhook.from_raw(raw_metrics),
       oban_queues: ObanQueue.from_raw(raw_metrics)
     }
   end
@@ -415,6 +418,40 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
         publishes_total: raw["event_broker_publishes_total"],
         publishes_ok_total: raw["event_broker_publishes_ok_total"],
         publishes_error_total: raw["event_broker_publishes_error_total"]
+      }
+    end
+  end
+
+  defmodule Webhook do
+    @moduledoc """
+    Webhook delivery metrics.
+
+    `fan_outs_total` is one increment per `Events.publish/1` invocation that
+    saw at least one matching webhook (the underlying counter records the
+    matched count as the measurement).
+
+    `deliveries_*` count individual HTTP attempts and split by outcome:
+      - `ok`           — 2xx response
+      - `recoverable`  — 408/429/503/network; will be retried by Oban
+      - `terminal`     — other 4xx/5xx; cancelled, contributes to auto-disable
+    """
+
+    @derive Jason.Encoder
+    defstruct [
+      :fan_outs_total,
+      :deliveries_total,
+      :deliveries_ok_total,
+      :deliveries_recoverable_total,
+      :deliveries_terminal_total
+    ]
+
+    def from_raw(raw) do
+      %__MODULE__{
+        fan_outs_total: raw["webhook_fan_outs_total"],
+        deliveries_total: raw["webhook_deliveries_total"],
+        deliveries_ok_total: raw["webhook_deliveries_ok_total"],
+        deliveries_recoverable_total: raw["webhook_deliveries_recoverable_total"],
+        deliveries_terminal_total: raw["webhook_deliveries_terminal_total"]
       }
     end
   end

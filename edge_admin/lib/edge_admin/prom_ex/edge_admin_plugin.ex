@@ -37,7 +37,8 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         ssh_metrics() ++
         reconciliation_metrics() ++
         self_update_metrics() ++
-        event_broker_metrics()
+        event_broker_metrics() ++
+        webhook_metrics()
     )
   end
 
@@ -493,6 +494,38 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
     ]
   end
 
+  defp webhook_metrics do
+    [
+      counter(
+        [:edge_admin, :webhook, :fan_out, :total],
+        event_name: [:edge_admin, :webhook, :fan_out],
+        description:
+          "Total fan-out invocations per published event. `count` measurement is the number of matching webhooks.",
+        measurement: :count,
+        tags: [:event_type],
+        tag_values: &get_webhook_fan_out_tags/1
+      ),
+      counter(
+        [:edge_admin, :webhook, :delivery, :total],
+        event_name: [:edge_admin, :webhook, :delivery],
+        description:
+          "Total webhook delivery attempts, tagged by event type, webhook id, and result (ok | recoverable | terminal)",
+        tags: [:event_type, :webhook_id, :result],
+        tag_values: &get_webhook_delivery_tags/1
+      ),
+      distribution(
+        [:edge_admin, :webhook, :delivery, :duration, :milliseconds],
+        event_name: [:edge_admin, :webhook, :delivery],
+        description: "Duration of webhook delivery attempts in milliseconds, tagged by event type and webhook id",
+        measurement: :duration,
+        unit: {:native, :millisecond},
+        tags: [:event_type, :webhook_id],
+        tag_values: &get_webhook_delivery_duration_tags/1,
+        reporter_options: [buckets: [25, 50, 100, 250, 500, 1_000, 2_500, 5_000, 10_000, 30_000]]
+      )
+    ]
+  end
+
   # Tag extraction functions
 
   defp get_membership_step_tags(%{step: step, status: status}) do
@@ -617,5 +650,21 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
 
   defp get_event_broker_publish_duration_tags(%{adapter: adapter, event_type: event_type}) do
     %{adapter: to_string(adapter), event_type: to_string(event_type)}
+  end
+
+  defp get_webhook_fan_out_tags(%{event_type: event_type}) do
+    %{event_type: to_string(event_type)}
+  end
+
+  defp get_webhook_delivery_tags(%{event_type: event_type, webhook_id: webhook_id, result: result}) do
+    %{
+      event_type: to_string(event_type),
+      webhook_id: to_string(webhook_id),
+      result: to_string(result)
+    }
+  end
+
+  defp get_webhook_delivery_duration_tags(%{event_type: event_type, webhook_id: webhook_id}) do
+    %{event_type: to_string(event_type), webhook_id: to_string(webhook_id)}
   end
 end

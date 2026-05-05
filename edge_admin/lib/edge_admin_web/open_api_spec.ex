@@ -60,7 +60,10 @@ defmodule EdgeAdminWeb.OpenApiSpec do
     "/api/v1/ssh_public_keys/{id}",
     # SelfUpdates.Request
     "/api/v1/self_update_requests",
-    "/api/v1/self_update_requests/{id}"
+    "/api/v1/self_update_requests/{id}",
+    # Events.Webhook
+    "/api/v1/webhooks",
+    "/api/v1/webhooks/{id}"
   ]
 
   @doc "Returns a path → index map for sorting. Paths not listed get index 999_999."

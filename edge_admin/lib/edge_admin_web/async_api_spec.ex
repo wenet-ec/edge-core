@@ -8,21 +8,21 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
   """
 
   @event_order [
+    "edge.enrollment_key.verified",
     "edge.node.registered",
     "edge.node.reregistered",
     "edge.node.version_changed",
     "edge.node.status_changed",
     "edge.node.cluster_changed",
     "edge.node.update_triggered",
-    "edge.enrollment_key.verified",
     "edge.command_execution.created",
     "edge.command_execution.sent",
     "edge.command_execution.completed",
     "edge.command_execution.cancelled",
     "edge.command_execution.expired",
     "edge.command_execution.pruned",
-    "edge.self_update_request.completed",
-    "edge.ssh_username.verified"
+    "edge.ssh_username.verified",
+    "edge.self_update_request.completed"
   ]
 
   @doc "Returns the AsyncAPI 3.1.0 document as a map (ready for Jason.encode!)."
@@ -57,6 +57,8 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         **Explore:**
         - [AsyncAPI viewer](/asyncdoc) — this page
         - [Raw spec](/api/asyncapi) — AsyncAPI JSON
+
+        **Webhook delivery:** every event in this spec is also deliverable via user-configured HTTP webhooks (always-on, no broker required). The same envelope is POSTed to each subscribed URL. Manage subscriptions via the REST `/api/v1/webhooks` endpoints — see the [Swagger UI](/swaggerui#/Events.Webhook) or [ReDoc](/redoc#tag/Events.Webhook).
 
         **REST API:** See the [Swagger UI](/swaggerui), [ReDoc](/redoc), or [download the OpenAPI spec](/api/openapi).
         """
@@ -196,14 +198,25 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
   defp raw_channels do
     Enum.reduce(
       [
+        enrollment_key_channels(),
         node_channels(),
         command_execution_channels(),
-        self_update_request_channels(),
-        enrollment_key_channels(),
-        ssh_username_channels()
+        ssh_username_channels(),
+        self_update_request_channels()
       ],
       &Map.merge/2
     )
+  end
+
+  defp enrollment_key_channels do
+    %{
+      "edge.enrollment_key.verified" =>
+        channel(
+          "enrollment_key.verified",
+          "enrollmentKeyVerifiedMessage",
+          "Agent attempted to enroll using an enrollment key (success or failure)"
+        )
+    }
   end
 
   defp node_channels do
@@ -252,24 +265,6 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
     }
   end
 
-  defp self_update_request_channels do
-    %{
-      "edge.self_update_request.completed" =>
-        channel("self_update_request.completed", "selfUpdateRequestCompletedMessage", "Self-update batch finished")
-    }
-  end
-
-  defp enrollment_key_channels do
-    %{
-      "edge.enrollment_key.verified" =>
-        channel(
-          "enrollment_key.verified",
-          "enrollmentKeyVerifiedMessage",
-          "Agent attempted to enroll using an enrollment key (success or failure)"
-        )
-    }
-  end
-
   defp ssh_username_channels do
     %{
       "edge.ssh_username.verified" =>
@@ -278,6 +273,13 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           "sshUsernameVerifiedMessage",
           "Agent verified an SSH credential against admin (success or failure)"
         )
+    }
+  end
+
+  defp self_update_request_channels do
+    %{
+      "edge.self_update_request.completed" =>
+        channel("self_update_request.completed", "selfUpdateRequestCompletedMessage", "Self-update batch finished")
     }
   end
 
@@ -354,11 +356,11 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
     }
   end
 
-  defp sns_domain_for("edge.node." <> _), do: "nodes"
   defp sns_domain_for("edge.enrollment_key." <> _), do: "nodes"
+  defp sns_domain_for("edge.node." <> _), do: "nodes"
   defp sns_domain_for("edge.command_execution." <> _), do: "commands"
-  defp sns_domain_for("edge.self_update_request." <> _), do: "self-updates"
   defp sns_domain_for("edge.ssh_username." <> _), do: "ssh"
+  defp sns_domain_for("edge.self_update_request." <> _), do: "self-updates"
 
   # ---------------------------------------------------------------------------
   # Components
@@ -420,6 +422,22 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
 
   defp messages do
     %{
+      # Enrollment key messages
+      "enrollmentKeyVerifiedMessage" =>
+        enrollment_key_message(
+          "enrollment_key.verified",
+          "EnrollmentKeyVerifiedEvent",
+          "Agent attempted to enroll using an enrollment key",
+          %{
+            "enrollment_key_id" => "enrkey-abc123",
+            "cluster_name" => "prod",
+            "name" => "prod rollout",
+            "uses_remaining" => 4,
+            "result" => "verified",
+            "verified_at" => "2026-04-13T10:00:00Z"
+          }
+        ),
+
       # Node messages
       "nodeRegisteredMessage" =>
         node_message("node.registered", "NodeEvent", "Node registered for the first time", @node_base_data),
@@ -540,34 +558,6 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           })
         ),
 
-      # Self-update request messages
-      "selfUpdateRequestCompletedMessage" =>
-        self_update_request_message(
-          "self_update_request.completed",
-          "SelfUpdateRequestEvent",
-          "Self-update batch finished",
-          Map.merge(@self_update_base_data, %{
-            "status" => "completed",
-            "summary" => %{"total" => 10, "triggered" => 9, "failed" => 1}
-          })
-        ),
-
-      # Enrollment key messages
-      "enrollmentKeyVerifiedMessage" =>
-        enrollment_key_message(
-          "enrollment_key.verified",
-          "EnrollmentKeyVerifiedEvent",
-          "Agent attempted to enroll using an enrollment key",
-          %{
-            "enrollment_key_id" => "enrkey-abc123",
-            "cluster_name" => "prod",
-            "name" => "prod rollout",
-            "uses_remaining" => 4,
-            "result" => "verified",
-            "verified_at" => "2026-04-13T10:00:00Z"
-          }
-        ),
-
       # SSH username messages
       "sshUsernameVerifiedMessage" =>
         ssh_username_message(
@@ -583,8 +573,24 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
             "result" => "success",
             "verified_at" => "2026-04-13T10:00:00Z"
           }
+        ),
+
+      # Self-update request messages
+      "selfUpdateRequestCompletedMessage" =>
+        self_update_request_message(
+          "self_update_request.completed",
+          "SelfUpdateRequestEvent",
+          "Self-update batch finished",
+          Map.merge(@self_update_base_data, %{
+            "status" => "completed",
+            "summary" => %{"total" => 10, "triggered" => 9, "failed" => 1}
+          })
         )
     }
+  end
+
+  defp enrollment_key_message(event_type, schema_ref, summary, data) do
+    build_message(event_type, schema_ref, summary, "enrollment_key_id", data)
   end
 
   defp node_message(event_type, schema_ref, summary, data) do
@@ -595,16 +601,12 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
     build_message(event_type, schema_ref, summary, "command_execution_id", data)
   end
 
-  defp self_update_request_message(event_type, schema_ref, summary, data) do
-    build_message(event_type, schema_ref, summary, "self_update_request_id", data)
-  end
-
-  defp enrollment_key_message(event_type, schema_ref, summary, data) do
-    build_message(event_type, schema_ref, summary, "enrollment_key_id", data)
-  end
-
   defp ssh_username_message(event_type, schema_ref, summary, data) do
     build_message(event_type, schema_ref, summary, "node_id", data)
+  end
+
+  defp self_update_request_message(event_type, schema_ref, summary, data) do
+    build_message(event_type, schema_ref, summary, "self_update_request_id", data)
   end
 
   defp build_message(event_type, _schema_ref, summary, kafka_partition_key, data) do
@@ -672,11 +674,11 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
     Enum.reduce(
       [
         envelope_schema(),
+        enrollment_key_schema(),
         node_schemas(),
         command_execution_schema(),
-        self_update_request_schema(),
-        enrollment_key_schema(),
-        ssh_username_schema()
+        ssh_username_schema(),
+        self_update_request_schema()
       ],
       &Map.merge/2
     )
@@ -762,6 +764,44 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
     }
   end
 
+  defp enrollment_key_schema do
+    %{
+      "EnrollmentKeyVerifiedEvent" => %{
+        "type" => "object",
+        "required" => ["result", "verified_at"],
+        "description" =>
+          "Agent presented an enrollment key to admin. The full key blob is " <>
+            "intentionally excluded — it's a credential. On `:invalid_key`, " <>
+            "`enrollment_key_id` and `cluster_name` are null (no DB row matched).",
+        "properties" => %{
+          "enrollment_key_id" => %{
+            "type" => ["string", "null"],
+            "format" => "uuid",
+            "description" => "Null when result is invalid_key"
+          },
+          "cluster_name" => %{
+            "type" => ["string", "null"],
+            "description" => "Null when result is invalid_key"
+          },
+          "name" => %{
+            "type" => ["string", "null"],
+            "description" =>
+              "Optional human-readable label for the key (display only). Null when unset or when result is invalid_key."
+          },
+          "uses_remaining" => %{
+            "type" => ["integer", "null"],
+            "description" => "Remaining uses after this attempt; null for unlimited keys or invalid_key"
+          },
+          "result" => %{
+            "type" => "string",
+            "enum" => ["verified", "invalid_key", "key_expired", "key_spent", "node_limit_reached"]
+          },
+          "verified_at" => %{"type" => "string", "format" => "date-time"}
+        }
+      }
+    }
+  end
+
   defp node_schemas do
     %{
       "NodeEvent" => %{
@@ -840,6 +880,30 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
     }
   end
 
+  defp ssh_username_schema do
+    %{
+      "SshUsernameVerifiedEvent" => %{
+        "type" => "object",
+        "required" => ["node_id", "username", "auth_method", "result", "verified_at"],
+        "description" =>
+          "Agent verified an SSH credential against admin. Password hashes and " <>
+            "public-key strings are never echoed. `ssh_username_id` and " <>
+            "`cluster_name` are null when no DB row matched the attempted " <>
+            "(node_id, username) pair — failed attempts against missing usernames " <>
+            "are still emitted as security signal.",
+        "properties" => %{
+          "ssh_username_id" => %{"type" => ["string", "null"], "format" => "uuid"},
+          "node_id" => %{"type" => "string"},
+          "cluster_name" => %{"type" => ["string", "null"]},
+          "username" => %{"type" => "string", "description" => "The username the agent attempted to auth as"},
+          "auth_method" => %{"type" => "string", "enum" => ["password", "public_key", "unknown"]},
+          "result" => %{"type" => "string", "enum" => ["success", "failure"]},
+          "verified_at" => %{"type" => "string", "format" => "date-time"}
+        }
+      }
+    }
+  end
+
   defp self_update_request_schema do
     %{
       "SelfUpdateRequestEvent" => %{
@@ -872,68 +936,6 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           },
           "inserted_at" => %{"type" => "string", "format" => "date-time"},
           "updated_at" => %{"type" => "string", "format" => "date-time"}
-        }
-      }
-    }
-  end
-
-  defp enrollment_key_schema do
-    %{
-      "EnrollmentKeyVerifiedEvent" => %{
-        "type" => "object",
-        "required" => ["result", "verified_at"],
-        "description" =>
-          "Agent presented an enrollment key to admin. The full key blob is " <>
-            "intentionally excluded — it's a credential. On `:invalid_key`, " <>
-            "`enrollment_key_id` and `cluster_name` are null (no DB row matched).",
-        "properties" => %{
-          "enrollment_key_id" => %{
-            "type" => ["string", "null"],
-            "format" => "uuid",
-            "description" => "Null when result is invalid_key"
-          },
-          "cluster_name" => %{
-            "type" => ["string", "null"],
-            "description" => "Null when result is invalid_key"
-          },
-          "name" => %{
-            "type" => ["string", "null"],
-            "description" =>
-              "Optional human-readable label for the key (display only). Null when unset or when result is invalid_key."
-          },
-          "uses_remaining" => %{
-            "type" => ["integer", "null"],
-            "description" => "Remaining uses after this attempt; null for unlimited keys or invalid_key"
-          },
-          "result" => %{
-            "type" => "string",
-            "enum" => ["verified", "invalid_key", "key_expired", "key_spent", "node_limit_reached"]
-          },
-          "verified_at" => %{"type" => "string", "format" => "date-time"}
-        }
-      }
-    }
-  end
-
-  defp ssh_username_schema do
-    %{
-      "SshUsernameVerifiedEvent" => %{
-        "type" => "object",
-        "required" => ["node_id", "username", "auth_method", "result", "verified_at"],
-        "description" =>
-          "Agent verified an SSH credential against admin. Password hashes and " <>
-            "public-key strings are never echoed. `ssh_username_id` and " <>
-            "`cluster_name` are null when no DB row matched the attempted " <>
-            "(node_id, username) pair — failed attempts against missing usernames " <>
-            "are still emitted as security signal.",
-        "properties" => %{
-          "ssh_username_id" => %{"type" => ["string", "null"], "format" => "uuid"},
-          "node_id" => %{"type" => "string"},
-          "cluster_name" => %{"type" => ["string", "null"]},
-          "username" => %{"type" => "string", "description" => "The username the agent attempted to auth as"},
-          "auth_method" => %{"type" => "string", "enum" => ["password", "public_key", "unknown"]},
-          "result" => %{"type" => "string", "enum" => ["success", "failure"]},
-          "verified_at" => %{"type" => "string", "format" => "date-time"}
         }
       }
     }

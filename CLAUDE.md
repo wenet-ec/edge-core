@@ -184,6 +184,7 @@ All operations use Docker Compose through the `./bin/run` script. No local Elixi
 - `ssh_usernames` - SSH login credentials
 - `ssh_public_keys` - Authorized keys for SSH users
 - `self_update_requests` - Container update scheduling
+- `webhooks` - User-configured HTTP delivery destinations for events; `secret` and `headers` are Cloak-encrypted
 - `oban_jobs` - Background job queue
 
 **Edge Agent (SQLite):**
@@ -221,6 +222,7 @@ edge_core/
 │   │   │   ├── proxy_servers/   # Proxy coordination
 │   │   │   ├── metrics/         # Metrics aggregation
 │   │   │   ├── edge_clusters/   # Cluster management + Erlang peer coordination
+│   │   │   ├── events/          # Event publish path (catalog, broker channel, webhook channel)
 │   │   │   └── vault/           # Cloak vault + encrypted Ecto types
 │   │   └── edge_admin_web/      # Phoenix web layer
 │   │       ├── controllers/     # REST API controllers
@@ -294,6 +296,13 @@ edge_core/
 - `events/broker/adapters/google_pubsub.ex` - Google Cloud Pub/Sub adapter (goth + raw req against the v1 REST API); managed pub/sub, domain topics, `type`/`corename` promoted to message attributes for filter expressions
 - `events/broker/workers/publish_event_worker.ex` - Oban worker for async broker delivery
 - **Not currently supported (demand-gated for future):** AMQP 1.0 (different protocol from AMQP 0-9-1 — would be a new adapter, not a flag on `amqp091`) and Apache Pulsar (not Kafka-wire-compatible despite KoP plugin existing). Add only if a real user asks; do not pre-build.
+- `events/webhooks/webhooks.ex` - Webhook delivery channel: `list_webhooks/1` (supports `?event_type=` post-filter for "which webhooks fire on this event"), `get_webhook/1`, `create_webhook/1`, `delete_webhook/1`, `fan_out/1` (called by `Events.publish/1`; pages through `list_webhooks/1`), `deliver_event/2` (called by the Oban worker). Webhooks are immutable after create; retry budget is `WEBHOOK_MAX_ATTEMPTS` (default 3).
+- `events/webhooks/schemas/webhook.ex` - Ecto schema; `secret` and `headers` are Cloak-encrypted at rest via `Vault.EncryptedBinary` / `Vault.EncryptedMap`.
+- `events/webhooks/forms/create_webhook_form.ex` - Input validation (URL/SSRF/secret length/headers shape/event filter syntax + catalog cross-check).
+- `events/webhooks/filter.ex` - Wildcard matcher (`*` matches any sequence of characters, including dots). Used by the create form (syntax + catalog cross-check) and `list_webhooks/1` (event_type post-filter).
+- `events/webhooks/ssrf.ex` - SSRF deny list. Loopback, RFC1918/ULA, link-local, multicast, cloud-metadata IPs/hostnames. IPv4-mapped IPv6 normalised before matching. Opt out per deployment with `WEBHOOK_ALLOW_PRIVATE_IPS=true`.
+- `events/webhooks/delivery.ex` - HTTP request building (`POST` only), HMAC-SHA256 signing into `X-Edge-Signature`, response classification (`:ok | {:recoverable, _} | {:terminal, _}`). Retry classification: 408/429/503 + network errors → recoverable, other 4xx/5xx → terminal.
+- `events/webhooks/workers/deliver_event_worker.ex` - Oban worker, queue: `webhooks`. Per-job `max_attempts` set from `WEBHOOK_MAX_ATTEMPTS` (default 3) at fan-out time. Drops jobs older than `EVENT_DELIVERY_MAX_AGE_SECONDS` via `{:cancel, ...}`, then delegates to `Webhooks.deliver_event/2`.
 
 **Edge Agent (`edge_agent/lib/edge_agent/`):**
 
@@ -344,6 +353,7 @@ Admin background work is split between two schedulers with different semantics:
 - `EdgeAdmin.Nodes.Workers.ReconcileClusterWorker` - Syncs a single cluster's node state with Netmaker VPN
 - `EdgeAdmin.SelfUpdates.Workers.TriggerSelfUpdateWorker` - Coordinates container updates
 - `EdgeAdmin.Events.Broker.Workers.PublishEventWorker` - Publishes a CloudEvents envelope to the broker, retries on failure
+- `EdgeAdmin.Events.Webhooks.Workers.DeliverEventWorker` - Delivers a CloudEvents envelope to one user-configured webhook URL via HTTP POST. Retry classification: 408/429/503 + network = recoverable; other 4xx/5xx = terminal. Per-job `max_attempts` is set from `WEBHOOK_MAX_ATTEMPTS` (default 3) at fan-out time.
 
 **Agent Workers:**
 
@@ -425,7 +435,7 @@ Production files follow the same pattern in `deploy/production/.envs/`
 - `NETMAKER_*` - Netmaker API credentials, URLs, and tokens
 - `ENROLLMENT_TOKEN` - Agent VPN enrollment key
 - `SECRET_KEY_BASE` - Phoenix secret for sessions and encryption
-- `CLOAK_KEY` - 32 bytes of base64 (generate with `openssl rand -base64 32`); required at boot. Encryption-at-rest key for sensitive Ecto columns (e.g. webhook secrets/headers when that ships). If lost, every encrypted row is unrecoverable — back it up alongside `MASTER_KEY`/`SECRET_KEY_BASE`.
+- `CLOAK_KEY` - 32 bytes of base64 (generate with `openssl rand -base64 32`); required at boot. Encryption-at-rest key for sensitive Ecto columns (webhook `secret` and `headers` today). If lost, every encrypted row is unrecoverable — back it up alongside `MASTER_KEY`/`SECRET_KEY_BASE`.
 - `CLOAK_TAG` - identifier paired 1:1 with `CLOAK_KEY`, prepended to every ciphertext blob so Cloak can find the right cipher on decrypt. Required at boot. Convention: `AES.GCM.V<N>`, bumped on each rotation.
 - `ROTATE_OLD_CLOAK_KEY` / `ROTATE_OLD_CLOAK_TAG` / `ROTATE_NEW_CLOAK_KEY` / `ROTATE_NEW_CLOAK_TAG` - all four set together to trigger Cloak key rotation via `EdgeAdmin.Release.rotate_cloak_key/0` (auto-runs on `start`, also runnable as one-off via `bin/rotate_cloak_key`). Idempotent. Logs skip if any of the four is missing.
 - `PHX_HOST` - Public hostname for admin API
@@ -449,7 +459,9 @@ Production files follow the same pattern in `deploy/production/.envs/`
 - `EVENT_BROKER_GOOGLE_PUBSUB_EMULATOR_HOST` - override only for the official Pub/Sub emulator (host:port, no scheme); leave UNSET in production
 - `GOOGLE_APPLICATION_CREDENTIALS` - GCP service-account JSON path, resolved by goth's standard chain (env → metadata server / Workload Identity)
 - `CORE_NAME` - Identifies this core instance in every event envelope (default: `"default"`)
-- `EVENT_DELIVERY_MAX_AGE_SECONDS` - Cancel publish jobs older than N seconds (default: `3600`); checked against Oban's `inserted_at` at the start of `perform/1`. Set to `0` to disable.
+- `EVENT_DELIVERY_MAX_AGE_SECONDS` - Cancel broker-publish and webhook-delivery jobs older than N seconds (default: `3600`); checked against Oban's `inserted_at` at the start of `perform/1`. Set to `0` to disable.
+- `WEBHOOK_MAX_ATTEMPTS` - Total HTTP delivery attempts per event before drop (default: `3`). Applied uniformly to every webhook job at fan-out time.
+- `WEBHOOK_ALLOW_PRIVATE_IPS` - `true` to bypass the SSRF deny list at webhook create time (default: `false`). Use only for homelab/dev where receivers legitimately live on RFC1918 ranges. Production should leave this off.
 
 ## Technology Stack
 

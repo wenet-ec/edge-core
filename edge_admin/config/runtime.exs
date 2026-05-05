@@ -378,6 +378,10 @@ config :edge_admin, EdgeAdmin.PromEx,
 #   self_updates           — rare, triggered manually; 1 is fine
 #   event_broker           — async broker publish with retry; 2 keeps it snappy
 #                          without hammering the broker with parallel calls
+#   webhooks               — HTTP delivery to user-configured endpoints; 2
+#                          mitigates head-of-line blocking when one receiver
+#                          is slow (HTTP timeouts can run 10s+, much longer
+#                          than broker publish latency)
 config :edge_admin, Oban,
   engine: oban_engine,
   queues: [
@@ -385,7 +389,8 @@ config :edge_admin, Oban,
     execution_pruning: 1,
     cluster_reconciliation: 1,
     self_updates: 1,
-    event_broker: 2
+    event_broker: 2,
+    webhooks: 2
   ],
   # Oban needs a real Ecto.Repo (calls __adapter__/0, config/0, etc.) so we
   # hand it the impl module directly, not the dispatcher.
@@ -488,6 +493,20 @@ config :edge_admin,
   netmaker_superadmin_username: get_env!("NETMAKER_SUPERADMIN_USERNAME"),
   netmaker_superadmin_password: get_env!("NETMAKER_SUPERADMIN_PASSWORD")
 
+# =============================================================================
+# Event delivery — applies to both broker and webhook channels
+# =============================================================================
+# CORE_NAME stamps every envelope with the publishing instance's identity.
+# EVENT_DELIVERY_MAX_AGE_SECONDS caps how long a delivery worker will keep
+# retrying a single event. WEBHOOK_MAX_ATTEMPTS sets the per-event retry
+# budget. WEBHOOK_ALLOW_PRIVATE_IPS opts out of SSRF protection for homelab
+# / dev where webhook receivers legitimately live on RFC1918 ranges.
+config :edge_admin,
+  core_name: get_env("CORE_NAME", :string, "default"),
+  event_delivery_max_age_seconds: get_env("EVENT_DELIVERY_MAX_AGE_SECONDS", :integer, 3600),
+  webhook_max_attempts: get_env("WEBHOOK_MAX_ATTEMPTS", :integer, 3),
+  webhook_allow_private_ips: get_env("WEBHOOK_ALLOW_PRIVATE_IPS", :boolean, false)
+
 config :nexmaker,
   base_url: get_env!("NETMAKER_API_URL"),
   master_key: get_env!("NETMAKER_MASTER_KEY")
@@ -547,9 +566,7 @@ if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
 
   config :edge_admin,
     event_broker_enabled: true,
-    event_broker_adapter: event_broker_adapter,
-    core_name: get_env("CORE_NAME", :string, "default"),
-    event_delivery_max_age_seconds: get_env("EVENT_DELIVERY_MAX_AGE_SECONDS", :integer, 3600)
+    event_broker_adapter: event_broker_adapter
 
   case event_broker_adapter do
     :nats ->

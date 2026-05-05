@@ -1417,41 +1417,37 @@ defmodule EdgeAdmin.Commands do
     end
   end
 
-  # Preloads command and node cluster, then publishes the appropriate execution event.
-  # Only runs when the broker is enabled — avoids unnecessary DB queries otherwise.
   defp publish_execution_event(execution, type) do
-    if Application.get_env(:edge_admin, :event_broker_enabled, false) do
-      execution = Repo.preload(execution, [:command, node: :cluster], force: true)
-      cluster_name = execution.node && execution.node.cluster && execution.node.cluster.name
+    execution = Repo.preload(execution, [:command, node: :cluster], force: true)
+    cluster_name = execution.node && execution.node.cluster && execution.node.cluster.name
 
-      event =
-        case type do
-          :sent ->
-            %Catalog.CommandExecutionSent{execution: execution, command: execution.command, cluster_name: cluster_name}
+    event =
+      case type do
+        :sent ->
+          %Catalog.CommandExecutionSent{execution: execution, command: execution.command, cluster_name: cluster_name}
 
-          :completed ->
-            %Catalog.CommandExecutionCompleted{
-              execution: execution,
-              command: execution.command,
-              cluster_name: cluster_name
-            }
+        :completed ->
+          %Catalog.CommandExecutionCompleted{
+            execution: execution,
+            command: execution.command,
+            cluster_name: cluster_name
+          }
 
-          :cancelled ->
-            %Catalog.CommandExecutionCancelled{
-              execution: execution,
-              command: execution.command,
-              cluster_name: cluster_name
-            }
+        :cancelled ->
+          %Catalog.CommandExecutionCancelled{
+            execution: execution,
+            command: execution.command,
+            cluster_name: cluster_name
+          }
 
-          :expired ->
-            %Catalog.CommandExecutionExpired{
-              execution: execution,
-              command: execution.command,
-              cluster_name: cluster_name
-            }
-        end
+        :expired ->
+          %Catalog.CommandExecutionExpired{
+            execution: execution,
+            command: execution.command,
+            cluster_name: cluster_name
+          }
+      end
 
-      Events.publish(event)
-    end
+    Events.publish(event)
   end
 end

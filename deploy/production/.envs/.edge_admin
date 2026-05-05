@@ -266,12 +266,21 @@ ADMIN_DISCOVERY_PORT=44000
 
 
 # =============================================================================
+# Event delivery (shared by broker + webhook channels)
+# =============================================================================
+
+# CORE_NAME=                            # included in every envelope; defaults to "default"
+# EVENT_DELIVERY_MAX_AGE_SECONDS=3600   # drop publish/delivery jobs older than N seconds; 0 disables (default: 3600)
+
+# Webhooks (always-on delivery channel; per-row config via /api/v1/webhooks):
+# WEBHOOK_MAX_ATTEMPTS=3                # total HTTP delivery attempts per event before drop (default: 3)
+# WEBHOOK_ALLOW_PRIVATE_IPS=false       # set true ONLY for homelab/dev — disables SSRF deny list (default: false)
+
+# =============================================================================
 # Event Broker
 # =============================================================================
 
 # EVENT_BROKER_ENABLED=true
-# CORE_NAME=                            # included in every envelope; defaults to "default"
-# EVENT_DELIVERY_MAX_AGE_SECONDS=3600   # drop publish jobs older than N seconds; 0 disables (default: 3600)
 
 # NATS:
 # EVENT_BROKER_ADAPTER=nats

@@ -264,6 +264,47 @@
         "title": "ClusterSingleResponse",
         "type": "object"
       },
+      "Webhook": {
+        "description": "A webhook subscription. Receives a POST per matching event with the full\nCloudEvents envelope as the body and an HMAC-SHA256 signature in the\n`X-Edge-Signature` header.\n\nWebhooks are immutable after create — to change any field, delete and\nrecreate. `secret` and `headers` are write-only — encrypted at rest and\nnever appear in any response.\n",
+        "example": {
+          "event_filters": ["edge.node.*", "edge.command_execution.completed"],
+          "id": "01234567-89ab-cdef-0123-456789abcdef",
+          "inserted_at": "2026-05-05T10:00:00Z",
+          "updated_at": "2026-05-05T10:00:00Z",
+          "url": "https://example.com/edge-events"
+        },
+        "properties": {
+          "event_filters": {
+            "description": "Wildcard patterns matched against envelope `type`. `*` matches any sequence of characters (including dots); `*` alone matches everything.",
+            "example": ["edge.node.*", "edge.command_execution.completed"],
+            "items": { "type": "string" },
+            "type": "array"
+          },
+          "id": {
+            "description": "Unique webhook identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "inserted_at": {
+            "description": "When the webhook was created",
+            "format": "date-time",
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "When the webhook was last updated",
+            "format": "date-time",
+            "type": "string"
+          },
+          "url": {
+            "description": "Destination URL — receives a POST per matching event",
+            "example": "https://example.com/edge-events",
+            "type": "string"
+          }
+        },
+        "required": ["id", "url", "event_filters", "inserted_at", "updated_at"],
+        "title": "Webhook",
+        "type": "object"
+      },
       "AgentCommandExecutionPaginatedResponse": {
         "description": "Paginated list of command executions for the agent",
         "properties": {
@@ -841,6 +882,16 @@
         },
         "required": ["data", "meta"],
         "title": "UnifiedMetricsResponse",
+        "type": "object"
+      },
+      "WebhookSingleResponse": {
+        "description": "Single webhook response",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/Webhook" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
+        },
+        "required": ["data", "meta"],
+        "title": "WebhookSingleResponse",
         "type": "object"
       },
       "AliasSingleResponse": {
@@ -2001,6 +2052,13 @@
             "vpn": {
               "zombie_cleanup_deleted_count": 0,
               "zombie_cleanup_total": 81
+            },
+            "webhook": {
+              "deliveries_ok_total": 2400,
+              "deliveries_recoverable_total": 60,
+              "deliveries_terminal_total": 10,
+              "deliveries_total": 2470,
+              "fan_outs_total": 1235
             }
           },
           "meta": "Elixir.EdgeAdminWeb.Schemas.CommonSchemas.MetaSchema"
@@ -2452,6 +2510,37 @@
                   }
                 },
                 "type": "object"
+              },
+              "webhook": {
+                "description": "Webhook delivery metrics. `fan_outs_total` counts publish-time fan-out invocations\n(one per published event regardless of how many webhooks match). `deliveries_*` count\nindividual HTTP delivery attempts and their outcomes — `ok`, `recoverable` (retried by\nOban: 408/429/503/network until `WEBHOOK_MAX_ATTEMPTS` is exhausted), `terminal`\n(cancelled by the worker, no further retries).\n",
+                "properties": {
+                  "deliveries_ok_total": {
+                    "description": "Total deliveries that returned 2xx",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "deliveries_recoverable_total": {
+                    "description": "Total deliveries that hit a recoverable error (will be retried)",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "deliveries_terminal_total": {
+                    "description": "Total deliveries that hit a terminal error (cancelled, contributes to auto-disable)",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "deliveries_total": {
+                    "description": "Total webhook delivery attempts (ok + recoverable + terminal)",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "fan_outs_total": {
+                    "description": "Total fan-out invocations from the publish path",
+                    "nullable": true,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
               }
             },
             "type": "object"
@@ -2482,6 +2571,57 @@
         },
         "required": ["data", "meta"],
         "title": "CommandPaginatedResponse",
+        "type": "object"
+      },
+      "WebhookCreateRequest": {
+        "description": "Create a new webhook subscription. Webhooks are immutable after create —\nto change any field, delete and recreate.\n\n- `url` is SSRF-checked downstream. Loopback, RFC1918, link-local, and\n  cloud-metadata IPs/hostnames are denied unless\n  `WEBHOOK_ALLOW_PRIVATE_IPS=true` is set on the admin process.\n- `secret` is the HMAC-SHA256 signing key. Stays on the server; receivers\n  verify the `X-Edge-Signature` header against their stored copy.\n- `headers` is an arbitrary string→string map stamped on every request\n  (e.g. `Authorization: Bearer ...`). Up to 20 entries.\n- `event_filters` are wildcard patterns matched against envelope\n  `type`. Each pattern must match at least one currently-known event\n  type — typos are rejected at create time.\n\nDelivery retry budget is `WEBHOOK_MAX_ATTEMPTS` (default 3).\n\nKnown event-type prefixes: `edge.node.*`, `edge.command_execution.*`,\n`edge.self_update_request.*`, `edge.enrollment_key.*`,\n`edge.ssh_username.*`. The full event catalog with payload schemas is\ndocumented in the [AsyncAPI spec](/asyncdoc).\n",
+        "example": {
+          "event_filters": ["edge.node.*", "edge.command_execution.completed"],
+          "headers": { "Authorization": "Bearer xoxb-token" },
+          "secret": "a-cryptographically-random-32-byte-secret",
+          "url": "https://example.com/edge-events"
+        },
+        "properties": {
+          "event_filters": {
+            "description": "Wildcard patterns. `*` matches any sequence of characters (including dots); `*` alone matches everything. Each pattern must match at least one current event type.",
+            "example": ["edge.node.*", "edge.command_execution.completed"],
+            "items": {
+              "maxLength": 256,
+              "pattern": "^[a-z0-9_*]+(\\.[a-z0-9_*]+)*$",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "type": "array"
+          },
+          "headers": {
+            "additionalProperties": { "maxLength": 4096, "type": "string" },
+            "description": "Extra HTTP headers. Up to 20 entries; each value up to 4096 characters.",
+            "example": {
+              "Authorization": "Bearer xoxb-token",
+              "X-Custom": "value"
+            },
+            "maxProperties": 20,
+            "type": "object"
+          },
+          "secret": {
+            "description": "HMAC-SHA256 signing key (≥ 32 bytes). Never returned in responses.",
+            "example": "a-cryptographically-random-32-byte-secret",
+            "maxLength": 256,
+            "minLength": 32,
+            "type": "string"
+          },
+          "url": {
+            "description": "Absolute http(s) URL. SSRF-checked downstream.",
+            "example": "https://example.com/edge-events",
+            "maxLength": 2048,
+            "minLength": 1,
+            "pattern": "^https?://.+",
+            "type": "string"
+          }
+        },
+        "required": ["url", "secret", "event_filters"],
+        "title": "WebhookCreateRequest",
         "type": "object"
       },
       "CancelExecutionData": {
@@ -2694,6 +2834,19 @@
         },
         "required": ["name"],
         "title": "CreateAliasRequest",
+        "type": "object"
+      },
+      "WebhookPaginatedResponse": {
+        "description": "Paginated list of webhooks with filtering and sorting metadata",
+        "properties": {
+          "data": {
+            "items": { "$ref": "#/components/schemas/Webhook" },
+            "type": "array"
+          },
+          "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
+        },
+        "required": ["data", "meta"],
+        "title": "WebhookPaginatedResponse",
         "type": "object"
       },
       "CommandSingleResponse": {
@@ -7036,6 +7189,248 @@
         },
         "summary": "Delete a self-update request",
         "tags": ["SelfUpdates.Request"]
+      }
+    },
+    "/api/v1/webhooks": {
+      "post": {
+        "callbacks": {},
+        "description": "Create a webhook subscription. The destination URL is validated against the SSRF deny list at create time. `secret` (HMAC signing key, >= 32 bytes) and `headers` are write-only — encrypted at rest and never returned in any GET response. The full catalog of event types you can subscribe to via `event_filters` is documented in the [AsyncAPI spec](/asyncdoc).",
+        "operationId": "EdgeAdminWeb.Controllers.Events.WebhookController.create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/WebhookCreateRequest" }
+            }
+          },
+          "description": "Webhook creation data",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookSingleResponse"
+                }
+              }
+            },
+            "description": "Webhook created"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangesetErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Create webhook",
+        "tags": ["Events.Webhook"]
+      },
+      "get": {
+        "callbacks": {},
+        "description": "Returns a paginated list of webhook subscriptions. The full catalog of event types you can subscribe to is documented in the [AsyncAPI spec](/asyncdoc).",
+        "operationId": "EdgeAdminWeb.Controllers.Events.WebhookController.index",
+        "parameters": [
+          {
+            "description": "Page number (1-indexed)",
+            "example": 1,
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": { "default": 1, "minimum": 1, "type": "integer" }
+          },
+          {
+            "description": "Items per page",
+            "example": 20,
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Comma-separated list of fields to sort by",
+            "example": "inserted_at,url",
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
+            "example": "desc,asc",
+            "in": "query",
+            "name": "order_directions",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by URL (exact match or wildcard: prefix*, *suffix, *substring*)",
+            "in": "query",
+            "name": "url",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Returns webhooks whose `event_filters` would match this concrete event type — same dispatch logic the publish path uses. Pass a literal event type (no wildcards), e.g. `edge.node.registered`.",
+            "in": "query",
+            "name": "event_type",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter records where inserted_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
+            "in": "query",
+            "name": "inserted_at__gte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter records where inserted_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
+            "in": "query",
+            "name": "inserted_at__lte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter records where updated_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
+            "in": "query",
+            "name": "updated_at__gte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "Filter records where updated_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
+            "in": "query",
+            "name": "updated_at__lte",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "format": "date-time", "type": "string" },
+                { "format": "date", "type": "string" }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookPaginatedResponse"
+                }
+              }
+            },
+            "description": "Paginated webhooks"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid query parameters"
+          }
+        },
+        "summary": "List webhooks",
+        "tags": ["Events.Webhook"]
+      }
+    },
+    "/api/v1/webhooks/{id}": {
+      "get": {
+        "callbacks": {},
+        "description": "Get a single webhook by ID.",
+        "operationId": "EdgeAdminWeb.Controllers.Events.WebhookController.show",
+        "parameters": [
+          {
+            "description": "Webhook ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookSingleResponse"
+                }
+              }
+            },
+            "description": "Webhook"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BadRequestResponse" }
+              }
+            },
+            "description": "Invalid path parameters"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Webhook not found"
+          }
+        },
+        "summary": "Get webhook",
+        "tags": ["Events.Webhook"]
+      },
+      "delete": {
+        "callbacks": {},
+        "description": "Permanently delete a webhook. Webhooks are immutable after create — to change any field (URL, secret, filters, retry budget) delete and recreate.",
+        "operationId": "EdgeAdminWeb.Controllers.Events.WebhookController.delete",
+        "parameters": [
+          {
+            "description": "Webhook ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": { "content": { "": {} }, "description": "Webhook deleted" },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Webhook not found"
+          }
+        },
+        "summary": "Delete webhook",
+        "tags": ["Events.Webhook"]
       }
     }
   },

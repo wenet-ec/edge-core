@@ -1,6 +1,6 @@
 # Edge Core — Architecture
 
-**Last Updated: 2026-05-04**
+**Last Updated: 2026-05-05**
 
 Edge Core is an infrastructure management platform for geographically distributed edge machines. It gives you centralized control over remote nodes through a secure VPN mesh — running commands, accessing machines via SSH, proxying traffic through them, and scraping their metrics — all through a simple HTTP API.
 
@@ -386,13 +386,15 @@ Proxy and SSH have no fallback below Layer 2. Both require raw TCP streaming —
 
 ---
 
-## Event Broker
+## Events
 
-Edge Admin can publish lifecycle events to an external message broker — opt-in, disabled by default, broker deployed separately.
+Edge Admin publishes lifecycle events through two independent delivery channels: a message broker (opt-in, infrastructure-level) and HTTP webhooks (always-on, configured per-row via the API). Both channels receive the same CloudEvents 1.0 envelope; events span node lifecycle (registered, status changed, etc.), command execution lifecycle (created → sent → completed/cancelled/expired), enrollment-key verification, SSH credential verification, and self-update request lifecycle. All events carry a full object snapshot in `data`.
 
-Events span node lifecycle (registered, status changed, deleted, etc.), command execution lifecycle (created → sent → completed/cancelled/expired), and self-update request lifecycle. All events follow [CloudEvents 1.0](https://cloudevents.io) and carry a full object snapshot in `data`.
+Business logic calls `EdgeAdmin.Events.publish/1` once per state change. The events context builds the envelope and fans out to every channel — broker (if enabled) and webhooks (always running its own filter). Channels operate independently: a broker outage does not affect webhook delivery, and vice versa.
 
-Adapters cover: `nats` (NATS — pub/sub by default, set `EVENT_BROKER_NATS_JETSTREAM=true` for durable log), `kafka` (any Kafka-compatible broker — Redpanda, Kafka, Confluent Cloud, Azure Event Hubs, etc.), `amqp091` (any AMQP 0-9-1 broker — RabbitMQ, LavinMQ, AmazonMQ for RabbitMQ, CloudAMQP; topic exchange, routing key = event type; `rabbitmq` accepted as alias), `redis` (fire-and-forget pub/sub, no persistence), `mqtt` (any MQTT 3.1.1 / 5 broker — EMQX, Mosquitto, HiveMQ, AWS IoT Core, Azure Event Grid in MQTT broker mode, etc.; configurable QoS 0/1/2), `aws_sns` (managed AWS service — pre-provisioned topics by domain, IAM-based auth via the standard AWS credential chain), and `google_pubsub` (managed GCP service — pre-provisioned topics by domain, OAuth2 auth via the standard GCP credential chain). Pick the broker that matches your semantics — there is no recommended default.
+### Broker channel
+
+Opt-in, disabled by default, broker deployed separately. Adapters cover: `nats` (NATS — pub/sub by default, set `EVENT_BROKER_NATS_JETSTREAM=true` for durable log), `kafka` (any Kafka-compatible broker — Redpanda, Kafka, Confluent Cloud, Azure Event Hubs, etc.), `amqp091` (any AMQP 0-9-1 broker — RabbitMQ, LavinMQ, AmazonMQ for RabbitMQ, CloudAMQP; topic exchange, routing key = event type; `rabbitmq` accepted as alias), `redis` (fire-and-forget pub/sub, no persistence), `mqtt` (any MQTT 3.1.1 / 5 broker — EMQX, Mosquitto, HiveMQ, AWS IoT Core, Azure Event Grid in MQTT broker mode, etc.; configurable QoS 0/1/2), `aws_sns` (managed AWS service — pre-provisioned topics by domain, IAM-based auth via the standard AWS credential chain), and `google_pubsub` (managed GCP service — pre-provisioned topics by domain, OAuth2 auth via the standard GCP credential chain). Pick the broker that matches your semantics — there is no recommended default.
 
 The `type` field in the envelope doubles as the NATS subject, RabbitMQ routing key, and Redis channel (`edge.node.status_changed`, `edge.command_execution.completed`, etc.) — no parsing needed for broker-level filtering. The MQTT adapter rewrites `.` to `/` (`edge/node/status_changed`) so MQTT segment wildcards (`edge/#`, `edge/node/+`) work as expected. The AWS SNS and Google Cloud Pub/Sub adapters promote `type` and `corename` to message attributes so subscription filter policies (SNS) or filter expressions (Pub/Sub) can match without parsing the body — neither service supports topic-name wildcards.
 
@@ -401,6 +403,18 @@ Duplicate events are possible for `edge.node.status_changed` — the health chec
 For the full event schema and subject/topic reference see [`docs/admin-asyncapi-v0.2.0.md`](admin-asyncapi-v0.2.0.md). Interactive viewer at `/asyncdoc` on a running admin.
 
 **Not currently supported, on the table if there is demand:** AMQP 1.0 (a different wire protocol from AMQP 0-9-1 despite the name — used by ActiveMQ, Azure Service Bus, IBM MQ, Solace) and Apache Pulsar. Neither is shipped today; the existing `amqp091` adapter does not speak AMQP 1.0, and the `kafka` adapter is not wire-compatible with Pulsar. If you have a concrete use case for either, file an issue — adapter additions are tractable and we'll prioritise based on real demand.
+
+### Webhook channel
+
+User-configurable HTTP delivery. Subscriptions are persisted in the `webhooks` table and managed through `POST/GET/DELETE /api/v1/webhooks`. **Webhooks are immutable after create** — to change any field, delete and recreate. Each webhook stores: an HTTPS URL, an HMAC-SHA256 `secret`, an optional `headers` map, and a list of wildcard `event_filters`. `secret` and `headers` are encrypted at rest via Cloak; `CLOAK_KEY` and `CLOAK_TAG` are required at admin boot. Retry budget per event is governed by `WEBHOOK_MAX_ATTEMPTS` (default 3).
+
+Filter grammar matches the rest of the admin API: `*` matches any sequence of characters (including dots) — `edge.node.*` matches every node event, `edge.command_execution.completed` matches one specific event, `*` alone matches everything. Patterns are validated at create time against the live event catalog so typos surface immediately rather than silently subscribing to nothing.
+
+Each delivery is one HTTP POST per `(webhook × matched event)` pair, JSON-encoded envelope as the body, signed with `X-Edge-Signature: sha256=<hex>` so receivers can verify integrity. Retry classification: `2xx` succeeds, `408 / 429 / 503` and network errors are retried with Oban's exponential backoff until `max_attempts` is exhausted, other `4xx / 5xx` are terminal (worker returns `{:cancel, _}`, no further retries). Per-job `max_attempts` is set from `WEBHOOK_MAX_ATTEMPTS` (default 3) at fan-out time. There is no row-level failure counter and no auto-disable — events are retried-or-dropped independently.
+
+Destination URLs go through an SSRF deny list at create time — loopback, RFC1918/ULA, link-local (including `169.254.169.254` and `metadata.{google,azure,tencentyun}.internal`), multicast, and the cloud-metadata literals are all rejected. IPv4-mapped IPv6 (`::ffff:a.b.c.d`) is normalised before matching so the v6 form cannot bypass the v4 deny list. Operators on homelab / dev networks can opt out per deployment with `WEBHOOK_ALLOW_PRIVATE_IPS=true`.
+
+Webhooks are not gated on `EVENT_BROKER_ENABLED` — they run independently. A deployment can ship the broker disabled and still use webhooks for every event.
 
 ---
 

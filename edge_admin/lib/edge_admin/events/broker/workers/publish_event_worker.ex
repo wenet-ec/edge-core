@@ -27,7 +27,7 @@ defmodule EdgeAdmin.Events.Broker.Workers.PublishEventWorker do
 
   use Oban.Worker,
     queue: :event_broker,
-    max_attempts: 6
+    max_attempts: 3
 
   alias EdgeAdmin.Events.Broker
 

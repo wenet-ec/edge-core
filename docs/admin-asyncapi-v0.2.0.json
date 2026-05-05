@@ -1,6 +1,15 @@
 {
   "asyncapi": "3.1.0",
   "channels": {
+    "edge.enrollment_key.verified": {
+      "address": "edge.enrollment_key.verified",
+      "description": "Agent attempted to enroll using an enrollment key (success or failure)",
+      "messages": {
+        "enrollment_key.verified": {
+          "$ref": "#/components/messages/enrollmentKeyVerifiedMessage"
+        }
+      }
+    },
     "edge.node.registered": {
       "address": "edge.node.registered",
       "description": "Node registered for the first time",
@@ -52,15 +61,6 @@
       "messages": {
         "node.update_triggered": {
           "$ref": "#/components/messages/nodeUpdateTriggeredMessage"
-        }
-      }
-    },
-    "edge.enrollment_key.verified": {
-      "address": "edge.enrollment_key.verified",
-      "description": "Agent attempted to enroll using an enrollment key (success or failure)",
-      "messages": {
-        "enrollment_key.verified": {
-          "$ref": "#/components/messages/enrollmentKeyVerifiedMessage"
         }
       }
     },
@@ -118,21 +118,21 @@
         }
       }
     },
-    "edge.self_update_request.completed": {
-      "address": "edge.self_update_request.completed",
-      "description": "Self-update batch finished",
-      "messages": {
-        "self_update_request.completed": {
-          "$ref": "#/components/messages/selfUpdateRequestCompletedMessage"
-        }
-      }
-    },
     "edge.ssh_username.verified": {
       "address": "edge.ssh_username.verified",
       "description": "Agent verified an SSH credential against admin (success or failure)",
       "messages": {
         "ssh_username.verified": {
           "$ref": "#/components/messages/sshUsernameVerifiedMessage"
+        }
+      }
+    },
+    "edge.self_update_request.completed": {
+      "address": "edge.self_update_request.completed",
+      "description": "Self-update batch finished",
+      "messages": {
+        "self_update_request.completed": {
+          "$ref": "#/components/messages/selfUpdateRequestCompletedMessage"
         }
       }
     }
@@ -1327,11 +1327,33 @@
   },
   "defaultContentType": "application/json",
   "info": {
-    "description": "Lifecycle events published by Edge Admin to a configured message broker (NATS, Kafka/Redpanda, RabbitMQ, Redis, MQTT, AWS SNS, or Google Cloud Pub/Sub).\n\nEdge Admin publishes and forgets — it has no knowledge of consumers.\nAll messages follow the [CloudEvents 1.0](https://cloudevents.io) spec.\n`corename` is a CloudEvents extension attribute identifying the publishing Edge Admin instance.\n\n```json\n{\n  \"specversion\": \"1.0\",\n  \"id\": \"<uuid v4>\",\n  \"source\": \"https://github.com/wenet-ec/edge-core\",\n  \"type\": \"edge.node.registered\",\n  \"time\": \"2026-04-13T10:00:00Z\",\n  \"datacontenttype\": \"application/json\",\n  \"corename\": \"prod-us\",\n  \"data\": { ... }\n}\n```\n\nEnable publishing by setting `EVENT_BROKER_ENABLED=true` on the admin.\n\n**Explore:**\n- [AsyncAPI viewer](/asyncdoc) — this page\n- [Raw spec](/api/asyncapi) — AsyncAPI JSON\n\n**REST API:** See the [Swagger UI](/swaggerui), [ReDoc](/redoc), or [download the OpenAPI spec](/api/openapi).\n",
+    "description": "Lifecycle events published by Edge Admin to a configured message broker (NATS, Kafka/Redpanda, RabbitMQ, Redis, MQTT, AWS SNS, or Google Cloud Pub/Sub).\n\nEdge Admin publishes and forgets — it has no knowledge of consumers.\nAll messages follow the [CloudEvents 1.0](https://cloudevents.io) spec.\n`corename` is a CloudEvents extension attribute identifying the publishing Edge Admin instance.\n\n```json\n{\n  \"specversion\": \"1.0\",\n  \"id\": \"<uuid v4>\",\n  \"source\": \"https://github.com/wenet-ec/edge-core\",\n  \"type\": \"edge.node.registered\",\n  \"time\": \"2026-04-13T10:00:00Z\",\n  \"datacontenttype\": \"application/json\",\n  \"corename\": \"prod-us\",\n  \"data\": { ... }\n}\n```\n\nEnable publishing by setting `EVENT_BROKER_ENABLED=true` on the admin.\n\n**Explore:**\n- [AsyncAPI viewer](/asyncdoc) — this page\n- [Raw spec](/api/asyncapi) — AsyncAPI JSON\n\n**Webhook delivery:** every event in this spec is also deliverable via user-configured HTTP webhooks (always-on, no broker required). The same envelope is POSTed to each subscribed URL. Manage subscriptions via the REST `/api/v1/webhooks` endpoints — see the [Swagger UI](/swaggerui#/Events.Webhook) or [ReDoc](/redoc#tag/Events.Webhook).\n\n**REST API:** See the [Swagger UI](/swaggerui), [ReDoc](/redoc), or [download the OpenAPI spec](/api/openapi).\n",
     "title": "Edge Admin AsyncAPI",
     "version": "0.2.0"
   },
   "operations": {
+    "publish_edge_enrollment_key_verified": {
+      "action": "send",
+      "bindings": {
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
+        "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-nodes-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-nodes-events" }
+        }
+      },
+      "channel": { "$ref": "#/channels/edge.enrollment_key.verified" }
+    },
     "publish_edge_node_registered": {
       "action": "send",
       "bindings": {
@@ -1463,28 +1485,6 @@
         }
       },
       "channel": { "$ref": "#/channels/edge.node.update_triggered" }
-    },
-    "publish_edge_enrollment_key_verified": {
-      "action": "send",
-      "bindings": {
-        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
-        "kafka": { "bindingVersion": "0.5.0" },
-        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
-        "nats": { "bindingVersion": "0.1.0" },
-        "redis": { "bindingVersion": "0.1.0" },
-        "sns": {
-          "bindingVersion": "0.1.0",
-          "consumers": [
-            {
-              "endpoint": { "name": "edge-nodes-events-debug" },
-              "protocol": "sqs",
-              "rawMessageDelivery": true
-            }
-          ],
-          "topic": { "name": "edge-nodes-events" }
-        }
-      },
-      "channel": { "$ref": "#/channels/edge.enrollment_key.verified" }
     },
     "publish_edge_command_execution_created": {
       "action": "send",
@@ -1618,28 +1618,6 @@
       },
       "channel": { "$ref": "#/channels/edge.command_execution.pruned" }
     },
-    "publish_edge_self_update_request_completed": {
-      "action": "send",
-      "bindings": {
-        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
-        "kafka": { "bindingVersion": "0.5.0" },
-        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
-        "nats": { "bindingVersion": "0.1.0" },
-        "redis": { "bindingVersion": "0.1.0" },
-        "sns": {
-          "bindingVersion": "0.1.0",
-          "consumers": [
-            {
-              "endpoint": { "name": "edge-self-updates-events-debug" },
-              "protocol": "sqs",
-              "rawMessageDelivery": true
-            }
-          ],
-          "topic": { "name": "edge-self-updates-events" }
-        }
-      },
-      "channel": { "$ref": "#/channels/edge.self_update_request.completed" }
-    },
     "publish_edge_ssh_username_verified": {
       "action": "send",
       "bindings": {
@@ -1661,6 +1639,28 @@
         }
       },
       "channel": { "$ref": "#/channels/edge.ssh_username.verified" }
+    },
+    "publish_edge_self_update_request_completed": {
+      "action": "send",
+      "bindings": {
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
+        "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-self-updates-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-self-updates-events" }
+        }
+      },
+      "channel": { "$ref": "#/channels/edge.self_update_request.completed" }
     }
   },
   "servers": {

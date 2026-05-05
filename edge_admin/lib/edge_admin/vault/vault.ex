@@ -41,5 +41,9 @@ defmodule EdgeAdmin.Vault do
   schema in this list and re-encrypts every row through the active ciphers.
   """
   @spec encrypted_schemas() :: [module()]
-  def encrypted_schemas, do: []
+  def encrypted_schemas do
+    [
+      EdgeAdmin.Events.Webhooks.Schemas.Webhook
+    ]
+  end
 end

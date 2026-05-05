@@ -8,8 +8,8 @@ defmodule EdgeAdminMcp.Tools.Events.CreateWebhook do
     receivers verify the `X-Edge-Signature` header against their copy.
   - `headers` is a map of string→string headers stamped on every delivery
     (e.g. `Authorization: Bearer xoxb-...`).
-  - `event_filters` is a list of wildcard patterns (`*` matches any chars) matched against the envelope
-    `type`. Each pattern must match at least one current event type.
+  - `subscribed_events` is an explicit list of event-type strings — no wildcards.
+    Each entry must be a known event type from the catalog.
   """
   use EdgeAdminMcp, :tool
 
@@ -25,14 +25,18 @@ defmodule EdgeAdminMcp.Tools.Events.CreateWebhook do
     field :url, {:required, :string}
     field :secret, {:required, :string}, min_length: 32
     field :headers, :map
-    field :event_filters, {:required, {:list, :string}}
+    field :subscribed_events, {:required, {:list, :string}}
   end
 
   @impl true
   def execute(params, frame) do
     attrs =
       put_if(
-        %{"url" => params.url, "secret" => params.secret, "event_filters" => params.event_filters},
+        %{
+          "url" => params.url,
+          "secret" => params.secret,
+          "subscribed_events" => params.subscribed_events
+        },
         "headers",
         params[:headers]
       )

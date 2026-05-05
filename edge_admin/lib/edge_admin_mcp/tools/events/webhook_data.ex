@@ -8,7 +8,7 @@ defmodule EdgeAdminMcp.Tools.Events.WebhookData do
     %{
       id: webhook.id,
       url: webhook.url,
-      event_filters: webhook.event_filters,
+      subscribed_events: webhook.subscribed_events,
       inserted_at: webhook.inserted_at,
       updated_at: webhook.updated_at
     }

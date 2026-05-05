@@ -35,12 +35,12 @@ defmodule EdgeAdminWeb.Schemas.Webhooks.WebhookSchemas do
           description: "Destination URL — receives a POST per matching event",
           example: "https://example.com/edge-events"
         },
-        event_filters: %Schema{
+        subscribed_events: %Schema{
           type: :array,
           items: %Schema{type: :string},
           description:
-            "Wildcard patterns matched against envelope `type`. `*` matches any sequence of characters (including dots); `*` alone matches everything.",
-          example: ["edge.node.*", "edge.command_execution.completed"]
+            "Explicit list of event types this webhook fires on. Each entry is a literal event type from the catalog (no wildcards). See [AsyncAPI spec](/asyncdoc) for the full catalog.",
+          example: ["edge.node.registered", "edge.command_execution.completed"]
         },
         inserted_at: %Schema{
           type: :string,
@@ -56,14 +56,14 @@ defmodule EdgeAdminWeb.Schemas.Webhooks.WebhookSchemas do
       required: [
         :id,
         :url,
-        :event_filters,
+        :subscribed_events,
         :inserted_at,
         :updated_at
       ],
       example: %{
         id: "01234567-89ab-cdef-0123-456789abcdef",
         url: "https://example.com/edge-events",
-        event_filters: ["edge.node.*", "edge.command_execution.completed"],
+        subscribed_events: ["edge.node.registered", "edge.command_execution.completed"],
         inserted_at: "2026-05-05T10:00:00Z",
         updated_at: "2026-05-05T10:00:00Z"
       }
@@ -110,16 +110,14 @@ defmodule EdgeAdminWeb.Schemas.Webhooks.WebhookSchemas do
         verify the `X-Edge-Signature` header against their stored copy.
       - `headers` is an arbitrary string→string map stamped on every request
         (e.g. `Authorization: Bearer ...`). Up to 20 entries.
-      - `event_filters` are wildcard patterns matched against envelope
-        `type`. Each pattern must match at least one currently-known event
-        type — typos are rejected at create time.
+      - `subscribed_events` is an explicit list of event-type strings — no
+        wildcards. Each string must be a known event type from the catalog;
+        unknown values are rejected at create time.
 
       Delivery retry budget is `WEBHOOK_MAX_ATTEMPTS` (default 3).
 
-      Known event-type prefixes: `edge.node.*`, `edge.command_execution.*`,
-      `edge.self_update_request.*`, `edge.enrollment_key.*`,
-      `edge.ssh_username.*`. The full event catalog with payload schemas is
-      documented in the [AsyncAPI spec](/asyncdoc).
+      The full event catalog with payload schemas is documented in the
+      [AsyncAPI spec](/asyncdoc).
       """,
       type: :object,
       properties: %{
@@ -145,26 +143,25 @@ defmodule EdgeAdminWeb.Schemas.Webhooks.WebhookSchemas do
           description: "Extra HTTP headers. Up to 20 entries; each value up to 4096 characters.",
           example: %{"Authorization" => "Bearer xoxb-token", "X-Custom" => "value"}
         },
-        event_filters: %Schema{
+        subscribed_events: %Schema{
           type: :array,
           items: %Schema{
             type: :string,
-            pattern: "^[a-z0-9_*]+(\\.[a-z0-9_*]+)*$",
             maxLength: 256
           },
           minItems: 1,
           maxItems: 20,
           description:
-            "Wildcard patterns. `*` matches any sequence of characters (including dots); `*` alone matches everything. Each pattern must match at least one current event type.",
-          example: ["edge.node.*", "edge.command_execution.completed"]
+            "Explicit list of event types this webhook subscribes to. Each entry must be a known event type from the catalog. See [AsyncAPI spec](/asyncdoc).",
+          example: ["edge.node.registered", "edge.command_execution.completed"]
         }
       },
-      required: [:url, :secret, :event_filters],
+      required: [:url, :secret, :subscribed_events],
       example: %{
         url: "https://example.com/edge-events",
         secret: "a-cryptographically-random-32-byte-secret",
         headers: %{"Authorization" => "Bearer xoxb-token"},
-        event_filters: ["edge.node.*", "edge.command_execution.completed"]
+        subscribed_events: ["edge.node.registered", "edge.command_execution.completed"]
       }
     })
   end

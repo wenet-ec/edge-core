@@ -179,7 +179,7 @@ Ready-to-use broker compose files are in [`examples/event_brokers/`](examples/ev
 
 ### Webhooks
 
-Register webhook subscriptions through the REST API at `POST /api/v1/webhooks`. Each webhook stores an HTTPS URL, an HMAC-SHA256 `secret`, optional static `headers`, and a list of wildcard `event_filters` (`*` matches any sequence of characters including dots — e.g. `edge.node.*`, `edge.command_execution.completed`, `*` for everything). Webhooks are immutable after create — to change anything, delete and recreate. Retry budget per event is `WEBHOOK_MAX_ATTEMPTS` (default 3).
+Register webhook subscriptions through the REST API at `POST /api/v1/webhooks`. Each webhook stores an HTTPS URL, an HMAC-SHA256 `secret`, optional static `headers`, and an explicit list of `subscribed_events` — literal event-type strings from the catalog (e.g. `edge.node.registered`, `edge.command_execution.completed`). No wildcards; unknown event types are rejected at create time. Webhooks are immutable after create — to change anything, delete and recreate. Retry budget per event is `WEBHOOK_MAX_ATTEMPTS` (default 3).
 
 Sensitive columns (`secret`, `headers`) are encrypted at rest via Cloak — `CLOAK_KEY` and `CLOAK_TAG` are required at boot. Destination URLs are SSRF-checked at create time (loopback, RFC1918, link-local, cloud metadata IPs/hostnames denied; opt out with `WEBHOOK_ALLOW_PRIVATE_IPS=true` for homelab/dev). Each delivery is signed with `X-Edge-Signature: sha256=<hex>`. Each event is retried up to `WEBHOOK_MAX_ATTEMPTS` and then dropped; there is no row-level failure counter or auto-disable.
 

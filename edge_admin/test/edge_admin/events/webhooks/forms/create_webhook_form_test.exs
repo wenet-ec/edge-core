@@ -26,7 +26,7 @@ defmodule EdgeAdmin.Events.Webhooks.Forms.CreateWebhookFormTest do
       %{
         "url" => "https://203.0.113.10/hook",
         "secret" => String.duplicate("x", 32),
-        "event_filters" => ["edge.node.registered"]
+        "subscribed_events" => ["edge.node.registered"]
       },
       overrides
     )
@@ -36,6 +36,7 @@ defmodule EdgeAdmin.Events.Webhooks.Forms.CreateWebhookFormTest do
     test "minimum required fields succeed" do
       assert {:ok, attrs} = CreateWebhookForm.changeset(valid_attrs())
       assert attrs["url"] == "https://203.0.113.10/hook"
+      assert attrs["subscribed_events"] == ["edge.node.registered"]
     end
 
     test "headers are accepted" do
@@ -45,9 +46,17 @@ defmodule EdgeAdmin.Events.Webhooks.Forms.CreateWebhookFormTest do
       assert attrs["headers"] == %{"Authorization" => "Bearer xyz"}
     end
 
-    test "wildcard filter matching the catalog is accepted" do
-      assert {:ok, _} = CreateWebhookForm.changeset(valid_attrs(%{"event_filters" => ["edge.node.*"]}))
-      assert {:ok, _} = CreateWebhookForm.changeset(valid_attrs(%{"event_filters" => ["*"]}))
+    test "multiple known event types are accepted" do
+      assert {:ok, _} =
+               CreateWebhookForm.changeset(
+                 valid_attrs(%{
+                   "subscribed_events" => [
+                     "edge.node.registered",
+                     "edge.node.status_changed",
+                     "edge.command_execution.completed"
+                   ]
+                 })
+               )
     end
   end
 
@@ -64,10 +73,10 @@ defmodule EdgeAdmin.Events.Webhooks.Forms.CreateWebhookFormTest do
       assert %{secret: ["can't be blank"]} = errors_on(changeset)
     end
 
-    test "missing event_filters is rejected" do
-      attrs = Map.delete(valid_attrs(), "event_filters")
+    test "missing subscribed_events is rejected" do
+      attrs = Map.delete(valid_attrs(), "subscribed_events")
       assert {:error, changeset} = CreateWebhookForm.changeset(attrs)
-      assert %{event_filters: ["can't be blank"]} = errors_on(changeset)
+      assert %{subscribed_events: ["can't be blank"]} = errors_on(changeset)
     end
   end
 
@@ -107,34 +116,35 @@ defmodule EdgeAdmin.Events.Webhooks.Forms.CreateWebhookFormTest do
     end
   end
 
-  describe "changeset/1 — event_filters validation" do
+  describe "changeset/1 — subscribed_events validation" do
     test "empty list is rejected" do
-      assert {:error, changeset} = CreateWebhookForm.changeset(valid_attrs(%{"event_filters" => []}))
-      assert %{event_filters: [msg]} = errors_on(changeset)
-      assert msg =~ "at least one pattern"
+      assert {:error, changeset} = CreateWebhookForm.changeset(valid_attrs(%{"subscribed_events" => []}))
+      assert %{subscribed_events: [msg]} = errors_on(changeset)
+      assert msg =~ "at least one event type"
     end
 
-    test "more than 20 patterns is rejected" do
-      patterns = for _ <- 1..21, do: "edge.node.registered"
-      assert {:error, changeset} = CreateWebhookForm.changeset(valid_attrs(%{"event_filters" => patterns}))
-      assert %{event_filters: [msg]} = errors_on(changeset)
+    test "more than 20 events is rejected" do
+      events = for _ <- 1..21, do: "edge.node.registered"
+      assert {:error, changeset} = CreateWebhookForm.changeset(valid_attrs(%{"subscribed_events" => events}))
+      assert %{subscribed_events: [msg]} = errors_on(changeset)
       assert msg =~ "cannot exceed 20"
     end
 
-    test "invalid pattern is rejected with the underlying reason" do
+    test "unknown event type is rejected" do
       assert {:error, changeset} =
-               CreateWebhookForm.changeset(valid_attrs(%{"event_filters" => ["edge..node"]}))
+               CreateWebhookForm.changeset(valid_attrs(%{"subscribed_events" => ["edge.unknown.foo"]}))
 
-      assert %{event_filters: [msg]} = errors_on(changeset)
-      assert msg =~ "edge..node"
+      assert %{subscribed_events: [msg]} = errors_on(changeset)
+      assert msg =~ "unknown event type"
+      assert msg =~ "edge.unknown.foo"
     end
 
-    test "pattern matching no current event type is rejected" do
+    test "wildcard input is rejected (no longer supported)" do
       assert {:error, changeset} =
-               CreateWebhookForm.changeset(valid_attrs(%{"event_filters" => ["edge.unknown.foo"]}))
+               CreateWebhookForm.changeset(valid_attrs(%{"subscribed_events" => ["edge.node.*"]}))
 
-      assert %{event_filters: [msg]} = errors_on(changeset)
-      assert msg =~ "matches no current event type"
+      assert %{subscribed_events: [msg]} = errors_on(changeset)
+      assert msg =~ "unknown event type"
     end
   end
 

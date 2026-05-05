@@ -29,7 +29,7 @@ defmodule EdgeAdminWeb.Controllers.Events.WebhookController do
           ),
           QueryParams.string_filter(:event_type,
             description:
-              "Returns webhooks whose `event_filters` would match this concrete event type — same dispatch logic the publish path uses. Pass a literal event type (no wildcards), e.g. `edge.node.registered`."
+              "Returns webhooks whose `subscribed_events` list contains this event type. Pass a literal event type, e.g. `edge.node.registered`. See [AsyncAPI spec](/asyncdoc) for the catalog."
           )
         ] ++
         QueryParams.datetime_range_filter(:inserted_at) ++
@@ -66,7 +66,7 @@ defmodule EdgeAdminWeb.Controllers.Events.WebhookController do
   operation(:create,
     summary: "Create webhook",
     description:
-      "Create a webhook subscription. The destination URL is validated against the SSRF deny list at create time. `secret` (HMAC signing key, >= 32 bytes) and `headers` are write-only — encrypted at rest and never returned in any GET response. The full catalog of event types you can subscribe to via `event_filters` is documented in the [AsyncAPI spec](/asyncdoc).",
+      "Create a webhook subscription. The destination URL is validated against the SSRF deny list at create time. `secret` (HMAC signing key, >= 32 bytes) and `headers` are write-only — encrypted at rest and never returned in any GET response. `subscribed_events` is an explicit list of event types this webhook fires on; the full catalog is documented in the [AsyncAPI spec](/asyncdoc).",
     request_body: {"Webhook creation data", "application/json", WebhookSchemas.WebhookCreateRequest, required: true},
     responses: %{
       201 => {"Webhook created", "application/json", WebhookSchemas.WebhookSingleResponse},

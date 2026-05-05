@@ -8,27 +8,27 @@ defmodule EdgeAdmin.Events.Webhooks.Forms.CreateWebhookForm do
   """
   use EdgeAdmin.Form
 
-  alias EdgeAdmin.Events.Webhooks.Filter
+  alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Events.Webhooks.Ssrf
 
-  @max_filters 20
+  @max_events 20
   @min_secret_bytes 32
 
   embedded_schema do
     field(:url, :string)
     field(:secret, :string)
     field(:headers, :map)
-    field(:event_filters, {:array, :string})
+    field(:subscribed_events, {:array, :string})
   end
 
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
-    |> cast(attrs, [:url, :secret, :headers, :event_filters])
-    |> validate_required([:url, :secret, :event_filters])
+    |> cast(attrs, [:url, :secret, :headers, :subscribed_events])
+    |> validate_required([:url, :secret, :subscribed_events])
     |> validate_url()
     |> validate_secret()
     |> validate_headers()
-    |> validate_event_filters()
+    |> validate_subscribed_events()
     |> apply_action(:insert)
     |> case do
       {:ok, form} -> {:ok, to_map(form)}
@@ -93,31 +93,30 @@ defmodule EdgeAdmin.Events.Webhooks.Forms.CreateWebhookForm do
     end
   end
 
-  defp validate_event_filters(changeset) do
-    case get_change(changeset, :event_filters) do
+  defp validate_subscribed_events(changeset) do
+    case get_change(changeset, :subscribed_events) do
       nil ->
         changeset
 
       [] ->
-        add_error(changeset, :event_filters, "must include at least one pattern")
+        add_error(changeset, :subscribed_events, "must include at least one event type")
 
-      patterns when length(patterns) > @max_filters ->
-        add_error(changeset, :event_filters, "cannot exceed #{@max_filters} patterns")
+      events when length(events) > @max_events ->
+        add_error(changeset, :subscribed_events, "cannot exceed #{@max_events} events")
 
-      patterns ->
-        Enum.reduce(patterns, changeset, fn pattern, acc ->
-          case Filter.validate(pattern) do
-            :ok ->
-              acc
+      events ->
+        catalog = Catalog.all_event_types()
+        unknown = Enum.reject(events, &(&1 in catalog))
 
-            {:error, reason} ->
-              add_error(
-                acc,
-                :event_filters,
-                "#{pattern}: #{reason} (filters are immutable after create — fix typos before submitting)"
-              )
-          end
-        end)
+        if unknown == [] do
+          changeset
+        else
+          add_error(
+            changeset,
+            :subscribed_events,
+            "unknown event type(s): #{Enum.join(unknown, ", ")} — see /asyncdoc for the catalog"
+          )
+        end
     end
   end
 
@@ -126,7 +125,7 @@ defmodule EdgeAdmin.Events.Webhooks.Forms.CreateWebhookForm do
       "url" => form.url,
       "secret" => form.secret,
       "headers" => form.headers,
-      "event_filters" => form.event_filters
+      "subscribed_events" => form.subscribed_events
     }
     |> Enum.reject(fn {_k, v} -> is_nil(v) end)
     |> Map.new()

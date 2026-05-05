@@ -11,15 +11,16 @@ defmodule EdgeAdmin.Events.Webhooks do
 
   ## Key Concepts
 
-  - **Webhook**: A `(url, secret, headers, event_filters)` tuple persisted as
-    a row in the `webhooks` table. `secret` and `headers` are encrypted at
+  - **Webhook**: A `(url, secret, headers, subscribed_events)` tuple persisted
+    as a row in the `webhooks` table. `secret` and `headers` are encrypted at
     rest. **Webhooks are immutable after create** — there is no update
     endpoint. To change anything, delete and recreate.
-  - **Event filter**: A wildcard pattern matched against an envelope's
-    `type` field (`*` matches any sequence of characters, including dots).
+  - **`subscribed_events`**: An explicit list of event-type strings, each one
+    a literal entry from `EdgeAdmin.Events.Catalog.all_event_types/0`. No
+    wildcards. The catalog is the contract; subscriptions reference it by
+    exact string. Validated at create time.
   - **Fan-out**: At publish time, the events context calls `fan_out/1` which
-    enqueues one Oban job per matching webhook with `WEBHOOK_MAX_ATTEMPTS` as
-    the per-job retry budget.
+    enqueues one Oban job per webhook subscribed to the envelope's event type.
   - **Delivery**: An Oban worker dequeues each job and calls `deliver_event/2`,
     which signs the body, makes the HTTP call, and classifies the response.
     Retry budgeting is Oban's responsibility — the worker just signals the
@@ -30,9 +31,9 @@ defmodule EdgeAdmin.Events.Webhooks do
   ### Publish path
   1. Business logic calls `EdgeAdmin.Events.publish/1` with a typed event
   2. Events builds a CloudEvents envelope and calls `Webhooks.fan_out/1`
-  3. `fan_out/1` queries webhooks whose filters match the envelope's `type`
-     and inserts one `DeliverEventWorker` job per match, with `max_attempts`
-     read from `WEBHOOK_MAX_ATTEMPTS`
+  3. `fan_out/1` queries webhooks subscribed to the envelope's `type` and
+     inserts one `DeliverEventWorker` job per match, with `max_attempts` read
+     from `WEBHOOK_MAX_ATTEMPTS`
   4. Each worker invocation calls `deliver_event/2` which performs the HTTP
      POST and returns the outcome to Oban
 
@@ -50,11 +51,11 @@ defmodule EdgeAdmin.Events.Webhooks do
       iex> create_webhook(%{
       ...>   "url" => "https://example.com/hook",
       ...>   "secret" => "a-32-byte-shared-secret-string!!",
-      ...>   "event_filters" => ["edge.node.*", "edge.command_execution.completed"]
+      ...>   "subscribed_events" => ["edge.node.registered", "edge.command_execution.completed"]
       ...> })
       {:ok, %Webhook{}}
 
-      # List webhooks matching an event type
+      # List webhooks subscribed to a given event type
       iex> list_webhooks(%{"event_type" => "edge.node.registered"})
       {:ok, {[%Webhook{}, ...], %Flop.Meta{}}}
 
@@ -68,7 +69,6 @@ defmodule EdgeAdmin.Events.Webhooks do
 
   alias Ecto.Query.CastError
   alias EdgeAdmin.Events.Webhooks.Delivery
-  alias EdgeAdmin.Events.Webhooks.Filter
   alias EdgeAdmin.Events.Webhooks.Forms
   alias EdgeAdmin.Events.Webhooks.Schemas.Webhook
   alias EdgeAdmin.Events.Webhooks.Workers.DeliverEventWorker
@@ -80,12 +80,11 @@ defmodule EdgeAdmin.Events.Webhooks do
   Lists webhooks with filtering, sorting, and pagination via Flop.
 
   Supports a custom `event_type` filter that returns only webhooks whose
-  stored `event_filters` would match the given concrete event type — same
-  semantics as `fan_out/1`'s per-publish dispatch. Applied as an
-  Elixir-side post-filter on each fetched page, after Flop's pagination,
-  because the wildcard match is not expressible cleanly in SQL across both
-  adapters. Pages can therefore return fewer than `page_size` results;
-  `meta.has_next_page?` still reflects the underlying scan.
+  `subscribed_events` list contains the given event type. Applied as an
+  Elixir-side post-filter on each fetched page (set membership) — same shape
+  used by `fan_out/1` so the two cannot drift. Pages can return fewer than
+  `page_size` results; `meta.has_next_page?` still reflects the underlying
+  scan.
 
   ## Returns
   - `{:ok, {webhooks, meta}}` - Page of webhooks with Flop.Meta pagination info
@@ -94,12 +93,9 @@ defmodule EdgeAdmin.Events.Webhooks do
   @spec list_webhooks(map()) ::
           {:ok, {[Webhook.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list_webhooks(params \\ %{}) do
+    {event_type, params} = pop_event_type(params)
+
     flop_params = EdgeAdmin.RequestParser.parse(params)
-
-    {event_type_filters, other_filters} =
-      Enum.split_with(flop_params.filters || [], &(&1.field == :event_type))
-
-    flop_params = Map.put(flop_params, :filters, other_filters)
 
     {ilike_filters, flop_params} =
       EdgeAdmin.RequestParser.split_ilike_filters(flop_params, [:url])
@@ -114,18 +110,26 @@ defmodule EdgeAdmin.Events.Webhooks do
            replace_invalid_params: true
          ) do
       {:ok, {webhooks, meta}} ->
-        {:ok, {filter_by_event_type(webhooks, event_type_filters), meta}}
+        {:ok, {filter_by_event_type(webhooks, event_type), meta}}
 
       {:error, meta} ->
         {:error, meta}
     end
   end
 
-  defp filter_by_event_type(webhooks, []), do: webhooks
+  defp pop_event_type(params) do
+    case Map.pop(params, "event_type") do
+      {nil, rest} -> {nil, rest}
+      {value, rest} when is_binary(value) -> {value, rest}
+      {_other, rest} -> {nil, rest}
+    end
+  end
 
-  defp filter_by_event_type(webhooks, [%{value: event_type} | _]) do
+  defp filter_by_event_type(webhooks, nil), do: webhooks
+
+  defp filter_by_event_type(webhooks, event_type) when is_binary(event_type) do
     Enum.filter(webhooks, fn webhook ->
-      Enum.any?(webhook.event_filters, &Filter.matches?(&1, event_type))
+      event_type in webhook.subscribed_events
     end)
   end
 

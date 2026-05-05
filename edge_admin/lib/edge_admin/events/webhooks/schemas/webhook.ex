@@ -3,7 +3,7 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
   @moduledoc false
   use EdgeAdmin.Schema
 
-  alias EdgeAdmin.Events.Webhooks.Filter
+  alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Vault.EncryptedBinary
   alias EdgeAdmin.Vault.EncryptedMap
 
@@ -12,7 +12,7 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
           url: String.t(),
           secret: binary() | nil,
           headers: map() | nil,
-          event_filters: [String.t()],
+          subscribed_events: [String.t()],
           inserted_at: DateTime.t(),
           updated_at: DateTime.t()
         }
@@ -31,23 +31,23 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
     field(:url, :string)
     field(:secret, EncryptedBinary, redact: true)
     field(:headers, EncryptedMap, redact: true)
-    field(:event_filters, {:array, :string})
+    field(:subscribed_events, {:array, :string})
 
     timestamps()
   end
 
-  @max_filters 20
+  @max_events 20
   @min_secret_bytes 32
 
   @doc false
   def changeset(webhook, attrs) do
     webhook
-    |> cast(attrs, [:url, :secret, :headers, :event_filters])
-    |> validate_required([:url, :secret, :event_filters])
+    |> cast(attrs, [:url, :secret, :headers, :subscribed_events])
+    |> validate_required([:url, :secret, :subscribed_events])
     |> validate_url()
     |> validate_secret()
     |> validate_headers()
-    |> validate_event_filters()
+    |> validate_subscribed_events()
   end
 
   defp validate_url(changeset) do
@@ -102,24 +102,30 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
     end
   end
 
-  defp validate_event_filters(changeset) do
-    case get_change(changeset, :event_filters) do
+  defp validate_subscribed_events(changeset) do
+    case get_change(changeset, :subscribed_events) do
       nil ->
         changeset
 
       [] ->
-        add_error(changeset, :event_filters, "must include at least one pattern")
+        add_error(changeset, :subscribed_events, "must include at least one event type")
 
-      patterns when length(patterns) > @max_filters ->
-        add_error(changeset, :event_filters, "cannot exceed #{@max_filters} patterns")
+      events when length(events) > @max_events ->
+        add_error(changeset, :subscribed_events, "cannot exceed #{@max_events} events")
 
-      patterns ->
-        Enum.reduce(patterns, changeset, fn pattern, acc ->
-          case Filter.validate(pattern) do
-            :ok -> acc
-            {:error, reason} -> add_error(acc, :event_filters, "#{pattern}: #{reason}")
-          end
-        end)
+      events ->
+        catalog = Catalog.all_event_types()
+        unknown = Enum.reject(events, &(&1 in catalog))
+
+        if unknown == [] do
+          changeset
+        else
+          add_error(
+            changeset,
+            :subscribed_events,
+            "unknown event type(s): #{Enum.join(unknown, ", ")}"
+          )
+        end
     end
   end
 end

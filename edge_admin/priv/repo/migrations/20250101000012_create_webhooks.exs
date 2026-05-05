@@ -8,7 +8,7 @@ defmodule EdgeAdmin.Repo.Migrations.CreateWebhooks do
       add :url, :string, null: false
       add :secret, :binary, null: false
       add :headers, :binary
-      add :event_filters, {:array, :string}, null: false, default: []
+      add :subscribed_events, {:array, :string}, null: false, default: []
 
       timestamps(type: :utc_datetime)
     end

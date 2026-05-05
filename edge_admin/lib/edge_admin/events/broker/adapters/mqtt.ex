@@ -4,8 +4,14 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
   MQTT adapter for the event broker.
 
   Publishes events to an MQTT broker via the `emqtt` Erlang client. The
-  CONNECT is hardcoded to MQTT 5 (`proto_ver: :v5`); MQTT 3.1.1 brokers are
-  not supported. Topic = event type with `.` rewritten to `/`
+  CONNECT uses MQTT 3.1.1 (`proto_ver: :v4`) — the lowest common denominator
+  every modern broker accepts. v5 brokers downgrade our publisher session
+  to 3.1.1 transparently; operators are free to run v5 sessions on their
+  subscribers and broker-side features (session expiry, shared subs,
+  retained-message TTL) independently. We don't use any v5-only publish
+  features (user properties, content-type, response topics), so there's
+  nothing to lose by speaking 3.1.1 on the way out. Topic = event type with
+  `.` rewritten to `/`
   (e.g. `edge/node/registered`) so MQTT segment-wildcards work naturally —
   subscribers can use `edge/#`, `edge/node/+`, `edge/execution/completed`, etc.
 
@@ -203,7 +209,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
       port: Keyword.fetch!(config, :port),
       clientid: client_id(config),
       clean_start: true,
-      proto_ver: :v5,
+      proto_ver: :v4,
       keepalive: 60,
       reconnect: 0
     ]

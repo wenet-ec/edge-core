@@ -130,7 +130,7 @@ edge/#                     ← everything
 
 Default publish QoS is `1` (at-least-once with broker ACK). Configurable globally via `EVENT_BROKER_MQTT_QOS=0|1|2` — there is no per-event QoS. Consumers should dedup on envelope `id` regardless (multi-admin setups produce duplicate `node.status_changed` events from independent health checkers).
 
-The adapter publishes as MQTT 5 (`proto_ver: :v5` is hardcoded) — MQTT 3.1.1 brokers are not supported.
+The adapter publishes as MQTT 3.1.1 (`proto_ver: :v4`) — the lowest common denominator every modern broker accepts. v5 brokers (EMQX, HiveMQ, Mosquitto 2.x, etc.) downgrade our publisher session to 3.1.1 transparently while operators run v5 features (session expiry, shared subs, retained-message TTL) on their subscribers and broker-side as usual. We don't use any v5-only publish features (user properties, content-type, response topics), so 3.1.1 on the way out is free. Targets capped at 3.1.1 (older AWS IoT Core accounts, LTS Mosquitto, embedded brokers) work without configuration.
 
 **Durability is the broker's and consumer's concern.** MQTT QoS controls only the publisher↔broker↔subscriber delivery handshake — it does not make messages durable. Subscribers wanting offline queueing connect with `Session Expiry Interval > 0` on their own connection.
 

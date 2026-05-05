@@ -96,6 +96,8 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "summary" => "Any Kafka-compatible broker (Redpanda recommended — no JVM).",
         "description" =>
           "Redpanda is the recommended default — no JVM, lighter than vanilla Kafka. " <>
+            "Compatible with Kafka 0.10+ (released Feb 2017) and any wire-compatible broker — " <>
+            "brod auto-negotiates the per-API protocol version on connect. " <>
             "Configure via EVENT_BROKER_KAFKA_URLS (comma-separated `host:port` cluster list). " <>
             "SASL auth via EVENT_BROKER_KAFKA_USERNAME / EVENT_BROKER_KAFKA_PASSWORD / EVENT_BROKER_KAFKA_SASL_MECHANISM.",
         "security" => [%{"$ref" => "#/components/securitySchemes/kafkaSasl"}]
@@ -131,10 +133,11 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "host" => "edge_event_broker_mqtt:1883",
         "protocol" => "mqtt",
         "title" => "MQTT",
-        "summary" => "Any MQTT 5 broker. Configurable QoS, topic = event type with `/` separators.",
+        "summary" => "Any MQTT 3.1.1 or MQTT 5 broker. Configurable QoS, topic = event type with `/` separators.",
         "description" =>
-          "Works against any MQTT 5 broker (EMQX, Mosquitto, HiveMQ, AWS IoT Core, etc.). " <>
-            "The adapter hardcodes `proto_ver: :v5`; MQTT 3.1.1 brokers are not supported. " <>
+          "Works against any MQTT broker (EMQX, Mosquitto, HiveMQ, AWS IoT Core, etc.). " <>
+            "The publisher CONNECT uses MQTT 3.1.1 (`proto_ver: :v4`) as the lowest common denominator; " <>
+            "v5 brokers downgrade our session to 3.1.1 transparently while operators run v5 freely on their subscribers. " <>
             "Configure via EVENT_BROKER_MQTT_URL (single host:port). " <>
             "Topic = event type with `.` rewritten to `/` (e.g. `edge/node/registered`). " <>
             "Subscribers use MQTT wildcards: `edge/#`, `edge/node/+`, etc. " <>

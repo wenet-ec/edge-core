@@ -8,15 +8,17 @@ defmodule EdgeAdmin.Events.Broker.Adapters.GooglePubsub do
 
   ## Topics
 
-  Three Pub/Sub topics by domain (matches the AWS SNS adapter convention):
+  Four Pub/Sub topics by domain (matches the AWS SNS adapter convention):
 
       edge-nodes-events
       edge-commands-events
       edge-self-updates-events
+      edge-ssh-events
 
-  Topics must be pre-provisioned in the GCP project (Console / `gcloud` /
-  Terraform); the adapter does not create them. The full resource name is
-  built from `EVENT_BROKER_GOOGLE_PUBSUB_PROJECT` + optional
+  `edge.enrollment_key.*` events also route to `edge-nodes-events` — same
+  domain. Topics must be pre-provisioned in the GCP project (Console /
+  `gcloud` / Terraform); the adapter does not create them. The full resource
+  name is built from `EVENT_BROKER_GOOGLE_PUBSUB_PROJECT` + optional
   `EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX` + the suffix above:
 
       projects/{project}/topics/{prefix}{suffix}

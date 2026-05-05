@@ -68,6 +68,7 @@ defmodule EdgeAdmin.Admins.Metadata do
     total_nodes: 5,             # total nodes across all clusters in the system
     total_edge_capacity: 498,   # sum of edge_node_capacity across all admins
     degraded: false,            # true when total_nodes > total_edge_capacity
+    weak_leader: "admin-abc123", # alphabetically first admin name; see am_i_weak_leader?/0
     topology: [
       %{name: "admin-abc123",
         max_wireguard_peers: 250, admin_peer_count: 1, edge_node_capacity: 249,

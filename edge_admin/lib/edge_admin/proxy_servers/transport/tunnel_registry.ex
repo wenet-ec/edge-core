@@ -5,7 +5,7 @@ defmodule EdgeAdmin.ProxyServers.Transport.TunnelRegistry do
   drain on shutdown.
 
   Backed by an ETS table owned by a supervised GenServer. Handlers call
-  `register/1` on entry and `unregister/1` on exit; the registry demonitors
+  `register/1` on entry and `unregister/0` on exit; the registry demonitors
   them automatically if the owner crashes.
 
   `drain/1` sends every registered handler a `{:drain, grace_ms}` message and

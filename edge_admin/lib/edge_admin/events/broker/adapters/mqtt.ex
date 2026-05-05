@@ -3,10 +3,11 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
   @moduledoc """
   MQTT adapter for the event broker.
 
-  Publishes events to an MQTT broker via the `emqtt` Erlang client. Topic =
-  event type with `.` rewritten to `/` (e.g. `edge/node/registered`) so MQTT
-  segment-wildcards work naturally — subscribers can use `edge/#`,
-  `edge/node/+`, `edge/execution/completed`, etc.
+  Publishes events to an MQTT broker via the `emqtt` Erlang client. The
+  CONNECT is hardcoded to MQTT 5 (`proto_ver: :v5`); MQTT 3.1.1 brokers are
+  not supported. Topic = event type with `.` rewritten to `/`
+  (e.g. `edge/node/registered`) so MQTT segment-wildcards work naturally —
+  subscribers can use `edge/#`, `edge/node/+`, `edge/execution/completed`, etc.
 
   Pub/sub semantics — durability, retention, and replay are the broker's
   concern. MQTT QoS controls only the publisher↔broker↔subscriber delivery

@@ -11,15 +11,17 @@ defmodule EdgeAdmin.Events.Broker.Adapters.AwsSns do
 
   ## Topics
 
-  Three SNS topics by domain (matches the Kafka adapter convention):
+  Four SNS topics by domain (matches the Kafka adapter convention):
 
       edge-nodes-events           partition: n/a (SNS does not partition)
       edge-commands-events
       edge-self-updates-events
+      edge-ssh-events
 
-  Topics must be pre-provisioned in the AWS account (Console / CLI / Terraform);
-  the adapter does not create them. The full topic ARN is constructed from
-  `EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX` + the suffix above.
+  `edge.enrollment_key.*` events also route to `edge-nodes-events` — same
+  domain. Topics must be pre-provisioned in the AWS account (Console / CLI /
+  Terraform); the adapter does not create them. The full topic ARN is
+  constructed from `EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX` + the suffix above.
 
   ## Routing / filtering — message attributes, not topic patterns
 

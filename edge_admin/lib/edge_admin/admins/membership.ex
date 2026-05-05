@@ -17,35 +17,33 @@ defmodule EdgeAdmin.Admins.Membership do
 
   ## Responsibilities
 
-  1. **VPN Network Join**
+  1. **VPN Network Join** (step 1)
      - Join admin cluster VPN network
      - Create network if this is the first admin in the cluster
-     - Obtain Netmaker host ID for this admin
+     - Wait for Netmaker host registration and netclient join (bounded)
 
-  2. **Erlang Distribution**
+  2. **Erlang Distribution** (step 2)
      - Start distributed Erlang with configured cookie
      - Set node name based on admin DNS hostname
      - Enable inter-admin communication
 
-  3. **Peer Discovery**
-     - Query Netmaker for other admins in the cluster
-     - Connect to peer Erlang nodes
-     - Enable distributed syn registry
+  3. **syn Initialization** (step 3)
+     - Add this node to `:admin_scope`
+     - Join the admin-cluster syn group with this admin's metadata
+     - Enable cross-admin topology awareness (`:cluster_scope` for gateways
+       is initialized separately by `EdgeAdmin.EdgeClusters`)
 
-  4. **syn Initialization**
-     - Join cluster_scope for Gateway registration
-     - Enable cross-admin request routing
+  4. **Peer Discovery** (step 4)
+     - Query Netmaker for other admins in the cluster
+     - Connect to peer Erlang nodes via `Discovery.scan_and_connect_admins/0`
 
   ## Membership Sequence
 
   ```
-  1. Ensure Netmaker superadmin exists
-  2. Join admin cluster network (create if needed)
-  3. Get Netmaker host ID
-  4. Start Erlang distribution
-  5. Discover peer admins via Netmaker API
-  6. Connect to peer Erlang nodes
-  7. Initialize syn registry
+  1. Join admin cluster network (create if needed) + wait for Netmaker / netclient
+  2. Start Erlang distribution
+  3. Initialize syn (add :admin_scope, join cluster group with metadata)
+  4. Discover peer admins via Netmaker API and connect
   ```
 
   ## Failure Handling
@@ -58,9 +56,9 @@ defmodule EdgeAdmin.Admins.Membership do
   ## Configuration
 
   All values read from Application config (set in runtime.exs):
-  - `:admin_id` - Random 12-char identifier (e.g., "7k3m9p2n")
-  - `:admin_name` - Prefixed name (e.g., "admin-7k3m9p2n")
-  - `:admin_cluster_name` - Shared cluster name (e.g., "admin-cluster-main")
+  - `:admin_id` - Random 12-char identifier (e.g., "7k3m9p2nq8r4")
+  - `:admin_name` - Prefixed name (e.g., "admin-7k3m9p2nq8r4")
+  - `:admin_cluster_name` - Shared cluster name (e.g., "admin-cluster-a")
   - `:admin_max_wireguard_peers` - WireGuard peer budget for this admin (e.g., 250).
     Counts both admin-mesh peers and edge-node peers. The metadata layer derives
     `edge_node_capacity = max_wireguard_peers - (total_admins - 1)` from this.

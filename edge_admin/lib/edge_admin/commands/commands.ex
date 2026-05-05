@@ -14,13 +14,20 @@ defmodule EdgeAdmin.Commands do
   - **Targeting**: Specification of which nodes should execute a command (all/specific nodes/clusters)
   - **Delivery**: Process of sending pending executions to healthy nodes via HTTP
   - **Status Lifecycle**: `pending` → `sent` → `completed`
+    - Terminal states: `completed` | `cancelled` | `expired`
+    - From `pending` or `sent`: admin can cancel; scheduler can mark `expired`
+      when the command's `expired_at` passes
+    - Race-window detail: `cancelled` / `expired` rows with `nil exit_code`
+      can still be overwritten by a late agent report
+      (see `Checks.ExecutionAcceptsResultCheck`)
 
   ## Architecture
 
   ### Async Execution Flow
   1. Command created with targeting specification
   2. Background worker creates execution records for targeted nodes
-  3. Scheduler delivers pending executions to healthy nodes (every 10s)
+  3. Scheduler delivers pending executions to healthy nodes (every minute,
+     `EXECUTION_DELIVERY_SCHEDULE`, default `* * * * *`)
   4. Nodes execute commands and report results back
   5. Executions marked as completed with output and exit code
 
@@ -512,9 +519,11 @@ defmodule EdgeAdmin.Commands do
   - `attrs` - Map containing:
     - `command_text` - The command to execute
     - `targeting` - Targeting specification:
-      - `type` - Either "all" or "nodes"
+      - `type` - One of "all", "nodes", or "clusters"
       - `node_ids` - List of node IDs (required for "nodes" type)
+      - `cluster_names` - List of cluster names (required for "clusters" type)
       - `node_filters` - Optional filters (map)
+      - `cluster_filters` - Optional filters for "all"/"clusters" types (map)
 
   ## Returns
 
@@ -902,7 +911,8 @@ defmodule EdgeAdmin.Commands do
   @doc """
   Delivers pending command executions for clusters owned by this admin.
 
-  Called by Quantum scheduler every 10 seconds. Uses local metadata to determine
+  Called by the Quantum LocalScheduler on the `EXECUTION_DELIVERY_SCHEDULE`
+  cadence (default: every minute). Uses local metadata to determine
   which clusters this admin owns, then delivers pending executions directly to agents.
 
   ## Behavior
@@ -1067,11 +1077,13 @@ defmodule EdgeAdmin.Commands do
 
   ## Parameters
   - `execution` - The execution struct
-  - `params` - Map (can be empty, no params needed)
+  - `params` - Currently unused; accepted for symmetry with the controller surface.
+    Pass `%{}` from new call sites.
 
   ## Returns
   - `{:ok, execution}` - Acknowledgment succeeded
-  - `{:error, changeset}` - Validation failed (not pending)
+  - `{:error, {:conflict, reason}}` - Execution not in `"pending"` status
+  - `{:error, changeset}` - Status update failed validation
 
   ## Examples
 
@@ -1079,7 +1091,9 @@ defmodule EdgeAdmin.Commands do
       {:ok, %CommandExecution{status: "sent"}}
   """
   @spec acknowledge_execution(CommandExecution.t(), map()) ::
-          {:ok, CommandExecution.t()} | {:error, {:conflict, String.t()}}
+          {:ok, CommandExecution.t()}
+          | {:error, {:conflict, String.t()}}
+          | {:error, Ecto.Changeset.t()}
   def acknowledge_execution(execution, _params) do
     with :ok <- Checks.ExecutionPendingCheck.check(execution),
          {:ok, updated} <- update_command_execution(execution, %{"status" => "sent", "sent_at" => DateTime.utc_now()}) do
@@ -1091,20 +1105,28 @@ defmodule EdgeAdmin.Commands do
   @doc """
   Updates command execution result from agent.
 
-  Validates execution status and updates with output and exit code.
-  Automatically marks execution as completed.
+  Validates execution status and updates with the agent-reported result. The
+  agent is the source of truth for terminal status: an `exit_code: 143`
+  (SIGTERM) is rewritten to `cancelled`, an agent-reported `status: "expired"`
+  passes through, and everything else is recorded as `completed`.
 
   ## Parameters
   - `execution` - The execution struct
-  - `params` - Map with "output" and "exit_code"
+  - `params` - Map with:
+    - `"status"` (required) — `"completed"` or `"expired"`
+    - `"output"` (optional) — command stdout/stderr text
+    - `"exit_code"` (optional) — integer; 143 forces cancelled, 124 categorised as timeout
+    - `"completed_at"` (optional) — ISO 8601 datetime; defaults to now
 
   ## Returns
   - `{:ok, execution}` - Update succeeded
   - `{:error, changeset}` - Validation failed
+  - `{:error, {:conflict, reason}}` - Execution not in a state that accepts a result
 
   ## Examples
 
       iex> update_command_execution_result(execution, %{
+      ...>   "status" => "completed",
       ...>   "output" => "Command output",
       ...>   "exit_code" => 0
       ...> })
@@ -1181,16 +1203,20 @@ defmodule EdgeAdmin.Commands do
   Cancels a command execution.
 
   Handles two scenarios:
-  1. Pending - Updates DB to completed with "cancelled" message
-  2. Sent - Sends cancellation request to agent via gateway (best-effort)
+  1. Pending — Updates DB status to `"cancelled"` immediately (command never
+     reached the agent, no output / exit code).
+  2. Sent — Sends best-effort cancellation request to agent via Gateway. The
+     row's status is left as `"sent"` until the agent reports back (which may
+     be `cancelled` or, if the agent already finished, `completed`).
 
   ## Parameters
     - execution: CommandExecution struct (must be preloaded with :cluster)
 
   ## Returns
-    - `{:ok, %{result: "cancellation request sent"}}` - Success
-    - `{:error, {:conflict, reason}}` - Execution not in cancellable state
-    - `{:error, :service_unavailable}` - Agent unreachable (sent status only)
+    - `{:ok, %{result: "execution cancelled"}}` — pending branch, DB updated
+    - `{:ok, %{result: "cancellation request sent"}}` — sent branch, agent reachable
+    - `{:error, {:conflict, reason}}` — execution not in cancellable state
+    - `{:error, :service_unavailable}` — agent unreachable (sent branch only)
   """
   @spec cancel_command_execution(CommandExecution.t()) ::
           {:ok, map()} | {:error, {:conflict, String.t()}} | {:error, :service_unavailable}

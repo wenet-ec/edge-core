@@ -29,10 +29,12 @@ defmodule EdgeAdmin.EdgeClusters do
   - `EdgeClusters.Supervisor`: DynamicSupervisor for Gateway processes
   - `EdgeClusters.Gateway`: Per-cluster GenServer managing VPN connection
 
-  **Race Condition Handling**: Starts after Metadata but handles timing gracefully:
-  - Subscribe to PubSub first
-  - Then read ETS immediately
-  - Result: Never miss assignments regardless of startup order
+  **Race Condition Handling**: `init/1` only subscribes to local metadata events
+  and starts with an empty `current_clusters` set — it does NOT pre-load ETS
+  assignments. This is safe because `Metadata.init/1` always runs an initial
+  recomputation that broadcasts `:metadata_recomputed` once it completes, which
+  triggers our first reconciliation. So no matter the startup order between
+  `Metadata` and `EdgeClusters`, the first event is never missed.
 
   **Anti-Thrashing**: Simple boolean flag prevents rapid reconciliation cycles:
   - If reconciling, set `pending_reconcile: true` (don't interrupt)
@@ -42,7 +44,7 @@ defmodule EdgeAdmin.EdgeClusters do
   ## Examples
 
       # Coordinator receives metadata event
-      {:metadata_recomputed, ...} -> reconcile_gateways()
+      :metadata_recomputed -> reconcile_gateways()
 
       # Result: Start Gateway for new cluster
       DynamicSupervisor.start_child(GatewaySupervisor, {Gateway, cluster: "prod"})

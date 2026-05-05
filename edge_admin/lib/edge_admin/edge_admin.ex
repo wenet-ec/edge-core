@@ -1,10 +1,11 @@
 # edge_admin/lib/edge_admin/edge_admin.ex
 defmodule EdgeAdmin do
   @moduledoc """
-  EdgeAdmin keeps the contexts that define your domain
-  and business logic.
+  Edge Admin: cloud-side orchestrator for Edge Core.
 
-  Contexts are also responsible for managing your data, regardless
-  if it comes from the database, an external API or others.
+  Top-level namespace. Business logic lives in per-domain contexts
+  (`EdgeAdmin.Nodes`, `EdgeAdmin.Commands`, `EdgeAdmin.Vpn`,
+  `EdgeAdmin.EdgeClusters`, `EdgeAdmin.Events`, etc.); see
+  `docs/architecture.md` for the full design.
   """
 end

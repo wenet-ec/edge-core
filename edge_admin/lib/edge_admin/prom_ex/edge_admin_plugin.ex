@@ -17,6 +17,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
   - Cluster reconciliation (Oban worker)
   - Self-update request processing
   - Event broker publishing (opt-in — zero events when disabled)
+  - Webhook delivery (fan-out, per-attempt result, duration)
   """
 
   use PromEx.Plugin

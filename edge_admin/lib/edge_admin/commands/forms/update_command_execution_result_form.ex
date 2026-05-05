@@ -23,6 +23,7 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
   - `attrs` - Map containing execution result attributes
 
   ## Validations
+  - `status` - Required, must be `"completed"` or `"expired"`
   - `output` - Optional, command output text
   - `exit_code` - Optional, must be integer if present
   - `completed_at` - Optional, must be valid ISO8601 datetime if present, defaults to now

@@ -91,7 +91,9 @@ defmodule EdgeAdmin.Metrics do
   Returns human-friendly admin metrics by parsing raw Prometheus text from admin PromEx.
 
   ## Returns
-  - `{:ok, %AdminMetrics{}}` - Structured metrics with application, metadata, membership, nodes, oban_queues
+  - `{:ok, %AdminMetrics{}}` - Structured metrics with application, metadata,
+    membership, discovery, nodes, quantum, vpn, commands, ssh, reconciliation,
+    self_updates, gateways, proxy, event_broker, webhook, oban_queues
   - `{:error, reason}` - PromEx unavailable
   """
   @spec get_admin_metrics() :: {:ok, AdminMetrics.t()} | {:error, term()}
@@ -117,10 +119,10 @@ defmodule EdgeAdmin.Metrics do
   - `node_id` - Node UUID (string)
 
   ## Returns
-  - `{:ok, metrics_text}` - Raw Prometheus metrics in text format
-  - `{:error, :node_not_found}` - Node not assigned to any cluster (ETS) or not in DB
-  - `{:error, :gateway_not_found}` - Gateway process not found
-  - `{:error, reason}` - HTTP request failed and no cache available
+  - `{:ok, metrics_text}` - Raw Prometheus metrics (live from VPN or cache)
+  - `{:error, :not_found}` - Node not in DB
+  - `{:error, :service_unavailable}` - VPN scrape failed AND no fresh cache available
+    (covers gateway-missing, cluster-not-in-ETS, scrape timeout, agent error)
   """
   @spec scrape_host_metrics(binary()) :: {:ok, String.t()} | {:error, term()}
   def scrape_host_metrics(node_id) do
@@ -164,10 +166,10 @@ defmodule EdgeAdmin.Metrics do
   - `node_id` - Node UUID (string)
 
   ## Returns
-  - `{:ok, metrics_text}` - Raw Prometheus metrics in text format
-  - `{:error, :node_not_found}` - Node not assigned to any cluster (ETS) or not in DB
-  - `{:error, :gateway_not_found}` - Gateway process not found
-  - `{:error, reason}` - HTTP request failed and no cache available
+  - `{:ok, metrics_text}` - Raw Prometheus metrics (live from VPN or cache)
+  - `{:error, :not_found}` - Node not in DB
+  - `{:error, :service_unavailable}` - VPN scrape failed AND no fresh cache available
+    (covers gateway-missing, cluster-not-in-ETS, scrape timeout, agent error)
   """
   @spec scrape_agent_metrics(binary()) :: {:ok, String.t()} | {:error, term()}
   def scrape_agent_metrics(node_id) do
@@ -181,7 +183,8 @@ defmodule EdgeAdmin.Metrics do
   - `node_id` - Node UUID (string)
 
   ## Returns
-  - `{:ok, %AgentMetrics{}}` - Structured metrics with application, commands, discovery, proxy, SSH, Oban
+  - `{:ok, %AgentMetrics{}}` - Structured metrics with application, commands,
+    discovery, proxy, ssh, vpn, health_check, oban_queues
   - `{:error, reason}` - Various error reasons
   """
   @spec get_agent_metrics(binary()) :: {:ok, AgentMetrics.t()} | {:error, term()}
@@ -277,10 +280,10 @@ defmodule EdgeAdmin.Metrics do
   - `node_id` - Node UUID (string)
 
   ## Returns
-  - `{:ok, metrics_text}` - Raw Prometheus metrics in text format
-  - `{:error, :node_not_found}` - Node not assigned to any cluster (ETS) or not in DB
-  - `{:error, :gateway_not_found}` - Gateway process not found
-  - `{:error, reason}` - HTTP request failed and no cache available
+  - `{:ok, metrics_text}` - Raw Prometheus metrics (live from VPN or cache)
+  - `{:error, :not_found}` - Node not in DB
+  - `{:error, :service_unavailable}` - VPN scrape failed AND no fresh cache available
+    (covers gateway-missing, cluster-not-in-ETS, scrape timeout, agent error)
   """
   @spec scrape_wireguard_metrics(binary()) :: {:ok, String.t()} | {:error, term()}
   def scrape_wireguard_metrics(node_id) do

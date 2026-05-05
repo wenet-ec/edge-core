@@ -1,7 +1,14 @@
 # edge_admin/lib/edge_admin/config.ex
 defmodule EdgeAdmin.Config do
   @moduledoc """
-  This modules provides various helpers to handle environment variables
+  Helpers for reading and parsing environment variables in `runtime.exs`.
+
+  Two readers (`get_env/3` with default, `get_env!/2` raising on missing) plus
+  a value-type system that coerces the raw string into the right Elixir term:
+  `:string | :integer | :boolean | :uri | :cors | :list | :atom | :positive_integer`.
+
+  Also exposes `generate_random_string/1`, used at boot to mint per-admin
+  identifiers (`admin_id`, LiveView signing salt).
   """
 
   @type value_type :: :string | :integer | :boolean | :uri | :cors | :list | :atom | :positive_integer

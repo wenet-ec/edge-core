@@ -9,6 +9,10 @@ defmodule EdgeAdmin.ProxyServers.Authentication do
 
   Password is always proxy_key for admin authentication. Comparison is
   timing-safe to avoid side-channel attacks.
+
+  When `AUTH_ENABLED=false`, password verification is skipped entirely — any
+  password (including blank) is accepted. The username branch still runs,
+  so routing-mode parsing is unaffected. Intended for local dev only.
   """
 
   require Logger
@@ -45,9 +49,9 @@ defmodule EdgeAdmin.ProxyServers.Authentication do
     end
   end
 
-  # Constant-time binary compare. Uses Plug.Crypto when available, with a
-  # pure-Erlang fallback for belt-and-braces behaviour in environments where
-  # that dep might not be loaded.
+  # Constant-time binary compare via OTP's :crypto.hash_equals/2. Mismatched
+  # lengths still consume a same-length compare so the rejection path doesn't
+  # leak length via timing.
   defp secure_compare(a, b) when is_binary(a) and is_binary(b) do
     if byte_size(a) == byte_size(b) do
       :crypto.hash_equals(a, b)

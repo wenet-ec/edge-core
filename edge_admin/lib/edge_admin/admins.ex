@@ -26,13 +26,13 @@ defmodule EdgeAdmin.Admins do
 
       {:ok, [
         %{
-          name: "admin-cluster-main",
+          name: "admin-cluster-a",
           ipv4_range: "100.64.0.0/24",
           admin_count: 3,
           admins: [
             %{
-              name: "admin-7k3m9p2n",
-              vpn_hostname: "admin-7k3m9p2n.admin-cluster-main.nm.internal",
+              name: "admin-7k3m9p2nq8r4",
+              vpn_hostname: "admin-7k3m9p2nq8r4.admin-cluster-a.nm.internal",
               netmaker_host_id: "f272e703-...",
               ipv4_address: "100.64.0.1",
               wireguard_ip_address: "10.0.0.7",

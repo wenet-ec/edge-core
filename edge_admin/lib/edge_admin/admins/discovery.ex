@@ -40,18 +40,19 @@ defmodule EdgeAdmin.Admins.Discovery do
 
   ## Used By
 
-  - `Membership` - Initial peer discovery during admin-cluster join
-  - Periodic scheduler (future) - Ongoing peer discovery for new admins
+  - `Membership` - Initial peer discovery during admin-cluster join (step 4)
+  - `EdgeAdmin.LocalScheduler` - Periodic rediscovery (default: every 5min,
+    `ADMIN_DISCOVERY_SCHEDULE`)
 
   ## Examples
 
-      # Called during membership startup
+      # Called during membership startup and on the discovery cron
       iex> Discovery.scan_and_connect_admins()
       :ok
 
       # Result: Connected to peer admins
       iex> Node.list()
-      [:"admin@admin-def456.admin-cluster-main.nm.internal"]
+      [:"admin@admin-def456.admin-cluster-a.nm.internal"]
   """
 
   alias EdgeAdmin.Vpn

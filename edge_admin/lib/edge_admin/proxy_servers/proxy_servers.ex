@@ -35,7 +35,10 @@ defmodule EdgeAdmin.ProxyServers do
   - **GenServer**: Manages lifecycle of both Ranch listeners
   - **Ranch Listeners**: One for HTTP, one for SOCKS5
   - **Protocol Handlers**: `Http.Handler` and `Socks5.Handler`
-  - **Gateway Integration**: Routes traffic through Gateway GenServers
+  - **Gateway Integration**: VPN-bound traffic routes through cluster Gateway
+    GenServers. HTTP direct mode targeting a non-VPN host bypasses Gateway
+    and dials the target directly with `:gen_tcp.connect`. SOCKS5 has no
+    such bypass — non-VPN targets in direct mode return `:not_vpn_target`.
 
   ## Examples
 
@@ -63,6 +66,12 @@ defmodule EdgeAdmin.ProxyServers do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
+  @doc """
+  Returns true if the proxy GenServer has finished its `init/1` callback.
+
+  Returns `false` if the process is missing or the call times out (1s).
+  Used by health checks.
+  """
   def initialized? do
     case Process.whereis(__MODULE__) do
       nil ->

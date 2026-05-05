@@ -83,15 +83,22 @@ defmodule EdgeAdmin.Ssh do
   end
 
   @doc """
-  Creates an SSH username with optional public keys in a transaction.
+  Creates an SSH username and inserts each public key in sequence.
+
+  Inserts are NOT wrapped in a database transaction. If a public-key insert
+  fails after the username has been created (or after some keys succeeded),
+  earlier rows are left in place — the caller gets `{:error, reason}` for the
+  first failing key but no rollback runs. If atomic semantics are required,
+  wrap the call in `Ecto.Multi` or delete the partial rows yourself.
 
   ## Parameters
   - `node` - The node struct (validated in controller via path param)
   - `params` - Request params (validated through CreateSshUsernameForm)
 
   ## Returns
-  - `{:ok, ssh_username}` - SSH username created successfully with keys loaded
-  - `{:error, changeset}` - Validation or creation failed
+  - `{:ok, ssh_username}` - SSH username and all keys created successfully
+  - `{:error, changeset}` - Validation or creation failed (may have committed
+    partial state — see caveat above)
   """
   @spec create_ssh_username_with_keys(Node.t(), map()) ::
           {:ok, SshUsername.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
@@ -158,6 +165,11 @@ defmodule EdgeAdmin.Ssh do
 
   Used by agents to validate SSH authentication attempts. Does not distinguish
   between "username not found" and "incorrect credential" for security reasons.
+
+  Every call (success or failure) emits the `[:edge_admin, :ssh, :verification]`
+  telemetry event and publishes a `Catalog.SshUsernameVerified` event with the
+  attempted username, auth method, and result — this is the audit trail for
+  SSH access attempts and is the primary signal for security alerting.
 
   ## Parameters
   - `node_id` - The node ID (from agent's API token)

@@ -67,10 +67,18 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
           "admin-1" => %{"cluster-b" => ["node-4", "node-5"]},
           "admin-2" => %{"cluster-a" => ["node-1", "node-2", "node-3"]}
         },
+        node_index: %{
+          "node-1" => {"cluster-a", "admin-2"},
+          "node-2" => {"cluster-a", "admin-2"},
+          "node-3" => {"cluster-a", "admin-2"},
+          "node-4" => {"cluster-b", "admin-1"},
+          "node-5" => {"cluster-b", "admin-1"}
+        },
         orphaned_clusters: %{},
         total_nodes: 5,
         total_edge_capacity: 498,
-        degraded: false
+        degraded: false,
+        weak_leader: "admin-1"
       }
   """
   def compute_assignments(admins, clusters, previous_edge_clusters \\ %{}) do

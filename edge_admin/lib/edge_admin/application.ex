@@ -1,7 +1,19 @@
 # edge_admin/lib/edge_admin/application.ex
 defmodule EdgeAdmin.Application do
   @moduledoc """
-  Main entry point of the app
+  OTP application entry point and supervision tree.
+
+  Two child-tree shapes selected by `EDGE_ADMIN_MODE`:
+
+    * `EDGE_ADMIN_MODE=test` — minimal tree (Vault, Repo, PubSub, Oban,
+      Endpoint). Used by the test env; skips PromEx, Membership, EdgeClusters,
+      Metadata, LocalScheduler, ProxyServers, MCP, etc.
+    * unset (default) — full server tree.
+
+  The active repo is selected by `DB_ADAPTER` via `:repo_impl` (Postgres or
+  SQLite). Postgres mode also starts a Notifier sub-repo for Oban LISTEN.
+
+  Event-broker children only start when `EVENT_BROKER_ENABLED=true`.
   """
 
   use Application

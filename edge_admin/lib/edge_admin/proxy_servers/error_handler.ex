@@ -178,7 +178,12 @@ defmodule EdgeAdmin.ProxyServers.ErrorHandler do
   defp timeout_reasons, do: [:etimedout, :timeout]
 
   @doc """
-  Determines if an error should trigger degraded mode.
+  Returns true when the error category is `:infrastructure` (no Gateway, no
+  cluster owner, etc.).
+
+  Currently only stamped onto telemetry metadata as `:should_degrade` —
+  there is no degraded-mode hook acting on it today. Kept around so dashboards
+  / future automation can pivot off the boolean without recomputing categories.
   """
   def should_trigger_degraded_mode?(reason) do
     categorize_error(reason) == :infrastructure

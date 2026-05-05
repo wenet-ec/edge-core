@@ -4,8 +4,9 @@ defmodule EdgeAdmin.Commands.Workers.CreateExecutionsWorker do
   Worker that creates command executions in bulk.
 
   Receives execution creation args and delegates to `Commands.create_command_executions/1`
-  which handles all validation and filtering logic. All executions are created with
-  status "pending" and filtered to only include healthy nodes.
+  which handles all validation and filtering logic. Executions are created for ALL
+  matching nodes regardless of health status, all with status "pending"; health
+  filtering happens later at delivery time.
 
   Quantum scheduler handles actual delivery via `Commands.deliver_local_executions/0`.
   """

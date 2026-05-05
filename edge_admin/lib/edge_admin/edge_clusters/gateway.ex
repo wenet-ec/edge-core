@@ -20,24 +20,30 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   1. **VPN Management**
      - Join cluster network on startup (creates Netmaker node)
      - Leave cluster network on shutdown (deletes node, preserves host)
-     - Monitor network connectivity
 
   2. **syn Registration**
      - Register with key `{:gateway, admin_name, cluster_name}`
      - Enable cross-admin request routing
      - Automatic deregistration on process exit
 
-  3. **HTTP Communication**
+  3. **HTTP Communication** (calls routed through this Gateway only)
      - Scrape host metrics (Node Exporter)
      - Scrape agent metrics (PromEx)
      - Scrape WireGuard metrics
      - Trigger agent self-updates
-     - Send command executions
-     - Request SSH credential verification
+     - Cancel command executions
+     - Open TCP connections through the cluster VPN (proxy tunnels)
+
+  Note: command-execution *delivery* (`AgentClient.deliver_execution/2`) does
+  NOT go through Gateway — `Commands` calls `AgentClient` directly. Only the
+  cancel path routes through Gateway, because cancellation needs to find the
+  owning admin's process via syn.
 
   ## Cross-Admin Routing
 
-  Gateways register in syn to enable distributed request routing:
+  Gateways register in syn to enable distributed request routing. The owning
+  admin's pid is looked up via the `:cluster_scope` registry; once obtained,
+  callers issue `GenServer.call/3` against it over Erlang distribution.
 
       # Find the Gateway that owns a cluster
       :syn.lookup(:cluster_scope, {:gateway, "admin-abc", "cluster-prod"})
@@ -102,6 +108,10 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   Returns the Gateway PID for the admin that owns the cluster.
   Uses cluster ownership from Metadata to determine which admin's Gateway to use.
 
+  If ownership changed between the Metadata read and the syn lookup (TOCTOU
+  during topology recomputation), falls back to scanning every known admin's
+  registration in `:cluster_scope` to locate the gateway.
+
   ## Parameters
   - cluster_name: The edge cluster name
 
@@ -113,7 +123,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   ## Examples
 
       {:ok, pid} = Gateway.lookup("cluster-abc123")
-      Gateway.scrape_metrics(pid, node)
+      Gateway.scrape_host_metrics(pid, node)
   """
   def lookup(cluster_name) do
     case Metadata.get_cluster_owner(cluster_name) do
@@ -240,11 +250,22 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   Establishes TCP connection to a target through the Gateway's VPN.
 
   Gateway is a pure network abstraction - it only handles VPN connectivity.
-  Returns {:ok, socket} with ownership transferred to caller, or error.
+
+  ## Returns
+
+  Two success shapes depending on where `caller_pid` lives:
+
+  - `{:ok, socket}` — `caller_pid` is on the same Erlang node as the Gateway.
+    The socket's controlling process is transferred to `caller_pid`; the
+    caller owns it from that point on.
+  - `{:ok, :remote, proxy_pid}` — `caller_pid` is on a different Erlang node.
+    Erlang distribution can't transfer socket ownership across nodes, so a
+    `RemoteTunnel` proxy process is spawned on the Gateway's node to own the
+    socket and forward bytes to/from `caller_pid`.
+  - `{:error, reason}` — `:gen_tcp.connect/4` failed.
 
   The caller is responsible for:
-  - Managing the returned socket
-  - Handling cross-node communication if needed
+  - Managing the returned socket (or proxy pid)
   - Setting up any streaming/forwarding logic
 
   - target_host: VPN DNS hostname (e.g., node-*.cluster-*.nm.internal)

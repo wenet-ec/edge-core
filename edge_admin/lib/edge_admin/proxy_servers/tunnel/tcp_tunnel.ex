@@ -10,7 +10,7 @@ defmodule EdgeAdmin.ProxyServers.Tunnel.TcpTunnel do
 
   Callers use this module in two phases:
 
-    * `connect/5` returns a tunnel handle (local socket or remote proxy pid)
+    * `connect/4` returns a tunnel handle (local socket or remote proxy pid)
       without starting byte-forwarding. The caller can send the appropriate
       success response to the client first.
     * `start_forwarding/3` hands off to `Forwarder` (local) or expects the

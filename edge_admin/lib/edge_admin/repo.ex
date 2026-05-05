@@ -25,7 +25,7 @@
 #
 # LiveDashboard's ecto_stats is wired to EdgeAdmin.Repo.Postgres only — in
 # SQLite mode that pool isn't running, so the page is auto-skipped. See
-# router.ex and db-adapter.md for the full rationale.
+# router.ex for the wiring.
 
 defmodule EdgeAdmin.Repo do
   @moduledoc """

@@ -10,11 +10,16 @@ defmodule EdgeAdmin.Vpn do
   - **Host Management**: Add/remove hosts from networks, manage host lifecycle
   - **Enrollment Keys**: Create and manage network enrollment keys
   - **DNS Entries**: Create custom DNS entries for nodes (aliases)
-  - **Error Normalization**: Delegates to `Nexmaker.Api.normalize/1`, then collapses to `:not_found` or `:service_unavailable`
+  - **Error Normalization**: Most functions go through `normalize_netmaker_error/1`, which
+    collapses to `{:ok, _} | {:error, :not_found} | {:error, :service_unavailable}`.
+    Functions where the caller benefits from richer outcomes opt out and return a
+    wider tuple set (e.g. `create_network/2` distinguishes `:already_exists`,
+    `add_host_to_network/2` returns `:already_joined`, `network_has_capacity/1`
+    returns `{:network_full, info}`).
 
   ## Key Concepts
 
-  - **Network**: A VPN network in Netmaker (e.g., `cluster-prod`, `admin-cluster-main`)
+  - **Network**: A VPN network in Netmaker (e.g., `cluster-prod`, `admin-cluster-a`)
   - **Host**: A physical/virtual machine running netclient
   - **Node**: A host's connection to a specific network
   - **DNS Name**: Short hostname (e.g., `node-abc123`, `admin-xyz789`)
@@ -25,7 +30,6 @@ defmodule EdgeAdmin.Vpn do
 
   - **Thin Wrapper**: Wraps Nexmaker API client with error normalization
   - **Stateless**: No state, all operations are direct API calls
-  - **Error Handling**: Uses `Nexmaker.Api.normalize/1` — collapses to `:service_unavailable` or `:not_found`
 
   ## Examples
 
@@ -432,7 +436,12 @@ defmodule EdgeAdmin.Vpn do
   defp prefix_to_mask(prefix), do: 0xFFFFFFFF |> bsl(32 - prefix) |> band(0xFFFFFFFF)
 
   @doc """
-  Generates all possible subnets within a base range.
+  Generates candidate subnets within a base range.
+
+  Currently only the `/10 → /24` case is fully implemented — it enumerates the
+  256 `/24` subnets that fit (`{a}.{b}.0.0/24` … `{a}.{b}.255.0/24`). Any other
+  combination falls back to a single-element list containing just the base
+  address with the target prefix; expand here when a new pair is needed.
   """
   def generate_subnets({a, b, _c, _d}, base_prefix, target_prefix) do
     # Simple implementation: for /10 -> /24, generate first 256 subnets
@@ -446,10 +455,6 @@ defmodule EdgeAdmin.Vpn do
       ["#{a}.#{b}.0.0/#{target_prefix}"]
     end
   end
-
-  # ===========================================================================
-  # Netmaker API Wrappers
-  # ===========================================================================
 
   # ===========================================================================
   # Error Normalization
@@ -748,6 +753,14 @@ defmodule EdgeAdmin.Vpn do
 
   Optionally filter by network for better performance when there are many hosts.
 
+  ## Returns
+
+  - `{:ok, host_id}` — host found
+  - `{:error, :host_not_found}` — host listing succeeded but no host had a matching
+    name. Note: this atom is `:host_not_found`, not the module-wide `:not_found`,
+    so callers pattern-matching on `:not_found` will miss it.
+  - `{:error, :service_unavailable}` — Netmaker host listing failed
+
   ## Examples
 
       iex> Vpn.get_host_id("admin-abc123")
@@ -944,7 +957,8 @@ defmodule EdgeAdmin.Vpn do
   Pulls latest VPN configuration from Netmaker server.
 
   Forces netclient to fetch full configuration via HTTP API, bypassing MQTT.
-  Used after reconciliation as a hard consistency guarantee.
+  Used by `sync_vpn_config/0` (LocalScheduler periodic backstop) — no other
+  call sites today.
 
   Returns `:ok` or `{:error, reason}`.
   """

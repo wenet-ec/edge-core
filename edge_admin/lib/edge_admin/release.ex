@@ -1,7 +1,19 @@
 # edge_admin/lib/edge_admin/release.ex
 defmodule EdgeAdmin.Release do
   @moduledoc """
-  Release tasks for Edge Admin.
+  Release tasks for Edge Admin. Each task boots only what it needs and is safe
+  to run on every container start (idempotent where applicable).
+
+  Wired into `deploy/{local,production}/compose/edge_admin/start`:
+
+    * `migrate/0` — run pending Ecto migrations on the active repo
+    * `rollback/1` — roll back to a target migration version
+    * `rotate_cloak_key/0` — re-encrypt rows through old → new Cloak key
+      (gated on the four `ROTATE_*` env vars; logs skip and exits clean
+      otherwise)
+    * `create_netmaker_superadmin/0` — bootstrap the Netmaker UI admin
+    * `create_default_cluster/0` — pre-create the cluster named by
+      `DEFAULT_CLUSTER_NAME` (skipped if unset)
   """
 
   alias Cloak.Ciphers.AES.GCM

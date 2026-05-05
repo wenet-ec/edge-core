@@ -102,7 +102,7 @@ MASTER_KEY=supersecretkey123456789
 #            AES.GCM.V<N>; bump <N> on each rotation.
 # Both required at boot. If CLOAK_KEY is lost, every encrypted row is
 # unrecoverable — back it up alongside MASTER_KEY / SECRET_KEY_BASE.
-CLOAK_KEY=
+CLOAK_KEY=0mG1kw7E8GSsUMHkbrWnFlWegwoOuRioNV0zYQnVtus=
 CLOAK_TAG=AES.GCM.V1
 
 # Rotation env vars. All four required to trigger rotation; if any is missing
@@ -199,7 +199,8 @@ DEFAULT_CLUSTER_NAME=test
 PUBLIC_ENROLLMENT_KEY_ENABLED=true
 
 # Admin URLs for enrollment key generation and agent fallback (required).
-ADMIN_URLS=edge-admin.yourdomain.com
+# Comma-separated list of full URLs (scheme required). Agents try each in order.
+ADMIN_URLS=https://edge-admin.yourdomain.com
 
 # DERP map server URL. Optional — leave unset to skip DERP overlay (Tailscale fallback).
 # This is the map server that describes relay locations, NOT the relay server itself.
@@ -333,9 +334,9 @@ ADMIN_DISCOVERY_PORT=44000
 
 # Google Cloud Pub/Sub:
 # EVENT_BROKER_ADAPTER=google_pubsub
-# EVENT_BROKER_GOOGLE_PUBSUB_EMULATOR_HOST=                   # leave UNSET in prod
 # EVENT_BROKER_GOOGLE_PUBSUB_PROJECT=my-project-123
 # EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX=                 # optional, e.g. "edge-prod-"
+# EVENT_BROKER_GOOGLE_PUBSUB_EMULATOR_HOST=                   # leave UNSET in prod
 # GOOGLE_APPLICATION_CREDENTIALS=/etc/gcp/sa.json             # service-account JSON; unset on GKE/GCE so goth auto-detects
 
 # =============================================================================

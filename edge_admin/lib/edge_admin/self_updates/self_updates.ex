@@ -217,7 +217,13 @@ defmodule EdgeAdmin.SelfUpdates do
   - `request_id` - The request ID to process
 
   ## Returns
-  - `:ok` - Processing completed successfully
+
+  Always `:ok` — meaning "processing completed", NOT "all triggers succeeded".
+  Per-node outcomes (gateway-not-found, self-update disabled, agent error) are
+  aggregated into the request's `summary` map (`%{total, triggered, failed}`)
+  and the request's `status` transitions to `"completed"` regardless of how
+  many individual nodes failed. Inspect `summary.failed` to detect partial
+  failures.
   """
   @spec process_self_update_request(String.t()) :: :ok
   def process_self_update_request(request_id) do

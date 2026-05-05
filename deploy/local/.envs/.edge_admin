@@ -200,6 +200,7 @@ DEFAULT_CLUSTER_NAME=test
 PUBLIC_ENROLLMENT_KEY_ENABLED=true
 
 # Admin URLs for enrollment key generation and agent fallback (required).
+# Comma-separated list of full URLs (scheme required). Agents try each in order.
 ADMIN_URLS=http://localhost:4000
 
 # DERP map server URL. Optional — leave unset to skip DERP overlay (Tailscale fallback).

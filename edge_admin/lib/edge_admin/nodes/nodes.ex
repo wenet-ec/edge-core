@@ -166,8 +166,9 @@ defmodule EdgeAdmin.Nodes do
   Supports filtering by:
   - `name` - Text search (supports wildcards: `prod*`, `*tion`, `*rod*`)
   - `ipv4_range` - Text search (supports wildcards)
+  - `node_limit` - Exact, `__gte`, `__lte` (null = no limit)
   - `inserted_at` - Range queries (e.g., `inserted_at__gte=2025-01-01`, `inserted_at__lte=2025-12-31`)
-  - `node_count` - Range queries (e.g., `node_count__gte=5`, `node_count__lte=10`)
+  - `node_count` - Range queries (e.g., `node_count__gte=5`, `node_count__lte=10`) — virtual filter computed via join
 
   Supports sorting by:
   - `name`, `ipv4_range`, `inserted_at`, `updated_at`
@@ -724,7 +725,9 @@ defmodule EdgeAdmin.Nodes do
 
   ## Returns
   - `{:ok, updated_node}` - Node cluster changed successfully
-  - `{:error, changeset}` - Validation failed
+  - `{:error, changeset}` - Validation failed (form, schema, or new cluster not found)
+  - `{:error, {:conflict, reason}}` - Already in target cluster (`SameClusterCheck`)
+    or target cluster at node limit (`NodeLimitCheck`)
   """
   @spec change_node_cluster(Node.t(), map()) ::
           {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
@@ -792,7 +795,10 @@ defmodule EdgeAdmin.Nodes do
   Flow (Netmaker-first):
   1. Clean up DNS records (aliases) from Netmaker (best-effort)
   2. Delete host from Netmaker FIRST
-  3. Delete from DB (cascades to ssh_usernames, ssh_public_keys, command_executions, aliases)
+  3. Delete from DB. Cascade behaviour:
+     - `ssh_usernames` → `:delete_all` (and their `ssh_public_keys` cascade transitively)
+     - `aliases` → `:delete_all`
+     - `command_executions` → `:nilify_all` (history rows kept; `node_id` set to NULL)
   4. Emit event for metadata recomputation
 
   If Netmaker deletion fails (except :not_found), operation stops and returns error.
@@ -854,8 +860,21 @@ defmodule EdgeAdmin.Nodes do
   @doc """
   Registers or updates a node from agent.
 
-  Verifies cluster and Netmaker node existence, generates new tokens on every registration,
-  and creates or updates the node record.
+  Verifies cluster and Netmaker node existence, then creates or updates the node
+  record.
+
+  ## Token rotation (security-relevant)
+
+  Both `api_token` and `proxy_password` are regenerated on EVERY call, including
+  re-registration of an existing node. Any previously-issued credentials for this
+  node are invalidated as soon as the upsert commits. Agents must persist the
+  values returned here and use them for all subsequent admin↔agent calls — caching
+  an older token will start failing immediately.
+
+  ## Limits
+
+  `NodeLimitCheck` is enforced for new nodes only. Re-registering an existing
+  node never fails on cluster capacity (the node already occupies a slot).
 
   ## Parameters
   - `params` - Node registration parameters (validated through RegisterNodeForm)
@@ -1558,10 +1577,15 @@ defmodule EdgeAdmin.Nodes do
   The decrement uses a conditional UPDATE to prevent race conditions when two agents
   simultaneously attempt to consume the last use of a key.
 
-  Returns a result map always shaped as:
-  `%{verified: bool, error: String.t(), netmaker_key: String.t()}`
+  ## Returns
+
+  - `{:ok, %{verified: bool, error: String.t(), netmaker_key: String.t()}}` —
+    on every input that survives form validation. The result map is the
+    verification outcome; check `:verified` to gate the agent's next step.
+  - `{:error, changeset}` — input failed `VerifyEnrollmentKeyForm` validation
+    (e.g. missing `key`).
   """
-  @spec verify_enrollment_key(map()) :: {:ok, map()}
+  @spec verify_enrollment_key(map()) :: {:ok, map()} | {:error, Ecto.Changeset.t()}
   def verify_enrollment_key(params) do
     with {:ok, key_blob} <- Forms.VerifyEnrollmentKeyForm.changeset(params) do
       {result, enrollment_key} =

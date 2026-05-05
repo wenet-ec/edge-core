@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/local_scheduler.ex
+# edge_admin/lib/edge_admin/local_scheduler/local_scheduler.ex
 defmodule EdgeAdmin.LocalScheduler do
   @moduledoc """
   Quantum scheduler for local (per-admin) periodic tasks.

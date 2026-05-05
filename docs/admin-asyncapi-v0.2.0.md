@@ -66,6 +66,8 @@ Retention is configured on the NATS server, not by Edge Core.
 
 **Pub/sub mode** (default): messages are delivered to active subscribers only — no persistence. Missed messages are gone.
 
+**Server version floor:** pub/sub mode works against any NATS server (core PUB stable since 1.x); JetStream mode requires NATS 2.2+ (July 2021). The adapter uses only baseline stream-create fields (`name`, `subjects`, `storage`), no version-gated extensions.
+
 ### Kafka / Redpanda
 
 Four topics, one per domain:
@@ -78,6 +80,8 @@ Four topics, one per domain:
 | `edge-ssh-events`          | `node_id` (verifications partition by the node attempting auth) |
 
 Partition key ensures ordering per entity, parallel across entities. Filter by event type using the `type` field in the envelope.
+
+**Server version floor:** Kafka 0.10+ (released Feb 2017) and any wire-compatible broker (Redpanda, Confluent Cloud, Aiven, AWS MSK, Azure Event Hubs, Upstash, etc.). The brod client auto-negotiates the per-API protocol version on connect.
 
 ### AMQP 0-9-1 (RabbitMQ-compatible)
 
@@ -107,6 +111,8 @@ PSUBSCRIBE edge.*                    ← everything
 ```
 
 **No persistence or replay** — messages are delivered to currently connected subscribers only. If no subscriber is connected when Core publishes, the message is gone. Pick Redis only when consumers are always-on and loss is acceptable.
+
+**Server version floor:** Redis 2.0+ (Aug 2010, when Pub/Sub was introduced) and any wire-compatible server (Valkey, KeyDB, Dragonfly). The adapter uses only `PING` and `PUBLISH` over RESP2 — no version-gated commands. ACL-style URL usernames (`redis://user:pass@host`) and native TLS require Redis 6.0+ (Apr 2020); password-only URLs work against any version.
 
 ### MQTT
 

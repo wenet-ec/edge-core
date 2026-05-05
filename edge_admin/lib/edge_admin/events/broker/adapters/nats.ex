@@ -4,10 +4,13 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Nats do
   NATS adapter for the event broker. Supports two modes:
 
   - **Pub/sub** (default) — plain `Gnat.pub/3`, fire-and-forget. Messages are
-    lost when no subscriber is connected.
+    lost when no subscriber is connected. Works against any NATS server
+    version; core PUB has been stable since NATS 1.x.
   - **JetStream** — set `EVENT_BROKER_NATS_JETSTREAM=true`. Same pub call, but
     JetStream intercepts it and persists the message into a durable stream.
-    On startup, the adapter auto-creates the three streams if absent.
+    On startup, the adapter auto-creates the streams if absent. Requires
+    NATS 2.2+ (released July 2021); we use only baseline stream-create
+    fields (`name`, `subjects`, `storage`), no version-gated extensions.
 
   ## Subjects
 

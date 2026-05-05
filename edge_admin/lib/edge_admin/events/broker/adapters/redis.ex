@@ -7,6 +7,13 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Redis do
   (e.g. `edge.node.registered`). Fire-and-forget — no durability or replay.
   Subscribers use `SUBSCRIBE` or `PSUBSCRIBE edge.*` for wildcard matching.
 
+  Compatible with Redis 2.0+ (Aug 2010, when Pub/Sub was introduced) and any
+  wire-compatible server (Valkey, KeyDB, Dragonfly). The adapter uses only
+  `PING` and `PUBLISH` over RESP2 — no version-gated commands. ACL-style
+  URL usernames (`redis://user:pass@host`) and native TLS require Redis 6.0+
+  (Apr 2020); password-only URLs (`redis://:pass@host`) work against any
+  version.
+
   ## Auth
 
   Embed credentials in the URL: `redis://:password@host:port` or

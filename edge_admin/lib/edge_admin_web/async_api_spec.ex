@@ -83,7 +83,9 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "title" => "NATS",
         "summary" => "Pub/sub by default; JetStream for durable log + replay.",
         "description" =>
-          "Configure via EVENT_BROKER_NATS_URLS (comma-separated cluster list). " <>
+          "Pub/sub mode works against any NATS server version — core PUB has been stable since NATS 1.x. " <>
+            "JetStream mode requires NATS 2.2+ (released July 2021); the stream-create API and field shape we use are 2.2 baseline. " <>
+            "Configure via EVENT_BROKER_NATS_URLS (comma-separated cluster list). " <>
             "Optional token auth via EVENT_BROKER_NATS_TOKEN. " <>
             "By default, pub/sub with no persistence. Set EVENT_BROKER_NATS_JETSTREAM=true to enable durable JetStream log — " <>
             "four streams are auto-created on startup: EDGE_NODES_EVENTS (captures edge.node.> + edge.enrollment_key.>), EDGE_COMMANDS_EVENTS, EDGE_SELF_UPDATES_EVENTS, EDGE_SSH_EVENTS. Retention is configured on the broker.",
@@ -123,7 +125,10 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "title" => "Redis",
         "summary" => "Pure pub/sub (`PUBLISH`/`SUBSCRIBE`). Fire-and-forget.",
         "description" =>
-          "Configure via EVENT_BROKER_REDIS_URL (single redis:// or rediss:// URL). " <>
+          "Compatible with Redis 2.0+ (Aug 2010, when Pub/Sub was introduced) and any wire-compatible server (Valkey, KeyDB, Dragonfly, etc.) — " <>
+            "the adapter uses only `PING` and `PUBLISH` over RESP2. " <>
+            "ACL usernames in URLs (`redis://user:pass@host`) and native TLS require Redis 6.0+ (Apr 2020); password-only URLs work against any version. " <>
+            "Configure via EVENT_BROKER_REDIS_URL (single redis:// or rediss:// URL). " <>
             "Events are published via Redis Pub/Sub (`PUBLISH`). Channel = event type " <>
             "(e.g. `edge.node.registered`). Use `SUBSCRIBE` or `PSUBSCRIBE edge.*` to consume. " <>
             "No durability or replay. Credentials embedded in URL.",

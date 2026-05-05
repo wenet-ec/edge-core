@@ -86,7 +86,7 @@ defmodule EdgeAdminWeb.Controllers.Events.WebhookController do
   operation(:delete,
     summary: "Delete webhook",
     description:
-      "Permanently delete a webhook. Webhooks are immutable after create — to change any field (URL, secret, filters, retry budget) delete and recreate.",
+      "Permanently delete a webhook. Webhooks are immutable after create — to change any field (URL, secret, headers, subscribed_events) delete and recreate. The retry budget is process-wide (`WEBHOOK_MAX_ATTEMPTS` env var on the admin), not per-webhook.",
     parameters: [PathParams.uuid(:id, "Webhook ID")],
     responses: %{
       204 => {"Webhook deleted", "", nil},

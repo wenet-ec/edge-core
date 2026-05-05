@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin_web/response_builder.ex
+# edge_admin/lib/edge_admin_web/response_envelope.ex
 defmodule EdgeAdminWeb.ResponseEnvelope do
   @moduledoc """
   Builds all HTTP response envelopes for the Edge Admin API.

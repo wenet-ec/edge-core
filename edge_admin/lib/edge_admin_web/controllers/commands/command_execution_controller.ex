@@ -122,10 +122,11 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
     responses: %{
       200 => {"Cancellation request sent", "application/json", CommandExecutionSchemas.CancelExecutionResponse},
       404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse},
-      422 =>
-        {"Validation failed - execution status not cancellable", "application/json",
-         CommonSchemas.ChangesetErrorResponse},
-      503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
+      409 =>
+        {"Execution not in a cancellable state (already terminal)", "application/json", CommonSchemas.ConflictResponse},
+      503 =>
+        {"Agent unreachable for cancellation request (sent status only)", "application/json",
+         CommonSchemas.ServiceUnavailableResponse}
     }
   )
 

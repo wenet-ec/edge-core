@@ -77,7 +77,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
     responses: %{
       200 => {"Node cluster changed successfully", "application/json", NodeSchemas.NodeSingleResponse},
       404 => {"Node not found", "application/json", CommonSchemas.NotFoundResponse},
-      409 => {"Node is already in the target cluster", "application/json", CommonSchemas.ConflictResponse},
+      409 =>
+        {"Node already in the target cluster, or target cluster has reached its node limit", "application/json",
+         CommonSchemas.ConflictResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
@@ -93,7 +95,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   operation(:delete,
     summary: "Delete a node",
     description:
-      "Delete a node from Netmaker and database in a transaction. Cascades to ssh_usernames, ssh_public_keys, and command_executions.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+      "Delete a node. Removes the Netmaker host first, then the DB row. Cascade: `ssh_usernames` (and their `ssh_public_keys`) and `aliases` are deleted; `command_executions` are kept with `node_id` set to NULL for history.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
     parameters: [PathParams.uuid(:id, "Node ID")],
     responses: %{
       204 => {"Node deleted successfully", "", nil},

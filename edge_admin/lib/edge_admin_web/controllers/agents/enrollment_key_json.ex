@@ -1,4 +1,4 @@
-# edge_admin_web/controllers/agents/enrollment_key_json.ex
+# edge_admin/lib/edge_admin_web/controllers/agents/enrollment_key_json.ex
 defmodule EdgeAdminWeb.Controllers.Agents.EnrollmentKeyJSON do
   alias EdgeAdminWeb.ResponseEnvelope
 

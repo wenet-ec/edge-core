@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin_web/controllers/asyncapi/doc_controller.ex
+# edge_admin/lib/edge_admin_web/controllers/async_api/doc_controller.ex
 defmodule EdgeAdminWeb.Controllers.AsyncApi.DocController do
   @moduledoc false
 

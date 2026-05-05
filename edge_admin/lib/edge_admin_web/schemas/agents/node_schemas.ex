@@ -33,8 +33,13 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
           enum: ["persistent", "random"],
           description: "How the node identity is determined"
         },
-        http_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "Admin HTTP port"},
-        ssh_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "SSH server port"},
+        http_port: %Schema{
+          type: :integer,
+          minimum: 1,
+          maximum: 65_535,
+          description: "Agent HTTP API port admin should reach on this node"
+        },
+        ssh_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "Agent SSH server port"},
         host_metrics_port: %Schema{
           type: :integer,
           minimum: 1,

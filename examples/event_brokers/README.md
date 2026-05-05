@@ -6,15 +6,15 @@ Edge Core publishes and forgets — it has no knowledge of consumers. All messag
 
 ## Adapters
 
-| Adapter                            | Protocol family               | Works against                                                                                                                           |
-| ---------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `nats`                             | NATS / NATS JetStream         | Any NATS server. JetStream-enabled servers gain durable log + replay via `EVENT_BROKER_NATS_JETSTREAM=true`.                            |
-| `kafka`                            | Kafka wire protocol           | Apache Kafka, Redpanda, Confluent Cloud, Aiven, AWS MSK, Azure Event Hubs, Upstash, Redpanda Cloud, etc.                                |
-| `amqp091` <br/>(alias: `rabbitmq`) | AMQP 0-9-1                    | Any AMQP 0-9-1 broker — RabbitMQ, LavinMQ (single-node or clustered), AmazonMQ for RabbitMQ, CloudAMQP.                                 |
-| `redis`                            | Redis Pub/Sub                 | Any Redis instance. Fire-and-forget — no durability, no replay.                                                                         |
-| `mqtt`                             | MQTT 3.1.1 / 5                | Any MQTT broker — EMQX, Mosquitto, HiveMQ, AWS IoT Core, Azure Event Grid (MQTT broker mode), VerneMQ, NanoMQ, etc.                     |
-| `aws_sns`                          | AWS SNS REST API              | AWS SNS (managed). Publishes to three pre-provisioned domain topics; subscribers filter via subscription filter policies.               |
-| `google_pubsub`                    | Google Cloud Pub/Sub REST API | Google Cloud Pub/Sub (managed). Same shape as SNS — three pre-provisioned domain topics, subscription filter expressions on attributes. |
+| Adapter                            | Protocol family               | Works against                                                                                                                                               |
+| ---------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `nats`                             | NATS / NATS JetStream         | Any NATS server. JetStream-enabled servers gain durable log + replay via `EVENT_BROKER_NATS_JETSTREAM=true`.                                                |
+| `kafka`                            | Kafka wire protocol           | Apache Kafka, Redpanda, Confluent Cloud, Aiven, AWS MSK, Azure Event Hubs, Upstash, Redpanda Cloud, etc.                                                    |
+| `amqp091` <br/>(alias: `rabbitmq`) | AMQP 0-9-1                    | Any AMQP 0-9-1 broker — RabbitMQ, LavinMQ (single-node or clustered), AmazonMQ for RabbitMQ, CloudAMQP.                                                     |
+| `redis`                            | Redis Pub/Sub                 | Any Redis instance. Fire-and-forget — no durability, no replay.                                                                                             |
+| `mqtt`                             | MQTT 5                        | Any MQTT 5 broker — EMQX, Mosquitto, HiveMQ, AWS IoT Core, Azure Event Grid (MQTT broker mode), VerneMQ, NanoMQ, etc. (adapter hardcodes `proto_ver: :v5`). |
+| `aws_sns`                          | AWS SNS REST API              | AWS SNS (managed). Publishes to four pre-provisioned domain topics; subscribers filter via subscription filter policies.                                    |
+| `google_pubsub`                    | Google Cloud Pub/Sub REST API | Google Cloud Pub/Sub (managed). Same shape as SNS — four pre-provisioned domain topics, subscription filter expressions on attributes.                      |
 
 Pick whichever adapter matches a broker your stack already runs. There is no recommended default.
 
@@ -186,8 +186,8 @@ Edge Admin promotes `type` and `corename` from each event envelope into broker-n
 |                      |                                                                                                                                                                 |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Adapter**          | `aws_sns`                                                                                                                                                       |
-| **Topics to create** | `edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`                                                                                         |
-| **IAM action**       | `sns:Publish` on the three topic ARNs                                                                                                                           |
+| **Topics to create** | `edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`, `edge-ssh-events`                                                                      |
+| **IAM action**       | `sns:Publish` on the four topic ARNs                                                                                                                            |
 | **Auth**             | Standard AWS credential chain via `ex_aws`. Prefer **IRSA** on EKS / instance profile on EC2; static keys via env vars are an escape hatch.                     |
 | **Subscriptions**    | SQS queue, Lambda, HTTPS endpoint — your choice. SNS itself stores nothing.                                                                                     |
 | **Filter syntax**    | [SNS subscription filter policies](https://docs.aws.amazon.com/sns/latest/dg/sns-subscription-filter-policies.html) — JSON, matched against message attributes. |
@@ -230,8 +230,8 @@ Filter policy examples:
 |                      |                                                                                                                                                                                                                                |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Adapter**          | `google_pubsub`                                                                                                                                                                                                                |
-| **Topics to create** | `edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events` (prefix optional via `EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX`)                                                                                     |
-| **IAM role**         | `roles/pubsub.publisher` on the three topics                                                                                                                                                                                   |
+| **Topics to create** | `edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`, `edge-ssh-events` (prefix optional via `EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX`)                                                                  |
+| **IAM role**         | `roles/pubsub.publisher` on the four topics                                                                                                                                                                                    |
 | **Auth**             | Standard GCP credential chain via `goth`. Prefer **Workload Identity** on GKE / metadata server on GCE; service-account JSON via `GOOGLE_APPLICATION_CREDENTIALS` is an escape hatch.                                          |
 | **Subscriptions**    | Pull, push (HTTPS / Cloud Run), BigQuery, Cloud Storage. Pub/Sub buffers per subscription (default 7-day retention, max 31).                                                                                                   |
 | **Filter syntax**    | [Pub/Sub subscription filters](https://cloud.google.com/pubsub/docs/subscription-message-filter#filtering_syntax) — query language, matched against message attributes. Set on subscription creation; cannot be changed later. |

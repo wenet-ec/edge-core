@@ -81,7 +81,11 @@ defmodule EdgeAdminWeb.OpenApiSpec do
         description: """
         REST API for Edge Admin — the orchestration server for Edge Core.
 
-        For managing Edge Core operations. All endpoints require an API key.
+        Most endpoints require an API key (`Authorization: Bearer <API_KEY>`
+        or `<MASTER_KEY>`). A small set of bootstrap endpoints is intentionally
+        public — see the per-operation `security` field in the spec; an empty
+        array there means the endpoint is unauthenticated by design (e.g.
+        public enrollment-key creation).
 
         **Explore:**
         - [Swagger UI](/swaggerui) — interactive API explorer
@@ -105,7 +109,8 @@ defmodule EdgeAdminWeb.OpenApiSpec do
         %Tag{name: "Commands.CommandExecution"},
         %Tag{name: "Ssh.SshUsername"},
         %Tag{name: "Ssh.SshPublicKey"},
-        %Tag{name: "SelfUpdates.Request"}
+        %Tag{name: "SelfUpdates.Request"},
+        %Tag{name: "Events.Webhook"}
       ]
     }
     |> maybe_add_security()

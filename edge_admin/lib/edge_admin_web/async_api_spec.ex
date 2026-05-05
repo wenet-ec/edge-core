@@ -131,9 +131,10 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "host" => "edge_event_broker_mqtt:1883",
         "protocol" => "mqtt",
         "title" => "MQTT",
-        "summary" => "Any MQTT 3.1.1 / 5 broker. Configurable QoS, topic = event type with `/` separators.",
+        "summary" => "Any MQTT 5 broker. Configurable QoS, topic = event type with `/` separators.",
         "description" =>
-          "Works against any MQTT broker (EMQX, Mosquitto, HiveMQ, AWS IoT Core, etc.). " <>
+          "Works against any MQTT 5 broker (EMQX, Mosquitto, HiveMQ, AWS IoT Core, etc.). " <>
+            "The adapter hardcodes `proto_ver: :v5`; MQTT 3.1.1 brokers are not supported. " <>
             "Configure via EVENT_BROKER_MQTT_URL (single host:port). " <>
             "Topic = event type with `.` rewritten to `/` (e.g. `edge/node/registered`). " <>
             "Subscribers use MQTT wildcards: `edge/#`, `edge/node/+`, etc. " <>
@@ -324,12 +325,13 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
            # to `/` (e.g. `edge.node.registered` → `edge/node/registered`) so MQTT
            # segment wildcards (`+`, `#`) work as expected. QoS shown above is the
            # default; configurable via EVENT_BROKER_MQTT_QOS.
-           # SNS routes by topic ARN (one of three pre-provisioned domain topics)
-           # and by message attributes — `type` and `corename` are promoted to
-           # attributes so subscription filter policies can match without parsing
-           # the body. Google Cloud Pub/Sub routes the same way; its bindings live
-           # on the channel + message objects (the spec defines no operation-level
-           # bindings for googlepubsub).
+           # SNS routes by topic ARN (one of four pre-provisioned domain topics:
+           # edge-nodes-events, edge-commands-events, edge-self-updates-events,
+           # edge-ssh-events) and by message attributes — `type` and `corename`
+           # are promoted to attributes so subscription filter policies can
+           # match without parsing the body. Google Cloud Pub/Sub routes the
+           # same way; its bindings live on the channel + message objects (the
+           # spec defines no operation-level bindings for googlepubsub).
          }
        }}
     end)

@@ -23,7 +23,7 @@ The **agent** that runs on your machines and the **Nexmaker** shared library are
 - **Edge ↔ Edge (VPN mesh)** — full WireGuard P2P mesh per cluster, automatic peer discovery, netclient-local DNS for `.nm.internal` hostnames, DERP/TURN relay fallback for NAT
 - **Edge ↔ Local devices (mDNS)** — agents advertise themselves via mDNS for zero-config discovery by devices on the same LAN; full LAN DNS control is a future direction (see [`docs/architecture.md`](docs/architecture.md))
 
-**Plus:** Event streaming (lifecycle events to NATS, Kafka/Redpanda, RabbitMQ, Redis, MQTT, or AWS SNS), and an MCP server for AI assistant integration (Claude, Cursor, and any MCP-compatible client).
+**Plus:** Event streaming (lifecycle events to NATS, Kafka/Redpanda, RabbitMQ, Redis, MQTT, AWS SNS, or Google Cloud Pub/Sub), and an MCP server for AI assistant integration (Claude, Cursor, and any MCP-compatible client).
 
 ## Who is this for
 
@@ -152,7 +152,7 @@ Edge Admin exposes an MCP server at `/mcp`. Point any MCP-compatible client (Cla
   "mcpServers": {
     "edge-admin": {
       "type": "http",
-      "url": "http://your-server:34000/mcp",
+      "url": "http://your-server:<API_PORT>/mcp",
       "headers": { "Authorization": "Bearer your-mcp-key" }
     }
   }

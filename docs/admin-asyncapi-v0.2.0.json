@@ -1697,11 +1697,11 @@
           "keepAlive": 60
         }
       },
-      "description": "Works against any MQTT broker (EMQX, Mosquitto, HiveMQ, AWS IoT Core, etc.). Configure via EVENT_BROKER_MQTT_URL (single host:port). Topic = event type with `.` rewritten to `/` (e.g. `edge/node/registered`). Subscribers use MQTT wildcards: `edge/#`, `edge/node/+`, etc. Default publish QoS is 1; configurable via EVENT_BROKER_MQTT_QOS=0|1|2.",
+      "description": "Works against any MQTT 5 broker (EMQX, Mosquitto, HiveMQ, AWS IoT Core, etc.). The adapter hardcodes `proto_ver: :v5`; MQTT 3.1.1 brokers are not supported. Configure via EVENT_BROKER_MQTT_URL (single host:port). Topic = event type with `.` rewritten to `/` (e.g. `edge/node/registered`). Subscribers use MQTT wildcards: `edge/#`, `edge/node/+`, etc. Default publish QoS is 1; configurable via EVENT_BROKER_MQTT_QOS=0|1|2.",
       "host": "edge_event_broker_mqtt:1883",
       "protocol": "mqtt",
       "security": [{ "$ref": "#/components/securitySchemes/mqttAuth" }],
-      "summary": "Any MQTT 3.1.1 / 5 broker. Configurable QoS, topic = event type with `/` separators.",
+      "summary": "Any MQTT 5 broker. Configurable QoS, topic = event type with `/` separators.",
       "title": "MQTT"
     },
     "nats": {

@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin_web/controllers/asyncapi/spec_controller.ex
+# edge_admin/lib/edge_admin_web/controllers/async_api/spec_controller.ex
 defmodule EdgeAdminWeb.Controllers.AsyncApi.SpecController do
   @moduledoc false
 

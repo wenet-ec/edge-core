@@ -1,4 +1,4 @@
-# edge_admin_web/lib/edge_admin_web/schemas/nodes/cluster_schemas.ex
+# edge_admin/lib/edge_admin_web/schemas/nodes/cluster_schemas.ex
 defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
   @moduledoc """
   OpenAPI schemas for Cluster resources
@@ -25,7 +25,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         status: %Schema{
           type: :string,
           description: "Node status",
-          enum: ["healthy", "unhealthy"],
+          enum: ["healthy", "unhealthy", "unreachable"],
           example: "healthy"
         },
         id_type: %Schema{

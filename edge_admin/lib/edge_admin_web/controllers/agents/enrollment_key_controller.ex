@@ -1,4 +1,4 @@
-# edge_admin_web/controllers/agents/enrollment_key_controller.ex
+# edge_admin/lib/edge_admin_web/controllers/agents/enrollment_key_controller.ex
 defmodule EdgeAdminWeb.Controllers.Agents.EnrollmentKeyController do
   use EdgeAdminWeb, :api_controller
   use OpenApiSpex.ControllerSpecs

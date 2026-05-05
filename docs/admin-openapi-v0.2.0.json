@@ -267,19 +267,16 @@
       "Webhook": {
         "description": "A webhook subscription. Receives a POST per matching event with the full\nCloudEvents envelope as the body and an HMAC-SHA256 signature in the\n`X-Edge-Signature` header.\n\nWebhooks are immutable after create — to change any field, delete and\nrecreate. `secret` and `headers` are write-only — encrypted at rest and\nnever appear in any response.\n",
         "example": {
-          "event_filters": ["edge.node.*", "edge.command_execution.completed"],
           "id": "01234567-89ab-cdef-0123-456789abcdef",
           "inserted_at": "2026-05-05T10:00:00Z",
+          "subscribed_events": [
+            "edge.node.registered",
+            "edge.command_execution.completed"
+          ],
           "updated_at": "2026-05-05T10:00:00Z",
           "url": "https://example.com/edge-events"
         },
         "properties": {
-          "event_filters": {
-            "description": "Wildcard patterns matched against envelope `type`. `*` matches any sequence of characters (including dots); `*` alone matches everything.",
-            "example": ["edge.node.*", "edge.command_execution.completed"],
-            "items": { "type": "string" },
-            "type": "array"
-          },
           "id": {
             "description": "Unique webhook identifier",
             "format": "uuid",
@@ -289,6 +286,15 @@
             "description": "When the webhook was created",
             "format": "date-time",
             "type": "string"
+          },
+          "subscribed_events": {
+            "description": "Explicit list of event types this webhook fires on. Each entry is a literal event type from the catalog (no wildcards). See [AsyncAPI spec](/asyncdoc) for the full catalog.",
+            "example": [
+              "edge.node.registered",
+              "edge.command_execution.completed"
+            ],
+            "items": { "type": "string" },
+            "type": "array"
           },
           "updated_at": {
             "description": "When the webhook was last updated",
@@ -301,7 +307,13 @@
             "type": "string"
           }
         },
-        "required": ["id", "url", "event_filters", "inserted_at", "updated_at"],
+        "required": [
+          "id",
+          "url",
+          "subscribed_events",
+          "inserted_at",
+          "updated_at"
+        ],
         "title": "Webhook",
         "type": "object"
       },
@@ -2574,26 +2586,17 @@
         "type": "object"
       },
       "WebhookCreateRequest": {
-        "description": "Create a new webhook subscription. Webhooks are immutable after create —\nto change any field, delete and recreate.\n\n- `url` is SSRF-checked downstream. Loopback, RFC1918, link-local, and\n  cloud-metadata IPs/hostnames are denied unless\n  `WEBHOOK_ALLOW_PRIVATE_IPS=true` is set on the admin process.\n- `secret` is the HMAC-SHA256 signing key. Stays on the server; receivers\n  verify the `X-Edge-Signature` header against their stored copy.\n- `headers` is an arbitrary string→string map stamped on every request\n  (e.g. `Authorization: Bearer ...`). Up to 20 entries.\n- `event_filters` are wildcard patterns matched against envelope\n  `type`. Each pattern must match at least one currently-known event\n  type — typos are rejected at create time.\n\nDelivery retry budget is `WEBHOOK_MAX_ATTEMPTS` (default 3).\n\nKnown event-type prefixes: `edge.node.*`, `edge.command_execution.*`,\n`edge.self_update_request.*`, `edge.enrollment_key.*`,\n`edge.ssh_username.*`. The full event catalog with payload schemas is\ndocumented in the [AsyncAPI spec](/asyncdoc).\n",
+        "description": "Create a new webhook subscription. Webhooks are immutable after create —\nto change any field, delete and recreate.\n\n- `url` is SSRF-checked downstream. Loopback, RFC1918, link-local, and\n  cloud-metadata IPs/hostnames are denied unless\n  `WEBHOOK_ALLOW_PRIVATE_IPS=true` is set on the admin process.\n- `secret` is the HMAC-SHA256 signing key. Stays on the server; receivers\n  verify the `X-Edge-Signature` header against their stored copy.\n- `headers` is an arbitrary string→string map stamped on every request\n  (e.g. `Authorization: Bearer ...`). Up to 20 entries.\n- `subscribed_events` is an explicit list of event-type strings — no\n  wildcards. Each string must be a known event type from the catalog;\n  unknown values are rejected at create time.\n\nDelivery retry budget is `WEBHOOK_MAX_ATTEMPTS` (default 3).\n\nThe full event catalog with payload schemas is documented in the\n[AsyncAPI spec](/asyncdoc).\n",
         "example": {
-          "event_filters": ["edge.node.*", "edge.command_execution.completed"],
           "headers": { "Authorization": "Bearer xoxb-token" },
           "secret": "a-cryptographically-random-32-byte-secret",
+          "subscribed_events": [
+            "edge.node.registered",
+            "edge.command_execution.completed"
+          ],
           "url": "https://example.com/edge-events"
         },
         "properties": {
-          "event_filters": {
-            "description": "Wildcard patterns. `*` matches any sequence of characters (including dots); `*` alone matches everything. Each pattern must match at least one current event type.",
-            "example": ["edge.node.*", "edge.command_execution.completed"],
-            "items": {
-              "maxLength": 256,
-              "pattern": "^[a-z0-9_*]+(\\.[a-z0-9_*]+)*$",
-              "type": "string"
-            },
-            "maxItems": 20,
-            "minItems": 1,
-            "type": "array"
-          },
           "headers": {
             "additionalProperties": { "maxLength": 4096, "type": "string" },
             "description": "Extra HTTP headers. Up to 20 entries; each value up to 4096 characters.",
@@ -2611,6 +2614,17 @@
             "minLength": 32,
             "type": "string"
           },
+          "subscribed_events": {
+            "description": "Explicit list of event types this webhook subscribes to. Each entry must be a known event type from the catalog. See [AsyncAPI spec](/asyncdoc).",
+            "example": [
+              "edge.node.registered",
+              "edge.command_execution.completed"
+            ],
+            "items": { "maxLength": 256, "type": "string" },
+            "maxItems": 20,
+            "minItems": 1,
+            "type": "array"
+          },
           "url": {
             "description": "Absolute http(s) URL. SSRF-checked downstream.",
             "example": "https://example.com/edge-events",
@@ -2620,7 +2634,7 @@
             "type": "string"
           }
         },
-        "required": ["url", "secret", "event_filters"],
+        "required": ["url", "secret", "subscribed_events"],
         "title": "WebhookCreateRequest",
         "type": "object"
       },
@@ -3068,7 +3082,7 @@
           },
           "status": {
             "description": "Node status",
-            "enum": ["healthy", "unhealthy"],
+            "enum": ["healthy", "unhealthy", "unreachable"],
             "example": "healthy",
             "type": "string"
           },
@@ -3661,7 +3675,7 @@
     }
   },
   "info": {
-    "description": "REST API for Edge Admin — the orchestration server for Edge Core.\n\nFor managing Edge Core operations. All endpoints require an API key.\n\n**Explore:**\n- [Swagger UI](/swaggerui) — interactive API explorer\n- [ReDoc](/redoc) — reference documentation\n- [Raw spec](/api/openapi) — OpenAPI JSON\n\n**Event streaming:** Edge Admin also publishes lifecycle events to a message broker.\nSee the [AsyncAPI spec](/asyncdoc) or [download it](/api/asyncapi).\n",
+    "description": "REST API for Edge Admin — the orchestration server for Edge Core.\n\nMost endpoints require an API key (`Authorization: Bearer <API_KEY>`\nor `<MASTER_KEY>`). A small set of bootstrap endpoints is intentionally\npublic — see the per-operation `security` field in the spec; an empty\narray there means the endpoint is unauthenticated by design (e.g.\npublic enrollment-key creation).\n\n**Explore:**\n- [Swagger UI](/swaggerui) — interactive API explorer\n- [ReDoc](/redoc) — reference documentation\n- [Raw spec](/api/openapi) — OpenAPI JSON\n\n**Event streaming:** Edge Admin also publishes lifecycle events to a message broker.\nSee the [AsyncAPI spec](/asyncdoc) or [download it](/api/asyncapi).\n",
     "title": "Edge Admin OpenAPI",
     "version": "0.2.0"
   },
@@ -3869,7 +3883,7 @@
                 }
               }
             },
-            "description": "Service Unavailable"
+            "description": "Netmaker unavailable or in degraded mode"
           }
         },
         "summary": "Create a new cluster",
@@ -4158,7 +4172,7 @@
                 }
               }
             },
-            "description": "Service Unavailable"
+            "description": "Netmaker unavailable or in degraded mode"
           }
         },
         "summary": "Update a cluster",
@@ -4218,7 +4232,7 @@
                 }
               }
             },
-            "description": "Service Unavailable"
+            "description": "Netmaker unavailable or in degraded mode"
           }
         },
         "summary": "Delete a cluster",
@@ -5040,7 +5054,7 @@
       },
       "delete": {
         "callbacks": {},
-        "description": "Delete a node from Netmaker and database in a transaction. Cascades to ssh_usernames, ssh_public_keys, and command_executions.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "description": "Delete a node. Removes the Netmaker host first, then the DB row. Cascade: `ssh_usernames` (and their `ssh_public_keys`) and `aliases` are deleted; `command_executions` are kept with `node_id` set to NULL for history.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeController.delete",
         "parameters": [
           {
@@ -5133,7 +5147,7 @@
                 "schema": { "$ref": "#/components/schemas/ConflictResponse" }
               }
             },
-            "description": "Node is already in the target cluster"
+            "description": "Node already in the target cluster, or target cluster has reached its node limit"
           },
           "422": {
             "content": {
@@ -6303,15 +6317,13 @@
             },
             "description": "Command execution not found"
           },
-          "422": {
+          "409": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChangesetErrorResponse"
-                }
+                "schema": { "$ref": "#/components/schemas/ConflictResponse" }
               }
             },
-            "description": "Validation failed - execution status not cancellable"
+            "description": "Execution not in a cancellable state (already terminal)"
           },
           "503": {
             "content": {
@@ -6321,7 +6333,7 @@
                 }
               }
             },
-            "description": "Service Unavailable"
+            "description": "Agent unreachable for cancellation request (sent status only)"
           }
         },
         "summary": "Cancel a command execution",
@@ -7194,7 +7206,7 @@
     "/api/v1/webhooks": {
       "post": {
         "callbacks": {},
-        "description": "Create a webhook subscription. The destination URL is validated against the SSRF deny list at create time. `secret` (HMAC signing key, >= 32 bytes) and `headers` are write-only — encrypted at rest and never returned in any GET response. The full catalog of event types you can subscribe to via `event_filters` is documented in the [AsyncAPI spec](/asyncdoc).",
+        "description": "Create a webhook subscription. The destination URL is validated against the SSRF deny list at create time. `secret` (HMAC signing key, >= 32 bytes) and `headers` are write-only — encrypted at rest and never returned in any GET response. `subscribed_events` is an explicit list of event types this webhook fires on; the full catalog is documented in the [AsyncAPI spec](/asyncdoc).",
         "operationId": "EdgeAdminWeb.Controllers.Events.WebhookController.create",
         "parameters": [],
         "requestBody": {
@@ -7281,7 +7293,7 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Returns webhooks whose `event_filters` would match this concrete event type — same dispatch logic the publish path uses. Pass a literal event type (no wildcards), e.g. `edge.node.registered`.",
+            "description": "Returns webhooks whose `subscribed_events` list contains this event type. Pass a literal event type, e.g. `edge.node.registered`. See [AsyncAPI spec](/asyncdoc) for the catalog.",
             "in": "query",
             "name": "event_type",
             "required": false,
@@ -7407,7 +7419,7 @@
       },
       "delete": {
         "callbacks": {},
-        "description": "Permanently delete a webhook. Webhooks are immutable after create — to change any field (URL, secret, filters, retry budget) delete and recreate.",
+        "description": "Permanently delete a webhook. Webhooks are immutable after create — to change any field (URL, secret, headers, subscribed_events) delete and recreate. The retry budget is process-wide (`WEBHOOK_MAX_ATTEMPTS` env var on the admin), not per-webhook.",
         "operationId": "EdgeAdminWeb.Controllers.Events.WebhookController.delete",
         "parameters": [
           {
@@ -7448,6 +7460,7 @@
     { "name": "Commands.CommandExecution" },
     { "name": "Ssh.SshUsername" },
     { "name": "Ssh.SshPublicKey" },
-    { "name": "SelfUpdates.Request" }
+    { "name": "SelfUpdates.Request" },
+    { "name": "Events.Webhook" }
   ]
 }

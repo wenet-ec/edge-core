@@ -47,8 +47,11 @@ defmodule EdgeAdminHealth.Router do
   plug(:match)
   plug(:dispatch)
 
-  # Kubernetes readiness probe - comprehensive health checks with retries
-  # Returns 200 if ready to serve traffic, 503 if not ready
+  # Kubernetes readiness probe — runs the full check list from
+  # `EdgeAdminHealth.checks/0` (DB, membership, metadata, Netmaker API,
+  # netclient, proxy servers, event broker). Only the Netmaker API check
+  # retries internally; the others are single-shot. Returns 200 if every
+  # check passes, 503 otherwise.
   forward("/readyz", to: Health)
 
   # Kubernetes general health check - alias to readyz for compatibility

@@ -1,4 +1,4 @@
-# edge_admin_web/controllers/agents/self_update_json.ex
+# edge_admin/lib/edge_admin_web/controllers/agents/self_update_json.ex
 defmodule EdgeAdminWeb.Controllers.Agents.SelfUpdateJSON do
   @moduledoc false
   alias EdgeAdminWeb.ResponseEnvelope

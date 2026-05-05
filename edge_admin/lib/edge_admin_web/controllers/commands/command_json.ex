@@ -1,4 +1,4 @@
-# edge_admin_web/controllers/commands/command_json.ex
+# edge_admin/lib/edge_admin_web/controllers/commands/command_json.ex
 defmodule EdgeAdminWeb.Controllers.Commands.CommandJSON do
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdminWeb.ResponseEnvelope

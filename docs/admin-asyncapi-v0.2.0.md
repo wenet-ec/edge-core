@@ -130,7 +130,9 @@ edge/#                     ← everything
 
 Default publish QoS is `1` (at-least-once with broker ACK). Configurable globally via `EVENT_BROKER_MQTT_QOS=0|1|2` — there is no per-event QoS. Consumers should dedup on envelope `id` regardless (multi-admin setups produce duplicate `node.status_changed` events from independent health checkers).
 
-**Durability is the broker's and consumer's concern.** MQTT QoS controls only the publisher↔broker↔subscriber delivery handshake — it does not make messages durable. Subscribers wanting offline queueing connect with `clean_session=false` (MQTT 3) or `Session Expiry Interval > 0` (MQTT 5) on their own connection.
+The adapter publishes as MQTT 5 (`proto_ver: :v5` is hardcoded) — MQTT 3.1.1 brokers are not supported.
+
+**Durability is the broker's and consumer's concern.** MQTT QoS controls only the publisher↔broker↔subscriber delivery handshake — it does not make messages durable. Subscribers wanting offline queueing connect with `Session Expiry Interval > 0` on their own connection.
 
 ### AWS SNS
 
@@ -165,7 +167,7 @@ Filter policy examples:
 
 ### Google Cloud Pub/Sub
 
-Three Pub/Sub topics by domain — must be pre-provisioned in your GCP project. The adapter constructs full resource names from `EVENT_BROKER_GOOGLE_PUBSUB_PROJECT` (+ optional `EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX`):
+Four Pub/Sub topics by domain — must be pre-provisioned in your GCP project. The adapter constructs full resource names from `EVENT_BROKER_GOOGLE_PUBSUB_PROJECT` (+ optional `EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX`):
 
 | Domain                       | Topic ID                   |
 | ---------------------------- | -------------------------- |

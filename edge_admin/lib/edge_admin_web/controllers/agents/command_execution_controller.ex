@@ -72,9 +72,10 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
       200 =>
         {"Command execution acknowledged", "application/json",
          CommandExecutionSchemas.AgentCommandExecutionSingleResponse},
+      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
       403 => {"Forbidden", "application/json", CommonSchemas.ForbiddenResponse},
       404 => {"Not found", "application/json", CommonSchemas.NotFoundResponse},
-      400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse}
+      409 => {"Execution not in 'pending' status", "application/json", CommonSchemas.ConflictResponse}
     }
   )
 
@@ -99,6 +100,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
         {"Command execution updated", "application/json", CommandExecutionSchemas.AgentCommandExecutionSingleResponse},
       403 => {"Forbidden", "application/json", CommonSchemas.ForbiddenResponse},
       404 => {"Not found", "application/json", CommonSchemas.NotFoundResponse},
+      409 => {"Execution not in a state that accepts a result", "application/json", CommonSchemas.ConflictResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse}
     }
   )

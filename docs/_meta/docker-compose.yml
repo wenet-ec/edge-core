@@ -1,0 +1,26 @@
+# docs/_meta/docker-compose.yml
+#
+# Local docs preview with live reload. Run from the repo root:
+#
+#   docker compose -f docs/_meta/docker-compose.yml up        # foreground, live logs
+#   docker compose -f docs/_meta/docker-compose.yml up -d     # background
+#   docker compose -f docs/_meta/docker-compose.yml down      # stop and remove
+#
+# First run builds the image (mkdocs-material + include-markdown + neoteroi).
+# Subsequent runs reuse the cached image instantly.
+#
+# Site is served at http://127.0.0.1:28080/edge-core/
+
+services:
+  docs:
+    container_name: edge_core_docs
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: edge_core_docs
+    ports:
+      - "28080:8000"
+    volumes:
+      - ../..:/docs
+    working_dir: /docs
+    command: ["serve", "--dev-addr", "0.0.0.0:8000"]

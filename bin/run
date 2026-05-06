@@ -6,6 +6,7 @@
 #   ./bin/run edge <command>      # Manage edge services (agent)
 #   ./bin/run all <command>       # Manage all services together
 #   ./bin/run k8s <command>       # Manage k8s test cluster (kind + helmfile)
+#   ./bin/run docs <command>      # Local docs site preview (mkdocs-material)
 
 # Exit on any error
 set -e
@@ -205,6 +206,7 @@ show_help() {
     echo "  edge      - Manage edge services (agent, registry, watchtower)"
     echo "  all       - Manage all services together"
     echo "  k8s       - Manage k8s test cluster (kind + helmfile)"
+    echo "  docs      - Local docs site preview (mkdocs-material)"
     echo ""
     echo -e "${YELLOW}Global Options:${NC}"
     echo "  ENV=production    - Use production environment (default: local)"
@@ -226,6 +228,7 @@ show_help() {
     echo "  ./bin/run edge"
     echo "  ./bin/run all"
     echo "  ./bin/run k8s"
+    echo "  ./bin/run docs"
 }
 
 # Handle cloud infrastructure commands
@@ -603,6 +606,54 @@ handle_all() {
     esac
 }
 
+# Handle docs site preview commands
+DOCS_COMPOSE_FILE="docs/_meta/docker-compose.yml"
+
+show_docs_help() {
+    echo -e "${BLUE}Docs Site Preview Commands${NC}"
+    echo "Local mkdocs-material preview with live reload, served at:"
+    echo "  http://127.0.0.1:28080/edge-core/"
+    echo ""
+    echo "Usage: ./bin/run docs <command> [options]"
+    echo ""
+    echo -e "${YELLOW}Commands:${NC}"
+    echo "  up [options]           - Start the docs preview (-d for background)"
+    echo "  down                   - Stop and remove the docs preview"
+    echo "  logs                   - Tail mkdocs build logs"
+    echo "  build                  - Rebuild the docs image (after editing requirements.txt)"
+    echo "  ps                     - Show whether the preview is running"
+    echo ""
+    echo -e "${GREEN}Examples:${NC}"
+    echo "  ./bin/run docs up -d"
+    echo "  ./bin/run docs logs"
+    echo "  ./bin/run docs down"
+}
+
+handle_docs() {
+    local compose_file="-f $DOCS_COMPOSE_FILE"
+    local command=$1
+    shift || true
+
+    case "$command" in
+        "")
+            show_docs_help
+            ;;
+        up|down|build|ps)
+            check_docker
+            log "Running: docker compose $compose_file $command $@"
+            docker compose $compose_file "$command" "$@"
+            ;;
+        logs)
+            check_docker
+            docker compose $compose_file logs -f "$@"
+            ;;
+        *)
+            error "Unknown docs command: $command"
+            show_docs_help
+            ;;
+    esac
+}
+
 # k8s constants
 K8S_CLUSTER_NAME="edge-core"
 K8S_HELMFILE="deploy/k8s/helmfile.test.yaml"
@@ -817,6 +868,11 @@ case "$1" in
     k8s)
         shift
         handle_k8s "$@"
+        ;;
+    docs)
+        shift
+        validate_compose_file "$DOCS_COMPOSE_FILE"
+        handle_docs "$@"
         ;;
     ""|help|--help|-h)
         show_help

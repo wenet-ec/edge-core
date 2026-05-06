@@ -1,0 +1,187 @@
+/* Edge Core docs — navy + gold palette
+ *
+ * Material's color system is driven by CSS custom properties, scoped to
+ * [data-md-color-scheme="default"] (light) and [data-md-color-scheme="slate"]
+ * (dark). We override those tokens here instead of using Material's built-in
+ * `primary: deep purple` shortcut, because our palette doesn't match any of
+ * Material's named hues.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Navy + neutral tokens (shared across light/dark)
+ * ------------------------------------------------------------------------- */
+:root {
+  /* Navy scale */
+  --ec-navy-900: #1a2240;
+  --ec-navy-800: #24344d;
+  --ec-navy-700: #2e4263;
+  --ec-navy-600: #3e567c;
+  --ec-navy-500: #506d96;
+  --ec-steel-500: #7b92af;
+  --ec-steel-400: #8ca0b1;
+  --ec-steel-300: #a7bbcb;
+
+  /* Gold scale */
+  --ec-gold-500: #c9942e;
+  --ec-gold-400: #d4a94a;
+  --ec-gold-300: #e0bf6e;
+  --ec-gold-200: #ebd49a;
+
+  /* Neutrals */
+  --ec-white: #ffffff;
+  --ec-near-white: #fafbfc;
+  --ec-near-white-2: #f5f7f9;
+  --ec-sunken: #eef1f5;
+  --ec-sunken-2: #f0f2f5;
+  --ec-border: #e1e5eb;
+  --ec-border-subtle: #ebeef2;
+
+  /* Semantic */
+  --ec-green: #1a8d3a;
+  --ec-yellow: #b8860b;
+  --ec-red: #d32f2f;
+  --ec-green-dark: #34d058;
+  --ec-yellow-dark: #e3b341;
+  --ec-red-dark: #f85149;
+}
+
+/* ---------------------------------------------------------------------------
+ * Light mode
+ * ------------------------------------------------------------------------- */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: var(--ec-navy-900);
+  --md-primary-fg-color--light: var(--ec-navy-700);
+  --md-primary-fg-color--dark: var(--ec-navy-900);
+  --md-primary-bg-color: var(--ec-white);
+  --md-primary-bg-color--light: var(--ec-near-white);
+
+  --md-accent-fg-color: var(--ec-gold-500);
+  --md-accent-fg-color--transparent: rgb(201 148 46 / 0.1);
+  --md-accent-bg-color: var(--ec-white);
+  --md-accent-bg-color--light: var(--ec-near-white);
+
+  --md-default-bg-color: var(--ec-near-white);
+  --md-default-fg-color: var(--ec-navy-900);
+  --md-default-fg-color--light: var(--ec-navy-700);
+  --md-default-fg-color--lighter: var(--ec-steel-500);
+  --md-default-fg-color--lightest: var(--ec-steel-400);
+
+  --md-code-bg-color: var(--ec-sunken);
+  --md-code-fg-color: var(--ec-navy-900);
+
+  --md-typeset-a-color: var(--ec-navy-700);
+}
+
+[data-md-color-scheme="default"] .md-header {
+  background: var(--ec-navy-900);
+  color: var(--ec-white);
+}
+
+[data-md-color-scheme="default"] .md-tabs {
+  background: var(--ec-navy-800);
+  color: var(--ec-white);
+}
+
+[data-md-color-scheme="default"] .md-tabs__link--active,
+[data-md-color-scheme="default"] .md-tabs__link:hover {
+  color: var(--ec-gold-500);
+}
+
+[data-md-color-scheme="default"] .md-nav__link--active,
+[data-md-color-scheme="default"] .md-nav__link:hover {
+  color: var(--ec-gold-500);
+}
+
+[data-md-color-scheme="default"] .md-typeset a:hover {
+  color: var(--ec-gold-500);
+}
+
+[data-md-color-scheme="default"] .md-typeset table:not([class]) th {
+  background: var(--ec-sunken);
+  color: var(--ec-navy-900);
+}
+
+[data-md-color-scheme="default"] .md-typeset table:not([class]) {
+  border: 1px solid var(--ec-border);
+}
+
+[data-md-color-scheme="default"] .md-typeset blockquote {
+  color: var(--ec-navy-700);
+  border-left-color: var(--ec-gold-500);
+}
+
+/* ---------------------------------------------------------------------------
+ * Dark mode (Material's "slate" scheme)
+ *
+ * Gold gets pushed slightly brighter (gold-400) because it reads better on
+ * the navy background. This matches the design-doc note that dark-mode accent
+ * should use #d4a94a, not #c9942e.
+ * ------------------------------------------------------------------------- */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: var(--ec-navy-900);
+  --md-primary-fg-color--light: var(--ec-navy-800);
+  --md-primary-fg-color--dark: var(--ec-navy-900);
+  --md-primary-bg-color: var(--ec-near-white);
+
+  --md-accent-fg-color: var(--ec-gold-400);
+  --md-accent-fg-color--transparent: rgb(212 169 74 / 0.15);
+
+  --md-default-bg-color: var(--ec-navy-900);
+  --md-default-fg-color: var(--ec-near-white);
+  --md-default-fg-color--light: var(--ec-steel-300);
+  --md-default-fg-color--lighter: var(--ec-steel-400);
+  --md-default-fg-color--lightest: var(--ec-steel-500);
+
+  --md-code-bg-color: var(--ec-navy-800);
+  --md-code-fg-color: var(--ec-near-white);
+
+  --md-typeset-a-color: var(--ec-gold-400);
+}
+
+[data-md-color-scheme="slate"] .md-header {
+  background: var(--ec-navy-900);
+}
+
+[data-md-color-scheme="slate"] .md-tabs {
+  background: var(--ec-navy-800);
+}
+
+[data-md-color-scheme="slate"] .md-tabs__link--active,
+[data-md-color-scheme="slate"] .md-tabs__link:hover {
+  color: var(--ec-gold-400);
+}
+
+[data-md-color-scheme="slate"] .md-nav__link--active,
+[data-md-color-scheme="slate"] .md-nav__link:hover {
+  color: var(--ec-gold-400);
+}
+
+[data-md-color-scheme="slate"] .md-typeset a:hover {
+  color: var(--ec-gold-300);
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+  background: var(--ec-navy-800);
+  color: var(--ec-near-white);
+}
+
+[data-md-color-scheme="slate"] .md-typeset blockquote {
+  color: var(--ec-steel-300);
+  border-left-color: var(--ec-gold-400);
+}
+
+/* ---------------------------------------------------------------------------
+ * Shared tweaks (both schemes)
+ * ------------------------------------------------------------------------- */
+
+/* Slightly tighter heading weight — the navy reads strong, no need for 700 */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3 {
+  font-weight: 600;
+}
+
+/* Code blocks: a touch of border so they sit cleanly against page bg */
+.md-typeset pre > code {
+  border-radius: 4px;
+}

@@ -1,0 +1,99 @@
+site_name: Edge Core
+site_description: Distributed edge computing infrastructure management — meshed, proxied, observed, and remotely controlled.
+site_url: https://wenet-ec.github.io/edge-core/
+repo_url: https://github.com/wenet-ec/edge-core
+repo_name: wenet-ec/edge-core
+edit_uri: edit/main/docs/
+
+# docs/ holds the built docs. README.md and examples/*/README.md are pulled in
+# at build time via the include-markdown plugin (see docs/index.md and the
+# docs/deploying/*.md stubs). This keeps a single source of truth in the repo
+# while satisfying MkDocs' constraint that docs_dir be a sibling of mkdocs.yml.
+# Anything related to the docs *system* (Dockerfile, requirements.txt,
+# stylesheets) lives under docs/_meta/.
+docs_dir: docs
+site_dir: site
+
+# Keep the docs system files out of the rendered site. CSS under
+# _meta/stylesheets/ is referenced explicitly by extra_css below and gets
+# copied through that route, so no allowlist needed.
+exclude_docs: |
+  _meta/Dockerfile
+  _meta/requirements.txt
+
+theme:
+  name: material
+  # Palette colors are overridden in docs/_meta/stylesheets/extra.css with the
+  # navy + gold tokens — Material's named hues don't match. We still declare a
+  # palette here so the dark-mode toggle works.
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+extra_css:
+  - _meta/stylesheets/extra.css
+  - _meta/stylesheets/neoteroi-mkdocsoad.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed
+
+plugins:
+  - search
+  - include-markdown
+  - neoteroi.mkdocsoad
+
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - User guide: guide.md
+  - API reference:
+      - REST API (OpenAPI): openapi.md
+      - Events (AsyncAPI): admin-asyncapi-v0.2.0.md
+  - Deploying:
+      - Examples overview: deploying/index.md
+      - Lite: deploying/lite.md
+      - Standard: deploying/standard.md
+      - Sidecar: deploying/sidecar.md
+      - Relay: deploying/relay.md
+      - Operations: deploying/operations.md
+      - Event brokers: deploying/event-brokers.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/wenet-ec/edge-core

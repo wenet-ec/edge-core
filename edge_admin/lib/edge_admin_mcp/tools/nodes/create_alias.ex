@@ -1,6 +1,13 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/create_alias.ex
 defmodule EdgeAdminMcp.Tools.Nodes.CreateAlias do
-  @moduledoc "Create a DNS alias for a node. Resolves as <name>.<cluster-domain> within the VPN mesh."
+  @moduledoc """
+  Create a DNS alias for a node. The alias resolves to the same WireGuard
+  IP as the underlying node within the VPN mesh.
+
+  Resolved hostname format: `node-<name>.cluster-<cluster_name>.<vpn_domain>`
+  (default `vpn_domain` is `nm.internal`). The created record's
+  `vpn_hostname` field carries the fully-qualified form for direct use.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes

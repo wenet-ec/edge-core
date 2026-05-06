@@ -4,9 +4,19 @@ defmodule EdgeAdminMcp.Tools.Metrics.GetNodeMetrics do
   Get unified metrics for a node — host + agent sources combined.
 
   Returns CPU, memory, disk, uptime (from Node Exporter) plus BEAM stats,
-  command pipeline, proxy, SSH, VPN pulls, health check reports, and Oban
-  queues (from agent PromEx). Best-effort: if one source fails, the others
-  are still returned.
+  command pipeline, admin discovery, proxy, SSH, VPN pulls, health check
+  reports, and Oban queues (from agent PromEx). Best-effort: if one
+  source fails, the corresponding section is reported as unavailable but
+  the call still succeeds.
+
+  ## Note on bogus node IDs
+
+  This tool always returns `{:ok, ...}` even if `node_id` doesn't exist —
+  the per-source fetch errors get folded into "unavailable" status.
+  Verify the node exists with `get_node` first if you need to
+  distinguish "node missing" from "node up but not scraping". The
+  per-source tools (`get_host_metrics`, `get_agent_metrics`) do return
+  an explicit `not_found` error for missing nodes.
   """
   use EdgeAdminMcp, :tool
 

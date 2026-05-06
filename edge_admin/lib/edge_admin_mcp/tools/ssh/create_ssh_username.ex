@@ -30,7 +30,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.CreateSshUsername do
         attrs =
           %{"username" => params.username}
           |> put_if("password", params[:password])
-          |> put_if("ssh_public_keys", params[:public_keys])
+          |> put_if("public_keys", params[:public_keys])
 
         case Ssh.create_ssh_username_with_keys(node, attrs) do
           {:ok, username} ->

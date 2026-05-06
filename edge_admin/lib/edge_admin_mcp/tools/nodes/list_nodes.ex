@@ -14,7 +14,8 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
   - `updated_at_gte` / `updated_at_lte` — last-updated datetime range (ISO8601)
 
   ## Sorting
-  - `order_by` — comma-separated fields: `status`, `version`, `last_seen_at`, `inserted_at`, `updated_at`
+  - `order_by` — comma-separated fields: `id_type`, `status`, `version`,
+    `self_update_enabled`, `last_seen_at`, `inserted_at`, `updated_at`
   - `order_directions` — comma-separated directions: `asc`, `desc`
   """
   use EdgeAdminMcp, :tool

@@ -1,6 +1,13 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/update_enrollment_key.ex
 defmodule EdgeAdminMcp.Tools.Nodes.UpdateEnrollmentKey do
-  @moduledoc "Update an enrollment key's uses_remaining or expired_at. Pass null to clear a field."
+  @moduledoc """
+  Update an enrollment key's `name`, `uses_remaining`, or `expired_at`.
+
+  Only fields you provide are updated. Omitting a field (or passing null)
+  leaves it unchanged — this tool cannot clear `expired_at` or set
+  `uses_remaining` back to unlimited. To do that, delete and recreate the
+  key.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes

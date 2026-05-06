@@ -5,15 +5,20 @@ defmodule EdgeAdminMcp.Tools.Events.ListWebhooks do
 
   ## Filtering
   - `url` — exact match or wildcard (`*example.com`, `https://prod*`)
-  - `enabled` — true/false
+  - `event_type` — post-filter: only webhooks whose `subscribed_events`
+    list contains this event type. Use this to answer "which webhooks
+    fire on event X?". Pagination is applied before this filter, so the
+    result count may be smaller than the page_size.
   - `inserted_at_gte` / `inserted_at_lte` — creation datetime range (ISO8601)
   - `updated_at_gte` / `updated_at_lte` — last-updated datetime range (ISO8601)
 
   ## Sorting
-  - `order_by` — comma-separated fields: `url`, `enabled`, `consecutive_failures`, `inserted_at`, `updated_at`
+  - `order_by` — comma-separated fields: `url`, `inserted_at`, `updated_at`
   - `order_directions` — comma-separated directions: `asc`, `desc`
 
   Note: `secret` and `headers` are write-only and are never returned.
+  Webhooks have no `enabled` toggle — they're immutable after create. To
+  pause delivery, delete and recreate.
   """
   use EdgeAdminMcp, :tool
 
@@ -30,7 +35,7 @@ defmodule EdgeAdminMcp.Tools.Events.ListWebhooks do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
     field :url, :string, min_length: 1
-    field :enabled, :boolean
+    field :event_type, :string, min_length: 1
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string
     field :updated_at_gte, :string
@@ -42,10 +47,12 @@ defmodule EdgeAdminMcp.Tools.Events.ListWebhooks do
   @impl true
   def execute(params, frame) do
     query =
-      FlopParams.build(params,
-        passthrough: [:url, :enabled],
+      params
+      |> FlopParams.build(
+        passthrough: [:url],
         ranges: [:inserted_at, :updated_at]
       )
+      |> put_if("event_type", params[:event_type])
 
     case Webhooks.list_webhooks(query) do
       {:ok, {webhooks, meta}} ->

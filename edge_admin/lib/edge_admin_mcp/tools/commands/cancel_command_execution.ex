@@ -3,9 +3,17 @@ defmodule EdgeAdminMcp.Tools.Commands.CancelCommandExecution do
   @moduledoc """
   Cancel a command execution.
 
-  - pending → cancelled immediately (status set to completed, output "Command cancelled")
-  - sent → cancellation request forwarded to agent (best-effort, async — check status later)
-  - completed → error, cannot cancel
+  Behaviour by status:
+
+  - `pending` → cancelled immediately. Status set to `cancelled`,
+    `cancelled_at` set to now. Output and exit_code stay nil.
+    Returns `%{result: "execution cancelled"}`.
+  - `sent` → cancellation request forwarded to the agent. Best-effort
+    and async — re-fetch the execution later to see whether the agent
+    actually stopped before completing. Returns
+    `%{result: "cancellation request sent"}`.
+  - `completed` / `cancelled` / `expired` → returns a 409-style conflict
+    error; only `pending` and `sent` are cancellable.
   """
   use EdgeAdminMcp, :tool
 

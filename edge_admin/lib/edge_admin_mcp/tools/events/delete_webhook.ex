@@ -1,8 +1,13 @@
 # edge_admin/lib/edge_admin_mcp/tools/events/delete_webhook.ex
 defmodule EdgeAdminMcp.Tools.Events.DeleteWebhook do
   @moduledoc """
-  Delete a webhook subscription. To temporarily pause delivery, update with
-  `enabled: false` instead of deleting.
+  Delete a webhook subscription.
+
+  Webhooks are immutable — there is no `enabled` toggle and no update API.
+  To pause delivery, delete the webhook; to resume, create a new one
+  with the same URL/events. Receivers verifying `X-Edge-Signature` will
+  need the secret you used at create time, so plan key handoff before
+  deleting if you intend to recreate.
   """
   use EdgeAdminMcp, :tool
 

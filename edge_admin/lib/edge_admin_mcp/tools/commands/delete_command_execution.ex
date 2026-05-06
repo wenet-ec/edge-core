@@ -1,6 +1,12 @@
 # edge_admin/lib/edge_admin_mcp/tools/commands/delete_command_execution.ex
 defmodule EdgeAdminMcp.Tools.Commands.DeleteCommandExecution do
-  @moduledoc "Delete a command execution. Only completed executions can be deleted."
+  @moduledoc """
+  Delete a command execution.
+
+  Only executions in a terminal status (`completed`, `cancelled`, or
+  `expired`) can be deleted. `pending` or `sent` executions return a
+  conflict error — cancel them first via `cancel_command_execution`.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Commands

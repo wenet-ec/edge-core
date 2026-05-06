@@ -9,7 +9,8 @@ defmodule EdgeAdminMcp.Tools.Events.CreateWebhook do
   - `headers` is a map of string→string headers stamped on every delivery
     (e.g. `Authorization: Bearer xoxb-...`).
   - `subscribed_events` is an explicit list of event-type strings — no wildcards.
-    Each entry must be a known event type from the catalog.
+    Each entry must be a known event type from the catalog. Capped at
+    20 events per webhook; create additional webhooks if you need more.
   """
   use EdgeAdminMcp, :tool
 

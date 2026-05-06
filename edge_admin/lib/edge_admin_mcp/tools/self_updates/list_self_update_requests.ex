@@ -9,7 +9,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.ListSelfUpdateRequests do
   - `updated_at_gte` / `updated_at_lte` — last-updated datetime range (ISO8601)
 
   ## Sorting
-  - `order_by` — comma-separated fields: `status`, `inserted_at`, `updated_at`
+  - `order_by` — comma-separated fields: `inserted_at`, `updated_at`
   - `order_directions` — comma-separated directions: `asc`, `desc`
   """
   use EdgeAdminMcp, :tool

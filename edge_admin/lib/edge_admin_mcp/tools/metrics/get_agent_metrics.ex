@@ -20,6 +20,9 @@ defmodule EdgeAdminMcp.Tools.Metrics.GetAgentMetrics do
       {:ok, metrics} ->
         {:reply, Response.json(Response.tool(), metrics), frame}
 
+      {:error, :not_found} ->
+        {:reply, error_response(:not_found, "Node #{node_id} not found"), frame}
+
       {:error, _reason} ->
         {:reply, error_response(:service_unavailable), frame}
     end

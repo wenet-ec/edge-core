@@ -2,18 +2,21 @@
 defmodule EdgeAgent.PromEx do
   @moduledoc """
   PromEx configuration for EdgeAgent application.
+
+  Wires up the upstream PromEx plugins (Application, Beam, Phoenix, Ecto, Oban)
+  plus our custom `EdgeAgent.PromEx.EdgeAgentPlugin` that emits agent-specific
+  business metrics. The corresponding agent Grafana dashboard
+  (`edge_agent.json`) lives under `edge_admin/priv/grafana_dashboards/` so
+  operators import it once at the admin tier; the agent itself does not serve
+  custom dashboards.
   """
 
   use PromEx, otp_app: :edge_agent
 
   alias PromEx.Plugins
 
-  require Logger
-
   @impl true
   def plugins do
-    Logger.info("PromEx: Loading plugins...")
-
     [
       # PromEx built in plugins
       Plugins.Application,
@@ -35,14 +38,15 @@ defmodule EdgeAgent.PromEx do
 
   @impl true
   def dashboards do
+    # Built-in PromEx dashboards. The agent-specific `edge_agent.json` is
+    # operator-imported from `edge_admin/priv/grafana_dashboards/`; it is not
+    # bundled here.
     [
-      # PromEx built in Grafana dashboards
       {:prom_ex, "application.json"},
       {:prom_ex, "beam.json"},
       {:prom_ex, "phoenix.json"},
       {:prom_ex, "ecto.json"},
       {:prom_ex, "oban.json"}
-      # Note: edge_agent.json will be stored in admin's priv/grafana_dashboards for reference
     ]
   end
 end

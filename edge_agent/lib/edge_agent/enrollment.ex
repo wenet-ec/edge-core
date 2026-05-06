@@ -25,9 +25,17 @@ defmodule EdgeAgent.Enrollment do
 
   ## Crash Safety
 
-  All Settings writes happen before returning. If the agent crashes after
-  `ensure_verified/0` returns `:ok`, the next bootstrap finds
-  `enrollment_verified=true` and skips re-verification, preserving the key use.
+  Settings writes are ordered so `enrollment_verified=true` is the last one.
+  If the agent crashes after `ensure_verified/0` returns `:ok`, the next
+  bootstrap sees the verified flag and skips re-verification, preserving
+  the enrollment key's use count.
+
+  A crash *during* the write sequence — between the
+  `set_admin_fallback_urls/1` / `set_netmaker_key/1` writes and the final
+  `set_enrollment_verified(true)` — leaves the verified flag false. The
+  next bootstrap will re-verify and consume another key use. Limited-use
+  keys with very narrow crash windows could deplete this way, but in
+  practice the writes are SQLite upserts and complete in microseconds.
 
   ## Configuration
 

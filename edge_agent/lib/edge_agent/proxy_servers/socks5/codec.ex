@@ -5,8 +5,8 @@ defmodule EdgeAgent.ProxyServers.Socks5.Codec do
 
   Every decoder returns one of:
     * `{:ok, value, rest}` — parsed successfully
-    * `{:need_more, required_bytes}` — need at least `required_bytes` more before
-      re-parsing; `0` means "keep the current buffer and read more"
+    * `{:need_more, required_bytes}` — need at least `required_bytes` more
+      bytes before the next parse attempt
     * `{:error, reason}` — protocol violation
   """
 

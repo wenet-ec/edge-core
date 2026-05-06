@@ -21,8 +21,10 @@ defmodule EdgeAgent.Metrics do
   ## Push Strategy
 
   - Best-effort: Push whatever metrics scrape successfully
-  - Validate: Skip empty or nil metrics text
+  - Validate: Skip empty metrics text
   - Continue on failures: One failed scrape doesn't stop others
+  - `push_metrics/0` always returns `{:ok, summary}` — partial failure is
+    surfaced via the `failed` count, never as `{:error, _}`
 
   ## Examples
 
@@ -76,8 +78,11 @@ defmodule EdgeAgent.Metrics do
   # Scrapes and pushes agent metrics (agent PromEx)
   defp push_agent_metrics do
     case scrape_agent_metrics() do
-      {:ok, metrics_text} when is_binary(metrics_text) and metrics_text != "" ->
-        # Validate metrics_text is not empty
+      {:ok, ""} ->
+        Logger.warning("Skipped agent metrics push: empty metrics text")
+        {:error, {"agent", :empty_metrics}}
+
+      {:ok, metrics_text} when is_binary(metrics_text) ->
         case AdminClient.push_metrics("agent", metrics_text) do
           {:ok, _cache} ->
             Logger.debug("Successfully pushed agent metrics")
@@ -87,10 +92,6 @@ defmodule EdgeAgent.Metrics do
             Logger.error("Failed to push agent metrics to admin: #{inspect(reason)}")
             {:error, {"agent", :push_failed, reason}}
         end
-
-      {:ok, empty} when empty == "" or empty == nil ->
-        Logger.warning("Skipped agent metrics push: empty metrics text")
-        {:error, {"agent", :empty_metrics}}
 
       {:error, reason} ->
         Logger.error("Failed to scrape agent metrics from PromEx: #{inspect(reason)}")
@@ -120,8 +121,11 @@ defmodule EdgeAgent.Metrics do
   # Generic scrape + push logic
   defp scrape_and_push(metrics_type, url) do
     case scrape_metrics(url) do
-      {:ok, metrics_text} when is_binary(metrics_text) and metrics_text != "" ->
-        # Validate metrics_text is not empty
+      {:ok, ""} ->
+        Logger.warning("Skipped #{metrics_type} metrics push: empty metrics text")
+        {:error, {metrics_type, :empty_metrics}}
+
+      {:ok, metrics_text} when is_binary(metrics_text) ->
         case AdminClient.push_metrics(metrics_type, metrics_text) do
           {:ok, _cache} ->
             Logger.debug("Successfully pushed #{metrics_type} metrics")
@@ -131,10 +135,6 @@ defmodule EdgeAgent.Metrics do
             Logger.error("Failed to push #{metrics_type} metrics to admin: #{inspect(reason)}")
             {:error, {metrics_type, :push_failed, reason}}
         end
-
-      {:ok, empty} when empty == "" or empty == nil ->
-        Logger.warning("Skipped #{metrics_type} metrics push: empty metrics text")
-        {:error, {metrics_type, :empty_metrics}}
 
       {:error, reason} ->
         Logger.error("Failed to scrape #{metrics_type} metrics from #{url}: #{inspect(reason)}")

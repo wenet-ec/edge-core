@@ -5,6 +5,18 @@ defmodule EdgeAgent.MetricsServers do
 
   Manages the node_exporter and wireguard_exporter processes for collecting
   system and WireGuard metrics from the host.
+
+  ## Startup behaviour
+
+  `init/1` always returns `{:ok, state}` even if launching the exporters
+  fails — the supervisor stays up so the agent can keep running without
+  metrics rather than crash-looping. Operators (and `EdgeAgentHealth`) can
+  query `servers_status/0` to detect this state, which will return `:error`
+  when the auto-start failed.
+
+  Exporter pids/ports are tracked independently. A crash of one exporter
+  triggers cleanup of the other, so we never leak a still-running process
+  whose pid we forgot.
   """
 
   @behaviour EdgeAgent.MetricsServers.Behaviour
@@ -158,15 +170,13 @@ defmodule EdgeAgent.MetricsServers do
   @impl true
   def handle_info({:EXIT, pid, reason}, state) when pid == state.node_exporter_pid do
     Logger.warning("node_exporter process #{pid} exited with reason: #{inspect(reason)}")
-    new_state = reset_state(state)
-    {:noreply, new_state}
+    {:noreply, handle_node_exporter_down(state)}
   end
 
   @impl true
   def handle_info({:EXIT, pid, reason}, state) when pid == state.wireguard_exporter_pid do
     Logger.warning("wireguard_exporter process #{pid} exited with reason: #{inspect(reason)}")
-    new_state = reset_state(state)
-    {:noreply, new_state}
+    {:noreply, handle_wireguard_exporter_down(state)}
   end
 
   @impl true
@@ -184,15 +194,13 @@ defmodule EdgeAgent.MetricsServers do
   @impl true
   def handle_info({port, {:exit_status, status}}, state) when port == state.node_exporter_port_ref do
     Logger.warning("node_exporter port exited with status: #{status}")
-    new_state = reset_state(state)
-    {:noreply, new_state}
+    {:noreply, handle_node_exporter_down(state)}
   end
 
   @impl true
   def handle_info({port, {:exit_status, status}}, state) when port == state.wireguard_exporter_port_ref do
     Logger.warning("wireguard_exporter port exited with status: #{status}")
-    new_state = reset_state(state)
-    {:noreply, new_state}
+    {:noreply, handle_wireguard_exporter_down(state)}
   end
 
   @impl true
@@ -215,28 +223,43 @@ defmodule EdgeAgent.MetricsServers do
   defp do_start_servers(state) do
     Logger.info("Starting metrics exporters...")
 
-    with {:ok, node_pid, node_port} <- start_node_exporter_safe(state),
-         {:ok, wg_pid, wg_port} <- start_wireguard_exporter_safe(state) do
-      primary_ip = Network.detect_primary_interface_ip()
+    case start_node_exporter_safe(state) do
+      {:ok, node_pid, node_port} ->
+        # Record the node_exporter in state *before* starting wireguard, so a
+        # wireguard-start failure can clean it up instead of orphaning it.
+        state_with_node = %{
+          state
+          | node_exporter_pid: node_pid,
+            node_exporter_port_ref: node_port
+        }
 
-      new_state = %{
-        state
-        | node_exporter_pid: node_pid,
-          node_exporter_port_ref: node_port,
-          wireguard_exporter_pid: wg_pid,
-          wireguard_exporter_port_ref: wg_port,
-          status: :running,
-          primary_interface_ip: primary_ip
-      }
+        Logger.info("Node exporter started with PID #{node_pid} on port #{state.host_metrics_port}")
 
-      Logger.info("Node exporter started with PID #{node_pid} on port #{state.host_metrics_port}")
-      Logger.info("WireGuard exporter started with PID #{wg_pid} on port #{state.wireguard_metrics_port}")
-      if primary_ip, do: Logger.info("Primary interface IP: #{primary_ip}")
+        case start_wireguard_exporter_safe(state_with_node) do
+          {:ok, wg_pid, wg_port} ->
+            primary_ip = Network.detect_primary_interface_ip()
 
-      {:ok, new_state}
-    else
+            Logger.info("WireGuard exporter started with PID #{wg_pid} on port #{state.wireguard_metrics_port}")
+            if primary_ip, do: Logger.info("Primary interface IP: #{primary_ip}")
+
+            new_state = %{
+              state_with_node
+              | wireguard_exporter_pid: wg_pid,
+                wireguard_exporter_port_ref: wg_port,
+                status: :running,
+                primary_interface_ip: primary_ip
+            }
+
+            {:ok, new_state}
+
+          {:error, reason} ->
+            Logger.error("WireGuard exporter failed to start; stopping node_exporter: #{inspect(reason)}")
+            ProcessSupervisor.stop_node_exporter(node_pid, node_port)
+            {:error, reason, %{state | status: :error}}
+        end
+
       {:error, reason} ->
-        Logger.error("Failed to start metrics exporters: #{inspect(reason)}")
+        Logger.error("Failed to start node_exporter: #{inspect(reason)}")
         {:error, reason, %{state | status: :error}}
     end
   end
@@ -289,23 +312,50 @@ defmodule EdgeAgent.MetricsServers do
 
   defp check_status(state) do
     status =
-      if state.status == :running and state.node_exporter_pid do
-        case state.node_exporter_pid do
-          pid when is_pid(pid) ->
-            if Process.alive?(pid), do: :running, else: :stopped
+      cond do
+        state.status != :running ->
+          state.status
 
-          pid when is_integer(pid) ->
-            if ProcessSupervisor.process_exists?(pid), do: :running, else: :stopped
+        not exporter_alive?(state.node_exporter_pid) ->
+          :stopped
 
-          _ ->
-            :stopped
-        end
-      else
-        state.status
+        not exporter_alive?(state.wireguard_exporter_pid) ->
+          :stopped
+
+        true ->
+          :running
       end
 
     updated_state = %{state | status: status}
     {status, updated_state}
+  end
+
+  defp exporter_alive?(nil), do: false
+  defp exporter_alive?(pid) when is_integer(pid), do: ProcessSupervisor.process_exists?(pid)
+
+  # When one exporter exits, tear down the other so we don't leave it running
+  # without a tracked pid. The next `start_servers/0` (or supervised restart)
+  # will bring both up cleanly.
+  defp handle_node_exporter_down(state) do
+    if state.wireguard_exporter_pid do
+      ProcessSupervisor.stop_wireguard_exporter(
+        state.wireguard_exporter_pid,
+        state.wireguard_exporter_port_ref
+      )
+    end
+
+    reset_state(state)
+  end
+
+  defp handle_wireguard_exporter_down(state) do
+    if state.node_exporter_pid do
+      ProcessSupervisor.stop_node_exporter(
+        state.node_exporter_pid,
+        state.node_exporter_port_ref
+      )
+    end
+
+    reset_state(state)
   end
 
   defp reset_state(state) do

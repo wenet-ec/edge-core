@@ -4,7 +4,8 @@ defmodule EdgeAgent.Commands.Workers.SyncUnprocessedExecutionWorker do
   Worker that syncs unprocessed command executions when using HTTP fallback.
 
   Triggered by:
-  - Cron scheduler every 2 minutes
+  - Cron scheduler at the cadence configured by `SYNC_EXECUTIONS_SCHEDULE`
+    (default: every 2 minutes)
 
   Only runs when:
   - VPN is down (admin_urls is empty list)

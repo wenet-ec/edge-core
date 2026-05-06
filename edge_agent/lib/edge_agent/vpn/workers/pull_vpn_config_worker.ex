@@ -4,7 +4,8 @@ defmodule EdgeAgent.Vpn.Workers.PullVpnConfigWorker do
   Worker that pulls latest VPN configuration from Netmaker server.
 
   Triggered by:
-  - Cron scheduler every 24 hours
+  - Cron scheduler at the cadence configured by `PULL_VPN_CONFIG_SCHEDULE`
+    (default: daily at midnight)
 
   Runs `netclient pull` to fetch full configuration from server via HTTP API.
   This is a last-resort backstop for DNS recovery after netclient daemon restarts.

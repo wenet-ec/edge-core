@@ -11,6 +11,9 @@ defmodule EdgeAgent.ProxyServers do
   - Username: "_" (underscore)
   - Password: `proxy_password` from the settings table
 
+  When `PROXY_SERVERS_AUTH_ENABLED=false` (default `true`), credentials are
+  not verified and any client is accepted. Intended for local dev only.
+
   No cluster awareness: the agent proxies any destination accepted by the
   SSRF/destination allowlist (see `Transport.DestinationValidator`). It does
   not resolve cluster membership or route based on it.
@@ -30,6 +33,15 @@ defmodule EdgeAgent.ProxyServers do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
+  @doc """
+  Returns true if the proxy GenServer has finished its `init/1` callback.
+
+  Note: this only confirms `init/1` returned, not that the Ranch listeners
+  are actually accepting connections — listener-startup errors are logged
+  but don't block the GenServer from coming up. Use `status/0` for a
+  liveness signal that reflects the actual listeners. Returns `false` if
+  the process is missing or the call times out (1s).
+  """
   def initialized? do
     case Process.whereis(__MODULE__) do
       nil ->
@@ -40,6 +52,32 @@ defmodule EdgeAgent.ProxyServers do
           GenServer.call(pid, :initialized?, 1000)
         catch
           :exit, _ -> false
+        end
+    end
+  end
+
+  @doc """
+  Returns the listener status:
+
+  - `:running` — both Ranch listeners came up cleanly in `init/1`
+  - `:error` — one or both listeners failed to start (logged at error level
+    in `init/1`)
+  - `:not_started` — the GenServer process is missing
+  - `:unknown` — call timed out
+
+  Used by health checks where `initialized?/0` is too lenient.
+  """
+  @spec status() :: :running | :error | :not_started | :unknown
+  def status do
+    case Process.whereis(__MODULE__) do
+      nil ->
+        :not_started
+
+      pid ->
+        try do
+          GenServer.call(pid, :status, 1000)
+        catch
+          :exit, _ -> :unknown
         end
     end
   end
@@ -59,7 +97,8 @@ defmodule EdgeAgent.ProxyServers do
       http_port: http_port,
       socks5_port: socks5_port,
       listen_address: listen_address,
-      initialized: false
+      initialized: false,
+      status: :error
     }
 
     case start_proxy_servers(state) do
@@ -67,17 +106,22 @@ defmodule EdgeAgent.ProxyServers do
         Logger.info("Proxy servers started successfully")
         Logger.info("  HTTP proxy: #{format_ip(listen_address)}:#{http_port}")
         Logger.info("  SOCKS5 proxy: #{format_ip(listen_address)}:#{socks5_port}")
-        {:ok, %{new_state | initialized: true}}
+        {:ok, %{new_state | initialized: true, status: :running}}
 
       {:error, reason, new_state} ->
         Logger.error("Failed to start proxy servers: #{inspect(reason)}")
-        {:ok, %{new_state | initialized: true}}
+        {:ok, %{new_state | initialized: true, status: :error}}
     end
   end
 
   @impl true
   def handle_call(:initialized?, _from, state) do
     {:reply, Map.get(state, :initialized, false), state}
+  end
+
+  @impl true
+  def handle_call(:status, _from, state) do
+    {:reply, Map.get(state, :status, :error), state}
   end
 
   @impl true
@@ -191,6 +235,7 @@ defmodule EdgeAgent.ProxyServers do
   end
 
   # Helper to format IP tuple for logging
+  @dialyzer {:nowarn_function, format_ip: 1}
   defp format_ip({a, b, c, d}), do: "#{a}.#{b}.#{c}.#{d}"
   defp format_ip(ip) when is_binary(ip), do: ip
 end

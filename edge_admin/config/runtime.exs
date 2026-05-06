@@ -415,7 +415,9 @@ config :edge_admin, :proxy_timeouts,
   connection: get_env("PROXY_CONNECTION_TIMEOUT_MS", :integer, 2_000),
   handshake: get_env("PROXY_HANDSHAKE_TIMEOUT_MS", :integer, 10_000),
   read: get_env("PROXY_READ_TIMEOUT_MS", :integer, 10_000),
-  recv: get_env("PROXY_RECV_TIMEOUT_MS", :integer, 300_000)
+  recv: get_env("PROXY_RECV_TIMEOUT_MS", :integer, 300_000),
+  tunnel_total: get_env("PROXY_TUNNEL_TOTAL_TIMEOUT_MS", :integer, 21_600_000),
+  drain_grace: get_env("PROXY_DRAIN_GRACE_TIMEOUT_MS", :integer, 30_000)
 
 config :edge_admin,
   # === Admin Identity ===
@@ -506,6 +508,9 @@ config :edge_admin,
   event_delivery_max_age_seconds: get_env("EVENT_DELIVERY_MAX_AGE_SECONDS", :integer, 3600),
   webhook_max_attempts: get_env("WEBHOOK_MAX_ATTEMPTS", :integer, 3),
   webhook_allow_private_ips: get_env("WEBHOOK_ALLOW_PRIVATE_IPS", :boolean, false)
+
+config :edge_admin,
+  proxy_num_acceptors: get_env("PROXY_NUM_ACCEPTORS", :integer, 100)
 
 config :nexmaker,
   base_url: get_env!("NETMAKER_API_URL"),

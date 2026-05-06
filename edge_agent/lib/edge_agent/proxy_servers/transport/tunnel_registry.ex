@@ -5,7 +5,7 @@ defmodule EdgeAgent.ProxyServers.Transport.TunnelRegistry do
   drain on shutdown.
 
   Backed by an ETS table owned by a supervised GenServer. Handlers call
-  `register/1` on entry and `unregister/1` on exit; the registry demonitors
+  `register/1` on entry and `unregister/0` on exit; the registry demonitors
   them automatically if the owner crashes.
 
   `drain/1` sends every registered handler a `{:drain, grace_ms}` message and
@@ -22,16 +22,27 @@ defmodule EdgeAgent.ProxyServers.Transport.TunnelRegistry do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
+  @doc """
+  Register the calling process as a live tunnel handler with `metadata` (map).
+  The registry monitors the caller so crashes don't leave stale entries.
+  """
   @spec register(map()) :: :ok
   def register(metadata \\ %{}) do
     GenServer.call(__MODULE__, {:register, self(), metadata})
   end
 
+  @doc """
+  Unregister the calling process. Idempotent — safe to call from a catch-all
+  exit path.
+  """
   @spec unregister() :: :ok
   def unregister do
     GenServer.cast(__MODULE__, {:unregister, self()})
   end
 
+  @doc """
+  Returns the list of live handler pids.
+  """
   @spec handlers() :: [pid()]
   def handlers do
     case :ets.whereis(@table) do
@@ -40,6 +51,9 @@ defmodule EdgeAgent.ProxyServers.Transport.TunnelRegistry do
     end
   end
 
+  @doc """
+  Count of live handlers.
+  """
   @spec count() :: non_neg_integer()
   def count do
     case :ets.whereis(@table) do
@@ -48,6 +62,13 @@ defmodule EdgeAgent.ProxyServers.Transport.TunnelRegistry do
     end
   end
 
+  @doc """
+  Signal every registered handler to drain.
+
+  Each handler receives `{:drain, grace_ms}`. The grace indicates how long it
+  has before the caller will force-terminate the tunnel — handlers should use
+  it to decide whether to finish in-flight work or abort.
+  """
   @spec drain(non_neg_integer()) :: non_neg_integer()
   def drain(grace_ms) do
     pids = handlers()
@@ -55,6 +76,10 @@ defmodule EdgeAgent.ProxyServers.Transport.TunnelRegistry do
     length(pids)
   end
 
+  @doc """
+  Block until the live handler count reaches zero or `timeout_ms` elapses.
+  Returns `:ok` on drain completion, `{:timeout, remaining}` if handlers persist.
+  """
   @spec wait_for_empty(non_neg_integer()) :: :ok | {:timeout, non_neg_integer()}
   def wait_for_empty(timeout_ms) do
     deadline = System.monotonic_time(:millisecond) + timeout_ms
@@ -76,6 +101,10 @@ defmodule EdgeAgent.ProxyServers.Transport.TunnelRegistry do
     end
   end
 
+  @doc """
+  Force-terminate any still-live handlers. Used as a last resort after
+  `wait_for_empty/1` times out.
+  """
   @spec force_close() :: non_neg_integer()
   def force_close do
     pids = handlers()

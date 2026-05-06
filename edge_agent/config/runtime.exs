@@ -16,6 +16,8 @@ if get_env("PHX_SERVER", :boolean, false) == true do
   config :edge_agent, EdgeAgentWeb.Endpoint, server: true
 end
 
+api_port = get_env("API_PORT", :integer, 44_000)
+
 # =============================================================================
 # Background Job Schedules
 # =============================================================================
@@ -31,7 +33,7 @@ pull_vpn_config_schedule = get_env("PULL_VPN_CONFIG_SCHEDULE", :string, "0 0 * *
 config :edge_agent, EdgeAgentWeb.Endpoint,
   http: [
     ip: {0, 0, 0, 0, 0, 0, 0, 0},
-    port: get_env("API_PORT", :integer, 44_000)
+    port: api_port
   ],
   # Generate ephemeral secret_key_base (agent is stateless API, no sessions)
   secret_key_base: Base.encode64(:crypto.strong_rand_bytes(48))
@@ -78,7 +80,12 @@ config :edge_agent, Oban,
 config :edge_agent, :proxy_timeouts,
   connection: get_env("PROXY_CONNECTION_TIMEOUT_MS", :integer, 2_000),
   read: get_env("PROXY_READ_TIMEOUT_MS", :integer, 10_000),
-  recv: get_env("PROXY_RECV_TIMEOUT_MS", :integer, 300_000)
+  recv: get_env("PROXY_RECV_TIMEOUT_MS", :integer, 300_000),
+  tunnel_total: get_env("PROXY_TUNNEL_TOTAL_TIMEOUT_MS", :integer, 21_600_000),
+  drain_grace: get_env("PROXY_DRAIN_GRACE_TIMEOUT_MS", :integer, 30_000)
+
+config :edge_agent,
+  proxy_num_acceptors: get_env("PROXY_NUM_ACCEPTORS", :integer, 100)
 
 if get_env("SELF_UPDATE_ENABLED", :boolean, false) do
   config :edge_agent,
@@ -93,7 +100,10 @@ else
 end
 
 config :edge_agent,
+  api_port: api_port,
   ssh_port: get_env("SSH_PORT", :integer, 40_022),
+  ssh_system_dir: "#{data_dir}/ssh",
+  ssh_user_dir: "#{data_dir}/ssh/users",
   host_metrics_port: get_env("HOST_METRICS_PORT", :integer, 49_100),
   wireguard_metrics_port: get_env("WIREGUARD_METRICS_PORT", :integer, 49_586),
   agent_wireguard_port: get_env("AGENT_WIREGUARD_PORT", :integer, nil),

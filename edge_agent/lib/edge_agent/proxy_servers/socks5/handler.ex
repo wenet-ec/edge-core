@@ -5,8 +5,12 @@ defmodule EdgeAgent.ProxyServers.Socks5.Handler do
 
   Protocol per RFC 1928 (SOCKS5), RFC 1929 (Username/Password Auth).
 
-  All wire parsing is delegated to `Socks5.Codec`. Connection reads use
-  `BufferedReader` so fragmented deliveries are handled correctly.
+  All wire parsing is delegated to `Socks5.Codec`. The initial greeting is
+  read via `Transport.BufferedReader.read_passive/3`; the auth and
+  connect-request stages use the local `read_with_leftover/3` helper, which
+  applies the same `{:ok | :need_more | :error}` parser contract directly
+  on top of `:gen_tcp.recv/3`. Both paths handle fragmented TCP deliveries
+  correctly.
   """
 
   @behaviour :ranch_protocol

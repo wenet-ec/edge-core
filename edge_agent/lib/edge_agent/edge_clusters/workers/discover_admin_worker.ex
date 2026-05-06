@@ -1,10 +1,14 @@
 # edge_agent/lib/edge_agent/edge_clusters/workers/discover_admin_worker.ex
 defmodule EdgeAgent.EdgeClusters.Workers.DiscoverAdminWorker do
   @moduledoc """
-  Worker that discovers admins in the cluster network.
+  Worker that discovers admins on the VPN network.
 
-  Scans the cluster subnet to find admins and updates the admin URLs in Settings.
+  Probes WireGuard peers named `admin-*` and updates the admin URLs in Settings.
   Uses Oban's unique constraint to ensure only one discovery runs at a time.
+
+  Triggered by:
+  - Cron scheduler at the cadence configured by `DISCOVER_ADMINS_SCHEDULE`
+    (default: every 3 minutes)
   """
 
   use Oban.Worker,

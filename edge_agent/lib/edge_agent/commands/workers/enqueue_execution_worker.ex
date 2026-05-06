@@ -4,7 +4,8 @@ defmodule EdgeAgent.Commands.Workers.EnqueueExecutionWorker do
   Scheduler worker that enqueues pending command executions.
 
   Triggered by:
-  - Cron scheduler every 10 seconds
+  - Cron scheduler at the cadence configured by `ENQUEUE_EXECUTIONS_SCHEDULE`
+    (default: every minute)
   - New command arrival
 
   Finds all pending executions and spawns a ExecuteCommandWorker for each.

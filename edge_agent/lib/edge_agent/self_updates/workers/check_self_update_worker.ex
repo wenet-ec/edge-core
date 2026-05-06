@@ -7,7 +7,8 @@ defmodule EdgeAgent.SelfUpdates.Workers.CheckSelfUpdateWorker do
   by polling the admin API for the latest self-update request.
 
   ## Behavior
-  - Runs every 2 hours (configured in Oban cron)
+  - Cron: cadence configured by `CHECK_SELF_UPDATE_SCHEDULE` (default: every
+    2 hours)
   - Only runs when: VPN down (admin_urls empty) + fallback configured + self-update enabled
   - Checks if latest self-update includes this node
   - Triggers Watchtower update if new update available
@@ -16,8 +17,14 @@ defmodule EdgeAgent.SelfUpdates.Workers.CheckSelfUpdateWorker do
   ## Guard Conditions
   The worker only executes when ALL conditions are met:
   - `admin_urls == []` - VPN discovery found no admins (VPN down)
-  - `fallback_url != nil` - HTTP fallback URL configured
+  - `fallback_urls != []` - At least one HTTP fallback URL configured
   - `self_update_enabled == true` - Self-update feature enabled
+
+  ## Retries
+  Unlike most agent workers (which use `max_attempts: 1`), this one uses
+  `max_attempts: 3` because the call chain is network-flaky on two hops
+  (admin API + Watchtower). The unique constraint includes `:retryable` so
+  retries don't spawn duplicate jobs alongside the original.
   """
 
   use Oban.Worker,

@@ -164,6 +164,10 @@ defmodule EdgeAgent.ProxyServers.ErrorHandler do
 
   @doc """
   Logs error with appropriate level based on category.
+
+  Returns the category atom (`:network | :protocol | :authentication |
+  :policy | :timeout | :unknown`) so callers can stamp telemetry without
+  recomputing it.
   """
   def log_error(reason, context \\ %{}) do
     category = categorize_error(reason)

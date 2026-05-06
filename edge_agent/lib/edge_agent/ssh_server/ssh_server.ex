@@ -32,7 +32,11 @@ defmodule EdgeAgent.SshServer do
   # GenServer callbacks
   @impl true
   def init(_opts) do
+    Process.flag(:trap_exit, true)
     :ok = File.mkdir_p(Config.ssh_system_dir())
+    :ok = File.mkdir_p(Config.ssh_user_dir())
+    # Host private keys live in ssh_system_dir — lock down to root-only.
+    _ = File.chmod(Config.ssh_system_dir(), 0o700)
     Logger.info("SSH server initialized on port #{Config.ssh_port()}")
 
     case do_start_server() do
@@ -88,6 +92,17 @@ defmodule EdgeAgent.SshServer do
   def handle_call(:server_status, _from, state) do
     {:reply, state.status, state}
   end
+
+  @impl true
+  def terminate(_reason, %{daemon_ref: daemon_ref}) when not is_nil(daemon_ref) do
+    Logger.info("Stopping SSH daemon on shutdown")
+    # `:ssh.stop_daemon/1` returns `:ok` even when the daemon ref is unknown
+    # to it, so no error path needs handling here.
+    :ok = :ssh.stop_daemon(daemon_ref)
+    :ok
+  end
+
+  def terminate(_reason, _state), do: :ok
 
   # SSH Server Key API Callbacks (delegates to HostKeys)
   @impl true

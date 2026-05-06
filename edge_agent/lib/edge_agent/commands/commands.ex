@@ -30,9 +30,10 @@ defmodule EdgeAgent.Commands do
   ## Command Cancellation
 
   Commands can be cancelled at any stage:
-  - **Pending (not running)** - Marks as cancelled without killing task
-  - **Pending (running)** - Kills task via Process.exit and marks cancelled
+  - **Pending** - Kills the running task if any, cancels the pending Oban job,
+    and marks the execution completed with exit code 143
   - **Completed** - No action (already finished)
+  - **Expired** - No action (already finalized)
 
   Cancellation involves:
   1. Killing running task (if executing)
@@ -43,7 +44,8 @@ defmodule EdgeAgent.Commands do
 
   Executions are reported back to admin in batches:
   - Report ordered by creation time (FIFO)
-  - Handle 404/422 errors (execution deleted/completed on admin side)
+  - Handle 404/409/422 from admin (execution deleted, already finalized, or
+    not in an updatable state) by discarding the local copy
   - Stop on network errors and retry later
   - Delete local copy after successful report
 
@@ -451,9 +453,11 @@ defmodule EdgeAgent.Commands do
   Cancels a command execution.
 
   Handles three scenarios:
-  1. Pending (not running) - Updates to completed with "cancelled" message
-  2. Pending (currently running) - Kills task and updates to completed
-  3. Completed - No action taken
+  1. Pending - Kills running task (if any), cancels the Oban job, and updates
+     the execution to completed with exit code 143 and "Command cancelled"
+     output
+  2. Completed - No action taken (already finalized)
+  3. Expired - No action taken (already finalized)
 
   ## Parameters
     - execution: CommandExecution struct
@@ -461,6 +465,7 @@ defmodule EdgeAgent.Commands do
   ## Returns
     - `{:ok, result_map}` - Cancellation result with details
   """
+  @spec cancel_execution(CommandExecution.t()) :: {:ok, map()}
   def cancel_execution(execution) do
     case execution.status do
       "pending" ->
@@ -501,16 +506,21 @@ defmodule EdgeAgent.Commands do
       "completed" ->
         Logger.debug("Execution #{execution.id} already completed, ignoring cancel request")
         {:ok, %{action: :already_completed}}
+
+      "expired" ->
+        Logger.debug("Execution #{execution.id} already expired, ignoring cancel request")
+        {:ok, %{action: :already_expired}}
     end
   end
 
   defp cancel_oban_job(execution_id) do
     import Ecto.Query
 
-    # Find and cancel Oban job for this execution
+    # Find and cancel Oban job for this execution. Queue name must match the
+    # one declared in ExecuteCommandWorker (`:execute_command`).
     query =
       from(j in Oban.Job,
-        where: j.queue == "command_execution",
+        where: j.queue == "execute_command",
         where: j.worker == "EdgeAgent.Commands.Workers.ExecuteCommandWorker",
         where: fragment("?->>'execution_id' = ?", j.args, ^execution_id),
         where: j.state in ["available", "scheduled", "executing"]

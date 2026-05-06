@@ -78,9 +78,12 @@ ALIASES=test
 # Proxy Server Timeouts
 # =============================================================================
 # Per-operation proxy timeouts (in milliseconds)
-# PROXY_CONNECTION_TIMEOUT_MS=2000    # TCP connect to target host (default: 2s)
-# PROXY_READ_TIMEOUT_MS=10000         # Socket read (default: 10s)
-# PROXY_RECV_TIMEOUT_MS=300000        # Forwarding loop inactivity — closes half-open connections (default: 5min)
+# PROXY_CONNECTION_TIMEOUT_MS=2000        # TCP connect to target host (default: 2s)
+# PROXY_READ_TIMEOUT_MS=10000             # Socket read (default: 10s)
+# PROXY_RECV_TIMEOUT_MS=300000            # Forwarding loop inactivity — closes half-open connections (default: 5min)
+# PROXY_TUNNEL_TOTAL_TIMEOUT_MS=21600000  # Absolute ceiling on a tunnel's lifetime (default: 6h, slowloris defence)
+# PROXY_DRAIN_GRACE_TIMEOUT_MS=30000      # Grace window for tunnels during graceful drain on shutdown (default: 30s)
+# PROXY_NUM_ACCEPTORS=100                 # Ranch acceptor processes per listener (default: 100)
 
 # =============================================================================
 # Background Job Schedules
@@ -124,13 +127,14 @@ ALIASES=test
 # Database & Data Paths (SQLite)
 # =============================================================================
 # DATA_DIR sets the root for all persistent agent state (default: /app/data).
-# Both subdirectories are implicit — no need to set them individually:
+# Subdirectories are implicit — no need to set them individually:
 #   ${DATA_DIR}/agent/edge_agent.db  — SQLite database
 #   ${DATA_DIR}/vpn/                 — netclient state (/etc/netclient symlinks here)
+#   ${DATA_DIR}/ssh/                 — SSH host keys (persisted across container restarts)
 #
 # Mount a single volume to persist everything:
 #   volumes:
 #     - edge_agent_data:/app/data
 #
 # DATA_DIR=/app/data
-# DB_POOL_SIZE=3
+# DB_POOL_SIZE=5

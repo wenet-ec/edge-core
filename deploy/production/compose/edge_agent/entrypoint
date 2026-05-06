@@ -9,14 +9,18 @@ echo "=== Edge Agent Entrypoint ==="
 
 # Unified data directory — all persistent state lives here.
 # DATA_DIR can be overridden via env; defaults to /app/data.
-#   ${DATA_DIR}/agent/  — SQLite database
-#   ${DATA_DIR}/vpn/    — netclient state (/etc/netclient symlinks here)
+#   ${DATA_DIR}/agent/      — SQLite database
+#   ${DATA_DIR}/vpn/        — netclient state (/etc/netclient symlinks here)
+#   ${DATA_DIR}/ssh/        — SSH host keys (private; chmod 0700)
+#   ${DATA_DIR}/ssh/users/  — :ssh.daemon's :user_dir (unused, but required)
 DATA_DIR="${DATA_DIR:-/app/data}"
 
 # Ensure unified data directory structure exists.
-# Always create the vpn dir — DATA_DIR may differ from the /app/data baked at build time
+# Always create these — DATA_DIR may differ from the /app/data baked at build time
 # (e.g. DATA_DIR=/app/data/test in the test container).
 mkdir -p "${DATA_DIR}/vpn"
+mkdir -p "${DATA_DIR}/ssh/users"
+
 # /etc/netclient must be a symlink pointing to ${DATA_DIR}/vpn.
 # Recreate if missing, not a symlink, or pointing at the wrong target.
 if [ "$(readlink /etc/netclient 2>/dev/null)" != "${DATA_DIR}/vpn" ]; then
@@ -25,6 +29,11 @@ if [ "$(readlink /etc/netclient 2>/dev/null)" != "${DATA_DIR}/vpn" ]; then
     ln -sfn "${DATA_DIR}/vpn" /etc/netclient
 fi
 chmod 0775 "${DATA_DIR}/vpn"
+
+# SSH host keys are private — lock down system_dir to root-only.
+# users/ stays world-traversable so :ssh.daemon's :user_dir lookups don't fail.
+chmod 0700 "${DATA_DIR}/ssh"
+chmod 0755 "${DATA_DIR}/ssh/users"
 
 # Check if running in privileged mode (agent typically runs privileged for hostscript + VPN)
 if [ -e /proc/1/ns/pid ] && [ "$(readlink /proc/1/ns/pid)" = "$(readlink /proc/self/ns/pid)" ]; then

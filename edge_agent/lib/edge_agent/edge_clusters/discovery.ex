@@ -3,16 +3,17 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   @moduledoc """
   Admin server discovery via WireGuard peer inspection.
 
-  Discovers admin servers on the VPN network by inspecting WireGuard peers
-  and querying their discovery endpoints. More efficient than subnet scanning
-  since we directly query known peers instead of scanning entire CIDR blocks.
+  Discovers admin servers on the VPN network by listing WireGuard peers
+  (via `netclient ping`) and probing the ones named `admin-*` on their
+  discovery endpoint.
 
   ## Discovery Process
 
   ```
-  1. Query WireGuard for peer list (netclient ping)
+  1. List WireGuard peers per network via EdgeAgent.Vpn.ping_peers/0
   2. Filter peers whose name starts with "admin-"
   3. HTTP GET http://ip:port/api/v1/admins/me/discovery on each candidate
+     in parallel (Task.async_stream)
   4. Store confirmed admin URLs (http://ip:port) in Settings for AdminClient
   ```
 
@@ -55,6 +56,9 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
 
   Always stores discovered admins (even empty list) in Settings so other
   components can distinguish "never discovered" from "discovered but none found".
+
+  The `opts` argument is currently reserved for future use (e.g. overriding
+  the discovery port or concurrency); pass `[]` for now.
   """
   @spec discover_admins(keyword()) :: {:ok, String.t() | nil, [String.t()]}
   def discover_admins(_opts \\ []) do
@@ -67,58 +71,69 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
         {:ok, network_name, []}
 
       {:ok, ping_data} ->
-        Logger.info("Inspecting peers on #{map_size(ping_data)} network(s) for admins...")
-
-        discovery_port = Application.get_env(:edge_agent, :admin_discovery_port, 44_000)
-        max_concurrency = Application.get_env(:edge_agent, :admin_discovery_concurrency, 10)
-
-        # Flatten {network, peer} pairs so probes across all networks run in
-        # one parallel pass instead of network-by-network sequentially.
-        peer_jobs =
-          Enum.flat_map(ping_data, fn {net_name, peers} ->
-            Enum.map(peers, &{net_name, &1})
-          end)
-
-        results =
-          peer_jobs
-          |> Task.async_stream(
-            fn {net_name, peer} ->
-              {net_name, probe_peer(peer, net_name, discovery_port)}
-            end,
-            max_concurrency: max_concurrency,
-            ordered: false,
-            on_timeout: :kill_task
-          )
-          |> Enum.flat_map(fn
-            {:ok, {net_name, urls}} -> Enum.map(urls, &{net_name, &1})
-            {:exit, _} -> []
-          end)
-
-        admin_urls = results |> Enum.map(fn {_net, url} -> url end) |> Enum.uniq()
-
-        # First network with a successful probe; falls back to whatever we got
-        # from the network list if nothing answered.
-        found_network =
-          case results do
-            [{net, _} | _] -> net
-            [] -> network_name
-          end
-
-        if admin_urls == [] do
-          Logger.warning("No admins discovered across any network")
-          Settings.set_admin_urls([])
-          {:ok, found_network, []}
-        else
-          Logger.info("Discovered #{length(admin_urls)} unique admin(s) across all networks")
-          Settings.set_admin_urls(admin_urls)
-          {:ok, found_network, admin_urls}
-        end
+        probe_all_networks(ping_data, network_name)
 
       {:error, reason} ->
         Logger.error("Failed to ping peers: #{inspect(reason)}")
         Settings.set_admin_urls([])
         {:ok, network_name, []}
     end
+  end
+
+  defp probe_all_networks(ping_data, fallback_network) do
+    Logger.info("Inspecting peers on #{map_size(ping_data)} network(s) for admins...")
+
+    discovery_port = Application.get_env(:edge_agent, :admin_discovery_port, 44_000)
+    max_concurrency = Application.get_env(:edge_agent, :admin_discovery_concurrency, 10)
+
+    results =
+      ping_data
+      |> flatten_peer_jobs()
+      |> probe_peers_async(discovery_port, max_concurrency)
+
+    admin_urls = results |> Enum.map(fn {_net, url} -> url end) |> Enum.uniq()
+    found_network = first_network_or(results, fallback_network)
+
+    record_discovery(found_network, admin_urls)
+  end
+
+  # Flatten {network, peer} pairs so probes across all networks run in one
+  # parallel pass instead of network-by-network sequentially.
+  defp flatten_peer_jobs(ping_data) do
+    Enum.flat_map(ping_data, fn {net_name, peers} ->
+      Enum.map(peers, &{net_name, &1})
+    end)
+  end
+
+  defp probe_peers_async(peer_jobs, discovery_port, max_concurrency) do
+    peer_jobs
+    |> Task.async_stream(
+      fn {net_name, peer} -> {net_name, probe_peer(peer, net_name, discovery_port)} end,
+      max_concurrency: max_concurrency,
+      ordered: false,
+      on_timeout: :kill_task
+    )
+    |> Enum.flat_map(fn
+      {:ok, {net_name, urls}} -> Enum.map(urls, &{net_name, &1})
+      {:exit, _} -> []
+    end)
+  end
+
+  # First network with a successful probe; falls back to whatever we got
+  # from the network list if nothing answered.
+  defp first_network_or([{net, _} | _], _fallback), do: net
+  defp first_network_or([], fallback), do: fallback
+
+  defp record_discovery(found_network, []) do
+    Logger.warning("No admins discovered across any network")
+    Settings.set_admin_urls([])
+    {:ok, found_network, []}
+  end
+
+  defp record_discovery(found_network, admin_urls) do
+    Logger.info("Discovered #{length(admin_urls)} unique admin(s) across all networks")
+    Settings.set_admin_urls(admin_urls)
+    {:ok, found_network, admin_urls}
   end
 
   defp get_network_name_from_list do

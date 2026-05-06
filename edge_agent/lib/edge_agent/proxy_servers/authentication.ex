@@ -7,7 +7,13 @@ defmodule EdgeAgent.ProxyServers.Authentication do
   - Username: "_" (underscore, always)
   - Password: proxy_password from settings table
 
-  Comparison is timing-safe.
+  Comparison is timing-safe via `:crypto.hash_equals/2`. Mismatched lengths
+  still consume a same-length compare so the rejection path doesn't leak
+  length via timing.
+
+  When `PROXY_SERVERS_AUTH_ENABLED=false` (default `true`), credential
+  verification is skipped — any username/password is accepted. Intended for
+  local dev only.
   """
 
   alias EdgeAgent.Settings

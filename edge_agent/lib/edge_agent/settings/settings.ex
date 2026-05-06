@@ -27,15 +27,19 @@ defmodule EdgeAgent.Settings do
   Settings are stored in a simple schema:
   ```
   CREATE TABLE settings (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL
+    id BLOB PRIMARY KEY,            -- binary UUID
+    key TEXT NOT NULL,              -- UNIQUE INDEX
+    value TEXT NOT NULL,
+    inserted_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
   );
   ```
 
   The module provides:
   - Generic `get/2`, `set/2`, `delete/1` functions
   - Typed accessors for common settings (`get_node_id/0`, `set_api_token/1`, etc.)
-  - Upsert semantics (insert if missing, update if exists)
+  - Upsert semantics via `INSERT ... ON CONFLICT(key) DO UPDATE` — concurrent
+    `set/2` calls on the same key are safe and the last writer wins.
 
   ## Examples
 
@@ -76,7 +80,8 @@ defmodule EdgeAgent.Settings do
 
   Returns the value if found, otherwise returns the default.
   """
-  @spec get(String.t(), any()) :: String.t() | any()
+  @spec get(String.t()) :: String.t() | nil
+  @spec get(String.t(), default) :: String.t() | default when default: any()
   def get(key, default \\ nil) do
     case Repo.get_by(Setting, key: key) do
       %Setting{value: value} -> value
@@ -87,21 +92,17 @@ defmodule EdgeAgent.Settings do
   @doc """
   Set a setting value by key.
 
-  Creates the setting if it doesn't exist, updates it if it does (upsert semantics).
+  Atomic upsert via `INSERT ... ON CONFLICT(key) DO UPDATE`. Safe under
+  concurrent callers writing the same key — last writer wins.
   """
   @spec set(String.t(), String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
   def set(key, value) do
-    case Repo.get_by(Setting, key: key) do
-      nil ->
-        %Setting{}
-        |> Setting.changeset(%{key: key, value: value})
-        |> Repo.insert()
-
-      existing ->
-        existing
-        |> Setting.changeset(%{value: value})
-        |> Repo.update()
-    end
+    %Setting{}
+    |> Setting.changeset(%{key: key, value: value})
+    |> Repo.insert(
+      on_conflict: [set: [value: value, updated_at: DateTime.utc_now(:second)]],
+      conflict_target: :key
+    )
   end
 
   @doc """
@@ -208,12 +209,6 @@ defmodule EdgeAgent.Settings do
           {:ok, urls} when is_list(urls) -> urls
           _ -> []
         end
-
-      urls when is_list(urls) ->
-        urls
-
-      _ ->
-        []
     end
   end
 
@@ -263,9 +258,6 @@ defmodule EdgeAgent.Settings do
           {:ok, dt, _offset} -> dt
           {:error, _} -> nil
         end
-
-      _ ->
-        nil
     end
   end
 
@@ -307,9 +299,6 @@ defmodule EdgeAgent.Settings do
           {:ok, urls} when is_list(urls) -> urls
           _ -> []
         end
-
-      _ ->
-        []
     end
   end
 

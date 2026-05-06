@@ -52,8 +52,7 @@ defmodule EdgeAgent.Vpn do
 
   Returns `{:ok, status, info}` where status is `:healthy`, `:degraded`, or `:unhealthy`.
   """
-  @spec netclient_health_check(keyword()) ::
-          {:ok, :healthy | :degraded | :unhealthy, map()} | {:error, any()}
+  @spec netclient_health_check(keyword()) :: {:ok, :healthy | :degraded | :unhealthy, map()}
   def netclient_health_check(opts \\ []) do
     Nexmaker.Cli.health_check(opts)
   end
@@ -118,6 +117,9 @@ defmodule EdgeAgent.Vpn do
   end
 
   defp health_check do
+    # Nexmaker.Cli.health_check/0 maps every internal failure to
+    # `{:ok, :unhealthy, _}`, so it never returns `{:error, _}`. No defensive
+    # error clause is needed here.
     case Nexmaker.Cli.health_check() do
       {:ok, :healthy, _} -> :connected
       {:ok, :degraded, _} -> :connected

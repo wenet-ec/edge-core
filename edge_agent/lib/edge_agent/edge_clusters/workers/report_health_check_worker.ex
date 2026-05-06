@@ -4,7 +4,8 @@ defmodule EdgeAgent.EdgeClusters.Workers.ReportHealthCheckWorker do
   Worker that reports node health to admin when using HTTP fallback.
 
   Triggered by:
-  - Cron scheduler every 2 minutes
+  - Cron scheduler at the cadence configured by `REPORT_HEALTH_CHECK_SCHEDULE`
+    (default: every 2 minutes)
 
   Only runs when:
   - VPN is down (admin_urls is empty list)

@@ -5,10 +5,24 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
 
   Supports:
   - CONNECT method for HTTPS/WebSocket (TCP tunneling)
-  - Regular HTTP methods (GET, POST, etc.) — one request per connection
+  - Regular HTTP methods (GET, POST, etc.) — one request per connection.
+    Origin must be `http://` (or rare cases where the proxy's plaintext
+    upstream is acceptable). HTTPS origin URLs without CONNECT are
+    structurally unsupported — TLS would need to terminate somewhere and
+    the proxy doesn't decrypt.
 
   Authentication via Proxy-Authorization header (Basic auth).
   Routes through Gateway using cluster name from target hostname.
+
+  ## Known limitation: request bodies in non-CONNECT mode
+
+  The parser returns any bytes that arrived after the `\\r\\n\\r\\n` header
+  terminator as a `body_rest` value, but the handler currently discards it
+  and forwards from the socket from scratch. If a client sends headers and
+  body in the same TCP segment(s) (common for small bodies and on
+  loopback), those body bytes are lost between header parse and the
+  upstream connect. CONNECT mode is unaffected (no body in CONNECT). The
+  agent's HTTP handler has the same limitation.
   """
 
   @behaviour :ranch_protocol

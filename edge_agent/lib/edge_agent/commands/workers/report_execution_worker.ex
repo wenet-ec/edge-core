@@ -5,7 +5,8 @@ defmodule EdgeAgent.Commands.Workers.ReportExecutionWorker do
 
   Triggered by:
   - After command execution completes (via enqueue_worker/2 in Commands context)
-  - Cron scheduler every 30 seconds (safety net for timely reporting)
+  - Cron scheduler at the cadence configured by `REPORT_EXECUTIONS_SCHEDULE`
+    (default: every minute) — safety net for timely reporting
 
   Uses Oban's unique constraint to ensure only one worker runs at a time.
 

@@ -5,6 +5,19 @@ defmodule EdgeAgent.SelfUpdates do
 
   Provides functions to check if self-update is enabled and trigger updates
   through the Watchtower service.
+
+  ## Behaviour notes
+
+  - **Boot-time trigger on fresh agents**: `check_self_update/0` triggers
+    Watchtower whenever `last_check_self_update_at` is `nil`, regardless of
+    how old the admin-side request is. A fresh agent that joins a cluster
+    with an old self-update record on file will pull and restart on first
+    poll. There is no "older than N" guard today.
+  - **`trigger_update_async/0` is unsupervised**: the spawned `Task.start/1`
+    is not linked or monitored. If the trigger crashes the caller is not
+    notified. Acceptable in the current call site (controller fire-and-
+    forget; the agent is expected to restart anyway), but watch for it if
+    the call site changes.
   """
 
   alias EdgeAgent.EdgeClusters.AdminClient
@@ -44,16 +57,29 @@ defmodule EdgeAgent.SelfUpdates do
     since Watchtower blocks until update completes and agent restarts
 
   ## Returns
-  - `{:ok, body | message_map}` - Update triggered successfully
-  - `{:error, reason}` - Failed to trigger update
+  - `{:ok, body}` - Watchtower returned 200; `body` is whatever Watchtower
+    sent (typically an empty body or a short status string)
+  - `{:ok, %{message: "Update triggered, agent restarting"}}` - Connection
+    closed/timed out mid-call, treated as success because Watchtower's
+    blocking restart usually severs the call before it can reply
+  - `{:error, "Watchtower returned status \#{status}: \#{inspect(body)}"}` -
+    Non-200 response
+  - `{:error, "Failed to call Watchtower: \#{inspect(reason)}"}` - Other
+    transport error
 
   ## Examples
 
+      # Typical 200 path
+      iex> EdgeAgent.SelfUpdates.trigger_update()
+      {:ok, ""}
+
+      # Connection severed by Watchtower restart — treated as success
       iex> EdgeAgent.SelfUpdates.trigger_update()
       {:ok, %{message: "Update triggered, agent restarting"}}
 
+      # Auth failure
       iex> EdgeAgent.SelfUpdates.trigger_update()
-      {:error, "Self-update service returned status 401: Unauthorized"}
+      {:error, "Watchtower returned status 401: \\"Unauthorized\\""}
   """
   @spec trigger_update :: {:ok, map() | binary()} | {:error, binary()}
   def trigger_update do
@@ -165,19 +191,33 @@ defmodule EdgeAgent.SelfUpdates do
     end
   end
 
-  # Determine if update should be triggered
-  defp should_trigger_update?(inserted_at, last_check) do
-    # Trigger if never checked before OR new update available
-    last_check == nil or DateTime.after?(inserted_at, last_check)
+  # Determine if update should be triggered.
+  #
+  # `inserted_at == nil` means the admin payload was missing or unparseable —
+  # don't trigger on bad data.
+  # `last_check == nil` means we've never checked before — trigger so a
+  # fresh agent can pick up an outstanding self-update request.
+  # Otherwise trigger only if `inserted_at` is strictly newer than the last
+  # check we recorded.
+  defp should_trigger_update?(nil, _last_check), do: false
+  defp should_trigger_update?(_inserted_at, nil), do: true
+
+  defp should_trigger_update?(%DateTime{} = inserted_at, %DateTime{} = last_check) do
+    DateTime.after?(inserted_at, last_check)
   end
 
-  # Parse ISO8601 datetime string
+  # Parse ISO8601 datetime string. Returns `nil` (not "now") on parse error
+  # so `should_trigger_update?/2` can refuse to act on bad data.
   defp parse_datetime(nil), do: nil
 
   defp parse_datetime(str) when is_binary(str) do
     case DateTime.from_iso8601(str) do
-      {:ok, dt, _offset} -> dt
-      {:error, _} -> DateTime.truncate(DateTime.utc_now(), :second)
+      {:ok, dt, _offset} ->
+        dt
+
+      {:error, reason} ->
+        Logger.warning("Self-update: malformed inserted_at #{inspect(str)} (#{inspect(reason)})")
+        nil
     end
   end
 end

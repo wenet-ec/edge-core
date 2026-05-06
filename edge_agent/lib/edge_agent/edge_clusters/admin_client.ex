@@ -17,28 +17,57 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   ## Architecture
 
-  The client implements two request patterns with optional HTTP fallback:
+  The client implements three request patterns:
 
-  1. **Unauthenticated Requests** (`request_with_fallback/3`)
+  1. **Bootstrap Requests** (`verify_enrollment_key/2` → `try_verify/3`)
+     - Used before any admin URL is in Settings (pre-VPN-join)
+     - URLs come from the decoded enrollment-key blob, not Settings
+     - Retries the next URL on 503 (degraded mode) and on network error
+
+  2. **Unauthenticated Requests** (`request_with_fallback/2`)
      - Used for registration (no token yet)
-     - Tries VPN admin URLs from Settings first
-     - Falls back to admin fallback URLs stored in Settings (from enrollment) if VPN URLs empty
-     - Tries each URL until one succeeds
+     - URLs come from Settings: VPN admin URLs first, then admin fallback URLs
+       stored at enrollment time
+     - Falls through to the next URL on network error only
 
-  2. **Authenticated Requests** (`request_with_auth/2`)
+  3. **Authenticated Requests** (`request_with_auth/2`)
      - Used for all post-registration endpoints
      - Requires API token from Settings
      - Adds `Authorization: Bearer <token>` header
-     - Tries VPN admin URLs, then HTTP fallback
-     - Falls back across admin URLs on network errors
+     - URL selection identical to (2); same network-error fallback
 
   ## API Endpoints
 
-  - **POST /api/v1/agents/nodes** - Register node and receive API token
-  - **GET /api/v1/agents/command_executions** - Fetch sent and pending command executions
-  - **PATCH /api/v1/agents/command_executions/:id/acknowledge** - Acknowledge pending execution receipt
-  - **PATCH /api/v1/agents/command_executions/:id/result** - Report execution results
-  - **POST /api/v1/agents/ssh_usernames/verify_credentials** - Verify SSH credentials
+  Bootstrap (no auth, URLs from enrollment blob):
+
+  - **POST /api/v1/agents/enrollment_keys/verify** — Verify enrollment key before
+    VPN join
+
+  Discovery probe (no auth, raw URL):
+
+  - **GET /api/v1/admins/me/discovery** — Identify reachable admins during
+    peer discovery
+
+  Unauthenticated (URLs from Settings):
+
+  - **POST /api/v1/agents/nodes** — Register node and receive API token
+
+  Authenticated (URLs from Settings):
+
+  - **GET /api/v1/agents/command_executions** — List command executions by status
+  - **PATCH /api/v1/agents/command_executions/:id/acknowledge** — Acknowledge
+    receipt of a pending execution
+  - **PATCH /api/v1/agents/command_executions/:id/result** — Report execution
+    results
+  - **PATCH /api/v1/agents/nodes/me/health_check** — Report node health
+    (HTTP-fallback mode)
+  - **GET /api/v1/agents/self_updates/check** — Poll for pending self-update
+    targeting this node
+  - **POST /api/v1/agents/metrics/push** — Push metrics text for HTTP-fallback
+    scrape
+  - **POST /api/v1/agents/aliases** — Register a friendly DNS alias for this node
+  - **POST /api/v1/agents/ssh_usernames/verify_credentials** — Verify SSH
+    credentials
 
   ## Error Handling
 
@@ -141,11 +170,12 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   network error, tries the next URL. Returns the first successful response.
 
   ## Parameters
-  - `token` - Raw token string extracted from the decoded enrollment key blob
-  - `admin_urls` - List of admin URLs from the enrollment key blob
+  - `key_blob` - Raw enrollment-key blob string (already decoded by the caller)
+  - `admin_urls` - List of admin URLs extracted from the same blob
 
   ## Returns
-  - `{:ok, %{verified: bool, error: String.t(), netmaker_key: String.t()}}` - Response from admin
+  - `{:ok, %{verified: bool, error: String.t(), netmaker_key: String.t()}}` -
+    Response from admin (`error` and `netmaker_key` default to `""` if omitted)
   - `{:error, reason}` - All URLs failed or non-retryable error
 
   POST /api/v1/agents/enrollment_keys/verify
@@ -193,8 +223,8 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   Register this node with an admin.
 
   Sends node metadata to admin server and receives API token and proxy password.
-  This is the only unauthenticated endpoint (no token yet).
-  Supports HTTP fallback by default.
+  Unauthenticated — agent has no API token until this call returns. Uses the
+  Settings URL list (VPN admin URLs, then HTTP fallback URLs).
 
   ## Parameters
   - `node_params` - Map with node metadata (node_id, id_type, network_name, ports, version)
@@ -231,7 +261,6 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   Queries admin server to verify if given username and credential are valid
   for SSH access to this node.
-  Supports HTTP fallback by default.
 
   ## Parameters
   - `username` - SSH username (string)
@@ -239,8 +268,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   ## Returns
   - `{:ok, true}` - credential verified and valid
-  - `{:ok, false}` - username not found or credential incorrect
-  - `{:error, reason}` - request or validation error
+  - `{:ok, false}` - username not found or credential incorrect (admin always
+    returns 200 with a `verified` field for both cases)
+  - `{:error, {:validation_error, body}}` - 422 from admin (malformed request)
+  - `{:error, {:http_error, status, body}}` - other non-200 response
+  - `{:error, {:request_failed, reason}}` - network/connection error
 
   POST /api/v1/agents/ssh_usernames/verify_credentials
   """
@@ -285,19 +317,21 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   Base function for fetching command executions with configurable status filter.
   Used during bootstrap and periodic sync to download commands.
-  Supports HTTP fallback by default.
 
   ## Parameters
   - `opts` - Options keyword list:
-    - `status` - Filter by status: "sent", "pending", or "completed" (required)
+    - `status` - Filter by status: one of `"sent"`, `"pending"`, `"completed"`,
+      `"cancelled"`, `"expired"` (required)
     - `page` - Page number (default: 1)
     - `page_size` - Results per page (default: 100)
     - `order_by` - Sort field (default: "inserted_at")
     - `order_directions` - Sort direction: "asc" or "desc" (default: "asc")
 
   ## Returns
-  - `{:ok, %{data: [command_executions], meta: pagination_meta}}` - Command executions with pagination
-  - `{:error, :not_found}` - Node not found or no commands
+  - `{:ok, %{data: [command_executions], meta: pagination_meta}}` - Command
+    executions with pagination. An empty result is `data: []`, not `:not_found`.
+  - `{:error, :not_found}` - Authenticated node not found on admin (e.g. it was
+    deleted server-side)
   - `{:error, reason}` - Request failed
 
   GET /api/v1/agents/command_executions
@@ -375,7 +409,6 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   Notifies admin that agent has received and stored a pending command execution.
   Transitions execution status from "pending" to "sent" on admin side.
-  Supports HTTP fallback by default.
 
   ## Parameters
   - `execution_id` - Command execution ID (string)
@@ -383,7 +416,8 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   ## Returns
   - `:ok` - Acknowledgment succeeded
   - `{:error, {:http_error, 404, _}}` - Execution not found
-  - `{:error, {:http_error, 422, _}}` - Validation error (not pending)
+  - `{:error, {:http_error, 409, _}}` - Execution not in `"pending"` status
+    (already acknowledged or finalized — admin's `ExecutionPendingCheck`)
   - `{:error, reason}` - Acknowledgment failed
 
   PATCH /api/v1/agents/command_executions/:id/acknowledge
@@ -416,13 +450,13 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   Sends health status (healthy/unhealthy) when using HTTP fallback mode.
   Allows admin to track node health when direct VPN pinging is unavailable.
-  Supports HTTP fallback by default.
 
   ## Parameters
   - `status` - Health status string: "healthy" or "unhealthy"
 
   ## Returns
-  - `{:ok, node}` - Health check reported successfully
+  - `{:ok, node}` - Health check reported successfully; `node` is the parsed
+    JSON node payload (string-keyed map)
   - `{:error, {:http_error, 422, _}}` - Validation error (invalid status)
   - `{:error, reason}` - Report failed
 
@@ -457,10 +491,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   Used by HTTP fallback mechanism for agents to poll for self-updates
   when VPN connectivity is unavailable.
-  Supports HTTP fallback by default.
 
   ## Returns
-  - `{:ok, %{including_me: boolean, inserted_at: DateTime.t() | nil}}` - Check succeeded
+  - `{:ok, %{"including_me" => boolean, "inserted_at" => String.t() | nil}}` -
+    Check succeeded. Map is the raw JSON `data` payload: string keys, ISO8601
+    string for `inserted_at`.
   - `{:error, reason}` - Request failed
 
   ## Examples
@@ -501,7 +536,6 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   Reports execution results (output, exit_code, completed_at) back to admin server.
   Called after command execution completes or fails.
-  Supports HTTP fallback by default.
 
   ## Parameters
   - `execution_id` - Command execution ID (string)
@@ -510,7 +544,9 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   ## Returns
   - `:ok` - Update succeeded
   - `{:error, {:http_error, 404, _}}` - Execution deleted on admin side
-  - `{:error, {:http_error, 422, _}}` - Validation error (already completed)
+  - `{:error, {:http_error, 409, _}}` - Execution not in a state that accepts
+    a result (admin's `ExecutionAcceptsResultCheck`)
+  - `{:error, {:http_error, 422, _}}` - Validation error (malformed payload)
   - `{:error, reason}` - Update failed
 
   PATCH /api/v1/agents/command_executions/:id/result
@@ -592,7 +628,8 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   Registers an alias (friendly name) for this node with admin.
 
   Called during bootstrap for each name in the ALIASES env var.
-  Returns :ok on success or if the name is already taken (conflict).
+  Treats both 201 (created) and 409 (name already taken by another node) as
+  `:ok` — alias registration is best-effort and silent conflicts are expected.
 
   POST /api/v1/agents/aliases
   """

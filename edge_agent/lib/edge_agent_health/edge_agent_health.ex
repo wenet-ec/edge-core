@@ -4,14 +4,15 @@ defmodule EdgeAgentHealth do
   Health check configuration for EdgeAgent.
 
   Verifies that all critical services have successfully initialized:
-  - Database connection
+  - Database connection (`SELECT 1` on the SQLite repo)
   - Bootstrap completion (identity, VPN join, admin registration)
-  - Netclient connection to assigned cluster network
-  - SSH server status
-  - Metrics servers status
-  - Proxy servers
+  - Netclient WireGuard interface health (per `Nexmaker.Cli.health_check/0`)
+  - SSH server GenServer status
+  - Metrics exporter pair (node_exporter + wireguard_exporter) liveness
+  - Proxy server Ranch listeners
 
-  Returns 503 Service Unavailable if any check fails.
+  Returns 503 Service Unavailable if any check fails. Used by the
+  `/health` route in `EdgeAgentHealth.Router`.
   """
 
   require Logger
@@ -51,12 +52,17 @@ defmodule EdgeAgentHealth do
       {:ok, :healthy, _info} ->
         :ok
 
-      {:ok, :degraded, _info} ->
-        Logger.error("Netclient WireGuard interface is down")
-        {:error, "WireGuard interface down"}
+      {:ok, :degraded, info} ->
+        # WireGuard interface is down even though nodes.json shows networks.
+        # Surface the same warning the Nexmaker CLI returns rather than a
+        # fixed string so operators see the actual signal.
+        warnings = info[:warnings] || []
+        Logger.warning("Netclient degraded: #{Enum.join(warnings, "; ")}")
+        {:error, Enum.join(warnings, "; ")}
 
       {:ok, :unhealthy, info} ->
-        {:error, Enum.join(info[:warnings], "; ")}
+        warnings = info[:warnings] || []
+        {:error, Enum.join(warnings, "; ")}
     end
   rescue
     e ->
@@ -95,8 +101,11 @@ defmodule EdgeAgentHealth do
       :error ->
         {:error, "Metrics servers error"}
 
-      status ->
-        {:error, "Unknown status: #{inspect(status)}"}
+      :not_started ->
+        {:error, "Metrics servers not started"}
+
+      :unknown ->
+        {:error, "Metrics servers status check timed out"}
     end
   rescue
     e ->
@@ -105,10 +114,18 @@ defmodule EdgeAgentHealth do
   end
 
   def proxy_servers_health do
-    if EdgeAgent.ProxyServers.initialized?() do
-      :ok
-    else
-      {:error, "Proxy servers not initialized"}
+    case EdgeAgent.ProxyServers.status() do
+      :running ->
+        :ok
+
+      :error ->
+        {:error, "Proxy servers failed to start listeners"}
+
+      :not_started ->
+        {:error, "Proxy servers not started"}
+
+      :unknown ->
+        {:error, "Proxy servers status check timed out"}
     end
   end
 end

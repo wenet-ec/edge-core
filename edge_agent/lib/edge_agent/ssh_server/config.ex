@@ -2,11 +2,23 @@
 defmodule EdgeAgent.SshServer.Config do
   @moduledoc """
   SSH server configuration management.
+
+  `ssh_system_dir` and `ssh_user_dir` are derived from the agent-wide
+  `DATA_DIR` in `runtime.exs`, so SSH host keys live alongside SQLite and
+  netclient state on the persistent volume — they survive container
+  restarts. The `users` subdirectory is required by `:ssh.daemon`'s
+  `:user_dir` option but is otherwise unused (we delegate authentication
+  to admin via `EdgeAgent.SshServer.Authentication`, not authorized_keys
+  files).
   """
 
-  @ssh_system_dir "/tmp/ssh_daemon"
-  @ssh_user_dir "/tmp"
-
+  # Note on host-key algorithms: we generate exactly one ECDSA key (P-256)
+  # via OpenSSL's `prime256v1` curve. Listing P-384/P-521 here would let SSH
+  # negotiate them, but `HostKeys.host_key/1` returns the P-256 key for all
+  # ECDSA variants — wrong curve, signature won't validate. Keep the
+  # public_key list aligned with the keys we actually own.
+  # KEX algorithms are independent of host-key algorithms (KEX uses
+  # ephemeral ECDH keys), so all curves remain enabled there.
   @ssh_algorithms [
     kex: [
       :"ecdh-sha2-nistp384",
@@ -19,8 +31,6 @@ defmodule EdgeAgent.SshServer.Config do
     ],
     public_key: [
       :"ssh-ed25519",
-      :"ecdsa-sha2-nistp384",
-      :"ecdsa-sha2-nistp521",
       :"ecdsa-sha2-nistp256",
       :"rsa-sha2-256",
       :"rsa-sha2-512",
@@ -53,16 +63,16 @@ defmodule EdgeAgent.SshServer.Config do
   @supported_host_key_types [:"ssh-ed25519", :"ecdsa-sha2-nistp256", :"ssh-rsa"]
 
   def ssh_port, do: Application.get_env(:edge_agent, :ssh_port)
-  def ssh_system_dir, do: @ssh_system_dir
-  def ssh_user_dir, do: @ssh_user_dir
+  def ssh_system_dir, do: Application.fetch_env!(:edge_agent, :ssh_system_dir)
+  def ssh_user_dir, do: Application.fetch_env!(:edge_agent, :ssh_user_dir)
   def ssh_algorithms, do: @ssh_algorithms
   def supported_host_key_types, do: @supported_host_key_types
 
   def ssh_options(key_callback_module, password_callback) do
     [
       {:ip, :any},
-      {:system_dir, String.to_charlist(@ssh_system_dir)},
-      {:user_dir, String.to_charlist(@ssh_user_dir)},
+      {:system_dir, String.to_charlist(ssh_system_dir())},
+      {:user_dir, String.to_charlist(ssh_user_dir())},
       {:key_cb, {key_callback_module, []}},
       {:pwdfun, password_callback},
       {:auth_methods, ~c"publickey,password"},

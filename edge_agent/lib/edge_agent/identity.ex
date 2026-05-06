@@ -25,8 +25,14 @@ defmodule EdgeAgent.Identity do
      - `/host/sys/class/dmi/id/product_uuid` - DMI product UUID
      - `/host/sys/class/dmi/id/board_serial` - Motherboard serial
      - `/host/sys/class/dmi/id/product_serial` - Product serial
-     - `/host/proc/sys/kernel/random/boot_id` - Boot ID (changes per boot)
   3. **Random UUID** - Generate new random UUID
+
+  Note: `/host/proc/sys/kernel/random/boot_id` is intentionally NOT in this
+  list. It changes on every host boot, so treating it as "persistent" would
+  cause minimal containers (where only boot_id is available) to register a
+  new identity on every host reboot. Falling through to a random UUID is
+  the more honest behaviour — the agent makes one new ID per container
+  start, persists it via Settings, and reuses it for the agent's lifetime.
 
   ## Configuration
 
@@ -156,13 +162,16 @@ defmodule EdgeAgent.Identity do
   end
 
   defp try_persistent_id do
+    # boot_id deliberately excluded — it changes per host boot, so treating it
+    # as a persistent identifier would rotate the agent's identity on every
+    # host reboot. Falling through to a random UUID (then persisted in
+    # Settings) is the more honest behaviour for that case.
     persistent_id_paths = [
       "/host/etc/machine-id",
       "/host/var/lib/dbus/machine-id",
       "/host/sys/class/dmi/id/product_uuid",
       "/host/sys/class/dmi/id/board_serial",
-      "/host/sys/class/dmi/id/product_serial",
-      "/host/proc/sys/kernel/random/boot_id"
+      "/host/sys/class/dmi/id/product_serial"
     ]
 
     Enum.find_value(persistent_id_paths, :error, fn path ->

@@ -63,9 +63,14 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
     stable_ms = Application.get_env(:edge_agent, :derp_map_refresh_interval_ms, to_timeout(minute: 5))
     # If the configured interval is shorter than the warmup start, skip warmup entirely.
     initial_ms = min(@warmup_interval_ms, stable_ms)
-    {map, next_ms} = fetch_and_next_interval(nil, initial_ms, stable_ms)
-    schedule_refresh(next_ms)
-    {:ok, %{map: map, interval_ms: next_ms, stable_ms: stable_ms}}
+
+    # Fetch on the first message rather than synchronously in init/1 so the
+    # supervision tree (and the HTTP endpoint that boots after this cache)
+    # don't block on a slow / unreachable DERP map server. Until the first
+    # fetch lands, `get/0` returns nil and the reflection endpoint serves
+    # an empty regions map — same behaviour the warmup path produced before.
+    schedule_refresh(0)
+    {:ok, %{map: nil, interval_ms: initial_ms, stable_ms: stable_ms}}
   end
 
   @impl true

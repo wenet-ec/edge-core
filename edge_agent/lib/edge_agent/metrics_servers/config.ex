@@ -1,10 +1,12 @@
-# edge_agent/lib/edge_agent/metrics_server/config.ex
+# edge_agent/lib/edge_agent/metrics_servers/config.ex
 defmodule EdgeAgent.MetricsServers.Config do
   @moduledoc """
-  Configuration management for the metrics server.
+  Configuration management for the metrics exporter pair.
 
-  Centralizes all hardcoded configuration values and provides
-  a clean interface for accessing them.
+  Centralizes the static binary paths and host bind-mount paths (module
+  attributes) alongside env-driven settings (`:host_metrics_port`,
+  `:wireguard_metrics_port`) and exposes a single `build_config/0` snapshot
+  used by the GenServer.
   """
 
   @listen_address "0.0.0.0"
@@ -58,6 +60,10 @@ defmodule EdgeAgent.MetricsServers.Config do
   def wireguard_exporter_args do
     port = wireguard_metrics_port()
 
+    # wireguard_exporter binds to "::" (IPv6 unspecified) so a dual-stack
+    # Linux host accepts both IPv4 and IPv6 scrapes through a single
+    # listener. node_exporter binds to "0.0.0.0" (IPv4-only) for symmetry
+    # with how Prometheus scrapes it from sibling containers.
     [
       "--port",
       "#{port}",

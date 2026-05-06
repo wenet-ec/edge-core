@@ -1,4 +1,4 @@
-# edge_agent/lib/edge_agent/metrics_server/network.ex
+# edge_agent/lib/edge_agent/metrics_servers/network.ex
 defmodule EdgeAgent.MetricsServers.Network do
   @moduledoc """
   Network utility functions for the metrics server.
@@ -71,16 +71,47 @@ defmodule EdgeAgent.MetricsServers.Network do
   defp detect_via_interfaces do
     case System.cmd("ip", ["addr", "show"], stderr_to_stdout: true) do
       {output, 0} ->
-        # Find the first non-loopback, non-docker interface with an IP
+        # `ip addr show` output is per-interface — group lines into
+        # interface blocks so we can skip wg* / docker* / br-* / veth*
+        # interfaces wholesale rather than picking up their inet line.
         output
-        |> String.split("\n")
-        |> Enum.find_value(&extract_ip_from_line/1)
+        |> split_into_interfaces()
+        |> Enum.reject(&excluded_interface?/1)
+        |> Enum.find_value(&first_global_inet/1)
 
       _ ->
         nil
     end
   rescue
     _ -> nil
+  end
+
+  # `ip addr show` starts each interface block with `<index>: <name>:`. Split
+  # on those header lines so each chunk carries the interface header plus its
+  # inet/inet6 entries.
+  defp split_into_interfaces(output) do
+    String.split(output, ~r/\n(?=\d+:\s+\S+:)/, trim: true)
+  end
+
+  defp excluded_interface?(block) do
+    case Regex.run(~r/^\d+:\s+(\S+?):/, block) do
+      [_, name] ->
+        # Loopback, WireGuard, Docker bridges, veth pairs.
+        name == "lo" or
+          String.starts_with?(name, "wg") or
+          String.starts_with?(name, "docker") or
+          String.starts_with?(name, "br-") or
+          String.starts_with?(name, "veth")
+
+      _ ->
+        false
+    end
+  end
+
+  defp first_global_inet(block) do
+    block
+    |> String.split("\n")
+    |> Enum.find_value(&extract_ip_from_line/1)
   end
 
   defp extract_ip_from_line(line) do

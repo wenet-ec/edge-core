@@ -3,22 +3,23 @@ defmodule EdgeAgent.Metrics.Workers.PushMetricsWorker do
   @moduledoc """
   Oban worker that pushes metrics to admin when using HTTP fallback mode.
 
-  This worker runs every 2 minutes when VPN is unavailable and fallback URL
-  is configured. It scrapes local metrics exporters (host, agent, wireguard)
-  and pushes them to admin for temporary caching.
+  When VPN is unavailable and fallback URLs are configured, scrapes local
+  metrics exporters (host, agent, wireguard) and pushes them to admin for
+  temporary caching.
 
   ## Conditions
 
   Worker only runs when:
   - VPN admin URLs are empty (no VPN connectivity)
-  - Fallback admin URL is configured
+  - Fallback admin URLs are configured
 
   ## Schedule
 
-  - Cron: Every 2 minutes (`"*/2 * * * *"`)
+  - Cron: cadence configured by `PUSH_METRICS_SCHEDULE` (default: every 2
+    minutes)
   - Queue: `:push_metrics`
   - Max attempts: 1 (best-effort, retry on next cron)
-  - Unique: One job in any state at a time
+  - Unique: One job in `:available` or `:scheduled` state at a time
   """
   use Oban.Worker,
     queue: :push_metrics,

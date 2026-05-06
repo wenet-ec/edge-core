@@ -69,7 +69,7 @@ defmodule EdgeAdmin.ProxyServers.Config do
   @doc """
   Returns the number of Ranch acceptor processes for each proxy listener.
 
-  Default: 100
+  Configurable via `PROXY_NUM_ACCEPTORS` env var (default: 100).
   """
   def num_acceptors do
     Application.get_env(:edge_admin, :proxy_num_acceptors, 100)
@@ -82,7 +82,8 @@ defmodule EdgeAdmin.ProxyServers.Config do
   a tunnel open indefinitely against `recv_timeout`; this ceiling bounds the
   total duration as a slowloris defence.
 
-  Default: 6h (21_600_000ms). Set to a very large value to effectively disable.
+  Configurable via `PROXY_TUNNEL_TOTAL_TIMEOUT_MS` (default: 6h /
+  21_600_000ms). Set to a very large value to effectively disable.
   """
   def tunnel_total_timeout do
     get_timeout(:tunnel_total, 21_600_000)
@@ -93,7 +94,7 @@ defmodule EdgeAdmin.ProxyServers.Config do
   graceful drain (deploy / shutdown). Handlers receive `{:drain, grace_ms}`
   when shutdown starts; after the grace, surviving tunnels are force-closed.
 
-  Default: 30_000 (30s).
+  Configurable via `PROXY_DRAIN_GRACE_TIMEOUT_MS` (default: 30s / 30_000ms).
   """
   def drain_grace_timeout do
     get_timeout(:drain_grace, 30_000)

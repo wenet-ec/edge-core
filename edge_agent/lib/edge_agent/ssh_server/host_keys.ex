@@ -1,7 +1,42 @@
 # edge_agent/lib/edge_agent/ssh_server/host_keys.ex
 defmodule EdgeAgent.SshServer.HostKeys do
   @moduledoc """
-  Manages SSH host keys - generation, loading, and validation.
+  Manages SSH host keys — generation, loading, and lookup for the embedded
+  agent SSH daemon.
+
+  ## Algorithms
+
+  Three host-key algorithms are supported, one key per algorithm:
+
+  - **Ed25519** (`ssh_host_ed25519_key`) — generated via `openssl genpkey -algorithm Ed25519`
+  - **ECDSA P-256** (`ssh_host_ecdsa_key`) — generated via `openssl ecparam -name prime256v1`
+  - **RSA 2048** (`ssh_host_rsa_key`) — generated via `openssl genrsa 2048`. The
+    same key is used for all three RSA signature algorithms (`ssh-rsa`,
+    `rsa-sha2-256`, `rsa-sha2-512`).
+
+  Other curves (ECDSA P-384, P-521) are intentionally NOT supported; they are
+  excluded from `Config.ssh_algorithms/0` so SSH never negotiates them.
+
+  ## Storage
+
+  Keys are written under `Config.ssh_system_dir/0`, which `runtime.exs`
+  derives from `DATA_DIR` (`${DATA_DIR}/ssh`). The agent compose mounts
+  `DATA_DIR` from a persistent volume, so host keys survive container
+  restarts and reconnecting clients keep matching the same fingerprint.
+
+  The directory is `chmod 0700` on first init so host private keys aren't
+  world-readable.
+
+  First-time deployments will still generate keys once; subsequent
+  restarts reuse them.
+
+  ## Boot semantics
+
+  `ensure_host_keys/0` walks `Config.supported_host_key_types/0` and tries to
+  load-or-generate each. It returns `:ok` if **at least one** key succeeded —
+  the SSH daemon can boot with a degraded key set rather than fail closed
+  when (e.g.) a single algorithm's OpenSSL invocation breaks. Returns
+  `{:error, :no_host_keys}` only if all three fail.
   """
 
   alias EdgeAgent.SshServer.Config
@@ -49,9 +84,11 @@ defmodule EdgeAgent.SshServer.HostKeys do
       :"ssh-ed25519" ->
         load_or_generate_host_key("ssh_host_ed25519_key", :ed25519)
 
-      alg when alg in [:"ecdsa-sha2-nistp256", :"ecdsa-sha2-nistp384", :"ecdsa-sha2-nistp521"] ->
+      :"ecdsa-sha2-nistp256" ->
         load_or_generate_host_key("ssh_host_ecdsa_key", :ecdsa_nistp256)
 
+      # rsa-sha2-256 and rsa-sha2-512 are signature algorithms over the same
+      # RSA key, so all three map to the same key file.
       alg when alg in [:"ssh-rsa", :"rsa-sha2-256", :"rsa-sha2-512"] ->
         load_or_generate_host_key("ssh_host_rsa_key", :rsa)
 

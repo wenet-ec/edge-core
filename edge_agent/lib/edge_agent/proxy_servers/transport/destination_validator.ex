@@ -4,12 +4,18 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidator do
   Validates proxy destination addresses to prevent SSRF and privilege escalation attacks.
 
   Security Model:
-  - BLOCK: Localhost/loopback (127.0.0.0/8, ::1, localhost)
-  - BLOCK: Cloud metadata services (169.254.169.254, 100.100.100.200, metadata.google.internal, etc.)
+  - BLOCK: Localhost/loopback (127.0.0.0/8, ::1, `localhost`, and `0.0.0.0`
+    which routes to loopback on Linux)
+  - BLOCK: Cloud metadata services (169.254.169.254, 100.100.100.200,
+    metadata.google.internal, etc.)
   - BLOCK: Link-local addresses (169.254.0.0/16, fe80::/10)
   - BLOCK: Docker API ports (2375, 2376, 2377)
   - BLOCK: Kubernetes API ports (6443, 10250, 10255, 2379, 2380)
-  - BLOCK: Agent's own service ports (configurable)
+  - BLOCK: Agent's own metrics ports (`HOST_METRICS_PORT`,
+    `WIREGUARD_METRICS_PORT` — always blocked, no opt-out)
+  - BLOCK: `proxy_blocked_ports` / `proxy_custom_blocked_hosts`
+    (operator-configured; both default empty — no extra ports/hosts blocked
+    out of the box)
   - ALLOW: Private networks (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16)
   - ALLOW: Public internet
   - ALLOW: Custom allow list (overrides all blocks)
@@ -29,12 +35,15 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidator do
 
   ## Configuration
 
-  Add to runtime.exs:
+  All three knobs default to empty lists — operators opt in via env vars:
 
-      config :edge_agent,
-        proxy_blocked_ports: [44000, 43128, 41080],  # Agent's own ports
-        proxy_custom_blocked_hosts: [],  # Additional hosts to block
-        proxy_custom_allowed_hosts: []   # Exceptions to blocking rules
+      PROXY_BLOCKED_PORTS=44000,43128,41080  # Often-recommended: agent's own ports
+      PROXY_CUSTOM_BLOCKED_HOSTS=...          # Additional hosts to block
+      PROXY_CUSTOM_ALLOWED_HOSTS=...          # Exceptions to blocking rules
+
+  These map to `:edge_agent` application config keys
+  `:proxy_blocked_ports`, `:proxy_custom_blocked_hosts`, and
+  `:proxy_custom_allowed_hosts` respectively.
   """
 
   require Logger
@@ -143,12 +152,13 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidator do
   end
 
   @doc """
-  Validates a destination host and port.
+  Validates a destination host and port (string-domain only — no DNS).
 
-  This is the legacy string-only check; prefer `resolve_and_validate/2` for
-  call sites that will then call `:gen_tcp.connect/4`, since this version
-  cannot guarantee the host the caller eventually connects to is the host
-  that was validated (DNS-rebinding window).
+  Production proxy code uses `resolve_and_validate/2` instead, which closes
+  the DNS-rebinding window between validation and `:gen_tcp.connect/4`.
+  This function remains as a predicate-only helper for tests and callers
+  that don't connect afterwards (e.g. precomputing block reasons for
+  reporting).
 
   Returns:
     * `:ok` if allowed
@@ -312,6 +322,11 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidator do
 
   @doc """
   Get human-readable error message for a block reason.
+
+  Production code paths render error messages via
+  `EdgeAgent.ProxyServers.ErrorHandler.http_error_response/1` (HTTP) and
+  `socks5_reply_code/1` (SOCKS5). This helper is kept for tests and any
+  out-of-band reporting that needs a plain English string per reason.
   """
   @spec error_message(block_reason() | atom()) :: String.t()
   def error_message(reason) do

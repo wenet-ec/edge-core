@@ -361,8 +361,7 @@ defmodule Nexmaker.Cli do
 
       {:ok, :healthy, %{networks: ["cluster-test"]}} = Nexmaker.Cli.health_check()
   """
-  @spec health_check(keyword()) ::
-          {:ok, :healthy | :degraded | :unhealthy, map()} | {:error, any()}
+  @spec health_check(keyword()) :: {:ok, :healthy | :degraded | :unhealthy, map()}
   def health_check(_opts \\ []) do
     timestamp = DateTime.utc_now()
 

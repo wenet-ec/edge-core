@@ -120,10 +120,13 @@ HTTP_PROXY_PORT=43128
 SOCKS5_PROXY_PORT=41080
 
 # Per-operation proxy timeouts (in milliseconds)
-# PROXY_CONNECTION_TIMEOUT_MS=2000    # TCP connect to target host (default: 2s)
-# PROXY_HANDSHAKE_TIMEOUT_MS=10000    # SOCKS5/HTTP proxy handshake (default: 10s)
-# PROXY_READ_TIMEOUT_MS=10000         # Socket read (default: 10s)
-# PROXY_RECV_TIMEOUT_MS=300000        # Forwarding loop inactivity — closes half-open connections (default: 5min)
+# PROXY_CONNECTION_TIMEOUT_MS=2000        # TCP connect to target host (default: 2s)
+# PROXY_HANDSHAKE_TIMEOUT_MS=10000        # SOCKS5/HTTP proxy handshake (default: 10s)
+# PROXY_READ_TIMEOUT_MS=10000             # Socket read (default: 10s)
+# PROXY_RECV_TIMEOUT_MS=300000            # Forwarding loop inactivity — closes half-open connections (default: 5min)
+# PROXY_TUNNEL_TOTAL_TIMEOUT_MS=21600000  # Absolute ceiling on a tunnel's lifetime (default: 6h, slowloris defence)
+# PROXY_DRAIN_GRACE_TIMEOUT_MS=30000      # Grace window for tunnels during graceful drain on shutdown (default: 30s)
+# PROXY_NUM_ACCEPTORS=100                 # Ranch acceptor processes per listener (default: 100)
 
 # =============================================================================
 # Observability

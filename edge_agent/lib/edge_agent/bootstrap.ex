@@ -20,7 +20,12 @@ defmodule EdgeAgent.Bootstrap do
 
   ## Failure Handling
 
-  Bootstrap failures are **FATAL** and crash the supervision tree:
+  Bootstrap failures stop the GenServer's `init/1` with the failure reason.
+  Under the application supervisor's `:one_for_one` strategy that triggers
+  a restart; once Bootstrap exhausts its restart intensity the entire
+  application supervisor terminates and the agent exits — i.e. fatal in
+  practice, but with a few retries first. Failure modes:
+
   - Identity determination failure → Can't identify node
   - Enrollment / VPN join failure → Can't communicate with admins
   - Registration failure → Can't authenticate with admin
@@ -35,12 +40,12 @@ defmodule EdgeAgent.Bootstrap do
   - `:enrollment_key` - Admin enrollment key blob (base64)
   - `:public_enrollment_key_url` - URL to fetch enrollment key blob if env not set
   - `:run_bootstrap` - Whether to run bootstrap (default: true)
-  - `:http_port` - Agent HTTP API port (default: 44000)
-  - `:ssh_port` - Agent SSH server port (default: 40022)
-  - `:host_metrics_port` - Node exporter port (default: 49100)
-  - `:wireguard_metrics_port` - WireGuard exporter port (default: 49586)
-  - `:http_proxy_port` - HTTP proxy port (default: 43128)
-  - `:socks5_proxy_port` - SOCKS5 proxy port (default: 41080)
+  - `:api_port` - Agent HTTP API port (sent to admin as `http_port`)
+  - `:ssh_port` - Agent SSH server port
+  - `:host_metrics_port` - Node exporter port
+  - `:wireguard_metrics_port` - WireGuard exporter port
+  - `:http_proxy_port` - HTTP proxy port
+  - `:socks5_proxy_port` - SOCKS5 proxy port
   - `:vpn_ready_timeout_seconds` - VPN verification timeout in seconds (default: 30)
   - `:aliases` - List of friendly name aliases to register with admin (default: [])
 
@@ -288,16 +293,20 @@ defmodule EdgeAgent.Bootstrap do
   # =============================================================================
 
   defp build_registration_payload(node_id, id_type, network_name) do
+    # The wire field is `http_port` (admin's API contract), but on the agent
+    # the HTTP server's port lives at `:api_port` (set from `API_PORT`).
+    # Reading `:http_port` here would silently use the fallback default and
+    # diverge from the actual listening port if API_PORT was overridden.
     %{
       node_id: node_id,
       id_type: id_type,
       network_name: network_name,
-      http_port: Application.get_env(:edge_agent, :http_port, 44_000),
-      ssh_port: Application.get_env(:edge_agent, :ssh_port, 40_022),
-      host_metrics_port: Application.get_env(:edge_agent, :host_metrics_port, 49_100),
-      wireguard_metrics_port: Application.get_env(:edge_agent, :wireguard_metrics_port, 49_586),
-      http_proxy_port: Application.get_env(:edge_agent, :http_proxy_port, 43_128),
-      socks5_proxy_port: Application.get_env(:edge_agent, :socks5_proxy_port, 41_080),
+      http_port: Application.fetch_env!(:edge_agent, :api_port),
+      ssh_port: Application.fetch_env!(:edge_agent, :ssh_port),
+      host_metrics_port: Application.fetch_env!(:edge_agent, :host_metrics_port),
+      wireguard_metrics_port: Application.fetch_env!(:edge_agent, :wireguard_metrics_port),
+      http_proxy_port: Application.fetch_env!(:edge_agent, :http_proxy_port),
+      socks5_proxy_port: Application.fetch_env!(:edge_agent, :socks5_proxy_port),
       version: :edge_agent |> Application.spec(:vsn) |> to_string(),
       self_update_enabled: Application.get_env(:edge_agent, :self_update_enabled, false)
     }

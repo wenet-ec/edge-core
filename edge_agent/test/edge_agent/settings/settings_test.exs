@@ -45,6 +45,32 @@ defmodule EdgeAgent.SettingsTest do
       assert {:error, changeset} = Settings.set("empty_val", "")
       assert changeset.errors[:value]
     end
+
+    test "concurrent set/2 on the same key all succeed (atomic upsert)" do
+      # Pre-1.x code did get-then-insert/update, which raced under concurrent
+      # writes and produced unique-constraint changeset errors. Current code
+      # uses INSERT ... ON CONFLICT DO UPDATE, so every caller wins.
+      values = for i <- 1..20, do: "v#{i}"
+
+      results =
+        values
+        |> Task.async_stream(fn v -> Settings.set("race_key", v) end,
+          max_concurrency: 20,
+          ordered: false
+        )
+        |> Enum.map(fn {:ok, result} -> result end)
+
+      assert Enum.all?(results, &match?({:ok, _}, &1))
+      assert Settings.get("race_key") in values
+    end
+
+    test "second set/2 bumps updated_at" do
+      {:ok, first} = Settings.set("bump", "one")
+      # Sleep past the second-precision boundary so the timestamp can change.
+      Process.sleep(1_100)
+      {:ok, second} = Settings.set("bump", "two")
+      assert DateTime.after?(second.updated_at, first.updated_at)
+    end
   end
 
   # -----------------------------------------------------------------------

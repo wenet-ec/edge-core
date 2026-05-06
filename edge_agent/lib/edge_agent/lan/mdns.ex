@@ -3,20 +3,31 @@ defmodule EdgeAgent.Lan.Mdns do
   @moduledoc """
   Advertises the agent on the local network via mDNS.
 
-  On startup, reads the node identity from Settings and tells MdnsLite to
-  advertise two names:
+  At boot, reads the node identity from Settings and registers two records
+  with `MdnsLite`:
 
-  - `{node_id}.local` — the stable resolvable hostname for this node.
+  - `node-{node_id}.local` — the stable resolvable hostname for this node.
     Any device on the same subnet can reach the agent by this name.
-  - `_edgecore._tcp.local` — service type record used by agents to
-    discover each other (active in v3 LAN clustering).
+  - `_edge_agent._tcp.local` — service type record used by agents and other
+    LAN clients to discover edge agents on the same subnet.
+
+  ## Process model
+
+  This module is a **one-shot Task**, not a long-lived GenServer. `MdnsLite`
+  owns its own state in `MdnsLite.TableServer` (part of `:mdns_lite`'s
+  supervision tree); the calls below are fire-and-forget configuration. Once
+  the Task exits, mDNS keeps advertising on its own. `restart: :transient`
+  ensures a crash during configuration is still surfaced by the supervisor,
+  while a normal exit doesn't cause needless restarts.
+
+  ## node_id invariant
 
   The node_id is determined during Bootstrap (step 1) and persisted in
-  SQLite before this process starts, so `Settings.get_node_id/0` is
-  always populated by the time `init/1` runs.
+  SQLite before this Task starts, so `Settings.get_node_id/0` is always
+  populated by the time `run/0` runs. If it isn't, that's a bug in the
+  supervision order — `run/0` raises rather than silently advertising
+  nothing.
   """
-
-  use GenServer
 
   alias EdgeAgent.Settings
 
@@ -24,42 +35,41 @@ defmodule EdgeAgent.Lan.Mdns do
 
   @service_id :edge_agent
 
-  # =============================================================================
-  # Public API
-  # =============================================================================
-
-  @spec start_link(keyword()) :: GenServer.on_start()
-  def start_link(opts \\ []) do
-    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+  @doc false
+  def child_spec(_opts) do
+    %{
+      id: __MODULE__,
+      start: {Task, :start_link, [&__MODULE__.run/0]},
+      restart: :transient,
+      type: :worker
+    }
   end
 
-  # =============================================================================
-  # GenServer Callbacks
-  # =============================================================================
+  @doc """
+  Configures `MdnsLite` to advertise this node, then returns. Intended to be
+  run once at boot via the supervisor's child_spec; not meant to be called
+  directly by application code.
+  """
+  @spec run() :: :ok
+  def run do
+    node_id =
+      Settings.get_node_id() ||
+        raise "mDNS: node_id missing from Settings — Bootstrap must run before EdgeAgent.Lan.Mdns"
 
-  @impl true
-  def init(_opts) do
-    node_id = Settings.get_node_id()
+    hostname = "node-#{node_id}"
+    port = Application.fetch_env!(:edge_agent, :api_port)
 
-    if node_id do
-      hostname = "node-#{node_id}"
-      port = Application.get_env(:edge_agent, :http_port, 44_000)
+    MdnsLite.set_hosts([hostname])
 
-      MdnsLite.set_hosts([hostname])
+    MdnsLite.add_mdns_service(%{
+      id: @service_id,
+      instance_name: hostname,
+      protocol: "edge_agent",
+      transport: "tcp",
+      port: port
+    })
 
-      MdnsLite.add_mdns_service(%{
-        id: @service_id,
-        instance_name: hostname,
-        protocol: "edge_agent",
-        transport: "tcp",
-        port: port
-      })
-
-      Logger.info("mDNS: advertising as #{hostname}.local on port #{port}")
-      {:ok, %{node_id: node_id, hostname: hostname}}
-    else
-      Logger.error("mDNS: node_id not set in Settings — skipping mDNS advertisement")
-      {:ok, %{node_id: nil, hostname: nil}}
-    end
+    Logger.info("mDNS: advertising as #{hostname}.local on port #{port}")
+    :ok
   end
 end

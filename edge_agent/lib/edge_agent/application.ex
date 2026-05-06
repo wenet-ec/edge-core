@@ -1,7 +1,22 @@
 # edge_agent/lib/edge_agent/application.ex
 defmodule EdgeAgent.Application do
   @moduledoc """
-  Main entry point of the app
+  Application entry point and supervision tree builder for the edge agent.
+
+  ## Runtime modes
+
+  The supervision tree is selected by `EDGE_AGENT_MODE`:
+
+  - `"test"` — minimal tree: `Repo`, `PubSub`, `Oban`, `ExecutionRegistry`,
+    `Endpoint`. No `Bootstrap`, `SshServer`, `MetricsServers`, `ProxyServers`,
+    `PromEx`, `DerpMapCache`, or `Mdns` — keeps tests free of external
+    side effects (VPN join, port binds, OpenSSL host-key generation).
+  - any other value (incl. unset) — full `:server` tree.
+
+  Strategy is `:one_for_one`: each child supervises independently, so a
+  Bootstrap failure restarts only Bootstrap (eventually crashing the
+  application supervisor if it exhausts restart intensity — see
+  `EdgeAgent.Bootstrap` moduledoc for details).
   """
 
   use Application

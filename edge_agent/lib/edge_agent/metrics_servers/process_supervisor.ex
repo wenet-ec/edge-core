@@ -1,4 +1,4 @@
-# edge_agent/lib/edge_agent/metrics_server/process_supervisor.ex
+# edge_agent/lib/edge_agent/metrics_servers/process_supervisor.ex
 defmodule EdgeAgent.MetricsServers.ProcessSupervisor do
   @moduledoc """
   Manages the node_exporter and wireguard_exporter process lifecycle.
@@ -11,7 +11,10 @@ defmodule EdgeAgent.MetricsServers.ProcessSupervisor do
 
   require Logger
 
-  @type process_result :: {:ok, pid() | integer(), port()} | {:error, term()}
+  # `pid` here is an OS-level integer PID found via `pgrep` after the port
+  # spawn — not an Erlang `pid()`. `port` is the port reference used to
+  # close stdout/stderr.
+  @type process_result :: {:ok, integer(), port()} | {:error, term()}
   @type stop_result :: :ok | {:error, term()}
 
   @spec start_node_exporter() :: process_result()
@@ -36,7 +39,7 @@ defmodule EdgeAgent.MetricsServers.ProcessSupervisor do
       {:error, {:exception, error}}
   end
 
-  @spec stop_node_exporter(pid() | integer() | nil, port() | nil) :: stop_result()
+  @spec stop_node_exporter(integer() | nil, port() | nil) :: stop_result()
   def stop_node_exporter(nil, nil), do: :ok
 
   def stop_node_exporter(nil, port_ref) when is_port(port_ref) do
@@ -47,15 +50,6 @@ defmodule EdgeAgent.MetricsServers.ProcessSupervisor do
   def stop_node_exporter(pid, port_ref) when is_port(port_ref) do
     Port.close(port_ref)
     stop_node_exporter(pid, nil)
-  end
-
-  def stop_node_exporter(pid, _port_ref) when is_pid(pid) do
-    if Process.alive?(pid) do
-      Process.exit(pid, :shutdown)
-      :ok
-    else
-      :ok
-    end
   end
 
   def stop_node_exporter(pid, _port_ref) when is_integer(pid) do
@@ -123,7 +117,7 @@ defmodule EdgeAgent.MetricsServers.ProcessSupervisor do
       {:error, {:exception, error}}
   end
 
-  @spec stop_wireguard_exporter(pid() | integer() | nil, port() | nil) :: stop_result()
+  @spec stop_wireguard_exporter(integer() | nil, port() | nil) :: stop_result()
   def stop_wireguard_exporter(nil, nil), do: :ok
 
   def stop_wireguard_exporter(nil, port_ref) when is_port(port_ref) do
@@ -134,15 +128,6 @@ defmodule EdgeAgent.MetricsServers.ProcessSupervisor do
   def stop_wireguard_exporter(pid, port_ref) when is_port(port_ref) do
     Port.close(port_ref)
     stop_wireguard_exporter(pid, nil)
-  end
-
-  def stop_wireguard_exporter(pid, _port_ref) when is_pid(pid) do
-    if Process.alive?(pid) do
-      Process.exit(pid, :shutdown)
-      :ok
-    else
-      :ok
-    end
   end
 
   def stop_wireguard_exporter(pid, _port_ref) when is_integer(pid) do

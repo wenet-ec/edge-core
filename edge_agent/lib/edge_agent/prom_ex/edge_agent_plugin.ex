@@ -4,11 +4,26 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
   Custom PromEx plugin for edge_agent specific metrics.
 
   Provides business-level metrics for:
-  - Command execution (syncing, running, reporting)
   - Bootstrap process (agent registration)
-  - Admin discovery (finding assigned admin)
-  - Proxy server (HTTP/SOCKS5 connections)
-  - SSH server (session management)
+  - Command execution (syncing, running, reporting)
+  - Admin discovery (probing VPN peers for admins)
+  - Proxy server (HTTP/SOCKS5 connections, blocks, tunnel close, bytes,
+    duration)
+  - SSH server (connection, authentication, session duration)
+  - VPN config pull (periodic netclient pull as DNS-recovery backstop)
+  - Health check (agent → admin status reports in HTTP-fallback mode)
+
+  ## Operator notes
+
+  Two metrics carry caveats worth flagging when authoring alerts:
+
+  - `[:edge_agent, :commands, :execution, :exit_code]` is a `last_value` —
+    under concurrent command execution, the value reflects whichever event
+    fired last. Useful as a spot indicator, **not** as a per-command tracker.
+  - `[:edge_agent, :ssh, :authentication, :total]` tags by `:username`. SSH
+    usernames come from the connecting client and are attacker-controllable;
+    the time-series cardinality is bounded only by external behaviour. Watch
+    for cardinality blow-ups under brute-force probing.
   """
 
   use PromEx.Plugin
@@ -101,7 +116,8 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
       last_value(
         [:edge_agent, :commands, :execution, :exit_code],
         event_name: [:edge_agent, :commands, :execution, :completed],
-        description: "Exit code of last command execution",
+        description:
+          "Exit code of the most recent command execution. Race-y under concurrent execution — spot indicator only, not per-command.",
         measurement: :exit_code
       )
     ]
@@ -214,7 +230,8 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
       counter(
         [:edge_agent, :ssh, :authentication, :total],
         event_name: [:edge_agent, :ssh, :authentication],
-        description: "Total SSH authentication attempts",
+        description:
+          "Total SSH authentication attempts. WARNING: tagged by `:username` which is attacker-controllable — cardinality is unbounded under brute-force probing.",
         tags: [:username, :auth_method, :result],
         tag_values: &get_ssh_auth_tags/1
       ),

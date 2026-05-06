@@ -133,6 +133,11 @@ RUN chmod +x /usr/local/bin/prometheus_wireguard_exporter
 COPY --from=builder /app/_build/prod/rel/edge_agent /app
 RUN chmod +x /app/bin/migrate /app/bin/server
 
+# License text for the embedded Edge Agent + Nexmaker code. Apache 2.0 — see
+# /usr/share/doc/edge_agent/LICENSE and /usr/share/doc/nexmaker/LICENSE.
+COPY edge_agent/LICENSE /usr/share/doc/edge_agent/LICENSE
+COPY nexmaker/LICENSE /usr/share/doc/nexmaker/LICENSE
+
 # Create unified data directory structure with symlink for netclient
 RUN mkdir -p /app/data/edge /app/data/vpn /tmp/erl_crash && \
     ln -sfn /app/data/vpn /etc/netclient && \

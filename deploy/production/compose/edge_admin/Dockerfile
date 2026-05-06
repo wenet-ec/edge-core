@@ -129,6 +129,9 @@ COPY --from=builder /app/_build/prod/rel/edge_admin /app
 RUN chmod +x /app/bin/migrate /app/bin/rotate_cloak_key /app/bin/server /app/bin/create_netmaker_superadmin /app/bin/create_default_cluster && \
     chown -R app:app /app
 
+# License text for the embedded Edge Admin release. ELv2 — see /usr/share/doc/edge_admin/LICENSE.
+COPY edge_admin/LICENSE /usr/share/doc/edge_admin/LICENSE
+
 # Create directories with proper permissions
 RUN mkdir -p /app/data /tmp/erl_crash && \
     chown -R app:app /app/data /tmp/erl_crash

@@ -1,6 +1,6 @@
 # Edge Core — Architecture
 
-**Last Updated: 2026-05-05**
+**Last Updated: 2026-05-06**
 
 Edge Core is an infrastructure management platform for geographically distributed edge machines. It gives you centralized control over remote nodes through a secure VPN mesh — running commands, accessing machines via SSH, proxying traffic through them, and scraping their metrics — all through a simple HTTP API.
 
@@ -190,7 +190,7 @@ The rest of this section assumes the production setup (PostgreSQL + multi-admin 
 
 ### Beyond PostgreSQL — future direction
 
-Realistically, Edge Admin is unlikely to outgrow PostgreSQL for most deployments. The data model is bounded (clusters, nodes, SSH credentials are slow-changing; commands and metrics are pruned on a window) and PostgreSQL on a well-tuned host handles tens of thousands of nodes comfortably. CNPG makes in-region HA trivial. The honest assumption is that PostgreSQL is sufficient for the foreseeable future and we are not actively planning around outgrowing it.
+Realistically, Edge Admin is unlikely to outgrow PostgreSQL for most deployments. The data model is bounded (clusters, nodes, SSH credentials are slow-changing; commands and metrics are pruned on a window), and PostgreSQL on a well-tuned host has comfortable headroom for the workload shape Edge Admin produces. CNPG makes in-region HA trivial. The honest assumption is that PostgreSQL is sufficient for the foreseeable future and we are not actively planning around outgrowing it.
 
 That said, the dispatcher pattern leaves the door open. If concrete demand surfaces — typically geo-distributed multi-region admin federation, very high write throughput from agent telemetry, or strict cross-region RPO requirements — **YugabyteDB is the documented future direction**. Yugabyte's YSQL is a fork of PostgreSQL source (not just wire-compatible), which means LISTEN/NOTIFY works, the type system matches, JSONB and transactional DDL behave as expected, and our existing PostgreSQL adapter code path can target it with minimal changes. The core engine is Apache 2.0, which is a meaningful adoption advantage over CockroachDB's CSL — users can self-host the cluster without a paid license. We have not implemented Yugabyte support today and won't without a clear customer ask, but the path is open and shallow.
 
@@ -252,6 +252,8 @@ Replication is achieved not by replicating state within a cluster, but by **spin
 
 ### Scaling Dimensions
 
+Edge Admin scales along two axes: vertically by adding admins inside one admin cluster, and horizontally by adding more admin clusters. Admin clusters share the PostgreSQL database but otherwise operate as independent failure domains.
+
 ```
 Same admin cluster (A1 + A2):
   → More sharding capacity, more WireGuard partitioning
@@ -259,9 +261,10 @@ Same admin cluster (A1 + A2):
   → Heals if one peer goes down
 
 Multiple admin clusters (cluster A + cluster B):
-  → More HA, geographic separation
+  → Horizontal scale-out and HA — failure of one cluster does not affect the others
   → Completely independent — share only PostgreSQL
-  → No coordination between clusters
+  → No Erlang distribution, no :syn visibility across the boundary
+  → Geographic separation is a natural fit (one cluster per region)
 ```
 
 ### Forward Proxy
@@ -483,7 +486,9 @@ The admin's HTTP proxy (port 43128) and SOCKS5 proxy (port 41080) are independen
 
 **PostgreSQL as the only source of truth.** Admins cache topology in ETS for fast reads but all persistent state is in PostgreSQL. ETS is intentionally ephemeral — it dies with the process and forces clean recomputation on restart. This eliminates the split-brain persistence problems that Mnesia creates.
 
-**Deterministic coordination without a strong leader.** All admins run the same algorithm on the same PostgreSQL-sourced inputs and converge to identical cluster assignments independently. No leader election, no consensus round, no Raft. If a network partition splits admins, both partitions continue operating; duplicate work accumulates in PostgreSQL (idempotent, not corrupting); assignments reconcile on reconnect.
+**Deterministic coordination without a strong leader.** All admins in an admin cluster run the same algorithm on the same PostgreSQL-sourced inputs and converge to identical cluster assignments independently. No leader election, no consensus round, no Raft. If a network partition splits admins, both partitions continue operating; duplicate work accumulates in PostgreSQL (idempotent, not corrupting); assignments reconcile on reconnect.
+
+**Horizontal scale-out via additional admin clusters.** Beyond a single admin cluster, scale and HA come from running additional independent admin clusters that share only the PostgreSQL database. Admin clusters do not coordinate with each other — no Erlang distribution, no `:syn` visibility across the boundary — which makes an admin cluster the natural unit of failure isolation, geographic placement, and capacity planning.
 
 **Weak leader for LocalScheduler deduplication.** The LocalScheduler (Quantum) runs periodic jobs on every admin instance — that is its design. Some jobs (e.g. zombie admin cleanup) would produce wasteful duplicate work if every admin ran them. A **weak leader** is elected deterministically: the admin with the alphabetically first admin ID in the current topology. All admins compute this independently and agree without coordination. The weak leader runs the job; others skip it. Duplicate work is still possible during split brain and is acceptable — these jobs are idempotent. This is explicitly not a strong leader: no exactly-once guarantee, no consensus. If stronger semantics are ever needed, a `:strong_leader` concept can be introduced separately.
 

@@ -1,19 +1,41 @@
 # .github/workflows/relay.yml
+#
+# Builds the edge_relay (derper) image and pushes it to GHCR under tags that
+# depend on what triggered the workflow. Same convention as production.yml:
+#
+#   develop branch push  → :dev                (rolling, mutable)
+#   main branch push     → :nightly            (rolling, mutable)
+#   v*.*.* tag push      → :vX.Y.Z + :stable + :latest  (frozen on the version
+#                                                        tag, mutable on stable/latest)
+#   pull request         → build only, no push (catches Dockerfile breakage in PRs)
+#   workflow_dispatch    → :nightly            (treated like a main push)
+#
+# Tag conventions:
+#   :vX.Y.Z   exact tagged release. Built once at tag push, never rebuilt.
+#   :stable   alias for the most recent :vX.Y.Z. Moves on every release tag.
+#   :latest   same as :stable. Kept for users who reflexively pull :latest.
+#   :nightly  whatever main currently is. Adventurous users opt in.
+#   :dev      whatever develop currently is. Engineers iterating, do not run in prod.
 name: Edge Relay Build and Push
 
 on:
   push:
     branches:
+      - develop
       - main
+    tags:
+      - "v*.*.*"
     paths:
       - "deploy/production/compose/edge_relay/Dockerfile"
       - "deploy/production/compose/edge_relay/entrypoint"
+      - ".github/workflows/relay.yml"
   pull_request:
     branches:
       - "**"
     paths:
       - "deploy/production/compose/edge_relay/Dockerfile"
       - "deploy/production/compose/edge_relay/entrypoint"
+      - ".github/workflows/relay.yml"
   workflow_dispatch:
 
 concurrency:
@@ -24,11 +46,63 @@ permissions:
   contents: read
   packages: write
 
-env:
-  IMAGE_TAG: v0.2.0
-
 jobs:
+  resolve-tags:
+    runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.compute.outputs.tags }}
+      push: ${{ steps.compute.outputs.push }}
+      summary: ${{ steps.compute.outputs.summary }}
+    steps:
+      - id: compute
+        name: Compute image tags from trigger
+        run: |
+          set -euo pipefail
+          BASE="ghcr.io/wenet-ec/edge_relay"
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # PR: build only, do not push. Throwaway tag for the build target;
+            # nothing reaches the registry anyway.
+            TAGS="$BASE:pr"
+            PUSH=false
+            SUMMARY="PR build only — not pushed to GHCR"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            # v*.*.* tag → frozen :vX.Y.Z + :stable + :latest
+            VERSION="${GITHUB_REF#refs/tags/}"
+            TAGS=$(printf '%s\n' \
+              "$BASE:$VERSION" \
+              "$BASE:stable" \
+              "$BASE:latest")
+            PUSH=true
+            SUMMARY="Release $VERSION — pushed :$VERSION, :stable, :latest"
+          elif [[ "${{ github.ref }}" == "refs/heads/main" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # main branch (or manual run) → :nightly
+            TAGS="$BASE:nightly"
+            PUSH=true
+            SUMMARY="main build — pushed :nightly"
+          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            # develop branch → :dev
+            TAGS="$BASE:dev"
+            PUSH=true
+            SUMMARY="develop build — pushed :dev"
+          else
+            TAGS="$BASE:dev"
+            PUSH=false
+            SUMMARY="unknown ref ${{ github.ref }} — built but not pushed"
+          fi
+
+          {
+            echo "tags<<EOF"
+            echo "$TAGS"
+            echo "EOF"
+            echo "push=$PUSH"
+            echo "summary=$SUMMARY"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "::notice::$SUMMARY"
+
   build-and-push:
+    needs: resolve-tags
     runs-on: ubuntu-latest
 
     steps:
@@ -44,6 +118,7 @@ jobs:
             env.BUILDKIT_STEP_LOG_MAX_SPEED=10485760
 
       - name: Login to GHCR
+        if: needs.resolve-tags.outputs.push == 'true'
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -55,11 +130,8 @@ jobs:
         with:
           context: .
           file: ./deploy/production/compose/edge_relay/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/wenet-ec/edge_relay:${{ env.IMAGE_TAG }}
-            ghcr.io/wenet-ec/edge_relay:latest
-            ghcr.io/wenet-ec/edge_relay:stable
+          push: ${{ needs.resolve-tags.outputs.push == 'true' }}
+          tags: ${{ needs.resolve-tags.outputs.tags }}
           platforms: linux/amd64,linux/arm64
           cache-from: |
             type=gha,scope=edge_relay-build
@@ -75,7 +147,22 @@ jobs:
 
       - name: Output image info
         run: |
-          echo "Built and pushed edge_relay:"
-          echo "  ghcr.io/wenet-ec/edge_relay:${{ env.IMAGE_TAG }}"
-          echo "  ghcr.io/wenet-ec/edge_relay:latest"
-          echo "  ghcr.io/wenet-ec/edge_relay:stable"
+          echo "Built edge_relay:"
+          echo "${{ needs.resolve-tags.outputs.tags }}"
+          if [[ "${{ needs.resolve-tags.outputs.push }}" == "true" ]]; then
+            echo "Pushed to GHCR."
+          else
+            echo "Build only — not pushed (PR build)."
+          fi
+
+  summary:
+    needs: [resolve-tags, build-and-push]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Build Summary
+        run: |
+          echo "${{ needs.resolve-tags.outputs.summary }}"
+          echo ""
+          echo "Registry: ghcr.io/wenet-ec/edge_relay"

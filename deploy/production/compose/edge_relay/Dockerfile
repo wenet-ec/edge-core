@@ -34,6 +34,12 @@ RUN apk add --no-cache ca-certificates
 
 COPY --from=builder /derper /usr/local/bin/derper
 
+# Upstream license + patent grant for the embedded derper binary.
+# Tailscale source is BSD-3-Clause; the PATENTS file is a separate patent
+# grant. Both are required for binary distribution of derived works.
+COPY --from=builder /build/LICENSE /usr/share/doc/tailscale/LICENSE
+COPY --from=builder /build/PATENTS /usr/share/doc/tailscale/PATENTS
+
 COPY ./deploy/production/compose/edge_relay/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint && chmod +x /entrypoint
 

@@ -1,5 +1,21 @@
 # edge_agent/lib/edge_agent_web/router.ex
 defmodule EdgeAgentWeb.Router do
+  @moduledoc """
+  Phoenix router for the agent's REST API.
+
+  Two pipelines:
+
+  - `:public` — JSON-accepting, no auth. Currently only the `/derp_map`
+    reflection endpoint, which netclient calls without credentials.
+  - `:api` — JSON + `ApiTokenAuth` (bearer token verified against the
+    agent's stored API token from bootstrap registration). All
+    admin↔agent endpoints sit here.
+
+  Routes mirror what `EdgeAgent.EdgeClusters.AdminClient` documents on the
+  admin side; if you add one here, update that moduledoc's endpoint list
+  too.
+  """
+
   use EdgeAgentWeb, :router
 
   pipeline :api do
@@ -20,7 +36,7 @@ defmodule EdgeAgentWeb.Router do
   scope "/api/v1", EdgeAgentWeb.Controllers do
     pipe_through(:api)
 
-    resources "/command_executions", CommandExecutionController, only: [:create]
+    post "/command_executions", CommandExecutionController, :create
     patch "/command_executions/:id/cancel", CommandExecutionController, :cancel
 
     post "/self_updates/trigger", SelfUpdateController, :trigger

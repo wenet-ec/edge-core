@@ -1,5 +1,26 @@
 # edge_agent/lib/edge_agent_web/endpoint.ex
 defmodule EdgeAgentWeb.Endpoint do
+  @moduledoc """
+  Phoenix endpoint for the agent's HTTP API.
+
+  Serves three concerns from one endpoint:
+
+  - `/ping` — unauthenticated liveness reply (status + version), short-circuits
+    before request-id assignment so it can't generate a request id for cheap
+    probes.
+  - `/health` — delegated to `EdgeAgentHealth.Router`, which runs the
+    full check list. Followed by `:halt_if_sent` so an early reply from
+    the health router doesn't leak into the Phoenix routers below.
+  - `/api/v1/agents/me/metrics/raw` — `PromEx.Plug` exporter, conditionally
+    auth-guarded by `:metrics_auth_conditional` (toggled via
+    `AGENT_METRICS_AUTH_ENABLED`).
+
+  Plug order is deliberate: `Security` first (CSP headers on every reply),
+  then code reloading in dev, then `AssignRequestId` (UUIDv7 generation +
+  Logger metadata + `x-request-id` response header — replaces
+  `Plug.RequestId` so we don't honour inbound ids).
+  """
+
   use Phoenix.Endpoint, otp_app: :edge_agent
 
   alias Plug.Conn

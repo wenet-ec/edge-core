@@ -12,12 +12,15 @@ defmodule EdgeAgentWeb.Controllers.SelfUpdateController do
 
   ## Behavior
   - If SELF_UPDATE_ENABLED=false: Returns 403 Forbidden
-  - If SELF_UPDATE_ENABLED=true: Calls self-update service API to trigger update
+  - If SELF_UPDATE_ENABLED=true: Spawns an unsupervised Task that calls
+    Watchtower asynchronously and returns 202 immediately. Failures
+    inside the Task are logged but never surface as HTTP errors here —
+    the agent expects to be restarted by Watchtower mid-call, so we
+    can't reliably wait for a result.
 
   ## Response Codes
-  - 202 Accepted: Update request sent to self-update service successfully
+  - 202 Accepted: Update Task spawned (Watchtower may or may not succeed)
   - 403 Forbidden: Self-update feature not enabled
-  - 503 Service Unavailable: Self-update service unreachable or error
   """
   def trigger(conn, _params) do
     with :ok <- SelfUpdates.check_enabled() do

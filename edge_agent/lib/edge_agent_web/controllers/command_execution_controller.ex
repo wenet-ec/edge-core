@@ -24,11 +24,12 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionController do
   Cancels a command execution.
 
   Attempts to cancel the command:
-  - If pending/queued: Marks as cancelled
-  - If currently executing: Kills the task and marks as cancelled
-  - If already completed: No action taken
+  - If pending: Kills the running task (if any), cancels the Oban job, and
+    updates the execution to completed with exit code 143
+  - If already completed: No action taken (returns `%{action: :already_completed}`)
+  - If expired: No action taken (returns `%{action: :already_expired}`)
 
-  Returns 200 with cancellation result details.
+  Returns 200 with the result map from `Commands.cancel_execution/1`.
   """
   def cancel(conn, %{"id" => id}) do
     with {:ok, execution} <- Commands.get_command_execution(id),

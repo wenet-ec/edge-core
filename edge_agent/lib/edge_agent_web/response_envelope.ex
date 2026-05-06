@@ -27,7 +27,8 @@ defmodule EdgeAgentWeb.ResponseEnvelope do
   """
 
   @doc """
-  Builds a success envelope for a single resource.
+  Builds a success envelope around `data`. Accepts either a map (single
+  resource — the common case) or a list (collection responses).
   """
   @spec success(Plug.Conn.t(), map() | list()) :: map()
   def success(conn, data) do

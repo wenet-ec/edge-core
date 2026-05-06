@@ -1,6 +1,21 @@
 # edge_agent/lib/edge_agent_web/plugs/security.ex
 defmodule EdgeAgentWeb.Plugs.Security do
-  @moduledoc false
+  @moduledoc """
+  Sets secure browser headers (CSP + the defaults from
+  `Phoenix.Controller.put_secure_browser_headers/2`) on every endpoint
+  response. The agent serves a JSON API only — no HTML — so the policy
+  is deliberately strict (`default-src 'none'`).
+
+  ## Tuning
+
+  Operators can opt into permissive script execution for local dev or
+  embedded debug tools by setting:
+
+      config :edge_agent, EdgeAgentWeb.Plugs.Security, allow_unsafe_scripts: true
+
+  This widens `script-src` to include `'unsafe-eval'` and `'unsafe-inline'`.
+  Production deployments should leave it off.
+  """
   @behaviour Plug
 
   import Phoenix.Controller, only: [put_secure_browser_headers: 2]
@@ -8,7 +23,6 @@ defmodule EdgeAgentWeb.Plugs.Security do
   def init(opts), do: opts
 
   def call(conn, _) do
-    # Remove the SwaggerUI check and just use regular CSP
     directives = [
       "default-src #{default_src_directive()}",
       "form-action #{form_action_directive()}",
@@ -24,7 +38,6 @@ defmodule EdgeAgentWeb.Plugs.Security do
     put_secure_browser_headers(conn, %{"content-security-policy" => Enum.join(directives, "; ")})
   end
 
-  # Keep only the regular CSP directives, remove all swagger_* functions
   defp default_src_directive, do: "'none'"
   defp form_action_directive, do: "'self'"
   defp media_src_directive, do: "'self'"

@@ -1,15 +1,20 @@
-# edge_agent_web/lib/edge_agent_web/plugs/api_token_auth.ex
+# edge_agent/lib/edge_agent_web/plugs/api_token_auth.ex
 defmodule EdgeAgentWeb.Plugs.ApiTokenAuth do
   @moduledoc """
   Plug for authenticating API requests using bearer token.
 
-  Retrieves the API token from Settings table and validates against
-  the Authorization header. Returns 401 if token is missing or invalid.
+  Retrieves the API token from Settings table (set on the agent during
+  bootstrap registration) and validates against the `Authorization: Bearer`
+  header via `Plug.Crypto.secure_compare/2`. Returns 401 with the standard
+  `ResponseEnvelope.error/3` shape if the token is missing or invalid —
+  same envelope used by `FallbackController` so clients see one error
+  contract across the API.
   """
 
   import Plug.Conn
 
   alias EdgeAgent.Settings
+  alias EdgeAgentWeb.ResponseEnvelope
 
   def init(opts), do: opts
 
@@ -20,9 +25,11 @@ defmodule EdgeAgentWeb.Plugs.ApiTokenAuth do
       conn
     else
       _ ->
+        body = ResponseEnvelope.error(conn, "unauthorized", "Missing or invalid credentials")
+
         conn
         |> put_resp_content_type("application/json")
-        |> send_resp(401, Jason.encode!(%{error: "Unauthorized"}))
+        |> send_resp(401, Jason.encode!(body))
         |> halt()
     end
   end

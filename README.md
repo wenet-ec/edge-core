@@ -7,11 +7,13 @@
 
 📖 **Docs:** [wenet-ec.github.io/edge-core](https://wenet-ec.github.io/edge-core/)
 
-Edge Core is an infrastructure management platform for geographically distributed machines. It gives you centralized control over remote nodes through a secure WireGuard mesh — run commands, SSH into any machine, proxy traffic through them, and scrape their metrics — all through a simple HTTP API.
+Edge Core is an infrastructure management platform for fleets of Linux machines you don't physically touch. Cloud VMs across providers, on-premises servers, factory-floor equipment, Raspberry Pis, homelab boxes, IoT devices — anywhere you have N machines and want a single HTTP API to operate them. You get a secure WireGuard mesh, remote command execution, SSH without exposing port 22, HTTP/SOCKS5 forward proxying through any node, and Prometheus metrics aggregation.
+
+We named the project "Edge Core" because the founding pain came from edge devices, but **"edge" here means *any machine you don't physically touch right now*** — a cloud VM in Frankfurt, a bare-metal box in a colo, or a Raspberry Pi in a factory. The control plane doesn't care; it's all the same problem.
 
 Runs on standard Linux hosts (glibc + systemd, kernel ≥ 5.6 for built-in WireGuard). Tested on Ubuntu 22.04 / 24.04 and Debian 12 (x86_64 + ARM64); other glibc/systemd distros should work — see [Host compatibility](#host-compatibility) below. Self-hosted, no vendor lock-in.
 
-The **agent** that runs on your machines and the **Nexmaker** shared library are open-source under Apache 2.0. The **admin** server is source-available under the Elastic License 2.0 — free to self-host, modify, and use commercially, but you may not offer it to third parties as a hosted or managed service without a commercial license from us. See [License](#license) below for details.
+The **agent** that runs on your machines and the **Nexmaker** shared library are open-source under Apache 2.0. The **admin** server is source-available under the Elastic License 2.0 — you can self-host, modify, and use it commercially. The one thing we reserve is the right to offer Edge Admin as a hosted service to the public; we hope you respect that decision so we can keep the rest of Edge Core fully free, with no future feature gates or surprise relicensing. See [License](#license) below for details.
 
 ## What it does
 
@@ -28,7 +30,14 @@ The **agent** that runs on your machines and the **Nexmaker** shared library are
 - **Edge ↔ Edge (VPN mesh)** — full WireGuard P2P mesh per cluster, automatic peer discovery, netclient-local DNS for `.nm.internal` hostnames, DERP/TURN relay fallback for NAT
 - **Edge ↔ Local devices (mDNS)** — agents advertise themselves via mDNS for zero-config discovery by devices on the same LAN; full LAN DNS control is a future direction (see [`docs/architecture.md`](docs/architecture.md))
 
-**Plus:** Event streaming (lifecycle events to NATS, Kafka/Redpanda, RabbitMQ, Redis, MQTT, AWS SNS, or Google Cloud Pub/Sub), and an MCP server for AI assistant integration (Claude, Cursor, and any MCP-compatible client).
+**Async events**
+
+- **Lifecycle events** — every state change (node registered, command finished, SSH verified, self-update completed) is published as a CloudEvents envelope. Subscribe via webhooks or a message broker (NATS, Kafka/Redpanda, RabbitMQ, Redis, MQTT, AWS SNS, Google Cloud Pub/Sub). No polling required.
+
+**AI-driveable by default**
+
+- **MCP server** — Edge Admin exposes the **same surface as the REST API** as MCP tools, with no separate integration work. Anything you can do over HTTP, an AI assistant (Claude, Cursor, any MCP-compatible client) can do through `/mcp` with a bearer token.
+- **Closed loop** — combine MCP tools (act), lifecycle events (observe), and the forward proxy (reach the long tail of services on any node), and an AI agent has every primitive it needs to run your fleet end-to-end. Patch a CVE across hundreds of nodes, follow rollout state in real time, debug a crash by SSH'ing through the proxy — none of it requires a human in the loop. The architecture happens to be the right shape; we didn't bolt anything on.
 
 ## Who is this for
 
@@ -65,11 +74,11 @@ The **agent** that runs on your machines and the **Nexmaker** shared library are
 | Works behind symmetric NAT       | ✅ DERP/TURN | ✅                         | ❌       | ✅ DERP/TURN          | ❌      |
 | No vendor lock-in                | ✅           | ❌                         | ✅       | ❌ / ✅               | ✅      |
 
-_¹ Ansible is a complement, not a competitor — see below._
+*¹ Ansible is a complement, not a competitor — see below.*
 
 **vs Balena:** Balena is optimized for IoT and requires their cloud or their OS. Edge Core is designed to run on general-purpose Linux (see [Host compatibility](#host-compatibility) for tested distros), any cloud or on-prem. You own everything.
 
-**vs Tailscale / Headscale:** Tailscale (and its self-hosted equivalent Headscale) is a polished, opinionated mesh networking product — VPN, identity, SSH, ACLs, MagicDNS, exit nodes. We use Tailscale's [DERP](https://tailscale.com/blog/how-nat-traversal-works) relay protocol for our own NAT-traversal fallback, so this isn't really a head-to-head comparison. Edge Core sits one layer up: the network plumbing is solved (via Netmaker + DERP), and the product is the fleet-management layer on top — command execution, centralized SSH credentials, HTTP/SOCKS5 forward proxying, metrics aggregation, MCP. If your need is "give my team SSH'd access to my fleet over a VPN", Tailscale is probably what you want. If you also need to _operate_ the fleet from a control plane, that's where Edge Core fits.
+**vs Tailscale / Headscale:** Tailscale (and its self-hosted equivalent Headscale) is a polished, opinionated mesh networking product — VPN, identity, SSH, ACLs, MagicDNS, exit nodes. We use Tailscale's [DERP](https://tailscale.com/blog/how-nat-traversal-works) relay protocol for our own NAT-traversal fallback, so this isn't really a head-to-head comparison. Edge Core sits one layer up: the network plumbing is solved (via Netmaker + DERP), and the product is the fleet-management layer on top — command execution, centralized SSH credentials, HTTP/SOCKS5 forward proxying, metrics aggregation, MCP. If your need is "give my team SSH'd access to my fleet over a VPN", Tailscale is probably what you want. If you also need to *operate* the fleet from a control plane, that's where Edge Core fits.
 
 **Works alongside Ansible:** Edge Core is not an Ansible replacement — it's the network layer that makes Ansible work on unreachable machines. Nodes behind NAT or firewalls are normally inaccessible to Ansible. With Edge Core, you SSH through the admin proxy tunnel to reach them, then run your playbooks as normal. No changes to your Ansible setup needed — just configure `ProxyCommand` in your SSH config to route through the admin's SOCKS5 proxy and Ansible works as if the nodes were on your local network.
 
@@ -206,7 +215,7 @@ What this means in practice:
 - **Allowed without asking us:** self-hosting for your own company, using it internally to manage your own fleet, using it as a tool while delivering services to your clients (MSP / consulting / IoT vendor patterns), modifying it, redistributing modified versions under ELv2, building products on top of it that aren't themselves "Edge Admin in the cloud."
 - **Requires a commercial license from us:** offering Edge Admin (or a thin wrapper around it) as a hosted SaaS that customers sign up for and use directly.
 
-Email **licensing@wenetec.com** if your use case needs a commercial license, or if you're not sure whether what you want to build falls inside or outside ELv2 — we'll tell you, and we're not looking to be difficult about it.
+Email **<licensing@wenetec.com>** if your use case needs a commercial license, or if you're not sure whether what you want to build falls inside or outside ELv2 — we'll tell you, and we're not looking to be difficult about it.
 
 Contributions are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the contribution flow and the Developer Certificate of Origin (DCO) sign-off we require on every commit.
 

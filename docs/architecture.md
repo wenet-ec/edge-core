@@ -2,7 +2,9 @@
 
 **Last Updated: 2026-05-06**
 
-Edge Core is an infrastructure management platform for geographically distributed edge machines. It gives you centralized control over remote nodes through a secure VPN mesh — running commands, accessing machines via SSH, proxying traffic through them, and scraping their metrics — all through a simple HTTP API.
+Edge Core is an infrastructure management platform for fleets of Linux machines you don't physically touch — cloud VMs, on-premises servers, factory-floor equipment, Raspberry Pis, homelab boxes, IoT devices. Anywhere you have N machines and want a single HTTP API to operate them, the same primitives apply: a secure WireGuard mesh, remote command execution, SSH without exposing port 22, HTTP/SOCKS5 forward proxying through any node, Prometheus metrics aggregation.
+
+The project is named "Edge Core" because the founding pain came from edge devices, but **"edge" here means *any machine you don't physically touch right now*** — a cloud VM in Frankfurt is as much an "edge" node to this control plane as a Pi in a factory. The control plane doesn't care; it's the same problem.
 
 ---
 
@@ -10,7 +12,7 @@ Edge Core is an infrastructure management platform for geographically distribute
 
 Edge Core was born from three years of watching a company hit the same walls trying to ship to edge devices it didn't fully control: deployments were a black box, machines on the same LAN couldn't reliably find each other, and every new product re-implemented the same WebSocket/MQTT sync layer to stay in touch with the cloud. The system is organized around two principles that came out of that experience.
 
-### 1. Control — a fleet you don't physically touch should still be a fleet you can see and operate.
+### 1. Control — a fleet you don't physically touch should still be a fleet you can see and operate
 
 Once devices are geographically distributed, you lose the things you take for granted with a server in a rack: shell access, log tailing, the ability to push a config file, the ability to know whether the machine is even alive. Closing that gap is the entire reason this project exists.
 
@@ -20,23 +22,23 @@ Once devices are geographically distributed, you lose the things you take for gr
 - **Self-update** — coordinated agent upgrades across the fleet from a single API call, via Watchtower as a sidecar. Same shape as command execution: one request, fans out to many machines.
 - **Async signal back out** — when state changes (a node registers, a command finishes, an SSH session is verified), the system publishes events. Consumers subscribe via webhooks (per-row HTTP delivery, signed) or a message broker (NATS, Kafka, AMQP, Redis, MQTT, AWS SNS, Google Cloud Pub/Sub). No polling required to follow what's happening.
 
-### 2. Connectivity — talking to a specific edge machine should work without anyone configuring IPs, ports, or tunnels in advance.
+### 2. Connectivity — talking to a specific edge machine should work without anyone configuring IPs, ports, or tunnels in advance
 
-Once you've decided to operate machines you don't physically touch, the next problem is _reaching_ them. You don't know the LAN, you don't control the firewall, the IPs are dynamic, the hostnames are generic. Every edge product ends up rebuilding the same WebSocket/MQTT sync layer to route around this. We wanted that solved once, in the platform.
+Once you've decided to operate machines you don't physically touch, the next problem is *reaching* them. You don't know the LAN, you don't control the firewall, the IPs are dynamic, the hostnames are generic. Every edge product ends up rebuilding the same WebSocket/MQTT sync layer to route around this. We wanted that solved once, in the platform.
 
 - **Edge ↔ Edge (VPN mesh).** All nodes in the same cluster form a full WireGuard mesh via Netmaker. Every node can reach every other node P2P, no central gateway. This is the transport everything else runs on. Three-layer fallback handles adverse network conditions: raw WireGuard UDP → DERP relay (symmetric NAT) → HTTP polling (last resort). See [Admin ↔ Agent Communication](#admin--agent-communication).
 - **Cloud ↔ Edge (forward proxy + proxy chaining).** Admin runs HTTP (port 43128) and SOCKS5 (port 41080) forward proxies. Because SOCKS5 supports any TCP connection, this covers any protocol — not just HTTP. Two modes: route directly to a VPN node, or chain through a specific agent as the exit node to reach the internet or its LAN from that agent's network location. Raw TCP over the VPN, no MQTT or WebSocket on the application path. In production, HAProxy load-balances proxy traffic across all admin instances.
 - **Network segmentation.** WireGuard mesh is O(n²) — bigger meshes get exponentially more expensive, and a single flat mesh forces every customer's machines to share the same trust boundary. So clusters are kept small (50–100 nodes) and isolated from each other; each customer or workload gets its own mesh, no ACLs to gate traffic inside one. Multiple admin clusters federate via shared PostgreSQL, no Erlang distribution between them.
 
-#### The unsolved one: User ↔ Edge (local).
+#### The unsolved one: User ↔ Edge (local)
 
-Some traffic should reach an edge node _without_ going through the cloud admin — when the user is physically near the node and a cloud round-trip is wasteful or unreliable. This is the principle we have not fully solved.
+Some traffic should reach an edge node *without* going through the cloud admin — when the user is physically near the node and a cloud round-trip is wasteful or unreliable. This is the principle we have not fully solved.
 
 What works today: agents advertise themselves via mDNS, so any device on the same LAN segment can resolve `node-{id}.local`. This covers the small case — a single network, no VLANs, devices that speak Bonjour/Avahi. It does not cover the realistic case of LANs we don't control.
 
 What's missing: trustworthy LAN DNS that the user's resolver actually uses, an HTTPS path to the agent that browsers won't block, and a way to do all of that without colliding with existing LAN DNS (corporate networks, home routers with their own DNS quirks). We don't have a good answer to that combination yet.
 
-What we won't do (yet): require the user to install a client. The whole point of this principle is _no agent on the user side._ If we can't honor that constraint, we'd rather punt than ship a half-thing. R&D continues; it is the focus for v3.
+What we won't do (yet): require the user to install a client. The whole point of this principle is *no agent on the user side.* If we can't honor that constraint, we'd rather punt than ship a half-thing. R&D continues; it is the focus for v3.
 
 ---
 
@@ -222,7 +224,7 @@ Capacity is modelled honestly against the WireGuard peer table, not invented as 
 - Each admin derives `admin_peer_count = total_admins - 1` (peers in its admin-mesh) and `edge_node_capacity = max_wireguard_peers - admin_peer_count` (slots left for edge nodes). Both are recomputed on every topology change.
 - The sharding algorithm sees only `edge_node_capacity` per admin. The cluster-level `total_edge_capacity` is the sum across admins; the system is `degraded` when total enrolled nodes exceed it.
 
-Adding admins to an admin cluster therefore _reduces_ each admin's `edge_node_capacity` by 1 — the cost of admin HA is now visible instead of hidden.
+Adding admins to an admin cluster therefore *reduces* each admin's `edge_node_capacity` by 1 — the cost of admin HA is now visible instead of hidden.
 
 #### `MAX_WIREGUARD_PEERS` is a budgeting unit, not a physical limit
 
@@ -260,6 +262,20 @@ Multiple admin clusters (cluster A + cluster B):
   → No Erlang distribution, no :syn visibility across the boundary
   → Geographic separation is a natural fit (one cluster per region)
 ```
+
+#### Why no in-cluster strong consistency
+
+The shape above — many admins per cluster, ETS for ephemeral cache, `:syn` for the registry, PostgreSQL as the only durable source of truth — is a deliberate departure from the more common BEAM pattern of using Mnesia (or a Mnesia extension like Mria) to replicate metadata across the cluster.
+
+The scale target is what justifies the choice. We aim to operate **50–100 admin nodes per admin cluster** (and many such clusters federated via shared PostgreSQL). At those numbers, any in-cluster strong-consistency layer for metadata becomes a liability:
+
+- **Mnesia tops out around 5–7 nodes** because of its full-mesh transaction protocol — chatty replication, real split-brain risk above that ceiling.
+- **Mria pushes the ceiling to ~23 nodes** by separating a small core quorum from many replicants. Excellent engineering, still a strong-consistency core under everything.
+- **We want 50–100.** At that count, neither approach fits. Strong consistency for *coordination* state — who owns which cluster, who's online, where to route a request — buys you very little but costs you a lot in coordination overhead and partition-recovery complexity.
+
+Our position: the BEAM cluster is a **coordination plane, not a data plane**. State that must be durable lives in PostgreSQL (slow, consistent, outside the cluster). State that must be fast lives in ETS (per-process, ephemeral, dies on restart). State that must be visible across the cluster lives in `:syn` (availability over consistency, eventually consistent registry, no consensus). Nothing in the BEAM cluster is authoritative — it's all derivable from PostgreSQL, so eventual consistency on registry state is fine. Duplicate work is possible during partitions, the system is idempotent, and reconciliation is cheap.
+
+This is what makes the 50–100-admin target tractable. Linear scale-out, no quorum, no replication lag, no split-brain recovery — both partitions just keep working until they reconnect, then the deterministic algorithm reconverges. The cost is duplicate work, which we mitigate where it matters (the weak-leader pattern reduces wasted work in the LocalScheduler) and accept where it doesn't.
 
 ### Forward Proxy
 
@@ -422,19 +438,27 @@ Edge Admin exposes a [Model Context Protocol (MCP)](https://modelcontextprotocol
 
 > Operator-facing usage (client config, the proxy combo) lives in [`guide.md`](guide.md). This section covers the design choices.
 
+### The closed loop
+
+The MCP server alone isn't the interesting property — REST APIs have always been driveable by anything that speaks HTTP. The interesting property is what falls out when MCP, events, and the forward proxy are taken together:
+
+| Capability     | Mechanism                                                  | What an agent gets                                                  |
+| -------------- | ---------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Observe**    | Lifecycle events (broker + webhooks, see § Events)         | Real-time push of state changes — no polling, no race conditions    |
+| **Decide**     | MCP tools (read endpoints) + parsed metrics                | Query state, list nodes, read health, fetch metrics                 |
+| **Act**        | MCP tools (write endpoints) — commands, SSH creds, deploys | Mutate fleet state with the same authority a human operator has     |
+| **Reach**      | HTTP/SOCKS5 forward proxy (§ Forward Proxy)                | Direct HTTP to any service on any node, when no MCP tool covers it  |
+
+That's a complete control loop for an AI agent: observe → decide → act → reach. None of it required us to build "AI features" — we built API surface, events, and a proxy. MCP is a thin shim that exposes the existing surface in the protocol AI clients already speak. **The architecture happens to be agent-shaped because it's well-structured for any client; agents are just the most demanding consumer.**
+
+This is why "fleet ops automated by an AI agent" is a real capability of Edge Core, not a feature to bolt on later. Patch a CVE across hundreds of nodes by issuing a command, follow the rollout via execution events, debug a regressing node by tunneling SSH through the proxy — none of those require a human in the loop, and none of them required a special API.
+
+### Implementation notes
+
 - **Streamable HTTP transport.** Standard MCP. Single endpoint, one bearer token (`MCP_KEY` or `MASTER_KEY`), no separate connection lifecycle to manage.
-- **Tools mirror the REST API surface.** Every REST operation has an
-  equivalent MCP tool. The tool catalog is **explicitly listed** in
-  `EdgeAdminMcp.Server` (each tool registered via `component(...)`),
-  not auto-generated from controllers. Adding a REST endpoint does
-  not automatically expose it via MCP — you write the matching tool
-  module under `edge_admin_mcp/tools/<domain>/` and register it in
-  `Server`. Discovery is still dynamic for clients via standard
-  `tools/list` once registered.
+- **Tools mirror the REST API surface.** Every REST operation has an equivalent MCP tool. The tool catalog is **explicitly listed** in `EdgeAdminMcp.Server` (each tool registered via `component(...)`), not auto-generated from controllers. Adding a REST endpoint does not automatically expose it via MCP — you write the matching tool module under `edge_admin_mcp/tools/<domain>/` and register it in `Server`. Discovery is still dynamic for clients via standard `tools/list` once registered. The explicit registry is deliberate: it forces a deliberate choice about whether each new endpoint is appropriate for AI consumption (rate, auth scope, side-effect surface), rather than auto-exposing everything.
 - **One MCP-only tool: `check_admin_health`.** Runs every subsystem check in parallel and returns structured pass/fail. The motivation is operational: AI assistants are uniquely positioned to triage "why isn't this working" because they can correlate the health output with the user's description, but doing that requires one consolidated health view rather than seven separate REST calls.
 - **Auth pre-Anubis.** `EdgeAdminWeb.Plugs.McpAuth` runs before Anubis processes the request, so unauthenticated traffic never reaches the MCP machinery.
-
-The forward proxy (§ Forward Proxy) and MCP are independent but complementary. An AI client configured to route its own HTTP through the admin proxy gets unrestricted access to any service on any VPN-connected node — no MCP tool call needed for arbitrary HTTP. MCP is for _managing_ the fleet; the proxy is for _talking to_ the fleet.
 
 ---
 
@@ -483,8 +507,8 @@ The forward proxy (§ Forward Proxy) and MCP are independent but complementary. 
 
 **HTTP for agent-admin, Erlang distribution for admin-admin.** Agents are simple HTTP services — no Erlang cookie, no epmd, no Node.connect. Erlang distribution complexity is justified only for admin coordination, where cross-admin proxy routing requires transparent process-to-process calls that would be awkward over HTTP.
 
-**Ranch for the proxy, not Phoenix/Plug.** The proxy is raw TCP. Phoenix is HTTP-only. Ranch gives direct socket control with a clean acceptor pool model — exactly what bidirectional byte streaming needs.
-
 **`:syn` over `:pg` for distributed registry.** Both are global process registries, but `:pg` (OTP's built-in) chooses consistency over availability and can become a bottleneck at scale. `:syn` chooses availability over consistency (strong eventual consistency), which is acceptable here since registration keys are unique by construction (one Gateway per cluster, one admin per name) and write throughput matters more than linearizability. `:syn` also supports scoped registries (`:admin_scope`, `:cluster_scope`), metadata attached to registrations, and cluster-wide callbacks on net splits — none of which `:pg` provides.
 
 **DERP over custom WebSocket relay.** A scalable custom WebSocket relay for proxy/SSH would need relay nodes to mesh and forward between each other for any agent connected to a different node. That is DERP. DERP already solves this at the network layer, transparently, for all TCP streams. More DERP nodes for HA is the right answer.
+
+**License shape mirrors layer position.** The agent + Nexmaker shared library are Apache 2.0; the admin server is ELv2. This isn't a hedge — it tracks where each layer sits in the stack. Agents and Nexmaker are *embeddable* — anyone integrating Edge Core into their own product (an IoT vendor shipping devices, an MSP managing customer fleets, an OEM bundling a control plane) ships those bits in their stack. Apache makes that frictionless. The admin server is the *coordination plane* itself — the thing a hosted Edge Admin offering would be. ELv2 keeps that surface available for one specific carve-out (offering Edge Admin as a managed service to third parties) while leaving every other commercial use unrestricted: self-host, modify, redistribute under ELv2, run it for clients, build products on top. The trade is calculated, not defensive — the carve-out is what makes it possible to keep the rest of the codebase fully free without resorting to feature gates, telemetry tricks, or future relicensing. One restriction in one specific shape, in exchange for no other restrictions ever.

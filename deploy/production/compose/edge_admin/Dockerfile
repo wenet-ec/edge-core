@@ -116,15 +116,17 @@ RUN chmod +x /usr/local/bin/netclient && \
 RUN groupadd --gid 1000 app && \
     useradd --uid 1000 --gid app --shell /bin/bash --create-home app
 
-# Copy the entrypoint and start scripts
+# Copy the entrypoint, start, and one-off task scripts
 COPY ./deploy/production/compose/edge_admin/entrypoint /entrypoint
 COPY ./deploy/production/compose/edge_admin/start /start
-RUN sed -i 's/\r$//g' /entrypoint /start && \
-    chmod +x /entrypoint /start
+COPY ./deploy/production/compose/edge_admin/migrate /migrate
+COPY ./deploy/production/compose/edge_admin/rotate_cloak_key /rotate_cloak_key
+RUN sed -i 's/\r$//g' /entrypoint /start /migrate /rotate_cloak_key && \
+    chmod +x /entrypoint /start /migrate /rotate_cloak_key
 
 # Copy the release from builder stage
 COPY --from=builder /app/_build/prod/rel/edge_admin /app
-RUN chmod +x /app/bin/migrate /app/bin/server /app/bin/create_netmaker_superadmin /app/bin/create_default_cluster && \
+RUN chmod +x /app/bin/migrate /app/bin/rotate_cloak_key /app/bin/server /app/bin/create_netmaker_superadmin /app/bin/create_default_cluster && \
     chown -R app:app /app
 
 # Create directories with proper permissions

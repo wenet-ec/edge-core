@@ -1,0 +1,40 @@
+# examples/operations/rotate_cloak_key.yml
+#
+# Rotate the Cloak encryption-at-rest key as a one-off task. Container exits when done.
+#
+# Usage:
+#   docker compose -f rotate_cloak_key.yml run --rm edge_admin_rotate_cloak_key
+#
+# Requires the same .env your running admin uses, plus all four ROTATE_* vars set:
+#   ROTATE_OLD_CLOAK_KEY, ROTATE_OLD_CLOAK_TAG, ROTATE_NEW_CLOAK_KEY, ROTATE_NEW_CLOAK_TAG
+#
+# If any ROTATE_* var is missing, the task logs "skip" and exits 0. Safe to re-run.
+
+networks:
+  edge_core:
+    name: edge_core
+    external: true
+
+services:
+  edge_admin_rotate_cloak_key:
+    image: ghcr.io/wenet-ec/edge_admin:v0.2.0
+    container_name: edge_admin_rotate_cloak_key
+    restart: "no"
+    networks:
+      - edge_core
+    env_file:
+      - .env
+    volumes:
+      - /dev/net/tun:/dev/net/tun
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
+    command: ["/rotate_cloak_key"]

@@ -1,0 +1,11 @@
+#!/bin/bash
+# deploy/production/compose/edge_admin/migrate
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+# Run database migrations only, without starting the server.
+# Suitable as a one-off task / Kubernetes Job — no VPN, no Phoenix server,
+# no netclient daemon. Exits 0 on success.
+exec /app/bin/migrate

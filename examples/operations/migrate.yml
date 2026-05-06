@@ -1,0 +1,38 @@
+# examples/operations/migrate.yml
+#
+# Run Edge Admin database migrations as a one-off task. Container exits when done.
+#
+# Usage:
+#   docker compose -f migrate.yml run --rm edge_admin_migrate
+#
+# Requires the same .env your running admin uses (DB connection, DB_ADAPTER, etc.).
+# Symlink it in: ln -s ../standard/.env .env
+
+networks:
+  edge_core:
+    name: edge_core
+    external: true
+
+services:
+  edge_admin_migrate:
+    image: ghcr.io/wenet-ec/edge_admin:v0.2.0
+    container_name: edge_admin_migrate
+    restart: "no"
+    networks:
+      - edge_core
+    env_file:
+      - .env
+    volumes:
+      - /dev/net/tun:/dev/net/tun
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.forwarding=1
+    command: ["/migrate"]

@@ -1,0 +1,12 @@
+#!/bin/bash
+# deploy/production/compose/edge_admin/rotate_cloak_key
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+# Run the Cloak key rotation release task without starting the server.
+# Idempotent — logs "skip" and exits cleanly if the four ROTATE_* env vars
+# are not all set, otherwise re-encrypts every encrypted Ecto column from
+# the old key to the new one. Suitable as a one-off task / Kubernetes Job.
+exec /app/bin/rotate_cloak_key

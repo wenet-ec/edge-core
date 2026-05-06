@@ -4,12 +4,14 @@ This directory contains ready-to-use Docker Compose deployment examples. If you 
 
 ## Available Examples
 
-| Example                  | Use case                                                                                                                                             |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`lite/`](lite/)         | Single admin on SQLite, Mosquitto broker, SQLite-backed Netmaker. Homelab / hobbyist / first-time exploration.                                       |
-| [`standard/`](standard/) | 4 admin instances on PostgreSQL across 2 clusters, EMQX, PostgreSQL-backed Netmaker, Prometheus metrics. Production.                                 |
-| [`sidecar/`](sidecar/)   | Agent deployed as a sidecar container on bridge networking (instead of host networking).                                                             |
-| [`relay/`](relay/)       | Self-hosted DERP relay for lower latency or full infra ownership. Not required for NAT traversal — the default Tailscale relay already handles that. |
+| Example                      | Use case                                                                                                                                             |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`lite/`](lite/)             | Single admin on SQLite, Mosquitto broker, SQLite-backed Netmaker. Homelab / hobbyist / first-time exploration.                                       |
+| [`standard/`](standard/)     | 4 admin instances on PostgreSQL across 2 clusters, EMQX, PostgreSQL-backed Netmaker, Prometheus metrics. Production.                                 |
+| [`sidecar/`](sidecar/)       | Agent deployed as a sidecar container on bridge networking (instead of host networking).                                                             |
+| [`relay/`](relay/)           | Self-hosted DERP relay for lower latency or full infra ownership. Not required for NAT traversal — the default Tailscale relay already handles that. |
+| [`operations/`](operations/) | One-off task compose files — `migrate.yml`, `rotate_cloak_key.yml`. Run admin release tasks in isolation, no VPN/server.                             |
+| `k8s/` (TODO)                | Kubernetes manifests / Helm chart for deploying Edge Admin and Edge Agent on a cluster. Not yet available.                                           |
 
 ## Version Pinning — Important
 
@@ -115,3 +117,4 @@ This must be set on **both** the admin and the agent. If you omit it, netclient 
 - **Agent on a machine running other containers**: see `sidecar/` — shows how to run the agent on bridge networking instead of `network_mode: host`.
 - **Self-hosted DERP relay**: see `relay/` — deploy your own relay nodes for lower latency or to avoid depending on Tailscale's public relay infrastructure. Not required for NAT traversal (the default Tailscale fallback already handles that) — only worth it if you want geo-local relays or full infra ownership.
 - **Event streaming**: see `event_brokers/` — add NATS, Kafka/Redpanda, RabbitMQ, or Redis to receive lifecycle events from the admin.
+- **One-off admin tasks**: see `operations/` — `migrate.yml` and `rotate_cloak_key.yml` for running database migrations or Cloak key rotation as standalone jobs. The default `/start` already does both at boot; these are the escape hatches for K8s Jobs, CI steps, or rotating keys on a schedule.

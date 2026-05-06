@@ -1,10 +1,30 @@
 # .github/workflows/production.yml
+#
+# Builds the production edge_admin / edge_agent images and pushes them to GHCR
+# under different tags depending on what triggered the workflow:
+#
+#   develop branch push  → :dev                (rolling, mutable)
+#   main branch push     → :nightly            (rolling, mutable)
+#   v*.*.* tag push      → :vX.Y.Z + :stable + :latest  (frozen on the version
+#                                                        tag, mutable on stable/latest)
+#   pull request         → build only, no push (catches Dockerfile breakage in PRs)
+#   workflow_dispatch    → :nightly            (treated like a main push)
+#
+# Tag conventions:
+#   :vX.Y.Z   exact tagged release. Built once at tag push, never rebuilt.
+#   :stable   alias for the most recent :vX.Y.Z. Moves on every release tag.
+#   :latest   same as :stable. Kept for users who reflexively pull :latest.
+#   :nightly  whatever main currently is. Adventurous users opt in.
+#   :dev      whatever develop currently is. Engineers iterating, do not run in prod.
 name: Production Build and Deploy
 
 on:
   push:
     branches:
+      - develop
       - main
+    tags:
+      - "v*.*.*"
     paths:
       - "edge_admin/lib/**"
       - "edge_admin/config/**"
@@ -52,11 +72,77 @@ permissions:
   contents: read
   packages: write
 
-env:
-  IMAGE_TAG: v0.2.0
-
 jobs:
+  resolve-tags:
+    runs-on: ubuntu-latest
+    outputs:
+      tags-admin: ${{ steps.compute.outputs.tags-admin }}
+      tags-agent: ${{ steps.compute.outputs.tags-agent }}
+      push: ${{ steps.compute.outputs.push }}
+      summary: ${{ steps.compute.outputs.summary }}
+    steps:
+      - id: compute
+        name: Compute image tags from trigger
+        run: |
+          set -euo pipefail
+          ADMIN_BASE="ghcr.io/wenet-ec/edge_admin"
+          AGENT_BASE="ghcr.io/wenet-ec/edge_agent"
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # PR: build only, do not push. Use a throwaway tag for the build target;
+            # nothing reaches the registry anyway.
+            TAGS_ADMIN="$ADMIN_BASE:pr"
+            TAGS_AGENT="$AGENT_BASE:pr"
+            PUSH=false
+            SUMMARY="PR build only — not pushed to GHCR"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            # v*.*.* tag → frozen :vX.Y.Z + :stable + :latest
+            VERSION="${GITHUB_REF#refs/tags/}"
+            TAGS_ADMIN=$(printf '%s\n' \
+              "$ADMIN_BASE:$VERSION" \
+              "$ADMIN_BASE:stable" \
+              "$ADMIN_BASE:latest")
+            TAGS_AGENT=$(printf '%s\n' \
+              "$AGENT_BASE:$VERSION" \
+              "$AGENT_BASE:stable" \
+              "$AGENT_BASE:latest")
+            PUSH=true
+            SUMMARY="Release $VERSION — pushed :$VERSION, :stable, :latest"
+          elif [[ "${{ github.ref }}" == "refs/heads/main" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # main branch (or manual run) → :nightly
+            TAGS_ADMIN="$ADMIN_BASE:nightly"
+            TAGS_AGENT="$AGENT_BASE:nightly"
+            PUSH=true
+            SUMMARY="main build — pushed :nightly"
+          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            # develop branch → :dev
+            TAGS_ADMIN="$ADMIN_BASE:dev"
+            TAGS_AGENT="$AGENT_BASE:dev"
+            PUSH=true
+            SUMMARY="develop build — pushed :dev"
+          else
+            # Any other branch push that slipped through paths filter
+            TAGS_ADMIN="$ADMIN_BASE:dev"
+            TAGS_AGENT="$AGENT_BASE:dev"
+            PUSH=false
+            SUMMARY="unknown ref ${{ github.ref }} — built but not pushed"
+          fi
+
+          {
+            echo "tags-admin<<EOF"
+            echo "$TAGS_ADMIN"
+            echo "EOF"
+            echo "tags-agent<<EOF"
+            echo "$TAGS_AGENT"
+            echo "EOF"
+            echo "push=$PUSH"
+            echo "summary=$SUMMARY"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "::notice::$SUMMARY"
+
   build-and-push:
+    needs: resolve-tags
     runs-on: ubuntu-latest
 
     strategy:
@@ -66,10 +152,10 @@ jobs:
         service:
           - name: edge_admin
             dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
-            image: edge_admin
+            tags-output: tags-admin
           - name: edge_agent
             dockerfile: ./deploy/production/compose/edge_agent/Dockerfile
-            image: edge_agent
+            tags-output: tags-agent
 
     steps:
       - name: Checkout code
@@ -84,31 +170,43 @@ jobs:
             env.BUILDKIT_STEP_LOG_MAX_SPEED=10485760
 
       - name: Login to GHCR
+        if: needs.resolve-tags.outputs.push == 'true'
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Resolve tags for ${{ matrix.service.name }}
+        id: tags
+        run: |
+          if [[ "${{ matrix.service.tags-output }}" == "tags-admin" ]]; then
+            TAGS='${{ needs.resolve-tags.outputs.tags-admin }}'
+          else
+            TAGS='${{ needs.resolve-tags.outputs.tags-agent }}'
+          fi
+          {
+            echo "value<<EOF"
+            echo "$TAGS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build and push ${{ matrix.service.name }}
         uses: docker/build-push-action@v7
         with:
           context: .
           file: ${{ matrix.service.dockerfile }}
-          push: true
-          tags: |
-            ghcr.io/wenet-ec/${{ matrix.service.image }}:${{ env.IMAGE_TAG }}
-            ghcr.io/wenet-ec/${{ matrix.service.image }}:latest
-            ghcr.io/wenet-ec/${{ matrix.service.image }}:stable
+          push: ${{ needs.resolve-tags.outputs.push == 'true' }}
+          tags: ${{ steps.tags.outputs.value }}
           platforms: linux/amd64,linux/arm64
           cache-from: |
             type=gha,scope=${{ matrix.service.name }}-build
             type=gha,scope=${{ matrix.service.name }}-mod
-            type=registry,ref=ghcr.io/wenet-ec/${{ matrix.service.image }}:cache
+            type=registry,ref=ghcr.io/wenet-ec/${{ matrix.service.name }}:cache
           cache-to: |
             type=gha,mode=max,scope=${{ matrix.service.name }}-build
             type=gha,mode=max,scope=${{ matrix.service.name }}-mod
-            type=registry,ref=ghcr.io/wenet-ec/${{ matrix.service.image }}:cache,mode=max
+            type=registry,ref=ghcr.io/wenet-ec/${{ matrix.service.name }}:cache,mode=max
           build-args: |
             BUILDKIT_INLINE_CACHE=1
             BUILDKIT_MULTI_PLATFORM=1
@@ -118,21 +216,23 @@ jobs:
 
       - name: Output image info
         run: |
-          echo "Built and pushed ${{ matrix.service.name }}:"
-          echo "  ghcr.io/wenet-ec/${{ matrix.service.image }}:${{ env.IMAGE_TAG }}"
-          echo "  ghcr.io/wenet-ec/${{ matrix.service.image }}:latest"
-          echo "  ghcr.io/wenet-ec/${{ matrix.service.image }}:stable"
+          echo "Built ${{ matrix.service.name }}:"
+          echo "${{ steps.tags.outputs.value }}"
+          if [[ "${{ needs.resolve-tags.outputs.push }}" == "true" ]]; then
+            echo "Pushed to GHCR."
+          else
+            echo "Build only — not pushed (PR build)."
+          fi
 
   summary:
-    needs: build-and-push
+    needs: [resolve-tags, build-and-push]
     runs-on: ubuntu-latest
     if: always()
 
     steps:
       - name: Build Summary
         run: |
-          echo "Production build completed!"
-          echo "Tags pushed: ${{ env.IMAGE_TAG }}, latest, stable"
+          echo "${{ needs.resolve-tags.outputs.summary }}"
           echo ""
           echo "Registry: ghcr.io/wenet-ec"
           echo "Images: edge_admin, edge_agent"

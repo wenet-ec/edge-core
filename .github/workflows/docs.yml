@@ -1,3 +1,4 @@
+# .github/workflows/docs.yml
 name: Docs
 
 on:
@@ -18,7 +19,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -38,6 +39,7 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v5
         with:
+          name: github-pages-docs
           path: site
 
   deploy:
@@ -49,3 +51,5 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+        with:
+          artifact_name: github-pages-docs

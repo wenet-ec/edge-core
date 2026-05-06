@@ -69,7 +69,7 @@ _¹ Ansible is a complement, not a competitor — see below._
 
 **vs Balena:** Balena is optimized for IoT and requires their cloud or their OS. Edge Core is designed to run on general-purpose Linux (see [Host compatibility](#host-compatibility) for tested distros), any cloud or on-prem. You own everything.
 
-**vs Tailscale / Headscale:** Tailscale and its self-hosted equivalent Headscale are networking-first — they give you a VPN and SSH access. Edge Core is application-first — networking just works out of the box (WireGuard + DERP/TURN relay), but the product is the fleet management layer on top: command execution, centralized SSH credential management, HTTP proxying, metrics aggregation, MCP AI interface.
+**vs Tailscale / Headscale:** Tailscale (and its self-hosted equivalent Headscale) is a polished, opinionated mesh networking product — VPN, identity, SSH, ACLs, MagicDNS, exit nodes. We use Tailscale's [DERP](https://tailscale.com/blog/how-nat-traversal-works) relay protocol for our own NAT-traversal fallback, so this isn't really a head-to-head comparison. Edge Core sits one layer up: the network plumbing is solved (via Netmaker + DERP), and the product is the fleet-management layer on top — command execution, centralized SSH credentials, HTTP/SOCKS5 forward proxying, metrics aggregation, MCP. If your need is "give my team SSH'd access to my fleet over a VPN", Tailscale is probably what you want. If you also need to _operate_ the fleet from a control plane, that's where Edge Core fits.
 
 **Works alongside Ansible:** Edge Core is not an Ansible replacement — it's the network layer that makes Ansible work on unreachable machines. Nodes behind NAT or firewalls are normally inaccessible to Ansible. With Edge Core, you SSH through the admin proxy tunnel to reach them, then run your playbooks as normal. No changes to your Ansible setup needed — just configure `ProxyCommand` in your SSH config to route through the admin's SOCKS5 proxy and Ansible works as if the nodes were on your local network.
 
@@ -168,9 +168,21 @@ Other useful pointers:
 | `examples/event_brokers/` | NATS, Redpanda, Kafka, RabbitMQ, Redis, and MQTT compose files (AWS SNS is managed — provisioning notes inline) |
 | `docs/`                   | Architecture docs and API specs                                                                                 |
 
-## VPN internals
+## Built on
 
-Edge Core uses [Netmaker](https://github.com/gravitl/netmaker) (v1.5.1) as its WireGuard mesh control plane. The Netmaker OpenAPI spec is included at [`docs/netmaker-openapi-v1.5.1.yml`](docs/netmaker-openapi-v1.5.1.yml) for reference.
+Edge Core stands on a stack of much larger projects, and we're grateful for them:
+
+| Layer                | Project                                                                           | Why                                                                                                |
+| -------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| WireGuard mesh       | [Netmaker](https://github.com/gravitl/netmaker) (v1.5.1)                          | Mature mesh control plane with proper network segmentation                                         |
+| Relay fallback       | [DERP](https://tailscale.com/blog/how-nat-traversal-works) (Tailscale)            | Best-in-class WireGuard-over-HTTPS for symmetric NAT                                               |
+| Runtime              | [Elixir](https://elixir-lang.org/) / [Phoenix](https://www.phoenixframework.org/) | BEAM concurrency model fits a coordination plane naturally                                         |
+| Distributed registry | [`:syn`](https://github.com/ostinelli/syn)                                        | Availability-over-consistency, scoped registries with metadata                                     |
+| Background jobs      | [Oban](https://github.com/oban-bg/oban)                                           | Same-process job runner that works on Postgres or SQLite — exactly what our two-binary shape needs |
+
+The Netmaker OpenAPI spec we target is included at [`docs/netmaker-openapi-v1.5.1.yml`](docs/netmaker-openapi-v1.5.1.yml) for reference.
+
+We didn't build any of these — we glued them together in a way that solved the specific problem in front of us.
 
 ## License
 

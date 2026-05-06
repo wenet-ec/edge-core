@@ -1,5 +1,8 @@
 # Edge Core
 
+[![CI](https://github.com/wenet-ec/edge-core/actions/workflows/local.yml/badge.svg)](https://github.com/wenet-ec/edge-core/actions/workflows/local.yml)
+[![Docs](https://github.com/wenet-ec/edge-core/actions/workflows/docs.yml/badge.svg)](https://github.com/wenet-ec/edge-core/actions/workflows/docs.yml)
+
 **Your machines, meshed, proxied, observed, and remotely controlled.**
 
 📖 **Docs:** [wenet-ec.github.io/edge-core](https://wenet-ec.github.io/edge-core/)

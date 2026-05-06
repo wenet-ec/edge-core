@@ -2,6 +2,8 @@
 
 **Your machines, meshed, proxied, observed, and remotely controlled.**
 
+📖 **Docs:** [wenet-ec.github.io/edge-core](https://wenet-ec.github.io/edge-core/)
+
 Edge Core is an infrastructure management platform for geographically distributed machines. It gives you centralized control over remote nodes through a secure WireGuard mesh — run commands, SSH into any machine, proxy traffic through them, and scrape their metrics — all through a simple HTTP API.
 
 Runs on standard Linux hosts (glibc + systemd, kernel ≥ 5.6 for built-in WireGuard). Tested on Ubuntu 22.04 / 24.04 and Debian 12 (x86_64 + ARM64); other glibc/systemd distros should work — see [Host compatibility](#host-compatibility) below. Self-hosted, no vendor lock-in.
@@ -48,17 +50,17 @@ The **agent** that runs on your machines and the **Nexmaker** shared library are
 
 ## Compared to alternatives
 
-|                                  | Edge Core    | Balena      | Ansible¹ | Tailscale / Headscale | FleetDM |
-| -------------------------------- | ------------ | ----------- | -------- | --------------------- | ------- |
-| Self-hosted                      | ✅           | Partial     | ✅       | Partial / ✅          | ✅      |
-| Works for general Linux          | ✅           | ❌ IoT-only | ✅       | ✅                    | ✅      |
+|                                  | Edge Core    | Balena                     | Ansible¹ | Tailscale / Headscale | FleetDM |
+| -------------------------------- | ------------ | -------------------------- | -------- | --------------------- | ------- |
+| Self-hosted                      | ✅           | Partial                    | ✅       | Partial / ✅          | ✅      |
+| Works for general Linux          | ✅           | ❌ IoT-only                | ✅       | ✅                    | ✅      |
 | Built-in VPN mesh                | ✅           | ❌ hub-and-spoke (OpenVPN) | ❌       | ✅                    | ❌      |
-| SSH proxy (no VPN client needed) | ✅           | ❌          | ❌       | ✅                    | ❌      |
-| HTTP forward proxy to edge       | ✅           | ❌          | ❌       | ❌                    | ❌      |
-| Remote command execution         | ✅           | ✅          | ✅       | ❌                    | Partial |
-| Prometheus metrics via admin     | ✅           | Partial     | ❌       | ❌                    | ❌      |
-| Works behind symmetric NAT       | ✅ DERP/TURN | ✅          | ❌       | ✅ DERP/TURN          | ❌      |
-| No vendor lock-in                | ✅           | ❌          | ✅       | ❌ / ✅               | ✅      |
+| SSH proxy (no VPN client needed) | ✅           | ❌                         | ❌       | ✅                    | ❌      |
+| HTTP forward proxy to edge       | ✅           | ❌                         | ❌       | ❌                    | ❌      |
+| Remote command execution         | ✅           | ✅                         | ✅       | ❌                    | Partial |
+| Prometheus metrics via admin     | ✅           | Partial                    | ❌       | ❌                    | ❌      |
+| Works behind symmetric NAT       | ✅ DERP/TURN | ✅                         | ❌       | ✅ DERP/TURN          | ❌      |
+| No vendor lock-in                | ✅           | ❌                         | ✅       | ❌ / ✅               | ✅      |
 
 _¹ Ansible is a complement, not a competitor — see below._
 

@@ -142,7 +142,7 @@ All operations use Docker Compose through the `./bin/run` script. No local Elixi
 2. Agent determines node identity (hostname, MAC address, etc.)
 3. Agent joins VPN using enrollment token: `Nexmaker.EnrollmentKeys.enroll/2`
 4. Agent discovers admin URL from Netmaker metadata
-5. Agent registers with admin: `POST /api/agents/nodes`
+5. Agent registers with admin: `POST /api/v1/agents/nodes`
 6. Admin returns API token and config
 7. Agent registers node aliases (best-effort, from `ALIASES` env var — comma-separated friendly names)
 8. Agent downloads pending command executions
@@ -150,20 +150,21 @@ All operations use Docker Compose through the `./bin/run` script. No local Elixi
 
 ### Command Execution
 
-1. Admin receives command request: `POST /api/commands`
+1. Admin receives command request: `POST /api/v1/commands`
 2. `EdgeAdmin.Commands.create_command/1` creates Command record
 3. Oban worker creates CommandExecution records per target node
-4. Background scheduler identifies healthy nodes (every 10s)
-5. Admin sends executions to agents: `POST /api/agents/command_executions`
+4. Background scheduler identifies healthy nodes (cadence configured by
+   `EXECUTION_DELIVERY_SCHEDULE`, default every minute)
+5. Admin sends executions to agents: `POST /api/v1/agents/command_executions`
 6. Agent executes via `EdgeAgent.Commands.execute/1`
-7. Agent reports results: `PATCH /api/agents/command_executions/:id`
+7. Agent reports results: `PATCH /api/v1/agents/command_executions/:id`
 8. Results visible through admin API
 
 ### SSH Access
 
 1. User SSH connects to agent port 40022
 2. Agent's `EdgeAgent.SshServer` receives connection
-3. Agent calls admin to verify credentials: `POST /api/agents/ssh_verifications`
+3. Agent calls admin to verify credentials: `POST /api/v1/agents/ssh_usernames/verify_credentials`
 4. Admin checks `ssh_usernames` + `ssh_public_keys` tables
 5. Admin returns approval/denial
 6. Agent grants/denies SSH access accordingly
@@ -312,7 +313,7 @@ edge_core/
 - `settings.ex` - Persistent configuration (SQLite key-value store)
 - `identity.ex` - Node identity determination (hostname, MAC, etc.)
 - `vpn/vpn.ex` - VPN join/health-check operations; `vpn/workers/pull_vpn_config_worker.ex` for periodic pulls
-- `lan/mdns.ex` - mDNS advertisement (`{node_id}.local` + `_edgecore._tcp.local` service record)
+- `lan/mdns.ex` - mDNS advertisement (`node-{node_id}.local` + `_edge_agent._tcp.local` service record)
 
 **Nexmaker (`nexmaker/lib/nexmaker/`):**
 
@@ -422,52 +423,29 @@ Admin background work is split between two schedulers with different semantics:
 
 Production files follow the same pattern in `deploy/production/.envs/`
 
-**Critical environment variables:**
+**Environment variables:**
 
-- `MASTER_KEY` - Full access, fallback for all scoped keys
-- `API_KEY` - REST API authentication (scoped; defaults to MASTER_KEY)
-- `METRICS_KEY` - Metrics API authentication (read-only; defaults to MASTER_KEY)
-- `DB_ADAPTER` - `postgres` (default) or `sqlite`. Selects the admin's database engine at runtime — no rebuild needed. SQLite is single-instance only.
-- `DATABASE_URL` - PostgreSQL connection string (admin, alternative to individual DB\_\* vars). Ignored when `DB_ADAPTER=sqlite`.
-- `SQLITE_DB_PATH` - SQLite DB file path (default `/app/data/edge/edge_admin.db`). Ignored when `DB_ADAPTER=postgres`.
-- `DB_MIGRATION_LOCK` - `pg_advisory_lock` (default) or `disabled`. Selects Ecto's migration locking strategy. `pg_advisory_lock` is correct for direct Postgres connections but needs a session-mode connection (so when running behind PgBouncer transaction-mode pooling, point migrations at the primary directly, same pattern as `DATABASE_NOTIFIER_URL`); `disabled` relies on the migrate sidecar to serialize admins and is the right pick when no direct-to-primary route is available. Ecto's own `:table_lock` default is deliberately not exposed — its two-transaction implementation has historically deadlocked on this codebase under heavy DDL even with a single admin.
-- `NETMAKER_*` - Netmaker API credentials, URLs, and tokens
-- `ENROLLMENT_TOKEN` - Agent VPN enrollment key
-- `SECRET_KEY_BASE` - Phoenix secret for sessions and encryption
-- `CLOAK_KEY` - 32 bytes of base64 (generate with `openssl rand -base64 32`); required at boot. Encryption-at-rest key for sensitive Ecto columns (webhook `secret` and `headers` today). If lost, every encrypted row is unrecoverable — back it up alongside `MASTER_KEY`/`SECRET_KEY_BASE`.
-- `CLOAK_TAG` - identifier paired 1:1 with `CLOAK_KEY`, prepended to every ciphertext blob so Cloak can find the right cipher on decrypt. Required at boot. Convention: `AES.GCM.V<N>`, bumped on each rotation.
-- `ROTATE_OLD_CLOAK_KEY` / `ROTATE_OLD_CLOAK_TAG` / `ROTATE_NEW_CLOAK_KEY` / `ROTATE_NEW_CLOAK_TAG` - all four set together to trigger Cloak key rotation via `EdgeAdmin.Release.rotate_cloak_key/0` (auto-runs on `start`, also runnable as one-off via `bin/rotate_cloak_key`). Idempotent. Logs skip if any of the four is missing.
-- `PHX_HOST` - Public hostname for admin API
-- `EVENT_BROKER_ENABLED` - `true` to enable event publishing (default: `false`)
-- `EVENT_BROKER_ADAPTER` - `nats`, `kafka`, `amqp091` (alias: `rabbitmq`), `redis`, `mqtt`, `aws_sns`, or `google_pubsub` (required when enabled)
-- Adapter-specific endpoint env var (required when enabled):
-  - `EVENT_BROKER_NATS_URLS` / `EVENT_BROKER_KAFKA_URLS` — comma-separated cluster list (plural)
-  - `EVENT_BROKER_RABBITMQ_URL` / `EVENT_BROKER_REDIS_URL` / `EVENT_BROKER_MQTT_URL` — single endpoint (singular)
-- `EVENT_BROKER_NATS_TOKEN` - NATS auth token (optional)
-- `EVENT_BROKER_KAFKA_USERNAME` / `EVENT_BROKER_KAFKA_PASSWORD` - SASL credentials (optional)
-- `EVENT_BROKER_KAFKA_SASL_MECHANISM` - `plain` (default), `scram_sha_256`, `scram_sha_512`
-- `EVENT_BROKER_KAFKA_SSL` - `true` for TLS (external/public brokers)
-- `EVENT_BROKER_MQTT_QOS` - `0`, `1` (default), or `2` — global QoS for all events
-- `EVENT_BROKER_MQTT_JWT` / `EVENT_BROKER_MQTT_USERNAME` + `EVENT_BROKER_MQTT_PASSWORD` - MQTT auth (mutually exclusive, JWT precedence)
-- `EVENT_BROKER_MQTT_SSL` / `EVENT_BROKER_MQTT_CACERT_FILE` / `EVENT_BROKER_MQTT_CLIENT_CERT_FILE` + `EVENT_BROKER_MQTT_CLIENT_KEY_FILE` - TLS / mTLS
-- `EVENT_BROKER_AWS_SNS_REGION` / `EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX` - AWS SNS region + topic ARN prefix (required for `aws_sns` adapter)
-- `EVENT_BROKER_AWS_SNS_ENDPOINT_URL` - override only for LocalStack/CI; leave UNSET in production
-- `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_SESSION_TOKEN` - AWS credentials, resolved by ex_aws's standard chain (env → instance profile → IRSA)
-- `EVENT_BROKER_GOOGLE_PUBSUB_PROJECT` - GCP project ID (required for `google_pubsub` adapter)
-- `EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX` - optional topic-ID prefix when sharing one project across multiple cores
-- `EVENT_BROKER_GOOGLE_PUBSUB_EMULATOR_HOST` - override only for the official Pub/Sub emulator (host:port, no scheme); leave UNSET in production
-- `GOOGLE_APPLICATION_CREDENTIALS` - GCP service-account JSON path, resolved by goth's standard chain (env → metadata server / Workload Identity)
-- `CORE_NAME` - Identifies this core instance in every event envelope (default: `"default"`)
-- `EVENT_DELIVERY_MAX_AGE_SECONDS` - Cancel broker-publish and webhook-delivery jobs older than N seconds (default: `3600`); checked against Oban's `inserted_at` at the start of `perform/1`. Set to `0` to disable.
-- `WEBHOOK_MAX_ATTEMPTS` - Total HTTP delivery attempts per event before drop (default: `3`). Applied uniformly to every webhook job at fan-out time.
-- `WEBHOOK_ALLOW_PRIVATE_IPS` - `true` to bypass the SSRF deny list at webhook create time (default: `false`). Use only for homelab/dev where receivers legitimately live on RFC1918 ranges. Production should leave this off.
+The full annotated list lives in `deploy/production/.envs/.edge_admin` — read it directly when you need to know what a variable does. The notes below are the **non-obvious** ones, where the variable's behavior is something you can't infer from its name or default:
+
+- `DB_ADAPTER` — `postgres` (default) or `sqlite`. Same compiled binary, runtime-switched. SQLite is single-instance only, no clustering.
+- `DB_MIGRATION_LOCK` — `pg_advisory_lock` (default) or `disabled`. `pg_advisory_lock` needs a session-mode Postgres connection — behind PgBouncer transaction pooling, point migrations at the primary directly (same pattern as `DATABASE_NOTIFIER_URL`). `disabled` relies on the migrate sidecar to serialize. Ecto's `:table_lock` default is deliberately not exposed — historically deadlocks on this codebase under heavy DDL even single-admin.
+- `CLOAK_KEY` / `CLOAK_TAG` — required at boot. Encryption-at-rest for `webhooks.secret` and `webhooks.headers`. If `CLOAK_KEY` is lost, every encrypted row is unrecoverable — back it up alongside `MASTER_KEY`/`SECRET_KEY_BASE`. `CLOAK_TAG` convention: `AES.GCM.V<N>`, bumped on rotation.
+- `ROTATE_OLD_CLOAK_KEY` / `ROTATE_OLD_CLOAK_TAG` / `ROTATE_NEW_CLOAK_KEY` / `ROTATE_NEW_CLOAK_TAG` — set all four to trigger rotation via `EdgeAdmin.Release.rotate_cloak_key/0`. Auto-runs on `/start`, also `examples/operations/rotate_cloak_key.yml` for one-off. Idempotent — logs skip if any of the four is missing.
+- `EVENT_BROKER_ADAPTER` — `nats`, `kafka`, `amqp091` (alias: `rabbitmq`), `redis`, `mqtt`, `aws_sns`, `google_pubsub`. Endpoint env var is namespaced per adapter — see the `.edge_admin` file for the matrix.
+- `CORE_NAME` — identifies this core instance in every event envelope (default: `"default"`). Promoted to message attributes on AWS SNS / Google Pub/Sub for filter policies.
+- `EVENT_DELIVERY_MAX_AGE_SECONDS` — cancel broker-publish + webhook-delivery jobs older than N seconds (default `3600`). Checked at `perform/1` start. Set `0` to disable.
+- `WEBHOOK_MAX_ATTEMPTS` — total HTTP delivery attempts per event before drop (default `3`). Applied at fan-out time, not configurable per-webhook.
+- `WEBHOOK_ALLOW_PRIVATE_IPS` — `true` bypasses the SSRF deny list at create time. Homelab/dev only.
+- `PULL_VPN_CONFIG_ENABLED` (agent) — opt out of the daily `netclient pull` backstop.
+
+Standard auth/host/DB vars (`MASTER_KEY`, scoped keys, `DATABASE_URL`, `NETMAKER_*`, `ENROLLMENT_TOKEN`, `SECRET_KEY_BASE`, `PHX_HOST`) work the way you'd expect — see the `.edge_admin` file.
 
 ## Technology Stack
 
-- **Framework:** Elixir 1.19+, Erlang 28.3+, Phoenix 1.8
+- **Framework:** Elixir 1.19+, Erlang 28.5+, Phoenix 1.8
 - **Databases:** PostgreSQL 18 (admin default; required for multi-admin HA), SQLite 0.22 (admin alternative for single-instance, also the agent's local store), Ecto 3.13. Adapter selected at runtime via `DB_ADAPTER`; same compiled binary serves both.
 - **VPN:** Netmaker (Go), netclient, WireGuard
-- **Jobs:** Oban 2.20, Quantum 3.5
+- **Jobs:** Oban 2.22, Quantum 3.5
 - **Metrics:** Prometheus exporters, Prometheus, PromEx 1.11
 - **HTTP:** Req 0.5, Bandit server
 - **API:** OpenApiSpex 3.22 (OpenAPI/Swagger)
@@ -477,15 +455,7 @@ Production files follow the same pattern in `deploy/production/.envs/`
 
 ## API Documentation
 
-OpenAPI specs auto-generated and served at:
-
-- `/api/openapi` - OpenAPI JSON
-- `/swaggerui` - Swagger UI
-- `/redoc` - ReDoc UI
-- `/api/asyncapi` - AsyncAPI JSON
-- `/asyncdoc` - AsyncAPI viewer
-
-Major API endpoints documented inline with `@doc` tags and OpenApiSpex schemas.
+User-facing API surface (Swagger, MCP, proxy, metrics, events, health) is documented in [`docs/guide.md`](docs/guide.md). Specs auto-generated and served at `/api/openapi`, `/swaggerui`, `/redoc`, `/api/asyncapi`, `/asyncdoc`. Endpoints documented inline with `@doc` + OpenApiSpex schemas.
 
 ## Common Development Workflows
 

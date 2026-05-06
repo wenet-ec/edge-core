@@ -4,7 +4,7 @@
 
 Edge Core is an infrastructure management platform for geographically distributed machines. It gives you centralized control over remote nodes through a secure WireGuard mesh — run commands, SSH into any machine, proxy traffic through them, and scrape their metrics — all through a simple HTTP API.
 
-Designed to run on Linux machines of all shapes: on-premises servers, IoT devices, factory floor equipment, Raspberry Pis, cloud VMs, home lab nodes, remote POS terminals, bare metal, containers. No vendor lock-in. Self-hosted. (Tested host distros: see [Host compatibility](#host-compatibility) below.)
+Runs on standard Linux hosts (glibc + systemd, kernel ≥ 5.6 for built-in WireGuard). Tested on Ubuntu 22.04 / 24.04 and Debian 12 (x86_64 + ARM64); other glibc/systemd distros should work — see [Host compatibility](#host-compatibility) below. Self-hosted, no vendor lock-in.
 
 The **agent** that runs on your machines and the **Nexmaker** shared library are open-source under Apache 2.0. The **admin** server is source-available under the Elastic License 2.0 — free to self-host, modify, and use commercially, but you may not offer it to third parties as a hosted or managed service without a commercial license from us. See [License](#license) below for details.
 
@@ -52,13 +52,12 @@ The **agent** that runs on your machines and the **Nexmaker** shared library are
 | -------------------------------- | ------------ | ----------- | -------- | --------------------- | ------- |
 | Self-hosted                      | ✅           | Partial     | ✅       | Partial / ✅          | ✅      |
 | Works for general Linux          | ✅           | ❌ IoT-only | ✅       | ✅                    | ✅      |
-| Built-in VPN mesh                | ✅           | ✅          | ❌       | ✅                    | ❌      |
+| Built-in VPN mesh                | ✅           | ❌ hub-and-spoke (OpenVPN) | ❌       | ✅                    | ❌      |
 | SSH proxy (no VPN client needed) | ✅           | ❌          | ❌       | ✅                    | ❌      |
 | HTTP forward proxy to edge       | ✅           | ❌          | ❌       | ❌                    | ❌      |
 | Remote command execution         | ✅           | ✅          | ✅       | ❌                    | Partial |
 | Prometheus metrics via admin     | ✅           | Partial     | ❌       | ❌                    | ❌      |
 | Works behind symmetric NAT       | ✅ DERP/TURN | ✅          | ❌       | ✅ DERP/TURN          | ❌      |
-| Masterless control plane         | ✅           | ❌          | N/A      | ❌                    | ❌      |
 | No vendor lock-in                | ✅           | ❌          | ✅       | ❌ / ✅               | ✅      |
 
 _¹ Ansible is a complement, not a competitor — see below._
@@ -120,7 +119,7 @@ Pick the setup that fits your needs and follow its README:
 | **Lite**     | Single admin, Mosquitto broker, no metrics stack. Good for homelab, small fleets, or first deployments. | [`examples/lite/`](examples/lite/README.md)         |
 | **Standard** | 4 admin instances across 2 clusters, EMQX, full Prometheus metrics. Production-ready HA setup.          | [`examples/standard/`](examples/standard/README.md) |
 
-Each README covers: server requirements, configuration, enrolling your first node, and upgrading.
+Each README covers: server requirements, configuration, enrolling your first node, and upgrading. Once your admin is running, the **[user guide](docs/guide.md)** walks through the day-to-day surface (Swagger, MCP, proxy, metrics, events).
 
 ## Host compatibility
 
@@ -140,58 +139,15 @@ Edge Agent ships as a Debian-slim container, so the agent process itself is port
 
 The admin server is host-distro-agnostic: it runs containerized and uses `wireguard-go` (userspace) inside its container, so it does not depend on the host's WireGuard support.
 
-## Connect an AI assistant
+## Using a running admin
 
-Edge Admin exposes an MCP server at `/mcp`. Point any MCP-compatible client (Claude Desktop, Cursor, etc.) at your admin's public address:
+Once an admin is up, the day-to-day surface — Swagger UI, MCP, proxy servers, metrics, events/webhooks, health checks, concepts — is documented in the **[user guide](docs/guide.md)**.
 
-```json
-{
-  "mcpServers": {
-    "edge-admin": {
-      "type": "http",
-      "url": "http://your-server:<API_PORT>/mcp",
-      "headers": { "Authorization": "Bearer your-mcp-key" }
-    }
-  }
-}
-```
+Other useful pointers:
 
-Tools are discovered dynamically via `tools/list` — no static spec file needed. Covers the full management surface: nodes, clusters, commands, SSH, metrics, and health checks.
-
-## Events
-
-Edge Admin publishes lifecycle events to two independent delivery channels: a message broker (opt-in) and HTTP webhooks (always-on, configured per-row via the API). Both channels receive the same CloudEvents 1.0 envelope; events cover node lifecycle, command execution lifecycle, enrollment-key verification, SSH credential verification, and self-update lifecycle.
-
-### Broker
-
-Disabled by default — opt in by setting `EVENT_BROKER_ENABLED=true` and the adapter-specific endpoint env var. Supported brokers: NATS, Kafka/Redpanda, AMQP 0-9-1 (RabbitMQ / LavinMQ / etc.), Redis, MQTT, AWS SNS, and Google Cloud Pub/Sub.
-
-```bash
-EVENT_BROKER_ENABLED=true
-EVENT_BROKER_ADAPTER=nats                   # or: kafka, amqp091, redis, mqtt, aws_sns, google_pubsub
-EVENT_BROKER_NATS_URLS=nats://your-broker:4222   # endpoint var is namespaced per adapter
-```
-
-Ready-to-use broker compose files are in [`examples/event_brokers/`](examples/event_brokers/). Full event schema: [`docs/admin-asyncapi-v0.2.0.md`](docs/admin-asyncapi-v0.2.0.md) or browse `/asyncdoc` on a running admin.
-
-### Webhooks
-
-Register webhook subscriptions through the REST API at `POST /api/v1/webhooks`. Each webhook stores an HTTPS URL, an HMAC-SHA256 `secret`, optional static `headers`, and an explicit list of `subscribed_events` — literal event-type strings from the catalog (e.g. `edge.node.registered`, `edge.command_execution.completed`). No wildcards; unknown event types are rejected at create time. Webhooks are immutable after create — to change anything, delete and recreate. Retry budget per event is `WEBHOOK_MAX_ATTEMPTS` (default 3).
-
-Sensitive columns (`secret`, `headers`) are encrypted at rest via Cloak — `CLOAK_KEY` and `CLOAK_TAG` are required at boot. Destination URLs are SSRF-checked at create time (loopback, RFC1918, link-local, cloud metadata IPs/hostnames denied; opt out with `WEBHOOK_ALLOW_PRIVATE_IPS=true` for homelab/dev). Each delivery is signed with `X-Edge-Signature: sha256=<hex>`. Each event is retried up to `WEBHOOK_MAX_ATTEMPTS` and then dropped; there is no row-level failure counter or auto-disable.
-
-## Configuration reference
-
-All environment variables are documented in the `.env.example` file of your chosen setup. For the full list of tunables (cluster sizing, VPN config, DB connection pooling, etc.) see:
-
-- [`examples/lite/`](examples/lite/) — `.env.example`
-- [`examples/standard/`](examples/standard/) — `.env.example`
-
-## Grafana dashboards
-
-Dashboard JSON files are in [`edge_admin/priv/grafana_dashboards/`](edge_admin/priv/grafana_dashboards/). See the [README there](edge_admin/priv/grafana_dashboards/README.md) for what each dashboard covers.
-
-To import: in Grafana go to **Dashboards → Import**, upload the JSON file, and select your Prometheus datasource.
+- Configuration reference: `.env.example` in [`examples/lite/`](examples/lite/) or [`examples/standard/`](examples/standard/), and the full annotated env files in [`deploy/production/.envs/`](deploy/production/.envs/)
+- Grafana dashboards: [`edge_admin/priv/grafana_dashboards/`](edge_admin/priv/grafana_dashboards/)
+- Event catalog: `/asyncdoc` on a running admin, or [`docs/admin-asyncapi-v0.2.0.md`](docs/admin-asyncapi-v0.2.0.md)
 
 ## Components
 

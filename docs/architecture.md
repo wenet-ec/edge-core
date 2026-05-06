@@ -391,61 +391,56 @@ Proxy and SSH have no fallback below Layer 2. Both require raw TCP streaming —
 
 ## Events
 
-Edge Admin publishes lifecycle events through two independent delivery channels: a message broker (opt-in, infrastructure-level) and HTTP webhooks (always-on, configured per-row via the API). Both channels receive the same CloudEvents 1.0 envelope; events span node lifecycle (registered, status changed, etc.), command execution lifecycle (created → sent → completed/cancelled/expired), enrollment-key verification, SSH credential verification, and self-update request lifecycle. All events carry a full object snapshot in `data`.
+Edge Admin publishes lifecycle events through two independent delivery channels: an opt-in message broker and always-on user-configurable HTTP webhooks. Both receive the same CloudEvents 1.0 envelope. Events span node lifecycle, command execution lifecycle, enrollment-key verification, SSH verification, and self-update lifecycle. All events carry a full object snapshot in `data`.
 
-Business logic calls `EdgeAdmin.Events.publish/1` once per state change. The events context builds the envelope and fans out to every channel — broker (if enabled) and webhooks (always running its own filter). Channels operate independently: a broker outage does not affect webhook delivery, and vice versa.
+`EdgeAdmin.Events.publish/1` is the single in-process entry point for state-change publication. It builds the envelope and fans out to every channel — broker (if enabled) and webhooks (always). Channels operate independently: a broker outage does not affect webhook delivery, and vice versa.
 
-### Broker channel
+> Operator-facing usage (subscribing, the broker config matrix, the full adapter list) lives in [`guide.md`](guide.md). The full event catalog is at [`admin-asyncapi-v0.2.0.md`](admin-asyncapi-v0.2.0.md), or browse `/asyncdoc` on a running admin. This section covers the design choices behind the two channels.
 
-Opt-in, disabled by default, broker deployed separately. Adapters cover: `nats` (NATS — pub/sub by default, set `EVENT_BROKER_NATS_JETSTREAM=true` for durable log), `kafka` (any Kafka-compatible broker — Redpanda, Kafka, Confluent Cloud, Azure Event Hubs, etc.), `amqp091` (any AMQP 0-9-1 broker — RabbitMQ, LavinMQ, AmazonMQ for RabbitMQ, CloudAMQP; topic exchange, routing key = event type; `rabbitmq` accepted as alias), `redis` (fire-and-forget pub/sub, no persistence), `mqtt` (any MQTT 3.1.1 or MQTT 5 broker — EMQX, Mosquitto, HiveMQ, AWS IoT Core, Azure Event Grid in MQTT broker mode, etc.; configurable QoS 0/1/2; publisher CONNECT uses `proto_ver: :v4` (3.1.1) as the lowest common denominator, v5 brokers downgrade our session transparently), `aws_sns` (managed AWS service — pre-provisioned topics by domain, IAM-based auth via the standard AWS credential chain), and `google_pubsub` (managed GCP service — pre-provisioned topics by domain, OAuth2 auth via the standard GCP credential chain). Pick the broker that matches your semantics — there is no recommended default.
+### Why two channels
 
-The `type` field in the envelope doubles as the NATS subject, RabbitMQ routing key, and Redis channel (`edge.node.status_changed`, `edge.command_execution.completed`, etc.) — no parsing needed for broker-level filtering. The MQTT adapter rewrites `.` to `/` (`edge/node/status_changed`) so MQTT segment wildcards (`edge/#`, `edge/node/+`) work as expected. The AWS SNS and Google Cloud Pub/Sub adapters promote `type` and `corename` to message attributes so subscription filter policies (SNS) or filter expressions (Pub/Sub) can match without parsing the body — neither service supports topic-name wildcards.
+A broker is the right answer when consumers are infrastructure that already speaks message-bus semantics (data pipelines, stream processors, fan-out to many subscribers). It is the wrong answer for a one-off webhook to a SaaS endpoint — that needs HTTPS, HMAC, retries, and SSRF protection, none of which a generic broker provides for free. Rather than force one shape on every consumer, we offer both and let them coexist.
 
-Duplicate events are possible for `edge.node.status_changed` — the health check runs on every admin instance independently (masterless design). Each duplicate carries a different `id` (UUID4 generated per enqueue), so `id` is not a dedup key here. Consumers dedup by comparing `(node_id, previous_status, status)` and discarding events whose `time` is not newer than the last processed event for that node.
+### Broker channel — design notes
 
-For the full event schema and subject/topic reference see [`docs/admin-asyncapi-v0.2.0.md`](admin-asyncapi-v0.2.0.md). Interactive viewer at `/asyncdoc` on a running admin.
+- **Adapter shim, not a hub.** The admin publishes; the broker is run separately by the operator. We don't bundle one. Adapters are thin enough that adding a new one is a day's work; the supported list grows on real demand.
+- **`type` field doubles as the broker identifier** — NATS subject, AMQP routing key, Redis channel, MQTT topic (`.` rewritten to `/`). This makes broker-level filtering work without parsing the body. AWS SNS and Google Pub/Sub don't support topic-name wildcards, so we promote `type` and `corename` to message attributes for their filter policies/expressions instead.
+- **Duplicates are possible** for `edge.node.status_changed` — the health check runs on every admin independently (masterless), and each duplicate carries a different `id`. Consumers dedup by `(node_id, previous_status, status)` plus a monotonic `time` check, not by `id`.
 
-**Not currently supported, on the table if there is demand:** AMQP 1.0 (a different wire protocol from AMQP 0-9-1 despite the name — used by ActiveMQ, Azure Service Bus, IBM MQ, Solace) and Apache Pulsar. Neither is shipped today; the existing `amqp091` adapter does not speak AMQP 1.0, and the `kafka` adapter is not wire-compatible with Pulsar. If you have a concrete use case for either, file an issue — adapter additions are tractable and we'll prioritise based on real demand.
+### Webhook channel — design notes
 
-### Webhook channel
+- **Immutable after create.** No partial updates, no soft-disable. Mutability is a footgun for delivery contracts — you delete and recreate. The cost of recreating is trivial; the cost of a partially-updated webhook silently sending to the wrong URL is not.
+- **Explicit subscription allowlist, no wildcards.** `subscribed_events` is a literal list of event-type strings, validated at create time against the live catalog. Subscribing to "everything" means listing every type explicitly. This is opt-in by design — adding new event types to the catalog never auto-expands existing subscriptions, so a noisy new event can't accidentally hammer existing receivers.
+- **Encryption at rest via Cloak** for `secret` and `headers`. `CLOAK_KEY` and `CLOAK_TAG` are required at admin boot. Rotation is supported via `EdgeAdmin.Release.rotate_cloak_key/0` (see `examples/operations/rotate_cloak_key.yml`).
+- **SSRF deny list at create time.** Loopback, RFC1918/ULA, link-local (including the cloud-metadata literals at `169.254.169.254` and `metadata.{google,azure,tencentyun}.internal`), and multicast are all rejected. IPv4-mapped IPv6 (`::ffff:a.b.c.d`) is normalised first so the v6 form can't bypass the v4 deny list. Opt-out is per deployment (`WEBHOOK_ALLOW_PRIVATE_IPS=true`) for homelab/dev — not per-webhook, because per-webhook bypass tends to drift into "everything bypasses by accident."
+- **Retry classification with no auto-disable.** `2xx` succeeds; `408 / 429 / 503` and network errors retry with Oban's exponential backoff up to `WEBHOOK_MAX_ATTEMPTS` (default 3), then drop; other `4xx / 5xx` are terminal (`{:cancel, _}`). There is no row-level failure counter and no auto-disable — every event is independent. Auto-disable would create a hidden state machine on top of webhooks; explicit retry-or-drop is easier to reason about.
+- **Each delivery is `(webhook × matched event)`** — one HTTP POST per pair, signed with `X-Edge-Signature: sha256=<hex>`.
 
-User-configurable HTTP delivery. Subscriptions are persisted in the `webhooks` table and managed through `POST/GET/DELETE /api/v1/webhooks`. **Webhooks are immutable after create** — to change any field, delete and recreate. Each webhook stores: an HTTPS URL, an HMAC-SHA256 `secret`, an optional `headers` map, and an explicit list of `subscribed_events` (literal event-type strings from the catalog — no wildcards). `secret` and `headers` are encrypted at rest via Cloak; `CLOAK_KEY` and `CLOAK_TAG` are required at admin boot. Retry budget per event is governed by `WEBHOOK_MAX_ATTEMPTS` (default 3).
+### Not currently supported
 
-`subscribed_events` is an explicit list of event-type strings — each entry is a literal event type from the catalog (e.g. `edge.node.registered`, `edge.command_execution.completed`). No wildcards, no clever matching. Validated at create time against the live event catalog; unknown values are rejected so typos surface immediately rather than silently subscribing to nothing. Subscribing to "everything" means listing every event type explicitly — opt-in by design, so adding new event types to the catalog never auto-expands existing subscriptions.
-
-Each delivery is one HTTP POST per `(webhook × matched event)` pair, JSON-encoded envelope as the body, signed with `X-Edge-Signature: sha256=<hex>` so receivers can verify integrity. Retry classification: `2xx` succeeds, `408 / 429 / 503` and network errors are retried with Oban's exponential backoff until `max_attempts` is exhausted, other `4xx / 5xx` are terminal (worker returns `{:cancel, _}`, no further retries). Per-job `max_attempts` is set from `WEBHOOK_MAX_ATTEMPTS` (default 3) at fan-out time. There is no row-level failure counter and no auto-disable — events are retried-or-dropped independently.
-
-Destination URLs go through an SSRF deny list at create time — loopback, RFC1918/ULA, link-local (including `169.254.169.254` and `metadata.{google,azure,tencentyun}.internal`), multicast, and the cloud-metadata literals are all rejected. IPv4-mapped IPv6 (`::ffff:a.b.c.d`) is normalised before matching so the v6 form cannot bypass the v4 deny list. Operators on homelab / dev networks can opt out per deployment with `WEBHOOK_ALLOW_PRIVATE_IPS=true`.
-
-Webhooks are not gated on `EVENT_BROKER_ENABLED` — they run independently. A deployment can ship the broker disabled and still use webhooks for every event.
+AMQP 1.0 (a different wire protocol from AMQP 0-9-1 despite the name — used by ActiveMQ, Azure Service Bus, IBM MQ, Solace) and Apache Pulsar. Neither is shipped today; the existing `amqp091` adapter does not speak AMQP 1.0, and the `kafka` adapter is not wire-compatible with Pulsar. Adapter additions are tractable — file an issue with a real use case and we'll prioritise.
 
 ---
 
 ## AI / MCP Interface
 
-Edge Admin exposes a [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server at `POST /mcp` alongside the REST API. This gives AI assistants (Claude, Cursor, etc.) direct, structured access to the full infrastructure management surface — the same operations available through the REST API, but designed for AI consumption rather than human HTTP clients.
+Edge Admin exposes a [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server at `POST /mcp` alongside the REST API, giving AI assistants direct, structured access to the same surface human operators get.
 
-### Transport
+> Operator-facing usage (client config, the proxy combo) lives in [`guide.md`](guide.md). This section covers the design choices.
 
-Streamable HTTP (MCP standard). Any MCP-compatible client connects by pointing at the admin's `/mcp` endpoint with an `Authorization: Bearer` header.
+- **Streamable HTTP transport.** Standard MCP. Single endpoint, one bearer token (`MCP_KEY` or `MASTER_KEY`), no separate connection lifecycle to manage.
+- **Tools mirror the REST API surface.** Every REST operation has an
+  equivalent MCP tool. The tool catalog is **explicitly listed** in
+  `EdgeAdminMcp.Server` (each tool registered via `component(...)`),
+  not auto-generated from controllers. Adding a REST endpoint does
+  not automatically expose it via MCP — you write the matching tool
+  module under `edge_admin_mcp/tools/<domain>/` and register it in
+  `Server`. Discovery is still dynamic for clients via standard
+  `tools/list` once registered.
+- **One MCP-only tool: `check_admin_health`.** Runs every subsystem check in parallel and returns structured pass/fail. The motivation is operational: AI assistants are uniquely positioned to triage "why isn't this working" because they can correlate the health output with the user's description, but doing that requires one consolidated health view rather than seven separate REST calls.
+- **Auth pre-Anubis.** `EdgeAdminWeb.Plugs.McpAuth` runs before Anubis processes the request, so unauthenticated traffic never reaches the MCP machinery.
 
-### Authentication
-
-Accepts `MCP_KEY` bearer token or falls back to `MASTER_KEY`. Auth is handled by `EdgeAdminWeb.Plugs.McpAuth` before Anubis processes the request.
-
-### Tool Discovery
-
-MCP clients discover available tools dynamically via the standard `tools/list` method — no static spec file. This is the MCP equivalent of `/api/openapi`. Call `POST /mcp` with `{"method": "tools/list"}` to get the full tool list with input schemas.
-
-### Tool Surface
-
-The MCP tool surface mirrors the REST API — anything you can do via the REST API you can do via MCP. Tools are grouped by domain: admin info, clusters, nodes, aliases, enrollment keys, commands, command executions, SSH credentials, self-updates, and metrics. `check_admin_health` is MCP-only: it runs all subsystem checks (Database, Membership, Metadata, Netmaker API, Netclient VPN, Proxy Servers) in parallel and returns a structured pass/fail per component — useful for diagnosing enrollment or connectivity failures from an AI assistant.
-
-For the current tool list with full input schemas, call `tools/list` on a running admin — that is always authoritative.
-
-### Proxy Access
-
-The admin's HTTP proxy (port 43128) and SOCKS5 proxy (port 41080) are independent of MCP but complement it. An AI client configured to route its own HTTP requests through the proxy can reach any service on any VPN-connected node or its local network — without any MCP tool call. Configure the proxy URL once at the client level using the `PROXY_KEY` credential; the AI then has unrestricted HTTP access to the entire edge mesh.
+The forward proxy (§ Forward Proxy) and MCP are independent but complementary. An AI client configured to route its own HTTP through the admin proxy gets unrestricted access to any service on any VPN-connected node — no MCP tool call needed for arbitrary HTTP. MCP is for _managing_ the fleet; the proxy is for _talking to_ the fleet.
 
 ---
 

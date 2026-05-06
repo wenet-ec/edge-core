@@ -2,3 +2,4 @@ mkdocs-material==9.7.6
 mkdocs-include-markdown-plugin==7.1.2
 neoteroi-mkdocs==1.2.0
 pymdown-extensions==10.7
+markdown==3.10.2

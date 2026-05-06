@@ -6,43 +6,37 @@ Edge Core is an infrastructure management platform for geographically distribute
 
 ---
 
-## Functionalities and Connectivity
+## Two principles
 
-Edge Core is organized around two groups — functional capabilities and connectivity layers.
+Edge Core was born from three years of watching a company hit the same walls trying to ship to edge devices it didn't fully control: deployments were a black box, machines on the same LAN couldn't reliably find each other, and every new product re-implemented the same WebSocket/MQTT sync layer to stay in touch with the cloud. The system is organized around two principles that came out of that experience.
 
-### Functionalities
+### 1. Control — a fleet you don't physically touch should still be a fleet you can see and operate.
 
-**1. Remote Command Execution**
+Once devices are geographically distributed, you lose the things you take for granted with a server in a rack: shell access, log tailing, the ability to push a config file, the ability to know whether the machine is even alive. Closing that gap is the entire reason this project exists.
 
-Run shell commands across hundreds of machines from a single API call. Commands are distributed to target nodes, executed in parallel, and results are collected back centrally. Supports both shell and exec modes. Works in real-time over VPN (Layer 1/2) or with eventual consistency when only HTTP polling is available (Layer 3, ~60s latency).
+- **Direct execution** — run shell commands across hundreds of machines from a single API call. Commands are distributed to target nodes, executed in parallel, results are collected back centrally. Real-time over VPN, eventually consistent over HTTP polling when the VPN is down.
+- **SSH access** — first-class. Admin holds centralized SSH usernames and public keys; agents run an embedded SSH server on port 40022 that calls back to admin to verify each connection. Combined with the forward proxy below, you get tunneled SSH into any node without ever exposing port 22.
+- **Observability** — admin instances act as Prometheus-compatible aggregators. Host, agent, and WireGuard metrics are scraped from every node through the admin's service-discovery endpoints — no direct network access to individual nodes required.
+- **Self-update** — coordinated agent upgrades across the fleet from a single API call, via Watchtower as a sidecar. Same shape as command execution: one request, fans out to many machines.
+- **Async signal back out** — when state changes (a node registers, a command finishes, an SSH session is verified), the system publishes events. Consumers subscribe via webhooks (per-row HTTP delivery, signed) or a message broker (NATS, Kafka, AMQP, Redis, MQTT, AWS SNS, Google Cloud Pub/Sub). No polling required to follow what's happening.
 
-**2. SSH Backdoor**
+### 2. Connectivity — talking to a specific edge machine should work without anyone configuring IPs, ports, or tunnels in advance.
 
-SSH access to any edge node as a first-class feature. Admin holds centralized SSH usernames, passwords, and public keys. Agents run an embedded SSH server on port 40022. Combined with the admin's forward proxy, you get full tunneled SSH access through the admin to any node in the mesh — without exposing any SSH port to the public internet.
+Once you've decided to operate machines you don't physically touch, the next problem is _reaching_ them. You don't know the LAN, you don't control the firewall, the IPs are dynamic, the hostnames are generic. Every edge product ends up rebuilding the same WebSocket/MQTT sync layer to route around this. We wanted that solved once, in the platform.
 
-**3. Metrics Aggregation**
+- **Edge ↔ Edge (VPN mesh).** All nodes in the same cluster form a full WireGuard mesh via Netmaker. Every node can reach every other node P2P, no central gateway. This is the transport everything else runs on. Three-layer fallback handles adverse network conditions: raw WireGuard UDP → DERP relay (symmetric NAT) → HTTP polling (last resort). See [Admin ↔ Agent Communication](#admin--agent-communication).
+- **Cloud ↔ Edge (forward proxy + proxy chaining).** Admin runs HTTP (port 43128) and SOCKS5 (port 41080) forward proxies. Because SOCKS5 supports any TCP connection, this covers any protocol — not just HTTP. Two modes: route directly to a VPN node, or chain through a specific agent as the exit node to reach the internet or its LAN from that agent's network location. Raw TCP over the VPN, no MQTT or WebSocket on the application path. In production, HAProxy load-balances proxy traffic across all admin instances.
+- **Network segmentation.** WireGuard mesh is O(n²) — bigger meshes get exponentially more expensive, and a single flat mesh forces every customer's machines to share the same trust boundary. So clusters are kept small (50–100 nodes) and isolated from each other; each customer or workload gets its own mesh, no ACLs to gate traffic inside one. Multiple admin clusters federate via shared PostgreSQL, no Erlang distribution between them.
 
-Admin instances act as Prometheus-compatible aggregators. Scrapers collect host, agent, and WireGuard metrics from all nodes through the admin's service discovery endpoints — without needing direct network access to each node. Metrics are proxied on demand (Layer 1/2) or served from a local cache pushed by agents (Layer 3).
+#### The unsolved one: User ↔ Edge (local).
 
-### Connectivity
+Some traffic should reach an edge node _without_ going through the cloud admin — when the user is physically near the node and a cloud round-trip is wasteful or unreliable. This is the principle we have not fully solved.
 
-**4. Cloud ↔ Edge (Forward Proxy + Proxy Chaining)**
+What works today: agents advertise themselves via mDNS, so any device on the same LAN segment can resolve `node-{id}.local`. This covers the small case — a single network, no VLANs, devices that speak Bonjour/Avahi. It does not cover the realistic case of LANs we don't control.
 
-Admin runs HTTP (port 43128) and SOCKS5 (port 41080) forward proxies. Because SOCKS5 supports any TCP connection, this covers any protocol — not just HTTP. Two modes: route directly to a VPN node (Mode 1, username `_`), or chain through a specific agent as the exit node to reach internet or LAN targets from that agent's network location (Mode 2, proxy chaining). No MQTT, no WebSocket — raw TCP over the VPN. In production, a HAProxy instance load-balances proxy traffic across all admin instances.
+What's missing: trustworthy LAN DNS that the user's resolver actually uses, an HTTPS path to the agent that browsers won't block, and a way to do all of that without colliding with existing LAN DNS (corporate networks, home routers with their own DNS quirks). We don't have a good answer to that combination yet.
 
-**5. Edge ↔ Edge (VPN Mesh)**
-
-All nodes in the same cluster form a full WireGuard mesh via Netmaker. Every node can reach every other node directly, P2P, without routing through a central gateway. This is the transport layer that everything else runs on. Three-layer fallback handles adverse network conditions: raw WireGuard UDP → DERP relay (symmetric NAT) → HTTP polling (last resort). See [Admin ↔ Agent Communication](#admin--agent-communication) for detail.
-
-**6. Edge ↔ Local Devices / End Users (Local Network Discovery)**
-
-This covers how edge nodes make themselves discoverable and accessible to devices on the same LAN — without requiring those devices to join the VPN.
-
-**What is supported today:** Agents advertise themselves via mDNS (Multicast DNS). A node's `mdns_hostname` is resolved by any device on the same local network using standard zero-conf discovery (Bonjour/Avahi). No configuration needed on the local device side.
-
-**What is not in scope (and why):** Full LAN DNS control — running a DNS server that authoritative-answers for local devices, intercepting local traffic, or acting as a LAN gateway — is architecturally feasible but deliberately out of scope for now. LAN networks are heterogeneous and largely outside our control: corporate networks have existing DNS policies, home routers have varying DNS behavior, and managing DNS conflicts across different environments is a reliability problem we are not ready to take on responsibly. We would rather support mDNS well and expand carefully than break existing LAN setups. If you need full LAN DNS integration, the agent's local IP and mDNS hostname are stable enough to configure your own DNS server to point at.
-
-**Future direction:** A managed in-agent DNS server that resolves `.edge.local` names for local clients is a natural next step, gated on having a reliable way to co-exist with existing LAN DNS without conflict.
+What we won't do (yet): require the user to install a client. The whole point of this principle is _no agent on the user side._ If we can't honor that constraint, we'd rather punt than ship a half-thing. R&D continues; it is the focus for v3.
 
 ---
 

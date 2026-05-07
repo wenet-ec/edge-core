@@ -3,7 +3,33 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   @moduledoc false
   use EdgeAdmin.Schema
 
-  @type t :: %__MODULE__{}
+  alias Ecto.Association.NotLoaded
+  alias EdgeAdmin.Commands.Schemas.Command
+  alias EdgeAdmin.Nodes.Schemas.Cluster
+  alias EdgeAdmin.Nodes.Schemas.Node
+
+  @type t :: %__MODULE__{
+          id: String.t(),
+          output: String.t() | nil,
+          status: String.t(),
+          exit_code: integer() | nil,
+          target_all: boolean(),
+          sent_at: DateTime.t() | nil,
+          completed_at: DateTime.t() | nil,
+          cancelled_at: DateTime.t() | nil,
+          command_text: String.t() | nil,
+          timeout: integer() | nil,
+          cluster_name: String.t() | nil,
+          expired_at: DateTime.t() | nil,
+          command_id: String.t() | nil,
+          command: Command.t() | NotLoaded.t() | nil,
+          node_id: String.t(),
+          node: Node.t() | NotLoaded.t(),
+          cluster_id: String.t() | nil,
+          cluster: Cluster.t() | NotLoaded.t() | nil,
+          inserted_at: DateTime.t(),
+          updated_at: DateTime.t()
+        }
 
   @derive {
     Flop.Schema,
@@ -43,9 +69,9 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
     field(:expired_at, :utc_datetime, virtual: true)
 
     # Associations
-    belongs_to(:command, EdgeAdmin.Commands.Schemas.Command)
-    belongs_to(:node, EdgeAdmin.Nodes.Schemas.Node)
-    belongs_to(:cluster, EdgeAdmin.Nodes.Schemas.Cluster)
+    belongs_to(:command, Command)
+    belongs_to(:node, Node)
+    belongs_to(:cluster, Cluster)
 
     timestamps()
   end

@@ -14,7 +14,14 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest do
   """
   use EdgeAdmin.Schema
 
-  @type t :: %__MODULE__{}
+  @type t :: %__MODULE__{
+          id: String.t(),
+          targeting: map(),
+          status: String.t(),
+          summary: map() | nil,
+          inserted_at: DateTime.t(),
+          updated_at: DateTime.t()
+        }
 
   @derive {
     Flop.Schema,

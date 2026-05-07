@@ -3,9 +3,19 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
   @moduledoc false
   use EdgeAdmin.Schema
 
+  alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Naming
+  alias EdgeAdmin.Ssh.Schemas.SshUsername
 
-  @type t :: %__MODULE__{}
+  @type t :: %__MODULE__{
+          id: String.t(),
+          public_key: String.t(),
+          key_name: String.t(),
+          ssh_username_id: String.t(),
+          ssh_username: SshUsername.t() | NotLoaded.t(),
+          inserted_at: DateTime.t(),
+          updated_at: DateTime.t()
+        }
 
   # Supported SSH key algorithms
   @supported_algorithms [
@@ -36,7 +46,7 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
     field(:key_name, :string)
 
     # Associations
-    belongs_to(:ssh_username, EdgeAdmin.Ssh.Schemas.SshUsername)
+    belongs_to(:ssh_username, SshUsername)
 
     timestamps()
   end

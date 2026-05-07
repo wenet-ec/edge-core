@@ -14,14 +14,25 @@ defmodule EdgeAdmin.Metrics.Schemas.NodeMetricsCache do
   """
   use EdgeAdmin.Schema
 
-  @type t :: %__MODULE__{}
+  alias Ecto.Association.NotLoaded
+  alias EdgeAdmin.Nodes.Schemas.Node
+
+  @type t :: %__MODULE__{
+          id: String.t(),
+          metrics_type: String.t(),
+          metrics_text: String.t(),
+          node_id: String.t(),
+          node: Node.t() | NotLoaded.t(),
+          inserted_at: DateTime.t(),
+          updated_at: DateTime.t()
+        }
 
   schema "node_metrics_cache" do
     field :metrics_type, :string
     field :metrics_text, :string
 
     # Associations
-    belongs_to :node, EdgeAdmin.Nodes.Schemas.Node
+    belongs_to :node, Node
 
     timestamps()
   end

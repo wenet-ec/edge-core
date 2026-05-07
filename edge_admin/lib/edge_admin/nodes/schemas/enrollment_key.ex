@@ -16,6 +16,7 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
   """
   use EdgeAdmin.Schema
 
+  alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Nodes.Schemas.Cluster
 
   @derive {
@@ -33,7 +34,7 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
           name: String.t() | nil,
           key: String.t(),
           cluster_id: String.t(),
-          cluster: Cluster.t() | Ecto.Association.NotLoaded.t(),
+          cluster: Cluster.t() | NotLoaded.t(),
           uses_remaining: integer() | nil,
           expired_at: DateTime.t() | nil,
           last_used_at: DateTime.t() | nil,

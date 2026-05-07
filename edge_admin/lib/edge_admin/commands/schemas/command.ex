@@ -3,7 +3,19 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
   @moduledoc false
   use EdgeAdmin.Schema
 
-  @type t :: %__MODULE__{}
+  alias Ecto.Association.NotLoaded
+  alias EdgeAdmin.Commands.Schemas.CommandExecution
+
+  @type t :: %__MODULE__{
+          id: String.t(),
+          command_text: String.t(),
+          timeout: integer() | nil,
+          expired_at: DateTime.t() | nil,
+          targeting: map(),
+          command_executions: [CommandExecution.t()] | NotLoaded.t(),
+          inserted_at: DateTime.t(),
+          updated_at: DateTime.t()
+        }
 
   @derive {
     Flop.Schema,
@@ -23,7 +35,7 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
     field(:targeting, :map)
 
     # Associations
-    has_many(:command_executions, EdgeAdmin.Commands.Schemas.CommandExecution, on_delete: :delete_all)
+    has_many(:command_executions, CommandExecution, on_delete: :delete_all)
 
     timestamps(type: :utc_datetime)
   end

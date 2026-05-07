@@ -22,6 +22,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Naming
   alias EdgeAdmin.Nodes.Schemas.Cluster
+  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Vpn
 
   @type t :: %__MODULE__{
@@ -30,7 +31,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
           vpn_hostname: String.t() | nil,
           node_id: String.t(),
           cluster_id: String.t(),
-          node: EdgeAdmin.Nodes.Schemas.Node.t() | NotLoaded.t(),
+          node: Node.t() | NotLoaded.t(),
           cluster: Cluster.t() | NotLoaded.t(),
           inserted_at: DateTime.t(),
           updated_at: DateTime.t()
@@ -50,7 +51,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
     field(:name, :string)
     field(:vpn_hostname, :string, virtual: true)
 
-    belongs_to(:node, EdgeAdmin.Nodes.Schemas.Node)
+    belongs_to(:node, Node)
     belongs_to(:cluster, Cluster)
 
     timestamps()

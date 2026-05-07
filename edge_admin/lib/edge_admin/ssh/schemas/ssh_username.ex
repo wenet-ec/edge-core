@@ -3,10 +3,22 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
   @moduledoc false
   use EdgeAdmin.Schema
 
+  alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Naming
+  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Ssh.Schemas.SshPublicKey
 
-  @type t :: %__MODULE__{}
+  @type t :: %__MODULE__{
+          id: String.t(),
+          username: String.t(),
+          password_hash: String.t() | nil,
+          has_password: boolean() | nil,
+          node_id: String.t(),
+          node: Node.t() | NotLoaded.t(),
+          ssh_public_keys: [SshPublicKey.t()] | NotLoaded.t(),
+          inserted_at: DateTime.t(),
+          updated_at: DateTime.t()
+        }
 
   @derive {
     Flop.Schema,
@@ -24,7 +36,7 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
     field(:has_password, :boolean, virtual: true)
 
     # Associations
-    belongs_to(:node, EdgeAdmin.Nodes.Schemas.Node)
+    belongs_to(:node, Node)
     has_many(:ssh_public_keys, SshPublicKey, on_delete: :delete_all)
 
     timestamps()

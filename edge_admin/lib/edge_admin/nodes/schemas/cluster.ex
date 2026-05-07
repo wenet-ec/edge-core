@@ -17,7 +17,10 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   """
   use EdgeAdmin.Schema
 
+  alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Naming
+  alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
+  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Vpn
 
   # /31 and /32 are unusable: /32 has 1 IP (consumed by the first admin gateway),
@@ -32,7 +35,8 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
           network_name: String.t() | nil,
           vpn_domain: String.t() | nil,
           node_count: integer() | nil,
-          nodes: [EdgeAdmin.Nodes.Schemas.Node.t()] | Ecto.Association.NotLoaded.t(),
+          nodes: [Node.t()] | NotLoaded.t(),
+          enrollment_keys: [EnrollmentKey.t()] | NotLoaded.t(),
           inserted_at: DateTime.t(),
           updated_at: DateTime.t()
         }
@@ -55,8 +59,8 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
     field(:vpn_domain, :string, virtual: true)
     field(:node_count, :integer, virtual: true)
 
-    has_many(:nodes, EdgeAdmin.Nodes.Schemas.Node)
-    has_many(:enrollment_keys, EdgeAdmin.Nodes.Schemas.EnrollmentKey)
+    has_many(:nodes, Node)
+    has_many(:enrollment_keys, EnrollmentKey)
 
     timestamps()
   end

@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/admins.ex
+# edge_admin/lib/edge_admin/admins/admins.ex
 defmodule EdgeAdmin.Admins do
   @moduledoc """
   Public surface for admin-domain queries.
@@ -60,7 +60,19 @@ defmodule EdgeAdmin.Admins do
   # Normalisation
   # ===========================================================================
 
-  defp normalise_cluster(%{network: network, members: members}) do
+  @doc """
+  Normalises a single raw `list_admin_cluster_networks/0` entry into the
+  admin-domain shape returned by `list_admin_clusters/0`.
+
+  Public so the transform — which is the real contract this module exposes —
+  can be unit-tested directly without standing up Netmaker.
+
+  Input is a `%{network: net_map, members: [%{node: node, host: host}, ...]}`
+  with raw Netmaker string-keyed maps. Output is the per-cluster map documented
+  on `list_admin_clusters/0`, with admins sorted by name.
+  """
+  @spec normalise_cluster(%{network: map(), members: [map()]}) :: map()
+  def normalise_cluster(%{network: network, members: members}) do
     cluster_name = network["netid"]
 
     admins =

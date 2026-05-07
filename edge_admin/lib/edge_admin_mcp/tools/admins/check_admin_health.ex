@@ -22,6 +22,28 @@ defmodule EdgeAdminMcp.Tools.Admins.CheckAdminHealth do
   """
   use EdgeAdminMcp, :tool
 
+  # Suppress Dialyzer's false positive on `execute/2`.
+  #
+  # `PlugCheckup.Check.Runner.async_run/2` declares its return as `tuple()`
+  # (unconstrained), but Dialyzer infers a tighter success typing from the
+  # implementation that requires `%PlugCheckup.Check{result: atom(),
+  # time: pos_integer()}`. Our input has `result: nil, time: nil` (unrun
+  # checks — the runner *fills these in*, that's its job), so Dialyzer
+  # concludes the call "will never return" even though it works fine at
+  # runtime.
+  #
+  # This is `/healthz`'s code path too — same checks, same runner, same
+  # shape — and `/healthz` has been working in production. The runtime is
+  # correct; only Dialyzer's static view is overly pessimistic.
+  #
+  # Future fix path: upstream a tighter `@spec` to PlugCheckup
+  # (`{:ok, [Check.t()]} | {:error, [Check.t()]}`) so Dialyzer sees the
+  # real contract. PlugCheckup is at v1.0.0 (`voughtdq/plug_checkup`), a
+  # cooperative upstream PR is realistic. When that lands and we bump the
+  # dep, this suppression becomes obsolete and Dialyzer will tell us via
+  # "Unnecessary Skips".
+  @dialyzer {:nowarn_function, execute: 2}
+
   @impl true
   def title, do: "Check Admin Health"
   @impl true

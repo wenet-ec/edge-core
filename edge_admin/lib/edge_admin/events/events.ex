@@ -77,11 +77,13 @@ defmodule EdgeAdmin.Events do
     :ok
   end
 
-  # ===========================================================================
-  # Private
-  # ===========================================================================
-
-  defp build_envelope(event) do
+  @doc false
+  # Public for unit testing. Builds the CloudEvents 1.0 envelope from an event
+  # struct — captures `id`, `time`, and `corename` at call time, delegates
+  # `type` and `data` to the catalog. Not meant for direct use in business
+  # logic; call `publish/1` instead.
+  @spec build_envelope(event()) :: map()
+  def build_envelope(event) do
     %{
       "specversion" => "1.0",
       "id" => Uniq.UUID.uuid4(),

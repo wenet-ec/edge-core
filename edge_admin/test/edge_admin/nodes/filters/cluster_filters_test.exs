@@ -170,10 +170,12 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFiltersTest do
 
   describe "apply_node_count/2 (>=, >, <=, <, ==, !=)" do
     setup do
-      empty = insert_cluster()
-      one = insert_cluster()
-      two = insert_cluster()
-      five = insert_cluster()
+      # Pin distinct IP ranges so the unique index on ipv4_range can't bite
+      # us (random rolls collide ~3% of the time across 4 clusters).
+      empty = insert_cluster(%{ipv4_range: "10.10.0.0/24"})
+      one = insert_cluster(%{ipv4_range: "10.10.1.0/24"})
+      two = insert_cluster(%{ipv4_range: "10.10.2.0/24"})
+      five = insert_cluster(%{ipv4_range: "10.10.3.0/24"})
 
       insert_node(one.id)
 

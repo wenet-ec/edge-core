@@ -54,7 +54,12 @@ defmodule EdgeAdmin.Events.Webhooks.Delivery do
   # Headers / signing
   # ---------------------------------------------------------------------------
 
-  defp build_headers(%Webhook{secret: secret, headers: extra}, body) do
+  @doc false
+  # Public for unit testing. Builds the outbound request headers for a given
+  # webhook + serialized body: standard Content-Type and X-Edge-Signature plus
+  # the operator-supplied `headers` map appended as-is.
+  @spec build_headers(Webhook.t(), binary()) :: [{String.t(), String.t()}]
+  def build_headers(%Webhook{secret: secret, headers: extra}, body) do
     signature = sign(secret, body)
 
     base = [
@@ -65,7 +70,11 @@ defmodule EdgeAdmin.Events.Webhooks.Delivery do
     base ++ Enum.map(extra || %{}, fn {k, v} -> {k, v} end)
   end
 
-  defp sign(secret, body) when is_binary(secret) and is_binary(body) do
+  @doc false
+  # Public for unit testing. HMAC-SHA256 of `body` keyed by `secret`, encoded
+  # as a lowercase hex string (no `sha256=` prefix).
+  @spec sign(binary(), binary()) :: String.t()
+  def sign(secret, body) when is_binary(secret) and is_binary(body) do
     :hmac |> :crypto.mac(:sha256, secret, body) |> Base.encode16(case: :lower)
   end
 
@@ -73,27 +82,31 @@ defmodule EdgeAdmin.Events.Webhooks.Delivery do
   # Classification
   # ---------------------------------------------------------------------------
 
-  defp classify({:ok, %Req.Response{status: status}}, _webhook, _envelope) when status in 200..299 do
+  @doc false
+  # Public for unit testing. Classifies a `Req.post` result into the retry
+  # decision used by the delivery worker.
+  @spec classify({:ok, Req.Response.t()} | {:error, term()}, Webhook.t(), map()) :: result()
+  def classify({:ok, %Req.Response{status: status}}, _webhook, _envelope) when status in 200..299 do
     :ok
   end
 
-  defp classify({:ok, %Req.Response{status: status} = resp}, webhook, envelope) when status in [408, 429, 503] do
+  def classify({:ok, %Req.Response{status: status} = resp}, webhook, envelope) when status in [408, 429, 503] do
     log_failure(webhook, envelope, "recoverable HTTP #{status}", resp)
     {:recoverable, {:http_status, status}}
   end
 
-  defp classify({:ok, %Req.Response{status: status} = resp}, webhook, envelope) do
+  def classify({:ok, %Req.Response{status: status} = resp}, webhook, envelope) do
     log_failure(webhook, envelope, "terminal HTTP #{status}", resp)
     {:terminal, {:http_status, status}}
   end
 
-  defp classify({:error, %{reason: reason}}, webhook, envelope)
-       when reason in [:timeout, :econnrefused, :closed, :nxdomain, :ehostunreach] do
+  def classify({:error, %{reason: reason}}, webhook, envelope)
+      when reason in [:timeout, :econnrefused, :closed, :nxdomain, :ehostunreach] do
     log_failure(webhook, envelope, "recoverable network error: #{inspect(reason)}", nil)
     {:recoverable, {:network, reason}}
   end
 
-  defp classify({:error, error}, webhook, envelope) do
+  def classify({:error, error}, webhook, envelope) do
     # Anything else from Req — wrap as recoverable. Network is volatile; we'd
     # rather retry once than treat an unfamiliar transport error as terminal.
     log_failure(webhook, envelope, "recoverable transport error: #{inspect(error)}", nil)

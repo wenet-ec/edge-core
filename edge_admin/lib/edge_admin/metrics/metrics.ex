@@ -57,6 +57,7 @@ defmodule EdgeAdmin.Metrics do
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics
   alias EdgeAdmin.Metrics.Schemas.HostMetrics
   alias EdgeAdmin.Metrics.Schemas.NodeMetricsCache
+  alias EdgeAdmin.Metrics.Schemas.UnifiedMetrics
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Vpn
@@ -205,67 +206,43 @@ defmodule EdgeAdmin.Metrics do
   Returns unified metrics from all sources (host, agent) with graceful fallback.
 
   Fetches metrics in parallel from multiple sources with timeout protection.
-  Uses best-effort approach - partial failures return unavailable status per source.
+  Uses best-effort approach — partial failures return `available: false` per
+  source while the call itself still succeeds.
 
   ## Parameters
-  - `node_id` - Node UUID (string)
+  - `node_id` — Node UUID (string)
 
   ## Returns
-  - `{:ok, unified_metrics}` - Map with host and agent metrics (may be unavailable)
-  - Never returns error - always returns best available data
+  - `{:ok, %UnifiedMetrics{}}` — always. Each per-source field carries its
+    own `available` flag; the call itself never errors.
   """
-  @spec get_unified_metrics(binary()) :: {:ok, map()}
+  @spec get_unified_metrics(binary()) :: {:ok, UnifiedMetrics.t()}
   def get_unified_metrics(node_id) do
-    # Fetch all metrics in parallel
-    tasks = [
-      Task.async(fn -> get_host_metrics(node_id) end),
-      Task.async(fn -> get_agent_metrics(node_id) end)
-    ]
-
-    # Catch timeout exceptions - Task.await_many raises on timeout
-    results =
+    [host_result, agent_result] =
       try do
-        Task.await_many(tasks, 10_000)
+        Task.await_many(
+          [Task.async(fn -> get_host_metrics(node_id) end), Task.async(fn -> get_agent_metrics(node_id) end)],
+          10_000
+        )
       catch
-        :exit, {:timeout, _} ->
-          # Timeout - return error tuples for both metrics
-          [{:error, :timeout}, {:error, :timeout}]
+        :exit, {:timeout, _} -> [{:error, :timeout}, {:error, :timeout}]
       end
 
-    # Extract host metrics
-    host_data =
-      case Enum.at(results, 0) do
-        {:ok, metrics} ->
-          metrics
-          |> Map.from_struct()
-          |> Map.put(:available, true)
+    host = source_data(host_result)
+    agent = source_data(agent_result)
 
-        {:error, _} ->
-          %{available: false, error: "unavailable"}
-      end
-
-    # Extract agent metrics
-    agent_data =
-      case Enum.at(results, 1) do
-        {:ok, metrics} ->
-          metrics
-          |> Map.from_struct()
-          |> Map.put(:available, true)
-
-        {:error, _} ->
-          %{available: false, error: "unavailable"}
-      end
-
-    unified_metrics = %{
-      node_id: node_id,
-      timestamp: DateTime.utc_now(),
-      cluster_name: host_data[:cluster_name] || agent_data[:cluster_name],
-      host: host_data,
-      agent: agent_data
-    }
-
-    {:ok, unified_metrics}
+    {:ok,
+     %UnifiedMetrics{
+       node_id: node_id,
+       timestamp: DateTime.utc_now(),
+       cluster_name: host[:cluster_name] || agent[:cluster_name],
+       host: host,
+       agent: agent
+     }}
   end
+
+  defp source_data({:ok, metrics}), do: metrics |> Map.from_struct() |> Map.put(:available, true)
+  defp source_data({:error, _}), do: %{available: false, error: "unavailable"}
 
   # ===========================================================================
   # Node WireGuard Metrics (wireguard_exporter)

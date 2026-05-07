@@ -31,7 +31,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
       "asyncapi" => "3.1.0",
       "info" => %{
         "title" => "Edge Admin AsyncAPI",
-        "version" => "0.2.0",
+        "version" => :edge_admin |> Application.spec(:vsn) |> to_string(),
         "description" => """
         Lifecycle events published by Edge Admin to a configured message broker (NATS, Kafka/Redpanda, RabbitMQ, Redis, MQTT, AWS SNS, or Google Cloud Pub/Sub).
 

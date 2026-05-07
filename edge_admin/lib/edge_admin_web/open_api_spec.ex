@@ -77,7 +77,7 @@ defmodule EdgeAdminWeb.OpenApiSpec do
       servers: [],
       info: %Info{
         title: "Edge Admin OpenAPI",
-        version: "0.2.0",
+        version: :edge_admin |> Application.spec(:vsn) |> to_string(),
         description: """
         REST API for Edge Admin — the orchestration server for Edge Core.
 

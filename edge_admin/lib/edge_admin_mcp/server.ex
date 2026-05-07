@@ -69,7 +69,7 @@ defmodule EdgeAdminMcp.Server do
 
   use Anubis.Server,
     name: "edge-admin",
-    version: "0.2.0",
+    version: :edge_admin |> Application.spec(:vsn) |> to_string(),
     capabilities: [:tools]
 
   alias Anubis.Server.Handlers

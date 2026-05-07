@@ -1,0 +1,90 @@
+/* Edge Core — Swagger UI theme overrides
+ *
+ * Imports the upstream Swagger UI CSS, then overlays a *light* set of brand
+ * accents. Navy leads (top bar, links, primary buttons, headings); gold is
+ * sprinkled sparingly (one accent on the topbar + the Explore button) for
+ * brand recognition. HTTP method block colors are intentionally left as the
+ * upstream defaults — green POST, blue GET, etc. — because those are what
+ * developers expect to see and recolouring them buys nothing.
+ */
+@import url("https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.29.1/swagger-ui.css");
+
+:root {
+  --ec-navy-900: #1a2240;
+  --ec-navy-800: #24344d;
+  --ec-navy-700: #2e4263;
+  --ec-navy-600: #3e567c;
+  --ec-navy-500: #506d96;
+  --ec-gold-500: #c9942e;
+  --ec-gold-400: #d4a94a;
+}
+
+/* ---- top bar (navy with a thin gold underline as the brand accent) ----- */
+
+.swagger-ui .topbar {
+  background-color: var(--ec-navy-800);
+  border-bottom: 2px solid var(--ec-gold-500);
+}
+
+/* "Explore" download-url button — left at upstream defaults; gold here
+ * was visually loud against the navy bar. */
+.swagger-ui .topbar .download-url-wrapper .select-label select {
+  border-color: var(--ec-navy-600);
+}
+
+/* ---- info / title ------------------------------------------------ */
+
+.swagger-ui .info .title {
+  color: var(--ec-navy-800);
+}
+
+.swagger-ui .info a {
+  color: var(--ec-navy-600);
+}
+.swagger-ui .info a:hover {
+  color: var(--ec-navy-700);
+}
+
+/* ---- "Authorize" button (navy) ----------------------------------- */
+
+.swagger-ui .scheme-container .auth-wrapper .authorize {
+  background: var(--ec-navy-600);
+  border-color: var(--ec-navy-600);
+  color: #fff;
+}
+.swagger-ui .scheme-container .auth-wrapper .authorize:hover {
+  background: var(--ec-navy-700);
+  border-color: var(--ec-navy-700);
+}
+.swagger-ui .scheme-container .auth-wrapper .authorize svg {
+  fill: #fff;
+}
+
+/* ---- tags / sections (just tint the headings navy) ---------------- */
+
+.swagger-ui .opblock-tag {
+  color: var(--ec-navy-800);
+}
+
+/* ---- links throughout --------------------------------------------- */
+
+.swagger-ui a {
+  color: var(--ec-navy-600);
+}
+.swagger-ui a:hover {
+  color: var(--ec-navy-700);
+}
+
+/* ---- model / schema headings -------------------------------------- */
+
+.swagger-ui section.models h4,
+.swagger-ui .model-title,
+.swagger-ui .opblock-summary-path,
+.swagger-ui .opblock-summary-path__deprecated {
+  color: var(--ec-navy-800);
+}
+
+/* HTTP method block colors are NOT overridden — keep upstream defaults
+ * (green POST, blue GET, orange PUT, red DELETE) so the visual cues are
+ * what developers expect.
+ */

@@ -20,7 +20,7 @@ defmodule EdgeAdminWeb do
 
   # Only files actually present in priv/static — narrowing this list shrinks
   # the gzip cache and avoids advertising paths that 404.
-  def static_paths, do: ~w(favicon.ico robots.txt)
+  def static_paths, do: ~w(assets favicon.ico robots.txt)
 
   def router do
     quote do

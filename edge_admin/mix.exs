@@ -98,13 +98,12 @@ defmodule EdgeAdmin.Mixfile do
 
       # API and MCP
       {:open_api_spex, "~> 3.22"},
-      {:redoc_ui_plug, "~> 0.2"},
       {:anubis_mcp, "~> 1.3"},
 
       # Database
       {:ecto_sql, "~> 3.13"},
       {:postgrex, "~> 0.22"},
-      {:ecto_sqlite3, "~> 0.22"},
+      {:ecto_sqlite3, "~> 0.23"},
       {:uniq, "~> 0.6"},
       {:flop, "~> 0.26"},
       {:cloak, "~> 1.1"},
@@ -164,7 +163,7 @@ defmodule EdgeAdmin.Mixfile do
       # flattens dynamic deps at publish time, so the Hex package always lists
       # `quicer` as non-optional even though the script would exclude it locally.
       {:emqtt, github: "emqx/emqtt", tag: "1.15.0"},
-      {:ex_aws, "~> 2.6"},
+      {:ex_aws, "~> 2.7"},
       {:ex_aws_sns, "~> 2.3"},
       {:sweet_xml, "~> 0.7"},
       # Google Cloud Pub/Sub auth — OAuth2 token manager + refresh. No

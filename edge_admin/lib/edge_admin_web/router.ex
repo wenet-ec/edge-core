@@ -62,8 +62,12 @@ defmodule EdgeAdminWeb.Router do
   scope "/" do
     pipe_through(:api_docs_ui)
 
-    get("/swaggerui", OpenApiSpex.Plug.SwaggerUI, path: "/api/openapi")
-    get("/redoc", Redoc.Plug.RedocUI, spec_url: "/api/openapi")
+    get("/swaggerui", OpenApiSpex.Plug.SwaggerUI,
+      path: "/api/openapi",
+      swagger_ui_css_url: "/assets/swagger-edge-core.css"
+    )
+
+    get("/redoc", EdgeAdminWeb.Plugs.RedocUI, spec_url: "/api/openapi")
     get("/asyncdoc", EdgeAdminWeb.Controllers.AsyncApi.DocController, :show)
   end
 

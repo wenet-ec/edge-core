@@ -4,7 +4,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetNode do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdminMcp.Tools.Nodes.NodeData
+  alias EdgeAdmin.Nodes.Schemas.Node, as: NodeSchema
 
   @impl true
   def title, do: "Get Node"
@@ -19,7 +19,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetNode do
   def execute(%{node_id: id}, frame) do
     case Nodes.get_node(id) do
       {:ok, node} ->
-        {:reply, Response.json(Response.tool(), NodeData.data(node)), frame}
+        {:reply, Response.json(Response.tool(), NodeSchema.to_public(node)), frame}
 
       {:error, :not_found} ->
         {:reply, error_response(:not_found, "Node #{id} not found"), frame}

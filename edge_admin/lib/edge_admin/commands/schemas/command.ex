@@ -15,6 +15,9 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
     }
   }
 
+  @derive {Jason.Encoder,
+           only: [:id, :command_text, :timeout, :expired_at, :targeting, :inserted_at, :updated_at]}
+
   schema "commands" do
     # Maps to TEXT in database
     field(:command_text, :string)

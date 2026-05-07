@@ -4,7 +4,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetAlias do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdminMcp.Tools.Nodes.AliasData
+  alias EdgeAdmin.Nodes.Schemas.Alias
 
   @impl true
   def title, do: "Get Alias"
@@ -19,7 +19,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetAlias do
   def execute(%{alias_id: id}, frame) do
     case Nodes.get_alias(id) do
       {:ok, alias_record} ->
-        {:reply, Response.json(Response.tool(), AliasData.data(alias_record)), frame}
+        {:reply, Response.json(Response.tool(), Alias.to_public(alias_record)), frame}
 
       {:error, :not_found} ->
         {:reply, error_response(:not_found, "Alias #{id} not found"), frame}

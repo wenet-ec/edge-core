@@ -20,7 +20,6 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommands do
 
   alias EdgeAdmin.Commands
   alias EdgeAdminMcp.FlopParams
-  alias EdgeAdminMcp.Tools.Commands.CommandData
 
   @impl true
   def title, do: "List Commands"
@@ -55,7 +54,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommands do
 
     case Commands.list_commands(query) do
       {:ok, {commands, meta}} ->
-        {:reply, Response.json(Response.tool(), paginated(commands, meta, &CommandData.data/1)), frame}
+        {:reply, Response.json(Response.tool(), paginated(commands, meta)), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}

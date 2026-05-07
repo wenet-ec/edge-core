@@ -4,7 +4,6 @@ defmodule EdgeAdminMcp.Tools.Commands.GetCommand do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Commands
-  alias EdgeAdminMcp.Tools.Commands.CommandData
 
   @impl true
   def title, do: "Get Command"
@@ -19,7 +18,7 @@ defmodule EdgeAdminMcp.Tools.Commands.GetCommand do
   def execute(%{command_id: id}, frame) do
     case Commands.get_command(id) do
       {:ok, command} ->
-        {:reply, Response.json(Response.tool(), CommandData.data(command)), frame}
+        {:reply, Response.json(Response.tool(), command), frame}
 
       {:error, :not_found} ->
         {:reply, error_response(:not_found, "Command #{id} not found"), frame}

@@ -24,7 +24,6 @@ defmodule EdgeAdminMcp.Tools.Events.CreateWebhook do
   alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Events.Webhooks
   alias EdgeAdmin.Events.Webhooks.Limits
-  alias EdgeAdminMcp.Tools.Events.WebhookData
 
   @max_url_length Limits.max_url_length()
   @min_secret_bytes Limits.min_secret_bytes()
@@ -65,7 +64,7 @@ defmodule EdgeAdminMcp.Tools.Events.CreateWebhook do
 
     case Webhooks.create_webhook(attrs) do
       {:ok, webhook} ->
-        {:reply, Response.json(Response.tool(), WebhookData.data(webhook)), frame}
+        {:reply, Response.json(Response.tool(), webhook), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}

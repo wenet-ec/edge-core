@@ -35,7 +35,7 @@ defmodule EdgeAdminMcp do
 
       alias Anubis.Server.Response
 
-      defp paginated(items, meta, mapper), do: EdgeAdminMcp.paginated(items, meta, mapper)
+      defp paginated(items, meta, mapper \\ & &1), do: EdgeAdminMcp.paginated(items, meta, mapper)
       defp error_response(reason), do: EdgeAdminMcp.error_response(reason)
       defp error_response(code, msg), do: EdgeAdminMcp.error_response(code, msg)
       defp put_if(m, _k, nil), do: m
@@ -51,7 +51,7 @@ defmodule EdgeAdminMcp do
     end
   end
 
-  def paginated(items, meta, mapper) do
+  def paginated(items, meta, mapper \\ & &1) do
     %{
       items: Enum.map(items, mapper),
       page: meta.current_page,

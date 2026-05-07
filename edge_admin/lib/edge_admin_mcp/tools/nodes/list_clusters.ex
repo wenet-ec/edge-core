@@ -21,8 +21,8 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListClusters do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdminMcp.FlopParams
-  alias EdgeAdminMcp.Tools.Nodes.ClusterData
 
   @impl true
   def title, do: "List Clusters"
@@ -58,7 +58,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListClusters do
 
     case Nodes.list_clusters(query) do
       {:ok, {clusters, meta}} ->
-        {:reply, Response.json(Response.tool(), paginated(clusters, meta, &ClusterData.data/1)), frame}
+        {:reply, Response.json(Response.tool(), paginated(clusters, meta, &Cluster.to_public/1)), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}

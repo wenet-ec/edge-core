@@ -64,6 +64,25 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
   end
 
   @doc """
+  Returns the public-facing map for this enrollment key — the canonical
+  shape both REST and MCP serialize. Requires `cluster` to be preloaded.
+  """
+  @spec to_public(t()) :: map()
+  def to_public(%__MODULE__{cluster: cluster} = key) do
+    %{
+      id: key.id,
+      cluster_name: cluster.name,
+      name: key.name,
+      key: key.key,
+      uses_remaining: key.uses_remaining,
+      expired_at: key.expired_at,
+      last_used_at: key.last_used_at,
+      inserted_at: key.inserted_at,
+      updated_at: key.updated_at
+    }
+  end
+
+  @doc """
   Returns true if this key has been fully consumed (uses_remaining == 0).
   Keys with uses_remaining == nil (unlimited) or > 0 are not spent.
   """

@@ -14,7 +14,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.UpdateEnrollmentKey do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdminMcp.Tools.Nodes.EnrollmentKeyData
+  alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
 
   @impl true
   def title, do: "Update Enrollment Key"
@@ -40,7 +40,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.UpdateEnrollmentKey do
 
         case Nodes.update_enrollment_key(key, attrs) do
           {:ok, updated} ->
-            {:reply, Response.json(Response.tool(), EnrollmentKeyData.data(updated)), frame}
+            {:reply, Response.json(Response.tool(), EnrollmentKey.to_public(updated)), frame}
 
           {:error, reason} ->
             {:reply, error_response(reason), frame}

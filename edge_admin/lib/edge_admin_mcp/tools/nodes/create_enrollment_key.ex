@@ -14,7 +14,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateEnrollmentKey do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdminMcp.Tools.Nodes.EnrollmentKeyData
+  alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
 
   @impl true
   def title, do: "Create Enrollment Key"
@@ -40,7 +40,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateEnrollmentKey do
 
         case Nodes.create_enrollment_key(cluster, attrs) do
           {:ok, key} ->
-            {:reply, Response.json(Response.tool(), EnrollmentKeyData.data(key)), frame}
+            {:reply, Response.json(Response.tool(), EnrollmentKey.to_public(key)), frame}
 
           {:error, reason} ->
             {:reply, error_response(reason), frame}

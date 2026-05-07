@@ -15,7 +15,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateAlias do
 
   alias EdgeAdmin.Naming
   alias EdgeAdmin.Nodes
-  alias EdgeAdminMcp.Tools.Nodes.AliasData
+  alias EdgeAdmin.Nodes.Schemas.Alias
 
   @min_length Naming.alias_name_min_length()
   @max_length Naming.alias_name_max_length()
@@ -37,7 +37,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateAlias do
       {:ok, node} ->
         case Nodes.create_alias(node, %{"name" => name}) do
           {:ok, alias_record} ->
-            {:reply, Response.json(Response.tool(), AliasData.data(alias_record)), frame}
+            {:reply, Response.json(Response.tool(), Alias.to_public(alias_record)), frame}
 
           {:error, reason} ->
             {:reply, error_response(reason), frame}

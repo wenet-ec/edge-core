@@ -24,7 +24,6 @@ defmodule EdgeAdminMcp.Tools.Events.ListWebhooks do
 
   alias EdgeAdmin.Events.Webhooks
   alias EdgeAdminMcp.FlopParams
-  alias EdgeAdminMcp.Tools.Events.WebhookData
 
   @impl true
   def title, do: "List Webhooks"
@@ -56,7 +55,7 @@ defmodule EdgeAdminMcp.Tools.Events.ListWebhooks do
 
     case Webhooks.list_webhooks(query) do
       {:ok, {webhooks, meta}} ->
-        {:reply, Response.json(Response.tool(), paginated(webhooks, meta, &WebhookData.data/1)), frame}
+        {:reply, Response.json(Response.tool(), paginated(webhooks, meta)), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}

@@ -19,7 +19,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.CreateSshUsername do
   alias EdgeAdmin.Naming
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Ssh
-  alias EdgeAdminMcp.Tools.Ssh.SshUsernameData
+  alias EdgeAdmin.Ssh.Schemas.SshUsername
 
   @username_min_length Naming.ssh_username_min_length()
   @username_max_length Naming.ssh_username_max_length()
@@ -59,7 +59,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.CreateSshUsername do
 
         case Ssh.create_ssh_username_with_keys(node, attrs) do
           {:ok, username} ->
-            {:reply, Response.json(Response.tool(), SshUsernameData.data(username)), frame}
+            {:reply, Response.json(Response.tool(), SshUsername.to_public(username)), frame}
 
           {:error, reason} ->
             {:reply, error_response(reason), frame}

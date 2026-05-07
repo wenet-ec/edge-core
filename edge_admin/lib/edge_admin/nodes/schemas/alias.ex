@@ -71,6 +71,25 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
   end
 
   @doc """
+  Returns the public-facing map for this alias — the canonical shape both
+  REST (`AliasJSON`) and MCP (`get_alias`/`list_aliases`/`create_alias`) serialize.
+
+  Requires `cluster` association to be preloaded.
+  """
+  @spec to_public(t()) :: map()
+  def to_public(%__MODULE__{cluster: cluster} = a) do
+    %{
+      id: a.id,
+      name: a.name,
+      vpn_hostname: vpn_hostname(a),
+      node_id: a.node_id,
+      cluster_name: cluster.name,
+      inserted_at: a.inserted_at,
+      updated_at: a.updated_at
+    }
+  end
+
+  @doc """
   Returns the full VPN hostname for this alias.
 
   ## Format

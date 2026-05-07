@@ -31,7 +31,6 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.CreateSelfUpdateRequest do
 
   alias EdgeAdmin.Nodes.Targeting
   alias EdgeAdmin.SelfUpdates
-  alias EdgeAdminMcp.Tools.SelfUpdates.SelfUpdateRequestData
 
   @impl true
   def title, do: "Create Self-Update Request"
@@ -46,7 +45,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.CreateSelfUpdateRequest do
   def execute(params, frame) do
     case SelfUpdates.create_self_update_request(%{"targeting" => params.targeting}) do
       {:ok, request} ->
-        {:reply, Response.json(Response.tool(), SelfUpdateRequestData.data(request)), frame}
+        {:reply, Response.json(Response.tool(), request), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}

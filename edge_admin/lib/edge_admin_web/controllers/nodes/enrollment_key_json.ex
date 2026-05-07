@@ -4,24 +4,10 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyJSON do
   alias EdgeAdminWeb.ResponseEnvelope
 
   def index(%{conn: conn, enrollment_keys: keys, meta: flop_meta}) do
-    ResponseEnvelope.success(conn, Enum.map(keys, &data/1), flop_meta)
+    ResponseEnvelope.success(conn, Enum.map(keys, &EnrollmentKey.to_public/1), flop_meta)
   end
 
   def show(%{conn: conn, enrollment_key: key}) do
-    ResponseEnvelope.success(conn, data(key))
-  end
-
-  defp data(%EnrollmentKey{cluster: cluster} = key) do
-    %{
-      id: key.id,
-      cluster_name: cluster.name,
-      name: key.name,
-      key: key.key,
-      uses_remaining: key.uses_remaining,
-      expired_at: key.expired_at,
-      last_used_at: key.last_used_at,
-      inserted_at: key.inserted_at,
-      updated_at: key.updated_at
-    }
+    ResponseEnvelope.success(conn, EnrollmentKey.to_public(key))
   end
 end

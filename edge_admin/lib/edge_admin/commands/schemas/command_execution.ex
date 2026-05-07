@@ -106,4 +106,32 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   """
   def expired_at(%__MODULE__{command: %{expired_at: expired_at}}), do: expired_at
   def expired_at(%__MODULE__{}), do: nil
+
+  @doc """
+  Returns the public-facing map for this command execution — the canonical
+  shape both REST and MCP serialize. Includes virtuals derived from the
+  preloaded `command` and `cluster` associations (`command_text`,
+  `timeout`, `expired_at`, `cluster_name`).
+  """
+  @spec to_public(t()) :: map()
+  def to_public(%__MODULE__{} = e) do
+    %{
+      id: e.id,
+      command_id: e.command_id,
+      node_id: e.node_id,
+      cluster_name: cluster_name(e),
+      target_all: e.target_all,
+      status: e.status,
+      command_text: command_text(e),
+      timeout: timeout(e),
+      output: e.output,
+      exit_code: e.exit_code,
+      sent_at: e.sent_at,
+      completed_at: e.completed_at,
+      cancelled_at: e.cancelled_at,
+      expired_at: expired_at(e),
+      inserted_at: e.inserted_at,
+      updated_at: e.updated_at
+    }
+  end
 end

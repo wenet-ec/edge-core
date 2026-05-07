@@ -48,4 +48,33 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
     |> unique_constraint([:username, :node_id], name: :ssh_usernames_node_id_username_index)
     |> foreign_key_constraint(:node_id)
   end
+
+  @doc """
+  Returns the public-facing map for this SSH username — the canonical
+  shape both REST and MCP serialize. Includes a derived `has_password`
+  flag and a nested array of public keys (without password hashes).
+  Requires `ssh_public_keys` to be preloaded.
+  """
+  @spec to_public(t()) :: map()
+  def to_public(%__MODULE__{ssh_public_keys: ssh_public_keys} = u) do
+    %{
+      id: u.id,
+      username: u.username,
+      has_password: has_password?(u),
+      node_id: u.node_id,
+      public_keys: Enum.map(ssh_public_keys, &public_key_summary/1),
+      inserted_at: u.inserted_at,
+      updated_at: u.updated_at
+    }
+  end
+
+  defp public_key_summary(%EdgeAdmin.Ssh.Schemas.SshPublicKey{} = key) do
+    %{
+      id: key.id,
+      key_name: key.key_name,
+      public_key: key.public_key,
+      inserted_at: key.inserted_at,
+      updated_at: key.updated_at
+    }
+  end
 end

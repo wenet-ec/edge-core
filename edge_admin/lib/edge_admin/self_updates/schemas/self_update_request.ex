@@ -26,6 +26,8 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest do
     }
   }
 
+  @derive {Jason.Encoder, only: [:id, :targeting, :status, :summary, :inserted_at, :updated_at]}
+
   schema "self_update_requests" do
     field(:targeting, :map)
     field(:status, :string, default: "pending")

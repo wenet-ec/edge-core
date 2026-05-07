@@ -47,7 +47,6 @@ defmodule EdgeAdminMcp.Tools.Commands.CreateCommand do
 
   alias EdgeAdmin.Commands
   alias EdgeAdmin.Nodes.Targeting
-  alias EdgeAdminMcp.Tools.Commands.CommandData
 
   @impl true
   def title, do: "Create Command"
@@ -70,7 +69,7 @@ defmodule EdgeAdminMcp.Tools.Commands.CreateCommand do
 
     case Commands.create_command_and_executions(attrs) do
       {:ok, command} ->
-        {:reply, Response.json(Response.tool(), CommandData.data(command)), frame}
+        {:reply, Response.json(Response.tool(), command), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}

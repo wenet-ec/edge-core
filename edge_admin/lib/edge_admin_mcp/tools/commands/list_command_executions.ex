@@ -27,8 +27,8 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Commands
+  alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdminMcp.FlopParams
-  alias EdgeAdminMcp.Tools.Commands.CommandExecutionData
 
   @impl true
   def title, do: "List Command Executions"
@@ -83,7 +83,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
 
     case Commands.list_command_executions(query) do
       {:ok, {executions, meta}} ->
-        {:reply, Response.json(Response.tool(), paginated(executions, meta, &CommandExecutionData.data/1)), frame}
+        {:reply, Response.json(Response.tool(), paginated(executions, meta, &CommandExecution.to_public/1)), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}

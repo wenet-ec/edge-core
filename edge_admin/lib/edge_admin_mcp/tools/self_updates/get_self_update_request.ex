@@ -4,7 +4,6 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.GetSelfUpdateRequest do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.SelfUpdates
-  alias EdgeAdminMcp.Tools.SelfUpdates.SelfUpdateRequestData
 
   @impl true
   def title, do: "Get Self-Update Request"
@@ -19,7 +18,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.GetSelfUpdateRequest do
   def execute(%{request_id: id}, frame) do
     case SelfUpdates.get_self_update_request(id) do
       {:ok, request} ->
-        {:reply, Response.json(Response.tool(), SelfUpdateRequestData.data(request)), frame}
+        {:reply, Response.json(Response.tool(), request), frame}
 
       {:error, :not_found} ->
         {:reply, error_response(:not_found, "Self-update request #{id} not found"), frame}

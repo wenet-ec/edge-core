@@ -86,14 +86,21 @@ defmodule EdgeAgent.MetricsServers.Network do
     _ -> nil
   end
 
-  # `ip addr show` starts each interface block with `<index>: <name>:`. Split
-  # on those header lines so each chunk carries the interface header plus its
-  # inet/inet6 entries.
-  defp split_into_interfaces(output) do
+  @doc false
+  # Public for unit testing. `ip addr show` starts each interface block with
+  # `<index>: <name>:`. Split on those header lines so each chunk carries the
+  # interface header plus its inet/inet6 entries.
+  @spec split_into_interfaces(String.t()) :: [String.t()]
+  def split_into_interfaces(output) do
     String.split(output, ~r/\n(?=\d+:\s+\S+:)/, trim: true)
   end
 
-  defp excluded_interface?(block) do
+  @doc false
+  # Public for unit testing. Returns true if the interface block belongs to a
+  # virtual / bridge / loopback interface that should not appear as the
+  # node's primary IP. Drift here means metrics advertise the wrong address.
+  @spec excluded_interface?(String.t()) :: boolean()
+  def excluded_interface?(block) do
     case Regex.run(~r/^\d+:\s+(\S+?):/, block) do
       [_, name] ->
         # Loopback, WireGuard, Docker bridges, veth pairs.
@@ -108,13 +115,21 @@ defmodule EdgeAgent.MetricsServers.Network do
     end
   end
 
-  defp first_global_inet(block) do
+  @doc false
+  # Public for unit testing. Walks the lines of a single interface block and
+  # returns the first global-scope IPv4 address found, or nil.
+  @spec first_global_inet(String.t()) :: String.t() | nil
+  def first_global_inet(block) do
     block
     |> String.split("\n")
     |> Enum.find_value(&extract_ip_from_line/1)
   end
 
-  defp extract_ip_from_line(line) do
+  @doc false
+  # Public for unit testing. Returns the IPv4 from a single `inet ...` line,
+  # but only when that line is `scope global` and not 127.0.0.1.
+  @spec extract_ip_from_line(String.t()) :: String.t() | nil
+  def extract_ip_from_line(line) do
     case Regex.run(~r/inet\s+(\d+\.\d+\.\d+\.\d+)\/\d+.+scope global/, line) do
       [_, ip] when ip != "127.0.0.1" -> ip
       _ -> nil

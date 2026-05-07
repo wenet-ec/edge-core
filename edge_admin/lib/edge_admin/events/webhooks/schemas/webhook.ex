@@ -4,6 +4,7 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
   use EdgeAdmin.Schema
 
   alias EdgeAdmin.Events.Catalog
+  alias EdgeAdmin.Events.Webhooks.Limits
   alias EdgeAdmin.Vault.EncryptedBinary
   alias EdgeAdmin.Vault.EncryptedMap
 
@@ -36,8 +37,13 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
     timestamps()
   end
 
-  @max_events 20
-  @min_secret_bytes 32
+  @max_url_length Limits.max_url_length()
+  @min_secret_bytes Limits.min_secret_bytes()
+  @max_secret_bytes Limits.max_secret_bytes()
+  @max_headers Limits.max_headers()
+  @max_header_value_length Limits.max_header_value_length()
+  @min_subscribed_events Limits.min_subscribed_events()
+  @max_subscribed_events Limits.max_subscribed_events()
 
   @doc false
   def changeset(webhook, attrs) do
@@ -54,6 +60,9 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
     case get_change(changeset, :url) do
       nil ->
         changeset
+
+      url when byte_size(url) > @max_url_length ->
+        add_error(changeset, :url, "must be at most #{@max_url_length} characters")
 
       url ->
         case URI.parse(url) do
@@ -75,6 +84,9 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
       secret when is_binary(secret) and byte_size(secret) < @min_secret_bytes ->
         add_error(changeset, :secret, "must be at least #{@min_secret_bytes} bytes")
 
+      secret when is_binary(secret) and byte_size(secret) > @max_secret_bytes ->
+        add_error(changeset, :secret, "must be at most #{@max_secret_bytes} bytes")
+
       _ ->
         changeset
     end
@@ -86,15 +98,22 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
         changeset
 
       headers when is_map(headers) ->
-        bad =
-          Enum.find(headers, fn {k, v} ->
-            not (is_binary(k) and is_binary(v))
-          end)
+        cond do
+          map_size(headers) > @max_headers ->
+            add_error(changeset, :headers, "must have at most #{@max_headers} entries")
 
-        if bad do
-          add_error(changeset, :headers, "all keys and values must be strings")
-        else
-          changeset
+          not Enum.all?(headers, fn {k, v} -> is_binary(k) and is_binary(v) end) ->
+            add_error(changeset, :headers, "all keys and values must be strings")
+
+          oversized_header_value?(headers) ->
+            add_error(
+              changeset,
+              :headers,
+              "each header value must be at most #{@max_header_value_length} characters"
+            )
+
+          true ->
+            changeset
         end
 
       _ ->
@@ -102,16 +121,20 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
     end
   end
 
+  defp oversized_header_value?(headers) do
+    Enum.any?(headers, fn {_k, v} -> is_binary(v) and String.length(v) > @max_header_value_length end)
+  end
+
   defp validate_subscribed_events(changeset) do
     case get_change(changeset, :subscribed_events) do
       nil ->
         changeset
 
-      [] ->
+      events when length(events) < @min_subscribed_events ->
         add_error(changeset, :subscribed_events, "must include at least one event type")
 
-      events when length(events) > @max_events ->
-        add_error(changeset, :subscribed_events, "cannot exceed #{@max_events} events")
+      events when length(events) > @max_subscribed_events ->
+        add_error(changeset, :subscribed_events, "cannot exceed #{@max_subscribed_events} events")
 
       events ->
         catalog = Catalog.all_event_types()

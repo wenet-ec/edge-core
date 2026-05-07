@@ -21,8 +21,19 @@ defmodule EdgeAdminMcp.Tools.Events.CreateWebhook do
   """
   use EdgeAdminMcp, :tool
 
+  alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Events.Webhooks
+  alias EdgeAdmin.Events.Webhooks.Limits
   alias EdgeAdminMcp.Tools.Events.WebhookData
+
+  @max_url_length Limits.max_url_length()
+  @min_secret_bytes Limits.min_secret_bytes()
+  @max_secret_bytes Limits.max_secret_bytes()
+  @max_headers Limits.max_headers()
+  @max_header_value_length Limits.max_header_value_length()
+  @min_subscribed_events Limits.min_subscribed_events()
+  @max_subscribed_events Limits.max_subscribed_events()
+  @max_event_type_length Limits.max_event_type_length()
 
   @impl true
   def title, do: "Create Webhook"
@@ -30,10 +41,13 @@ defmodule EdgeAdminMcp.Tools.Events.CreateWebhook do
   def annotations, do: %{"destructiveHint" => false, "idempotentHint" => false, "openWorldHint" => false}
 
   schema do
-    field :url, {:required, :string}, max_length: 2048, regex: ~r{^https?://.+}
-    field :secret, {:required, :string}, min_length: 32, max_length: 256
-    field :headers, {:map, :string, :string}
-    field :subscribed_events, {:required, {:list, {:string, max: 256}}}, min: 1, max: 20
+    field :url, {:required, :string}, max_length: @max_url_length, regex: ~r{^https?://.+}
+    field :secret, {:required, :string}, min_length: @min_secret_bytes, max_length: @max_secret_bytes
+    field :headers, {:custom, {__MODULE__, :validate_headers}}
+
+    field :subscribed_events, {:required, {:list, {:custom, {__MODULE__, :validate_event_type}}}},
+      min: @min_subscribed_events,
+      max: @max_subscribed_events
   end
 
   @impl true
@@ -57,4 +71,50 @@ defmodule EdgeAdminMcp.Tools.Events.CreateWebhook do
         {:reply, error_response(reason), frame}
     end
   end
+
+  @doc """
+  Validates the `headers` map: string→string, at most #{@max_headers}
+  entries, each value ≤#{@max_header_value_length} chars. Returns the
+  original map on success.
+  """
+  @spec validate_headers(term()) :: {:ok, map()} | {:error, String.t(), keyword()}
+  def validate_headers(value) when is_map(value) do
+    cond do
+      map_size(value) > @max_headers ->
+        {:error, "headers map must have at most %{max} entries, got %{count}", max: @max_headers,
+         count: map_size(value)}
+
+      not Enum.all?(value, fn {k, v} -> is_binary(k) and is_binary(v) end) ->
+        {:error, "headers must be a string→string map", []}
+
+      Enum.any?(value, fn {_k, v} -> String.length(v) > @max_header_value_length end) ->
+        {:error, "each header value must be at most %{max} characters", max: @max_header_value_length}
+
+      true ->
+        {:ok, value}
+    end
+  end
+
+  def validate_headers(_), do: {:error, "headers must be a map", []}
+
+  @doc """
+  Validates a single event type string against `Catalog.all_event_types/0`,
+  also enforcing the per-string length cap. Returns the original string on
+  success.
+  """
+  @spec validate_event_type(term()) :: {:ok, String.t()} | {:error, String.t(), keyword()}
+  def validate_event_type(value) when is_binary(value) do
+    cond do
+      String.length(value) > @max_event_type_length ->
+        {:error, "event type must be at most %{max} characters", max: @max_event_type_length}
+
+      value in Catalog.all_event_types() ->
+        {:ok, value}
+
+      true ->
+        {:error, "%{value} is not a known event type — see /asyncdoc for the catalog", value: value}
+    end
+  end
+
+  def validate_event_type(_), do: {:error, "event type must be a string", []}
 end

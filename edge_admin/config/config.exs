@@ -55,7 +55,8 @@ config :phoenix, :filter_parameters, [
   "enrollment_token",
   "enrollment_key",
   "secret",
-  "token"
+  "token",
+  "headers"
 ]
 
 config :phoenix, :json_library, Jason

@@ -5,10 +5,14 @@ defmodule EdgeAdmin.Sentry do
     "first_name",
     "last_name",
     "email",
+    "password",
     "api_token",
     "proxy_password",
     "enrollment_token",
-    "enrollment_key"
+    "enrollment_key",
+    "secret",
+    "token",
+    "headers"
   ]
   @scrubbed_value "*********"
 

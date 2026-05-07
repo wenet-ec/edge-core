@@ -346,7 +346,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
 
       {message_ref,
        build_message(
-         address,
+         event_type,
          schema_ref,
          Catalog.description(event_type),
          kafka_key,

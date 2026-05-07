@@ -96,7 +96,12 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
   end
 
   defmodule CommandCreateRequest do
-    @moduledoc false
+    @moduledoc """
+    The `targeting` shape below mirrors the canonical Peri schema in
+    `EdgeAdmin.Nodes.Targeting` (the MCP layer-1 gate). Both surfaces are
+    independent layer-1 validators — when adding a filter, update **both**
+    here and in `EdgeAdmin.Nodes.Targeting`.
+    """
 
     schema(%{
       title: "CommandCreateRequest",

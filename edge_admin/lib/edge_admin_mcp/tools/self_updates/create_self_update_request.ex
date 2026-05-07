@@ -10,32 +10,15 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.CreateSelfUpdateRequest do
 
   ## targeting
 
-  Required map. Three forms:
+  Required nested object selecting which nodes to update. Same shape as
+  `create_command` — supports three top-level shapes
+  (`type: "all" | "nodes" | "clusters"`) with optional `node_filters` /
+  `cluster_filters` for refinement (AND logic). Full shape reference and
+  field-level docs: `EdgeAdmin.Nodes.Targeting`.
 
-  - `%{"type" => "all"}` — every eligible node in the fleet.
-  - `%{"type" => "nodes", "node_ids" => ["<uuid>", ...]}` — specific nodes by ID.
-  - `%{"type" => "clusters", "cluster_names" => ["prod", ...]}` — every node in those clusters.
+  Quick example targeting only nodes still on an old version:
 
-  Optional `node_filters` and `cluster_filters` further refine the target
-  set (AND logic with the type/ids/names selection):
-
-  - `node_filters` keys: `id_type` (`"persistent"` | `"random"`), `status`
-    (`"healthy"` | `"unhealthy"` | `"unreachable"`), `cluster_name` (string,
-    wildcards `prod*` / `*staging`), `version` (string with wildcards),
-    `self_update_enabled` (boolean), `last_seen_at__gte` /
-    `last_seen_at__lte` / `inserted_at__gte` / `inserted_at__lte` /
-    `updated_at__gte` / `updated_at__lte` (ISO8601 datetime or date).
-  - `cluster_filters` keys: `name` (string with wildcards), `ipv4_range`
-    (CIDR string), `node_count` / `node_count__gte` / `node_count__lte`
-    (integer), `has_node_limit` (boolean), `inserted_at__gte` /
-    `inserted_at__lte` / `updated_at__gte` / `updated_at__lte`.
-
-  Example with filters:
-
-      %{
-        "type" => "all",
-        "node_filters" => %{"version" => "0.1.*"}
-      }
+      %{"type" => "all", "node_filters" => %{"version" => "0.1.*"}}
 
   ## Result
 
@@ -46,6 +29,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.CreateSelfUpdateRequest do
   """
   use EdgeAdminMcp, :tool
 
+  alias EdgeAdmin.Nodes.Targeting
   alias EdgeAdmin.SelfUpdates
   alias EdgeAdminMcp.Tools.SelfUpdates.SelfUpdateRequestData
 
@@ -55,7 +39,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.CreateSelfUpdateRequest do
   def annotations, do: %{"destructiveHint" => true, "idempotentHint" => false, "openWorldHint" => false}
 
   schema do
-    field :targeting, {:required, :map}
+    field :targeting, {:required, Targeting.peri_schema()}
   end
 
   @impl true

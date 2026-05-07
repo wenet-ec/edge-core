@@ -111,13 +111,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
   end
 
   defmodule SelfUpdateRequestCreateRequest do
-    @moduledoc """
-    The `targeting` shape below mirrors the canonical Peri schema in
-    `EdgeAdmin.Nodes.Targeting` (the MCP layer-1 gate) and is identical to
-    `EdgeAdminWeb.Schemas.Commands.CommandSchemas.CommandCreateRequest`'s
-    targeting block. All three are independent layer-1 validators — when
-    adding a filter, update all three.
-    """
+    @moduledoc false
 
     schema(%{
       title: "SelfUpdateRequestCreateRequest",

@@ -47,6 +47,9 @@ defmodule EdgeAdmin.Ssh do
   alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
+  alias EdgeAdmin.Ssh.CredentialMatcher
+  alias EdgeAdmin.Ssh.Filters.SshPublicKeyFilters
+  alias EdgeAdmin.Ssh.Filters.SshUsernameFilters
   alias EdgeAdmin.Ssh.Forms
   alias EdgeAdmin.Ssh.Schemas.SshPublicKey
   alias EdgeAdmin.Ssh.Schemas.SshUsername
@@ -195,7 +198,7 @@ defmodule EdgeAdmin.Ssh do
           {:error, _meta} -> nil
         end
 
-      {verified, auth_method} = check_credential(ssh_username, password, public_key)
+      {verified, auth_method} = CredentialMatcher.check(ssh_username, password, public_key)
       result = if verified, do: :success, else: :failure
 
       :telemetry.execute(
@@ -213,37 +216,6 @@ defmodule EdgeAdmin.Ssh do
       })
 
       {:ok, verified}
-    end
-  end
-
-  defp check_credential(nil, _password, _public_key), do: {false, :unknown}
-
-  defp check_credential(%SshUsername{password_hash: nil}, password, _) when not is_nil(password), do: {false, :password}
-
-  defp check_credential(%SshUsername{password_hash: hash}, password, _) when not is_nil(password),
-    do: {Argon2.verify_pass(password, hash), :password}
-
-  defp check_credential(%SshUsername{ssh_public_keys: []}, _, public_key) when not is_nil(public_key),
-    do: {false, :public_key}
-
-  defp check_credential(%SshUsername{ssh_public_keys: keys}, _, public_key) when not is_nil(public_key) do
-    provided_key_normalized = normalize_ssh_key(public_key)
-
-    result =
-      Enum.any?(keys, fn stored_key ->
-        stored_key_normalized = stored_key.public_key |> String.trim() |> normalize_ssh_key()
-        provided_key_normalized == stored_key_normalized
-      end)
-
-    {result, :public_key}
-  end
-
-  # Normalizes SSH key by removing comment (keeps algorithm + key data only)
-  defp normalize_ssh_key(key_string) do
-    case String.split(key_string, " ", parts: 3) do
-      [algorithm, key_data, _comment] -> "#{algorithm} #{key_data}"
-      [algorithm, key_data] -> "#{algorithm} #{key_data}"
-      _ -> String.trim(key_string)
     end
   end
 
@@ -291,7 +263,7 @@ defmodule EdgeAdmin.Ssh do
       if has_password_filters == [] do
         base_query
       else
-        apply_has_password_filters(base_query, has_password_filters)
+        SshUsernameFilters.apply_has_password(base_query, has_password_filters)
       end
 
     # Apply cluster_name filter if present
@@ -299,7 +271,7 @@ defmodule EdgeAdmin.Ssh do
       if cluster_name_filters == [] do
         query_with_password_filter
       else
-        apply_ssh_username_cluster_name_filters(query_with_password_filter, cluster_name_filters)
+        SshUsernameFilters.apply_cluster_name(query_with_password_filter, cluster_name_filters)
       end
 
     {ilike_filters, flop_params} =
@@ -325,45 +297,6 @@ defmodule EdgeAdmin.Ssh do
         {:error, meta}
     end
   end
-
-  # Apply has_password filters using WHERE clause on password_hash
-  defp apply_has_password_filters(query, filters) do
-    Enum.reduce(filters, query, fn filter, acc_query ->
-      apply_has_password_filter(acc_query, filter)
-    end)
-  end
-
-  defp apply_has_password_filter(query, %{op: :==, value: "true"}) do
-    from(u in query, where: not is_nil(u.password_hash))
-  end
-
-  defp apply_has_password_filter(query, %{op: :==, value: "false"}) do
-    from(u in query, where: is_nil(u.password_hash))
-  end
-
-  defp apply_has_password_filter(query, %{op: :==, value: true}) do
-    from(u in query, where: not is_nil(u.password_hash))
-  end
-
-  defp apply_has_password_filter(query, %{op: :==, value: false}) do
-    from(u in query, where: is_nil(u.password_hash))
-  end
-
-  defp apply_has_password_filter(query, _), do: query
-
-  defp apply_ssh_username_cluster_name_filters(query, filters) do
-    Enum.reduce(filters, query, fn filter, acc -> apply_ssh_username_cluster_name_filter(acc, filter) end)
-  end
-
-  defp apply_ssh_username_cluster_name_filter(query, %{op: :==, value: value}) when is_binary(value) do
-    from([_u, _n, c] in query, where: c.name == ^value)
-  end
-
-  defp apply_ssh_username_cluster_name_filter(query, %{op: :ilike, value: value}) when is_binary(value) do
-    from([_u, _n, c] in query, where: case_insensitive_like(c.name, ^value))
-  end
-
-  defp apply_ssh_username_cluster_name_filter(query, _), do: query
 
   # ===========================================================================
   # SSH Public Key functions
@@ -483,9 +416,9 @@ defmodule EdgeAdmin.Ssh do
 
     base_query =
       base_query
-      |> apply_public_key_node_id_filters(node_id_filters)
-      |> apply_public_key_username_filters(username_filters)
-      |> apply_public_key_cluster_name_filters(cluster_name_filters)
+      |> SshPublicKeyFilters.apply_node_id(node_id_filters)
+      |> SshPublicKeyFilters.apply_username(username_filters)
+      |> SshPublicKeyFilters.apply_cluster_name(cluster_name_filters)
 
     base_query =
       Enum.reduce(ilike_filters, base_query, fn %{field: field, value: value}, acc ->
@@ -502,47 +435,5 @@ defmodule EdgeAdmin.Ssh do
       {:error, meta} ->
         {:error, meta}
     end
-  end
-
-  defp apply_public_key_node_id_filters(query, []), do: query
-
-  defp apply_public_key_node_id_filters(query, filters) do
-    Enum.reduce(filters, query, fn
-      %{op: :==, value: value}, acc when is_binary(value) ->
-        from([_k, _u, n] in acc, where: n.id == ^value)
-
-      _filter, acc ->
-        acc
-    end)
-  end
-
-  defp apply_public_key_username_filters(query, []), do: query
-
-  defp apply_public_key_username_filters(query, filters) do
-    Enum.reduce(filters, query, fn
-      %{op: :==, value: value}, acc when is_binary(value) ->
-        from([_k, u] in acc, where: u.username == ^value)
-
-      %{op: :ilike, value: value}, acc when is_binary(value) ->
-        from([_k, u] in acc, where: case_insensitive_like(u.username, ^value))
-
-      _filter, acc ->
-        acc
-    end)
-  end
-
-  defp apply_public_key_cluster_name_filters(query, []), do: query
-
-  defp apply_public_key_cluster_name_filters(query, filters) do
-    Enum.reduce(filters, query, fn
-      %{op: :==, value: value}, acc when is_binary(value) ->
-        from([_k, _u, _n, c] in acc, where: c.name == ^value)
-
-      %{op: :ilike, value: value}, acc when is_binary(value) ->
-        from([_k, _u, _n, c] in acc, where: case_insensitive_like(c.name, ^value))
-
-      _filter, acc ->
-        acc
-    end)
   end
 end

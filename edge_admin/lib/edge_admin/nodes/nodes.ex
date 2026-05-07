@@ -131,6 +131,9 @@ defmodule EdgeAdmin.Nodes do
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Nodes.Checks
+  alias EdgeAdmin.Nodes.Filters.ClusterFilters
+  alias EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters
+  alias EdgeAdmin.Nodes.Filters.NodeFilters
   alias EdgeAdmin.Nodes.Forms
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Cluster
@@ -220,7 +223,7 @@ defmodule EdgeAdmin.Nodes do
       if node_count_filters == [] do
         Cluster
       else
-        apply_node_count_filters(
+        ClusterFilters.apply_node_count(
           from(c in Cluster,
             left_join: n in assoc(c, :nodes),
             group_by: c.id,
@@ -235,11 +238,11 @@ defmodule EdgeAdmin.Nodes do
       if has_node_limit_filters == [] do
         base_query
       else
-        apply_has_node_limit_filters(base_query, has_node_limit_filters)
+        ClusterFilters.apply_has_node_limit(base_query, has_node_limit_filters)
       end
 
     # Apply ilike filters directly via Ecto (bypassing Flop's add_wildcard)
-    base_query = apply_cluster_ilike_filters(base_query, ilike_filters)
+    base_query = ClusterFilters.apply_ilike(base_query, ilike_filters)
 
     case Flop.validate_and_run(base_query, flop_params,
            for: Cluster,
@@ -254,97 +257,6 @@ defmodule EdgeAdmin.Nodes do
         {:error, meta}
     end
   end
-
-  defp apply_has_node_limit_filters(query, filters) do
-    Enum.reduce(filters, query, fn filter, acc -> apply_has_node_limit_filter(acc, filter) end)
-  end
-
-  defp apply_has_node_limit_filter(query, %{op: :==, value: v}) when v in [true, "true"] do
-    from(c in query, where: not is_nil(c.node_limit))
-  end
-
-  defp apply_has_node_limit_filter(query, %{op: :==, value: v}) when v in [false, "false"] do
-    from(c in query, where: is_nil(c.node_limit))
-  end
-
-  defp apply_has_node_limit_filter(query, _), do: query
-
-  # Apply ilike filters for string fields directly via Ecto, bypassing Flop's add_wildcard
-  # which escapes % characters and wraps values in %..%, breaking user-supplied patterns.
-  defp apply_cluster_ilike_filters(query, filters) do
-    Enum.reduce(filters, query, fn %{field: field, value: value}, acc ->
-      from(c in acc, where: case_insensitive_like(field(c, ^field), ^value))
-    end)
-  end
-
-  # Apply node_count filters using HAVING clause
-  defp apply_node_count_filters(query, filters) do
-    Enum.reduce(filters, query, fn filter, acc_query ->
-      apply_node_count_filter(acc_query, filter)
-    end)
-  end
-
-  defp apply_node_count_filter(query, %{op: :>=, value: value}) when is_integer(value),
-    do: from([c, n] in query, having: count(n.id) >= ^value)
-
-  defp apply_node_count_filter(query, %{op: :>=, value: value}) when is_binary(value) do
-    case Integer.parse(value) do
-      {num, _} -> from([c, n] in query, having: count(n.id) >= ^num)
-      _ -> query
-    end
-  end
-
-  defp apply_node_count_filter(query, %{op: :>, value: value}) when is_integer(value),
-    do: from([c, n] in query, having: count(n.id) > ^value)
-
-  defp apply_node_count_filter(query, %{op: :>, value: value}) when is_binary(value) do
-    case Integer.parse(value) do
-      {num, _} -> from([c, n] in query, having: count(n.id) > ^num)
-      _ -> query
-    end
-  end
-
-  defp apply_node_count_filter(query, %{op: :<=, value: value}) when is_integer(value),
-    do: from([c, n] in query, having: count(n.id) <= ^value)
-
-  defp apply_node_count_filter(query, %{op: :<=, value: value}) when is_binary(value) do
-    case Integer.parse(value) do
-      {num, _} -> from([c, n] in query, having: count(n.id) <= ^num)
-      _ -> query
-    end
-  end
-
-  defp apply_node_count_filter(query, %{op: :<, value: value}) when is_integer(value),
-    do: from([c, n] in query, having: count(n.id) < ^value)
-
-  defp apply_node_count_filter(query, %{op: :<, value: value}) when is_binary(value) do
-    case Integer.parse(value) do
-      {num, _} -> from([c, n] in query, having: count(n.id) < ^num)
-      _ -> query
-    end
-  end
-
-  defp apply_node_count_filter(query, %{op: :==, value: value}) when is_integer(value),
-    do: from([c, n] in query, having: count(n.id) == ^value)
-
-  defp apply_node_count_filter(query, %{op: :==, value: value}) when is_binary(value) do
-    case Integer.parse(value) do
-      {num, _} -> from([c, n] in query, having: count(n.id) == ^num)
-      _ -> query
-    end
-  end
-
-  defp apply_node_count_filter(query, %{op: :!=, value: value}) when is_integer(value),
-    do: from([c, n] in query, having: count(n.id) != ^value)
-
-  defp apply_node_count_filter(query, %{op: :!=, value: value}) when is_binary(value) do
-    case Integer.parse(value) do
-      {num, _} -> from([c, n] in query, having: count(n.id) != ^num)
-      _ -> query
-    end
-  end
-
-  defp apply_node_count_filter(query, _), do: query
 
   @doc """
   Lists cluster-node mappings.
@@ -1185,11 +1097,11 @@ defmodule EdgeAdmin.Nodes do
       if cluster_name_filters == [] do
         base_query
       else
-        apply_cluster_name_filters(base_query, cluster_name_filters)
+        ClusterFilters.apply_name(base_query, cluster_name_filters)
       end
 
     # Apply ilike filters directly via Ecto (bypassing Flop's add_wildcard)
-    query_with_cluster_filter = apply_node_ilike_filters(query_with_cluster_filter, ilike_filters)
+    query_with_cluster_filter = NodeFilters.apply_ilike(query_with_cluster_filter, ilike_filters)
 
     # Run Flop query
     case Flop.validate_and_run(query_with_cluster_filter, flop_params,
@@ -1202,102 +1114,6 @@ defmodule EdgeAdmin.Nodes do
       {:error, meta} ->
         {:error, meta}
     end
-  end
-
-  # Apply cluster_name filters using WHERE clause on joined cluster table
-  defp apply_cluster_name_filters(query, filters) do
-    Enum.reduce(filters, query, fn filter, acc_query ->
-      apply_cluster_name_filter(acc_query, filter)
-    end)
-  end
-
-  defp apply_cluster_name_filter(query, %{op: :==, value: value}) when is_binary(value) do
-    from([_main, c] in query, where: c.name == ^value)
-  end
-
-  defp apply_cluster_name_filter(query, %{op: :ilike, value: value}) when is_binary(value) do
-    from([_main, c] in query, where: case_insensitive_like(c.name, ^value))
-  end
-
-  defp apply_cluster_name_filter(query, _), do: query
-
-  defp apply_is_unlimited_filters(query, filters) do
-    Enum.reduce(filters, query, fn filter, acc -> apply_is_unlimited_filter(acc, filter) end)
-  end
-
-  defp apply_is_unlimited_filter(query, %{op: :==, value: v}) when v in [true, "true"] do
-    from(k in query, where: is_nil(k.uses_remaining))
-  end
-
-  defp apply_is_unlimited_filter(query, %{op: :==, value: v}) when v in [false, "false"] do
-    from(k in query, where: not is_nil(k.uses_remaining))
-  end
-
-  defp apply_is_unlimited_filter(query, _), do: query
-
-  defp apply_is_spent_filters(query, filters) do
-    Enum.reduce(filters, query, fn filter, acc -> apply_is_spent_filter(acc, filter) end)
-  end
-
-  defp apply_is_spent_filter(query, %{op: :==, value: v}) when v in [true, "true"] do
-    from(k in query, where: k.uses_remaining == 0)
-  end
-
-  defp apply_is_spent_filter(query, %{op: :==, value: v}) when v in [false, "false"] do
-    from(k in query, where: k.uses_remaining != 0 or is_nil(k.uses_remaining))
-  end
-
-  defp apply_is_spent_filter(query, _), do: query
-
-  defp apply_is_expired_filters(query, filters) do
-    Enum.reduce(filters, query, fn filter, acc -> apply_is_expired_filter(acc, filter) end)
-  end
-
-  defp apply_is_expired_filter(query, %{op: :==, value: v}) when v in [true, "true"] do
-    now = DateTime.utc_now()
-    from(k in query, where: not is_nil(k.expired_at) and k.expired_at < ^now)
-  end
-
-  defp apply_is_expired_filter(query, %{op: :==, value: v}) when v in [false, "false"] do
-    now = DateTime.utc_now()
-    from(k in query, where: is_nil(k.expired_at) or k.expired_at >= ^now)
-  end
-
-  defp apply_is_expired_filter(query, _), do: query
-
-  defp apply_is_never_used_filters(query, filters) do
-    Enum.reduce(filters, query, fn filter, acc -> apply_is_never_used_filter(acc, filter) end)
-  end
-
-  defp apply_is_never_used_filter(query, %{op: :==, value: v}) when v in [true, "true"] do
-    from(k in query, where: is_nil(k.last_used_at))
-  end
-
-  defp apply_is_never_used_filter(query, %{op: :==, value: v}) when v in [false, "false"] do
-    from(k in query, where: not is_nil(k.last_used_at))
-  end
-
-  defp apply_is_never_used_filter(query, _), do: query
-
-  defp apply_has_expiry_filters(query, filters) do
-    Enum.reduce(filters, query, fn filter, acc -> apply_has_expiry_filter(acc, filter) end)
-  end
-
-  defp apply_has_expiry_filter(query, %{op: :==, value: v}) when v in [true, "true"] do
-    from(k in query, where: not is_nil(k.expired_at))
-  end
-
-  defp apply_has_expiry_filter(query, %{op: :==, value: v}) when v in [false, "false"] do
-    from(k in query, where: is_nil(k.expired_at))
-  end
-
-  defp apply_has_expiry_filter(query, _), do: query
-
-  # Apply ilike filters for node string fields directly via Ecto, bypassing Flop's add_wildcard.
-  defp apply_node_ilike_filters(query, filters) do
-    Enum.reduce(filters, query, fn %{field: field, value: value}, acc ->
-      from(n in acc, where: case_insensitive_like(field(n, ^field), ^value))
-    end)
   end
 
   @doc """
@@ -1458,12 +1274,12 @@ defmodule EdgeAdmin.Nodes do
 
     query =
       base_query
-      |> maybe_apply_filters(custom_by_field[:cluster_name], &apply_cluster_name_filters/2)
-      |> maybe_apply_filters(custom_by_field[:is_unlimited], &apply_is_unlimited_filters/2)
-      |> maybe_apply_filters(custom_by_field[:is_spent], &apply_is_spent_filters/2)
-      |> maybe_apply_filters(custom_by_field[:is_expired], &apply_is_expired_filters/2)
-      |> maybe_apply_filters(custom_by_field[:is_never_used], &apply_is_never_used_filters/2)
-      |> maybe_apply_filters(custom_by_field[:has_expiry], &apply_has_expiry_filters/2)
+      |> EnrollmentKeyFilters.apply_maybe(custom_by_field[:cluster_name], &ClusterFilters.apply_name/2)
+      |> EnrollmentKeyFilters.apply_maybe(custom_by_field[:is_unlimited], &EnrollmentKeyFilters.apply_is_unlimited/2)
+      |> EnrollmentKeyFilters.apply_maybe(custom_by_field[:is_spent], &EnrollmentKeyFilters.apply_is_spent/2)
+      |> EnrollmentKeyFilters.apply_maybe(custom_by_field[:is_expired], &EnrollmentKeyFilters.apply_is_expired/2)
+      |> EnrollmentKeyFilters.apply_maybe(custom_by_field[:is_never_used], &EnrollmentKeyFilters.apply_is_never_used/2)
+      |> EnrollmentKeyFilters.apply_maybe(custom_by_field[:has_expiry], &EnrollmentKeyFilters.apply_has_expiry/2)
 
     {ilike_filters, flop_params} =
       RequestParser.split_ilike_filters(
@@ -1478,10 +1294,6 @@ defmodule EdgeAdmin.Nodes do
 
     {query, flop_params}
   end
-
-  defp maybe_apply_filters(query, nil, _fun), do: query
-  defp maybe_apply_filters(query, [], _fun), do: query
-  defp maybe_apply_filters(query, filters, fun), do: fun.(query, filters)
 
   @doc """
   Gets a single enrollment key by ID.
@@ -2157,7 +1969,7 @@ defmodule EdgeAdmin.Nodes do
       if cluster_name_filters == [] do
         base_query
       else
-        apply_cluster_name_filters(base_query, cluster_name_filters)
+        ClusterFilters.apply_name(base_query, cluster_name_filters)
       end
 
     {ilike_filters, flop_params} =

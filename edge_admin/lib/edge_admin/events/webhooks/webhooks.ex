@@ -69,6 +69,7 @@ defmodule EdgeAdmin.Events.Webhooks do
 
   alias Ecto.Query.CastError
   alias EdgeAdmin.Events.Webhooks.Delivery
+  alias EdgeAdmin.Events.Webhooks.Filters.WebhookFilters
   alias EdgeAdmin.Events.Webhooks.Forms
   alias EdgeAdmin.Events.Webhooks.Schemas.Webhook
   alias EdgeAdmin.Events.Webhooks.Workers.DeliverEventWorker
@@ -93,7 +94,7 @@ defmodule EdgeAdmin.Events.Webhooks do
   @spec list_webhooks(map()) ::
           {:ok, {[Webhook.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list_webhooks(params \\ %{}) do
-    {event_type, params} = pop_event_type(params)
+    {event_type, params} = WebhookFilters.pop_event_type(params)
 
     flop_params = EdgeAdmin.RequestParser.parse(params)
 
@@ -110,27 +111,11 @@ defmodule EdgeAdmin.Events.Webhooks do
            replace_invalid_params: true
          ) do
       {:ok, {webhooks, meta}} ->
-        {:ok, {filter_by_event_type(webhooks, event_type), meta}}
+        {:ok, {WebhookFilters.filter_by_event_type(webhooks, event_type), meta}}
 
       {:error, meta} ->
         {:error, meta}
     end
-  end
-
-  defp pop_event_type(params) do
-    case Map.pop(params, "event_type") do
-      {nil, rest} -> {nil, rest}
-      {value, rest} when is_binary(value) -> {value, rest}
-      {_other, rest} -> {nil, rest}
-    end
-  end
-
-  defp filter_by_event_type(webhooks, nil), do: webhooks
-
-  defp filter_by_event_type(webhooks, event_type) when is_binary(event_type) do
-    Enum.filter(webhooks, fn webhook ->
-      event_type in webhook.subscribed_events
-    end)
   end
 
   @doc """

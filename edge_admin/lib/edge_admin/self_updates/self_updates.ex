@@ -35,8 +35,8 @@ defmodule EdgeAdmin.SelfUpdates do
   alias EdgeAdmin.EdgeClusters.Gateway
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog
-  alias EdgeAdmin.Nodes
   alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.Nodes.Targeting
   alias EdgeAdmin.Repo
   alias EdgeAdmin.SelfUpdates.Checks
   alias EdgeAdmin.SelfUpdates.Forms
@@ -322,193 +322,20 @@ defmodule EdgeAdmin.SelfUpdates do
 
     case targeting_type do
       "all" ->
-        get_all_filtered_nodes(node_filters, cluster_filters)
+        Targeting.nodes_for_all(node_filters, cluster_filters)
 
       "nodes" ->
         node_ids = Map.get(targeting, "node_ids", [])
-        get_nodes_for_targeting(node_ids, node_filters)
+        Targeting.nodes_for_ids(node_ids, node_filters)
 
       "clusters" ->
         cluster_names = Map.get(targeting, "cluster_names", [])
-        {nodes, _cluster_id} = get_nodes_for_clusters(cluster_names, node_filters, cluster_filters)
+        {nodes, _cluster_id} = Targeting.nodes_for_clusters(cluster_names, node_filters, cluster_filters)
         nodes
 
       _ ->
         Logger.error("Invalid targeting type: #{targeting_type}")
         []
-    end
-  end
-
-  # Get all cluster names matching cluster_filters
-  defp get_all_filtered_cluster_names(cluster_filters, page \\ 1, accumulated_names \\ []) do
-    params =
-      cluster_filters
-      |> Map.put("page_size", "1000")
-      |> Map.put("page", to_string(page))
-
-    case Nodes.list_clusters(params) do
-      {:ok, {clusters, meta}} ->
-        all_names = accumulated_names ++ Enum.map(clusters, & &1.name)
-
-        if meta.has_next_page? do
-          get_all_filtered_cluster_names(cluster_filters, page + 1, all_names)
-        else
-          all_names
-        end
-
-      {:error, _meta} ->
-        Logger.error("Failed to list clusters with filters: #{inspect(cluster_filters)}")
-        accumulated_names
-    end
-  end
-
-  # Get nodes for clusters targeting
-  defp get_nodes_for_clusters(cluster_names, node_filters, cluster_filters) do
-    # Deduplicate cluster names
-    unique_cluster_names = Enum.uniq(cluster_names)
-
-    # Get existing clusters by name (ignore non-existent)
-    clusters =
-      unique_cluster_names
-      |> Enum.map(&Nodes.get_cluster/1)
-      |> Enum.filter(&match?({:ok, _}, &1))
-      |> Enum.map(fn {:ok, cluster} -> cluster end)
-
-    if Enum.empty?(clusters) do
-      Logger.warning("No valid clusters found from names: #{inspect(unique_cluster_names)}")
-      {[], nil}
-    else
-      # Apply cluster_filters (AND logic with cluster_names)
-      filtered_clusters =
-        if map_size(cluster_filters) > 0 do
-          filtered_cluster_names = get_all_filtered_cluster_names(cluster_filters)
-          filtered_set = MapSet.new(filtered_cluster_names)
-
-          Enum.filter(clusters, fn cluster ->
-            MapSet.member?(filtered_set, cluster.name)
-          end)
-        else
-          clusters
-        end
-
-      if Enum.empty?(filtered_clusters) do
-        Logger.info("No clusters match the combined cluster_names AND cluster_filters")
-        {[], nil}
-      else
-        # Get all cluster names from filtered clusters
-        cluster_names_list = Enum.map(filtered_clusters, & &1.name)
-
-        # Fetch nodes from these clusters with node_filters
-        nodes = get_nodes_from_cluster_list(cluster_names_list, node_filters)
-
-        {nodes, nil}
-      end
-    end
-  end
-
-  # Get all nodes from a list of cluster names with node filters
-  defp get_nodes_from_cluster_list(cluster_names, node_filters, page \\ 1, accumulated_nodes \\ []) do
-    cluster_name_set = MapSet.new(cluster_names)
-
-    params =
-      node_filters
-      |> Map.put("page_size", "1000")
-      |> Map.put("page", to_string(page))
-
-    case Nodes.list_nodes(params) do
-      {:ok, {nodes, meta}} ->
-        # Filter nodes by cluster names
-        filtered_nodes =
-          Enum.filter(nodes, fn node ->
-            MapSet.member?(cluster_name_set, node.cluster.name)
-          end)
-
-        all_nodes = accumulated_nodes ++ filtered_nodes
-
-        if meta.has_next_page? do
-          get_nodes_from_cluster_list(cluster_names, node_filters, page + 1, all_nodes)
-        else
-          all_nodes
-        end
-
-      {:error, _meta} ->
-        Logger.error("Failed to list nodes with filters: #{inspect(node_filters)}")
-        accumulated_nodes
-    end
-  end
-
-  # Get specific nodes for "nodes" targeting with filters
-  defp get_nodes_for_targeting(node_ids, node_filters) do
-    unique_node_ids = Enum.uniq(node_ids)
-
-    # Get valid nodes
-    nodes =
-      unique_node_ids
-      |> Nodes.get_nodes_by_ids()
-      |> Enum.filter(&match?({:ok, _}, &1))
-      |> Enum.map(fn {:ok, node} -> node end)
-
-    # Apply additional filters if provided
-    if map_size(node_filters) == 0 do
-      # No additional filters, return all nodes
-      nodes
-    else
-      # Apply custom filters (no cluster filters for node targeting)
-      all_matching_nodes = get_all_filtered_nodes(node_filters, %{})
-      matching_node_ids = MapSet.new(all_matching_nodes, & &1.id)
-
-      Enum.filter(nodes, fn node ->
-        MapSet.member?(matching_node_ids, node.id)
-      end)
-    end
-  end
-
-  # Helper function to get all nodes across all pages
-  defp get_all_filtered_nodes(node_filters, cluster_filters, page \\ 1, accumulated_nodes \\ [], cluster_names \\ nil) do
-    # Get cluster names from filters on first call (cached for pagination)
-    cluster_names =
-      cluster_names ||
-        if map_size(cluster_filters) > 0 do
-          get_all_filtered_cluster_names(cluster_filters)
-        end
-
-    # Build params with node_filters
-    params =
-      node_filters
-      |> Map.put("page_size", "100")
-      |> Map.put("page", to_string(page))
-
-    case Nodes.list_nodes(params) do
-      {:ok, {nodes, meta}} ->
-        # Filter by cluster names if cluster_filters were provided
-        filtered_nodes =
-          if cluster_names do
-            cluster_name_set = MapSet.new(cluster_names)
-
-            Enum.filter(nodes, fn node ->
-              MapSet.member?(cluster_name_set, node.cluster.name)
-            end)
-          else
-            nodes
-          end
-
-        all_nodes = accumulated_nodes ++ filtered_nodes
-
-        if meta.has_next_page? do
-          get_all_filtered_nodes(
-            node_filters,
-            cluster_filters,
-            page + 1,
-            all_nodes,
-            cluster_names
-          )
-        else
-          all_nodes
-        end
-
-      {:error, _meta} ->
-        Logger.error("Failed to list nodes with filters: #{inspect(node_filters)}")
-        accumulated_nodes
     end
   end
 

@@ -282,7 +282,12 @@ defmodule EdgeAgent.Commands do
     end
   end
 
-  defp categorize_exit_code(exit_code) do
+  @doc false
+  # Public for unit testing. Maps a process exit code to a domain category.
+  # 124 is the conventional exit code from `timeout(1)`; 143 is 128+SIGTERM
+  # which the cancel path uses. Negative or unexpected codes are :unknown.
+  @spec categorize_exit_code(integer()) :: :success | :timeout | :cancelled | :failure | :unknown
+  def categorize_exit_code(exit_code) do
     cond do
       exit_code == 0 -> :success
       exit_code == 124 -> :timeout
@@ -405,7 +410,12 @@ defmodule EdgeAgent.Commands do
     end)
   end
 
-  defp build_report_params(execution) do
+  @doc false
+  # Public for unit testing. Builds the wire payload admin sees when this
+  # agent reports a completed execution. `completed_at` is rendered as an
+  # ISO 8601 string when set (admin's contract), nil otherwise.
+  @spec build_report_params(CommandExecution.t()) :: map()
+  def build_report_params(execution) do
     %{
       status: execution.status,
       output: execution.output,

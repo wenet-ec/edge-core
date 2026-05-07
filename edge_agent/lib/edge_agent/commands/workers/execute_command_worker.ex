@@ -25,8 +25,13 @@ defmodule EdgeAgent.Commands.Workers.ExecuteCommandWorker do
 
   require Logger
 
-  defp expired?(%{expired_at: nil}), do: false
-  defp expired?(%{expired_at: expired_at}), do: DateTime.compare(expired_at, DateTime.utc_now()) != :gt
+  @doc false
+  # Public for unit testing. An execution is expired if `expired_at` is set
+  # and has already passed. `nil` means no deadline was configured. Equality
+  # with "now" counts as expired (compare result is :eq, not :gt).
+  @spec expired?(%{expired_at: DateTime.t() | nil}) :: boolean()
+  def expired?(%{expired_at: nil}), do: false
+  def expired?(%{expired_at: expired_at}), do: DateTime.compare(expired_at, DateTime.utc_now()) != :gt
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"execution_id" => execution_id}}) do

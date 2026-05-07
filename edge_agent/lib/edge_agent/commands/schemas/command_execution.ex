@@ -48,17 +48,7 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecution do
       :completed_at
     ])
     |> validate_required([:id, :command_id, :node_id, :command_text, :status])
-    |> validate_uuid_format(:id)
     |> validate_inclusion(:status, ["pending", "completed", "expired"])
     |> unique_constraint(:id, name: :command_executions_id_index)
-  end
-
-  defp validate_uuid_format(changeset, field) do
-    validate_change(changeset, field, fn _, value ->
-      case Ecto.UUID.cast(value) do
-        {:ok, _} -> []
-        :error -> [{field, "must be a valid UUID format"}]
-      end
-    end)
   end
 end

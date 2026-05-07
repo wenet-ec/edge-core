@@ -113,12 +113,24 @@ defmodule EdgeAdminMcp.Server do
     end
   end
 
-  defp check_not_degraded(%{"method" => "tools/call", "params" => %{"name" => name}})
-       when name in @blocked_when_degraded do
+  @doc false
+  # Public for unit testing. Mirrors the REST `DegradedMode` plug — same
+  # `@metadata_module.degraded?/0` source of truth, same blocked tool list.
+  # Adding a new write tool: if its REST counterpart uses :block, append the
+  # tool name to @blocked_when_degraded above.
+  @spec check_not_degraded(map()) :: :ok | :degraded
+  def check_not_degraded(%{"method" => "tools/call", "params" => %{"name" => name}})
+      when name in @blocked_when_degraded do
     if @metadata_module.degraded?(), do: :degraded, else: :ok
   end
 
-  defp check_not_degraded(_request), do: :ok
+  def check_not_degraded(_request), do: :ok
+
+  @doc false
+  # Public for unit testing — pin the cross-surface contract that this list
+  # mirrors REST's DegradedMode `:block` allow-list.
+  @spec blocked_when_degraded() :: [String.t()]
+  def blocked_when_degraded, do: @blocked_when_degraded
 
   defp degraded_response do
     Response.tool() |> Response.error(ToolError.message(:degraded_mode)) |> Response.to_protocol()

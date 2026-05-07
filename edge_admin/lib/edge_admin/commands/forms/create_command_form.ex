@@ -51,7 +51,6 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
     %__MODULE__{}
     |> cast(flattened_attrs, [:command_text, :timeout, :expired_at, :targeting_type, :node_ids, :cluster_names])
     |> validate_required([:command_text, :targeting_type])
-    |> validate_command_text_format()
     |> validate_timeout()
     |> validate_expired_at()
     |> validate_targeting_type()
@@ -70,18 +69,6 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
       |> add_error(:base, "invalid parameters - expected a map")
 
     {:error, %{changeset | action: :insert}}
-  end
-
-  defp validate_command_text_format(changeset) do
-    validate_change(changeset, :command_text, fn :command_text, command_text ->
-      trimmed = String.trim(command_text)
-
-      if trimmed == "" do
-        [command_text: "cannot be empty or only whitespace"]
-      else
-        []
-      end
-    end)
   end
 
   defp validate_timeout(changeset) do

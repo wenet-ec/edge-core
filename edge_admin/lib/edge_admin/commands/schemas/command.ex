@@ -45,7 +45,6 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
     command
     |> cast(attrs, [:command_text, :timeout, :expired_at, :targeting])
     |> validate_required([:command_text, :targeting])
-    |> validate_command_text_format()
     |> validate_timeout()
     |> validate_expired_at()
   end
@@ -74,19 +73,6 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
         []
       else
         [expired_at: "must be in the future"]
-      end
-    end)
-  end
-
-  @doc false
-  defp validate_command_text_format(changeset) do
-    validate_change(changeset, :command_text, fn :command_text, command_text ->
-      trimmed = String.trim(command_text)
-
-      if trimmed == "" do
-        [command_text: "cannot be empty or only whitespace"]
-      else
-        []
       end
     end)
   end

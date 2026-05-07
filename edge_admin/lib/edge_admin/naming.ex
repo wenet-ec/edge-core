@@ -43,7 +43,7 @@ defmodule EdgeAdmin.Naming do
   @ssh_username_pattern "^[a-z_][a-z0-9_-]*$"
   @ssh_username_regex ~r/^[a-z_][a-z0-9_-]*$/
 
-  @ssh_public_key_pattern "^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa)\\s+([A-Za-z0-9+\\/]+=*)\\s*(.*)$"
+  @ssh_public_key_pattern "^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa)\\s+([A-Za-z0-9+/]+=*)\\s*(.*)$"
   @ssh_public_key_regex ~r/^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa)\s+([A-Za-z0-9+\/]+=*)\s*(.*)$/
 
   # ── Cluster names ──────────────────────────────────────────────────────────

@@ -421,6 +421,106 @@ defmodule EdgeAdmin.RequestParserTest do
   end
 
   # ---------------------------------------------------------------------------
+  # split_ilike_filters/2 — splits ilike filters out so callers can apply them
+  # as raw Ecto clauses without Flop's wildcard escaping.
+  # ---------------------------------------------------------------------------
+
+  describe "split_ilike_filters/2" do
+    test "extracts ilike filters for the listed fields, leaves others untouched" do
+      flop_params = %{
+        filters: [
+          %{field: :name, op: :ilike, value: "prod%"},
+          %{field: :version, op: :==, value: "1.0"},
+          %{field: :description, op: :ilike, value: "%edge%"}
+        ],
+        page: 1,
+        page_size: 20
+      }
+
+      {ilike, rest} = RequestParser.split_ilike_filters(flop_params, [:name])
+
+      assert ilike == [%{field: :name, op: :ilike, value: "prod%"}]
+
+      assert rest.filters == [
+               %{field: :version, op: :==, value: "1.0"},
+               %{field: :description, op: :ilike, value: "%edge%"}
+             ]
+
+      # Other keys are preserved.
+      assert rest.page == 1
+      assert rest.page_size == 20
+    end
+
+    test "extracts multiple matching ilike filters at once" do
+      flop_params = %{
+        filters: [
+          %{field: :name, op: :ilike, value: "prod%"},
+          %{field: :version, op: :ilike, value: "1.%"},
+          %{field: :status, op: :==, value: "active"}
+        ]
+      }
+
+      {ilike, rest} = RequestParser.split_ilike_filters(flop_params, [:name, :version])
+
+      assert length(ilike) == 2
+      assert %{field: :name, op: :ilike, value: "prod%"} in ilike
+      assert %{field: :version, op: :ilike, value: "1.%"} in ilike
+
+      assert rest.filters == [%{field: :status, op: :==, value: "active"}]
+    end
+
+    test "ignores ilike filters for fields not in the allow-list" do
+      flop_params = %{
+        filters: [%{field: :name, op: :ilike, value: "prod%"}]
+      }
+
+      {ilike, rest} = RequestParser.split_ilike_filters(flop_params, [:other_field])
+
+      assert ilike == []
+      assert rest.filters == [%{field: :name, op: :ilike, value: "prod%"}]
+    end
+
+    test "ignores non-ilike filters even when the field is in the allow-list" do
+      # Critical: only :ilike ops are extracted — :== or :in on the same field
+      # must stay in Flop's hands.
+      flop_params = %{
+        filters: [
+          %{field: :name, op: :==, value: "prod"},
+          %{field: :name, op: :in, value: ["a", "b"]}
+        ]
+      }
+
+      {ilike, rest} = RequestParser.split_ilike_filters(flop_params, [:name])
+
+      assert ilike == []
+      assert length(rest.filters) == 2
+    end
+
+    test "missing :filters key is treated as empty list" do
+      flop_params = %{page: 1, page_size: 20}
+
+      {ilike, rest} = RequestParser.split_ilike_filters(flop_params, [:name])
+
+      assert ilike == []
+      # split_ilike_filters always sets :filters to whatever remains, so the
+      # output map gains the key even when the input didn't have it.
+      assert rest.filters == []
+      assert rest.page == 1
+    end
+
+    test "empty fields list extracts nothing" do
+      flop_params = %{
+        filters: [%{field: :name, op: :ilike, value: "prod%"}]
+      }
+
+      {ilike, rest} = RequestParser.split_ilike_filters(flop_params, [])
+
+      assert ilike == []
+      assert rest.filters == [%{field: :name, op: :ilike, value: "prod%"}]
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Helpers
   # ---------------------------------------------------------------------------
 

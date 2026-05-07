@@ -99,7 +99,7 @@ versions and only receives merges at release time.
 ## Reporting security issues
 
 Do not file security issues in public GitHub Issues. Email
-**security@wenetec.com** with a description, reproducer, and any exploitation
+**security@wenet-ec.com** with a description, reproducer, and any exploitation
 details. We will acknowledge receipt within 72 hours and coordinate a fix and
 disclosure timeline with you.
 

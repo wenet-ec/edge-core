@@ -215,7 +215,7 @@ What this means in practice:
 - **Allowed without asking us:** self-hosting for your own company, using it internally to manage your own fleet, using it as a tool while delivering services to your clients (MSP / consulting / IoT vendor patterns), modifying it, redistributing modified versions under ELv2, building products on top of it that aren't themselves "Edge Admin in the cloud."
 - **Requires a commercial license from us:** offering Edge Admin (or a thin wrapper around it) as a hosted SaaS that customers sign up for and use directly.
 
-Email **<licensing@wenetec.com>** if your use case needs a commercial license, or if you're not sure whether what you want to build falls inside or outside ELv2 — we'll tell you, and we're not looking to be difficult about it.
+Email **<licensing@wenet-ec.com>** if your use case needs a commercial license, or if you're not sure whether what you want to build falls inside or outside ELv2 — we'll tell you, and we're not looking to be difficult about it.
 
 Contributions are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the contribution flow and the Developer Certificate of Origin (DCO) sign-off we require on every commit.
 

@@ -42,6 +42,26 @@ When working on anything related to Netmaker API, netclient enrollment, DERP rel
 6. Context pattern: Business logic organized in contexts (Commands, Nodes, Vpn, Ssh, etc.)
 7. API-first: Both admin and agent expose REST APIs; admin API uses OpenApiSpex for documentation
 
+### Defense-in-depth validation
+
+Edge Core is **strict by default**. Every write to the database passes through 5 layers, each with its own role. Some checks intentionally duplicate across layers — the cost of letting bad input slip one layer deeper is bigger than the cost of running the same check twice.
+
+| Layer | Role | Error code | Where it lives |
+|---|---|---|---|
+| 1. **Public-API schema** | Request shape: types, required fields, basic constraints (regex, length, enum). Rejects malformed input at the boundary. | 400 | OpenApiSpex schemas (REST), MCP Peri schemas via Anubis (`EdgeAdminMcp.Tools.*`) |
+| 2. **Form module** | Situational rules per action and per role. Composable across actions. Validates external input shape *contextually*. | 422 | `EdgeAdmin.<Domain>.Forms.*` modules, `use EdgeAdmin.Form` |
+| 3. **DB checks** | Business rules that need DB state. Composable, distinct from Ecto schema validation. | 422 | `EdgeAdmin.<Domain>.Checks.*` modules (e.g. `NodeLimitBelowCountCheck`, `SubnetOverlapCheck`) |
+| 4. **Ecto schema** | Canonical model validation. **Every write passes here, no exception.** Field types, in-record invariants. | 422 | `EdgeAdmin.<Domain>.Schemas.*` changesets |
+| 5. **DB constraints** | Final backstop. Unique indexes, not-null, foreign keys, exclusion constraints. | varies | Migrations |
+
+**Key implications:**
+
+- **Layer 1 is peer to layer 1.** OpenApiSpex (REST) and MCP Peri (MCP) are both layer-1 gates for their respective surfaces. They should match each other in strictness — drift between them is a real bug, not polish.
+- **Layer 1 is *not* peer to layer 2.** Forms are an independent defense layer. Don't collapse layer 1 into layer 2 thinking "the Form catches it anyway" — that removes a defense.
+- **Adding a new validation rule** usually means adding it to the *layer where it naturally belongs*, then potentially mirroring upward (layer 4 → layer 2 → layer 1) for early rejection. Each layer should be as strict as it can honestly be at its level.
+- **Common validators (regex constants, length bounds)** want to be DRY *across surfaces within a layer* — e.g. cluster-name regex shared between OpenApiSpex and MCP Peri — but **not collapsed across layers**.
+- **DRY across the boundary surfaces (REST + MCP)** is the live standardization question. See `mcp-parity.md` for the running plan.
+
 ## Development Commands
 
 All operations use Docker Compose through the `./bin/run` script. No local Elixir/Erlang installation required.

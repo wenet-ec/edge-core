@@ -84,13 +84,23 @@ The admin exposes both Prometheus-scrape endpoints (raw, for Grafana / Prometheu
 
 ### Admin ops domain
 
-The admin layer manages itself too: admin instances form peer clusters, share PostgreSQL, deterministically agree on which admin owns which edge cluster. Most of this is invisible to operators — it's described in [`architecture.md`](architecture.md). The day-to-day surface for it is:
+The admin layer manages itself too: admin instances form peer clusters, share PostgreSQL, deterministically agree on which admin owns which edge cluster. Most of this is invisible to operators — it's described in [`architecture.md`](architecture.md). You don't manage admin-side resources through the API — admins are spun up via your deploy system, joined automatically, and converge. The day-to-day surface for it is:
 
-- `GET /api/v1/admins/*` — list admins, see each admin's metadata, ownership assignments
+- `GET /api/v1/admins/*` — read-only introspection of the control plane (see below)
 - `/live_dashboard` — runtime view of every admin process
 - `/health/cluster` — load-balancer-friendly cluster health (see §8)
 
-You generally don't manage admin-side resources through the API — admins are spun up via your deploy system, joined automatically, and converge.
+**Admin metadata endpoints.** You won't hit these daily, but they're invaluable when debugging delivery problems or admin-cluster health. All read-only.
+
+| Endpoint                          | What it tells you                                                                                                              |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `/admins/me`                      | This specific admin's identity, version, role within its cluster.                                                              |
+| `/admins/my_admin_cluster`        | The admin cluster this admin belongs to, and which edge clusters it currently owns.                                            |
+| `/admins/admin_clusters`          | All admin clusters Netmaker knows about (cross-cluster view, useful for spotting zombie admins).                               |
+| `/admins/edge_clusters`           | Every edge cluster + which admin currently owns each.                                                                          |
+| `/admins/orphaned_clusters`       | Edge clusters with no current owner — usually transient during admin rollover; persistent means something is wrong.            |
+
+If a command isn't being delivered to a cluster, check `edge_clusters` to see if it has an owner — an orphaned cluster won't process anything until ownership is reclaimed.
 
 ---
 

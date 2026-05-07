@@ -57,6 +57,7 @@ defmodule EdgeAdmin.Vpn do
   import Bitwise
 
   alias EdgeAdmin.Admins.Metadata
+  alias EdgeAdmin.Naming
   alias Nexmaker.Api
   alias Nexmaker.Api.DNS
   alias Nexmaker.Api.EnrollmentKeys
@@ -196,7 +197,7 @@ defmodule EdgeAdmin.Vpn do
     prefix = "admin-cluster-"
     max_total_length = 32
 
-    if !Regex.match?(~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, suffix) do
+    if !Regex.match?(Naming.cluster_name_regex(), suffix) do
       raise ArgumentError, """
       Admin cluster name suffix must match format: lowercase alphanumeric with hyphens
       Got: #{suffix}
@@ -282,7 +283,7 @@ defmodule EdgeAdmin.Vpn do
       String.length(name) > 32 ->
         {:error, "network name exceeds 32 character limit"}
 
-      not Regex.match?(~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, name) ->
+      not Regex.match?(Naming.cluster_name_regex(), name) ->
         {:error, "network name must be lowercase alphanumeric with hyphens, no leading/trailing hyphens"}
 
       true ->

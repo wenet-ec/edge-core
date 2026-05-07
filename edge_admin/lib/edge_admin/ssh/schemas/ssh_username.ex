@@ -3,6 +3,8 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
   @moduledoc false
   use EdgeAdmin.Schema
 
+  alias EdgeAdmin.Naming
+
   @type t :: %__MODULE__{}
 
   @derive {
@@ -38,8 +40,8 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
     ssh_username
     |> cast(attrs, [:username, :password_hash, :node_id])
     |> validate_required([:username, :node_id])
-    |> validate_length(:username, min: 3, max: 32)
-    |> validate_format(:username, ~r/^[a-z_][a-z0-9_-]*$/,
+    |> validate_length(:username, min: Naming.ssh_username_min_length(), max: Naming.ssh_username_max_length())
+    |> validate_format(:username, Naming.ssh_username_regex(),
       message:
         "must start with a letter or underscore and contain only lowercase letters, digits, hyphens, or underscores"
     )

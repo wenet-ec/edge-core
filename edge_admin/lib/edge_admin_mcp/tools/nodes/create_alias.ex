@@ -13,8 +13,13 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateAlias do
   """
   use EdgeAdminMcp, :tool
 
+  alias EdgeAdmin.Naming
   alias EdgeAdmin.Nodes
   alias EdgeAdminMcp.Tools.Nodes.AliasData
+
+  @min_length Naming.alias_name_min_length()
+  @max_length Naming.alias_name_max_length()
+  @regex Naming.alias_name_regex()
 
   @impl true
   def title, do: "Create Alias"
@@ -23,7 +28,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateAlias do
 
   schema do
     field :node_id, {:required, :string}
-    field :name, {:required, :string}, min_length: 1, max_length: 63, regex: ~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/
+    field :name, {:required, :string}, min_length: @min_length, max_length: @max_length, regex: @regex
   end
 
   @impl true

@@ -8,6 +8,8 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterForm do
   """
   use EdgeAdmin.Form
 
+  alias EdgeAdmin.Naming
+
   embedded_schema do
     field(:cluster_name, :string)
   end
@@ -16,7 +18,7 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterForm do
   Validates and normalizes node cluster change parameters.
 
   ## Validations
-  - `cluster_name` - Required, must match pattern ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$, max 24 chars
+  - `cluster_name` - Required, must match the cluster-name pattern in `EdgeAdmin.Naming`
   - Also checks if cluster exists (via get_cluster_fn callback)
 
   ## Returns
@@ -29,8 +31,8 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterForm do
     %__MODULE__{}
     |> cast(attrs, [:cluster_name])
     |> validate_required([:cluster_name])
-    |> validate_length(:cluster_name, max: 24)
-    |> validate_format(:cluster_name, ~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+    |> validate_length(:cluster_name, max: Naming.cluster_name_max_length())
+    |> validate_format(:cluster_name, Naming.cluster_name_regex(),
       message: "must be lowercase alphanumeric with hyphens, cannot start/end with hyphen"
     )
     |> validate_cluster_exists(get_cluster_fn)

@@ -3,6 +3,8 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
   @moduledoc false
   use EdgeAdmin.Schema
 
+  alias EdgeAdmin.Naming
+
   @type t :: %__MODULE__{}
 
   # Supported SSH key algorithms
@@ -15,7 +17,9 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
   ]
 
   # SSH key format regex - matches "algorithm base64data [comment]"
-  @ssh_key_regex ~r/^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa)\s+([A-Za-z0-9+\/]+=*)\s*(.*)$/
+  # Source: EdgeAdmin.Naming.ssh_public_key_regex/0 — captures algorithm,
+  # base64 data, and (optional) comment.
+  @ssh_key_regex Naming.ssh_public_key_regex()
 
   @derive {
     Flop.Schema,

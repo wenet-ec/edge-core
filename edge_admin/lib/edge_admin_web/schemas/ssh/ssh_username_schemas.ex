@@ -6,6 +6,7 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
 
   use EdgeAdminWeb.Schema
 
+  alias EdgeAdmin.Naming
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas
   alias OpenApiSpex.Schema
@@ -114,9 +115,9 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
           description:
             "SSH username for node access (3-32 characters, must start with letter or underscore, lowercase letters/digits/hyphens/underscores only)",
           example: "admin",
-          pattern: "^[a-z_][a-z0-9_-]*$",
-          minLength: 3,
-          maxLength: 32
+          pattern: Naming.ssh_username_pattern(),
+          minLength: Naming.ssh_username_min_length(),
+          maxLength: Naming.ssh_username_max_length()
         },
         password: %Schema{
           type: :string,

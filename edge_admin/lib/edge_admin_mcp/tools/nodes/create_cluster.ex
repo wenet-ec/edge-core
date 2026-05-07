@@ -13,8 +13,12 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateCluster do
   """
   use EdgeAdminMcp, :tool
 
+  alias EdgeAdmin.Naming
   alias EdgeAdmin.Nodes
   alias EdgeAdminMcp.Tools.Nodes.ClusterData
+
+  @max_length Naming.cluster_name_max_length()
+  @regex Naming.cluster_name_regex()
 
   @impl true
   def title, do: "Create Cluster"
@@ -22,7 +26,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateCluster do
   def annotations, do: %{"destructiveHint" => false, "idempotentHint" => false, "openWorldHint" => true}
 
   schema do
-    field :name, {:required, :string}, max_length: 24, regex: ~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/
+    field :name, {:required, :string}, max_length: @max_length, regex: @regex
     field :ipv4_range, :string
     field :node_limit, :integer, min: 1
   end

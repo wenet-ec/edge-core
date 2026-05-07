@@ -8,6 +8,8 @@ defmodule EdgeAdmin.Nodes.Forms.CreateAliasForm do
   """
   use EdgeAdmin.Form
 
+  alias EdgeAdmin.Naming
+
   embedded_schema do
     field(:name, :string)
   end
@@ -29,8 +31,8 @@ defmodule EdgeAdmin.Nodes.Forms.CreateAliasForm do
     %__MODULE__{}
     |> cast(attrs, [:name])
     |> validate_required([:name])
-    |> validate_length(:name, max: 63)
-    |> validate_format(:name, ~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+    |> validate_length(:name, max: Naming.alias_name_max_length())
+    |> validate_format(:name, Naming.alias_name_regex(),
       message: "must be lowercase alphanumeric with hyphens, no leading/trailing hyphens"
     )
     |> apply_action(:insert)

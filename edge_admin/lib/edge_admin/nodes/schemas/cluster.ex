@@ -17,6 +17,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   """
   use EdgeAdmin.Schema
 
+  alias EdgeAdmin.Naming
   alias EdgeAdmin.Vpn
 
   # /31 and /32 are unusable: /32 has 1 IP (consumed by the first admin gateway),
@@ -67,8 +68,8 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
     |> maybe_generate_name()
     |> maybe_generate_ipv4_range()
     |> validate_required([:name, :ipv4_range])
-    |> validate_length(:name, max: 24)
-    |> validate_format(:name, ~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/)
+    |> validate_length(:name, max: Naming.cluster_name_max_length())
+    |> validate_format(:name, Naming.cluster_name_regex())
     |> validate_exclusion(:name, ~w(default), message: "is reserved")
     |> validate_number(:node_limit, greater_than: 0)
     |> validate_ipv4_cidr_format()

@@ -11,8 +11,11 @@ defmodule EdgeAdminMcp.Tools.Ssh.CreateSshPublicKey do
   """
   use EdgeAdminMcp, :tool
 
+  alias EdgeAdmin.Naming
   alias EdgeAdmin.Ssh
   alias EdgeAdminMcp.Tools.Ssh.SshPublicKeyData
+
+  @public_key_regex Naming.ssh_public_key_regex()
 
   @impl true
   def title, do: "Create SSH Public Key"
@@ -21,11 +24,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.CreateSshPublicKey do
 
   schema do
     field :ssh_username_id, {:required, :string}
-
-    field :public_key, {:required, :string},
-      min_length: 1,
-      regex: ~r/^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa)\s+[A-Za-z0-9+\/]+=*\s*.*$/
-
+    field :public_key, {:required, :string}, min_length: 1, regex: @public_key_regex
     field :key_name, {:required, :string}, min_length: 1, max_length: 255
   end
 

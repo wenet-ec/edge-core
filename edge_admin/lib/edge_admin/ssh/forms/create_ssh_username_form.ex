@@ -8,6 +8,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameForm do
   """
   use EdgeAdmin.Form
 
+  alias EdgeAdmin.Naming
   alias EdgeAdmin.Ssh.Forms.CreateSshPublicKeyForm
 
   embedded_schema do
@@ -65,8 +66,8 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameForm do
     %__MODULE__{}
     |> cast(attrs, [:username, :password])
     |> validate_required([:username])
-    |> validate_length(:username, min: 3, max: 32)
-    |> validate_format(:username, ~r/^[a-z_][a-z0-9_-]*$/,
+    |> validate_length(:username, min: Naming.ssh_username_min_length(), max: Naming.ssh_username_max_length())
+    |> validate_format(:username, Naming.ssh_username_regex(),
       message:
         "must start with a letter or underscore and contain only lowercase letters, digits, hyphens, or underscores"
     )

@@ -6,6 +6,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
 
   use EdgeAdminWeb.Schema
 
+  alias EdgeAdmin.Naming
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
@@ -30,7 +31,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         cluster_name: %Schema{
           type: :string,
           description: "Name of the cluster this node belongs to",
-          pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+          pattern: Naming.cluster_name_pattern(),
           example: "prod-east"
         },
         netmaker_host_id: %Schema{
@@ -188,7 +189,8 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
       properties: %{
         cluster_name: %Schema{
           type: :string,
-          pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+          pattern: Naming.cluster_name_pattern(),
+          maxLength: Naming.cluster_name_max_length(),
           description: "Name of the target cluster to move this node to.",
           example: "prod-west"
         }

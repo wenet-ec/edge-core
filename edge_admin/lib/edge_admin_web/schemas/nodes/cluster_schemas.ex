@@ -6,6 +6,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
 
   use EdgeAdminWeb.Schema
 
+  alias EdgeAdmin.Naming
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
@@ -67,7 +68,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
           type: :string,
           description:
             "Cluster name - primary identifier used in API operations (max 24 chars, alphanumeric with hyphens)",
-          pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+          pattern: Naming.cluster_name_pattern(),
           example: "prod-east"
         },
         ipv4_range: %Schema{
@@ -200,8 +201,8 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         name: %Schema{
           type: :string,
           description: "Cluster name — primary identifier (max 24 chars, lowercase alphanumeric + hyphens)",
-          pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-          maxLength: 24,
+          pattern: Naming.cluster_name_pattern(),
+          maxLength: Naming.cluster_name_max_length(),
           example: "prod-east"
         },
         ipv4_range: %Schema{

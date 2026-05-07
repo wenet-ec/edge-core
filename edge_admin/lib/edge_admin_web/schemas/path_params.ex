@@ -19,12 +19,8 @@ defmodule EdgeAdminWeb.Schemas.PathParams do
       )
   """
 
+  alias EdgeAdmin.Naming
   alias OpenApiSpex.Schema
-
-  # Cluster name pattern — also enforced server-side in EdgeAdmin.Nodes.
-  # Lowercase alphanumeric with hyphens, no leading/trailing hyphen, max 24 chars.
-  @cluster_name_pattern "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
-  @cluster_name_max_length 24
 
   @doc "UUID path parameter (e.g. `:id`, `:node_id`, `:command_id`)."
   @spec uuid(atom(), String.t()) :: {atom(), keyword()}
@@ -51,8 +47,8 @@ defmodule EdgeAdminWeb.Schemas.PathParams do
        description: description,
        schema: %Schema{
          type: :string,
-         pattern: @cluster_name_pattern,
-         maxLength: @cluster_name_max_length
+         pattern: Naming.cluster_name_pattern(),
+         maxLength: Naming.cluster_name_max_length()
        }
      ]}
   end

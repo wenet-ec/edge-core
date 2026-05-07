@@ -6,6 +6,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
 
   use EdgeAdminWeb.Schema
 
+  alias EdgeAdmin.Naming
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
@@ -25,7 +26,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
         name: %Schema{
           type: :string,
           description: "Alias name (used in DNS)",
-          pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+          pattern: Naming.alias_name_pattern(),
           example: "web-server"
         },
         vpn_hostname: %Schema{
@@ -95,9 +96,9 @@ defmodule EdgeAdminWeb.Schemas.Nodes.AliasSchemas do
       properties: %{
         name: %Schema{
           type: :string,
-          pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
-          minLength: 1,
-          maxLength: 63,
+          pattern: Naming.alias_name_pattern(),
+          minLength: Naming.alias_name_min_length(),
+          maxLength: Naming.alias_name_max_length(),
           description: "Alias name (lowercase alphanumeric with hyphens)",
           example: "web-server"
         }

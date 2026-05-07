@@ -11,8 +11,12 @@ defmodule EdgeAdminMcp.Tools.Nodes.ChangeNodeCluster do
   """
   use EdgeAdminMcp, :tool
 
+  alias EdgeAdmin.Naming
   alias EdgeAdmin.Nodes
   alias EdgeAdminMcp.Tools.Nodes.NodeData
+
+  @max_length Naming.cluster_name_max_length()
+  @regex Naming.cluster_name_regex()
 
   @impl true
   def title, do: "Move Node to Cluster"
@@ -21,7 +25,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ChangeNodeCluster do
 
   schema do
     field :node_id, {:required, :string}
-    field :cluster_name, {:required, :string}, max_length: 24, regex: ~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/
+    field :cluster_name, {:required, :string}, max_length: @max_length, regex: @regex
   end
 
   @impl true

@@ -16,9 +16,15 @@ defmodule EdgeAdminMcp.Tools.Ssh.CreateSshUsername do
   """
   use EdgeAdminMcp, :tool
 
+  alias EdgeAdmin.Naming
   alias EdgeAdmin.Nodes
   alias EdgeAdmin.Ssh
   alias EdgeAdminMcp.Tools.Ssh.SshUsernameData
+
+  @username_min_length Naming.ssh_username_min_length()
+  @username_max_length Naming.ssh_username_max_length()
+  @username_regex Naming.ssh_username_regex()
+  @public_key_regex Naming.ssh_public_key_regex()
 
   @impl true
   def title, do: "Create SSH Username"
@@ -29,18 +35,16 @@ defmodule EdgeAdminMcp.Tools.Ssh.CreateSshUsername do
     field :node_id, {:required, :string}
 
     field :username, {:required, :string},
-      min_length: 3,
-      max_length: 32,
-      regex: ~r/^[a-z_][a-z0-9_-]*$/
+      min_length: @username_min_length,
+      max_length: @username_max_length,
+      regex: @username_regex
 
     field :password, :string, min_length: 12, max_length: 128
 
     embeds_many :public_keys do
       field :key_name, {:required, :string}, min_length: 1, max_length: 255
 
-      field :public_key, {:required, :string},
-        min_length: 1,
-        regex: ~r/^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa)\s+[A-Za-z0-9+\/]+=*\s*.*$/
+      field :public_key, {:required, :string}, min_length: 1, regex: @public_key_regex
     end
   end
 

@@ -8,6 +8,8 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
   """
   use EdgeAdmin.Form
 
+  alias EdgeAdmin.Naming
+
   embedded_schema do
     field(:name, :string)
     field(:ipv4_range, :string)
@@ -44,8 +46,8 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
   defp validate_name(changeset) do
     changeset
     |> validate_required([:name])
-    |> validate_length(:name, max: 24)
-    |> validate_format(:name, ~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+    |> validate_length(:name, max: Naming.cluster_name_max_length())
+    |> validate_format(:name, Naming.cluster_name_regex(),
       message: "must be lowercase alphanumeric with hyphens, cannot start/end with hyphen"
     )
     |> validate_exclusion(:name, @reserved_names, message: "is reserved")

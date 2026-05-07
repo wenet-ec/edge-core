@@ -464,7 +464,15 @@ defmodule EdgeAdmin.Vpn do
   # Delegates to Nexmaker.Api.normalize/1, then collapses anything that isn't
   # :ok / :not_found into :service_unavailable so callers get a clean two-outcome
   # contract (same behaviour as the old private normalize_netmaker_error/1).
-  defp normalize_netmaker_error(result) do
+  @doc """
+  Funnel for Netmaker API responses.
+
+  Preserves `{:ok, _}` and `{:error, :not_found}`; collapses every other error
+  into `{:error, :service_unavailable}`. Every Netmaker call routes through
+  this so callers only have to pattern-match on a small fixed set of outcomes.
+  """
+  @spec normalize_netmaker_error(term()) :: {:ok, term()} | {:error, :not_found | :service_unavailable}
+  def normalize_netmaker_error(result) do
     case Api.normalize(result) do
       {:ok, _} = ok -> ok
       {:error, :not_found} -> {:error, :not_found}
@@ -597,7 +605,22 @@ defmodule EdgeAdmin.Vpn do
   # name" is only produced by Netmaker's IsNetworkNameUnique check; pure format
   # errors (bad chars, length) surface different messages and are pre-rejected
   # by validate_network_name/1 before we ever call Netmaker.
-  defp classify_create_network_400(body) do
+  @doc """
+  Classifies a Netmaker `400 Bad Request` response from network creation.
+
+  Netmaker doesn't distinguish "this CIDR is taken" from "this name is taken"
+  in its status code — it returns 400 with a textual message. Both shapes
+  represent races where another caller created the network first, so they
+  collapse to `{:error, :already_exists}`. Anything else at 400 is treated as
+  `{:error, :service_unavailable}`.
+
+  Match strings are substring (not full-match) — they survive Netmaker
+  rewording around them, but a major message change will silently fall
+  through to `:service_unavailable`. Lock these down in tests.
+  """
+  @spec classify_create_network_400(term()) ::
+          {:error, :already_exists | :service_unavailable}
+  def classify_create_network_400(body) do
     message = Api.extract_message(body)
 
     cond do
@@ -1184,7 +1207,20 @@ defmodule EdgeAdmin.Vpn do
     end
   end
 
-  defp zombie_node?(node, current_time, threshold_seconds, protected_host_ids) do
+  @doc """
+  Decides whether a Netmaker node should be reaped as a zombie admin.
+
+  A node is a zombie when its last check-in is older than `threshold_seconds`
+  *and* its host is not in the protected set (current admin cluster members,
+  read from syn). Protection always wins: a stale check-in on a live admin
+  must not be reaped, even briefly, because the deletion takes the live admin
+  off the mesh.
+
+  Time inputs are Unix epoch seconds — `current_time` and `node["lastcheckin"]`
+  must use the same units. Caller supplies both so the function stays pure.
+  """
+  @spec zombie_node?(map(), integer(), non_neg_integer(), [String.t()] | MapSet.t()) :: boolean()
+  def zombie_node?(node, current_time, threshold_seconds, protected_host_ids) do
     age_seconds = current_time - node["lastcheckin"]
     is_zombie = age_seconds > threshold_seconds
     is_protected = node["hostid"] in protected_host_ids

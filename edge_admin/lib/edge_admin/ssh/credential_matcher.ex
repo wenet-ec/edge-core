@@ -63,13 +63,20 @@ defmodule EdgeAdmin.Ssh.CredentialMatcher do
   Normalizes an SSH key string by stripping the trailing comment, keeping only
   the algorithm and key data. Used to make key comparison comment-insensitive
   (so re-pasting the same key with a different host suffix still matches).
+
+  Leading and trailing whitespace are stripped before splitting so callers
+  don't get a nonsense `" "` result for whitespace-padded input. Inputs with
+  fewer than two space-separated tokens (no key data present) fall through
+  to the trimmed input — they can't match a well-formed stored key.
   """
   @spec normalize_key(String.t()) :: String.t()
   def normalize_key(key_string) do
-    case String.split(key_string, " ", parts: 3) do
+    trimmed = String.trim(key_string)
+
+    case String.split(trimmed, " ", parts: 3) do
       [algorithm, key_data, _comment] -> "#{algorithm} #{key_data}"
       [algorithm, key_data] -> "#{algorithm} #{key_data}"
-      _ -> String.trim(key_string)
+      _ -> trimmed
     end
   end
 end

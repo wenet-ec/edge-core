@@ -33,9 +33,12 @@ defmodule EdgeAdminWeb.Plugs.RenderOpenApiSpec do
   # Preferred HTTP verb order within a path item: create → list/get → update → delete.
   @verb_order ~w(post get put patch delete head options trace)
 
-  # Jason.encode! on a plain map uses hash order. By converting paths and their
-  # verb maps to Jason.OrderedObject, we preserve both orders through to the wire.
-  defp sort_paths_in_map(%{"paths" => paths} = spec_map) when is_map(paths) do
+  @doc false
+  # Public for unit testing. Jason.encode! on a plain map uses hash order. By
+  # converting paths and their verb maps to Jason.OrderedObject, we preserve
+  # both orders through to the wire.
+  @spec sort_paths_in_map(map()) :: map()
+  def sort_paths_in_map(%{"paths" => paths} = spec_map) when is_map(paths) do
     ordered_paths =
       paths
       |> Enum.sort_by(fn {path, _} ->
@@ -46,9 +49,13 @@ defmodule EdgeAdminWeb.Plugs.RenderOpenApiSpec do
     %{spec_map | "paths" => Jason.OrderedObject.new(ordered_paths)}
   end
 
-  defp sort_paths_in_map(spec_map), do: spec_map
+  def sort_paths_in_map(spec_map), do: spec_map
 
-  defp sort_verbs(path_item) when is_map(path_item) do
+  @doc false
+  # Public for unit testing. Reorders the HTTP verbs in a path item to the
+  # documented order: post → get → put → patch → delete → head → options → trace.
+  @spec sort_verbs(map()) :: Jason.OrderedObject.t()
+  def sort_verbs(path_item) when is_map(path_item) do
     verb_index = @verb_order |> Enum.with_index() |> Map.new()
 
     ordered =
@@ -57,7 +64,14 @@ defmodule EdgeAdminWeb.Plugs.RenderOpenApiSpec do
     Jason.OrderedObject.new(ordered)
   end
 
-  defp filter_internal_paths(%OpenApiSpex.OpenApi{paths: paths} = spec) do
+  @doc false
+  # Public for unit testing. Drops paths whose every operation is tagged
+  # exclusively with `Internal.*`. Mixed paths (some operations public, some
+  # internal) stay — only fully-internal paths are stripped. This is the
+  # security-adjacent contract: regression here leaks internal endpoints into
+  # public Swagger / ReDoc.
+  @spec filter_internal_paths(OpenApiSpex.OpenApi.t()) :: OpenApiSpex.OpenApi.t()
+  def filter_internal_paths(%OpenApiSpex.OpenApi{paths: paths} = spec) do
     filtered =
       Map.reject(paths, fn {_path, path_item} ->
         path_item
@@ -78,7 +92,11 @@ defmodule EdgeAdminWeb.Plugs.RenderOpenApiSpec do
     %{spec | paths: filtered}
   end
 
-  defp filter_internal_schemas(%OpenApiSpex.OpenApi{components: components} = spec) do
+  @doc false
+  # Public for unit testing. Drops component schemas whose name starts with
+  # `Internal.`, so they aren't referenced from the published spec.
+  @spec filter_internal_schemas(OpenApiSpex.OpenApi.t()) :: OpenApiSpex.OpenApi.t()
+  def filter_internal_schemas(%OpenApiSpex.OpenApi{components: components} = spec) do
     filtered_schemas =
       Map.reject(components.schemas, fn {key, _} ->
         String.starts_with?(to_string(key), @internal_tag_prefix)

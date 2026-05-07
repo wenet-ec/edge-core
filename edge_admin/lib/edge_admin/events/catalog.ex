@@ -255,6 +255,213 @@ defmodule EdgeAdmin.Events.Catalog do
     ]
   end
 
+  # ---------------------------------------------------------------------------
+  # Per-event metadata (description + sample data)
+  #
+  # `description/1` and `data_example/1` are the **canonical source** of event
+  # semantics — when this event fires, what its payload looks like. The
+  # AsyncAPI spec generator reads from here, so adding/changing an event
+  # definition happens in one place.
+  #
+  # `lookup/1` aggregates metadata + the `data` shape into a single map for
+  # the MCP `explain_event_type` tool.
+  # ---------------------------------------------------------------------------
+
+  @node_base_data %{
+    "node_id" => "node-abc123",
+    "cluster_name" => "prod",
+    "status" => "healthy",
+    "version" => "1.2.0",
+    "id_type" => "hostname",
+    "http_port" => 44_000,
+    "ssh_port" => 40_022,
+    "host_metrics_port" => 9100,
+    "wireguard_metrics_port" => 9101,
+    "http_proxy_port" => 44_001,
+    "socks5_proxy_port" => 44_002,
+    "self_update_enabled" => true,
+    "last_seen_at" => "2026-04-13T10:00:00Z",
+    "inserted_at" => "2026-04-13T09:00:00Z",
+    "updated_at" => "2026-04-13T10:00:00Z"
+  }
+
+  @execution_base_data %{
+    "command_execution_id" => "cmdexec-abc123",
+    "command_id" => "cmd-xyz789",
+    "node_id" => "node-abc123",
+    "cluster_name" => "prod",
+    "command_text" => "systemctl restart app",
+    "timeout" => 30_000,
+    "target_all" => false,
+    "expired_at" => nil,
+    "inserted_at" => "2026-04-13T10:00:00Z",
+    "updated_at" => "2026-04-13T10:00:00Z"
+  }
+
+  @self_update_base_data %{
+    "self_update_request_id" => "selfupd-abc123",
+    "targeting" => %{
+      "type" => "clusters",
+      "cluster_filters" => %{},
+      "node_filters" => %{"version" => "1.1.*"}
+    },
+    "inserted_at" => "2026-04-13T10:00:00Z",
+    "updated_at" => "2026-04-13T10:00:00Z"
+  }
+
+  @descriptions %{
+    "edge.enrollment_key.verified" => "Agent attempted to enroll using an enrollment key (success or failure).",
+    "edge.node.registered" => "Node registered for the first time.",
+    "edge.node.reregistered" => "Node re-enrolled (reboot, redeploy, etc.).",
+    "edge.node.version_changed" => "Node version changed alongside re-enrollment.",
+    "edge.node.status_changed" => "Node health status transitioned.",
+    "edge.node.cluster_changed" => "Node moved to a different cluster.",
+    "edge.node.update_triggered" => "Self-update signal sent to this node.",
+    "edge.command_execution.created" => "Execution record created and queued.",
+    "edge.command_execution.sent" => "Execution delivered to agent and ACKed.",
+    "edge.command_execution.completed" => "Agent reported result.",
+    "edge.command_execution.cancelled" => "Execution cancelled (explicit or SIGTERM).",
+    "edge.command_execution.expired" => "Execution swept as stale before running.",
+    "edge.command_execution.pruned" => "Execution reaped by background pruning worker.",
+    "edge.ssh_username.verified" => "Agent verified an SSH credential against admin (success or failure).",
+    "edge.self_update_request.completed" => "Self-update batch finished."
+  }
+
+  @data_examples %{
+    "edge.enrollment_key.verified" => %{
+      "enrollment_key_id" => "enrkey-abc123",
+      "cluster_name" => "prod",
+      "name" => "prod rollout",
+      "uses_remaining" => 4,
+      "result" => "verified",
+      "verified_at" => "2026-04-13T10:00:00Z"
+    },
+    "edge.node.registered" => @node_base_data,
+    "edge.node.reregistered" => Map.put(@node_base_data, "status", "healthy"),
+    "edge.node.version_changed" => Map.put(@node_base_data, "previous_version", "1.1.0"),
+    "edge.node.status_changed" =>
+      Map.merge(@node_base_data, %{"status" => "unhealthy", "previous_status" => "healthy"}),
+    "edge.node.cluster_changed" => Map.put(@node_base_data, "previous_cluster_name", "staging"),
+    "edge.node.update_triggered" => Map.put(@node_base_data, "self_update_request_id", "selfupd-abc123"),
+    "edge.command_execution.created" =>
+      Map.merge(@execution_base_data, %{
+        "status" => "pending",
+        "exit_code" => nil,
+        "sent_at" => nil,
+        "completed_at" => nil,
+        "cancelled_at" => nil
+      }),
+    "edge.command_execution.sent" =>
+      Map.merge(@execution_base_data, %{
+        "status" => "sent",
+        "exit_code" => nil,
+        "sent_at" => "2026-04-13T10:00:01Z",
+        "completed_at" => nil,
+        "cancelled_at" => nil
+      }),
+    "edge.command_execution.completed" =>
+      Map.merge(@execution_base_data, %{
+        "status" => "completed",
+        "exit_code" => 0,
+        "sent_at" => "2026-04-13T10:00:01Z",
+        "completed_at" => "2026-04-13T10:00:03Z",
+        "cancelled_at" => nil
+      }),
+    "edge.command_execution.cancelled" =>
+      Map.merge(@execution_base_data, %{
+        "status" => "cancelled",
+        "exit_code" => 143,
+        "sent_at" => "2026-04-13T10:00:01Z",
+        "completed_at" => nil,
+        "cancelled_at" => "2026-04-13T10:00:05Z"
+      }),
+    "edge.command_execution.expired" =>
+      Map.merge(@execution_base_data, %{
+        "status" => "expired",
+        "exit_code" => nil,
+        "sent_at" => nil,
+        "completed_at" => nil,
+        "cancelled_at" => nil,
+        "expired_at" => "2026-04-13T10:05:00Z"
+      }),
+    "edge.command_execution.pruned" =>
+      Map.merge(@execution_base_data, %{
+        "status" => "completed",
+        "exit_code" => 0,
+        "sent_at" => "2026-04-13T10:00:01Z",
+        "completed_at" => "2026-04-13T10:00:03Z",
+        "cancelled_at" => nil
+      }),
+    "edge.ssh_username.verified" => %{
+      "ssh_username_id" => "sshuser-abc123",
+      "node_id" => "node-abc123",
+      "cluster_name" => "prod",
+      "username" => "deploy",
+      "auth_method" => "public_key",
+      "result" => "success",
+      "verified_at" => "2026-04-13T10:00:00Z"
+    },
+    "edge.self_update_request.completed" =>
+      Map.merge(@self_update_base_data, %{
+        "status" => "completed",
+        "summary" => %{"total" => 10, "triggered" => 9, "failed" => 1}
+      })
+  }
+
+  @doc """
+  Returns a one-line description of when the given event fires. Returns
+  `nil` if the event type is not in the catalog.
+  """
+  @spec description(String.t()) :: String.t() | nil
+  def description(event_type) when is_binary(event_type), do: Map.get(@descriptions, event_type)
+
+  @doc """
+  Returns a sample CloudEvents `data` map for the given event type. Useful
+  for documentation, examples, and orienting the model on payload shape.
+  Returns `nil` if the event type is not in the catalog.
+  """
+  @spec data_example(String.t()) :: map() | nil
+  def data_example(event_type) when is_binary(event_type), do: Map.get(@data_examples, event_type)
+
+  @doc """
+  Aggregates everything known about an event type into a single map:
+
+      %{
+        type: "edge.node.registered",
+        description: "Node registered for the first time.",
+        data_example: %{...},
+        reference: "/asyncdoc"
+      }
+
+  Returns `{:error, :not_found}` if the event type is not in the catalog.
+  """
+  @spec lookup(String.t()) :: {:ok, map()} | {:error, :not_found}
+  def lookup(event_type) when is_binary(event_type) do
+    if event_type in all_event_types() do
+      {:ok,
+       %{
+         type: event_type,
+         description: description(event_type),
+         data_example: data_example(event_type),
+         reference: "/asyncdoc"
+       }}
+    else
+      {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Returns a list of `%{type, description}` maps — one per known event
+  type, in catalog order. Useful for browsing the catalog without
+  pulling each event's full payload example.
+  """
+  @spec list_with_descriptions() :: [map()]
+  def list_with_descriptions do
+    Enum.map(all_event_types(), fn event_type ->
+      %{type: event_type, description: description(event_type)}
+    end)
+  end
+
   @doc "Returns the string event type for the given event struct."
   @spec event_type(term()) :: String.t()
   def event_type(%EnrollmentKeyVerified{}), do: "edge.enrollment_key.verified"

@@ -5,25 +5,13 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
   published by Edge Admin.
 
   Served as JSON at `GET /api/asyncapi`.
+
+  Per-event descriptions and `data` examples come from
+  `EdgeAdmin.Events.Catalog` — that's the canonical source of event
+  semantics, shared with the MCP `explain_event_type` tool.
   """
 
-  @event_order [
-    "edge.enrollment_key.verified",
-    "edge.node.registered",
-    "edge.node.reregistered",
-    "edge.node.version_changed",
-    "edge.node.status_changed",
-    "edge.node.cluster_changed",
-    "edge.node.update_triggered",
-    "edge.command_execution.created",
-    "edge.command_execution.sent",
-    "edge.command_execution.completed",
-    "edge.command_execution.cancelled",
-    "edge.command_execution.expired",
-    "edge.command_execution.pruned",
-    "edge.ssh_username.verified",
-    "edge.self_update_request.completed"
-  ]
+  alias EdgeAdmin.Events.Catalog
 
   @doc "Returns the AsyncAPI 3.1.0 document as a map (ready for Jason.encode!)."
   def spec do
@@ -199,97 +187,32 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
   # ---------------------------------------------------------------------------
 
   defp channels do
-    @event_order
+    Catalog.all_event_types()
     |> Enum.map(fn channel_id -> {channel_id, Map.fetch!(raw_channels(), channel_id)} end)
     |> Jason.OrderedObject.new()
   end
 
+  # Channel for each catalog event type. Address is the event-type string
+  # without the leading `edge.` segment (e.g. `node.registered`); message
+  # ref is the camelCase form + `Message` suffix; description is sourced
+  # from `Catalog.description/1`.
   defp raw_channels do
-    Enum.reduce(
-      [
-        enrollment_key_channels(),
-        node_channels(),
-        command_execution_channels(),
-        ssh_username_channels(),
-        self_update_request_channels()
-      ],
-      &Map.merge/2
-    )
+    Map.new(Catalog.all_event_types(), fn event_type ->
+      address = String.replace_leading(event_type, "edge.", "")
+      message_ref = camelcase_message_ref(address)
+      {event_type, channel(address, message_ref, Catalog.description(event_type))}
+    end)
   end
 
-  defp enrollment_key_channels do
-    %{
-      "edge.enrollment_key.verified" =>
-        channel(
-          "enrollment_key.verified",
-          "enrollmentKeyVerifiedMessage",
-          "Agent attempted to enroll using an enrollment key (success or failure)"
-        )
-    }
-  end
+  # `node.registered` → `nodeRegisteredMessage`
+  defp camelcase_message_ref(address) do
+    [first | rest] = String.split(address, [".", "_"])
 
-  defp node_channels do
-    %{
-      "edge.node.registered" =>
-        channel("node.registered", "nodeRegisteredMessage", "Node registered for the first time"),
-      "edge.node.reregistered" =>
-        channel("node.reregistered", "nodeReregisteredMessage", "Node re-enrolled (reboot, redeploy, etc.)"),
-      "edge.node.version_changed" =>
-        channel("node.version_changed", "nodeVersionChangedMessage", "Node version changed alongside re-enrollment"),
-      "edge.node.status_changed" =>
-        channel("node.status_changed", "nodeStatusChangedMessage", "Node health status transitioned"),
-      "edge.node.cluster_changed" =>
-        channel("node.cluster_changed", "nodeClusterChangedMessage", "Node moved to a different cluster"),
-      "edge.node.update_triggered" =>
-        channel("node.update_triggered", "nodeUpdateTriggeredMessage", "Self-update signal sent to this node")
-    }
-  end
-
-  defp command_execution_channels do
-    %{
-      "edge.command_execution.created" =>
-        channel("command_execution.created", "commandExecutionCreatedMessage", "Execution record created and queued"),
-      "edge.command_execution.sent" =>
-        channel("command_execution.sent", "commandExecutionSentMessage", "Execution delivered to agent and ACKed"),
-      "edge.command_execution.completed" =>
-        channel("command_execution.completed", "commandExecutionCompletedMessage", "Agent reported result"),
-      "edge.command_execution.cancelled" =>
-        channel(
-          "command_execution.cancelled",
-          "commandExecutionCancelledMessage",
-          "Execution cancelled (explicit or SIGTERM)"
-        ),
-      "edge.command_execution.expired" =>
-        channel(
-          "command_execution.expired",
-          "commandExecutionExpiredMessage",
-          "Execution swept as stale before running"
-        ),
-      "edge.command_execution.pruned" =>
-        channel(
-          "command_execution.pruned",
-          "commandExecutionPrunedMessage",
-          "Execution reaped by background pruning worker"
-        )
-    }
-  end
-
-  defp ssh_username_channels do
-    %{
-      "edge.ssh_username.verified" =>
-        channel(
-          "ssh_username.verified",
-          "sshUsernameVerifiedMessage",
-          "Agent verified an SSH credential against admin (success or failure)"
-        )
-    }
-  end
-
-  defp self_update_request_channels do
-    %{
-      "edge.self_update_request.completed" =>
-        channel("self_update_request.completed", "selfUpdateRequestCompletedMessage", "Self-update batch finished")
-    }
+    rest
+    |> Enum.map(&String.capitalize/1)
+    |> List.insert_at(0, first)
+    |> Enum.join("")
+    |> Kernel.<>("Message")
   end
 
   defp channel(event_type, message_ref, description) do
@@ -307,7 +230,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
   # ---------------------------------------------------------------------------
 
   defp operations do
-    @event_order
+    Catalog.all_event_types()
     |> Enum.map(fn channel_id ->
       operation_id = "publish_#{String.replace(channel_id, ~r/[.\-]/, "_")}"
 
@@ -388,235 +311,48 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
   # Messages — one per event type, each with its own example
   # ---------------------------------------------------------------------------
 
-  @node_base_data %{
-    "node_id" => "node-abc123",
-    "cluster_name" => "prod",
-    "status" => "healthy",
-    "version" => "1.2.0",
-    "id_type" => "hostname",
-    "http_port" => 44_000,
-    "ssh_port" => 40_022,
-    "host_metrics_port" => 9100,
-    "wireguard_metrics_port" => 9101,
-    "http_proxy_port" => 44_001,
-    "socks5_proxy_port" => 44_002,
-    "self_update_enabled" => true,
-    "last_seen_at" => "2026-04-13T10:00:00Z",
-    "inserted_at" => "2026-04-13T09:00:00Z",
-    "updated_at" => "2026-04-13T10:00:00Z"
-  }
-
-  @execution_base_data %{
-    "command_execution_id" => "cmdexec-abc123",
-    "command_id" => "cmd-xyz789",
-    "node_id" => "node-abc123",
-    "cluster_name" => "prod",
-    "command_text" => "systemctl restart app",
-    "timeout" => 30_000,
-    "target_all" => false,
-    "expired_at" => nil,
-    "inserted_at" => "2026-04-13T10:00:00Z",
-    "updated_at" => "2026-04-13T10:00:00Z"
-  }
-
-  @self_update_base_data %{
-    "self_update_request_id" => "selfupd-abc123",
-    "targeting" => %{
-      "type" => "clusters",
-      "cluster_filters" => %{},
-      "node_filters" => %{"version" => "1.1.*"}
-    },
-    "inserted_at" => "2026-04-13T10:00:00Z",
-    "updated_at" => "2026-04-13T10:00:00Z"
+  # Per-event AsyncAPI message metadata. Keyed by full event type (matches
+  # `Catalog.all_event_types/0`):
+  #
+  #   - `schema_ref`: name of the JSON schema the payload conforms to
+  #     (declared in `schemas/0`).
+  #   - `kafka_key`: which `data` field becomes the Kafka partition key.
+  #
+  # Description and data example come from `EdgeAdmin.Events.Catalog` —
+  # this map only carries the AsyncAPI-specific extras.
+  @message_specs %{
+    "edge.enrollment_key.verified" => %{schema_ref: "EnrollmentKeyVerifiedEvent", kafka_key: "enrollment_key_id"},
+    "edge.node.registered" => %{schema_ref: "NodeEvent", kafka_key: "node_id"},
+    "edge.node.reregistered" => %{schema_ref: "NodeEvent", kafka_key: "node_id"},
+    "edge.node.version_changed" => %{schema_ref: "NodeVersionChangedEvent", kafka_key: "node_id"},
+    "edge.node.status_changed" => %{schema_ref: "NodeStatusChangedEvent", kafka_key: "node_id"},
+    "edge.node.cluster_changed" => %{schema_ref: "NodeClusterChangedEvent", kafka_key: "node_id"},
+    "edge.node.update_triggered" => %{schema_ref: "NodeUpdateTriggeredEvent", kafka_key: "node_id"},
+    "edge.command_execution.created" => %{schema_ref: "CommandExecutionEvent", kafka_key: "command_execution_id"},
+    "edge.command_execution.sent" => %{schema_ref: "CommandExecutionEvent", kafka_key: "command_execution_id"},
+    "edge.command_execution.completed" => %{schema_ref: "CommandExecutionEvent", kafka_key: "command_execution_id"},
+    "edge.command_execution.cancelled" => %{schema_ref: "CommandExecutionEvent", kafka_key: "command_execution_id"},
+    "edge.command_execution.expired" => %{schema_ref: "CommandExecutionEvent", kafka_key: "command_execution_id"},
+    "edge.command_execution.pruned" => %{schema_ref: "CommandExecutionEvent", kafka_key: "command_execution_id"},
+    "edge.ssh_username.verified" => %{schema_ref: "SshUsernameVerifiedEvent", kafka_key: "node_id"},
+    "edge.self_update_request.completed" => %{schema_ref: "SelfUpdateRequestEvent", kafka_key: "self_update_request_id"}
   }
 
   defp messages do
-    %{
-      # Enrollment key messages
-      "enrollmentKeyVerifiedMessage" =>
-        enrollment_key_message(
-          "enrollment_key.verified",
-          "EnrollmentKeyVerifiedEvent",
-          "Agent attempted to enroll using an enrollment key",
-          %{
-            "enrollment_key_id" => "enrkey-abc123",
-            "cluster_name" => "prod",
-            "name" => "prod rollout",
-            "uses_remaining" => 4,
-            "result" => "verified",
-            "verified_at" => "2026-04-13T10:00:00Z"
-          }
-        ),
+    Map.new(Catalog.all_event_types(), fn event_type ->
+      address = String.replace_leading(event_type, "edge.", "")
+      message_ref = camelcase_message_ref(address)
+      %{schema_ref: schema_ref, kafka_key: kafka_key} = Map.fetch!(@message_specs, event_type)
 
-      # Node messages
-      "nodeRegisteredMessage" =>
-        node_message("node.registered", "NodeEvent", "Node registered for the first time", @node_base_data),
-      "nodeReregisteredMessage" =>
-        node_message(
-          "node.reregistered",
-          "NodeEvent",
-          "Node re-enrolled (reboot, redeploy, etc.)",
-          Map.put(@node_base_data, "status", "healthy")
-        ),
-      "nodeVersionChangedMessage" =>
-        node_message(
-          "node.version_changed",
-          "NodeVersionChangedEvent",
-          "Node version changed alongside re-enrollment",
-          Map.put(@node_base_data, "previous_version", "1.1.0")
-        ),
-      "nodeStatusChangedMessage" =>
-        node_message(
-          "node.status_changed",
-          "NodeStatusChangedEvent",
-          "Node health status transitioned",
-          Map.merge(@node_base_data, %{"status" => "unhealthy", "previous_status" => "healthy"})
-        ),
-      "nodeClusterChangedMessage" =>
-        node_message(
-          "node.cluster_changed",
-          "NodeClusterChangedEvent",
-          "Node moved to a different cluster",
-          Map.put(@node_base_data, "previous_cluster_name", "staging")
-        ),
-      "nodeUpdateTriggeredMessage" =>
-        node_message(
-          "node.update_triggered",
-          "NodeUpdateTriggeredEvent",
-          "Self-update signal sent to this node",
-          Map.put(@node_base_data, "self_update_request_id", "selfupd-abc123")
-        ),
-
-      # Command execution messages
-      "commandExecutionCreatedMessage" =>
-        command_execution_message(
-          "command_execution.created",
-          "CommandExecutionEvent",
-          "Execution record created and queued",
-          Map.merge(@execution_base_data, %{
-            "status" => "pending",
-            "exit_code" => nil,
-            "sent_at" => nil,
-            "completed_at" => nil,
-            "cancelled_at" => nil
-          })
-        ),
-      "commandExecutionSentMessage" =>
-        command_execution_message(
-          "command_execution.sent",
-          "CommandExecutionEvent",
-          "Execution delivered to agent and ACKed",
-          Map.merge(@execution_base_data, %{
-            "status" => "sent",
-            "exit_code" => nil,
-            "sent_at" => "2026-04-13T10:00:01Z",
-            "completed_at" => nil,
-            "cancelled_at" => nil
-          })
-        ),
-      "commandExecutionCompletedMessage" =>
-        command_execution_message(
-          "command_execution.completed",
-          "CommandExecutionEvent",
-          "Agent reported result",
-          Map.merge(@execution_base_data, %{
-            "status" => "completed",
-            "exit_code" => 0,
-            "sent_at" => "2026-04-13T10:00:01Z",
-            "completed_at" => "2026-04-13T10:00:03Z",
-            "cancelled_at" => nil
-          })
-        ),
-      "commandExecutionCancelledMessage" =>
-        command_execution_message(
-          "command_execution.cancelled",
-          "CommandExecutionEvent",
-          "Execution cancelled (explicit or SIGTERM)",
-          Map.merge(@execution_base_data, %{
-            "status" => "cancelled",
-            "exit_code" => 143,
-            "sent_at" => "2026-04-13T10:00:01Z",
-            "completed_at" => nil,
-            "cancelled_at" => "2026-04-13T10:00:05Z"
-          })
-        ),
-      "commandExecutionExpiredMessage" =>
-        command_execution_message(
-          "command_execution.expired",
-          "CommandExecutionEvent",
-          "Execution swept as stale before running",
-          Map.merge(@execution_base_data, %{
-            "status" => "expired",
-            "exit_code" => nil,
-            "sent_at" => nil,
-            "completed_at" => nil,
-            "cancelled_at" => nil,
-            "expired_at" => "2026-04-13T10:05:00Z"
-          })
-        ),
-      "commandExecutionPrunedMessage" =>
-        command_execution_message(
-          "command_execution.pruned",
-          "CommandExecutionEvent",
-          "Execution reaped by background pruning worker",
-          Map.merge(@execution_base_data, %{
-            "status" => "completed",
-            "exit_code" => 0,
-            "sent_at" => "2026-04-13T10:00:01Z",
-            "completed_at" => "2026-04-13T10:00:03Z",
-            "cancelled_at" => nil
-          })
-        ),
-
-      # SSH username messages
-      "sshUsernameVerifiedMessage" =>
-        ssh_username_message(
-          "ssh_username.verified",
-          "SshUsernameVerifiedEvent",
-          "Agent verified an SSH credential against admin",
-          %{
-            "ssh_username_id" => "sshuser-abc123",
-            "node_id" => "node-abc123",
-            "cluster_name" => "prod",
-            "username" => "deploy",
-            "auth_method" => "public_key",
-            "result" => "success",
-            "verified_at" => "2026-04-13T10:00:00Z"
-          }
-        ),
-
-      # Self-update request messages
-      "selfUpdateRequestCompletedMessage" =>
-        self_update_request_message(
-          "self_update_request.completed",
-          "SelfUpdateRequestEvent",
-          "Self-update batch finished",
-          Map.merge(@self_update_base_data, %{
-            "status" => "completed",
-            "summary" => %{"total" => 10, "triggered" => 9, "failed" => 1}
-          })
-        )
-    }
-  end
-
-  defp enrollment_key_message(event_type, schema_ref, summary, data) do
-    build_message(event_type, schema_ref, summary, "enrollment_key_id", data)
-  end
-
-  defp node_message(event_type, schema_ref, summary, data) do
-    build_message(event_type, schema_ref, summary, "node_id", data)
-  end
-
-  defp command_execution_message(event_type, schema_ref, summary, data) do
-    build_message(event_type, schema_ref, summary, "command_execution_id", data)
-  end
-
-  defp ssh_username_message(event_type, schema_ref, summary, data) do
-    build_message(event_type, schema_ref, summary, "node_id", data)
-  end
-
-  defp self_update_request_message(event_type, schema_ref, summary, data) do
-    build_message(event_type, schema_ref, summary, "self_update_request_id", data)
+      {message_ref,
+       build_message(
+         address,
+         schema_ref,
+         Catalog.description(event_type),
+         kafka_key,
+         Catalog.data_example(event_type)
+       )}
+    end)
   end
 
   defp build_message(event_type, _schema_ref, summary, kafka_partition_key, data) do

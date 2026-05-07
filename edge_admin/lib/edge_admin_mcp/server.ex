@@ -279,4 +279,8 @@ defmodule EdgeAdminMcp.Server do
   component(EdgeAdminMcp.Tools.Events.GetWebhook)
   component(EdgeAdminMcp.Tools.Events.CreateWebhook)
   component(EdgeAdminMcp.Tools.Events.DeleteWebhook)
+
+  # ── Event catalog (MCP-only — no REST analog; surfaces /asyncdoc as tools) ───
+  component(EdgeAdminMcp.Tools.Events.ListEventTypes)
+  component(EdgeAdminMcp.Tools.Events.ExplainEventType)
 end

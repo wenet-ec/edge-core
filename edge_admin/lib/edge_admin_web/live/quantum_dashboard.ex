@@ -414,16 +414,27 @@ defmodule EdgeAdminWeb.Live.QuantumDashboard do
   # Formatters (page-side, run on the calling node)
   # ---------------------------------------------------------------------------
 
-  defp format_schedule(%Crontab.CronExpression{} = expr), do: Crontab.CronExpression.Composer.compose(expr)
-  defp format_schedule(other), do: inspect(other)
+  @doc false
+  # Public for unit testing.
+  @spec format_schedule(term()) :: String.t()
+  def format_schedule(%Crontab.CronExpression{} = expr), do: Crontab.CronExpression.Composer.compose(expr)
+  def format_schedule(other), do: inspect(other)
 
-  defp format_task({m, f, a}), do: "#{inspect(m)}.#{f}/#{length(a)}"
-  defp format_task(fun) when is_function(fun), do: inspect(fun)
-  defp format_task(other), do: inspect(other)
+  @doc false
+  # Public for unit testing. Formats a Quantum task tuple as `Module.function/arity`,
+  # falling back to `inspect/1` for anonymous functions and unexpected shapes.
+  @spec format_task(term()) :: String.t()
+  def format_task({m, f, a}), do: "#{inspect(m)}.#{f}/#{length(a)}"
+  def format_task(fun) when is_function(fun), do: inspect(fun)
+  def format_task(other), do: inspect(other)
 
-  defp format_duration(nil), do: "?"
+  @doc false
+  # Public for unit testing. Renders a job duration (in native time units)
+  # as a human string: "?" / "<1ms" / "Nms" / "N.Ns".
+  @spec format_duration(integer() | nil) :: String.t()
+  def format_duration(nil), do: "?"
 
-  defp format_duration(native_units) when is_integer(native_units) do
+  def format_duration(native_units) when is_integer(native_units) do
     ms = System.convert_time_unit(native_units, :native, :millisecond)
 
     cond do
@@ -467,12 +478,15 @@ defmodule EdgeAdminWeb.Live.QuantumDashboard do
     """
   end
 
-  # Pure data — no HEEx pattern-matching inside cond branches (which leak).
-  defp next_run_payload(%{state: :inactive}), do: :dash
-  defp next_run_payload(%{next_run_naive: nil}), do: :dash
-  defp next_run_payload(%{next_run_naive: {:error, reason}}), do: {:error, reason}
+  @doc false
+  # Public for unit testing. Pure data — no HEEx pattern-matching inside cond
+  # branches (which leak). Renders the "next run" cell payload from a job map.
+  @spec next_run_payload(map()) :: :dash | {:ok, map()} | {:error, String.t()}
+  def next_run_payload(%{state: :inactive}), do: :dash
+  def next_run_payload(%{next_run_naive: nil}), do: :dash
+  def next_run_payload(%{next_run_naive: {:error, reason}}), do: {:error, reason}
 
-  defp next_run_payload(%{next_run_naive: {:ok, naive_dt, job_tz}}) do
+  def next_run_payload(%{next_run_naive: {:ok, naive_dt, job_tz}}) do
     {:ok, dt} = DateTime.from_naive(naive_dt, "Etc/UTC")
     naive_now = naive_now_in_tz(DateTime.utc_now(), job_tz)
     seconds_until = NaiveDateTime.diff(naive_dt, naive_now, :second)
@@ -488,25 +502,37 @@ defmodule EdgeAdminWeb.Live.QuantumDashboard do
   end
 
   # Catch-all: any unexpected shape becomes a visible error rather than a render crash.
-  defp next_run_payload(other), do: {:error, "unexpected next_run shape: #{inspect(other)}"}
+  def next_run_payload(other), do: {:error, "unexpected next_run shape: #{inspect(other)}"}
 
-  defp humanize_ago(seconds) when seconds < 0, do: "in the future"
-  defp humanize_ago(seconds) when seconds < 60, do: "#{seconds}s ago"
-  defp humanize_ago(seconds) when seconds < 3600, do: "#{div(seconds, 60)}m ago"
-  defp humanize_ago(seconds) when seconds < 86_400, do: "#{div(seconds, 3600)}h ago"
-  defp humanize_ago(seconds), do: "#{div(seconds, 86_400)}d ago"
+  @doc false
+  # Public for unit testing. Renders a non-negative seconds delta as a relative
+  # past-tense string ("3d ago"); negative values surface as "in the future".
+  @spec humanize_ago(integer()) :: String.t()
+  def humanize_ago(seconds) when seconds < 0, do: "in the future"
+  def humanize_ago(seconds) when seconds < 60, do: "#{seconds}s ago"
+  def humanize_ago(seconds) when seconds < 3600, do: "#{div(seconds, 60)}m ago"
+  def humanize_ago(seconds) when seconds < 86_400, do: "#{div(seconds, 3600)}h ago"
+  def humanize_ago(seconds), do: "#{div(seconds, 86_400)}d ago"
 
-  defp humanize_in(seconds) when seconds <= 0, do: "now"
-  defp humanize_in(seconds) when seconds < 60, do: "in #{seconds}s"
-  defp humanize_in(seconds) when seconds < 3600, do: "in #{div(seconds, 60)}m"
-  defp humanize_in(seconds) when seconds < 86_400, do: "in #{div(seconds, 3600)}h"
-  defp humanize_in(seconds), do: "in #{div(seconds, 86_400)}d"
+  @doc false
+  # Public for unit testing. Renders a non-negative seconds delta as a relative
+  # future-tense string ("in 5m"); zero/negative values surface as "now".
+  @spec humanize_in(integer()) :: String.t()
+  def humanize_in(seconds) when seconds <= 0, do: "now"
+  def humanize_in(seconds) when seconds < 60, do: "in #{seconds}s"
+  def humanize_in(seconds) when seconds < 3600, do: "in #{div(seconds, 60)}m"
+  def humanize_in(seconds) when seconds < 86_400, do: "in #{div(seconds, 3600)}h"
+  def humanize_in(seconds), do: "in #{div(seconds, 86_400)}d"
 
-  defp next_run_class(%{state: :inactive}), do: "text-muted"
-  defp next_run_class(%{next_run_naive: nil}), do: "text-muted"
-  defp next_run_class(%{next_run_naive: {:error, _}}), do: "next-run-error"
+  @doc false
+  # Public for unit testing. Returns the CSS class for the next-run cell:
+  # "text-muted" / "next-run-error" / "next-run-soon" / "" (default).
+  @spec next_run_class(map()) :: String.t()
+  def next_run_class(%{state: :inactive}), do: "text-muted"
+  def next_run_class(%{next_run_naive: nil}), do: "text-muted"
+  def next_run_class(%{next_run_naive: {:error, _}}), do: "next-run-error"
 
-  defp next_run_class(%{next_run_naive: {:ok, naive_dt, job_tz}}) do
+  def next_run_class(%{next_run_naive: {:ok, naive_dt, job_tz}}) do
     now = DateTime.utc_now()
     naive_now = naive_now_in_tz(now, job_tz)
     seconds = NaiveDateTime.diff(naive_dt, naive_now, :second)

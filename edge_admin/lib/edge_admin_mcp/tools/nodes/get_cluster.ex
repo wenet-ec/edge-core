@@ -9,7 +9,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetCluster do
   @impl true
   def title, do: "Get Cluster"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => false}
 
   schema do
     field :cluster_name, {:required, :string}

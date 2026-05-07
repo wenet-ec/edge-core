@@ -9,7 +9,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.GetSshUsername do
   @impl true
   def title, do: "Get SSH Username"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => false}
 
   schema do
     field :ssh_username_id, {:required, :string}

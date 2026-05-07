@@ -20,7 +20,7 @@ defmodule EdgeAdminMcp.Tools.Admins.GetAdmin do
   @impl true
   def title, do: "Get Admin Info"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => false}
 
   schema do
   end

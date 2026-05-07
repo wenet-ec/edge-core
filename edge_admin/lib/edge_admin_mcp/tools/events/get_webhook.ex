@@ -9,7 +9,7 @@ defmodule EdgeAdminMcp.Tools.Events.GetWebhook do
   @impl true
   def title, do: "Get Webhook"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => false}
 
   schema do
     field :webhook_id, {:required, :string}

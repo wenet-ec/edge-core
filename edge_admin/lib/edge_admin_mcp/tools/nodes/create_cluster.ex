@@ -1,6 +1,16 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/create_cluster.ex
 defmodule EdgeAdminMcp.Tools.Nodes.CreateCluster do
-  @moduledoc "Create a new edge cluster. ipv4_range is auto-assigned if omitted. node_limit caps how many nodes can enroll."
+  @moduledoc """
+  Create a new edge cluster.
+
+  - `name` — required. Lowercase alphanumeric and hyphens only, must start
+    and end with alphanumeric. Max 24 characters. Examples: `prod`,
+    `prod-east`, `homelab-1`. The literal `default` is reserved.
+  - `ipv4_range` — optional CIDR (e.g. `100.64.1.0/24`). Auto-assigned from
+    the available pool if omitted.
+  - `node_limit` — optional cap on how many nodes can enroll. Omit for no
+    limit.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
@@ -9,10 +19,10 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateCluster do
   @impl true
   def title, do: "Create Cluster"
   @impl true
-  def annotations, do: %{"destructiveHint" => false}
+  def annotations, do: %{"destructiveHint" => false, "idempotentHint" => false, "openWorldHint" => true}
 
   schema do
-    field :name, {:required, :string}, min_length: 1
+    field :name, {:required, :string}, max_length: 24, regex: ~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/
     field :ipv4_range, :string
     field :node_limit, :integer, min: 1
   end

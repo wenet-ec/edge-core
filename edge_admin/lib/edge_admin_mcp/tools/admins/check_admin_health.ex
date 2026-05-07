@@ -10,48 +10,48 @@ defmodule EdgeAdminMcp.Tools.Admins.CheckAdminHealth do
   Check names match the labels in `EdgeAdminHealth.checks/0` so the
   response is searchable against the same identifiers operators see in
   `/health` payloads and in logs.
+
+  ## Why the shape differs from `/healthz`
+
+  Both surfaces invoke the same check functions in `EdgeAdminHealth` and run
+  them through the same `PlugCheckup.Check.Runner` — checks and runner are
+  shared. Only the output shape diverges: `/healthz` returns PlugCheckup's
+  JSON (with HTTP status semantics for K8s probes / load balancers); this
+  tool flattens to `%{healthy, checks: [%{name, status, reason?}]}` because
+  that shape is friendlier for an AI agent to summarise.
   """
   use EdgeAdminMcp, :tool
 
   @impl true
   def title, do: "Check Admin Health"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => true}
 
   schema do
   end
 
   @impl true
   def execute(_params, frame) do
-    checks = EdgeAdminHealth.checks()
+    # Reuse PlugCheckup's runner so this tool and `/healthz` share the same
+    # parallel-execution + timeout + rescue/catch semantics. The shapes diverge
+    # downstream (model-friendly here, PlugCheckup JSON on the HTTP path).
+    {_status, results} = PlugCheckup.Check.Runner.async_run(EdgeAdminHealth.checks(), 6_000)
 
-    results =
-      checks
-      |> Task.async_stream(
-        fn check ->
-          result =
-            try do
-              apply(check.module, check.function, [])
-            rescue
-              e -> {:error, Exception.message(e)}
-            end
+    formatted = Enum.map(results, &format_check/1)
+    healthy = Enum.all?(formatted, &(&1.status == "ok"))
 
-          case result do
-            :ok -> %{name: check.name, status: "ok"}
-            {:error, reason} -> %{name: check.name, status: "error", reason: reason}
-          end
-        end,
-        timeout: 6_000,
-        on_timeout: :kill_task
-      )
-      |> Enum.zip(checks)
-      |> Enum.map(fn
-        {{:ok, result}, _check} -> result
-        {{:exit, :timeout}, check} -> %{name: check.name, status: "error", reason: "timeout"}
-      end)
-
-    healthy = Enum.all?(results, &(&1.status == "ok"))
-
-    {:reply, Response.json(Response.tool(), %{healthy: healthy, checks: results}), frame}
+    {:reply, Response.json(Response.tool(), %{healthy: healthy, checks: formatted}), frame}
   end
+
+  defp format_check(%PlugCheckup.Check{name: name, result: :ok}) do
+    %{name: name, status: "ok"}
+  end
+
+  defp format_check(%PlugCheckup.Check{name: name, result: {:error, reason}}) do
+    %{name: name, status: "error", reason: format_reason(reason)}
+  end
+
+  defp format_reason(reason) when is_binary(reason), do: reason
+  defp format_reason(:timeout), do: "timeout"
+  defp format_reason(reason), do: inspect(reason)
 end

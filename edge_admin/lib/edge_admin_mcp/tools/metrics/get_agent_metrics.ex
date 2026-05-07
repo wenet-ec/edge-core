@@ -8,7 +8,7 @@ defmodule EdgeAdminMcp.Tools.Metrics.GetAgentMetrics do
   @impl true
   def title, do: "Get Agent Metrics"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => true}
 
   schema do
     field :node_id, {:required, :string}

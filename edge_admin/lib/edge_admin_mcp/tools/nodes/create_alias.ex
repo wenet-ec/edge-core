@@ -4,9 +4,12 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateAlias do
   Create a DNS alias for a node. The alias resolves to the same WireGuard
   IP as the underlying node within the VPN mesh.
 
-  Resolved hostname format: `node-<name>.cluster-<cluster_name>.<vpn_domain>`
-  (default `vpn_domain` is `nm.internal`). The created record's
-  `vpn_hostname` field carries the fully-qualified form for direct use.
+  - `name` — lowercase alphanumeric and hyphens only, must start and end
+    with alphanumeric. 1–63 characters. Examples: `web-1`, `db-primary`.
+
+  Resolved hostname format: `<name>.<cluster_name>.<vpn_domain>` (default
+  `vpn_domain` is `nm.internal`). The created record's `vpn_hostname`
+  field carries the fully-qualified form for direct use.
   """
   use EdgeAdminMcp, :tool
 
@@ -16,11 +19,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateAlias do
   @impl true
   def title, do: "Create Alias"
   @impl true
-  def annotations, do: %{"destructiveHint" => false}
+  def annotations, do: %{"destructiveHint" => false, "idempotentHint" => false, "openWorldHint" => true}
 
   schema do
     field :node_id, {:required, :string}
-    field :name, {:required, :string}
+    field :name, {:required, :string}, min_length: 1, max_length: 63, regex: ~r/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/
   end
 
   @impl true

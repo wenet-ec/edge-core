@@ -14,7 +14,7 @@ defmodule EdgeAdminMcp.Tools.Commands.DeleteCommandExecution do
   @impl true
   def title, do: "Delete Command Execution"
   @impl true
-  def annotations, do: %{"destructiveHint" => true, "idempotentHint" => false}
+  def annotations, do: %{"destructiveHint" => true, "idempotentHint" => false, "openWorldHint" => false}
 
   schema do
     field :execution_id, {:required, :string}
@@ -24,7 +24,7 @@ defmodule EdgeAdminMcp.Tools.Commands.DeleteCommandExecution do
   def execute(%{execution_id: id}, frame) do
     with {:ok, execution} <- Commands.get_command_execution(id),
          {:ok, _} <- Commands.delete_command_execution(execution) do
-      {:reply, Response.text(Response.tool(), "Command execution #{id} deleted"), frame}
+      {:reply, Response.json(Response.tool(), %{deleted: true, id: id}), frame}
     else
       {:error, :not_found} ->
         {:reply, error_response(:not_found, "Command execution #{id} not found"), frame}

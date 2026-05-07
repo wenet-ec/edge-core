@@ -8,7 +8,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.DeleteCluster do
   @impl true
   def title, do: "Delete Cluster"
   @impl true
-  def annotations, do: %{"destructiveHint" => true, "idempotentHint" => false}
+  def annotations, do: %{"destructiveHint" => true, "idempotentHint" => false, "openWorldHint" => true}
 
   schema do
     field :cluster_name, {:required, :string}
@@ -18,7 +18,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.DeleteCluster do
   def execute(%{cluster_name: name}, frame) do
     with {:ok, cluster} <- Nodes.get_cluster(name),
          {:ok, _} <- Nodes.delete_cluster(cluster) do
-      {:reply, Response.text(Response.tool(), "Cluster #{name} deleted"), frame}
+      {:reply, Response.json(Response.tool(), %{deleted: true, name: name}), frame}
     else
       {:error, :not_found} ->
         {:reply, error_response(:not_found, "Cluster #{name} not found"), frame}

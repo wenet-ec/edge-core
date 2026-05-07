@@ -14,7 +14,7 @@ defmodule EdgeAdminMcp.Tools.Admins.ListAdminClusters do
   @impl true
   def title, do: "List All Admin Clusters"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => true}
 
   schema do
   end

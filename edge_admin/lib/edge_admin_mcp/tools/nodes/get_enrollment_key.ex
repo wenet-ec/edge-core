@@ -9,7 +9,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetEnrollmentKey do
   @impl true
   def title, do: "Get Enrollment Key"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => false}
 
   schema do
     field :enrollment_key_id, {:required, :string}

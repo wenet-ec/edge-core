@@ -8,7 +8,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.DeleteEnrollmentKey do
   @impl true
   def title, do: "Delete Enrollment Key"
   @impl true
-  def annotations, do: %{"destructiveHint" => true, "idempotentHint" => false}
+  def annotations, do: %{"destructiveHint" => true, "idempotentHint" => false, "openWorldHint" => false}
 
   schema do
     field :enrollment_key_id, {:required, :string}
@@ -18,7 +18,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.DeleteEnrollmentKey do
   def execute(%{enrollment_key_id: id}, frame) do
     with {:ok, key} <- Nodes.get_enrollment_key(id),
          {:ok, _} <- Nodes.delete_enrollment_key(key) do
-      {:reply, Response.text(Response.tool(), "Enrollment key #{id} deleted"), frame}
+      {:reply, Response.json(Response.tool(), %{deleted: true, id: id}), frame}
     else
       {:error, :not_found} ->
         {:reply, error_response(:not_found, "Enrollment key #{id} not found"), frame}

@@ -29,7 +29,7 @@ defmodule EdgeAdminMcp.Tools.Metrics.GetAdminMetrics do
   @impl true
   def title, do: "Get Admin Metrics"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => false}
 
   schema do
   end

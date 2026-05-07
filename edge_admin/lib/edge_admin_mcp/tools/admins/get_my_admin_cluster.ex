@@ -19,7 +19,7 @@ defmodule EdgeAdminMcp.Tools.Admins.GetMyAdminCluster do
   @impl true
   def title, do: "Get This Admin's Admin Cluster"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => false}
 
   schema do
   end

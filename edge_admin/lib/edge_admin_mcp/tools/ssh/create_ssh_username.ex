@@ -3,7 +3,16 @@ defmodule EdgeAdminMcp.Tools.Ssh.CreateSshUsername do
   @moduledoc """
   Create an SSH username for a node. Optionally set a password and/or public keys.
 
-  public_keys is a list of maps with `public_key` (required) and `key_name` (optional).
+  - `node_id` — required. The node this username can SSH into.
+  - `username` — required. 3–32 characters, must start with a letter or
+    underscore, lowercase letters / digits / hyphens / underscores only.
+  - `password` — optional. 12–128 characters. Hashed with Argon2 at rest.
+    Omit for key-only auth.
+  - `public_keys` — optional list of `%{key_name, public_key}`. Both fields
+    are required on each entry. `public_key` must be valid OpenSSH format
+    (supported algorithms: `ssh-ed25519`, `ecdsa-sha2-nistp256/384/521`,
+    `ssh-rsa`). `key_name` is a human-readable label, unique within this
+    username.
   """
   use EdgeAdminMcp, :tool
 
@@ -14,13 +23,25 @@ defmodule EdgeAdminMcp.Tools.Ssh.CreateSshUsername do
   @impl true
   def title, do: "Create SSH Username"
   @impl true
-  def annotations, do: %{"destructiveHint" => false}
+  def annotations, do: %{"destructiveHint" => false, "idempotentHint" => false, "openWorldHint" => false}
 
   schema do
     field :node_id, {:required, :string}
-    field :username, {:required, :string}, min_length: 1
-    field :password, :string, min_length: 1
-    field :public_keys, {:list, :map}
+
+    field :username, {:required, :string},
+      min_length: 3,
+      max_length: 32,
+      regex: ~r/^[a-z_][a-z0-9_-]*$/
+
+    field :password, :string, min_length: 12, max_length: 128
+
+    embeds_many :public_keys do
+      field :key_name, {:required, :string}, min_length: 1, max_length: 255
+
+      field :public_key, {:required, :string},
+        min_length: 1,
+        regex: ~r/^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa)\s+[A-Za-z0-9+\/]+=*\s*.*$/
+    end
   end
 
   @impl true

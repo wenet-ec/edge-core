@@ -22,7 +22,7 @@ defmodule EdgeAdminMcp.Tools.Commands.CancelCommandExecution do
   @impl true
   def title, do: "Cancel Command Execution"
   @impl true
-  def annotations, do: %{"destructiveHint" => false, "idempotentHint" => false}
+  def annotations, do: %{"destructiveHint" => true, "idempotentHint" => false, "openWorldHint" => false}
 
   schema do
     field :execution_id, {:required, :string}

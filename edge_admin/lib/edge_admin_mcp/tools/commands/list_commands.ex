@@ -25,7 +25,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommands do
   @impl true
   def title, do: "List Commands"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => false}
 
   schema do
     field :page, :integer, default: 1, min: 1

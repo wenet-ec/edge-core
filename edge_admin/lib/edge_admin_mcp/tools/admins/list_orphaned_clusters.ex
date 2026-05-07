@@ -8,7 +8,7 @@ defmodule EdgeAdminMcp.Tools.Admins.ListOrphanedClusters do
   @impl true
   def title, do: "List Orphaned Clusters"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => false}
 
   schema do
   end

@@ -8,7 +8,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.DeleteSshUsername do
   @impl true
   def title, do: "Delete SSH Username"
   @impl true
-  def annotations, do: %{"destructiveHint" => true, "idempotentHint" => false}
+  def annotations, do: %{"destructiveHint" => true, "idempotentHint" => false, "openWorldHint" => false}
 
   schema do
     field :ssh_username_id, {:required, :string}
@@ -18,7 +18,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.DeleteSshUsername do
   def execute(%{ssh_username_id: id}, frame) do
     with {:ok, username} <- Ssh.get_ssh_username(id),
          {:ok, _} <- Ssh.delete_ssh_username(username) do
-      {:reply, Response.text(Response.tool(), "SSH username #{id} deleted"), frame}
+      {:reply, Response.json(Response.tool(), %{deleted: true, id: id}), frame}
     else
       {:error, :not_found} ->
         {:reply, error_response(:not_found, "SSH username #{id} not found"), frame}

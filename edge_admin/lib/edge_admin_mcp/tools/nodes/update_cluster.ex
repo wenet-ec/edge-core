@@ -1,6 +1,12 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/update_cluster.ex
 defmodule EdgeAdminMcp.Tools.Nodes.UpdateCluster do
-  @moduledoc "Update a cluster's node_limit. Pass null to remove the limit."
+  @moduledoc """
+  Update a cluster's `node_limit`.
+
+  - **Omit `node_limit`** — leave the limit unchanged.
+  - **Pass an integer** — set the limit to that value (must be ≥ current node count).
+  - **Pass `null`** — remove the limit (unlimited).
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
@@ -9,7 +15,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.UpdateCluster do
   @impl true
   def title, do: "Update Cluster"
   @impl true
-  def annotations, do: %{"idempotentHint" => true}
+  def annotations, do: %{"destructiveHint" => false, "idempotentHint" => true, "openWorldHint" => false}
 
   schema do
     field :cluster_name, {:required, :string}
@@ -20,7 +26,9 @@ defmodule EdgeAdminMcp.Tools.Nodes.UpdateCluster do
   def execute(%{cluster_name: name} = params, frame) do
     case Nodes.get_cluster(name) do
       {:ok, cluster} ->
-        case Nodes.update_cluster(cluster, %{"node_limit" => params[:node_limit]}) do
+        attrs = put_if_present(%{}, "node_limit", params, :node_limit)
+
+        case Nodes.update_cluster(cluster, attrs) do
           {:ok, updated} ->
             {:reply, Response.json(Response.tool(), ClusterData.data(updated)), frame}
 

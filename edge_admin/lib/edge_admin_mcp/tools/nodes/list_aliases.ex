@@ -23,7 +23,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListAliases do
   @impl true
   def title, do: "List Aliases"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => false}
 
   schema do
     field :page, :integer, default: 1, min: 1

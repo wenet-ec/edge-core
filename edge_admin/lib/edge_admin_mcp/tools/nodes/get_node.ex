@@ -9,7 +9,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetNode do
   @impl true
   def title, do: "Get Node"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => false}
 
   schema do
     field :node_id, {:required, :string}

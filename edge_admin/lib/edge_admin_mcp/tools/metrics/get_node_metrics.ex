@@ -25,7 +25,7 @@ defmodule EdgeAdminMcp.Tools.Metrics.GetNodeMetrics do
   @impl true
   def title, do: "Get Node Metrics"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => true}
 
   schema do
     field :node_id, {:required, :string}

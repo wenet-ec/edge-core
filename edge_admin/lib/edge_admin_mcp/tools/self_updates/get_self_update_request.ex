@@ -9,7 +9,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.GetSelfUpdateRequest do
   @impl true
   def title, do: "Get Self-Update Request"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => false}
 
   schema do
     field :request_id, {:required, :string}

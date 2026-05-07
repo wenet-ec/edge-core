@@ -24,7 +24,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
   @impl true
   def title, do: "List SSH Usernames"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => false}
 
   schema do
     field :page, :integer, default: 1, min: 1

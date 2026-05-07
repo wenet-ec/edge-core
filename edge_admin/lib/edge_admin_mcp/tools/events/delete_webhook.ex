@@ -16,7 +16,7 @@ defmodule EdgeAdminMcp.Tools.Events.DeleteWebhook do
   @impl true
   def title, do: "Delete Webhook"
   @impl true
-  def annotations, do: %{"destructiveHint" => true, "idempotentHint" => false}
+  def annotations, do: %{"destructiveHint" => true, "idempotentHint" => false, "openWorldHint" => false}
 
   schema do
     field :webhook_id, {:required, :string}
@@ -26,7 +26,7 @@ defmodule EdgeAdminMcp.Tools.Events.DeleteWebhook do
   def execute(%{webhook_id: id}, frame) do
     with {:ok, webhook} <- Webhooks.get_webhook(id),
          {:ok, _} <- Webhooks.delete_webhook(webhook) do
-      {:reply, Response.text(Response.tool(), "Webhook #{id} deleted"), frame}
+      {:reply, Response.json(Response.tool(), %{deleted: true, id: id}), frame}
     else
       {:error, :not_found} ->
         {:reply, error_response(:not_found, "Webhook #{id} not found"), frame}

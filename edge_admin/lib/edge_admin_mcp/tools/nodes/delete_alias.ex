@@ -8,7 +8,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.DeleteAlias do
   @impl true
   def title, do: "Delete Alias"
   @impl true
-  def annotations, do: %{"destructiveHint" => true, "idempotentHint" => false}
+  def annotations, do: %{"destructiveHint" => true, "idempotentHint" => false, "openWorldHint" => true}
 
   schema do
     field :alias_id, {:required, :string}
@@ -18,7 +18,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.DeleteAlias do
   def execute(%{alias_id: id}, frame) do
     with {:ok, a} <- Nodes.get_alias(id),
          {:ok, _} <- Nodes.delete_alias(a) do
-      {:reply, Response.text(Response.tool(), "Alias #{id} deleted"), frame}
+      {:reply, Response.json(Response.tool(), %{deleted: true, id: id}), frame}
     else
       {:error, :not_found} ->
         {:reply, error_response(:not_found, "Alias #{id} not found"), frame}

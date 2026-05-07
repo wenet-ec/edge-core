@@ -9,7 +9,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.GetSshPublicKey do
   @impl true
   def title, do: "Get SSH Public Key"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => false}
 
   schema do
     field :ssh_public_key_id, {:required, :string}

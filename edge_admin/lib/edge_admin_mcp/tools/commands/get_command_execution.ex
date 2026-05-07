@@ -9,7 +9,7 @@ defmodule EdgeAdminMcp.Tools.Commands.GetCommandExecution do
   @impl true
   def title, do: "Get Command Execution"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => false}
 
   schema do
     field :execution_id, {:required, :string}

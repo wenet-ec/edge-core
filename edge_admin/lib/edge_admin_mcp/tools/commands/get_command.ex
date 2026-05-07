@@ -9,7 +9,7 @@ defmodule EdgeAdminMcp.Tools.Commands.GetCommand do
   @impl true
   def title, do: "Get Command"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => false}
 
   schema do
     field :command_id, {:required, :string}

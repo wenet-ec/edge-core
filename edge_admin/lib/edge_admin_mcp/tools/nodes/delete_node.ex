@@ -8,7 +8,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.DeleteNode do
   @impl true
   def title, do: "Delete Node"
   @impl true
-  def annotations, do: %{"destructiveHint" => true, "idempotentHint" => false}
+  def annotations, do: %{"destructiveHint" => true, "idempotentHint" => false, "openWorldHint" => true}
 
   schema do
     field :node_id, {:required, :string}
@@ -18,7 +18,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.DeleteNode do
   def execute(%{node_id: id}, frame) do
     with {:ok, node} <- Nodes.get_node(id),
          {:ok, _} <- Nodes.delete_node(node) do
-      {:reply, Response.text(Response.tool(), "Node #{id} deleted"), frame}
+      {:reply, Response.json(Response.tool(), %{deleted: true, id: id}), frame}
     else
       {:error, :not_found} ->
         {:reply, error_response(:not_found, "Node #{id} not found"), frame}

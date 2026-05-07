@@ -27,7 +27,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
   @impl true
   def title, do: "List Nodes"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => false}
 
   schema do
     field :page, :integer, default: 1, min: 1

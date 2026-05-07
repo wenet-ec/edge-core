@@ -8,7 +8,7 @@ defmodule EdgeAdminMcp.Tools.Metrics.GetHostMetrics do
   @impl true
   def title, do: "Get Host Metrics"
   @impl true
-  def annotations, do: %{"readOnlyHint" => true}
+  def annotations, do: %{"readOnlyHint" => true, "openWorldHint" => true}
 
   schema do
     field :node_id, {:required, :string}

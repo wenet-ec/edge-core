@@ -132,16 +132,31 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
     end
   end
 
-  defp validate_proxy_form("CONNECT", _uri), do: :ok
+  @doc """
+  Validates that a non-CONNECT request URI is in absolute (proxy) form.
 
-  defp validate_proxy_form(_method, uri) do
+  Forward proxies require absolute URIs (`http://host/path`) on the request
+  line — origin-form URIs (`/path`) are rejected. CONNECT bypasses this check
+  because it carries `host:port` instead of a URI.
+  """
+  @spec validate_proxy_form(String.t(), String.t()) :: :ok | {:error, :origin_form_uri}
+  def validate_proxy_form("CONNECT", _uri), do: :ok
+
+  def validate_proxy_form(_method, uri) do
     case URI.parse(uri) do
       %URI{scheme: s, host: h} when is_binary(s) and is_binary(h) -> :ok
       _ -> {:error, :origin_form_uri}
     end
   end
 
-  defp check_loop(headers) do
+  @doc """
+  Detects a forwarding loop by scanning the `Via` header for our own pseudonym.
+
+  When the proxy sees its pseudonym already on the Via chain, the request has
+  travelled through us before — return `{:error, :loop_detected}` to break it.
+  """
+  @spec check_loop([{String.t(), String.t()}]) :: :ok | {:error, :loop_detected}
+  def check_loop(headers) do
     pseudonym = via_pseudonym()
 
     case get_header(headers, "via") do
@@ -427,7 +442,15 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
     }
   end
 
-  defp reconcile_host_header(headers, host, port) do
+  @doc """
+  Replaces the `Host` header with `host[:port]`, eliding the port for the
+  scheme defaults (80 and 443).
+
+  Any prior Host entries (any case) are dropped before the new one is prepended.
+  """
+  @spec reconcile_host_header([{String.t(), String.t()}], String.t(), 1..65_535) ::
+          [{String.t(), String.t()}]
+  def reconcile_host_header(headers, host, port) do
     host_value =
       case port do
         80 -> host
@@ -438,7 +461,22 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
     [{"host", host_value} | Enum.reject(headers, fn {k, _} -> String.downcase(k) == "host" end)]
   end
 
-  defp filter_hop_by_hop_headers(headers) do
+  @doc """
+  Strips RFC 7230 hop-by-hop headers and any extra names listed in `Connection`,
+  preserving WebSocket-style upgrades.
+
+  Drop set: the static hop-by-hop list (`connection`, `keep-alive`,
+  `proxy-authenticate`, `proxy-authorization`, `proxy-connection`, `te`,
+  `trailer`, `transfer-encoding`, `upgrade`) plus every comma-separated value
+  named in the request's `Connection` header.
+
+  When `Connection` lists `upgrade`, the original `Upgrade` header and a fresh
+  `Connection: Upgrade` are re-added after filtering so the upgrade chain
+  survives.
+  """
+  @spec filter_hop_by_hop_headers([{String.t(), String.t()}]) ::
+          [{String.t(), String.t()}]
+  def filter_hop_by_hop_headers(headers) do
     connection_listed =
       headers
       |> get_header("connection")
@@ -469,7 +507,12 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
     end
   end
 
-  defp add_via_header(headers, http_version) do
+  @doc """
+  Appends a `Via` entry of the form `"<version> <pseudonym>"`, chaining onto
+  any existing `Via` value with comma-space separation.
+  """
+  @spec add_via_header([{String.t(), String.t()}], String.t()) :: [{String.t(), String.t()}]
+  def add_via_header(headers, http_version) do
     version = parse_http_version(http_version)
     pseudonym = via_pseudonym()
     new_entry = "#{version} #{pseudonym}"
@@ -483,16 +526,41 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
     [{"via", updated} | Enum.reject(headers, fn {k, _} -> String.downcase(k) == "via" end)]
   end
 
-  defp parse_http_version("HTTP/1.0"), do: "1.0"
-  defp parse_http_version("HTTP/1.1"), do: "1.1"
-  defp parse_http_version("HTTP/" <> rest), do: rest
-  defp parse_http_version(_), do: "1.1"
+  @doc """
+  Reduces an HTTP version string to its bare digits for use in the `Via` header
+  (per RFC 7230). Falls back to `"1.1"` for unrecognised inputs.
+  """
+  @spec parse_http_version(String.t()) :: String.t()
+  def parse_http_version("HTTP/1.0"), do: "1.0"
+  def parse_http_version("HTTP/1.1"), do: "1.1"
+  def parse_http_version("HTTP/" <> rest), do: rest
+  def parse_http_version(_), do: "1.1"
 
-  defp via_pseudonym do
+  @doc """
+  Returns this proxy's `Via` pseudonym, configurable via the `:via_pseudonym`
+  application env (default `"edge-admin"`).
+  """
+  @spec via_pseudonym() :: String.t()
+  def via_pseudonym do
     Application.get_env(:edge_admin, :via_pseudonym, "edge-admin")
   end
 
-  defp validate_external_destination(host, port) do
+  @type ssrf_error ::
+          {:error, :localhost_blocked}
+          | {:error, :link_local_blocked}
+          | {:error, :metadata_service_blocked}
+          | {:error, :blocked_port}
+
+  @doc """
+  SSRF guard for HTTP direct mode targeting non-VPN destinations.
+
+  Rejects loopback hosts, link-local IPv4 (169.254.0.0/16), well-known
+  cloud-metadata endpoints, and a curated set of orchestration ports.
+  Returns `:ok` for anything else — the handler still has to confirm the
+  destination is acceptable; this is a deny-list, not an allow-list.
+  """
+  @spec validate_external_destination(String.t(), 1..65_535) :: :ok | ssrf_error()
+  def validate_external_destination(host, port) do
     cond do
       loopback?(host) -> {:error, :localhost_blocked}
       link_local?(host) -> {:error, :link_local_blocked}
@@ -502,19 +570,31 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
     end
   end
 
-  defp loopback?(host) do
+  @doc """
+  Returns true for loopback host literals: `localhost`, `127.0.0.1`,
+  `0.0.0.0`, `::1`, and any `127.x.y.z`.
+  """
+  @spec loopback?(String.t()) :: boolean()
+  def loopback?(host) do
     String.downcase(host) in ["localhost", "127.0.0.1", "0.0.0.0", "::1"] or
       String.starts_with?(host, "127.")
   end
 
-  defp link_local?(host) do
+  @doc "Returns true for IPv4 addresses in the link-local 169.254.0.0/16 block."
+  @spec link_local?(String.t()) :: boolean()
+  def link_local?(host) do
     case parse_ipv4(host) do
       {169, 254, _, _} -> true
       _ -> false
     end
   end
 
-  defp metadata_service?(host) do
+  @doc """
+  Returns true for the well-known cloud-provider metadata endpoints (GCP,
+  Azure, AWS, Alibaba). Match is case-insensitive on the hostname.
+  """
+  @spec metadata_service?(String.t()) :: boolean()
+  def metadata_service?(host) do
     host_lower = String.downcase(host)
 
     host_lower in [
@@ -525,11 +605,21 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
     ]
   end
 
-  defp blocked_ports do
+  @doc """
+  Ports the proxy refuses to connect to, even for non-VPN destinations.
+  Covers Docker daemon, Swarm, Kubernetes API/kubelet, and etcd.
+  """
+  @spec blocked_ports() :: [1..65_535]
+  def blocked_ports do
     [2375, 2376, 2377, 6443, 10_250, 10_255, 2379, 2380]
   end
 
-  defp parse_ipv4(host) do
+  @doc """
+  Parses a dotted-quad IPv4 string into a 4-tuple of octets, or returns `nil`
+  if the input isn't four integer-only segments. Does not range-check octets.
+  """
+  @spec parse_ipv4(String.t()) :: {integer(), integer(), integer(), integer()} | nil
+  def parse_ipv4(host) do
     case String.split(host, ".") do
       [a, b, c, d] ->
         with {a, ""} <- Integer.parse(a),
@@ -546,13 +636,26 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
     end
   end
 
-  defp build_http_request(method, path, http_version, headers) do
+  @doc """
+  Serialises a request line + headers + terminating blank line into one
+  `\\r\\n`-framed binary suitable for `:gen_tcp.send/2`.
+  """
+  @spec build_http_request(String.t(), String.t(), String.t(), [{String.t(), String.t()}]) :: binary()
+  def build_http_request(method, path, http_version, headers) do
     request_line = "#{method} #{path} #{http_version}\r\n"
     header_lines = Enum.map(headers, fn {k, v} -> "#{k}: #{v}\r\n" end)
     IO.iodata_to_binary([request_line | header_lines] ++ ["\r\n"])
   end
 
-  defp parse_http_uri(uri) do
+  @doc """
+  Splits an absolute-form URI into `{host, port, path}`, defaulting the port
+  to the scheme default (80/443) and the path to `"/"` when missing.
+
+  Only `http` and `https` schemes are accepted.
+  """
+  @spec parse_http_uri(String.t()) ::
+          {:ok, String.t(), 1..65_535, String.t()} | {:error, :invalid_uri}
+  def parse_http_uri(uri) do
     case URI.parse(uri) do
       %URI{scheme: scheme, host: host, port: port, path: path} when scheme in ["http", "https"] and is_binary(host) ->
         port = port || if scheme == "https", do: 443, else: 80
@@ -564,7 +667,14 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
     end
   end
 
-  defp parse_host_port(uri) do
+  @doc """
+  Splits a `host:port` token (CONNECT request target) into its components.
+  """
+  @spec parse_host_port(String.t()) ::
+          {:ok, String.t(), 1..65_535}
+          | {:error, :invalid_port}
+          | {:error, :invalid_format}
+  def parse_host_port(uri) do
     case String.split(uri, ":", parts: 2) do
       [host, port_str] ->
         case Integer.parse(port_str) do
@@ -577,7 +687,12 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
     end
   end
 
-  defp get_header(headers, key) do
+  @doc """
+  Case-insensitive lookup against a list of header tuples; returns the first
+  matching value or `nil`.
+  """
+  @spec get_header([{String.t(), String.t()}], String.t()) :: String.t() | nil
+  def get_header(headers, key) do
     key_down = String.downcase(key)
 
     Enum.find_value(headers, fn {k, v} ->

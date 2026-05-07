@@ -28,10 +28,6 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
     }
   }
 
-  # `secret` and `headers` are intentionally write-only — encrypted at rest
-  # and never returned in any GET response.
-  @derive {Jason.Encoder, only: [:id, :url, :subscribed_events, :inserted_at, :updated_at]}
-
   schema "webhooks" do
     field(:url, :string)
     field(:secret, EncryptedBinary, redact: true)

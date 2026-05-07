@@ -13,7 +13,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ChangeNodeCluster do
 
   alias EdgeAdmin.Naming
   alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Nodes.Schemas.Node, as: NodeSchema
+  alias EdgeAdmin.Nodes.Views.NodeView
 
   @max_length Naming.cluster_name_max_length()
   @regex Naming.cluster_name_regex()
@@ -34,7 +34,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ChangeNodeCluster do
       {:ok, node} ->
         case Nodes.change_node_cluster(node, %{"cluster_name" => cluster_name}) do
           {:ok, updated} ->
-            {:reply, Response.json(Response.tool(), NodeSchema.to_public(updated)), frame}
+            {:reply, Response.json(Response.tool(), NodeView.render(updated)), frame}
 
           {:error, reason} ->
             {:reply, error_response(reason), frame}

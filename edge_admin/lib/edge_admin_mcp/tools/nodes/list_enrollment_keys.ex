@@ -26,7 +26,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
+  alias EdgeAdmin.Nodes.Views.EnrollmentKeyView
   alias EdgeAdminMcp.FlopParams
 
   @impl true
@@ -80,7 +80,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
 
     case Nodes.list_enrollment_keys(query) do
       {:ok, {keys, meta}} ->
-        {:reply, Response.json(Response.tool(), paginated(keys, meta, &EnrollmentKey.to_public/1)), frame}
+        {:reply, Response.json(Response.tool(), paginated(keys, meta, &EnrollmentKeyView.render/1)), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}

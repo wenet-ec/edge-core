@@ -46,6 +46,7 @@ defmodule EdgeAdminMcp.Tools.Commands.CreateCommand do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Commands
+  alias EdgeAdmin.Commands.Views.CommandView
   alias EdgeAdmin.Nodes.Targeting
 
   @impl true
@@ -69,7 +70,7 @@ defmodule EdgeAdminMcp.Tools.Commands.CreateCommand do
 
     case Commands.create_command_and_executions(attrs) do
       {:ok, command} ->
-        {:reply, Response.json(Response.tool(), command), frame}
+        {:reply, Response.json(Response.tool(), CommandView.render(command)), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}

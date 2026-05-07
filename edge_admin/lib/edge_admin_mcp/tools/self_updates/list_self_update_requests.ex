@@ -15,6 +15,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.ListSelfUpdateRequests do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.SelfUpdates
+  alias EdgeAdmin.SelfUpdates.Views.SelfUpdateRequestView
   alias EdgeAdminMcp.FlopParams
 
   @impl true
@@ -44,7 +45,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.ListSelfUpdateRequests do
 
     case SelfUpdates.list_self_update_requests(query) do
       {:ok, {requests, meta}} ->
-        {:reply, Response.json(Response.tool(), paginated(requests, meta)), frame}
+        {:reply, Response.json(Response.tool(), paginated(requests, meta, &SelfUpdateRequestView.render/1)), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}

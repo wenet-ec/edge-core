@@ -10,7 +10,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.UpdateCluster do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Nodes.Schemas.Cluster
+  alias EdgeAdmin.Nodes.Views.ClusterView
 
   @impl true
   def title, do: "Update Cluster"
@@ -30,7 +30,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.UpdateCluster do
 
         case Nodes.update_cluster(cluster, attrs) do
           {:ok, updated} ->
-            {:reply, Response.json(Response.tool(), Cluster.to_public(updated)), frame}
+            {:reply, Response.json(Response.tool(), ClusterView.render(updated)), frame}
 
           {:error, reason} ->
             {:reply, error_response(reason), frame}

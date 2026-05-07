@@ -17,7 +17,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListAliases do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Nodes.Schemas.Alias
+  alias EdgeAdmin.Nodes.Views.AliasView
   alias EdgeAdminMcp.FlopParams
 
   @impl true
@@ -49,7 +49,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListAliases do
 
     case Nodes.list_aliases(query) do
       {:ok, {aliases, meta}} ->
-        {:reply, Response.json(Response.tool(), paginated(aliases, meta, &Alias.to_public/1)), frame}
+        {:reply, Response.json(Response.tool(), paginated(aliases, meta, &AliasView.render/1)), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}

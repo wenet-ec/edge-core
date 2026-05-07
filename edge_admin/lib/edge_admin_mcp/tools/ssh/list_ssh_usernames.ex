@@ -18,7 +18,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Ssh
-  alias EdgeAdmin.Ssh.Schemas.SshUsername
+  alias EdgeAdmin.Ssh.Views.SshUsernameView
   alias EdgeAdminMcp.FlopParams
 
   @impl true
@@ -51,7 +51,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
 
     case Ssh.list_ssh_usernames(query) do
       {:ok, {usernames, meta}} ->
-        {:reply, Response.json(Response.tool(), paginated(usernames, meta, &SshUsername.to_public/1)), frame}
+        {:reply, Response.json(Response.tool(), paginated(usernames, meta, &SshUsernameView.render/1)), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}

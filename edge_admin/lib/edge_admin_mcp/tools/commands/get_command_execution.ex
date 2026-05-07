@@ -4,7 +4,7 @@ defmodule EdgeAdminMcp.Tools.Commands.GetCommandExecution do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Commands
-  alias EdgeAdmin.Commands.Schemas.CommandExecution
+  alias EdgeAdmin.Commands.Views.CommandExecutionView
 
   @impl true
   def title, do: "Get Command Execution"
@@ -19,7 +19,7 @@ defmodule EdgeAdminMcp.Tools.Commands.GetCommandExecution do
   def execute(%{execution_id: id}, frame) do
     case Commands.get_command_execution(id) do
       {:ok, execution} ->
-        {:reply, Response.json(Response.tool(), CommandExecution.to_public(execution)), frame}
+        {:reply, Response.json(Response.tool(), CommandExecutionView.render(execution)), frame}
 
       {:error, :not_found} ->
         {:reply, error_response(:not_found, "Command execution #{id} not found"), frame}

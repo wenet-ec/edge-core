@@ -20,6 +20,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshPublicKeys do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Ssh
+  alias EdgeAdmin.Ssh.Views.SshPublicKeyView
   alias EdgeAdminMcp.FlopParams
 
   @impl true
@@ -54,7 +55,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshPublicKeys do
 
     case Ssh.list_ssh_public_keys(query) do
       {:ok, {keys, meta}} ->
-        {:reply, Response.json(Response.tool(), paginated(keys, meta)), frame}
+        {:reply, Response.json(Response.tool(), paginated(keys, meta, &SshPublicKeyView.render/1)), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}

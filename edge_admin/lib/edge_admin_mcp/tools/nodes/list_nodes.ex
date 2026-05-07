@@ -21,7 +21,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Nodes.Schemas.Node, as: NodeSchema
+  alias EdgeAdmin.Nodes.Views.NodeView
   alias EdgeAdminMcp.FlopParams
 
   @impl true
@@ -57,7 +57,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
 
     case Nodes.list_nodes(query) do
       {:ok, {nodes, meta}} ->
-        {:reply, Response.json(Response.tool(), paginated(nodes, meta, &NodeSchema.to_public/1)), frame}
+        {:reply, Response.json(Response.tool(), paginated(nodes, meta, &NodeView.render/1)), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}

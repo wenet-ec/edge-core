@@ -15,7 +15,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateCluster do
 
   alias EdgeAdmin.Naming
   alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Nodes.Schemas.Cluster
+  alias EdgeAdmin.Nodes.Views.ClusterView
 
   @max_length Naming.cluster_name_max_length()
   @regex Naming.cluster_name_regex()
@@ -40,7 +40,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateCluster do
 
     case Nodes.create_cluster(attrs) do
       {:ok, cluster} ->
-        {:reply, Response.json(Response.tool(), Cluster.to_public(cluster)), frame}
+        {:reply, Response.json(Response.tool(), ClusterView.render(cluster)), frame}
 
       {:error, :service_unavailable} ->
         {:reply, error_response(:service_unavailable), frame}

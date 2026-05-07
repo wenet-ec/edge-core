@@ -4,6 +4,7 @@ defmodule EdgeAdminMcp.Tools.Events.GetWebhook do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Events.Webhooks
+  alias EdgeAdmin.Events.Webhooks.Views.WebhookView
 
   @impl true
   def title, do: "Get Webhook"
@@ -18,7 +19,7 @@ defmodule EdgeAdminMcp.Tools.Events.GetWebhook do
   def execute(%{webhook_id: id}, frame) do
     case Webhooks.get_webhook(id) do
       {:ok, webhook} ->
-        {:reply, Response.json(Response.tool(), webhook), frame}
+        {:reply, Response.json(Response.tool(), WebhookView.render(webhook)), frame}
 
       {:error, :not_found} ->
         {:reply, error_response(:not_found, "Webhook #{id} not found"), frame}

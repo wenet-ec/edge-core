@@ -19,6 +19,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommands do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Commands
+  alias EdgeAdmin.Commands.Views.CommandView
   alias EdgeAdminMcp.FlopParams
 
   @impl true
@@ -54,7 +55,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommands do
 
     case Commands.list_commands(query) do
       {:ok, {commands, meta}} ->
-        {:reply, Response.json(Response.tool(), paginated(commands, meta)), frame}
+        {:reply, Response.json(Response.tool(), paginated(commands, meta, &CommandView.render/1)), frame}
 
       {:error, reason} ->
         {:reply, error_response(reason), frame}

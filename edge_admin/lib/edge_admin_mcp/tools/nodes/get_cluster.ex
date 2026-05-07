@@ -4,7 +4,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetCluster do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Nodes.Schemas.Cluster
+  alias EdgeAdmin.Nodes.Views.ClusterView
 
   @impl true
   def title, do: "Get Cluster"
@@ -19,7 +19,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetCluster do
   def execute(%{cluster_name: name}, frame) do
     case Nodes.get_cluster(name) do
       {:ok, cluster} ->
-        {:reply, Response.json(Response.tool(), Cluster.to_public(cluster)), frame}
+        {:reply, Response.json(Response.tool(), ClusterView.render(cluster)), frame}
 
       {:error, :not_found} ->
         {:reply, error_response(:not_found, "Cluster #{name} not found"), frame}

@@ -4,6 +4,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.GetSshPublicKey do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Ssh
+  alias EdgeAdmin.Ssh.Views.SshPublicKeyView
 
   @impl true
   def title, do: "Get SSH Public Key"
@@ -18,7 +19,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.GetSshPublicKey do
   def execute(%{ssh_public_key_id: id}, frame) do
     case Ssh.get_ssh_public_key(id) do
       {:ok, key} ->
-        {:reply, Response.json(Response.tool(), key), frame}
+        {:reply, Response.json(Response.tool(), SshPublicKeyView.render(key)), frame}
 
       {:error, :not_found} ->
         {:reply, error_response(:not_found, "SSH public key #{id} not found"), frame}

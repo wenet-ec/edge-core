@@ -13,6 +13,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.CreateSshPublicKey do
 
   alias EdgeAdmin.Naming
   alias EdgeAdmin.Ssh
+  alias EdgeAdmin.Ssh.Views.SshPublicKeyView
 
   @public_key_regex Naming.ssh_public_key_regex()
 
@@ -35,7 +36,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.CreateSshPublicKey do
 
         case Ssh.create_ssh_public_key(ssh_username, attrs) do
           {:ok, key} ->
-            {:reply, Response.json(Response.tool(), key), frame}
+            {:reply, Response.json(Response.tool(), SshPublicKeyView.render(key)), frame}
 
           {:error, reason} ->
             {:reply, error_response(reason), frame}

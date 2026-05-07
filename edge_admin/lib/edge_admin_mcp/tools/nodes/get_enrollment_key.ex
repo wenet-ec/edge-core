@@ -4,7 +4,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetEnrollmentKey do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
+  alias EdgeAdmin.Nodes.Views.EnrollmentKeyView
 
   @impl true
   def title, do: "Get Enrollment Key"
@@ -19,7 +19,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetEnrollmentKey do
   def execute(%{enrollment_key_id: id}, frame) do
     case Nodes.get_enrollment_key(id) do
       {:ok, key} ->
-        {:reply, Response.json(Response.tool(), EnrollmentKey.to_public(key)), frame}
+        {:reply, Response.json(Response.tool(), EnrollmentKeyView.render(key)), frame}
 
       {:error, :not_found} ->
         {:reply, error_response(:not_found, "Enrollment key #{id} not found"), frame}

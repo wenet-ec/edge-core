@@ -4,6 +4,7 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
   use EdgeAdmin.Schema
 
   alias EdgeAdmin.Naming
+  alias EdgeAdmin.Ssh.Schemas.SshPublicKey
 
   @type t :: %__MODULE__{}
 
@@ -24,7 +25,7 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
 
     # Associations
     belongs_to(:node, EdgeAdmin.Nodes.Schemas.Node)
-    has_many(:ssh_public_keys, EdgeAdmin.Ssh.Schemas.SshPublicKey, on_delete: :delete_all)
+    has_many(:ssh_public_keys, SshPublicKey, on_delete: :delete_all)
 
     timestamps()
   end
@@ -68,7 +69,7 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
     }
   end
 
-  defp public_key_summary(%EdgeAdmin.Ssh.Schemas.SshPublicKey{} = key) do
+  defp public_key_summary(%SshPublicKey{} = key) do
     %{
       id: key.id,
       key_name: key.key_name,

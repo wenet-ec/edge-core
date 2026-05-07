@@ -258,11 +258,11 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     }
   end
 
-  defp alias_summary(%EdgeAdmin.Nodes.Schemas.Alias{} = a) do
+  defp alias_summary(%Alias{} = a) do
     %{
       id: a.id,
       name: a.name,
-      vpn_hostname: EdgeAdmin.Nodes.Schemas.Alias.vpn_hostname(a)
+      vpn_hostname: Alias.vpn_hostname(a)
     }
   end
 end

@@ -31,9 +31,7 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
     }
   }
 
-  @derive {Jason.Encoder,
-           only: [:id, :public_key, :key_name, :ssh_username_id, :inserted_at, :updated_at]}
-
+  @derive {Jason.Encoder, only: [:id, :public_key, :key_name, :ssh_username_id, :inserted_at, :updated_at]}
 
   schema "ssh_public_keys" do
     field(:public_key, :string)

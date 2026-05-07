@@ -46,7 +46,7 @@ defmodule EdgeAdminWeb.Plugs.DegradedMode do
       conn
       |> put_status(:service_unavailable)
       |> put_view(json: EdgeAdminWeb.Controllers.ErrorJSON)
-      |> render(:"503")
+      |> render(:"503_degraded_mode")
       |> halt()
     else
       conn

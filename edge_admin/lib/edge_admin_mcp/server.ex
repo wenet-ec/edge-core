@@ -72,6 +72,58 @@ defmodule EdgeAdminMcp.Server do
     version: "0.2.0",
     capabilities: [:tools]
 
+  alias Anubis.Server.Handlers
+  alias Anubis.Server.Response
+  alias EdgeAdminMcp.ToolError
+
+  # ── Degraded-mode gating ──────────────────────────────────────────────────
+  #
+  # Tools that are blocked when `EdgeAdmin.Admins.Metadata.degraded?/0` is true.
+  # Mirrors `plug DegradedMode, :block when action in [...]` on the REST side
+  # — same source of truth (`@metadata_module.degraded?/0`), same operations
+  # blocked. Reads, alias ops, webhook ops, SSH ops, commands all run
+  # unconditionally.
+  #
+  # When adding a new write tool: if its REST counterpart uses `:block`,
+  # append the tool name here. The decision (block vs. allow) lives next to
+  # the `component(...)` registrations in this file — both adjacent to make
+  # adding new tools coherent.
+  @blocked_when_degraded ~w(
+    create_cluster
+    update_cluster
+    delete_cluster
+    change_node_cluster
+    delete_node
+    create_enrollment_key
+    update_enrollment_key
+    delete_enrollment_key
+    create_self_update_request
+  )
+
+  # Compile-time dispatch matching `EdgeAdminWeb.Plugs.DegradedMode` — tests
+  # override `:metadata_module` in `config/test.exs` before compilation.
+  @metadata_module Application.compile_env(:edge_admin, :metadata_module, EdgeAdmin.Admins.Metadata)
+  @compile {:no_warn_undefined, @metadata_module}
+
+  @impl true
+  def handle_request(request, frame) do
+    case check_not_degraded(request) do
+      :ok -> Handlers.handle(request, __MODULE__, frame)
+      :degraded -> {:reply, degraded_response(), frame}
+    end
+  end
+
+  defp check_not_degraded(%{"method" => "tools/call", "params" => %{"name" => name}})
+       when name in @blocked_when_degraded do
+    if @metadata_module.degraded?(), do: :degraded, else: :ok
+  end
+
+  defp check_not_degraded(_request), do: :ok
+
+  defp degraded_response do
+    Response.tool() |> Response.error(ToolError.message(:degraded_mode)) |> Response.to_protocol()
+  end
+
   @impl true
   def server_instructions do
     """

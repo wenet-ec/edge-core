@@ -34,4 +34,17 @@ defmodule EdgeAdminWeb.Controllers.ErrorJSON do
   def render("503.json", %{conn: conn}) do
     ResponseEnvelope.error(conn, "service_unavailable", "Service Unavailable")
   end
+
+  # Distinct from `503.json` — rendered by `Plugs.DegradedMode` when the admin
+  # cluster is over capacity. Same wire status (503) but a more specific code +
+  # message so clients can distinguish "wait briefly" (downstream dep flapping)
+  # from "you exceeded capacity, fix that". MCP renders the same vocabulary
+  # via `EdgeAdminMcp.ToolError.message(:degraded_mode)`.
+  def render("503_degraded_mode.json", %{conn: conn}) do
+    ResponseEnvelope.error(
+      conn,
+      "degraded_mode",
+      "Cluster is in degraded mode (over capacity) — try again when capacity recovers"
+    )
+  end
 end

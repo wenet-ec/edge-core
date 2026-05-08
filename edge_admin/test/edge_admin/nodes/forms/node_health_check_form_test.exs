@@ -17,14 +17,14 @@ defmodule EdgeAdmin.Nodes.Forms.NodeHealthCheckFormTest do
   # ---------------------------------------------------------------------------
 
   describe "changeset/1 — valid statuses" do
-    test "healthy status succeeds" do
+    test "healthy status succeeds (wire string cast to atom)" do
       assert {:ok, result} = NodeHealthCheckForm.changeset(%{"status" => "healthy"})
-      assert result["status"] == "healthy"
+      assert result["status"] == :healthy
     end
 
-    test "unhealthy status succeeds" do
+    test "unhealthy status succeeds (wire string cast to atom)" do
       assert {:ok, result} = NodeHealthCheckForm.changeset(%{"status" => "unhealthy"})
-      assert result["status"] == "unhealthy"
+      assert result["status"] == :unhealthy
     end
   end
 
@@ -33,11 +33,9 @@ defmodule EdgeAdmin.Nodes.Forms.NodeHealthCheckFormTest do
   # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid statuses" do
-    test "unreachable status is rejected" do
+    test "unreachable status is rejected (agent never reports :unreachable)" do
       assert {:error, changeset} = NodeHealthCheckForm.changeset(%{"status" => "unreachable"})
-      assert %{status: [msg]} = errors_on(changeset)
-      assert msg =~ "healthy"
-      assert msg =~ "unhealthy"
+      assert %{status: [_msg]} = errors_on(changeset)
     end
 
     test "unknown status is rejected" do
@@ -72,9 +70,9 @@ defmodule EdgeAdmin.Nodes.Forms.NodeHealthCheckFormTest do
       refute Map.has_key?(result, :status)
     end
 
-    test "result value is preserved as-is" do
+    test "result value is the cast atom (wire string → :atom via Ecto.Enum)" do
       {:ok, result} = NodeHealthCheckForm.changeset(%{"status" => "unhealthy"})
-      assert result["status"] == "unhealthy"
+      assert result["status"] == :unhealthy
     end
   end
 

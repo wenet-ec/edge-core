@@ -8,24 +8,28 @@ defmodule EdgeAdmin.Nodes.Forms.NodeHealthCheckForm do
   """
   use EdgeAdmin.Form
 
+  # Agents only report :healthy or :unhealthy. :unreachable is admin-derived
+  # (set when health checks fail to reach the node), never agent-reported.
+  @agent_reported_statuses [:healthy, :unhealthy]
+
   embedded_schema do
-    field(:status, :string)
+    field(:status, Ecto.Enum, values: @agent_reported_statuses)
   end
 
   @doc """
   Validates node health check parameters from agent.
 
   ## Validations
-  - `status` - Must be "healthy" or "unhealthy"
+  - `status` - Must be `"healthy"` or `"unhealthy"` on the wire (cast to atom)
 
   ## Returns
-  - `{:ok, attrs}` - Validated attributes as map
+  - `{:ok, attrs}` - Validated attributes as map (status is an atom)
   - `{:error, changeset}` - Validation errors
 
   ## Examples
 
       iex> changeset(%{"status" => "healthy"})
-      {:ok, %{"status" => "healthy"}}
+      {:ok, %{"status" => :healthy}}
 
       iex> changeset(%{"status" => "unreachable"})
       {:error, %Ecto.Changeset{}}
@@ -34,7 +38,6 @@ defmodule EdgeAdmin.Nodes.Forms.NodeHealthCheckForm do
     %__MODULE__{}
     |> cast(attrs, [:status])
     |> validate_required([:status])
-    |> validate_inclusion(:status, ["healthy", "unhealthy"], message: "must be either 'healthy' or 'unhealthy'")
     |> apply_action(:insert)
     |> case do
       {:ok, form} -> {:ok, form |> Map.take([:status]) |> stringify_keys()}

@@ -7,11 +7,14 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
   use EdgeAdminWeb.Schema
 
   alias EdgeAdmin.Naming
+  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
   defmodule NodeSummary do
     @moduledoc false
+
+    @status_enum Node.status_strings()
 
     schema(%{
       title: "NodeSummary",
@@ -26,7 +29,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         status: %Schema{
           type: :string,
           description: "Node status",
-          enum: ["healthy", "unhealthy", "unreachable"],
+          enum: @status_enum,
           example: "healthy"
         },
         id_type: %Schema{

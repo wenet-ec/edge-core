@@ -18,7 +18,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeView do
       cluster_name: cluster.name,
       netmaker_host_id: node.netmaker_host_id,
       id_type: node.id_type,
-      status: node.status,
+      status: status_to_string(node.status),
       vpn_hostname: NodeSchema.vpn_hostname(node),
       mdns_hostname: NodeSchema.mdns_hostname(node),
       http_port: node.http_port,
@@ -45,4 +45,6 @@ defmodule EdgeAdmin.Nodes.Views.NodeView do
       vpn_hostname: Alias.vpn_hostname(a)
     }
   end
+
+  defp status_to_string(status), do: Atom.to_string(status)
 end

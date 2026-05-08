@@ -7,11 +7,14 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
   use EdgeAdminWeb.Schema
 
   alias EdgeAdmin.Naming
+  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
   defmodule NodeResponse do
     @moduledoc false
+
+    @status_enum Node.status_strings()
 
     schema(%{
       title: "NodeResponse",
@@ -47,7 +50,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         },
         status: %Schema{
           type: :string,
-          enum: ["healthy", "unhealthy", "unreachable"],
+          enum: @status_enum,
           description: "Current node status"
         },
         vpn_hostname: %Schema{

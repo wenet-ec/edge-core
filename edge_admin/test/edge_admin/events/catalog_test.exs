@@ -26,7 +26,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
       id: "node-uuid-1",
       cluster: cluster,
       cluster_id: cluster.id,
-      status: "healthy",
+      status: :healthy,
       version: "1.2.0",
       id_type: "persistent",
       http_port: 44_000,
@@ -177,7 +177,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
         %Catalog.NodeRegistered{node: node_fixture()},
         %Catalog.NodeReregistered{node: node_fixture()},
         %Catalog.NodeVersionChanged{node: node_fixture(), previous_version: "1.1.0"},
-        %Catalog.NodeStatusChanged{node: node_fixture(), previous_status: "healthy"},
+        %Catalog.NodeStatusChanged{node: node_fixture(), previous_status: :healthy},
         %Catalog.NodeClusterChanged{node: node_fixture(), previous_cluster_name: "old"},
         %Catalog.NodeUpdateTriggered{node: node_fixture(), self_update_request_id: "req"},
         %Catalog.CommandExecutionCreated{
@@ -354,8 +354,8 @@ defmodule EdgeAdmin.Events.CatalogTest do
     test "NodeStatusChanged overlays previous_status onto base" do
       data =
         Catalog.to_data(%Catalog.NodeStatusChanged{
-          node: node_fixture(%{status: "unhealthy"}),
-          previous_status: "healthy"
+          node: node_fixture(%{status: :unhealthy}),
+          previous_status: :healthy
         })
 
       assert data["status"] == "unhealthy"

@@ -17,7 +17,7 @@ defmodule EdgeAdmin.Events.Catalog do
       %Catalog.NodeRegistered{node: node}
       %Catalog.NodeReregistered{node: node}
       %Catalog.NodeVersionChanged{node: node, previous_version: "1.1.0"}
-      %Catalog.NodeStatusChanged{node: node, previous_status: "healthy"}
+      %Catalog.NodeStatusChanged{node: node, previous_status: :healthy}
       %Catalog.NodeClusterChanged{node: node, previous_cluster_name: "old"}
       %Catalog.NodeUpdateTriggered{node: node, self_update_request_id: id}
 
@@ -99,7 +99,7 @@ defmodule EdgeAdmin.Events.Catalog do
     @moduledoc false
     @enforce_keys [:node, :previous_status]
     defstruct [:node, :previous_status]
-    @type t :: %__MODULE__{node: Node.t(), previous_status: String.t()}
+    @type t :: %__MODULE__{node: Node.t(), previous_status: Node.status()}
   end
 
   defmodule NodeClusterChanged do
@@ -495,7 +495,7 @@ defmodule EdgeAdmin.Events.Catalog do
   end
 
   def to_data(%NodeStatusChanged{node: node, previous_status: prev}) do
-    node |> node_data() |> Map.put("previous_status", prev)
+    node |> node_data() |> Map.put("previous_status", Atom.to_string(prev))
   end
 
   def to_data(%NodeClusterChanged{node: node, previous_cluster_name: prev}) do
@@ -560,7 +560,7 @@ defmodule EdgeAdmin.Events.Catalog do
     %{
       "node_id" => node.id,
       "cluster_name" => cluster_name(node),
-      "status" => node.status,
+      "status" => Atom.to_string(node.status),
       "version" => node.version,
       "id_type" => node.id_type,
       "http_port" => node.http_port,

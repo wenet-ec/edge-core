@@ -19,7 +19,7 @@ defmodule EdgeAdmin.EventsTest do
       id: "node-uuid-1",
       cluster: cluster,
       cluster_id: cluster.id,
-      status: "healthy",
+      status: :healthy,
       version: "1.2.0",
       id_type: "persistent",
       http_port: 44_000,

@@ -26,7 +26,7 @@ defmodule EdgeAdmin.Nodes.Views.ClusterViewTest do
     base = %Node{
       id: "node-uuid-1",
       id_type: "persistent",
-      status: "healthy"
+      status: :healthy
     }
 
     struct(base, overrides)

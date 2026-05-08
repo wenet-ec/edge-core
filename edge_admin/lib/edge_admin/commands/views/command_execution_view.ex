@@ -31,9 +31,5 @@ defmodule EdgeAdmin.Commands.Views.CommandExecutionView do
     }
   end
 
-  # Tolerate string statuses from older / inline-built test fixtures while the
-  # canonical runtime representation is now an atom.
-  defp status_to_string(status) when is_atom(status) and not is_nil(status), do: Atom.to_string(status)
-  defp status_to_string(status) when is_binary(status), do: status
-  defp status_to_string(nil), do: nil
+  defp status_to_string(status), do: Atom.to_string(status)
 end

@@ -4,11 +4,14 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdminWeb.Plugs.DegradedMode
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Nodes.NodeSchemas
   alias EdgeAdminWeb.Schemas.PathParams
   alias EdgeAdminWeb.Schemas.QueryParams
+
+  @status_enum Node.status_strings()
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
@@ -25,9 +28,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
         QueryParams.sort(order_by_example: "inserted_at,status", order_directions_example: "desc,asc") ++
         [
           QueryParams.enum_filter(:id_type, ["persistent", "random"], description: "Filter by node ID type"),
-          QueryParams.enum_filter(:status, ["healthy", "unhealthy", "unreachable"],
-            description: "Filter by node status"
-          ),
+          QueryParams.enum_filter(:status, @status_enum, description: "Filter by node status"),
           QueryParams.string_filter(:version,
             description: "Filter by agent version (exact match or wildcard: 1.0.0, 1.*, etc.)"
           ),

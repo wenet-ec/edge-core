@@ -10,7 +10,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
 
   - `id` - Node UUID (can be persistent or randomly generated per boot)
   - `id_type` - Either "persistent" (saved to disk) or "random" (ephemeral)
-  - `status` - Health status: "healthy", "unhealthy", or "unreachable"
+  - `status` - Health status: `:healthy`, `:unhealthy`, or `:unreachable`
   - `cluster_id` - Foreign key to cluster
   - `netmaker_host_id` - Reference to Netmaker host resource
   - `api_token` - Bearer token for node API authentication
@@ -29,10 +29,18 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   alias EdgeAdmin.Ssh.Schemas.SshUsername
   alias EdgeAdmin.Vpn
 
+  # Health status registry. The schema's `Ecto.Enum` cast, the public predicate
+  # functions, and external surfaces (controller / MCP / OpenAPI / AsyncAPI
+  # enums) all derive from these lists — single source of truth.
+  @statuses [:healthy, :unhealthy, :unreachable]
+  @reachable_statuses [:healthy, :unhealthy]
+
+  @type status :: :healthy | :unhealthy | :unreachable
+
   @type t :: %__MODULE__{
           id: String.t(),
           id_type: String.t(),
-          status: String.t(),
+          status: status(),
           last_seen_at: DateTime.t() | nil,
           version: String.t(),
           http_port: integer(),
@@ -81,7 +89,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   schema "nodes" do
     # Informative fields
     field(:id_type, :string)
-    field(:status, :string, default: "healthy")
+    field(:status, Ecto.Enum, values: @statuses, default: :healthy)
     field(:last_seen_at, :utc_datetime)
     field(:version, :string)
 
@@ -152,7 +160,6 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
       :self_update_enabled
     ])
     |> validate_inclusion(:id_type, ["persistent", "random"])
-    |> validate_inclusion(:status, ["healthy", "unhealthy", "unreachable"])
     |> unique_constraint(:id, name: :nodes_pkey)
     |> unique_constraint(:api_token)
     |> foreign_key_constraint(:cluster_id)
@@ -221,4 +228,24 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   def mdns_hostname(%__MODULE__{id: id}) do
     "node-#{id}.local"
   end
+
+  # ---------------------------------------------------------------------------
+  # Status registry
+  # ---------------------------------------------------------------------------
+
+  @doc "All node health statuses, in canonical order."
+  @spec statuses() :: [status()]
+  def statuses, do: @statuses
+
+  @doc "Statuses for which the node was reached recently (excludes :unreachable)."
+  @spec reachable_statuses() :: [status()]
+  def reachable_statuses, do: @reachable_statuses
+
+  @doc "Wire-format strings (sorted to match `statuses/0`). For OpenAPI / MCP / AsyncAPI enums."
+  @spec status_strings() :: [String.t()]
+  def status_strings, do: Enum.map(@statuses, &Atom.to_string/1)
+
+  @doc "Wire-format strings for reachable statuses only."
+  @spec reachable_status_strings() :: [String.t()]
+  def reachable_status_strings, do: Enum.map(@reachable_statuses, &Atom.to_string/1)
 end

@@ -31,9 +31,11 @@ defmodule EdgeAdmin.Nodes.Views.ClusterView do
 
     %{
       id: node.id,
-      status: node.status,
+      status: status_to_string(node.status),
       id_type: node.id_type,
       vpn_hostname: Vpn.build_vpn_hostname(short_name, network_name)
     }
   end
+
+  defp status_to_string(status), do: Atom.to_string(status)
 end

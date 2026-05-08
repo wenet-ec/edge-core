@@ -494,7 +494,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
     %{
       "node_id" => %{"type" => "string"},
       "cluster_name" => %{"type" => "string"},
-      "status" => %{"type" => "string", "enum" => ["healthy", "unhealthy", "unreachable"]},
+      "status" => %{"type" => "string", "enum" => EdgeAdmin.Nodes.Schemas.Node.status_strings()},
       "version" => %{"type" => "string"},
       "id_type" => %{"type" => "string"},
       "http_port" => %{"type" => "integer"},
@@ -570,7 +570,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "properties" =>
           Map.put(node_base_properties(), "previous_status", %{
             "type" => "string",
-            "enum" => ["healthy", "unhealthy", "unreachable"],
+            "enum" => EdgeAdmin.Nodes.Schemas.Node.status_strings(),
             "description" => "Status before this transition"
           })
       },

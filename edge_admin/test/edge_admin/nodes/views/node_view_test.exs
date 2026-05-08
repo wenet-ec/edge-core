@@ -43,7 +43,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
       aliases: [],
       netmaker_host_id: "host-1",
       id_type: "persistent",
-      status: "healthy",
+      status: :healthy,
       http_port: 44_000,
       ssh_port: 40_022,
       host_metrics_port: 9100,

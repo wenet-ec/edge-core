@@ -755,7 +755,7 @@ defmodule EdgeAdmin.Commands do
         join: cmd in assoc(ce, :command),
         where: ce.status == :pending,
         where: c.name in ^cluster_names,
-        where: n.status == "healthy",
+        where: n.status == :healthy,
         where: is_nil(cmd.expired_at) or cmd.expired_at > ^now,
         order_by: [asc: ce.node_id, asc: ce.inserted_at],
         preload: [node: :cluster, command: []]

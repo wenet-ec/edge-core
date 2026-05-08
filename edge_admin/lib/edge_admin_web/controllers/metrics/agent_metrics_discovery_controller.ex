@@ -4,6 +4,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AgentMetricsDiscoveryController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdminWeb.Schemas.Metrics.DiscoverySchemas
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
@@ -25,7 +26,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AgentMetricsDiscoveryController do
     metrics_base_url = Application.get_env(:edge_admin, :metrics_base_url)
 
     target_groups =
-      [prefix: false, filter_status: ["healthy", "unhealthy"]]
+      [prefix: false, filter_status: Node.reachable_statuses()]
       |> Nodes.list_cluster_node_mappings()
       |> Enum.flat_map(fn %{name: cluster_name, nodes: node_ids} ->
         Enum.map(node_ids, fn node_id ->

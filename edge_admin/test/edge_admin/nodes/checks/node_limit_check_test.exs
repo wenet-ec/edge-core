@@ -30,7 +30,7 @@ defmodule EdgeAdmin.Nodes.Checks.NodeLimitCheckTest do
       id: Ecto.UUID.generate(),
       cluster_id: cluster_id,
       id_type: "persistent",
-      status: "healthy",
+      status: :healthy,
       version: "0.1.0",
       http_port: 44_000,
       ssh_port: 40_022,

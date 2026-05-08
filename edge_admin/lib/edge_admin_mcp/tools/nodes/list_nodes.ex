@@ -21,8 +21,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Views.NodeView
   alias EdgeAdminMcp.FlopParams
+
+  @status_enum Node.status_strings()
 
   @impl true
   def title, do: "List Nodes"
@@ -32,7 +35,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
   schema do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
-    field :status, {:enum, ["healthy", "unhealthy", "unreachable"]}
+    field :status, {:enum, @status_enum}
     field :id_type, {:enum, ["persistent", "random"]}
     field :cluster_name, :string, min_length: 1
     field :version, :string, min_length: 1

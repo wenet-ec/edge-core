@@ -73,7 +73,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
 
   @node_filters_schema %{
     id_type: {:enum, ["persistent", "random"]},
-    status: {:enum, ["healthy", "unhealthy", "unreachable"]},
+    status: {:enum, Node.status_strings()},
     cluster_name: :string,
     version: :string,
     self_update_enabled: :boolean,

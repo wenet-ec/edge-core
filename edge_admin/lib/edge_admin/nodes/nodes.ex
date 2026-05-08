@@ -266,7 +266,7 @@ defmodule EdgeAdmin.Nodes do
     - `true`: Returns "cluster-prod", "node-abc123" (for metadata)
     - `false`: Returns "prod", "abc123" (for discovery endpoints)
   - `:filter_status` - Filter nodes by status (default: nil, includes all)
-    - Example: `["healthy", "unhealthy"]` excludes unreachable nodes
+    - Example: `[:healthy, :unhealthy]` excludes unreachable nodes
 
   ## Returns
   List of maps:
@@ -607,7 +607,7 @@ defmodule EdgeAdmin.Nodes do
   ## Examples
 
       iex> update_node(node, %{"status" => "unhealthy"})
-      {:ok, %Node{status: "unhealthy"}}
+      {:ok, %Node{status: :unhealthy}}
   """
   @spec update_node(Node.t(), map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
   def update_node(%Node{} = node, attrs) do
@@ -831,7 +831,7 @@ defmodule EdgeAdmin.Nodes do
       cluster_id: cluster.id,
       netmaker_host_id: netmaker_host_id,
       id_type: attrs["id_type"],
-      status: "healthy",
+      status: :healthy,
       last_seen_at: now,
       http_port: attrs["http_port"],
       ssh_port: attrs["ssh_port"],
@@ -913,9 +913,9 @@ defmodule EdgeAdmin.Nodes do
   which nodes this admin governs, then performs parallel health checks.
 
   Health check logic:
-  - 200 response => status: "healthy", update last_seen_at
-  - 503 response => status: "unhealthy", update last_seen_at (we reached it)
-  - Network error/timeout => status: "unreachable" only if last_seen_at > 5 minutes ago,
+  - 200 response => status: `:healthy`, update last_seen_at
+  - 503 response => status: `:unhealthy`, update last_seen_at (we reached it)
+  - Network error/timeout => status: `:unreachable` only if last_seen_at > 5 minutes ago,
     otherwise keep existing status (agent might be reporting via HTTP fallback)
 
   Logs warnings for unreachable and unhealthy nodes.
@@ -991,14 +991,14 @@ defmodule EdgeAdmin.Nodes do
     result =
       case AgentClient.ping(node) do
         :healthy ->
-          update_node(node, %{status: "healthy", last_seen_at: now})
-          maybe_publish_status_changed(node, "healthy")
+          update_node(node, %{status: :healthy, last_seen_at: now})
+          maybe_publish_status_changed(node, :healthy)
           :healthy
 
         :unhealthy ->
           Logger.warning("Node #{node.id} is unhealthy (503 response)")
-          update_node(node, %{status: "unhealthy", last_seen_at: now})
-          maybe_publish_status_changed(node, "unhealthy")
+          update_node(node, %{status: :unhealthy, last_seen_at: now})
+          maybe_publish_status_changed(node, :unhealthy)
           :unhealthy
 
         :unreachable ->
@@ -1030,13 +1030,13 @@ defmodule EdgeAdmin.Nodes do
 
     if should_mark_unreachable do
       Logger.warning("Node #{node.id} is unreachable (no contact for > 5 minutes)")
-      update_node(node, %{status: "unreachable"})
-      maybe_publish_status_changed(node, "unreachable")
+      update_node(node, %{status: :unreachable})
+      maybe_publish_status_changed(node, :unreachable)
       :unreachable
     else
       Logger.debug("Node #{node.id} ping failed but last_seen_at is recent, keeping status: #{node.status}")
       # Keep existing status - might be using HTTP fallback
-      String.to_existing_atom(node.status)
+      node.status
     end
   end
 
@@ -1054,7 +1054,7 @@ defmodule EdgeAdmin.Nodes do
 
   Supports filtering by:
   - `id_type` - Enum: "persistent" or "random"
-  - `status` - Enum: "healthy", "unhealthy", or "unreachable"
+  - `status` - Enum: `"healthy"`, `"unhealthy"`, or `"unreachable"` (wire) / atom internally
   - `version` - Text search with wildcard support (1.0.0 exact, 1.* ilike)
   - `self_update_enabled` - Boolean
   - `last_seen_at__gte/lte` - Datetime range filter

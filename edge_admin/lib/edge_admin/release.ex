@@ -240,7 +240,7 @@ defmodule EdgeAdmin.Release do
         :ok
 
       {:ok, params} ->
-        Logger.info("[CloakRotation] Starting rotation: #{params.old_tag} → #{params.new_tag}")
+        Logger.info("Starting cloak rotation: #{params.old_tag} → #{params.new_tag}")
 
         Application.put_env(:edge_admin, EdgeAdmin.Vault,
           ciphers: [
@@ -268,7 +268,7 @@ defmodule EdgeAdmin.Release do
 
     cond do
       length(missing) == 4 ->
-        Logger.info("[CloakRotation] Skip: no ROTATE_* env vars set")
+        Logger.info("Skip: no ROTATE_* env vars set")
         :skip
 
       missing == [] ->
@@ -278,7 +278,7 @@ defmodule EdgeAdmin.Release do
         present = envs |> Enum.reject(fn {_k, v} -> is_nil(v) end) |> Enum.map(&elem(&1, 0))
 
         Logger.info(
-          "[CloakRotation] Skip: incomplete ROTATE_* envs " <>
+          "Skip: incomplete ROTATE_* envs " <>
             "(present: #{inspect(present)}, missing: #{inspect(missing)}). " <>
             "All four are required to rotate."
         )
@@ -301,14 +301,14 @@ defmodule EdgeAdmin.Release do
 
       {:ok, bytes} ->
         Logger.error(
-          "[CloakRotation] #{name} decoded to #{byte_size(bytes)} bytes — must be 32 (AES-256). " <>
+          "#{name} decoded to #{byte_size(bytes)} bytes — must be 32 (AES-256). " <>
             "Generate with: openssl rand -base64 32"
         )
 
         System.halt(1)
 
       :error ->
-        Logger.error("[CloakRotation] #{name} is not valid base64")
+        Logger.error("#{name} is not valid base64")
         System.halt(1)
     end
   end

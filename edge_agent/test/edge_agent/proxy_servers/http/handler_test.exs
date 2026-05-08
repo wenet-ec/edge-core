@@ -1,0 +1,355 @@
+# edge_agent/test/edge_agent/proxy_servers/http/handler_test.exs
+defmodule EdgeAgent.ProxyServers.Http.HandlerTest do
+  # async: false because tests touch the :via_pseudonym application env. The
+  # Handler reads it lazily on every call, so racing test writes would
+  # cross-talk between cases.
+  use ExUnit.Case, async: false
+
+  alias EdgeAgent.ProxyServers.Http.Handler
+
+  # ---------------------------------------------------------------------------
+  # validate_proxy_form/2
+  # ---------------------------------------------------------------------------
+
+  describe "validate_proxy_form/2" do
+    test "CONNECT bypasses URI shape (uri carries host:port, not a URI)" do
+      assert Handler.validate_proxy_form("CONNECT", "example.com:443") == :ok
+    end
+
+    test "non-CONNECT requires absolute-form URI (scheme + host)" do
+      assert Handler.validate_proxy_form("GET", "http://example.com/path") == :ok
+      assert Handler.validate_proxy_form("POST", "https://example.com/") == :ok
+    end
+
+    test "non-CONNECT rejects origin-form URI (no scheme/host)" do
+      assert Handler.validate_proxy_form("GET", "/path") == {:error, :origin_form_uri}
+      assert Handler.validate_proxy_form("GET", "") == {:error, :origin_form_uri}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # check_loop/1 — agent's pseudonym defaults to "edge-agent"
+  # ---------------------------------------------------------------------------
+
+  describe "check_loop/1" do
+    setup do
+      previous = Elixir.Application.get_env(:edge_agent, :via_pseudonym)
+      Elixir.Application.put_env(:edge_agent, :via_pseudonym, "edge-agent")
+
+      on_exit(fn ->
+        if is_nil(previous) do
+          Elixir.Application.delete_env(:edge_agent, :via_pseudonym)
+        else
+          Elixir.Application.put_env(:edge_agent, :via_pseudonym, previous)
+        end
+      end)
+
+      :ok
+    end
+
+    test "no Via header → :ok" do
+      assert Handler.check_loop([{"host", "example.com"}]) == :ok
+    end
+
+    test "Via without our pseudonym → :ok" do
+      assert Handler.check_loop([{"via", "1.1 some-other-proxy"}]) == :ok
+    end
+
+    test "Via containing our pseudonym → loop_detected" do
+      assert Handler.check_loop([{"via", "1.1 edge-agent"}]) == {:error, :loop_detected}
+    end
+
+    test "loop detection survives header name case differences" do
+      assert Handler.check_loop([{"Via", "1.1 edge-agent"}]) == {:error, :loop_detected}
+    end
+
+    test "loop detection works mid-chain" do
+      assert Handler.check_loop([{"via", "1.0 first, 1.1 edge-agent, 1.1 last"}]) ==
+               {:error, :loop_detected}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # get_header/2
+  # ---------------------------------------------------------------------------
+
+  describe "get_header/2" do
+    test "case-insensitive on header name" do
+      headers = [{"Content-Type", "application/json"}]
+      assert Handler.get_header(headers, "content-type") == "application/json"
+      assert Handler.get_header(headers, "CONTENT-TYPE") == "application/json"
+    end
+
+    test "returns first match when duplicates exist" do
+      headers = [{"x-custom", "first"}, {"X-Custom", "second"}]
+      assert Handler.get_header(headers, "x-custom") == "first"
+    end
+
+    test "returns nil when missing" do
+      assert Handler.get_header([], "host") == nil
+      assert Handler.get_header([{"host", "x"}], "via") == nil
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # reconcile_host_header/3
+  # ---------------------------------------------------------------------------
+
+  describe "reconcile_host_header/3" do
+    test "elides port for HTTP default 80" do
+      [{"host", host_value} | _] = Handler.reconcile_host_header([], "example.com", 80)
+      assert host_value == "example.com"
+    end
+
+    test "elides port for HTTPS default 443" do
+      [{"host", host_value} | _] = Handler.reconcile_host_header([], "example.com", 443)
+      assert host_value == "example.com"
+    end
+
+    test "appends port for non-default ports" do
+      [{"host", host_value} | _] = Handler.reconcile_host_header([], "example.com", 8080)
+      assert host_value == "example.com:8080"
+    end
+
+    test "drops any prior Host headers regardless of case" do
+      headers = [{"Host", "old.example.com"}, {"host", "older.example.com"}, {"x-other", "keep"}]
+      result = Handler.reconcile_host_header(headers, "new.example.com", 80)
+
+      assert [{"host", "new.example.com"}, {"x-other", "keep"}] = result
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # filter_hop_by_hop_headers/1
+  # ---------------------------------------------------------------------------
+
+  describe "filter_hop_by_hop_headers/1" do
+    test "strips RFC 7230 hop-by-hop names regardless of case" do
+      headers = [
+        {"Connection", "keep-alive"},
+        {"Keep-Alive", "timeout=5"},
+        {"Proxy-Authenticate", "Basic"},
+        {"Proxy-Authorization", "Basic abcd"},
+        {"Proxy-Connection", "keep-alive"},
+        {"TE", "trailers"},
+        {"Trailer", "Expires"},
+        {"Transfer-Encoding", "chunked"},
+        {"Upgrade", "websocket"},
+        {"Content-Type", "text/plain"}
+      ]
+
+      assert Handler.filter_hop_by_hop_headers(headers) == [{"Content-Type", "text/plain"}]
+    end
+
+    test "expands Connection-listed names into the drop set" do
+      headers = [
+        {"connection", "x-foo, x-bar"},
+        {"x-foo", "1"},
+        {"x-bar", "2"},
+        {"x-keep", "3"}
+      ]
+
+      assert Handler.filter_hop_by_hop_headers(headers) == [{"x-keep", "3"}]
+    end
+
+    test "preserves Upgrade chain when Connection lists 'upgrade'" do
+      headers = [
+        {"connection", "upgrade"},
+        {"upgrade", "websocket"},
+        {"sec-websocket-key", "abc"}
+      ]
+
+      result = Handler.filter_hop_by_hop_headers(headers)
+
+      assert {"connection", "Upgrade"} in result
+      assert {"upgrade", "websocket"} in result
+      assert {"sec-websocket-key", "abc"} in result
+    end
+
+    test "absence of Connection header is fine (to_string(nil) == \"\")" do
+      assert Handler.filter_hop_by_hop_headers([{"x-keep", "1"}]) == [{"x-keep", "1"}]
+    end
+
+    test "Connection list is case- and whitespace-tolerant" do
+      headers = [
+        {"connection", "  X-Foo , X-Bar  "},
+        {"x-foo", "1"},
+        {"X-BAR", "2"}
+      ]
+
+      assert Handler.filter_hop_by_hop_headers(headers) == []
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # add_via_header/2 — agent pseudonym
+  # ---------------------------------------------------------------------------
+
+  describe "add_via_header/2" do
+    setup do
+      previous = Elixir.Application.get_env(:edge_agent, :via_pseudonym)
+      Elixir.Application.put_env(:edge_agent, :via_pseudonym, "edge-agent")
+
+      on_exit(fn ->
+        if is_nil(previous) do
+          Elixir.Application.delete_env(:edge_agent, :via_pseudonym)
+        else
+          Elixir.Application.put_env(:edge_agent, :via_pseudonym, previous)
+        end
+      end)
+
+      :ok
+    end
+
+    test "creates a Via header when none exists" do
+      result = Handler.add_via_header([], "HTTP/1.1")
+      assert [{"via", "1.1 edge-agent"}] = result
+    end
+
+    test "appends to an existing Via with comma-space" do
+      result = Handler.add_via_header([{"via", "1.0 upstream"}], "HTTP/1.1")
+      assert [{"via", "1.0 upstream, 1.1 edge-agent"}] = result
+    end
+
+    test "drops the old Via entry (regardless of case) before prepending the new one" do
+      headers = [{"Via", "1.0 upstream"}, {"x-other", "keep"}]
+      result = Handler.add_via_header(headers, "HTTP/1.1")
+
+      assert [{"via", "1.0 upstream, 1.1 edge-agent"}, {"x-other", "keep"}] == result
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # parse_http_version/1
+  # ---------------------------------------------------------------------------
+
+  describe "parse_http_version/1" do
+    test "strips HTTP/ prefix for known versions" do
+      assert Handler.parse_http_version("HTTP/1.0") == "1.0"
+      assert Handler.parse_http_version("HTTP/1.1") == "1.1"
+    end
+
+    test "strips HTTP/ prefix generically (unknown versions)" do
+      assert Handler.parse_http_version("HTTP/2.0") == "2.0"
+      assert Handler.parse_http_version("HTTP/3") == "3"
+    end
+
+    test "falls back to '1.1' for unrecognised input" do
+      assert Handler.parse_http_version("garbage") == "1.1"
+      assert Handler.parse_http_version("") == "1.1"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # via_pseudonym/0 — agent default differs from admin
+  # ---------------------------------------------------------------------------
+
+  describe "via_pseudonym/0" do
+    test "defaults to 'edge-agent' when env unset" do
+      previous = Elixir.Application.get_env(:edge_agent, :via_pseudonym)
+      Elixir.Application.delete_env(:edge_agent, :via_pseudonym)
+
+      try do
+        assert Handler.via_pseudonym() == "edge-agent"
+      after
+        if previous, do: Elixir.Application.put_env(:edge_agent, :via_pseudonym, previous)
+      end
+    end
+
+    test "uses configured value when set" do
+      previous = Elixir.Application.get_env(:edge_agent, :via_pseudonym)
+      Elixir.Application.put_env(:edge_agent, :via_pseudonym, "custom-proxy")
+
+      try do
+        assert Handler.via_pseudonym() == "custom-proxy"
+      after
+        if is_nil(previous) do
+          Elixir.Application.delete_env(:edge_agent, :via_pseudonym)
+        else
+          Elixir.Application.put_env(:edge_agent, :via_pseudonym, previous)
+        end
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # build_http_request/4
+  # ---------------------------------------------------------------------------
+
+  describe "build_http_request/4" do
+    test "produces request line + headers + blank-line terminator" do
+      result =
+        Handler.build_http_request("GET", "/path", "HTTP/1.1", [
+          {"host", "example.com"},
+          {"x-custom", "value"}
+        ])
+
+      assert result ==
+               "GET /path HTTP/1.1\r\n" <>
+                 "host: example.com\r\n" <>
+                 "x-custom: value\r\n" <>
+                 "\r\n"
+    end
+
+    test "preserves header order" do
+      result = Handler.build_http_request("POST", "/", "HTTP/1.1", [{"a", "1"}, {"b", "2"}])
+      assert result =~ ~r/a: 1\r\nb: 2\r\n/
+    end
+
+    test "no headers → request line + blank line" do
+      assert Handler.build_http_request("GET", "/", "HTTP/1.1", []) == "GET / HTTP/1.1\r\n\r\n"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # parse_http_uri/1
+  # ---------------------------------------------------------------------------
+
+  describe "parse_http_uri/1" do
+    test "http with explicit port and path" do
+      assert Handler.parse_http_uri("http://example.com:8080/path") ==
+               {:ok, "example.com", 8080, "/path"}
+    end
+
+    test "http defaults port to 80 and path to '/' when missing" do
+      assert Handler.parse_http_uri("http://example.com") == {:ok, "example.com", 80, "/"}
+    end
+
+    test "https defaults port to 443" do
+      assert Handler.parse_http_uri("https://example.com/x") == {:ok, "example.com", 443, "/x"}
+    end
+
+    test "rejects non-http(s) schemes" do
+      assert Handler.parse_http_uri("ftp://example.com/") == {:error, :invalid_uri}
+      assert Handler.parse_http_uri("ws://example.com/") == {:error, :invalid_uri}
+    end
+
+    test "rejects malformed input (no host)" do
+      assert Handler.parse_http_uri("/path") == {:error, :invalid_uri}
+      assert Handler.parse_http_uri("not a uri") == {:error, :invalid_uri}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # parse_host_port/1
+  # ---------------------------------------------------------------------------
+
+  describe "parse_host_port/1" do
+    test "splits host:port" do
+      assert Handler.parse_host_port("example.com:443") == {:ok, "example.com", 443}
+      assert Handler.parse_host_port("10.0.0.1:8080") == {:ok, "10.0.0.1", 8080}
+    end
+
+    test "rejects missing colon" do
+      assert Handler.parse_host_port("example.com") == {:error, :invalid_format}
+    end
+
+    test "rejects non-integer port" do
+      assert Handler.parse_host_port("example.com:abc") == {:error, :invalid_port}
+    end
+
+    test "Integer.parse is forgiving — partial numeric ports succeed (documented quirk)" do
+      assert Handler.parse_host_port("example.com:443x") == {:ok, "example.com", 443}
+    end
+  end
+end

@@ -87,28 +87,47 @@ defmodule EdgeAgent.ProxyServers.Http.Parser do
     end
   end
 
-  defp to_method(method) when is_atom(method), do: method |> Atom.to_string() |> String.upcase()
-  defp to_method(method) when is_binary(method), do: String.upcase(method)
+  @doc false
+  # Public for unit testing. :erlang.decode_packet returns method as either
+  # an atom (well-known methods like :GET) or a binary (custom methods).
+  # Normalised to an uppercase string.
+  @spec to_method(atom() | binary()) :: String.t()
+  def to_method(method) when is_atom(method), do: method |> Atom.to_string() |> String.upcase()
+  def to_method(method) when is_binary(method), do: String.upcase(method)
 
-  defp to_uri({:absoluteURI, _scheme, _host, _port, _path} = uri), do: stringify_uri(uri)
-  defp to_uri({:scheme, _scheme, _string} = uri), do: stringify_uri(uri)
-  defp to_uri({:abs_path, path}), do: path
-  defp to_uri(~c"*"), do: "*"
-  defp to_uri(uri) when is_binary(uri), do: uri
-  defp to_uri(uri) when is_list(uri), do: List.to_string(uri)
+  @doc false
+  # Public for unit testing. :erlang.decode_packet returns the URI in five
+  # different shapes depending on the request line form. Normalised to a
+  # plain string.
+  @spec to_uri(term()) :: String.t()
+  def to_uri({:absoluteURI, _scheme, _host, _port, _path} = uri), do: stringify_uri(uri)
+  def to_uri({:scheme, _scheme, _string} = uri), do: stringify_uri(uri)
+  def to_uri({:abs_path, path}), do: path
+  def to_uri(~c"*"), do: "*"
+  def to_uri(uri) when is_binary(uri), do: uri
+  def to_uri(uri) when is_list(uri), do: List.to_string(uri)
 
-  defp stringify_uri({:absoluteURI, scheme, host, :undefined, path}) do
+  @doc false
+  # Public for unit testing. Renders the absoluteURI / scheme tuples returned
+  # by :erlang.decode_packet back into a plain URI string.
+  @spec stringify_uri(tuple()) :: String.t()
+  def stringify_uri({:absoluteURI, scheme, host, :undefined, path}) do
     "#{scheme}://#{host}#{path}"
   end
 
-  defp stringify_uri({:absoluteURI, scheme, host, port, path}) do
+  def stringify_uri({:absoluteURI, scheme, host, port, path}) do
     "#{scheme}://#{host}:#{port}#{path}"
   end
 
-  defp stringify_uri({:scheme, scheme, rest}) do
+  def stringify_uri({:scheme, scheme, rest}) do
     "#{scheme}:#{rest}"
   end
 
-  defp to_header_name(name) when is_atom(name), do: name |> Atom.to_string() |> String.downcase()
-  defp to_header_name(name) when is_binary(name), do: String.downcase(name)
+  @doc false
+  # Public for unit testing. :erlang.decode_packet returns header names as
+  # atoms (well-known) or binaries (custom). Normalised to a lowercase
+  # string for downstream case-insensitive matching.
+  @spec to_header_name(atom() | binary()) :: String.t()
+  def to_header_name(name) when is_atom(name), do: name |> Atom.to_string() |> String.downcase()
+  def to_header_name(name) when is_binary(name), do: String.downcase(name)
 end

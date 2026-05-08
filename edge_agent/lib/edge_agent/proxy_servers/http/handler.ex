@@ -126,16 +126,26 @@ defmodule EdgeAgent.ProxyServers.Http.Handler do
     end
   end
 
-  defp validate_proxy_form("CONNECT", _uri), do: :ok
+  @doc """
+  Validates that a non-CONNECT request URI is in absolute (proxy) form.
+  CONNECT bypasses this check because it carries `host:port`, not a URI.
+  """
+  @spec validate_proxy_form(String.t(), String.t()) :: :ok | {:error, :origin_form_uri}
+  def validate_proxy_form("CONNECT", _uri), do: :ok
 
-  defp validate_proxy_form(_method, uri) do
+  def validate_proxy_form(_method, uri) do
     case URI.parse(uri) do
       %URI{scheme: s, host: h} when is_binary(s) and is_binary(h) -> :ok
       _ -> {:error, :origin_form_uri}
     end
   end
 
-  defp check_loop(headers) do
+  @doc """
+  Detects a forwarding loop by scanning the `Via` header for our own pseudonym.
+  Breaking the chain protects against unbounded request relays through us.
+  """
+  @spec check_loop([{String.t(), String.t()}]) :: :ok | {:error, :loop_detected}
+  def check_loop(headers) do
     pseudonym = via_pseudonym()
 
     case get_header(headers, "via") do
@@ -279,7 +289,13 @@ defmodule EdgeAgent.ProxyServers.Http.Handler do
 
   # Helpers
 
-  defp reconcile_host_header(headers, host, port) do
+  @doc """
+  Replaces the `Host` header with `host[:port]`, eliding the port for the
+  scheme defaults (80 and 443). Drops any prior Host entries (any case).
+  """
+  @spec reconcile_host_header([{String.t(), String.t()}], String.t(), 1..65_535) ::
+          [{String.t(), String.t()}]
+  def reconcile_host_header(headers, host, port) do
     host_value =
       case port do
         80 -> host
@@ -290,7 +306,15 @@ defmodule EdgeAgent.ProxyServers.Http.Handler do
     [{"host", host_value} | Enum.reject(headers, fn {k, _} -> String.downcase(k) == "host" end)]
   end
 
-  defp filter_hop_by_hop_headers(headers) do
+  @doc """
+  Strips RFC 7230 hop-by-hop headers and any extras named in `Connection`.
+  When `Connection` lists `upgrade`, the original `Upgrade` header and a
+  fresh `Connection: Upgrade` are reinjected so WebSocket-style upgrades
+  survive.
+  """
+  @spec filter_hop_by_hop_headers([{String.t(), String.t()}]) ::
+          [{String.t(), String.t()}]
+  def filter_hop_by_hop_headers(headers) do
     connection_listed =
       headers
       |> get_header("connection")
@@ -321,7 +345,12 @@ defmodule EdgeAgent.ProxyServers.Http.Handler do
     end
   end
 
-  defp add_via_header(headers, http_version) do
+  @doc """
+  Appends a `Via` entry of the form `"<version> <pseudonym>"`, chaining onto
+  any existing `Via` value with comma-space separation.
+  """
+  @spec add_via_header([{String.t(), String.t()}], String.t()) :: [{String.t(), String.t()}]
+  def add_via_header(headers, http_version) do
     version = parse_http_version(http_version)
     pseudonym = via_pseudonym()
     new_entry = "#{version} #{pseudonym}"
@@ -335,22 +364,44 @@ defmodule EdgeAgent.ProxyServers.Http.Handler do
     [{"via", updated} | Enum.reject(headers, fn {k, _} -> String.downcase(k) == "via" end)]
   end
 
-  defp parse_http_version("HTTP/1.0"), do: "1.0"
-  defp parse_http_version("HTTP/1.1"), do: "1.1"
-  defp parse_http_version("HTTP/" <> rest), do: rest
-  defp parse_http_version(_), do: "1.1"
+  @doc """
+  Reduces an HTTP version string to its bare digits for use in the `Via`
+  header. Falls back to `"1.1"` for unrecognised inputs.
+  """
+  @spec parse_http_version(String.t()) :: String.t()
+  def parse_http_version("HTTP/1.0"), do: "1.0"
+  def parse_http_version("HTTP/1.1"), do: "1.1"
+  def parse_http_version("HTTP/" <> rest), do: rest
+  def parse_http_version(_), do: "1.1"
 
-  defp via_pseudonym do
+  @doc """
+  Returns this proxy's `Via` pseudonym, configurable via the `:via_pseudonym`
+  application env (default `"edge-agent"`).
+  """
+  @spec via_pseudonym() :: String.t()
+  def via_pseudonym do
     Application.get_env(:edge_agent, :via_pseudonym, "edge-agent")
   end
 
-  defp build_http_request(method, path, http_version, headers) do
+  @doc """
+  Serialises a request line + headers + terminating blank line into one
+  `\\r\\n`-framed binary suitable for `:gen_tcp.send/2`.
+  """
+  @spec build_http_request(String.t(), String.t(), String.t(), [{String.t(), String.t()}]) ::
+          binary()
+  def build_http_request(method, path, http_version, headers) do
     request_line = "#{method} #{path} #{http_version}\r\n"
     header_lines = Enum.map(headers, fn {k, v} -> "#{k}: #{v}\r\n" end)
     IO.iodata_to_binary([request_line | header_lines] ++ ["\r\n"])
   end
 
-  defp parse_http_uri(uri) do
+  @doc """
+  Splits an absolute-form URI into `{host, port, path}`, defaulting the port
+  to the scheme default (80/443) and the path to `"/"` when missing.
+  """
+  @spec parse_http_uri(String.t()) ::
+          {:ok, String.t(), 1..65_535, String.t()} | {:error, :invalid_uri}
+  def parse_http_uri(uri) do
     case URI.parse(uri) do
       %URI{scheme: scheme, host: host, port: port, path: path} when scheme in ["http", "https"] and is_binary(host) ->
         port = port || if scheme == "https", do: 443, else: 80
@@ -362,7 +413,14 @@ defmodule EdgeAgent.ProxyServers.Http.Handler do
     end
   end
 
-  defp parse_host_port(uri) do
+  @doc """
+  Splits a `host:port` token (CONNECT request target) into its components.
+  """
+  @spec parse_host_port(String.t()) ::
+          {:ok, String.t(), 1..65_535}
+          | {:error, :invalid_port}
+          | {:error, :invalid_format}
+  def parse_host_port(uri) do
     case String.split(uri, ":", parts: 2) do
       [host, port_str] ->
         case Integer.parse(port_str) do
@@ -375,7 +433,11 @@ defmodule EdgeAgent.ProxyServers.Http.Handler do
     end
   end
 
-  defp get_header(headers, key) do
+  @doc """
+  Case-insensitive lookup against a list of header tuples.
+  """
+  @spec get_header([{String.t(), String.t()}], String.t()) :: String.t() | nil
+  def get_header(headers, key) do
     key_down = String.downcase(key)
 
     Enum.find_value(headers, fn {k, v} ->

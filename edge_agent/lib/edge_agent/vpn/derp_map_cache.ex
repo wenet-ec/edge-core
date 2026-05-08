@@ -93,23 +93,35 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
     Process.send_after(self(), :refresh, interval_ms)
   end
 
-  # Returns {map, next_interval_ms}.
-  # - On success: always jump to stable interval (we have data, no need to rush).
-  # - On failure/unconfigured: double the current interval, capped at stable.
+  # Returns {map, next_interval_ms}. The pure decision lives in
+  # next_state/4; this wrapper handles the impure fetch and the warmup-tick
+  # log line (fired on every failed tick before we reach stable cadence).
   defp fetch_and_next_interval(current_map, current_ms, stable_ms) do
-    case fetch_and_log() do
-      nil ->
-        next_ms = min(current_ms * 2, stable_ms)
+    fetch_result = fetch_and_log()
+    {map, next_ms} = next_state(fetch_result, current_map, current_ms, stable_ms)
 
-        if next_ms != stable_ms do
-          Logger.debug("DerpMapCache: no map yet, next refresh in #{div(next_ms, 1000)} s")
-        end
-
-        {current_map, next_ms}
-
-      map ->
-        {map, stable_ms}
+    if is_nil(fetch_result) and next_ms != stable_ms do
+      Logger.debug("DerpMapCache: no map yet, next refresh in #{div(next_ms, 1000)} s")
     end
+
+    {map, next_ms}
+  end
+
+  @doc false
+  # Public for unit testing. Pure interval-doubling logic separated from the
+  # impure fetch/log path:
+  #   - On success (fetch returned a map): jump straight to stable_ms (we
+  #     have data, no need to rush future fetches).
+  #   - On failure (fetch returned nil): keep the previous map, double the
+  #     current interval, capped at stable_ms.
+  @spec next_state(map() | nil, map() | nil, pos_integer(), pos_integer()) ::
+          {map() | nil, pos_integer()}
+  def next_state(nil, current_map, current_ms, stable_ms) do
+    {current_map, min(current_ms * 2, stable_ms)}
+  end
+
+  def next_state(map, _current_map, _current_ms, stable_ms) do
+    {map, stable_ms}
   end
 
   defp fetch_and_log do
@@ -148,6 +160,12 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
     end
   end
 
-  defp map_has_regions?(%{"Regions" => regions}) when map_size(regions) > 0, do: true
-  defp map_has_regions?(_), do: false
+  @doc false
+  # Public for unit testing. A 200 response counts as a successful fetch
+  # only if it carries a non-empty `"Regions"` map. Empty/missing regions
+  # mean the map server has nothing to overlay; we treat that as a failed
+  # fetch so the warmup logic keeps trying.
+  @spec map_has_regions?(term()) :: boolean()
+  def map_has_regions?(%{"Regions" => regions}) when map_size(regions) > 0, do: true
+  def map_has_regions?(_), do: false
 end

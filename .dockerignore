@@ -15,6 +15,7 @@
 !edge_admin/lib/
 !edge_admin/priv/
 !edge_admin/rel/
+!edge_admin/LICENSE
 
 # Include nexmaker dependency
 !nexmaker/
@@ -27,6 +28,7 @@
 !edge_agent/lib/
 !edge_agent/priv/
 !edge_agent/rel/
+!edge_agent/LICENSE
 
 # Exclude build artifacts even if parent is included
 **/_build/

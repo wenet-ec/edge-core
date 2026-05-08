@@ -57,11 +57,11 @@ defmodule EdgeAgent.MetricsServers.ConfigTest do
     end
 
     test "ports come from app env" do
-      original_host = Application.get_env(:edge_agent, :host_metrics_port)
-      original_wg = Application.get_env(:edge_agent, :wireguard_metrics_port)
+      original_host = Elixir.Application.get_env(:edge_agent, :host_metrics_port)
+      original_wg = Elixir.Application.get_env(:edge_agent, :wireguard_metrics_port)
 
-      Application.put_env(:edge_agent, :host_metrics_port, 49_999)
-      Application.put_env(:edge_agent, :wireguard_metrics_port, 48_888)
+      Elixir.Application.put_env(:edge_agent, :host_metrics_port, 49_999)
+      Elixir.Application.put_env(:edge_agent, :wireguard_metrics_port, 48_888)
 
       try do
         result = Config.build_config()
@@ -82,8 +82,8 @@ defmodule EdgeAgent.MetricsServers.ConfigTest do
 
   describe "node_exporter_args/0" do
     setup do
-      original = Application.get_env(:edge_agent, :host_metrics_port)
-      Application.put_env(:edge_agent, :host_metrics_port, 49_100)
+      original = Elixir.Application.get_env(:edge_agent, :host_metrics_port)
+      Elixir.Application.put_env(:edge_agent, :host_metrics_port, 49_100)
       on_exit(fn -> restore(:host_metrics_port, original) end)
       :ok
     end
@@ -135,8 +135,8 @@ defmodule EdgeAgent.MetricsServers.ConfigTest do
 
   describe "wireguard_exporter_args/0" do
     setup do
-      original = Application.get_env(:edge_agent, :wireguard_metrics_port)
-      Application.put_env(:edge_agent, :wireguard_metrics_port, 49_586)
+      original = Elixir.Application.get_env(:edge_agent, :wireguard_metrics_port)
+      Elixir.Application.put_env(:edge_agent, :wireguard_metrics_port, 49_586)
       on_exit(fn -> restore(:wireguard_metrics_port, original) end)
       :ok
     end
@@ -170,6 +170,6 @@ defmodule EdgeAgent.MetricsServers.ConfigTest do
 
   # ---------------------------------------------------------------------------
 
-  defp restore(key, nil), do: Application.delete_env(:edge_agent, key)
-  defp restore(key, value), do: Application.put_env(:edge_agent, key, value)
+  defp restore(key, nil), do: Elixir.Application.delete_env(:edge_agent, key)
+  defp restore(key, value), do: Elixir.Application.put_env(:edge_agent, key, value)
 end

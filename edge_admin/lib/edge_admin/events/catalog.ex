@@ -1,43 +1,41 @@
 # edge_admin/lib/edge_admin/events/catalog.ex
 defmodule EdgeAdmin.Events.Catalog do
   @moduledoc """
-  Typed event structs for the event catalog.
+  Single source of truth for the event catalog.
 
-  Each struct carries the raw domain data needed to build the CloudEvents
-  envelope's `data` field. Callers construct the appropriate struct and pass
-  it to `EdgeAdmin.Events.publish/1`.
+  The `@events` registry below colocates four facts per event:
 
-  ## Enrollment key events
+    * the **struct module** (e.g. `NodeRegistered`)
+    * the **wire-format event type** string (e.g. `"edge.node.registered"`)
+    * a one-line **description** of when the event fires
+    * a sample **data payload** for documentation and the AsyncAPI spec
 
-      %Catalog.EnrollmentKeyVerified{enrollment_key: key, result: :verified}
-      %Catalog.EnrollmentKeyVerified{enrollment_key: nil, result: :invalid_key, attempted_key_blob: blob}
+  Everything else is derived from this list at compile time:
+  `all_event_types/0`, `event_type/1`, `description/1`, `data_example/1`,
+  `list_with_descriptions/0`, `lookup/1`. The AsyncAPI spec generator
+  reads through the same accessors. Compile-time assertions reject
+  duplicate type strings and missing modules.
 
-  ## Node events
+  Callers construct the appropriate struct and pass it to
+  `EdgeAdmin.Events.publish/1`:
 
-      %Catalog.NodeRegistered{node: node}
-      %Catalog.NodeReregistered{node: node}
-      %Catalog.NodeVersionChanged{node: node, previous_version: "1.1.0"}
-      %Catalog.NodeStatusChanged{node: node, previous_status: :healthy}
-      %Catalog.NodeClusterChanged{node: node, previous_cluster_name: "old"}
-      %Catalog.NodeUpdateTriggered{node: node, self_update_request_id: id}
+      Events.publish(%Catalog.NodeRegistered{node: node})
+      Events.publish(%Catalog.NodeStatusChanged{node: node, previous_status: :healthy})
 
-  ## Command execution events
+  Field shapes vary per event — see each `defmodule` below for
+  `@enforce_keys`, `defstruct`, and the typespec.
 
-      %Catalog.CommandExecutionCreated{execution: execution, command: command, cluster_name: "prod"}
-      %Catalog.CommandExecutionSent{execution: execution, command: command, cluster_name: "prod"}
-      %Catalog.CommandExecutionCompleted{execution: execution, command: command, cluster_name: "prod"}
-      %Catalog.CommandExecutionCancelled{execution: execution, command: command, cluster_name: "prod"}
-      %Catalog.CommandExecutionExpired{execution: execution, command: command, cluster_name: "prod"}
-      %Catalog.CommandExecutionPruned{execution: execution, command: command, cluster_name: "prod"}
+  ## Adding a new event
 
-  ## SSH username events
-
-      %Catalog.SshUsernameVerified{ssh_username: ssh_username, node_id: node_id, attempted_username: "deploy",
-                                  auth_method: :public_key, result: :success}
-
-  ## Self-update request events
-
-      %Catalog.SelfUpdateCompleted{request: request}
+    1. Define the struct module with `@enforce_keys`, `defstruct`, and a
+       `@type t` typespec.
+    2. Add an entry to `@events` with the module, type string, description,
+       and a sample `data` payload (the wire shape an external subscriber
+       would see).
+    3. Add a `to_data/1` clause that builds the wire payload from the
+       struct (field extraction, atom-to-string conversion, etc.).
+    4. The AsyncAPI spec, MCP tools, and webhook validation pick up the
+       new event automatically.
   """
 
   alias EdgeAdmin.Commands.Schemas.Command
@@ -225,46 +223,10 @@ defmodule EdgeAdmin.Events.Catalog do
   end
 
   # ---------------------------------------------------------------------------
-  # Protocol: event_type/1 and to_data/1
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Returns every event type currently in the catalog as a list of strings.
-
-  Used by webhook filter validation to reject patterns that match no current
-  event type (catches typos at API time).
-  """
-  @spec all_event_types() :: [String.t()]
-  def all_event_types do
-    [
-      "edge.enrollment_key.verified",
-      "edge.node.registered",
-      "edge.node.reregistered",
-      "edge.node.version_changed",
-      "edge.node.status_changed",
-      "edge.node.cluster_changed",
-      "edge.node.update_triggered",
-      "edge.command_execution.created",
-      "edge.command_execution.sent",
-      "edge.command_execution.completed",
-      "edge.command_execution.cancelled",
-      "edge.command_execution.expired",
-      "edge.command_execution.pruned",
-      "edge.ssh_username.verified",
-      "edge.self_update_request.completed"
-    ]
-  end
-
-  # ---------------------------------------------------------------------------
-  # Per-event metadata (description + sample data)
+  # Registry — one entry per event. Order is the catalog's canonical order.
   #
-  # `description/1` and `data_example/1` are the **canonical source** of event
-  # semantics — when this event fires, what its payload looks like. The
-  # AsyncAPI spec generator reads from here, so adding/changing an event
-  # definition happens in one place.
-  #
-  # `lookup/1` aggregates metadata + the `data` shape into a single map for
-  # the MCP `explain_event_type` tool.
+  # Sample data uses string keys / wire-format values: this is the shape an
+  # external subscriber sees in `data` after `to_data/1` runs.
   # ---------------------------------------------------------------------------
 
   @node_base_data %{
@@ -309,104 +271,183 @@ defmodule EdgeAdmin.Events.Catalog do
     "updated_at" => "2026-04-13T10:00:00Z"
   }
 
-  @descriptions %{
-    "edge.enrollment_key.verified" => "Agent attempted to enroll using an enrollment key (success or failure).",
-    "edge.node.registered" => "Node registered for the first time.",
-    "edge.node.reregistered" => "Node re-enrolled (reboot, redeploy, etc.).",
-    "edge.node.version_changed" => "Node version changed alongside re-enrollment.",
-    "edge.node.status_changed" => "Node health status transitioned.",
-    "edge.node.cluster_changed" => "Node moved to a different cluster.",
-    "edge.node.update_triggered" => "Self-update signal sent to this node.",
-    "edge.command_execution.created" => "Execution record created and queued.",
-    "edge.command_execution.sent" => "Execution delivered to agent and ACKed.",
-    "edge.command_execution.completed" => "Agent reported result.",
-    "edge.command_execution.cancelled" => "Execution cancelled (explicit or SIGTERM).",
-    "edge.command_execution.expired" => "Execution swept as stale before running.",
-    "edge.command_execution.pruned" => "Execution reaped by background pruning worker.",
-    "edge.ssh_username.verified" => "Agent verified an SSH credential against admin (success or failure).",
-    "edge.self_update_request.completed" => "Self-update batch finished."
-  }
+  @events [
+    %{
+      module: EnrollmentKeyVerified,
+      type: "edge.enrollment_key.verified",
+      description: "Agent attempted to enroll using an enrollment key (success or failure).",
+      data_example: %{
+        "enrollment_key_id" => "enrkey-abc123",
+        "cluster_name" => "prod",
+        "name" => "prod rollout",
+        "uses_remaining" => 4,
+        "result" => "verified",
+        "verified_at" => "2026-04-13T10:00:00Z"
+      }
+    },
+    %{
+      module: NodeRegistered,
+      type: "edge.node.registered",
+      description: "Node registered for the first time.",
+      data_example: @node_base_data
+    },
+    %{
+      module: NodeReregistered,
+      type: "edge.node.reregistered",
+      description: "Node re-enrolled (reboot, redeploy, etc.).",
+      data_example: Map.put(@node_base_data, "status", "healthy")
+    },
+    %{
+      module: NodeVersionChanged,
+      type: "edge.node.version_changed",
+      description: "Node version changed alongside re-enrollment.",
+      data_example: Map.put(@node_base_data, "previous_version", "1.1.0")
+    },
+    %{
+      module: NodeStatusChanged,
+      type: "edge.node.status_changed",
+      description: "Node health status transitioned.",
+      data_example: Map.merge(@node_base_data, %{"status" => "unhealthy", "previous_status" => "healthy"})
+    },
+    %{
+      module: NodeClusterChanged,
+      type: "edge.node.cluster_changed",
+      description: "Node moved to a different cluster.",
+      data_example: Map.put(@node_base_data, "previous_cluster_name", "staging")
+    },
+    %{
+      module: NodeUpdateTriggered,
+      type: "edge.node.update_triggered",
+      description: "Self-update signal sent to this node.",
+      data_example: Map.put(@node_base_data, "self_update_request_id", "selfupd-abc123")
+    },
+    %{
+      module: CommandExecutionCreated,
+      type: "edge.command_execution.created",
+      description: "Execution record created and queued.",
+      data_example:
+        Map.merge(@execution_base_data, %{
+          "status" => "pending",
+          "exit_code" => nil,
+          "sent_at" => nil,
+          "completed_at" => nil,
+          "cancelled_at" => nil
+        })
+    },
+    %{
+      module: CommandExecutionSent,
+      type: "edge.command_execution.sent",
+      description: "Execution delivered to agent and ACKed.",
+      data_example:
+        Map.merge(@execution_base_data, %{
+          "status" => "sent",
+          "exit_code" => nil,
+          "sent_at" => "2026-04-13T10:00:01Z",
+          "completed_at" => nil,
+          "cancelled_at" => nil
+        })
+    },
+    %{
+      module: CommandExecutionCompleted,
+      type: "edge.command_execution.completed",
+      description: "Agent reported result.",
+      data_example:
+        Map.merge(@execution_base_data, %{
+          "status" => "completed",
+          "exit_code" => 0,
+          "sent_at" => "2026-04-13T10:00:01Z",
+          "completed_at" => "2026-04-13T10:00:03Z",
+          "cancelled_at" => nil
+        })
+    },
+    %{
+      module: CommandExecutionCancelled,
+      type: "edge.command_execution.cancelled",
+      description: "Execution cancelled (explicit or SIGTERM).",
+      data_example:
+        Map.merge(@execution_base_data, %{
+          "status" => "cancelled",
+          "exit_code" => 143,
+          "sent_at" => "2026-04-13T10:00:01Z",
+          "completed_at" => nil,
+          "cancelled_at" => "2026-04-13T10:00:05Z"
+        })
+    },
+    %{
+      module: CommandExecutionExpired,
+      type: "edge.command_execution.expired",
+      description: "Execution swept as stale before running.",
+      data_example:
+        Map.merge(@execution_base_data, %{
+          "status" => "expired",
+          "exit_code" => nil,
+          "sent_at" => nil,
+          "completed_at" => nil,
+          "cancelled_at" => nil,
+          "expired_at" => "2026-04-13T10:05:00Z"
+        })
+    },
+    %{
+      module: CommandExecutionPruned,
+      type: "edge.command_execution.pruned",
+      description: "Execution reaped by background pruning worker.",
+      data_example:
+        Map.merge(@execution_base_data, %{
+          "status" => "completed",
+          "exit_code" => 0,
+          "sent_at" => "2026-04-13T10:00:01Z",
+          "completed_at" => "2026-04-13T10:00:03Z",
+          "cancelled_at" => nil
+        })
+    },
+    %{
+      module: SshUsernameVerified,
+      type: "edge.ssh_username.verified",
+      description: "Agent verified an SSH credential against admin (success or failure).",
+      data_example: %{
+        "ssh_username_id" => "sshuser-abc123",
+        "node_id" => "node-abc123",
+        "cluster_name" => "prod",
+        "username" => "deploy",
+        "auth_method" => "public_key",
+        "result" => "success",
+        "verified_at" => "2026-04-13T10:00:00Z"
+      }
+    },
+    %{
+      module: SelfUpdateCompleted,
+      type: "edge.self_update_request.completed",
+      description: "Self-update batch finished.",
+      data_example:
+        Map.merge(@self_update_base_data, %{
+          "status" => "completed",
+          "summary" => %{"total" => 10, "triggered" => 9, "failed" => 1}
+        })
+    }
+  ]
 
-  @data_examples %{
-    "edge.enrollment_key.verified" => %{
-      "enrollment_key_id" => "enrkey-abc123",
-      "cluster_name" => "prod",
-      "name" => "prod rollout",
-      "uses_remaining" => 4,
-      "result" => "verified",
-      "verified_at" => "2026-04-13T10:00:00Z"
-    },
-    "edge.node.registered" => @node_base_data,
-    "edge.node.reregistered" => Map.put(@node_base_data, "status", "healthy"),
-    "edge.node.version_changed" => Map.put(@node_base_data, "previous_version", "1.1.0"),
-    "edge.node.status_changed" =>
-      Map.merge(@node_base_data, %{"status" => "unhealthy", "previous_status" => "healthy"}),
-    "edge.node.cluster_changed" => Map.put(@node_base_data, "previous_cluster_name", "staging"),
-    "edge.node.update_triggered" => Map.put(@node_base_data, "self_update_request_id", "selfupd-abc123"),
-    "edge.command_execution.created" =>
-      Map.merge(@execution_base_data, %{
-        "status" => "pending",
-        "exit_code" => nil,
-        "sent_at" => nil,
-        "completed_at" => nil,
-        "cancelled_at" => nil
-      }),
-    "edge.command_execution.sent" =>
-      Map.merge(@execution_base_data, %{
-        "status" => "sent",
-        "exit_code" => nil,
-        "sent_at" => "2026-04-13T10:00:01Z",
-        "completed_at" => nil,
-        "cancelled_at" => nil
-      }),
-    "edge.command_execution.completed" =>
-      Map.merge(@execution_base_data, %{
-        "status" => "completed",
-        "exit_code" => 0,
-        "sent_at" => "2026-04-13T10:00:01Z",
-        "completed_at" => "2026-04-13T10:00:03Z",
-        "cancelled_at" => nil
-      }),
-    "edge.command_execution.cancelled" =>
-      Map.merge(@execution_base_data, %{
-        "status" => "cancelled",
-        "exit_code" => 143,
-        "sent_at" => "2026-04-13T10:00:01Z",
-        "completed_at" => nil,
-        "cancelled_at" => "2026-04-13T10:00:05Z"
-      }),
-    "edge.command_execution.expired" =>
-      Map.merge(@execution_base_data, %{
-        "status" => "expired",
-        "exit_code" => nil,
-        "sent_at" => nil,
-        "completed_at" => nil,
-        "cancelled_at" => nil,
-        "expired_at" => "2026-04-13T10:05:00Z"
-      }),
-    "edge.command_execution.pruned" =>
-      Map.merge(@execution_base_data, %{
-        "status" => "completed",
-        "exit_code" => 0,
-        "sent_at" => "2026-04-13T10:00:01Z",
-        "completed_at" => "2026-04-13T10:00:03Z",
-        "cancelled_at" => nil
-      }),
-    "edge.ssh_username.verified" => %{
-      "ssh_username_id" => "sshuser-abc123",
-      "node_id" => "node-abc123",
-      "cluster_name" => "prod",
-      "username" => "deploy",
-      "auth_method" => "public_key",
-      "result" => "success",
-      "verified_at" => "2026-04-13T10:00:00Z"
-    },
-    "edge.self_update_request.completed" =>
-      Map.merge(@self_update_base_data, %{
-        "status" => "completed",
-        "summary" => %{"total" => 10, "triggered" => 9, "failed" => 1}
-      })
-  }
+  # Compile-time invariants on the registry. Each fires at compile time, before
+  # any test runs — so a botched copy-paste shows up in the build, not at runtime.
+  @all_types Enum.map(@events, & &1.type)
+  if length(@all_types) != length(Enum.uniq(@all_types)) do
+    raise "EdgeAdmin.Events.Catalog: duplicate event type in @events"
+  end
+
+  @descriptions Map.new(@events, &{&1.type, &1.description})
+  @data_examples Map.new(@events, &{&1.type, &1.data_example})
+
+  # ---------------------------------------------------------------------------
+  # Public API — derived from @events
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Returns every event type currently in the catalog as a list of strings.
+
+  Used by webhook filter validation to reject patterns that match no current
+  event type (catches typos at API time).
+  """
+  @spec all_event_types() :: [String.t()]
+  def all_event_types, do: @all_types
 
   @doc """
   Returns a one-line description of when the given event fires. Returns
@@ -437,7 +478,7 @@ defmodule EdgeAdmin.Events.Catalog do
   """
   @spec lookup(String.t()) :: {:ok, map()} | {:error, :not_found}
   def lookup(event_type) when is_binary(event_type) do
-    if event_type in all_event_types() do
+    if event_type in @all_types do
       {:ok,
        %{
          type: event_type,
@@ -457,28 +498,14 @@ defmodule EdgeAdmin.Events.Catalog do
   """
   @spec list_with_descriptions() :: [map()]
   def list_with_descriptions do
-    Enum.map(all_event_types(), fn event_type ->
-      %{type: event_type, description: description(event_type)}
-    end)
+    Enum.map(@events, fn e -> %{type: e.type, description: e.description} end)
   end
 
   @doc "Returns the string event type for the given event struct."
   @spec event_type(term()) :: String.t()
-  def event_type(%EnrollmentKeyVerified{}), do: "edge.enrollment_key.verified"
-  def event_type(%NodeRegistered{}), do: "edge.node.registered"
-  def event_type(%NodeReregistered{}), do: "edge.node.reregistered"
-  def event_type(%NodeVersionChanged{}), do: "edge.node.version_changed"
-  def event_type(%NodeStatusChanged{}), do: "edge.node.status_changed"
-  def event_type(%NodeClusterChanged{}), do: "edge.node.cluster_changed"
-  def event_type(%NodeUpdateTriggered{}), do: "edge.node.update_triggered"
-  def event_type(%CommandExecutionCreated{}), do: "edge.command_execution.created"
-  def event_type(%CommandExecutionSent{}), do: "edge.command_execution.sent"
-  def event_type(%CommandExecutionCompleted{}), do: "edge.command_execution.completed"
-  def event_type(%CommandExecutionCancelled{}), do: "edge.command_execution.cancelled"
-  def event_type(%CommandExecutionExpired{}), do: "edge.command_execution.expired"
-  def event_type(%CommandExecutionPruned{}), do: "edge.command_execution.pruned"
-  def event_type(%SshUsernameVerified{}), do: "edge.ssh_username.verified"
-  def event_type(%SelfUpdateCompleted{}), do: "edge.self_update_request.completed"
+  for entry <- @events do
+    def event_type(%unquote(entry.module){}), do: unquote(entry.type)
+  end
 
   @doc "Builds the `data` map for the event envelope."
   @spec to_data(term()) :: map()

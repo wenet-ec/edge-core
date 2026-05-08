@@ -101,9 +101,15 @@ defmodule EdgeAgent.SshServer.Authentication do
     result
   end
 
-  # Private functions - Key formatting (Erlang SSH format -> OpenSSH string)
+  # Key formatting (Erlang SSH format -> OpenSSH string)
 
-  defp format_public_key({key_type, key_data, _comment}) when is_list(key_type) and is_binary(key_data) do
+  @doc false
+  # Public for unit testing. Renders a public key (in any of the shapes
+  # `:public_key.ssh_decode/2` and `:ssh_file` produce) as an OpenSSH-format
+  # string `"<algorithm> <base64>"`. Drift here breaks SSH auth — admin's
+  # allow-list comparison runs on this string.
+  @spec format_public_key(term()) :: String.t()
+  def format_public_key({key_type, key_data, _comment}) when is_list(key_type) and is_binary(key_data) do
     key_type_string = charlist_to_string(key_type)
     key_data_base64 = Base.encode64(key_data)
     "#{key_type_string} #{key_data_base64}"
@@ -111,7 +117,7 @@ defmodule EdgeAgent.SshServer.Authentication do
 
   # Raw RSA public key from Erlang's public_key module — encode to OpenSSH wire format
   # SSH wire format: length-prefixed "ssh-rsa" + mpint(exponent) + mpint(modulus)
-  defp format_public_key({:RSAPublicKey, modulus, exponent}) when is_integer(modulus) and is_integer(exponent) do
+  def format_public_key({:RSAPublicKey, modulus, exponent}) when is_integer(modulus) and is_integer(exponent) do
     type_bin = "ssh-rsa"
 
     wire =
@@ -122,7 +128,7 @@ defmodule EdgeAgent.SshServer.Authentication do
     "ssh-rsa #{Base.encode64(wire)}"
   end
 
-  defp format_public_key({{:ECPoint, point_data}, {:namedCurve, {1, 3, 101, 112}}}) do
+  def format_public_key({{:ECPoint, point_data}, {:namedCurve, {1, 3, 101, 112}}}) do
     ssh_ed25519_prefix = "ssh-ed25519"
     algorithm_length = byte_size(ssh_ed25519_prefix)
     key_length = byte_size(point_data)
@@ -134,30 +140,37 @@ defmodule EdgeAgent.SshServer.Authentication do
     "ssh-ed25519 #{key_data_base64}"
   end
 
-  defp format_public_key({:"ssh-ed25519", key_data}) when is_binary(key_data) do
+  def format_public_key({:"ssh-ed25519", key_data}) when is_binary(key_data) do
     key_data_base64 = Base.encode64(key_data)
     "ssh-ed25519 #{key_data_base64}"
   end
 
-  defp format_public_key(key) when is_binary(key) do
+  def format_public_key(key) when is_binary(key) do
     String.trim(key)
   end
 
-  defp format_public_key(other) do
+  def format_public_key(other) do
     Logger.warning("Unknown public key format: #{inspect(other)}")
     ""
   end
 
-  # Encode a binary as an SSH length-prefixed string
-  defp ssh_string(bin) when is_binary(bin) do
+  @doc false
+  # Public for unit testing. Encode a binary as an SSH length-prefixed string:
+  # 4-byte big-endian length followed by the bytes themselves.
+  @spec ssh_string(binary()) :: binary()
+  def ssh_string(bin) when is_binary(bin) do
     len = byte_size(bin)
     <<len::32>> <> bin
   end
 
-  # Encode an integer as an SSH mpint (big-endian, with leading zero if high bit set)
-  defp ssh_mpint(0), do: <<0::32>>
+  @doc false
+  # Public for unit testing. Encode an integer as an SSH mpint (RFC 4251 §5):
+  # big-endian, with a leading 0x00 byte prepended if the high bit is set, so
+  # the result is always interpreted as positive.
+  @spec ssh_mpint(non_neg_integer()) :: binary()
+  def ssh_mpint(0), do: <<0::32>>
 
-  defp ssh_mpint(n) when is_integer(n) and n > 0 do
+  def ssh_mpint(n) when is_integer(n) and n > 0 do
     bin = :binary.encode_unsigned(n)
     # Prepend 0x00 if high bit is set to keep it positive
     bin =
@@ -170,8 +183,12 @@ defmodule EdgeAgent.SshServer.Authentication do
     ssh_string(bin)
   end
 
-  # Helper to convert SSH key type charlist to string
-  defp charlist_to_string(charlist) when is_list(charlist) do
+  @doc false
+  # Public for unit testing. Convert SSH key-type charlist to the canonical
+  # string. Known types short-circuit; anything else falls through via
+  # `List.to_string/1`.
+  @spec charlist_to_string(term()) :: String.t()
+  def charlist_to_string(charlist) when is_list(charlist) do
     case charlist do
       ~c"ssh-rsa" -> "ssh-rsa"
       ~c"ssh-dss" -> "ssh-dss"
@@ -183,5 +200,5 @@ defmodule EdgeAgent.SshServer.Authentication do
     end
   end
 
-  defp charlist_to_string(other), do: to_string(other)
+  def charlist_to_string(other), do: to_string(other)
 end

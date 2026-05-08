@@ -4,10 +4,13 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Commands
+  alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.PathParams
   alias EdgeAdminWeb.Schemas.QueryParams
+
+  @status_enum CommandExecution.status_strings()
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
@@ -22,9 +25,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
       QueryParams.pagination() ++
         QueryParams.sort(order_by_example: "inserted_at,status", order_directions_example: "desc,asc") ++
         [
-          QueryParams.enum_filter(:status, ["pending", "sent", "completed", "cancelled", "expired"],
-            description: "Filter by execution status"
-          ),
+          QueryParams.enum_filter(:status, @status_enum, description: "Filter by execution status"),
           QueryParams.boolean_filter(:target_all, description: "Filter by target_all flag"),
           QueryParams.int_filter(:exit_code, description: "Filter by exact exit code"),
           QueryParams.boolean_filter(:has_output,

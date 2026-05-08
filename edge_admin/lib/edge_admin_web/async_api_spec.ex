@@ -609,7 +609,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           "cluster_name" => %{"type" => "string"},
           "command_text" => %{"type" => "string"},
           "timeout" => %{"type" => ["integer", "null"]},
-          "status" => %{"type" => "string", "enum" => ["pending", "sent", "completed", "cancelled", "expired"]},
+          "status" => %{"type" => "string", "enum" => EdgeAdmin.Commands.Schemas.CommandExecution.status_strings()},
           "exit_code" => %{
             "type" => ["integer", "null"],
             "description" => "null until completed or cancelled; 143 on SIGTERM cancel"

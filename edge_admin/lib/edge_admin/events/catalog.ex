@@ -584,7 +584,7 @@ defmodule EdgeAdmin.Events.Catalog do
       "cluster_name" => cluster_name,
       "command_text" => command.command_text,
       "timeout" => command.timeout,
-      "status" => execution.status,
+      "status" => Atom.to_string(execution.status),
       "exit_code" => execution.exit_code,
       "target_all" => execution.target_all,
       "expired_at" => format_dt(command.expired_at),

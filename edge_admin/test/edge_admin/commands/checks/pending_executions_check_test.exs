@@ -13,12 +13,23 @@ defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheckTest do
   # helpers
   # ---------------------------------------------------------------------------
 
+  # See cluster_filters_test for rationale: monotonic ints, not random, so
+  # birthday-paradox collisions on the small `100.64.X.0/24` space disappear.
+  defp unique_id, do: :erlang.unique_integer([:positive, :monotonic])
+
+  defp unique_ipv4_range do
+    n = unique_id()
+    octet2 = 64 + rem(div(n, 256), 64)
+    octet3 = rem(n, 256)
+    "100.#{octet2}.#{octet3}.0/24"
+  end
+
   defp insert_cluster do
     Repo.insert!(
       struct(Cluster, %{
         id: Ecto.UUID.generate(),
-        name: "cluster-#{:rand.uniform(999_999)}",
-        ipv4_range: "100.64.#{:rand.uniform(200)}.0/24"
+        name: "cluster-#{unique_id()}",
+        ipv4_range: unique_ipv4_range()
       })
     )
   end
@@ -79,8 +90,8 @@ defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheckTest do
       node1 = insert_node(cluster.id)
       node2 = insert_node(cluster.id)
       command = insert_command()
-      insert_execution(command.id, node1.id, "completed")
-      insert_execution(command.id, node2.id, "completed")
+      insert_execution(command.id, node1.id, :completed)
+      insert_execution(command.id, node2.id, :completed)
       assert :ok = PendingExecutionsCheck.check(command)
     end
 
@@ -89,8 +100,8 @@ defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheckTest do
       node1 = insert_node(cluster.id)
       node2 = insert_node(cluster.id)
       command = insert_command()
-      insert_execution(command.id, node1.id, "cancelled")
-      insert_execution(command.id, node2.id, "expired")
+      insert_execution(command.id, node1.id, :cancelled)
+      insert_execution(command.id, node2.id, :expired)
       assert :ok = PendingExecutionsCheck.check(command)
     end
   end
@@ -104,7 +115,7 @@ defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheckTest do
       cluster = insert_cluster()
       node = insert_node(cluster.id)
       command = insert_command()
-      insert_execution(command.id, node.id, "pending")
+      insert_execution(command.id, node.id, :pending)
       assert {:error, {:conflict, reason}} = PendingExecutionsCheck.check(command)
       assert reason =~ "1"
     end
@@ -113,7 +124,7 @@ defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheckTest do
       cluster = insert_cluster()
       node = insert_node(cluster.id)
       command = insert_command()
-      insert_execution(command.id, node.id, "sent")
+      insert_execution(command.id, node.id, :sent)
       assert {:error, {:conflict, reason}} = PendingExecutionsCheck.check(command)
       assert reason =~ "1"
     end
@@ -124,9 +135,9 @@ defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheckTest do
       node2 = insert_node(cluster.id)
       node3 = insert_node(cluster.id)
       command = insert_command()
-      insert_execution(command.id, node1.id, "pending")
-      insert_execution(command.id, node2.id, "sent")
-      insert_execution(command.id, node3.id, "completed")
+      insert_execution(command.id, node1.id, :pending)
+      insert_execution(command.id, node2.id, :sent)
+      insert_execution(command.id, node3.id, :completed)
       {:error, {:conflict, reason}} = PendingExecutionsCheck.check(command)
       assert reason =~ "2"
     end

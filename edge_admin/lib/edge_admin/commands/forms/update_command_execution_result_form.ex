@@ -9,8 +9,12 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
   """
   use EdgeAdmin.Form
 
+  # Agent-reported terminal statuses. `commands.ex` may further override
+  # `:completed` to `:cancelled` based on exit_code 143 (SIGTERM).
+  @agent_reported_statuses [:completed, :expired]
+
   embedded_schema do
-    field(:status, :string)
+    field(:status, Ecto.Enum, values: @agent_reported_statuses)
     field(:output, :string)
     field(:exit_code, :integer)
     field(:completed_at, :utc_datetime)
@@ -23,20 +27,19 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultForm do
   - `attrs` - Map containing execution result attributes
 
   ## Validations
-  - `status` - Required, must be `"completed"` or `"expired"`
+  - `status` - Required, must be `"completed"` or `"expired"` on the wire (cast to atom)
   - `output` - Optional, command output text
   - `exit_code` - Optional, must be integer if present
   - `completed_at` - Optional, must be valid ISO8601 datetime if present, defaults to now
 
   ## Returns
-  - `{:ok, attrs}` - Validated and normalized attributes as a map
+  - `{:ok, attrs}` - Validated and normalized attributes as a map (status is an atom)
   - `{:error, changeset}` - Validation errors
   """
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:status, :output, :exit_code, :completed_at])
     |> validate_required([:status])
-    |> validate_inclusion(:status, ["completed", "expired"])
     |> validate_completed_at()
     |> apply_action(:insert)
     |> case do

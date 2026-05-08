@@ -70,7 +70,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
       command_id: "cmd-uuid-1",
       node_id: "node-uuid-1",
       target_all: false,
-      status: "pending",
+      status: :pending,
       output: "should not be in event payload",
       exit_code: nil,
       sent_at: nil,
@@ -403,7 +403,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
     test "execution payload carries identity, command metadata, and timestamps" do
       execution =
         execution_fixture(%{
-          status: "completed",
+          status: :completed,
           exit_code: 0,
           sent_at: now(),
           completed_at: now()

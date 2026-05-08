@@ -14,11 +14,13 @@ defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheck do
 
   @spec check(Command.t()) :: :ok | {:error, {:conflict, String.t()}}
   def check(%Command{id: command_id}) do
+    cancellable = CommandExecution.cancellable_statuses()
+
     count =
       Repo.one(
         from(ce in CommandExecution,
           where: ce.command_id == ^command_id,
-          where: ce.status in ["pending", "sent"],
+          where: ce.status in ^cancellable,
           select: count(ce.id)
         )
       )

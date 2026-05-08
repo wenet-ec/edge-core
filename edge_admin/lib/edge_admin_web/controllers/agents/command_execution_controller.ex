@@ -5,10 +5,13 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
 
   alias EdgeAdmin.Commands
   alias EdgeAdmin.Commands.Policies.CommandExecutionPolicy
+  alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.PathParams
   alias EdgeAdminWeb.Schemas.QueryParams
+
+  @status_enum CommandExecution.status_strings()
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
@@ -24,8 +27,8 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
       [
         status: [
           in: :query,
-          description: "Filter by status: sent, pending, completed, cancelled, or expired",
-          schema: %OpenApiSpex.Schema{type: :string, enum: ["sent", "pending", "completed", "cancelled", "expired"]},
+          description: "Filter by execution status",
+          schema: %OpenApiSpex.Schema{type: :string, enum: @status_enum},
           required: true
         ]
       ] ++

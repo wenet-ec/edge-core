@@ -17,7 +17,7 @@ defmodule EdgeAdmin.Commands.Views.CommandExecutionView do
       node_id: e.node_id,
       cluster_name: CommandExecution.cluster_name(e),
       target_all: e.target_all,
-      status: e.status,
+      status: status_to_string(e.status),
       command_text: CommandExecution.command_text(e),
       timeout: CommandExecution.timeout(e),
       output: e.output,
@@ -30,4 +30,10 @@ defmodule EdgeAdmin.Commands.Views.CommandExecutionView do
       updated_at: e.updated_at
     }
   end
+
+  # Tolerate string statuses from older / inline-built test fixtures while the
+  # canonical runtime representation is now an atom.
+  defp status_to_string(status) when is_atom(status) and not is_nil(status), do: Atom.to_string(status)
+  defp status_to_string(status) when is_binary(status), do: status
+  defp status_to_string(nil), do: nil
 end

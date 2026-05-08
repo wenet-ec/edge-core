@@ -27,8 +27,11 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Commands
+  alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Commands.Views.CommandExecutionView
   alias EdgeAdminMcp.FlopParams
+
+  @status_enum CommandExecution.status_strings()
 
   @impl true
   def title, do: "List Command Executions"
@@ -40,7 +43,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
     field :page_size, :integer, default: 20, min: 1
     field :command_id, :string
     field :node_id, :string
-    field :status, {:enum, ["pending", "sent", "completed", "cancelled", "expired"]}
+    field :status, {:enum, @status_enum}
     field :target_all, :boolean
     field :exit_code, :integer
     field :exit_code_gte, :integer

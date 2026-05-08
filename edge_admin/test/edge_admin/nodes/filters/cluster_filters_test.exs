@@ -15,13 +15,27 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFiltersTest do
   # Fixtures
   # ---------------------------------------------------------------------------
 
+  # Unique fixture identifiers per VM. `:erlang.unique_integer([:positive, :monotonic])`
+  # never repeats within a process, eliminating the birthday-paradox flake we got with
+  # `:rand.uniform/1` on small ranges like `/24` over `100.64.X.0`.
+  defp unique_id, do: :erlang.unique_integer([:positive, :monotonic])
+
+  # Walks the 16_384 `/24` blocks inside CGNAT (`100.64.0.0/10`):
+  #   second octet ∈ 64..127, third octet ∈ 0..255.
+  defp unique_ipv4_range do
+    n = unique_id()
+    octet2 = 64 + rem(div(n, 256), 64)
+    octet3 = rem(n, 256)
+    "100.#{octet2}.#{octet3}.0/24"
+  end
+
   defp insert_cluster(overrides \\ %{}) do
     attrs =
       Map.merge(
         %{
           id: Ecto.UUID.generate(),
-          name: "cluster-#{:rand.uniform(999_999)}",
-          ipv4_range: "100.64.#{:rand.uniform(200)}.0/24",
+          name: "cluster-#{unique_id()}",
+          ipv4_range: unique_ipv4_range(),
           node_limit: nil
         },
         overrides

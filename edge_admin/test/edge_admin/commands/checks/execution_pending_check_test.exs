@@ -11,28 +11,28 @@ defmodule EdgeAdmin.Commands.Checks.ExecutionPendingCheckTest do
 
   describe "check/1 — pending execution" do
     test "pending execution returns :ok" do
-      execution = %CommandExecution{status: "pending"}
+      execution = %CommandExecution{status: :pending}
       assert :ok = ExecutionPendingCheck.check(execution)
     end
   end
 
   describe "check/1 — non-pending executions" do
     test "sent execution returns conflict error" do
-      execution = %CommandExecution{status: "sent"}
+      execution = %CommandExecution{status: :sent}
       assert {:error, {:conflict, reason}} = ExecutionPendingCheck.check(execution)
       assert reason =~ "sent"
       assert reason =~ "pending"
     end
 
     test "completed execution returns conflict error" do
-      execution = %CommandExecution{status: "completed"}
+      execution = %CommandExecution{status: :completed}
       assert {:error, {:conflict, reason}} = ExecutionPendingCheck.check(execution)
       assert reason =~ "completed"
       assert reason =~ "pending"
     end
 
     test "error message includes the actual status" do
-      execution = %CommandExecution{status: "sent"}
+      execution = %CommandExecution{status: :sent}
       {:error, {:conflict, reason}} = ExecutionPendingCheck.check(execution)
       assert reason =~ "sent"
     end

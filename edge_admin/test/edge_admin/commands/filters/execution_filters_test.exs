@@ -16,13 +16,24 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       Map.merge(
         %{
           id: Ecto.UUID.generate(),
-          name: "cluster-#{:rand.uniform(999_999)}",
-          ipv4_range: "100.64.#{:rand.uniform(200)}.0/24"
+          name: "cluster-#{unique_id()}",
+          ipv4_range: unique_ipv4_range()
         },
         overrides
       )
 
     Repo.insert!(struct(Cluster, attrs))
+  end
+
+  # See cluster_filters_test for rationale: monotonic ints, not random, so
+  # birthday-paradox collisions on the small `100.64.X.0/24` space disappear.
+  defp unique_id, do: :erlang.unique_integer([:positive, :monotonic])
+
+  defp unique_ipv4_range do
+    n = unique_id()
+    octet2 = 64 + rem(div(n, 256), 64)
+    octet3 = rem(n, 256)
+    "100.#{octet2}.#{octet3}.0/24"
   end
 
   defp insert_node(cluster_id) do
@@ -70,7 +81,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       command_id: command_id,
       node_id: node_id,
       cluster_id: cluster_id,
-      status: "pending",
+      status: :pending,
       output: output
     })
     |> Repo.insert!()

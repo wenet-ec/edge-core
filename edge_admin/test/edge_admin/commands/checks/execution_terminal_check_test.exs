@@ -13,38 +13,38 @@ defmodule EdgeAdmin.Commands.Checks.ExecutionTerminalCheckTest do
 
   describe "check/1 — terminal executions" do
     test "completed execution returns :ok" do
-      execution = %CommandExecution{status: "completed"}
+      execution = %CommandExecution{status: :completed}
       assert :ok = ExecutionTerminalCheck.check(execution)
     end
 
     test "cancelled execution returns :ok" do
-      execution = %CommandExecution{status: "cancelled"}
+      execution = %CommandExecution{status: :cancelled}
       assert :ok = ExecutionTerminalCheck.check(execution)
     end
 
     test "expired execution returns :ok" do
-      execution = %CommandExecution{status: "expired"}
+      execution = %CommandExecution{status: :expired}
       assert :ok = ExecutionTerminalCheck.check(execution)
     end
   end
 
   describe "check/1 — non-terminal executions" do
     test "pending execution returns conflict error" do
-      execution = %CommandExecution{status: "pending"}
+      execution = %CommandExecution{status: :pending}
       assert {:error, {:conflict, reason}} = ExecutionTerminalCheck.check(execution)
       assert reason =~ "pending"
       assert reason =~ "completed"
     end
 
     test "sent execution returns conflict error" do
-      execution = %CommandExecution{status: "sent"}
+      execution = %CommandExecution{status: :sent}
       assert {:error, {:conflict, reason}} = ExecutionTerminalCheck.check(execution)
       assert reason =~ "sent"
       assert reason =~ "completed"
     end
 
     test "error message includes the actual status" do
-      execution = %CommandExecution{status: "pending"}
+      execution = %CommandExecution{status: :pending}
       {:error, {:conflict, reason}} = ExecutionTerminalCheck.check(execution)
       assert reason =~ "pending"
     end

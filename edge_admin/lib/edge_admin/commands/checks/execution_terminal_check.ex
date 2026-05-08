@@ -9,11 +9,13 @@ defmodule EdgeAdmin.Commands.Checks.ExecutionTerminalCheck do
   alias EdgeAdmin.Commands.Schemas.CommandExecution
 
   @spec check(CommandExecution.t()) :: :ok | {:error, {:conflict, String.t()}}
-  def check(%CommandExecution{status: status}) when status in ["completed", "cancelled", "expired"], do: :ok
-
-  def check(%CommandExecution{status: status}) do
-    {:error,
-     {:conflict,
-      "cannot delete execution with status '#{status}' - only completed, cancelled, or expired executions can be deleted"}}
+  def check(%CommandExecution{} = execution) do
+    if CommandExecution.terminal?(execution) do
+      :ok
+    else
+      {:error,
+       {:conflict,
+        "cannot delete execution with status '#{execution.status}' - only completed, cancelled, or expired executions can be deleted"}}
+    end
   end
 end

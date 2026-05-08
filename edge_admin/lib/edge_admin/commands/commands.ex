@@ -331,7 +331,7 @@ defmodule EdgeAdmin.Commands do
   Lists command executions with filtering, sorting, and pagination.
 
   Supports filtering by:
-  - `status` - Enum: "pending", "sent", or "completed"
+  - `status` - Enum: `"pending"`, `"sent"`, `"completed"`, `"cancelled"`, or `"expired"`
   - `target_all` - Boolean
   - `exit_code` - Integer
   - `command_id` - Exact match on command ID
@@ -539,7 +539,7 @@ defmodule EdgeAdmin.Commands do
 
   - Creates executions for ALL matching nodes (regardless of health status)
   - Delivery will only happen to healthy nodes (filtered during delivery phase)
-  - All executions created with status "pending"
+  - All executions created with status `:pending`
   - Uses bulk insert for efficiency
   - Returns {:ok, executions} or {:error, reason}
   """
@@ -603,7 +603,7 @@ defmodule EdgeAdmin.Commands do
           node_id: node.id,
           cluster_id: cluster_id,
           target_all: target_all,
-          status: "pending",
+          status: :pending,
           inserted_at: now,
           updated_at: now
         }
@@ -753,7 +753,7 @@ defmodule EdgeAdmin.Commands do
         join: n in assoc(ce, :node),
         join: c in assoc(n, :cluster),
         join: cmd in assoc(ce, :command),
-        where: ce.status == "pending",
+        where: ce.status == :pending,
         where: c.name in ^cluster_names,
         where: n.status == "healthy",
         where: is_nil(cmd.expired_at) or cmd.expired_at > ^now,
@@ -780,8 +780,8 @@ defmodule EdgeAdmin.Commands do
 
       case AgentClient.deliver_execution(node, execution_data) do
         {:ok, :sent} ->
-          # Agent received it - update to "sent"
-          case update_command_execution(execution, %{status: "sent", sent_at: DateTime.utc_now()}) do
+          # Agent received it — transition to :sent
+          case update_command_execution(execution, %{status: :sent, sent_at: DateTime.utc_now()}) do
             {:ok, updated} -> publish_execution_event(updated, :sent)
             _ -> :ok
           end
@@ -809,7 +809,7 @@ defmodule EdgeAdmin.Commands do
   @doc """
   Acknowledges command execution receipt from agent.
 
-  Validates execution is in "pending" status and transitions it to "sent".
+  Validates execution is in `:pending` status and transitions it to `:sent`.
   Called when agent receives and stores a pending command execution.
 
   ## Parameters
@@ -819,13 +819,13 @@ defmodule EdgeAdmin.Commands do
 
   ## Returns
   - `{:ok, execution}` - Acknowledgment succeeded
-  - `{:error, {:conflict, reason}}` - Execution not in `"pending"` status
+  - `{:error, {:conflict, reason}}` - Execution not in `:pending` status
   - `{:error, changeset}` - Status update failed validation
 
   ## Examples
 
       iex> acknowledge_execution(execution, %{})
-      {:ok, %CommandExecution{status: "sent"}}
+      {:ok, %CommandExecution{status: :sent}}
   """
   @spec acknowledge_execution(CommandExecution.t(), map()) ::
           {:ok, CommandExecution.t()}
@@ -833,7 +833,7 @@ defmodule EdgeAdmin.Commands do
           | {:error, Ecto.Changeset.t()}
   def acknowledge_execution(execution, _params) do
     with :ok <- Checks.ExecutionPendingCheck.check(execution),
-         {:ok, updated} <- update_command_execution(execution, %{"status" => "sent", "sent_at" => DateTime.utc_now()}) do
+         {:ok, updated} <- update_command_execution(execution, %{status: :sent, sent_at: DateTime.utc_now()}) do
       publish_execution_event(updated, :sent)
       {:ok, updated}
     end
@@ -844,13 +844,13 @@ defmodule EdgeAdmin.Commands do
 
   Validates execution status and updates with the agent-reported result. The
   agent is the source of truth for terminal status: an `exit_code: 143`
-  (SIGTERM) is rewritten to `cancelled`, an agent-reported `status: "expired"`
-  passes through, and everything else is recorded as `completed`.
+  (SIGTERM) is rewritten to `:cancelled`, an agent-reported `status: :expired`
+  passes through, and everything else is recorded as `:completed`.
 
   ## Parameters
   - `execution` - The execution struct
   - `params` - Map with:
-    - `"status"` (required) — `"completed"` or `"expired"`
+    - `"status"` (required) — `"completed"` or `"expired"` (wire-format string from agent)
     - `"output"` (optional) — command stdout/stderr text
     - `"exit_code"` (optional) — integer; 143 forces cancelled, 124 categorised as timeout
     - `"completed_at"` (optional) — ISO 8601 datetime; defaults to now
@@ -867,7 +867,7 @@ defmodule EdgeAdmin.Commands do
       ...>   "output" => "Command output",
       ...>   "exit_code" => 0
       ...> })
-      {:ok, %CommandExecution{status: "completed", exit_code: 0}}
+      {:ok, %CommandExecution{status: :completed, exit_code: 0}}
   """
   @spec update_command_execution_result(CommandExecution.t(), map()) ::
           {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
@@ -875,21 +875,21 @@ defmodule EdgeAdmin.Commands do
     with :ok <- Checks.ExecutionAcceptsResultCheck.check(execution),
          {:ok, attrs} <- Forms.UpdateCommandExecutionResultForm.changeset(params) do
       # Agent is the source of truth for terminal status.
-      # exit_code 143 (SIGTERM) means the agent honoured a cancellation request — override to cancelled.
-      # "expired" means agent detected expiry before running — trust it.
-      # Everything else uses the status the agent reported.
+      # exit_code 143 (SIGTERM) means the agent honoured a cancellation request — override to :cancelled.
+      # :expired means agent detected expiry before running — trust it.
+      # Everything else is recorded as :completed.
       terminal_status =
         cond do
-          attrs["exit_code"] == 143 -> "cancelled"
-          attrs["status"] == "expired" -> "expired"
-          true -> "completed"
+          attrs["exit_code"] == 143 -> :cancelled
+          attrs["status"] == :expired -> :expired
+          true -> :completed
         end
 
       attrs =
         attrs
         |> Map.put("status", terminal_status)
         |> then(fn a ->
-          if terminal_status == "cancelled" do
+          if terminal_status == :cancelled do
             Map.put(a, "cancelled_at", DateTime.truncate(DateTime.utc_now(), :second))
           else
             a
@@ -925,7 +925,7 @@ defmodule EdgeAdmin.Commands do
             %{exit_code_category: exit_code_category}
           )
 
-          event_type = if terminal_status == "cancelled", do: :cancelled, else: :completed
+          event_type = if terminal_status == :cancelled, do: :cancelled, else: :completed
           publish_execution_event(updated_execution, event_type)
 
         _ ->
@@ -940,11 +940,11 @@ defmodule EdgeAdmin.Commands do
   Cancels a command execution.
 
   Handles two scenarios:
-  1. Pending — Updates DB status to `"cancelled"` immediately (command never
+  1. Pending — Updates DB status to `:cancelled` immediately (command never
      reached the agent, no output / exit code).
   2. Sent — Sends best-effort cancellation request to agent via Gateway. The
-     row's status is left as `"sent"` until the agent reports back (which may
-     be `cancelled` or, if the agent already finished, `completed`).
+     row's status is left as `:sent` until the agent reports back (which may
+     be `:cancelled` or, if the agent already finished, `:completed`).
 
   ## Parameters
     - execution: CommandExecution struct (must be preloaded with :cluster)
@@ -960,18 +960,18 @@ defmodule EdgeAdmin.Commands do
   def cancel_command_execution(execution) do
     with :ok <- Checks.ExecutionCancellableCheck.check(execution) do
       case execution.status do
-        "pending" ->
+        :pending ->
           # Cancel immediately in DB — command never ran, no output or exit code
           {:ok, updated} =
             update_command_execution(execution, %{
-              status: "cancelled",
+              status: :cancelled,
               cancelled_at: DateTime.utc_now()
             })
 
           publish_execution_event(updated, :cancelled)
           {:ok, %{result: "execution cancelled"}}
 
-        "sent" ->
+        :sent ->
           # Send cancellation request to agent (best-effort)
           case send_cancel_to_agent(execution) do
             :ok ->
@@ -1013,10 +1013,10 @@ defmodule EdgeAdmin.Commands do
 
       Enum.each(stale_executions, fn execution ->
         case execution.status do
-          "pending" ->
+          :pending ->
             expire_execution(execution, now)
 
-          "sent" ->
+          :sent ->
             # Best-effort cancel signal to agent — do not block on result
             case send_cancel_to_agent(execution) do
               :ok ->
@@ -1043,11 +1043,13 @@ defmodule EdgeAdmin.Commands do
   end
 
   defp get_stale_executions(now) do
+    cancellable = CommandExecution.cancellable_statuses()
+
     Repo.all(
       from(ce in CommandExecution,
         join: c in assoc(ce, :command),
         join: n in assoc(ce, :node),
-        where: ce.status in ["pending", "sent"],
+        where: ce.status in ^cancellable,
         where: not is_nil(c.expired_at),
         where: c.expired_at <= ^now,
         preload: [node: :cluster, command: []]
@@ -1056,7 +1058,7 @@ defmodule EdgeAdmin.Commands do
   end
 
   defp expire_execution(execution, _now) do
-    case update_command_execution(execution, %{status: "expired"}) do
+    case update_command_execution(execution, %{status: :expired}) do
       {:ok, updated} ->
         Logger.info("Execution #{execution.id} marked expired")
         publish_execution_event(updated, :expired)
@@ -1074,17 +1076,17 @@ defmodule EdgeAdmin.Commands do
   An execution is considered finalised — meaning it can no longer receive any
   updates — when:
 
-    * `status == "completed"` (agent reported result), or
-    * `status in ["cancelled", "expired"]` AND `exit_code IS NOT NULL` (agent
+    * `status == :completed` (agent reported result), or
+    * `status in [:cancelled, :expired]` AND `exit_code IS NOT NULL` (agent
       reported the result of the cancel/expire signal).
 
-  A `cancelled` or `expired` row with `nil exit_code` is NOT finalised — it's a
-  race-window placeholder that `ExecutionAcceptsResultCheck` still accepts a
+  A `:cancelled` or `:expired` row with `nil exit_code` is NOT finalised — it's
+  a race-window placeholder that `ExecutionAcceptsResultCheck` still accepts a
   late agent report for (the agent picked the command up before the admin's
   cancel/expire reached it). Pruning those would lose the agent's actual
   result if it eventually arrived. We exclude them, regardless of age.
 
-  In-flight executions (`pending`, `sent`) are never deleted.
+  In-flight executions (`:pending`, `:sent`) are never deleted.
 
   Deletes in batches of #{@prune_batch_size} to avoid long locks on the hot path.
   Returns `{:ok, total_deleted}`.
@@ -1111,8 +1113,8 @@ defmodule EdgeAdmin.Commands do
         from(ce in CommandExecution,
           where:
             ce.inserted_at < ^cutoff and
-              (ce.status == "completed" or
-                 (ce.status in ["cancelled", "expired"] and not is_nil(ce.exit_code))),
+              (ce.status == :completed or
+                 (ce.status in [:cancelled, :expired] and not is_nil(ce.exit_code))),
           limit: @prune_batch_size,
           preload: [:command, node: :cluster]
         )

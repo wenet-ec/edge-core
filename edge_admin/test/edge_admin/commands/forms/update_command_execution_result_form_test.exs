@@ -20,7 +20,7 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultFormTest do
     test "succeeds with status completed, output and exit_code" do
       attrs = %{"status" => "completed", "output" => "hello", "exit_code" => 0}
       assert {:ok, result} = UpdateCommandExecutionResultForm.changeset(attrs)
-      assert result["status"] == "completed"
+      assert result["status"] == :completed
       assert result["output"] == "hello"
       assert result["exit_code"] == 0
     end
@@ -28,7 +28,7 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultFormTest do
     test "succeeds with status expired and no output or exit_code" do
       attrs = %{"status" => "expired"}
       assert {:ok, result} = UpdateCommandExecutionResultForm.changeset(attrs)
-      assert result["status"] == "expired"
+      assert result["status"] == :expired
     end
 
     test "status is required — missing status returns error" do
@@ -45,7 +45,7 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultFormTest do
     test "status is included in result map" do
       attrs = %{"status" => "completed"}
       {:ok, result} = UpdateCommandExecutionResultForm.changeset(attrs)
-      assert result["status"] == "completed"
+      assert result["status"] == :completed
     end
   end
 

@@ -23,7 +23,7 @@ defmodule EdgeAdmin.Commands.Views.CommandExecutionViewTest do
       cluster_id: cluster.id,
       cluster: cluster,
       target_all: false,
-      status: "pending",
+      status: :pending,
       output: nil,
       exit_code: nil,
       sent_at: nil,
@@ -72,7 +72,7 @@ defmodule EdgeAdmin.Commands.Views.CommandExecutionViewTest do
 
       execution =
         execution_fixture(%{
-          status: "completed",
+          status: :completed,
           output: "Linux 6.1.0",
           exit_code: 0,
           sent_at: now,

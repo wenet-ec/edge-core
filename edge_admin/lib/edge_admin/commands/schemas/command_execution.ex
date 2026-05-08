@@ -8,10 +8,20 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
 
+  # Lifecycle status registry. The schema's `Ecto.Enum` cast, the
+  # `validate_inclusion`-equivalent enforcement, the public predicate
+  # functions, and external surfaces (controller / MCP / AsyncAPI enums)
+  # all derive from these lists — single source of truth.
+  @statuses [:pending, :sent, :completed, :cancelled, :expired]
+  @terminal_statuses [:completed, :cancelled, :expired]
+  @cancellable_statuses [:pending, :sent]
+
+  @type status :: :pending | :sent | :completed | :cancelled | :expired
+
   @type t :: %__MODULE__{
           id: String.t(),
           output: String.t() | nil,
-          status: String.t(),
+          status: status(),
           exit_code: integer() | nil,
           target_all: boolean(),
           sent_at: DateTime.t() | nil,
@@ -56,7 +66,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   schema "command_executions" do
     # "output" will be mapped to TEXT in database
     field(:output, :string)
-    field(:status, :string)
+    field(:status, Ecto.Enum, values: @statuses)
     field(:exit_code, :integer)
     field(:target_all, :boolean, default: false)
     field(:sent_at, :utc_datetime)
@@ -92,7 +102,6 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
       :cluster_id
     ])
     |> validate_required([:status, :node_id])
-    |> validate_inclusion(:status, ["pending", "sent", "completed", "cancelled", "expired"])
     |> foreign_key_constraint(:command_id)
     |> foreign_key_constraint(:node_id)
     |> foreign_key_constraint(:cluster_id)
@@ -132,4 +141,32 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   """
   def expired_at(%__MODULE__{command: %{expired_at: expired_at}}), do: expired_at
   def expired_at(%__MODULE__{}), do: nil
+
+  # ---------------------------------------------------------------------------
+  # Status registry
+  # ---------------------------------------------------------------------------
+
+  @doc "All lifecycle statuses, in canonical order."
+  @spec statuses() :: [status()]
+  def statuses, do: @statuses
+
+  @doc "Statuses that represent a finished execution (no further transitions)."
+  @spec terminal_statuses() :: [status()]
+  def terminal_statuses, do: @terminal_statuses
+
+  @doc "Statuses from which a cancellation request is accepted."
+  @spec cancellable_statuses() :: [status()]
+  def cancellable_statuses, do: @cancellable_statuses
+
+  @doc "Wire-format strings (sorted to match `statuses/0`). For OpenAPI / MCP enums."
+  @spec status_strings() :: [String.t()]
+  def status_strings, do: Enum.map(@statuses, &Atom.to_string/1)
+
+  @doc "True when the execution is in a terminal status."
+  @spec terminal?(t()) :: boolean()
+  def terminal?(%__MODULE__{status: status}), do: status in @terminal_statuses
+
+  @doc "True when the execution can still be cancelled."
+  @spec cancellable?(t()) :: boolean()
+  def cancellable?(%__MODULE__{status: status}), do: status in @cancellable_statuses
 end

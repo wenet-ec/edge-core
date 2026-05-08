@@ -6,11 +6,14 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
 
   use EdgeAdminWeb.Schema
 
+  alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
   defmodule CommandExecutionResponse do
     @moduledoc false
+
+    @status_enum CommandExecution.status_strings()
 
     schema(%{
       title: "CommandExecutionResponse",
@@ -44,7 +47,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
         },
         status: %Schema{
           type: :string,
-          enum: ["pending", "sent", "completed", "cancelled", "expired"],
+          enum: @status_enum,
           description: "Current execution status"
         },
         command_text: %Schema{

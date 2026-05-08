@@ -6,11 +6,16 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
 
   use EdgeAdminWeb.Schema
 
+  alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
   defmodule UpdateCommandExecutionResultRequest do
     @moduledoc false
+
+    # Agent only reports terminal results here. Cancellation is admin-driven
+    # (override on exit_code 143), so the wire enum is just these two.
+    @agent_terminal_enum ["completed", "expired"]
 
     schema(%{
       title: "Internal.UpdateCommandExecutionResultRequest",
@@ -20,7 +25,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
       properties: %{
         status: %Schema{
           type: :string,
-          enum: ["completed", "expired"],
+          enum: @agent_terminal_enum,
           description: "Terminal status reported by the agent"
         },
         output: %Schema{type: :string, nullable: true, description: "Command output text"},
@@ -38,6 +43,8 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
 
   defmodule AgentCommandExecutionResponse do
     @moduledoc false
+
+    @status_enum CommandExecution.status_strings()
 
     schema(%{
       title: "Internal.AgentCommandExecutionResponse",
@@ -59,7 +66,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
         },
         status: %Schema{
           type: :string,
-          enum: ["pending", "sent", "completed", "cancelled", "expired"],
+          enum: @status_enum,
           description: "Current execution status"
         },
         expired_at: %Schema{

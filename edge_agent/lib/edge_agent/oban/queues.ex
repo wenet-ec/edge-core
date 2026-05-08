@@ -104,12 +104,12 @@ defmodule EdgeAgent.Oban.Queues do
     |> Keyword.keys()
   end
 
-  defp worker_queue(module), do: module.__opts__() |> Keyword.fetch!(:queue)
+  defp worker_queue(module), do: Keyword.fetch!(module.__opts__(), :queue)
 
   defp format_atoms(set) do
     case MapSet.to_list(set) do
       [] -> "(none)"
-      list -> list |> Enum.map(&inspect/1) |> Enum.join(", ")
+      list -> Enum.map_join(list, ", ", &inspect/1)
     end
   end
 end

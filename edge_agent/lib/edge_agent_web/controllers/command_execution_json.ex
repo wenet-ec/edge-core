@@ -19,7 +19,7 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionJSON do
       command_text: command_execution.command_text,
       timeout: command_execution.timeout,
       expired_at: command_execution.expired_at,
-      status: command_execution.status,
+      status: Atom.to_string(command_execution.status),
       output: command_execution.output,
       exit_code: command_execution.exit_code,
       inserted_at: command_execution.inserted_at,

@@ -19,10 +19,10 @@ defmodule EdgeAgent.Commands do
   ## Execution Flow
 
   ```
-  1. Admin sends command → Agent creates CommandExecution (status: "pending")
+  1. Admin sends command → Agent creates CommandExecution (status: :pending)
   2. Enqueue Oban job → EnqueueExecutionWorker triggers ExecuteCommandWorker
   3. Worker calls execute_single_command → Runs via /usr/local/bin/hostscript
-  4. Execution completes → Updates status to "completed" with output/exit_code
+  4. Execution completes → Updates status to :completed with output/exit_code
   5. Report to admin → Sends result via AdminClient.update_command_execution_result
   6. Delete local copy → Removes from agent database after successful report
   ```
@@ -60,7 +60,7 @@ defmodule EdgeAgent.Commands do
 
       # List all command executions
       iex> Commands.list_command_executions()
-      [%CommandExecution{id: "...", status: "pending", ...}]
+      [%CommandExecution{id: "...", status: :pending, ...}]
 
       # Create and enqueue execution
       iex> Commands.create_command_execution_and_enqueue_worker(%{
@@ -236,7 +236,7 @@ defmodule EdgeAgent.Commands do
 
     {:ok, _updated_execution} =
       update_command_execution(execution, %{
-        status: "completed",
+        status: :completed,
         output: output,
         exit_code: exit_code,
         completed_at: DateTime.truncate(DateTime.utc_now(), :second)
@@ -417,7 +417,7 @@ defmodule EdgeAgent.Commands do
   @spec build_report_params(CommandExecution.t()) :: map()
   def build_report_params(execution) do
     %{
-      status: execution.status,
+      status: Atom.to_string(execution.status),
       output: execution.output,
       exit_code: execution.exit_code,
       completed_at: execution.completed_at && DateTime.to_iso8601(execution.completed_at)
@@ -456,8 +456,8 @@ defmodule EdgeAgent.Commands do
     Repo.all(from(ce in CommandExecution, where: ce.status == ^status, order_by: [asc: ce.inserted_at]))
   end
 
-  defp get_pending_executions, do: get_executions_by_status("pending")
-  defp get_completed_executions, do: get_executions_by_status("completed")
+  defp get_pending_executions, do: get_executions_by_status(:pending)
+  defp get_completed_executions, do: get_executions_by_status(:completed)
 
   @doc """
   Cancels a command execution.
@@ -478,7 +478,7 @@ defmodule EdgeAgent.Commands do
   @spec cancel_execution(CommandExecution.t()) :: {:ok, map()}
   def cancel_execution(execution) do
     case execution.status do
-      "pending" ->
+      :pending ->
         # Try to kill running task if executing
         task_kill_result =
           case ExecutionRegistry.get_task(execution.id) do
@@ -498,7 +498,7 @@ defmodule EdgeAgent.Commands do
         # Update execution to cancelled
         {:ok, _updated} =
           update_command_execution(execution, %{
-            status: "completed",
+            status: :completed,
             output: "Command cancelled",
             exit_code: 143,
             completed_at: DateTime.truncate(DateTime.utc_now(), :second)
@@ -513,11 +513,11 @@ defmodule EdgeAgent.Commands do
            oban_result: oban_result
          }}
 
-      "completed" ->
+      :completed ->
         Logger.debug("Execution #{execution.id} already completed, ignoring cancel request")
         {:ok, %{action: :already_completed}}
 
-      "expired" ->
+      :expired ->
         Logger.debug("Execution #{execution.id} already expired, ignoring cancel request")
         {:ok, %{action: :already_expired}}
     end

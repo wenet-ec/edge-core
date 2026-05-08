@@ -26,7 +26,7 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionJSONTest do
           command_text: "uptime",
           timeout: 30_000,
           expired_at: nil,
-          status: "pending",
+          status: :pending,
           output: nil,
           exit_code: nil,
           inserted_at: ~U[2026-01-01 00:00:00Z],
@@ -84,7 +84,7 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionJSONTest do
     test "scalar values are passed through correctly" do
       execution =
         build_execution(%{
-          status: "completed",
+          status: :completed,
           output: "load average: 0.1",
           exit_code: 0,
           timeout: 5_000

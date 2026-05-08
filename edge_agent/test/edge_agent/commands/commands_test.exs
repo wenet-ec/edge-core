@@ -51,7 +51,7 @@ defmodule EdgeAgent.CommandsTest do
   describe "build_report_params/1" do
     test "produces the documented field set" do
       execution = %CommandExecution{
-        status: "completed",
+        status: :completed,
         output: "Linux 6.1.0",
         exit_code: 0,
         completed_at: ~U[2026-04-13 10:00:00Z]
@@ -69,7 +69,7 @@ defmodule EdgeAgent.CommandsTest do
 
     test "renders completed_at as ISO 8601 when set" do
       execution = %CommandExecution{
-        status: "completed",
+        status: :completed,
         completed_at: ~U[2026-04-13 10:00:00Z]
       }
 
@@ -80,12 +80,12 @@ defmodule EdgeAgent.CommandsTest do
       # Pending executions don't have a completion time. The wire field is
       # nil rather than an empty string, so admin can distinguish "not yet
       # completed" from "completed but admin shouldn't render time."
-      execution = %CommandExecution{status: "pending", completed_at: nil}
+      execution = %CommandExecution{status: :pending, completed_at: nil}
       assert Commands.build_report_params(execution).completed_at == nil
     end
 
     test "passes through nil output and nil exit_code (pending executions)" do
-      execution = %CommandExecution{status: "pending", output: nil, exit_code: nil}
+      execution = %CommandExecution{status: :pending, output: nil, exit_code: nil}
       result = Commands.build_report_params(execution)
 
       assert result.output == nil
@@ -94,7 +94,7 @@ defmodule EdgeAgent.CommandsTest do
     end
 
     test "rendered map contains exactly the documented top-level keys" do
-      execution = %CommandExecution{status: "completed"}
+      execution = %CommandExecution{status: :completed}
       result = Commands.build_report_params(execution)
 
       assert result |> Map.keys() |> Enum.sort() ==

@@ -8,6 +8,8 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionForm do
   """
   use EdgeAgent.Form
 
+  alias EdgeAgent.Commands.Schemas.CommandExecution
+
   embedded_schema do
     field(:id, :binary_id)
     field(:command_id, :binary_id)
@@ -15,7 +17,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionForm do
     field(:command_text, :string)
     field(:timeout, :integer)
     field(:expired_at, :utc_datetime)
-    field(:status, :string)
+    field(:status, Ecto.Enum, values: CommandExecution.statuses())
     field(:output, :string)
     field(:exit_code, :integer)
     field(:completed_at, :utc_datetime)
@@ -29,7 +31,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionForm do
   - `command_id` - Required, must be valid UUID
   - `node_id` - Required, must be valid UUID
   - `command_text` - Required, must not be empty
-  - `status` - Required, must be "pending" or "completed"
+  - `status` - Required, must be `"pending"`, `"completed"`, or `"expired"` on the wire (cast to atom)
   - `timeout` - Optional, must be positive integer if present
   - `output` - Optional
   - `exit_code` - Optional, must be integer if present
@@ -58,7 +60,6 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionForm do
     |> validate_uuid_format(:command_id)
     |> validate_uuid_format(:node_id)
     |> validate_command_text_format()
-    |> validate_inclusion(:status, ["pending", "completed", "expired"])
     |> validate_timeout()
     |> apply_action(:insert)
     |> case do

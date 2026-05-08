@@ -44,13 +44,13 @@ defmodule EdgeAgent.Commands.Workers.ExecuteCommandWorker do
       :ok
     else
       cond do
-        execution.status != "pending" ->
+        execution.status != :pending ->
           Logger.debug("Execution #{execution_id} already processed (status: #{execution.status}), skipping")
           :ok
 
         expired?(execution) ->
           Logger.info("Execution #{execution_id} expired before running, marking expired")
-          {:ok, _} = Commands.update_command_execution(execution, %{status: "expired"})
+          {:ok, _} = Commands.update_command_execution(execution, %{status: :expired})
 
           Commands.enqueue_worker(
             ReportExecutionWorker,

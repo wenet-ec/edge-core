@@ -44,23 +44,23 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionFormTest do
       assert Map.has_key?(result, "status")
     end
 
-    test "required field values are preserved in result" do
+    test "required field values are preserved in result (status cast to atom)" do
       {:ok, result} = CreateCommandExecutionForm.changeset(valid_attrs())
       assert result["id"] == @valid_id
       assert result["command_id"] == @valid_command_id
       assert result["node_id"] == @valid_node_id
       assert result["command_text"] == "uptime"
-      assert result["status"] == "pending"
+      assert result["status"] == :pending
     end
 
-    test "status: completed is accepted" do
+    test "status: completed is accepted (cast to atom)" do
       assert {:ok, result} = CreateCommandExecutionForm.changeset(valid_attrs(%{"status" => "completed"}))
-      assert result["status"] == "completed"
+      assert result["status"] == :completed
     end
 
-    test "status: expired is accepted" do
+    test "status: expired is accepted (cast to atom)" do
       assert {:ok, result} = CreateCommandExecutionForm.changeset(valid_attrs(%{"status" => "expired"}))
-      assert result["status"] == "expired"
+      assert result["status"] == :expired
     end
 
     test "expired_at is accepted when present" do

@@ -236,6 +236,7 @@ defmodule EdgeAdminWeb.Router do
 
     scope "/", Events do
       resources("/webhooks", WebhookController, only: [:index, :show, :create, :delete])
+      get("/event_types", EventTypeController, :index)
     end
 
     scope "/", Commands do

@@ -61,6 +61,8 @@ defmodule EdgeAdminWeb.OpenApiSpec do
     # SelfUpdates.Request
     "/api/v1/self_update_requests",
     "/api/v1/self_update_requests/{id}",
+    # Events.Type
+    "/api/v1/event_types",
     # Events.Webhook
     "/api/v1/webhooks",
     "/api/v1/webhooks/{id}"
@@ -110,6 +112,7 @@ defmodule EdgeAdminWeb.OpenApiSpec do
         %Tag{name: "Ssh.SshUsername"},
         %Tag{name: "Ssh.SshPublicKey"},
         %Tag{name: "SelfUpdates.Request"},
+        %Tag{name: "Events.Type"},
         %Tag{name: "Events.Webhook"}
       ]
     }

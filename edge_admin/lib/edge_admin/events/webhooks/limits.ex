@@ -3,12 +3,6 @@ defmodule EdgeAdmin.Events.Webhooks.Limits do
   @moduledoc """
   Shared numeric limits for webhook validation.
 
-  Centralised so Layer 4 (`Webhook` Ecto schema), Layer 2
-  (`Forms.CreateWebhookForm`), and Layer 1 (`EdgeAdminMcp.Tools.Events.CreateWebhook`,
-  `EdgeAdminWeb.Schemas.Webhooks.WebhookSchemas.WebhookCreateRequest`) all
-  reference the same numbers. The validation *passes* are still
-  independent (defense in depth) — only the *constants* are shared.
-
   When tightening a limit, update here. The change automatically takes
   effect at every layer that imports it.
   """

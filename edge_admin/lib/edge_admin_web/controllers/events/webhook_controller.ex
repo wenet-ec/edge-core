@@ -6,9 +6,9 @@ defmodule EdgeAdminWeb.Controllers.Events.WebhookController do
   alias EdgeAdmin.Events.Webhooks
   alias EdgeAdmin.Events.Webhooks.Schemas.Webhook
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias EdgeAdminWeb.Schemas.Events.WebhookSchemas
   alias EdgeAdminWeb.Schemas.PathParams
   alias EdgeAdminWeb.Schemas.QueryParams
-  alias EdgeAdminWeb.Schemas.Webhooks.WebhookSchemas
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 

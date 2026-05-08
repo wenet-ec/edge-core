@@ -250,12 +250,19 @@ defmodule Nexmaker.Api do
     Keyword.get(opts, key) || Application.get_env(:nexmaker, key)
   end
 
-  defp build_url(base_url, path, []) do
+  @doc false
+  # Public for unit testing. Composes `<base_url><path>?<encoded_query>` with
+  # one trailing slash trimmed from `base_url` so callers can configure either
+  # `"http://host:8081"` or `"http://host:8081/"` without changing the URL
+  # the request actually hits. Query values are URL-encoded via
+  # `URI.encode_query/1`.
+  @spec build_url(String.t(), String.t(), keyword()) :: String.t()
+  def build_url(base_url, path, []) do
     base_url = String.trim_trailing(base_url, "/")
     "#{base_url}#{path}"
   end
 
-  defp build_url(base_url, path, query) when is_list(query) do
+  def build_url(base_url, path, query) when is_list(query) do
     base_url = String.trim_trailing(base_url, "/")
     query_string = URI.encode_query(query)
     "#{base_url}#{path}?#{query_string}"

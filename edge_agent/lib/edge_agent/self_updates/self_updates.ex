@@ -199,18 +199,30 @@ defmodule EdgeAgent.SelfUpdates do
   # fresh agent can pick up an outstanding self-update request.
   # Otherwise trigger only if `inserted_at` is strictly newer than the last
   # check we recorded.
-  defp should_trigger_update?(nil, _last_check), do: false
-  defp should_trigger_update?(_inserted_at, nil), do: true
+  @doc false
+  # Public for unit testing. Decides whether to trigger Watchtower based on
+  # the admin's reported `inserted_at` and our last-check timestamp.
+  #
+  # nil inserted_at → false (admin payload was missing/unparseable; refuse to
+  # act on bad data, otherwise we'd loop-restart on every check).
+  # nil last_check → true (fresh agent; pick up any outstanding request).
+  # Both set → trigger only if inserted_at is strictly newer than last_check.
+  @spec should_trigger_update?(DateTime.t() | nil, DateTime.t() | nil) :: boolean()
+  def should_trigger_update?(nil, _last_check), do: false
+  def should_trigger_update?(_inserted_at, nil), do: true
 
-  defp should_trigger_update?(%DateTime{} = inserted_at, %DateTime{} = last_check) do
+  def should_trigger_update?(%DateTime{} = inserted_at, %DateTime{} = last_check) do
     DateTime.after?(inserted_at, last_check)
   end
 
-  # Parse ISO8601 datetime string. Returns `nil` (not "now") on parse error
-  # so `should_trigger_update?/2` can refuse to act on bad data.
-  defp parse_datetime(nil), do: nil
+  @doc false
+  # Public for unit testing. Parse ISO 8601 datetime string. Returns `nil`
+  # (not "now") on parse error so should_trigger_update?/2 can refuse to act
+  # on bad data.
+  @spec parse_datetime(String.t() | nil) :: DateTime.t() | nil
+  def parse_datetime(nil), do: nil
 
-  defp parse_datetime(str) when is_binary(str) do
+  def parse_datetime(str) when is_binary(str) do
     case DateTime.from_iso8601(str) do
       {:ok, dt, _offset} ->
         dt

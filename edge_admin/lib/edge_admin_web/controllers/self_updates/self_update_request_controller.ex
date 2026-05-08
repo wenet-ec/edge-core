@@ -11,6 +11,8 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
   alias EdgeAdminWeb.Schemas.QueryParams
   alias EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas
 
+  @status_enum SelfUpdateRequest.status_strings()
+
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
   plug DegradedMode, :block when action in [:create]
@@ -25,7 +27,7 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
       QueryParams.pagination() ++
         QueryParams.sort() ++
         [
-          QueryParams.enum_filter(:status, ["pending", "processing", "completed"], description: "Filter by status")
+          QueryParams.enum_filter(:status, @status_enum, description: "Filter by status")
         ] ++
         QueryParams.datetime_range_filter(:inserted_at) ++
         QueryParams.datetime_range_filter(:updated_at),

@@ -12,7 +12,7 @@ defmodule EdgeAdmin.SelfUpdates.Views.SelfUpdateRequestView do
     %{
       id: request.id,
       targeting: request.targeting,
-      status: request.status,
+      status: Atom.to_string(request.status),
       summary: request.summary,
       inserted_at: request.inserted_at,
       updated_at: request.updated_at

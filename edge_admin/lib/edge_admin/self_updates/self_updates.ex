@@ -221,7 +221,7 @@ defmodule EdgeAdmin.SelfUpdates do
   Always `:ok` — meaning "processing completed", NOT "all triggers succeeded".
   Per-node outcomes (gateway-not-found, self-update disabled, agent error) are
   aggregated into the request's `summary` map (`%{total, triggered, failed}`)
-  and the request's `status` transitions to `"completed"` regardless of how
+  and the request's `status` transitions to `:completed` regardless of how
   many individual nodes failed. Inspect `summary.failed` to detect partial
   failures.
   """
@@ -230,7 +230,7 @@ defmodule EdgeAdmin.SelfUpdates do
     {:ok, request} = get_self_update_request(request_id)
 
     # Update status to processing
-    {:ok, request} = update_self_update_request(request, %{status: "processing"})
+    {:ok, request} = update_self_update_request(request, %{status: :processing})
 
     # Resolve targeting and filter nodes
     nodes = resolve_targeting_and_filter(request.targeting)
@@ -241,7 +241,7 @@ defmodule EdgeAdmin.SelfUpdates do
 
       {:ok, completed_request} =
         update_self_update_request(request, %{
-          status: "completed",
+          status: :completed,
           summary: %{total: 0, triggered: 0, failed: 0}
         })
 
@@ -281,7 +281,7 @@ defmodule EdgeAdmin.SelfUpdates do
       # Update request with summary
       {:ok, completed_request} =
         update_self_update_request(request, %{
-          status: "completed",
+          status: :completed,
           summary: summary
         })
 

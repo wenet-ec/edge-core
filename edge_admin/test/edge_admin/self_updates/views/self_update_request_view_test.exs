@@ -11,7 +11,7 @@ defmodule EdgeAdmin.SelfUpdates.Views.SelfUpdateRequestViewTest do
     base = %SelfUpdateRequest{
       id: "request-uuid-1",
       targeting: %{"type" => "all"},
-      status: "pending",
+      status: :pending,
       summary: nil,
       inserted_at: now,
       updated_at: now
@@ -49,7 +49,7 @@ defmodule EdgeAdmin.SelfUpdates.Views.SelfUpdateRequestViewTest do
     test "passes summary maps through unchanged when populated" do
       summary = %{"total" => 10, "triggered" => 8, "failed" => 2}
 
-      result = SelfUpdateRequestView.render(request_fixture(%{status: "completed", summary: summary}))
+      result = SelfUpdateRequestView.render(request_fixture(%{status: :completed, summary: summary}))
 
       assert result.status == "completed"
       assert result.summary == summary

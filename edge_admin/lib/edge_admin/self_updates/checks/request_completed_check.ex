@@ -9,7 +9,7 @@ defmodule EdgeAdmin.SelfUpdates.Checks.RequestCompletedCheck do
   alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
 
   @spec check(SelfUpdateRequest.t()) :: :ok | {:error, {:conflict, String.t()}}
-  def check(%SelfUpdateRequest{status: "completed"}), do: :ok
+  def check(%SelfUpdateRequest{status: :completed}), do: :ok
 
   def check(%SelfUpdateRequest{status: status}) do
     {:error,

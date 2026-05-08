@@ -15,8 +15,11 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.ListSelfUpdateRequests do
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.SelfUpdates
+  alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
   alias EdgeAdmin.SelfUpdates.Views.SelfUpdateRequestView
   alias EdgeAdminMcp.FlopParams
+
+  @status_enum SelfUpdateRequest.status_strings()
 
   @impl true
   def title, do: "List Self-Update Requests"
@@ -26,7 +29,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.ListSelfUpdateRequests do
   schema do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
-    field :status, {:enum, ["pending", "processing", "completed"]}
+    field :status, {:enum, @status_enum}
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string
     field :updated_at_gte, :string

@@ -115,7 +115,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
     base = %SelfUpdateRequest{
       id: "selfupd-uuid-1",
       targeting: %{"type" => "all"},
-      status: "completed",
+      status: :completed,
       summary: %{"total" => 10, "triggered" => 9, "failed" => 1},
       inserted_at: now(),
       updated_at: now()

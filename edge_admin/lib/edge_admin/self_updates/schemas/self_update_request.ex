@@ -9,15 +9,22 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest do
 
   ## Fields
   - `targeting` - JSON targeting configuration (same as commands)
-  - `status` - Request status: "pending", "processing", "completed"
+  - `status` - Request status: `:pending`, `:processing`, `:completed`
   - `summary` - JSON summary of results: %{total, triggered, failed}
   """
   use EdgeAdmin.Schema
 
+  # Status registry. Schema's Ecto.Enum, registry helpers, and external
+  # surfaces (controller / MCP / OpenAPI / AsyncAPI enums) all derive from
+  # these lists — single source of truth.
+  @statuses [:pending, :processing, :completed]
+
+  @type status :: :pending | :processing | :completed
+
   @type t :: %__MODULE__{
           id: String.t(),
           targeting: map(),
-          status: String.t(),
+          status: status(),
           summary: map() | nil,
           inserted_at: DateTime.t(),
           updated_at: DateTime.t()
@@ -35,7 +42,7 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest do
 
   schema "self_update_requests" do
     field(:targeting, :map)
-    field(:status, :string, default: "pending")
+    field(:status, Ecto.Enum, values: @statuses, default: :pending)
     field(:summary, :map)
 
     timestamps()
@@ -46,6 +53,17 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest do
     self_update_request
     |> cast(attrs, [:targeting, :status, :summary])
     |> validate_required([:targeting])
-    |> validate_inclusion(:status, ["pending", "processing", "completed"])
   end
+
+  # ---------------------------------------------------------------------------
+  # Status registry
+  # ---------------------------------------------------------------------------
+
+  @doc "All request statuses, in canonical lifecycle order."
+  @spec statuses() :: [status()]
+  def statuses, do: @statuses
+
+  @doc "Wire-format strings (sorted to match `statuses/0`). For OpenAPI / MCP / AsyncAPI enums."
+  @spec status_strings() :: [String.t()]
+  def status_strings, do: Enum.map(@statuses, &Atom.to_string/1)
 end

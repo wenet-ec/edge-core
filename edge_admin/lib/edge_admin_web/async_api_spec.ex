@@ -657,7 +657,10 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "required" => ["self_update_request_id", "status", "targeting"],
         "properties" => %{
           "self_update_request_id" => %{"type" => "string", "format" => "uuid"},
-          "status" => %{"type" => "string", "enum" => ["pending", "processing", "completed"]},
+          "status" => %{
+            "type" => "string",
+            "enum" => EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest.status_strings()
+          },
           "targeting" => %{
             "type" => "object",
             "properties" => %{

@@ -639,7 +639,7 @@ defmodule EdgeAdmin.Events.Catalog do
   defp self_update_data(request) do
     %{
       "self_update_request_id" => request.id,
-      "status" => request.status,
+      "status" => Atom.to_string(request.status),
       "targeting" => request.targeting,
       "summary" => request.summary,
       "inserted_at" => format_dt(request.inserted_at),

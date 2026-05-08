@@ -6,11 +6,15 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
 
   use EdgeAdminWeb.Schema
 
+  alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
   defmodule SelfUpdateRequestResponse do
     @moduledoc false
+
+    @status_enum SelfUpdateRequest.status_strings()
 
     schema(%{
       title: "SelfUpdateRequestResponse",
@@ -35,7 +39,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
         },
         status: %Schema{
           type: :string,
-          enum: ["pending", "processing", "completed"],
+          enum: @status_enum,
           description: "Request processing status"
         },
         summary: %Schema{
@@ -113,6 +117,8 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
   defmodule SelfUpdateRequestCreateRequest do
     @moduledoc false
 
+    @node_status_enum Node.status_strings()
+
     schema(%{
       title: "SelfUpdateRequestCreateRequest",
       description: """
@@ -153,7 +159,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
                 },
                 status: %Schema{
                   type: :string,
-                  enum: ["healthy", "unhealthy", "unreachable"],
+                  enum: @node_status_enum,
                   description: "Filter by node status"
                 },
                 cluster_name: %Schema{

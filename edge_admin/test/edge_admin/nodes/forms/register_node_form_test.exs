@@ -39,18 +39,18 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
   # ---------------------------------------------------------------------------
 
   describe "changeset/2 — valid cases" do
-    test "all required fields present succeeds" do
+    test "all required fields present succeeds (wire string cast to atom)" do
       assert {:ok, result} = RegisterNodeForm.changeset(valid_attrs(), &cluster_found/1)
-      assert result["id_type"] == "persistent"
+      assert result["id_type"] == :persistent
       assert result["network_name"] == "cluster-test"
       assert result["http_port"] == 4000
     end
 
-    test "random id_type succeeds" do
+    test "random id_type succeeds (wire string cast to atom)" do
       assert {:ok, result} =
                RegisterNodeForm.changeset(valid_attrs(%{"id_type" => "random"}), &cluster_found/1)
 
-      assert result["id_type"] == "random"
+      assert result["id_type"] == :random
     end
 
     test "self_update_enabled true succeeds" do

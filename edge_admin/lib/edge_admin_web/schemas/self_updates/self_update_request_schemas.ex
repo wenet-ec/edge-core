@@ -118,6 +118,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
     @moduledoc false
 
     @node_status_enum Node.status_strings()
+    @id_type_enum Node.id_type_strings()
 
     schema(%{
       title: "SelfUpdateRequestCreateRequest",
@@ -154,7 +155,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
               properties: %{
                 id_type: %Schema{
                   type: :string,
-                  enum: ["persistent", "random"],
+                  enum: @id_type_enum,
                   description: "Filter by node ID type"
                 },
                 status: %Schema{

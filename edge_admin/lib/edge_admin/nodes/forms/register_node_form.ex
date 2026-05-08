@@ -8,10 +8,12 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
   """
   use EdgeAdmin.Form
 
+  alias EdgeAdmin.Nodes.Schemas.Node
+
   embedded_schema do
     field(:node_id, :string)
     field(:network_name, :string)
-    field(:id_type, :string)
+    field(:id_type, Ecto.Enum, values: Node.id_types())
     field(:http_port, :integer)
     field(:ssh_port, :integer)
     field(:host_metrics_port, :integer)
@@ -66,7 +68,6 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     |> validate_uuid_format(:node_id)
     |> validate_network_name()
     |> validate_cluster_exists(get_cluster_fn)
-    |> validate_inclusion(:id_type, ["persistent", "random"])
     |> validate_port(:http_port)
     |> validate_port(:ssh_port)
     |> validate_port(:host_metrics_port)

@@ -72,7 +72,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
   @datetime_or_date {:custom, {__MODULE__, :validate_iso8601_date_or_datetime}}
 
   @node_filters_schema %{
-    id_type: {:enum, ["persistent", "random"]},
+    id_type: {:enum, Node.id_type_strings()},
     status: {:enum, Node.status_strings()},
     cluster_name: :string,
     version: :string,

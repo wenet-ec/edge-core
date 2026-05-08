@@ -26,6 +26,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
   alias EdgeAdminMcp.FlopParams
 
   @status_enum Node.status_strings()
+  @id_type_enum Node.id_type_strings()
 
   @impl true
   def title, do: "List Nodes"
@@ -36,7 +37,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
     field :status, {:enum, @status_enum}
-    field :id_type, {:enum, ["persistent", "random"]}
+    field :id_type, {:enum, @id_type_enum}
     field :cluster_name, :string, min_length: 1
     field :version, :string, min_length: 1
     field :self_update_enabled, :boolean

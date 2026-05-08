@@ -1053,7 +1053,7 @@ defmodule EdgeAdmin.Nodes do
   Lists nodes with filtering, sorting, and pagination.
 
   Supports filtering by:
-  - `id_type` - Enum: "persistent" or "random"
+  - `id_type` - Enum: `"persistent"` or `"random"` (wire) / atom internally
   - `status` - Enum: `"healthy"`, `"unhealthy"`, or `"unreachable"` (wire) / atom internally
   - `version` - Text search with wildcard support (1.0.0 exact, 1.* ilike)
   - `self_update_enabled` - Boolean

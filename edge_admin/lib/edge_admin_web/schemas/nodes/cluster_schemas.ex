@@ -15,6 +15,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
     @moduledoc false
 
     @status_enum Node.status_strings()
+    @id_type_enum Node.id_type_strings()
 
     schema(%{
       title: "NodeSummary",
@@ -35,7 +36,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         id_type: %Schema{
           type: :string,
           description: "Node ID type",
-          enum: ["persistent", "random"],
+          enum: @id_type_enum,
           example: "persistent"
         },
         vpn_hostname: %Schema{

@@ -48,7 +48,7 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFiltersTest do
     attrs = %{
       id: Ecto.UUID.generate(),
       cluster_id: cluster_id,
-      id_type: "persistent",
+      id_type: :persistent,
       status: :healthy,
       version: "0.1.0",
       http_port: 44_000,

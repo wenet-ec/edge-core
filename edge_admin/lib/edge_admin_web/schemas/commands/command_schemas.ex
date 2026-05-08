@@ -6,6 +6,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
 
   use EdgeAdminWeb.Schema
 
+  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
@@ -98,6 +99,9 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
   defmodule CommandCreateRequest do
     @moduledoc false
 
+    @id_type_enum Node.id_type_strings()
+    @node_status_enum Node.status_strings()
+
     schema(%{
       title: "CommandCreateRequest",
       description: "Create a new command with flexible targeting options",
@@ -155,12 +159,12 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
               properties: %{
                 id_type: %Schema{
                   type: :string,
-                  enum: ["persistent", "random"],
+                  enum: @id_type_enum,
                   description: "Filter by node ID type"
                 },
                 status: %Schema{
                   type: :string,
-                  enum: ["healthy", "unhealthy", "unreachable"],
+                  enum: @node_status_enum,
                   description: "Filter by node status"
                 },
                 cluster_name: %Schema{

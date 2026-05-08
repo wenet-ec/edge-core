@@ -25,7 +25,7 @@ defmodule EdgeAdmin.Nodes.Views.ClusterViewTest do
   defp node_fixture(overrides \\ %{}) do
     base = %Node{
       id: "node-uuid-1",
-      id_type: "persistent",
+      id_type: :persistent,
       status: :healthy
     }
 

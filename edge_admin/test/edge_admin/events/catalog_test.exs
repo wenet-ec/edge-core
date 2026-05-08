@@ -28,7 +28,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
       cluster_id: cluster.id,
       status: :healthy,
       version: "1.2.0",
-      id_type: "persistent",
+      id_type: :persistent,
       http_port: 44_000,
       ssh_port: 40_022,
       host_metrics_port: 9100,

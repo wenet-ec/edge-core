@@ -15,6 +15,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
     @moduledoc false
 
     @status_enum Node.status_strings()
+    @id_type_enum Node.id_type_strings()
 
     schema(%{
       title: "NodeResponse",
@@ -45,7 +46,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         },
         id_type: %Schema{
           type: :string,
-          enum: ["persistent", "random"],
+          enum: @id_type_enum,
           description: "Type of node identifier (persistent or random)"
         },
         status: %Schema{

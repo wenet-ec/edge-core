@@ -6,11 +6,14 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
 
   use EdgeAdminWeb.Schema
 
+  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
   defmodule NodeRegisterRequest do
     @moduledoc false
+
+    @id_type_enum Node.id_type_strings()
 
     schema(%{
       title: "Internal.NodeRegisterRequest",
@@ -30,7 +33,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         },
         id_type: %Schema{
           type: :string,
-          enum: ["persistent", "random"],
+          enum: @id_type_enum,
           description: "How the node identity is determined"
         },
         http_port: %Schema{

@@ -496,7 +496,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
       "cluster_name" => %{"type" => "string"},
       "status" => %{"type" => "string", "enum" => EdgeAdmin.Nodes.Schemas.Node.status_strings()},
       "version" => %{"type" => "string"},
-      "id_type" => %{"type" => "string"},
+      "id_type" => %{"type" => "string", "enum" => EdgeAdmin.Nodes.Schemas.Node.id_type_strings()},
       "http_port" => %{"type" => "integer"},
       "ssh_port" => %{"type" => "integer"},
       "host_metrics_port" => %{"type" => "integer"},

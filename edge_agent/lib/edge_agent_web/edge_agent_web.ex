@@ -1,4 +1,4 @@
-# edge_agent/lib/edge_agent_web.ex
+# edge_agent/lib/edge_agent_web/edge_agent_web.ex
 defmodule EdgeAgentWeb do
   @moduledoc """
   The entrypoint for defining your web interface, such

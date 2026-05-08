@@ -1,4 +1,4 @@
-# edge_agent/lib/edge_agent.ex
+# edge_agent/lib/edge_agent/edge_agent.ex
 defmodule EdgeAgent do
   @moduledoc """
   EdgeAgent keeps the contexts that define your domain

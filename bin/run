@@ -290,6 +290,18 @@ handle_cloud() {
             ;;
         admin:test)
             check_docker
+            # SQLite parity guard: under VARIANT=lite, the test SQLite file
+            # lives on a named volume (local_local_edge_admin_test_data).
+            # `down` doesn't drop named volumes by default, so a stale file
+            # can survive across runs and silently keep schema_migrations
+            # rows for migrations that have since been edited in place.
+            # Wipe the file before boot so Ecto re-runs migrations against
+            # current source every time. Postgres is unaffected.
+            if [ "$VARIANT" = "lite" ]; then
+                log "Resetting SQLite test DB (stale-volume guard)..."
+                docker compose $compose_file run --rm --no-deps edge_admin_test \
+                    sh -c "rm -f /app/data/edge_admin_test.db /app/data/edge_admin_test.db-shm /app/data/edge_admin_test.db-wal"
+            fi
             log "Running Edge Admin tests..."
             docker compose $compose_file run --rm edge_admin_test "$@"
             ;;

@@ -3,7 +3,7 @@
   "channels": {
     "edge.enrollment_key.verified": {
       "address": "edge.enrollment_key.verified",
-      "description": "Agent attempted to enroll using an enrollment key (success or failure)",
+      "description": "Agent attempted to enroll using an enrollment key (success or failure).",
       "messages": {
         "enrollment_key.verified": {
           "$ref": "#/components/messages/enrollmentKeyVerifiedMessage"
@@ -12,7 +12,7 @@
     },
     "edge.node.registered": {
       "address": "edge.node.registered",
-      "description": "Node registered for the first time",
+      "description": "Node registered for the first time.",
       "messages": {
         "node.registered": {
           "$ref": "#/components/messages/nodeRegisteredMessage"
@@ -21,7 +21,7 @@
     },
     "edge.node.reregistered": {
       "address": "edge.node.reregistered",
-      "description": "Node re-enrolled (reboot, redeploy, etc.)",
+      "description": "Node re-enrolled (reboot, redeploy, etc.).",
       "messages": {
         "node.reregistered": {
           "$ref": "#/components/messages/nodeReregisteredMessage"
@@ -30,7 +30,7 @@
     },
     "edge.node.version_changed": {
       "address": "edge.node.version_changed",
-      "description": "Node version changed alongside re-enrollment",
+      "description": "Node version changed alongside re-enrollment.",
       "messages": {
         "node.version_changed": {
           "$ref": "#/components/messages/nodeVersionChangedMessage"
@@ -39,7 +39,7 @@
     },
     "edge.node.status_changed": {
       "address": "edge.node.status_changed",
-      "description": "Node health status transitioned",
+      "description": "Node health status transitioned.",
       "messages": {
         "node.status_changed": {
           "$ref": "#/components/messages/nodeStatusChangedMessage"
@@ -48,7 +48,7 @@
     },
     "edge.node.cluster_changed": {
       "address": "edge.node.cluster_changed",
-      "description": "Node moved to a different cluster",
+      "description": "Node moved to a different cluster.",
       "messages": {
         "node.cluster_changed": {
           "$ref": "#/components/messages/nodeClusterChangedMessage"
@@ -57,7 +57,7 @@
     },
     "edge.node.update_triggered": {
       "address": "edge.node.update_triggered",
-      "description": "Self-update signal sent to this node",
+      "description": "Self-update signal sent to this node.",
       "messages": {
         "node.update_triggered": {
           "$ref": "#/components/messages/nodeUpdateTriggeredMessage"
@@ -66,7 +66,7 @@
     },
     "edge.command_execution.created": {
       "address": "edge.command_execution.created",
-      "description": "Execution record created and queued",
+      "description": "Execution record created and queued.",
       "messages": {
         "command_execution.created": {
           "$ref": "#/components/messages/commandExecutionCreatedMessage"
@@ -75,7 +75,7 @@
     },
     "edge.command_execution.sent": {
       "address": "edge.command_execution.sent",
-      "description": "Execution delivered to agent and ACKed",
+      "description": "Execution delivered to agent and ACKed.",
       "messages": {
         "command_execution.sent": {
           "$ref": "#/components/messages/commandExecutionSentMessage"
@@ -84,7 +84,7 @@
     },
     "edge.command_execution.completed": {
       "address": "edge.command_execution.completed",
-      "description": "Agent reported result",
+      "description": "Agent reported result.",
       "messages": {
         "command_execution.completed": {
           "$ref": "#/components/messages/commandExecutionCompletedMessage"
@@ -93,7 +93,7 @@
     },
     "edge.command_execution.cancelled": {
       "address": "edge.command_execution.cancelled",
-      "description": "Execution cancelled (explicit or SIGTERM)",
+      "description": "Execution cancelled (explicit or SIGTERM).",
       "messages": {
         "command_execution.cancelled": {
           "$ref": "#/components/messages/commandExecutionCancelledMessage"
@@ -102,7 +102,7 @@
     },
     "edge.command_execution.expired": {
       "address": "edge.command_execution.expired",
-      "description": "Execution swept as stale before running",
+      "description": "Execution swept as stale before running.",
       "messages": {
         "command_execution.expired": {
           "$ref": "#/components/messages/commandExecutionExpiredMessage"
@@ -111,7 +111,7 @@
     },
     "edge.command_execution.pruned": {
       "address": "edge.command_execution.pruned",
-      "description": "Execution reaped by background pruning worker",
+      "description": "Execution reaped by background pruning worker.",
       "messages": {
         "command_execution.pruned": {
           "$ref": "#/components/messages/commandExecutionPrunedMessage"
@@ -120,7 +120,7 @@
     },
     "edge.ssh_username.verified": {
       "address": "edge.ssh_username.verified",
-      "description": "Agent verified an SSH credential against admin (success or failure)",
+      "description": "Agent verified an SSH credential against admin (success or failure).",
       "messages": {
         "ssh_username.verified": {
           "$ref": "#/components/messages/sshUsernameVerifiedMessage"
@@ -129,7 +129,7 @@
     },
     "edge.self_update_request.completed": {
       "address": "edge.self_update_request.completed",
-      "description": "Self-update batch finished",
+      "description": "Self-update batch finished.",
       "messages": {
         "self_update_request.completed": {
           "$ref": "#/components/messages/selfUpdateRequestCompletedMessage"
@@ -187,12 +187,12 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "command_execution.cancelled"
+              "type": "edge.command_execution.cancelled"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
-        "summary": "Execution cancelled (explicit or SIGTERM)"
+        "summary": "Execution cancelled (explicit or SIGTERM)."
       },
       "commandExecutionCompletedMessage": {
         "bindings": {
@@ -242,12 +242,12 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "command_execution.completed"
+              "type": "edge.command_execution.completed"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
-        "summary": "Agent reported result"
+        "summary": "Agent reported result."
       },
       "commandExecutionCreatedMessage": {
         "bindings": {
@@ -297,12 +297,12 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "command_execution.created"
+              "type": "edge.command_execution.created"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
-        "summary": "Execution record created and queued"
+        "summary": "Execution record created and queued."
       },
       "commandExecutionExpiredMessage": {
         "bindings": {
@@ -352,12 +352,12 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "command_execution.expired"
+              "type": "edge.command_execution.expired"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
-        "summary": "Execution swept as stale before running"
+        "summary": "Execution swept as stale before running."
       },
       "commandExecutionPrunedMessage": {
         "bindings": {
@@ -407,12 +407,12 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "command_execution.pruned"
+              "type": "edge.command_execution.pruned"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
-        "summary": "Execution reaped by background pruning worker"
+        "summary": "Execution reaped by background pruning worker."
       },
       "commandExecutionSentMessage": {
         "bindings": {
@@ -462,12 +462,12 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "command_execution.sent"
+              "type": "edge.command_execution.sent"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
-        "summary": "Execution delivered to agent and ACKed"
+        "summary": "Execution delivered to agent and ACKed."
       },
       "enrollmentKeyVerifiedMessage": {
         "bindings": {
@@ -508,12 +508,12 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "enrollment_key.verified"
+              "type": "edge.enrollment_key.verified"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
-        "summary": "Agent attempted to enroll using an enrollment key"
+        "summary": "Agent attempted to enroll using an enrollment key (success or failure)."
       },
       "nodeClusterChangedMessage": {
         "bindings": {
@@ -564,12 +564,12 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "node.cluster_changed"
+              "type": "edge.node.cluster_changed"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
-        "summary": "Node moved to a different cluster"
+        "summary": "Node moved to a different cluster."
       },
       "nodeRegisteredMessage": {
         "bindings": {
@@ -619,12 +619,12 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "node.registered"
+              "type": "edge.node.registered"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
-        "summary": "Node registered for the first time"
+        "summary": "Node registered for the first time."
       },
       "nodeReregisteredMessage": {
         "bindings": {
@@ -674,12 +674,12 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "node.reregistered"
+              "type": "edge.node.reregistered"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
-        "summary": "Node re-enrolled (reboot, redeploy, etc.)"
+        "summary": "Node re-enrolled (reboot, redeploy, etc.)."
       },
       "nodeStatusChangedMessage": {
         "bindings": {
@@ -730,12 +730,12 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "node.status_changed"
+              "type": "edge.node.status_changed"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
-        "summary": "Node health status transitioned"
+        "summary": "Node health status transitioned."
       },
       "nodeUpdateTriggeredMessage": {
         "bindings": {
@@ -786,12 +786,12 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "node.update_triggered"
+              "type": "edge.node.update_triggered"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
-        "summary": "Self-update signal sent to this node"
+        "summary": "Self-update signal sent to this node."
       },
       "nodeVersionChangedMessage": {
         "bindings": {
@@ -842,12 +842,12 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "node.version_changed"
+              "type": "edge.node.version_changed"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
-        "summary": "Node version changed alongside re-enrollment"
+        "summary": "Node version changed alongside re-enrollment."
       },
       "selfUpdateRequestCompletedMessage": {
         "bindings": {
@@ -892,12 +892,12 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "self_update_request.completed"
+              "type": "edge.self_update_request.completed"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
-        "summary": "Self-update batch finished"
+        "summary": "Self-update batch finished."
       },
       "sshUsernameVerifiedMessage": {
         "bindings": {
@@ -939,12 +939,12 @@
               "source": "https://github.com/wenet-ec/edge-core",
               "specversion": "1.0",
               "time": "2026-04-13T10:00:00Z",
-              "type": "ssh_username.verified"
+              "type": "edge.ssh_username.verified"
             }
           }
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
-        "summary": "Agent verified an SSH credential against admin"
+        "summary": "Agent verified an SSH credential against admin (success or failure)."
       }
     },
     "schemas": {

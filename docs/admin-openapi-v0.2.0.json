@@ -359,7 +359,7 @@
           "public_key": {
             "description": "SSH public key in OpenSSH format (algorithm base64data [comment]). Supported algorithms: ssh-ed25519 (recommended), ecdsa-sha2-nistp256, ecdsa-sha2-nistp384, ecdsa-sha2-nistp521, ssh-rsa",
             "example": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
-            "pattern": "^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa)\\s+[A-Za-z0-9+\\/]+=*\\s*.*$",
+            "pattern": "^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa)\\s+([A-Za-z0-9+/]+=*)\\s*(.*)$",
             "type": "string"
           }
         },
@@ -1209,6 +1209,7 @@
           "cluster_name": {
             "description": "Name of the target cluster to move this node to.",
             "example": "prod-west",
+            "maxLength": 24,
             "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
             "type": "string"
           }
@@ -1752,6 +1753,37 @@
         },
         "required": ["data", "meta"],
         "title": "NodePaginatedResponse",
+        "type": "object"
+      },
+      "EventTypeListResponse": {
+        "description": "Full catalog of event types Edge Core can publish.",
+        "properties": {
+          "data": {
+            "description": "Full catalog of event types Edge Core can publish, in catalog order.\n\nUse this list to build a webhook's `subscribed_events` array — every\nentry here is a valid value, anything else is rejected at create time.\nThe list is static (code-owned). See [AsyncAPI spec](/asyncdoc) for\neach event's payload shape.\n",
+            "example": [
+              "edge.enrollment_key.verified",
+              "edge.node.registered",
+              "edge.node.reregistered",
+              "edge.node.version_changed",
+              "edge.node.status_changed",
+              "edge.node.cluster_changed",
+              "edge.node.update_triggered",
+              "edge.command_execution.created",
+              "edge.command_execution.sent",
+              "edge.command_execution.completed",
+              "edge.command_execution.cancelled",
+              "edge.command_execution.expired",
+              "edge.command_execution.pruned",
+              "edge.ssh_username.verified",
+              "edge.self_update_request.completed"
+            ],
+            "items": { "type": "string" },
+            "type": "array"
+          },
+          "meta": { "$ref": "#/components/schemas/Meta" }
+        },
+        "required": ["data", "meta"],
+        "title": "EventTypeListResponse",
         "type": "object"
       },
       "ClusterUpdateRequest": {
@@ -7203,6 +7235,28 @@
         "tags": ["SelfUpdates.Request"]
       }
     },
+    "/api/v1/event_types": {
+      "get": {
+        "callbacks": {},
+        "description": "Returns the full catalog of event types Edge Core can publish. Use this list to build a webhook's `subscribed_events` array — every value here is valid, anything else is rejected at create time. Static, code-owned list. See [AsyncAPI spec](/asyncdoc) for each event's payload shape.",
+        "operationId": "EdgeAdminWeb.Controllers.Events.EventTypeController.index",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventTypeListResponse"
+                }
+              }
+            },
+            "description": "Event types"
+          }
+        },
+        "summary": "List event types",
+        "tags": ["Events.Type"]
+      }
+    },
     "/api/v1/webhooks": {
       "post": {
         "callbacks": {},
@@ -7461,6 +7515,7 @@
     { "name": "Ssh.SshUsername" },
     { "name": "Ssh.SshPublicKey" },
     { "name": "SelfUpdates.Request" },
+    { "name": "Events.Type" },
     { "name": "Events.Webhook" }
   ]
 }

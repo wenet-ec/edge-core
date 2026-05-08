@@ -26,6 +26,7 @@ defmodule EdgeAdmin.Events.Broker do
   - `google_pubsub` — Google Cloud Pub/Sub; managed pub/sub
   """
 
+  alias EdgeAdmin.Events.Broker.Adapter
   alias EdgeAdmin.Events.Broker.Workers.PublishEventWorker
 
   require Logger
@@ -114,17 +115,7 @@ defmodule EdgeAdmin.Events.Broker do
     Application.get_env(:edge_admin, :event_broker_enabled, false)
   end
 
-  defp adapter do
-    case adapter_name() do
-      :nats -> EdgeAdmin.Events.Broker.Adapters.Nats
-      :kafka -> EdgeAdmin.Events.Broker.Adapters.Kafka
-      :rabbitmq -> EdgeAdmin.Events.Broker.Adapters.Rabbitmq
-      :redis -> EdgeAdmin.Events.Broker.Adapters.Redis
-      :mqtt -> EdgeAdmin.Events.Broker.Adapters.Mqtt
-      :aws_sns -> EdgeAdmin.Events.Broker.Adapters.AwsSns
-      :google_pubsub -> EdgeAdmin.Events.Broker.Adapters.GooglePubsub
-    end
-  end
+  defp adapter, do: Adapter.module_for(adapter_name())
 
   defp adapter_name do
     Application.get_env(:edge_admin, :event_broker_adapter)

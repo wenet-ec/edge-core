@@ -539,35 +539,13 @@ config :sentry,
 # (RabbitMQ, Redis, MQTT). Managed-service adapters (AWS SNS, Google Pub/Sub) have no
 # endpoint var — auth + region/project envs locate the service.
 if get_env("EVENT_BROKER_ENABLED", :boolean, false) do
+  alias EdgeAdmin.Events.Broker.Adapter, as: BrokerAdapter
+
+  raw_event_broker_adapter = get_env!("EVENT_BROKER_ADAPTER")
+
   event_broker_adapter =
-    case get_env!("EVENT_BROKER_ADAPTER") do
-      "nats" ->
-        :nats
-
-      "kafka" ->
-        :kafka
-
-      "amqp091" ->
-        :rabbitmq
-
-      "rabbitmq" ->
-        :rabbitmq
-
-      "redis" ->
-        :redis
-
-      "mqtt" ->
-        :mqtt
-
-      "aws_sns" ->
-        :aws_sns
-
-      "google_pubsub" ->
-        :google_pubsub
-
-      other ->
-        raise "Unknown EVENT_BROKER_ADAPTER=#{other} — valid values: nats, kafka, amqp091 (alias: rabbitmq), redis, mqtt, aws_sns, google_pubsub"
-    end
+    BrokerAdapter.name_for_wire(raw_event_broker_adapter) ||
+      raise "Unknown EVENT_BROKER_ADAPTER=#{raw_event_broker_adapter} — valid values: #{Enum.join(BrokerAdapter.wire_strings(), ", ")}"
 
   config :edge_admin,
     event_broker_enabled: true,

@@ -23,6 +23,9 @@ defmodule EdgeAdmin.Application do
 
   @impl true
   def start(_type, _args) do
+    # Crash early on Oban queue/worker drift — silent-failure class.
+    EdgeAdmin.Oban.Queues.assert_consistent!()
+
     children = build_children(runtime_mode())
 
     :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{

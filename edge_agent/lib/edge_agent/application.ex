@@ -27,6 +27,9 @@ defmodule EdgeAgent.Application do
 
   @impl true
   def start(_type, _args) do
+    # Crash early on Oban queue/worker drift — silent-failure class.
+    EdgeAgent.Oban.Queues.assert_consistent!()
+
     mode = runtime_mode()
     children = build_children(mode)
 

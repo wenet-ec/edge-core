@@ -4,11 +4,11 @@
 
 Edge Core has two testing tiers, with a clear split of responsibility.
 
-**Unit tests (this repo)** — for both `edge_admin/` and `edge_agent/`, unit
-tests cover **pure logic only**: things we can extract out of the codebase
-and verify deterministically with inputs and expected outputs.
+**Unit tests (this repo)** cover **pure logic only**: things we can extract
+out of the codebase and verify deterministically with inputs and expected
+outputs. They run in milliseconds, in-process, with no external dependencies.
 
-**System and integration tests** — live outside this repo. Our dev and QA
+**System and integration tests** live outside this repo. The dev and QA
 team verifies system behaviour manually on staging servers, including:
 
 - Real Netmaker / netclient enrollment and mesh formation.
@@ -55,8 +55,9 @@ that's integration territory and lives in staging.
 - **Pure helpers** — anything that takes data and returns data: parsers,
   formatters, normalisers, classifiers, key derivers, hash signers, etc.
 - **Cross-surface contracts** — places where REST and MCP must agree
-  (changeset error rendering, event catalog, response envelope shape, blocked
-  operations under degraded mode). One representative test per shared module.
+  (changeset error rendering, event catalog, response envelope shape,
+  blocked operations under degraded mode). One representative test per
+  shared module.
 - **Defense-in-depth boundaries** — when a rule lives at multiple layers
   (layer 2 form + layer 4 schema), each layer is unit-tested independently.
 
@@ -84,23 +85,50 @@ Two test base modules:
 
 - `ExUnit.Case` — pure tests, `async: true` by default. No DB, no shared
   state.
-- `EdgeAdmin.DataCase` (and `EdgeAgent.DataCase`) — DB-backed tests,
+- `EdgeAdmin.DataCase` / `EdgeAgent.DataCase` — DB-backed tests,
   `async: false`. Sandbox transaction rolls back after each test. Used for
   filters, checks, and any function whose contract is "this query returns
   these rows."
 
 Use whichever the function under test requires. Default to `ExUnit.Case`.
 
+### Adapter parity
+
+Admin runs against PostgreSQL by default and SQLite when
+`DB_ADAPTER=sqlite`. Both adapters must stay green. The DB-backed test
+suite is adapter-agnostic by design:
+
+- All filters use `EdgeAdmin.Query.case_insensitive_like/2` (a `lower(?) LIKE
+  lower(?)` shim) instead of `ilike/2`. SQLite doesn't have `ilike`.
+- Fixtures truncate timestamps to `:second` so PG (microsecond) and SQLite
+  (no native datetime, stored as text) agree.
+- Fixtures use `Ecto.Changeset.change/2` for fields that need an explicit
+  `nil`. Plain `struct/2` insert keeps schema-level defaults — fine on
+  PG, but the same value lands as the default on disk in SQLite too, so
+  use `change/2` whenever the test contract is "this row's column is NULL."
+- Run the SQLite suite with `VARIANT=lite ./bin/run cloud admin:test`. The
+  `bin/run` harness wipes the test DB file before each lite run so
+  in-place migration edits never desync source from the on-disk schema.
+
+### Avoiding test pollution
+
+When inserting multiple rows that share a unique constraint (cluster IP
+ranges, names, keys), pin distinct values explicitly rather than rolling
+random ones. With 4+ inserts in one test, random rolls collide often
+enough to flake CI. The unit-tested filter suite uses fixed `10.10.x.0/24`
+ranges in a setup block for this reason.
+
 ## The mock exception
 
 Mox is allowed in **one narrow case**: when a module is explicitly designed
 with a behaviour callback so the production code can dispatch to a
-configurable module at compile time, and you're testing that dispatch logic.
+configurable module at compile time, and you're testing that dispatch
+logic.
 
-The two existing examples (`EdgeAdmin.Admins.Metadata` → `MetadataMock`,
-`EdgeAdmin.Nodes` → `NodesMock`) are wired via `Application.compile_env` and
-the test environment swaps the module. In those cases, Mox is testing the
-*real* dispatch behaviour, not constructing fake interactions.
+Existing examples are `EdgeAdmin.Admins.Metadata` → `MetadataMock` and
+`EdgeAdmin.Nodes` → `NodesMock`, wired via `Application.compile_env` and
+the test environment swapping the module. In those cases, Mox is testing
+the *real* dispatch behaviour, not constructing fake interactions.
 
 If you need a mock for any other reason — to stand up a fake context, a
 fake HTTP server, a fake Netmaker — that test doesn't belong here. Add it
@@ -113,17 +141,26 @@ with `@doc false` and a real `@spec` over leaving it untestable. The
 function is then a real part of the module's API surface (a friend's API,
 not strangers') with documented behaviour, and the test pins the contract.
 
-We've done this for ~40 helpers across `edge_admin/`. Examples:
+Examples of contracts worth promoting:
 
-- `EdgeAdmin.Admins.normalise_cluster/1` — Netmaker→admin shape transform.
-- `EdgeAdminWeb.Plugs.Http.Handler.filter_hop_by_hop_headers/1` and
-  friends — RFC 7230 header logic.
-- `EdgeAdmin.Vpn.zombie_node?/4` — safety-critical predicate.
-- `EdgeAdminWeb.Plugs.RenderOpenApiSpec.filter_internal_paths/1` —
-  security-adjacent (keeps internal endpoints out of public docs).
+- Pure helpers that classify, parse, or normalise (`normalize_key/1`,
+  `classify_create_network_400/1`, `extract_message/1`).
+- Security-adjacent predicates (`zombie_node?/4`,
+  `filter_internal_paths/1`).
+- Cross-surface envelope builders (`build_envelope/1`,
+  `paginated/3`).
 
 Don't promote functions that are genuinely implementation details (helpers
 that compose with their caller, formatting trivia). Promote contracts.
+
+### Credo gotcha for env-touching tests
+
+Credo's `Credo.Check.Warning.ApplicationConfigInModuleAttribute` flags
+`Application.put_env/3` and `Application.get_env/2` even inside test
+bodies. Use the fully-qualified `Elixir.Application.put_env/3` and
+`Elixir.Application.get_env/2` form to dodge the heuristic. Tests that
+snapshot/restore application env should also be `async: false` since the
+env is global.
 
 ## Property of a good unit test in this codebase
 
@@ -136,18 +173,17 @@ A unit test should:
   pin them when fixtures share a unique constraint).
 - Catch a real bug class, not just exercise pattern-match plumbing.
 
-If a test exists only because we want code coverage, it's noise. We removed
-~1500 lines of redundant JSON-renderer tests during the admin pass for
-exactly this reason — they duplicated View + ResponseEnvelope coverage that
-already lived in tested modules.
+If a test exists only because we want code coverage, it's noise. Tests
+that duplicate coverage of upstream modules they wrap (e.g. JSON
+renderers around already-tested Views) should be removed, not maintained.
 
-## Applies to edge sub-codebases
+## Applies to all sub-codebases
 
 This policy applies to every Elixir application in the repo:
 
-- `edge_admin/` — covered (see [test-review.md](./test-review.md)).
-- `edge_agent/` — same rule applies; future test work should follow this
-  policy.
+- `edge_admin/`
+- `edge_agent/`
+- `nexmaker/`
 
 Keep the unit suite tight, the contracts pinned, the wiring trusted to dev
 and QA on staging.

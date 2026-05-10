@@ -4,7 +4,7 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
   Ecto query filter helpers for the `enrollment_keys` table.
 
   Pure query builders for the virtual booleans Flop can't express directly:
-  `is_unlimited`, `is_spent`, `is_expired`, `is_never_used`, `has_expiry`.
+  `is_unlimited`, `is_spent`, `is_expired`, `is_never_used`, `has_expiry`, `has_name`.
   """
 
   import Ecto.Query, warn: false
@@ -96,6 +96,24 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
   end
 
   defp apply_has_expiry_one(query, _), do: query
+
+  @doc """
+  Applies `has_name` filter — `true` matches keys with a `name` set
+  (any non-null label, including the empty string if one were ever stored).
+  """
+  def apply_has_name(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc -> apply_has_name_one(acc, filter) end)
+  end
+
+  defp apply_has_name_one(query, %{op: :==, value: v}) when v in [true, "true"] do
+    from(k in query, where: not is_nil(k.name))
+  end
+
+  defp apply_has_name_one(query, %{op: :==, value: v}) when v in [false, "false"] do
+    from(k in query, where: is_nil(k.name))
+  end
+
+  defp apply_has_name_one(query, _), do: query
 
   @doc """
   Conditionally applies a filter function only when the filter list is non-empty.

@@ -224,6 +224,32 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
   end
 
   # ---------------------------------------------------------------------------
+  # apply_has_name/2 — name IS [NOT] NULL
+  # ---------------------------------------------------------------------------
+
+  describe "apply_has_name/2" do
+    test "true matches keys with a name set" do
+      cluster = insert_cluster()
+      labeled = insert_key(cluster.id, %{name: "prod-rollout"})
+      _unlabeled = insert_key(cluster.id, %{name: nil})
+
+      query = EnrollmentKeyFilters.apply_has_name(EnrollmentKey, [%{op: :==, value: true}])
+
+      assert ids(query) == [labeled.id]
+    end
+
+    test "false matches keys with no name (e.g. issued by public endpoint)" do
+      cluster = insert_cluster()
+      _labeled = insert_key(cluster.id, %{name: "prod-rollout"})
+      unlabeled = insert_key(cluster.id, %{name: nil})
+
+      query = EnrollmentKeyFilters.apply_has_name(EnrollmentKey, [%{op: :==, value: false}])
+
+      assert ids(query) == [unlabeled.id]
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # apply_maybe/3 — pure dispatching helper. Doesn't need DB but worth
   # testing inside this file since it's part of the same module.
   # ---------------------------------------------------------------------------

@@ -4519,6 +4519,13 @@
             "schema": { "type": "string" }
           },
           {
+            "description": "Filter by whether the key has a name set: true returns keys with a human-readable label, false returns unlabeled keys (e.g. those issued by the public/default-cluster endpoint)",
+            "in": "query",
+            "name": "has_name",
+            "required": false,
+            "schema": { "type": "boolean" }
+          },
+          {
             "description": "Filter by exact key value",
             "in": "query",
             "name": "key",

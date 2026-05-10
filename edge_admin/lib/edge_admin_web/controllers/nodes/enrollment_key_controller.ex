@@ -30,6 +30,10 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
           QueryParams.string_filter(:name,
             description: "Filter by enrollment key name (case-insensitive substring or wildcard: prod*, *rollout, etc.)"
           ),
+          QueryParams.boolean_filter(:has_name,
+            description:
+              "Filter by whether the key has a name set: true returns keys with a human-readable label, false returns unlabeled keys (e.g. those issued by the public/default-cluster endpoint)"
+          ),
           QueryParams.string_filter(:key, description: "Filter by exact key value"),
           QueryParams.int_filter(:uses_remaining,
             description:

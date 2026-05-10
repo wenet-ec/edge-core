@@ -14,6 +14,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
   - `is_expired` — true: keys where expired_at is in the past; false: active keys
   - `is_never_used` — true: never-used keys (last_used_at is null); false: used at least once
   - `has_expiry` — true: keys with expired_at set; false: keys with no expiry
+  - `has_name` — true: keys with a name set; false: unlabeled keys
   - `expired_at_gte` / `expired_at_lte` — expiry datetime range (ISO8601)
   - `last_used_at_gte` / `last_used_at_lte` — last used datetime range (ISO8601)
   - `inserted_at_gte` / `inserted_at_lte` — creation datetime range (ISO8601)
@@ -39,6 +40,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
     field :page_size, :integer, default: 20, min: 1
     field :cluster_name, :string, min_length: 1
     field :name, :string, min_length: 1
+    field :has_name, :boolean
     field :key, :string, min_length: 1
     field :uses_remaining, :integer, min: 1
     field :uses_remaining_gte, :integer, min: 1
@@ -73,7 +75,8 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
           :is_spent,
           :is_expired,
           :is_never_used,
-          :has_expiry
+          :has_expiry,
+          :has_name
         ],
         ranges: [:uses_remaining, :expired_at, :last_used_at, :inserted_at, :updated_at]
       )

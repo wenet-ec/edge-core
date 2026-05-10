@@ -1233,6 +1233,7 @@ defmodule EdgeAdmin.Nodes do
   Lists enrollment keys with filtering, sorting, and pagination.
 
   Supports filtering by:
+  - `name` - Case-insensitive substring or wildcard (`prod*`, `*rollout`)
   - `key` - Exact match or wildcard
   - `uses_remaining` - Exact, `__gte`, `__lte` (null = unlimited)
   - `is_unlimited` - Boolean: true returns unlimited keys (uses_remaining is null)
@@ -1240,6 +1241,7 @@ defmodule EdgeAdmin.Nodes do
   - `is_expired` - Boolean: true returns expired keys (expired_at in the past)
   - `is_never_used` - Boolean: true returns keys never used (last_used_at is null)
   - `has_expiry` - Boolean: true returns keys with an expiry set (expired_at is not null)
+  - `has_name` - Boolean: true returns keys with a name set (name is not null)
   - `expired_at`, `last_used_at`, `inserted_at`, `updated_at` - Date range (`__gte`, `__lte`)
   - `cluster_name` - Text search with wildcard support (requires join)
   """
@@ -1258,8 +1260,18 @@ defmodule EdgeAdmin.Nodes do
     end
   end
 
+  @enrollment_key_custom_filters [
+    cluster_name: &ClusterFilters.apply_name/2,
+    is_unlimited: &EnrollmentKeyFilters.apply_is_unlimited/2,
+    is_spent: &EnrollmentKeyFilters.apply_is_spent/2,
+    is_expired: &EnrollmentKeyFilters.apply_is_expired/2,
+    is_never_used: &EnrollmentKeyFilters.apply_is_never_used/2,
+    has_expiry: &EnrollmentKeyFilters.apply_has_expiry/2,
+    has_name: &EnrollmentKeyFilters.apply_has_name/2
+  ]
+
   defp build_enrollment_key_query(flop_params) do
-    custom_fields = [:cluster_name, :is_unlimited, :is_spent, :is_expired, :is_never_used, :has_expiry]
+    custom_fields = Keyword.keys(@enrollment_key_custom_filters)
 
     {custom, other_filters} =
       Enum.split_with(flop_params[:filters] || [], &(&1.field in custom_fields))
@@ -1272,14 +1284,7 @@ defmodule EdgeAdmin.Nodes do
         preload: [cluster: c]
       )
 
-    query =
-      base_query
-      |> EnrollmentKeyFilters.apply_maybe(custom_by_field[:cluster_name], &ClusterFilters.apply_name/2)
-      |> EnrollmentKeyFilters.apply_maybe(custom_by_field[:is_unlimited], &EnrollmentKeyFilters.apply_is_unlimited/2)
-      |> EnrollmentKeyFilters.apply_maybe(custom_by_field[:is_spent], &EnrollmentKeyFilters.apply_is_spent/2)
-      |> EnrollmentKeyFilters.apply_maybe(custom_by_field[:is_expired], &EnrollmentKeyFilters.apply_is_expired/2)
-      |> EnrollmentKeyFilters.apply_maybe(custom_by_field[:is_never_used], &EnrollmentKeyFilters.apply_is_never_used/2)
-      |> EnrollmentKeyFilters.apply_maybe(custom_by_field[:has_expiry], &EnrollmentKeyFilters.apply_has_expiry/2)
+    query = apply_enrollment_key_custom_filters(base_query, custom_by_field)
 
     {ilike_filters, flop_params} =
       RequestParser.split_ilike_filters(
@@ -1293,6 +1298,12 @@ defmodule EdgeAdmin.Nodes do
       end)
 
     {query, flop_params}
+  end
+
+  defp apply_enrollment_key_custom_filters(query, custom_by_field) do
+    Enum.reduce(@enrollment_key_custom_filters, query, fn {field, fun}, acc ->
+      EnrollmentKeyFilters.apply_maybe(acc, custom_by_field[field], fun)
+    end)
   end
 
   @doc """

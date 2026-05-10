@@ -437,24 +437,55 @@ defmodule EdgeAdmin.Vpn do
   defp prefix_to_mask(prefix), do: 0xFFFFFFFF |> bsl(32 - prefix) |> band(0xFFFFFFFF)
 
   @doc """
-  Generates candidate subnets within a base range.
+  Generates candidate subnets within a base range as a lazy stream.
 
-  Currently only the `/10 → /24` case is fully implemented — it enumerates the
-  256 `/24` subnets that fit (`{a}.{b}.0.0/24` … `{a}.{b}.255.0/24`). Any other
-  combination falls back to a single-element list containing just the base
-  address with the target prefix; expand here when a new pair is needed.
+  Works for any `base_prefix <= target_prefix` pair (e.g. `/8 → /24`,
+  `/10 → /24`, `/10 → /28`, `/16 → /24`, `/24 → /24`). The base IP is realigned
+  to its prefix boundary so a misaligned pool entry like `100.64.5.0/10` is
+  treated as `100.64.0.0/10`.
+
+  Returns a `Stream` because the enumeration can be large
+  (`/8 → /24` = 65,536 subnets; `/10 → /28` ≈ 1M). Callers consume lazily — the
+  only production caller is `find_available_subnet/3`, which stops at the first
+  non-overlapping match via `Enum.find/2`.
+
+  Raises `ArgumentError` on misconfiguration (operator-fixable, not user input):
+    * `target_prefix < base_prefix` — can't carve a wider subnet from a narrower pool
+    * `base_prefix` outside `0..32` or `target_prefix` outside `0..32`
   """
-  def generate_subnets({a, b, _c, _d}, base_prefix, target_prefix) do
-    # Simple implementation: for /10 -> /24, generate first 256 subnets
-    # This covers 100.64.0.0/24 through 100.64.255.0/24
-    if target_prefix == 24 and base_prefix == 10 do
-      for third_octet <- 0..255 do
-        "#{a}.#{b}.#{third_octet}.0/24"
-      end
-    else
-      # For other combinations, just return the base as-is for now
-      ["#{a}.#{b}.0.0/#{target_prefix}"]
+  @spec generate_subnets(:inet.ip4_address(), 0..32, 0..32) :: Enumerable.t(String.t())
+  def generate_subnets({_, _, _, _} = base_ip, base_prefix, target_prefix)
+      when is_integer(base_prefix) and is_integer(target_prefix) do
+    cond do
+      base_prefix < 0 or base_prefix > 32 ->
+        raise ArgumentError, "base_prefix must be in 0..32, got #{base_prefix}"
+
+      target_prefix < 0 or target_prefix > 32 ->
+        raise ArgumentError, "target_prefix must be in 0..32, got #{target_prefix}"
+
+      target_prefix < base_prefix ->
+        raise ArgumentError,
+              "target_prefix (#{target_prefix}) must be >= base_prefix (#{base_prefix}); " <>
+                "cannot carve a wider subnet than the pool"
+
+      true ->
+        aligned_base_int = base_ip |> ip_to_int() |> band(prefix_to_mask(base_prefix))
+        count = 1 <<< (target_prefix - base_prefix)
+        step = 1 <<< (32 - target_prefix)
+
+        Stream.map(0..(count - 1), fn i ->
+          subnet_int = aligned_base_int + i * step
+          "#{int_to_ip_string(subnet_int)}/#{target_prefix}"
+        end)
     end
+  end
+
+  defp int_to_ip_string(int) do
+    a = int |> bsr(24) |> band(0xFF)
+    b = int |> bsr(16) |> band(0xFF)
+    c = int |> bsr(8) |> band(0xFF)
+    d = band(int, 0xFF)
+    "#{a}.#{b}.#{c}.#{d}"
   end
 
   # ===========================================================================

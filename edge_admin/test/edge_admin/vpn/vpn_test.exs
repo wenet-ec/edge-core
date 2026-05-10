@@ -333,12 +333,18 @@ defmodule EdgeAdmin.VpnTest do
       assert result == "100.64.1.0/24"
     end
 
-    test "skips /24 that is contained within an existing wider /16" do
-      # 100.64.1.0/24 is inside 100.64.0.0/16, so it must be skipped
+    test "skips /24s contained within an existing wider /16, falls past the /16" do
+      # 100.64.0.0/16 contains 100.64.0.0/24 .. 100.64.255.0/24 (256 /24s).
+      # The /10 pool covers 100.64.0.0 .. 100.127.255.255 (16_384 /24s), so the
+      # first /24 outside the existing /16 is 100.65.0.0/24.
       existing = ["100.64.0.0/16"]
       result = Vpn.find_available_subnet("100.64.0.0/10", 24, existing)
-      # All 100.64.x.0/24 candidates fall inside the /16 — no available subnet
-      assert result == nil
+      assert result == "100.65.0.0/24"
+    end
+
+    test "returns nil when the entire /10 pool is blocked by a wider /10" do
+      existing = ["100.64.0.0/10"]
+      assert Vpn.find_available_subnet("100.64.0.0/10", 24, existing) == nil
     end
 
     test "skips /24 that overlaps a wider /8" do
@@ -411,11 +417,15 @@ defmodule EdgeAdmin.VpnTest do
   # ---------------------------------------------------------------------------
 
   describe "generate_subnets/3" do
-    test "generates 256 /24 subnets from a /10 base" do
-      subnets = Vpn.generate_subnets({100, 64, 0, 0}, 10, 24)
-      assert length(subnets) == 256
-      assert List.first(subnets) == "100.64.0.0/24"
-      assert List.last(subnets) == "100.64.255.0/24"
+    test "generates 16_384 /24 subnets from a /10 base (full /10 coverage)" do
+      # A /10 contains 2^(24-10) = 16_384 distinct /24s, not 256. The previous
+      # implementation hardcoded a single second-octet, walking only the third
+      # octet (256 /24s) — that bug is what this rewrite fixes.
+      stream = Vpn.generate_subnets({100, 64, 0, 0}, 10, 24)
+      assert Enum.count(stream) == 16_384
+      assert Enum.at(stream, 0) == "100.64.0.0/24"
+      # 100.64.0.0/10 spans 100.64.0.0 .. 100.127.255.255 — last /24 is .255.0
+      assert Enum.at(stream, 16_383) == "100.127.255.0/24"
     end
 
     test "all generated subnets have the correct prefix" do
@@ -423,15 +433,117 @@ defmodule EdgeAdmin.VpnTest do
       assert Enum.all?(subnets, &String.ends_with?(&1, "/24"))
     end
 
-    test "uses first two octets from base IP" do
-      subnets = Vpn.generate_subnets({10, 0, 0, 0}, 10, 24)
+    test "starts at aligned base IP" do
+      stream = Vpn.generate_subnets({10, 0, 0, 0}, 10, 24)
+      assert Enum.at(stream, 0) == "10.0.0.0/24"
+      # /10 starting at 10.0.0.0 also covers 10.63.255.0/24 as its last /24
+      assert Enum.at(stream, 16_383) == "10.63.255.0/24"
+    end
+
+    test "/16 -> /24 generates 256 subnets within the second octet" do
+      subnets = {10, 0, 0, 0} |> Vpn.generate_subnets(16, 24) |> Enum.to_list()
+      assert length(subnets) == 256
       assert List.first(subnets) == "10.0.0.0/24"
       assert List.last(subnets) == "10.0.255.0/24"
     end
 
-    test "non /10->24 combination returns single subnet fallback" do
-      subnets = Vpn.generate_subnets({10, 0, 0, 0}, 16, 24)
-      assert subnets == ["10.0.0.0/24"]
+    test "/8 -> /24 generates 65_536 subnets (lazy, only count)" do
+      assert {10, 0, 0, 0} |> Vpn.generate_subnets(8, 24) |> Enum.count() == 65_536
+    end
+
+    test "/8 -> /24 first and last subnet wrap correctly" do
+      stream = Vpn.generate_subnets({10, 0, 0, 0}, 8, 24)
+      assert Enum.at(stream, 0) == "10.0.0.0/24"
+      assert Enum.at(stream, 255) == "10.0.255.0/24"
+      assert Enum.at(stream, 256) == "10.1.0.0/24"
+      assert Enum.at(stream, 65_535) == "10.255.255.0/24"
+    end
+
+    test "/10 -> /28 generates 2^18 subnets" do
+      assert {100, 64, 0, 0} |> Vpn.generate_subnets(10, 28) |> Enum.count() == 262_144
+    end
+
+    test "/10 -> /28 first subnets step by 16 in the host octet" do
+      stream = Vpn.generate_subnets({100, 64, 0, 0}, 10, 28)
+      assert Enum.at(stream, 0) == "100.64.0.0/28"
+      assert Enum.at(stream, 1) == "100.64.0.16/28"
+      assert Enum.at(stream, 15) == "100.64.0.240/28"
+      assert Enum.at(stream, 16) == "100.64.1.0/28"
+    end
+
+    test "/24 -> /24 yields exactly the aligned base" do
+      assert {192, 168, 1, 0} |> Vpn.generate_subnets(24, 24) |> Enum.to_list() ==
+               ["192.168.1.0/24"]
+    end
+
+    test "misaligned base is realigned to its prefix boundary" do
+      # 100.64.5.0 with a /10 mask aligns to 100.64.0.0 (since 64 & 0xC0 == 64)
+      subnets = {100, 64, 5, 0} |> Vpn.generate_subnets(10, 24) |> Enum.to_list()
+      assert length(subnets) == 16_384
+      assert List.first(subnets) == "100.64.0.0/24"
+      assert List.last(subnets) == "100.127.255.0/24"
+    end
+
+    test "misaligned base with non-aligned second octet realigns correctly" do
+      # 100.100.5.0 with /10: second octet 100 = 0x64, masked with 0xC0 = 0x40 = 64.
+      # So this realigns to 100.64.0.0, same span as the canonical pool.
+      subnets = {100, 100, 5, 0} |> Vpn.generate_subnets(10, 24) |> Enum.to_list()
+      assert List.first(subnets) == "100.64.0.0/24"
+      assert List.last(subnets) == "100.127.255.0/24"
+    end
+
+    test "returns a Stream (lazy)" do
+      # Should not blow up memory; we never force the whole thing.
+      stream = Vpn.generate_subnets({10, 0, 0, 0}, 8, 32)
+      assert Enum.at(stream, 0) == "10.0.0.0/32"
+      assert Enum.at(stream, 1) == "10.0.0.1/32"
+    end
+
+    test "raises when target_prefix < base_prefix" do
+      assert_raise ArgumentError, ~r/target_prefix \(8\) must be >= base_prefix \(10\)/, fn ->
+        Vpn.generate_subnets({100, 64, 0, 0}, 10, 8)
+      end
+    end
+
+    test "raises when base_prefix is out of range" do
+      assert_raise ArgumentError, ~r/base_prefix must be in 0\.\.32/, fn ->
+        Vpn.generate_subnets({100, 64, 0, 0}, 33, 24)
+      end
+
+      assert_raise ArgumentError, ~r/base_prefix must be in 0\.\.32/, fn ->
+        Vpn.generate_subnets({100, 64, 0, 0}, -1, 24)
+      end
+    end
+
+    test "raises when target_prefix is out of range" do
+      assert_raise ArgumentError, ~r/target_prefix must be in 0\.\.32/, fn ->
+        Vpn.generate_subnets({100, 64, 0, 0}, 10, 33)
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # find_available_subnet/3 — non-default pool shapes (regression for the old
+  # `/10 → /24` hardcoded path)
+  # ---------------------------------------------------------------------------
+
+  describe "find_available_subnet/3 with non-default pools" do
+    test "/16 pool returns the first /24 inside it" do
+      assert Vpn.find_available_subnet("10.0.0.0/16", 24, []) == "10.0.0.0/24"
+    end
+
+    test "/16 pool skips taken /24s" do
+      assert Vpn.find_available_subnet("10.0.0.0/16", 24, ["10.0.0.0/24", "10.0.1.0/24"]) ==
+               "10.0.2.0/24"
+    end
+
+    test "/8 pool returns first /24, skipping a wider overlap" do
+      assert Vpn.find_available_subnet("10.0.0.0/8", 24, ["10.0.0.0/16"]) == "10.1.0.0/24"
+    end
+
+    test "/10 pool with /28 target returns first /28 and skips taken /28s" do
+      assert Vpn.find_available_subnet("100.64.0.0/10", 28, ["100.64.0.0/28"]) ==
+               "100.64.0.16/28"
     end
   end
 end

@@ -30,44 +30,88 @@ ENV MIX_ENV=dev
 
 WORKDIR ${APP_HOME}
 
-# Install packages in single layer
-# Agent leverages host tools via hostscript (nsenter/chroot to /host)
-# So we only install what the AGENT itself needs, not what commands need
+# Install packages in single layer.
+#
+# Design rule: the agent is a GATEWAY, not an interactive target. When an
+# operator SSHs in and types a command, `edge_bashrc` routes unknown commands
+# to the host via `hostscript` (nsenter into /host's namespaces) — so the
+# host's editor edits the host's files, the host's `ip` reads the host's
+# interfaces, etc.
+#
+# Therefore the image installs three kinds of things:
+#   1. What the agent process itself links to / shells out to.
+#   2. What `netclient` shells out to (netclient runs INSIDE this container;
+#      `network_mode: host` shares the host's netns but binaries are resolved
+#      against the container's filesystem).
+#   3. A small in-container quality-of-life set (pagers, completion, jq) —
+#      not for typing commands by hand, but for tools that auto-invoke them
+#      (e.g. `$PAGER`) or for ad-hoc container-side debugging without
+#      crossing into the host's namespace.
+#
+# Deliberately NOT installed: editors (nano, vim, emacs). They would trap
+# operators into editing the container's ephemeral filesystem; routing
+# through `command_not_found_handle` → `hostscript` gives them the host's
+# editor on the host's files instead.
 RUN apt-get update && apt-get install --no-install-recommends -y \
-  # Erlang runtime dependencies
+  # --- BEAM runtime ---
   libstdc++6 \
   openssl \
   libncurses6 \
   locales \
   ca-certificates \
-  # Build dependencies (dev only)
+  tini \
+  # --- Agent runtime ---
+  # SQLite — agent's local store
+  sqlite3 \
+  # procps — pgrep/pkill used by /start netclient cleanup
+  procps \
+  # libcap2-bin — getcap/setcap, agent inspects its own capabilities
+  libcap2-bin \
+  # curl — used by container-side scripts and probes
+  curl \
+  # util-linux — nsenter for hostscript
+  util-linux \
+  # libnss-mdns — .local hostname resolution from inside the container
+  libnss-mdns \
+  # --- netclient runtime ---
+  # wireguard-tools: wg + wg-quick (WG interface bring-up)
+  wireguard-tools \
+  # systemd-resolved: provides resolvectl + systemctl, used by netclient to
+  # detect and configure systemd-resolved on systemd hosts
+  systemd-resolved \
+  # iproute2: `ip` — netclient's interface management fallback (no-wg-quick
+  # path and the migrate-old-interface path)
+  iproute2 \
+  # iptables: iptables/ip6tables — netclient's iptables firewall backend
+  # shells out via the go-iptables library. The nftables backend uses
+  # netlink directly and does NOT need the `nft` binary, but iptables
+  # backend does need iptables binaries. netclient prefers iptables when
+  # present, so install it to converge on a working backend (and to match
+  # prod, which also picks iptables).
+  iptables \
+  # --- Dev workflow (local only) ---
+  # build-essential + git — compile Elixir deps from source (erlexec's C++
+  # port, sqlite NIF) and fetch git deps
   build-essential \
   git \
-  # Agent database (SQLite)
-  sqlite3 \
   libsqlite3-dev \
-  # Development utilities
-  sudo \
-  bash-completion \
-  nano \
-  # Essential tools (healthcheck, metrics, SSH server, capability checks)
-  curl \
-  iputils-ping \
-  libcap2-bin \
-  # Process management (pgrep, pkill for netclient cleanup)
-  procps \
-  # File system watching for live reload (dev only)
+  # inotify-tools — Phoenix live-reload file watcher
   inotify-tools \
-  # Agent-specific: WireGuard management tools (for VPN and wireguard_exporter)
-  wireguard-tools \
-  # Agent-specific: nsenter for hostscript (part of util-linux)
-  util-linux \
-  # systemd-resolved: provides resolvectl for netclient DNS management on systemd hosts
-  systemd-resolved \
-  # mDNS resolution: enables .local hostname resolution via nss-mdns
-  libnss-mdns \
-  # PID 1 zombie reaper for the BEAM (matches production for parity)
-  tini && \
+  # sudo — convenience for `./bin/run agent:shell`
+  sudo \
+  # --- In-container quality of life ---
+  # bash-completion — completion at the SSH prompt before commands route to host
+  bash-completion \
+  # less — default $PAGER. git/man/systemctl/kubectl/psql pipe long output
+  # through it; without it those tools dump everything at once.
+  less \
+  # jq — JSON munging in entrypoint/start scripts and ad-hoc API checks
+  jq \
+  # iputils-ping, dnsutils, netcat-openbsd — quick container-side network
+  # probes (host equivalents are also reachable via hostscript)
+  iputils-ping \
+  dnsutils \
+  netcat-openbsd && \
   # Enable mDNS resolution in nsswitch.conf
   sed -i 's/^hosts:.*/hosts: files mdns4_minimal [NOTFOUND=return] dns/' /etc/nsswitch.conf && \
   # Set locale in same layer
@@ -99,6 +143,13 @@ ENV RELEASE_DISTRIBUTION=none
 
 # Keep epmd in the 40k port range to avoid colliding with user-deployed Erlang/Elixir apps
 ENV ERL_EPMD_PORT=44369
+
+# erlexec's port program refuses to start unless USER and SHELL are set in
+# the environment, even when running as root. Container runtimes don't set
+# these by default. The values here just need to be non-empty + match the
+# erlexec config (root: true, user: "root").
+ENV USER=root
+ENV SHELL=/bin/bash
 
 # Copy netclient binary from builder stage
 COPY --from=netclient-builder /netclient /usr/local/bin/netclient

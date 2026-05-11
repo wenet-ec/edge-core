@@ -100,6 +100,9 @@ defmodule EdgeAgent.Mixfile do
       # Background jobs
       {:oban, "~> 2.22"},
 
+      # SSH server
+      {:erlexec, "~> 2.3", runtime: Mix.env() != :test},
+
       # Telemetry
       {:prom_ex, "~> 1.11"},
 

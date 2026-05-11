@@ -28,6 +28,14 @@ config :edge_agent,
   ecto_repos: [EdgeAgent.Repo],
   version: version
 
+# erlexec runs its port program (and therefore its child shells) as root
+# inside the agent container. The port program refuses to start as root
+# unless it's told to via -user / -limit_users; we restrict it to root only.
+config :erlexec,
+  root: true,
+  user: ~c"root",
+  limit_users: [~c"root"]
+
 config :mdns_lite,
   if_monitor: MdnsLite.InetMonitor,
   hosts: [:hostname],

@@ -93,6 +93,19 @@ defmodule EdgeAgent.SshServer do
     {:reply, state.status, state}
   end
 
+  # erlexec routes port-program exit signals here because the GenServer is the
+  # process that owned the original :exec.run call (via the channel handler's
+  # spawn chain). For a normal SSH disconnect the port shuts down cleanly and
+  # the linked port emits {:EXIT, port, :normal}; swallow it. Anything else
+  # gets logged so a real crash isn't silenced.
+  @impl true
+  def handle_info({:EXIT, port, :normal}, state) when is_port(port), do: {:noreply, state}
+
+  def handle_info({:EXIT, port, reason}, state) when is_port(port) do
+    Logger.warning("SSH-related port #{inspect(port)} exited: #{inspect(reason)}")
+    {:noreply, state}
+  end
+
   @impl true
   def terminate(_reason, %{daemon_ref: daemon_ref}) when not is_nil(daemon_ref) do
     Logger.info("Stopping SSH daemon on shutdown")

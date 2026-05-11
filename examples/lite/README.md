@@ -115,3 +115,18 @@ To update the admin manually:
 docker compose -f cloud.yml pull
 docker compose -f cloud.yml up -d
 ```
+
+## Files in this directory
+
+Browse the actual files on GitHub:
+
+| File | Purpose |
+| --- | --- |
+| [`cloud.yml`](https://github.com/wenet-ec/edge-core/blob/main/examples/lite/cloud.yml) | Cloud-side compose: single SQLite-backed admin, Mosquitto, Netmaker, Caddy |
+| [`edge.yml`](https://github.com/wenet-ec/edge-core/blob/main/examples/lite/edge.yml) | Edge-side compose: agent + Watchtower for self-update |
+| [`.env.example`](https://github.com/wenet-ec/edge-core/blob/main/examples/lite/.env.example) | Annotated environment variables. Copy to `.env` and fill in |
+| [`mosquitto.conf`](https://github.com/wenet-ec/edge-core/blob/main/examples/lite/mosquitto.conf) | Mosquitto broker config (Netmaker-internal) |
+| [`configs/Caddyfile`](https://github.com/wenet-ec/edge-core/blob/main/examples/lite/configs/Caddyfile) | Caddy reverse proxy + automatic TLS |
+| [`configs/haproxy.cfg`](https://github.com/wenet-ec/edge-core/blob/main/examples/lite/configs/haproxy.cfg) | HAProxy TCP load balancer for the admin proxy ports |
+
+Or browse the whole directory: [`examples/lite/`](https://github.com/wenet-ec/edge-core/tree/main/examples/lite).

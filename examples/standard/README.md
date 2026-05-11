@@ -127,3 +127,19 @@ To update the admin stack:
 docker compose -f cloud.yml pull
 docker compose -f cloud.yml up -d
 ```
+
+## Files in this directory
+
+Browse the actual files on GitHub:
+
+| File | Purpose |
+| --- | --- |
+| [`cloud.yml`](https://github.com/wenet-ec/edge-core/blob/main/examples/standard/cloud.yml) | Cloud-side compose: 4 admins, Postgres, EMQX, Netmaker, Caddy, HAProxy, Prometheus |
+| [`edge.yml`](https://github.com/wenet-ec/edge-core/blob/main/examples/standard/edge.yml) | Edge-side compose: agent + Watchtower for self-update |
+| [`.env.example`](https://github.com/wenet-ec/edge-core/blob/main/examples/standard/.env.example) | Annotated environment variables. Copy to `.env` and fill in |
+| [`configs/Caddyfile`](https://github.com/wenet-ec/edge-core/blob/main/examples/standard/configs/Caddyfile) | Caddy reverse proxy + automatic TLS |
+| [`configs/emqx.conf`](https://github.com/wenet-ec/edge-core/blob/main/examples/standard/configs/emqx.conf) | EMQX broker config (Netmaker-internal) |
+| [`configs/haproxy.cfg`](https://github.com/wenet-ec/edge-core/blob/main/examples/standard/configs/haproxy.cfg) | HAProxy TCP load balancer for the admin proxy ports |
+| [`configs/prometheus.yml`](https://github.com/wenet-ec/edge-core/blob/main/examples/standard/configs/prometheus.yml) | Prometheus scrape config. Replace `change-me-your-metrics-key` |
+
+Or browse the whole directory: [`examples/standard/`](https://github.com/wenet-ec/edge-core/tree/main/examples/standard).

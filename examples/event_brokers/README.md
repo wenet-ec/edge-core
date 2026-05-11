@@ -269,3 +269,21 @@ See the AsyncAPI spec at `GET /api/asyncapi` (or browse `/asyncdoc`) for the ful
 - **Self-update lifecycle** — request created and batch completed.
 
 All events follow the [CloudEvents 1.0](https://cloudevents.io) spec.
+
+## Files in this directory
+
+Browse the actual files on GitHub:
+
+| File | Broker |
+| --- | --- |
+| [`nats.yml`](https://github.com/wenet-ec/edge-core/blob/main/examples/event_brokers/nats.yml) + [`config/nats.conf`](https://github.com/wenet-ec/edge-core/blob/main/examples/event_brokers/config/nats.conf) + [`config/nui-context.json`](https://github.com/wenet-ec/edge-core/blob/main/examples/event_brokers/config/nui-context.json) | NATS (with NUI web UI) |
+| [`redpanda.yml`](https://github.com/wenet-ec/edge-core/blob/main/examples/event_brokers/redpanda.yml) | Redpanda (Kafka-wire compatible) |
+| [`kafka.yml`](https://github.com/wenet-ec/edge-core/blob/main/examples/event_brokers/kafka.yml) | Apache Kafka (KRaft mode) |
+| [`rabbitmq.yml`](https://github.com/wenet-ec/edge-core/blob/main/examples/event_brokers/rabbitmq.yml) + [`config/rabbitmq.conf`](https://github.com/wenet-ec/edge-core/blob/main/examples/event_brokers/config/rabbitmq.conf) + [`config/rabbitmq_enabled_plugins`](https://github.com/wenet-ec/edge-core/blob/main/examples/event_brokers/config/rabbitmq_enabled_plugins) | RabbitMQ (AMQP 0.9.1) |
+| [`redis.yml`](https://github.com/wenet-ec/edge-core/blob/main/examples/event_brokers/redis.yml) | Redis (pub/sub) |
+| [`mosquitto.yml`](https://github.com/wenet-ec/edge-core/blob/main/examples/event_brokers/mosquitto.yml) + [`config/mosquitto.conf`](https://github.com/wenet-ec/edge-core/blob/main/examples/event_brokers/config/mosquitto.conf) | MQTT (Mosquitto) |
+| [`emqx.yml`](https://github.com/wenet-ec/edge-core/blob/main/examples/event_brokers/emqx.yml) + [`config/emqx.conf`](https://github.com/wenet-ec/edge-core/blob/main/examples/event_brokers/config/emqx.conf) | MQTT (EMQX, with dashboard) |
+
+AWS SNS and Google Cloud Pub/Sub are managed services. No compose file needed; see "Managed cloud services" above for provisioning notes.
+
+Or browse the whole directory: [`examples/event_brokers/`](https://github.com/wenet-ec/edge-core/tree/main/examples/event_brokers).

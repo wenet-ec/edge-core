@@ -66,3 +66,14 @@ volumes:
   - /dev/net/tun:/dev/net/tun   # wireguard-go needs this to create a TUN interface
 privileged: true
 ```
+
+## Files in this directory
+
+Browse the actual files on GitHub:
+
+| File | Purpose |
+| --- | --- |
+| [`docker-compose.yml`](https://github.com/wenet-ec/edge-core/blob/main/examples/sidecar/docker-compose.yml) | Sidecar agent compose. Bridge networking, no `network_mode: host` |
+| [`.env.example`](https://github.com/wenet-ec/edge-core/blob/main/examples/sidecar/.env.example) | Required env vars. Copy to `.env` and fill in |
+
+Or browse the whole directory: [`examples/sidecar/`](https://github.com/wenet-ec/edge-core/tree/main/examples/sidecar).

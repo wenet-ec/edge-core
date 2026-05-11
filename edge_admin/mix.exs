@@ -98,7 +98,7 @@ defmodule EdgeAdmin.Mixfile do
 
       # API and MCP
       {:open_api_spex, "~> 3.22"},
-      {:anubis_mcp, "~> 1.3"},
+      {:anubis_mcp, "~> 1.5"},
 
       # Database
       {:ecto_sql, "~> 3.13"},

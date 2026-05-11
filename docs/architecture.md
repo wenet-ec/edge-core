@@ -444,10 +444,10 @@ The MCP server alone isn't the interesting property — REST APIs have always be
 
 | Capability     | Mechanism                                                  | What an agent gets                                                  |
 | -------------- | ---------------------------------------------------------- | ------------------------------------------------------------------- |
-| **Observe**    | Lifecycle events (broker + webhooks, see § Events)         | Real-time push of state changes — no polling, no race conditions    |
+| **Observe**    | Lifecycle events (broker + webhooks, see [§ Events](#events)) | Real-time push of state changes — no polling, no race conditions    |
 | **Decide**     | MCP tools (read endpoints) + parsed metrics                | Query state, list nodes, read health, fetch metrics                 |
 | **Act**        | MCP tools (write endpoints) — commands, SSH creds, deploys | Mutate fleet state with the same authority a human operator has     |
-| **Reach**      | HTTP/SOCKS5 forward proxy (§ Forward Proxy)                | Direct HTTP to any service on any node, when no MCP tool covers it  |
+| **Reach**      | HTTP/SOCKS5 forward proxy ([§ Forward Proxy](#forward-proxy)) | Direct HTTP to any service on any node, when no MCP tool covers it  |
 
 That's a complete control loop for an AI agent: observe → decide → act → reach. None of it required us to build "AI features" — we built API surface, events, and a proxy. MCP is a thin shim that exposes the existing surface in the protocol AI clients already speak. **The architecture happens to be agent-shaped because it's well-structured for any client; agents are just the most demanding consumer.**
 

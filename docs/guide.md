@@ -13,8 +13,8 @@ The admin is **API-first**. Every management operation goes through HTTP — the
 | `/swaggerui`      | **Primary UI.** Interactive Swagger UI — browse every endpoint, fill in parameters, hit "Try it out", see live responses.              |
 | `/redoc`          | Same OpenAPI spec rendered as ReDoc — better for reading reference docs end-to-end.                                                    |
 | `/live_dashboard` | Phoenix LiveDashboard — runtime introspection (BEAM processes, ETS, Oban queues, Ecto stats). Useful for debugging, not for daily ops. |
-| `/asyncdoc`       | AsyncAPI viewer for the event catalog (see §7).                                                                                        |
-| `/mcp`            | MCP server endpoint for AI assistants (see §4).                                                                                        |
+| `/asyncdoc`       | AsyncAPI viewer for the event catalog (see [§7](#7-events--webhooks-and-brokers)).                                                     |
+| `/mcp`            | MCP server endpoint for AI assistants (see [§4](#4-mcp--ai-assistant-access)).                                                         |
 
 **Day-to-day, you live in `/swaggerui`.** Everything in this guide can be done from there: list nodes, create commands, register webhooks, manage SSH credentials, generate enrollment keys. Anything not on Swagger is intentionally not part of the management API — typically because it's a health/metrics endpoint hit by infrastructure rather than a person.
 
@@ -70,17 +70,17 @@ From any node-A in `cluster-prod`, `ping node-B.cluster-prod.nm.internal` works 
 - **Agent** — BEAM, Oban, command throughput, internal Phoenix metrics. From PromEx.
 - **WireGuard** — peer endpoint, last handshake, bytes in/out, latency.
 
-The admin exposes both Prometheus-scrape endpoints (raw, for Grafana / Prometheus) and human-friendly JSON endpoints (parsed, for dashboards or quick checks). Full detail in §6.
+The admin exposes both Prometheus-scrape endpoints (raw, for Grafana / Prometheus) and human-friendly JSON endpoints (parsed, for dashboards or quick checks). Full detail in [§6](#6-metrics).
 
 **Command.** A shell command you want to run on one or more nodes. You create a command with a target filter (`all`, specific cluster, specific node IDs, etc.), and the admin tracks delivery and results asynchronously. Commands are not synchronous — they are jobs.
 
 **Command execution.** The actual unit of work. **One command fans out into one execution per targeted node.** Each execution has its own status (`pending`, `sent`, `completed`, `cancelled`, `expired`), output, exit code, and timing. `completed` is a single terminal status whether the command succeeded or failed — read `exit_code` to distinguish. When you "run a command on 50 nodes," you create 1 command and the system creates 50 executions.
 
-**SSH username + public key.** Centralized SSH credentials. You register a username with one or more public keys on the admin; the agent's embedded SSH server (port 40022) verifies every connection attempt by calling the admin. **No host SSH is involved** — you're SSHing into the agent's own SSH server, not into port 22 on the host. This is normally combined with the proxy servers (§5) when you're outside the VPN: SOCKS5 to the admin, SSH through the tunnel into the agent.
+**SSH username + public key.** Centralized SSH credentials. You register a username with one or more public keys on the admin; the agent's embedded SSH server (port 40022) verifies every connection attempt by calling the admin. **No host SSH is involved** — you're SSHing into the agent's own SSH server, not into port 22 on the host. This is normally combined with the proxy servers ([§5](#5-proxy-servers)) when you're outside the VPN: SOCKS5 to the admin, SSH through the tunnel into the agent.
 
 **Self-update request.** A managed agent upgrade. Requires Watchtower running as a sidecar container next to the agent and the agent image pinned to the `:stable` tag. You create a self-update request via the admin; the admin pushes it to the targeted agents; each agent calls its local Watchtower, which pulls the latest `:stable` and recreates the container. The version "stable" is whatever we've most recently promoted — you don't choose specific versions through this path. (If you want pinned-version rollouts, manage your image tags directly.)
 
-**Webhook.** See §7 — these are user-facing subscriptions to lifecycle events.
+**Webhook.** See [§7](#7-events--webhooks-and-brokers) — these are user-facing subscriptions to lifecycle events.
 
 ### Admin ops domain
 
@@ -88,7 +88,7 @@ The admin layer manages itself too: admin instances form peer clusters, share Po
 
 - `GET /api/v1/admins/*` — read-only introspection of the control plane (see below)
 - `/live_dashboard` — runtime view of every admin process
-- `/health/cluster` — load-balancer-friendly cluster health (see §8)
+- `/health/cluster` — load-balancer-friendly cluster health (see [§8](#8-health-checks))
 
 **Admin metadata endpoints.** You won't hit these daily, but they're invaluable when debugging delivery problems or admin-cluster health. All read-only.
 
@@ -146,7 +146,7 @@ Configure your client to point at:
 Tools are discovered dynamically (`tools/list`) — no static spec to maintain. A few extras worth knowing:
 
 - `check_admin_health` — runs every subsystem check (DB, membership, metadata, Netmaker, netclient, proxies, broker) in parallel and returns a structured pass/fail. Use when an AI assistant needs to diagnose enrollment or connectivity issues.
-- `get_node_metrics` / `get_host_metrics` / `get_agent_metrics` / `get_admin_metrics` — human-friendly parsed metrics. Pair with the proxy (§5) if the assistant needs raw scrape access too.
+- `get_node_metrics` / `get_host_metrics` / `get_agent_metrics` / `get_admin_metrics` — human-friendly parsed metrics. Pair with the proxy ([§5](#5-proxy-servers)) if the assistant needs raw scrape access too.
 
 ---
 

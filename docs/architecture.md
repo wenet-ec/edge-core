@@ -180,7 +180,7 @@ Both adapters are baked into every compiled binary — no rebuild needed to swit
 | Schema                        | Same migrations, same Ecto schema                                        | Same migrations, same Ecto schema                                              |
 | Recommended for               | Production, anything that might scale, anything you'd be unhappy to lose | Homelab, hobbyist, first-time exploration, fleets that won't exceed ~100 nodes |
 
-See `examples/lite/` for a SQLite single-admin deployment and `examples/standard/` for the production PostgreSQL setup. The general guidance lives in `examples/README.md` ("Choosing an Example").
+See [`examples/lite/`](https://github.com/wenet-ec/edge-core/tree/main/examples/lite) for a SQLite single-admin deployment and [`examples/standard/`](https://github.com/wenet-ec/edge-core/tree/main/examples/standard) for the production PostgreSQL setup. The general guidance lives in [`examples/README.md`](https://github.com/wenet-ec/edge-core/blob/main/examples/README.md) ("Choosing an Example").
 
 The rest of this section assumes the production setup (PostgreSQL + multi-admin clustering). Single-admin SQLite mode is functionally a subset — same code paths, just without the peer-cluster and cross-admin coordination layers below.
 
@@ -329,7 +329,7 @@ Requirements for sidecar mode (same as host mode minus `network_mode: host`):
 - `sysctls: net.ipv4.ip_forward=1, net.ipv4.conf.all.src_valid_mark=1, net.ipv6.conf.all.forwarding=1`
 - `/dev/net/tun:/dev/net/tun` — required for wireguard-go to create a TUN interface
 
-See `examples/sidecar/` for a ready-to-use Docker Compose example.
+See [`examples/sidecar/`](https://github.com/wenet-ec/edge-core/tree/main/examples/sidecar) for a ready-to-use Docker Compose example.
 
 ### What the Agent Contains
 
@@ -421,7 +421,7 @@ A broker is the right answer when consumers are infrastructure that already spea
 
 - **Immutable after create.** No partial updates, no soft-disable. Mutability is a footgun for delivery contracts — you delete and recreate. The cost of recreating is trivial; the cost of a partially-updated webhook silently sending to the wrong URL is not.
 - **Explicit subscription allowlist, no wildcards.** `subscribed_events` is a literal list of event-type strings, validated at create time against the live catalog. Subscribing to "everything" means listing every type explicitly. This is opt-in by design — adding new event types to the catalog never auto-expands existing subscriptions, so a noisy new event can't accidentally hammer existing receivers.
-- **Encryption at rest via Cloak** for `secret` and `headers`. `CLOAK_KEY` and `CLOAK_TAG` are required at admin boot. Rotation is supported via `EdgeAdmin.Release.rotate_cloak_key/0` (see `examples/operations/rotate_cloak_key.yml`).
+- **Encryption at rest via Cloak** for `secret` and `headers`. `CLOAK_KEY` and `CLOAK_TAG` are required at admin boot. Rotation is supported via `EdgeAdmin.Release.rotate_cloak_key/0` (see [`examples/operations/rotate_cloak_key.yml`](https://github.com/wenet-ec/edge-core/blob/main/examples/operations/rotate_cloak_key.yml)).
 - **SSRF deny list at create time.** Loopback, RFC1918/ULA, link-local (including the cloud-metadata literals at `169.254.169.254` and `metadata.{google,azure,tencentyun}.internal`), and multicast are all rejected. IPv4-mapped IPv6 (`::ffff:a.b.c.d`) is normalised first so the v6 form can't bypass the v4 deny list. Opt-out is per deployment (`WEBHOOK_ALLOW_PRIVATE_IPS=true`) for homelab/dev — not per-webhook, because per-webhook bypass tends to drift into "everything bypasses by accident."
 - **Retry classification with no auto-disable.** `2xx` succeeds; `408 / 429 / 503` and network errors retry with Oban's exponential backoff up to `WEBHOOK_MAX_ATTEMPTS` (default 3), then drop; other `4xx / 5xx` are terminal (`{:cancel, _}`). There is no row-level failure counter and no auto-disable — every event is independent. Auto-disable would create a hidden state machine on top of webhooks; explicit retry-or-drop is easier to reason about.
 - **Each delivery is `(webhook × matched event)`** — one HTTP POST per pair, signed with `X-Edge-Signature: sha256=<hex>`.

@@ -1,6 +1,6 @@
 # Edge Core — User Guide
 
-This guide is for operators and integrators using a running Edge Admin. If you want to know **how it's built**, read [`architecture.md`](architecture.md). If you want to know **how to deploy it**, see [`../examples/`](../examples/). This file covers the day-to-day surface — what you click, call, and configure once an admin is up.
+This guide is for operators and integrators using a running Edge Admin. If you want to know **how it's built**, read [`architecture.md`](architecture.md). If you want to know **how to deploy it**, see [`examples/`](https://github.com/wenet-ec/edge-core/tree/main/examples). This file covers the day-to-day surface — what you click, call, and configure once an admin is up.
 
 ---
 
@@ -287,7 +287,7 @@ EVENT_BROKER_ADAPTER=nats     # or: kafka, amqp091, redis, mqtt, aws_sns, google
 EVENT_BROKER_NATS_URLS=nats://your-broker:4222
 ```
 
-Ready-to-use compose files for each broker live in [`../examples/event_brokers/`](../examples/event_brokers/).
+Ready-to-use compose files for each broker live in [`examples/event_brokers/`](https://github.com/wenet-ec/edge-core/tree/main/examples/event_brokers).
 
 **Webhooks and the broker run independently.** A broker outage doesn't affect webhook delivery and vice versa. You can use either, both, or neither.
 

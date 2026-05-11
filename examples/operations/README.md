@@ -62,3 +62,14 @@ The regular admin `/start` already runs `migrate` and `rotate_cloak_key` at boot
 - **You're debugging a migration or rotation** and want to run it in isolation without the rest of the admin starting up.
 
 For everyday self-hosted Compose deployments, the built-in `/start` flow is fine — these are the escape hatches.
+
+## Files in this directory
+
+Browse the actual files on GitHub:
+
+| File | Purpose |
+| --- | --- |
+| [`migrate.yml`](https://github.com/wenet-ec/edge-core/blob/main/examples/operations/migrate.yml) | Runs `/migrate` — database migrations, then exits |
+| [`rotate_cloak_key.yml`](https://github.com/wenet-ec/edge-core/blob/main/examples/operations/rotate_cloak_key.yml) | Runs `/rotate_cloak_key` — re-encrypts Cloak-encrypted columns to a new key, then exits |
+
+Or browse the whole directory: [`examples/operations/`](https://github.com/wenet-ec/edge-core/tree/main/examples/operations).

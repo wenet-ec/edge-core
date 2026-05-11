@@ -28,7 +28,7 @@ The **agent** that runs on your machines and the **Nexmaker** shared library are
 
 - **Cloud ↔ Edge (forward proxy + proxy chaining)** — HTTP and SOCKS5 forward proxies tunnel any TCP traffic from the cloud through any agent to its local network or the internet
 - **Edge ↔ Edge (VPN mesh)** — full WireGuard P2P mesh per cluster, automatic peer discovery, netclient-local DNS for `.nm.internal` hostnames, DERP/TURN relay fallback for NAT
-- **Edge ↔ Local devices (mDNS)** — agents advertise themselves via mDNS for zero-config discovery by devices on the same LAN; full LAN DNS control is a future direction (see [`docs/architecture.md`](docs/architecture.md))
+- **Edge ↔ Local devices (mDNS)** — agents advertise themselves via mDNS for zero-config discovery by devices on the same LAN; full LAN DNS control is a future direction (see [`docs/architecture.md`](https://github.com/wenet-ec/edge-core/blob/main/docs/architecture.md))
 
 **Async events**
 
@@ -120,7 +120,7 @@ Edge Nodes (one agent per machine)
 
 **Agent↔Admin communication** is HTTP over WireGuard, with graceful fallback: raw WireGuard UDP → DERP/TURN relay (transparent, handles symmetric NAT) → HTTP polling (last resort, eventual consistency).
 
-For full detail see [`docs/architecture.md`](docs/architecture.md).
+For full detail see [`docs/architecture.md`](https://github.com/wenet-ec/edge-core/blob/main/docs/architecture.md).
 
 ## Getting started
 
@@ -130,10 +130,10 @@ Pick the setup that fits your needs and follow its README:
 
 | Setup        | Description                                                                                             | Start here                                          |
 | ------------ | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| **Lite**     | Single admin, Mosquitto broker, no metrics stack. Good for homelab, small fleets, or first deployments. | [`examples/lite/`](examples/lite/README.md)         |
-| **Standard** | 4 admin instances across 2 clusters, EMQX, full Prometheus metrics. Production-ready HA setup.          | [`examples/standard/`](examples/standard/README.md) |
+| **Lite**     | Single admin, Mosquitto broker, no metrics stack. Good for homelab, small fleets, or first deployments. | [`examples/lite/`](https://github.com/wenet-ec/edge-core/blob/main/examples/lite/README.md)         |
+| **Standard** | 4 admin instances across 2 clusters, EMQX, full Prometheus metrics. Production-ready HA setup.          | [`examples/standard/`](https://github.com/wenet-ec/edge-core/blob/main/examples/standard/README.md) |
 
-Each README covers: server requirements, configuration, enrolling your first node, and upgrading. Once your admin is running, the **[user guide](docs/guide.md)** walks through the day-to-day surface (Swagger, MCP, proxy, metrics, events).
+Each README covers: server requirements, configuration, enrolling your first node, and upgrading. Once your admin is running, the **[user guide](https://github.com/wenet-ec/edge-core/blob/main/docs/guide.md)** walks through the day-to-day surface (Swagger, MCP, proxy, metrics, events).
 
 ## Host compatibility
 
@@ -155,13 +155,13 @@ The admin server is host-distro-agnostic: it runs containerized and uses `wiregu
 
 ## Using a running admin
 
-Once an admin is up, the day-to-day surface — Swagger UI, MCP, proxy servers, metrics, events/webhooks, health checks, concepts — is documented in the **[user guide](docs/guide.md)**.
+Once an admin is up, the day-to-day surface — Swagger UI, MCP, proxy servers, metrics, events/webhooks, health checks, concepts — is documented in the **[user guide](https://github.com/wenet-ec/edge-core/blob/main/docs/guide.md)**.
 
 Other useful pointers:
 
-- Configuration reference: `.env.example` in [`examples/lite/`](examples/lite/) or [`examples/standard/`](examples/standard/), and the full annotated env files in [`deploy/production/.envs/`](deploy/production/.envs/)
-- Grafana dashboards: [`edge_admin/priv/grafana_dashboards/`](edge_admin/priv/grafana_dashboards/)
-- Event catalog: `/asyncdoc` on a running admin, or [`docs/admin-asyncapi-v0.2.0.md`](docs/admin-asyncapi-v0.2.0.md)
+- Configuration reference: `.env.example` in [`examples/lite/`](https://github.com/wenet-ec/edge-core/tree/main/examples/lite) or [`examples/standard/`](https://github.com/wenet-ec/edge-core/tree/main/examples/standard), and the full annotated env files in [`deploy/production/.envs/`](https://github.com/wenet-ec/edge-core/tree/main/deploy/production/.envs)
+- Grafana dashboards: [`edge_admin/priv/grafana_dashboards/`](https://github.com/wenet-ec/edge-core/tree/main/edge_admin/priv/grafana_dashboards)
+- Event catalog: `/asyncdoc` on a running admin, or [`docs/admin-asyncapi-v0.2.0.md`](https://github.com/wenet-ec/edge-core/blob/main/docs/admin-asyncapi-v0.2.0.md)
 
 ## Components
 
@@ -189,19 +189,19 @@ Edge Core stands on a stack of much larger projects, and we're grateful for them
 | Distributed registry | [`:syn`](https://github.com/ostinelli/syn)                                        | Availability-over-consistency, scoped registries with metadata                                     |
 | Background jobs      | [Oban](https://github.com/oban-bg/oban)                                           | Same-process job runner that works on Postgres or SQLite — exactly what our two-binary shape needs |
 
-The Netmaker OpenAPI spec we target is included at [`docs/netmaker-openapi-v1.5.1.yml`](docs/netmaker-openapi-v1.5.1.yml) for reference.
+The Netmaker OpenAPI spec we target is included at [`docs/netmaker-openapi-v1.5.1.yml`](https://github.com/wenet-ec/edge-core/blob/main/docs/netmaker-openapi-v1.5.1.yml) for reference.
 
 We didn't build any of these — we glued them together in a way that solved the specific problem in front of us.
 
 ## License
 
-Edge Core ships under multiple licenses depending on the component. See [`LICENSE`](LICENSE) at the repository root for the full overview.
+Edge Core ships under multiple licenses depending on the component. See [`LICENSE`](https://github.com/wenet-ec/edge-core/blob/main/LICENSE) at the repository root for the full overview.
 
 | Component                           | Path          | License                                                      | Posture          |
 | ----------------------------------- | ------------- | ------------------------------------------------------------ | ---------------- |
-| Edge Agent                          | `edge_agent/` | [Apache License 2.0](edge_agent/LICENSE)                     | Open source      |
-| Nexmaker                            | `nexmaker/`   | [Apache License 2.0](nexmaker/LICENSE)                       | Open source      |
-| Edge Admin                          | `edge_admin/` | [Elastic License 2.0](edge_admin/LICENSE)                    | Source available |
+| Edge Agent                          | `edge_agent/` | [Apache License 2.0](https://github.com/wenet-ec/edge-core/blob/main/edge_agent/LICENSE)                     | Open source      |
+| Nexmaker                            | `nexmaker/`   | [Apache License 2.0](https://github.com/wenet-ec/edge-core/blob/main/nexmaker/LICENSE)                       | Open source      |
+| Edge Admin                          | `edge_admin/` | [Elastic License 2.0](https://github.com/wenet-ec/edge-core/blob/main/edge_admin/LICENSE)                    | Source available |
 | Examples, docs, deploy, bin scripts | other         | Apache License 2.0 unless a file explicitly states otherwise | Open source      |
 
 **Open source vs. source available — what the difference means here**
@@ -217,6 +217,6 @@ What this means in practice:
 
 Email **<licensing@wenet-ec.com>** if your use case needs a commercial license, or if you're not sure whether what you want to build falls inside or outside ELv2 — we'll tell you, and we're not looking to be difficult about it.
 
-Contributions are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the contribution flow and the Developer Certificate of Origin (DCO) sign-off we require on every commit.
+Contributions are welcome. See [`CONTRIBUTING.md`](https://github.com/wenet-ec/edge-core/blob/main/CONTRIBUTING.md) for the contribution flow and the Developer Certificate of Origin (DCO) sign-off we require on every commit.
 
 Copyright © 2026 WENET VIETNAM JOINT STOCK COMPANY. "Edge Core", "Edge Admin", "Edge Agent", "Nexmaker", "Wenet", and "Wenetec" are trademarks of WENET VIETNAM JOINT STOCK COMPANY. The licenses above grant rights to the software only — not to the trademarks.

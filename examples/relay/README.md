@@ -85,12 +85,16 @@ The map server needs:
 
 ## Files in this directory
 
+Browse the actual files on GitHub:
+
 | File                 | Purpose                                                                                          |
 | -------------------- | ------------------------------------------------------------------------------------------------ |
-| `docker-compose.yml` | Two-service compose file — run one service per machine.                                          |
-| `.env.example`       | Required env vars: hostnames, ACME email.                                                        |
-| `Caddyfile`          | Caddy config for the map server — serves `derp-map.json` at `/derpmap/default`.                  |
-| `derp-map.json`      | The relay map itself. Edit `HostName` to match your `DERP_HOSTNAME`. Add more regions as needed. |
+| [`docker-compose.yml`](https://github.com/wenet-ec/edge-core/blob/main/examples/relay/docker-compose.yml) | Two-service compose file — run one service per machine.                                          |
+| [`.env.example`](https://github.com/wenet-ec/edge-core/blob/main/examples/relay/.env.example)             | Required env vars: hostnames, ACME email.                                                        |
+| [`Caddyfile`](https://github.com/wenet-ec/edge-core/blob/main/examples/relay/Caddyfile)                   | Caddy config for the map server — serves `derp-map.json` at `/derpmap/default`.                  |
+| [`derp-map.json`](https://github.com/wenet-ec/edge-core/blob/main/examples/relay/derp-map.json)           | The relay map itself. Edit `HostName` to match your `DERP_HOSTNAME`. Add more regions as needed. |
+
+Or browse the whole directory: [`examples/relay/`](https://github.com/wenet-ec/edge-core/tree/main/examples/relay).
 
 ## Adding more relays
 

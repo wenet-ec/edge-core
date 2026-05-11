@@ -6,11 +6,11 @@ This directory contains ready-to-use Docker Compose deployment examples. If you 
 
 | Example                      | Use case                                                                                                                                             |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`lite/`](lite/)             | Single admin on SQLite, Mosquitto broker, SQLite-backed Netmaker. Homelab / hobbyist / first-time exploration.                                       |
-| [`standard/`](standard/)     | 4 admin instances on PostgreSQL across 2 clusters, EMQX, PostgreSQL-backed Netmaker, Prometheus metrics. Production.                                 |
-| [`sidecar/`](sidecar/)       | Agent deployed as a sidecar container on bridge networking (instead of host networking).                                                             |
-| [`relay/`](relay/)           | Self-hosted DERP relay for lower latency or full infra ownership. Not required for NAT traversal — the default Tailscale relay already handles that. |
-| [`operations/`](operations/) | One-off task compose files — `migrate.yml`, `rotate_cloak_key.yml`. Run admin release tasks in isolation, no VPN/server.                             |
+| [`lite/`](https://github.com/wenet-ec/edge-core/tree/main/examples/lite)                 | Single admin on SQLite, Mosquitto broker, SQLite-backed Netmaker. Homelab / hobbyist / first-time exploration.                                       |
+| [`standard/`](https://github.com/wenet-ec/edge-core/tree/main/examples/standard)         | 4 admin instances on PostgreSQL across 2 clusters, EMQX, PostgreSQL-backed Netmaker, Prometheus metrics. Production.                                 |
+| [`sidecar/`](https://github.com/wenet-ec/edge-core/tree/main/examples/sidecar)           | Agent deployed as a sidecar container on bridge networking (instead of host networking).                                                             |
+| [`relay/`](https://github.com/wenet-ec/edge-core/tree/main/examples/relay)               | Self-hosted DERP relay for lower latency or full infra ownership. Not required for NAT traversal — the default Tailscale relay already handles that. |
+| [`operations/`](https://github.com/wenet-ec/edge-core/tree/main/examples/operations)     | One-off task compose files — `migrate.yml`, `rotate_cloak_key.yml`. Run admin release tasks in isolation, no VPN/server.                             |
 | `k8s/` (TODO)                | Kubernetes manifests / Helm chart for deploying Edge Admin and Edge Agent on a cluster. Not yet available.                                           |
 
 ## Version Pinning — Important
@@ -65,8 +65,8 @@ The agent requires far fewer variables than the admin. The critical ones are the
 
 The examples contain everything needed for a standard deployment. For deeper configuration (custom DNS domains, gateway settings, ACLs, etc.), refer to the official Netmaker documentation:
 
-- Docs: https://learn.netmaker.io/
-- Source: https://github.com/gravitl/netmaker/tree/v1.5.1
+- Docs: <https://learn.netmaker.io/>
+- Source: <https://github.com/gravitl/netmaker/tree/v1.5.1>
 
 ## Choosing an Example
 

@@ -56,7 +56,7 @@ RUN --mount=type=cache,target=/root/.hex \
     mix release
 
 # Stage 2: Production runtime image
-FROM debian:stable-20260421-slim
+FROM debian:stable-20260505-slim
 
 # Install runtime dependencies in single layer
 # Agent leverages host tools via hostscript (nsenter/chroot to /host)

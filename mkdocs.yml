@@ -1,3 +1,6 @@
+# mkdocs.yml
+# yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
+
 site_name: Edge Core
 site_description: Distributed edge computing infrastructure management — meshed, proxied, observed, and remotely controlled.
 site_url: https://wenet-ec.github.io/edge-core/
@@ -63,14 +66,17 @@ markdown_extensions:
   - md_in_html
   - tables
   - toc:
+      # GitHub-flavored slugifier so anchor links like
+      # #4-mcp--ai-assistant-access work identically in mkdocs and on
+      # github.com (default Python-Markdown collapses any non-alnum run to a
+      # single "-"; GitHub preserves the multi-dash from em-dashes).
+      slugify: !!python/object/apply:pymdownx.slugs.slugify {kwds: {case: lower}}
       permalink: true
-  - pymdownx.details
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
-  - pymdownx.tabbed
 
 plugins:
   - search

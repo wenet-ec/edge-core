@@ -1,9 +1,5 @@
 mkdocs-material==9.7.6
-mkdocs-include-markdown-plugin==7.1.2
+mkdocs-include-markdown-plugin==7.2.2
 neoteroi-mkdocs==1.2.0
-pymdown-extensions==10.7
+pymdown-extensions==10.21.2
 markdown==3.10.2
-# Pygments 2.20.0 breaks pymdown-extensions superfences (code blocks render as
-# <p><code> instead of <pre><code>). Pinned to 2.19.2 — the version shipped in
-# squidfunk/mkdocs-material:latest where local previews work correctly.
-Pygments==2.19.2

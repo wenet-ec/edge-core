@@ -436,7 +436,7 @@ AMQP 1.0 (a different wire protocol from AMQP 0-9-1 despite the name — used by
 
 Edge Admin exposes a [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server at `POST /mcp` alongside the REST API, giving AI assistants direct, structured access to the same surface human operators get.
 
-> Operator-facing usage (client config, the proxy combo) lives in [`guide.md`](guide.md). This section covers the design choices.
+> Operator-facing usage (client config, the proxy combo) lives in [`guide.md`](guide.md). The full tool catalog is at [`admin-mcp-v0.2.0.md`](admin-mcp-v0.2.0.md). This section covers the design choices.
 
 ### The closed loop
 
@@ -459,6 +459,7 @@ This is why "fleet ops automated by an AI agent" is a real capability of Edge Co
 - **Tools mirror the REST API surface.** Every REST operation has an equivalent MCP tool. The tool catalog is **explicitly listed** in `EdgeAdminMcp.Server` (each tool registered via `component(...)`), not auto-generated from controllers. Adding a REST endpoint does not automatically expose it via MCP — you write the matching tool module under `edge_admin_mcp/tools/<domain>/` and register it in `Server`. Discovery is still dynamic for clients via standard `tools/list` once registered. The explicit registry is deliberate: it forces a deliberate choice about whether each new endpoint is appropriate for AI consumption (rate, auth scope, side-effect surface), rather than auto-exposing everything.
 - **One MCP-only tool: `check_admin_health`.** Runs every subsystem check in parallel and returns structured pass/fail. The motivation is operational: AI assistants are uniquely positioned to triage "why isn't this working" because they can correlate the health output with the user's description, but doing that requires one consolidated health view rather than seven separate REST calls.
 - **Auth pre-Anubis.** `EdgeAdminWeb.Plugs.McpAuth` runs before Anubis processes the request, so unauthenticated traffic never reaches the MCP machinery.
+- **No static spec — hand-maintained catalog.** MCP discovery is live (`tools/list`), and the protocol does not yet standardise a static-spec format the way OpenAPI/AsyncAPI do. There is no Swagger UI / `@asyncapi/react-component` equivalent to embed. For operator visibility without running an MCP client, we ship a hand-maintained catalog at [`admin-mcp-v0.2.0.md`](admin-mcp-v0.2.0.md), versioned alongside the REST and event specs. The catalog is updated in the same PR as `EdgeAdminMcp.Server` changes — code review enforces the parity. When (if) the MCP spec gains a static-discovery format, this catalog becomes a generation target instead of a source.
 
 ---
 

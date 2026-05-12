@@ -84,6 +84,7 @@ nav:
   - API reference:
       - REST API (OpenAPI): openapi.md
       - Events (AsyncAPI): admin-asyncapi-v0.2.0.md
+      - MCP tools: admin-mcp-v0.2.0.md
   - Deploying:
       - Examples overview: deploying/index.md
       - Lite: deploying/lite.md

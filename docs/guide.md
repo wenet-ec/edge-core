@@ -143,7 +143,9 @@ Configure your client to point at:
 }
 ```
 
-Tools are discovered dynamically (`tools/list`) — no static spec to maintain. A few extras worth knowing:
+Tools are discovered dynamically over the protocol (`tools/list`) — any connected client sees the live list. For a hand-maintained catalog you can read without running a client, see [`admin-mcp-v0.2.0.md`](admin-mcp-v0.2.0.md). For an interactive browser, point [`@modelcontextprotocol/inspector`](https://github.com/modelcontextprotocol/inspector) (`npx @modelcontextprotocol/inspector`) at `/mcp` with your `MCP_KEY`.
+
+A few extras worth knowing:
 
 - `check_admin_health` — runs every subsystem check (DB, membership, metadata, Netmaker, netclient, proxies, broker) in parallel and returns a structured pass/fail. Use when an AI assistant needs to diagnose enrollment or connectivity issues.
 - `get_node_metrics` / `get_host_metrics` / `get_agent_metrics` / `get_admin_metrics` — human-friendly parsed metrics. Pair with the proxy ([§5](#5-proxy-servers)) if the assistant needs raw scrape access too.

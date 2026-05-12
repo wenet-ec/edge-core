@@ -55,31 +55,19 @@ RUN --mount=type=cache,target=/root/.hex \
     --mount=type=cache,target=/root/.mix \
     mix release
 
+# host_pty_spawn: C helper that allocates a PTY in the host's mount namespace
+# so the SSH `:shell` channel runs bash on the host. See the source for the why.
+# Compiled here in the builder so the runtime image stays toolchain-free.
+COPY deploy/production/compose/edge_agent/host_pty_spawn.c /tmp/host_pty_spawn.c
+RUN gcc -O2 -Wall -Wextra -o /usr/local/bin/host_pty_spawn /tmp/host_pty_spawn.c -lutil && \
+    rm /tmp/host_pty_spawn.c
+
 # Stage 2: Production runtime image
 FROM debian:stable-20260505-slim
 
-# Install runtime dependencies in single layer.
-#
-# Design rule: the agent is a GATEWAY, not an interactive target. When an
-# operator SSHs in and types a command, `edge_bashrc` routes unknown commands
-# to the host via `hostscript` (nsenter into /host's namespaces) — so the
-# host's editor edits the host's files, the host's `ip` reads the host's
-# interfaces, etc.
-#
-# Therefore the image installs three kinds of things:
-#   1. What the agent process itself links to / shells out to.
-#   2. What `netclient` shells out to (netclient runs INSIDE this container;
-#      `network_mode: host` shares the host's netns but binaries are resolved
-#      against the container's filesystem).
-#   3. A small in-container quality-of-life set (pagers, completion, jq,
-#      a few network probes) — not for typing commands by hand, but for
-#      tools that auto-invoke them (e.g. `$PAGER`) and for debugging the
-#      agent itself from inside the container without crossing nsenter.
-#
-# Deliberately NOT installed: editors (nano, vim, emacs). They would trap
-# operators into editing the container's ephemeral filesystem; routing
-# through `command_not_found_handle` → `hostscript` gives them the host's
-# editor on the host's files instead.
+# Install runtime dependencies in single layer. The agent is a gateway:
+# every operator command runs on the host via nsenter, so this image only
+# needs what the agent process and netclient themselves use.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
@@ -99,9 +87,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     procps \
     # libcap2-bin — getcap/setcap, agent inspects its own capabilities
     libcap2-bin \
-    # curl — used by container-side scripts and probes
+    # curl — kept for ad-hoc container-side HTTP probing; no runtime code
+    # path uses it directly today (the agent uses Req).
     curl \
-    # util-linux — nsenter for hostscript
+    # util-linux — nsenter for hostscript; setns(2) for host_pty_spawn via libc
     util-linux \
     # libnss-mdns — .local hostname resolution from inside the container
     libnss-mdns \
@@ -120,16 +109,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     # backend does need iptables binaries. netclient prefers iptables when
     # present, so install it to converge on a working backend.
     iptables \
-    # --- In-container quality of life ---
-    # bash-completion — completion at the SSH prompt before commands route to host
-    bash-completion \
-    # less — default $PAGER. git/man/systemctl/kubectl/psql pipe long output
-    # through it; without it those tools dump everything at once.
-    less \
-    # jq — JSON munging in entrypoint/start scripts and ad-hoc API checks
+    # --- Ad-hoc container-side debug probes ---
+    # Operator-facing tools (less, vim, nano, bash-completion) are deliberately
+    # NOT installed — the SSH shell is the host's, not the container's. Only
+    # ad-hoc container-internal probes are kept here, for the rare case of
+    # `docker exec production_edge_agent <cmd>` to debug the agent itself.
     jq \
-    # iputils-ping, dnsutils, netcat-openbsd — quick container-side network
-    # probes (host equivalents are also reachable via hostscript)
     iputils-ping \
     dnsutils \
     netcat-openbsd && \
@@ -173,6 +158,9 @@ RUN chmod +x /usr/local/bin/prometheus_wireguard_exporter
 COPY --from=builder /app/_build/prod/rel/edge_agent /app
 RUN chmod +x /app/bin/migrate /app/bin/server
 
+COPY --from=builder /usr/local/bin/host_pty_spawn /usr/local/bin/host_pty_spawn
+RUN chmod +x /usr/local/bin/host_pty_spawn
+
 # License text for the embedded Edge Agent + Nexmaker code. Apache 2.0 — see
 # /usr/share/doc/edge_agent/LICENSE and /usr/share/doc/nexmaker/LICENSE.
 COPY edge_agent/LICENSE /usr/share/doc/edge_agent/LICENSE
@@ -197,10 +185,6 @@ RUN sed -i 's/\r$//g' /start && \
 COPY ./deploy/production/compose/edge_agent/hostscript /usr/local/bin/hostscript
 RUN sed -i 's/\r$//g' /usr/local/bin/hostscript && \
     chmod +x /usr/local/bin/hostscript
-
-COPY ./deploy/production/compose/edge_agent/edge_bashrc /usr/local/bin/edge_bashrc
-RUN sed -i 's/\r$//g' /usr/local/bin/edge_bashrc && \
-    chmod +r /usr/local/bin/edge_bashrc
 
 WORKDIR /app
 

@@ -140,12 +140,15 @@ defmodule EdgeAgent.SshServer.ChannelTest do
   end
 
   # ---------------------------------------------------------------------------
-  # build_shell_env/3 — the env we hand to bash when spawning the SSH shell.
-  # Two contracts pinned here matter for the rest of the system:
-  #   * `TERM` is forwarded from the client's pty-req (else nano/less break)
-  #   * `EDGE_NODE_ID` is set so edge_bashrc can render it in the prompt
-  # Everything else (HOME, PATH, SHELL, LANG) is a constant; we pin the
-  # shape so a refactor that drops one is caught immediately.
+  # build_shell_env/3 — the env we hand to host_pty_spawn when spawning the
+  # SSH shell. The shell runs on the host (bash --login -i inside the host's
+  # mount namespace), so the host's /etc/profile + ~/.bashrc set PATH, HOME,
+  # SHELL. We forward only what the host can't infer:
+  #   * `TERM` from the client's pty-req (else nano/less break)
+  #   * `USER` from authentication
+  #   * `EDGE_NODE_ID` for any host-side prompt customisation
+  # And explicitly override locale to keep the container's en_US.UTF-8 from
+  # leaking onto a host that hasn't generated that locale.
   # ---------------------------------------------------------------------------
 
   describe "build_shell_env/3" do
@@ -158,14 +161,30 @@ defmodule EdgeAgent.SshServer.ChannelTest do
       assert {~c"EDGE_NODE_ID", ~c"node-abc-12345"} in env
     end
 
-    test "always sets HOME, SHELL, LANG, and PATH" do
+    test "does not leak container-side HOME/SHELL/PATH" do
       pty = %{term: ~c"xterm", cols: 80, rows: 24, modes: []}
       env = Channel.build_shell_env(pty, "x", "y")
       keys = for {k, _} <- env, do: k
 
-      for required <- [~c"TERM", ~c"EDGE_NODE_ID", ~c"USER", ~c"HOME", ~c"SHELL", ~c"LANG", ~c"PATH"] do
-        assert required in keys, "missing required env var #{required}"
+      # bash --login on the host sources /etc/profile and ~/.bashrc which
+      # set these. Leaking container values would mask the host's real env.
+      for forbidden <- [~c"HOME", ~c"SHELL", ~c"PATH"] do
+        refute forbidden in keys, "leaked container env var #{forbidden}"
       end
+    end
+
+    test "forces LANG to C.UTF-8 and unsets LANGUAGE / LC_ALL" do
+      # The container's Dockerfile sets LANG=en_US.UTF-8, which leaks through
+      # erlexec's env inheritance. Most hosts haven't generated en_US.UTF-8,
+      # so bash prints `cannot change locale` warnings on every shell startup.
+      # Pinning C.UTF-8 (always available on glibc) avoids that, and unsetting
+      # LANGUAGE / LC_ALL (via `false`) stops them fighting LANG.
+      pty = %{term: ~c"xterm", cols: 80, rows: 24, modes: []}
+      env = Channel.build_shell_env(pty, "x", "y")
+
+      assert {~c"LANG", ~c"C.UTF-8"} in env
+      assert {~c"LANGUAGE", false} in env
+      assert {~c"LC_ALL", false} in env
     end
   end
 

@@ -30,28 +30,9 @@ ENV MIX_ENV=dev
 
 WORKDIR ${APP_HOME}
 
-# Install packages in single layer.
-#
-# Design rule: the agent is a GATEWAY, not an interactive target. When an
-# operator SSHs in and types a command, `edge_bashrc` routes unknown commands
-# to the host via `hostscript` (nsenter into /host's namespaces) — so the
-# host's editor edits the host's files, the host's `ip` reads the host's
-# interfaces, etc.
-#
-# Therefore the image installs three kinds of things:
-#   1. What the agent process itself links to / shells out to.
-#   2. What `netclient` shells out to (netclient runs INSIDE this container;
-#      `network_mode: host` shares the host's netns but binaries are resolved
-#      against the container's filesystem).
-#   3. A small in-container quality-of-life set (pagers, completion, jq) —
-#      not for typing commands by hand, but for tools that auto-invoke them
-#      (e.g. `$PAGER`) or for ad-hoc container-side debugging without
-#      crossing into the host's namespace.
-#
-# Deliberately NOT installed: editors (nano, vim, emacs). They would trap
-# operators into editing the container's ephemeral filesystem; routing
-# through `command_not_found_handle` → `hostscript` gives them the host's
-# editor on the host's files instead.
+# Install packages in single layer. The agent is a gateway: every operator
+# command runs on the host via nsenter, so this image only needs what the
+# agent process and netclient themselves use, plus dev tooling on local.
 RUN apt-get update && apt-get install --no-install-recommends -y \
   # --- BEAM runtime ---
   libstdc++6 \
@@ -67,9 +48,10 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   procps \
   # libcap2-bin — getcap/setcap, agent inspects its own capabilities
   libcap2-bin \
-  # curl — used by container-side scripts and probes
+  # curl — kept for ad-hoc container-side HTTP probing; no runtime code path
+  # uses it directly today (the agent uses Req).
   curl \
-  # util-linux — nsenter for hostscript
+  # util-linux — nsenter for hostscript; setns(2) for host_pty_spawn via libc
   util-linux \
   # libnss-mdns — .local hostname resolution from inside the container
   libnss-mdns \
@@ -91,24 +73,18 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   iptables \
   # --- Dev workflow (local only) ---
   # build-essential + git — compile Elixir deps from source (erlexec's C++
-  # port, sqlite NIF) and fetch git deps
+  # port, host_pty_spawn helper, sqlite NIF) and fetch git deps
   build-essential \
   git \
   libsqlite3-dev \
   # inotify-tools — Phoenix live-reload file watcher
   inotify-tools \
-  # sudo — convenience for `./bin/run agent:shell`
-  sudo \
-  # --- In-container quality of life ---
-  # bash-completion — completion at the SSH prompt before commands route to host
-  bash-completion \
-  # less — default $PAGER. git/man/systemctl/kubectl/psql pipe long output
-  # through it; without it those tools dump everything at once.
-  less \
-  # jq — JSON munging in entrypoint/start scripts and ad-hoc API checks
+  # --- Ad-hoc container-side debug probes ---
+  # Operator-facing tools (less, vim, nano, bash-completion) are deliberately
+  # NOT installed — the SSH shell is the host's, not the container's. Only
+  # ad-hoc container-internal probes are kept here, for the rare case of
+  # `docker exec local_edge_agent <cmd>` to debug the agent itself.
   jq \
-  # iputils-ping, dnsutils, netcat-openbsd — quick container-side network
-  # probes (host equivalents are also reachable via hostscript)
   iputils-ping \
   dnsutils \
   netcat-openbsd && \
@@ -189,9 +165,12 @@ COPY ./deploy/local/compose/edge_agent/hostscript /usr/local/bin/hostscript
 RUN sed -i 's/\r$//g' /usr/local/bin/hostscript && \
     chmod +x /usr/local/bin/hostscript
 
-COPY ./deploy/local/compose/edge_agent/edge_bashrc /usr/local/bin/edge_bashrc
-RUN sed -i 's/\r$//g' /usr/local/bin/edge_bashrc && \
-    chmod +r /usr/local/bin/edge_bashrc
+# host_pty_spawn: C helper that allocates a PTY in the host's mount namespace
+# so the SSH `:shell` channel runs bash on the host. See the source for the why.
+COPY ./deploy/local/compose/edge_agent/host_pty_spawn.c /tmp/host_pty_spawn.c
+RUN gcc -O2 -Wall -Wextra -o /usr/local/bin/host_pty_spawn /tmp/host_pty_spawn.c -lutil && \
+    rm /tmp/host_pty_spawn.c && \
+    chmod +x /usr/local/bin/host_pty_spawn
 
 ENTRYPOINT ["/usr/bin/tini", "-s", "--", "/entrypoint"]
 

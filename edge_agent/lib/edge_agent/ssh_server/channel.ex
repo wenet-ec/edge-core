@@ -3,11 +3,17 @@ defmodule EdgeAgent.SshServer.Channel do
   @moduledoc """
   SSH channel handler for shell and exec sessions.
 
-  Implements the `:ssh_server_channel` behavior. The shell path spawns a
-  login bash on a real PTY via erlexec so that TTY-sensitive programs
-  (nano, less, top, sudo) behave correctly. The exec path runs commands
-  through `hostscript` (nsenter into the host namespaces) without a PTY,
-  matching how non-interactive `ssh user@host 'cmd'` is expected to work.
+  Implements the `:ssh_server_channel` behavior. Both paths route the
+  operator's commands onto the host, so the agent container behaves as a
+  pure gateway:
+
+    * `:shell` (interactive) — erlexec spawns `host_pty_spawn`, which enters
+      the host's mount namespace, allocates a PTY on the host's devpts, and
+      execs `bash --login -i` on it. TTY-sensitive programs (nano, less,
+      top, sudo) work because they're running natively on the host.
+    * `:exec` (`ssh user@host 'cmd'`) — a `Port.open` spawns `hostscript`,
+      which `nsenter`s into the host namespaces and runs the command via
+      `bash --login -c "..."`. No PTY needed.
   """
 
   @behaviour :ssh_server_channel
@@ -17,14 +23,14 @@ defmodule EdgeAgent.SshServer.Channel do
   require Bitwise
   require Logger
 
-  # The SSH shell runs container-side bash sourced with `edge_bashrc`. That
-  # rcfile sets up host-routing: a curated list of admin commands (docker,
-  # systemctl, ip, …) become wrapper functions that call `hostscript <cmd>`,
-  # and any unknown command falls through `command_not_found_handle` which
-  # also forwards to hostscript. So `nano /etc/foo` from the SSH prompt runs
-  # the host's nano against the host's filesystem under nsenter — the agent
-  # container is the gateway, not the target.
-  @bashrc_path "/usr/local/bin/edge_bashrc"
+  # `host_pty_spawn` arguments: namespace handle to enter (host's PID 1 mount
+  # ns, reachable via the `/host` bind mount), then the shell binary and its
+  # argv that gets exec'd after the namespace swap + PTY allocation. The C
+  # helper itself injects `--rcfile /proc/self/fd/N` so bash sources our
+  # branded prompt (memfd-backed, no on-disk file); see host_pty_spawn.c.
+  @host_pty_spawn ~c"/usr/local/bin/host_pty_spawn"
+  @host_ns_handle ~c"/host/proc/1/ns/mnt"
+  @host_shell_argv [~c"/bin/bash", ~c"--login", ~c"-i"]
 
   # Conservative defaults when the client doesn't send sensible values
   # (or sends 0 for "use pixel dimensions instead", which we ignore).
@@ -202,12 +208,12 @@ defmodule EdgeAgent.SshServer.Channel do
 
     pty = state.pty || %{term: @default_term, cols: @default_cols, rows: @default_rows, modes: []}
     env = build_shell_env(pty, username, node_id)
-    cmd = ~c"/bin/bash --rcfile " ++ to_charlist(@bashrc_path) ++ ~c" -i"
+    cmd = [@host_pty_spawn, @host_ns_handle | @host_shell_argv]
     run_opts = build_shell_run_opts(pty, env)
 
     case :exec.run(cmd, run_opts) do
       {:ok, _epid, ospid} ->
-        Logger.debug("Spawned bash on pty, ospid=#{ospid}")
+        Logger.debug("Spawned host shell on pty, ospid=#{ospid}")
 
         {:ok,
          state
@@ -290,21 +296,37 @@ defmodule EdgeAgent.SshServer.Channel do
   end
 
   @doc false
-  @spec build_shell_env(map(), String.t(), String.t()) :: [{charlist(), charlist()}]
+  @spec build_shell_env(map(), String.t(), String.t()) :: [{charlist(), charlist() | false}]
+  # Minimal env. host_pty_spawn execs `bash --login -i` inside the host's
+  # mount namespace, which sources the host's /etc/profile and the
+  # operator's ~/.bashrc — those set PATH, HOME, SHELL correctly. We
+  # forward only TERM (from the SSH pty-req), identity (USER, EDGE_NODE_ID),
+  # and locale.
+  #
+  # Locale: the container's Dockerfile sets LANG=en_US.UTF-8, which leaks
+  # through erlexec's default env inheritance into the host shell. If the
+  # host hasn't generated en_US.UTF-8 (most haven't), bash prints `cannot
+  # change locale` warnings on every shell startup. We override with
+  # C.UTF-8 (always-available on glibc — no locale-gen needed) and unset
+  # LANGUAGE / LC_ALL so they don't fight C.UTF-8.
   def build_shell_env(pty, username, node_id) do
     [
       {~c"TERM", pty.term},
-      {~c"EDGE_NODE_ID", to_charlist(node_id)},
       {~c"USER", to_charlist(username)},
-      {~c"HOME", ~c"/root"},
-      {~c"SHELL", ~c"/bin/bash"},
-      {~c"LANG", ~c"en_US.UTF-8"},
-      {~c"PATH", ~c"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}
+      {~c"EDGE_NODE_ID", to_charlist(node_id)},
+      {~c"LANG", ~c"C.UTF-8"},
+      {~c"LANGUAGE", false},
+      {~c"LC_ALL", false}
     ]
   end
 
   @doc false
   @spec build_shell_run_opts(map(), [{charlist(), charlist()}]) :: keyword()
+  # No `:cd` — host_pty_spawn enters the host's mount namespace before exec
+  # bash. Bash's --login flag reads $HOME from the host's /etc/passwd and
+  # starts the user there. Setting `:cd` here to a container path would
+  # resolve in the container's mount ns and either fail or land in the
+  # wrong place after the namespace swap.
   def build_shell_run_opts(pty, env) do
     [
       {:pty, pty.modes},
@@ -314,7 +336,6 @@ defmodule EdgeAgent.SshServer.Channel do
       {:stderr, :stdout},
       {:winsz, {pty.rows, pty.cols}},
       {:env, env},
-      {:cd, ~c"/root"},
       :monitor,
       :kill_group
     ]

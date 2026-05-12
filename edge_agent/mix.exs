@@ -138,7 +138,7 @@ defmodule EdgeAgent.Mixfile do
   defp dialyzer do
     [
       plt_file: {:no_warn, "priv/plts/edge_agent.plt"},
-      plt_add_apps: [:mix, :ex_unit]
+      plt_add_apps: [:mix, :ex_unit, :erlexec]
     ]
   end
 

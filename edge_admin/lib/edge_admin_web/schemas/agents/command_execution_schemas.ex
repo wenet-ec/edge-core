@@ -107,7 +107,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
     schema(
       CommonSchemas.paginated_response(
         AgentCommandExecutionResponse,
-        "AgentCommandExecutionPaginatedResponse",
+        "Internal.AgentCommandExecutionPaginatedResponse",
         "Paginated list of command executions for the agent"
       )
     )

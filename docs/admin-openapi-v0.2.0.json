@@ -317,21 +317,6 @@
         "title": "Webhook",
         "type": "object"
       },
-      "AgentCommandExecutionPaginatedResponse": {
-        "description": "Paginated list of command executions for the agent",
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/Internal.AgentCommandExecutionResponse"
-            },
-            "type": "array"
-          },
-          "meta": { "$ref": "#/components/schemas/PaginatedMeta" }
-        },
-        "required": ["data", "meta"],
-        "title": "AgentCommandExecutionPaginatedResponse",
-        "type": "object"
-      },
       "EdgeClustersResponse": {
         "description": "All edge cluster assignments across all admins",
         "properties": {

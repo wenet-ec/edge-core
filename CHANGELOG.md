@@ -17,6 +17,7 @@ For the full picture rather than a feature list:
 - Deployment shapes: [`examples/`](examples/)
 - Event catalog: [`docs/admin-asyncapi-v0.2.0.md`](docs/admin-asyncapi-v0.2.0.md) or `/asyncdoc` on a running admin
 - REST API: [`docs/admin-openapi-v0.2.0.json`](docs/admin-openapi-v0.2.0.json) or `/swaggerui` on a running admin
+- MCP tool catalog: [`docs/admin-mcp-v0.2.0.md`](docs/admin-mcp-v0.2.0.md) or `tools/list` on `POST /mcp` for the live surface
 
 Image tags `ghcr.io/wenet-ec/edge_admin:v0.2.0` and `ghcr.io/wenet-ec/edge_agent:v0.2.0`.
 

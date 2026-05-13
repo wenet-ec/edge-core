@@ -23,17 +23,20 @@ ENV ELIXIR_MAKE_PARALLEL=true
 # `quicer` build (compiles Microsoft's msquic from source) is pure overhead.
 ENV BUILD_WITHOUT_QUIC=1
 
+# Relocate Mix's home to a normal image path so hex/rebar archives survive across
+# RUN steps. The default /root/.mix gets overlaid by the cache mount below,
+# which would otherwise hide a pre-install and make every subsequent mix step
+# prompt for hex.
+ENV MIX_HOME=/opt/mix
+RUN mix local.hex --force && mix local.rebar --force
+
 # Copy nexmaker (path dependency) so mix deps.get can resolve it and its transitive deps
 COPY nexmaker /nexmaker
 
 # Copy mix files and install all dependencies (including nexmaker's transitive deps) with caching.
-# Hex/Rebar are installed inside the cache-mounted step so they land in /root/.mix
-# (cache mounts overlay the host dir and would otherwise hide a pre-install).
 COPY edge_admin/mix.exs edge_admin/mix.lock ./
 RUN --mount=type=cache,target=/root/.hex \
     --mount=type=cache,target=/root/.mix \
-    mix local.hex --force && \
-    mix local.rebar --force && \
     mix deps.get --only $MIX_ENV
 
 # Copy config files (needed for compilation)

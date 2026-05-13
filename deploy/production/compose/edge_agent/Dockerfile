@@ -23,17 +23,20 @@ ENV MIX_ENV=prod
 ENV ERL_MAX_PORTS=65536
 ENV ELIXIR_MAKE_PARALLEL=true
 
+# Relocate Mix's home to a normal image path so hex/rebar archives survive across
+# RUN steps. The default /root/.mix gets overlaid by the cache mount below,
+# which would otherwise hide a pre-install and make every subsequent mix step
+# prompt for hex.
+ENV MIX_HOME=/opt/mix
+RUN mix local.hex --force && mix local.rebar --force
+
 # Copy nexmaker (path dependency) so mix deps.get can resolve it and its transitive deps
 COPY nexmaker /nexmaker
 
 # Copy mix files and install all dependencies (including nexmaker's transitive deps) with caching.
-# Hex/Rebar are installed inside the cache-mounted step so they land in /root/.mix
-# (cache mounts overlay the host dir and would otherwise hide a pre-install).
 COPY edge_agent/mix.exs edge_agent/mix.lock ./
 RUN --mount=type=cache,target=/root/.hex \
     --mount=type=cache,target=/root/.mix \
-    mix local.hex --force && \
-    mix local.rebar --force && \
     mix deps.get --only $MIX_ENV
 
 # Copy config files (needed for compilation)

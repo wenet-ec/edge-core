@@ -67,6 +67,7 @@ defmodule EdgeAgent.Application do
       EdgeAgent.Repo,
       {Phoenix.PubSub, name: EdgeAgent.PubSub},
       {Oban, Application.fetch_env!(:edge_agent, Oban)},
+      EdgeAgent.LocalScheduler,
       EdgeAgent.PromEx,
       ExecutionRegistry,
       EdgeAgent.SshServer,

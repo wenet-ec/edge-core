@@ -15,7 +15,7 @@ defmodule EdgeAgent.EdgeClusters.HealthCheck do
   Reports node health to admin via HTTP fallback.
 
   Determines current health status and sends report to admin.
-  Used by ReportHealthCheckWorker when operating in HTTP fallback mode.
+  Used by `EdgeAgent.LocalScheduler.Tasks.report_health_check/0` when operating in HTTP fallback mode.
 
   ## Returns
   - `:ok` - Report sent successfully

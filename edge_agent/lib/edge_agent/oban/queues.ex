@@ -31,23 +31,11 @@ defmodule EdgeAgent.Oban.Queues do
   alias EdgeAgent.Commands.Workers.EnqueueExecutionWorker
   alias EdgeAgent.Commands.Workers.ExecuteCommandWorker
   alias EdgeAgent.Commands.Workers.ReportExecutionWorker
-  alias EdgeAgent.Commands.Workers.SyncUnprocessedExecutionWorker
-  alias EdgeAgent.EdgeClusters.Workers.DiscoverAdminWorker
-  alias EdgeAgent.EdgeClusters.Workers.ReportHealthCheckWorker
-  alias EdgeAgent.Metrics.Workers.PushMetricsWorker
-  alias EdgeAgent.SelfUpdates.Workers.CheckSelfUpdateWorker
-  alias EdgeAgent.Vpn.Workers.PullVpnConfigWorker
 
   @workers [
     EnqueueExecutionWorker,
     ExecuteCommandWorker,
-    ReportExecutionWorker,
-    SyncUnprocessedExecutionWorker,
-    DiscoverAdminWorker,
-    ReportHealthCheckWorker,
-    PushMetricsWorker,
-    CheckSelfUpdateWorker,
-    PullVpnConfigWorker
+    ReportExecutionWorker
   ]
 
   @doc "Every worker module, in registry order."

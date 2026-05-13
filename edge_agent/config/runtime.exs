@@ -2,6 +2,8 @@
 import Config
 import EdgeAgent.Config
 
+alias EdgeAgent.LocalScheduler.Tasks
+
 # Optional environment variables with defaults
 data_dir = get_env("DATA_DIR", :string, "/app/data")
 
@@ -32,6 +34,39 @@ check_self_update_schedule = get_env("CHECK_SELF_UPDATE_SCHEDULE", :string, "0 *
 push_metrics_schedule = get_env("PUSH_METRICS_SCHEDULE", :string, "*/2 * * * *")
 pull_vpn_config_schedule = get_env("PULL_VPN_CONFIG_SCHEDULE", :string, "0 0 * * *")
 
+# --- LocalScheduler (Quantum) ---
+#
+# In-process cron for stateless, idempotent housekeeping. Avoids writing an
+# `oban_jobs` row per tick on the agent's SQLite — the same pattern admin uses
+# with its `EdgeAdmin.LocalScheduler`.
+config :edge_agent, EdgeAgent.LocalScheduler,
+  jobs: [
+    discover_admins: [
+      schedule: discover_admins_schedule,
+      task: {Tasks, :discover_admins, []}
+    ],
+    report_health_check: [
+      schedule: report_health_check_schedule,
+      task: {Tasks, :report_health_check, []}
+    ],
+    sync_unprocessed_executions: [
+      schedule: sync_executions_schedule,
+      task: {Tasks, :sync_unprocessed_executions, []}
+    ],
+    push_metrics: [
+      schedule: push_metrics_schedule,
+      task: {Tasks, :push_metrics, []}
+    ],
+    check_self_update: [
+      schedule: check_self_update_schedule,
+      task: {Tasks, :check_self_update, []}
+    ],
+    pull_vpn_config: [
+      schedule: pull_vpn_config_schedule,
+      task: {Tasks, :pull_vpn_config, []}
+    ]
+  ]
+
 config :edge_agent, EdgeAgentWeb.Endpoint,
   http: [
     ip: {0, 0, 0, 0, 0, 0, 0, 0},
@@ -46,13 +81,7 @@ config :edge_agent, Oban,
   queues: [
     enqueue_executions: 1,
     execute_command: [limit: 10],
-    report_executions: 1,
-    sync_executions: 1,
-    report_health_check: 1,
-    discover_admins: 1,
-    check_self_update: 1,
-    push_metrics: 1,
-    pull_vpn_config: 1
+    report_executions: 1
   ],
   plugins: [
     {Oban.Plugins.Cron,
@@ -60,19 +89,7 @@ config :edge_agent, Oban,
        # Enqueue pending command executions
        {enqueue_executions_schedule, EdgeAgent.Commands.Workers.EnqueueExecutionWorker},
        # Report completed executions to admin (safety net)
-       {report_executions_schedule, EdgeAgent.Commands.Workers.ReportExecutionWorker},
-       # Sync unprocessed executions from admin (HTTP fallback mode)
-       {sync_executions_schedule, EdgeAgent.Commands.Workers.SyncUnprocessedExecutionWorker},
-       # Report node health to admin (HTTP fallback mode)
-       {report_health_check_schedule, EdgeAgent.EdgeClusters.Workers.ReportHealthCheckWorker},
-       # Probe VPN for admin peers
-       {discover_admins_schedule, EdgeAgent.EdgeClusters.Workers.DiscoverAdminWorker},
-       # Poll admin for self-update requests (HTTP fallback mode)
-       {check_self_update_schedule, EdgeAgent.SelfUpdates.Workers.CheckSelfUpdateWorker},
-       # Push metrics to admin (HTTP fallback mode)
-       {push_metrics_schedule, EdgeAgent.Metrics.Workers.PushMetricsWorker},
-       # Pull full VPN config from Netmaker (safety net for MQTT message loss / daemon-restart DNS loss)
-       {pull_vpn_config_schedule, EdgeAgent.Vpn.Workers.PullVpnConfigWorker}
+       {report_executions_schedule, EdgeAgent.Commands.Workers.ReportExecutionWorker}
      ]},
     Oban.Plugins.Lifeline,
     {Oban.Plugins.Pruner, max_age: 3_600}

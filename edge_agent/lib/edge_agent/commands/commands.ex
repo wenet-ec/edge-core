@@ -561,7 +561,7 @@ defmodule EdgeAgent.Commands do
 
   Used by:
   - Bootstrap (initial sync on startup)
-  - SyncUnprocessedExecutionWorker (periodic sync when using HTTP fallback)
+  - `EdgeAgent.LocalScheduler.Tasks.sync_unprocessed_executions/0` (periodic sync when using HTTP fallback)
 
   ## Flow
   1. Fetch "sent" executions → store locally (already acknowledged)

@@ -89,7 +89,8 @@ defmodule EdgeAgent.SelfUpdates do
 
     Logger.info("Calling Watchtower service at #{update_endpoint}")
 
-    # Make GET request to Watchtower with Bearer token (10 second timeout)
+    # POST to Watchtower's POST-only /v1/update with Bearer token (10s timeout).
+    # Empty body; image filters would travel as query params if we needed them.
     headers =
       if api_token == "" do
         []
@@ -97,7 +98,7 @@ defmodule EdgeAgent.SelfUpdates do
         [{"authorization", "Bearer #{api_token}"}]
       end
 
-    case Req.get(update_endpoint, headers: headers, receive_timeout: 10_000, retry: false) do
+    case Req.post(update_endpoint, headers: headers, receive_timeout: 10_000, retry: false) do
       {:ok, %{status: 200, body: body}} ->
         Logger.info("Self-update triggered successfully")
         {:ok, body}

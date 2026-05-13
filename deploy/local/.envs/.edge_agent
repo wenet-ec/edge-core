@@ -137,4 +137,4 @@ ALIASES=test
 #     - edge_agent_data:/app/data
 #
 # DATA_DIR=/app/data
-# DB_POOL_SIZE=5
+# DB_POOL_SIZE=10

@@ -723,6 +723,8 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec delete_node(Node.t()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
   def delete_node(%Node{} = node) do
+    node = Repo.preload(node, :cluster)
+
     # 1. Clean up DNS records (aliases) from Netmaker (best-effort, outside main flow)
     cleanup_node_aliases(node)
 
@@ -730,17 +732,61 @@ defmodule EdgeAdmin.Nodes do
     case Vpn.delete_host(node.netmaker_host_id) do
       {:ok, _} ->
         Logger.info("Deleted host #{node.netmaker_host_id} from Netmaker")
+        sweep_orphan_netmaker_nodes(node)
         delete_node_from_db(node)
 
       {:error, :not_found} ->
         # Host already gone - continue with DB deletion
         Logger.info("Netmaker host #{node.netmaker_host_id} already deleted")
+        sweep_orphan_netmaker_nodes(node)
         delete_node_from_db(node)
 
       {:error, :service_unavailable} = error ->
         # Netmaker failed - stop operation
         Logger.error("Failed to delete Netmaker host #{node.netmaker_host_id}, aborting node deletion")
         error
+    end
+  end
+
+  # Defends against a Netmaker bug: `RemoveHost` (logic/hosts.go) iterates the
+  # cached `host.Nodes` slice instead of querying the nodes table by host_id.
+  # Node rows that drifted out of that cache (e.g. enroll racing with delete)
+  # survive the host delete and remain visible in peer pulls as dead allowed-ips.
+  #
+  # After deleting the host, list the network's nodes and force-delete any whose
+  # `hostid` still matches the host we just removed. The per-node delete endpoint
+  # routes through `DeleteNode(purge=true)` which keys off node_id directly and
+  # skips the broken read path.
+  #
+  # Best-effort; failures are logged. The periodic reconciler is the backstop.
+  defp sweep_orphan_netmaker_nodes(%Node{cluster: %Ecto.Association.NotLoaded{}}), do: :ok
+
+  defp sweep_orphan_netmaker_nodes(%Node{} = node) do
+    network_name = node_network_name(node.cluster)
+
+    case Vpn.list_nodes(network_name) do
+      {:ok, nm_nodes} ->
+        nm_nodes
+        |> Enum.filter(fn nm_node -> nm_node["hostid"] == node.netmaker_host_id end)
+        |> Enum.each(fn nm_node -> delete_orphan_node(network_name, nm_node, node.netmaker_host_id) end)
+
+      {:error, reason} ->
+        Logger.warning("Orphan sweep: could not list Netmaker nodes for #{network_name}: #{inspect(reason)}")
+    end
+  end
+
+  defp delete_orphan_node(network_name, nm_node, host_id) do
+    node_id = nm_node["id"]
+
+    case Vpn.delete_node(network_name, node_id) do
+      {:ok, _} ->
+        Logger.warning("Orphan sweep: removed Netmaker node #{node_id} (host #{host_id}) from #{network_name}")
+
+      {:error, :not_found} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Orphan sweep: failed to remove Netmaker node #{node_id} from #{network_name}: #{inspect(reason)}")
     end
   end
 
@@ -1633,13 +1679,27 @@ defmodule EdgeAdmin.Nodes do
     end
   end
 
-  defp reconcile_cluster_nodes(cluster, db_nodes, _netmaker_nodes, expected_host_ids, actual_host_ids) do
+  defp reconcile_cluster_nodes(cluster, db_nodes, netmaker_nodes, expected_host_ids, actual_host_ids) do
+    network_name = node_network_name(cluster)
+
+    # Fetched up front: used both for orphan-node detection (node rows whose
+    # `hostid` no longer matches any host record in this network) and for
+    # admin-* filtering in the rogue-eviction branch below.
+    host_hostname_map =
+      case Vpn.list_hosts(network_name) do
+        {:ok, hosts} -> Map.new(hosts, fn h -> {h["id"], h["name"] || ""} end)
+        {:error, _} -> %{}
+      end
+
+    live_host_ids = host_hostname_map |> Map.keys() |> MapSet.new()
+    orphan_swept = sweep_orphan_nodes_in_network(netmaker_nodes, live_host_ids, network_name)
+
     orphaned_in_db = MapSet.difference(expected_host_ids, actual_host_ids)
     orphaned_nodes = Enum.filter(db_nodes, fn node -> node.netmaker_host_id in orphaned_in_db end)
 
     aliases_cleaned = cleanup_orphaned_aliases(orphaned_nodes)
     {deleted, unenrolled_host_ids} = delete_orphaned_nodes(orphaned_nodes)
-    added = add_missing_nodes(unenrolled_host_ids, node_network_name(cluster), cluster.name)
+    added = add_missing_nodes(unenrolled_host_ids, network_name, cluster.name)
 
     extra_in_netmaker = MapSet.difference(actual_host_ids, expected_host_ids)
 
@@ -1651,22 +1711,15 @@ defmodule EdgeAdmin.Nodes do
     managed_extra = MapSet.intersection(extra_in_netmaker, all_db_host_ids)
     unmanaged_extra = MapSet.difference(extra_in_netmaker, all_db_host_ids)
 
-    removed = remove_extra_nodes(managed_extra, node_network_name(cluster), cluster.name)
+    removed = remove_extra_nodes(managed_extra, network_name, cluster.name)
 
     evicted =
       if Application.get_env(:edge_admin, :evict_rogue_hosts, true) do
-        # Build hostname map from actual host objects (hosts have "name"; node objects do not)
-        host_hostname_map =
-          case Vpn.list_hosts(node_network_name(cluster)) do
-            {:ok, hosts} -> Map.new(hosts, fn h -> {h["id"], h["name"] || ""} end)
-            {:error, _} -> %{}
-          end
-
-        evict_rogue_hosts(unmanaged_extra, host_hostname_map, node_network_name(cluster), cluster.name)
+        evict_rogue_hosts(unmanaged_extra, host_hostname_map, network_name, cluster.name)
       else
         if not MapSet.equal?(unmanaged_extra, MapSet.new()) do
           Logger.info(
-            "Reconciliation: #{MapSet.size(unmanaged_extra)} unrecognized host(s) in #{node_network_name(cluster)} — eviction disabled (EVICT_ROGUE_HOSTS=false)"
+            "Reconciliation: #{MapSet.size(unmanaged_extra)} unrecognized host(s) in #{network_name} — eviction disabled (EVICT_ROGUE_HOSTS=false)"
           )
         end
 
@@ -1676,9 +1729,50 @@ defmodule EdgeAdmin.Nodes do
     %{
       added: added,
       removed: removed,
-      deleted: deleted + evicted,
+      deleted: deleted + evicted + orphan_swept,
       aliases_cleaned: aliases_cleaned
     }
+  end
+
+  # Heals the upstream Netmaker bug (`RemoveHost` iterating the cached
+  # `host.Nodes` slice): a node row can survive a host delete and remain
+  # visible to peer pulls as a dead allowed-ip. Detection: `node["hostid"]`
+  # references a host that no longer exists in the network's `list_hosts`
+  # response. Cleanup: force-delete by `(network, node_id)`, which routes
+  # through `DeleteNode(purge=true)` and skips the broken read path.
+  #
+  # The synchronous sweep in `delete_node/1` covers the originating case;
+  # this is the backstop for orphans created before that fix shipped or by
+  # paths outside `delete_node/1` (e.g. UI deletes hitting Netmaker directly).
+  defp sweep_orphan_nodes_in_network(netmaker_nodes, live_host_ids, network_name) do
+    netmaker_nodes
+    |> Enum.filter(fn nm_node ->
+      host_id = nm_node["hostid"]
+      is_binary(host_id) and not MapSet.member?(live_host_ids, host_id)
+    end)
+    |> Enum.reduce(0, fn nm_node, count ->
+      node_id = nm_node["id"]
+      host_id = nm_node["hostid"]
+
+      case Vpn.delete_node(network_name, node_id) do
+        {:ok, _} ->
+          Logger.warning(
+            "Reconciliation: swept orphan node #{node_id} (dangling hostid #{host_id}) from #{network_name}"
+          )
+
+          count + 1
+
+        {:error, :not_found} ->
+          count
+
+        {:error, reason} ->
+          Logger.error(
+            "Reconciliation: failed to sweep orphan node #{node_id} from #{network_name}: #{inspect(reason)}"
+          )
+
+          count
+      end
+    end)
   end
 
   defp add_missing_nodes(host_ids, network_name, cluster_name) do

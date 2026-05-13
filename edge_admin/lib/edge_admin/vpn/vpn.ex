@@ -931,6 +931,26 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
+  Force-deletes a Netmaker node by (network, node_id), routing through Netmaker's
+  per-node delete endpoint instead of the host endpoint.
+
+  Used as a defensive sweep after `delete_host/1` to remove orphan node rows
+  whose `hostid` still references a host that was just deleted. Netmaker's
+  `RemoveHost` iterates a cached `host.Nodes` slice and misses node rows that
+  drifted out of that cache (e.g. enroll racing with delete), leaving them in
+  the nodes table and visible to peer pulls.
+
+  Returns `{:ok, response}`, `{:error, :not_found}`, or `{:error, :service_unavailable}`.
+  """
+  @spec delete_node(String.t(), String.t()) ::
+          {:ok, map()} | {:error, :not_found | :service_unavailable}
+  def delete_node(network_name, node_id) do
+    network_name
+    |> Nodes.delete(node_id)
+    |> normalize_netmaker_error()
+  end
+
+  @doc """
   Creates an enrollment key for a Netmaker network.
 
   Returns `{:ok, key}` or `{:error, :service_unavailable}`.

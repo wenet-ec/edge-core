@@ -38,7 +38,7 @@ defmodule EdgeAgent.ProxyServers.Authentication do
   end
 
   defp authenticate_credentials(username, password) do
-    case Settings.get("proxy_password") do
+    case Settings.get_proxy_password() do
       nil ->
         Logger.warning("Proxy authentication failed: no password configured")
         {:error, :no_password_configured}

@@ -1,206 +1,105 @@
 # edge_agent/lib/edge_agent/settings/settings.ex
 defmodule EdgeAgent.Settings do
   @moduledoc """
-  Simple key-value settings storage for agent configuration.
+  Public API for agent-side settings.
 
-  This module provides a persistent key-value store backed by the database for
-  storing agent configuration and runtime state. Settings persist across restarts
-  and are used for identity, authentication, and admin discovery.
+  Settings come in two flavours, each backed by its own engine:
 
-  ## Key Concepts
+  - **Config** — durable, sqlite-backed key-value. Survives restarts. Used for
+    identity and discovery state (node_id, admin_urls, enrollment_verified,
+    etc.). Engine: `EdgeAgent.Settings.Configs`.
+  - **Secret** — session-scoped, in-memory via `:persistent_term`. Lives for
+    the lifetime of the BEAM and is repopulated by bootstrap on the next
+    start. Used for the API token and proxy password. Engine:
+    `EdgeAgent.Settings.Secrets`.
 
-  - **Key-Value Store**: Simple string key → string value mapping
-  - **Database Persistence**: All settings stored in `settings` table
-  - **Typed Accessors**: Convenience functions for common settings (node_id, api_token, etc.)
-  - **JSON Encoding**: Complex values (lists) stored as JSON strings
-
-  ## Common Settings
-
-  - `node_id` - Agent's unique node identifier (UUID)
-  - `id_type` - Type of ID ("persistent" or "random")
-  - `api_token` - JWT token for authenticating with admin API
-  - `proxy_password` - Password for proxy server authentication
-  - `admin_urls` - JSON-encoded list of admin server URLs (discovered via VPN)
-
-  ## Architecture
-
-  Settings are stored in a simple schema:
-  ```
-  CREATE TABLE settings (
-    id BLOB PRIMARY KEY,            -- binary UUID
-    key TEXT NOT NULL,              -- UNIQUE INDEX
-    value TEXT NOT NULL,
-    inserted_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL
-  );
-  ```
-
-  The module provides:
-  - Generic `get/2`, `set/2`, `delete/1` functions
-  - Typed accessors for common settings (`get_node_id/0`, `set_api_token/1`, etc.)
-  - Upsert semantics via `INSERT ... ON CONFLICT(key) DO UPDATE` — concurrent
-    `set/2` calls on the same key are safe and the last writer wins.
+  Generic accessors (`get_config/2`, `set_config/2`, `get_secret/2`,
+  `set_secret/2`) exist mainly for tests and the typed accessors below.
+  Application code should prefer the typed accessors (`get_api_token/0`,
+  `get_admin_urls/0`, etc.) so the engine choice for each well-known key
+  cannot be mistaken at the call site.
 
   ## Examples
 
-      # Generic key-value access
-      iex> Settings.set("custom_key", "custom_value")
-      {:ok, %Setting{}}
-      iex> Settings.get("custom_key")
+      # Typed accessors (preferred)
+      iex> Settings.set_node_id("a1b2c3d4-...")
+      iex> Settings.get_node_id()
+      "a1b2c3d4-..."
+
+      iex> Settings.set_api_token("tok-abc")
+      iex> Settings.get_api_token()
+      "tok-abc"
+
+      # Generic accessors
+      iex> Settings.set_config("custom_key", "custom_value")
+      iex> Settings.get_config("custom_key")
       "custom_value"
 
-      # Typed accessors
-      iex> Settings.set_node_id("a1b2c3d4-e5f6-7081-92a3-b4c5d6e7f809")
-      {:ok, %Setting{}}
-      iex> Settings.get_node_id()
-      "a1b2c3d4-e5f6-7081-92a3-b4c5d6e7f809"
-
-      # Admin URLs (stored as JSON)
-      iex> Settings.set_admin_urls(["http://admin1:44000", "http://admin2:44000"])
-      {:ok, %Setting{}}
-      iex> Settings.get_admin_urls()
-      ["http://admin1:44000", "http://admin2:44000"]
-
-      # Check existence
-      iex> Settings.has_key?("node_id")
-      true
-
-      # Get all settings
-      iex> Settings.all()
-      %{"node_id" => "...", "api_token" => "...", ...}
+      iex> Settings.set_secret("custom_secret", "shhh")
+      iex> Settings.get_secret("custom_secret")
+      "shhh"
   """
 
-  import Ecto.Query, warn: false
-
-  alias EdgeAgent.Repo
+  alias EdgeAgent.Settings.Configs
   alias EdgeAgent.Settings.Schemas.Setting
-
-  @doc """
-  Get a setting value by key.
-
-  Returns the value if found, otherwise returns the default.
-  """
-  @spec get(String.t()) :: String.t() | nil
-  @spec get(String.t(), default) :: String.t() | default when default: any()
-  def get(key, default \\ nil) do
-    case Repo.get_by(Setting, key: key) do
-      %Setting{value: value} -> value
-      nil -> default
-    end
-  end
-
-  @doc """
-  Set a setting value by key.
-
-  Atomic upsert via `INSERT ... ON CONFLICT(key) DO UPDATE`. Safe under
-  concurrent callers writing the same key — last writer wins.
-  """
-  @spec set(String.t(), String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
-  def set(key, value) do
-    %Setting{}
-    |> Setting.changeset(%{key: key, value: value})
-    |> Repo.insert(
-      on_conflict: [set: [value: value, updated_at: DateTime.utc_now(:second)]],
-      conflict_target: :key
-    )
-  end
-
-  @doc """
-  Delete a setting by key.
-
-  Returns `{:ok, nil}` if key doesn't exist, `{:ok, setting}` if deleted successfully.
-  """
-  @spec delete(String.t()) :: {:ok, Setting.t() | nil} | {:error, Ecto.Changeset.t()}
-  def delete(key) do
-    case Repo.get_by(Setting, key: key) do
-      nil -> {:ok, nil}
-      setting -> Repo.delete(setting)
-    end
-  end
-
-  @doc """
-  Check if a setting key exists.
-  """
-  @spec has_key?(String.t()) :: boolean()
-  def has_key?(key) do
-    Setting
-    |> where([s], s.key == ^key)
-    |> Repo.exists?()
-  end
-
-  @doc """
-  Get all settings as a map.
-
-  Returns a map with keys as setting names and values as setting values.
-  """
-  @spec all() :: %{String.t() => String.t()}
-  def all do
-    Setting
-    |> Repo.all()
-    |> Map.new(fn %Setting{key: key, value: value} -> {key, value} end)
-  end
+  alias EdgeAgent.Settings.Secrets
 
   # =============================================================================
-  # Typed Setting Accessors
+  # Generic Config (sqlite)
   # =============================================================================
 
-  @doc """
-  Get the node ID.
-  """
+  @spec get_config(String.t()) :: String.t() | nil
+  @spec get_config(String.t(), default) :: String.t() | default when default: any()
+  def get_config(key, default \\ nil), do: Configs.get(key, default)
+
+  @spec set_config(String.t(), String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
+  def set_config(key, value), do: Configs.set(key, value)
+
+  @spec delete_config(String.t()) :: {:ok, Setting.t() | nil} | {:error, Ecto.Changeset.t()}
+  def delete_config(key), do: Configs.delete(key)
+
+  @spec has_config?(String.t()) :: boolean()
+  def has_config?(key), do: Configs.has_key?(key)
+
+  @spec all_configs() :: %{String.t() => String.t()}
+  def all_configs, do: Configs.all()
+
+  # =============================================================================
+  # Generic Secret (persistent_term)
+  # =============================================================================
+
+  @spec get_secret(String.t()) :: String.t() | nil
+  @spec get_secret(String.t(), default) :: String.t() | default when default: any()
+  def get_secret(key, default \\ nil), do: Secrets.get(key, default)
+
+  @spec set_secret(String.t(), String.t()) :: :ok
+  def set_secret(key, value), do: Secrets.set(key, value)
+
+  @spec delete_secret(String.t()) :: :ok
+  def delete_secret(key), do: Secrets.delete(key)
+
+  @spec has_secret?(String.t()) :: boolean()
+  def has_secret?(key), do: Secrets.has_key?(key)
+
+  # =============================================================================
+  # Typed Accessors — Config (durable)
+  # =============================================================================
+
   @spec get_node_id() :: String.t() | nil
-  def get_node_id, do: get("node_id")
+  def get_node_id, do: get_config("node_id")
 
-  @doc """
-  Set the node ID.
-  """
   @spec set_node_id(String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
-  def set_node_id(value), do: set("node_id", value)
+  def set_node_id(value), do: set_config("node_id", value)
 
-  @doc """
-  Get the node ID type (persistent or random).
-  """
   @spec get_id_type() :: String.t() | nil
-  def get_id_type, do: get("id_type")
+  def get_id_type, do: get_config("id_type")
 
-  @doc """
-  Set the node ID type.
-  """
   @spec set_id_type(String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
-  def set_id_type(value), do: set("id_type", value)
+  def set_id_type(value), do: set_config("id_type", value)
 
-  @doc """
-  Get the API token for admin authentication.
-  """
-  @spec get_api_token() :: String.t() | nil
-  def get_api_token, do: get("api_token")
-
-  @doc """
-  Set the API token.
-  """
-  @spec set_api_token(String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
-  def set_api_token(value), do: set("api_token", value)
-
-  @doc """
-  Get the proxy password.
-  """
-  @spec get_proxy_password() :: String.t() | nil
-  def get_proxy_password, do: get("proxy_password")
-
-  @doc """
-  Set the proxy password.
-  """
-  @spec set_proxy_password(String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
-  def set_proxy_password(value), do: set("proxy_password", value)
-
-  @doc """
-  Get admin URLs as a list.
-
-  Returns a list of admin URL strings, or empty list if not set.
-  The URLs are stored as a JSON-encoded string.
-  """
   @spec get_admin_urls() :: [String.t()]
   def get_admin_urls do
-    case get("admin_urls") do
+    case get_config("admin_urls") do
       nil ->
         []
 
@@ -212,44 +111,24 @@ defmodule EdgeAgent.Settings do
     end
   end
 
-  @doc """
-  Set admin URLs.
-
-  Accepts a list of URL strings and stores them as JSON.
-  """
   @spec set_admin_urls([String.t()]) ::
           {:ok, Setting.t()} | {:error, Ecto.Changeset.t() | String.t()}
   def set_admin_urls(urls) when is_list(urls) do
     case Jason.encode(urls) do
-      {:ok, json} -> set("admin_urls", json)
+      {:ok, json} -> set_config("admin_urls", json)
       {:error, _} -> {:error, "Failed to encode admin URLs"}
     end
   end
 
-  @doc """
-  Get the Netmaker enrollment key for VPN join.
-
-  Stored after a successful admin enrollment key verification so the agent
-  can rejoin the VPN on restart without re-verifying.
-  """
   @spec get_netmaker_key() :: String.t() | nil
-  def get_netmaker_key, do: get("netmaker_key")
+  def get_netmaker_key, do: get_config("netmaker_key")
 
-  @doc """
-  Set the Netmaker enrollment key.
-  """
   @spec set_netmaker_key(String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
-  def set_netmaker_key(value), do: set("netmaker_key", value)
+  def set_netmaker_key(value), do: set_config("netmaker_key", value)
 
-  @doc """
-  Get the last self-update check timestamp.
-
-  Returns a DateTime when the agent last checked for self-updates,
-  or nil if never checked.
-  """
   @spec get_last_check_self_update_at() :: DateTime.t() | nil
   def get_last_check_self_update_at do
-    case get("last_check_self_update_at") do
+    case get_config("last_check_self_update_at") do
       nil ->
         nil
 
@@ -261,36 +140,26 @@ defmodule EdgeAgent.Settings do
     end
   end
 
-  @doc """
-  Get whether enrollment has been verified.
+  @spec set_last_check_self_update_at(DateTime.t()) ::
+          {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
+  def set_last_check_self_update_at(%DateTime{} = datetime) do
+    iso_string = DateTime.to_iso8601(datetime)
+    set_config("last_check_self_update_at", iso_string)
+  end
 
-  Returns true if the agent has successfully verified an enrollment key and
-  joined the VPN at least once. Used to skip re-verification on restarts
-  when the VPN connection is still healthy.
-  """
   @spec get_enrollment_verified() :: boolean()
   def get_enrollment_verified do
-    get("enrollment_verified") == "true"
+    get_config("enrollment_verified") == "true"
   end
 
-  @doc """
-  Set whether enrollment has been verified.
-  """
   @spec set_enrollment_verified(boolean()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
   def set_enrollment_verified(value) when is_boolean(value) do
-    set("enrollment_verified", to_string(value))
+    set_config("enrollment_verified", to_string(value))
   end
 
-  @doc """
-  Get admin fallback URLs as a list.
-
-  These are the URLs embedded in the enrollment key blob and stored on first
-  successful verify. Used when VPN is down and no admin URLs are in Settings.
-  Falls back to empty list if not set.
-  """
   @spec get_admin_fallback_urls() :: [String.t()]
   def get_admin_fallback_urls do
-    case get("admin_fallback_urls") do
+    case get_config("admin_fallback_urls") do
       nil ->
         []
 
@@ -302,52 +171,36 @@ defmodule EdgeAgent.Settings do
     end
   end
 
-  @doc """
-  Set admin fallback URLs.
-
-  Stores the URLs from the enrollment key blob so the agent can reach admin
-  when VPN is down.
-  """
   @spec set_admin_fallback_urls([String.t()]) ::
           {:ok, Setting.t()} | {:error, Ecto.Changeset.t() | String.t()}
   def set_admin_fallback_urls(urls) when is_list(urls) do
     case Jason.encode(urls) do
-      {:ok, json} -> set("admin_fallback_urls", json)
+      {:ok, json} -> set_config("admin_fallback_urls", json)
       {:error, _} -> {:error, "Failed to encode admin fallback URLs"}
     end
   end
 
-  @doc """
-  Get the DERP map server URL pushed down from admin at registration.
-
-  Returns the URL string if set, nil otherwise.
-  """
   @spec get_derp_map_url() :: String.t() | nil
-  def get_derp_map_url, do: get("derp_map_url")
+  def get_derp_map_url, do: get_config("derp_map_url")
 
-  @doc """
-  Set the DERP map server URL.
-
-  Pass nil to clear (admin has no DERP map configured).
-  """
   @spec set_derp_map_url(String.t() | nil) ::
           {:ok, Setting.t()} | {:error, Ecto.Changeset.t() | String.t()}
-  def set_derp_map_url(nil), do: delete("derp_map_url")
-  def set_derp_map_url(url) when is_binary(url), do: set("derp_map_url", url)
+  def set_derp_map_url(nil), do: delete_config("derp_map_url")
+  def set_derp_map_url(url) when is_binary(url), do: set_config("derp_map_url", url)
 
-  @doc """
-  Set the last self-update check timestamp.
+  # =============================================================================
+  # Typed Accessors — Secret (session-scoped)
+  # =============================================================================
 
-  Stores the datetime when the agent last checked for self-updates.
-  Accepts a DateTime struct and stores it as an ISO8601 string.
+  @spec get_api_token() :: String.t() | nil
+  def get_api_token, do: get_secret("api_token")
 
-  Note: Always pass `DateTime.truncate(DateTime.utc_now(), :second)` to ensure
-  second precision matching admin's `:utc_datetime` format.
-  """
-  @spec set_last_check_self_update_at(DateTime.t()) ::
-          {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
-  def set_last_check_self_update_at(%DateTime{} = datetime) do
-    iso_string = DateTime.to_iso8601(datetime)
-    set("last_check_self_update_at", iso_string)
-  end
+  @spec set_api_token(String.t()) :: :ok
+  def set_api_token(value), do: set_secret("api_token", value)
+
+  @spec get_proxy_password() :: String.t() | nil
+  def get_proxy_password, do: get_secret("proxy_password")
+
+  @spec set_proxy_password(String.t()) :: :ok
+  def set_proxy_password(value), do: set_secret("proxy_password", value)
 end

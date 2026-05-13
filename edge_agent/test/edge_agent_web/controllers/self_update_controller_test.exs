@@ -7,7 +7,7 @@ defmodule EdgeAgentWeb.Controllers.SelfUpdateControllerTest do
   @token "test-api-token"
 
   setup do
-    {:ok, _} = Settings.set_api_token(@token)
+    :ok = Settings.set_api_token(@token)
     :ok
   end
 

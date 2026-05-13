@@ -48,7 +48,7 @@ defmodule EdgeAgent.ProxyServers.AuthenticationTest do
 
   describe "authenticate/2 — auth enabled, password configured" do
     setup do
-      {:ok, _} = Settings.set("proxy_password", "s3cr3t!")
+      :ok = Settings.set_proxy_password("s3cr3t!")
       :ok
     end
 

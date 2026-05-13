@@ -32,7 +32,7 @@ defmodule EdgeAgentWeb.Plugs.ApiTokenAuthTest do
 
   describe "call/2 — token configured in Settings" do
     setup do
-      {:ok, _} = Settings.set_api_token("secret-agent-token")
+      :ok = Settings.set_api_token("secret-agent-token")
       :ok
     end
 

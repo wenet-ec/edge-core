@@ -33,6 +33,23 @@ defmodule EdgeAgent.DataCase do
 
   setup tags do
     EdgeAgent.DataCase.setup_sandbox(tags)
+    EdgeAgent.DataCase.reset_secrets()
+    :ok
+  end
+
+  @doc """
+  Erases every `EdgeAgent.Settings.Secrets`-owned persistent term.
+
+  Secrets live in BEAM-global `:persistent_term`, outside the Ecto sandbox.
+  Without this reset, a secret written by one test would leak into the next.
+  """
+  def reset_secrets do
+    namespace = EdgeAgent.Settings.Secrets
+
+    for {{^namespace, _key} = full_key, _value} <- :persistent_term.get() do
+      :persistent_term.erase(full_key)
+    end
+
     :ok
   end
 

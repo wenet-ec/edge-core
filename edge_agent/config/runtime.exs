@@ -8,7 +8,7 @@ data_dir = get_env("DATA_DIR", :string, "/app/data")
 config :edge_agent, EdgeAgent.Repo,
   database: "#{data_dir}/agent/edge_agent.db",
   pool_size: get_env("DB_POOL_SIZE", :integer, 10),
-  busy_timeout: 5_000,
+  busy_timeout: 30_000,
   queue_target: 100,
   queue_interval: 2_000
 
@@ -75,7 +75,7 @@ config :edge_agent, Oban,
        {pull_vpn_config_schedule, EdgeAgent.Vpn.Workers.PullVpnConfigWorker}
      ]},
     Oban.Plugins.Lifeline,
-    {Oban.Plugins.Pruner, max_age: 86_400}
+    {Oban.Plugins.Pruner, max_age: 3_600}
   ]
 
 # Proxy server per-operation timeouts (in milliseconds)

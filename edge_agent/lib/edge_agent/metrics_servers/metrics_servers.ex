@@ -14,9 +14,24 @@ defmodule EdgeAgent.MetricsServers do
   query `servers_status/0` to detect this state, which will return `:error`
   when the auto-start failed.
 
-  Exporter pids/ports are tracked independently. A crash of one exporter
-  triggers cleanup of the other, so we never leak a still-running process
-  whose pid we forgot.
+  ## Self-healing
+
+  A `:check_health` timer fires every `@check_health_interval_ms` and runs
+  `check_status/1` against OS reality (tracked PID still alive via
+  `kill -0`; if not, port-rediscover via `ss` / `pgrep`). If both exporters
+  are gone, the timer respawns them.
+
+  This protects against two real failure modes seen in production:
+  - Host reboot leaves the GenServer with stale PIDs that no longer
+    correspond to the post-boot exporter processes (the `init/1` spawn
+    succeeds but PID discovery raced and recorded the wrong PID).
+  - A spurious `{:exit_status, _}` port message tears down tracked state
+    while the OS process is actually still alive — reconciliation
+    re-adopts via port probe instead of staying permanently `:stopped`.
+
+  Exit-signal handlers (`handle_node_exporter_down/1` etc.) clear ONLY
+  the affected exporter's tracked state — they no longer tear down the
+  sibling. The reconciler handles recovery.
   """
 
   @behaviour EdgeAgent.MetricsServers.Behaviour
@@ -28,6 +43,12 @@ defmodule EdgeAgent.MetricsServers do
   alias EdgeAgent.MetricsServers.ProcessSupervisor
 
   require Logger
+
+  # Periodic liveness reconciliation. Runs in addition to the on-demand
+  # `servers_status/0` path so the GenServer self-heals (port-rediscovers
+  # an orphaned exporter we lost track of, or respawns if both are gone)
+  # even when nothing is asking.
+  @check_health_interval_ms 30_000
 
   # Client API
   @impl EdgeAgent.MetricsServers.Behaviour
@@ -82,15 +103,27 @@ defmodule EdgeAgent.MetricsServers do
       primary_interface_ip: nil
     }
 
-    case do_start_servers(state) do
-      {:ok, new_state} ->
-        Logger.info("Host metrics servers started successfully on port #{new_state.host_metrics_port}")
-        {:ok, new_state}
+    result =
+      case do_start_servers(state) do
+        {:ok, new_state} ->
+          Logger.info("Host metrics servers started successfully on port #{new_state.host_metrics_port}")
+          {:ok, new_state}
 
-      {:error, reason, new_state} ->
-        Logger.error("Failed to auto-start host metrics servers: #{inspect(reason)}")
-        {:ok, new_state}
-    end
+        {:error, reason, new_state} ->
+          Logger.error("Failed to auto-start host metrics servers: #{inspect(reason)}")
+          {:ok, new_state}
+      end
+
+    # Best-effort flush of the init-time Logger backlog. Under releases, the
+    # `:logger` handler attaches synchronously but its console handler can
+    # still buffer the first few writes before the IO group leader stabilises,
+    # so these Logger.info/error lines occasionally never reach docker logs
+    # at all. Flushing here makes them appear in stdout. Safe no-op if the
+    # backend is already drained.
+    _ = Logger.flush()
+
+    schedule_check_health()
+    result
   end
 
   @impl true
@@ -210,6 +243,33 @@ defmodule EdgeAgent.MetricsServers do
   end
 
   @impl true
+  def handle_info(:check_health, state) do
+    {_status, new_state} = check_status(state)
+
+    recovered_state =
+      if new_state.status == :stopped and
+           is_nil(new_state.node_exporter_pid) and
+           is_nil(new_state.wireguard_exporter_pid) do
+        Logger.warning("Metrics exporters not running — attempting auto-recovery")
+
+        case do_start_servers(new_state) do
+          {:ok, started_state} ->
+            Logger.info("Auto-recovery succeeded; metrics exporters back online")
+            started_state
+
+          {:error, reason, errored_state} ->
+            Logger.error("Auto-recovery failed: #{inspect(reason)} — will retry next interval")
+            errored_state
+        end
+      else
+        new_state
+      end
+
+    schedule_check_health()
+    {:noreply, recovered_state}
+  end
+
+  @impl true
   def terminate(_reason, state) do
     if state.node_exporter_pid != nil or state.wireguard_exporter_pid != nil do
       Logger.info("Cleaning up metrics exporter processes on shutdown...")
@@ -310,52 +370,107 @@ defmodule EdgeAgent.MetricsServers do
     end
   end
 
+  # Reconciles state with OS reality. Replaces the previous sticky logic that
+  # short-circuited on `state.status != :running`, which left the GenServer
+  # permanently reporting `:stopped` after a single transient `kill -0`
+  # failure (e.g. fork EAGAIN under boot-time fork pressure, or a pgrep race
+  # that picked a short-lived PID).
+  #
+  # For each exporter we:
+  #   1. Trust the tracked PID if it's still alive.
+  #   2. If tracked PID is missing or dead, port-rediscover via
+  #      `ProcessSupervisor.discover_pid_by_port/3`. If we find a live
+  #      exporter we didn't spawn, adopt it (port_ref stays `nil` — orphan
+  #      adoptions can't receive `{:exit_status, _}` notifications, but the
+  #      periodic `:check_health` re-probes anyway, so no liveness gap).
+  #   3. If neither path yields a live process, declare it down.
   defp check_status(state) do
-    status =
-      cond do
-        state.status != :running ->
-          state.status
+    {node_alive?, node_pid, node_port_ref} =
+      reconcile_exporter(
+        state.node_exporter_pid,
+        state.node_exporter_port_ref,
+        state.host_metrics_port,
+        "node_exporter",
+        ProcessSupervisor.node_exporter_pgrep_pattern(state.host_metrics_port)
+      )
 
-        not exporter_alive?(state.node_exporter_pid) ->
-          :stopped
+    {wg_alive?, wg_pid, wg_port_ref} =
+      reconcile_exporter(
+        state.wireguard_exporter_pid,
+        state.wireguard_exporter_port_ref,
+        state.wireguard_metrics_port,
+        "prometheus_wireguard_exporter",
+        ProcessSupervisor.wireguard_exporter_pgrep_pattern(state.wireguard_metrics_port)
+      )
 
-        not exporter_alive?(state.wireguard_exporter_pid) ->
-          :stopped
+    status = if node_alive? and wg_alive?, do: :running, else: :stopped
 
-        true ->
-          :running
-      end
+    updated_state = %{
+      state
+      | node_exporter_pid: node_pid,
+        node_exporter_port_ref: node_port_ref,
+        wireguard_exporter_pid: wg_pid,
+        wireguard_exporter_port_ref: wg_port_ref,
+        status: status
+    }
 
-    updated_state = %{state | status: status}
     {status, updated_state}
+  end
+
+  # Returns `{alive?, pid_or_nil, port_ref_or_nil}` for a single exporter.
+  # `port_ref` is preserved if we adopted via port discovery (i.e. the
+  # tracked pid was dead but the configured port has a live exporter):
+  # since we didn't spawn the adopted process, we have no port to track.
+  defp reconcile_exporter(tracked_pid, port_ref, port, binary_name, pgrep_pattern) do
+    if exporter_alive?(tracked_pid) do
+      {true, tracked_pid, port_ref}
+    else
+      case ProcessSupervisor.discover_pid_by_port(port, binary_name, pgrep_pattern) do
+        {:ok, discovered_pid} ->
+          if tracked_pid != nil and discovered_pid != tracked_pid do
+            Logger.warning(
+              "Adopted orphan #{binary_name} PID #{discovered_pid} on port #{port} (tracked PID #{tracked_pid} was dead)"
+            )
+          end
+
+          {true, discovered_pid, nil}
+
+        {:error, _} ->
+          {false, nil, nil}
+      end
+    end
   end
 
   defp exporter_alive?(nil), do: false
   defp exporter_alive?(pid) when is_integer(pid), do: ProcessSupervisor.process_exists?(pid)
 
-  # When one exporter exits, tear down the other so we don't leave it running
-  # without a tracked pid. The next `start_servers/0` (or supervised restart)
-  # will bring both up cleanly.
-  defp handle_node_exporter_down(state) do
-    if state.wireguard_exporter_pid do
-      ProcessSupervisor.stop_wireguard_exporter(
-        state.wireguard_exporter_pid,
-        state.wireguard_exporter_port_ref
-      )
-    end
+  defp schedule_check_health do
+    Process.send_after(self(), :check_health, @check_health_interval_ms)
+  end
 
-    reset_state(state)
+  # On exit-signal from one exporter, clear ONLY that exporter's tracked
+  # state. The previous implementation tore down the healthy sibling too,
+  # which (a) caused a metrics blackout on every spurious port message and
+  # (b) didn't actually guarantee cleanup since `Port.close` doesn't always
+  # SIGTERM detached OS children. The periodic `:check_health` reconciler
+  # now handles full recovery — either it re-adopts the surviving sibling
+  # via port probe, or, if both are gone, respawns both atomically.
+  defp handle_node_exporter_down(state) do
+    %{
+      state
+      | node_exporter_pid: nil,
+        node_exporter_port_ref: nil,
+        status: :stopped
+    }
   end
 
   defp handle_wireguard_exporter_down(state) do
-    if state.node_exporter_pid do
-      ProcessSupervisor.stop_node_exporter(
-        state.node_exporter_pid,
-        state.node_exporter_port_ref
-      )
-    end
-
-    reset_state(state)
+    %{
+      state
+      | wireguard_exporter_pid: nil,
+        wireguard_exporter_port_ref: nil,
+        status: :stopped
+    }
   end
 
   defp reset_state(state) do

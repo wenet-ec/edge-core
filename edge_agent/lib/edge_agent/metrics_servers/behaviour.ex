@@ -3,8 +3,10 @@ defmodule EdgeAgent.MetricsServers.Behaviour do
   @moduledoc """
   Behaviour for metrics server operations to enable testing and abstraction.
 
-  The "pid" returned by `start_servers/0` is an OS-level integer PID found via
-  `pgrep` (see `EdgeAgent.MetricsServers.ProcessSupervisor.find_node_exporter_process/1`),
+  The "pid" returned by `start_servers/0` is an OS-level integer PID
+  discovered by port (preferred via `ss -tlnp`, falling back to a tightly
+  anchored `pgrep -f` — see
+  `EdgeAgent.MetricsServers.ProcessSupervisor.discover_pid_by_port/3`),
   not an Erlang `pid()`. The `start_result` type reflects that.
   """
 

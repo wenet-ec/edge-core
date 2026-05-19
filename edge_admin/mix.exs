@@ -61,11 +61,11 @@ defmodule EdgeAdmin.Mixfile do
       test: ["ecto.create --quiet", "ecto.migrate", "test --warnings-as-errors --max-failures 1"],
       lint: ["compile --warnings-as-errors", "credo --strict"],
       quality: ["format --check-formatted", "credo --strict", "dialyzer"],
-      security: ["deps.audit", "sobelow --config"],
+      security: [deps_audit_cmd(), "sobelow --config"],
       check: [
         "format --check-formatted",
         "deps.unlock --check-unused",
-        "deps.audit",
+        deps_audit_cmd(),
         "sobelow --config",
         "compile --warnings-as-errors",
         "credo --strict",
@@ -77,6 +77,12 @@ defmodule EdgeAdmin.Mixfile do
       ]
     ]
   end
+
+  # cowlib 2.16.1 (transitive via cowboy) has GHSA-g2wm-735q-3f56 — low-severity
+  # cookie-encoder issue with no patched version published upstream. We don't
+  # use cow_cookie:cookie/1, so this is a low-risk ignore. Re-check when
+  # cowlib publishes a fix and drop this list.
+  defp deps_audit_cmd, do: "deps.audit --ignore-advisory-ids GHSA-g2wm-735q-3f56"
 
   defp deps do
     [

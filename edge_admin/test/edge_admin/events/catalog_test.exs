@@ -130,14 +130,13 @@ defmodule EdgeAdmin.Events.CatalogTest do
   # ---------------------------------------------------------------------------
 
   describe "all_event_types/0" do
-    test "returns the 15 documented event types in catalog order" do
+    test "returns the 14 documented event types in catalog order" do
       assert Catalog.all_event_types() == [
                "edge.enrollment_key.verified",
                "edge.node.registered",
                "edge.node.reregistered",
                "edge.node.version_changed",
                "edge.node.status_changed",
-               "edge.node.cluster_changed",
                "edge.node.update_triggered",
                "edge.command_execution.created",
                "edge.command_execution.sent",
@@ -178,7 +177,6 @@ defmodule EdgeAdmin.Events.CatalogTest do
         %Catalog.NodeReregistered{node: node_fixture()},
         %Catalog.NodeVersionChanged{node: node_fixture(), previous_version: "1.1.0"},
         %Catalog.NodeStatusChanged{node: node_fixture(), previous_status: :healthy},
-        %Catalog.NodeClusterChanged{node: node_fixture(), previous_cluster_name: "old"},
         %Catalog.NodeUpdateTriggered{node: node_fixture(), self_update_request_id: "req"},
         %Catalog.CommandExecutionCreated{
           execution: execution_fixture(),
@@ -360,17 +358,6 @@ defmodule EdgeAdmin.Events.CatalogTest do
 
       assert data["status"] == "unhealthy"
       assert data["previous_status"] == "healthy"
-    end
-
-    test "NodeClusterChanged overlays previous_cluster_name" do
-      data =
-        Catalog.to_data(%Catalog.NodeClusterChanged{
-          node: node_fixture(),
-          previous_cluster_name: "staging"
-        })
-
-      assert data["cluster_name"] == "prod"
-      assert data["previous_cluster_name"] == "staging"
     end
 
     test "NodeUpdateTriggered overlays self_update_request_id" do

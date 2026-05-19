@@ -100,13 +100,6 @@ defmodule EdgeAdmin.Events.Catalog do
     @type t :: %__MODULE__{node: Node.t(), previous_status: Node.status()}
   end
 
-  defmodule NodeClusterChanged do
-    @moduledoc false
-    @enforce_keys [:node, :previous_cluster_name]
-    defstruct [:node, :previous_cluster_name]
-    @type t :: %__MODULE__{node: Node.t(), previous_cluster_name: String.t()}
-  end
-
   defmodule NodeUpdateTriggered do
     @moduledoc false
     @enforce_keys [:node, :self_update_request_id]
@@ -308,12 +301,6 @@ defmodule EdgeAdmin.Events.Catalog do
       type: "edge.node.status_changed",
       description: "Node health status transitioned.",
       data_example: Map.merge(@node_base_data, %{"status" => "unhealthy", "previous_status" => "healthy"})
-    },
-    %{
-      module: NodeClusterChanged,
-      type: "edge.node.cluster_changed",
-      description: "Node moved to a different cluster.",
-      data_example: Map.put(@node_base_data, "previous_cluster_name", "staging")
     },
     %{
       module: NodeUpdateTriggered,
@@ -523,10 +510,6 @@ defmodule EdgeAdmin.Events.Catalog do
 
   def to_data(%NodeStatusChanged{node: node, previous_status: prev}) do
     node |> node_data() |> Map.put("previous_status", Atom.to_string(prev))
-  end
-
-  def to_data(%NodeClusterChanged{node: node, previous_cluster_name: prev}) do
-    node |> node_data() |> Map.put("previous_cluster_name", prev)
   end
 
   def to_data(%NodeUpdateTriggered{node: node, self_update_request_id: req_id}) do

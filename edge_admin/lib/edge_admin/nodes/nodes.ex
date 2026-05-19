@@ -656,11 +656,6 @@ defmodule EdgeAdmin.Nodes do
           Metadata.Events.publish(:node_updated)
           sync_node_cluster_networks(node, new_cluster)
 
-          Events.publish(%Catalog.NodeClusterChanged{
-            node: updated_node,
-            previous_cluster_name: node.cluster.name
-          })
-
           {:ok, updated_node}
 
         {:error, changeset} ->

@@ -45,7 +45,6 @@ defmodule EdgeAdmin.Events do
           | Catalog.NodeReregistered.t()
           | Catalog.NodeVersionChanged.t()
           | Catalog.NodeStatusChanged.t()
-          | Catalog.NodeClusterChanged.t()
           | Catalog.NodeUpdateTriggered.t()
           | Catalog.CommandExecutionCreated.t()
           | Catalog.CommandExecutionSent.t()

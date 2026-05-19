@@ -219,7 +219,6 @@ All node events share the same `data` shape unless noted.
 | `edge.node.reregistered`     | `edge.node.reregistered`            | Re-enrollment — existing node came back (reboot, redeploy, etc.)         |
 | `edge.node.version_changed`  | `edge.node.version_changed`         | Fires alongside `reregistered` when reported version differs from stored |
 | `edge.node.status_changed`   | `edge.node.status_changed`          | Health transition: `healthy` ↔ `unhealthy` ↔ `unreachable`               |
-| `edge.node.cluster_changed`  | `edge.node.cluster_changed`         | Node moved to a different cluster                                        |
 | `edge.node.update_triggered` | `edge.node.update_triggered`        | Self-update signal successfully sent to this node's Watchtower           |
 
 **Node `data` schema:**
@@ -250,7 +249,6 @@ All node events share the same `data` shape unless noted.
 | ---------------------------- | ------------------------------------ |
 | `edge.node.status_changed`   | `"previous_status": "healthy"`       |
 | `edge.node.version_changed`  | `"previous_version": "1.1.0"`        |
-| `edge.node.cluster_changed`  | `"previous_cluster_name": "staging"` |
 | `edge.node.update_triggered` | `"self_update_request_id": "<uuid>"` |
 
 **Multi-admin note:** `edge.node.status_changed` may fire from multiple admin instances for the same transition (health check runs on every admin independently). Dedup consumers by `id`.

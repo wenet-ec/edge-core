@@ -3681,14 +3681,6 @@
         "title": "SshUsernamePaginatedResponse",
         "type": "object"
       }
-    },
-    "securitySchemes": {
-      "apiKey": {
-        "bearerFormat": "opaque",
-        "description": "API key for REST API access (API_KEY or MASTER_KEY)",
-        "scheme": "bearer",
-        "type": "http"
-      }
     }
   },
   "info": {
@@ -7492,7 +7484,7 @@
       }
     }
   },
-  "security": [{ "apiKey": [] }],
+  "security": [],
   "servers": [],
   "tags": [
     { "name": "Admins.Metadata" },

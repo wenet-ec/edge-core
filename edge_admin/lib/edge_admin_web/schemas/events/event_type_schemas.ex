@@ -31,7 +31,6 @@ defmodule EdgeAdminWeb.Schemas.Events.EventTypeSchemas do
             "edge.node.reregistered",
             "edge.node.version_changed",
             "edge.node.status_changed",
-            "edge.node.cluster_changed",
             "edge.node.update_triggered",
             "edge.command_execution.created",
             "edge.command_execution.sent",

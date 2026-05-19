@@ -326,7 +326,6 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
     "edge.node.reregistered" => %{schema_ref: "NodeEvent", kafka_key: "node_id"},
     "edge.node.version_changed" => %{schema_ref: "NodeVersionChangedEvent", kafka_key: "node_id"},
     "edge.node.status_changed" => %{schema_ref: "NodeStatusChangedEvent", kafka_key: "node_id"},
-    "edge.node.cluster_changed" => %{schema_ref: "NodeClusterChangedEvent", kafka_key: "node_id"},
     "edge.node.update_triggered" => %{schema_ref: "NodeUpdateTriggeredEvent", kafka_key: "node_id"},
     "edge.command_execution.created" => %{schema_ref: "CommandExecutionEvent", kafka_key: "command_execution_id"},
     "edge.command_execution.sent" => %{schema_ref: "CommandExecutionEvent", kafka_key: "command_execution_id"},
@@ -457,7 +456,6 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
               "edge.node.reregistered",
               "edge.node.version_changed",
               "edge.node.status_changed",
-              "edge.node.cluster_changed",
               "edge.node.update_triggered",
               "edge.command_execution.created",
               "edge.command_execution.sent",
@@ -572,15 +570,6 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
             "type" => "string",
             "enum" => EdgeAdmin.Nodes.Schemas.Node.status_strings(),
             "description" => "Status before this transition"
-          })
-      },
-      "NodeClusterChangedEvent" => %{
-        "type" => "object",
-        "required" => ["node_id", "cluster_name", "status", "previous_cluster_name"],
-        "properties" =>
-          Map.put(node_base_properties(), "previous_cluster_name", %{
-            "type" => "string",
-            "description" => "Cluster before this move"
           })
       },
       "NodeUpdateTriggeredEvent" => %{

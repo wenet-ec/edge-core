@@ -21,6 +21,23 @@ defmodule EdgeAdmin.Commands do
       can still be overwritten by a late agent report
       (see `Checks.ExecutionAcceptsResultCheck`)
 
+  ## Concurrency model
+
+  This context runs on every admin in a multi-admin cluster simultaneously.
+  Cluster ownership (via `Admins.Metadata`) is *eventually* consistent and can
+  flap during reconciliation — at any moment, two admins may both believe they
+  own the same edge cluster. Independently, a single admin's HTTP round trip
+  to an agent can outlast the agent's command execution, so the agent can
+  report results back before the admin has finished marking the row `:sent`.
+
+  Both situations were producing lost-update races on every status transition
+  (a terminal row could be clobbered back to `:sent` or `:expired` by a stale
+  in-memory struct). Every transition now flows through `transition_status/3`
+  or `transition_to_result/2`, which run a single conditional `UPDATE … WHERE
+  status IN (allowed)` and return `{:error, :stale_state}` if the row already
+  left the expected source status. Check modules (`Checks.Execution*`) remain
+  as early 409 gates but the DB is authoritative.
+
   ## Architecture
 
   ### Async Execution Flow
@@ -780,10 +797,21 @@ defmodule EdgeAdmin.Commands do
 
       case AgentClient.deliver_execution(node, execution_data) do
         {:ok, :sent} ->
-          # Agent received it — transition to :sent
-          case update_command_execution(execution, %{status: :sent, sent_at: DateTime.utc_now()}) do
-            {:ok, updated} -> publish_execution_event(updated, :sent)
-            _ -> :ok
+          # Agent received it — conditional transition pending → sent.
+          # If the row is no longer :pending (agent already reported back, admin
+          # cancelled/expired, or a peer admin already marked it sent), do not
+          # overwrite. See `transition_status/3`.
+          case transition_status(execution, [:pending],
+                 status: :sent,
+                 sent_at: DateTime.truncate(DateTime.utc_now(), :second)
+               ) do
+            {:ok, updated} ->
+              publish_execution_event(updated, :sent)
+
+            {:error, :stale_state} ->
+              Logger.debug(
+                "Skipped sent transition for execution #{execution.id}: row no longer in :pending (likely already reported by agent or transitioned by peer admin)"
+              )
           end
 
           :telemetry.execute(
@@ -833,9 +861,21 @@ defmodule EdgeAdmin.Commands do
           | {:error, Ecto.Changeset.t()}
   def acknowledge_execution(execution, _params) do
     with :ok <- Checks.ExecutionPendingCheck.check(execution),
-         {:ok, updated} <- update_command_execution(execution, %{status: :sent, sent_at: DateTime.utc_now()}) do
+         {:ok, updated} <-
+           transition_status(execution, [:pending],
+             status: :sent,
+             sent_at: DateTime.truncate(DateTime.utc_now(), :second)
+           ) do
       publish_execution_event(updated, :sent)
       {:ok, updated}
+    else
+      {:error, :stale_state} ->
+        # Row moved out of :pending between the check and the write — surface
+        # the same 409 the check would have produced if it had won the race.
+        {:error, {:conflict, "execution is no longer in 'pending' status and cannot be acknowledged"}}
+
+      other ->
+        other
     end
   end
 
@@ -885,18 +925,12 @@ defmodule EdgeAdmin.Commands do
           true -> :completed
         end
 
-      attrs =
-        attrs
-        |> Map.put("status", terminal_status)
-        |> then(fn a ->
-          if terminal_status == :cancelled do
-            Map.put(a, "cancelled_at", DateTime.truncate(DateTime.utc_now(), :second))
-          else
-            a
-          end
-        end)
-
-      result = update_command_execution(execution, attrs)
+      # Conditional transition: only write if the row is still in a state that
+      # accepts a result. The race-window allowance from
+      # `ExecutionAcceptsResultCheck` (cancelled/expired with nil exit_code) is
+      # encoded directly in the WHERE clause so two concurrent reports cannot
+      # both succeed and clobber each other.
+      result = transition_to_result(execution, build_result_set(attrs, terminal_status))
 
       # Emit completion telemetry
       case result do
@@ -932,9 +966,40 @@ defmodule EdgeAdmin.Commands do
           :ok
       end
 
-      result
+      case result do
+        {:error, :stale_state} ->
+          # Row was already in a terminal-with-exit_code state by the time we
+          # tried to write. Treat as a 409 — the agent has already reported a
+          # result (possibly via a different admin) and should not retry.
+          {:error, {:conflict, "execution is no longer in a state that accepts a result (likely already reported)"}}
+
+        other ->
+          other
+      end
     end
   end
+
+  # Build the `update_all set:` keyword list from the form-normalised attrs
+  # map. The form guarantees `completed_at` is a %DateTime{} and that
+  # `output`/`exit_code` are either present-with-a-value or absent.
+  defp build_result_set(attrs, terminal_status) do
+    base = [
+      status: terminal_status,
+      completed_at: DateTime.truncate(attrs["completed_at"], :second)
+    ]
+
+    base
+    |> maybe_put(:output, Map.get(attrs, "output"))
+    |> maybe_put(:exit_code, Map.get(attrs, "exit_code"))
+    |> maybe_put(
+      :cancelled_at,
+      terminal_status == :cancelled && DateTime.truncate(DateTime.utc_now(), :second)
+    )
+  end
+
+  defp maybe_put(set, _key, nil), do: set
+  defp maybe_put(set, _key, false), do: set
+  defp maybe_put(set, key, value), do: Keyword.put(set, key, value)
 
   @doc """
   Cancels a command execution.
@@ -961,27 +1026,29 @@ defmodule EdgeAdmin.Commands do
     with :ok <- Checks.ExecutionCancellableCheck.check(execution) do
       case execution.status do
         :pending ->
-          # Cancel immediately in DB — command never ran, no output or exit code
-          {:ok, updated} =
-            update_command_execution(execution, %{
-              status: :cancelled,
-              cancelled_at: DateTime.utc_now()
-            })
+          # Conditional cancel: only flip pending → cancelled. If a peer admin
+          # or this admin's scheduler moved the row to :sent in the meantime,
+          # fall through to the :sent branch and ask the agent to cancel.
+          case transition_status(execution, [:pending],
+                 status: :cancelled,
+                 cancelled_at: DateTime.truncate(DateTime.utc_now(), :second)
+               ) do
+            {:ok, updated} ->
+              publish_execution_event(updated, :cancelled)
+              {:ok, %{result: "execution cancelled"}}
 
-          publish_execution_event(updated, :cancelled)
-          {:ok, %{result: "execution cancelled"}}
+            {:error, :stale_state} ->
+              case Repo.get(CommandExecution, execution.id) do
+                %CommandExecution{status: :sent} = current ->
+                  cancel_sent_execution(current)
+
+                _ ->
+                  {:error, {:conflict, "execution is no longer cancellable"}}
+              end
+          end
 
         :sent ->
-          # Send cancellation request to agent (best-effort)
-          case send_cancel_to_agent(execution) do
-            :ok ->
-              {:ok, %{result: "cancellation request sent"}}
-
-            {:error, reason} ->
-              Logger.warning("Failed to send cancellation to agent for execution #{execution.id}: #{inspect(reason)}")
-
-              {:error, :service_unavailable}
-          end
+          cancel_sent_execution(execution)
       end
     end
   end
@@ -1003,7 +1070,21 @@ defmodule EdgeAdmin.Commands do
   def expire_stale_executions do
     now = DateTime.utc_now()
 
-    stale_executions = get_stale_executions(now)
+    # Scope to clusters owned by this admin. Without this gate, every admin in
+    # the fleet runs the expiration loop against every cluster every minute,
+    # producing write amplification and (pre-conditional-update) clobbering
+    # terminal rows. Mirrors the ownership gate in `deliver_local_executions/0`.
+    my_cluster_names =
+      Metadata.get_my_clusters()
+      |> Map.keys()
+      |> Enum.map(&String.replace_prefix(&1, "cluster-", ""))
+
+    stale_executions =
+      if my_cluster_names == [] do
+        []
+      else
+        get_stale_executions(now, my_cluster_names)
+      end
 
     if Enum.empty?(stale_executions) do
       Logger.debug("No stale executions to expire")
@@ -1042,29 +1123,37 @@ defmodule EdgeAdmin.Commands do
     end
   end
 
-  defp get_stale_executions(now) do
+  defp get_stale_executions(now, cluster_names) do
     cancellable = CommandExecution.cancellable_statuses()
 
     Repo.all(
       from(ce in CommandExecution,
         join: c in assoc(ce, :command),
         join: n in assoc(ce, :node),
+        join: cl in assoc(n, :cluster),
         where: ce.status in ^cancellable,
         where: not is_nil(c.expired_at),
         where: c.expired_at <= ^now,
+        where: cl.name in ^cluster_names,
         preload: [node: :cluster, command: []]
       )
     )
   end
 
   defp expire_execution(execution, _now) do
-    case update_command_execution(execution, %{status: :expired}) do
+    # Conditional transition: only expire rows still in :pending or :sent. If
+    # the agent has already reported back (row is now :completed/:cancelled/
+    # :expired with exit_code), do not overwrite — the agent is the source of
+    # truth for what actually ran.
+    case transition_status(execution, [:pending, :sent], status: :expired) do
       {:ok, updated} ->
         Logger.info("Execution #{execution.id} marked expired")
         publish_execution_event(updated, :expired)
 
-      {:error, changeset} ->
-        Logger.error("Failed to expire execution #{execution.id}: #{inspect(changeset.errors)}")
+      {:error, :stale_state} ->
+        Logger.debug(
+          "Skipped expire transition for execution #{execution.id}: row already left :pending/:sent (agent reported back)"
+        )
     end
   end
 
@@ -1146,6 +1235,95 @@ defmodule EdgeAdmin.Commands do
       command: execution.command,
       cluster_name: cluster_name
     })
+  end
+
+  # ---------------------------------------------------------------------------
+  # Conditional status transitions
+  #
+  # Every status transition on a CommandExecution flows through one of the two
+  # helpers below. The point is to make each transition a single atomic SQL
+  # statement (`UPDATE ... WHERE id = ? AND status IN (...)`) so that stale
+  # in-memory structs can never overwrite a row that has moved on.
+  #
+  # Background: this code path runs on every admin in a multi-admin cluster,
+  # and ownership of an edge cluster can flap during reconciliation. Without a
+  # WHERE-status guard, two admins delivering the same execution (or a single
+  # admin whose HTTP round trip is slow enough for the agent to round-trip a
+  # result back) can clobber a terminal row back to :sent / :expired. See the
+  # incident write-up in the changelog.
+  # ---------------------------------------------------------------------------
+
+  @spec transition_status(CommandExecution.t(), [CommandExecution.status()], keyword()) ::
+          {:ok, CommandExecution.t()} | {:error, :stale_state}
+  defp transition_status(%CommandExecution{id: id}, allowed_from, set) do
+    where = dynamic([ce], ce.status in ^allowed_from)
+    do_transition(id, where, set)
+  end
+
+  # Result-report transition. The "accepts a result" predicate is dynamic:
+  # :sent (normal) OR :cancelled / :expired with exit_code IS NULL
+  # (race-window placeholders).
+  #
+  # Paired predicate: the same rule is encoded as a pure struct check in
+  # `EdgeAdmin.Commands.Checks.ExecutionAcceptsResultCheck`, which runs first
+  # as the layer-3 early-409 gate. This dynamic is the layer-4/5 backstop
+  # against concurrent writers the struct check cannot see (peer admin races,
+  # agent retries hitting a different admin). If you change the predicate
+  # here, change the check there too — the two layers must agree.
+  @spec transition_to_result(CommandExecution.t(), keyword()) ::
+          {:ok, CommandExecution.t()} | {:error, :stale_state}
+  defp transition_to_result(%CommandExecution{id: id}, set) do
+    accepts_result =
+      dynamic(
+        [ce],
+        ce.status == :sent or
+          (ce.status in [:cancelled, :expired] and is_nil(ce.exit_code))
+      )
+
+    do_transition(id, accepts_result, set)
+  end
+
+  # Shared core. Runs a conditional `update_all` on the row, and on exactly 1
+  # row affected, fetches the fresh struct for event publication. `updated_at`
+  # is appended automatically; callers pass only the fields they want to set.
+  #
+  # We do a follow-up `Repo.get` rather than `update_all returning: [:*]`
+  # because the SQLite adapter (DB_ADAPTER=sqlite) does not support RETURNING
+  # on `update_all`. Two round trips, identical semantics on both adapters.
+  defp do_transition(id, where_dynamic, set) do
+    set = Keyword.put(set, :updated_at, DateTime.truncate(DateTime.utc_now(), :second))
+
+    query =
+      from(ce in CommandExecution,
+        where: ce.id == ^id,
+        where: ^where_dynamic
+      )
+
+    case Repo.update_all(query, set: set) do
+      {1, _} ->
+        case Repo.get(CommandExecution, id) do
+          nil -> {:error, :stale_state}
+          fresh -> {:ok, Repo.preload(fresh, :command)}
+        end
+
+      {0, _} ->
+        {:error, :stale_state}
+    end
+  end
+
+  # Extracted shared :sent-branch cancel for use from `cancel_command_execution/1`
+  # both directly (when called with a :sent row) and from the fall-through when a
+  # :pending row raced to :sent between the check and our conditional update.
+  defp cancel_sent_execution(execution) do
+    case send_cancel_to_agent(execution) do
+      :ok ->
+        {:ok, %{result: "cancellation request sent"}}
+
+      {:error, reason} ->
+        Logger.warning("Failed to send cancellation to agent for execution #{execution.id}: #{inspect(reason)}")
+
+        {:error, :service_unavailable}
+    end
   end
 
   defp send_cancel_to_agent(execution) do

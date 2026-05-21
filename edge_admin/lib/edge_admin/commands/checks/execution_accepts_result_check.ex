@@ -11,6 +11,15 @@ defmodule EdgeAdmin.Commands.Checks.ExecutionAcceptsResultCheck do
   - Status is "expired" with nil exit_code (race condition: admin expired the
     execution via scheduler, but agent already picked it up and is now reporting
     back - accept the result as it reflects what actually happened on the node)
+
+  ## Paired predicate
+
+  This is the layer-3 early-409 gate against the struct in hand. The same
+  predicate is encoded in SQL inside `EdgeAdmin.Commands.transition_to_result/2`
+  as the WHERE clause of a conditional UPDATE, where it defends against
+  concurrent writers (peer admin races, agent retries hitting a different
+  admin) that the struct-level check cannot see. If you change the predicate
+  here, change the dynamic there too — the two layers must agree.
   """
 
   alias EdgeAdmin.Commands.Schemas.CommandExecution

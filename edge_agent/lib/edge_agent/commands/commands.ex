@@ -634,9 +634,12 @@ defmodule EdgeAgent.Commands do
 
             {:error, {:http_error, status, _body}} when status in [404, 409] ->
               # 404: execution deleted on admin side
-              # 409: execution was cancelled before we could acknowledge it — discard
+              # 409: execution is no longer in :pending status — it may have been
+              #      cancelled/expired, or it may have already been acknowledged
+              #      by another path (peer admin, prior sync, etc.). Either way
+              #      we should not retry the acknowledge — discard locally.
               Logger.debug(
-                "Discarding command execution #{command["id"]} — admin returned HTTP #{status} (deleted or cancelled)"
+                "Discarding command execution #{command["id"]} — admin returned HTTP #{status} (deleted or already past :pending)"
               )
 
             {:error, reason} ->

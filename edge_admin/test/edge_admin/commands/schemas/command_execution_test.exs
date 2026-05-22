@@ -7,9 +7,9 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecutionTest do
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Nodes.Schemas.Cluster
 
-  defp execution_with_command(timeout, expired_at) do
+  defp execution_with_command(timeout, expires_at) do
     %CommandExecution{
-      command: %Command{command_text: "uname -a", timeout: timeout, expired_at: expired_at}
+      command: %Command{command_text: "uname -a", timeout: timeout, expires_at: expires_at}
     }
   end
 
@@ -59,25 +59,25 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecutionTest do
   end
 
   # ---------------------------------------------------------------------------
-  # expired_at/1
+  # expires_at/1
   # ---------------------------------------------------------------------------
 
-  describe "expired_at/1" do
-    test "returns expired_at from preloaded command" do
+  describe "expires_at/1" do
+    test "returns expires_at from preloaded command" do
       now = DateTime.truncate(DateTime.utc_now(), :second)
-      assert CommandExecution.expired_at(execution_with_command(30_000, now)) == now
+      assert CommandExecution.expires_at(execution_with_command(30_000, now)) == now
     end
 
-    test "returns nil when command's expired_at is nil" do
-      assert CommandExecution.expired_at(execution_with_command(30_000, nil)) == nil
+    test "returns nil when command's expires_at is nil" do
+      assert CommandExecution.expires_at(execution_with_command(30_000, nil)) == nil
     end
 
     test "returns nil when command is not preloaded" do
-      assert CommandExecution.expired_at(execution_without_command_preload()) == nil
+      assert CommandExecution.expires_at(execution_without_command_preload()) == nil
     end
 
     test "returns nil when command is nil" do
-      assert CommandExecution.expired_at(%CommandExecution{command: nil}) == nil
+      assert CommandExecution.expires_at(%CommandExecution{command: nil}) == nil
     end
   end
 

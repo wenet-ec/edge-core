@@ -281,7 +281,7 @@ All command execution events share the same `data` shape. `output` is always exc
   "status": "completed",
   "exit_code": 0,
   "target_all": false,
-  "expired_at": null,
+  "expires_at": null,
   "sent_at": "2026-04-14T10:00:01Z",
   "completed_at": "2026-04-14T10:00:03Z",
   "cancelled_at": null,

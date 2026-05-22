@@ -9,7 +9,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateEnrollmentKey do
     not used for lookup or authentication.
   - `uses_remaining` — optional positive integer. Omit for the default of
     1 (single-use). Pass a number for a finite-use key.
-  - `expired_at` — optional ISO8601 datetime. Omit for no expiry.
+  - `expires_at` — optional ISO8601 datetime. Omit for no expiry.
   """
   use EdgeAdminMcp, :tool
 
@@ -25,7 +25,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateEnrollmentKey do
     field :cluster_name, {:required, :string}, min_length: 1
     field :name, :string
     field :uses_remaining, :integer, min: 1
-    field :expired_at, :string
+    field :expires_at, :string
   end
 
   @impl true
@@ -36,7 +36,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateEnrollmentKey do
           %{}
           |> put_if("name", params[:name])
           |> put_if("uses_remaining", params[:uses_remaining])
-          |> put_if("expired_at", params[:expired_at])
+          |> put_if("expires_at", params[:expires_at])
 
         case Nodes.create_enrollment_key(cluster, attrs) do
           {:ok, key} ->

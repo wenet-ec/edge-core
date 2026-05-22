@@ -136,42 +136,42 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandFormTest do
   end
 
   # ---------------------------------------------------------------------------
-  # changeset/1 — expired_at validation
+  # changeset/1 — expires_at validation
   # ---------------------------------------------------------------------------
 
-  describe "changeset/1 — expired_at validation" do
-    test "future expired_at is accepted" do
+  describe "changeset/1 — expires_at validation" do
+    test "future expires_at is accepted" do
       future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
-      attrs = valid_attrs(%{"expired_at" => future})
+      attrs = valid_attrs(%{"expires_at" => future})
       assert {:ok, result} = CreateCommandForm.changeset(attrs)
-      assert result["expired_at"] == future
+      assert result["expires_at"] == future
     end
 
-    test "expired_at in the past is rejected" do
+    test "expires_at in the past is rejected" do
       past = DateTime.add(DateTime.utc_now(), -3600, :second)
-      attrs = valid_attrs(%{"expired_at" => past})
+      attrs = valid_attrs(%{"expires_at" => past})
       assert {:error, changeset} = CreateCommandForm.changeset(attrs)
-      assert %{expired_at: [msg]} = errors_on(changeset)
+      assert %{expires_at: [msg]} = errors_on(changeset)
       assert msg =~ "future"
     end
 
-    test "expired_at equal to now is rejected" do
+    test "expires_at equal to now is rejected" do
       # Use a slightly-past time to avoid race on exact equality
       now = DateTime.add(DateTime.utc_now(), -1, :second)
-      attrs = valid_attrs(%{"expired_at" => now})
+      attrs = valid_attrs(%{"expires_at" => now})
       assert {:error, changeset} = CreateCommandForm.changeset(attrs)
-      assert %{expired_at: [_msg]} = errors_on(changeset)
+      assert %{expires_at: [_msg]} = errors_on(changeset)
     end
 
-    test "expired_at is excluded from result when not provided" do
+    test "expires_at is excluded from result when not provided" do
       assert {:ok, result} = CreateCommandForm.changeset(valid_attrs())
-      refute Map.has_key?(result, "expired_at")
+      refute Map.has_key?(result, "expires_at")
     end
 
-    test "nil expired_at is allowed (optional field)" do
-      attrs = valid_attrs(%{"expired_at" => nil})
+    test "nil expires_at is allowed (optional field)" do
+      attrs = valid_attrs(%{"expires_at" => nil})
       assert {:ok, result} = CreateCommandForm.changeset(attrs)
-      refute Map.has_key?(result, "expired_at")
+      refute Map.has_key?(result, "expires_at")
     end
   end
 

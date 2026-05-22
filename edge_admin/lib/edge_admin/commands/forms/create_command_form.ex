@@ -11,7 +11,7 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
   embedded_schema do
     field(:command_text, :string)
     field(:timeout, :integer)
-    field(:expired_at, :utc_datetime)
+    field(:expires_at, :utc_datetime)
     field(:targeting_type, :string)
     field(:node_ids, {:array, :binary_id})
     field(:cluster_names, {:array, :string})
@@ -49,10 +49,10 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
       |> Map.put("cluster_names", Map.get(targeting, "cluster_names"))
 
     %__MODULE__{}
-    |> cast(flattened_attrs, [:command_text, :timeout, :expired_at, :targeting_type, :node_ids, :cluster_names])
+    |> cast(flattened_attrs, [:command_text, :timeout, :expires_at, :targeting_type, :node_ids, :cluster_names])
     |> validate_required([:command_text, :targeting_type])
     |> validate_timeout()
-    |> validate_expired_at()
+    |> validate_expires_at()
     |> validate_targeting_type()
     |> validate_targeting_requirements()
     |> apply_action(:insert)
@@ -78,12 +78,12 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
     )
   end
 
-  defp validate_expired_at(changeset) do
-    validate_change(changeset, :expired_at, fn :expired_at, expired_at ->
-      if DateTime.after?(expired_at, DateTime.utc_now()) do
+  defp validate_expires_at(changeset) do
+    validate_change(changeset, :expires_at, fn :expires_at, expires_at ->
+      if DateTime.after?(expires_at, DateTime.utc_now()) do
         []
       else
-        [expired_at: "must be in the future"]
+        [expires_at: "must be in the future"]
       end
     end)
   end
@@ -123,7 +123,7 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandForm do
       %{
         "command_text" => form.command_text,
         "timeout" => form.timeout,
-        "expired_at" => form.expired_at
+        "expires_at" => form.expires_at
       }
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
       |> Map.new()

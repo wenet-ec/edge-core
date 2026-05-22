@@ -50,10 +50,10 @@ defmodule EdgeAdmin.Commands.Schemas.CommandTest do
       assert changeset.valid?
     end
 
-    test "expired_at is optional" do
+    test "expires_at is optional" do
       changeset = Command.changeset(%Command{}, valid_attrs())
       assert changeset.valid?
-      refute Map.has_key?(changeset.changes, :expired_at)
+      refute Map.has_key?(changeset.changes, :expires_at)
     end
   end
 
@@ -124,29 +124,29 @@ defmodule EdgeAdmin.Commands.Schemas.CommandTest do
   end
 
   # ---------------------------------------------------------------------------
-  # validate_expired_at
+  # validate_expires_at
   # ---------------------------------------------------------------------------
 
-  describe "changeset/2 — expired_at" do
+  describe "changeset/2 — expires_at" do
     test "future timestamp is valid" do
       future = DateTime.add(DateTime.utc_now(), 3600, :second)
-      changeset = Command.changeset(%Command{}, valid_attrs(%{expired_at: future}))
+      changeset = Command.changeset(%Command{}, valid_attrs(%{expires_at: future}))
       assert changeset.valid?
     end
 
     test "past timestamp is rejected" do
       past = DateTime.add(DateTime.utc_now(), -3600, :second)
-      changeset = Command.changeset(%Command{}, valid_attrs(%{expired_at: past}))
+      changeset = Command.changeset(%Command{}, valid_attrs(%{expires_at: past}))
       refute changeset.valid?
 
-      assert "must be in the future" in errors_on(changeset).expired_at
+      assert "must be in the future" in errors_on(changeset).expires_at
     end
 
     test "current time (or essentially now) is rejected (DateTime.after? is strict)" do
       # The cast truncates to :utc_datetime (second precision), so 'now' as
       # given is at best equal to the comparison's now, never strictly after.
       now = DateTime.truncate(DateTime.utc_now(), :second)
-      changeset = Command.changeset(%Command{}, valid_attrs(%{expired_at: now}))
+      changeset = Command.changeset(%Command{}, valid_attrs(%{expires_at: now}))
       refute changeset.valid?
     end
   end

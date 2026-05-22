@@ -13,7 +13,7 @@ defmodule EdgeAdmin.Commands.Views.CommandExecutionViewTest do
     expiry = DateTime.add(now, 3600, :second)
 
     cluster = %Cluster{id: "cluster-uuid-1", name: "prod"}
-    command = %Command{id: "command-uuid-1", command_text: "uname -a", timeout: 30_000, expired_at: expiry}
+    command = %Command{id: "command-uuid-1", command_text: "uname -a", timeout: 30_000, expires_at: expiry}
 
     base = %CommandExecution{
       id: "execution-uuid-1",
@@ -54,7 +54,7 @@ defmodule EdgeAdmin.Commands.Views.CommandExecutionViewTest do
       # Virtuals derived from preloaded command.
       assert result.command_text == "uname -a"
       assert result.timeout == 30_000
-      assert result.expired_at == execution.command.expired_at
+      assert result.expires_at == execution.command.expires_at
 
       # Virtuals derived from preloaded cluster.
       assert result.cluster_name == "prod"
@@ -88,7 +88,7 @@ defmodule EdgeAdmin.Commands.Views.CommandExecutionViewTest do
       assert result.completed_at == now
     end
 
-    test "missing command preload → command_text/timeout/expired_at fall through to nil" do
+    test "missing command preload → command_text/timeout/expires_at fall through to nil" do
       # The schema helpers explicitly fall back to nil when associations are
       # not preloaded. The view must not crash when callers forget the preload.
       execution = execution_fixture(%{command: %NotLoaded{}})
@@ -97,7 +97,7 @@ defmodule EdgeAdmin.Commands.Views.CommandExecutionViewTest do
 
       assert result.command_text == nil
       assert result.timeout == nil
-      assert result.expired_at == nil
+      assert result.expires_at == nil
     end
 
     test "missing cluster preload → cluster_name falls through to nil" do
@@ -119,7 +119,7 @@ defmodule EdgeAdmin.Commands.Views.CommandExecutionViewTest do
 
       expected_keys = Enum.sort(~w(
           id command_id node_id cluster_name target_all status command_text timeout
-          output exit_code sent_at completed_at cancelled_at expired_at
+          output exit_code sent_at completed_at cancelled_at expires_at
           inserted_at updated_at
         )a)
 

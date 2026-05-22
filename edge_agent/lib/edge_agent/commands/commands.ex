@@ -665,7 +665,7 @@ defmodule EdgeAgent.Commands do
       node_id: node_id,
       command_text: command["command_text"],
       timeout: command["timeout"],
-      expired_at: command["expired_at"],
+      expires_at: command["expires_at"],
       status: "pending"
     }
 

@@ -9,7 +9,7 @@ defmodule EdgeAdmin.Repo.Migrations.CreateEnrollmentKeys do
       add :name, :string, null: true
       add :key, :text, null: false
       add :uses_remaining, :integer, null: true, default: 1
-      add :expired_at, :utc_datetime, null: true
+      add :expires_at, :utc_datetime, null: true
       add :last_used_at, :utc_datetime, null: true
 
       timestamps(type: :utc_datetime)

@@ -17,7 +17,7 @@ defmodule EdgeAdminMcp.Tools.Commands.CreateCommand do
 
   Optional. Milliseconds. Must be > 0. Omit (or pass null) for no timeout.
 
-  ## expired_at
+  ## expires_at
 
   Optional. ISO8601 datetime, must be in the future. After this time, any
   executions still `pending` or `sent` are automatically marked `expired`.
@@ -58,7 +58,7 @@ defmodule EdgeAdminMcp.Tools.Commands.CreateCommand do
     field :command_text, {:required, :string}, min_length: 1
     field :targeting, {:required, Targeting.peri_schema()}
     field :timeout, :integer, min: 1
-    field :expired_at, :string
+    field :expires_at, :string
   end
 
   @impl true
@@ -66,7 +66,7 @@ defmodule EdgeAdminMcp.Tools.Commands.CreateCommand do
     attrs =
       %{"command_text" => params.command_text, "targeting" => params.targeting}
       |> put_if("timeout", params[:timeout])
-      |> put_if("expired_at", params[:expired_at])
+      |> put_if("expires_at", params[:expires_at])
 
     case Commands.create_command_and_executions(attrs) do
       {:ok, command} ->

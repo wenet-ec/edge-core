@@ -92,7 +92,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
           nullable: true,
           description: "When the command execution was cancelled"
         },
-        expired_at: %Schema{
+        expires_at: %Schema{
           type: :string,
           format: :"date-time",
           nullable: true,

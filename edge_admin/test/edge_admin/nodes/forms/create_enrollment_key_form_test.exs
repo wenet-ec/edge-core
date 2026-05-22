@@ -32,20 +32,20 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyFormTest do
       assert result["uses_remaining"] == 10
     end
 
-    test "expired_at is accepted when a valid datetime" do
+    test "expires_at is accepted when a valid datetime" do
       dt = ~U[2027-01-01 00:00:00Z]
-      assert {:ok, result} = CreateEnrollmentKeyForm.changeset(%{expired_at: dt})
-      assert result["expired_at"] == dt
+      assert {:ok, result} = CreateEnrollmentKeyForm.changeset(%{expires_at: dt})
+      assert result["expires_at"] == dt
     end
 
     test "both optional fields accepted together" do
       dt = ~U[2027-06-01 12:00:00Z]
 
       assert {:ok, result} =
-               CreateEnrollmentKeyForm.changeset(%{uses_remaining: 5, expired_at: dt})
+               CreateEnrollmentKeyForm.changeset(%{uses_remaining: 5, expires_at: dt})
 
       assert result["uses_remaining"] == 5
-      assert result["expired_at"] == dt
+      assert result["expires_at"] == dt
     end
 
     test "name is accepted when present" do
@@ -107,17 +107,17 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyFormTest do
       {:ok, result} = CreateEnrollmentKeyForm.changeset(%{})
       refute Map.has_key?(result, "name")
       refute Map.has_key?(result, "uses_remaining")
-      refute Map.has_key?(result, "expired_at")
+      refute Map.has_key?(result, "expires_at")
     end
 
     test "present fields are included in result map" do
       dt = ~U[2027-01-01 00:00:00Z]
 
       {:ok, result} =
-        CreateEnrollmentKeyForm.changeset(%{uses_remaining: 2, expired_at: dt})
+        CreateEnrollmentKeyForm.changeset(%{uses_remaining: 2, expires_at: dt})
 
       assert result["uses_remaining"] == 2
-      assert result["expired_at"] == dt
+      assert result["expires_at"] == dt
     end
 
     test "explicit null uses_remaining is included (unlimited)" do

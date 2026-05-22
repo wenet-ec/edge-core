@@ -44,7 +44,7 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
   defp apply_is_spent_one(query, _), do: query
 
   @doc """
-  Applies `is_expired` filter — compares `expired_at` to now at query time.
+  Applies `is_expired` filter — compares `expires_at` to now at query time.
   """
   def apply_is_expired(query, filters) do
     Enum.reduce(filters, query, fn filter, acc -> apply_is_expired_one(acc, filter) end)
@@ -52,12 +52,12 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
 
   defp apply_is_expired_one(query, %{op: :==, value: v}) when v in [true, "true"] do
     now = DateTime.utc_now()
-    from(k in query, where: not is_nil(k.expired_at) and k.expired_at < ^now)
+    from(k in query, where: not is_nil(k.expires_at) and k.expires_at < ^now)
   end
 
   defp apply_is_expired_one(query, %{op: :==, value: v}) when v in [false, "false"] do
     now = DateTime.utc_now()
-    from(k in query, where: is_nil(k.expired_at) or k.expired_at >= ^now)
+    from(k in query, where: is_nil(k.expires_at) or k.expires_at >= ^now)
   end
 
   defp apply_is_expired_one(query, _), do: query
@@ -80,7 +80,7 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
   defp apply_is_never_used_one(query, _), do: query
 
   @doc """
-  Applies `has_expiry` filter — `true` matches keys with `expired_at` set
+  Applies `has_expiry` filter — `true` matches keys with `expires_at` set
   (regardless of whether the timestamp is in the past).
   """
   def apply_has_expiry(query, filters) do
@@ -88,11 +88,11 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
   end
 
   defp apply_has_expiry_one(query, %{op: :==, value: v}) when v in [true, "true"] do
-    from(k in query, where: not is_nil(k.expired_at))
+    from(k in query, where: not is_nil(k.expires_at))
   end
 
   defp apply_has_expiry_one(query, %{op: :==, value: v}) when v in [false, "false"] do
-    from(k in query, where: is_nil(k.expired_at))
+    from(k in query, where: is_nil(k.expires_at))
   end
 
   defp apply_has_expiry_one(query, _), do: query

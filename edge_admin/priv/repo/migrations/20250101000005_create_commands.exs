@@ -7,7 +7,7 @@ defmodule EdgeAdmin.Repo.Migrations.CreateCommands do
       add :id, :binary_id, primary_key: true
       add :command_text, :text, null: false
       add :timeout, :integer
-      add :expired_at, :utc_datetime
+      add :expires_at, :utc_datetime
       add :targeting, :map, null: false
 
       timestamps(type: :utc_datetime)

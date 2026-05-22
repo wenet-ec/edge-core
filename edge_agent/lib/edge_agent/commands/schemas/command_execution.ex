@@ -20,7 +20,7 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecution do
           node_id: Ecto.UUID.t() | nil,
           command_text: String.t() | nil,
           timeout: integer() | nil,
-          expired_at: DateTime.t() | nil,
+          expires_at: DateTime.t() | nil,
           completed_at: DateTime.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -34,7 +34,7 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecution do
     field(:node_id, :binary_id)
     field(:command_text, :string)
     field(:timeout, :integer)
-    field(:expired_at, :utc_datetime)
+    field(:expires_at, :utc_datetime)
     field(:completed_at, :utc_datetime)
 
     timestamps()
@@ -49,7 +49,7 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecution do
       :node_id,
       :command_text,
       :timeout,
-      :expired_at,
+      :expires_at,
       :status,
       :output,
       :exit_code,

@@ -15,7 +15,7 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKeyTest do
         key: "somebase64blob==",
         cluster_id: "cluster-uuid",
         uses_remaining: 1,
-        expired_at: nil,
+        expires_at: nil,
         last_used_at: nil
       },
       overrides
@@ -49,18 +49,18 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKeyTest do
   # ---------------------------------------------------------------------------
 
   describe "expired?/1" do
-    test "nil expired_at → false (never expires)" do
-      refute EnrollmentKey.expired?(key(%{expired_at: nil}))
+    test "nil expires_at → false (never expires)" do
+      refute EnrollmentKey.expired?(key(%{expires_at: nil}))
     end
 
-    test "expired_at in the future → false (not expired)" do
+    test "expires_at in the future → false (not expired)" do
       future = DateTime.add(DateTime.utc_now(), 3600, :second)
-      refute EnrollmentKey.expired?(key(%{expired_at: future}))
+      refute EnrollmentKey.expired?(key(%{expires_at: future}))
     end
 
-    test "expired_at in the past → true (expired)" do
+    test "expires_at in the past → true (expired)" do
       past = DateTime.add(DateTime.utc_now(), -3600, :second)
-      assert EnrollmentKey.expired?(key(%{expired_at: past}))
+      assert EnrollmentKey.expired?(key(%{expires_at: past}))
     end
   end
 

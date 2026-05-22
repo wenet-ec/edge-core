@@ -30,9 +30,9 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
             description:
               "Filter by whether a timeout is set: true returns commands with a timeout, false returns commands without"
           ),
-          QueryParams.boolean_filter(:has_expired_at,
+          QueryParams.boolean_filter(:has_expires_at,
             description:
-              "Filter by whether an expiration is set: true returns commands with expired_at, false returns commands without"
+              "Filter by whether an expiration is set: true returns commands with expires_at, false returns commands without"
           )
         ] ++
         QueryParams.int_range_filter(:timeout,
@@ -40,7 +40,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
           gte_description: "Filter commands with timeout greater than or equal to this value (milliseconds)",
           lte_description: "Filter commands with timeout less than or equal to this value (milliseconds)"
         ) ++
-        QueryParams.datetime_range_filter(:expired_at) ++
+        QueryParams.datetime_range_filter(:expires_at) ++
         QueryParams.datetime_range_filter(:inserted_at) ++
         QueryParams.datetime_range_filter(:updated_at),
     responses: %{

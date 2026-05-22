@@ -604,7 +604,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
             "description" => "null until completed or cancelled; 143 on SIGTERM cancel"
           },
           "target_all" => %{"type" => "boolean"},
-          "expired_at" => %{"type" => ["string", "null"], "format" => "date-time"},
+          "expires_at" => %{"type" => ["string", "null"], "format" => "date-time"},
           "sent_at" => %{"type" => ["string", "null"], "format" => "date-time"},
           "completed_at" => %{"type" => ["string", "null"], "format" => "date-time"},
           "cancelled_at" => %{"type" => ["string", "null"], "format" => "date-time"},

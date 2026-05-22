@@ -63,15 +63,15 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionFormTest do
       assert result["status"] == :expired
     end
 
-    test "expired_at is accepted when present" do
+    test "expires_at is accepted when present" do
       future = ~U[2099-01-01 00:00:00Z]
-      assert {:ok, result} = CreateCommandExecutionForm.changeset(valid_attrs(%{"expired_at" => future}))
-      assert result["expired_at"] == future
+      assert {:ok, result} = CreateCommandExecutionForm.changeset(valid_attrs(%{"expires_at" => future}))
+      assert result["expires_at"] == future
     end
 
-    test "nil expired_at is excluded from result" do
+    test "nil expires_at is excluded from result" do
       {:ok, result} = CreateCommandExecutionForm.changeset(valid_attrs())
-      refute Map.has_key?(result, "expired_at")
+      refute Map.has_key?(result, "expires_at")
     end
 
     test "timeout: positive integer is accepted" do
@@ -138,16 +138,16 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionFormTest do
       refute Map.has_key?(result, "completed_at")
     end
 
-    test "nil expired_at is excluded from result" do
+    test "nil expires_at is excluded from result" do
       {:ok, result} = CreateCommandExecutionForm.changeset(valid_attrs())
-      refute Map.has_key?(result, "expired_at")
+      refute Map.has_key?(result, "expires_at")
     end
 
     test "all optional fields present when provided" do
       attrs =
         valid_attrs(%{
           "timeout" => 5000,
-          "expired_at" => ~U[2099-01-01 00:00:00Z],
+          "expires_at" => ~U[2099-01-01 00:00:00Z],
           "output" => "ok",
           "exit_code" => 0,
           "completed_at" => "2026-01-01T10:00:00Z"
@@ -155,7 +155,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionFormTest do
 
       {:ok, result} = CreateCommandExecutionForm.changeset(attrs)
       assert Map.has_key?(result, "timeout")
-      assert Map.has_key?(result, "expired_at")
+      assert Map.has_key?(result, "expires_at")
       assert Map.has_key?(result, "output")
       assert Map.has_key?(result, "exit_code")
       assert Map.has_key?(result, "completed_at")

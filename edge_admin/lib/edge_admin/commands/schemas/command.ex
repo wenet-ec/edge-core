@@ -10,7 +10,7 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
           id: String.t(),
           command_text: String.t(),
           timeout: integer() | nil,
-          expired_at: DateTime.t() | nil,
+          expires_at: DateTime.t() | nil,
           targeting: map(),
           command_executions: [CommandExecution.t()] | NotLoaded.t(),
           inserted_at: DateTime.t(),
@@ -19,8 +19,8 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
 
   @derive {
     Flop.Schema,
-    filterable: [:command_text, :timeout, :expired_at, :inserted_at, :updated_at],
-    sortable: [:timeout, :expired_at, :inserted_at, :updated_at],
+    filterable: [:command_text, :timeout, :expires_at, :inserted_at, :updated_at],
+    sortable: [:timeout, :expires_at, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],
       order_directions: [:desc]
@@ -31,7 +31,7 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
     # Maps to TEXT in database
     field(:command_text, :string)
     field(:timeout, :integer)
-    field(:expired_at, :utc_datetime)
+    field(:expires_at, :utc_datetime)
     field(:targeting, :map)
 
     # Associations
@@ -43,10 +43,10 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
   @doc false
   def changeset(command, attrs) do
     command
-    |> cast(attrs, [:command_text, :timeout, :expired_at, :targeting])
+    |> cast(attrs, [:command_text, :timeout, :expires_at, :targeting])
     |> validate_required([:command_text, :targeting])
     |> validate_timeout()
-    |> validate_expired_at()
+    |> validate_expires_at()
   end
 
   @doc false
@@ -67,12 +67,12 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
   end
 
   @doc false
-  defp validate_expired_at(changeset) do
-    validate_change(changeset, :expired_at, fn :expired_at, expired_at ->
-      if DateTime.after?(expired_at, DateTime.utc_now()) do
+  defp validate_expires_at(changeset) do
+    validate_change(changeset, :expires_at, fn :expires_at, expires_at ->
+      if DateTime.after?(expires_at, DateTime.utc_now()) do
         []
       else
-        [expired_at: "must be in the future"]
+        [expires_at: "must be in the future"]
       end
     end)
   end

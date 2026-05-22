@@ -21,8 +21,8 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
 
   @derive {
     Flop.Schema,
-    filterable: [:name, :key, :uses_remaining, :expired_at, :last_used_at, :inserted_at, :updated_at],
-    sortable: [:name, :uses_remaining, :expired_at, :last_used_at, :inserted_at, :updated_at],
+    filterable: [:name, :key, :uses_remaining, :expires_at, :last_used_at, :inserted_at, :updated_at],
+    sortable: [:name, :uses_remaining, :expires_at, :last_used_at, :inserted_at, :updated_at],
     default_order: %{
       order_by: [:inserted_at],
       order_directions: [:desc]
@@ -36,7 +36,7 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
           cluster_id: String.t(),
           cluster: Cluster.t() | NotLoaded.t(),
           uses_remaining: integer() | nil,
-          expired_at: DateTime.t() | nil,
+          expires_at: DateTime.t() | nil,
           last_used_at: DateTime.t() | nil,
           inserted_at: DateTime.t(),
           updated_at: DateTime.t()
@@ -46,7 +46,7 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
     field(:name, :string)
     field(:key, :string)
     field(:uses_remaining, :integer, default: 1)
-    field(:expired_at, :utc_datetime)
+    field(:expires_at, :utc_datetime)
     field(:last_used_at, :utc_datetime)
 
     belongs_to(:cluster, Cluster)
@@ -57,7 +57,7 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
   @doc false
   def changeset(enrollment_key, attrs) do
     enrollment_key
-    |> cast(attrs, [:name, :key, :cluster_id, :uses_remaining, :expired_at])
+    |> cast(attrs, [:name, :key, :cluster_id, :uses_remaining, :expires_at])
     |> validate_required([:key, :cluster_id])
     |> validate_uses_remaining()
     |> unique_constraint(:key)
@@ -74,13 +74,13 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
 
   @doc """
   Returns true if this key has expired.
-  Keys with no expired_at never expire.
+  Keys with no expires_at never expire.
   """
   @spec expired?(t()) :: boolean()
-  def expired?(%__MODULE__{expired_at: nil}), do: false
+  def expired?(%__MODULE__{expires_at: nil}), do: false
 
-  def expired?(%__MODULE__{expired_at: expired_at}) do
-    DateTime.after?(DateTime.utc_now(), expired_at)
+  def expired?(%__MODULE__{expires_at: expires_at}) do
+    DateTime.after?(DateTime.utc_now(), expires_at)
   end
 
   @doc """

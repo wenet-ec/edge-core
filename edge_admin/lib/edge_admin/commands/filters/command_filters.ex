@@ -28,20 +28,20 @@ defmodule EdgeAdmin.Commands.Filters.CommandFilters do
   defp apply_has_timeout_one(query, _), do: query
 
   @doc """
-  Applies `has_expired_at` virtual boolean filter — `true` matches commands
-  with a non-null `expired_at` (regardless of whether the timestamp is in the past).
+  Applies `has_expires_at` virtual boolean filter — `true` matches commands
+  with a non-null `expires_at` (regardless of whether the timestamp is in the past).
   """
-  def apply_has_expired_at(query, filters) do
-    Enum.reduce(filters, query, fn filter, acc -> apply_has_expired_at_one(acc, filter) end)
+  def apply_has_expires_at(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc -> apply_has_expires_at_one(acc, filter) end)
   end
 
-  defp apply_has_expired_at_one(query, %{op: :==, value: v}) when v in [true, "true"] do
-    from(c in query, where: not is_nil(c.expired_at))
+  defp apply_has_expires_at_one(query, %{op: :==, value: v}) when v in [true, "true"] do
+    from(c in query, where: not is_nil(c.expires_at))
   end
 
-  defp apply_has_expired_at_one(query, %{op: :==, value: v}) when v in [false, "false"] do
-    from(c in query, where: is_nil(c.expired_at))
+  defp apply_has_expires_at_one(query, %{op: :==, value: v}) when v in [false, "false"] do
+    from(c in query, where: is_nil(c.expires_at))
   end
 
-  defp apply_has_expired_at_one(query, _), do: query
+  defp apply_has_expires_at_one(query, _), do: query
 end

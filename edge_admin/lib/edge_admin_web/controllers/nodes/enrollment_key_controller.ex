@@ -50,7 +50,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
           ),
           QueryParams.boolean_filter(:is_expired,
             description:
-              "Filter by whether the key is expired: true returns keys where expired_at is in the past, false returns active keys (including those with no expiry)"
+              "Filter by whether the key is expired: true returns keys where expires_at is in the past, false returns active keys (including those with no expiry)"
           ),
           QueryParams.boolean_filter(:is_never_used,
             description:
@@ -58,11 +58,11 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
           ),
           QueryParams.boolean_filter(:has_expiry,
             description:
-              "Filter by whether the key has an expiry set: true returns keys with expired_at present, false returns keys with no expiry (unlimited lifetime)"
+              "Filter by whether the key has an expiry set: true returns keys with expires_at present, false returns keys with no expiry (unlimited lifetime)"
           )
         ] ++
         QueryParams.int_range_filter(:uses_remaining, minimum: 1) ++
-        QueryParams.datetime_range_filter(:expired_at) ++
+        QueryParams.datetime_range_filter(:expires_at) ++
         QueryParams.datetime_range_filter(:last_used_at) ++
         QueryParams.datetime_range_filter(:inserted_at) ++
         QueryParams.datetime_range_filter(:updated_at),
@@ -101,7 +101,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
     Create a new enrollment key for an edge cluster. The returned `key` blob must be set as the `ENROLLMENT_KEY`
     environment variable on the agent to allow it to join the cluster's VPN network.
 
-    Keys can be limited by use count (`uses_remaining`) or by expiry time (`expired_at`). Omit both for a single-use key with no expiry.
+    Keys can be limited by use count (`uses_remaining`) or by expiry time (`expires_at`). Omit both for a single-use key with no expiry.
 
     **Note:** This endpoint is unavailable during degraded mode (503).
     """,
@@ -179,7 +179,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController do
   operation(:update,
     summary: "Update an enrollment key",
     description:
-      "Update expired_at or uses_remaining. Pass null to unset a nullable field.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+      "Update expires_at or uses_remaining. Pass null to unset a nullable field.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
     parameters: [PathParams.uuid(:id, "Enrollment key ID")],
     request_body: {"Update parameters", "application/json", EnrollmentKeySchemas.EnrollmentKeyUpdateRequest},
     responses: %{

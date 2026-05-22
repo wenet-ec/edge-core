@@ -16,7 +16,7 @@ defmodule EdgeAdmin.Commands do
   - **Status Lifecycle**: `pending` → `sent` → `completed`
     - Terminal states: `completed` | `cancelled` | `expired`
     - From `pending` or `sent`: admin can cancel; scheduler can mark `expired`
-      when the command's `expired_at` passes
+      when the command's `expires_at` passes
     - Race-window detail: `cancelled` / `expired` rows with `nil exit_code`
       can still be overwritten by a late agent report
       (see `Checks.ExecutionAcceptsResultCheck`)
@@ -217,10 +217,10 @@ defmodule EdgeAdmin.Commands do
         filter.field == :has_timeout
       end)
 
-    # Extract has_expired_at filter (virtual, handle separately)
-    {has_expired_at_filters, other_filters} =
+    # Extract has_expires_at filter (virtual, handle separately)
+    {has_expires_at_filters, other_filters} =
       Enum.split_with(other_filters, fn filter ->
-        filter.field == :has_expired_at
+        filter.field == :has_expires_at
       end)
 
     {ilike_filters, flop_params} =
@@ -235,7 +235,7 @@ defmodule EdgeAdmin.Commands do
       end)
 
     base_query = CommandFilters.apply_has_timeout(base_query, has_timeout_filters)
-    base_query = CommandFilters.apply_has_expired_at(base_query, has_expired_at_filters)
+    base_query = CommandFilters.apply_has_expires_at(base_query, has_expires_at_filters)
 
     case Flop.validate_and_run(base_query, flop_params,
            for: Command,
@@ -773,7 +773,7 @@ defmodule EdgeAdmin.Commands do
         where: ce.status == :pending,
         where: c.name in ^cluster_names,
         where: n.status == :healthy,
-        where: is_nil(cmd.expired_at) or cmd.expired_at > ^now,
+        where: is_nil(cmd.expires_at) or cmd.expires_at > ^now,
         order_by: [asc: ce.node_id, asc: ce.inserted_at],
         preload: [node: :cluster, command: []]
       )
@@ -791,7 +791,7 @@ defmodule EdgeAdmin.Commands do
         node_id: execution.node_id,
         command_text: CommandExecution.command_text(execution),
         timeout: CommandExecution.timeout(execution),
-        expired_at: CommandExecution.expired_at(execution),
+        expires_at: CommandExecution.expires_at(execution),
         status: "pending"
       }
 
@@ -1054,7 +1054,7 @@ defmodule EdgeAdmin.Commands do
   end
 
   @doc """
-  Expires all stale command executions whose command's `expired_at` has passed.
+  Expires all stale command executions whose command's `expires_at` has passed.
 
   Called by the Quantum scheduler (every minute). Processes executions in two passes:
 
@@ -1132,8 +1132,8 @@ defmodule EdgeAdmin.Commands do
         join: n in assoc(ce, :node),
         join: cl in assoc(n, :cluster),
         where: ce.status in ^cancellable,
-        where: not is_nil(c.expired_at),
-        where: c.expired_at <= ^now,
+        where: not is_nil(c.expires_at),
+        where: c.expires_at <= ^now,
         where: cl.name in ^cluster_names,
         preload: [node: :cluster, command: []]
       )

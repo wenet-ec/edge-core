@@ -25,7 +25,7 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionJSONTest do
           node_id: @valid_node_id,
           command_text: "uptime",
           timeout: 30_000,
-          expired_at: nil,
+          expires_at: nil,
           status: :pending,
           output: nil,
           exit_code: nil,
@@ -58,7 +58,7 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionJSONTest do
             :node_id,
             :command_text,
             :timeout,
-            :expired_at,
+            :expires_at,
             :status,
             :output,
             :exit_code,
@@ -69,16 +69,16 @@ defmodule EdgeAgentWeb.Controllers.CommandExecutionJSONTest do
       end
     end
 
-    test "nil expired_at is included" do
+    test "nil expires_at is included" do
       %{data: data} = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: build_execution()})
-      assert Map.has_key?(data, :expired_at)
-      assert data.expired_at == nil
+      assert Map.has_key?(data, :expires_at)
+      assert data.expires_at == nil
     end
 
-    test "expired_at is passed through when set" do
-      exec = build_execution(%{expired_at: ~U[2026-12-31 00:00:00Z]})
+    test "expires_at is passed through when set" do
+      exec = build_execution(%{expires_at: ~U[2026-12-31 00:00:00Z]})
       %{data: data} = CommandExecutionJSON.show(%{conn: fake_conn(), command_execution: exec})
-      assert data.expired_at == ~U[2026-12-31 00:00:00Z]
+      assert data.expires_at == ~U[2026-12-31 00:00:00Z]
     end
 
     test "scalar values are passed through correctly" do

@@ -6,12 +6,12 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyForm do
   embedded_schema do
     field(:name, :string)
     field(:uses_remaining, :integer)
-    field(:expired_at, :utc_datetime)
+    field(:expires_at, :utc_datetime)
   end
 
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
-    |> cast(attrs, [:name, :uses_remaining, :expired_at])
+    |> cast(attrs, [:name, :uses_remaining, :expires_at])
     |> validate_uses_remaining()
     |> apply_action(:update)
     |> case do
@@ -37,7 +37,7 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyForm do
     %{}
     |> maybe_put(raw_attrs, "name", form.name)
     |> maybe_put(raw_attrs, "uses_remaining", form.uses_remaining)
-    |> maybe_put(raw_attrs, "expired_at", form.expired_at)
+    |> maybe_put(raw_attrs, "expires_at", form.expires_at)
   end
 
   defp maybe_put(result, raw_attrs, key, value) do

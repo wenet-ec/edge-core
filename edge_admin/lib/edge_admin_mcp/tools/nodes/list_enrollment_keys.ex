@@ -11,17 +11,17 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
   - `uses_remaining_gte` / `uses_remaining_lte` — uses remaining range
   - `is_unlimited` — true: unlimited keys (uses_remaining is null); false: finite use keys
   - `is_spent` — true: exhausted keys (uses_remaining == 0); false: keys with uses left
-  - `is_expired` — true: keys where expired_at is in the past; false: active keys
+  - `is_expired` — true: keys where expires_at is in the past; false: active keys
   - `is_never_used` — true: never-used keys (last_used_at is null); false: used at least once
-  - `has_expiry` — true: keys with expired_at set; false: keys with no expiry
+  - `has_expiry` — true: keys with expires_at set; false: keys with no expiry
   - `has_name` — true: keys with a name set; false: unlabeled keys
-  - `expired_at_gte` / `expired_at_lte` — expiry datetime range (ISO8601)
+  - `expires_at_gte` / `expires_at_lte` — expiry datetime range (ISO8601)
   - `last_used_at_gte` / `last_used_at_lte` — last used datetime range (ISO8601)
   - `inserted_at_gte` / `inserted_at_lte` — creation datetime range (ISO8601)
   - `updated_at_gte` / `updated_at_lte` — last-updated datetime range (ISO8601)
 
   ## Sorting
-  - `order_by` — comma-separated fields: `name`, `uses_remaining`, `expired_at`, `last_used_at`, `inserted_at`, `updated_at`
+  - `order_by` — comma-separated fields: `name`, `uses_remaining`, `expires_at`, `last_used_at`, `inserted_at`, `updated_at`
   - `order_directions` — comma-separated directions: `asc`, `desc`
   """
   use EdgeAdminMcp, :tool
@@ -50,8 +50,8 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
     field :is_expired, :boolean
     field :is_never_used, :boolean
     field :has_expiry, :boolean
-    field :expired_at_gte, :string
-    field :expired_at_lte, :string
+    field :expires_at_gte, :string
+    field :expires_at_lte, :string
     field :last_used_at_gte, :string
     field :last_used_at_lte, :string
     field :inserted_at_gte, :string
@@ -78,7 +78,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
           :has_expiry,
           :has_name
         ],
-        ranges: [:uses_remaining, :expired_at, :last_used_at, :inserted_at, :updated_at]
+        ranges: [:uses_remaining, :expires_at, :last_used_at, :inserted_at, :updated_at]
       )
 
     case Nodes.list_enrollment_keys(query) do

@@ -15,7 +15,7 @@ defmodule EdgeAdmin.Nodes.Views.EnrollmentKeyViewTest do
       name: "default-key",
       key: "base64encodedblob",
       uses_remaining: 1,
-      expired_at: nil,
+      expires_at: nil,
       last_used_at: nil,
       cluster_id: cluster.id,
       cluster: cluster,
@@ -37,31 +37,31 @@ defmodule EdgeAdmin.Nodes.Views.EnrollmentKeyViewTest do
       assert result.name == "default-key"
       assert result.key == "base64encodedblob"
       assert result.uses_remaining == 1
-      assert result.expired_at == nil
+      assert result.expires_at == nil
       assert result.last_used_at == nil
       assert result.inserted_at == key.inserted_at
       assert result.updated_at == key.updated_at
     end
 
     test "preserves nullable fields as nil (no coercion to defaults)" do
-      key = key_fixture(%{name: nil, expired_at: nil, last_used_at: nil, uses_remaining: nil})
+      key = key_fixture(%{name: nil, expires_at: nil, last_used_at: nil, uses_remaining: nil})
 
       result = EnrollmentKeyView.render(key)
 
       assert result.name == nil
       assert result.uses_remaining == nil
-      assert result.expired_at == nil
+      assert result.expires_at == nil
       assert result.last_used_at == nil
     end
 
     test "passes through populated timestamps" do
       now = ~U[2025-01-15 12:34:56Z]
 
-      key = key_fixture(%{expired_at: now, last_used_at: now})
+      key = key_fixture(%{expires_at: now, last_used_at: now})
 
       result = EnrollmentKeyView.render(key)
 
-      assert result.expired_at == now
+      assert result.expires_at == now
       assert result.last_used_at == now
     end
 
@@ -69,7 +69,7 @@ defmodule EdgeAdmin.Nodes.Views.EnrollmentKeyViewTest do
       result = EnrollmentKeyView.render(key_fixture())
 
       expected_keys =
-        Enum.sort(~w(id cluster_name name key uses_remaining expired_at last_used_at inserted_at updated_at)a)
+        Enum.sort(~w(id cluster_name name key uses_remaining expires_at last_used_at inserted_at updated_at)a)
 
       assert result |> Map.keys() |> Enum.sort() == expected_keys
     end

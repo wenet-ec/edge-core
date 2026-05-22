@@ -1,14 +1,14 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/update_enrollment_key.ex
 defmodule EdgeAdminMcp.Tools.Nodes.UpdateEnrollmentKey do
   @moduledoc """
-  Update an enrollment key's `name`, `uses_remaining`, or `expired_at`.
+  Update an enrollment key's `name`, `uses_remaining`, or `expires_at`.
 
   Three ways each field can be passed:
 
   - **Omit the field** — leave it unchanged.
   - **Pass a value** — set the field to that value.
   - **Pass `null`** — clear the field. `name: null` removes the label.
-    `uses_remaining: null` makes the key unlimited. `expired_at: null`
+    `uses_remaining: null` makes the key unlimited. `expires_at: null`
     removes the expiry.
   """
   use EdgeAdminMcp, :tool
@@ -25,7 +25,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.UpdateEnrollmentKey do
     field :enrollment_key_id, {:required, :string}
     field :name, :string
     field :uses_remaining, :integer, min: 1
-    field :expired_at, :string
+    field :expires_at, :string
   end
 
   @impl true
@@ -36,7 +36,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.UpdateEnrollmentKey do
           %{}
           |> put_if_present("name", params, :name)
           |> put_if_present("uses_remaining", params, :uses_remaining)
-          |> put_if_present("expired_at", params, :expired_at)
+          |> put_if_present("expires_at", params, :expires_at)
 
         case Nodes.update_enrollment_key(key, attrs) do
           {:ok, updated} ->

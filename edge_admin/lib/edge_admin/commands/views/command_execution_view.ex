@@ -4,7 +4,7 @@ defmodule EdgeAdmin.Commands.Views.CommandExecutionView do
   Public-facing render for `CommandExecution` — the canonical map shape
   both REST and MCP serialize. Includes virtuals derived from the
   preloaded `command` and `cluster` associations (`command_text`,
-  `timeout`, `expired_at`, `cluster_name`).
+  `timeout`, `expires_at`, `cluster_name`).
   """
 
   alias EdgeAdmin.Commands.Schemas.CommandExecution
@@ -25,7 +25,7 @@ defmodule EdgeAdmin.Commands.Views.CommandExecutionView do
       sent_at: e.sent_at,
       completed_at: e.completed_at,
       cancelled_at: e.cancelled_at,
-      expired_at: CommandExecution.expired_at(e),
+      expires_at: CommandExecution.expires_at(e),
       inserted_at: e.inserted_at,
       updated_at: e.updated_at
     }

@@ -11,18 +11,18 @@ defmodule EdgeAgent.Commands.Workers.ExecuteCommandWorkerTest do
   # ---------------------------------------------------------------------------
 
   describe "expired?/1" do
-    test "nil expired_at → not expired (no deadline configured)" do
-      refute ExecuteCommandWorker.expired?(%{expired_at: nil})
+    test "nil expires_at → not expired (no deadline configured)" do
+      refute ExecuteCommandWorker.expired?(%{expires_at: nil})
     end
 
-    test "future expired_at → not expired" do
+    test "future expires_at → not expired" do
       future = DateTime.add(DateTime.utc_now(), 3600, :second)
-      refute ExecuteCommandWorker.expired?(%{expired_at: future})
+      refute ExecuteCommandWorker.expired?(%{expires_at: future})
     end
 
-    test "past expired_at → expired" do
+    test "past expires_at → expired" do
       past = DateTime.add(DateTime.utc_now(), -3600, :second)
-      assert ExecuteCommandWorker.expired?(%{expired_at: past})
+      assert ExecuteCommandWorker.expired?(%{expires_at: past})
     end
 
     test "equality with now counts as expired (compare returns :eq, not :gt)" do
@@ -30,7 +30,7 @@ defmodule EdgeAgent.Commands.Workers.ExecuteCommandWorkerTest do
       # never strictly after — so this lands on the :eq branch which is
       # treated as expired.
       now = DateTime.truncate(DateTime.utc_now(), :second)
-      assert ExecuteCommandWorker.expired?(%{expired_at: now})
+      assert ExecuteCommandWorker.expired?(%{expires_at: now})
     end
   end
 end

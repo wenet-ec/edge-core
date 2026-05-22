@@ -88,7 +88,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
       id: "cmd-uuid-1",
       command_text: "uname -a",
       timeout: 30_000,
-      expired_at: nil,
+      expires_at: nil,
       targeting: %{"type" => "all"},
       inserted_at: now(),
       updated_at: now()
@@ -455,7 +455,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
 
       keys =
         ~w(command_execution_id command_id node_id cluster_name command_text timeout
-           status exit_code target_all expired_at sent_at completed_at cancelled_at
+           status exit_code target_all expires_at sent_at completed_at cancelled_at
            inserted_at updated_at)
 
       for s <- structs do

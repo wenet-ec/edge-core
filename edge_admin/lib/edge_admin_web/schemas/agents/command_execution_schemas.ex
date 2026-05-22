@@ -69,7 +69,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas do
           enum: @status_enum,
           description: "Current execution status"
         },
-        expired_at: %Schema{
+        expires_at: %Schema{
           type: :string,
           format: :"date-time",
           nullable: true,

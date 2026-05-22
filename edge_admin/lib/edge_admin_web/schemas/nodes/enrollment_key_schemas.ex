@@ -33,7 +33,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
           nullable: true,
           description: "Remaining uses. null means unlimited."
         },
-        expired_at: %Schema{
+        expires_at: %Schema{
           type: :string,
           format: :"date-time",
           nullable: true,
@@ -59,7 +59,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
         name: "prod rollout",
         key: "eyJzZXJ2ZXIiOiJodHRwczovL25ldG1ha2VyLmV4YW1wbGUuY29tIiwia2V5IjoiYWJjMTIzIn0=",
         uses_remaining: 5,
-        expired_at: "2026-12-31T23:59:59Z",
+        expires_at: "2026-12-31T23:59:59Z",
         last_used_at: nil,
         inserted_at: "2025-06-09T08:00:00Z",
         updated_at: "2025-06-09T08:00:00Z"
@@ -108,7 +108,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
           description: "Number of uses (must be >= 1). Pass null for unlimited. Omit to use the default of 1.",
           example: 5
         },
-        expired_at: %Schema{
+        expires_at: %Schema{
           type: :string,
           format: :"date-time",
           nullable: true,
@@ -116,7 +116,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
           example: "2026-12-31T23:59:59Z"
         }
       },
-      example: %{name: "prod rollout", uses_remaining: 5, expired_at: "2026-12-31T23:59:59Z"}
+      example: %{name: "prod rollout", uses_remaining: 5, expires_at: "2026-12-31T23:59:59Z"}
     })
   end
 
@@ -130,7 +130,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
 
       - `name`: pass a string to set a label, or `null` to clear it.
       - `uses_remaining`: pass a positive integer to set a limit, or `null` to make the key unlimited.
-      - `expired_at`: pass a datetime to set expiry, or `null` to remove expiry.
+      - `expires_at`: pass a datetime to set expiry, or `null` to remove expiry.
       """,
       type: :object,
       properties: %{
@@ -148,7 +148,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
             "Positive integer to set a use limit, or null to make the key unlimited. Omit to leave unchanged.",
           example: 10
         },
-        expired_at: %Schema{
+        expires_at: %Schema{
           type: :string,
           format: :"date-time",
           nullable: true,
@@ -156,7 +156,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.EnrollmentKeySchemas do
           example: "2026-12-31T23:59:59Z"
         }
       },
-      example: %{name: "prod rollout", uses_remaining: nil, expired_at: "2026-12-31T23:59:59Z"}
+      example: %{name: "prod rollout", uses_remaining: nil, expires_at: "2026-12-31T23:59:59Z"}
     })
   end
 end

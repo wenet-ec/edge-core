@@ -73,12 +73,12 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecutionTest do
       assert "can't be blank" in errors_on(changeset).status
     end
 
-    test "output, exit_code, expired_at, completed_at, timeout are optional" do
+    test "output, exit_code, expires_at, completed_at, timeout are optional" do
       changeset = CommandExecution.changeset(%CommandExecution{}, valid_attrs())
       assert changeset.valid?
       refute Map.has_key?(changeset.changes, :output)
       refute Map.has_key?(changeset.changes, :exit_code)
-      refute Map.has_key?(changeset.changes, :expired_at)
+      refute Map.has_key?(changeset.changes, :expires_at)
       refute Map.has_key?(changeset.changes, :completed_at)
     end
   end

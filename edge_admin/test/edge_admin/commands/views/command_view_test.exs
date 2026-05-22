@@ -12,7 +12,7 @@ defmodule EdgeAdmin.Commands.Views.CommandViewTest do
       id: "command-uuid-1",
       command_text: "uname -a",
       timeout: 30_000,
-      expired_at: nil,
+      expires_at: nil,
       targeting: %{"type" => "all"},
       inserted_at: now,
       updated_at: now
@@ -30,19 +30,19 @@ defmodule EdgeAdmin.Commands.Views.CommandViewTest do
       assert result.id == command.id
       assert result.command_text == "uname -a"
       assert result.timeout == 30_000
-      assert result.expired_at == nil
+      assert result.expires_at == nil
       assert result.targeting == %{"type" => "all"}
       assert result.inserted_at == command.inserted_at
       assert result.updated_at == command.updated_at
     end
 
-    test "preserves nil timeout / expired_at (no coercion)" do
-      command = command_fixture(%{timeout: nil, expired_at: nil})
+    test "preserves nil timeout / expires_at (no coercion)" do
+      command = command_fixture(%{timeout: nil, expires_at: nil})
 
       result = CommandView.render(command)
 
       assert result.timeout == nil
-      assert result.expired_at == nil
+      assert result.expires_at == nil
     end
 
     test "passes through targeting maps unchanged (string keys preserved)" do
@@ -60,7 +60,7 @@ defmodule EdgeAdmin.Commands.Views.CommandViewTest do
     test "rendered map contains exactly the documented top-level keys" do
       result = CommandView.render(command_fixture())
 
-      expected_keys = Enum.sort(~w(id command_text timeout expired_at targeting inserted_at updated_at)a)
+      expected_keys = Enum.sort(~w(id command_text timeout expires_at targeting inserted_at updated_at)a)
       assert result |> Map.keys() |> Enum.sort() == expected_keys
     end
   end

@@ -1279,11 +1279,11 @@ defmodule EdgeAdmin.Nodes do
   - `uses_remaining` - Exact, `__gte`, `__lte` (null = unlimited)
   - `is_unlimited` - Boolean: true returns unlimited keys (uses_remaining is null)
   - `is_spent` - Boolean: true returns exhausted keys (uses_remaining == 0)
-  - `is_expired` - Boolean: true returns expired keys (expired_at in the past)
+  - `is_expired` - Boolean: true returns expired keys (expires_at in the past)
   - `is_never_used` - Boolean: true returns keys never used (last_used_at is null)
-  - `has_expiry` - Boolean: true returns keys with an expiry set (expired_at is not null)
+  - `has_expiry` - Boolean: true returns keys with an expiry set (expires_at is not null)
   - `has_name` - Boolean: true returns keys with a name set (name is not null)
-  - `expired_at`, `last_used_at`, `inserted_at`, `updated_at` - Date range (`__gte`, `__lte`)
+  - `expires_at`, `last_used_at`, `inserted_at`, `updated_at` - Date range (`__gte`, `__lte`)
   - `cluster_name` - Text search with wildcard support (requires join)
   """
   @spec list_enrollment_keys(map()) ::
@@ -1399,9 +1399,9 @@ defmodule EdgeAdmin.Nodes do
   end
 
   @doc """
-  Updates an enrollment key's `uses_remaining` and/or `expired_at`.
+  Updates an enrollment key's `uses_remaining` and/or `expires_at`.
 
-  Only fields explicitly provided are updated. Pass null to unset `expired_at`.
+  Only fields explicitly provided are updated. Pass null to unset `expires_at`.
   """
   @spec update_enrollment_key(EnrollmentKey.t(), map()) ::
           {:ok, EnrollmentKey.t()} | {:error, Ecto.Changeset.t()}

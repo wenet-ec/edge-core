@@ -14,7 +14,7 @@ defmodule EdgeAdmin.Commands.Filters.CommandFiltersTest do
           command_text: "echo hello",
           targeting: %{},
           timeout: nil,
-          expired_at: nil
+          expires_at: nil
         },
         overrides
       )
@@ -75,23 +75,23 @@ defmodule EdgeAdmin.Commands.Filters.CommandFiltersTest do
   end
 
   # ---------------------------------------------------------------------------
-  # apply_has_expired_at/2 — virtual boolean: expired_at IS [NOT] NULL.
+  # apply_has_expires_at/2 — virtual boolean: expires_at IS [NOT] NULL.
   # Critically, this does NOT check whether the timestamp is in the past.
   # ---------------------------------------------------------------------------
 
-  describe "apply_has_expired_at/2" do
-    test "true matches commands with expired_at set, regardless of past/future" do
+  describe "apply_has_expires_at/2" do
+    test "true matches commands with expires_at set, regardless of past/future" do
       # Use a past expiry so we don't depend on the schema's
-      # validate_expired_at — but we're using struct() insertion that bypasses
+      # validate_expires_at — but we're using struct() insertion that bypasses
       # the changeset, so any timestamp works.
       past = DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.truncate(:second)
       future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
 
-      past_key = insert_command(%{expired_at: past})
-      future_key = insert_command(%{expired_at: future})
-      _no_expiry = insert_command(%{expired_at: nil})
+      past_key = insert_command(%{expires_at: past})
+      future_key = insert_command(%{expires_at: future})
+      _no_expiry = insert_command(%{expires_at: nil})
 
-      query = CommandFilters.apply_has_expired_at(Command, [%{op: :==, value: true}])
+      query = CommandFilters.apply_has_expires_at(Command, [%{op: :==, value: true}])
 
       assert ids(query) == Enum.sort([past_key.id, future_key.id])
     end
@@ -99,23 +99,23 @@ defmodule EdgeAdmin.Commands.Filters.CommandFiltersTest do
     test "false matches commands with no expiry set" do
       future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
 
-      _has_expiry = insert_command(%{expired_at: future})
-      no_expiry = insert_command(%{expired_at: nil})
+      _has_expiry = insert_command(%{expires_at: future})
+      no_expiry = insert_command(%{expires_at: nil})
 
-      query = CommandFilters.apply_has_expired_at(Command, [%{op: :==, value: false}])
+      query = CommandFilters.apply_has_expires_at(Command, [%{op: :==, value: false}])
 
       assert ids(query) == [no_expiry.id]
     end
 
     test "string 'true' / 'false' work as well" do
       future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
-      with_exp = insert_command(%{expired_at: future})
-      without = insert_command(%{expired_at: nil})
+      with_exp = insert_command(%{expires_at: future})
+      without = insert_command(%{expires_at: nil})
 
-      assert ids(CommandFilters.apply_has_expired_at(Command, [%{op: :==, value: "true"}])) ==
+      assert ids(CommandFilters.apply_has_expires_at(Command, [%{op: :==, value: "true"}])) ==
                [with_exp.id]
 
-      assert ids(CommandFilters.apply_has_expired_at(Command, [%{op: :==, value: "false"}])) ==
+      assert ids(CommandFilters.apply_has_expires_at(Command, [%{op: :==, value: "false"}])) ==
                [without.id]
     end
 
@@ -123,7 +123,7 @@ defmodule EdgeAdmin.Commands.Filters.CommandFiltersTest do
       a = insert_command()
       b = insert_command()
 
-      assert ids(CommandFilters.apply_has_expired_at(Command, [])) == Enum.sort([a.id, b.id])
+      assert ids(CommandFilters.apply_has_expires_at(Command, [])) == Enum.sort([a.id, b.id])
     end
   end
 end

@@ -30,7 +30,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
           command_text: String.t() | nil,
           timeout: integer() | nil,
           cluster_name: String.t() | nil,
-          expired_at: DateTime.t() | nil,
+          expires_at: DateTime.t() | nil,
           command_id: String.t() | nil,
           command: Command.t() | NotLoaded.t() | nil,
           node_id: String.t(),
@@ -76,7 +76,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
     field(:command_text, :string, virtual: true)
     field(:timeout, :integer, virtual: true)
     field(:cluster_name, :string, virtual: true)
-    field(:expired_at, :utc_datetime, virtual: true)
+    field(:expires_at, :utc_datetime, virtual: true)
 
     # Associations
     belongs_to(:command, Command)
@@ -135,12 +135,12 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
 
   @doc """
   Returns the expiration deadline for this execution.
-  Derived from the command's expired_at — this is the deadline, not the event timestamp.
+  Derived from the command's expires_at — this is the deadline, not the event timestamp.
   Requires command association to be preloaded.
   Returns nil if no expiration is set.
   """
-  def expired_at(%__MODULE__{command: %{expired_at: expired_at}}), do: expired_at
-  def expired_at(%__MODULE__{}), do: nil
+  def expires_at(%__MODULE__{command: %{expires_at: expires_at}}), do: expires_at
+  def expires_at(%__MODULE__{}), do: nil
 
   # ---------------------------------------------------------------------------
   # Status registry

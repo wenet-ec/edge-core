@@ -15,7 +15,7 @@ defmodule EdgeAdmin.Nodes.Views.EnrollmentKeyView do
       name: key.name,
       key: key.key,
       uses_remaining: key.uses_remaining,
-      expired_at: key.expired_at,
+      expires_at: key.expires_at,
       last_used_at: key.last_used_at,
       inserted_at: key.inserted_at,
       updated_at: key.updated_at

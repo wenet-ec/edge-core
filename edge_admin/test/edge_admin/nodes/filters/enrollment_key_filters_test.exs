@@ -26,7 +26,7 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
           name: "key-#{:rand.uniform(999_999)}",
           key: "blob-#{Ecto.UUID.generate()}",
           uses_remaining: 1,
-          expired_at: nil,
+          expires_at: nil,
           last_used_at: nil
         },
         overrides
@@ -36,7 +36,7 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
     # `uses_remaining > 0`) so we can write nil into nullable fields. A
     # plain `struct(...)` insert keeps the schema-default value for nil
     # fields instead of writing NULL — that matters here because the
-    # `unlimited` and `expired_at == nil` cases need real NULLs in the row.
+    # `unlimited` and `expires_at == nil` cases need real NULLs in the row.
     %EnrollmentKey{}
     |> Ecto.Changeset.change(attrs)
     |> Repo.insert!()
@@ -129,14 +129,14 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
   # ---------------------------------------------------------------------------
 
   describe "apply_is_expired/2" do
-    test "true matches keys with expired_at in the past" do
+    test "true matches keys with expires_at in the past" do
       cluster = insert_cluster()
       past = DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.truncate(:second)
       future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
 
-      expired = insert_key(cluster.id, %{expired_at: past})
-      _future = insert_key(cluster.id, %{expired_at: future})
-      _no_expiry = insert_key(cluster.id, %{expired_at: nil})
+      expired = insert_key(cluster.id, %{expires_at: past})
+      _future = insert_key(cluster.id, %{expires_at: future})
+      _no_expiry = insert_key(cluster.id, %{expires_at: nil})
 
       query = EnrollmentKeyFilters.apply_is_expired(EnrollmentKey, [%{op: :==, value: true}])
 
@@ -148,9 +148,9 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
       past = DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.truncate(:second)
       future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
 
-      _expired = insert_key(cluster.id, %{expired_at: past})
-      future_key = insert_key(cluster.id, %{expired_at: future})
-      no_expiry = insert_key(cluster.id, %{expired_at: nil})
+      _expired = insert_key(cluster.id, %{expires_at: past})
+      future_key = insert_key(cluster.id, %{expires_at: future})
+      no_expiry = insert_key(cluster.id, %{expires_at: nil})
 
       query = EnrollmentKeyFilters.apply_is_expired(EnrollmentKey, [%{op: :==, value: false}])
 
@@ -191,19 +191,19 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
   end
 
   # ---------------------------------------------------------------------------
-  # apply_has_expiry/2 — expired_at IS [NOT] NULL (does NOT check whether the
+  # apply_has_expiry/2 — expires_at IS [NOT] NULL (does NOT check whether the
   # timestamp is in the past)
   # ---------------------------------------------------------------------------
 
   describe "apply_has_expiry/2" do
-    test "true matches keys with expired_at set, regardless of past/future" do
+    test "true matches keys with expires_at set, regardless of past/future" do
       cluster = insert_cluster()
       past = DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.truncate(:second)
       future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
 
-      past_key = insert_key(cluster.id, %{expired_at: past})
-      future_key = insert_key(cluster.id, %{expired_at: future})
-      _no_expiry = insert_key(cluster.id, %{expired_at: nil})
+      past_key = insert_key(cluster.id, %{expires_at: past})
+      future_key = insert_key(cluster.id, %{expires_at: future})
+      _no_expiry = insert_key(cluster.id, %{expires_at: nil})
 
       query = EnrollmentKeyFilters.apply_has_expiry(EnrollmentKey, [%{op: :==, value: true}])
 
@@ -214,8 +214,8 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
       cluster = insert_cluster()
       future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
 
-      _has_expiry = insert_key(cluster.id, %{expired_at: future})
-      no_expiry = insert_key(cluster.id, %{expired_at: nil})
+      _has_expiry = insert_key(cluster.id, %{expires_at: future})
+      no_expiry = insert_key(cluster.id, %{expires_at: nil})
 
       query = EnrollmentKeyFilters.apply_has_expiry(EnrollmentKey, [%{op: :==, value: false}])
 

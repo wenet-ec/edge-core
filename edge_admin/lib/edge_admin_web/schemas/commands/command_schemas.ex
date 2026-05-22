@@ -34,7 +34,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
           description: "Command timeout in milliseconds (optional, null means no timeout)",
           example: 30_000
         },
-        expired_at: %Schema{
+        expires_at: %Schema{
           type: :string,
           format: :"date-time",
           nullable: true,
@@ -66,7 +66,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
         id: "01234567-89ab-cdef-0123-456789abcdef",
         command_text: "ABC=value\necho $ABC\nsystemctl restart nginx",
         timeout: 30_000,
-        expired_at: "2025-12-31T23:59:59Z",
+        expires_at: "2025-12-31T23:59:59Z",
         targeting: %{
           type: "nodes",
           node_ids: ["01234567-89ab-cdef-0123-456789abcdef"],
@@ -120,7 +120,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
           description: "Command timeout in milliseconds (optional, null or omitted means no timeout, must be > 0)",
           example: 30_000
         },
-        expired_at: %Schema{
+        expires_at: %Schema{
           type: :string,
           format: :"date-time",
           nullable: true,

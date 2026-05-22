@@ -73,7 +73,7 @@
             "minLength": 1,
             "type": "string"
           },
-          "expired_at": {
+          "expires_at": {
             "description": "Deadline after which pending/sent executions are automatically expired. Must be in the future. Immutable after creation.",
             "example": "2025-12-31T23:59:59Z",
             "format": "date-time",
@@ -689,12 +689,12 @@
       "EnrollmentKeyCreateRequest": {
         "description": "Parameters for creating a new enrollment key for a cluster. All fields are optional.",
         "example": {
-          "expired_at": "2026-12-31T23:59:59Z",
+          "expires_at": "2026-12-31T23:59:59Z",
           "name": "prod rollout",
           "uses_remaining": 5
         },
         "properties": {
-          "expired_at": {
+          "expires_at": {
             "description": "Expiry datetime (ISO 8601). Omit or pass null for no expiry.",
             "example": "2026-12-31T23:59:59Z",
             "format": "date-time",
@@ -1751,7 +1751,6 @@
               "edge.node.reregistered",
               "edge.node.version_changed",
               "edge.node.status_changed",
-              "edge.node.cluster_changed",
               "edge.node.update_triggered",
               "edge.command_execution.created",
               "edge.command_execution.sent",
@@ -2751,7 +2750,7 @@
             "nullable": true,
             "type": "integer"
           },
-          "expired_at": {
+          "expires_at": {
             "description": "The expiration deadline from the parent command (null if no expiration was set)",
             "format": "date-time",
             "nullable": true,
@@ -2957,7 +2956,7 @@
         "description": "Command information",
         "example": {
           "command_text": "ABC=value\necho $ABC\nsystemctl restart nginx",
-          "expired_at": "2025-12-31T23:59:59Z",
+          "expires_at": "2025-12-31T23:59:59Z",
           "id": "01234567-89ab-cdef-0123-456789abcdef",
           "inserted_at": "2025-06-17T10:30:00Z",
           "targeting": {
@@ -2974,7 +2973,7 @@
             "example": "ABC=value\necho $ABC\nsystemctl restart nginx",
             "type": "string"
           },
-          "expired_at": {
+          "expires_at": {
             "description": "Deadline after which pending/sent executions are automatically expired (immutable after creation)",
             "format": "date-time",
             "nullable": true,
@@ -3046,14 +3045,14 @@
         "type": "object"
       },
       "EnrollmentKeyUpdateRequest": {
-        "description": "Parameters for updating an enrollment key. Only fields that are present in the request body are updated — omitting a field leaves it unchanged.\n\n- `name`: pass a string to set a label, or `null` to clear it.\n- `uses_remaining`: pass a positive integer to set a limit, or `null` to make the key unlimited.\n- `expired_at`: pass a datetime to set expiry, or `null` to remove expiry.\n",
+        "description": "Parameters for updating an enrollment key. Only fields that are present in the request body are updated — omitting a field leaves it unchanged.\n\n- `name`: pass a string to set a label, or `null` to clear it.\n- `uses_remaining`: pass a positive integer to set a limit, or `null` to make the key unlimited.\n- `expires_at`: pass a datetime to set expiry, or `null` to remove expiry.\n",
         "example": {
-          "expired_at": "2026-12-31T23:59:59Z",
+          "expires_at": "2026-12-31T23:59:59Z",
           "name": "prod rollout",
           "uses_remaining": null
         },
         "properties": {
-          "expired_at": {
+          "expires_at": {
             "description": "Expiry datetime (ISO 8601), or null to remove expiry. Omit to leave unchanged.",
             "example": "2026-12-31T23:59:59Z",
             "format": "date-time",
@@ -3432,7 +3431,7 @@
         "description": "Enrollment key information",
         "example": {
           "cluster_name": "prod-east",
-          "expired_at": "2026-12-31T23:59:59Z",
+          "expires_at": "2026-12-31T23:59:59Z",
           "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
           "inserted_at": "2025-06-09T08:00:00Z",
           "key": "eyJzZXJ2ZXIiOiJodHRwczovL25ldG1ha2VyLmV4YW1wbGUuY29tIiwia2V5IjoiYWJjMTIzIn0=",
@@ -3446,7 +3445,7 @@
             "description": "Cluster this key belongs to",
             "type": "string"
           },
-          "expired_at": {
+          "expires_at": {
             "description": "Expiry datetime (ISO 8601). null means never expires.",
             "format": "date-time",
             "nullable": true,
@@ -3680,6 +3679,14 @@
         "required": ["data", "meta"],
         "title": "SshUsernamePaginatedResponse",
         "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "apiKey": {
+        "bearerFormat": "opaque",
+        "description": "API key for REST API access (API_KEY or MASTER_KEY)",
+        "scheme": "bearer",
+        "type": "http"
       }
     }
   },
@@ -4368,7 +4375,7 @@
     "/api/v1/clusters/{cluster_name}/enrollment_keys": {
       "post": {
         "callbacks": {},
-        "description": "Create a new enrollment key for an edge cluster. The returned `key` blob must be set as the `ENROLLMENT_KEY`\nenvironment variable on the agent to allow it to join the cluster's VPN network.\n\nKeys can be limited by use count (`uses_remaining`) or by expiry time (`expired_at`). Omit both for a single-use key with no expiry.\n\n**Note:** This endpoint is unavailable during degraded mode (503).\n",
+        "description": "Create a new enrollment key for an edge cluster. The returned `key` blob must be set as the `ENROLLMENT_KEY`\nenvironment variable on the agent to allow it to join the cluster's VPN network.\n\nKeys can be limited by use count (`uses_remaining`) or by expiry time (`expires_at`). Omit both for a single-use key with no expiry.\n\n**Note:** This endpoint is unavailable during degraded mode (503).\n",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.create",
         "parameters": [
           {
@@ -4531,7 +4538,7 @@
             "schema": { "type": "boolean" }
           },
           {
-            "description": "Filter by whether the key is expired: true returns keys where expired_at is in the past, false returns active keys (including those with no expiry)",
+            "description": "Filter by whether the key is expired: true returns keys where expires_at is in the past, false returns active keys (including those with no expiry)",
             "in": "query",
             "name": "is_expired",
             "required": false,
@@ -4545,7 +4552,7 @@
             "schema": { "type": "boolean" }
           },
           {
-            "description": "Filter by whether the key has an expiry set: true returns keys with expired_at present, false returns keys with no expiry (unlimited lifetime)",
+            "description": "Filter by whether the key has an expiry set: true returns keys with expires_at present, false returns keys with no expiry (unlimited lifetime)",
             "in": "query",
             "name": "has_expiry",
             "required": false,
@@ -4566,9 +4573,9 @@
             "schema": { "minimum": 1, "type": "integer" }
           },
           {
-            "description": "Filter records where expired_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
+            "description": "Filter records where expires_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
-            "name": "expired_at__gte",
+            "name": "expires_at__gte",
             "required": false,
             "schema": {
               "anyOf": [
@@ -4578,9 +4585,9 @@
             }
           },
           {
-            "description": "Filter records where expired_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
+            "description": "Filter records where expires_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
-            "name": "expired_at__lte",
+            "name": "expires_at__lte",
             "required": false,
             "schema": {
               "anyOf": [
@@ -4733,7 +4740,7 @@
       },
       "patch": {
         "callbacks": {},
-        "description": "Update expired_at or uses_remaining. Pass null to unset a nullable field.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "description": "Update expires_at or uses_remaining. Pass null to unset a nullable field.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.EnrollmentKeyController.update",
         "parameters": [
           {
@@ -5731,9 +5738,9 @@
             "schema": { "type": "boolean" }
           },
           {
-            "description": "Filter by whether an expiration is set: true returns commands with expired_at, false returns commands without",
+            "description": "Filter by whether an expiration is set: true returns commands with expires_at, false returns commands without",
             "in": "query",
-            "name": "has_expired_at",
+            "name": "has_expires_at",
             "required": false,
             "schema": { "type": "boolean" }
           },
@@ -5752,9 +5759,9 @@
             "schema": { "minimum": 1, "type": "integer" }
           },
           {
-            "description": "Filter records where expired_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
+            "description": "Filter records where expires_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
             "in": "query",
-            "name": "expired_at__gte",
+            "name": "expires_at__gte",
             "required": false,
             "schema": {
               "anyOf": [
@@ -5764,9 +5771,9 @@
             }
           },
           {
-            "description": "Filter records where expired_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
+            "description": "Filter records where expires_at is on or before this datetime (ISO 8601 datetime; date-only is treated as end of day UTC)",
             "in": "query",
-            "name": "expired_at__lte",
+            "name": "expires_at__lte",
             "required": false,
             "schema": {
               "anyOf": [
@@ -7484,7 +7491,7 @@
       }
     }
   },
-  "security": [],
+  "security": [{ "apiKey": [] }],
   "servers": [],
   "tags": [
     { "name": "Admins.Metadata" },

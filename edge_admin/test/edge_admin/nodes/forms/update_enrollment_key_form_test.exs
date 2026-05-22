@@ -32,20 +32,20 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyFormTest do
       assert result["uses_remaining"] == 5
     end
 
-    test "expired_at is accepted when a valid datetime" do
+    test "expires_at is accepted when a valid datetime" do
       dt = ~U[2027-01-01 00:00:00Z]
-      assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{expired_at: dt})
-      assert result["expired_at"] == dt
+      assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{expires_at: dt})
+      assert result["expires_at"] == dt
     end
 
     test "both fields accepted together" do
       dt = ~U[2027-06-01 12:00:00Z]
 
       assert {:ok, result} =
-               UpdateEnrollmentKeyForm.changeset(%{uses_remaining: 3, expired_at: dt})
+               UpdateEnrollmentKeyForm.changeset(%{uses_remaining: 3, expires_at: dt})
 
       assert result["uses_remaining"] == 3
-      assert result["expired_at"] == dt
+      assert result["expires_at"] == dt
     end
 
     test "name is accepted when present" do
@@ -82,9 +82,9 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyFormTest do
 
   describe "changeset/1 — explicit null vs omitted" do
     test "key present with nil value is preserved in result (explicit null)" do
-      assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{expired_at: nil})
-      assert Map.has_key?(result, "expired_at")
-      assert result["expired_at"] == nil
+      assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{expires_at: nil})
+      assert Map.has_key?(result, "expires_at")
+      assert result["expires_at"] == nil
     end
 
     test "key present with nil uses_remaining is preserved (explicit null = unlimited)" do
@@ -96,7 +96,7 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyFormTest do
     test "absent key is excluded from result (omitted field)" do
       assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{})
       refute Map.has_key?(result, "name")
-      refute Map.has_key?(result, "expired_at")
+      refute Map.has_key?(result, "expires_at")
       refute Map.has_key?(result, "uses_remaining")
     end
 
@@ -109,7 +109,7 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyFormTest do
     test "only the provided keys appear in result" do
       assert {:ok, result} = UpdateEnrollmentKeyForm.changeset(%{uses_remaining: 5})
       assert Map.has_key?(result, "uses_remaining")
-      refute Map.has_key?(result, "expired_at")
+      refute Map.has_key?(result, "expires_at")
     end
   end
 

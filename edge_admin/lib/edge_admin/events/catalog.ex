@@ -248,7 +248,7 @@ defmodule EdgeAdmin.Events.Catalog do
     "command_text" => "systemctl restart app",
     "timeout" => 30_000,
     "target_all" => false,
-    "expired_at" => nil,
+    "expires_at" => nil,
     "inserted_at" => "2026-04-13T10:00:00Z",
     "updated_at" => "2026-04-13T10:00:00Z"
   }
@@ -371,7 +371,7 @@ defmodule EdgeAdmin.Events.Catalog do
           "sent_at" => nil,
           "completed_at" => nil,
           "cancelled_at" => nil,
-          "expired_at" => "2026-04-13T10:05:00Z"
+          "expires_at" => "2026-04-13T10:05:00Z"
         })
     },
     %{
@@ -597,7 +597,7 @@ defmodule EdgeAdmin.Events.Catalog do
       "status" => Atom.to_string(execution.status),
       "exit_code" => execution.exit_code,
       "target_all" => execution.target_all,
-      "expired_at" => format_dt(command.expired_at),
+      "expires_at" => format_dt(command.expires_at),
       "sent_at" => format_dt(execution.sent_at),
       "completed_at" => format_dt(execution.completed_at),
       "cancelled_at" => format_dt(execution.cancelled_at),

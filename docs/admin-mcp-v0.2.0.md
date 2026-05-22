@@ -87,10 +87,10 @@ Tokens agents use to join a cluster's VPN mesh.
 
 | Tool | Title | Hints | Description |
 |---|---|---|---|
-| `list_enrollment_keys` | List Enrollment Keys | 🔍 | Filter/sort/paginate. Filters: `cluster_name`, `name`, `key`, `uses_remaining*`, `is_unlimited`, `is_spent`, `is_expired`, `is_never_used`, `has_expiry`, `has_name`, `expired_at_*`, `last_used_at_*`, `inserted_at_*`, `updated_at_*`. |
+| `list_enrollment_keys` | List Enrollment Keys | 🔍 | Filter/sort/paginate. Filters: `cluster_name`, `name`, `key`, `uses_remaining*`, `is_unlimited`, `is_spent`, `is_expired`, `is_never_used`, `has_expiry`, `has_name`, `expires_at_*`, `last_used_at_*`, `inserted_at_*`, `updated_at_*`. |
 | `get_enrollment_key` | Get Enrollment Key | 🔍 | Required: `enrollment_key_id`. |
-| `create_enrollment_key` | Create Enrollment Key | | Required: `cluster_name`. Optional: `name` (label), `uses_remaining` (default 1), `expired_at` (ISO8601). |
-| `update_enrollment_key` | Update Enrollment Key | ♻️ | Required: `enrollment_key_id`. Optional: `name`, `uses_remaining`, `expired_at`. Pass `null` on any field to clear it (unlimited / no expiry / no label). |
+| `create_enrollment_key` | Create Enrollment Key | | Required: `cluster_name`. Optional: `name` (label), `uses_remaining` (default 1), `expires_at` (ISO8601). |
+| `update_enrollment_key` | Update Enrollment Key | ♻️ | Required: `enrollment_key_id`. Optional: `name`, `uses_remaining`, `expires_at`. Pass `null` on any field to clear it (unlimited / no expiry / no label). |
 | `delete_enrollment_key` | Delete Enrollment Key | ⚠️ | Required: `enrollment_key_id`. |
 
 ---
@@ -101,9 +101,9 @@ Shell jobs fanned out across the fleet. Creating a command produces one `command
 
 | Tool | Title | Hints | Description |
 |---|---|---|---|
-| `list_commands` | List Commands | 🔍 | Filter/sort/paginate. Filters: `command_text`, `has_timeout`, `timeout_gte/lte`, `has_expired_at`, `expired_at_*`, `inserted_at_*`, `updated_at_*`. |
+| `list_commands` | List Commands | 🔍 | Filter/sort/paginate. Filters: `command_text`, `has_timeout`, `timeout_gte/lte`, `has_expires_at`, `expires_at_*`, `inserted_at_*`, `updated_at_*`. |
 | `get_command` | Get Command | 🔍 | Required: `command_id`. |
-| `create_command` | Create Command | | Required: `command_text` (multi-line shell supported), `targeting` (see below). Optional: `timeout` (ms), `expired_at` (ISO8601, future). |
+| `create_command` | Create Command | | Required: `command_text` (multi-line shell supported), `targeting` (see below). Optional: `timeout` (ms), `expires_at` (ISO8601, future). |
 | `delete_command` | Delete Command | ⚠️ | Required: `command_id`. Only deletes commands where every execution is terminal. |
 
 **Targeting** (required nested object on `create_command`):

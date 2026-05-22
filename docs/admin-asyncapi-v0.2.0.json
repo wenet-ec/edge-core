@@ -46,15 +46,6 @@
         }
       }
     },
-    "edge.node.cluster_changed": {
-      "address": "edge.node.cluster_changed",
-      "description": "Node moved to a different cluster.",
-      "messages": {
-        "node.cluster_changed": {
-          "$ref": "#/components/messages/nodeClusterChangedMessage"
-        }
-      }
-    },
     "edge.node.update_triggered": {
       "address": "edge.node.update_triggered",
       "description": "Self-update signal sent to this node.",
@@ -173,7 +164,7 @@
                 "command_text": "systemctl restart app",
                 "completed_at": null,
                 "exit_code": 143,
-                "expired_at": null,
+                "expires_at": null,
                 "inserted_at": "2026-04-13T10:00:00Z",
                 "node_id": "node-abc123",
                 "sent_at": "2026-04-13T10:00:01Z",
@@ -228,7 +219,7 @@
                 "command_text": "systemctl restart app",
                 "completed_at": "2026-04-13T10:00:03Z",
                 "exit_code": 0,
-                "expired_at": null,
+                "expires_at": null,
                 "inserted_at": "2026-04-13T10:00:00Z",
                 "node_id": "node-abc123",
                 "sent_at": "2026-04-13T10:00:01Z",
@@ -283,7 +274,7 @@
                 "command_text": "systemctl restart app",
                 "completed_at": null,
                 "exit_code": null,
-                "expired_at": null,
+                "expires_at": null,
                 "inserted_at": "2026-04-13T10:00:00Z",
                 "node_id": "node-abc123",
                 "sent_at": null,
@@ -338,7 +329,7 @@
                 "command_text": "systemctl restart app",
                 "completed_at": null,
                 "exit_code": null,
-                "expired_at": "2026-04-13T10:05:00Z",
+                "expires_at": "2026-04-13T10:05:00Z",
                 "inserted_at": "2026-04-13T10:00:00Z",
                 "node_id": "node-abc123",
                 "sent_at": null,
@@ -393,7 +384,7 @@
                 "command_text": "systemctl restart app",
                 "completed_at": "2026-04-13T10:00:03Z",
                 "exit_code": 0,
-                "expired_at": null,
+                "expires_at": null,
                 "inserted_at": "2026-04-13T10:00:00Z",
                 "node_id": "node-abc123",
                 "sent_at": "2026-04-13T10:00:01Z",
@@ -448,7 +439,7 @@
                 "command_text": "systemctl restart app",
                 "completed_at": null,
                 "exit_code": null,
-                "expired_at": null,
+                "expires_at": null,
                 "inserted_at": "2026-04-13T10:00:00Z",
                 "node_id": "node-abc123",
                 "sent_at": "2026-04-13T10:00:01Z",
@@ -514,62 +505,6 @@
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
         "summary": "Agent attempted to enroll using an enrollment key (success or failure)."
-      },
-      "nodeClusterChangedMessage": {
-        "bindings": {
-          "amqp": { "bindingVersion": "0.3.0" },
-          "googlepubsub": {
-            "attributes": { "corename": "string", "type": "string" },
-            "bindingVersion": "0.2.0"
-          },
-          "kafka": {
-            "bindingVersion": "0.5.0",
-            "key": {
-              "description": "Kafka partition key — `node_id` from the event data",
-              "type": "string"
-            }
-          },
-          "mqtt": {
-            "bindingVersion": "0.2.0",
-            "contentType": "application/json",
-            "payloadFormatIndicator": 1
-          }
-        },
-        "contentType": "application/json",
-        "examples": [
-          {
-            "name": "example",
-            "payload": {
-              "corename": "prod-us",
-              "data": {
-                "cluster_name": "prod",
-                "host_metrics_port": 9100,
-                "http_port": 44000,
-                "http_proxy_port": 44001,
-                "id_type": "persistent",
-                "inserted_at": "2026-04-13T09:00:00Z",
-                "last_seen_at": "2026-04-13T10:00:00Z",
-                "node_id": "node-abc123",
-                "previous_cluster_name": "staging",
-                "self_update_enabled": true,
-                "socks5_proxy_port": 44002,
-                "ssh_port": 40022,
-                "status": "healthy",
-                "updated_at": "2026-04-13T10:00:00Z",
-                "version": "1.2.0",
-                "wireguard_metrics_port": 9101
-              },
-              "datacontenttype": "application/json",
-              "id": "550e8400-e29b-41d4-a716-446655440000",
-              "source": "https://github.com/wenet-ec/edge-core",
-              "specversion": "1.0",
-              "time": "2026-04-13T10:00:00Z",
-              "type": "edge.node.cluster_changed"
-            }
-          }
-        ],
-        "payload": { "$ref": "#/components/schemas/Envelope" },
-        "summary": "Node moved to a different cluster."
       },
       "nodeRegisteredMessage": {
         "bindings": {
@@ -961,7 +896,7 @@
             "description": "null until completed or cancelled; 143 on SIGTERM cancel",
             "type": ["integer", "null"]
           },
-          "expired_at": { "format": "date-time", "type": ["string", "null"] },
+          "expires_at": { "format": "date-time", "type": ["string", "null"] },
           "inserted_at": { "format": "date-time", "type": "string" },
           "node_id": { "type": "string" },
           "sent_at": { "format": "date-time", "type": ["string", "null"] },
@@ -1046,7 +981,6 @@
               "edge.node.reregistered",
               "edge.node.version_changed",
               "edge.node.status_changed",
-              "edge.node.cluster_changed",
               "edge.node.update_triggered",
               "edge.command_execution.created",
               "edge.command_execution.sent",
@@ -1069,39 +1003,6 @@
           "time",
           "datacontenttype",
           "data"
-        ],
-        "type": "object"
-      },
-      "NodeClusterChangedEvent": {
-        "properties": {
-          "cluster_name": { "type": "string" },
-          "host_metrics_port": { "type": "integer" },
-          "http_port": { "type": "integer" },
-          "http_proxy_port": { "type": "integer" },
-          "id_type": { "enum": ["persistent", "random"], "type": "string" },
-          "inserted_at": { "format": "date-time", "type": "string" },
-          "last_seen_at": { "format": "date-time", "type": ["string", "null"] },
-          "node_id": { "type": "string" },
-          "previous_cluster_name": {
-            "description": "Cluster before this move",
-            "type": "string"
-          },
-          "self_update_enabled": { "type": "boolean" },
-          "socks5_proxy_port": { "type": "integer" },
-          "ssh_port": { "type": "integer" },
-          "status": {
-            "enum": ["healthy", "unhealthy", "unreachable"],
-            "type": "string"
-          },
-          "updated_at": { "format": "date-time", "type": "string" },
-          "version": { "type": "string" },
-          "wireguard_metrics_port": { "type": "integer" }
-        },
-        "required": [
-          "node_id",
-          "cluster_name",
-          "status",
-          "previous_cluster_name"
         ],
         "type": "object"
       },
@@ -1441,28 +1342,6 @@
         }
       },
       "channel": { "$ref": "#/channels/edge.node.status_changed" }
-    },
-    "publish_edge_node_cluster_changed": {
-      "action": "send",
-      "bindings": {
-        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
-        "kafka": { "bindingVersion": "0.5.0" },
-        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
-        "nats": { "bindingVersion": "0.1.0" },
-        "redis": { "bindingVersion": "0.1.0" },
-        "sns": {
-          "bindingVersion": "0.1.0",
-          "consumers": [
-            {
-              "endpoint": { "name": "edge-nodes-events-debug" },
-              "protocol": "sqs",
-              "rawMessageDelivery": true
-            }
-          ],
-          "topic": { "name": "edge-nodes-events" }
-        }
-      },
-      "channel": { "$ref": "#/channels/edge.node.cluster_changed" }
     },
     "publish_edge_node_update_triggered": {
       "action": "send",

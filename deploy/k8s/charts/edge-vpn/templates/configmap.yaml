@@ -18,10 +18,7 @@ data:
   BROKER_TYPE: "emqx"
   EMQX_REST_ENDPOINT: {{ .Values.config.emqxRestEndpoint | quote }}
   MQ_USERNAME: {{ .Values.config.mqUsername | quote }}
-  DNS_MODE: "on"
-  MANAGE_DNS: "true"
   API_PORT: "8081"
-  MESSAGEQUEUE_BACKEND: "on"
   DATABASE: "postgres"
   SQL_HOST: {{ .Values.config.db.host | quote }}
   SQL_PORT: {{ .Values.config.db.port | quote }}
@@ -29,12 +26,11 @@ data:
   SQL_USER: {{ .Values.config.db.user | quote }}
   SQL_SSL_MODE: {{ .Values.config.db.sslmode | quote }}
   DEFAULT_DOMAIN: {{ .Values.config.defaultDomain | quote }}
+  # Netmaker's caches are per-pod sync.Maps with no cross-pod invalidation,
+  # so they go stale under multi-replica HA. Required false here, do not flip.
   CACHING_ENABLED: "false"
   IS_HA: "true"
-  K8s: "true"
   VERBOSITY: "1"
   CORS_ALLOWED_ORIGIN: "*"
-  DISPLAY_KEYS: "on"
-  DISABLE_REMOTE_IP_CHECK: "on"
   TELEMETRY: "off"
-  STUN_LIST: "stun1.l.google.com:19302,stun2.l.google.com:19302,stun.stunprotocol.org:3478,stun.nextcloud.com:443,stun.edge-vpn.io:3478"
+  STUN_SERVERS: "stun1.l.google.com:19302,stun2.l.google.com:19302,stun.stunprotocol.org:3478,stun.nextcloud.com:443,stun.edge-vpn.io:3478"

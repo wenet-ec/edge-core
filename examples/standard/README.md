@@ -53,7 +53,7 @@ docker compose -f cloud.yml ps
 ```bash
 # 1. Copy and edit the env file
 cp .env.example .env
-nano .env   # set PUBLIC_ENROLLMENT_KEY_URL to your admin's address
+nano .env   # set PUBLIC_ENROLLMENT_KEY_URLS to your admin's address
 
 # 2. Start the agent
 docker compose -f edge.yml up -d

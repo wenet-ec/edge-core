@@ -22,7 +22,7 @@ This was not the original design intent but has been tested and works.
 
 ```bash
 cp .env.example .env
-# fill in PUBLIC_ENROLLMENT_KEY_URL
+# fill in PUBLIC_ENROLLMENT_KEY_URLS
 docker compose up -d
 ```
 

@@ -3,11 +3,13 @@
 # =============================================================================
 # VPN Enrollment
 # =============================================================================
-# Exactly one of ENROLLMENT_KEY or PUBLIC_ENROLLMENT_KEY_URL must be set.
+# Exactly one of ENROLLMENT_KEY or PUBLIC_ENROLLMENT_KEY_URLS must be set.
 # ENROLLMENT_KEY is a static signed token (preferred for production).
-# PUBLIC_ENROLLMENT_KEY_URL fetches a token from the admin at boot (simpler setup).
+# PUBLIC_ENROLLMENT_KEY_URLS is a comma-separated list of admin URLs to try
+# in order at boot. Any admin can mint a key (shared Postgres), so the list
+# is a pure availability fallback.
 ENROLLMENT_KEY=
-PUBLIC_ENROLLMENT_KEY_URL=http://localhost:4000/api/v1/clusters/default/enrollment_keys/public
+PUBLIC_ENROLLMENT_KEY_URLS=http://localhost:4000/api/v1/clusters/default/enrollment_keys/public
 
 # Path to a local file containing the enrollment key (alternative to the above).
 # PUBLIC_ENROLLMENT_KEY_PATH=/etc/edge/enrollment_key

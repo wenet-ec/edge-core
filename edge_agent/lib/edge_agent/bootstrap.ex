@@ -38,7 +38,7 @@ defmodule EdgeAgent.Bootstrap do
 
   All values read from Application config (set in runtime.exs):
   - `:enrollment_key` - Admin enrollment key blob (base64)
-  - `:public_enrollment_key_url` - URL to fetch enrollment key blob if env not set
+  - `:public_enrollment_key_urls` - List of URLs to fetch enrollment key blob (tried in order)
   - `:run_bootstrap` - Whether to run bootstrap (default: true)
   - `:api_port` - Agent HTTP API port (sent to admin as `http_port`)
   - `:ssh_port` - Agent SSH server port

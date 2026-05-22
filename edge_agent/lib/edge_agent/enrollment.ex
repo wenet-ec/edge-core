@@ -7,21 +7,32 @@ defmodule EdgeAgent.Enrollment do
 
       base64({"admin_urls": ["https://admin.example.com"], "nonce": "<random_32_bytes_base64>"})
 
-  It can be provided directly via `ENROLLMENT_KEY` or fetched from
-  `PUBLIC_ENROLLMENT_KEY_URL` (same format, returned by the admin's public
-  enrollment endpoint).
+  It can be provided directly via `ENROLLMENT_KEY` or fetched from one of
+  the URLs in `PUBLIC_ENROLLMENT_KEY_URLS` (comma-separated, tried in order).
+  Any admin can mint a key — admins share the same Postgres — so the list
+  is a pure availability fallback, not a routing decision.
 
   ## Flow
 
       ensure_verified()
         ├── enrollment_verified=true in Settings? → :ok (skip)
         └── not verified:
-              1. Get enrollment key (ENROLLMENT_KEY env, or fetch from PUBLIC_ENROLLMENT_KEY_URL)
+              1. Get enrollment key (ENROLLMENT_KEY env, or fetch by trying
+                 PUBLIC_ENROLLMENT_KEY_URLS in order until one succeeds)
               2. Decode → extract admin_urls (nonce is ignored — it only makes the blob unique)
               3. POST the full key blob to admin verify endpoint
               4. On success: store admin_fallback_urls, netmaker_key,
                  enrollment_verified=true to Settings
               5. Return :ok
+
+  ## Multi-URL failover semantics
+
+  Transport errors (timeout, connection refused, DNS failure) on URL N
+  cause the agent to try URL N+1. HTTP errors (non-2xx response) are
+  treated as terminal — they mean a reachable admin rejected the request,
+  which is almost always a config bug (`PUBLIC_ENROLLMENT_KEY_ENABLED=false`,
+  wrong cluster name, etc.) that another admin would reject identically.
+  Failing over on those would hide the real problem.
 
   ## Crash Safety
 
@@ -40,8 +51,15 @@ defmodule EdgeAgent.Enrollment do
   ## Configuration
 
   - `ENROLLMENT_KEY` — base64 enrollment key (highest priority)
-  - `PUBLIC_ENROLLMENT_KEY_URL` — URL to POST to receive the enrollment key (fallback)
-  - `PUBLIC_ENROLLMENT_KEY_PATH` — custom JSON path for extraction from URL response
+  - `PUBLIC_ENROLLMENT_KEY_URLS` — comma-separated URLs to POST to receive
+    the enrollment key (fallback; tried in order)
+  - `PUBLIC_ENROLLMENT_KEY_PATH` — dotted JSON path for extracting the key
+    from the response body (e.g. `data.key`, `result.token`,
+    `payload.enrollment_key`). Tried *first*, then the built-in patterns
+    fall through. Set this when integrating with a third-party admin whose
+    response shape doesn't match any of the built-in patterns; the
+    fall-through ensures other URLs in `PUBLIC_ENROLLMENT_KEY_URLS` with
+    standard shapes still work.
   """
 
   alias EdgeAgent.EdgeClusters.AdminClient
@@ -95,20 +113,41 @@ defmodule EdgeAgent.Enrollment do
 
   defp get_enrollment_key do
     enrollment_key = Application.get_env(:edge_agent, :enrollment_key)
-    public_key_url = Application.get_env(:edge_agent, :public_enrollment_key_url)
+    urls = Application.get_env(:edge_agent, :public_enrollment_key_urls, [])
 
     cond do
       is_binary(enrollment_key) and enrollment_key != "" ->
         Logger.info("Using ENROLLMENT_KEY from configuration")
         {:ok, enrollment_key}
 
-      is_binary(public_key_url) and public_key_url != "" ->
-        Logger.info("Fetching enrollment key from: #{public_key_url}")
-        fetch_from_url(public_key_url)
+      is_list(urls) and urls != [] ->
+        fetch_from_urls(urls)
 
       true ->
-        {:error, "No enrollment key configured (set ENROLLMENT_KEY or PUBLIC_ENROLLMENT_KEY_URL)"}
+        {:error, "No enrollment key configured (set ENROLLMENT_KEY or PUBLIC_ENROLLMENT_KEY_URLS)"}
     end
+  end
+
+  # Try each URL in order. Transport errors fall through to the next URL;
+  # HTTP errors (non-2xx) and extraction failures are terminal — see
+  # moduledoc for rationale.
+  defp fetch_from_urls(urls) do
+    Enum.reduce_while(urls, {:error, "No URLs to try"}, fn url, _acc ->
+      Logger.info("Fetching enrollment key from: #{url}")
+
+      case fetch_from_url(url) do
+        {:ok, key} ->
+          {:halt, {:ok, key}}
+
+        {:transport_error, reason} ->
+          Logger.warning("Transport error fetching enrollment key from #{url}: #{inspect(reason)} — trying next URL")
+
+          {:cont, {:error, "All enrollment key URLs failed: last error #{inspect(reason)}"}}
+
+        {:error, _reason} = terminal ->
+          {:halt, terminal}
+      end
+    end)
   end
 
   defp fetch_from_url(url) do
@@ -125,23 +164,32 @@ defmodule EdgeAgent.Enrollment do
         extract_from_response(body)
 
       {:ok, %{status: status, body: body}} ->
-        Logger.error("Failed to fetch enrollment key: HTTP #{status}, body: #{inspect(body)}")
+        Logger.error("Failed to fetch enrollment key from #{url}: HTTP #{status}, body: #{inspect(body)}")
         {:error, "Public enrollment key request failed: HTTP #{status}"}
 
       {:error, reason} ->
-        Logger.error("Failed to fetch enrollment key: #{inspect(reason)}")
-        {:error, "Failed to fetch enrollment key: #{inspect(reason)}"}
+        {:transport_error, reason}
     end
   end
 
-  defp extract_from_response(body) when is_map(body) do
+  @doc false
+  # Promoted from defp for testability — pins the contract for the
+  # response-body extraction step. See TESTING.md "Promote-to-public for
+  # testability". Not part of the user-facing API.
+  #
+  # When `PUBLIC_ENROLLMENT_KEY_PATH` is set, the custom path is tried
+  # *first*, then the built-in pattern list falls through. With multi-URL
+  # configured, a single PATH meant for a third-party endpoint would
+  # otherwise break extraction for sibling URLs returning a standard shape;
+  # the prepend-not-override semantics let mixed sources coexist.
+  @spec extract_from_response(map() | binary() | any()) :: {:ok, String.t()} | {:error, String.t()}
+  def extract_from_response(body) when is_map(body) do
     custom_path = Application.get_env(:edge_agent, :public_enrollment_key_path)
 
     result =
-      if is_binary(custom_path) and custom_path != "" do
-        get_in_path(body, String.split(custom_path, "."))
-      else
-        try_extraction_patterns(body)
+      case try_custom_path(body, custom_path) do
+        nil -> try_extraction_patterns(body)
+        key -> key
       end
 
     case result do
@@ -154,7 +202,7 @@ defmodule EdgeAgent.Enrollment do
     end
   end
 
-  defp extract_from_response(body) when is_binary(body) do
+  def extract_from_response(body) when is_binary(body) do
     trimmed = String.trim(body)
 
     if String.length(trimmed) > 10 and not String.contains?(trimmed, ["{", "<"]) do
@@ -164,7 +212,10 @@ defmodule EdgeAgent.Enrollment do
     end
   end
 
-  defp extract_from_response(_), do: {:error, "Response body is not a map or string"}
+  def extract_from_response(_), do: {:error, "Response body is not a map or string"}
+
+  defp try_custom_path(_body, path) when path in [nil, ""], do: nil
+  defp try_custom_path(body, path), do: get_in_path(body, String.split(path, "."))
 
   defp try_extraction_patterns(body) do
     patterns = [

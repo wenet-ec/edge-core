@@ -107,9 +107,9 @@ defmodule EdgeAdmin.Mixfile do
       {:anubis_mcp, "~> 1.6"},
 
       # Database
-      {:ecto_sql, "~> 3.13"},
+      {:ecto_sql, "~> 3.14"},
       {:postgrex, "~> 0.22"},
-      {:ecto_sqlite3, "~> 0.23"},
+      {:ecto_sqlite3, "~> 0.24"},
       {:uniq, "~> 0.6"},
       {:flop, "~> 0.26"},
       {:cloak, "~> 1.1"},
@@ -119,7 +119,7 @@ defmodule EdgeAdmin.Mixfile do
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
 
       # Errors
-      {:sentry, "~> 13.0"},
+      {:sentry, "~> 13.1"},
 
       # Telemetry
       {:prom_ex, "~> 1.11"},
@@ -160,7 +160,7 @@ defmodule EdgeAdmin.Mixfile do
       {:syn, "~> 3.4"},
 
       # Event Streaming
-      {:gnat, "~> 1.14"},
+      {:gnat, "~> 1.15"},
       {:brod, "~> 4.5"},
       {:amqp, "~> 4.1"},
       {:redix, "~> 1.5"},

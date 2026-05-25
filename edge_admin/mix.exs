@@ -168,7 +168,7 @@ defmodule EdgeAdmin.Mixfile do
       # compile and honors BUILD_WITHOUT_QUIC=1 (set in the Dockerfiles). Hex
       # flattens dynamic deps at publish time, so the Hex package always lists
       # `quicer` as non-optional even though the script would exclude it locally.
-      {:emqtt, github: "emqx/emqtt", tag: "1.15.0"},
+      {:emqtt, github: "emqx/emqtt", tag: "1.15.1"},
       {:ex_aws, "~> 2.7"},
       {:ex_aws_sns, "~> 2.3"},
       {:sweet_xml, "~> 0.7"},

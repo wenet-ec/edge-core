@@ -47,4 +47,8 @@ defmodule EdgeAdminWeb.Controllers.ErrorJSON do
       "Cluster is in degraded mode (over capacity) — try again when capacity recovers"
     )
   end
+
+  def render(_, %{conn: conn}) do
+    ResponseEnvelope.error(conn, "internal_server_error", "An unexpected error occurred")
+  end
 end

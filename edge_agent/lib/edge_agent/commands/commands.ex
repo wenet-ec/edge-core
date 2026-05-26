@@ -93,6 +93,11 @@ defmodule EdgeAgent.Commands do
 
   require Logger
 
+  # Max bytes of command output kept per execution (512 KB each side = 1 MB total).
+  # Larger output is trimmed to first+last halves with a marker in the middle.
+  @max_output_bytes 1_024 * 1_024
+  @half_output_bytes div(@max_output_bytes, 2)
+
   @doc """
   Lists all command executions from the database.
 
@@ -251,6 +256,27 @@ defmodule EdgeAgent.Commands do
     :ok
   end
 
+  @doc false
+  # Public for unit testing. Truncates command output to at most `@max_output_bytes`
+  # by keeping the first and last `@half_output_bytes` with a marker in between.
+  # This prevents large outputs (e.g. `du` on /') from bloating SQLite and
+  # exceeding the admin's request size limit.
+  @spec truncate_output(String.t() | nil) :: String.t() | nil
+  def truncate_output(nil), do: nil
+
+  def truncate_output(output) when is_binary(output) do
+    size = byte_size(output)
+
+    if size <= @max_output_bytes do
+      output
+    else
+      head = binary_part(output, 0, @half_output_bytes)
+      tail = binary_part(output, size - @half_output_bytes, @half_output_bytes)
+      omitted = size - @max_output_bytes
+      "#{head}\n...[truncated: #{omitted} bytes omitted]...\n#{tail}"
+    end
+  end
+
   defp run_command(execution) do
     timeout_ms = execution.timeout || :infinity
 
@@ -261,7 +287,7 @@ defmodule EdgeAgent.Commands do
 
         case Task.yield(task, timeout_ms) || Task.shutdown(task, :brutal_kill) do
           {:ok, {output, exit_code}} ->
-            {:ok, output, exit_code}
+            {:ok, truncate_output(output), exit_code}
 
           nil ->
             Logger.warning("Command #{execution.id} timed out after #{execution.timeout}ms")
@@ -402,10 +428,21 @@ defmodule EdgeAgent.Commands do
           delete_execution_after_report(execution)
           {:cont, :ok}
 
-        {:error, reason} ->
-          # Network/connectivity error or other HTTP errors - stop and retry later
-          Logger.warning("Failed to report execution #{execution.id}: #{inspect(reason)}")
+        {:error, {:request_failed, reason}} ->
+          # Transport error — admin is unreachable. Halt the batch; no point
+          # attempting the remaining executions until connectivity recovers.
+          Logger.warning("Failed to report execution #{execution.id}, admin unreachable: #{inspect(reason)}")
           {:halt, :error}
+
+        {:error, {:http_error, status, body}} ->
+          # Admin is up but returned an unexpected status for this specific row.
+          # Log and continue — halting the whole batch for one bad row would
+          # block all subsequent executions indefinitely.
+          Logger.warning(
+            "Admin returned unexpected HTTP #{status} for execution #{execution.id}: #{inspect(body)}. Skipping and continuing."
+          )
+
+          {:cont, :ok}
       end
     end)
   end
@@ -418,7 +455,7 @@ defmodule EdgeAgent.Commands do
   def build_report_params(execution) do
     %{
       status: Atom.to_string(execution.status),
-      output: execution.output,
+      output: truncate_output(execution.output),
       exit_code: execution.exit_code,
       completed_at: execution.completed_at && DateTime.to_iso8601(execution.completed_at)
     }

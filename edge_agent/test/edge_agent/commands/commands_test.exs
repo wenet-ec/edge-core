@@ -100,5 +100,79 @@ defmodule EdgeAgent.CommandsTest do
       assert result |> Map.keys() |> Enum.sort() ==
                [:completed_at, :exit_code, :output, :status]
     end
+
+    test "truncates oversized output stored in DB before reporting" do
+      # Safety net: rows written before truncation was added (e.g. a 143 MB
+      # `du` run) must still be trimmed at report time so the PATCH to admin
+      # doesn't exceed the request size limit.
+      big = String.duplicate("x", 2 * 1024 * 1024)
+      execution = %CommandExecution{status: :completed, output: big, exit_code: 0}
+      result = Commands.build_report_params(execution)
+
+      assert byte_size(result.output) < 2 * 1024 * 1024
+      assert result.output =~ "[truncated:"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # truncate_output/1 — caps output at 1 MB, keeping head + tail with marker.
+  # Contract: nil passthrough, small passthrough, large → trimmed with marker.
+  # ---------------------------------------------------------------------------
+
+  describe "truncate_output/1" do
+    test "nil passthrough" do
+      assert Commands.truncate_output(nil) == nil
+    end
+
+    test "output under 1 MB is returned unchanged" do
+      small = String.duplicate("a", 512)
+      assert Commands.truncate_output(small) == small
+    end
+
+    test "output exactly at the 1 MB limit is returned unchanged" do
+      at_limit = String.duplicate("a", 1024 * 1024)
+      assert Commands.truncate_output(at_limit) == at_limit
+    end
+
+    test "output over 1 MB is truncated and contains the marker" do
+      big = String.duplicate("a", 2 * 1024 * 1024)
+      result = Commands.truncate_output(big)
+
+      assert byte_size(result) < byte_size(big)
+      assert result =~ "[truncated:"
+    end
+
+    test "truncated output starts with the head of the original" do
+      head = String.duplicate("h", 512 * 1024)
+      tail = String.duplicate("t", 512 * 1024)
+      big = head <> String.duplicate("m", 1024 * 1024) <> tail
+
+      result = Commands.truncate_output(big)
+
+      assert String.starts_with?(result, head)
+    end
+
+    test "truncated output ends with the tail of the original" do
+      head = String.duplicate("h", 512 * 1024)
+      tail = String.duplicate("t", 512 * 1024)
+      big = head <> String.duplicate("m", 1024 * 1024) <> tail
+
+      result = Commands.truncate_output(big)
+
+      assert String.ends_with?(result, tail)
+    end
+
+    test "marker reports the correct number of omitted bytes" do
+      total = 3 * 1024 * 1024
+      big = String.duplicate("x", total)
+      result = Commands.truncate_output(big)
+
+      omitted = total - 1024 * 1024
+      assert result =~ "#{omitted} bytes omitted"
+    end
+
+    test "empty string is returned unchanged" do
+      assert Commands.truncate_output("") == ""
+    end
   end
 end

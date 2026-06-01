@@ -1,11 +1,10 @@
 # edge_admin/test/edge_admin/events/webhooks/filters/webhook_filters_test.exs
 defmodule EdgeAdmin.Events.Webhooks.Filters.WebhookFiltersTest do
-  use ExUnit.Case, async: true
+  use EdgeAdmin.DataCase, async: false
 
   alias EdgeAdmin.Events.Webhooks.Filters.WebhookFilters
   alias EdgeAdmin.Events.Webhooks.Schemas.Webhook
-
-  defp webhook(events), do: %Webhook{subscribed_events: events}
+  alias EdgeAdmin.Repo
 
   # ---------------------------------------------------------------------------
   # pop_event_type/1 — extracts the event_type filter out of params, accepting
@@ -42,58 +41,73 @@ defmodule EdgeAdmin.Events.Webhooks.Filters.WebhookFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # filter_by_event_type/2 — Elixir-side post-query filter. The same shape is
-  # used by Webhooks.fan_out/1, so the two paths can't drift.
-  # ---------------------------------------------------------------------------
+  defp insert_webhook!(attrs) do
+    now = DateTime.truncate(DateTime.utc_now(), :second)
+
+    %Webhook{}
+    |> Webhook.changeset(
+      Map.merge(
+        %{
+          url: "https://203.0.113.10/#{System.unique_integer([:positive])}",
+          secret: String.duplicate("x", 32),
+          subscribed_events: ["edge.node.registered"],
+          inserted_at: now,
+          updated_at: now
+        },
+        attrs
+      )
+    )
+    |> Repo.insert!()
+  end
 
   describe "filter_by_event_type/2" do
-    test "nil → no-op, returns the input list unchanged" do
-      webhooks = [webhook(["edge.node.registered"]), webhook(["edge.node.status_changed"])]
+    test "nil → no-op, query returns all rows" do
+      a = insert_webhook!(%{subscribed_events: ["edge.node.registered"]})
+      b = insert_webhook!(%{subscribed_events: ["edge.node.status_changed"]})
 
-      assert WebhookFilters.filter_by_event_type(webhooks, nil) == webhooks
+      result =
+        Webhook
+        |> WebhookFilters.filter_by_event_type(nil)
+        |> Repo.all()
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
+
+      assert result == Enum.sort([a.id, b.id])
     end
 
-    test "matches webhooks whose subscribed_events contains the target type" do
-      a = webhook(["edge.node.registered", "edge.node.status_changed"])
-      b = webhook(["edge.node.status_changed"])
-      c = webhook(["edge.node.registered"])
+    test "matches only webhooks whose subscribed_events contains the target type" do
+      a = insert_webhook!(%{subscribed_events: ["edge.node.registered", "edge.node.status_changed"]})
+      _b = insert_webhook!(%{subscribed_events: ["edge.node.status_changed"]})
+      c = insert_webhook!(%{subscribed_events: ["edge.node.registered"]})
 
-      result = WebhookFilters.filter_by_event_type([a, b, c], "edge.node.registered")
+      result =
+        Webhook
+        |> WebhookFilters.filter_by_event_type("edge.node.registered")
+        |> Repo.all()
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
 
-      assert result == [a, c]
-    end
-
-    test "preserves input order" do
-      a = webhook(["edge.node.registered"])
-      b = webhook(["edge.command_execution.completed"])
-      c = webhook(["edge.node.registered"])
-      d = webhook(["edge.node.registered"])
-
-      assert WebhookFilters.filter_by_event_type([a, b, c, d], "edge.node.registered") ==
-               [a, c, d]
-    end
-
-    test "returns [] when no webhooks match" do
-      webhooks = [webhook(["edge.node.registered"]), webhook(["edge.node.status_changed"])]
-
-      assert WebhookFilters.filter_by_event_type(webhooks, "edge.command_execution.completed") ==
-               []
-    end
-
-    test "empty input list yields empty output regardless of event type" do
-      assert WebhookFilters.filter_by_event_type([], "edge.node.registered") == []
+      assert result == Enum.sort([a.id, c.id])
     end
 
     test "match is exact (no prefix or wildcard semantics)" do
-      a = webhook(["edge.node.registered"])
-      b = webhook(["edge.node.reregistered"])
+      a = insert_webhook!(%{subscribed_events: ["edge.node.registered"]})
+      _b = insert_webhook!(%{subscribed_events: ["edge.node.reregistered"]})
 
-      # "edge.node.reg" must not match either.
-      assert WebhookFilters.filter_by_event_type([a, b], "edge.node.reg") == []
+      result =
+        Webhook
+        |> WebhookFilters.filter_by_event_type("edge.node.reg")
+        |> Repo.all()
 
-      # Exact match returns just the registered one.
-      assert WebhookFilters.filter_by_event_type([a, b], "edge.node.registered") == [a]
+      assert result == []
+
+      exact_result =
+        Webhook
+        |> WebhookFilters.filter_by_event_type("edge.node.registered")
+        |> Repo.all()
+        |> Enum.map(& &1.id)
+
+      assert exact_result == [a.id]
     end
   end
 end

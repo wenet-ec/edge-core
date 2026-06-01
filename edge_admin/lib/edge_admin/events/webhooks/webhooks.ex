@@ -81,11 +81,8 @@ defmodule EdgeAdmin.Events.Webhooks do
   Lists webhooks with filtering, sorting, and pagination via Flop.
 
   Supports a custom `event_type` filter that returns only webhooks whose
-  `subscribed_events` list contains the given event type. Applied as an
-  Elixir-side post-filter on each fetched page (set membership) — same shape
-  used by `fan_out/1` so the two cannot drift. Pages can return fewer than
-  `page_size` results; `meta.has_next_page?` still reflects the underlying
-  scan.
+  `subscribed_events` list contains the given event type. Applied in SQL so
+  the returned rows and `Flop.Meta` counts come from the same scope.
 
   ## Returns
   - `{:ok, {webhooks, meta}}` - Page of webhooks with Flop.Meta pagination info
@@ -102,16 +99,18 @@ defmodule EdgeAdmin.Events.Webhooks do
       EdgeAdmin.RequestParser.split_ilike_filters(flop_params, [:url])
 
     query =
-      Enum.reduce(ilike_filters, Webhook, fn %{field: field, value: value}, acc ->
+      ilike_filters
+      |> Enum.reduce(Webhook, fn %{field: field, value: value}, acc ->
         from(w in acc, where: case_insensitive_like(field(w, ^field), ^value))
       end)
+      |> WebhookFilters.filter_by_event_type(event_type)
 
     case Flop.validate_and_run(query, flop_params,
            for: Webhook,
            replace_invalid_params: true
          ) do
-      {:ok, {webhooks, meta}} ->
-        {:ok, {WebhookFilters.filter_by_event_type(webhooks, event_type), meta}}
+      {:ok, result} ->
+        {:ok, result}
 
       {:error, meta} ->
         {:error, meta}

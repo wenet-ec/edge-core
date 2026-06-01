@@ -135,23 +135,36 @@ Pick the setup that fits your needs and follow its README:
 
 Each README covers: server requirements, configuration, enrolling your first node, and upgrading. Once your admin is running, the **[user guide](https://github.com/wenet-ec/edge-core/blob/main/docs/guide.md)** walks through the day-to-day surface (Swagger, MCP, proxy, metrics, events).
 
-## Host compatibility
+## Compatibility
+
+### Admin deployment matrix
+
+The admin is always a containerized deployment target. We do not support running it directly as a bare Linux host process.
+
+| Deployment surface | Status | Notes |
+| ------------------ | ------ | ----- |
+| Docker Compose on Linux | Supported | Canonical deployment path today |
+| Docker on Linux | Supported | Same containerized runtime model |
+| Kubernetes | Planned / not yet shipped | `examples/k8s` is still TODO |
+| Bare Linux host process | Unsupported | Not a supported runtime shape |
+
+The admin is much less host-sensitive than the agent: it runs containerized and uses `wireguard-go` (userspace) inside its own container, so it does not depend on host WireGuard kernel support.
+
+### Agent platform matrix
 
 Edge Agent ships as a Debian-slim container, so the agent process itself is portable. The real constraints come from what it does to the **host**: it runs `network_mode: host` + `privileged`, manages WireGuard interfaces, writes `/etc/resolv.conf`, and (when present) talks to `systemd-resolved` over D-Bus.
 
-**Tested:** Ubuntu 22.04 / 24.04 and Debian 12, on x86_64 and ARM64, with kernel ≥ 5.15 (built-in WireGuard).
-
-**Should work, not regularly tested:** Other glibc-based, systemd-based distros with kernel ≥ 5.6 (Fedora, Rocky, Alma, openSUSE Leap, recent CentOS Stream). If you run agents on these and hit something, please [open an issue](https://github.com/wenet-ec/edge-core/issues) — fixes are usually small.
-
-**Known caveats:**
-
-- **Older kernels (< 5.6)** — RHEL/CentOS 7, old Debian/Ubuntu LTS — need the WireGuard DKMS module. netclient also has a userspace fallback (`wireguard-go`), but it is slower and less commonly tested in this codebase.
-- **Alpine and other musl-based hosts** — works for the agent (it runs in its own container), but if the host network stack expects musl-specific behavior, edge cases may surface.
-- **Immutable / atomic distros** (Fedora CoreOS, Flatcar, Bottlerocket, Talos, NixOS) — the privileged-host-container model still applies, but persistent paths, package layout, and service management differ; expect some integration work.
-- **SELinux enforcing** (RHEL/Fedora/Rocky/Alma defaults) — privileged containers with host networking and raw socket access often need a custom policy or `--security-opt label=disabled`.
-- **Architectures other than x86_64 / ARM64** (RISC-V, ppc64le, s390x) — not currently built or tested.
-
-The admin server is host-distro-agnostic: it runs containerized and uses `wireguard-go` (userspace) inside its container, so it does not depend on the host's WireGuard support.
+| Platform | Architectures | Status | Notes |
+| -------- | ------------- | ------ | ----- |
+| Ubuntu 22.04 | `amd64`, `arm64` | Tested | Regularly used baseline |
+| Ubuntu 24.04 | `amd64`, `arm64` | Tested | Regularly used baseline |
+| Debian 12 | `amd64`, `arm64` | Tested | Regularly used baseline |
+| Fedora, Rocky, Alma, openSUSE Leap, recent CentOS Stream | `amd64`, `arm64` | Should work, not regularly tested | glibc + systemd shape expected |
+| Older Linux with kernel `< 5.6` | varies | Caveat | Needs WireGuard DKMS or `wireguard-go` userspace fallback |
+| Alpine and other musl-based hosts | varies | Caveat | Container may run, but host-network integration can be rough |
+| Immutable / atomic distros (Fedora CoreOS, Flatcar, Bottlerocket, Talos, NixOS) | varies | Caveat | Expect extra integration work around persistence and service management |
+| SELinux-enforcing hosts | `amd64`, `arm64` | Caveat | May need custom policy or `--security-opt label=disabled` |
+| `riscv64`, `ppc64le`, `s390x` | those architectures | Unsupported today | Not currently built or tested |
 
 ## Using a running admin
 

@@ -296,7 +296,26 @@ Admin never acts as an exit node — only agents can. This prevents SSRF.
 
 Edge Agent is a standalone binary that runs on each edge machine. The primary deployment model is one agent per physical machine using `network_mode: host`.
 
-**Host OS compatibility.** The agent ships as a Debian-slim container, so its own process is portable. The constraints are on the host: kernel WireGuard support (built-in on ≥ 5.6, DKMS or `wireguard-go` userspace fallback otherwise), a writable `/etc/resolv.conf`, and (when applicable) `systemd-resolved` reachable over D-Bus. Regularly tested on Ubuntu 22.04 / 24.04 and Debian 12 (x86_64 and ARM64). Other glibc + systemd distros (Fedora, Rocky, Alma, openSUSE Leap) should work but are not part of the regular test matrix. Alpine / other musl hosts, immutable distros (Fedora CoreOS, Flatcar, Bottlerocket, Talos, NixOS), and SELinux-enforcing hosts may need additional configuration. Architectures beyond x86_64 / ARM64 are not currently built.
+**Compatibility split.** Admin and agent have different compatibility concerns:
+
+- **Admin** is a containerized runtime only: Docker Compose on Linux today, Kubernetes later. Bare-host execution is not a supported path.
+- **Agent** is where the host-compatibility matrix matters, because it touches the host network, resolver, and metrics surfaces directly.
+
+**Agent host platform matrix.**
+
+| Platform | Architectures | Status | Notes |
+| -------- | ------------- | ------ | ----- |
+| Ubuntu 22.04 | `amd64`, `arm64` | Tested | Regularly used baseline |
+| Ubuntu 24.04 | `amd64`, `arm64` | Tested | Regularly used baseline |
+| Debian 12 | `amd64`, `arm64` | Tested | Regularly used baseline |
+| Fedora, Rocky, Alma, openSUSE Leap, recent CentOS Stream | `amd64`, `arm64` | Should work, not regularly tested | glibc + systemd shape expected |
+| Older Linux with kernel `< 5.6` | varies | Caveat | Needs WireGuard DKMS or `wireguard-go` userspace fallback |
+| Alpine and other musl-based hosts | varies | Caveat | Container may run, but host-network integration can be rough |
+| Immutable / atomic distros (Fedora CoreOS, Flatcar, Bottlerocket, Talos, NixOS) | varies | Caveat | Expect extra integration work around persistence and service management |
+| SELinux-enforcing hosts | `amd64`, `arm64` | Caveat | May need custom policy or `--security-opt label=disabled` |
+| `riscv64`, `ppc64le`, `s390x` | those architectures | Unsupported today | Not currently built or tested |
+
+The practical constraints are kernel WireGuard support (built-in on `>= 5.6`, DKMS or `wireguard-go` userspace fallback otherwise), a writable `/etc/resolv.conf`, and, when applicable, `systemd-resolved` reachable over D-Bus.
 
 The standard deployment requires:
 

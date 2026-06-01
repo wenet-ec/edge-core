@@ -3,7 +3,7 @@
 [![CI](https://github.com/wenet-ec/edge-core/actions/workflows/local.yml/badge.svg)](https://github.com/wenet-ec/edge-core/actions/workflows/local.yml)
 [![Docs](https://github.com/wenet-ec/edge-core/actions/workflows/docs.yml/badge.svg)](https://github.com/wenet-ec/edge-core/actions/workflows/docs.yml)
 
-**Your machines, meshed, proxied, observed, and remotely controlled.**
+**Open-source self-hostable control plane for distributed Linux and Edge fleets — WireGuard mesh, SSH proxy, remote execution, Prometheus metrics, all over one REST API/MCP.**
 
 📖 **Docs:** [wenet-ec.github.io/edge-core](https://wenet-ec.github.io/edge-core/)
 

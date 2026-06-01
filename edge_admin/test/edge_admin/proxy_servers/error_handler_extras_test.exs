@@ -20,6 +20,11 @@ defmodule EdgeAdmin.ProxyServers.ErrorHandlerExtrasTest do
       end
     end
 
+    test "non-VPN target in direct mode → 403" do
+      assert {403, msg} = ErrorHandler.http_error_response(:not_vpn_target)
+      assert msg =~ "VPN Hostname"
+    end
+
     test "header_too_large → 431" do
       assert {431, _} = ErrorHandler.http_error_response(:header_too_large)
     end
@@ -68,6 +73,7 @@ defmodule EdgeAdmin.ProxyServers.ErrorHandlerExtrasTest do
     test "policy blocks categorized as :policy, not :authentication" do
       assert :policy == ErrorHandler.categorize_error(:localhost_blocked)
       assert :policy == ErrorHandler.categorize_error(:metadata_service_blocked)
+      assert :protocol == ErrorHandler.categorize_error(:not_vpn_target)
     end
 
     test "origin_form_uri and loop_detected are protocol errors" do

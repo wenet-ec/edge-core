@@ -43,6 +43,7 @@ defmodule EdgeAdmin.ProxyServers.ErrorHandler do
       :invalid_request -> {400, "Bad Request"}
       :origin_form_uri -> {400, "Bad Request - Proxy Requires Absolute URI"}
       :loop_detected -> {508, "Loop Detected"}
+      :not_vpn_target -> {403, "Forbidden - Direct Mode Requires VPN Hostname"}
       :localhost_blocked -> {403, "Forbidden - Localhost Blocked"}
       :link_local_blocked -> {403, "Forbidden - Link Local Blocked"}
       :metadata_service_blocked -> {403, "Forbidden - Metadata Service Blocked"}
@@ -146,6 +147,7 @@ defmodule EdgeAdmin.ProxyServers.ErrorHandler do
       :invalid_auth_type,
       :origin_form_uri,
       :loop_detected,
+      :not_vpn_target,
       :header_too_large,
       :bad_response
     ]

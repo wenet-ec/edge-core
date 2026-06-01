@@ -13,7 +13,8 @@ defmodule EdgeAdmin.ProxyServers do
   ### Direct (admin as exit)
   - Username: `_` or empty string
   - Admin routes traffic through the VPN Gateway directly to the target
-  - Used for reaching nodes on the VPN mesh from the admin
+  - Used only for reaching nodes on the VPN mesh from the admin
+  - Non-VPN targets are rejected
 
   ### Chained (agent as exit)
   - Username: a node's DNS hostname, e.g. `node-<id>.cluster-<name>.nm.internal`
@@ -36,9 +37,9 @@ defmodule EdgeAdmin.ProxyServers do
   - **Ranch Listeners**: One for HTTP, one for SOCKS5
   - **Protocol Handlers**: `Http.Handler` and `Socks5.Handler`
   - **Gateway Integration**: VPN-bound traffic routes through cluster Gateway
-    GenServers. HTTP direct mode targeting a non-VPN host bypasses Gateway
-    and dials the target directly with `:gen_tcp.connect`. SOCKS5 has no
-    such bypass — non-VPN targets in direct mode return `:not_vpn_target`.
+    GenServers. In direct mode, both HTTP and SOCKS5 require VPN hostnames.
+    Reaching arbitrary internet/LAN targets is only supported through
+    proxy chaining via an agent.
 
   ## Examples
 

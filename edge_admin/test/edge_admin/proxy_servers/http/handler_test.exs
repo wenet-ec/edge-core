@@ -345,6 +345,34 @@ defmodule EdgeAdmin.ProxyServers.Http.HandlerTest do
     end
   end
 
+  describe "vpn_target?/1" do
+    setup do
+      previous = Application.get_env(:edge_admin, :netmaker_default_domain)
+      Application.put_env(:edge_admin, :netmaker_default_domain, "nm.internal")
+
+      on_exit(fn ->
+        if is_nil(previous) do
+          Application.delete_env(:edge_admin, :netmaker_default_domain)
+        else
+          Application.put_env(:edge_admin, :netmaker_default_domain, previous)
+        end
+      end)
+
+      :ok
+    end
+
+    test "returns true for VPN hostnames under the configured domain" do
+      assert Handler.vpn_target?("node-123.cluster-prod.nm.internal")
+      assert Handler.vpn_target?("api.cluster-prod.nm.internal")
+    end
+
+    test "returns false for non-VPN hosts including RFC1918 literals" do
+      refute Handler.vpn_target?("example.com")
+      refute Handler.vpn_target?("192.168.1.127")
+      refute Handler.vpn_target?("10.0.0.5")
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # parse_ipv4/1
   # ---------------------------------------------------------------------------

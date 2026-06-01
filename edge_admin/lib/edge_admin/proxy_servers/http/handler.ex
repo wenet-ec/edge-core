@@ -31,7 +31,6 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
   alias EdgeAdmin.ProxyServers.Config
   alias EdgeAdmin.ProxyServers.ErrorHandler
   alias EdgeAdmin.ProxyServers.Http.Parser, as: HttpParser
-  alias EdgeAdmin.ProxyServers.Transport.Forwarder
   alias EdgeAdmin.ProxyServers.Transport.TunnelRegistry
   alias EdgeAdmin.ProxyServers.Tunnel.TcpTunnel
 
@@ -313,11 +312,17 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
 
       tunnel_http_request(socket, transport, host, port, opts, metadata, proxy_mode, cluster_name)
     else
-      direct_http_request(socket, transport, host, port, request)
+      {status, message} = ErrorHandler.http_error_response(:not_vpn_target)
+      send_error(socket, transport, status, message)
+      {:error, :not_vpn_target}
     end
   end
 
-  defp vpn_target?(host) do
+  @doc """
+  Returns true when `host` is a VPN hostname under the configured Netmaker domain.
+  """
+  @spec vpn_target?(String.t()) :: boolean()
+  def vpn_target?(host) do
     domain = Application.get_env(:edge_admin, :netmaker_default_domain, "nm.internal")
     String.ends_with?(host, ".#{domain}")
   end
@@ -347,37 +352,6 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
 
         {:ok, :remote, proxy_mode, cluster_name}
 
-      {:error, reason} ->
-        {status, message} = ErrorHandler.http_error_response(reason)
-        send_error(socket, transport, status, message)
-        {:error, reason}
-    end
-  end
-
-  defp direct_http_request(socket, transport, host, port, request) do
-    metadata = %{
-      protocol: :http,
-      target_host: host,
-      target_port: port,
-      kind: :request,
-      routing_mode: :direct,
-      cluster: "external"
-    }
-
-    with :ok <- validate_external_destination(host, port),
-         {:ok, target_socket} <-
-           :gen_tcp.connect(String.to_charlist(host), port, [:binary, active: false], Config.connection_timeout()) do
-      :gen_tcp.send(target_socket, request)
-      :ok = TunnelRegistry.register(metadata)
-
-      try do
-        Forwarder.forward(socket, target_socket, metadata)
-      after
-        TunnelRegistry.unregister()
-      end
-
-      {:ok, :local, :direct, "external"}
-    else
       {:error, reason} ->
         {status, message} = ErrorHandler.http_error_response(reason)
         send_error(socket, transport, status, message)

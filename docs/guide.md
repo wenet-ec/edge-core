@@ -70,6 +70,8 @@ From any node-A in `cluster-prod`, `ping node-B.cluster-prod.nm.internal` works 
 - **Agent** — BEAM, Oban, command throughput, internal Phoenix metrics. From PromEx.
 - **WireGuard** — peer endpoint, last handshake, bytes in/out, latency.
 
+By default the agent already brings the scrape surfaces with it: host metrics on port `49100`, WireGuard metrics on port `49586`, and the agent's own PromEx endpoint at `GET /api/v1/agents/me/metrics/raw`. In normal deployments you scrape through the admin aggregator, not from each agent directly, but the local surfaces are there when you need them.
+
 The admin exposes both Prometheus-scrape endpoints (raw, for Grafana / Prometheus) and human-friendly JSON endpoints (parsed, for dashboards or quick checks). Full detail in [§6](#6-metrics).
 
 **Command.** A shell command you want to run on one or more nodes. You create a command with a target filter (`all`, specific cluster, specific node IDs, etc.), and the admin tracks delivery and results asynchronously. Commands are not synchronous — they are jobs.
@@ -198,11 +200,57 @@ curl -x http://node-abc.cluster-prod.nm.internal:PROXY_KEY@admin-host:43128 http
 
 The admin itself never acts as an exit node — only agents can. This prevents the admin from being used as an open SSRF surface.
 
+### Using an agent proxy directly
+
+The canonical path is still **admin proxy → agent** because it gives you one stable entry point, cluster-aware routing, and no need to expose agent proxy ports broadly. But the agent is itself a standalone HTTP + SOCKS5 forward proxy, so if you can already reach that agent directly, you can use it without involving the admin at all.
+
+Default agent proxy ports:
+
+| Proxy  | Port    |
+| ------ | ------- |
+| HTTP   | `43128` |
+| SOCKS5 | `41080` |
+
+Direct agent proxy auth is simpler than the admin's:
+
+- Username is always `_`
+- Password is the agent's stored `proxy_password`
+- If `PROXY_SERVERS_AUTH_ENABLED=false`, the agent accepts any credentials and effectively behaves as a transparent local proxy
+
+Examples:
+
+```bash
+# HTTP proxy directly to the agent
+curl -x http://_:AGENT_PROXY_PASSWORD@agent-host:43128 http://192.168.1.1/
+
+# SOCKS5 directly to the agent
+curl --socks5 _:AGENT_PROXY_PASSWORD@agent-host:41080 https://ifconfig.me
+
+# SSH through the agent's SOCKS5 listener
+ssh -o ProxyCommand="ncat --proxy agent-host:41080 --proxy-type socks5 --proxy-auth _:AGENT_PROXY_PASSWORD %h %p" \
+    admin@192.168.1.10 -p 22
+```
+
+This is a different use case from admin forwarding:
+
+- **Admin proxy** — best default; reach VPN nodes from one cloud entry point, optionally chain through an agent
+- **Agent direct proxy** — useful when the agent is already reachable on your LAN/VPN and you want to use that machine itself as the exit node
+
+The agent proxy is not cluster-aware. It simply validates the destination against its own local SSRF policy and then dials it.
+
 ---
 
 ## 6. Metrics
 
 The admin is a Prometheus-compatible aggregator: scrapers point at the admin, the admin handles service discovery and per-node fan-out. Auth: `METRICS_KEY` (or `MASTER_KEY`) bearer token on every endpoint.
+
+That is the canonical integration path. If you need to debug a single node locally, remember the agent also exposes metrics surfaces directly:
+
+- host metrics via `node_exporter` on `:49100`
+- WireGuard metrics on `:49586`
+- agent PromEx on `GET http://agent-host:44000/api/v1/agents/me/metrics/raw`
+
+The PromEx endpoint is bearer-token protected by default (`AGENT_METRICS_AUTH_ENABLED=true`). If you disable that toggle, local scraping becomes transparent.
 
 ### Service discovery (returns Prometheus HTTP SD targets, grouped per cluster)
 

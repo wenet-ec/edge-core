@@ -1,6 +1,6 @@
 # Edge Core — Architecture
 
-**Last Updated: 2026-05-06**
+**Last Updated: 2026-06-01**
 
 Edge Core is an infrastructure management platform for fleets of Linux machines you don't physically touch — cloud VMs, on-premises servers, factory-floor equipment, Raspberry Pis, homelab boxes, IoT devices. Anywhere you have N machines and want a single HTTP API to operate them, the same primitives apply: a secure WireGuard mesh, remote command execution, SSH without exposing port 22, HTTP/SOCKS5 forward proxying through any node, Prometheus metrics aggregation.
 
@@ -340,8 +340,10 @@ The agent is more than a process runner. It bundles:
 - **Prometheus node exporter** — exposes host metrics (CPU, memory, disk, network) on port 49100
 - **WireGuard metrics exporter** — exposes peer/interface metrics on port 49586
 - **Embedded SSH server** — Erlang `:ssh` server on port 40022, with centralized key management via admin
-- **HTTP + SOCKS5 forward proxy** — same dual-protocol proxy as admin (ports 43128 / 41080)
+- **HTTP + SOCKS5 forward proxy** — same dual-protocol proxy as admin (ports 43128 / 41080); can be used either indirectly via admin proxy chaining or directly if the agent itself is reachable
 - **Oban background workers** — async job processing for commands, health reporting, polling
+
+By default the agent is not just "a thing that phones home" — it already contains the operational sidecars you would otherwise deploy separately: host metrics exporter, WireGuard exporter, SSH server, and both proxy listeners.
 
 The agent is currently implemented in Elixir but the interface is purely HTTP — it could be reimplemented in any language.
 
@@ -476,6 +478,7 @@ This is why "fleet ops automated by an AI agent" is a real capability of Edge Co
 | Agent → Admin            | Per-node API token (issued at enrollment)                                       |
 | Admin → Agent            | Per-node API token (same token, stored in admin DB)                             |
 | Admin ↔ Admin (Erlang)   | Shared `VPN_CLUSTER_COOKIE` + connection verified against PostgreSQL + Netmaker |
+| Agent proxy (direct use) | Basic auth: username `_`, password = agent `proxy_password`; can be disabled     |
 | SSH                      | Username/password or public key, verified by admin on each connection attempt   |
 
 ---

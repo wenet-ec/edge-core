@@ -153,7 +153,7 @@ defmodule EdgeAdmin.Mixfile do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
 
       # Background Jobs
-      {:oban, "~> 2.22"},
+      {:oban, "~> 2.23"},
       {:quantum, "~> 3.5"},
 
       # Erlang Distribution
@@ -168,7 +168,7 @@ defmodule EdgeAdmin.Mixfile do
       # compile and honors BUILD_WITHOUT_QUIC=1 (set in the Dockerfiles). Hex
       # flattens dynamic deps at publish time, so the Hex package always lists
       # `quicer` as non-optional even though the script would exclude it locally.
-      {:emqtt, github: "emqx/emqtt", tag: "1.15.1"},
+      {:emqtt, github: "emqx/emqtt", tag: "1.15.2"},
       {:ex_aws, "~> 2.7"},
       {:ex_aws_sns, "~> 2.3"},
       {:sweet_xml, "~> 0.7"},

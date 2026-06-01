@@ -104,7 +104,7 @@ defmodule EdgeAgent.Mixfile do
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
 
       # Background jobs
-      {:oban, "~> 2.22"},
+      {:oban, "~> 2.23"},
       {:quantum, "~> 3.5"},
 
       # SSH server

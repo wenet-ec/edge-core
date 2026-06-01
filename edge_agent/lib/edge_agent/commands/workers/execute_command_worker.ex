@@ -15,7 +15,7 @@ defmodule EdgeAgent.Commands.Workers.ExecuteCommandWorker do
       period: :infinity,
       fields: [:args],
       keys: [:execution_id],
-      states: [:available, :scheduled, :executing, :retryable]
+      states: :incomplete
     ]
 
   alias EdgeAgent.Commands

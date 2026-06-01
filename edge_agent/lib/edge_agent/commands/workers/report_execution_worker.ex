@@ -23,7 +23,7 @@ defmodule EdgeAgent.Commands.Workers.ReportExecutionWorker do
     max_attempts: 1,
     unique: [
       period: :infinity,
-      states: [:available, :scheduled]
+      states: :incomplete
     ]
 
   alias EdgeAgent.Commands

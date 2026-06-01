@@ -21,7 +21,7 @@ defmodule EdgeAdmin.Nodes.Workers.ReconcileClusterWorker do
     max_attempts: 3,
     unique: [
       period: :infinity,
-      states: [:available, :scheduled, :executing, :retryable],
+      states: :incomplete,
       keys: [:cluster_name]
     ]
 

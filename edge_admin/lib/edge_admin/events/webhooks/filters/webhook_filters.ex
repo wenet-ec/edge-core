@@ -18,7 +18,13 @@ defmodule EdgeAdmin.Events.Webhooks.Filters.WebhookFilters do
   """
   @spec pop_event_type(map()) :: {String.t() | nil, map()}
   def pop_event_type(params) do
-    case Map.pop(params, "event_type") do
+    {value, rest} =
+      case Map.pop(params, :event_type) do
+        {nil, ^params} -> Map.pop(params, "event_type")
+        result -> result
+      end
+
+    case {value, rest} do
       {nil, rest} -> {nil, rest}
       {value, rest} when is_binary(value) -> {value, rest}
       {_other, rest} -> {nil, rest}

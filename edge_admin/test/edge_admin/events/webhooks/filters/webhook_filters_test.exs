@@ -18,6 +18,11 @@ defmodule EdgeAdmin.Events.Webhooks.Filters.WebhookFiltersTest do
                {"edge.node.registered", %{"page" => 1}}
     end
 
+    test "accepts atom-keyed event_type params from OpenAPI-cast requests" do
+      assert WebhookFilters.pop_event_type(%{event_type: "edge.node.registered", page: 1}) ==
+               {"edge.node.registered", %{page: 1}}
+    end
+
     test "returns nil and unchanged params when the key is missing" do
       assert WebhookFilters.pop_event_type(%{"page" => 2}) == {nil, %{"page" => 2}}
     end

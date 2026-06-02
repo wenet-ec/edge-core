@@ -104,8 +104,8 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     field(:wireguard_metrics_port, :integer)
     field(:http_proxy_port, :integer)
     field(:socks5_proxy_port, :integer)
-    field(:api_token, :string)
-    field(:proxy_password, :string)
+    field(:api_token, :string, redact: true)
+    field(:proxy_password, :string, redact: true)
     field(:self_update_enabled, :boolean, default: false)
 
     # Netmaker references

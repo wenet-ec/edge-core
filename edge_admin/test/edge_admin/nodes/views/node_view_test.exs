@@ -94,11 +94,6 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
       assert result.http_proxy_port == 8080
       assert result.socks5_proxy_port == 1080
 
-      # Secrets — yes, view exposes them. Pinning so a future "redact" change
-      # is an intentional decision, not a silent regression.
-      assert result.api_token == "token-abc"
-      assert result.proxy_password == "pw-abc"
-
       # Misc.
       assert result.version == "0.1.0"
       assert result.self_update_enabled == true
@@ -155,7 +150,6 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
           vpn_hostname mdns_hostname
           http_port ssh_port host_metrics_port wireguard_metrics_port
           http_proxy_port socks5_proxy_port
-          api_token proxy_password
           version self_update_enabled last_seen_at
           aliases inserted_at updated_at
         )a)

@@ -3532,7 +3532,6 @@
       "NodeResponse": {
         "description": "Edge node information",
         "example": {
-          "api_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
           "cluster_name": "prod-east",
           "host_metrics_port": 49100,
           "http_port": 44000,
@@ -3544,7 +3543,6 @@
           "mdns_hostname": "node-01234567-89ab-cdef-0123-456789abcdef.local",
           "netmaker_host_id": "def67890-5678-5678-5678-567890abcdef",
           "node_name": "node-01234567-89ab-cdef-0123-456789abcdef",
-          "proxy_password": "securepassword123",
           "self_update_enabled": false,
           "socks5_proxy_port": 44180,
           "ssh_port": 42222,
@@ -3555,10 +3553,6 @@
           "wireguard_metrics_port": 49586
         },
         "properties": {
-          "api_token": {
-            "description": "API token for agent authentication",
-            "type": "string"
-          },
           "cluster_name": {
             "description": "Name of the cluster this node belongs to",
             "example": "prod-east",
@@ -3611,10 +3605,6 @@
             "example": "node-01234567-89ab-cdef-0123-456789abcdef",
             "type": "string"
           },
-          "proxy_password": {
-            "description": "Password for proxy authentication (username is always '_')",
-            "type": "string"
-          },
           "self_update_enabled": {
             "description": "Whether self-updates are enabled",
             "type": "boolean"
@@ -3659,8 +3649,6 @@
           "wireguard_metrics_port",
           "http_proxy_port",
           "socks5_proxy_port",
-          "api_token",
-          "proxy_password",
           "inserted_at",
           "updated_at"
         ],

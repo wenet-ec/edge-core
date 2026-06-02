@@ -44,6 +44,9 @@ config :mdns_lite,
 # Import environment configuration
 config :phoenix, :filter_parameters, [
   "password",
+  "authorization",
+  "proxy-authorization",
+  "x-api-key",
   "api_token",
   "proxy_password",
   "enrollment_token",

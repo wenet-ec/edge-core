@@ -88,14 +88,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           type: :integer,
           description: "SOCKS5 proxy port"
         },
-        api_token: %Schema{
-          type: :string,
-          description: "API token for agent authentication"
-        },
-        proxy_password: %Schema{
-          type: :string,
-          description: "Password for proxy authentication (username is always '_')"
-        },
         version: %Schema{
           type: :string,
           nullable: true,
@@ -132,8 +124,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         :wireguard_metrics_port,
         :http_proxy_port,
         :socks5_proxy_port,
-        :api_token,
-        :proxy_password,
         :inserted_at,
         :updated_at
       ],
@@ -152,8 +142,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         wireguard_metrics_port: 49_586,
         http_proxy_port: 44_880,
         socks5_proxy_port: 44_180,
-        api_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-        proxy_password: "securepassword123",
         version: "0.1.0",
         self_update_enabled: false,
         last_seen_at: "2025-06-09T08:20:00Z",

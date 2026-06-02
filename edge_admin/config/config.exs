@@ -50,6 +50,9 @@ config :flop, repo: EdgeAdmin.Repo
 
 config :phoenix, :filter_parameters, [
   "password",
+  "authorization",
+  "proxy-authorization",
+  "x-api-key",
   "api_token",
   "proxy_password",
   "enrollment_token",

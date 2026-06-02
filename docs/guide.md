@@ -215,6 +215,7 @@ Direct agent proxy auth is simpler than the admin's:
 
 - Username is always `_`
 - Password is the agent's stored `proxy_password`
+- That password is an internal secret and is **not** returned by normal node REST responses or MCP `get_node` / `list_nodes` reads
 - If `PROXY_SERVERS_AUTH_ENABLED=false`, the agent accepts any credentials and effectively behaves as a transparent local proxy
 
 Examples:

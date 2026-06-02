@@ -6,6 +6,9 @@ defmodule EdgeAdmin.Sentry do
     "last_name",
     "email",
     "password",
+    "authorization",
+    "proxy-authorization",
+    "x-api-key",
     "api_token",
     "proxy_password",
     "enrollment_token",
@@ -40,9 +43,16 @@ defmodule EdgeAdmin.Sentry do
   # Reference: https://github.com/getsentry/sentry-elixir/blob/9.1.0/lib/sentry/plug_context.ex#L232
   defp scrub_map(map, scrubbed_keys) do
     Map.new(map, fn {key, value} ->
+      key_name =
+        cond do
+          is_atom(key) -> Atom.to_string(key)
+          is_binary(key) -> key
+          true -> nil
+        end
+
       value =
         cond do
-          key in scrubbed_keys -> @scrubbed_value
+          key_name in scrubbed_keys -> @scrubbed_value
           is_struct(value) -> value |> Map.from_struct() |> scrub_map(scrubbed_keys)
           is_map(value) -> scrub_map(value, scrubbed_keys)
           is_list(value) -> scrub_list(value, scrubbed_keys)

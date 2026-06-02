@@ -1686,6 +1686,8 @@ defmodule EdgeAdmin.Nodes do
         {:error, _} -> %{}
       end
 
+    expected_hostnames = MapSet.new(db_nodes, &Node.node_name/1)
+
     live_host_ids = host_hostname_map |> Map.keys() |> MapSet.new()
     orphan_swept = sweep_orphan_nodes_in_network(netmaker_nodes, live_host_ids, network_name)
 
@@ -1710,7 +1712,7 @@ defmodule EdgeAdmin.Nodes do
 
     evicted =
       if Application.get_env(:edge_admin, :evict_rogue_hosts, true) do
-        evict_rogue_hosts(unmanaged_extra, host_hostname_map, network_name, cluster.name)
+        evict_rogue_hosts(unmanaged_extra, host_hostname_map, expected_hostnames, network_name, cluster.name)
       else
         if not MapSet.equal?(unmanaged_extra, MapSet.new()) do
           Logger.info(
@@ -1786,37 +1788,46 @@ defmodule EdgeAdmin.Nodes do
     end)
   end
 
-  defp evict_rogue_hosts(host_ids, host_hostname_map, network_name, cluster_name) do
+  defp evict_rogue_hosts(host_ids, host_hostname_map, expected_hostnames, network_name, cluster_name) do
     Enum.reduce(host_ids, 0, fn host_id, count ->
       hostname = Map.get(host_hostname_map, host_id, "")
 
-      if String.starts_with?(hostname, "admin-") do
-        # Admin nodes are handled by the zombie admin cleaner - never touch them
-        Logger.debug(
-          "Reconciliation: Skipping admin host #{host_id} (#{hostname}) in network #{network_name} - handled by zombie cleaner"
-        )
+      cond do
+        String.starts_with?(hostname, "admin-") ->
+          # Admin nodes are handled by the zombie admin cleaner - never touch them
+          Logger.debug(
+            "Reconciliation: Skipping admin host #{host_id} (#{hostname}) in network #{network_name} - handled by zombie cleaner"
+          )
 
-        count
-      else
-        case Vpn.delete_host(host_id) do
-          {:ok, _} ->
-            Logger.info(
-              "Reconciliation: Evicted rogue host #{host_id} (#{hostname}) from network #{network_name} (cluster: #{cluster_name})"
-            )
+          count
 
-            count + 1
+        MapSet.member?(expected_hostnames, hostname) ->
+          Logger.warning(
+            "Reconciliation: Skipping rogue eviction for host #{host_id} (#{hostname}) in #{network_name} because hostname matches an existing node identity"
+          )
 
-          {:error, :not_found} ->
-            Logger.debug("Reconciliation: Rogue host #{host_id} already gone from network #{network_name}")
-            count
+          count
 
-          {:error, reason} ->
-            Logger.warning(
-              "Reconciliation: Failed to evict rogue host #{host_id} (#{hostname}) from network #{network_name}: #{inspect(reason)}"
-            )
+        true ->
+          case Vpn.delete_host(host_id) do
+            {:ok, _} ->
+              Logger.info(
+                "Reconciliation: Evicted rogue host #{host_id} (#{hostname}) from network #{network_name} (cluster: #{cluster_name})"
+              )
 
-            count
-        end
+              count + 1
+
+            {:error, :not_found} ->
+              Logger.debug("Reconciliation: Rogue host #{host_id} already gone from network #{network_name}")
+              count
+
+            {:error, reason} ->
+              Logger.warning(
+                "Reconciliation: Failed to evict rogue host #{host_id} (#{hostname}) from network #{network_name}: #{inspect(reason)}"
+              )
+
+              count
+          end
       end
     end)
   end

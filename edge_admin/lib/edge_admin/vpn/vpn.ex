@@ -832,29 +832,78 @@ defmodule EdgeAdmin.Vpn do
         if(network_name, do: " in network: #{network_name}", else: "")
     )
 
-    # List all hosts from Netmaker (optionally filtered by network)
-    case list_hosts(network_name) do
-      {:ok, hosts} ->
-        Logger.debug("Retrieved #{length(hosts)} hosts from Netmaker")
+    with {:ok, hosts} <- list_hosts(network_name),
+         {:ok, nodes} <- list_nodes_for_host_resolution(network_name) do
+      Logger.debug("Retrieved #{length(hosts)} hosts from Netmaker")
 
-        matching_host =
-          Enum.find(hosts, fn host ->
-            host["name"] == hostname
+      case select_host_id(hosts, nodes, hostname) do
+        nil ->
+          Logger.debug("No Netmaker host found with name: #{hostname}")
+          {:error, :host_not_found}
+
+        host_id ->
+          Logger.debug("Found Netmaker host ID: #{host_id} for name: #{hostname}")
+          {:ok, host_id}
+      end
+    else
+      {:error, reason} ->
+        Logger.error("Failed to resolve Netmaker host ID for #{hostname}: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+  @doc false
+  @spec select_host_id([map()], [map()], String.t()) :: String.t() | nil
+  def select_host_id(hosts, nodes, hostname) do
+    matching_hosts = Enum.filter(hosts, &(&1["name"] == hostname))
+
+    case matching_hosts do
+      [] ->
+        nil
+
+      [host] ->
+        host["id"]
+
+      _ ->
+        node_by_host_id =
+          Map.new(nodes, fn node ->
+            {node["hostid"], node}
           end)
 
-        case matching_host do
-          nil ->
-            Logger.debug("No Netmaker host found with name: #{hostname}")
-            {:error, :host_not_found}
-
-          host ->
-            Logger.debug("Found Netmaker host ID: #{host["id"]} for name: #{hostname}")
-            {:ok, host["id"]}
+        matching_hosts
+        |> Enum.max_by(
+          &candidate_rank(&1, node_by_host_id),
+          fn -> nil end
+        )
+        |> case do
+          nil -> nil
+          host -> host["id"]
         end
+    end
+  end
 
-      {:error, reason} ->
-        Logger.error("Failed to list Netmaker hosts: #{inspect(reason)}")
-        {:error, reason}
+  defp list_nodes_for_host_resolution(nil), do: {:ok, []}
+  defp list_nodes_for_host_resolution(network_name), do: list_nodes(network_name)
+
+  defp candidate_rank(host, node_by_host_id) do
+    node = Map.get(node_by_host_id, host["id"])
+
+    {
+      if(node, do: 1, else: 0),
+      if(node && node["connected"], do: 1, else: 0),
+      node_timestamp(node, "lastmodified"),
+      node_timestamp(node, "lastcheckin"),
+      node_timestamp(node, "lastpeerupdate"),
+      host["id"]
+    }
+  end
+
+  defp node_timestamp(nil, _field), do: -1
+
+  defp node_timestamp(node, field) do
+    case Map.get(node, field) do
+      value when is_integer(value) -> value
+      _ -> -1
     end
   end
 

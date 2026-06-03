@@ -22,7 +22,7 @@ defmodule EdgeAdmin.ProxyServers.Tunnel.RemoteTunnel do
   Starts a remote tunnel proxy process on the Gateway node.
   """
   def start_proxy(target_socket, caller_pid) do
-    pid = spawn_link(__MODULE__, :proxy_loop, [target_socket, caller_pid])
+    pid = spawn(__MODULE__, :proxy_loop, [target_socket, caller_pid])
     :gen_tcp.controlling_process(target_socket, pid)
     {:ok, pid}
   end

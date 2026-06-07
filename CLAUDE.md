@@ -462,13 +462,13 @@ Standard auth/host/DB vars (`MASTER_KEY`, scoped keys, `DATABASE_URL`, `NETMAKER
 
 ## Technology Stack
 
-- **Framework:** Elixir 1.19+, Erlang 28.5+, Phoenix 1.8
-- **Databases:** PostgreSQL 18 (admin default; required for multi-admin HA), SQLite 0.22 (admin alternative for single-instance, also the agent's local store), Ecto 3.13. Adapter selected at runtime via `DB_ADAPTER`; same compiled binary serves both.
+- **Framework:** Elixir/Erlang, Phoenix
+- **Databases:** PostgreSQL (admin default; required for multi-admin HA), SQLite (admin alternative for single-instance, also the agent's local store), Ecto. Adapter selected at runtime via `DB_ADAPTER`; same compiled binary serves both.
 - **VPN:** Netmaker (Go), netclient, WireGuard
-- **Jobs:** Oban 2.22, Quantum 3.5
-- **Metrics:** Prometheus exporters, Prometheus, PromEx 1.11
-- **HTTP:** Req 0.5, Bandit server
-- **API:** OpenApiSpex 3.22 (OpenAPI/Swagger)
+- **Jobs:** Oban, Quantum
+- **Metrics:** Prometheus exporters, Prometheus, PromEx
+- **HTTP:** Req, Bandit server
+- **API:** OpenApiSpex (OpenAPI/Swagger)
 - **Auth:** Argon2, JWT-like tokens
 - **Testing:** ExUnit, ExMachina, Mox, Faker
 - **Quality:** Credo, Dialyxir, Sobelow, Mix Audit

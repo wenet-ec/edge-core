@@ -214,7 +214,8 @@ cors_headers =
 
 config :edge_admin, Corsica,
   origins: get_env("CORS_ALLOWED_ORIGINS", :cors),
-  allow_headers: cors_headers
+  allow_headers: cors_headers,
+  allow_methods: :all
 
 config :edge_admin, EdgeAdminWeb.Endpoint,
   http: [

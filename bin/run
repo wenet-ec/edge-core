@@ -20,13 +20,21 @@ ENV=${ENV:-local}
 # Support custom compose file suffix (e.g., VARIANT=test -> cloud.test.yml)
 # Usage: VARIANT=test ./bin/run cloud up
 VARIANT=${VARIANT:-}
-if [ -n "$VARIANT" ]; then
-    CLOUD_COMPOSE_FILE="deploy/${ENV}/cloud.${VARIANT}.yml"
-    EDGE_COMPOSE_FILE="deploy/${ENV}/edge.${VARIANT}.yml"
-else
-    CLOUD_COMPOSE_FILE="deploy/${ENV}/cloud.yml"
-    EDGE_COMPOSE_FILE="deploy/${ENV}/edge.yml"
-fi
+
+resolve_compose_file() {
+    local scope=$1
+    local base_file="deploy/${ENV}/${scope}.yml"
+    local variant_file="deploy/${ENV}/${scope}.${VARIANT}.yml"
+
+    if [ -n "$VARIANT" ] && [ -f "$variant_file" ]; then
+        echo "$variant_file"
+    else
+        echo "$base_file"
+    fi
+}
+
+CLOUD_COMPOSE_FILE=$(resolve_compose_file cloud)
+EDGE_COMPOSE_FILE=$(resolve_compose_file edge)
 
 # Colors for output
 RED='\033[0;31m'

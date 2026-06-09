@@ -97,7 +97,7 @@ defmodule EdgeAdmin.Application do
         EdgeAdmin.LocalScheduler,
         EdgeAdmin.ProxyServers.Transport.TunnelRegistry,
         EdgeAdmin.ProxyServers,
-        {EdgeAdminMcp.Server, transport: :streamable_http},
+        {EdgeAdminMcp.Server, transport: :streamable_http, registry: {Anubis.Server.Registry.PG, []}},
         EdgeAdminWeb.Endpoint
       ] ++ event_broker_children()
   end

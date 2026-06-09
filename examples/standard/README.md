@@ -75,7 +75,7 @@ Key things to configure:
 - `VPN_CLUSTER_COOKIE` — must be the same across all 4 admin instances
 - `MQ_PASSWORD` and `EMQX_DASHBOARD_PASSWORD` — must match each other
 - Update `configs/prometheus.yml` — replace `change-me-your-metrics-key` with your actual `METRICS_KEY`
-- If using a domain with TLS: update `configs/Caddyfile` with your domain names
+- If using a domain with TLS: update `configs/Caddyfile` with your domain names. Use `edge-admin.yourdomain.com` as the load-balanced admin API/MCP hostname; the per-admin hostnames are mainly for direct debugging.
 
 ### Private network (no TLS)?
 

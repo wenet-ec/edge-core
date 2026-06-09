@@ -86,7 +86,7 @@ defmodule EdgeAgent.Mixfile do
   defp deps do
     [
       # HTTP Client
-      {:req, "~> 0.5"},
+      {:req, "~> 0.6"},
 
       # HTTP server
       {:bandit, "~> 1.12"},

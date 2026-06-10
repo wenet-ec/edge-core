@@ -27,7 +27,7 @@ The **agent** that runs on your machines and the **Nexmaker** shared library are
 **Connectivity**
 
 - **Cloud ↔ Edge (forward proxy + proxy chaining)** — HTTP and SOCKS5 forward proxies tunnel any TCP traffic from the cloud through any agent to its local network or the internet
-- **Edge ↔ Edge (VPN mesh)** — full WireGuard P2P mesh per cluster, automatic peer discovery, netclient-local DNS for `.nm.internal` hostnames, DERP/TURN relay fallback for NAT
+- **Edge ↔ Edge (VPN mesh)** — full WireGuard P2P mesh per cluster, automatic peer discovery, netclient-local DNS for `.nm.internal` hostnames, DERP relay fallback for NAT
 - **Edge ↔ Local devices (mDNS)** — agents advertise themselves via mDNS for zero-config discovery by devices on the same LAN; full LAN DNS control is a future direction (see [`docs/architecture.md`](https://github.com/wenet-ec/edge-core/blob/main/docs/architecture.md))
 
 **Async events**
@@ -46,7 +46,7 @@ The **agent** that runs on your machines and the **Nexmaker** shared library are
 - A self-hostable alternative to Balena that works for general Linux machines, not just IoT
 - A way to manage remote machines without exposing SSH ports to the internet
 - Fleet management that works on-prem, air-gapped, or across multiple clouds simultaneously
-- Remote access to machines behind strict NAT or firewalls (DERP/TURN relay handles symmetric NAT automatically)
+- Remote access to machines behind strict NAT or firewalls (DERP relay handles symmetric NAT automatically)
 - A self-hosted alternative to Headscale (self-hosted Tailscale) + fleet management, where you own all the infrastructure
 - HTTP-first edge communication without needing to run MQTT brokers (like EMQX or Mosquitto) in your own application code
 - A control plane with no single point of failure — masterless admins, horizontal scale-out via independent admin clusters
@@ -71,7 +71,7 @@ The **agent** that runs on your machines and the **Nexmaker** shared library are
 | HTTP forward proxy to edge       | ✅           | ❌                         | ❌       | ❌                    | ❌      |
 | Remote command execution         | ✅           | ✅                         | ✅       | ❌                    | Partial |
 | Prometheus metrics via admin     | ✅           | Partial                    | ❌       | ❌                    | ❌      |
-| Works behind symmetric NAT       | ✅ DERP/TURN | ✅                         | ❌       | ✅ DERP/TURN          | ❌      |
+| Works behind symmetric NAT       | ✅ DERP     | ✅                         | ❌       | ✅ DERP               | ❌      |
 | No vendor lock-in                | ✅           | ❌                         | ✅       | ❌ / ✅               | ✅      |
 
 *¹ Ansible is a complement, not a competitor — see below.*
@@ -110,7 +110,7 @@ Cloud Server
 
 Edge Nodes (one agent per machine)
 └── Edge Agent                network_mode: host, privileged
-    ├── netclient             WireGuard VPN client (DERP/TURN relay fallback for symmetric NAT)
+    ├── netclient             WireGuard VPN client (DERP relay fallback for symmetric NAT)
     ├── SSH server            port 40022, keys managed centrally by admin
     ├── Forward proxies       HTTP + SOCKS5
     └── Metrics exporters     node exporter + WireGuard metrics
@@ -118,7 +118,7 @@ Edge Nodes (one agent per machine)
 
 **Admin clustering** is masterless peer-to-peer — admins coordinate via Erlang distribution and share a PostgreSQL database. Exactly one admin owns each edge cluster at a time (shard assignment, not replication). HA and horizontal scale come from running additional independent admin clusters.
 
-**Agent↔Admin communication** is HTTP over WireGuard, with graceful fallback: raw WireGuard UDP → DERP/TURN relay (transparent, handles symmetric NAT) → HTTP polling (last resort, eventual consistency).
+**Agent↔Admin communication** is HTTP over WireGuard, with graceful fallback: raw WireGuard UDP → DERP relay (transparent, handles symmetric NAT) → HTTP polling (last resort, eventual consistency).
 
 For full detail see [`docs/architecture.md`](https://github.com/wenet-ec/edge-core/blob/main/docs/architecture.md).
 
@@ -186,7 +186,7 @@ Other useful pointers:
 | `nexmaker/`               | Shared Elixir lib — Netmaker API + netclient CLI wrapper                                                        |
 | `examples/lite/`          | Single admin, Mosquitto, no metrics — good for small fleets or resource-constrained servers                     |
 | `examples/standard/`      | 4 admins across 2 clusters, EMQX, Prometheus — when you need HA or more node capacity                           |
-| `examples/relay/`         | Self-hosted DERP/TURN relay node — optional, for agents behind strict NAT                                       |
+| `examples/relay/`         | Self-hosted DERP relay node — optional, for agents behind strict NAT                                           |
 | `examples/sidecar/`       | Agent as a sidecar container (bridge networking) rather than host-networked                                     |
 | `examples/event_brokers/` | NATS, Redpanda, Kafka, RabbitMQ, Redis, and MQTT compose files (AWS SNS is managed — provisioning notes inline) |
 | `docs/`                   | Architecture docs and API specs                                                                                 |

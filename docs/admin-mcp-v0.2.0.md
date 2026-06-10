@@ -18,9 +18,7 @@ For interactive browsing of the live surface, run [`@modelcontextprotocol/inspec
   - 🌐 `openWorldHint` — calls external systems (Netmaker, agents, exporters)
 - Write tools whose REST counterpart is gated by degraded-mode are also blocked here — see [§ Operations blocked in degraded mode](#operations-blocked-in-degraded-mode) below.
 
-## Tool count
-
-**59 tools** across 11 domains. One MCP-only tool (`check_admin_health`) has no REST equivalent; every other tool maps 1:1 to a REST endpoint documented in [`admin-openapi-v0.2.0.json`](admin-openapi-v0.2.0.json).
+One MCP-only tool (`check_admin_health`) has no REST equivalent; every other tool maps 1:1 to a REST endpoint documented in [`admin-openapi-v0.2.0.json`](admin-openapi-v0.2.0.json).
 
 ---
 
@@ -137,6 +135,8 @@ Centralised SSH credentials. The agent's embedded SSH server (`:40022`) verifies
 | `get_ssh_username` | Get SSH Username | 🔍 | Required: `ssh_username_id`. |
 | `create_ssh_username` | Create SSH Username | | Required: `node_id`, `username` (3–32 chars, starts with letter or `_`, lowercase + digits + hyphens + underscores). Optional: `password` (12–128 chars, Argon2-hashed at rest), `public_keys` (list of `%{key_name, public_key}`). |
 | `delete_ssh_username` | Delete SSH Username | ⚠️ | Required: `ssh_username_id`. Deletes all associated public keys. |
+
+---
 
 ## 8. SSH public keys
 

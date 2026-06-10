@@ -124,8 +124,8 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
           description:
             "Optional password for username/password SSH authentication (12-128 characters if provided, will be hashed with Argon2)",
           example: "MySecurePassword123!",
-          minLength: 12,
-          maxLength: 128,
+          minLength: Naming.ssh_password_min_length(),
+          maxLength: Naming.ssh_password_max_length(),
           nullable: true
         },
         public_keys: %Schema{

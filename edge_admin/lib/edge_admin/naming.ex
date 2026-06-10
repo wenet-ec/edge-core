@@ -96,4 +96,16 @@ defmodule EdgeAdmin.Naming do
 
   @doc "Inner regex string for OpenApiSpex `pattern:` field."
   def ssh_public_key_pattern, do: @ssh_public_key_pattern
+
+  # ── SSH passwords ──────────────────────────────────────────────────────────
+
+  @doc """
+  Minimum length of an SSH password (when one is set — passwords are optional,
+  key-only auth is supported). Shared across OpenApiSpex (Layer 1 REST), MCP
+  Peri (Layer 1 MCP), and the Layer 2 Form `validate_length`.
+  """
+  def ssh_password_min_length, do: 12
+
+  @doc "Maximum length of an SSH password."
+  def ssh_password_max_length, do: 128
 end

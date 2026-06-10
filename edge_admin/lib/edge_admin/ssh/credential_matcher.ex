@@ -53,7 +53,10 @@ defmodule EdgeAdmin.Ssh.CredentialMatcher do
     result =
       Enum.any?(keys, fn stored_key ->
         stored_key_normalized = stored_key.public_key |> String.trim() |> normalize_key()
-        provided_key_normalized == stored_key_normalized
+        # Constant-time compare for uniformity with the password path. Public
+        # keys aren't secret, so this is hardening rather than a fix, but it
+        # avoids leaking how many leading bytes of a stored key an attempt matched.
+        Plug.Crypto.secure_compare(provided_key_normalized, stored_key_normalized)
       end)
 
     {result, :public_key}

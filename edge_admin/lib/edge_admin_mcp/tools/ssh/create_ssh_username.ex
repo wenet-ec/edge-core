@@ -25,6 +25,8 @@ defmodule EdgeAdminMcp.Tools.Ssh.CreateSshUsername do
   @username_max_length Naming.ssh_username_max_length()
   @username_regex Naming.ssh_username_regex()
   @public_key_regex Naming.ssh_public_key_regex()
+  @password_min_length Naming.ssh_password_min_length()
+  @password_max_length Naming.ssh_password_max_length()
 
   @impl true
   def title, do: "Create SSH Username"
@@ -39,7 +41,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.CreateSshUsername do
       max_length: @username_max_length,
       regex: @username_regex
 
-    field :password, :string, min_length: 12, max_length: 128
+    field :password, :string, min_length: @password_min_length, max_length: @password_max_length
 
     embeds_many :public_keys do
       field :key_name, {:required, :string}, min_length: 1, max_length: 255

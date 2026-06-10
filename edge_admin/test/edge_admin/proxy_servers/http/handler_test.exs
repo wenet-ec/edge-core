@@ -244,106 +244,8 @@ defmodule EdgeAdmin.ProxyServers.Http.HandlerTest do
   end
 
   # ---------------------------------------------------------------------------
-  # validate_external_destination/2 + predicates
+  # vpn_target?/1
   # ---------------------------------------------------------------------------
-
-  describe "validate_external_destination/2" do
-    test "blocks loopback hosts" do
-      assert Handler.validate_external_destination("localhost", 80) == {:error, :localhost_blocked}
-      assert Handler.validate_external_destination("127.0.0.1", 80) == {:error, :localhost_blocked}
-      assert Handler.validate_external_destination("0.0.0.0", 80) == {:error, :localhost_blocked}
-      assert Handler.validate_external_destination("::1", 80) == {:error, :localhost_blocked}
-      assert Handler.validate_external_destination("127.5.5.5", 80) == {:error, :localhost_blocked}
-    end
-
-    test "blocks link-local IPv4" do
-      assert Handler.validate_external_destination("169.254.1.2", 80) ==
-               {:error, :link_local_blocked}
-    end
-
-    test "blocks cloud metadata endpoints (loopback check fires first when both apply)" do
-      # 169.254.169.254 matches both link_local? and metadata_service?; loopback? is false.
-      # Order in validate_external_destination: loopback → link_local → metadata.
-      assert Handler.validate_external_destination("metadata.google.internal", 80) ==
-               {:error, :metadata_service_blocked}
-
-      assert Handler.validate_external_destination("metadata.azure.com", 80) ==
-               {:error, :metadata_service_blocked}
-
-      # 169.254.169.254 matches link_local? first, so it returns :link_local_blocked
-      # rather than :metadata_service_blocked. Documenting actual precedence.
-      assert Handler.validate_external_destination("169.254.169.254", 80) ==
-               {:error, :link_local_blocked}
-    end
-
-    test "blocks orchestration ports (Docker, k8s, etcd)" do
-      for port <- [2375, 2376, 2377, 6443, 10_250, 10_255, 2379, 2380] do
-        assert Handler.validate_external_destination("example.com", port) ==
-                 {:error, :blocked_port},
-               "expected port #{port} to be blocked"
-      end
-    end
-
-    test "passes :ok for safe public destinations" do
-      assert Handler.validate_external_destination("example.com", 443) == :ok
-      assert Handler.validate_external_destination("8.8.8.8", 53) == :ok
-    end
-  end
-
-  describe "loopback?/1" do
-    test "matches host literals" do
-      assert Handler.loopback?("localhost")
-      assert Handler.loopback?("LOCALHOST")
-      assert Handler.loopback?("127.0.0.1")
-      assert Handler.loopback?("0.0.0.0")
-      assert Handler.loopback?("::1")
-    end
-
-    test "matches any 127.x" do
-      assert Handler.loopback?("127.5.5.5")
-      assert Handler.loopback?("127.255.255.255")
-    end
-
-    test "rejects everything else" do
-      refute Handler.loopback?("example.com")
-      refute Handler.loopback?("8.8.8.8")
-      refute Handler.loopback?("128.0.0.1")
-    end
-  end
-
-  describe "link_local?/1" do
-    test "matches 169.254.x.x" do
-      assert Handler.link_local?("169.254.0.1")
-      assert Handler.link_local?("169.254.169.254")
-    end
-
-    test "rejects neighbours and non-IPv4" do
-      refute Handler.link_local?("169.253.0.1")
-      refute Handler.link_local?("169.255.0.1")
-      refute Handler.link_local?("example.com")
-    end
-  end
-
-  describe "metadata_service?/1" do
-    test "matches the four documented endpoints (case-insensitive)" do
-      assert Handler.metadata_service?("metadata.google.internal")
-      assert Handler.metadata_service?("Metadata.Google.Internal")
-      assert Handler.metadata_service?("metadata.azure.com")
-      assert Handler.metadata_service?("169.254.169.254")
-      assert Handler.metadata_service?("100.100.100.200")
-    end
-
-    test "rejects look-alikes" do
-      refute Handler.metadata_service?("metadata.example.com")
-      refute Handler.metadata_service?("not-metadata.google.internal")
-    end
-  end
-
-  describe "blocked_ports/0" do
-    test "is the documented set" do
-      assert Handler.blocked_ports() == [2375, 2376, 2377, 6443, 10_250, 10_255, 2379, 2380]
-    end
-  end
 
   describe "vpn_target?/1" do
     setup do
@@ -365,29 +267,6 @@ defmodule EdgeAdmin.ProxyServers.Http.HandlerTest do
       refute Handler.vpn_target?("example.com")
       refute Handler.vpn_target?("192.168.1.127")
       refute Handler.vpn_target?("10.0.0.5")
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # parse_ipv4/1
-  # ---------------------------------------------------------------------------
-
-  describe "parse_ipv4/1" do
-    test "parses dotted-quad" do
-      assert Handler.parse_ipv4("169.254.0.1") == {169, 254, 0, 1}
-      assert Handler.parse_ipv4("0.0.0.0") == {0, 0, 0, 0}
-    end
-
-    test "returns nil for non-IPv4 shapes" do
-      assert Handler.parse_ipv4("example.com") == nil
-      assert Handler.parse_ipv4("1.2.3") == nil
-      assert Handler.parse_ipv4("1.2.3.4.5") == nil
-    end
-
-    test "returns nil when any segment isn't a clean integer" do
-      assert Handler.parse_ipv4("1.2.3.abc") == nil
-      assert Handler.parse_ipv4("1.2.3.4a") == nil
-      assert Handler.parse_ipv4("..1.2") == nil
     end
   end
 

@@ -94,6 +94,12 @@ defmodule EdgeAdmin.Ssh.Views.SshUsernameViewTest do
       assert second.key_name == "desktop"
     end
 
+    test "unloaded ssh_public_keys association renders as an empty public_keys list" do
+      user = struct(SshUsername, username_fixture() |> Map.from_struct() |> Map.delete(:ssh_public_keys))
+
+      assert SshUsernameView.render(user).public_keys == []
+    end
+
     test "public_key summary contains exactly the documented keys" do
       user = username_fixture(%{ssh_public_keys: [public_key()]})
 

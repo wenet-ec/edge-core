@@ -3,7 +3,7 @@ defmodule EdgeAdmin.Nodes.Views.ClusterView do
   @moduledoc """
   Public-facing render for `Cluster` — the canonical map shape both REST
   and MCP serialize. Includes a nested `nodes` array with each node's
-  identity + VPN hostname. Requires `nodes` to be preloaded.
+  identity + VPN hostname when the association is preloaded.
   """
 
   alias EdgeAdmin.Nodes.Schemas.Cluster
@@ -17,13 +17,16 @@ defmodule EdgeAdmin.Nodes.Views.ClusterView do
       ipv4_range: cluster.ipv4_range,
       node_limit: cluster.node_limit,
       node_count: Cluster.node_count(cluster),
-      nodes: Enum.map(nodes, &node_summary(&1, cluster)),
+      nodes: render_nodes(nodes, cluster),
       network_name: Cluster.network_name(cluster),
       vpn_domain: Cluster.vpn_domain(cluster),
       inserted_at: cluster.inserted_at,
       updated_at: cluster.updated_at
     }
   end
+
+  defp render_nodes(nodes, cluster) when is_list(nodes), do: Enum.map(nodes, &node_summary(&1, cluster))
+  defp render_nodes(_not_loaded, _cluster), do: []
 
   defp node_summary(node, cluster) do
     short_name = Vpn.build_vpn_name(node.id, prefix: :node)

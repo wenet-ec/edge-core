@@ -140,6 +140,12 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
       assert alias_summary |> Map.keys() |> Enum.sort() == [:id, :name, :vpn_hostname]
     end
 
+    test "unloaded aliases association renders as an empty aliases list" do
+      node = struct(Node, node_fixture() |> Map.from_struct() |> Map.delete(:aliases))
+
+      assert NodeView.render(node).aliases == []
+    end
+
     test "rendered map contains exactly the documented top-level keys" do
       node = node_fixture()
 

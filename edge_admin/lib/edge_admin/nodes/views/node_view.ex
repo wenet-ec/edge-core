@@ -3,8 +3,8 @@ defmodule EdgeAdmin.Nodes.Views.NodeView do
   @moduledoc """
   Public-facing render for `Node` — the canonical map shape both REST and
   MCP serialize. Includes computed hostnames + nested aliases with their
-  per-alias `vpn_hostname`. Requires `cluster` and `aliases` to be
-  preloaded.
+  per-alias `vpn_hostname` when aliases are preloaded. Requires `cluster`
+  to be preloaded.
   """
 
   alias EdgeAdmin.Nodes.Schemas.Alias
@@ -30,11 +30,14 @@ defmodule EdgeAdmin.Nodes.Views.NodeView do
       version: node.version,
       self_update_enabled: node.self_update_enabled,
       last_seen_at: node.last_seen_at,
-      aliases: Enum.map(aliases, &alias_summary/1),
+      aliases: render_aliases(aliases),
       inserted_at: node.inserted_at,
       updated_at: node.updated_at
     }
   end
+
+  defp render_aliases(aliases) when is_list(aliases), do: Enum.map(aliases, &alias_summary/1)
+  defp render_aliases(_not_loaded), do: []
 
   defp alias_summary(a) do
     %{

@@ -66,6 +66,15 @@ defmodule EdgeAdmin.Nodes.Views.ClusterViewTest do
       assert length(result.nodes) == 3
     end
 
+    test "unloaded nodes association renders as an empty nodes list" do
+      cluster = struct(Cluster, cluster_fixture() |> Map.from_struct() |> Map.delete(:nodes))
+
+      result = ClusterView.render(cluster)
+
+      assert result.node_count == 0
+      assert result.nodes == []
+    end
+
     test "node summaries carry id, status, id_type, and vpn_hostname" do
       cluster = cluster_fixture(%{name: "prod", nodes: [node_fixture(%{id: "abc-123"})]})
 

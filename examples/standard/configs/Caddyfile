@@ -19,9 +19,7 @@ http://edge-admin.yourdomain.com {
     @mcp path /mcp /mcp/*
     handle @mcp {
         reverse_proxy edge_admin_a1:44000 edge_admin_a2:44000 edge_admin_b1:44000 edge_admin_b2:44000 {
-            lb_policy header mcp-session-id {
-                fallback ip_hash
-            }
+            lb_policy ip_hash
         }
     }
 

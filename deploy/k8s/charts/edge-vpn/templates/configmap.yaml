@@ -33,4 +33,4 @@ data:
   VERBOSITY: "1"
   CORS_ALLOWED_ORIGIN: "*"
   TELEMETRY: "off"
-  STUN_SERVERS: "stun1.l.google.com:19302,stun2.l.google.com:19302,stun.stunprotocol.org:3478,stun.nextcloud.com:443,stun.edge-vpn.io:3478"
+  STUN_SERVERS: "stun1.l.google.com:19302,stun2.l.google.com:19302,stun.stunprotocol.org:3478,stun.nextcloud.com:443,stun.netmaker.io:3478"

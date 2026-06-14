@@ -22,13 +22,13 @@ For full architecture detail see `docs/architecture.md`.
 
 ```bash
 # Netmaker server (upstream, read-only reference)
-git clone --branch v1.5.1 https://github.com/gravitl/netmaker edge_vpn/netmaker
+git clone --branch v1.6.0 https://github.com/gravitl/netmaker edge_vpn/netmaker
 
 # Netclient (our fork — includes DERP relay integration)
-git clone --branch v1.5.1-derp https://github.com/wenet-ec/netclient edge_vpn/netclient
+git clone --branch v1.6.0-derp https://github.com/wenet-ec/netclient edge_vpn/netclient
 ```
 
-When working on anything related to Netmaker API, netclient enrollment, DERP relay, or WireGuard mesh behavior, read the source directly from `edge_vpn/` rather than guessing. The Netmaker OpenAPI spec is also available at `docs/netmaker-openapi-v1.5.1.yml`.
+When working on anything related to Netmaker API, netclient enrollment, DERP relay, or WireGuard mesh behavior, read the source directly from `edge_vpn/` rather than guessing. The Netmaker OpenAPI spec is also available at `docs/netmaker-openapi-v1.6.0.yml`.
 
 ## Architecture
 
@@ -287,7 +287,7 @@ edge_core/
 │   ├── admin-openapi-v0.2.0.json
 │   ├── admin-asyncapi-v0.2.0.json
 │   ├── admin-asyncapi-v0.2.0.md
-│   └── netmaker-openapi-v1.5.1.yml
+│   └── netmaker-openapi-v1.6.0.yml
 └── bin/
     └── run              # Management script
 ```

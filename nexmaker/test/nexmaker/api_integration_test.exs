@@ -283,6 +283,37 @@ defmodule Nexmaker.ApiIntegrationTest do
       assert is_list(key["tags"])
       on_exit(fn -> Nexmaker.Api.EnrollmentKeys.delete(key["value"], api_opts()) end)
     end
+
+    test "get_default_for_network/2 returns the auto-created default key", %{network_name: net} do
+      # Netmaker auto-creates a default enrollment key (tagged with the network name) when a
+      # network is created. We verify the endpoint returns it with a populated token.
+      assert {:ok, fetched} = Nexmaker.Api.EnrollmentKeys.get_default_for_network(net, api_opts())
+      assert fetched["default"] == true
+      assert is_binary(fetched["token"]) and fetched["token"] != ""
+    end
+
+    test "get_default_for_network/2 returns error for nonexistent network" do
+      assert {:error, _} =
+               Nexmaker.Api.EnrollmentKeys.get_default_for_network(
+                 "network-that-does-not-exist-xyz",
+                 api_opts()
+               )
+    end
+
+    test "regenerate_token/2 returns key with new token", %{network_name: net} do
+      tag = "tag-#{unique_id()}"
+      {:ok, key} = Nexmaker.Api.EnrollmentKeys.create(net, %{tags: [tag]}, api_opts())
+
+      assert {:ok, new_key} =
+               Nexmaker.Api.EnrollmentKeys.regenerate_token(key["value"], api_opts())
+
+      assert is_binary(new_key["token"]) and new_key["token"] != ""
+      # RegenerateEnrollmentKeyToken replaces the value (DB key) with a new one —
+      # `value` is the enrollment key ID and it rotates along with the token.
+      assert new_key["value"] != key["value"]
+
+      on_exit(fn -> Nexmaker.Api.EnrollmentKeys.delete(new_key["value"], api_opts()) end)
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -385,6 +416,20 @@ defmodule Nexmaker.ApiIntegrationTest do
       assert {:ok, status} = Nexmaker.Api.Nodes.network_status(name, api_opts())
       # No nodes yet — returns empty map
       assert is_map(status)
+
+      on_exit(fn -> Nexmaker.Api.Networks.delete(name, api_opts()) end)
+    end
+
+    test "list_v1/2 returns paginated response for a network" do
+      name = unique_network_name("nodes")
+      cidr = unique_cidr()
+      {:ok, _} = Nexmaker.Api.Networks.create(name, %{addressrange: cidr}, api_opts())
+
+      assert {:ok, result} = Nexmaker.Api.Nodes.list_v1(name, api_opts())
+      assert is_list(result["data"])
+      assert is_integer(result["page"])
+      assert is_integer(result["total"])
+      assert is_integer(result["total_pages"])
 
       on_exit(fn -> Nexmaker.Api.Networks.delete(name, api_opts()) end)
     end
@@ -559,7 +604,6 @@ defmodule Nexmaker.ApiIntegrationTest do
     end
 
     test "normalize maps missing host get to {:error, :not_found}" do
-      # Hosts.get returns 500 + 'no result found' for missing host — normalize should catch it
       fake_id = "00000000-0000-0000-0000-000000000000"
       result = Nexmaker.Api.Hosts.get(fake_id, api_opts())
       assert {:error, :not_found} = Nexmaker.Api.normalize(result)

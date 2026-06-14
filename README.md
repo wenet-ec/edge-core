@@ -197,13 +197,13 @@ Edge Core stands on a stack of much larger projects, and we're grateful for them
 
 | Layer                | Project                                                                           | Why                                                                                                |
 | -------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| WireGuard mesh       | [Netmaker](https://github.com/gravitl/netmaker) (v1.5.1)                          | Mature mesh control plane with proper network segmentation                                         |
+| WireGuard mesh       | [Netmaker](https://github.com/gravitl/netmaker) (v1.6.0)                          | Mature mesh control plane with proper network segmentation                                         |
 | Relay fallback       | [DERP](https://tailscale.com/blog/how-nat-traversal-works) (Tailscale)            | Best-in-class WireGuard-over-HTTPS for symmetric NAT                                               |
 | Runtime              | [Elixir](https://elixir-lang.org/) / [Phoenix](https://www.phoenixframework.org/) | BEAM concurrency model fits a coordination plane naturally                                         |
 | Distributed registry | [`:syn`](https://github.com/ostinelli/syn)                                        | Availability-over-consistency, scoped registries with metadata                                     |
 | Background jobs      | [Oban](https://github.com/oban-bg/oban)                                           | Same-process job runner that works on Postgres or SQLite — exactly what our two-binary shape needs |
 
-The Netmaker OpenAPI spec we target is included at [`docs/netmaker-openapi-v1.5.1.yml`](https://github.com/wenet-ec/edge-core/blob/main/docs/netmaker-openapi-v1.5.1.yml) for reference.
+The Netmaker OpenAPI spec we target is included at [`docs/netmaker-openapi-v1.6.0.yml`](https://github.com/wenet-ec/edge-core/blob/main/docs/netmaker-openapi-v1.6.0.yml) for reference.
 
 We didn't build any of these — we glued them together in a way that solved the specific problem in front of us.
 

@@ -1,6 +1,6 @@
 # nexmaker/Dockerfile
 # Stage 1: Pull pre-built netclient (DERP fork) — built by wenet-ec/netclient CI
-ARG NETCLIENT_VERSION=v1.5.1-derp
+ARG NETCLIENT_VERSION=v1.6.0-derp
 FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient_builder
 
 # Stage 2: Create Elixir test environment with netclient installed

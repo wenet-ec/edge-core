@@ -2,7 +2,7 @@
 
 # Stage 0a: Pull pre-built netclient (DERP fork)
 # The fork's CI publishes a new image on every v*-derp tag push.
-ARG NETCLIENT_VERSION=v1.5.1-derp
+ARG NETCLIENT_VERSION=v1.6.0-derp
 FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 
 # Stage 0b: Pull pre-built node_exporter
@@ -13,7 +13,7 @@ FROM quay.io/prometheus/node-exporter:v1.11.1 AS node-exporter-builder
 # so you don't need a tag push + CI round-trip per fix. Pair with --no-cache:
 #   docker compose -f deploy/local/edge.yml build --no-cache edge_agent
 #
-# ARG NETCLIENT_VERSION=v1.5.1-derp
+# ARG NETCLIENT_VERSION=v1.6.0-derp
 # FROM golang:1.26-bookworm AS netclient-builder
 # ARG NETCLIENT_VERSION
 # RUN apt-get update && apt-get install --no-install-recommends -y git ca-certificates && rm -rf /var/lib/apt/lists/*

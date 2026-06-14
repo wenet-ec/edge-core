@@ -42,10 +42,7 @@ defmodule Nexmaker.Api.Hosts do
   end
 
   @doc """
-  Gets a specific host by ID.
-
-  Uses `GET /api/v1/hosts?q={host_id}` since `GET /api/hosts/{hostid}` was
-  removed in v1.5.1 (only PUT/DELETE remain on that path).
+  Gets a specific host by ID via `GET /api/hosts/{hostid}`.
 
   ## Parameters
     - host_id: String - Host UUID
@@ -58,11 +55,9 @@ defmodule Nexmaker.Api.Hosts do
   """
   @spec get(String.t(), keyword()) :: {:ok, map()} | {:error, any()}
   def get(host_id, opts \\ []) do
-    with {:ok, %{"data" => hosts}} <- list([q: host_id, per_page: 1] ++ opts) do
-      case Enum.find(hosts, fn h -> h["id"] == host_id end) do
-        nil -> {:error, :not_found}
-        host -> {:ok, host}
-      end
+    case Api.request(:get, "/api/hosts/#{host_id}", opts) do
+      {:ok, %{"Response" => host}} -> {:ok, host}
+      other -> other
     end
   end
 

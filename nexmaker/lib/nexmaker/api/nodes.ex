@@ -197,4 +197,36 @@ defmodule Nexmaker.Api.Nodes do
       other -> other
     end
   end
+
+  @doc """
+  Lists nodes in a network via the paginated v1 route `GET /api/v1/nodes/{network}`.
+
+  Supports filtering and pagination. Prefer this over `list/2` for large networks.
+
+  ## Parameters
+    - network_name: String - Network name
+    - opts: Keyword - API options plus optional query params:
+      - `:page` - Page number (default: 1)
+      - `:per_page` - Page size (default: server default)
+      - `:q` - Search string
+      - `:os` - OS filter (repeatable)
+      - `:status` - Status filter (repeatable)
+      - `:device_type` - Device type filter
+
+  ## Returns
+    - `{:ok, %{"data" => [...], "page" => _, "per_page" => _, "total" => _, "total_pages" => _}}`
+    - `{:error, reason}` - Error occurred
+  """
+  @spec list_v1(String.t(), keyword()) :: {:ok, map()} | {:error, any()}
+  def list_v1(network_name, opts \\ []) do
+    {query_keys, api_opts} =
+      Keyword.split(opts, [:page, :per_page, :q, :os, :status, :device_type])
+
+    req_opts = if query_keys == [], do: api_opts, else: Keyword.put(api_opts, :query, query_keys)
+
+    case Api.request(:get, "/api/v1/nodes/#{network_name}", req_opts) do
+      {:ok, %{"Response" => paginated}} -> {:ok, paginated}
+      other -> other
+    end
+  end
 end

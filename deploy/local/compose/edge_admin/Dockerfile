@@ -2,7 +2,7 @@
 
 # Stage 0a: Pull pre-built netclient (DERP fork)
 # The fork's CI publishes a new image on every v*-derp tag push.
-ARG NETCLIENT_VERSION=v1.5.1-derp
+ARG NETCLIENT_VERSION=v1.6.0-derp
 FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 
 # Debug alternative: build from source in-Dockerfile. Uncomment this block (and
@@ -10,7 +10,7 @@ FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 # so you don't need a tag push + CI round-trip per fix. Pair with --no-cache:
 #   docker compose -f deploy/local/cloud.yml build --no-cache edge_admin_a1
 #
-# ARG NETCLIENT_VERSION=v1.5.1-derp
+# ARG NETCLIENT_VERSION=v1.6.0-derp
 # FROM golang:1.26-bookworm AS netclient-builder
 # ARG NETCLIENT_VERSION
 # RUN apt-get update && apt-get install --no-install-recommends -y git ca-certificates && rm -rf /var/lib/apt/lists/*

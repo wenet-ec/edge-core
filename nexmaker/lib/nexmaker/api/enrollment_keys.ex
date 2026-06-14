@@ -146,4 +146,44 @@ defmodule Nexmaker.Api.EnrollmentKeys do
   def delete(key_id, opts \\ []) do
     Api.request(:delete, "/api/v1/enrollment-keys/#{key_id}", opts)
   end
+
+  @doc """
+  Gets the default enrollment key for a network.
+
+  Each network has at most one key tagged "default". Returns that key with its
+  current token value populated.
+
+  ## Parameters
+    - network_name: String - Network name
+    - opts: Keyword - API options (base_url, master_key)
+
+  ## Returns
+    - `{:ok, key}` - Enrollment key map (includes `value` token field)
+    - `{:error, {:bad_request, body}}` - Network not found or no default key exists
+    - `{:error, reason}` - Other error
+  """
+  @spec get_default_for_network(String.t(), keyword()) :: {:ok, map()} | {:error, any()}
+  def get_default_for_network(network_name, opts \\ []) do
+    Api.request(:get, "/api/v1/enrollment-keys/network/#{network_name}/default", opts)
+  end
+
+  @doc """
+  Regenerates the token for an existing enrollment key.
+
+  The key ID stays the same; only the `value` (join token) changes. Useful when
+  a token has been exposed and needs to be rotated without changing key settings.
+
+  ## Parameters
+    - key_id: String - Enrollment key ID
+    - opts: Keyword - API options (base_url, master_key)
+
+  ## Returns
+    - `{:ok, key}` - Updated enrollment key map with new `value` token
+    - `{:error, {:bad_request, body}}` - Key not found
+    - `{:error, reason}` - Other error
+  """
+  @spec regenerate_token(String.t(), keyword()) :: {:ok, map()} | {:error, any()}
+  def regenerate_token(key_id, opts \\ []) do
+    Api.request(:post, "/api/v1/enrollment-keys/#{key_id}/regenerate-token", opts)
+  end
 end

@@ -102,7 +102,7 @@ This is gated on `ManageDNS=true` in the Netmaker server config, which is enable
 
 ### netclient
 
-netclient is the WireGuard client bundled inside the Edge Agent container. It handles VPN enrollment, peer management, the local DNS listener described above, and — critically — transparent DERP relay fallback when direct UDP is blocked. Edge Agent is built on top of our fork of netclient (`github.com/wenet-ec/netclient`, branch `v1.5.1-derp`) which adds DERP relay support and an HTTP scheme override for local development.
+netclient is the WireGuard client bundled inside the Edge Agent container. It handles VPN enrollment, peer management, the local DNS listener described above, and — critically — transparent DERP relay fallback when direct UDP is blocked. Edge Agent is built on top of our fork of netclient (`github.com/wenet-ec/netclient`, branch `v1.6.0-derp`) which adds DERP relay support and an HTTP scheme override for local development.
 
 ---
 

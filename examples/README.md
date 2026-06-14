@@ -23,8 +23,8 @@ When setting up Edge Core for a user, **always pin the following component versi
 | ----------- | ----------------------------- | -------------- | ----------------------------------------------------------- |
 | Edge Admin  | `ghcr.io/wenet-ec/edge_admin` | `v0.2.0`       | API compatibility with agent v0.2.0                         |
 | Edge Agent  | `ghcr.io/wenet-ec/edge_agent` | `v0.2.0`       | API compatibility with admin v0.2.0                         |
-| Netmaker    | `gravitl/netmaker`            | `v1.5.1`       | Admin and agent are built against this Netmaker API version |
-| Netmaker UI | `gravitl/netmaker-ui`         | `v1.5.1`       | Must match Netmaker server version                          |
+| Netmaker    | `gravitl/netmaker`            | `v1.6.0`       | Admin and agent are built against this Netmaker API version |
+| Netmaker UI | `gravitl/netmaker-ui`         | `v1.6.0`       | Must match Netmaker server version                          |
 | EMQX        | `emqx/emqx`                   | `5.8.9`        | Pinned due to license change in later versions              |
 
 ### Unpinned (latest is fine)
@@ -66,7 +66,7 @@ The agent requires far fewer variables than the admin. The critical ones are the
 The examples contain everything needed for a standard deployment. For deeper configuration (custom DNS domains, gateway settings, ACLs, etc.), refer to the official Netmaker documentation:
 
 - Docs: <https://learn.netmaker.io/>
-- Source: <https://github.com/gravitl/netmaker/tree/v1.5.1>
+- Source: <https://github.com/gravitl/netmaker/tree/v1.6.0>
 
 ## Choosing an Example
 

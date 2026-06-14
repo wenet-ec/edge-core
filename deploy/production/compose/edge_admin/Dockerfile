@@ -1,7 +1,7 @@
 # deploy/production/compose/edge_admin/Dockerfile
 
 # Stage 0a: Pull pre-built netclient (DERP fork)
-ARG NETCLIENT_VERSION=v1.5.1-derp
+ARG NETCLIENT_VERSION=v1.6.0-derp
 FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 
 # Stage 1: Build the OTP release

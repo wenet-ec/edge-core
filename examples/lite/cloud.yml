@@ -106,7 +106,7 @@ services:
   # Edge VPN — WireGuard VPN mesh server
   # ---------------------------------------------------------------------------
   edge_vpn:
-    image: gravitl/netmaker:v1.5.1
+    image: gravitl/netmaker:v1.6.0
     container_name: edge_vpn
     restart: unless-stopped
     networks:
@@ -146,7 +146,7 @@ services:
   # Edge VPN UI — web dashboard
   # ---------------------------------------------------------------------------
   edge_vpn_ui:
-    image: gravitl/netmaker-ui:v1.5.1
+    image: gravitl/netmaker-ui:v1.6.0
     container_name: edge_vpn_ui
     restart: unless-stopped
     networks:

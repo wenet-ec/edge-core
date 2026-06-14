@@ -1,7 +1,8 @@
 # Edge Core
 
-[![CI](https://github.com/wenet-ec/edge-core/actions/workflows/local.yml/badge.svg)](https://github.com/wenet-ec/edge-core/actions/workflows/local.yml)
-[![Docs](https://github.com/wenet-ec/edge-core/actions/workflows/docs.yml/badge.svg)](https://github.com/wenet-ec/edge-core/actions/workflows/docs.yml)
+[![CI](https://github.com/wenet-ec/edge-core/actions/workflows/local.yml/badge.svg?branch=develop)](https://github.com/wenet-ec/edge-core/actions/workflows/local.yml)
+[![Build](https://github.com/wenet-ec/edge-core/actions/workflows/production.yml/badge.svg?branch=main)](https://github.com/wenet-ec/edge-core/actions/workflows/production.yml)
+[![Docs](https://github.com/wenet-ec/edge-core/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/wenet-ec/edge-core/actions/workflows/docs.yml)
 
 **Open-source self-hostable control plane for distributed Linux and Edge fleets — WireGuard mesh, SSH proxy, remote execution, Prometheus metrics, all over one REST API/MCP.**
 

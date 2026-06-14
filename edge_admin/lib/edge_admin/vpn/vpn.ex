@@ -1020,40 +1020,20 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Gets the default enrollment key for a network.
+  Gets the default enrollment key token for a network.
 
-  Netmaker automatically creates a default key (with "default": true) when a network is created.
-  This key has unlimited uses and no expiration.
-
-  Returns {:ok, token} or {:error, reason}
+  Returns `{:ok, token}` or `{:error, :default_key_not_found}`.
   """
   def get_default_enrollment_key(network_name) do
-    case list_enrollment_keys() do
-      {:ok, keys} ->
-        # Find the default key for this network
-        default_key =
-          Enum.find(keys, fn key ->
-            # Check if key is for this network and is the default key
-            networks = Map.get(key, "networks", [])
-            is_default = Map.get(key, "default", false)
-            network_name in networks and is_default
-          end)
+    case network_name |> EnrollmentKeys.get_default_for_network() |> Api.normalize() do
+      {:ok, %{"token" => token}} when is_binary(token) and token != "" ->
+        {:ok, token}
 
-        case default_key do
-          nil ->
-            {:error, :default_key_not_found}
+      {:ok, _} ->
+        {:error, :default_key_not_found}
 
-          %{"token" => token} when is_binary(token) and token != "" ->
-            {:ok, token}
-
-          _ ->
-            # token field is omitempty in Netmaker — absent or empty means the key
-            # hasn't been tokenized yet or was returned without the field
-            {:error, :default_key_not_found}
-        end
-
-      {:error, reason} ->
-        {:error, reason}
+      {:error, _} ->
+        {:error, :default_key_not_found}
     end
   end
 

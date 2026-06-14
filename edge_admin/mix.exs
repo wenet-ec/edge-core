@@ -96,7 +96,7 @@ defmodule EdgeAdmin.Mixfile do
 
       # Phoenix
       {:phoenix, "~> 1.8"},
-      {:phoenix_live_view, "~> 1.1"},
+      {:phoenix_live_view, "~> 1.2"},
       {:phoenix_ecto, "~> 4.7"},
       {:phoenix_live_reload, "~> 1.6", only: :dev},
       {:jason, "~> 1.4"},
@@ -119,7 +119,7 @@ defmodule EdgeAdmin.Mixfile do
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
 
       # Errors
-      {:sentry, "~> 13.1"},
+      {:sentry, "~> 13.2"},
 
       # Telemetry
       {:prom_ex, "~> 1.11"},

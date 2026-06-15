@@ -11,6 +11,31 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
+  defmodule AliasSummary do
+    @moduledoc false
+
+    schema(%{
+      title: "AliasSummary",
+      description: "Brief alias information within a node response",
+      type: :object,
+      properties: %{
+        id: %Schema{type: :string, format: :uuid, description: "Unique alias identifier"},
+        name: %Schema{type: :string, description: "Alias name", example: "web-server"},
+        vpn_hostname: %Schema{
+          type: :string,
+          description: "Full VPN DNS hostname for this alias",
+          example: "node-web-server.cluster-prod-east.nm.internal"
+        }
+      },
+      required: [:id, :name, :vpn_hostname],
+      example: %{
+        id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        name: "web-server",
+        vpn_hostname: "node-web-server.cluster-prod-east.nm.internal"
+      }
+    })
+  end
+
   defmodule NodeResponse do
     @moduledoc false
 
@@ -112,6 +137,11 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           type: :string,
           format: :"date-time",
           description: "When the node was last updated"
+        },
+        aliases: %Schema{
+          type: :array,
+          description: "DNS aliases registered for this node",
+          items: AliasSummary
         }
       },
       required: [
@@ -124,6 +154,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         :wireguard_metrics_port,
         :http_proxy_port,
         :socks5_proxy_port,
+        :aliases,
         :inserted_at,
         :updated_at
       ],
@@ -145,6 +176,13 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         version: "0.1.0",
         self_update_enabled: false,
         last_seen_at: "2025-06-09T08:20:00Z",
+        aliases: [
+          %{
+            id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+            name: "web-server",
+            vpn_hostname: "node-web-server.cluster-prod-east.nm.internal"
+          }
+        ],
         inserted_at: "2025-06-09T08:00:00Z",
         updated_at: "2025-06-09T08:20:00Z"
       }

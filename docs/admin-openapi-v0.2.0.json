@@ -378,7 +378,6 @@
               "inserted_at": "2025-06-23T10:30:00Z",
               "key_name": "laptop",
               "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
-              "ssh_username_id": "01234567-89ab-cdef-0123-456789abcdef",
               "updated_at": "2025-06-23T10:30:00Z"
             }
           ],
@@ -407,9 +406,44 @@
             "type": "string"
           },
           "public_keys": {
-            "description": "SSH public keys associated with this username (only included when preloaded)",
-            "items": { "$ref": "#/components/schemas/SshPublicKey" },
-            "nullable": true,
+            "description": "SSH public keys associated with this username",
+            "items": {
+              "properties": {
+                "id": {
+                  "description": "Unique key identifier",
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "inserted_at": {
+                  "description": "When the key was created",
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "key_name": {
+                  "description": "Human-readable name for the key",
+                  "example": "laptop",
+                  "type": "string"
+                },
+                "public_key": {
+                  "description": "SSH public key in OpenSSH format",
+                  "example": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
+                  "type": "string"
+                },
+                "updated_at": {
+                  "description": "When the key was last updated",
+                  "format": "date-time",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "key_name",
+                "public_key",
+                "inserted_at",
+                "updated_at"
+              ],
+              "type": "object"
+            },
             "type": "array"
           },
           "updated_at": {
@@ -3044,6 +3078,34 @@
         "title": "EdgeClusters",
         "type": "object"
       },
+      "AliasSummary": {
+        "description": "Brief alias information within a node response",
+        "example": {
+          "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+          "name": "web-server",
+          "vpn_hostname": "node-web-server.cluster-prod-east.nm.internal"
+        },
+        "properties": {
+          "id": {
+            "description": "Unique alias identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "description": "Alias name",
+            "example": "web-server",
+            "type": "string"
+          },
+          "vpn_hostname": {
+            "description": "Full VPN DNS hostname for this alias",
+            "example": "node-web-server.cluster-prod-east.nm.internal",
+            "type": "string"
+          }
+        },
+        "required": ["id", "name", "vpn_hostname"],
+        "title": "AliasSummary",
+        "type": "object"
+      },
       "EnrollmentKeyUpdateRequest": {
         "description": "Parameters for updating an enrollment key. Only fields that are present in the request body are updated — omitting a field leaves it unchanged.\n\n- `name`: pass a string to set a label, or `null` to clear it.\n- `uses_remaining`: pass a positive integer to set a limit, or `null` to make the key unlimited.\n- `expires_at`: pass a datetime to set expiry, or `null` to remove expiry.\n",
         "example": {
@@ -3532,6 +3594,13 @@
       "NodeResponse": {
         "description": "Edge node information",
         "example": {
+          "aliases": [
+            {
+              "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+              "name": "web-server",
+              "vpn_hostname": "node-web-server.cluster-prod-east.nm.internal"
+            }
+          ],
           "cluster_name": "prod-east",
           "host_metrics_port": 49100,
           "http_port": 44000,
@@ -3553,6 +3622,11 @@
           "wireguard_metrics_port": 49586
         },
         "properties": {
+          "aliases": {
+            "description": "DNS aliases registered for this node",
+            "items": { "$ref": "#/components/schemas/AliasSummary" },
+            "type": "array"
+          },
           "cluster_name": {
             "description": "Name of the cluster this node belongs to",
             "example": "prod-east",
@@ -3649,6 +3723,7 @@
           "wireguard_metrics_port",
           "http_proxy_port",
           "socks5_proxy_port",
+          "aliases",
           "inserted_at",
           "updated_at"
         ],

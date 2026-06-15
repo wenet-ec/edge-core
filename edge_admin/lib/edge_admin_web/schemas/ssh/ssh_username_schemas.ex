@@ -8,7 +8,6 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
 
   alias EdgeAdmin.Naming
   alias EdgeAdminWeb.Schemas.CommonSchemas
-  alias EdgeAdminWeb.Schemas.Ssh.SshPublicKeySchemas
   alias OpenApiSpex.Schema
 
   defmodule SshUsernameResponse do
@@ -41,9 +40,22 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
         },
         public_keys: %Schema{
           type: :array,
-          description: "SSH public keys associated with this username (only included when preloaded)",
-          items: SshPublicKeySchemas.SshPublicKeyResponse,
-          nullable: true
+          description: "SSH public keys associated with this username",
+          items: %Schema{
+            type: :object,
+            properties: %{
+              id: %Schema{type: :string, format: :uuid, description: "Unique key identifier"},
+              key_name: %Schema{type: :string, description: "Human-readable name for the key", example: "laptop"},
+              public_key: %Schema{
+                type: :string,
+                description: "SSH public key in OpenSSH format",
+                example: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop"
+              },
+              inserted_at: %Schema{type: :string, format: :"date-time", description: "When the key was created"},
+              updated_at: %Schema{type: :string, format: :"date-time", description: "When the key was last updated"}
+            },
+            required: [:id, :key_name, :public_key, :inserted_at, :updated_at]
+          }
         },
         inserted_at: %Schema{
           type: :string,
@@ -67,7 +79,6 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
             id: "fedcba98-7654-3210-fedc-ba9876543210",
             key_name: "laptop",
             public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop",
-            ssh_username_id: "01234567-89ab-cdef-0123-456789abcdef",
             inserted_at: "2025-06-23T10:30:00Z",
             updated_at: "2025-06-23T10:30:00Z"
           }

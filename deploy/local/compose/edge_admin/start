@@ -58,9 +58,8 @@ rm -rf /etc/netclient/*
 echo "Cleaning up stale WireGuard interface..."
 ip link delete netmaker 2>/dev/null || true
 
-# # Use UPYUN ("Yun") mirror for hex.pm — the Fastly-backed default has been
-# # flaky lately, mirror has fuller coverage in our region.
-# # https://hex.pm/docs/mirrors
+# Use UPYUN ("Yun") mirror for hex.pm — if the Fastly-backed default is flaky
+# https://hex.pm/docs/mirrors
 # export HEX_MIRROR="https://hexpm.upyun.com"
 
 mix deps.get

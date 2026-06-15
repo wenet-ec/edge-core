@@ -54,6 +54,8 @@ cleanup() {
 # Trap EXIT, INT, and TERM signals
 trap cleanup EXIT INT TERM
 
+# Use UPYUN ("Yun") mirror for hex.pm — if the Fastly-backed default is flaky
+# https://hex.pm/docs/mirrors
 # export HEX_MIRROR="https://hexpm.upyun.com"
 mix deps.get
 mix compile

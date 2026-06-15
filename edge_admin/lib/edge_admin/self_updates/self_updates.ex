@@ -112,8 +112,9 @@ defmodule EdgeAdmin.SelfUpdates do
   Lists self-update requests with filtering, sorting, and pagination.
 
   Supports filtering by:
-  - `status` - Request status
+  - `status` - Enum: `"pending"`, `"processing"`, `"completed"`
   - `inserted_at__gte/lte` - Date range filter
+  - `updated_at__gte/lte` - Date range filter
 
   ## Returns
   - `{:ok, {requests, meta}}` - List of requests with Flop.Meta pagination info

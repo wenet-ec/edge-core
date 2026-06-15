@@ -168,9 +168,13 @@ defmodule EdgeAdmin.Nodes do
 
   Supports filtering by:
   - `name` - Text search (supports wildcards: `prod*`, `*tion`, `*rod*`)
+  - `names` - Exact IN match on cluster names (comma-separated on REST, array on MCP)
   - `ipv4_range` - Text search (supports wildcards)
   - `node_limit` - Exact, `__gte`, `__lte` (null = no limit)
-  - `inserted_at` - Range queries (e.g., `inserted_at__gte=2025-01-01`, `inserted_at__lte=2025-12-31`)
+  - `has_node_limit` - Boolean: true returns clusters with a node limit set
+  - `node_ids` - Exact IN match on node IDs — returns clusters that contain any of those nodes (comma-separated on REST, array on MCP)
+  - `inserted_at__gte/lte` - Date range filter
+  - `updated_at__gte/lte` - Date range filter
   - `node_count` - Range queries (e.g., `node_count__gte=5`, `node_count__lte=10`) — virtual filter computed via join
 
   Supports sorting by:
@@ -1103,6 +1107,7 @@ defmodule EdgeAdmin.Nodes do
   - `self_update_enabled` - Boolean
   - `last_seen_at__gte/lte` - Datetime range filter
   - `inserted_at__gte/lte` - Date range filter
+  - `updated_at__gte/lte` - Date range filter
   - `cluster_name` - Text search with wildcard support (requires join)
   - `node_ids` - Exact IN match on node IDs (comma-separated on REST, array on MCP)
   - `cluster_names` - Exact IN match on cluster names (comma-separated on REST, array on MCP)
@@ -2066,6 +2071,7 @@ defmodule EdgeAdmin.Nodes do
   - `cluster_name` - Text search with wildcard support (requires join)
   - `cluster_names` - Exact IN match on cluster names (comma-separated on REST, array on MCP)
   - `inserted_at__gte/lte` - Date range filter
+  - `updated_at__gte/lte` - Date range filter
   """
   @spec list_aliases(map()) :: {:ok, {[Alias.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list_aliases(params \\ %{}) do

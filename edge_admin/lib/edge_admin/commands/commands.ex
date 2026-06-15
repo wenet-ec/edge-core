@@ -200,7 +200,10 @@ defmodule EdgeAdmin.Commands do
   - `command_text` - Text search with wildcard support
   - `timeout` - Exact, `__gte`, `__lte` (milliseconds; null = no timeout)
   - `has_timeout` - Boolean: true returns commands with a timeout set
+  - `expires_at__gte/lte` - Date range filter
+  - `has_expires_at` - Boolean: true returns commands with an expiry set
   - `inserted_at__gte/lte` - Date range filter
+  - `updated_at__gte/lte` - Date range filter
 
   ## Returns
   - `{:ok, {commands, meta}}` - List of commands with Flop.Meta pagination info
@@ -359,6 +362,10 @@ defmodule EdgeAdmin.Commands do
   - `has_cluster` - Boolean (filters by cluster_id presence: true = NOT NULL, false = IS NULL)
   - `has_output` - Boolean: true returns executions with output present
   - `inserted_at__gte/lte` - Date range filter
+  - `updated_at__gte/lte` - Date range filter
+  - `sent_at__gte/lte` - Date range filter
+  - `completed_at__gte/lte` - Date range filter
+  - `cancelled_at__gte/lte` - Date range filter
 
   ## Returns
   - `{:ok, {command_executions, meta}}` - List of command executions with Flop.Meta pagination info

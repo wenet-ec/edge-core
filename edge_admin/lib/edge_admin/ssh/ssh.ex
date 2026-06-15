@@ -231,6 +231,7 @@ defmodule EdgeAdmin.Ssh do
   - `key_name` - Text search with wildcard support on associated public key names (joins ssh_public_keys)
   - `key_names` - Exact IN match on associated public key names (comma-separated on REST, array on MCP)
   - `inserted_at__gte/lte` - Date range filter
+  - `updated_at__gte/lte` - Date range filter
 
   ## Returns
   - `{:ok, {ssh_usernames, meta}}` - List of SSH usernames with Flop.Meta pagination info
@@ -369,6 +370,7 @@ defmodule EdgeAdmin.Ssh do
   - `cluster_name` - Text search with wildcard support (requires join through ssh_username → node)
   - `cluster_names` - Exact IN match on cluster names (comma-separated on REST, array on MCP)
   - `inserted_at__gte/lte` - Date range filter
+  - `updated_at__gte/lte` - Date range filter
 
   ## Returns
   - `{:ok, {ssh_public_keys, meta}}` - List of SSH public keys with Flop.Meta pagination info

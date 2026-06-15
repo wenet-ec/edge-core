@@ -38,6 +38,14 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
           QueryParams.string_array_filter(:cluster_names,
             description:
               "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use cluster_name for wildcard filtering."
+          ),
+          QueryParams.string_filter(:key_name,
+            description:
+              "Filter by associated public key name — exact match or wildcard (laptop*, *prod). Returns usernames that have at least one matching key. Use key_names for multi-key IN matching."
+          ),
+          QueryParams.string_array_filter(:key_names,
+            description:
+              "Filter by associated public key names — comma-separated list for exact IN match (e.g. laptop,server-key). No wildcards; use key_name for wildcard filtering."
           )
         ] ++
         QueryParams.datetime_range_filter(:inserted_at) ++

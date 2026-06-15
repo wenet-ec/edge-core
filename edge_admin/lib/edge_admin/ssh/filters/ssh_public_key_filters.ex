@@ -30,7 +30,26 @@ defmodule EdgeAdmin.Ssh.Filters.SshPublicKeyFilters do
   end
 
   @doc """
+  Applies `ssh_username_ids` IN filter via the joined ssh_username binding (`u.id`).
+  """
+  def apply_ssh_username_ids(query, []), do: query
+
+  def apply_ssh_username_ids(query, filters) do
+    Enum.reduce(filters, query, fn
+      %{op: :in, value: values}, acc when is_list(values) ->
+        from([_k, u] in acc, where: u.id in ^values)
+
+      %{op: :==, value: value}, acc when is_binary(value) ->
+        from([_k, u] in acc, where: u.id == ^value)
+
+      _filter, acc ->
+        acc
+    end)
+  end
+
+  @doc """
   Applies `username` filter via the joined ssh_username binding (`u.username`).
+  Supports exact match, ilike wildcard, and exact IN (`usernames`).
   """
   def apply_username(query, []), do: query
 
@@ -41,6 +60,9 @@ defmodule EdgeAdmin.Ssh.Filters.SshPublicKeyFilters do
 
       %{op: :ilike, value: value}, acc when is_binary(value) ->
         from([_k, u] in acc, where: case_insensitive_like(u.username, ^value))
+
+      %{op: :in, value: values}, acc when is_list(values) ->
+        from([_k, u] in acc, where: u.username in ^values)
 
       _filter, acc ->
         acc

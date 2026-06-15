@@ -158,6 +158,69 @@ defmodule EdgeAdmin.Ssh.Filters.SshPublicKeyFiltersTest do
   end
 
   # ---------------------------------------------------------------------------
+  # apply_ssh_username_ids/2 — filters via the ssh_username binding (u.id)
+  # ---------------------------------------------------------------------------
+
+  describe "apply_ssh_username_ids/2" do
+    test ":in matches keys whose ssh_username ID is in the given list" do
+      cluster = insert_cluster()
+      node = insert_node(cluster.id)
+
+      user_a = insert_ssh_username(node.id)
+      user_b = insert_ssh_username(node.id)
+      user_c = insert_ssh_username(node.id)
+
+      key_a = insert_public_key(user_a.id)
+      key_b = insert_public_key(user_b.id)
+      _key_c = insert_public_key(user_c.id)
+
+      query =
+        SshPublicKeyFilters.apply_ssh_username_ids(base_query(), [
+          %{op: :in, value: [user_a.id, user_b.id]}
+        ])
+
+      assert ids(query) == Enum.sort([key_a.id, key_b.id])
+    end
+
+    test ":== single ID exact-match clause" do
+      cluster = insert_cluster()
+      node = insert_node(cluster.id)
+
+      user_a = insert_ssh_username(node.id)
+      user_b = insert_ssh_username(node.id)
+
+      key_a = insert_public_key(user_a.id)
+      _key_b = insert_public_key(user_b.id)
+
+      query =
+        SshPublicKeyFilters.apply_ssh_username_ids(base_query(), [%{op: :==, value: user_a.id}])
+
+      assert ids(query) == [key_a.id]
+    end
+
+    test "empty filters list → query unchanged (early-return clause)" do
+      cluster = insert_cluster()
+      node = insert_node(cluster.id)
+      user = insert_ssh_username(node.id)
+      a = insert_public_key(user.id)
+      b = insert_public_key(user.id)
+
+      assert ids(SshPublicKeyFilters.apply_ssh_username_ids(base_query(), [])) ==
+               Enum.sort([a.id, b.id])
+    end
+
+    test "unrecognised filter op → query unchanged (catch-all)" do
+      cluster = insert_cluster()
+      node = insert_node(cluster.id)
+      user = insert_ssh_username(node.id)
+      a = insert_public_key(user.id)
+
+      query = SshPublicKeyFilters.apply_ssh_username_ids(base_query(), [%{op: :ilike, value: "x"}])
+      assert ids(query) == [a.id]
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # apply_username/2 — filters via the username binding (u.username)
   # ---------------------------------------------------------------------------
 
@@ -200,6 +263,24 @@ defmodule EdgeAdmin.Ssh.Filters.SshPublicKeyFiltersTest do
       b = insert_public_key(user.id)
 
       assert ids(SshPublicKeyFilters.apply_username(base_query(), [])) == Enum.sort([a.id, b.id])
+    end
+
+    test ":in matches keys whose username is in the given list" do
+      cluster = insert_cluster()
+      node = insert_node(cluster.id)
+
+      alice = insert_ssh_username(node.id, username: "alice")
+      bob = insert_ssh_username(node.id, username: "bob")
+      carol = insert_ssh_username(node.id, username: "carol")
+
+      key_alice = insert_public_key(alice.id)
+      key_bob = insert_public_key(bob.id)
+      _key_carol = insert_public_key(carol.id)
+
+      query =
+        SshPublicKeyFilters.apply_username(base_query(), [%{op: :in, value: ["alice", "bob"]}])
+
+      assert ids(query) == Enum.sort([key_alice.id, key_bob.id])
     end
 
     test "unrecognised filter op → query unchanged" do

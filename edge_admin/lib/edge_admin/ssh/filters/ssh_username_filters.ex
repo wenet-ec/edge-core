@@ -77,4 +77,41 @@ defmodule EdgeAdmin.Ssh.Filters.SshUsernameFilters do
   end
 
   defp apply_node_ids_one(query, _), do: query
+
+  @doc """
+  Applies `key_name` filter by joining into `ssh_public_keys` (has_many side).
+  Supports exact match, ilike wildcard, and exact IN. Applies `distinct` to
+  avoid duplicate username rows when multiple keys match.
+  """
+  def apply_key_name(query, []), do: query
+
+  def apply_key_name(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc -> apply_key_name_one(acc, filter) end)
+  end
+
+  defp apply_key_name_one(query, %{op: :==, value: value}) when is_binary(value) do
+    from(u in query,
+      join: k in assoc(u, :ssh_public_keys),
+      where: k.key_name == ^value,
+      distinct: true
+    )
+  end
+
+  defp apply_key_name_one(query, %{op: :ilike, value: value}) when is_binary(value) do
+    from(u in query,
+      join: k in assoc(u, :ssh_public_keys),
+      where: case_insensitive_like(k.key_name, ^value),
+      distinct: true
+    )
+  end
+
+  defp apply_key_name_one(query, %{op: :in, value: values}) when is_list(values) do
+    from(u in query,
+      join: k in assoc(u, :ssh_public_keys),
+      where: k.key_name in ^values,
+      distinct: true
+    )
+  end
+
+  defp apply_key_name_one(query, _), do: query
 end

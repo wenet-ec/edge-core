@@ -265,4 +265,131 @@ defmodule EdgeAdmin.Ssh.Filters.SshUsernameFiltersTest do
       assert ids(query) == [a.id]
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # apply_key_name/2 — joins ssh_public_keys (has_many) and filters by key name.
+  # Returns distinct usernames so multiple matching keys don't duplicate rows.
+  # ---------------------------------------------------------------------------
+
+  describe "apply_key_name/2" do
+    test "== matches usernames that have a key with the exact name" do
+      cluster = insert_cluster()
+      node_a = insert_node(cluster.id)
+      node_b = insert_node(cluster.id)
+
+      user_a = insert_ssh_username(node_a.id)
+      user_b = insert_ssh_username(node_b.id)
+
+      insert_public_key(user_a.id, key_name: "laptop")
+      insert_public_key(user_b.id, key_name: "server")
+
+      query = SshUsernameFilters.apply_key_name(base_query(), [%{op: :==, value: "laptop"}])
+
+      assert ids(query) == [user_a.id]
+    end
+
+    test "ilike matches by wildcard key name, case-insensitively" do
+      cluster = insert_cluster()
+      node_a = insert_node(cluster.id)
+      node_b = insert_node(cluster.id)
+
+      user_a = insert_ssh_username(node_a.id)
+      user_b = insert_ssh_username(node_b.id)
+
+      insert_public_key(user_a.id, key_name: "prod-deploy")
+      insert_public_key(user_b.id, key_name: "laptop")
+
+      query = SshUsernameFilters.apply_key_name(base_query(), [%{op: :ilike, value: "PROD%"}])
+
+      assert ids(query) == [user_a.id]
+    end
+
+    test ":in matches usernames that have a key in the given name list" do
+      cluster = insert_cluster()
+      node_a = insert_node(cluster.id)
+      node_b = insert_node(cluster.id)
+      node_c = insert_node(cluster.id)
+
+      user_a = insert_ssh_username(node_a.id)
+      user_b = insert_ssh_username(node_b.id)
+      user_c = insert_ssh_username(node_c.id)
+
+      insert_public_key(user_a.id, key_name: "laptop")
+      insert_public_key(user_b.id, key_name: "server")
+      insert_public_key(user_c.id, key_name: "tablet")
+
+      query =
+        SshUsernameFilters.apply_key_name(base_query(), [%{op: :in, value: ["laptop", "server"]}])
+
+      assert ids(query) == Enum.sort([user_a.id, user_b.id])
+    end
+
+    test "username with multiple matching keys is returned only once (distinct)" do
+      cluster = insert_cluster()
+      node = insert_node(cluster.id)
+      user = insert_ssh_username(node.id)
+
+      insert_public_key(user.id, key_name: "laptop")
+      insert_public_key(user.id, key_name: "server")
+
+      query =
+        SshUsernameFilters.apply_key_name(base_query(), [
+          %{op: :in, value: ["laptop", "server"]}
+        ])
+
+      results = Repo.all(query)
+      assert length(results) == 1
+      assert hd(results).id == user.id
+    end
+
+    test "empty filters list → query unchanged (early-return clause)" do
+      cluster = insert_cluster()
+      node = insert_node(cluster.id)
+      a = insert_ssh_username(node.id)
+      b = insert_ssh_username(node.id)
+
+      assert ids(SshUsernameFilters.apply_key_name(base_query(), [])) == Enum.sort([a.id, b.id])
+    end
+
+    test "unrecognised filter op → query unchanged (catch-all)" do
+      cluster = insert_cluster()
+      node = insert_node(cluster.id)
+      a = insert_ssh_username(node.id)
+
+      query = SshUsernameFilters.apply_key_name(base_query(), [%{op: :>=, value: 5}])
+
+      assert ids(query) == [a.id]
+    end
+
+    test "username with no keys is excluded when key_name filter is active" do
+      cluster = insert_cluster()
+      node_a = insert_node(cluster.id)
+      node_b = insert_node(cluster.id)
+
+      user_with_key = insert_ssh_username(node_a.id)
+      _user_no_key = insert_ssh_username(node_b.id)
+
+      insert_public_key(user_with_key.id, key_name: "laptop")
+
+      query = SshUsernameFilters.apply_key_name(base_query(), [%{op: :==, value: "laptop"}])
+
+      assert ids(query) == [user_with_key.id]
+    end
+  end
+
+  defp insert_public_key(ssh_username_id, opts) do
+    alias EdgeAdmin.Ssh.Schemas.SshPublicKey
+
+    key_name = Keyword.get(opts, :key_name, "key-#{:rand.uniform(999_999)}")
+    public_key = Keyword.get(opts, :public_key, "ssh-ed25519 AAAA#{Ecto.UUID.generate()} comment")
+
+    Repo.insert!(
+      struct(SshPublicKey, %{
+        id: Ecto.UUID.generate(),
+        ssh_username_id: ssh_username_id,
+        key_name: key_name,
+        public_key: public_key
+      })
+    )
+  end
 end

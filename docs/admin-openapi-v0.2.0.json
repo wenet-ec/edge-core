@@ -3936,7 +3936,7 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by cluster name — exact match or wildcard (prod*, *tion, *rod*). Use cluster_names for multi-cluster IN matching.",
+            "description": "Filter by cluster name — exact match or wildcard (prod*, *tion, *rod*). Use names for multi-cluster IN matching.",
             "in": "query",
             "name": "name",
             "required": false,
@@ -3946,7 +3946,7 @@
             "description": "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use name for wildcard filtering.",
             "explode": false,
             "in": "query",
-            "name": "cluster_names",
+            "name": "names",
             "required": false,
             "schema": { "items": { "type": "string" }, "type": "array" },
             "style": "form"

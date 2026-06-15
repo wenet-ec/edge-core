@@ -214,8 +214,8 @@ defmodule EdgeAdmin.Nodes do
       end)
 
     # Extract plural IN filters (handle separately)
-    {cluster_names_filters, other_filters} =
-      Enum.split_with(other_filters, fn filter -> filter.field == :cluster_names end)
+    {names_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter -> filter.field == :names end)
 
     {node_ids_filters, other_filters} =
       Enum.split_with(other_filters, fn filter -> filter.field == :node_ids end)
@@ -247,7 +247,7 @@ defmodule EdgeAdmin.Nodes do
     base_query =
       base_query
       |> ClusterFilters.apply_has_node_limit(has_node_limit_filters)
-      |> ClusterFilters.apply_names(cluster_names_filters)
+      |> ClusterFilters.apply_names(names_filters)
       |> ClusterFilters.apply_node_ids_on_clusters(node_ids_filters)
       |> ClusterFilters.apply_ilike(ilike_filters)
 

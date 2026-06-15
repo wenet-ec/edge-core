@@ -34,6 +34,25 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFilters do
   defp apply_cluster_name_one(query, _), do: query
 
   @doc """
+  Applies `command_ids` IN filter directly on `ce.command_id`.
+  """
+  def apply_command_ids(query, []), do: query
+
+  def apply_command_ids(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc -> apply_command_ids_one(acc, filter) end)
+  end
+
+  defp apply_command_ids_one(query, %{op: :in, value: values}) when is_list(values) do
+    from(ce in query, where: ce.command_id in ^values)
+  end
+
+  defp apply_command_ids_one(query, %{op: :==, value: value}) when is_binary(value) do
+    from(ce in query, where: ce.command_id == ^value)
+  end
+
+  defp apply_command_ids_one(query, _), do: query
+
+  @doc """
   Applies `node_ids` IN filter on a query joined as `[ce, n, c]`.
   """
   def apply_node_ids(query, []), do: query

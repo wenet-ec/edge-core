@@ -350,15 +350,13 @@ defmodule EdgeAdmin.Commands do
   Supports filtering by:
   - `status` - Enum: `"pending"`, `"sent"`, `"completed"`, `"cancelled"`, or `"expired"`
   - `target_all` - Boolean
-  - `exit_code` - Integer
-  - `command_id` - Exact match on command ID
-  - `node_id` - Exact match on node ID
+  - `exit_code` - Exact, `__gte`, `__lte`
+  - `command_ids` - Exact IN match on command IDs (comma-separated on REST, array on MCP)
   - `node_ids` - Exact IN match on node IDs (comma-separated on REST, array on MCP)
   - `output` - Text search with wildcard support
   - `cluster_name` - Text search with wildcard support (filters by node's cluster name)
   - `cluster_names` - Exact IN match on cluster names (comma-separated on REST, array on MCP)
   - `has_cluster` - Boolean (filters by cluster_id presence: true = NOT NULL, false = IS NULL)
-  - `exit_code` - Exact, `__gte`, `__lte`
   - `has_output` - Boolean: true returns executions with output present
   - `inserted_at__gte/lte` - Date range filter
 
@@ -368,38 +366,9 @@ defmodule EdgeAdmin.Commands do
   """
   @spec list_command_executions(map()) :: {:ok, {[CommandExecution.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list_command_executions(params \\ %{}) do
-    # Parse params into Flop format
     flop_params = EdgeAdmin.RequestParser.parse(params)
+    {custom, ilike_filters, flop_params} = split_execution_filters(flop_params)
 
-    # Extract join-based and virtual filters (handle separately from Flop)
-    {cluster_name_filters, other_filters} =
-      Enum.split_with(flop_params[:filters] || [], fn filter ->
-        filter.field == :cluster_name
-      end)
-
-    {cluster_names_filters, other_filters} =
-      Enum.split_with(other_filters, fn filter -> filter.field == :cluster_names end)
-
-    {node_ids_filters, other_filters} =
-      Enum.split_with(other_filters, fn filter -> filter.field == :node_ids end)
-
-    {has_cluster_filters, other_filters} =
-      Enum.split_with(other_filters, fn filter ->
-        filter.field == :has_cluster
-      end)
-
-    {has_output_filters, other_filters} =
-      Enum.split_with(other_filters, fn filter ->
-        filter.field == :has_output
-      end)
-
-    {ilike_filters, flop_params} =
-      EdgeAdmin.RequestParser.split_ilike_filters(
-        Map.put(flop_params, :filters, other_filters),
-        [:output]
-      )
-
-    # Build base query with preload and cluster join (needed for cluster_name filter)
     base_query =
       from(ce in CommandExecution,
         join: n in assoc(ce, :node),
@@ -409,11 +378,12 @@ defmodule EdgeAdmin.Commands do
 
     query =
       base_query
-      |> ExecutionFilters.apply_cluster_name(cluster_name_filters)
-      |> ExecutionFilters.apply_cluster_name(cluster_names_filters)
-      |> ExecutionFilters.apply_node_ids(node_ids_filters)
-      |> ExecutionFilters.apply_has_cluster(has_cluster_filters)
-      |> ExecutionFilters.apply_has_output(has_output_filters)
+      |> ExecutionFilters.apply_command_ids(custom.command_ids)
+      |> ExecutionFilters.apply_cluster_name(custom.cluster_name)
+      |> ExecutionFilters.apply_cluster_name(custom.cluster_names)
+      |> ExecutionFilters.apply_node_ids(custom.node_ids)
+      |> ExecutionFilters.apply_has_cluster(custom.has_cluster)
+      |> ExecutionFilters.apply_has_output(custom.has_output)
 
     query_with_ilike =
       Enum.reduce(ilike_filters, query, fn %{field: field, value: value}, acc ->
@@ -431,6 +401,20 @@ defmodule EdgeAdmin.Commands do
       {:error, meta} ->
         {:error, meta}
     end
+  end
+
+  defp split_execution_filters(flop_params) do
+    custom_fields = [:command_ids, :cluster_name, :cluster_names, :node_ids, :has_cluster, :has_output]
+
+    {custom_filters, rest} =
+      Enum.split_with(flop_params[:filters] || [], fn f -> f.field in custom_fields end)
+
+    custom = Map.new(custom_fields, fn field -> {field, Enum.filter(custom_filters, &(&1.field == field))} end)
+
+    {ilike_filters, flop_params} =
+      EdgeAdmin.RequestParser.split_ilike_filters(Map.put(flop_params, :filters, rest), [:output])
+
+    {custom, ilike_filters, flop_params}
   end
 
   @doc """

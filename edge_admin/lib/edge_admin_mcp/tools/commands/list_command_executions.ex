@@ -4,7 +4,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
   List command executions with filtering, sorting, and pagination.
 
   ## Filtering
-  - `command_id` — filter by command UUID
+  - `command_ids` — filter by command UUIDs (array of UUIDs, exact IN match)
   - `node_ids` — filter by node UUIDs (array of UUIDs, exact IN match)
   - `status` — `pending`, `sent`, `completed`, `cancelled`, `expired`
   - `target_all` — true: executions targeting all nodes; false: targeted executions
@@ -42,7 +42,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
   schema do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
-    field :command_id, :string
+    field :command_ids, {:array, :string}
     field :node_ids, {:array, :string}
     field :status, {:enum, @status_enum}
     field :target_all, :boolean
@@ -73,7 +73,6 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
     query =
       FlopParams.build(params,
         passthrough: [
-          :command_id,
           :status,
           :target_all,
           :exit_code,
@@ -82,7 +81,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
           :cluster_name,
           :has_cluster
         ],
-        multi: [:node_ids, :cluster_names],
+        multi: [:command_ids, :node_ids, :cluster_names],
         ranges: [:exit_code, :inserted_at, :updated_at, :sent_at, :completed_at, :cancelled_at]
       )
 

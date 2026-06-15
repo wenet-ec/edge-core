@@ -32,7 +32,9 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
             description:
               "Filter by whether output is present: true returns executions with output, false returns executions with no output"
           ),
-          QueryParams.uuid_filter(:command_id, description: "Filter by command ID"),
+          QueryParams.uuid_array_filter(:command_ids,
+            description: "Filter by command IDs — comma-separated list of UUIDs (exact IN match)"
+          ),
           QueryParams.uuid_array_filter(:node_ids,
             description: "Filter by node IDs — comma-separated list of UUIDs (exact IN match)"
           ),

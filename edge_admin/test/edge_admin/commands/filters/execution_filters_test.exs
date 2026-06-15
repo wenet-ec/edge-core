@@ -100,6 +100,66 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
   defp ids(query), do: query |> Repo.all() |> Enum.map(& &1.id) |> Enum.sort()
 
   # ---------------------------------------------------------------------------
+  # apply_command_ids/2 — filters directly on ce.command_id
+  # ---------------------------------------------------------------------------
+
+  describe "apply_command_ids/2" do
+    test ":in matches executions whose command ID is in the given list" do
+      cluster_a = insert_cluster()
+      node_a = insert_node(cluster_a.id)
+
+      cmd_a = insert_command()
+      cmd_b = insert_command()
+      cmd_c = insert_command()
+
+      exec_a = insert_execution(node_a.id, command_id: cmd_a.id)
+      exec_b = insert_execution(node_a.id, command_id: cmd_b.id)
+      _exec_c = insert_execution(node_a.id, command_id: cmd_c.id)
+
+      query =
+        ExecutionFilters.apply_command_ids(base_query(), [
+          %{op: :in, value: [cmd_a.id, cmd_b.id]}
+        ])
+
+      assert ids(query) == Enum.sort([exec_a.id, exec_b.id])
+    end
+
+    test ":== single command ID exact-match clause" do
+      cluster_a = insert_cluster()
+      node_a = insert_node(cluster_a.id)
+
+      cmd_a = insert_command()
+      cmd_b = insert_command()
+
+      exec_a = insert_execution(node_a.id, command_id: cmd_a.id)
+      _exec_b = insert_execution(node_a.id, command_id: cmd_b.id)
+
+      query = ExecutionFilters.apply_command_ids(base_query(), [%{op: :==, value: cmd_a.id}])
+
+      assert ids(query) == [exec_a.id]
+    end
+
+    test "empty filters list → query unchanged (early-return clause)" do
+      cluster_a = insert_cluster()
+      node_a = insert_node(cluster_a.id)
+      a = insert_execution(node_a.id)
+      b = insert_execution(node_a.id)
+
+      assert ids(ExecutionFilters.apply_command_ids(base_query(), [])) == Enum.sort([a.id, b.id])
+    end
+
+    test "unrecognised filter op → query unchanged (catch-all)" do
+      cluster_a = insert_cluster()
+      node_a = insert_node(cluster_a.id)
+      exec_a = insert_execution(node_a.id)
+
+      query = ExecutionFilters.apply_command_ids(base_query(), [%{op: :ilike, value: "x"}])
+
+      assert ids(query) == [exec_a.id]
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # apply_cluster_name/2 — filters by the node's cluster name (3rd binding)
   # ---------------------------------------------------------------------------
 

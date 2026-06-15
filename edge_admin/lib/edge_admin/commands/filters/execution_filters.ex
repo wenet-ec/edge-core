@@ -27,7 +27,30 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFilters do
     from([ce, n, c] in query, where: case_insensitive_like(c.name, ^value))
   end
 
+  defp apply_cluster_name_one(query, %{op: :in, value: values}) when is_list(values) do
+    from([ce, n, c] in query, where: c.name in ^values)
+  end
+
   defp apply_cluster_name_one(query, _), do: query
+
+  @doc """
+  Applies `node_ids` IN filter on a query joined as `[ce, n, c]`.
+  """
+  def apply_node_ids(query, []), do: query
+
+  def apply_node_ids(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc -> apply_node_ids_one(acc, filter) end)
+  end
+
+  defp apply_node_ids_one(query, %{op: :in, value: values}) when is_list(values) do
+    from([ce, n] in query, where: n.id in ^values)
+  end
+
+  defp apply_node_ids_one(query, %{op: :==, value: value}) when is_binary(value) do
+    from([ce, n] in query, where: n.id == ^value)
+  end
+
+  defp apply_node_ids_one(query, _), do: query
 
   @doc """
   Applies `has_cluster` virtual boolean filter — true/false matches `cluster_id IS [NOT] NULL`.

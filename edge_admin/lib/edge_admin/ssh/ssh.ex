@@ -224,9 +224,10 @@ defmodule EdgeAdmin.Ssh do
 
   Supports filtering by:
   - `username` - Text search with wildcard support
-  - `node_id` - Exact match on node ID
+  - `node_ids` - Exact IN match on node IDs (comma-separated on REST, array on MCP)
   - `has_password` - Boolean (filters by password_hash presence)
   - `cluster_name` - Text search with wildcard support (requires join through node)
+  - `cluster_names` - Exact IN match on cluster names (comma-separated on REST, array on MCP)
   - `inserted_at__gte/lte` - Date range filter
 
   ## Returns
@@ -238,17 +239,26 @@ defmodule EdgeAdmin.Ssh do
     # Parse params into Flop format
     flop_params = EdgeAdmin.RequestParser.parse(params)
 
-    # Extract has_password filter (virtual field, handle separately)
+    # Extract virtual and join-based filters (handle separately from Flop)
     {has_password_filters, other_filters} =
       Enum.split_with(flop_params[:filters] || [], fn filter ->
         filter.field == :has_password
       end)
 
-    # Extract cluster_name filters (join-based, handle separately)
     {cluster_name_filters, other_filters} =
-      Enum.split_with(other_filters, fn filter ->
-        filter.field == :cluster_name
-      end)
+      Enum.split_with(other_filters, fn filter -> filter.field == :cluster_name end)
+
+    {cluster_names_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter -> filter.field == :cluster_names end)
+
+    {node_ids_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter -> filter.field == :node_ids end)
+
+    {ilike_filters, flop_params} =
+      EdgeAdmin.RequestParser.split_ilike_filters(
+        Map.put(flop_params, :filters, other_filters),
+        [:username]
+      )
 
     # Build base query with node→cluster join for cluster_name filtering
     base_query =
@@ -258,35 +268,20 @@ defmodule EdgeAdmin.Ssh do
         preload: [:ssh_public_keys]
       )
 
-    # Apply has_password filter if present
-    query_with_password_filter =
-      if has_password_filters == [] do
-        base_query
-      else
-        SshUsernameFilters.apply_has_password(base_query, has_password_filters)
-      end
+    query =
+      base_query
+      |> SshUsernameFilters.apply_has_password(has_password_filters)
+      |> SshUsernameFilters.apply_cluster_name(cluster_name_filters)
+      |> SshUsernameFilters.apply_cluster_name(cluster_names_filters)
+      |> SshUsernameFilters.apply_node_ids(node_ids_filters)
 
-    # Apply cluster_name filter if present
-    query_with_cluster_filter =
-      if cluster_name_filters == [] do
-        query_with_password_filter
-      else
-        SshUsernameFilters.apply_cluster_name(query_with_password_filter, cluster_name_filters)
-      end
-
-    {ilike_filters, flop_params} =
-      EdgeAdmin.RequestParser.split_ilike_filters(
-        Map.put(flop_params, :filters, other_filters),
-        [:username]
-      )
-
-    query_with_ilike =
-      Enum.reduce(ilike_filters, query_with_cluster_filter, fn %{field: field, value: value}, acc ->
+    query =
+      Enum.reduce(ilike_filters, query, fn %{field: field, value: value}, acc ->
         from(u in acc, where: case_insensitive_like(field(u, ^field), ^value))
       end)
 
     # Run Flop query
-    case Flop.validate_and_run(query_with_ilike, flop_params,
+    case Flop.validate_and_run(query, flop_params,
            for: SshUsername,
            replace_invalid_params: true
          ) do
@@ -376,9 +371,10 @@ defmodule EdgeAdmin.Ssh do
   - `key_name` - Text search with wildcard support
   - `public_key` - Text search with wildcard support (useful for searching email comments)
   - `ssh_username_id` - Exact match on SSH username ID
-  - `node_id` - Exact match on node ID (requires join through ssh_username)
+  - `node_ids` - Exact IN match on node IDs (requires join through ssh_username)
   - `username` - Text search with wildcard support (requires join through ssh_username)
   - `cluster_name` - Text search with wildcard support (requires join through ssh_username → node)
+  - `cluster_names` - Exact IN match on cluster names (comma-separated on REST, array on MCP)
   - `inserted_at__gte/lte` - Date range filter
 
   ## Returns
@@ -390,15 +386,18 @@ defmodule EdgeAdmin.Ssh do
     # Parse params into Flop format
     flop_params = EdgeAdmin.RequestParser.parse(params)
 
-    # Extract join-based custom filters
-    {node_id_filters, other_filters} =
-      Enum.split_with(flop_params[:filters] || [], fn filter -> filter.field == :node_id end)
+    # Extract join-based and plural IN filters (handle separately from Flop)
+    {node_ids_filters, other_filters} =
+      Enum.split_with(flop_params[:filters] || [], fn filter -> filter.field == :node_ids end)
 
     {username_filters, other_filters} =
       Enum.split_with(other_filters, fn filter -> filter.field == :username end)
 
     {cluster_name_filters, other_filters} =
       Enum.split_with(other_filters, fn filter -> filter.field == :cluster_name end)
+
+    {cluster_names_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter -> filter.field == :cluster_names end)
 
     {ilike_filters, flop_params} =
       EdgeAdmin.RequestParser.split_ilike_filters(
@@ -414,18 +413,19 @@ defmodule EdgeAdmin.Ssh do
         join: c in assoc(n, :cluster)
       )
 
-    base_query =
+    query =
       base_query
-      |> SshPublicKeyFilters.apply_node_id(node_id_filters)
+      |> SshPublicKeyFilters.apply_node_id(node_ids_filters)
       |> SshPublicKeyFilters.apply_username(username_filters)
       |> SshPublicKeyFilters.apply_cluster_name(cluster_name_filters)
+      |> SshPublicKeyFilters.apply_cluster_name(cluster_names_filters)
 
-    base_query =
-      Enum.reduce(ilike_filters, base_query, fn %{field: field, value: value}, acc ->
+    query =
+      Enum.reduce(ilike_filters, query, fn %{field: field, value: value}, acc ->
         from(k in acc, where: case_insensitive_like(field(k, ^field), ^value))
       end)
 
-    case Flop.validate_and_run(base_query, flop_params,
+    case Flop.validate_and_run(query, flop_params,
            for: SshPublicKey,
            replace_invalid_params: true
          ) do

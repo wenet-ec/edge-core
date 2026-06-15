@@ -160,6 +160,84 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       # Filter ignored → all executions visible.
       assert ids(query) == [exec_a.id]
     end
+
+    test ":in matches executions whose node is in any of the given cluster names" do
+      cluster_a = insert_cluster(%{name: "alpha"})
+      cluster_b = insert_cluster(%{name: "bravo"})
+      cluster_c = insert_cluster(%{name: "charlie"})
+
+      node_a = insert_node(cluster_a.id)
+      node_b = insert_node(cluster_b.id)
+      node_c = insert_node(cluster_c.id)
+
+      exec_a = insert_execution(node_a.id)
+      exec_b = insert_execution(node_b.id)
+      _exec_c = insert_execution(node_c.id)
+
+      query =
+        ExecutionFilters.apply_cluster_name(base_query(), [
+          %{op: :in, value: ["alpha", "bravo"]}
+        ])
+
+      assert ids(query) == Enum.sort([exec_a.id, exec_b.id])
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # apply_node_ids/2 — filters via the node binding (n.id)
+  # ---------------------------------------------------------------------------
+
+  describe "apply_node_ids/2" do
+    test ":in matches executions whose node ID is in the given list" do
+      cluster_a = insert_cluster()
+
+      node_a = insert_node(cluster_a.id)
+      node_b = insert_node(cluster_a.id)
+      node_c = insert_node(cluster_a.id)
+
+      exec_a = insert_execution(node_a.id)
+      exec_b = insert_execution(node_b.id)
+      _exec_c = insert_execution(node_c.id)
+
+      query =
+        ExecutionFilters.apply_node_ids(base_query(), [
+          %{op: :in, value: [node_a.id, node_b.id]}
+        ])
+
+      assert ids(query) == Enum.sort([exec_a.id, exec_b.id])
+    end
+
+    test ":== single node ID exact-match clause" do
+      cluster_a = insert_cluster()
+      node_a = insert_node(cluster_a.id)
+      node_b = insert_node(cluster_a.id)
+
+      exec_a = insert_execution(node_a.id)
+      _exec_b = insert_execution(node_b.id)
+
+      query = ExecutionFilters.apply_node_ids(base_query(), [%{op: :==, value: node_a.id}])
+
+      assert ids(query) == [exec_a.id]
+    end
+
+    test "empty filters list → query unchanged (early-return clause)" do
+      cluster_a = insert_cluster()
+      node_a = insert_node(cluster_a.id)
+      a = insert_execution(node_a.id)
+      b = insert_execution(node_a.id)
+
+      assert ids(ExecutionFilters.apply_node_ids(base_query(), [])) == Enum.sort([a.id, b.id])
+    end
+
+    test "unrecognised filter op → query unchanged (catch-all)" do
+      cluster_a = insert_cluster()
+      node_a = insert_node(cluster_a.id)
+      exec_a = insert_execution(node_a.id)
+
+      query = ExecutionFilters.apply_node_ids(base_query(), [%{op: :ilike, value: "x"}])
+
+      assert ids(query) == [exec_a.id]
+    end
   end
 
   # ---------------------------------------------------------------------------

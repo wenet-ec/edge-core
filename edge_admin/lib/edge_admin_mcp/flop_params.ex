@@ -34,6 +34,10 @@ defmodule EdgeAdminMcp.FlopParams do
   ## Options
 
     * `:passthrough` — list of atom keys copied as-is to string keys.
+    * `:multi` — list of atom keys that are `{:array, :string}` in the MCP
+      schema. The list value is joined to a comma-separated string so
+      `RequestParser` picks it up as an `op: :in` filter (same wire format as
+      the REST comma-separated convention).
     * `:ranges` — list of atom field names expanded into `<field>_gte` /
       `<field>_lte` (renamed to Flop's `<field>__gte` / `<field>__lte`).
     * `:default_page_size` — overrides the default of 20.
@@ -41,6 +45,7 @@ defmodule EdgeAdminMcp.FlopParams do
   @spec build(map() | keyword(), keyword()) :: map()
   def build(params, opts \\ []) do
     passthrough = Keyword.get(opts, :passthrough, [])
+    multi = Keyword.get(opts, :multi, [])
     ranges = Keyword.get(opts, :ranges, [])
     default_page_size = Keyword.get(opts, :default_page_size, @default_page_size)
 
@@ -51,6 +56,7 @@ defmodule EdgeAdminMcp.FlopParams do
 
     base
     |> add_passthrough(params, passthrough)
+    |> add_multi(params, multi)
     |> add_ranges(params, ranges)
     |> add_sort(params)
   end
@@ -58,6 +64,18 @@ defmodule EdgeAdminMcp.FlopParams do
   defp add_passthrough(query, params, fields) do
     Enum.reduce(fields, query, fn field, acc ->
       put_if(acc, Atom.to_string(field), params[field])
+    end)
+  end
+
+  defp add_multi(query, params, fields) do
+    Enum.reduce(fields, query, fn field, acc ->
+      case params[field] do
+        values when is_list(values) and values != [] ->
+          Map.put(acc, Atom.to_string(field), Enum.join(values, ","))
+
+        _ ->
+          acc
+      end
     end)
   end
 

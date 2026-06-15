@@ -107,4 +107,57 @@ defmodule EdgeAdmin.Nodes.Filters.NodeFiltersTest do
       assert ids(NodeFilters.apply_ilike(Node, [])) == Enum.sort([a.id, b.id])
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # apply_node_ids/2 — IN filter directly on nodes.id
+  # ---------------------------------------------------------------------------
+
+  describe "apply_node_ids/2" do
+    test ":in matches exactly the given node IDs" do
+      cluster = insert_cluster()
+      node_a = insert_node(cluster.id)
+      node_b = insert_node(cluster.id)
+      _node_c = insert_node(cluster.id)
+
+      query = NodeFilters.apply_node_ids(Node, [%{op: :in, value: [node_a.id, node_b.id]}])
+
+      assert ids(query) == Enum.sort([node_a.id, node_b.id])
+    end
+
+    test ":== single ID exact-match clause" do
+      cluster = insert_cluster()
+      node_a = insert_node(cluster.id)
+      _node_b = insert_node(cluster.id)
+
+      query = NodeFilters.apply_node_ids(Node, [%{op: :==, value: node_a.id}])
+
+      assert ids(query) == [node_a.id]
+    end
+
+    test "empty filters list → query unchanged (early-return clause)" do
+      cluster = insert_cluster()
+      a = insert_node(cluster.id)
+      b = insert_node(cluster.id)
+
+      assert ids(NodeFilters.apply_node_ids(Node, [])) == Enum.sort([a.id, b.id])
+    end
+
+    test "unrecognised filter op → query unchanged (catch-all)" do
+      cluster = insert_cluster()
+      a = insert_node(cluster.id)
+
+      query = NodeFilters.apply_node_ids(Node, [%{op: :ilike, value: "anything"}])
+
+      assert ids(query) == [a.id]
+    end
+
+    test "ID not present in DB → empty result" do
+      cluster = insert_cluster()
+      _node_a = insert_node(cluster.id)
+
+      query = NodeFilters.apply_node_ids(Node, [%{op: :in, value: [Ecto.UUID.generate()]}])
+
+      assert ids(query) == []
+    end
+  end
 end

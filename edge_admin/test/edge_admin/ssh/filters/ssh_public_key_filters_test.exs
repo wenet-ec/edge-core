@@ -103,6 +103,28 @@ defmodule EdgeAdmin.Ssh.Filters.SshPublicKeyFiltersTest do
       assert ids(query) == [key_a.id]
     end
 
+    test ":in matches keys whose node ID is in the given list" do
+      cluster = insert_cluster()
+      node_a = insert_node(cluster.id)
+      node_b = insert_node(cluster.id)
+      node_c = insert_node(cluster.id)
+
+      user_a = insert_ssh_username(node_a.id)
+      user_b = insert_ssh_username(node_b.id)
+      user_c = insert_ssh_username(node_c.id)
+
+      key_a = insert_public_key(user_a.id)
+      key_b = insert_public_key(user_b.id)
+      _key_c = insert_public_key(user_c.id)
+
+      query =
+        SshPublicKeyFilters.apply_node_id(base_query(), [
+          %{op: :in, value: [node_a.id, node_b.id]}
+        ])
+
+      assert ids(query) == Enum.sort([key_a.id, key_b.id])
+    end
+
     test "empty filters list → query unchanged (early return clause)" do
       cluster = insert_cluster()
       node = insert_node(cluster.id)
@@ -253,6 +275,31 @@ defmodule EdgeAdmin.Ssh.Filters.SshPublicKeyFiltersTest do
 
       query = SshPublicKeyFilters.apply_cluster_name(base_query(), [%{op: :>=, value: 5}])
       assert ids(query) == [a.id]
+    end
+
+    test ":in matches keys whose node's cluster name is in the given list" do
+      cluster_alpha = insert_cluster(%{name: "alpha"})
+      cluster_bravo = insert_cluster(%{name: "bravo"})
+      cluster_charlie = insert_cluster(%{name: "charlie"})
+
+      node_alpha = insert_node(cluster_alpha.id)
+      node_bravo = insert_node(cluster_bravo.id)
+      node_charlie = insert_node(cluster_charlie.id)
+
+      user_alpha = insert_ssh_username(node_alpha.id)
+      user_bravo = insert_ssh_username(node_bravo.id)
+      user_charlie = insert_ssh_username(node_charlie.id)
+
+      key_alpha = insert_public_key(user_alpha.id)
+      key_bravo = insert_public_key(user_bravo.id)
+      _key_charlie = insert_public_key(user_charlie.id)
+
+      query =
+        SshPublicKeyFilters.apply_cluster_name(base_query(), [
+          %{op: :in, value: ["alpha", "bravo"]}
+        ])
+
+      assert ids(query) == Enum.sort([key_alpha.id, key_bravo.id])
     end
   end
 end

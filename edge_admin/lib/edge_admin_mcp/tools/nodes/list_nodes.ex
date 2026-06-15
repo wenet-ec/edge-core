@@ -4,9 +4,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
   List edge nodes with filtering, sorting, and pagination.
 
   ## Filtering
+  - `node_ids` — exact IN match on node IDs (array of UUIDs)
   - `status` — `healthy`, `unhealthy`, `unreachable`
   - `id_type` — `persistent`, `random`
-  - `cluster_name` — exact match or wildcard (`prod*`, `*east`)
+  - `cluster_name` — exact match or wildcard (`prod*`, `*east`); use `cluster_names` for multi-cluster IN matching
+  - `cluster_names` — exact IN match on cluster names (array of strings, no wildcards)
   - `version` — exact match or wildcard (`1.0.0`, `1.*`)
   - `self_update_enabled` — boolean
   - `last_seen_at_gte` / `last_seen_at_lte` — last seen datetime range (ISO8601)
@@ -36,9 +38,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
   schema do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
+    field :node_ids, {:array, :string}
     field :status, {:enum, @status_enum}
     field :id_type, {:enum, @id_type_enum}
     field :cluster_name, :string, min_length: 1
+    field :cluster_names, {:array, :string}
     field :version, :string, min_length: 1
     field :self_update_enabled, :boolean
     field :last_seen_at_gte, :string
@@ -56,6 +60,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
     query =
       FlopParams.build(params,
         passthrough: [:status, :id_type, :cluster_name, :version, :self_update_enabled],
+        multi: [:node_ids, :cluster_names],
         ranges: [:last_seen_at, :inserted_at, :updated_at]
       )
 

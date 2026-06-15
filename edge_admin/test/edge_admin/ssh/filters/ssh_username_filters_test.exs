@@ -187,5 +187,82 @@ defmodule EdgeAdmin.Ssh.Filters.SshUsernameFiltersTest do
       query = SshUsernameFilters.apply_cluster_name(base_query(), [%{op: :>=, value: 5}])
       assert ids(query) == [a.id]
     end
+
+    test ":in matches usernames whose node is in any of the given cluster names" do
+      cluster_a = insert_cluster(%{name: "alpha"})
+      cluster_b = insert_cluster(%{name: "bravo"})
+      cluster_c = insert_cluster(%{name: "charlie"})
+
+      node_a = insert_node(cluster_a.id)
+      node_b = insert_node(cluster_b.id)
+      node_c = insert_node(cluster_c.id)
+
+      user_a = insert_ssh_username(node_a.id)
+      user_b = insert_ssh_username(node_b.id)
+      _user_c = insert_ssh_username(node_c.id)
+
+      query =
+        SshUsernameFilters.apply_cluster_name(base_query(), [
+          %{op: :in, value: ["alpha", "bravo"]}
+        ])
+
+      assert ids(query) == Enum.sort([user_a.id, user_b.id])
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # apply_node_ids/2 — filters via the node binding (n.id)
+  # ---------------------------------------------------------------------------
+
+  describe "apply_node_ids/2" do
+    test ":in matches usernames whose node ID is in the given list" do
+      cluster_a = insert_cluster()
+      node_a = insert_node(cluster_a.id)
+      node_b = insert_node(cluster_a.id)
+      node_c = insert_node(cluster_a.id)
+
+      user_a = insert_ssh_username(node_a.id)
+      user_b = insert_ssh_username(node_b.id)
+      _user_c = insert_ssh_username(node_c.id)
+
+      query =
+        SshUsernameFilters.apply_node_ids(base_query(), [
+          %{op: :in, value: [node_a.id, node_b.id]}
+        ])
+
+      assert ids(query) == Enum.sort([user_a.id, user_b.id])
+    end
+
+    test ":== single node ID exact-match clause" do
+      cluster_a = insert_cluster()
+      node_a = insert_node(cluster_a.id)
+      node_b = insert_node(cluster_a.id)
+
+      user_a = insert_ssh_username(node_a.id)
+      _user_b = insert_ssh_username(node_b.id)
+
+      query = SshUsernameFilters.apply_node_ids(base_query(), [%{op: :==, value: node_a.id}])
+
+      assert ids(query) == [user_a.id]
+    end
+
+    test "empty filters list → query unchanged (early-return clause)" do
+      cluster_a = insert_cluster()
+      node_a = insert_node(cluster_a.id)
+      a = insert_ssh_username(node_a.id)
+      b = insert_ssh_username(node_a.id)
+
+      assert ids(SshUsernameFilters.apply_node_ids(base_query(), [])) == Enum.sort([a.id, b.id])
+    end
+
+    test "unrecognised filter op → query unchanged (catch-all)" do
+      cluster_a = insert_cluster()
+      node_a = insert_node(cluster_a.id)
+      a = insert_ssh_username(node_a.id)
+
+      query = SshUsernameFilters.apply_node_ids(base_query(), [%{op: :ilike, value: "x"}])
+
+      assert ids(query) == [a.id]
+    end
   end
 end

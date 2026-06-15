@@ -5,9 +5,10 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
 
   ## Filtering
   - `username` — exact match or wildcard (`admin*`, `*user`)
-  - `node_id` — exact UUID match
+  - `node_ids` — exact IN match on node IDs (array of UUIDs)
   - `has_password` — true: usernames with a password set; false: without
-  - `cluster_name` — filter by node's cluster (exact match or wildcard)
+  - `cluster_name` — filter by node's cluster — exact match or wildcard; use `cluster_names` for multi-cluster IN matching
+  - `cluster_names` — exact IN match on cluster names (array of strings, no wildcards)
   - `inserted_at_gte` / `inserted_at_lte` — creation datetime range (ISO8601)
   - `updated_at_gte` / `updated_at_lte` — last-updated datetime range (ISO8601)
 
@@ -30,9 +31,10 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
     field :username, :string, min_length: 1
-    field :node_id, :string
+    field :node_ids, {:array, :string}
     field :has_password, :boolean
     field :cluster_name, :string, min_length: 1
+    field :cluster_names, {:array, :string}
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string
     field :updated_at_gte, :string
@@ -45,7 +47,8 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
   def execute(params, frame) do
     query =
       FlopParams.build(params,
-        passthrough: [:username, :node_id, :has_password, :cluster_name],
+        passthrough: [:username, :has_password, :cluster_name],
+        multi: [:node_ids, :cluster_names],
         ranges: [:inserted_at, :updated_at]
       )
 

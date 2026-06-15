@@ -25,9 +25,16 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
           QueryParams.string_filter(:name,
             description: "Filter by alias name (exact match or wildcard: prod*, *east, etc.)"
           ),
-          QueryParams.uuid_filter(:node_id, description: "Filter by node ID (exact match UUID)"),
+          QueryParams.uuid_array_filter(:node_ids,
+            description: "Filter by node IDs — comma-separated list of UUIDs (exact IN match)"
+          ),
           QueryParams.string_filter(:cluster_name,
-            description: "Filter by cluster name (exact match or wildcard: prod*, *east, etc.)"
+            description:
+              "Filter by cluster name — exact match or wildcard (prod*, *east, *rod*). Use cluster_names for multi-cluster IN matching."
+          ),
+          QueryParams.string_array_filter(:cluster_names,
+            description:
+              "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use cluster_name for wildcard filtering."
           )
         ] ++
         QueryParams.datetime_range_filter(:inserted_at) ++

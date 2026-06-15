@@ -30,12 +30,19 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
             description: "Filter by public key content (useful for searching email comments: *@example.com)"
           ),
           QueryParams.uuid_filter(:ssh_username_id, description: "Filter by SSH username ID"),
-          QueryParams.uuid_filter(:node_id, description: "Filter by node ID"),
+          QueryParams.uuid_array_filter(:node_ids,
+            description: "Filter by node IDs — comma-separated list of UUIDs (exact IN match)"
+          ),
           QueryParams.string_filter(:username,
             description: "Filter by SSH username (exact match or wildcard: deploy*, *admin, etc.)"
           ),
           QueryParams.string_filter(:cluster_name,
-            description: "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *east, etc.)"
+            description:
+              "Filter by cluster name via node's cluster — exact match or wildcard (prod*, *east, *rod*). Use cluster_names for multi-cluster IN matching."
+          ),
+          QueryParams.string_array_filter(:cluster_names,
+            description:
+              "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use cluster_name for wildcard filtering."
           )
         ] ++
         QueryParams.datetime_range_filter(:inserted_at) ++

@@ -293,5 +293,150 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFiltersTest do
 
       assert base |> ClusterFilters.apply_name([]) |> Repo.all() |> length() == 2
     end
+
+    test ":in matches all nodes in any of the given cluster names" do
+      cluster_a = insert_cluster(%{name: "alpha"})
+      cluster_b = insert_cluster(%{name: "bravo"})
+      cluster_c = insert_cluster(%{name: "charlie"})
+
+      node_a = insert_node(cluster_a.id)
+      node_b = insert_node(cluster_b.id)
+      _node_c = insert_node(cluster_c.id)
+
+      base = from(n in Node, join: c in assoc(n, :cluster), select: n)
+
+      query = ClusterFilters.apply_name(base, [%{op: :in, value: ["alpha", "bravo"]}])
+
+      assert ids(query) == Enum.sort([node_a.id, node_b.id])
+    end
+
+    test ":in with empty list → no results (WHERE name IN ())" do
+      cluster_a = insert_cluster(%{name: "alpha"})
+      _node_a = insert_node(cluster_a.id)
+
+      base = from(n in Node, join: c in assoc(n, :cluster), select: n)
+
+      query = ClusterFilters.apply_name(base, [%{op: :in, value: []}])
+
+      assert ids(query) == []
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # apply_names/2 — IN filter directly on the clusters table (first binding).
+  # Used by list_clusters where cluster is the primary binding.
+  # ---------------------------------------------------------------------------
+
+  describe "apply_names/2 (operates on first/primary cluster binding)" do
+    test ":in matches clusters by exact name membership" do
+      alpha = insert_cluster(%{name: "alpha"})
+      bravo = insert_cluster(%{name: "bravo"})
+      _charlie = insert_cluster(%{name: "charlie"})
+
+      query = ClusterFilters.apply_names(Cluster, [%{op: :in, value: ["alpha", "bravo"]}])
+
+      assert ids(query) == Enum.sort([alpha.id, bravo.id])
+    end
+
+    test ":== falls through to exact-match clause" do
+      alpha = insert_cluster(%{name: "alpha"})
+      _bravo = insert_cluster(%{name: "bravo"})
+
+      query = ClusterFilters.apply_names(Cluster, [%{op: :==, value: "alpha"}])
+
+      assert ids(query) == [alpha.id]
+    end
+
+    test "empty filters list → query unchanged (early-return clause)" do
+      a = insert_cluster()
+      b = insert_cluster()
+
+      query = ClusterFilters.apply_names(Cluster, [])
+
+      assert ids(query) == Enum.sort([a.id, b.id])
+    end
+
+    test "unrecognised filter op → query unchanged (catch-all)" do
+      a = insert_cluster()
+      _b = insert_cluster()
+
+      query = ClusterFilters.apply_names(Cluster, [%{op: :ilike, value: "prod%"}])
+
+      assert a.id in ids(query)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # apply_node_ids_on_clusters/2 — joins nodes and returns distinct clusters
+  # that contain any of the given node IDs.
+  # ---------------------------------------------------------------------------
+
+  describe "apply_node_ids_on_clusters/2" do
+    test ":in returns clusters containing any of the given node IDs" do
+      cluster_a = insert_cluster()
+      cluster_b = insert_cluster()
+      _cluster_c = insert_cluster()
+
+      node_a = insert_node(cluster_a.id)
+      node_b = insert_node(cluster_b.id)
+
+      query = ClusterFilters.apply_node_ids_on_clusters(Cluster, [%{op: :in, value: [node_a.id, node_b.id]}])
+
+      assert ids(query) == Enum.sort([cluster_a.id, cluster_b.id])
+    end
+
+    test ":in with multiple nodes in the same cluster returns that cluster only once (distinct)" do
+      cluster_a = insert_cluster()
+
+      node_1 = insert_node(cluster_a.id)
+      node_2 = insert_node(cluster_a.id)
+
+      query =
+        ClusterFilters.apply_node_ids_on_clusters(Cluster, [
+          %{op: :in, value: [node_1.id, node_2.id]}
+        ])
+
+      results = Repo.all(query)
+      assert length(results) == 1
+      assert hd(results).id == cluster_a.id
+    end
+
+    test ":== single node ID returns its cluster" do
+      cluster_a = insert_cluster()
+      _cluster_b = insert_cluster()
+
+      node_a = insert_node(cluster_a.id)
+
+      query = ClusterFilters.apply_node_ids_on_clusters(Cluster, [%{op: :==, value: node_a.id}])
+
+      assert ids(query) == [cluster_a.id]
+    end
+
+    test "empty filters list → query unchanged (early-return clause)" do
+      a = insert_cluster()
+      b = insert_cluster()
+
+      query = ClusterFilters.apply_node_ids_on_clusters(Cluster, [])
+
+      assert ids(query) == Enum.sort([a.id, b.id])
+    end
+
+    test "node ID not matching any node → empty result" do
+      _cluster_a = insert_cluster()
+
+      missing_id = Ecto.UUID.generate()
+
+      query = ClusterFilters.apply_node_ids_on_clusters(Cluster, [%{op: :in, value: [missing_id]}])
+
+      assert ids(query) == []
+    end
+
+    test "unrecognised filter op → query unchanged (catch-all)" do
+      a = insert_cluster()
+
+      query = ClusterFilters.apply_node_ids_on_clusters(Cluster, [%{op: :>=, value: 5}])
+
+      assert a.id in ids(query)
+    end
   end
 end

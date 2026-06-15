@@ -28,6 +28,9 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
       QueryParams.pagination() ++
         QueryParams.sort(order_by_example: "inserted_at,status", order_directions_example: "desc,asc") ++
         [
+          QueryParams.uuid_array_filter(:node_ids,
+            description: "Filter by node IDs — comma-separated list of UUIDs (exact IN match)"
+          ),
           QueryParams.enum_filter(:id_type, @id_type_enum, description: "Filter by node ID type"),
           QueryParams.enum_filter(:status, @status_enum, description: "Filter by node status"),
           QueryParams.string_filter(:version,
@@ -35,7 +38,12 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
           ),
           QueryParams.boolean_filter(:self_update_enabled, description: "Filter by self-update enabled status"),
           QueryParams.string_filter(:cluster_name,
-            description: "Filter by cluster name (exact match or wildcard: prod*, *east, etc.)"
+            description:
+              "Filter by cluster name — exact match or wildcard (prod*, *east, *rod*). Use cluster_names for multi-cluster IN matching."
+          ),
+          QueryParams.string_array_filter(:cluster_names,
+            description:
+              "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use cluster_name for wildcard filtering."
           )
         ] ++
         QueryParams.datetime_range_filter(:last_seen_at) ++

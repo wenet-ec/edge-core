@@ -209,6 +209,13 @@ defmodule EdgeAdmin.Nodes do
         filter.field == :has_node_limit
       end)
 
+    # Extract plural IN filters (handle separately)
+    {cluster_names_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter -> filter.field == :cluster_names end)
+
+    {node_ids_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter -> filter.field == :node_ids end)
+
     # Extract ilike filters for string fields — Flop's :ilike wraps values in %..%
     # and escapes any existing % characters, breaking wildcard patterns like "def%".
     # Apply these as raw Ecto ilike/2 clauses instead.
@@ -233,16 +240,12 @@ defmodule EdgeAdmin.Nodes do
         )
       end
 
-    # Apply has_node_limit filter if present
     base_query =
-      if has_node_limit_filters == [] do
-        base_query
-      else
-        ClusterFilters.apply_has_node_limit(base_query, has_node_limit_filters)
-      end
-
-    # Apply ilike filters directly via Ecto (bypassing Flop's add_wildcard)
-    base_query = ClusterFilters.apply_ilike(base_query, ilike_filters)
+      base_query
+      |> ClusterFilters.apply_has_node_limit(has_node_limit_filters)
+      |> ClusterFilters.apply_names(cluster_names_filters)
+      |> ClusterFilters.apply_node_ids_on_clusters(node_ids_filters)
+      |> ClusterFilters.apply_ilike(ilike_filters)
 
     case Flop.validate_and_run(base_query, flop_params,
            for: Cluster,
@@ -1101,6 +1104,8 @@ defmodule EdgeAdmin.Nodes do
   - `last_seen_at__gte/lte` - Datetime range filter
   - `inserted_at__gte/lte` - Date range filter
   - `cluster_name` - Text search with wildcard support (requires join)
+  - `node_ids` - Exact IN match on node IDs (comma-separated on REST, array on MCP)
+  - `cluster_names` - Exact IN match on cluster names (comma-separated on REST, array on MCP)
 
   ## Returns
   - `{:ok, {nodes, meta}}` - List of nodes with Flop.Meta pagination info
@@ -1111,11 +1116,17 @@ defmodule EdgeAdmin.Nodes do
     # Parse params into Flop format
     flop_params = RequestParser.parse(params)
 
-    # Extract cluster_name filters (join-based, handle separately)
+    # Extract join-based and custom filters (handle separately from Flop)
     {cluster_name_filters, other_filters} =
       Enum.split_with(flop_params[:filters] || [], fn filter ->
         filter.field == :cluster_name
       end)
+
+    {cluster_names_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter -> filter.field == :cluster_names end)
+
+    {node_ids_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter -> filter.field == :node_ids end)
 
     # Extract ilike filters for string fields — Flop's :ilike wraps values in %..%
     # and escapes any existing % characters, breaking wildcard patterns like "1.*".
@@ -1133,19 +1144,15 @@ defmodule EdgeAdmin.Nodes do
         preload: [:cluster, aliases: :cluster]
       )
 
-    # Apply cluster_name filters if present
-    query_with_cluster_filter =
-      if cluster_name_filters == [] do
-        base_query
-      else
-        ClusterFilters.apply_name(base_query, cluster_name_filters)
-      end
-
-    # Apply ilike filters directly via Ecto (bypassing Flop's add_wildcard)
-    query_with_cluster_filter = NodeFilters.apply_ilike(query_with_cluster_filter, ilike_filters)
+    query =
+      base_query
+      |> ClusterFilters.apply_name(cluster_name_filters)
+      |> ClusterFilters.apply_name(cluster_names_filters)
+      |> NodeFilters.apply_node_ids(node_ids_filters)
+      |> NodeFilters.apply_ilike(ilike_filters)
 
     # Run Flop query
-    case Flop.validate_and_run(query_with_cluster_filter, flop_params,
+    case Flop.validate_and_run(query, flop_params,
            for: Node,
            replace_invalid_params: true
          ) do
@@ -1285,6 +1292,7 @@ defmodule EdgeAdmin.Nodes do
   - `has_name` - Boolean: true returns keys with a name set (name is not null)
   - `expires_at`, `last_used_at`, `inserted_at`, `updated_at` - Date range (`__gte`, `__lte`)
   - `cluster_name` - Text search with wildcard support (requires join)
+  - `cluster_names` - Exact IN match on cluster names (comma-separated on REST, array on MCP)
   """
   @spec list_enrollment_keys(map()) ::
           {:ok, {[EnrollmentKey.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
@@ -1303,6 +1311,7 @@ defmodule EdgeAdmin.Nodes do
 
   @enrollment_key_custom_filters [
     cluster_name: &ClusterFilters.apply_name/2,
+    cluster_names: &ClusterFilters.apply_name/2,
     is_unlimited: &EnrollmentKeyFilters.apply_is_unlimited/2,
     is_spent: &EnrollmentKeyFilters.apply_is_spent/2,
     is_expired: &EnrollmentKeyFilters.apply_is_expired/2,
@@ -2053,8 +2062,9 @@ defmodule EdgeAdmin.Nodes do
 
   Supports filtering by:
   - `name` - Text search with wildcard support
-  - `node_id` - Exact match by node UUID
+  - `node_ids` - Exact IN match on node IDs (comma-separated on REST, array on MCP)
   - `cluster_name` - Text search with wildcard support (requires join)
+  - `cluster_names` - Exact IN match on cluster names (comma-separated on REST, array on MCP)
   - `inserted_at__gte/lte` - Date range filter
   """
   @spec list_aliases(map()) :: {:ok, {[Alias.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
@@ -2062,11 +2072,23 @@ defmodule EdgeAdmin.Nodes do
     # Parse params into Flop format
     flop_params = RequestParser.parse(params)
 
-    # Extract cluster_name filters (join-based, handle separately)
+    # Extract join-based and plural IN filters (handle separately from Flop)
     {cluster_name_filters, other_filters} =
       Enum.split_with(flop_params[:filters] || [], fn filter ->
         filter.field == :cluster_name
       end)
+
+    {cluster_names_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter -> filter.field == :cluster_names end)
+
+    {node_ids_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter -> filter.field == :node_ids end)
+
+    {ilike_filters, flop_params} =
+      RequestParser.split_ilike_filters(
+        Map.put(flop_params, :filters, other_filters),
+        [:name]
+      )
 
     # Build base query with cluster preload
     base_query =
@@ -2075,27 +2097,28 @@ defmodule EdgeAdmin.Nodes do
         preload: [cluster: c]
       )
 
-    # Apply cluster_name filters if present
-    query_with_cluster_filter =
-      if cluster_name_filters == [] do
-        base_query
-      else
-        ClusterFilters.apply_name(base_query, cluster_name_filters)
-      end
+    query =
+      base_query
+      |> ClusterFilters.apply_name(cluster_name_filters)
+      |> ClusterFilters.apply_name(cluster_names_filters)
 
-    {ilike_filters, flop_params} =
-      RequestParser.split_ilike_filters(
-        Map.put(flop_params, :filters, other_filters),
-        [:name]
-      )
+    # node_ids IN filter — node_id is a direct column on aliases
+    query =
+      Enum.reduce(node_ids_filters, query, fn filter, acc ->
+        case filter do
+          %{op: :in, value: values} when is_list(values) -> from(a in acc, where: a.node_id in ^values)
+          %{op: :==, value: value} when is_binary(value) -> from(a in acc, where: a.node_id == ^value)
+          _ -> acc
+        end
+      end)
 
-    query_with_ilike =
-      Enum.reduce(ilike_filters, query_with_cluster_filter, fn %{field: field, value: value}, acc ->
+    query =
+      Enum.reduce(ilike_filters, query, fn %{field: field, value: value}, acc ->
         from(a in acc, where: case_insensitive_like(field(a, ^field), ^value))
       end)
 
     # Run Flop query
-    case Flop.validate_and_run(query_with_ilike, flop_params,
+    case Flop.validate_and_run(query, flop_params,
            for: Alias,
            replace_invalid_params: true
          ) do

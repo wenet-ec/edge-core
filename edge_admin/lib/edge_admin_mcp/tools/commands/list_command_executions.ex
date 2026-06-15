@@ -5,14 +5,15 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
 
   ## Filtering
   - `command_id` — filter by command UUID
-  - `node_id` — filter by node UUID
+  - `node_ids` — filter by node UUIDs (array of UUIDs, exact IN match)
   - `status` — `pending`, `sent`, `completed`, `cancelled`, `expired`
   - `target_all` — true: executions targeting all nodes; false: targeted executions
   - `exit_code` — exact exit code
   - `exit_code_gte` / `exit_code_lte` — exit code range (e.g. `exit_code_gte: 1` for all failures)
   - `output` — text search in output (exact match or wildcard: `*error*`, `*failed`)
   - `has_output` — true: executions with output present; false: executions without output
-  - `cluster_name` — filter by cluster name (exact match or wildcard: `prod*`, `*staging`)
+  - `cluster_name` — filter by cluster name — exact match or wildcard (`prod*`, `*staging`); use `cluster_names` for multi-cluster IN matching
+  - `cluster_names` — exact IN match on cluster names (array of strings, no wildcards)
   - `has_cluster` — true: cluster-wide executions; false: non-cluster-wide
   - `inserted_at_gte` / `inserted_at_lte` — creation datetime range (ISO8601)
   - `updated_at_gte` / `updated_at_lte` — last-updated datetime range (ISO8601)
@@ -42,7 +43,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
     field :command_id, :string
-    field :node_id, :string
+    field :node_ids, {:array, :string}
     field :status, {:enum, @status_enum}
     field :target_all, :boolean
     field :exit_code, :integer
@@ -51,6 +52,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
     field :output, :string, min_length: 1
     field :has_output, :boolean
     field :cluster_name, :string, min_length: 1
+    field :cluster_names, {:array, :string}
     field :has_cluster, :boolean
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string
@@ -72,7 +74,6 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
       FlopParams.build(params,
         passthrough: [
           :command_id,
-          :node_id,
           :status,
           :target_all,
           :exit_code,
@@ -81,6 +82,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
           :cluster_name,
           :has_cluster
         ],
+        multi: [:node_ids, :cluster_names],
         ranges: [:exit_code, :inserted_at, :updated_at, :sent_at, :completed_at, :cancelled_at]
       )
 

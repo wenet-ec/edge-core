@@ -159,6 +159,54 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
   end
 
   @doc """
+  UUID array filter — comma-separated list of UUIDs (e.g. `node_ids=uuid1,uuid2`).
+  Maps to an IN query. OpenAPI `style: :form, explode: false` signals the
+  comma-separated encoding to spec renderers.
+  """
+  @spec uuid_array_filter(atom(), keyword()) :: {atom(), keyword()}
+  def uuid_array_filter(name, opts \\ []) when is_atom(name) do
+    description =
+      Keyword.get(
+        opts,
+        :description,
+        "Filter by #{name} — comma-separated list of UUIDs (exact IN match)"
+      )
+
+    {name,
+     [
+       in: :query,
+       description: description,
+       style: :form,
+       explode: false,
+       schema: %Schema{type: :array, items: %Schema{type: :string, format: :uuid}}
+     ]}
+  end
+
+  @doc """
+  String array filter — comma-separated list of values (e.g. `cluster_names=prod,staging`).
+  Maps to an exact IN query (no wildcards). Use `string_filter/2` for wildcard support.
+  OpenAPI `style: :form, explode: false` signals the comma-separated encoding.
+  """
+  @spec string_array_filter(atom(), keyword()) :: {atom(), keyword()}
+  def string_array_filter(name, opts \\ []) when is_atom(name) do
+    description =
+      Keyword.get(
+        opts,
+        :description,
+        "Filter by #{name} — comma-separated list of values (exact IN match)"
+      )
+
+    {name,
+     [
+       in: :query,
+       description: description,
+       style: :form,
+       explode: false,
+       schema: %Schema{type: :array, items: %Schema{type: :string}}
+     ]}
+  end
+
+  @doc """
   Integer equality filter — exact match.
   """
   @spec int_filter(atom(), keyword()) :: {atom(), keyword()}

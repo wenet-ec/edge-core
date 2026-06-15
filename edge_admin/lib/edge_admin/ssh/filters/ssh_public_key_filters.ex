@@ -21,6 +21,9 @@ defmodule EdgeAdmin.Ssh.Filters.SshPublicKeyFilters do
       %{op: :==, value: value}, acc when is_binary(value) ->
         from([_k, _u, n] in acc, where: n.id == ^value)
 
+      %{op: :in, value: values}, acc when is_list(values) ->
+        from([_k, _u, n] in acc, where: n.id in ^values)
+
       _filter, acc ->
         acc
     end)
@@ -56,6 +59,9 @@ defmodule EdgeAdmin.Ssh.Filters.SshPublicKeyFilters do
 
       %{op: :ilike, value: value}, acc when is_binary(value) ->
         from([_k, _u, _n, c] in acc, where: case_insensitive_like(c.name, ^value))
+
+      %{op: :in, value: values}, acc when is_list(values) ->
+        from([_k, _u, _n, c] in acc, where: c.name in ^values)
 
       _filter, acc ->
         acc

@@ -353,8 +353,10 @@ defmodule EdgeAdmin.Commands do
   - `exit_code` - Integer
   - `command_id` - Exact match on command ID
   - `node_id` - Exact match on node ID
+  - `node_ids` - Exact IN match on node IDs (comma-separated on REST, array on MCP)
   - `output` - Text search with wildcard support
   - `cluster_name` - Text search with wildcard support (filters by node's cluster name)
+  - `cluster_names` - Exact IN match on cluster names (comma-separated on REST, array on MCP)
   - `has_cluster` - Boolean (filters by cluster_id presence: true = NOT NULL, false = IS NULL)
   - `exit_code` - Exact, `__gte`, `__lte`
   - `has_output` - Boolean: true returns executions with output present
@@ -369,23 +371,33 @@ defmodule EdgeAdmin.Commands do
     # Parse params into Flop format
     flop_params = EdgeAdmin.RequestParser.parse(params)
 
-    # Extract cluster_name filters (join-based, handle separately)
+    # Extract join-based and virtual filters (handle separately from Flop)
     {cluster_name_filters, other_filters} =
       Enum.split_with(flop_params[:filters] || [], fn filter ->
         filter.field == :cluster_name
       end)
 
-    # Extract has_cluster filters (virtual field, handle separately)
+    {cluster_names_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter -> filter.field == :cluster_names end)
+
+    {node_ids_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter -> filter.field == :node_ids end)
+
     {has_cluster_filters, other_filters} =
       Enum.split_with(other_filters, fn filter ->
         filter.field == :has_cluster
       end)
 
-    # Extract has_output filters (virtual field, handle separately)
     {has_output_filters, other_filters} =
       Enum.split_with(other_filters, fn filter ->
         filter.field == :has_output
       end)
+
+    {ilike_filters, flop_params} =
+      EdgeAdmin.RequestParser.split_ilike_filters(
+        Map.put(flop_params, :filters, other_filters),
+        [:output]
+      )
 
     # Build base query with preload and cluster join (needed for cluster_name filter)
     base_query =
@@ -395,38 +407,16 @@ defmodule EdgeAdmin.Commands do
         preload: [:command, :cluster, node: :cluster]
       )
 
-    # Apply cluster_name filters if present
-    query_with_cluster_name =
-      if cluster_name_filters == [] do
-        base_query
-      else
-        ExecutionFilters.apply_cluster_name(base_query, cluster_name_filters)
-      end
-
-    # Apply has_cluster filters if present
-    query_with_has_cluster =
-      if has_cluster_filters == [] do
-        query_with_cluster_name
-      else
-        ExecutionFilters.apply_has_cluster(query_with_cluster_name, has_cluster_filters)
-      end
-
-    # Apply has_output filters if present
-    query_with_has_output =
-      if has_output_filters == [] do
-        query_with_has_cluster
-      else
-        ExecutionFilters.apply_has_output(query_with_has_cluster, has_output_filters)
-      end
-
-    {ilike_filters, flop_params} =
-      EdgeAdmin.RequestParser.split_ilike_filters(
-        Map.put(flop_params, :filters, other_filters),
-        [:output]
-      )
+    query =
+      base_query
+      |> ExecutionFilters.apply_cluster_name(cluster_name_filters)
+      |> ExecutionFilters.apply_cluster_name(cluster_names_filters)
+      |> ExecutionFilters.apply_node_ids(node_ids_filters)
+      |> ExecutionFilters.apply_has_cluster(has_cluster_filters)
+      |> ExecutionFilters.apply_has_output(has_output_filters)
 
     query_with_ilike =
-      Enum.reduce(ilike_filters, query_with_has_output, fn %{field: field, value: value}, acc ->
+      Enum.reduce(ilike_filters, query, fn %{field: field, value: value}, acc ->
         from(ce in acc, where: case_insensitive_like(field(ce, ^field), ^value))
       end)
 

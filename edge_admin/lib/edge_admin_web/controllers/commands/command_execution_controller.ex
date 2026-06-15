@@ -33,12 +33,19 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
               "Filter by whether output is present: true returns executions with output, false returns executions with no output"
           ),
           QueryParams.uuid_filter(:command_id, description: "Filter by command ID"),
-          QueryParams.uuid_filter(:node_id, description: "Filter by node ID"),
+          QueryParams.uuid_array_filter(:node_ids,
+            description: "Filter by node IDs — comma-separated list of UUIDs (exact IN match)"
+          ),
           QueryParams.string_filter(:output,
             description: "Text search in output (exact match or wildcard: *error*, *failed, etc.)"
           ),
           QueryParams.string_filter(:cluster_name,
-            description: "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *staging, etc.)"
+            description:
+              "Filter by cluster name via node's cluster — exact match or wildcard (prod*, *staging, *rod*). Use cluster_names for multi-cluster IN matching."
+          ),
+          QueryParams.string_array_filter(:cluster_names,
+            description:
+              "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use cluster_name for wildcard filtering."
           ),
           QueryParams.boolean_filter(:has_cluster,
             description: "Filter by cluster_id presence (true = cluster-wide executions, false = non-cluster-wide)"

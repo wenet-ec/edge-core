@@ -4,7 +4,8 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
   List enrollment keys with filtering, sorting, and pagination.
 
   ## Filtering
-  - `cluster_name` — exact match or wildcard (`prod*`, `*east`)
+  - `cluster_name` — exact match or wildcard (`prod*`, `*east`); use `cluster_names` for multi-cluster IN matching
+  - `cluster_names` — exact IN match on cluster names (array of strings, no wildcards)
   - `name` — case-insensitive substring/wildcard match on the human-readable label
   - `key` — exact key value
   - `uses_remaining` — exact uses remaining count
@@ -39,6 +40,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
     field :cluster_name, :string, min_length: 1
+    field :cluster_names, {:array, :string}
     field :name, :string, min_length: 1
     field :has_name, :boolean
     field :key, :string, min_length: 1
@@ -78,6 +80,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
           :has_expiry,
           :has_name
         ],
+        multi: [:cluster_names],
         ranges: [:uses_remaining, :expires_at, :last_used_at, :inserted_at, :updated_at]
       )
 

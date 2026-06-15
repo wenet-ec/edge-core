@@ -27,10 +27,17 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
           QueryParams.string_filter(:username,
             description: "Filter by username (exact match or wildcard: root*, *admin, etc.)"
           ),
-          QueryParams.uuid_filter(:node_id, description: "Filter by node ID"),
+          QueryParams.uuid_array_filter(:node_ids,
+            description: "Filter by node IDs — comma-separated list of UUIDs (exact IN match)"
+          ),
           QueryParams.boolean_filter(:has_password, description: "Filter by whether username has password configured"),
           QueryParams.string_filter(:cluster_name,
-            description: "Filter by cluster name via node's cluster (exact match or wildcard: prod*, *east, etc.)"
+            description:
+              "Filter by cluster name via node's cluster — exact match or wildcard (prod*, *east, *rod*). Use cluster_names for multi-cluster IN matching."
+          ),
+          QueryParams.string_array_filter(:cluster_names,
+            description:
+              "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use cluster_name for wildcard filtering."
           )
         ] ++
         QueryParams.datetime_range_filter(:inserted_at) ++

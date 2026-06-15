@@ -168,6 +168,61 @@ defmodule EdgeAdminMcp.FlopParamsTest do
   end
 
   # ---------------------------------------------------------------------------
+  # multi fields — {:array, :string} lists joined to comma-separated strings
+  # so RequestParser picks them up as op: :in filters (same wire format as REST)
+  # ---------------------------------------------------------------------------
+
+  describe "build/2 — multi" do
+    test "joins a list value into a comma-separated string" do
+      result =
+        FlopParams.build(%{node_ids: ["uuid-1", "uuid-2", "uuid-3"]}, multi: [:node_ids])
+
+      assert result["node_ids"] == "uuid-1,uuid-2,uuid-3"
+    end
+
+    test "single-element list produces a plain string (no trailing comma)" do
+      result = FlopParams.build(%{cluster_names: ["prod"]}, multi: [:cluster_names])
+
+      assert result["cluster_names"] == "prod"
+    end
+
+    test "nil value is dropped (not in params)" do
+      result = FlopParams.build(%{node_ids: nil}, multi: [:node_ids])
+
+      refute Map.has_key?(result, "node_ids")
+    end
+
+    test "empty list is dropped (treated like nil)" do
+      result = FlopParams.build(%{node_ids: []}, multi: [:node_ids])
+
+      refute Map.has_key?(result, "node_ids")
+    end
+
+    test "missing key is silently absent from output" do
+      result = FlopParams.build(%{}, multi: [:node_ids])
+
+      refute Map.has_key?(result, "node_ids")
+    end
+
+    test "multiple multi fields are each handled independently" do
+      result =
+        FlopParams.build(
+          %{node_ids: ["a", "b"], cluster_names: ["prod", "staging"]},
+          multi: [:node_ids, :cluster_names]
+        )
+
+      assert result["node_ids"] == "a,b"
+      assert result["cluster_names"] == "prod,staging"
+    end
+
+    test "keys not in :multi are not included even if the value is a list" do
+      result = FlopParams.build(%{node_ids: ["a", "b"]}, multi: [])
+
+      refute Map.has_key?(result, "node_ids")
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Combined — pagination + passthrough + ranges + sort
   # ---------------------------------------------------------------------------
 

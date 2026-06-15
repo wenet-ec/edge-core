@@ -8,7 +8,7 @@ defmodule EdgeAgent.Lan.Mdns do
 
   - `node-{node_id}.local` — the stable resolvable hostname for this node.
     Any device on the same subnet can reach the agent by this name.
-  - `_edge_agent._tcp.local` — service type record used by agents and other
+  - `_edge_core._tcp.local` — service type record used by agents and other
     LAN clients to discover edge agents on the same subnet.
 
   ## Process model
@@ -33,7 +33,7 @@ defmodule EdgeAgent.Lan.Mdns do
 
   require Logger
 
-  @service_id :edge_agent
+  @service_id :edge_core
 
   @doc false
   def child_spec(_opts) do
@@ -64,7 +64,7 @@ defmodule EdgeAgent.Lan.Mdns do
     MdnsLite.add_mdns_service(%{
       id: @service_id,
       instance_name: hostname,
-      protocol: "edge_agent",
+      protocol: "edge_core",
       transport: "tcp",
       port: port
     })

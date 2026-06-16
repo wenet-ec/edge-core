@@ -175,15 +175,15 @@ defmodule EdgeAdminWeb.Router do
     pipe_through(:agent_api)
 
     # Node health check reporting
-    patch("/nodes/me/health_check", NodeController, :update_health_check)
+    post("/nodes/me/health_check", NodeController, :update_health_check)
 
     # SSH credentials verification
     post("/ssh_usernames/verify_credentials", SshUsernameController, :verify_credentials)
 
     # Command sync and result reporting
     get("/command_executions", CommandExecutionController, :index)
-    patch("/command_executions/:id/acknowledge", CommandExecutionController, :acknowledge)
-    patch("/command_executions/:id/result", CommandExecutionController, :update_result)
+    post("/command_executions/:id/acknowledge", CommandExecutionController, :acknowledge)
+    post("/command_executions/:id/report_result", CommandExecutionController, :report_result)
 
     # Self-update check
     get("/self_updates/check", SelfUpdateController, :check)
@@ -218,7 +218,7 @@ defmodule EdgeAdminWeb.Router do
         resources("/aliases", AliasController, only: [:create])
       end
 
-      patch("/nodes/:id/change_cluster", NodeController, :change_cluster)
+      post("/nodes/:id/change_cluster", NodeController, :change_cluster)
       delete("/nodes/:id", NodeController, :delete)
 
       resources("/aliases", AliasController, only: [:index, :show, :delete])
@@ -245,7 +245,7 @@ defmodule EdgeAdminWeb.Router do
 
       resources("/command_executions", CommandExecutionController, only: [:index, :show])
       delete("/command_executions/:id", CommandExecutionController, :delete)
-      patch("/command_executions/:id/cancel", CommandExecutionController, :cancel)
+      post("/command_executions/:id/cancel", CommandExecutionController, :cancel)
     end
 
     resources("/self_update_requests", SelfUpdates.SelfUpdateRequestController, only: [:index, :create, :show, :delete])

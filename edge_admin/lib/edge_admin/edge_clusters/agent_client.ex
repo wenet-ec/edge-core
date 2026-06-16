@@ -13,7 +13,7 @@ defmodule EdgeAdmin.EdgeClusters.AgentClient do
 
   - `ping/2` — GET /health (node health check)
   - `deliver_execution/2` — POST /api/v1/command_executions
-  - `cancel_execution/2` — PATCH /api/v1/command_executions/:id/cancel
+  - `cancel_execution/2` — POST /api/v1/command_executions/:id/cancel
   - `trigger_self_update/1` — POST /api/v1/self_updates/trigger
   - `scrape_host_metrics/1` — GET http://<vpn_hostname>:<host_metrics_port>/metrics
   - `scrape_agent_metrics/1` — GET /api/v1/agents/me/metrics/raw
@@ -114,7 +114,7 @@ defmodule EdgeAdmin.EdgeClusters.AgentClient do
 
     opts = Keyword.merge([auth: {:bearer, node.api_token}], command_opts())
 
-    case Req.patch(url, opts) do
+    case Req.post(url, opts) do
       {:ok, %{status: status}} when status in 200..299 ->
         :ok
 

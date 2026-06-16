@@ -23,7 +23,7 @@ defmodule EdgeAgent.Commands do
   2. Enqueue Oban job → EnqueueExecutionWorker triggers ExecuteCommandWorker
   3. Worker calls execute_single_command → Runs via /usr/local/bin/hostscript
   4. Execution completes → Updates status to :completed with output/exit_code
-  5. Report to admin → Sends result via AdminClient.update_command_execution_result
+  5. Report to admin → Sends result via AdminClient.report_command_execution_result
   6. Delete local copy → Removes from agent database after successful report
   ```
 
@@ -410,7 +410,7 @@ defmodule EdgeAgent.Commands do
     Enum.reduce_while(executions, :ok, fn execution, _acc ->
       params = build_report_params(execution)
 
-      case AdminClient.update_command_execution_result(execution.id, params) do
+      case AdminClient.report_command_execution_result(execution.id, params) do
         :ok ->
           Logger.debug("Successfully reported execution #{execution.id}")
           delete_execution_after_report(execution)

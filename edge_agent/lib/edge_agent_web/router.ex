@@ -37,7 +37,7 @@ defmodule EdgeAgentWeb.Router do
     pipe_through(:api)
 
     post "/command_executions", CommandExecutionController, :create
-    patch "/command_executions/:id/cancel", CommandExecutionController, :cancel
+    post "/command_executions/:id/cancel", CommandExecutionController, :cancel
 
     post "/self_updates/trigger", SelfUpdateController, :trigger
   end

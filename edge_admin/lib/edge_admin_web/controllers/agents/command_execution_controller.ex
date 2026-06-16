@@ -15,7 +15,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
-  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :acknowledge, :update_result]
+  plug EdgeAdminWeb.Plugs.DegradedMode, :allow when action in [:index, :acknowledge, :report_result]
 
   tags(["Internal.Agents"])
 
@@ -90,7 +90,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
     end
   end
 
-  operation(:update_result,
+  operation(:report_result,
     summary: "Report command execution result",
     description:
       "Agent reports command results (output, exit_code, status). Verifies command belongs to the authenticated node.",
@@ -108,7 +108,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
     }
   )
 
-  def update_result(conn, %{id: id}) do
+  def report_result(conn, %{id: id}) do
     with {:ok, execution} <- Commands.get_command_execution(id),
          :ok <- CommandExecutionPolicy.authorize({:update, conn.assigns.current_node, execution}),
          {:ok, updated_execution} <-

@@ -5239,7 +5239,7 @@
       }
     },
     "/api/v1/nodes/{id}/change_cluster": {
-      "patch": {
+      "post": {
         "callbacks": {},
         "description": "Move a node to a different cluster. Performs cluster migration via Netmaker (best-effort, reconciliation worker handles failures).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeController.change_cluster",
@@ -6455,7 +6455,7 @@
       }
     },
     "/api/v1/command_executions/{id}/cancel": {
-      "patch": {
+      "post": {
         "callbacks": {},
         "description": "Attempts to cancel a command execution. Behavior depends on current status:\n\n- `pending`: Immediately marked `cancelled` in the database (command never ran).\n- `sent`: Sends cancellation request to agent (best-effort, async). The agent is the source of truth — if it already ran the command, it reports back the real result and the execution is marked `completed`. If the agent honoured the cancellation (exit code 143), it is marked `cancelled`.\n- `completed` / `cancelled`: Returns 409 conflict (already terminal).\n\nReturns 200 if cancellation was initiated. For `sent` executions, poll status to confirm the outcome.\n",
         "operationId": "EdgeAdminWeb.Controllers.Commands.CommandExecutionController.cancel",

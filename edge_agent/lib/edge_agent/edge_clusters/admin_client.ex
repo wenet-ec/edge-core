@@ -55,11 +55,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   Authenticated (URLs from Settings):
 
   - **GET /api/v1/agents/command_executions** — List command executions by status
-  - **PATCH /api/v1/agents/command_executions/:id/acknowledge** — Acknowledge
+  - **POST /api/v1/agents/command_executions/:id/acknowledge** — Acknowledge
     receipt of a pending execution
-  - **PATCH /api/v1/agents/command_executions/:id/result** — Report execution
+  - **POST /api/v1/agents/command_executions/:id/report_result** — Report execution
     results
-  - **PATCH /api/v1/agents/nodes/me/health_check** — Report node health
+  - **POST /api/v1/agents/nodes/me/health_check** — Report node health
     (HTTP-fallback mode)
   - **GET /api/v1/agents/self_updates/check** — Poll for pending self-update
     targeting this node
@@ -94,8 +94,8 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
       iex> AdminClient.list_sent_command_executions()
       {:ok, %{data: [%{"id" => "exec-123", "command_text" => "uptime"}], meta: %{}}}
 
-      # Update command execution (authenticated)
-      iex> AdminClient.update_command_execution_result("exec-123", %{
+      # Report command execution result (authenticated)
+      iex> AdminClient.report_command_execution_result("exec-123", %{
         status: "completed",
         exit_code: 0,
         output: "14:23:45 up 3 days"
@@ -420,7 +420,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     (already acknowledged or finalized — admin's `ExecutionPendingCheck`)
   - `{:error, reason}` - Acknowledgment failed
 
-  PATCH /api/v1/agents/command_executions/:id/acknowledge
+  POST /api/v1/agents/command_executions/:id/acknowledge
   """
   @spec acknowledge_command_execution(String.t()) :: :ok | {:error, term()}
   def acknowledge_command_execution(execution_id) do
@@ -429,7 +429,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     request_with_auth(path, fn url, headers ->
       opts = Keyword.merge([json: %{}, headers: headers], http_options())
 
-      case Req.patch(url, opts) do
+      case Req.post(url, opts) do
         {:ok, %{status: status}} when status in 200..299 ->
           Logger.debug("Successfully acknowledged command execution #{execution_id}")
           :ok
@@ -460,7 +460,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   - `{:error, {:http_error, 422, _}}` - Validation error (invalid status)
   - `{:error, reason}` - Report failed
 
-  PATCH /api/v1/agents/nodes/me/health_check
+  POST /api/v1/agents/nodes/me/health_check
   """
   @spec report_health_check(String.t()) :: {:ok, map()} | {:error, term()}
   def report_health_check(status) do
@@ -470,7 +470,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
       payload = %{status: status}
       opts = Keyword.merge([json: payload, headers: headers], http_options())
 
-      case Req.patch(url, opts) do
+      case Req.post(url, opts) do
         {:ok, %{status: 200, body: %{"data" => node}}} ->
           Logger.debug("Successfully reported health check: #{status}")
           {:ok, node}
@@ -549,17 +549,17 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   - `{:error, {:http_error, 422, _}}` - Validation error (malformed payload)
   - `{:error, reason}` - Update failed
 
-  PATCH /api/v1/agents/command_executions/:id/result
+  POST /api/v1/agents/command_executions/:id/report_result
   """
-  @spec update_command_execution_result(String.t(), map()) :: :ok | {:error, term()}
-  def update_command_execution_result(execution_id, command_execution_params) do
-    path = "/api/v1/agents/command_executions/#{execution_id}/result"
+  @spec report_command_execution_result(String.t(), map()) :: :ok | {:error, term()}
+  def report_command_execution_result(execution_id, command_execution_params) do
+    path = "/api/v1/agents/command_executions/#{execution_id}/report_result"
     payload = command_execution_params
 
     request_with_auth(path, fn url, headers ->
       opts = Keyword.merge([json: payload, headers: headers], http_options())
 
-      case Req.patch(url, opts) do
+      case Req.post(url, opts) do
         {:ok, %{status: status}} when status in 200..299 ->
           Logger.debug("Successfully updated command execution #{execution_id}")
           :ok

@@ -33,14 +33,14 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshPublicKeys do
   schema do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
-    field :ssh_username_ids, {:array, :string}
-    field :node_ids, {:array, :string}
+    field :ssh_username_ids, {:list, :string}
+    field :node_ids, {:list, :string}
     field :username, :string, min_length: 1
-    field :usernames, {:array, :string}
+    field :usernames, {:list, :string}
     field :key_name, :string, min_length: 1
     field :public_key, :string, min_length: 1
     field :cluster_name, :string, min_length: 1
-    field :cluster_names, {:array, :string}
+    field :cluster_names, {:list, :string}
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string
     field :updated_at_gte, :string

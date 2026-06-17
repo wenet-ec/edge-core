@@ -179,6 +179,13 @@ defmodule EdgeAdmin.RequestParser do
     end
   end
 
+  defp parse_filter(key, value) when is_binary(key) and is_list(value) and value != [] do
+    case parse_field(key) do
+      {:ok, field} -> [%{field: field, op: :in, value: value}]
+      _ -> []
+    end
+  end
+
   defp parse_filter(_key, _value), do: []
 
   # Build a filter for the given field, op, and string value

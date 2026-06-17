@@ -34,7 +34,7 @@ defmodule EdgeAdminMcp.FlopParams do
   ## Options
 
     * `:passthrough` — list of atom keys copied as-is to string keys.
-    * `:multi` — list of atom keys that are `{:array, :string}` in the MCP
+    * `:multi` — list of atom keys that are `{:list, :string}` in the MCP
       schema. The list value is joined to a comma-separated string so
       `RequestParser` picks it up as an `op: :in` filter (same wire format as
       the REST comma-separated convention).

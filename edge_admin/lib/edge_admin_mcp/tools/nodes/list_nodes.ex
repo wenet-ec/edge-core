@@ -38,11 +38,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
   schema do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
-    field :node_ids, {:array, :string}
+    field :node_ids, {:list, :string}
     field :status, {:enum, @status_enum}
     field :id_type, {:enum, @id_type_enum}
     field :cluster_name, :string, min_length: 1
-    field :cluster_names, {:array, :string}
+    field :cluster_names, {:list, :string}
     field :version, :string, min_length: 1
     field :self_update_enabled, :boolean
     field :last_seen_at_gte, :string

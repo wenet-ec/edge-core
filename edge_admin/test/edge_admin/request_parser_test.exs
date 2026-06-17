@@ -257,6 +257,28 @@ defmodule EdgeAdmin.RequestParserTest do
       result = RequestParser.parse(%{"status__in" => "pending,completed"})
       assert_filter(result, :status, :in, "pending,completed")
     end
+
+    test "pre-cast list value produces :in filter (OpenApiSpex CastAndValidate path)" do
+      result = RequestParser.parse(%{"status" => ["pending", "completed"]})
+      assert_filter(result, :status, :in, ["pending", "completed"])
+    end
+
+    test "pre-cast single-element list produces :in filter" do
+      result = RequestParser.parse(%{"status" => ["active"]})
+      assert_filter(result, :status, :in, ["active"])
+    end
+
+    test "pre-cast empty list is silently dropped" do
+      result = RequestParser.parse(%{"status" => []})
+      filters = result[:filters] || []
+      assert filters == []
+    end
+
+    test "pre-cast list with unknown field is silently dropped" do
+      result = RequestParser.parse(%{"totally_nonexistent_xyz_field" => ["a", "b"]})
+      filters = result[:filters] || []
+      assert filters == []
+    end
   end
 
   # ---------------------------------------------------------------------------

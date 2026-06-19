@@ -168,8 +168,10 @@ defmodule EdgeAdminMcp.FlopParamsTest do
   end
 
   # ---------------------------------------------------------------------------
-  # multi fields — {:array, :string} lists joined to comma-separated strings
-  # so RequestParser picks them up as op: :in filters (same wire format as REST)
+  # multi fields — {:list, :string} or {:list, {:enum, ...}} lists joined to
+  # comma-separated strings so RequestParser picks them up as op: :in filters
+  # (same wire format as REST comma convention). Covers ID arrays, enum fields,
+  # and text fields that accept multi-value IN matching (e.g. cluster_name).
   # ---------------------------------------------------------------------------
 
   describe "build/2 — multi" do
@@ -219,6 +221,25 @@ defmodule EdgeAdminMcp.FlopParamsTest do
       result = FlopParams.build(%{node_ids: ["a", "b"]}, multi: [])
 
       refute Map.has_key?(result, "node_ids")
+    end
+
+    test "enum list (multi-value status) is joined and produces an IN filter via RequestParser" do
+      result =
+        FlopParams.build(%{status: ["healthy", "unhealthy"]}, multi: [:status])
+
+      assert result["status"] == "healthy,unhealthy"
+    end
+
+    test "single-value enum list produces a plain string (exact-match, not IN)" do
+      result = FlopParams.build(%{status: ["healthy"]}, multi: [:status])
+
+      assert result["status"] == "healthy"
+    end
+
+    test "empty enum list is dropped (no filter applied)" do
+      result = FlopParams.build(%{status: []}, multi: [:status])
+
+      refute Map.has_key?(result, "status")
     end
   end
 

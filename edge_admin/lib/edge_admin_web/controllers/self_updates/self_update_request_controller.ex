@@ -27,7 +27,10 @@ defmodule EdgeAdminWeb.Controllers.SelfUpdates.SelfUpdateRequestController do
       QueryParams.pagination() ++
         QueryParams.sort() ++
         [
-          QueryParams.enum_filter(:status, @status_enum, description: "Filter by status")
+          QueryParams.enum_array_filter(:status, @status_enum,
+            description:
+              "Filter by status — comma-separated list for IN match (e.g. pending,processing). Single value also accepted."
+          )
         ] ++
         QueryParams.datetime_range_filter(:inserted_at) ++
         QueryParams.datetime_range_filter(:updated_at),

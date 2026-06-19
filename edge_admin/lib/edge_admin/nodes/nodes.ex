@@ -213,10 +213,6 @@ defmodule EdgeAdmin.Nodes do
         filter.field == :has_node_limit
       end)
 
-    # Extract plural IN filters (handle separately)
-    {names_filters, other_filters} =
-      Enum.split_with(other_filters, fn filter -> filter.field == :names end)
-
     {node_ids_filters, other_filters} =
       Enum.split_with(other_filters, fn filter -> filter.field == :node_ids end)
 
@@ -247,7 +243,6 @@ defmodule EdgeAdmin.Nodes do
     base_query =
       base_query
       |> ClusterFilters.apply_has_node_limit(has_node_limit_filters)
-      |> ClusterFilters.apply_names(names_filters)
       |> ClusterFilters.apply_node_ids_on_clusters(node_ids_filters)
       |> ClusterFilters.apply_ilike(ilike_filters)
 
@@ -1101,16 +1096,15 @@ defmodule EdgeAdmin.Nodes do
   Lists nodes with filtering, sorting, and pagination.
 
   Supports filtering by:
-  - `id_type` - Enum: `"persistent"` or `"random"` (wire) / atom internally
-  - `status` - Enum: `"healthy"`, `"unhealthy"`, or `"unreachable"` (wire) / atom internally
+  - `id_type` - Enum IN: `"persistent"`, `"random"` — single value or comma-separated list for multi-match
+  - `status` - Enum IN: `"healthy"`, `"unhealthy"`, `"unreachable"` — single value or comma-separated list for multi-match
   - `version` - Text search with wildcard support (1.0.0 exact, 1.* ilike)
   - `self_update_enabled` - Boolean
   - `last_seen_at__gte/lte` - Datetime range filter
   - `inserted_at__gte/lte` - Date range filter
   - `updated_at__gte/lte` - Date range filter
-  - `cluster_name` - Text search with wildcard support (requires join)
+  - `cluster_name` - Wildcard (`prod*`), exact, or comma-separated IN match on cluster name (requires join)
   - `node_ids` - Exact IN match on node IDs (comma-separated on REST, array on MCP)
-  - `cluster_names` - Exact IN match on cluster names (comma-separated on REST, array on MCP)
 
   ## Returns
   - `{:ok, {nodes, meta}}` - List of nodes with Flop.Meta pagination info
@@ -1126,9 +1120,6 @@ defmodule EdgeAdmin.Nodes do
       Enum.split_with(flop_params[:filters] || [], fn filter ->
         filter.field == :cluster_name
       end)
-
-    {cluster_names_filters, other_filters} =
-      Enum.split_with(other_filters, fn filter -> filter.field == :cluster_names end)
 
     {node_ids_filters, other_filters} =
       Enum.split_with(other_filters, fn filter -> filter.field == :node_ids end)
@@ -1152,7 +1143,6 @@ defmodule EdgeAdmin.Nodes do
     query =
       base_query
       |> ClusterFilters.apply_name(cluster_name_filters)
-      |> ClusterFilters.apply_name(cluster_names_filters)
       |> NodeFilters.apply_node_ids(node_ids_filters)
       |> NodeFilters.apply_ilike(ilike_filters)
 
@@ -1296,8 +1286,7 @@ defmodule EdgeAdmin.Nodes do
   - `has_expiry` - Boolean: true returns keys with an expiry set (expires_at is not null)
   - `has_name` - Boolean: true returns keys with a name set (name is not null)
   - `expires_at`, `last_used_at`, `inserted_at`, `updated_at` - Date range (`__gte`, `__lte`)
-  - `cluster_name` - Text search with wildcard support (requires join)
-  - `cluster_names` - Exact IN match on cluster names (comma-separated on REST, array on MCP)
+  - `cluster_name` - Wildcard (`prod*`), exact, or comma-separated IN match on cluster name (requires join)
   """
   @spec list_enrollment_keys(map()) ::
           {:ok, {[EnrollmentKey.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
@@ -1316,7 +1305,6 @@ defmodule EdgeAdmin.Nodes do
 
   @enrollment_key_custom_filters [
     cluster_name: &ClusterFilters.apply_name/2,
-    cluster_names: &ClusterFilters.apply_name/2,
     is_unlimited: &EnrollmentKeyFilters.apply_is_unlimited/2,
     is_spent: &EnrollmentKeyFilters.apply_is_spent/2,
     is_expired: &EnrollmentKeyFilters.apply_is_expired/2,
@@ -2068,8 +2056,7 @@ defmodule EdgeAdmin.Nodes do
   Supports filtering by:
   - `name` - Text search with wildcard support
   - `node_ids` - Exact IN match on node IDs (comma-separated on REST, array on MCP)
-  - `cluster_name` - Text search with wildcard support (requires join)
-  - `cluster_names` - Exact IN match on cluster names (comma-separated on REST, array on MCP)
+  - `cluster_name` - Wildcard (`prod*`), exact, or comma-separated IN match on cluster name (requires join)
   - `inserted_at__gte/lte` - Date range filter
   - `updated_at__gte/lte` - Date range filter
   """
@@ -2078,14 +2065,11 @@ defmodule EdgeAdmin.Nodes do
     # Parse params into Flop format
     flop_params = RequestParser.parse(params)
 
-    # Extract join-based and plural IN filters (handle separately from Flop)
+    # Extract join-based filters (handle separately from Flop)
     {cluster_name_filters, other_filters} =
       Enum.split_with(flop_params[:filters] || [], fn filter ->
         filter.field == :cluster_name
       end)
-
-    {cluster_names_filters, other_filters} =
-      Enum.split_with(other_filters, fn filter -> filter.field == :cluster_names end)
 
     {node_ids_filters, other_filters} =
       Enum.split_with(other_filters, fn filter -> filter.field == :node_ids end)
@@ -2103,10 +2087,7 @@ defmodule EdgeAdmin.Nodes do
         preload: [cluster: c]
       )
 
-    query =
-      base_query
-      |> ClusterFilters.apply_name(cluster_name_filters)
-      |> ClusterFilters.apply_name(cluster_names_filters)
+    query = ClusterFilters.apply_name(base_query, cluster_name_filters)
 
     # node_ids IN filter — node_id is a direct column on aliases
     query =

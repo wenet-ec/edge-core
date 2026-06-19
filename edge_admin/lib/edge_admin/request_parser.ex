@@ -33,14 +33,9 @@ defmodule EdgeAdmin.RequestParser do
   - `field__lt=value` - Less than (<)
   - `field__ne=value` - Not equal (!=)
 
-  ### Null checks
-  - `field__null=true` - Field is null (:empty)
-  - `field__null=false` - Field is not null (:not_empty)
-
   ### Other
   - `field=true/false` - Boolean exact match
-  - `field=value1,value2` - IN operator
-  - `field__in=value1,value2` - Explicit IN operator
+  - `field=value1,value2` - IN operator (comma-separated)
 
   ### Pagination & Sorting
   - `page=1` - Page number (default: 1)
@@ -188,15 +183,6 @@ defmodule EdgeAdmin.RequestParser do
 
   defp parse_filter(_key, _value), do: []
 
-  # Build a filter for the given field, op, and string value
-  defp build_filter(field, :null, "false", _op_str) do
-    %{field: field, op: :not_empty, value: true}
-  end
-
-  defp build_filter(field, :null, _value, _op_str) do
-    %{field: field, op: :empty, value: true}
-  end
-
   defp build_filter(field, op, value, _op_str) do
     %{field: field, op: op, value: value}
   end
@@ -234,10 +220,8 @@ defmodule EdgeAdmin.RequestParser do
   defp parse_operator("lt"), do: {:ok, :<}
   defp parse_operator("ne"), do: {:ok, :!=}
   defp parse_operator("eq"), do: {:ok, :==}
-  defp parse_operator("in"), do: {:ok, :in}
   defp parse_operator("ilike"), do: {:ok, :ilike}
   defp parse_operator("like"), do: {:ok, :like}
-  defp parse_operator("null"), do: {:ok, :null}
   defp parse_operator(_), do: {:error, :invalid_operator}
 
   defp parse_page(%{"page" => page}) when is_integer(page) and page > 0, do: page

@@ -4011,20 +4011,11 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by cluster name — exact match or wildcard (prod*, *tion, *rod*). Use names for multi-cluster IN matching.",
+            "description": "Filter by cluster name — exact match, wildcard (prod*, *tion, *rod*), or comma-separated list for IN match (prod,staging).",
             "in": "query",
             "name": "name",
             "required": false,
             "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use name for wildcard filtering.",
-            "explode": false,
-            "in": "query",
-            "name": "names",
-            "required": false,
-            "schema": { "items": { "type": "string" }, "type": "array" },
-            "style": "form"
           },
           {
             "description": "Filter clusters by node membership — returns all distinct clusters containing any of the given node IDs (comma-separated UUIDs).",
@@ -4573,20 +4564,11 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by cluster name — exact match or wildcard (prod*, *east, *rod*). Use cluster_names for multi-cluster IN matching.",
+            "description": "Filter by cluster name — exact match, wildcard (prod*, *east, *rod*), or comma-separated list for IN match (prod,staging).",
             "in": "query",
             "name": "cluster_name",
             "required": false,
             "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use cluster_name for wildcard filtering.",
-            "explode": false,
-            "in": "query",
-            "name": "cluster_names",
-            "required": false,
-            "schema": { "items": { "type": "string" }, "type": "array" },
-            "style": "form"
           },
           {
             "description": "Filter by enrollment key name (case-insensitive substring or wildcard: prod*, *rollout, etc.)",
@@ -5003,21 +4985,31 @@
             "style": "form"
           },
           {
-            "description": "Filter by node ID type",
+            "description": "Filter by node ID type — comma-separated list for IN match (e.g. persistent,random). Single value also accepted.",
+            "explode": false,
             "in": "query",
             "name": "id_type",
             "required": false,
-            "schema": { "enum": ["persistent", "random"], "type": "string" }
+            "schema": {
+              "items": { "enum": ["persistent", "random"], "type": "string" },
+              "type": "array"
+            },
+            "style": "form"
           },
           {
-            "description": "Filter by node status",
+            "description": "Filter by node status — comma-separated list for IN match (e.g. healthy,unhealthy). Single value also accepted.",
+            "explode": false,
             "in": "query",
             "name": "status",
             "required": false,
             "schema": {
-              "enum": ["healthy", "unhealthy", "unreachable"],
-              "type": "string"
-            }
+              "items": {
+                "enum": ["healthy", "unhealthy", "unreachable"],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
           },
           {
             "description": "Filter by agent version (exact match or wildcard: 1.0.0, 1.*, etc.)",
@@ -5034,20 +5026,11 @@
             "schema": { "type": "boolean" }
           },
           {
-            "description": "Filter by cluster name — exact match or wildcard (prod*, *east, *rod*). Use cluster_names for multi-cluster IN matching.",
+            "description": "Filter by cluster name — exact match, wildcard (prod*, *east, *rod*), or comma-separated list for IN match (prod,staging).",
             "in": "query",
             "name": "cluster_name",
             "required": false,
             "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use cluster_name for wildcard filtering.",
-            "explode": false,
-            "in": "query",
-            "name": "cluster_names",
-            "required": false,
-            "schema": { "items": { "type": "string" }, "type": "array" },
-            "style": "form"
           },
           {
             "description": "Filter records where last_seen_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
@@ -5447,20 +5430,11 @@
             "style": "form"
           },
           {
-            "description": "Filter by cluster name — exact match or wildcard (prod*, *east, *rod*). Use cluster_names for multi-cluster IN matching.",
+            "description": "Filter by cluster name — exact match, wildcard (prod*, *east, *rod*), or comma-separated list for IN match (prod,staging).",
             "in": "query",
             "name": "cluster_name",
             "required": false,
             "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use cluster_name for wildcard filtering.",
-            "explode": false,
-            "in": "query",
-            "name": "cluster_names",
-            "required": false,
-            "schema": { "items": { "type": "string" }, "type": "array" },
-            "style": "form"
           },
           {
             "description": "Filter records where inserted_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
@@ -6119,14 +6093,25 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by execution status",
+            "description": "Filter by execution status — comma-separated list for IN match (e.g. pending,sent). Single value also accepted.",
+            "explode": false,
             "in": "query",
             "name": "status",
             "required": false,
             "schema": {
-              "enum": ["pending", "sent", "completed", "cancelled", "expired"],
-              "type": "string"
-            }
+              "items": {
+                "enum": [
+                  "pending",
+                  "sent",
+                  "completed",
+                  "cancelled",
+                  "expired"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
           },
           {
             "description": "Filter by target_all flag",
@@ -6181,20 +6166,11 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by cluster name via node's cluster — exact match or wildcard (prod*, *staging, *rod*). Use cluster_names for multi-cluster IN matching.",
+            "description": "Filter by cluster name via node's cluster — exact match, wildcard (prod*, *staging, *rod*), or comma-separated list for IN match (prod,staging).",
             "in": "query",
             "name": "cluster_name",
             "required": false,
             "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use cluster_name for wildcard filtering.",
-            "explode": false,
-            "in": "query",
-            "name": "cluster_names",
-            "required": false,
-            "schema": { "items": { "type": "string" }, "type": "array" },
-            "style": "form"
           },
           {
             "description": "Filter by cluster_id presence (true = cluster-wide executions, false = non-cluster-wide)",
@@ -7257,14 +7233,19 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by status",
+            "description": "Filter by status — comma-separated list for IN match (e.g. pending,processing). Single value also accepted.",
+            "explode": false,
             "in": "query",
             "name": "status",
             "required": false,
             "schema": {
-              "enum": ["pending", "processing", "completed"],
-              "type": "string"
-            }
+              "items": {
+                "enum": ["pending", "processing", "completed"],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
           },
           {
             "description": "Filter records where inserted_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",

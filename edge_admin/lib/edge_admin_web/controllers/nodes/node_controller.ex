@@ -31,19 +31,21 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
           QueryParams.uuid_array_filter(:node_ids,
             description: "Filter by node IDs — comma-separated list of UUIDs (exact IN match)"
           ),
-          QueryParams.enum_filter(:id_type, @id_type_enum, description: "Filter by node ID type"),
-          QueryParams.enum_filter(:status, @status_enum, description: "Filter by node status"),
+          QueryParams.enum_array_filter(:id_type, @id_type_enum,
+            description:
+              "Filter by node ID type — comma-separated list for IN match (e.g. persistent,random). Single value also accepted."
+          ),
+          QueryParams.enum_array_filter(:status, @status_enum,
+            description:
+              "Filter by node status — comma-separated list for IN match (e.g. healthy,unhealthy). Single value also accepted."
+          ),
           QueryParams.string_filter(:version,
             description: "Filter by agent version (exact match or wildcard: 1.0.0, 1.*, etc.)"
           ),
           QueryParams.boolean_filter(:self_update_enabled, description: "Filter by self-update enabled status"),
           QueryParams.string_filter(:cluster_name,
             description:
-              "Filter by cluster name — exact match or wildcard (prod*, *east, *rod*). Use cluster_names for multi-cluster IN matching."
-          ),
-          QueryParams.string_array_filter(:cluster_names,
-            description:
-              "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use cluster_name for wildcard filtering."
+              "Filter by cluster name — exact match, wildcard (prod*, *east, *rod*), or comma-separated list for IN match (prod,staging)."
           )
         ] ++
         QueryParams.datetime_range_filter(:last_seen_at) ++

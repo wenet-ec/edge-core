@@ -138,26 +138,6 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFilters do
   defp apply_name_one(query, _), do: query
 
   @doc """
-  Applies `cluster_names` IN filter directly on the `clusters` table (first binding).
-  Used by `list_clusters/1` where the cluster is the primary binding.
-  """
-  def apply_names(query, []), do: query
-
-  def apply_names(query, filters) do
-    Enum.reduce(filters, query, fn filter, acc -> apply_names_one(acc, filter) end)
-  end
-
-  defp apply_names_one(query, %{op: :in, value: values}) when is_list(values) do
-    from(c in query, where: c.name in ^values)
-  end
-
-  defp apply_names_one(query, %{op: :==, value: value}) when is_binary(value) do
-    from(c in query, where: c.name == ^value)
-  end
-
-  defp apply_names_one(query, _), do: query
-
-  @doc """
   Applies `node_ids` IN filter on `list_clusters` — joins nodes and filters
   clusters that contain any of the given node IDs. Applies `distinct` to
   avoid duplicate cluster rows when multiple node IDs land in the same cluster.

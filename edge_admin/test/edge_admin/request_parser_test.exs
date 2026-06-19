@@ -253,9 +253,10 @@ defmodule EdgeAdmin.RequestParserTest do
       assert_filter(result, :status, :in, ["pending", "completed"])
     end
 
-    test "explicit __in suffix also produces :in filter" do
+    test "__in suffix is an unknown operator and is silently dropped" do
       result = RequestParser.parse(%{"status__in" => "pending,completed"})
-      assert_filter(result, :status, :in, "pending,completed")
+      filters = result[:filters] || []
+      assert filters == []
     end
 
     test "pre-cast list value produces :in filter (OpenApiSpex CastAndValidate path)" do
@@ -329,16 +330,6 @@ defmodule EdgeAdmin.RequestParserTest do
     test "__like produces :like filter" do
       result = RequestParser.parse(%{"name__like" => "%prod%"})
       assert_filter(result, :name, :like, "%prod%")
-    end
-
-    test "__null=true produces :empty filter" do
-      result = RequestParser.parse(%{"node_limit__null" => "true"})
-      assert_filter(result, :node_limit, :empty, true)
-    end
-
-    test "__null=false produces :not_empty filter" do
-      result = RequestParser.parse(%{"node_limit__null" => "false"})
-      assert_filter(result, :node_limit, :not_empty, true)
     end
 
     test "unknown operator suffix is silently dropped" do

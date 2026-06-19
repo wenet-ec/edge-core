@@ -26,11 +26,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
         [
           QueryParams.string_filter(:name,
             description:
-              "Filter by cluster name — exact match or wildcard (prod*, *tion, *rod*). Use names for multi-cluster IN matching."
-          ),
-          QueryParams.string_array_filter(:names,
-            description:
-              "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use name for wildcard filtering."
+              "Filter by cluster name — exact match, wildcard (prod*, *tion, *rod*), or comma-separated list for IN match (prod,staging)."
           ),
           QueryParams.uuid_array_filter(:node_ids,
             description:

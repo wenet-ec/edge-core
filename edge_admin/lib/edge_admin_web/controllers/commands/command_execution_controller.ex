@@ -25,7 +25,10 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
       QueryParams.pagination() ++
         QueryParams.sort(order_by_example: "inserted_at,status", order_directions_example: "desc,asc") ++
         [
-          QueryParams.enum_filter(:status, @status_enum, description: "Filter by execution status"),
+          QueryParams.enum_array_filter(:status, @status_enum,
+            description:
+              "Filter by execution status — comma-separated list for IN match (e.g. pending,sent). Single value also accepted."
+          ),
           QueryParams.boolean_filter(:target_all, description: "Filter by target_all flag"),
           QueryParams.int_filter(:exit_code, description: "Filter by exact exit code"),
           QueryParams.boolean_filter(:has_output,
@@ -43,11 +46,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
           ),
           QueryParams.string_filter(:cluster_name,
             description:
-              "Filter by cluster name via node's cluster — exact match or wildcard (prod*, *staging, *rod*). Use cluster_names for multi-cluster IN matching."
-          ),
-          QueryParams.string_array_filter(:cluster_names,
-            description:
-              "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use cluster_name for wildcard filtering."
+              "Filter by cluster name via node's cluster — exact match, wildcard (prod*, *staging, *rod*), or comma-separated list for IN match (prod,staging)."
           ),
           QueryParams.boolean_filter(:has_cluster,
             description: "Filter by cluster_id presence (true = cluster-wide executions, false = non-cluster-wide)"

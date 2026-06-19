@@ -323,50 +323,6 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFiltersTest do
   end
 
   # ---------------------------------------------------------------------------
-  # apply_names/2 — IN filter directly on the clusters table (first binding).
-  # Used by list_clusters where cluster is the primary binding.
-  # ---------------------------------------------------------------------------
-
-  describe "apply_names/2 (operates on first/primary cluster binding)" do
-    test ":in matches clusters by exact name membership" do
-      alpha = insert_cluster(%{name: "alpha"})
-      bravo = insert_cluster(%{name: "bravo"})
-      _charlie = insert_cluster(%{name: "charlie"})
-
-      query = ClusterFilters.apply_names(Cluster, [%{op: :in, value: ["alpha", "bravo"]}])
-
-      assert ids(query) == Enum.sort([alpha.id, bravo.id])
-    end
-
-    test ":== falls through to exact-match clause" do
-      alpha = insert_cluster(%{name: "alpha"})
-      _bravo = insert_cluster(%{name: "bravo"})
-
-      query = ClusterFilters.apply_names(Cluster, [%{op: :==, value: "alpha"}])
-
-      assert ids(query) == [alpha.id]
-    end
-
-    test "empty filters list → query unchanged (early-return clause)" do
-      a = insert_cluster()
-      b = insert_cluster()
-
-      query = ClusterFilters.apply_names(Cluster, [])
-
-      assert ids(query) == Enum.sort([a.id, b.id])
-    end
-
-    test "unrecognised filter op → query unchanged (catch-all)" do
-      a = insert_cluster()
-      _b = insert_cluster()
-
-      query = ClusterFilters.apply_names(Cluster, [%{op: :ilike, value: "prod%"}])
-
-      assert a.id in ids(query)
-    end
-  end
-
-  # ---------------------------------------------------------------------------
   # apply_node_ids_on_clusters/2 — joins nodes and returns distinct clusters
   # that contain any of the given node IDs.
   # ---------------------------------------------------------------------------

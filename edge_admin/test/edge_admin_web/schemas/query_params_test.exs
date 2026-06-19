@@ -107,6 +107,38 @@ defmodule EdgeAdminWeb.Schemas.QueryParamsTest do
     end
   end
 
+  describe "enum_array_filter/3" do
+    test "produces an array schema with enum-constrained items" do
+      {:status, opts} =
+        QueryParams.enum_array_filter(:status, ["healthy", "unhealthy", "unreachable"])
+
+      assert opts[:in] == :query
+      assert opts[:style] == :form
+      assert opts[:explode] == false
+
+      assert opts[:schema] == %Schema{
+               type: :array,
+               items: %Schema{type: :string, enum: ["healthy", "unhealthy", "unreachable"]}
+             }
+    end
+
+    test "default description names allowed values and mentions comma-separated IN match" do
+      {_, opts} = QueryParams.enum_array_filter(:status, ["pending", "completed"])
+
+      assert opts[:description] =~ "comma-separated"
+      assert opts[:description] =~ "IN"
+      assert opts[:description] =~ "pending"
+      assert opts[:description] =~ "completed"
+    end
+
+    test "description is overridable" do
+      {_, opts} =
+        QueryParams.enum_array_filter(:status, ["pending"], description: "custom desc")
+
+      assert opts[:description] == "custom desc"
+    end
+  end
+
   describe "boolean_filter/2" do
     test "produces a :boolean-typed query parameter" do
       {:has_node_limit, opts} = QueryParams.boolean_filter(:has_node_limit)

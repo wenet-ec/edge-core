@@ -13,8 +13,9 @@ defmodule EdgeAdminMcp.FlopParams do
   ## Usage
 
       build(params,
-        passthrough: [:status, :name, :cluster_name],
+        passthrough: [:name, :key],
         boolean_filters: [:has_password],
+        multi: [:cluster_name, :status],
         ranges: [:inserted_at, :updated_at, :timeout]
       )
 
@@ -43,10 +44,13 @@ defmodule EdgeAdminMcp.FlopParams do
       receives the native boolean it expects. Absent / nil values are dropped
       (no filter applied), which is the correct behaviour when the MCP UI
       dropdown is left blank.
-    * `:multi` — list of atom keys that are `{:list, :string}` in the MCP
-      schema. The list value is joined to a comma-separated string so
-      `RequestParser` picks it up as an `op: :in` filter (same wire format as
-      the REST comma-separated convention).
+    * `:multi` — list of atom keys declared as `{:list, :string}` or
+      `{:list, {:enum, values}}` in the MCP schema. The list is joined to a
+      comma-separated string so `RequestParser` picks it up via the standard
+      comma-as-IN convention. A single-element list produces an exact/wildcard
+      match; multi-element produces an IN filter. Use for ID arrays, enum
+      fields, and text fields that support multi-value filtering (e.g.
+      `cluster_name`).
     * `:ranges` — list of atom field names expanded into `<field>_gte` /
       `<field>_lte` (renamed to Flop's `<field>__gte` / `<field>__lte`).
     * `:default_page_size` — overrides the default of 20.

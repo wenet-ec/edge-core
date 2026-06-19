@@ -4,8 +4,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListClusters do
   List edge clusters with filtering, sorting, and pagination.
 
   ## Filtering
-  - `name` — exact match or wildcard (`prod*`, `*tion`, `*rod*`); use `names` for multi-cluster IN matching
-  - `names` — exact IN match on cluster names (array of strings, no wildcards)
+  - `name` — exact match, wildcard (`prod*`, `*tion`, `*rod*`), or array for IN match
   - `node_ids` — filter clusters by node membership — returns distinct clusters containing any of the given node IDs
   - `ipv4_range` — exact match or wildcard
   - `node_count_gte` / `node_count_lte` — node count range
@@ -34,8 +33,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListClusters do
   schema do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
-    field :name, :string, min_length: 1
-    field :names, {:list, :string}
+    field :name, {:list, :string}
     field :node_ids, {:list, :string}
     field :ipv4_range, :string, min_length: 1
     field :node_count_gte, :integer, min: 0
@@ -56,9 +54,9 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListClusters do
   def execute(params, frame) do
     query =
       FlopParams.build(params,
-        passthrough: [:name, :ipv4_range, :node_limit],
+        passthrough: [:ipv4_range, :node_limit],
         boolean_filters: [:has_node_limit],
-        multi: [:names, :node_ids],
+        multi: [:name, :node_ids],
         ranges: [:node_count, :node_limit, :inserted_at, :updated_at]
       )
 

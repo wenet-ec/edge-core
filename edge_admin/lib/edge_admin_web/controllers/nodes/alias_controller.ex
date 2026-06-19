@@ -30,11 +30,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
           ),
           QueryParams.string_filter(:cluster_name,
             description:
-              "Filter by cluster name — exact match or wildcard (prod*, *east, *rod*). Use cluster_names for multi-cluster IN matching."
-          ),
-          QueryParams.string_array_filter(:cluster_names,
-            description:
-              "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use cluster_name for wildcard filtering."
+              "Filter by cluster name — exact match, wildcard (prod*, *east, *rod*), or comma-separated list for IN match (prod,staging)."
           )
         ] ++
         QueryParams.datetime_range_filter(:inserted_at) ++

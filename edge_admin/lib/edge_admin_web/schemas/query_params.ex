@@ -114,7 +114,8 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
   end
 
   @doc """
-  Enum filter — restrict values to a finite list (e.g. `status: "healthy" | "unhealthy"`).
+  Enum filter — restrict to a single value from a finite list
+  (e.g. `status=healthy`).
   """
   @spec enum_filter(atom(), [String.t()], keyword()) :: {atom(), keyword()}
   def enum_filter(name, values, opts \\ []) when is_atom(name) and is_list(values) do
@@ -125,6 +126,32 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
        in: :query,
        description: description,
        schema: %Schema{type: :string, enum: values}
+     ]}
+  end
+
+  @doc """
+  Enum array filter — comma-separated list of values from a finite set
+  (e.g. `status=healthy,unhealthy`). Maps to an IN query.
+
+  OpenAPI `style: :form, explode: false` signals the comma-separated encoding.
+  Single-value usage (`status=healthy`) is also valid and maps to an exact match.
+  """
+  @spec enum_array_filter(atom(), [String.t()], keyword()) :: {atom(), keyword()}
+  def enum_array_filter(name, values, opts \\ []) when is_atom(name) and is_list(values) do
+    description =
+      Keyword.get(
+        opts,
+        :description,
+        "Filter by #{name} — comma-separated list of values (exact IN match). Allowed values: #{Enum.join(values, ", ")}"
+      )
+
+    {name,
+     [
+       in: :query,
+       description: description,
+       style: :form,
+       explode: false,
+       schema: %Schema{type: :array, items: %Schema{type: :string, enum: values}}
      ]}
   end
 

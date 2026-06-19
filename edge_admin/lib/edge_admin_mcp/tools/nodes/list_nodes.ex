@@ -44,7 +44,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
     field :cluster_name, :string, min_length: 1
     field :cluster_names, {:list, :string}
     field :version, :string, min_length: 1
-    field :self_update_enabled, :boolean
+    field :self_update_enabled, {:enum, ["true", "false"]}
     field :last_seen_at_gte, :string
     field :last_seen_at_lte, :string
     field :inserted_at_gte, :string
@@ -59,7 +59,8 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
   def execute(params, frame) do
     query =
       FlopParams.build(params,
-        passthrough: [:status, :id_type, :cluster_name, :version, :self_update_enabled],
+        passthrough: [:status, :id_type, :cluster_name, :version],
+        boolean_filters: [:self_update_enabled],
         multi: [:node_ids, :cluster_names],
         ranges: [:last_seen_at, :inserted_at, :updated_at]
       )

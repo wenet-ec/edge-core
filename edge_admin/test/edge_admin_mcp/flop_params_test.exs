@@ -223,7 +223,69 @@ defmodule EdgeAdminMcp.FlopParamsTest do
   end
 
   # ---------------------------------------------------------------------------
-  # Combined — pagination + passthrough + ranges + sort
+  # boolean_filters — {:enum, ["true", "false"]} string values cast to booleans
+  # ---------------------------------------------------------------------------
+
+  describe "build/2 — boolean_filters" do
+    test ~s(casts "true" string to boolean true) do
+      result =
+        FlopParams.build(%{has_node_limit: "true"}, boolean_filters: [:has_node_limit])
+
+      assert result["has_node_limit"] == true
+    end
+
+    test ~s(casts "false" string to boolean false) do
+      result =
+        FlopParams.build(%{has_node_limit: "false"}, boolean_filters: [:has_node_limit])
+
+      assert result["has_node_limit"] == false
+    end
+
+    test "drops nil value — no filter applied when field is absent" do
+      result =
+        FlopParams.build(%{has_node_limit: nil}, boolean_filters: [:has_node_limit])
+
+      refute Map.has_key?(result, "has_node_limit")
+    end
+
+    test "drops missing field — blank dropdown leaves no filter" do
+      result = FlopParams.build(%{}, boolean_filters: [:has_node_limit])
+
+      refute Map.has_key?(result, "has_node_limit")
+    end
+
+    test "ignores keys not declared in :boolean_filters" do
+      result =
+        FlopParams.build(%{has_node_limit: "true"}, boolean_filters: [])
+
+      refute Map.has_key?(result, "has_node_limit")
+    end
+
+    test "multiple boolean filters are each cast independently" do
+      result =
+        FlopParams.build(
+          %{has_timeout: "true", has_expires_at: "false"},
+          boolean_filters: [:has_timeout, :has_expires_at]
+        )
+
+      assert result["has_timeout"] == true
+      assert result["has_expires_at"] == false
+    end
+
+    test "only the set boolean filter is emitted when one is absent" do
+      result =
+        FlopParams.build(
+          %{has_timeout: "true"},
+          boolean_filters: [:has_timeout, :has_expires_at]
+        )
+
+      assert result["has_timeout"] == true
+      refute Map.has_key?(result, "has_expires_at")
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Combined — pagination + passthrough + boolean_filters + ranges + sort
   # ---------------------------------------------------------------------------
 
   describe "build/2 — full integration" do
@@ -233,17 +295,19 @@ defmodule EdgeAdminMcp.FlopParamsTest do
         page_size: 50,
         status: "healthy",
         name: "prod",
+        has_node_limit: "true",
         inserted_at_gte: "2025-01-01T00:00:00Z",
         inserted_at_lte: "2025-02-01T00:00:00Z",
         order_by: "inserted_at,name",
         order_directions: "desc,asc",
-        # not in passthrough — must NOT appear
+        # not in any opt list — must NOT appear
         uninvited: "leak"
       }
 
       result =
         FlopParams.build(params,
           passthrough: [:status, :name],
+          boolean_filters: [:has_node_limit],
           ranges: [:inserted_at, :updated_at]
         )
 
@@ -252,11 +316,29 @@ defmodule EdgeAdminMcp.FlopParamsTest do
                "page_size" => 50,
                "status" => "healthy",
                "name" => "prod",
+               "has_node_limit" => true,
                "inserted_at__gte" => "2025-01-01T00:00:00Z",
                "inserted_at__lte" => "2025-02-01T00:00:00Z",
                "order_by" => "inserted_at,name",
                "order_directions" => "desc,asc"
              }
+    end
+
+    test "blank boolean filter (nil) does not appear in output" do
+      params = %{
+        page: 1,
+        status: "healthy",
+        has_node_limit: nil
+      }
+
+      result =
+        FlopParams.build(params,
+          passthrough: [:status],
+          boolean_filters: [:has_node_limit]
+        )
+
+      assert result["status"] == "healthy"
+      refute Map.has_key?(result, "has_node_limit")
     end
   end
 end

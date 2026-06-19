@@ -43,7 +43,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListClusters do
     field :node_limit, :integer, min: 1
     field :node_limit_gte, :integer, min: 1
     field :node_limit_lte, :integer, min: 1
-    field :has_node_limit, :boolean
+    field :has_node_limit, {:enum, ["true", "false"]}
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string
     field :updated_at_gte, :string
@@ -56,7 +56,8 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListClusters do
   def execute(params, frame) do
     query =
       FlopParams.build(params,
-        passthrough: [:name, :ipv4_range, :node_limit, :has_node_limit],
+        passthrough: [:name, :ipv4_range, :node_limit],
+        boolean_filters: [:has_node_limit],
         multi: [:names, :node_ids],
         ranges: [:node_count, :node_limit, :inserted_at, :updated_at]
       )

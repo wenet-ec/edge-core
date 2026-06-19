@@ -45,15 +45,15 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
     field :command_ids, {:list, :string}
     field :node_ids, {:list, :string}
     field :status, {:enum, @status_enum}
-    field :target_all, :boolean
+    field :target_all, {:enum, ["true", "false"]}
     field :exit_code, :integer
     field :exit_code_gte, :integer
     field :exit_code_lte, :integer
     field :output, :string, min_length: 1
-    field :has_output, :boolean
+    field :has_output, {:enum, ["true", "false"]}
     field :cluster_name, :string, min_length: 1
     field :cluster_names, {:list, :string}
-    field :has_cluster, :boolean
+    field :has_cluster, {:enum, ["true", "false"]}
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string
     field :updated_at_gte, :string
@@ -74,13 +74,11 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
       FlopParams.build(params,
         passthrough: [
           :status,
-          :target_all,
           :exit_code,
           :output,
-          :has_output,
-          :cluster_name,
-          :has_cluster
+          :cluster_name
         ],
+        boolean_filters: [:target_all, :has_output, :has_cluster],
         multi: [:command_ids, :node_ids, :cluster_names],
         ranges: [:exit_code, :inserted_at, :updated_at, :sent_at, :completed_at, :cancelled_at]
       )

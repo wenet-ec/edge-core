@@ -42,16 +42,16 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
     field :cluster_name, :string, min_length: 1
     field :cluster_names, {:list, :string}
     field :name, :string, min_length: 1
-    field :has_name, :boolean
+    field :has_name, {:enum, ["true", "false"]}
     field :key, :string, min_length: 1
     field :uses_remaining, :integer, min: 1
     field :uses_remaining_gte, :integer, min: 1
     field :uses_remaining_lte, :integer, min: 1
-    field :is_unlimited, :boolean
-    field :is_spent, :boolean
-    field :is_expired, :boolean
-    field :is_never_used, :boolean
-    field :has_expiry, :boolean
+    field :is_unlimited, {:enum, ["true", "false"]}
+    field :is_spent, {:enum, ["true", "false"]}
+    field :is_expired, {:enum, ["true", "false"]}
+    field :is_never_used, {:enum, ["true", "false"]}
+    field :has_expiry, {:enum, ["true", "false"]}
     field :expires_at_gte, :string
     field :expires_at_lte, :string
     field :last_used_at_gte, :string
@@ -72,7 +72,9 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
           :cluster_name,
           :name,
           :key,
-          :uses_remaining,
+          :uses_remaining
+        ],
+        boolean_filters: [
           :is_unlimited,
           :is_spent,
           :is_expired,

@@ -13,11 +13,14 @@ defmodule EdgeAdminMcp.FlopParams do
   ## Usage
 
       build(params,
-        passthrough: [:status, :name, :cluster_name, :has_password],
+        passthrough: [:status, :name, :cluster_name],
+        boolean_filters: [:has_password],
         ranges: [:inserted_at, :updated_at, :timeout]
       )
 
   The `:passthrough` keys are passed through unchanged (atom → string key).
+  The `:boolean_filters` keys are declared as `{:enum, ["true", "false"]}` in
+  the MCP schema; the string values are cast to booleans before passing through.
   The `:ranges` keys expand to two filters each — `<key>_gte` → `<key>__gte`,
   `<key>_lte` → `<key>__lte`. Nil values are dropped.
 
@@ -34,6 +37,12 @@ defmodule EdgeAdminMcp.FlopParams do
   ## Options
 
     * `:passthrough` — list of atom keys copied as-is to string keys.
+    * `:boolean_filters` — list of atom keys declared as `{:enum, ["true",
+      "false"]}` in the MCP schema. The string values `"true"` / `"false"` are
+      cast to actual booleans before being passed through, so `RequestParser`
+      receives the native boolean it expects. Absent / nil values are dropped
+      (no filter applied), which is the correct behaviour when the MCP UI
+      dropdown is left blank.
     * `:multi` — list of atom keys that are `{:list, :string}` in the MCP
       schema. The list value is joined to a comma-separated string so
       `RequestParser` picks it up as an `op: :in` filter (same wire format as
@@ -45,6 +54,7 @@ defmodule EdgeAdminMcp.FlopParams do
   @spec build(map() | keyword(), keyword()) :: map()
   def build(params, opts \\ []) do
     passthrough = Keyword.get(opts, :passthrough, [])
+    boolean_filters = Keyword.get(opts, :boolean_filters, [])
     multi = Keyword.get(opts, :multi, [])
     ranges = Keyword.get(opts, :ranges, [])
     default_page_size = Keyword.get(opts, :default_page_size, @default_page_size)
@@ -56,6 +66,7 @@ defmodule EdgeAdminMcp.FlopParams do
 
     base
     |> add_passthrough(params, passthrough)
+    |> add_boolean_filters(params, boolean_filters)
     |> add_multi(params, multi)
     |> add_ranges(params, ranges)
     |> add_sort(params)
@@ -64,6 +75,16 @@ defmodule EdgeAdminMcp.FlopParams do
   defp add_passthrough(query, params, fields) do
     Enum.reduce(fields, query, fn field, acc ->
       put_if(acc, Atom.to_string(field), params[field])
+    end)
+  end
+
+  defp add_boolean_filters(query, params, fields) do
+    Enum.reduce(fields, query, fn field, acc ->
+      case params[field] do
+        "true" -> Map.put(acc, Atom.to_string(field), true)
+        "false" -> Map.put(acc, Atom.to_string(field), false)
+        _ -> acc
+      end
     end)
   end
 

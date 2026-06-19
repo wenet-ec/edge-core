@@ -34,7 +34,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
     field :page_size, :integer, default: 20, min: 1
     field :username, :string, min_length: 1
     field :node_ids, {:list, :string}
-    field :has_password, :boolean
+    field :has_password, {:enum, ["true", "false"]}
     field :cluster_name, :string, min_length: 1
     field :cluster_names, {:list, :string}
     field :key_name, :string, min_length: 1
@@ -51,7 +51,8 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
   def execute(params, frame) do
     query =
       FlopParams.build(params,
-        passthrough: [:username, :has_password, :cluster_name, :key_name],
+        passthrough: [:username, :cluster_name, :key_name],
+        boolean_filters: [:has_password],
         multi: [:node_ids, :cluster_names, :key_names],
         ranges: [:inserted_at, :updated_at]
       )

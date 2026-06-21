@@ -78,7 +78,7 @@ defmodule EdgeAdmin.Mixfile do
     ]
   end
 
-  # cowlib 2.16.1 (transitive via cowboy) has GHSA-g2wm-735q-3f56 — low-severity
+  # cowlib 2.17.1 (transitive via cowboy) has GHSA-g2wm-735q-3f56 — low-severity
   # cookie-encoder issue with no patched version published upstream. We don't
   # use cow_cookie:cookie/1, so this is a low-risk ignore. Re-check when
   # cowlib publishes a fix and drop this list.
@@ -122,7 +122,7 @@ defmodule EdgeAdmin.Mixfile do
       {:sentry, "~> 13.2"},
 
       # Telemetry
-      {:prom_ex, "~> 1.11"},
+      {:prom_ex, "~> 1.12"},
       {:phoenix_live_dashboard, "~> 0.8"},
       {:ecto_psql_extras, "~> 0.8"},
       {:ecto_sqlite3_extras, "~> 1.2"},
@@ -168,7 +168,7 @@ defmodule EdgeAdmin.Mixfile do
       # compile and honors BUILD_WITHOUT_QUIC=1 (set in the Dockerfiles). Hex
       # flattens dynamic deps at publish time, so the Hex package always lists
       # `quicer` as non-optional even though the script would exclude it locally.
-      {:emqtt, github: "emqx/emqtt", tag: "1.15.2"},
+      {:emqtt, github: "emqx/emqtt", tag: "1.15.3"},
       {:ex_aws, "~> 2.7"},
       {:ex_aws_sns, "~> 2.3"},
       {:sweet_xml, "~> 0.7"},

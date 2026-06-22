@@ -6,12 +6,10 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshPublicKeys do
   ## Filtering
   - `ssh_username_ids` — filter by SSH username UUIDs (array, exact IN match)
   - `node_ids` — filter by node UUIDs (array, via username's node)
-  - `username` — filter by username — exact match or wildcard; use `usernames` for multi-username IN matching
-  - `usernames` — exact IN match on SSH usernames (array of strings, no wildcards)
-  - `key_name` — filter by key name (exact match or wildcard)
+  - `username` — filter by username — exact match, wildcard, or array for IN match
+  - `key_name` — filter by key name — exact match, wildcard, or array for IN match
   - `public_key` — exact key value match
-  - `cluster_name` — filter by node's cluster — exact match or wildcard; use `cluster_names` for multi-cluster IN matching
-  - `cluster_names` — exact IN match on cluster names (array of strings, no wildcards)
+  - `cluster_name` — filter by node's cluster — exact match, wildcard, or array for IN match
   - `inserted_at_gte` / `inserted_at_lte` — creation datetime range (ISO8601)
   - `updated_at_gte` / `updated_at_lte` — last-updated datetime range (ISO8601)
 
@@ -35,12 +33,10 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshPublicKeys do
     field :page_size, :integer, default: 20, min: 1
     field :ssh_username_ids, {:list, :string}
     field :node_ids, {:list, :string}
-    field :username, :string, min_length: 1
-    field :usernames, {:list, :string}
-    field :key_name, :string, min_length: 1
+    field :username, {:list, :string}
+    field :key_name, {:list, :string}
     field :public_key, :string, min_length: 1
-    field :cluster_name, :string, min_length: 1
-    field :cluster_names, {:list, :string}
+    field :cluster_name, {:list, :string}
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string
     field :updated_at_gte, :string
@@ -53,8 +49,8 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshPublicKeys do
   def execute(params, frame) do
     query =
       FlopParams.build(params,
-        passthrough: [:username, :key_name, :public_key, :cluster_name],
-        multi: [:ssh_username_ids, :node_ids, :usernames, :cluster_names],
+        passthrough: [:public_key],
+        multi: [:ssh_username_ids, :node_ids, :username, :key_name, :cluster_name],
         ranges: [:inserted_at, :updated_at]
       )
 

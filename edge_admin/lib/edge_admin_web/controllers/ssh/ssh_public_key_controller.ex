@@ -24,7 +24,8 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
         QueryParams.sort(order_by_example: "inserted_at,key_name", order_directions_example: "desc,asc") ++
         [
           QueryParams.string_filter(:key_name,
-            description: "Filter by key name (exact match or wildcard: my-key*, *prod, etc.)"
+            description:
+              "Filter by key name — exact match, wildcard (my-key*, *prod, *laptop*), or comma-separated exact IN match (laptop,server-key)."
           ),
           QueryParams.string_filter(:public_key,
             description: "Filter by public key content (useful for searching email comments: *@example.com)"
@@ -37,19 +38,11 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
           ),
           QueryParams.string_filter(:username,
             description:
-              "Filter by SSH username — exact match or wildcard (deploy*, *admin, etc.). Use usernames for multi-username IN matching."
-          ),
-          QueryParams.string_array_filter(:usernames,
-            description:
-              "Filter by SSH usernames — comma-separated list for exact IN match (e.g. deploy,admin). No wildcards; use username for wildcard filtering."
+              "Filter by SSH username — exact match, wildcard (deploy*, *admin, *ops*), or comma-separated exact IN match (deploy,admin)."
           ),
           QueryParams.string_filter(:cluster_name,
             description:
-              "Filter by cluster name via node's cluster — exact match or wildcard (prod*, *east, *rod*). Use cluster_names for multi-cluster IN matching."
-          ),
-          QueryParams.string_array_filter(:cluster_names,
-            description:
-              "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use cluster_name for wildcard filtering."
+              "Filter by cluster name via node's cluster — exact match, wildcard (prod*, *east, *rod*), or comma-separated exact IN match (prod,staging)."
           )
         ] ++
         QueryParams.datetime_range_filter(:inserted_at) ++

@@ -181,7 +181,7 @@ defmodule EdgeAdminWeb.Schemas.QueryParamsTest do
 
   describe "string_array_filter/2" do
     test "produces an array-of-string schema with form/no-explode encoding" do
-      {:cluster_names, opts} = QueryParams.string_array_filter(:cluster_names)
+      {:tag_names, opts} = QueryParams.string_array_filter(:tag_names)
 
       assert opts[:in] == :query
       assert opts[:style] == :form
@@ -190,14 +190,14 @@ defmodule EdgeAdminWeb.Schemas.QueryParamsTest do
     end
 
     test "default description mentions comma-separated and IN match" do
-      {_, opts} = QueryParams.string_array_filter(:cluster_names)
+      {_, opts} = QueryParams.string_array_filter(:tag_names)
 
       assert opts[:description] =~ "comma-separated"
       assert opts[:description] =~ "IN"
     end
 
     test "description is overridable" do
-      {_, opts} = QueryParams.string_array_filter(:cluster_names, description: "custom desc")
+      {_, opts} = QueryParams.string_array_filter(:tag_names, description: "custom desc")
 
       assert opts[:description] == "custom desc"
     end

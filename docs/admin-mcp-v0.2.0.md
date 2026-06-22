@@ -11,6 +11,7 @@ For interactive browsing of the live surface, run [`@modelcontextprotocol/inspec
 ## Reading this catalog
 
 - **Required parameters** are listed before optional ones; the parameter name links to the tool's input contract.
+- **List tools** all accept `page`, `page_size`, `order_by`, and `order_directions` unless noted otherwise.
 - **Annotations** in the tool table use MCP-standard hints:
   - 🔍 `readOnlyHint` — does not mutate state
   - ⚠️ `destructiveHint` — irreversible or fleet-affecting
@@ -19,6 +20,16 @@ For interactive browsing of the live surface, run [`@modelcontextprotocol/inspec
 - Write tools whose REST counterpart is gated by degraded-mode are also blocked here — see [§ Operations blocked in degraded mode](#operations-blocked-in-degraded-mode) below.
 
 One MCP-only tool (`check_admin_health`) has no REST equivalent; every other tool maps 1:1 to a REST endpoint documented in [`admin-openapi-v0.2.0.json`](admin-openapi-v0.2.0.json).
+
+### Filter value conventions
+
+MCP list tools use typed parameters rather than REST query strings:
+
+- **Array filters** are passed as JSON arrays. One value means exact or wildcard match for wildcard-capable text fields; multiple values mean exact `IN` matching. Examples: `cluster_name: ["prod*"]`, `cluster_name: ["prod", "staging"]`, `status: ["healthy", "unhealthy"]`.
+- **Wildcard text filters** use `*` inside a single string value: prefix (`prod*`), suffix (`*east`), or contains (`*prod*`) depending on the field.
+- **Boolean filters** are enum strings: `"true"` or `"false"`.
+- **Range filters** use `_gte` / `_lte` suffixes, for example `inserted_at_gte`, `timeout_lte`.
+- Removed REST operators such as `field__null` and `field__in` are not MCP parameters. Use the explicit `has_*` / `is_*` booleans and array filters instead.
 
 ---
 
@@ -45,7 +56,7 @@ Logical groups that map 1:1 to Netmaker WireGuard networks. One full mesh per cl
 
 | Tool | Title | Hints | Description |
 |---|---|---|---|
-| `list_clusters` | List Clusters | 🔍 | Filter/sort/paginate. Filters: `name`, `ipv4_range`, `node_count_gte/lte`, `node_limit`, `node_limit_gte/lte`, `has_node_limit`, `inserted_at_*`, `updated_at_*`. |
+| `list_clusters` | List Clusters | 🔍 | Filter/sort/paginate. Filters: `name` (array; exact/wildcard/IN), `node_ids` (array), `ipv4_range`, `node_count_gte/lte`, `node_limit`, `node_limit_gte/lte`, `has_node_limit`, `inserted_at_*`, `updated_at_*`. |
 | `get_cluster` | Get Cluster | 🔍 | Required: `cluster_name`. |
 | `create_cluster` | Create Cluster | 🌐 | Required: `name` (lowercase alphanumeric + hyphens, ≤24 chars, `default` reserved). Optional: `ipv4_range` (CIDR — auto-assigned if omitted), `node_limit`. |
 | `update_cluster` | Update Cluster | ♻️ | Required: `cluster_name`. Optional: `node_limit` (pass `null` to remove the limit). |
@@ -59,7 +70,7 @@ Edge machines running the agent. Addressed only by VPN hostname.
 
 | Tool | Title | Hints | Description |
 |---|---|---|---|
-| `list_nodes` | List Nodes | 🔍 | Filter/sort/paginate. Filters: `status` (`healthy`/`unhealthy`/`unreachable`), `id_type` (`persistent`/`random`), `cluster_name`, `version`, `self_update_enabled`, `last_seen_at_*`, `inserted_at_*`, `updated_at_*`. |
+| `list_nodes` | List Nodes | 🔍 | Filter/sort/paginate. Filters: `node_ids` (array), `status` (array: `healthy`/`unhealthy`/`unreachable`), `id_type` (array: `persistent`/`random`), `cluster_name` (array; exact/wildcard/IN), `version`, `self_update_enabled`, `last_seen_at_*`, `inserted_at_*`, `updated_at_*`. |
 | `get_node` | Get Node | 🔍 | Required: `node_id`. |
 | `delete_node` | Delete Node | ⚠️ 🌐 | Required: `node_id`. Removes from VPN mesh — agent must re-enroll. |
 | `change_node_cluster` | Move Node to Cluster | ⚠️ 🌐 | Required: `node_id`, `cluster_name`. Best-effort, not transactional — reconciliation worker heals inconsistencies. |
@@ -72,7 +83,7 @@ Friendly DNS names for nodes. Resolved as `<alias>.<cluster>.<vpn_domain>`.
 
 | Tool | Title | Hints | Description |
 |---|---|---|---|
-| `list_aliases` | List Aliases | 🔍 | Filter/sort/paginate. Filters: `name`, `node_id`, `cluster_name`, `inserted_at_*`, `updated_at_*`. |
+| `list_aliases` | List Aliases | 🔍 | Filter/sort/paginate. Filters: `name`, `node_ids` (array), `cluster_name` (array; exact/wildcard/IN), `inserted_at_*`, `updated_at_*`. |
 | `get_alias` | Get Alias | 🔍 | Required: `alias_id`. |
 | `create_alias` | Create Alias | 🌐 | Required: `node_id`, `name` (lowercase alphanumeric + hyphens, 1–63 chars). |
 | `delete_alias` | Delete Alias | ⚠️ 🌐 | Required: `alias_id`. |
@@ -85,7 +96,7 @@ Tokens agents use to join a cluster's VPN mesh.
 
 | Tool | Title | Hints | Description |
 |---|---|---|---|
-| `list_enrollment_keys` | List Enrollment Keys | 🔍 | Filter/sort/paginate. Filters: `cluster_name`, `name`, `key`, `uses_remaining*`, `is_unlimited`, `is_spent`, `is_expired`, `is_never_used`, `has_expiry`, `has_name`, `expires_at_*`, `last_used_at_*`, `inserted_at_*`, `updated_at_*`. |
+| `list_enrollment_keys` | List Enrollment Keys | 🔍 | Filter/sort/paginate. Filters: `cluster_name` (array; exact/wildcard/IN), `name`, `has_name`, `key`, `uses_remaining`, `uses_remaining_gte/lte`, `is_unlimited`, `is_spent`, `is_expired`, `is_never_used`, `has_expiry`, `expires_at_*`, `last_used_at_*`, `inserted_at_*`, `updated_at_*`. |
 | `get_enrollment_key` | Get Enrollment Key | 🔍 | Required: `enrollment_key_id`. |
 | `create_enrollment_key` | Create Enrollment Key | | Required: `cluster_name`. Optional: `name` (label), `uses_remaining` (default 1), `expires_at` (ISO8601). |
 | `update_enrollment_key` | Update Enrollment Key | ♻️ | Required: `enrollment_key_id`. Optional: `name`, `uses_remaining`, `expires_at`. Pass `null` on any field to clear it (unlimited / no expiry / no label). |
@@ -116,7 +127,7 @@ Both `nodes` and `clusters` forms accept optional `node_filters` / `cluster_filt
 
 | Tool | Title | Hints | Description |
 |---|---|---|---|
-| `list_command_executions` | List Command Executions | 🔍 | Filter/sort/paginate. Filters: `command_id`, `node_id`, `status` (`pending`/`sent`/`completed`/`cancelled`/`expired`), `target_all`, `exit_code`, `exit_code_gte/lte`, `output` (wildcard text search), `has_output`, `cluster_name`, `has_cluster`, `inserted_at_*`, `updated_at_*`, `sent_at_*`, `completed_at_*`, `cancelled_at_*`. |
+| `list_command_executions` | List Command Executions | 🔍 | Filter/sort/paginate. Filters: `command_ids` (array), `node_ids` (array), `status` (array: `pending`/`sent`/`completed`/`cancelled`/`expired`), `target_all`, `exit_code`, `exit_code_gte/lte`, `output` (wildcard text search), `has_output`, `cluster_name` (array; exact/wildcard/IN), `has_cluster`, `inserted_at_*`, `updated_at_*`, `sent_at_*`, `completed_at_*`, `cancelled_at_*`. |
 | `get_command_execution` | Get Command Execution | 🔍 | Required: `execution_id`. Returns status, output, exit code, timestamps. |
 | `cancel_command_execution` | Cancel Command Execution | ⚠️ | Required: `execution_id`. `pending` → cancelled immediately. `sent` → cancellation forwarded to agent (best-effort). Terminal statuses return 409. |
 | `delete_command_execution` | Delete Command Execution | ⚠️ | Required: `execution_id`. Only terminal executions can be deleted. |
@@ -131,7 +142,7 @@ Centralised SSH credentials. The agent's embedded SSH server (`:40022`) verifies
 
 | Tool | Title | Hints | Description |
 |---|---|---|---|
-| `list_ssh_usernames` | List SSH Usernames | 🔍 | Filter/sort/paginate. Filters: `username`, `node_id`, `has_password`, `cluster_name`, `inserted_at_*`, `updated_at_*`. |
+| `list_ssh_usernames` | List SSH Usernames | 🔍 | Filter/sort/paginate. Filters: `username` (array; exact/wildcard/IN), `node_ids` (array), `has_password`, `cluster_name` (array; exact/wildcard/IN), `key_name` (array; exact/wildcard/IN), `inserted_at_*`, `updated_at_*`. |
 | `get_ssh_username` | Get SSH Username | 🔍 | Required: `ssh_username_id`. |
 | `create_ssh_username` | Create SSH Username | | Required: `node_id`, `username` (3–32 chars, starts with letter or `_`, lowercase + digits + hyphens + underscores). Optional: `password` (12–128 chars, Argon2-hashed at rest), `public_keys` (list of `%{key_name, public_key}`). |
 | `delete_ssh_username` | Delete SSH Username | ⚠️ | Required: `ssh_username_id`. Deletes all associated public keys. |
@@ -144,7 +155,7 @@ Authorized keys attached to a username.
 
 | Tool | Title | Hints | Description |
 |---|---|---|---|
-| `list_ssh_public_keys` | List SSH Public Keys | 🔍 | Filter/sort/paginate. Filters: `ssh_username_id`, `node_id`, `username`, `key_name`, `public_key`, `cluster_name`, `inserted_at_*`, `updated_at_*`. |
+| `list_ssh_public_keys` | List SSH Public Keys | 🔍 | Filter/sort/paginate. Filters: `ssh_username_ids` (array), `node_ids` (array), `username` (array; exact/wildcard/IN), `key_name` (array; exact/wildcard/IN), `public_key`, `cluster_name` (array; exact/wildcard/IN), `inserted_at_*`, `updated_at_*`. |
 | `get_ssh_public_key` | Get SSH Public Key | 🔍 | Required: `ssh_public_key_id`. |
 | `create_ssh_public_key` | Create SSH Public Key | | Required: `ssh_username_id`, `public_key` (OpenSSH format: `ssh-ed25519`, `ecdsa-sha2-nistp256/384/521`, `ssh-rsa`), `key_name` (1–255 chars, unique within the username). |
 | `delete_ssh_public_key` | Delete SSH Public Key | ⚠️ | Required: `ssh_public_key_id`. |
@@ -157,7 +168,7 @@ Managed agent upgrades across the fleet.
 
 | Tool | Title | Hints | Description |
 |---|---|---|---|
-| `list_self_update_requests` | List Self-Update Requests | 🔍 | Filter/sort/paginate. Filters: `status` (`pending`/`processing`/`completed`), `inserted_at_*`, `updated_at_*`. |
+| `list_self_update_requests` | List Self-Update Requests | 🔍 | Filter/sort/paginate. Filters: `status` (array: `pending`/`processing`/`completed`), `inserted_at_*`, `updated_at_*`. |
 | `get_self_update_request` | Get Self-Update Request | 🔍 | Required: `request_id`. Watch `status` and `summary` (`%{total, triggered, failed}`). |
 | `create_self_update_request` | Create Self-Update Request | ⚠️ | Required: `targeting` (same shape as `create_command`). Only healthy nodes with `self_update_enabled=true` are updated. No cancel — durable once triggered. |
 | `delete_self_update_request` | Delete Self-Update Request | ⚠️ | Required: `request_id`. Only `completed` requests can be deleted. |

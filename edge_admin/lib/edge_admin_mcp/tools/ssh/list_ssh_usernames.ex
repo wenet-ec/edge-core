@@ -4,13 +4,11 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
   List SSH usernames with filtering, sorting, and pagination.
 
   ## Filtering
-  - `username` — exact match or wildcard (`admin*`, `*user`)
+  - `username` — exact match, wildcard (`admin*`, `*user`), or array for IN match
   - `node_ids` — exact IN match on node IDs (array of UUIDs)
   - `has_password` — true: usernames with a password set; false: without
-  - `cluster_name` — filter by node's cluster — exact match or wildcard; use `cluster_names` for multi-cluster IN matching
-  - `cluster_names` — exact IN match on cluster names (array of strings, no wildcards)
-  - `key_name` — filter by associated public key name — exact match or wildcard; returns usernames with at least one matching key; use `key_names` for multi-key IN matching
-  - `key_names` — exact IN match on associated public key names (array of strings, no wildcards)
+  - `cluster_name` — filter by node's cluster — exact match, wildcard, or array for IN match
+  - `key_name` — filter by associated public key name — exact match, wildcard, or array for IN match
   - `inserted_at_gte` / `inserted_at_lte` — creation datetime range (ISO8601)
   - `updated_at_gte` / `updated_at_lte` — last-updated datetime range (ISO8601)
 
@@ -32,13 +30,11 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
   schema do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
-    field :username, :string, min_length: 1
+    field :username, {:list, :string}
     field :node_ids, {:list, :string}
     field :has_password, {:enum, ["true", "false"]}
-    field :cluster_name, :string, min_length: 1
-    field :cluster_names, {:list, :string}
-    field :key_name, :string, min_length: 1
-    field :key_names, {:list, :string}
+    field :cluster_name, {:list, :string}
+    field :key_name, {:list, :string}
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string
     field :updated_at_gte, :string
@@ -51,9 +47,8 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
   def execute(params, frame) do
     query =
       FlopParams.build(params,
-        passthrough: [:username, :cluster_name, :key_name],
         boolean_filters: [:has_password],
-        multi: [:node_ids, :cluster_names, :key_names],
+        multi: [:username, :node_ids, :cluster_name, :key_name],
         ranges: [:inserted_at, :updated_at]
       )
 

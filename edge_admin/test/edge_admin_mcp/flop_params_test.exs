@@ -183,9 +183,9 @@ defmodule EdgeAdminMcp.FlopParamsTest do
     end
 
     test "single-element list produces a plain string (no trailing comma)" do
-      result = FlopParams.build(%{cluster_names: ["prod"]}, multi: [:cluster_names])
+      result = FlopParams.build(%{cluster_name: ["prod"]}, multi: [:cluster_name])
 
-      assert result["cluster_names"] == "prod"
+      assert result["cluster_name"] == "prod"
     end
 
     test "nil value is dropped (not in params)" do
@@ -209,12 +209,12 @@ defmodule EdgeAdminMcp.FlopParamsTest do
     test "multiple multi fields are each handled independently" do
       result =
         FlopParams.build(
-          %{node_ids: ["a", "b"], cluster_names: ["prod", "staging"]},
-          multi: [:node_ids, :cluster_names]
+          %{node_ids: ["a", "b"], cluster_name: ["prod", "staging"]},
+          multi: [:node_ids, :cluster_name]
         )
 
       assert result["node_ids"] == "a,b"
-      assert result["cluster_names"] == "prod,staging"
+      assert result["cluster_name"] == "prod,staging"
     end
 
     test "keys not in :multi are not included even if the value is a list" do

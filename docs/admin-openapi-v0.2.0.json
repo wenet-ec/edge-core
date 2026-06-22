@@ -6597,7 +6597,7 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by username (exact match or wildcard: root*, *admin, etc.)",
+            "description": "Filter by username — exact match, wildcard (root*, *admin, *deploy*), or comma-separated exact IN match (deploy,admin).",
             "in": "query",
             "name": "username",
             "required": false,
@@ -6623,36 +6623,18 @@
             "schema": { "type": "boolean" }
           },
           {
-            "description": "Filter by cluster name via node's cluster — exact match or wildcard (prod*, *east, *rod*). Use cluster_names for multi-cluster IN matching.",
+            "description": "Filter by cluster name via node's cluster — exact match, wildcard (prod*, *east, *rod*), or comma-separated exact IN match (prod,staging).",
             "in": "query",
             "name": "cluster_name",
             "required": false,
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use cluster_name for wildcard filtering.",
-            "explode": false,
-            "in": "query",
-            "name": "cluster_names",
-            "required": false,
-            "schema": { "items": { "type": "string" }, "type": "array" },
-            "style": "form"
-          },
-          {
-            "description": "Filter by associated public key name — exact match or wildcard (laptop*, *prod). Returns usernames that have at least one matching key. Use key_names for multi-key IN matching.",
+            "description": "Filter by associated public key name — exact match, wildcard (laptop*, *prod), or comma-separated exact IN match (laptop,server-key). Returns usernames that have at least one matching key.",
             "in": "query",
             "name": "key_name",
             "required": false,
             "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by associated public key names — comma-separated list for exact IN match (e.g. laptop,server-key). No wildcards; use key_name for wildcard filtering.",
-            "explode": false,
-            "in": "query",
-            "name": "key_names",
-            "required": false,
-            "schema": { "items": { "type": "string" }, "type": "array" },
-            "style": "form"
           },
           {
             "description": "Filter records where inserted_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
@@ -6922,7 +6904,7 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by key name (exact match or wildcard: my-key*, *prod, etc.)",
+            "description": "Filter by key name — exact match, wildcard (my-key*, *prod, *laptop*), or comma-separated exact IN match (laptop,server-key).",
             "in": "query",
             "name": "key_name",
             "required": false,
@@ -6960,36 +6942,18 @@
             "style": "form"
           },
           {
-            "description": "Filter by SSH username — exact match or wildcard (deploy*, *admin, etc.). Use usernames for multi-username IN matching.",
+            "description": "Filter by SSH username — exact match, wildcard (deploy*, *admin, *ops*), or comma-separated exact IN match (deploy,admin).",
             "in": "query",
             "name": "username",
             "required": false,
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by SSH usernames — comma-separated list for exact IN match (e.g. deploy,admin). No wildcards; use username for wildcard filtering.",
-            "explode": false,
-            "in": "query",
-            "name": "usernames",
-            "required": false,
-            "schema": { "items": { "type": "string" }, "type": "array" },
-            "style": "form"
-          },
-          {
-            "description": "Filter by cluster name via node's cluster — exact match or wildcard (prod*, *east, *rod*). Use cluster_names for multi-cluster IN matching.",
+            "description": "Filter by cluster name via node's cluster — exact match, wildcard (prod*, *east, *rod*), or comma-separated exact IN match (prod,staging).",
             "in": "query",
             "name": "cluster_name",
             "required": false,
             "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by cluster names — comma-separated list for exact IN match (e.g. prod,staging). No wildcards; use cluster_name for wildcard filtering.",
-            "explode": false,
-            "in": "query",
-            "name": "cluster_names",
-            "required": false,
-            "schema": { "items": { "type": "string" }, "type": "array" },
-            "style": "form"
           },
           {
             "description": "Filter records where inserted_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",

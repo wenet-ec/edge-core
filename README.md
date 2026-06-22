@@ -173,6 +173,7 @@ Once an admin is up, the day-to-day surface — Swagger UI, MCP, proxy servers, 
 
 Other useful pointers:
 
+- REST API reference: [`docs/openapi.md`](https://github.com/wenet-ec/edge-core/blob/main/docs/openapi.md) — lightweight index plus links to the static OpenAPI spec and live `/swaggerui` / `/redoc`
 - Configuration reference: `.env.example` in [`examples/lite/`](https://github.com/wenet-ec/edge-core/tree/main/examples/lite) or [`examples/standard/`](https://github.com/wenet-ec/edge-core/tree/main/examples/standard), and the full annotated env files in [`deploy/production/.envs/`](https://github.com/wenet-ec/edge-core/tree/main/deploy/production/.envs)
 - Grafana dashboards: [`edge_admin/priv/grafana_dashboards/`](https://github.com/wenet-ec/edge-core/tree/main/edge_admin/priv/grafana_dashboards)
 - Event catalog: `/asyncdoc` on a running admin, or [`docs/admin-asyncapi-v0.2.0.md`](https://github.com/wenet-ec/edge-core/blob/main/docs/admin-asyncapi-v0.2.0.md)

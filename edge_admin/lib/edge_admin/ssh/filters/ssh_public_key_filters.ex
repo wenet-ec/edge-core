@@ -49,7 +49,7 @@ defmodule EdgeAdmin.Ssh.Filters.SshPublicKeyFilters do
 
   @doc """
   Applies `username` filter via the joined ssh_username binding (`u.username`).
-  Supports exact match, ilike wildcard, and exact IN (`usernames`).
+  Supports exact match, ilike wildcard, and exact IN.
   """
   def apply_username(query, []), do: query
 

@@ -226,10 +226,8 @@ defmodule EdgeAdmin.Ssh do
   - `username` - Text search with wildcard support
   - `node_ids` - Exact IN match on node IDs (comma-separated on REST, array on MCP)
   - `has_password` - Boolean (filters by password_hash presence)
-  - `cluster_name` - Text search with wildcard support (requires join through node)
-  - `cluster_names` - Exact IN match on cluster names (comma-separated on REST, array on MCP)
-  - `key_name` - Text search with wildcard support on associated public key names (joins ssh_public_keys)
-  - `key_names` - Exact IN match on associated public key names (comma-separated on REST, array on MCP)
+  - `cluster_name` - Exact match, wildcard, or IN match (requires join through node)
+  - `key_name` - Exact match, wildcard, or IN match on associated public key names (joins ssh_public_keys)
   - `inserted_at__gte/lte` - Date range filter
   - `updated_at__gte/lte` - Date range filter
 
@@ -253,10 +251,8 @@ defmodule EdgeAdmin.Ssh do
       base_query
       |> SshUsernameFilters.apply_has_password(custom.has_password)
       |> SshUsernameFilters.apply_cluster_name(custom.cluster_name)
-      |> SshUsernameFilters.apply_cluster_name(custom.cluster_names)
       |> SshUsernameFilters.apply_node_ids(custom.node_ids)
       |> SshUsernameFilters.apply_key_name(custom.key_name)
-      |> SshUsernameFilters.apply_key_name(custom.key_names)
 
     query =
       Enum.reduce(ilike_filters, query, fn %{field: field, value: value}, acc ->
@@ -273,7 +269,7 @@ defmodule EdgeAdmin.Ssh do
   end
 
   defp split_username_filters(flop_params) do
-    custom_fields = [:has_password, :cluster_name, :cluster_names, :node_ids, :key_name, :key_names]
+    custom_fields = [:has_password, :cluster_name, :node_ids, :key_name]
 
     {custom_filters, rest} =
       Enum.split_with(flop_params[:filters] || [], fn f -> f.field in custom_fields end)
@@ -365,10 +361,8 @@ defmodule EdgeAdmin.Ssh do
   - `public_key` - Text search with wildcard support (useful for searching email comments)
   - `ssh_username_ids` - Exact IN match on SSH username IDs (comma-separated on REST, array on MCP)
   - `node_ids` - Exact IN match on node IDs (requires join through ssh_username)
-  - `username` - Text search with wildcard support (requires join through ssh_username)
-  - `usernames` - Exact IN match on SSH usernames (comma-separated on REST, array on MCP)
-  - `cluster_name` - Text search with wildcard support (requires join through ssh_username → node)
-  - `cluster_names` - Exact IN match on cluster names (comma-separated on REST, array on MCP)
+  - `username` - Exact match, wildcard, or IN match (requires join through ssh_username)
+  - `cluster_name` - Exact match, wildcard, or IN match (requires join through ssh_username → node)
   - `inserted_at__gte/lte` - Date range filter
   - `updated_at__gte/lte` - Date range filter
 
@@ -393,9 +387,7 @@ defmodule EdgeAdmin.Ssh do
       |> SshPublicKeyFilters.apply_ssh_username_ids(custom.ssh_username_ids)
       |> SshPublicKeyFilters.apply_node_id(custom.node_ids)
       |> SshPublicKeyFilters.apply_username(custom.username)
-      |> SshPublicKeyFilters.apply_username(custom.usernames)
       |> SshPublicKeyFilters.apply_cluster_name(custom.cluster_name)
-      |> SshPublicKeyFilters.apply_cluster_name(custom.cluster_names)
 
     query =
       Enum.reduce(ilike_filters, query, fn %{field: field, value: value}, acc ->
@@ -412,7 +404,7 @@ defmodule EdgeAdmin.Ssh do
   end
 
   defp split_public_key_filters(flop_params) do
-    custom_fields = [:ssh_username_ids, :node_ids, :username, :usernames, :cluster_name, :cluster_names]
+    custom_fields = [:ssh_username_ids, :node_ids, :username, :cluster_name]
 
     {custom_filters, rest} =
       Enum.split_with(flop_params[:filters] || [], fn f -> f.field in custom_fields end)

@@ -239,44 +239,49 @@ defmodule EdgeAdmin.RequestParserTest do
   end
 
   # ---------------------------------------------------------------------------
-  # parse/1 — IN operator (comma-separated values)
+  # parse/1 — IN operator (__in suffix)
   # ---------------------------------------------------------------------------
 
   describe "parse/1 — IN filters" do
-    test "comma-separated value produces :in filter with list" do
-      result = RequestParser.parse(%{"status" => "pending,completed"})
+    test "field__in with comma-separated value produces :in filter with list" do
+      result = RequestParser.parse(%{"status__in" => "pending,completed"})
       assert_filter(result, :status, :in, ["pending", "completed"])
     end
 
     test "values are trimmed of whitespace" do
-      result = RequestParser.parse(%{"status" => "pending, completed"})
+      result = RequestParser.parse(%{"status__in" => "pending, completed"})
       assert_filter(result, :status, :in, ["pending", "completed"])
     end
 
-    test "__in suffix is an unknown operator and is silently dropped" do
-      result = RequestParser.parse(%{"status__in" => "pending,completed"})
+    test "bare comma-separated value is treated as exact match (not IN)" do
+      result = RequestParser.parse(%{"status" => "pending,completed"})
+      assert_filter(result, :status, :==, "pending,completed")
+    end
+
+    test "field__in with unknown field is silently dropped" do
+      result = RequestParser.parse(%{"totally_nonexistent_xyz_field__in" => "a,b"})
       filters = result[:filters] || []
       assert filters == []
     end
 
     test "pre-cast list value produces :in filter (OpenApiSpex CastAndValidate path)" do
-      result = RequestParser.parse(%{"status" => ["pending", "completed"]})
+      result = RequestParser.parse(%{"status__in" => ["pending", "completed"]})
       assert_filter(result, :status, :in, ["pending", "completed"])
     end
 
     test "pre-cast single-element list produces :in filter" do
-      result = RequestParser.parse(%{"status" => ["active"]})
+      result = RequestParser.parse(%{"status__in" => ["active"]})
       assert_filter(result, :status, :in, ["active"])
     end
 
     test "pre-cast empty list is silently dropped" do
-      result = RequestParser.parse(%{"status" => []})
+      result = RequestParser.parse(%{"status__in" => []})
       filters = result[:filters] || []
       assert filters == []
     end
 
     test "pre-cast list with unknown field is silently dropped" do
-      result = RequestParser.parse(%{"totally_nonexistent_xyz_field" => ["a", "b"]})
+      result = RequestParser.parse(%{"totally_nonexistent_xyz_field__in" => ["a", "b"]})
       filters = result[:filters] || []
       assert filters == []
     end

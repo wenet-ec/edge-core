@@ -4011,17 +4011,26 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by cluster name — exact match, wildcard (prod*, *tion, *rod*), or comma-separated list for IN match (prod,staging).",
+            "description": "Filter by cluster name — exact match or wildcard (prod*, *tion, *rod*)",
             "in": "query",
             "name": "name",
             "required": false,
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter clusters by node membership — returns all distinct clusters containing any of the given node IDs (comma-separated UUIDs).",
+            "description": "Filter by cluster name — comma-separated list for IN match (e.g. name__in=prod,staging)",
             "explode": false,
             "in": "query",
-            "name": "node_ids",
+            "name": "name__in",
+            "required": false,
+            "schema": { "items": { "type": "string" }, "type": "array" },
+            "style": "form"
+          },
+          {
+            "description": "Filter clusters by node membership — returns all distinct clusters containing any of the given node IDs (e.g. node_id__in=uuid1,uuid2)",
+            "explode": false,
+            "in": "query",
+            "name": "node_id__in",
             "required": false,
             "schema": {
               "items": { "format": "uuid", "type": "string" },
@@ -4564,11 +4573,20 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by cluster name — exact match, wildcard (prod*, *east, *rod*), or comma-separated list for IN match (prod,staging).",
+            "description": "Filter by cluster name — exact match or wildcard (prod*, *east, *rod*)",
             "in": "query",
             "name": "cluster_name",
             "required": false,
             "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by cluster name — comma-separated list for IN match (e.g. cluster_name__in=prod,staging)",
+            "explode": false,
+            "in": "query",
+            "name": "cluster_name__in",
+            "required": false,
+            "schema": { "items": { "type": "string" }, "type": "array" },
+            "style": "form"
           },
           {
             "description": "Filter by enrollment key name (case-insensitive substring or wildcard: prod*, *rollout, etc.)",
@@ -4973,10 +4991,10 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by node IDs — comma-separated list of UUIDs (exact IN match)",
+            "description": "Filter by node IDs — comma-separated list of UUIDs (e.g. node_id__in=uuid1,uuid2)",
             "explode": false,
             "in": "query",
-            "name": "node_ids",
+            "name": "node_id__in",
             "required": false,
             "schema": {
               "items": { "format": "uuid", "type": "string" },
@@ -4985,10 +5003,10 @@
             "style": "form"
           },
           {
-            "description": "Filter by node ID type — comma-separated list for IN match (e.g. persistent,random). Single value also accepted.",
+            "description": "Filter by node ID type (e.g. id_type__in=persistent,random)",
             "explode": false,
             "in": "query",
-            "name": "id_type",
+            "name": "id_type__in",
             "required": false,
             "schema": {
               "items": { "enum": ["persistent", "random"], "type": "string" },
@@ -4997,10 +5015,10 @@
             "style": "form"
           },
           {
-            "description": "Filter by node status — comma-separated list for IN match (e.g. healthy,unhealthy). Single value also accepted.",
+            "description": "Filter by node status (e.g. status__in=healthy,unhealthy)",
             "explode": false,
             "in": "query",
-            "name": "status",
+            "name": "status__in",
             "required": false,
             "schema": {
               "items": {
@@ -5026,11 +5044,20 @@
             "schema": { "type": "boolean" }
           },
           {
-            "description": "Filter by cluster name — exact match, wildcard (prod*, *east, *rod*), or comma-separated list for IN match (prod,staging).",
+            "description": "Filter by cluster name — exact match or wildcard (prod*, *east, *rod*)",
             "in": "query",
             "name": "cluster_name",
             "required": false,
             "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by cluster name — comma-separated list for IN match (e.g. cluster_name__in=prod,staging)",
+            "explode": false,
+            "in": "query",
+            "name": "cluster_name__in",
+            "required": false,
+            "schema": { "items": { "type": "string" }, "type": "array" },
+            "style": "form"
           },
           {
             "description": "Filter records where last_seen_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
@@ -5418,10 +5445,10 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by node IDs — comma-separated list of UUIDs (exact IN match)",
+            "description": "Filter by node IDs — comma-separated list of UUIDs (e.g. node_id__in=uuid1,uuid2)",
             "explode": false,
             "in": "query",
-            "name": "node_ids",
+            "name": "node_id__in",
             "required": false,
             "schema": {
               "items": { "format": "uuid", "type": "string" },
@@ -5430,11 +5457,20 @@
             "style": "form"
           },
           {
-            "description": "Filter by cluster name — exact match, wildcard (prod*, *east, *rod*), or comma-separated list for IN match (prod,staging).",
+            "description": "Filter by cluster name — exact match or wildcard (prod*, *east, *rod*)",
             "in": "query",
             "name": "cluster_name",
             "required": false,
             "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by cluster name — comma-separated list for IN match (e.g. cluster_name__in=prod,staging)",
+            "explode": false,
+            "in": "query",
+            "name": "cluster_name__in",
+            "required": false,
+            "schema": { "items": { "type": "string" }, "type": "array" },
+            "style": "form"
           },
           {
             "description": "Filter records where inserted_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
@@ -6093,10 +6129,10 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by execution status — comma-separated list for IN match (e.g. pending,sent). Single value also accepted.",
+            "description": "Filter by execution status (e.g. status__in=pending,sent)",
             "explode": false,
             "in": "query",
-            "name": "status",
+            "name": "status__in",
             "required": false,
             "schema": {
               "items": {
@@ -6135,10 +6171,10 @@
             "schema": { "type": "boolean" }
           },
           {
-            "description": "Filter by command IDs — comma-separated list of UUIDs (exact IN match)",
+            "description": "Filter by command IDs — comma-separated list of UUIDs (e.g. command_id__in=uuid1,uuid2)",
             "explode": false,
             "in": "query",
-            "name": "command_ids",
+            "name": "command_id__in",
             "required": false,
             "schema": {
               "items": { "format": "uuid", "type": "string" },
@@ -6147,10 +6183,10 @@
             "style": "form"
           },
           {
-            "description": "Filter by node IDs — comma-separated list of UUIDs (exact IN match)",
+            "description": "Filter by node IDs — comma-separated list of UUIDs (e.g. node_id__in=uuid1,uuid2)",
             "explode": false,
             "in": "query",
-            "name": "node_ids",
+            "name": "node_id__in",
             "required": false,
             "schema": {
               "items": { "format": "uuid", "type": "string" },
@@ -6166,11 +6202,20 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by cluster name via node's cluster — exact match, wildcard (prod*, *staging, *rod*), or comma-separated list for IN match (prod,staging).",
+            "description": "Filter by cluster name via node's cluster — exact match or wildcard (prod*, *staging, *rod*)",
             "in": "query",
             "name": "cluster_name",
             "required": false,
             "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by cluster name — comma-separated list for IN match (e.g. cluster_name__in=prod,staging)",
+            "explode": false,
+            "in": "query",
+            "name": "cluster_name__in",
+            "required": false,
+            "schema": { "items": { "type": "string" }, "type": "array" },
+            "style": "form"
           },
           {
             "description": "Filter by cluster_id presence (true = cluster-wide executions, false = non-cluster-wide)",
@@ -6597,17 +6642,26 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by username — exact match, wildcard (root*, *admin, *deploy*), or comma-separated exact IN match (deploy,admin).",
+            "description": "Filter by username — exact match or wildcard (root*, *admin, *deploy*)",
             "in": "query",
             "name": "username",
             "required": false,
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by node IDs — comma-separated list of UUIDs (exact IN match)",
+            "description": "Filter by username — comma-separated list for IN match (e.g. username__in=deploy,admin)",
             "explode": false,
             "in": "query",
-            "name": "node_ids",
+            "name": "username__in",
+            "required": false,
+            "schema": { "items": { "type": "string" }, "type": "array" },
+            "style": "form"
+          },
+          {
+            "description": "Filter by node IDs — comma-separated list of UUIDs (e.g. node_id__in=uuid1,uuid2)",
+            "explode": false,
+            "in": "query",
+            "name": "node_id__in",
             "required": false,
             "schema": {
               "items": { "format": "uuid", "type": "string" },
@@ -6623,18 +6677,36 @@
             "schema": { "type": "boolean" }
           },
           {
-            "description": "Filter by cluster name via node's cluster — exact match, wildcard (prod*, *east, *rod*), or comma-separated exact IN match (prod,staging).",
+            "description": "Filter by cluster name via node's cluster — exact match or wildcard (prod*, *east, *rod*)",
             "in": "query",
             "name": "cluster_name",
             "required": false,
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by associated public key name — exact match, wildcard (laptop*, *prod), or comma-separated exact IN match (laptop,server-key). Returns usernames that have at least one matching key.",
+            "description": "Filter by cluster name — comma-separated list for IN match (e.g. cluster_name__in=prod,staging)",
+            "explode": false,
+            "in": "query",
+            "name": "cluster_name__in",
+            "required": false,
+            "schema": { "items": { "type": "string" }, "type": "array" },
+            "style": "form"
+          },
+          {
+            "description": "Filter by associated public key name — exact match or wildcard (laptop*, *prod)",
             "in": "query",
             "name": "key_name",
             "required": false,
             "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by associated public key name — comma-separated list for IN match (e.g. key_name__in=laptop,server-key). Returns usernames that have at least one matching key.",
+            "explode": false,
+            "in": "query",
+            "name": "key_name__in",
+            "required": false,
+            "schema": { "items": { "type": "string" }, "type": "array" },
+            "style": "form"
           },
           {
             "description": "Filter records where inserted_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
@@ -6904,11 +6976,20 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by key name — exact match, wildcard (my-key*, *prod, *laptop*), or comma-separated exact IN match (laptop,server-key).",
+            "description": "Filter by key name — exact match or wildcard (my-key*, *prod, *laptop*)",
             "in": "query",
             "name": "key_name",
             "required": false,
             "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by key name — comma-separated list for IN match (e.g. key_name__in=laptop,server-key)",
+            "explode": false,
+            "in": "query",
+            "name": "key_name__in",
+            "required": false,
+            "schema": { "items": { "type": "string" }, "type": "array" },
+            "style": "form"
           },
           {
             "description": "Filter by public key content (useful for searching email comments: *@example.com)",
@@ -6918,10 +6999,10 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by SSH username IDs — comma-separated list of UUIDs (exact IN match)",
+            "description": "Filter by SSH username IDs — comma-separated list of UUIDs (e.g. ssh_username_id__in=uuid1,uuid2)",
             "explode": false,
             "in": "query",
-            "name": "ssh_username_ids",
+            "name": "ssh_username_id__in",
             "required": false,
             "schema": {
               "items": { "format": "uuid", "type": "string" },
@@ -6930,10 +7011,10 @@
             "style": "form"
           },
           {
-            "description": "Filter by node IDs — comma-separated list of UUIDs (exact IN match)",
+            "description": "Filter by node IDs — comma-separated list of UUIDs (e.g. node_id__in=uuid1,uuid2)",
             "explode": false,
             "in": "query",
-            "name": "node_ids",
+            "name": "node_id__in",
             "required": false,
             "schema": {
               "items": { "format": "uuid", "type": "string" },
@@ -6942,18 +7023,36 @@
             "style": "form"
           },
           {
-            "description": "Filter by SSH username — exact match, wildcard (deploy*, *admin, *ops*), or comma-separated exact IN match (deploy,admin).",
+            "description": "Filter by SSH username — exact match or wildcard (deploy*, *admin, *ops*)",
             "in": "query",
             "name": "username",
             "required": false,
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by cluster name via node's cluster — exact match, wildcard (prod*, *east, *rod*), or comma-separated exact IN match (prod,staging).",
+            "description": "Filter by SSH username — comma-separated list for IN match (e.g. username__in=deploy,admin)",
+            "explode": false,
+            "in": "query",
+            "name": "username__in",
+            "required": false,
+            "schema": { "items": { "type": "string" }, "type": "array" },
+            "style": "form"
+          },
+          {
+            "description": "Filter by cluster name via node's cluster — exact match or wildcard (prod*, *east, *rod*)",
             "in": "query",
             "name": "cluster_name",
             "required": false,
             "schema": { "type": "string" }
+          },
+          {
+            "description": "Filter by cluster name — comma-separated list for IN match (e.g. cluster_name__in=prod,staging)",
+            "explode": false,
+            "in": "query",
+            "name": "cluster_name__in",
+            "required": false,
+            "schema": { "items": { "type": "string" }, "type": "array" },
+            "style": "form"
           },
           {
             "description": "Filter records where inserted_at is on or after this datetime (ISO 8601 datetime; date-only is treated as start of day UTC)",
@@ -7197,10 +7296,10 @@
             "schema": { "type": "string" }
           },
           {
-            "description": "Filter by status — comma-separated list for IN match (e.g. pending,processing). Single value also accepted.",
+            "description": "Filter by status (e.g. status__in=pending,processing)",
             "explode": false,
             "in": "query",
-            "name": "status",
+            "name": "status__in",
             "required": false,
             "schema": {
               "items": {

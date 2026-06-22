@@ -34,7 +34,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFilters do
   defp apply_cluster_name_one(query, _), do: query
 
   @doc """
-  Applies `command_ids` IN filter directly on `ce.command_id`.
+  Applies `command_id__in` IN filter directly on `ce.command_id`.
   """
   def apply_command_ids(query, []), do: query
 
@@ -53,7 +53,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFilters do
   defp apply_command_ids_one(query, _), do: query
 
   @doc """
-  Applies `node_ids` IN filter on a query joined as `[ce, n, c]`.
+  Applies `node_id__in` IN filter on a query joined as `[ce, n, c]`.
   """
   def apply_node_ids(query, []), do: query
 

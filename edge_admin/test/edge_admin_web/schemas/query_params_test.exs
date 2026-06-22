@@ -108,8 +108,15 @@ defmodule EdgeAdminWeb.Schemas.QueryParamsTest do
   end
 
   describe "enum_array_filter/3" do
+    test "delegates to enum_in_filter — emits status__in key" do
+      {key, _opts} =
+        QueryParams.enum_array_filter(:status, ["healthy", "unhealthy", "unreachable"])
+
+      assert key == :status__in
+    end
+
     test "produces an array schema with enum-constrained items" do
-      {:status, opts} =
+      {:status__in, opts} =
         QueryParams.enum_array_filter(:status, ["healthy", "unhealthy", "unreachable"])
 
       assert opts[:in] == :query
@@ -139,6 +146,43 @@ defmodule EdgeAdminWeb.Schemas.QueryParamsTest do
     end
   end
 
+  describe "enum_in_filter/3" do
+    test "emits name__in key" do
+      {key, _opts} = QueryParams.enum_in_filter(:status, ["healthy", "unhealthy"])
+
+      assert key == :status__in
+    end
+
+    test "produces an array schema with enum-constrained items" do
+      {:status__in, opts} =
+        QueryParams.enum_in_filter(:status, ["healthy", "unhealthy", "unreachable"])
+
+      assert opts[:in] == :query
+      assert opts[:style] == :form
+      assert opts[:explode] == false
+
+      assert opts[:schema] == %Schema{
+               type: :array,
+               items: %Schema{type: :string, enum: ["healthy", "unhealthy", "unreachable"]}
+             }
+    end
+
+    test "default description names allowed values and mentions comma-separated IN match" do
+      {_, opts} = QueryParams.enum_in_filter(:status, ["pending", "completed"])
+
+      assert opts[:description] =~ "comma-separated"
+      assert opts[:description] =~ "IN"
+      assert opts[:description] =~ "pending"
+      assert opts[:description] =~ "completed"
+    end
+
+    test "description is overridable" do
+      {_, opts} = QueryParams.enum_in_filter(:status, ["pending"], description: "custom")
+
+      assert opts[:description] == "custom"
+    end
+  end
+
   describe "boolean_filter/2" do
     test "produces a :boolean-typed query parameter" do
       {:has_node_limit, opts} = QueryParams.boolean_filter(:has_node_limit)
@@ -156,8 +200,14 @@ defmodule EdgeAdminWeb.Schemas.QueryParamsTest do
   end
 
   describe "uuid_array_filter/2" do
+    test "delegates to uuid_in_filter — emits node_id__in key" do
+      {key, _opts} = QueryParams.uuid_array_filter(:node_id)
+
+      assert key == :node_id__in
+    end
+
     test "produces an array-of-uuid schema with form/no-explode encoding" do
-      {:node_ids, opts} = QueryParams.uuid_array_filter(:node_ids)
+      {:node_id__in, opts} = QueryParams.uuid_array_filter(:node_id)
 
       assert opts[:in] == :query
       assert opts[:style] == :form
@@ -166,14 +216,74 @@ defmodule EdgeAdminWeb.Schemas.QueryParamsTest do
     end
 
     test "default description mentions comma-separated and IN match" do
-      {_, opts} = QueryParams.uuid_array_filter(:node_ids)
+      {_, opts} = QueryParams.uuid_array_filter(:node_id)
 
       assert opts[:description] =~ "comma-separated"
       assert opts[:description] =~ "IN"
     end
 
     test "description is overridable" do
-      {_, opts} = QueryParams.uuid_array_filter(:node_ids, description: "custom desc")
+      {_, opts} = QueryParams.uuid_array_filter(:node_id, description: "custom desc")
+
+      assert opts[:description] == "custom desc"
+    end
+  end
+
+  describe "uuid_in_filter/2" do
+    test "emits name__in key" do
+      {key, _opts} = QueryParams.uuid_in_filter(:node_id)
+
+      assert key == :node_id__in
+    end
+
+    test "produces an array-of-uuid schema with form/no-explode encoding" do
+      {:node_id__in, opts} = QueryParams.uuid_in_filter(:node_id)
+
+      assert opts[:in] == :query
+      assert opts[:style] == :form
+      assert opts[:explode] == false
+      assert opts[:schema] == %Schema{type: :array, items: %Schema{type: :string, format: :uuid}}
+    end
+
+    test "default description mentions comma-separated and IN match" do
+      {_, opts} = QueryParams.uuid_in_filter(:node_id)
+
+      assert opts[:description] =~ "comma-separated"
+      assert opts[:description] =~ "IN"
+    end
+
+    test "description is overridable" do
+      {_, opts} = QueryParams.uuid_in_filter(:node_id, description: "custom desc")
+
+      assert opts[:description] == "custom desc"
+    end
+  end
+
+  describe "string_in_filter/2" do
+    test "emits name__in key" do
+      {key, _opts} = QueryParams.string_in_filter(:cluster_name)
+
+      assert key == :cluster_name__in
+    end
+
+    test "produces an array-of-string schema with form/no-explode encoding" do
+      {:cluster_name__in, opts} = QueryParams.string_in_filter(:cluster_name)
+
+      assert opts[:in] == :query
+      assert opts[:style] == :form
+      assert opts[:explode] == false
+      assert opts[:schema] == %Schema{type: :array, items: %Schema{type: :string}}
+    end
+
+    test "default description mentions the field name and IN match" do
+      {_, opts} = QueryParams.string_in_filter(:cluster_name)
+
+      assert opts[:description] =~ "cluster_name"
+      assert opts[:description] =~ "IN"
+    end
+
+    test "description is overridable" do
+      {_, opts} = QueryParams.string_in_filter(:cluster_name, description: "custom desc")
 
       assert opts[:description] == "custom desc"
     end

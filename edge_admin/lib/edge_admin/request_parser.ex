@@ -26,6 +26,12 @@ defmodule EdgeAdmin.RequestParser do
   - `field=value*` - Starts with (ilike)
   - `field=*value*` - Contains (ilike)
 
+  ### IN List
+  - `field__in=a,b,c` - IN operator (comma-separated). Use this for all multi-value
+    filtering — string fields, enum fields alike. The bare `field=a,b` comma form is
+    **not** supported for IN; commas in a plain `field=` value are treated as part of
+    the literal string.
+
   ### Range/Comparison
   - `field__gte=value` - Greater than or equal (>=)
   - `field__gt=value` - Greater than (>)
@@ -35,7 +41,6 @@ defmodule EdgeAdmin.RequestParser do
 
   ### Other
   - `field=true/false` - Boolean exact match
-  - `field=value1,value2` - IN operator (comma-separated)
 
   ### Pagination & Sorting
   - `page=1` - Page number (default: 1)
@@ -158,7 +163,7 @@ defmodule EdgeAdmin.RequestParser do
         [field_str, op_str] ->
           with {:ok, field} <- parse_field(field_str),
                {:ok, op} <- parse_operator(op_str) do
-            [build_filter(field, op, value, op_str)]
+            build_filter(field, op, value, op_str)
           else
             _ -> []
           end
@@ -175,34 +180,45 @@ defmodule EdgeAdmin.RequestParser do
   end
 
   defp parse_filter(key, value) when is_binary(key) and is_list(value) and value != [] do
-    case parse_field(key) do
-      {:ok, field} -> [%{field: field, op: :in, value: value}]
-      _ -> []
+    if String.contains?(key, "__") do
+      case String.split(key, "__", parts: 2) do
+        [field_str, "in"] ->
+          case parse_field(field_str) do
+            {:ok, field} -> [%{field: field, op: :in, value: value}]
+            _ -> []
+          end
+
+        _ ->
+          []
+      end
+    else
+      case parse_field(key) do
+        {:ok, field} -> [%{field: field, op: :in, value: value}]
+        _ -> []
+      end
     end
   end
 
   defp parse_filter(_key, _value), do: []
 
-  defp build_filter(field, op, value, _op_str) do
-    %{field: field, op: op, value: value}
+  defp build_filter(field, :in, value, _op_str) when is_binary(value) do
+    values = value |> String.split(",") |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
+    [%{field: field, op: :in, value: values}]
   end
 
-  # Parse filter based on value pattern
+  defp build_filter(field, op, value, _op_str) do
+    [%{field: field, op: op, value: value}]
+  end
+
+  # Parse filter based on value pattern (plain field=value — no operator suffix)
   defp parse_value_filter(field, value) do
-    cond do
-      # Comma-separated list (IN operator)
-      String.contains?(value, ",") ->
-        values = value |> String.split(",") |> Enum.map(&String.trim/1)
-        [%{field: field, op: :in, value: values}]
-
-      # Wildcard patterns (ilike)
-      String.contains?(value, "*") ->
-        like_value = String.replace(value, "*", "%")
-        [%{field: field, op: :ilike, value: like_value}]
-
+    # Wildcard patterns (ilike)
+    if String.contains?(value, "*") do
+      like_value = String.replace(value, "*", "%")
+      [%{field: field, op: :ilike, value: like_value}]
+    else
       # Exact match
-      true ->
-        [%{field: field, op: :==, value: value}]
+      [%{field: field, op: :==, value: value}]
     end
   end
 
@@ -220,6 +236,7 @@ defmodule EdgeAdmin.RequestParser do
   defp parse_operator("lt"), do: {:ok, :<}
   defp parse_operator("ne"), do: {:ok, :!=}
   defp parse_operator("eq"), do: {:ok, :==}
+  defp parse_operator("in"), do: {:ok, :in}
   defp parse_operator("ilike"), do: {:ok, :ilike}
   defp parse_operator("like"), do: {:ok, :like}
   defp parse_operator(_), do: {:error, :invalid_operator}

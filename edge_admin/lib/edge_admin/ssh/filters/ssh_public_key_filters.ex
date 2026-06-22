@@ -30,7 +30,7 @@ defmodule EdgeAdmin.Ssh.Filters.SshPublicKeyFilters do
   end
 
   @doc """
-  Applies `ssh_username_ids` IN filter via the joined ssh_username binding (`u.id`).
+  Applies `ssh_username_id__in` IN filter via the joined ssh_username binding (`u.id`).
   """
   def apply_ssh_username_ids(query, []), do: query
 

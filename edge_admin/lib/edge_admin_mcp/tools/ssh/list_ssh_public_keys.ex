@@ -4,12 +4,15 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshPublicKeys do
   List SSH public keys with filtering, sorting, and pagination.
 
   ## Filtering
-  - `ssh_username_ids` — filter by SSH username UUIDs (array, exact IN match)
-  - `node_ids` — filter by node UUIDs (array, via username's node)
-  - `username` — filter by username — exact match, wildcard, or array for IN match
-  - `key_name` — filter by key name — exact match, wildcard, or array for IN match
+  - `ssh_username_id_in` — filter by SSH username UUIDs (array)
+  - `node_id_in` — filter by node UUIDs (array, via username's node)
+  - `username` — filter by username — exact match or wildcard
+  - `username_in` — IN match on username (array)
+  - `key_name` — filter by key name — exact match or wildcard
+  - `key_name_in` — IN match on key name (array)
   - `public_key` — exact key value match
-  - `cluster_name` — filter by node's cluster — exact match, wildcard, or array for IN match
+  - `cluster_name` — filter by node's cluster — exact match or wildcard
+  - `cluster_name_in` — IN match on cluster name (array)
   - `inserted_at_gte` / `inserted_at_lte` — creation datetime range (ISO8601)
   - `updated_at_gte` / `updated_at_lte` — last-updated datetime range (ISO8601)
 
@@ -31,12 +34,12 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshPublicKeys do
   schema do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
-    field :ssh_username_ids, {:list, :string}
-    field :node_ids, {:list, :string}
-    field :username, {:list, :string}
-    field :key_name, {:list, :string}
+    field :ssh_username_id_in, {:list, :string}
+    field :node_id_in, {:list, :string}
+    field :username_in, {:list, :string}
+    field :key_name_in, {:list, :string}
     field :public_key, :string, min_length: 1
-    field :cluster_name, {:list, :string}
+    field :cluster_name_in, {:list, :string}
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string
     field :updated_at_gte, :string
@@ -50,7 +53,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshPublicKeys do
     query =
       FlopParams.build(params,
         passthrough: [:public_key],
-        multi: [:ssh_username_ids, :node_ids, :username, :key_name, :cluster_name],
+        multi: [:ssh_username_id, :node_id, :username, :key_name, :cluster_name],
         ranges: [:inserted_at, :updated_at]
       )
 

@@ -5,8 +5,9 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListAliases do
 
   ## Filtering
   - `name` — exact match or wildcard (`prod*`, `*east`)
-  - `node_ids` — exact IN match on node IDs (array of UUIDs)
-  - `cluster_name` — exact match, wildcard (`prod*`, `*east`), or array for IN match
+  - `node_id_in` — IN match on node IDs (array of UUIDs)
+  - `cluster_name` — exact match or wildcard (`prod*`, `*east`)
+  - `cluster_name_in` — IN match on cluster name (array)
   - `inserted_at_gte` / `inserted_at_lte` — creation datetime range (ISO8601)
   - `updated_at_gte` / `updated_at_lte` — last-updated datetime range (ISO8601)
 
@@ -29,8 +30,8 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListAliases do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
     field :name, :string, min_length: 1
-    field :node_ids, {:list, :string}
-    field :cluster_name, {:list, :string}
+    field :node_id_in, {:list, :string}
+    field :cluster_name_in, {:list, :string}
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string
     field :updated_at_gte, :string
@@ -44,7 +45,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListAliases do
     query =
       FlopParams.build(params,
         passthrough: [:name],
-        multi: [:node_ids, :cluster_name],
+        multi: [:node_id, :cluster_name],
         ranges: [:inserted_at, :updated_at]
       )
 

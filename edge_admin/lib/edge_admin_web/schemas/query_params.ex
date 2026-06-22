@@ -98,7 +98,8 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
 
   @doc """
   String exact-match or wildcard filter: `name` accepts `"prod-east"`,
-  `"prod*"`, `"*east"`, or `"*east*"`.
+  `"prod*"`, `"*east"`, or `"*east*"`. For multi-value (IN) matching use
+  `string_in_filter/2` (`name__in=a,b`).
   """
   @spec string_filter(atom(), keyword()) :: {atom(), keyword()}
   def string_filter(name, opts \\ []) when is_atom(name) do
@@ -114,8 +115,34 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
   end
 
   @doc """
+  String IN filter: `name__in` accepts a comma-separated list of exact values
+  (e.g. `cluster_name__in=prod,staging`). Maps to an IN query. No wildcards.
+  """
+  @spec string_in_filter(atom(), keyword()) :: {atom(), keyword()}
+  def string_in_filter(name, opts \\ []) when is_atom(name) do
+    key = :"#{name}__in"
+
+    description =
+      Keyword.get(
+        opts,
+        :description,
+        "Filter by #{name} — comma-separated list of exact values (IN match, e.g. #{name}__in=a,b,c)"
+      )
+
+    {key,
+     [
+       in: :query,
+       description: description,
+       style: :form,
+       explode: false,
+       schema: %Schema{type: :array, items: %Schema{type: :string}}
+     ]}
+  end
+
+  @doc """
   Enum filter — restrict to a single value from a finite list
-  (e.g. `status=healthy`).
+  (e.g. `status=healthy`). For multi-value (IN) matching use
+  `enum_in_filter/3` (`status__in=healthy,unhealthy`).
   """
   @spec enum_filter(atom(), [String.t()], keyword()) :: {atom(), keyword()}
   def enum_filter(name, values, opts \\ []) when is_atom(name) and is_list(values) do
@@ -130,22 +157,24 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
   end
 
   @doc """
-  Enum array filter — comma-separated list of values from a finite set
-  (e.g. `status=healthy,unhealthy`). Maps to an IN query.
+  Enum IN filter: `name__in` accepts a comma-separated list of values from a
+  finite set (e.g. `status__in=healthy,unhealthy`). Maps to an IN query.
+  Single-value usage (`status__in=healthy`) is also valid.
 
   OpenAPI `style: :form, explode: false` signals the comma-separated encoding.
-  Single-value usage (`status=healthy`) is also valid and maps to an exact match.
   """
-  @spec enum_array_filter(atom(), [String.t()], keyword()) :: {atom(), keyword()}
-  def enum_array_filter(name, values, opts \\ []) when is_atom(name) and is_list(values) do
+  @spec enum_in_filter(atom(), [String.t()], keyword()) :: {atom(), keyword()}
+  def enum_in_filter(name, values, opts \\ []) when is_atom(name) and is_list(values) do
+    key = :"#{name}__in"
+
     description =
       Keyword.get(
         opts,
         :description,
-        "Filter by #{name} — comma-separated list of values (exact IN match). Allowed values: #{Enum.join(values, ", ")}"
+        "Filter by #{name} — comma-separated list of values (IN match). Allowed values: #{Enum.join(values, ", ")}"
       )
 
-    {name,
+    {key,
      [
        in: :query,
        description: description,
@@ -153,6 +182,17 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
        explode: false,
        schema: %Schema{type: :array, items: %Schema{type: :string, enum: values}}
      ]}
+  end
+
+  @doc """
+  Enum array filter — **deprecated**. Use `enum_in_filter/3` instead.
+
+  Kept for any call-sites not yet migrated. Emits `name__in` with the same
+  semantics as `enum_in_filter/3`.
+  """
+  @spec enum_array_filter(atom(), [String.t()], keyword()) :: {atom(), keyword()}
+  def enum_array_filter(name, values, opts \\ []) when is_atom(name) and is_list(values) do
+    enum_in_filter(name, values, opts)
   end
 
   @doc """
@@ -186,20 +226,22 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
   end
 
   @doc """
-  UUID array filter — comma-separated list of UUIDs (e.g. `node_ids=uuid1,uuid2`).
-  Maps to an IN query. OpenAPI `style: :form, explode: false` signals the
-  comma-separated encoding to spec renderers.
+  UUID IN filter: `name__in` accepts a comma-separated list of UUIDs
+  (e.g. `node_id__in=uuid1,uuid2`). Maps to an IN query.
+  OpenAPI `style: :form, explode: false` signals the comma-separated encoding.
   """
-  @spec uuid_array_filter(atom(), keyword()) :: {atom(), keyword()}
-  def uuid_array_filter(name, opts \\ []) when is_atom(name) do
+  @spec uuid_in_filter(atom(), keyword()) :: {atom(), keyword()}
+  def uuid_in_filter(name, opts \\ []) when is_atom(name) do
+    key = :"#{name}__in"
+
     description =
       Keyword.get(
         opts,
         :description,
-        "Filter by #{name} — comma-separated list of UUIDs (exact IN match)"
+        "Filter by #{name} — comma-separated list of UUIDs (IN match, e.g. #{name}__in=uuid1,uuid2)"
       )
 
-    {name,
+    {key,
      [
        in: :query,
        description: description,
@@ -210,8 +252,21 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
   end
 
   @doc """
-  String array filter — comma-separated list of values (e.g. `cluster_names=prod,staging`).
-  Maps to an exact IN query (no wildcards). Use `string_filter/2` for wildcard support.
+  UUID array filter — **deprecated**. Use `uuid_in_filter/2` instead.
+
+  Kept for any call-sites not yet migrated. Delegates to `uuid_in_filter/2`.
+  """
+  @spec uuid_array_filter(atom(), keyword()) :: {atom(), keyword()}
+  def uuid_array_filter(name, opts \\ []) when is_atom(name) do
+    uuid_in_filter(name, opts)
+  end
+
+  @doc """
+  String array filter — **deprecated**. Use `string_in_filter/2` instead.
+
+  Kept for UUID array filters and any call-sites not yet migrated. Emits the
+  key as-is (not `__in` suffixed) — only suitable for fields that are parsed
+  as lists by `RequestParser` (e.g. when the value arrives pre-split).
   OpenAPI `style: :form, explode: false` signals the comma-separated encoding.
   """
   @spec string_array_filter(atom(), keyword()) :: {atom(), keyword()}

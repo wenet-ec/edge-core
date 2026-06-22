@@ -24,25 +24,33 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
         QueryParams.sort(order_by_example: "inserted_at,key_name", order_directions_example: "desc,asc") ++
         [
           QueryParams.string_filter(:key_name,
-            description:
-              "Filter by key name — exact match, wildcard (my-key*, *prod, *laptop*), or comma-separated exact IN match (laptop,server-key)."
+            description: "Filter by key name — exact match or wildcard (my-key*, *prod, *laptop*)"
+          ),
+          QueryParams.string_in_filter(:key_name,
+            description: "Filter by key name — comma-separated list for IN match (e.g. key_name__in=laptop,server-key)"
           ),
           QueryParams.string_filter(:public_key,
             description: "Filter by public key content (useful for searching email comments: *@example.com)"
           ),
-          QueryParams.uuid_array_filter(:ssh_username_ids,
-            description: "Filter by SSH username IDs — comma-separated list of UUIDs (exact IN match)"
+          QueryParams.uuid_in_filter(:ssh_username_id,
+            description:
+              "Filter by SSH username IDs — comma-separated list of UUIDs (e.g. ssh_username_id__in=uuid1,uuid2)"
           ),
-          QueryParams.uuid_array_filter(:node_ids,
-            description: "Filter by node IDs — comma-separated list of UUIDs (exact IN match)"
+          QueryParams.uuid_in_filter(:node_id,
+            description: "Filter by node IDs — comma-separated list of UUIDs (e.g. node_id__in=uuid1,uuid2)"
           ),
           QueryParams.string_filter(:username,
-            description:
-              "Filter by SSH username — exact match, wildcard (deploy*, *admin, *ops*), or comma-separated exact IN match (deploy,admin)."
+            description: "Filter by SSH username — exact match or wildcard (deploy*, *admin, *ops*)"
+          ),
+          QueryParams.string_in_filter(:username,
+            description: "Filter by SSH username — comma-separated list for IN match (e.g. username__in=deploy,admin)"
           ),
           QueryParams.string_filter(:cluster_name,
+            description: "Filter by cluster name via node's cluster — exact match or wildcard (prod*, *east, *rod*)"
+          ),
+          QueryParams.string_in_filter(:cluster_name,
             description:
-              "Filter by cluster name via node's cluster — exact match, wildcard (prod*, *east, *rod*), or comma-separated exact IN match (prod,staging)."
+              "Filter by cluster name — comma-separated list for IN match (e.g. cluster_name__in=prod,staging)"
           )
         ] ++
         QueryParams.datetime_range_filter(:inserted_at) ++

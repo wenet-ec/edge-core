@@ -168,78 +168,77 @@ defmodule EdgeAdminMcp.FlopParamsTest do
   end
 
   # ---------------------------------------------------------------------------
-  # multi fields — {:list, :string} or {:list, {:enum, ...}} lists joined to
-  # comma-separated strings so RequestParser picks them up as op: :in filters
-  # (same wire format as REST comma convention). Covers ID arrays, enum fields,
-  # and text fields that accept multi-value IN matching (e.g. cluster_name).
+  # multi fields — reads params[:<field>_in] (MCP single-underscore convention,
+  # matching last_seen_at_gte) and emits "<field>__in" (Flop double-underscore
+  # wire format). :multi opt takes base field names (e.g. :node_id, :status).
   # ---------------------------------------------------------------------------
 
   describe "build/2 — multi" do
-    test "joins a list value into a comma-separated string" do
+    test "reads <field>_in param and emits <field>__in key" do
       result =
-        FlopParams.build(%{node_ids: ["uuid-1", "uuid-2", "uuid-3"]}, multi: [:node_ids])
+        FlopParams.build(%{node_id_in: ["uuid-1", "uuid-2", "uuid-3"]}, multi: [:node_id])
 
-      assert result["node_ids"] == "uuid-1,uuid-2,uuid-3"
+      assert result["node_id__in"] == "uuid-1,uuid-2,uuid-3"
     end
 
-    test "single-element list produces a plain string (no trailing comma)" do
-      result = FlopParams.build(%{cluster_name: ["prod"]}, multi: [:cluster_name])
+    test "single-element list produces a single value (no trailing comma)" do
+      result = FlopParams.build(%{cluster_name_in: ["prod"]}, multi: [:cluster_name])
 
-      assert result["cluster_name"] == "prod"
+      assert result["cluster_name__in"] == "prod"
     end
 
     test "nil value is dropped (not in params)" do
-      result = FlopParams.build(%{node_ids: nil}, multi: [:node_ids])
+      result = FlopParams.build(%{node_id_in: nil}, multi: [:node_id])
 
-      refute Map.has_key?(result, "node_ids")
+      refute Map.has_key?(result, "node_id__in")
     end
 
     test "empty list is dropped (treated like nil)" do
-      result = FlopParams.build(%{node_ids: []}, multi: [:node_ids])
+      result = FlopParams.build(%{node_id_in: []}, multi: [:node_id])
 
-      refute Map.has_key?(result, "node_ids")
+      refute Map.has_key?(result, "node_id__in")
     end
 
-    test "missing key is silently absent from output" do
-      result = FlopParams.build(%{}, multi: [:node_ids])
+    test "missing _in key is silently absent from output" do
+      result = FlopParams.build(%{}, multi: [:node_id])
 
-      refute Map.has_key?(result, "node_ids")
+      refute Map.has_key?(result, "node_id__in")
     end
 
     test "multiple multi fields are each handled independently" do
       result =
         FlopParams.build(
-          %{node_ids: ["a", "b"], cluster_name: ["prod", "staging"]},
-          multi: [:node_ids, :cluster_name]
+          %{node_id_in: ["a", "b"], cluster_name_in: ["prod", "staging"]},
+          multi: [:node_id, :cluster_name]
         )
 
-      assert result["node_ids"] == "a,b"
-      assert result["cluster_name"] == "prod,staging"
+      assert result["node_id__in"] == "a,b"
+      assert result["cluster_name__in"] == "prod,staging"
     end
 
-    test "keys not in :multi are not included even if the value is a list" do
-      result = FlopParams.build(%{node_ids: ["a", "b"]}, multi: [])
+    test "base field not in :multi is not included even if the _in param is a list" do
+      result = FlopParams.build(%{node_id_in: ["a", "b"]}, multi: [])
 
-      refute Map.has_key?(result, "node_ids")
+      refute Map.has_key?(result, "node_id__in")
     end
 
-    test "enum list (multi-value status) is joined and produces an IN filter via RequestParser" do
+    test "enum list (multi-value status) is joined and emits status__in" do
       result =
-        FlopParams.build(%{status: ["healthy", "unhealthy"]}, multi: [:status])
+        FlopParams.build(%{status_in: ["healthy", "unhealthy"]}, multi: [:status])
 
-      assert result["status"] == "healthy,unhealthy"
+      assert result["status__in"] == "healthy,unhealthy"
     end
 
-    test "single-value enum list produces a plain string (exact-match, not IN)" do
-      result = FlopParams.build(%{status: ["healthy"]}, multi: [:status])
+    test "single-value enum list emits status__in with one value" do
+      result = FlopParams.build(%{status_in: ["healthy"]}, multi: [:status])
 
-      assert result["status"] == "healthy"
+      assert result["status__in"] == "healthy"
     end
 
     test "empty enum list is dropped (no filter applied)" do
-      result = FlopParams.build(%{status: []}, multi: [:status])
+      result = FlopParams.build(%{status_in: []}, multi: [:status])
 
-      refute Map.has_key?(result, "status")
+      refute Map.has_key?(result, "status__in")
     end
   end
 

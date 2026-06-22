@@ -25,20 +25,28 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
         QueryParams.sort(order_by_example: "inserted_at,username", order_directions_example: "desc,asc") ++
         [
           QueryParams.string_filter(:username,
-            description:
-              "Filter by username — exact match, wildcard (root*, *admin, *deploy*), or comma-separated exact IN match (deploy,admin)."
+            description: "Filter by username — exact match or wildcard (root*, *admin, *deploy*)"
           ),
-          QueryParams.uuid_array_filter(:node_ids,
-            description: "Filter by node IDs — comma-separated list of UUIDs (exact IN match)"
+          QueryParams.string_in_filter(:username,
+            description: "Filter by username — comma-separated list for IN match (e.g. username__in=deploy,admin)"
+          ),
+          QueryParams.uuid_in_filter(:node_id,
+            description: "Filter by node IDs — comma-separated list of UUIDs (e.g. node_id__in=uuid1,uuid2)"
           ),
           QueryParams.boolean_filter(:has_password, description: "Filter by whether username has password configured"),
           QueryParams.string_filter(:cluster_name,
+            description: "Filter by cluster name via node's cluster — exact match or wildcard (prod*, *east, *rod*)"
+          ),
+          QueryParams.string_in_filter(:cluster_name,
             description:
-              "Filter by cluster name via node's cluster — exact match, wildcard (prod*, *east, *rod*), or comma-separated exact IN match (prod,staging)."
+              "Filter by cluster name — comma-separated list for IN match (e.g. cluster_name__in=prod,staging)"
           ),
           QueryParams.string_filter(:key_name,
+            description: "Filter by associated public key name — exact match or wildcard (laptop*, *prod)"
+          ),
+          QueryParams.string_in_filter(:key_name,
             description:
-              "Filter by associated public key name — exact match, wildcard (laptop*, *prod), or comma-separated exact IN match (laptop,server-key). Returns usernames that have at least one matching key."
+              "Filter by associated public key name — comma-separated list for IN match (e.g. key_name__in=laptop,server-key). Returns usernames that have at least one matching key."
           )
         ] ++
         QueryParams.datetime_range_filter(:inserted_at) ++

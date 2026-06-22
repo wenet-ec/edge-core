@@ -25,9 +25,8 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
       QueryParams.pagination() ++
         QueryParams.sort(order_by_example: "inserted_at,status", order_directions_example: "desc,asc") ++
         [
-          QueryParams.enum_array_filter(:status, @status_enum,
-            description:
-              "Filter by execution status — comma-separated list for IN match (e.g. pending,sent). Single value also accepted."
+          QueryParams.enum_in_filter(:status, @status_enum,
+            description: "Filter by execution status (e.g. status__in=pending,sent)"
           ),
           QueryParams.boolean_filter(:target_all, description: "Filter by target_all flag"),
           QueryParams.int_filter(:exit_code, description: "Filter by exact exit code"),
@@ -35,18 +34,21 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
             description:
               "Filter by whether output is present: true returns executions with output, false returns executions with no output"
           ),
-          QueryParams.uuid_array_filter(:command_ids,
-            description: "Filter by command IDs — comma-separated list of UUIDs (exact IN match)"
+          QueryParams.uuid_in_filter(:command_id,
+            description: "Filter by command IDs — comma-separated list of UUIDs (e.g. command_id__in=uuid1,uuid2)"
           ),
-          QueryParams.uuid_array_filter(:node_ids,
-            description: "Filter by node IDs — comma-separated list of UUIDs (exact IN match)"
+          QueryParams.uuid_in_filter(:node_id,
+            description: "Filter by node IDs — comma-separated list of UUIDs (e.g. node_id__in=uuid1,uuid2)"
           ),
           QueryParams.string_filter(:output,
             description: "Text search in output (exact match or wildcard: *error*, *failed, etc.)"
           ),
           QueryParams.string_filter(:cluster_name,
+            description: "Filter by cluster name via node's cluster — exact match or wildcard (prod*, *staging, *rod*)"
+          ),
+          QueryParams.string_in_filter(:cluster_name,
             description:
-              "Filter by cluster name via node's cluster — exact match, wildcard (prod*, *staging, *rod*), or comma-separated list for IN match (prod,staging)."
+              "Filter by cluster name — comma-separated list for IN match (e.g. cluster_name__in=prod,staging)"
           ),
           QueryParams.boolean_filter(:has_cluster,
             description: "Filter by cluster_id presence (true = cluster-wide executions, false = non-cluster-wide)"

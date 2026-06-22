@@ -4,10 +4,11 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
   List edge nodes with filtering, sorting, and pagination.
 
   ## Filtering
-  - `node_ids` — exact IN match on node IDs (array of UUIDs)
-  - `status` — one or more of `healthy`, `unhealthy`, `unreachable` (array)
-  - `id_type` — one or more of `persistent`, `random` (array)
-  - `cluster_name` — exact match, wildcard (`prod*`, `*east`), or array for IN match
+  - `node_id_in` — IN match on node IDs (array of UUIDs)
+  - `status_in` — one or more of `healthy`, `unhealthy`, `unreachable`
+  - `id_type_in` — one or more of `persistent`, `random`
+  - `cluster_name` — exact match or wildcard (`prod*`, `*east`)
+  - `cluster_name_in` — IN match on cluster name (array)
   - `version` — exact match or wildcard (`1.0.0`, `1.*`)
   - `self_update_enabled` — boolean
   - `last_seen_at_gte` / `last_seen_at_lte` — last seen datetime range (ISO8601)
@@ -37,10 +38,10 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
   schema do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
-    field :node_ids, {:list, :string}
-    field :status, {:list, {:enum, @status_enum}}
-    field :id_type, {:list, {:enum, @id_type_enum}}
-    field :cluster_name, {:list, :string}
+    field :node_id_in, {:list, :string}
+    field :status_in, {:list, {:enum, @status_enum}}
+    field :id_type_in, {:list, {:enum, @id_type_enum}}
+    field :cluster_name_in, {:list, :string}
     field :version, :string, min_length: 1
     field :self_update_enabled, {:enum, ["true", "false"]}
     field :last_seen_at_gte, :string
@@ -59,7 +60,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
       FlopParams.build(params,
         passthrough: [:version],
         boolean_filters: [:self_update_enabled],
-        multi: [:node_ids, :cluster_name, :status, :id_type],
+        multi: [:node_id, :cluster_name, :status, :id_type],
         ranges: [:last_seen_at, :inserted_at, :updated_at]
       )
 

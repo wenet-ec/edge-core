@@ -22,7 +22,7 @@ defmodule EdgeAdmin.Nodes.Filters.NodeFilters do
   end
 
   @doc """
-  Applies `node_ids` IN filter directly on the `nodes` table.
+  Applies `node_id__in` IN filter directly on the `nodes` table.
   """
   def apply_node_ids(query, []), do: query
 

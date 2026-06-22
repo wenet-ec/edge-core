@@ -223,11 +223,11 @@ defmodule EdgeAdmin.Ssh do
   Lists SSH usernames with filtering, sorting, and pagination.
 
   Supports filtering by:
-  - `username` - Text search with wildcard support
-  - `node_ids` - Exact IN match on node IDs (comma-separated on REST, array on MCP)
+  - `username` - Exact match or wildcard; `username__in` for IN match
+  - `node_id__in` - Exact IN match on node IDs — comma-separated UUIDs
   - `has_password` - Boolean (filters by password_hash presence)
-  - `cluster_name` - Exact match, wildcard, or IN match (requires join through node)
-  - `key_name` - Exact match, wildcard, or IN match on associated public key names (joins ssh_public_keys)
+  - `cluster_name` - Exact match or wildcard; `cluster_name__in` for IN match (requires join through node)
+  - `key_name` - Exact match or wildcard; `key_name__in` for IN match on associated public key names (joins ssh_public_keys)
   - `inserted_at__gte/lte` - Date range filter
   - `updated_at__gte/lte` - Date range filter
 
@@ -251,7 +251,7 @@ defmodule EdgeAdmin.Ssh do
       base_query
       |> SshUsernameFilters.apply_has_password(custom.has_password)
       |> SshUsernameFilters.apply_cluster_name(custom.cluster_name)
-      |> SshUsernameFilters.apply_node_ids(custom.node_ids)
+      |> SshUsernameFilters.apply_node_ids(custom.node_id)
       |> SshUsernameFilters.apply_key_name(custom.key_name)
 
     query =
@@ -269,7 +269,7 @@ defmodule EdgeAdmin.Ssh do
   end
 
   defp split_username_filters(flop_params) do
-    custom_fields = [:has_password, :cluster_name, :node_ids, :key_name]
+    custom_fields = [:has_password, :cluster_name, :node_id, :key_name]
 
     {custom_filters, rest} =
       Enum.split_with(flop_params[:filters] || [], fn f -> f.field in custom_fields end)
@@ -357,12 +357,12 @@ defmodule EdgeAdmin.Ssh do
   Lists SSH public keys with filtering, sorting, and pagination.
 
   Supports filtering by:
-  - `key_name` - Text search with wildcard support
-  - `public_key` - Text search with wildcard support (useful for searching email comments)
-  - `ssh_username_ids` - Exact IN match on SSH username IDs (comma-separated on REST, array on MCP)
-  - `node_ids` - Exact IN match on node IDs (requires join through ssh_username)
-  - `username` - Exact match, wildcard, or IN match (requires join through ssh_username)
-  - `cluster_name` - Exact match, wildcard, or IN match (requires join through ssh_username → node)
+  - `key_name` - Exact match or wildcard; `key_name__in` for IN match
+  - `public_key` - Exact match or wildcard (useful for searching email comments)
+  - `ssh_username_id__in` - Exact IN match on SSH username IDs — comma-separated UUIDs
+  - `node_id__in` - Exact IN match on node IDs — comma-separated UUIDs (requires join through ssh_username)
+  - `username` - Exact match or wildcard; `username__in` for IN match (requires join through ssh_username)
+  - `cluster_name` - Exact match or wildcard; `cluster_name__in` for IN match (requires join through ssh_username → node)
   - `inserted_at__gte/lte` - Date range filter
   - `updated_at__gte/lte` - Date range filter
 
@@ -384,8 +384,8 @@ defmodule EdgeAdmin.Ssh do
 
     query =
       base_query
-      |> SshPublicKeyFilters.apply_ssh_username_ids(custom.ssh_username_ids)
-      |> SshPublicKeyFilters.apply_node_id(custom.node_ids)
+      |> SshPublicKeyFilters.apply_ssh_username_ids(custom.ssh_username_id)
+      |> SshPublicKeyFilters.apply_node_id(custom.node_id)
       |> SshPublicKeyFilters.apply_username(custom.username)
       |> SshPublicKeyFilters.apply_cluster_name(custom.cluster_name)
 
@@ -404,7 +404,7 @@ defmodule EdgeAdmin.Ssh do
   end
 
   defp split_public_key_filters(flop_params) do
-    custom_fields = [:ssh_username_ids, :node_ids, :username, :cluster_name]
+    custom_fields = [:ssh_username_id, :node_id, :username, :cluster_name]
 
     {custom_filters, rest} =
       Enum.split_with(flop_params[:filters] || [], fn f -> f.field in custom_fields end)

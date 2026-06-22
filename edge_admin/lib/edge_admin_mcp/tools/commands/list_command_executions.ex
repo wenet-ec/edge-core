@@ -4,15 +4,16 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
   List command executions with filtering, sorting, and pagination.
 
   ## Filtering
-  - `command_ids` — filter by command UUIDs (array of UUIDs, exact IN match)
-  - `node_ids` — filter by node UUIDs (array of UUIDs, exact IN match)
-  - `status` — one or more of `pending`, `sent`, `completed`, `cancelled`, `expired` (array)
+  - `command_id_in` — filter by command UUIDs (array of UUIDs)
+  - `node_id_in` — filter by node UUIDs (array of UUIDs)
+  - `status_in` — one or more of `pending`, `sent`, `completed`, `cancelled`, `expired`
   - `target_all` — true: executions targeting all nodes; false: targeted executions
   - `exit_code` — exact exit code
   - `exit_code_gte` / `exit_code_lte` — exit code range (e.g. `exit_code_gte: 1` for all failures)
   - `output` — text search in output (exact match or wildcard: `*error*`, `*failed`)
   - `has_output` — true: executions with output present; false: executions without output
-  - `cluster_name` — filter by cluster name — exact match, wildcard (`prod*`, `*staging`), or array for IN match
+  - `cluster_name` — filter by cluster name — exact match or wildcard (`prod*`, `*staging`)
+  - `cluster_name_in` — IN match on cluster name (array)
   - `has_cluster` — true: cluster-wide executions; false: non-cluster-wide
   - `inserted_at_gte` / `inserted_at_lte` — creation datetime range (ISO8601)
   - `updated_at_gte` / `updated_at_lte` — last-updated datetime range (ISO8601)
@@ -41,16 +42,16 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
   schema do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
-    field :command_ids, {:list, :string}
-    field :node_ids, {:list, :string}
-    field :status, {:list, {:enum, @status_enum}}
+    field :command_id_in, {:list, :string}
+    field :node_id_in, {:list, :string}
+    field :status_in, {:list, {:enum, @status_enum}}
     field :target_all, {:enum, ["true", "false"]}
     field :exit_code, :integer
     field :exit_code_gte, :integer
     field :exit_code_lte, :integer
     field :output, :string, min_length: 1
     field :has_output, {:enum, ["true", "false"]}
-    field :cluster_name, {:list, :string}
+    field :cluster_name_in, {:list, :string}
     field :has_cluster, {:enum, ["true", "false"]}
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string
@@ -75,7 +76,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
           :output
         ],
         boolean_filters: [:target_all, :has_output, :has_cluster],
-        multi: [:command_ids, :node_ids, :cluster_name, :status],
+        multi: [:command_id, :node_id, :cluster_name, :status],
         ranges: [:exit_code, :inserted_at, :updated_at, :sent_at, :completed_at, :cancelled_at]
       )
 

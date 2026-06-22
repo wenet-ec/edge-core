@@ -60,7 +60,7 @@ defmodule EdgeAdmin.Ssh.Filters.SshUsernameFilters do
   defp apply_cluster_name_one(query, _), do: query
 
   @doc """
-  Applies `node_ids` IN filter on a query joined as `[u, n, c]`.
+  Applies `node_id__in` IN filter on a query joined as `[u, n, c]`.
   """
   def apply_node_ids(query, []), do: query
 

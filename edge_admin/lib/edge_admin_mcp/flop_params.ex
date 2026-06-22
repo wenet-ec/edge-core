@@ -4,8 +4,8 @@ defmodule EdgeAdminMcp.FlopParams do
   Builds the Flop-shaped query map from MCP tool params.
 
   MCP tool schemas use snake_case keys with single underscores
-  (`inserted_at_gte`, `timeout_lte`). Flop expects double-underscore
-  separators on range filters (`inserted_at__gte`, `timeout__lte`).
+  (`inserted_at_gte`, `timeout_lte`, `status_in`, `node_id_in`). Flop expects
+  double-underscore separators (`inserted_at__gte`, `status__in`, `node_id__in`).
 
   This helper takes the params map plus a small spec describing each
   filter and produces the right shape, with pagination + sort included.
@@ -15,13 +15,16 @@ defmodule EdgeAdminMcp.FlopParams do
       build(params,
         passthrough: [:name, :key],
         boolean_filters: [:has_password],
-        multi: [:cluster_name, :status],
+        multi: [:cluster_name, :status, :node_id],
         ranges: [:inserted_at, :updated_at, :timeout]
       )
 
   The `:passthrough` keys are passed through unchanged (atom → string key).
   The `:boolean_filters` keys are declared as `{:enum, ["true", "false"]}` in
   the MCP schema; the string values are cast to booleans before passing through.
+  The `:multi` keys are declared as `{:list, :string}` or `{:list, {:enum, values}}`
+  in the MCP schema; the list is joined to a comma-separated string and emitted as
+  `"field__in"` so `RequestParser` routes it through the `__in` operator.
   The `:ranges` keys expand to two filters each — `<key>_gte` → `<key>__gte`,
   `<key>_lte` → `<key>__lte`. Nil values are dropped.
 
@@ -44,13 +47,14 @@ defmodule EdgeAdminMcp.FlopParams do
       receives the native boolean it expects. Absent / nil values are dropped
       (no filter applied), which is the correct behaviour when the MCP UI
       dropdown is left blank.
-    * `:multi` — list of atom keys declared as `{:list, :string}` or
-      `{:list, {:enum, values}}` in the MCP schema. The list is joined to a
-      comma-separated string so `RequestParser` picks it up via the standard
-      comma-as-IN convention. A single-element list produces an exact/wildcard
-      match; multi-element produces an IN filter. Use for ID arrays, enum
-      fields, and text fields that support multi-value filtering (e.g.
-      `cluster_name`).
+    * `:multi` — list of base field name atoms (e.g. `:node_id`, `:status`,
+      `:cluster_name`). The MCP schema declares these as `<field>_in` with
+      `{:list, :string}` or `{:list, {:enum, values}}` — matching the single-
+      underscore convention used by `:ranges` (`inserted_at_gte`). The list
+      value is read from `params[:<field>_in]`, joined to a comma-separated
+      string, and emitted as `"<field>__in"` so `RequestParser` routes it
+      through the `__in` operator. Single-element and multi-element lists both
+      produce an `:in` filter.
     * `:ranges` — list of atom field names expanded into `<field>_gte` /
       `<field>_lte` (renamed to Flop's `<field>__gte` / `<field>__lte`).
     * `:default_page_size` — overrides the default of 20.
@@ -94,9 +98,11 @@ defmodule EdgeAdminMcp.FlopParams do
 
   defp add_multi(query, params, fields) do
     Enum.reduce(fields, query, fn field, acc ->
-      case params[field] do
+      in_atom = :"#{field}_in"
+
+      case params[in_atom] do
         values when is_list(values) and values != [] ->
-          Map.put(acc, Atom.to_string(field), Enum.join(values, ","))
+          Map.put(acc, "#{field}__in", Enum.join(values, ","))
 
         _ ->
           acc

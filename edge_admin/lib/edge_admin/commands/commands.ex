@@ -354,8 +354,8 @@ defmodule EdgeAdmin.Commands do
   - `status` - Enum IN: `"pending"`, `"sent"`, `"completed"`, `"cancelled"`, `"expired"` — single value or comma-separated list for multi-match
   - `target_all` - Boolean
   - `exit_code` - Exact, `__gte`, `__lte`
-  - `command_ids` - Exact IN match on command IDs (comma-separated on REST, array on MCP)
-  - `node_ids` - Exact IN match on node IDs (comma-separated on REST, array on MCP)
+  - `command_id__in` - Exact IN match on command IDs — comma-separated UUIDs
+  - `node_id__in` - Exact IN match on node IDs — comma-separated UUIDs
   - `output` - Text search with wildcard support
   - `cluster_name` - Wildcard (`prod*`), exact, or comma-separated IN match on cluster name (via node's cluster)
   - `has_cluster` - Boolean (filters by cluster_id presence: true = NOT NULL, false = IS NULL)
@@ -384,9 +384,9 @@ defmodule EdgeAdmin.Commands do
 
     query =
       base_query
-      |> ExecutionFilters.apply_command_ids(custom.command_ids)
+      |> ExecutionFilters.apply_command_ids(custom.command_id)
       |> ExecutionFilters.apply_cluster_name(custom.cluster_name)
-      |> ExecutionFilters.apply_node_ids(custom.node_ids)
+      |> ExecutionFilters.apply_node_ids(custom.node_id)
       |> ExecutionFilters.apply_has_cluster(custom.has_cluster)
       |> ExecutionFilters.apply_has_output(custom.has_output)
 
@@ -409,7 +409,7 @@ defmodule EdgeAdmin.Commands do
   end
 
   defp split_execution_filters(flop_params) do
-    custom_fields = [:command_ids, :cluster_name, :node_ids, :has_cluster, :has_output]
+    custom_fields = [:command_id, :cluster_name, :node_id, :has_cluster, :has_output]
 
     {custom_filters, rest} =
       Enum.split_with(flop_params[:filters] || [], fn f -> f.field in custom_fields end)

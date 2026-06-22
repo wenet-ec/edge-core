@@ -4,7 +4,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.ListSelfUpdateRequests do
   List self-update requests with filtering, sorting, and pagination.
 
   ## Filtering
-  - `status` — one or more of `pending`, `processing`, `completed` (array)
+  - `status_in` — one or more of `pending`, `processing`, `completed`
   - `inserted_at_gte` / `inserted_at_lte` — creation datetime range (ISO8601)
   - `updated_at_gte` / `updated_at_lte` — last-updated datetime range (ISO8601)
 
@@ -29,7 +29,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.ListSelfUpdateRequests do
   schema do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
-    field :status, {:list, {:enum, @status_enum}}
+    field :status_in, {:list, {:enum, @status_enum}}
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string
     field :updated_at_gte, :string

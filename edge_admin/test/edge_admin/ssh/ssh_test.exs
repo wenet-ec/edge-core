@@ -71,7 +71,7 @@ defmodule EdgeAdmin.SshTest do
   defp ids(records), do: records |> Enum.map(& &1.id) |> Enum.sort()
 
   describe "list_ssh_usernames/1 merged filters" do
-    test "cluster_name accepts comma-separated exact IN values" do
+    test "cluster_name__in accepts comma-separated exact IN values" do
       alpha = insert_cluster(%{name: "alpha"})
       bravo = insert_cluster(%{name: "bravo"})
       charlie = insert_cluster(%{name: "charlie"})
@@ -80,11 +80,11 @@ defmodule EdgeAdmin.SshTest do
       user_bravo = bravo.id |> insert_node() |> then(&insert_ssh_username(&1.id))
       charlie.id |> insert_node() |> then(&insert_ssh_username(&1.id))
 
-      assert {:ok, {users, _meta}} = Ssh.list_ssh_usernames(%{"cluster_name" => "alpha,bravo"})
+      assert {:ok, {users, _meta}} = Ssh.list_ssh_usernames(%{"cluster_name__in" => "alpha,bravo"})
       assert ids(users) == ids([user_alpha, user_bravo])
     end
 
-    test "key_name accepts comma-separated exact IN values" do
+    test "key_name__in accepts comma-separated exact IN values" do
       cluster = insert_cluster()
       node = insert_node(cluster.id)
 
@@ -96,13 +96,13 @@ defmodule EdgeAdmin.SshTest do
       insert_public_key(server_user.id, key_name: "server")
       insert_public_key(tablet_user.id, key_name: "tablet")
 
-      assert {:ok, {users, _meta}} = Ssh.list_ssh_usernames(%{"key_name" => "laptop,server"})
+      assert {:ok, {users, _meta}} = Ssh.list_ssh_usernames(%{"key_name__in" => "laptop,server"})
       assert ids(users) == ids([laptop_user, server_user])
     end
   end
 
   describe "list_ssh_public_keys/1 merged filters" do
-    test "username accepts comma-separated exact IN values" do
+    test "username__in accepts comma-separated exact IN values" do
       cluster = insert_cluster()
       node = insert_node(cluster.id)
 
@@ -114,11 +114,11 @@ defmodule EdgeAdmin.SshTest do
       bob_key = insert_public_key(bob.id)
       insert_public_key(carol.id)
 
-      assert {:ok, {keys, _meta}} = Ssh.list_ssh_public_keys(%{"username" => "alice,bob"})
+      assert {:ok, {keys, _meta}} = Ssh.list_ssh_public_keys(%{"username__in" => "alice,bob"})
       assert ids(keys) == ids([alice_key, bob_key])
     end
 
-    test "cluster_name accepts comma-separated exact IN values" do
+    test "cluster_name__in accepts comma-separated exact IN values" do
       alpha = insert_cluster(%{name: "alpha"})
       bravo = insert_cluster(%{name: "bravo"})
       charlie = insert_cluster(%{name: "charlie"})
@@ -131,11 +131,11 @@ defmodule EdgeAdmin.SshTest do
       bravo_key = insert_public_key(bravo_user.id)
       insert_public_key(charlie_user.id)
 
-      assert {:ok, {keys, _meta}} = Ssh.list_ssh_public_keys(%{"cluster_name" => "alpha,bravo"})
+      assert {:ok, {keys, _meta}} = Ssh.list_ssh_public_keys(%{"cluster_name__in" => "alpha,bravo"})
       assert ids(keys) == ids([alpha_key, bravo_key])
     end
 
-    test "key_name accepts comma-separated exact IN values" do
+    test "key_name__in accepts comma-separated exact IN values" do
       cluster = insert_cluster()
       node = insert_node(cluster.id)
       user = insert_ssh_username(node.id)
@@ -144,7 +144,7 @@ defmodule EdgeAdmin.SshTest do
       server = insert_public_key(user.id, key_name: "server")
       insert_public_key(user.id, key_name: "tablet")
 
-      assert {:ok, {keys, _meta}} = Ssh.list_ssh_public_keys(%{"key_name" => "laptop,server"})
+      assert {:ok, {keys, _meta}} = Ssh.list_ssh_public_keys(%{"key_name__in" => "laptop,server"})
       assert ids(keys) == ids([laptop, server])
     end
   end

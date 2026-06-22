@@ -25,12 +25,14 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
         QueryParams.sort(order_by_example: "inserted_at,name", order_directions_example: "desc,asc") ++
         [
           QueryParams.string_filter(:name,
-            description:
-              "Filter by cluster name — exact match, wildcard (prod*, *tion, *rod*), or comma-separated list for IN match (prod,staging)."
+            description: "Filter by cluster name — exact match or wildcard (prod*, *tion, *rod*)"
           ),
-          QueryParams.uuid_array_filter(:node_ids,
+          QueryParams.string_in_filter(:name,
+            description: "Filter by cluster name — comma-separated list for IN match (e.g. name__in=prod,staging)"
+          ),
+          QueryParams.uuid_in_filter(:node_id,
             description:
-              "Filter clusters by node membership — returns all distinct clusters containing any of the given node IDs (comma-separated UUIDs)."
+              "Filter clusters by node membership — returns all distinct clusters containing any of the given node IDs (e.g. node_id__in=uuid1,uuid2)"
           ),
           QueryParams.string_filter(:ipv4_range, description: "Filter by IPv4 range (exact match or wildcard)"),
           QueryParams.int_filter(:node_limit, description: "Filter by exact node limit", minimum: 1),

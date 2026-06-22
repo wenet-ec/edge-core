@@ -138,7 +138,7 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFilters do
   defp apply_name_one(query, _), do: query
 
   @doc """
-  Applies `node_ids` IN filter on `list_clusters` — joins nodes and filters
+  Applies `node_id__in` filter on `list_clusters` — joins nodes and filters
   clusters that contain any of the given node IDs. Applies `distinct` to
   avoid duplicate cluster rows when multiple node IDs land in the same cluster.
   """

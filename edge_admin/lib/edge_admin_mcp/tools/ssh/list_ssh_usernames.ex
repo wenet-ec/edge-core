@@ -4,11 +4,14 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
   List SSH usernames with filtering, sorting, and pagination.
 
   ## Filtering
-  - `username` — exact match, wildcard (`admin*`, `*user`), or array for IN match
-  - `node_ids` — exact IN match on node IDs (array of UUIDs)
+  - `username` — exact match or wildcard (`admin*`, `*user`)
+  - `username_in` — IN match on username (array)
+  - `node_id_in` — IN match on node IDs (array of UUIDs)
   - `has_password` — true: usernames with a password set; false: without
-  - `cluster_name` — filter by node's cluster — exact match, wildcard, or array for IN match
-  - `key_name` — filter by associated public key name — exact match, wildcard, or array for IN match
+  - `cluster_name` — filter by node's cluster — exact match or wildcard
+  - `cluster_name_in` — IN match on cluster name (array)
+  - `key_name` — filter by associated public key name — exact match or wildcard
+  - `key_name_in` — IN match on key name (array)
   - `inserted_at_gte` / `inserted_at_lte` — creation datetime range (ISO8601)
   - `updated_at_gte` / `updated_at_lte` — last-updated datetime range (ISO8601)
 
@@ -30,11 +33,11 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
   schema do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
-    field :username, {:list, :string}
-    field :node_ids, {:list, :string}
+    field :username_in, {:list, :string}
+    field :node_id_in, {:list, :string}
     field :has_password, {:enum, ["true", "false"]}
-    field :cluster_name, {:list, :string}
-    field :key_name, {:list, :string}
+    field :cluster_name_in, {:list, :string}
+    field :key_name_in, {:list, :string}
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string
     field :updated_at_gte, :string
@@ -48,7 +51,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
     query =
       FlopParams.build(params,
         boolean_filters: [:has_password],
-        multi: [:username, :node_ids, :cluster_name, :key_name],
+        multi: [:username, :node_id, :cluster_name, :key_name],
         ranges: [:inserted_at, :updated_at]
       )
 

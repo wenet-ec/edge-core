@@ -41,16 +41,16 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
     field :page_size, :integer, default: 20, min: 1
     field :cluster_name_in, {:list, :string}
     field :name, :string, min_length: 1
-    field :has_name, :boolean
+    field :has_name, {:either, {:boolean, nil}}
     field :key, :string, min_length: 1
     field :uses_remaining, :integer, min: 1
     field :uses_remaining_gte, :integer, min: 1
     field :uses_remaining_lte, :integer, min: 1
-    field :is_unlimited, :boolean
-    field :is_spent, :boolean
-    field :is_expired, :boolean
-    field :is_never_used, :boolean
-    field :has_expiry, :boolean
+    field :is_unlimited, {:either, {:boolean, nil}}
+    field :is_spent, {:either, {:boolean, nil}}
+    field :is_expired, {:either, {:boolean, nil}}
+    field :is_never_used, {:either, {:boolean, nil}}
+    field :has_expiry, {:either, {:boolean, nil}}
     field :expires_at_gte, :string
     field :expires_at_lte, :string
     field :last_used_at_gte, :string

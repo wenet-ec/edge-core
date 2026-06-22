@@ -35,6 +35,8 @@ defmodule EdgeAdminMcp do
 
       alias Anubis.Server.Response
 
+      unquote(input_schema_override())
+
       defp paginated(items, meta, mapper \\ & &1), do: EdgeAdminMcp.paginated(items, meta, mapper)
       defp error_response(reason), do: EdgeAdminMcp.error_response(reason)
       defp error_response(code, msg), do: EdgeAdminMcp.error_response(code, msg)
@@ -49,6 +51,46 @@ defmodule EdgeAdminMcp do
         end
       end
     end
+  end
+
+  defp input_schema_override do
+    quote do
+      defoverridable input_schema: 0
+
+      def input_schema do
+        EdgeAdminMcp.normalize_input_schema_for_clients(super())
+      end
+    end
+  end
+
+  @doc false
+  def normalize_input_schema_for_clients(schema) when is_map(schema) do
+    normalize_nullable_boolean_unions(schema)
+  end
+
+  defp normalize_nullable_boolean_unions(%{"oneOf" => branches} = schema) when is_list(branches) do
+    if nullable_boolean_union?(branches) do
+      schema
+      |> Map.delete("oneOf")
+      |> Map.put("anyOf", branches)
+    else
+      Map.update!(schema, "oneOf", &Enum.map(&1, fn branch -> normalize_nullable_boolean_unions(branch) end))
+    end
+  end
+
+  defp normalize_nullable_boolean_unions(map) when is_map(map) do
+    Map.new(map, fn
+      {key, value} when is_map(value) -> {key, normalize_nullable_boolean_unions(value)}
+      {key, values} when is_list(values) -> {key, Enum.map(values, &normalize_nullable_boolean_unions/1)}
+      pair -> pair
+    end)
+  end
+
+  defp normalize_nullable_boolean_unions(value), do: value
+
+  defp nullable_boolean_union?(branches) do
+    Enum.any?(branches, &(&1 == %{"type" => "boolean"})) and
+      Enum.any?(branches, &(&1 == %{"type" => "null"}))
   end
 
   def paginated(items, meta, mapper \\ & &1) do

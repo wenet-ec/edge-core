@@ -42,7 +42,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListClusters do
     field :node_limit, :integer, min: 1
     field :node_limit_gte, :integer, min: 1
     field :node_limit_lte, :integer, min: 1
-    field :has_node_limit, :boolean
+    field :has_node_limit, {:either, {:boolean, nil}}
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string
     field :updated_at_gte, :string

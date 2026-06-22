@@ -31,10 +31,10 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommands do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
     field :command_text, :string, min_length: 1
-    field :has_timeout, :boolean
+    field :has_timeout, {:either, {:boolean, nil}}
     field :timeout_gte, :integer, min: 1
     field :timeout_lte, :integer, min: 1
-    field :has_expires_at, :boolean
+    field :has_expires_at, {:either, {:boolean, nil}}
     field :expires_at_gte, :string
     field :expires_at_lte, :string
     field :inserted_at_gte, :string

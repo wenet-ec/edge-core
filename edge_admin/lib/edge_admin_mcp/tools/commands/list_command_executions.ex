@@ -45,14 +45,14 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
     field :command_id_in, {:list, :string}
     field :node_id_in, {:list, :string}
     field :status_in, {:list, {:enum, @status_enum}}
-    field :target_all, :boolean
+    field :target_all, {:either, {:boolean, nil}}
     field :exit_code, :integer
     field :exit_code_gte, :integer
     field :exit_code_lte, :integer
     field :output, :string, min_length: 1
-    field :has_output, :boolean
+    field :has_output, {:either, {:boolean, nil}}
     field :cluster_name_in, {:list, :string}
-    field :has_cluster, :boolean
+    field :has_cluster, {:either, {:boolean, nil}}
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string
     field :updated_at_gte, :string

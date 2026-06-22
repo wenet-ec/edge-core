@@ -43,7 +43,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
     field :id_type_in, {:list, {:enum, @id_type_enum}}
     field :cluster_name_in, {:list, :string}
     field :version, :string, min_length: 1
-    field :self_update_enabled, :boolean
+    field :self_update_enabled, {:either, {:boolean, nil}}
     field :last_seen_at_gte, :string
     field :last_seen_at_lte, :string
     field :inserted_at_gte, :string

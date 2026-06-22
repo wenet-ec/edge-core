@@ -47,15 +47,15 @@ defmodule EdgeAdmin.Commands.Filters.CommandFiltersTest do
       assert ids(query) == [without_timeout.id]
     end
 
-    test "string 'true' / 'false' work the same way" do
+    test "string 'true' / 'false' are ignored" do
       with_timeout = insert_command(%{timeout: 30_000})
       without_timeout = insert_command(%{timeout: nil})
 
       assert ids(CommandFilters.apply_has_timeout(Command, [%{op: :==, value: "true"}])) ==
-               [with_timeout.id]
+               Enum.sort([with_timeout.id, without_timeout.id])
 
       assert ids(CommandFilters.apply_has_timeout(Command, [%{op: :==, value: "false"}])) ==
-               [without_timeout.id]
+               Enum.sort([with_timeout.id, without_timeout.id])
     end
 
     test "no filters → query unchanged" do
@@ -107,16 +107,16 @@ defmodule EdgeAdmin.Commands.Filters.CommandFiltersTest do
       assert ids(query) == [no_expiry.id]
     end
 
-    test "string 'true' / 'false' work as well" do
+    test "string 'true' / 'false' are ignored" do
       future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
       with_exp = insert_command(%{expires_at: future})
       without = insert_command(%{expires_at: nil})
 
       assert ids(CommandFilters.apply_has_expires_at(Command, [%{op: :==, value: "true"}])) ==
-               [with_exp.id]
+               Enum.sort([with_exp.id, without.id])
 
       assert ids(CommandFilters.apply_has_expires_at(Command, [%{op: :==, value: "false"}])) ==
-               [without.id]
+               Enum.sort([with_exp.id, without.id])
     end
 
     test "no filters → query unchanged" do

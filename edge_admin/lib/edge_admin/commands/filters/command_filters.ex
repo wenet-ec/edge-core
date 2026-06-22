@@ -17,11 +17,11 @@ defmodule EdgeAdmin.Commands.Filters.CommandFilters do
     Enum.reduce(filters, query, fn filter, acc -> apply_has_timeout_one(acc, filter) end)
   end
 
-  defp apply_has_timeout_one(query, %{op: :==, value: v}) when v in [true, "true"] do
+  defp apply_has_timeout_one(query, %{op: :==, value: true}) do
     from(c in query, where: not is_nil(c.timeout))
   end
 
-  defp apply_has_timeout_one(query, %{op: :==, value: v}) when v in [false, "false"] do
+  defp apply_has_timeout_one(query, %{op: :==, value: false}) do
     from(c in query, where: is_nil(c.timeout))
   end
 
@@ -35,11 +35,11 @@ defmodule EdgeAdmin.Commands.Filters.CommandFilters do
     Enum.reduce(filters, query, fn filter, acc -> apply_has_expires_at_one(acc, filter) end)
   end
 
-  defp apply_has_expires_at_one(query, %{op: :==, value: v}) when v in [true, "true"] do
+  defp apply_has_expires_at_one(query, %{op: :==, value: true}) do
     from(c in query, where: not is_nil(c.expires_at))
   end
 
-  defp apply_has_expires_at_one(query, %{op: :==, value: v}) when v in [false, "false"] do
+  defp apply_has_expires_at_one(query, %{op: :==, value: false}) do
     from(c in query, where: is_nil(c.expires_at))
   end
 

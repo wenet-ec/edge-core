@@ -16,11 +16,11 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
     Enum.reduce(filters, query, fn filter, acc -> apply_is_unlimited_one(acc, filter) end)
   end
 
-  defp apply_is_unlimited_one(query, %{op: :==, value: v}) when v in [true, "true"] do
+  defp apply_is_unlimited_one(query, %{op: :==, value: true}) do
     from(k in query, where: is_nil(k.uses_remaining))
   end
 
-  defp apply_is_unlimited_one(query, %{op: :==, value: v}) when v in [false, "false"] do
+  defp apply_is_unlimited_one(query, %{op: :==, value: false}) do
     from(k in query, where: not is_nil(k.uses_remaining))
   end
 
@@ -33,11 +33,11 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
     Enum.reduce(filters, query, fn filter, acc -> apply_is_spent_one(acc, filter) end)
   end
 
-  defp apply_is_spent_one(query, %{op: :==, value: v}) when v in [true, "true"] do
+  defp apply_is_spent_one(query, %{op: :==, value: true}) do
     from(k in query, where: k.uses_remaining == 0)
   end
 
-  defp apply_is_spent_one(query, %{op: :==, value: v}) when v in [false, "false"] do
+  defp apply_is_spent_one(query, %{op: :==, value: false}) do
     from(k in query, where: k.uses_remaining != 0 or is_nil(k.uses_remaining))
   end
 
@@ -50,12 +50,12 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
     Enum.reduce(filters, query, fn filter, acc -> apply_is_expired_one(acc, filter) end)
   end
 
-  defp apply_is_expired_one(query, %{op: :==, value: v}) when v in [true, "true"] do
+  defp apply_is_expired_one(query, %{op: :==, value: true}) do
     now = DateTime.utc_now()
     from(k in query, where: not is_nil(k.expires_at) and k.expires_at < ^now)
   end
 
-  defp apply_is_expired_one(query, %{op: :==, value: v}) when v in [false, "false"] do
+  defp apply_is_expired_one(query, %{op: :==, value: false}) do
     now = DateTime.utc_now()
     from(k in query, where: is_nil(k.expires_at) or k.expires_at >= ^now)
   end
@@ -69,11 +69,11 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
     Enum.reduce(filters, query, fn filter, acc -> apply_is_never_used_one(acc, filter) end)
   end
 
-  defp apply_is_never_used_one(query, %{op: :==, value: v}) when v in [true, "true"] do
+  defp apply_is_never_used_one(query, %{op: :==, value: true}) do
     from(k in query, where: is_nil(k.last_used_at))
   end
 
-  defp apply_is_never_used_one(query, %{op: :==, value: v}) when v in [false, "false"] do
+  defp apply_is_never_used_one(query, %{op: :==, value: false}) do
     from(k in query, where: not is_nil(k.last_used_at))
   end
 
@@ -87,11 +87,11 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
     Enum.reduce(filters, query, fn filter, acc -> apply_has_expiry_one(acc, filter) end)
   end
 
-  defp apply_has_expiry_one(query, %{op: :==, value: v}) when v in [true, "true"] do
+  defp apply_has_expiry_one(query, %{op: :==, value: true}) do
     from(k in query, where: not is_nil(k.expires_at))
   end
 
-  defp apply_has_expiry_one(query, %{op: :==, value: v}) when v in [false, "false"] do
+  defp apply_has_expiry_one(query, %{op: :==, value: false}) do
     from(k in query, where: is_nil(k.expires_at))
   end
 
@@ -105,11 +105,11 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
     Enum.reduce(filters, query, fn filter, acc -> apply_has_name_one(acc, filter) end)
   end
 
-  defp apply_has_name_one(query, %{op: :==, value: v}) when v in [true, "true"] do
+  defp apply_has_name_one(query, %{op: :==, value: true}) do
     from(k in query, where: not is_nil(k.name))
   end
 
-  defp apply_has_name_one(query, %{op: :==, value: v}) when v in [false, "false"] do
+  defp apply_has_name_one(query, %{op: :==, value: false}) do
     from(k in query, where: is_nil(k.name))
   end
 

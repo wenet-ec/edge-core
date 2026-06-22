@@ -40,7 +40,8 @@ defmodule EdgeAdmin.RequestParser do
   - `field__ne=value` - Not equal (!=)
 
   ### Other
-  - `field=true/false` - Boolean exact match
+  - `field=true/false` - Boolean exact match when upstream validation has cast
+    the value to a native boolean
 
   ### Pagination & Sorting
   - `page=1` - Page number (default: 1)
@@ -63,7 +64,8 @@ defmodule EdgeAdmin.RequestParser do
   before processing.
 
   Values arrive pre-cast from CastAndValidate: integers as integers, booleans as
-  booleans, Date/DateTime structs for date params.
+  booleans, Date/DateTime structs for date params. MCP tools must provide the
+  same native types before calling domain list functions.
   """
   def parse(params) when is_map(params) do
     params = stringify_keys(params)

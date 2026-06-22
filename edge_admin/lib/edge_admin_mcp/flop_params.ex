@@ -20,8 +20,8 @@ defmodule EdgeAdminMcp.FlopParams do
       )
 
   The `:passthrough` keys are passed through unchanged (atom → string key).
-  The `:boolean_filters` keys are declared as `{:enum, ["true", "false"]}` in
-  the MCP schema; the string values are cast to booleans before passing through.
+  The `:boolean_filters` keys are native JSON booleans and are passed through
+  unchanged.
   The `:multi` keys are declared as `{:list, :string}` or `{:list, {:enum, values}}`
   in the MCP schema; the list is joined to a comma-separated string and emitted as
   `"field__in"` so `RequestParser` routes it through the `__in` operator.
@@ -41,12 +41,9 @@ defmodule EdgeAdminMcp.FlopParams do
   ## Options
 
     * `:passthrough` — list of atom keys copied as-is to string keys.
-    * `:boolean_filters` — list of atom keys declared as `{:enum, ["true",
-      "false"]}` in the MCP schema. The string values `"true"` / `"false"` are
-      cast to actual booleans before being passed through, so `RequestParser`
-      receives the native boolean it expects. Absent / nil values are dropped
-      (no filter applied), which is the correct behaviour when the MCP UI
-      dropdown is left blank.
+    * `:boolean_filters` — list of atom keys for native boolean filters.
+      Absent / nil values are dropped (no filter applied), which is the correct
+      behaviour when the MCP UI dropdown is left blank.
     * `:multi` — list of base field name atoms (e.g. `:node_id`, `:status`,
       `:cluster_name`). The MCP schema declares these as `<field>_in` with
       `{:list, :string}` or `{:list, {:enum, values}}` — matching the single-
@@ -89,8 +86,8 @@ defmodule EdgeAdminMcp.FlopParams do
   defp add_boolean_filters(query, params, fields) do
     Enum.reduce(fields, query, fn field, acc ->
       case params[field] do
-        "true" -> Map.put(acc, Atom.to_string(field), true)
-        "false" -> Map.put(acc, Atom.to_string(field), false)
+        true -> Map.put(acc, Atom.to_string(field), true)
+        false -> Map.put(acc, Atom.to_string(field), false)
         _ -> acc
       end
     end)

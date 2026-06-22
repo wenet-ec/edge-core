@@ -332,7 +332,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       assert ids(query) == [without_cluster.id]
     end
 
-    test "string 'true' / 'false' both work" do
+    test "string 'true' / 'false' are ignored" do
       cluster_a = insert_cluster()
       node_a = insert_node(cluster_a.id)
 
@@ -340,10 +340,10 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       without_cluster = insert_execution(node_a.id, cluster_id: nil)
 
       assert ids(ExecutionFilters.apply_has_cluster(base_query(), [%{op: :==, value: "true"}])) ==
-               [with_cluster.id]
+               Enum.sort([with_cluster.id, without_cluster.id])
 
       assert ids(ExecutionFilters.apply_has_cluster(base_query(), [%{op: :==, value: "false"}])) ==
-               [without_cluster.id]
+               Enum.sort([with_cluster.id, without_cluster.id])
     end
 
     test "no filters → query unchanged" do

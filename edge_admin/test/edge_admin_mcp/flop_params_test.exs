@@ -243,22 +243,36 @@ defmodule EdgeAdminMcp.FlopParamsTest do
   end
 
   # ---------------------------------------------------------------------------
-  # boolean_filters — {:enum, ["true", "false"]} string values cast to booleans
+  # boolean_filters — native booleans only
   # ---------------------------------------------------------------------------
 
   describe "build/2 — boolean_filters" do
-    test ~s(casts "true" string to boolean true) do
+    test "passes native boolean true through" do
       result =
-        FlopParams.build(%{has_node_limit: "true"}, boolean_filters: [:has_node_limit])
+        FlopParams.build(%{has_node_limit: true}, boolean_filters: [:has_node_limit])
 
       assert result["has_node_limit"] == true
     end
 
-    test ~s(casts "false" string to boolean false) do
+    test "passes native boolean false through" do
+      result =
+        FlopParams.build(%{has_node_limit: false}, boolean_filters: [:has_node_limit])
+
+      assert result["has_node_limit"] == false
+    end
+
+    test ~s(ignores "true" string because MCP booleans must be native booleans) do
+      result =
+        FlopParams.build(%{has_node_limit: "true"}, boolean_filters: [:has_node_limit])
+
+      refute Map.has_key?(result, "has_node_limit")
+    end
+
+    test ~s(ignores "false" string because MCP booleans must be native booleans) do
       result =
         FlopParams.build(%{has_node_limit: "false"}, boolean_filters: [:has_node_limit])
 
-      assert result["has_node_limit"] == false
+      refute Map.has_key?(result, "has_node_limit")
     end
 
     test "drops nil value — no filter applied when field is absent" do
@@ -281,10 +295,10 @@ defmodule EdgeAdminMcp.FlopParamsTest do
       refute Map.has_key?(result, "has_node_limit")
     end
 
-    test "multiple boolean filters are each cast independently" do
+    test "multiple boolean filters are each passed through independently" do
       result =
         FlopParams.build(
-          %{has_timeout: "true", has_expires_at: "false"},
+          %{has_timeout: true, has_expires_at: false},
           boolean_filters: [:has_timeout, :has_expires_at]
         )
 
@@ -295,7 +309,7 @@ defmodule EdgeAdminMcp.FlopParamsTest do
     test "only the set boolean filter is emitted when one is absent" do
       result =
         FlopParams.build(
-          %{has_timeout: "true"},
+          %{has_timeout: true},
           boolean_filters: [:has_timeout, :has_expires_at]
         )
 
@@ -315,7 +329,7 @@ defmodule EdgeAdminMcp.FlopParamsTest do
         page_size: 50,
         status: "healthy",
         name: "prod",
-        has_node_limit: "true",
+        has_node_limit: true,
         inserted_at_gte: "2025-01-01T00:00:00Z",
         inserted_at_lte: "2025-02-01T00:00:00Z",
         order_by: "inserted_at,name",

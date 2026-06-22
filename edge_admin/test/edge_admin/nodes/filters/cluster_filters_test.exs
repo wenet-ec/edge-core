@@ -99,15 +99,15 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFiltersTest do
       assert ids(query) == [without_limit.id]
     end
 
-    test "string 'true' / 'false' values work the same way" do
+    test "string 'true' / 'false' values are ignored" do
       with_limit = insert_cluster(%{node_limit: 50})
       without_limit = insert_cluster(%{node_limit: nil})
 
       assert ids(ClusterFilters.apply_has_node_limit(Cluster, [%{op: :==, value: "true"}])) ==
-               [with_limit.id]
+               Enum.sort([with_limit.id, without_limit.id])
 
       assert ids(ClusterFilters.apply_has_node_limit(Cluster, [%{op: :==, value: "false"}])) ==
-               [without_limit.id]
+               Enum.sort([with_limit.id, without_limit.id])
     end
 
     test "no filters → query unchanged" do

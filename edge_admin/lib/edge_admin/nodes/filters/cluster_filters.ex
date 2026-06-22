@@ -21,11 +21,11 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFilters do
     Enum.reduce(filters, query, fn filter, acc -> apply_has_node_limit_one(acc, filter) end)
   end
 
-  defp apply_has_node_limit_one(query, %{op: :==, value: v}) when v in [true, "true"] do
+  defp apply_has_node_limit_one(query, %{op: :==, value: true}) do
     from(c in query, where: not is_nil(c.node_limit))
   end
 
-  defp apply_has_node_limit_one(query, %{op: :==, value: v}) when v in [false, "false"] do
+  defp apply_has_node_limit_one(query, %{op: :==, value: false}) do
     from(c in query, where: is_nil(c.node_limit))
   end
 

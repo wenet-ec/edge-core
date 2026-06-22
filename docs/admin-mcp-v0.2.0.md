@@ -27,7 +27,10 @@ MCP list tools use typed parameters rather than REST query strings:
 
 - **Wildcard text filters** — single-value string parameter. `*` matches prefix (`prod*`), suffix (`*east`), or contains (`*prod*`). Examples: `cluster_name: "prod*"`, `username: "*admin"`.
 - **IN filters** — `<field>_in` array parameter. Passes one or more exact values; any match is returned. Single-element arrays work. Examples: `cluster_name_in: ["prod", "staging"]`, `status_in: ["healthy", "unhealthy"]`, `node_id_in: ["<uuid>"]`. This mirrors the REST `__in` operator (`?cluster_name__in=prod,staging`).
-- **Boolean filters** are enum strings: `"true"` or `"false"`.
+- **Boolean filters** are native JSON booleans: `true` or `false`. MCP Inspector
+  renders these as checkbox controls. If sending raw JSON, do not quote boolean
+  values; `"true"` / `"false"` are strings and will be rejected by MCP
+  validation.
 - **Range filters** use `_gte` / `_lte` suffixes: `inserted_at_gte`, `timeout_lte`. Mirrors the REST `__gte` / `__lte` operators.
 - REST-only operators (`field__null`, bare comma `field=a,b`) have no MCP equivalent — use the explicit `has_*` / `is_*` booleans and `_in` arrays instead.
 

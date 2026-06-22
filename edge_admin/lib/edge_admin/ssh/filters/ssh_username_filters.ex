@@ -19,14 +19,6 @@ defmodule EdgeAdmin.Ssh.Filters.SshUsernameFilters do
     Enum.reduce(filters, query, fn filter, acc -> apply_has_password_one(acc, filter) end)
   end
 
-  defp apply_has_password_one(query, %{op: :==, value: "true"}) do
-    from(u in query, where: not is_nil(u.password_hash))
-  end
-
-  defp apply_has_password_one(query, %{op: :==, value: "false"}) do
-    from(u in query, where: is_nil(u.password_hash))
-  end
-
   defp apply_has_password_one(query, %{op: :==, value: true}) do
     from(u in query, where: not is_nil(u.password_hash))
   end

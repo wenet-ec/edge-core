@@ -97,17 +97,17 @@ defmodule EdgeAdmin.Ssh.Filters.SshUsernameFiltersTest do
       assert ids(query) == [without.id]
     end
 
-    test "string 'true' / 'false' work the same way" do
+    test "string 'true' / 'false' are ignored" do
       cluster = insert_cluster()
       node = insert_node(cluster.id)
       with_pw = insert_ssh_username(node.id, password_hash: "h")
       without = insert_ssh_username(node.id, password_hash: nil)
 
       assert ids(SshUsernameFilters.apply_has_password(SshUsername, [%{op: :==, value: "true"}])) ==
-               [with_pw.id]
+               Enum.sort([with_pw.id, without.id])
 
       assert ids(SshUsernameFilters.apply_has_password(SshUsername, [%{op: :==, value: "false"}])) ==
-               [without.id]
+               Enum.sort([with_pw.id, without.id])
     end
 
     test "no filters → query unchanged" do

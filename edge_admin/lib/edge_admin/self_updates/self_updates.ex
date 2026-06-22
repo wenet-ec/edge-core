@@ -319,7 +319,7 @@ defmodule EdgeAdmin.SelfUpdates do
     node_filters =
       node_filters
       |> Map.put("status", "healthy")
-      |> Map.put("self_update_enabled", "true")
+      |> Map.put("self_update_enabled", true)
 
     case targeting_type do
       "all" ->

@@ -71,16 +71,16 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
       assert ids(query) == [bounded.id]
     end
 
-    test "string 'true' / 'false' work as well" do
+    test "string 'true' / 'false' are ignored" do
       cluster = insert_cluster()
       unlimited = insert_key(cluster.id, %{uses_remaining: nil})
       bounded = insert_key(cluster.id, %{uses_remaining: 5})
 
       assert ids(EnrollmentKeyFilters.apply_is_unlimited(EnrollmentKey, [%{op: :==, value: "true"}])) ==
-               [unlimited.id]
+               Enum.sort([unlimited.id, bounded.id])
 
       assert ids(EnrollmentKeyFilters.apply_is_unlimited(EnrollmentKey, [%{op: :==, value: "false"}])) ==
-               [bounded.id]
+               Enum.sort([unlimited.id, bounded.id])
     end
 
     test "no filters / unrecognised filter → query unchanged" do

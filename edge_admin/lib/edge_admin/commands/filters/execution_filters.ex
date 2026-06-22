@@ -79,14 +79,6 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFilters do
     Enum.reduce(filters, query, fn filter, acc -> apply_has_cluster_one(acc, filter) end)
   end
 
-  defp apply_has_cluster_one(query, %{op: :==, value: "true"}) do
-    from([ce, _n, _c] in query, where: not is_nil(ce.cluster_id))
-  end
-
-  defp apply_has_cluster_one(query, %{op: :==, value: "false"}) do
-    from([ce, _n, _c] in query, where: is_nil(ce.cluster_id))
-  end
-
   defp apply_has_cluster_one(query, %{op: :==, value: true}) do
     from([ce, _n, _c] in query, where: not is_nil(ce.cluster_id))
   end
@@ -105,11 +97,11 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFilters do
     Enum.reduce(filters, query, fn filter, acc -> apply_has_output_one(acc, filter) end)
   end
 
-  defp apply_has_output_one(query, %{op: :==, value: v}) when v in [true, "true"] do
+  defp apply_has_output_one(query, %{op: :==, value: true}) do
     from(ce in query, where: not is_nil(ce.output))
   end
 
-  defp apply_has_output_one(query, %{op: :==, value: v}) when v in [false, "false"] do
+  defp apply_has_output_one(query, %{op: :==, value: false}) do
     from(ce in query, where: is_nil(ce.output))
   end
 

@@ -205,6 +205,16 @@ defmodule EdgeAdmin.RequestParserTest do
       assert_filter(result, :self_update_enabled, :==, false)
     end
 
+    test ~s(boolean-looking "true" string stays a string exact match) do
+      result = RequestParser.parse(%{"self_update_enabled" => "true"})
+      assert_filter(result, :self_update_enabled, :==, "true")
+    end
+
+    test ~s(non-boolean filter field with "true" string stays a string exact match) do
+      result = RequestParser.parse(%{"status" => "true"})
+      assert_filter(result, :status, :==, "true")
+    end
+
     test "unknown field is silently dropped from filters" do
       result = RequestParser.parse(%{"totally_nonexistent_xyz_field" => "value"})
       filters = result[:filters] || []
@@ -325,6 +335,16 @@ defmodule EdgeAdmin.RequestParserTest do
     test "__eq produces == filter" do
       result = RequestParser.parse(%{"status__eq" => "active"})
       assert_filter(result, :status, :==, "active")
+    end
+
+    test ~s(__eq keeps boolean-looking string values as strings) do
+      result = RequestParser.parse(%{"self_update_enabled__eq" => "true"})
+      assert_filter(result, :self_update_enabled, :==, "true")
+    end
+
+    test ~s(__ne keeps boolean-looking string values as strings) do
+      result = RequestParser.parse(%{"self_update_enabled__ne" => "false"})
+      assert_filter(result, :self_update_enabled, :!=, "false")
     end
 
     test "__ilike produces :ilike filter" do

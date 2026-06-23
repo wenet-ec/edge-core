@@ -351,7 +351,7 @@ defmodule EdgeAdmin.Commands do
   Lists command executions with filtering, sorting, and pagination.
 
   Supports filtering by:
-  - `status` - Enum IN: `"pending"`, `"sent"`, `"completed"`, `"cancelled"`, `"expired"` — single value or comma-separated list for multi-match
+  - `status__in` - Enum IN: `"pending"`, `"sent"`, `"completed"`, `"cancelled"`, `"expired"` — comma-separated list (`status__in=pending,sent`)
   - `target_all` - Boolean
   - `exit_code` - Exact, `__gte`, `__lte`
   - `command_id__in` - Exact IN match on command IDs — comma-separated UUIDs

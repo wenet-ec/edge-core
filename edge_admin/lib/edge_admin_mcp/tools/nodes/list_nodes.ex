@@ -41,6 +41,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
     field :node_id_in, {:list, :string}
     field :status_in, {:list, {:enum, @status_enum}}
     field :id_type_in, {:list, {:enum, @id_type_enum}}
+    field :cluster_name, :string, min_length: 1
     field :cluster_name_in, {:list, :string}
     field :version, :string, min_length: 1
     field :self_update_enabled, {:either, {:boolean, nil}}

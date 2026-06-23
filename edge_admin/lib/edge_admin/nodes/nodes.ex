@@ -190,7 +190,7 @@ defmodule EdgeAdmin.Nodes do
 
   ## Examples
 
-      iex> list_clusters(%{"name__ilike" => "prod*"})
+      iex> list_clusters(%{"name" => "prod*"})
       {:ok, {[%Cluster{name: "production"}], %Flop.Meta{}}}
 
       iex> list_clusters(%{"node_count__gte" => "5"})

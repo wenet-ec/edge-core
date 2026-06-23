@@ -36,9 +36,12 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshPublicKeys do
     field :page_size, :integer, default: 20, min: 1
     field :ssh_username_id_in, {:list, :string}
     field :node_id_in, {:list, :string}
+    field :username, :string, min_length: 1
     field :username_in, {:list, :string}
+    field :key_name, :string, min_length: 1
     field :key_name_in, {:list, :string}
     field :public_key, :string, min_length: 1
+    field :cluster_name, :string, min_length: 1
     field :cluster_name_in, {:list, :string}
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string

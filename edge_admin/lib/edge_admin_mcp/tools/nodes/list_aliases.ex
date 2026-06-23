@@ -31,6 +31,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListAliases do
     field :page_size, :integer, default: 20, min: 1
     field :name, :string, min_length: 1
     field :node_id_in, {:list, :string}
+    field :cluster_name, :string, min_length: 1
     field :cluster_name_in, {:list, :string}
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string

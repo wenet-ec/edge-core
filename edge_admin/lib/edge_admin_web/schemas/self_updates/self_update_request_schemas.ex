@@ -32,7 +32,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
           example: %{
             type: "all",
             node_filters: %{
-              status: "healthy",
+              status__in: "healthy",
               self_update_enabled: true
             }
           }
@@ -74,7 +74,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
         targeting: %{
           type: "all",
           node_filters: %{
-            status: "healthy",
+            status__in: "healthy",
             self_update_enabled: true
           }
         },
@@ -151,17 +151,22 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
             node_filters: %Schema{
               type: :object,
               description:
-                "Optional filters to apply to target nodes (AND logic with cluster_filters). Supports all node list filters except cluster_name.",
+                "Optional filters to apply to target nodes (AND logic with cluster_filters). Accepts: id_type__in, status__in, version, self_update_enabled, last_seen_at/inserted_at/updated_at ranges. Does not accept node_id__in or cluster_name__in.",
               properties: %{
-                id_type: %Schema{
-                  type: :string,
-                  enum: @id_type_enum,
-                  description: "Filter by node ID type"
+                id_type__in: %Schema{
+                  oneOf: [
+                    %Schema{type: :string, description: "Comma-separated: \"persistent,random\""},
+                    %Schema{type: :array, items: %Schema{type: :string, enum: @id_type_enum}}
+                  ],
+                  description: "Filter by node ID type — comma-separated string or array of: persistent, random"
                 },
-                status: %Schema{
-                  type: :string,
-                  enum: @node_status_enum,
-                  description: "Filter by node status"
+                status__in: %Schema{
+                  oneOf: [
+                    %Schema{type: :string, description: "Comma-separated: \"healthy,unhealthy\""},
+                    %Schema{type: :array, items: %Schema{type: :string, enum: @node_status_enum}}
+                  ],
+                  description:
+                    "Filter by node status — comma-separated string or array of: healthy, unhealthy, unreachable"
                 },
                 cluster_name: %Schema{
                   type: :string,
@@ -223,11 +228,18 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
             cluster_filters: %Schema{
               type: :object,
               description:
-                "Optional filters to apply to target clusters (AND logic with node_filters). Supports all cluster list filters.",
+                "Optional filters to apply to target clusters (AND logic with node_filters). Accepts: name, name__in, ipv4_range, node_count (exact/gte/lte), has_node_limit, inserted_at/updated_at ranges. Does not accept node_limit or node_id__in.",
               properties: %{
                 name: %Schema{
                   type: :string,
                   description: "Filter by cluster name (exact match or wildcard: prod*, *staging, etc.)"
+                },
+                name__in: %Schema{
+                  oneOf: [
+                    %Schema{type: :string, description: "Comma-separated: \"prod,staging\""},
+                    %Schema{type: :array, items: %Schema{type: :string}}
+                  ],
+                  description: "Filter by cluster names — comma-separated string or array"
                 },
                 ipv4_range: %Schema{
                   type: :string,

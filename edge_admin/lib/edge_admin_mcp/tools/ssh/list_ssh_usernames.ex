@@ -33,10 +33,13 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
   schema do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
+    field :username, :string, min_length: 1
     field :username_in, {:list, :string}
     field :node_id_in, {:list, :string}
     field :has_password, {:either, {:boolean, nil}}
+    field :cluster_name, :string, min_length: 1
     field :cluster_name_in, {:list, :string}
+    field :key_name, :string, min_length: 1
     field :key_name_in, {:list, :string}
     field :inserted_at_gte, :string
     field :inserted_at_lte, :string

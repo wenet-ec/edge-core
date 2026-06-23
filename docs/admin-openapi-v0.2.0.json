@@ -61,7 +61,10 @@
         "example": {
           "command_text": "ABC=value\necho $ABC\nsudo docker ps",
           "targeting": {
-            "node_filters": { "id_type": "persistent", "status": "healthy" },
+            "node_filters": {
+              "id_type__in": "persistent",
+              "status__in": "healthy"
+            },
             "node_ids": ["01234567-89ab-cdef-0123-456789abcdef"],
             "type": "nodes"
           }
@@ -84,13 +87,16 @@
             "example": {
               "cluster_filters": { "name": "*prod*" },
               "cluster_names": ["prod", "staging"],
-              "node_filters": { "id_type": "persistent", "status": "healthy" },
+              "node_filters": {
+                "id_type__in": "persistent",
+                "status__in": "healthy"
+              },
               "type": "clusters"
             },
             "properties": {
               "cluster_filters": {
                 "additionalProperties": false,
-                "description": "Optional filters to apply to target clusters (AND logic with node_filters). Supports all cluster list filters.",
+                "description": "Optional filters to apply to target clusters (AND logic with node_filters). Accepts: name, name__in, ipv4_range, node_count (exact/gte/lte), has_node_limit, inserted_at/updated_at ranges. Does not accept node_limit or node_id__in.",
                 "properties": {
                   "has_node_limit": {
                     "description": "Filter clusters that have (true) or do not have (false) a node limit set",
@@ -117,6 +123,16 @@
                   "name": {
                     "description": "Filter by cluster name (exact match or wildcard: prod*, *staging, etc.)",
                     "type": "string"
+                  },
+                  "name__in": {
+                    "description": "Filter by cluster names — comma-separated string or array",
+                    "oneOf": [
+                      {
+                        "description": "Comma-separated: \"prod,staging\"",
+                        "type": "string"
+                      },
+                      { "items": { "type": "string" }, "type": "array" }
+                    ]
                   },
                   "node_count": {
                     "description": "Filter by exact node count",
@@ -155,16 +171,27 @@
               },
               "node_filters": {
                 "additionalProperties": false,
-                "description": "Optional filters to apply to target nodes (AND logic with cluster_filters). Supports all node list filters except cluster_name.",
+                "description": "Optional filters to apply to target nodes (AND logic with cluster_filters). Accepts: id_type__in, status__in, version, self_update_enabled, last_seen_at/inserted_at/updated_at ranges. Does not accept node_id__in or cluster_name__in.",
                 "properties": {
                   "cluster_name": {
                     "description": "Filter by cluster name (exact match or wildcard: prod*, *staging, etc.)",
                     "type": "string"
                   },
-                  "id_type": {
-                    "description": "Filter by node ID type",
-                    "enum": ["persistent", "random"],
-                    "type": "string"
+                  "id_type__in": {
+                    "description": "Filter by node ID type — comma-separated string or array of: persistent, random",
+                    "oneOf": [
+                      {
+                        "description": "Comma-separated: \"persistent,random\"",
+                        "type": "string"
+                      },
+                      {
+                        "items": {
+                          "enum": ["persistent", "random"],
+                          "type": "string"
+                        },
+                        "type": "array"
+                      }
+                    ]
                   },
                   "inserted_at__gte": {
                     "anyOf": [
@@ -198,10 +225,21 @@
                     "description": "Filter by self-update enabled status",
                     "type": "boolean"
                   },
-                  "status": {
-                    "description": "Filter by node status",
-                    "enum": ["healthy", "unhealthy", "unreachable"],
-                    "type": "string"
+                  "status__in": {
+                    "description": "Filter by node status — comma-separated string or array of: healthy, unhealthy, unreachable",
+                    "oneOf": [
+                      {
+                        "description": "Comma-separated: \"healthy,unhealthy\"",
+                        "type": "string"
+                      },
+                      {
+                        "items": {
+                          "enum": ["healthy", "unhealthy", "unreachable"],
+                          "type": "string"
+                        },
+                        "type": "array"
+                      }
+                    ]
                   },
                   "updated_at__gte": {
                     "anyOf": [
@@ -484,7 +522,7 @@
           "targeting": {
             "node_filters": {
               "self_update_enabled": true,
-              "status": "healthy"
+              "status__in": "healthy"
             },
             "type": "all"
           },
@@ -531,7 +569,7 @@
             "example": {
               "node_filters": {
                 "self_update_enabled": true,
-                "status": "healthy"
+                "status__in": "healthy"
               },
               "type": "all"
             },
@@ -568,7 +606,7 @@
             "properties": {
               "cluster_filters": {
                 "additionalProperties": false,
-                "description": "Optional filters to apply to target clusters (AND logic with node_filters). Supports all cluster list filters.",
+                "description": "Optional filters to apply to target clusters (AND logic with node_filters). Accepts: name, name__in, ipv4_range, node_count (exact/gte/lte), has_node_limit, inserted_at/updated_at ranges. Does not accept node_limit or node_id__in.",
                 "properties": {
                   "has_node_limit": {
                     "description": "Filter clusters that have (true) or do not have (false) a node limit set",
@@ -595,6 +633,16 @@
                   "name": {
                     "description": "Filter by cluster name (exact match or wildcard: prod*, *staging, etc.)",
                     "type": "string"
+                  },
+                  "name__in": {
+                    "description": "Filter by cluster names — comma-separated string or array",
+                    "oneOf": [
+                      {
+                        "description": "Comma-separated: \"prod,staging\"",
+                        "type": "string"
+                      },
+                      { "items": { "type": "string" }, "type": "array" }
+                    ]
                   },
                   "node_count": {
                     "description": "Filter by exact node count",
@@ -632,16 +680,27 @@
               },
               "node_filters": {
                 "additionalProperties": false,
-                "description": "Optional filters to apply to target nodes (AND logic with cluster_filters). Supports all node list filters except cluster_name.",
+                "description": "Optional filters to apply to target nodes (AND logic with cluster_filters). Accepts: id_type__in, status__in, version, self_update_enabled, last_seen_at/inserted_at/updated_at ranges. Does not accept node_id__in or cluster_name__in.",
                 "properties": {
                   "cluster_name": {
                     "description": "Filter by cluster name (exact match or wildcard: prod*, *staging, etc.)",
                     "type": "string"
                   },
-                  "id_type": {
-                    "description": "Filter by node ID type",
-                    "enum": ["persistent", "random"],
-                    "type": "string"
+                  "id_type__in": {
+                    "description": "Filter by node ID type — comma-separated string or array of: persistent, random",
+                    "oneOf": [
+                      {
+                        "description": "Comma-separated: \"persistent,random\"",
+                        "type": "string"
+                      },
+                      {
+                        "items": {
+                          "enum": ["persistent", "random"],
+                          "type": "string"
+                        },
+                        "type": "array"
+                      }
+                    ]
                   },
                   "inserted_at__gte": {
                     "anyOf": [
@@ -675,10 +734,21 @@
                     "description": "Filter by self-update enabled status",
                     "type": "boolean"
                   },
-                  "status": {
-                    "description": "Filter by node status",
-                    "enum": ["healthy", "unhealthy", "unreachable"],
-                    "type": "string"
+                  "status__in": {
+                    "description": "Filter by node status — comma-separated string or array of: healthy, unhealthy, unreachable",
+                    "oneOf": [
+                      {
+                        "description": "Comma-separated: \"healthy,unhealthy\"",
+                        "type": "string"
+                      },
+                      {
+                        "items": {
+                          "enum": ["healthy", "unhealthy", "unreachable"],
+                          "type": "string"
+                        },
+                        "type": "array"
+                      }
+                    ]
                   },
                   "updated_at__gte": {
                     "anyOf": [
@@ -1924,7 +1994,7 @@
             },
             {
               "key_name": "ci",
-              "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... ci@deploy"
+              "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBqJTBMoXnkHGQKX7Rmlw6JQe5JJPMoC3PcByEzJHV9G ci@deploy"
             }
           ],
           "username": "admin"
@@ -2994,7 +3064,7 @@
           "id": "01234567-89ab-cdef-0123-456789abcdef",
           "inserted_at": "2025-06-17T10:30:00Z",
           "targeting": {
-            "node_filters": { "status": "healthy" },
+            "node_filters": { "status__in": "healthy" },
             "node_ids": ["01234567-89ab-cdef-0123-456789abcdef"],
             "type": "nodes"
           },
@@ -3026,7 +3096,7 @@
           "targeting": {
             "description": "Targeting configuration used when creating this command (informational only, not filterable)",
             "example": {
-              "node_filters": { "status": "healthy" },
+              "node_filters": { "status__in": "healthy" },
               "node_ids": ["01234567-89ab-cdef-0123-456789abcdef"],
               "type": "nodes"
             },

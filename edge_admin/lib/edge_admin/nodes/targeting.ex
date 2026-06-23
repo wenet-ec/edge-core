@@ -72,8 +72,8 @@ defmodule EdgeAdmin.Nodes.Targeting do
   @datetime_or_date {:custom, {__MODULE__, :validate_iso8601_date_or_datetime}}
 
   @node_filters_schema %{
-    id_type: {:enum, Node.id_type_strings()},
-    status: {:enum, Node.status_strings()},
+    id_type__in: {:either, {:string, {:list, :string}}},
+    status__in: {:either, {:string, {:list, :string}}},
     cluster_name: :string,
     version: :string,
     self_update_enabled: :boolean,
@@ -87,6 +87,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
 
   @cluster_filters_schema %{
     name: :string,
+    name__in: {:either, {:string, {:list, :string}}},
     ipv4_range: :string,
     node_count: :integer,
     node_count__gte: :integer,

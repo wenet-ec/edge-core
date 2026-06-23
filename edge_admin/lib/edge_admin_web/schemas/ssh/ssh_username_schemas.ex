@@ -170,7 +170,10 @@ defmodule EdgeAdminWeb.Schemas.Ssh.SshUsernameSchemas do
             key_name: "laptop",
             public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGQw7Di3fBr2oc2vbZN5YLz8YpJ8PQb5bXwQwe+QgYX8 user@laptop"
           },
-          %{key_name: "ci", public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... ci@deploy"}
+          %{
+            key_name: "ci",
+            public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBqJTBMoXnkHGQKX7Rmlw6JQe5JJPMoC3PcByEzJHV9G ci@deploy"
+          }
         ]
       }
     })

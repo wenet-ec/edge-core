@@ -112,7 +112,7 @@ defmodule EdgeAdmin.SelfUpdates do
   Lists self-update requests with filtering, sorting, and pagination.
 
   Supports filtering by:
-  - `status` - Enum IN: `"pending"`, `"processing"`, `"completed"` — single value or comma-separated list for multi-match
+  - `status__in` - Enum IN: `"pending"`, `"processing"`, `"completed"` — comma-separated list (`status__in=pending,processing`)
   - `inserted_at__gte/lte` - Date range filter
   - `updated_at__gte/lte` - Date range filter
 

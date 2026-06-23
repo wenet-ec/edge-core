@@ -51,6 +51,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
     field :exit_code_lte, :integer
     field :output, :string, min_length: 1
     field :has_output, {:either, {:boolean, nil}}
+    field :cluster_name, :string, min_length: 1
     field :cluster_name_in, {:list, :string}
     field :has_cluster, {:either, {:boolean, nil}}
     field :inserted_at_gte, :string

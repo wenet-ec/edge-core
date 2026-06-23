@@ -32,14 +32,24 @@ defmodule EdgeAdmin.Nodes.TargetingTest do
       assert schema.cluster_names == {:list, :string}
     end
 
-    test "node_filters allows the documented status values" do
+    test "node_filters.status__in accepts a string or a list" do
       schema = Targeting.peri_schema()
-      assert {:enum, ["healthy", "unhealthy", "unreachable"]} = schema.node_filters.status
+      assert {:either, {:string, {:list, :string}}} = schema.node_filters.status__in
     end
 
-    test "node_filters allows the documented id_type values" do
+    test "node_filters.id_type__in accepts a string or a list" do
       schema = Targeting.peri_schema()
-      assert {:enum, ["persistent", "random"]} = schema.node_filters.id_type
+      assert {:either, {:string, {:list, :string}}} = schema.node_filters.id_type__in
+    end
+
+    test "cluster_filters.name__in accepts a string or a list" do
+      schema = Targeting.peri_schema()
+      assert {:either, {:string, {:list, :string}}} = schema.cluster_filters.name__in
+    end
+
+    test "cluster_filters.name accepts a string for wildcard matching" do
+      schema = Targeting.peri_schema()
+      assert :string = schema.cluster_filters.name
     end
   end
 

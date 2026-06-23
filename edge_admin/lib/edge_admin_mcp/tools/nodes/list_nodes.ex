@@ -57,13 +57,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
 
   @impl true
   def execute(params, frame) do
-    query =
-      FlopParams.build(params,
-        passthrough: [:version],
-        boolean_filters: [:self_update_enabled],
-        multi: [:node_id, :cluster_name, :status, :id_type],
-        ranges: [:last_seen_at, :inserted_at, :updated_at]
-      )
+    query = FlopParams.build(params)
 
     case Nodes.list_nodes(query) do
       {:ok, {nodes, meta}} ->

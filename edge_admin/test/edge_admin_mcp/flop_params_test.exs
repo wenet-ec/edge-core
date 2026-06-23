@@ -5,11 +5,11 @@ defmodule EdgeAdminMcp.FlopParamsTest do
   alias EdgeAdminMcp.FlopParams
 
   # ---------------------------------------------------------------------------
-  # build/2 — MCP-shape (single underscore) → Flop-shape (double underscore).
-  # Output is always string-keyed.
+  # build/1 — auto-detection: no per-tool opts needed.
+  # Every MCP param key is translated by pattern.
   # ---------------------------------------------------------------------------
 
-  describe "build/2 — pagination defaults" do
+  describe "build/1 — pagination defaults" do
     test "defaults page to 1 and page_size to 20 when not supplied" do
       result = FlopParams.build(%{})
 
@@ -38,341 +38,240 @@ defmodule EdgeAdminMcp.FlopParamsTest do
   end
 
   # ---------------------------------------------------------------------------
-  # passthrough fields — atom keys → string keys, nil values dropped
+  # Plain fields (string/integer) — passed through as-is
   # ---------------------------------------------------------------------------
 
-  describe "build/2 — passthrough" do
-    test "copies passthrough atom keys to string keys" do
-      result =
-        FlopParams.build(%{status: "healthy", name: "prod"}, passthrough: [:status, :name])
+  describe "build/1 — plain string/integer fields" do
+    test "plain string field is passed through unchanged" do
+      result = FlopParams.build(%{cluster_name: "prod"})
 
-      assert result["status"] == "healthy"
-      assert result["name"] == "prod"
+      assert result["cluster_name"] == "prod"
     end
 
-    test "drops nil passthrough values (so Flop doesn't see them)" do
-      result = FlopParams.build(%{status: nil, name: "prod"}, passthrough: [:status, :name])
+    test "plain integer field is passed through unchanged" do
+      result = FlopParams.build(%{exit_code: 1})
 
-      refute Map.has_key?(result, "status")
-      assert result["name"] == "prod"
+      assert result["exit_code"] == 1
     end
 
-    test "ignores keys not declared in :passthrough (allow-list, not pass-everything)" do
-      result = FlopParams.build(%{status: "healthy", uninvited: "leak"}, passthrough: [:status])
+    test "nil value is dropped" do
+      result = FlopParams.build(%{cluster_name: nil})
 
-      assert result["status"] == "healthy"
-      refute Map.has_key?(result, "uninvited")
+      refute Map.has_key?(result, "cluster_name")
     end
 
-    test "missing passthrough key in params is silently dropped" do
-      result = FlopParams.build(%{status: "healthy"}, passthrough: [:status, :missing])
+    test "multiple plain fields are each passed through" do
+      result = FlopParams.build(%{cluster_name: "prod", version: "1.0.*"})
 
-      assert result["status"] == "healthy"
-      refute Map.has_key?(result, "missing")
+      assert result["cluster_name"] == "prod"
+      assert result["version"] == "1.0.*"
     end
   end
 
   # ---------------------------------------------------------------------------
-  # range fields — _gte / _lte → __gte / __lte (Flop's expected suffix)
+  # Boolean fields — native true/false pass through; nil is dropped
   # ---------------------------------------------------------------------------
 
-  describe "build/2 — ranges" do
-    test "expands a range field into two double-underscore Flop keys" do
+  describe "build/1 — boolean fields" do
+    test "native true passes through" do
+      result = FlopParams.build(%{has_node_limit: true})
+
+      assert result["has_node_limit"] == true
+    end
+
+    test "native false passes through" do
+      result = FlopParams.build(%{has_node_limit: false})
+
+      assert result["has_node_limit"] == false
+    end
+
+    test "nil boolean is dropped — no filter applied" do
+      result = FlopParams.build(%{has_node_limit: nil})
+
+      refute Map.has_key?(result, "has_node_limit")
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # _in fields — list → "<field>__in" comma-joined string
+  # ---------------------------------------------------------------------------
+
+  describe "build/1 — _in list fields" do
+    test "list is joined and emitted as <field>__in" do
+      result = FlopParams.build(%{node_id_in: ["uuid-1", "uuid-2", "uuid-3"]})
+
+      assert result["node_id__in"] == "uuid-1,uuid-2,uuid-3"
+    end
+
+    test "single-element list produces no trailing comma" do
+      result = FlopParams.build(%{cluster_name_in: ["prod"]})
+
+      assert result["cluster_name__in"] == "prod"
+    end
+
+    test "empty list is dropped" do
+      result = FlopParams.build(%{node_id_in: []})
+
+      refute Map.has_key?(result, "node_id__in")
+    end
+
+    test "nil list is dropped" do
+      result = FlopParams.build(%{node_id_in: nil})
+
+      refute Map.has_key?(result, "node_id__in")
+    end
+
+    test "enum list is joined correctly" do
+      result = FlopParams.build(%{status_in: ["healthy", "unhealthy"]})
+
+      assert result["status__in"] == "healthy,unhealthy"
+    end
+
+    test "multiple _in fields are each translated independently" do
+      result = FlopParams.build(%{node_id_in: ["a", "b"], cluster_name_in: ["prod", "staging"]})
+
+      assert result["node_id__in"] == "a,b"
+      assert result["cluster_name__in"] == "prod,staging"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # _gte / _lte fields — single underscore → double underscore
+  # ---------------------------------------------------------------------------
+
+  describe "build/1 — range fields (_gte / _lte)" do
+    test "_gte suffix becomes __gte" do
+      result = FlopParams.build(%{inserted_at_gte: "2025-01-01T00:00:00Z"})
+
+      assert result["inserted_at__gte"] == "2025-01-01T00:00:00Z"
+    end
+
+    test "_lte suffix becomes __lte" do
+      result = FlopParams.build(%{inserted_at_lte: "2025-02-01T00:00:00Z"})
+
+      assert result["inserted_at__lte"] == "2025-02-01T00:00:00Z"
+    end
+
+    test "both sides of a range are translated" do
       result =
-        FlopParams.build(
-          %{inserted_at_gte: "2025-01-01T00:00:00Z", inserted_at_lte: "2025-02-01T00:00:00Z"},
-          ranges: [:inserted_at]
-        )
+        FlopParams.build(%{
+          inserted_at_gte: "2025-01-01T00:00:00Z",
+          inserted_at_lte: "2025-02-01T00:00:00Z"
+        })
 
       assert result["inserted_at__gte"] == "2025-01-01T00:00:00Z"
       assert result["inserted_at__lte"] == "2025-02-01T00:00:00Z"
     end
 
-    test "single-side range (only gte supplied) emits only that side" do
-      result = FlopParams.build(%{timeout_gte: 1000}, ranges: [:timeout])
+    test "single-side range emits only that side" do
+      result = FlopParams.build(%{timeout_gte: 1000})
 
       assert result["timeout__gte"] == 1000
       refute Map.has_key?(result, "timeout__lte")
     end
 
-    test "single-side range (only lte supplied) emits only that side" do
-      result = FlopParams.build(%{timeout_lte: 5000}, ranges: [:timeout])
-
-      assert result["timeout__lte"] == 5000
-      refute Map.has_key?(result, "timeout__gte")
-    end
-
     test "nil range values are dropped" do
-      result =
-        FlopParams.build(%{timeout_gte: nil, timeout_lte: nil}, ranges: [:timeout])
+      result = FlopParams.build(%{timeout_gte: nil, timeout_lte: nil})
 
       refute Map.has_key?(result, "timeout__gte")
       refute Map.has_key?(result, "timeout__lte")
     end
 
+    test "integer range value passes through correctly" do
+      result = FlopParams.build(%{exit_code_gte: 1})
+
+      assert result["exit_code__gte"] == 1
+    end
+
     test "multiple range fields each get their own __gte/__lte pair" do
       result =
-        FlopParams.build(
-          %{
-            inserted_at_gte: "2025-01-01",
-            updated_at_lte: "2025-02-01",
-            timeout_gte: 1000
-          },
-          ranges: [:inserted_at, :updated_at, :timeout]
-        )
+        FlopParams.build(%{
+          inserted_at_gte: "2025-01-01",
+          updated_at_lte: "2025-02-01",
+          timeout_gte: 1000
+        })
 
       assert result["inserted_at__gte"] == "2025-01-01"
       assert result["updated_at__lte"] == "2025-02-01"
       assert result["timeout__gte"] == 1000
     end
-
-    test "ranges that aren't in :ranges opt are NOT expanded (allow-list)" do
-      result = FlopParams.build(%{inserted_at_gte: "2025-01-01"}, ranges: [])
-
-      refute Map.has_key?(result, "inserted_at__gte")
-    end
   end
 
   # ---------------------------------------------------------------------------
-  # sort fields — order_by + order_directions, dropped when nil
+  # Reserved keys — page, page_size, order_by, order_directions, event_type
   # ---------------------------------------------------------------------------
 
-  describe "build/2 — sort" do
-    test "passes order_by and order_directions through" do
+  describe "build/1 — reserved keys" do
+    test "order_by and order_directions pass through" do
       result = FlopParams.build(%{order_by: "name,inserted_at", order_directions: "asc,desc"})
 
       assert result["order_by"] == "name,inserted_at"
       assert result["order_directions"] == "asc,desc"
     end
 
-    test "drops nil sort fields" do
+    test "nil sort fields are absent from output" do
       result = FlopParams.build(%{order_by: nil, order_directions: nil})
 
       refute Map.has_key?(result, "order_by")
       refute Map.has_key?(result, "order_directions")
     end
 
-    test "missing sort fields are absent from output" do
-      result = FlopParams.build(%{})
+    test "event_type is skipped by auto-detection (post-filter injected manually by list_webhooks)" do
+      result = FlopParams.build(%{event_type: "edge.node.registered"})
 
-      refute Map.has_key?(result, "order_by")
-      refute Map.has_key?(result, "order_directions")
-    end
-
-    test "sort and pagination coexist" do
-      result = FlopParams.build(%{page: 2, order_by: "name"})
-
-      assert result["page"] == 2
-      assert result["order_by"] == "name"
+      refute Map.has_key?(result, "event_type")
     end
   end
 
   # ---------------------------------------------------------------------------
-  # multi fields — reads params[:<field>_in] (MCP single-underscore convention,
-  # matching last_seen_at_gte) and emits "<field>__in" (Flop double-underscore
-  # wire format). :multi opt takes base field names (e.g. :node_id, :status).
+  # Full integration — realistic MCP params map
   # ---------------------------------------------------------------------------
 
-  describe "build/2 — multi" do
-    test "reads <field>_in param and emits <field>__in key" do
-      result =
-        FlopParams.build(%{node_id_in: ["uuid-1", "uuid-2", "uuid-3"]}, multi: [:node_id])
-
-      assert result["node_id__in"] == "uuid-1,uuid-2,uuid-3"
-    end
-
-    test "single-element list produces a single value (no trailing comma)" do
-      result = FlopParams.build(%{cluster_name_in: ["prod"]}, multi: [:cluster_name])
-
-      assert result["cluster_name__in"] == "prod"
-    end
-
-    test "nil value is dropped (not in params)" do
-      result = FlopParams.build(%{node_id_in: nil}, multi: [:node_id])
-
-      refute Map.has_key?(result, "node_id__in")
-    end
-
-    test "empty list is dropped (treated like nil)" do
-      result = FlopParams.build(%{node_id_in: []}, multi: [:node_id])
-
-      refute Map.has_key?(result, "node_id__in")
-    end
-
-    test "missing _in key is silently absent from output" do
-      result = FlopParams.build(%{}, multi: [:node_id])
-
-      refute Map.has_key?(result, "node_id__in")
-    end
-
-    test "multiple multi fields are each handled independently" do
-      result =
-        FlopParams.build(
-          %{node_id_in: ["a", "b"], cluster_name_in: ["prod", "staging"]},
-          multi: [:node_id, :cluster_name]
-        )
-
-      assert result["node_id__in"] == "a,b"
-      assert result["cluster_name__in"] == "prod,staging"
-    end
-
-    test "base field not in :multi is not included even if the _in param is a list" do
-      result = FlopParams.build(%{node_id_in: ["a", "b"]}, multi: [])
-
-      refute Map.has_key?(result, "node_id__in")
-    end
-
-    test "enum list (multi-value status) is joined and emits status__in" do
-      result =
-        FlopParams.build(%{status_in: ["healthy", "unhealthy"]}, multi: [:status])
-
-      assert result["status__in"] == "healthy,unhealthy"
-    end
-
-    test "single-value enum list emits status__in with one value" do
-      result = FlopParams.build(%{status_in: ["healthy"]}, multi: [:status])
-
-      assert result["status__in"] == "healthy"
-    end
-
-    test "empty enum list is dropped (no filter applied)" do
-      result = FlopParams.build(%{status_in: []}, multi: [:status])
-
-      refute Map.has_key?(result, "status__in")
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # boolean_filters — native booleans only
-  # ---------------------------------------------------------------------------
-
-  describe "build/2 — boolean_filters" do
-    test "passes native boolean true through" do
-      result =
-        FlopParams.build(%{has_node_limit: true}, boolean_filters: [:has_node_limit])
-
-      assert result["has_node_limit"] == true
-    end
-
-    test "passes native boolean false through" do
-      result =
-        FlopParams.build(%{has_node_limit: false}, boolean_filters: [:has_node_limit])
-
-      assert result["has_node_limit"] == false
-    end
-
-    test ~s(ignores "true" string because MCP booleans must be native booleans) do
-      result =
-        FlopParams.build(%{has_node_limit: "true"}, boolean_filters: [:has_node_limit])
-
-      refute Map.has_key?(result, "has_node_limit")
-    end
-
-    test ~s(ignores "false" string because MCP booleans must be native booleans) do
-      result =
-        FlopParams.build(%{has_node_limit: "false"}, boolean_filters: [:has_node_limit])
-
-      refute Map.has_key?(result, "has_node_limit")
-    end
-
-    test "drops nil value — no filter applied when field is absent" do
-      result =
-        FlopParams.build(%{has_node_limit: nil}, boolean_filters: [:has_node_limit])
-
-      refute Map.has_key?(result, "has_node_limit")
-    end
-
-    test "drops missing field — blank dropdown leaves no filter" do
-      result = FlopParams.build(%{}, boolean_filters: [:has_node_limit])
-
-      refute Map.has_key?(result, "has_node_limit")
-    end
-
-    test "ignores keys not declared in :boolean_filters" do
-      result =
-        FlopParams.build(%{has_node_limit: "true"}, boolean_filters: [])
-
-      refute Map.has_key?(result, "has_node_limit")
-    end
-
-    test "multiple boolean filters are each passed through independently" do
-      result =
-        FlopParams.build(
-          %{has_timeout: true, has_expires_at: false},
-          boolean_filters: [:has_timeout, :has_expires_at]
-        )
-
-      assert result["has_timeout"] == true
-      assert result["has_expires_at"] == false
-    end
-
-    test "only the set boolean filter is emitted when one is absent" do
-      result =
-        FlopParams.build(
-          %{has_timeout: true},
-          boolean_filters: [:has_timeout, :has_expires_at]
-        )
-
-      assert result["has_timeout"] == true
-      refute Map.has_key?(result, "has_expires_at")
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # Combined — pagination + passthrough + boolean_filters + ranges + sort
-  # ---------------------------------------------------------------------------
-
-  describe "build/2 — full integration" do
-    test "produces the documented Flop-shaped map for a realistic call" do
+  describe "build/1 — full integration" do
+    test "produces the correct Flop-shaped map for a realistic list_nodes call" do
       params = %{
         page: 2,
         page_size: 50,
-        status: "healthy",
-        name: "prod",
-        has_node_limit: true,
-        inserted_at_gte: "2025-01-01T00:00:00Z",
-        inserted_at_lte: "2025-02-01T00:00:00Z",
-        order_by: "inserted_at,name",
-        order_directions: "desc,asc",
-        # not in any opt list — must NOT appear
-        uninvited: "leak"
+        cluster_name: "prod*",
+        cluster_name_in: ["prod-east", "prod-west"],
+        status_in: ["healthy", "unhealthy"],
+        self_update_enabled: true,
+        last_seen_at_gte: "2025-01-01T00:00:00Z",
+        inserted_at_lte: "2025-06-01T00:00:00Z",
+        order_by: "inserted_at",
+        order_directions: "desc"
       }
 
-      result =
-        FlopParams.build(params,
-          passthrough: [:status, :name],
-          boolean_filters: [:has_node_limit],
-          ranges: [:inserted_at, :updated_at]
-        )
+      result = FlopParams.build(params)
 
       assert result == %{
                "page" => 2,
                "page_size" => 50,
-               "status" => "healthy",
-               "name" => "prod",
-               "has_node_limit" => true,
-               "inserted_at__gte" => "2025-01-01T00:00:00Z",
-               "inserted_at__lte" => "2025-02-01T00:00:00Z",
-               "order_by" => "inserted_at,name",
-               "order_directions" => "desc,asc"
+               "cluster_name" => "prod*",
+               "cluster_name__in" => "prod-east,prod-west",
+               "status__in" => "healthy,unhealthy",
+               "self_update_enabled" => true,
+               "last_seen_at__gte" => "2025-01-01T00:00:00Z",
+               "inserted_at__lte" => "2025-06-01T00:00:00Z",
+               "order_by" => "inserted_at",
+               "order_directions" => "desc"
              }
     end
 
-    test "blank boolean filter (nil) does not appear in output" do
+    test "nil values are uniformly dropped across all field types" do
       params = %{
-        page: 1,
-        status: "healthy",
-        has_node_limit: nil
+        cluster_name: nil,
+        cluster_name_in: nil,
+        self_update_enabled: nil,
+        inserted_at_gte: nil
       }
 
-      result =
-        FlopParams.build(params,
-          passthrough: [:status],
-          boolean_filters: [:has_node_limit]
-        )
+      result = FlopParams.build(params)
 
-      assert result["status"] == "healthy"
-      refute Map.has_key?(result, "has_node_limit")
+      refute Map.has_key?(result, "cluster_name")
+      refute Map.has_key?(result, "cluster_name__in")
+      refute Map.has_key?(result, "self_update_enabled")
+      refute Map.has_key?(result, "inserted_at__gte")
     end
   end
 end

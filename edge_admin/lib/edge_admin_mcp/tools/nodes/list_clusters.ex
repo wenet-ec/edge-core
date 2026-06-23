@@ -34,6 +34,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListClusters do
   schema do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
+    field :name, :string, min_length: 1
     field :name_in, {:list, :string}
     field :node_id_in, {:list, :string}
     field :ipv4_range, :string, min_length: 1
@@ -53,13 +54,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListClusters do
 
   @impl true
   def execute(params, frame) do
-    query =
-      FlopParams.build(params,
-        passthrough: [:ipv4_range, :node_limit],
-        boolean_filters: [:has_node_limit],
-        multi: [:name, :node_id],
-        ranges: [:node_count, :node_limit, :inserted_at, :updated_at]
-      )
+    query = FlopParams.build(params)
 
     case Nodes.list_clusters(query) do
       {:ok, {clusters, meta}} ->

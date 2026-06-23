@@ -51,12 +51,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshUsernames do
 
   @impl true
   def execute(params, frame) do
-    query =
-      FlopParams.build(params,
-        boolean_filters: [:has_password],
-        multi: [:username, :node_id, :cluster_name, :key_name],
-        ranges: [:inserted_at, :updated_at]
-      )
+    query = FlopParams.build(params)
 
     case Ssh.list_ssh_usernames(query) do
       {:ok, {usernames, meta}} ->

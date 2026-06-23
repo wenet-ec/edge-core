@@ -53,12 +53,7 @@ defmodule EdgeAdminMcp.Tools.Ssh.ListSshPublicKeys do
 
   @impl true
   def execute(params, frame) do
-    query =
-      FlopParams.build(params,
-        passthrough: [:public_key],
-        multi: [:ssh_username_id, :node_id, :username, :key_name, :cluster_name],
-        ranges: [:inserted_at, :updated_at]
-      )
+    query = FlopParams.build(params)
 
     case Ssh.list_ssh_public_keys(query) do
       {:ok, {keys, meta}} ->

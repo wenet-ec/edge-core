@@ -39,6 +39,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
   schema do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
+    field :cluster_name, :string, min_length: 1
     field :cluster_name_in, {:list, :string}
     field :name, :string, min_length: 1
     field :has_name, {:either, {:boolean, nil}}
@@ -65,24 +66,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys do
 
   @impl true
   def execute(params, frame) do
-    query =
-      FlopParams.build(params,
-        passthrough: [
-          :name,
-          :key,
-          :uses_remaining
-        ],
-        boolean_filters: [
-          :is_unlimited,
-          :is_spent,
-          :is_expired,
-          :is_never_used,
-          :has_expiry,
-          :has_name
-        ],
-        multi: [:cluster_name],
-        ranges: [:uses_remaining, :expires_at, :last_used_at, :inserted_at, :updated_at]
-      )
+    query = FlopParams.build(params)
 
     case Nodes.list_enrollment_keys(query) do
       {:ok, {keys, meta}} ->

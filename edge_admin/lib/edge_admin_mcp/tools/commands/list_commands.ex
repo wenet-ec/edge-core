@@ -47,12 +47,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommands do
 
   @impl true
   def execute(params, frame) do
-    query =
-      FlopParams.build(params,
-        passthrough: [:command_text],
-        boolean_filters: [:has_timeout, :has_expires_at],
-        ranges: [:timeout, :expires_at, :inserted_at, :updated_at]
-      )
+    query = FlopParams.build(params)
 
     case Commands.list_commands(query) do
       {:ok, {commands, meta}} ->

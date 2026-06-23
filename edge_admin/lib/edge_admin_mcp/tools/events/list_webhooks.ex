@@ -48,10 +48,7 @@ defmodule EdgeAdminMcp.Tools.Events.ListWebhooks do
   def execute(params, frame) do
     query =
       params
-      |> FlopParams.build(
-        passthrough: [:url],
-        ranges: [:inserted_at, :updated_at]
-      )
+      |> FlopParams.build()
       |> put_if("event_type", params[:event_type])
 
     case Webhooks.list_webhooks(query) do

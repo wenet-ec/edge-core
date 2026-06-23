@@ -1,67 +1,46 @@
 # edge_admin/lib/edge_admin_mcp/flop_params.ex
 defmodule EdgeAdminMcp.FlopParams do
   @moduledoc """
-  Builds the Flop-shaped query map from MCP tool params.
+  Translates atom-keyed MCP tool params into the string-keyed map that
+  `EdgeAdmin.RequestParser.parse/1` expects.
 
-  MCP tool schemas use snake_case keys with single underscores
-  (`inserted_at_gte`, `timeout_lte`, `status_in`, `node_id_in`). Flop expects
-  double-underscore separators (`inserted_at__gte`, `status__in`, `node_id__in`).
+  MCP tool schemas use single-underscore suffixes (`inserted_at_gte`,
+  `status_in`, `node_id_in`). `RequestParser` expects double-underscore
+  Flop operators (`inserted_at__gte`, `status__in`, `node_id__in`).
 
-  This helper takes the params map plus a small spec describing each
-  filter and produces the right shape, with pagination + sort included.
+  `build/1` scans every param key automatically by pattern — no per-tool
+  `passthrough:` / `multi:` / `ranges:` declarations needed.
 
-  ## Usage
+  ## Translation rules (applied to every non-nil param)
 
-      build(params,
-        passthrough: [:name, :key],
-        boolean_filters: [:has_password],
-        multi: [:cluster_name, :status, :node_id],
-        ranges: [:inserted_at, :updated_at, :timeout]
-      )
+  | MCP key pattern      | value type | emits                            |
+  |----------------------|------------|----------------------------------|
+  | `<field>_in`         | list       | `"<field>__in" => "a,b,c"`       |
+  | `<field>_gte`        | any        | `"<field>__gte" => value`        |
+  | `<field>_lte`        | any        | `"<field>__lte" => value`        |
+  | `<field>`            | boolean    | `"<field>" => true/false`        |
+  | `<field>`            | string/int | `"<field>" => value`             |
+  | `page` / `page_size` | integer    | `"page"` / `"page_size"` (reserved) |
+  | `order_by` / `order_directions` | string | passed through as-is  |
 
-  The `:passthrough` keys are passed through unchanged (atom → string key).
-  The `:boolean_filters` keys are native JSON booleans and are passed through
-  unchanged.
-  The `:multi` keys are declared as `{:list, :string}` or `{:list, {:enum, values}}`
-  in the MCP schema; the list is joined to a comma-separated string and emitted as
-  `"field__in"` so `RequestParser` routes it through the `__in` operator.
-  The `:ranges` keys expand to two filters each — `<key>_gte` → `<key>__gte`,
-  `<key>_lte` → `<key>__lte`. Nil values are dropped.
-
-  Pagination (`page`, `page_size`) and sort (`order_by`, `order_directions`)
-  are always included.
+  Nil values are always dropped. Reserved keys (`page`, `page_size`,
+  `order_by`, `order_directions`) are handled separately and not treated
+  as filter fields.
   """
+
+  # event_type is a post-filter injected by list_webhooks after build/1 — skip it here
+  @reserved ~w(page page_size order_by order_directions event_type)a
 
   @default_page 1
   @default_page_size 20
 
   @doc """
-  Build a Flop-shaped string-keyed query map from MCP tool params.
+  Translate MCP atom-keyed params into a `RequestParser`-compatible string map.
 
-  ## Options
-
-    * `:passthrough` — list of atom keys copied as-is to string keys.
-    * `:boolean_filters` — list of atom keys for native boolean filters.
-      Absent / nil values are dropped (no filter applied), which is the correct
-      behaviour when the MCP UI dropdown is left blank.
-    * `:multi` — list of base field name atoms (e.g. `:node_id`, `:status`,
-      `:cluster_name`). The MCP schema declares these as `<field>_in` with
-      `{:list, :string}` or `{:list, {:enum, values}}` — matching the single-
-      underscore convention used by `:ranges` (`inserted_at_gte`). The list
-      value is read from `params[:<field>_in]`, joined to a comma-separated
-      string, and emitted as `"<field>__in"` so `RequestParser` routes it
-      through the `__in` operator. Single-element and multi-element lists both
-      produce an `:in` filter.
-    * `:ranges` — list of atom field names expanded into `<field>_gte` /
-      `<field>_lte` (renamed to Flop's `<field>__gte` / `<field>__lte`).
-    * `:default_page_size` — overrides the default of 20.
+  Accepts an optional `default_page_size:` keyword.
   """
-  @spec build(map() | keyword(), keyword()) :: map()
+  @spec build(map(), keyword()) :: map()
   def build(params, opts \\ []) do
-    passthrough = Keyword.get(opts, :passthrough, [])
-    boolean_filters = Keyword.get(opts, :boolean_filters, [])
-    multi = Keyword.get(opts, :multi, [])
-    ranges = Keyword.get(opts, :ranges, [])
     default_page_size = Keyword.get(opts, :default_page_size, @default_page_size)
 
     base = %{
@@ -70,59 +49,54 @@ defmodule EdgeAdminMcp.FlopParams do
     }
 
     base
-    |> add_passthrough(params, passthrough)
-    |> add_boolean_filters(params, boolean_filters)
-    |> add_multi(params, multi)
-    |> add_ranges(params, ranges)
     |> add_sort(params)
-  end
-
-  defp add_passthrough(query, params, fields) do
-    Enum.reduce(fields, query, fn field, acc ->
-      put_if(acc, Atom.to_string(field), params[field])
-    end)
-  end
-
-  defp add_boolean_filters(query, params, fields) do
-    Enum.reduce(fields, query, fn field, acc ->
-      case params[field] do
-        true -> Map.put(acc, Atom.to_string(field), true)
-        false -> Map.put(acc, Atom.to_string(field), false)
-        _ -> acc
-      end
-    end)
-  end
-
-  defp add_multi(query, params, fields) do
-    Enum.reduce(fields, query, fn field, acc ->
-      in_atom = :"#{field}_in"
-
-      case params[in_atom] do
-        values when is_list(values) and values != [] ->
-          Map.put(acc, "#{field}__in", Enum.join(values, ","))
-
-        _ ->
-          acc
-      end
-    end)
-  end
-
-  defp add_ranges(query, params, fields) do
-    Enum.reduce(fields, query, fn field, acc ->
-      base = Atom.to_string(field)
-      gte_atom = :"#{base}_gte"
-      lte_atom = :"#{base}_lte"
-
-      acc
-      |> put_if("#{base}__gte", params[gte_atom])
-      |> put_if("#{base}__lte", params[lte_atom])
-    end)
+    |> add_filters(params)
   end
 
   defp add_sort(query, params) do
     query
     |> put_if("order_by", params[:order_by])
     |> put_if("order_directions", params[:order_directions])
+  end
+
+  defp add_filters(query, params) do
+    Enum.reduce(params, query, fn {key, value}, acc ->
+      if key in @reserved or is_nil(value) do
+        acc
+      else
+        translate(acc, key, value)
+      end
+    end)
+  end
+
+  # <field>_in list → "<field>__in" comma-joined string
+  defp translate(acc, key, value) when is_list(value) and value != [] do
+    str = Atom.to_string(key)
+
+    if String.ends_with?(str, "_in") do
+      field = String.slice(str, 0, byte_size(str) - 3)
+      Map.put(acc, "#{field}__in", Enum.join(value, ","))
+    else
+      acc
+    end
+  end
+
+  # <field>_gte / <field>_lte → double-underscore
+  defp translate(acc, key, value) do
+    str = Atom.to_string(key)
+
+    cond do
+      String.ends_with?(str, "_gte") ->
+        field = String.slice(str, 0, byte_size(str) - 4)
+        put_if(acc, "#{field}__gte", value)
+
+      String.ends_with?(str, "_lte") ->
+        field = String.slice(str, 0, byte_size(str) - 4)
+        put_if(acc, "#{field}__lte", value)
+
+      true ->
+        put_if(acc, str, value)
+    end
   end
 
   defp put_if(m, _k, nil), do: m

@@ -40,11 +40,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.ListSelfUpdateRequests do
 
   @impl true
   def execute(params, frame) do
-    query =
-      FlopParams.build(params,
-        multi: [:status],
-        ranges: [:inserted_at, :updated_at]
-      )
+    query = FlopParams.build(params)
 
     case SelfUpdates.list_self_update_requests(query) do
       {:ok, {requests, meta}} ->

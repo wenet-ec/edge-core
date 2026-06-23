@@ -70,16 +70,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
 
   @impl true
   def execute(params, frame) do
-    query =
-      FlopParams.build(params,
-        passthrough: [
-          :exit_code,
-          :output
-        ],
-        boolean_filters: [:target_all, :has_output, :has_cluster],
-        multi: [:command_id, :node_id, :cluster_name, :status],
-        ranges: [:exit_code, :inserted_at, :updated_at, :sent_at, :completed_at, :cancelled_at]
-      )
+    query = FlopParams.build(params)
 
     case Commands.list_command_executions(query) do
       {:ok, {executions, meta}} ->

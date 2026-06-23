@@ -43,12 +43,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListAliases do
 
   @impl true
   def execute(params, frame) do
-    query =
-      FlopParams.build(params,
-        passthrough: [:name],
-        multi: [:node_id, :cluster_name],
-        ranges: [:inserted_at, :updated_at]
-      )
+    query = FlopParams.build(params)
 
     case Nodes.list_aliases(query) do
       {:ok, {aliases, meta}} ->

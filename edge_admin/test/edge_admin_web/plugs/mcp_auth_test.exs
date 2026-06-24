@@ -106,7 +106,7 @@ defmodule EdgeAdminWeb.Plugs.McpAuthTest do
       Application.put_env(:edge_admin, :master_key, "master-key")
       Application.put_env(:edge_admin, :mcp_key, "mcp-key")
       conn = "Bearer wrong" |> build_conn() |> McpAuth.call(@opts)
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert get_in(body, ["error", "code"]) == "unauthorized"
     end
 
@@ -114,7 +114,7 @@ defmodule EdgeAdminWeb.Plugs.McpAuthTest do
       Application.put_env(:edge_admin, :master_key, "master-key")
       Application.put_env(:edge_admin, :mcp_key, "mcp-key")
       conn = "Bearer wrong" |> build_conn() |> McpAuth.call(@opts)
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert Map.has_key?(body, "error")
     end
   end

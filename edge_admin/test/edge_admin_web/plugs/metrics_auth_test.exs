@@ -111,7 +111,7 @@ defmodule EdgeAdminWeb.Plugs.MetricsAuthTest do
       Application.put_env(:edge_admin, :master_key, "master-key")
       Application.put_env(:edge_admin, :metrics_key, "metrics-key")
       conn = "Bearer garbage" |> build_conn() |> MetricsAuth.call(@opts)
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert Map.has_key?(body, "error")
     end
 

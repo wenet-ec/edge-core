@@ -21,7 +21,7 @@ defmodule EdgeAgentWeb.Plugs.ApiTokenAuthTest do
 
     test "response body has error key", %{conn: conn} do
       conn = call(conn)
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert Map.has_key?(body, "error")
     end
   end
@@ -117,7 +117,7 @@ defmodule EdgeAgentWeb.Plugs.ApiTokenAuthTest do
         |> put_req_header("authorization", "Bearer bad-token")
         |> call()
 
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert Map.has_key?(body, "error")
     end
 

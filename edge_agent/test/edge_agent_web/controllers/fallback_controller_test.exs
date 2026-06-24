@@ -31,13 +31,13 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
 
     test "response has error.code validation_failed", %{conn: conn} do
       conn = call(conn, {:error, empty_changeset()})
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert get_in(body, ["error", "code"]) == "validation_failed"
     end
 
     test "response has error.details with field errors", %{conn: conn} do
       conn = call(conn, {:error, empty_changeset()})
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert is_map(get_in(body, ["error", "details"]))
     end
   end
@@ -54,13 +54,13 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
 
     test "response has error.code not_found", %{conn: conn} do
       conn = call(conn, {:error, :not_found})
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert get_in(body, ["error", "code"]) == "not_found"
     end
 
     test "response has error.message", %{conn: conn} do
       conn = call(conn, {:error, :not_found})
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert is_binary(get_in(body, ["error", "message"]))
     end
   end
@@ -77,7 +77,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
 
     test "response has error.code forbidden", %{conn: conn} do
       conn = call(conn, {:error, :forbidden})
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert get_in(body, ["error", "code"]) == "forbidden"
     end
   end
@@ -94,7 +94,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
 
     test "response has error.code unauthorized", %{conn: conn} do
       conn = call(conn, {:error, :unauthorized})
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert get_in(body, ["error", "code"]) == "unauthorized"
     end
   end
@@ -111,7 +111,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
 
     test "response has error.code conflict", %{conn: conn} do
       conn = call(conn, {:error, :conflict})
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert get_in(body, ["error", "code"]) == "conflict"
     end
   end
@@ -128,7 +128,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
 
     test "response error.message contains the specific reason", %{conn: conn} do
       conn = call(conn, {:error, {:conflict, "cannot delete with active nodes"}})
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert get_in(body, ["error", "message"]) == "cannot delete with active nodes"
     end
   end
@@ -145,7 +145,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
 
     test "response has error.code service_unavailable", %{conn: conn} do
       conn = call(conn, {:error, :service_unavailable})
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert get_in(body, ["error", "code"]) == "service_unavailable"
     end
   end
@@ -162,7 +162,7 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
 
     test "response has error.code bad_request", %{conn: conn} do
       conn = call(conn, {:error, :bad_request})
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert get_in(body, ["error", "code"]) == "bad_request"
     end
   end
@@ -189,13 +189,13 @@ defmodule EdgeAgentWeb.Controllers.FallbackControllerTest do
 
     test "500 response has error.code internal_server_error", %{conn: conn} do
       conn = call(conn, {:error, :some_unknown_atom})
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert get_in(body, ["error", "code"]) == "internal_server_error"
     end
 
     test "500 response has error.message", %{conn: conn} do
       conn = call(conn, {:error, :some_unknown_atom})
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert is_binary(get_in(body, ["error", "message"]))
     end
   end

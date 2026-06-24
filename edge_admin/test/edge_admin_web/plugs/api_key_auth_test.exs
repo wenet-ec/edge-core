@@ -124,7 +124,7 @@ defmodule EdgeAdminWeb.Plugs.ApiKeyAuthTest do
       Application.put_env(:edge_admin, :master_key, "secret-master-key")
       Application.put_env(:edge_admin, :api_key, "secret-api-key")
       conn = "Bearer wrong" |> build_conn() |> ApiKeyAuth.call(@opts)
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert Map.has_key?(body, "error")
     end
   end

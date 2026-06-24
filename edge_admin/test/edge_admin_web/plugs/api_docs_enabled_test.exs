@@ -53,7 +53,7 @@ defmodule EdgeAdminWeb.Plugs.ApiDocsEnabledTest do
     test "response body is JSON with errors key" do
       Application.put_env(:edge_admin, :api_docs_enabled, false)
       conn = :get |> conn("/swaggerui") |> ApiDocsEnabled.call(@opts)
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert %{"errors" => %{"detail" => "Not Found"}} = body
     end
 

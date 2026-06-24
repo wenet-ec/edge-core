@@ -39,7 +39,7 @@ defmodule EdgeAgentWeb.Controllers.SelfUpdateControllerTest do
     test "response body has error.code forbidden when disabled", %{conn: conn} do
       with_self_update_enabled(false, fn ->
         conn = post(authed(conn), ~p"/api/v1/self_updates/trigger")
-        body = Jason.decode!(conn.resp_body)
+        body = JSON.decode!(conn.resp_body)
         assert get_in(body, ["error", "code"]) == "forbidden"
       end)
     end
@@ -66,7 +66,7 @@ defmodule EdgeAgentWeb.Controllers.SelfUpdateControllerTest do
     test "response body has data.message key when enabled", %{conn: conn} do
       with_self_update_enabled(true, fn ->
         conn = post(authed(conn), ~p"/api/v1/self_updates/trigger")
-        body = Jason.decode!(conn.resp_body)
+        body = JSON.decode!(conn.resp_body)
         assert get_in(body, ["data", "message"])
       end)
     end
@@ -74,7 +74,7 @@ defmodule EdgeAgentWeb.Controllers.SelfUpdateControllerTest do
     test "response message mentions self-update triggered", %{conn: conn} do
       with_self_update_enabled(true, fn ->
         conn = post(authed(conn), ~p"/api/v1/self_updates/trigger")
-        body = Jason.decode!(conn.resp_body)
+        body = JSON.decode!(conn.resp_body)
         assert get_in(body, ["data", "message"]) =~ "triggered"
       end)
     end

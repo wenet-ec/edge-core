@@ -30,7 +30,7 @@ defmodule EdgeAdminWeb.Plugs.RedocUI do
   # Navy-led theme. Primary, links, headings, sidebar accents → navy.
   # HTTP method colors are intentionally NOT overridden — ReDoc's defaults
   # (green POST, blue GET, etc.) are what developers expect to see.
-  @theme_json Jason.encode!(%{
+  @theme_json JSON.encode!(%{
                 colors: %{
                   primary: %{main: "#3e567c"},
                   text: %{primary: "#24344d", secondary: "#506d96"},

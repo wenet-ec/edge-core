@@ -45,7 +45,7 @@ defmodule EdgeAdminWeb.Plugs.AgentAuthTest do
     test "response body contains error key" do
       opts = opts_with(lookup_returning({:ok, stub_node()}))
       conn = nil |> build_conn() |> AgentAuth.call(opts)
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert Map.has_key?(body, "error")
     end
   end
@@ -90,7 +90,7 @@ defmodule EdgeAdminWeb.Plugs.AgentAuthTest do
     test "response body contains error key" do
       opts = opts_with(lookup_returning(:error))
       conn = "Bearer unknown-token" |> build_conn() |> AgentAuth.call(opts)
-      body = Jason.decode!(conn.resp_body)
+      body = JSON.decode!(conn.resp_body)
       assert Map.has_key?(body, "error")
     end
   end

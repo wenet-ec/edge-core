@@ -305,7 +305,7 @@ defmodule EdgeAgent.SettingsTest do
       {:ok, _} = Settings.set_admin_urls(["http://admin:44000"])
       raw = Settings.get_config("admin_urls")
       assert is_binary(raw)
-      assert {:ok, _} = Jason.decode(raw)
+      assert {:ok, _} = JSON.decode(raw)
     end
   end
 
@@ -399,7 +399,7 @@ defmodule EdgeAgent.SettingsTest do
       {:ok, _} = Settings.set_admin_fallback_urls(["https://admin.example.com"])
       raw = Settings.get_config("admin_fallback_urls")
       assert is_binary(raw)
-      assert {:ok, _} = Jason.decode(raw)
+      assert {:ok, _} = JSON.decode(raw)
     end
   end
 

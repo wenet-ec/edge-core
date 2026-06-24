@@ -23,7 +23,7 @@ defmodule EdgeAdminWeb.Plugs.CastAndValidateErrorRendererTest do
 
   defp call(errors), do: CastAndValidateErrorRenderer.call(build_conn(), errors)
 
-  defp decoded(conn), do: Jason.decode!(conn.resp_body)
+  defp decoded(conn), do: JSON.decode!(conn.resp_body)
 
   # -----------------------------------------------------------------------
   # HTTP status

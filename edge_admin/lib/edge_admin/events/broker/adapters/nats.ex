@@ -120,14 +120,23 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Nats do
     config = Application.get_env(:edge_admin, :event_broker_nats, [])
 
     if Keyword.get(config, :jetstream, false) do
-      send(self(), :ensure_streams)
+      {:ok, %{}, {:continue, :ensure_streams}}
+    else
+      {:ok, %{}}
     end
-
-    {:ok, %{}}
   end
 
   @impl GenServer
-  def handle_info(:ensure_streams, state) do
+  def handle_continue(:ensure_streams, state), do: do_ensure_streams(state)
+
+  @impl GenServer
+  def handle_info(:ensure_streams, state), do: do_ensure_streams(state)
+
+  # ---------------------------------------------------------------------------
+  # Private helpers
+  # ---------------------------------------------------------------------------
+
+  defp do_ensure_streams(state) do
     if connection_ready?() do
       case ensure_streams() do
         :ok ->
@@ -143,10 +152,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Nats do
       {:noreply, state}
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Private helpers
-  # ---------------------------------------------------------------------------
 
   # Auth precedence: token → username/password → nkey+jwt → nkey only → none
   defp build_auth(config) do

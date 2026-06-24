@@ -97,12 +97,16 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Kafka do
 
   @impl GenServer
   def init([]) do
-    send(self(), :start_client)
-    {:ok, %{}}
+    {:ok, %{}, {:continue, :start_client}}
   end
 
   @impl GenServer
-  def handle_info(:start_client, state) do
+  def handle_continue(:start_client, state), do: do_start_client(state)
+
+  @impl GenServer
+  def handle_info(:start_client, state), do: do_start_client(state)
+
+  defp do_start_client(state) do
     config = Application.get_env(:edge_admin, :event_broker_kafka, [])
     brokers = Keyword.fetch!(config, :brokers)
     client_config = Keyword.get(config, :client_config, [])

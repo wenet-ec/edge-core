@@ -89,9 +89,11 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Redis do
 
   @impl GenServer
   def init([]) do
-    send(self(), :connect)
-    {:ok, %{conn: nil}}
+    {:ok, %{conn: nil}, {:continue, :connect}}
   end
+
+  @impl GenServer
+  def handle_continue(:connect, state), do: do_connect(state)
 
   @impl GenServer
   def handle_call(:healthy?, _from, %{conn: nil} = state) do
@@ -120,7 +122,16 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Redis do
   end
 
   @impl GenServer
-  def handle_info(:connect, _state) do
+  def handle_info(:connect, state), do: do_connect(state)
+
+  # Connection went down — reconnect
+  def handle_info({:DOWN, _ref, :process, _pid, reason}, _state) do
+    Logger.warning("[EventBroker.Redis] Connection lost (#{inspect(reason)}) — reconnecting in 5s")
+    Process.send_after(self(), :connect, 5_000)
+    {:noreply, %{conn: nil}}
+  end
+
+  defp do_connect(_state) do
     config = Application.get_env(:edge_admin, :event_broker_redis, [])
     url = Keyword.fetch!(config, :url)
     ssl = Keyword.get(config, :ssl, false)
@@ -138,12 +149,5 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Redis do
         Process.send_after(self(), :connect, 10_000)
         {:noreply, %{conn: nil}}
     end
-  end
-
-  # Connection went down — reconnect
-  def handle_info({:DOWN, _ref, :process, _pid, reason}, _state) do
-    Logger.warning("[EventBroker.Redis] Connection lost (#{inspect(reason)}) — reconnecting in 5s")
-    Process.send_after(self(), :connect, 5_000)
-    {:noreply, %{conn: nil}}
   end
 end

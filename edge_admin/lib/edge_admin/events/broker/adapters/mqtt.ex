@@ -119,9 +119,11 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
   @impl GenServer
   def init([]) do
     Process.flag(:trap_exit, true)
-    send(self(), :connect)
-    {:ok, %{client: nil}}
+    {:ok, %{client: nil}, {:continue, :connect}}
   end
+
+  @impl GenServer
+  def handle_continue(:connect, state), do: do_connect(state)
 
   @impl GenServer
   def handle_call(:healthy?, _from, %{client: nil} = state) do
@@ -158,22 +160,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
   end
 
   @impl GenServer
-  def handle_info(:connect, _state) do
-    config = Application.get_env(:edge_admin, :event_broker_mqtt, [])
-    opts = build_emqtt_opts(config)
-
-    with {:ok, client} <- :emqtt.start_link(opts),
-         {:ok, _props} <- :emqtt.connect(client) do
-      Process.monitor(client)
-      Logger.info("[EventBroker.Mqtt] Connected to #{config[:host]}:#{config[:port]}")
-      {:noreply, %{client: client}}
-    else
-      {:error, reason} ->
-        Logger.warning("[EventBroker.Mqtt] Connection failed: #{inspect(reason)} — will retry in 10s")
-        Process.send_after(self(), :connect, 10_000)
-        {:noreply, %{client: nil}}
-    end
-  end
+  def handle_info(:connect, state), do: do_connect(state)
 
   def handle_info({:DOWN, _ref, :process, _pid, reason}, _state) do
     Logger.warning("[EventBroker.Mqtt] Client process died (#{inspect(reason)}) — reconnecting in 5s")
@@ -197,6 +184,23 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
   # ---------------------------------------------------------------------------
   # Helpers
   # ---------------------------------------------------------------------------
+
+  defp do_connect(_state) do
+    config = Application.get_env(:edge_admin, :event_broker_mqtt, [])
+    opts = build_emqtt_opts(config)
+
+    with {:ok, client} <- :emqtt.start_link(opts),
+         {:ok, _props} <- :emqtt.connect(client) do
+      Process.monitor(client)
+      Logger.info("[EventBroker.Mqtt] Connected to #{config[:host]}:#{config[:port]}")
+      {:noreply, %{client: client}}
+    else
+      {:error, reason} ->
+        Logger.warning("[EventBroker.Mqtt] Connection failed: #{inspect(reason)} — will retry in 10s")
+        Process.send_after(self(), :connect, 10_000)
+        {:noreply, %{client: nil}}
+    end
+  end
 
   # CloudEvents type uses dot-separated hierarchy (`edge.node.registered`).
   # MQTT segment wildcards (`+`, `#`) work on `/` — translate so subscribers

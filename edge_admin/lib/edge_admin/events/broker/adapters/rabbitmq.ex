@@ -87,9 +87,11 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Rabbitmq do
 
   @impl GenServer
   def init([]) do
-    send(self(), :connect)
-    {:ok, %{conn: nil, channel: nil}}
+    {:ok, %{conn: nil, channel: nil}, {:continue, :connect}}
   end
+
+  @impl GenServer
+  def handle_continue(:connect, state), do: do_connect(state)
 
   @impl GenServer
   def handle_call(:healthy?, _from, %{channel: nil} = state) do
@@ -128,7 +130,16 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Rabbitmq do
   end
 
   @impl GenServer
-  def handle_info(:connect, state) do
+  def handle_info(:connect, state), do: do_connect(state)
+
+  # Connection or channel went down — reconnect
+  def handle_info({:DOWN, _ref, :process, _pid, reason}, state) do
+    Logger.warning("[EventBroker.RabbitMQ] Connection lost (#{inspect(reason)}) — reconnecting in 5s")
+    Process.send_after(self(), :connect, 5_000)
+    {:noreply, %{state | conn: nil, channel: nil}}
+  end
+
+  defp do_connect(state) do
     config = Application.get_env(:edge_admin, :event_broker_rabbitmq, [])
     url = Keyword.fetch!(config, :url)
     ssl = Keyword.get(config, :ssl, false)
@@ -158,12 +169,5 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Rabbitmq do
         Process.send_after(self(), :connect, 10_000)
         {:noreply, %{state | conn: nil, channel: nil}}
     end
-  end
-
-  # Connection or channel went down — reconnect
-  def handle_info({:DOWN, _ref, :process, _pid, reason}, state) do
-    Logger.warning("[EventBroker.RabbitMQ] Connection lost (#{inspect(reason)}) — reconnecting in 5s")
-    Process.send_after(self(), :connect, 5_000)
-    {:noreply, %{state | conn: nil, channel: nil}}
   end
 end

@@ -16,13 +16,15 @@ defmodule EdgeAdminMcp do
   - `paginated/3` — builds the standard MCP list response shape
   - `error_response/1` — renders a known reason via `EdgeAdminMcp.ToolError.message/1`
   - `error_response/2` — renders a custom message for any error code
-  - `put_if/3` — adds a key to a map only when the value is non-nil. Use on
-    *create* paths where `nil` means "the user didn't pass this field."
-  - `put_if_present/4` — adds a key to a map iff the source key was *present*
-    in `params`, even if its value is `nil`. Use on *update* paths where the
-    user can pass `null` to mean "clear this field," distinct from omitting
-    it (which means "leave unchanged"). Peri preserves explicit nulls
-    through validation, so `Map.has_key?/2` correctly distinguishes the two.
+  - `put_if/3` — delegates to `EdgeAdminMcp.put_if/3`. Adds a key to a map
+    only when the value is non-nil. Use on *create* paths where `nil` means
+    "the user didn't pass this field."
+  - `put_if_present/4` — delegates to `EdgeAdminMcp.put_if_present/4`. Adds
+    a key to a map iff the source key was *present* in `params`, even if its
+    value is `nil`. Use on *update* paths where the user can pass `null` to
+    mean "clear this field," distinct from omitting it (which means "leave
+    unchanged"). Peri preserves explicit nulls through validation, so
+    `Map.has_key?/2` correctly distinguishes the two.
 
   See `EdgeAdminMcp.ToolError` for the full error code table.
 
@@ -47,16 +49,8 @@ defmodule EdgeAdminMcp do
       defp paginated(items, meta, mapper \\ & &1), do: EdgeAdminMcp.paginated(items, meta, mapper)
       defp error_response(reason), do: EdgeAdminMcp.error_response(reason)
       defp error_response(code, msg), do: EdgeAdminMcp.error_response(code, msg)
-      defp put_if(m, _k, nil), do: m
-      defp put_if(m, k, v), do: Map.put(m, k, v)
-
-      defp put_if_present(attrs, attr_key, params, param_key) do
-        if Map.has_key?(params, param_key) do
-          Map.put(attrs, attr_key, params[param_key])
-        else
-          attrs
-        end
-      end
+      defp put_if(m, k, v), do: EdgeAdminMcp.put_if(m, k, v)
+      defp put_if_present(attrs, key, params, param_key), do: EdgeAdminMcp.put_if_present(attrs, key, params, param_key)
     end
   end
 
@@ -151,6 +145,17 @@ defmodule EdgeAdminMcp do
   """
   def error_response(_code, msg) when is_binary(msg) do
     Response.error(Response.tool(), msg)
+  end
+
+  def put_if(m, _k, nil), do: m
+  def put_if(m, k, v), do: Map.put(m, k, v)
+
+  def put_if_present(attrs, attr_key, params, param_key) do
+    if Map.has_key?(params, param_key) do
+      Map.put(attrs, attr_key, params[param_key])
+    else
+      attrs
+    end
   end
 
   defmacro __using__(which) when is_atom(which) do

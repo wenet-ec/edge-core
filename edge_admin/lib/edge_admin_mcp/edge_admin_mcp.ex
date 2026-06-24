@@ -10,6 +10,9 @@ defmodule EdgeAdminMcp do
   Injects:
   - `use Anubis.Server.Component, type: :tool`
   - `alias Anubis.Server.Response`
+  - `input_schema/0` override — rewrites the Peri-generated JSON Schema into
+    inspector-friendly form before it is served to MCP clients (see
+    `normalize_json_schema/1` for the rewrite rules).
   - `paginated/3` — builds the standard MCP list response shape
   - `error_response/1` — renders a known reason via `EdgeAdminMcp.ToolError.message/1`
   - `error_response/2` — renders a custom message for any error code
@@ -35,7 +38,11 @@ defmodule EdgeAdminMcp do
 
       alias Anubis.Server.Response
 
-      unquote(input_schema_override())
+      defoverridable input_schema: 0
+
+      def input_schema do
+        EdgeAdminMcp.normalize_json_schema(super())
+      end
 
       defp paginated(items, meta, mapper \\ & &1), do: EdgeAdminMcp.paginated(items, meta, mapper)
       defp error_response(reason), do: EdgeAdminMcp.error_response(reason)
@@ -53,44 +60,59 @@ defmodule EdgeAdminMcp do
     end
   end
 
-  defp input_schema_override do
-    quote do
-      defoverridable input_schema: 0
+  @doc """
+  Recursively rewrites a Peri-generated JSON Schema into a form the MCP
+  inspector's `DynamicJsonForm` can render.
 
-      def input_schema do
-        EdgeAdminMcp.normalize_input_schema_for_clients(super())
-      end
+  Peri emits certain `oneOf` unions that have no top-level `type`, which the
+  inspector treats as unrenderable and silently skips. Two cases are fixed:
+
+  - **Nullable boolean** — `oneOf: [bool, null]` → `anyOf: [bool, null]`
+    Claude Desktop's strict-mode validator rejects `oneOf` when both branches
+    match (a nullable boolean value satisfies both `bool` and `null` when the
+    value is `false`... actually this is the original workaround comment;
+    the real reason is Claude Desktop requires `anyOf` here).
+
+  - **String-or-array** — `oneOf: [string, array]` → `type: string`
+    The inspector has no mixed-type control. A comma-separated string covers
+    the common case and the runtime `RequestParser` accepts it. Callers who
+    need to pass a list use JSON mode.
+  """
+  def normalize_json_schema(schema) when is_map(schema) do
+    rewrite_unions(schema)
+  end
+
+  defp rewrite_unions(%{"oneOf" => branches} = schema) when is_list(branches) do
+    cond do
+      nullable_boolean_union?(branches) ->
+        schema |> Map.delete("oneOf") |> Map.put("anyOf", branches)
+
+      string_or_array_union?(branches) ->
+        schema |> Map.delete("oneOf") |> Map.put("type", "string")
+
+      true ->
+        Map.update!(schema, "oneOf", fn bs -> Enum.map(bs, &rewrite_unions/1) end)
     end
   end
 
-  @doc false
-  def normalize_input_schema_for_clients(schema) when is_map(schema) do
-    normalize_nullable_boolean_unions(schema)
-  end
-
-  defp normalize_nullable_boolean_unions(%{"oneOf" => branches} = schema) when is_list(branches) do
-    if nullable_boolean_union?(branches) do
-      schema
-      |> Map.delete("oneOf")
-      |> Map.put("anyOf", branches)
-    else
-      Map.update!(schema, "oneOf", &Enum.map(&1, fn branch -> normalize_nullable_boolean_unions(branch) end))
-    end
-  end
-
-  defp normalize_nullable_boolean_unions(map) when is_map(map) do
+  defp rewrite_unions(map) when is_map(map) do
     Map.new(map, fn
-      {key, value} when is_map(value) -> {key, normalize_nullable_boolean_unions(value)}
-      {key, values} when is_list(values) -> {key, Enum.map(values, &normalize_nullable_boolean_unions/1)}
+      {k, v} when is_map(v) -> {k, rewrite_unions(v)}
+      {k, v} when is_list(v) -> {k, Enum.map(v, &rewrite_unions/1)}
       pair -> pair
     end)
   end
 
-  defp normalize_nullable_boolean_unions(value), do: value
+  defp rewrite_unions(value), do: value
 
   defp nullable_boolean_union?(branches) do
     Enum.any?(branches, &(&1 == %{"type" => "boolean"})) and
       Enum.any?(branches, &(&1 == %{"type" => "null"}))
+  end
+
+  defp string_or_array_union?(branches) do
+    Enum.any?(branches, &(&1 == %{"type" => "string"})) and
+      Enum.any?(branches, &(is_map(&1) and Map.get(&1, "type") == "array"))
   end
 
   def paginated(items, meta, mapper \\ & &1) do

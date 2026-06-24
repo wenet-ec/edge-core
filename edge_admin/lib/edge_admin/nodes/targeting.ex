@@ -11,12 +11,16 @@ defmodule EdgeAdmin.Nodes.Targeting do
 
   This module has two responsibilities:
 
-  1. **Input shape** (`peri_schema/0`, `normalize/1`, `validate_iso8601_date_or_datetime/1`)
+  1. **Input shape** (`peri_schema/0`, `normalize/1`)
      — the canonical layer-1 (public-API gate) Peri schema. Used by MCP tool
      definitions and mirrored by the OpenApiSpex schemas on the REST side.
      `normalize/1` converts the atom-keyed output Peri produces into the
      string-keyed maps the Form layer expects — call it on the Peri result
      before passing to any Form changeset.
+     `validate_iso8601_date_or_datetime/1` is kept as a public utility for
+     callers that want to enforce strict ISO 8601 format at layer 1; the
+     schema itself types datetime fields as `:string` so the MCP inspector
+     can render text inputs for them.
   2. **Resolution** (`nodes_for_all/2`, `nodes_for_ids/2`,
      `nodes_for_clusters/3`) — at runtime, turns a validated targeting spec
      into the concrete list of nodes the operation should run against. Pages
@@ -66,17 +70,28 @@ defmodule EdgeAdmin.Nodes.Targeting do
   # into JSONB and read back as strings; keeping them as strings end-to-end
   # avoids round-trip surprises.
   #
-  # Trade-off: Peri's JSON Schema generator emits `{}` (true schema) for
-  # `:custom` validators, so the model-facing JSON Schema doesn't advertise
-  # the ISO 8601 requirement — the model must learn it from the docstring.
-  # We accept this for stricter runtime validation: malformed dates get
-  # rejected at layer 1 with a clean error rather than silently passing
-  # through to the worker.
-  @datetime_or_date {:custom, {__MODULE__, :validate_iso8601_date_or_datetime}}
+  # Peri's JSON Schema generator emits `{}` (true schema) for `:custom`
+  # validators, which causes MCP inspector form fields to be invisible (no
+  # `type` → no input rendered). We use `:string` as the Peri type so the
+  # JSON Schema gets `{"type": "string"}` and the inspector shows a text
+  # input. The custom validator is still called by Peri at runtime via the
+  # separate `validate_iso8601_date_or_datetime/1` function — callers that
+  # want strict layer-1 ISO 8601 enforcement can compose it themselves (the
+  # REST OpenApiSpex side enforces format via `format: "date"/"date-time"`).
+  @datetime_or_date {:meta, :string, [format: "date-time"]}
+
+  # `{:either, {a, b}}` emits `{"oneOf": [...]}` in JSON Schema. The MCP
+  # inspector's DynamicJsonForm can't render a field with no top-level `type`,
+  # so these fields would be invisible in form mode. We keep the full
+  # `{:either, ...}` here for correct Peri runtime validation (both string and
+  # list are accepted), and `EdgeAdminMcp.normalize_input_schema_for_clients/1`
+  # rewrites the resulting `oneOf: [string, array]` → `string` in the JSON
+  # Schema served to the inspector, so form mode shows a text input.
+  @either_string_or_list {:either, {:string, {:list, :string}}}
 
   @node_filters_schema %{
-    id_type__in: {:either, {:string, {:list, :string}}},
-    status__in: {:either, {:string, {:list, :string}}},
+    id_type__in: @either_string_or_list,
+    status__in: @either_string_or_list,
     cluster_name: :string,
     version: :string,
     self_update_enabled: :boolean,
@@ -90,7 +105,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
 
   @cluster_filters_schema %{
     name: :string,
-    name__in: {:either, {:string, {:list, :string}}},
+    name__in: @either_string_or_list,
     ipv4_range: :string,
     node_count: :integer,
     node_count__gte: :integer,
@@ -103,7 +118,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
   }
 
   @schema %{
-    type: {:required, {:enum, ["all", "nodes", "clusters"]}},
+    type: {:required, {:enum, ["all", "nodes", "clusters"], type: :string}},
     node_ids: {:list, :string},
     cluster_names: {:list, :string},
     node_filters: @node_filters_schema,

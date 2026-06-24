@@ -23,7 +23,8 @@ defmodule EdgeAdmin.Nodes.TargetingTest do
     end
 
     test "type is required and constrained to the three documented values" do
-      assert {:required, {:enum, ["all", "nodes", "clusters"]}} = Targeting.peri_schema().type
+      assert {:required, {:enum, ["all", "nodes", "clusters"], type: :string}} =
+               Targeting.peri_schema().type
     end
 
     test "node_ids and cluster_names are list-of-string when present" do
@@ -50,6 +51,12 @@ defmodule EdgeAdmin.Nodes.TargetingTest do
     test "cluster_filters.name accepts a string for wildcard matching" do
       schema = Targeting.peri_schema()
       assert :string = schema.cluster_filters.name
+    end
+
+    test "datetime filter fields emit a string type for MCP inspector form rendering" do
+      schema = Targeting.peri_schema()
+      assert {:meta, :string, [format: "date-time"]} = schema.node_filters.last_seen_at__gte
+      assert {:meta, :string, [format: "date-time"]} = schema.cluster_filters.inserted_at__gte
     end
   end
 

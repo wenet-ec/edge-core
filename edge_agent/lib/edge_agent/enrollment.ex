@@ -53,13 +53,13 @@ defmodule EdgeAgent.Enrollment do
   - `ENROLLMENT_KEY` — base64 enrollment key (highest priority)
   - `PUBLIC_ENROLLMENT_KEY_URLS` — comma-separated URLs to POST to receive
     the enrollment key (fallback; tried in order)
-  - `PUBLIC_ENROLLMENT_KEY_PATH` — dotted JSON path for extracting the key
-    from the response body (e.g. `data.key`, `result.token`,
-    `payload.enrollment_key`). Tried *first*, then the built-in patterns
-    fall through. Set this when integrating with a third-party admin whose
-    response shape doesn't match any of the built-in patterns; the
-    fall-through ensures other URLs in `PUBLIC_ENROLLMENT_KEY_URLS` with
-    standard shapes still work.
+  - `PUBLIC_ENROLLMENT_KEY_PATHS` — comma-separated list of dotted JSON paths
+    for extracting the key from the response body (e.g.
+    `data.key,result.token,payload.enrollment_key`). Each path is tried in
+    order *first*, then the built-in patterns fall through. Set this when
+    integrating with a third-party admin whose response shape doesn't match
+    any of the built-in patterns; the fall-through ensures other URLs in
+    `PUBLIC_ENROLLMENT_KEY_URLS` with standard shapes still work.
   """
 
   alias EdgeAgent.EdgeClusters.AdminClient
@@ -177,17 +177,17 @@ defmodule EdgeAgent.Enrollment do
   # response-body extraction step. See TESTING.md "Promote-to-public for
   # testability". Not part of the user-facing API.
   #
-  # When `PUBLIC_ENROLLMENT_KEY_PATH` is set, the custom path is tried
-  # *first*, then the built-in pattern list falls through. With multi-URL
-  # configured, a single PATH meant for a third-party endpoint would
+  # When `PUBLIC_ENROLLMENT_KEY_PATHS` is set, each custom path is tried in
+  # order *first*, then the built-in pattern list falls through. With
+  # multi-URL configured, paths meant for a third-party endpoint would
   # otherwise break extraction for sibling URLs returning a standard shape;
   # the prepend-not-override semantics let mixed sources coexist.
   @spec extract_from_response(map() | binary() | any()) :: {:ok, String.t()} | {:error, String.t()}
   def extract_from_response(body) when is_map(body) do
-    custom_path = Application.get_env(:edge_agent, :public_enrollment_key_path)
+    custom_paths = Application.get_env(:edge_agent, :public_enrollment_key_paths, [])
 
     result =
-      case try_custom_path(body, custom_path) do
+      case try_custom_paths(body, custom_paths) do
         nil -> try_extraction_patterns(body)
         key -> key
       end
@@ -214,8 +214,16 @@ defmodule EdgeAgent.Enrollment do
 
   def extract_from_response(_), do: {:error, "Response body is not a map or string"}
 
-  defp try_custom_path(_body, path) when path in [nil, ""], do: nil
-  defp try_custom_path(body, path), do: get_in_path(body, String.split(path, "."))
+  defp try_custom_paths(_body, []), do: nil
+
+  defp try_custom_paths(body, paths) do
+    Enum.find_value(paths, fn path ->
+      case get_in_path(body, String.split(path, ".")) do
+        value when is_binary(value) and value != "" -> value
+        _ -> nil
+      end
+    end)
+  end
 
   defp try_extraction_patterns(body) do
     patterns = [

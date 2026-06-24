@@ -12,7 +12,7 @@ ENROLLMENT_KEY=
 PUBLIC_ENROLLMENT_KEY_URLS=http://localhost:4000/api/v1/clusters/default/enrollment_keys/public
 
 # Path to a local file containing the enrollment key (alternative to the above).
-# PUBLIC_ENROLLMENT_KEY_PATH=/etc/edge/enrollment_key
+# PUBLIC_ENROLLMENT_KEY_PATHS=data.key,result.token
 
 # =============================================================================
 # Self-Update (Watchtower)

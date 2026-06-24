@@ -8,7 +8,7 @@ defmodule EdgeAgent.EnrollmentTest do
   # Build a valid base64 enrollment key blob (mirrors admin's create_enrollment_key)
   defp build_blob(admin_urls, nonce \\ "abc123nonce") do
     %{"admin_urls" => admin_urls, "nonce" => nonce}
-    |> Jason.encode!()
+    |> JSON.encode!()
     |> Base.encode64(padding: false)
   end
 
@@ -81,7 +81,7 @@ defmodule EdgeAgent.EnrollmentTest do
     end
 
     test "returns error when enrollment key JSON is missing admin_urls" do
-      blob = %{"nonce" => "abc"} |> Jason.encode!() |> Base.encode64(padding: false)
+      blob = %{"nonce" => "abc"} |> JSON.encode!() |> Base.encode64(padding: false)
       Application.put_env(:edge_agent, :enrollment_key, blob)
       Application.delete_env(:edge_agent, :public_enrollment_key_urls)
 
@@ -145,7 +145,7 @@ defmodule EdgeAgent.EnrollmentTest do
   #
   # Promoted to def @doc false for testability per TESTING.md. The
   # critical contract is the prepend-not-override semantics of
-  # PUBLIC_ENROLLMENT_KEY_PATH: when the custom path doesn't match a given
+  # PUBLIC_ENROLLMENT_KEY_PATHS: when none of the custom paths match a given
   # body, the built-in patterns must still get a fair shot. Otherwise a
   # multi-URL setup mixing edge-admin + third-party would silently break.
   # -----------------------------------------------------------------------
@@ -153,12 +153,12 @@ defmodule EdgeAgent.EnrollmentTest do
   describe "extract_from_response/1 — custom PATH semantics" do
     setup do
       on_exit(fn ->
-        Application.delete_env(:edge_agent, :public_enrollment_key_path)
+        Application.delete_env(:edge_agent, :public_enrollment_key_paths)
       end)
     end
 
     test "custom path matches when body has the configured shape" do
-      Application.put_env(:edge_agent, :public_enrollment_key_path, "auth.token")
+      Application.put_env(:edge_agent, :public_enrollment_key_paths, ["auth.token"])
       body = %{"auth" => %{"token" => "k-from-custom-path"}}
 
       assert {:ok, "k-from-custom-path"} = Enrollment.extract_from_response(body)
@@ -169,7 +169,7 @@ defmodule EdgeAgent.EnrollmentTest do
       # PATH is set for a third-party URL, but the standard edge-admin URL
       # in the same list still returns its usual {data: {key: ...}} shape.
       # The fallback must still match it.
-      Application.put_env(:edge_agent, :public_enrollment_key_path, "auth.token")
+      Application.put_env(:edge_agent, :public_enrollment_key_paths, ["auth.token"])
       body = %{"data" => %{"key" => "k-from-builtin"}}
 
       assert {:ok, "k-from-builtin"} = Enrollment.extract_from_response(body)
@@ -177,21 +177,35 @@ defmodule EdgeAgent.EnrollmentTest do
 
     test "custom path wins over built-in when both could match" do
       # Body has both auth.token AND data.key. PATH should take precedence.
-      Application.put_env(:edge_agent, :public_enrollment_key_path, "auth.token")
+      Application.put_env(:edge_agent, :public_enrollment_key_paths, ["auth.token"])
       body = %{"auth" => %{"token" => "from-path"}, "data" => %{"key" => "from-builtin"}}
 
       assert {:ok, "from-path"} = Enrollment.extract_from_response(body)
     end
 
-    test "empty-string PATH is treated as unset (falls through to built-ins)" do
-      Application.put_env(:edge_agent, :public_enrollment_key_path, "")
+    test "tries each path in order, returns first match" do
+      Application.put_env(:edge_agent, :public_enrollment_key_paths, ["auth.token", "data.key"])
+      body = %{"data" => %{"key" => "from-second"}}
+
+      assert {:ok, "from-second"} = Enrollment.extract_from_response(body)
+    end
+
+    test "first matching path wins when multiple paths match" do
+      Application.put_env(:edge_agent, :public_enrollment_key_paths, ["auth.token", "data.key"])
+      body = %{"auth" => %{"token" => "from-first"}, "data" => %{"key" => "from-second"}}
+
+      assert {:ok, "from-first"} = Enrollment.extract_from_response(body)
+    end
+
+    test "empty list falls through to built-ins" do
+      Application.put_env(:edge_agent, :public_enrollment_key_paths, [])
       body = %{"data" => %{"key" => "k-fallback"}}
 
       assert {:ok, "k-fallback"} = Enrollment.extract_from_response(body)
     end
 
-    test "returns error when neither PATH nor built-ins match" do
-      Application.put_env(:edge_agent, :public_enrollment_key_path, "auth.token")
+    test "returns error when neither paths nor built-ins match" do
+      Application.put_env(:edge_agent, :public_enrollment_key_paths, ["auth.token"])
       body = %{"unrelated" => "value"}
 
       assert {:error, reason} = Enrollment.extract_from_response(body)
@@ -201,7 +215,7 @@ defmodule EdgeAgent.EnrollmentTest do
 
   describe "extract_from_response/1 — built-in patterns (PATH unset)" do
     setup do
-      Application.delete_env(:edge_agent, :public_enrollment_key_path)
+      Application.delete_env(:edge_agent, :public_enrollment_key_paths)
       :ok
     end
 
@@ -264,7 +278,7 @@ defmodule EdgeAgent.EnrollmentTest do
       blob = build_blob(urls)
 
       assert {:ok, json} = Base.decode64(blob, padding: false)
-      assert {:ok, decoded} = Jason.decode(json)
+      assert {:ok, decoded} = JSON.decode(json)
       assert decoded["admin_urls"] == urls
     end
 
@@ -276,7 +290,7 @@ defmodule EdgeAgent.EnrollmentTest do
     test "nonce field is present in blob" do
       blob = build_blob(["https://admin.example.com"], "my-nonce")
       {:ok, json} = Base.decode64(blob, padding: false)
-      {:ok, decoded} = Jason.decode(json)
+      {:ok, decoded} = JSON.decode(json)
       assert decoded["nonce"] == "my-nonce"
     end
 
@@ -288,8 +302,8 @@ defmodule EdgeAgent.EnrollmentTest do
 
       {:ok, json1} = Base.decode64(blob1, padding: false)
       {:ok, json2} = Base.decode64(blob2, padding: false)
-      {:ok, d1} = Jason.decode(json1)
-      {:ok, d2} = Jason.decode(json2)
+      {:ok, d1} = JSON.decode(json1)
+      {:ok, d2} = JSON.decode(json2)
       assert d1["admin_urls"] == d2["admin_urls"]
     end
   end

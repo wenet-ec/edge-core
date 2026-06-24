@@ -252,7 +252,7 @@ defmodule EdgeAgent.Enrollment do
 
   defp decode(enrollment_key) do
     with {:ok, json} <- Base.decode64(enrollment_key, padding: false),
-         {:ok, decoded} <- Jason.decode(json),
+         {:ok, decoded} <- JSON.decode(json),
          admin_urls when is_list(admin_urls) and admin_urls != [] <- Map.get(decoded, "admin_urls") do
       {:ok, admin_urls}
     else

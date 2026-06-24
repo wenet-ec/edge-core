@@ -104,7 +104,7 @@ defmodule EdgeAgent.Settings do
         []
 
       json when is_binary(json) ->
-        case Jason.decode(json) do
+        case JSON.decode(json) do
           {:ok, urls} when is_list(urls) -> urls
           _ -> []
         end
@@ -114,10 +114,7 @@ defmodule EdgeAgent.Settings do
   @spec set_admin_urls([String.t()]) ::
           {:ok, Setting.t()} | {:error, Ecto.Changeset.t() | String.t()}
   def set_admin_urls(urls) when is_list(urls) do
-    case Jason.encode(urls) do
-      {:ok, json} -> set_config("admin_urls", json)
-      {:error, _} -> {:error, "Failed to encode admin URLs"}
-    end
+    set_config("admin_urls", JSON.encode!(urls))
   end
 
   @spec get_netmaker_key() :: String.t() | nil
@@ -164,7 +161,7 @@ defmodule EdgeAgent.Settings do
         []
 
       json when is_binary(json) ->
-        case Jason.decode(json) do
+        case JSON.decode(json) do
           {:ok, urls} when is_list(urls) -> urls
           _ -> []
         end
@@ -174,10 +171,7 @@ defmodule EdgeAgent.Settings do
   @spec set_admin_fallback_urls([String.t()]) ::
           {:ok, Setting.t()} | {:error, Ecto.Changeset.t() | String.t()}
   def set_admin_fallback_urls(urls) when is_list(urls) do
-    case Jason.encode(urls) do
-      {:ok, json} -> set_config("admin_fallback_urls", json)
-      {:error, _} -> {:error, "Failed to encode admin fallback URLs"}
-    end
+    set_config("admin_fallback_urls", JSON.encode!(urls))
   end
 
   @spec get_derp_map_url() :: String.t() | nil

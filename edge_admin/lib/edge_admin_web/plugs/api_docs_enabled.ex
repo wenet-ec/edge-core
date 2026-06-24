@@ -35,7 +35,7 @@ defmodule EdgeAdminWeb.Plugs.ApiDocsEnabled do
       conn
       |> put_status(:not_found)
       |> put_resp_content_type("application/json")
-      |> send_resp(:not_found, Jason.encode!(%{errors: %{detail: "Not Found"}}))
+      |> send_resp(:not_found, JSON.encode!(%{errors: %{detail: "Not Found"}}))
       |> halt()
     end
   end

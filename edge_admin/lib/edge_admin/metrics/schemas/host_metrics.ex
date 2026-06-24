@@ -13,7 +13,7 @@ defmodule EdgeAdmin.Metrics.Schemas.HostMetrics do
 
   @type t :: %__MODULE__{}
 
-  @derive Jason.Encoder
+  @derive JSON.Encoder
   defstruct [
     :node_id,
     :cluster_name,
@@ -42,7 +42,7 @@ defmodule EdgeAdmin.Metrics.Schemas.HostMetrics do
   defmodule CPU do
     @moduledoc "CPU metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :cores,
       :load_1m,
@@ -69,7 +69,7 @@ defmodule EdgeAdmin.Metrics.Schemas.HostMetrics do
   defmodule Memory do
     @moduledoc "Memory metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :usage_percent,
       :total_bytes,
@@ -109,7 +109,7 @@ defmodule EdgeAdmin.Metrics.Schemas.HostMetrics do
   defmodule Disk do
     @moduledoc "Disk metrics for root filesystem"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :usage_percent,
       :total_bytes,
@@ -149,7 +149,7 @@ defmodule EdgeAdmin.Metrics.Schemas.HostMetrics do
   defmodule Uptime do
     @moduledoc "System uptime"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :seconds,
       :human

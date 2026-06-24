@@ -62,7 +62,7 @@ defmodule EdgeAgentWeb.Endpoint do
   # sobelow_skip ["XSS.SendResp"]
   defp ping(%{request_path: "/ping"} = conn, _opts) do
     version = Application.get_env(:edge_agent, :version)
-    response = Jason.encode!(%{status: "ok", version: version})
+    response = JSON.encode!(%{status: "ok", version: version})
 
     conn
     |> Conn.put_resp_header("content-type", "application/json")

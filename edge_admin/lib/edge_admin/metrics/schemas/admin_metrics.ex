@@ -23,7 +23,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
 
   @type t :: %__MODULE__{}
 
-  @derive Jason.Encoder
+  @derive JSON.Encoder
   defstruct [
     :timestamp,
     :application,
@@ -72,7 +72,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   defmodule Application do
     @moduledoc "Application health and BEAM stats"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :uptime_seconds,
       :uptime_human,
@@ -146,7 +146,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   defmodule Metadata do
     @moduledoc "Admin metadata and cluster assignment metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :degraded,
       :orphaned_clusters,
@@ -167,7 +167,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   defmodule Membership do
     @moduledoc "Admin-cluster membership initialization metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :steps_completed_total,
       :complete_total
@@ -184,7 +184,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   defmodule Discovery do
     @moduledoc "Peer admin discovery metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :scans_total,
       :dns_resolutions_total,
@@ -203,7 +203,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   defmodule Nodes do
     @moduledoc "Node health check metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :health_checks_total
     ]
@@ -218,7 +218,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   defmodule Quantum do
     @moduledoc "Quantum scheduler job execution metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :jobs_executed_total,
       :jobs_exceptions_total
@@ -235,7 +235,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   defmodule Vpn do
     @moduledoc "VPN management metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :zombie_cleanup_total,
       :zombie_cleanup_deleted_count
@@ -252,7 +252,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   defmodule Commands do
     @moduledoc "Command execution and delivery metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :delivery_total,
       :delivery_delivered_count,
@@ -279,7 +279,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   defmodule Ssh do
     @moduledoc "SSH credential verification metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :verifications_total,
       :verifications_failed
@@ -296,7 +296,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   defmodule Reconciliation do
     @moduledoc "Cluster reconciliation metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :total,
       :errors
@@ -313,7 +313,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   defmodule SelfUpdates do
     @moduledoc "Self-update request processing metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :completed_total
     ]
@@ -328,7 +328,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   defmodule Gateways do
     @moduledoc "Gateway connection and scrape metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :connections_total,
       :active_count,
@@ -347,7 +347,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   defmodule Proxy do
     @moduledoc "HTTP and SOCKS5 forward proxy metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :connections_total,
       :connections_success_total,
@@ -402,7 +402,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
     failing to accept them.
     """
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :enabled,
       :enqueues_total,
@@ -436,7 +436,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
       - `terminal`     — other 4xx/5xx; cancelled, contributes to auto-disable
     """
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :fan_outs_total,
       :deliveries_total,
@@ -459,7 +459,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   defmodule ObanQueue do
     @moduledoc "Oban job queue state"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :queue,
       :available,

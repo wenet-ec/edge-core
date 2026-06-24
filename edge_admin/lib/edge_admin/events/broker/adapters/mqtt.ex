@@ -150,7 +150,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Mqtt do
     config = Application.get_env(:edge_admin, :event_broker_mqtt, [])
     qos = Keyword.get(config, :qos, 1)
     topic = topic_for(envelope["type"])
-    payload = Jason.encode!(envelope)
+    payload = JSON.encode!(envelope)
 
     case :emqtt.publish(client, topic, payload, qos) do
       :ok -> {:reply, :ok, state}

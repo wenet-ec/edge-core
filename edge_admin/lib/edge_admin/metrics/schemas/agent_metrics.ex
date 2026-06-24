@@ -15,7 +15,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
 
   @type t :: %__MODULE__{}
 
-  @derive Jason.Encoder
+  @derive JSON.Encoder
   defstruct [
     :node_id,
     :cluster_name,
@@ -52,7 +52,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
   defmodule Application do
     @moduledoc "Application health and BEAM stats"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :uptime_seconds,
       :uptime_human,
@@ -112,7 +112,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
   defmodule Commands do
     @moduledoc "Command execution metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :synced_total,
       :enqueued_total,
@@ -133,7 +133,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
   defmodule Discovery do
     @moduledoc "Admin discovery metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :scans_total,
       :admins_found_last
@@ -150,7 +150,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
   defmodule Proxy do
     @moduledoc "Proxy server metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :http_connections_total,
       :http_blocked_total,
@@ -197,7 +197,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
   defmodule Ssh do
     @moduledoc "SSH server metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [
       :authentications_total,
       :connections_total
@@ -214,7 +214,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
   defmodule Vpn do
     @moduledoc "VPN config pull metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [:pulls_total]
 
     def from_raw(raw) do
@@ -227,7 +227,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
   defmodule HealthCheck do
     @moduledoc "Health check report metrics (HTTP fallback mode)"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [:reports_total]
 
     def from_raw(raw) do
@@ -240,7 +240,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
   defmodule ObanQueue do
     @moduledoc "Oban queue metrics"
 
-    @derive Jason.Encoder
+    @derive JSON.Encoder
     defstruct [:queue, :available, :executing, :completed, :discarded, :retryable]
 
     def from_raw(raw) do

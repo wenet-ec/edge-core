@@ -118,7 +118,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Rabbitmq do
 
   def handle_call({:publish, envelope}, _from, %{channel: channel} = state) do
     routing_key = envelope["type"]
-    payload = Jason.encode!(envelope)
+    payload = JSON.encode!(envelope)
 
     result =
       AMQP.Basic.publish(channel, @exchange, routing_key, payload,

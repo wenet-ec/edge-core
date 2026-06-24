@@ -42,7 +42,7 @@ defmodule EdgeAdmin.Events.Webhooks.Delivery do
   """
   @spec send(Webhook.t(), map()) :: result()
   def send(%Webhook{} = webhook, envelope) when is_map(envelope) do
-    body = Jason.encode!(envelope)
+    body = JSON.encode!(envelope)
     headers = build_headers(webhook, body)
 
     webhook.url

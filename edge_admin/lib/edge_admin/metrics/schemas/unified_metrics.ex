@@ -35,7 +35,7 @@ defmodule EdgeAdmin.Metrics.Schemas.UnifiedMetrics do
           agent: map()
         }
 
-  @derive Jason.Encoder
+  @derive JSON.Encoder
   defstruct [
     :node_id,
     :cluster_name,

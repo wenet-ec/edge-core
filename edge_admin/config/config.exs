@@ -62,7 +62,7 @@ config :phoenix, :filter_parameters, [
   "headers"
 ]
 
-config :phoenix, :json_library, Jason
+config :phoenix, :json_library, JSON
 
 config :sentry,
   root_source_code_path: File.cwd!(),

@@ -29,7 +29,7 @@ defmodule EdgeAgentWeb.Plugs.ApiTokenAuth do
 
         conn
         |> put_resp_content_type("application/json")
-        |> send_resp(401, Jason.encode!(body))
+        |> send_resp(401, JSON.encode!(body))
         |> halt()
     end
   end

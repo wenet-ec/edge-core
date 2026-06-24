@@ -113,7 +113,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Redis do
 
   def handle_call({:publish, envelope}, _from, %{conn: conn} = state) do
     channel = envelope["type"]
-    payload = Jason.encode!(envelope)
+    payload = JSON.encode!(envelope)
 
     case Redix.command(conn, ["PUBLISH", channel, payload]) do
       {:ok, _subscribers} -> {:reply, :ok, state}

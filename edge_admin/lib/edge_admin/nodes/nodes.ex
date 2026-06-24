@@ -1387,7 +1387,7 @@ defmodule EdgeAdmin.Nodes do
 
       key =
         %{"admin_urls" => admin_urls, "nonce" => nonce}
-        |> Jason.encode!()
+        |> JSON.encode!()
         |> Base.encode64()
 
       key_attrs =

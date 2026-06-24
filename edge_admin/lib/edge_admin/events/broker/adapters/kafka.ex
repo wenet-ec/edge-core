@@ -83,7 +83,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Kafka do
   def publish(envelope) do
     topic = topic_for(envelope["type"])
     partition_key = partition_key_for(envelope)
-    payload = Jason.encode!(envelope)
+    payload = JSON.encode!(envelope)
 
     case :brod.produce_sync(@client, topic, :hash, partition_key, payload) do
       :ok -> :ok

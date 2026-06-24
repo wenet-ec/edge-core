@@ -107,7 +107,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Nats do
 
   @impl Adapter
   def publish(envelope) do
-    payload = Jason.encode!(envelope)
+    payload = JSON.encode!(envelope)
     Gnat.pub(@conn, envelope["type"], payload)
   end
 

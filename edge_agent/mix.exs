@@ -93,7 +93,6 @@ defmodule EdgeAgent.Mixfile do
       {:ranch, "~> 2.2"},
       {:phoenix, "~> 1.8"},
       {:phoenix_live_reload, "~> 1.6", only: :dev},
-      {:jason, "~> 1.4"},
       {:plug_checkup, git: "https://github.com/voughtdq/plug_checkup.git", tag: "v1.0.0"},
 
       # Database

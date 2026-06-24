@@ -193,7 +193,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.GooglePubsub do
         %{
           # Pub/Sub REST API requires `data` to be base64-encoded — wire format,
           # not an adapter choice. Subscribers receive the same bytes back.
-          "data" => Base.encode64(Jason.encode!(envelope)),
+          "data" => Base.encode64(JSON.encode!(envelope)),
           "attributes" => %{
             "type" => envelope["type"],
             "corename" => envelope["corename"]

@@ -55,6 +55,6 @@ config :phoenix, :filter_parameters, [
   "token"
 ]
 
-config :phoenix, :json_library, Jason
+config :phoenix, :json_library, JSON
 
 import_config "#{Mix.env()}.exs"

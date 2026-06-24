@@ -114,7 +114,7 @@ defmodule EdgeAdminWeb.Endpoint do
   # sobelow_skip ["XSS.SendResp"]
   defp ping(%{request_path: "/ping"} = conn, _opts) do
     version = Application.get_env(:edge_admin, :version)
-    response = Jason.encode!(%{status: "ok", version: version})
+    response = JSON.encode!(%{status: "ok", version: version})
 
     conn
     |> Conn.put_resp_header("content-type", "application/json")
@@ -130,7 +130,7 @@ defmodule EdgeAdminWeb.Endpoint do
   # sobelow_skip ["XSS.SendResp"]
   defp livez(%{request_path: "/livez"} = conn, _opts) do
     version = Application.get_env(:edge_admin, :version)
-    response = Jason.encode!(%{status: "ok", version: version})
+    response = JSON.encode!(%{status: "ok", version: version})
 
     conn
     |> Conn.put_resp_header("content-type", "application/json")

@@ -160,7 +160,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.AwsSns do
 
   def handle_call({:publish, envelope}, _from, state) do
     topic_arn = state.topic_arn_prefix <> topic_suffix_for(envelope["type"])
-    payload = Jason.encode!(envelope)
+    payload = JSON.encode!(envelope)
 
     # Each attribute is a map per ex_aws_sns's @type message_attribute spec:
     #   %{name, data_type, value: {:string | :binary, value}}

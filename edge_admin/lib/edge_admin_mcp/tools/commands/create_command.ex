@@ -64,7 +64,7 @@ defmodule EdgeAdminMcp.Tools.Commands.CreateCommand do
   @impl true
   def execute(params, frame) do
     attrs =
-      %{"command_text" => params.command_text, "targeting" => params.targeting}
+      %{"command_text" => params.command_text, "targeting" => Targeting.normalize(params.targeting)}
       |> put_if("timeout", params[:timeout])
       |> put_if("expires_at", params[:expires_at])
 

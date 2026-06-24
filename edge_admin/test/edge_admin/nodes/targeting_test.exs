@@ -54,6 +54,63 @@ defmodule EdgeAdmin.Nodes.TargetingTest do
   end
 
   # ---------------------------------------------------------------------------
+  # normalize/1 — converts Peri's atom-keyed output to string-keyed maps
+  # ---------------------------------------------------------------------------
+
+  describe "normalize/1" do
+    test "converts atom keys to strings at the top level" do
+      assert %{"type" => "all"} = Targeting.normalize(%{type: "all"})
+    end
+
+    test "converts atom keys recursively in nested maps" do
+      input = %{type: "all", node_filters: %{status__in: "healthy"}}
+
+      assert %{
+               "type" => "all",
+               "node_filters" => %{"status__in" => "healthy"}
+             } = Targeting.normalize(input)
+    end
+
+    test "converts atom keys inside lists" do
+      input = %{type: "nodes", node_ids: ["a", "b"]}
+      assert %{"type" => "nodes", "node_ids" => ["a", "b"]} = Targeting.normalize(input)
+    end
+
+    test "handles deeply nested cluster_filters" do
+      input = %{
+        type: "clusters",
+        cluster_names: ["prod"],
+        cluster_filters: %{name__in: ["prod", "staging"]},
+        node_filters: %{status__in: "healthy", self_update_enabled: true}
+      }
+
+      result = Targeting.normalize(input)
+
+      assert result["type"] == "clusters"
+      assert result["cluster_names"] == ["prod"]
+      assert result["cluster_filters"] == %{"name__in" => ["prod", "staging"]}
+      assert result["node_filters"] == %{"status__in" => "healthy", "self_update_enabled" => true}
+    end
+
+    test "is a no-op on already string-keyed maps" do
+      input = %{"type" => "all", "node_filters" => %{"status__in" => "healthy"}}
+      assert input == Targeting.normalize(input)
+    end
+
+    test "passes scalar values through unchanged" do
+      assert "hello" == Targeting.normalize("hello")
+      assert 42 == Targeting.normalize(42)
+      assert true == Targeting.normalize(true)
+      assert nil == Targeting.normalize(nil)
+    end
+
+    test "normalises lists of maps" do
+      input = [%{a: 1}, %{b: 2}]
+      assert [%{"a" => 1}, %{"b" => 2}] = Targeting.normalize(input)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # validate_iso8601_date_or_datetime/1
   # ---------------------------------------------------------------------------
 

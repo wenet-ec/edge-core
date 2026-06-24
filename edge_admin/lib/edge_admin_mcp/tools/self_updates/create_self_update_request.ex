@@ -44,7 +44,7 @@ defmodule EdgeAdminMcp.Tools.SelfUpdates.CreateSelfUpdateRequest do
 
   @impl true
   def execute(params, frame) do
-    case SelfUpdates.create_self_update_request(%{"targeting" => params.targeting}) do
+    case SelfUpdates.create_self_update_request(%{"targeting" => Targeting.normalize(params.targeting)}) do
       {:ok, request} ->
         {:reply, Response.json(Response.tool(), SelfUpdateRequestView.render(request)), frame}
 

@@ -11,9 +11,12 @@ defmodule EdgeAdmin.Nodes.Targeting do
 
   This module has two responsibilities:
 
-  1. **Input shape** (`peri_schema/0`, `validate_iso8601_date_or_datetime/1`)
+  1. **Input shape** (`peri_schema/0`, `normalize/1`, `validate_iso8601_date_or_datetime/1`)
      — the canonical layer-1 (public-API gate) Peri schema. Used by MCP tool
      definitions and mirrored by the OpenApiSpex schemas on the REST side.
+     `normalize/1` converts the atom-keyed output Peri produces into the
+     string-keyed maps the Form layer expects — call it on the Peri result
+     before passing to any Form changeset.
   2. **Resolution** (`nodes_for_all/2`, `nodes_for_ids/2`,
      `nodes_for_clusters/3`) — at runtime, turns a validated targeting spec
      into the concrete list of nodes the operation should run against. Pages
@@ -115,6 +118,22 @@ defmodule EdgeAdmin.Nodes.Targeting do
   """
   @spec peri_schema() :: map()
   def peri_schema, do: @schema
+
+  @doc """
+  Recursively converts all map keys to strings.
+
+  Peri validates the targeting input and returns atom-keyed maps at every
+  nesting level. The Form modules that consume targeting expect string keys
+  throughout (including nested `node_filters` / `cluster_filters`). Call this
+  on the Peri output before passing to any Form changeset.
+  """
+  @spec normalize(map() | list() | term()) :: map() | list() | term()
+  def normalize(map) when is_map(map) do
+    Map.new(map, fn {k, v} -> {to_string(k), normalize(v)} end)
+  end
+
+  def normalize(list) when is_list(list), do: Enum.map(list, &normalize/1)
+  def normalize(value), do: value
 
   @doc """
   Validates an ISO 8601 date or datetime string. Returns the original

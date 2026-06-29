@@ -66,7 +66,7 @@ RUN gcc -O2 -Wall -Wextra -o /usr/local/bin/host_pty_spawn /tmp/host_pty_spawn.c
     rm /tmp/host_pty_spawn.c
 
 # Stage 2: Production runtime image
-FROM debian:stable-20260610-slim
+FROM debian:stable-20260623-slim
 
 # Install runtime dependencies in single layer. The agent is a gateway:
 # every operator command runs on the host via nsenter, so this image only

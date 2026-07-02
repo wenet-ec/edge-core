@@ -29,7 +29,7 @@ config:
   # --- Phoenix / public hostname ---
   # Public hostname for the admin API — baked into enrollment keys (ADMIN_URLS)
   phxHost: "edge-admin.yourdomain.com"
-  adminUrls: "edge-admin.yourdomain.com"
+  adminUrls: "https://edge-admin.yourdomain.com"
 
   # --- Database ---
   # Edge Admin's database engine. Kubernetes deployments always use Postgres —
@@ -150,8 +150,8 @@ sysctls:
 secrets:
   # Set existingSecret to the name of a pre-created Secret to skip chart-managed secret creation.
   # The Secret must contain: SECRET_KEY_BASE, MASTER_KEY, DB_PASSWORD,
-  #   NETMAKER_MASTER_KEY, NETMAKER_SUPERADMIN_PASSWORD, VPN_CLUSTER_COOKIE,
-  #   CLOAK_KEY, CLOAK_TAG.
+  #   NETMAKER_MASTER_KEY, NETMAKER_SUPERADMIN_PASSWORD, CLOAK_KEY, CLOAK_TAG.
+  # VPN_CLUSTER_COOKIE is optional; leave it empty to use the built-in default.
   # Optional broker auth (only needed when EVENT_BROKER_ENABLED=true and broker requires auth).
   # RabbitMQ and Redis embed credentials in EVENT_BROKER_RABBITMQ_URL / EVENT_BROKER_REDIS_URL — no separate fields needed.
   # Leave fields empty to omit them from the Secret.
@@ -161,7 +161,7 @@ secrets:
   dbPassword: "changeme"
   netmakerMasterKey: "changeme"
   netmakerSuperadminPassword: "changeme"
-  vpnClusterCookie: "changeme"
+  vpnClusterCookie: ""
   # Cloak vault. cloakKey is 32 bytes of base64; cloakTag is the identifier
   # paired with the key (convention: AES.GCM.V<N>, bumped on each rotation).
   # Required at boot — the admin will not start without these set.

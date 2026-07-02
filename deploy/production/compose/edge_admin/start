@@ -70,6 +70,10 @@ echo "Bootstrapping Netmaker superadmin..."
 echo "Bootstrapping default cluster..."
 /app/bin/create_default_cluster
 
+if [ -z "${VPN_CLUSTER_COOKIE:-}" ]; then
+    echo "WARNING: VPN_CLUSTER_COOKIE is not set; using the built-in default Erlang cookie. Admin clustering still runs over VPN, but set VPN_CLUSTER_COOKIE to make the deployment explicit."
+fi
+
 # Resolve WireGuard port for StatefulSet deployments.
 # If POD_INDEX is set (injected by K8s Downward API), auto-compute the port
 # from ADMIN_WIREGUARD_PORT_BASE + POD_INDEX — unless ADMIN_WIREGUARD_PORT is

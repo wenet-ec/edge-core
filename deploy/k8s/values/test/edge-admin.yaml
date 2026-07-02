@@ -9,7 +9,7 @@ sysctls:
   enabled: false
 config:
   phxHost: "edge-admin.localtest.me"
-  adminUrls: "edge-admin.localtest.me"
+  adminUrls: "http://edge-admin.localtest.me"
   dbHost: "edge-admin-db-rw"
   dbPort: "5432"
   dbName: "edge_admin_production"

@@ -61,7 +61,7 @@ CORS_ALLOWED_ORIGINS=*
 # =============================================================================
 # Protects /live_dashboard with HTTP Basic Auth.
 # When BASIC_AUTH_ENABLED=true, both username and password must be set or the
-# admin will raise on every dashboard request.
+# admin will raise at boot.
 # When false (default), basic auth is skipped entirely.
 BASIC_AUTH_ENABLED=false
 # BASIC_AUTH_USERNAME=admin
@@ -251,7 +251,9 @@ ADMIN_MAX_WIREGUARD_PEERS=250
 # No-op when POD_INDEX is absent (Docker Compose / non-StatefulSet deployments).
 # ADMIN_WIREGUARD_PORT_BASE=51820
 
-# Shared Erlang cookie for VPN cluster — must be identical across all admin instances.
+# Shared Erlang cookie for VPN cluster. Optional; when unset the admin uses a
+# built-in default and the start script logs a warning. If set, it must be
+# identical across all admin instances in the same admin cluster.
 VPN_CLUSTER_COOKIE=local-cookie
 
 # epmd port — default 44369, baked into the Dockerfile. Override here only if needed.

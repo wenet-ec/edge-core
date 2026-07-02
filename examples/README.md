@@ -89,7 +89,7 @@ The two examples reflect this split:
 
 **Private network or public internet — does it matter?**
 
-No. Both examples work identically on a private network (LAN, internal VPC, corporate WAN) or with public internet exposure. The only thing that changes is what value you put in `ADMIN_URLS` and the Netmaker `SERVER_HOST` variables — a private IP works just as well as a public domain.
+No. Both examples work identically on a private network (LAN, internal VPC, corporate WAN) or with public internet exposure. The only thing that changes is what value you put in `ADMIN_URLS` and the Netmaker `SERVER_HOST` variables — a private IP works just as well as a public domain. `ADMIN_URLS` must be full `http://` or `https://` URLs.
 
 For agents to enroll and operate, three things must be reachable from every agent machine:
 

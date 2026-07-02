@@ -201,6 +201,24 @@ if get_env("PHX_SERVER", :boolean) == true do
 end
 
 auth_enabled = get_env("AUTH_ENABLED", :boolean, true)
+basic_auth_enabled = get_env("BASIC_AUTH_ENABLED", :boolean, false)
+
+admin_urls =
+  case get_env!("ADMIN_URLS", :list) do
+    [] ->
+      raise "ADMIN_URLS must contain at least one full admin URL, e.g. https://edge-admin.example.com"
+
+    urls ->
+      Enum.each(urls, fn url ->
+        uri = URI.parse(url)
+
+        if !(uri.scheme in ["http", "https"] and is_binary(uri.host) and uri.host != "") do
+          raise "Invalid ADMIN_URLS entry #{inspect(url)} — expected a full http:// or https:// URL"
+        end
+      end)
+
+      urls
+  end
 
 # CORS — origins and allowed request headers. Set CORS_ALLOWED_HEADERS=*
 # to mirror request headers back (Corsica's :all), or pass a comma-separated
@@ -228,10 +246,18 @@ config :edge_admin, EdgeAdminWeb.Endpoint,
   ]
 
 config :edge_admin,
-  basic_auth_enabled: get_env("BASIC_AUTH_ENABLED", :boolean, false),
+  basic_auth_enabled: basic_auth_enabled,
   basic_auth: [
-    username: get_env("BASIC_AUTH_USERNAME"),
-    password: get_env("BASIC_AUTH_PASSWORD")
+    username:
+      if(basic_auth_enabled,
+        do: get_env!("BASIC_AUTH_USERNAME"),
+        else: get_env("BASIC_AUTH_USERNAME")
+      ),
+    password:
+      if(basic_auth_enabled,
+        do: get_env!("BASIC_AUTH_PASSWORD"),
+        else: get_env("BASIC_AUTH_PASSWORD")
+      )
   ]
 
 config :edge_admin,
@@ -427,7 +453,7 @@ config :edge_admin,
   admin_max_wireguard_peers: get_env!("ADMIN_MAX_WIREGUARD_PEERS", :positive_integer),
   # === Admin Cluster (VPN network for multi-admin coordination) ===
   admin_cluster_name: EdgeAdmin.Vpn.build_network_name(get_env!("ADMIN_CLUSTER_NAME"), prefix: :admin),
-  admin_cluster_subnet: get_env("ADMIN_CLUSTER_SUBNET"),
+  admin_cluster_subnet: get_env!("ADMIN_CLUSTER_SUBNET"),
   # === WireGuard Configuration ===
   # Static port for WireGuard (must match UDP port mapping in docker-compose for external connectivity)
   admin_wireguard_port: get_env("ADMIN_WIREGUARD_PORT", :integer),
@@ -451,7 +477,7 @@ config :edge_admin,
   # Allow public enrollment without authentication (dev/testing only)
   public_enrollment_key_enabled: get_env("PUBLIC_ENROLLMENT_KEY_ENABLED", :boolean, false),
   # Admin URLs for enrollment key generation and agent fallback (required).
-  admin_urls: get_env("ADMIN_URLS", :list),
+  admin_urls: admin_urls,
   derp_map_url: get_env("DERP_MAP_URL"),
   # Netmaker DNS domain suffix (used for hostname construction)
   netmaker_default_domain: get_env("NETMAKER_DEFAULT_DOMAIN", :string, "nm.internal"),

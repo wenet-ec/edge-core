@@ -65,14 +65,14 @@ All configuration lives in a single `.env` file. Copy `.env.example` to `.env` a
 
 Key things to configure:
 
-- Replace all `your-server-ip-or-domain.com` with your actual server address (private IP or public domain, both work)
+- Replace all `your-server-ip-or-domain.com` with your actual server address (private IP or public domain, both work); keep `ADMIN_URLS` as full URLs, including `http://` or `https://`
 - Replace all `change-me` with strong random values
 - `SECRET_KEY_BASE` — generate with `openssl rand -base64 48`
 - `CLOAK_KEY` — generate with `openssl rand -base64 32` (encryption-at-rest for sensitive columns; back it up with the rest of your secrets — losing it means losing every encrypted row)
 - `MASTER_KEY` — omnipotent key, fallback for all scoped keys
 - `API_KEY` — scoped to REST API clients (optional, defaults to `MASTER_KEY`)
 - `METRICS_KEY` — scoped to metrics scrapers (optional, defaults to `MASTER_KEY`)
-- `VPN_CLUSTER_COOKIE` — must be the same across all 4 admin instances
+- `VPN_CLUSTER_COOKIE` — optional; if set, use the same value across admin instances in the same admin cluster
 - `MQ_PASSWORD` and `EMQX_DASHBOARD_PASSWORD` — must match each other
 - Update `configs/prometheus.yml` — replace `change-me-your-metrics-key` with your actual `METRICS_KEY`
 - If using a domain with TLS: update `configs/Caddyfile` with your domain names. Use `edge-admin.yourdomain.com` as the load-balanced admin API/MCP hostname; the per-admin hostnames are mainly for direct debugging.

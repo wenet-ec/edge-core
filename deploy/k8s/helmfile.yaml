@@ -87,7 +87,7 @@ releases:
           adminClusterSubnet: "100.63.0.0/24"
           metricsBaseUrl: "edge-admin-a:44000"
         secrets:
-          vpnClusterCookie: {{ requiredEnv "VPN_CLUSTER_COOKIE_A" | quote }}
+          vpnClusterCookie: {{ env "VPN_CLUSTER_COOKIE_A" | default "" | quote }}
 
   # ============================================================================
   # 5b. Edge Admin — cluster B
@@ -105,7 +105,7 @@ releases:
           adminClusterSubnet: "100.63.1.0/24"
           metricsBaseUrl: "edge-admin-b:44000"
         secrets:
-          vpnClusterCookie: {{ requiredEnv "VPN_CLUSTER_COOKIE_B" | quote }}
+          vpnClusterCookie: {{ env "VPN_CLUSTER_COOKIE_B" | default "" | quote }}
 
   # ============================================================================
   # 6. Edge Admin Proxy — single NodePort/LB across all admin clusters

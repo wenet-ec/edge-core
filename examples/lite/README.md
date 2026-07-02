@@ -60,7 +60,7 @@ All configuration lives in a single `.env` file. Copy `.env.example` to `.env` a
 
 The minimum you must change:
 
-- `your-server-ip-or-domain.com` — replace everywhere with your actual server address (private IP or public domain, both work)
+- `your-server-ip-or-domain.com` — replace everywhere with your actual server address (private IP or public domain, both work); keep `ADMIN_URLS` as a full URL, including `http://` or `https://`
 - `change-me` passwords and keys — use strong random values
 - `SECRET_KEY_BASE` — generate with `openssl rand -base64 48`
 - `CLOAK_KEY` — generate with `openssl rand -base64 32` (encryption-at-rest for sensitive columns; back it up with the rest of your secrets — losing it means losing every encrypted row)

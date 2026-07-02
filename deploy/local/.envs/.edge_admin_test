@@ -30,6 +30,7 @@ DB_SSL=false
 ADMIN_MAX_WIREGUARD_PEERS=100
 ADMIN_CLUSTER_NAME=test
 ADMIN_CLUSTER_SUBNET=100.71.0.0/16
+ADMIN_URLS=http://localhost:44000
 
 # Netmaker configuration (required by runtime.exs)
 NETMAKER_API_URL=http://edge_vpn:8081

@@ -324,7 +324,7 @@ Each webhook is **immutable after create** — to change anything, delete and re
 
 URLs are SSRF-checked at create time (loopback, RFC1918, link-local, cloud metadata IPs are blocked). Opt out per deployment with `WEBHOOK_ALLOW_PRIVATE_IPS=true` if you're on a homelab or dev network where receivers legitimately live on private IPs.
 
-To test delivery plumbing without fabricating a node or command event, subscribe a webhook to `edge.core.test` and publish the official test event:
+To test delivery plumbing without fabricating a node or command event, subscribe a webhook to `edge.core.test` and publish that event:
 
 ```http
 POST /api/v1/events/test

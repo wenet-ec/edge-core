@@ -13,7 +13,7 @@ defmodule EdgeAdminWeb.Controllers.Events.EventController do
   operation(:test,
     summary: "Publish test event",
     description:
-      "Publishes the official `edge.core.test` event through the normal event delivery path. " <>
+      "Publishes an `edge.core.test` event through the normal event delivery path. " <>
         "The event is enqueued for the configured broker, if enabled, and delivered to webhooks " <>
         "whose `subscribed_events` includes `edge.core.test`.",
     responses: %{
@@ -22,7 +22,7 @@ defmodule EdgeAdminWeb.Controllers.Events.EventController do
   )
 
   def test(conn, _params) do
-    {:ok, envelope} = Events.publish_test()
+    {:ok, envelope} = Events.publish_test_event()
 
     conn
     |> put_status(:accepted)

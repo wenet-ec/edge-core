@@ -57,8 +57,6 @@ defmodule EdgeAdmin.Events do
           | Catalog.EnrollmentKeyVerified.t()
           | Catalog.SshUsernameVerified.t()
 
-  @test_event_type "edge.core.test"
-
   @doc """
   Publishes an event to every configured delivery channel.
 
@@ -73,24 +71,21 @@ defmodule EdgeAdmin.Events do
   """
   @spec publish(event()) :: :ok
   def publish(event) do
-    envelope = build_envelope(event)
-    Broker.enqueue(envelope)
-    Webhooks.fan_out(envelope)
+    event
+    |> build_envelope()
+    |> dispatch()
+
     :ok
   end
 
   @doc """
-  Publishes the official Core test event through the normal event delivery path.
-
-  The event is delivered to the configured broker, if enabled, and to webhooks
-  that explicitly subscribe to `#{@test_event_type}`.
+  Publishes an `edge.core.test` event through the normal event delivery path.
   """
-  @spec publish_test() :: {:ok, map()}
-  def publish_test do
+  @spec publish_test_event() :: {:ok, map()}
+  def publish_test_event do
     event = %Catalog.CoreTest{requested_at: DateTime.utc_now()}
     envelope = build_envelope(event)
-    Broker.enqueue(envelope)
-    Webhooks.fan_out(envelope)
+    dispatch(envelope)
     {:ok, envelope}
   end
 
@@ -111,5 +106,10 @@ defmodule EdgeAdmin.Events do
       "corename" => Application.get_env(:edge_admin, :core_name, "default"),
       "data" => Catalog.to_data(event)
     }
+  end
+
+  defp dispatch(envelope) do
+    Broker.enqueue(envelope)
+    Webhooks.fan_out(envelope)
   end
 end

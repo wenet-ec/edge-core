@@ -422,7 +422,7 @@ Proxy and SSH have no fallback below Layer 2. Both require raw TCP streaming —
 
 ## Events
 
-Edge Admin publishes lifecycle events through two independent delivery channels: an opt-in message broker and always-on user-configurable HTTP webhooks. Both receive the same CloudEvents 1.0 envelope. Events span node lifecycle, command execution lifecycle, enrollment-key verification, SSH verification, self-update lifecycle, and the official `edge.core.test` operational probe. Normal state-change events carry a full object snapshot in `data`; `edge.core.test` carries only test metadata.
+Edge Admin publishes lifecycle events through two independent delivery channels: an opt-in message broker and always-on user-configurable HTTP webhooks. Both receive the same CloudEvents 1.0 envelope. Events span node lifecycle, command execution lifecycle, enrollment-key verification, SSH verification, self-update lifecycle, and `edge.core.test` for delivery-path probes. Normal state-change events carry a full object snapshot in `data`; `edge.core.test` carries only test metadata.
 
 `EdgeAdmin.Events.publish/1` is the single in-process entry point for state-change publication. It builds the envelope and fans out to every channel — broker (if enabled) and webhooks (always). Channels operate independently: a broker outage does not affect webhook delivery, and vice versa.
 

@@ -433,7 +433,7 @@ POST /api/v1/events/test
 
 Notes:
 
-- This is an official catalog event, so it appears in AsyncAPI and can be used in webhook `subscribed_events`.
+- This event is in the catalog, so it appears in AsyncAPI and can be used in webhook `subscribed_events`.
 - It proves Core accepted a test publish into the normal broker/webhook path. Broker consumer receipt and webhook receiver processing remain downstream responsibilities.
 - Kafka, SNS, and Pub/Sub route it to `edge-core-events`; NATS JetStream captures it in `EDGE_CORE_EVENTS`.
 

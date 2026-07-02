@@ -7892,7 +7892,7 @@
     "/api/v1/events/test": {
       "post": {
         "callbacks": {},
-        "description": "Publishes the official `edge.core.test` event through the normal event delivery path. The event is enqueued for the configured broker, if enabled, and delivered to webhooks whose `subscribed_events` includes `edge.core.test`.",
+        "description": "Publishes an `edge.core.test` event through the normal event delivery path. The event is enqueued for the configured broker, if enabled, and delivered to webhooks whose `subscribed_events` includes `edge.core.test`.",
         "operationId": "EdgeAdminWeb.Controllers.Events.EventController.test",
         "parameters": [],
         "responses": {
@@ -7925,8 +7925,8 @@
     { "name": "Ssh.SshUsername" },
     { "name": "Ssh.SshPublicKey" },
     { "name": "SelfUpdates.Request" },
-    { "name": "Events.Event" },
     { "name": "Events.Type" },
-    { "name": "Events.Webhook" }
+    { "name": "Events.Webhook" },
+    { "name": "Events.Event" }
   ]
 }

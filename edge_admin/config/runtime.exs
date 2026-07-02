@@ -203,22 +203,22 @@ end
 auth_enabled = get_env("AUTH_ENABLED", :boolean, true)
 basic_auth_enabled = get_env("BASIC_AUTH_ENABLED", :boolean, false)
 
-admin_urls =
-  case get_env!("ADMIN_URLS", :list) do
-    [] ->
-      raise "ADMIN_URLS must contain at least one full admin URL, e.g. https://edge-admin.example.com"
+urls = get_env!("ADMIN_URLS", :list)
+urls = Enum.reject(urls, &(&1 == ""))
 
-    urls ->
-      Enum.each(urls, fn url ->
-        uri = URI.parse(url)
+if urls == [] do
+  raise "ADMIN_URLS must contain at least one full admin URL, e.g. https://edge-admin.example.com"
+end
 
-        if !(uri.scheme in ["http", "https"] and is_binary(uri.host) and uri.host != "") do
-          raise "Invalid ADMIN_URLS entry #{inspect(url)} — expected a full http:// or https:// URL"
-        end
-      end)
+Enum.each(urls, fn url ->
+  uri = URI.parse(url)
 
-      urls
+  if !(uri.scheme in ["http", "https"] and is_binary(uri.host) and uri.host != "") do
+    raise "Invalid ADMIN_URLS entry #{inspect(url)} — expected a full http:// or https:// URL"
   end
+end)
+
+admin_urls = urls
 
 # CORS — origins and allowed request headers. Set CORS_ALLOWED_HEADERS=*
 # to mirror request headers back (Corsica's :all), or pass a comma-separated

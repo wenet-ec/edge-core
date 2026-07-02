@@ -1,6 +1,13 @@
 {
   "asyncapi": "3.1.0",
   "channels": {
+    "edge.core.test": {
+      "address": "edge.core.test",
+      "description": "Operator-requested test event for verifying event broker and webhook delivery plumbing.",
+      "messages": {
+        "core.test": { "$ref": "#/components/messages/coreTestMessage" }
+      }
+    },
     "edge.enrollment_key.verified": {
       "address": "edge.enrollment_key.verified",
       "description": "Agent attempted to enroll using an enrollment key (success or failure).",
@@ -460,6 +467,48 @@
         "payload": { "$ref": "#/components/schemas/Envelope" },
         "summary": "Execution delivered to agent and ACKed."
       },
+      "coreTestMessage": {
+        "bindings": {
+          "amqp": { "bindingVersion": "0.3.0" },
+          "googlepubsub": {
+            "attributes": { "corename": "string", "type": "string" },
+            "bindingVersion": "0.2.0"
+          },
+          "kafka": {
+            "bindingVersion": "0.5.0",
+            "key": {
+              "description": "Kafka partition key — `none` from the event data",
+              "type": "string"
+            }
+          },
+          "mqtt": {
+            "bindingVersion": "0.2.0",
+            "contentType": "application/json",
+            "payloadFormatIndicator": 1
+          }
+        },
+        "contentType": "application/json",
+        "examples": [
+          {
+            "name": "example",
+            "payload": {
+              "corename": "prod-us",
+              "data": {
+                "message": "Test event from Edge Core",
+                "requested_at": "2026-04-13T10:00:00Z"
+              },
+              "datacontenttype": "application/json",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "source": "https://github.com/wenet-ec/edge-core",
+              "specversion": "1.0",
+              "time": "2026-04-13T10:00:00Z",
+              "type": "edge.core.test"
+            }
+          }
+        ],
+        "payload": { "$ref": "#/components/schemas/Envelope" },
+        "summary": "Operator-requested test event for verifying event broker and webhook delivery plumbing."
+      },
       "enrollmentKeyVerifiedMessage": {
         "bindings": {
           "amqp": { "bindingVersion": "0.3.0" },
@@ -917,6 +966,15 @@
         ],
         "type": "object"
       },
+      "CoreTestEvent": {
+        "description": "Operator-requested test event. It proves Core accepted a test publish into the normal event delivery path; broker consumer receipt and webhook receiver behavior remain downstream responsibilities.",
+        "properties": {
+          "message": { "type": "string" },
+          "requested_at": { "format": "date-time", "type": "string" }
+        },
+        "required": ["message", "requested_at"],
+        "type": "object"
+      },
       "EnrollmentKeyVerifiedEvent": {
         "description": "Agent presented an enrollment key to admin. The full key blob is intentionally excluded — it's a credential. On `:invalid_key`, `enrollment_key_id` and `cluster_name` are null (no DB row matched).",
         "properties": {
@@ -977,6 +1035,8 @@
           },
           "type": {
             "enum": [
+              "edge.core.test",
+              "edge.enrollment_key.verified",
               "edge.node.registered",
               "edge.node.reregistered",
               "edge.node.version_changed",
@@ -988,9 +1048,8 @@
               "edge.command_execution.cancelled",
               "edge.command_execution.expired",
               "edge.command_execution.pruned",
-              "edge.self_update_request.completed",
-              "edge.enrollment_key.verified",
-              "edge.ssh_username.verified"
+              "edge.ssh_username.verified",
+              "edge.self_update_request.completed"
             ],
             "type": "string"
           }
@@ -1233,6 +1292,28 @@
     "version": "0.2.0"
   },
   "operations": {
+    "publish_edge_core_test": {
+      "action": "send",
+      "bindings": {
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
+        "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-core-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-core-events" }
+        }
+      },
+      "channel": { "$ref": "#/channels/edge.core.test" }
+    },
     "publish_edge_enrollment_key_verified": {
       "action": "send",
       "bindings": {
@@ -1544,7 +1625,7 @@
   },
   "servers": {
     "aws_sns": {
-      "description": "Managed AWS service; no on-prem broker. Four topics by domain: `edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`, `edge-ssh-events` — must be pre-provisioned in your AWS account. Configure via EVENT_BROKER_AWS_SNS_REGION + EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX. Subscribers filter via subscription filter policies on message attributes (`type`, `corename`) — SNS has no topic-name wildcards. Durability is the subscriber's responsibility (typically SQS). Auth uses the standard AWS credential chain (IAM env vars, instance profile, etc.).",
+      "description": "Managed AWS service; no on-prem broker. Five topics by domain: `edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`, `edge-ssh-events`, `edge-core-events` — must be pre-provisioned in your AWS account. Configure via EVENT_BROKER_AWS_SNS_REGION + EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX. Subscribers filter via subscription filter policies on message attributes (`type`, `corename`) — SNS has no topic-name wildcards. Durability is the subscriber's responsibility (typically SQS). Auth uses the standard AWS credential chain (IAM env vars, instance profile, etc.).",
       "host": "sns.us-east-1.amazonaws.com",
       "protocol": "sns",
       "security": [{ "$ref": "#/components/securitySchemes/awsSigV4" }],
@@ -1552,7 +1633,7 @@
       "title": "AWS SNS"
     },
     "google_pubsub": {
-      "description": "Managed GCP service; no on-prem broker. Four topics by domain: `edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`, `edge-ssh-events` — must be pre-provisioned in your GCP project. Configure via EVENT_BROKER_GOOGLE_PUBSUB_PROJECT (+ optional EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX). Subscribers filter via subscription filter expressions on message attributes (`type`, `corename`) — Pub/Sub has no topic-name wildcards. Durability is built in: each subscription buffers messages until ACKed (default 7-day retention, max 31). Auth uses the standard GCP credential chain — service-account JSON via GOOGLE_APPLICATION_CREDENTIALS, Workload Identity on GKE, or the GCE metadata server.",
+      "description": "Managed GCP service; no on-prem broker. Five topics by domain: `edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`, `edge-ssh-events`, `edge-core-events` — must be pre-provisioned in your GCP project. Configure via EVENT_BROKER_GOOGLE_PUBSUB_PROJECT (+ optional EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX). Subscribers filter via subscription filter expressions on message attributes (`type`, `corename`) — Pub/Sub has no topic-name wildcards. Durability is built in: each subscription buffers messages until ACKed (default 7-day retention, max 31). Auth uses the standard GCP credential chain — service-account JSON via GOOGLE_APPLICATION_CREDENTIALS, Workload Identity on GKE, or the GCE metadata server.",
       "host": "pubsub.googleapis.com",
       "protocol": "googlepubsub",
       "security": [{ "$ref": "#/components/securitySchemes/googleOauth2" }],
@@ -1584,7 +1665,7 @@
       "title": "MQTT"
     },
     "nats": {
-      "description": "Pub/sub mode works against any NATS server version — core PUB has been stable since NATS 1.x. JetStream mode requires NATS 2.2+ (released July 2021); the stream-create API and field shape we use are 2.2 baseline. Configure via EVENT_BROKER_NATS_URLS (comma-separated cluster list). Optional token auth via EVENT_BROKER_NATS_TOKEN. By default, pub/sub with no persistence. Set EVENT_BROKER_NATS_JETSTREAM=true to enable durable JetStream log — four streams are auto-created on startup: EDGE_NODES_EVENTS (captures edge.node.> + edge.enrollment_key.>), EDGE_COMMANDS_EVENTS, EDGE_SELF_UPDATES_EVENTS, EDGE_SSH_EVENTS. Retention is configured on the broker.",
+      "description": "Pub/sub mode works against any NATS server version — core PUB has been stable since NATS 1.x. JetStream mode requires NATS 2.2+ (released July 2021); the stream-create API and field shape we use are 2.2 baseline. Configure via EVENT_BROKER_NATS_URLS (comma-separated cluster list). Optional token auth via EVENT_BROKER_NATS_TOKEN. By default, pub/sub with no persistence. Set EVENT_BROKER_NATS_JETSTREAM=true to enable durable JetStream log — five streams are auto-created on startup: EDGE_NODES_EVENTS (captures edge.node.> + edge.enrollment_key.>), EDGE_COMMANDS_EVENTS, EDGE_SELF_UPDATES_EVENTS, EDGE_SSH_EVENTS, EDGE_CORE_EVENTS. Retention is configured on the broker.",
       "host": "edge_event_broker_nats:4222",
       "protocol": "nats",
       "security": [{ "$ref": "#/components/securitySchemes/natsToken" }],

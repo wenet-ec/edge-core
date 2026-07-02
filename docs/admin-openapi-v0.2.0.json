@@ -1291,6 +1291,85 @@
         "title": "NotFoundResponse",
         "type": "object"
       },
+      "EventTestResponse": {
+        "description": "Core test event accepted for normal event delivery.",
+        "properties": {
+          "data": {
+            "example": {
+              "event": {
+                "corename": "prod-us",
+                "data": {
+                  "message": "Test event from Edge Core",
+                  "requested_at": "2026-04-13T10:00:00Z"
+                },
+                "datacontenttype": "application/json",
+                "id": "550e8400-e29b-41d4-a716-446655440000",
+                "source": "https://github.com/wenet-ec/edge-core",
+                "specversion": "1.0",
+                "time": "2026-04-13T10:00:00Z",
+                "type": "edge.core.test"
+              },
+              "published": true
+            },
+            "properties": {
+              "event": {
+                "description": "The CloudEvents envelope generated for this test publish.",
+                "properties": {
+                  "corename": { "example": "prod-us", "type": "string" },
+                  "data": {
+                    "properties": {
+                      "message": {
+                        "example": "Test event from Edge Core",
+                        "type": "string"
+                      },
+                      "requested_at": {
+                        "format": "date-time",
+                        "type": "string"
+                      }
+                    },
+                    "required": ["message", "requested_at"],
+                    "type": "object"
+                  },
+                  "datacontenttype": {
+                    "example": "application/json",
+                    "type": "string"
+                  },
+                  "id": { "format": "uuid", "type": "string" },
+                  "source": {
+                    "example": "https://github.com/wenet-ec/edge-core",
+                    "type": "string"
+                  },
+                  "specversion": { "example": "1.0", "type": "string" },
+                  "time": { "format": "date-time", "type": "string" },
+                  "type": { "example": "edge.core.test", "type": "string" }
+                },
+                "required": [
+                  "specversion",
+                  "id",
+                  "source",
+                  "type",
+                  "time",
+                  "datacontenttype",
+                  "corename",
+                  "data"
+                ],
+                "type": "object"
+              },
+              "published": {
+                "description": "True when Core accepted the test event for normal event delivery.",
+                "example": true,
+                "type": "boolean"
+              }
+            },
+            "required": ["published", "event"],
+            "type": "object"
+          },
+          "meta": { "$ref": "#/components/schemas/Meta" }
+        },
+        "required": ["data", "meta"],
+        "title": "EventTestResponse",
+        "type": "object"
+      },
       "ChangeClusterRequest": {
         "description": "Request to move a node to a different cluster. Performs cluster migration via Netmaker (best-effort, reconciliation worker handles failures).",
         "example": { "cluster_name": "prod-west" },
@@ -1850,6 +1929,7 @@
           "data": {
             "description": "Full catalog of event types Edge Core can publish, in catalog order.\n\nUse this list to build a webhook's `subscribed_events` array — every\nentry here is a valid value, anything else is rejected at create time.\nThe list is static (code-owned). See [AsyncAPI spec](/asyncdoc) for\neach event's payload shape.\n",
             "example": [
+              "edge.core.test",
               "edge.enrollment_key.verified",
               "edge.node.registered",
               "edge.node.reregistered",
@@ -7808,6 +7888,26 @@
         "summary": "Delete webhook",
         "tags": ["Events.Webhook"]
       }
+    },
+    "/api/v1/events/test": {
+      "post": {
+        "callbacks": {},
+        "description": "Publishes the official `edge.core.test` event through the normal event delivery path. The event is enqueued for the configured broker, if enabled, and delivered to webhooks whose `subscribed_events` includes `edge.core.test`.",
+        "operationId": "EdgeAdminWeb.Controllers.Events.EventController.test",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EventTestResponse" }
+              }
+            },
+            "description": "Test event accepted"
+          }
+        },
+        "summary": "Publish test event",
+        "tags": ["Events.Event"]
+      }
     }
   },
   "security": [{ "apiKey": [] }],
@@ -7825,6 +7925,7 @@
     { "name": "Ssh.SshUsername" },
     { "name": "Ssh.SshPublicKey" },
     { "name": "SelfUpdates.Request" },
+    { "name": "Events.Event" },
     { "name": "Events.Type" },
     { "name": "Events.Webhook" }
   ]

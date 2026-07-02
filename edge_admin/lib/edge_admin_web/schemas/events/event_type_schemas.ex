@@ -26,6 +26,7 @@ defmodule EdgeAdminWeb.Schemas.Events.EventTypeSchemas do
           each event's payload shape.
           """,
           example: [
+            "edge.core.test",
             "edge.enrollment_key.verified",
             "edge.node.registered",
             "edge.node.reregistered",

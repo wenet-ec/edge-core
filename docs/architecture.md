@@ -1,6 +1,6 @@
 # Edge Core — Architecture
 
-**Last Updated: 2026-06-01**
+**Last Updated: 2026-07-02**
 
 Edge Core is an infrastructure management platform for fleets of Linux machines you don't physically touch — cloud VMs, on-premises servers, factory-floor equipment, Raspberry Pis, homelab boxes, IoT devices. Anywhere you have N machines and want a single HTTP API to operate them, the same primitives apply: a secure WireGuard mesh, remote command execution, SSH without exposing port 22, HTTP/SOCKS5 forward proxying through any node, Prometheus metrics aggregation.
 
@@ -422,7 +422,7 @@ Proxy and SSH have no fallback below Layer 2. Both require raw TCP streaming —
 
 ## Events
 
-Edge Admin publishes lifecycle events through two independent delivery channels: an opt-in message broker and always-on user-configurable HTTP webhooks. Both receive the same CloudEvents 1.0 envelope. Events span node lifecycle, command execution lifecycle, enrollment-key verification, SSH verification, and self-update lifecycle. All events carry a full object snapshot in `data`.
+Edge Admin publishes lifecycle events through two independent delivery channels: an opt-in message broker and always-on user-configurable HTTP webhooks. Both receive the same CloudEvents 1.0 envelope. Events span node lifecycle, command execution lifecycle, enrollment-key verification, SSH verification, self-update lifecycle, and the official `edge.core.test` operational probe. Normal state-change events carry a full object snapshot in `data`; `edge.core.test` carries only test metadata.
 
 `EdgeAdmin.Events.publish/1` is the single in-process entry point for state-change publication. It builds the envelope and fans out to every channel — broker (if enabled) and webhooks (always). Channels operate independently: a broker outage does not affect webhook delivery, and vice versa.
 
@@ -436,6 +436,7 @@ A broker is the right answer when consumers are infrastructure that already spea
 
 - **Adapter shim, not a hub.** The admin publishes; the broker is run separately by the operator. We don't bundle one. Adapters are thin enough that adding a new one is a day's work; the supported list grows on real demand.
 - **`type` field doubles as the broker identifier** — NATS subject, AMQP routing key, Redis channel, MQTT topic (`.` rewritten to `/`). This makes broker-level filtering work without parsing the body. AWS SNS and Google Pub/Sub don't support topic-name wildcards, so we promote `type` and `corename` to message attributes for their filter policies/expressions instead.
+- **`edge.core.test` is a normal event** — `POST /api/v1/events/test` publishes it through the same broker and webhook path as every other event. It proves Core accepted a test publish into the delivery path; broker consumer receipt and webhook receiver processing remain downstream responsibilities.
 - **Duplicates are possible** for `edge.node.status_changed` — the health check runs on every admin independently (masterless), and each duplicate carries a different `id`. Consumers dedup by `(node_id, previous_status, status)` plus a monotonic `time` check, not by `id`.
 
 ### Webhook channel — design notes

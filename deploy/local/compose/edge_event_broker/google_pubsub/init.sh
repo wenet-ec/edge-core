@@ -11,7 +11,7 @@
 # only describe/list reliably route to the emulator. The emulator does serve
 # REST on the same port as gRPC despite the docs implying gRPC-only.
 #
-# Creates three topics matching the production naming convention plus a pull
+# Creates topics matching the production naming convention plus a pull
 # subscription per topic so adapter publishes can be verified without standing
 # up a separate consumer:
 #
@@ -26,7 +26,7 @@ set -euo pipefail
 
 PROJECT="${PUBSUB_PROJECT_ID:-edge-local}"
 HOST="${PUBSUB_EMULATOR_HOST:?PUBSUB_EMULATOR_HOST must be set}"
-TOPICS=(edge-nodes-events edge-commands-events edge-self-updates-events edge-ssh-events)
+TOPICS=(edge-nodes-events edge-commands-events edge-self-updates-events edge-ssh-events edge-core-events)
 
 api() {
   local method="$1" path="$2" body="${3:-}"

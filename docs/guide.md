@@ -324,6 +324,14 @@ Each webhook is **immutable after create** — to change anything, delete and re
 
 URLs are SSRF-checked at create time (loopback, RFC1918, link-local, cloud metadata IPs are blocked). Opt out per deployment with `WEBHOOK_ALLOW_PRIVATE_IPS=true` if you're on a homelab or dev network where receivers legitimately live on private IPs.
 
+To test delivery plumbing without fabricating a node or command event, subscribe a webhook to `edge.core.test` and publish the official test event:
+
+```http
+POST /api/v1/events/test
+```
+
+The response includes the generated CloudEvents envelope. Delivery is still asynchronous: the endpoint means Core accepted the test event into the normal broker/webhook path, not that every downstream consumer has processed it.
+
 ### Event broker (opt-in)
 
 For higher-throughput or message-bus integration. Pick the broker that matches your stack, point the admin at it, and every event is published as a CloudEvents envelope on a subject/topic matching its `type` field (`edge.node.registered`, `edge.command_execution.completed`, etc.).
@@ -341,6 +349,8 @@ EVENT_BROKER_NATS_URLS=nats://your-broker:4222
 Ready-to-use compose files for each broker live in [`examples/event_brokers/`](https://github.com/wenet-ec/edge-core/tree/main/examples/event_brokers).
 
 **Webhooks and the broker run independently.** A broker outage doesn't affect webhook delivery and vice versa. You can use either, both, or neither.
+
+For broker probes, call `POST /api/v1/events/test` and consume `edge.core.test` from your broker. Kafka/SNS/Pub/Sub route this event to the `edge-core-events` topic; NATS JetStream captures it in `EDGE_CORE_EVENTS`; NATS pub/sub, RabbitMQ, Redis, and MQTT publish it directly by event type/routing key/channel/topic.
 
 ---
 

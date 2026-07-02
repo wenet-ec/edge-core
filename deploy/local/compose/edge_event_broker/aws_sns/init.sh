@@ -5,7 +5,7 @@
 # /etc/localstack/init/ready.d/init.sh). create-topic / create-queue / subscribe
 # are idempotent — re-running returns existing resources, safe across restarts.
 #
-# Creates three SNS topics matching the production naming convention, plus an
+# Creates SNS topics matching the production naming convention, plus an
 # SQS queue subscribed to each topic so adapter publishes can be verified
 # without standing up a separate consumer:
 #
@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-TOPICS=(edge-nodes-events edge-commands-events edge-self-updates-events edge-ssh-events)
+TOPICS=(edge-nodes-events edge-commands-events edge-self-updates-events edge-ssh-events edge-core-events)
 
 for topic in "${TOPICS[@]}"; do
   awslocal sns create-topic --name "$topic" >/dev/null

@@ -11,12 +11,13 @@ defmodule EdgeAdmin.Events.Broker.Adapters.AwsSns do
 
   ## Topics
 
-  Four SNS topics by domain (matches the Kafka adapter convention):
+  Five SNS topics by domain (matches the Kafka adapter convention):
 
       edge-nodes-events           partition: n/a (SNS does not partition)
       edge-commands-events
       edge-self-updates-events
       edge-ssh-events
+      edge-core-events
 
   `edge.enrollment_key.*` events also route to `edge-nodes-events` — same
   domain. Topics must be pre-provisioned in the AWS account (Console / CLI /
@@ -192,4 +193,5 @@ defmodule EdgeAdmin.Events.Broker.Adapters.AwsSns do
   defp topic_suffix_for("edge.command_execution." <> _), do: "edge-commands-events"
   defp topic_suffix_for("edge.self_update_request." <> _), do: "edge-self-updates-events"
   defp topic_suffix_for("edge.ssh_username." <> _), do: "edge-ssh-events"
+  defp topic_suffix_for("edge.core." <> _), do: "edge-core-events"
 end

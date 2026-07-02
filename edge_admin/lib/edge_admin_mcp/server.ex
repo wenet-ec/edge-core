@@ -185,6 +185,8 @@ defmodule EdgeAdminMcp.Server do
     `subscribed_events` is an explicit allowlist — no wildcards, unknown event
     types are rejected at create time. To change any field on a webhook, delete
     and recreate. The full event catalog is at `/asyncdoc` on the running admin.
+    Use `publish_test_event` to emit the official `edge.core.test` event through
+    the same broker and webhook delivery path as normal lifecycle events.
 
     ## Out-of-band capabilities (not MCP tools — surface these to the user when relevant)
 
@@ -292,7 +294,8 @@ defmodule EdgeAdminMcp.Server do
   component(EdgeAdminMcp.Tools.Events.CreateWebhook)
   component(EdgeAdminMcp.Tools.Events.DeleteWebhook)
 
-  # ── Event catalog (MCP-only — no REST analog; surfaces /asyncdoc as tools) ───
+  # ── Event catalog / publish helpers ─────────────────────────────────────────
   component(EdgeAdminMcp.Tools.Events.ListEventTypes)
   component(EdgeAdminMcp.Tools.Events.ExplainEventType)
+  component(EdgeAdminMcp.Tools.Events.PublishTestEvent)
 end

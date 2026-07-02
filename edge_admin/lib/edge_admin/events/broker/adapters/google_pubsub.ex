@@ -8,12 +8,13 @@ defmodule EdgeAdmin.Events.Broker.Adapters.GooglePubsub do
 
   ## Topics
 
-  Four Pub/Sub topics by domain (matches the AWS SNS adapter convention):
+  Five Pub/Sub topics by domain (matches the AWS SNS adapter convention):
 
       edge-nodes-events
       edge-commands-events
       edge-self-updates-events
       edge-ssh-events
+      edge-core-events
 
   `edge.enrollment_key.*` events also route to `edge-nodes-events` — same
   domain. Topics must be pre-provisioned in the GCP project (Console /
@@ -218,6 +219,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.GooglePubsub do
   defp topic_id_for("edge.command_execution." <> _), do: "edge-commands-events"
   defp topic_id_for("edge.self_update_request." <> _), do: "edge-self-updates-events"
   defp topic_id_for("edge.ssh_username." <> _), do: "edge-ssh-events"
+  defp topic_id_for("edge.core." <> _), do: "edge-core-events"
 
   defp topic_url(state, topic_id) do
     "#{state.base_url}/v1/projects/#{state.project}/topics/#{state.topic_id_prefix}#{topic_id}"

@@ -50,6 +50,7 @@ The `type` value is also the NATS subject. Subscription examples:
 edge.node.>                       ← all node events
 edge.node.status_changed          ← only status transitions (server-side filter)
 edge.command_execution.completed  ← only completed executions
+edge.core.test                    ← Core delivery-path test event
 edge.>                            ← everything
 ```
 
@@ -60,6 +61,7 @@ Stream: EDGE_NODES_EVENTS          captures: edge.node.> + edge.enrollment_key.>
 Stream: EDGE_COMMANDS_EVENTS       captures: edge.command_execution.>
 Stream: EDGE_SELF_UPDATES_EVENTS   captures: edge.self_update_request.>
 Stream: EDGE_SSH_EVENTS            captures: edge.ssh_username.>
+Stream: EDGE_CORE_EVENTS           captures: edge.core.>
 ```
 
 Retention is configured on the NATS server, not by Edge Core.
@@ -70,7 +72,7 @@ Retention is configured on the NATS server, not by Edge Core.
 
 ### Kafka / Redpanda
 
-Four topics, one per domain:
+Five topics, one per domain:
 
 | Topic                      | Partition key                                                   |
 | -------------------------- | --------------------------------------------------------------- |
@@ -78,6 +80,7 @@ Four topics, one per domain:
 | `edge-commands-events`     | `command_execution_id`                                          |
 | `edge-self-updates-events` | `self_update_request_id`                                        |
 | `edge-ssh-events`          | `node_id` (verifications partition by the node attempting auth) |
+| `edge-core-events`         | empty string (operator test events)                             |
 
 Partition key ensures ordering per entity, parallel across entities. Filter by event type using the `type` field in the envelope.
 
@@ -142,7 +145,7 @@ The adapter publishes as MQTT 3.1.1 (`proto_ver: :v4`) — the lowest common den
 
 ### AWS SNS
 
-Four SNS topics by domain — must be pre-provisioned in your AWS account, ARNs derived from `EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX`:
+Five SNS topics by domain — must be pre-provisioned in your AWS account, ARNs derived from `EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX`:
 
 | Domain                       | Topic name suffix          |
 | ---------------------------- | -------------------------- |
@@ -150,6 +153,7 @@ Four SNS topics by domain — must be pre-provisioned in your AWS account, ARNs 
 | Command execution events     | `edge-commands-events`     |
 | Self-update events           | `edge-self-updates-events` |
 | SSH events                   | `edge-ssh-events`          |
+| Core operational events      | `edge-core-events`         |
 
 SNS has no topic-name wildcards. Subscribers filter via _subscription filter policies_ matched against **message attributes**. The adapter promotes two attributes on every publish:
 
@@ -173,7 +177,7 @@ Filter policy examples:
 
 ### Google Cloud Pub/Sub
 
-Four Pub/Sub topics by domain — must be pre-provisioned in your GCP project. The adapter constructs full resource names from `EVENT_BROKER_GOOGLE_PUBSUB_PROJECT` (+ optional `EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX`):
+Five Pub/Sub topics by domain — must be pre-provisioned in your GCP project. The adapter constructs full resource names from `EVENT_BROKER_GOOGLE_PUBSUB_PROJECT` (+ optional `EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX`):
 
 | Domain                       | Topic ID                   |
 | ---------------------------- | -------------------------- |
@@ -181,6 +185,7 @@ Four Pub/Sub topics by domain — must be pre-provisioned in your GCP project. T
 | Command execution events     | `edge-commands-events`     |
 | Self-update events           | `edge-self-updates-events` |
 | SSH events                   | `edge-ssh-events`          |
+| Core operational events      | `edge-core-events`         |
 
 Pub/Sub has no topic-name wildcards. Subscribers filter via _subscription filter expressions_ matched against **message attributes**. The adapter promotes two attributes on every publish:
 
@@ -405,9 +410,38 @@ Notes:
 
 ---
 
+### Core Events
+
+| Type             | NATS subject / RabbitMQ routing key | Description                                                            |
+| ---------------- | ----------------------------------- | ---------------------------------------------------------------------- |
+| `edge.core.test` | `edge.core.test`                    | Operator-requested test event for broker and webhook delivery plumbing |
+
+Publish with:
+
+```http
+POST /api/v1/events/test
+```
+
+**Core test `data` schema:**
+
+```json
+{
+  "message": "Test event from Edge Core",
+  "requested_at": "2026-04-14T10:00:00Z"
+}
+```
+
+Notes:
+
+- This is an official catalog event, so it appears in AsyncAPI and can be used in webhook `subscribed_events`.
+- It proves Core accepted a test publish into the normal broker/webhook path. Broker consumer receipt and webhook receiver processing remain downstream responsibilities.
+- Kafka, SNS, and Pub/Sub route it to `edge-core-events`; NATS JetStream captures it in `EDGE_CORE_EVENTS`.
+
+---
+
 ## Schema Principles
 
-- Every event carries a **full object snapshot** in `data` — same fields regardless of event type. Consumers read what they need, ignore the rest.
+- Normal state-change events carry a **full object snapshot** in `data` — same fields regardless of event type. Consumers read what they need, ignore the rest. `edge.core.test` is an operational probe and carries test metadata instead.
 - Transition events add `previous_*` fields alongside the snapshot — the previous value cannot be derived from the snapshot alone.
 - Internal/secret fields never appear: `api_token`, `proxy_password`, `netmaker_host_id`.
 - Null fields are always included explicitly as `null`, never omitted.

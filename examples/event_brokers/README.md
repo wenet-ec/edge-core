@@ -13,8 +13,8 @@ Edge Core publishes and forgets — it has no knowledge of consumers. All messag
 | `amqp091` <br/>(alias: `rabbitmq`) | AMQP 0-9-1                    | Any AMQP 0-9-1 broker — RabbitMQ, LavinMQ (single-node or clustered), AmazonMQ for RabbitMQ, CloudAMQP.                                                     |
 | `redis`                            | Redis Pub/Sub                 | Any Redis instance. Fire-and-forget — no durability, no replay.                                                                                             |
 | `mqtt`                             | MQTT 3.1.1 / 5                | Any MQTT 3.1.1 or 5 broker — EMQX, Mosquitto, HiveMQ, AWS IoT Core, Azure Event Grid (MQTT broker mode), VerneMQ, NanoMQ, etc. Publisher CONNECT uses `proto_ver: :v4` (3.1.1), the lowest common denominator; v5 brokers downgrade our session transparently. |
-| `aws_sns`                          | AWS SNS REST API              | AWS SNS (managed). Publishes to four pre-provisioned domain topics; subscribers filter via subscription filter policies.                                    |
-| `google_pubsub`                    | Google Cloud Pub/Sub REST API | Google Cloud Pub/Sub (managed). Same shape as SNS — four pre-provisioned domain topics, subscription filter expressions on attributes.                      |
+| `aws_sns`                          | AWS SNS REST API              | AWS SNS (managed). Publishes to five pre-provisioned domain topics; subscribers filter via subscription filter policies.                                    |
+| `google_pubsub`                    | Google Cloud Pub/Sub REST API | Google Cloud Pub/Sub (managed). Same shape as SNS — five pre-provisioned domain topics, subscription filter expressions on attributes.                      |
 
 Pick whichever adapter matches a broker your stack already runs. There is no recommended default.
 
@@ -177,6 +177,8 @@ The topic names are fixed:
 edge-nodes-events           ← all node lifecycle events
 edge-commands-events        ← all command execution events
 edge-self-updates-events    ← all self-update events
+edge-ssh-events             ← all SSH events
+edge-core-events            ← core operational events such as edge.core.test
 ```
 
 Edge Admin promotes `type` and `corename` from each event envelope into broker-native message attributes. Subscribers filter on those attributes server-side using the cloud's own filter syntax — see the cloud's docs for the syntax (filter policies for SNS, filter expressions for Pub/Sub).
@@ -186,14 +188,14 @@ Edge Admin promotes `type` and `corename` from each event envelope into broker-n
 |                      |                                                                                                                                                                 |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Adapter**          | `aws_sns`                                                                                                                                                       |
-| **Topics to create** | `edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`, `edge-ssh-events`                                                                      |
-| **IAM action**       | `sns:Publish` on the four topic ARNs                                                                                                                            |
+| **Topics to create** | `edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`, `edge-ssh-events`, `edge-core-events`                                                  |
+| **IAM action**       | `sns:Publish` on the five topic ARNs                                                                                                                            |
 | **Auth**             | Standard AWS credential chain via `ex_aws`. Prefer **IRSA** on EKS / instance profile on EC2; static keys via env vars are an escape hatch.                     |
 | **Subscriptions**    | SQS queue, Lambda, HTTPS endpoint — your choice. SNS itself stores nothing.                                                                                     |
 | **Filter syntax**    | [SNS subscription filter policies](https://docs.aws.amazon.com/sns/latest/dg/sns-subscription-filter-policies.html) — JSON, matched against message attributes. |
 
 ```bash
-for t in edge-nodes-events edge-commands-events edge-self-updates-events; do
+for t in edge-nodes-events edge-commands-events edge-self-updates-events edge-ssh-events edge-core-events; do
   aws sns create-topic --name "$t" --region us-east-1
 done
 ```
@@ -210,7 +212,9 @@ Minimal IAM policy:
       "Resource": [
         "arn:aws:sns:us-east-1:123456789012:edge-nodes-events",
         "arn:aws:sns:us-east-1:123456789012:edge-commands-events",
-        "arn:aws:sns:us-east-1:123456789012:edge-self-updates-events"
+        "arn:aws:sns:us-east-1:123456789012:edge-self-updates-events",
+        "arn:aws:sns:us-east-1:123456789012:edge-ssh-events",
+        "arn:aws:sns:us-east-1:123456789012:edge-core-events"
       ]
     }
   ]
@@ -230,14 +234,14 @@ Filter policy examples:
 |                      |                                                                                                                                                                                                                                |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Adapter**          | `google_pubsub`                                                                                                                                                                                                                |
-| **Topics to create** | `edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`, `edge-ssh-events` (prefix optional via `EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX`)                                                                  |
-| **IAM role**         | `roles/pubsub.publisher` on the four topics                                                                                                                                                                                    |
+| **Topics to create** | `edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`, `edge-ssh-events`, `edge-core-events` (prefix optional via `EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX`)                                              |
+| **IAM role**         | `roles/pubsub.publisher` on the five topics                                                                                                                                                                                    |
 | **Auth**             | Standard GCP credential chain via `goth`. Prefer **Workload Identity** on GKE / metadata server on GCE; service-account JSON via `GOOGLE_APPLICATION_CREDENTIALS` is an escape hatch.                                          |
 | **Subscriptions**    | Pull, push (HTTPS / Cloud Run), BigQuery, Cloud Storage. Pub/Sub buffers per subscription (default 7-day retention, max 31).                                                                                                   |
 | **Filter syntax**    | [Pub/Sub subscription filters](https://cloud.google.com/pubsub/docs/subscription-message-filter#filtering_syntax) — query language, matched against message attributes. Set on subscription creation; cannot be changed later. |
 
 ```bash
-for t in edge-nodes-events edge-commands-events edge-self-updates-events; do
+for t in edge-nodes-events edge-commands-events edge-self-updates-events edge-ssh-events edge-core-events; do
   gcloud pubsub topics create "$t" --project=my-project-123
 done
 ```
@@ -245,7 +249,7 @@ done
 Minimal per-topic role binding:
 
 ```bash
-for t in edge-nodes-events edge-commands-events edge-self-updates-events; do
+for t in edge-nodes-events edge-commands-events edge-self-updates-events edge-ssh-events edge-core-events; do
   gcloud pubsub topics add-iam-policy-binding "$t" \
     --member=serviceAccount:edge-admin@my-project-123.iam.gserviceaccount.com \
     --role=roles/pubsub.publisher --project=my-project-123

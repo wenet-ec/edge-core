@@ -12,6 +12,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Kafka do
       edge-commands-events        partition key: command_execution_id
       edge-self-updates-events    partition key: self_update_request_id
       edge-ssh-events             partition key: node_id (verifications partition by the node attempting auth)
+      edge-core-events            partition key: empty string (operator test events)
 
   ## Configuration (set in runtime.exs from env vars)
 
@@ -45,7 +46,8 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Kafka do
     "edge-nodes-events",
     "edge-commands-events",
     "edge-self-updates-events",
-    "edge-ssh-events"
+    "edge-ssh-events",
+    "edge-core-events"
   ]
 
   # ---------------------------------------------------------------------------
@@ -176,6 +178,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Kafka do
   defp topic_for("edge.command_execution." <> _), do: "edge-commands-events"
   defp topic_for("edge.self_update_request." <> _), do: "edge-self-updates-events"
   defp topic_for("edge.ssh_username." <> _), do: "edge-ssh-events"
+  defp topic_for("edge.core." <> _), do: "edge-core-events"
 
   # Partition key — Kafka uses it for two things: (1) co-locating events with
   # the same key onto the same partition (in-partition ordering is guaranteed,

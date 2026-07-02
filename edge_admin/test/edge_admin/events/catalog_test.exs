@@ -130,8 +130,9 @@ defmodule EdgeAdmin.Events.CatalogTest do
   # ---------------------------------------------------------------------------
 
   describe "all_event_types/0" do
-    test "returns the 14 documented event types in catalog order" do
+    test "returns the 15 documented event types in catalog order" do
       assert Catalog.all_event_types() == [
+               "edge.core.test",
                "edge.enrollment_key.verified",
                "edge.node.registered",
                "edge.node.reregistered",
@@ -172,6 +173,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
   describe "event_type/1" do
     test "every struct produces a registered event type" do
       structs = [
+        %Catalog.CoreTest{requested_at: now()},
         %Catalog.EnrollmentKeyVerified{result: :verified},
         %Catalog.NodeRegistered{node: node_fixture()},
         %Catalog.NodeReregistered{node: node_fixture()},
@@ -239,6 +241,9 @@ defmodule EdgeAdmin.Events.CatalogTest do
       assert Catalog.event_type(%Catalog.EnrollmentKeyVerified{result: :verified}) ==
                "edge.enrollment_key.verified"
 
+      assert Catalog.event_type(%Catalog.CoreTest{requested_at: now()}) ==
+               "edge.core.test"
+
       assert Catalog.event_type(%Catalog.SelfUpdateCompleted{
                request: self_update_request_fixture()
              }) == "edge.self_update_request.completed"
@@ -252,6 +257,23 @@ defmodule EdgeAdmin.Events.CatalogTest do
   #   • node.api_token / node.proxy_password NEVER appear
   #   • execution.output NEVER appears (operators may have logged secrets there)
   # ---------------------------------------------------------------------------
+
+  describe "to_data/1 — CoreTest" do
+    test "serializes the test message and request timestamp" do
+      requested_at = ~U[2026-04-13 10:00:00Z]
+
+      data =
+        Catalog.to_data(%Catalog.CoreTest{
+          message: "Custom test message",
+          requested_at: requested_at
+        })
+
+      assert data == %{
+               "message" => "Custom test message",
+               "requested_at" => "2026-04-13T10:00:00Z"
+             }
+    end
+  end
 
   describe "to_data/1 — EnrollmentKeyVerified (security)" do
     test "verified case excludes the key blob" do

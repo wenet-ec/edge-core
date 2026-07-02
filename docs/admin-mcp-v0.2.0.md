@@ -205,12 +205,13 @@ User-configured HTTP delivery destinations for events. Webhooks are **immutable*
 
 ## 12. Event catalog
 
-MCP-only tools surfacing the same content as `/asyncdoc`. Useful when picking values for `create_webhook`'s `subscribed_events`.
+MCP-only tools surfacing the same content as `/asyncdoc`. Useful when picking values for `create_webhook`'s `subscribed_events`. The catalog includes the official test event, `edge.core.test`.
 
 | Tool | Title | Hints | Description |
 |---|---|---|---|
 | `list_event_types` | List Event Types | 🔍 | No parameters. Returns `%{event_types: [%{type, description}, ...], count}`. |
 | `explain_event_type` | Explain Event Type | 🔍 | Required: `event_type`. Returns `%{type, description, data_example, reference}` — the `data` payload shape inside the CloudEvents envelope. |
+| `publish_test_event` | Publish Test Event | 🌐 | No parameters. Publishes the official `edge.core.test` event through the normal broker and webhook delivery path. Webhooks must explicitly subscribe to `edge.core.test` to receive it. |
 
 ---
 

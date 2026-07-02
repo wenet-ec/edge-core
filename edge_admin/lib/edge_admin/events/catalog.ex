@@ -216,6 +216,21 @@ defmodule EdgeAdmin.Events.Catalog do
   end
 
   # ---------------------------------------------------------------------------
+  # Core operational event structs
+  # ---------------------------------------------------------------------------
+
+  defmodule CoreTest do
+    @moduledoc false
+    @enforce_keys [:requested_at]
+    defstruct [:requested_at, message: "Test event from Edge Core"]
+
+    @type t :: %__MODULE__{
+            requested_at: DateTime.t(),
+            message: String.t()
+          }
+  end
+
+  # ---------------------------------------------------------------------------
   # Registry — one entry per event. Order is the catalog's canonical order.
   #
   # Sample data uses string keys / wire-format values: this is the shape an
@@ -264,7 +279,18 @@ defmodule EdgeAdmin.Events.Catalog do
     "updated_at" => "2026-04-13T10:00:00Z"
   }
 
+  @core_test_data %{
+    "message" => "Test event from Edge Core",
+    "requested_at" => "2026-04-13T10:00:00Z"
+  }
+
   @events [
+    %{
+      module: CoreTest,
+      type: "edge.core.test",
+      description: "Operator-requested test event for verifying event broker and webhook delivery plumbing.",
+      data_example: @core_test_data
+    },
     %{
       module: EnrollmentKeyVerified,
       type: "edge.enrollment_key.verified",
@@ -536,6 +562,14 @@ defmodule EdgeAdmin.Events.Catalog do
 
   # Self-update events
   def to_data(%SelfUpdateCompleted{request: req}), do: self_update_data(req)
+
+  # Core operational events
+  def to_data(%CoreTest{message: message, requested_at: requested_at}) do
+    %{
+      "message" => message,
+      "requested_at" => format_dt(requested_at)
+    }
+  end
 
   # ---------------------------------------------------------------------------
   # Data builders — full object snapshots, no internal/secret fields

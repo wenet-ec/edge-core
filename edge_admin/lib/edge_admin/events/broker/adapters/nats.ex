@@ -19,6 +19,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Nats do
       edge.command_execution.<event>   → captured by EDGE_COMMANDS_EVENTS stream (JetStream only)
       edge.self_update_request.<event> → captured by EDGE_SELF_UPDATES_EVENTS stream (JetStream only)
       edge.ssh_username.<event>        → captured by EDGE_SSH_EVENTS stream (JetStream only)
+      edge.core.<event>                → captured by EDGE_CORE_EVENTS stream (JetStream only)
 
   ## Configuration (set in runtime.exs from env vars)
 
@@ -52,7 +53,8 @@ defmodule EdgeAdmin.Events.Broker.Adapters.Nats do
     },
     %JsStream{name: "EDGE_COMMANDS_EVENTS", subjects: ["edge.command_execution.>"], storage: :file},
     %JsStream{name: "EDGE_SELF_UPDATES_EVENTS", subjects: ["edge.self_update_request.>"], storage: :file},
-    %JsStream{name: "EDGE_SSH_EVENTS", subjects: ["edge.ssh_username.>"], storage: :file}
+    %JsStream{name: "EDGE_SSH_EVENTS", subjects: ["edge.ssh_username.>"], storage: :file},
+    %JsStream{name: "EDGE_CORE_EVENTS", subjects: ["edge.core.>"], storage: :file}
   ]
 
   # ---------------------------------------------------------------------------

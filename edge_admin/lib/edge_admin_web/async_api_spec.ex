@@ -76,7 +76,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
             "Configure via EVENT_BROKER_NATS_URLS (comma-separated cluster list). " <>
             "Optional token auth via EVENT_BROKER_NATS_TOKEN. " <>
             "By default, pub/sub with no persistence. Set EVENT_BROKER_NATS_JETSTREAM=true to enable durable JetStream log — " <>
-            "four streams are auto-created on startup: EDGE_NODES_EVENTS (captures edge.node.> + edge.enrollment_key.>), EDGE_COMMANDS_EVENTS, EDGE_SELF_UPDATES_EVENTS, EDGE_SSH_EVENTS. Retention is configured on the broker.",
+            "five streams are auto-created on startup: EDGE_NODES_EVENTS (captures edge.node.> + edge.enrollment_key.>), EDGE_COMMANDS_EVENTS, EDGE_SELF_UPDATES_EVENTS, EDGE_SSH_EVENTS, EDGE_CORE_EVENTS. Retention is configured on the broker.",
         "security" => [%{"$ref" => "#/components/securitySchemes/natsToken"}]
       },
       "kafka" => %{
@@ -151,8 +151,8 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "title" => "AWS SNS",
         "summary" => "AWS Simple Notification Service — managed fan-out pub/sub.",
         "description" =>
-          "Managed AWS service; no on-prem broker. Four topics by domain: " <>
-            "`edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`, `edge-ssh-events` " <>
+          "Managed AWS service; no on-prem broker. Five topics by domain: " <>
+            "`edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`, `edge-ssh-events`, `edge-core-events` " <>
             "— must be pre-provisioned in your AWS account. Configure via " <>
             "EVENT_BROKER_AWS_SNS_REGION + EVENT_BROKER_AWS_SNS_TOPIC_ARN_PREFIX. " <>
             "Subscribers filter via subscription filter policies on message attributes " <>
@@ -167,8 +167,8 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         "title" => "Google Cloud Pub/Sub",
         "summary" => "Google Cloud Pub/Sub — managed fan-out pub/sub.",
         "description" =>
-          "Managed GCP service; no on-prem broker. Four topics by domain: " <>
-            "`edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`, `edge-ssh-events` " <>
+          "Managed GCP service; no on-prem broker. Five topics by domain: " <>
+            "`edge-nodes-events`, `edge-commands-events`, `edge-self-updates-events`, `edge-ssh-events`, `edge-core-events` " <>
             "— must be pre-provisioned in your GCP project. Configure via " <>
             "EVENT_BROKER_GOOGLE_PUBSUB_PROJECT (+ optional EVENT_BROKER_GOOGLE_PUBSUB_TOPIC_ID_PREFIX). " <>
             "Subscribers filter via subscription filter expressions on message attributes " <>
@@ -256,9 +256,9 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
            # to `/` (e.g. `edge.node.registered` → `edge/node/registered`) so MQTT
            # segment wildcards (`+`, `#`) work as expected. QoS shown above is the
            # default; configurable via EVENT_BROKER_MQTT_QOS.
-           # SNS routes by topic ARN (one of four pre-provisioned domain topics:
+           # SNS routes by topic ARN (one of five pre-provisioned domain topics:
            # edge-nodes-events, edge-commands-events, edge-self-updates-events,
-           # edge-ssh-events) and by message attributes — `type` and `corename`
+           # edge-ssh-events, edge-core-events) and by message attributes — `type` and `corename`
            # are promoted to attributes so subscription filter policies can
            # match without parsing the body. Google Cloud Pub/Sub routes the
            # same way; its bindings live on the channel + message objects (the
@@ -294,6 +294,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
   defp sns_domain_for("edge.command_execution." <> _), do: "commands"
   defp sns_domain_for("edge.ssh_username." <> _), do: "ssh"
   defp sns_domain_for("edge.self_update_request." <> _), do: "self-updates"
+  defp sns_domain_for("edge.core." <> _), do: "core"
 
   # ---------------------------------------------------------------------------
   # Components
@@ -321,6 +322,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
   # Description and data example come from `EdgeAdmin.Events.Catalog` —
   # this map only carries the AsyncAPI-specific extras.
   @message_specs %{
+    "edge.core.test" => %{schema_ref: "CoreTestEvent", kafka_key: "none"},
     "edge.enrollment_key.verified" => %{schema_ref: "EnrollmentKeyVerifiedEvent", kafka_key: "enrollment_key_id"},
     "edge.node.registered" => %{schema_ref: "NodeEvent", kafka_key: "node_id"},
     "edge.node.reregistered" => %{schema_ref: "NodeEvent", kafka_key: "node_id"},
@@ -423,7 +425,8 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
         node_schemas(),
         command_execution_schema(),
         ssh_username_schema(),
-        self_update_request_schema()
+        self_update_request_schema(),
+        core_test_schema()
       ],
       &Map.merge/2
     )
@@ -451,22 +454,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           },
           "type" => %{
             "type" => "string",
-            "enum" => [
-              "edge.node.registered",
-              "edge.node.reregistered",
-              "edge.node.version_changed",
-              "edge.node.status_changed",
-              "edge.node.update_triggered",
-              "edge.command_execution.created",
-              "edge.command_execution.sent",
-              "edge.command_execution.completed",
-              "edge.command_execution.cancelled",
-              "edge.command_execution.expired",
-              "edge.command_execution.pruned",
-              "edge.self_update_request.completed",
-              "edge.enrollment_key.verified",
-              "edge.ssh_username.verified"
-            ]
+            "enum" => Catalog.all_event_types()
           },
           "time" => %{
             "type" => "string",
@@ -674,6 +662,23 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           },
           "inserted_at" => %{"type" => "string", "format" => "date-time"},
           "updated_at" => %{"type" => "string", "format" => "date-time"}
+        }
+      }
+    }
+  end
+
+  defp core_test_schema do
+    %{
+      "CoreTestEvent" => %{
+        "type" => "object",
+        "required" => ["message", "requested_at"],
+        "description" =>
+          "Operator-requested test event. It proves Core accepted a test publish " <>
+            "into the normal event delivery path; broker consumer receipt and " <>
+            "webhook receiver behavior remain downstream responsibilities.",
+        "properties" => %{
+          "message" => %{"type" => "string"},
+          "requested_at" => %{"type" => "string", "format" => "date-time"}
         }
       }
     }

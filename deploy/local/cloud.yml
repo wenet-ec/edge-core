@@ -351,42 +351,42 @@ services:
       - "--web.enable-lifecycle"
 
   # Event Brokers
-  # edge_event_broker_nats:
-  #   image: nats:alpine
-  #   container_name: local_edge_event_broker_nats
-  #   networks:
-  #     local_edge_core:
-  #       ipv4_address: 172.20.0.110
-  #   volumes:
-  #     - local_edge_event_broker_nats_data:/data
-  #     - ../../deploy/production/compose/edge_event_broker/nats.conf:/etc/nats/nats.conf:ro
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "wget -qO- http://localhost:8222/healthz?js-enabled-only=true | grep -q ok"]
-  #     interval: 10s
-  #     timeout: 3s
-  #     retries: 5
-  #     start_period: 10s
-  #   ports:
-  #     - "44222:4222"   # NATS client
-  #     - "48222:8222"   # NATS monitoring
-  #   command: ["-c", "/etc/nats/nats.conf"]
+  edge_event_broker_nats:
+    image: nats:alpine
+    container_name: local_edge_event_broker_nats
+    networks:
+      local_edge_core:
+        ipv4_address: 172.20.0.110
+    volumes:
+      - local_edge_event_broker_nats_data:/data
+      - ../../deploy/production/compose/edge_event_broker/nats.conf:/etc/nats/nats.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8222/healthz?js-enabled-only=true | grep -q ok"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    ports:
+      - "44222:4222"   # NATS client
+      - "48222:8222"   # NATS monitoring
+    command: ["-c", "/etc/nats/nats.conf"]
 
-  # edge_event_broker_nats_ui:
-  #   image: ghcr.io/nats-nui/nui:latest
-  #   container_name: local_edge_event_broker_nats_ui
-  #   networks:
-  #     - local_edge_core
-  #   volumes:
-  #     - local_edge_event_broker_nui_data:/db
-  #     - ../../deploy/production/compose/edge_event_broker/nui-context.json:/clicontexts/edge-event-broker.json:ro
-  #   depends_on:
-  #     edge_event_broker_nats:
-  #       condition: service_healthy
-  #   ports:
-  #     - "41311:31311"   # NUI web UI
-  #   command:
-  #     - --db-path=/db/nui.db
-  #     - --nats-cli-contexts=/clicontexts
+  edge_event_broker_nats_ui:
+    image: ghcr.io/nats-nui/nui:latest
+    container_name: local_edge_event_broker_nats_ui
+    networks:
+      - local_edge_core
+    volumes:
+      - local_edge_event_broker_nui_data:/db
+      - ../../deploy/production/compose/edge_event_broker/nui-context.json:/clicontexts/edge-event-broker.json:ro
+    depends_on:
+      edge_event_broker_nats:
+        condition: service_healthy
+    ports:
+      - "41311:31311"   # NUI web UI
+    command:
+      - --db-path=/db/nui.db
+      - --nats-cli-contexts=/clicontexts
 
   # edge_event_broker_kafka:
   #   container_name: local_edge_event_broker_kafka

@@ -119,6 +119,8 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
 
     @node_status_enum Node.status_strings()
     @id_type_enum Node.id_type_strings()
+    @node_status_in_pattern EdgeAdmin.Naming.enum_in_pattern(@node_status_enum)
+    @id_type_in_pattern EdgeAdmin.Naming.enum_in_pattern(@id_type_enum)
 
     schema(%{
       title: "SelfUpdateRequestCreateRequest",
@@ -154,19 +156,14 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
                 "Optional filters to apply to target nodes (AND logic with cluster_filters). Accepts: id_type__in, status__in, version, self_update_enabled, last_seen_at/inserted_at/updated_at ranges. Does not accept node_id__in or cluster_name__in.",
               properties: %{
                 id_type__in: %Schema{
-                  oneOf: [
-                    %Schema{type: :string, description: "Comma-separated: \"persistent,random\""},
-                    %Schema{type: :array, items: %Schema{type: :string, enum: @id_type_enum}}
-                  ],
-                  description: "Filter by node ID type — comma-separated string or array of: persistent, random"
+                  type: :string,
+                  pattern: @id_type_in_pattern,
+                  description: "Filter by node ID type — comma-separated string of: persistent, random"
                 },
                 status__in: %Schema{
-                  oneOf: [
-                    %Schema{type: :string, description: "Comma-separated: \"healthy,unhealthy\""},
-                    %Schema{type: :array, items: %Schema{type: :string, enum: @node_status_enum}}
-                  ],
-                  description:
-                    "Filter by node status — comma-separated string or array of: healthy, unhealthy, unreachable"
+                  type: :string,
+                  pattern: @node_status_in_pattern,
+                  description: "Filter by node status — comma-separated string of: healthy, unhealthy, unreachable"
                 },
                 cluster_name: %Schema{
                   type: :string,

@@ -33,19 +33,29 @@ defmodule EdgeAdmin.Nodes.TargetingTest do
       assert schema.cluster_names == {:list, :string}
     end
 
-    test "node_filters.status__in accepts a string or a list" do
+    test "node_filters.status__in accepts an enum string or unique enum list" do
       schema = Targeting.peri_schema()
-      assert {:either, {:string, {:list, :string}}} = schema.node_filters.status__in
+
+      assert {:either, {{:string, {:regex, regex}}, {:list, {:enum, values}, [unique: true]}}} =
+               schema.node_filters.status__in
+
+      assert values == ["healthy", "unhealthy", "unreachable"]
+      assert Regex.source(regex) == EdgeAdmin.Naming.enum_in_pattern(values)
     end
 
-    test "node_filters.id_type__in accepts a string or a list" do
+    test "node_filters.id_type__in accepts an enum string or unique enum list" do
       schema = Targeting.peri_schema()
-      assert {:either, {:string, {:list, :string}}} = schema.node_filters.id_type__in
+
+      assert {:either, {{:string, {:regex, regex}}, {:list, {:enum, values}, [unique: true]}}} =
+               schema.node_filters.id_type__in
+
+      assert values == ["persistent", "random"]
+      assert Regex.source(regex) == EdgeAdmin.Naming.enum_in_pattern(values)
     end
 
-    test "cluster_filters.name__in accepts a string or a list" do
+    test "cluster_filters.name__in accepts a string or unique list" do
       schema = Targeting.peri_schema()
-      assert {:either, {:string, {:list, :string}}} = schema.cluster_filters.name__in
+      assert {:either, {:string, {:list, :string, [unique: true]}}} = schema.cluster_filters.name__in
     end
 
     test "cluster_filters.name accepts a string for wildcard matching" do

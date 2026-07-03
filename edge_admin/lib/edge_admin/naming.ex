@@ -35,6 +35,8 @@ defmodule EdgeAdmin.Naming do
     3–32 chars.
   - **SSH public keys** match the OpenSSH public-key wire format:
     `<algorithm> <base64> [comment]`.
+  - **Enum IN query values** are comma-separated enum strings with optional
+    whitespace around commas and no duplicate values.
   """
 
   @dns_label_pattern "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
@@ -108,4 +110,32 @@ defmodule EdgeAdmin.Naming do
 
   @doc "Maximum length of an SSH password."
   def ssh_password_max_length, do: 128
+
+  # ── Enum IN query values ──────────────────────────────────────────────────
+
+  @doc """
+  Inner regex string for OpenApiSpex `pattern:` fields that accept one or more
+  enum values as a comma-separated list, rejecting unknown and duplicate values.
+  """
+  @spec enum_in_pattern([String.t()]) :: String.t()
+  def enum_in_pattern(values) when is_list(values) do
+    values_pattern = Enum.map_join(values, "|", &Regex.escape/1)
+    no_duplicate_assertions = Enum.map_join(values, "", &enum_value_not_repeated_assertion/1)
+
+    "^#{no_duplicate_assertions}(#{values_pattern})(\\s*,\\s*(#{values_pattern}))*$"
+  end
+
+  @doc "Regex literal matching the same enum IN values as `enum_in_pattern/1`."
+  @spec enum_in_regex([String.t()]) :: Regex.t()
+  def enum_in_regex(values) when is_list(values) do
+    values
+    |> enum_in_pattern()
+    |> Regex.compile!()
+  end
+
+  defp enum_value_not_repeated_assertion(value) do
+    escaped = Regex.escape(value)
+
+    "(?!.*(?:^|,\\s*)#{escaped}(?=\\s*(?:,|$)).*(?:^|,\\s*)#{escaped}(?=\\s*(?:,|$)))"
+  end
 end

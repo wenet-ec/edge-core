@@ -123,6 +123,38 @@ defmodule EdgeAdmin.NamingTest do
   end
 
   # ---------------------------------------------------------------------------
+  # Enum IN query values: comma-separated enum tokens with no duplicates.
+  # ---------------------------------------------------------------------------
+
+  describe "enum_in_pattern/1" do
+    test "accepts one or more allowed enum values" do
+      regex = ["pending", "sent", "completed"] |> Naming.enum_in_pattern() |> Regex.compile!()
+
+      assert "pending" =~ regex
+      assert "pending,sent" =~ regex
+      assert "pending, sent, completed" =~ regex
+    end
+
+    test "rejects partial, unknown, empty, and duplicate values" do
+      regex = ["pending", "sent", "completed"] |> Naming.enum_in_pattern() |> Regex.compile!()
+
+      refute "pend" =~ regex
+      refute "pending,nope" =~ regex
+      refute "pending,pending" =~ regex
+      refute "pending, sent, pending" =~ regex
+      refute "" =~ regex
+    end
+  end
+
+  describe "enum_in_regex/1" do
+    test "compiles from enum_in_pattern" do
+      values = ["pending", "sent"]
+
+      assert Regex.source(Naming.enum_in_regex(values)) == Naming.enum_in_pattern(values)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # SSH public key wire format: <algorithm> <base64> [comment]
   # ---------------------------------------------------------------------------
 

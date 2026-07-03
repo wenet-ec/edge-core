@@ -44,7 +44,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
     field :page_size, :integer, default: 20, min: 1
     field :command_id_in, {:list, :string}
     field :node_id_in, {:list, :string}
-    field :status_in, {:list, {:enum, @status_enum}}
+    field :status_in, {:list, {:enum, @status_enum}, unique: true}
     field :target_all, {:either, {:boolean, nil}}
     field :exit_code, :integer
     field :exit_code_gte, :integer

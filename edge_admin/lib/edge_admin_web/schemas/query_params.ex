@@ -26,6 +26,12 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
 
   All helpers return a keyword-list slice that can be appended via `++`. Names
   are atoms — OpenApiSpex serialises them to strings.
+
+  `*_in_filter` helpers describe the wire format as a comma-separated string.
+  OpenApiSpex can model `style=form, explode=false` arrays, but Swagger UI's
+  enum-array control does not clear reliably for optional query parameters.
+  Runtime parsing and validation still happen in `RequestParser` plus the
+  domain form/check/schema layers.
   """
 
   alias OpenApiSpex.Schema
@@ -117,6 +123,9 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
   @doc """
   String IN filter: `name__in` accepts a comma-separated list of exact values
   (e.g. `cluster_name__in=prod,staging`). Maps to an IN query. No wildcards.
+
+  Emitted as a string because the REST wire format is comma-separated and this
+  keeps Swagger UI clearable for optional query parameters.
   """
   @spec string_in_filter(atom(), keyword()) :: {atom(), keyword()}
   def string_in_filter(name, opts \\ []) when is_atom(name) do
@@ -133,9 +142,7 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
      [
        in: :query,
        description: description,
-       style: :form,
-       explode: false,
-       schema: %Schema{type: :array, items: %Schema{type: :string}}
+       schema: %Schema{type: :string}
      ]}
   end
 
@@ -161,11 +168,13 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
   finite set (e.g. `status__in=healthy,unhealthy`). Maps to an IN query.
   Single-value usage (`status__in=healthy`) is also valid.
 
-  OpenAPI `style: :form, explode: false` signals the comma-separated encoding.
+  Emitted as a string because the REST wire format is comma-separated. Enum
+  validity is enforced at the OpenApiSpex boundary with a generated pattern.
   """
   @spec enum_in_filter(atom(), [String.t()], keyword()) :: {atom(), keyword()}
   def enum_in_filter(name, values, opts \\ []) when is_atom(name) and is_list(values) do
     key = :"#{name}__in"
+    pattern = EdgeAdmin.Naming.enum_in_pattern(values)
 
     description =
       Keyword.get(
@@ -178,21 +187,8 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
      [
        in: :query,
        description: description,
-       style: :form,
-       explode: false,
-       schema: %Schema{type: :array, items: %Schema{type: :string, enum: values}}
+       schema: %Schema{type: :string, pattern: pattern}
      ]}
-  end
-
-  @doc """
-  Enum array filter — **deprecated**. Use `enum_in_filter/3` instead.
-
-  Kept for any call-sites not yet migrated. Emits `name__in` with the same
-  semantics as `enum_in_filter/3`.
-  """
-  @spec enum_array_filter(atom(), [String.t()], keyword()) :: {atom(), keyword()}
-  def enum_array_filter(name, values, opts \\ []) when is_atom(name) and is_list(values) do
-    enum_in_filter(name, values, opts)
   end
 
   @doc """
@@ -228,7 +224,9 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
   @doc """
   UUID IN filter: `name__in` accepts a comma-separated list of UUIDs
   (e.g. `node_id__in=uuid1,uuid2`). Maps to an IN query.
-  OpenAPI `style: :form, explode: false` signals the comma-separated encoding.
+
+  Emitted as a string because the REST wire format is comma-separated. Each
+  UUID is validated after parsing.
   """
   @spec uuid_in_filter(atom(), keyword()) :: {atom(), keyword()}
   def uuid_in_filter(name, opts \\ []) when is_atom(name) do
@@ -245,9 +243,7 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
      [
        in: :query,
        description: description,
-       style: :form,
-       explode: false,
-       schema: %Schema{type: :array, items: %Schema{type: :string, format: :uuid}}
+       schema: %Schema{type: :string}
      ]}
   end
 

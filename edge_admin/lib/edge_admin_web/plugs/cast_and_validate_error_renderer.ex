@@ -12,7 +12,7 @@ defmodule EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer do
           "message": "Invalid request parameters",
           "details": {
             "name": ["Invalid format. Expected ~r/…/"],
-            "ipv4_range": ["Invalid format. Expected ~r/…/"]
+            "status__in": ["must be a comma-separated list of unique allowed values"]
           }
         },
         "meta": { "request_id": "…", "timestamp": "…" }
@@ -39,7 +39,7 @@ defmodule EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer do
       Enum.group_by(
         errors,
         fn error -> error |> OpenApiSpex.path_to_string() |> strip_leading_slash() end,
-        &to_string/1
+        &message/1
       )
 
     body =
@@ -53,6 +53,27 @@ defmodule EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer do
   end
 
   def call(conn, reason), do: call(conn, [reason])
+
+  defp message(%OpenApiSpex.Cast.Error{reason: :invalid_format, format: %Regex{} = format, path: path} = error) do
+    if enum_in_field?(path) and enum_in_pattern?(format) do
+      "must be a comma-separated list of unique allowed values"
+    else
+      to_string(error)
+    end
+  end
+
+  defp message(error), do: to_string(error)
+
+  defp enum_in_field?(path) do
+    path
+    |> List.last()
+    |> to_string()
+    |> String.ends_with?("__in")
+  end
+
+  defp enum_in_pattern?(%Regex{source: source}) do
+    String.starts_with?(source, "^(?!.*") and String.contains?(source, "\\s*,\\s*")
+  end
 
   defp strip_leading_slash("/" <> rest), do: rest
   defp strip_leading_slash(key), do: key

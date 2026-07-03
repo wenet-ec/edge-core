@@ -107,45 +107,6 @@ defmodule EdgeAdminWeb.Schemas.QueryParamsTest do
     end
   end
 
-  describe "enum_array_filter/3" do
-    test "delegates to enum_in_filter — emits status__in key" do
-      {key, _opts} =
-        QueryParams.enum_array_filter(:status, ["healthy", "unhealthy", "unreachable"])
-
-      assert key == :status__in
-    end
-
-    test "produces an array schema with enum-constrained items" do
-      {:status__in, opts} =
-        QueryParams.enum_array_filter(:status, ["healthy", "unhealthy", "unreachable"])
-
-      assert opts[:in] == :query
-      assert opts[:style] == :form
-      assert opts[:explode] == false
-
-      assert opts[:schema] == %Schema{
-               type: :array,
-               items: %Schema{type: :string, enum: ["healthy", "unhealthy", "unreachable"]}
-             }
-    end
-
-    test "default description names allowed values and mentions comma-separated IN match" do
-      {_, opts} = QueryParams.enum_array_filter(:status, ["pending", "completed"])
-
-      assert opts[:description] =~ "comma-separated"
-      assert opts[:description] =~ "IN"
-      assert opts[:description] =~ "pending"
-      assert opts[:description] =~ "completed"
-    end
-
-    test "description is overridable" do
-      {_, opts} =
-        QueryParams.enum_array_filter(:status, ["pending"], description: "custom desc")
-
-      assert opts[:description] == "custom desc"
-    end
-  end
-
   describe "enum_in_filter/3" do
     test "emits name__in key" do
       {key, _opts} = QueryParams.enum_in_filter(:status, ["healthy", "unhealthy"])
@@ -153,18 +114,16 @@ defmodule EdgeAdminWeb.Schemas.QueryParamsTest do
       assert key == :status__in
     end
 
-    test "produces an array schema with enum-constrained items" do
+    test "produces a string schema with a pattern for comma-separated enum values" do
       {:status__in, opts} =
         QueryParams.enum_in_filter(:status, ["healthy", "unhealthy", "unreachable"])
 
       assert opts[:in] == :query
-      assert opts[:style] == :form
-      assert opts[:explode] == false
+      refute Keyword.has_key?(opts, :style)
+      refute Keyword.has_key?(opts, :explode)
 
-      assert opts[:schema] == %Schema{
-               type: :array,
-               items: %Schema{type: :string, enum: ["healthy", "unhealthy", "unreachable"]}
-             }
+      assert %Schema{type: :string, pattern: pattern} = opts[:schema]
+      assert pattern == EdgeAdmin.Naming.enum_in_pattern(["healthy", "unhealthy", "unreachable"])
     end
 
     test "default description names allowed values and mentions comma-separated IN match" do
@@ -206,13 +165,13 @@ defmodule EdgeAdminWeb.Schemas.QueryParamsTest do
       assert key == :node_id__in
     end
 
-    test "produces an array-of-uuid schema with form/no-explode encoding" do
+    test "produces a string schema for comma-separated UUIDs" do
       {:node_id__in, opts} = QueryParams.uuid_array_filter(:node_id)
 
       assert opts[:in] == :query
-      assert opts[:style] == :form
-      assert opts[:explode] == false
-      assert opts[:schema] == %Schema{type: :array, items: %Schema{type: :string, format: :uuid}}
+      refute Keyword.has_key?(opts, :style)
+      refute Keyword.has_key?(opts, :explode)
+      assert opts[:schema] == %Schema{type: :string}
     end
 
     test "default description mentions comma-separated and IN match" do
@@ -236,13 +195,13 @@ defmodule EdgeAdminWeb.Schemas.QueryParamsTest do
       assert key == :node_id__in
     end
 
-    test "produces an array-of-uuid schema with form/no-explode encoding" do
+    test "produces a string schema for comma-separated UUIDs" do
       {:node_id__in, opts} = QueryParams.uuid_in_filter(:node_id)
 
       assert opts[:in] == :query
-      assert opts[:style] == :form
-      assert opts[:explode] == false
-      assert opts[:schema] == %Schema{type: :array, items: %Schema{type: :string, format: :uuid}}
+      refute Keyword.has_key?(opts, :style)
+      refute Keyword.has_key?(opts, :explode)
+      assert opts[:schema] == %Schema{type: :string}
     end
 
     test "default description mentions comma-separated and IN match" do
@@ -266,13 +225,13 @@ defmodule EdgeAdminWeb.Schemas.QueryParamsTest do
       assert key == :cluster_name__in
     end
 
-    test "produces an array-of-string schema with form/no-explode encoding" do
+    test "produces a string schema for comma-separated values" do
       {:cluster_name__in, opts} = QueryParams.string_in_filter(:cluster_name)
 
       assert opts[:in] == :query
-      assert opts[:style] == :form
-      assert opts[:explode] == false
-      assert opts[:schema] == %Schema{type: :array, items: %Schema{type: :string}}
+      refute Keyword.has_key?(opts, :style)
+      refute Keyword.has_key?(opts, :explode)
+      assert opts[:schema] == %Schema{type: :string}
     end
 
     test "default description mentions the field name and IN match" do

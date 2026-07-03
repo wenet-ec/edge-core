@@ -9,8 +9,14 @@ defmodule EdgeAdminWeb.Plugs.CastAndValidateErrorRendererTest do
   # Build a minimal fake OpenApiSpex.Cast.Error so we don't depend on the full
   # cast pipeline. path_to_string/1 only needs %{path: [...]} and the error
   # needs to_string/1 to produce a human-readable message.
+  alias OpenApiSpex.Cast.Error
+
   defp fake_error(path, message) do
-    %OpenApiSpex.Cast.Error{path: path, reason: :invalid_type, meta: %{message: message}}
+    %Error{path: path, reason: :invalid_type, meta: %{message: message}}
+  end
+
+  defp invalid_format_error(path, format) do
+    %Error{path: path, reason: :invalid_format, format: format}
   end
 
   defp build_conn do
@@ -142,6 +148,39 @@ defmodule EdgeAdminWeb.Plugs.CastAndValidateErrorRendererTest do
       details = get_in(body, ["error", "details"])
       assert Map.has_key?(details, "name")
       assert Map.has_key?(details, "ipv4_range")
+    end
+  end
+
+  # -----------------------------------------------------------------------
+  # Friendly enum IN messages
+  # -----------------------------------------------------------------------
+
+  describe "friendly enum IN messages" do
+    test "hides generated enum IN regex details" do
+      format = EdgeAdmin.Naming.enum_in_regex(["pending", "sent", "completed"])
+      body = [invalid_format_error(["status__in"], format)] |> call() |> decoded()
+
+      assert get_in(body, ["error", "details", "status__in"]) == [
+               "must be a comma-separated list of unique allowed values"
+             ]
+    end
+
+    test "hides generated enum IN regex details for nested fields" do
+      format = EdgeAdmin.Naming.enum_in_regex(["healthy", "unhealthy", "unreachable"])
+      body = [invalid_format_error(["targeting", "node_filters", "status__in"], format)] |> call() |> decoded()
+
+      assert get_in(body, ["error", "details", "targeting/node_filters/status__in"]) == [
+               "must be a comma-separated list of unique allowed values"
+             ]
+    end
+
+    test "keeps normal pattern messages unchanged" do
+      format = ~r/^[a-z0-9]+$/
+      body = [invalid_format_error(["name"], format)] |> call() |> decoded()
+
+      assert get_in(body, ["error", "details", "name"]) == [
+               "Invalid format. Expected ~r/^[a-z0-9]+$/"
+             ]
     end
   end
 

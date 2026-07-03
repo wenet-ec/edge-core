@@ -1,6 +1,6 @@
 # Edge Core — Architecture
 
-**Last Updated: 2026-07-02**
+**Last Updated: 2026-07-03**
 
 Edge Core is an infrastructure management platform for fleets of Linux machines you don't physically touch — cloud VMs, on-premises servers, factory-floor equipment, Raspberry Pis, homelab boxes, IoT devices. Anywhere you have N machines and want a single HTTP API to operate them, the same primitives apply: a secure WireGuard mesh, remote command execution, SSH without exposing port 22, HTTP/SOCKS5 forward proxying through any node, Prometheus metrics aggregation.
 
@@ -323,7 +323,7 @@ The standard deployment requires:
 - `pid: host` — agent shares the host PID namespace; required for certain Linux system tools and commands that do not function correctly inside an isolated PID namespace
 - `privileged: true` — required for WireGuard interface creation, routing rule manipulation (`ip rule`), and kernel module management (`rmmod wireguard`)
 - `/etc/resolv.conf:/etc/resolv.conf:rw` — netclient modifies the host's `resolv.conf` to inject VPN DNS on join and restores it on clean shutdown; needs write access to the host file, not a copy
-- `/:/host:ro` — mounts the host filesystem read-only so the Prometheus node exporter can read host proc/sys stats rather than container-scoped ones
+- `/:/host:rw` — mounts the host filesystem so command execution, SSH exec, identity detection, and Prometheus node exporter all operate against host state rather than container-scoped state
 - `/run/dbus/system_bus_socket:/run/dbus/system_bus_socket:ro` — required on systems running `systemd-resolved`; netclient communicates with `systemd-resolved` over D-Bus to configure VPN DNS correctly
 
 ### Sidecar deployment

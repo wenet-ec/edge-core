@@ -28,7 +28,7 @@ services:
     volumes:
       - edge_agent_data:/app/data
       - /etc/resolv.conf:/etc/resolv.conf:rw
-      - /:/host:ro
+      - /:/host:rw
       - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:ro
     env_file:
       - .env

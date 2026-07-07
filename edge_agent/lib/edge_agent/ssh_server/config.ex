@@ -17,12 +17,15 @@ defmodule EdgeAgent.SshServer.Config do
   # negotiate them, but `HostKeys.host_key/1` returns the P-256 key for all
   # ECDSA variants — wrong curve, signature won't validate. Keep the
   # public_key list aligned with the keys we actually own.
-  # KEX algorithms are independent of host-key algorithms (KEX uses
-  # ephemeral ECDH keys), so all curves remain enabled there.
+  # KEX algorithms are independent of host-key algorithms.
   @ssh_algorithms [
     kex: [
-      :"ecdh-sha2-nistp384",
+      :"mlkem768x25519-sha256",
+      :"curve25519-sha256",
+      :"curve25519-sha256@libssh.org",
+      :"curve448-sha512",
       :"ecdh-sha2-nistp521",
+      :"ecdh-sha2-nistp384",
       :"ecdh-sha2-nistp256",
       :"diffie-hellman-group-exchange-sha256",
       :"diffie-hellman-group16-sha512",
@@ -32,8 +35,8 @@ defmodule EdgeAgent.SshServer.Config do
     public_key: [
       :"ssh-ed25519",
       :"ecdsa-sha2-nistp256",
-      :"rsa-sha2-256",
       :"rsa-sha2-512",
+      :"rsa-sha2-256",
       :"ssh-rsa"
     ],
     cipher: [
@@ -43,7 +46,8 @@ defmodule EdgeAgent.SshServer.Config do
          :"aes256-ctr",
          :"aes192-ctr",
          :"aes128-gcm@openssh.com",
-         :"aes128-ctr"
+         :"aes128-ctr",
+         :"chacha20-poly1305@openssh.com"
        ]},
       {:server2client,
        [
@@ -51,12 +55,25 @@ defmodule EdgeAgent.SshServer.Config do
          :"aes256-ctr",
          :"aes192-ctr",
          :"aes128-gcm@openssh.com",
-         :"aes128-ctr"
+         :"aes128-ctr",
+         :"chacha20-poly1305@openssh.com"
        ]}
     ],
     mac: [
-      {:client2server, [:"hmac-sha2-256", :"hmac-sha2-512"]},
-      {:server2client, [:"hmac-sha2-256", :"hmac-sha2-512"]}
+      {:client2server,
+       [
+         :"hmac-sha2-512-etm@openssh.com",
+         :"hmac-sha2-256-etm@openssh.com",
+         :"hmac-sha2-512",
+         :"hmac-sha2-256"
+       ]},
+      {:server2client,
+       [
+         :"hmac-sha2-512-etm@openssh.com",
+         :"hmac-sha2-256-etm@openssh.com",
+         :"hmac-sha2-512",
+         :"hmac-sha2-256"
+       ]}
     ]
   ]
 

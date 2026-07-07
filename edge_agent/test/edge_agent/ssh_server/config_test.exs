@@ -34,8 +34,12 @@ defmodule EdgeAgent.SshServer.ConfigTest do
 
     test "kex: pinned set" do
       assert Config.ssh_algorithms()[:kex] == [
-               :"ecdh-sha2-nistp384",
+               :"mlkem768x25519-sha256",
+               :"curve25519-sha256",
+               :"curve25519-sha256@libssh.org",
+               :"curve448-sha512",
                :"ecdh-sha2-nistp521",
+               :"ecdh-sha2-nistp384",
                :"ecdh-sha2-nistp256",
                :"diffie-hellman-group-exchange-sha256",
                :"diffie-hellman-group16-sha512",
@@ -50,13 +54,13 @@ defmodule EdgeAgent.SshServer.ConfigTest do
       assert pk == [
                :"ssh-ed25519",
                :"ecdsa-sha2-nistp256",
-               :"rsa-sha2-256",
                :"rsa-sha2-512",
+               :"rsa-sha2-256",
                :"ssh-rsa"
              ]
     end
 
-    test "cipher: same allow-list for both directions, only AES-CTR / AES-GCM" do
+    test "cipher: same allow-list for both directions, only modern stream / CTR / GCM ciphers" do
       ciphers = Config.ssh_algorithms()[:cipher]
 
       expected = [
@@ -64,7 +68,8 @@ defmodule EdgeAgent.SshServer.ConfigTest do
         :"aes256-ctr",
         :"aes192-ctr",
         :"aes128-gcm@openssh.com",
-        :"aes128-ctr"
+        :"aes128-ctr",
+        :"chacha20-poly1305@openssh.com"
       ]
 
       assert ciphers == [{:client2server, expected}, {:server2client, expected}]
@@ -83,9 +88,15 @@ defmodule EdgeAgent.SshServer.ConfigTest do
       end
     end
 
-    test "mac: same set for both directions, only SHA-2" do
+    test "mac: same set for both directions, only SHA-2 with ETM preferred" do
       mac = Config.ssh_algorithms()[:mac]
-      expected = [:"hmac-sha2-256", :"hmac-sha2-512"]
+
+      expected = [
+        :"hmac-sha2-512-etm@openssh.com",
+        :"hmac-sha2-256-etm@openssh.com",
+        :"hmac-sha2-512",
+        :"hmac-sha2-256"
+      ]
 
       assert mac == [{:client2server, expected}, {:server2client, expected}]
     end

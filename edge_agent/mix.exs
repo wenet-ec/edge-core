@@ -77,7 +77,7 @@ defmodule EdgeAgent.Mixfile do
     ]
   end
 
-  # cowlib 2.17.1 (transitive via cowboy) has GHSA-g2wm-735q-3f56 — low-severity
+  # cowlib 2.18.0 (transitive via cowboy) has GHSA-g2wm-735q-3f56 — low-severity
   # cookie-encoder issue with no patched version published upstream. We don't
   # use cow_cookie:cookie/1, so this is a low-risk ignore. Re-check when
   # cowlib publishes a fix and drop this list.

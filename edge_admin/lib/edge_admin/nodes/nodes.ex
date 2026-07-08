@@ -44,8 +44,8 @@ defmodule EdgeAdmin.Nodes do
   The node's VPN IP is only known to Netmaker; we must fetch it. The DB insert anchors
   the alias record. The DNS write is the final step. If DNS write fails, we rollback the
   DB insert. If rollback also fails, `cleanup_ghost_aliases/2` in the reconciler will
-  clean the orphaned DB record. Ghost DNS entries (DNS in Netmaker, no DB record) are
-  cleaned by the Netmaker→DB direction of `cleanup_ghost_aliases/2`.
+  recreate the missing DNS entry from DB. Ghost DNS entries (DNS in Netmaker, no DB
+  record) are cleaned by the Netmaker→DB direction of `cleanup_ghost_aliases/2`.
 
   **Alias delete — Netmaker first, then DB:**
   Same reasoning as cluster delete — DB-first would create permanently invisible orphans.
@@ -62,7 +62,8 @@ defmodule EdgeAdmin.Nodes do
   networks are admin infrastructure and are never touched here. The prefix contract is
   enforced by `Vpn.build_network_name/2`.
 
-  `cleanup_ghost_aliases/2` — bidirectional alias cleanup, same logic applied to DNS.
+  `cleanup_ghost_aliases/2` — reconciles alias DNS from DB to Netmaker, repairs stale
+  IPs, and deletes Netmaker DNS entries with no matching DB alias.
 
   ### Subnet pool and scale
 
@@ -82,9 +83,8 @@ defmodule EdgeAdmin.Nodes do
     interval (~minutes). Don't assume operations are atomic.
 
   - `create_alias/2` fetches the node's VPN IP from Netmaker at call time. If the node
-    re-enrolls and gets a new IP, the DNS entry points to the old IP forever — there is
-    no reconciliation path that *updates* DNS entries, only creates or deletes them.
-    This is a known silent correctness gap.
+    re-enrolls and gets a new IP, the reconciler repairs alias DNS by deleting and
+    recreating the Netmaker DNS entry with the current IP.
 
   - `cleanup_ghost_networks/1` deletes by prefix convention, not by any Netmaker-side
     ownership marker. If something outside this system ever creates a `cluster-*` network
@@ -1549,7 +1549,7 @@ defmodule EdgeAdmin.Nodes do
   4. Adds missing nodes (DB says yes, Netmaker says no)
   5. Removes extra nodes (Netmaker says yes, DB says no)
   6. Cleans up orphaned clusters (exist in DB but network doesn't exist in Netmaker)
-  7. Cleans up ghost aliases (exist in DB but DNS doesn't exist in Netmaker)
+  7. Repairs missing/stale alias DNS and deletes ghost alias DNS
 
   Only processes edge nodes (those belonging to edge agents, identified by having a DB record).
   Admin nodes and staff machines are not touched.
@@ -1560,7 +1560,11 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec reconcile_clusters() :: map()
   def reconcile_clusters do
-    reconcile_clusters_paginated(1, %{
+    reconcile_clusters_paginated(1, empty_reconcile_stats())
+  end
+
+  defp empty_reconcile_stats do
+    %{
       clusters_processed: 0,
       nodes_added: 0,
       nodes_removed: 0,
@@ -1568,9 +1572,10 @@ defmodule EdgeAdmin.Nodes do
       clusters_deleted: 0,
       ghost_networks_deleted: 0,
       aliases_cleaned: 0,
+      aliases_repaired: 0,
       ghost_aliases_cleaned: 0,
       errors: 0
-    })
+    }
   end
 
   @doc """
@@ -1582,17 +1587,7 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec reconcile_cluster(Cluster.t()) :: map()
   def reconcile_cluster(%Cluster{} = cluster) do
-    acc = %{
-      clusters_processed: 0,
-      nodes_added: 0,
-      nodes_removed: 0,
-      nodes_deleted: 0,
-      clusters_deleted: 0,
-      ghost_networks_deleted: 0,
-      aliases_cleaned: 0,
-      ghost_aliases_cleaned: 0,
-      errors: 0
-    }
+    acc = empty_reconcile_stats()
 
     db_nodes = Repo.all(from(n in Node, where: n.cluster_id == ^cluster.id, preload: [:cluster]))
 
@@ -1653,24 +1648,11 @@ defmodule EdgeAdmin.Nodes do
 
     case Vpn.list_nodes(network_name) do
       {:ok, netmaker_nodes} ->
-        actual_host_ids =
-          netmaker_nodes
-          |> Enum.map(& &1["hostid"])
-          |> Enum.reject(&is_nil/1)
-          |> MapSet.new()
+        actual_host_ids = netmaker_host_ids(netmaker_nodes)
 
         counts = reconcile_cluster_nodes(cluster, db_nodes, netmaker_nodes, expected_host_ids, actual_host_ids)
 
-        %{
-          clusters_processed: acc.clusters_processed + 1,
-          nodes_added: acc.nodes_added + counts.added,
-          nodes_removed: acc.nodes_removed + counts.removed,
-          nodes_deleted: acc.nodes_deleted + counts.deleted,
-          clusters_deleted: acc.clusters_deleted,
-          aliases_cleaned: acc.aliases_cleaned + counts.aliases_cleaned,
-          ghost_aliases_cleaned: acc.ghost_aliases_cleaned,
-          errors: acc.errors
-        }
+        merge_cluster_reconcile_counts(acc, counts)
 
       {:error, reason} ->
         Logger.error("Failed to list nodes for cluster #{cluster.name}: #{inspect(reason)}")
@@ -1681,27 +1663,71 @@ defmodule EdgeAdmin.Nodes do
   defp reconcile_cluster_nodes(cluster, db_nodes, netmaker_nodes, expected_host_ids, actual_host_ids) do
     network_name = node_network_name(cluster)
 
-    # Fetched up front: used both for orphan-node detection (node rows whose
-    # `hostid` no longer matches any host record in this network) and for
-    # admin-* filtering in the rogue-eviction branch below.
-    host_hostname_map =
-      case Vpn.list_hosts(network_name) do
-        {:ok, hosts} -> Map.new(hosts, fn h -> {h["id"], h["name"] || ""} end)
-        {:error, _} -> %{}
-      end
-
+    host_hostname_map = host_hostname_map(network_name)
     expected_hostnames = MapSet.new(db_nodes, &Node.node_name/1)
 
     live_host_ids = host_hostname_map |> Map.keys() |> MapSet.new()
     orphan_swept = sweep_orphan_nodes_in_network(netmaker_nodes, live_host_ids, network_name)
 
-    orphaned_in_db = MapSet.difference(expected_host_ids, actual_host_ids)
-    orphaned_nodes = Enum.filter(db_nodes, fn node -> node.netmaker_host_id in orphaned_in_db end)
+    orphaned_nodes = orphaned_db_nodes(db_nodes, expected_host_ids, actual_host_ids)
 
     aliases_cleaned = cleanup_orphaned_aliases(orphaned_nodes)
     {deleted, unenrolled_host_ids} = delete_orphaned_nodes(orphaned_nodes)
     added = add_missing_nodes(unenrolled_host_ids, network_name, cluster.name)
 
+    {managed_extra, unmanaged_extra} = partition_extra_netmaker_hosts(actual_host_ids, expected_host_ids)
+
+    removed = remove_extra_nodes(managed_extra, network_name, cluster.name)
+
+    evicted =
+      maybe_evict_rogue_hosts(unmanaged_extra, host_hostname_map, expected_hostnames, network_name, cluster.name)
+
+    %{
+      added: added,
+      removed: removed + evicted,
+      deleted: deleted + orphan_swept,
+      aliases_cleaned: aliases_cleaned
+    }
+  end
+
+  defp merge_cluster_reconcile_counts(acc, counts) do
+    %{
+      clusters_processed: acc.clusters_processed + 1,
+      nodes_added: acc.nodes_added + counts.added,
+      nodes_removed: acc.nodes_removed + counts.removed,
+      nodes_deleted: acc.nodes_deleted + counts.deleted,
+      clusters_deleted: acc.clusters_deleted,
+      ghost_networks_deleted: acc.ghost_networks_deleted,
+      aliases_cleaned: acc.aliases_cleaned + counts.aliases_cleaned,
+      aliases_repaired: acc.aliases_repaired,
+      ghost_aliases_cleaned: acc.ghost_aliases_cleaned,
+      errors: acc.errors
+    }
+  end
+
+  defp netmaker_host_ids(netmaker_nodes) do
+    netmaker_nodes
+    |> Enum.map(& &1["hostid"])
+    |> Enum.reject(&is_nil/1)
+    |> MapSet.new()
+  end
+
+  # Fetched up front: used both for orphan-node detection (node rows whose
+  # `hostid` no longer matches any host record in this network) and for
+  # admin-* filtering in the rogue-eviction branch.
+  defp host_hostname_map(network_name) do
+    case Vpn.list_hosts(network_name) do
+      {:ok, hosts} -> Map.new(hosts, fn h -> {h["id"], h["name"] || ""} end)
+      {:error, _} -> %{}
+    end
+  end
+
+  defp orphaned_db_nodes(db_nodes, expected_host_ids, actual_host_ids) do
+    orphaned_host_ids = MapSet.difference(expected_host_ids, actual_host_ids)
+    Enum.filter(db_nodes, fn node -> node.netmaker_host_id in orphaned_host_ids end)
+  end
+
+  defp partition_extra_netmaker_hosts(actual_host_ids, expected_host_ids) do
     extra_in_netmaker = MapSet.difference(actual_host_ids, expected_host_ids)
 
     all_db_host_ids =
@@ -1709,30 +1735,24 @@ defmodule EdgeAdmin.Nodes do
       |> Repo.all()
       |> MapSet.new()
 
-    managed_extra = MapSet.intersection(extra_in_netmaker, all_db_host_ids)
-    unmanaged_extra = MapSet.difference(extra_in_netmaker, all_db_host_ids)
+    {
+      MapSet.intersection(extra_in_netmaker, all_db_host_ids),
+      MapSet.difference(extra_in_netmaker, all_db_host_ids)
+    }
+  end
 
-    removed = remove_extra_nodes(managed_extra, network_name, cluster.name)
-
-    evicted =
-      if Application.get_env(:edge_admin, :evict_rogue_hosts, true) do
-        evict_rogue_hosts(unmanaged_extra, host_hostname_map, expected_hostnames, network_name, cluster.name)
-      else
-        if not MapSet.equal?(unmanaged_extra, MapSet.new()) do
-          Logger.info(
-            "Reconciliation: #{MapSet.size(unmanaged_extra)} unrecognized host(s) in #{network_name} — eviction disabled (EVICT_ROGUE_HOSTS=false)"
-          )
-        end
-
-        0
+  defp maybe_evict_rogue_hosts(host_ids, host_hostname_map, expected_hostnames, network_name, cluster_name) do
+    if Application.get_env(:edge_admin, :evict_rogue_hosts, true) do
+      evict_rogue_hosts(host_ids, host_hostname_map, expected_hostnames, network_name, cluster_name)
+    else
+      if not MapSet.equal?(host_ids, MapSet.new()) do
+        Logger.info(
+          "Reconciliation: #{MapSet.size(host_ids)} unrecognized host(s) in #{network_name} — eviction disabled (EVICT_ROGUE_HOSTS=false)"
+        )
       end
 
-    %{
-      added: added,
-      removed: removed,
-      deleted: deleted + evicted + orphan_swept,
-      aliases_cleaned: aliases_cleaned
-    }
+      0
+    end
   end
 
   # Heals the upstream Netmaker bug (`RemoveHost` iterating the cached
@@ -2158,10 +2178,9 @@ defmodule EdgeAdmin.Nodes do
   If health check fails, returns service unavailable immediately.
   If node not found in Netmaker or has no IP, returns service unavailable.
   If DB creation fails, returns validation error.
-  If DNS creation fails, deletes DB record and returns service unavailable.
-
-  This ensures "alias in DB but DNS not in Netmaker" always means failed deletion,
-  allowing reconciliation to safely delete orphaned DB aliases.
+  If DNS creation fails, rolls back the DB record and returns service unavailable.
+  If that rollback ever fails and the alias row remains, reconciliation treats the
+  DB row as source of truth and recreates the DNS entry.
 
   ## Parameters
   - `node` - The node to create an alias for (must have cluster preloaded)
@@ -2262,8 +2281,8 @@ defmodule EdgeAdmin.Nodes do
   If Netmaker deletion fails (except :not_found), operation stops and returns error.
   If Netmaker returns :not_found, continues with DB deletion (DNS already gone).
 
-  This ensures "alias in DB but DNS not in Netmaker" always means failed deletion,
-  allowing reconciliation to safely delete orphaned DB aliases.
+  If DB deletion fails after Netmaker DNS deletion, the DB row remains the source
+  of truth and reconciliation will recreate the DNS entry.
 
   Returns `{:ok, alias}`, `{:error, changeset}` (DB failure), or `{:error, :service_unavailable}` (Netmaker failure).
   """
@@ -2316,12 +2335,12 @@ defmodule EdgeAdmin.Nodes do
   end
 
   @doc """
-  Cleans up ghost aliases in both directions for each cluster:
+  Reconciles alias DNS for each cluster:
 
   Direction 1 — DB → Netmaker:
-    Aliases in DB whose DNS entry no longer exists in Netmaker.
-    (DNS was deleted first per our flow, DB cleanup failed.)
-    Fix: delete the DB record.
+    Aliases in DB whose DNS entry no longer exists in Netmaker, or whose DNS
+    address no longer matches the node's current Netmaker IP.
+    Fix: delete/recreate the Netmaker DNS entry from DB state.
 
   Direction 2 — Netmaker → DB:
     Custom DNS entries in Netmaker with no matching DB alias.
@@ -2337,27 +2356,31 @@ defmodule EdgeAdmin.Nodes do
 
       case Vpn.list_custom_dns_entries(network_name) do
         {:ok, netmaker_custom_entries} ->
-          db_aliases = Repo.all(from(a in Alias, where: a.cluster_id == ^cluster.id, preload: [:cluster]))
+          db_aliases = Repo.all(from(a in Alias, where: a.cluster_id == ^cluster.id, preload: [:cluster, :node]))
 
-          netmaker_dns_names = MapSet.new(netmaker_custom_entries, & &1["name"])
           db_alias_hostnames = MapSet.new(db_aliases, &Alias.vpn_hostname/1)
           db_alias_short_names = MapSet.new(db_aliases, &Alias.netmaker_dns_name/1)
+          netmaker_entries_by_name = Map.new(netmaker_custom_entries, &{&1["name"], &1})
 
-          db_deleted = delete_ghost_db_aliases(db_aliases, netmaker_dns_names)
+          dns_repaired = repair_alias_dns_entries(db_aliases, netmaker_entries_by_name, network_name)
 
           dns_deleted =
             delete_orphaned_dns_entries(netmaker_custom_entries, network_name, db_alias_short_names, db_alias_hostnames)
 
-          total_cleaned = db_deleted + dns_deleted
+          total_cleaned = dns_deleted
+          total_changed = dns_repaired + dns_deleted
 
-          if total_cleaned > 0 do
+          if total_changed > 0 do
             Logger.info(
-              "Reconciliation: Cleaned #{total_cleaned} ghost alias(es) in cluster #{cluster.name} " <>
-                "(#{db_deleted} DB records, #{dns_deleted} DNS entries)"
+              "Reconciliation: Repaired #{dns_repaired} alias DNS record(s), cleaned #{dns_deleted} ghost alias DNS record(s) in cluster #{cluster.name}"
             )
           end
 
-          %{result | ghost_aliases_cleaned: result.ghost_aliases_cleaned + total_cleaned}
+          %{
+            result
+            | aliases_repaired: result.aliases_repaired + dns_repaired,
+              ghost_aliases_cleaned: result.ghost_aliases_cleaned + total_cleaned
+          }
 
         {:error, reason} ->
           Logger.warning("Reconciliation: Failed to list DNS entries for cluster #{cluster.name}: #{inspect(reason)}")
@@ -2366,24 +2389,76 @@ defmodule EdgeAdmin.Nodes do
     end)
   end
 
-  # Direction 1: DB aliases whose DNS is gone from Netmaker → delete the DB record.
-  # Handles the case where Netmaker-first deletion succeeded but DB deletion failed.
-  defp delete_ghost_db_aliases(db_aliases, netmaker_dns_names) do
+  defp repair_alias_dns_entries(db_aliases, netmaker_entries_by_name, network_name) do
     Enum.reduce(db_aliases, 0, fn alias_record, count ->
-      if MapSet.member?(netmaker_dns_names, Alias.vpn_hostname(alias_record)) do
-        count
-      else
-        case Repo.delete(alias_record) do
-          {:ok, _} ->
-            Logger.info("Reconciliation: Deleted ghost alias #{alias_record.name} from DB (DNS gone from Netmaker)")
-            count + 1
+      current_ip = current_alias_node_ip(alias_record, network_name)
+      dns_entry = Map.get(netmaker_entries_by_name, Alias.vpn_hostname(alias_record))
 
-          {:error, changeset} ->
-            Logger.error("Reconciliation: Failed to delete ghost DB alias #{alias_record.name}: #{inspect(changeset)}")
-            count
-        end
+      case alias_dns_repair_action(alias_record, dns_entry, current_ip) do
+        {:repair, ip_address, reason} ->
+          if repair_alias_dns_entry(alias_record, network_name, ip_address, reason), do: count + 1, else: count
+
+        :ok ->
+          count
       end
     end)
+  end
+
+  defp current_alias_node_ip(%Alias{node: %Node{netmaker_host_id: host_id}}, network_name) do
+    case Vpn.find_node_by_host(network_name, host_id) do
+      {:ok, %{"address" => address}} when is_binary(address) and address != "" ->
+        address |> String.split("/") |> List.first()
+
+      _ ->
+        nil
+    end
+  end
+
+  defp current_alias_node_ip(_alias_record, _network_name), do: nil
+
+  defp alias_dns_repair_action(_alias_record, _dns_entry, nil), do: :ok
+
+  defp alias_dns_repair_action(_alias_record, nil, current_ip), do: {:repair, current_ip, :missing}
+
+  defp alias_dns_repair_action(_alias_record, %{"address" => current_ip}, current_ip), do: :ok
+
+  defp alias_dns_repair_action(_alias_record, %{"address" => _old_ip}, current_ip), do: {:repair, current_ip, :stale_ip}
+
+  defp repair_alias_dns_entry(alias_record, network_name, ip_address, reason) do
+    netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
+    vpn_hostname = Alias.vpn_hostname(alias_record)
+
+    case Vpn.delete_dns_entry(network_name, netmaker_dns_name) do
+      {:ok, _} ->
+        create_repaired_alias_dns(alias_record, network_name, ip_address, reason)
+
+      {:error, :not_found} ->
+        create_repaired_alias_dns(alias_record, network_name, ip_address, reason)
+
+      {:error, error} ->
+        Logger.warning("Reconciliation: Failed to delete alias DNS #{vpn_hostname} before repair: #{inspect(error)}")
+
+        false
+    end
+  end
+
+  defp create_repaired_alias_dns(alias_record, network_name, ip_address, reason) do
+    netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
+    vpn_hostname = Alias.vpn_hostname(alias_record)
+
+    case Vpn.create_dns_entry(network_name, %{name: netmaker_dns_name, address: ip_address}) do
+      {:ok, _} ->
+        Logger.info("Reconciliation: Repaired alias DNS #{vpn_hostname} -> #{ip_address} (reason=#{reason})")
+
+        true
+
+      {:error, error} ->
+        Logger.warning(
+          "Reconciliation: Failed to recreate alias DNS #{vpn_hostname} -> #{ip_address}: #{inspect(error)}"
+        )
+
+        false
+    end
   end
 
   # Direction 2: Netmaker custom DNS entries with no DB alias → delete the DNS entry.

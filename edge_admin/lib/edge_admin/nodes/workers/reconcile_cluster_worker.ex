@@ -10,7 +10,7 @@ defmodule EdgeAdmin.Nodes.Workers.ReconcileClusterWorker do
   4. Cleans up orphaned aliases for nodes no longer in Netmaker
   5. Deletes orphaned DB records for nodes whose Netmaker host is gone
   6. Deletes the cluster from DB if its Netmaker network no longer exists
-  7. Cleans up ghost aliases (DB aliases with no corresponding Netmaker DNS entry)
+  7. Repairs missing/stale alias DNS and cleans up ghost alias DNS
 
   Retried up to 3 times on failure. Each cluster is independent — a Netmaker timeout
   on one cluster does not affect reconciliation of others.
@@ -41,6 +41,7 @@ defmodule EdgeAdmin.Nodes.Workers.ReconcileClusterWorker do
           "ReconcileClusterWorker: cluster #{cluster.name} — " <>
             "added=#{result.nodes_added} removed=#{result.nodes_removed} " <>
             "deleted=#{result.nodes_deleted} aliases_cleaned=#{result.aliases_cleaned} " <>
+            "aliases_repaired=#{result.aliases_repaired} " <>
             "ghost_aliases_cleaned=#{result.ghost_aliases_cleaned} errors=#{result.errors}"
         )
 
@@ -54,6 +55,7 @@ defmodule EdgeAdmin.Nodes.Workers.ReconcileClusterWorker do
             nodes_removed: result.nodes_removed,
             nodes_deleted: result.nodes_deleted,
             aliases_cleaned: result.aliases_cleaned,
+            aliases_repaired: result.aliases_repaired,
             ghost_aliases_cleaned: result.ghost_aliases_cleaned,
             errors: result.errors
           },

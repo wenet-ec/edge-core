@@ -910,10 +910,45 @@ defmodule EdgeAdmin.Nodes do
           end
         end
 
+        repair_node_alias_dns(node)
+
         {:ok, node}
 
       {:error, changeset} ->
         {:error, changeset}
+    end
+  end
+
+  defp repair_node_alias_dns(%Node{} = node) do
+    node = Repo.preload(node, :cluster)
+    network_name = node_network_name(node.cluster)
+
+    aliases =
+      Repo.all(
+        from(a in Alias,
+          where: a.node_id == ^node.id,
+          preload: [:cluster, :node]
+        )
+      )
+
+    if aliases == [] do
+      :ok
+    else
+      case Vpn.list_custom_dns_entries(network_name) do
+        {:ok, netmaker_custom_entries} ->
+          netmaker_entries_by_name = Map.new(netmaker_custom_entries, &{&1["name"], &1})
+          repaired = repair_alias_dns_entries(aliases, netmaker_entries_by_name, network_name)
+
+          if repaired > 0 do
+            Logger.info("Registration: repaired #{repaired} alias DNS record(s) for node #{node.id}")
+          end
+
+          :ok
+
+        {:error, reason} ->
+          Logger.warning("Registration: failed to list alias DNS entries for node #{node.id}: #{inspect(reason)}")
+          :ok
+      end
     end
   end
 

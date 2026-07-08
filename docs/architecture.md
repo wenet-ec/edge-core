@@ -305,12 +305,13 @@ Edge Agent is a standalone binary that runs on each edge machine. The primary de
 
 | Platform | Architectures | Status | Notes |
 | -------- | ------------- | ------ | ----- |
-| Ubuntu 22.04 | `amd64`, `arm64` | Tested | Regularly used baseline |
-| Ubuntu 24.04 | `amd64`, `arm64` | Tested | Regularly used baseline |
-| Debian 12 | `amd64`, `arm64` | Tested | Regularly used baseline |
-| Fedora, Rocky, Alma, openSUSE Leap, recent CentOS Stream | `amd64`, `arm64` | Should work, not regularly tested | glibc + systemd shape expected |
+| Ubuntu 22.04 | image-supported architectures | Tested | Agent host compatibility target |
+| Ubuntu 24.04 | image-supported architectures | Tested | Agent host compatibility target |
+| Debian 13 | image-supported architectures | Tested | Agent host compatibility target |
+| Rocky Linux 10 / RHEL-family hosts | image-supported architectures | Tested | RHEL-compatible host validation |
+| Alpine 3.24 | image-supported architectures | Tested | Alpine/musl host validation |
+| Other recent Linux hosts | varies | Expected | Requires host networking, resolver, and container runtime validation |
 | Older Linux with kernel `< 5.6` | varies | Caveat | Needs WireGuard DKMS or `wireguard-go` userspace fallback |
-| Alpine and other musl-based hosts | varies | Caveat | Container may run, but host-network integration can be rough |
 | Immutable / atomic distros (Fedora CoreOS, Flatcar, Bottlerocket, Talos, NixOS) | varies | Caveat | Expect extra integration work around persistence and service management |
 | SELinux-enforcing hosts | `amd64`, `arm64` | Caveat | May need custom policy or `--security-opt label=disabled` |
 | `riscv64`, `ppc64le`, `s390x` | those architectures | Unsupported today | Not currently built or tested |

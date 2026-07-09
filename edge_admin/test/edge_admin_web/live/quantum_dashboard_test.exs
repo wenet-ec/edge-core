@@ -186,9 +186,9 @@ defmodule EdgeAdminWeb.Live.QuantumDashboardTest do
       # of the truncated value.
       assert naive_str == NaiveDateTime.to_string(NaiveDateTime.truncate(future, :second))
 
-      # rel is humanize_in/1 of the seconds delta — for a 10-min-future time
-      # this lands in the minutes range.
-      assert rel == "in 10m"
+      # rel is humanize_in/1 of the seconds delta. Avoid pinning the exact
+      # minute boundary because real time passes while the test runs.
+      assert rel in ["in 9m", "in 10m"]
     end
 
     test "unexpected shape → {:error, descriptive message}" do

@@ -8,6 +8,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   - Degraded mode support (tracks unassigned nodes when capacity exceeded)
   - Empty cluster bootstrap (pre-assignment before first node joins)
   - Smart load balancing (prefers admins with fewer clusters, then higher remaining capacity)
+  - Stable hash affinity (breaks exact ties without local mutable state)
 
   ## Capacity model
 
@@ -21,25 +22,23 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
   @doc """
   Computes cluster assignments from scratch on every call — no incremental updates, no shedding.
 
-  Clusters are sorted by size descending so large clusters get first pick of admins.
+  Clusters are sorted by size descending, then cluster name ascending, so large
+  clusters get first pick of admins and equal-sized clusters still have stable order.
   Each cluster is assigned to the best available admin scored by:
     1. Fewest clusters currently managed (prefer less-loaded admins)
     2. Highest remaining capacity (tiebreaker)
-    3. Stickiness: previous owner wins at ties (suppresses tiebreaker churn on topology change)
+    3. Stable hash affinity for `{cluster_name, admin_name}` (tiebreaker)
     4. Admin ID alphabetically (deterministic final tiebreaker, consistent with weak-leader election)
 
-  Stickiness only kicks in when a cluster has multiple admins tied on (1) and (2).
-  When that happens, if one of the tied admins owned the cluster in `previous_edge_clusters`,
-  it wins. This is what suppresses the "alphabetically-early new admin steals everything"
-  storm without giving up load-balance optimality.
+  Hash affinity only kicks in when a cluster has multiple admins tied on (1) and
+  (2). It is intentionally stateless: all admins compute the same affinity from
+  shared inputs, so placement converges across the admin cluster.
 
   Clusters that cannot fit any admin (total capacity exceeded) are placed in `orphaned_clusters`.
 
   ## Arguments
   - admins: %{admin_name => %{edge_node_capacity: int}}
   - clusters: [%{name: cluster_name, nodes: [node_name, ...]}]
-  - previous_edge_clusters: previous output's `edge_clusters` map, used as a tiebreaker
-    to prefer continuity at tie points. Defaults to `%{}` (no stickiness, pure scratch).
 
   ## Returns (ETS format - ready for direct insertion)
   %{
@@ -81,12 +80,9 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
         weak_leader: "admin-1"
       }
   """
-  def compute_assignments(admins, clusters, previous_edge_clusters \\ %{}) do
+  def compute_assignments(admins, clusters) do
     # Build cluster lookup map (cluster_name => nodes)
     cluster_nodes_map = Map.new(clusters, fn cluster -> {cluster.name, cluster.nodes} end)
-
-    # Invert previous edge_clusters to %{cluster_name => admin_name} for O(1) stickiness lookup
-    previous_owners = invert_to_cluster_owner_map(previous_edge_clusters)
 
     # Total nodes in the system (all clusters, assigned or orphaned)
     total_nodes = Enum.reduce(clusters, 0, fn cluster, acc -> acc + length(cluster.nodes) end)
@@ -101,23 +97,24 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
       orphaned_clusters: %{}
     }
 
-    # Sort clusters by size descending: large clusters get first pick of admins.
+    # Sort clusters by size descending, then name ascending: large clusters get
+    # first pick of admins, and equal-sized clusters still have a stable order
+    # across admins even if PostgreSQL returns rows differently.
     # This makes assignments stable (a small cluster can't steal the best admin from a
     # large one) and ensures deterministic output regardless of DB/map iteration order.
-    sorted_clusters = Enum.sort_by(clusters, fn c -> -length(c.nodes) end)
+    sorted_clusters = Enum.sort_by(clusters, fn c -> {-length(c.nodes), c.name} end)
 
     # Assign each cluster
     intermediate_result =
       Enum.reduce(sorted_clusters, initial_state, fn cluster, state ->
         cluster_size = length(cluster.nodes)
-        previous_owner = Map.get(previous_owners, cluster.name)
 
         case find_best_admin_for_cluster(
                admins,
                state.cluster_assignments,
                state.admin_node_counts,
                cluster_size,
-               previous_owner
+               cluster.name
              ) do
           {:ok, best_admin} ->
             # Assign cluster to admin
@@ -192,16 +189,8 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
         cluster_assignments = extract_cluster_assignments(current_assignments.edge_clusters)
         admin_node_counts = calculate_admin_node_counts(current_assignments.edge_clusters)
 
-        # Find best admin for empty cluster (size = 0)
-        # No previous owner — this cluster is brand new.
-        find_best_admin_for_cluster(
-          admins,
-          cluster_assignments,
-          admin_node_counts,
-          # empty cluster
-          0,
-          nil
-        )
+        # Find best admin for empty cluster (size = 0).
+        find_best_admin_for_cluster(admins, cluster_assignments, admin_node_counts, 0, cluster_name)
 
       admin_name ->
         {:ok, admin_name}
@@ -210,7 +199,7 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
 
   # Private helpers
 
-  defp find_best_admin_for_cluster(admins, cluster_assignments, admin_node_counts, cluster_size, previous_owner) do
+  defp find_best_admin_for_cluster(admins, cluster_assignments, admin_node_counts, cluster_size, cluster_name) do
     # Filter admins that can handle this cluster
     available_admins =
       admins
@@ -225,12 +214,12 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
 
       admins_list ->
         # Score each admin: prefer fewer clusters managed, then higher remaining capacity,
-        # then stickiness (previous owner wins ties), then admin_name (final deterministic tiebreaker).
+        # then stable per-cluster hash affinity, then admin_name as final tiebreaker.
         best_admin =
           Enum.min_by(admins_list, fn admin_name ->
             {s1, s2} = admin_score(admin_name, admins, cluster_assignments, admin_node_counts)
-            stickiness = stickiness_score(admin_name, previous_owner)
-            {s1, s2, stickiness, admin_name}
+            affinity = hash_affinity_score(cluster_name, admin_name)
+            {s1, s2, affinity, admin_name}
           end)
 
         {:ok, best_admin}
@@ -254,19 +243,10 @@ defmodule EdgeAdmin.Admins.Metadata.Algorithm do
     {clusters_managed, -remaining_capacity}
   end
 
-  # 0 if this admin owned the cluster previously, 1 otherwise.
-  # Lower wins under Enum.min_by, so previous owner is preferred at ties.
-  defp stickiness_score(_admin_name, nil), do: 1
-  defp stickiness_score(admin_name, previous_owner) when admin_name == previous_owner, do: 0
-  defp stickiness_score(_admin_name, _previous_owner), do: 1
-
-  # %{admin => %{cluster => nodes}}  →  %{cluster => admin}
-  defp invert_to_cluster_owner_map(edge_clusters) do
-    Enum.reduce(edge_clusters, %{}, fn {admin_name, clusters}, acc ->
-      Enum.reduce(clusters, acc, fn {cluster_name, _nodes}, acc2 ->
-        Map.put(acc2, cluster_name, admin_name)
-      end)
-    end)
+  defp hash_affinity_score(cluster_name, admin_name) do
+    :sha256
+    |> :crypto.hash([cluster_name, <<0>>, admin_name])
+    |> :binary.decode_unsigned()
   end
 
   defp build_node_index(edge_clusters) do

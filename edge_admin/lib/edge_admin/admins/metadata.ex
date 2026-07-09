@@ -470,13 +470,9 @@ defmodule EdgeAdmin.Admins.Metadata do
     # This is what the algorithm consumes — admins enriched with all three numbers.
     enriched_admins = derive_capacity(all_admins)
 
-    # Read previous assignment from ETS to feed stickiness tiebreaker.
-    # On first boot ETS is %{admin_name => %{}}, so previous is effectively empty and
-    # behavior reduces to pure scratch placement.
-    [{:edge_clusters, previous_edge_clusters}] = :ets.lookup(@table, :edge_clusters)
-
-    # Run algorithm (works with any unique strings - IDs or names, doesn't matter)
-    result = Algorithm.compute_assignments(enriched_admins, clusters_with_names, previous_edge_clusters)
+    # Run from shared inputs only so every admin in the cluster converges on the
+    # same owner map.
+    result = Algorithm.compute_assignments(enriched_admins, clusters_with_names)
 
     # Result already has names - ready for ETS!
     update_ets(result, enriched_admins)

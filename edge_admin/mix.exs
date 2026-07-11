@@ -119,7 +119,7 @@ defmodule EdgeAdmin.Mixfile do
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
 
       # Errors
-      {:sentry, "~> 13.2"},
+      {:sentry, "~> 13.3"},
 
       # Telemetry
       {:prom_ex, "~> 1.12"},
@@ -160,7 +160,7 @@ defmodule EdgeAdmin.Mixfile do
       {:syn, "~> 3.4"},
 
       # Event Streaming
-      {:gnat, "~> 1.15"},
+      {:gnat, "~> 1.16"},
       {:brod, "~> 4.5"},
       {:amqp, "~> 4.1"},
       {:redix, "~> 1.6"},

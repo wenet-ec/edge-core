@@ -111,7 +111,8 @@ releases:
       - values/test/edge-admin.yaml
       - config:
           adminClusterName: "a"
-          adminClusterSubnet: "100.63.0.0/24"
+          adminClusterV4Subnet: "100.63.0.0/24"
+          adminClusterV6Subnet: "fd7a:91c2:4e8c:1::/64"
           metricsBaseUrl: "edge-admin-a:44000"
         secrets:
           vpnClusterCookie: "test-cookie-a"
@@ -135,7 +136,8 @@ releases:
       - values/test/edge-admin.yaml
       - config:
           adminClusterName: "b"
-          adminClusterSubnet: "100.63.1.0/24"
+          adminClusterV4Subnet: "100.63.1.0/24"
+          adminClusterV6Subnet: "fd7a:91c2:4e8c:2::/64"
           metricsBaseUrl: "edge-admin-b:44000"
         secrets:
           vpnClusterCookie: "test-cookie-b"

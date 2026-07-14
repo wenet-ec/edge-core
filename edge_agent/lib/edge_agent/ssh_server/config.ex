@@ -87,7 +87,12 @@ defmodule EdgeAgent.SshServer.Config do
 
   def ssh_options(key_callback_module, password_callback) do
     [
-      {:ip, :any},
+      # An IPv6 wildcard socket with v6-only disabled accepts both overlay
+      # families on supported Linux hosts. SSH has no separate proxy layer to
+      # provide this fallback, so it must listen dual-stack itself.
+      :inet6,
+      {:ip, {0, 0, 0, 0, 0, 0, 0, 0}},
+      {:ipv6_v6only, false},
       {:system_dir, String.to_charlist(ssh_system_dir())},
       {:user_dir, String.to_charlist(ssh_user_dir())},
       {:key_cb, {key_callback_module, []}},

@@ -87,7 +87,8 @@ services:
     container_name: production_edge_admin_b1
     environment:
       - ADMIN_CLUSTER_NAME=b
-      - ADMIN_CLUSTER_SUBNET=100.63.1.0/24
+      - ADMIN_CLUSTER_V4_SUBNET=100.63.1.0/24
+      - ADMIN_CLUSTER_V6_SUBNET=fd7a:91c2:4e8c:2::/64
     ports:
       - "34002:44000" # API
       - "33130:43128" # HTTP proxy
@@ -233,4 +234,3 @@ services:
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=14d"
       - "--web.enable-lifecycle"
-

@@ -1,6 +1,6 @@
 # Edge Core — Architecture
 
-**Last Updated: 2026-07-03**
+**Last Updated: 2026-07-14**
 
 Edge Core is an infrastructure management platform for fleets of Linux machines you don't physically touch — cloud VMs, on-premises servers, factory-floor equipment, Raspberry Pis, homelab boxes, IoT devices. Anywhere you have N machines and want a single HTTP API to operate them, the same primitives apply: a secure WireGuard mesh, remote command execution, SSH without exposing port 22, HTTP/SOCKS5 forward proxying through any node, Prometheus metrics aggregation.
 
@@ -79,7 +79,7 @@ The VPN is the foundation everything else is built on. It creates a secure mesh 
 
 ### Netmaker
 
-Netmaker manages the WireGuard mesh. Each edge cluster maps to a dedicated Netmaker network named `cluster-{cluster_name}`. Admin instances join multiple networks: their own admin cluster network plus every edge cluster they manage.
+Netmaker manages the WireGuard mesh. Each edge cluster maps to a dedicated dual-stack Netmaker network named `cluster-{cluster_name}`. New networks receive an IPv4 CIDR from `CLUSTER_AUTO_GENERATED_V4_RANGES` (CGNAT by default) and an IPv6 ULA `/64` from `CLUSTER_AUTO_GENERATED_V6_RANGES`; both are immutable after creation. Admin instances join multiple networks: their own admin cluster network plus every edge cluster they manage.
 
 DNS identities follow a consistent pattern:
 

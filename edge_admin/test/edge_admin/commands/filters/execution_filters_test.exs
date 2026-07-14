@@ -17,7 +17,8 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
         %{
           id: Ecto.UUID.generate(),
           name: "cluster-#{unique_id()}",
-          ipv4_range: unique_ipv4_range()
+          ipv4_range: unique_ipv4_range(),
+          ipv6_range: unique_ipv6_range()
         },
         overrides
       )
@@ -35,6 +36,8 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
     octet3 = rem(n, 256)
     "100.#{octet2}.#{octet3}.0/24"
   end
+
+  defp unique_ipv6_range, do: "fd7a:91c2:4e8b:#{rem(unique_id(), 65_536)}::/64"
 
   defp insert_node(cluster_id) do
     Repo.insert!(

@@ -172,7 +172,7 @@ defmodule EdgeAgent.ProxyServers do
 
   defp start_http_proxy(state) do
     transport_opts = %{
-      socket_opts: [
+      socket_opts: Config.listen_socket_options() ++ [
         {:ip, state.listen_address},
         {:port, state.http_port}
       ],
@@ -198,7 +198,7 @@ defmodule EdgeAgent.ProxyServers do
 
   defp start_socks5_proxy(state) do
     transport_opts = %{
-      socket_opts: [
+      socket_opts: Config.listen_socket_options() ++ [
         {:ip, state.listen_address},
         {:port, state.socks5_port}
       ],
@@ -234,8 +234,6 @@ defmodule EdgeAgent.ProxyServers do
     end
   end
 
-  # Helper to format IP tuple for logging
-  @dialyzer {:nowarn_function, format_ip: 1}
-  defp format_ip({a, b, c, d}), do: "#{a}.#{b}.#{c}.#{d}"
-  defp format_ip(ip) when is_binary(ip), do: ip
+  # Helper to format IPv4 or IPv6 tuples for logging.
+  defp format_ip(ip) when is_tuple(ip), do: ip |> :inet.ntoa() |> List.to_string()
 end

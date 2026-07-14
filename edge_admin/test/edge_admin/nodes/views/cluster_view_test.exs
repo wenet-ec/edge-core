@@ -13,6 +13,7 @@ defmodule EdgeAdmin.Nodes.Views.ClusterViewTest do
       id: "cluster-uuid-1",
       name: "prod",
       ipv4_range: "100.64.1.0/24",
+      ipv6_range: "fd7a:91c2:4e8b:2::/64",
       node_limit: nil,
       nodes: [],
       inserted_at: now,
@@ -45,6 +46,7 @@ defmodule EdgeAdmin.Nodes.Views.ClusterViewTest do
       assert result.id == cluster.id
       assert result.name == "prod"
       assert result.ipv4_range == "100.64.1.0/24"
+      assert result.ipv6_range == "fd7a:91c2:4e8b:2::/64"
       assert result.node_limit == 50
       assert result.node_count == 0
       assert result.nodes == []
@@ -106,7 +108,9 @@ defmodule EdgeAdmin.Nodes.Views.ClusterViewTest do
       result = ClusterView.render(cluster)
 
       expected_keys =
-        Enum.sort(~w(id name ipv4_range node_limit node_count nodes network_name vpn_domain inserted_at updated_at)a)
+        Enum.sort(
+          ~w(id name ipv4_range ipv6_range node_limit node_count nodes network_name vpn_domain inserted_at updated_at)a
+        )
 
       assert result |> Map.keys() |> Enum.sort() == expected_keys
     end

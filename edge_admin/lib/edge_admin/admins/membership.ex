@@ -63,7 +63,7 @@ defmodule EdgeAdmin.Admins.Membership do
     Counts both admin-mesh peers and edge-node peers. The metadata layer derives
     `edge_node_capacity = max_wireguard_peers - (total_admins - 1)` from this.
   - `:vpn_cluster_cookie` - Shared secret for Erlang distribution over the VPN cluster
-  - `:admin_cluster_subnet` - Optional subnet (auto-generates if missing)
+  - `:admin_cluster_v4_subnet` / `:admin_cluster_v6_subnet` - Required dual-stack CIDRs
 
   ## Examples
 
@@ -142,7 +142,8 @@ defmodule EdgeAdmin.Admins.Membership do
 
   defp admin_name, do: Application.get_env(:edge_admin, :admin_name)
   defp admin_cluster_name, do: Application.get_env(:edge_admin, :admin_cluster_name)
-  defp admin_cluster_subnet, do: Application.get_env(:edge_admin, :admin_cluster_subnet)
+  defp admin_cluster_v4_subnet, do: Application.get_env(:edge_admin, :admin_cluster_v4_subnet)
+  defp admin_cluster_v6_subnet, do: Application.get_env(:edge_admin, :admin_cluster_v6_subnet)
   defp max_wireguard_peers, do: Application.get_env(:edge_admin, :admin_max_wireguard_peers)
   defp vpn_cluster_cookie, do: Application.get_env(:edge_admin, :vpn_cluster_cookie)
   defp admin_wireguard_port, do: Application.get_env(:edge_admin, :admin_wireguard_port)
@@ -258,7 +259,7 @@ defmodule EdgeAdmin.Admins.Membership do
       {:error, {:network_full, %{used: used, capacity: capacity}}} ->
         Logger.error(
           "Admin cluster network #{network_name} is full (#{used}/#{capacity} addresses used). " <>
-            "Expand ADMIN_CLUSTER_SUBNET or evict stale admins before retrying."
+            "Expand ADMIN_CLUSTER_V4_SUBNET or evict stale admins before retrying."
         )
 
         {:error, {:admin_cluster_full, network_name, used, capacity}}
@@ -276,12 +277,18 @@ defmodule EdgeAdmin.Admins.Membership do
   defp ensure_network_exists(network_name) do
     # Get admin cluster subnet from env or generate from pool
     subnet =
-      case admin_cluster_subnet() do
-        nil -> Vpn.generate_next_subnet([])
-        value -> value
+      case admin_cluster_v4_subnet() do
+        nil ->
+          case Vpn.generate_next_subnet([]) do
+            {:ok, value} -> value
+            {:error, _} -> raise "No IPv4 subnet available for admin cluster"
+          end
+
+        value ->
+          value
       end
 
-    Vpn.ensure_network_exists(network_name, %{addressrange: subnet})
+    Vpn.ensure_network_exists(network_name, %{addressrange: subnet, addressrange6: admin_cluster_v6_subnet()})
   end
 
   defp build_join_opts(admin_name) do

@@ -100,7 +100,8 @@ services:
     container_name: edge_admin_a1
     environment:
       - ADMIN_CLUSTER_NAME=a
-      - ADMIN_CLUSTER_SUBNET=${ADMIN_A_CLUSTER_SUBNET}
+      - ADMIN_CLUSTER_V4_SUBNET=${ADMIN_A_CLUSTER_V4_SUBNET}
+      - ADMIN_CLUSTER_V6_SUBNET=${ADMIN_A_CLUSTER_V6_SUBNET}
     ports:
       - "34000:44000" # API
       - "33128:43128" # HTTP proxy
@@ -114,7 +115,8 @@ services:
     container_name: edge_admin_a2
     environment:
       - ADMIN_CLUSTER_NAME=a
-      - ADMIN_CLUSTER_SUBNET=${ADMIN_A_CLUSTER_SUBNET}
+      - ADMIN_CLUSTER_V4_SUBNET=${ADMIN_A_CLUSTER_V4_SUBNET}
+      - ADMIN_CLUSTER_V6_SUBNET=${ADMIN_A_CLUSTER_V6_SUBNET}
     ports:
       - "34001:44000" # API
       - "33129:43128" # HTTP proxy
@@ -128,7 +130,8 @@ services:
     container_name: edge_admin_b1
     environment:
       - ADMIN_CLUSTER_NAME=b
-      - ADMIN_CLUSTER_SUBNET=${ADMIN_B_CLUSTER_SUBNET}
+      - ADMIN_CLUSTER_V4_SUBNET=${ADMIN_B_CLUSTER_V4_SUBNET}
+      - ADMIN_CLUSTER_V6_SUBNET=${ADMIN_B_CLUSTER_V6_SUBNET}
     ports:
       - "34002:44000" # API
       - "33130:43128" # HTTP proxy
@@ -142,7 +145,8 @@ services:
     container_name: edge_admin_b2
     environment:
       - ADMIN_CLUSTER_NAME=b
-      - ADMIN_CLUSTER_SUBNET=${ADMIN_B_CLUSTER_SUBNET}
+      - ADMIN_CLUSTER_V4_SUBNET=${ADMIN_B_CLUSTER_V4_SUBNET}
+      - ADMIN_CLUSTER_V6_SUBNET=${ADMIN_B_CLUSTER_V6_SUBNET}
     ports:
       - "34003:44000" # API
       - "33131:43128" # HTTP proxy

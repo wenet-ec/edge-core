@@ -9,12 +9,13 @@ defmodule EdgeAdmin.AdminsTest do
   # ---------------------------------------------------------------------------
 
   defp network(netid, addressrange \\ "100.64.0.0/24") do
-    %{"netid" => netid, "addressrange" => addressrange}
+    %{"netid" => netid, "addressrange" => addressrange, "addressrange6" => "fd7a:91c2:4e8c:1::/64"}
   end
 
   defp member(opts) do
     node = %{
       "address" => Keyword.get(opts, :address, "100.64.0.1/24"),
+      "address6" => Keyword.get(opts, :address6, "fd7a:91c2:4e8c:1::1/64"),
       "status" => Keyword.get(opts, :status, "online"),
       "lastcheckin" => Keyword.get(opts, :lastcheckin, 1_700_000_000)
     }
@@ -55,6 +56,7 @@ defmodule EdgeAdmin.AdminsTest do
 
       assert result.name == "admin-cluster-a"
       assert result.ipv4_range == "100.64.0.0/24"
+      assert result.ipv6_range == "fd7a:91c2:4e8c:1::/64"
       assert result.admin_count == 2
       assert is_list(result.admins)
       assert length(result.admins) == 2

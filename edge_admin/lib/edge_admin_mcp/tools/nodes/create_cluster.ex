@@ -8,6 +8,8 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateCluster do
     `prod-east`, `homelab-1`. The literal `default` is reserved.
   - `ipv4_range` — optional CIDR (e.g. `100.64.1.0/24`). Auto-assigned from
     the available pool if omitted.
+  - `ipv6_range` — optional ULA /64 (e.g. `fd7a:91c2:4e8b:1::/64`).
+    Auto-assigned from the configured ULA pool if omitted.
   - `node_limit` — optional cap on how many nodes can enroll. Omit for no
     limit.
   """
@@ -28,6 +30,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateCluster do
   schema do
     field :name, {:required, :string}, max_length: @max_length, regex: @regex
     field :ipv4_range, :string
+    field :ipv6_range, :string
     field :node_limit, :integer, min: 1
   end
 
@@ -36,6 +39,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.CreateCluster do
     attrs =
       %{"name" => params.name}
       |> put_if("ipv4_range", params[:ipv4_range])
+      |> put_if("ipv6_range", params[:ipv6_range])
       |> put_if("node_limit", params[:node_limit])
 
     case Nodes.create_cluster(attrs) do

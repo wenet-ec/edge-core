@@ -92,15 +92,25 @@ defmodule EdgeAdmin.Vpn do
   @doc """
   Returns the configured base ranges for auto-generating cluster subnets.
   """
-  def cluster_auto_generated_ranges do
-    Application.get_env(:edge_admin, :cluster_auto_generated_ranges)
+  def cluster_auto_generated_v4_ranges do
+    Application.get_env(:edge_admin, :cluster_auto_generated_v4_ranges)
   end
 
   @doc """
   Returns the target subnet prefix for auto-generated clusters.
   """
-  def cluster_subnet_prefix do
-    Application.get_env(:edge_admin, :cluster_subnet_prefix)
+  def cluster_v4_subnet_prefix do
+    Application.get_env(:edge_admin, :cluster_v4_subnet_prefix)
+  end
+
+  @doc "Returns the configured ULA pools used to allocate edge-cluster IPv6 /64s."
+  def cluster_auto_generated_v6_ranges do
+    Application.get_env(:edge_admin, :cluster_auto_generated_v6_ranges)
+  end
+
+  @doc "Returns the target prefix for automatically allocated IPv6 edge networks."
+  def cluster_v6_subnet_prefix do
+    Application.get_env(:edge_admin, :cluster_v6_subnet_prefix, 64)
   end
 
   @doc """
@@ -360,22 +370,38 @@ defmodule EdgeAdmin.Vpn do
   @doc """
   Generates the next available IPv4 range from configured pools.
 
-  Uses :cluster_auto_generated_ranges and :cluster_subnet_prefix from config.
+  Uses :cluster_auto_generated_v4_ranges and :cluster_v4_subnet_prefix from config.
   Excludes any ranges in the provided list.
 
   ## Examples
 
       iex> EdgeAdmin.Vpn.generate_next_subnet(["100.64.0.0/24"])
-      "100.64.1.0/24"
+      {:ok, "100.64.1.0/24"}
   """
   def generate_next_subnet(existing_ranges \\ []) do
-    base_ranges = cluster_auto_generated_ranges()
-    target_prefix = cluster_subnet_prefix()
+    base_ranges = cluster_auto_generated_v4_ranges()
+    target_prefix = cluster_v4_subnet_prefix()
 
     # Try to find available subnet from each base range
-    Enum.find_value(base_ranges, fn base_range ->
-      find_available_subnet(base_range, target_prefix, existing_ranges)
-    end) || raise "No available IP ranges in configured pools"
+    case Enum.find_value(base_ranges, fn base_range ->
+           find_available_subnet(base_range, target_prefix, existing_ranges)
+         end) do
+      nil -> {:error, {:conflict, "address_pool_exhausted: no IPv4 subnets remain in the configured allocation pools"}}
+      subnet -> {:ok, subnet}
+    end
+  end
+
+  @doc "Generates the first non-overlapping IPv6 subnet from the configured ULA pools."
+  @spec generate_next_ipv6_subnet([String.t()]) :: {:ok, String.t()} | {:error, {:conflict, String.t()}}
+  def generate_next_ipv6_subnet(existing_ranges \\ []) do
+    target_prefix = cluster_v6_subnet_prefix()
+
+    case Enum.find_value(cluster_auto_generated_v6_ranges(), fn base_range ->
+           find_available_ipv6_subnet(base_range, target_prefix, existing_ranges)
+         end) do
+      nil -> {:error, {:conflict, "address_pool_exhausted: no IPv6 /64 subnets remain in the configured ULA pools"}}
+      subnet -> {:ok, subnet}
+    end
   end
 
   @doc """
@@ -398,6 +424,86 @@ defmodule EdgeAdmin.Vpn do
       _ ->
         nil
     end
+  end
+
+  @doc false
+  def find_available_ipv6_subnet(base_cidr, target_prefix, existing_ranges) do
+    with {:ok, {base_ip, base_prefix}} <- parse_ipv6_cidr(base_cidr),
+         true <- target_prefix >= base_prefix and target_prefix <= 128 do
+      base_int = ipv6_to_int(base_ip) &&& ipv6_prefix_to_mask(base_prefix)
+      count = 1 <<< (target_prefix - base_prefix)
+      step = 1 <<< (128 - target_prefix)
+
+      0..(count - 1)
+      |> Stream.map(fn index ->
+        "#{ipv6_int_to_string(base_int + index * step)}/#{target_prefix}"
+      end)
+      |> Enum.find(fn subnet -> not ipv6_cidrs_overlap?(subnet, existing_ranges) end)
+    else
+      _ -> nil
+    end
+  end
+
+  @doc "Parses an IPv6 CIDR into its 8-tuple address and prefix length."
+  @spec parse_ipv6_cidr(String.t()) ::
+          {:ok, {{0..65_535, 0..65_535, 0..65_535, 0..65_535, 0..65_535, 0..65_535, 0..65_535, 0..65_535}, 0..128}}
+          | {:error, String.t()}
+  def parse_ipv6_cidr(cidr) when is_binary(cidr) do
+    with [address, prefix_string] <- String.split(cidr, "/", parts: 2),
+         {prefix, ""} <- Integer.parse(prefix_string),
+         true <- prefix >= 0 and prefix <= 128,
+         {:ok, address_tuple} <- :inet.parse_address(String.to_charlist(address)),
+         true <- tuple_size(address_tuple) == 8 do
+      {:ok, {address_tuple, prefix}}
+    else
+      _ -> {:error, "invalid IPv6 CIDR format"}
+    end
+  end
+
+  def parse_ipv6_cidr(_), do: {:error, "invalid IPv6 CIDR format"}
+
+  @doc "Returns whether an IPv6 CIDR intersects any IPv6 CIDR in the given list."
+  @spec ipv6_cidrs_overlap?(String.t(), [String.t()]) :: boolean()
+  def ipv6_cidrs_overlap?(cidr, existing_ranges) do
+    case parse_ipv6_cidr(cidr) do
+      {:ok, {ip, prefix}} ->
+        Enum.any?(existing_ranges, fn existing ->
+          case parse_ipv6_cidr(existing) do
+            {:ok, {existing_ip, existing_prefix}} ->
+              ipv6_contains?(ip, prefix, existing_ip) or ipv6_contains?(existing_ip, existing_prefix, ip)
+
+            _ ->
+              false
+          end
+        end)
+
+      _ ->
+        false
+    end
+  end
+
+  defp ipv6_contains?(network, prefix, address) do
+    mask = ipv6_prefix_to_mask(prefix)
+    (ipv6_to_int(network) &&& mask) == (ipv6_to_int(address) &&& mask)
+  end
+
+  defp ipv6_prefix_to_mask(0), do: 0
+  defp ipv6_prefix_to_mask(prefix), do: ((1 <<< 128) - 1) <<< (128 - prefix) &&& (1 <<< 128) - 1
+
+  defp ipv6_to_int(tuple) do
+    tuple
+    |> Tuple.to_list()
+    |> Enum.reduce(0, fn segment, acc -> (acc <<< 16) + segment end)
+  end
+
+  defp ipv6_int_to_string(integer) do
+    tuple =
+      0..7
+      |> Enum.reverse()
+      |> Enum.map(fn shift -> integer >>> (shift * 16) &&& 0xFFFF end)
+      |> List.to_tuple()
+
+    tuple |> :inet.ntoa() |> List.to_string()
   end
 
   @doc """
@@ -527,8 +633,8 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Returns every IPv4 range Netmaker currently knows about, across all networks
-  (cluster networks, admin-mesh networks, and anything else).
+  Returns every IPv4 and IPv6 range Netmaker currently knows about, across all
+  networks (cluster networks, admin-mesh networks, and anything else).
 
   Used as the authoritative input to subnet-overlap checks and auto-generation:
   the local DB only knows about `cluster-*` ranges, so without this an admin
@@ -536,15 +642,14 @@ defmodule EdgeAdmin.Vpn do
   `create_network` time. Strict by design — propagates `:service_unavailable`
   when Netmaker is unreachable.
   """
-  @spec list_network_ranges() :: {:ok, [String.t()]} | {:error, :service_unavailable}
+  @spec list_network_ranges() :: {:ok, %{ipv4: [String.t()], ipv6: [String.t()]}} | {:error, :service_unavailable}
   def list_network_ranges do
     with {:ok, networks} <- list_networks() do
-      ranges =
-        networks
-        |> Enum.map(& &1["addressrange"])
-        |> Enum.filter(&is_binary/1)
-
-      {:ok, ranges}
+      {:ok,
+       %{
+         ipv4: networks |> Enum.map(& &1["addressrange"]) |> Enum.filter(&is_binary/1),
+         ipv6: networks |> Enum.map(& &1["addressrange6"]) |> Enum.filter(&is_binary/1)
+       }}
     end
   end
 
@@ -695,8 +800,8 @@ defmodule EdgeAdmin.Vpn do
   """
   def ensure_network_exists(network_name, create_opts \\ %{}) do
     case get_network(network_name) do
-      {:ok, _network} ->
-        :ok
+      {:ok, network} ->
+        ensure_network_ranges_match(network_name, network, create_opts)
 
       {:error, :not_found} ->
         case create_network(network_name, create_opts) do
@@ -707,6 +812,20 @@ defmodule EdgeAdmin.Vpn do
 
       error ->
         error
+    end
+  end
+
+  defp ensure_network_ranges_match(network_name, network, opts) do
+    expected_ipv4 = opts[:addressrange]
+    expected_ipv6 = opts[:addressrange6]
+
+    if (is_nil(expected_ipv4) or network["addressrange"] == expected_ipv4) and
+         (is_nil(expected_ipv6) or network["addressrange6"] == expected_ipv6) do
+      :ok
+    else
+      {:error,
+       {:conflict,
+        "Netmaker network #{network_name} has different immutable address ranges; recreate it before enabling dual-stack"}}
     end
   end
 

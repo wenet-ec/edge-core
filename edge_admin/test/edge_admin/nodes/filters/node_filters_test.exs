@@ -12,7 +12,8 @@ defmodule EdgeAdmin.Nodes.Filters.NodeFiltersTest do
       struct(Cluster, %{
         id: Ecto.UUID.generate(),
         name: "cluster-#{:rand.uniform(999_999)}",
-        ipv4_range: "100.64.#{:rand.uniform(200)}.0/24"
+        ipv4_range: "100.64.#{:rand.uniform(200)}.0/24",
+        ipv6_range: "fd7a:91c2:4e8b:#{rem(:erlang.unique_integer([:positive, :monotonic]), 65_536)}::/64"
       })
     )
   end

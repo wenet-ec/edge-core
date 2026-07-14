@@ -33,11 +33,18 @@ data:
 
   # --- Required: Admin cluster identity ---
   ADMIN_CLUSTER_NAME: {{ .Values.config.adminClusterName | quote }}
-  ADMIN_CLUSTER_SUBNET: {{ .Values.config.adminClusterSubnet | quote }}
+  ADMIN_CLUSTER_V4_SUBNET: {{ .Values.config.adminClusterV4Subnet | quote }}
+  ADMIN_CLUSTER_V6_SUBNET: {{ .Values.config.adminClusterV6Subnet | quote }}
   ADMIN_MAX_WIREGUARD_PEERS: {{ .Values.config.adminMaxWireguardPeers | quote }}
 
   # --- Required: enrollment + self-referential metrics ---
   DEFAULT_CLUSTER_NAME: {{ .Values.config.defaultClusterName | quote }}
+  {{- if .Values.config.defaultClusterV4Subnet }}
+  DEFAULT_CLUSTER_V4_SUBNET: {{ .Values.config.defaultClusterV4Subnet | quote }}
+  {{- end }}
+  {{- if .Values.config.defaultClusterV6Subnet }}
+  DEFAULT_CLUSTER_V6_SUBNET: {{ .Values.config.defaultClusterV6Subnet | quote }}
+  {{- end }}
   METRICS_BASE_URL: {{ .Values.config.metricsBaseUrl | quote }}
 
   # --- extraEnv: free-form overrides ---

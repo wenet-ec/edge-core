@@ -15,6 +15,7 @@ defmodule EdgeAdmin.Nodes.Views.ClusterView do
       id: cluster.id,
       name: cluster.name,
       ipv4_range: cluster.ipv4_range,
+      ipv6_range: cluster.ipv6_range,
       node_limit: cluster.node_limit,
       node_count: Cluster.node_count(cluster),
       nodes: render_nodes(nodes, cluster),

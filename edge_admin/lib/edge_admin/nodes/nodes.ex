@@ -67,8 +67,8 @@ defmodule EdgeAdmin.Nodes do
 
   ### Subnet pool and scale
 
-  Cluster subnets are carved from `CLUSTER_AUTO_GENERATED_RANGES` (default: CGNAT
-  `100.64.0.0/10`) at `CLUSTER_SUBNET_PREFIX` (default: `/24`). This gives a hard cap
+  IPv4 cluster subnets are carved from `CLUSTER_AUTO_GENERATED_V4_RANGES` (default: CGNAT
+  `100.64.0.0/10`) at `CLUSTER_V4_SUBNET_PREFIX` (default: `/24`). This gives a hard cap
   of 16,384 clusters per core (4,194,304 addresses ÷ 256 per /24). If the pool is
   exhausted, start a new core — do not expand the range or change the prefix on an
   existing core. `GET /api/networks` in Netmaker has no pagination (full table scan);
@@ -170,6 +170,7 @@ defmodule EdgeAdmin.Nodes do
   - `name` - Exact match or wildcard (`prod*`, `*tion`, `*rod*`)
   - `name__in` - Exact IN match on cluster names — comma-separated list
   - `ipv4_range` - Text search (supports wildcards)
+  - `ipv6_range` - Text search (supports wildcards)
   - `node_limit` - Exact, `__gte`, `__lte` (null = no limit)
   - `has_node_limit` - Boolean: true returns clusters with a node limit set
   - `node_id__in` - Exact IN match on node IDs — returns clusters that contain any of those nodes
@@ -178,7 +179,7 @@ defmodule EdgeAdmin.Nodes do
   - `node_count` - Range queries (e.g., `node_count__gte=5`, `node_count__lte=10`) — virtual filter computed via join
 
   Supports sorting by:
-  - `name`, `ipv4_range`, `inserted_at`, `updated_at`
+  - `name`, `ipv4_range`, `ipv6_range`, `inserted_at`, `updated_at`
   - Default: `inserted_at:desc`
 
   ## Parameters
@@ -222,7 +223,7 @@ defmodule EdgeAdmin.Nodes do
     {ilike_filters, flop_params} =
       RequestParser.split_ilike_filters(
         Map.put(flop_params, :filters, other_filters),
-        [:name, :ipv4_range]
+        [:name, :ipv4_range, :ipv6_range]
       )
 
     # Build base query with node_count if filtering/sorting on it
@@ -361,10 +362,10 @@ defmodule EdgeAdmin.Nodes do
 
   Flow:
   1. Validate input
-  2. Fetch every IPv4 range Netmaker currently knows about (acts as both a
+  2. Fetch every IPv4 and IPv6 range Netmaker currently knows about (acts as both a
      liveness probe and the authoritative overlap set — local DB only tracks
      `cluster-*` ranges, not admin-mesh networks)
-  3. Merge with DB ranges, then validate or auto-generate the IP range
+  3. Merge with DB ranges, then validate or auto-generate both address families
   4. Create DB record (validates uniqueness constraints)
   5. Create Netmaker network (rollback DB on failure)
   6. Emit event for metadata recomputation
@@ -385,44 +386,90 @@ defmodule EdgeAdmin.Nodes do
           | {:error, :service_unavailable}
   def create_cluster(attrs \\ %{}) do
     with {:ok, validated_attrs} <- Forms.CreateClusterForm.changeset(attrs),
-         {:ok, netmaker_ranges} <- Vpn.list_network_ranges(),
-         db_ranges = Repo.all(from(c in Cluster, select: c.ipv4_range)),
-         existing_ranges = Enum.uniq(db_ranges ++ netmaker_ranges),
-         :ok <- Checks.SubnetOverlapCheck.check(validated_attrs["ipv4_range"], existing_ranges),
-         ipv4_range = validated_attrs["ipv4_range"] || Vpn.generate_next_subnet(existing_ranges),
-         cluster_attrs = Map.put(validated_attrs, "ipv4_range", ipv4_range),
-         {:ok, cluster} <-
-           %Cluster{}
-           |> Cluster.changeset(cluster_attrs)
-           |> Repo.insert()
-           |> Repo.normalize_conflict([:name, :ipv4_range]) do
-      # DB insert succeeded - now create Netmaker network
-      network_name = node_network_name(cluster)
-
-      netmaker_opts = maybe_put_nodelimit(%{addressrange: ipv4_range}, cluster.node_limit)
-
-      case Vpn.create_network(network_name, netmaker_opts) do
-        {:ok, _} ->
-          Logger.info("Created Netmaker network: #{network_name}")
-          Metadata.Events.publish(:cluster_created)
-          {:ok, cluster}
-
-        {:error, :already_exists} ->
-          # The Netmaker network already exists (left over from a previous run,
-          # or another replica created it concurrently). DB and Netmaker are in
-          # sync — proceed as success.
-          Logger.info("Netmaker network #{network_name} already exists, reusing")
-          Metadata.Events.publish(:cluster_created)
-          {:ok, cluster}
-
-        {:error, :service_unavailable} = error ->
-          # Netmaker failed - rollback DB insert
-          Logger.warning("Netmaker network creation failed, rolling back DB cluster: #{cluster.name}")
-          Repo.delete(cluster)
-          error
-      end
+         {:ok, existing_ranges} <- existing_cluster_ranges(),
+         {:ok, ranges} <- resolve_cluster_ranges(validated_attrs, existing_ranges),
+         {:ok, cluster} <- insert_cluster(validated_attrs, ranges) do
+      provision_cluster_network(cluster)
     end
   end
+
+  defp existing_cluster_ranges do
+    with {:ok, netmaker_ranges} <- Vpn.list_network_ranges() do
+      {:ok,
+       %{
+         ipv4: Enum.uniq(Repo.all(from(c in Cluster, select: c.ipv4_range)) ++ netmaker_ranges.ipv4),
+         ipv6: Enum.uniq(Repo.all(from(c in Cluster, select: c.ipv6_range)) ++ netmaker_ranges.ipv6)
+       }}
+    end
+  end
+
+  defp resolve_cluster_ranges(attrs, existing_ranges) do
+    with :ok <- Checks.SubnetOverlapCheck.check(attrs["ipv4_range"], existing_ranges.ipv4),
+         :ok <- Checks.SubnetOverlapCheck.check_ipv6(attrs["ipv6_range"], existing_ranges.ipv6),
+         {:ok, ipv4_range} <- allocate_ipv4_range(attrs["ipv4_range"], existing_ranges.ipv4),
+         {:ok, ipv6_range} <- allocate_ipv6_range(attrs["ipv6_range"], existing_ranges.ipv6) do
+      {:ok, %{ipv4: ipv4_range, ipv6: ipv6_range}}
+    end
+  end
+
+  defp insert_cluster(attrs, %{ipv4: ipv4_range, ipv6: ipv6_range}) do
+    attrs
+    |> Map.put("ipv4_range", ipv4_range)
+    |> Map.put("ipv6_range", ipv6_range)
+    |> then(&Cluster.changeset(%Cluster{}, &1))
+    |> Repo.insert()
+    |> Repo.normalize_conflict([:name, :ipv4_range, :ipv6_range])
+  end
+
+  defp provision_cluster_network(cluster) do
+    network_name = node_network_name(cluster)
+    ipv4_range = cluster.ipv4_range
+    ipv6_range = cluster.ipv6_range
+
+    opts = maybe_put_nodelimit(%{addressrange: ipv4_range, addressrange6: ipv6_range}, cluster.node_limit)
+
+    case Vpn.create_network(network_name, opts) do
+      {:ok, _} ->
+        Logger.info("Created Netmaker network: #{network_name}")
+        Metadata.Events.publish(:cluster_created)
+        {:ok, cluster}
+
+      {:error, :already_exists} ->
+        resolve_existing_network(cluster, network_name)
+
+      {:error, :service_unavailable} = error ->
+        Logger.warning("Netmaker network creation failed, rolling back DB cluster: #{cluster.name}")
+        Repo.delete(cluster)
+        error
+    end
+  end
+
+  defp resolve_existing_network(cluster, network_name) do
+    with {:ok, %{"addressrange" => ipv4_range, "addressrange6" => ipv6_range}} <- Vpn.get_network(network_name),
+         true <- ipv4_range == cluster.ipv4_range and ipv6_range == cluster.ipv6_range do
+      Logger.info("Netmaker network #{network_name} already exists with matching dual-stack ranges")
+      Metadata.Events.publish(:cluster_created)
+      {:ok, cluster}
+    else
+      {:ok, _network} ->
+        Repo.delete(cluster)
+        {:error, {:conflict, "Netmaker network #{network_name} exists with different immutable address ranges"}}
+
+      {:error, _} = error ->
+        Repo.delete(cluster)
+        error
+
+      false ->
+        Repo.delete(cluster)
+        {:error, {:conflict, "Netmaker network #{network_name} exists with different immutable address ranges"}}
+    end
+  end
+
+  defp allocate_ipv4_range(nil, existing_ranges), do: Vpn.generate_next_subnet(existing_ranges)
+  defp allocate_ipv4_range(range, _existing_ranges), do: {:ok, range}
+
+  defp allocate_ipv6_range(nil, existing_ranges), do: Vpn.generate_next_ipv6_subnet(existing_ranges)
+  defp allocate_ipv6_range(range, _existing_ranges), do: {:ok, range}
 
   @doc """
   Updates a cluster.
@@ -1955,9 +2002,17 @@ defmodule EdgeAdmin.Nodes do
 
       # Check if network exists in Netmaker
       case Vpn.get_network(network_name) do
-        {:ok, _network} ->
-          # Network exists, cluster is fine
+        {:ok, %{"addressrange" => ipv4_range, "addressrange6" => ipv6_range}}
+        when ipv4_range == cluster.ipv4_range and ipv6_range == cluster.ipv6_range ->
           result
+
+        {:ok, _network} ->
+          Logger.error(
+            "Reconciliation: Netmaker network #{network_name} has immutable address ranges that do not match " <>
+              "cluster #{cluster.name}; recreate the network rather than attempting an in-place migration"
+          )
+
+          %{result | errors: result.errors + 1}
 
         {:error, :not_found} ->
           # Network doesn't exist - cluster should be deleted from DB

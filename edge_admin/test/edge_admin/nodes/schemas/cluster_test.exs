@@ -14,7 +14,7 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
   end
 
   defp build_changeset(attrs) do
-    Cluster.changeset(%Cluster{}, attrs)
+    Cluster.changeset(%Cluster{}, Map.put_new(attrs, "ipv6_range", "fd7a:91c2:4e8b:2::/64"))
   end
 
   defp apply(attrs) do
@@ -147,6 +147,24 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
       changeset = build_changeset(%{})
       errors = errors_on(changeset)
       assert Map.has_key?(errors, :ipv4_range) or Map.has_key?(errors, :name)
+    end
+  end
+
+  describe "changeset/2 — ipv6_range CIDR format and policy" do
+    test "accepts a ULA /64" do
+      assert {:ok, _} = apply(%{"name" => "prod", "ipv4_range" => "100.64.1.0/24"})
+    end
+
+    test "rejects non-ULA IPv6 ranges" do
+      changeset = build_changeset(%{"name" => "prod", "ipv4_range" => "100.64.1.0/24", "ipv6_range" => "2001:db8::/64"})
+      assert %{ipv6_range: [_]} = errors_on(changeset)
+    end
+
+    test "rejects a ULA range that is not a /64" do
+      changeset =
+        build_changeset(%{"name" => "prod", "ipv4_range" => "100.64.1.0/24", "ipv6_range" => "fd7a:91c2:4e8b::/48"})
+
+      assert %{ipv6_range: [_]} = errors_on(changeset)
     end
   end
 

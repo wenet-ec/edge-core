@@ -40,8 +40,12 @@ defmodule EdgeAdmin.Release do
     Application.get_env(:edge_admin, :default_cluster_name)
   end
 
-  defp default_cluster_subnet do
-    Application.get_env(:edge_admin, :default_cluster_subnet)
+  defp default_cluster_v4_subnet do
+    Application.get_env(:edge_admin, :default_cluster_v4_subnet)
+  end
+
+  defp default_cluster_v6_subnet do
+    Application.get_env(:edge_admin, :default_cluster_v6_subnet)
   end
 
   defp default_cluster_node_limit do
@@ -139,12 +143,13 @@ defmodule EdgeAdmin.Release do
 
   Reads configuration from Application config (configured in runtime.exs):
   - `:default_cluster_name` - Name for the default cluster (optional)
-  - `:default_cluster_subnet` - IPv4 CIDR range (optional, auto-generates if not provided)
+  - `:default_cluster_v4_subnet` - IPv4 CIDR range (optional, auto-generates if not provided)
+  - `:default_cluster_v6_subnet` - IPv6 ULA /64 (optional, auto-generates if not provided)
 
   This task is idempotent and optional:
   - Skips if `default_cluster_name` is not configured
   - Skips if cluster with that name already exists
-  - Auto-generates subnet if not provided
+  - Auto-generates either address family if not provided
 
   ## Exit codes
     - 0: Success (created or already exists or skipped)
@@ -176,12 +181,15 @@ defmodule EdgeAdmin.Release do
   defp do_create_cluster(cluster_name) do
     attrs =
       %{name: cluster_name}
-      |> maybe_put(:ipv4_range, default_cluster_subnet())
+      |> maybe_put(:ipv4_range, default_cluster_v4_subnet())
+      |> maybe_put(:ipv6_range, default_cluster_v6_subnet())
       |> maybe_put(:node_limit, default_cluster_node_limit())
 
     case EdgeAdmin.Nodes.create_cluster(attrs) do
       {:ok, cluster} ->
-        Logger.info("Successfully created default cluster: #{cluster.name} (#{cluster.ipv4_range})")
+        Logger.info(
+          "Successfully created default cluster: #{cluster.name} (#{cluster.ipv4_range}, #{cluster.ipv6_range})"
+        )
 
         :ok
 

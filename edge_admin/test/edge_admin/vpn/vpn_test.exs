@@ -354,6 +354,24 @@ defmodule EdgeAdmin.VpnTest do
     end
   end
 
+  describe "IPv6 CIDR utilities" do
+    test "parses a compressed IPv6 CIDR" do
+      assert {:ok, {{0xFD7A, 0x91C2, 0x4E8B, 0, 0, 0, 0, 0}, 48}} =
+               Vpn.parse_ipv6_cidr("fd7a:91c2:4e8b::/48")
+    end
+
+    test "detects IPv6 overlap in either direction" do
+      assert Vpn.ipv6_cidrs_overlap?("fd7a:91c2:4e8b:1::/64", ["fd7a:91c2:4e8b::/48"])
+      assert Vpn.ipv6_cidrs_overlap?("fd7a:91c2:4e8b::/48", ["fd7a:91c2:4e8b:1::/64"])
+      refute Vpn.ipv6_cidrs_overlap?("fd7a:91c2:4e8c::/48", ["fd7a:91c2:4e8b::/48"])
+    end
+
+    test "allocates the first free /64 from a ULA /48" do
+      assert Vpn.find_available_ipv6_subnet("fd7a:91c2:4e8b::/48", 64, ["fd7a:91c2:4e8b::/64"]) ==
+               "fd7a:91c2:4e8b:1::/64"
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # cidrs_overlap?/2
   # ---------------------------------------------------------------------------

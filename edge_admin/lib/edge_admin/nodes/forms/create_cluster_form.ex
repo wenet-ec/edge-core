@@ -13,14 +13,16 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
   embedded_schema do
     field(:name, :string)
     field(:ipv4_range, :string)
+    field(:ipv6_range, :string)
     field(:node_limit, :integer)
   end
 
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
-    |> cast(attrs, [:name, :ipv4_range, :node_limit])
+    |> cast(attrs, [:name, :ipv4_range, :ipv6_range, :node_limit])
     |> validate_name()
     |> validate_ipv4_range()
+    |> validate_ipv6_range()
     |> validate_node_limit()
     |> apply_action(:insert)
     |> case do
@@ -61,6 +63,12 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
     )
   end
 
+  defp validate_ipv6_range(changeset) do
+    validate_format(changeset, :ipv6_range, ~r/^[0-9A-Fa-f:]+\/[0-9]{1,3}$/,
+      message: "must be an IPv6 CIDR (e.g., fd7a:91c2:4e8b::/64)"
+    )
+  end
+
   defp validate_node_limit(changeset) do
     validate_number(changeset, :node_limit, greater_than: 0)
   end
@@ -70,6 +78,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
     %{
       "name" => form.name,
       "ipv4_range" => form.ipv4_range,
+      "ipv6_range" => form.ipv6_range,
       "node_limit" => form.node_limit
     }
     |> Enum.reject(fn {_k, v} -> is_nil(v) end)

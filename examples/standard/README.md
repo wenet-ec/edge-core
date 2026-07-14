@@ -13,8 +13,8 @@ A multi-admin deployment of Edge Core with 4 admin instances across 2 clusters, 
 ## Cluster Layout
 
 ```
-Cluster A: edge_admin_a1 + edge_admin_a2  →  subnet 100.63.0.0/24
-Cluster B: edge_admin_b1 + edge_admin_b2  →  subnet 100.63.1.0/24
+Cluster A: edge_admin_a1 + edge_admin_a2  →  100.63.0.0/24 + fd7a:91c2:4e8c:1::/64
+Cluster B: edge_admin_b1 + edge_admin_b2  →  100.63.1.0/24 + fd7a:91c2:4e8c:2::/64
 ```
 
 Each admin instance is a peer — there is no primary/replica or leader/follower relationship. Instances within the same cluster form an Erlang peer mesh over the VPN and share the same PostgreSQL database. Each cluster independently owns and manages its own set of edge nodes. Multiple clusters mean more total capacity — clusters do not coordinate with each other.

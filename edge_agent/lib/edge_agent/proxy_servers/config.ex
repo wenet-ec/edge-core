@@ -20,8 +20,10 @@ defmodule EdgeAgent.ProxyServers.Config do
   def socks5_proxy_port, do: Application.get_env(:edge_agent, :socks5_proxy_port)
 
   def listen_address do
-    Application.get_env(:edge_agent, :proxy_listen_address, {0, 0, 0, 0})
+    Application.get_env(:edge_agent, :proxy_listen_address, {0, 0, 0, 0, 0, 0, 0, 0})
   end
+
+  def listen_socket_options, do: [:inet6, {:ipv6_v6only, false}]
 
   @doc """
   TCP connection timeout in ms. Default 2s.

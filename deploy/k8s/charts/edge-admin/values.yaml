@@ -59,13 +59,18 @@ config:
   # --- Admin cluster Erlang identity ---
   # adminClusterName must be unique per release within the same core.
   adminClusterName: "a"
-  adminClusterSubnet: "100.63.0.0/24"
+  adminClusterV4Subnet: "100.63.0.0/24"
+  adminClusterV6Subnet: "fd7a:91c2:4e8c:1::/64"
   adminMaxWireguardPeers: "250"
 
   # --- Default cluster pre-created on first boot ---
   # Note: "default" is reserved (URL keyword on /api/v1/clusters/default/...
   # routes). Pick anything else.
   defaultClusterName: "main"
+  # Optional fixed dual-stack ranges. Leave empty to allocate each family from
+  # its configured pool when the default cluster is created.
+  defaultClusterV4Subnet: ""
+  defaultClusterV6Subnet: ""
 
   # --- Self-referential metrics scrape URL — release-specific ---
   # In k8s: ClusterIP service name + port, e.g. "edge-admin-a:44000"

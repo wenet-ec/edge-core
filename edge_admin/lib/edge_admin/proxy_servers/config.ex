@@ -22,7 +22,12 @@ defmodule EdgeAdmin.ProxyServers.Config do
   Get proxy listen address as a tuple for Ranch.
   """
   def listen_address do
-    {0, 0, 0, 0}
+    {0, 0, 0, 0, 0, 0, 0, 0}
+  end
+
+  @doc "Socket options that force a single IPv6 wildcard listener to accept IPv4-mapped clients too."
+  def listen_socket_options do
+    [:inet6, {:ipv6_v6only, false}]
   end
 
   @doc """

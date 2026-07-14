@@ -9,7 +9,9 @@ defmodule EdgeAgent.MetricsServers.Config do
   used by the GenServer.
   """
 
-  @listen_address "0.0.0.0"
+  # node_exporter delegates listener creation to prometheus/exporter-toolkit;
+  # wireguard_exporter delegates to Tokio. Both accept an IPv6 unspecified
+  # address, which is dual-stack on our supported Linux hosts (bindv6only=0).
   @listen_address_ipv6 "::"
   @node_exporter_binary "/usr/local/bin/node_exporter"
   @wireguard_exporter_binary "/usr/local/bin/prometheus_wireguard_exporter"
@@ -19,7 +21,7 @@ defmodule EdgeAgent.MetricsServers.Config do
 
   def host_metrics_port, do: Application.get_env(:edge_agent, :host_metrics_port)
   def wireguard_metrics_port, do: Application.get_env(:edge_agent, :wireguard_metrics_port)
-  def listen_address, do: @listen_address
+  def listen_address, do: @listen_address_ipv6
   def node_exporter_binary, do: @node_exporter_binary
   def wireguard_exporter_binary, do: @wireguard_exporter_binary
   def host_proc_path, do: @host_proc_path
@@ -30,7 +32,7 @@ defmodule EdgeAgent.MetricsServers.Config do
     %{
       host_metrics_port: host_metrics_port(),
       wireguard_metrics_port: wireguard_metrics_port(),
-      listen_address: @listen_address,
+      listen_address: @listen_address_ipv6,
       node_exporter_binary: @node_exporter_binary,
       wireguard_exporter_binary: @wireguard_exporter_binary,
       host_proc_path: @host_proc_path,
@@ -43,7 +45,7 @@ defmodule EdgeAgent.MetricsServers.Config do
     port = host_metrics_port()
 
     [
-      "--web.listen-address=#{@listen_address}:#{port}",
+      "--web.listen-address=[#{@listen_address_ipv6}]:#{port}",
       "--path.procfs=#{@host_proc_path}",
       "--path.sysfs=#{@host_sys_path}",
       "--path.rootfs=#{@host_root_path}",
@@ -60,10 +62,9 @@ defmodule EdgeAgent.MetricsServers.Config do
   def wireguard_exporter_args do
     port = wireguard_metrics_port()
 
-    # wireguard_exporter binds to "::" (IPv6 unspecified) so a dual-stack
-    # Linux host accepts both IPv4 and IPv6 scrapes through a single
-    # listener. node_exporter binds to "0.0.0.0" (IPv4-only) for symmetry
-    # with how Prometheus scrapes it from sibling containers.
+    # This exporter exposes one listener only. Its Tokio listener on "::" is
+    # dual-stack on supported Linux hosts (net.ipv6.bindv6only=0), matching
+    # node_exporter's IPv6 wildcard listener above.
     [
       "--port",
       "#{port}",

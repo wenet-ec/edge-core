@@ -80,6 +80,11 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
           description: "IPv4 CIDR range for this cluster",
           example: "100.64.0.0/24"
         },
+        ipv6_range: %Schema{
+          type: :string,
+          description: "Private ULA IPv6 /64 range for this cluster",
+          example: "fd7a:91c2:4e8b:2::/64"
+        },
         node_limit: %Schema{
           type: :integer,
           nullable: true,
@@ -119,6 +124,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         :id,
         :name,
         :ipv4_range,
+        :ipv6_range,
         :node_limit,
         :node_count,
         :nodes,
@@ -131,6 +137,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         id: "abc12345-1234-1234-1234-123456789abc",
         name: "prod-east",
         ipv4_range: "100.64.0.0/24",
+        ipv6_range: "fd7a:91c2:4e8b:2::/64",
         node_limit: 50,
         node_count: 2,
         nodes: [
@@ -216,6 +223,13 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
           description: "IPv4 CIDR range (auto-generated if not provided)",
           example: "100.64.0.0/24"
         },
+        ipv6_range: %Schema{
+          type: :string,
+          nullable: true,
+          pattern: "^[0-9A-Fa-f:]+\\/[0-9]{1,3}$",
+          description: "Private ULA IPv6 /64 range (auto-generated if not provided)",
+          example: "fd7a:91c2:4e8b:2::/64"
+        },
         node_limit: %Schema{
           type: :integer,
           nullable: true,
@@ -228,6 +242,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
       example: %{
         name: "prod-east",
         ipv4_range: "100.64.1.0/24",
+        ipv6_range: "fd7a:91c2:4e8b:3::/64",
         node_limit: 50
       }
     })

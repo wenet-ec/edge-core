@@ -35,6 +35,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
               "Filter clusters by node membership — returns all distinct clusters containing any of the given node IDs (e.g. node_id__in=uuid1,uuid2)"
           ),
           QueryParams.string_filter(:ipv4_range, description: "Filter by IPv4 range (exact match or wildcard)"),
+          QueryParams.string_filter(:ipv6_range, description: "Filter by IPv6 range (exact match or wildcard)"),
           QueryParams.int_filter(:node_limit, description: "Filter by exact node limit", minimum: 1),
           QueryParams.boolean_filter(:has_node_limit,
             description:

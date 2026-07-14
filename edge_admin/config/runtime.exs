@@ -453,7 +453,8 @@ config :edge_admin,
   admin_max_wireguard_peers: get_env!("ADMIN_MAX_WIREGUARD_PEERS", :positive_integer),
   # === Admin Cluster (VPN network for multi-admin coordination) ===
   admin_cluster_name: EdgeAdmin.Vpn.build_network_name(get_env!("ADMIN_CLUSTER_NAME"), prefix: :admin),
-  admin_cluster_subnet: get_env!("ADMIN_CLUSTER_SUBNET"),
+  admin_cluster_v4_subnet: get_env!("ADMIN_CLUSTER_V4_SUBNET"),
+  admin_cluster_v6_subnet: get_env!("ADMIN_CLUSTER_V6_SUBNET"),
   # === WireGuard Configuration ===
   # Static port for WireGuard (must match UDP port mapping in docker-compose for external connectivity)
   admin_wireguard_port: get_env("ADMIN_WIREGUARD_PORT", :integer),
@@ -461,10 +462,14 @@ config :edge_admin,
   vpn_cluster_cookie: get_env("VPN_CLUSTER_COOKIE", :atom, :edge_admin_default_cookie),
   admin_discovery_port: get_env("ADMIN_DISCOVERY_PORT", :integer, 44_000),
   # === VPN & Cluster Configuration ===
-  # Subnet size for auto-generated clusters (e.g., 24 = /24 = 254 hosts)
-  cluster_subnet_prefix: get_env("CLUSTER_SUBNET_PREFIX", :integer, 24),
-  # CIDR ranges to use for auto-generated cluster subnets (CGNAT space)
-  cluster_auto_generated_ranges: get_env("CLUSTER_AUTO_GENERATED_RANGES", :list, ["100.64.0.0/10"]),
+  # IPv4 subnet size for auto-generated clusters (e.g., 24 = /24 = 254 hosts)
+  cluster_v4_subnet_prefix: get_env("CLUSTER_V4_SUBNET_PREFIX", :integer, 24),
+  # IPv4 CIDR ranges to use for auto-generated cluster subnets (CGNAT space)
+  cluster_auto_generated_v4_ranges: get_env("CLUSTER_AUTO_GENERATED_V4_RANGES", :list, ["100.64.0.0/10"]),
+  # Immutable Core-owned ULA /48 pool(s). Set explicitly in production and share
+  # the same value across every admin that uses this PostgreSQL/Netmaker core.
+  cluster_auto_generated_v6_ranges: get_env("CLUSTER_AUTO_GENERATED_V6_RANGES", :list, ["fd7a:91c2:4e8b::/48"]),
+  cluster_v6_subnet_prefix: get_env("CLUSTER_V6_SUBNET_PREFIX", :integer, 64),
   # Slots reserved for admin gateway nodes (e.g. split-brain flooding).
   # Tune to match total admin instances across all admin clusters per core.
   admin_slot_reservation: get_env("ADMIN_SLOT_RESERVATION", :integer, 10),
@@ -472,7 +477,8 @@ config :edge_admin,
   node_slot_reservation: get_env("NODE_SLOT_RESERVATION", :integer, 10),
   # Optional: Pre-defined default cluster for agent enrollment
   default_cluster_name: get_env("DEFAULT_CLUSTER_NAME"),
-  default_cluster_subnet: get_env("DEFAULT_CLUSTER_SUBNET"),
+  default_cluster_v4_subnet: get_env("DEFAULT_CLUSTER_V4_SUBNET"),
+  default_cluster_v6_subnet: get_env("DEFAULT_CLUSTER_V6_SUBNET"),
   default_cluster_node_limit: get_env("DEFAULT_CLUSTER_NODE_LIMIT", :integer),
   # Allow public enrollment without authentication (dev/testing only)
   public_enrollment_key_enabled: get_env("PUBLIC_ENROLLMENT_KEY_ENABLED", :boolean, false),

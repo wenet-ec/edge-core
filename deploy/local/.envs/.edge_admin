@@ -179,11 +179,15 @@ NETMAKER_API_SCHEME=http
 # NETMAKER_DEFAULT_DOMAIN=nm.internal
 
 # --- Edge Cluster Network Allocation ---
-# Subnet prefix length for auto-generated cluster networks (24 = /24 = 254 usable hosts).
-# CLUSTER_SUBNET_PREFIX=24
+# IPv4 subnet prefix length for auto-generated cluster networks (24 = /24 = 254 usable hosts).
+# CLUSTER_V4_SUBNET_PREFIX=24
 
-# CIDR pool from which cluster subnets are carved (CGNAT space by default).
-# CLUSTER_AUTO_GENERATED_RANGES=100.64.0.0/10
+# IPv4 CIDR pool from which cluster subnets are carved (CGNAT space by default).
+# CLUSTER_AUTO_GENERATED_V4_RANGES=100.64.0.0/10
+# Immutable Core-owned ULA /48 pool for edge clusters. All admins sharing this
+# Core must use it; it must not contain an admin-cluster IPv6 subnet.
+# CLUSTER_AUTO_GENERATED_V6_RANGES=fd7a:91c2:4e8b::/48
+# CLUSTER_V6_SUBNET_PREFIX=64
 
 # Slots reserved for admin gateway nodes (e.g. split-brain flooding) — tune to match admin instance count per core.
 # ADMIN_SLOT_RESERVATION=10
@@ -196,7 +200,8 @@ NETMAKER_API_SCHEME=http
 # other valid name. Routes like POST /api/v1/clusters/default/enrollment_keys
 # resolve to whichever cluster this variable names.
 DEFAULT_CLUSTER_NAME=test
-# DEFAULT_CLUSTER_SUBNET=100.64.0.0/24
+# DEFAULT_CLUSTER_V4_SUBNET=100.64.0.0/24
+# DEFAULT_CLUSTER_V6_SUBNET=fd7a:91c2:4e8b::/64
 # DEFAULT_CLUSTER_NODE_LIMIT=   # Max nodes allowed in the default cluster (unset = no limit)
 
 # Allow agent enrollment without a signed token — dev/testing only, never production.
@@ -227,8 +232,10 @@ ADMIN_URLS=http://localhost:4000,http://localhost:4001,http://localhost:4002
 # Must be identical across all admin instances in the same deployment.
 ADMIN_CLUSTER_NAME=a
 
-# IPv4 CIDR for the admin cluster VPN. Must not overlap with edge cluster ranges.
-ADMIN_CLUSTER_SUBNET=100.63.0.0/24
+# IPv4 and IPv6 ULA CIDRs for the admin cluster VPN. The IPv6 placeholder is in
+# a separate /48 from the edge-cluster pool; replace both ULA prefixes before launch.
+ADMIN_CLUSTER_V4_SUBNET=100.63.0.0/24
+ADMIN_CLUSTER_V6_SUBNET=fd7a:91c2:4e8c:1::/64
 
 # Maximum WireGuard peers this admin can sit in a mesh with — the operator-facing
 # physical constraint. Counts both admin-mesh peers (= total_admins - 1) and edge-node

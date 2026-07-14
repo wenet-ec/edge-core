@@ -115,6 +115,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
     name: :string,
     name__in: @either_string_or_list,
     ipv4_range: :string,
+    ipv6_range: :string,
     node_count: :integer,
     node_count__gte: :integer,
     node_count__lte: :integer,

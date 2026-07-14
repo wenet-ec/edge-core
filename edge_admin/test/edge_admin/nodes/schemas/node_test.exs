@@ -6,7 +6,15 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
   alias EdgeAdmin.Nodes.Schemas.Node
 
   defp fake_cluster(overrides \\ %{}) do
-    Map.merge(%Cluster{id: "cluster-uuid-1", name: "prod", ipv4_range: "100.64.1.0/24"}, overrides)
+    Map.merge(
+      %Cluster{
+        id: "cluster-uuid-1",
+        name: "prod",
+        ipv4_range: "100.64.1.0/24",
+        ipv6_range: "fd7a:91c2:4e8b:1::/64"
+      },
+      overrides
+    )
   end
 
   defp fake_node(overrides \\ %{}) do

@@ -14,8 +14,8 @@ defmodule EdgeAgent.MetricsServers.ConfigTest do
   # ---------------------------------------------------------------------------
 
   describe "constant getters" do
-    test "listen_address is 0.0.0.0 (IPv4 wildcard for sibling-container scrapes)" do
-      assert Config.listen_address() == "0.0.0.0"
+    test "listen_address is :: (dual-stack IPv6 wildcard on supported Linux hosts)" do
+      assert Config.listen_address() == "::"
     end
 
     test "node_exporter_binary path matches the container install location" do
@@ -91,7 +91,7 @@ defmodule EdgeAgent.MetricsServers.ConfigTest do
     test "binds listen address with the configured port" do
       args = Config.node_exporter_args()
 
-      assert "--web.listen-address=0.0.0.0:49100" in args
+      assert "--web.listen-address=[::]:49100" in args
     end
 
     test "overrides procfs/sysfs/rootfs to the host bind-mount paths" do

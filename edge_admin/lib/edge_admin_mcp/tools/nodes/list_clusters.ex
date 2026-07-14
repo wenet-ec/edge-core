@@ -8,6 +8,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListClusters do
   - `name_in` — IN match on cluster name (array)
   - `node_id_in` — filter clusters by node membership — returns distinct clusters containing any of the given node IDs (array)
   - `ipv4_range` — exact match or wildcard
+  - `ipv6_range` — exact match or wildcard
   - `node_count_gte` / `node_count_lte` — node count range
   - `node_limit` — exact node limit
   - `node_limit_gte` / `node_limit_lte` — node limit range
@@ -16,7 +17,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListClusters do
   - `updated_at_gte` / `updated_at_lte` — last-updated datetime range (ISO8601)
 
   ## Sorting
-  - `order_by` — comma-separated fields: `name`, `ipv4_range`, `node_limit`,
+  - `order_by` — comma-separated fields: `name`, `ipv4_range`, `ipv6_range`, `node_limit`,
     `inserted_at`, `updated_at`
   - `order_directions` — comma-separated directions: `asc`, `desc`
   """
@@ -38,6 +39,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListClusters do
     field :name_in, {:list, :string}
     field :node_id_in, {:list, :string}
     field :ipv4_range, :string, min_length: 1
+    field :ipv6_range, :string, min_length: 1
     field :node_count_gte, :integer, min: 0
     field :node_count_lte, :integer, min: 0
     field :node_limit, :integer, min: 1

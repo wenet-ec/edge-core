@@ -353,6 +353,11 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           description: "IPv4 address assigned within the admin cluster CIDR (without prefix length)",
           nullable: true
         },
+        ipv6_address: %Schema{
+          type: :string,
+          description: "IPv6 address assigned within the admin cluster ULA /64 (without prefix length)",
+          nullable: true
+        },
         wireguard_ip_address: %Schema{
           type: :string,
           description: "IP address WireGuard peers send tunnel packets to (public or LAN-reachable)",
@@ -406,6 +411,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
       properties: %{
         name: %Schema{type: :string, description: "Admin cluster network name (e.g., admin-cluster-main)"},
         ipv4_range: %Schema{type: :string, description: "IPv4 CIDR for the admin cluster network"},
+        ipv6_range: %Schema{type: :string, description: "ULA IPv6 /64 for the admin cluster network"},
         admin_count: %Schema{type: :integer, description: "Number of admins in this cluster"},
         admins: %Schema{
           type: :array,
@@ -413,10 +419,11 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           description: "Admins present in this cluster, sorted by name"
         }
       },
-      required: [:name, :ipv4_range, :admin_count, :admins],
+      required: [:name, :ipv4_range, :ipv6_range, :admin_count, :admins],
       example: %{
         name: "admin-cluster-main",
         ipv4_range: "100.64.0.0/24",
+        ipv6_range: "fd7a:91c2:4e8c:1::/64",
         admin_count: 1,
         admins: [
           %{
@@ -424,6 +431,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
             vpn_hostname: "admin-7k3m9p2n.admin-cluster-main.nm.internal",
             netmaker_host_id: "f272e703-b48f-4b61-b4c1-bfe4fffde62b",
             ipv4_address: "100.64.0.1",
+            ipv6_address: "fd7a:91c2:4e8c:1::1",
             wireguard_ip_address: "10.0.0.7",
             wireguard_port: 51_820,
             use_static_port: true,

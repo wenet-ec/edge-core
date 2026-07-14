@@ -229,7 +229,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
             cluster_filters: %Schema{
               type: :object,
               description:
-                "Optional filters to apply to target clusters (AND logic with node_filters). Accepts: name, name__in, ipv4_range, node_count (exact/gte/lte), has_node_limit, inserted_at/updated_at ranges. Does not accept node_limit or node_id__in.",
+                "Optional filters to apply to target clusters (AND logic with node_filters). Accepts: name, name__in, ipv4_range, ipv6_range, node_count (exact/gte/lte), has_node_limit, inserted_at/updated_at ranges. Does not accept node_limit or node_id__in.",
               properties: %{
                 name: %Schema{
                   type: :string,
@@ -246,6 +246,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
                   type: :string,
                   description: "Filter by IPv4 range (CIDR notation)"
                 },
+                ipv6_range: %Schema{type: :string},
                 node_count: %Schema{
                   type: :integer,
                   description: "Filter by exact node count"

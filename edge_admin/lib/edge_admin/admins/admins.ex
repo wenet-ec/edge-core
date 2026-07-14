@@ -28,6 +28,7 @@ defmodule EdgeAdmin.Admins do
         %{
           name: "admin-cluster-a",
           ipv4_range: "100.64.0.0/24",
+          ipv6_range: "fd7a:91c2:4e8c:1::/64",
           admin_count: 3,
           admins: [
             %{
@@ -35,6 +36,7 @@ defmodule EdgeAdmin.Admins do
               vpn_hostname: "admin-7k3m9p2nq8r4.admin-cluster-a.nm.internal",
               netmaker_host_id: "f272e703-...",
               ipv4_address: "100.64.0.1",
+              ipv6_address: "fd7a:91c2:4e8c:1::1",
               wireguard_ip_address: "10.0.0.7",
               wireguard_port: 51820,
               use_static_port: true,
@@ -83,6 +85,7 @@ defmodule EdgeAdmin.Admins do
     %{
       name: cluster_name,
       ipv4_range: network["addressrange"],
+      ipv6_range: network["addressrange6"],
       admin_count: length(admins),
       admins: admins
     }
@@ -96,6 +99,7 @@ defmodule EdgeAdmin.Admins do
       vpn_hostname: Vpn.build_vpn_hostname(host_name, cluster_name),
       netmaker_host_id: host["id"],
       ipv4_address: strip_cidr(node["address"]),
+      ipv6_address: strip_cidr(node["address6"]),
       wireguard_ip_address: host["endpointip"],
       wireguard_port: host["listenport"],
       use_static_port: host["isstaticport"] == true,

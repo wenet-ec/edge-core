@@ -60,9 +60,9 @@ Logical groups that map 1:1 to Netmaker WireGuard networks. One full mesh per cl
 
 | Tool | Title | Hints | Description |
 |---|---|---|---|
-| `list_clusters` | List Clusters | 🔍 | Filter/sort/paginate. Filters: `name` (wildcard), `name_in` (array), `node_id_in` (array), `ipv4_range`, `node_count_gte/lte`, `node_limit`, `node_limit_gte/lte`, `has_node_limit`, `inserted_at_*`, `updated_at_*`. |
+| `list_clusters` | List Clusters | 🔍 | Filter/sort/paginate. Filters: `name` (wildcard), `name_in` (array), `node_id_in` (array), `ipv4_range`, `ipv6_range`, `node_count_gte/lte`, `node_limit`, `node_limit_gte/lte`, `has_node_limit`, `inserted_at_*`, `updated_at_*`. |
 | `get_cluster` | Get Cluster | 🔍 | Required: `cluster_name`. |
-| `create_cluster` | Create Cluster | 🌐 | Required: `name` (lowercase alphanumeric + hyphens, ≤24 chars, `default` reserved). Optional: `ipv4_range` (CIDR — auto-assigned if omitted), `node_limit`. |
+| `create_cluster` | Create Cluster | 🌐 | Required: `name` (lowercase alphanumeric + hyphens, ≤24 chars, `default` reserved). Optional: `ipv4_range` (CIDR) and `ipv6_range` (ULA `/64`) — either family is auto-assigned if omitted; plus `node_limit`. |
 | `update_cluster` | Update Cluster | ♻️ | Required: `cluster_name`. Optional: `node_limit` (pass `null` to remove the limit). |
 | `delete_cluster` | Delete Cluster | ⚠️ 🌐 | Required: `cluster_name`. Deletes the VPN network — all nodes lose connectivity. |
 

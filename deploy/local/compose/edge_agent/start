@@ -71,6 +71,29 @@ mix ecto.migrate
 if [ "${WG_QUICK_USERSPACE_IMPLEMENTATION:-}" = "wireguard-go" ]; then
     echo "Userspace WireGuard mode: unloading kernel wireguard module (if present)..."
     rmmod wireguard 2>/dev/null || true
+
+    # wireguard-go needs the kernel TUN device. Minimal hosts (notably Alpine)
+    # may not create /dev/net/tun until the module is loaded; Docker's private
+    # /dev namespace can also omit the node. Load it when possible, then create
+    # the standard 10:200 character device when the driver is built into Linux.
+    if [ ! -c /dev/net/tun ]; then
+        echo "Userspace WireGuard mode: ensuring /dev/net/tun is available..."
+        modprobe tun 2>/dev/null || true
+
+        if [ ! -e /dev/net/tun ]; then
+            mkdir -p /dev/net
+            if ! mknod /dev/net/tun c 10 200; then
+                echo "ERROR: failed to create /dev/net/tun; wireguard-go requires a TUN device"
+                exit 1
+            fi
+            chmod 600 /dev/net/tun
+        fi
+
+        if [ ! -c /dev/net/tun ]; then
+            echo "ERROR: /dev/net/tun is not a character device; wireguard-go cannot start"
+            exit 1
+        fi
+    fi
 fi
 
 # Clean up any stale WireGuard interface from previous run

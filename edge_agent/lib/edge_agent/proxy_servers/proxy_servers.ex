@@ -172,10 +172,12 @@ defmodule EdgeAgent.ProxyServers do
 
   defp start_http_proxy(state) do
     transport_opts = %{
-      socket_opts: Config.listen_socket_options() ++ [
-        {:ip, state.listen_address},
-        {:port, state.http_port}
-      ],
+      socket_opts:
+        Config.listen_socket_options() ++
+          [
+            {:ip, state.listen_address},
+            {:port, state.http_port}
+          ],
       num_acceptors: Config.num_acceptors()
     }
 
@@ -198,10 +200,12 @@ defmodule EdgeAgent.ProxyServers do
 
   defp start_socks5_proxy(state) do
     transport_opts = %{
-      socket_opts: Config.listen_socket_options() ++ [
-        {:ip, state.listen_address},
-        {:port, state.socks5_port}
-      ],
+      socket_opts:
+        Config.listen_socket_options() ++
+          [
+            {:ip, state.listen_address},
+            {:port, state.socks5_port}
+          ],
       num_acceptors: Config.num_acceptors()
     }
 

@@ -18,7 +18,7 @@ x-edge-admin-base: &edge-admin-base
   build:
     context: ../..
     dockerfile: ./deploy/production/compose/edge_admin/Dockerfile
-  image: production_edge_admin
+  image: ghcr.io/wenet-ec/edge_admin:v0.2.0
   networks:
     - production_edge_core
   depends_on:

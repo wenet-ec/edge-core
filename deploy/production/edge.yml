@@ -12,7 +12,7 @@ services:
     build:
       context: ../..
       dockerfile: ./deploy/production/compose/edge_agent/Dockerfile
-    image: registry.yourdomain.com/edge_agent:stable
+    image: ghcr.io/wenet-ec/edge_agent:stable
     container_name: production_edge_agent
     volumes:
       - production_edge_agent_data:/app/data

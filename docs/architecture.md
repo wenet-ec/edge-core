@@ -318,6 +318,8 @@ Edge Agent is a standalone binary that runs on each edge machine. The primary de
 
 The practical constraints are kernel WireGuard support (built-in on `>= 5.6`, DKMS or `wireguard-go` userspace fallback otherwise), a writable `/etc/resolv.conf`, and, when applicable, `systemd-resolved` reachable over D-Bus.
 
+**RHEL-family firewalld.** Rocky Linux, RHEL, AlmaLinux, CentOS Stream, and Fedora commonly run `firewalld`. Its default zone can reject traffic arriving on the Netmaker interface even when Netmaker's iptables-nft compatibility rules permit it. This is a host firewall compatibility concern: configure firewalld on the host to allow the interface or its traffic in an appropriate zone, and validate VPN allow/deny behavior on each supported RHEL-family release.
+
 The standard deployment requires:
 
 - `network_mode: host` — agent shares the host network namespace; required so netclient can manage WireGuard interfaces on the host, and so the proxy and SSH server are reachable without port mapping

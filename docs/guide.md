@@ -2,6 +2,17 @@
 
 This guide is for operators and integrators using a running Edge Admin. If you want to know **how it's built**, read [`architecture.md`](architecture.md). If you want to know **how to deploy it**, see [`examples/`](https://github.com/wenet-ec/edge-core/tree/main/examples). This file covers the day-to-day surface — what you click, call, and configure once an admin is up.
 
+> **RHEL-family agent hosts:** Rocky Linux, RHEL, AlmaLinux, CentOS Stream, and Fedora commonly run `firewalld`. Its default zone can reject traffic arriving over the Netmaker interface, leaving admin-to-agent API, SSH, proxy, or metrics connections unavailable even when the VPN client is healthy. Configure firewalld on the **host** for affected machines.
+>
+> Assign `netmaker` to a dedicated accepting zone after the interface exists. This is a persistent host-level change; use it when you intentionally manage the zone yourself.
+>
+> ```bash
+> sudo firewall-cmd --permanent --new-zone=netmaker 2>/dev/null || true
+> sudo firewall-cmd --permanent --zone=netmaker --set-target=ACCEPT
+> sudo firewall-cmd --permanent --zone=netmaker --add-interface=netmaker
+> sudo firewall-cmd --reload
+> ```
+
 ---
 
 ## 1. API surface and built-in UIs

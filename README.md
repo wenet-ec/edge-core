@@ -168,6 +168,15 @@ Edge Agent ships as a Debian-slim container, so the agent process itself is port
 | SELinux-enforcing hosts | `amd64`, `arm64` | Caveat | May need custom policy or `--security-opt label=disabled` |
 | `riscv64`, `ppc64le`, `s390x` | those architectures | Unsupported today | Not currently built or tested |
 
+#### RHEL-family hosts and firewalld
+
+Rocky Linux, RHEL, AlmaLinux, CentOS Stream, and Fedora commonly run
+`firewalld`. Its default zone can reject traffic arriving over the Netmaker
+interface even when the VPN client is connected. On affected hosts, configure
+firewalld on the **host** to allow the Netmaker interface or its traffic in an
+appropriate zone. See the [operator guide](docs/guide.md) for the host-side
+commands and troubleshooting guidance.
+
 ## Using a running admin
 
 Once an admin is up, the day-to-day surface — Swagger UI, MCP, proxy servers, metrics, events/webhooks, health checks, concepts — is documented in the **[user guide](https://github.com/wenet-ec/edge-core/blob/main/docs/guide.md)**.

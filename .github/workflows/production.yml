@@ -196,6 +196,7 @@ jobs:
         with:
           context: .
           file: ${{ matrix.service.dockerfile }}
+          pull: true
           push: ${{ needs.resolve-tags.outputs.push == 'true' }}
           tags: ${{ steps.tags.outputs.value }}
           platforms: linux/amd64,linux/arm64

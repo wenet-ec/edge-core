@@ -20,8 +20,6 @@ defmodule EdgeAgent.ProxyServers.Transport.Forwarder do
 
   alias EdgeAgent.ProxyServers.Config
 
-  require Logger
-
   @type metadata :: map()
 
   @doc """

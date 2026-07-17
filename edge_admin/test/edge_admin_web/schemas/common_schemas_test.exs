@@ -47,10 +47,11 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemasTest do
       assert Enum.sort(result.required) == [:data, :meta]
     end
 
-    test "PaginatedMetaSchema is distinct from MetaSchema (collection vs single)" do
-      # The whole point of having two — paginated has more fields. Pin the
-      # distinction so a careless 'simplification' doesn't merge them.
-      refute PaginatedMetaSchema == MetaSchema
+    test "PaginatedMetaSchema includes pagination while MetaSchema does not" do
+      # Pin the observable OpenAPI contract rather than comparing the two
+      # module atoms, which are statically known to be distinct.
+      assert Map.has_key?(PaginatedMetaSchema.schema().properties, :pagination)
+      refute Map.has_key?(MetaSchema.schema().properties, :pagination)
     end
   end
 

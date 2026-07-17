@@ -23,8 +23,6 @@ defmodule EdgeAgent.Application do
 
   alias EdgeAgent.Commands.ExecutionRegistry
 
-  require Logger
-
   @impl true
   def start(_type, _args) do
     # Crash early on Oban queue/worker drift — silent-failure class.

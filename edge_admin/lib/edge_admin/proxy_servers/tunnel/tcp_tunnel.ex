@@ -24,8 +24,6 @@ defmodule EdgeAdmin.ProxyServers.Tunnel.TcpTunnel do
   alias EdgeAdmin.ProxyServers.Transport.BufferedReader
   alias EdgeAdmin.ProxyServers.Transport.Forwarder
 
-  require Logger
-
   @type handle ::
           {:local, :gen_tcp.socket()}
           | {:remote, pid()}

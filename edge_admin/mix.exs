@@ -6,8 +6,8 @@ defmodule EdgeAdmin.Mixfile do
     [
       app: :edge_admin,
       version: "0.2.0",
-      erlang: "~> 28.5",
-      elixir: "~> 1.19",
+      erlang: "~> 29.0",
+      elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       test_paths: ["test"],
       test_pattern: "**/*_test.exs",

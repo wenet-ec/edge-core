@@ -4,7 +4,7 @@ ARG NETCLIENT_VERSION=v1.6.0-derp
 FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient_builder
 
 # Stage 2: Create Elixir test environment with netclient installed
-FROM elixir:1.19-alpine
+FROM elixir:1.20-alpine
 
 WORKDIR /app
 

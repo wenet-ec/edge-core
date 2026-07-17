@@ -21,8 +21,6 @@ defmodule EdgeAdmin.ProxyServers.Transport.Forwarder do
 
   alias EdgeAdmin.ProxyServers.Config
 
-  require Logger
-
   @type metadata :: map()
 
   @doc """

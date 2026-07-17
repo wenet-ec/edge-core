@@ -16,8 +16,6 @@ defmodule EdgeAdmin.ProxyServers.Tunnel.RemoteTunnel do
   alias EdgeAdmin.ProxyServers.Socks5.Codec, as: Socks5Codec
   alias EdgeAdmin.ProxyServers.Transport.BufferedReader
 
-  require Logger
-
   @doc """
   Starts a remote tunnel proxy process on the Gateway node.
   """

@@ -5,7 +5,7 @@ ARG NETCLIENT_VERSION=v1.6.0-derp
 FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 
 # Stage 1: Build the OTP release
-FROM elixir:1.19.5-otp-28-slim AS builder
+FROM elixir:1.20.2-otp-29-slim AS builder
 
 # Install build dependencies
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \

@@ -45,7 +45,7 @@ defmodule EdgeAdmin.ProxyServers.ErrorHandlerTest do
     test "messages are non-empty strings" do
       for reason <- [:econnrefused, :timeout, :no_gateway, :invalid_uri, :unknown_thing] do
         {_code, msg} = ErrorHandler.http_error_response(reason)
-        assert is_binary(msg) and msg != ""
+        assert msg != ""
       end
     end
   end

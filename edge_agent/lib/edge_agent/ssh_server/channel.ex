@@ -20,7 +20,6 @@ defmodule EdgeAgent.SshServer.Channel do
 
   alias EdgeAgent.Settings
 
-  require Bitwise
   require Logger
 
   # `host_pty_spawn` arguments: namespace handle to enter (host's PID 1 mount

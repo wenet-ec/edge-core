@@ -14,8 +14,6 @@ defmodule EdgeAgent.ProxyServers.Transport.TunnelRegistry do
 
   use GenServer
 
-  require Logger
-
   @table __MODULE__
 
   def start_link(opts \\ []) do

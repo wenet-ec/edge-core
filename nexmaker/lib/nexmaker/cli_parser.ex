@@ -32,8 +32,6 @@ defmodule Nexmaker.CliParser do
   - netclient/functions/ping.go (PingPeers function)
   """
 
-  require Logger
-
   # Known plain-text error/info patterns from netclient source
   @no_network_pattern ~r/no such network/i
   @no_peers_patterns [
@@ -327,6 +325,4 @@ defmodule Nexmaker.CliParser do
         end)
     end)
   end
-
-  defp valid_ping_structure?(_), do: false
 end

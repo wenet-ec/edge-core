@@ -14,8 +14,6 @@ defmodule EdgeAdmin.ProxyServers.Transport.TunnelRegistry do
 
   use GenServer
 
-  require Logger
-
   @table __MODULE__
 
   # Client API

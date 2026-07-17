@@ -23,7 +23,7 @@ FROM quay.io/prometheus/node-exporter:v1.12.0 AS node-exporter-builder
 # RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /netclient -ldflags="-s -w" .
 
 # Stage 1: Devcontainer (live reload, source bind-mounted at runtime)
-FROM elixir:1.19.5-otp-28-slim AS elixir-dev-stage
+FROM elixir:1.20.2-otp-29-slim AS elixir-dev-stage
 
 ARG APP_HOME=/app
 ENV MIX_ENV=dev

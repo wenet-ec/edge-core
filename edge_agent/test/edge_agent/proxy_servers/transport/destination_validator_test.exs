@@ -473,7 +473,7 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
 
       for reason <- reasons do
         msg = DestinationValidator.error_message(reason)
-        assert is_binary(msg) and byte_size(msg) > 0, "empty message for #{reason}"
+        assert byte_size(msg) > 0, "empty message for #{reason}"
       end
     end
 
@@ -494,7 +494,7 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
 
     test "unknown reason returns generic fallback" do
       msg = DestinationValidator.error_message(:some_unknown_reason)
-      assert is_binary(msg) and byte_size(msg) > 0
+      assert byte_size(msg) > 0
     end
 
     test "localhost_blocked message mentions security" do

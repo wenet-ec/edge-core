@@ -81,7 +81,7 @@ defmodule EdgeAgent.ProxyServers.ErrorHandlerTest do
 
       for reason <- reasons do
         {_code, msg} = ErrorHandler.http_error_response(reason)
-        assert is_binary(msg) and byte_size(msg) > 0, "empty message for #{reason}"
+        assert byte_size(msg) > 0, "empty message for #{reason}"
       end
     end
   end

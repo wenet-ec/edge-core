@@ -52,6 +52,7 @@ defmodule EdgeAdmin.Events do
           | Catalog.CommandExecutionCompleted.t()
           | Catalog.CommandExecutionCancelled.t()
           | Catalog.CommandExecutionExpired.t()
+          | Catalog.CommandExecutionDropped.t()
           | Catalog.CommandExecutionPruned.t()
           | Catalog.SelfUpdateCompleted.t()
           | Catalog.EnrollmentKeyVerified.t()

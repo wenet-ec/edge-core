@@ -1864,8 +1864,9 @@
             "type": "string"
           },
           "node_id": {
-            "description": "ID of the target node",
+            "description": "ID of the target node (null after the node is deleted)",
             "format": "uuid",
+            "nullable": true,
             "type": "string"
           },
           "output": {
@@ -1882,7 +1883,14 @@
           },
           "status": {
             "description": "Current execution status",
-            "enum": ["pending", "sent", "completed", "cancelled", "expired"],
+            "enum": [
+              "pending",
+              "sent",
+              "completed",
+              "cancelled",
+              "expired",
+              "dropped"
+            ],
             "type": "string"
           },
           "target_all": {
@@ -1941,6 +1949,7 @@
               "delivery_total": 48,
               "execution_completed_total": 21,
               "execution_delivered_total": 23,
+              "execution_dropped_total": 1,
               "expiration_total": 2,
               "pruning_deleted_count": 76,
               "pruning_total": 4
@@ -2169,6 +2178,11 @@
                   },
                   "execution_delivered_total": {
                     "description": "Total individual execution delivery attempts to agents (success + failure)",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "execution_dropped_total": {
+                    "description": "Total executions dropped because their target node was deleted",
                     "nullable": true,
                     "type": "integer"
                   },
@@ -6547,7 +6561,7 @@
                 "schema": { "$ref": "#/components/schemas/ConflictResponse" }
               }
             },
-            "description": "Cannot delete command with non-completed executions"
+            "description": "Cannot delete command with non-terminal executions"
           }
         },
         "summary": "Delete a command",
@@ -6603,7 +6617,7 @@
             "name": "status__in",
             "required": false,
             "schema": {
-              "pattern": "^(?!.*(?:^|,\\s*)pending(?=\\s*(?:,|$)).*(?:^|,\\s*)pending(?=\\s*(?:,|$)))(?!.*(?:^|,\\s*)sent(?=\\s*(?:,|$)).*(?:^|,\\s*)sent(?=\\s*(?:,|$)))(?!.*(?:^|,\\s*)completed(?=\\s*(?:,|$)).*(?:^|,\\s*)completed(?=\\s*(?:,|$)))(?!.*(?:^|,\\s*)cancelled(?=\\s*(?:,|$)).*(?:^|,\\s*)cancelled(?=\\s*(?:,|$)))(?!.*(?:^|,\\s*)expired(?=\\s*(?:,|$)).*(?:^|,\\s*)expired(?=\\s*(?:,|$)))(pending|sent|completed|cancelled|expired)(\\s*,\\s*(pending|sent|completed|cancelled|expired))*$",
+              "pattern": "^(?!.*(?:^|,\\s*)pending(?=\\s*(?:,|$)).*(?:^|,\\s*)pending(?=\\s*(?:,|$)))(?!.*(?:^|,\\s*)sent(?=\\s*(?:,|$)).*(?:^|,\\s*)sent(?=\\s*(?:,|$)))(?!.*(?:^|,\\s*)completed(?=\\s*(?:,|$)).*(?:^|,\\s*)completed(?=\\s*(?:,|$)))(?!.*(?:^|,\\s*)cancelled(?=\\s*(?:,|$)).*(?:^|,\\s*)cancelled(?=\\s*(?:,|$)))(?!.*(?:^|,\\s*)expired(?=\\s*(?:,|$)).*(?:^|,\\s*)expired(?=\\s*(?:,|$)))(?!.*(?:^|,\\s*)dropped(?=\\s*(?:,|$)).*(?:^|,\\s*)dropped(?=\\s*(?:,|$)))(pending|sent|completed|cancelled|expired|dropped)(\\s*,\\s*(pending|sent|completed|cancelled|expired|dropped))*$",
               "type": "string"
             }
           },
@@ -6876,7 +6890,7 @@
       },
       "delete": {
         "callbacks": {},
-        "description": "Delete a specific command execution.\n\nOnly completed, cancelled, or expired executions can be deleted. Attempting to delete pending or sent executions will return 409.\n",
+        "description": "Delete a specific command execution.\n\nOnly completed, cancelled, expired, or dropped executions can be deleted. Attempting to delete pending or sent executions will return 409.\n",
         "operationId": "EdgeAdminWeb.Controllers.Commands.CommandExecutionController.delete",
         "parameters": [
           {
@@ -6914,7 +6928,7 @@
                 "schema": { "$ref": "#/components/schemas/ConflictResponse" }
               }
             },
-            "description": "Cannot delete non-completed execution"
+            "description": "Cannot delete non-terminal execution"
           }
         },
         "summary": "Delete a command execution",
@@ -6924,7 +6938,7 @@
     "/api/v1/command_executions/{id}/cancel": {
       "post": {
         "callbacks": {},
-        "description": "Attempts to cancel a command execution. Behavior depends on current status:\n\n- `pending`: Immediately marked `cancelled` in the database (command never ran).\n- `sent`: Sends cancellation request to agent (best-effort, async). The agent is the source of truth — if it already ran the command, it reports back the real result and the execution is marked `completed`. If the agent honoured the cancellation (exit code 143), it is marked `cancelled`.\n- `completed` / `cancelled`: Returns 409 conflict (already terminal).\n\nReturns 200 if cancellation was initiated. For `sent` executions, poll status to confirm the outcome.\n",
+        "description": "Attempts to cancel a command execution. Behavior depends on current status:\n\n- `pending`: Immediately marked `cancelled` in the database (command never ran).\n- `sent`: Sends cancellation request to agent (best-effort, async). The agent is the source of truth — if it already ran the command, it reports back the real result and the execution is marked `completed`. If the agent honoured the cancellation (exit code 143), it is marked `cancelled`.\n- `completed` / `cancelled` / `expired` / `dropped`: Returns 409 conflict (already terminal).\n\nReturns 200 if cancellation was initiated. For `sent` executions, poll status to confirm the outcome.\n",
         "operationId": "EdgeAdminWeb.Controllers.Commands.CommandExecutionController.cancel",
         "parameters": [
           {

@@ -52,6 +52,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     edge_admin_self_updates_request_completed_failed 1
     edge_admin_commands_delivery_total{result="ok"} 50
     edge_admin_commands_delivery_delivered_count 48
+    edge_admin_commands_execution_dropped_total 2
     edge_admin_gateway_connection_total{cluster="prod"} 10
     edge_admin_gateway_connection_total{cluster="staging"} 5
     edge_admin_gateway_active_count 3
@@ -198,6 +199,11 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
       assert result["self_updates_completed_total"] == 4
       assert result["self_updates_triggered"] == 6
       assert result["self_updates_failed"] == 1
+    end
+
+    test "extracts dropped command executions" do
+      result = AdminMetricsParser.parse(sample_prometheus_text())
+      assert result["commands_execution_dropped_total"] == 2
     end
 
     test "sums gateway_scrapes_total across types" do

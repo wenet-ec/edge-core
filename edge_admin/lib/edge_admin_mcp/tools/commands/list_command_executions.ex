@@ -6,7 +6,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
   ## Filtering
   - `command_id_in` — filter by command UUIDs (array of UUIDs)
   - `node_id_in` — filter by node UUIDs (array of UUIDs)
-  - `status_in` — one or more of `pending`, `sent`, `completed`, `cancelled`, `expired`
+  - `status_in` — one or more of `pending`, `sent`, `completed`, `cancelled`, `expired`, `dropped`
   - `target_all` — true: executions targeting all nodes; false: targeted executions
   - `exit_code` — exact exit code
   - `exit_code_gte` / `exit_code_lte` — exit code range (e.g. `exit_code_gte: 1` for all failures)

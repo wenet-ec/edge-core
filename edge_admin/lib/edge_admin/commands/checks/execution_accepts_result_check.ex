@@ -36,6 +36,10 @@ defmodule EdgeAdmin.Commands.Checks.ExecutionAcceptsResultCheck do
   # and ran it - accept the result; agent is the source of truth for what ran
   def check(%CommandExecution{status: :expired, exit_code: nil}), do: :ok
 
+  # A dropped execution belongs to a deleted node. It must never accept a
+  # result, including if the former agent retries after deletion.
+  def check(%CommandExecution{status: :dropped}), do: {:error, {:conflict, "execution is no longer active"}}
+
   def check(%CommandExecution{status: status, exit_code: exit_code}) do
     {:error, {:conflict, "execution is in '#{status}' status (exit_code: #{inspect(exit_code)}) and cannot be updated"}}
   end

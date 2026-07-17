@@ -33,7 +33,8 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
         node_id: %Schema{
           type: :string,
           format: :uuid,
-          description: "ID of the target node"
+          nullable: true,
+          description: "ID of the target node (null after the node is deleted)"
         },
         cluster_name: %Schema{
           type: :string,

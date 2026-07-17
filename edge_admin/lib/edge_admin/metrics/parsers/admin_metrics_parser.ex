@@ -102,6 +102,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParser do
       "commands_delivery_delivered_count" => extract_gauge(lines, "edge_admin_commands_delivery_delivered_count"),
       "commands_execution_delivered_total" => extract_counter(lines, "edge_admin_commands_execution_delivered_total"),
       "commands_execution_completed_total" => extract_counter(lines, "edge_admin_commands_execution_completed_total"),
+      "commands_execution_dropped_total" => extract_counter(lines, "edge_admin_commands_execution_dropped_total"),
       "commands_expiration_total" => extract_counter(lines, "edge_admin_commands_expiration_total"),
       "commands_pruning_total" => extract_counter(lines, "edge_admin_commands_pruning_total"),
       "commands_pruning_deleted_count" => extract_gauge(lines, "edge_admin_commands_pruning_deleted_count"),

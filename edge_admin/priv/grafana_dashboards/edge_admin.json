@@ -703,7 +703,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "End-to-end execution flow: created \u2192 delivered \u2192 completed, plus background expiration and pruning sweeps.",
+      "description": "End-to-end execution flow: created \u2192 delivered \u2192 completed or dropped, plus background expiration and pruning sweeps.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -805,8 +805,17 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "rate(edge_admin_commands_expiration_total{otp_app=\"$otp_app\"}[$__rate_interval])",
+          "expr": "rate(edge_admin_commands_execution_dropped_total{otp_app=\"$otp_app\"}[$__rate_interval])",
           "refId": "D",
+          "legendFormat": "Dropped \u2014 node deleted"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "rate(edge_admin_commands_expiration_total{otp_app=\"$otp_app\"}[$__rate_interval])",
+          "refId": "E",
           "legendFormat": "Expiration sweeps"
         },
         {
@@ -815,7 +824,7 @@
             "uid": "${datasource}"
           },
           "expr": "rate(edge_admin_commands_pruning_total{otp_app=\"$otp_app\"}[$__rate_interval])",
-          "refId": "E",
+          "refId": "F",
           "legendFormat": "Pruning sweeps"
         }
       ],

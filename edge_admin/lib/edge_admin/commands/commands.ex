@@ -14,7 +14,7 @@ defmodule EdgeAdmin.Commands do
   - **Targeting**: Specification of which nodes should execute a command (all/specific nodes/clusters)
   - **Delivery**: Process of sending pending executions to healthy nodes via HTTP
   - **Status Lifecycle**: `pending` → `sent` → `completed`
-    - Terminal states: `completed` | `cancelled` | `expired`
+    - Terminal states: `completed` | `cancelled` | `expired` | `dropped`
     - From `pending` or `sent`: admin can cancel; scheduler can mark `expired`
       when the command's `expires_at` passes
     - Race-window detail: `cancelled` / `expired` rows with `nil exit_code`
@@ -171,7 +171,7 @@ defmodule EdgeAdmin.Commands do
 
   ## Returns
   - `{:ok, command}` - Deletion succeeded
-  - `{:error, {:conflict, reason}}` - Command has non-completed executions
+  - `{:error, {:conflict, reason}}` - Command has non-terminal executions
   """
   @spec delete_command(Command.t()) :: {:ok, Command.t()} | {:error, {:conflict, String.t()}}
   def delete_command(%Command{} = command) do
@@ -351,7 +351,7 @@ defmodule EdgeAdmin.Commands do
   Lists command executions with filtering, sorting, and pagination.
 
   Supports filtering by:
-  - `status__in` - Enum IN: `"pending"`, `"sent"`, `"completed"`, `"cancelled"`, `"expired"` — comma-separated list (`status__in=pending,sent`)
+  - `status__in` - Enum IN: `"pending"`, `"sent"`, `"completed"`, `"cancelled"`, `"expired"`, `"dropped"` — comma-separated list (`status__in=pending,sent`)
   - `target_all` - Boolean
   - `exit_code` - Exact, `__gte`, `__lte`
   - `command_id__in` - Exact IN match on command IDs — comma-separated UUIDs
@@ -377,8 +377,8 @@ defmodule EdgeAdmin.Commands do
 
     base_query =
       from(ce in CommandExecution,
-        join: n in assoc(ce, :node),
-        join: c in assoc(n, :cluster),
+        left_join: n in assoc(ce, :node),
+        left_join: c in assoc(n, :cluster),
         preload: [:command, :cluster, node: :cluster]
       )
 
@@ -757,6 +757,62 @@ defmodule EdgeAdmin.Commands do
         preload: [node: :cluster, command: []]
       )
     )
+  end
+
+  @type dropped_execution :: %{
+          execution: CommandExecution.t(),
+          command: Command.t(),
+          cluster_name: String.t()
+        }
+
+  @doc false
+  @spec drop_node_executions(String.t(), String.t()) :: [dropped_execution()]
+  def drop_node_executions(node_id, cluster_name) do
+    executions =
+      Repo.all(
+        from(ce in CommandExecution,
+          where: ce.node_id == ^node_id,
+          where: ce.status in [:pending, :sent],
+          preload: [:command]
+        )
+      )
+
+    dropped =
+      executions
+      |> Enum.reduce([], fn execution, acc ->
+        case transition_status(execution, [:pending, :sent], status: :dropped) do
+          {:ok, updated_execution} ->
+            [%{execution: updated_execution, command: execution.command, cluster_name: cluster_name} | acc]
+
+          {:error, :stale_state} ->
+            acc
+        end
+      end)
+      |> Enum.reverse()
+
+    if dropped != [] do
+      :telemetry.execute(
+        [:edge_admin, :commands, :execution, :dropped],
+        %{count: length(dropped)},
+        %{}
+      )
+    end
+
+    dropped
+  end
+
+  @doc false
+  @spec publish_dropped_executions([dropped_execution()]) :: :ok
+  def publish_dropped_executions(dropped_executions) do
+    Enum.each(dropped_executions, fn %{execution: execution, command: command, cluster_name: cluster_name} ->
+      Events.publish(%Catalog.CommandExecutionDropped{
+        execution: execution,
+        command: command,
+        cluster_name: cluster_name
+      })
+    end)
+
+    :ok
   end
 
   defp deliver_executions_to_node(node, executions) do
@@ -1144,7 +1200,7 @@ defmodule EdgeAdmin.Commands do
   An execution is considered finalised — meaning it can no longer receive any
   updates — when:
 
-    * `status == :completed` (agent reported result), or
+    * `status in [:completed, :dropped]`, or
     * `status in [:cancelled, :expired]` AND `exit_code IS NOT NULL` (agent
       reported the result of the cancel/expire signal).
 
@@ -1173,7 +1229,7 @@ defmodule EdgeAdmin.Commands do
     # codebase is pruning, and consumers maintaining state mirrors have no
     # other way to learn that a row went away.
     #
-    # Eligibility: completed (always finalised), OR cancelled/expired with
+    # Eligibility: completed/dropped (always finalised), OR cancelled/expired with
     # exit_code set (agent reported back). Excludes the cancel/expire race
     # window where exit_code is still nil.
     eligible =
@@ -1181,7 +1237,7 @@ defmodule EdgeAdmin.Commands do
         from(ce in CommandExecution,
           where:
             ce.inserted_at < ^cutoff and
-              (ce.status == :completed or
+              (ce.status in [:completed, :dropped] or
                  (ce.status in [:cancelled, :expired] and not is_nil(ce.exit_code))),
           limit: @prune_batch_size,
           preload: [:command, node: :cluster]

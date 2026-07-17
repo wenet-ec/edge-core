@@ -288,6 +288,11 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
                   nullable: true,
                   description: "Total executions completed (result reported back by agent)"
                 },
+                execution_dropped_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total executions dropped because their target node was deleted"
+                },
                 expiration_total: %Schema{
                   type: :integer,
                   nullable: true,
@@ -653,6 +658,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
             delivery_delivered_count: 0,
             execution_delivered_total: 23,
             execution_completed_total: 21,
+            execution_dropped_total: 1,
             expiration_total: 2,
             pruning_total: 4,
             pruning_deleted_count: 76

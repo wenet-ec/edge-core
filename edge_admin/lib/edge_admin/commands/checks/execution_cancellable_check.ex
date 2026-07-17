@@ -3,7 +3,7 @@ defmodule EdgeAdmin.Commands.Checks.ExecutionCancellableCheck do
   @moduledoc """
   Checks that an execution is in a cancellable status (pending or sent).
 
-  Completed, cancelled, and expired executions cannot be cancelled.
+  Completed, cancelled, expired, and dropped executions cannot be cancelled.
   """
 
   alias EdgeAdmin.Commands.Schemas.CommandExecution

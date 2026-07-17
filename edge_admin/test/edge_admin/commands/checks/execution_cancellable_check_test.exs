@@ -46,6 +46,12 @@ defmodule EdgeAdmin.Commands.Checks.ExecutionCancellableCheckTest do
       assert reason =~ "sent"
     end
 
+    test "dropped execution returns conflict error" do
+      execution = %CommandExecution{status: :dropped}
+      assert {:error, {:conflict, reason}} = ExecutionCancellableCheck.check(execution)
+      assert reason =~ "dropped"
+    end
+
     test "unknown status returns conflict error" do
       execution = %CommandExecution{status: :unknown_status}
       assert {:error, {:conflict, reason}} = ExecutionCancellableCheck.check(execution)

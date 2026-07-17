@@ -57,6 +57,11 @@ defmodule EdgeAdmin.Commands.Checks.ExecutionAcceptsResultCheckTest do
       assert reason =~ "expired"
     end
 
+    test "dropped execution never accepts a result" do
+      execution = %CommandExecution{status: :dropped, exit_code: nil}
+      assert {:error, {:conflict, _reason}} = ExecutionAcceptsResultCheck.check(execution)
+    end
+
     test "error message includes the actual status and exit_code" do
       execution = %CommandExecution{status: :pending, exit_code: nil}
       {:error, {:conflict, reason}} = ExecutionAcceptsResultCheck.check(execution)

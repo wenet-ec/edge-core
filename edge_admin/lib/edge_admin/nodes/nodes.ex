@@ -127,6 +127,7 @@ defmodule EdgeAdmin.Nodes do
 
   alias Ecto.Query.CastError
   alias EdgeAdmin.Admins.Metadata
+  alias EdgeAdmin.Commands
   alias EdgeAdmin.EdgeClusters.AgentClient
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog
@@ -754,7 +755,7 @@ defmodule EdgeAdmin.Nodes do
   3. Delete from DB. Cascade behaviour:
      - `ssh_usernames` → `:delete_all` (and their `ssh_public_keys` cascade transitively)
      - `aliases` → `:delete_all`
-     - `command_executions` → `:nilify_all` (history rows kept; `node_id` set to NULL)
+     - non-terminal `command_executions` → `dropped`, then `:nilify_all`
   4. Emit event for metadata recomputation
 
   If Netmaker deletion fails (except :not_found), operation stops and returns error.
@@ -835,9 +836,18 @@ defmodule EdgeAdmin.Nodes do
   end
 
   defp delete_node_from_db(%Node{} = node) do
-    # Delete from DB (cascades to ssh_usernames, ssh_public_keys, command_executions, aliases)
-    case Repo.delete(node) do
-      {:ok, deleted_node} ->
+    node = Repo.preload(node, :cluster)
+
+    case Repo.transaction(fn ->
+           dropped_executions = Commands.drop_node_executions(node.id, node.cluster.name)
+
+           case Repo.delete(node) do
+             {:ok, deleted_node} -> {deleted_node, dropped_executions}
+             {:error, changeset} -> Repo.rollback(changeset)
+           end
+         end) do
+      {:ok, {deleted_node, dropped_executions}} ->
+        Commands.publish_dropped_executions(dropped_executions)
         Metadata.Events.publish(:node_deleted)
         {:ok, deleted_node}
 
@@ -1999,9 +2009,8 @@ defmodule EdgeAdmin.Nodes do
           # This means deletion was attempted and Netmaker succeeded but DB failed.
           Logger.info("Reconciliation: Deleting orphaned node #{node.id} from DB (host not found in Netmaker)")
 
-          case Repo.delete(node) do
+          case delete_node_from_db(node) do
             {:ok, _} ->
-              Metadata.Events.publish(:node_deleted)
               {count + 1, unenrolled_ids}
 
             {:error, changeset} ->

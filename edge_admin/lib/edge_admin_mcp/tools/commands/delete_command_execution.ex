@@ -3,8 +3,8 @@ defmodule EdgeAdminMcp.Tools.Commands.DeleteCommandExecution do
   @moduledoc """
   Delete a command execution.
 
-  Only executions in a terminal status (`completed`, `cancelled`, or
-  `expired`) can be deleted. `pending` or `sent` executions return a
+  Only executions in a terminal status (`completed`, `cancelled`, `expired`,
+  or `dropped`) can be deleted. `pending` or `sent` executions return a
   conflict error — cancel them first via `cancel_command_execution`.
   """
   use EdgeAdminMcp, :tool

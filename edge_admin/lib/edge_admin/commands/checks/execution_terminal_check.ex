@@ -1,7 +1,7 @@
 # edge_admin/lib/edge_admin/commands/checks/execution_terminal_check.ex
 defmodule EdgeAdmin.Commands.Checks.ExecutionTerminalCheck do
   @moduledoc """
-  Checks that an execution is in a terminal status (completed, cancelled, or expired).
+  Checks that an execution is in a terminal status (completed, cancelled, expired, or dropped).
 
   Prevents deletion of pending or in-flight executions.
   """
@@ -15,7 +15,7 @@ defmodule EdgeAdmin.Commands.Checks.ExecutionTerminalCheck do
     else
       {:error,
        {:conflict,
-        "cannot delete execution with status '#{execution.status}' - only completed, cancelled, or expired executions can be deleted"}}
+        "cannot delete execution with status '#{execution.status}' - only completed, cancelled, expired, or dropped executions can be deleted"}}
     end
   end
 end

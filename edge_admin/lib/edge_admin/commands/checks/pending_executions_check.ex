@@ -30,7 +30,7 @@ defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheck do
     else
       {:error,
        {:conflict,
-        "cannot delete command with #{count} non-completed execution(s) - all executions must be completed first"}}
+        "cannot delete command with #{count} non-terminal execution(s) - all executions must be terminal first"}}
     end
   end
 end

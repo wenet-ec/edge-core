@@ -192,6 +192,10 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetricsTest do
       assert Gateways.from_raw(%{}).diagnostics_total == nil
     end
 
+    test "Commands passes through dropped execution totals" do
+      assert Commands.from_raw(%{"commands_execution_dropped_total" => 3}).execution_dropped_total == 3
+    end
+
     test "Webhook counters pass through" do
       raw = %{
         "webhook_fan_outs_total" => 1,

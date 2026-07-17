@@ -271,6 +271,7 @@ All command execution events share the same `data` shape. `output` is always exc
 | `edge.command_execution.completed` | `edge.command_execution.completed` | Agent reported result — `exit_code` populated, consumer decides pass/fail |
 | `edge.command_execution.cancelled` | `edge.command_execution.cancelled` | Explicit cancel or agent received SIGTERM (`exit_code: 143`)              |
 | `edge.command_execution.expired`   | `edge.command_execution.expired`   | Swept as stale before running (status: `expired`)                         |
+| `edge.command_execution.dropped`   | `edge.command_execution.dropped`   | Target node deleted (status: `dropped`)                                   |
 | `edge.command_execution.pruned`    | `edge.command_execution.pruned`    | Reaped by background pruning worker — only async deletion path            |
 
 **Command execution `data` schema:**
@@ -313,7 +314,7 @@ Notes:
 | `expired`   | `expired`            | `null`       | `null`            | `null`         | `null`         |
 | `pruned`    | terminal at deletion | as recorded  | as recorded       | as recorded    | as recorded    |
 
-**`pruned` semantics:** fired by the background pruning worker when a finalised execution is deleted from the DB after the retention window. The snapshot reflects the row's terminal state at deletion time (whatever `completed`/`cancelled`/`expired` left it in). `pruned` is the only async deletion path — cascade-from-command-delete is sync and does not fire events.
+**`pruned` semantics:** fired by the background pruning worker when a finalised execution is deleted from the DB after the retention window. The snapshot reflects the row's terminal state at deletion time (whatever `completed`/`cancelled`/`expired`/`dropped` left it in). `pruned` is the only async deletion path — cascade-from-command-delete is sync and does not fire events.
 
 ---
 

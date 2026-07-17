@@ -12,7 +12,7 @@ defmodule EdgeAdminMcp.Tools.Commands.CancelCommandExecution do
     and async — re-fetch the execution later to see whether the agent
     actually stopped before completing. Returns
     `%{result: "cancellation request sent"}`.
-  - `completed` / `cancelled` / `expired` → returns a 409-style conflict
+  - `completed` / `cancelled` / `expired` / `dropped` → returns a 409-style conflict
     error; only `pending` and `sent` are cancellable.
   """
   use EdgeAdminMcp, :tool

@@ -26,6 +26,11 @@ defmodule EdgeAdmin.Commands.Checks.ExecutionTerminalCheckTest do
       execution = %CommandExecution{status: :expired}
       assert :ok = ExecutionTerminalCheck.check(execution)
     end
+
+    test "dropped execution returns :ok" do
+      execution = %CommandExecution{status: :dropped}
+      assert :ok = ExecutionTerminalCheck.check(execution)
+    end
   end
 
   describe "check/1 — non-terminal executions" do

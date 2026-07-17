@@ -12,11 +12,11 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   # `validate_inclusion`-equivalent enforcement, the public predicate
   # functions, and external surfaces (controller / MCP / AsyncAPI enums)
   # all derive from these lists — single source of truth.
-  @statuses [:pending, :sent, :completed, :cancelled, :expired]
-  @terminal_statuses [:completed, :cancelled, :expired]
+  @statuses [:pending, :sent, :completed, :cancelled, :expired, :dropped]
+  @terminal_statuses [:completed, :cancelled, :expired, :dropped]
   @cancellable_statuses [:pending, :sent]
 
-  @type status :: :pending | :sent | :completed | :cancelled | :expired
+  @type status :: :pending | :sent | :completed | :cancelled | :expired | :dropped
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -33,8 +33,8 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
           expires_at: DateTime.t() | nil,
           command_id: String.t() | nil,
           command: Command.t() | NotLoaded.t() | nil,
-          node_id: String.t(),
-          node: Node.t() | NotLoaded.t(),
+          node_id: String.t() | nil,
+          node: Node.t() | NotLoaded.t() | nil,
           cluster_id: String.t() | nil,
           cluster: Cluster.t() | NotLoaded.t() | nil,
           inserted_at: DateTime.t(),

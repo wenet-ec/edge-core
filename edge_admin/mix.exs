@@ -13,6 +13,7 @@ defmodule EdgeAdmin.Mixfile do
       test_pattern: "**/*_test.exs",
       test_coverage: [tool: ExCoveralls],
       start_permanent: Mix.env() == :prod,
+      consolidate_protocols: Mix.env() != :dev,
       aliases: aliases(),
       deps: deps(),
       dialyzer: dialyzer(),

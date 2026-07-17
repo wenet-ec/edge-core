@@ -130,7 +130,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
   # ---------------------------------------------------------------------------
 
   describe "all_event_types/0" do
-    test "returns the 15 documented event types in catalog order" do
+    test "returns the 16 documented event types in catalog order" do
       assert Catalog.all_event_types() == [
                "edge.core.test",
                "edge.enrollment_key.verified",
@@ -144,6 +144,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
                "edge.command_execution.completed",
                "edge.command_execution.cancelled",
                "edge.command_execution.expired",
+               "edge.command_execution.dropped",
                "edge.command_execution.pruned",
                "edge.ssh_username.verified",
                "edge.self_update_request.completed"
@@ -201,6 +202,11 @@ defmodule EdgeAdmin.Events.CatalogTest do
           cluster_name: "prod"
         },
         %Catalog.CommandExecutionExpired{
+          execution: execution_fixture(),
+          command: command_fixture(),
+          cluster_name: "prod"
+        },
+        %Catalog.CommandExecutionDropped{
           execution: execution_fixture(),
           command: command_fixture(),
           cluster_name: "prod"
@@ -441,7 +447,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
       assert data["cancelled_at"] == nil
     end
 
-    test "all six command_execution events use the same execution_data shape" do
+    test "all seven command_execution events use the same execution_data shape" do
       structs = [
         %Catalog.CommandExecutionCreated{
           execution: execution_fixture(),
@@ -464,6 +470,11 @@ defmodule EdgeAdmin.Events.CatalogTest do
           cluster_name: "prod"
         },
         %Catalog.CommandExecutionExpired{
+          execution: execution_fixture(),
+          command: command_fixture(),
+          cluster_name: "prod"
+        },
+        %Catalog.CommandExecutionDropped{
           execution: execution_fixture(),
           command: command_fixture(),
           cluster_name: "prod"

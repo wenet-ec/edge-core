@@ -115,7 +115,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandController do
       204 => {"Command deleted successfully", "", nil},
       400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Command not found", "application/json", CommonSchemas.NotFoundResponse},
-      409 => {"Cannot delete command with non-completed executions", "application/json", CommonSchemas.ConflictResponse}
+      409 => {"Cannot delete command with non-terminal executions", "application/json", CommonSchemas.ConflictResponse}
     }
   )
 

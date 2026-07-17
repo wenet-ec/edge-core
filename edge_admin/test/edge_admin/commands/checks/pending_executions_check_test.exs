@@ -132,7 +132,7 @@ defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheckTest do
       assert reason =~ "1"
     end
 
-    test "error count reflects all non-completed executions" do
+    test "error count reflects all non-terminal executions" do
       cluster = insert_cluster()
       node1 = insert_node(cluster.id)
       node2 = insert_node(cluster.id)

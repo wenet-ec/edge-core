@@ -13,7 +13,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
 
   alias EdgeAdmin.Events.Catalog
 
-  @doc "Returns the AsyncAPI 3.1.0 document as a map (ready for JSON.encode!)."
+  @doc "Returns the AsyncAPI 3.1.0 document as a map (ready for Jason.encode!)."
   def spec do
     %{
       "asyncapi" => "3.1.0",
@@ -334,6 +334,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
     "edge.command_execution.completed" => %{schema_ref: "CommandExecutionEvent", kafka_key: "command_execution_id"},
     "edge.command_execution.cancelled" => %{schema_ref: "CommandExecutionEvent", kafka_key: "command_execution_id"},
     "edge.command_execution.expired" => %{schema_ref: "CommandExecutionEvent", kafka_key: "command_execution_id"},
+    "edge.command_execution.dropped" => %{schema_ref: "CommandExecutionEvent", kafka_key: "command_execution_id"},
     "edge.command_execution.pruned" => %{schema_ref: "CommandExecutionEvent", kafka_key: "command_execution_id"},
     "edge.ssh_username.verified" => %{schema_ref: "SshUsernameVerifiedEvent", kafka_key: "node_id"},
     "edge.self_update_request.completed" => %{schema_ref: "SelfUpdateRequestEvent", kafka_key: "self_update_request_id"}

@@ -294,6 +294,12 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         reporter_options: [buckets: [100, 500, 1_000, 5_000, 10_000, 30_000, 60_000]]
       ),
       counter(
+        [:edge_admin, :commands, :execution, :dropped, :total],
+        event_name: [:edge_admin, :commands, :execution, :dropped],
+        description: "Total executions dropped because their target node was deleted",
+        measurement: :count
+      ),
+      counter(
         [:edge_admin, :commands, :expiration, :total],
         event_name: [:edge_admin, :commands, :expiration],
         description: "Total number of stale execution expiration runs",

@@ -107,6 +107,15 @@
         }
       }
     },
+    "edge.command_execution.dropped": {
+      "address": "edge.command_execution.dropped",
+      "description": "Execution dropped because its target node was deleted.",
+      "messages": {
+        "command_execution.dropped": {
+          "$ref": "#/components/messages/commandExecutionDroppedMessage"
+        }
+      }
+    },
     "edge.command_execution.pruned": {
       "address": "edge.command_execution.pruned",
       "description": "Execution reaped by background pruning worker.",
@@ -301,6 +310,61 @@
         ],
         "payload": { "$ref": "#/components/schemas/Envelope" },
         "summary": "Execution record created and queued."
+      },
+      "commandExecutionDroppedMessage": {
+        "bindings": {
+          "amqp": { "bindingVersion": "0.3.0" },
+          "googlepubsub": {
+            "attributes": { "corename": "string", "type": "string" },
+            "bindingVersion": "0.2.0"
+          },
+          "kafka": {
+            "bindingVersion": "0.5.0",
+            "key": {
+              "description": "Kafka partition key — `command_execution_id` from the event data",
+              "type": "string"
+            }
+          },
+          "mqtt": {
+            "bindingVersion": "0.2.0",
+            "contentType": "application/json",
+            "payloadFormatIndicator": 1
+          }
+        },
+        "contentType": "application/json",
+        "examples": [
+          {
+            "name": "example",
+            "payload": {
+              "corename": "prod-us",
+              "data": {
+                "cancelled_at": null,
+                "cluster_name": "prod",
+                "command_execution_id": "cmdexec-abc123",
+                "command_id": "cmd-xyz789",
+                "command_text": "systemctl restart app",
+                "completed_at": null,
+                "exit_code": null,
+                "expires_at": null,
+                "inserted_at": "2026-04-13T10:00:00Z",
+                "node_id": "node-abc123",
+                "sent_at": "2026-04-13T10:00:01Z",
+                "status": "dropped",
+                "target_all": false,
+                "timeout": 30000,
+                "updated_at": "2026-04-13T10:00:00Z"
+              },
+              "datacontenttype": "application/json",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "source": "https://github.com/wenet-ec/edge-core",
+              "specversion": "1.0",
+              "time": "2026-04-13T10:00:00Z",
+              "type": "edge.command_execution.dropped"
+            }
+          }
+        ],
+        "payload": { "$ref": "#/components/schemas/Envelope" },
+        "summary": "Execution dropped because its target node was deleted."
       },
       "commandExecutionExpiredMessage": {
         "bindings": {
@@ -950,7 +1014,14 @@
           "node_id": { "type": "string" },
           "sent_at": { "format": "date-time", "type": ["string", "null"] },
           "status": {
-            "enum": ["pending", "sent", "completed", "cancelled", "expired"],
+            "enum": [
+              "pending",
+              "sent",
+              "completed",
+              "cancelled",
+              "expired",
+              "dropped"
+            ],
             "type": "string"
           },
           "target_all": { "type": "boolean" },
@@ -1047,6 +1118,7 @@
               "edge.command_execution.completed",
               "edge.command_execution.cancelled",
               "edge.command_execution.expired",
+              "edge.command_execution.dropped",
               "edge.command_execution.pruned",
               "edge.ssh_username.verified",
               "edge.self_update_request.completed"
@@ -1555,6 +1627,28 @@
         }
       },
       "channel": { "$ref": "#/channels/edge.command_execution.expired" }
+    },
+    "publish_edge_command_execution_dropped": {
+      "action": "send",
+      "bindings": {
+        "amqp": { "bindingVersion": "0.3.0", "deliveryMode": 2 },
+        "kafka": { "bindingVersion": "0.5.0" },
+        "mqtt": { "bindingVersion": "0.2.0", "qos": 1, "retain": false },
+        "nats": { "bindingVersion": "0.1.0" },
+        "redis": { "bindingVersion": "0.1.0" },
+        "sns": {
+          "bindingVersion": "0.1.0",
+          "consumers": [
+            {
+              "endpoint": { "name": "edge-commands-events-debug" },
+              "protocol": "sqs",
+              "rawMessageDelivery": true
+            }
+          ],
+          "topic": { "name": "edge-commands-events" }
+        }
+      },
+      "channel": { "$ref": "#/channels/edge.command_execution.dropped" }
     },
     "publish_edge_command_execution_pruned": {
       "action": "send",

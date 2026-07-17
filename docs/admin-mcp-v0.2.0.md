@@ -132,7 +132,7 @@ Both `nodes` and `clusters` forms accept optional `node_filters` / `cluster_filt
 
 | Tool | Title | Hints | Description |
 |---|---|---|---|
-| `list_command_executions` | List Command Executions | 🔍 | Filter/sort/paginate. Filters: `command_id_in` (array), `node_id_in` (array), `status_in` (array: `pending`/`sent`/`completed`/`cancelled`/`expired`), `target_all`, `exit_code`, `exit_code_gte/lte`, `output` (wildcard text search), `has_output`, `cluster_name` (wildcard), `cluster_name_in` (array), `has_cluster`, `inserted_at_*`, `updated_at_*`, `sent_at_*`, `completed_at_*`, `cancelled_at_*`. |
+| `list_command_executions` | List Command Executions | 🔍 | Filter/sort/paginate. Filters: `command_id_in` (array), `node_id_in` (array), `status_in` (array: `pending`/`sent`/`completed`/`cancelled`/`expired`/`dropped`), `target_all`, `exit_code`, `exit_code_gte/lte`, `output` (wildcard text search), `has_output`, `cluster_name` (wildcard), `cluster_name_in` (array), `has_cluster`, `inserted_at_*`, `updated_at_*`, `sent_at_*`, `completed_at_*`, `cancelled_at_*`. |
 | `get_command_execution` | Get Command Execution | 🔍 | Required: `execution_id`. Returns status, output, exit code, timestamps. |
 | `cancel_command_execution` | Cancel Command Execution | ⚠️ | Required: `execution_id`. `pending` → cancelled immediately. `sent` → cancellation forwarded to agent (best-effort). Terminal statuses return 409. |
 | `delete_command_execution` | Delete Command Execution | ⚠️ | Required: `execution_id`. Only terminal executions can be deleted. |

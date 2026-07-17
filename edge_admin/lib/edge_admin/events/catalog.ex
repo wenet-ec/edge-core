@@ -171,6 +171,18 @@ defmodule EdgeAdmin.Events.Catalog do
           }
   end
 
+  defmodule CommandExecutionDropped do
+    @moduledoc false
+    @enforce_keys [:execution, :command, :cluster_name]
+    defstruct [:execution, :command, :cluster_name]
+
+    @type t :: %__MODULE__{
+            execution: CommandExecution.t(),
+            command: Command.t(),
+            cluster_name: String.t()
+          }
+  end
+
   defmodule CommandExecutionPruned do
     @moduledoc false
     @enforce_keys [:execution, :command, :cluster_name]
@@ -401,6 +413,19 @@ defmodule EdgeAdmin.Events.Catalog do
         })
     },
     %{
+      module: CommandExecutionDropped,
+      type: "edge.command_execution.dropped",
+      description: "Execution dropped because its target node was deleted.",
+      data_example:
+        Map.merge(@execution_base_data, %{
+          "status" => "dropped",
+          "exit_code" => nil,
+          "sent_at" => "2026-04-13T10:00:01Z",
+          "completed_at" => nil,
+          "cancelled_at" => nil
+        })
+    },
+    %{
       module: CommandExecutionPruned,
       type: "edge.command_execution.pruned",
       description: "Execution reaped by background pruning worker.",
@@ -554,6 +579,8 @@ defmodule EdgeAdmin.Events.Catalog do
     do: execution_data(ex, cmd, cn)
 
   def to_data(%CommandExecutionExpired{execution: ex, command: cmd, cluster_name: cn}), do: execution_data(ex, cmd, cn)
+
+  def to_data(%CommandExecutionDropped{execution: ex, command: cmd, cluster_name: cn}), do: execution_data(ex, cmd, cn)
 
   def to_data(%CommandExecutionPruned{execution: ex, command: cmd, cluster_name: cn}), do: execution_data(ex, cmd, cn)
 

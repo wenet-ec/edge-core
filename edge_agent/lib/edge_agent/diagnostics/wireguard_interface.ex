@@ -50,7 +50,7 @@ defmodule EdgeAgent.Diagnostics.WireguardInterface do
         case JSON.decode(output) do
           {:ok, result} when is_list(result) -> {:ok, result}
           {:ok, _result} -> {:error, "unexpected ip output"}
-          {:error, reason} -> {:error, "invalid ip JSON: #{Exception.message(reason)}"}
+          {:error, reason} -> {:error, "invalid ip JSON: #{inspect(reason)}"}
         end
 
       {output, _exit_code} ->

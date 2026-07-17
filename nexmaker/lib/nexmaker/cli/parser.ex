@@ -1,5 +1,5 @@
-# nexmaker/lib/nexmaker/cli_parser.ex
-defmodule Nexmaker.CliParser do
+# nexmaker/lib/nexmaker/cli/parser.ex
+defmodule Nexmaker.Cli.Parser do
   @moduledoc """
   Robust parser for netclient CLI output based on actual source code patterns.
 

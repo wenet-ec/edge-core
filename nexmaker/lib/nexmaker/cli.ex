@@ -212,7 +212,7 @@ defmodule Nexmaker.Cli do
     case {output, exit_code} do
       {output, 0} ->
         # Use robust parser based on netclient source code
-        Nexmaker.CliParser.parse_list_output(output)
+        Nexmaker.Cli.Parser.parse_list_output(output)
 
       {output, exit_code} ->
         # Check if it's the "no such network" message with non-zero exit
@@ -435,7 +435,7 @@ defmodule Nexmaker.Cli do
   def check_connection(network_name) when is_binary(network_name) do
     case System.cmd("netclient", ["list", network_name], stderr_to_stdout: true) do
       {output, 0} ->
-        case Nexmaker.CliParser.parse_list_output(output) do
+        case Nexmaker.Cli.Parser.parse_list_output(output) do
           {:ok, [network_info | _]} ->
             connected = Map.get(network_info, "connected", false)
 
@@ -548,7 +548,7 @@ defmodule Nexmaker.Cli do
       {output, 0} ->
         if json do
           # Use robust parser based on netclient source code
-          Nexmaker.CliParser.parse_peers_output(output)
+          Nexmaker.Cli.Parser.parse_peers_output(output)
         else
           # Return raw text output
           {:ok, output}
@@ -638,7 +638,7 @@ defmodule Nexmaker.Cli do
       {output, 0} ->
         if json do
           # Use robust parser based on netclient source code
-          Nexmaker.CliParser.parse_ping_output(output)
+          Nexmaker.Cli.Parser.parse_ping_output(output)
         else
           # Return raw text output
           {:ok, output}

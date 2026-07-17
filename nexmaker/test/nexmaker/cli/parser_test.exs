@@ -1,8 +1,8 @@
-# nexmaker/test/nexmaker/cli_parser_test.exs
-defmodule Nexmaker.CliParserTest do
+# nexmaker/test/nexmaker/cli/parser_test.exs
+defmodule Nexmaker.Cli.ParserTest do
   use ExUnit.Case, async: true
 
-  alias Nexmaker.CliParser
+  alias Nexmaker.Cli.Parser, as: CliParser
 
   # ===========================================================================
   # parse_list_output/1

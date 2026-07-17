@@ -5,4 +5,4 @@
 #   test/nexmaker/cli_test.exs  — netclient CLI (join, leave, list, ping, health_check, pull)
 #
 # Pure unit tests:
-#   test/nexmaker/cli_parser_test.exs — CliParser (parse_list_output, parse_ping_output, parse_peers_output)
+#   test/nexmaker/cli/parser_test.exs — Cli.Parser (parse_list_output, parse_ping_output, parse_peers_output)

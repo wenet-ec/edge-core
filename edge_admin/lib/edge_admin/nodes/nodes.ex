@@ -1004,10 +1004,14 @@ defmodule EdgeAdmin.Nodes do
   end
 
   @doc """
-  Updates node health status from agent health check report.
+  Records an agent health report received through HTTP fallback mode.
 
-  Called when agent reports its health via HTTP fallback mode.
-  Updates node status and last_seen_at timestamp.
+  A fallback report proves that the agent can still contact the Admin, but it
+  does not prove that the owning Admin can reach the agent over the VPN. The
+  overall node status is therefore always recorded as `:unhealthy`; only a
+  successful Admin-to-Agent VPN health probe may restore `:healthy`.
+  `last_seen_at` is still updated so fallback contact prevents the node from
+  becoming `:unreachable`.
 
   ## Parameters
   - `node` - The node struct
@@ -1019,15 +1023,18 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec update_node_health_check(Node.t(), map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
   def update_node_health_check(node, params) do
-    with {:ok, attrs} <- Forms.NodeHealthCheckForm.changeset(params) do
+    with {:ok, _attrs} <- Forms.NodeHealthCheckForm.changeset(params) do
       now = DateTime.truncate(DateTime.utc_now(), :second)
 
       update_attrs = %{
-        status: attrs["status"],
+        status: :unhealthy,
         last_seen_at: now
       }
 
-      update_node(node, update_attrs)
+      with {:ok, updated_node} <- update_node(node, update_attrs) do
+        maybe_publish_status_changed(node, :unhealthy)
+        {:ok, updated_node}
+      end
     end
   end
 

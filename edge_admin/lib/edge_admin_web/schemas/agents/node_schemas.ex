@@ -88,7 +88,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         status: %Schema{
           type: :string,
           enum: ["healthy", "unhealthy"],
-          description: "Current node health status"
+          description: "Agent-local health status; fallback reports always record the overall node status as unhealthy"
         }
       },
       required: [:status]
@@ -149,7 +149,11 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
       type: :object,
       properties: %{
         id: %Schema{type: :string, format: :uuid, description: "Node UUID"},
-        status: %Schema{type: :string, enum: ["healthy", "unhealthy"], description: "Current node health status"},
+        status: %Schema{
+          type: :string,
+          enum: ["unhealthy"],
+          description: "Overall node status after a fallback health report"
+        },
         last_seen_at: %Schema{
           type: :string,
           format: :"date-time",
@@ -160,7 +164,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
       required: [:id, :status],
       example: %{
         id: "01234567-89ab-cdef-0123-456789abcdef",
-        status: "healthy",
+        status: "unhealthy",
         last_seen_at: "2026-04-02T10:00:00Z"
       }
     })

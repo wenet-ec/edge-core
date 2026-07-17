@@ -3,8 +3,10 @@ defmodule EdgeAdmin.Nodes.Forms.NodeHealthCheckForm do
   @moduledoc """
   Form for validating agent node health check reports.
 
-  Agents report their health status (healthy or unhealthy) when using HTTP fallback mode.
-  This form validates the status value before updating the node record.
+  Agents report their local health status (healthy or unhealthy) when using HTTP
+  fallback mode. This form validates that payload. The fallback endpoint always
+  records the node's overall status as unhealthy because Admin-to-Agent VPN
+  reachability is a requirement for a healthy node.
   """
   use EdgeAdmin.Form
 

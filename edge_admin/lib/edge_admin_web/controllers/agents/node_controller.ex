@@ -37,7 +37,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
   operation(:update_health_check,
     summary: "Report node health check",
     description:
-      "Agent reports its health status when using HTTP fallback mode. Node ID is inferred from the API token.",
+      "Agent reports local health through HTTP fallback mode. The report refreshes last_seen_at and records the node as unhealthy until the Admin can reach it through the VPN again. Node ID is inferred from the API token.",
     request_body: {"Health check parameters", "application/json", NodeSchemas.NodeHealthCheckRequest, required: true},
     responses: %{
       200 => {"Health check recorded", "application/json", NodeSchemas.NodeHealthCheckResponse},

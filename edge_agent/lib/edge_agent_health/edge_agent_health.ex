@@ -11,8 +11,9 @@ defmodule EdgeAgentHealth do
   - Metrics exporter pair (node_exporter + wireguard_exporter) liveness
   - Proxy server Ranch listeners
 
-  Returns 503 Service Unavailable if any check fails. Used by the
-  `/health` route in `EdgeAgentHealth.Router`.
+  Returns 503 Service Unavailable if any check fails. Used by the `/health`,
+  `/healthz`, and `/readyz` routes in `EdgeAgentHealth.Router`; `/livez`
+  intentionally does not run this check list.
   """
 
   require Logger

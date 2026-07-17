@@ -3,14 +3,14 @@ defmodule EdgeAgentWeb.Endpoint do
   @moduledoc """
   Phoenix endpoint for the agent's HTTP API.
 
-  Serves three concerns from one endpoint:
+  Serves four concerns from one endpoint:
 
-  - `/ping` — unauthenticated liveness reply (status + version), short-circuits
-    before request-id assignment so it can't generate a request id for cheap
-    probes.
-  - `/health` — delegated to `EdgeAgentHealth.Router`, which runs the
-    full check list. Followed by `:halt_if_sent` so an early reply from
-    the health router doesn't leak into the Phoenix routers below.
+  - `/ping` and `/livez` — unauthenticated liveness replies (status + version),
+    short-circuit before request-id assignment so they cannot generate a request
+    id or depend on Agent subsystems.
+  - `/health`, `/healthz`, and `/readyz` — delegated to `EdgeAgentHealth.Router`,
+    which runs the full readiness check list. Followed by `:halt_if_sent` so an
+    early reply from the health router doesn't leak into the Phoenix routers below.
   - `/api/v1/agents/me/metrics/raw` — `PromEx.Plug` exporter, conditionally
     auth-guarded by `:metrics_auth_conditional` (toggled via
     `AGENT_METRICS_AUTH_ENABLED`).
@@ -60,7 +60,7 @@ defmodule EdgeAgentWeb.Endpoint do
   plug(EdgeAgentWeb.Router)
 
   # sobelow_skip ["XSS.SendResp"]
-  defp ping(%{request_path: "/ping"} = conn, _opts) do
+  defp ping(%{request_path: path} = conn, _opts) when path in ["/ping", "/livez"] do
     version = Application.get_env(:edge_agent, :version)
     response = JSON.encode!(%{status: "ok", version: version})
 

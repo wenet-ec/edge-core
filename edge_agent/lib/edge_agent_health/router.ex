@@ -1,10 +1,10 @@
 # edge_agent/lib/edge_agent_health/router.ex
 defmodule EdgeAgentHealth.Router do
   @moduledoc """
-  Plug router for the edge agent's health endpoint. Mounted at `/health` by
-  `EdgeAgentWeb.Endpoint`. Delegates to `PlugCheckup` with the check list
-  from `EdgeAgentHealth.checks/0`. Returns 200 if every check passes,
-  503 (`EdgeAgentHealth.error_code/0`) otherwise.
+  Plug router for the edge agent's full readiness endpoints. Mounted at
+  `/health`, `/healthz`, and `/readyz` by `EdgeAgentWeb.Endpoint`. Delegates to
+  `PlugCheckup` with the check list from `EdgeAgentHealth.checks/0`. Returns
+  200 if every check passes, 503 (`EdgeAgentHealth.error_code/0`) otherwise.
   """
 
   use Plug.Router
@@ -34,6 +34,8 @@ defmodule EdgeAgentHealth.Router do
   plug(:dispatch)
 
   forward("/health", to: Health)
+  forward("/healthz", to: Health)
+  forward("/readyz", to: Health)
 
   match(_, do: conn)
 end

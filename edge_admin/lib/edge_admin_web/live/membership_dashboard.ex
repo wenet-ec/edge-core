@@ -40,6 +40,7 @@ defmodule EdgeAdminWeb.Live.MembershipDashboard do
             orphaned: data.orphaned,
             my_clusters: my_clusters,
             weak_leader?: data.weak_leader?,
+            metadata_status: data.metadata_status,
             error: nil
           )
 
@@ -116,6 +117,23 @@ defmodule EdgeAdminWeb.Live.MembershipDashboard do
                 <tr><th>Max WireGuard Peers</th><td>{@admin.max_wireguard_peers}</td></tr>
                 <tr><th>Admin Peer Count</th><td>{@admin.admin_peer_count}</td></tr>
                 <tr><th>Edge Node Capacity</th><td>{@admin.edge_node_capacity} nodes</td></tr>
+                <tr><th>Last Recomputed</th><td>{format_timestamp(@admin.last_computed_at)}</td></tr>
+                <tr>
+                  <th>Metadata State</th>
+                  <td>
+                    <%= if @metadata_status.recomputing? do %>
+                      <span class="badge bg-warning text-dark">Recomputing</span>
+                    <% else %>
+                      <span class="badge bg-success">Current</span>
+                    <% end %>
+                  </td>
+                </tr>
+                <%= if @metadata_status.last_recompute_error do %>
+                  <tr>
+                    <th>Last Error</th>
+                    <td><code>{@metadata_status.last_recompute_error}</code></td>
+                  </tr>
+                <% end %>
                 <tr>
                   <th>Weak Leader?</th>
                   <td>
@@ -166,11 +184,11 @@ defmodule EdgeAdminWeb.Live.MembershipDashboard do
       <div class="col-12">
         <div class="card">
           <div class="card-header">
-            <h6 class="mb-0">Topology — Connected Peers ({length(@admin_cluster.topology)})</h6>
+            <h6 class="mb-0">Observed Admins ({length(@admin_cluster.topology)})</h6>
           </div>
           <div class="card-body">
             <%= if @admin_cluster.topology == [] do %>
-              <p class="text-muted mb-0">No peers in topology.</p>
+              <p class="text-muted mb-0">No admins in the observed topology.</p>
             <% else %>
               <table class="table table-sm mb-0">
                 <thead>
@@ -310,13 +328,16 @@ defmodule EdgeAdminWeb.Live.MembershipDashboard do
   def remote_snapshot do
     alias EdgeAdmin.Admins.Metadata
 
+    metadata = Metadata.snapshot()
+
     {:ok,
      %{
-       admin: Metadata.get_admin(),
-       admin_cluster: Metadata.get_admin_cluster(),
-       edge_clusters: Metadata.get_edge_clusters(),
-       orphaned: Metadata.get_orphaned_clusters(),
-       weak_leader?: Metadata.am_i_weak_leader?()
+       admin: metadata.admin,
+       admin_cluster: metadata.admin_cluster,
+       edge_clusters: metadata.edge_clusters,
+       orphaned: metadata.orphaned_clusters,
+       weak_leader?: metadata.admin.name == metadata.admin_cluster.weak_leader,
+       metadata_status: Metadata.status()
      }}
   rescue
     e -> {:error, Exception.message(e)}
@@ -331,4 +352,7 @@ defmodule EdgeAdminWeb.Live.MembershipDashboard do
     |> Map.get(admin_name, %{})
     |> Enum.reduce(0, fn {_cluster, nodes}, acc -> acc + length(nodes) end)
   end
+
+  defp format_timestamp(nil), do: "never"
+  defp format_timestamp(datetime), do: datetime |> DateTime.truncate(:second) |> DateTime.to_iso8601()
 end

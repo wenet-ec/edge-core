@@ -40,9 +40,11 @@ defmodule EdgeAdmin.Admins.Metadata do
 
   ## ETS Schema
 
-  The `:metadata` table contains 5 keys:
+  The `:metadata` table contains one `:snapshot` key. Its value is a map that
+  contains the following fields. Replacing that one ETS entry means readers
+  never combine values from different recomputations.
 
-  ### `:admin` - This Admin's Info
+  ### `admin` - This Admin's Info
   ```elixir
   %{
     id: "abc123",
@@ -60,7 +62,7 @@ defmodule EdgeAdmin.Admins.Metadata do
 
   Invariant: `max_wireguard_peers == admin_peer_count + edge_node_capacity`.
 
-  ### `:admin_cluster` - Full Topology
+  ### `admin_cluster` - Full Topology
   ```elixir
   %{
     name: "admin-cluster-1",
@@ -79,7 +81,7 @@ defmodule EdgeAdmin.Admins.Metadata do
   }
   ```
 
-  ### `:edge_clusters` - Assignment Map
+  ### `edge_clusters` - Assignment Map
   ```elixir
   %{
     "admin-abc123" => %{
@@ -92,7 +94,7 @@ defmodule EdgeAdmin.Admins.Metadata do
   }
   ```
 
-  ### `:orphaned_clusters` - Unassigned Clusters
+  ### `orphaned_clusters` - Unassigned Clusters
   ```elixir
   %{
     "cluster-orphaned-1" => ["node-5", "node-6"],
@@ -100,7 +102,7 @@ defmodule EdgeAdmin.Admins.Metadata do
   }
   ```
 
-  ### `:node_index` - Inverted Node Index
+  ### `node_index` - Inverted Node Index
   Rebuilt on every recomputation. O(1) lookup for `find_node_cluster/1`.
   ```elixir
   %{
@@ -159,6 +161,7 @@ defmodule EdgeAdmin.Admins.Metadata do
   @callback degraded?() :: boolean()
 
   @table :metadata
+  @snapshot_key :snapshot
 
   # === Lifecycle ===
 
@@ -192,8 +195,7 @@ defmodule EdgeAdmin.Admins.Metadata do
     # Initial ETS state (placeholders - will be populated by first computation).
     # admin_peer_count and edge_node_capacity reflect a lone admin (no peers yet);
     # they're recomputed on every metadata recomputation as topology changes.
-    :ets.insert(@table, {
-      :admin,
+    admin =
       %{
         id: admin_id,
         name: admin_name,
@@ -206,10 +208,8 @@ defmodule EdgeAdmin.Admins.Metadata do
         netmaker_host_id: netmaker_host_id,
         last_computed_at: nil
       }
-    })
 
-    :ets.insert(@table, {
-      :admin_cluster,
+    admin_cluster =
       %{
         name: admin_cluster_name,
         total_admins: 0,
@@ -219,21 +219,13 @@ defmodule EdgeAdmin.Admins.Metadata do
         topology: [],
         weak_leader: admin_name
       }
-    })
 
-    :ets.insert(@table, {
-      :edge_clusters,
-      %{admin_name => %{}}
-    })
-
-    :ets.insert(@table, {
-      :orphaned_clusters,
-      %{}
-    })
-
-    :ets.insert(@table, {
-      :node_index,
-      %{}
+    put_snapshot(%{
+      admin: admin,
+      admin_cluster: admin_cluster,
+      edge_clusters: %{admin_name => %{}},
+      orphaned_clusters: %{},
+      node_index: %{}
     })
 
     # Subscribe to PubSub events (cluster/node CRUD from this admin cluster)
@@ -246,6 +238,7 @@ defmodule EdgeAdmin.Admins.Metadata do
       last_computed_at: nil,
       recomputing?: false,
       pending_recompute: false,
+      last_recompute_error: nil,
       initialized: false
     }
 
@@ -259,13 +252,21 @@ defmodule EdgeAdmin.Admins.Metadata do
 
   # === Public API (Queries) ===
 
-  def get_admin do
-    [{:admin, admin}] = :ets.lookup(@table, :admin)
-    admin
+  @doc """
+  Returns one internally consistent metadata snapshot.
+
+  The snapshot is published as one ETS object after every recomputation, so a
+  caller cannot observe a new topology together with old assignments.
+  """
+  def snapshot do
+    [{@snapshot_key, snapshot}] = :ets.lookup(@table, @snapshot_key)
+    snapshot
   end
 
+  def get_admin, do: snapshot().admin
+
   def get_cluster_owner(cluster_name) do
-    [{:edge_clusters, assignments}] = :ets.lookup(@table, :edge_clusters)
+    assignments = snapshot().edge_clusters
 
     Enum.find_value(assignments, fn {admin_name, clusters} ->
       if Map.has_key?(clusters, cluster_name), do: admin_name
@@ -283,7 +284,7 @@ defmodule EdgeAdmin.Admins.Metadata do
   - {:error, :not_found} if node not assigned to any cluster
   """
   def find_node_cluster(node_name) do
-    [{:node_index, index}] = :ets.lookup(@table, :node_index)
+    index = snapshot().node_index
 
     case Map.get(index, node_name) do
       {cluster_name, admin_name} -> {:ok, cluster_name, admin_name}
@@ -292,34 +293,28 @@ defmodule EdgeAdmin.Admins.Metadata do
   end
 
   def get_my_clusters do
-    [{:admin, %{name: admin_name}}] = :ets.lookup(@table, :admin)
-    [{:edge_clusters, assignments}] = :ets.lookup(@table, :edge_clusters)
-    Map.get(assignments, admin_name, %{})
+    metadata = snapshot()
+    Map.get(metadata.edge_clusters, metadata.admin.name, %{})
   end
 
   def get_peer_admins do
-    [{:admin_cluster, %{topology: topology}}] = :ets.lookup(@table, :admin_cluster)
-    topology
+    snapshot().admin_cluster.topology
   end
 
   def get_admin_cluster do
-    [{:admin_cluster, admin_cluster}] = :ets.lookup(@table, :admin_cluster)
-    admin_cluster
+    snapshot().admin_cluster
   end
 
   def get_edge_clusters do
-    [{:edge_clusters, assignments}] = :ets.lookup(@table, :edge_clusters)
-    assignments
+    snapshot().edge_clusters
   end
 
   def get_orphaned_clusters do
-    [{:orphaned_clusters, orphaned}] = :ets.lookup(@table, :orphaned_clusters)
-    orphaned
+    snapshot().orphaned_clusters
   end
 
   def degraded? do
-    [{:admin_cluster, %{degraded: degraded}}] = :ets.lookup(@table, :admin_cluster)
-    degraded
+    snapshot().admin_cluster.degraded
   end
 
   @doc """
@@ -336,9 +331,25 @@ defmodule EdgeAdmin.Admins.Metadata do
   leader semantics are ever needed, introduce a :strong_leader key separately.
   """
   def am_i_weak_leader? do
-    [{:admin, %{name: my_name}}] = :ets.lookup(@table, :admin)
-    [{:admin_cluster, %{weak_leader: weak_leader}}] = :ets.lookup(@table, :admin_cluster)
-    my_name == weak_leader
+    metadata = snapshot()
+    metadata.admin.name == metadata.admin_cluster.weak_leader
+  end
+
+  @doc """
+  Returns the current recomputation lifecycle state for operator-facing views.
+  """
+  def status do
+    case Process.whereis(__MODULE__) do
+      nil ->
+        %{recomputing?: false, pending_recompute: false, last_recompute_error: nil}
+
+      pid ->
+        try do
+          GenServer.call(pid, :status, 1_000)
+        catch
+          :exit, _ -> %{recomputing?: false, pending_recompute: false, last_recompute_error: nil}
+        end
+    end
   end
 
   def initialized? do
@@ -364,6 +375,10 @@ defmodule EdgeAdmin.Admins.Metadata do
   @impl true
   def handle_call(:initialized?, _from, state) do
     {:reply, Map.get(state, :initialized, false), state}
+  end
+
+  def handle_call(:status, _from, state) do
+    {:reply, Map.take(state, [:recomputing?, :pending_recompute, :last_recompute_error]), state}
   end
 
   @impl true
@@ -413,21 +428,39 @@ defmodule EdgeAdmin.Admins.Metadata do
     request_recomputation(state, :node_updated)
   end
 
-  # Recomputation complete
+  # Recomputation completion/failure
   @impl true
-  def handle_info({:recomputation_complete, trigger, duration}, state) do
+  def handle_info({:recomputation_finished, trigger, duration, :ok}, state) do
     if state.pending_recompute do
       # Something changed while we worked - do it again
       Logger.debug("Metadata: Pending recomputation triggered")
       spawn_recomputation_task(state, :pending)
-      {:noreply, %{state | recomputing?: true, pending_recompute: false}}
+      {:noreply, %{state | recomputing?: true, pending_recompute: false, last_recompute_error: nil}}
     else
       Logger.debug("Metadata: Recomputation complete, idle")
 
       # Emit recomputation telemetry
       emit_recomputation_telemetry(trigger, duration)
 
-      {:noreply, %{state | recomputing?: false}}
+      {:noreply, %{state | recomputing?: false, last_recompute_error: nil}}
+    end
+  end
+
+  def handle_info({:recomputation_finished, trigger, _duration, {:error, reason}}, state) do
+    Logger.error("Metadata recomputation failed (#{trigger}): #{reason}")
+
+    if state.pending_recompute do
+      spawn_recomputation_task(state, :pending)
+
+      {:noreply,
+       %{
+         state
+         | recomputing?: true,
+           pending_recompute: false,
+           last_recompute_error: reason
+       }}
+    else
+      {:noreply, %{state | recomputing?: false, last_recompute_error: reason}}
     end
   end
 
@@ -451,9 +484,19 @@ defmodule EdgeAdmin.Admins.Metadata do
 
     Task.start(fn ->
       start_time = System.monotonic_time(:millisecond)
-      perform_recomputation(state)
+
+      result =
+        try do
+          perform_recomputation(state)
+          :ok
+        rescue
+          exception -> {:error, Exception.message(exception)}
+        catch
+          kind, reason -> {:error, "#{kind}: #{inspect(reason)}"}
+        end
+
       duration = System.monotonic_time(:millisecond) - start_time
-      send(parent, {:recomputation_complete, trigger, duration})
+      send(parent, {:recomputation_finished, trigger, duration, result})
     end)
   end
 
@@ -490,8 +533,7 @@ defmodule EdgeAdmin.Admins.Metadata do
     # :syn.members/2 returns list of {pid, metadata} tuples
     # Metadata contains: %{name: admin_name, max_wireguard_peers: int,
     #   erlang_node_name: ..., vpn_hostname: ..., netmaker_host_id: ...}
-    [{:admin, admin_info}] = :ets.lookup(@table, :admin)
-    admin_cluster_name = admin_info.admin_cluster_name
+    admin_cluster_name = snapshot().admin.admin_cluster_name
 
     try do
       members = :syn.members(:admin_scope, admin_cluster_name)
@@ -527,16 +569,8 @@ defmodule EdgeAdmin.Admins.Metadata do
   end
 
   defp update_ets(result, all_admins) do
-    # Update :edge_clusters
-    :ets.insert(@table, {:edge_clusters, result.edge_clusters})
-
-    # Update :orphaned_clusters
-    :ets.insert(@table, {:orphaned_clusters, result.orphaned_clusters})
-
-    :ets.insert(@table, {:node_index, result.node_index})
-
-    # Update :admin_cluster topology
-    [{:admin_cluster, admin_cluster}] = :ets.lookup(@table, :admin_cluster)
+    previous = snapshot()
+    admin_cluster = previous.admin_cluster
 
     # Extract metadata values
     topology = Map.values(all_admins)
@@ -551,10 +585,8 @@ defmodule EdgeAdmin.Admins.Metadata do
         weak_leader: result.weak_leader
     }
 
-    :ets.insert(@table, {:admin_cluster, updated_admin_cluster})
-
-    # Update :admin last_computed_at and the derived capacity fields for self
-    [{:admin, admin}] = :ets.lookup(@table, :admin)
+    # Update :admin last_computed_at and the derived capacity fields for self.
+    admin = previous.admin
     self_enriched = Map.fetch!(all_admins, admin.name)
 
     updated_admin = %{
@@ -564,17 +596,23 @@ defmodule EdgeAdmin.Admins.Metadata do
         last_computed_at: DateTime.truncate(DateTime.utc_now(), :second)
     }
 
-    :ets.insert(@table, {:admin, updated_admin})
+    put_snapshot(%{
+      admin: updated_admin,
+      admin_cluster: updated_admin_cluster,
+      edge_clusters: result.edge_clusters,
+      orphaned_clusters: result.orphaned_clusters,
+      node_index: result.node_index
+    })
 
     :ok
   end
 
   defp emit_recomputation_telemetry(trigger, duration) do
-    # Read current state from ETS
-    [{:edge_clusters, edge_clusters}] = :ets.lookup(@table, :edge_clusters)
-    [{:orphaned_clusters, orphaned_clusters}] = :ets.lookup(@table, :orphaned_clusters)
-    [{:admin, admin}] = :ets.lookup(@table, :admin)
-    [{:admin_cluster, admin_cluster}] = :ets.lookup(@table, :admin_cluster)
+    metadata = snapshot()
+    edge_clusters = metadata.edge_clusters
+    orphaned_clusters = metadata.orphaned_clusters
+    admin = metadata.admin
+    admin_cluster = metadata.admin_cluster
 
     # Count assigned clusters for this admin
     assigned_clusters =
@@ -597,5 +635,9 @@ defmodule EdgeAdmin.Admins.Metadata do
       },
       %{trigger: trigger}
     )
+  end
+
+  defp put_snapshot(snapshot) do
+    :ets.insert(@table, {@snapshot_key, snapshot})
   end
 end

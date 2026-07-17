@@ -12,6 +12,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
   - SSH server (connection, authentication, session duration)
   - VPN config pull (periodic netclient pull as DNS-recovery backstop)
   - Health check (agent → admin status reports in HTTP-fallback mode)
+  - Settings Config refresh (Admin URLs and Core DERP map sources)
 
   ## Operator notes
 
@@ -20,10 +21,8 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
   - `[:edge_agent, :commands, :execution, :exit_code]` is a `last_value` —
     under concurrent command execution, the value reflects whichever event
     fired last. Useful as a spot indicator, **not** as a per-command tracker.
-  - `[:edge_agent, :ssh, :authentication, :total]` tags by `:username`. SSH
-    usernames come from the connecting client and are attacker-controllable;
-    the time-series cardinality is bounded only by external behaviour. Watch
-    for cardinality blow-ups under brute-force probing.
+  - SSH authentication metrics deliberately tag only bounded `:auth_method`
+    and `:result` values. Usernames belong in audit logs, not Prometheus labels.
   """
 
   use PromEx.Plugin
@@ -40,7 +39,8 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         ssh_metrics() ++
         discovery_metrics() ++
         vpn_metrics() ++
-        health_check_metrics()
+        health_check_metrics() ++
+        settings_config_metrics()
     )
   end
 
@@ -170,6 +170,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :proxy, :http, :blocked, :total],
         event_name: [:edge_agent, :proxy, :http, :blocked],
         description: "Total HTTP proxy requests blocked by security rules",
+        measurement: :count,
         tags: [:reason],
         tag_values: &get_reason_tag/1
       ),
@@ -177,6 +178,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :proxy, :socks5, :blocked, :total],
         event_name: [:edge_agent, :proxy, :socks5, :blocked],
         description: "Total SOCKS5 proxy requests blocked by security rules",
+        measurement: :count,
         tags: [:reason],
         tag_values: &get_reason_tag/1
       ),
@@ -185,6 +187,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         event_name: [:edge_agent, :proxy, :tunnel, :closed],
         description:
           "Tunnels that finished forwarding, tagged by protocol and close reason (normal | deadline | drain_timeout)",
+        measurement: :duration_ms,
         tags: [:protocol, :reason],
         tag_values: &get_tunnel_close_tag/1
       ),
@@ -230,9 +233,8 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
       counter(
         [:edge_agent, :ssh, :authentication, :total],
         event_name: [:edge_agent, :ssh, :authentication],
-        description:
-          "Total SSH authentication attempts. WARNING: tagged by `:username` which is attacker-controllable — cardinality is unbounded under brute-force probing.",
-        tags: [:username, :auth_method, :result],
+        description: "Total SSH authentication attempts by method and result",
+        tags: [:auth_method, :result],
         tag_values: &get_ssh_auth_tags/1
       ),
       distribution(
@@ -269,6 +271,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :vpn, :pull, :total],
         event_name: [:edge_agent, :vpn, :pull],
         description: "Total number of VPN config pull attempts",
+        measurement: :count,
         tags: [:result],
         tag_values: &get_result_tag/1
       )
@@ -281,6 +284,20 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :health_check, :report, :total],
         event_name: [:edge_agent, :health_check, :report],
         description: "Total number of health check reports sent to admin (HTTP fallback mode)",
+        measurement: :count,
+        tags: [:result],
+        tag_values: &get_result_tag/1
+      )
+    ]
+  end
+
+  defp settings_config_metrics do
+    [
+      counter(
+        [:edge_agent, :settings_config, :refresh, :total],
+        event_name: [:edge_agent, :settings_config, :refresh],
+        description: "Total authenticated refresh attempts for Admin URLs and Core DERP map sources",
+        measurement: :count,
         tags: [:result],
         tag_values: &get_result_tag/1
       )
@@ -300,8 +317,8 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
     %{protocol: to_string(protocol)}
   end
 
-  defp get_ssh_auth_tags(%{username: username, auth_method: auth_method, result: result}) do
-    %{username: to_string(username), auth_method: to_string(auth_method), result: to_string(result)}
+  defp get_ssh_auth_tags(%{auth_method: auth_method, result: result}) do
+    %{auth_method: to_string(auth_method), result: to_string(result)}
   end
 
   defp get_reason_tag(%{reason: reason}) do

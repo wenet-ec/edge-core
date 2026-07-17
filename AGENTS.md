@@ -30,16 +30,16 @@ git clone --branch v1.6.0-derp https://github.com/wenet-ec/netclient edge_vpn/ne
 
 When working on anything related to the Netmaker API, netclient enrollment, DERP relay, or WireGuard mesh behavior, read the source directly from `edge_vpn/`. The Netmaker OpenAPI spec is also available at `docs/netmaker-openapi-v1.6.0.yml`.
 
-### DERP and dynamic connectivity contract
+### DERP and dynamic Settings Config contract
 
 - `CORE_DERP_MAP_URLS` is Edge Admin deployment configuration: an ordered comma-separated list of mirror or hostname-migration URLs for **one complete canonical Core DERP map**. It is not stored in the Admin database.
 - Admin's `/start` script bridges `CORE_DERP_MAP_URLS` into netclient's existing `DERP_MAP_URLS` contract before the daemon starts. Do not reuse `DERP_MAP_URLS` as an application configuration name.
 - In the `v1.6.0-derp` netclient fork, the first usable `DERP_MAP_URLS` source wins; Core maps are never merged. Every migration URL must serve the same complete map. If no Core source is usable, netclient falls back to Tailscale's public map.
 - `ADMIN_URLS` remains a list of independently useful Admin API endpoints; agents use it for transport failover. Do not apply canonical-map semantics to Admin URLs.
-- The authenticated agent refresh endpoint is `GET /api/v1/agents/settings/config`. It returns only non-secret connectivity configuration (`admin_urls`, `core_derp_map_urls`), follows the normal controller/JSON/OpenAPI schema convention, and remains available in degraded mode so agents can recover routes.
+- The authenticated agent refresh endpoint is `GET /api/v1/agents/settings/config`. It returns only non-secret Settings Config (`admin_urls`, `core_derp_map_urls`), follows the normal controller/JSON/OpenAPI schema convention, and remains available in degraded mode so agents can recover routes.
 - Agent netclient receives a fixed localhost DERP reflection URL at process startup. Dynamic Core map sources are fetched by the Agent application and reflected there; never attempt to change a running netclient's environment.
 - The Agent refreshes settings on `REFRESH_SETTINGS_CONFIG_SCHEDULE` (default: every five minutes). Its DERP-map cache refreshes separately through `DERP_MAP_REFRESH_INTERVAL_MS` (default: five minutes).
-- Do not introduce an Admin database table, revision counter, or server-side persistence for this connectivity configuration. Deployment configuration is advertised by each Admin; agents retain learned endpoints locally to tolerate rolling hostname migration.
+- Do not introduce an Admin database table, revision counter, or server-side persistence for this Settings Config. Deployment configuration is advertised by each Admin; agents retain learned endpoints locally to tolerate rolling hostname migration.
 
 ## Architecture
 
@@ -174,7 +174,7 @@ All operations use Docker Compose through the `./bin/run` script. No local Elixi
 3. Agent joins VPN using enrollment token: `Nexmaker.EnrollmentKeys.enroll/2`
 4. Agent discovers admin URL from Netmaker metadata
 5. Agent registers with admin: `POST /api/v1/agents/nodes`
-6. Admin returns API token plus initial `admin_urls` and `core_derp_map_urls`; the agent later refreshes non-secret connectivity configuration through `GET /api/v1/agents/settings/config`
+6. Admin returns API token plus initial `admin_urls` and `core_derp_map_urls`; the agent later refreshes non-secret Settings Config through `GET /api/v1/agents/settings/config`
 7. Agent registers node aliases (best-effort, from `ALIASES` env var — comma-separated friendly names)
 8. Agent downloads pending command executions
 9. Agent ready to receive commands

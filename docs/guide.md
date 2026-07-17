@@ -15,7 +15,7 @@ This guide is for operators and integrators using a running Edge Admin. If you w
 
 ---
 
-## Connectivity URL migrations
+## Settings Config URL migrations
 
 `ADMIN_URLS` and `CORE_DERP_MAP_URLS` have deliberately different migration rules.
 

@@ -337,7 +337,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "VPN config pull failures or health-check HTTP-fallback report failures. Either signals connectivity trouble between agent and admin.",
+      "description": "VPN config pull, fallback health-report, or Settings Config refresh failures. Each indicates a problem reaching Admin.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -432,9 +432,18 @@
           "expr": "sum(rate(edge_agent_health_check_report_total{result=\"failure\"}[$__rate_interval]))",
           "refId": "B",
           "legendFormat": "health report"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(edge_agent_settings_config_refresh_total{result=~\"failure|invalid_response\"}[$__rate_interval])) by (result)",
+          "refId": "C",
+          "legendFormat": "settings config {{result}}"
         }
       ],
-      "title": "VPN / Health Failures (rate)",
+      "title": "Admin Contact / Settings Config Failures (rate)",
       "type": "timeseries"
     },
     {

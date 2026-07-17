@@ -17,16 +17,21 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
     edge_agent_prom_ex_beam_memory_processes_total_bytes 26214400
     edge_agent_prom_ex_beam_memory_ets_total_bytes 5242880
     edge_agent_prom_ex_beam_memory_binary_total_bytes 2097152
-    edge_agent_bootstrap_registration_total{result="ok"} 1
-    edge_agent_discovery_scan_total{result="ok"} 5
-    edge_agent_discovery_scan_total{result="no_admins"} 2
+    edge_agent_bootstrap_registration_total{status="success"} 1
+    edge_agent_bootstrap_registration_total{status="failure"} 1
+    edge_agent_discovery_scan_total{status="success"} 5
+    edge_agent_discovery_scan_total{status="empty"} 2
     edge_agent_discovery_admins_found 3
-    edge_agent_commands_sync_total{result="ok"} 10
-    edge_agent_commands_execution_enqueued_total{result="ok"} 8
-    edge_agent_commands_execution_completed_total{result="ok"} 7
-    edge_agent_commands_report_total{result="ok"} 7
-    edge_agent_proxy_http_connection_total{result="ok"} 100
-    edge_agent_proxy_socks5_connection_total{result="ok"} 50
+    edge_agent_commands_sync_total 10
+    edge_agent_commands_sync_sent_count 4
+    edge_agent_commands_sync_pending_count 1
+    edge_agent_commands_execution_enqueued_total{status="success"} 8
+    edge_agent_commands_execution_completed_total{result="success"} 7
+    edge_agent_commands_report_total{status="success"} 7
+    edge_agent_commands_report_batch_size 3
+    edge_agent_commands_execution_exit_code 0
+    edge_agent_proxy_http_connection_total{result="success"} 100
+    edge_agent_proxy_socks5_connection_total{result="success"} 50
     edge_agent_proxy_http_blocked_total{reason="localhost_blocked"} 5
     edge_agent_proxy_http_blocked_total{reason="docker_network_blocked"} 3
     edge_agent_proxy_socks5_blocked_total{reason="localhost_blocked"} 2
@@ -38,13 +43,16 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
     edge_agent_proxy_tunnel_bytes_up_total{protocol="socks5"} 524288
     edge_agent_proxy_tunnel_bytes_down_total{protocol="http"} 4194304
     edge_agent_proxy_tunnel_bytes_down_total{protocol="socks5"} 2097152
-    edge_agent_ssh_authentication_total{result="ok"} 4
-    edge_agent_ssh_authentication_total{result="failed"} 1
-    edge_agent_ssh_connection_total{result="ok"} 3
+    edge_agent_ssh_authentication_total{auth_method="password",result="success"} 4
+    edge_agent_ssh_authentication_total{auth_method="public_key",result="failure"} 1
+    edge_agent_ssh_connection_total{result="success"} 3
     edge_agent_vpn_pull_total{result="success"} 6
     edge_agent_vpn_pull_total{result="failure"} 1
     edge_agent_health_check_report_total{result="success"} 12
     edge_agent_health_check_report_total{result="failure"} 3
+    edge_agent_settings_config_refresh_total{result="success"} 5
+    edge_agent_settings_config_refresh_total{result="invalid_response"} 1
+    edge_agent_settings_config_refresh_total{result="failure"} 2
     edge_agent_prom_ex_oban_queue_length_count{queue="commands",state="available"} 3
     edge_agent_prom_ex_oban_queue_length_count{queue="commands",state="executing"} 1
     edge_agent_prom_ex_oban_queue_length_count{queue="commands",state="completed"} 50
@@ -92,15 +100,15 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
   # ---------------------------------------------------------------------------
 
   describe "parse/1 — counter extraction" do
-    test "sums discovery_scans across result labels" do
+    test "sums discovery_scans across status labels" do
       result = AgentMetricsParser.parse(sample_prometheus_text())
-      # ok(5) + no_admins(2) = 7
+      # success(5) + empty(2) = 7
       assert result["discovery_scans"] == 7
     end
 
-    test "sums ssh_authentications across result labels" do
+    test "sums ssh_authentications across method and result labels" do
       result = AgentMetricsParser.parse(sample_prometheus_text())
-      # ok(4) + failed(1) = 5
+      # password/success(4) + public_key/failure(1) = 5
       assert result["ssh_authentications"] == 5
     end
 
@@ -122,6 +130,15 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert result["health_check_reports"] == 15
     end
 
+    test "splits Settings Config refreshes by result" do
+      result = AgentMetricsParser.parse(sample_prometheus_text())
+
+      assert result["settings_config_refreshes"] == 8
+      assert result["settings_config_refreshes_success"] == 5
+      assert result["settings_config_refreshes_invalid_response"] == 1
+      assert result["settings_config_refreshes_failure"] == 2
+    end
+
     test "counter returns 0 when metric not present" do
       result = AgentMetricsParser.parse(empty_prometheus_text())
       assert result["discovery_scans"] == 0
@@ -129,6 +146,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert result["ssh_authentications"] == 0
       assert result["vpn_pulls"] == 0
       assert result["health_check_reports"] == 0
+      assert result["settings_config_refreshes"] == 0
     end
 
     test "sums proxy tunnels_closed across all reasons and protocols" do
@@ -245,12 +263,14 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert metrics.node_id == "node-abc"
       assert metrics.cluster_name == "prod"
       assert %AgentMetrics.Application{} = metrics.application
+      assert %AgentMetrics.Bootstrap{} = metrics.bootstrap
       assert %AgentMetrics.Commands{} = metrics.commands
       assert %AgentMetrics.Discovery{} = metrics.discovery
       assert %AgentMetrics.Proxy{} = metrics.proxy
       assert %AgentMetrics.Ssh{} = metrics.ssh
       assert %AgentMetrics.Vpn{} = metrics.vpn
       assert %AgentMetrics.HealthCheck{} = metrics.health_check
+      assert %AgentMetrics.SettingsConfig{} = metrics.settings_config
       assert is_list(metrics.oban_queues)
     end
 
@@ -279,6 +299,10 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert metrics.commands.enqueued_total == 8
       assert metrics.commands.completed_total == 7
       assert metrics.commands.reported_total == 7
+      assert metrics.commands.sync_sent_count == 4
+      assert metrics.commands.sync_pending_count == 1
+      assert metrics.commands.report_batch_size == 3
+      assert metrics.commands.last_exit_code == 0
     end
 
     test "discovery struct has correct totals" do
@@ -346,6 +370,19 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       metrics = AgentMetrics.from_raw_metrics(raw, "node-abc")
       # success(12) + failure(3) = 15
       assert metrics.health_check.reports_total == 15
+      assert metrics.health_check.reports_success_total == 12
+      assert metrics.health_check.reports_failure_total == 3
+    end
+
+    test "Settings Config struct has correct refresh outcomes" do
+      raw = AgentMetricsParser.parse(sample_prometheus_text())
+      raw = Map.put(raw, "cluster_name", "prod")
+      metrics = AgentMetrics.from_raw_metrics(raw, "node-abc")
+
+      assert metrics.settings_config.refreshes_total == 8
+      assert metrics.settings_config.refreshes_success_total == 5
+      assert metrics.settings_config.refreshes_invalid_response_total == 1
+      assert metrics.settings_config.refreshes_failure_total == 2
     end
 
     test "oban_queues is a list of ObanQueue structs" do
@@ -367,6 +404,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert metrics.ssh.authentications_total == 0
       assert metrics.vpn.pulls_total == 0
       assert metrics.health_check.reports_total == 0
+      assert metrics.settings_config.refreshes_total == 0
     end
 
     test "nil uptime_ms defaults to 0 seconds" do

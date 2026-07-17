@@ -194,7 +194,7 @@ defmodule EdgeAdminWeb.Router do
     # Alias registration
     post("/aliases", AliasController, :create)
 
-    # Refreshable, non-secret connectivity configuration.
+    # Refreshable, non-secret Settings Config.
     get("/settings/config", SettingsController, :config)
   end
 

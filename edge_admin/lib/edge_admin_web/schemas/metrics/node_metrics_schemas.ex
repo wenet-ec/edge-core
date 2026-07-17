@@ -305,6 +305,47 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                   type: :integer,
                   nullable: true,
                   description: "Total results reported back to admin"
+                },
+                sync_sent_count: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Executions fetched in the most recent sync"
+                },
+                sync_pending_count: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Pending executions fetched in the most recent sync"
+                },
+                report_batch_size: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Executions in the most recent report batch"
+                },
+                last_exit_code: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Exit code from the most recently completed execution; spot indicator only"
+                }
+              }
+            },
+            bootstrap: %Schema{
+              type: :object,
+              description: "Agent registration metrics",
+              properties: %{
+                registrations_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total registration attempts"
+                },
+                registrations_success_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Successful registration attempts"
+                },
+                registrations_failure_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Failed registration attempts"
                 }
               }
             },
@@ -437,6 +478,16 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                   nullable: true,
                   description:
                     "Total VPN config pulls performed (daily backstop for DNS recovery after netclient restart)"
+                },
+                pulls_success_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Successful VPN config pulls"
+                },
+                pulls_failure_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Failed VPN config pulls"
                 }
               }
             },
@@ -449,6 +500,42 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                   type: :integer,
                   nullable: true,
                   description: "Total health check reports sent to admin via HTTP fallback"
+                },
+                reports_success_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Health check reports accepted by Admin"
+                },
+                reports_failure_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Health check reports that could not reach Admin"
+                }
+              }
+            },
+            settings_config: %Schema{
+              type: :object,
+              description: "Refresh outcomes for Admin-advertised Settings Config",
+              properties: %{
+                refreshes_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total authenticated Settings Config refresh attempts"
+                },
+                refreshes_success_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Successful Settings Config refreshes"
+                },
+                refreshes_invalid_response_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Refreshes that returned an invalid Settings Config response"
+                },
+                refreshes_failure_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Refreshes that could not reach Admin"
                 }
               }
             },
@@ -495,7 +582,16 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
             synced_total: 156,
             enqueued_total: 152,
             completed_total: 150,
-            reported_total: 150
+            reported_total: 150,
+            sync_sent_count: 2,
+            sync_pending_count: 1,
+            report_batch_size: 3,
+            last_exit_code: 0
+          },
+          bootstrap: %{
+            registrations_total: 4,
+            registrations_success_total: 3,
+            registrations_failure_total: 1
           },
           discovery: %{
             scans_total: 48,
@@ -530,10 +626,20 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
             connections_total: 44
           },
           vpn: %{
-            pulls_total: 7
+            pulls_total: 7,
+            pulls_success_total: 6,
+            pulls_failure_total: 1
           },
           health_check: %{
-            reports_total: 0
+            reports_total: 2,
+            reports_success_total: 1,
+            reports_failure_total: 1
+          },
+          settings_config: %{
+            refreshes_total: 12,
+            refreshes_success_total: 10,
+            refreshes_invalid_response_total: 1,
+            refreshes_failure_total: 1
           },
           oban_queues: [
             %{
@@ -604,6 +710,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
               properties: %{
                 available: %Schema{type: :boolean, description: "Whether agent metrics were successfully fetched"},
                 application: %Schema{type: :object, nullable: true, description: "BEAM VM stats"},
+                bootstrap: %Schema{type: :object, nullable: true, description: "Agent registration metrics"},
                 commands: %Schema{type: :object, nullable: true, description: "Command execution metrics"},
                 discovery: %Schema{type: :object, nullable: true, description: "Admin discovery metrics"},
                 proxy: %Schema{type: :object, nullable: true, description: "Proxy server metrics"},
@@ -613,6 +720,11 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                   type: :object,
                   nullable: true,
                   description: "Health check report metrics (HTTP fallback mode)"
+                },
+                settings_config: %Schema{
+                  type: :object,
+                  nullable: true,
+                  description: "Admin-advertised Settings Config refresh metrics"
                 },
                 oban_queues: %Schema{
                   type: :array,

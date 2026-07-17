@@ -5,11 +5,13 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
   """
 
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Application
+  alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Bootstrap
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Commands
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Discovery
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.HealthCheck
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.ObanQueue
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Proxy
+  alias EdgeAdmin.Metrics.Schemas.AgentMetrics.SettingsConfig
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Ssh
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Vpn
 
@@ -21,12 +23,14 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
     :cluster_name,
     :timestamp,
     :application,
+    :bootstrap,
     :commands,
     :discovery,
     :proxy,
     :ssh,
     :vpn,
     :health_check,
+    :settings_config,
     :oban_queues
   ]
 
@@ -39,12 +43,14 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
       cluster_name: raw_metrics["cluster_name"],
       timestamp: DateTime.utc_now(),
       application: Application.from_raw(raw_metrics),
+      bootstrap: Bootstrap.from_raw(raw_metrics),
       commands: Commands.from_raw(raw_metrics),
       discovery: Discovery.from_raw(raw_metrics),
       proxy: Proxy.from_raw(raw_metrics),
       ssh: Ssh.from_raw(raw_metrics),
       vpn: Vpn.from_raw(raw_metrics),
       health_check: HealthCheck.from_raw(raw_metrics),
+      settings_config: SettingsConfig.from_raw(raw_metrics),
       oban_queues: ObanQueue.from_raw(raw_metrics)
     }
   end
@@ -117,7 +123,11 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
       :synced_total,
       :enqueued_total,
       :completed_total,
-      :reported_total
+      :reported_total,
+      :sync_sent_count,
+      :sync_pending_count,
+      :report_batch_size,
+      :last_exit_code
     ]
 
     def from_raw(raw) do
@@ -125,7 +135,11 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
         synced_total: raw["commands_synced"] || 0,
         enqueued_total: raw["commands_enqueued"] || 0,
         completed_total: raw["commands_completed"] || 0,
-        reported_total: raw["commands_reported"] || 0
+        reported_total: raw["commands_reported"] || 0,
+        sync_sent_count: raw["commands_sync_sent_count"],
+        sync_pending_count: raw["commands_sync_pending_count"],
+        report_batch_size: raw["commands_report_batch_size"],
+        last_exit_code: raw["commands_execution_exit_code"]
       }
     end
   end
@@ -215,11 +229,13 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
     @moduledoc "VPN config pull metrics"
 
     @derive JSON.Encoder
-    defstruct [:pulls_total]
+    defstruct [:pulls_total, :pulls_success_total, :pulls_failure_total]
 
     def from_raw(raw) do
       %__MODULE__{
-        pulls_total: raw["vpn_pulls"] || 0
+        pulls_total: raw["vpn_pulls"] || 0,
+        pulls_success_total: raw["vpn_pulls_success"] || 0,
+        pulls_failure_total: raw["vpn_pulls_failure"] || 0
       }
     end
   end
@@ -228,11 +244,42 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
     @moduledoc "Health check report metrics (HTTP fallback mode)"
 
     @derive JSON.Encoder
-    defstruct [:reports_total]
+    defstruct [:reports_total, :reports_success_total, :reports_failure_total]
 
     def from_raw(raw) do
       %__MODULE__{
-        reports_total: raw["health_check_reports"] || 0
+        reports_total: raw["health_check_reports"] || 0,
+        reports_success_total: raw["health_check_reports_success"] || 0,
+        reports_failure_total: raw["health_check_reports_failure"] || 0
+      }
+    end
+  end
+
+  defmodule Bootstrap do
+    @moduledoc "Agent registration metrics"
+    @derive JSON.Encoder
+    defstruct [:registrations_total, :registrations_success_total, :registrations_failure_total]
+
+    def from_raw(raw) do
+      %__MODULE__{
+        registrations_total: raw["bootstrap_registrations"] || 0,
+        registrations_success_total: raw["bootstrap_registrations_success"] || 0,
+        registrations_failure_total: raw["bootstrap_registrations_failure"] || 0
+      }
+    end
+  end
+
+  defmodule SettingsConfig do
+    @moduledoc "Admin-advertised Settings Config refresh metrics"
+    @derive JSON.Encoder
+    defstruct [:refreshes_total, :refreshes_success_total, :refreshes_invalid_response_total, :refreshes_failure_total]
+
+    def from_raw(raw) do
+      %__MODULE__{
+        refreshes_total: raw["settings_config_refreshes"] || 0,
+        refreshes_success_total: raw["settings_config_refreshes_success"] || 0,
+        refreshes_invalid_response_total: raw["settings_config_refreshes_invalid_response"] || 0,
+        refreshes_failure_total: raw["settings_config_refreshes_failure"] || 0
       }
     end
   end

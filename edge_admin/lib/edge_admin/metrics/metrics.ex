@@ -184,8 +184,8 @@ defmodule EdgeAdmin.Metrics do
   - `node_id` - Node UUID (string)
 
   ## Returns
-  - `{:ok, %AgentMetrics{}}` - Structured metrics with application, commands,
-    discovery, proxy, ssh, vpn, health_check, oban_queues
+  - `{:ok, %AgentMetrics{}}` - Structured metrics with application, bootstrap,
+    commands, discovery, proxy, ssh, vpn, health_check, settings_config, oban_queues
   - `{:error, reason}` - Various error reasons
   """
   @spec get_agent_metrics(binary()) :: {:ok, AgentMetrics.t()} | {:error, term()}

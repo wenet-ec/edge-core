@@ -31,14 +31,22 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
 
       # Bootstrap & Discovery
       "bootstrap_registrations" => extract_counter(lines, "edge_agent_bootstrap_registration_total"),
+      "bootstrap_registrations_success" =>
+        extract_counter_by_label_value(lines, "edge_agent_bootstrap_registration_total", "status", "success"),
+      "bootstrap_registrations_failure" =>
+        extract_counter_by_label_value(lines, "edge_agent_bootstrap_registration_total", "status", "failure"),
       "discovery_scans" => extract_counter(lines, "edge_agent_discovery_scan_total"),
       "admins_found" => extract_gauge(lines, "edge_agent_discovery_admins_found"),
 
       # Commands
       "commands_synced" => extract_counter(lines, "edge_agent_commands_sync_total"),
+      "commands_sync_sent_count" => extract_gauge(lines, "edge_agent_commands_sync_sent_count"),
+      "commands_sync_pending_count" => extract_gauge(lines, "edge_agent_commands_sync_pending_count"),
       "commands_enqueued" => extract_counter(lines, "edge_agent_commands_execution_enqueued_total"),
       "commands_completed" => extract_counter(lines, "edge_agent_commands_execution_completed_total"),
       "commands_reported" => extract_counter(lines, "edge_agent_commands_report_total"),
+      "commands_report_batch_size" => extract_gauge(lines, "edge_agent_commands_report_batch_size"),
+      "commands_execution_exit_code" => extract_gauge(lines, "edge_agent_commands_execution_exit_code"),
 
       # Proxy — connections
       "proxy_http_connections" => extract_counter(lines, "edge_agent_proxy_http_connection_total"),
@@ -67,9 +75,24 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
 
       # VPN
       "vpn_pulls" => extract_counter(lines, "edge_agent_vpn_pull_total"),
+      "vpn_pulls_success" => extract_counter_by_label_value(lines, "edge_agent_vpn_pull_total", "result", "success"),
+      "vpn_pulls_failure" => extract_counter_by_label_value(lines, "edge_agent_vpn_pull_total", "result", "failure"),
 
       # Health check (HTTP fallback)
-      "health_check_reports" => extract_counter(lines, "edge_agent_health_check_report_total")
+      "health_check_reports" => extract_counter(lines, "edge_agent_health_check_report_total"),
+      "health_check_reports_success" =>
+        extract_counter_by_label_value(lines, "edge_agent_health_check_report_total", "result", "success"),
+      "health_check_reports_failure" =>
+        extract_counter_by_label_value(lines, "edge_agent_health_check_report_total", "result", "failure"),
+
+      # Dynamic Settings Config
+      "settings_config_refreshes" => extract_counter(lines, "edge_agent_settings_config_refresh_total"),
+      "settings_config_refreshes_success" =>
+        extract_counter_by_label_value(lines, "edge_agent_settings_config_refresh_total", "result", "success"),
+      "settings_config_refreshes_invalid_response" =>
+        extract_counter_by_label_value(lines, "edge_agent_settings_config_refresh_total", "result", "invalid_response"),
+      "settings_config_refreshes_failure" =>
+        extract_counter_by_label_value(lines, "edge_agent_settings_config_refresh_total", "result", "failure")
     }
   end
 

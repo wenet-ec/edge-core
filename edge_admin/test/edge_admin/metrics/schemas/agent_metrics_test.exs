@@ -4,11 +4,13 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetricsTest do
 
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Application, as: App
+  alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Bootstrap
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Commands
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Discovery
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.HealthCheck
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.ObanQueue
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Proxy
+  alias EdgeAdmin.Metrics.Schemas.AgentMetrics.SettingsConfig
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Ssh
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Vpn
 
@@ -28,12 +30,14 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetricsTest do
       assert result.node_id == "node-abc"
       assert result.cluster_name == "cluster-a"
       assert %App{} = result.application
+      assert %Bootstrap{} = result.bootstrap
       assert %Commands{} = result.commands
       assert %Discovery{} = result.discovery
       assert %Proxy{} = result.proxy
       assert %Ssh{} = result.ssh
       assert %Vpn{} = result.vpn
       assert %HealthCheck{} = result.health_check
+      assert %SettingsConfig{} = result.settings_config
       assert is_list(result.oban_queues)
       assert DateTime.compare(result.timestamp, before) in [:gt, :eq]
       assert DateTime.compare(result.timestamp, after_) in [:lt, :eq]
@@ -94,12 +98,16 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetricsTest do
   # ---------------------------------------------------------------------------
 
   describe "passthrough sub-modules default missing keys to 0" do
-    test "Commands defaults all counters to 0" do
+    test "Commands defaults counters to 0 and last values to nil" do
       assert Commands.from_raw(%{}) == %Commands{
                synced_total: 0,
                enqueued_total: 0,
                completed_total: 0,
-               reported_total: 0
+               reported_total: 0,
+               sync_sent_count: nil,
+               sync_pending_count: nil,
+               report_batch_size: nil,
+               last_exit_code: nil
              }
     end
 
@@ -108,14 +116,22 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetricsTest do
         "commands_synced" => 1,
         "commands_enqueued" => 2,
         "commands_completed" => 3,
-        "commands_reported" => 4
+        "commands_reported" => 4,
+        "commands_sync_sent_count" => 5,
+        "commands_sync_pending_count" => 6,
+        "commands_report_batch_size" => 7,
+        "commands_execution_exit_code" => 8
       }
 
       assert Commands.from_raw(raw) == %Commands{
                synced_total: 1,
                enqueued_total: 2,
                completed_total: 3,
-               reported_total: 4
+               reported_total: 4,
+               sync_sent_count: 5,
+               sync_pending_count: 6,
+               report_batch_size: 7,
+               last_exit_code: 8
              }
     end
 
@@ -128,11 +144,30 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetricsTest do
     end
 
     test "Vpn defaults to 0" do
-      assert Vpn.from_raw(%{}) == %Vpn{pulls_total: 0}
+      assert Vpn.from_raw(%{}) == %Vpn{pulls_total: 0, pulls_success_total: 0, pulls_failure_total: 0}
     end
 
     test "HealthCheck defaults to 0" do
-      assert HealthCheck.from_raw(%{}) == %HealthCheck{reports_total: 0}
+      assert HealthCheck.from_raw(%{}) == %HealthCheck{
+               reports_total: 0,
+               reports_success_total: 0,
+               reports_failure_total: 0
+             }
+    end
+
+    test "Bootstrap and SettingsConfig default to 0" do
+      assert Bootstrap.from_raw(%{}) == %Bootstrap{
+               registrations_total: 0,
+               registrations_success_total: 0,
+               registrations_failure_total: 0
+             }
+
+      assert SettingsConfig.from_raw(%{}) == %SettingsConfig{
+               refreshes_total: 0,
+               refreshes_success_total: 0,
+               refreshes_invalid_response_total: 0,
+               refreshes_failure_total: 0
+             }
     end
   end
 

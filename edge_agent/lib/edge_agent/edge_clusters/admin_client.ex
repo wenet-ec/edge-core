@@ -258,12 +258,12 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   end
 
   @doc """
-  Fetches refreshable, non-secret connectivity configuration for this agent.
+  Fetches refreshable, non-secret Settings Config for this agent.
 
   GET /api/v1/agents/settings/config
   """
-  @spec get_connectivity_config() :: {:ok, map()} | {:error, term()}
-  def get_connectivity_config do
+  @spec get_settings_config() :: {:ok, map()} | {:error, term()}
+  def get_settings_config do
     request_with_auth("/api/v1/agents/settings/config", fn url, headers ->
       opts = Keyword.merge([headers: headers], http_options())
 

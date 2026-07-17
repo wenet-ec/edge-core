@@ -1,1 +1,546 @@
-@CLAUDE.md
+# AGENTS.md
+
+This is the canonical repository guide for everyone working in this codebase: maintainers, contributors, reviewers, and coding agents. Read it before making changes; follow local conventions in the affected area as well.
+
+## Project Overview
+
+Edge Core is a distributed edge computing infrastructure management platform built with Elixir and Phoenix. It enables centralized control of geographically distributed edge nodes through two groups of capabilities:
+
+**Functionalities:** remote command execution, SSH backdoor access, metrics aggregation, self-update.
+**Connectivity:** cloud↔edge TCP proxying (forward proxy + proxy chaining), edge↔edge WireGuard VPN mesh, edge↔local devices (mDNS today; LAN DNS is future scope — see `docs/architecture.md`).
+
+- **Edge Admin** (cloud server) - Orchestrates nodes, commands, SSH access, proxies, and metrics. PostgreSQL is the production default and the only path that supports multi-admin HA. The same compiled binary also supports SQLite (`DB_ADAPTER=sqlite`) for single-instance hobbyist / homelab deployments — see `examples/README.md` and `examples/lite/`.
+- **Edge Agent** (edge nodes) - Standalone binary, primary deployment is one per machine (`network_mode: host`). Also works as a sidecar container on bridge networking. Bundles netclient, SSH server, Prometheus exporters, and forward proxies.
+- **Nexmaker** (shared library) - Elixir wrapper for Netmaker API and netclient CLI
+- **Netmaker VPN** - WireGuard mesh connecting all components. EMQX/Mosquitto is Netmaker-internal infrastructure only — not used by Edge Admin/Agent application code.
+
+For full architecture detail see `docs/architecture.md`.
+
+## VPN Source Code Reference
+
+**Clone the VPN source code into `./edge_vpn/` when working on VPN behavior.** It is the implementation reference for Netmaker and the forked netclient.
+
+```bash
+# Netmaker server (upstream, read-only reference)
+git clone --branch v1.6.0 https://github.com/gravitl/netmaker edge_vpn/netmaker
+
+# Netclient (our fork — includes DERP relay integration)
+git clone --branch v1.6.0-derp https://github.com/wenet-ec/netclient edge_vpn/netclient
+```
+
+When working on anything related to the Netmaker API, netclient enrollment, DERP relay, or WireGuard mesh behavior, read the source directly from `edge_vpn/`. The Netmaker OpenAPI spec is also available at `docs/netmaker-openapi-v1.6.0.yml`.
+
+### DERP and dynamic connectivity contract
+
+- `CORE_DERP_MAP_URLS` is Edge Admin deployment configuration: an ordered comma-separated list of mirror or hostname-migration URLs for **one complete canonical Core DERP map**. It is not stored in the Admin database.
+- Admin's `/start` script bridges `CORE_DERP_MAP_URLS` into netclient's existing `DERP_MAP_URLS` contract before the daemon starts. Do not reuse `DERP_MAP_URLS` as an application configuration name.
+- In the `v1.6.0-derp` netclient fork, the first usable `DERP_MAP_URLS` source wins; Core maps are never merged. Every migration URL must serve the same complete map. If no Core source is usable, netclient falls back to Tailscale's public map.
+- `ADMIN_URLS` remains a list of independently useful Admin API endpoints; agents use it for transport failover. Do not apply canonical-map semantics to Admin URLs.
+- The authenticated agent refresh endpoint is `GET /api/v1/agents/settings/config`. It returns only non-secret connectivity configuration (`admin_urls`, `core_derp_map_urls`), follows the normal controller/JSON/OpenAPI schema convention, and remains available in degraded mode so agents can recover routes.
+- Agent netclient receives a fixed localhost DERP reflection URL at process startup. Dynamic Core map sources are fetched by the Agent application and reflected there; never attempt to change a running netclient's environment.
+- The Agent refreshes settings on `REFRESH_SETTINGS_CONFIG_SCHEDULE` (default: every five minutes). Its DERP-map cache refreshes separately through `DERP_MAP_REFRESH_INTERVAL_MS` (default: five minutes).
+- Do not introduce an Admin database table, revision counter, or server-side persistence for this connectivity configuration. Deployment configuration is advertised by each Admin; agents retain learned endpoints locally to tolerate rolling hostname migration.
+
+## Architecture
+
+**Key Architectural Principles:**
+
+1. The database is the only source of truth — admins are stateless compute workers. PostgreSQL is the production default; SQLite is supported as a single-instance alternative selected at runtime via `DB_ADAPTER`. Same compiled binary either way. Multi-admin clustering, HA, and cluster ownership sharding all require PostgreSQL (LISTEN/NOTIFY for cross-admin coordination) — SQLite mode is single-admin only.
+2. Admin clustering is masterless peer-to-peer — no strong leader election, no primary/replica. Admins coordinate via Erlang distribution + `:syn` registry within the same admin cluster. A **weak leader** (alphabetically first admin ID in the current topology) is elected deterministically by each admin independently to reduce duplicate work from the LocalScheduler — but this is best-effort only, duplicate work is acceptable. See `EdgeAdmin.Admins.Metadata.am_i_weak_leader?/0`. PostgreSQL only.
+3. Cluster ownership sharding — exactly one admin owns each edge cluster at a time (one-admin-per-cluster algorithm). HA comes from spinning up additional independent admin clusters sharing the same PostgreSQL database. PostgreSQL only.
+4. Agent primary deployment is one-per-machine — `network_mode: host`, privileged. Also works as a sidecar container on bridge networking (see `examples/sidecar/`). Multiple agents on one host is for testing only.
+5. Admin↔Agent communication is HTTP over WireGuard VPN, with graceful fallback: raw WireGuard → DERP relay → HTTP polling.
+6. Context pattern: Business logic organized in contexts (Commands, Nodes, Vpn, Ssh, etc.)
+7. API-first: Both admin and agent expose REST APIs; admin API uses OpenApiSpex for documentation
+
+### Defense-in-depth validation
+
+Edge Core is **strict by default**. Every write to the database passes through 5 layers, each with its own role. Some checks intentionally duplicate across layers — the cost of letting bad input slip one layer deeper is bigger than the cost of running the same check twice.
+
+| Layer | Role | Error code | Where it lives |
+|---|---|---|---|
+| 1. **Public-API schema** | Request shape: types, required fields, basic constraints (regex, length, enum). Rejects malformed input at the boundary. | 400 | OpenApiSpex schemas (REST), MCP Peri schemas via Anubis (`EdgeAdminMcp.Tools.*`) |
+| 2. **Form module** | Situational rules per action and per role. Composable across actions. Validates external input shape *contextually*. | 422 | `EdgeAdmin.<Domain>.Forms.*` modules, `use EdgeAdmin.Form` |
+| 3. **DB checks** | Business rules that need DB state. Composable, distinct from Ecto schema validation. | 422 | `EdgeAdmin.<Domain>.Checks.*` modules (e.g. `NodeLimitBelowCountCheck`, `SubnetOverlapCheck`) |
+| 4. **Ecto schema** | Canonical model validation. **Every write passes here, no exception.** Field types, in-record invariants. | 422 | `EdgeAdmin.<Domain>.Schemas.*` changesets |
+| 5. **DB constraints** | Final backstop. Unique indexes, not-null, foreign keys, exclusion constraints. | varies | Migrations |
+
+**Key implications:**
+
+- **Layer 1 is peer to layer 1.** OpenApiSpex (REST) and MCP Peri (MCP) are both layer-1 gates for their respective surfaces. They should match each other in strictness — drift between them is a real bug, not polish.
+- **Layer 1 is *not* peer to layer 2.** Forms are an independent defense layer. Don't collapse layer 1 into layer 2 thinking "the Form catches it anyway" — that removes a defense.
+- **Adding a new validation rule** usually means adding it to the *layer where it naturally belongs*, then potentially mirroring upward (layer 4 → layer 2 → layer 1) for early rejection. Each layer should be as strict as it can honestly be at its level.
+- **Common validators (regex constants, length bounds)** want to be DRY *across surfaces within a layer* — e.g. cluster-name regex shared between OpenApiSpex and MCP Peri — but **not collapsed across layers**.
+- **DRY across the boundary surfaces (REST + MCP)** is the live standardization question. See `mcp-parity.md` for the running plan.
+
+## Development Commands
+
+All operations use Docker Compose through the `./bin/run` script. No local Elixir/Erlang installation required.
+
+### Starting Services
+
+```bash
+# Start cloud infrastructure (admin + VPN + metrics + DB)
+./bin/run cloud up
+
+# Start edge agents (in separate terminal)
+./bin/run edge up
+
+# Start everything together
+./bin/run all up -d
+```
+
+### Code Quality
+
+```bash
+# Format code
+./bin/run cloud admin:format
+./bin/run edge agent:format
+./bin/run all format
+
+# Lint (Credo)
+./bin/run cloud admin:lint
+./bin/run edge agent:lint
+
+# Quality checks (format + lint + dialyzer)
+./bin/run cloud admin:quality
+./bin/run edge agent:quality
+./bin/run all quality
+
+# Security checks (Sobelow + mix audit)
+./bin/run cloud admin:security
+./bin/run edge agent:security
+./bin/run all security
+
+# Complete check (format, deps, security, lint, dialyzer)
+./bin/run cloud admin check
+./bin/run edge agent check
+
+# Pre-commit hook (runs check + test)
+./bin/run cloud admin precommit
+./bin/run edge agent precommit
+```
+
+### Database Operations
+
+```bash
+# Run migrations
+./bin/run cloud db:migrate
+./bin/run edge db:migrate
+
+# Reset database (destructive)
+./bin/run cloud db:reset
+./bin/run edge db:reset
+
+# Setup fresh database
+./bin/run cloud db:setup
+```
+
+### Development Shell
+
+```bash
+# Open IEx shell
+./bin/run cloud admin:shell
+./bin/run edge agent:shell
+
+# Open bash shell in running container
+./bin/run cloud shell edge_admin
+./bin/run edge shell edge_agent
+
+# Execute arbitrary mix command
+./bin/run cloud admin <mix-command>
+./bin/run edge agent <mix-command>
+```
+
+### Logs and Monitoring
+
+```bash
+# View logs
+./bin/run cloud logs edge_admin
+./bin/run edge logs edge_agent
+./bin/run all logs
+
+# List running services
+./bin/run cloud ps
+./bin/run edge ps
+```
+
+## Key Interaction Flows
+
+### Node Enrollment
+
+1. Agent starts and runs `EdgeAgent.Bootstrap`
+2. Agent determines node identity (hostname, MAC address, etc.)
+3. Agent joins VPN using enrollment token: `Nexmaker.EnrollmentKeys.enroll/2`
+4. Agent discovers admin URL from Netmaker metadata
+5. Agent registers with admin: `POST /api/v1/agents/nodes`
+6. Admin returns API token plus initial `admin_urls` and `core_derp_map_urls`; the agent later refreshes non-secret connectivity configuration through `GET /api/v1/agents/settings/config`
+7. Agent registers node aliases (best-effort, from `ALIASES` env var — comma-separated friendly names)
+8. Agent downloads pending command executions
+9. Agent ready to receive commands
+
+### Command Execution
+
+1. Admin receives command request: `POST /api/v1/commands`
+2. `EdgeAdmin.Commands.create_command/1` creates Command record
+3. Oban worker creates CommandExecution records per target node
+4. Background scheduler identifies healthy nodes (cadence configured by
+   `EXECUTION_DELIVERY_SCHEDULE`, default every minute)
+5. Admin sends executions to agents: `POST /api/v1/agents/command_executions`
+6. Agent executes via `EdgeAgent.Commands.execute/1`
+7. Agent reports results: `PATCH /api/v1/agents/command_executions/:id`
+8. Results visible through admin API
+
+### SSH Access
+
+1. User SSH connects to agent port 40022
+2. Agent's `EdgeAgent.SshServer` receives connection
+3. Agent calls admin to verify credentials: `POST /api/v1/agents/ssh_usernames/verify_credentials`
+4. Admin checks `ssh_usernames` + `ssh_public_keys` tables
+5. Admin returns approval/denial
+6. Agent grants/denies SSH access accordingly
+
+## Important Implementation Details
+
+### Database Schemas
+
+**Edge Admin** (PostgreSQL by default, SQLite when `DB_ADAPTER=sqlite`; same migrations, same Ecto schema, runtime-switched):
+
+- `clusters` - VPN network definitions
+- `nodes` - Edge device registrations with health status
+- `aliases` - DNS name mappings for nodes
+- `enrollment_keys` - VPN enrollment key records
+- `commands` - Commands to execute across nodes
+- `command_executions` - Per-node execution tracking
+- `node_metrics_cache` - Cached metrics for Layer 3 (HTTP polling) mode
+- `ssh_usernames` - SSH login credentials
+- `ssh_public_keys` - Authorized keys for SSH users
+- `self_update_requests` - Container update scheduling
+- `webhooks` - User-configured HTTP delivery destinations for events; `secret` and `headers` are Cloak-encrypted
+- `oban_jobs` - Background job queue
+
+**Edge Agent (SQLite):**
+
+- `settings` - Key-value configuration store
+- `command_executions` - Local execution tracking
+- `oban_jobs` - Local background jobs
+
+### Authentication
+
+**Admin API:**
+
+- `MASTER_KEY` header - Full access, fallback for all other keys
+- `API_KEY` header - REST API access (clusters, nodes, commands, SSH, enrollment keys)
+- `METRICS_KEY` header - Read-only metrics access
+- `PROXY_KEY` header - Proxy tunnel access
+- `MCP_KEY` header - MCP server access
+- Agent API token - Per-agent authentication for status reporting
+
+**Agent API:**
+
+- API token from registration - Admin-to-agent communication
+
+### Project Structure
+
+```
+edge_core/
+├── edge_admin/          # Phoenix admin server
+│   ├── lib/
+│   │   ├── edge_admin/          # Business logic contexts
+│   │   │   ├── commands/        # Command execution system
+│   │   │   ├── nodes/           # Node management
+│   │   │   ├── ssh/             # SSH credential management
+│   │   │   ├── vpn/             # Netmaker VPN integration
+│   │   │   ├── proxy_servers/   # Proxy coordination
+│   │   │   ├── metrics/         # Metrics aggregation
+│   │   │   ├── edge_clusters/   # Cluster management + Erlang peer coordination
+│   │   │   ├── events/          # Event publish path (catalog, broker channel, webhook channel)
+│   │   │   └── vault/           # Cloak vault + encrypted Ecto types
+│   │   └── edge_admin_web/      # Phoenix web layer
+│   │       ├── controllers/     # REST API controllers
+│   │       ├── schemas/         # OpenAPI schemas
+│   │       └── router.ex        # Route definitions
+│   ├── priv/
+│   │   └── repo/migrations/     # Database migrations
+│   └── test/                    # Test files mirror lib/
+├── edge_agent/          # Phoenix agent server
+│   ├── lib/
+│   │   ├── edge_agent/          # Agent business logic
+│   │   │   ├── bootstrap.ex     # Startup and registration
+│   │   │   ├── commands/        # Local command execution
+│   │   │   ├── ssh_server/      # Embedded SSH server
+│   │   │   ├── settings/        # Persistent config (SQLite)
+│   │   │   └── edge_clusters/   # Admin discovery and health
+│   │   └── edge_agent_web/      # Agent API
+│   └── test/
+├── nexmaker/            # Shared Netmaker library
+│   └── lib/nexmaker/
+│       ├── enrollment_keys.ex   # VPN enrollment
+│       ├── networks.ex          # Network management
+│       ├── hosts.ex             # Host management
+│       └── nodes.ex             # Node management
+├── edge_vpn/            # Reference VPN source (Go, read-only)
+│   ├── netmaker/        # Netmaker server source + swagger.yaml
+│   └── netclient/       # Netclient CLI source (our fork adds DERP)
+├── deploy/              # Docker Compose configurations
+│   ├── local/           # Local development
+│   │   ├── cloud.yml    # Admin + infrastructure
+│   │   ├── edge.yml     # Agent services
+│   │   └── .envs/       # Environment files
+│   └── production/      # Production configs
+├── examples/            # Deployment examples for users
+│   ├── lite/            # Single admin, Mosquitto, no metrics
+│   ├── standard/        # 4 admins (2 clusters), EMQX, full metrics
+│   ├── sidecar/         # Agent as sidecar container (bridge networking)
+│   └── relay/           # Self-hosted DERP relay node
+├── docs/                # Architecture docs and API specs
+│   ├── architecture.md
+│   ├── admin-openapi-v0.2.0.json
+│   ├── admin-asyncapi-v0.2.0.json
+│   ├── admin-asyncapi-v0.2.0.md
+│   └── netmaker-openapi-v1.6.0.yml
+└── bin/
+    └── run              # Management script
+```
+
+### Key Modules
+
+**Edge Admin (`edge_admin/lib/edge_admin/`):**
+
+- `nodes.ex` - Node enrollment, discovery, health monitoring
+- `commands.ex` - Command orchestration (detailed in Command Execution flow)
+- `ssh.ex` - SSH credential management
+- `vpn.ex` - Netmaker API wrapper
+- `proxy_servers.ex` - HTTP/SOCKS5 proxy coordination
+- `metrics.ex` - Metrics aggregation
+- `edge_clusters.ex` - Cluster management and metadata
+- `events/events.ex` - Public publish API: `publish/1`. Builds the CloudEvents envelope and fans out to every configured delivery channel. (No `healthy?/0` here — health checks live per-channel: `EdgeAdmin.Events.Broker.healthy?/0`, etc.)
+- `events/catalog.ex` - Typed event structs + `event_type/1` + `to_data/1` (catalog of all event types)
+- `events/broker/broker.ex` - Broker delivery channel: `enqueue/1` (called by `Events.publish/1`), `publish_envelope/1` (called by the Oban worker), `healthy?/0`
+- `vault/vault.ex` - `EdgeAdmin.Vault` (Cloak.Vault) + `encrypted_schemas/0` registry used by the rotation task. Wired via `CLOAK_KEY` + `CLOAK_TAG` in `runtime.exs`, started before the Repo in the supervision tree.
+- `vault/encrypted_binary.ex` / `vault/encrypted_map.ex` - Cloak Ecto types for opaque binary and map columns. Migration column type is always `:binary`; types JSON-encode + AES-GCM-encrypt transparently on the schema side.
+- `events/broker/adapters/nats.ex` - NATS adapter (gnat); JetStream enabled via `EVENT_BROKER_NATS_JETSTREAM=true`
+- `events/broker/adapters/kafka.ex` - Kafka-compatible adapter (brod)
+- `events/broker/adapters/rabbitmq.ex` - AMQP 0-9-1 adapter (amqp lib); durable topic exchange `edge.events`. Operator-facing adapter id is `amqp091` (alias: `rabbitmq`); module/file kept under `Rabbitmq` since the protocol's primary deployment is RabbitMQ. Works against RabbitMQ, LavinMQ, AmazonMQ for RabbitMQ, CloudAMQP.
+- `events/broker/adapters/redis.ex` - Redis adapter (redix); fire-and-forget pub/sub, channel = event type
+- `events/broker/adapters/mqtt.ex` - MQTT adapter (emqtt); pub/sub, configurable QoS, topic = event type with `.` rewritten to `/`
+- `events/broker/adapters/aws_sns.ex` - AWS SNS adapter (ex_aws_sns + req); managed pub/sub, domain topics, `type`/`corename` promoted to message attributes for filter policies
+- `events/broker/adapters/google_pubsub.ex` - Google Cloud Pub/Sub adapter (goth + raw req against the v1 REST API); managed pub/sub, domain topics, `type`/`corename` promoted to message attributes for filter expressions
+- `events/broker/workers/publish_event_worker.ex` - Oban worker for async broker delivery
+- **Not currently supported (demand-gated for future):** AMQP 1.0 (different protocol from AMQP 0-9-1 — would be a new adapter, not a flag on `amqp091`) and Apache Pulsar (not Kafka-wire-compatible despite KoP plugin existing). Add only if a real user asks; do not pre-build.
+- `events/webhooks/webhooks.ex` - Webhook delivery channel: `list_webhooks/1` (supports `?event_type=` post-filter for "which webhooks fire on this event"), `get_webhook/1`, `create_webhook/1`, `delete_webhook/1`, `fan_out/1` (called by `Events.publish/1`; pages through `list_webhooks/1`), `deliver_event/2` (called by the Oban worker). Webhooks are immutable after create; retry budget is `WEBHOOK_MAX_ATTEMPTS` (default 3).
+- `events/webhooks/schemas/webhook.ex` - Ecto schema; `secret` and `headers` are Cloak-encrypted at rest via `Vault.EncryptedBinary` / `Vault.EncryptedMap`.
+- `events/webhooks/forms/create_webhook_form.ex` - Input validation (URL/SSRF/secret length/headers shape/`subscribed_events` membership in `Catalog.all_event_types/0`).
+- `events/webhooks/ssrf.ex` - SSRF deny list. Loopback, RFC1918/ULA, link-local, multicast, cloud-metadata IPs/hostnames. IPv4-mapped IPv6 normalised before matching. Opt out per deployment with `WEBHOOK_ALLOW_PRIVATE_IPS=true`.
+- `events/webhooks/delivery.ex` - HTTP request building (`POST` only), HMAC-SHA256 signing into `X-Edge-Signature`, response classification (`:ok | {:recoverable, _} | {:terminal, _}`). Retry classification: 408/429/503 + network errors → recoverable, other 4xx/5xx → terminal.
+- `events/webhooks/workers/deliver_event_worker.ex` - Oban worker, queue: `webhooks`. Per-job `max_attempts` set from `WEBHOOK_MAX_ATTEMPTS` (default 3) at fan-out time. Drops jobs older than `EVENT_DELIVERY_MAX_AGE_SECONDS` via `{:cancel, ...}`, then delegates to `Webhooks.deliver_event/2`.
+
+**Edge Agent (`edge_agent/lib/edge_agent/`):**
+
+- `bootstrap.ex` - Startup orchestration, VPN enrollment, admin discovery, alias registration
+- `commands.ex` - Local command execution via System.cmd
+- `ssh_server.ex` - Embedded SSH server (port 40022)
+- `proxy_servers.ex` - Local HTTP/SOCKS5 proxy servers
+- `settings.ex` - Persistent configuration (SQLite key-value store)
+- `identity.ex` - Node identity determination (hostname, MAC, etc.)
+- `vpn/vpn.ex` - VPN join/health-check operations; `vpn/workers/pull_vpn_config_worker.ex` for periodic pulls
+- `lan/mdns.ex` - mDNS advertisement (`node-{node_id}.local` + `_edge_core._tcp.local` service record)
+
+**Nexmaker (`nexmaker/lib/nexmaker/`):**
+
+Shared path dependency used by both admin and agent. Neither ever calls Netmaker or netclient directly — all interaction goes through Nexmaker.
+
+Two interfaces:
+
+- `Nexmaker.Api.*` — HTTP client (`Req`) for the full Netmaker REST API. Auth via MASTER_KEY bearer token. Modules: `Networks`, `EnrollmentKeys`, `Hosts`, `Nodes`, `DNS`, `Superadmin`, `Gateways.*`, `EMQX`.
+- `Nexmaker.Cli` — Wrapper around the `netclient` binary (shelled out via `System.cmd`). Functions: `join_network/1`, `leave_network/1`, `list_networks/0`, `check_connection/1`, `health_check/1`, `pull/0`, `list_peers/1`, `ping_peers/1`.
+
+Config:
+
+```elixir
+config :nexmaker,
+  base_url: System.get_env("NETMAKER_API_URL"),
+  master_key: System.get_env("NETMAKER_MASTER_KEY")
+```
+
+### Background Jobs
+
+Admin background work is split between two schedulers with different semantics:
+
+**Quantum LocalScheduler** — runs on every admin instance independently. Jobs that should run cluster-wide use the weak leader guard (`Metadata.am_i_weak_leader?/0`) to reduce duplicate work:
+
+- `EdgeAdmin.Vpn.run_zombie_admin_cleanup/0` - Cleans up orphaned admin entries in Netmaker (weak leader only)
+- `EdgeAdmin.Vpn.sync_vpn_config/0` - Periodic `netclient pull` as a VPN consistency backstop (every admin)
+- `EdgeAdmin.Admins.Metadata.recompute_now/0` - Recomputes cluster ownership assignments (every admin)
+- `EdgeAdmin.Admins.Discovery.scan_and_connect_admins/0` - Discovers and connects to peer admins (every admin)
+- `EdgeAdmin.Nodes.check_node_health/0` - Health checks owned nodes (every admin)
+- `EdgeAdmin.Commands.deliver_local_executions/0` - Delivers pending commands to agents (every admin)
+- `EdgeAdmin.Commands.expire_stale_executions/0` - Sweeps stale command executions (every admin)
+
+**Oban** — jobs inserted by the DB peer leader, competed for by any admin across all clusters sharing the same DB:
+
+- `EdgeAdmin.Commands.Workers.CreateExecutionsWorker` - Creates CommandExecution records for each targeted node
+- `EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker` - Enqueues one `ReconcileClusterWorker` job per cluster
+- `EdgeAdmin.Nodes.Workers.ReconcileClusterWorker` - Syncs a single cluster's node state with Netmaker VPN
+- `EdgeAdmin.SelfUpdates.Workers.TriggerSelfUpdateWorker` - Coordinates container updates
+- `EdgeAdmin.Events.Broker.Workers.PublishEventWorker` - Publishes a CloudEvents envelope to the broker, retries on failure
+- `EdgeAdmin.Events.Webhooks.Workers.DeliverEventWorker` - Delivers a CloudEvents envelope to one user-configured webhook URL via HTTP POST. Retry classification: 408/429/503 + network = recoverable; other 4xx/5xx = terminal. Per-job `max_attempts` is set from `WEBHOOK_MAX_ATTEMPTS` (default 3) at fan-out time.
+
+**Agent Workers:**
+
+- `EdgeAgent.Commands.Workers.EnqueueExecutionWorker` - Receives executions from admin
+- `EdgeAgent.Commands.Workers.ExecuteCommandWorker` - Executes commands locally
+- `EdgeAgent.Commands.Workers.ReportExecutionWorker` - Reports results to admin
+- `EdgeAgent.Commands.Workers.SyncUnprocessedExecutionWorker` - Syncs pending executions
+- `EdgeAgent.EdgeClusters.Workers.DiscoverAdminWorker` - Discovers admin URL from VPN metadata
+- `EdgeAgent.EdgeClusters.Workers.ReportHealthCheckWorker` - Sends health status to admin
+- `EdgeAgent.Vpn.Workers.PullVpnConfigWorker` - Periodic VPN config pull (daily, opt-out via `PULL_VPN_CONFIG_ENABLED`)
+- `EdgeAgent.LocalScheduler.Tasks.refresh_settings_config/0` - Refreshes the authenticated, non-secret Admin settings configuration (default: every five minutes)
+
+### Testing Patterns
+
+- Use `EdgeAdmin.Factory` / `EdgeAgent.Factory` (ExMachina) for test data
+  - `build/2` for structs, `insert/2` for database records
+  - Factories include: nodes, commands, executions, clusters, SSH credentials
+- Mock external services (Netmaker API) with `Mox`
+  - Define behaviors in test environment
+  - Use `expect/4` and `stub/3` for mock expectations
+- Database sandboxing via `Ecto.Adapters.SQL.Sandbox`
+  - Each test runs in a transaction
+  - Use `DataCase` for database tests, `ConnCase` for controller tests
+- Test async jobs with `Oban.Testing`
+  - Use `perform_job/2` to test worker logic synchronously
+  - Verify job enqueueing with `assert_enqueued`
+- Test organization: `test/edge_admin/` mirrors `lib/edge_admin/` structure
+
+## Service Endpoints
+
+**Cloud Services:**
+
+- Edge Admin API: <http://localhost:44000> (external: 34000, 34001, ...)
+- Netmaker UI: <http://localhost:48080>
+- Netmaker API: <http://localhost:48081>
+- EMQX Dashboard: <http://localhost:48085>
+- Prometheus: <http://localhost:49090>
+- PostgreSQL: localhost:5432
+- NATS (event broker): nats://localhost:44222 (client), <http://localhost:48222> (monitoring)
+- NUI (NATS web UI): <http://localhost:41311>
+- Redpanda (event broker, opt-in): localhost:49092
+- Redpanda Console: <http://localhost:49080>
+- RabbitMQ (event broker, opt-in): localhost:45672 (AMQP), <http://localhost:41567> (Management UI)
+- Redis (event broker, opt-in): localhost:46379
+- MQTT (event broker, opt-in): localhost:41883 (MQTT), localhost:48084 (WebSocket), <http://localhost:48086> (EMQX Dashboard + REST API)
+- AWS SNS via LocalStack (event broker, opt-in, local-dev only): <http://localhost:44566> — production points at real AWS
+- Google Pub/Sub via emulator (event broker, opt-in, local-dev only): localhost:48087 (gRPC) — production points at real GCP
+
+**Edge Services:**
+
+- Edge Agent 1: <http://localhost:44000>
+- Edge Agent 2: <http://localhost:44001>
+- Docker Registry: <http://localhost:45000>
+
+## Configuration
+
+**Environment variable files (`deploy/local/.envs/`):**
+
+- `.edge_admin` - Edge Admin application config
+- `.edge_admin_db` - PostgreSQL database config
+- `.edge_admin_test` - Test environment config
+- `.edge_agent` - Edge Agent application config
+- `.edge_agent_test` - Agent test environment config
+- `.edge_vpn` - Netmaker VPN config
+- `.edge_vpn_db` - Netmaker database config
+- `.edge_vpn_broker` - EMQX message broker config
+- `.edge_metrics` - Prometheus metrics config
+
+Production files follow the same pattern in `deploy/production/.envs/`
+
+**Environment variables:**
+
+The full annotated list lives in `deploy/production/.envs/.edge_admin` — read it directly when you need to know what a variable does. The notes below are the **non-obvious** ones, where the variable's behavior is something you can't infer from its name or default:
+
+- `DB_ADAPTER` — `postgres` (default) or `sqlite`. Same compiled binary, runtime-switched. SQLite is single-instance only, no clustering.
+- `DB_MIGRATION_LOCK` — `pg_advisory_lock` (default) or `disabled`. `pg_advisory_lock` needs a session-mode Postgres connection — behind PgBouncer transaction pooling, point migrations at the primary directly (same pattern as `DATABASE_NOTIFIER_URL`). `disabled` relies on the migrate sidecar to serialize. Ecto's `:table_lock` default is deliberately not exposed — historically deadlocks on this codebase under heavy DDL even single-admin.
+- `CLOAK_KEY` / `CLOAK_TAG` — required at boot. Encryption-at-rest for `webhooks.secret` and `webhooks.headers`. If `CLOAK_KEY` is lost, every encrypted row is unrecoverable — back it up alongside `MASTER_KEY`/`SECRET_KEY_BASE`. `CLOAK_TAG` convention: `AES.GCM.V<N>`, bumped on rotation.
+- `ROTATE_OLD_CLOAK_KEY` / `ROTATE_OLD_CLOAK_TAG` / `ROTATE_NEW_CLOAK_KEY` / `ROTATE_NEW_CLOAK_TAG` — set all four to trigger rotation via `EdgeAdmin.Release.rotate_cloak_key/0`. Auto-runs on `/start`, also `examples/operations/rotate_cloak_key.yml` for one-off. Idempotent — logs skip if any of the four is missing.
+- `EVENT_BROKER_ADAPTER` — `nats`, `kafka`, `amqp091` (alias: `rabbitmq`), `redis`, `mqtt`, `aws_sns`, `google_pubsub`. Endpoint env var is namespaced per adapter — see the `.edge_admin` file for the matrix.
+- `CORE_NAME` — identifies this core instance in every event envelope (default: `"default"`). Promoted to message attributes on AWS SNS / Google Pub/Sub for filter policies.
+- `EVENT_DELIVERY_MAX_AGE_SECONDS` — cancel broker-publish + webhook-delivery jobs older than N seconds (default `3600`). Checked at `perform/1` start. Set `0` to disable.
+- `WEBHOOK_MAX_ATTEMPTS` — total HTTP delivery attempts per event before drop (default `3`). Applied at fan-out time, not configurable per-webhook.
+- `WEBHOOK_ALLOW_PRIVATE_IPS` — `true` bypasses the SSRF deny list at create time. Homelab/dev only.
+- `PULL_VPN_CONFIG_ENABLED` (agent) — opt out of the daily `netclient pull` backstop.
+- `ADMIN_URLS` — ordered, independently usable Admin API URLs. Keep new and old URLs together during a hostname migration so agents can fail over between them.
+- `CORE_DERP_MAP_URLS` — ordered URLs for one complete canonical Core DERP map. The first reachable source wins; sources are never merged. During a hostname migration, every listed URL must serve the same complete map.
+- `REFRESH_SETTINGS_CONFIG_SCHEDULE` (agent) — cadence for retrieving non-secret `admin_urls` and `core_derp_map_urls` from the authenticated Admin endpoint; defaults to every five minutes.
+- `DERP_MAP_REFRESH_INTERVAL_MS` (agent) — DERP-map cache refresh interval; defaults to five minutes. It is independent of the settings refresh schedule.
+
+Standard auth/host/DB vars (`MASTER_KEY`, scoped keys, `DATABASE_URL`, `NETMAKER_*`, `ENROLLMENT_TOKEN`, `SECRET_KEY_BASE`, `PHX_HOST`) work the way you'd expect — see the `.edge_admin` file.
+
+## Technology Stack
+
+- **Framework:** Elixir/Erlang, Phoenix
+- **Databases:** PostgreSQL (admin default; required for multi-admin HA), SQLite (admin alternative for single-instance, also the agent's local store), Ecto. Adapter selected at runtime via `DB_ADAPTER`; same compiled binary serves both.
+- **VPN:** Netmaker (Go), netclient, WireGuard
+- **Jobs:** Oban, Quantum
+- **Metrics:** Prometheus exporters, Prometheus, PromEx
+- **HTTP:** Req, Bandit server
+- **API:** OpenApiSpex (OpenAPI/Swagger)
+- **Auth:** Argon2, JWT-like tokens
+- **Testing:** ExUnit, ExMachina, Mox, Faker
+- **Quality:** Credo, Dialyxir, Sobelow, Mix Audit
+
+## API Documentation
+
+User-facing API surface (Swagger, MCP, proxy, metrics, events, health) is documented in [`docs/guide.md`](docs/guide.md). Specs auto-generated and served at `/api/openapi`, `/swaggerui`, `/redoc`, `/api/asyncapi`, `/asyncdoc`. Endpoints documented inline with `@doc` + OpenApiSpex schemas.
+
+## Common Development Workflows
+
+### Adding a New Feature
+
+1. Start services: `./bin/run all up -d`
+2. Make code changes in `edge_admin/lib/` or `edge_agent/lib/`
+3. Create migrations if needed: `./bin/run cloud admin ecto.gen.migration migration_name`
+4. Run migrations: `./bin/run cloud db:migrate`
+5. Add tests in corresponding `test/` directory
+6. Run tests: `./bin/run cloud admin:test` or for specific file
+7. Format code: `./bin/run all format`
+8. Run quality checks: `./bin/run all quality`
+
+### Debugging
+
+```bash
+# Attach to running admin with IEx
+./bin/run cloud shell edge_admin
+iex -S mix
+
+# View real-time logs
+./bin/run cloud logs edge_admin
+./bin/run edge logs edge_agent
+
+# Inspect database
+./bin/run cloud admin ecto.migrate --log-sql
+./bin/run cloud admin dbconsole
+
+# Check Oban jobs
+# In IEx: Oban.check_queue(queue: :default)
+```
+
+### Troubleshooting
+
+**VPN connectivity issues:**
+
+- Check Netmaker is healthy: `./bin/run cloud logs edge_vpn`
+- Verify enrollment token in `.edge_agent` env file
+- Check agent VPN status: `./bin/run edge shell edge_agent` then `netclient list`
+
+**Database connection errors:**
+
+- Ensure database is running: `./bin/run cloud ps`
+- Reset database: `./bin/run cloud db:reset`
+- Check DATABASE_URL or DB_HOST/DB_PORT/DB_NAME in `.edge_admin` env file
+
+**Failed tests:**
+
+- Clean test database: `./bin/run cloud admin ecto.drop` then `./bin/run cloud admin:test`
+- Check for async test conflicts (use `async: false` if needed)
+- Verify mocks are properly configured in `test/test_helper.exs`

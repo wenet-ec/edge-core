@@ -33,32 +33,57 @@ defmodule EdgeAdminWeb.LiveDashboardHooks do
           document.querySelectorAll('.quantum-page time.qt-time').forEach(function(el) {
             var iso = el.getAttribute('datetime');
             if (!iso) return;
+            var text;
+
             if (mode === 'local') {
               var d = new Date(iso);
-              if (!isNaN(d)) { el.textContent = d.toLocaleString(); return; }
+              if (!isNaN(d)) text = d.toLocaleString();
             }
-            el.textContent = iso.replace('T', ' ').replace(/\.\d+Z$|Z$/, '');
+
+            text = text || iso.replace('T', ' ').replace(/\.\d+Z$|Z$/, '');
+            if (el.textContent !== text) el.textContent = text;
           });
         }
 
-        function bind() {
-          var toggle = document.getElementById('quantum-tz-toggle');
-          if (!toggle || toggle.dataset.bound) return;
-          toggle.dataset.bound = '1';
-          toggle.querySelectorAll('button').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-              var mode = btn.getAttribute('data-tz');
-              window.__quantumTzMode = mode;
-              toggle.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
-              btn.classList.add('active');
-              applyTz(mode);
-            });
-          });
+        function setMode(button) {
+          var toggle = button.closest('#quantum-tz-toggle');
+          var mode = button.getAttribute('data-tz');
+
+          window.__quantumTzMode = mode;
+          toggle.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
+          button.classList.add('active');
+          applyTz(mode);
         }
 
         function init() {
-          bind();
           applyTz(window.__quantumTzMode || 'UTC');
+
+          // LiveView replaces the dashboard page during refreshes. Delegate
+          // from document so newly-rendered timezone buttons stay interactive.
+          if (!window.__quantumTzClickBound) {
+            window.__quantumTzClickBound = true;
+
+            document.addEventListener('click', function(event) {
+              if (!(event.target instanceof Element)) return;
+
+              var button = event.target.closest('#quantum-tz-toggle button[data-tz]');
+              if (button) setMode(button);
+            });
+          }
+
+          // Reapply the selected mode after LiveView patches in fresh <time>
+          // elements. The observer is intentionally global because this script
+          // lives in <head>, while the Quantum page is patched below <body>.
+          if (!window.__quantumTzObserver) {
+            window.__quantumTzObserver = new MutationObserver(function() {
+              applyTz(window.__quantumTzMode || 'UTC');
+            });
+
+            window.__quantumTzObserver.observe(document.body, {
+              childList: true,
+              subtree: true
+            });
+          }
         }
 
         // Script is injected in <head>; defer until <body> exists.

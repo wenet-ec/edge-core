@@ -213,10 +213,9 @@ ADMIN_URLS=http://localhost:4000,http://localhost:4001,http://localhost:4002
 
 # DERP map server URL. Optional — leave unset to skip DERP overlay (Tailscale fallback).
 # This is the map server that describes relay locations, NOT the relay server itself.
-# Upfront decision: on first enrollment, agent doesn't have the map yet so VPN peer path
-# won't work — registration falls back to HTTP via admin_fallback_urls. Agent gets the map
-# after registering and converges on the same DERP. Adding/removing later has the same effect.
-# DERP_MAP_URL=http://localhost:47713/derpmap/default
+# Ordered mirror / hostname-migration URLs for one canonical Core DERP map.
+# The first usable URL wins; every URL must serve the same complete map.
+# CORE_DERP_MAP_URLS=http://localhost:47713/derpmap/default
 
 # =============================================================================
 # Admin Cluster & Erlang Distribution

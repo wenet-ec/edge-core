@@ -114,7 +114,7 @@ config:
 #   EVENT_BROKER_MQTT_CACERT_FILE: "/etc/mqtt/tls/ca.crt"
 #   EVENT_BROKER_MQTT_CLIENT_CERT_FILE: "/etc/mqtt/tls/client.crt"
 #   EVENT_BROKER_MQTT_CLIENT_KEY_FILE: "/etc/mqtt/tls/client.key"
-#   DERP_MAP_URL: "https://relay.example.com/derpmap/default"
+#   CORE_DERP_MAP_URLS: "https://relay-new.example.com/derpmap/default,https://relay-old.example.com/derpmap/default"
 #   SENTRY_DSN: "https://..."
 #   CORE_NAME: "prod-us"
 extraEnv: {}

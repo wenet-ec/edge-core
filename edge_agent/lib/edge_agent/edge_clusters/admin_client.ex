@@ -26,9 +26,10 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
   2. **Unauthenticated Requests** (`request_with_fallback/2`)
      - Used for registration (no token yet)
-     - URLs come from Settings: VPN admin URLs first, then admin fallback URLs
+     - URLs come from Settings: VPN admin URLs first, then public fallback URLs
        stored at enrollment time
-     - Falls through to the next URL on network error only
+     - Tries public fallback URLs only after every VPN URL has a network error;
+       HTTP responses remain terminal
 
   3. **Authenticated Requests** (`request_with_auth/2`)
      - Used for all post-registration endpoints
@@ -246,6 +247,29 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
       case Req.post(url, opts) do
         {:ok, %{status: 201, body: %{"data" => node_data}}} ->
           {:ok, node_data}
+
+        {:ok, %{status: status, body: body}} ->
+          {:error, {:http_error, status, body}}
+
+        {:error, reason} ->
+          {:error, {:request_failed, reason}}
+      end
+    end)
+  end
+
+  @doc """
+  Fetches refreshable, non-secret connectivity configuration for this agent.
+
+  GET /api/v1/agents/settings/config
+  """
+  @spec get_connectivity_config() :: {:ok, map()} | {:error, term()}
+  def get_connectivity_config do
+    request_with_auth("/api/v1/agents/settings/config", fn url, headers ->
+      opts = Keyword.merge([headers: headers], http_options())
+
+      case Req.get(url, opts) do
+        {:ok, %{status: 200, body: %{"data" => data}}} when is_map(data) ->
+          {:ok, data}
 
         {:ok, %{status: status, body: body}} ->
           {:error, {:http_error, status, body}}
@@ -687,21 +711,35 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     end
   end
 
-  # Get list of URLs to try: VPN admin URLs first, then HTTP fallback URLs from Settings.
+  # Get list of URLs to try: every VPN admin URL first, then every distinct public
+  # fallback URL. `try_request*` only advances after transport failures, so a
+  # reachable HTTP response (including an error status) remains terminal.
   defp get_urls_to_try do
-    case Settings.get_admin_urls() do
-      [] ->
-        fallback_urls = Settings.get_admin_fallback_urls()
+    vpn_urls = Settings.get_admin_urls()
+    fallback_urls = Settings.get_admin_fallback_urls()
 
-        if fallback_urls != [] do
-          Logger.info("No VPN admin URLs, using HTTP fallback: #{inspect(fallback_urls)}")
-        end
+    cond do
+      vpn_urls == [] and fallback_urls != [] ->
+        Logger.info("No VPN admin URLs, using HTTP fallback: #{inspect(fallback_urls)}")
 
-        fallback_urls
+      vpn_urls != [] and fallback_urls != [] ->
+        Logger.debug("VPN admin URLs will be tried before public fallback URLs: #{inspect(fallback_urls)}")
 
-      vpn_urls ->
-        vpn_urls
+      true ->
+        :ok
     end
+
+    urls_to_try(vpn_urls, fallback_urls)
+  end
+
+  @doc false
+  # Kept pure and public for unit testing. VPN URLs are deliberately not
+  # discarded merely because public fallbacks exist: their lower latency is the
+  # preferred path. The fallback URLs follow them so the same request can still
+  # escape a broken VPN path without waiting for another scheduler tick.
+  @spec urls_to_try([String.t()], [String.t()]) :: [String.t()]
+  def urls_to_try(vpn_urls, fallback_urls) do
+    Enum.uniq(vpn_urls ++ fallback_urls)
   end
 
   defp try_request([url | remaining_urls], path, request_fn) do

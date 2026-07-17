@@ -15,6 +15,32 @@ This guide is for operators and integrators using a running Edge Admin. If you w
 
 ---
 
+## Connectivity URL migrations
+
+`ADMIN_URLS` and `CORE_DERP_MAP_URLS` have deliberately different migration rules.
+
+### Admin URLs
+
+`ADMIN_URLS` is an ordered list of independently usable Admin API endpoints. Add the new URL while retaining the old one, roll the Admin deployment, and leave both available until agents have had time to refresh their settings. This is additive: agents can use either URL for Admin communication.
+
+If the VPN path is temporarily unavailable, agents can still reach the control plane through those public Admin fallback URLs. Direct WireGuard connectivity continues to work whenever it is available.
+
+### Core DERP map URLs
+
+`CORE_DERP_MAP_URLS` is different. It is an ordered list of URLs for **one complete canonical DERP map**, used only to migrate a map hostname or provide a mirror. The first usable URL wins; maps from different URLs are never combined.
+
+When changing a DERP map hostname:
+
+1. Make the new and old URLs serve the exact same complete map.
+2. Configure the new URL first and retain the old URL second.
+3. Roll the Admin deployment and allow agents to refresh their settings. Wait for the normal refresh window (at least 10 minutes, plus margin for offline nodes) before retiring the old URL.
+
+Changing the contents of the map is a separate operation. Complete the hostname migration first, then update the map served by every active URL and again allow the fleet to converge. Do not change hostnames and map contents in the same rollout: nodes selecting different map versions can choose different DERP relays for the same peer pair.
+
+During a bad or incomplete DERP-map rollout, direct WireGuard paths still work and Admin/Agent central communication can use `ADMIN_URLS` fallback URLs. The affected path is peer-to-peer traffic that needs DERP relay fallback; it may retry or be temporarily unavailable until the fleet converges on the same map.
+
+---
+
 ## 1. API surface and built-in UIs
 
 The admin is **API-first**. Every management operation goes through HTTP — there is no separate web UI to install. The API ships with three built-in browser entry points:

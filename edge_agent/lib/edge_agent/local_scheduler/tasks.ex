@@ -17,6 +17,7 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
   alias EdgeAgent.Commands
   alias EdgeAgent.EdgeClusters.Discovery
   alias EdgeAgent.EdgeClusters.HealthCheck
+  alias EdgeAgent.EdgeClusters.SettingsConfig
   alias EdgeAgent.Metrics
   alias EdgeAgent.SelfUpdates
   alias EdgeAgent.Settings
@@ -42,6 +43,15 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
       %{status: if(admin_urls == [], do: :empty, else: :success)}
     )
 
+    :ok
+  end
+
+  @doc """
+  Refreshes non-secret Admin-advertised settings configuration.
+  """
+  @spec refresh_settings_config() :: :ok
+  def refresh_settings_config do
+    SettingsConfig.refresh()
     :ok
   end
 

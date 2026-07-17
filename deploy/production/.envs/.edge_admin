@@ -212,10 +212,9 @@ ADMIN_URLS=https://edge-admin.yourdomain.com
 
 # DERP map server URL. Optional — leave unset to skip DERP overlay (Tailscale fallback).
 # This is the map server that describes relay locations, NOT the relay server itself.
-# Upfront decision: on first enrollment, agent doesn't have the map yet so VPN peer path
-# won't work — registration falls back to HTTP via admin_fallback_urls. Agent gets the map
-# after registering and converges on the same DERP. Adding/removing later has the same effect.
-# DERP_MAP_URL=https://edge-relay-map-1.yourdomain.com/derpmap/default
+# Ordered mirror / hostname-migration URLs for one canonical Core DERP map.
+# The first usable URL wins; every URL must serve the same complete map.
+# CORE_DERP_MAP_URLS=https://edge-relay-map-1.yourdomain.com/derpmap/default
 
 # =============================================================================
 # Admin Cluster & Erlang Distribution

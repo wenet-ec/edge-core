@@ -31,6 +31,28 @@ defmodule EdgeAdmin.Config do
     parse_env(value, type)
   end
 
+  @doc """
+  Reads an optional comma-separated list of absolute HTTP(S) URLs.
+
+  Empty entries are discarded. Raises during boot for malformed values so a
+  bad deployment configuration cannot be advertised to enrolling agents.
+  """
+  @spec get_http_url_list(String.t(), [String.t()]) :: [String.t()]
+  def get_http_url_list(key, default \\ []) do
+    key
+    |> get_env(:list, default)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.map(fn url ->
+      uri = URI.parse(url)
+
+      if uri.scheme in ["http", "https"] and is_binary(uri.host) and uri.host != "" do
+        url
+      else
+        raise "Invalid #{key} entry #{inspect(url)} — expected a full http:// or https:// URL"
+      end
+    end)
+  end
+
   defp parse_env(value, :string), do: value
   defp parse_env(value, :integer), do: String.to_integer(value)
 

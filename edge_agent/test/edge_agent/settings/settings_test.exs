@@ -404,33 +404,29 @@ defmodule EdgeAgent.SettingsTest do
   end
 
   # -----------------------------------------------------------------------
-  # derp_map_url — plain string, nil clears via delete
+  # core_derp_map_urls — JSON list
   # -----------------------------------------------------------------------
 
-  describe "derp_map_url accessors" do
-    test "get_derp_map_url returns nil when not set" do
-      assert Settings.get_derp_map_url() == nil
+  describe "core_derp_map_urls accessors" do
+    test "get_core_derp_map_urls returns an empty list when not set" do
+      assert Settings.get_core_derp_map_urls() == []
     end
 
-    test "set_derp_map_url then get roundtrips" do
-      {:ok, _} = Settings.set_derp_map_url("https://config.example.com/derp-map.json")
-      assert Settings.get_derp_map_url() == "https://config.example.com/derp-map.json"
+    test "merge prepends newly learned URLs and retains known migration URLs" do
+      {:ok, _} = Settings.merge_core_derp_map_urls(["https://old.example.com/derpmap/default"])
+      {:ok, _} = Settings.merge_core_derp_map_urls(["https://new.example.com/derpmap/default"])
+
+      assert Settings.get_core_derp_map_urls() == [
+               "https://new.example.com/derpmap/default",
+               "https://old.example.com/derpmap/default"
+             ]
     end
 
-    test "set_derp_map_url nil deletes the key" do
-      {:ok, _} = Settings.set_derp_map_url("https://config.example.com/derp-map.json")
-      {:ok, _} = Settings.set_derp_map_url(nil)
-      assert Settings.get_derp_map_url() == nil
-    end
+    test "merge deduplicates URLs" do
+      url = "https://relay.example.com/derpmap/default"
+      {:ok, _} = Settings.merge_core_derp_map_urls([url, url])
 
-    test "set_derp_map_url nil on missing key is safe" do
-      assert {:ok, nil} = Settings.set_derp_map_url(nil)
-    end
-
-    test "set_derp_map_url can overwrite previous value" do
-      {:ok, _} = Settings.set_derp_map_url("https://config1.example.com/derp-map.json")
-      {:ok, _} = Settings.set_derp_map_url("https://config2.example.com/derp-map.json")
-      assert Settings.get_derp_map_url() == "https://config2.example.com/derp-map.json"
+      assert Settings.get_core_derp_map_urls() == [url]
     end
   end
 

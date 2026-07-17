@@ -56,13 +56,31 @@ curl https://edge-relay-map-1.yourdomain.com/derpmap/default
 
 ## Wire it into your admin
 
-Once both services are up and the map is reachable, point your admin at it via `DERP_MAP_URL` in `.edge_admin`:
+Once both services are up and the map is reachable, point your admin at it via `CORE_DERP_MAP_URLS` in `.edge_admin`:
 
 ```env
-DERP_MAP_URL=https://edge-relay-map-1.yourdomain.com/derpmap/default
+CORE_DERP_MAP_URLS=https://edge-relay-map-1.yourdomain.com/derpmap/default
 ```
 
-The admin's `/start` script exports this to `DERP_MAP_URLS` for netclient at boot. After an admin restart, the new map is picked up — admins propagate it to agents via the regular Netmaker peer-update flow, so agents don't need a separate config change.
+The admin's `/start` script exports this to netclient's `DERP_MAP_URLS` at boot. Agents learn the same ordered source list through their authenticated settings refresh.
+
+`CORE_DERP_MAP_URLS` is an ordered list for **one complete canonical map**. It is not a list of map fragments: the first reachable URL is used, and maps from multiple URLs are never merged.
+
+### Migrate a map hostname
+
+Use two URLs only while moving the hostname that serves the map:
+
+```env
+CORE_DERP_MAP_URLS=https://new-map.example.com/derpmap/default,https://old-map.example.com/derpmap/default
+```
+
+Both URLs must serve the same complete canonical map. Deploy the new setting, then keep both URLs live for at least 10 minutes (and longer for offline nodes) so Admins and Agents converge. Retire the old URL only after that window.
+
+### Change the map contents
+
+Do this separately from a hostname migration. First finish the hostname migration above. Then update `derp-map.json` on every active map server so all of them serve the same new complete map, and allow the fleet another refresh window to converge.
+
+Do not change the source URLs and map contents in one rollout. Nodes using different map versions can select different DERP relays for the same peer pair. This does not stop direct WireGuard connectivity or Admin fallback communication through `ADMIN_URLS`; only peer-to-peer traffic that requires DERP can be briefly disrupted while the maps converge.
 
 ## Network requirements
 
@@ -137,7 +155,7 @@ The map JSON supports multiple regions and multiple nodes per region:
 
 Each node needs its own VM running the `edge_relay` service with its own `DERP_HOSTNAME`. Region IDs ≥ 900 are the convention for self-hosted relays — public Tailscale DERPs use lower numbers.
 
-After editing `derp-map.json`, restart `edge_relay_map` to pick up the new file. Admins fetch the map at boot, so admin restarts propagate the change to agents.
+After editing `derp-map.json`, restart `edge_relay_map` to pick up the file. Follow the map-content rollout above rather than relying on Admin restarts: Admins and Agents refresh their advertised configuration and map cache independently.
 
 ## Limitations
 

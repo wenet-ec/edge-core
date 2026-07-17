@@ -193,6 +193,9 @@ defmodule EdgeAdminWeb.Router do
 
     # Alias registration
     post("/aliases", AliasController, :create)
+
+    # Refreshable, non-secret connectivity configuration.
+    get("/settings/config", SettingsController, :config)
   end
 
   # Protected API endpoints (requires API_KEY or MASTER_KEY)

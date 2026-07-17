@@ -174,13 +174,37 @@ defmodule EdgeAgent.Settings do
     set_config("admin_fallback_urls", JSON.encode!(urls))
   end
 
-  @spec get_derp_map_url() :: String.t() | nil
-  def get_derp_map_url, do: get_config("derp_map_url")
-
-  @spec set_derp_map_url(String.t() | nil) ::
+  @spec merge_admin_fallback_urls([String.t()]) ::
           {:ok, Setting.t()} | {:error, Ecto.Changeset.t() | String.t()}
-  def set_derp_map_url(nil), do: delete_config("derp_map_url")
-  def set_derp_map_url(url) when is_binary(url), do: set_config("derp_map_url", url)
+  def merge_admin_fallback_urls(urls), do: set_admin_fallback_urls(prepend_new_urls(urls, get_admin_fallback_urls()))
+
+  @spec get_core_derp_map_urls() :: [String.t()]
+  def get_core_derp_map_urls do
+    case get_config("core_derp_map_urls") do
+      nil ->
+        []
+
+      json ->
+        case JSON.decode(json) do
+          {:ok, urls} when is_list(urls) -> urls
+          _ -> []
+        end
+    end
+  end
+
+  @spec merge_core_derp_map_urls([String.t()]) ::
+          {:ok, Setting.t()} | {:error, Ecto.Changeset.t() | String.t()}
+  def merge_core_derp_map_urls(urls) do
+    set_config("core_derp_map_urls", JSON.encode!(prepend_new_urls(urls, get_core_derp_map_urls())))
+  end
+
+  defp prepend_new_urls(incoming, existing) do
+    incoming
+    |> Enum.filter(&(is_binary(&1) and &1 != ""))
+    |> Enum.uniq()
+    |> Enum.reject(&(&1 in existing))
+    |> Kernel.++(existing)
+  end
 
   # =============================================================================
   # Typed Accessors — Secret (session-scoped)

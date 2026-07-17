@@ -30,6 +30,7 @@ report_executions_schedule = get_env("REPORT_EXECUTIONS_SCHEDULE", :string, "* *
 sync_executions_schedule = get_env("SYNC_EXECUTIONS_SCHEDULE", :string, "*/2 * * * *")
 report_health_check_schedule = get_env("REPORT_HEALTH_CHECK_SCHEDULE", :string, "*/2 * * * *")
 discover_admins_schedule = get_env("DISCOVER_ADMINS_SCHEDULE", :string, "*/3 * * * *")
+refresh_settings_config_schedule = get_env("REFRESH_SETTINGS_CONFIG_SCHEDULE", :string, "*/5 * * * *")
 check_self_update_schedule = get_env("CHECK_SELF_UPDATE_SCHEDULE", :string, "0 */2 * * *")
 push_metrics_schedule = get_env("PUSH_METRICS_SCHEDULE", :string, "*/2 * * * *")
 pull_vpn_config_schedule = get_env("PULL_VPN_CONFIG_SCHEDULE", :string, "0 0 * * *")
@@ -44,6 +45,10 @@ config :edge_agent, EdgeAgent.LocalScheduler,
     discover_admins: [
       schedule: discover_admins_schedule,
       task: {Tasks, :discover_admins, []}
+    ],
+    refresh_settings_config: [
+      schedule: refresh_settings_config_schedule,
+      task: {Tasks, :refresh_settings_config, []}
     ],
     report_health_check: [
       schedule: report_health_check_schedule,

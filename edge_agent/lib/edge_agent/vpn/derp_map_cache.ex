@@ -3,7 +3,7 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
   @moduledoc """
   Periodic cache for the DERP map fetched from the configured map server.
 
-  Fetches the DERP map JSON from `derp_map_url` (stored in settings) on startup
+  Fetches the DERP map JSON from `core_derp_map_urls` (stored in settings) on startup
   and on a recurring interval (default 5 minutes, configurable via
   `DERP_MAP_REFRESH_INTERVAL_MS`). Serves the cached result instantly to the
   reflection endpoint.
@@ -21,11 +21,11 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
 
   ## Other behaviour
 
-  If `derp_map_url` is nil (not configured), the cache holds nil and the endpoint
+  If `core_derp_map_urls` is empty (not configured), the cache holds nil and the endpoint
   returns an empty regions map — netclient skips the overlay and uses Tailscale fallback.
 
   If a fetch fails, the last known good cache is kept. The map server URL is re-read
-  from settings on every fetch cycle, so re-registration with a new URL takes effect
+  from settings on every fetch cycle, so a refreshed URL list takes effect
   within one refresh interval without a restart.
   """
 
@@ -125,21 +125,23 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
   end
 
   defp fetch_and_log do
-    case Settings.get_derp_map_url() do
-      nil ->
-        Logger.debug("DerpMapCache: derp_map_url not configured, cache empty")
+    case Settings.get_core_derp_map_urls() do
+      [] ->
+        Logger.debug("DerpMapCache: core_derp_map_urls not configured, cache empty")
         nil
 
-      url ->
-        case fetch(url) do
-          {:ok, map} ->
-            Logger.info("DerpMapCache: fetched DERP map from #{url}")
-            map
+      urls ->
+        Enum.find_value(urls, fn url ->
+          case fetch(url) do
+            {:ok, map} ->
+              Logger.info("DerpMapCache: fetched canonical Core DERP map from #{url}")
+              map
 
-          {:error, reason} ->
-            Logger.warning("DerpMapCache: fetch failed from #{url}: #{inspect(reason)}")
-            nil
-        end
+            {:error, reason} ->
+              Logger.warning("DerpMapCache: fetch failed from #{url}: #{inspect(reason)}")
+              nil
+          end
+        end)
     end
   end
 

@@ -111,7 +111,11 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
           items: %Schema{type: :string},
           description: "List of admin HTTP fallback URLs"
         },
-        derp_map_url: %Schema{type: :string, nullable: true, description: "URL to fetch the DERP relay map"}
+        core_derp_map_urls: %Schema{
+          type: :array,
+          items: %Schema{type: :string},
+          description: "Ordered mirror or migration URLs for one canonical Core DERP map"
+        }
       },
       required: [:node_id, :api_token, :proxy_password, :admin_urls],
       example: %{
@@ -119,7 +123,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         api_token: "eyJhbGciOiJIUzI1NiJ9...",
         proxy_password: "s3cr3tpassword",
         admin_urls: ["http://10.0.0.1:44000"],
-        derp_map_url: "https://controlplane.tailscale.com/derpmap/default"
+        core_derp_map_urls: ["https://relay.example.com/derpmap/default"]
       }
     })
   end

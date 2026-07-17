@@ -219,7 +219,7 @@ defmodule EdgeAgent.Bootstrap do
           api_token = node_data["api_token"]
           proxy_password = node_data["proxy_password"]
           admin_urls = node_data["admin_urls"]
-          derp_map_url = node_data["derp_map_url"]
+          core_derp_map_urls = node_data["core_derp_map_urls"] || []
 
           cond do
             is_nil(api_token) ->
@@ -231,8 +231,8 @@ defmodule EdgeAgent.Bootstrap do
             true ->
               Settings.set_api_token(api_token)
               Settings.set_proxy_password(proxy_password)
-              if admin_urls not in [nil, []], do: Settings.set_admin_fallback_urls(admin_urls)
-              Settings.set_derp_map_url(derp_map_url)
+              if admin_urls not in [nil, []], do: Settings.merge_admin_fallback_urls(admin_urls)
+              Settings.merge_core_derp_map_urls(core_derp_map_urls)
               Logger.info("Successfully registered with admin")
               :ok
           end

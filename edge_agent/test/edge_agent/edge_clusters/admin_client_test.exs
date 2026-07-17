@@ -6,7 +6,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
   alias EdgeAgent.Settings
 
   # ---------------------------------------------------------------------------
-  # get_urls_to_try/0 — fallback URL priority logic
+  # urls_to_try/2 — fallback URL priority logic
   #
   # The function is private, so we test it via the public API by observing
   # which error is returned: {:error, :no_admin_urls} means the URL list was
@@ -18,7 +18,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
   # but that proves the URL was resolved).
   # ---------------------------------------------------------------------------
 
-  describe "get_urls_to_try/0 — VPN admin URLs take priority" do
+  describe "urls_to_try/2 — VPN admin URLs take priority" do
     setup do
       Settings.set_api_token("test-token")
 
@@ -36,6 +36,25 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
       result = AdminClient.list_pending_command_executions()
       assert result != {:error, :no_admin_urls}
       assert match?({:error, _}, result)
+    end
+
+    test "public fallback URLs follow all VPN URLs, so one request can recover from VPN transport failures" do
+      assert AdminClient.urls_to_try(
+               ["http://100.64.0.4:44000", "http://100.64.0.5:44000"],
+               ["https://admin.example.com", "https://admin-backup.example.com"]
+             ) == [
+               "http://100.64.0.4:44000",
+               "http://100.64.0.5:44000",
+               "https://admin.example.com",
+               "https://admin-backup.example.com"
+             ]
+    end
+
+    test "duplicate public URL is attempted only once" do
+      assert AdminClient.urls_to_try(
+               ["http://100.64.0.4:44000"],
+               ["http://100.64.0.4:44000", "https://admin.example.com"]
+             ) == ["http://100.64.0.4:44000", "https://admin.example.com"]
     end
 
     test "when no VPN URLs and no fallback configured → :no_admin_urls" do

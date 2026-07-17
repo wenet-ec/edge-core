@@ -100,11 +100,11 @@ if [ -z "$EPMD_BIN" ]; then
 fi
 "$EPMD_BIN" -daemon
 
-# Tell netclient where to fetch the DERP map overlay.
-# Admin has DERP_MAP_URL at start time (deploy-time config) — export directly.
+# Tell netclient where to fetch canonical Core DERP map sources.
+# CORE_DERP_MAP_URLS is Edge Admin configuration; DERP_MAP_URLS is netclient's contract.
 # Must be set before netclient daemon starts; cannot be pushed into a running process.
-if [ -n "${DERP_MAP_URL:-}" ]; then
-    export DERP_MAP_URLS="${DERP_MAP_URL}"
+if [ -n "${CORE_DERP_MAP_URLS:-}" ]; then
+    export DERP_MAP_URLS="${CORE_DERP_MAP_URLS}"
 fi
 
 # Start netclient daemon in the background

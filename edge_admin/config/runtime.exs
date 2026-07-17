@@ -203,22 +203,15 @@ end
 auth_enabled = get_env("AUTH_ENABLED", :boolean, true)
 basic_auth_enabled = get_env("BASIC_AUTH_ENABLED", :boolean, false)
 
-urls = get_env!("ADMIN_URLS", :list)
-urls = Enum.reject(urls, &(&1 == ""))
+urls = EdgeAdmin.Config.get_http_url_list("ADMIN_URLS")
 
 if urls == [] do
   raise "ADMIN_URLS must contain at least one full admin URL, e.g. https://edge-admin.example.com"
 end
 
-Enum.each(urls, fn url ->
-  uri = URI.parse(url)
-
-  if !(uri.scheme in ["http", "https"] and is_binary(uri.host) and uri.host != "") do
-    raise "Invalid ADMIN_URLS entry #{inspect(url)} — expected a full http:// or https:// URL"
-  end
-end)
-
 admin_urls = urls
+
+core_derp_map_urls = EdgeAdmin.Config.get_http_url_list("CORE_DERP_MAP_URLS")
 
 # CORS — origins and allowed request headers. Set CORS_ALLOWED_HEADERS=*
 # to mirror request headers back (Corsica's :all), or pass a comma-separated
@@ -484,7 +477,8 @@ config :edge_admin,
   public_enrollment_key_enabled: get_env("PUBLIC_ENROLLMENT_KEY_ENABLED", :boolean, false),
   # Admin URLs for enrollment key generation and agent fallback (required).
   admin_urls: admin_urls,
-  derp_map_url: get_env("DERP_MAP_URL"),
+  # Ordered mirror / migration sources for one canonical Core DERP map.
+  core_derp_map_urls: core_derp_map_urls,
   # Netmaker DNS domain suffix (used for hostname construction)
   netmaker_default_domain: get_env("NETMAKER_DEFAULT_DOMAIN", :string, "nm.internal"),
   # === Background Job Schedules ===

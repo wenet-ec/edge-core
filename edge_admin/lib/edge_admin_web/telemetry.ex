@@ -90,10 +90,12 @@ defmodule EdgeAdminWeb.Telemetry do
         description: "Successful job duration"
       ),
       counter("oban.job.stop.count",
+        measurement: :duration,
         tags: [:worker, :queue, :state],
         description: "Completed jobs by terminal state"
       ),
       counter("oban.job.exception.count",
+        measurement: :duration,
         tags: [:worker, :queue],
         description: "Job exceptions"
       )
@@ -108,6 +110,7 @@ defmodule EdgeAdminWeb.Telemetry do
         description: "LocalScheduler job duration"
       ),
       counter("quantum.job.exception.count",
+        measurement: :duration,
         tags: [:scheduler],
         description: "LocalScheduler job exceptions — non-zero means a scheduled job is failing"
       )
@@ -151,11 +154,22 @@ defmodule EdgeAdminWeb.Telemetry do
         description: "1 = degraded (over capacity), 0 = healthy"
       ),
 
-      # Node health — how many of my nodes are not responding?
+      # Node health — latest local direct-VPN sweep plus fallback reports.
       last_value("edge_admin.nodes.health_check_summary.unhealthy_count",
         event_name: [:edge_admin, :nodes, :health_check_summary],
         measurement: :unhealthy_count,
-        description: "Unhealthy/unreachable nodes seen on the last health-check sweep"
+        description: "Unhealthy nodes in this admin's last direct VPN health-check sweep"
+      ),
+      last_value("edge_admin.nodes.health_check_summary.unreachable_count",
+        event_name: [:edge_admin, :nodes, :health_check_summary],
+        measurement: :unreachable_count,
+        description: "Unreachable nodes in this admin's last direct VPN health-check sweep"
+      ),
+      counter("edge_admin.nodes.fallback_health_report.count",
+        event_name: [:edge_admin, :nodes, :fallback_health_report],
+        measurement: :count,
+        tags: [:reported_status],
+        description: "HTTP fallback reports; agent-to-admin reachability without proof of direct VPN reachability"
       ),
 
       # Commands — delivery throughput, completion exit codes
@@ -166,6 +180,7 @@ defmodule EdgeAdminWeb.Telemetry do
       ),
       counter("edge_admin.commands.execution.completed.count",
         event_name: [:edge_admin, :commands, :execution, :completed],
+        measurement: :duration,
         tags: [:exit_code_category],
         description: "Executions that returned a result, grouped by exit code class"
       ),
@@ -173,6 +188,7 @@ defmodule EdgeAdminWeb.Telemetry do
       # Proxy — tunnel closure reasons reveal abuse / abnormal closes
       counter("edge_admin.proxy.tunnel.closed.count",
         event_name: [:edge_admin, :proxy, :tunnel, :closed],
+        measurement: :duration_ms,
         tags: [:protocol, :reason],
         description: "Tunnels closed (normal | deadline | drain_timeout)"
       ),
@@ -189,6 +205,7 @@ defmodule EdgeAdminWeb.Telemetry do
       ),
       counter("edge_admin.event_broker.publish.count",
         event_name: [:edge_admin, :event_broker, :publish],
+        measurement: :duration,
         tags: [:result],
         description: "Broker publish attempts (ok | error)"
       )

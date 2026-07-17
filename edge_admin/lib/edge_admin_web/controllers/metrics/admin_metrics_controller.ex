@@ -21,13 +21,14 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AdminMetricsController do
     - Metadata: degraded status, orphaned/assigned clusters
     - Membership: step counts and full sequence completions
     - Discovery: peer discovery scan, DNS resolution, and connection counts
-    - Nodes: health check statistics
+    - Nodes: direct VPN health-check outcomes, latest local sweep, and HTTP fallback reports
     - Commands: delivery runs, per-execution delivery, completions, expirations
     - SSH: credential verification attempts and failures
     - Reconciliation: cluster Netmaker↔DB sync runs and errors
     - Self-updates: request processing completions
     - Gateways: connection events, active count, scrape totals
     - Event broker: publish/enqueue counters (zeroed when broker is disabled)
+    - Webhooks: fan-out invocations, matched delivery jobs, and delivery outcomes
     - Oban: job queue states (available, scheduled, executing, etc.)
     """,
     parameters: [],

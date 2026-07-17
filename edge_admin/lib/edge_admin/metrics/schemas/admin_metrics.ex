@@ -201,16 +201,30 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   end
 
   defmodule Nodes do
-    @moduledoc "Node health check metrics"
+    @moduledoc "Node health and fallback-connectivity metrics for this admin instance"
 
     @derive JSON.Encoder
     defstruct [
-      :health_checks_total
+      :health_checks_total,
+      :health_checks_healthy_total,
+      :health_checks_unhealthy_total,
+      :health_checks_unreachable_total,
+      :fallback_health_reports_total,
+      :last_sweep_healthy_count,
+      :last_sweep_unhealthy_count,
+      :last_sweep_unreachable_count
     ]
 
     def from_raw(raw) do
       %__MODULE__{
-        health_checks_total: raw["nodes_health_checks"]
+        health_checks_total: raw["nodes_health_checks"],
+        health_checks_healthy_total: raw["nodes_health_checks_healthy"],
+        health_checks_unhealthy_total: raw["nodes_health_checks_unhealthy"],
+        health_checks_unreachable_total: raw["nodes_health_checks_unreachable"],
+        fallback_health_reports_total: raw["nodes_fallback_health_reports_total"],
+        last_sweep_healthy_count: raw["nodes_health_check_summary_healthy_count"],
+        last_sweep_unhealthy_count: raw["nodes_health_check_summary_unhealthy_count"],
+        last_sweep_unreachable_count: raw["nodes_health_check_summary_unreachable_count"]
       }
     end
   end
@@ -299,13 +313,19 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
     @derive JSON.Encoder
     defstruct [
       :total,
-      :errors
+      :errors,
+      :nodes_added,
+      :nodes_removed,
+      :nodes_deleted
     ]
 
     def from_raw(raw) do
       %__MODULE__{
         total: raw["nodes_cluster_reconciliations_total"],
-        errors: raw["nodes_cluster_reconciliation_errors"]
+        errors: raw["nodes_cluster_reconciliation_errors"],
+        nodes_added: raw["nodes_cluster_reconciliation_nodes_added"],
+        nodes_removed: raw["nodes_cluster_reconciliation_nodes_removed"],
+        nodes_deleted: raw["nodes_cluster_reconciliation_nodes_deleted"]
       }
     end
   end
@@ -315,12 +335,16 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
 
     @derive JSON.Encoder
     defstruct [
-      :completed_total
+      :completed_total,
+      :triggered,
+      :failed
     ]
 
     def from_raw(raw) do
       %__MODULE__{
-        completed_total: raw["self_updates_completed_total"]
+        completed_total: raw["self_updates_completed_total"],
+        triggered: raw["self_updates_triggered"],
+        failed: raw["self_updates_failed"]
       }
     end
   end
@@ -426,9 +450,8 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
     @moduledoc """
     Webhook delivery metrics.
 
-    `fan_outs_total` is one increment per `Events.publish/1` invocation that
-    saw at least one matching webhook (the underlying counter records the
-    matched count as the measurement).
+    `fan_outs_total` is one increment per `Events.publish/1` invocation;
+    `matched_deliveries_total` sums the matching delivery jobs enqueued.
 
     `deliveries_*` count individual HTTP attempts and split by outcome:
       - `ok`           — 2xx response
@@ -439,6 +462,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
     @derive JSON.Encoder
     defstruct [
       :fan_outs_total,
+      :matched_deliveries_total,
       :deliveries_total,
       :deliveries_ok_total,
       :deliveries_recoverable_total,
@@ -448,6 +472,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
     def from_raw(raw) do
       %__MODULE__{
         fan_outs_total: raw["webhook_fan_outs_total"],
+        matched_deliveries_total: raw["webhook_matched_deliveries_total"],
         deliveries_total: raw["webhook_deliveries_total"],
         deliveries_ok_total: raw["webhook_deliveries_ok_total"],
         deliveries_recoverable_total: raw["webhook_deliveries_recoverable_total"],

@@ -9,7 +9,7 @@ defmodule EdgeAdminMcp.Tools.Metrics.GetAdminMetrics do
   - `metadata` — cluster metadata recompute counters
   - `membership` — admin Erlang/`:syn` membership health
   - `discovery` — admin peer discovery via VPN
-  - `nodes` — node count + per-cluster health distribution
+  - `nodes` — direct VPN health-check outcomes, latest local sweep, and HTTP fallback reports
   - `quantum` — LocalScheduler job runs
   - `vpn` — Netmaker API calls + netclient pulls
   - `commands` — command pipeline (creation, dispatch, completion)
@@ -19,7 +19,7 @@ defmodule EdgeAdminMcp.Tools.Metrics.GetAdminMetrics do
   - `gateways` — per-cluster Gateway proxy health
   - `proxy` — admin's HTTP/SOCKS5 forward proxy
   - `event_broker` — broker publish (NATS/Kafka/etc.) outcomes
-  - `webhook` — webhook delivery outcomes
+  - `webhook` — fan-out volume and webhook delivery outcomes
   - `oban_queues` — per-queue depth and execution stats
   """
   use EdgeAdminMcp, :tool

@@ -101,7 +101,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Nodes flagged as unhealthy or unreachable in the last health check sweep.",
+      "description": "Unhealthy plus unreachable nodes in this Admin's last direct VPN health-check sweep; this is not a fleet-wide gauge.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -154,11 +154,11 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "edge_admin_nodes_health_check_summary_unhealthy_count{otp_app=\"$otp_app\"}",
+          "expr": "sum(edge_admin_nodes_health_check_summary_unhealthy_count{otp_app=\"$otp_app\"}) + sum(edge_admin_nodes_health_check_summary_unreachable_count{otp_app=\"$otp_app\"})",
           "refId": "A"
         }
       ],
-      "title": "Unhealthy Nodes",
+      "title": "VPN-Degraded Nodes (Last Sweep)",
       "type": "stat"
     },
     {
@@ -2106,7 +2106,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "description": "Unhealthy/unreachable nodes in the most recent sweep.",
+          "description": "Unhealthy plus unreachable nodes in this Admin's most recent direct VPN health-check sweep; this is not a fleet-wide gauge.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2157,12 +2157,76 @@
                 "type": "prometheus",
                 "uid": "${datasource}"
               },
-              "expr": "edge_admin_nodes_health_check_summary_unhealthy_count{otp_app=\"$otp_app\"}",
+              "expr": "sum(edge_admin_nodes_health_check_summary_unhealthy_count{otp_app=\"$otp_app\"}) + sum(edge_admin_nodes_health_check_summary_unreachable_count{otp_app=\"$otp_app\"})",
               "refId": "A"
             }
           ],
-          "title": "Unhealthy (Last Sweep)",
+          "title": "VPN-Degraded (Last Sweep)",
           "type": "gauge"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "description": "HTTP fallback reports prove Agent-to-Admin reachability only; their presence means the direct VPN health path is unavailable for those Agents.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineWidth": 1,
+                "showPoints": "never"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 9
+          },
+          "id": 77,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "sum by (reported_status) (rate(edge_admin_nodes_fallback_health_report_total{otp_app=\"$otp_app\"}[$__rate_interval]))",
+              "refId": "A",
+              "legendFormat": "{{reported_status}}"
+            }
+          ],
+          "title": "HTTP Fallback Health Reports",
+          "type": "timeseries"
         }
       ],
       "title": "Nodes & Health",
@@ -4632,7 +4696,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "description": "Terminal failure rate by webhook id. Sustained \u2192 receiver is broken \u2192 events are being dropped after retries exhaust.",
+          "description": "Terminal failure rate by event type. Sustained failures mean receivers are broken and events are dropped after retries exhaust; inspect the webhook delivery logs or subscriptions to identify a destination.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -4691,12 +4755,85 @@
                 "type": "prometheus",
                 "uid": "${datasource}"
               },
-              "expr": "sum by (webhook_id) (rate(edge_admin_webhook_delivery_total{otp_app=\"$otp_app\",result=\"terminal\"}[$__rate_interval]))",
+              "expr": "sum by (event_type) (rate(edge_admin_webhook_delivery_total{otp_app=\"$otp_app\",result=\"terminal\"}[$__rate_interval]))",
               "refId": "A",
-              "legendFormat": "{{webhook_id}}"
+              "legendFormat": "{{event_type}}"
             }
           ],
-          "title": "Terminal Failure Rate by Webhook",
+          "title": "Terminal Failure Rate by Event Type",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "description": "Publish-time fan-out volume. `matching delivery jobs` is the number of webhook jobs enqueued; it can exceed published events when multiple subscriptions match.",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineWidth": 1,
+                "showPoints": "never"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 9
+          },
+          "id": 78,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "sum(rate(edge_admin_webhook_fan_out_total{otp_app=\"$otp_app\"}[$__rate_interval]))",
+              "refId": "A",
+              "legendFormat": "fan-out invocations"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "sum(rate(edge_admin_webhook_fan_out_matched_total{otp_app=\"$otp_app\"}[$__rate_interval]))",
+              "refId": "B",
+              "legendFormat": "matching delivery jobs"
+            }
+          ],
+          "title": "Webhook Fan-out Volume",
           "type": "timeseries"
         }
       ],

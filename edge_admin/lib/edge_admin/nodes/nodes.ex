@@ -1023,7 +1023,7 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec update_node_health_check(Node.t(), map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
   def update_node_health_check(node, params) do
-    with {:ok, _attrs} <- Forms.NodeHealthCheckForm.changeset(params) do
+    with {:ok, %{"status" => reported_status}} <- Forms.NodeHealthCheckForm.changeset(params) do
       now = DateTime.truncate(DateTime.utc_now(), :second)
 
       update_attrs = %{
@@ -1033,6 +1033,13 @@ defmodule EdgeAdmin.Nodes do
 
       with {:ok, updated_node} <- update_node(node, update_attrs) do
         maybe_publish_status_changed(node, :unhealthy)
+
+        :telemetry.execute(
+          [:edge_admin, :nodes, :fallback_health_report],
+          %{count: 1},
+          %{reported_status: reported_status}
+        )
+
         {:ok, updated_node}
       end
     end
@@ -1108,7 +1115,13 @@ defmodule EdgeAdmin.Nodes do
       # Emit summary telemetry
       :telemetry.execute(
         [:edge_admin, :nodes, :health_check_summary],
-        %{unhealthy_count: results.unhealthy + results.unreachable, count: 1, total: 1},
+        %{
+          healthy_count: results.healthy,
+          unhealthy_count: results.unhealthy,
+          unreachable_count: results.unreachable,
+          count: 1,
+          total: 1
+        },
         %{}
       )
 

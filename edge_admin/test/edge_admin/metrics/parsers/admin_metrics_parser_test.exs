@@ -32,10 +32,24 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     edge_admin_membership_step_total{step="db"} 1
     edge_admin_nodes_health_check_total{result="healthy"} 10
     edge_admin_nodes_health_check_total{result="unhealthy"} 2
+    edge_admin_nodes_health_check_total{result="unreachable"} 1
+    edge_admin_nodes_fallback_health_report_total{reported_status="healthy"} 3
+    edge_admin_nodes_fallback_health_report_total{reported_status="unhealthy"} 1
+    edge_admin_nodes_health_check_summary_healthy_count 10
+    edge_admin_nodes_health_check_summary_unhealthy_count 2
+    edge_admin_nodes_health_check_summary_unreachable_count 1
+    edge_admin_nodes_cluster_reconciliation_total{cluster="prod",result="ok"} 6
+    edge_admin_nodes_cluster_reconciliation_errors 0
+    edge_admin_nodes_cluster_reconciliation_nodes_added 1
+    edge_admin_nodes_cluster_reconciliation_nodes_removed 2
+    edge_admin_nodes_cluster_reconciliation_nodes_deleted 3
     edge_admin_quantum_job_executed_total{job="reconcile"} 100
     edge_admin_quantum_job_exception_total{job="reconcile"} 1
     edge_admin_vpn_zombie_admin_cleanup_total{result="ok"} 5
     edge_admin_vpn_zombie_admin_cleanup_deleted_count 3
+    edge_admin_self_updates_request_completed_total{targeting_type="nodes"} 4
+    edge_admin_self_updates_request_completed_triggered 6
+    edge_admin_self_updates_request_completed_failed 1
     edge_admin_commands_delivery_total{result="ok"} 50
     edge_admin_commands_delivery_delivered_count 48
     edge_admin_gateway_connection_total{cluster="prod"} 10
@@ -66,11 +80,13 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     edge_admin_event_broker_publish_total{adapter="nats",event_type="execution.completed",result="error"} 1
     edge_admin_webhook_fan_out_total{event_type="edge.node.registered"} 50
     edge_admin_webhook_fan_out_total{event_type="edge.command_execution.completed"} 30
-    edge_admin_webhook_delivery_total{event_type="edge.node.registered",webhook_id="abc",result="ok"} 48
-    edge_admin_webhook_delivery_total{event_type="edge.node.registered",webhook_id="abc",result="recoverable"} 1
-    edge_admin_webhook_delivery_total{event_type="edge.node.registered",webhook_id="abc",result="terminal"} 1
-    edge_admin_webhook_delivery_total{event_type="edge.command_execution.completed",webhook_id="def",result="ok"} 28
-    edge_admin_webhook_delivery_total{event_type="edge.command_execution.completed",webhook_id="def",result="recoverable"} 2
+    edge_admin_webhook_fan_out_matched_total{event_type="edge.node.registered"} 50
+    edge_admin_webhook_fan_out_matched_total{event_type="edge.command_execution.completed"} 30
+    edge_admin_webhook_delivery_total{event_type="edge.node.registered",result="ok"} 48
+    edge_admin_webhook_delivery_total{event_type="edge.node.registered",result="recoverable"} 1
+    edge_admin_webhook_delivery_total{event_type="edge.node.registered",result="terminal"} 1
+    edge_admin_webhook_delivery_total{event_type="edge.command_execution.completed",result="ok"} 28
+    edge_admin_webhook_delivery_total{event_type="edge.command_execution.completed",result="recoverable"} 2
     edge_admin_prom_ex_oban_queue_length_count{queue="default",state="available"} 2
     edge_admin_prom_ex_oban_queue_length_count{queue="default",state="executing"} 1
     edge_admin_prom_ex_oban_queue_length_count{queue="default",state="completed"} 100
@@ -152,14 +168,34 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
 
     test "sums nodes_health_checks across label combinations" do
       result = AdminMetricsParser.parse(sample_prometheus_text())
-      # healthy(10) + unhealthy(2) = 12
-      assert result["nodes_health_checks"] == 12
+      # healthy(10) + unhealthy(2) + unreachable(1) = 13
+      assert result["nodes_health_checks"] == 13
+      assert result["nodes_health_checks_healthy"] == 10
+      assert result["nodes_health_checks_unhealthy"] == 2
+      assert result["nodes_health_checks_unreachable"] == 1
+      assert result["nodes_fallback_health_reports_total"] == 4
+      assert result["nodes_health_check_summary_healthy_count"] == 10
+      assert result["nodes_health_check_summary_unhealthy_count"] == 2
+      assert result["nodes_health_check_summary_unreachable_count"] == 1
     end
 
     test "sums gateway_connections_total across clusters" do
       result = AdminMetricsParser.parse(sample_prometheus_text())
       # prod(10) + staging(5) = 15
       assert result["gateway_connections_total"] == 15
+    end
+
+    test "extracts the latest reconciliation and self-update summaries" do
+      result = AdminMetricsParser.parse(sample_prometheus_text())
+
+      assert result["nodes_cluster_reconciliations_total"] == 6
+      assert result["nodes_cluster_reconciliation_errors"] == 0
+      assert result["nodes_cluster_reconciliation_nodes_added"] == 1
+      assert result["nodes_cluster_reconciliation_nodes_removed"] == 2
+      assert result["nodes_cluster_reconciliation_nodes_deleted"] == 3
+      assert result["self_updates_completed_total"] == 4
+      assert result["self_updates_triggered"] == 6
+      assert result["self_updates_failed"] == 1
     end
 
     test "sums gateway_scrapes_total across types" do
@@ -280,6 +316,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
       result = AdminMetricsParser.parse(sample_prometheus_text())
       # 50 + 30 = 80
       assert result["webhook_fan_outs_total"] == 80
+      assert result["webhook_matched_deliveries_total"] == 80
       # 48 + 1 + 1 + 28 + 2 = 80
       assert result["webhook_deliveries_total"] == 80
     end
@@ -297,6 +334,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     test "counters return 0 when webhook metrics are absent" do
       result = AdminMetricsParser.parse(empty_prometheus_text())
       assert result["webhook_fan_outs_total"] == 0
+      assert result["webhook_matched_deliveries_total"] == 0
       assert result["webhook_deliveries_total"] == 0
       assert result["webhook_deliveries_ok_total"] == 0
       assert result["webhook_deliveries_recoverable_total"] == 0

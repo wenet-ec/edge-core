@@ -85,7 +85,8 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
       counter(
         [:edge_admin, :discovery, :scan_complete, :total],
         event_name: [:edge_admin, :discovery, :scan_complete],
-        description: "Total number of peer discovery scans completed"
+        description: "Total number of peer discovery scans completed",
+        measurement: :connected_peers
       ),
       counter(
         [:edge_admin, :discovery, :dns_resolution, :total],
@@ -110,6 +111,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :metadata, :recomputation, :total],
         event_name: [:edge_admin, :metadata, :recomputation],
         description: "Total number of metadata recomputations",
+        measurement: :count,
         tags: [:trigger],
         tag_values: &get_trigger_tag/1
       ),
@@ -176,6 +178,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         event_name: [:edge_admin, :proxy, :tunnel, :closed],
         description:
           "Tunnels that finished forwarding, tagged by protocol, routing mode, cluster, and close reason (normal | deadline | drain_timeout)",
+        measurement: :duration_ms,
         tags: [:protocol, :routing_mode, :cluster, :reason],
         tag_values: &get_proxy_tunnel_close_tags/1
       ),
@@ -228,10 +231,31 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         reporter_options: [buckets: [10, 50, 100, 500, 1_000, 5_000]]
       ),
       last_value(
+        [:edge_admin, :nodes, :health_check_summary, :healthy_count],
+        event_name: [:edge_admin, :nodes, :health_check_summary],
+        description: "Healthy nodes in this admin's most recent health-check sweep",
+        measurement: :healthy_count
+      ),
+      last_value(
         [:edge_admin, :nodes, :health_check_summary, :unhealthy_count],
         event_name: [:edge_admin, :nodes, :health_check_summary],
-        description: "Number of unhealthy/unreachable nodes in last health check run",
+        description: "Unhealthy nodes in this admin's most recent health-check sweep",
         measurement: :unhealthy_count
+      ),
+      last_value(
+        [:edge_admin, :nodes, :health_check_summary, :unreachable_count],
+        event_name: [:edge_admin, :nodes, :health_check_summary],
+        description: "Unreachable nodes in this admin's most recent health-check sweep",
+        measurement: :unreachable_count
+      ),
+      counter(
+        [:edge_admin, :nodes, :fallback_health_report, :total],
+        event_name: [:edge_admin, :nodes, :fallback_health_report],
+        description:
+          "HTTP fallback health reports received from agents; each proves agent-to-admin reachability but not VPN reachability",
+        measurement: :count,
+        tags: [:reported_status],
+        tag_values: &get_fallback_health_report_tags/1
       )
     ]
   end
@@ -256,6 +280,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :commands, :execution, :completed, :total],
         event_name: [:edge_admin, :commands, :execution, :completed],
         description: "Total number of command executions completed (result reported back by agent)",
+        measurement: :duration,
         tags: [:exit_code_category],
         tag_values: &get_exit_code_category_tag/1
       ),
@@ -271,7 +296,8 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
       counter(
         [:edge_admin, :commands, :expiration, :total],
         event_name: [:edge_admin, :commands, :expiration],
-        description: "Total number of stale execution expiration runs"
+        description: "Total number of stale execution expiration runs",
+        measurement: :expired_count
       ),
       last_value(
         [:edge_admin, :commands, :expiration, :expired_count],
@@ -282,7 +308,8 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
       counter(
         [:edge_admin, :commands, :pruning, :total],
         event_name: [:edge_admin, :commands, :pruning],
-        description: "Total number of execution pruning runs (delete old finalised rows)"
+        description: "Total number of execution pruning runs (delete old finalised rows)",
+        measurement: :deleted_count
       ),
       last_value(
         [:edge_admin, :commands, :pruning, :deleted_count],
@@ -306,6 +333,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :quantum, :job, :executed, :total],
         event_name: [:quantum, :job, :stop],
         description: "Total number of Quantum jobs executed",
+        measurement: :duration,
         tags: [:job_name, :result],
         tag_values: &get_quantum_job_tags/1
       ),
@@ -323,6 +351,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :quantum, :job, :exception, :total],
         event_name: [:quantum, :job, :exception],
         description: "Total number of Quantum job exceptions",
+        measurement: :duration,
         tags: [:job_name, :kind],
         tag_values: &get_quantum_exception_tags/1
       )
@@ -335,6 +364,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :vpn, :zombie_admin_cleanup, :total],
         event_name: [:edge_admin, :vpn, :zombie_admin_cleanup],
         description: "Total zombie admin cleanup runs",
+        measurement: :deleted_count,
         tags: [:result],
         tag_values: &get_result_tag/1
       ),
@@ -348,6 +378,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :commands, :delivery, :total],
         event_name: [:edge_admin, :commands, :delivery],
         description: "Total execution delivery batch runs",
+        measurement: :delivered_count,
         tags: [:result],
         tag_values: &get_result_tag/1
       ),
@@ -366,6 +397,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :gateway, :connection, :total],
         event_name: [:edge_admin, :gateway, :connection],
         description: "Total gateway connection events (connected/disconnected per cluster)",
+        measurement: :count,
         tags: [:cluster, :event],
         tag_values: &get_gateway_tags/1
       ),
@@ -379,6 +411,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :gateway, :scrape, :total],
         event_name: [:edge_admin, :gateway, :scrape],
         description: "Total gateway metrics scrape operations",
+        measurement: :count,
         tags: [:cluster, :metrics_type, :result],
         tag_values: &get_gateway_scrape_tags/1
       )
@@ -391,6 +424,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :ssh, :verification, :total],
         event_name: [:edge_admin, :ssh, :verification],
         description: "Total SSH credential verification attempts",
+        measurement: :count,
         tags: [:result, :auth_method],
         tag_values: &get_ssh_verification_tags/1
       )
@@ -403,6 +437,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :nodes, :cluster_reconciliation, :total],
         event_name: [:edge_admin, :nodes, :cluster_reconciliation],
         description: "Total cluster reconciliation runs",
+        measurement: :duration,
         tags: [:cluster, :result],
         tag_values: &get_reconciliation_tags/1
       ),
@@ -472,6 +507,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :event_broker, :enqueue, :total],
         event_name: [:edge_admin, :event_broker, :enqueue],
         description: "Total events enqueued for async broker delivery (before broker publish attempt)",
+        measurement: :count,
         tags: [:event_type],
         tag_values: &get_event_broker_enqueue_tags/1
       ),
@@ -479,6 +515,7 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         [:edge_admin, :event_broker, :publish, :total],
         event_name: [:edge_admin, :event_broker, :publish],
         description: "Total broker publish attempts, tagged by adapter, event type, and result (ok | error)",
+        measurement: :duration,
         tags: [:adapter, :event_type, :result],
         tag_values: &get_event_broker_publish_tags/1
       ),
@@ -500,8 +537,15 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
       counter(
         [:edge_admin, :webhook, :fan_out, :total],
         event_name: [:edge_admin, :webhook, :fan_out],
-        description:
-          "Total fan-out invocations per published event. `count` measurement is the number of matching webhooks.",
+        description: "Total fan-out invocations from the publish path.",
+        measurement: :count,
+        tags: [:event_type],
+        tag_values: &get_webhook_fan_out_tags/1
+      ),
+      sum(
+        [:edge_admin, :webhook, :fan_out, :matched, :total],
+        event_name: [:edge_admin, :webhook, :fan_out],
+        description: "Total matching webhooks enqueued from the publish path.",
         measurement: :count,
         tags: [:event_type],
         tag_values: &get_webhook_fan_out_tags/1
@@ -509,18 +553,18 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
       counter(
         [:edge_admin, :webhook, :delivery, :total],
         event_name: [:edge_admin, :webhook, :delivery],
-        description:
-          "Total webhook delivery attempts, tagged by event type, webhook id, and result (ok | recoverable | terminal)",
-        tags: [:event_type, :webhook_id, :result],
+        description: "Total webhook delivery attempts, tagged by event type and result (ok | recoverable | terminal)",
+        measurement: :duration,
+        tags: [:event_type, :result],
         tag_values: &get_webhook_delivery_tags/1
       ),
       distribution(
         [:edge_admin, :webhook, :delivery, :duration, :milliseconds],
         event_name: [:edge_admin, :webhook, :delivery],
-        description: "Duration of webhook delivery attempts in milliseconds, tagged by event type and webhook id",
+        description: "Duration of webhook delivery attempts in milliseconds, tagged by event type",
         measurement: :duration,
         unit: {:native, :millisecond},
-        tags: [:event_type, :webhook_id],
+        tags: [:event_type],
         tag_values: &get_webhook_delivery_duration_tags/1,
         reporter_options: [buckets: [25, 50, 100, 250, 500, 1_000, 2_500, 5_000, 10_000, 30_000]]
       )
@@ -551,6 +595,10 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
 
   defp get_exit_code_category_tag(%{exit_code_category: exit_code_category}) do
     %{exit_code_category: to_string(exit_code_category)}
+  end
+
+  defp get_fallback_health_report_tags(%{reported_status: reported_status}) do
+    %{reported_status: to_string(reported_status)}
   end
 
   defp get_quantum_job_tags(metadata) do
@@ -657,15 +705,14 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
     %{event_type: to_string(event_type)}
   end
 
-  defp get_webhook_delivery_tags(%{event_type: event_type, webhook_id: webhook_id, result: result}) do
+  defp get_webhook_delivery_tags(%{event_type: event_type, result: result}) do
     %{
       event_type: to_string(event_type),
-      webhook_id: to_string(webhook_id),
       result: to_string(result)
     }
   end
 
-  defp get_webhook_delivery_duration_tags(%{event_type: event_type, webhook_id: webhook_id}) do
-    %{event_type: to_string(event_type), webhook_id: to_string(webhook_id)}
+  defp get_webhook_delivery_duration_tags(%{event_type: event_type}) do
+    %{event_type: to_string(event_type)}
   end
 end

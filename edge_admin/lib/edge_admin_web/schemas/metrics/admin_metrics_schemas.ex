@@ -186,12 +186,49 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
             },
             nodes: %Schema{
               type: :object,
-              description: "Node health check metrics",
+              description:
+                "Direct Admin-to-Agent VPN health-check metrics for this Admin instance. Latest-sweep values cover only the nodes this Admin owns; they are not fleet-wide gauges.",
               properties: %{
                 health_checks_total: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Total node health checks performed"
+                  description: "Total direct VPN health checks performed"
+                },
+                health_checks_healthy_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total direct health checks that reached a healthy Agent"
+                },
+                health_checks_unhealthy_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total direct health checks that reached an unhealthy Agent"
+                },
+                health_checks_unreachable_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total direct health checks that could not reach the Agent through the VPN"
+                },
+                fallback_health_reports_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description:
+                    "Total HTTP fallback health reports received. These prove Agent-to-Admin reachability only; they never make the overall node healthy."
+                },
+                last_sweep_healthy_count: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Healthy nodes in this Admin's most recent direct health-check sweep"
+                },
+                last_sweep_unhealthy_count: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Unhealthy nodes in this Admin's most recent direct health-check sweep"
+                },
+                last_sweep_unreachable_count: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Unreachable nodes in this Admin's most recent direct health-check sweep"
                 }
               }
             },
@@ -255,6 +292,16 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
                   type: :integer,
                   nullable: true,
                   description: "Total stale execution expiration sweeps"
+                },
+                pruning_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total command-execution pruning sweeps"
+                },
+                pruning_deleted_count: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Command-execution rows deleted in the most recent pruning sweep"
                 }
               }
             },
@@ -287,6 +334,21 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
                   type: :integer,
                   nullable: true,
                   description: "Number of errors in last reconciliation run"
+                },
+                nodes_added: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Nodes added to Netmaker in the most recent reconciliation run"
+                },
+                nodes_removed: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Nodes removed from Netmaker in the most recent reconciliation run"
+                },
+                nodes_deleted: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Orphaned database node records deleted in the most recent reconciliation run"
                 }
               }
             },
@@ -298,6 +360,16 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
                   type: :integer,
                   nullable: true,
                   description: "Total self-update requests processed to completion"
+                },
+                triggered: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Nodes successfully triggered by the most recent self-update request"
+                },
+                failed: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Nodes that failed to trigger in the most recent self-update request"
                 }
               }
             },
@@ -444,6 +516,11 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
                   nullable: true,
                   description: "Total fan-out invocations from the publish path"
                 },
+                matched_deliveries_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total matching webhook delivery jobs enqueued from the publish path"
+                },
                 deliveries_total: %Schema{
                   type: :integer,
                   nullable: true,
@@ -549,7 +626,14 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
             peer_connections_total: 3
           },
           nodes: %{
-            health_checks_total: 480
+            health_checks_total: 480,
+            health_checks_healthy_total: 462,
+            health_checks_unhealthy_total: 12,
+            health_checks_unreachable_total: 6,
+            fallback_health_reports_total: 4,
+            last_sweep_healthy_count: 96,
+            last_sweep_unhealthy_count: 2,
+            last_sweep_unreachable_count: 1
           },
           quantum: %{
             jobs_executed_total: 156,
@@ -564,7 +648,9 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
             delivery_delivered_count: 0,
             execution_delivered_total: 23,
             execution_completed_total: 21,
-            expiration_total: 2
+            expiration_total: 2,
+            pruning_total: 4,
+            pruning_deleted_count: 76
           },
           ssh: %{
             verifications_total: 34,
@@ -572,10 +658,15 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
           },
           reconciliation: %{
             total: 12,
-            errors: 0
+            errors: 0,
+            nodes_added: 1,
+            nodes_removed: 0,
+            nodes_deleted: 0
           },
           self_updates: %{
-            completed_total: 3
+            completed_total: 3,
+            triggered: 4,
+            failed: 0
           },
           gateways: %{
             connections_total: 2,
@@ -606,6 +697,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
           },
           webhook: %{
             fan_outs_total: 1235,
+            matched_deliveries_total: 2470,
             deliveries_total: 2470,
             deliveries_ok_total: 2400,
             deliveries_recoverable_total: 60,

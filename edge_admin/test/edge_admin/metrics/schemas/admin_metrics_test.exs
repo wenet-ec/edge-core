@@ -182,6 +182,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetricsTest do
 
     test "Nodes / Quantum / Vpn / Ssh / Reconciliation / SelfUpdates / Gateways pass missing keys as nil" do
       assert Nodes.from_raw(%{}).health_checks_total == nil
+      assert Nodes.from_raw(%{}).fallback_health_reports_total == nil
       assert Quantum.from_raw(%{}).jobs_executed_total == nil
       assert Vpn.from_raw(%{}).zombie_cleanup_total == nil
       assert Ssh.from_raw(%{}).verifications_total == nil
@@ -193,6 +194,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetricsTest do
     test "Webhook counters pass through" do
       raw = %{
         "webhook_fan_outs_total" => 1,
+        "webhook_matched_deliveries_total" => 3,
         "webhook_deliveries_total" => 5,
         "webhook_deliveries_ok_total" => 4,
         "webhook_deliveries_recoverable_total" => 1,
@@ -201,11 +203,37 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetricsTest do
 
       assert Webhook.from_raw(raw) == %Webhook{
                fan_outs_total: 1,
+               matched_deliveries_total: 3,
                deliveries_total: 5,
                deliveries_ok_total: 4,
                deliveries_recoverable_total: 1,
                deliveries_terminal_total: 0
              }
+    end
+
+    test "Reconciliation and self-update summaries pass through" do
+      reconciliation =
+        Reconciliation.from_raw(%{
+          "nodes_cluster_reconciliations_total" => 4,
+          "nodes_cluster_reconciliation_errors" => 1,
+          "nodes_cluster_reconciliation_nodes_added" => 2,
+          "nodes_cluster_reconciliation_nodes_removed" => 3,
+          "nodes_cluster_reconciliation_nodes_deleted" => 4
+        })
+
+      assert reconciliation == %Reconciliation{
+               total: 4,
+               errors: 1,
+               nodes_added: 2,
+               nodes_removed: 3,
+               nodes_deleted: 4
+             }
+
+      assert SelfUpdates.from_raw(%{
+               "self_updates_completed_total" => 5,
+               "self_updates_triggered" => 6,
+               "self_updates_failed" => 1
+             }) == %SelfUpdates{completed_total: 5, triggered: 6, failed: 1}
     end
   end
 

@@ -14,11 +14,11 @@ defmodule EdgeAdminHealth.Router do
       to: PlugCheckup,
       init_opts:
         PlugCheckup.Options.new(
-          json_encoder: Jason,
+          json_encoder: EdgeAdminHealth.JsonEncoder,
           checks: EdgeAdminHealth.checks(),
           error_code: EdgeAdminHealth.error_code(),
           timeout: to_timeout(second: 5),
-          pretty: true
+          pretty: false
         )
     )
   end
@@ -35,11 +35,11 @@ defmodule EdgeAdminHealth.Router do
       to: PlugCheckup,
       init_opts:
         PlugCheckup.Options.new(
-          json_encoder: Jason,
+          json_encoder: EdgeAdminHealth.JsonEncoder,
           checks: EdgeAdminHealth.ClusterHealth.checks(),
           error_code: EdgeAdminHealth.ClusterHealth.error_code(),
           timeout: to_timeout(second: 5),
-          pretty: true
+          pretty: false
         )
     )
   end

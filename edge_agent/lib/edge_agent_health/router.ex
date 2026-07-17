@@ -21,11 +21,11 @@ defmodule EdgeAgentHealth.Router do
       to: PlugCheckup,
       init_opts:
         PlugCheckup.Options.new(
-          json_encoder: Jason,
+          json_encoder: EdgeAgentHealth.JsonEncoder,
           checks: EdgeAgentHealth.checks(),
           error_code: EdgeAgentHealth.error_code(),
           timeout: to_timeout(second: 5),
-          pretty: true
+          pretty: false
         )
     )
   end

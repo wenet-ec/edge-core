@@ -13,7 +13,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
 
   alias EdgeAdmin.Events.Catalog
 
-  @doc "Returns the AsyncAPI 3.1.0 document as a map (ready for Jason.encode!)."
+  @doc "Returns the AsyncAPI 3.1.0 document as a map (ready for JSON.encode!)."
   def spec do
     %{
       "asyncapi" => "3.1.0",

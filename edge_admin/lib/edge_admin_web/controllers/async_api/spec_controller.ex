@@ -7,6 +7,6 @@ defmodule EdgeAdminWeb.Controllers.AsyncApi.SpecController do
   def show(conn, _params) do
     conn
     |> put_resp_content_type("application/json")
-    |> send_resp(200, Jason.encode!(EdgeAdminWeb.AsyncApiSpec.spec()))
+    |> send_resp(200, JSON.encode!(EdgeAdminWeb.AsyncApiSpec.spec()))
   end
 end

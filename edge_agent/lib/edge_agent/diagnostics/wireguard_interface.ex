@@ -19,15 +19,18 @@ defmodule EdgeAgent.Diagnostics.WireguardInterface do
   @doc false
   @spec assess(map(), map(), [map()]) :: {:ok, map()} | {:warn, String.t(), map()} | {:error, String.t(), map()}
   def assess(link, address, routes) do
+    flags = Map.get(link, "flags", [])
+
     details = %{
       interface: @interface,
       state: link |> Map.get("operstate", "unknown") |> String.downcase(),
+      flags: flags,
       addresses: addresses(address),
       routes: routes(routes)
     }
 
     cond do
-      Map.get(link, "operstate") != "UP" ->
+      "UP" not in flags ->
         {:error, "WireGuard interface is not up", details}
 
       details.addresses == [] ->
@@ -44,7 +47,7 @@ defmodule EdgeAgent.Diagnostics.WireguardInterface do
   defp ip_json(args) do
     case System.cmd("ip", args, stderr_to_stdout: true) do
       {output, 0} ->
-        case Jason.decode(output) do
+        case JSON.decode(output) do
           {:ok, result} when is_list(result) -> {:ok, result}
           {:ok, _result} -> {:error, "unexpected ip output"}
           {:error, reason} -> {:error, "invalid ip JSON: #{Exception.message(reason)}"}

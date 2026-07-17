@@ -119,6 +119,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParser do
       "gateway_connections_total" => extract_counter(lines, "edge_admin_gateway_connection_total"),
       "gateway_active_count" => extract_gauge(lines, "edge_admin_gateway_active_count"),
       "gateway_scrapes_total" => extract_counter(lines, "edge_admin_gateway_scrape_total"),
+      "gateway_diagnostics_total" => extract_counter(lines, "edge_admin_gateway_diagnostics_total"),
       "oban_queues" => extract_oban_queues(lines)
     }
   end

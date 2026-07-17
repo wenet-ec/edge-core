@@ -350,20 +350,22 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetrics do
   end
 
   defmodule Gateways do
-    @moduledoc "Gateway connection and scrape metrics"
+    @moduledoc "Gateway connection, scrape, and diagnostics metrics"
 
     @derive JSON.Encoder
     defstruct [
       :connections_total,
       :active_count,
-      :scrapes_total
+      :scrapes_total,
+      :diagnostics_total
     ]
 
     def from_raw(raw) do
       %__MODULE__{
         connections_total: raw["gateway_connections_total"],
         active_count: raw["gateway_active_count"],
-        scrapes_total: raw["gateway_scrapes_total"]
+        scrapes_total: raw["gateway_scrapes_total"],
+        diagnostics_total: raw["gateway_diagnostics_total"]
       }
     end
   end

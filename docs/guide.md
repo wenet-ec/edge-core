@@ -188,6 +188,7 @@ A few extras worth knowing:
 
 - `check_admin_health` — runs every subsystem check (DB, membership, metadata, Netmaker, netclient, proxies, broker) in parallel and returns a structured pass/fail. Use when an AI assistant needs to diagnose enrollment or connectivity issues.
 - `get_node_metrics` / `get_host_metrics` / `get_agent_metrics` / `get_admin_metrics` — human-friendly parsed metrics. Pair with the proxy ([§5](#5-proxy-servers)) if the assistant needs raw scrape access too.
+- `get_node_diagnostics` — diagnostic report for one node.
 
 ---
 
@@ -330,6 +331,16 @@ GET /api/v1/admins/me/metrics
 Parsed JSON, ready to feed into a dashboard or AI assistant. Same data the MCP `get_*_metrics` tools return.
 
 A working `prometheus.yml` example lives at `deploy/production/compose/edge_metrics/prometheus.yml`.
+
+### Node self-diagnostics
+
+```
+GET /api/v1/nodes/:node_id/diagnostics
+```
+
+Use this to investigate one troubled Agent. The report checks network and VPN state before Agent services; it does not change node health status.
+
+The same operation is available to AI clients as `get_node_diagnostics`.
 
 ---
 

@@ -213,6 +213,7 @@ All operations use Docker Compose through the `./bin/run` script. No local Elixi
 - `commands` - Commands to execute across nodes
 - `command_executions` - Per-node execution tracking
 - `node_metrics_cache` - Cached metrics for Layer 3 (HTTP polling) mode
+- `node_diagnostics` - Latest Agent diagnostic report
 - `ssh_usernames` - SSH login credentials
 - `ssh_public_keys` - Authorized keys for SSH users
 - `self_update_requests` - Container update scheduling
@@ -253,6 +254,7 @@ edge_core/
 │   │   │   ├── vpn/             # Netmaker VPN integration
 │   │   │   ├── proxy_servers/   # Proxy coordination
 │   │   │   ├── metrics/         # Metrics aggregation
+│   │   │   ├── diagnostics/     # Node diagnostics
 │   │   │   ├── edge_clusters/   # Cluster management + Erlang peer coordination
 │   │   │   ├── events/          # Event publish path (catalog, broker channel, webhook channel)
 │   │   │   └── vault/           # Cloak vault + encrypted Ecto types
@@ -313,6 +315,7 @@ edge_core/
 - `vpn.ex` - Netmaker API wrapper
 - `proxy_servers.ex` - HTTP/SOCKS5 proxy coordination
 - `metrics.ex` - Metrics aggregation
+- `diagnostics/diagnostics.ex` - Node diagnostics
 - `edge_clusters.ex` - Cluster management and metadata
 - `events/events.ex` - Public publish API: `publish/1`. Builds the CloudEvents envelope and fans out to every configured delivery channel. (No `healthy?/0` here — health checks live per-channel: `EdgeAdmin.Events.Broker.healthy?/0`, etc.)
 - `events/catalog.ex` - Typed event structs + `event_type/1` + `to_data/1` (catalog of all event types)
@@ -394,6 +397,7 @@ Admin background work is split between two schedulers with different semantics:
 - `EdgeAgent.Commands.Workers.SyncUnprocessedExecutionWorker` - Syncs pending executions
 - `EdgeAgent.EdgeClusters.Workers.DiscoverAdminWorker` - Discovers admin URL from VPN metadata
 - `EdgeAgent.EdgeClusters.Workers.ReportHealthCheckWorker` - Sends health status to admin
+- `EdgeAgent.LocalScheduler.Tasks.push_diagnostics/0` - Pushes diagnostics through HTTP fallback
 - `EdgeAgent.Vpn.Workers.PullVpnConfigWorker` - Periodic VPN config pull (daily, opt-out via `PULL_VPN_CONFIG_ENABLED`)
 - `EdgeAgent.LocalScheduler.Tasks.refresh_settings_config/0` - Refreshes the authenticated, non-secret Admin settings configuration (default: every five minutes)
 
@@ -472,6 +476,7 @@ The full annotated list lives in `deploy/production/.envs/.edge_admin` — read 
 - `ADMIN_URLS` — ordered, independently usable Admin API URLs. Keep new and old URLs together during a hostname migration so agents can fail over between them.
 - `CORE_DERP_MAP_URLS` — ordered URLs for one complete canonical Core DERP map. The first reachable source wins; sources are never merged. During a hostname migration, every listed URL must serve the same complete map.
 - `REFRESH_SETTINGS_CONFIG_SCHEDULE` (agent) — cadence for retrieving non-secret `admin_urls` and `core_derp_map_urls` from the authenticated Admin endpoint; defaults to every five minutes.
+- `PUSH_DIAGNOSTICS_SCHEDULE` (agent) — diagnostics push cadence; defaults to every two minutes.
 - `DERP_MAP_REFRESH_INTERVAL_MS` (agent) — DERP-map cache refresh interval; defaults to five minutes. It is independent of the settings refresh schedule.
 
 Standard auth/host/DB vars (`MASTER_KEY`, scoped keys, `DATABASE_URL`, `NETMAKER_*`, `ENROLLMENT_TOKEN`, `SECRET_KEY_BASE`, `PHX_HOST`) work the way you'd expect — see the `.edge_admin` file.

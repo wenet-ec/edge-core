@@ -48,6 +48,17 @@ defmodule EdgeAgent.Vpn do
   end
 
   @doc """
+  Returns WireGuard peer information from netclient.
+
+  Netclient reads the local WireGuard device for handshake and traffic state,
+  then asks Netmaker for peer metadata.
+  """
+  @spec list_peers(keyword()) :: {:ok, map()} | {:error, any()}
+  def list_peers(opts \\ []) do
+    Nexmaker.Cli.list_peers(opts)
+  end
+
+  @doc """
   Checks netclient VPN connection health.
 
   Returns `{:ok, status, info}` where status is `:healthy`, `:degraded`, or `:unhealthy`.

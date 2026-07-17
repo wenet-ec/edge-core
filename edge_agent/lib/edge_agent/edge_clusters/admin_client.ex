@@ -61,6 +61,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   - **POST /api/v1/agents/command_executions/:id/report_result** — Report execution
     results
   - **POST /api/v1/agents/nodes/me/health_check** — Report node health
+  - **POST /api/v1/agents/diagnostics/push** — Push diagnostics
     (HTTP-fallback mode)
   - **GET /api/v1/agents/self_updates/check** — Poll for pending self-update
     targeting this node
@@ -506,6 +507,27 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
         {:error, reason} ->
           Logger.warning("Failed to report health check: #{inspect(reason)}")
           {:error, {:request_failed, reason}}
+      end
+    end)
+  end
+
+  @doc """
+  Pushes a diagnostic report to Admin through the normal
+  authenticated VPN-first/fallback client.
+
+  POST /api/v1/agents/diagnostics/push
+  """
+  @spec push_diagnostics(map()) :: {:ok, map()} | {:error, term()}
+  def push_diagnostics(diagnostic) when is_map(diagnostic) do
+    path = "/api/v1/agents/diagnostics/push"
+
+    request_with_auth(path, fn url, headers ->
+      opts = Keyword.merge([json: %{diagnostic: diagnostic}, headers: headers], http_options())
+
+      case Req.post(url, opts) do
+        {:ok, %{status: 200, body: %{"data" => data}}} when is_map(data) -> {:ok, data}
+        {:ok, %{status: status, body: body}} -> {:error, {:http_error, status, body}}
+        {:error, reason} -> {:error, {:request_failed, reason}}
       end
     end)
   end

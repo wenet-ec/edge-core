@@ -7,6 +7,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Application
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Bootstrap
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Commands
+  alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Diagnostics
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Discovery
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.HealthCheck
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.ObanQueue
@@ -30,6 +31,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
     :ssh,
     :vpn,
     :health_check,
+    :diagnostics,
     :settings_config,
     :oban_queues
   ]
@@ -50,6 +52,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
       ssh: Ssh.from_raw(raw_metrics),
       vpn: Vpn.from_raw(raw_metrics),
       health_check: HealthCheck.from_raw(raw_metrics),
+      diagnostics: Diagnostics.from_raw(raw_metrics),
       settings_config: SettingsConfig.from_raw(raw_metrics),
       oban_queues: ObanQueue.from_raw(raw_metrics)
     }
@@ -251,6 +254,21 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetrics do
         reports_total: raw["health_check_reports"] || 0,
         reports_success_total: raw["health_check_reports_success"] || 0,
         reports_failure_total: raw["health_check_reports_failure"] || 0
+      }
+    end
+  end
+
+  defmodule Diagnostics do
+    @moduledoc "Diagnostic report push metrics (HTTP fallback mode)"
+
+    @derive JSON.Encoder
+    defstruct [:pushes_total, :pushes_success_total, :pushes_failure_total]
+
+    def from_raw(raw) do
+      %__MODULE__{
+        pushes_total: raw["diagnostics_pushes"] || 0,
+        pushes_success_total: raw["diagnostics_pushes_success"] || 0,
+        pushes_failure_total: raw["diagnostics_pushes_failure"] || 0
       }
     end
   end

@@ -15,6 +15,7 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
   """
 
   alias EdgeAgent.Commands
+  alias EdgeAgent.Diagnostics
   alias EdgeAgent.EdgeClusters.Discovery
   alias EdgeAgent.EdgeClusters.HealthCheck
   alias EdgeAgent.EdgeClusters.SettingsConfig
@@ -68,6 +69,22 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
       Logger.debug("LocalScheduler: report_health_check done")
     else
       Logger.debug("LocalScheduler: report_health_check skipped (VPN up or fallback not configured)")
+    end
+
+    :ok
+  end
+
+  @doc """
+  Push diagnostics to Admin via HTTP fallback.
+  """
+  @spec push_diagnostics() :: :ok
+  def push_diagnostics do
+    if http_fallback_mode?() do
+      Logger.debug("LocalScheduler: push_diagnostics started")
+      Diagnostics.push()
+      Logger.debug("LocalScheduler: push_diagnostics done")
+    else
+      Logger.debug("LocalScheduler: push_diagnostics skipped (VPN up or fallback not configured)")
     end
 
     :ok

@@ -357,7 +357,7 @@ See [`examples/sidecar/`](https://github.com/wenet-ec/edge-core/tree/main/exampl
 
 The agent is more than a process runner. It bundles:
 
-- **Elixir/Phoenix HTTP API** — receives commands from admin, reports results and health
+- **Elixir/Phoenix HTTP API** — receives commands from admin, reports results and health, and serves self-diagnostics
 - **netclient** — WireGuard VPN client, handles mesh enrollment and connectivity
 - **Prometheus node exporter** — exposes host metrics (CPU, memory, disk, network) on port 49100
 - **WireGuard metrics exporter** — exposes peer/interface metrics on port 49586
@@ -386,9 +386,11 @@ Watchtower tracks the `:stable` tag — this is why the agent image is always pi
 Communication between admin and agent is **HTTP over the VPN**. The VPN DNS name and a per-node API token are all that's needed. There is no Erlang distribution to agents — agents are not Erlang nodes.
 
 ```
-Admin → Agent:  POST  http://node-{id}.cluster-{cluster_name}.nm.internal:44000/api/command_executions
-Agent → Admin:  PATCH http://admin-{id}.cluster-{cluster_name}.nm.internal:44000/api/agents/command_executions/:id
-                POST  http://admin-{id}.cluster-{cluster_name}.nm.internal:44000/api/agents/nodes/me/health_check
+Admin → Agent:  POST  http://node-{id}.cluster-{cluster_name}.nm.internal:44000/api/v1/command_executions
+                GET   http://node-{id}.cluster-{cluster_name}.nm.internal:44000/api/v1/diagnostics
+Agent → Admin:  POST  http://admin-{id}.cluster-{cluster_name}.nm.internal:44000/api/v1/agents/command_executions/:id/report_result
+                POST  http://admin-{id}.cluster-{cluster_name}.nm.internal:44000/api/v1/agents/nodes/me/health_check
+                POST  http://admin-{id}.cluster-{cluster_name}.nm.internal:44000/api/v1/agents/diagnostics/push
 ```
 
 ### Connectivity Fallback Layers
@@ -409,13 +411,14 @@ Layer 3: HTTP Polling          ← Agent polls admin, eventual        ✅ Produc
 
 Only `wireguard-go` (userspace) supports DERP relay. Kernel-mode WireGuard does not. Admin always uses `wireguard-go`. Agent can use kernel-mode WireGuard for maximum performance, but this disables DERP fallback.
 
-**Layer 3 — HTTP Polling:** When the VPN is completely down, agents poll the admin HTTP API directly via `FALLBACK_ADMIN_URLS`. This is unidirectional (agent → admin only) and eventually consistent. Commands are fetched every 2 minutes, health and metrics pushed on the same interval.
+**Layer 3 — HTTP Polling:** When the VPN is completely down, agents poll the admin HTTP API directly via their configured Admin URLs. This is unidirectional (agent → admin only) and eventually consistent. Commands are fetched every 2 minutes; health, metrics, and diagnostics follow their own schedules.
 
 | Feature           | Layer 1 + 2  | Layer 3 (HTTP polling)     |
 | ----------------- | ------------ | -------------------------- |
 | Command execution | ✅ real-time | ✅ 0–120s latency          |
 | Health reporting  | ✅ real-time | ✅ 0–120s latency          |
 | Metrics           | ✅ real-time | ✅ cached, ~5min staleness |
+| Self-diagnostics  | ✅ | ✅ |
 | Proxy servers     | ✅           | ❌ requires VPN            |
 | SSH access        | ✅           | ❌ requires VPN            |
 
@@ -470,7 +473,7 @@ The MCP server alone isn't the interesting property — REST APIs have always be
 | Capability     | Mechanism                                                  | What an agent gets                                                  |
 | -------------- | ---------------------------------------------------------- | ------------------------------------------------------------------- |
 | **Observe**    | Lifecycle events (broker + webhooks, see [§ Events](#events)) | Real-time push of state changes — no polling, no race conditions    |
-| **Decide**     | MCP tools (read endpoints) + parsed metrics                | Query state, list nodes, read health, fetch metrics                 |
+| **Decide**     | MCP tools (read endpoints) + parsed metrics                | Query state, list nodes, read health, fetch metrics and diagnostics |
 | **Act**        | MCP tools (write endpoints) — commands, SSH creds, deploys | Mutate fleet state with the same authority a human operator has     |
 | **Reach**      | HTTP/SOCKS5 forward proxy ([§ Forward Proxy](#forward-proxy)) | Direct HTTP to any service on any node, when no MCP tool covers it  |
 

@@ -57,6 +57,8 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     edge_admin_gateway_active_count 3
     edge_admin_gateway_scrape_total{type="host"} 20
     edge_admin_gateway_scrape_total{type="agent"} 20
+    edge_admin_gateway_diagnostics_total{cluster="prod",result="success"} 7
+    edge_admin_gateway_diagnostics_total{cluster="prod",result="failure"} 2
     edge_admin_proxy_connection_total{protocol="http",result="success",routing_mode="local",proxy_mode="direct",cluster="prod"} 100
     edge_admin_proxy_connection_total{protocol="socks5",result="success",routing_mode="local",proxy_mode="direct",cluster="prod"} 50
     edge_admin_proxy_connection_total{protocol="http",result="auth_failed",routing_mode="unknown",proxy_mode="unknown",cluster="unknown"} 7
@@ -202,6 +204,11 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
       result = AdminMetricsParser.parse(sample_prometheus_text())
       # host(20) + agent(20) = 40
       assert result["gateway_scrapes_total"] == 40
+    end
+
+    test "sums gateway_diagnostics_total across results" do
+      result = AdminMetricsParser.parse(sample_prometheus_text())
+      assert result["gateway_diagnostics_total"] == 9
     end
 
     test "extracts proxy connection totals split by result label" do
@@ -445,6 +452,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
       assert metrics.gateways.active_count == 3
       assert metrics.gateways.connections_total == 15
       assert metrics.gateways.scrapes_total == 40
+      assert metrics.gateways.diagnostics_total == 9
     end
 
     test "event_broker counters reflect parsed totals" do

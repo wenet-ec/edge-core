@@ -94,6 +94,7 @@ WATCHTOWER_HTTP_API_TOKEN=change-me-in-production
 # REPORT_EXECUTIONS_SCHEDULE=* * * * *       # Report completed executions to admin (default: every 1min)
 # SYNC_EXECUTIONS_SCHEDULE=*/2 * * * *       # Sync unprocessed executions via HTTP fallback (default: every 2min)
 # REPORT_HEALTH_CHECK_SCHEDULE=*/2 * * * *   # Report node health via HTTP fallback (default: every 2min)
+# PUSH_DIAGNOSTICS_SCHEDULE=*/2 * * * *      # Push latest self-diagnostics via HTTP fallback (default: every 2min)
 # DISCOVER_ADMINS_SCHEDULE=*/3 * * * *       # Probe VPN for admin peers (default: every 3min)
 # CHECK_SELF_UPDATE_SCHEDULE=0 */2 * * *     # Poll admin for self-update requests via HTTP fallback (default: every 2h)
 # PUSH_METRICS_SCHEDULE=*/2 * * * *          # Push metrics to admin via HTTP fallback (default: every 2min)

@@ -375,7 +375,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
             },
             gateways: %Schema{
               type: :object,
-              description: "Gateway connection and scrape metrics",
+              description: "Gateway connection, scrape, and diagnostics metrics",
               properties: %{
                 connections_total: %Schema{
                   type: :integer,
@@ -391,6 +391,11 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
                   type: :integer,
                   nullable: true,
                   description: "Total metrics scrape operations performed by gateways"
+                },
+                diagnostics_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total diagnostic operations performed by gateways"
                 }
               }
             },
@@ -671,7 +676,8 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
           gateways: %{
             connections_total: 2,
             active_count: 0,
-            scrapes_total: 0
+            scrapes_total: 0,
+            diagnostics_total: 0
           },
           proxy: %{
             connections_total: 1245,

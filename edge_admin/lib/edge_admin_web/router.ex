@@ -177,6 +177,9 @@ defmodule EdgeAdminWeb.Router do
     # Node health check reporting
     post("/nodes/me/health_check", NodeController, :update_health_check)
 
+    # Diagnostics push
+    post("/diagnostics/push", NodeDiagnosticController, :push)
+
     # SSH credentials verification
     post("/ssh_usernames/verify_credentials", SshUsernameController, :verify_credentials)
 
@@ -221,6 +224,7 @@ defmodule EdgeAdminWeb.Router do
         resources("/aliases", AliasController, only: [:create])
       end
 
+      get("/nodes/:id/diagnostics", NodeDiagnosticController, :show)
       post("/nodes/:id/change_cluster", NodeController, :change_cluster)
       delete("/nodes/:id", NodeController, :delete)
 

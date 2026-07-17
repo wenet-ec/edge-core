@@ -40,5 +40,7 @@ defmodule EdgeAgentWeb.Router do
     post "/command_executions/:id/cancel", CommandExecutionController, :cancel
 
     post "/self_updates/trigger", SelfUpdateController, :trigger
+
+    get "/diagnostics", DiagnosticsController, :show
   end
 end

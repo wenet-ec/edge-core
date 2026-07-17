@@ -516,10 +516,10 @@ defmodule Nexmaker.Cli do
   defp extract_subnet(_), do: nil
 
   @doc """
-  Lists detailed WireGuard peer information from the local netclient daemon.
+  Returns WireGuard peer information for all networks or a specific network.
 
-  Returns comprehensive peer data including handshake times, traffic statistics,
-  and endpoint information for all networks or a specific network.
+  Netclient reads the local WireGuard device for handshake and traffic state,
+  then asks Netmaker for peer metadata.
 
   ## Options
     - `:network` - Filter by network name (optional)

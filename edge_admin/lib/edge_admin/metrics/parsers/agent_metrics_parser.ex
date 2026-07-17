@@ -85,6 +85,13 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParser do
       "health_check_reports_failure" =>
         extract_counter_by_label_value(lines, "edge_agent_health_check_report_total", "result", "failure"),
 
+      # Diagnostics (HTTP fallback)
+      "diagnostics_pushes" => extract_counter(lines, "edge_agent_diagnostics_push_total"),
+      "diagnostics_pushes_success" =>
+        extract_counter_by_label_value(lines, "edge_agent_diagnostics_push_total", "result", "success"),
+      "diagnostics_pushes_failure" =>
+        extract_counter_by_label_value(lines, "edge_agent_diagnostics_push_total", "result", "failure"),
+
       # Dynamic Settings Config
       "settings_config_refreshes" => extract_counter(lines, "edge_agent_settings_config_refresh_total"),
       "settings_config_refreshes_success" =>

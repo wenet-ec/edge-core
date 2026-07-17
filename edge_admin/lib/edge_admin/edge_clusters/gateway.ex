@@ -30,6 +30,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
      - Scrape host metrics (Node Exporter)
      - Scrape agent metrics (PromEx)
      - Scrape WireGuard metrics
+     - Retrieve Agent self-diagnostics
      - Trigger agent self-updates
      - Cancel command executions
      - Open TCP connections through the cluster VPN (proxy tunnels)
@@ -209,6 +210,13 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   """
   def scrape_wireguard_metrics(gateway_pid, node) do
     GenServer.call(gateway_pid, {:scrape_wireguard_metrics, node}, AgentClient.metrics_call_timeout())
+  end
+
+  @doc """
+  Retrieves an Agent self-diagnostic report.
+  """
+  def get_diagnostics(gateway_pid, node) do
+    GenServer.call(gateway_pid, {:get_diagnostics, node}, AgentClient.diagnostics_call_timeout())
   end
 
   @doc """
@@ -396,6 +404,25 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
         [:edge_admin, :gateway, :scrape],
         %{count: 1},
         %{cluster: cluster_name, metrics_type: :wireguard, result: telemetry_result(result)}
+      )
+
+      GenServer.reply(from, result)
+    end)
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_call({:get_diagnostics, node}, from, state) do
+    cluster_name = state.cluster_name
+
+    Task.start(fn ->
+      result = AgentClient.get_diagnostics(node)
+
+      :telemetry.execute(
+        [:edge_admin, :gateway, :diagnostics],
+        %{count: 1},
+        %{cluster: cluster_name, result: telemetry_result(result)}
       )
 
       GenServer.reply(from, result)

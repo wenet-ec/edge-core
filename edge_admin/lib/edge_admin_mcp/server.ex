@@ -65,6 +65,11 @@ defmodule EdgeAdminMcp.Server do
 
   For human-friendly parsed metrics, use the MCP tools: `get_node_metrics`,
   `get_host_metrics`, `get_agent_metrics`, `get_admin_metrics`.
+
+  ### Node diagnostics
+      GET /api/v1/nodes/:node_id/diagnostics
+
+  Use `get_node_diagnostics` for a node diagnostic report.
   """
 
   use Anubis.Server,
@@ -212,7 +217,8 @@ defmodule EdgeAdminMcp.Server do
 
     When an agent looks broken or a node won't enroll, start with
     `check_admin_health` — it runs every subsystem check (DB, Netmaker, netclient,
-    proxies, broker) in parallel and returns structured pass/fail.
+    proxies, broker) in parallel and returns structured pass/fail. For an
+    individual edge node, use `get_node_diagnostics`.
     """
   end
 
@@ -234,6 +240,7 @@ defmodule EdgeAdminMcp.Server do
   # ── Nodes ────────────────────────────────────────────────────────────────────
   component(EdgeAdminMcp.Tools.Nodes.ListNodes)
   component(EdgeAdminMcp.Tools.Nodes.GetNode)
+  component(EdgeAdminMcp.Tools.Nodes.GetNodeDiagnostics)
   component(EdgeAdminMcp.Tools.Nodes.DeleteNode)
   component(EdgeAdminMcp.Tools.Nodes.ChangeNodeCluster)
 

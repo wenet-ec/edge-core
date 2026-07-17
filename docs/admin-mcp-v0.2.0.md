@@ -76,6 +76,7 @@ Edge machines running the agent. Addressed only by VPN hostname.
 |---|---|---|---|
 | `list_nodes` | List Nodes | 🔍 | Filter/sort/paginate. Filters: `node_id_in` (array), `status_in` (array: `healthy`/`unhealthy`/`unreachable`), `id_type_in` (array: `persistent`/`random`), `cluster_name` (wildcard), `cluster_name_in` (array), `version`, `self_update_enabled`, `last_seen_at_*`, `inserted_at_*`, `updated_at_*`. |
 | `get_node` | Get Node | 🔍 | Required: `node_id`. |
+| `get_node_diagnostics` | Get Node Diagnostics | 🔍 🌐 | Required: `node_id`. Diagnostic report for one node. |
 | `delete_node` | Delete Node | ⚠️ 🌐 | Required: `node_id`. Removes from VPN mesh — agent must re-enroll. |
 | `change_node_cluster` | Move Node to Cluster | ⚠️ 🌐 | Required: `node_id`, `cluster_name`. Best-effort, not transactional — reconciliation worker heals inconsistencies. |
 
@@ -187,8 +188,8 @@ Parsed, human-friendly JSON (not raw Prometheus text). For scraping endpoints se
 |---|---|---|---|
 | `get_node_metrics` | Get Node Metrics | 🔍 🌐 | Required: `node_id`. Unified host + agent sources. Best-effort: if one source fails, that section is reported unavailable. Always returns ok — verify the node exists first with `get_node` if you need to distinguish "missing" from "not scraping". |
 | `get_host_metrics` | Get Host Metrics | 🔍 🌐 | Required: `node_id`. From Node Exporter: CPU, memory, disk, uptime. |
-| `get_agent_metrics` | Get Agent Metrics | 🔍 🌐 | Required: `node_id`. From edge_agent PromEx: BEAM, commands, discovery, proxy, SSH, VPN pulls, health check reports, Oban queues. |
-| `get_admin_metrics` | Get Admin Metrics | 🔍 | No parameters. 16 sections covering this admin's full operational surface: `application`, `metadata`, `membership`, `discovery`, `nodes`, `quantum`, `vpn`, `commands`, `ssh`, `reconciliation`, `self_updates`, `gateways`, `proxy`, `event_broker`, `webhook`, `oban_queues`. |
+| `get_agent_metrics` | Get Agent Metrics | 🔍 🌐 | Required: `node_id`. From edge_agent PromEx: BEAM, commands, discovery, proxy, SSH, VPN pulls, fallback reports, Oban queues. |
+| `get_admin_metrics` | Get Admin Metrics | 🔍 | No parameters. 16 sections covering this admin's full operational surface, including Gateway connections, scrapes, and diagnostic operations. |
 
 ---
 

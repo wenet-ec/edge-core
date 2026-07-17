@@ -24,7 +24,7 @@ The management API is organized around these groups:
 |---|---|
 | Admin info | Local admin metadata, admin-cluster topology, edge-cluster ownership, orphaned clusters. |
 | Clusters | Edge cluster lifecycle, node limits, and WireGuard network backing. |
-| Nodes | Registered edge nodes, health status, cluster moves, and node deletion. |
+| Nodes | Registered edge nodes, health status, self-diagnostics, cluster moves, and node deletion. |
 | Aliases | Friendly VPN DNS aliases for nodes. |
 | Enrollment keys | Tokens used by agents to join a cluster. |
 | Commands | Fleet command creation, execution status, cancellation, and deletion. |

@@ -15,6 +15,7 @@ defmodule EdgeAdmin.EdgeClusters.AgentClient do
   - `deliver_execution/2` — POST /api/v1/command_executions
   - `cancel_execution/2` — POST /api/v1/command_executions/:id/cancel
   - `trigger_self_update/1` — POST /api/v1/self_updates/trigger
+  - `get_diagnostics/1` — GET /api/v1/diagnostics
   - `scrape_host_metrics/1` — GET http://<vpn_hostname>:<host_metrics_port>/metrics
   - `scrape_agent_metrics/1` — GET /api/v1/agents/me/metrics/raw
   - `scrape_wireguard_metrics/1` — GET http://<vpn_hostname>:<wireguard_metrics_port>/metrics
@@ -29,6 +30,8 @@ defmodule EdgeAdmin.EdgeClusters.AgentClient do
   def metrics_call_timeout, do: metrics_scrape_timeout() + 2_000
 
   def health_check_call_timeout, do: health_check_timeout() + 500
+
+  def diagnostics_call_timeout, do: health_check_timeout() + 2_000
 
   defp command_delivery_timeout, do: Application.get_env(:edge_admin, :command_delivery_timeout, 10_000)
 
@@ -48,6 +51,11 @@ defmodule EdgeAdmin.EdgeClusters.AgentClient do
 
   defp health_check_opts do
     t = health_check_timeout()
+    [receive_timeout: t, connect_options: [timeout: t], retry: false]
+  end
+
+  defp diagnostics_opts do
+    t = diagnostics_call_timeout()
     [receive_timeout: t, connect_options: [timeout: t], retry: false]
   end
 
@@ -73,6 +81,21 @@ defmodule EdgeAdmin.EdgeClusters.AgentClient do
     _ -> :unreachable
   catch
     _, _ -> :unreachable
+  end
+
+  @doc """
+  Requests a diagnostic report from an Agent over its VPN URL.
+  """
+  @spec get_diagnostics(Node.t()) :: {:ok, map()} | {:error, term()}
+  def get_diagnostics(%Node{} = node) do
+    url = "http://#{Node.vpn_hostname(node)}:#{node.http_port}/api/v1/diagnostics"
+    opts = Keyword.merge([auth: {:bearer, node.api_token}], diagnostics_opts())
+
+    case Req.get(url, opts) do
+      {:ok, %{status: 200, body: %{"data" => report}}} when is_map(report) -> {:ok, report}
+      {:ok, %{status: status}} -> {:error, "HTTP #{status}"}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   # ---------------------------------------------------------------------------

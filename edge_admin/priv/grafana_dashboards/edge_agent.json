@@ -441,9 +441,18 @@
           "expr": "sum(rate(edge_agent_settings_config_refresh_total{result=~\"failure|invalid_response\"}[$__rate_interval])) by (result)",
           "refId": "C",
           "legendFormat": "settings config {{result}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(edge_agent_diagnostics_push_total{result=\"failure\"}[$__rate_interval]))",
+          "refId": "D",
+          "legendFormat": "diagnostics push"
         }
       ],
-      "title": "Admin Contact / Settings Config Failures (rate)",
+      "title": "Admin Contact Failures (rate)",
       "type": "timeseries"
     },
     {
@@ -2472,7 +2481,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "description": "Only fires when VPN is down \u2014 agent reports health to admin via HTTP. Failure here means even the fallback path is broken.",
+          "description": "Reports sent to admin via HTTP fallback.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2550,9 +2559,18 @@
               "expr": "rate(edge_agent_health_check_report_total[$__rate_interval])",
               "refId": "A",
               "legendFormat": "{{result}}"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "rate(edge_agent_diagnostics_push_total[$__rate_interval])",
+              "refId": "B",
+              "legendFormat": "diagnostics \u2014 {{result}}"
             }
           ],
-          "title": "Health Check Report Rate (HTTP fallback)",
+          "title": "Fallback Report Rate",
           "type": "timeseries"
         }
       ],

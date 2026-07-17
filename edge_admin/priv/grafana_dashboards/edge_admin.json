@@ -3778,7 +3778,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "description": "Metrics scrape ops via gateway, by cluster, type, and result.",
+          "description": "Metrics scrape and diagnostic operations via gateway.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3856,9 +3856,18 @@
               "expr": "rate(edge_admin_gateway_scrape_total{otp_app=\"$otp_app\"}[$__rate_interval])",
               "refId": "A",
               "legendFormat": "{{cluster}} \u2014 {{metrics_type}} \u2014 {{result}}"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "rate(edge_admin_gateway_diagnostics_total{otp_app=\"$otp_app\"}[$__rate_interval])",
+              "refId": "B",
+              "legendFormat": "diagnostics \u2014 {{cluster}} \u2014 {{result}}"
             }
           ],
-          "title": "Scrape Rate",
+          "title": "Gateway Operation Rate",
           "type": "timeseries"
         }
       ],

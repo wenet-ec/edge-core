@@ -12,6 +12,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
   - SSH server (connection, authentication, session duration)
   - VPN config pull (periodic netclient pull as DNS-recovery backstop)
   - Health check (agent → admin status reports in HTTP-fallback mode)
+  - Diagnostics push (agent → admin reports in HTTP-fallback mode)
   - Settings Config refresh (Admin URLs and Core DERP map sources)
 
   ## Operator notes
@@ -40,6 +41,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         discovery_metrics() ++
         vpn_metrics() ++
         health_check_metrics() ++
+        diagnostics_metrics() ++
         settings_config_metrics()
     )
   end
@@ -284,6 +286,19 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
         [:edge_agent, :health_check, :report, :total],
         event_name: [:edge_agent, :health_check, :report],
         description: "Total number of health check reports sent to admin (HTTP fallback mode)",
+        measurement: :count,
+        tags: [:result],
+        tag_values: &get_result_tag/1
+      )
+    ]
+  end
+
+  defp diagnostics_metrics do
+    [
+      counter(
+        [:edge_agent, :diagnostics, :push, :total],
+        event_name: [:edge_agent, :diagnostics, :push],
+        description: "Total diagnostic reports pushed to admin in HTTP fallback mode",
         measurement: :count,
         tags: [:result],
         tag_values: &get_result_tag/1

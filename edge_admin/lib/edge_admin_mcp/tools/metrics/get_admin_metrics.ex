@@ -16,7 +16,7 @@ defmodule EdgeAdminMcp.Tools.Metrics.GetAdminMetrics do
   - `ssh` — SSH credential verification calls from agents
   - `reconciliation` — cluster reconciliation Oban runs
   - `self_updates` — self-update request processing
-  - `gateways` — per-cluster Gateway proxy health
+  - `gateways` — Gateway connections, scrapes, and diagnostic operations
   - `proxy` — admin's HTTP/SOCKS5 forward proxy
   - `event_broker` — broker publish (NATS/Kafka/etc.) outcomes
   - `webhook` — fan-out volume and webhook delivery outcomes

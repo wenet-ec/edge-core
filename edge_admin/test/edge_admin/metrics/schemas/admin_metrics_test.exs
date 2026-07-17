@@ -189,6 +189,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetricsTest do
       assert Reconciliation.from_raw(%{}).total == nil
       assert SelfUpdates.from_raw(%{}).completed_total == nil
       assert Gateways.from_raw(%{}).active_count == nil
+      assert Gateways.from_raw(%{}).diagnostics_total == nil
     end
 
     test "Webhook counters pass through" do

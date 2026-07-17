@@ -50,6 +50,8 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
     edge_agent_vpn_pull_total{result="failure"} 1
     edge_agent_health_check_report_total{result="success"} 12
     edge_agent_health_check_report_total{result="failure"} 3
+    edge_agent_diagnostics_push_total{result="success"} 4
+    edge_agent_diagnostics_push_total{result="failure"} 1
     edge_agent_settings_config_refresh_total{result="success"} 5
     edge_agent_settings_config_refresh_total{result="invalid_response"} 1
     edge_agent_settings_config_refresh_total{result="failure"} 2
@@ -130,6 +132,14 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert result["health_check_reports"] == 15
     end
 
+    test "parses diagnostics push results" do
+      result = AgentMetricsParser.parse(sample_prometheus_text())
+
+      assert result["diagnostics_pushes"] == 5
+      assert result["diagnostics_pushes_success"] == 4
+      assert result["diagnostics_pushes_failure"] == 1
+    end
+
     test "splits Settings Config refreshes by result" do
       result = AgentMetricsParser.parse(sample_prometheus_text())
 
@@ -146,6 +156,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert result["ssh_authentications"] == 0
       assert result["vpn_pulls"] == 0
       assert result["health_check_reports"] == 0
+      assert result["diagnostics_pushes"] == 0
       assert result["settings_config_refreshes"] == 0
     end
 
@@ -270,6 +281,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert %AgentMetrics.Ssh{} = metrics.ssh
       assert %AgentMetrics.Vpn{} = metrics.vpn
       assert %AgentMetrics.HealthCheck{} = metrics.health_check
+      assert %AgentMetrics.Diagnostics{} = metrics.diagnostics
       assert %AgentMetrics.SettingsConfig{} = metrics.settings_config
       assert is_list(metrics.oban_queues)
     end
@@ -374,6 +386,16 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert metrics.health_check.reports_failure_total == 3
     end
 
+    test "diagnostics struct has correct push totals" do
+      raw = AgentMetricsParser.parse(sample_prometheus_text())
+      raw = Map.put(raw, "cluster_name", "prod")
+      metrics = AgentMetrics.from_raw_metrics(raw, "node-abc")
+
+      assert metrics.diagnostics.pushes_total == 5
+      assert metrics.diagnostics.pushes_success_total == 4
+      assert metrics.diagnostics.pushes_failure_total == 1
+    end
+
     test "Settings Config struct has correct refresh outcomes" do
       raw = AgentMetricsParser.parse(sample_prometheus_text())
       raw = Map.put(raw, "cluster_name", "prod")
@@ -404,6 +426,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
       assert metrics.ssh.authentications_total == 0
       assert metrics.vpn.pulls_total == 0
       assert metrics.health_check.reports_total == 0
+      assert metrics.diagnostics.pushes_total == 0
       assert metrics.settings_config.refreshes_total == 0
     end
 

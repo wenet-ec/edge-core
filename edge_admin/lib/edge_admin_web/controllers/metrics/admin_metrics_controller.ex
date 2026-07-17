@@ -26,7 +26,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AdminMetricsController do
     - SSH: credential verification attempts and failures
     - Reconciliation: cluster Netmaker↔DB sync runs and errors
     - Self-updates: request processing completions
-    - Gateways: connection events, active count, scrape totals
+    - Gateways: connection events, active count, scrape totals, diagnostic totals
     - Event broker: publish/enqueue counters (zeroed when broker is disabled)
     - Webhooks: fan-out invocations, matched delivery jobs, and delivery outcomes
     - Oban: job queue states (available, scheduled, executing, etc.)

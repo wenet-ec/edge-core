@@ -6,6 +6,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetricsTest do
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Application, as: App
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Bootstrap
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Commands
+  alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Diagnostics
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Discovery
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.HealthCheck
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.ObanQueue
@@ -37,6 +38,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetricsTest do
       assert %Ssh{} = result.ssh
       assert %Vpn{} = result.vpn
       assert %HealthCheck{} = result.health_check
+      assert %Diagnostics{} = result.diagnostics
       assert %SettingsConfig{} = result.settings_config
       assert is_list(result.oban_queues)
       assert DateTime.compare(result.timestamp, before) in [:gt, :eq]
@@ -152,6 +154,14 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetricsTest do
                reports_total: 0,
                reports_success_total: 0,
                reports_failure_total: 0
+             }
+    end
+
+    test "Diagnostics defaults to 0" do
+      assert Diagnostics.from_raw(%{}) == %Diagnostics{
+               pushes_total: 0,
+               pushes_success_total: 0,
+               pushes_failure_total: 0
              }
     end
 

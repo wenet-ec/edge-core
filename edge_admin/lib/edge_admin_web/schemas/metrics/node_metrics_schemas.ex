@@ -513,6 +513,27 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                 }
               }
             },
+            diagnostics: %Schema{
+              type: :object,
+              description: "Diagnostic report push metrics (HTTP fallback mode)",
+              properties: %{
+                pushes_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Total diagnostic reports pushed to Admin"
+                },
+                pushes_success_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Diagnostic reports accepted by Admin"
+                },
+                pushes_failure_total: %Schema{
+                  type: :integer,
+                  nullable: true,
+                  description: "Diagnostic reports that could not reach Admin"
+                }
+              }
+            },
             settings_config: %Schema{
               type: :object,
               description: "Refresh outcomes for Admin-advertised Settings Config",
@@ -635,6 +656,11 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
             reports_success_total: 1,
             reports_failure_total: 1
           },
+          diagnostics: %{
+            pushes_total: 2,
+            pushes_success_total: 1,
+            pushes_failure_total: 1
+          },
           settings_config: %{
             refreshes_total: 12,
             refreshes_success_total: 10,
@@ -720,6 +746,11 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                   type: :object,
                   nullable: true,
                   description: "Health check report metrics (HTTP fallback mode)"
+                },
+                diagnostics: %Schema{
+                  type: :object,
+                  nullable: true,
+                  description: "Diagnostic report push metrics (HTTP fallback mode)"
                 },
                 settings_config: %Schema{
                   type: :object,

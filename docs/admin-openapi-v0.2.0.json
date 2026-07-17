@@ -612,6 +612,20 @@
         "title": "CommandSingleResponse",
         "type": "object"
       },
+      "NodeDiagnosticData": {
+        "description": "Structured node diagnostic report",
+        "properties": {
+          "checks": {
+            "items": { "$ref": "#/components/schemas/NodeDiagnosticCheck" },
+            "type": "array"
+          },
+          "collected_at": { "format": "date-time", "type": "string" },
+          "overall": { "enum": ["pass", "warn", "fail"], "type": "string" }
+        },
+        "required": ["collected_at", "overall", "checks"],
+        "title": "NodeDiagnosticData",
+        "type": "object"
+      },
       "AdminCluster": {
         "description": "An admin cluster as known to Netmaker, plus its admin members.",
         "example": {
@@ -809,8 +823,18 @@
                     "description": "Whether agent metrics were successfully fetched",
                     "type": "boolean"
                   },
+                  "bootstrap": {
+                    "description": "Agent registration metrics",
+                    "nullable": true,
+                    "type": "object"
+                  },
                   "commands": {
                     "description": "Command execution metrics",
+                    "nullable": true,
+                    "type": "object"
+                  },
+                  "diagnostics": {
+                    "description": "Diagnostic report push metrics (HTTP fallback mode)",
                     "nullable": true,
                     "type": "object"
                   },
@@ -832,6 +856,11 @@
                   },
                   "proxy": {
                     "description": "Proxy server metrics",
+                    "nullable": true,
+                    "type": "object"
+                  },
+                  "settings_config": {
+                    "description": "Admin-advertised Settings Config refresh metrics",
                     "nullable": true,
                     "type": "object"
                   },
@@ -1086,6 +1115,16 @@
         },
         "required": ["data", "meta"],
         "title": "SelfUpdateRequestPaginatedResponse",
+        "type": "object"
+      },
+      "NodeDiagnosticResponse": {
+        "description": "Node diagnostics",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/NodeDiagnosticData" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
+        },
+        "required": ["data", "meta"],
+        "title": "NodeDiagnosticResponse",
         "type": "object"
       },
       "SshPublicKeyCreateRequest": {
@@ -1466,6 +1505,32 @@
         },
         "required": ["result"],
         "title": "CancelExecutionData",
+        "type": "object"
+      },
+      "NodeDiagnosticCheck": {
+        "properties": {
+          "details": { "additionalProperties": true, "type": "object" },
+          "duration_ms": { "minimum": 0, "type": "integer" },
+          "name": {
+            "enum": [
+              "wireguard_interface",
+              "netclient",
+              "networks",
+              "configured_peers",
+              "derp_map",
+              "database",
+              "bootstrap",
+              "ssh_server",
+              "metrics_servers",
+              "proxy_servers"
+            ],
+            "type": "string"
+          },
+          "status": { "enum": ["pass", "warn", "fail"], "type": "string" },
+          "summary": { "nullable": true, "type": "string" }
+        },
+        "required": ["name", "status", "duration_ms", "details"],
+        "title": "NodeDiagnosticCheck",
         "type": "object"
       },
       "AliasSummary": {
@@ -1876,7 +1941,9 @@
               "delivery_total": 48,
               "execution_completed_total": 21,
               "execution_delivered_total": 23,
-              "expiration_total": 2
+              "expiration_total": 2,
+              "pruning_deleted_count": 76,
+              "pruning_total": 4
             },
             "discovery": {
               "dns_resolutions_total": 12,
@@ -1893,6 +1960,7 @@
             "gateways": {
               "active_count": 0,
               "connections_total": 2,
+              "diagnostics_total": 0,
               "scrapes_total": 0
             },
             "membership": { "complete_total": 1, "steps_completed_total": 4 },
@@ -1902,7 +1970,16 @@
               "orphaned_clusters": 0,
               "recomputations_total": 26
             },
-            "nodes": { "health_checks_total": 480 },
+            "nodes": {
+              "fallback_health_reports_total": 4,
+              "health_checks_healthy_total": 462,
+              "health_checks_total": 480,
+              "health_checks_unhealthy_total": 12,
+              "health_checks_unreachable_total": 6,
+              "last_sweep_healthy_count": 96,
+              "last_sweep_unhealthy_count": 2,
+              "last_sweep_unreachable_count": 1
+            },
             "oban_queues": [
               {
                 "available": 0,
@@ -1944,8 +2021,18 @@
               "jobs_exceptions_total": 0,
               "jobs_executed_total": 156
             },
-            "reconciliation": { "errors": 0, "total": 12 },
-            "self_updates": { "completed_total": 3 },
+            "reconciliation": {
+              "errors": 0,
+              "nodes_added": 1,
+              "nodes_deleted": 0,
+              "nodes_removed": 0,
+              "total": 12
+            },
+            "self_updates": {
+              "completed_total": 3,
+              "failed": 0,
+              "triggered": 4
+            },
             "ssh": { "verifications_failed": 1, "verifications_total": 34 },
             "timestamp": "2025-12-26T15:30:00Z",
             "vpn": {
@@ -1957,7 +2044,8 @@
               "deliveries_recoverable_total": 60,
               "deliveries_terminal_total": 10,
               "deliveries_total": 2470,
-              "fan_outs_total": 1235
+              "fan_outs_total": 1235,
+              "matched_deliveries_total": 2470
             }
           },
           "meta": "Elixir.EdgeAdminWeb.Schemas.CommonSchemas.MetaSchema"
@@ -2088,6 +2176,16 @@
                     "description": "Total stale execution expiration sweeps",
                     "nullable": true,
                     "type": "integer"
+                  },
+                  "pruning_deleted_count": {
+                    "description": "Command-execution rows deleted in the most recent pruning sweep",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "pruning_total": {
+                    "description": "Total command-execution pruning sweeps",
+                    "nullable": true,
+                    "type": "integer"
                   }
                 },
                 "type": "object"
@@ -2145,7 +2243,7 @@
                 "type": "object"
               },
               "gateways": {
-                "description": "Gateway connection and scrape metrics",
+                "description": "Gateway connection, scrape, and diagnostics metrics",
                 "properties": {
                   "active_count": {
                     "description": "Current number of active gateway connections",
@@ -2154,6 +2252,11 @@
                   },
                   "connections_total": {
                     "description": "Total gateway connection events (connects + disconnects)",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "diagnostics_total": {
+                    "description": "Total diagnostic operations performed by gateways",
                     "nullable": true,
                     "type": "integer"
                   },
@@ -2208,10 +2311,45 @@
                 "type": "object"
               },
               "nodes": {
-                "description": "Node health check metrics",
+                "description": "Direct Admin-to-Agent VPN health-check metrics for this Admin instance. Latest-sweep values cover only the nodes this Admin owns; they are not fleet-wide gauges.",
                 "properties": {
+                  "fallback_health_reports_total": {
+                    "description": "Total HTTP fallback health reports received. These prove Agent-to-Admin reachability only; they never make the overall node healthy.",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "health_checks_healthy_total": {
+                    "description": "Total direct health checks that reached a healthy Agent",
+                    "nullable": true,
+                    "type": "integer"
+                  },
                   "health_checks_total": {
-                    "description": "Total node health checks performed",
+                    "description": "Total direct VPN health checks performed",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "health_checks_unhealthy_total": {
+                    "description": "Total direct health checks that reached an unhealthy Agent",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "health_checks_unreachable_total": {
+                    "description": "Total direct health checks that could not reach the Agent through the VPN",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "last_sweep_healthy_count": {
+                    "description": "Healthy nodes in this Admin's most recent direct health-check sweep",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "last_sweep_unhealthy_count": {
+                    "description": "Unhealthy nodes in this Admin's most recent direct health-check sweep",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "last_sweep_unreachable_count": {
+                    "description": "Unreachable nodes in this Admin's most recent direct health-check sweep",
                     "nullable": true,
                     "type": "integer"
                   }
@@ -2354,6 +2492,21 @@
                     "nullable": true,
                     "type": "integer"
                   },
+                  "nodes_added": {
+                    "description": "Nodes added to Netmaker in the most recent reconciliation run",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "nodes_deleted": {
+                    "description": "Orphaned database node records deleted in the most recent reconciliation run",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "nodes_removed": {
+                    "description": "Nodes removed from Netmaker in the most recent reconciliation run",
+                    "nullable": true,
+                    "type": "integer"
+                  },
                   "total": {
                     "description": "Total cluster reconciliation runs",
                     "nullable": true,
@@ -2367,6 +2520,16 @@
                 "properties": {
                   "completed_total": {
                     "description": "Total self-update requests processed to completion",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "failed": {
+                    "description": "Nodes that failed to trigger in the most recent self-update request",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "triggered": {
+                    "description": "Nodes successfully triggered by the most recent self-update request",
                     "nullable": true,
                     "type": "integer"
                   }
@@ -2435,6 +2598,11 @@
                   },
                   "fan_outs_total": {
                     "description": "Total fan-out invocations from the publish path",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "matched_deliveries_total": {
+                    "description": "Total matching webhook delivery jobs enqueued from the publish path",
                     "nullable": true,
                     "type": "integer"
                   }
@@ -2592,15 +2760,33 @@
               "uptime_human": "2d 0h 0m",
               "uptime_seconds": 172800
             },
+            "bootstrap": {
+              "registrations_failure_total": 1,
+              "registrations_success_total": 3,
+              "registrations_total": 4
+            },
             "cluster_name": "production",
             "commands": {
               "completed_total": 150,
               "enqueued_total": 152,
+              "last_exit_code": 0,
+              "report_batch_size": 3,
               "reported_total": 150,
+              "sync_pending_count": 1,
+              "sync_sent_count": 2,
               "synced_total": 156
             },
+            "diagnostics": {
+              "pushes_failure_total": 1,
+              "pushes_success_total": 1,
+              "pushes_total": 2
+            },
             "discovery": { "admins_found_last": 5, "scans_total": 48 },
-            "health_check": { "reports_total": 0 },
+            "health_check": {
+              "reports_failure_total": 1,
+              "reports_success_total": 1,
+              "reports_total": 2
+            },
             "node_id": "550e8400-e29b-41d4-a716-446655440000",
             "oban_queues": [
               {
@@ -2644,9 +2830,19 @@
               "tunnels_closed_normal_total": 590,
               "tunnels_closed_total": 605
             },
+            "settings_config": {
+              "refreshes_failure_total": 1,
+              "refreshes_invalid_response_total": 1,
+              "refreshes_success_total": 10,
+              "refreshes_total": 12
+            },
             "ssh": { "authentications_total": 45, "connections_total": 44 },
             "timestamp": "2025-01-15T15:30:00Z",
-            "vpn": { "pulls_total": 7 }
+            "vpn": {
+              "pulls_failure_total": 1,
+              "pulls_success_total": 6,
+              "pulls_total": 7
+            }
           }
         },
         "properties": {
@@ -2713,6 +2909,27 @@
                 },
                 "type": "object"
               },
+              "bootstrap": {
+                "description": "Agent registration metrics",
+                "properties": {
+                  "registrations_failure_total": {
+                    "description": "Failed registration attempts",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "registrations_success_total": {
+                    "description": "Successful registration attempts",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "registrations_total": {
+                    "description": "Total registration attempts",
+                    "nullable": true,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
               "cluster_name": {
                 "description": "Name of the cluster this node belongs to",
                 "type": "string"
@@ -2730,13 +2947,54 @@
                     "nullable": true,
                     "type": "integer"
                   },
+                  "last_exit_code": {
+                    "description": "Exit code from the most recently completed execution; spot indicator only",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "report_batch_size": {
+                    "description": "Executions in the most recent report batch",
+                    "nullable": true,
+                    "type": "integer"
+                  },
                   "reported_total": {
                     "description": "Total results reported back to admin",
                     "nullable": true,
                     "type": "integer"
                   },
+                  "sync_pending_count": {
+                    "description": "Pending executions fetched in the most recent sync",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "sync_sent_count": {
+                    "description": "Executions fetched in the most recent sync",
+                    "nullable": true,
+                    "type": "integer"
+                  },
                   "synced_total": {
                     "description": "Total command sync calls made to admin",
+                    "nullable": true,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "diagnostics": {
+                "description": "Diagnostic report push metrics (HTTP fallback mode)",
+                "properties": {
+                  "pushes_failure_total": {
+                    "description": "Diagnostic reports that could not reach Admin",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "pushes_success_total": {
+                    "description": "Diagnostic reports accepted by Admin",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "pushes_total": {
+                    "description": "Total diagnostic reports pushed to Admin",
                     "nullable": true,
                     "type": "integer"
                   }
@@ -2762,6 +3020,16 @@
               "health_check": {
                 "description": "Health check report metrics (only active when VPN is down and agent is in HTTP fallback mode)",
                 "properties": {
+                  "reports_failure_total": {
+                    "description": "Health check reports that could not reach Admin",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "reports_success_total": {
+                    "description": "Health check reports accepted by Admin",
+                    "nullable": true,
+                    "type": "integer"
+                  },
                   "reports_total": {
                     "description": "Total health check reports sent to admin via HTTP fallback",
                     "nullable": true,
@@ -2896,6 +3164,32 @@
                 },
                 "type": "object"
               },
+              "settings_config": {
+                "description": "Refresh outcomes for Admin-advertised Settings Config",
+                "properties": {
+                  "refreshes_failure_total": {
+                    "description": "Refreshes that could not reach Admin",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "refreshes_invalid_response_total": {
+                    "description": "Refreshes that returned an invalid Settings Config response",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "refreshes_success_total": {
+                    "description": "Successful Settings Config refreshes",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "refreshes_total": {
+                    "description": "Total authenticated Settings Config refresh attempts",
+                    "nullable": true,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
               "ssh": {
                 "description": "SSH server metrics",
                 "properties": {
@@ -2920,6 +3214,16 @@
               "vpn": {
                 "description": "VPN connectivity metrics",
                 "properties": {
+                  "pulls_failure_total": {
+                    "description": "Failed VPN config pulls",
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "pulls_success_total": {
+                    "description": "Successful VPN config pulls",
+                    "nullable": true,
+                    "type": "integer"
+                  },
                   "pulls_total": {
                     "description": "Total VPN config pulls performed (daily backstop for DNS recovery after netclient restart)",
                     "nullable": true,
@@ -4021,7 +4325,7 @@
     "/api/v1/admins/me/metrics": {
       "get": {
         "callbacks": {},
-        "description": "Returns application-level metrics from the edge_admin PromEx:\n- Application: uptime, BEAM stats (processes, memory, atoms, ETS tables)\n- Metadata: degraded status, orphaned/assigned clusters\n- Membership: step counts and full sequence completions\n- Discovery: peer discovery scan, DNS resolution, and connection counts\n- Nodes: health check statistics\n- Commands: delivery runs, per-execution delivery, completions, expirations\n- SSH: credential verification attempts and failures\n- Reconciliation: cluster Netmaker↔DB sync runs and errors\n- Self-updates: request processing completions\n- Gateways: connection events, active count, scrape totals\n- Event broker: publish/enqueue counters (zeroed when broker is disabled)\n- Oban: job queue states (available, scheduled, executing, etc.)\n",
+        "description": "Returns application-level metrics from the edge_admin PromEx:\n- Application: uptime, BEAM stats (processes, memory, atoms, ETS tables)\n- Metadata: degraded status, orphaned/assigned clusters\n- Membership: step counts and full sequence completions\n- Discovery: peer discovery scan, DNS resolution, and connection counts\n- Nodes: direct VPN health-check outcomes, latest local sweep, and HTTP fallback reports\n- Commands: delivery runs, per-execution delivery, completions, expirations\n- SSH: credential verification attempts and failures\n- Reconciliation: cluster Netmaker↔DB sync runs and errors\n- Self-updates: request processing completions\n- Gateways: connection events, active count, scrape totals, diagnostic totals\n- Event broker: publish/enqueue counters (zeroed when broker is disabled)\n- Webhooks: fan-out invocations, matched delivery jobs, and delivery outcomes\n- Oban: job queue states (available, scheduled, executing, etc.)\n",
         "operationId": "EdgeAdminWeb.Controllers.Metrics.AdminMetricsController.show",
         "parameters": [],
         "responses": {
@@ -5757,7 +6061,7 @@
     "/api/v1/nodes/{node_id}/metrics": {
       "get": {
         "callbacks": {},
-        "description": "Returns aggregated metrics from all available sources for a node:\n- Host metrics (Node Exporter): CPU, memory, disk, uptime\n- Agent metrics (agent PromEx): BEAM stats, commands, proxy, SSH, VPN, health check, Oban\n\nProvides a complete view of node health and performance in a single request.\nUses best-effort fetching - if one source fails, others are still returned.\n",
+        "description": "Returns aggregated metrics from all available sources for a node:\n- Host metrics (Node Exporter): CPU, memory, disk, uptime\n- Agent metrics (agent PromEx): BEAM stats, bootstrap, commands, proxy, SSH, VPN, fallback health checks, Settings Config, Oban\n\nProvides a complete view of node health and performance in a single request.\nUses best-effort fetching - if one source fails, others are still returned.\n",
         "operationId": "EdgeAdminWeb.Controllers.Metrics.NodeMetricsController.show_unified",
         "parameters": [
           {
@@ -5851,7 +6155,7 @@
     "/api/v1/nodes/{node_id}/metrics/agent": {
       "get": {
         "callbacks": {},
-        "description": "Returns application-level metrics from the edge_agent PromEx:\n- Application: uptime, BEAM stats (processes, memory breakdown)\n- Commands: sync/enqueue/complete/report statistics\n- Discovery: admin discovery scan metrics\n- Proxy: HTTP and SOCKS5 connection and blocked-request statistics\n- SSH: authentication attempts and connection count\n- VPN: config pull count (daily backstop for DNS recovery)\n- Health Check: fallback health report count (only non-zero when VPN is down)\n- Oban: job queue states (available, executing, completed, etc.)\n",
+        "description": "Returns application-level metrics from the edge_agent PromEx:\n- Application: uptime, BEAM stats (processes, memory breakdown)\n- Commands: sync/enqueue/complete/report statistics\n- Discovery: admin discovery scan metrics\n- Proxy: HTTP and SOCKS5 connection and blocked-request statistics\n- SSH: authentication attempts and connection count\n- VPN: config pull count (daily backstop for DNS recovery)\n- Health Check: fallback health report outcomes (only non-zero when VPN is down)\n- Settings Config: Admin URL and Core DERP map source refresh outcomes\n- Oban: job queue states (available, executing, completed, etc.)\n",
         "operationId": "EdgeAdminWeb.Controllers.Metrics.NodeMetricsController.show_agent",
         "parameters": [
           {
@@ -5894,6 +6198,54 @@
         },
         "summary": "Get agent metrics for a node",
         "tags": ["Nodes.Metrics"]
+      }
+    },
+    "/api/v1/nodes/{id}/diagnostics": {
+      "get": {
+        "callbacks": {},
+        "description": "Returns a read-only diagnostic report for a node.",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeDiagnosticController.show",
+        "parameters": [
+          {
+            "description": "Node ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeDiagnosticResponse"
+                }
+              }
+            },
+            "description": "Node diagnostics"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Node not found"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                }
+              }
+            },
+            "description": "No diagnostic report available"
+          }
+        },
+        "summary": "Get node diagnostics",
+        "tags": ["Nodes.Diagnostics"]
       }
     },
     "/api/v1/commands": {
@@ -7832,6 +8184,7 @@
     { "name": "Nodes.Node" },
     { "name": "Nodes.Alias" },
     { "name": "Nodes.Metrics" },
+    { "name": "Nodes.Diagnostics" },
     { "name": "Commands.Command" },
     { "name": "Commands.CommandExecution" },
     { "name": "Ssh.SshUsername" },

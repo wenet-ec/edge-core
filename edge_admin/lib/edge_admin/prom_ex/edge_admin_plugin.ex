@@ -414,6 +414,14 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
         measurement: :count,
         tags: [:cluster, :metrics_type, :result],
         tag_values: &get_gateway_scrape_tags/1
+      ),
+      counter(
+        [:edge_admin, :gateway, :diagnostics, :total],
+        event_name: [:edge_admin, :gateway, :diagnostics],
+        description: "Total gateway diagnostic operations",
+        measurement: :count,
+        tags: [:cluster, :result],
+        tag_values: &get_gateway_diagnostics_tags/1
       )
     ]
   end
@@ -619,6 +627,10 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
 
   defp get_gateway_scrape_tags(%{cluster: cluster, metrics_type: metrics_type, result: result}) do
     %{cluster: to_string(cluster), metrics_type: to_string(metrics_type), result: to_string(result)}
+  end
+
+  defp get_gateway_diagnostics_tags(%{cluster: cluster, result: result}) do
+    %{cluster: to_string(cluster), result: to_string(result)}
   end
 
   defp get_proxy_connection_tags(%{

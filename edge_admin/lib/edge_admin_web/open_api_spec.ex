@@ -43,6 +43,8 @@ defmodule EdgeAdminWeb.OpenApiSpec do
     "/api/v1/nodes/{node_id}/metrics",
     "/api/v1/nodes/{node_id}/metrics/host",
     "/api/v1/nodes/{node_id}/metrics/agent",
+    # Nodes.Diagnostics
+    "/api/v1/nodes/{id}/diagnostics",
     # Commands.Command
     "/api/v1/commands",
     "/api/v1/commands/{id}",
@@ -109,6 +111,7 @@ defmodule EdgeAdminWeb.OpenApiSpec do
         %Tag{name: "Nodes.Node"},
         %Tag{name: "Nodes.Alias"},
         %Tag{name: "Nodes.Metrics"},
+        %Tag{name: "Nodes.Diagnostics"},
         %Tag{name: "Commands.Command"},
         %Tag{name: "Commands.CommandExecution"},
         %Tag{name: "Ssh.SshUsername"},

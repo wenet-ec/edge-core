@@ -12,13 +12,15 @@ defmodule EdgeAdmin.Ssh.Filters.SshPublicKeyFiltersTest do
   alias EdgeAdmin.Ssh.Schemas.SshUsername
 
   defp insert_cluster(overrides \\ %{}) do
+    number = :erlang.unique_integer([:positive, :monotonic])
+
     attrs =
       Map.merge(
         %{
           id: Ecto.UUID.generate(),
-          name: "cluster-#{:rand.uniform(999_999)}",
-          ipv4_range: "100.64.#{:rand.uniform(200)}.0/24",
-          ipv6_range: "fd7a:91c2:4e8b:#{rem(:erlang.unique_integer([:positive, :monotonic]), 65_536)}::/64"
+          name: "cluster-#{number}",
+          ipv4_range: "100.#{64 + rem(div(number, 256), 64)}.#{rem(number, 256)}.0/24",
+          ipv6_range: "fd7a:91c2:4e8b:#{rem(number, 65_536)}::/64"
         },
         overrides
       )

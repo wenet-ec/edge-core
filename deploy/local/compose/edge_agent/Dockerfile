@@ -6,7 +6,7 @@ ARG NETCLIENT_VERSION=v1.6.0-derp
 FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 
 # Stage 0b: Pull pre-built node_exporter
-FROM quay.io/prometheus/node-exporter:v1.12.0 AS node-exporter-builder
+FROM quay.io/prometheus/node-exporter:v1.12.1 AS node-exporter-builder
 
 # Debug alternative: build from source in-Dockerfile. Uncomment this block (and
 # comment out the two lines above) when iterating on the netclient fork locally,

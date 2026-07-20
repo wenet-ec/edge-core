@@ -168,6 +168,18 @@ Edge Agent ships as a Debian-slim container, so the agent process itself is port
 | SELinux-enforcing hosts | `amd64`, `arm64` | Caveat | May need custom policy or `--security-opt label=disabled` |
 | `riscv64`, `ppc64le`, `s390x` | those architectures | Unsupported today | Not currently built or tested |
 
+#### Full Agent host resources
+
+The full Agent is a privileged Docker/Compose deployment that bundles VPN,
+remote command execution, SSH, Prometheus exporters, proxies, SQLite, and
+diagnostics. It is not intended for tiny sensor- or router-class devices.
+
+- **Minimum:** 1 GB RAM on the Linux host.
+- **Recommended:** 2 GB RAM or more for comfortable Agent and workload headroom.
+- Hosts with less than 1 GB RAM may be able to start the container, but are not
+  a supported full-Agent target. Memory pressure from the operating system,
+  Docker, the Agent, and customer workloads makes them operationally fragile.
+
 #### RHEL-family hosts and firewalld
 
 Rocky Linux, RHEL, AlmaLinux, CentOS Stream, and Fedora commonly run

@@ -316,6 +316,15 @@ Edge Agent is a standalone binary that runs on each edge machine. The primary de
 | SELinux-enforcing hosts | `amd64`, `arm64` | Caveat | May need custom policy or `--security-opt label=disabled` |
 | `riscv64`, `ppc64le`, `s390x` | those architectures | Unsupported today | Not currently built or tested |
 
+**Full Agent host resources.** The full Agent is a privileged Docker/Compose
+deployment that bundles VPN, remote command execution, SSH, Prometheus
+exporters, proxies, SQLite, and diagnostics. It is not intended for tiny
+sensor- or router-class devices. A supported host needs at least **1 GB RAM**;
+**2 GB or more is recommended** for comfortable Agent and workload headroom.
+Hosts with less than 1 GB RAM may be able to start the container, but are not a
+supported full-Agent target because operating-system, Docker, Agent, and
+customer-workload memory pressure makes them operationally fragile.
+
 The practical constraints are kernel WireGuard support (built-in on `>= 5.6`, DKMS or `wireguard-go` userspace fallback otherwise), a writable `/etc/resolv.conf`, and, when applicable, `systemd-resolved` reachable over D-Bus.
 
 **RHEL-family firewalld.** Rocky Linux, RHEL, AlmaLinux, CentOS Stream, and Fedora commonly run `firewalld`. Its default zone can reject traffic arriving on the Netmaker interface even when Netmaker's iptables-nft compatibility rules permit it. This is a host firewall compatibility concern: configure firewalld on the host to allow the interface or its traffic in an appropriate zone, and validate VPN allow/deny behavior on each supported RHEL-family release.

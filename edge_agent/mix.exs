@@ -97,7 +97,7 @@ defmodule EdgeAgent.Mixfile do
 
       # Database
       {:phoenix_ecto, "~> 4.7"},
-      {:ecto_sql, "~> 3.13"},
+      {:ecto_sql, "~> 3.14"},
       {:ecto_sqlite3, "~> 0.24"},
       {:uniq, "~> 0.6"},
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},

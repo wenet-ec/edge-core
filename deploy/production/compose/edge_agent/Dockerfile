@@ -5,7 +5,7 @@ ARG NETCLIENT_VERSION=v1.6.0-derp
 FROM ghcr.io/wenet-ec/netclient:${NETCLIENT_VERSION} AS netclient-builder
 
 # Stage 0b: Pull pre-built node_exporter
-FROM quay.io/prometheus/node-exporter:v1.12.0 AS node-exporter-builder
+FROM quay.io/prometheus/node-exporter:v1.12.1 AS node-exporter-builder
 
 # Stage 1: Build the OTP release
 FROM elixir:1.20.2-otp-29-slim AS builder

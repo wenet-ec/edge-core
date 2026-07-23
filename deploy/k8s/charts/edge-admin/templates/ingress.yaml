@@ -1,5 +1,44 @@
 {{- /* deploy/k8s/charts/edge-admin/templates/ingress.yaml */ -}}
 {{- if .Values.ingress.enabled }}
+{{/*
+MCP sessions are process-local. Keep /mcp on its original Admin pod; the
+distributed Anubis registry is only the fallback when that routing drifts.
+
+This is intentionally a separate Ingress because affinity annotations are
+applied per Ingress by controllers such as ingress-nginx. The normal API route
+below remains stateless and load-balanced.
+*/}}
+{{- if .Values.ingress.mcp.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "edge-admin.fullname" . }}-mcp
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "edge-admin.labels" . | nindent 4 }}
+  {{- with .Values.ingress.mcp.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- toYaml .Values.ingress.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.config.phxHost }}
+      http:
+        paths:
+          - path: /mcp
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "edge-admin.fullname" . }}
+                port:
+                  name: api
+---
+{{- end }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

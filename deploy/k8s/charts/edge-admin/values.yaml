@@ -226,6 +226,22 @@ ingress:
   enabled: false
   className: "nginx"
   annotations: {}
+  # MCP sessions are process-local. The dedicated /mcp Ingress below is more
+  # specific than the general / route and uses a cookie to keep each client on
+  # one Admin pod. Registry.PG remains a fallback for a request that still
+  # reaches another live peer; it is not the normal routing path.
+  #
+  # These defaults target the chart's default ingress class, ingress-nginx.
+  # For another controller, replace `mcp.annotations` with that controller's
+  # equivalent affinity settings (or set mcp.enabled: false only when a
+  # front-door proxy supplies equivalent /mcp-only stickiness).
+  mcp:
+    enabled: true
+    annotations:
+      nginx.ingress.kubernetes.io/affinity: "cookie"
+      nginx.ingress.kubernetes.io/affinity-mode: "persistent"
+      nginx.ingress.kubernetes.io/session-cookie-name: "edge_admin_mcp"
+      nginx.ingress.kubernetes.io/session-cookie-path: "/mcp"
   tls: []
 
 resources:

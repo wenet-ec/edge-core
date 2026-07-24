@@ -6,7 +6,7 @@
 FROM golang:1.26-alpine AS builder
 
 ARG TAILSCALE_REPO=https://github.com/tailscale/tailscale.git
-ARG TAILSCALE_VERSION=v1.100.0
+ARG TAILSCALE_VERSION=v1.102.0
 
 WORKDIR /build
 

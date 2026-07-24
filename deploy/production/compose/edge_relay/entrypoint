@@ -46,6 +46,11 @@ ARGS=""
 # Optional for letsencrypt, required for gcp certmode.
 [ -n "${DERP_ACME_EMAIL:-}" ]       && ARGS="$ARGS -acme-email=${DERP_ACME_EMAIL}"
 
+# DERP_ACME_IP_CERTS: Set to "true" to obtain and serve short-lived Let's
+# Encrypt certificates for each IP address clients connect to. Requires
+# certmode=letsencrypt and public HTTP-01 reachability on port 80. Default: false
+[ "${DERP_ACME_IP_CERTS:-}" = "true" ] && ARGS="$ARGS -acme-ip-certs"
+
 # DERP_ACME_EAB_KID: ACME External Account Binding Key ID.
 # Required only for certmode=gcp.
 [ -n "${DERP_ACME_EAB_KID:-}" ]     && ARGS="$ARGS -acme-eab-kid=${DERP_ACME_EAB_KID}"
@@ -129,6 +134,10 @@ ARGS=""
 # DERP_ACCEPT_CONN_BURST: Burst size for connection rate limiter. Default: unlimited
 [ -n "${DERP_ACCEPT_CONN_BURST:-}" ] && ARGS="$ARGS -accept-connection-burst=${DERP_ACCEPT_CONN_BURST}"
 
+# DERP_RATE_CONFIG: Path to experimental JSON rate-limit configuration. The
+# derper reloads it when it receives SIGHUP.
+[ -n "${DERP_RATE_CONFIG:-}" ]       && ARGS="$ARGS -rate-config=${DERP_RATE_CONFIG}"
+
 # --- TCP tuning ---
 # DERP_TCP_KEEPALIVE_TIME: TCP keepalive interval. Intentionally long to save battery.
 # Format: Go duration string e.g. "10m", "30s". Default: 10m
@@ -141,6 +150,15 @@ ARGS=""
 # DERP_TCP_WRITE_TIMEOUT: Timeout for writing to client TCP connections.
 # Does not apply to mesh connections. Set to "0" for no timeout. Default: 5s
 [ -n "${DERP_TCP_WRITE_TIMEOUT:-}" ] && ARGS="$ARGS -tcp-write-timeout=${DERP_TCP_WRITE_TIMEOUT}"
+
+# --- Experimental ---
+# DERP_ENABLE_ACE: Set to "true" to enable Tailscale's embedded ACE server.
+# This feature is experimental and in development. Default: false
+[ "${DERP_ENABLE_ACE:-}" = "true" ] && ARGS="$ARGS -ace"
+
+# DERP_PRINT_VERSION: Set to "true" to print derper's version and exit.
+# Intended for diagnostics, not normal service startup. Default: false
+[ "${DERP_PRINT_VERSION:-}" = "true" ] && ARGS="$ARGS -version"
 
 # -----------------------------------------------
 # Startup

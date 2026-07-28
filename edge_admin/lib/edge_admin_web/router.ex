@@ -47,6 +47,7 @@ defmodule EdgeAdminWeb.Router do
 
   # API documentation UI pipeline (SwaggerUI, ReDoc)
   pipeline :api_docs_ui do
+    plug(:accepts, ["html"])
     plug(:fetch_session)
     plug(:fetch_live_flash)
     plug(ApiDocsEnabled)
@@ -56,6 +57,21 @@ defmodule EdgeAdminWeb.Router do
   pipeline :agent_api do
     plug(:accepts, ["json"])
     plug(EdgeAdminWeb.Plugs.AgentAuth)
+  end
+
+  # Edge Admin guide — part of the documentation surface, gated with Swagger,
+  # ReDoc, AsyncAPI, and the raw specs by API_DOCS_ENABLED.
+  scope "/" do
+    pipe_through(:api_docs_ui)
+
+    get("/", EdgeAdminWeb.Controllers.Guide.IndexController, :index)
+    get("/guide/clusters", EdgeAdminWeb.Controllers.Guide.ClusterController, :show)
+    get("/guide/nodes", EdgeAdminWeb.Controllers.Guide.NodeController, :show)
+    get("/guide/commands", EdgeAdminWeb.Controllers.Guide.CommandController, :show)
+    get("/guide/proxy", EdgeAdminWeb.Controllers.Guide.ProxyController, :show)
+    get("/guide/ssh", EdgeAdminWeb.Controllers.Guide.SshController, :show)
+    get("/guide/metrics", EdgeAdminWeb.Controllers.Guide.MetricsController, :show)
+    get("/guide/events", EdgeAdminWeb.Controllers.Guide.EventController, :show)
   end
 
   # API documentation UIs — all gated by API_DOCS_ENABLED (disabled in production)
@@ -71,7 +87,7 @@ defmodule EdgeAdminWeb.Router do
     get("/asyncdoc", EdgeAdminWeb.Controllers.AsyncApi.DocController, :show)
   end
 
-  # LiveDashboard with basic auth protection
+  # Admin debug with basic auth protection
   scope "/" do
     pipe_through(:browser_with_basic_auth)
 
@@ -80,10 +96,10 @@ defmodule EdgeAdminWeb.Router do
     # then dispatches per repo's adapter (Postgres → EctoPSQLExtras, SQLite
     # → EctoSQLite3Extras), so DB_ADAPTER selects the right backend with no
     # hardcoded list here.
-    live_dashboard("/live_dashboard",
+    live_dashboard("/admin/debug",
       metrics: EdgeAdminWeb.Telemetry,
       home_app: {"Edge Admin", :edge_admin},
-      on_mount: [EdgeAdminWeb.LiveDashboardAuth, EdgeAdminWeb.LiveDashboardHooks],
+      on_mount: [EdgeAdminWeb.AdminDebugAuth, EdgeAdminWeb.AdminDebugHooks],
       additional_pages: [
         oban: Oban.LiveDashboard,
         quantum: EdgeAdminWeb.Live.QuantumDashboard,

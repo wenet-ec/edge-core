@@ -1,0 +1,11 @@
+<%!-- edge_admin/lib/edge_admin_web/controllers/guide/cluster_html/show.html.heex --%>
+<.page title="Clusters" description="How clusters define Edge Admin's secure management boundary.">
+  <article class="guide-content guide-topic">
+    <a class="back-link" href="/">← Guide overview</a>
+    <p class="kicker">Concept 01</p><h1>Clusters are the boundary.</h1>
+    <p class="lede">A cluster groups machines into one isolated management domain and one private WireGuard mesh.</p>
+    <section><h2>What a cluster gives you</h2><p>Every node in the cluster receives a stable VPN identity and can communicate with its peers over the mesh. Edge Admin uses that network to deliver commands, collect metrics, and reach agents without requiring public host ports.</p><p>Clusters are deliberately small. A WireGuard mesh grows with every peer relationship, so scale comes from adding clusters rather than making one mesh indefinitely large.</p></section>
+    <section><h2>Choose a cluster around a boundary</h2><ul><li>A customer or tenant that should not share a network with another customer.</li><li>A workload, site, or environment with its own connectivity and operational boundary.</li><li>A group of machines that need to communicate directly with one another.</li></ul></section>
+    <section class="next"><h2>Use it</h2><p>Create a cluster, then create an enrollment key for it. The key is what lets Edge Agent join a machine to the correct mesh.</p><div class="next__links"><a class="primary-link" href="/swaggerui#/Nodes.Cluster">Cluster API <span aria-hidden="true">→</span></a><a href="/guide/nodes">Next: nodes</a></div></section>
+  </article>
+</.page>

@@ -93,13 +93,16 @@ defmodule EdgeAdminWeb.OpenApiSpec do
         array there means the endpoint is unauthenticated by design (e.g.
         public enrollment-key creation).
 
+        **Start here:** [Edge Admin guide](/) — a short introduction to the
+        cluster-and-node model before you work with the API.
+
         **Explore:**
         - [Swagger UI](/swaggerui) — interactive API explorer
         - [ReDoc](/redoc) — reference documentation
         - [Raw spec](/api/openapi) — OpenAPI JSON
 
-        **Event streaming:** Edge Admin also publishes lifecycle events to a message broker.
-        See the [AsyncAPI spec](/asyncdoc) or [download it](/api/asyncapi).
+        **Events:** Edge Admin also publishes lifecycle events to a message broker.
+        Browse the [AsyncAPI docs](/asyncdoc) or [download the AsyncAPI spec](/api/asyncapi).
         """
       },
       paths: Paths.from_router(Router),

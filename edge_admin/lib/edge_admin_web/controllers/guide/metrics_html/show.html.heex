@@ -1,0 +1,11 @@
+<%!-- edge_admin/lib/edge_admin_web/controllers/guide/metrics_html/show.html.heex --%>
+<.page title="Metrics" description="How Edge Admin aggregates metrics from managed nodes.">
+  <article class="guide-content guide-topic">
+    <a class="back-link" href="/">← Guide overview</a>
+    <p class="kicker">Capability</p><h1>Metrics make a remote fleet observable.</h1>
+    <p class="lede">Edge Admin aggregates machine signals so operators and monitoring systems do not need direct public access to every node.</p>
+    <section><h2>Three metric families</h2><p>Host metrics describe the machine. Agent metrics describe Edge Agent and its runtime. WireGuard metrics describe the mesh connection. Together, they tell you whether the machine, its control software, and its network path are healthy.</p></section>
+    <section><h2>Two consumption shapes</h2><p>Use the human-friendly JSON endpoints when an operator, script, or MCP client needs a unified view. Use the Prometheus-compatible discovery and raw endpoints when your monitoring system performs the scraping.</p></section>
+    <section class="next"><h2>Use it</h2><p>Start with a node's unified metrics endpoint, then connect Prometheus to the discovery endpoints when you need continuous fleet monitoring.</p><div class="next__links"><a class="primary-link" href="/swaggerui#/Nodes.Metrics">Metrics API <span aria-hidden="true">→</span></a><a href="/guide/events">Next: events</a></div></section>
+  </article>
+</.page>

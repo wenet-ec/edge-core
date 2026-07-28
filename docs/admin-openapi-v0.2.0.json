@@ -4212,7 +4212,7 @@
     }
   },
   "info": {
-    "description": "REST API for Edge Admin — the orchestration server for Edge Core.\n\nMost endpoints require an API key (`Authorization: Bearer <API_KEY>`\nor `<MASTER_KEY>`). A small set of bootstrap endpoints is intentionally\npublic — see the per-operation `security` field in the spec; an empty\narray there means the endpoint is unauthenticated by design (e.g.\npublic enrollment-key creation).\n\n**Explore:**\n- [Swagger UI](/swaggerui) — interactive API explorer\n- [ReDoc](/redoc) — reference documentation\n- [Raw spec](/api/openapi) — OpenAPI JSON\n\n**Event streaming:** Edge Admin also publishes lifecycle events to a message broker.\nSee the [AsyncAPI spec](/asyncdoc) or [download it](/api/asyncapi).\n",
+    "description": "REST API for Edge Admin — the orchestration server for Edge Core.\n\nMost endpoints require an API key (`Authorization: Bearer <API_KEY>`\nor `<MASTER_KEY>`). A small set of bootstrap endpoints is intentionally\npublic — see the per-operation `security` field in the spec; an empty\narray there means the endpoint is unauthenticated by design (e.g.\npublic enrollment-key creation).\n\n**Start here:** [Edge Admin guide](/) — a short introduction to the\ncluster-and-node model before you work with the API.\n\n**Explore:**\n- [Swagger UI](/swaggerui) — interactive API explorer\n- [ReDoc](/redoc) — reference documentation\n- [Raw spec](/api/openapi) — OpenAPI JSON\n\n**Events:** Edge Admin also publishes lifecycle events to a message broker.\nBrowse the [AsyncAPI docs](/asyncdoc) or [download the AsyncAPI spec](/api/asyncapi).\n",
     "title": "Edge Admin OpenAPI",
     "version": "0.2.0"
   },

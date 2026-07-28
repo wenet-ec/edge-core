@@ -239,6 +239,10 @@ config :edge_admin, EdgeAdminWeb.Endpoint,
   ]
 
 config :edge_admin,
+  admin_debug_enabled: get_env("ADMIN_DEBUG_ENABLED", :boolean, false),
+  api_docs_enabled: get_env("API_DOCS_ENABLED", :boolean, true)
+
+config :edge_admin,
   basic_auth_enabled: basic_auth_enabled,
   basic_auth: [
     username:
@@ -252,10 +256,6 @@ config :edge_admin,
         else: get_env("BASIC_AUTH_PASSWORD")
       )
   ]
-
-config :edge_admin,
-  live_dashboard_enabled: get_env("LIVE_DASHBOARD_ENABLED", :boolean, false),
-  api_docs_enabled: get_env("API_DOCS_ENABLED", :boolean, true)
 
 if auth_enabled do
   master_key = get_env!("MASTER_KEY")

@@ -57,12 +57,12 @@ CORS_ALLOWED_ORIGINS=*
 # CORS_ALLOWED_HEADERS=authorization,content-type,x-request-id
 
 # =============================================================================
-# Basic Authentication (LiveDashboard)
+# Basic Authentication
 # =============================================================================
-# Protects /live_dashboard with HTTP Basic Auth.
+# Protects /admin/debug with HTTP Basic Auth.
 # When BASIC_AUTH_ENABLED=true, both username and password must be set or the
 # admin will raise at boot.
-# Strongly recommended in production whenever LIVE_DASHBOARD_ENABLED=true.
+# Strongly recommended in production whenever ADMIN_DEBUG_ENABLED=true.
 BASIC_AUTH_ENABLED=true
 BASIC_AUTH_USERNAME=admin
 BASIC_AUTH_PASSWORD=admin
@@ -71,7 +71,7 @@ BASIC_AUTH_PASSWORD=admin
 # Development & Debugging Tools
 # =============================================================================
 # The dashboard exposes internal process/memory/DB/Oban info — gate it appropriately.
-LIVE_DASHBOARD_ENABLED=true
+ADMIN_DEBUG_ENABLED=true
 
 # Enables SwaggerUI (/swaggerui), ReDoc (/redoc), AsyncAPI viewer (/asyncdoc),
 # OpenAPI spec (/api/openapi), and AsyncAPI spec (/api/asyncapi).

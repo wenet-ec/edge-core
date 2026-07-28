@@ -69,7 +69,7 @@ defmodule EdgeAdminWeb.Endpoint do
   plug(:metrics_auth_conditional)
   plug(PromEx.Plug, prom_ex_module: EdgeAdmin.PromEx, path: "/api/v1/admins/me/metrics/raw")
 
-  # Request Logger only mounted when LiveDashboard is enabled — otherwise it
+  # Request Logger is only mounted when Admin debug is enabled — otherwise it
   # tags every request with stale metadata for a UI nobody can reach.
   plug(:request_logger_conditional)
 
@@ -81,7 +81,7 @@ defmodule EdgeAdminWeb.Endpoint do
   plug(EdgeAdminWeb.Router)
 
   defp request_logger_conditional(conn, _opts) do
-    if Application.get_env(:edge_admin, :live_dashboard_enabled, false) do
+    if Application.get_env(:edge_admin, :admin_debug_enabled, false) do
       RequestLogger.call(
         conn,
         RequestLogger.init(param_key: "request_logger")

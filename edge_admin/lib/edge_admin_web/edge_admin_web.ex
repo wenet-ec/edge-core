@@ -54,6 +54,30 @@ defmodule EdgeAdminWeb do
   end
 
   @doc """
+  HTML-only controller surface for the small number of browser pages that
+  belong to Edge Admin itself. API controllers intentionally remain JSON-only.
+  """
+  def html_controller do
+    quote do
+      use Phoenix.Controller,
+        formats: [:html],
+        layouts: []
+
+      import Plug.Conn
+
+      unquote(verified_routes())
+    end
+  end
+
+  def html do
+    quote do
+      use Phoenix.Component
+
+      unquote(verified_routes())
+    end
+  end
+
+  @doc """
   Like `:controller`, but with `OpenApiSpex.Plug.CastAndValidate` already
   installed against `EdgeAdminWeb.Plugs.CastAndValidateErrorRenderer`.
 

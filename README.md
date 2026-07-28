@@ -191,7 +191,7 @@ commands and troubleshooting guidance.
 
 ## Using a running admin
 
-Once an admin is up, the day-to-day surface — Swagger UI, MCP, proxy servers, metrics, events/webhooks, health checks, concepts — is documented in the **[user guide](https://github.com/wenet-ec/edge-core/blob/main/docs/guide.md)**.
+Once an admin is up, start at `/` for the short Edge Admin guide to its cluster-and-node model, then use Swagger UI for day-to-day API work. The complete surface — Swagger UI, MCP, proxy servers, metrics, events/webhooks, health checks, and concepts — is documented in the **[user guide](https://github.com/wenet-ec/edge-core/blob/main/docs/guide.md)**.
 
 Other useful pointers:
 

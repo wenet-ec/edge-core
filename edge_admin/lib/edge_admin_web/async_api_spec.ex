@@ -42,6 +42,9 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
 
         Enable publishing by setting `EVENT_BROKER_ENABLED=true` on the admin.
 
+        **Start here:** [Edge Admin guide](/) — a short introduction to the
+        cluster-and-node model before you integrate event delivery.
+
         **Explore:**
         - [AsyncAPI viewer](/asyncdoc) — this page
         - [Raw spec](/api/asyncapi) — AsyncAPI JSON

@@ -1,0 +1,65 @@
+<%!-- edge_admin/lib/edge_admin_web/controllers/guide/index_html/index.html.heex --%>
+<.page title="Edge Admin guide" description="A short guide to Edge Admin's cluster-and-node model.">
+  <article class="guide-content">
+    <p class="kicker">Start here</p>
+    <h1>Edge Admin manages machines you do not physically control.</h1>
+    <p class="lede">
+      It gives you one control plane for securely connecting, observing, and operating
+      distributed machines. Before using the API, learn two concepts.
+    </p>
+
+    <section class="concepts" aria-labelledby="concepts-title">
+      <h2 id="concepts-title">The model</h2>
+      <div class="concept">
+        <div class="concept__index">01</div>
+        <div>
+          <h3>Cluster</h3>
+          <p>A cluster is an isolated management and network boundary. It maps to one WireGuard mesh: every enrolled node can communicate securely inside that mesh, without you managing individual IPs, ports, or tunnels.</p>
+          <p class="concept__links"><a href="/guide/clusters">Learn about clusters <span aria-hidden="true">→</span></a><a href="/swaggerui#/Nodes.Cluster">Cluster API</a></p>
+        </div>
+      </div>
+      <div class="concept">
+        <div class="concept__index">02</div>
+        <div>
+          <h3>Node</h3>
+          <p>A node is a machine running Edge Agent in a cluster. Once enrolled, Edge Admin can reach it over the mesh and expose the same operational capabilities wherever the machine is located.</p>
+          <p class="concept__links"><a href="/guide/nodes">Learn about nodes <span aria-hidden="true">→</span></a><a href="/swaggerui#/Nodes.Node">Node API</a></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="flow" aria-labelledby="flow-title">
+      <h2 id="flow-title">How you use it</h2>
+      <ol>
+        <li><strong>Create a cluster.</strong> Establish the private mesh for a workload, site, or customer.</li>
+        <li><strong>Enroll a node.</strong> Run Edge Agent with an enrollment key to join the machine to that mesh.</li>
+        <li><strong>Choose a capability.</strong> Use the API or MCP to operate nodes, or the proxy, metrics, and event surfaces to integrate them into your systems.</li>
+      </ol>
+    </section>
+
+    <section class="capabilities" aria-labelledby="capabilities-title">
+      <h2 id="capabilities-title">What Edge Admin can do</h2>
+      <dl>
+        <div><dt><a href="/guide/commands">Commands</a></dt><dd>Run shell work across selected nodes and collect an execution result for each one.</dd></div>
+        <div><dt><a href="/guide/proxy">Proxy</a></dt><dd>Route HTTP or any TCP connection through the secure network, including paths beyond SSH.</dd></div>
+        <div><dt><a href="/guide/ssh">SSH</a></dt><dd>Use centralized SSH credentials with the proxy path when you need interactive access.</dd></div>
+        <div><dt><a href="/guide/metrics">Metrics</a></dt><dd>Aggregate host, agent, and WireGuard metrics through one API and Prometheus-compatible endpoints.</dd></div>
+        <div><dt><a href="/guide/events">Events</a></dt><dd>Publish lifecycle changes to signed webhooks or a message broker instead of polling for them.</dd></div>
+      </dl>
+    </section>
+
+    <section class="next" aria-labelledby="next-title">
+      <h2 id="next-title">Next</h2>
+      <p>Swagger UI is the primary working surface: inspect operations, authorize with your key, and try requests live.</p>
+      <div class="next__links"><a class="primary-link" href="/swaggerui">Open Swagger UI <span aria-hidden="true">→</span></a><a href="/redoc">Read the API reference</a><a href="/asyncdoc">Explore events</a><a href="https://wenet-ec.github.io/edge-core/">Read the full documentation</a></div>
+    </section>
+
+    <%= if @admin_debug_enabled do %>
+      <section class="admin-debug" aria-labelledby="admin-debug-title">
+        <h2 id="admin-debug-title">Admin debug</h2>
+        <p>Inspect the Admin cluster's runtime, queues, scheduler, database activity, and connected Erlang nodes when troubleshooting the control plane.</p>
+        <a href="/admin/debug">Open Admin debug <span aria-hidden="true">→</span></a>
+      </section>
+    <% end %>
+  </article>
+</.page>

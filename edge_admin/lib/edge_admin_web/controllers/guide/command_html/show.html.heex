@@ -1,0 +1,11 @@
+<%!-- edge_admin/lib/edge_admin_web/controllers/guide/command_html/show.html.heex --%>
+<.page title="Commands" description="How Edge Admin distributes command work across nodes.">
+  <article class="guide-content guide-topic">
+    <a class="back-link" href="/">← Guide overview</a>
+    <p class="kicker">Capability</p><h1>One command can become many executions.</h1>
+    <p class="lede">Commands are asynchronous fleet work, not a synchronous shell session.</p>
+    <section><h2>The two levels matter</h2><p>You create one command and choose its target filter. Edge Admin expands it into one command execution for every matching node, delivers each execution, and records output, timing, exit code, and status independently.</p><p>A completed execution can still have a non-zero exit code. Completion means the agent finished the process; the exit code says whether the command itself succeeded.</p></section>
+    <section><h2>Use commands for automation</h2><p>Commands work well for a defined action across a fleet: gathering a diagnostic, changing a configuration, or invoking your own deployment script. Use SSH when a human needs an interactive session instead.</p></section>
+    <section class="next"><h2>Use it</h2><p>Create a command, then follow its command executions rather than waiting for one synchronous response.</p><div class="next__links"><a class="primary-link" href="/swaggerui#/Commands.Command">Command API <span aria-hidden="true">→</span></a><a href="/guide/proxy">Next: proxy</a></div></section>
+  </article>
+</.page>

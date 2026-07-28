@@ -101,6 +101,7 @@ See `examples/event_brokers/` for all supported brokers (NATS, Redpanda, Kafka, 
 
 Once the admin is running, the API documentation is available at:
 
+- `/` — short Edge Admin guide and links into the API explorer
 - `/swaggerui` — Swagger UI (interactive)
 - `/redoc` — ReDoc
 - `/asyncdoc` — AsyncAPI (event broker schema)

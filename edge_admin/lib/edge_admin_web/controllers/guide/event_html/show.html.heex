@@ -1,0 +1,11 @@
+<%!-- edge_admin/lib/edge_admin_web/controllers/guide/event_html/show.html.heex --%>
+<.page title="Events" description="How Edge Admin publishes lifecycle changes to external systems.">
+  <article class="guide-content guide-topic">
+    <a class="back-link" href="/">← Guide overview</a>
+    <p class="kicker">Capability</p><h1>Events let your systems react without polling.</h1>
+    <p class="lede">Node enrollment, command completion, SSH verification, and other lifecycle changes are published as CloudEvents.</p>
+    <section><h2>Choose a delivery channel</h2><p>Webhooks deliver a signed HTTP POST to each subscribed endpoint. Message-broker delivery publishes the same envelope to the configured broker. Both are asynchronous: Edge Admin accepts the change first, then performs delivery with its own retry policy.</p></section>
+    <section><h2>Use events for integration</h2><p>Events are the right handoff to external automation, notification systems, and platform layers that need to react when Edge Admin state changes. They complement the REST API; they do not replace querying the current resource state when that is what you need.</p></section>
+    <section class="next"><h2>Use it</h2><p>Read the AsyncAPI catalog to choose event types, then create webhook subscriptions or configure a broker adapter.</p><div class="next__links"><a class="primary-link" href="/asyncdoc">Explore AsyncAPI <span aria-hidden="true">→</span></a><a href="/swaggerui#/Events.Webhook">Webhook API</a></div></section>
+  </article>
+</.page>

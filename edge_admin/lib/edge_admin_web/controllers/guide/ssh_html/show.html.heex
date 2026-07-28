@@ -1,0 +1,11 @@
+<%!-- edge_admin/lib/edge_admin_web/controllers/guide/ssh_html/show.html.heex --%>
+<.page title="SSH" description="How centralized credentials and the proxy path provide Edge Admin SSH access.">
+  <article class="guide-content guide-topic">
+    <a class="back-link" href="/">← Guide overview</a>
+    <p class="kicker">Capability</p><h1>SSH builds on centralized access and connectivity.</h1>
+    <p class="lede">Edge Admin manages SSH usernames and public keys; Edge Agent verifies them at its embedded SSH server.</p>
+    <section><h2>Credentials live in Edge Admin</h2><p>Register a username and one or more public keys centrally. When a client connects to the agent's SSH server, the agent calls Edge Admin to verify the credentials. This is not the host's port 22; it is the agent's own SSH service.</p></section>
+    <section><h2>Proxy makes remote access practical</h2><p>When you are outside the mesh, use the SOCKS5 proxy to carry the SSH connection to the node. SSH is therefore one important use of proxy, but proxy remains independently useful for any TCP traffic.</p></section>
+    <section class="next"><h2>Use it</h2><p>Create the SSH username and public key, then use your SSH client's proxy support to reach the node through Edge Admin.</p><div class="next__links"><a class="primary-link" href="/swaggerui#/Ssh.SshUsername">SSH API <span aria-hidden="true">→</span></a><a href="/guide/metrics">Next: metrics</a></div></section>
+  </article>
+</.page>

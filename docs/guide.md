@@ -43,17 +43,30 @@ During a bad or incomplete DERP-map rollout, direct WireGuard paths still work a
 
 ## 1. API surface and built-in UIs
 
-The admin is **API-first**. Every management operation goes through HTTP — there is no separate web UI to install. The API ships with three built-in browser entry points:
+The admin is **API-first**. Every management operation goes through HTTP — there is no separate CRUD web UI to install. Its documentation surface starts with a short guide and includes the browser entry points below:
 
 | Path              | What it is                                                                                                                             |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`               | **Edge Admin guide.** A short introduction to the cluster-and-node model, with links into the API explorer. |
 | `/swaggerui`      | **Primary UI.** Interactive Swagger UI — browse every endpoint, fill in parameters, hit "Try it out", see live responses.              |
 | `/redoc`          | Same OpenAPI spec rendered as ReDoc — better for reading reference docs end-to-end.                                                    |
-| `/live_dashboard` | Phoenix LiveDashboard — runtime introspection (BEAM processes, ETS, Oban queues, Ecto stats). Useful for debugging, not for daily ops. |
+| `/admin/debug` | **Admin debug** — runtime introspection for the Admin cluster (processes, queues, scheduler, database stats, connected Erlang nodes). Available only when `ADMIN_DEBUG_ENABLED=true`; the generic Basic Auth settings may protect it. Useful for troubleshooting the control plane, not for daily fleet operations. |
 | `/asyncdoc`       | AsyncAPI viewer for the event catalog (see [§7](#7-events--webhooks-and-brokers)).                                                     |
 | `/mcp`            | MCP server endpoint for AI assistants (see [§4](#4-mcp--ai-assistant-access)).                                                         |
 
-**Day-to-day, you live in `/swaggerui`.** Everything in this guide can be done from there: list nodes, create commands, register webhooks, manage SSH credentials, generate enrollment keys. Anything not on Swagger is intentionally not part of the management API — typically because it's a health/metrics endpoint hit by infrastructure rather than a person.
+**Day-to-day, you live in `/swaggerui`.** Everything in this guide can be done from there: list nodes, create commands, register webhooks, manage SSH credentials, generate enrollment keys. Anything not on Swagger is intentionally not part of the management API — typically because it's a health/metrics endpoint hit by infrastructure rather than a person. Set `API_DOCS_ENABLED=false` to hide the guide and all built-in documentation routes together.
+
+The built-in guide expands the overview at `/` with short concept pages:
+
+| Path | Topic |
+| --- | --- |
+| `/guide/clusters` | Cluster as the private mesh and management boundary. |
+| `/guide/nodes` | Edge Agent enrollment and the managed-machine model. |
+| `/guide/commands` | Asynchronous commands and per-node executions. |
+| `/guide/proxy` | HTTP/SOCKS5 proxying as an independent network capability. |
+| `/guide/ssh` | Centralized SSH credentials and the proxy path. |
+| `/guide/metrics` | Host, agent, and WireGuard metrics. |
+| `/guide/events` | Webhook and broker delivery of CloudEvents. |
 
 The OpenAPI spec itself is at `GET /api/openapi` if you want to feed it into your own client generator.
 
@@ -126,7 +139,7 @@ The admin exposes both Prometheus-scrape endpoints (raw, for Grafana / Prometheu
 The admin layer manages itself too: admin instances form peer clusters, share PostgreSQL, deterministically agree on which admin owns which edge cluster. Most of this is invisible to operators — it's described in [`architecture.md`](architecture.md). You don't manage admin-side resources through the API — admins are spun up via your deploy system, joined automatically, and converge. The day-to-day surface for it is:
 
 - `GET /api/v1/admins/*` — read-only introspection of the control plane (see below)
-- `/live_dashboard` — runtime view of every admin process
+- `/admin/debug` — runtime view of every admin process
 - `/health/cluster` — load-balancer-friendly cluster health (see [§8](#8-health-checks))
 
 **Admin metadata endpoints.** You won't hit these daily, but they're invaluable when debugging delivery problems or admin-cluster health. All read-only.

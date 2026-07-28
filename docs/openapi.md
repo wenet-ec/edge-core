@@ -11,7 +11,7 @@ The running admin's `/api/openapi` is authoritative for that deployed version. U
 
 ## Interactive reference
 
-On a running Edge Admin:
+On a running Edge Admin, start at `/` for the short Edge Admin guide to its cluster-and-node model. Then use:
 
 - `/swaggerui` — best for trying requests from the browser
 - `/redoc` — best for reading the full API reference end-to-end

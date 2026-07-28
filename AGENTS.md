@@ -77,6 +77,25 @@ Edge Core is **strict by default**. Every write to the database passes through 5
 
 All operations use Docker Compose through the `./bin/run` script. No local Elixir/Erlang installation required.
 
+### Source file path headers
+
+Every source file created by an agent must begin with exactly one comment that states its repository-relative path. Use the comment syntax native to the file (`#` for Elixir, `/* ... */` for CSS, `<%!-- ... --%>` for HEEx). Before editing an existing source file, inspect its first lines: retain its existing path header when present, and never add a second, duplicate path comment.
+
+### Tests: read the policy first
+
+**Before creating, changing, or removing any test, read [`TESTING.md`](TESTING.md) in full.** It is the canonical test-scope policy for every Elixir application in this repository. Do not invent coverage from general habits: this repository keeps only fast, deterministic unit tests for pure logic, forms, schemas, checks, filters, views, helpers, and explicit cross-surface contracts. Controllers, plugs that are merely endpoint wiring, MCP tools, workers, supervisors, external IO, and other integration orchestration are verified by the dev/QA staging workflow instead.
+
+### Select the local deployment variant first
+
+**Never assume the default PostgreSQL stack before running `./bin/run`.** First determine which local deployment the user has started or wants to use:
+
+- **Standard/PostgreSQL** — use `./bin/run …` with no `VARIANT` value. This selects `deploy/local/cloud.yml`.
+- **Lite/SQLite** — prefix **every** `bin/run` invocation with `VARIANT=lite`, for example `VARIANT=lite ./bin/run cloud admin:test`. This selects `deploy/local/cloud.lite.yml`; commands whose variant-specific compose file does not exist (such as `edge`) safely fall back to the normal compose file.
+
+Use the user's explicit statement as the source of truth. If it is not stated, inspect the currently running local services with a read-only Compose `ps` command for both cloud compose files, or ask the user; do not guess based on a config default, an environment file, or the mere presence of `cloud.lite.yml`.
+
+This choice applies to **all** `bin/run` operations: service lifecycle, logs, shells, migrations, tests, formatting, linting, quality checks, and arbitrary Mix commands. Mixing default and Lite commands against the same running setup is incorrect and can target the wrong database or service set.
+
 ### Starting Services
 
 ```bash
@@ -88,6 +107,9 @@ All operations use Docker Compose through the `./bin/run` script. No local Elixi
 
 # Start everything together
 ./bin/run all up -d
+
+# Lite/SQLite equivalent (prefix every bin/run command in this session)
+VARIANT=lite ./bin/run all up -d
 ```
 
 ### Code Quality
@@ -465,6 +487,7 @@ The full annotated list lives in `deploy/production/.envs/.edge_admin` — read 
 
 - `DB_ADAPTER` — `postgres` (default) or `sqlite`. Same compiled binary, runtime-switched. SQLite is single-instance only, no clustering.
 - `DB_MIGRATION_LOCK` — `pg_advisory_lock` (default) or `disabled`. `pg_advisory_lock` needs a session-mode Postgres connection — behind PgBouncer transaction pooling, point migrations at the primary directly (same pattern as `DATABASE_NOTIFIER_URL`). `disabled` relies on the migrate sidecar to serialize. Ecto's `:table_lock` default is deliberately not exposed — historically deadlocks on this codebase under heavy DDL even single-admin.
+- `ADMIN_DEBUG_ENABLED` — exposes the Admin debug surface at `/admin/debug` (default `false`). It is for ad-hoc control-plane troubleshooting; enable `BASIC_AUTH_ENABLED` in any deployment where it is reachable by others.
 - `CLOAK_KEY` / `CLOAK_TAG` — required at boot. Encryption-at-rest for `webhooks.secret` and `webhooks.headers`. If `CLOAK_KEY` is lost, every encrypted row is unrecoverable — back it up alongside `MASTER_KEY`/`SECRET_KEY_BASE`. `CLOAK_TAG` convention: `AES.GCM.V<N>`, bumped on rotation.
 - `ROTATE_OLD_CLOAK_KEY` / `ROTATE_OLD_CLOAK_TAG` / `ROTATE_NEW_CLOAK_KEY` / `ROTATE_NEW_CLOAK_TAG` — set all four to trigger rotation via `EdgeAdmin.Release.rotate_cloak_key/0`. Auto-runs on `/start`, also `examples/operations/rotate_cloak_key.yml` for one-off. Idempotent — logs skip if any of the four is missing.
 - `EVENT_BROKER_ADAPTER` — `nats`, `kafka`, `amqp091` (alias: `rabbitmq`), `redis`, `mqtt`, `aws_sns`, `google_pubsub`. Endpoint env var is namespaced per adapter — see the `.edge_admin` file for the matrix.
@@ -496,7 +519,7 @@ Standard auth/host/DB vars (`MASTER_KEY`, scoped keys, `DATABASE_URL`, `NETMAKER
 
 ## API Documentation
 
-User-facing API surface (Swagger, MCP, proxy, metrics, events, health) is documented in [`docs/guide.md`](docs/guide.md). Specs auto-generated and served at `/api/openapi`, `/swaggerui`, `/redoc`, `/api/asyncapi`, `/asyncdoc`. Endpoints documented inline with `@doc` + OpenApiSpex schemas.
+User-facing API surface (Swagger, MCP, proxy, metrics, events, health) is documented in [`docs/guide.md`](docs/guide.md). The guide is served at `/`; specs are auto-generated and served at `/api/openapi`, `/swaggerui`, `/redoc`, `/api/asyncapi`, `/asyncdoc`. The guide and documentation routes are all gated by `API_DOCS_ENABLED`. Endpoints are documented inline with `@doc` + OpenApiSpex schemas.
 
 ## Common Development Workflows
 

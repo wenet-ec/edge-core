@@ -1,7 +1,7 @@
-# edge_admin/lib/edge_admin_web/live_dashboard_hooks.ex
-defmodule EdgeAdminWeb.LiveDashboardHooks do
+# edge_admin/lib/edge_admin_web/admin_debug_hooks.ex
+defmodule EdgeAdminWeb.AdminDebugHooks do
   @moduledoc """
-  LiveDashboard `on_mount` hook that registers an `after_opening_head_tag`
+  Admin debug `on_mount` hook that registers an `after_opening_head_tag`
   script with a CSP nonce.
 
   The Quantum dashboard renders timestamps as `<time class="qt-time"
@@ -12,7 +12,7 @@ defmodule EdgeAdminWeb.LiveDashboardHooks do
   `<time>` elements with fresh server-rendered UTC text).
 
   This module exists because the admin's CSP (`script-src 'self'`) blocks
-  inline scripts injected directly into a LiveDashboard page. Scripts injected
+  inline scripts injected directly into an Admin debug page. Scripts injected
   via `register_after_opening_head_tag/2` carry the CSP nonce, so the browser
   allows them.
   """

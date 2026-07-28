@@ -4,15 +4,12 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdminWeb.Plugs.DegradedMode
   alias EdgeAdminWeb.Schemas.CommonSchemas
+  alias EdgeAdminWeb.Schemas.Nodes.NodeQueryParams
   alias EdgeAdminWeb.Schemas.Nodes.NodeSchemas
   alias EdgeAdminWeb.Schemas.PathParams
   alias EdgeAdminWeb.Schemas.QueryParams
-
-  @status_enum Node.status_strings()
-  @id_type_enum Node.id_type_strings()
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
@@ -27,31 +24,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
     parameters:
       QueryParams.pagination() ++
         QueryParams.sort(example: "-inserted_at,status") ++
-        [
-          QueryParams.uuid_in_filter(:node_id,
-            description: "Filter by node IDs — comma-separated list of UUIDs (e.g. node_id__in=uuid1,uuid2)"
-          ),
-          QueryParams.enum_in_filter(:id_type, @id_type_enum,
-            description: "Filter by node ID type (e.g. id_type__in=persistent,random)"
-          ),
-          QueryParams.enum_in_filter(:status, @status_enum,
-            description: "Filter by node status (e.g. status__in=healthy,unhealthy)"
-          ),
-          QueryParams.string_filter(:version,
-            description: "Filter by agent version (exact match or wildcard: 1.0.0, 1.*, etc.)"
-          ),
-          QueryParams.boolean_filter(:self_update_enabled, description: "Filter by self-update enabled status"),
-          QueryParams.string_filter(:cluster_name,
-            description: "Filter by cluster name — exact match or wildcard (prod*, *east, *rod*)"
-          ),
-          QueryParams.string_in_filter(:cluster_name,
-            description:
-              "Filter by cluster name — comma-separated list for IN match (e.g. cluster_name__in=prod,staging)"
-          )
-        ] ++
-        QueryParams.datetime_range_filter(:last_seen_at) ++
-        QueryParams.datetime_range_filter(:inserted_at) ++
-        QueryParams.datetime_range_filter(:updated_at),
+        NodeQueryParams.filters(),
     responses: %{
       200 => {"Paginated list of nodes", "application/json", NodeSchemas.NodePaginatedResponse},
       400 => {"Invalid query parameters", "application/json", CommonSchemas.BadRequestResponse}

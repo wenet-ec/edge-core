@@ -58,6 +58,11 @@ defmodule EdgeAdminMcp.Server do
       GET /api/v1/nodes/metrics/agent/discovery      — agent PromEx targets (BEAM, Oban, commands)
       GET /api/v1/nodes/metrics/wireguard/discovery  — WireGuard exporter targets (peer stats)
 
+  Each discovery URL accepts the same node filters as `list_nodes` except
+  pagination and sorting. The response is always the complete matching target
+  snapshot. Without `status__in`, all statuses, including `unreachable`, are
+  included; supply `status__in` to narrow the scrape set deliberately.
+
   ### Raw metrics proxy (per-node, useful for direct scraping or debugging)
       GET /api/v1/nodes/:node_id/metrics/host/raw
       GET /api/v1/nodes/:node_id/metrics/agent/raw
@@ -145,8 +150,9 @@ defmodule EdgeAdminMcp.Server do
   def server_instructions do
     """
     Edge Admin manages a fleet of edge machines connected over a WireGuard mesh VPN.
-    Every REST API operation has a corresponding MCP tool — if a user asks for
-    something not exposed here, it is intentionally not part of the management API.
+    Every management REST API operation has a corresponding MCP tool. Prometheus
+    scraping endpoints are intentionally REST-only because they use METRICS_KEY
+    authentication and return collector-specific wire formats.
 
     ## Mental model
 

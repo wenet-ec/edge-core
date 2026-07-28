@@ -191,6 +191,13 @@ Parsed, human-friendly JSON (not raw Prometheus text). For scraping endpoints se
 | `get_agent_metrics` | Get Agent Metrics | 🔍 🌐 | Required: `node_id`. From edge_agent PromEx: BEAM, commands, discovery, proxy, SSH, VPN pulls, fallback reports, Oban queues. |
 | `get_admin_metrics` | Get Admin Metrics | 🔍 | No parameters. 16 sections covering this admin's full operational surface, including Gateway connections, scrapes, and diagnostic operations. |
 
+Prometheus service-discovery and raw-metrics endpoints remain REST-only because
+they use `METRICS_KEY` authentication and return collector-specific wire
+formats. Their discovery URLs accept the complete `list_nodes` filter set
+except pagination and sorting; the response is always a complete target
+snapshot. Without `status__in`, all statuses, including `unreachable`, are
+included.
+
 ---
 
 ## 11. Webhooks

@@ -1225,41 +1225,9 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec list_nodes(map()) :: {:ok, {[Node.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list_nodes(params \\ %{}) do
-    # Parse params into Flop format
     flop_params = RequestParser.parse(params)
+    {query, flop_params} = node_filter_query(flop_params)
 
-    # Extract join-based and custom filters (handle separately from Flop)
-    {cluster_name_filters, other_filters} =
-      Enum.split_with(flop_params[:filters] || [], fn filter ->
-        filter.field == :cluster_name
-      end)
-
-    {node_ids_filters, other_filters} =
-      Enum.split_with(other_filters, fn filter -> filter.field == :node_id end)
-
-    # Extract ilike filters for string fields — Flop's :ilike wraps values in %..%
-    # and escapes any existing % characters, breaking wildcard patterns like "1.*".
-    # Apply these as raw Ecto ilike/2 clauses instead.
-    {ilike_filters, flop_params} =
-      RequestParser.split_ilike_filters(
-        Map.put(flop_params, :filters, other_filters),
-        [:version]
-      )
-
-    # Build base query with cluster preload
-    base_query =
-      from(n in Node,
-        join: c in assoc(n, :cluster),
-        preload: [:cluster, aliases: :cluster]
-      )
-
-    query =
-      base_query
-      |> ClusterFilters.apply_name(cluster_name_filters)
-      |> NodeFilters.apply_node_ids(node_ids_filters)
-      |> NodeFilters.apply_ilike(ilike_filters)
-
-    # Run Flop query
     case Flop.validate_and_run(query, flop_params,
            for: Node,
            replace_invalid_params: true
@@ -1270,6 +1238,63 @@ defmodule EdgeAdmin.Nodes do
       {:error, meta} ->
         {:error, meta}
     end
+  end
+
+  @doc """
+  Lists every node matching the list-node filters for Prometheus discovery.
+
+  Discovery is a complete HTTP SD snapshot, so it deliberately does not apply
+  pagination or sorting. When `status__in` is absent, all statuses — including
+  `unreachable` — are returned.
+  """
+  @spec list_nodes_for_discovery(map()) :: {:ok, [Node.t()]} | {:error, Flop.Meta.t()}
+  def list_nodes_for_discovery(params \\ %{}) do
+    flop_params =
+      params
+      |> RequestParser.parse()
+      |> Map.drop([:page, :page_size, :order_by, :order_directions])
+
+    {query, flop_params} = node_filter_query(flop_params)
+
+    discovery_opts = [
+      for: Node,
+      replace_invalid_params: true,
+      default_limit: false,
+      default_order: false,
+      default_pagination_type: false
+    ]
+
+    case Flop.validate(flop_params, discovery_opts) do
+      {:ok, flop} -> {:ok, Flop.all(query, flop, discovery_opts)}
+      {:error, meta} -> {:error, meta}
+    end
+  end
+
+  defp node_filter_query(flop_params) do
+    {cluster_name_filters, other_filters} =
+      Enum.split_with(flop_params[:filters] || [], fn filter ->
+        filter.field == :cluster_name
+      end)
+
+    {node_ids_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter -> filter.field == :node_id end)
+
+    {ilike_filters, flop_params} =
+      RequestParser.split_ilike_filters(
+        Map.put(flop_params, :filters, other_filters),
+        [:version]
+      )
+
+    query =
+      from(n in Node,
+        join: c in assoc(n, :cluster),
+        preload: [:cluster, aliases: :cluster]
+      )
+      |> ClusterFilters.apply_name(cluster_name_filters)
+      |> NodeFilters.apply_node_ids(node_ids_filters)
+      |> NodeFilters.apply_ilike(ilike_filters)
+
+    {query, flop_params}
   end
 
   @doc """

@@ -304,7 +304,7 @@ That is the canonical integration path. If you need to debug a single node local
 
 The PromEx endpoint is bearer-token protected by default (`AGENT_METRICS_AUTH_ENABLED=true`). If you disable that toggle, local scraping becomes transparent.
 
-### Service discovery (returns Prometheus HTTP SD targets, grouped per cluster)
+### Service discovery (returns Prometheus HTTP SD targets)
 
 ```
 GET /api/v1/nodes/metrics/host/discovery       — node_exporter targets (CPU, memory, disk, network)
@@ -312,7 +312,24 @@ GET /api/v1/nodes/metrics/agent/discovery      — agent PromEx targets (BEAM, O
 GET /api/v1/nodes/metrics/wireguard/discovery  — WireGuard exporter targets (peer stats, handshakes, bytes)
 ```
 
-Wire these into your Prometheus `scrape_configs` as `http_sd_configs` — Prometheus will discover all eligible nodes per cluster automatically.
+Wire these into your Prometheus `scrape_configs` as `http_sd_configs`. Each
+response is the complete matching target snapshot — it is not paginated and
+does not support sorting.
+
+All three endpoints accept the same node filters as `GET /api/v1/nodes`:
+`node_id__in`, `id_type__in`, `status__in`, `version`,
+`self_update_enabled`, `cluster_name`, `cluster_name__in`, and the
+`last_seen_at`, `inserted_at`, and `updated_at` `__gte` / `__lte` ranges.
+Filters intersect: values within one `__in` filter are ORed, while different
+filters are ANDed. Without `status__in`, discovery includes all node statuses,
+including `unreachable`; specify it when you want to narrow the scrape set.
+
+For example, a Prometheus job restricted to two clusters and healthy nodes can
+use:
+
+```text
+http://edge_admin_a1:44000/api/v1/nodes/metrics/host/discovery?cluster_name__in=prod-east,staging&status__in=healthy
+```
 
 ### Per-node raw metrics proxy (Prometheus text format)
 

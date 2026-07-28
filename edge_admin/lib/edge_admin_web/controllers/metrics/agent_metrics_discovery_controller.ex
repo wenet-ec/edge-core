@@ -4,8 +4,9 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AgentMetricsDiscoveryController do
   use OpenApiSpex.ControllerSpecs
 
   alias EdgeAdmin.Nodes
-  alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Metrics.DiscoverySchemas
+  alias EdgeAdminWeb.Schemas.Nodes.NodeQueryParams
 
   action_fallback EdgeAdminWeb.Controllers.FallbackController
 
@@ -16,32 +17,32 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AgentMetricsDiscoveryController do
   operation(:index,
     summary: "Agent metrics service discovery",
     description:
-      "Service discovery endpoint for Prometheus HTTP SD (agent metrics). Returns all active nodes grouped by cluster in the format expected by http_sd_configs.",
+      "Service discovery endpoint for Prometheus HTTP SD (agent metrics). Returns every node matching the list-node filters in the format expected by http_sd_configs. The response is a complete, unpaginated target snapshot; without status__in, it includes healthy, unhealthy, and unreachable nodes.",
+    parameters: NodeQueryParams.filters(),
     responses: %{
-      200 => {"Service discovery targets", "application/json", DiscoverySchemas.DiscoveryResponse}
+      200 => {"Service discovery targets", "application/json", DiscoverySchemas.DiscoveryResponse},
+      400 => {"Invalid query parameters", "application/json", CommonSchemas.BadRequestResponse}
     }
   )
 
-  def index(conn, _params) do
+  def index(conn, params) do
     metrics_base_url = Application.get_env(:edge_admin, :metrics_base_url)
 
-    target_groups =
-      [prefix: false, filter_status: Node.reachable_statuses()]
-      |> Nodes.list_cluster_node_mappings()
-      |> Enum.flat_map(fn %{name: cluster_name, nodes: node_ids} ->
-        Enum.map(node_ids, fn node_id ->
+    with {:ok, nodes} <- Nodes.list_nodes_for_discovery(params) do
+      target_groups =
+        Enum.map(nodes, fn node ->
           %{
             targets: [metrics_base_url],
             labels: %{
-              cluster: cluster_name,
+              cluster: node.cluster.name,
               job: "node-agent-metrics",
-              __metrics_path__: "/api/v1/nodes/#{node_id}/metrics/agent/raw",
-              node_id: node_id
+              __metrics_path__: "/api/v1/nodes/#{node.id}/metrics/agent/raw",
+              node_id: node.id
             }
           }
         end)
-      end)
 
-    render(conn, :index, target_groups: target_groups)
+      render(conn, :index, target_groups: target_groups)
+    end
   end
 end

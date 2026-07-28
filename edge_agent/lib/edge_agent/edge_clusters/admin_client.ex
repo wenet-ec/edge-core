@@ -349,8 +349,8 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
       `"cancelled"`, `"expired"` (required)
     - `page` - Page number (default: 1)
     - `page_size` - Results per page (default: 100)
-    - `order_by` - Sort field (default: "inserted_at")
-    - `order_directions` - Sort direction: "asc" or "desc" (default: "asc")
+    - `sort` - Comma-separated sort fields; prefix a field with `-` for
+      descending order (default: "inserted_at")
 
   ## Returns
   - `{:ok, %{data: [command_executions], meta: pagination_meta}}` - Command
@@ -370,8 +370,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
       "status" => Keyword.fetch!(opts, :status),
       "page" => Keyword.get(opts, :page, 1),
       "page_size" => Keyword.get(opts, :page_size, 100),
-      "order_by" => Keyword.get(opts, :order_by, "inserted_at"),
-      "order_directions" => Keyword.get(opts, :order_directions, "asc")
+      "sort" => Keyword.get(opts, :sort, "inserted_at")
     }
 
     request_with_auth(path, fn url, headers ->

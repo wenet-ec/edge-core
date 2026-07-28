@@ -13,8 +13,7 @@ defmodule EdgeAdminMcp.Tools.Events.ListWebhooks do
   - `updated_at_gte` / `updated_at_lte` — last-updated datetime range (ISO8601)
 
   ## Sorting
-  - `order_by` — comma-separated fields: `url`, `inserted_at`, `updated_at`
-  - `order_directions` — comma-separated directions: `asc`, `desc`
+  - `sort` — comma-separated fields: `url`, `inserted_at`, `updated_at`; prefix with `-` for descending order
 
   Note: `secret` and `headers` are write-only and are never returned.
   Webhooks have no `enabled` toggle — they're immutable after create. To
@@ -40,8 +39,7 @@ defmodule EdgeAdminMcp.Tools.Events.ListWebhooks do
     field :inserted_at_lte, :string
     field :updated_at_gte, :string
     field :updated_at_lte, :string
-    field :order_by, :string
-    field :order_directions, :string
+    field :sort, :string, regex: EdgeAdmin.Sort.regex()
   end
 
   @impl true

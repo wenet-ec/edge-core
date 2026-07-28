@@ -21,15 +21,15 @@ defmodule EdgeAdminMcp.FlopParams do
   | `<field>`            | boolean    | `"<field>" => true/false`        |
   | `<field>`            | string/int | `"<field>" => value`             |
   | `page` / `page_size` | integer    | `"page"` / `"page_size"` (reserved) |
-  | `order_by` / `order_directions` | string | passed through as-is  |
+  | `sort`               | string | passed through as-is  |
 
   Nil values are always dropped. Reserved keys (`page`, `page_size`,
-  `order_by`, `order_directions`) are handled separately and not treated
+  `sort`) are handled separately and not treated
   as filter fields.
   """
 
   # event_type is a post-filter injected by list_webhooks after build/1 — skip it here
-  @reserved ~w(page page_size order_by order_directions event_type)a
+  @reserved ~w(page page_size sort event_type)a
 
   @default_page 1
   @default_page_size 20
@@ -54,9 +54,7 @@ defmodule EdgeAdminMcp.FlopParams do
   end
 
   defp add_sort(query, params) do
-    query
-    |> put_if("order_by", params[:order_by])
-    |> put_if("order_directions", params[:order_directions])
+    put_if(query, "sort", params[:sort])
   end
 
   defp add_filters(query, params) do

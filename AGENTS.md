@@ -58,7 +58,7 @@ When working on anything related to the Netmaker API, netclient enrollment, DERP
 Edge Core is **strict by default**. Every write to the database passes through 5 layers, each with its own role. Some checks intentionally duplicate across layers — the cost of letting bad input slip one layer deeper is bigger than the cost of running the same check twice.
 
 | Layer | Role | Error code | Where it lives |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 1. **Public-API schema** | Request shape: types, required fields, basic constraints (regex, length, enum). Rejects malformed input at the boundary. | 400 | OpenApiSpex schemas (REST), MCP Peri schemas via Anubis (`EdgeAdminMcp.Tools.*`) |
 | 2. **Form module** | Situational rules per action and per role. Composable across actions. Validates external input shape *contextually*. | 422 | `EdgeAdmin.<Domain>.Forms.*` modules, `use EdgeAdmin.Form` |
 | 3. **DB checks** | Business rules that need DB state. Composable, distinct from Ecto schema validation. | 422 | `EdgeAdmin.<Domain>.Checks.*` modules (e.g. `NodeLimitBelowCountCheck`, `SubnetOverlapCheck`) |
@@ -75,7 +75,19 @@ Edge Core is **strict by default**. Every write to the database passes through 5
 
 ## Development Commands
 
-All operations use Docker Compose through the `./bin/run` script. No local Elixir/Erlang installation required.
+All Elixir/Mix operations use Docker Compose through the `./bin/run` script. No local Elixir/Erlang installation required.
+
+### Docker commands are a deliberate final step, never the default first step
+
+**Do not start work by running `bin/run`.** Start with static inspection and code/documentation edits. Use Docker only when the user explicitly asks you to run it, or after the implementation is complete and container-bound validation is genuinely necessary.
+
+Before every `bin/run` invocation, stop and confirm all of the following:
+
+1. The command is necessary for the task; it is not a reflexive first step.
+2. The deployment variant is known.
+3. The user has authorized Docker work for this task.
+
+If any point is not true, do not run `bin/run`; continue static work or ask the user. Never run formatting, tests, Compose lifecycle commands, shells, or arbitrary Mix commands automatically. In particular, do not use `bin/run` merely to "see whether things work".
 
 ### Source file path headers
 
@@ -87,12 +99,14 @@ Every source file created by an agent must begin with exactly one comment that s
 
 ### Select the local deployment variant first
 
-**Never assume the default PostgreSQL stack before running `./bin/run`.** First determine which local deployment the user has started or wants to use:
+**Dylan primarily uses Lite/SQLite. Unless he explicitly says Standard/PostgreSQL, the safe default is Lite: prefix every cloud command with `VARIANT=lite`. Never use plain `./bin/run cloud ...` merely because it is the script default.**
+
+When Docker work is authorized, determine which local deployment the user has started or wants to use:
 
 - **Standard/PostgreSQL** — use `./bin/run …` with no `VARIANT` value. This selects `deploy/local/cloud.yml`.
 - **Lite/SQLite** — prefix **every** `bin/run` invocation with `VARIANT=lite`, for example `VARIANT=lite ./bin/run cloud admin:test`. This selects `deploy/local/cloud.lite.yml`; commands whose variant-specific compose file does not exist (such as `edge`) safely fall back to the normal compose file.
 
-Use the user's explicit statement as the source of truth. If it is not stated, inspect the currently running local services with a read-only Compose `ps` command for both cloud compose files, or ask the user; do not guess based on a config default, an environment file, or the mere presence of `cloud.lite.yml`.
+Use the user's explicit statement as the source of truth. If it is not stated, use Lite when the user has authorized the command; otherwise do not run Docker. A read-only Compose `ps` check is appropriate only when it is needed to resolve an actual conflict with the user's stated variant — do not run it as an automatic preflight.
 
 This choice applies to **all** `bin/run` operations: service lifecycle, logs, shells, migrations, tests, formatting, linting, quality checks, and arbitrary Mix commands. Mixing default and Lite commands against the same running setup is incorrect and can target the wrong database or service set.
 

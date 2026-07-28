@@ -20,13 +20,9 @@ defmodule EdgeAdmin.RequestParserTest do
       assert result[:filters] == [] or not Map.has_key?(result, :filters)
     end
 
-    test "no order_by key when not provided" do
+    test "no Flop sort fields when sort is not provided" do
       result = RequestParser.parse(%{})
       refute Map.has_key?(result, :order_by)
-    end
-
-    test "no order_directions key when not provided" do
-      result = RequestParser.parse(%{})
       refute Map.has_key?(result, :order_directions)
     end
   end
@@ -89,68 +85,25 @@ defmodule EdgeAdmin.RequestParserTest do
   end
 
   # ---------------------------------------------------------------------------
-  # parse/1 — order_by parsing
+  # parse/1 — sort parsing
   # ---------------------------------------------------------------------------
 
-  describe "parse/1 — order_by parsing" do
-    test "parses single order_by field" do
-      result = RequestParser.parse(%{"order_by" => "inserted_at"})
-      assert result[:order_by] == [:inserted_at]
-    end
-
-    test "parses multiple order_by fields comma-separated" do
-      result = RequestParser.parse(%{"order_by" => "inserted_at,updated_at"})
-      assert result[:order_by] == [:inserted_at, :updated_at]
-    end
-
-    test "trims whitespace from order_by fields" do
-      result = RequestParser.parse(%{"order_by" => "inserted_at, updated_at"})
-      assert result[:order_by] == [:inserted_at, :updated_at]
-    end
-
-    test "unknown field is silently dropped from order_by" do
-      result = RequestParser.parse(%{"order_by" => "inserted_at,totally_nonexistent_xyz_field"})
-      assert result[:order_by] == [:inserted_at]
-    end
-
-    test "order_by not in result when not provided" do
-      result = RequestParser.parse(%{})
-      refute Map.has_key?(result, :order_by)
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # parse/1 — order_directions parsing
-  # ---------------------------------------------------------------------------
-
-  describe "parse/1 — order_directions parsing" do
-    test "parses asc direction" do
-      result = RequestParser.parse(%{"order_directions" => "asc"})
+  describe "parse/1 — sort parsing" do
+    test "parses a single ascending sort field" do
+      result = RequestParser.parse(%{"sort" => "inserted_at"})
+      assert result[:order_by] == ["inserted_at"]
       assert result[:order_directions] == [:asc]
     end
 
-    test "parses desc direction" do
-      result = RequestParser.parse(%{"order_directions" => "desc"})
-      assert result[:order_directions] == [:desc]
-    end
-
-    test "parses multiple directions comma-separated" do
-      result = RequestParser.parse(%{"order_directions" => "desc,asc"})
+    test "parses multiple fields and descending prefixes" do
+      result = RequestParser.parse(%{"sort" => "-inserted_at,status"})
+      assert result[:order_by] == ["inserted_at", "status"]
       assert result[:order_directions] == [:desc, :asc]
     end
 
-    test "invalid direction is silently dropped" do
-      result = RequestParser.parse(%{"order_directions" => "desc,sideways"})
-      assert result[:order_directions] == [:desc]
-    end
-
-    test "all invalid directions → order_directions key omitted (compact removes empty list)" do
-      result = RequestParser.parse(%{"order_directions" => "sideways,upward"})
-      refute Map.has_key?(result, :order_directions)
-    end
-
-    test "order_directions not in result when not provided" do
+    test "sort fields are absent when not provided" do
       result = RequestParser.parse(%{})
+      refute Map.has_key?(result, :order_by)
       refute Map.has_key?(result, :order_directions)
     end
   end
@@ -172,16 +125,10 @@ defmodule EdgeAdmin.RequestParserTest do
       refute Enum.any?(filters, &(&1.field == :page_size))
     end
 
-    test "order_by is not in filters" do
-      result = RequestParser.parse(%{"order_by" => "inserted_at"})
+    test "sort is not in filters" do
+      result = RequestParser.parse(%{"sort" => "-inserted_at"})
       filters = result[:filters] || []
-      refute Enum.any?(filters, &(&1.field == :order_by))
-    end
-
-    test "order_directions is not in filters" do
-      result = RequestParser.parse(%{"order_directions" => "asc"})
-      filters = result[:filters] || []
-      refute Enum.any?(filters, &(&1.field == :order_directions))
+      refute Enum.any?(filters, &(&1.field == :sort))
     end
   end
 
@@ -382,9 +329,9 @@ defmodule EdgeAdmin.RequestParserTest do
       assert_filter(result, :status, :==, "active")
     end
 
-    test "atom key order_by is parsed" do
-      result = RequestParser.parse(%{order_by: "inserted_at", order_directions: "desc"})
-      assert result[:order_by] == [:inserted_at]
+    test "atom key sort is parsed" do
+      result = RequestParser.parse(%{sort: "-inserted_at"})
+      assert result[:order_by] == ["inserted_at"]
       assert result[:order_directions] == [:desc]
     end
 
@@ -424,13 +371,12 @@ defmodule EdgeAdmin.RequestParserTest do
           "status" => "healthy",
           "page" => 2,
           "page_size" => 50,
-          "order_by" => "inserted_at",
-          "order_directions" => "desc"
+          "sort" => "-inserted_at"
         })
 
       assert result[:page] == 2
       assert result[:page_size] == 50
-      assert result[:order_by] == [:inserted_at]
+      assert result[:order_by] == ["inserted_at"]
       assert result[:order_directions] == [:desc]
       assert_filter(result, :status, :==, "healthy")
     end
@@ -441,13 +387,9 @@ defmodule EdgeAdmin.RequestParserTest do
   # ---------------------------------------------------------------------------
 
   describe "parse/1 — compact removes nil and empty" do
-    test "order_by not present when nil (not provided)" do
+    test "Flop sort fields are absent when sort is not provided" do
       result = RequestParser.parse(%{"status" => "active"})
       refute Map.has_key?(result, :order_by)
-    end
-
-    test "order_directions not present when nil (not provided)" do
-      result = RequestParser.parse(%{"status" => "active"})
       refute Map.has_key?(result, :order_directions)
     end
 

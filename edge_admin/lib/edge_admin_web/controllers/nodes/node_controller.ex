@@ -26,7 +26,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
     description: "Returns a paginated list of all registered edge nodes with filtering and sorting",
     parameters:
       QueryParams.pagination() ++
-        QueryParams.sort(order_by_example: "inserted_at,status", order_directions_example: "desc,asc") ++
+        QueryParams.sort(example: "-inserted_at,status") ++
         [
           QueryParams.uuid_in_filter(:node_id,
             description: "Filter by node IDs — comma-separated list of UUIDs (e.g. node_id__in=uuid1,uuid2)"

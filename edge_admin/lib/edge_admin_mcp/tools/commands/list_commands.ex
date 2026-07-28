@@ -13,8 +13,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommands do
   - `updated_at_gte` / `updated_at_lte` — last-updated datetime range (ISO8601)
 
   ## Sorting
-  - `order_by` — comma-separated fields: `timeout`, `expires_at`, `inserted_at`, `updated_at`
-  - `order_directions` — comma-separated directions: `asc`, `desc` (one per order_by field)
+  - `sort` — comma-separated fields: `timeout`, `expires_at`, `inserted_at`, `updated_at`; prefix with `-` for descending order
   """
   use EdgeAdminMcp, :tool
 
@@ -41,8 +40,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommands do
     field :inserted_at_lte, :string
     field :updated_at_gte, :string
     field :updated_at_lte, :string
-    field :order_by, :string
-    field :order_directions, :string
+    field :sort, :string, regex: EdgeAdmin.Sort.regex()
   end
 
   @impl true

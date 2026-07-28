@@ -11,7 +11,7 @@ For interactive browsing of the live surface, run [`@modelcontextprotocol/inspec
 ## Reading this catalog
 
 - **Required parameters** are listed before optional ones; the parameter name links to the tool's input contract.
-- **List tools** all accept `page`, `page_size`, `order_by`, and `order_directions` unless noted otherwise.
+- **List tools** all accept `page`, `page_size`, and `sort` unless noted otherwise. `sort` is a comma-separated field list; prefix a field with `-` for descending order.
 - **Annotations** in the tool table use MCP-standard hints:
   - 🔍 `readOnlyHint` — does not mutate state
   - ⚠️ `destructiveHint` — irreversible or fleet-affecting
@@ -42,7 +42,7 @@ MCP list tools use typed parameters rather than REST query strings:
 The local admin instance's identity, its admin-cluster topology, and cross-cluster discovery of other admins.
 
 | Tool | Title | Hints | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `get_admin` | Get Admin Info | 🔍 | This admin's metadata: id, name, peer capacity, last recompute time. |
 | `get_my_admin_cluster` | Get This Admin's Admin Cluster | 🔍 | This admin's admin-cluster — totals, topology, weak leader. |
 | `list_admin_clusters` | List All Admin Clusters | 🔍 🌐 | Every admin cluster Netmaker knows about (incl. zombies). |
@@ -59,7 +59,7 @@ All six tools take no parameters.
 Logical groups that map 1:1 to Netmaker WireGuard networks. One full mesh per cluster.
 
 | Tool | Title | Hints | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `list_clusters` | List Clusters | 🔍 | Filter/sort/paginate. Filters: `name` (wildcard), `name_in` (array), `node_id_in` (array), `ipv4_range`, `ipv6_range`, `node_count_gte/lte`, `node_limit`, `node_limit_gte/lte`, `has_node_limit`, `inserted_at_*`, `updated_at_*`. |
 | `get_cluster` | Get Cluster | 🔍 | Required: `cluster_name`. |
 | `create_cluster` | Create Cluster | 🌐 | Required: `name` (lowercase alphanumeric + hyphens, ≤24 chars, `default` reserved). Optional: `ipv4_range` (CIDR) and `ipv6_range` (ULA `/64`) — either family is auto-assigned if omitted; plus `node_limit`. |
@@ -73,7 +73,7 @@ Logical groups that map 1:1 to Netmaker WireGuard networks. One full mesh per cl
 Edge machines running the agent. Addressed only by VPN hostname.
 
 | Tool | Title | Hints | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `list_nodes` | List Nodes | 🔍 | Filter/sort/paginate. Filters: `node_id_in` (array), `status_in` (array: `healthy`/`unhealthy`/`unreachable`), `id_type_in` (array: `persistent`/`random`), `cluster_name` (wildcard), `cluster_name_in` (array), `version`, `self_update_enabled`, `last_seen_at_*`, `inserted_at_*`, `updated_at_*`. |
 | `get_node` | Get Node | 🔍 | Required: `node_id`. |
 | `get_node_diagnostics` | Get Node Diagnostics | 🔍 🌐 | Required: `node_id`. Diagnostic report for one node. |
@@ -87,7 +87,7 @@ Edge machines running the agent. Addressed only by VPN hostname.
 Friendly DNS names for nodes. Resolved as `<alias>.<cluster>.<vpn_domain>`.
 
 | Tool | Title | Hints | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `list_aliases` | List Aliases | 🔍 | Filter/sort/paginate. Filters: `name` (wildcard), `node_id_in` (array), `cluster_name` (wildcard), `cluster_name_in` (array), `inserted_at_*`, `updated_at_*`. |
 | `get_alias` | Get Alias | 🔍 | Required: `alias_id`. |
 | `create_alias` | Create Alias | 🌐 | Required: `node_id`, `name` (lowercase alphanumeric + hyphens, 1–63 chars). |
@@ -100,7 +100,7 @@ Friendly DNS names for nodes. Resolved as `<alias>.<cluster>.<vpn_domain>`.
 Tokens agents use to join a cluster's VPN mesh.
 
 | Tool | Title | Hints | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `list_enrollment_keys` | List Enrollment Keys | 🔍 | Filter/sort/paginate. Filters: `cluster_name` (wildcard), `cluster_name_in` (array), `name`, `has_name`, `key`, `uses_remaining`, `uses_remaining_gte/lte`, `is_unlimited`, `is_spent`, `is_expired`, `is_never_used`, `has_expiry`, `expires_at_*`, `last_used_at_*`, `inserted_at_*`, `updated_at_*`. |
 | `get_enrollment_key` | Get Enrollment Key | 🔍 | Required: `enrollment_key_id`. |
 | `create_enrollment_key` | Create Enrollment Key | | Required: `cluster_name`. Optional: `name` (label), `uses_remaining` (default 1), `expires_at` (ISO8601). |
@@ -114,7 +114,7 @@ Tokens agents use to join a cluster's VPN mesh.
 Shell jobs fanned out across the fleet. Creating a command produces one `command_execution` per targeted node.
 
 | Tool | Title | Hints | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `list_commands` | List Commands | 🔍 | Filter/sort/paginate. Filters: `command_text`, `has_timeout`, `timeout_gte/lte`, `has_expires_at`, `expires_at_*`, `inserted_at_*`, `updated_at_*`. |
 | `get_command` | Get Command | 🔍 | Required: `command_id`. |
 | `create_command` | Create Command | | Required: `command_text` (multi-line shell supported), `targeting` (see below). Optional: `timeout` (ms), `expires_at` (ISO8601, future). |
@@ -131,7 +131,7 @@ Both `nodes` and `clusters` forms accept optional `node_filters` / `cluster_filt
 ### Command executions
 
 | Tool | Title | Hints | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `list_command_executions` | List Command Executions | 🔍 | Filter/sort/paginate. Filters: `command_id_in` (array), `node_id_in` (array), `status_in` (array: `pending`/`sent`/`completed`/`cancelled`/`expired`/`dropped`), `target_all`, `exit_code`, `exit_code_gte/lte`, `output` (wildcard text search), `has_output`, `cluster_name` (wildcard), `cluster_name_in` (array), `has_cluster`, `inserted_at_*`, `updated_at_*`, `sent_at_*`, `completed_at_*`, `cancelled_at_*`. |
 | `get_command_execution` | Get Command Execution | 🔍 | Required: `execution_id`. Returns status, output, exit code, timestamps. |
 | `cancel_command_execution` | Cancel Command Execution | ⚠️ | Required: `execution_id`. `pending` → cancelled immediately. `sent` → cancellation forwarded to agent (best-effort). Terminal statuses return 409. |
@@ -146,7 +146,7 @@ Both `nodes` and `clusters` forms accept optional `node_filters` / `cluster_filt
 Centralised SSH credentials. The agent's embedded SSH server (`:40022`) verifies against these via the admin.
 
 | Tool | Title | Hints | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `list_ssh_usernames` | List SSH Usernames | 🔍 | Filter/sort/paginate. Filters: `username` (wildcard), `username_in` (array), `node_id_in` (array), `has_password`, `cluster_name` (wildcard), `cluster_name_in` (array), `key_name` (wildcard), `key_name_in` (array), `inserted_at_*`, `updated_at_*`. |
 | `get_ssh_username` | Get SSH Username | 🔍 | Required: `ssh_username_id`. |
 | `create_ssh_username` | Create SSH Username | | Required: `node_id`, `username` (3–32 chars, starts with letter or `_`, lowercase + digits + hyphens + underscores). Optional: `password` (12–128 chars, Argon2-hashed at rest), `public_keys` (list of `%{key_name, public_key}`). |
@@ -159,7 +159,7 @@ Centralised SSH credentials. The agent's embedded SSH server (`:40022`) verifies
 Authorized keys attached to a username.
 
 | Tool | Title | Hints | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `list_ssh_public_keys` | List SSH Public Keys | 🔍 | Filter/sort/paginate. Filters: `ssh_username_id_in` (array), `node_id_in` (array), `username` (wildcard), `username_in` (array), `key_name` (wildcard), `key_name_in` (array), `public_key`, `cluster_name` (wildcard), `cluster_name_in` (array), `inserted_at_*`, `updated_at_*`. |
 | `get_ssh_public_key` | Get SSH Public Key | 🔍 | Required: `ssh_public_key_id`. |
 | `create_ssh_public_key` | Create SSH Public Key | | Required: `ssh_username_id`, `public_key` (OpenSSH format: `ssh-ed25519`, `ecdsa-sha2-nistp256/384/521`, `ssh-rsa`), `key_name` (1–255 chars, unique within the username). |
@@ -172,7 +172,7 @@ Authorized keys attached to a username.
 Managed agent upgrades across the fleet.
 
 | Tool | Title | Hints | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `list_self_update_requests` | List Self-Update Requests | 🔍 | Filter/sort/paginate. Filters: `status_in` (array: `pending`/`processing`/`completed`), `inserted_at_*`, `updated_at_*`. |
 | `get_self_update_request` | Get Self-Update Request | 🔍 | Required: `request_id`. Watch `status` and `summary` (`%{total, triggered, failed}`). |
 | `create_self_update_request` | Create Self-Update Request | ⚠️ | Required: `targeting` (same shape as `create_command`). Only healthy nodes with `self_update_enabled=true` are updated. No cancel — durable once triggered. |
@@ -185,7 +185,7 @@ Managed agent upgrades across the fleet.
 Parsed, human-friendly JSON (not raw Prometheus text). For scraping endpoints see [`guide.md` §6](guide.md#6-metrics).
 
 | Tool | Title | Hints | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `get_node_metrics` | Get Node Metrics | 🔍 🌐 | Required: `node_id`. Unified host + agent sources. Best-effort: if one source fails, that section is reported unavailable. Always returns ok — verify the node exists first with `get_node` if you need to distinguish "missing" from "not scraping". |
 | `get_host_metrics` | Get Host Metrics | 🔍 🌐 | Required: `node_id`. From Node Exporter: CPU, memory, disk, uptime. |
 | `get_agent_metrics` | Get Agent Metrics | 🔍 🌐 | Required: `node_id`. From edge_agent PromEx: BEAM, commands, discovery, proxy, SSH, VPN pulls, fallback reports, Oban queues. |
@@ -198,7 +198,7 @@ Parsed, human-friendly JSON (not raw Prometheus text). For scraping endpoints se
 User-configured HTTP delivery destinations for events. Webhooks are **immutable** after create — to change a field, delete and recreate.
 
 | Tool | Title | Hints | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `list_webhooks` | List Webhooks | 🔍 | Filter/sort/paginate. Filters: `url`, `event_type` (post-filter: which webhooks fire on this event), `inserted_at_*`, `updated_at_*`. Secret and headers are never returned. |
 | `get_webhook` | Get Webhook | 🔍 | Required: `webhook_id`. Secret and headers are never returned. |
 | `create_webhook` | Create Webhook | | Required: `url` (absolute http(s), ≤2048 chars, SSRF-checked), `secret` (HMAC-SHA256 key, 32–256 chars), `subscribed_events` (explicit list, 1–20 known event types). Optional: `headers` (≤20 entries, values ≤4096 chars). |
@@ -209,7 +209,7 @@ User-configured HTTP delivery destinations for events. Webhooks are **immutable*
 MCP-only tools surfacing the same content as `/asyncdoc`. Useful when picking values for `create_webhook`'s `subscribed_events`. The catalog includes `edge.core.test` for delivery-path probes.
 
 | Tool | Title | Hints | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `list_event_types` | List Event Types | 🔍 | No parameters. Returns `%{event_types: [%{type, description}, ...], count}`. |
 | `explain_event_type` | Explain Event Type | 🔍 | Required: `event_type`. Returns `%{type, description, data_example, reference}` — the `data` payload shape inside the CloudEvents envelope. |
 | `publish_test_event` | Publish Test Event | 🌐 | No parameters. Publishes `edge.core.test` through the normal broker and webhook delivery path. Webhooks must explicitly subscribe to `edge.core.test` to receive it. |

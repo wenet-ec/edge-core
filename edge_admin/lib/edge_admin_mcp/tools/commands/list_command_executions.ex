@@ -22,8 +22,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
   - `cancelled_at_gte` / `cancelled_at_lte` — cancelled datetime range (ISO8601)
 
   ## Sorting
-  - `order_by` — comma-separated fields: `status`, `exit_code`, `sent_at`, `completed_at`, `cancelled_at`, `inserted_at`, `updated_at`
-  - `order_directions` — comma-separated directions: `asc`, `desc` (one per order_by field)
+  - `sort` — comma-separated fields: `status`, `exit_code`, `sent_at`, `completed_at`, `cancelled_at`, `inserted_at`, `updated_at`; prefix with `-` for descending order
   """
   use EdgeAdminMcp, :tool
 
@@ -64,8 +63,7 @@ defmodule EdgeAdminMcp.Tools.Commands.ListCommandExecutions do
     field :completed_at_lte, :string
     field :cancelled_at_gte, :string
     field :cancelled_at_lte, :string
-    field :order_by, :string
-    field :order_directions, :string
+    field :sort, :string, regex: EdgeAdmin.Sort.regex()
   end
 
   @impl true

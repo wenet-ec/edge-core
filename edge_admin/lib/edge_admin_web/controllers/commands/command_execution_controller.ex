@@ -23,7 +23,7 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
     description: "Returns a paginated list of command executions with filtering and sorting",
     parameters:
       QueryParams.pagination() ++
-        QueryParams.sort(order_by_example: "inserted_at,status", order_directions_example: "desc,asc") ++
+        QueryParams.sort(example: "-inserted_at,status") ++
         [
           QueryParams.enum_in_filter(:status, @status_enum,
             description: "Filter by execution status (e.g. status__in=pending,sent)"

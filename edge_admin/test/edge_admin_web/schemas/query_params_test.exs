@@ -51,31 +51,29 @@ defmodule EdgeAdminWeb.Schemas.QueryParamsTest do
   end
 
   # ---------------------------------------------------------------------------
-  # sort/1 — order_by + order_directions keys (parsed by RequestParser)
+  # sort/1 — compact sort key (parsed by RequestParser)
   # ---------------------------------------------------------------------------
 
   describe "sort/1" do
-    test "returns :order_by and :order_directions keys" do
+    test "returns a :sort key" do
       params = QueryParams.sort()
 
-      assert Keyword.keys(params) == [:order_by, :order_directions]
+      assert Keyword.keys(params) == [:sort]
     end
 
-    test "both fields are strings (comma-separated handled by RequestParser)" do
+    test "sort is a string parsed by RequestParser" do
       params = QueryParams.sort()
 
-      assert params[:order_by][:schema] == %Schema{type: :string}
-      assert params[:order_directions][:schema] == %Schema{type: :string}
+      assert params[:sort][:schema].type == :string
+      assert params[:sort][:schema].pattern == EdgeAdmin.Sort.pattern()
     end
 
-    test "examples default to inserted_at / desc, configurable" do
+    test "examples default to descending inserted_at and are configurable" do
       defaults = QueryParams.sort()
-      assert defaults[:order_by][:example] == "inserted_at"
-      assert defaults[:order_directions][:example] == "desc"
+      assert defaults[:sort][:example] == "-inserted_at"
 
-      custom = QueryParams.sort(order_by_example: "name", order_directions_example: "asc")
-      assert custom[:order_by][:example] == "name"
-      assert custom[:order_directions][:example] == "asc"
+      custom = QueryParams.sort(example: "name,-inserted_at")
+      assert custom[:sort][:example] == "name,-inserted_at"
     end
   end
 

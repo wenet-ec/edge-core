@@ -198,22 +198,20 @@ defmodule EdgeAdminMcp.FlopParamsTest do
   end
 
   # ---------------------------------------------------------------------------
-  # Reserved keys — page, page_size, order_by, order_directions, event_type
+  # Reserved keys — page, page_size, sort, event_type
   # ---------------------------------------------------------------------------
 
   describe "build/1 — reserved keys" do
-    test "order_by and order_directions pass through" do
-      result = FlopParams.build(%{order_by: "name,inserted_at", order_directions: "asc,desc"})
+    test "sort passes through" do
+      result = FlopParams.build(%{sort: "name,-inserted_at"})
 
-      assert result["order_by"] == "name,inserted_at"
-      assert result["order_directions"] == "asc,desc"
+      assert result["sort"] == "name,-inserted_at"
     end
 
-    test "nil sort fields are absent from output" do
-      result = FlopParams.build(%{order_by: nil, order_directions: nil})
+    test "nil sort is absent from output" do
+      result = FlopParams.build(%{sort: nil})
 
-      refute Map.has_key?(result, "order_by")
-      refute Map.has_key?(result, "order_directions")
+      refute Map.has_key?(result, "sort")
     end
 
     test "event_type is skipped by auto-detection (post-filter injected manually by list_webhooks)" do
@@ -238,8 +236,7 @@ defmodule EdgeAdminMcp.FlopParamsTest do
         self_update_enabled: true,
         last_seen_at_gte: "2025-01-01T00:00:00Z",
         inserted_at_lte: "2025-06-01T00:00:00Z",
-        order_by: "inserted_at",
-        order_directions: "desc"
+        sort: "-inserted_at"
       }
 
       result = FlopParams.build(params)
@@ -253,8 +250,7 @@ defmodule EdgeAdminMcp.FlopParamsTest do
                "self_update_enabled" => true,
                "last_seen_at__gte" => "2025-01-01T00:00:00Z",
                "inserted_at__lte" => "2025-06-01T00:00:00Z",
-               "order_by" => "inserted_at",
-               "order_directions" => "desc"
+               "sort" => "-inserted_at"
              }
     end
 

@@ -22,7 +22,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
     description: "Returns a paginated list of all edge clusters with filtering and sorting",
     parameters:
       QueryParams.pagination() ++
-        QueryParams.sort(order_by_example: "inserted_at,name", order_directions_example: "desc,asc") ++
+        QueryParams.sort(example: "-inserted_at,name") ++
         [
           QueryParams.string_filter(:name,
             description: "Filter by cluster name — exact match or wildcard (prod*, *tion, *rod*)"

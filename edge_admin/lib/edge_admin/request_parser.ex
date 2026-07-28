@@ -4,7 +4,7 @@ defmodule EdgeAdmin.RequestParser do
   Parses flat query params from API requests into Flop-compatible format.
 
   Converts URL query strings like:
-    ?name=prod*&inserted_at__gte=2025-01-01&order_by=inserted_at&order_directions=desc
+    ?name=prod*&inserted_at__gte=2025-01-01&sort=-inserted_at,name
 
   Into Flop params:
     %{
@@ -12,8 +12,8 @@ defmodule EdgeAdmin.RequestParser do
         %{field: :name, op: :ilike, value: "prod%"},
         %{field: :inserted_at, op: :>=, value: "2025-01-01T00:00:00Z"}
       ],
-      order_by: [:inserted_at],
-      order_directions: [:desc],
+      order_by: ["inserted_at", "name"],
+      order_directions: [:desc, :asc],
       page: 1,
       page_size: 20
     }
@@ -46,15 +46,17 @@ defmodule EdgeAdmin.RequestParser do
   ### Pagination & Sorting
   - `page=1` - Page number (default: 1)
   - `page_size=20` - Items per page (default: 20, max: 100)
-  - `order_by=field1,field2` - Fields to sort by
-  - `order_directions=desc,asc` - Sort directions (default: asc for each field)
+  - `sort=-field1,field2` - Fields to sort by; `-` means descending and no
+    prefix means ascending
   """
+
+  alias EdgeAdmin.Sort
 
   @default_page_size 20
   @max_page_size 100
 
   # Reserved params that aren't filters
-  @reserved_params ~w(page page_size order_by order_directions sort_by sort_order)
+  @reserved_params ~w(page page_size sort)
 
   @doc """
   Parses flat query params into Flop format.
@@ -70,13 +72,9 @@ defmodule EdgeAdmin.RequestParser do
   def parse(params) when is_map(params) do
     params = stringify_keys(params)
 
-    compact(%{
-      filters: parse_filters(params),
-      page: parse_page(params),
-      page_size: parse_page_size(params),
-      order_by: parse_order_by(params),
-      order_directions: parse_order_directions(params)
-    })
+    %{filters: parse_filters(params), page: parse_page(params), page_size: parse_page_size(params)}
+    |> Map.merge(parse_sort(params))
+    |> compact()
   end
 
   @doc """
@@ -249,37 +247,14 @@ defmodule EdgeAdmin.RequestParser do
   defp parse_page_size(%{"page_size" => size}) when is_integer(size) and size > 0 and size <= @max_page_size, do: size
   defp parse_page_size(_), do: @default_page_size
 
-  # Parse order_by fields
-  defp parse_order_by(%{"order_by" => order_by}) when is_binary(order_by) do
-    order_by
-    |> String.split(",")
-    |> Enum.map(&String.trim/1)
-    |> Enum.reject(&(&1 == ""))
-    |> Enum.map(&parse_field/1)
-    |> Enum.flat_map(fn
-      {:ok, field} -> [field]
-      _ -> []
-    end)
+  defp parse_sort(%{"sort" => sort}) when is_binary(sort) do
+    case Sort.parse(sort) do
+      {:ok, parsed} -> parsed
+      {:error, :invalid_sort} -> %{}
+    end
   end
 
-  defp parse_order_by(_), do: nil
-
-  # Parse order_directions
-  defp parse_order_directions(%{"order_directions" => directions}) when is_binary(directions) do
-    directions
-    |> String.split(",")
-    |> Enum.map(&String.trim/1)
-    |> Enum.reject(&(&1 == ""))
-    |> Enum.map(&parse_direction/1)
-    |> Enum.reject(&is_nil/1)
-  end
-
-  defp parse_order_directions(_), do: nil
-
-  # Parse direction string
-  defp parse_direction("asc"), do: :asc
-  defp parse_direction("desc"), do: :desc
-  defp parse_direction(_), do: nil
+  defp parse_sort(_), do: %{}
 
   # Normalize all keys to strings so both atom-keyed (internal) and string-keyed
   # (CastAndValidate public) params are handled uniformly.

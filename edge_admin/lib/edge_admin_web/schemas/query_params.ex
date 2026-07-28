@@ -12,7 +12,7 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
       operation(:index,
         parameters:
           QueryParams.pagination() ++
-            QueryParams.sort(order_by_example: "inserted_at,name", order_directions_example: "desc,asc") ++
+            QueryParams.sort(example: "-inserted_at,name") ++
             [
               QueryParams.string_filter(:name, description: "Filter by cluster name"),
               QueryParams.int_range_filter(:node_count),
@@ -34,6 +34,7 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
   domain form/check/schema layers.
   """
 
+  alias EdgeAdmin.Sort
   alias OpenApiSpex.Schema
 
   # ---------------------------------------------------------------------------
@@ -70,30 +71,22 @@ defmodule EdgeAdminWeb.Schemas.QueryParams do
   end
 
   @doc """
-  Sort parameters: `order_by`, `order_directions`.
+  Sort parameter: `sort`.
 
   ## Options
 
-    * `:order_by_example` — example value for `order_by` (default `"inserted_at"`)
-    * `:order_directions_example` — example value for `order_directions` (default `"desc"`)
+    * `:example` — value using `-` for descending fields (default `"-inserted_at"`)
   """
   @spec sort(keyword()) :: keyword()
   def sort(opts \\ []) do
-    order_by_example = Keyword.get(opts, :order_by_example, "inserted_at")
-    order_directions_example = Keyword.get(opts, :order_directions_example, "desc")
+    example = Keyword.get(opts, :example, "-inserted_at")
 
     [
-      order_by: [
+      sort: [
         in: :query,
-        description: "Comma-separated list of fields to sort by",
-        schema: %Schema{type: :string},
-        example: order_by_example
-      ],
-      order_directions: [
-        in: :query,
-        description: "Comma-separated list of sort directions (asc/desc) corresponding to order_by fields",
-        schema: %Schema{type: :string},
-        example: order_directions_example
+        description: "Comma-separated sort fields; prefix a field with - for descending order",
+        schema: %Schema{type: :string, pattern: Sort.pattern()},
+        example: example
       ]
     ]
   end

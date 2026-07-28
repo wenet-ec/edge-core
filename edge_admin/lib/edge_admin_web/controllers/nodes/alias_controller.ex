@@ -20,7 +20,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
     description: "Returns a paginated list of node aliases with filtering and sorting",
     parameters:
       QueryParams.pagination() ++
-        QueryParams.sort(order_by_example: "inserted_at,name", order_directions_example: "desc,asc") ++
+        QueryParams.sort(example: "-inserted_at,name") ++
         [
           QueryParams.string_filter(:name,
             description: "Filter by alias name (exact match or wildcard: prod*, *east, etc.)"

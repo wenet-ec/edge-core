@@ -21,7 +21,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshPublicKeyController do
     description: "Returns a paginated list of SSH public keys with filtering and sorting",
     parameters:
       QueryParams.pagination() ++
-        QueryParams.sort(order_by_example: "inserted_at,key_name", order_directions_example: "desc,asc") ++
+        QueryParams.sort(example: "-inserted_at,key_name") ++
         [
           QueryParams.string_filter(:key_name,
             description: "Filter by key name — exact match or wildcard (my-key*, *prod, *laptop*)"

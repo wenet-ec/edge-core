@@ -22,7 +22,7 @@ defmodule EdgeAdminWeb.Controllers.Ssh.SshUsernameController do
     description: "Returns a paginated list of SSH usernames with filtering and sorting",
     parameters:
       QueryParams.pagination() ++
-        QueryParams.sort(order_by_example: "inserted_at,username", order_directions_example: "desc,asc") ++
+        QueryParams.sort(example: "-inserted_at,username") ++
         [
           QueryParams.string_filter(:username,
             description: "Filter by username — exact match or wildcard (root*, *admin, *deploy*)"

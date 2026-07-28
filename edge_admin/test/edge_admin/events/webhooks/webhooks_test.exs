@@ -50,8 +50,7 @@ defmodule EdgeAdmin.Events.WebhooksTest do
                  "event_type" => "edge.command_execution.completed",
                  "page" => 1,
                  "page_size" => 20,
-                 "order_by" => "url",
-                 "order_directions" => "asc"
+                 "sort" => "url"
                })
 
       assert Enum.map(webhooks, & &1.id) == [matching_a.id, matching_b.id]

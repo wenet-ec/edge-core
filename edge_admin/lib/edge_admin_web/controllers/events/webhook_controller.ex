@@ -22,7 +22,7 @@ defmodule EdgeAdminWeb.Controllers.Events.WebhookController do
       "Returns a paginated list of webhook subscriptions. The full catalog of event types you can subscribe to is documented in the [AsyncAPI spec](/asyncdoc).",
     parameters:
       QueryParams.pagination() ++
-        QueryParams.sort(order_by_example: "inserted_at,url", order_directions_example: "desc,asc") ++
+        QueryParams.sort(example: "-inserted_at,url") ++
         [
           QueryParams.string_filter(:url,
             description: "Filter by URL (exact match or wildcard: prefix*, *suffix, *substring*)"

@@ -6,6 +6,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
   alias EdgeAdmin.Commands
   alias EdgeAdmin.Commands.Policies.CommandExecutionPolicy
   alias EdgeAdmin.Commands.Schemas.CommandExecution
+  alias EdgeAdmin.Sort
   alias EdgeAdminWeb.Schemas.Agents.CommandExecutionSchemas
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.PathParams
@@ -34,15 +35,10 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
       ] ++
         QueryParams.pagination(default_page_size: 100) ++
         [
-          order_by: [
+          sort: [
             in: :query,
-            description: "Field to sort by",
-            schema: %OpenApiSpex.Schema{type: :string, default: "inserted_at"}
-          ],
-          order_directions: [
-            in: :query,
-            description: "Sort direction: asc or desc",
-            schema: %OpenApiSpex.Schema{type: :string, enum: ["asc", "desc"], default: "asc"}
+            description: "Sort fields, comma-separated; prefix a field with - for descending order",
+            schema: %OpenApiSpex.Schema{type: :string, default: "inserted_at", pattern: Sort.pattern()}
           ]
         ],
     responses: %{
@@ -58,8 +54,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.CommandExecutionController do
     query_params =
       params
       |> Map.put(:node_id, node_id)
-      |> Map.put_new(:order_by, "inserted_at")
-      |> Map.put_new(:order_directions, "asc")
+      |> Map.put_new(:sort, "inserted_at")
       |> Map.put_new(:page_size, 100)
 
     with {:ok, {command_executions, meta}} <- Commands.list_command_executions(query_params) do

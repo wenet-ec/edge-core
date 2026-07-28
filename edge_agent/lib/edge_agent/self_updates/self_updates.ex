@@ -53,29 +53,22 @@ defmodule EdgeAgent.SelfUpdates do
   ## Behavior
   - Calls Watchtower's `/v1/update` endpoint
   - Uses Bearer token authentication if WATCHTOWER_HTTP_API_TOKEN is configured
-  - Handles expected connection errors (timeout/refused/closed) as success signals
-    since Watchtower blocks until update completes and agent restarts
+  - Uses Watchtower's `async=true` option so the API acknowledges the update
+    before the agent is restarted
 
   ## Returns
-  - `{:ok, body}` - Watchtower returned 200; `body` is whatever Watchtower
-    sent (typically an empty body or a short status string)
-  - `{:ok, %{message: "Update triggered, agent restarting"}}` - Connection
-    closed/timed out mid-call, treated as success because Watchtower's
-    blocking restart usually severs the call before it can reply
+  - `{:ok, body}` - Watchtower returned 202; `body` describes the accepted
+    asynchronous update
   - `{:error, "Watchtower returned status \#{status}: \#{inspect(body)}"}` -
-    Non-200 response
+    Non-202 response
   - `{:error, "Failed to call Watchtower: \#{inspect(reason)}"}` - Other
     transport error
 
   ## Examples
 
-      # Typical 200 path
+      # Asynchronous update accepted
       iex> EdgeAgent.SelfUpdates.trigger_update()
-      {:ok, ""}
-
-      # Connection severed by Watchtower restart — treated as success
-      iex> EdgeAgent.SelfUpdates.trigger_update()
-      {:ok, %{message: "Update triggered, agent restarting"}}
+      {:ok, "Accepted"}
 
       # Auth failure
       iex> EdgeAgent.SelfUpdates.trigger_update()
@@ -85,12 +78,12 @@ defmodule EdgeAgent.SelfUpdates do
   def trigger_update do
     watchtower_url = Application.get_env(:edge_agent, :watchtower_url, "")
     api_token = Application.get_env(:edge_agent, :watchtower_http_api_token, "")
-    update_endpoint = "#{watchtower_url}/v1/update"
+    update_endpoint = "#{watchtower_url}/v1/update?async=true"
 
     Logger.info("Calling Watchtower service at #{update_endpoint}")
 
-    # POST to Watchtower's POST-only /v1/update with Bearer token (10s timeout).
-    # Empty body; image filters would travel as query params if we needed them.
+    # POST to Watchtower's POST-only /v1/update with its async query parameter.
+    # The accepted response arrives before Watchtower restarts the agent.
     headers =
       if api_token == "" do
         []
@@ -99,19 +92,14 @@ defmodule EdgeAgent.SelfUpdates do
       end
 
     case Req.post(update_endpoint, headers: headers, receive_timeout: 10_000, retry: false) do
-      {:ok, %{status: 200, body: body}} ->
-        Logger.info("Self-update triggered successfully")
+      {:ok, %{status: 202, body: body}} ->
+        Logger.info("Self-update accepted successfully")
         {:ok, body}
 
       {:ok, %{status: status, body: body}} ->
         error_msg = "Watchtower returned status #{status}: #{inspect(body)}"
         Logger.error(error_msg)
         {:error, error_msg}
-
-      {:error, %Req.TransportError{reason: reason}} when reason in [:timeout, :econnrefused, :closed] ->
-        # Watchtower blocks until update completes, so timeout/connection errors mean agent is restarting
-        Logger.info("Self-update triggered successfully (connection #{reason} indicates restart)")
-        {:ok, %{message: "Update triggered, agent restarting"}}
 
       {:error, reason} ->
         error_msg = "Failed to call Watchtower: #{inspect(reason)}"

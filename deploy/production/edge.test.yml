@@ -38,7 +38,7 @@ services:
     image: nickfedor/watchtower:latest
     container_name: production_watchtower
     command:
-      - --http-api-update
+      - --http-api-endpoints=update
       - --label-enable
       - --cleanup
     env_file:

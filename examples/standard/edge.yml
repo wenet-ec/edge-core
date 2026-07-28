@@ -46,7 +46,7 @@ services:
     container_name: edge_watchtower
     restart: unless-stopped
     command:
-      - --http-api-update
+      - --http-api-endpoints=update
       - --label-enable
       - --cleanup
     env_file:

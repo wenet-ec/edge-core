@@ -49,7 +49,7 @@ services:
     image: nickfedor/watchtower:latest
     container_name: local_watchtower
     command:
-      - --http-api-update
+      - --http-api-endpoints=update
       - --label-enable
       - --cleanup
     env_file:

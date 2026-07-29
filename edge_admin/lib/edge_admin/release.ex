@@ -23,6 +23,9 @@ defmodule EdgeAdmin.Release do
   require Logger
 
   @app :edge_admin
+  @superadmin_bootstrap_max_retries 6
+  @superadmin_bootstrap_base_delay_ms 250
+  @superadmin_bootstrap_max_delay_ms 2_000
 
   # =============================================================================
   # Config Helpers
@@ -87,7 +90,10 @@ defmodule EdgeAdmin.Release do
   - `:netmaker_superadmin_username` - Username for the superadmin
   - `:netmaker_superadmin_password` - Password for the superadmin
 
-  This task is idempotent - it will skip creation if a superadmin already exists.
+  This task is idempotent and safe to run concurrently on every Admin replica.
+  Netmaker's check-then-create API is not atomic, so an ambiguous create failure
+  is followed by a bounded, backoff-delayed re-check. This lets a replica observe
+  a superadmin created by a peer instead of failing its container startup.
 
   ## Exit codes
     - 0: Success (created or already exists)
@@ -98,6 +104,17 @@ defmodule EdgeAdmin.Release do
 
     Logger.info("Checking if Netmaker superadmin exists...")
 
+    case ensure_netmaker_superadmin(@superadmin_bootstrap_max_retries) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to bootstrap Netmaker superadmin: #{inspect(reason)}")
+        System.halt(1)
+    end
+  end
+
+  defp ensure_netmaker_superadmin(retries_left) do
     case Vpn.check_superadmin() do
       {:ok, true} ->
         Logger.info("Netmaker superadmin already exists, skipping creation")
@@ -105,15 +122,14 @@ defmodule EdgeAdmin.Release do
 
       {:ok, false} ->
         Logger.info("No superadmin found, creating superadmin: #{netmaker_superadmin_username()}")
-        do_create_superadmin()
+        create_netmaker_superadmin_or_retry(retries_left)
 
       {:error, reason} ->
-        Logger.error("Failed to check superadmin status: #{inspect(reason)}")
-        System.halt(1)
+        retry_netmaker_superadmin_bootstrap(:check, reason, retries_left)
     end
   end
 
-  defp do_create_superadmin do
+  defp create_netmaker_superadmin_or_retry(retries_left) do
     attrs = %{
       username: netmaker_superadmin_username(),
       password: netmaker_superadmin_password()
@@ -128,10 +144,35 @@ defmodule EdgeAdmin.Release do
         Logger.info("Netmaker superadmin already exists (likely created by a peer replica), skipping")
         :ok
 
-      {:error, :service_unavailable} ->
-        Logger.error("Failed to create superadmin: Netmaker service unavailable")
-        System.halt(1)
+      {:error, reason} ->
+        # A concurrent peer can create the user after our initial check. The
+        # Netmaker API may report that outcome as either its documented
+        # `superadmin user already exists` response or a database constraint
+        # error, so re-check before treating it as a startup failure.
+        retry_netmaker_superadmin_bootstrap(:create, reason, retries_left)
     end
+  end
+
+  defp retry_netmaker_superadmin_bootstrap(_operation, reason, 0), do: {:error, reason}
+
+  defp retry_netmaker_superadmin_bootstrap(operation, reason, retries_left) do
+    attempt = @superadmin_bootstrap_max_retries - retries_left + 1
+    delay = superadmin_bootstrap_delay(attempt)
+
+    Logger.warning(
+      "Netmaker superadmin #{operation} failed: #{inspect(reason)}. " <>
+        "Re-checking in #{delay}ms (#{retries_left} retries remaining)."
+    )
+
+    Process.sleep(delay)
+    ensure_netmaker_superadmin(retries_left - 1)
+  end
+
+  defp superadmin_bootstrap_delay(attempt) do
+    min(
+      @superadmin_bootstrap_base_delay_ms * Integer.pow(2, attempt - 1),
+      @superadmin_bootstrap_max_delay_ms
+    )
   end
 
   # =============================================================================

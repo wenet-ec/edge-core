@@ -38,6 +38,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   libstdc++6 \
   openssl \
   libncurses6 \
+  # OTP 29 dynamically probes SCTP at startup; include this to avoid a warning
+  libsctp1 \
   locales \
   ca-certificates \
   tini \

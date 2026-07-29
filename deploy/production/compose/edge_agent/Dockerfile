@@ -80,6 +80,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libstdc++6 \
     openssl \
     libncurses6 \
+    # OTP 29 dynamically probes SCTP at startup; include this to avoid a warning
+    libsctp1 \
     ca-certificates \
     tini \
     tzdata \

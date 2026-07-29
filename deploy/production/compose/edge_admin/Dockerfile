@@ -77,7 +77,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libstdc++6 \
     openssl \
     libncurses6 \
-    # Optional SCTP socket library used by OTP when available
+    # OTP 29 dynamically probes SCTP at startup; include this to avoid a warning
     libsctp1 \
     ca-certificates \
     # Essential tools (healthcheck, troubleshooting, netclient download, capability checks)

@@ -8,8 +8,6 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionForm do
   """
   use EdgeAgent.Form
 
-  alias EdgeAgent.Commands.Schemas.CommandExecution
-
   embedded_schema do
     field(:id, :binary_id)
     field(:command_id, :binary_id)
@@ -17,7 +15,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionForm do
     field(:command_text, :string)
     field(:timeout, :integer)
     field(:expires_at, :utc_datetime)
-    field(:status, Ecto.Enum, values: CommandExecution.statuses())
+    field(:status, Ecto.Enum, values: [:pending])
     field(:output, :string)
     field(:exit_code, :integer)
     field(:completed_at, :utc_datetime)
@@ -31,7 +29,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionForm do
   - `command_id` - Required, must be valid UUID
   - `node_id` - Required, must be valid UUID
   - `command_text` - Required, must not be empty
-  - `status` - Required, must be `"pending"`, `"completed"`, or `"expired"` on the wire (cast to atom)
+  - `status` - Required, must be `"pending"` on the wire (cast to atom)
   - `timeout` - Optional, must be positive integer if present
   - `output` - Optional
   - `exit_code` - Optional, must be integer if present

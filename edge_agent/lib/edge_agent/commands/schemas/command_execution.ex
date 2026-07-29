@@ -3,13 +3,13 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecution do
   @moduledoc false
   use EdgeAgent.Schema
 
-  # Lifecycle status registry. The agent only sees three states locally
+  # Lifecycle status registry. The agent only sees four states locally
   # (`:sent` and `:cancelled` are admin-only). The schema's `Ecto.Enum`
-  # cast and external surfaces (form / wire serialization) all derive
-  # from this list — single source of truth.
-  @statuses [:pending, :completed, :expired]
+  # cast derives from this list. The incoming Admin form deliberately accepts
+  # only `:pending`; `:running` is Agent-internal lifecycle state.
+  @statuses [:pending, :running, :completed, :expired]
 
-  @type status :: :pending | :completed | :expired
+  @type status :: :pending | :running | :completed | :expired
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil,

@@ -18,6 +18,8 @@ defmodule EdgeAgent.Commands.Workers.ExecuteCommandWorker do
       states: :incomplete
     ]
 
+  import Ecto.Query
+
   alias EdgeAgent.Commands
   alias EdgeAgent.Commands.Schemas.CommandExecution
   alias EdgeAgent.Commands.Workers.ReportExecutionWorker
@@ -43,23 +45,37 @@ defmodule EdgeAgent.Commands.Workers.ExecuteCommandWorker do
       Logger.warning("Execution #{execution_id} not found, skipping")
       :ok
     else
-      cond do
-        execution.status != :pending ->
-          Logger.debug("Execution #{execution_id} already processed (status: #{execution.status}), skipping")
+      case execution.status do
+        :pending ->
+          if expired?(execution) do
+            Logger.info("Execution #{execution_id} expired before running, marking expired")
+            mark_expired(execution)
+
+            Commands.enqueue_worker(
+              ReportExecutionWorker,
+              "ReportExecutionWorker"
+            )
+          else
+            case Commands.claim_command_execution(execution) do
+              {:ok, running_execution} ->
+                Commands.execute_single_command(running_execution)
+
+                Commands.enqueue_worker(
+                  ReportExecutionWorker,
+                  "ReportExecutionWorker"
+                )
+
+              :stale ->
+                Logger.debug("Execution #{execution_id} changed state before it could be claimed, skipping")
+            end
+          end
+
           :ok
 
-        expired?(execution) ->
-          Logger.info("Execution #{execution_id} expired before running, marking expired")
-          {:ok, _} = Commands.update_command_execution(execution, %{status: :expired})
-
-          Commands.enqueue_worker(
-            ReportExecutionWorker,
-            "ReportExecutionWorker"
-          )
-
-          :ok
-
-        true ->
+        :running ->
+          # A running row only reaches a fresh worker after Oban recovery or the
+          # periodic re-enqueue pass. The Agent deliberately retries it after a
+          # crash, so command delivery remains at-least-once.
           Commands.execute_single_command(execution)
 
           Commands.enqueue_worker(
@@ -68,7 +84,21 @@ defmodule EdgeAgent.Commands.Workers.ExecuteCommandWorker do
           )
 
           :ok
+
+        status ->
+          Logger.debug("Execution #{execution_id} already processed (status: #{status}), skipping")
+          :ok
       end
     end
+  end
+
+  defp mark_expired(execution) do
+    query =
+      from(ce in CommandExecution,
+        where: ce.id == ^execution.id and ce.status == :pending
+      )
+
+    now = DateTime.truncate(DateTime.utc_now(), :second)
+    Repo.update_all(query, set: [status: :expired, updated_at: now])
   end
 end

@@ -121,8 +121,8 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecutionTest do
   # ---------------------------------------------------------------------------
 
   describe "changeset/2 — status inclusion" do
-    test "accepts the three documented statuses" do
-      for status <- ["pending", "completed", "expired"] do
+    test "accepts the four locally-tracked statuses" do
+      for status <- ["pending", "running", "completed", "expired"] do
         changeset =
           CommandExecution.changeset(%CommandExecution{}, valid_attrs(%{status: status}))
 

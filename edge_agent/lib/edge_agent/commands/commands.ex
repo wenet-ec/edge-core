@@ -11,7 +11,7 @@ defmodule EdgeAgent.Commands do
 
   The module uses a **queue-based execution model** with the following components:
 
-  1. **Local Database** - Stores command executions (pending → completed)
+  1. **Local Database** - Stores command executions (pending → running → completed)
   2. **Oban Jobs** - Manages execution queue with uniqueness constraints
   3. **ExecutionRegistry** - Tracks running tasks for cancellation
   4. **AdminClient** - Reports execution results to admin server
@@ -21,8 +21,8 @@ defmodule EdgeAgent.Commands do
   ```
   1. Admin sends command → Agent creates CommandExecution (status: :pending)
   2. Enqueue Oban job → EnqueueExecutionWorker triggers ExecuteCommandWorker
-  3. Worker calls execute_single_command → Runs via /usr/local/bin/hostscript
-  4. Execution completes → Updates status to :completed with output/exit_code
+  3. Worker atomically claims pending work (pending → running), then runs it via hostscript
+  4. Execution completes → Conditionally updates running work to :completed with output/exit_code
   5. Report to admin → Sends result via AdminClient.report_command_execution_result
   6. Delete local copy → Removes from agent database after successful report
   ```
@@ -30,15 +30,15 @@ defmodule EdgeAgent.Commands do
   ## Command Cancellation
 
   Commands can be cancelled at any stage:
-  - **Pending** - Kills the running task if any, cancels the pending Oban job,
+  - **Pending or running** - Kills the running task if any, cancels the Oban job,
     and marks the execution completed with exit code 143
   - **Completed** - No action (already finished)
   - **Expired** - No action (already finalized)
 
   Cancellation involves:
-  1. Killing running task (if executing)
-  2. Cancelling Oban job (prevents future execution)
-  3. Updating status to completed with exit code 143
+  1. Atomically finalizing pending/running work as cancelled
+  2. Killing a running task (if executing)
+  3. Cancelling the Oban job (prevents future execution)
 
   ## Reporting
 
@@ -101,7 +101,7 @@ defmodule EdgeAgent.Commands do
   @doc """
   Lists all command executions from the database.
 
-  Returns all executions regardless of status (pending or completed).
+  Returns all executions regardless of status.
   """
   @spec list_command_executions() :: [CommandExecution.t()]
   def list_command_executions do
@@ -191,25 +191,26 @@ defmodule EdgeAgent.Commands do
   end
 
   @doc """
-  Enqueues all pending command executions as Oban jobs.
+  Enqueues all recoverable command executions as Oban jobs.
 
-  Called periodically to ensure pending commands are processed.
+  Called periodically to ensure pending commands are processed and to recover
+  commands that were running when the Agent previously stopped.
   Oban's unique constraints prevent duplicate job creation.
   """
   @spec enqueue_pending_executions() :: :ok
   def enqueue_pending_executions do
-    Logger.debug("Enqueueing pending command executions")
+    Logger.debug("Enqueueing recoverable command executions")
 
-    pending_executions = get_pending_executions()
+    recoverable_executions = get_recoverable_executions()
 
-    if Enum.empty?(pending_executions) do
-      Logger.debug("No pending executions to enqueue")
+    if Enum.empty?(recoverable_executions) do
+      Logger.debug("No recoverable executions to enqueue")
       :ok
     else
-      Logger.info("Enqueueing #{length(pending_executions)} pending executions")
+      Logger.info("Enqueueing #{length(recoverable_executions)} recoverable executions")
 
       # Enqueue each execution as a separate Oban job
-      Enum.each(pending_executions, fn execution ->
+      Enum.each(recoverable_executions, fn execution ->
         enqueue_execution_job(execution)
       end)
 
@@ -239,21 +240,44 @@ defmodule EdgeAgent.Commands do
 
     Logger.info("Command #{execution.id} completed with exit code: #{exit_code}")
 
-    {:ok, _updated_execution} =
-      update_command_execution(execution, %{
-        status: :completed,
-        output: output,
-        exit_code: exit_code,
-        completed_at: DateTime.truncate(DateTime.utc_now(), :second)
-      })
+    case complete_running_execution(execution.id, output, exit_code) do
+      :ok ->
+        :telemetry.execute(
+          [:edge_agent, :commands, :execution, :completed],
+          %{duration: duration, exit_code: exit_code, count: 1, total: 1},
+          %{result: categorize_exit_code(exit_code)}
+        )
 
-    :telemetry.execute(
-      [:edge_agent, :commands, :execution, :completed],
-      %{duration: duration, exit_code: exit_code, count: 1, total: 1},
-      %{result: categorize_exit_code(exit_code)}
-    )
+      :stale ->
+        Logger.info("Command #{execution.id} finished after its state was finalized; discarding result")
+    end
 
     :ok
+  end
+
+  @doc """
+  Atomically claims a pending command execution for local execution.
+
+  Transitions the row from `:pending` to `:running` only when it is still
+  pending at write time. Returns the freshly loaded running execution on a
+  successful claim, or `:stale` when cancellation, expiry, or another worker
+  finalized the row first.
+  """
+  @spec claim_command_execution(CommandExecution.t()) :: {:ok, CommandExecution.t()} | :stale
+  def claim_command_execution(%CommandExecution{id: id}) do
+    query = from(ce in CommandExecution, where: ce.id == ^id and ce.status == :pending)
+    now = DateTime.truncate(DateTime.utc_now(), :second)
+
+    case Repo.update_all(query, set: [status: :running, updated_at: now]) do
+      {1, _} ->
+        case Repo.get(CommandExecution, id) do
+          %CommandExecution{status: :running} = execution -> {:ok, execution}
+          _ -> :stale
+        end
+
+      {0, _} ->
+        :stale
+    end
   end
 
   @doc false
@@ -489,18 +513,20 @@ defmodule EdgeAgent.Commands do
   end
 
   # Queries command executions by status, ordered by insertion time (FIFO)
-  defp get_executions_by_status(status) do
-    Repo.all(from(ce in CommandExecution, where: ce.status == ^status, order_by: [asc: ce.inserted_at]))
+  defp get_executions_by_status(statuses) when is_list(statuses) do
+    Repo.all(from(ce in CommandExecution, where: ce.status in ^statuses, order_by: [asc: ce.inserted_at]))
   end
 
-  defp get_pending_executions, do: get_executions_by_status(:pending)
+  defp get_executions_by_status(status), do: get_executions_by_status([status])
+  defp get_recoverable_executions, do: get_executions_by_status([:pending, :running])
   defp get_completed_executions, do: get_executions_by_status(:completed)
 
   @doc """
   Cancels a command execution.
 
-  Handles three scenarios:
-  1. Pending - Kills running task (if any), cancels the Oban job, and updates
+  Handles four scenarios:
+  1. Pending or running - Atomically marks the execution cancelled, kills a
+     running task if any, cancels the Oban job, and updates
      the execution to completed with exit code 143 and "Command cancelled"
      output
   2. Completed - No action taken (already finalized)
@@ -514,8 +540,8 @@ defmodule EdgeAgent.Commands do
   """
   @spec cancel_execution(CommandExecution.t()) :: {:ok, map()}
   def cancel_execution(execution) do
-    case execution.status do
-      :pending ->
+    case cancel_pending_or_running_execution(execution.id) do
+      :cancelled ->
         # Try to kill running task if executing
         task_kill_result =
           case ExecutionRegistry.get_task(execution.id) do
@@ -529,17 +555,8 @@ defmodule EdgeAgent.Commands do
               :task_killed
           end
 
-        # Cancel Oban job (prevents future execution)
+        # Cancel Oban job (prevents a future execution).
         oban_result = cancel_oban_job(execution.id)
-
-        # Update execution to cancelled
-        {:ok, _updated} =
-          update_command_execution(execution, %{
-            status: :completed,
-            output: "Command cancelled",
-            exit_code: 143,
-            completed_at: DateTime.truncate(DateTime.utc_now(), :second)
-          })
 
         Logger.info("Execution #{execution.id} cancelled successfully")
 
@@ -557,6 +574,57 @@ defmodule EdgeAgent.Commands do
       :expired ->
         Logger.debug("Execution #{execution.id} already expired, ignoring cancel request")
         {:ok, %{action: :already_expired}}
+
+      :not_found ->
+        Logger.debug("Execution #{execution.id} no longer exists, ignoring cancel request")
+        {:ok, %{action: :not_found}}
+    end
+  end
+
+  defp complete_running_execution(execution_id, output, exit_code) do
+    query = from(ce in CommandExecution, where: ce.id == ^execution_id and ce.status == :running)
+    now = DateTime.truncate(DateTime.utc_now(), :second)
+
+    attrs = [
+      status: :completed,
+      output: output,
+      exit_code: exit_code,
+      completed_at: now,
+      updated_at: now
+    ]
+
+    case Repo.update_all(query, set: attrs) do
+      {1, _} -> :ok
+      {0, _} -> :stale
+    end
+  end
+
+  defp cancel_pending_or_running_execution(execution_id) do
+    query =
+      from(ce in CommandExecution,
+        where: ce.id == ^execution_id and ce.status in [:pending, :running]
+      )
+
+    now = DateTime.truncate(DateTime.utc_now(), :second)
+
+    attrs = [
+      status: :completed,
+      output: "Command cancelled",
+      exit_code: 143,
+      completed_at: now,
+      updated_at: now
+    ]
+
+    case Repo.update_all(query, set: attrs) do
+      {1, _} ->
+        :cancelled
+
+      {0, _} ->
+        case Repo.get(CommandExecution, execution_id) do
+          nil -> :not_found
+          %{status: :completed} -> :completed
+          %{status: :expired} -> :expired
+        end
     end
   end
 

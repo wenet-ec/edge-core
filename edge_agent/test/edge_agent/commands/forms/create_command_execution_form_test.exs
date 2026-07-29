@@ -53,14 +53,18 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionFormTest do
       assert result["status"] == :pending
     end
 
-    test "status: completed is accepted (cast to atom)" do
-      assert {:ok, result} = CreateCommandExecutionForm.changeset(valid_attrs(%{"status" => "completed"}))
-      assert result["status"] == :completed
+    test "status: completed is rejected because it is Agent-internal" do
+      assert {:error, changeset} =
+               CreateCommandExecutionForm.changeset(valid_attrs(%{"status" => "completed"}))
+
+      assert Map.has_key?(errors_on(changeset), :status)
     end
 
-    test "status: expired is accepted (cast to atom)" do
-      assert {:ok, result} = CreateCommandExecutionForm.changeset(valid_attrs(%{"status" => "expired"}))
-      assert result["status"] == :expired
+    test "status: expired is rejected because it is Agent-internal" do
+      assert {:error, changeset} =
+               CreateCommandExecutionForm.changeset(valid_attrs(%{"status" => "expired"}))
+
+      assert Map.has_key?(errors_on(changeset), :status)
     end
 
     test "expires_at is accepted when present" do

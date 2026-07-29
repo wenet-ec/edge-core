@@ -23,6 +23,11 @@ defmodule EdgeAdmin.Release do
   require Logger
 
   @app :edge_admin
+  # PostgreSQL advisory-lock namespace for the outer migration bootstrap lock.
+  # This intentionally differs from Ecto's own migration lock: it is acquired
+  # before Ecto initializes `schema_migrations`, closing that first-table race.
+  @migration_bootstrap_lock_namespace 116_203
+  @migration_bootstrap_lock_key 1
   @superadmin_bootstrap_max_retries 6
   @superadmin_bootstrap_base_delay_ms 250
   @superadmin_bootstrap_max_delay_ms 2_000
@@ -63,7 +68,10 @@ defmodule EdgeAdmin.Release do
     boot([])
 
     for repo <- repos() do
-      {:ok, _, _} = Migrator.with_repo(repo, &Migrator.run(&1, :up, all: true))
+      {:ok, _, _} =
+        Migrator.with_repo(repo, fn repo ->
+          with_migration_bootstrap_lock(repo, fn -> Migrator.run(repo, :up, all: true) end)
+        end)
     end
   end
 
@@ -409,6 +417,45 @@ defmodule EdgeAdmin.Release do
     case Application.fetch_env!(@app, :db_adapter) do
       :sqlite -> :exqlite
       _ -> :postgrex
+    end
+  end
+
+  # Ecto creates `schema_migrations` before its configured migration lock can
+  # protect migration execution. On a brand-new PostgreSQL database, multiple
+  # Admin replicas can therefore race while PostgreSQL creates that table's
+  # implicit row type. Hold an outer, session-scoped lock first so only one
+  # replica can reach Ecto's bootstrap path at a time.
+  #
+  # The lock lives on the Repo checkout connection. PostgreSQL releases it if
+  # this process or its connection dies; the explicit unlock covers success and
+  # ordinary migration failures. This requires the same direct/session-pinned
+  # PostgreSQL connection contract as Ecto's `:pg_advisory_lock`.
+  defp with_migration_bootstrap_lock(repo, fun) do
+    case Application.fetch_env!(@app, :db_adapter) do
+      :postgres ->
+        Logger.info("Waiting for PostgreSQL migration bootstrap lock...")
+
+        repo.checkout(fn ->
+          repo.query!(
+            "SELECT pg_advisory_lock($1::integer, $2::integer)",
+            [@migration_bootstrap_lock_namespace, @migration_bootstrap_lock_key]
+          )
+
+          Logger.info("Acquired PostgreSQL migration bootstrap lock")
+
+          try do
+            fun.()
+          after
+            _ =
+              repo.query(
+                "SELECT pg_advisory_unlock($1::integer, $2::integer)",
+                [@migration_bootstrap_lock_namespace, @migration_bootstrap_lock_key]
+              )
+          end
+        end)
+
+      :sqlite ->
+        fun.()
     end
   end
 

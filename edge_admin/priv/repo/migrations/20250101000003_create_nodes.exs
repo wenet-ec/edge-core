@@ -9,17 +9,37 @@ defmodule EdgeAdmin.Repo.Migrations.CreateNodes do
 
       # Informative fields
       add :id_type, :string, null: false
-      add :status, :string, null: false, default: "healthy"
+
+      add :status, :string,
+        null: false,
+        default: "healthy"
+
       add :last_seen_at, :utc_datetime
       add :version, :string, null: false
 
       # Operational fields
-      add :http_port, :integer, null: false
-      add :ssh_port, :integer, null: false
-      add :host_metrics_port, :integer, null: false
-      add :wireguard_metrics_port, :integer, null: false
-      add :http_proxy_port, :integer, null: false
-      add :socks5_proxy_port, :integer, null: false
+      add :http_port, :integer,
+        null: false,
+        check: %{name: "nodes_http_port_valid", expr: "http_port BETWEEN 1 AND 65535"}
+
+      add :ssh_port, :integer, null: false, check: %{name: "nodes_ssh_port_valid", expr: "ssh_port BETWEEN 1 AND 65535"}
+
+      add :host_metrics_port, :integer,
+        null: false,
+        check: %{name: "nodes_host_metrics_port_valid", expr: "host_metrics_port BETWEEN 1 AND 65535"}
+
+      add :wireguard_metrics_port, :integer,
+        null: false,
+        check: %{name: "nodes_wireguard_metrics_port_valid", expr: "wireguard_metrics_port BETWEEN 1 AND 65535"}
+
+      add :http_proxy_port, :integer,
+        null: false,
+        check: %{name: "nodes_http_proxy_port_valid", expr: "http_proxy_port BETWEEN 1 AND 65535"}
+
+      add :socks5_proxy_port, :integer,
+        null: false,
+        check: %{name: "nodes_socks5_proxy_port_valid", expr: "socks5_proxy_port BETWEEN 1 AND 65535"}
+
       add :api_token, :string, null: false
       add :proxy_password, :string, null: false
       add :self_update_enabled, :boolean, null: false, default: false
@@ -28,6 +48,19 @@ defmodule EdgeAdmin.Repo.Migrations.CreateNodes do
       add :netmaker_host_id, :binary_id, null: false
 
       timestamps(type: :utc_datetime)
+    end
+
+    if repo().__adapter__() == Ecto.Adapters.Postgres do
+      create constraint(:nodes, :nodes_http_port_valid, check: "http_port BETWEEN 1 AND 65535")
+      create constraint(:nodes, :nodes_ssh_port_valid, check: "ssh_port BETWEEN 1 AND 65535")
+      create constraint(:nodes, :nodes_host_metrics_port_valid, check: "host_metrics_port BETWEEN 1 AND 65535")
+
+      create constraint(:nodes, :nodes_wireguard_metrics_port_valid,
+               check: "wireguard_metrics_port BETWEEN 1 AND 65535"
+             )
+
+      create constraint(:nodes, :nodes_http_proxy_port_valid, check: "http_proxy_port BETWEEN 1 AND 65535")
+      create constraint(:nodes, :nodes_socks5_proxy_port_valid, check: "socks5_proxy_port BETWEEN 1 AND 65535")
     end
 
     create unique_index(:nodes, [:api_token])

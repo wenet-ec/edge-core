@@ -8,10 +8,18 @@ defmodule EdgeAdmin.Repo.Migrations.CreateClusters do
       add :name, :string, null: false
       add :ipv4_range, :string, null: false
       add :ipv6_range, :string, null: false
-      add :node_limit, :integer, null: true
+
+      add :node_limit, :integer,
+        null: true,
+        check: %{name: "clusters_node_limit_positive", expr: "node_limit IS NULL OR node_limit > 0"}
+
       add :deleted_at, :utc_datetime, null: true
 
       timestamps(type: :utc_datetime)
+    end
+
+    if repo().__adapter__() == Ecto.Adapters.Postgres do
+      create constraint(:clusters, :clusters_node_limit_positive, check: "node_limit IS NULL OR node_limit > 0")
     end
 
     create unique_index(:clusters, [:name])

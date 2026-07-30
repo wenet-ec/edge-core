@@ -61,6 +61,7 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
     |> validate_required([:key, :cluster_id])
     |> validate_uses_remaining()
     |> validate_expires_at()
+    |> check_constraint(:uses_remaining, name: :enrollment_keys_uses_remaining_nonnegative)
     |> unique_constraint(:key)
     |> foreign_key_constraint(:cluster_id)
   end

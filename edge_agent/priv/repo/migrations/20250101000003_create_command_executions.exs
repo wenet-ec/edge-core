@@ -7,8 +7,14 @@ defmodule EdgeAgent.Repo.Migrations.CreateCommandExecutions do
       add :id, :binary_id, primary_key: true
       add :command_id, :binary_id, null: false
       add :node_id, :binary_id, null: false
-      add :command_text, :text, null: false
-      add :timeout, :integer
+
+      add :command_text, :text,
+        null: false,
+        check: %{name: "command_executions_command_text_present", expr: "length(trim(command_text)) > 0"}
+
+      add :timeout, :integer,
+        check: %{name: "command_executions_timeout_positive", expr: "timeout IS NULL OR timeout > 0"}
+
       add :expires_at, :utc_datetime
       add :status, :string, null: false
       add :output, :text

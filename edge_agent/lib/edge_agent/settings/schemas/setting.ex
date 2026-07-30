@@ -24,6 +24,7 @@ defmodule EdgeAgent.Settings.Schemas.Setting do
     |> cast(attrs, [:key, :value])
     |> validate_required([:key, :value])
     |> validate_length(:key, min: 1, max: 255)
+    |> check_constraint(:key, name: :settings_key_present)
     |> unique_constraint(:key)
   end
 end

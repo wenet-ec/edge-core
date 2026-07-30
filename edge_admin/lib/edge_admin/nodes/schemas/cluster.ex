@@ -87,6 +87,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
     |> validate_format(:name, Naming.cluster_name_regex())
     |> validate_exclusion(:name, ~w(default), message: "is reserved")
     |> validate_number(:node_limit, greater_than: 0)
+    |> check_constraint(:node_limit, name: :clusters_node_limit_positive)
     |> validate_ipv4_cidr_format()
     |> validate_ipv4_exclusions()
     |> validate_ipv6_cidr()

@@ -198,6 +198,12 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
       :version,
       :self_update_enabled
     ])
+    |> check_constraint(:http_port, name: :nodes_http_port_valid)
+    |> check_constraint(:ssh_port, name: :nodes_ssh_port_valid)
+    |> check_constraint(:host_metrics_port, name: :nodes_host_metrics_port_valid)
+    |> check_constraint(:wireguard_metrics_port, name: :nodes_wireguard_metrics_port_valid)
+    |> check_constraint(:http_proxy_port, name: :nodes_http_proxy_port_valid)
+    |> check_constraint(:socks5_proxy_port, name: :nodes_socks5_proxy_port_valid)
     |> unique_constraint(:id, name: :nodes_pkey)
     |> unique_constraint(:api_token)
     |> foreign_key_constraint(:cluster_id)

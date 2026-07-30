@@ -51,6 +51,8 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
     |> validate_command_text()
     |> validate_timeout()
     |> validate_expires_at()
+    |> check_constraint(:command_text, name: :commands_command_text_present)
+    |> check_constraint(:timeout, name: :commands_timeout_positive)
   end
 
   @doc false

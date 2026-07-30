@@ -56,7 +56,9 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecution do
       :completed_at
     ])
     |> validate_required([:id, :command_id, :node_id, :command_text, :status])
+    |> check_constraint(:command_text, name: :command_executions_command_text_present)
     |> validate_timeout()
+    |> check_constraint(:timeout, name: :command_executions_timeout_positive)
     |> unique_constraint(:id, name: :command_executions_id_index)
   end
 

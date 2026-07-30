@@ -8,7 +8,7 @@ defmodule EdgeAdmin.Release do
 
     * `migrate/0` — run pending Ecto migrations on the active repo
     * `rollback/1` — roll back to a target migration version
-    * `rotate_cloak_key/0` — re-encrypt rows through old → new Cloak key
+    * `rotate_encryption_key/0` — re-encrypt rows through old → new encryption key
       (gated on the four `ROTATE_*` env vars; logs skip and exits clean
       otherwise)
     * `create_netmaker_superadmin/0` — bootstrap the Netmaker UI admin
@@ -258,30 +258,30 @@ defmodule EdgeAdmin.Release do
   end
 
   # =============================================================================
-  # Cloak Key Rotation
+  # Encryption Key Rotation
   # =============================================================================
 
   @doc """
-  Rotates the Cloak encryption key.
+  Rotates the encryption-at-rest key.
 
   Idempotent — safe to run multiple times. Reads four env vars; if any is
   missing, logs skip and returns `:ok` without touching the DB. When all four
   are present, re-encrypts every row in every schema returned by
-  `EdgeAdmin.Vault.encrypted_schemas/0` through `old → new`.
+  `EdgeAdmin.Encryption.encrypted_schemas/0` through `old → new`.
 
   Required env vars (all four, or none):
-    - `ROTATE_OLD_CLOAK_KEY`  — old key, base64-encoded 32 bytes
-    - `ROTATE_OLD_CLOAK_TAG`  — old tag (e.g. "AES.GCM.V1")
-    - `ROTATE_NEW_CLOAK_KEY`  — new key, base64-encoded 32 bytes
-    - `ROTATE_NEW_CLOAK_TAG`  — new tag (e.g. "AES.GCM.V2")
+    - `ROTATE_OLD_ENCRYPTION_KEY`  — old key, base64-encoded 32 bytes
+    - `ROTATE_OLD_ENCRYPTION_TAG`  — old tag (e.g. "AES.GCM.V1")
+    - `ROTATE_NEW_ENCRYPTION_KEY`  — new key, base64-encoded 32 bytes
+    - `ROTATE_NEW_ENCRYPTION_TAG`  — new tag (e.g. "AES.GCM.V2")
 
-  Idempotent because Cloak's per-row tag prefix tells the migrator which
+  Idempotent because the per-row tag prefix tells the migrator which
   cipher decrypted each row; a row already encrypted under the new tag is
   decrypted with the new key and re-encrypted with the new key (wasteful
   but correct). A mid-rotation interruption can be resumed by re-running.
 
-  After the task completes successfully, operators update `CLOAK_KEY` /
-  `CLOAK_TAG` to the new values and remove the four `ROTATE_*` env vars on
+  After the task completes successfully, operators update `ENCRYPTION_KEY` /
+  `ENCRYPTION_TAG` to the new values and remove the four `ROTATE_*` env vars on
   the next deploy. There is no time pressure — running the task again with
   the old `ROTATE_*` values would still succeed but do nothing useful.
 
@@ -289,7 +289,7 @@ defmodule EdgeAdmin.Release do
     - 0: rotation completed, or skipped because envs missing
     - 1: rotation attempted but failed (key decode error, DB error, etc.)
   """
-  def rotate_cloak_key do
+  def rotate_encryption_key do
     boot([:repo])
 
     case read_rotation_envs() do
@@ -297,9 +297,9 @@ defmodule EdgeAdmin.Release do
         :ok
 
       {:ok, params} ->
-        Logger.info("Starting cloak rotation: #{params.old_tag} → #{params.new_tag}")
+        Logger.info("Starting encryption key rotation: #{params.old_tag} → #{params.new_tag}")
 
-        Application.put_env(:edge_admin, EdgeAdmin.Vault,
+        Application.put_env(:edge_admin, EdgeAdmin.Encryption,
           ciphers: [
             default: {GCM, tag: params.new_tag, key: params.new_key},
             retired: {GCM, tag: params.old_tag, key: params.old_key}
@@ -307,18 +307,18 @@ defmodule EdgeAdmin.Release do
         )
 
         {:ok, _} = Application.ensure_all_started(:cloak_ecto)
-        {:ok, _} = EdgeAdmin.Vault.start_link()
+        {:ok, _} = EdgeAdmin.Encryption.start_link()
 
-        do_rotate(EdgeAdmin.Vault.encrypted_schemas())
+        do_rotate(EdgeAdmin.Encryption.encrypted_schemas())
     end
   end
 
   defp read_rotation_envs do
     envs = %{
-      old_key: System.get_env("ROTATE_OLD_CLOAK_KEY"),
-      old_tag: System.get_env("ROTATE_OLD_CLOAK_TAG"),
-      new_key: System.get_env("ROTATE_NEW_CLOAK_KEY"),
-      new_tag: System.get_env("ROTATE_NEW_CLOAK_TAG")
+      old_key: System.get_env("ROTATE_OLD_ENCRYPTION_KEY"),
+      old_tag: System.get_env("ROTATE_OLD_ENCRYPTION_TAG"),
+      new_key: System.get_env("ROTATE_NEW_ENCRYPTION_KEY"),
+      new_tag: System.get_env("ROTATE_NEW_ENCRYPTION_TAG")
     }
 
     missing = for {k, nil} <- envs, do: k
@@ -345,8 +345,8 @@ defmodule EdgeAdmin.Release do
   end
 
   defp decode_rotation_keys(envs) do
-    with {:ok, old_key} <- decode_key(envs.old_key, "ROTATE_OLD_CLOAK_KEY"),
-         {:ok, new_key} <- decode_key(envs.new_key, "ROTATE_NEW_CLOAK_KEY") do
+    with {:ok, old_key} <- decode_key(envs.old_key, "ROTATE_OLD_ENCRYPTION_KEY"),
+         {:ok, new_key} <- decode_key(envs.new_key, "ROTATE_NEW_ENCRYPTION_KEY") do
       {:ok, %{old_key: old_key, old_tag: envs.old_tag, new_key: new_key, new_tag: envs.new_tag}}
     end
   end
@@ -378,7 +378,7 @@ defmodule EdgeAdmin.Release do
       Cloak.Ecto.Migrator.migrate(repo, schema)
     end)
 
-    Logger.info("Cloak Rotation complete.")
+    Logger.info("Encryption key rotation complete.")
     :ok
   end
 

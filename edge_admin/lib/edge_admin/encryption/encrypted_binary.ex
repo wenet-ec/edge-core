@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/vault/encrypted_binary.ex
-defmodule EdgeAdmin.Vault.EncryptedBinary do
+# edge_admin/lib/edge_admin/encryption/encrypted_binary.ex
+defmodule EdgeAdmin.Encryption.EncryptedBinary do
   @moduledoc """
   Ecto type for opaque encrypted binary fields (e.g. HMAC secrets).
 
@@ -7,5 +7,5 @@ defmodule EdgeAdmin.Vault.EncryptedBinary do
   string at the schema level; the round-trip through Cloak is transparent.
   """
 
-  use Cloak.Ecto.Binary, vault: EdgeAdmin.Vault
+  use Cloak.Ecto.Binary, vault: EdgeAdmin.Encryption
 end

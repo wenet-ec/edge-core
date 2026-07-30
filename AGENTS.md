@@ -253,7 +253,7 @@ VARIANT=lite ./bin/run all up -d
 - `ssh_usernames` - SSH login credentials
 - `ssh_public_keys` - Authorized keys for SSH users
 - `self_update_requests` - Container update scheduling
-- `webhooks` - User-configured HTTP delivery destinations for events; `secret` and `headers` are Cloak-encrypted
+- `webhooks` - User-configured HTTP delivery destinations for events; `secret` and `headers` are encrypted at rest
 - `oban_jobs` - Background job queue
 
 **Edge Agent (SQLite):**
@@ -293,7 +293,7 @@ edge_core/
 │   │   │   ├── diagnostics/     # Node diagnostics
 │   │   │   ├── edge_clusters/   # Cluster management + Erlang peer coordination
 │   │   │   ├── events/          # Event publish path (catalog, broker channel, webhook channel)
-│   │   │   └── vault/           # Cloak vault + encrypted Ecto types
+│   │   │   └── encryption/      # Encryption boundary + encrypted Ecto types
 │   │   └── edge_admin_web/      # Phoenix web layer
 │   │       ├── controllers/     # REST API controllers
 │   │       ├── schemas/         # OpenAPI schemas
@@ -356,8 +356,8 @@ edge_core/
 - `events/events.ex` - Public publish API: `publish/1`. Builds the CloudEvents envelope and fans out to every configured delivery channel. (No `healthy?/0` here — health checks live per-channel: `EdgeAdmin.Events.Broker.healthy?/0`, etc.)
 - `events/catalog.ex` - Typed event structs + `event_type/1` + `to_data/1` (catalog of all event types)
 - `events/broker/broker.ex` - Broker delivery channel: `enqueue/1` (called by `Events.publish/1`), `publish_envelope/1` (called by the Oban worker), `healthy?/0`
-- `vault/vault.ex` - `EdgeAdmin.Vault` (Cloak.Vault) + `encrypted_schemas/0` registry used by the rotation task. Wired via `CLOAK_KEY` + `CLOAK_TAG` in `runtime.exs`, started before the Repo in the supervision tree.
-- `vault/encrypted_binary.ex` / `vault/encrypted_map.ex` - Cloak Ecto types for opaque binary and map columns. Migration column type is always `:binary`; types JSON-encode + AES-GCM-encrypt transparently on the schema side.
+- `encryption/encryption.ex` - `EdgeAdmin.Encryption` (implemented with `Cloak.Vault`) + `encrypted_schemas/0` registry used by the rotation task. Wired via `ENCRYPTION_KEY` + `ENCRYPTION_TAG` in `runtime.exs`, started before the Repo in the supervision tree.
+- `encryption/encrypted_binary.ex` / `encryption/encrypted_map.ex` - Encrypted Ecto types for opaque binary and map columns. Migration column type is always `:binary`; types JSON-encode + AES-GCM-encrypt transparently on the schema side.
 - `events/broker/adapters/nats.ex` - NATS adapter (gnat); JetStream enabled via `EVENT_BROKER_NATS_JETSTREAM=true`
 - `events/broker/adapters/kafka.ex` - Kafka-compatible adapter (brod)
 - `events/broker/adapters/rabbitmq.ex` - AMQP 0-9-1 adapter (amqp lib); durable topic exchange `edge.events`. Operator-facing adapter id is `amqp091` (alias: `rabbitmq`); module/file kept under `Rabbitmq` since the protocol's primary deployment is RabbitMQ. Works against RabbitMQ, LavinMQ, AmazonMQ for RabbitMQ, CloudAMQP.
@@ -368,7 +368,7 @@ edge_core/
 - `events/broker/workers/publish_event_worker.ex` - Oban worker for async broker delivery
 - **Not currently supported (demand-gated for future):** AMQP 1.0 (different protocol from AMQP 0-9-1 — would be a new adapter, not a flag on `amqp091`) and Apache Pulsar (not Kafka-wire-compatible despite KoP plugin existing). Add only if a real user asks; do not pre-build.
 - `events/webhooks/webhooks.ex` - Webhook delivery channel: `list_webhooks/1` (supports `?event_type=` post-filter for "which webhooks fire on this event"), `get_webhook/1`, `create_webhook/1`, `delete_webhook/1`, `fan_out/1` (called by `Events.publish/1`; pages through `list_webhooks/1`), `deliver_event/2` (called by the Oban worker). Webhooks are immutable after create; retry budget is `WEBHOOK_MAX_ATTEMPTS` (default 3).
-- `events/webhooks/schemas/webhook.ex` - Ecto schema; `secret` and `headers` are Cloak-encrypted at rest via `Vault.EncryptedBinary` / `Vault.EncryptedMap`.
+- `events/webhooks/schemas/webhook.ex` - Ecto schema; `secret` and `headers` are encrypted at rest via `Encryption.EncryptedBinary` / `Encryption.EncryptedMap`.
 - `events/webhooks/forms/create_webhook_form.ex` - Input validation (URL/SSRF/secret length/headers shape/`subscribed_events` membership in `Catalog.all_event_types/0`).
 - `events/webhooks/ssrf.ex` - SSRF deny list. Loopback, RFC1918/ULA, link-local, multicast, cloud-metadata IPs/hostnames. IPv4-mapped IPv6 normalised before matching. Opt out per deployment with `WEBHOOK_ALLOW_PRIVATE_IPS=true`.
 - `events/webhooks/delivery.ex` - HTTP request building (`POST` only), HMAC-SHA256 signing into `X-Edge-Signature`, response classification (`:ok | {:recoverable, _} | {:terminal, _}`). Retry classification: 408/429/503 + network errors → recoverable, other 4xx/5xx → terminal.
@@ -502,8 +502,8 @@ The full annotated list lives in `deploy/production/.envs/.edge_admin` — read 
 - `DB_ADAPTER` — `postgres` (default) or `sqlite`. Same compiled binary, runtime-switched. SQLite is single-instance only, no clustering.
 - `DB_MIGRATION_LOCK` — `pg_advisory_lock` (default) or `disabled`. `pg_advisory_lock` needs a session-mode Postgres connection — behind PgBouncer transaction pooling, point migrations at the primary directly (same pattern as `DATABASE_NOTIFIER_URL`). `disabled` relies on the migrate sidecar to serialize. Ecto's `:table_lock` default is deliberately not exposed — historically deadlocks on this codebase under heavy DDL even single-admin.
 - `ADMIN_DEBUG_ENABLED` — exposes the Admin debug surface at `/admin/debug` (default `false`). It is for ad-hoc control-plane troubleshooting; enable `BASIC_AUTH_ENABLED` in any deployment where it is reachable by others.
-- `CLOAK_KEY` / `CLOAK_TAG` — required at boot. Encryption-at-rest for `webhooks.secret` and `webhooks.headers`. If `CLOAK_KEY` is lost, every encrypted row is unrecoverable — back it up alongside `MASTER_KEY`/`SECRET_KEY_BASE`. `CLOAK_TAG` convention: `AES.GCM.V<N>`, bumped on rotation.
-- `ROTATE_OLD_CLOAK_KEY` / `ROTATE_OLD_CLOAK_TAG` / `ROTATE_NEW_CLOAK_KEY` / `ROTATE_NEW_CLOAK_TAG` — set all four to trigger rotation via `EdgeAdmin.Release.rotate_cloak_key/0`. Auto-runs on `/start`, also `examples/operations/rotate_cloak_key.yml` for one-off. Idempotent — logs skip if any of the four is missing.
+- `ENCRYPTION_KEY` / `ENCRYPTION_TAG` — required at boot. Encryption-at-rest for `webhooks.secret` and `webhooks.headers`. If `ENCRYPTION_KEY` is lost, every encrypted row is unrecoverable — back it up alongside `MASTER_KEY`/`SECRET_KEY_BASE`. `ENCRYPTION_TAG` convention: `AES.GCM.V<N>`, bumped on rotation.
+- `ROTATE_OLD_ENCRYPTION_KEY` / `ROTATE_OLD_ENCRYPTION_TAG` / `ROTATE_NEW_ENCRYPTION_KEY` / `ROTATE_NEW_ENCRYPTION_TAG` — set all four to trigger rotation via `EdgeAdmin.Release.rotate_encryption_key/0`. Auto-runs on `/start`, also `examples/operations/rotate_encryption_key.yml` for one-off. Idempotent — logs skip if any of the four is missing.
 - `EVENT_BROKER_ADAPTER` — `nats`, `kafka`, `amqp091` (alias: `rabbitmq`), `redis`, `mqtt`, `aws_sns`, `google_pubsub`. Endpoint env var is namespaced per adapter — see the `.edge_admin` file for the matrix.
 - `CORE_NAME` — identifies this core instance in every event envelope (default: `"default"`). Promoted to message attributes on AWS SNS / Google Pub/Sub for filter policies.
 - `EVENT_DELIVERY_MAX_AGE_SECONDS` — cancel broker-publish + webhook-delivery jobs older than N seconds (default `3600`). Checked at `perform/1` start. Set `0` to disable.

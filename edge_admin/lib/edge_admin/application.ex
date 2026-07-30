@@ -73,7 +73,7 @@ defmodule EdgeAdmin.Application do
   end
 
   defp build_children(:test) do
-    [EdgeAdmin.Vault] ++
+    [EdgeAdmin.Encryption] ++
       repo_children() ++
       [
         {Phoenix.PubSub, name: EdgeAdmin.PubSub},
@@ -83,7 +83,7 @@ defmodule EdgeAdmin.Application do
   end
 
   defp build_children(:server) do
-    [EdgeAdmin.PromEx, EdgeAdmin.Vault] ++
+    [EdgeAdmin.PromEx, EdgeAdmin.Encryption] ++
       repo_children() ++
       [
         {Phoenix.PubSub, name: EdgeAdmin.PubSub},

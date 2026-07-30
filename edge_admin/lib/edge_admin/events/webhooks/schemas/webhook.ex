@@ -3,10 +3,10 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
   @moduledoc false
   use EdgeAdmin.Schema
 
+  alias EdgeAdmin.Encryption.EncryptedBinary
+  alias EdgeAdmin.Encryption.EncryptedMap
   alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Events.Webhooks.Limits
-  alias EdgeAdmin.Vault.EncryptedBinary
-  alias EdgeAdmin.Vault.EncryptedMap
 
   @type t :: %__MODULE__{
           id: String.t(),

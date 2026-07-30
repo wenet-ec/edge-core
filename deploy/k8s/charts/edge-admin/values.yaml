@@ -155,7 +155,7 @@ sysctls:
 secrets:
   # Set existingSecret to the name of a pre-created Secret to skip chart-managed secret creation.
   # The Secret must contain: SECRET_KEY_BASE, MASTER_KEY, DB_PASSWORD,
-  #   NETMAKER_MASTER_KEY, NETMAKER_SUPERADMIN_PASSWORD, CLOAK_KEY, CLOAK_TAG.
+  #   NETMAKER_MASTER_KEY, NETMAKER_SUPERADMIN_PASSWORD, ENCRYPTION_KEY, ENCRYPTION_TAG.
   # VPN_CLUSTER_COOKIE is optional; leave it empty to use the built-in default.
   # Optional broker auth (only needed when EVENT_BROKER_ENABLED=true and broker requires auth).
   # RabbitMQ and Redis embed credentials in EVENT_BROKER_RABBITMQ_URL / EVENT_BROKER_REDIS_URL — no separate fields needed.
@@ -167,18 +167,18 @@ secrets:
   netmakerMasterKey: "changeme"
   netmakerSuperadminPassword: "changeme"
   vpnClusterCookie: ""
-  # Cloak vault. cloakKey is 32 bytes of base64; cloakTag is the identifier
+  # Encryption at rest. encryptionKey is 32 bytes of base64; encryptionTag is the identifier
   # paired with the key (convention: AES.GCM.V<N>, bumped on each rotation).
   # Required at boot — the admin will not start without these set.
-  cloakKey: "changeme"
-  cloakTag: "AES.GCM.V1"
+  encryptionKey: "changeme"
+  encryptionTag: "AES.GCM.V1"
   # Rotation envs. Set ALL FOUR to trigger rotation on the next admin start (or
-  # via the one-off `rotate_cloak_key` release script). Leave empty otherwise;
+  # via the one-off `rotate_encryption_key` release script). Leave empty otherwise;
   # they're omitted from the rendered Secret when blank. Idempotent.
-  rotateOldCloakKey: ""
-  rotateOldCloakTag: ""
-  rotateNewCloakKey: ""
-  rotateNewCloakTag: ""
+  rotateOldEncryptionKey: ""
+  rotateOldEncryptionTag: ""
+  rotateNewEncryptionKey: ""
+  rotateNewEncryptionTag: ""
   # NATS auth — pick one, mutually exclusive (token takes precedence)
   eventBrokerNatsToken: ""       # shared token (simple/self-hosted)
   eventBrokerNatsUsername: ""    # username + password

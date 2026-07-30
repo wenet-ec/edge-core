@@ -123,9 +123,9 @@ COPY ./deploy/local/compose/edge_admin/migrate /migrate
 RUN sed -i 's/\r$//g' /migrate
 RUN chmod +x /migrate
 
-COPY ./deploy/local/compose/edge_admin/rotate_cloak_key /rotate_cloak_key
-RUN sed -i 's/\r$//g' /rotate_cloak_key
-RUN chmod +x /rotate_cloak_key
+COPY ./deploy/local/compose/edge_admin/rotate_encryption_key /rotate_encryption_key
+RUN sed -i 's/\r$//g' /rotate_encryption_key
+RUN chmod +x /rotate_encryption_key
 
 ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint"]
 

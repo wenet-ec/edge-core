@@ -66,10 +66,10 @@ mix deps.get
 mix compile
 mix run --no-start -e "EdgeAdmin.Release.migrate()"
 
-# Rotate Cloak encryption key when ROTATE_OLD_CLOAK_* + ROTATE_NEW_CLOAK_* envs
+# Rotate the encryption key when ROTATE_OLD_ENCRYPTION_* + ROTATE_NEW_ENCRYPTION_* envs
 # are set. Idempotent — logs skip when envs are absent.
-echo "Checking Cloak key rotation..."
-mix run --no-start -e "EdgeAdmin.Release.rotate_cloak_key()"
+echo "Checking encryption key rotation..."
+mix run --no-start -e "EdgeAdmin.Release.rotate_encryption_key()"
 
 # Bootstrap Netmaker superadmin
 echo "Bootstrapping Netmaker superadmin..."

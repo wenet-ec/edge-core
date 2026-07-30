@@ -1,0 +1,4 @@
+#!/bin/sh
+# edge_admin/rel/overlays/bin/rotate_encryption_key
+cd -P -- "$(dirname -- "$0")"
+exec ./edge_admin eval EdgeAdmin.Release.rotate_encryption_key

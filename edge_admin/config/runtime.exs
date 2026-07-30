@@ -24,40 +24,41 @@ alias EdgeAdmin.Repo.SQLite
 ###
 
 ###
-# Cloak vault — encryption-at-rest for sensitive Ecto columns.
+# Encryption at rest for sensitive Ecto columns.
 #
-# CLOAK_KEY: 32 bytes of base64. Generate with: openssl rand -base64 32
-# CLOAK_TAG: short identifier prepended to every ciphertext blob, paired 1:1
+# ENCRYPTION_KEY: 32 bytes of base64. Generate with: openssl rand -base64 32
+# ENCRYPTION_TAG: short identifier prepended to every ciphertext blob, paired 1:1
 #            with the key. Convention: AES.GCM.V1 / V2 / ... bumped each
-#            rotation. Cloak uses the tag on read to look up which cipher in
-#            the vault config matches, so the DB schema needs no version
+#            rotation. The encryption library uses the tag on read to look up
+#            which cipher matches, so the DB schema needs no version
 #            column — the ciphertext is self-describing.
 #
 # Both required at boot. Same shape as MASTER_KEY / SECRET_KEY_BASE; if
-# CLOAK_KEY is lost, every encrypted row is unrecoverable, so back it up
+# ENCRYPTION_KEY is lost, every encrypted row is unrecoverable, so back it up
 # alongside the rest of your secrets.
 #
-# Rotation is operated through `EdgeAdmin.Release.rotate_cloak_key/0` and
-# the four ROTATE_OLD_CLOAK_KEY / ROTATE_OLD_CLOAK_TAG / ROTATE_NEW_CLOAK_KEY
-# / ROTATE_NEW_CLOAK_TAG env vars; the active CLOAK_KEY/CLOAK_TAG below
+# Rotation is operated through `EdgeAdmin.Release.rotate_encryption_key/0` and
+# the four ROTATE_OLD_ENCRYPTION_KEY / ROTATE_OLD_ENCRYPTION_TAG /
+# ROTATE_NEW_ENCRYPTION_KEY / ROTATE_NEW_ENCRYPTION_TAG env vars; the active
+# ENCRYPTION_KEY/ENCRYPTION_TAG below
 # describes only the currently-active cipher.
 ###
-cloak_key =
-  case Base.decode64(get_env!("CLOAK_KEY")) do
+encryption_key =
+  case Base.decode64(get_env!("ENCRYPTION_KEY")) do
     {:ok, bytes} when byte_size(bytes) == 32 ->
       bytes
 
     {:ok, bytes} ->
       raise """
-      CLOAK_KEY decoded to #{byte_size(bytes)} bytes — must be 32 (AES-256).
+      ENCRYPTION_KEY decoded to #{byte_size(bytes)} bytes — must be 32 (AES-256).
       Generate one with: openssl rand -base64 32
       """
 
     :error ->
-      raise "CLOAK_KEY is not valid base64. Generate one with: openssl rand -base64 32"
+      raise "ENCRYPTION_KEY is not valid base64. Generate one with: openssl rand -base64 32"
   end
 
-cloak_tag = get_env!("CLOAK_TAG")
+encryption_tag = get_env!("ENCRYPTION_TAG")
 
 db_adapter =
   case get_env("DB_ADAPTER", :string, "postgres") do
@@ -71,9 +72,9 @@ repo_impl =
     :postgres -> Postgres
   end
 
-config :edge_admin, EdgeAdmin.Vault,
+config :edge_admin, EdgeAdmin.Encryption,
   ciphers: [
-    default: {Cloak.Ciphers.AES.GCM, tag: cloak_tag, key: cloak_key}
+    default: {Cloak.Ciphers.AES.GCM, tag: encryption_tag, key: encryption_key}
   ]
 
 config :edge_admin, :db_adapter, db_adapter

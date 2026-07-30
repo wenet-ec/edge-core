@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/vault/encrypted_map.ex
-defmodule EdgeAdmin.Vault.EncryptedMap do
+# edge_admin/lib/edge_admin/encryption/encrypted_map.ex
+defmodule EdgeAdmin.Encryption.EncryptedMap do
   @moduledoc """
   Ecto type for encrypted map fields (e.g. webhook header maps).
 
@@ -8,5 +8,5 @@ defmodule EdgeAdmin.Vault.EncryptedMap do
   reverses on read.
   """
 
-  use Cloak.Ecto.Map, vault: EdgeAdmin.Vault
+  use Cloak.Ecto.Map, vault: EdgeAdmin.Encryption
 end

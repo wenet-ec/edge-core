@@ -5,7 +5,7 @@ defmodule EdgeAdmin.Events.Webhooks do
 
   Webhooks are user-configured HTTP endpoints that receive a POST per matching
   event. Subscriptions are persisted in the `webhooks` table with field-level
-  encryption for `secret` and `headers` via Cloak. Delivery is asynchronous
+  encryption for `secret` and `headers`. Delivery is asynchronous
   through Oban; each event is retried up to `WEBHOOK_MAX_ATTEMPTS` (default 3)
   and then dropped.
 

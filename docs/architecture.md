@@ -302,8 +302,8 @@ Edge Agent is a standalone binary that runs on each edge machine. The primary de
 
 | Platform | Architectures | Status | Notes |
 | -------- | ------------- | ------ | ----- |
-| Ubuntu 22.04 | image-supported architectures | Tested | Agent host compatibility target |
-| Ubuntu 24.04 | image-supported architectures | Tested | Agent host compatibility target |
+| Ubuntu 24.04 LTS | image-supported architectures | Tested | Supported Ubuntu LTS release |
+| Ubuntu 26.04 LTS | image-supported architectures | Tested | Supported Ubuntu LTS release |
 | Debian 13 | image-supported architectures | Tested | Agent host compatibility target |
 | Rocky Linux 10 / RHEL-family hosts | image-supported architectures | Tested | RHEL-compatible host validation |
 | Alpine 3.24 | image-supported architectures | Tested | Alpine/musl host validation |

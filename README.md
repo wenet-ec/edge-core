@@ -12,7 +12,7 @@ Edge Core is an infrastructure management platform for fleets of Linux machines 
 
 We named the project "Edge Core" because the founding pain came from edge devices, but **"edge" here means *any machine you don't physically touch right now*** — a cloud VM in Frankfurt, a bare-metal box in a colo, or a Raspberry Pi in a factory. The control plane doesn't care; it's all the same problem.
 
-Runs on standard Linux hosts with container support and WireGuard-capable networking. Agent host testing currently covers Ubuntu 22.04, Ubuntu 24.04, Debian 13, Rocky Linux 10 / RHEL-family hosts, and Alpine 3.24 — see [Host compatibility](#host-compatibility) below. Self-hosted, no vendor lock-in.
+Runs on standard Linux hosts with container support and WireGuard-capable networking. Agent host testing currently covers the two latest Ubuntu LTS releases (24.04 and 26.04), Debian 13, Rocky Linux 10 / RHEL-family hosts, and Alpine 3.24 — see [Host compatibility](#host-compatibility) below. Self-hosted, no vendor lock-in.
 
 The **agent** that runs on your machines and the **Nexmaker** shared library are open-source under Apache 2.0. The **admin** server is source-available under the Elastic License 2.0 — you can self-host, modify, and use it commercially. The one thing we reserve is the right to offer Edge Admin as a hosted service to the public; we hope you respect that decision so we can keep the rest of Edge Core fully free, with no future feature gates or surprise relicensing. See [License](#license) below for details.
 
@@ -157,8 +157,8 @@ Edge Agent ships as a Debian-slim container, so the agent process itself is port
 
 | Platform | Architectures | Status | Notes |
 | -------- | ------------- | ------ | ----- |
-| Ubuntu 22.04 | image-supported architectures | Tested | Agent host compatibility target |
-| Ubuntu 24.04 | image-supported architectures | Tested | Agent host compatibility target |
+| Ubuntu 24.04 LTS | image-supported architectures | Tested | Supported Ubuntu LTS release |
+| Ubuntu 26.04 LTS | image-supported architectures | Tested | Supported Ubuntu LTS release |
 | Debian 13 | image-supported architectures | Tested | Agent host compatibility target |
 | Rocky Linux 10 / RHEL-family hosts | image-supported architectures | Tested | RHEL-compatible host validation |
 | Alpine 3.24 | image-supported architectures | Tested | Alpine/musl host validation |

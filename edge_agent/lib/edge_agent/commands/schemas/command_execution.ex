@@ -56,7 +56,18 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecution do
       :completed_at
     ])
     |> validate_required([:id, :command_id, :node_id, :command_text, :status])
+    |> validate_timeout()
     |> unique_constraint(:id, name: :command_executions_id_index)
+  end
+
+  defp validate_timeout(changeset) do
+    validate_change(changeset, :timeout, fn :timeout, timeout ->
+      if timeout > 0 do
+        []
+      else
+        [timeout: "must be a positive number (in milliseconds)"]
+      end
+    end)
   end
 
   # ---------------------------------------------------------------------------

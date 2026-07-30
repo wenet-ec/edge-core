@@ -65,6 +65,15 @@ defmodule EdgeAgent.Settings.Schemas.SettingTest do
     end
   end
 
+  describe "changeset/2 — key content" do
+    test "rejects a whitespace-only key" do
+      changeset = Setting.changeset(%Setting{}, valid_attrs(%{key: " \t"}))
+
+      refute changeset.valid?
+      assert "can't be blank" in errors_on(changeset).key
+    end
+  end
+
   describe "changeset/2 — cast allowlist" do
     test "ignores unknown fields" do
       changeset = Setting.changeset(%Setting{}, valid_attrs(%{not_a_field: "leak"}))

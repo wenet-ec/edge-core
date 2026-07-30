@@ -140,6 +140,30 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecutionTest do
     end
   end
 
+  describe "changeset/2 — canonical field validation" do
+    test "rejects whitespace-only command text" do
+      changeset =
+        CommandExecution.changeset(%CommandExecution{}, valid_attrs(%{command_text: "  \t"}))
+
+      refute changeset.valid?
+      assert "can't be blank" in errors_on(changeset).command_text
+    end
+
+    test "accepts a positive timeout" do
+      changeset = CommandExecution.changeset(%CommandExecution{}, valid_attrs(%{timeout: 1}))
+      assert changeset.valid?
+    end
+
+    test "rejects a zero or negative timeout" do
+      for timeout <- [0, -1] do
+        changeset = CommandExecution.changeset(%CommandExecution{}, valid_attrs(%{timeout: timeout}))
+
+        refute changeset.valid?
+        assert "must be a positive number (in milliseconds)" in errors_on(changeset).timeout
+      end
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # Cast allowlist
   # ---------------------------------------------------------------------------

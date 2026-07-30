@@ -294,3 +294,4 @@ django_hans/media/
 .pytest_cache/
 .ipython/
 .env
+edge_libs/

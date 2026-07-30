@@ -84,8 +84,8 @@ defmodule EdgeAdmin.Commands.Filters.CommandFiltersTest do
       # Use a past expiry so we don't depend on the schema's
       # validate_expires_at — but we're using struct() insertion that bypasses
       # the changeset, so any timestamp works.
-      past = DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.truncate(:second)
-      future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
+      past = DateTime.utc_now() |> DateTime.shift(hour: -1) |> DateTime.truncate(:second)
+      future = DateTime.utc_now() |> DateTime.shift(hour: 1) |> DateTime.truncate(:second)
 
       past_key = insert_command(%{expires_at: past})
       future_key = insert_command(%{expires_at: future})
@@ -97,7 +97,7 @@ defmodule EdgeAdmin.Commands.Filters.CommandFiltersTest do
     end
 
     test "false matches commands with no expiry set" do
-      future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
+      future = DateTime.utc_now() |> DateTime.shift(hour: 1) |> DateTime.truncate(:second)
 
       _has_expiry = insert_command(%{expires_at: future})
       no_expiry = insert_command(%{expires_at: nil})
@@ -108,7 +108,7 @@ defmodule EdgeAdmin.Commands.Filters.CommandFiltersTest do
     end
 
     test "string 'true' / 'false' are ignored" do
-      future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
+      future = DateTime.utc_now() |> DateTime.shift(hour: 1) |> DateTime.truncate(:second)
       with_exp = insert_command(%{expires_at: future})
       without = insert_command(%{expires_at: nil})
 

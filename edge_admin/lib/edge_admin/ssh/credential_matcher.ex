@@ -25,6 +25,7 @@ defmodule EdgeAdmin.Ssh.CredentialMatcher do
   match succeeded.
   """
 
+  alias EdgeAdmin.PasswordHasher
   alias EdgeAdmin.Ssh.Schemas.SshUsername
 
   @type auth_method :: :password | :public_key | :unknown
@@ -38,16 +39,30 @@ defmodule EdgeAdmin.Ssh.CredentialMatcher do
   """
   @spec check(SshUsername.t() | nil, String.t() | nil, String.t() | nil) ::
           {boolean(), auth_method()}
-  def check(nil, _password, _public_key), do: {false, :unknown}
+  def check(ssh_username, password, public_key) do
+    {verified, auth_method, _password_hash_status} = check_detailed(ssh_username, password, public_key)
+    {verified, auth_method}
+  end
 
-  def check(%SshUsername{password_hash: nil}, password, _) when not is_nil(password), do: {false, :password}
+  @doc false
+  @spec check_detailed(SshUsername.t() | nil, String.t() | nil, String.t() | nil) ::
+          {boolean(), auth_method(), PasswordHasher.verification() | nil}
+  def check_detailed(nil, _password, _public_key), do: {false, :unknown, nil}
 
-  def check(%SshUsername{password_hash: hash}, password, _) when not is_nil(password),
-    do: {Argon2.verify_pass(password, hash), :password}
+  def check_detailed(%SshUsername{password_hash: nil}, password, _) when not is_nil(password),
+    do: {false, :password, nil}
 
-  def check(%SshUsername{ssh_public_keys: []}, _, public_key) when not is_nil(public_key), do: {false, :public_key}
+  def check_detailed(%SshUsername{password_hash: hash}, password, _) when not is_nil(password) do
+    case PasswordHasher.verify(password, hash) do
+      {:ok, status} -> {true, :password, status}
+      :error -> {false, :password, nil}
+    end
+  end
 
-  def check(%SshUsername{ssh_public_keys: keys}, _, public_key) when not is_nil(public_key) do
+  def check_detailed(%SshUsername{ssh_public_keys: []}, _, public_key) when not is_nil(public_key),
+    do: {false, :public_key, nil}
+
+  def check_detailed(%SshUsername{ssh_public_keys: keys}, _, public_key) when not is_nil(public_key) do
     provided_key_normalized = normalize_key(public_key)
 
     result =
@@ -59,7 +74,7 @@ defmodule EdgeAdmin.Ssh.CredentialMatcher do
         Plug.Crypto.secure_compare(provided_key_normalized, stored_key_normalized)
       end)
 
-    {result, :public_key}
+    {result, :public_key, nil}
   end
 
   @doc """

@@ -1217,7 +1217,7 @@ defmodule EdgeAdmin.Commands do
   """
   @spec prune_executions(pos_integer()) :: {:ok, non_neg_integer()}
   def prune_executions(retention_days) when is_integer(retention_days) and retention_days > 0 do
-    cutoff = DateTime.add(DateTime.utc_now(), -retention_days * 86_400, :second)
+    cutoff = DateTime.shift(DateTime.utc_now(), day: -retention_days)
     total = prune_loop(cutoff, 0)
     {:ok, total}
   end

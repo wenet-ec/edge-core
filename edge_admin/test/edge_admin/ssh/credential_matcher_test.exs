@@ -2,9 +2,8 @@
 defmodule EdgeAdmin.Ssh.CredentialMatcherTest do
   use ExUnit.Case, async: true
 
+  alias EdgeAdmin.PasswordHasher
   alias EdgeAdmin.Ssh.CredentialMatcher
-  alias EdgeAdmin.Ssh.Schemas.SshPublicKey
-  alias EdgeAdmin.Ssh.Schemas.SshUsername
 
   # ---------------------------------------------------------------------------
   # check/3 — auth method semantics. The auth_method returned distinguishes
@@ -12,6 +11,9 @@ defmodule EdgeAdmin.Ssh.CredentialMatcherTest do
   # so the audit trail can tell them apart. Failure cases still return the
   # attempted method, not :unknown.
   # ---------------------------------------------------------------------------
+
+  alias EdgeAdmin.Ssh.Schemas.SshPublicKey
+  alias EdgeAdmin.Ssh.Schemas.SshUsername
 
   describe "check/3 — :unknown (no SshUsername record)" do
     test "nil ssh_username always returns {false, :unknown}" do
@@ -32,7 +34,7 @@ defmodule EdgeAdmin.Ssh.CredentialMatcherTest do
     end
 
     test "matching password → {true, :password}" do
-      hash = Argon2.hash_pwd_salt("correct-horse-battery-staple")
+      hash = PasswordHasher.hash("correct-horse-battery-staple")
       user = %SshUsername{password_hash: hash, ssh_public_keys: []}
 
       assert CredentialMatcher.check(user, "correct-horse-battery-staple", nil) ==
@@ -40,7 +42,7 @@ defmodule EdgeAdmin.Ssh.CredentialMatcherTest do
     end
 
     test "non-matching password → {false, :password}" do
-      hash = Argon2.hash_pwd_salt("correct-horse-battery-staple")
+      hash = PasswordHasher.hash("correct-horse-battery-staple")
       user = %SshUsername{password_hash: hash, ssh_public_keys: []}
 
       assert CredentialMatcher.check(user, "wrong-password", nil) == {false, :password}
@@ -127,7 +129,7 @@ defmodule EdgeAdmin.Ssh.CredentialMatcherTest do
     test "password supplied → password path wins (public_key path skipped)" do
       # The function head order matters: password match is tried first when
       # password is non-nil, regardless of whether public_key is also supplied.
-      hash = Argon2.hash_pwd_salt("right-pw")
+      hash = PasswordHasher.hash("right-pw")
       user = %SshUsername{password_hash: hash, ssh_public_keys: []}
 
       # Password is correct, public_key would be ignored even if it matched.
@@ -135,11 +137,6 @@ defmodule EdgeAdmin.Ssh.CredentialMatcherTest do
                {true, :password}
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # normalize_key/1 — strips trailing comment so re-pasting with a different
-  # host suffix doesn't break matching.
-  # ---------------------------------------------------------------------------
 
   describe "normalize_key/1" do
     test "strips comment, keeps algorithm + data" do
@@ -153,7 +150,12 @@ defmodule EdgeAdmin.Ssh.CredentialMatcherTest do
 
     test "comment with embedded spaces is fully stripped" do
       # parts: 3 split — only the first space-separated token after data is the
+      # ---------------------------------------------------------------------------
       # boundary. Anything after that (including more spaces) is the comment.
+      # normalize_key/1 — strips trailing comment so re-pasting with a different
+      # host suffix doesn't break matching.
+      # ---------------------------------------------------------------------------
+
       assert CredentialMatcher.normalize_key("ssh-rsa AAAA my full name comment") ==
                "ssh-rsa AAAA"
     end

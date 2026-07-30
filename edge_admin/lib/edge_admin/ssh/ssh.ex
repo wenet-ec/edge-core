@@ -10,7 +10,7 @@ defmodule EdgeAdmin.Ssh do
 
   - **SSH Username**: A Linux username allowed to SSH into a node
   - **SSH Public Key**: An authorized SSH public key for a username
-  - **Password Authentication**: Argon2-hashed passwords for username/password SSH login
+  - **Password Authentication**: Password-hashed username/password SSH login
   - **Public Key Authentication**: Verification against stored public keys
   - **Credential Verification**: Agent calls to validate SSH login attempts
 
@@ -18,7 +18,7 @@ defmodule EdgeAdmin.Ssh do
 
   - **Node-Scoped**: Each username belongs to a specific node
   - **Multiple Auth Methods**: Supports password and/or public key authentication
-  - **Secure Storage**: Passwords are Argon2-hashed, never stored in plaintext
+  - **Secure Storage**: Passwords are hashed, never stored in plaintext
   - **Agent-Driven**: Agents call API to verify credentials during SSH login attempts
 
   ## Examples
@@ -46,6 +46,10 @@ defmodule EdgeAdmin.Ssh do
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.PasswordHasher
+  # ===========================================================================
+  # SSH Username functions
+  # ===========================================================================
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Ssh.CredentialMatcher
   alias EdgeAdmin.Ssh.Filters.SshPublicKeyFilters
@@ -54,9 +58,7 @@ defmodule EdgeAdmin.Ssh do
   alias EdgeAdmin.Ssh.Schemas.SshPublicKey
   alias EdgeAdmin.Ssh.Schemas.SshUsername
 
-  # ===========================================================================
-  # SSH Username functions
-  # ===========================================================================
+  require Logger
 
   @doc """
   Gets a single SSH username by ID.
@@ -119,7 +121,7 @@ defmodule EdgeAdmin.Ssh do
           password when is_binary(password) ->
             username_attrs
             |> Map.delete("password")
-            |> Map.put("password_hash", Argon2.hash_pwd_salt(password))
+            |> Map.put("password_hash", PasswordHasher.hash(password))
         end
 
       username_attrs = Map.put(username_attrs, "node_id", node.id)
@@ -198,7 +200,10 @@ defmodule EdgeAdmin.Ssh do
           {:error, _meta} -> nil
         end
 
-      {verified, auth_method} = CredentialMatcher.check(ssh_username, password, public_key)
+      {verified, auth_method, password_hash_status} =
+        CredentialMatcher.check_detailed(ssh_username, password, public_key)
+
+      maybe_upgrade_password_hash(ssh_username, password, password_hash_status)
       result = if verified, do: :success, else: :failure
 
       :telemetry.execute(
@@ -274,6 +279,10 @@ defmodule EdgeAdmin.Ssh do
     {custom_filters, rest} =
       Enum.split_with(flop_params[:filters] || [], fn f -> f.field in custom_fields end)
 
+    # ===========================================================================
+    # SSH Public Key functions
+    # ===========================================================================
+
     custom = Map.new(custom_fields, fn field -> {field, Enum.filter(custom_filters, &(&1.field == field))} end)
 
     {ilike_filters, flop_params} =
@@ -282,9 +291,20 @@ defmodule EdgeAdmin.Ssh do
     {custom, ilike_filters, flop_params}
   end
 
-  # ===========================================================================
-  # SSH Public Key functions
-  # ===========================================================================
+  # A rehash is best-effort. Authentication has already succeeded, so an
+  # incidental write failure must not deny access. The schema changeset keeps
+  # this write inside the normal Ecto validation path.
+  defp maybe_upgrade_password_hash(%SshUsername{} = ssh_username, password, :legacy) when is_binary(password) do
+    ssh_username
+    |> SshUsername.changeset(%{password_hash: PasswordHasher.hash(password)})
+    |> Repo.update()
+    |> case do
+      {:ok, _ssh_username} -> :ok
+      {:error, reason} -> Logger.warning("SSH password hash upgrade failed: #{inspect(reason)}")
+    end
+  end
+
+  defp maybe_upgrade_password_hash(_ssh_username, _password, _password_hash_status), do: :ok
 
   @doc """
   Gets a single SSH public key by ID.

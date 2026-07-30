@@ -1,7 +1,9 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/change_node_cluster.ex
 defmodule EdgeAdminMcp.Tools.Nodes.ChangeNodeCluster do
   @moduledoc """
-  Move a node to a different cluster. Treat this as a destructive operation.
+  Move a node to a different cluster. The returned node reflects the saved
+  assignment immediately; network connectivity may briefly reflect the previous
+  assignment while it converges. Treat this as a destructive operation.
   """
   use EdgeAdminMcp, :tool
 

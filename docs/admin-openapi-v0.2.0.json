@@ -1493,20 +1493,6 @@
         "title": "EnrollmentKeyPaginatedResponse",
         "type": "object"
       },
-      "CancelExecutionData": {
-        "description": "Cancellation request result",
-        "example": { "result": "cancellation request sent" },
-        "properties": {
-          "result": {
-            "description": "Cancellation request status message",
-            "example": "cancellation request sent",
-            "type": "string"
-          }
-        },
-        "required": ["result"],
-        "title": "CancelExecutionData",
-        "type": "object"
-      },
       "NodeDiagnosticCheck": {
         "properties": {
           "details": { "additionalProperties": true, "type": "object" },
@@ -3599,16 +3585,6 @@
         "title": "AdminClusterMember",
         "type": "object"
       },
-      "CancelExecutionResponse": {
-        "description": "Response from command execution cancellation request",
-        "properties": {
-          "data": { "$ref": "#/components/schemas/CancelExecutionData" },
-          "meta": { "$ref": "#/components/schemas/Meta" }
-        },
-        "required": ["data", "meta"],
-        "title": "CancelExecutionResponse",
-        "type": "object"
-      },
       "CommandCreateRequest": {
         "description": "Create a new command with flexible targeting options",
         "example": {
@@ -4733,7 +4709,7 @@
       },
       "delete": {
         "callbacks": {},
-        "description": "Delete an empty cluster (must have no nodes).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "description": "Delete an empty cluster (must have no nodes). The cluster stops appearing in normal cluster reads once deletion is accepted; removal completes asynchronously.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.ClusterController.delete",
         "parameters": [
           {
@@ -5678,7 +5654,7 @@
     "/api/v1/nodes/{id}/change_cluster": {
       "post": {
         "callbacks": {},
-        "description": "Move a node to a different cluster.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "description": "Move a node to a different cluster. The returned node reflects the saved cluster assignment immediately; network connectivity may briefly reflect the previous assignment while it converges.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeController.change_cluster",
         "parameters": [
           {
@@ -6908,7 +6884,7 @@
     "/api/v1/command_executions/{id}/cancel": {
       "post": {
         "callbacks": {},
-        "description": "Attempts to cancel a command execution. Behavior depends on current status:\n\n- `pending`: Immediately marked `cancelled` in the database (command never ran).\n- `sent`: Sends cancellation request to agent (best-effort, async). The agent is the source of truth — if it already ran the command, it reports back the real result and the execution is marked `completed`. If the agent honoured the cancellation (exit code 143), it is marked `cancelled`.\n- `completed` / `cancelled` / `expired` / `dropped`: Returns 409 conflict (already terminal).\n\nReturns 200 if cancellation was initiated. For `sent` executions, poll status to confirm the outcome.\n",
+        "description": "Attempts to cancel a command execution. Behavior depends on current status:\n\n- `pending`: Immediately marked `cancelled` in the database (command never ran).\n- `sent`: Sends cancellation request to agent (best-effort, async). The agent is the source of truth — if it already ran the command, it reports back the real result and the execution is marked `completed`. If the agent honoured the cancellation (exit code 143), it is marked `cancelled`.\n- `completed` / `cancelled` / `expired` / `dropped`: Returns 409 conflict (already terminal).\n\nReturns `200` with the cancelled execution when a pending execution is cancelled\nimmediately. Returns `202` when an agent accepted cancellation for a sent execution;\npoll the execution to confirm its final outcome.\n",
         "operationId": "EdgeAdminWeb.Controllers.Commands.CommandExecutionController.cancel",
         "parameters": [
           {
@@ -6924,11 +6900,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CancelExecutionResponse"
+                  "$ref": "#/components/schemas/CommandExecutionSingleResponse"
                 }
               }
             },
-            "description": "Cancellation request sent"
+            "description": "Pending execution cancelled"
+          },
+          "202": {
+            "content": { "": {} },
+            "description": "Cancellation accepted; final execution state is asynchronous"
           },
           "404": {
             "content": {
@@ -8120,7 +8100,7 @@
     "/api/v1/events/test": {
       "post": {
         "callbacks": {},
-        "description": "Publishes an `edge.core.test` event through the normal event delivery path. The event is enqueued for the configured broker, if enabled, and delivered to webhooks whose `subscribed_events` includes `edge.core.test`.",
+        "description": "Publishes an `edge.core.test` event through the normal event delivery path. Returns the CloudEvents envelope accepted for asynchronous delivery. Broker and matching-webhook delivery are queued independently and may complete later or retry.",
         "operationId": "EdgeAdminWeb.Controllers.Events.EventController.test",
         "parameters": [],
         "responses": {

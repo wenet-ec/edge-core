@@ -75,7 +75,7 @@ defmodule EdgeAdmin.Commands do
 
       # Cancel a pending execution
       iex> cancel_command_execution(execution)
-      {:ok, %{result: "cancellation request sent"}}
+      {:ok, {:cancelled, %CommandExecution{}}}
   """
 
   import Ecto.Query, warn: false
@@ -1050,13 +1050,15 @@ defmodule EdgeAdmin.Commands do
     - execution: CommandExecution struct (must be preloaded with :cluster)
 
   ## Returns
-    - `{:ok, %{result: "execution cancelled"}}` — pending branch, DB updated
-    - `{:ok, %{result: "cancellation request sent"}}` — sent branch, agent reachable
+    - `{:ok, {:cancelled, execution}}` — pending branch, DB updated
+    - `{:ok, :accepted}` — sent branch, agent accepted the cancellation request
     - `{:error, {:conflict, reason}}` — execution not in cancellable state
     - `{:error, :service_unavailable}` — agent unreachable (sent branch only)
   """
   @spec cancel_command_execution(CommandExecution.t()) ::
-          {:ok, map()} | {:error, {:conflict, String.t()}} | {:error, :service_unavailable}
+          {:ok, {:cancelled, CommandExecution.t()} | :accepted}
+          | {:error, {:conflict, String.t()}}
+          | {:error, :service_unavailable}
   def cancel_command_execution(execution) do
     with :ok <- Checks.ExecutionCancellableCheck.check(execution) do
       case execution.status do
@@ -1070,7 +1072,7 @@ defmodule EdgeAdmin.Commands do
                ) do
             {:ok, updated} ->
               publish_execution_event(updated, :cancelled)
-              {:ok, %{result: "execution cancelled"}}
+              {:ok, {:cancelled, Repo.preload(updated, [:command, :cluster])}}
 
             {:error, :stale_state} ->
               case Repo.get(CommandExecution, execution.id) do
@@ -1352,7 +1354,7 @@ defmodule EdgeAdmin.Commands do
   defp cancel_sent_execution(execution) do
     case send_cancel_to_agent(execution) do
       :ok ->
-        {:ok, %{result: "cancellation request sent"}}
+        {:ok, :accepted}
 
       {:error, reason} ->
         Logger.warning("Failed to send cancellation to agent for execution #{execution.id}: #{inspect(reason)}")

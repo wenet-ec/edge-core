@@ -64,7 +64,7 @@ Logical groups that map 1:1 to Netmaker WireGuard networks. One full mesh per cl
 | `get_cluster` | Get Cluster | 🔍 | Required: `cluster_name`. |
 | `create_cluster` | Create Cluster | 🌐 | Required: `name` (lowercase alphanumeric + hyphens, ≤24 chars, `default` reserved). Optional: `ipv4_range` (CIDR) and `ipv6_range` (ULA `/64`) — either family is auto-assigned if omitted; plus `node_limit`. |
 | `update_cluster` | Update Cluster | ♻️ | Required: `cluster_name`. Optional: `node_limit` (pass `null` to remove the limit). |
-| `delete_cluster` | Delete Cluster | ⚠️ 🌐 | Required: `cluster_name`. Deletes the VPN network — all nodes lose connectivity. |
+| `delete_cluster` | Delete Cluster | ⚠️ 🌐 | Required: `cluster_name`. Accepts deletion of an empty cluster; it immediately stops appearing in normal reads while removal completes asynchronously. |
 
 ---
 
@@ -78,7 +78,7 @@ Edge machines running the agent. Addressed only by VPN hostname.
 | `get_node` | Get Node | 🔍 | Required: `node_id`. |
 | `get_node_diagnostics` | Get Node Diagnostics | 🔍 🌐 | Required: `node_id`. Diagnostic report for one node. |
 | `delete_node` | Delete Node | ⚠️ 🌐 | Required: `node_id`. The agent must re-enroll to reconnect. |
-| `change_node_cluster` | Move Node to Cluster | ⚠️ 🌐 | Required: `node_id`, `cluster_name`. |
+| `change_node_cluster` | Move Node to Cluster | ⚠️ 🌐 | Required: `node_id`, `cluster_name`. The returned node reflects the saved assignment immediately; network connectivity may briefly reflect the previous assignment while it converges. |
 
 ---
 
@@ -134,7 +134,7 @@ Both `nodes` and `clusters` forms accept optional `node_filters` / `cluster_filt
 | --- | --- | --- | --- |
 | `list_command_executions` | List Command Executions | 🔍 | Filter/sort/paginate. Filters: `command_id_in` (array), `node_id_in` (array), `status_in` (array: `pending`/`sent`/`completed`/`cancelled`/`expired`/`dropped`), `target_all`, `exit_code`, `exit_code_gte/lte`, `output` (wildcard text search), `has_output`, `cluster_name` (wildcard), `cluster_name_in` (array), `has_cluster`, `inserted_at_*`, `updated_at_*`, `sent_at_*`, `completed_at_*`, `cancelled_at_*`. |
 | `get_command_execution` | Get Command Execution | 🔍 | Required: `execution_id`. Returns status, output, exit code, timestamps. |
-| `cancel_command_execution` | Cancel Command Execution | ⚠️ | Required: `execution_id`. `pending` → cancelled immediately. `sent` → cancellation forwarded to agent (best-effort). Terminal statuses return 409. |
+| `cancel_command_execution` | Cancel Command Execution | ⚠️ | Required: `execution_id`. `pending` → cancelled immediately and returns the execution. `sent` → cancellation accepted by the agent (best-effort); re-fetch later for its final state. Terminal statuses return 409. |
 | `delete_command_execution` | Delete Command Execution | ⚠️ | Required: `execution_id`. Only terminal executions can be deleted. |
 
 `completed` is the only terminal *success* status — read `exit_code` to distinguish success (0) from failure (non-zero).

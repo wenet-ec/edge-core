@@ -127,11 +127,15 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
     - `sent`: Sends cancellation request to agent (best-effort, async). The agent is the source of truth — if it already ran the command, it reports back the real result and the execution is marked `completed`. If the agent honoured the cancellation (exit code 143), it is marked `cancelled`.
     - `completed` / `cancelled` / `expired` / `dropped`: Returns 409 conflict (already terminal).
 
-    Returns 200 if cancellation was initiated. For `sent` executions, poll status to confirm the outcome.
+    Returns `200` with the cancelled execution when a pending execution is cancelled
+    immediately. Returns `202` when an agent accepted cancellation for a sent execution;
+    poll the execution to confirm its final outcome.
     """,
     parameters: [PathParams.uuid(:id, "Command Execution ID")],
     responses: %{
-      200 => {"Cancellation request sent", "application/json", CommandExecutionSchemas.CancelExecutionResponse},
+      200 =>
+        {"Pending execution cancelled", "application/json", CommandExecutionSchemas.CommandExecutionSingleResponse},
+      202 => {"Cancellation accepted; final execution state is asynchronous", "", nil},
       404 => {"Command execution not found", "application/json", CommonSchemas.NotFoundResponse},
       409 =>
         {"Execution not in a cancellable state (already terminal)", "application/json", CommonSchemas.ConflictResponse},
@@ -144,7 +148,10 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionController do
   def cancel(conn, %{id: id}) do
     with {:ok, execution} <- Commands.get_command_execution(id),
          {:ok, result} <- Commands.cancel_command_execution(execution) do
-      render(conn, :cancel, conn: conn, result: result)
+      case result do
+        {:cancelled, execution} -> render(conn, :show, conn: conn, command_execution: execution)
+        :accepted -> send_resp(conn, :accepted, "")
+      end
     end
   end
 end

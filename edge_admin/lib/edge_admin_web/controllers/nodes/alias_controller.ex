@@ -88,6 +88,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.AliasController do
          {:ok, alias_record} <- Nodes.create_alias(node, Map.merge(params, conn.body_params)) do
       conn
       |> put_status(:created)
+      |> put_resp_header("location", ~p"/api/v1/aliases/#{alias_record.id}")
       |> render(:show, conn: conn, alias: alias_record)
     end
   end

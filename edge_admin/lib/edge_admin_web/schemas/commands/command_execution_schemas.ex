@@ -153,35 +153,4 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandExecutionSchemas do
       )
     )
   end
-
-  defmodule CancelExecutionData do
-    @moduledoc false
-
-    schema(%{
-      title: "CancelExecutionData",
-      description: "Cancellation request result",
-      type: :object,
-      properties: %{
-        result: %Schema{
-          type: :string,
-          description: "Cancellation request status message",
-          example: "cancellation request sent"
-        }
-      },
-      required: [:result],
-      example: %{result: "cancellation request sent"}
-    })
-  end
-
-  defmodule CancelExecutionResponse do
-    @moduledoc false
-
-    schema(
-      CommonSchemas.single_response(
-        CancelExecutionData,
-        "CancelExecutionResponse",
-        "Response from command execution cancellation request"
-      )
-    )
-  end
 end

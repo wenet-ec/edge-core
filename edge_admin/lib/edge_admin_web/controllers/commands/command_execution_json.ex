@@ -10,8 +10,4 @@ defmodule EdgeAdminWeb.Controllers.Commands.CommandExecutionJSON do
   def show(%{conn: conn, command_execution: command_execution}) do
     ResponseEnvelope.success(conn, CommandExecutionView.render(command_execution))
   end
-
-  def cancel(%{conn: conn, result: result}) do
-    ResponseEnvelope.success(conn, result)
-  end
 end

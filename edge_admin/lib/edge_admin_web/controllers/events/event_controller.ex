@@ -14,8 +14,8 @@ defmodule EdgeAdminWeb.Controllers.Events.EventController do
     summary: "Publish test event",
     description:
       "Publishes an `edge.core.test` event through the normal event delivery path. " <>
-        "The event is enqueued for the configured broker, if enabled, and delivered to webhooks " <>
-        "whose `subscribed_events` includes `edge.core.test`.",
+        "Returns the CloudEvents envelope accepted for asynchronous delivery. Broker and matching-webhook " <>
+        "delivery are queued independently and may complete later or retry.",
     responses: %{
       202 => {"Test event accepted", "application/json", EventSchemas.EventTestResponse}
     }

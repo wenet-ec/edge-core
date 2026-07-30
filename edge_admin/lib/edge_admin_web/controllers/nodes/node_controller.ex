@@ -57,7 +57,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   operation(:change_cluster,
     summary: "Change a node's cluster",
     description:
-      "Move a node to a different cluster.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+      "Move a node to a different cluster. The returned node reflects the saved cluster assignment immediately; network connectivity may briefly reflect the previous assignment while it converges.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
     parameters: [PathParams.uuid(:id, "Node ID")],
     request_body: {"Cluster change parameters", "application/json", NodeSchemas.ChangeClusterRequest, required: true},
     responses: %{

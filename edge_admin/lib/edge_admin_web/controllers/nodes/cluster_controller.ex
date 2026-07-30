@@ -128,7 +128,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
   operation(:delete,
     summary: "Delete a cluster",
     description:
-      "Delete an empty cluster (must have no nodes).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+      "Delete an empty cluster (must have no nodes). The cluster stops appearing in normal cluster reads once deletion is accepted; removal completes asynchronously.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
     parameters: [PathParams.cluster_name(:name, "Cluster name")],
     responses: %{
       202 => {"Cluster deletion accepted", "", nil},

@@ -4,12 +4,12 @@ defmodule EdgeAdmin.Nodes.Workers.ReconcileClusterWorker do
   Oban worker that reconciles a single cluster's state between the DB and Netmaker.
 
   Enqueued by ScheduleClusterReconciliationWorker — one job per cluster. Each job:
-  1. Adds missing nodes to the Netmaker network (DB says yes, Netmaker says no)
-  2. Removes extra managed nodes from the network (Netmaker says yes, DB says no)
-  3. Evicts rogue hosts (unrecognized hosts with no DB record, if EVICT_ROGUE_HOSTS=true)
-  4. Cleans up orphaned aliases for nodes no longer in Netmaker
-  5. Deletes orphaned DB records for nodes whose Netmaker host is gone
-  6. Deletes the cluster from DB if its Netmaker network no longer exists
+  1. Recreates a missing network from active DB cluster configuration
+  2. Adds missing nodes to the Netmaker network (DB says yes, Netmaker says no)
+  3. Removes extra managed nodes from the network (Netmaker says yes, DB says no)
+  4. Evicts rogue hosts (unrecognized hosts with no DB record, if EVICT_ROGUE_HOSTS=true)
+  5. Cleans up orphaned aliases for nodes no longer in Netmaker
+  6. Deletes orphaned DB records for nodes whose Netmaker host is gone
   7. Repairs missing/stale alias DNS and cleans up ghost alias DNS
 
   Retried up to 3 times on failure. Each cluster is independent — a Netmaker timeout
@@ -31,14 +31,14 @@ defmodule EdgeAdmin.Nodes.Workers.ReconcileClusterWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"cluster_name" => cluster_name}}) do
-    case Nodes.get_cluster(cluster_name) do
-      {:ok, cluster} ->
-        start_time = System.monotonic_time(:millisecond)
-        result = Nodes.reconcile_cluster(cluster)
+    start_time = System.monotonic_time(:millisecond)
+
+    case Nodes.reconcile_cluster(cluster_name) do
+      {:ok, result} ->
         duration = System.monotonic_time(:millisecond) - start_time
 
         Logger.info(
-          "ReconcileClusterWorker: cluster #{cluster.name} — " <>
+          "ReconcileClusterWorker: cluster #{cluster_name} — " <>
             "added=#{result.nodes_added} removed=#{result.nodes_removed} " <>
             "deleted=#{result.nodes_deleted} aliases_cleaned=#{result.aliases_cleaned} " <>
             "aliases_repaired=#{result.aliases_repaired} " <>
@@ -59,7 +59,7 @@ defmodule EdgeAdmin.Nodes.Workers.ReconcileClusterWorker do
             ghost_aliases_cleaned: result.ghost_aliases_cleaned,
             errors: result.errors
           },
-          %{cluster: cluster.name, result: outcome}
+          %{cluster: cluster_name, result: outcome}
         )
 
         if outcome == :error do

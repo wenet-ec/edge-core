@@ -212,9 +212,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
 
     schema(%{
       title: "ChangeClusterRequest",
-      description:
-        "Request to move a node to a different cluster. " <>
-          "Performs cluster migration via Netmaker (best-effort, reconciliation worker handles failures).",
+      description: "Request to move a node to a different cluster.",
       type: :object,
       properties: %{
         cluster_name: %Schema{

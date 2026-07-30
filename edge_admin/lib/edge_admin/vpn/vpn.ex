@@ -951,8 +951,10 @@ defmodule EdgeAdmin.Vpn do
         if(network_name, do: " in network: #{network_name}", else: "")
     )
 
-    with {:ok, hosts} <- list_hosts(network_name),
+    with {:ok, hosts} <- list_hosts(),
          {:ok, nodes} <- list_nodes_for_host_resolution(network_name) do
+      hosts = filter_hosts_for_host_resolution(hosts, nodes, network_name)
+
       Logger.debug("Retrieved #{length(hosts)} hosts from Netmaker")
 
       case select_host_id(hosts, nodes, hostname) do
@@ -1004,6 +1006,13 @@ defmodule EdgeAdmin.Vpn do
   defp list_nodes_for_host_resolution(nil), do: {:ok, []}
   defp list_nodes_for_host_resolution(network_name), do: list_nodes(network_name)
 
+  defp filter_hosts_for_host_resolution(hosts, _nodes, nil), do: hosts
+
+  defp filter_hosts_for_host_resolution(hosts, nodes, _network_name) do
+    host_ids_in_network = MapSet.new(nodes, & &1["hostid"])
+    Enum.filter(hosts, &MapSet.member?(host_ids_in_network, &1["id"]))
+  end
+
   defp candidate_rank(host, node_by_host_id) do
     node = Map.get(node_by_host_id, host["id"])
 
@@ -1027,34 +1036,13 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Lists Netmaker hosts, optionally filtered by network.
+  Lists the global Netmaker host inventory.
 
-  When network_name is provided, lists all hosts and filters to those
-  that have a node in the specified network.
-
-  Returns `{:ok, hosts}` or `{:error, :service_unavailable}`.
+  Returns `{:ok, hosts}` or `{:error, :service_unavailable}`. A successful empty
+  list means Netmaker has no host records; it is not an error result.
   """
-  def list_hosts(network_name \\ nil) do
-    with {:ok, hosts} <- fetch_all_hosts() do
-      if is_binary(network_name) do
-        case list_nodes(network_name) do
-          {:ok, nodes} ->
-            host_ids_in_network = MapSet.new(nodes, & &1["hostid"])
-
-            filtered_hosts =
-              Enum.filter(hosts, fn host ->
-                MapSet.member?(host_ids_in_network, host["id"])
-              end)
-
-            {:ok, filtered_hosts}
-
-          error ->
-            error
-        end
-      else
-        {:ok, hosts}
-      end
-    end
+  def list_hosts do
+    fetch_all_hosts()
   end
 
   defp fetch_all_hosts(page \\ 1, acc \\ []) do

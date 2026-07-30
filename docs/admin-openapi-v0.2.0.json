@@ -3962,7 +3962,7 @@
         "type": "object"
       },
       "ChangeClusterRequest": {
-        "description": "Request to move a node to a different cluster. Performs cluster migration via Netmaker (best-effort, reconciliation worker handles failures).",
+        "description": "Request to move a node to a different cluster.",
         "example": { "cluster_name": "prod-west" },
         "properties": {
           "cluster_name": {
@@ -4420,7 +4420,7 @@
                 }
               }
             },
-            "description": "Netmaker unavailable or in degraded mode"
+            "description": "Service Unavailable"
           }
         },
         "summary": "Create a new cluster",
@@ -4725,7 +4725,7 @@
                 }
               }
             },
-            "description": "Netmaker unavailable or in degraded mode"
+            "description": "Service Unavailable"
           }
         },
         "summary": "Update a cluster",
@@ -4749,9 +4749,9 @@
           }
         ],
         "responses": {
-          "204": {
+          "202": {
             "content": { "": {} },
-            "description": "Cluster deleted successfully"
+            "description": "Cluster deletion accepted"
           },
           "400": {
             "content": {
@@ -4785,7 +4785,7 @@
                 }
               }
             },
-            "description": "Netmaker unavailable or in degraded mode"
+            "description": "Service Unavailable"
           }
         },
         "summary": "Delete a cluster",
@@ -5628,7 +5628,7 @@
       },
       "delete": {
         "callbacks": {},
-        "description": "Delete a node. Removes the Netmaker host first, then the DB row. Cascade: `ssh_usernames` (and their `ssh_public_keys`) and `aliases` are deleted; `command_executions` are kept with `node_id` set to NULL for history.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "description": "Delete a node and its associated Edge Core records. Command-execution history is retained.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeController.delete",
         "parameters": [
           {
@@ -5678,7 +5678,7 @@
     "/api/v1/nodes/{id}/change_cluster": {
       "post": {
         "callbacks": {},
-        "description": "Move a node to a different cluster. Performs cluster migration via Netmaker (best-effort, reconciliation worker handles failures).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "description": "Move a node to a different cluster.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeController.change_cluster",
         "parameters": [
           {
@@ -8091,7 +8091,7 @@
       },
       "delete": {
         "callbacks": {},
-        "description": "Permanently delete a webhook. Webhooks are immutable after create — to change any field (URL, secret, headers, subscribed_events) delete and recreate. The retry budget is process-wide (`WEBHOOK_MAX_ATTEMPTS` env var on the admin), not per-webhook.",
+        "description": "Permanently delete a webhook. Webhooks are immutable after create — to change any field (URL, secret, headers, subscribed_events) delete and recreate. The retry budget is deployment-wide, not per-webhook.",
         "operationId": "EdgeAdminWeb.Controllers.Events.WebhookController.delete",
         "parameters": [
           {

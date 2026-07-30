@@ -87,7 +87,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
         {"Cluster name already exists, or IP range conflicts with an existing cluster", "application/json",
          CommonSchemas.ConflictResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
-      503 => {"Netmaker unavailable or in degraded mode", "application/json", CommonSchemas.ServiceUnavailableResponse}
+      503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 
@@ -114,7 +114,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
       422 =>
         {"Validation error or node_limit below current node count", "application/json",
          CommonSchemas.ChangesetErrorResponse},
-      503 => {"Netmaker unavailable or in degraded mode", "application/json", CommonSchemas.ServiceUnavailableResponse}
+      503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 
@@ -131,18 +131,18 @@ defmodule EdgeAdminWeb.Controllers.Nodes.ClusterController do
       "Delete an empty cluster (must have no nodes).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
     parameters: [PathParams.cluster_name(:name, "Cluster name")],
     responses: %{
-      204 => {"Cluster deleted successfully", "", nil},
+      202 => {"Cluster deletion accepted", "", nil},
       400 => {"Invalid path parameters", "application/json", CommonSchemas.BadRequestResponse},
       404 => {"Cluster not found", "application/json", CommonSchemas.NotFoundResponse},
       409 => {"Cannot delete cluster with nodes", "application/json", CommonSchemas.ConflictResponse},
-      503 => {"Netmaker unavailable or in degraded mode", "application/json", CommonSchemas.ServiceUnavailableResponse}
+      503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 
   def delete(conn, %{name: name}) do
     with {:ok, cluster} <- Nodes.get_cluster(name),
          {:ok, _cluster} <- Nodes.delete_cluster(cluster) do
-      send_resp(conn, :no_content, "")
+      send_resp(conn, :accepted, "")
     end
   end
 end

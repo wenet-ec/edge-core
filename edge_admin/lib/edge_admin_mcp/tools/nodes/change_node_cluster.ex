@@ -1,13 +1,7 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/change_node_cluster.ex
 defmodule EdgeAdminMcp.Tools.Nodes.ChangeNodeCluster do
   @moduledoc """
-  Move a node to a different cluster. The node is removed from its current
-  VPN network and added to the new one.
-
-  Best-effort and not transactional: the Netmaker host is moved first, then
-  the DB row updated. If the Netmaker step fails mid-flight, the
-  reconciliation worker will eventually heal the inconsistency, but the
-  node may be briefly unreachable. Treat this as a destructive operation.
+  Move a node to a different cluster. Treat this as a destructive operation.
   """
   use EdgeAdminMcp, :tool
 

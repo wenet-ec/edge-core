@@ -419,8 +419,9 @@ Admin background work is split between two schedulers with different semantics:
 **Oban** — jobs inserted by the DB peer leader, competed for by any admin across all clusters sharing the same DB:
 
 - `EdgeAdmin.Commands.Workers.CreateExecutionsWorker` - Creates CommandExecution records for each targeted node
-- `EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker` - Enqueues one `ReconcileClusterWorker` job per cluster
+- `EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker` - Enqueues active-cluster reconciliation and retired-cluster deletion work
 - `EdgeAdmin.Nodes.Workers.ReconcileClusterWorker` - Syncs a single cluster's node state with Netmaker VPN
+- `EdgeAdmin.Nodes.Workers.DeleteClusterWorker` - Completes deletion of one retired cluster
 - `EdgeAdmin.SelfUpdates.Workers.TriggerSelfUpdateWorker` - Coordinates container updates
 - `EdgeAdmin.Events.Broker.Workers.PublishEventWorker` - Publishes a CloudEvents envelope to the broker, retries on failure
 - `EdgeAdmin.Events.Webhooks.Workers.DeliverEventWorker` - Delivers a CloudEvents envelope to one user-configured webhook URL via HTTP POST. Retry classification: 408/429/503 + network = recoverable; other 4xx/5xx = terminal. Per-job `max_attempts` is set from `WEBHOOK_MAX_ATTEMPTS` (default 3) at fan-out time.

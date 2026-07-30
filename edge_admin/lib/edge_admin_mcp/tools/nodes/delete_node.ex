@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/delete_node.ex
 defmodule EdgeAdminMcp.Tools.Nodes.DeleteNode do
-  @moduledoc "Remove a node from the system and its VPN mesh. The agent must re-enroll to reconnect."
+  @moduledoc "Remove a node from the system. The agent must re-enroll to reconnect."
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes

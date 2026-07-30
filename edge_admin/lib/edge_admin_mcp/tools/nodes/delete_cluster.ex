@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/delete_cluster.ex
 defmodule EdgeAdminMcp.Tools.Nodes.DeleteCluster do
-  @moduledoc "Delete a cluster and its VPN network. All nodes lose connectivity. Irreversible."
+  @moduledoc "Delete an empty cluster. This action is irreversible."
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes

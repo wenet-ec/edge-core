@@ -12,6 +12,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   - `ipv4_range` - CIDR notation for the cluster's VPN network (e.g., "100.64.1.0/24")
   - `ipv6_range` - ULA /64 CIDR for the cluster's VPN network
   - `node_limit` - Maximum nodes allowed in this cluster (null means no limit)
+  - `deleted_at` - Internal tombstone marking a cluster retired from the public API
   - `network_name` - Virtual field: Netmaker network name (cluster-{name})
   - `vpn_domain` - Virtual field: VPN domain suffix for nodes in this cluster
   - `node_count` - Virtual field: Number of nodes in this cluster
@@ -34,6 +35,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
           ipv4_range: String.t(),
           ipv6_range: String.t(),
           node_limit: integer() | nil,
+          deleted_at: DateTime.t() | nil,
           network_name: String.t() | nil,
           vpn_domain: String.t() | nil,
           node_count: integer() | nil,
@@ -58,6 +60,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
     field(:ipv4_range, :string)
     field(:ipv6_range, :string)
     field(:node_limit, :integer)
+    field(:deleted_at, :utc_datetime)
     field(:network_name, :string, virtual: true)
     field(:vpn_domain, :string, virtual: true)
     field(:node_count, :integer, virtual: true)

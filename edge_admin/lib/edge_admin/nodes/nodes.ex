@@ -16,10 +16,10 @@ defmodule EdgeAdmin.Nodes do
 
   ## Architecture
 
-  Two sources of state must be kept in sync: our PostgreSQL DB and Netmaker (the VPN
+  Two sources of state must be kept in sync: the Admin database and Netmaker (the VPN
   provider). There is no transaction spanning both — every operation that touches both
-  systems has a partial-failure window. The reconciler (`reconcile_clusters/0`, called
-  periodically) is what heals drift. Understand the reconciler before changing any
+  systems has a partial-failure window. Cluster reconciliation is what heals drift.
+  Understand it before changing any
   create/delete ordering here.
 
   ### Ordering rules (why they are what they are)
@@ -34,11 +34,11 @@ defmodule EdgeAdmin.Nodes do
   anyway (race with a concurrent admin or admin-mesh write), we rollback the DB
   insert. A DB insert failure with no Netmaker call leaves no state to clean.
 
-  **Cluster delete — Netmaker first, then DB:**
-  If we deleted DB first and Netmaker failed, the network would be permanently orphaned
-  (reconciler only iterates DB clusters, so it would never see it). Going Netmaker-first
-  means a DB delete failure leaves "cluster in DB, network gone from Netmaker" — which
-  `cleanup_orphaned_clusters/2` explicitly detects and cleans up.
+  **Cluster delete — retire in DB, then delete from Netmaker:**
+  `deleted_at` is the durable canonical decision that the cluster no longer exists for
+  public reads or new membership. `DeleteClusterWorker` deletes the Netmaker network
+  after that transaction commits and finally removes the tombstone after verifying the
+  network is absent. This avoids holding a database transaction across external IO.
 
   **Alias create — read IP from Netmaker, then DB, then write DNS to Netmaker:**
   The node's VPN IP is only known to Netmaker; we must fetch it. The DB insert anchors
@@ -48,19 +48,18 @@ defmodule EdgeAdmin.Nodes do
   record) are cleaned by the Netmaker→DB direction of `cleanup_ghost_aliases/2`.
 
   **Alias delete — Netmaker first, then DB:**
-  Same reasoning as cluster delete — DB-first would create permanently invisible orphans.
+  A missing DNS entry is harmless because the DB row still makes the alias repairable.
 
   ### Reconciler directions (both are needed)
 
-  `cleanup_orphaned_clusters/2` — DB has cluster, Netmaker doesn't:
-  Handles failed delete (Netmaker succeeded, DB delete failed) and manual Netmaker
-  deletions. Fix: delete the DB record.
+  `ensure_cluster_network/1` — active DB cluster has no Netmaker network:
+  Recreates the network from the cluster's immutable DB configuration. A retired
+  cluster is never repaired here; its deletion worker owns its network instead.
 
   `cleanup_ghost_networks/1` — Netmaker has `cluster-*` network, DB doesn't:
-  Handles failed create (Netmaker succeeded, DB insert failed). Fix: delete the Netmaker
-  network. Safety: we only touch networks with the `cluster-` prefix — `admin-cluster-*`
-  networks are admin infrastructure and are never touched here. The prefix contract is
-  enforced by `Vpn.build_network_name/2`.
+  Deletes the unowned network. Safety: we only touch networks with the `cluster-`
+  prefix — `admin-cluster-*` networks are admin infrastructure and are never touched
+  here. The prefix contract is enforced by `Vpn.build_network_name/2`.
 
   `cleanup_ghost_aliases/2` — reconciles alias DNS from DB to Netmaker, repairs stale
   IPs, and deletes Netmaker DNS entries with no matching DB alias.
@@ -90,14 +89,13 @@ defmodule EdgeAdmin.Nodes do
     ownership marker. If something outside this system ever creates a `cluster-*` network
     in Netmaker, the reconciler will delete it. The prefix contract must be maintained.
 
-  - The reconciler runs `cleanup_orphaned_clusters/2` per page (batched with cluster
-    iteration) but `cleanup_ghost_networks/1` only at the end of the full sweep. This
-    means a ghost network created during a sweep may not be cleaned until the next full
-    run. Acceptable — ghost networks are harmless, just wasteful.
+  - `cleanup_ghost_networks/1` runs once per scheduled maintenance sweep. A ghost
+    network created during that sweep may not be cleaned until the next run. This is
+    acceptable — ghost networks are harmless, just wasteful.
 
-  - `reconcile_cluster/1` (single-cluster worker path) does NOT run
-    `cleanup_ghost_networks/1`. It only has context for one cluster, not the global
-    Netmaker state. Ghost network cleanup only happens in `reconcile_clusters/0`.
+  - `reconcile_cluster/1` does NOT run `cleanup_ghost_networks/1`. It only has context
+    for one cluster, not the global Netmaker state. The maintenance scheduler performs
+    the global sweep once after it queues per-cluster work.
 
   ## Examples
 
@@ -140,6 +138,8 @@ defmodule EdgeAdmin.Nodes do
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.Nodes.Workers.DeleteClusterWorker
+  alias EdgeAdmin.Nodes.Workers.ReconcileClusterWorker
   alias EdgeAdmin.Repo
   alias EdgeAdmin.RequestParser
   alias EdgeAdmin.Vpn
@@ -160,12 +160,44 @@ defmodule EdgeAdmin.Nodes do
   defp maybe_put_nodelimit(opts, nil), do: opts
   defp maybe_put_nodelimit(opts, limit), do: Map.put(opts, :nodelimit, limit)
 
+  defp active_clusters_query do
+    from(c in Cluster, where: is_nil(c.deleted_at))
+  end
+
+  defp cluster_active?(cluster_id) do
+    Repo.exists?(from(c in active_clusters_query(), where: c.id == ^cluster_id))
+  end
+
+  defp cluster_transaction(fun_or_multi) do
+    opts =
+      case Repo.__adapter__() do
+        Ecto.Adapters.SQLite3 -> [mode: :immediate]
+        _ -> []
+      end
+
+    Repo.transaction(fun_or_multi, opts)
+  end
+
+  defp lock_active_cluster(name) do
+    query = from(c in active_clusters_query(), where: c.name == ^name)
+
+    query =
+      case Repo.__adapter__() do
+        Ecto.Adapters.Postgres -> from(c in query, lock: "FOR UPDATE")
+        _ -> query
+      end
+
+    Repo.one(query)
+  end
+
   # ===========================================================================
   # Cluster functions
   # ===========================================================================
 
   @doc """
   Lists all clusters with node counts, filtering, and pagination.
+
+  Retired clusters are not returned.
 
   Supports filtering by:
   - `name` - Exact match or wildcard (`prod*`, `*tion`, `*rod*`)
@@ -199,7 +231,9 @@ defmodule EdgeAdmin.Nodes do
       {:ok, {[%Cluster{nodes: [...]}, ...], %Flop.Meta{}}}
   """
   @spec list_clusters(map()) :: {:ok, {[Cluster.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  def list_clusters(params \\ %{}) do
+  def list_clusters(params \\ %{}), do: run_cluster_list_query(active_clusters_query(), params)
+
+  defp run_cluster_list_query(cluster_query, params) do
     # Parse API params into Flop format
     flop_params = RequestParser.parse(params)
 
@@ -230,10 +264,10 @@ defmodule EdgeAdmin.Nodes do
     # Build base query with node_count if filtering/sorting on it
     base_query =
       if node_count_filters == [] do
-        Cluster
+        cluster_query
       else
         ClusterFilters.apply_node_count(
-          from(c in Cluster,
+          from(c in cluster_query,
             left_join: n in assoc(c, :nodes),
             group_by: c.id,
             select_merge: %{node_count: count(n.id)}
@@ -294,7 +328,7 @@ defmodule EdgeAdmin.Nodes do
     filter_status = Keyword.get(opts, :filter_status)
 
     base_query =
-      from(c in Cluster,
+      from(c in active_clusters_query(),
         left_join: n in assoc(c, :nodes),
         select: %{
           cluster_name: c.name,
@@ -352,7 +386,7 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec get_cluster(String.t()) :: {:ok, Cluster.t()} | {:error, :not_found}
   def get_cluster(name) do
-    case Repo.get_by(Cluster, name: name) do
+    case Repo.one(from(c in active_clusters_query(), where: c.name == ^name)) do
       nil -> {:error, :not_found}
       cluster -> {:ok, Repo.preload(cluster, :nodes)}
     end
@@ -375,8 +409,8 @@ defmodule EdgeAdmin.Nodes do
   If DB creation fails, returns validation error immediately (no Netmaker call).
   If Netmaker creation fails, deletes DB record and returns service unavailable.
 
-  This ensures "cluster in DB but network not in Netmaker" always means failed deletion,
-  allowing reconciliation to safely delete orphaned DB clusters.
+  A later missing network does not make the active DB cluster disposable: the active
+  row is the desired configuration, so reconciliation recreates the network from it.
 
   Returns `{:ok, cluster}`, `{:error, changeset}` (validation), `{:error, {:conflict, reason}}` (CIDR overlap), or `{:error, :service_unavailable}` (health check or Netmaker failure).
   """
@@ -396,6 +430,7 @@ defmodule EdgeAdmin.Nodes do
 
   defp existing_cluster_ranges do
     with {:ok, netmaker_ranges} <- Vpn.list_network_ranges() do
+      # Retired clusters retain their ranges until their network cleanup finishes.
       {:ok,
        %{
          ipv4: Enum.uniq(Repo.all(from(c in Cluster, select: c.ipv4_range)) ++ netmaker_ranges.ipv4),
@@ -424,10 +459,7 @@ defmodule EdgeAdmin.Nodes do
 
   defp provision_cluster_network(cluster) do
     network_name = node_network_name(cluster)
-    ipv4_range = cluster.ipv4_range
-    ipv6_range = cluster.ipv6_range
-
-    opts = maybe_put_nodelimit(%{addressrange: ipv4_range, addressrange6: ipv6_range}, cluster.node_limit)
+    opts = cluster_network_options(cluster)
 
     case Vpn.create_network(network_name, opts) do
       {:ok, _} ->
@@ -443,6 +475,13 @@ defmodule EdgeAdmin.Nodes do
         Repo.delete(cluster)
         error
     end
+  end
+
+  defp cluster_network_options(cluster) do
+    maybe_put_nodelimit(
+      %{addressrange: cluster.ipv4_range, addressrange6: cluster.ipv6_range},
+      cluster.node_limit
+    )
   end
 
   defp resolve_existing_network(cluster, network_name) do
@@ -477,6 +516,7 @@ defmodule EdgeAdmin.Nodes do
 
   node_limit is enforced by this system only. Netmaker has the field on its network
   model but no server-side update endpoint or enforcement logic as of the current version.
+  The active cluster row is re-read and locked before the limit is checked or updated.
 
   ## Parameters
   - `cluster` - The cluster struct to update
@@ -484,76 +524,92 @@ defmodule EdgeAdmin.Nodes do
 
   ## Returns
   - `{:ok, cluster}` - Update succeeded
+  - `{:error, :not_found}` - Cluster was retired or no longer exists
   - `{:error, changeset}` - Validation failed
   """
   @spec update_cluster(Cluster.t(), map()) ::
-          {:ok, Cluster.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, Cluster.t()} | {:error, :not_found} | {:error, Ecto.Changeset.t()}
   def update_cluster(%Cluster{} = cluster, params) do
-    with {:ok, attrs} <- Forms.UpdateClusterForm.changeset(params),
-         :ok <- Checks.NodeLimitBelowCountCheck.check(cluster, Map.get(attrs, "node_limit")),
-         {:ok, updated_cluster} <-
-           cluster
-           |> Cluster.changeset(attrs)
-           |> Repo.update() do
-      {:ok, Repo.preload(updated_cluster, :nodes)}
+    with {:ok, attrs} <- Forms.UpdateClusterForm.changeset(params) do
+      update_active_cluster(cluster.name, attrs)
+    end
+  end
+
+  defp update_active_cluster(cluster_name, attrs) do
+    fn ->
+      with %Cluster{} = cluster <- lock_active_cluster(cluster_name),
+           :ok <- Checks.NodeLimitBelowCountCheck.check(cluster, Map.get(attrs, "node_limit")),
+           {:ok, updated_cluster} <-
+             cluster
+             |> Cluster.changeset(attrs)
+             |> Repo.update() do
+        updated_cluster
+      else
+        nil -> Repo.rollback(:not_found)
+        {:error, _} = error -> Repo.rollback(error)
+      end
+    end
+    |> cluster_transaction()
+    |> case do
+      {:ok, cluster} -> {:ok, Repo.preload(cluster, :nodes)}
+      {:error, reason} -> {:error, reason}
     end
   end
 
   @doc """
-  Deletes a cluster and its Netmaker network.
-  Fails if cluster has nodes.
+  Retires an empty cluster from the public API and enqueues Netmaker cleanup.
 
-  Flow (Netmaker-first):
-  1. Verify cluster is empty (deletion rule)
-  2. Delete network from Netmaker FIRST
-  3. Delete from DB
-  4. Emit event for metadata recomputation
+  The retirement transaction locks the active cluster, rechecks that it is empty, writes
+  `deleted_at`, and inserts the deletion job atomically. New registration and
+  cluster-move paths use the same short transaction boundary, so they cannot enter a
+  cluster after retirement wins. Netmaker deletion happens asynchronously after commit.
 
-  If Netmaker deletion fails (except :not_found), operation stops and returns error.
-  If Netmaker returns :not_found, continues with DB deletion (network already gone).
-
-  This ensures "cluster in DB but network not in Netmaker" always means failed deletion,
-  allowing reconciliation to safely delete orphaned DB clusters.
-
-  Returns `{:ok, cluster}`, `{:error, {:conflict, reason}}` (cluster has nodes), or `{:error, :service_unavailable}` (Netmaker failure).
+  Returns `{:ok, cluster}`, `{:error, :not_found}`, or
+  `{:error, {:conflict, reason}}` when the cluster has nodes.
   """
   @spec delete_cluster(Cluster.t()) ::
-          {:ok, Cluster.t()} | {:error, {:conflict, String.t()}} | {:error, :service_unavailable}
+          {:ok, Cluster.t()}
+          | {:error, :not_found}
+          | {:error, {:conflict, String.t()}}
+          | {:error, :service_unavailable}
   def delete_cluster(%Cluster{} = cluster) do
-    case Checks.ClusterNotEmptyCheck.check(cluster) do
-      :ok ->
-        network_name = node_network_name(cluster)
+    now = DateTime.truncate(DateTime.utc_now(), :second)
 
-        # 1. Delete network from Netmaker FIRST
-        case Vpn.delete_network(network_name) do
-          {:ok, _} ->
-            Logger.info("Deleted network #{network_name} from Netmaker")
-            delete_cluster_from_db(cluster)
-
-          {:error, :not_found} ->
-            # Network already gone - continue with DB deletion
-            Logger.info("Netmaker network #{network_name} already deleted")
-            delete_cluster_from_db(cluster)
-
-          {:error, :service_unavailable} = error ->
-            # Netmaker failed - stop operation
-            Logger.error("Failed to delete Netmaker network #{network_name}, aborting cluster deletion")
-            error
-        end
-
-      {:error, {:conflict, _}} = error ->
-        error
+    fn ->
+      with %Cluster{} = active_cluster <- lock_active_cluster(cluster.name),
+           :ok <- Checks.ClusterNotEmptyCheck.check(active_cluster),
+           {:ok, retired_cluster} <-
+             active_cluster
+             |> Ecto.Changeset.change(deleted_at: now)
+             |> Repo.update(),
+           {:ok, _job} <-
+             %{
+               "cluster_name" => retired_cluster.name,
+               "cluster_id" => retired_cluster.id
+             }
+             |> DeleteClusterWorker.new()
+             |> Oban.insert() do
+        retired_cluster
+      else
+        nil -> Repo.rollback(:not_found)
+        {:error, _} = error -> Repo.rollback(error)
+      end
     end
-  end
-
-  defp delete_cluster_from_db(%Cluster{} = cluster) do
-    case Repo.delete(cluster) do
-      {:ok, deleted_cluster} ->
+    |> cluster_transaction()
+    |> case do
+      {:ok, retired_cluster} ->
         Metadata.Events.publish(:cluster_deleted)
-        {:ok, deleted_cluster}
+        {:ok, retired_cluster}
 
-      {:error, changeset} ->
-        {:error, changeset}
+      {:error, :not_found} ->
+        {:error, :not_found}
+
+      {:error, {:conflict, _} = error} ->
+        error
+
+      {:error, reason} ->
+        Logger.error("Failed to retire cluster #{cluster.name}: #{inspect(reason)}")
+        {:error, :service_unavailable}
     end
   end
 
@@ -673,8 +729,8 @@ defmodule EdgeAdmin.Nodes do
   A background reconciliation worker handles any inconsistencies.
 
   Flow:
-  1. Delete all aliases (they're cluster-specific)
-  2. Update database (source of truth)
+  1. Serialize the target-cluster admission and update the database (source of truth)
+  2. Delete all aliases (they're cluster-specific)
   3. Best-effort sync: Add host to new network
   4. Best-effort sync: Remove host from old network
   5. Emit event for metadata recomputation
@@ -692,26 +748,37 @@ defmodule EdgeAdmin.Nodes do
     or target cluster at node limit (`NodeLimitCheck`)
   """
   @spec change_node_cluster(Node.t(), map()) ::
-          {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
+          {:ok, Node.t()} | {:error, :not_found} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
   def change_node_cluster(%Node{} = node, params) do
     with {:ok, new_cluster_name} <- Forms.ChangeNodeClusterForm.changeset(params),
-         {:ok, new_cluster} <- get_cluster(new_cluster_name),
-         :ok <- Checks.SameClusterCheck.check(node, new_cluster),
-         :ok <- Checks.NodeLimitCheck.check(new_cluster) do
-      cleanup_node_aliases(node)
+         {:ok, %{node: current_node, new_cluster: new_cluster, updated_node: updated_node}} <-
+           move_node_to_active_cluster(node.id, new_cluster_name) do
+      cleanup_node_aliases(current_node)
+      updated_node = Repo.preload(updated_node, [:cluster, aliases: :cluster], force: true)
+      Metadata.Events.publish(:node_updated)
+      sync_node_cluster_networks(current_node, new_cluster)
 
-      case node |> Ecto.Changeset.change(cluster_id: new_cluster.id) |> Repo.update() do
-        {:ok, updated_node} ->
-          updated_node = Repo.preload(updated_node, [:cluster, aliases: :cluster], force: true)
-          Metadata.Events.publish(:node_updated)
-          sync_node_cluster_networks(node, new_cluster)
-
-          {:ok, updated_node}
-
-        {:error, changeset} ->
-          {:error, changeset}
-      end
+      {:ok, updated_node}
     end
+  end
+
+  defp move_node_to_active_cluster(node_id, new_cluster_name) do
+    cluster_transaction(fn ->
+      with %Node{} = current_node <- Repo.get(Node, node_id),
+           current_node = Repo.preload(current_node, :cluster),
+           %Cluster{} = new_cluster <- lock_active_cluster(new_cluster_name),
+           :ok <- Checks.SameClusterCheck.check(current_node, new_cluster),
+           :ok <- Checks.NodeLimitCheck.check(new_cluster),
+           {:ok, updated_node} <-
+             current_node
+             |> Ecto.Changeset.change(cluster_id: new_cluster.id)
+             |> Repo.update() do
+        %{node: current_node, new_cluster: new_cluster, updated_node: updated_node}
+      else
+        nil -> Repo.rollback(:not_found)
+        {:error, _} = error -> Repo.rollback(error)
+      end
+    end)
   end
 
   # Best-effort Netmaker network sync after a cluster change.
@@ -903,24 +970,48 @@ defmodule EdgeAdmin.Nodes do
 
       cluster_name = String.replace_prefix(network_name, "cluster-", "")
 
-      case get_cluster(cluster_name) do
-        {:error, :not_found} ->
-          Forms.RegisterNodeForm.add_netmaker_not_found_error()
+      with {:ok, netmaker_host_id} <-
+             Vpn.get_host_id(Vpn.build_vpn_name(node_id, prefix: :node), network_name: network_name),
+           {:ok, registration} <- persist_registration(node_id, cluster_name, netmaker_host_id, attrs) do
+        finalize_registration(registration)
+      else
+        {:error, :not_found} -> Forms.RegisterNodeForm.add_netmaker_not_found_error()
+        {:error, _reason} -> Forms.RegisterNodeForm.add_netmaker_not_found_error()
+      end
+    end
+  end
 
-        {:ok, cluster} ->
+  defp persist_registration(node_id, reported_cluster_name, netmaker_host_id, attrs) do
+    cluster_transaction(fn ->
+      case lock_active_cluster(reported_cluster_name) do
+        nil ->
+          Repo.rollback(:not_found)
+
+        reported_cluster ->
           existing_node = Repo.get(Node, node_id)
           is_new_node = is_nil(existing_node)
 
-          with :ok <- if(is_new_node, do: Checks.NodeLimitCheck.check(cluster), else: :ok),
-               {:ok, netmaker_host_id} <-
-                 Vpn.get_host_id(Vpn.build_vpn_name(node_id, prefix: :node), network_name: network_name) do
-            node_attrs = build_node_attrs(node_id, cluster, netmaker_host_id, attrs)
-            upsert_node(node_attrs, existing_node, is_new_node, cluster)
+          canonical_cluster =
+            case existing_node do
+              nil ->
+                reported_cluster
+
+              node ->
+                Repo.one(from(c in active_clusters_query(), where: c.id == ^node.cluster_id))
+            end
+
+          with %Cluster{} = canonical_cluster <- canonical_cluster,
+               :ok <- if(is_new_node, do: Checks.NodeLimitCheck.check(reported_cluster), else: :ok),
+               node_attrs = build_node_attrs(node_id, canonical_cluster, netmaker_host_id, attrs),
+               result = if(is_new_node, do: create_node(node_attrs), else: update_node(existing_node, node_attrs)),
+               {:ok, node} <- result do
+            %{node: node, existing_node: existing_node, is_new_node: is_new_node}
           else
-            {:error, _reason} -> Forms.RegisterNodeForm.add_netmaker_not_found_error()
+            nil -> Repo.rollback(:not_found)
+            {:error, _} = error -> Repo.rollback(error)
           end
       end
-    end
+    end)
   end
 
   defp build_node_attrs(node_id, cluster, netmaker_host_id, attrs) do
@@ -946,34 +1037,26 @@ defmodule EdgeAdmin.Nodes do
     }
   end
 
-  defp upsert_node(node_attrs, existing_node, is_new_node, _cluster) do
-    result = if is_new_node, do: create_node(node_attrs), else: update_node(existing_node, node_attrs)
+  defp finalize_registration(%{node: node, existing_node: existing_node, is_new_node: is_new_node}) do
+    node = Repo.preload(node, [:cluster], force: true)
 
-    case result do
-      {:ok, node} ->
-        node = Repo.preload(node, [:cluster], force: true)
+    if is_new_node do
+      Metadata.Events.publish(:node_created)
+      Events.publish(%Catalog.NodeRegistered{node: node})
+    else
+      Events.publish(%Catalog.NodeReregistered{node: node})
 
-        if is_new_node do
-          Metadata.Events.publish(:node_created)
-          Events.publish(%Catalog.NodeRegistered{node: node})
-        else
-          Events.publish(%Catalog.NodeReregistered{node: node})
-
-          if existing_node.version != node_attrs.version do
-            Events.publish(%Catalog.NodeVersionChanged{
-              node: node,
-              previous_version: existing_node.version
-            })
-          end
-        end
-
-        repair_node_alias_dns(node)
-
-        {:ok, node}
-
-      {:error, changeset} ->
-        {:error, changeset}
+      if existing_node.version != node.version do
+        Events.publish(%Catalog.NodeVersionChanged{
+          node: node,
+          previous_version: existing_node.version
+        })
+      end
     end
+
+    repair_node_alias_dns(node)
+
+    {:ok, node}
   end
 
   defp repair_node_alias_dns(%Node{} = node) do
@@ -1359,7 +1442,7 @@ defmodule EdgeAdmin.Nodes do
           on: c.id == n.cluster_id,
           left_join: a in Alias,
           on: a.node_id == n.id,
-          where: c.name == ^cluster_name,
+          where: c.name == ^cluster_name and is_nil(c.deleted_at),
           select: %{
             id: n.id,
             proxy_password: n.proxy_password,
@@ -1377,7 +1460,7 @@ defmodule EdgeAdmin.Nodes do
     case rows do
       [] ->
         # Verify whether the cluster exists at all to return the right error.
-        if Repo.exists?(from c in Cluster, where: c.name == ^cluster_name) do
+        if Repo.exists?(from c in active_clusters_query(), where: c.name == ^cluster_name) do
           {:ok, %{}}
         else
           {:error, :not_found}
@@ -1677,7 +1760,7 @@ defmodule EdgeAdmin.Nodes do
   end
 
   @doc """
-  Reconciles clusters and their node membership between database (source of truth) and Netmaker.
+  Reconciles all active clusters and their node membership between database (source of truth) and Netmaker.
 
   For each cluster:
   1. Gets nodes that SHOULD be in the network (from DB)
@@ -1685,13 +1768,14 @@ defmodule EdgeAdmin.Nodes do
   3. Cleans up orphaned aliases (nodes not in DB or not in Netmaker)
   4. Adds missing nodes (DB says yes, Netmaker says no)
   5. Removes extra nodes (Netmaker says yes, DB says no)
-  6. Cleans up orphaned clusters (exist in DB but network doesn't exist in Netmaker)
+  6. Recreates missing Netmaker networks from active DB cluster configuration
   7. Repairs missing/stale alias DNS and deletes ghost alias DNS
 
   Only processes edge nodes (those belonging to edge agents, identified by having a DB record).
   Admin nodes and staff machines are not touched.
 
-  Processes all clusters in batches of 500.
+  Processes active clusters in batches of 500. Retired clusters are handled by
+  `DeleteClusterWorker` jobs.
 
   Returns statistics about the reconciliation operation.
   """
@@ -1700,13 +1784,57 @@ defmodule EdgeAdmin.Nodes do
     reconcile_clusters_paginated(1, empty_reconcile_stats())
   end
 
+  @doc """
+  Reconciles one active cluster with the VPN control plane.
+  """
+  @spec reconcile_cluster(String.t()) :: {:ok, map()} | {:error, :not_found}
+  def reconcile_cluster(cluster_name) do
+    case get_cluster(cluster_name) do
+      {:ok, cluster} -> {:ok, reconcile_active_cluster(cluster)}
+      {:error, :not_found} = error -> error
+    end
+  end
+
+  @doc """
+  Completes the deletion of a retired cluster.
+
+  The cluster name addresses the cluster throughout the deletion workflow. The ID is
+  an identity fence, so a stale job cannot affect a later cluster with the same name.
+  """
+  @spec complete_cluster_deletion(String.t(), String.t()) :: :ok | {:error, :not_retired | term()}
+  def complete_cluster_deletion(cluster_name, cluster_id) do
+    query = from(c in Cluster, where: c.name == ^cluster_name and c.id == ^cluster_id)
+
+    case Repo.one(query) do
+      nil ->
+        :ok
+
+      %Cluster{deleted_at: nil} ->
+        {:error, :not_retired}
+
+      cluster ->
+        delete_retired_cluster(cluster)
+    end
+  rescue
+    CastError -> :ok
+  end
+
+  @doc """
+  Enqueues active-cluster reconciliation and retired-cluster deletion work, then cleans
+  up Netmaker cluster networks that no database row owns.
+  """
+  @spec enqueue_cluster_reconciliation() :: :ok | {:error, term()}
+  def enqueue_cluster_reconciliation do
+    enqueue_cluster_reconciliation_page(1, 0)
+    cleanup_ghost_cluster_networks()
+  end
+
   defp empty_reconcile_stats do
     %{
       clusters_processed: 0,
       nodes_added: 0,
       nodes_removed: 0,
       nodes_deleted: 0,
-      clusters_deleted: 0,
       ghost_networks_deleted: 0,
       aliases_cleaned: 0,
       aliases_repaired: 0,
@@ -1715,22 +1843,82 @@ defmodule EdgeAdmin.Nodes do
     }
   end
 
-  @doc """
-  Reconciles a single cluster's state between the DB and Netmaker.
-
-  Called by ReconcileClusterWorker — one job per cluster, allowing independent
-  retries and parallel processing. Performs the same steps as reconcile_clusters/0
-  but scoped to a single cluster struct.
-  """
-  @spec reconcile_cluster(Cluster.t()) :: map()
-  def reconcile_cluster(%Cluster{} = cluster) do
+  defp reconcile_active_cluster(%Cluster{} = cluster) do
     acc = empty_reconcile_stats()
 
     db_nodes = Repo.all(from(n in Node, where: n.cluster_id == ^cluster.id, preload: [:cluster]))
 
     result = reconcile_single_cluster(cluster, db_nodes, acc)
-    result = cleanup_orphaned_clusters([cluster], result)
     cleanup_ghost_aliases([cluster], result)
+  end
+
+  defp delete_retired_cluster(cluster) do
+    network_name = node_network_name(cluster)
+
+    case Vpn.delete_network(network_name) do
+      {:ok, _} ->
+        remove_retired_cluster(cluster, network_name)
+
+      {:error, :not_found} ->
+        remove_retired_cluster(cluster, network_name)
+
+      {:error, reason} ->
+        Logger.warning("Failed to delete retired Netmaker network #{network_name}: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+  defp remove_retired_cluster(cluster, network_name) do
+    case Repo.delete(cluster) do
+      {:ok, _} ->
+        Logger.info("Finished cleanup for retired cluster #{cluster.name} (network: #{network_name})")
+        :ok
+
+      {:error, changeset} ->
+        Logger.error("Failed to remove retired cluster #{cluster.name}: #{inspect(changeset)}")
+        {:error, changeset}
+    end
+  end
+
+  defp enqueue_cluster_reconciliation_page(page, total) do
+    {:ok, {clusters, meta}} =
+      list_clusters_for_reconciliation(%{"page_size" => "500", "page" => to_string(page)})
+
+    count =
+      Enum.reduce(clusters, 0, fn cluster, acc ->
+        worker =
+          if is_nil(cluster.deleted_at) do
+            ReconcileClusterWorker.new(%{"cluster_name" => cluster.name})
+          else
+            DeleteClusterWorker.new(%{
+              "cluster_name" => cluster.name,
+              "cluster_id" => cluster.id
+            })
+          end
+
+        case Oban.insert(worker) do
+          {:ok, _job} ->
+            acc + 1
+
+          {:error, reason} ->
+            Logger.warning("Failed to enqueue reconciliation for cluster #{cluster.name}: #{inspect(reason)}")
+
+            acc
+        end
+      end)
+
+    if meta.has_next_page? do
+      enqueue_cluster_reconciliation_page(page + 1, total + count)
+    else
+      Logger.info("Enqueued #{total + count} cluster maintenance jobs")
+      :ok
+    end
+  end
+
+  # The maintenance scheduler includes retired rows so it can enqueue their deletion
+  # workers until their tombstones have been removed.
+  defp list_clusters_for_reconciliation(params) do
+    run_cluster_list_query(Cluster, params)
   end
 
   defp reconcile_clusters_paginated(page, acc) do
@@ -1751,17 +1939,14 @@ defmodule EdgeAdmin.Nodes do
 
       Logger.info("Processing page #{page}: #{length(clusters)} clusters")
 
-      # Process this batch of clusters
+      # Process this batch of active clusters.
       result =
         Enum.reduce(clusters, acc, fn cluster, cluster_acc ->
           reconcile_single_cluster(cluster, db_nodes_by_cluster[cluster.id] || [], cluster_acc)
         end)
 
-      # Clean up orphaned clusters for this batch
-      result_with_clusters = cleanup_orphaned_clusters(clusters, result)
-
       # Clean up ghost aliases for this batch
-      result_with_ghost_aliases = cleanup_ghost_aliases(clusters, result_with_clusters)
+      result_with_ghost_aliases = cleanup_ghost_aliases(clusters, result)
 
       # Check if there are more pages
       if meta.has_next_page? do
@@ -1781,30 +1966,42 @@ defmodule EdgeAdmin.Nodes do
 
     Logger.debug("Reconciling cluster #{cluster.name} (network: #{network_name})")
 
-    expected_host_ids = MapSet.new(db_nodes, & &1.netmaker_host_id)
+    with true <- cluster_active?(cluster.id),
+         :ok <- ensure_cluster_network(cluster) do
+      expected_host_ids = MapSet.new(db_nodes, & &1.netmaker_host_id)
 
-    case Vpn.list_nodes(network_name) do
-      {:ok, netmaker_nodes} ->
-        actual_host_ids = netmaker_host_ids(netmaker_nodes)
+      case Vpn.list_nodes(network_name) do
+        {:ok, netmaker_nodes} ->
+          if cluster_active?(cluster.id) do
+            actual_host_ids = netmaker_host_ids(netmaker_nodes)
 
-        counts = reconcile_cluster_nodes(cluster, db_nodes, netmaker_nodes, expected_host_ids, actual_host_ids)
+            counts = reconcile_cluster_nodes(cluster, db_nodes, netmaker_nodes, expected_host_ids, actual_host_ids)
 
-        merge_cluster_reconcile_counts(acc, counts)
+            merge_cluster_reconcile_counts(acc, counts)
+          else
+            acc
+          end
+
+        {:error, reason} ->
+          Logger.error("Failed to list nodes for cluster #{cluster.name}: #{inspect(reason)}")
+          %{acc | errors: acc.errors + 1}
+      end
+    else
+      false ->
+        acc
+
+      :retired ->
+        acc
 
       {:error, reason} ->
-        Logger.error("Failed to list nodes for cluster #{cluster.name}: #{inspect(reason)}")
+        Logger.error("Failed to ensure network for cluster #{cluster.name}: #{inspect(reason)}")
         %{acc | errors: acc.errors + 1}
     end
   end
 
   defp reconcile_cluster_nodes(cluster, db_nodes, netmaker_nodes, expected_host_ids, actual_host_ids) do
     network_name = node_network_name(cluster)
-
-    host_hostname_map = host_hostname_map(network_name)
     expected_hostnames = MapSet.new(db_nodes, &Node.node_name/1)
-
-    live_host_ids = host_hostname_map |> Map.keys() |> MapSet.new()
-    orphan_swept = sweep_orphan_nodes_in_network(netmaker_nodes, live_host_ids, network_name)
 
     orphaned_nodes = orphaned_db_nodes(db_nodes, expected_host_ids, actual_host_ids)
 
@@ -1816,14 +2013,21 @@ defmodule EdgeAdmin.Nodes do
 
     removed = remove_extra_nodes(managed_extra, network_name, cluster.name)
 
-    evicted =
-      maybe_evict_rogue_hosts(unmanaged_extra, host_hostname_map, expected_hostnames, network_name, cluster.name)
+    {orphan_swept, evicted, errors} =
+      reconcile_host_inventory(
+        netmaker_nodes,
+        unmanaged_extra,
+        expected_hostnames,
+        network_name,
+        cluster.name
+      )
 
     %{
       added: added,
       removed: removed + evicted,
       deleted: deleted + orphan_swept,
-      aliases_cleaned: aliases_cleaned
+      aliases_cleaned: aliases_cleaned,
+      errors: errors
     }
   end
 
@@ -1833,12 +2037,11 @@ defmodule EdgeAdmin.Nodes do
       nodes_added: acc.nodes_added + counts.added,
       nodes_removed: acc.nodes_removed + counts.removed,
       nodes_deleted: acc.nodes_deleted + counts.deleted,
-      clusters_deleted: acc.clusters_deleted,
       ghost_networks_deleted: acc.ghost_networks_deleted,
       aliases_cleaned: acc.aliases_cleaned + counts.aliases_cleaned,
       aliases_repaired: acc.aliases_repaired,
       ghost_aliases_cleaned: acc.ghost_aliases_cleaned,
-      errors: acc.errors
+      errors: acc.errors + counts.errors
     }
   end
 
@@ -1849,13 +2052,40 @@ defmodule EdgeAdmin.Nodes do
     |> MapSet.new()
   end
 
-  # Fetched up front: used both for orphan-node detection (node rows whose
-  # `hostid` no longer matches any host record in this network) and for
-  # admin-* filtering in the rogue-eviction branch.
-  defp host_hostname_map(network_name) do
-    case Vpn.list_hosts(network_name) do
-      {:ok, hosts} -> Map.new(hosts, fn h -> {h["id"], h["name"] || ""} end)
-      {:error, _} -> %{}
+  # The global inventory answers the only question these destructive branches need:
+  # whether a node's host still exists at all. Do not filter it through another node
+  # snapshot, which can disagree with the node list this reconciliation is processing.
+  defp host_hostname_map do
+    with {:ok, hosts} <- Vpn.list_hosts() do
+      {:ok, Map.new(hosts, fn host -> {host["id"], host["name"] || ""} end)}
+    end
+  end
+
+  defp reconcile_host_inventory(netmaker_nodes, unmanaged_extra, expected_hostnames, network_name, cluster_name) do
+    case host_hostname_map() do
+      {:ok, hostnames_by_id} ->
+        live_host_ids = hostnames_by_id |> Map.keys() |> MapSet.new()
+
+        orphan_swept = sweep_orphan_nodes_in_network(netmaker_nodes, live_host_ids, network_name)
+
+        evicted =
+          maybe_evict_rogue_hosts(
+            unmanaged_extra,
+            hostnames_by_id,
+            expected_hostnames,
+            network_name,
+            cluster_name
+          )
+
+        {orphan_swept, evicted, 0}
+
+      {:error, reason} ->
+        Logger.warning(
+          "Reconciliation: Failed to list Netmaker hosts for #{network_name}; " <>
+            "skipping orphan-node sweep and rogue-host eviction: #{inspect(reason)}"
+        )
+
+        {0, 0, 1}
     end
   end
 
@@ -1895,9 +2125,9 @@ defmodule EdgeAdmin.Nodes do
   # Heals the upstream Netmaker bug (`RemoveHost` iterating the cached
   # `host.Nodes` slice): a node row can survive a host delete and remain
   # visible to peer pulls as a dead allowed-ip. Detection: `node["hostid"]`
-  # references a host that no longer exists in the network's `list_hosts`
-  # response. Cleanup: force-delete by `(network, node_id)`, which routes
-  # through `DeleteNode(purge=true)` and skips the broken read path.
+  # references a host that no longer exists in the global host inventory. Cleanup
+  # force-deletes by `(network, node_id)`, which routes through
+  # `DeleteNode(purge=true)` and skips the broken read path.
   #
   # The synchronous sweep in `delete_node/1` covers the originating case;
   # this is the backstop for orphans created before that fix shipped or by
@@ -2050,97 +2280,134 @@ defmodule EdgeAdmin.Nodes do
     end)
   end
 
-  defp cleanup_orphaned_clusters(clusters, acc) do
-    Enum.reduce(clusters, acc, fn cluster, result ->
+  defp ensure_cluster_network(cluster) do
+    case cluster_network_state(cluster) do
+      :present -> :ok
+      :missing -> create_missing_cluster_network(cluster)
+      {:error, _reason} = error -> error
+    end
+  end
+
+  defp cluster_network_state(cluster) do
+    network_name = node_network_name(cluster)
+
+    case Vpn.get_network(network_name) do
+      {:ok, %{"addressrange" => ipv4_range, "addressrange6" => ipv6_range}}
+      when ipv4_range == cluster.ipv4_range and ipv6_range == cluster.ipv6_range ->
+        :present
+
+      {:ok, _network} ->
+        {:error, :immutable_range_mismatch}
+
+      {:error, :not_found} ->
+        :missing
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp create_missing_cluster_network(cluster) do
+    if cluster_active?(cluster.id) do
       network_name = node_network_name(cluster)
 
-      # Check if network exists in Netmaker
-      case Vpn.get_network(network_name) do
-        {:ok, %{"addressrange" => ipv4_range, "addressrange6" => ipv6_range}}
-        when ipv4_range == cluster.ipv4_range and ipv6_range == cluster.ipv6_range ->
-          result
+      case Vpn.create_network(network_name, cluster_network_options(cluster)) do
+        {:ok, _} ->
+          Logger.info("Reconciliation: Recreated missing Netmaker network #{network_name}")
+          :ok
 
-        {:ok, _network} ->
-          Logger.error(
-            "Reconciliation: Netmaker network #{network_name} has immutable address ranges that do not match " <>
-              "cluster #{cluster.name}; recreate the network rather than attempting an in-place migration"
-          )
-
-          %{result | errors: result.errors + 1}
-
-        {:error, :not_found} ->
-          # Network doesn't exist - cluster should be deleted from DB
-          # This means deletion was attempted and Netmaker succeeded but DB failed
-          Logger.info("Reconciliation: Deleting orphaned cluster #{cluster.id} from DB (network not found in Netmaker)")
-
-          case Repo.delete(cluster) do
-            {:ok, _} ->
-              # Emit event for metadata recomputation
-              Metadata.Events.publish(:cluster_deleted)
-
-              %{result | clusters_deleted: result.clusters_deleted + 1}
-
-            {:error, changeset} ->
-              Logger.error("Reconciliation: Failed to delete orphaned cluster #{cluster.id}: #{inspect(changeset)}")
-
-              %{result | errors: result.errors + 1}
+        {:error, :already_exists} ->
+          case cluster_network_state(cluster) do
+            :present -> :ok
+            :missing -> {:error, :network_not_found_after_create}
+            {:error, _reason} = error -> error
           end
 
         {:error, reason} ->
-          Logger.warning("Reconciliation: Failed to check if network #{network_name} exists: #{inspect(reason)}")
-
-          %{result | errors: result.errors + 1}
+          {:error, reason}
       end
-    end)
+    else
+      :retired
+    end
+  end
+
+  # Deletes Netmaker `cluster-*` networks that have no matching database row. Retired
+  # rows count as owned until DeleteClusterWorker confirms their network is gone, so
+  # this sweep cannot race a cluster retirement.
+  defp cleanup_ghost_cluster_networks do
+    case delete_ghost_cluster_networks() do
+      {:ok, _deleted} ->
+        :ok
+
+      {:error, _reason} = error ->
+        error
+    end
   end
 
   # Cleans up ghost networks: Netmaker has a "cluster-*" network that has no matching
-  # DB cluster record. This is the failure path for Netmaker-first cluster create —
-  # Netmaker succeeded but our DB insert failed.
+  # DB cluster record. This is the failure path for external Netmaker changes or a
+  # failed cleanup after the DB row is gone.
   #
   # Safety contract: we only ever touch networks with the "cluster-" prefix. Networks
   # with "admin-cluster-" prefix are admin infrastructure and must never be touched here.
   defp cleanup_ghost_networks(acc) do
-    case Vpn.list_networks() do
-      {:ok, netmaker_networks} ->
-        # All "cluster-*" networks in Netmaker (excludes "admin-cluster-*" by prefix check)
-        netmaker_cluster_names =
-          netmaker_networks
-          |> Enum.map(& &1["netid"])
-          |> Enum.filter(&String.starts_with?(&1, "cluster-"))
-          |> MapSet.new()
-
-        # All expected network names from our DB
-        db_network_names =
-          from(c in Cluster, select: c.name)
-          |> Repo.all()
-          |> MapSet.new(&node_network_name/1)
-
-        ghost_network_names = MapSet.difference(netmaker_cluster_names, db_network_names)
-
-        deleted =
-          Enum.reduce(ghost_network_names, 0, fn network_name, count ->
-            case Vpn.delete_network(network_name) do
-              {:ok, _} ->
-                Logger.info("Reconciliation: Deleted ghost Netmaker network #{network_name} (no matching DB cluster)")
-                count + 1
-
-              {:error, :not_found} ->
-                # Already gone
-                count
-
-              {:error, reason} ->
-                Logger.warning("Reconciliation: Failed to delete ghost network #{network_name}: #{inspect(reason)}")
-                count
-            end
-          end)
-
+    case delete_ghost_cluster_networks() do
+      {:ok, deleted} ->
         %{acc | ghost_networks_deleted: acc.ghost_networks_deleted + deleted}
 
       {:error, reason} ->
         Logger.warning("Reconciliation: Failed to list Netmaker networks for ghost cleanup: #{inspect(reason)}")
         %{acc | errors: acc.errors + 1}
     end
+  end
+
+  defp delete_ghost_cluster_networks do
+    with {:ok, netmaker_networks} <- Vpn.list_networks() do
+      netmaker_cluster_names =
+        netmaker_networks
+        |> Enum.map(& &1["netid"])
+        |> Enum.filter(&String.starts_with?(&1, "cluster-"))
+        |> MapSet.new()
+
+      # Retired rows stay in this set until their network deletion is confirmed, so
+      # the ghost sweep cannot race a retirement and delete its network incorrectly.
+      db_network_names =
+        from(c in Cluster, select: c.name)
+        |> Repo.all()
+        |> MapSet.new(&node_network_name/1)
+
+      deleted =
+        netmaker_cluster_names
+        |> MapSet.difference(db_network_names)
+        |> Enum.count(&delete_ghost_network/1)
+
+      {:ok, deleted}
+    end
+  end
+
+  defp delete_ghost_network(network_name) do
+    if cluster_exists_for_network?(network_name) do
+      false
+    else
+      case Vpn.delete_network(network_name) do
+        {:ok, _} ->
+          Logger.info("Reconciliation: Deleted ghost Netmaker network #{network_name} (no matching DB cluster)")
+          true
+
+        {:error, :not_found} ->
+          false
+
+        {:error, reason} ->
+          Logger.warning("Reconciliation: Failed to delete ghost network #{network_name}: #{inspect(reason)}")
+          false
+      end
+    end
+  end
+
+  defp cluster_exists_for_network?(network_name) do
+    cluster_name = String.replace_prefix(network_name, "cluster-", "")
+
+    Repo.exists?(from(c in Cluster, where: c.name == ^cluster_name))
   end
 
   @doc """
@@ -2496,41 +2763,49 @@ defmodule EdgeAdmin.Nodes do
   @spec cleanup_ghost_aliases([Cluster.t()], map()) :: map()
   def cleanup_ghost_aliases(clusters, acc) do
     Enum.reduce(clusters, acc, fn cluster, result ->
-      network_name = node_network_name(cluster)
-
-      case Vpn.list_custom_dns_entries(network_name) do
-        {:ok, netmaker_custom_entries} ->
-          db_aliases = Repo.all(from(a in Alias, where: a.cluster_id == ^cluster.id, preload: [:cluster, :node]))
-
-          db_alias_hostnames = MapSet.new(db_aliases, &Alias.vpn_hostname/1)
-          db_alias_short_names = MapSet.new(db_aliases, &Alias.netmaker_dns_name/1)
-          netmaker_entries_by_name = Map.new(netmaker_custom_entries, &{&1["name"], &1})
-
-          dns_repaired = repair_alias_dns_entries(db_aliases, netmaker_entries_by_name, network_name)
-
-          dns_deleted =
-            delete_orphaned_dns_entries(netmaker_custom_entries, network_name, db_alias_short_names, db_alias_hostnames)
-
-          total_cleaned = dns_deleted
-          total_changed = dns_repaired + dns_deleted
-
-          if total_changed > 0 do
-            Logger.info(
-              "Reconciliation: Repaired #{dns_repaired} alias DNS record(s), cleaned #{dns_deleted} ghost alias DNS record(s) in cluster #{cluster.name}"
-            )
-          end
-
-          %{
-            result
-            | aliases_repaired: result.aliases_repaired + dns_repaired,
-              ghost_aliases_cleaned: result.ghost_aliases_cleaned + total_cleaned
-          }
-
-        {:error, reason} ->
-          Logger.warning("Reconciliation: Failed to list DNS entries for cluster #{cluster.name}: #{inspect(reason)}")
-          %{result | errors: result.errors + 1}
+      if cluster_active?(cluster.id) do
+        cleanup_cluster_aliases(cluster, result)
+      else
+        result
       end
     end)
+  end
+
+  defp cleanup_cluster_aliases(cluster, result) do
+    network_name = node_network_name(cluster)
+
+    case Vpn.list_custom_dns_entries(network_name) do
+      {:ok, netmaker_custom_entries} ->
+        db_aliases = Repo.all(from(a in Alias, where: a.cluster_id == ^cluster.id, preload: [:cluster, :node]))
+
+        db_alias_hostnames = MapSet.new(db_aliases, &Alias.vpn_hostname/1)
+        db_alias_short_names = MapSet.new(db_aliases, &Alias.netmaker_dns_name/1)
+        netmaker_entries_by_name = Map.new(netmaker_custom_entries, &{&1["name"], &1})
+
+        dns_repaired = repair_alias_dns_entries(db_aliases, netmaker_entries_by_name, network_name)
+
+        dns_deleted =
+          delete_orphaned_dns_entries(netmaker_custom_entries, network_name, db_alias_short_names, db_alias_hostnames)
+
+        total_cleaned = dns_deleted
+        total_changed = dns_repaired + dns_deleted
+
+        if total_changed > 0 do
+          Logger.info(
+            "Reconciliation: Repaired #{dns_repaired} alias DNS record(s), cleaned #{dns_deleted} ghost alias DNS record(s) in cluster #{cluster.name}"
+          )
+        end
+
+        %{
+          result
+          | aliases_repaired: result.aliases_repaired + dns_repaired,
+            ghost_aliases_cleaned: result.ghost_aliases_cleaned + total_cleaned
+        }
+
+      {:error, reason} ->
+        Logger.warning("Reconciliation: Failed to list DNS entries for cluster #{cluster.name}: #{inspect(reason)}")
+        %{result | errors: result.errors + 1}
+    end
   end
 
   defp repair_alias_dns_entries(db_aliases, netmaker_entries_by_name, network_name) do

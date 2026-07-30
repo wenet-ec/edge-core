@@ -395,7 +395,8 @@ config :edge_admin, EdgeAdmin.PromEx,
 #
 #   execution_creation     — inserts execution records in bulk; 2 is plenty
 #   execution_pruning      — daily sweep, batched deletes; 1 is enough
-#   cluster_reconciliation — one job per cluster every 6h; 1 is enough
+#   cluster_reconciliation — one job per active cluster every 6h; 1 is enough
+#   cluster_deletion       — completes retired-cluster deletion; 1 is enough
 #   self_updates           — rare, triggered manually; 1 is fine
 #   event_broker           — async broker publish with retry; 2 keeps it snappy
 #                          without hammering the broker with parallel calls
@@ -409,6 +410,7 @@ config :edge_admin, Oban,
     execution_creation: 2,
     execution_pruning: 1,
     cluster_reconciliation: 1,
+    cluster_deletion: 1,
     self_updates: 1,
     event_broker: 2,
     webhooks: 2
@@ -422,7 +424,7 @@ config :edge_admin, Oban,
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [
-       # Reconcile clusters and nodes between DB and Netmaker
+       # Fan out active-cluster reconciliation and retired-cluster deletion work
        {cluster_reconciliation_schedule, EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker},
        # Delete finalised command executions older than retention
        {execution_pruning_schedule, EdgeAdmin.Commands.Workers.PruneExecutionsWorker}

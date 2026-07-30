@@ -77,8 +77,8 @@ Edge machines running the agent. Addressed only by VPN hostname.
 | `list_nodes` | List Nodes | 🔍 | Filter/sort/paginate. Filters: `node_id_in` (array), `status_in` (array: `healthy`/`unhealthy`/`unreachable`), `id_type_in` (array: `persistent`/`random`), `cluster_name` (wildcard), `cluster_name_in` (array), `version`, `self_update_enabled`, `last_seen_at_*`, `inserted_at_*`, `updated_at_*`. |
 | `get_node` | Get Node | 🔍 | Required: `node_id`. |
 | `get_node_diagnostics` | Get Node Diagnostics | 🔍 🌐 | Required: `node_id`. Diagnostic report for one node. |
-| `delete_node` | Delete Node | ⚠️ 🌐 | Required: `node_id`. Removes from VPN mesh — agent must re-enroll. |
-| `change_node_cluster` | Move Node to Cluster | ⚠️ 🌐 | Required: `node_id`, `cluster_name`. Best-effort, not transactional — reconciliation worker heals inconsistencies. |
+| `delete_node` | Delete Node | ⚠️ 🌐 | Required: `node_id`. The agent must re-enroll to reconnect. |
+| `change_node_cluster` | Move Node to Cluster | ⚠️ 🌐 | Required: `node_id`, `cluster_name`. |
 
 ---
 

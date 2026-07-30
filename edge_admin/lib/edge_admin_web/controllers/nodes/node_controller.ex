@@ -57,7 +57,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   operation(:change_cluster,
     summary: "Change a node's cluster",
     description:
-      "Move a node to a different cluster. Performs cluster migration via Netmaker (best-effort, reconciliation worker handles failures).\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+      "Move a node to a different cluster.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
     parameters: [PathParams.uuid(:id, "Node ID")],
     request_body: {"Cluster change parameters", "application/json", NodeSchemas.ChangeClusterRequest, required: true},
     responses: %{
@@ -81,7 +81,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeController do
   operation(:delete,
     summary: "Delete a node",
     description:
-      "Delete a node. Removes the Netmaker host first, then the DB row. Cascade: `ssh_usernames` (and their `ssh_public_keys`) and `aliases` are deleted; `command_executions` are kept with `node_id` set to NULL for history.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+      "Delete a node and its associated Edge Core records. Command-execution history is retained.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
     parameters: [PathParams.uuid(:id, "Node ID")],
     responses: %{
       204 => {"Node deleted successfully", "", nil},

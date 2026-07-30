@@ -11,7 +11,7 @@ This directory contains ready-to-use Docker Compose deployment examples. If you 
 | [`sidecar/`](https://github.com/wenet-ec/edge-core/tree/main/examples/sidecar)           | Agent deployed as a sidecar container on bridge networking (instead of host networking).                                                             |
 | [`relay/`](https://github.com/wenet-ec/edge-core/tree/main/examples/relay)               | Self-hosted DERP relay for lower latency or full infra ownership. Not required for NAT traversal — the default Tailscale relay already handles that. |
 | [`operations/`](https://github.com/wenet-ec/edge-core/tree/main/examples/operations)     | One-off task compose files — `migrate.yml`, `rotate_encryption_key.yml`. Run admin release tasks in isolation, no VPN/server.                        |
-| `k8s/` (TODO)                | Kubernetes manifests / Helm chart for deploying Edge Admin and Edge Agent on a cluster. Not yet available.                                           |
+| `../deploy/k8s/`             | Helmfile/Helm assets for Edge Admin and VPN infrastructure. These are operator-managed deployment assets, not a Compose example.                    |
 
 ## Version Pinning — Important
 

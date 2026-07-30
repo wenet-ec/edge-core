@@ -1,6 +1,6 @@
 # Edge Core — Architecture
 
-**Last Updated: 2026-07-14**
+**Last Updated: 2026-07-30**
 
 Edge Core is an infrastructure management platform for fleets of Linux machines you don't physically touch — cloud VMs, on-premises servers, factory-floor equipment, Raspberry Pis, homelab boxes, IoT devices. Anywhere you have N machines and want a single HTTP API to operate them, the same primitives apply: a secure WireGuard mesh, remote command execution, SSH without exposing port 22, HTTP/SOCKS5 forward proxying through any node, Prometheus metrics aggregation.
 
@@ -30,15 +30,12 @@ Once you've decided to operate machines you don't physically touch, the next pro
 - **Cloud ↔ Edge (forward proxy + proxy chaining).** Admin runs HTTP (port 43128) and SOCKS5 (port 41080) forward proxies. Because SOCKS5 supports any TCP connection, this covers any protocol — not just HTTP. Two modes: route directly to a VPN node, or chain through a specific agent as the exit node to reach the internet or its LAN from that agent's network location. Raw TCP over the VPN, no MQTT or WebSocket on the application path. In production, HAProxy load-balances proxy traffic across all admin instances.
 - **Network segmentation.** WireGuard mesh is O(n²) — bigger meshes get exponentially more expensive, and a single flat mesh forces every customer's machines to share the same trust boundary. So clusters are kept small (50–100 nodes) and isolated from each other; each customer or workload gets its own mesh, no ACLs to gate traffic inside one. Multiple admin clusters federate via shared PostgreSQL, no Erlang distribution between them.
 
-#### The unsolved one: User ↔ Edge (local)
+#### Local-network discovery (mDNS)
 
-Some traffic should reach an edge node *without* going through the cloud admin — when the user is physically near the node and a cloud round-trip is wasteful or unreliable. This is the principle we have not fully solved.
-
-What works today: agents advertise themselves via mDNS, so any device on the same LAN segment can resolve `node-{id}.local`. This covers the small case — a single network, no VLANs, devices that speak Bonjour/Avahi. It does not cover the realistic case of LANs we don't control.
-
-What's missing: trustworthy LAN DNS that the user's resolver actually uses, an HTTPS path to the agent that browsers won't block, and a way to do all of that without colliding with existing LAN DNS (corporate networks, home routers with their own DNS quirks). We don't have a good answer to that combination yet.
-
-What we won't do (yet): require the user to install a client. The whole point of this principle is *no agent on the user side.* If we can't honor that constraint, we'd rather punt than ship a half-thing. R&D continues; it is the focus for v3.
+Agents advertise `node-{id}.local` and an `_edge_core._tcp.local` service record
+through mDNS. This is a same-LAN convenience for networks where Bonjour/Avahi
+multicast is available; it is not a LAN DNS, router, DHCP, or browser-access
+feature. Cross-subnet discovery and access remain outside this contract.
 
 ---
 
@@ -298,7 +295,7 @@ Edge Agent is a standalone binary that runs on each edge machine. The primary de
 
 **Compatibility split.** Admin and agent have different compatibility concerns:
 
-- **Admin** is a containerized runtime only: Docker Compose on Linux today, Kubernetes later. Bare-host execution is not a supported path.
+- **Admin** is a containerized runtime only: Docker Compose is the canonical local deployment path, and Helmfile/Helm assets are maintained under `deploy/k8s` for Admin/VPN infrastructure. Bare-host execution is not a supported path.
 - **Agent** is where the host-compatibility matrix matters, because it touches the host network, resolver, and metrics surfaces directly.
 
 **Agent host platform matrix.**

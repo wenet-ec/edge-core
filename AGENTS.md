@@ -7,7 +7,7 @@ This is the canonical repository guide for everyone working in this codebase: ma
 Edge Core is a distributed edge computing infrastructure management platform built with Elixir and Phoenix. It enables centralized control of geographically distributed edge nodes through two groups of capabilities:
 
 **Functionalities:** remote command execution, SSH backdoor access, metrics aggregation, self-update.
-**Connectivity:** cloud↔edge TCP proxying (forward proxy + proxy chaining), edge↔edge WireGuard VPN mesh, edge↔local devices (mDNS today; LAN DNS is future scope — see `docs/architecture.md`).
+**Connectivity:** cloud↔edge TCP proxying (forward proxy + proxy chaining), edge↔edge WireGuard VPN mesh, edge↔local devices on the same LAN via mDNS.
 
 - **Edge Admin** (cloud server) - Orchestrates nodes, commands, SSH access, proxies, and metrics. PostgreSQL is the production default and the only path that supports multi-admin HA. The same compiled binary also supports SQLite (`DB_ADAPTER=sqlite`) for single-instance hobbyist / homelab deployments — see `examples/README.md` and `examples/lite/`.
 - **Edge Agent** (edge nodes) - Standalone binary, primary deployment is one per machine (`network_mode: host`). Also works as a sidecar container on bridge networking. Bundles netclient, SSH server, Prometheus exporters, and forward proxies.

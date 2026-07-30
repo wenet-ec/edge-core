@@ -29,7 +29,7 @@ The **agent** that runs on your machines and the **Nexmaker** shared library are
 
 - **Cloud ↔ Edge (forward proxy + proxy chaining)** — HTTP and SOCKS5 forward proxies tunnel any TCP traffic from the cloud through any agent to its local network or the internet
 - **Edge ↔ Edge (VPN mesh)** — full WireGuard P2P mesh per cluster, automatic peer discovery, netclient-local DNS for `.nm.internal` hostnames, DERP relay fallback for NAT
-- **Edge ↔ Local devices (mDNS)** — agents advertise themselves via mDNS for zero-config discovery by devices on the same LAN; full LAN DNS control is a future direction (see [`docs/architecture.md`](https://github.com/wenet-ec/edge-core/blob/main/docs/architecture.md))
+- **Edge ↔ Local devices (mDNS)** — agents advertise themselves via mDNS for zero-config discovery by devices on the same LAN segment
 
 **Async events**
 
@@ -77,7 +77,7 @@ The **agent** that runs on your machines and the **Nexmaker** shared library are
 
 *¹ Ansible is a complement, not a competitor — see below.*
 
-**vs Balena:** Balena is optimized for IoT and requires their cloud or their OS. Edge Core is designed to run on general-purpose Linux (see [Host compatibility](#host-compatibility) for tested distros), any cloud or on-prem. You own everything.
+**vs Balena:** Balena is optimized for IoT and requires their cloud or their OS. Edge Core is designed to run on general-purpose Linux (see [Host compatibility](#host-compatibility) for tested distros), in any cloud or on-prem. It manages hosts you control; it does not provide or take ownership of their operating system.
 
 **vs Tailscale / Headscale:** Tailscale (and its self-hosted equivalent Headscale) is a polished, opinionated mesh networking product — VPN, identity, SSH, ACLs, MagicDNS, exit nodes. We use Tailscale's [DERP](https://tailscale.com/blog/how-nat-traversal-works) relay protocol for our own NAT-traversal fallback, so this isn't really a head-to-head comparison. Edge Core sits one layer up: the network plumbing is solved (via Netmaker + DERP), and the product is the fleet-management layer on top — command execution, centralized SSH credentials, HTTP/SOCKS5 forward proxying, metrics aggregation, MCP. If your need is "give my team SSH'd access to my fleet over a VPN", Tailscale is probably what you want. If you also need to *operate* the fleet from a control plane, that's where Edge Core fits.
 
@@ -146,7 +146,7 @@ The admin is always a containerized deployment target. We do not support running
 | ------------------ | ------ | ----- |
 | Docker Compose on Linux | Supported | Canonical deployment path today |
 | Docker on Linux | Supported | Same containerized runtime model |
-| Kubernetes | Planned / not yet shipped | `examples/k8s` is still TODO |
+| Kubernetes | Admin/VPN deployment assets available | Helmfile/Helm assets live under `deploy/k8s`; qualify the deployment for your environment before production use |
 | Bare Linux host process | Unsupported | Not a supported runtime shape |
 
 The admin is much less host-sensitive than the agent: it runs containerized and uses `wireguard-go` (userspace) inside its own container, so it does not depend on host WireGuard kernel support.

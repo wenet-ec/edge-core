@@ -16,7 +16,7 @@ defmodule EdgeAdminWeb.Controllers.Guide.Layout do
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="description" content={@description} />
-        <title>{@title} — Edge Admin guide</title>
+        <title>{@title} — Guide</title>
         <link rel="stylesheet" href="/assets/guide.css" />
       </head>
       <body>

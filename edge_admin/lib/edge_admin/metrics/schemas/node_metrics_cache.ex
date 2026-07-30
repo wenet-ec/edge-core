@@ -46,5 +46,6 @@ defmodule EdgeAdmin.Metrics.Schemas.NodeMetricsCache do
     |> unique_constraint([:node_id, :metrics_type],
       name: :node_metrics_cache_node_id_metrics_type_index
     )
+    |> foreign_key_constraint(:node_id)
   end
 end

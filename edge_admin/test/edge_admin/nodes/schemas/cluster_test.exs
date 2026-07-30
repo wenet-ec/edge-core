@@ -3,6 +3,8 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
   use ExUnit.Case, async: true
 
   alias Ecto.Association.NotLoaded
+  alias EdgeAdmin.Commands.Schemas.CommandExecution
+  alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Cluster
 
   # ---------------------------------------------------------------------------
@@ -19,6 +21,25 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
 
   defp apply(attrs) do
     attrs |> build_changeset() |> Ecto.Changeset.apply_action(:insert)
+  end
+
+  # ---------------------------------------------------------------------------
+  # associations
+  # ---------------------------------------------------------------------------
+
+  describe "associations" do
+    test "maps aliases and command executions using their database delete behavior" do
+      aliases = Cluster.__schema__(:association, :aliases)
+      command_executions = Cluster.__schema__(:association, :command_executions)
+
+      assert aliases.cardinality == :many
+      assert aliases.related == Alias
+      assert aliases.on_delete == :delete_all
+
+      assert command_executions.cardinality == :many
+      assert command_executions.related == CommandExecution
+      assert command_executions.on_delete == :nilify_all
+    end
   end
 
   # ---------------------------------------------------------------------------

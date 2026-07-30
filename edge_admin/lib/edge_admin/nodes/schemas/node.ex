@@ -24,8 +24,11 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Commands.Schemas.CommandExecution
+  alias EdgeAdmin.Diagnostics.Schemas.NodeDiagnostic
+  alias EdgeAdmin.Metrics.Schemas.NodeMetricsCache
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Cluster
+  alias EdgeAdmin.Ssh.Schemas.SshPublicKey
   alias EdgeAdmin.Ssh.Schemas.SshUsername
   alias EdgeAdmin.Vpn
 
@@ -34,6 +37,14 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   # enums) all derive from these lists — single source of truth.
   @statuses [:healthy, :unhealthy, :unreachable]
   @reachable_statuses [:healthy, :unhealthy]
+  @port_fields [
+    :http_port,
+    :ssh_port,
+    :host_metrics_port,
+    :wireguard_metrics_port,
+    :http_proxy_port,
+    :socks5_proxy_port
+  ]
 
   # ID-type registry. Same pattern as @statuses above.
   @id_types [:persistent, :random]
@@ -62,7 +73,12 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
           mdns_hostname: String.t() | nil,
           cluster_id: String.t(),
           cluster: Cluster.t() | NotLoaded.t(),
+          node_diagnostic: NodeDiagnostic.t() | NotLoaded.t() | nil,
+          host_metrics_cache: NodeMetricsCache.t() | NotLoaded.t() | nil,
+          agent_metrics_cache: NodeMetricsCache.t() | NotLoaded.t() | nil,
+          wireguard_metrics_cache: NodeMetricsCache.t() | NotLoaded.t() | nil,
           ssh_usernames: [SshUsername.t()] | NotLoaded.t(),
+          ssh_public_keys: [SshPublicKey.t()] | NotLoaded.t(),
           aliases: [Alias.t()] | NotLoaded.t(),
           command_executions: [CommandExecution.t()] | NotLoaded.t(),
           commands: [EdgeAdmin.Commands.Schemas.Command.t()] | NotLoaded.t(),
@@ -118,7 +134,25 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
 
     # Associations
     belongs_to(:cluster, Cluster)
+    has_one(:node_diagnostic, NodeDiagnostic, on_delete: :delete_all)
+
+    has_one(:host_metrics_cache, NodeMetricsCache,
+      where: [metrics_type: "host"],
+      on_delete: :delete_all
+    )
+
+    has_one(:agent_metrics_cache, NodeMetricsCache,
+      where: [metrics_type: "agent"],
+      on_delete: :delete_all
+    )
+
+    has_one(:wireguard_metrics_cache, NodeMetricsCache,
+      where: [metrics_type: "wireguard"],
+      on_delete: :delete_all
+    )
+
     has_many(:ssh_usernames, SshUsername, on_delete: :delete_all)
+    has_many(:ssh_public_keys, through: [:ssh_usernames, :ssh_public_keys])
     has_many(:aliases, Alias, on_delete: :delete_all)
     has_many(:command_executions, CommandExecution, on_delete: :nilify_all)
     has_many(:commands, through: [:command_executions, :command])
@@ -151,6 +185,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     |> validate_required([
       :id,
       :cluster_id,
+      :netmaker_host_id,
       :id_type,
       :http_port,
       :ssh_port,
@@ -166,6 +201,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     |> unique_constraint(:id, name: :nodes_pkey)
     |> unique_constraint(:api_token)
     |> foreign_key_constraint(:cluster_id)
+    |> validate_ports()
   end
 
   defp validate_uuid_format(changeset, field) do
@@ -174,6 +210,16 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
         {:ok, _} -> []
         :error -> [{field, "must be a valid UUID format"}]
       end
+    end)
+  end
+
+  defp validate_ports(changeset) do
+    Enum.reduce(@port_fields, changeset, fn field, changeset ->
+      validate_number(changeset, field,
+        greater_than: 0,
+        less_than_or_equal_to: 65_535,
+        message: "must be between 1 and 65535"
+      )
     end)
   end
 

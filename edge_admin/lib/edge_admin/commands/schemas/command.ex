@@ -5,6 +5,7 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Commands.Schemas.CommandExecution
+  alias EdgeAdmin.Nodes.Schemas.Node
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -13,6 +14,7 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
           expires_at: DateTime.t() | nil,
           targeting: map(),
           command_executions: [CommandExecution.t()] | NotLoaded.t(),
+          nodes: [Node.t()] | NotLoaded.t(),
           inserted_at: DateTime.t(),
           updated_at: DateTime.t()
         }
@@ -36,6 +38,7 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
 
     # Associations
     has_many(:command_executions, CommandExecution, on_delete: :delete_all)
+    has_many(:nodes, through: [:command_executions, :node])
 
     timestamps(type: :utc_datetime)
   end
@@ -45,8 +48,20 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
     command
     |> cast(attrs, [:command_text, :timeout, :expires_at, :targeting])
     |> validate_required([:command_text, :targeting])
+    |> validate_command_text()
     |> validate_timeout()
     |> validate_expires_at()
+  end
+
+  @doc false
+  defp validate_command_text(changeset) do
+    validate_change(changeset, :command_text, fn :command_text, command_text ->
+      if String.trim(command_text) == "" do
+        [command_text: "must not be blank"]
+      else
+        []
+      end
+    end)
   end
 
   @doc false

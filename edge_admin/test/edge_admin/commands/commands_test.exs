@@ -26,6 +26,7 @@ defmodule EdgeAdmin.CommandsTest do
     Repo.insert!(%Node{
       id: Ecto.UUID.generate(),
       cluster_id: cluster.id,
+      netmaker_host_id: Ecto.UUID.generate(),
       id_type: :persistent,
       status: :healthy,
       version: "0.1.0",

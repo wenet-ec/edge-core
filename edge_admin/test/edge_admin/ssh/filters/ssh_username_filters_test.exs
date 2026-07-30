@@ -30,6 +30,7 @@ defmodule EdgeAdmin.Ssh.Filters.SshUsernameFiltersTest do
       struct(Node, %{
         id: Ecto.UUID.generate(),
         cluster_id: cluster_id,
+        netmaker_host_id: Ecto.UUID.generate(),
         id_type: :persistent,
         status: :healthy,
         version: "0.1.0",

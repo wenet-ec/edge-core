@@ -20,7 +20,9 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   use EdgeAdmin.Schema
 
   alias Ecto.Association.NotLoaded
+  alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Naming
+  alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Vpn
@@ -41,6 +43,8 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
           node_count: integer() | nil,
           nodes: [Node.t()] | NotLoaded.t(),
           enrollment_keys: [EnrollmentKey.t()] | NotLoaded.t(),
+          aliases: [Alias.t()] | NotLoaded.t(),
+          command_executions: [CommandExecution.t()] | NotLoaded.t(),
           inserted_at: DateTime.t(),
           updated_at: DateTime.t()
         }
@@ -67,6 +71,8 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
 
     has_many(:nodes, Node)
     has_many(:enrollment_keys, EnrollmentKey)
+    has_many(:aliases, Alias, on_delete: :delete_all)
+    has_many(:command_executions, CommandExecution, on_delete: :nilify_all)
 
     timestamps()
   end

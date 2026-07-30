@@ -26,6 +26,15 @@ defmodule EdgeAdmin.Diagnostics.Schemas.NodeDiagnosticTest do
     assert "can't be blank" in errors[:report]
   end
 
+  test "maps the node foreign key constraint to the node_id field" do
+    constraints = NodeDiagnostic.changeset(%NodeDiagnostic{}, valid_attrs(%{})).constraints
+
+    assert Enum.any?(constraints, fn constraint ->
+             constraint.field == :node_id and constraint.type == :foreign_key and
+               constraint.error_type == :foreign
+           end)
+  end
+
   defp errors_on(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {message, _opts} -> message end)
   end

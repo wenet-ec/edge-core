@@ -22,6 +22,7 @@ defmodule EdgeAdmin.Nodes.DiscoveryNodesTest do
     defaults = %{
       id: Ecto.UUID.generate(),
       cluster_id: cluster.id,
+      netmaker_host_id: Ecto.UUID.generate(),
       id_type: :persistent,
       status: :healthy,
       last_seen_at: ~U[2026-02-01 12:00:00Z],

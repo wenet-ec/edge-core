@@ -3,6 +3,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Commands.Schemas.Command
+  alias EdgeAdmin.Nodes.Schemas.Node
 
   defp valid_attrs(overrides \\ %{}) do
     Map.merge(
@@ -21,6 +22,18 @@ defmodule EdgeAdmin.Commands.Schemas.CommandTest do
         opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
       end)
     end)
+  end
+
+  describe "associations" do
+    test "maps target nodes through command executions" do
+      association = Command.__schema__(:association, :nodes)
+
+      assert association.cardinality == :many
+      assert association.through == [:command_executions, :node]
+
+      through_association = Node.__schema__(:association, :command_executions)
+      assert through_association.related == EdgeAdmin.Commands.Schemas.CommandExecution
+    end
   end
 
   # ---------------------------------------------------------------------------

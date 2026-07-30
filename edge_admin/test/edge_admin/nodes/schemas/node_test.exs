@@ -2,8 +2,11 @@
 defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
   use ExUnit.Case, async: true
 
+  alias EdgeAdmin.Diagnostics.Schemas.NodeDiagnostic
+  alias EdgeAdmin.Metrics.Schemas.NodeMetricsCache
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.Ssh.Schemas.SshPublicKey
 
   defp fake_cluster(overrides \\ %{}) do
     Map.merge(
@@ -25,6 +28,121 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
       },
       overrides
     )
+  end
+
+  defp valid_attrs(overrides \\ %{}) do
+    Map.merge(
+      %{
+        id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+        cluster_id: "11111111-2222-3333-4444-555555555555",
+        netmaker_host_id: "22222222-3333-4444-5555-666666666666",
+        id_type: :persistent,
+        status: :healthy,
+        http_port: 44_000,
+        ssh_port: 40_022,
+        host_metrics_port: 49_100,
+        wireguard_metrics_port: 49_586,
+        http_proxy_port: 43_128,
+        socks5_proxy_port: 41_080,
+        api_token: "node-api-token",
+        proxy_password: "node-proxy-password",
+        version: "1.0.0",
+        self_update_enabled: false
+      },
+      overrides
+    )
+  end
+
+  defp errors_on(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {message, _opts} -> message end)
+  end
+
+  # ---------------------------------------------------------------------------
+  # changeset/2
+  # ---------------------------------------------------------------------------
+
+  describe "changeset/2" do
+    test "accepts valid registration attributes" do
+      assert Node.changeset(%Node{}, valid_attrs()).valid?
+    end
+
+    test "requires a Netmaker host ID" do
+      changeset = Node.changeset(%Node{}, Map.delete(valid_attrs(), :netmaker_host_id))
+
+      refute changeset.valid?
+      assert "can't be blank" in errors_on(changeset).netmaker_host_id
+    end
+
+    test "accepts every configured service port at both inclusive boundaries" do
+      for field <- [
+            :http_port,
+            :ssh_port,
+            :host_metrics_port,
+            :wireguard_metrics_port,
+            :http_proxy_port,
+            :socks5_proxy_port
+          ],
+          port <- [1, 65_535] do
+        assert Node.changeset(%Node{}, valid_attrs(%{field => port})).valid?,
+               "expected #{field}=#{port} to be valid"
+      end
+    end
+
+    test "rejects every configured service port outside the TCP/UDP range" do
+      for field <- [
+            :http_port,
+            :ssh_port,
+            :host_metrics_port,
+            :wireguard_metrics_port,
+            :http_proxy_port,
+            :socks5_proxy_port
+          ],
+          port <- [0, 65_536] do
+        changeset = Node.changeset(%Node{}, valid_attrs(%{field => port}))
+
+        refute changeset.valid?, "expected #{field}=#{port} to be invalid"
+        assert "must be between 1 and 65535" in errors_on(changeset)[field]
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # associations
+  # ---------------------------------------------------------------------------
+
+  describe "associations" do
+    test "maps the latest diagnostic as a one-to-one association" do
+      association = Node.__schema__(:association, :node_diagnostic)
+
+      assert association.cardinality == :one
+      assert association.related == NodeDiagnostic
+      assert association.on_delete == :delete_all
+    end
+
+    test "maps one metrics cache per supported metrics type" do
+      for {association_name, metrics_type} <- [
+            {:host_metrics_cache, "host"},
+            {:agent_metrics_cache, "agent"},
+            {:wireguard_metrics_cache, "wireguard"}
+          ] do
+        association = Node.__schema__(:association, association_name)
+
+        assert association.cardinality == :one
+        assert association.related == NodeMetricsCache
+        assert association.where == [metrics_type: metrics_type]
+        assert association.on_delete == :delete_all
+      end
+    end
+
+    test "maps SSH public keys through SSH usernames" do
+      association = Node.__schema__(:association, :ssh_public_keys)
+
+      assert association.cardinality == :many
+      assert association.through == [:ssh_usernames, :ssh_public_keys]
+
+      through_association = SshPublicKey.__schema__(:association, :ssh_username)
+      assert through_association.related == EdgeAdmin.Ssh.Schemas.SshUsername
+    end
   end
 
   # ---------------------------------------------------------------------------

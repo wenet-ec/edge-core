@@ -60,8 +60,9 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
     |> cast(attrs, [:name, :key, :cluster_id, :uses_remaining, :expires_at])
     |> validate_required([:key, :cluster_id])
     |> validate_uses_remaining()
+    |> validate_expires_at()
     |> unique_constraint(:key)
-    |> assoc_constraint(:cluster)
+    |> foreign_key_constraint(:cluster_id)
   end
 
   @doc """
@@ -96,6 +97,16 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKey do
         []
       else
         [uses_remaining: "must be a positive integer (or null for unlimited)"]
+      end
+    end)
+  end
+
+  defp validate_expires_at(changeset) do
+    validate_change(changeset, :expires_at, fn :expires_at, expires_at ->
+      if DateTime.after?(expires_at, DateTime.utc_now()) do
+        []
+      else
+        [expires_at: "must be in the future"]
       end
     end)
   end

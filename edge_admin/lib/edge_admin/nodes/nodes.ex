@@ -2608,77 +2608,81 @@ defmodule EdgeAdmin.Nodes do
       {:ok, %Alias{name: "web-server", node_id: "abc-123"}}
   """
   @spec create_alias(Node.t(), map()) ::
-          {:ok, Alias.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
+          {:ok, Alias.t()}
+          | {:error, Ecto.Changeset.t()}
+          | {:error, {:conflict, String.t()}}
+          | {:error, :service_unavailable}
   def create_alias(%Node{} = node, params) do
     with {:ok, attrs} <- Forms.CreateAliasForm.changeset(params) do
-      # 1. Ensure node has cluster preloaded
-      node = Repo.preload(node, :cluster)
+      alias_attrs = Map.merge(attrs, %{"node_id" => node.id, "cluster_id" => node.cluster_id})
+      changeset = Alias.changeset(%Alias{}, alias_attrs)
 
-      # 2. Query Netmaker for node's IP address (required for DNS entry)
-      network_name = node_network_name(node.cluster)
+      case Checks.NodeClusterConsistencyCheck.check(changeset) do
+        {:error, changeset} ->
+          {:error, changeset}
 
-      case Vpn.find_node_by_host(network_name, node.netmaker_host_id) do
-        {:ok, %{"address" => address}} when is_binary(address) and address != "" ->
-          # 3. Build attrs with node_id and cluster_id
-          alias_attrs =
-            Map.merge(attrs, %{
-              "node_id" => node.id,
-              "cluster_id" => node.cluster_id
-            })
+        {:ok, changeset} ->
+          # Query Netmaker only after local/schema and DB-state checks pass.
+          network_name = node_network_name(node.cluster)
 
-          # 4. Create DB record
-          changeset = Alias.changeset(%Alias{}, alias_attrs)
+          case Vpn.find_node_by_host(network_name, node.netmaker_host_id) do
+            {:ok, %{"address" => address}} when is_binary(address) and address != "" ->
+              insert_alias(changeset, network_name, address)
 
-          case Repo.insert(changeset) do
-            {:ok, alias_record} ->
-              alias_record = Repo.preload(alias_record, :cluster)
+            {:ok, _node} ->
+              # Node exists in Netmaker but has no IP yet — still enrolling
+              Logger.warning(
+                "Cannot create alias: node #{node.netmaker_host_id} has no IP address yet in network #{network_name}"
+              )
 
-              # 5. Create DNS entry in Netmaker (rollback DB on failure)
-              ip_address = address |> String.split("/") |> List.first()
-              vpn_hostname = Alias.vpn_hostname(alias_record)
-              netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
+              {:error,
+               {:conflict, "Node has not been assigned an IP address yet. It may still be enrolling in the VPN."}}
 
-              case Vpn.create_dns_entry(network_name, %{
-                     name: netmaker_dns_name,
-                     address: ip_address
-                   }) do
-                {:ok, _} ->
-                  Logger.info("Created DNS entry for alias #{alias_record.name}: #{vpn_hostname} -> #{ip_address}")
-                  {:ok, alias_record}
+            {:error, :not_found} ->
+              # Node is not enrolled in Netmaker at all
+              Logger.warning(
+                "Cannot create alias: node #{node.netmaker_host_id} is not enrolled in network #{network_name}"
+              )
 
-                {:error, :service_unavailable} = error ->
-                  # Netmaker DNS creation failed - rollback DB insert
-                  Logger.warning("Netmaker DNS creation failed, rolling back DB alias: #{alias_record.name}")
-                  Repo.delete(alias_record)
-                  error
-              end
+              {:error,
+               {:conflict,
+                "Node is not enrolled in the VPN network. Ensure the agent is connected and has joined the network."}}
 
-            {:error, changeset} ->
-              Repo.normalize_conflict({:error, changeset}, [:name, :cluster_id])
+            {:error, :service_unavailable} ->
+              Logger.error("Failed to query Netmaker nodes for network #{network_name}")
+              {:error, :service_unavailable}
           end
-
-        {:ok, _node} ->
-          # Node exists in Netmaker but has no IP yet — still enrolling
-          Logger.warning(
-            "Cannot create alias: node #{node.netmaker_host_id} has no IP address yet in network #{network_name}"
-          )
-
-          {:error, {:conflict, "Node has not been assigned an IP address yet. It may still be enrolling in the VPN."}}
-
-        {:error, :not_found} ->
-          # Node is not enrolled in this network at all
-          Logger.warning(
-            "Cannot create alias: node #{node.netmaker_host_id} is not enrolled in network #{network_name}"
-          )
-
-          {:error,
-           {:conflict,
-            "Node is not enrolled in the VPN network. Ensure the agent is connected and has joined the network."}}
-
-        {:error, :service_unavailable} ->
-          Logger.error("Failed to query Netmaker nodes for network #{network_name}")
-          {:error, :service_unavailable}
       end
+    end
+  end
+
+  defp insert_alias(changeset, network_name, address) do
+    case Repo.insert(changeset) do
+      {:ok, alias_record} ->
+        alias_record = Repo.preload(alias_record, :cluster)
+
+        # Create DNS entry in Netmaker (rollback DB on failure)
+        ip_address = address |> String.split("/") |> List.first()
+        vpn_hostname = Alias.vpn_hostname(alias_record)
+        netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
+
+        case Vpn.create_dns_entry(network_name, %{
+               name: netmaker_dns_name,
+               address: ip_address
+             }) do
+          {:ok, _} ->
+            Logger.info("Created DNS entry for alias #{alias_record.name}: #{vpn_hostname} -> #{ip_address}")
+            {:ok, alias_record}
+
+          {:error, :service_unavailable} = error ->
+            # Netmaker DNS creation failed - rollback DB insert
+            Logger.warning("Netmaker DNS creation failed, rolling back DB alias: #{alias_record.name}")
+            Repo.delete(alias_record)
+            error
+        end
+
+      {:error, changeset} ->
+        Repo.normalize_conflict({:error, changeset}, [:name, :cluster_id])
     end
   end
 
@@ -2776,7 +2780,7 @@ defmodule EdgeAdmin.Nodes do
 
     case Vpn.list_custom_dns_entries(network_name) do
       {:ok, netmaker_custom_entries} ->
-        db_aliases = Repo.all(from(a in Alias, where: a.cluster_id == ^cluster.id, preload: [:cluster, :node]))
+        db_aliases = Repo.preload(cluster, [aliases: :node], force: true).aliases
 
         db_alias_hostnames = MapSet.new(db_aliases, &Alias.vpn_hostname/1)
         db_alias_short_names = MapSet.new(db_aliases, &Alias.netmaker_dns_name/1)

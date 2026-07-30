@@ -25,7 +25,7 @@ defmodule EdgeAdmin.Repo.Migrations.CreateNodes do
       add :self_update_enabled, :boolean, null: false, default: false
 
       # Netmaker references
-      add :netmaker_host_id, :binary_id
+      add :netmaker_host_id, :binary_id, null: false
 
       timestamps(type: :utc_datetime)
     end

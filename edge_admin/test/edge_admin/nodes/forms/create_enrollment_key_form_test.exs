@@ -98,6 +98,15 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyFormTest do
     end
   end
 
+  describe "changeset/1 — expiry validation" do
+    test "past expires_at is rejected" do
+      past = DateTime.shift(DateTime.utc_now(), hour: -1)
+
+      assert {:error, changeset} = CreateEnrollmentKeyForm.changeset(%{expires_at: past})
+      assert "must be in the future" in errors_on(changeset).expires_at
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # changeset/1 — to_map output
   # ---------------------------------------------------------------------------

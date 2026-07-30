@@ -32,5 +32,6 @@ defmodule EdgeAdmin.Diagnostics.Schemas.NodeDiagnostic do
     |> cast(attrs, [:node_id, :report])
     |> validate_required([:node_id, :report])
     |> unique_constraint(:node_id, name: :node_diagnostics_node_id_index)
+    |> foreign_key_constraint(:node_id)
   end
 end

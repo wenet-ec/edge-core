@@ -62,6 +62,15 @@ defmodule EdgeAdmin.Metrics.Schemas.NodeMetricsCacheTest do
       assert changeset.valid?
       refute Map.has_key?(changeset.changes, :not_a_field)
     end
+
+    test "maps the node foreign key constraint to the node_id field" do
+      constraints = NodeMetricsCache.changeset(%NodeMetricsCache{}, valid_attrs()).constraints
+
+      assert Enum.any?(constraints, fn constraint ->
+               constraint.field == :node_id and constraint.type == :foreign_key and
+                 constraint.error_type == :foreign
+             end)
+    end
   end
 
   # Mirrors Phoenix's Ecto.Changeset error helper without pulling in DataCase

@@ -10,7 +10,7 @@ defmodule EdgeAdmin.Commands.Views.CommandExecutionViewTest do
 
   defp execution_fixture(overrides \\ %{}) do
     now = DateTime.truncate(DateTime.utc_now(), :second)
-    expiry = DateTime.add(now, 3600, :second)
+    expiry = DateTime.shift(now, hour: 1)
 
     cluster = %Cluster{id: "cluster-uuid-1", name: "prod"}
     command = %Command{id: "command-uuid-1", command_text: "uname -a", timeout: 30_000, expires_at: expiry}

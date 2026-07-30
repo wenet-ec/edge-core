@@ -77,16 +77,22 @@ defmodule EdgeAgent.Mixfile do
     ]
   end
 
-  # cowlib 2.18.0 (transitive via cowboy) has GHSA-g2wm-735q-3f56 — low-severity
-  # cookie-encoder issue with no patched version published upstream. We don't
-  # use cow_cookie:cookie/1, so this is a low-risk ignore. Re-check when
-  # cowlib publishes a fix and drop this list.
-  defp deps_audit_cmd, do: "deps.audit --ignore-advisory-ids GHSA-g2wm-735q-3f56"
+  # GHSA-g2wm-735q-3f56 is a distinct cow_cookie:cookie/1 issue, but this
+  # application has no Cowlib lock entry and needs no audit exception for it.
+  # GHSA-w4f7-4cxr-rv3c remains unpatched in Cowlib:
+  #
+  # - It is a structured-field header encoder issue.
+  # - This application uses Bandit rather than Cowboy.
+  #
+  # Re-check when Cowlib publishes a fix and remove this exception.
+  defp deps_audit_cmd do
+    "deps.audit --ignore-advisory-ids GHSA-w4f7-4cxr-rv3c"
+  end
 
   defp deps do
     [
       # HTTP Client
-      {:req, "~> 0.6"},
+      {:req, "~> 0.7"},
 
       # HTTP server
       {:bandit, "~> 1.12"},
@@ -116,7 +122,7 @@ defmodule EdgeAgent.Mixfile do
       {:credo, "~> 1.7", only: [:dev, :test], override: true},
       {:credo_envvar, "~> 0.1", only: [:dev, :test], runtime: false},
       {:credo_naming, "~> 2.1", only: [:dev, :test], runtime: false},
-      {:styler, "~> 1.11", only: [:dev, :test], runtime: false},
+      {:styler, "~> 1.12", only: [:dev, :test], runtime: false},
 
       # Security check
       {:sobelow, "~> 0.14", only: [:dev, :test], runtime: true},

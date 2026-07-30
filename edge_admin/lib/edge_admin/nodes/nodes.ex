@@ -1174,7 +1174,7 @@ defmodule EdgeAdmin.Nodes do
   # Only mark as unreachable if last_seen_at is > 5 minutes ago
   # Otherwise keep existing status (agent might be using HTTP fallback to report health)
   defp handle_unreachable_node(node) do
-    five_minutes_ago = DateTime.add(DateTime.utc_now(), -5, :minute)
+    five_minutes_ago = DateTime.shift(DateTime.utc_now(), minute: -5)
 
     should_mark_unreachable =
       case node.last_seen_at do

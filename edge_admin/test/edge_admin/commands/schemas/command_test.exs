@@ -129,13 +129,13 @@ defmodule EdgeAdmin.Commands.Schemas.CommandTest do
 
   describe "changeset/2 — expires_at" do
     test "future timestamp is valid" do
-      future = DateTime.add(DateTime.utc_now(), 3600, :second)
+      future = DateTime.shift(DateTime.utc_now(), hour: 1)
       changeset = Command.changeset(%Command{}, valid_attrs(%{expires_at: future}))
       assert changeset.valid?
     end
 
     test "past timestamp is rejected" do
-      past = DateTime.add(DateTime.utc_now(), -3600, :second)
+      past = DateTime.shift(DateTime.utc_now(), hour: -1)
       changeset = Command.changeset(%Command{}, valid_attrs(%{expires_at: past}))
       refute changeset.valid?
 

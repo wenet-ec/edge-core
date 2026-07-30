@@ -54,12 +54,12 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKeyTest do
     end
 
     test "expires_at in the future → false (not expired)" do
-      future = DateTime.add(DateTime.utc_now(), 3600, :second)
+      future = DateTime.shift(DateTime.utc_now(), hour: 1)
       refute EnrollmentKey.expired?(key(%{expires_at: future}))
     end
 
     test "expires_at in the past → true (expired)" do
-      past = DateTime.add(DateTime.utc_now(), -3600, :second)
+      past = DateTime.shift(DateTime.utc_now(), hour: -1)
       assert EnrollmentKey.expired?(key(%{expires_at: past}))
     end
   end

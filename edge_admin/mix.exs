@@ -79,16 +79,23 @@ defmodule EdgeAdmin.Mixfile do
     ]
   end
 
-  # cowlib 2.18.0 (transitive via cowboy) has GHSA-g2wm-735q-3f56 — low-severity
-  # cookie-encoder issue with no patched version published upstream. We don't
-  # use cow_cookie:cookie/1, so this is a low-risk ignore. Re-check when
-  # cowlib publishes a fix and drop this list.
-  defp deps_audit_cmd, do: "deps.audit --ignore-advisory-ids GHSA-g2wm-735q-3f56"
+  # GHSA-g2wm-735q-3f56 is a distinct cow_cookie:cookie/1 issue, but Cowlib
+  # 2.19.0 is outside its affected range (through 2.16.1), so it needs no
+  # audit exception. GHSA-w4f7-4cxr-rv3c remains unpatched in Cowlib:
+  #
+  # - It is a structured-field header encoder issue.
+  # - Gun 2.5.0 includes Gun's 2.4 request-header validation mitigation.
+  # - This application uses Bandit rather than Cowboy.
+  #
+  # Re-check when Cowlib publishes a fix and remove this exception.
+  defp deps_audit_cmd do
+    "deps.audit --ignore-advisory-ids GHSA-w4f7-4cxr-rv3c"
+  end
 
   defp deps do
     [
       # HTTP Client/Wrapper
-      {:req, "~> 0.6"},
+      {:req, "~> 0.7"},
 
       # HTTP server
       {:bandit, "~> 1.12"},
@@ -105,7 +112,7 @@ defmodule EdgeAdmin.Mixfile do
 
       # API and MCP
       {:open_api_spex, "~> 3.22"},
-      {:anubis_mcp, "~> 1.10"},
+      {:anubis_mcp, "~> 1.14"},
 
       # Database
       {:ecto_sql, "~> 3.14"},
@@ -133,7 +140,7 @@ defmodule EdgeAdmin.Mixfile do
       {:credo, "~> 1.7", only: [:dev, :test], override: true},
       {:credo_envvar, "~> 0.1", only: [:dev, :test], runtime: false},
       {:credo_naming, "~> 2.1", only: [:dev, :test], runtime: false},
-      {:styler, "~> 1.11", only: [:dev, :test], runtime: false},
+      {:styler, "~> 1.12", only: [:dev, :test], runtime: false},
 
       # Security check
       {:sobelow, "~> 0.14", only: [:dev, :test], runtime: true},
@@ -169,7 +176,7 @@ defmodule EdgeAdmin.Mixfile do
       # compile and honors BUILD_WITHOUT_QUIC=1 (set in the Dockerfiles). Hex
       # flattens dynamic deps at publish time, so the Hex package always lists
       # `quicer` as non-optional even though the script would exclude it locally.
-      {:emqtt, github: "emqx/emqtt", tag: "1.15.3"},
+      {:emqtt, github: "emqx/emqtt", tag: "1.15.4"},
       {:ex_aws, "~> 2.7"},
       {:ex_aws_sns, "~> 2.3"},
       {:sweet_xml, "~> 0.7"},

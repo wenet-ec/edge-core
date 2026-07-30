@@ -405,7 +405,7 @@ defmodule EdgeAdmin.Metrics do
   """
   @spec get_cached_metrics(binary(), String.t()) :: NodeMetricsCache.t() | nil
   def get_cached_metrics(node_id, metrics_type) do
-    cutoff = DateTime.add(DateTime.utc_now(), -@cache_staleness_minutes, :minute)
+    cutoff = DateTime.shift(DateTime.utc_now(), minute: -@cache_staleness_minutes)
 
     NodeMetricsCache
     |> where([m], m.node_id == ^node_id and m.metrics_type == ^metrics_type)

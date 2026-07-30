@@ -79,7 +79,7 @@ defmodule EdgeAdmin.Diagnostics do
   """
   @spec get_cached_node_diagnostic(String.t()) :: NodeDiagnostic.t() | nil
   def get_cached_node_diagnostic(node_id) do
-    cutoff = DateTime.add(DateTime.utc_now(), -@cache_staleness_minutes, :minute)
+    cutoff = DateTime.shift(DateTime.utc_now(), minute: -@cache_staleness_minutes)
 
     NodeDiagnostic
     |> where([diagnostic], diagnostic.node_id == ^node_id and diagnostic.updated_at >= ^cutoff)

@@ -132,8 +132,8 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
   describe "apply_is_expired/2" do
     test "true matches keys with expires_at in the past" do
       cluster = insert_cluster()
-      past = DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.truncate(:second)
-      future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
+      past = DateTime.utc_now() |> DateTime.shift(hour: -1) |> DateTime.truncate(:second)
+      future = DateTime.utc_now() |> DateTime.shift(hour: 1) |> DateTime.truncate(:second)
 
       expired = insert_key(cluster.id, %{expires_at: past})
       _future = insert_key(cluster.id, %{expires_at: future})
@@ -146,8 +146,8 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
 
     test "false matches keys with no expiry OR future expiry" do
       cluster = insert_cluster()
-      past = DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.truncate(:second)
-      future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
+      past = DateTime.utc_now() |> DateTime.shift(hour: -1) |> DateTime.truncate(:second)
+      future = DateTime.utc_now() |> DateTime.shift(hour: 1) |> DateTime.truncate(:second)
 
       _expired = insert_key(cluster.id, %{expires_at: past})
       future_key = insert_key(cluster.id, %{expires_at: future})
@@ -199,8 +199,8 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
   describe "apply_has_expiry/2" do
     test "true matches keys with expires_at set, regardless of past/future" do
       cluster = insert_cluster()
-      past = DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.truncate(:second)
-      future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
+      past = DateTime.utc_now() |> DateTime.shift(hour: -1) |> DateTime.truncate(:second)
+      future = DateTime.utc_now() |> DateTime.shift(hour: 1) |> DateTime.truncate(:second)
 
       past_key = insert_key(cluster.id, %{expires_at: past})
       future_key = insert_key(cluster.id, %{expires_at: future})
@@ -213,7 +213,7 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
 
     test "false matches keys with no expiry set" do
       cluster = insert_cluster()
-      future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
+      future = DateTime.utc_now() |> DateTime.shift(hour: 1) |> DateTime.truncate(:second)
 
       _has_expiry = insert_key(cluster.id, %{expires_at: future})
       no_expiry = insert_key(cluster.id, %{expires_at: nil})

@@ -24,7 +24,7 @@ defmodule EdgeAgent.SelfUpdatesTest do
 
     test "inserted_at strictly newer than last_check → true" do
       last_check = DateTime.utc_now()
-      newer = DateTime.add(last_check, 60, :second)
+      newer = DateTime.shift(last_check, minute: 1)
 
       assert SelfUpdates.should_trigger_update?(newer, last_check)
     end
@@ -40,7 +40,7 @@ defmodule EdgeAgent.SelfUpdatesTest do
 
     test "inserted_at older than last_check → false" do
       last_check = DateTime.utc_now()
-      older = DateTime.add(last_check, -60, :second)
+      older = DateTime.shift(last_check, minute: -1)
 
       refute SelfUpdates.should_trigger_update?(older, last_check)
     end

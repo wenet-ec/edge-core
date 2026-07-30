@@ -141,14 +141,14 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandFormTest do
 
   describe "changeset/1 — expires_at validation" do
     test "future expires_at is accepted" do
-      future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
+      future = DateTime.utc_now() |> DateTime.shift(hour: 1) |> DateTime.truncate(:second)
       attrs = valid_attrs(%{"expires_at" => future})
       assert {:ok, result} = CreateCommandForm.changeset(attrs)
       assert result["expires_at"] == future
     end
 
     test "expires_at in the past is rejected" do
-      past = DateTime.add(DateTime.utc_now(), -3600, :second)
+      past = DateTime.shift(DateTime.utc_now(), hour: -1)
       attrs = valid_attrs(%{"expires_at" => past})
       assert {:error, changeset} = CreateCommandForm.changeset(attrs)
       assert %{expires_at: [msg]} = errors_on(changeset)
@@ -157,7 +157,7 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandFormTest do
 
     test "expires_at equal to now is rejected" do
       # Use a slightly-past time to avoid race on exact equality
-      now = DateTime.add(DateTime.utc_now(), -1, :second)
+      now = DateTime.shift(DateTime.utc_now(), second: -1)
       attrs = valid_attrs(%{"expires_at" => now})
       assert {:error, changeset} = CreateCommandForm.changeset(attrs)
       assert %{expires_at: [_msg]} = errors_on(changeset)

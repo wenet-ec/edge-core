@@ -16,12 +16,12 @@ defmodule EdgeAgent.Commands.Workers.ExecuteCommandWorkerTest do
     end
 
     test "future expires_at → not expired" do
-      future = DateTime.add(DateTime.utc_now(), 3600, :second)
+      future = DateTime.shift(DateTime.utc_now(), hour: 1)
       refute ExecuteCommandWorker.expired?(%{expires_at: future})
     end
 
     test "past expires_at → expired" do
-      past = DateTime.add(DateTime.utc_now(), -3600, :second)
+      past = DateTime.shift(DateTime.utc_now(), hour: -1)
       assert ExecuteCommandWorker.expired?(%{expires_at: past})
     end
 

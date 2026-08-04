@@ -47,9 +47,12 @@ config :edge_admin, EdgeAdminWeb.Plugs.Security, allow_unsafe_scripts: false
 config :edge_admin, :password_hashers, [EdgeAdmin.PasswordHashers.Argon2]
 
 config :edge_admin,
-  ecto_repos: [EdgeAdmin.Repo],
   generators: [timestamp_type: :utc_datetime, binary_id: true],
   version: version
+
+# The active Ecto.Repo implementation is selected at runtime from DB_ADAPTER
+# and configured in runtime.exs. Test configuration selects its implementation
+# separately in test.exs; the dispatcher facade is never an ecto_repo.
 
 config :flop, repo: EdgeAdmin.Repo
 

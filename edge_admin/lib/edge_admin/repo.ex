@@ -19,13 +19,11 @@
 # At runtime, only the configured impl's pool is started — the other module
 # is dormant code. One compiled artifact serves both modes.
 #
-# Test infra (Sandbox, ExMachina), release tasks (Migrator), Oban, and
-# LiveDashboard take a real Ecto.Repo module — for those, we read :repo_impl
-# (or pass the impl explicitly) and bypass the dispatcher.
-#
-# LiveDashboard's ecto_stats is wired to EdgeAdmin.Repo.Postgres only — in
-# SQLite mode that pool isn't running, so the page is auto-skipped. See
-# router.ex for the wiring.
+# Test infrastructure (Sandbox, ExMachina), release tasks (Migrator), and Oban
+# take a real Ecto.Repo module — for those, we read :repo_impl (or pass the
+# implementation explicitly) and bypass the dispatcher. LiveDashboard discovers
+# the running implementation through Ecto.Repo.all_running/0 and supports both
+# configured adapters; it does not use this facade as an Ecto.Repo.
 
 defmodule EdgeAdmin.Repo do
   @moduledoc """
@@ -50,9 +48,9 @@ defmodule EdgeAdmin.Repo do
       `default_options/1`) — these are intended to be *overridden* on
       the impl, not invoked through it.
 
-  Anything that genuinely needs the running adapter (LiveDashboard,
-  Sandbox, Migrator, Oban) should reference the impl module directly
-  via `Application.fetch_env!(:edge_admin, :repo_impl)`.
+  Anything that genuinely needs the running adapter (Sandbox, Migrator, Oban)
+  should reference the implementation module directly via
+  `Application.fetch_env!(:edge_admin, :repo_impl)`.
   """
 
   # === Resolve the impl at call time so runtime config wins ===

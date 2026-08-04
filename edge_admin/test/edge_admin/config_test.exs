@@ -296,33 +296,4 @@ defmodule EdgeAdmin.ConfigTest do
       end)
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # generate_random_string/1
-  # ---------------------------------------------------------------------------
-
-  describe "generate_random_string/1" do
-    test "returns string of exact requested length" do
-      assert String.length(Config.generate_random_string(16)) == 16
-      assert String.length(Config.generate_random_string(32)) == 32
-      assert String.length(Config.generate_random_string(64)) == 64
-    end
-
-    test "returns only lowercase base32 characters (a-z, 2-7)" do
-      result = Config.generate_random_string(100)
-      assert result =~ ~r/^[a-z2-7]+$/
-    end
-
-    test "two calls produce different results" do
-      a = Config.generate_random_string(32)
-      b = Config.generate_random_string(32)
-      assert a != b
-    end
-
-    test "length 1 works" do
-      result = Config.generate_random_string(1)
-      assert String.length(result) == 1
-      assert result =~ ~r/^[a-z2-7]$/
-    end
-  end
 end

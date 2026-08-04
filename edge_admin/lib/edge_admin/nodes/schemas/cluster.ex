@@ -25,6 +25,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.Random
   alias EdgeAdmin.Vpn
 
   # /31 and /32 are unusable: /32 has 1 IP (consumed by the first admin gateway),
@@ -159,11 +160,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
       changeset
     else
       # Generate 12-char random alphanumeric name
-      random_name =
-        9
-        |> :crypto.strong_rand_bytes()
-        |> Base.encode32(case: :lower, padding: false)
-        |> String.slice(0..11)
+      random_name = Random.string(12)
 
       put_change(changeset, :name, random_name)
     end

@@ -7,8 +7,6 @@ defmodule EdgeAdmin.Config do
   a value-type system that coerces the raw string into the right Elixir term:
   `:string | :integer | :boolean | :uri | :cors | :list | :atom | :positive_integer`.
 
-  Also exposes `generate_random_string/1`, used at boot to mint per-admin
-  identifiers (`admin_id`, LiveView signing salt).
   """
 
   @type value_type :: :string | :integer | :boolean | :uri | :cors | :list | :atom | :positive_integer
@@ -87,16 +85,5 @@ defmodule EdgeAdmin.Config do
     end
 
     int
-  end
-
-  @spec generate_random_string(pos_integer()) :: String.t()
-  def generate_random_string(length) do
-    # Generate more bytes than needed to ensure we get enough characters after encoding
-    byte_count = ceil(length * 5 / 8)
-
-    byte_count
-    |> :crypto.strong_rand_bytes()
-    |> Base.encode32(case: :lower, padding: false)
-    |> String.slice(0..(length - 1))
   end
 end

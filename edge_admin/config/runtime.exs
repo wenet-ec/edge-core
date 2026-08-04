@@ -2,6 +2,7 @@
 import Config
 import EdgeAdmin.Config
 
+alias EdgeAdmin.Random
 alias EdgeAdmin.Repo.Postgres
 alias EdgeAdmin.Repo.Postgres.Notifier
 alias EdgeAdmin.Repo.SQLite
@@ -236,7 +237,7 @@ config :edge_admin, EdgeAdminWeb.Endpoint,
   ],
   secret_key_base: get_env!("SECRET_KEY_BASE"),
   live_view: [
-    signing_salt: generate_random_string(16)
+    signing_salt: Random.string(16)
   ]
 
 config :edge_admin,
@@ -282,7 +283,7 @@ else
     mcp_key: nil
 end
 
-admin_id = generate_random_string(12)
+admin_id = Random.string(12)
 
 # =============================================================================
 # Background Job Schedules

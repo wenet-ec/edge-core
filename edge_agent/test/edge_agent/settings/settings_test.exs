@@ -222,7 +222,7 @@ defmodule EdgeAgent.SettingsTest do
   end
 
   # -----------------------------------------------------------------------
-  # Typed accessors — Secret
+  # Typed accessors — Credentials
   # -----------------------------------------------------------------------
 
   describe "api_token accessors" do
@@ -231,14 +231,14 @@ defmodule EdgeAgent.SettingsTest do
     end
 
     test "set_api_token then get_api_token roundtrips" do
-      :ok = Settings.set_api_token("tok-abc")
+      {:ok, _} = Settings.set_api_token("tok-abc")
       assert Settings.get_api_token() == "tok-abc"
     end
 
-    test "api_token is stored as a secret (not in sqlite)" do
-      :ok = Settings.set_api_token("tok-xyz")
-      assert Settings.get_config("api_token") == nil
-      assert Settings.get_secret("api_token") == "tok-xyz"
+    test "api_token is stored in SQLite" do
+      {:ok, _} = Settings.set_api_token("tok-xyz")
+      assert Settings.get_config("api_token") == "tok-xyz"
+      assert Settings.get_secret("api_token") == nil
     end
   end
 

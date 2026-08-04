@@ -39,6 +39,7 @@ defmodule EdgeAdmin.Repo.Migrations.CreateNodes do
 
       add :api_token, :string, null: false
       add :proxy_password, :string, null: false
+      add :recovery_key, :string
       add :self_update_enabled, :boolean, null: false, default: false
 
       # Netmaker references
@@ -61,6 +62,7 @@ defmodule EdgeAdmin.Repo.Migrations.CreateNodes do
     end
 
     create unique_index(:nodes, [:api_token])
+    create unique_index(:nodes, [:recovery_key])
     create index(:nodes, [:cluster_id])
     create index(:nodes, [:status])
     create index(:nodes, [:last_seen_at])

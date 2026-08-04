@@ -65,6 +65,14 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
       assert Node.changeset(%Node{}, valid_attrs()).valid?
     end
 
+    test "accepts a nil recovery key" do
+      assert Node.changeset(%Node{}, valid_attrs(%{recovery_key: nil})).valid?
+    end
+
+    test "accepts a recovery key" do
+      assert Node.changeset(%Node{}, valid_attrs(%{recovery_key: "recovery-key"})).valid?
+    end
+
     test "requires a Netmaker host ID" do
       changeset = Node.changeset(%Node{}, Map.delete(valid_attrs(), :netmaker_host_id))
 

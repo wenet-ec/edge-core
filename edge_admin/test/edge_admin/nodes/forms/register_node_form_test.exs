@@ -54,6 +54,16 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
       assert result["self_update_enabled"] == true
     end
 
+    test "preserves an optional recovery key" do
+      assert {:ok, result} =
+               RegisterNodeForm.changeset(
+                 valid_attrs(%{"recovery_key" => "recovery-key"}),
+                 &cluster_found/1
+               )
+
+      assert result["recovery_key"] == "recovery-key"
+    end
+
     test "port at boundary 1 is valid" do
       assert {:ok, _} =
                RegisterNodeForm.changeset(valid_attrs(%{"http_port" => 1}), &cluster_found/1)
@@ -275,28 +285,6 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
           ] do
         assert Map.has_key?(result, key), "expected key #{key} in result"
       end
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # changeset/2 — invalid param types
-  # ---------------------------------------------------------------------------
-
-  describe "changeset/2 — invalid params" do
-    test "non-map params return a base error" do
-      assert {:error, %Ecto.Changeset{} = changeset} =
-               RegisterNodeForm.changeset("bad", &cluster_found/1)
-
-      assert %{base: [msg]} = errors_on(changeset)
-      assert msg =~ "expected a map"
-    end
-
-    test "nil params return a base error" do
-      assert {:error, %Ecto.Changeset{} = changeset} =
-               RegisterNodeForm.changeset(nil, &cluster_found/1)
-
-      assert %{base: [msg]} = errors_on(changeset)
-      assert msg =~ "expected a map"
     end
   end
 end

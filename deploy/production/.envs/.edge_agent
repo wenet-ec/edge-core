@@ -15,6 +15,16 @@ PUBLIC_ENROLLMENT_KEY_URLS=https://edge-admin.yourdomain.com/api/v1/clusters/def
 # PUBLIC_ENROLLMENT_KEY_PATHS=data.key,result.token
 
 # =============================================================================
+# Node recovery
+# =============================================================================
+# Optional. On a fresh Agent data volume only, RECOVERY_KEY restores a node
+# when used with its normal enrollment key. Create it from the Admin for the
+# exact node and cluster being restored. Do not use it while that node is still running.
+# The key is ignored when the Agent already has a node ID in its data volume.
+# Never set it for normal deployments.
+# RECOVERY_KEY=
+
+# =============================================================================
 # Self-Update (Watchtower)
 # =============================================================================
 SELF_UPDATE_ENABLED=true

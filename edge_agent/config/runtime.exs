@@ -6,6 +6,7 @@ alias EdgeAgent.LocalScheduler.Tasks
 
 # Optional environment variables with defaults
 data_dir = get_env("DATA_DIR", :string, "/app/data")
+recovery_key = get_env("RECOVERY_KEY", :string)
 
 config :edge_agent, EdgeAgent.Repo,
   database: "#{data_dir}/agent/edge_agent.db",
@@ -129,6 +130,7 @@ else
 end
 
 config :edge_agent,
+  recovery_key: recovery_key,
   api_port: api_port,
   ssh_port: get_env("SSH_PORT", :integer, 40_022),
   ssh_system_dir: "#{data_dir}/ssh",

@@ -1367,6 +1367,18 @@
         "title": "NodeSummary",
         "type": "object"
       },
+      "Nodes.NodeRecoveryKeyData": {
+        "description": "One-use recovery key returned only when it is created",
+        "properties": {
+          "recovery_key": {
+            "description": "Node recovery key",
+            "type": "string"
+          }
+        },
+        "required": ["recovery_key"],
+        "title": "Nodes.NodeRecoveryKeyData",
+        "type": "object"
+      },
       "ServiceUnavailableResponse": {
         "description": "503 Service Unavailable",
         "example": {
@@ -2674,6 +2686,16 @@
         },
         "required": ["data", "meta"],
         "title": "EventTypeListResponse",
+        "type": "object"
+      },
+      "Nodes.NodeRecoveryKeyResponse": {
+        "description": "Response after creating a node recovery key",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/Nodes.NodeRecoveryKeyData" },
+          "meta": { "$ref": "#/components/schemas/Meta" }
+        },
+        "required": ["data", "meta"],
+        "title": "Nodes.NodeRecoveryKeyResponse",
         "type": "object"
       },
       "Webhook": {
@@ -4133,6 +4155,37 @@
         },
         "required": ["data", "meta"],
         "title": "SshPublicKeyPaginatedResponse",
+        "type": "object"
+      },
+      "UnauthorizedResponse": {
+        "description": "401 Unauthorized",
+        "example": {
+          "error": {
+            "code": "unauthorized",
+            "message": "Missing or invalid credentials"
+          },
+          "meta": {
+            "request_id": "550e8400-e29b-41d4-a716-446655440000",
+            "timestamp": "2026-04-15T10:00:00.000Z"
+          }
+        },
+        "properties": {
+          "error": {
+            "properties": {
+              "code": { "example": "unauthorized", "type": "string" },
+              "details": { "nullable": true },
+              "message": {
+                "example": "Missing or invalid credentials",
+                "type": "string"
+              }
+            },
+            "required": ["code", "message"],
+            "type": "object"
+          },
+          "meta": { "$ref": "#/components/schemas/Meta" }
+        },
+        "required": ["error", "meta"],
+        "title": "UnauthorizedResponse",
         "type": "object"
       },
       "CommandExecutionSingleResponse": {
@@ -8073,6 +8126,94 @@
         },
         "summary": "Publish test event",
         "tags": ["Events.Event"]
+      }
+    },
+    "/api/v1/nodes/{id}/recovery_key": {
+      "post": {
+        "callbacks": {},
+        "description": "Creates or replaces the node's one-use recovery key.",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeRecoveryKeyController.create",
+        "parameters": [
+          {
+            "description": "Node ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Nodes.NodeRecoveryKeyResponse"
+                }
+              }
+            },
+            "description": "Recovery key created"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Node not found"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Create a node recovery key",
+        "tags": ["Nodes.RecoveryKey"]
+      },
+      "delete": {
+        "callbacks": {},
+        "description": "Deletes the node's active recovery key.",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeRecoveryKeyController.delete",
+        "parameters": [
+          {
+            "description": "Node ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": {
+            "content": { "": {} },
+            "description": "Recovery key deleted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Node not found"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Delete a node recovery key",
+        "tags": ["Nodes.RecoveryKey"]
       }
     }
   },

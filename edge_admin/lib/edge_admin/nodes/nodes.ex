@@ -123,6 +123,7 @@ defmodule EdgeAdmin.Nodes do
   import Ecto.Query, warn: false
   import EdgeAdmin.Query, only: [case_insensitive_like: 2]
 
+  alias Ecto.Adapters.Postgres
   alias Ecto.Query.CastError
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Commands
@@ -160,6 +161,9 @@ defmodule EdgeAdmin.Nodes do
   defp maybe_put_nodelimit(opts, nil), do: opts
   defp maybe_put_nodelimit(opts, limit), do: Map.put(opts, :nodelimit, limit)
 
+  # ===========================================================================
+  # Cluster functions
+  # ===========================================================================
   defp active_clusters_query do
     from(c in Cluster, where: is_nil(c.deleted_at))
   end
@@ -183,16 +187,12 @@ defmodule EdgeAdmin.Nodes do
 
     query =
       case Repo.__adapter__() do
-        Ecto.Adapters.Postgres -> from(c in query, lock: "FOR UPDATE")
+        Postgres -> from(c in query, lock: "FOR UPDATE")
         _ -> query
       end
 
     Repo.one(query)
   end
-
-  # ===========================================================================
-  # Cluster functions
-  # ===========================================================================
 
   @doc """
   Lists all clusters with node counts, filtering, and pagination.
@@ -723,6 +723,33 @@ defmodule EdgeAdmin.Nodes do
   end
 
   @doc """
+  Creates or replaces a node's one-use recovery key.
+
+  The returned value is the complete base64 JSON blob the operator supplies to
+  a fresh Agent as `RECOVERY_KEY` alongside its normal enrollment key.
+  """
+  @spec create_node_recovery_key(Node.t()) :: {:ok, String.t()} | {:error, Ecto.Changeset.t()}
+  def create_node_recovery_key(%Node{} = node) do
+    node = Repo.preload(node, :cluster)
+
+    recovery_key =
+      %{"node_id" => node.id, "cluster_name" => node.cluster.name, "nonce" => generate_token()}
+      |> JSON.encode!()
+      |> Base.encode64()
+
+    case update_node(node, %{recovery_key: recovery_key}) do
+      {:ok, _node} -> {:ok, recovery_key}
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+
+  @doc """
+  Deletes a node's active recovery key.
+  """
+  @spec delete_node_recovery_key(Node.t()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
+  def delete_node_recovery_key(%Node{} = node), do: update_node(node, %{recovery_key: nil})
+
+  @doc """
   Changes a node's cluster.
 
   DB-first approach: Updates database immediately, then best-effort syncs with Netmaker.
@@ -730,7 +757,7 @@ defmodule EdgeAdmin.Nodes do
 
   Flow:
   1. Serialize the target-cluster admission and update the database (source of truth)
-  2. Delete all aliases (they're cluster-specific)
+  2. Clear the recovery key and delete all aliases (they're cluster-specific)
   3. Best-effort sync: Add host to new network
   4. Best-effort sync: Remove host from old network
   5. Emit event for metadata recomputation
@@ -771,7 +798,7 @@ defmodule EdgeAdmin.Nodes do
            :ok <- Checks.NodeLimitCheck.check(new_cluster),
            {:ok, updated_node} <-
              current_node
-             |> Ecto.Changeset.change(cluster_id: new_cluster.id)
+             |> Ecto.Changeset.change(cluster_id: new_cluster.id, recovery_key: nil)
              |> Repo.update() do
         %{node: current_node, new_cluster: new_cluster, updated_node: updated_node}
       else
@@ -937,33 +964,27 @@ defmodule EdgeAdmin.Nodes do
   end
 
   @doc """
-  Registers or updates a node from agent.
-
-  Verifies cluster and Netmaker node existence, then creates or updates the node
-  record.
+  Registers a new node or recovers an existing node from agent bootstrap.
 
   ## Token rotation (security-relevant)
 
-  Both `api_token` and `proxy_password` are regenerated on EVERY call, including
-  re-registration of an existing node. Any previously-issued credentials for this
-  node are invalidated as soon as the upsert commits. Agents must persist the
-  values returned here and use them for all subsequent admin↔agent calls — caching
-  an older token will start failing immediately.
+  Both `api_token` and `proxy_password` are generated on every successful
+  registration. An existing node can only be recovered with its one-use
+  recovery key. Normal re-registration is handled by `reregister_node/2`.
 
   ## Limits
 
-  `NodeLimitCheck` is enforced for new nodes only. Re-registering an existing
-  node never fails on cluster capacity (the node already occupies a slot).
+  `NodeLimitCheck` is enforced for new nodes only.
 
   ## Parameters
   - `params` - Node registration parameters (validated through RegisterNodeForm)
 
   ## Returns
-  - `{:ok, node}` - Node registered/updated successfully
+  - `{:ok, node}` - Node registered or recovered successfully
   - `{:error, changeset}` - Validation or registration failed
   """
   @spec register_node(map()) ::
-          {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
+          {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, :unauthorized | {:conflict, String.t()}}
   def register_node(params) do
     with {:ok, attrs} <- Forms.RegisterNodeForm.changeset(params) do
       %{"node_id" => node_id, "network_name" => network_name} = attrs
@@ -975,8 +996,31 @@ defmodule EdgeAdmin.Nodes do
            {:ok, registration} <- persist_registration(node_id, cluster_name, netmaker_host_id, attrs) do
         finalize_registration(registration)
       else
+        {:error, :unauthorized} -> {:error, :unauthorized}
         {:error, :not_found} -> Forms.RegisterNodeForm.add_netmaker_not_found_error()
         {:error, _reason} -> Forms.RegisterNodeForm.add_netmaker_not_found_error()
+      end
+    end
+  end
+
+  @doc """
+  Re-registers the node authenticated by the Agent API token.
+  """
+  @spec reregister_node(Node.t(), map()) ::
+          {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, :unauthorized}
+  def reregister_node(%Node{id: node_id}, params) do
+    with {:ok, attrs} <- Forms.ReregisterNodeForm.changeset(params) do
+      %{"network_name" => network_name} = attrs
+      cluster_name = String.replace_prefix(network_name, "cluster-", "")
+
+      with {:ok, netmaker_host_id} <-
+             Vpn.get_host_id(Vpn.build_vpn_name(node_id, prefix: :node), network_name: network_name),
+           {:ok, registration} <- persist_reregistration(node_id, cluster_name, netmaker_host_id, attrs) do
+        finalize_registration(registration)
+      else
+        {:error, :unauthorized} -> {:error, :unauthorized}
+        {:error, :not_found} -> Forms.ReregisterNodeForm.add_netmaker_not_found_error()
+        {:error, _reason} -> Forms.ReregisterNodeForm.add_netmaker_not_found_error()
       end
     end
   end
@@ -988,7 +1032,7 @@ defmodule EdgeAdmin.Nodes do
           Repo.rollback(:not_found)
 
         reported_cluster ->
-          existing_node = Repo.get(Node, node_id)
+          existing_node = lock_node(node_id)
           is_new_node = is_nil(existing_node)
 
           canonical_cluster =
@@ -1001,15 +1045,41 @@ defmodule EdgeAdmin.Nodes do
             end
 
           with %Cluster{} = canonical_cluster <- canonical_cluster,
+               :ok <- if(reported_cluster.name == canonical_cluster.name, do: :ok, else: {:error, :unauthorized}),
+               :ok <-
+                 if(existing_node,
+                   do: Checks.NodeRecoveryKeyCheck.check(existing_node, attrs["recovery_key"], canonical_cluster.name),
+                   else: :ok
+                 ),
                :ok <- if(is_new_node, do: Checks.NodeLimitCheck.check(reported_cluster), else: :ok),
                node_attrs = build_node_attrs(node_id, canonical_cluster, netmaker_host_id, attrs),
+               node_attrs = if(is_new_node, do: node_attrs, else: Map.put(node_attrs, :recovery_key, nil)),
                result = if(is_new_node, do: create_node(node_attrs), else: update_node(existing_node, node_attrs)),
                {:ok, node} <- result do
             %{node: node, existing_node: existing_node, is_new_node: is_new_node}
           else
             nil -> Repo.rollback(:not_found)
+            {:error, :unauthorized} = error -> Repo.rollback(error)
             {:error, _} = error -> Repo.rollback(error)
           end
+      end
+    end)
+  end
+
+  defp persist_reregistration(node_id, reported_cluster_name, netmaker_host_id, attrs) do
+    cluster_transaction(fn ->
+      with %Node{} = node <- lock_node(node_id),
+           %Cluster{} = reported_cluster <- lock_active_cluster(reported_cluster_name),
+           %Cluster{} = canonical_cluster <-
+             Repo.one(from(c in active_clusters_query(), where: c.id == ^node.cluster_id)),
+           :ok <- if(reported_cluster.name == canonical_cluster.name, do: :ok, else: {:error, :unauthorized}),
+           node_attrs = build_node_attrs(node_id, canonical_cluster, netmaker_host_id, attrs),
+           {:ok, updated_node} <- update_node(node, node_attrs) do
+        %{node: updated_node, existing_node: node, is_new_node: false}
+      else
+        nil -> Repo.rollback(:not_found)
+        {:error, :unauthorized} = error -> Repo.rollback(error)
+        {:error, _} = error -> Repo.rollback(error)
       end
     end)
   end
@@ -1034,6 +1104,18 @@ defmodule EdgeAdmin.Nodes do
       version: attrs["version"],
       self_update_enabled: attrs["self_update_enabled"]
     }
+  end
+
+  defp lock_node(node_id) do
+    query = from(n in Node, where: n.id == ^node_id)
+
+    query =
+      case Repo.__adapter__() do
+        Postgres -> from(n in query, lock: "FOR UPDATE")
+        _ -> query
+      end
+
+    Repo.one(query)
   end
 
   defp finalize_registration(%{node: node, existing_node: existing_node, is_new_node: is_new_node}) do
@@ -1290,7 +1372,6 @@ defmodule EdgeAdmin.Nodes do
   Lists nodes with filtering, sorting, and pagination.
 
   Supports filtering by:
-  - `id_type__in` - Enum IN: `"persistent"`, `"random"` — comma-separated list (`id_type__in=persistent,random`)
   - `status__in` - Enum IN: `"healthy"`, `"unhealthy"`, `"unreachable"` — comma-separated list (`status__in=healthy,unhealthy`)
   - `version` - Text search with wildcard support (1.0.0 exact, 1.* ilike)
   - `self_update_enabled` - Boolean
@@ -1396,6 +1477,7 @@ defmodule EdgeAdmin.Nodes do
       iex> get_nodes_by_ids(["abc-123", "invalid"])
       [{:ok, %Node{id: "abc-123"}}, {:error, "Node invalid not found"}]
   """
+
   @spec get_nodes_by_ids([String.t()]) :: [{:ok, Node.t()} | {:error, String.t()}]
   def get_nodes_by_ids(node_ids) do
     Enum.map(node_ids, fn node_id ->
@@ -1589,7 +1671,7 @@ defmodule EdgeAdmin.Nodes do
   Generates a base64 JSON blob stored in the `key` column and returned to the
   operator for placement in the agent's ENROLLMENT_KEY env var:
 
-      base64({"admin_urls": [...], "nonce": "<random_32_bytes_base64>"})
+      base64({"admin_urls": [...], "cluster_name": "<cluster>", "nonce": "<random_32_bytes_base64>"})
 
   The agent decodes the blob to extract `admin_urls` (for routing) and sends
   the full blob to the verify endpoint. Admin looks up by the blob directly —
@@ -1605,9 +1687,9 @@ defmodule EdgeAdmin.Nodes do
       nonce = generate_token()
 
       key =
-        %{"admin_urls" => admin_urls, "nonce" => nonce}
+        %{"admin_urls" => admin_urls, "cluster_name" => cluster.name, "nonce" => nonce}
         |> JSON.encode!()
-        |> Base.encode64()
+        |> Base.encode64(padding: false)
 
       key_attrs =
         attrs
@@ -1650,7 +1732,8 @@ defmodule EdgeAdmin.Nodes do
   Verifies an enrollment key blob presented by an agent before it joins the VPN.
 
   The agent sends the full key blob (the base64 JSON string). Admin looks it up
-  directly in the DB — no decoding required on the admin side.
+  directly in the DB and confirms the embedded cluster name matches the key's
+  associated cluster.
 
   Performs the following checks in order:
   1. Key blob exists in DB
@@ -1707,6 +1790,9 @@ defmodule EdgeAdmin.Nodes do
 
   defp verify_key(%EnrollmentKey{} = key) do
     cond do
+      not enrollment_key_cluster_matches?(key) ->
+        %{verified: false, error: "invalid_key", netmaker_key: ""}
+
       EnrollmentKey.expired?(key) ->
         %{verified: false, error: "key_expired", netmaker_key: ""}
 
@@ -1721,6 +1807,15 @@ defmodule EdgeAdmin.Nodes do
           :ok ->
             consume_key(key)
         end
+    end
+  end
+
+  defp enrollment_key_cluster_matches?(%EnrollmentKey{key: key_blob, cluster: %Cluster{name: cluster_name}}) do
+    with {:ok, json} <- Base.decode64(key_blob, padding: false),
+         {:ok, %{"cluster_name" => ^cluster_name}} <- JSON.decode(json) do
+      true
+    else
+      _ -> false
     end
   end
 
@@ -1757,6 +1852,10 @@ defmodule EdgeAdmin.Nodes do
       %{verified: true, error: "", netmaker_key: netmaker_key}
     end
   end
+
+  # ===========================================================================
+  # Reconciliation functions
+  # ===========================================================================
 
   @doc """
   Reconciles all active clusters and their node membership between database (source of truth) and Netmaker.
@@ -2409,6 +2508,10 @@ defmodule EdgeAdmin.Nodes do
     Repo.exists?(from(c in Cluster, where: c.name == ^cluster_name))
   end
 
+  # ===========================================================================
+  # Alias functions
+  # ===========================================================================
+
   @doc """
   Cleans up all aliases for a single node.
 
@@ -2477,10 +2580,6 @@ defmodule EdgeAdmin.Nodes do
         Logger.error("Failed to delete alias record #{alias_record.name}: #{inspect(reason)}")
     end
   end
-
-  # ===========================================================================
-  # Alias functions
-  # ===========================================================================
 
   @doc """
   Lists aliases with filtering and pagination.

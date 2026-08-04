@@ -207,10 +207,10 @@ VARIANT=lite ./bin/run cloud up -d
 ### Node Enrollment
 
 1. Agent starts and runs `EdgeAgent.Bootstrap`
-2. Agent determines node identity (hostname, MAC address, etc.)
+2. Agent loads its persisted node ID or generates one for a new installation
 3. Agent joins VPN using enrollment token: `Nexmaker.EnrollmentKeys.enroll/2`
 4. Agent discovers admin URL from Netmaker metadata
-5. Agent registers with admin: `POST /api/v1/agents/nodes`
+5. Agent registers with admin: `POST /api/v1/agents/nodes/register`; later bootstraps with a saved API token use `POST /api/v1/agents/nodes/reregister`
 6. Admin returns API token plus initial `admin_urls` and `core_derp_map_urls`; the agent later refreshes non-secret Settings Config through `GET /api/v1/agents/settings/config`
 7. Agent registers node aliases (best-effort, from `ALIASES` env var — comma-separated friendly names)
 8. Agent downloads pending command executions
@@ -382,7 +382,6 @@ edge_core/
 - `ssh_server.ex` - Embedded SSH server (port 40022)
 - `proxy_servers.ex` - Local HTTP/SOCKS5 proxy servers
 - `settings.ex` - Persistent configuration (SQLite key-value store)
-- `identity.ex` - Node identity determination (hostname, MAC, etc.)
 - `vpn/vpn.ex` - VPN join/health-check operations; `vpn/workers/pull_vpn_config_worker.ex` for periodic pulls
 - `lan/mdns.ex` - mDNS advertisement (`node-{node_id}.local` + `_edge_core._tcp.local` service record)
 

@@ -19,6 +19,7 @@ defmodule EdgeAdmin.SentryTest do
       conn_with_params(%{
         "api_token" => "tok-123",
         "proxy_password" => "pw-123",
+        "recovery_key" => "recovery-123",
         "authorization" => "Bearer top-secret",
         "proxy-authorization" => "Basic dXNlcjpwYXNz"
       })
@@ -27,6 +28,7 @@ defmodule EdgeAdmin.SentryTest do
 
     assert scrubbed["api_token"] == "*********"
     assert scrubbed["proxy_password"] == "*********"
+    assert scrubbed["recovery_key"] == "*********"
     assert scrubbed["authorization"] == "*********"
     assert scrubbed["proxy-authorization"] == "*********"
   end
@@ -37,6 +39,7 @@ defmodule EdgeAdmin.SentryTest do
         payload: %{
           api_token: "tok-123",
           proxy_password: "pw-123",
+          recovery_key: "recovery-123",
           headers: %{
             "x-api-key" => "key-123",
             authorization: "Bearer top-secret"
@@ -48,6 +51,7 @@ defmodule EdgeAdmin.SentryTest do
 
     assert scrubbed[:payload][:api_token] == "*********"
     assert scrubbed[:payload][:proxy_password] == "*********"
+    assert scrubbed[:payload][:recovery_key] == "*********"
     assert scrubbed[:payload][:headers] == "*********"
   end
 end

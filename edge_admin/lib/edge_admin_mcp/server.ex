@@ -104,6 +104,8 @@ defmodule EdgeAdminMcp.Server do
     delete_cluster
     change_node_cluster
     delete_node
+    create_node_recovery_key
+    delete_node_recovery_key
     create_enrollment_key
     update_enrollment_key
     delete_enrollment_key
@@ -249,6 +251,8 @@ defmodule EdgeAdminMcp.Server do
   component(EdgeAdminMcp.Tools.Nodes.GetNodeDiagnostics)
   component(EdgeAdminMcp.Tools.Nodes.DeleteNode)
   component(EdgeAdminMcp.Tools.Nodes.ChangeNodeCluster)
+  component(EdgeAdminMcp.Tools.Nodes.CreateNodeRecoveryKey)
+  component(EdgeAdminMcp.Tools.Nodes.DeleteNodeRecoveryKey)
 
   # ── Aliases ──────────────────────────────────────────────────────────────────
   component(EdgeAdminMcp.Tools.Nodes.ListAliases)

@@ -14,6 +14,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   - `netmaker_host_id` - Reference to Netmaker host resource
   - `api_token` - Bearer token for node API authentication
   - `proxy_password` - Password for proxy server authentication
+  - `recovery_key` - One-use key for replacing a node after local state loss
   - `http_port`, `ssh_port`, etc. - Service ports exposed by the node
   - `last_seen_at` - Last successful health check timestamp
   - `version` - EdgeAgent version string
@@ -60,6 +61,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
           socks5_proxy_port: integer(),
           api_token: String.t(),
           proxy_password: String.t(),
+          recovery_key: String.t() | nil,
           self_update_enabled: boolean(),
           netmaker_host_id: String.t(),
           node_name: String.t() | nil,
@@ -97,7 +99,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     }
   }
 
-  @primary_key {:id, Uniq.UUID, version: 7, autogenerate: false, dump: :raw, type: :uuid}
+  @primary_key {:id, Uniq.UUID, autogenerate: false, dump: :raw, type: :uuid}
 
   schema "nodes" do
     field(:status, Ecto.Enum, values: @statuses, default: :healthy)
@@ -113,6 +115,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     field(:socks5_proxy_port, :integer)
     field(:api_token, :string, redact: true)
     field(:proxy_password, :string, redact: true)
+    field(:recovery_key, :string, redact: true)
     field(:self_update_enabled, :boolean, default: false)
 
     # Netmaker references
@@ -167,6 +170,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
       :socks5_proxy_port,
       :api_token,
       :proxy_password,
+      :recovery_key,
       :last_seen_at,
       :version,
       :self_update_enabled
@@ -195,6 +199,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     |> check_constraint(:socks5_proxy_port, name: :nodes_socks5_proxy_port_valid)
     |> unique_constraint(:id, name: :nodes_pkey)
     |> unique_constraint(:api_token)
+    |> unique_constraint(:recovery_key)
     |> foreign_key_constraint(:cluster_id)
     |> validate_ports()
   end

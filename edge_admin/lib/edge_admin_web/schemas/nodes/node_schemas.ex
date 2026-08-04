@@ -11,6 +11,32 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
+  defmodule NodeRecoveryKeyData do
+    @moduledoc false
+
+    schema(%{
+      title: "Nodes.NodeRecoveryKeyData",
+      description: "One-use recovery key returned only when it is created",
+      type: :object,
+      properties: %{
+        recovery_key: %Schema{type: :string, description: "Node recovery key"}
+      },
+      required: [:recovery_key]
+    })
+  end
+
+  defmodule NodeRecoveryKeyResponse do
+    @moduledoc false
+
+    schema(
+      CommonSchemas.single_response(
+        NodeRecoveryKeyData,
+        "Nodes.NodeRecoveryKeyResponse",
+        "Response after creating a node recovery key"
+      )
+    )
+  end
+
   defmodule AliasSummary do
     @moduledoc false
 

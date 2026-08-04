@@ -10,27 +10,47 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
 
   action_fallback(EdgeAdminWeb.Controllers.FallbackController)
 
-  plug DegradedMode, :block when action in [:create]
+  plug DegradedMode, :block when action in [:register, :reregister]
   plug DegradedMode, :allow when action in [:update_health_check]
 
   tags(["Internal.Agents"])
 
-  operation(:create,
+  operation(:register,
     summary: "Register a node",
     description: "Agent registers itself with admin, receives api_token and proxy_password.",
     request_body: {"Node registration parameters", "application/json", NodeSchemas.NodeRegisterRequest, required: true},
     responses: %{
       201 => {"Node registered", "application/json", NodeSchemas.NodeRegistrationResponse},
+      401 => {"Registration credentials required", "application/json", CommonSchemas.UnauthorizedResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 
-  def create(conn, params) do
+  def register(conn, params) do
     with {:ok, node} <- Nodes.register_node(Map.merge(params, conn.body_params)) do
       conn
       |> put_status(:created)
       |> render(:show, conn: conn, node: node)
+    end
+  end
+
+  operation(:reregister,
+    summary: "Re-register a node",
+    description: "Authenticated Agent re-registration that refreshes node credentials and metadata.",
+    request_body:
+      {"Node re-registration parameters", "application/json", NodeSchemas.NodeReregisterRequest, required: true},
+    responses: %{
+      200 => {"Node re-registered", "application/json", NodeSchemas.NodeRegistrationResponse},
+      401 => {"Unauthorized", "application/json", CommonSchemas.UnauthorizedResponse},
+      422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
+      503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
+    }
+  )
+
+  def reregister(conn, params) do
+    with {:ok, node} <- Nodes.reregister_node(conn.assigns.current_node, Map.merge(params, conn.body_params)) do
+      render(conn, :show, conn: conn, node: node)
     end
   end
 

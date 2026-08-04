@@ -24,8 +24,8 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
      - URLs come from the decoded enrollment-key blob, not Settings
      - Retries the next URL on 503 (degraded mode) and on network error
 
-  2. **Unauthenticated Requests** (`request_with_fallback/2`)
-     - Used for registration (no token yet)
+  2. **Bootstrap Registration** (`request_with_fallback/2`)
+     - Used for initial registration and recovery; no API token is sent
      - URLs come from Settings: VPN admin URLs first, then public fallback URLs
        stored at enrollment time
      - Tries public fallback URLs only after every VPN URL has a network error;
@@ -49,9 +49,10 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   - **GET /api/v1/admins/me/discovery** — Identify reachable admins during
     peer discovery
 
-  Unauthenticated (URLs from Settings):
+  Agent registration (URLs from Settings):
 
-  - **POST /api/v1/agents/nodes** — Register node and receive API token
+  - **POST /api/v1/agents/nodes/register** — Register or recover a node
+  - **POST /api/v1/agents/nodes/reregister** — Authenticated re-registration
 
   Authenticated (URLs from Settings):
 
@@ -223,9 +224,8 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   @doc """
   Register this node with an admin.
 
-  Sends node metadata to admin server and receives API token and proxy password.
-  Unauthenticated — agent has no API token until this call returns. Uses the
-  Settings URL list (VPN admin URLs, then HTTP fallback URLs).
+  Sends initial-registration metadata to admin server and receives API token and
+  proxy password. Uses the Settings URL list (VPN admin URLs, then HTTP fallback URLs).
 
   ## Parameters
   - `node_params` - Map with node metadata (node_id, network_name, ports, version)
@@ -234,11 +234,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   - `{:ok, node_data}` - Registration succeeded, node_data includes api_token and proxy_password
   - `{:error, reason}` - Registration failed
 
-  POST /api/v1/agents/nodes
+  POST /api/v1/agents/nodes/register
   """
   @spec register_node(map()) :: {:ok, map()} | {:error, term()}
   def register_node(node_params) do
-    path = "/api/v1/agents/nodes"
+    path = "/api/v1/agents/nodes/register"
     payload = node_params
 
     request_with_fallback(path, fn url ->
@@ -253,6 +253,24 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
 
         {:error, reason} ->
           {:error, {:request_failed, reason}}
+      end
+    end)
+  end
+
+  @doc """
+  Re-register this authenticated node with an admin.
+
+  POST /api/v1/agents/nodes/reregister
+  """
+  @spec reregister_node(map()) :: {:ok, map()} | {:error, term()}
+  def reregister_node(node_params) do
+    request_with_auth("/api/v1/agents/nodes/reregister", fn url, headers ->
+      opts = Keyword.merge([json: node_params, headers: headers], http_options())
+
+      case Req.post(url, opts) do
+        {:ok, %{status: 200, body: %{"data" => node_data}}} -> {:ok, node_data}
+        {:ok, %{status: status, body: body}} -> {:error, {:http_error, status, body}}
+        {:error, reason} -> {:error, {:request_failed, reason}}
       end
     end)
   end

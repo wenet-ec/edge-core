@@ -5,9 +5,8 @@ defmodule EdgeAgent.Settings.Secrets do
 
   Values live in `:persistent_term` for the lifetime of the BEAM. Written once
   by bootstrap after (re)registration with admin; reread on every hot-path
-  call (auth plugs, proxy credential checks). The agent generates a fresh
-  set on each boot — "rotation" happens at the process boundary, so there is
-  no in-process invalidation API.
+  call (proxy credential checks). The proxy password is refreshed after each
+  successful registration. There is no in-process invalidation API.
 
   Direct callers should be limited to `EdgeAgent.Settings` (the facade) and
   tests. Other modules go through the facade.

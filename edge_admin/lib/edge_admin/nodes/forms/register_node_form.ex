@@ -3,7 +3,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
   @moduledoc """
   Form for validating agent node registration inputs.
 
-  Handles input validation and normalization for node registration (create or update).
+  Handles input validation and normalization for initial node registration and recovery.
   This form validates external API inputs from agents before passing to the domain layer.
   """
   use EdgeAdmin.Form
@@ -19,8 +19,22 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     field(:socks5_proxy_port, :integer)
     field(:version, :string)
     field(:self_update_enabled, :boolean)
+    field(:recovery_key, :string)
   end
 
+  @fields [
+    :node_id,
+    :network_name,
+    :http_port,
+    :ssh_port,
+    :host_metrics_port,
+    :wireguard_metrics_port,
+    :http_proxy_port,
+    :socks5_proxy_port,
+    :version,
+    :self_update_enabled,
+    :recovery_key
+  ]
   @doc """
   Validates and normalizes agent node registration parameters.
 
@@ -36,18 +50,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
 
   def changeset(attrs, get_cluster_fn) when is_map(attrs) do
     %__MODULE__{}
-    |> cast(attrs, [
-      :node_id,
-      :network_name,
-      :http_port,
-      :ssh_port,
-      :host_metrics_port,
-      :wireguard_metrics_port,
-      :http_proxy_port,
-      :socks5_proxy_port,
-      :version,
-      :self_update_enabled
-    ])
+    |> cast(attrs, @fields)
     |> validate_required([
       :node_id,
       :network_name,
@@ -74,15 +77,6 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
       {:ok, form} -> {:ok, to_map(form)}
       {:error, changeset} -> {:error, changeset}
     end
-  end
-
-  def changeset(_params, _get_cluster_fn) do
-    changeset =
-      %__MODULE__{}
-      |> cast(%{}, [])
-      |> add_error(:base, "invalid parameters - expected a map")
-
-    {:error, %{changeset | action: :insert}}
   end
 
   defp validate_uuid_format(changeset, field) do
@@ -151,7 +145,8 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
       "http_proxy_port" => form.http_proxy_port,
       "socks5_proxy_port" => form.socks5_proxy_port,
       "version" => form.version,
-      "self_update_enabled" => form.self_update_enabled
+      "self_update_enabled" => form.self_update_enabled,
+      "recovery_key" => form.recovery_key
     }
     |> Enum.reject(fn {_k, v} -> is_nil(v) end)
     |> Map.new()

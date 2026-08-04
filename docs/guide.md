@@ -317,7 +317,7 @@ response is the complete matching target snapshot — it is not paginated and
 does not support sorting.
 
 All three endpoints accept the same node filters as `GET /api/v1/nodes`:
-`node_id__in`, `id_type__in`, `status__in`, `version`,
+`node_id__in`, `status__in`, `version`,
 `self_update_enabled`, `cluster_name`, `cluster_name__in`, and the
 `last_seen_at`, `inserted_at`, and `updated_at` `__gte` / `__lte` ranges.
 Filters intersect: values within one `__in` filter are ORed, while different

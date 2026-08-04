@@ -50,7 +50,8 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         http_proxy_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "HTTP proxy port"},
         socks5_proxy_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "SOCKS5 proxy port"},
         version: %Schema{type: :string, description: "Agent version string", example: "1.2.3"},
-        self_update_enabled: %Schema{type: :boolean, description: "Whether the agent supports self-update"}
+        self_update_enabled: %Schema{type: :boolean, description: "Whether the agent supports self-update"},
+        recovery_key: %Schema{type: :string, description: "Optional node recovery key"}
       },
       required: [
         :node_id,
@@ -83,6 +84,49 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         }
       },
       required: [:status]
+    })
+  end
+
+  defmodule NodeReregisterRequest do
+    @moduledoc false
+
+    schema(%{
+      title: "Internal.NodeReregisterRequest",
+      description: "Authenticated Agent re-registration payload",
+      type: :object,
+      additionalProperties: false,
+      properties: %{
+        network_name: %Schema{type: :string, description: "Netmaker network name (must start with 'cluster-')"},
+        http_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "Agent HTTP API port"},
+        ssh_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "Agent SSH server port"},
+        host_metrics_port: %Schema{
+          type: :integer,
+          minimum: 1,
+          maximum: 65_535,
+          description: "Host metrics exporter port"
+        },
+        wireguard_metrics_port: %Schema{
+          type: :integer,
+          minimum: 1,
+          maximum: 65_535,
+          description: "WireGuard metrics exporter port"
+        },
+        http_proxy_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "HTTP proxy port"},
+        socks5_proxy_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "SOCKS5 proxy port"},
+        version: %Schema{type: :string, description: "Agent version string", example: "1.2.3"},
+        self_update_enabled: %Schema{type: :boolean, description: "Whether the agent supports self-update"}
+      },
+      required: [
+        :network_name,
+        :http_port,
+        :ssh_port,
+        :host_metrics_port,
+        :wireguard_metrics_port,
+        :http_proxy_port,
+        :socks5_proxy_port,
+        :version,
+        :self_update_enabled
+      ]
     })
   end
 

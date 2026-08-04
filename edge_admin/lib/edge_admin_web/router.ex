@@ -175,12 +175,12 @@ defmodule EdgeAdminWeb.Router do
     end
   end
 
-  # Agent API endpoints (no authentication for registration)
+  # Agent API endpoints (no authentication for initial registration or recovery)
   scope "/api/v1/agents", Agents do
     pipe_through(:public_api)
 
     # Node registration (no auth required)
-    post("/nodes", NodeController, :create)
+    post("/nodes/register", NodeController, :register)
 
     # Enrollment key verification (no auth required, blocked during degraded mode)
     post("/enrollment_keys/verify", EnrollmentKeyController, :verify)
@@ -189,6 +189,9 @@ defmodule EdgeAdminWeb.Router do
   # Agent API endpoints (requires agent api_token)
   scope "/api/v1/agents", Agents do
     pipe_through(:agent_api)
+
+    # Node reregistration
+    post("/nodes/reregister", NodeController, :reregister)
 
     # Node health check reporting
     post("/nodes/me/health_check", NodeController, :update_health_check)
@@ -243,6 +246,9 @@ defmodule EdgeAdminWeb.Router do
       get("/nodes/:id/diagnostics", NodeDiagnosticController, :show)
       post("/nodes/:id/change_cluster", NodeController, :change_cluster)
       delete("/nodes/:id", NodeController, :delete)
+
+      post("/nodes/:id/recovery_key", NodeRecoveryKeyController, :create)
+      delete("/nodes/:id/recovery_key", NodeRecoveryKeyController, :delete)
 
       resources("/aliases", AliasController, only: [:index, :show, :delete])
     end

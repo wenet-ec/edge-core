@@ -74,11 +74,13 @@ Edge machines running the agent. Addressed only by VPN hostname.
 
 | Tool | Title | Hints | Description |
 | --- | --- | --- | --- |
-| `list_nodes` | List Nodes | 🔍 | Filter/sort/paginate. Filters: `node_id_in` (array), `status_in` (array: `healthy`/`unhealthy`/`unreachable`), `id_type_in` (array: `persistent`/`random`), `cluster_name` (wildcard), `cluster_name_in` (array), `version`, `self_update_enabled`, `last_seen_at_*`, `inserted_at_*`, `updated_at_*`. |
+| `list_nodes` | List Nodes | 🔍 | Filter/sort/paginate. Filters: `node_id_in` (array), `status_in` (array: `healthy`/`unhealthy`/`unreachable`), `cluster_name` (wildcard), `cluster_name_in` (array), `version`, `self_update_enabled`, `last_seen_at_*`, `inserted_at_*`, `updated_at_*`. |
 | `get_node` | Get Node | 🔍 | Required: `node_id`. |
 | `get_node_diagnostics` | Get Node Diagnostics | 🔍 🌐 | Required: `node_id`. Diagnostic report for one node. |
 | `delete_node` | Delete Node | ⚠️ 🌐 | Required: `node_id`. The agent must re-enroll to reconnect. |
 | `change_node_cluster` | Move Node to Cluster | ⚠️ 🌐 | Required: `node_id`, `cluster_name`. The returned node reflects the saved assignment immediately; network connectivity may briefly reflect the previous assignment while it converges. |
+| `create_node_recovery_key` | Create Node Recovery Key | ⚠️ 🌐 | Required: `node_id`. Creates or replaces the node's one-use recovery key. |
+| `delete_node_recovery_key` | Delete Node Recovery Key | ⚠️ ♻️ 🌐 | Required: `node_id`. Deletes the node's active recovery key. |
 
 ---
 
@@ -229,7 +231,7 @@ When the admin is in degraded mode (total nodes exceed total edge-capacity acros
 
 ```
 create_cluster              update_cluster              delete_cluster
-change_node_cluster         delete_node
+change_node_cluster         delete_node                 create_node_recovery_key       delete_node_recovery_key
 create_enrollment_key       update_enrollment_key       delete_enrollment_key
 create_self_update_request
 ```

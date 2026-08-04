@@ -100,6 +100,13 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
 
       assert {:error, :no_admin_urls} = AdminClient.register_node(%{node_id: "test"})
     end
+
+    test "no VPN, no Settings fallback → :no_admin_urls (authenticated re-registration path)" do
+      Settings.set_admin_urls([])
+      Settings.set_admin_fallback_urls([])
+
+      assert {:error, :no_admin_urls} = AdminClient.reregister_node(%{})
+    end
   end
 
   # ---------------------------------------------------------------------------

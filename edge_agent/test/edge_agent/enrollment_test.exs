@@ -7,7 +7,7 @@ defmodule EdgeAgent.EnrollmentTest do
 
   # Build a valid base64 enrollment key blob (mirrors admin's create_enrollment_key)
   defp build_blob(admin_urls, nonce \\ "abc123nonce") do
-    %{"admin_urls" => admin_urls, "nonce" => nonce}
+    %{"admin_urls" => admin_urls, "cluster_name" => "production", "nonce" => nonce}
     |> JSON.encode!()
     |> Base.encode64(padding: false)
   end
@@ -273,13 +273,14 @@ defmodule EdgeAgent.EnrollmentTest do
   # -----------------------------------------------------------------------
 
   describe "enrollment key blob format" do
-    test "correctly formed blob decodes to admin_urls list" do
+    test "correctly formed blob decodes to its routing and cluster fields" do
       urls = ["https://admin1.example.com", "https://admin2.example.com"]
       blob = build_blob(urls)
 
       assert {:ok, json} = Base.decode64(blob, padding: false)
       assert {:ok, decoded} = JSON.decode(json)
       assert decoded["admin_urls"] == urls
+      assert decoded["cluster_name"] == "production"
     end
 
     test "blob has no padding characters (padding: false)" do
@@ -294,8 +295,8 @@ defmodule EdgeAgent.EnrollmentTest do
       assert decoded["nonce"] == "my-nonce"
     end
 
-    test "nonce is ignored by the decode path — only admin_urls matters" do
-      # Both blobs have same admin_urls but different nonces — both are valid
+    test "nonce changes the blob without changing its routing or cluster fields" do
+      # Both blobs have the same routing and cluster fields but different nonces.
       blob1 = build_blob(["https://admin.example.com"], "nonce-1")
       blob2 = build_blob(["https://admin.example.com"], "nonce-2")
       assert blob1 != blob2
@@ -305,6 +306,33 @@ defmodule EdgeAgent.EnrollmentTest do
       {:ok, d1} = JSON.decode(json1)
       {:ok, d2} = JSON.decode(json2)
       assert d1["admin_urls"] == d2["admin_urls"]
+      assert d1["cluster_name"] == d2["cluster_name"]
+    end
+  end
+
+  describe "verify_recovery_key/2" do
+    defp recovery_key(cluster_name, node_id \\ "018f0f52-7b5b-7a4e-8f50-6f3f9e5c8a11") do
+      %{"node_id" => node_id, "cluster_name" => cluster_name, "nonce" => "recovery-nonce"}
+      |> JSON.encode!()
+      |> Base.encode64()
+    end
+
+    test "accepts a recovery key for the enrolled cluster" do
+      assert :ok = Enrollment.verify_recovery_key(recovery_key("production"), "production")
+    end
+
+    test "accepts registration without a recovery key" do
+      assert :ok = Enrollment.verify_recovery_key(nil, "production")
+      assert :ok = Enrollment.verify_recovery_key("", "production")
+    end
+
+    test "rejects a recovery key for another cluster" do
+      assert {:error, message} = Enrollment.verify_recovery_key(recovery_key("staging"), "production")
+      assert message =~ "different clusters"
+    end
+
+    test "rejects malformed recovery keys" do
+      assert {:error, "RECOVERY_KEY is invalid"} = Enrollment.verify_recovery_key("not-a-key", "production")
     end
   end
 end

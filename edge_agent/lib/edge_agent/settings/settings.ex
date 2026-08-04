@@ -10,8 +10,7 @@ defmodule EdgeAgent.Settings do
     etc.). Engine: `EdgeAgent.Settings.Configs`.
   - **Secret** — session-scoped, in-memory via `:persistent_term`. Lives for
     the lifetime of the BEAM and is repopulated by bootstrap on the next
-    start. Used for the API token and proxy password. Engine:
-    `EdgeAgent.Settings.Secrets`.
+    start. Used for the proxy password. Engine: `EdgeAgent.Settings.Secrets`.
 
   Generic accessors (`get_config/2`, `set_config/2`, `get_secret/2`,
   `set_secret/2`) exist mainly for tests and the typed accessors below.
@@ -201,14 +200,14 @@ defmodule EdgeAgent.Settings do
   end
 
   # =============================================================================
-  # Typed Accessors — Secret (session-scoped)
+  # Typed Accessors — Credentials
   # =============================================================================
 
   @spec get_api_token() :: String.t() | nil
-  def get_api_token, do: get_secret("api_token")
+  def get_api_token, do: get_config("api_token")
 
-  @spec set_api_token(String.t()) :: :ok
-  def set_api_token(value), do: set_secret("api_token", value)
+  @spec set_api_token(String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
+  def set_api_token(value), do: set_config("api_token", value)
 
   @spec get_proxy_password() :: String.t() | nil
   def get_proxy_password, do: get_secret("proxy_password")

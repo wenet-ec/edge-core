@@ -45,6 +45,8 @@ defmodule EdgeAdminWeb.OpenApiSpec do
     "/api/v1/nodes/{node_id}/metrics/agent",
     # Nodes.Diagnostics
     "/api/v1/nodes/{id}/diagnostics",
+    # Nodes.RecoveryKey
+    "/api/v1/nodes/{id}/recovery_key",
     # Commands.Command
     "/api/v1/commands",
     "/api/v1/commands/{id}",
@@ -115,6 +117,7 @@ defmodule EdgeAdminWeb.OpenApiSpec do
         %Tag{name: "Nodes.Alias"},
         %Tag{name: "Nodes.Metrics"},
         %Tag{name: "Nodes.Diagnostics"},
+        %Tag{name: "Nodes.RecoveryKey"},
         %Tag{name: "Commands.Command"},
         %Tag{name: "Commands.CommandExecution"},
         %Tag{name: "Ssh.SshUsername"},

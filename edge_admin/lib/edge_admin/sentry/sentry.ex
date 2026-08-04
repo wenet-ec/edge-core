@@ -11,6 +11,7 @@ defmodule EdgeAdmin.Sentry do
     "x-api-key",
     "api_token",
     "proxy_password",
+    "recovery_key",
     "enrollment_token",
     "enrollment_key",
     "secret",

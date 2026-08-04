@@ -28,6 +28,8 @@ defmodule EdgeAdminMcp.ServerTest do
                "delete_cluster",
                "change_node_cluster",
                "delete_node",
+               "create_node_recovery_key",
+               "delete_node_recovery_key",
                "create_enrollment_key",
                "update_enrollment_key",
                "delete_enrollment_key",

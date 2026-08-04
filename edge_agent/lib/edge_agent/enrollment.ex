@@ -5,7 +5,7 @@ defmodule EdgeAgent.Enrollment do
 
   The enrollment key is a base64-encoded JSON blob issued by admin:
 
-      base64({"admin_urls": ["https://admin.example.com"], "nonce": "<random_32_bytes_base64>"})
+      base64({"admin_urls": ["https://admin.example.com"], "cluster_name": "production", "nonce": "<random_32_bytes_base64>"})
 
   It can be provided directly via `ENROLLMENT_KEY` or fetched from one of
   the URLs in `PUBLIC_ENROLLMENT_KEY_URLS` (comma-separated, tried in order).
@@ -14,16 +14,16 @@ defmodule EdgeAgent.Enrollment do
 
   ## Flow
 
-      ensure_verified()
-        ├── enrollment_verified=true in Settings? → :ok (skip)
+      ensure_verified(recovery_key)
+        ├── enrollment_verified=true and no recovery key? → :ok (skip)
         └── not verified:
               1. Get enrollment key (ENROLLMENT_KEY env, or fetch by trying
                  PUBLIC_ENROLLMENT_KEY_URLS in order until one succeeds)
-              2. Decode → extract admin_urls (nonce is ignored — it only makes the blob unique)
-              3. POST the full key blob to admin verify endpoint
-              4. On success: store admin_fallback_urls, netmaker_key,
+              2. Decode → extract admin_urls and cluster_name (nonce only makes the blob unique)
+              3. If recovering, verify the recovery key belongs to cluster_name
+              4. POST the full key blob to admin verify endpoint
+              5. On success: store admin_fallback_urls, netmaker_key,
                  enrollment_verified=true to Settings
-              5. Return :ok
 
   ## Multi-URL failover semantics
 
@@ -83,12 +83,19 @@ defmodule EdgeAgent.Enrollment do
   - `admin_fallback_urls` — for use by `AdminClient` when VPN is down
   """
   @spec ensure_verified() :: :ok | {:error, String.t()}
-  def ensure_verified do
+  def ensure_verified, do: ensure_verified(nil)
+
+  @spec ensure_verified(String.t() | nil) :: :ok | {:error, String.t()}
+  def ensure_verified(recovery_key) do
     if Settings.get_enrollment_verified() do
-      Logger.info("Enrollment already verified, skipping")
-      :ok
+      if recovery_key in [nil, ""] do
+        Logger.info("Enrollment already verified, skipping")
+        :ok
+      else
+        {:error, "Cannot use a recovery key after enrollment is already verified"}
+      end
     else
-      do_verify()
+      do_verify(recovery_key)
     end
   end
 
@@ -96,9 +103,10 @@ defmodule EdgeAgent.Enrollment do
   # Private — Verification Flow
   # =============================================================================
 
-  defp do_verify do
+  defp do_verify(recovery_key) do
     with {:ok, enrollment_key} <- get_enrollment_key(),
-         {:ok, admin_urls} <- decode(enrollment_key),
+         {:ok, %{admin_urls: admin_urls, cluster_name: cluster_name}} <- decode(enrollment_key),
+         :ok <- verify_recovery_key(recovery_key, cluster_name),
          {:ok, netmaker_key} <- verify_with_admin(enrollment_key, admin_urls) do
       Settings.set_admin_fallback_urls(admin_urls)
       Settings.set_netmaker_key(netmaker_key)
@@ -106,6 +114,36 @@ defmodule EdgeAgent.Enrollment do
       :ok
     end
   end
+
+  @doc """
+  Verifies that a recovery key belongs to the enrollment cluster.
+
+  A missing recovery key is valid for ordinary first registration. A supplied
+  key must be a valid recovery blob and must name the same cluster as the
+  enrollment key.
+  """
+  @spec verify_recovery_key(String.t() | nil, String.t()) :: :ok | {:error, String.t()}
+  def verify_recovery_key(nil, _cluster_name), do: :ok
+  def verify_recovery_key("", _cluster_name), do: :ok
+
+  def verify_recovery_key(recovery_key, cluster_name)
+      when is_binary(recovery_key) and is_binary(cluster_name) and cluster_name != "" do
+    with {:ok, json} <- Base.decode64(recovery_key),
+         {:ok, decoded} <- JSON.decode(json),
+         node_id when is_binary(node_id) and node_id != "" <- Map.get(decoded, "node_id"),
+         nonce when is_binary(nonce) and nonce != "" <- Map.get(decoded, "nonce"),
+         recovery_cluster_name when is_binary(recovery_cluster_name) and recovery_cluster_name != "" <-
+           Map.get(decoded, "cluster_name"),
+         {:ok, _uuid} <- Ecto.UUID.cast(node_id),
+         true <- recovery_cluster_name == cluster_name do
+      :ok
+    else
+      false -> {:error, "RECOVERY_KEY and ENROLLMENT_KEY belong to different clusters"}
+      _ -> {:error, "RECOVERY_KEY is invalid"}
+    end
+  end
+
+  def verify_recovery_key(_recovery_key, _cluster_name), do: {:error, "RECOVERY_KEY is invalid"}
 
   # =============================================================================
   # Private — Get Enrollment Key
@@ -261,12 +299,13 @@ defmodule EdgeAgent.Enrollment do
   defp decode(enrollment_key) do
     with {:ok, json} <- Base.decode64(enrollment_key, padding: false),
          {:ok, decoded} <- JSON.decode(json),
-         admin_urls when is_list(admin_urls) and admin_urls != [] <- Map.get(decoded, "admin_urls") do
-      {:ok, admin_urls}
+         admin_urls when is_list(admin_urls) and admin_urls != [] <- Map.get(decoded, "admin_urls"),
+         cluster_name when is_binary(cluster_name) and cluster_name != "" <- Map.get(decoded, "cluster_name") do
+      {:ok, %{admin_urls: admin_urls, cluster_name: cluster_name}}
     else
       :error -> {:error, "ENROLLMENT_KEY is not valid base64"}
       {:error, _} -> {:error, "ENROLLMENT_KEY is not valid JSON"}
-      _ -> {:error, "ENROLLMENT_KEY is missing admin_urls field"}
+      _ -> {:error, "ENROLLMENT_KEY is missing admin_urls or cluster_name field"}
     end
   end
 

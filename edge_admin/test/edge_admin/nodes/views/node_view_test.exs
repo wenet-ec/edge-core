@@ -51,6 +51,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
       socks5_proxy_port: 1080,
       api_token: "token-abc",
       proxy_password: "pw-abc",
+      recovery_key: "recovery-key-abc",
       version: "0.1.0",
       self_update_enabled: true,
       last_seen_at: now,

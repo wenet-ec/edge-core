@@ -176,8 +176,8 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   - `admin_urls` - List of admin URLs extracted from the same blob
 
   ## Returns
-  - `{:ok, %{verified: bool, error: String.t(), netmaker_key: String.t()}}` -
-    Response from admin (`error` and `netmaker_key` default to `""` if omitted)
+  - `{:ok, %{error: String.t(), netmaker_key: String.t(), enrollment_key_id: String.t() | nil}}` -
+    Response from admin (`error`, `netmaker_key`, and `enrollment_key_id` default when omitted)
   - `{:error, reason}` - All URLs failed or non-retryable error
 
   POST /api/v1/agents/enrollment_keys/verify
@@ -202,9 +202,9 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
       {:ok, %{status: 200, body: %{"data" => data}}} ->
         {:ok,
          %{
-           verified: data["verified"],
            error: data["error"] || "",
-           netmaker_key: data["netmaker_key"] || ""
+           netmaker_key: data["netmaker_key"] || "",
+           enrollment_key_id: data["enrollment_key_id"]
          }}
 
       {:ok, %{status: 503}} ->

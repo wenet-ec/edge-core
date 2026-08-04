@@ -6,8 +6,8 @@ defmodule EdgeAgent.Settings do
   Settings come in two flavours, each backed by its own engine:
 
   - **Config** — durable, sqlite-backed key-value. Survives restarts. Used for
-    identity and discovery state (node_id, admin_urls, enrollment_verified,
-    etc.). Engine: `EdgeAgent.Settings.Configs`.
+    identity and discovery state (node_id, admin_urls, enrollment_key_id, etc.).
+    Engine: `EdgeAgent.Settings.Configs`.
   - **Secret** — session-scoped, in-memory via `:persistent_term`. Lives for
     the lifetime of the BEAM and is repopulated by bootstrap on the next
     start. Used for the proxy password. Engine: `EdgeAgent.Settings.Secrets`.
@@ -116,6 +116,12 @@ defmodule EdgeAgent.Settings do
   @spec set_netmaker_key(String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
   def set_netmaker_key(value), do: set_config("netmaker_key", value)
 
+  @spec get_enrollment_key_id() :: String.t() | nil
+  def get_enrollment_key_id, do: get_config("enrollment_key_id")
+
+  @spec set_enrollment_key_id(String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
+  def set_enrollment_key_id(value), do: set_config("enrollment_key_id", value)
+
   @spec get_last_check_self_update_at() :: DateTime.t() | nil
   def get_last_check_self_update_at do
     case get_config("last_check_self_update_at") do
@@ -135,16 +141,6 @@ defmodule EdgeAgent.Settings do
   def set_last_check_self_update_at(%DateTime{} = datetime) do
     iso_string = DateTime.to_iso8601(datetime)
     set_config("last_check_self_update_at", iso_string)
-  end
-
-  @spec get_enrollment_verified() :: boolean()
-  def get_enrollment_verified do
-    get_config("enrollment_verified") == "true"
-  end
-
-  @spec set_enrollment_verified(boolean()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
-  def set_enrollment_verified(value) when is_boolean(value) do
-    set_config("enrollment_verified", to_string(value))
   end
 
   @spec get_admin_fallback_urls() :: [String.t()]

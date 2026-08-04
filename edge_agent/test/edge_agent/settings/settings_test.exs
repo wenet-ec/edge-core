@@ -299,40 +299,6 @@ defmodule EdgeAgent.SettingsTest do
   end
 
   # -----------------------------------------------------------------------
-  # enrollment_verified — boolean stored as "true"/"false" string
-  # -----------------------------------------------------------------------
-
-  describe "enrollment_verified accessors" do
-    test "get_enrollment_verified returns false when not set" do
-      assert Settings.get_enrollment_verified() == false
-    end
-
-    test "set_enrollment_verified(true) then get returns true" do
-      {:ok, _} = Settings.set_enrollment_verified(true)
-      assert Settings.get_enrollment_verified() == true
-    end
-
-    test "set_enrollment_verified(false) then get returns false" do
-      {:ok, _} = Settings.set_enrollment_verified(true)
-      {:ok, _} = Settings.set_enrollment_verified(false)
-      assert Settings.get_enrollment_verified() == false
-    end
-
-    test "stored value is the string 'true' not a boolean" do
-      {:ok, _} = Settings.set_enrollment_verified(true)
-      assert Settings.get_config("enrollment_verified") == "true"
-    end
-
-    test "stored value is the string 'false' not a boolean" do
-      {:ok, _} = Settings.set_enrollment_verified(false)
-      assert Settings.get_config("enrollment_verified") == "false"
-    end
-
-    test "missing key returns false (not true)" do
-      refute Settings.get_enrollment_verified()
-    end
-  end
-
   # -----------------------------------------------------------------------
   # netmaker_key — plain string roundtrip
   # -----------------------------------------------------------------------
@@ -351,6 +317,30 @@ defmodule EdgeAgent.SettingsTest do
       {:ok, _} = Settings.set_netmaker_key("TOKEN=old")
       {:ok, _} = Settings.set_netmaker_key("TOKEN=new")
       assert Settings.get_netmaker_key() == "TOKEN=new"
+    end
+  end
+
+  describe "enrollment_key_id accessors" do
+    test "get_enrollment_key_id returns nil when not set" do
+      assert Settings.get_enrollment_key_id() == nil
+    end
+
+    test "set_enrollment_key_id then get roundtrips" do
+      enrollment_key_id = Uniq.UUID.uuid7()
+
+      {:ok, _} = Settings.set_enrollment_key_id(enrollment_key_id)
+
+      assert Settings.get_enrollment_key_id() == enrollment_key_id
+    end
+
+    test "set_enrollment_key_id can overwrite the association" do
+      first_id = Uniq.UUID.uuid7()
+      second_id = Uniq.UUID.uuid7()
+
+      {:ok, _} = Settings.set_enrollment_key_id(first_id)
+      {:ok, _} = Settings.set_enrollment_key_id(second_id)
+
+      assert Settings.get_enrollment_key_id() == second_id
     end
   end
 

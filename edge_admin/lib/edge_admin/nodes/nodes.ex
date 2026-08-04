@@ -792,7 +792,10 @@ defmodule EdgeAdmin.Nodes do
            :ok <- Checks.NodeLimitCheck.check(new_cluster),
            {:ok, updated_node} <-
              current_node
-             |> Ecto.Changeset.change(cluster_id: new_cluster.id, recovery_key: nil)
+             |> Ecto.Changeset.change(
+               cluster_id: new_cluster.id,
+               recovery_key: nil
+             )
              |> Repo.update() do
         %{node: current_node, new_cluster: new_cluster, updated_node: updated_node}
       else
@@ -1317,9 +1320,10 @@ defmodule EdgeAdmin.Nodes do
 
   ## Returns
 
-  - `{:ok, %{verified: bool, error: String.t(), netmaker_key: String.t()}}` —
-    on every input that survives form validation. The result map is the
-    verification outcome; check `:verified` to gate the agent's next step.
+  - `{:ok, %{error: String.t(), netmaker_key: String.t(), enrollment_key_id: String.t() | nil}}` —
+    on every input that survives form validation. A non-nil
+    `enrollment_key_id` indicates successful verification; `nil` indicates
+    that verification failed.
   - `{:error, changeset}` — input failed `VerifyEnrollmentKeyForm` validation
     (e.g. missing `key`).
   """

@@ -20,6 +20,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     field(:version, :string)
     field(:self_update_enabled, :boolean)
     field(:recovery_key, :string)
+    field(:enrollment_key_id, :string)
   end
 
   @fields [
@@ -33,7 +34,8 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     :socks5_proxy_port,
     :version,
     :self_update_enabled,
-    :recovery_key
+    :recovery_key,
+    :enrollment_key_id
   ]
   @doc """
   Validates and normalizes agent node registration parameters.
@@ -64,6 +66,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
       :self_update_enabled
     ])
     |> validate_uuid_format(:node_id)
+    |> validate_uuid_format(:enrollment_key_id)
     |> validate_network_name()
     |> validate_cluster_exists(get_cluster_fn)
     |> validate_port(:http_port)
@@ -146,7 +149,8 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
       "socks5_proxy_port" => form.socks5_proxy_port,
       "version" => form.version,
       "self_update_enabled" => form.self_update_enabled,
-      "recovery_key" => form.recovery_key
+      "recovery_key" => form.recovery_key,
+      "enrollment_key_id" => form.enrollment_key_id
     }
     |> Enum.reject(fn {_k, v} -> is_nil(v) end)
     |> Map.new()

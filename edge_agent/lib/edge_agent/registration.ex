@@ -37,7 +37,14 @@ defmodule EdgeAgent.Registration do
         AdminClient.reregister_node(build_reregistration_payload(network_name))
 
       _ ->
-        AdminClient.register_node(build_registration_payload(node_id, network_name, recovery_key))
+        AdminClient.register_node(
+          build_registration_payload(
+            node_id,
+            network_name,
+            recovery_key,
+            Settings.get_enrollment_key_id()
+          )
+        )
     end
   end
 
@@ -76,16 +83,20 @@ defmodule EdgeAgent.Registration do
     end
   end
 
-  defp build_registration_payload(node_id, network_name, nil) do
+  defp build_registration_payload(node_id, network_name, nil, enrollment_key_id) do
     network_name
     |> node_metadata()
-    |> Map.put(:node_id, node_id)
+    |> Map.merge(%{node_id: node_id, enrollment_key_id: enrollment_key_id})
   end
 
-  defp build_registration_payload(node_id, network_name, recovery_key) do
+  defp build_registration_payload(node_id, network_name, recovery_key, enrollment_key_id) do
     network_name
     |> node_metadata()
-    |> Map.merge(%{node_id: node_id, recovery_key: recovery_key})
+    |> Map.merge(%{
+      node_id: node_id,
+      recovery_key: recovery_key,
+      enrollment_key_id: enrollment_key_id
+    })
   end
 
   defp build_reregistration_payload(network_name), do: node_metadata(network_name)

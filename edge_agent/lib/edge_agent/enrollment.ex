@@ -15,8 +15,8 @@ defmodule EdgeAgent.Enrollment do
   ## Flow
 
       ensure_verified(recovery_key)
-        ├── enrollment_verified=true and no recovery key? → :ok (skip)
-        └── not verified:
+        ├── enrollment_key_id is present and no recovery key? → :ok (skip)
+        └── enrollment_key_id is absent:
               1. Get enrollment key (ENROLLMENT_KEY env, or fetch by trying
                  PUBLIC_ENROLLMENT_KEY_URLS in order until one succeeds)
               2. Decode → extract admin_urls and cluster_name (nonce only makes the blob unique)
@@ -24,7 +24,7 @@ defmodule EdgeAgent.Enrollment do
               4. POST the full key blob to admin verify endpoint
               5. Require a non-empty Netmaker enrollment key
               6. On success: store admin_fallback_urls, netmaker_key,
-                 enrollment_verified=true to Settings
+                 then write enrollment_key_id last as the durable commit marker
 
   ## Multi-URL failover semantics
 
@@ -37,14 +37,14 @@ defmodule EdgeAgent.Enrollment do
 
   ## Crash Safety
 
-  Settings writes are ordered so `enrollment_verified=true` is the last one.
+  Settings writes are ordered so `enrollment_key_id` is the last one.
   If the agent crashes after `ensure_verified/0` returns `:ok`, the next
-  bootstrap sees the verified flag and skips re-verification, preserving
+  bootstrap sees the key ID and skips re-verification, preserving
   the enrollment key's use count.
 
   A crash *during* the write sequence — between the
   `set_admin_fallback_urls/1` / `set_netmaker_key/1` writes and the final
-  `set_enrollment_verified(true)` — leaves the verified flag false. The
+  `set_enrollment_key_id/1` — leaves the key ID absent. The
   next bootstrap will re-verify and consume another key use. Limited-use
   keys with very narrow crash windows could deplete this way, but in
   practice the writes are SQLite upserts and complete in microseconds.
@@ -75,12 +75,12 @@ defmodule EdgeAgent.Enrollment do
   @doc """
   Ensures the agent has a verified enrollment key.
 
-  Idempotent — if `enrollment_verified=true` is already in Settings, returns
+  Idempotent — if `enrollment_key_id` is already in Settings, returns
   immediately without contacting admin or consuming a key use.
 
   On success, Settings will contain:
-  - `enrollment_verified` = true
   - `netmaker_key` — for use by `EdgeAgent.Vpn`
+  - `enrollment_key_id` — for associating the successful registration with Admin
   - `admin_fallback_urls` — for use by `AdminClient` when VPN is down
   """
   @spec ensure_verified() :: :ok | {:error, String.t()}
@@ -88,7 +88,7 @@ defmodule EdgeAgent.Enrollment do
 
   @spec ensure_verified(String.t() | nil) :: :ok | {:error, String.t()}
   def ensure_verified(recovery_key) do
-    if Settings.get_enrollment_verified() do
+    if enrollment_key_id_present?() do
       if recovery_key in [nil, ""] do
         Logger.info("Enrollment already verified, skipping")
         :ok
@@ -109,19 +109,26 @@ defmodule EdgeAgent.Enrollment do
          {:ok, %{admin_urls: admin_urls, cluster_name: cluster_name}} <-
            decode_enrollment_key(enrollment_key),
          :ok <- verify_recovery_key(recovery_key, cluster_name),
-         {:ok, netmaker_key} <- verify_enrollment_key_with_admin(enrollment_key, admin_urls) do
-      persist_verified_settings(admin_urls, netmaker_key)
+         {:ok, verification} <- verify_enrollment_key_with_admin(enrollment_key, admin_urls) do
+      persist_enrollment_settings(admin_urls, verification)
     end
   end
 
-  defp persist_verified_settings(admin_urls, netmaker_key) do
+  defp persist_enrollment_settings(admin_urls, %{netmaker_key: netmaker_key, enrollment_key_id: enrollment_key_id}) do
     with {:ok, _setting} <- Settings.set_admin_fallback_urls(admin_urls),
          {:ok, _setting} <- Settings.set_netmaker_key(netmaker_key),
-         {:ok, _setting} <- Settings.set_enrollment_verified(true) do
+         {:ok, _setting} <- Settings.set_enrollment_key_id(enrollment_key_id) do
       :ok
     else
       {:error, reason} ->
         {:error, "Failed to persist enrollment settings: #{inspect(reason)}"}
+    end
+  end
+
+  defp enrollment_key_id_present? do
+    case Settings.get_enrollment_key_id() do
+      id when is_binary(id) and id != "" -> true
+      _ -> false
     end
   end
 
@@ -325,18 +332,20 @@ defmodule EdgeAgent.Enrollment do
 
   defp verify_enrollment_key_with_admin(key_blob, admin_urls) do
     case AdminClient.verify_enrollment_key(key_blob, admin_urls) do
-      {:ok, %{verified: true, netmaker_key: netmaker_key}}
-      when is_binary(netmaker_key) and netmaker_key != "" ->
+      {:ok, %{netmaker_key: netmaker_key, enrollment_key_id: enrollment_key_id}}
+      when is_binary(netmaker_key) and netmaker_key != "" and
+             is_binary(enrollment_key_id) and enrollment_key_id != "" ->
         Logger.info("Enrollment key verified successfully")
-        {:ok, netmaker_key}
+        {:ok, %{netmaker_key: netmaker_key, enrollment_key_id: enrollment_key_id}}
 
-      {:ok, %{verified: true}} ->
-        Logger.error("Admin verified enrollment but returned no Netmaker enrollment key")
-        {:error, "Admin returned no Netmaker enrollment key"}
-
-      {:ok, %{verified: false, error: error}} ->
+      {:ok, %{enrollment_key_id: nil, error: error}} ->
         Logger.error("Enrollment key rejected by admin: #{error}")
         {:error, "Enrollment key verification failed: #{error}"}
+
+      {:ok, %{netmaker_key: netmaker_key, enrollment_key_id: _enrollment_key_id}}
+      when not is_binary(netmaker_key) or netmaker_key == "" ->
+        Logger.error("Admin verified enrollment but returned no Netmaker enrollment key")
+        {:error, "Admin returned no Netmaker enrollment key"}
 
       {:error, reason} ->
         Logger.error("Could not reach admin for enrollment verification: #{inspect(reason)}")

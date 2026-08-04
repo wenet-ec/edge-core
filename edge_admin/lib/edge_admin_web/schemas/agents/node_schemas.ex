@@ -51,7 +51,12 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         socks5_proxy_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "SOCKS5 proxy port"},
         version: %Schema{type: :string, description: "Agent version string", example: "1.2.3"},
         self_update_enabled: %Schema{type: :boolean, description: "Whether the agent supports self-update"},
-        recovery_key: %Schema{type: :string, description: "Optional node recovery key"}
+        recovery_key: %Schema{type: :string, description: "Optional node recovery key"},
+        enrollment_key_id: %Schema{
+          type: :string,
+          format: :uuid,
+          description: "Optional Admin enrollment key ID used for this registration"
+        }
       },
       required: [
         :node_id,

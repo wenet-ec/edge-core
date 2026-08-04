@@ -2,7 +2,11 @@
 defmodule EdgeAdminWeb.Controllers.Agents.EnrollmentKeyJSON do
   alias EdgeAdminWeb.ResponseEnvelope
 
-  def verify(%{conn: conn, result: %{verified: verified, error: error, netmaker_key: netmaker_key}}) do
-    ResponseEnvelope.success(conn, %{verified: verified, error: error, netmaker_key: netmaker_key})
+  def verify(%{conn: conn, result: %{error: error, netmaker_key: netmaker_key, enrollment_key_id: enrollment_key_id}}) do
+    ResponseEnvelope.success(conn, %{
+      error: error,
+      netmaker_key: netmaker_key,
+      enrollment_key_id: enrollment_key_id
+    })
   end
 end

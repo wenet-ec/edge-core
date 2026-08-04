@@ -64,6 +64,18 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
       assert result["recovery_key"] == "recovery-key"
     end
 
+    test "preserves an optional enrollment key ID" do
+      enrollment_key_id = Uniq.UUID.uuid7()
+
+      assert {:ok, result} =
+               RegisterNodeForm.changeset(
+                 valid_attrs(%{"enrollment_key_id" => enrollment_key_id}),
+                 &cluster_found/1
+               )
+
+      assert result["enrollment_key_id"] == enrollment_key_id
+    end
+
     test "port at boundary 1 is valid" do
       assert {:ok, _} =
                RegisterNodeForm.changeset(valid_attrs(%{"http_port" => 1}), &cluster_found/1)

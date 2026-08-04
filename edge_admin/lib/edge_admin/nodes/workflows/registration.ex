@@ -15,6 +15,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
   alias EdgeAdmin.Nodes.Checks
   alias EdgeAdmin.Nodes.Forms
   alias EdgeAdmin.Nodes.Schemas.Cluster
+  alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Random
   alias EdgeAdmin.Repo
@@ -196,7 +197,17 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
       api_token: Random.token(),
       proxy_password: Random.token(),
       version: attrs["version"],
-      self_update_enabled: attrs["self_update_enabled"]
+      self_update_enabled: attrs["self_update_enabled"],
+      enrollment_key_id: enrollment_key_id_for(attrs["enrollment_key_id"], cluster.id)
     }
+  end
+
+  defp enrollment_key_id_for(nil, _cluster_id), do: nil
+
+  defp enrollment_key_id_for(enrollment_key_id, cluster_id) do
+    case Repo.get_by(EnrollmentKey, id: enrollment_key_id, cluster_id: cluster_id) do
+      %EnrollmentKey{id: id} -> id
+      nil -> nil
+    end
   end
 end

@@ -32,15 +32,24 @@ defmodule EdgeAdminWeb.Schemas.Agents.EnrollmentKeySchemas do
       description: "Result of enrollment key verification",
       type: :object,
       properties: %{
-        verified: %Schema{type: :boolean, description: "Whether the enrollment key is valid and unused"},
         error: %Schema{type: :string, description: "Error message if verification failed, empty string otherwise"},
         netmaker_key: %Schema{
           type: :string,
           description: "Netmaker enrollment key to use for VPN join, empty string if not verified"
+        },
+        enrollment_key_id: %Schema{
+          type: :string,
+          format: :uuid,
+          nullable: true,
+          description: "Admin enrollment key ID when verification succeeds, otherwise null"
         }
       },
-      required: [:verified, :error, :netmaker_key],
-      example: %{verified: true, error: "", netmaker_key: "eyJhbGciOiJIUzI1NiJ9..."}
+      required: [:error, :netmaker_key, :enrollment_key_id],
+      example: %{
+        error: "",
+        netmaker_key: "eyJhbGciOiJIUzI1NiJ9...",
+        enrollment_key_id: "0190f1e0-7b2a-7abc-8def-0123456789ab"
+      }
     })
   end
 
@@ -51,7 +60,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.EnrollmentKeySchemas do
       CommonSchemas.single_response(
         EnrollmentKeyVerifyData,
         "Internal.EnrollmentKeyVerifyResponse",
-        "Result of enrollment key verification. Always returns 200 — check `verified` field."
+        "Result of enrollment key verification. A non-null `enrollment_key_id` indicates success."
       )
     )
   end

@@ -130,7 +130,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
       {result, enrollment_key} =
         case Repo.get_by(EnrollmentKey, key: key_blob) do
           nil ->
-            {%{verified: false, error: "invalid_key", netmaker_key: ""}, nil}
+            {%{verified: false, error: "invalid_key", netmaker_key: "", enrollment_key_id: nil}, nil}
 
           enrollment_key ->
             enrollment_key = Repo.preload(enrollment_key, :cluster)
@@ -220,7 +220,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
     end
   end
 
-  defp verification_failure(error), do: %{verified: false, error: error, netmaker_key: ""}
+  defp verification_failure(error), do: %{verified: false, error: error, netmaker_key: "", enrollment_key_id: nil}
 
   defp cluster_matches?(%EnrollmentKey{key: key_blob, cluster: %Cluster{name: cluster_name}}) do
     with {:ok, json} <- Base.decode64(key_blob, padding: false),
@@ -251,7 +251,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
     if rows_updated == 0 do
       verification_failure("key_spent")
     else
-      %{verified: true, error: "", netmaker_key: netmaker_key}
+      %{verified: true, error: "", netmaker_key: netmaker_key, enrollment_key_id: key.id}
     end
   end
 end

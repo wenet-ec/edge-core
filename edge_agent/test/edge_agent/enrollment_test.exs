@@ -13,12 +13,12 @@ defmodule EdgeAgent.EnrollmentTest do
   end
 
   # -----------------------------------------------------------------------
-  # ensure_verified/0 — short-circuit when enrollment_verified=true in Settings
+  # ensure_verified/0 — short-circuit when enrollment_key_id is present
   # -----------------------------------------------------------------------
 
   describe "ensure_verified/0 — already verified (idempotent short-circuit)" do
-    test "returns :ok immediately when enrollment_verified is true in Settings" do
-      Settings.set_enrollment_verified(true)
+    test "returns :ok immediately when enrollment_key_id is present in Settings" do
+      Settings.set_enrollment_key_id(Ecto.UUID.generate())
       assert :ok = Enrollment.ensure_verified()
     end
 
@@ -27,7 +27,7 @@ defmodule EdgeAgent.EnrollmentTest do
       # it would fail. The short-circuit must fire first.
       Application.delete_env(:edge_agent, :enrollment_key)
       Application.delete_env(:edge_agent, :public_enrollment_key_urls)
-      Settings.set_enrollment_verified(true)
+      Settings.set_enrollment_key_id(Ecto.UUID.generate())
 
       assert :ok = Enrollment.ensure_verified()
     after
@@ -38,7 +38,7 @@ defmodule EdgeAgent.EnrollmentTest do
 
   describe "ensure_verified/0 — not yet verified, missing key" do
     setup do
-      Settings.set_enrollment_verified(false)
+      Settings.delete_config("enrollment_key_id")
 
       on_exit(fn ->
         Application.delete_env(:edge_agent, :enrollment_key)
@@ -109,12 +109,12 @@ defmodule EdgeAgent.EnrollmentTest do
       assert is_binary(reason)
     end
 
-    test "enrollment_verified remains false after a failed verify" do
+    test "enrollment_key_id remains absent after a failed verify" do
       Application.delete_env(:edge_agent, :enrollment_key)
       Application.delete_env(:edge_agent, :public_enrollment_key_urls)
 
       Enrollment.ensure_verified()
-      refute Settings.get_enrollment_verified()
+      assert Settings.get_enrollment_key_id() == nil
     end
 
     test "returns error when public_enrollment_key_urls is set to empty list" do

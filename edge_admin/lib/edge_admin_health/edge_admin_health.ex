@@ -24,6 +24,8 @@ defmodule EdgeAdminHealth do
   # conditional list would freeze in the wrong state. The Event Broker check
   # below already short-circuits to `:ok` when the broker is disabled
   # (see `EdgeAdmin.Events.Broker.healthy?/0`), so always-include is safe.
+  @doc "Returns the checks used by the Admin readiness and health endpoints."
+  @spec checks() :: [map()]
   def checks do
     [
       %PlugCheckup.Check{name: "Database", module: __MODULE__, function: :database_health},
@@ -36,8 +38,12 @@ defmodule EdgeAdminHealth do
     ]
   end
 
+  @doc "Returns the HTTP error code used when an Admin health check fails."
+  @spec error_code() :: pos_integer()
   def error_code, do: @health_check_error_code
 
+  @doc "Checks whether the Admin database is responding to a simple query."
+  @spec database_health() :: :ok | {:error, String.t()}
   def database_health do
     case EdgeAdmin.Repo.query("SELECT 1", []) do
       {:ok, _} -> :ok
@@ -45,6 +51,8 @@ defmodule EdgeAdminHealth do
     end
   end
 
+  @doc "Checks whether Admin-cluster membership has initialized."
+  @spec membership_health() :: :ok | {:error, String.t()}
   def membership_health do
     if EdgeAdmin.Admins.Membership.initialized?() do
       :ok
@@ -53,6 +61,8 @@ defmodule EdgeAdminHealth do
     end
   end
 
+  @doc "Checks whether Admin metadata computation has initialized."
+  @spec metadata_health() :: :ok | {:error, String.t()}
   def metadata_health do
     if EdgeAdmin.Admins.Metadata.initialized?() do
       :ok
@@ -61,6 +71,8 @@ defmodule EdgeAdminHealth do
     end
   end
 
+  @doc "Checks reachability of the Netmaker API with bounded retries."
+  @spec netmaker_api_health() :: :ok | {:error, String.t()}
   def netmaker_api_health do
     case EdgeAdmin.Vpn.netmaker_health_check(retries: 2, retry_delay: 200) do
       :ok ->
@@ -76,6 +88,8 @@ defmodule EdgeAdminHealth do
       {:error, "API check exception"}
   end
 
+  @doc "Checks that the Admin Netclient is connected to its Admin cluster network."
+  @spec netclient_health() :: :ok | {:error, String.t()}
   def netclient_health do
     admin_cluster = EdgeAdmin.Vpn.admin_cluster_name()
 
@@ -105,6 +119,8 @@ defmodule EdgeAdminHealth do
       {:error, "Health check exception"}
   end
 
+  @doc "Checks whether the Admin proxy servers have initialized."
+  @spec proxy_servers_health() :: :ok | {:error, String.t()}
   def proxy_servers_health do
     if EdgeAdmin.ProxyServers.initialized?() do
       :ok
@@ -113,6 +129,8 @@ defmodule EdgeAdminHealth do
     end
   end
 
+  @doc "Checks the configured event broker, or returns healthy when it is disabled."
+  @spec event_broker_health() :: :ok | {:error, String.t()}
   def event_broker_health do
     EdgeAdmin.Events.Broker.healthy?()
   end

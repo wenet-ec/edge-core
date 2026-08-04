@@ -33,16 +33,6 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
     Repo.exists?(from(c in Cluster, where: c.id == ^cluster_id and is_nil(c.deleted_at)))
   end
 
-  defp cluster_network_options(cluster) do
-    maybe_put_nodelimit(
-      %{addressrange: cluster.ipv4_range, addressrange6: cluster.ipv6_range},
-      cluster.node_limit
-    )
-  end
-
-  defp maybe_put_nodelimit(opts, nil), do: opts
-  defp maybe_put_nodelimit(opts, limit), do: Map.put(opts, :nodelimit, limit)
-
   @doc """
   Reconciles all active clusters and their node membership between database (source of truth) and Netmaker.
 
@@ -599,7 +589,9 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
     if cluster_active?(cluster.id) do
       network_name = node_network_name(cluster)
 
-      case Vpn.create_network(network_name, cluster_network_options(cluster)) do
+      opts = %{addressrange: cluster.ipv4_range, addressrange6: cluster.ipv6_range}
+
+      case Vpn.create_network(network_name, opts) do
         {:ok, _} ->
           Logger.info("Reconciliation: Recreated missing Netmaker network #{network_name}")
           :ok

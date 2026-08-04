@@ -190,9 +190,6 @@ NETMAKER_SUPERADMIN_PASSWORD=admin
 # all admin clusters per core. With 50-100 admins per core, set this to 50-100 accordingly.
 # ADMIN_SLOT_RESERVATION=10
 
-# Slots reserved for node churn headroom (reconciliation re-adds, transient failures).
-# NODE_SLOT_RESERVATION=10
-
 # Pre-create a named default cluster so agents can enroll without specifying a cluster.
 # `default` is reserved (used as a URL keyword on convenience routes) — pick any
 # other valid name. Routes like POST /api/v1/clusters/default/enrollment_keys

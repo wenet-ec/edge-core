@@ -470,8 +470,6 @@ config :edge_admin,
   # Slots reserved for admin gateway nodes (e.g. split-brain flooding).
   # Tune to match total admin instances across all admin clusters per core.
   admin_slot_reservation: get_env("ADMIN_SLOT_RESERVATION", :integer, 10),
-  # Slots reserved for node churn headroom (reconciliation re-adds, transient failures).
-  node_slot_reservation: get_env("NODE_SLOT_RESERVATION", :integer, 10),
   # Optional: Pre-defined default cluster for agent enrollment
   default_cluster_name: get_env("DEFAULT_CLUSTER_NAME"),
   default_cluster_v4_subnet: get_env("DEFAULT_CLUSTER_V4_SUBNET"),

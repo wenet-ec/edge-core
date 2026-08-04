@@ -122,10 +122,15 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Returns the number of IP slots reserved for node churn headroom.
+  Returns Netmaker's usable IPv4 address capacity for a CIDR prefix.
+
+  Netmaker's allocator skips the network address, so a `/prefix` network has
+  `2^(32 - prefix) - 1` usable addresses. This is shared by cluster validation
+  and runtime capacity checks so they cannot disagree about the boundary.
   """
-  def node_slot_reservation do
-    Application.get_env(:edge_admin, :node_slot_reservation, 10)
+  @spec usable_ipv4_capacity(0..32) :: non_neg_integer()
+  def usable_ipv4_capacity(prefix) when prefix in 0..32 do
+    Integer.pow(2, 32 - prefix) - 1
   end
 
   # ===========================================================================
@@ -839,9 +844,8 @@ defmodule EdgeAdmin.Vpn do
     - `{:error, :not_found}` — network doesn't exist in Netmaker
     - `{:error, :service_unavailable}` — Netmaker can't be queried
 
-  Capacity is computed as `2^(32 - prefix) - 1` to account for the network
-  address that Netmaker's allocator (iplib) skips. WireGuard does not reserve
-  the broadcast address, so it remains usable. We treat `used >= capacity`
+  Capacity is computed with `usable_ipv4_capacity/1` to account for the network
+  address that Netmaker's allocator (iplib) skips. We treat `used >= capacity`
   as full so the next allocation attempt is *guaranteed* to fail rather than
   *probably* fail.
   """
@@ -854,7 +858,7 @@ defmodule EdgeAdmin.Vpn do
          cidr when is_binary(cidr) <- network["addressrange"],
          {:ok, {_ip, prefix}} <- parse_cidr(cidr),
          {:ok, nodes} <- list_nodes(network_name) do
-      capacity = Integer.pow(2, 32 - prefix) - 1
+      capacity = usable_ipv4_capacity(prefix)
       used = length(nodes)
 
       if used >= capacity do

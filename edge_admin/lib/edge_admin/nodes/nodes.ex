@@ -161,10 +161,6 @@ defmodule EdgeAdmin.Nodes do
   defp node_network_name(cluster_name) when is_binary(cluster_name),
     do: Vpn.build_network_name(cluster_name, prefix: :node)
 
-  # Adds nodelimit to Netmaker network opts when a limit is set
-  defp maybe_put_nodelimit(opts, nil), do: opts
-  defp maybe_put_nodelimit(opts, limit), do: Map.put(opts, :nodelimit, limit)
-
   # ===========================================================================
   # Cluster functions
   # ===========================================================================
@@ -464,7 +460,7 @@ defmodule EdgeAdmin.Nodes do
 
   defp provision_cluster_network(cluster) do
     network_name = node_network_name(cluster)
-    opts = cluster_network_options(cluster)
+    opts = %{addressrange: cluster.ipv4_range, addressrange6: cluster.ipv6_range}
 
     case Vpn.create_network(network_name, opts) do
       {:ok, _} ->
@@ -480,13 +476,6 @@ defmodule EdgeAdmin.Nodes do
         Repo.delete(cluster)
         error
     end
-  end
-
-  defp cluster_network_options(cluster) do
-    maybe_put_nodelimit(
-      %{addressrange: cluster.ipv4_range, addressrange6: cluster.ipv6_range},
-      cluster.node_limit
-    )
   end
 
   defp resolve_existing_network(cluster, network_name) do
@@ -519,8 +508,9 @@ defmodule EdgeAdmin.Nodes do
   @doc """
   Updates a cluster.
 
-  node_limit is enforced by this system only. Netmaker has the field on its network
-  model but no server-side update endpoint or enforcement logic as of the current version.
+  `node_limit` is an Edge Admin policy and is intentionally not sent to Netmaker.
+  Netmaker's network membership includes both Admin and Agent hosts, so its own
+  network-level limit would not represent this cluster's edge-node limit.
   The active cluster row is re-read and locked before the limit is checked or updated.
 
   ## Parameters

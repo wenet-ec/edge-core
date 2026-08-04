@@ -306,6 +306,20 @@ defmodule EdgeAdmin.VpnTest do
   end
 
   # ---------------------------------------------------------------------------
+  # usable_ipv4_capacity/1
+  # ---------------------------------------------------------------------------
+
+  describe "usable_ipv4_capacity/1" do
+    test "uses the same network-address exclusion as Netmaker" do
+      assert Vpn.usable_ipv4_capacity(24) == 255
+    end
+
+    test "returns zero for a /32 network" do
+      assert Vpn.usable_ipv4_capacity(32) == 0
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # find_available_subnet/3
   # ---------------------------------------------------------------------------
 

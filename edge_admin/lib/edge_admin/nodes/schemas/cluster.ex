@@ -28,8 +28,8 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   alias EdgeAdmin.Random
   alias EdgeAdmin.Vpn
 
-  # /31 and /32 are unusable: /32 has 1 IP (consumed by the first admin gateway),
-  # /31 has 2 IPs (both consumed before any edge node can enroll).
+  # /31 and /32 are unusable for an edge cluster: Netmaker skips the network
+  # address and the remaining addresses are reserved for Admin gateways.
   @min_prefix 30
 
   @type t :: %__MODULE__{
@@ -220,7 +220,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
         {:ok, {_ip, prefix}} when prefix > @min_prefix ->
           [
             ipv4_range:
-              "prefix /#{prefix} is too small — minimum is /#{@min_prefix} (#{cidr_capacity(@min_prefix)} IPs)"
+              "prefix /#{prefix} is too small — minimum is /#{@min_prefix} (#{Vpn.usable_ipv4_capacity(@min_prefix)} usable IPs)"
           ]
 
         _ ->
@@ -235,14 +235,14 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
     with limit when not is_nil(limit) <- get_field(changeset, :node_limit),
          cidr when not is_nil(cidr) <- get_field(changeset, :ipv4_range),
          {:ok, {_ip, prefix}} <- Vpn.parse_cidr(cidr) do
-      reservation = Vpn.admin_slot_reservation() + Vpn.node_slot_reservation()
-      max_limit = cidr_capacity(prefix) - reservation
+      reservation = Vpn.admin_slot_reservation()
+      max_limit = Vpn.usable_ipv4_capacity(prefix) - reservation
 
       if limit > max_limit do
         add_error(
           changeset,
           :node_limit,
-          "cannot exceed #{max_limit} for /#{prefix} (#{cidr_capacity(prefix)} IPs minus #{reservation} reserved slots)"
+          "cannot exceed #{max_limit} for /#{prefix} (#{Vpn.usable_ipv4_capacity(prefix)} usable IPs minus #{reservation} Admin slots)"
         )
       else
         changeset
@@ -251,8 +251,4 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
       _ -> changeset
     end
   end
-
-  # 2^(32 - prefix) — full address count, no broadcast/network exclusion
-  # (WireGuard assigns all addresses including .0 and .255)
-  defp cidr_capacity(prefix), do: Integer.pow(2, 32 - prefix)
 end

@@ -192,9 +192,6 @@ NETMAKER_API_SCHEME=http
 # Slots reserved for admin gateway nodes (e.g. split-brain flooding) — tune to match admin instance count per core.
 # ADMIN_SLOT_RESERVATION=10
 
-# Slots reserved for node churn headroom (reconciliation re-adds, transient failures).
-# NODE_SLOT_RESERVATION=10
-
 # Pre-create a named default cluster so agents can enroll without specifying a cluster.
 # `default` is reserved (used as a URL keyword on convenience routes) — pick any
 # other valid name. Routes like POST /api/v1/clusters/default/enrollment_keys

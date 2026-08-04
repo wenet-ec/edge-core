@@ -1,9 +1,10 @@
 # edge_agent/lib/edge_agent/diagnostics/wireguard_interface.ex
 defmodule EdgeAgent.Diagnostics.WireguardInterface do
-  @moduledoc false
+  @moduledoc "Checks the Agent's Netmaker WireGuard interface and routes."
 
   @interface "netmaker"
 
+  @doc "Inspects the Netmaker interface, addresses, and routes using the host `ip` command."
   @spec check() :: {:ok, map()} | {:warn, String.t(), map()} | {:error, String.t(), map()}
   def check do
     with {:ok, [link]} <- ip_json(["-j", "link", "show", "dev", @interface]),
@@ -16,7 +17,7 @@ defmodule EdgeAgent.Diagnostics.WireguardInterface do
     end
   end
 
-  @doc false
+  @doc "Classifies interface state from decoded link, address, and route data."
   @spec assess(map(), map(), [map()]) :: {:ok, map()} | {:warn, String.t(), map()} | {:error, String.t(), map()}
   def assess(link, address, routes) do
     flags = Map.get(link, "flags", [])

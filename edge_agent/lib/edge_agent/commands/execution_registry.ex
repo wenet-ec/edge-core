@@ -9,6 +9,7 @@ defmodule EdgeAgent.Commands.ExecutionRegistry do
 
   use GenServer
 
+  @spec start_link(term()) :: GenServer.on_start()
   def start_link(_) do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
@@ -16,6 +17,7 @@ defmodule EdgeAgent.Commands.ExecutionRegistry do
   @doc """
   Registers a task PID for a command execution.
   """
+  @spec register(String.t(), pid()) :: :ok
   def register(execution_id, task_pid) do
     GenServer.cast(__MODULE__, {:register, execution_id, task_pid})
   end
@@ -23,6 +25,7 @@ defmodule EdgeAgent.Commands.ExecutionRegistry do
   @doc """
   Unregisters a task PID for a command execution.
   """
+  @spec unregister(String.t()) :: :ok
   def unregister(execution_id) do
     GenServer.cast(__MODULE__, {:unregister, execution_id})
   end
@@ -31,6 +34,7 @@ defmodule EdgeAgent.Commands.ExecutionRegistry do
   Gets the task PID for a command execution.
   Returns nil if not found.
   """
+  @spec get_task(String.t()) :: pid() | nil
   def get_task(execution_id) do
     GenServer.call(__MODULE__, {:get_task, execution_id})
   end

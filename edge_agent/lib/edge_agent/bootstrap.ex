@@ -1,7 +1,7 @@
 # edge_agent/lib/edge_agent/bootstrap.ex
 defmodule EdgeAgent.Bootstrap do
   @moduledoc """
-  One-time bootstrap orchestrator for edge agent startup.
+  Bootstrap orchestrator for edge agent startup.
 
   This GenServer runs exactly once during application startup and performs critical
   initialization tasks to load or create the agent installation ID, join the VPN network, discover
@@ -38,6 +38,7 @@ defmodule EdgeAgent.Bootstrap do
 
   All values read from Application config (set in runtime.exs):
   - `:enrollment_key` - Admin enrollment key blob (base64)
+  - `:recovery_key` - Optional node recovery key used only when local identity is absent
   - `:public_enrollment_key_urls` - List of URLs to fetch enrollment key blob (tried in order)
   - `:run_bootstrap` - Whether to run bootstrap (default: true)
   - `:api_port` - Agent HTTP API port (sent to admin as `http_port`)
@@ -175,7 +176,7 @@ defmodule EdgeAgent.Bootstrap do
   end
 
   # =============================================================================
-  # Step 4: Join VPN
+  # Step 3: Join VPN
   # =============================================================================
 
   defp step_3_join_vpn(node_id) do

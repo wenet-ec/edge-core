@@ -2,6 +2,13 @@
 defmodule EdgeAgent.Identity do
   @moduledoc """
   Determines and persists the Agent node identity.
+
+  The identity is an Agent-generated UUIDv7 stored in the persistent Agent
+  Settings database. An existing local value always wins. If the local value
+  is absent, a valid `RECOVERY_KEY` supplies the previous node ID; otherwise a
+  new UUIDv7 is generated and persisted. The recovery key is returned to the
+  bootstrap flow for registration verification and is never used to override
+  an existing local identity.
   """
 
   alias EdgeAgent.Settings
@@ -13,6 +20,7 @@ defmodule EdgeAgent.Identity do
           recovery_key: String.t() | nil
         }
 
+  @doc "Loads the persisted node ID, recovers it from `RECOVERY_KEY`, or generates a new UUIDv7."
   @spec determine() :: {:ok, identity()} | {:error, :invalid_persisted_node_id | :invalid_recovery_key | term()}
   def determine do
     persisted_node_id = Settings.get_node_id()

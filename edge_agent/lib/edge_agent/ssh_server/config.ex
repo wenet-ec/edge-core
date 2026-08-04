@@ -79,12 +79,28 @@ defmodule EdgeAgent.SshServer.Config do
 
   @supported_host_key_types [:"ssh-ed25519", :"ecdsa-sha2-nistp256", :"ssh-rsa"]
 
+  @doc "Returns the configured SSH listening port."
+  @spec ssh_port() :: non_neg_integer() | nil
   def ssh_port, do: Application.get_env(:edge_agent, :ssh_port)
+
+  @doc "Returns the directory containing persistent SSH host keys."
+  @spec ssh_system_dir() :: String.t()
   def ssh_system_dir, do: Application.fetch_env!(:edge_agent, :ssh_system_dir)
+
+  @doc "Returns the SSH user directory passed to the Erlang SSH daemon."
+  @spec ssh_user_dir() :: String.t()
   def ssh_user_dir, do: Application.fetch_env!(:edge_agent, :ssh_user_dir)
+
+  @doc "Returns the preferred SSH algorithm configuration."
+  @spec ssh_algorithms() :: keyword()
   def ssh_algorithms, do: @ssh_algorithms
+
+  @doc "Returns the host-key algorithms supported by the Agent SSH server."
+  @spec supported_host_key_types() :: [atom()]
   def supported_host_key_types, do: @supported_host_key_types
 
+  @doc "Builds the Erlang SSH daemon options for the Agent server."
+  @spec ssh_options(module(), function()) :: keyword()
   def ssh_options(key_callback_module, password_callback) do
     [
       # An IPv6 wildcard socket with v6-only disabled accepts both overlay

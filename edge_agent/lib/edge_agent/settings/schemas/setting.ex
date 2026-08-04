@@ -1,6 +1,6 @@
 # edge_agent/lib/edge_agent/settings/schemas/setting.ex
 defmodule EdgeAgent.Settings.Schemas.Setting do
-  @moduledoc false
+  @moduledoc "Ecto schema for a persisted Agent setting key and value."
   use EdgeAgent.Schema
 
   @type t :: %__MODULE__{
@@ -18,7 +18,8 @@ defmodule EdgeAgent.Settings.Schemas.Setting do
     timestamps()
   end
 
-  @doc false
+  @doc "Builds a changeset for creating or updating a persisted Agent setting."
+  @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(setting, attrs) do
     setting
     |> cast(attrs, [:key, :value])

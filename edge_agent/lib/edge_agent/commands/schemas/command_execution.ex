@@ -1,6 +1,6 @@
 # edge_agent/lib/edge_agent/commands/schemas/command_execution.ex
 defmodule EdgeAgent.Commands.Schemas.CommandExecution do
-  @moduledoc false
+  @moduledoc "Ecto schema for a command execution tracked locally by the Agent."
   use EdgeAgent.Schema
 
   # Lifecycle status registry. The agent only sees four states locally
@@ -40,7 +40,8 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecution do
     timestamps()
   end
 
-  @doc false
+  @doc "Builds a changeset for creating or updating a local command execution."
+  @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(command_execution, attrs) do
     command_execution
     |> cast(attrs, [

@@ -1,5 +1,7 @@
 # edge_admin/lib/edge_admin_health/router.ex
 defmodule EdgeAdminHealth.Router do
+  @moduledoc "Plug router exposing full and cluster-level Admin health endpoints."
+
   use Plug.Router
 
   defmodule Health do

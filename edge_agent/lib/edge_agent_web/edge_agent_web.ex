@@ -19,6 +19,8 @@ defmodule EdgeAgentWeb do
   """
 
   # Only files actually present in priv/static.
+  @doc "Returns the static asset paths exposed by the Agent endpoint."
+  @spec static_paths() :: [String.t()]
   def static_paths, do: ~w(favicon.ico robots.txt)
 
   def router do

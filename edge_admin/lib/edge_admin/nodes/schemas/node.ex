@@ -11,6 +11,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   - `id` - Node UUID
   - `status` - Health status: `:healthy`, `:unhealthy`, or `:unreachable`
   - `cluster_id` - Foreign key to cluster
+  - `enrollment_key_id` - Enrollment key associated with the latest successful registration
   - `netmaker_host_id` - Reference to Netmaker host resource
   - `api_token` - Bearer token for node API authentication
   - `proxy_password` - Password for proxy server authentication
@@ -27,6 +28,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   alias EdgeAdmin.Metrics.Schemas.NodeMetricsCache
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Cluster
+  alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
   alias EdgeAdmin.Ssh.Schemas.SshPublicKey
   alias EdgeAdmin.Ssh.Schemas.SshUsername
@@ -68,7 +70,9 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
           vpn_hostname: String.t() | nil,
           mdns_hostname: String.t() | nil,
           cluster_id: String.t(),
+          enrollment_key_id: String.t() | nil,
           cluster: Cluster.t() | NotLoaded.t(),
+          enrollment_key: EnrollmentKey.t() | NotLoaded.t() | nil,
           node_diagnostic: NodeDiagnostic.t() | NotLoaded.t() | nil,
           host_metrics_cache: NodeMetricsCache.t() | NotLoaded.t() | nil,
           agent_metrics_cache: NodeMetricsCache.t() | NotLoaded.t() | nil,
@@ -128,6 +132,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
 
     # Associations
     belongs_to(:cluster, Cluster)
+    belongs_to(:enrollment_key, EnrollmentKey)
     has_one(:node_diagnostic, NodeDiagnostic, on_delete: :delete_all)
 
     has_one(:host_metrics_cache, NodeMetricsCache,
@@ -160,6 +165,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     |> cast(attrs, [
       :id,
       :cluster_id,
+      :enrollment_key_id,
       :netmaker_host_id,
       :status,
       :http_port,
@@ -201,6 +207,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     |> unique_constraint(:api_token)
     |> unique_constraint(:recovery_key)
     |> foreign_key_constraint(:cluster_id)
+    |> foreign_key_constraint(:enrollment_key_id)
     |> validate_ports()
   end
 

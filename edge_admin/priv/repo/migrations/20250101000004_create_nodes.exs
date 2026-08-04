@@ -7,6 +7,9 @@ defmodule EdgeAdmin.Repo.Migrations.CreateNodes do
       add :id, :binary_id, primary_key: true
       add :cluster_id, references(:clusters, type: :binary_id, on_delete: :restrict), null: false
 
+      add :enrollment_key_id,
+          references(:enrollment_keys, type: :binary_id, on_delete: :nilify_all)
+
       add :status, :string,
         null: false,
         default: "healthy"
@@ -64,6 +67,7 @@ defmodule EdgeAdmin.Repo.Migrations.CreateNodes do
     create unique_index(:nodes, [:api_token])
     create unique_index(:nodes, [:recovery_key])
     create index(:nodes, [:cluster_id])
+    create index(:nodes, [:enrollment_key_id])
     create index(:nodes, [:status])
     create index(:nodes, [:last_seen_at])
   end

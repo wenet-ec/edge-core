@@ -208,7 +208,7 @@ VARIANT=lite ./bin/run cloud up -d
 
 1. Agent starts and runs `EdgeAgent.Bootstrap`
 2. Agent loads its persisted node ID or generates one for a new installation
-3. Agent joins VPN using enrollment token: `Nexmaker.EnrollmentKeys.enroll/2`
+3. Agent verifies the cluster-scoped enrollment key and joins VPN using the returned Netmaker key: `Nexmaker.EnrollmentKeys.enroll/2`
 4. Agent discovers admin URL from Netmaker metadata
 5. Agent registers with admin: `POST /api/v1/agents/nodes/register`; later bootstraps with a saved API token use `POST /api/v1/agents/nodes/reregister`
 6. Admin returns API token plus initial `admin_urls` and `core_derp_map_urls`; the agent later refreshes non-secret Settings Config through `GET /api/v1/agents/settings/config`

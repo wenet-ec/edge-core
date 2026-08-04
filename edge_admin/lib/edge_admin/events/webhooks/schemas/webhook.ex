@@ -9,13 +9,13 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
   alias EdgeAdmin.Events.Webhooks.Limits
 
   @type t :: %__MODULE__{
-          id: String.t(),
-          url: String.t(),
+          id: String.t() | nil,
+          url: String.t() | nil,
           secret: binary() | nil,
           headers: map() | nil,
-          subscribed_events: [String.t()],
-          inserted_at: DateTime.t(),
-          updated_at: DateTime.t()
+          subscribed_events: [String.t()] | nil,
+          inserted_at: DateTime.t() | nil,
+          updated_at: DateTime.t() | nil
         }
 
   @derive {

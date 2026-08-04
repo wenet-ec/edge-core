@@ -8,13 +8,13 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
   alias EdgeAdmin.Ssh.Schemas.SshUsername
 
   @type t :: %__MODULE__{
-          id: String.t(),
-          public_key: String.t(),
-          key_name: String.t(),
-          ssh_username_id: String.t(),
+          id: String.t() | nil,
+          public_key: String.t() | nil,
+          key_name: String.t() | nil,
+          ssh_username_id: String.t() | nil,
           ssh_username: SshUsername.t() | NotLoaded.t(),
-          inserted_at: DateTime.t(),
-          updated_at: DateTime.t()
+          inserted_at: DateTime.t() | nil,
+          updated_at: DateTime.t() | nil
         }
 
   # Supported SSH key algorithms

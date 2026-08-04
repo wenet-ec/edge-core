@@ -9,15 +9,15 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsername do
   alias EdgeAdmin.Ssh.Schemas.SshPublicKey
 
   @type t :: %__MODULE__{
-          id: String.t(),
-          username: String.t(),
+          id: String.t() | nil,
+          username: String.t() | nil,
           password_hash: String.t() | nil,
           has_password: boolean() | nil,
-          node_id: String.t(),
+          node_id: String.t() | nil,
           node: Node.t() | NotLoaded.t(),
           ssh_public_keys: [SshPublicKey.t()] | NotLoaded.t(),
-          inserted_at: DateTime.t(),
-          updated_at: DateTime.t()
+          inserted_at: DateTime.t() | nil,
+          updated_at: DateTime.t() | nil
         }
 
   @derive {

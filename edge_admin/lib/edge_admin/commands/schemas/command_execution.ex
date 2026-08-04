@@ -19,11 +19,11 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   @type status :: :pending | :sent | :completed | :cancelled | :expired | :dropped
 
   @type t :: %__MODULE__{
-          id: String.t(),
+          id: String.t() | nil,
           output: String.t() | nil,
-          status: status(),
+          status: status() | nil,
           exit_code: integer() | nil,
-          target_all: boolean(),
+          target_all: boolean() | nil,
           sent_at: DateTime.t() | nil,
           completed_at: DateTime.t() | nil,
           cancelled_at: DateTime.t() | nil,
@@ -37,8 +37,8 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
           node: Node.t() | NotLoaded.t() | nil,
           cluster_id: String.t() | nil,
           cluster: Cluster.t() | NotLoaded.t() | nil,
-          inserted_at: DateTime.t(),
-          updated_at: DateTime.t()
+          inserted_at: DateTime.t() | nil,
+          updated_at: DateTime.t() | nil
         }
 
   @derive {

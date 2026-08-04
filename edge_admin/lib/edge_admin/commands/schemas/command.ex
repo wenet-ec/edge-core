@@ -8,15 +8,15 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
   alias EdgeAdmin.Nodes.Schemas.Node
 
   @type t :: %__MODULE__{
-          id: String.t(),
-          command_text: String.t(),
+          id: String.t() | nil,
+          command_text: String.t() | nil,
           timeout: integer() | nil,
           expires_at: DateTime.t() | nil,
-          targeting: map(),
+          targeting: map() | nil,
           command_executions: [CommandExecution.t()] | NotLoaded.t(),
           nodes: [Node.t()] | NotLoaded.t(),
-          inserted_at: DateTime.t(),
-          updated_at: DateTime.t()
+          inserted_at: DateTime.t() | nil,
+          updated_at: DateTime.t() | nil
         }
 
   @derive {

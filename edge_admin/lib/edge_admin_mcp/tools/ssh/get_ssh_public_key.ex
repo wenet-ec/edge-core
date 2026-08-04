@@ -1,6 +1,13 @@
 # edge_admin/lib/edge_admin_mcp/tools/ssh/get_ssh_public_key.ex
 defmodule EdgeAdminMcp.Tools.Ssh.GetSshPublicKey do
-  @moduledoc "Get an SSH public key by ID."
+  @moduledoc """
+  Get an SSH public key by ID.
+
+  - `ssh_public_key_id` — required. The public key to retrieve.
+
+  The response includes the key name and public key material, along with its
+  parent SSH username. Private keys are never stored or returned.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Ssh

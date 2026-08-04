@@ -1,6 +1,13 @@
 # edge_admin/lib/edge_admin_mcp/tools/ssh/delete_ssh_public_key.ex
 defmodule EdgeAdminMcp.Tools.Ssh.DeleteSshPublicKey do
-  @moduledoc "Delete an SSH public key."
+  @moduledoc """
+  Delete an SSH public key.
+
+  - `ssh_public_key_id` — required. The public key to remove.
+
+  This immediately removes that key from the associated SSH username's
+  authorized credentials. It does not delete the parent SSH username.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Ssh

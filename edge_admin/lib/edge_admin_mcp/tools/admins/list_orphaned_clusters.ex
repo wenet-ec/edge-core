@@ -1,6 +1,12 @@
 # edge_admin/lib/edge_admin_mcp/tools/admins/list_orphaned_clusters.ex
 defmodule EdgeAdminMcp.Tools.Admins.ListOrphanedClusters do
-  @moduledoc "List clusters with no assigned admin instance. These cannot receive commands until an admin picks them up."
+  @moduledoc """
+  List edge clusters that currently have no assigned Admin instance.
+
+  Orphaned clusters are not owned by an Admin and therefore cannot receive
+  normal node health checks, reconciliation, or command delivery until the
+  metadata coordinator assigns them again. This tool takes no parameters.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Admins.Metadata

@@ -1,6 +1,14 @@
 # edge_admin/lib/edge_admin_mcp/tools/ssh/get_ssh_username.ex
 defmodule EdgeAdminMcp.Tools.Ssh.GetSshUsername do
-  @moduledoc "Get an SSH username by ID."
+  @moduledoc """
+  Get an SSH username by ID.
+
+  - `ssh_username_id` — required. The SSH username to retrieve.
+
+  The response includes the username, its parent node, whether password
+  authentication is configured, and its associated public keys. Password
+  hashes are never returned.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Ssh

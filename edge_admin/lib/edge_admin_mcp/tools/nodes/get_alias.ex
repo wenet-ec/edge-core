@@ -1,6 +1,12 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/get_alias.ex
 defmodule EdgeAdminMcp.Tools.Nodes.GetAlias do
-  @moduledoc "Get a DNS alias by ID."
+  @moduledoc """
+  Get a DNS alias by ID.
+
+  - `alias_id` — required. The alias to retrieve.
+
+  The response identifies the friendly name and the node to which it points.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes

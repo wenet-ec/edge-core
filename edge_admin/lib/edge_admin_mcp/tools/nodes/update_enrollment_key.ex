@@ -1,9 +1,15 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/update_enrollment_key.ex
 defmodule EdgeAdminMcp.Tools.Nodes.UpdateEnrollmentKey do
   @moduledoc """
-  Update an enrollment key's `name`, `uses_remaining`, or `expires_at`.
+  Update an enrollment key's mutable metadata and usage policy.
 
-  Three ways each field can be passed:
+  - `enrollment_key_id` — required. The enrollment key to update.
+  - `name` — optional human-readable label.
+  - `uses_remaining` — optional positive integer for a finite remaining-use
+    count.
+  - `expires_at` — optional ISO8601 expiration datetime.
+
+  Each mutable field has three possible update behaviors:
 
   - **Omit the field** — leave it unchanged.
   - **Pass a value** — set the field to that value.

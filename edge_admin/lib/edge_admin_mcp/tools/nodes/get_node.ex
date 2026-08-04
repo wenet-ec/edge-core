@@ -1,6 +1,13 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/get_node.ex
 defmodule EdgeAdminMcp.Tools.Nodes.GetNode do
-  @moduledoc "Get a node by ID."
+  @moduledoc """
+  Get an edge node by ID.
+
+  - `node_id` — required. The node to retrieve.
+
+  The response includes the node's cluster assignment, connection details,
+  health state, aliases, and other non-secret registration fields.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes

@@ -1,6 +1,13 @@
 # edge_admin/lib/edge_admin_mcp/tools/metrics/get_host_metrics.ex
 defmodule EdgeAdminMcp.Tools.Metrics.GetHostMetrics do
-  @moduledoc "Get host-level metrics for a node from Node Exporter — CPU, memory, disk, uptime."
+  @moduledoc """
+  Get host-level metrics collected by Node Exporter for an edge node.
+
+  - `node_id` — required. The node whose host metrics should be fetched.
+
+  The response includes CPU, memory, disk, and uptime metrics. The operation
+  reads the live Agent and may fail when the node or exporter is unavailable.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Metrics

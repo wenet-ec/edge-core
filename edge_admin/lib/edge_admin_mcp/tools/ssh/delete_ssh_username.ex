@@ -1,6 +1,13 @@
 # edge_admin/lib/edge_admin_mcp/tools/ssh/delete_ssh_username.ex
 defmodule EdgeAdminMcp.Tools.Ssh.DeleteSshUsername do
-  @moduledoc "Delete an SSH username and all its associated public keys."
+  @moduledoc """
+  Delete an SSH username from an edge node.
+
+  - `ssh_username_id` — required. The SSH username to remove.
+
+  Deleting the username also deletes all public keys associated with it. Any
+  future SSH attempt using that username will be rejected by the Agent.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Ssh

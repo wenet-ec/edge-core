@@ -1,6 +1,14 @@
 # edge_admin/lib/edge_admin_mcp/tools/events/get_webhook.ex
 defmodule EdgeAdminMcp.Tools.Events.GetWebhook do
-  @moduledoc "Get a webhook subscription by ID. Secret and headers are never returned."
+  @moduledoc """
+  Get a webhook subscription by ID.
+
+  - `webhook_id` — required. The webhook to retrieve.
+
+  The response includes the destination URL and subscribed event types.
+  Webhook secrets and custom headers are encrypted at rest and never returned
+  by this tool.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Events.Webhooks

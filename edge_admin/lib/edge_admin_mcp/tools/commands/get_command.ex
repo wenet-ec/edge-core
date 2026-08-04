@@ -1,6 +1,13 @@
 # edge_admin/lib/edge_admin_mcp/tools/commands/get_command.ex
 defmodule EdgeAdminMcp.Tools.Commands.GetCommand do
-  @moduledoc "Get a command by ID."
+  @moduledoc """
+  Get a command by ID.
+
+  - `command_id` — required. The command to retrieve.
+
+  The response contains the command text, targeting definition, timeout,
+  expiration, and its execution summary when available.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Commands

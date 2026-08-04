@@ -125,11 +125,9 @@ defmodule EdgeAdminMcp.Server do
     end
   end
 
-  @doc false
-  # Public for unit testing. Mirrors the REST `DegradedMode` plug — same
-  # `@metadata_module.degraded?/0` source of truth, same blocked tool list.
-  # Adding a new write tool: if its REST counterpart uses :block, append the
-  # tool name to @blocked_when_degraded above.
+  @doc "Returns whether a request targets a tool blocked during degraded mode."
+  # Mirrors the REST `DegradedMode` plug — same `@metadata_module.degraded?/0`
+  # source of truth and same blocked tool list.
   @spec check_not_degraded(map()) :: :ok | :degraded
   def check_not_degraded(%{"method" => "tools/call", "params" => %{"name" => name}})
       when name in @blocked_when_degraded do
@@ -138,9 +136,7 @@ defmodule EdgeAdminMcp.Server do
 
   def check_not_degraded(_request), do: :ok
 
-  @doc false
-  # Public for unit testing — pin the cross-surface contract that this list
-  # mirrors REST's DegradedMode `:block` allow-list.
+  @doc "Returns the MCP tools blocked while the Admin cluster is degraded."
   @spec blocked_when_degraded() :: [String.t()]
   def blocked_when_degraded, do: @blocked_when_degraded
 
@@ -149,6 +145,7 @@ defmodule EdgeAdminMcp.Server do
   end
 
   @impl true
+  @spec server_instructions() :: String.t()
   def server_instructions do
     """
     Edge Admin manages a fleet of edge machines connected over a WireGuard mesh VPN.

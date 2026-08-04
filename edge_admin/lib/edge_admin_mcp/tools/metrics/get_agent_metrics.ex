@@ -1,6 +1,15 @@
 # edge_admin/lib/edge_admin_mcp/tools/metrics/get_agent_metrics.ex
 defmodule EdgeAdminMcp.Tools.Metrics.GetAgentMetrics do
-  @moduledoc "Get agent application metrics for a node from edge_agent PromEx — BEAM stats, bootstrap, commands, discovery, proxy, SSH, VPN pulls, fallback health and diagnostic reports, Settings Config refreshes, and Oban queues."
+  @moduledoc """
+  Get application metrics collected from an edge Agent's PromEx endpoint.
+
+  - `node_id` — required. The node whose Agent metrics should be fetched.
+
+  The response includes BEAM, bootstrap, command, discovery, proxy, SSH, VPN,
+  fallback health, diagnostics, Settings Config refresh, and Oban metrics.
+  The operation reads the live Agent and may fail when the node or its metrics
+  endpoint is unavailable.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Metrics

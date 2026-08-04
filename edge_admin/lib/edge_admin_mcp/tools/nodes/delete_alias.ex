@@ -1,6 +1,12 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/delete_alias.ex
 defmodule EdgeAdminMcp.Tools.Nodes.DeleteAlias do
-  @moduledoc "Delete a DNS alias."
+  @moduledoc """
+  Delete a DNS alias assigned to an edge node.
+
+  - `alias_id` — required. The alias to remove.
+
+  The node remains registered; only the friendly DNS alias is removed.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes

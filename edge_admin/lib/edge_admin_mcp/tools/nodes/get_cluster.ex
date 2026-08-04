@@ -1,6 +1,14 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/get_cluster.ex
 defmodule EdgeAdminMcp.Tools.Nodes.GetCluster do
-  @moduledoc "Get a cluster by name."
+  @moduledoc """
+  Get an edge cluster by name.
+
+  - `cluster_name` — required. Cluster names are the canonical cluster
+    identifier and are also used to locate the corresponding VPN network.
+
+  The response includes the cluster's address ranges, node limit, and current
+  lifecycle metadata.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes

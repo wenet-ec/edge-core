@@ -1,6 +1,14 @@
 # edge_admin/lib/edge_admin_mcp/tools/self_updates/delete_self_update_request.ex
 defmodule EdgeAdminMcp.Tools.SelfUpdates.DeleteSelfUpdateRequest do
-  @moduledoc "Delete a self-update request. Only completed requests can be deleted."
+  @moduledoc """
+  Delete a completed self-update request.
+
+  - `request_id` — required. The self-update request to remove.
+
+  Self-update requests are processed asynchronously and cannot be cancelled
+  while active. Deletion is available only after the request reaches its
+  completed state.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.SelfUpdates

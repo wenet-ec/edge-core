@@ -1,6 +1,14 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/delete_node_recovery_key.ex
 defmodule EdgeAdminMcp.Tools.Nodes.DeleteNodeRecoveryKey do
-  @moduledoc "Delete a node's active recovery key."
+  @moduledoc """
+  Delete a node's active recovery key.
+
+  - `node_id` — required. The node whose recovery credential should be cleared.
+
+  This permanently disables recovery with the current key. It is safe to call
+  when no active key exists; create a new key explicitly when recovery is
+  needed again.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes

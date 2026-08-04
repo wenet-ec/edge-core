@@ -1,8 +1,13 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/delete_cluster.ex
 defmodule EdgeAdminMcp.Tools.Nodes.DeleteCluster do
   @moduledoc """
-  Accept deletion of an empty cluster. The cluster immediately stops appearing in
-  normal reads; removal completes asynchronously. This action is irreversible.
+  Delete an empty edge cluster.
+
+  - `cluster_name` — required. The cluster to retire and delete.
+
+  The cluster immediately stops appearing in normal reads; removal completes
+  asynchronously. This action is irreversible and cluster-specific resources
+  are removed as the deletion workflow completes.
   """
   use EdgeAdminMcp, :tool
 

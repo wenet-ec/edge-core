@@ -1,6 +1,14 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/delete_node.ex
 defmodule EdgeAdminMcp.Tools.Nodes.DeleteNode do
-  @moduledoc "Remove a node from the system. The agent must re-enroll to reconnect."
+  @moduledoc """
+  Delete an edge node from the Admin system.
+
+  - `node_id` — required. The node to remove.
+
+  This removes the node's Admin record and its node-owned resources. The
+  running Agent is not stopped; it must register again before it can reconnect
+  to this Admin. Treat this as a destructive operation.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes

@@ -34,6 +34,7 @@ defmodule EdgeAdminMcp do
 
   alias Anubis.Server.Response
 
+  @doc "Returns the `use EdgeAdminMcp, :tool` expansion used by MCP tool modules."
   def tool do
     quote do
       use Anubis.Server.Component, type: :tool
@@ -62,16 +63,14 @@ defmodule EdgeAdminMcp do
   inspector treats as unrenderable and silently skips. Two cases are fixed:
 
   - **Nullable boolean** — `oneOf: [bool, null]` → `anyOf: [bool, null]`
-    Claude Desktop's strict-mode validator rejects `oneOf` when both branches
-    match (a nullable boolean value satisfies both `bool` and `null` when the
-    value is `false`... actually this is the original workaround comment;
-    the real reason is Claude Desktop requires `anyOf` here).
+    so MCP clients can render nullable boolean inputs consistently.
 
   - **String-or-array** — `oneOf: [string, array]` → `type: string`
     The inspector has no mixed-type control. A comma-separated string covers
     the common case and the runtime `RequestParser` accepts it. Callers who
     need to pass a list use JSON mode.
   """
+  @spec normalize_json_schema(map()) :: map()
   def normalize_json_schema(schema) when is_map(schema) do
     rewrite_unions(schema)
   end
@@ -109,6 +108,8 @@ defmodule EdgeAdminMcp do
       Enum.any?(branches, &(is_map(&1) and Map.get(&1, "type") == "array"))
   end
 
+  @doc "Builds the standard paginated response payload used by MCP list tools."
+  @spec paginated(list(), map(), (term() -> term())) :: map()
   def paginated(items, meta, mapper \\ & &1) do
     %{
       items: Enum.map(items, mapper),
@@ -127,6 +128,7 @@ defmodule EdgeAdminMcp do
   The `reason` is passed through `EdgeAdminMcp.ToolError.message/1` to produce
   a human-readable string (`%Ecto.Changeset{}`, `:not_found`, etc.).
   """
+  @spec error_response(term()) :: term()
   def error_response(reason) do
     Response.error(Response.tool(), EdgeAdminMcp.ToolError.message(reason))
   end
@@ -143,13 +145,18 @@ defmodule EdgeAdminMcp do
   in the response body, but tools should still pass an honest code so the
   intent is clear at the call site.
   """
+  @spec error_response(term(), String.t()) :: term()
   def error_response(_code, msg) when is_binary(msg) do
     Response.error(Response.tool(), msg)
   end
 
+  @doc "Adds a map entry unless its value is nil."
+  @spec put_if(map(), term(), term()) :: map()
   def put_if(m, _k, nil), do: m
   def put_if(m, k, v), do: Map.put(m, k, v)
 
+  @doc "Adds an entry when the source map contains the requested key, including nil values."
+  @spec put_if_present(map(), term(), map(), term()) :: map()
   def put_if_present(attrs, attr_key, params, param_key) do
     if Map.has_key?(params, param_key) do
       Map.put(attrs, attr_key, params[param_key])

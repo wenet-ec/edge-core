@@ -26,6 +26,8 @@ defmodule EdgeAdminMcp.ToolError do
 
   alias EdgeAdmin.ChangesetErrors
 
+  @doc "Converts a domain error reason into the message returned by an MCP tool."
+  @spec message(term()) :: String.t()
   def message(%Ecto.Changeset{} = cs), do: ChangesetErrors.to_flat_string(cs)
   def message({:conflict, reason}) when is_binary(reason), do: reason
   def message(:not_found), do: "Resource not found"

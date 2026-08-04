@@ -1,6 +1,13 @@
 # edge_admin/lib/edge_admin_mcp/tools/self_updates/get_self_update_request.ex
 defmodule EdgeAdminMcp.Tools.SelfUpdates.GetSelfUpdateRequest do
-  @moduledoc "Get a self-update request by ID."
+  @moduledoc """
+  Get a self-update request by ID.
+
+  - `request_id` — required. The request to retrieve.
+
+  The response includes the request status and its asynchronous update
+  summary, including totals, triggered nodes, and failures when available.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.SelfUpdates

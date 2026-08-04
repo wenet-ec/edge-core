@@ -1,7 +1,12 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/get_node_diagnostics.ex
 defmodule EdgeAdminMcp.Tools.Nodes.GetNodeDiagnostics do
   @moduledoc """
-  Gets a node's diagnostic report.
+  Get the latest diagnostic report submitted by an edge node.
+
+  - `node_id` — required. The node whose diagnostic report should be fetched.
+
+  This is a read-only operation. It returns the latest stored report and does
+  not trigger a new diagnostic collection on the Agent.
   """
 
   use EdgeAdminMcp, :tool

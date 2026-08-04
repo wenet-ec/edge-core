@@ -1,6 +1,13 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/get_enrollment_key.ex
 defmodule EdgeAdminMcp.Tools.Nodes.GetEnrollmentKey do
-  @moduledoc "Get an enrollment key by ID."
+  @moduledoc """
+  Get an enrollment key by ID.
+
+  - `enrollment_key_id` — required. The enrollment key to retrieve.
+
+  The response includes the key's cluster, usage, expiration, and audit
+  metadata. Treat the returned enrollment credential as sensitive.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes

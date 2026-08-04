@@ -1,6 +1,13 @@
 # edge_admin/lib/edge_admin_mcp/tools/nodes/delete_enrollment_key.ex
 defmodule EdgeAdminMcp.Tools.Nodes.DeleteEnrollmentKey do
-  @moduledoc "Delete an enrollment key. Agents that haven't enrolled yet will no longer be able to use it."
+  @moduledoc """
+  Delete an enrollment key for a cluster.
+
+  - `enrollment_key_id` — required. The enrollment key to remove.
+
+  Agents that have not enrolled yet can no longer use the key. Existing node
+  registrations and their API tokens are unaffected.
+  """
   use EdgeAdminMcp, :tool
 
   alias EdgeAdmin.Nodes

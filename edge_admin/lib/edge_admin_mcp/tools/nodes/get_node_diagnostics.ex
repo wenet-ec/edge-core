@@ -6,8 +6,8 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetNodeDiagnostics do
 
   use EdgeAdminMcp, :tool
 
-  alias EdgeAdmin.Diagnostics
-  alias EdgeAdmin.Diagnostics.Views.NodeDiagnosticView
+  alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Nodes.Views.NodeDiagnosticView
 
   @impl true
   def title, do: "Get Node Diagnostics"
@@ -21,7 +21,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.GetNodeDiagnostics do
 
   @impl true
   def execute(%{node_id: node_id}, frame) do
-    case Diagnostics.get_node_diagnostics(node_id) do
+    case Nodes.get_node_diagnostics(node_id) do
       {:ok, diagnostic} ->
         {:reply, Response.json(Response.tool(), NodeDiagnosticView.render(diagnostic)), frame}
 

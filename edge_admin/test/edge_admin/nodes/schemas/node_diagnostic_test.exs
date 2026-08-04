@@ -1,8 +1,8 @@
-# edge_admin/test/edge_admin/diagnostics/schemas/node_diagnostic_test.exs
-defmodule EdgeAdmin.Diagnostics.Schemas.NodeDiagnosticTest do
+# edge_admin/test/edge_admin/nodes/schemas/node_diagnostic_test.exs
+defmodule EdgeAdmin.Nodes.Schemas.NodeDiagnosticTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAdmin.Diagnostics.Schemas.NodeDiagnostic
+  alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
 
   defp valid_attrs(overrides) do
     Map.merge(

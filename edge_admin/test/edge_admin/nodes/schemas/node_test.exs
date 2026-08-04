@@ -2,10 +2,10 @@
 defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAdmin.Diagnostics.Schemas.NodeDiagnostic
   alias EdgeAdmin.Metrics.Schemas.NodeMetricsCache
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
   alias EdgeAdmin.Ssh.Schemas.SshPublicKey
 
   defp fake_cluster(overrides \\ %{}) do
@@ -48,6 +48,11 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
         version: "1.0.0",
         self_update_enabled: false
       },
+
+      # ---------------------------------------------------------------------------
+      # changeset/2
+      # ---------------------------------------------------------------------------
+
       overrides
     )
   end
@@ -55,10 +60,6 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
   defp errors_on(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {message, _opts} -> message end)
   end
-
-  # ---------------------------------------------------------------------------
-  # changeset/2
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2" do
     test "accepts valid registration attributes" do
@@ -118,15 +119,15 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
           port <- [0, 65_536] do
         changeset = Node.changeset(%Node{}, valid_attrs(%{field => port}))
 
+        # ---------------------------------------------------------------------------
+        # associations
+        # ---------------------------------------------------------------------------
+
         refute changeset.valid?, "expected #{field}=#{port} to be invalid"
         assert "must be between 1 and 65535" in errors_on(changeset)[field]
       end
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # associations
-  # ---------------------------------------------------------------------------
 
   describe "associations" do
     test "maps the latest diagnostic as a one-to-one association" do
@@ -159,13 +160,12 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
       assert association.through == [:ssh_usernames, :ssh_public_keys]
 
       through_association = SshPublicKey.__schema__(:association, :ssh_username)
+      # ---------------------------------------------------------------------------
+      # node_name/1
+      # ---------------------------------------------------------------------------
       assert through_association.related == EdgeAdmin.Ssh.Schemas.SshUsername
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # node_name/1
-  # ---------------------------------------------------------------------------
 
   describe "node_name/1" do
     test "returns node-{id} format" do
@@ -220,11 +220,10 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # mdns_hostname/1
-  # ---------------------------------------------------------------------------
-
   describe "mdns_hostname/1" do
+    # ---------------------------------------------------------------------------
+    # mdns_hostname/1
+    # ---------------------------------------------------------------------------
     test "returns node-{id}.local" do
       node = fake_node(%{id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"})
       assert Node.mdns_hostname(node) == "node-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.local"
@@ -250,14 +249,14 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # hostname distinctness
-  # ---------------------------------------------------------------------------
-
   describe "hostname distinctness" do
     test "vpn_hostname and mdns_hostname are different" do
       node = fake_node()
       refute Node.vpn_hostname(node) == Node.mdns_hostname(node)
     end
+
+    # ---------------------------------------------------------------------------
+    # hostname distinctness
+    # ---------------------------------------------------------------------------
   end
 end

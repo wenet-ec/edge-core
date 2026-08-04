@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/diagnostics/schemas/node_diagnostic.ex
-defmodule EdgeAdmin.Diagnostics.Schemas.NodeDiagnostic do
+# edge_admin/lib/edge_admin/nodes/schemas/node_diagnostic.ex
+defmodule EdgeAdmin.Nodes.Schemas.NodeDiagnostic do
   @moduledoc """
   Latest Agent diagnostic report for a node.
   """

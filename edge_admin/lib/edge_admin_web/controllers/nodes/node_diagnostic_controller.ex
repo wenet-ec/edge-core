@@ -3,7 +3,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeDiagnosticController do
   use EdgeAdminWeb, :api_controller
   use OpenApiSpex.ControllerSpecs
 
-  alias EdgeAdmin.Diagnostics
+  alias EdgeAdmin.Nodes
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias EdgeAdminWeb.Schemas.Nodes.NodeDiagnosticSchemas
 
@@ -25,7 +25,7 @@ defmodule EdgeAdminWeb.Controllers.Nodes.NodeDiagnosticController do
   )
 
   def show(conn, %{id: id}) do
-    with {:ok, diagnostic} <- Diagnostics.get_node_diagnostics(id) do
+    with {:ok, diagnostic} <- Nodes.get_node_diagnostics(id) do
       render(conn, :show, conn: conn, diagnostic: diagnostic)
     end
   end

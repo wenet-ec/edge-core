@@ -133,11 +133,13 @@ defmodule EdgeAdmin.Nodes do
   alias EdgeAdmin.Nodes.Filters.NodeFilters
   alias EdgeAdmin.Nodes.Forms
   alias EdgeAdmin.Nodes.Resources.Aliases
+  alias EdgeAdmin.Nodes.Resources.Diagnostics
   alias EdgeAdmin.Nodes.Resources.EnrollmentKeys
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   alias EdgeAdmin.Nodes.Schemas.Node
+  alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
   alias EdgeAdmin.Nodes.Workers.DeleteClusterWorker
   alias EdgeAdmin.Nodes.Workflows.HealthCheck
   alias EdgeAdmin.Nodes.Workflows.Reconciliation
@@ -1034,6 +1036,21 @@ defmodule EdgeAdmin.Nodes do
   @spec check_node_health() :: :ok
   defdelegate check_node_health(), to: HealthCheck
 
+  @doc "Returns a live or recently cached diagnostic report for a node."
+  @spec get_node_diagnostics(String.t()) ::
+          {:ok, map()} | {:error, :not_found | :service_unavailable}
+  defdelegate get_node_diagnostics(node_id), to: Diagnostics
+
+  @doc "Stores the latest diagnostic report for a node."
+  @spec upsert_node_diagnostic(String.t(), map()) ::
+          {:ok, NodeDiagnostic.t()} | {:error, Ecto.Changeset.t()}
+  defdelegate upsert_node_diagnostic(node_id, report), to: Diagnostics
+
+  @doc "Returns a recent cached diagnostic report for a node, if available."
+  @spec get_cached_node_diagnostic(String.t()) ::
+          NodeDiagnostic.t() | nil
+  defdelegate get_cached_node_diagnostic(node_id), to: Diagnostics
+
   @doc """
   Lists nodes with filtering, sorting, and pagination.
 
@@ -1052,6 +1069,11 @@ defmodule EdgeAdmin.Nodes do
   - `{:ok, {nodes, meta}}` - List of nodes with Flop.Meta pagination info
   - `{:error, meta}` - Validation errors (when replace_invalid_params: false)
   """
+
+  # ===========================================================================
+  # Enrollment Key functions
+  # ===========================================================================
+
   @spec list_nodes(map()) :: {:ok, {[Node.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list_nodes(params \\ %{}) do
     flop_params = RequestParser.parse(params)
@@ -1143,10 +1165,6 @@ defmodule EdgeAdmin.Nodes do
       iex> get_nodes_by_ids(["abc-123", "invalid"])
       [{:ok, %Node{id: "abc-123"}}, {:error, "Node invalid not found"}]
   """
-
-  # ===========================================================================
-  # Enrollment Key functions
-  # ===========================================================================
 
   @spec get_nodes_by_ids([String.t()]) :: [{:ok, Node.t()} | {:error, String.t()}]
   def get_nodes_by_ids(node_ids) do

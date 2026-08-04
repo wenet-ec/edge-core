@@ -1,9 +1,9 @@
-# edge_admin/test/edge_admin/diagnostics/views/node_diagnostic_view_test.exs
-defmodule EdgeAdmin.Diagnostics.Views.NodeDiagnosticViewTest do
+# edge_admin/test/edge_admin/nodes/views/node_diagnostic_view_test.exs
+defmodule EdgeAdmin.Nodes.Views.NodeDiagnosticViewTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAdmin.Diagnostics.Schemas.NodeDiagnostic
-  alias EdgeAdmin.Diagnostics.Views.NodeDiagnosticView
+  alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
+  alias EdgeAdmin.Nodes.Views.NodeDiagnosticView
 
   describe "render/1" do
     test "renders the canonical public shape" do

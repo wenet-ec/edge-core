@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/diagnostics/forms/push_node_diagnostic_form.ex
-defmodule EdgeAdmin.Diagnostics.Forms.PushNodeDiagnosticForm do
+# edge_admin/lib/edge_admin/nodes/forms/push_node_diagnostic_form.ex
+defmodule EdgeAdmin.Nodes.Forms.PushNodeDiagnosticForm do
   @moduledoc """
   Validates an Agent-pushed diagnostic report.
   """

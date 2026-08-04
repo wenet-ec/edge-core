@@ -1,8 +1,8 @@
-# edge_admin/test/edge_admin/diagnostics/forms/push_node_diagnostic_form_test.exs
-defmodule EdgeAdmin.Diagnostics.Forms.PushNodeDiagnosticFormTest do
+# edge_admin/test/edge_admin/nodes/forms/push_node_diagnostic_form_test.exs
+defmodule EdgeAdmin.Nodes.Forms.PushNodeDiagnosticFormTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAdmin.Diagnostics.Forms.PushNodeDiagnosticForm
+  alias EdgeAdmin.Nodes.Forms.PushNodeDiagnosticForm
 
   defp valid_attrs(overrides \\ %{}) do
     Map.merge(

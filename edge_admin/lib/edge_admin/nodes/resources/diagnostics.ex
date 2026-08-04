@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/diagnostics/diagnostics.ex
-defmodule EdgeAdmin.Diagnostics do
+# edge_admin/lib/edge_admin/nodes/resources/diagnostics.ex
+defmodule EdgeAdmin.Nodes.Resources.Diagnostics do
   @moduledoc """
   Node self-diagnostics.
   """
@@ -7,9 +7,9 @@ defmodule EdgeAdmin.Diagnostics do
   import Ecto.Query, only: [where: 3]
 
   alias EdgeAdmin.Admins.Metadata
-  alias EdgeAdmin.Diagnostics.Schemas.NodeDiagnostic
   alias EdgeAdmin.EdgeClusters.Gateway
   alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Vpn
 

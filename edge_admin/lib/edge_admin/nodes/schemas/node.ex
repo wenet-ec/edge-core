@@ -24,10 +24,10 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
 
   alias Ecto.Association.NotLoaded
   alias EdgeAdmin.Commands.Schemas.CommandExecution
-  alias EdgeAdmin.Diagnostics.Schemas.NodeDiagnostic
   alias EdgeAdmin.Metrics.Schemas.NodeMetricsCache
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Cluster
+  alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
   alias EdgeAdmin.Ssh.Schemas.SshPublicKey
   alias EdgeAdmin.Ssh.Schemas.SshUsername
   alias EdgeAdmin.Vpn
@@ -255,6 +255,9 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
       iex> vpn_hostname(%Node{id: "abc-123", cluster: %Cluster{name: "prod"}})
       "node-abc-123.cluster-prod.nm.internal"
   """
+  # ---------------------------------------------------------------------------
+  # Status registry
+  # ---------------------------------------------------------------------------
   @spec vpn_hostname(t()) :: String.t()
   def vpn_hostname(%__MODULE__{id: id, cluster: %{name: cluster_name}}) do
     short_name = Vpn.build_vpn_name(id, prefix: :node)
@@ -277,10 +280,6 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   def mdns_hostname(%__MODULE__{id: id}) do
     "node-#{id}.local"
   end
-
-  # ---------------------------------------------------------------------------
-  # Status registry
-  # ---------------------------------------------------------------------------
 
   @doc "All node health statuses, in canonical order."
   @spec statuses() :: [status()]

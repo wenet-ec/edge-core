@@ -4,8 +4,10 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
   Enrollment-key management and verification for edge-node provisioning.
 
   This module owns enrollment-key persistence, filtering, blob generation, and
-  one-use verification. `EdgeAdmin.Nodes` keeps a small facade for callers
-  while the enrollment-key lifecycle lives here.
+  one-use verification. A finite-use key is consumed only after the target
+  cluster has capacity and its Netmaker enrollment key is available.
+  `EdgeAdmin.Nodes` keeps a small facade for callers while the enrollment-key
+  lifecycle lives here.
   """
 
   import Ecto.Query, warn: false
@@ -118,7 +120,9 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
   Verifies an enrollment-key blob presented by an Agent before VPN enrollment.
 
   Verification checks the stored blob, cluster binding, expiry, remaining uses,
-  and cluster capacity. A successful finite-use key is consumed atomically.
+  and cluster capacity. It also loads the target cluster's Netmaker enrollment
+  key before consuming the Admin key. A successful finite-use key is consumed
+  atomically.
   """
   @spec verify(map()) :: {:ok, map()} | {:error, Ecto.Changeset.t()}
   def verify(params) do
@@ -187,6 +191,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
   defp verification_result(false, "key_expired"), do: :key_expired
   defp verification_result(false, "key_spent"), do: :key_spent
   defp verification_result(false, "node_limit_reached"), do: :node_limit_reached
+  defp verification_result(false, "netmaker_key_unavailable"), do: :netmaker_key_unavailable
 
   defp verify_key(%EnrollmentKey{} = key) do
     cond do
@@ -199,8 +204,19 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
 
   defp verify_capacity_and_consume(%EnrollmentKey{} = key) do
     case Checks.NodeLimitCheck.check(key.cluster) do
-      {:error, _} -> verification_failure("node_limit_reached")
-      :ok -> consume_key(key)
+      {:error, _} ->
+        verification_failure("node_limit_reached")
+
+      :ok ->
+        network_name = Vpn.build_network_name(key.cluster.name, prefix: :node)
+
+        case Vpn.get_default_enrollment_key(network_name) do
+          {:ok, netmaker_key} when is_binary(netmaker_key) and netmaker_key != "" ->
+            consume_key(key, netmaker_key)
+
+          _ ->
+            verification_failure("netmaker_key_unavailable")
+        end
     end
   end
 
@@ -215,7 +231,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
     end
   end
 
-  defp consume_key(%EnrollmentKey{} = key) do
+  defp consume_key(%EnrollmentKey{} = key, netmaker_key) do
     now = DateTime.truncate(DateTime.utc_now(), :second)
 
     {rows_updated, _} =
@@ -235,14 +251,6 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
     if rows_updated == 0 do
       verification_failure("key_spent")
     else
-      network_name = Vpn.build_network_name(key.cluster.name, prefix: :node)
-
-      netmaker_key =
-        case Vpn.get_default_enrollment_key(network_name) do
-          {:ok, token} -> token
-          {:error, _} -> ""
-        end
-
       %{verified: true, error: "", netmaker_key: netmaker_key}
     end
   end

@@ -22,7 +22,8 @@ defmodule EdgeAgent.Enrollment do
               2. Decode → extract admin_urls and cluster_name (nonce only makes the blob unique)
               3. If recovering, verify the recovery key belongs to cluster_name
               4. POST the full key blob to admin verify endpoint
-              5. On success: store admin_fallback_urls, netmaker_key,
+              5. Require a non-empty Netmaker enrollment key
+              6. On success: store admin_fallback_urls, netmaker_key,
                  enrollment_verified=true to Settings
 
   ## Multi-URL failover semantics
@@ -95,7 +96,7 @@ defmodule EdgeAgent.Enrollment do
         {:error, "Cannot use a recovery key after enrollment is already verified"}
       end
     else
-      do_verify(recovery_key)
+      verify_and_persist(recovery_key)
     end
   end
 
@@ -103,15 +104,24 @@ defmodule EdgeAgent.Enrollment do
   # Private — Verification Flow
   # =============================================================================
 
-  defp do_verify(recovery_key) do
-    with {:ok, enrollment_key} <- get_enrollment_key(),
-         {:ok, %{admin_urls: admin_urls, cluster_name: cluster_name}} <- decode(enrollment_key),
+  defp verify_and_persist(recovery_key) do
+    with {:ok, enrollment_key} <- load_enrollment_key(),
+         {:ok, %{admin_urls: admin_urls, cluster_name: cluster_name}} <-
+           decode_enrollment_key(enrollment_key),
          :ok <- verify_recovery_key(recovery_key, cluster_name),
-         {:ok, netmaker_key} <- verify_with_admin(enrollment_key, admin_urls) do
-      Settings.set_admin_fallback_urls(admin_urls)
-      Settings.set_netmaker_key(netmaker_key)
-      Settings.set_enrollment_verified(true)
+         {:ok, netmaker_key} <- verify_enrollment_key_with_admin(enrollment_key, admin_urls) do
+      persist_verified_settings(admin_urls, netmaker_key)
+    end
+  end
+
+  defp persist_verified_settings(admin_urls, netmaker_key) do
+    with {:ok, _setting} <- Settings.set_admin_fallback_urls(admin_urls),
+         {:ok, _setting} <- Settings.set_netmaker_key(netmaker_key),
+         {:ok, _setting} <- Settings.set_enrollment_verified(true) do
       :ok
+    else
+      {:error, reason} ->
+        {:error, "Failed to persist enrollment settings: #{inspect(reason)}"}
     end
   end
 
@@ -146,10 +156,10 @@ defmodule EdgeAgent.Enrollment do
   def verify_recovery_key(_recovery_key, _cluster_name), do: {:error, "RECOVERY_KEY is invalid"}
 
   # =============================================================================
-  # Private — Get Enrollment Key
+  # Private — Load Enrollment Key
   # =============================================================================
 
-  defp get_enrollment_key do
+  defp load_enrollment_key do
     enrollment_key = Application.get_env(:edge_agent, :enrollment_key)
     urls = Application.get_env(:edge_agent, :public_enrollment_key_urls, [])
 
@@ -159,7 +169,7 @@ defmodule EdgeAgent.Enrollment do
         {:ok, enrollment_key}
 
       is_list(urls) and urls != [] ->
-        fetch_from_urls(urls)
+        fetch_enrollment_key_from_urls(urls)
 
       true ->
         {:error, "No enrollment key configured (set ENROLLMENT_KEY or PUBLIC_ENROLLMENT_KEY_URLS)"}
@@ -169,11 +179,11 @@ defmodule EdgeAgent.Enrollment do
   # Try each URL in order. Transport errors fall through to the next URL;
   # HTTP errors (non-2xx) and extraction failures are terminal — see
   # moduledoc for rationale.
-  defp fetch_from_urls(urls) do
+  defp fetch_enrollment_key_from_urls(urls) do
     Enum.reduce_while(urls, {:error, "No URLs to try"}, fn url, _acc ->
       Logger.info("Fetching enrollment key from: #{url}")
 
-      case fetch_from_url(url) do
+      case fetch_enrollment_key_from_url(url) do
         {:ok, key} ->
           {:halt, {:ok, key}}
 
@@ -188,7 +198,7 @@ defmodule EdgeAgent.Enrollment do
     end)
   end
 
-  defp fetch_from_url(url) do
+  defp fetch_enrollment_key_from_url(url) do
     timeout = Application.get_env(:edge_agent, :admin_call_timeout, 10_000)
 
     opts = [
@@ -293,10 +303,10 @@ defmodule EdgeAgent.Enrollment do
   defp get_in_path(_, _), do: nil
 
   # =============================================================================
-  # Private — Decode
+  # Private — Decode Enrollment Key
   # =============================================================================
 
-  defp decode(enrollment_key) do
+  defp decode_enrollment_key(enrollment_key) do
     with {:ok, json} <- Base.decode64(enrollment_key, padding: false),
          {:ok, decoded} <- JSON.decode(json),
          admin_urls when is_list(admin_urls) and admin_urls != [] <- Map.get(decoded, "admin_urls"),
@@ -310,14 +320,19 @@ defmodule EdgeAgent.Enrollment do
   end
 
   # =============================================================================
-  # Private — Verify with Admin
+  # Private — Verify Enrollment Key with Admin
   # =============================================================================
 
-  defp verify_with_admin(key_blob, admin_urls) do
+  defp verify_enrollment_key_with_admin(key_blob, admin_urls) do
     case AdminClient.verify_enrollment_key(key_blob, admin_urls) do
-      {:ok, %{verified: true, netmaker_key: netmaker_key}} ->
+      {:ok, %{verified: true, netmaker_key: netmaker_key}}
+      when is_binary(netmaker_key) and netmaker_key != "" ->
         Logger.info("Enrollment key verified successfully")
         {:ok, netmaker_key}
+
+      {:ok, %{verified: true}} ->
+        Logger.error("Admin verified enrollment but returned no Netmaker enrollment key")
+        {:error, "Admin returned no Netmaker enrollment key"}
 
       {:ok, %{verified: false, error: error}} ->
         Logger.error("Enrollment key rejected by admin: #{error}")

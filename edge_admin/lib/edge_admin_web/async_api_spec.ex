@@ -530,7 +530,14 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
           },
           "result" => %{
             "type" => "string",
-            "enum" => ["verified", "invalid_key", "key_expired", "key_spent", "node_limit_reached"]
+            "enum" => [
+              "verified",
+              "invalid_key",
+              "key_expired",
+              "key_spent",
+              "node_limit_reached",
+              "netmaker_key_unavailable"
+            ]
           },
           "verified_at" => %{"type" => "string", "format" => "date-time"}
         }

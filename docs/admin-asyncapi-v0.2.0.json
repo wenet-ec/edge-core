@@ -1063,7 +1063,8 @@
               "invalid_key",
               "key_expired",
               "key_spent",
-              "node_limit_reached"
+              "node_limit_reached",
+              "netmaker_key_unavailable"
             ],
             "type": "string"
           },

@@ -70,7 +70,7 @@ defmodule EdgeAgent.Bootstrap do
   alias EdgeAgent.EdgeClusters.Discovery
   alias EdgeAgent.Enrollment
   alias EdgeAgent.Identity
-  alias EdgeAgent.Settings
+  alias EdgeAgent.Registration
   alias EdgeAgent.Vpn
 
   require Logger
@@ -184,12 +184,21 @@ defmodule EdgeAgent.Bootstrap do
   end
 
   # =============================================================================
-  # Step 5: Discover Admins and Register Node
+  # Step 4: Discover Admins and Register Node
   # =============================================================================
 
   defp step_4_discover_and_register(%{node_id: node_id, recovery_key: recovery_key}) do
     Logger.info("Step 4: Discovering admins and registering...")
+    start_time = System.monotonic_time(:millisecond)
 
+    network_name = discover_and_log_admins()
+    result = Registration.register(%{node_id: node_id, recovery_key: recovery_key}, network_name)
+
+    emit_registration_telemetry(result, start_time)
+    result
+  end
+
+  defp discover_and_log_admins do
     {:ok, network_name, admin_urls} = Discovery.discover_admins()
 
     if network_name do
@@ -201,54 +210,11 @@ defmodule EdgeAgent.Bootstrap do
       urls -> Logger.info("Discovered #{length(urls)} admin(s)")
     end
 
-    Logger.info("Registering with admin...")
+    network_name
+  end
 
-    start_time = System.monotonic_time(:millisecond)
-
-    registration_result =
-      case Settings.get_api_token() do
-        token when is_binary(token) and token != "" ->
-          AdminClient.reregister_node(build_reregistration_payload(network_name))
-
-        _ ->
-          AdminClient.register_node(build_registration_payload(node_id, network_name, recovery_key))
-      end
-
-    result =
-      case registration_result do
-        {:ok, node_data} ->
-          api_token = node_data["api_token"]
-          proxy_password = node_data["proxy_password"]
-          admin_urls = node_data["admin_urls"]
-          core_derp_map_urls = node_data["core_derp_map_urls"] || []
-
-          cond do
-            is_nil(api_token) ->
-              {:error, "Registration response missing api_token"}
-
-            is_nil(proxy_password) ->
-              {:error, "Registration response missing proxy_password"}
-
-            true ->
-              case Settings.set_api_token(api_token) do
-                {:ok, _setting} ->
-                  :ok = Settings.set_proxy_password(proxy_password)
-                  if admin_urls not in [nil, []], do: Settings.merge_admin_fallback_urls(admin_urls)
-                  Settings.merge_core_derp_map_urls(core_derp_map_urls)
-                  Logger.info("Successfully registered with admin")
-                  :ok
-
-                {:error, reason} ->
-                  {:error, "Failed to persist registration credentials: #{inspect(reason)}"}
-              end
-          end
-
-        {:error, reason} ->
-          {:error, "Registration failed: #{inspect(reason)}"}
-      end
-
+  defp emit_registration_telemetry(result, start_time) do
     duration = System.monotonic_time(:millisecond) - start_time
-
     status = if result == :ok, do: :success, else: :failure
 
     :telemetry.execute(
@@ -256,12 +222,10 @@ defmodule EdgeAgent.Bootstrap do
       %{duration: duration, count: 1, total: 1},
       %{status: status}
     )
-
-    result
   end
 
   # =============================================================================
-  # Step 6: Sync Unprocessed Command Executions
+  # Step 5: Sync Unprocessed Command Executions
   # =============================================================================
 
   defp step_5_sync_unprocessed_command_executions(_node_id) do
@@ -274,7 +238,7 @@ defmodule EdgeAgent.Bootstrap do
   end
 
   # =============================================================================
-  # Step 7: Register Aliases (best-effort)
+  # Step 6: Register Aliases (best-effort)
   # =============================================================================
 
   defp step_6_register_aliases do
@@ -292,41 +256,5 @@ defmodule EdgeAgent.Bootstrap do
     end
 
     :ok
-  end
-
-  # =============================================================================
-  # Helper Functions
-  # =============================================================================
-
-  defp build_registration_payload(node_id, network_name, nil) do
-    network_name
-    |> node_metadata()
-    |> Map.put(:node_id, node_id)
-  end
-
-  defp build_registration_payload(node_id, network_name, recovery_key) do
-    network_name
-    |> node_metadata()
-    |> Map.merge(%{node_id: node_id, recovery_key: recovery_key})
-  end
-
-  defp build_reregistration_payload(network_name), do: node_metadata(network_name)
-
-  defp node_metadata(network_name) do
-    # The wire field is `http_port` (admin's API contract), but on the agent
-    # the HTTP server's port lives at `:api_port` (set from `API_PORT`).
-    # Reading `:http_port` here would silently use the fallback default and
-    # diverge from the actual listening port if API_PORT was overridden.
-    %{
-      network_name: network_name,
-      http_port: Application.fetch_env!(:edge_agent, :api_port),
-      ssh_port: Application.fetch_env!(:edge_agent, :ssh_port),
-      host_metrics_port: Application.fetch_env!(:edge_agent, :host_metrics_port),
-      wireguard_metrics_port: Application.fetch_env!(:edge_agent, :wireguard_metrics_port),
-      http_proxy_port: Application.fetch_env!(:edge_agent, :http_proxy_port),
-      socks5_proxy_port: Application.fetch_env!(:edge_agent, :socks5_proxy_port),
-      version: :edge_agent |> Application.spec(:vsn) |> to_string(),
-      self_update_enabled: Application.get_env(:edge_agent, :self_update_enabled, false)
-    }
   end
 end

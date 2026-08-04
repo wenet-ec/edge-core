@@ -61,7 +61,7 @@ The built-in guide expands the overview at `/` with short concept pages:
 | Path | Topic |
 | --- | --- |
 | `/guide/clusters` | Cluster as the private mesh and management boundary. |
-| `/guide/nodes` | Edge Agent enrollment and the managed-machine model. |
+| `/guide/nodes` | Edge Agent enrollment, installation identity, and explicit recovery. |
 | `/guide/commands` | Asynchronous commands and per-node executions. |
 | `/guide/proxy` | HTTP/SOCKS5 proxying as an independent network capability. |
 | `/guide/ssh` | Centralized SSH credentials and the proxy path. |
@@ -85,6 +85,7 @@ Cluster
   └─ Enrollment Key
        └─ Node
             ├─ Alias
+            ├─ Recovery Key  (explicit one-use recovery)
             ├─ Metrics  (host / agent / wireguard)
             ├─ Command Execution  ← Command (one command → many executions)
             ├─ SSH Username / Public Key
@@ -100,7 +101,9 @@ Two opinionated design choices worth knowing up front:
 
 **Enrollment key.** A short-lived credential a fresh agent uses to join a specific cluster. You generate the key on the admin, configure it as `ENROLLMENT_TOKEN` on the agent, and the agent enrolls itself on first boot. Keys are cluster-scoped — one key per cluster.
 
-**Node.** A single edge machine that has joined a cluster. Maps **1:1 to a physical machine** (or a VM, container host, etc. — anything running an agent). Once enrolled, every node in the same cluster can reach every other directly over WireGuard.
+**Node.** An Edge Agent installation registered in a cluster. The normal deployment is one Agent per machine, but the node identity belongs to the Agent installation rather than to a machine-level identifier. The Agent generates a UUID and persists it in its data volume. If that volume is lost, the next installation generates a new node identity; the old node record is not silently reclaimed. Once enrolled, every node in the same cluster can reach every other directly over WireGuard.
+
+**Recovery key.** An optional, cluster-bound, one-use credential for explicitly recovering a node after its local Agent data has been lost. The Admin creates or replaces it with `POST /api/v1/nodes/:id/recovery_key` and removes it with `DELETE /api/v1/nodes/:id/recovery_key`. On a first boot with no local node ID, the Agent can use the recovery key together with the normal enrollment key; the Admin verifies the node, cluster, and key before consuming it. An installation with an existing API token uses authenticated re-registration instead. Moving a node to another cluster clears its recovery key, so create a new one if recovery should remain available.
 
 Nodes are addressed **only by VPN hostname**, never by IP:
 

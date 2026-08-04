@@ -5665,7 +5665,7 @@
     "/api/v1/nodes/{id}/change_cluster": {
       "post": {
         "callbacks": {},
-        "description": "Move a node to a different cluster. The returned node reflects the saved cluster assignment immediately; network connectivity may briefly reflect the previous assignment while it converges.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
+        "description": "Move a node to a different cluster. This clears the node's existing recovery key and removes its cluster-specific aliases; create a new recovery key explicitly if needed. The returned node reflects the saved cluster assignment immediately; network connectivity may briefly reflect the previous assignment while it converges.\n\n**Note:** This endpoint is unavailable during degraded mode (503).",
         "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeController.change_cluster",
         "parameters": [
           {

@@ -1,7 +1,7 @@
 # edge_agent/lib/edge_agent_web/plugs/assign_request_id.ex
 defmodule EdgeAgentWeb.Plugs.AssignRequestId do
   @moduledoc """
-  Generates a UUIDv7 request ID and threads it through three places:
+  Generates a UUID request ID and threads it through three places:
 
     * `x-request-id` response header — for clients to correlate requests
     * `conn.assigns.request_id` — for response envelopes to include in `meta`

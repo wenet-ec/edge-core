@@ -35,7 +35,7 @@ defmodule EdgeAdminMcp.Tools.Commands.CreateCommand do
       %{"type" => "all"}
       %{"type" => "nodes", "node_ids" => ["<uuid>", ...]}
       %{"type" => "clusters", "cluster_names" => ["prod", "staging"],
-        "node_filters" => %{"status" => "healthy", "id_type" => "persistent"}}
+        "node_filters" => %{"status" => "healthy", "version" => "1.2.*"}}
 
   ## Result
 

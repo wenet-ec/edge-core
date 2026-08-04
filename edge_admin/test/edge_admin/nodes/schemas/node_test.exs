@@ -23,7 +23,7 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
   defp fake_node(overrides \\ %{}) do
     Map.merge(
       %Node{
-        id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+        id: Uniq.UUID.uuid7(),
         cluster: fake_cluster()
       },
       overrides
@@ -33,10 +33,9 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
   defp valid_attrs(overrides \\ %{}) do
     Map.merge(
       %{
-        id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+        id: Uniq.UUID.uuid7(),
         cluster_id: "11111111-2222-3333-4444-555555555555",
         netmaker_host_id: "22222222-3333-4444-5555-666666666666",
-        id_type: :persistent,
         status: :healthy,
         http_port: 44_000,
         ssh_port: 40_022,
@@ -71,6 +70,17 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
 
       refute changeset.valid?
       assert "can't be blank" in errors_on(changeset).netmaker_host_id
+    end
+
+    test "accepts a valid UUID from another version" do
+      assert Node.changeset(%Node{}, valid_attrs(%{id: Ecto.UUID.generate()})).valid?
+    end
+
+    test "rejects a malformed UUID" do
+      changeset = Node.changeset(%Node{}, valid_attrs(%{id: "not-a-uuid"}))
+
+      refute changeset.valid?
+      assert "is invalid" in errors_on(changeset).id
     end
 
     test "accepts every configured service port at both inclusive boundaries" do

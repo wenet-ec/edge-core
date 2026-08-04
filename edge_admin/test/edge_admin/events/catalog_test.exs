@@ -28,7 +28,6 @@ defmodule EdgeAdmin.Events.CatalogTest do
       cluster_id: cluster.id,
       status: :healthy,
       version: "1.2.0",
-      id_type: :persistent,
       http_port: 44_000,
       ssh_port: 40_022,
       host_metrics_port: 9100,
@@ -339,7 +338,6 @@ defmodule EdgeAdmin.Events.CatalogTest do
       assert data["cluster_name"] == "prod"
       assert data["status"] == "healthy"
       assert data["version"] == "1.2.0"
-      assert data["id_type"] == "persistent"
       assert data["http_port"] == 44_000
       assert data["ssh_port"] == 40_022
       assert data["host_metrics_port"] == 9100

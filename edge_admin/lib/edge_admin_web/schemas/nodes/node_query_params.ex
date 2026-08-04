@@ -6,7 +6,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeQueryParams do
   alias EdgeAdminWeb.Schemas.QueryParams
 
   @status_enum Node.status_strings()
-  @id_type_enum Node.id_type_strings()
 
   @doc "Returns the shared REST filter contract for node collections."
   @spec filters() :: keyword()
@@ -14,9 +13,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeQueryParams do
     [
       QueryParams.uuid_in_filter(:node_id,
         description: "Filter by node IDs — comma-separated list of UUIDs (e.g. node_id__in=uuid1,uuid2)"
-      ),
-      QueryParams.enum_in_filter(:id_type, @id_type_enum,
-        description: "Filter by node ID type (e.g. id_type__in=persistent,random)"
       ),
       QueryParams.enum_in_filter(:status, @status_enum,
         description: "Filter by node status (e.g. status__in=healthy,unhealthy)"

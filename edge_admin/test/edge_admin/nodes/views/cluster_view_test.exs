@@ -26,7 +26,6 @@ defmodule EdgeAdmin.Nodes.Views.ClusterViewTest do
   defp node_fixture(overrides \\ %{}) do
     base = %Node{
       id: "node-uuid-1",
-      id_type: :persistent,
       status: :healthy
     }
 
@@ -77,14 +76,13 @@ defmodule EdgeAdmin.Nodes.Views.ClusterViewTest do
       assert result.nodes == []
     end
 
-    test "node summaries carry id, status, id_type, and vpn_hostname" do
+    test "node summaries carry id, status, and vpn_hostname" do
       cluster = cluster_fixture(%{name: "prod", nodes: [node_fixture(%{id: "abc-123"})]})
 
       [node_summary] = ClusterView.render(cluster).nodes
 
       assert node_summary.id == "abc-123"
       assert node_summary.status == "healthy"
-      assert node_summary.id_type == "persistent"
       assert node_summary.vpn_hostname == "node-abc-123.cluster-prod.nm.internal"
     end
 
@@ -93,7 +91,7 @@ defmodule EdgeAdmin.Nodes.Views.ClusterViewTest do
 
       [node_summary] = ClusterView.render(cluster).nodes
 
-      assert node_summary |> Map.keys() |> Enum.sort() == [:id, :id_type, :status, :vpn_hostname]
+      assert node_summary |> Map.keys() |> Enum.sort() == [:id, :status, :vpn_hostname]
     end
 
     test "node_limit nil is preserved as nil (not coerced)" do

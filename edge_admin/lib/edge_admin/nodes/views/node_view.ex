@@ -17,7 +17,6 @@ defmodule EdgeAdmin.Nodes.Views.NodeView do
       node_name: NodeSchema.node_name(node),
       cluster_name: cluster.name,
       netmaker_host_id: node.netmaker_host_id,
-      id_type: atom_to_string(node.id_type),
       status: atom_to_string(node.status),
       vpn_hostname: NodeSchema.vpn_hostname(node),
       mdns_hostname: NodeSchema.mdns_hostname(node),

@@ -25,7 +25,6 @@ defmodule EdgeAdmin.Nodes.Filters.NodeFiltersTest do
           id: Ecto.UUID.generate(),
           cluster_id: cluster_id,
           netmaker_host_id: Ecto.UUID.generate(),
-          id_type: :persistent,
           status: :healthy,
           version: "0.1.0",
           http_port: 44_000,
@@ -86,17 +85,13 @@ defmodule EdgeAdmin.Nodes.Filters.NodeFiltersTest do
       assert ids(query) == [n.id]
     end
 
-    test "multiple ilike filters AND together" do
+    test "version filter selects matching nodes" do
       cluster = insert_cluster()
-      target = insert_node(cluster.id, %{version: "0.1.0", id_type: :persistent})
-      _wrong_version = insert_node(cluster.id, %{version: "0.2.0", id_type: :persistent})
-      _wrong_type = insert_node(cluster.id, %{version: "0.1.0", id_type: :random})
+      target = insert_node(cluster.id, %{version: "0.1.0"})
+      _wrong_version = insert_node(cluster.id, %{version: "0.2.0"})
 
       query =
-        NodeFilters.apply_ilike(Node, [
-          %{field: :version, op: :ilike, value: "0.1%"},
-          %{field: :id_type, op: :ilike, value: "persistent"}
-        ])
+        NodeFilters.apply_ilike(Node, [%{field: :version, op: :ilike, value: "0.1%"}])
 
       assert ids(query) == [target.id]
     end

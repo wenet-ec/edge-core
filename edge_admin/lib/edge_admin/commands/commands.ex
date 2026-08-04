@@ -526,7 +526,7 @@ defmodule EdgeAdmin.Commands do
 
   - `command_id` - The command ID
   - `targeting_type` - Either "all", "nodes", or "clusters"
-  - `node_filters` - Optional filters for nodes (status, id_type, version, self_update_enabled)
+  - `node_filters` - Optional filters for nodes (status, version, self_update_enabled)
   - `cluster_filters` - Optional filters for clusters (name, ipv4_range, node_count)
   - `node_ids` - Required for "nodes" type, list of specific node IDs
   - `cluster_names` - Required for "clusters" type, list of cluster names

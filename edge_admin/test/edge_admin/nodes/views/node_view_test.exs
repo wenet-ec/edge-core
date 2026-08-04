@@ -42,7 +42,6 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
       cluster: cluster,
       aliases: [],
       netmaker_host_id: "host-1",
-      id_type: :persistent,
       status: :healthy,
       http_port: 44_000,
       ssh_port: 40_022,
@@ -77,7 +76,6 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
       assert result.id == node.id
       assert result.cluster_name == "prod"
       assert result.netmaker_host_id == "host-1"
-      assert result.id_type == "persistent"
       assert result.status == "healthy"
 
       # Computed hostnames — pinned exactly so a regression in the helper
@@ -152,7 +150,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
       result = NodeView.render(node)
 
       expected_keys = Enum.sort(~w(
-          id node_name cluster_name netmaker_host_id id_type status
+          id node_name cluster_name netmaker_host_id status
           vpn_hostname mdns_hostname
           http_port ssh_port host_metrics_port wireguard_metrics_port
           http_proxy_port socks5_proxy_port

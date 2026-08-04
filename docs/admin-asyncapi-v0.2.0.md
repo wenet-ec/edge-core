@@ -234,7 +234,6 @@ All node events share the same `data` shape unless noted.
   "cluster_name": "prod",
   "status": "healthy",
   "version": "1.2.0",
-  "id_type": "hostname",
   "http_port": 44000,
   "ssh_port": 40022,
   "host_metrics_port": 49100,

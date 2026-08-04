@@ -33,7 +33,7 @@ defmodule EdgeAdminWeb.Endpoint do
     plug(Phoenix.Ecto.CheckRepoStatus, otp_app: :edge_admin)
   end
 
-  # AssignRequestId both generates a UUIDv7 and sets the response header, so
+  # AssignRequestId both generates a UUID and sets the response header, so
   # `Plug.RequestId` is redundant. Admin is a request origin, not a relay —
   # we don't honor inbound x-request-id from upstream.
   plug(EdgeAdminWeb.Plugs.AssignRequestId)

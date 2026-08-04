@@ -127,7 +127,7 @@ defmodule EdgeAdmin.Mixfile do
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
 
       # Errors
-      {:sentry, "~> 13.3"},
+      {:sentry, "~> 13.4"},
 
       # Telemetry
       {:prom_ex, "~> 1.12"},

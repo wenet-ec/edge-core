@@ -18,9 +18,8 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
   defp valid_attrs(overrides \\ %{}) do
     Map.merge(
       %{
-        "node_id" => Ecto.UUID.generate(),
+        "node_id" => Uniq.UUID.uuid7(),
         "network_name" => "cluster-test",
-        "id_type" => "persistent",
         "http_port" => 4000,
         "ssh_port" => 40_022,
         "host_metrics_port" => 9100,
@@ -39,18 +38,10 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
   # ---------------------------------------------------------------------------
 
   describe "changeset/2 — valid cases" do
-    test "all required fields present succeeds (wire string cast to atom)" do
+    test "all required fields present succeeds" do
       assert {:ok, result} = RegisterNodeForm.changeset(valid_attrs(), &cluster_found/1)
-      assert result["id_type"] == :persistent
       assert result["network_name"] == "cluster-test"
       assert result["http_port"] == 4000
-    end
-
-    test "random id_type succeeds (wire string cast to atom)" do
-      assert {:ok, result} =
-               RegisterNodeForm.changeset(valid_attrs(%{"id_type" => "random"}), &cluster_found/1)
-
-      assert result["id_type"] == :random
     end
 
     test "self_update_enabled true succeeds" do
@@ -85,7 +76,6 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
     for field <- [
           "node_id",
           "network_name",
-          "id_type",
           "http_port",
           "ssh_port",
           "host_metrics_port",
@@ -111,7 +101,14 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
 
   describe "changeset/2 — node_id UUID validation" do
     test "valid UUID is accepted" do
+      uuid = Uniq.UUID.uuid7()
+      assert {:ok, result} = RegisterNodeForm.changeset(valid_attrs(%{"node_id" => uuid}), &cluster_found/1)
+      assert result["node_id"] == uuid
+    end
+
+    test "valid UUIDv4 is accepted at the public form boundary" do
       uuid = Ecto.UUID.generate()
+
       assert {:ok, result} = RegisterNodeForm.changeset(valid_attrs(%{"node_id" => uuid}), &cluster_found/1)
       assert result["node_id"] == uuid
     end
@@ -212,22 +209,6 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
   end
 
   # ---------------------------------------------------------------------------
-  # changeset/2 — id_type validation
-  # ---------------------------------------------------------------------------
-
-  describe "changeset/2 — id_type validation" do
-    test "invalid id_type is rejected" do
-      assert {:error, changeset} =
-               RegisterNodeForm.changeset(
-                 valid_attrs(%{"id_type" => "hardware"}),
-                 &cluster_found/1
-               )
-
-      assert %{id_type: [_msg]} = errors_on(changeset)
-    end
-  end
-
-  # ---------------------------------------------------------------------------
   # changeset/2 — port validation
   # ---------------------------------------------------------------------------
 
@@ -283,7 +264,6 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
       for key <- [
             "node_id",
             "network_name",
-            "id_type",
             "http_port",
             "ssh_port",
             "host_metrics_port",

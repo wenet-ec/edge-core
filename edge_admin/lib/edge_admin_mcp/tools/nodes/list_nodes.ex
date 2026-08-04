@@ -6,7 +6,6 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
   ## Filtering
   - `node_id_in` — IN match on node IDs (array of UUIDs)
   - `status_in` — one or more of `healthy`, `unhealthy`, `unreachable`
-  - `id_type_in` — one or more of `persistent`, `random`
   - `cluster_name` — exact match or wildcard (`prod*`, `*east`)
   - `cluster_name_in` — IN match on cluster name (array)
   - `version` — exact match or wildcard (`1.0.0`, `1.*`)
@@ -16,7 +15,7 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
   - `updated_at_gte` / `updated_at_lte` — last-updated datetime range (ISO8601)
 
   ## Sorting
-  - `sort` — comma-separated fields: `id_type`, `status`, `version`,
+  - `sort` — comma-separated fields: `status`, `version`,
     `self_update_enabled`, `last_seen_at`, `inserted_at`, `updated_at`; prefix with `-` for descending order
   """
   use EdgeAdminMcp, :tool
@@ -27,8 +26,6 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
   alias EdgeAdminMcp.FlopParams
 
   @status_enum Node.status_strings()
-  @id_type_enum Node.id_type_strings()
-
   @impl true
   def title, do: "List Nodes"
   @impl true
@@ -39,7 +36,6 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
     field :page_size, :integer, default: 20, min: 1
     field :node_id_in, {:list, :string}
     field :status_in, {:list, {:enum, @status_enum}, unique: true}
-    field :id_type_in, {:list, {:enum, @id_type_enum}, unique: true}
     field :cluster_name, :string, min_length: 1
     field :cluster_name_in, {:list, :string}
     field :version, :string, min_length: 1

@@ -15,7 +15,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
     @moduledoc false
 
     @status_enum Node.status_strings()
-    @id_type_enum Node.id_type_strings()
 
     schema(%{
       title: "NodeSummary",
@@ -33,23 +32,16 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
           enum: @status_enum,
           example: "healthy"
         },
-        id_type: %Schema{
-          type: :string,
-          description: "Node ID type",
-          enum: @id_type_enum,
-          example: "persistent"
-        },
         vpn_hostname: %Schema{
           type: :string,
           description: "DNS hostname for this node",
           example: "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
         }
       },
-      required: [:id, :status, :id_type, :vpn_hostname],
+      required: [:id, :status, :vpn_hostname],
       example: %{
         id: "abc12345-1234-1234-1234-123456789abc",
         status: "healthy",
-        id_type: "persistent",
         vpn_hostname: "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
       }
     })
@@ -144,13 +136,11 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
           %{
             id: "abc12345-1234-1234-1234-123456789abc",
             status: "healthy",
-            id_type: "persistent",
             vpn_hostname: "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
           },
           %{
             id: "def67890-5678-5678-5678-567890abcdef",
             status: "healthy",
-            id_type: "persistent",
             vpn_hostname: "node-def67890-5678-5678-5678-567890abcdef.cluster-prod-east.nm.internal"
           }
         ],

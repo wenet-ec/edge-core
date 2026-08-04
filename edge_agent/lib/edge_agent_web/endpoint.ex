@@ -16,7 +16,7 @@ defmodule EdgeAgentWeb.Endpoint do
     `AGENT_METRICS_AUTH_ENABLED`).
 
   Plug order is deliberate: `Security` first (CSP headers on every reply),
-  then code reloading in dev, then `AssignRequestId` (UUIDv7 generation +
+  then code reloading in dev, then `AssignRequestId` (UUID generation +
   Logger metadata + `x-request-id` response header — replaces
   `Plug.RequestId` so we don't honour inbound ids).
   """
@@ -34,7 +34,7 @@ defmodule EdgeAgentWeb.Endpoint do
     plug(Phoenix.Ecto.CheckRepoStatus, otp_app: :edge_agent)
   end
 
-  # AssignRequestId both generates a UUIDv7 and sets the response header, so
+  # AssignRequestId both generates a UUID and sets the response header, so
   # `Plug.RequestId` is redundant. Agent is a request origin, not a relay —
   # we don't honor inbound x-request-id from upstream.
   plug(EdgeAgentWeb.Plugs.AssignRequestId)

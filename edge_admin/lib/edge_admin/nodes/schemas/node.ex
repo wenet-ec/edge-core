@@ -8,8 +8,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
 
   ## Fields
 
-  - `id` - Node UUID (can be persistent or randomly generated per boot)
-  - `id_type` - Either `:persistent` (saved to disk) or `:random` (ephemeral)
+  - `id` - Node UUID
   - `status` - Health status: `:healthy`, `:unhealthy`, or `:unreachable`
   - `cluster_id` - Foreign key to cluster
   - `netmaker_host_id` - Reference to Netmaker host resource
@@ -46,15 +45,10 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     :socks5_proxy_port
   ]
 
-  # ID-type registry. Same pattern as @statuses above.
-  @id_types [:persistent, :random]
-
   @type status :: :healthy | :unhealthy | :unreachable
-  @type id_type :: :persistent | :random
 
   @type t :: %__MODULE__{
           id: String.t(),
-          id_type: id_type(),
           status: status(),
           last_seen_at: DateTime.t() | nil,
           version: String.t(),
@@ -88,9 +82,8 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
 
   @derive {
     Flop.Schema,
-    filterable: [:id_type, :status, :version, :self_update_enabled, :last_seen_at, :inserted_at, :updated_at],
+    filterable: [:status, :version, :self_update_enabled, :last_seen_at, :inserted_at, :updated_at],
     sortable: [
-      :id_type,
       :status,
       :version,
       :self_update_enabled,
@@ -104,11 +97,9 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     }
   }
 
-  @primary_key {:id, Uniq.UUID, autogenerate: false, dump: :raw, type: :uuid}
+  @primary_key {:id, Uniq.UUID, version: 7, autogenerate: false, dump: :raw, type: :uuid}
 
   schema "nodes" do
-    # Informative fields
-    field(:id_type, Ecto.Enum, values: @id_types)
     field(:status, Ecto.Enum, values: @statuses, default: :healthy)
     field(:last_seen_at, :utc_datetime)
     field(:version, :string)
@@ -167,7 +158,6 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
       :id,
       :cluster_id,
       :netmaker_host_id,
-      :id_type,
       :status,
       :http_port,
       :ssh_port,
@@ -186,7 +176,6 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
       :id,
       :cluster_id,
       :netmaker_host_id,
-      :id_type,
       :http_port,
       :ssh_port,
       :host_metrics_port,
@@ -303,16 +292,4 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   @doc "Wire-format strings for reachable statuses only."
   @spec reachable_status_strings() :: [String.t()]
   def reachable_status_strings, do: Enum.map(@reachable_statuses, &Atom.to_string/1)
-
-  # ---------------------------------------------------------------------------
-  # ID-type registry
-  # ---------------------------------------------------------------------------
-
-  @doc "All node id_types, in canonical order."
-  @spec id_types() :: [id_type()]
-  def id_types, do: @id_types
-
-  @doc "Wire-format id_type strings (sorted to match `id_types/0`)."
-  @spec id_type_strings() :: [String.t()]
-  def id_type_strings, do: Enum.map(@id_types, &Atom.to_string/1)
 end

@@ -40,7 +40,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
     @moduledoc false
 
     @status_enum Node.status_strings()
-    @id_type_enum Node.id_type_strings()
 
     schema(%{
       title: "NodeResponse",
@@ -68,11 +67,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           format: :uuid,
           nullable: true,
           description: "Netmaker Host UUID for API operations"
-        },
-        id_type: %Schema{
-          type: :string,
-          enum: @id_type_enum,
-          description: "Type of node identifier (persistent or random)"
         },
         status: %Schema{
           type: :string,
@@ -147,7 +141,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
       required: [
         :id,
         :cluster_name,
-        :id_type,
         :http_port,
         :ssh_port,
         :host_metrics_port,
@@ -163,7 +156,6 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         node_name: "node-01234567-89ab-cdef-0123-456789abcdef",
         cluster_name: "prod-east",
         netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
-        id_type: "persistent",
         status: "healthy",
         vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
         mdns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.local",

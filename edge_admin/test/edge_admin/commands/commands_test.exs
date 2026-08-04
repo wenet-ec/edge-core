@@ -27,7 +27,6 @@ defmodule EdgeAdmin.CommandsTest do
       id: Ecto.UUID.generate(),
       cluster_id: cluster.id,
       netmaker_host_id: Ecto.UUID.generate(),
-      id_type: :persistent,
       status: :healthy,
       version: "0.1.0",
       http_port: 44_000,

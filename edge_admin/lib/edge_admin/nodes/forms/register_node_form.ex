@@ -8,12 +8,9 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
   """
   use EdgeAdmin.Form
 
-  alias EdgeAdmin.Nodes.Schemas.Node
-
   embedded_schema do
     field(:node_id, :string)
     field(:network_name, :string)
-    field(:id_type, Ecto.Enum, values: Node.id_types())
     field(:http_port, :integer)
     field(:ssh_port, :integer)
     field(:host_metrics_port, :integer)
@@ -42,7 +39,6 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     |> cast(attrs, [
       :node_id,
       :network_name,
-      :id_type,
       :http_port,
       :ssh_port,
       :host_metrics_port,
@@ -55,7 +51,6 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     |> validate_required([
       :node_id,
       :network_name,
-      :id_type,
       :http_port,
       :ssh_port,
       :host_metrics_port,
@@ -94,7 +89,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     validate_change(changeset, field, fn _, value ->
       case Ecto.UUID.cast(value) do
         {:ok, _} -> []
-        :error -> [{field, "must be a valid UUID"}]
+        :error -> [{field, "must be a valid UUID format"}]
       end
     end)
   end
@@ -149,7 +144,6 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     %{
       "node_id" => form.node_id,
       "network_name" => form.network_name,
-      "id_type" => form.id_type,
       "http_port" => form.http_port,
       "ssh_port" => form.ssh_port,
       "host_metrics_port" => form.host_metrics_port,

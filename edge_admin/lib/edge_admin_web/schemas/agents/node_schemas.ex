@@ -6,14 +6,11 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
 
   use EdgeAdminWeb.Schema
 
-  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdminWeb.Schemas.CommonSchemas
   alias OpenApiSpex.Schema
 
   defmodule NodeRegisterRequest do
     @moduledoc false
-
-    @id_type_enum Node.id_type_strings()
 
     schema(%{
       title: "Internal.NodeRegisterRequest",
@@ -24,17 +21,12 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         node_id: %Schema{
           type: :string,
           format: :uuid,
-          description: "Netmaker node UUID"
+          description: "Node UUID"
         },
         network_name: %Schema{
           type: :string,
           description: "Netmaker network name (must start with 'cluster-')",
           example: "cluster-test"
-        },
-        id_type: %Schema{
-          type: :string,
-          enum: @id_type_enum,
-          description: "How the node identity is determined"
         },
         http_port: %Schema{
           type: :integer,
@@ -63,7 +55,6 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
       required: [
         :node_id,
         :network_name,
-        :id_type,
         :http_port,
         :ssh_port,
         :host_metrics_port,

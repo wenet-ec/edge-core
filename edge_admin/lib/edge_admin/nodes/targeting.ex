@@ -64,9 +64,7 @@ defmodule EdgeAdmin.Nodes.Targeting do
   require Logger
 
   @node_status_enum Node.status_strings()
-  @id_type_enum Node.id_type_strings()
   @node_status_in_regex EdgeAdmin.Naming.enum_in_regex(@node_status_enum)
-  @id_type_in_regex EdgeAdmin.Naming.enum_in_regex(@id_type_enum)
 
   # The `__gte`/`__lte` fields accept ISO 8601 *date* OR *datetime* strings
   # (matching the OpenApiSpex `anyOf: [date-time, date]` shape on the REST
@@ -95,10 +93,8 @@ defmodule EdgeAdmin.Nodes.Targeting do
   @either_string_or_list {:either, {:string, {:list, :string, [unique: true]}}}
   @node_status_in {:either,
                    {{:string, {:regex, @node_status_in_regex}}, {:list, {:enum, @node_status_enum}, [unique: true]}}}
-  @id_type_in {:either, {{:string, {:regex, @id_type_in_regex}}, {:list, {:enum, @id_type_enum}, [unique: true]}}}
 
   @node_filters_schema %{
-    id_type__in: @id_type_in,
     status__in: @node_status_in,
     cluster_name: :string,
     version: :string,

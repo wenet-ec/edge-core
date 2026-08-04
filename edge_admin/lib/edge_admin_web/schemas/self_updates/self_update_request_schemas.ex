@@ -118,9 +118,7 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
     @moduledoc false
 
     @node_status_enum Node.status_strings()
-    @id_type_enum Node.id_type_strings()
     @node_status_in_pattern EdgeAdmin.Naming.enum_in_pattern(@node_status_enum)
-    @id_type_in_pattern EdgeAdmin.Naming.enum_in_pattern(@id_type_enum)
 
     schema(%{
       title: "SelfUpdateRequestCreateRequest",
@@ -153,13 +151,8 @@ defmodule EdgeAdminWeb.Schemas.SelfUpdates.SelfUpdateRequestSchemas do
             node_filters: %Schema{
               type: :object,
               description:
-                "Optional filters to apply to target nodes (AND logic with cluster_filters). Accepts: id_type__in, status__in, version, self_update_enabled, last_seen_at/inserted_at/updated_at ranges. Does not accept node_id__in or cluster_name__in.",
+                "Optional filters to apply to target nodes (AND logic with cluster_filters). Accepts: status__in, version, self_update_enabled, last_seen_at/inserted_at/updated_at ranges. Does not accept node_id__in or cluster_name__in.",
               properties: %{
-                id_type__in: %Schema{
-                  type: :string,
-                  pattern: @id_type_in_pattern,
-                  description: "Filter by node ID type — comma-separated string of: persistent, random"
-                },
                 status__in: %Schema{
                   type: :string,
                   pattern: @node_status_in_pattern,

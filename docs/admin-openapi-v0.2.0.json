@@ -321,13 +321,11 @@
           "nodes": [
             {
               "id": "abc12345-1234-1234-1234-123456789abc",
-              "id_type": "persistent",
               "status": "healthy",
               "vpn_hostname": "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
             },
             {
               "id": "def67890-5678-5678-5678-567890abcdef",
-              "id_type": "persistent",
               "status": "healthy",
               "vpn_hostname": "node-def67890-5678-5678-5678-567890abcdef.cluster-prod-east.nm.internal"
             }
@@ -1238,15 +1236,10 @@
               },
               "node_filters": {
                 "additionalProperties": false,
-                "description": "Optional filters to apply to target nodes (AND logic with cluster_filters). Accepts: id_type__in, status__in, version, self_update_enabled, last_seen_at/inserted_at/updated_at ranges. Does not accept node_id__in or cluster_name__in.",
+                "description": "Optional filters to apply to target nodes (AND logic with cluster_filters). Accepts: status__in, version, self_update_enabled, last_seen_at/inserted_at/updated_at ranges. Does not accept node_id__in or cluster_name__in.",
                 "properties": {
                   "cluster_name": {
                     "description": "Filter by cluster name (exact match or wildcard: prod*, *staging, etc.)",
-                    "type": "string"
-                  },
-                  "id_type__in": {
-                    "description": "Filter by node ID type — comma-separated string of: persistent, random",
-                    "pattern": "^(?!.*(?:^|,\\s*)persistent(?=\\s*(?:,|$)).*(?:^|,\\s*)persistent(?=\\s*(?:,|$)))(?!.*(?:^|,\\s*)random(?=\\s*(?:,|$)).*(?:^|,\\s*)random(?=\\s*(?:,|$)))(persistent|random)(\\s*,\\s*(persistent|random))*$",
                     "type": "string"
                   },
                   "inserted_at__gte": {
@@ -1349,7 +1342,6 @@
         "description": "Brief node information within cluster response",
         "example": {
           "id": "abc12345-1234-1234-1234-123456789abc",
-          "id_type": "persistent",
           "status": "healthy",
           "vpn_hostname": "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
         },
@@ -1357,12 +1349,6 @@
           "id": {
             "description": "Node ID",
             "example": "abc12345-1234-1234-1234-123456789abc",
-            "type": "string"
-          },
-          "id_type": {
-            "description": "Node ID type",
-            "enum": ["persistent", "random"],
-            "example": "persistent",
             "type": "string"
           },
           "status": {
@@ -1377,7 +1363,7 @@
             "type": "string"
           }
         },
-        "required": ["id", "status", "id_type", "vpn_hostname"],
+        "required": ["id", "status", "vpn_hostname"],
         "title": "NodeSummary",
         "type": "object"
       },
@@ -3590,10 +3576,7 @@
         "example": {
           "command_text": "ABC=value\necho $ABC\nsudo docker ps",
           "targeting": {
-            "node_filters": {
-              "id_type__in": "persistent",
-              "status__in": "healthy"
-            },
+            "node_filters": { "status__in": "healthy", "version": "1.2.*" },
             "node_ids": ["01234567-89ab-cdef-0123-456789abcdef"],
             "type": "nodes"
           }
@@ -3616,10 +3599,7 @@
             "example": {
               "cluster_filters": { "name": "*prod*" },
               "cluster_names": ["prod", "staging"],
-              "node_filters": {
-                "id_type__in": "persistent",
-                "status__in": "healthy"
-              },
+              "node_filters": { "status__in": "healthy", "version": "1.2.*" },
               "type": "clusters"
             },
             "properties": {
@@ -3701,15 +3681,10 @@
               },
               "node_filters": {
                 "additionalProperties": false,
-                "description": "Optional filters to apply to target nodes (AND logic with cluster_filters). Accepts: id_type__in, status__in, version, self_update_enabled, last_seen_at/inserted_at/updated_at ranges. Does not accept node_id__in or cluster_name__in.",
+                "description": "Optional filters to apply to target nodes (AND logic with cluster_filters). Accepts: status__in, version, self_update_enabled, last_seen_at/inserted_at/updated_at ranges. Does not accept node_id__in or cluster_name__in.",
                 "properties": {
                   "cluster_name": {
                     "description": "Filter by cluster name (exact match or wildcard: prod*, *staging, etc.)",
-                    "type": "string"
-                  },
-                  "id_type__in": {
-                    "description": "Filter by node ID type — comma-separated string of: persistent, random",
-                    "pattern": "^(?!.*(?:^|,\\s*)persistent(?=\\s*(?:,|$)).*(?:^|,\\s*)persistent(?=\\s*(?:,|$)))(?!.*(?:^|,\\s*)random(?=\\s*(?:,|$)).*(?:^|,\\s*)random(?=\\s*(?:,|$)))(persistent|random)(\\s*,\\s*(persistent|random))*$",
                     "type": "string"
                   },
                   "inserted_at__gte": {
@@ -4030,7 +4005,6 @@
           "http_port": 44000,
           "http_proxy_port": 44880,
           "id": "01234567-89ab-cdef-0123-456789abcdef",
-          "id_type": "persistent",
           "inserted_at": "2025-06-09T08:00:00Z",
           "last_seen_at": "2025-06-09T08:20:00Z",
           "mdns_hostname": "node-01234567-89ab-cdef-0123-456789abcdef.local",
@@ -4069,11 +4043,6 @@
           "id": {
             "description": "Unique node identifier",
             "format": "uuid",
-            "type": "string"
-          },
-          "id_type": {
-            "description": "Type of node identifier (persistent or random)",
-            "enum": ["persistent", "random"],
             "type": "string"
           },
           "inserted_at": {
@@ -4140,7 +4109,6 @@
         "required": [
           "id",
           "cluster_name",
-          "id_type",
           "http_port",
           "ssh_port",
           "host_metrics_port",
@@ -5413,16 +5381,6 @@
             "name": "node_id__in",
             "required": false,
             "schema": { "type": "string" }
-          },
-          {
-            "description": "Filter by node ID type (e.g. id_type__in=persistent,random)",
-            "in": "query",
-            "name": "id_type__in",
-            "required": false,
-            "schema": {
-              "pattern": "^(?!.*(?:^|,\\s*)persistent(?=\\s*(?:,|$)).*(?:^|,\\s*)persistent(?=\\s*(?:,|$)))(?!.*(?:^|,\\s*)random(?=\\s*(?:,|$)).*(?:^|,\\s*)random(?=\\s*(?:,|$)))(persistent|random)(\\s*,\\s*(persistent|random))*$",
-              "type": "string"
-            }
           },
           {
             "description": "Filter by node status (e.g. status__in=healthy,unhealthy)",

@@ -99,9 +99,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
   defmodule CommandCreateRequest do
     @moduledoc false
 
-    @id_type_enum Node.id_type_strings()
     @node_status_enum Node.status_strings()
-    @id_type_in_pattern EdgeAdmin.Naming.enum_in_pattern(@id_type_enum)
     @node_status_in_pattern EdgeAdmin.Naming.enum_in_pattern(@node_status_enum)
 
     schema(%{
@@ -157,13 +155,8 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
             node_filters: %Schema{
               type: :object,
               description:
-                "Optional filters to apply to target nodes (AND logic with cluster_filters). Accepts: id_type__in, status__in, version, self_update_enabled, last_seen_at/inserted_at/updated_at ranges. Does not accept node_id__in or cluster_name__in.",
+                "Optional filters to apply to target nodes (AND logic with cluster_filters). Accepts: status__in, version, self_update_enabled, last_seen_at/inserted_at/updated_at ranges. Does not accept node_id__in or cluster_name__in.",
               properties: %{
-                id_type__in: %Schema{
-                  type: :string,
-                  pattern: @id_type_in_pattern,
-                  description: "Filter by node ID type — comma-separated string of: persistent, random"
-                },
                 status__in: %Schema{
                   type: :string,
                   pattern: @node_status_in_pattern,
@@ -300,7 +293,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
             type: "clusters",
             cluster_names: ["prod", "staging"],
             cluster_filters: %{name: "*prod*"},
-            node_filters: %{status__in: "healthy", id_type__in: "persistent"}
+            node_filters: %{status__in: "healthy", version: "1.2.*"}
           }
         }
       },
@@ -310,7 +303,7 @@ defmodule EdgeAdminWeb.Schemas.Commands.CommandSchemas do
         targeting: %{
           type: "nodes",
           node_ids: ["01234567-89ab-cdef-0123-456789abcdef"],
-          node_filters: %{status__in: "healthy", id_type__in: "persistent"}
+          node_filters: %{status__in: "healthy", version: "1.2.*"}
         }
       }
     })

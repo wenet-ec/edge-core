@@ -23,7 +23,6 @@ defmodule EdgeAdmin.Nodes.DiscoveryNodesTest do
       id: Ecto.UUID.generate(),
       cluster_id: cluster.id,
       netmaker_host_id: Ecto.UUID.generate(),
-      id_type: :persistent,
       status: :healthy,
       last_seen_at: ~U[2026-02-01 12:00:00Z],
       version: "edge-1.2.3",
@@ -69,7 +68,6 @@ defmodule EdgeAdmin.Nodes.DiscoveryNodesTest do
 
     _non_matching =
       insert_node!(staging, %{
-        id_type: :random,
         status: :healthy,
         version: "edge-2.0.0",
         self_update_enabled: false,
@@ -80,7 +78,6 @@ defmodule EdgeAdmin.Nodes.DiscoveryNodesTest do
 
     params = %{
       "node_id__in" => target.id,
-      "id_type__in" => "persistent",
       "status__in" => "unreachable",
       "version" => "edge-1.*",
       "self_update_enabled" => true,

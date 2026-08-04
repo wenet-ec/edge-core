@@ -13,6 +13,7 @@ defmodule EdgeAdmin.Nodes.Checks.NodeClusterConsistencyCheck do
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
 
+  @doc "Ensures an alias cluster matches the cluster currently owning its node."
   @spec check(Ecto.Changeset.t()) :: {:ok, Ecto.Changeset.t()} | {:error, Ecto.Changeset.t()}
   def check(changeset) do
     node_id = get_field(changeset, :node_id)

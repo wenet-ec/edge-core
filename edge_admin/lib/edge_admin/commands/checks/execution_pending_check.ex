@@ -8,6 +8,7 @@ defmodule EdgeAdmin.Commands.Checks.ExecutionPendingCheck do
 
   alias EdgeAdmin.Commands.Schemas.CommandExecution
 
+  @doc "Checks whether an execution is still pending acknowledgment."
   @spec check(CommandExecution.t()) :: :ok | {:error, {:conflict, String.t()}}
   def check(%CommandExecution{status: :pending}), do: :ok
 

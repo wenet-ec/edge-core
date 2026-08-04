@@ -9,6 +9,7 @@ defmodule EdgeAdmin.Nodes.Checks.NodeRecoveryKeyCheck do
 
   alias EdgeAdmin.Nodes.Schemas.Node
 
+  @doc "Authorizes recovery when the supplied key matches the node and cluster."
   @spec check(Node.t(), String.t() | nil, String.t()) :: :ok | {:error, :unauthorized}
   def check(%Node{recovery_key: stored_key}, recovery_key, cluster_name) do
     if matches?(recovery_key, stored_key) and recovery_cluster_name(recovery_key) == cluster_name do

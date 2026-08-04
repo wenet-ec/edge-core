@@ -12,6 +12,7 @@ defmodule EdgeAdmin.Nodes.Checks.NodeLimitCheck do
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
 
+  @doc "Ensures a cluster has capacity for another node."
   @spec check(Cluster.t()) :: :ok | {:error, {:conflict, String.t()}}
   def check(%Cluster{node_limit: nil}), do: :ok
 

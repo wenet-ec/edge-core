@@ -3,13 +3,14 @@ defmodule EdgeAdmin.Admins.Metadata do
   @moduledoc """
   Distributed metadata coordinator for admin cluster state and edge cluster assignments.
 
-  This GenServer maintains a distributed ETS table containing the current state of the
-  admin cluster topology and cluster assignment decisions. It recomputes assignments
-  when topology or edge cluster state changes, broadcasting updates to all admins.
+  This GenServer maintains a local, ephemeral ETS snapshot containing the current
+  state of the admin cluster topology and cluster assignment decisions. Every Admin
+  independently recomputes the same snapshot from the shared database and cluster
+  events; ETS is not a replicated source of truth.
 
   ## Key Concepts
 
-  - **Metadata**: Distributed state shared across all admins via ETS + replication
+  - **Metadata**: Local ETS state recomputed independently by each Admin
   - **Admin Topology**: Which admins exist, their capacity, and health status
   - **Cluster Assignments**: Which admin owns which edge clusters
   - **Recomputation**: Algorithm that redistributes clusters when topology changes
@@ -168,6 +169,7 @@ defmodule EdgeAdmin.Admins.Metadata do
   @doc """
   Starts the Metadata GenServer.
   """
+  @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
@@ -258,13 +260,18 @@ defmodule EdgeAdmin.Admins.Metadata do
   The snapshot is published as one ETS object after every recomputation, so a
   caller cannot observe a new topology together with old assignments.
   """
+  @spec snapshot() :: map()
   def snapshot do
     [{@snapshot_key, snapshot}] = :ets.lookup(@table, @snapshot_key)
     snapshot
   end
 
+  @doc "Returns this Admin's metadata from the current snapshot."
+  @spec get_admin() :: map()
   def get_admin, do: snapshot().admin
 
+  @doc "Returns the name of the Admin that currently owns the given edge cluster."
+  @spec get_cluster_owner(String.t()) :: String.t() | nil
   def get_cluster_owner(cluster_name) do
     assignments = snapshot().edge_clusters
 
@@ -283,6 +290,8 @@ defmodule EdgeAdmin.Admins.Metadata do
   - {:ok, cluster_name, admin_name} if found
   - {:error, :not_found} if node not assigned to any cluster
   """
+  @spec find_node_cluster(String.t()) ::
+          {:ok, String.t(), String.t()} | {:error, :not_found}
   def find_node_cluster(node_name) do
     index = snapshot().node_index
 
@@ -292,27 +301,39 @@ defmodule EdgeAdmin.Admins.Metadata do
     end
   end
 
+  @doc "Returns the edge clusters currently assigned to this Admin."
+  @spec get_my_clusters() :: %{optional(String.t()) => [String.t()]}
   def get_my_clusters do
     metadata = snapshot()
     Map.get(metadata.edge_clusters, metadata.admin.name, %{})
   end
 
+  @doc "Returns the current admin topology entries for this admin cluster."
+  @spec get_peer_admins() :: [map()]
   def get_peer_admins do
     snapshot().admin_cluster.topology
   end
 
+  @doc "Returns the current admin-cluster topology and capacity snapshot."
+  @spec get_admin_cluster() :: map()
   def get_admin_cluster do
     snapshot().admin_cluster
   end
 
+  @doc "Returns the complete edge-cluster-to-admin assignment map."
+  @spec get_edge_clusters() :: %{optional(String.t()) => map()}
   def get_edge_clusters do
     snapshot().edge_clusters
   end
 
+  @doc "Returns edge clusters that currently have no assigned Admin."
+  @spec get_orphaned_clusters() :: %{optional(String.t()) => [String.t()]}
   def get_orphaned_clusters do
     snapshot().orphaned_clusters
   end
 
+  @doc "Returns whether the admin cluster currently exceeds its edge capacity."
+  @spec degraded?() :: boolean()
   def degraded? do
     snapshot().admin_cluster.degraded
   end
@@ -330,6 +351,7 @@ defmodule EdgeAdmin.Admins.Metadata do
   Do not use this for operations that require exactly-once guarantees. If strong
   leader semantics are ever needed, introduce a :strong_leader key separately.
   """
+  @spec am_i_weak_leader?() :: boolean()
   def am_i_weak_leader? do
     metadata = snapshot()
     metadata.admin.name == metadata.admin_cluster.weak_leader
@@ -338,6 +360,7 @@ defmodule EdgeAdmin.Admins.Metadata do
   @doc """
   Returns the current recomputation lifecycle state for operator-facing views.
   """
+  @spec status() :: map()
   def status do
     case Process.whereis(__MODULE__) do
       nil ->
@@ -352,6 +375,8 @@ defmodule EdgeAdmin.Admins.Metadata do
     end
   end
 
+  @doc "Returns whether the Metadata GenServer has completed initial setup."
+  @spec initialized?() :: boolean()
   def initialized? do
     case Process.whereis(__MODULE__) do
       nil ->
@@ -366,6 +391,8 @@ defmodule EdgeAdmin.Admins.Metadata do
     end
   end
 
+  @doc "Requests an asynchronous metadata recomputation and returns immediately after it is queued."
+  @spec recompute_now() :: :ok
   def recompute_now do
     GenServer.call(__MODULE__, {:recompute_now, :manual}, 10_000)
   end

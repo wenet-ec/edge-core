@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/nodes/registration.ex
+# edge_admin/lib/edge_admin/nodes/workflows/registration.ex
 defmodule EdgeAdmin.Nodes.Workflows.Registration do
   @moduledoc """
   Persists initial node registration and authenticated re-registration.

@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/commands/schemas/command.ex
 defmodule EdgeAdmin.Commands.Schemas.Command do
-  @moduledoc false
+  @moduledoc "Ecto schema for a command submitted for execution on edge nodes."
   use EdgeAdmin.Schema
 
   alias Ecto.Association.NotLoaded
@@ -43,7 +43,8 @@ defmodule EdgeAdmin.Commands.Schemas.Command do
     timestamps(type: :utc_datetime)
   end
 
-  @doc false
+  @doc "Builds a changeset for creating or updating a command."
+  @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(command, attrs) do
     command
     |> cast(attrs, [:command_text, :timeout, :expires_at, :targeting])

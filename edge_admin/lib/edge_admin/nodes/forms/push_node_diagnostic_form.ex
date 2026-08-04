@@ -23,6 +23,8 @@ defmodule EdgeAdmin.Nodes.Forms.PushNodeDiagnosticForm do
     field(:diagnostic, :map)
   end
 
+  @doc "Validates an Agent-pushed diagnostic payload."
+  @spec changeset(map()) :: {:ok, map()} | {:error, Ecto.Changeset.t()}
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:diagnostic])

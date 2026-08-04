@@ -17,6 +17,8 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterForm do
     field(:node_limit, :integer)
   end
 
+  @doc "Validates and normalizes cluster creation attributes."
+  @spec changeset(map()) :: {:ok, map()} | {:error, Ecto.Changeset.t()}
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:name, :ipv4_range, :ipv6_range, :node_limit])

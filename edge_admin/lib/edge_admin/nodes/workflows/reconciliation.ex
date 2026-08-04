@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/nodes/reconciliation.ex
+# edge_admin/lib/edge_admin/nodes/workflows/reconciliation.ex
 defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
   @moduledoc """
   Reconciles the Admin database with Netmaker cluster and node state.

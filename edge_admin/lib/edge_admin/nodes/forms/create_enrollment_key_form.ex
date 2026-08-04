@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/nodes/forms/create_enrollment_key_form.ex
 defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyForm do
-  @moduledoc false
+  @moduledoc "Validates attributes for creating an Admin enrollment key."
   use EdgeAdmin.Form
 
   embedded_schema do
@@ -9,6 +9,8 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyForm do
     field(:expires_at, :utc_datetime)
   end
 
+  @doc "Validates and normalizes enrollment-key creation attributes."
+  @spec changeset(map()) :: {:ok, map()} | {:error, Ecto.Changeset.t()}
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:name, :uses_remaining, :expires_at])

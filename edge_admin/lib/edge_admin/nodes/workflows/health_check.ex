@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/nodes/health_check.ex
+# edge_admin/lib/edge_admin/nodes/workflows/health_check.ex
 defmodule EdgeAdmin.Nodes.Workflows.HealthCheck do
   @moduledoc """
   Owns node liveness checks and health reports.

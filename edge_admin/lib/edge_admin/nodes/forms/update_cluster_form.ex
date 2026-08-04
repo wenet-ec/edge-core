@@ -11,6 +11,8 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateClusterForm do
     field(:node_limit, :integer)
   end
 
+  @doc "Validates and normalizes the explicitly supplied cluster update attributes."
+  @spec changeset(map()) :: {:ok, map()} | {:error, Ecto.Changeset.t()}
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:node_limit])

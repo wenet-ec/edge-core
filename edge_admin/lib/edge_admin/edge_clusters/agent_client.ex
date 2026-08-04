@@ -25,12 +25,20 @@ defmodule EdgeAdmin.EdgeClusters.AgentClient do
 
   require Logger
 
+  @doc "Returns the timeout used for command delivery and cancellation calls."
+  @spec command_call_timeout() :: pos_integer()
   def command_call_timeout, do: command_delivery_timeout() + 2_000
 
+  @doc "Returns the timeout used for metrics scraping calls."
+  @spec metrics_call_timeout() :: pos_integer()
   def metrics_call_timeout, do: metrics_scrape_timeout() + 2_000
 
+  @doc "Returns the timeout used for Agent health checks."
+  @spec health_check_call_timeout() :: pos_integer()
   def health_check_call_timeout, do: health_check_timeout() + 500
 
+  @doc "Returns the timeout used for diagnostic collection calls."
+  @spec diagnostics_call_timeout() :: pos_integer()
   def diagnostics_call_timeout, do: health_check_timeout() + 2_000
 
   defp command_delivery_timeout, do: Application.get_env(:edge_admin, :command_delivery_timeout, 10_000)

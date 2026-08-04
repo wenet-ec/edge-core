@@ -59,6 +59,8 @@ defmodule EdgeAdmin.Admins.Discovery do
 
   require Logger
 
+  @doc "Discovers peer Admins through the Admin VPN and attempts Erlang connections."
+  @spec scan_and_connect_admins() :: :ok
   def scan_and_connect_admins do
     network_name = Vpn.admin_cluster_name()
 

@@ -1,11 +1,13 @@
 defmodule EdgeAdmin.Nodes.Forms.VerifyEnrollmentKeyForm do
-  @moduledoc false
+  @moduledoc "Validates an enrollment key supplied by an Agent during bootstrap."
   use EdgeAdmin.Form
 
   embedded_schema do
     field(:key, :string)
   end
 
+  @doc "Validates an enrollment-key verification request and returns the key."
+  @spec changeset(map()) :: {:ok, String.t()} | {:error, Ecto.Changeset.t() | :invalid}
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, [:key])

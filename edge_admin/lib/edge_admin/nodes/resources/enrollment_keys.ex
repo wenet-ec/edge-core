@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/nodes/enrollment_keys.ex
+# edge_admin/lib/edge_admin/nodes/resources/enrollment_keys.ex
 defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
   @moduledoc """
   Enrollment-key management and verification for edge-node provisioning.

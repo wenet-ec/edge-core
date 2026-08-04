@@ -12,6 +12,7 @@ defmodule EdgeAdmin.Nodes.Checks.ClusterNotEmptyCheck do
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
 
+  @doc "Ensures a cluster has no nodes before deletion."
   @spec check(Cluster.t()) :: :ok | {:error, {:conflict, String.t()}}
   def check(%Cluster{id: cluster_id}) do
     count = Repo.one(from(n in Node, where: n.cluster_id == ^cluster_id, select: count(n.id)))

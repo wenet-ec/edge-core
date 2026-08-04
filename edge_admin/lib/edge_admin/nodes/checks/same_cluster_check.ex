@@ -9,6 +9,7 @@ defmodule EdgeAdmin.Nodes.Checks.SameClusterCheck do
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
 
+  @doc "Rejects a cluster move when the node is already in the target cluster."
   @spec check(Node.t(), Cluster.t()) :: :ok | {:error, {:conflict, String.t()}}
   def check(%Node{cluster_id: same_id}, %Cluster{id: same_id}) do
     {:error, {:conflict, "node is already in this cluster"}}

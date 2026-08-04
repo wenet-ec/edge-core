@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/ssh/schemas/ssh_public_key.ex
 defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
-  @moduledoc false
+  @moduledoc "Ecto schema for an authorized SSH public key."
   use EdgeAdmin.Schema
 
   alias Ecto.Association.NotLoaded
@@ -51,7 +51,8 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
     timestamps()
   end
 
-  @doc false
+  @doc "Builds a changeset for creating or updating an SSH public key."
+  @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(ssh_public_key, attrs) do
     ssh_public_key
     |> cast(attrs, [:public_key, :key_name, :ssh_username_id])
@@ -134,12 +135,14 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKey do
   @doc """
   Returns the list of supported SSH key algorithms.
   """
+  @spec supported_algorithms() :: [String.t()]
   def supported_algorithms, do: @supported_algorithms
 
   @doc """
   Validates if a public key string has valid format and algorithm.
   Returns {:ok, algorithm} or {:error, reason}.
   """
+  @spec validate_key_format(String.t()) :: {:ok, String.t()} | {:error, String.t()}
   def validate_key_format(public_key) when is_binary(public_key) do
     trimmed_key = String.trim(public_key)
 

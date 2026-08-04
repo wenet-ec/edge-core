@@ -8,6 +8,7 @@ defmodule EdgeAdmin.Commands.Checks.ExecutionTerminalCheck do
 
   alias EdgeAdmin.Commands.Schemas.CommandExecution
 
+  @doc "Checks whether an execution is in a terminal state."
   @spec check(CommandExecution.t()) :: :ok | {:error, {:conflict, String.t()}}
   def check(%CommandExecution{} = execution) do
     if CommandExecution.terminal?(execution) do

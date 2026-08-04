@@ -12,6 +12,7 @@ defmodule EdgeAdmin.Nodes.Checks.SubnetOverlapCheck do
 
   alias EdgeAdmin.Vpn
 
+  @doc "Checks whether an IPv4 range overlaps an existing cluster range."
   @spec check(String.t() | nil, [String.t()]) :: :ok | {:error, {:conflict, String.t()}}
   def check(nil, _existing_ranges), do: :ok
 
@@ -23,6 +24,7 @@ defmodule EdgeAdmin.Nodes.Checks.SubnetOverlapCheck do
     end
   end
 
+  @doc "Checks whether an IPv6 range overlaps an existing cluster range."
   @spec check_ipv6(String.t() | nil, [String.t()]) :: :ok | {:error, {:conflict, String.t()}}
   def check_ipv6(nil, _existing_ranges), do: :ok
 

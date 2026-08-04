@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/commands/schemas/command_execution.ex
 defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
-  @moduledoc false
+  @moduledoc "Ecto schema for one node's execution of a command."
   use EdgeAdmin.Schema
 
   alias Ecto.Association.NotLoaded
@@ -86,7 +86,8 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
     timestamps()
   end
 
-  @doc false
+  @doc "Builds a changeset for creating or updating a command execution."
+  @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(command_execution, attrs) do
     command_execution
     |> cast(attrs, [
@@ -114,6 +115,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   Returns the command text for this execution.
   Requires command association to be preloaded.
   """
+  @spec command_text(t()) :: String.t() | nil
   def command_text(%__MODULE__{command: %{command_text: command_text}}), do: command_text
   def command_text(%__MODULE__{}), do: nil
 
@@ -122,6 +124,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   Requires cluster association to be preloaded.
   Returns nil if no cluster is associated.
   """
+  @spec cluster_name(t()) :: String.t() | nil
   def cluster_name(%__MODULE__{cluster: %{name: name}}), do: name
   def cluster_name(%__MODULE__{}), do: nil
 
@@ -130,6 +133,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   Requires command association to be preloaded.
   Returns nil if no timeout is set.
   """
+  @spec timeout(t()) :: integer() | nil
   def timeout(%__MODULE__{command: %{timeout: timeout}}), do: timeout
   def timeout(%__MODULE__{}), do: nil
 
@@ -139,6 +143,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecution do
   Requires command association to be preloaded.
   Returns nil if no expiration is set.
   """
+  @spec expires_at(t()) :: DateTime.t() | nil
   def expires_at(%__MODULE__{command: %{expires_at: expires_at}}), do: expires_at
   def expires_at(%__MODULE__{}), do: nil
 

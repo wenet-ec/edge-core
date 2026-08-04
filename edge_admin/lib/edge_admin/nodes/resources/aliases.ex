@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/nodes/aliases.ex
+# edge_admin/lib/edge_admin/nodes/resources/aliases.ex
 defmodule EdgeAdmin.Nodes.Resources.Aliases do
   @moduledoc """
   Owns node alias records and their Netmaker DNS lifecycle.

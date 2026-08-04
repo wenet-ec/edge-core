@@ -8,6 +8,7 @@ defmodule EdgeAdmin.Commands.Checks.ExecutionCancellableCheck do
 
   alias EdgeAdmin.Commands.Schemas.CommandExecution
 
+  @doc "Checks whether an execution may be cancelled."
   @spec check(CommandExecution.t()) :: :ok | {:error, {:conflict, String.t()}}
   def check(%CommandExecution{} = execution) do
     if CommandExecution.cancellable?(execution) do

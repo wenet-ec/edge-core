@@ -12,6 +12,7 @@ defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheck do
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Repo
 
+  @doc "Ensures a command has no pending or in-flight executions."
   @spec check(Command.t()) :: :ok | {:error, {:conflict, String.t()}}
   def check(%Command{id: command_id}) do
     cancellable = CommandExecution.cancellable_statuses()

@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin/events/webhooks/schemas/webhook.ex
 defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
-  @moduledoc false
+  @moduledoc "Ecto schema for a configured webhook delivery destination."
   use EdgeAdmin.Schema
 
   alias EdgeAdmin.Encryption.EncryptedBinary
@@ -45,7 +45,8 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.Webhook do
   @min_subscribed_events Limits.min_subscribed_events()
   @max_subscribed_events Limits.max_subscribed_events()
 
-  @doc false
+  @doc "Builds a changeset for creating or updating a webhook."
+  @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(webhook, attrs) do
     webhook
     |> cast(attrs, [:url, :secret, :headers, :subscribed_events])

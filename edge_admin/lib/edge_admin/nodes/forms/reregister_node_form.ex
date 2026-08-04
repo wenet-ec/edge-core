@@ -32,6 +32,9 @@ defmodule EdgeAdmin.Nodes.Forms.ReregisterNodeForm do
     :self_update_enabled
   ]
 
+  @doc "Validates and normalizes authenticated Agent re-registration attributes."
+  @spec changeset(map()) :: {:ok, map()} | {:error, Ecto.Changeset.t()}
+  @spec changeset(map(), (String.t() -> term())) :: {:ok, map()} | {:error, Ecto.Changeset.t()}
   def changeset(attrs, get_cluster_fn \\ &EdgeAdmin.Nodes.get_cluster/1)
 
   def changeset(attrs, get_cluster_fn) when is_map(attrs) do
@@ -53,6 +56,8 @@ defmodule EdgeAdmin.Nodes.Forms.ReregisterNodeForm do
     end
   end
 
+  @doc "Returns a validation error for a node missing from the expected Netmaker network."
+  @spec add_netmaker_not_found_error() :: {:error, Ecto.Changeset.t()}
   def add_netmaker_not_found_error do
     changeset =
       %__MODULE__{}

@@ -91,12 +91,6 @@ defmodule EdgeAgent.Settings do
   @spec set_node_id(String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
   def set_node_id(value), do: set_config("node_id", value)
 
-  @spec get_id_type() :: String.t() | nil
-  def get_id_type, do: get_config("id_type")
-
-  @spec set_id_type(String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
-  def set_id_type(value), do: set_config("id_type", value)
-
   @spec get_admin_urls() :: [String.t()]
   def get_admin_urls do
     case get_config("admin_urls") do

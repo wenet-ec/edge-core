@@ -1,6 +1,6 @@
 # Edge Core — Architecture
 
-**Last Updated: 2026-07-30**
+**Last Updated: 2026-08-04**
 
 Edge Core is an infrastructure management platform for fleets of Linux machines you don't physically touch — cloud VMs, on-premises servers, factory-floor equipment, Raspberry Pis, homelab boxes, IoT devices. Anywhere you have N machines and want a single HTTP API to operate them, the same primitives apply: a secure WireGuard mesh, remote command execution, SSH without exposing port 22, HTTP/SOCKS5 forward proxying through any node, Prometheus metrics aggregation.
 
@@ -352,7 +352,6 @@ What doesn't apply in sidecar mode:
 
 Requirements for sidecar mode (same as host mode minus `network_mode: host`):
 
-- `USE_RANDOM_ID=true` — avoids identity collisions when multiple sidecars run on the same node (host-derived identity is not meaningful in a container)
 - `cap_add: [NET_ADMIN, SYS_MODULE]`
 - `sysctls: net.ipv4.ip_forward=1, net.ipv4.conf.all.src_valid_mark=1, net.ipv6.conf.all.forwarding=1`
 - `/dev/net/tun:/dev/net/tun` — required for wireguard-go to create a TUN interface

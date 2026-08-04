@@ -44,12 +44,6 @@ WATCHTOWER_HTTP_API_TOKEN=local-dev-token
 # ADMIN_DISCOVERY_PORT=44000
 
 # =============================================================================
-# Node Identity
-# =============================================================================
-# USE_RANDOM_ID=false   # Use a random UUID instead of a stable hardware-derived ID.
-#                       # Enable only for ephemeral/test agents.
-
-# =============================================================================
 # Node Aliases
 # =============================================================================
 # Friendly DNS names for this node (comma-separated). Best-effort — conflicts silently ignored.

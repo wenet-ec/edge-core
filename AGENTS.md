@@ -99,16 +99,16 @@ Every source file created by an agent must begin with exactly one comment that s
 
 ### Select the local deployment variant first
 
-**Dylan primarily uses Lite/SQLite. Unless he explicitly says Standard/PostgreSQL, the safe default is Lite: prefix every cloud command with `VARIANT=lite`. Never use plain `./bin/run cloud ...` merely because it is the script default.**
+**Unless the user explicitly selects Standard/PostgreSQL, the safe default is Lite/SQLite: prefix every Cloud command with `VARIANT=lite`. Never use plain `./bin/run cloud ...` merely because it is the script default. Agent commands have no deployment variant; always run them as `./bin/run edge ...` without `VARIANT`.**
 
 When Docker work is authorized, determine which local deployment the user has started or wants to use:
 
 - **Standard/PostgreSQL** — use `./bin/run …` with no `VARIANT` value. This selects `deploy/local/cloud.yml`.
-- **Lite/SQLite** — prefix **every** `bin/run` invocation with `VARIANT=lite`, for example `VARIANT=lite ./bin/run cloud admin:test`. This selects `deploy/local/cloud.lite.yml`; commands whose variant-specific compose file does not exist (such as `edge`) safely fall back to the normal compose file.
+- **Lite/SQLite** — prefix every **Cloud** `bin/run` invocation with `VARIANT=lite`, for example `VARIANT=lite ./bin/run cloud admin:test`. This selects `deploy/local/cloud.lite.yml`. The Agent has no Lite variant, so use unprefixed Agent commands, for example `./bin/run edge agent:test`.
 
 Use the user's explicit statement as the source of truth. If it is not stated, use Lite when the user has authorized the command; otherwise do not run Docker. A read-only Compose `ps` check is appropriate only when it is needed to resolve an actual conflict with the user's stated variant — do not run it as an automatic preflight.
 
-This choice applies to **all** `bin/run` operations: service lifecycle, logs, shells, migrations, tests, formatting, linting, quality checks, and arbitrary Mix commands. Mixing default and Lite commands against the same running setup is incorrect and can target the wrong database or service set.
+This choice applies to every **Cloud** `bin/run` operation: service lifecycle, logs, shells, migrations, tests, formatting, linting, quality checks, and arbitrary Mix commands. Agent operations are always unvaried. Mixing default and Lite Cloud commands against the same running setup is incorrect and can target the wrong database or service set.
 
 ### Starting Services
 
@@ -122,8 +122,9 @@ This choice applies to **all** `bin/run` operations: service lifecycle, logs, sh
 # Start everything together
 ./bin/run all up -d
 
-# Lite/SQLite equivalent (prefix every bin/run command in this session)
-VARIANT=lite ./bin/run all up -d
+# Lite/SQLite Cloud plus Agent (the Agent has no variant)
+VARIANT=lite ./bin/run cloud up -d
+./bin/run edge up -d
 ```
 
 ### Code Quality

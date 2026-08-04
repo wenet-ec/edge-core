@@ -42,10 +42,8 @@ export https_proxy=http://edge_agent:43128
 ## Key differences from the standard deployment
 
 | | Standard (`network_mode: host`) | Sidecar (bridge) |
-|---|---|---|
+| --- | --- | --- |
 | Network namespace | Host | Pod / stack |
-| `USE_RANDOM_ID` | Optional | Required |
-| Identity source | Host persistent ID | Random (host ID not meaningful) |
 | Port collisions | Possible on multi-agent hosts | None (isolated namespace) |
 | Command execution | Runs on host machine | Runs in agent container |
 | Host metrics | Full host visibility | Container view only |

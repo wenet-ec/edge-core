@@ -21,7 +21,6 @@
 #   - NET_ADMIN + SYS_MODULE capabilities
 #   - /dev/net/tun device (wireguard-go needs it to create a TUN interface)
 #   - The sysctls below (WireGuard routing rules)
-#   - USE_RANDOM_ID=true so identity is not tied to the host MAC address
 #
 # Usage:
 #   cp .env.example .env

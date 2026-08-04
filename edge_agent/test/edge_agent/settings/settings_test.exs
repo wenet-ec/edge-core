@@ -221,17 +221,6 @@ defmodule EdgeAgent.SettingsTest do
     end
   end
 
-  describe "id_type accessors" do
-    test "get_id_type returns nil when not set" do
-      assert Settings.get_id_type() == nil
-    end
-
-    test "set_id_type then get_id_type roundtrips" do
-      {:ok, _} = Settings.set_id_type("persistent")
-      assert Settings.get_id_type() == "persistent"
-    end
-  end
-
   # -----------------------------------------------------------------------
   # Typed accessors — Secret
   # -----------------------------------------------------------------------

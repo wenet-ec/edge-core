@@ -86,7 +86,6 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
       # Register node (unauthenticated)
       iex> AdminClient.register_node(%{
         node_id: "abc-123",
-        id_type: "persistent",
         network_name: "cluster-test",
         http_port: 44000
       })
@@ -229,7 +228,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   Settings URL list (VPN admin URLs, then HTTP fallback URLs).
 
   ## Parameters
-  - `node_params` - Map with node metadata (node_id, id_type, network_name, ports, version)
+  - `node_params` - Map with node metadata (node_id, network_name, ports, version)
 
   ## Returns
   - `{:ok, node_data}` - Registration succeeded, node_data includes api_token and proxy_password

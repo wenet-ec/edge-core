@@ -6229,6 +6229,94 @@
         "tags": ["Nodes.Diagnostics"]
       }
     },
+    "/api/v1/nodes/{id}/recovery_key": {
+      "post": {
+        "callbacks": {},
+        "description": "Creates or replaces the node's one-use recovery key.",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeRecoveryKeyController.create",
+        "parameters": [
+          {
+            "description": "Node ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Nodes.NodeRecoveryKeyResponse"
+                }
+              }
+            },
+            "description": "Recovery key created"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Node not found"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Create a node recovery key",
+        "tags": ["Nodes.RecoveryKey"]
+      },
+      "delete": {
+        "callbacks": {},
+        "description": "Deletes the node's active recovery key.",
+        "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeRecoveryKeyController.delete",
+        "parameters": [
+          {
+            "description": "Node ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": {
+            "content": { "": {} },
+            "description": "Recovery key deleted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
+              }
+            },
+            "description": "Node not found"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Delete a node recovery key",
+        "tags": ["Nodes.RecoveryKey"]
+      }
+    },
     "/api/v1/commands": {
       "post": {
         "callbacks": {},
@@ -8127,94 +8215,6 @@
         "summary": "Publish test event",
         "tags": ["Events.Event"]
       }
-    },
-    "/api/v1/nodes/{id}/recovery_key": {
-      "post": {
-        "callbacks": {},
-        "description": "Creates or replaces the node's one-use recovery key.",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeRecoveryKeyController.create",
-        "parameters": [
-          {
-            "description": "Node ID",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Nodes.NodeRecoveryKeyResponse"
-                }
-              }
-            },
-            "description": "Recovery key created"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Node not found"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        },
-        "summary": "Create a node recovery key",
-        "tags": ["Nodes.RecoveryKey"]
-      },
-      "delete": {
-        "callbacks": {},
-        "description": "Deletes the node's active recovery key.",
-        "operationId": "EdgeAdminWeb.Controllers.Nodes.NodeRecoveryKeyController.delete",
-        "parameters": [
-          {
-            "description": "Node ID",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          }
-        ],
-        "responses": {
-          "204": {
-            "content": { "": {} },
-            "description": "Recovery key deleted"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/NotFoundResponse" }
-              }
-            },
-            "description": "Node not found"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServiceUnavailableResponse"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        },
-        "summary": "Delete a node recovery key",
-        "tags": ["Nodes.RecoveryKey"]
-      }
     }
   },
   "security": [{ "apiKey": [] }],
@@ -8228,6 +8228,7 @@
     { "name": "Nodes.Alias" },
     { "name": "Nodes.Metrics" },
     { "name": "Nodes.Diagnostics" },
+    { "name": "Nodes.RecoveryKey" },
     { "name": "Commands.Command" },
     { "name": "Commands.CommandExecution" },
     { "name": "Ssh.SshUsername" },

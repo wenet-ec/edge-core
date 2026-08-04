@@ -413,6 +413,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
         schema(CommonSchemas.paginated_response(NodeResponse, "NodePaginatedResponse", "Paginated nodes"))
       end
   """
+  @spec paginated_response(term(), String.t(), String.t()) :: map()
   def paginated_response(data_schema, title, description) do
     %{
       title: title,
@@ -436,6 +437,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemas do
         schema(CommonSchemas.single_response(NodeResponse, "NodeSingleResponse", "Single node"))
       end
   """
+  @spec single_response(term(), String.t(), String.t()) :: map()
   def single_response(data_schema, title, description) do
     %{
       title: title,

@@ -1,6 +1,6 @@
 # edge_admin/lib/edge_admin_web/open_api_spec.ex
 defmodule EdgeAdminWeb.OpenApiSpec do
-  @moduledoc false
+  @moduledoc "Builds the OpenAPI document for the Edge Admin REST API."
   @behaviour OpenApiSpex.OpenApi
 
   alias EdgeAdminWeb.Router
@@ -75,11 +75,13 @@ defmodule EdgeAdminWeb.OpenApiSpec do
   ]
 
   @doc "Returns a path → index map for sorting. Paths not listed get index 999_999."
+  @spec paths_order_index() :: %{optional(String.t()) => non_neg_integer()}
   def paths_order_index do
     @paths_order |> Enum.with_index() |> Map.new()
   end
 
   @impl OpenApi
+  @spec spec() :: OpenApi.t()
   def spec do
     %OpenApi{
       servers: [],

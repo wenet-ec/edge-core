@@ -39,4 +39,36 @@ defmodule EdgeAdmin.Nodes.Filters.NodeFilters do
   end
 
   defp apply_node_ids_one(query, _), do: query
+
+  @doc "Applies `enrollment_key_id__in` to nodes with matching enrollment-key provenance."
+  def apply_enrollment_key_ids(query, []), do: query
+
+  def apply_enrollment_key_ids(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc -> apply_enrollment_key_ids_one(acc, filter) end)
+  end
+
+  defp apply_enrollment_key_ids_one(query, %{op: :in, value: values}) when is_list(values) do
+    from(n in query, where: n.enrollment_key_id in ^values)
+  end
+
+  defp apply_enrollment_key_ids_one(query, %{op: :==, value: value}) when is_binary(value) do
+    from(n in query, where: n.enrollment_key_id == ^value)
+  end
+
+  defp apply_enrollment_key_ids_one(query, _), do: query
+
+  @doc "Applies `has_enrollment_key` as an enrollment-key association presence filter."
+  def apply_has_enrollment_key(query, filters) do
+    Enum.reduce(filters, query, fn filter, acc -> apply_has_enrollment_key_one(acc, filter) end)
+  end
+
+  defp apply_has_enrollment_key_one(query, %{op: :==, value: true}) do
+    from(n in query, where: not is_nil(n.enrollment_key_id))
+  end
+
+  defp apply_has_enrollment_key_one(query, %{op: :==, value: false}) do
+    from(n in query, where: is_nil(n.enrollment_key_id))
+  end
+
+  defp apply_has_enrollment_key_one(query, _), do: query
 end

@@ -4,6 +4,7 @@ defmodule EdgeAdmin.Nodes.Filters.NodeFiltersTest do
 
   alias EdgeAdmin.Nodes.Filters.NodeFilters
   alias EdgeAdmin.Nodes.Schemas.Cluster
+  alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
 
@@ -40,6 +41,16 @@ defmodule EdgeAdmin.Nodes.Filters.NodeFiltersTest do
       )
 
     Repo.insert!(struct(Node, attrs))
+  end
+
+  defp insert_enrollment_key(cluster_id) do
+    Repo.insert!(
+      struct(EnrollmentKey, %{
+        id: Ecto.UUID.generate(),
+        cluster_id: cluster_id,
+        key: Ecto.UUID.generate()
+      })
+    )
   end
 
   defp ids(query), do: query |> Repo.all() |> Enum.map(& &1.id) |> Enum.sort()
@@ -155,6 +166,41 @@ defmodule EdgeAdmin.Nodes.Filters.NodeFiltersTest do
       query = NodeFilters.apply_node_ids(Node, [%{op: :in, value: [Ecto.UUID.generate()]}])
 
       assert ids(query) == []
+    end
+  end
+
+  describe "apply_enrollment_key_ids/2" do
+    test ":in matches nodes by enrollment-key provenance" do
+      cluster = insert_cluster()
+      key_id = insert_enrollment_key(cluster.id).id
+      matching = insert_node(cluster.id, %{enrollment_key_id: key_id})
+      _without_key = insert_node(cluster.id)
+
+      query = NodeFilters.apply_enrollment_key_ids(Node, [%{op: :in, value: [key_id]}])
+
+      assert ids(query) == [matching.id]
+    end
+  end
+
+  describe "apply_has_enrollment_key/2" do
+    test "true matches nodes with an enrollment-key association" do
+      cluster = insert_cluster()
+      matching = insert_node(cluster.id, %{enrollment_key_id: insert_enrollment_key(cluster.id).id})
+      _without_key = insert_node(cluster.id)
+
+      query = NodeFilters.apply_has_enrollment_key(Node, [%{op: :==, value: true}])
+
+      assert ids(query) == [matching.id]
+    end
+
+    test "false matches nodes without an enrollment-key association" do
+      cluster = insert_cluster()
+      _with_key = insert_node(cluster.id, %{enrollment_key_id: insert_enrollment_key(cluster.id).id})
+      without_key = insert_node(cluster.id)
+
+      query = NodeFilters.apply_has_enrollment_key(Node, [%{op: :==, value: false}])
+
+      assert ids(query) == [without_key.id]
     end
   end
 end

@@ -144,6 +144,12 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
       type: :object,
       properties: %{
         node_id: %Schema{type: :string, format: :uuid, description: "Registered node UUID"},
+        enrollment_key_id: %Schema{
+          type: :string,
+          format: :uuid,
+          nullable: true,
+          description: "ID of the enrollment key most recently used by this node"
+        },
         api_token: %Schema{type: :string, description: "Bearer token for subsequent authenticated agent requests"},
         proxy_password: %Schema{type: :string, description: "Password for proxy authentication"},
         admin_urls: %Schema{
@@ -157,9 +163,10 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
           description: "Ordered mirror or migration URLs for one canonical Core DERP map"
         }
       },
-      required: [:node_id, :api_token, :proxy_password, :admin_urls],
+      required: [:node_id, :enrollment_key_id, :api_token, :proxy_password, :admin_urls],
       example: %{
         node_id: "01234567-89ab-cdef-0123-456789abcdef",
+        enrollment_key_id: "0190f1e0-7b2a-7abc-8def-0123456789ab",
         api_token: "eyJhbGciOiJIUzI1NiJ9...",
         proxy_password: "s3cr3tpassword",
         admin_urls: ["http://10.0.0.1:44000"],

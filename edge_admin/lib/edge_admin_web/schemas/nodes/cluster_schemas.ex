@@ -26,6 +26,13 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
           description: "Node ID",
           example: "abc12345-1234-1234-1234-123456789abc"
         },
+        enrollment_key_id: %Schema{
+          type: :string,
+          format: :uuid,
+          nullable: true,
+          description: "ID of the enrollment key most recently used by this node",
+          example: "0190f1e0-7b2a-7abc-8def-0123456789ab"
+        },
         status: %Schema{
           type: :string,
           description: "Node status",
@@ -38,9 +45,10 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
           example: "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
         }
       },
-      required: [:id, :status, :vpn_hostname],
+      required: [:id, :enrollment_key_id, :status, :vpn_hostname],
       example: %{
         id: "abc12345-1234-1234-1234-123456789abc",
+        enrollment_key_id: "0190f1e0-7b2a-7abc-8def-0123456789ab",
         status: "healthy",
         vpn_hostname: "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
       }
@@ -135,11 +143,13 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         nodes: [
           %{
             id: "abc12345-1234-1234-1234-123456789abc",
+            enrollment_key_id: "0190f1e0-7b2a-7abc-8def-0123456789ab",
             status: "healthy",
             vpn_hostname: "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
           },
           %{
             id: "def67890-5678-5678-5678-567890abcdef",
+            enrollment_key_id: nil,
             status: "healthy",
             vpn_hostname: "node-def67890-5678-5678-5678-567890abcdef.cluster-prod-east.nm.internal"
           }

@@ -320,11 +320,13 @@
           "node_limit": 50,
           "nodes": [
             {
+              "enrollment_key_id": "0190f1e0-7b2a-7abc-8def-0123456789ab",
               "id": "abc12345-1234-1234-1234-123456789abc",
               "status": "healthy",
               "vpn_hostname": "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
             },
             {
+              "enrollment_key_id": null,
               "id": "def67890-5678-5678-5678-567890abcdef",
               "status": "healthy",
               "vpn_hostname": "node-def67890-5678-5678-5678-567890abcdef.cluster-prod-east.nm.internal"
@@ -1341,11 +1343,19 @@
       "NodeSummary": {
         "description": "Brief node information within cluster response",
         "example": {
+          "enrollment_key_id": "0190f1e0-7b2a-7abc-8def-0123456789ab",
           "id": "abc12345-1234-1234-1234-123456789abc",
           "status": "healthy",
           "vpn_hostname": "node-abc12345-1234-1234-1234-123456789abc.cluster-prod-east.nm.internal"
         },
         "properties": {
+          "enrollment_key_id": {
+            "description": "ID of the enrollment key most recently used by this node",
+            "example": "0190f1e0-7b2a-7abc-8def-0123456789ab",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
           "id": {
             "description": "Node ID",
             "example": "abc12345-1234-1234-1234-123456789abc",
@@ -1363,7 +1373,7 @@
             "type": "string"
           }
         },
-        "required": ["id", "status", "vpn_hostname"],
+        "required": ["id", "enrollment_key_id", "status", "vpn_hostname"],
         "title": "NodeSummary",
         "type": "object"
       },
@@ -4023,6 +4033,7 @@
             }
           ],
           "cluster_name": "prod-east",
+          "enrollment_key_id": "0190f1e0-7b2a-7abc-8def-0123456789ab",
           "host_metrics_port": 49100,
           "http_port": 44000,
           "http_proxy_port": 44880,
@@ -4051,6 +4062,12 @@
             "description": "Name of the cluster this node belongs to",
             "example": "prod-east",
             "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+            "type": "string"
+          },
+          "enrollment_key_id": {
+            "description": "ID of the enrollment key most recently used by this node",
+            "format": "uuid",
+            "nullable": true,
             "type": "string"
           },
           "host_metrics_port": {
@@ -5436,6 +5453,13 @@
             "schema": { "type": "string" }
           },
           {
+            "description": "Filter by enrollment-key IDs — comma-separated list of UUIDs (e.g. enrollment_key_id__in=uuid1,uuid2)",
+            "in": "query",
+            "name": "enrollment_key_id__in",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
             "description": "Filter by node status (e.g. status__in=healthy,unhealthy)",
             "in": "query",
             "name": "status__in",
@@ -5456,6 +5480,13 @@
             "description": "Filter by self-update enabled status",
             "in": "query",
             "name": "self_update_enabled",
+            "required": false,
+            "schema": { "type": "boolean" }
+          },
+          {
+            "description": "Filter by whether the node has an enrollment-key association",
+            "in": "query",
+            "name": "has_enrollment_key",
             "required": false,
             "schema": { "type": "boolean" }
           },

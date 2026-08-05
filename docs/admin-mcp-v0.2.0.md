@@ -26,7 +26,7 @@ One MCP-only tool (`check_admin_health`) has no REST equivalent; every other too
 MCP list tools use typed parameters rather than REST query strings:
 
 - **Wildcard text filters** — single-value string parameter. `*` matches prefix (`prod*`), suffix (`*east`), or contains (`*prod*`). Examples: `cluster_name: "prod*"`, `username: "*admin"`.
-- **IN filters** — `<field>_in` array parameter. Passes one or more exact values; any match is returned. Single-element arrays work. Examples: `cluster_name_in: ["prod", "staging"]`, `status_in: ["healthy", "unhealthy"]`, `node_id_in: ["<uuid>"]`. This mirrors the REST `__in` operator (`?cluster_name__in=prod,staging`).
+- **IN filters** — `<field>_in` array parameter. Passes one or more exact values; any match is returned. Single-element arrays work. Examples: `cluster_name_in: ["prod", "staging"]`, `status_in: ["healthy", "unhealthy"]`, `node_id_in: ["<uuid>"]`, `enrollment_key_id_in: ["<uuid>"]`. This mirrors the REST `__in` operator (`?cluster_name__in=prod,staging`).
 - **Boolean filters** are native JSON booleans: `true` or `false`. Pass `null`
   or omit the field to clear the filter. MCP Inspector renders these as
   checkbox controls with a null/clear option. If sending raw JSON, do not quote
@@ -74,7 +74,7 @@ Edge machines running the agent. Addressed only by VPN hostname.
 
 | Tool | Title | Hints | Description |
 | --- | --- | --- | --- |
-| `list_nodes` | List Nodes | 🔍 | Filter/sort/paginate. Filters: `node_id_in` (array), `status_in` (array: `healthy`/`unhealthy`/`unreachable`), `cluster_name` (wildcard), `cluster_name_in` (array), `version`, `self_update_enabled`, `last_seen_at_*`, `inserted_at_*`, `updated_at_*`. |
+| `list_nodes` | List Nodes | 🔍 | Filter/sort/paginate. Filters: `node_id_in` (array), `enrollment_key_id_in` (array), `has_enrollment_key`, `status_in` (array: `healthy`/`unhealthy`/`unreachable`), `cluster_name` (wildcard), `cluster_name_in` (array), `version`, `self_update_enabled`, `last_seen_at_*`, `inserted_at_*`, `updated_at_*`. |
 | `get_node` | Get Node | 🔍 | Required: `node_id`. |
 | `get_node_diagnostics` | Get Node Diagnostics | 🔍 🌐 | Required: `node_id`. Diagnostic report for one node. |
 | `delete_node` | Delete Node | ⚠️ 🌐 | Required: `node_id`. The agent must re-enroll to reconnect. |

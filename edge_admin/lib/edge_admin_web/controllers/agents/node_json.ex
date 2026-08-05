@@ -9,6 +9,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeJSON do
   defp data(node) do
     %{
       node_id: node.id,
+      enrollment_key_id: node.enrollment_key_id,
       api_token: node.api_token,
       proxy_password: node.proxy_password,
       admin_urls: Application.get_env(:edge_admin, :admin_urls, []),

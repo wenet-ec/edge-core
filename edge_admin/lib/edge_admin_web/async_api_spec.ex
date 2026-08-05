@@ -485,6 +485,10 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
     %{
       "node_id" => %{"type" => "string"},
       "cluster_name" => %{"type" => "string"},
+      "enrollment_key_id" => %{
+        "type" => ["string", "null"],
+        "format" => "uuid"
+      },
       "status" => %{"type" => "string", "enum" => EdgeAdmin.Nodes.Schemas.Node.status_strings()},
       "version" => %{"type" => "string"},
       "http_port" => %{"type" => "integer"},
@@ -549,12 +553,12 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
     %{
       "NodeEvent" => %{
         "type" => "object",
-        "required" => ["node_id", "cluster_name", "status"],
+        "required" => ["node_id", "cluster_name", "enrollment_key_id", "status"],
         "properties" => node_base_properties()
       },
       "NodeVersionChangedEvent" => %{
         "type" => "object",
-        "required" => ["node_id", "cluster_name", "status", "previous_version"],
+        "required" => ["node_id", "cluster_name", "enrollment_key_id", "status", "previous_version"],
         "properties" =>
           Map.put(node_base_properties(), "previous_version", %{
             "type" => "string",
@@ -563,7 +567,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
       },
       "NodeStatusChangedEvent" => %{
         "type" => "object",
-        "required" => ["node_id", "cluster_name", "status", "previous_status"],
+        "required" => ["node_id", "cluster_name", "enrollment_key_id", "status", "previous_status"],
         "properties" =>
           Map.put(node_base_properties(), "previous_status", %{
             "type" => "string",
@@ -573,7 +577,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
       },
       "NodeUpdateTriggeredEvent" => %{
         "type" => "object",
-        "required" => ["node_id", "cluster_name", "status", "self_update_request_id"],
+        "required" => ["node_id", "cluster_name", "enrollment_key_id", "status", "self_update_request_id"],
         "properties" =>
           Map.put(node_base_properties(), "self_update_request_id", %{
             "type" => "string",

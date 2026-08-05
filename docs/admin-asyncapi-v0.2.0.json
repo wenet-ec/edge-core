@@ -1136,6 +1136,7 @@
       "NodeEvent": {
         "properties": {
           "cluster_name": { "type": "string" },
+          "enrollment_key_id": { "format": "uuid", "type": ["string", "null"] },
           "host_metrics_port": { "type": "integer" },
           "http_port": { "type": "integer" },
           "http_proxy_port": { "type": "integer" },
@@ -1153,12 +1154,13 @@
           "version": { "type": "string" },
           "wireguard_metrics_port": { "type": "integer" }
         },
-        "required": ["node_id", "cluster_name", "status"],
+        "required": ["node_id", "cluster_name", "enrollment_key_id", "status"],
         "type": "object"
       },
       "NodeStatusChangedEvent": {
         "properties": {
           "cluster_name": { "type": "string" },
+          "enrollment_key_id": { "format": "uuid", "type": ["string", "null"] },
           "host_metrics_port": { "type": "integer" },
           "http_port": { "type": "integer" },
           "http_proxy_port": { "type": "integer" },
@@ -1181,12 +1183,19 @@
           "version": { "type": "string" },
           "wireguard_metrics_port": { "type": "integer" }
         },
-        "required": ["node_id", "cluster_name", "status", "previous_status"],
+        "required": [
+          "node_id",
+          "cluster_name",
+          "enrollment_key_id",
+          "status",
+          "previous_status"
+        ],
         "type": "object"
       },
       "NodeUpdateTriggeredEvent": {
         "properties": {
           "cluster_name": { "type": "string" },
+          "enrollment_key_id": { "format": "uuid", "type": ["string", "null"] },
           "host_metrics_port": { "type": "integer" },
           "http_port": { "type": "integer" },
           "http_proxy_port": { "type": "integer" },
@@ -1212,6 +1221,7 @@
         "required": [
           "node_id",
           "cluster_name",
+          "enrollment_key_id",
           "status",
           "self_update_request_id"
         ],
@@ -1220,6 +1230,7 @@
       "NodeVersionChangedEvent": {
         "properties": {
           "cluster_name": { "type": "string" },
+          "enrollment_key_id": { "format": "uuid", "type": ["string", "null"] },
           "host_metrics_port": { "type": "integer" },
           "http_port": { "type": "integer" },
           "http_proxy_port": { "type": "integer" },
@@ -1241,7 +1252,13 @@
           "version": { "type": "string" },
           "wireguard_metrics_port": { "type": "integer" }
         },
-        "required": ["node_id", "cluster_name", "status", "previous_version"],
+        "required": [
+          "node_id",
+          "cluster_name",
+          "enrollment_key_id",
+          "status",
+          "previous_version"
+        ],
         "type": "object"
       },
       "SelfUpdateRequestEvent": {

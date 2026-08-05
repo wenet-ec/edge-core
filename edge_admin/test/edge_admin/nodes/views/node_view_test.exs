@@ -52,6 +52,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
       api_token: "token-abc",
       proxy_password: "pw-abc",
       recovery_key: "recovery-key-abc",
+      enrollment_key_id: "enrollment-key-abc",
       version: "0.1.0",
       self_update_enabled: true,
       last_seen_at: now,
@@ -76,6 +77,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
       # Identity / cluster reference.
       assert result.id == node.id
       assert result.cluster_name == "prod"
+      assert result.enrollment_key_id == node.enrollment_key_id
       assert result.netmaker_host_id == "host-1"
       assert result.status == "healthy"
 
@@ -151,7 +153,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
       result = NodeView.render(node)
 
       expected_keys = Enum.sort(~w(
-          id node_name cluster_name netmaker_host_id status
+          id node_name cluster_name enrollment_key_id netmaker_host_id status
           vpn_hostname mdns_hostname
           http_port ssh_port host_metrics_port wireguard_metrics_port
           http_proxy_port socks5_proxy_port

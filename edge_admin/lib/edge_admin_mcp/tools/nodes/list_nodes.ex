@@ -5,6 +5,8 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
 
   ## Filtering
   - `node_id_in` — IN match on node IDs (array of UUIDs)
+  - `enrollment_key_id_in` — IN match on enrollment-key IDs (array of UUIDs)
+  - `has_enrollment_key` — true: enrollment-key association exists; false: no association
   - `status_in` — one or more of `healthy`, `unhealthy`, `unreachable`
   - `cluster_name` — exact match or wildcard (`prod*`, `*east`)
   - `cluster_name_in` — IN match on cluster name (array)
@@ -35,11 +37,13 @@ defmodule EdgeAdminMcp.Tools.Nodes.ListNodes do
     field :page, :integer, default: 1, min: 1
     field :page_size, :integer, default: 20, min: 1
     field :node_id_in, {:list, :string}
+    field :enrollment_key_id_in, {:list, :string}
     field :status_in, {:list, {:enum, @status_enum}, unique: true}
     field :cluster_name, :string, min_length: 1
     field :cluster_name_in, {:list, :string}
     field :version, :string, min_length: 1
     field :self_update_enabled, {:either, {:boolean, nil}}
+    field :has_enrollment_key, {:either, {:boolean, nil}}
     field :last_seen_at_gte, :string
     field :last_seen_at_lte, :string
     field :inserted_at_gte, :string

@@ -37,6 +37,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
       self_update_enabled: true,
       api_token: "token-secret",
       proxy_password: "proxy-secret",
+      enrollment_key_id: "enrollment-key-1",
       netmaker_host_id: "host-1",
       last_seen_at: now(),
       inserted_at: now(),
@@ -336,6 +337,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
 
       assert data["node_id"] == node.id
       assert data["cluster_name"] == "prod"
+      assert data["enrollment_key_id"] == node.enrollment_key_id
       assert data["status"] == "healthy"
       assert data["version"] == "1.2.0"
       assert data["http_port"] == 44_000

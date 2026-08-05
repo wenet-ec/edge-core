@@ -631,6 +631,7 @@ defmodule EdgeAdmin.Events.Catalog do
     %{
       "node_id" => node.id,
       "cluster_name" => cluster_name(node),
+      "enrollment_key_id" => node.enrollment_key_id,
       "status" => Atom.to_string(node.status),
       "version" => node.version,
       "http_port" => node.http_port,

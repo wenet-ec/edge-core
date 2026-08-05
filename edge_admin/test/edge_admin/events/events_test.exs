@@ -30,6 +30,7 @@ defmodule EdgeAdmin.EventsTest do
       self_update_enabled: true,
       api_token: "token",
       proxy_password: "pw",
+      enrollment_key_id: "enrollment-key-1",
       netmaker_host_id: "h",
       last_seen_at: now(),
       inserted_at: now(),

@@ -1057,6 +1057,8 @@ defmodule EdgeAdmin.Nodes do
   - `cluster_name` - Exact match or wildcard (`prod*`) on cluster name (requires join)
   - `cluster_name__in` - IN match on cluster name — comma-separated list (requires join)
   - `node_id__in` - Exact IN match on node IDs — comma-separated UUIDs
+  - `enrollment_key_id__in` - Exact IN match on enrollment-key IDs — comma-separated UUIDs
+  - `has_enrollment_key` - Boolean: whether the node has an enrollment-key association
 
   ## Returns
   - `{:ok, {nodes, meta}}` - List of nodes with Flop.Meta pagination info
@@ -1123,6 +1125,12 @@ defmodule EdgeAdmin.Nodes do
     {node_ids_filters, other_filters} =
       Enum.split_with(other_filters, fn filter -> filter.field == :node_id end)
 
+    {enrollment_key_ids_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter -> filter.field == :enrollment_key_id end)
+
+    {has_enrollment_key_filters, other_filters} =
+      Enum.split_with(other_filters, fn filter -> filter.field == :has_enrollment_key end)
+
     {ilike_filters, flop_params} =
       RequestParser.split_ilike_filters(
         Map.put(flop_params, :filters, other_filters),
@@ -1136,6 +1144,8 @@ defmodule EdgeAdmin.Nodes do
       )
       |> ClusterFilters.apply_name(cluster_name_filters)
       |> NodeFilters.apply_node_ids(node_ids_filters)
+      |> NodeFilters.apply_enrollment_key_ids(enrollment_key_ids_filters)
+      |> NodeFilters.apply_has_enrollment_key(has_enrollment_key_filters)
       |> NodeFilters.apply_ilike(ilike_filters)
 
     {query, flop_params}

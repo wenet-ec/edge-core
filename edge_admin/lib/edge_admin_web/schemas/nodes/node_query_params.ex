@@ -14,6 +14,10 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeQueryParams do
       QueryParams.uuid_in_filter(:node_id,
         description: "Filter by node IDs — comma-separated list of UUIDs (e.g. node_id__in=uuid1,uuid2)"
       ),
+      QueryParams.uuid_in_filter(:enrollment_key_id,
+        description:
+          "Filter by enrollment-key IDs — comma-separated list of UUIDs (e.g. enrollment_key_id__in=uuid1,uuid2)"
+      ),
       QueryParams.enum_in_filter(:status, @status_enum,
         description: "Filter by node status (e.g. status__in=healthy,unhealthy)"
       ),
@@ -21,6 +25,9 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeQueryParams do
         description: "Filter by agent version (exact match or wildcard: 1.0.0, 1.*, etc.)"
       ),
       QueryParams.boolean_filter(:self_update_enabled, description: "Filter by self-update enabled status"),
+      QueryParams.boolean_filter(:has_enrollment_key,
+        description: "Filter by whether the node has an enrollment-key association"
+      ),
       QueryParams.string_filter(:cluster_name,
         description: "Filter by cluster name — exact match or wildcard (prod*, *east, *rod*)"
       ),

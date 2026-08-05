@@ -5,7 +5,6 @@ defmodule EdgeAdmin.Nodes.Forms.ReregisterNodeFormTest do
   alias EdgeAdmin.Nodes.Forms.ReregisterNodeForm
 
   defp errors_on(changeset), do: Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-  defp cluster_found(_name), do: {:ok, %{name: "test"}}
 
   defp valid_attrs(overrides \\ %{}) do
     Map.merge(
@@ -25,14 +24,14 @@ defmodule EdgeAdmin.Nodes.Forms.ReregisterNodeFormTest do
   end
 
   test "accepts authenticated node metadata without node ID or recovery key" do
-    assert {:ok, result} = ReregisterNodeForm.changeset(valid_attrs(), &cluster_found/1)
+    assert {:ok, result} = ReregisterNodeForm.changeset(valid_attrs())
     refute Map.has_key?(result, "node_id")
     refute Map.has_key?(result, "recovery_key")
   end
 
   test "rejects missing re-registration metadata" do
     assert {:error, changeset} =
-             valid_attrs() |> Map.delete("version") |> ReregisterNodeForm.changeset(&cluster_found/1)
+             valid_attrs() |> Map.delete("version") |> ReregisterNodeForm.changeset()
 
     assert %{version: [_]} = errors_on(changeset)
   end

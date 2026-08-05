@@ -34,15 +34,11 @@ defmodule EdgeAdmin.Nodes.Forms.ReregisterNodeForm do
 
   @doc "Validates and normalizes authenticated Agent re-registration attributes."
   @spec changeset(map()) :: {:ok, map()} | {:error, Ecto.Changeset.t()}
-  @spec changeset(map(), (String.t() -> term())) :: {:ok, map()} | {:error, Ecto.Changeset.t()}
-  def changeset(attrs, get_cluster_fn \\ &EdgeAdmin.Nodes.get_cluster/1)
-
-  def changeset(attrs, get_cluster_fn) when is_map(attrs) do
+  def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, @fields)
     |> validate_required(@fields)
     |> validate_network_name()
-    |> validate_cluster_exists(get_cluster_fn)
     |> validate_port(:http_port)
     |> validate_port(:ssh_port)
     |> validate_port(:host_metrics_port)
@@ -56,36 +52,10 @@ defmodule EdgeAdmin.Nodes.Forms.ReregisterNodeForm do
     end
   end
 
-  @doc "Returns a validation error for a node missing from the expected Netmaker network."
-  @spec add_netmaker_not_found_error() :: {:error, Ecto.Changeset.t()}
-  def add_netmaker_not_found_error do
-    changeset =
-      %__MODULE__{}
-      |> cast(%{}, [])
-      |> add_error(:base, "node not found in Netmaker network")
-
-    {:error, %{changeset | action: :insert}}
-  end
-
   defp validate_network_name(changeset) do
     validate_change(changeset, :network_name, fn :network_name, value ->
       if String.starts_with?(value, "cluster-"), do: [], else: [network_name: "must start with 'cluster-'"]
     end)
-  end
-
-  defp validate_cluster_exists(changeset, get_cluster_fn) do
-    network_name = get_field(changeset, :network_name)
-
-    if network_name && changeset.valid? do
-      cluster_name = String.replace_prefix(network_name, "cluster-", "")
-
-      case get_cluster_fn.(cluster_name) do
-        {:ok, _cluster} -> changeset
-        {:error, :not_found} -> add_error(changeset, :network_name, "cluster does not exist")
-      end
-    else
-      changeset
-    end
   end
 
   defp validate_port(changeset, field) do

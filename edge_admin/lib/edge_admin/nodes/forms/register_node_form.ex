@@ -41,16 +41,14 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
   Validates and normalizes agent node registration parameters.
 
   ## Validations
-  - Format validations: UUID, ports, network name format
-  - Checks if cluster exists (via get_cluster_fn callback)
+  - Format validations: UUID, ports, and network name format
 
   ## Returns
   - `{:ok, attrs}` - Validated attributes as map
   - `{:error, changeset}` - Validation errors
   """
-  def changeset(attrs, get_cluster_fn \\ &EdgeAdmin.Nodes.get_cluster/1)
-
-  def changeset(attrs, get_cluster_fn) when is_map(attrs) do
+  @spec changeset(map()) :: {:ok, map()} | {:error, Ecto.Changeset.t()}
+  def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}
     |> cast(attrs, @fields)
     |> validate_required([
@@ -69,7 +67,6 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     |> validate_uuid_format(:node_id)
     |> validate_uuid_format(:enrollment_key_id)
     |> validate_network_name()
-    |> validate_cluster_exists(get_cluster_fn)
     |> validate_port(:http_port)
     |> validate_port(:ssh_port)
     |> validate_port(:host_metrics_port)
@@ -102,39 +99,8 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
     end)
   end
 
-  defp validate_cluster_exists(changeset, get_cluster_fn) do
-    network_name = get_field(changeset, :network_name)
-
-    if network_name && changeset.valid? do
-      # Parse cluster name from network name (e.g., "cluster-prod" -> "prod")
-      cluster_name = String.replace_prefix(network_name, "cluster-", "")
-
-      case get_cluster_fn.(cluster_name) do
-        {:ok, _cluster} -> changeset
-        {:error, :not_found} -> add_error(changeset, :network_name, "cluster does not exist")
-      end
-    else
-      changeset
-    end
-  end
-
   defp validate_port(changeset, field) do
     validate_number(changeset, field, greater_than: 0, less_than_or_equal_to: 65_535)
-  end
-
-  @doc """
-  Adds a "not found in Netmaker" error to the node_id field.
-
-  Used when the node_id passes format validation but doesn't exist in Netmaker.
-  Returns an error changeset that can be returned from context functions.
-  """
-  def add_netmaker_not_found_error do
-    changeset =
-      %__MODULE__{}
-      |> cast(%{}, [])
-      |> add_error(:node_id, "node not found in Netmaker network")
-
-    {:error, %{changeset | action: :insert}}
   end
 
   defp to_map(%__MODULE__{} = form) do

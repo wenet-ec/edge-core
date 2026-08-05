@@ -24,20 +24,36 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
   @doc """
   Persists an initial registration or recovery attempt.
   """
-  @spec register(map()) :: {:ok, map()} | {:error, Ecto.Changeset.t()} | {:error, :unauthorized}
+  @spec register(map()) ::
+          {:ok, map()}
+          | {:error, Ecto.Changeset.t()}
+          | {:error, :unauthorized | :service_unavailable}
+          | {:error, {:conflict, String.t()}}
   def register(params) do
     with {:ok, attrs} <- Forms.RegisterNodeForm.changeset(params) do
       %{"node_id" => node_id, "network_name" => network_name} = attrs
       cluster_name = String.replace_prefix(network_name, "cluster-", "")
 
-      with {:ok, netmaker_host_id} <-
+      with :ok <- active_cluster_exists?(cluster_name),
+           {:ok, netmaker_host_id} <-
              Vpn.get_host_id(Vpn.build_vpn_name(node_id, prefix: :node), network_name: network_name),
            {:ok, registration} <- persist_registration(node_id, cluster_name, netmaker_host_id, attrs) do
         {:ok, registration}
       else
-        {:error, :unauthorized} -> {:error, :unauthorized}
-        {:error, :not_found} -> Forms.RegisterNodeForm.add_netmaker_not_found_error()
-        {:error, _reason} -> Forms.RegisterNodeForm.add_netmaker_not_found_error()
+        {:error, :unauthorized} ->
+          {:error, :unauthorized}
+
+        {:error, :not_found} ->
+          {:error, :unauthorized}
+
+        {:error, :host_not_found} ->
+          {:error, {:conflict, "node not found in Netmaker network"}}
+
+        {:error, :service_unavailable} ->
+          {:error, :service_unavailable}
+
+        {:error, _reason} ->
+          {:error, :service_unavailable}
       end
     end
   end
@@ -46,20 +62,35 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
   Persists an authenticated re-registration for an existing node.
   """
   @spec reregister(Node.t(), map()) ::
-          {:ok, map()} | {:error, Ecto.Changeset.t()} | {:error, :unauthorized}
+          {:ok, map()}
+          | {:error, Ecto.Changeset.t()}
+          | {:error, :unauthorized | :service_unavailable}
+          | {:error, {:conflict, String.t()}}
   def reregister(%Node{id: node_id}, params) do
     with {:ok, attrs} <- Forms.ReregisterNodeForm.changeset(params) do
       %{"network_name" => network_name} = attrs
       cluster_name = String.replace_prefix(network_name, "cluster-", "")
 
-      with {:ok, netmaker_host_id} <-
+      with :ok <- active_cluster_exists?(cluster_name),
+           {:ok, netmaker_host_id} <-
              Vpn.get_host_id(Vpn.build_vpn_name(node_id, prefix: :node), network_name: network_name),
            {:ok, registration} <- persist_reregistration(node_id, cluster_name, netmaker_host_id, attrs) do
         {:ok, registration}
       else
-        {:error, :unauthorized} -> {:error, :unauthorized}
-        {:error, :not_found} -> Forms.ReregisterNodeForm.add_netmaker_not_found_error()
-        {:error, _reason} -> Forms.ReregisterNodeForm.add_netmaker_not_found_error()
+        {:error, :unauthorized} ->
+          {:error, :unauthorized}
+
+        {:error, :not_found} ->
+          {:error, :unauthorized}
+
+        {:error, :host_not_found} ->
+          {:error, {:conflict, "node not found in Netmaker network"}}
+
+        {:error, :service_unavailable} ->
+          {:error, :service_unavailable}
+
+        {:error, _reason} ->
+          {:error, :service_unavailable}
       end
     end
   end
@@ -122,6 +153,14 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
 
   defp active_clusters_query do
     from(c in Cluster, where: is_nil(c.deleted_at))
+  end
+
+  defp active_cluster_exists?(cluster_name) do
+    if Repo.exists?(from(c in active_clusters_query(), where: c.name == ^cluster_name)) do
+      :ok
+    else
+      {:error, :not_found}
+    end
   end
 
   defp cluster_transaction(fun) do

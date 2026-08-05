@@ -201,6 +201,11 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
     if reported_cluster.name == canonical_cluster.name, do: :ok, else: {:error, :unauthorized}
   end
 
+  defp recovery_authorized?(nil, %{"recovery_key" => recovery_key}, _canonical_cluster)
+       when is_binary(recovery_key) and recovery_key != "" do
+    {:error, :unauthorized}
+  end
+
   defp recovery_authorized?(nil, _attrs, _canonical_cluster), do: :ok
 
   defp recovery_authorized?(existing_node, attrs, canonical_cluster) do

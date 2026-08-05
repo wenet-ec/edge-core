@@ -55,7 +55,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         enrollment_key_id: %Schema{
           type: :string,
           format: :uuid,
-          description: "Optional Admin enrollment key ID used for this registration"
+          description: "Admin enrollment key ID used for this registration"
         }
       },
       required: [
@@ -68,7 +68,8 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         :http_proxy_port,
         :socks5_proxy_port,
         :version,
-        :self_update_enabled
+        :self_update_enabled,
+        :enrollment_key_id
       ]
     })
   end

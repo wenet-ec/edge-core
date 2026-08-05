@@ -83,6 +83,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
           with %Cluster{} = canonical_cluster <- canonical_cluster,
                :ok <- cluster_matches?(reported_cluster, canonical_cluster),
                :ok <- recovery_authorized?(existing_node, attrs, canonical_cluster),
+               :ok <- enrollment_key_matches_cluster?(attrs["enrollment_key_id"], canonical_cluster.id),
                :ok <- if(is_new_node, do: Checks.NodeLimitCheck.check(reported_cluster), else: :ok),
                node_attrs = build_node_attrs(node_id, canonical_cluster, netmaker_host_id, attrs),
                node_attrs = if(is_new_node, do: node_attrs, else: Map.put(node_attrs, :recovery_key, nil)),
@@ -105,7 +106,10 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
            %Cluster{} = canonical_cluster <-
              Repo.one(from(c in active_clusters_query(), where: c.id == ^node.cluster_id)),
            :ok <- cluster_matches?(reported_cluster, canonical_cluster),
-           node_attrs = build_node_attrs(node_id, canonical_cluster, netmaker_host_id, attrs),
+           node_attrs =
+             node_id
+             |> build_node_attrs(canonical_cluster, netmaker_host_id, attrs)
+             |> Map.put(:enrollment_key_id, node.enrollment_key_id),
            {:ok, updated_node} <- update_node(node, node_attrs) do
         %{node: updated_node, existing_node: node, is_new_node: false}
       else
@@ -198,16 +202,14 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
       proxy_password: Random.token(),
       version: attrs["version"],
       self_update_enabled: attrs["self_update_enabled"],
-      enrollment_key_id: enrollment_key_id_for(attrs["enrollment_key_id"], cluster.id)
+      enrollment_key_id: attrs["enrollment_key_id"]
     }
   end
 
-  defp enrollment_key_id_for(nil, _cluster_id), do: nil
-
-  defp enrollment_key_id_for(enrollment_key_id, cluster_id) do
+  defp enrollment_key_matches_cluster?(enrollment_key_id, cluster_id) do
     case Repo.get_by(EnrollmentKey, id: enrollment_key_id, cluster_id: cluster_id) do
-      %EnrollmentKey{id: id} -> id
-      nil -> nil
+      %EnrollmentKey{} -> :ok
+      nil -> {:error, :unauthorized}
     end
   end
 end

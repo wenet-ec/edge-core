@@ -27,7 +27,8 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
         "http_proxy_port" => 8080,
         "socks5_proxy_port" => 1080,
         "version" => "1.0.0",
-        "self_update_enabled" => false
+        "self_update_enabled" => false,
+        "enrollment_key_id" => Uniq.UUID.uuid7()
       },
       overrides
     )
@@ -64,7 +65,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
       assert result["recovery_key"] == "recovery-key"
     end
 
-    test "preserves an optional enrollment key ID" do
+    test "preserves the required enrollment key ID" do
       enrollment_key_id = Uniq.UUID.uuid7()
 
       assert {:ok, result} =
@@ -105,7 +106,8 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
           "http_proxy_port",
           "socks5_proxy_port",
           "version",
-          "self_update_enabled"
+          "self_update_enabled",
+          "enrollment_key_id"
         ] do
       test "missing #{field} is rejected" do
         attrs = Map.delete(valid_attrs(), unquote(field))

@@ -63,7 +63,8 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeForm do
       :http_proxy_port,
       :socks5_proxy_port,
       :version,
-      :self_update_enabled
+      :self_update_enabled,
+      :enrollment_key_id
     ])
     |> validate_uuid_format(:node_id)
     |> validate_uuid_format(:enrollment_key_id)

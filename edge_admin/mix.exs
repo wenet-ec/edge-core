@@ -106,7 +106,7 @@ defmodule EdgeAdmin.Mixfile do
       {:phoenix, "~> 1.8"},
       {:phoenix_live_view, "~> 1.2"},
       {:phoenix_ecto, "~> 4.7"},
-      {:phoenix_live_reload, "~> 1.6", only: :dev},
+      {:phoenix_live_reload, "~> 1.7", only: :dev},
       {:jason, "~> 1.4"},
       {:argon2_elixir, "~> 4.1"},
 
@@ -143,7 +143,7 @@ defmodule EdgeAdmin.Mixfile do
       {:styler, "~> 1.12", only: [:dev, :test], runtime: false},
 
       # Security check
-      {:sobelow, "~> 0.14", only: [:dev, :test], runtime: true},
+      {:sobelow, "~> 0.15", only: [:dev, :test], runtime: true},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
 
       # Health

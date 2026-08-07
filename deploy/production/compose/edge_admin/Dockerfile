@@ -64,7 +64,7 @@ RUN --mount=type=cache,target=/root/.hex \
     mix release
 
 # Stage 2: Production runtime image
-FROM debian:stable-20260713-slim
+FROM debian:stable-20260803-slim
 
 # Install runtime dependencies in single layer
 # Grouped by purpose for maintainability

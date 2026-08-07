@@ -18,6 +18,7 @@ defmodule Nexmaker.Api.DNS do
       %{
         "name" => "gateway.cluster-abc.nm.internal",
         "address" => "100.64.0.2",
+        "address6" => "fd7a:91c2:4e8b:1::2",
         "network" => "cluster-abc"
       }
 
@@ -138,8 +139,11 @@ defmodule Nexmaker.Api.DNS do
   ## Parameters
     - network_name: String - Network name
     - attrs: Map - DNS entry attributes:
-      - `:name` - Hostname (e.g., "gateway.cluster-abc.nm.internal")
-      - `:address` - IP address (e.g., "100.64.0.2")
+    - `:name` - Hostname (e.g., "gateway.cluster-abc.nm.internal")
+    - `:address` - Optional IPv4 address (e.g., "100.64.0.2")
+    - `:address6` - Optional IPv6 address (e.g., "fd7a:91c2:4e8b:1::2")
+      A DNS entry must contain at least one address family. When both are
+      supplied, Netmaker publishes one name with both A and AAAA records.
     - opts: Keyword - API options (base_url, master_key)
 
   ## Returns

@@ -37,7 +37,8 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   Repairs DNS entries for aliases belonging to a node after registration.
 
   Missing or stale Netmaker DNS records are recreated from the node's current
-  VPN address. External DNS failures are logged and left for reconciliation.
+  IPv4 and IPv6 VPN addresses. External DNS failures are logged and left for
+  reconciliation.
   """
   @spec repair_node_dns(Node.t()) :: :ok
   def repair_node_dns(%Node{} = node) do
@@ -242,12 +243,12 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   Flow:
   1. Check Netmaker health (fail fast if service unavailable)
   2. Validate input
-  3. Query node IP from Netmaker (required for DNS entry)
+  3. Query node IPv4/IPv6 addresses from Netmaker (at least one required for DNS entry)
   4. Create DB record
   5. Create DNS entry in Netmaker (rollback DB on failure)
 
   If health check fails, returns service unavailable immediately.
-  If node not found in Netmaker or has no IP, returns service unavailable.
+  If node not found in Netmaker or has no VPN address, returns a conflict.
   If DB creation fails, returns validation error.
   If DNS creation fails, rolls back the DB record and returns service unavailable.
   If that rollback ever fails and the alias row remains, reconciliation treats the
@@ -286,17 +287,14 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
           network_name = node_network_name(node.cluster)
 
           case Vpn.find_node_by_host(network_name, node.netmaker_host_id) do
-            {:ok, %{"address" => address}} when is_binary(address) and address != "" ->
-              insert_alias(changeset, network_name, address)
+            {:ok, netmaker_node} ->
+              addresses = node_dns_addresses(netmaker_node)
 
-            {:ok, _node} ->
-              # Node exists in Netmaker but has no IP yet — still enrolling
-              Logger.warning(
-                "Cannot create alias: node #{node.netmaker_host_id} has no IP address yet in network #{network_name}"
-              )
-
-              {:error,
-               {:conflict, "Node has not been assigned an IP address yet. It may still be enrolling in the VPN."}}
+              if addresses do
+                insert_alias(changeset, network_name, addresses)
+              else
+                node_without_vpn_address(network_name, node.netmaker_host_id)
+              end
 
             {:error, :not_found} ->
               # Node is not enrolled in Netmaker at all
@@ -316,22 +314,30 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
     end
   end
 
-  defp insert_alias(changeset, network_name, address) do
+  defp node_without_vpn_address(network_name, host_id) do
+    # Node exists in Netmaker but has no IP yet — still enrolling.
+    Logger.warning("Cannot create alias: node #{host_id} has no IPv4 or IPv6 address yet in network #{network_name}")
+
+    {:error,
+     {:conflict, "Node has not been assigned an IPv4 or IPv6 address yet. It may still be enrolling in the VPN."}}
+  end
+
+  defp insert_alias(changeset, network_name, addresses) do
     case Repo.insert(changeset) do
       {:ok, alias_record} ->
         alias_record = Repo.preload(alias_record, :cluster)
 
         # Create DNS entry in Netmaker (rollback DB on failure)
-        ip_address = address |> String.split("/") |> List.first()
         vpn_hostname = Alias.vpn_hostname(alias_record)
         netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
+        dns_attrs = Map.merge(%{name: netmaker_dns_name}, addresses)
 
-        case Vpn.create_dns_entry(network_name, %{
-               name: netmaker_dns_name,
-               address: ip_address
-             }) do
+        case Vpn.create_dns_entry(network_name, dns_attrs) do
           {:ok, _} ->
-            Logger.info("Created DNS entry for alias #{alias_record.name}: #{vpn_hostname} -> #{ip_address}")
+            Logger.info(
+              "Created DNS entry for alias #{alias_record.name}: #{vpn_hostname} -> #{format_dns_addresses(addresses)}"
+            )
+
             {:ok, alias_record}
 
           {:error, :service_unavailable} = error ->
@@ -474,12 +480,12 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
 
   defp repair_alias_dns_entries(db_aliases, netmaker_entries_by_name, network_name) do
     Enum.reduce(db_aliases, 0, fn alias_record, count ->
-      current_ip = current_alias_node_ip(alias_record, network_name)
+      current_addresses = current_alias_node_addresses(alias_record, network_name)
       dns_entry = Map.get(netmaker_entries_by_name, Alias.vpn_hostname(alias_record))
 
-      case alias_dns_repair_action(alias_record, dns_entry, current_ip) do
-        {:repair, ip_address, reason} ->
-          if repair_alias_dns_entry(alias_record, network_name, ip_address, reason), do: count + 1, else: count
+      case alias_dns_repair_action(alias_record, dns_entry, current_addresses) do
+        {:repair, addresses, reason} ->
+          if repair_alias_dns_entry(alias_record, network_name, addresses, reason), do: count + 1, else: count
 
         :ok ->
           count
@@ -487,36 +493,40 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
     end)
   end
 
-  defp current_alias_node_ip(%Alias{node: %Node{netmaker_host_id: host_id}}, network_name) do
+  defp current_alias_node_addresses(%Alias{node: %Node{netmaker_host_id: host_id}}, network_name) do
     case Vpn.find_node_by_host(network_name, host_id) do
-      {:ok, %{"address" => address}} when is_binary(address) and address != "" ->
-        address |> String.split("/") |> List.first()
+      {:ok, node} ->
+        node_dns_addresses(node)
 
       _ ->
         nil
     end
   end
 
-  defp current_alias_node_ip(_alias_record, _network_name), do: nil
+  defp current_alias_node_addresses(_alias_record, _network_name), do: nil
 
   defp alias_dns_repair_action(_alias_record, _dns_entry, nil), do: :ok
 
-  defp alias_dns_repair_action(_alias_record, nil, current_ip), do: {:repair, current_ip, :missing}
+  defp alias_dns_repair_action(_alias_record, nil, current_addresses), do: {:repair, current_addresses, :missing}
 
-  defp alias_dns_repair_action(_alias_record, %{"address" => current_ip}, current_ip), do: :ok
+  defp alias_dns_repair_action(_alias_record, dns_entry, current_addresses) do
+    if node_dns_addresses(dns_entry) == current_addresses do
+      :ok
+    else
+      {:repair, current_addresses, :stale_addresses}
+    end
+  end
 
-  defp alias_dns_repair_action(_alias_record, %{"address" => _old_ip}, current_ip), do: {:repair, current_ip, :stale_ip}
-
-  defp repair_alias_dns_entry(alias_record, network_name, ip_address, reason) do
+  defp repair_alias_dns_entry(alias_record, network_name, addresses, reason) do
     netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
     vpn_hostname = Alias.vpn_hostname(alias_record)
 
     case Vpn.delete_dns_entry(network_name, netmaker_dns_name) do
       {:ok, _} ->
-        create_repaired_alias_dns(alias_record, network_name, ip_address, reason)
+        create_repaired_alias_dns(alias_record, network_name, addresses, reason)
 
       {:error, :not_found} ->
-        create_repaired_alias_dns(alias_record, network_name, ip_address, reason)
+        create_repaired_alias_dns(alias_record, network_name, addresses, reason)
 
       {:error, error} ->
         Logger.warning("Reconciliation: Failed to delete alias DNS #{vpn_hostname} before repair: #{inspect(error)}")
@@ -525,23 +535,53 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
     end
   end
 
-  defp create_repaired_alias_dns(alias_record, network_name, ip_address, reason) do
+  defp create_repaired_alias_dns(alias_record, network_name, addresses, reason) do
     netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
     vpn_hostname = Alias.vpn_hostname(alias_record)
+    dns_attrs = Map.merge(%{name: netmaker_dns_name}, addresses)
 
-    case Vpn.create_dns_entry(network_name, %{name: netmaker_dns_name, address: ip_address}) do
+    case Vpn.create_dns_entry(network_name, dns_attrs) do
       {:ok, _} ->
-        Logger.info("Reconciliation: Repaired alias DNS #{vpn_hostname} -> #{ip_address} (reason=#{reason})")
+        Logger.info(
+          "Reconciliation: Repaired alias DNS #{vpn_hostname} -> #{format_dns_addresses(addresses)} (reason=#{reason})"
+        )
 
         true
 
       {:error, error} ->
         Logger.warning(
-          "Reconciliation: Failed to recreate alias DNS #{vpn_hostname} -> #{ip_address}: #{inspect(error)}"
+          "Reconciliation: Failed to recreate alias DNS #{vpn_hostname} -> #{format_dns_addresses(addresses)}: #{inspect(error)}"
         )
 
         false
     end
+  end
+
+  # Returns the address fields accepted by Netmaker's single DNS record shape.
+  # A node may be IPv4-only, IPv6-only, or dual-stack, so absent families are
+  # omitted rather than sent as empty strings.
+  defp node_dns_addresses(node) when is_map(node) do
+    addresses =
+      %{
+        address: normalize_dns_address(Map.get(node, "address")),
+        address6: normalize_dns_address(Map.get(node, "address6"))
+      }
+      |> Enum.reject(fn {_family, address} -> is_nil(address) end)
+      |> Map.new()
+
+    if map_size(addresses) == 0, do: nil, else: addresses
+  end
+
+  defp node_dns_addresses(_node), do: nil
+
+  defp normalize_dns_address(address) when is_binary(address) and address != "" do
+    address |> String.split("/", parts: 2) |> List.first()
+  end
+
+  defp normalize_dns_address(_address), do: nil
+
+  defp format_dns_addresses(addresses) do
+    Enum.map_join(addresses, ", ", fn {family, address} -> "#{family}=#{address}" end)
   end
 
   # Direction 2: Netmaker custom DNS entries with no DB alias → delete the DNS entry.

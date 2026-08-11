@@ -11,7 +11,7 @@ defmodule EdgeAdmin.Release do
     * `rotate_encryption_key/0` — re-encrypt rows through old → new encryption key
       (gated on the four `ROTATE_*` env vars; logs skip and exits clean
       otherwise)
-    * `create_netmaker_superadmin/0` — bootstrap the Netmaker UI admin
+    * `bootstrap_edge_vpn_admin/0` — bootstrap the Edge VPN UI admin
     * `create_default_cluster/0` — pre-create the cluster named by
       `DEFAULT_CLUSTER_NAME` (skipped if unset)
   """
@@ -28,19 +28,19 @@ defmodule EdgeAdmin.Release do
   # before Ecto initializes `schema_migrations`, closing that first-table race.
   @migration_bootstrap_lock_namespace 116_203
   @migration_bootstrap_lock_key 1
-  @superadmin_bootstrap_max_retries 6
-  @superadmin_bootstrap_base_delay_ms 250
-  @superadmin_bootstrap_max_delay_ms 2_000
+  @edge_vpn_admin_bootstrap_max_retries 6
+  @edge_vpn_admin_bootstrap_base_delay_ms 250
+  @edge_vpn_admin_bootstrap_max_delay_ms 2_000
 
   # =============================================================================
   # Config Helpers
   # =============================================================================
 
-  defp netmaker_superadmin_username do
+  defp edge_vpn_bootstrap_username do
     Application.get_env(:edge_admin, :edge_vpn_bootstrap_username)
   end
 
-  defp netmaker_superadmin_password do
+  defp edge_vpn_bootstrap_password do
     Application.get_env(:edge_admin, :edge_vpn_bootstrap_password)
   end
 
@@ -92,14 +92,14 @@ defmodule EdgeAdmin.Release do
   # =============================================================================
 
   @doc """
-  Creates Netmaker superadmin user if doesn't exist.
+  Creates Edge VPN admin user if doesn't exist.
 
   Reads credentials from Application config (configured in runtime.exs):
   - `:edge_vpn_bootstrap_username` - Username for the bootstrap account
   - `:edge_vpn_bootstrap_password` - Password for the bootstrap account
 
   This task is idempotent and safe to run concurrently on every Admin replica.
-  Netmaker's check-then-create API is not atomic, so an ambiguous create failure
+  Edge VPN's check-then-create API is not atomic, so an ambiguous create failure
   is followed by a bounded, backoff-delayed re-check. This lets a replica observe
   a superadmin created by a peer instead of failing its container startup.
 
@@ -107,79 +107,79 @@ defmodule EdgeAdmin.Release do
     - 0: Success (created or already exists)
     - 1: Failure (API error)
   """
-  def create_netmaker_superadmin do
+  def bootstrap_edge_vpn_admin do
     boot([:http])
 
-    Logger.info("Checking if Netmaker superadmin exists...")
+    Logger.info("Checking if Edge VPN admin exists...")
 
-    case ensure_netmaker_superadmin(@superadmin_bootstrap_max_retries) do
+    case ensure_edge_vpn_admin(@edge_vpn_admin_bootstrap_max_retries) do
       :ok ->
         :ok
 
       {:error, reason} ->
-        Logger.error("Failed to bootstrap Netmaker superadmin: #{inspect(reason)}")
+        Logger.error("Failed to bootstrap Edge VPN admin: #{inspect(reason)}")
         System.halt(1)
     end
   end
 
-  defp ensure_netmaker_superadmin(retries_left) do
+  defp ensure_edge_vpn_admin(retries_left) do
     case Vpn.check_superadmin() do
       {:ok, true} ->
-        Logger.info("Netmaker superadmin already exists, skipping creation")
+        Logger.info("Edge VPN admin already exists, skipping creation")
         :ok
 
       {:ok, false} ->
-        Logger.info("No superadmin found, creating superadmin: #{netmaker_superadmin_username()}")
-        create_netmaker_superadmin_or_retry(retries_left)
+        Logger.info("No superadmin found, creating superadmin: #{edge_vpn_bootstrap_username()}")
+        bootstrap_edge_vpn_admin_or_retry(retries_left)
 
       {:error, reason} ->
-        retry_netmaker_superadmin_bootstrap(:check, reason, retries_left)
+        retry_edge_vpn_admin_bootstrap(:check, reason, retries_left)
     end
   end
 
-  defp create_netmaker_superadmin_or_retry(retries_left) do
+  defp bootstrap_edge_vpn_admin_or_retry(retries_left) do
     attrs = %{
-      username: netmaker_superadmin_username(),
-      password: netmaker_superadmin_password()
+      username: edge_vpn_bootstrap_username(),
+      password: edge_vpn_bootstrap_password()
     }
 
     case Vpn.create_superadmin(attrs) do
       {:ok, _user} ->
-        Logger.info("Successfully created Netmaker superadmin: #{netmaker_superadmin_username()}")
+        Logger.info("Successfully created Edge VPN admin: #{edge_vpn_bootstrap_username()}")
         :ok
 
       {:error, :already_exists} ->
-        Logger.info("Netmaker superadmin already exists (likely created by a peer replica), skipping")
+        Logger.info("Edge VPN admin already exists (likely created by a peer replica), skipping")
         :ok
 
       {:error, reason} ->
         # A concurrent peer can create the user after our initial check. The
-        # Netmaker API may report that outcome as either its documented
+        # Edge VPN API may report that outcome as either its documented
         # `superadmin user already exists` response or a database constraint
         # error, so re-check before treating it as a startup failure.
-        retry_netmaker_superadmin_bootstrap(:create, reason, retries_left)
+        retry_edge_vpn_admin_bootstrap(:create, reason, retries_left)
     end
   end
 
-  defp retry_netmaker_superadmin_bootstrap(_operation, reason, 0), do: {:error, reason}
+  defp retry_edge_vpn_admin_bootstrap(_operation, reason, 0), do: {:error, reason}
 
-  defp retry_netmaker_superadmin_bootstrap(operation, reason, retries_left) do
-    attempt = @superadmin_bootstrap_max_retries - retries_left + 1
-    delay = superadmin_bootstrap_delay(attempt)
+  defp retry_edge_vpn_admin_bootstrap(operation, reason, retries_left) do
+    attempt = @edge_vpn_admin_bootstrap_max_retries - retries_left + 1
+    delay = edge_vpn_admin_bootstrap_delay(attempt)
 
     Logger.warning(
-      "Netmaker superadmin #{operation} failed: #{inspect(reason)}. " <>
+      "Edge VPN admin #{operation} failed: #{inspect(reason)}. " <>
         "Re-checking in #{delay}ms (#{retries_left} retries remaining)."
     )
 
     Process.sleep(delay)
-    ensure_netmaker_superadmin(retries_left - 1)
+    ensure_edge_vpn_admin(retries_left - 1)
   end
 
-  defp superadmin_bootstrap_delay(attempt) do
+  defp edge_vpn_admin_bootstrap_delay(attempt) do
     min(
-      @superadmin_bootstrap_base_delay_ms * Integer.pow(2, attempt - 1),
-      @superadmin_bootstrap_max_delay_ms
+      @edge_vpn_admin_bootstrap_base_delay_ms * Integer.pow(2, attempt - 1),
+      @edge_vpn_admin_bootstrap_max_delay_ms
     )
   end
 

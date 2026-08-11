@@ -71,9 +71,9 @@ mix run --no-start -e "EdgeAdmin.Release.migrate()"
 echo "Checking encryption key rotation..."
 mix run --no-start -e "EdgeAdmin.Release.rotate_encryption_key()"
 
-# Bootstrap Netmaker superadmin
-echo "Bootstrapping Netmaker superadmin..."
-mix run --no-start -e "EdgeAdmin.Release.create_netmaker_superadmin()"
+# Bootstrap Edge VPN admin
+echo "Bootstrapping Edge VPN admin..."
+mix run --no-start -e "EdgeAdmin.Release.bootstrap_edge_vpn_admin()"
 
 # Bootstrap default cluster
 echo "Bootstrapping default cluster..."

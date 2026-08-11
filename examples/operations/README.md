@@ -36,7 +36,7 @@ The admin image exposes three commands:
 
 | Command             | What it does                                                                                                                            |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `/start`            | Default. Runs migrate + rotate encryption key + create Netmaker superadmin + create default cluster (all idempotent), then starts the admin. |
+| `/start`            | Default. Runs migrate + rotate encryption key + bootstrap Edge VPN admin + create default cluster (all idempotent), then starts the admin. |
 | `/migrate`          | Runs database migrations and exits.                                                                                                     |
 | `/rotate_encryption_key` | Re-encrypts every encrypted column from an old key to a new one. Idempotent. Exits.                                             |
 

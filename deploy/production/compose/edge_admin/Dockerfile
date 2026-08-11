@@ -132,7 +132,7 @@ RUN sed -i 's/\r$//g' /entrypoint /start /migrate /rotate_encryption_key /consol
 
 # Copy the release from builder stage
 COPY --from=builder /app/_build/prod/rel/edge_admin /app
-RUN chmod +x /app/bin/console /app/bin/migrate /app/bin/rotate_encryption_key /app/bin/server /app/bin/create_netmaker_superadmin /app/bin/create_default_cluster && \
+RUN chmod +x /app/bin/console /app/bin/migrate /app/bin/rotate_encryption_key /app/bin/server /app/bin/bootstrap_edge_vpn_admin /app/bin/create_default_cluster && \
     chown -R app:app /app
 
 # License text for the embedded Edge Admin release. ELv2 — see /usr/share/doc/edge_admin/LICENSE.

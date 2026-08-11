@@ -342,7 +342,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
     schema(%{
       title: "AdminClusterMember",
       description:
-        "An admin instance present in a Edge VPN admin-cluster network. May include stale/disconnected entries.",
+        "An admin instance present in an Edge VPN admin-cluster network. May include stale/disconnected entries.",
       type: :object,
       properties: %{
         name: %Schema{type: :string, description: "Admin name (e.g., admin-k7m3n2p9x4j6)"},

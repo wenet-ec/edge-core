@@ -84,6 +84,8 @@ defmodule EdgeAgent.Commands do
 
   import Ecto.Query, warn: false
 
+  alias EdgeAgent.Commands.CommandExecutionOutput
+  alias EdgeAgent.Commands.CommandExecutionResults
   alias EdgeAgent.Commands.ExecutionRegistry
   alias EdgeAgent.Commands.Forms.CreateCommandExecutionForm
   alias EdgeAgent.Commands.Schemas.CommandExecution
@@ -92,11 +94,6 @@ defmodule EdgeAgent.Commands do
   alias EdgeAgent.Settings
 
   require Logger
-
-  # Max bytes of command output kept per execution (512 KB each side = 1 MB total).
-  # Larger output is trimmed to first+last halves with a marker in the middle.
-  @max_output_bytes 1_024 * 1_024
-  @half_output_bytes div(@max_output_bytes, 2)
 
   @doc """
   Lists all command executions from the database.
@@ -281,25 +278,8 @@ defmodule EdgeAgent.Commands do
   end
 
   @doc false
-  # Public for unit testing. Truncates command output to at most `@max_output_bytes`
-  # by keeping the first and last `@half_output_bytes` with a marker in between.
-  # This prevents large outputs (e.g. `du` on /') from bloating SQLite and
-  # exceeding the admin's request size limit.
   @spec truncate_output(String.t() | nil) :: String.t() | nil
-  def truncate_output(nil), do: nil
-
-  def truncate_output(output) when is_binary(output) do
-    size = byte_size(output)
-
-    if size <= @max_output_bytes do
-      output
-    else
-      head = binary_part(output, 0, @half_output_bytes)
-      tail = binary_part(output, size - @half_output_bytes, @half_output_bytes)
-      omitted = size - @max_output_bytes
-      "#{head}\n...[truncated: #{omitted} bytes omitted]...\n#{tail}"
-    end
-  end
+  defdelegate truncate_output(output), to: CommandExecutionOutput, as: :truncate
 
   defp run_command(execution) do
     timeout_ms = execution.timeout || :infinity
@@ -311,7 +291,7 @@ defmodule EdgeAgent.Commands do
 
         case Task.yield(task, timeout_ms) || Task.shutdown(task, :brutal_kill) do
           {:ok, {output, exit_code}} ->
-            {:ok, truncate_output(output), exit_code}
+            {:ok, CommandExecutionOutput.truncate(output), exit_code}
 
           nil ->
             Logger.warning("Command #{execution.id} timed out after #{execution.timeout}ms")
@@ -333,19 +313,8 @@ defmodule EdgeAgent.Commands do
   end
 
   @doc false
-  # Public for unit testing. Maps a process exit code to a domain category.
-  # 124 is the conventional exit code from `timeout(1)`; 143 is 128+SIGTERM
-  # which the cancel path uses. Negative or unexpected codes are :unknown.
   @spec categorize_exit_code(integer()) :: :success | :timeout | :cancelled | :failure | :unknown
-  def categorize_exit_code(exit_code) do
-    cond do
-      exit_code == 0 -> :success
-      exit_code == 124 -> :timeout
-      exit_code == 143 -> :cancelled
-      exit_code > 0 -> :failure
-      true -> :unknown
-    end
-  end
+  defdelegate categorize_exit_code(exit_code), to: CommandExecutionResults
 
   @doc """
   Reports all completed but unreported executions back to admin.
@@ -432,7 +401,7 @@ defmodule EdgeAgent.Commands do
     Logger.info("Attempting to report #{length(executions)} executions to admin")
 
     Enum.reduce_while(executions, :ok, fn execution, _acc ->
-      params = build_report_params(execution)
+      params = CommandExecutionResults.build_report_params(execution)
 
       case AdminClient.report_command_execution_result(execution.id, params) do
         :ok ->
@@ -472,18 +441,8 @@ defmodule EdgeAgent.Commands do
   end
 
   @doc false
-  # Public for unit testing. Builds the wire payload admin sees when this
-  # agent reports a completed execution. `completed_at` is rendered as an
-  # ISO 8601 string when set (admin's contract), nil otherwise.
   @spec build_report_params(CommandExecution.t()) :: map()
-  def build_report_params(execution) do
-    %{
-      status: Atom.to_string(execution.status),
-      output: truncate_output(execution.output),
-      exit_code: execution.exit_code,
-      completed_at: execution.completed_at && DateTime.to_iso8601(execution.completed_at)
-    }
-  end
+  defdelegate build_report_params(execution), to: CommandExecutionResults
 
   defp delete_execution_after_report(execution) do
     case delete_command_execution(execution) do

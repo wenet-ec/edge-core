@@ -6,6 +6,8 @@ defmodule EdgeAgent.MetricsServers.Network do
   Handles IP address detection and network interface queries.
   """
 
+  alias EdgeAgent.MetricsServers.Network.Parser
+
   @type ip_result :: {:ok, String.t()} | {:error, term()}
 
   @spec detect_primary_interface_ip() :: String.t() | nil
@@ -75,64 +77,14 @@ defmodule EdgeAgent.MetricsServers.Network do
         # interface blocks so we can skip wg* / docker* / br-* / veth*
         # interfaces wholesale rather than picking up their inet line.
         output
-        |> split_into_interfaces()
-        |> Enum.reject(&excluded_interface?/1)
-        |> Enum.find_value(&first_global_inet/1)
+        |> Parser.split_into_interfaces()
+        |> Enum.reject(&Parser.excluded_interface?/1)
+        |> Enum.find_value(&Parser.first_global_inet/1)
 
       _ ->
         nil
     end
   rescue
     _ -> nil
-  end
-
-  @doc false
-  # Public for unit testing. `ip addr show` starts each interface block with
-  # `<index>: <name>:`. Split on those header lines so each chunk carries the
-  # interface header plus its inet/inet6 entries.
-  @spec split_into_interfaces(String.t()) :: [String.t()]
-  def split_into_interfaces(output) do
-    String.split(output, ~r/\n(?=\d+:\s+\S+:)/, trim: true)
-  end
-
-  @doc false
-  # Public for unit testing. Returns true if the interface block belongs to a
-  # virtual / bridge / loopback interface that should not appear as the
-  # node's primary IP. Drift here means metrics advertise the wrong address.
-  @spec excluded_interface?(String.t()) :: boolean()
-  def excluded_interface?(block) do
-    case Regex.run(~r/^\d+:\s+(\S+?):/, block) do
-      [_, name] ->
-        # Loopback, WireGuard, Docker bridges, veth pairs.
-        name == "lo" or
-          String.starts_with?(name, "wg") or
-          String.starts_with?(name, "docker") or
-          String.starts_with?(name, "br-") or
-          String.starts_with?(name, "veth")
-
-      _ ->
-        false
-    end
-  end
-
-  @doc false
-  # Public for unit testing. Walks the lines of a single interface block and
-  # returns the first global-scope IPv4 address found, or nil.
-  @spec first_global_inet(String.t()) :: String.t() | nil
-  def first_global_inet(block) do
-    block
-    |> String.split("\n")
-    |> Enum.find_value(&extract_ip_from_line/1)
-  end
-
-  @doc false
-  # Public for unit testing. Returns the IPv4 from a single `inet ...` line,
-  # but only when that line is `scope global` and not 127.0.0.1.
-  @spec extract_ip_from_line(String.t()) :: String.t() | nil
-  def extract_ip_from_line(line) do
-    case Regex.run(~r/inet\s+(\d+\.\d+\.\d+\.\d+)\/\d+.+scope global/, line) do
-      [_, ip] when ip != "127.0.0.1" -> ip
-      _ -> nil
-    end
   end
 end

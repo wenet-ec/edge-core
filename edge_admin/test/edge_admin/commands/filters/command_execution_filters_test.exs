@@ -1,10 +1,10 @@
 # edge_admin/test/edge_admin/commands/filters/execution_filters_test.exs
-defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
+defmodule EdgeAdmin.Commands.Filters.CommandExecutionFiltersTest do
   use EdgeAdmin.DataCase, async: false
 
   import Ecto.Query
 
-  alias EdgeAdmin.Commands.Filters.ExecutionFilters
+  alias EdgeAdmin.Commands.Filters.CommandExecutionFilters
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Nodes.Schemas.Cluster
@@ -120,7 +120,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       _exec_c = insert_execution(node_a.id, command_id: cmd_c.id)
 
       query =
-        ExecutionFilters.apply_command_ids(base_query(), [
+        CommandExecutionFilters.apply_command_ids(base_query(), [
           %{op: :in, value: [cmd_a.id, cmd_b.id]}
         ])
 
@@ -137,7 +137,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       exec_a = insert_execution(node_a.id, command_id: cmd_a.id)
       _exec_b = insert_execution(node_a.id, command_id: cmd_b.id)
 
-      query = ExecutionFilters.apply_command_ids(base_query(), [%{op: :==, value: cmd_a.id}])
+      query = CommandExecutionFilters.apply_command_ids(base_query(), [%{op: :==, value: cmd_a.id}])
 
       assert ids(query) == [exec_a.id]
     end
@@ -148,7 +148,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       a = insert_execution(node_a.id)
       b = insert_execution(node_a.id)
 
-      assert ids(ExecutionFilters.apply_command_ids(base_query(), [])) == Enum.sort([a.id, b.id])
+      assert ids(CommandExecutionFilters.apply_command_ids(base_query(), [])) == Enum.sort([a.id, b.id])
     end
 
     test "unrecognised filter op → query unchanged (catch-all)" do
@@ -156,7 +156,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       node_a = insert_node(cluster_a.id)
       exec_a = insert_execution(node_a.id)
 
-      query = ExecutionFilters.apply_command_ids(base_query(), [%{op: :ilike, value: "x"}])
+      query = CommandExecutionFilters.apply_command_ids(base_query(), [%{op: :ilike, value: "x"}])
 
       assert ids(query) == [exec_a.id]
     end
@@ -177,7 +177,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       exec_a = insert_execution(node_a.id)
       _exec_b = insert_execution(node_b.id)
 
-      query = ExecutionFilters.apply_cluster_name(base_query(), [%{op: :==, value: "alpha"}])
+      query = CommandExecutionFilters.apply_cluster_name(base_query(), [%{op: :==, value: "alpha"}])
 
       assert ids(query) == [exec_a.id]
     end
@@ -193,7 +193,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       _exec_staging = insert_execution(node_staging.id)
 
       query =
-        ExecutionFilters.apply_cluster_name(base_query(), [
+        CommandExecutionFilters.apply_cluster_name(base_query(), [
           %{field: :cluster_name, op: :ilike, value: "PROD%"}
         ])
 
@@ -209,7 +209,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       a = insert_execution(node_a.id)
       b = insert_execution(node_b.id)
 
-      assert ids(ExecutionFilters.apply_cluster_name(base_query(), [])) ==
+      assert ids(CommandExecutionFilters.apply_cluster_name(base_query(), [])) ==
                Enum.sort([a.id, b.id])
     end
 
@@ -218,7 +218,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       node_a = insert_node(cluster_a.id)
       exec_a = insert_execution(node_a.id)
 
-      query = ExecutionFilters.apply_cluster_name(base_query(), [%{op: :>=, value: 5}])
+      query = CommandExecutionFilters.apply_cluster_name(base_query(), [%{op: :>=, value: 5}])
 
       # Filter ignored → all executions visible.
       assert ids(query) == [exec_a.id]
@@ -238,7 +238,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       _exec_c = insert_execution(node_c.id)
 
       query =
-        ExecutionFilters.apply_cluster_name(base_query(), [
+        CommandExecutionFilters.apply_cluster_name(base_query(), [
           %{op: :in, value: ["alpha", "bravo"]}
         ])
 
@@ -263,7 +263,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       _exec_c = insert_execution(node_c.id)
 
       query =
-        ExecutionFilters.apply_node_ids(base_query(), [
+        CommandExecutionFilters.apply_node_ids(base_query(), [
           %{op: :in, value: [node_a.id, node_b.id]}
         ])
 
@@ -278,7 +278,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       exec_a = insert_execution(node_a.id)
       _exec_b = insert_execution(node_b.id)
 
-      query = ExecutionFilters.apply_node_ids(base_query(), [%{op: :==, value: node_a.id}])
+      query = CommandExecutionFilters.apply_node_ids(base_query(), [%{op: :==, value: node_a.id}])
 
       assert ids(query) == [exec_a.id]
     end
@@ -289,7 +289,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       a = insert_execution(node_a.id)
       b = insert_execution(node_a.id)
 
-      assert ids(ExecutionFilters.apply_node_ids(base_query(), [])) == Enum.sort([a.id, b.id])
+      assert ids(CommandExecutionFilters.apply_node_ids(base_query(), [])) == Enum.sort([a.id, b.id])
     end
 
     test "unrecognised filter op → query unchanged (catch-all)" do
@@ -297,7 +297,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       node_a = insert_node(cluster_a.id)
       exec_a = insert_execution(node_a.id)
 
-      query = ExecutionFilters.apply_node_ids(base_query(), [%{op: :ilike, value: "x"}])
+      query = CommandExecutionFilters.apply_node_ids(base_query(), [%{op: :ilike, value: "x"}])
 
       assert ids(query) == [exec_a.id]
     end
@@ -318,7 +318,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       with_cluster = insert_execution(node_a.id, cluster_id: cluster_a.id)
       _without_cluster = insert_execution(node_a.id, cluster_id: nil)
 
-      query = ExecutionFilters.apply_has_cluster(base_query(), [%{op: :==, value: true}])
+      query = CommandExecutionFilters.apply_has_cluster(base_query(), [%{op: :==, value: true}])
 
       assert ids(query) == [with_cluster.id]
     end
@@ -330,7 +330,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       _with_cluster = insert_execution(node_a.id, cluster_id: cluster_a.id)
       without_cluster = insert_execution(node_a.id, cluster_id: nil)
 
-      query = ExecutionFilters.apply_has_cluster(base_query(), [%{op: :==, value: false}])
+      query = CommandExecutionFilters.apply_has_cluster(base_query(), [%{op: :==, value: false}])
 
       assert ids(query) == [without_cluster.id]
     end
@@ -342,10 +342,10 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       with_cluster = insert_execution(node_a.id, cluster_id: cluster_a.id)
       without_cluster = insert_execution(node_a.id, cluster_id: nil)
 
-      assert ids(ExecutionFilters.apply_has_cluster(base_query(), [%{op: :==, value: "true"}])) ==
+      assert ids(CommandExecutionFilters.apply_has_cluster(base_query(), [%{op: :==, value: "true"}])) ==
                Enum.sort([with_cluster.id, without_cluster.id])
 
-      assert ids(ExecutionFilters.apply_has_cluster(base_query(), [%{op: :==, value: "false"}])) ==
+      assert ids(CommandExecutionFilters.apply_has_cluster(base_query(), [%{op: :==, value: "false"}])) ==
                Enum.sort([with_cluster.id, without_cluster.id])
     end
 
@@ -355,7 +355,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       a = insert_execution(node_a.id)
       b = insert_execution(node_a.id)
 
-      assert ids(ExecutionFilters.apply_has_cluster(base_query(), [])) ==
+      assert ids(CommandExecutionFilters.apply_has_cluster(base_query(), [])) ==
                Enum.sort([a.id, b.id])
     end
   end
@@ -373,7 +373,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       with_output = insert_execution(node_a.id, output: "hello\n")
       _without_output = insert_execution(node_a.id, output: nil)
 
-      query = ExecutionFilters.apply_has_output(base_query(), [%{op: :==, value: true}])
+      query = CommandExecutionFilters.apply_has_output(base_query(), [%{op: :==, value: true}])
 
       assert ids(query) == [with_output.id]
     end
@@ -385,7 +385,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       _with_output = insert_execution(node_a.id, output: "hello\n")
       without_output = insert_execution(node_a.id, output: nil)
 
-      query = ExecutionFilters.apply_has_output(base_query(), [%{op: :==, value: false}])
+      query = CommandExecutionFilters.apply_has_output(base_query(), [%{op: :==, value: false}])
 
       assert ids(query) == [without_output.id]
     end
@@ -397,7 +397,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       node_a = insert_node(cluster_a.id)
       empty = insert_execution(node_a.id, output: "")
 
-      query = ExecutionFilters.apply_has_output(base_query(), [%{op: :==, value: true}])
+      query = CommandExecutionFilters.apply_has_output(base_query(), [%{op: :==, value: true}])
       assert ids(query) == [empty.id]
     end
 
@@ -407,7 +407,7 @@ defmodule EdgeAdmin.Commands.Filters.ExecutionFiltersTest do
       a = insert_execution(node_a.id)
       b = insert_execution(node_a.id)
 
-      assert ids(ExecutionFilters.apply_has_output(base_query(), [])) ==
+      assert ids(CommandExecutionFilters.apply_has_output(base_query(), [])) ==
                Enum.sort([a.id, b.id])
     end
   end

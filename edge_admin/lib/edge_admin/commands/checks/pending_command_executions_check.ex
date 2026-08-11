@@ -1,5 +1,5 @@
 # edge_admin/lib/edge_admin/commands/checks/pending_executions_check.ex
-defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheck do
+defmodule EdgeAdmin.Commands.Checks.PendingCommandExecutionsCheck do
   @moduledoc """
   Checks that a command has no pending or in-flight executions.
 

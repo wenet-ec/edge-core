@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/commands/workers/prune_executions_worker.ex
-defmodule EdgeAdmin.Commands.Workers.PruneExecutionsWorker do
+# edge_admin/lib/edge_admin/commands/workers/prune_command_executions_worker.ex
+defmodule EdgeAdmin.Commands.Workers.PruneCommandExecutionsWorker do
   @moduledoc """
   Periodic worker that deletes finalised command executions older than
   `EXECUTION_RETENTION_DAYS`.
@@ -10,7 +10,7 @@ defmodule EdgeAdmin.Commands.Workers.PruneExecutionsWorker do
   gate execution at the worker.
 
   Only rows where the execution can no longer receive any updates are deleted
-  (see `EdgeAdmin.Commands.prune_executions/1`). In-flight executions
+  (see `EdgeAdmin.Commands.prune_command_executions/1`). In-flight executions
   (`pending`, `sent`) are never touched.
 
   `max_attempts: 1` — a missed run is recovered by the next cron tick, no
@@ -28,7 +28,7 @@ defmodule EdgeAdmin.Commands.Workers.PruneExecutionsWorker do
     if should_run?() do
       run()
     else
-      Logger.debug("PruneExecutionsWorker: pruning disabled, skipping")
+      Logger.debug("PruneCommandExecutionsWorker: pruning disabled, skipping")
       :ok
     end
   end
@@ -37,7 +37,7 @@ defmodule EdgeAdmin.Commands.Workers.PruneExecutionsWorker do
     retention_days = Application.fetch_env!(:edge_admin, :execution_retention_days)
 
     started_at = System.monotonic_time()
-    {:ok, deleted} = Commands.prune_executions(retention_days)
+    {:ok, deleted} = Commands.prune_command_executions(retention_days)
     duration_ms = System.convert_time_unit(System.monotonic_time() - started_at, :native, :millisecond)
 
     Logger.info("Pruned #{deleted} finalised command execution(s) older than #{retention_days} day(s)")

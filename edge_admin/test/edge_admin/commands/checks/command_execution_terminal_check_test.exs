@@ -1,8 +1,8 @@
 # edge_admin/test/edge_admin/commands/checks/execution_terminal_check_test.exs
-defmodule EdgeAdmin.Commands.Checks.ExecutionTerminalCheckTest do
+defmodule EdgeAdmin.Commands.Checks.CommandExecutionTerminalCheckTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAdmin.Commands.Checks.ExecutionTerminalCheck
+  alias EdgeAdmin.Commands.Checks.CommandExecutionTerminalCheck
   alias EdgeAdmin.Commands.Schemas.CommandExecution
 
   # ---------------------------------------------------------------------------
@@ -14,43 +14,43 @@ defmodule EdgeAdmin.Commands.Checks.ExecutionTerminalCheckTest do
   describe "check/1 — terminal executions" do
     test "completed execution returns :ok" do
       execution = %CommandExecution{status: :completed}
-      assert :ok = ExecutionTerminalCheck.check(execution)
+      assert :ok = CommandExecutionTerminalCheck.check(execution)
     end
 
     test "cancelled execution returns :ok" do
       execution = %CommandExecution{status: :cancelled}
-      assert :ok = ExecutionTerminalCheck.check(execution)
+      assert :ok = CommandExecutionTerminalCheck.check(execution)
     end
 
     test "expired execution returns :ok" do
       execution = %CommandExecution{status: :expired}
-      assert :ok = ExecutionTerminalCheck.check(execution)
+      assert :ok = CommandExecutionTerminalCheck.check(execution)
     end
 
     test "dropped execution returns :ok" do
       execution = %CommandExecution{status: :dropped}
-      assert :ok = ExecutionTerminalCheck.check(execution)
+      assert :ok = CommandExecutionTerminalCheck.check(execution)
     end
   end
 
   describe "check/1 — non-terminal executions" do
     test "pending execution returns conflict error" do
       execution = %CommandExecution{status: :pending}
-      assert {:error, {:conflict, reason}} = ExecutionTerminalCheck.check(execution)
+      assert {:error, {:conflict, reason}} = CommandExecutionTerminalCheck.check(execution)
       assert reason =~ "pending"
       assert reason =~ "completed"
     end
 
     test "sent execution returns conflict error" do
       execution = %CommandExecution{status: :sent}
-      assert {:error, {:conflict, reason}} = ExecutionTerminalCheck.check(execution)
+      assert {:error, {:conflict, reason}} = CommandExecutionTerminalCheck.check(execution)
       assert reason =~ "sent"
       assert reason =~ "completed"
     end
 
     test "error message includes the actual status" do
       execution = %CommandExecution{status: :pending}
-      {:error, {:conflict, reason}} = ExecutionTerminalCheck.check(execution)
+      {:error, {:conflict, reason}} = CommandExecutionTerminalCheck.check(execution)
       assert reason =~ "pending"
     end
   end

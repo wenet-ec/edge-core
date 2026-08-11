@@ -1,8 +1,8 @@
 # edge_admin/test/edge_admin/commands/checks/pending_executions_check_test.exs
-defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheckTest do
+defmodule EdgeAdmin.Commands.Checks.PendingCommandExecutionsCheckTest do
   use EdgeAdmin.DataCase, async: false
 
-  alias EdgeAdmin.Commands.Checks.PendingExecutionsCheck
+  alias EdgeAdmin.Commands.Checks.PendingCommandExecutionsCheck
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Nodes.Schemas.Cluster
@@ -85,7 +85,7 @@ defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheckTest do
   describe "check/1 — all executions completed" do
     test "command with no executions returns :ok" do
       command = insert_command()
-      assert :ok = PendingExecutionsCheck.check(command)
+      assert :ok = PendingCommandExecutionsCheck.check(command)
     end
 
     test "command with only completed executions returns :ok" do
@@ -95,7 +95,7 @@ defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheckTest do
       command = insert_command()
       insert_execution(command.id, node1.id, :completed)
       insert_execution(command.id, node2.id, :completed)
-      assert :ok = PendingExecutionsCheck.check(command)
+      assert :ok = PendingCommandExecutionsCheck.check(command)
     end
 
     test "command with cancelled and expired executions returns :ok" do
@@ -105,7 +105,7 @@ defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheckTest do
       command = insert_command()
       insert_execution(command.id, node1.id, :cancelled)
       insert_execution(command.id, node2.id, :expired)
-      assert :ok = PendingExecutionsCheck.check(command)
+      assert :ok = PendingCommandExecutionsCheck.check(command)
     end
   end
 
@@ -119,7 +119,7 @@ defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheckTest do
       node = insert_node(cluster.id)
       command = insert_command()
       insert_execution(command.id, node.id, :pending)
-      assert {:error, {:conflict, reason}} = PendingExecutionsCheck.check(command)
+      assert {:error, {:conflict, reason}} = PendingCommandExecutionsCheck.check(command)
       assert reason =~ "1"
     end
 
@@ -128,7 +128,7 @@ defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheckTest do
       node = insert_node(cluster.id)
       command = insert_command()
       insert_execution(command.id, node.id, :sent)
-      assert {:error, {:conflict, reason}} = PendingExecutionsCheck.check(command)
+      assert {:error, {:conflict, reason}} = PendingCommandExecutionsCheck.check(command)
       assert reason =~ "1"
     end
 
@@ -141,7 +141,7 @@ defmodule EdgeAdmin.Commands.Checks.PendingExecutionsCheckTest do
       insert_execution(command.id, node1.id, :pending)
       insert_execution(command.id, node2.id, :sent)
       insert_execution(command.id, node3.id, :completed)
-      {:error, {:conflict, reason}} = PendingExecutionsCheck.check(command)
+      {:error, {:conflict, reason}} = PendingCommandExecutionsCheck.check(command)
       assert reason =~ "2"
     end
   end

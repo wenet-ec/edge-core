@@ -28,8 +28,8 @@ defmodule EdgeAdmin.Oban.Queues do
   Forgetting step 2 or 3 is caught at boot.
   """
 
-  alias EdgeAdmin.Commands.Workers.CreateExecutionsWorker
-  alias EdgeAdmin.Commands.Workers.PruneExecutionsWorker
+  alias EdgeAdmin.Commands.Workers.CreateCommandExecutionsWorker
+  alias EdgeAdmin.Commands.Workers.PruneCommandExecutionsWorker
   alias EdgeAdmin.Events.Broker.Workers.PublishEventWorker
   alias EdgeAdmin.Events.Webhooks.Workers.DeliverEventWorker
   alias EdgeAdmin.Nodes.Workers.DeleteClusterWorker
@@ -38,8 +38,8 @@ defmodule EdgeAdmin.Oban.Queues do
   alias EdgeAdmin.SelfUpdates.Workers.TriggerSelfUpdateWorker
 
   @workers [
-    CreateExecutionsWorker,
-    PruneExecutionsWorker,
+    CreateCommandExecutionsWorker,
+    PruneCommandExecutionsWorker,
     PublishEventWorker,
     DeliverEventWorker,
     DeleteClusterWorker,

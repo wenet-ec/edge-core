@@ -1,5 +1,5 @@
 # edge_admin/lib/edge_admin/commands/checks/execution_terminal_check.ex
-defmodule EdgeAdmin.Commands.Checks.ExecutionTerminalCheck do
+defmodule EdgeAdmin.Commands.Checks.CommandExecutionTerminalCheck do
   @moduledoc """
   Checks that an execution is in a terminal status (completed, cancelled, expired, or dropped).
 

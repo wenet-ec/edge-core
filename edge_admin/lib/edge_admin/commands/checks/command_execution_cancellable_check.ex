@@ -1,5 +1,5 @@
 # edge_admin/lib/edge_admin/commands/checks/execution_cancellable_check.ex
-defmodule EdgeAdmin.Commands.Checks.ExecutionCancellableCheck do
+defmodule EdgeAdmin.Commands.Checks.CommandExecutionCancellableCheck do
   @moduledoc """
   Checks that an execution is in a cancellable status (pending or sent).
 

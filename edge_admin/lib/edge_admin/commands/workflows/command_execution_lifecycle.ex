@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/commands/workflows/execution_lifecycle.ex
-defmodule EdgeAdmin.Commands.Workflows.ExecutionLifecycle do
+# edge_admin/lib/edge_admin/commands/workflows/command_command_execution_lifecycle.ex
+defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
   @moduledoc """
   Owns command-execution state transitions and agent-facing lifecycle workflows.
 
@@ -25,15 +25,15 @@ defmodule EdgeAdmin.Commands.Workflows.ExecutionLifecycle do
 
   require Logger
 
-  @type dropped_execution :: %{
+  @type dropped_command_execution :: %{
           execution: CommandExecution.t(),
           command: Command.t(),
           cluster_name: String.t()
         }
 
   @doc "Marks pending or sent executions for a node as dropped during node cleanup."
-  @spec drop_node_executions(String.t(), String.t()) :: [dropped_execution()]
-  def drop_node_executions(node_id, cluster_name) do
+  @spec drop_node_command_executions(String.t(), String.t()) :: [dropped_command_execution()]
+  def drop_node_command_executions(node_id, cluster_name) do
     executions =
       Repo.all(
         from(ce in CommandExecution,
@@ -68,9 +68,9 @@ defmodule EdgeAdmin.Commands.Workflows.ExecutionLifecycle do
   end
 
   @doc "Publishes events for executions dropped during node cleanup."
-  @spec publish_dropped_executions([dropped_execution()]) :: :ok
-  def publish_dropped_executions(dropped_executions) do
-    Enum.each(dropped_executions, fn %{execution: execution, command: command, cluster_name: cluster_name} ->
+  @spec publish_dropped_command_executions([dropped_command_execution()]) :: :ok
+  def publish_dropped_command_executions(dropped_command_executions) do
+    Enum.each(dropped_command_executions, fn %{execution: execution, command: command, cluster_name: cluster_name} ->
       Events.publish(%Catalog.CommandExecutionDropped{
         execution: execution,
         command: command,
@@ -99,15 +99,15 @@ defmodule EdgeAdmin.Commands.Workflows.ExecutionLifecycle do
 
   ## Examples
 
-      iex> acknowledge_execution(execution, %{})
+      iex> acknowledge_command_execution(execution, %{})
       {:ok, %CommandExecution{status: :sent}}
   """
-  @spec acknowledge_execution(CommandExecution.t(), map()) ::
+  @spec acknowledge_command_execution(CommandExecution.t(), map()) ::
           {:ok, CommandExecution.t()}
           | {:error, {:conflict, String.t()}}
           | {:error, Ecto.Changeset.t()}
-  def acknowledge_execution(execution, _params) do
-    with :ok <- Checks.ExecutionPendingCheck.check(execution),
+  def acknowledge_command_execution(execution, _params) do
+    with :ok <- Checks.CommandExecutionPendingCheck.check(execution),
          {:ok, updated} <-
            transition_status(execution, [:pending],
              status: :sent,
@@ -159,7 +159,7 @@ defmodule EdgeAdmin.Commands.Workflows.ExecutionLifecycle do
   @spec update_command_execution_result(CommandExecution.t(), map()) ::
           {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
   def update_command_execution_result(execution, params) do
-    with :ok <- Checks.ExecutionAcceptsResultCheck.check(execution),
+    with :ok <- Checks.CommandExecutionAcceptsResultCheck.check(execution),
          {:ok, attrs} <- Forms.UpdateCommandExecutionResultForm.changeset(params) do
       # Agent is the source of truth for terminal status.
       # exit_code 143 (SIGTERM) means the agent honoured a cancellation request — override to :cancelled.
@@ -174,7 +174,7 @@ defmodule EdgeAdmin.Commands.Workflows.ExecutionLifecycle do
 
       # Conditional transition: only write if the row is still in a state that
       # accepts a result. The race-window allowance from
-      # `ExecutionAcceptsResultCheck` (cancelled/expired with nil exit_code) is
+      # `CommandExecutionAcceptsResultCheck` (cancelled/expired with nil exit_code) is
       # encoded directly in the WHERE clause so two concurrent reports cannot
       # both succeed and clobber each other.
       result = transition_to_result(execution, build_result_set(attrs, terminal_status))
@@ -272,7 +272,7 @@ defmodule EdgeAdmin.Commands.Workflows.ExecutionLifecycle do
           | {:error, {:conflict, String.t()}}
           | {:error, :service_unavailable}
   def cancel_command_execution(execution) do
-    with :ok <- Checks.ExecutionCancellableCheck.check(execution) do
+    with :ok <- Checks.CommandExecutionCancellableCheck.check(execution) do
       case execution.status do
         :pending ->
           # Conditional cancel: only flip pending → cancelled. If a peer admin
@@ -331,7 +331,7 @@ defmodule EdgeAdmin.Commands.Workflows.ExecutionLifecycle do
   # (race-window placeholders).
   #
   # Paired predicate: the same rule is encoded as a pure struct check in
-  # `EdgeAdmin.Commands.Checks.ExecutionAcceptsResultCheck`, which runs first
+  # `EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheck`, which runs first
   # as the layer-3 early-409 gate. This dynamic is the layer-4/5 backstop
   # against concurrent writers the struct check cannot see (peer admin races,
   # agent retries hitting a different admin). If you change the predicate

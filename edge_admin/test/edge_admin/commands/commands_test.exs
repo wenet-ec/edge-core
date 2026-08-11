@@ -53,7 +53,7 @@ defmodule EdgeAdmin.CommandsTest do
     })
   end
 
-  describe "drop_node_executions/2" do
+  describe "drop_node_command_executions/2" do
     test "drops only non-terminal executions and preserves their event snapshots" do
       cluster = insert_cluster()
       node = insert_node(cluster)
@@ -64,7 +64,7 @@ defmodule EdgeAdmin.CommandsTest do
       sent = insert_execution(sent_command, node, :sent)
       completed = insert_execution(completed_command, node, :completed)
 
-      dropped = Commands.drop_node_executions(node.id, cluster.name)
+      dropped = Commands.drop_node_command_executions(node.id, cluster.name)
 
       assert MapSet.new(Enum.map(dropped, & &1.execution.id)) == MapSet.new([pending.id, sent.id])
       assert Enum.all?(dropped, &(&1.execution.status == :dropped))

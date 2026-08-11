@@ -19,7 +19,7 @@ defmodule EdgeAdmin.Commands do
       when the command's `expires_at` passes
     - Race-window detail: `cancelled` / `expired` rows with `nil exit_code`
       can still be overwritten by a late agent report
-      (see `Checks.ExecutionAcceptsResultCheck`)
+      (see `Checks.CommandExecutionAcceptsResultCheck`)
 
   ## Concurrency model
 
@@ -78,19 +78,13 @@ defmodule EdgeAdmin.Commands do
       {:ok, {:cancelled, %CommandExecution{}}}
   """
 
-  import Ecto.Query, warn: false
-  import EdgeAdmin.Query, only: [case_insensitive_like: 2]
-
-  alias Ecto.Query.CastError
-  alias EdgeAdmin.Commands.Checks
-  alias EdgeAdmin.Commands.Filters.CommandFilters
-  alias EdgeAdmin.Commands.Filters.ExecutionFilters
+  alias EdgeAdmin.Commands.Resources.CommandExecutions, as: CommandExecutionResource
+  alias EdgeAdmin.Commands.Resources.Commands, as: CommandResource
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Commands.Schemas.CommandExecution
-  alias EdgeAdmin.Commands.Workflows.Dispatch
-  alias EdgeAdmin.Commands.Workflows.ExecutionLifecycle
+  alias EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle
+  alias EdgeAdmin.Commands.Workflows.Delivery
   alias EdgeAdmin.Commands.Workflows.Retention
-  alias EdgeAdmin.Repo
 
   @doc """
   Gets a single command by ID.
@@ -108,14 +102,7 @@ defmodule EdgeAdmin.Commands do
       {:ok, %Command{command_text: "uptime"}}
   """
   @spec get_command(String.t()) :: {:ok, Command.t()} | {:error, :not_found}
-  def get_command(id) do
-    case Repo.get(Command, id) do
-      nil -> {:error, :not_found}
-      command -> {:ok, command}
-    end
-  rescue
-    CastError -> {:error, :not_found}
-  end
+  defdelegate get_command(id), to: CommandResource, as: :get
 
   @doc """
   Creates a new command.
@@ -128,11 +115,7 @@ defmodule EdgeAdmin.Commands do
   - `{:error, changeset}` - Validation failed
   """
   @spec create_command(map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
-  def create_command(attrs \\ %{}) do
-    %Command{}
-    |> Command.changeset(attrs)
-    |> Repo.insert()
-  end
+  defdelegate create_command(attrs \\ %{}), to: CommandResource, as: :create
 
   @doc """
   Updates a command.
@@ -146,11 +129,7 @@ defmodule EdgeAdmin.Commands do
   - `{:error, changeset}` - Validation failed
   """
   @spec update_command(Command.t(), map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
-  def update_command(%Command{} = command, attrs) do
-    command
-    |> Command.changeset(attrs)
-    |> Repo.update()
-  end
+  defdelegate update_command(command, attrs), to: CommandResource, as: :update
 
   @doc """
   Deletes a command.
@@ -165,11 +144,7 @@ defmodule EdgeAdmin.Commands do
   - `{:error, {:conflict, reason}}` - Command has non-terminal executions
   """
   @spec delete_command(Command.t()) :: {:ok, Command.t()} | {:error, {:conflict, String.t()}}
-  def delete_command(%Command{} = command) do
-    with :ok <- Checks.PendingExecutionsCheck.check(command) do
-      Repo.delete(command)
-    end
-  end
+  defdelegate delete_command(command), to: CommandResource, as: :delete
 
   @doc """
   Returns a changeset for tracking command changes (for forms).
@@ -180,9 +155,7 @@ defmodule EdgeAdmin.Commands do
       %Ecto.Changeset{data: %Command{}}
   """
   @spec change_command(Command.t(), map()) :: Ecto.Changeset.t()
-  def change_command(%Command{} = command, attrs \\ %{}) do
-    Command.changeset(command, attrs)
-  end
+  defdelegate change_command(command, attrs \\ %{}), to: CommandResource, as: :change
 
   @doc """
   Lists commands with filtering, sorting, and pagination.
@@ -201,47 +174,7 @@ defmodule EdgeAdmin.Commands do
   - `{:error, meta}` - Validation errors (when replace_invalid_params: false)
   """
   @spec list_commands(map()) :: {:ok, {[Command.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  def list_commands(params \\ %{}) do
-    # Parse params into Flop format
-    flop_params = EdgeAdmin.RequestParser.parse(params)
-
-    # Extract has_timeout filter (virtual, handle separately)
-    {has_timeout_filters, other_filters} =
-      Enum.split_with(flop_params[:filters] || [], fn filter ->
-        filter.field == :has_timeout
-      end)
-
-    # Extract has_expires_at filter (virtual, handle separately)
-    {has_expires_at_filters, other_filters} =
-      Enum.split_with(other_filters, fn filter ->
-        filter.field == :has_expires_at
-      end)
-
-    {ilike_filters, flop_params} =
-      EdgeAdmin.RequestParser.split_ilike_filters(
-        Map.put(flop_params, :filters, other_filters),
-        [:command_text]
-      )
-
-    base_query =
-      Enum.reduce(ilike_filters, Command, fn %{field: field, value: value}, acc ->
-        from(c in acc, where: case_insensitive_like(field(c, ^field), ^value))
-      end)
-
-    base_query = CommandFilters.apply_has_timeout(base_query, has_timeout_filters)
-    base_query = CommandFilters.apply_has_expires_at(base_query, has_expires_at_filters)
-
-    case Flop.validate_and_run(base_query, flop_params,
-           for: Command,
-           replace_invalid_params: true
-         ) do
-      {:ok, {commands, meta}} ->
-        {:ok, {commands, meta}}
-
-      {:error, meta} ->
-        {:error, meta}
-    end
-  end
+  defdelegate list_commands(params \\ %{}), to: CommandResource, as: :list
 
   @doc """
   Gets a single command execution by ID.
@@ -254,14 +187,7 @@ defmodule EdgeAdmin.Commands do
   - `{:error, :not_found}` - Execution doesn't exist or invalid UUID
   """
   @spec get_command_execution(String.t()) :: {:ok, CommandExecution.t()} | {:error, :not_found}
-  def get_command_execution(id) do
-    case Repo.get(CommandExecution, id) do
-      nil -> {:error, :not_found}
-      command_execution -> {:ok, Repo.preload(command_execution, :command)}
-    end
-  rescue
-    CastError -> {:error, :not_found}
-  end
+  defdelegate get_command_execution(id), to: CommandExecutionResource, as: :get
 
   @doc """
   Creates a new command execution.
@@ -274,17 +200,7 @@ defmodule EdgeAdmin.Commands do
   - `{:error, changeset}` - Validation failed
   """
   @spec create_command_execution(map()) :: {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
-  def create_command_execution(attrs \\ %{}) do
-    result =
-      %CommandExecution{}
-      |> CommandExecution.changeset(attrs)
-      |> Repo.insert()
-
-    case result do
-      {:ok, execution} -> {:ok, execution}
-      error -> error
-    end
-  end
+  defdelegate create_command_execution(attrs \\ %{}), to: CommandExecutionResource, as: :create
 
   @doc """
   Updates a command execution.
@@ -299,11 +215,7 @@ defmodule EdgeAdmin.Commands do
   """
   @spec update_command_execution(CommandExecution.t(), map()) ::
           {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
-  def update_command_execution(%CommandExecution{} = command_execution, attrs) do
-    command_execution
-    |> CommandExecution.changeset(attrs)
-    |> Repo.update()
-  end
+  defdelegate update_command_execution(command_execution, attrs), to: CommandExecutionResource, as: :update
 
   @doc """
   Deletes a command execution.
@@ -319,11 +231,7 @@ defmodule EdgeAdmin.Commands do
   """
   @spec delete_command_execution(CommandExecution.t()) ::
           {:ok, CommandExecution.t()} | {:error, {:conflict, String.t()}}
-  def delete_command_execution(%CommandExecution{} = command_execution) do
-    with :ok <- Checks.ExecutionTerminalCheck.check(command_execution) do
-      Repo.delete(command_execution)
-    end
-  end
+  defdelegate delete_command_execution(command_execution), to: CommandExecutionResource, as: :delete
 
   @doc """
   Returns a changeset for tracking execution changes (for forms).
@@ -334,9 +242,7 @@ defmodule EdgeAdmin.Commands do
       %Ecto.Changeset{data: %CommandExecution{}}
   """
   @spec change_command_execution(CommandExecution.t(), map()) :: Ecto.Changeset.t()
-  def change_command_execution(%CommandExecution{} = command_execution, attrs \\ %{}) do
-    CommandExecution.changeset(command_execution, attrs)
-  end
+  defdelegate change_command_execution(command_execution, attrs \\ %{}), to: CommandExecutionResource, as: :change
 
   @doc """
   Lists command executions with filtering, sorting, and pagination.
@@ -362,103 +268,54 @@ defmodule EdgeAdmin.Commands do
   - `{:error, meta}` - Validation errors (when replace_invalid_params: false)
   """
   @spec list_command_executions(map()) :: {:ok, {[CommandExecution.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  def list_command_executions(params \\ %{}) do
-    flop_params = EdgeAdmin.RequestParser.parse(params)
-    {custom, ilike_filters, flop_params} = split_execution_filters(flop_params)
-
-    base_query =
-      from(ce in CommandExecution,
-        left_join: n in assoc(ce, :node),
-        left_join: c in assoc(n, :cluster),
-        preload: [:command, :cluster, node: :cluster]
-      )
-
-    query =
-      base_query
-      |> ExecutionFilters.apply_command_ids(custom.command_id)
-      |> ExecutionFilters.apply_cluster_name(custom.cluster_name)
-      |> ExecutionFilters.apply_node_ids(custom.node_id)
-      |> ExecutionFilters.apply_has_cluster(custom.has_cluster)
-      |> ExecutionFilters.apply_has_output(custom.has_output)
-
-    query_with_ilike =
-      Enum.reduce(ilike_filters, query, fn %{field: field, value: value}, acc ->
-        from(ce in acc, where: case_insensitive_like(field(ce, ^field), ^value))
-      end)
-
-    # Run Flop query
-    case Flop.validate_and_run(query_with_ilike, flop_params,
-           for: CommandExecution,
-           replace_invalid_params: true
-         ) do
-      {:ok, {command_executions, meta}} ->
-        {:ok, {command_executions, meta}}
-
-      {:error, meta} ->
-        {:error, meta}
-    end
-  end
-
-  defp split_execution_filters(flop_params) do
-    custom_fields = [:command_id, :cluster_name, :node_id, :has_cluster, :has_output]
-
-    {custom_filters, rest} =
-      Enum.split_with(flop_params[:filters] || [], fn f -> f.field in custom_fields end)
-
-    custom = Map.new(custom_fields, fn field -> {field, Enum.filter(custom_filters, &(&1.field == field))} end)
-
-    {ilike_filters, flop_params} =
-      EdgeAdmin.RequestParser.split_ilike_filters(Map.put(flop_params, :filters, rest), [:output])
-
-    {custom, ilike_filters, flop_params}
-  end
+  defdelegate list_command_executions(params \\ %{}), to: CommandExecutionResource, as: :list
 
   @doc "Creates a command and enqueues execution creation."
   @spec create_command_and_executions(map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate create_command_and_executions(params), to: Dispatch
+  defdelegate create_command_and_executions(params), to: Delivery
 
   @doc "Creates command executions from targeting arguments."
   @spec create_command_executions(map()) :: {:ok, [CommandExecution.t()]} | {:error, String.t()}
-  defdelegate create_command_executions(args), to: Dispatch
+  defdelegate create_command_executions(args), to: Delivery
 
   @doc "Delivers pending executions for clusters owned by this Admin."
-  @spec deliver_local_executions() :: :ok
-  defdelegate deliver_local_executions(), to: Dispatch
+  @spec deliver_local_command_executions() :: :ok
+  defdelegate deliver_local_command_executions(), to: Delivery
 
-  @type dropped_execution :: ExecutionLifecycle.dropped_execution()
+  @type dropped_command_execution :: CommandExecutionLifecycle.dropped_command_execution()
 
   @doc "Marks pending or sent executions for a node as dropped."
-  @spec drop_node_executions(String.t(), String.t()) :: [dropped_execution()]
-  defdelegate drop_node_executions(node_id, cluster_name), to: ExecutionLifecycle
+  @spec drop_node_command_executions(String.t(), String.t()) :: [dropped_command_execution()]
+  defdelegate drop_node_command_executions(node_id, cluster_name), to: CommandExecutionLifecycle
 
   @doc "Publishes events for executions dropped during node cleanup."
-  @spec publish_dropped_executions([dropped_execution()]) :: :ok
-  defdelegate publish_dropped_executions(dropped_executions), to: ExecutionLifecycle
+  @spec publish_dropped_command_executions([dropped_command_execution()]) :: :ok
+  defdelegate publish_dropped_command_executions(dropped_command_executions), to: CommandExecutionLifecycle
 
   @doc "Acknowledges command execution receipt from an agent."
-  @spec acknowledge_execution(CommandExecution.t(), map()) ::
+  @spec acknowledge_command_execution(CommandExecution.t(), map()) ::
           {:ok, CommandExecution.t()}
           | {:error, {:conflict, String.t()}}
           | {:error, Ecto.Changeset.t()}
-  defdelegate acknowledge_execution(execution, params), to: ExecutionLifecycle
+  defdelegate acknowledge_command_execution(execution, params), to: CommandExecutionLifecycle
 
   @doc "Updates a command execution with an agent-reported result."
   @spec update_command_execution_result(CommandExecution.t(), map()) ::
           {:ok, CommandExecution.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate update_command_execution_result(execution, params), to: ExecutionLifecycle
+  defdelegate update_command_execution_result(execution, params), to: CommandExecutionLifecycle
 
   @doc "Cancels a command execution."
   @spec cancel_command_execution(CommandExecution.t()) ::
           {:ok, {:cancelled, CommandExecution.t()} | :accepted}
           | {:error, {:conflict, String.t()}}
           | {:error, :service_unavailable}
-  defdelegate cancel_command_execution(execution), to: ExecutionLifecycle
+  defdelegate cancel_command_execution(execution), to: CommandExecutionLifecycle
 
   @doc "Expires stale command executions owned by this Admin."
-  @spec expire_stale_executions() :: :ok
-  defdelegate expire_stale_executions(), to: Retention
+  @spec expire_stale_command_executions() :: :ok
+  defdelegate expire_stale_command_executions(), to: Retention
 
   @doc "Deletes finalized command executions older than the retention period."
-  @spec prune_executions(pos_integer()) :: {:ok, non_neg_integer()}
-  defdelegate prune_executions(retention_days), to: Retention
+  @spec prune_command_executions(pos_integer()) :: {:ok, non_neg_integer()}
+  defdelegate prune_command_executions(retention_days), to: Retention
 end

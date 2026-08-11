@@ -1,5 +1,5 @@
 # edge_admin/lib/edge_admin/commands/checks/execution_pending_check.ex
-defmodule EdgeAdmin.Commands.Checks.ExecutionPendingCheck do
+defmodule EdgeAdmin.Commands.Checks.CommandExecutionPendingCheck do
   @moduledoc """
   Checks that an execution is in `:pending` status.
 

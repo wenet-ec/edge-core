@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/commands/workflows/dispatch.ex
-defmodule EdgeAdmin.Commands.Workflows.Dispatch do
+# edge_admin/lib/edge_admin/commands/workflows/delivery.ex
+defmodule EdgeAdmin.Commands.Workflows.Delivery do
   @moduledoc """
   Owns command fan-out and delivery.
 
@@ -10,12 +10,12 @@ defmodule EdgeAdmin.Commands.Workflows.Dispatch do
   import Ecto.Query, warn: false
 
   alias EdgeAdmin.Admins.Metadata
-  alias EdgeAdmin.Commands
   alias EdgeAdmin.Commands.Forms
+  alias EdgeAdmin.Commands.Resources.Commands, as: CommandResource
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Commands.Schemas.CommandExecution
-  alias EdgeAdmin.Commands.Workers.CreateExecutionsWorker
-  alias EdgeAdmin.Commands.Workflows.ExecutionLifecycle
+  alias EdgeAdmin.Commands.Workers.CreateCommandExecutionsWorker
+  alias EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle
   alias EdgeAdmin.EdgeClusters.AgentClient
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog
@@ -50,7 +50,7 @@ defmodule EdgeAdmin.Commands.Workflows.Dispatch do
   @spec create_command_and_executions(map()) :: {:ok, Command.t()} | {:error, Ecto.Changeset.t()}
   def create_command_and_executions(params) do
     with {:ok, attrs} <- Forms.CreateCommandForm.changeset(params),
-         {:ok, command} <- Commands.create_command(attrs) do
+         {:ok, command} <- CommandResource.create(attrs) do
       enqueue_execution_creation(command, attrs)
       {:ok, command}
     else
@@ -98,14 +98,14 @@ defmodule EdgeAdmin.Commands.Workflows.Dispatch do
 
     if args do
       args
-      |> CreateExecutionsWorker.new()
+      |> CreateCommandExecutionsWorker.new()
       |> Oban.insert()
       |> case do
         {:ok, _job} ->
           :ok
 
         {:error, reason} ->
-          Logger.error("Failed to enqueue CreateExecutionsWorker: #{inspect(reason)}")
+          Logger.error("Failed to enqueue CreateCommandExecutionsWorker: #{inspect(reason)}")
       end
     else
       :ok
@@ -148,7 +148,7 @@ defmodule EdgeAdmin.Commands.Workflows.Dispatch do
     node_filters = args["node_filters"] || %{}
     cluster_filters = args["cluster_filters"] || %{}
 
-    case Commands.get_command(command_id) do
+    case CommandResource.get(command_id) do
       {:ok, command} ->
         # Get nodes based on targeting type
         {nodes, cluster_id} =
@@ -262,8 +262,8 @@ defmodule EdgeAdmin.Commands.Workflows.Dispatch do
 
   Always returns `:ok` - errors are logged but don't halt the scheduler.
   """
-  @spec deliver_local_executions() :: :ok
-  def deliver_local_executions do
+  @spec deliver_local_command_executions() :: :ok
+  def deliver_local_command_executions do
     # Get clusters owned by this admin from metadata (ETS)
     my_clusters = Metadata.get_my_clusters()
     my_cluster_network_names = Map.keys(my_clusters)
@@ -382,12 +382,12 @@ defmodule EdgeAdmin.Commands.Workflows.Dispatch do
           # If the row is no longer :pending (agent already reported back, admin
           # cancelled/expired, or a peer admin already marked it sent), do not
           # overwrite. See `transition_status/3`.
-          case ExecutionLifecycle.transition_status(execution, [:pending],
+          case CommandExecutionLifecycle.transition_status(execution, [:pending],
                  status: :sent,
                  sent_at: DateTime.truncate(DateTime.utc_now(), :second)
                ) do
             {:ok, updated} ->
-              ExecutionLifecycle.publish_execution_event(updated, :sent)
+              CommandExecutionLifecycle.publish_execution_event(updated, :sent)
 
             {:error, :stale_state} ->
               Logger.debug(

@@ -227,7 +227,7 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
 
   defp delete_node_from_db(%Node{} = node) do
     case Repo.transaction(fn ->
-           dropped_executions = Commands.drop_node_executions(node.id, node.cluster.name)
+           dropped_executions = Commands.drop_node_command_executions(node.id, node.cluster.name)
 
            case Repo.delete(node) do
              {:ok, deleted_node} -> {deleted_node, dropped_executions}
@@ -235,7 +235,7 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
            end
          end) do
       {:ok, {deleted_node, dropped_executions}} ->
-        Commands.publish_dropped_executions(dropped_executions)
+        Commands.publish_dropped_command_executions(dropped_executions)
         Metadata.Events.publish(:node_deleted)
         {:ok, deleted_node}
 

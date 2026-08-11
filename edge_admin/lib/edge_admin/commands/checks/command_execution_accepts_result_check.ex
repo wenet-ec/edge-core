@@ -1,5 +1,5 @@
 # edge_admin/lib/edge_admin/commands/checks/execution_accepts_result_check.ex
-defmodule EdgeAdmin.Commands.Checks.ExecutionAcceptsResultCheck do
+defmodule EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheck do
   @moduledoc """
   Checks that an execution is in a state that accepts a result update from an agent.
 

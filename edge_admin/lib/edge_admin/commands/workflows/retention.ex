@@ -11,7 +11,7 @@ defmodule EdgeAdmin.Commands.Workflows.Retention do
 
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Commands.Schemas.CommandExecution
-  alias EdgeAdmin.Commands.Workflows.ExecutionLifecycle
+  alias EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog
   alias EdgeAdmin.Repo
@@ -26,19 +26,19 @@ defmodule EdgeAdmin.Commands.Workflows.Retention do
   - `pending` - Command never reached the agent; mark expired immediately in DB.
   - `sent` - Command was delivered; send best-effort cancellation to agent, then mark
     expired in DB regardless of whether the agent acknowledged it. If the agent already
-    ran the command and reports back later, `ExecutionAcceptsResultCheck` will accept the
+    ran the command and reports back later, `CommandExecutionAcceptsResultCheck` will accept the
     result and overwrite the expired status (agent is source of truth for what ran).
 
   Always returns `:ok` — errors are logged but never halt the scheduler.
   """
-  @spec expire_stale_executions() :: :ok
-  def expire_stale_executions do
+  @spec expire_stale_command_executions() :: :ok
+  def expire_stale_command_executions do
     now = DateTime.utc_now()
 
     # Scope to clusters owned by this admin. Without this gate, every admin in
     # the fleet runs the expiration loop against every cluster every minute,
     # producing write amplification and (pre-conditional-update) clobbering
-    # terminal rows. Mirrors the ownership gate in `deliver_local_executions/0`.
+    # terminal rows. Mirrors the ownership gate in `deliver_local_command_executions/0`.
     my_cluster_names =
       Metadata.get_my_clusters()
       |> Map.keys()
@@ -64,7 +64,7 @@ defmodule EdgeAdmin.Commands.Workflows.Retention do
 
           :sent ->
             # Best-effort cancel signal to agent — do not block on result
-            case ExecutionLifecycle.send_cancel_to_agent(execution) do
+            case CommandExecutionLifecycle.send_cancel_to_agent(execution) do
               :ok ->
                 Logger.debug("Sent cancellation to agent for expiring execution #{execution.id}")
 
@@ -110,10 +110,10 @@ defmodule EdgeAdmin.Commands.Workflows.Retention do
     # the agent has already reported back (row is now :completed/:cancelled/
     # :expired with exit_code), do not overwrite — the agent is the source of
     # truth for what actually ran.
-    case ExecutionLifecycle.transition_status(execution, [:pending, :sent], status: :expired) do
+    case CommandExecutionLifecycle.transition_status(execution, [:pending, :sent], status: :expired) do
       {:ok, updated} ->
         Logger.info("Execution #{execution.id} marked expired")
-        ExecutionLifecycle.publish_execution_event(updated, :expired)
+        CommandExecutionLifecycle.publish_execution_event(updated, :expired)
 
       {:error, :stale_state} ->
         Logger.debug(
@@ -135,7 +135,7 @@ defmodule EdgeAdmin.Commands.Workflows.Retention do
       reported the result of the cancel/expire signal).
 
   A `:cancelled` or `:expired` row with `nil exit_code` is NOT finalised — it's
-  a race-window placeholder that `ExecutionAcceptsResultCheck` still accepts a
+  a race-window placeholder that `CommandExecutionAcceptsResultCheck` still accepts a
   late agent report for (the agent picked the command up before the admin's
   cancel/expire reached it). Pruning those would lose the agent's actual
   result if it eventually arrived. We exclude them, regardless of age.
@@ -145,8 +145,8 @@ defmodule EdgeAdmin.Commands.Workflows.Retention do
   Deletes in batches of #{@prune_batch_size} to avoid long locks on the hot path.
   Returns `{:ok, total_deleted}`.
   """
-  @spec prune_executions(pos_integer()) :: {:ok, non_neg_integer()}
-  def prune_executions(retention_days) when is_integer(retention_days) and retention_days > 0 do
+  @spec prune_command_executions(pos_integer()) :: {:ok, non_neg_integer()}
+  def prune_command_executions(retention_days) when is_integer(retention_days) and retention_days > 0 do
     cutoff = DateTime.shift(DateTime.utc_now(), day: -retention_days)
     total = prune_loop(cutoff, 0)
     {:ok, total}

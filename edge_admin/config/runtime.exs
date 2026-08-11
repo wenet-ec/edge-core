@@ -368,11 +368,11 @@ config :edge_admin, EdgeAdmin.LocalScheduler,
     ],
     execution_delivery: [
       schedule: execution_delivery_schedule,
-      task: {EdgeAdmin.Commands, :deliver_local_executions, []}
+      task: {EdgeAdmin.Commands, :deliver_local_command_executions, []}
     ],
     execution_expiration: [
       schedule: execution_expiration_schedule,
-      task: {EdgeAdmin.Commands, :expire_stale_executions, []}
+      task: {EdgeAdmin.Commands, :expire_stale_command_executions, []}
     ],
     vpn_config_sync: [
       schedule: vpn_config_sync_schedule,

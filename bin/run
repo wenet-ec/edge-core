@@ -139,7 +139,6 @@ show_edge_help() {
     echo ""
     echo -e "${YELLOW}Edge Agent Commands:${NC}"
     echo "  agent <mix-cmd>        - Run Mix command in Edge Agent"
-    echo "  agent:shell            - Open Edge Agent IEx shell"
     echo "  agent:format           - Format Edge Agent code"
     echo "  agent:lint             - Lint Edge Agent code"
     echo "  agent:test [opts]      - Run Edge Agent tests"
@@ -418,11 +417,6 @@ handle_edge() {
             fi
             log "Running Edge Agent command: mix $*"
             docker compose $compose_file run --rm edge_agent mix "$@"
-            ;;
-        agent:shell)
-            check_docker
-            log "Opening Edge Agent IEx shell..."
-            docker compose $compose_file run --rm edge_agent iex -S mix
             ;;
         agent:format)
             check_docker

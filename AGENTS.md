@@ -177,8 +177,7 @@ VARIANT=lite ./bin/run cloud up -d
 
 ```bash
 # Open IEx shell
-./bin/run cloud admin:shell
-./bin/run edge agent:shell
+./bin/run cloud admin:console
 
 # Open bash shell in running container
 ./bin/run cloud shell edge_admin

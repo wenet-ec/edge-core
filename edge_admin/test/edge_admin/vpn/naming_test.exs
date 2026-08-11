@@ -212,7 +212,4 @@ defmodule EdgeAdmin.Vpn.NamingTest do
       assert is_atom(result)
     end
   end
-
-
 end
-

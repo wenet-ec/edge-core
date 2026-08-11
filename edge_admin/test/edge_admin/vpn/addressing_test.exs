@@ -369,7 +369,4 @@ defmodule EdgeAdmin.Vpn.AddressingTest do
                "100.64.0.16/28"
     end
   end
-
-
 end
-

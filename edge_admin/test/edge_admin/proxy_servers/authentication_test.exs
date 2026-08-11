@@ -91,7 +91,7 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
 
       on_exit(fn ->
         Application.delete_env(:edge_admin, :auth_enabled)
-      Application.delete_env(:edge_admin, :edge_vpn_default_domain)
+        Application.delete_env(:edge_admin, :edge_vpn_default_domain)
       end)
     end
 
@@ -172,7 +172,7 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
 
       on_exit(fn ->
         Application.delete_env(:edge_admin, :auth_enabled)
-      Application.delete_env(:edge_admin, :edge_vpn_default_domain)
+        Application.delete_env(:edge_admin, :edge_vpn_default_domain)
       end)
     end
 

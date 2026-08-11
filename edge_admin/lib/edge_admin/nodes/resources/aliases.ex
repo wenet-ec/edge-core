@@ -290,9 +290,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
 
             {:error, :not_found} ->
               # Node is not enrolled in Edge VPN at all
-              Logger.warning(
-                "Cannot create alias: node #{node.vpn_host_id} is not enrolled in network #{network_name}"
-              )
+              Logger.warning("Cannot create alias: node #{node.vpn_host_id} is not enrolled in network #{network_name}")
 
               {:error,
                {:conflict,

@@ -363,7 +363,7 @@
             "type": "string"
           },
           "network_name": {
-            "description": "Netmaker network name",
+            "description": "Edge VPN network name",
             "example": "cluster-prod-east",
             "type": "string"
           },
@@ -627,7 +627,7 @@
         "type": "object"
       },
       "AdminCluster": {
-        "description": "An admin cluster as known to Netmaker, plus its admin members.",
+        "description": "An admin cluster as known to Edge VPN, plus its admin members.",
         "example": {
           "admin_count": 1,
           "admins": [
@@ -636,9 +636,9 @@
               "ipv6_address": "fd7a:91c2:4e8c:1::1",
               "last_checked_in": "2026-04-28T12:34:56Z",
               "name": "admin-7k3m9p2n",
-              "netmaker_host_id": "f272e703-b48f-4b61-b4c1-bfe4fffde62b",
               "status": "online",
               "use_static_port": true,
+              "vpn_host_id": "f272e703-b48f-4b61-b4c1-bfe4fffde62b",
               "vpn_hostname": "admin-7k3m9p2n.admin-cluster-main.nm.internal",
               "wireguard_ip_address": "10.0.0.7",
               "wireguard_port": 51820
@@ -717,7 +717,7 @@
         "type": "object"
       },
       "AdminClustersResponse": {
-        "description": "All admin clusters Netmaker knows about",
+        "description": "All admin clusters Edge VPN knows about",
         "properties": {
           "data": { "$ref": "#/components/schemas/AdminClusters" },
           "meta": { "$ref": "#/components/schemas/Meta" }
@@ -748,7 +748,7 @@
               "erlang_node_name": "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
               "max_wireguard_peers": 250,
               "name": "admin-k7m3n2p9x4j6",
-              "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
+              "vpn_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
               "vpn_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
             },
             {
@@ -757,7 +757,7 @@
               "erlang_node_name": "admin@admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal",
               "max_wireguard_peers": 250,
               "name": "admin-x9j4p2k7m8n3",
-              "netmaker_host_id": "7f3c8d4e-9a1b-4c2d-8e3f-5a6b7c8d9e0f",
+              "vpn_host_id": "7f3c8d4e-9a1b-4c2d-8e3f-5a6b7c8d9e0f",
               "vpn_hostname": "admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal"
             }
           ],
@@ -947,7 +947,7 @@
         "type": "object"
       },
       "AdminClusters": {
-        "description": "All admin clusters Netmaker knows about, sorted by name.",
+        "description": "All admin clusters Edge VPN knows about, sorted by name.",
         "items": { "$ref": "#/components/schemas/AdminCluster" },
         "title": "AdminClusters",
         "type": "array"
@@ -1566,7 +1566,7 @@
           "last_computed_at": "2025-01-15T12:00:00Z",
           "max_wireguard_peers": 250,
           "name": "admin-k7m3n2p9x4j6",
-          "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
+          "vpn_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
           "vpn_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
         },
         "properties": {
@@ -1604,8 +1604,8 @@
             "description": "Admin name (e.g., admin-k7m3n2p9x4j6)",
             "type": "string"
           },
-          "netmaker_host_id": {
-            "description": "Netmaker host ID for this admin (UUID format)",
+          "vpn_host_id": {
+            "description": "VPN host ID for this admin (UUID format)",
             "type": "string"
           },
           "vpn_hostname": {
@@ -1622,7 +1622,7 @@
           "erlang_node_name",
           "vpn_hostname",
           "admin_cluster_name",
-          "netmaker_host_id"
+          "vpn_host_id"
         ],
         "title": "Admin",
         "type": "object"
@@ -2493,7 +2493,7 @@
                 "type": "object"
               },
               "reconciliation": {
-                "description": "Cluster reconciliation metrics (Netmaker ↔ DB sync)",
+                "description": "Cluster reconciliation metrics (Edge VPN ↔ DB sync)",
                 "properties": {
                   "errors": {
                     "description": "Number of errors in last reconciliation run",
@@ -2501,7 +2501,7 @@
                     "type": "integer"
                   },
                   "nodes_added": {
-                    "description": "Nodes added to Netmaker in the most recent reconciliation run",
+                    "description": "Nodes added to Edge VPN in the most recent reconciliation run",
                     "nullable": true,
                     "type": "integer"
                   },
@@ -2511,7 +2511,7 @@
                     "type": "integer"
                   },
                   "nodes_removed": {
-                    "description": "Nodes removed from Netmaker in the most recent reconciliation run",
+                    "description": "Nodes removed from Edge VPN in the most recent reconciliation run",
                     "nullable": true,
                     "type": "integer"
                   },
@@ -3243,7 +3243,7 @@
                     "type": "integer"
                   },
                   "pulls_total": {
-                    "description": "Total VPN config pulls performed (daily backstop for DNS recovery after netclient restart)",
+                    "description": "Total VPN config pulls performed (daily backstop for DNS recovery after Edge VPN CLI restart)",
                     "nullable": true,
                     "type": "integer"
                   }
@@ -3265,7 +3265,7 @@
           "erlang_node_name": "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
           "max_wireguard_peers": 250,
           "name": "admin-k7m3n2p9x4j6",
-          "netmaker_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
+          "vpn_host_id": "95e2707e-d11f-4551-bdd4-4ab2ab917505",
           "vpn_hostname": "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal"
         },
         "properties": {
@@ -3289,12 +3289,12 @@
             "description": "Admin name (e.g., admin-k7m3n2p9x4j6)",
             "type": "string"
           },
-          "netmaker_host_id": {
-            "description": "Netmaker host ID for this admin (UUID format)",
+          "vpn_host_id": {
+            "description": "VPN host ID for this admin (UUID format)",
             "type": "string"
           },
           "vpn_hostname": {
-            "description": "Netmaker dns hostname",
+            "description": "Edge VPN dns hostname",
             "type": "string"
           }
         },
@@ -3304,7 +3304,7 @@
           "admin_peer_count",
           "edge_node_capacity",
           "erlang_node_name",
-          "netmaker_host_id"
+          "vpn_host_id"
         ],
         "title": "AdminTopologyEntry",
         "type": "object"
@@ -3537,14 +3537,14 @@
         "type": "object"
       },
       "AdminClusterMember": {
-        "description": "An admin instance present in a Netmaker admin-cluster network. May include stale/disconnected entries.",
+        "description": "An admin instance present in an Edge VPN admin-cluster network. May include stale/disconnected entries.",
         "example": {
           "ipv4_address": "100.64.0.1",
           "last_checked_in": "2026-04-28T12:34:56Z",
           "name": "admin-7k3m9p2n",
-          "netmaker_host_id": "f272e703-b48f-4b61-b4c1-bfe4fffde62b",
           "status": "online",
           "use_static_port": true,
+          "vpn_host_id": "f272e703-b48f-4b61-b4c1-bfe4fffde62b",
           "vpn_hostname": "admin-7k3m9p2n.admin-cluster-main.nm.internal",
           "wireguard_ip_address": "10.0.0.7",
           "wireguard_port": 51820
@@ -3561,7 +3561,7 @@
             "type": "string"
           },
           "last_checked_in": {
-            "description": "Last time this admin's netclient reported in to Netmaker (ISO 8601)",
+            "description": "Last time this admin's Edge VPN CLI reported to the Edge VPN server (ISO 8601)",
             "format": "date-time",
             "nullable": true,
             "type": "string"
@@ -3570,12 +3570,8 @@
             "description": "Admin name (e.g., admin-k7m3n2p9x4j6)",
             "type": "string"
           },
-          "netmaker_host_id": {
-            "description": "Netmaker host ID (UUID)",
-            "type": "string"
-          },
           "status": {
-            "description": "Netmaker-derived status: online (recent checkin), offline (stale checkin), disconnected (admin disabled)",
+            "description": "Edge VPN-derived status: online (recent checkin), offline (stale checkin), disconnected (admin disabled)",
             "enum": ["online", "offline", "disconnected"],
             "nullable": true,
             "type": "string"
@@ -3583,6 +3579,10 @@
           "use_static_port": {
             "description": "True when the admin pins WireGuard to a fixed port across restarts",
             "type": "boolean"
+          },
+          "vpn_host_id": {
+            "description": "VPN host ID (UUID)",
+            "type": "string"
           },
           "vpn_hostname": {
             "description": "DNS hostname inside the admin cluster network",
@@ -3599,7 +3599,7 @@
             "type": "integer"
           }
         },
-        "required": ["name", "vpn_hostname", "netmaker_host_id"],
+        "required": ["name", "vpn_hostname", "vpn_host_id"],
         "title": "AdminClusterMember",
         "type": "object"
       },
@@ -4041,7 +4041,6 @@
           "inserted_at": "2025-06-09T08:00:00Z",
           "last_seen_at": "2025-06-09T08:20:00Z",
           "mdns_hostname": "node-01234567-89ab-cdef-0123-456789abcdef.local",
-          "netmaker_host_id": "def67890-5678-5678-5678-567890abcdef",
           "node_name": "node-01234567-89ab-cdef-0123-456789abcdef",
           "self_update_enabled": false,
           "socks5_proxy_port": 44180,
@@ -4049,6 +4048,7 @@
           "status": "healthy",
           "updated_at": "2025-06-09T08:20:00Z",
           "version": "0.1.0",
+          "vpn_host_id": "def67890-5678-5678-5678-567890abcdef",
           "vpn_hostname": "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
           "wireguard_metrics_port": 49586
         },
@@ -4100,12 +4100,6 @@
             "example": "node-01234567-89ab-cdef-0123-456789abcdef.local",
             "type": "string"
           },
-          "netmaker_host_id": {
-            "description": "Netmaker Host UUID for API operations",
-            "format": "uuid",
-            "nullable": true,
-            "type": "string"
-          },
           "node_name": {
             "description": "Human-readable node name (derived from ID)",
             "example": "node-01234567-89ab-cdef-0123-456789abcdef",
@@ -4132,6 +4126,12 @@
           },
           "version": {
             "description": "Agent version",
+            "nullable": true,
+            "type": "string"
+          },
+          "vpn_host_id": {
+            "description": "VPN host UUID for API operations",
+            "format": "uuid",
             "nullable": true,
             "type": "string"
           },
@@ -4277,7 +4277,7 @@
     "/api/v1/admins/admin_clusters": {
       "get": {
         "callbacks": {},
-        "description": "Lists every admin cluster Netmaker knows about, with each cluster's admins.\nIncludes admins this instance is not a member of (cross-cluster visibility)\nand may include stale entries.\n",
+        "description": "Lists every admin cluster Edge VPN knows about, with each cluster's admins.\nIncludes admins this instance is not a member of (cross-cluster visibility)\nand may include stale entries.\n",
         "operationId": "EdgeAdminWeb.Controllers.Admins.AdminClustersController.index",
         "parameters": [],
         "responses": {
@@ -4299,10 +4299,10 @@
                 }
               }
             },
-            "description": "Netmaker unavailable"
+            "description": "Edge VPN unavailable"
           }
         },
-        "summary": "List all admin clusters from Netmaker",
+        "summary": "List all admin clusters from Edge VPN",
         "tags": ["Admins.Metadata"]
       }
     },
@@ -4353,7 +4353,7 @@
     "/api/v1/admins/me/metrics": {
       "get": {
         "callbacks": {},
-        "description": "Returns application-level metrics from the edge_admin PromEx:\n- Application: uptime, BEAM stats (processes, memory, atoms, ETS tables)\n- Metadata: degraded status, orphaned/assigned clusters\n- Membership: step counts and full sequence completions\n- Discovery: peer discovery scan, DNS resolution, and connection counts\n- Nodes: direct VPN health-check outcomes, latest local sweep, and HTTP fallback reports\n- Commands: delivery runs, per-execution delivery, completions, expirations\n- SSH: credential verification attempts and failures\n- Reconciliation: cluster Netmaker↔DB sync runs and errors\n- Self-updates: request processing completions\n- Gateways: connection events, active count, scrape totals, diagnostic totals\n- Event broker: publish/enqueue counters (zeroed when broker is disabled)\n- Webhooks: fan-out invocations, matched delivery jobs, and delivery outcomes\n- Oban: job queue states (available, scheduled, executing, etc.)\n",
+        "description": "Returns application-level metrics from the edge_admin PromEx:\n- Application: uptime, BEAM stats (processes, memory, atoms, ETS tables)\n- Metadata: degraded status, orphaned/assigned clusters\n- Membership: step counts and full sequence completions\n- Discovery: peer discovery scan, DNS resolution, and connection counts\n- Nodes: direct VPN health-check outcomes, latest local sweep, and HTTP fallback reports\n- Commands: delivery runs, per-execution delivery, completions, expirations\n- SSH: credential verification attempts and failures\n- Reconciliation: cluster Edge VPN↔DB sync runs and errors\n- Self-updates: request processing completions\n- Gateways: connection events, active count, scrape totals, diagnostic totals\n- Event broker: publish/enqueue counters (zeroed when broker is disabled)\n- Webhooks: fan-out invocations, matched delivery jobs, and delivery outcomes\n- Oban: job queue states (available, scheduled, executing, etc.)\n",
         "operationId": "EdgeAdminWeb.Controllers.Metrics.AdminMetricsController.show",
         "parameters": [],
         "responses": {

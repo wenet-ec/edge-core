@@ -1,4 +1,4 @@
-# edge_agent/test/edge_agent/self_updates/self_updates_test.exs
+# edge_agent/test/edge_agent/self_updates_test.exs
 defmodule EdgeAgent.SelfUpdatesTest do
   use ExUnit.Case, async: true
 

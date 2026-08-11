@@ -3,7 +3,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   @moduledoc """
   Schema for edge clusters.
 
-  Each cluster represents an isolated dual-stack Netmaker network (VPN).
+  Each cluster represents an isolated dual-stack Edge VPN network (VPN).
   Nodes within a cluster can communicate with each other via the VPN.
 
   ## Fields
@@ -13,7 +13,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   - `ipv6_range` - ULA /64 CIDR for the cluster's VPN network
   - `node_limit` - Maximum nodes allowed in this cluster (null means no limit)
   - `deleted_at` - Internal tombstone marking a cluster retired from the public API
-  - `network_name` - Virtual field: Netmaker network name (cluster-{name})
+  - `network_name` - Virtual field: Edge VPN network name (cluster-{name})
   - `vpn_domain` - Virtual field: VPN domain suffix for nodes in this cluster
   - `node_count` - Virtual field: Number of nodes in this cluster
   """
@@ -28,7 +28,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   alias EdgeAdmin.Random
   alias EdgeAdmin.Vpn
 
-  # /31 and /32 are unusable for an edge cluster: Netmaker skips the network
+  # /31 and /32 are unusable for an edge cluster: Edge VPN skips the network
   # address and the remaining addresses are reserved for Admin gateways.
   @min_prefix 30
 
@@ -100,7 +100,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   end
 
   @doc """
-  Returns the Netmaker network name for this cluster.
+  Returns the Edge VPN network name for this cluster.
 
   ## Format
   `cluster-{name}`

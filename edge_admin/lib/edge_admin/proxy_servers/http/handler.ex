@@ -320,7 +320,7 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
   end
 
   @doc """
-  Returns true when `host` is a VPN hostname under the configured Netmaker domain.
+  Returns true when `host` is a VPN hostname under the configured Edge VPN domain.
   """
   @spec vpn_target?(String.t()) :: boolean()
   def vpn_target?(host) do

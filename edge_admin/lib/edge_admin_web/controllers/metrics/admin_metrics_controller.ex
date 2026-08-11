@@ -24,7 +24,7 @@ defmodule EdgeAdminWeb.Controllers.Metrics.AdminMetricsController do
     - Nodes: direct VPN health-check outcomes, latest local sweep, and HTTP fallback reports
     - Commands: delivery runs, per-execution delivery, completions, expirations
     - SSH: credential verification attempts and failures
-    - Reconciliation: cluster Netmaker↔DB sync runs and errors
+    - Reconciliation: cluster Edge VPN↔DB sync runs and errors
     - Self-updates: request processing completions
     - Gateways: connection events, active count, scrape totals, diagnostic totals
     - Event broker: publish/enqueue counters (zeroed when broker is disabled)

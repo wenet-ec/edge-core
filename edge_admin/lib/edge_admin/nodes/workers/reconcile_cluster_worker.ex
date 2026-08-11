@@ -1,18 +1,18 @@
 # edge_admin/lib/edge_admin/nodes/workers/reconcile_cluster_worker.ex
 defmodule EdgeAdmin.Nodes.Workers.ReconcileClusterWorker do
   @moduledoc """
-  Oban worker that reconciles a single cluster's state between the DB and Netmaker.
+  Oban worker that reconciles a single cluster's state between the DB and Edge VPN.
 
   Enqueued by ScheduleClusterReconciliationWorker — one job per cluster. Each job:
   1. Recreates a missing network from active DB cluster configuration
-  2. Adds missing nodes to the Netmaker network (DB says yes, Netmaker says no)
-  3. Removes extra managed nodes from the network (Netmaker says yes, DB says no)
+  2. Adds missing nodes to the Edge VPN network (DB says yes, Edge VPN says no)
+  3. Removes extra managed nodes from the network (Edge VPN says yes, DB says no)
   4. Evicts rogue hosts (unrecognized hosts with no DB record, if EVICT_ROGUE_HOSTS=true)
-  5. Cleans up orphaned aliases for nodes no longer in Netmaker
-  6. Deletes orphaned DB records for nodes whose Netmaker host is gone
+  5. Cleans up orphaned aliases for nodes no longer in Edge VPN
+  6. Deletes orphaned DB records for nodes whose Edge VPN host is gone
   7. Repairs missing/stale alias DNS and cleans up ghost alias DNS
 
-  Retried up to 3 times on failure. Each cluster is independent — a Netmaker timeout
+  Retried up to 3 times on failure. Each cluster is independent — a Edge VPN timeout
   on one cluster does not affect reconciliation of others.
   """
 

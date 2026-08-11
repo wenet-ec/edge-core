@@ -5,17 +5,17 @@ defmodule EdgeAdmin.Admins do
 
   Wraps `EdgeAdmin.Vpn` and other lower-level modules with operations whose
   inputs and outputs are expressed in admin-domain language (admin clusters,
-  admin members) rather than raw Netmaker shapes.
+  admin members) rather than raw Edge VPN shapes.
 
   Membership/Metadata/Discovery remain their own modules — this is the
   cross-cutting facade for callers (controllers, MCP tools) that need
-  admin-domain views derived from Netmaker data.
+  admin-domain views derived from Edge VPN data.
   """
 
   alias EdgeAdmin.Vpn
 
   @doc """
-  Lists every admin cluster Netmaker knows about, with a normalised view of
+  Lists every admin cluster Edge VPN knows about, with a normalised view of
   each cluster's admins.
 
   Includes admins this instance is not a member of (cross-cluster visibility)
@@ -49,7 +49,7 @@ defmodule EdgeAdmin.Admins do
         ...
       ]}
 
-  Returns `{:error, :service_unavailable}` if Netmaker is unreachable.
+  Returns `{:error, :service_unavailable}` if Edge VPN is unreachable.
   """
   @spec list_admin_clusters() :: {:ok, [map()]} | {:error, :service_unavailable}
   def list_admin_clusters do
@@ -67,10 +67,10 @@ defmodule EdgeAdmin.Admins do
   admin-domain shape returned by `list_admin_clusters/0`.
 
   Public so the transform — which is the real contract this module exposes —
-  can be unit-tested directly without standing up Netmaker.
+  can be unit-tested directly without standing up Edge VPN.
 
   Input is a `%{network: net_map, members: [%{node: node, host: host}, ...]}`
-  with raw Netmaker string-keyed maps. Output is the per-cluster map documented
+  with raw Edge VPN string-keyed maps. Output is the per-cluster map documented
   on `list_admin_clusters/0`, with admins sorted by name.
   """
   @spec normalise_cluster(%{network: map(), members: [map()]}) :: map()
@@ -108,7 +108,7 @@ defmodule EdgeAdmin.Admins do
     }
   end
 
-  # Netmaker returns addresses as "100.64.0.1/24"; the cluster-level
+  # Edge VPN returns addresses as "100.64.0.1/24"; the cluster-level
   # `ipv4_range` already carries the prefix, so members expose just the IP.
   defp strip_cidr(nil), do: nil
 
@@ -119,7 +119,7 @@ defmodule EdgeAdmin.Admins do
     end
   end
 
-  # Netmaker exposes lastcheckin as a Unix epoch (seconds). Format as ISO 8601
+  # Edge VPN exposes lastcheckin as a Unix epoch (seconds). Format as ISO 8601
   # so consumers don't have to re-derive a timezone-aware timestamp.
   defp format_checkin(seconds) when is_integer(seconds) and seconds > 0 do
     seconds

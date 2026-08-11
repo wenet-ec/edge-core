@@ -46,7 +46,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
           {:error, :unauthorized}
 
         {:error, :host_not_found} ->
-          {:error, {:conflict, "node not found in Netmaker network"}}
+          {:error, {:conflict, "node not found in Edge VPN network"}}
 
         {:error, :service_unavailable} ->
           {:error, :service_unavailable}
@@ -83,7 +83,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
           {:error, :unauthorized}
 
         {:error, :host_not_found} ->
-          {:error, {:conflict, "node not found in Netmaker network"}}
+          {:error, {:conflict, "node not found in Edge VPN network"}}
 
         {:error, :service_unavailable} ->
           {:error, :service_unavailable}

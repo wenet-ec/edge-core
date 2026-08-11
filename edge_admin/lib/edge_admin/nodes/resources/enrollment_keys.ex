@@ -5,7 +5,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
 
   This module owns enrollment-key persistence, filtering, blob generation, and
   one-use verification. A finite-use key is consumed only after the target
-  cluster has capacity and its Netmaker enrollment key is available.
+  cluster has capacity and its Edge VPN enrollment key is available.
   `EdgeAdmin.Nodes` keeps a small facade for callers while the enrollment-key
   lifecycle lives here.
   """
@@ -121,7 +121,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
   Verifies an enrollment-key blob presented by an Agent before VPN enrollment.
 
   Verification checks the stored blob, cluster binding, expiry, remaining uses,
-  and cluster capacity. It also loads the target cluster's Netmaker enrollment
+  and cluster capacity. It also loads the target cluster's Edge VPN enrollment
   key before consuming the Admin key. A successful finite-use key is consumed
   atomically.
   """

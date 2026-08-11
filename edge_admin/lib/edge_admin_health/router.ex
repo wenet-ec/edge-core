@@ -50,8 +50,8 @@ defmodule EdgeAdminHealth.Router do
   plug(:dispatch)
 
   # Kubernetes readiness probe — runs the full check list from
-  # `EdgeAdminHealth.checks/0` (DB, membership, metadata, Netmaker API,
-  # netclient, proxy servers, event broker). Only the Netmaker API check
+  # `EdgeAdminHealth.checks/0` (DB, membership, metadata, Edge VPN API,
+  # netclient, proxy servers, event broker). Only the Edge VPN API check
   # retries internally; the others are single-shot. Returns 200 if every
   # check passes, 503 otherwise.
   forward("/readyz", to: Health)

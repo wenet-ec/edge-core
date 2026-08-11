@@ -23,7 +23,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
       201 => {"Node registered", "application/json", NodeSchemas.NodeRegistrationResponse},
       401 => {"Registration credentials required", "application/json", CommonSchemas.UnauthorizedResponse},
       409 =>
-        {"Node is not present in the expected Netmaker network", "application/json", CommonSchemas.ConflictResponse},
+        {"Node is not present in the expected Edge VPN network", "application/json", CommonSchemas.ConflictResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
@@ -46,7 +46,7 @@ defmodule EdgeAdminWeb.Controllers.Agents.NodeController do
       200 => {"Node re-registered", "application/json", NodeSchemas.NodeRegistrationResponse},
       401 => {"Unauthorized", "application/json", CommonSchemas.UnauthorizedResponse},
       409 =>
-        {"Node is not present in the expected Netmaker network", "application/json", CommonSchemas.ConflictResponse},
+        {"Node is not present in the expected Edge VPN network", "application/json", CommonSchemas.ConflictResponse},
       422 => {"Validation error", "application/json", CommonSchemas.ChangesetErrorResponse},
       503 => {"Service Unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }

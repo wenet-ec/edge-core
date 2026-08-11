@@ -1,10 +1,10 @@
 # edge_admin/lib/edge_admin/nodes/resources/aliases.ex
 defmodule EdgeAdmin.Nodes.Resources.Aliases do
   @moduledoc """
-  Owns node alias records and their Netmaker DNS lifecycle.
+  Owns node alias records and their Edge VPN DNS lifecycle.
 
   Alias records are persisted in the Admin database, while their DNS entries
-  live in Netmaker. This module handles CRUD, cleanup, and repair of that
+  live in Edge VPN. This module handles CRUD, cleanup, and repair of that
   cross-system state.
   """
 
@@ -32,7 +32,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   @doc """
   Repairs DNS entries for aliases belonging to a node after registration.
 
-  Missing or stale Netmaker DNS records are recreated from the node's current
+  Missing or stale Edge VPN DNS records are recreated from the node's current
   IPv4 and IPv6 VPN addresses. External DNS failures are logged and left for
   reconciliation.
   """
@@ -53,9 +53,9 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
       :ok
     else
       case Vpn.list_custom_dns_entries(network_name) do
-        {:ok, netmaker_custom_entries} ->
-          netmaker_entries_by_name = Map.new(netmaker_custom_entries, &{&1["name"], &1})
-          repaired = repair_alias_dns_entries(aliases, netmaker_entries_by_name, network_name)
+        {:ok, vpn_custom_entries} ->
+          vpn_entries_by_name = Map.new(vpn_custom_entries, &{&1["name"], &1})
+          repaired = repair_alias_dns_entries(aliases, vpn_entries_by_name, network_name)
 
           if repaired > 0 do
             Logger.info("Registration: repaired #{repaired} alias DNS record(s) for node #{node.id}")
@@ -74,7 +74,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   @doc """
   Cleans up all aliases for a single node.
 
-  Deletes DNS entries from Netmaker and removes alias records from DB.
+  Deletes DNS entries from Edge VPN and removes alias records from DB.
   Best-effort - logs warnings on failures but continues cleanup.
 
   Used when a node changes clusters (all aliases become invalid).
@@ -92,7 +92,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   Cleans up orphaned aliases for multiple nodes.
 
   Used by reconciliation worker to clean up aliases for nodes that:
-  - No longer exist in Netmaker (left network, deleted)
+  - No longer exist in Edge VPN (left network, deleted)
   - Exist in DB but not in the current network
 
   Returns count of cleaned aliases.
@@ -116,10 +116,10 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   defp cleanup_single_alias(%Alias{} = alias_record) do
     network_name = Cluster.network_name(alias_record.cluster)
     vpn_hostname = Alias.vpn_hostname(alias_record)
-    netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
+    vpn_dns_name = Alias.vpn_dns_name(alias_record)
 
     # 1. Try to delete DNS entry (best-effort)
-    case Vpn.delete_dns_entry(network_name, netmaker_dns_name) do
+    case Vpn.delete_dns_entry(network_name, vpn_dns_name) do
       {:ok, _} ->
         Logger.info("Deleted DNS entry for alias #{alias_record.name}: #{vpn_hostname}")
 
@@ -233,14 +233,14 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   Creates an alias for a node and its DNS entry.
 
   Flow:
-  1. Check Netmaker health (fail fast if service unavailable)
+  1. Check Edge VPN health (fail fast if service unavailable)
   2. Validate input
-  3. Query node IPv4/IPv6 addresses from Netmaker (at least one required for DNS entry)
+  3. Query node IPv4/IPv6 addresses from Edge VPN (at least one required for DNS entry)
   4. Create DB record
-  5. Create DNS entry in Netmaker (rollback DB on failure)
+  5. Create DNS entry in Edge VPN (rollback DB on failure)
 
   If health check fails, returns service unavailable immediately.
-  If node not found in Netmaker or has no VPN address, returns a conflict.
+  If node not found in Edge VPN or has no VPN address, returns a conflict.
   If DB creation fails, returns validation error.
   If DNS creation fails, rolls back the DB record and returns service unavailable.
   If that rollback ever fails and the alias row remains, reconciliation treats the
@@ -253,7 +253,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   ## Returns
   - `{:ok, alias}` - Alias created successfully
   - `{:error, changeset}` - Validation failed
-  - `{:error, :service_unavailable}` - Netmaker health check failed, node not found, or DNS creation failed
+  - `{:error, :service_unavailable}` - Edge VPN health check failed, node not found, or DNS creation failed
 
   ## Examples
 
@@ -275,12 +275,12 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
           {:error, changeset}
 
         {:ok, changeset} ->
-          # Query Netmaker only after local/schema and DB-state checks pass.
+          # Query Edge VPN only after local/schema and DB-state checks pass.
           network_name = Cluster.network_name(node.cluster)
 
           case Vpn.find_node_by_host(network_name, node.vpn_host_id) do
-            {:ok, netmaker_node} ->
-              addresses = node_dns_addresses(netmaker_node)
+            {:ok, vpn_node} ->
+              addresses = node_dns_addresses(vpn_node)
 
               if addresses do
                 insert_alias(changeset, network_name, addresses)
@@ -289,7 +289,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
               end
 
             {:error, :not_found} ->
-              # Node is not enrolled in Netmaker at all
+              # Node is not enrolled in Edge VPN at all
               Logger.warning(
                 "Cannot create alias: node #{node.vpn_host_id} is not enrolled in network #{network_name}"
               )
@@ -299,7 +299,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
                 "Node is not enrolled in the VPN network. Ensure the agent is connected and has joined the network."}}
 
             {:error, :service_unavailable} ->
-              Logger.error("Failed to query Netmaker nodes for network #{network_name}")
+              Logger.error("Failed to query Edge VPN nodes for network #{network_name}")
               {:error, :service_unavailable}
           end
       end
@@ -307,7 +307,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   end
 
   defp node_without_vpn_address(network_name, host_id) do
-    # Node exists in Netmaker but has no IP yet — still enrolling.
+    # Node exists in Edge VPN but has no IP yet — still enrolling.
     Logger.warning("Cannot create alias: node #{host_id} has no IPv4 or IPv6 address yet in network #{network_name}")
 
     {:error,
@@ -319,10 +319,10 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
       {:ok, alias_record} ->
         alias_record = Repo.preload(alias_record, :cluster)
 
-        # Create DNS entry in Netmaker (rollback DB on failure)
+        # Create DNS entry in Edge VPN (rollback DB on failure)
         vpn_hostname = Alias.vpn_hostname(alias_record)
-        netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
-        dns_attrs = Map.merge(%{name: netmaker_dns_name}, addresses)
+        vpn_dns_name = Alias.vpn_dns_name(alias_record)
+        dns_attrs = Map.merge(%{name: vpn_dns_name}, addresses)
 
         case Vpn.create_dns_entry(network_name, dns_attrs) do
           {:ok, _} ->
@@ -333,8 +333,8 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
             {:ok, alias_record}
 
           {:error, :service_unavailable} = error ->
-            # Netmaker DNS creation failed - rollback DB insert
-            Logger.warning("Netmaker DNS creation failed, rolling back DB alias: #{alias_record.name}")
+            # Edge VPN DNS creation failed - rollback DB insert
+            Logger.warning("Edge VPN DNS creation failed, rolling back DB alias: #{alias_record.name}")
             Repo.delete(alias_record)
             error
         end
@@ -347,27 +347,27 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   @doc """
   Deletes an alias and its DNS entry.
 
-  Flow (Netmaker-first):
-  1. Delete DNS entry from Netmaker FIRST
+  Flow (Edge VPN-first):
+  1. Delete DNS entry from Edge VPN FIRST
   2. Delete from DB
 
-  If Netmaker deletion fails (except :not_found), operation stops and returns error.
-  If Netmaker returns :not_found, continues with DB deletion (DNS already gone).
+  If Edge VPN deletion fails (except :not_found), operation stops and returns error.
+  If Edge VPN returns :not_found, continues with DB deletion (DNS already gone).
 
-  If DB deletion fails after Netmaker DNS deletion, the DB row remains the source
+  If DB deletion fails after Edge VPN DNS deletion, the DB row remains the source
   of truth and reconciliation will recreate the DNS entry.
 
-  Returns `{:ok, alias}`, `{:error, changeset}` (DB failure), or `{:error, :service_unavailable}` (Netmaker failure).
+  Returns `{:ok, alias}`, `{:error, changeset}` (DB failure), or `{:error, :service_unavailable}` (Edge VPN failure).
   """
   @spec delete(Alias.t()) :: {:ok, Alias.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
   def delete(%Alias{} = alias_record) do
     alias_record = Repo.preload(alias_record, :cluster)
     network_name = Cluster.network_name(alias_record.cluster)
     vpn_hostname = Alias.vpn_hostname(alias_record)
-    netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
+    vpn_dns_name = Alias.vpn_dns_name(alias_record)
 
-    # 1. Delete DNS entry from Netmaker FIRST
-    case Vpn.delete_dns_entry(network_name, netmaker_dns_name) do
+    # 1. Delete DNS entry from Edge VPN FIRST
+    case Vpn.delete_dns_entry(network_name, vpn_dns_name) do
       {:ok, _} ->
         Logger.info("Deleted DNS entry for alias #{alias_record.name}: #{vpn_hostname}")
         delete_alias_from_db(alias_record)
@@ -378,7 +378,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
         delete_alias_from_db(alias_record)
 
       {:error, :service_unavailable} = error ->
-        # Netmaker failed - stop operation
+        # Edge VPN failed - stop operation
         Logger.error("Failed to delete DNS entry for alias #{alias_record.name}, aborting alias deletion")
         error
     end
@@ -410,17 +410,17 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   @doc """
   Reconciles alias DNS for each cluster:
 
-  Direction 1 — DB → Netmaker:
-    Aliases in DB whose DNS entry no longer exists in Netmaker, or whose DNS
-    address no longer matches the node's current Netmaker IP.
-    Fix: delete/recreate the Netmaker DNS entry from DB state.
+  Direction 1 — DB → Edge VPN:
+    Aliases in DB whose DNS entry no longer exists in Edge VPN, or whose DNS
+    address no longer matches the node's current Edge VPN IP.
+    Fix: delete/recreate the Edge VPN DNS entry from DB state.
 
-  Direction 2 — Netmaker → DB:
-    Custom DNS entries in Netmaker with no matching DB alias.
+  Direction 2 — Edge VPN → DB:
+    Custom DNS entries in Edge VPN with no matching DB alias.
     This is the common failure path: node deleted (or cluster changed),
-    cleanup_node_aliases failed to reach Netmaker (service unavailable),
-    DB alias was deleted by cascade, DNS entry orphaned in Netmaker.
-    Fix: delete the DNS entry from Netmaker.
+    cleanup_node_aliases failed to reach Edge VPN (service unavailable),
+    DB alias was deleted by cascade, DNS entry orphaned in Edge VPN.
+    Fix: delete the DNS entry from Edge VPN.
   """
   @spec cleanup_ghost_aliases([Cluster.t()], map()) :: map()
   def cleanup_ghost_aliases(clusters, acc) do
@@ -437,17 +437,17 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
     network_name = Cluster.network_name(cluster)
 
     case Vpn.list_custom_dns_entries(network_name) do
-      {:ok, netmaker_custom_entries} ->
+      {:ok, vpn_custom_entries} ->
         db_aliases = Repo.preload(cluster, [aliases: :node], force: true).aliases
 
         db_alias_hostnames = MapSet.new(db_aliases, &Alias.vpn_hostname/1)
-        db_alias_short_names = MapSet.new(db_aliases, &Alias.netmaker_dns_name/1)
-        netmaker_entries_by_name = Map.new(netmaker_custom_entries, &{&1["name"], &1})
+        db_alias_short_names = MapSet.new(db_aliases, &Alias.vpn_dns_name/1)
+        vpn_entries_by_name = Map.new(vpn_custom_entries, &{&1["name"], &1})
 
-        dns_repaired = repair_alias_dns_entries(db_aliases, netmaker_entries_by_name, network_name)
+        dns_repaired = repair_alias_dns_entries(db_aliases, vpn_entries_by_name, network_name)
 
         dns_deleted =
-          delete_orphaned_dns_entries(netmaker_custom_entries, network_name, db_alias_short_names, db_alias_hostnames)
+          delete_orphaned_dns_entries(vpn_custom_entries, network_name, db_alias_short_names, db_alias_hostnames)
 
         total_cleaned = dns_deleted
         total_changed = dns_repaired + dns_deleted
@@ -470,10 +470,10 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
     end
   end
 
-  defp repair_alias_dns_entries(db_aliases, netmaker_entries_by_name, network_name) do
+  defp repair_alias_dns_entries(db_aliases, vpn_entries_by_name, network_name) do
     Enum.reduce(db_aliases, 0, fn alias_record, count ->
       current_addresses = current_alias_node_addresses(alias_record, network_name)
-      dns_entry = Map.get(netmaker_entries_by_name, Alias.vpn_hostname(alias_record))
+      dns_entry = Map.get(vpn_entries_by_name, Alias.vpn_hostname(alias_record))
 
       case alias_dns_repair_action(alias_record, dns_entry, current_addresses) do
         {:repair, addresses, reason} ->
@@ -510,10 +510,10 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   end
 
   defp repair_alias_dns_entry(alias_record, network_name, addresses, reason) do
-    netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
+    vpn_dns_name = Alias.vpn_dns_name(alias_record)
     vpn_hostname = Alias.vpn_hostname(alias_record)
 
-    case Vpn.delete_dns_entry(network_name, netmaker_dns_name) do
+    case Vpn.delete_dns_entry(network_name, vpn_dns_name) do
       {:ok, _} ->
         create_repaired_alias_dns(alias_record, network_name, addresses, reason)
 
@@ -528,9 +528,9 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   end
 
   defp create_repaired_alias_dns(alias_record, network_name, addresses, reason) do
-    netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
+    vpn_dns_name = Alias.vpn_dns_name(alias_record)
     vpn_hostname = Alias.vpn_hostname(alias_record)
-    dns_attrs = Map.merge(%{name: netmaker_dns_name}, addresses)
+    dns_attrs = Map.merge(%{name: vpn_dns_name}, addresses)
 
     case Vpn.create_dns_entry(network_name, dns_attrs) do
       {:ok, _} ->
@@ -549,7 +549,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
     end
   end
 
-  # Returns the address fields accepted by Netmaker's single DNS record shape.
+  # Returns the address fields accepted by Edge VPN's single DNS record shape.
   # A node may be IPv4-only, IPv6-only, or dual-stack, so absent families are
   # omitted rather than sent as empty strings.
   defp node_dns_addresses(node) when is_map(node) do
@@ -576,15 +576,15 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
     Enum.map_join(addresses, ", ", fn {family, address} -> "#{family}=#{address}" end)
   end
 
-  # Direction 2: Netmaker custom DNS entries with no DB alias → delete the DNS entry.
-  # Handles the case where cleanup_node_aliases couldn't reach Netmaker (service unavailable)
-  # so the DB alias was deleted (cascade) but the DNS entry was orphaned in Netmaker.
-  # Netmaker returns names with domain suffix appended — strip it to get the stored short name
+  # Direction 2: Edge VPN custom DNS entries with no DB alias → delete the DNS entry.
+  # Handles the case where cleanup_node_aliases couldn't reach Edge VPN (service unavailable)
+  # so the DB alias was deleted (cascade) but the DNS entry was orphaned in Edge VPN.
+  # Edge VPN returns names with domain suffix appended — strip it to get the stored short name
   # for the delete call.
-  defp delete_orphaned_dns_entries(netmaker_custom_entries, network_name, db_alias_short_names, db_alias_hostnames) do
+  defp delete_orphaned_dns_entries(vpn_custom_entries, network_name, db_alias_short_names, db_alias_hostnames) do
     default_domain = Vpn.default_domain()
 
-    Enum.reduce(netmaker_custom_entries, 0, fn entry, count ->
+    Enum.reduce(vpn_custom_entries, 0, fn entry, count ->
       dns_name = entry["name"]
 
       short_name =
@@ -598,11 +598,11 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
       else
         case Vpn.delete_dns_entry(network_name, short_name) do
           {:ok, _} ->
-            Logger.info("Reconciliation: Deleted orphaned DNS entry #{dns_name} from Netmaker (no DB alias)")
+            Logger.info("Reconciliation: Deleted orphaned DNS entry #{dns_name} from Edge VPN (no DB alias)")
             count + 1
 
           {:error, :not_found} ->
-            Logger.debug("Reconciliation: DNS entry #{dns_name} already gone from Netmaker")
+            Logger.debug("Reconciliation: DNS entry #{dns_name} already gone from Edge VPN")
             count
 
           {:error, reason} ->

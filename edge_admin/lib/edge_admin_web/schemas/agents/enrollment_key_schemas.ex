@@ -35,7 +35,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.EnrollmentKeySchemas do
         error: %Schema{type: :string, description: "Error message if verification failed, empty string otherwise"},
         netmaker_key: %Schema{
           type: :string,
-          description: "Netmaker enrollment key to use for VPN join, empty string if not verified"
+          description: "Edge VPN enrollment key to use for VPN join, empty string if not verified"
         },
         enrollment_key_id: %Schema{
           type: :string,

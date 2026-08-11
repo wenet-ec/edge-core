@@ -4,7 +4,7 @@ defmodule EdgeAdmin.Nodes.Checks.SubnetOverlapCheck do
   Checks that a proposed address-family range does not overlap with existing ranges.
 
   Overlap means one network's address falls inside the other's range (either direction),
-  which would cause Netmaker to reject the network with "network cidr already in use".
+  which would cause Edge VPN to reject the network with "network cidr already in use".
 
   Accepts the existing ranges as a parameter so the caller can reuse the same query
   result for auto-generating a subnet when no range is supplied.

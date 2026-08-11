@@ -3,7 +3,7 @@ defmodule EdgeAdmin.Nodes.Resources.Clusters do
   @moduledoc """
   Cluster read operations for the Nodes context.
 
-  This module owns cluster persistence and Netmaker lifecycle operations. The
+  This module owns cluster persistence and Edge VPN lifecycle operations. The
   public `EdgeAdmin.Nodes` context delegates here, but this resource does not
   call back through the context.
   """
@@ -129,7 +129,7 @@ defmodule EdgeAdmin.Nodes.Resources.Clusters do
     end
   end
 
-  @doc "Creates a cluster, allocates ranges, and provisions its Netmaker network."
+  @doc "Creates a cluster, allocates ranges, and provisions its Edge VPN network."
   @spec create(map()) ::
           {:ok, Cluster.t()}
           | {:error, Ecto.Changeset.t()}
@@ -153,7 +153,7 @@ defmodule EdgeAdmin.Nodes.Resources.Clusters do
     end
   end
 
-  @doc "Retires an empty cluster and enqueues asynchronous Netmaker cleanup."
+  @doc "Retires an empty cluster and enqueues asynchronous Edge VPN cleanup."
   @spec delete(Cluster.t()) ::
           {:ok, Cluster.t()}
           | {:error, :not_found}
@@ -202,11 +202,11 @@ defmodule EdgeAdmin.Nodes.Resources.Clusters do
   def change(%Cluster{} = cluster, attrs \\ %{}), do: Cluster.changeset(cluster, attrs)
 
   defp existing_cluster_ranges do
-    with {:ok, netmaker_ranges} <- Vpn.list_network_ranges() do
+    with {:ok, vpn_ranges} <- Vpn.list_network_ranges() do
       {:ok,
        %{
-         ipv4: Enum.uniq(Repo.all(from(c in Cluster, select: c.ipv4_range)) ++ netmaker_ranges.ipv4),
-         ipv6: Enum.uniq(Repo.all(from(c in Cluster, select: c.ipv6_range)) ++ netmaker_ranges.ipv6)
+         ipv4: Enum.uniq(Repo.all(from(c in Cluster, select: c.ipv4_range)) ++ vpn_ranges.ipv4),
+         ipv6: Enum.uniq(Repo.all(from(c in Cluster, select: c.ipv6_range)) ++ vpn_ranges.ipv6)
        }}
     end
   end
@@ -235,7 +235,7 @@ defmodule EdgeAdmin.Nodes.Resources.Clusters do
 
     case Vpn.create_network(network_name, opts) do
       {:ok, _} ->
-        Logger.info("Created Netmaker network: #{network_name}")
+        Logger.info("Created Edge VPN network: #{network_name}")
         Metadata.Events.publish(:cluster_created)
         {:ok, cluster}
 
@@ -243,7 +243,7 @@ defmodule EdgeAdmin.Nodes.Resources.Clusters do
         resolve_existing_network(cluster, network_name)
 
       {:error, :service_unavailable} = error ->
-        Logger.warning("Netmaker network creation failed, rolling back DB cluster: #{cluster.name}")
+        Logger.warning("Edge VPN network creation failed, rolling back DB cluster: #{cluster.name}")
         Repo.delete(cluster)
         error
     end
@@ -252,13 +252,13 @@ defmodule EdgeAdmin.Nodes.Resources.Clusters do
   defp resolve_existing_network(cluster, network_name) do
     with {:ok, %{"addressrange" => ipv4_range, "addressrange6" => ipv6_range}} <- Vpn.get_network(network_name),
          true <- ipv4_range == cluster.ipv4_range and ipv6_range == cluster.ipv6_range do
-      Logger.info("Netmaker network #{network_name} already exists with matching dual-stack ranges")
+      Logger.info("Edge VPN network #{network_name} already exists with matching dual-stack ranges")
       Metadata.Events.publish(:cluster_created)
       {:ok, cluster}
     else
       {:ok, _network} ->
         Repo.delete(cluster)
-        {:error, {:conflict, "Netmaker network #{network_name} exists with different immutable address ranges"}}
+        {:error, {:conflict, "Edge VPN network #{network_name} exists with different immutable address ranges"}}
 
       {:error, _} = error ->
         Repo.delete(cluster)
@@ -266,7 +266,7 @@ defmodule EdgeAdmin.Nodes.Resources.Clusters do
 
       false ->
         Repo.delete(cluster)
-        {:error, {:conflict, "Netmaker network #{network_name} exists with different immutable address ranges"}}
+        {:error, {:conflict, "Edge VPN network #{network_name} exists with different immutable address ranges"}}
     end
   end
 

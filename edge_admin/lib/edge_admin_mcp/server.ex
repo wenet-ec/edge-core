@@ -166,7 +166,7 @@ defmodule EdgeAdminMcp.Server do
                     ├─ Self-Update Request (managed agent upgrade)
                     └─ Metrics (host / agent / wireguard exporters)
 
-    A **cluster** is a logical group that maps 1:1 to a Netmaker WireGuard network.
+    A **cluster** is a logical group that maps 1:1 to a Edge VPN WireGuard network.
     Every cluster is a full mesh — there are no per-cluster ACLs. Workloads should
     be partitioned by *creating more clusters*, not by gating traffic inside one.
 
@@ -221,7 +221,7 @@ defmodule EdgeAdminMcp.Server do
     ## Diagnosing problems
 
     When an agent looks broken or a node won't enroll, start with
-    `check_admin_health` — it runs every subsystem check (DB, Netmaker, netclient,
+    `check_admin_health` — it runs every subsystem check (DB, Edge VPN, netclient,
     proxies, broker) in parallel and returns structured pass/fail. For an
     individual edge node, use `get_node_diagnostics`.
     """

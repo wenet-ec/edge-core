@@ -37,7 +37,7 @@ defmodule EdgeAdminWeb.Schemas.PathParams do
   Cluster-name path parameter — DNS-style charset, max 24 chars.
 
   Used for cluster, network, and similar names that travel through the
-  Netmaker/WireGuard stack.
+  Edge VPN/WireGuard stack.
   """
   @spec cluster_name(atom(), String.t()) :: {atom(), keyword()}
   def cluster_name(name, description) when is_atom(name) and is_binary(description) do

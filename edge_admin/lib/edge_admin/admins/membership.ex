@@ -13,14 +13,14 @@ defmodule EdgeAdmin.Admins.Membership do
 
   - **Admin Cluster**: VPN network connecting all admin instances for HA coordination
   - **Erlang Distribution**: Enables inter-admin RPC, syn registry, and clustering
-  - **Peer Discovery**: Finds other admins in the cluster via Netmaker API
+  - **Peer Discovery**: Finds other admins in the cluster via Edge VPN API
 
   ## Responsibilities
 
   1. **VPN Network Join** (step 1)
      - Join admin cluster VPN network
      - Create network if this is the first admin in the cluster
-     - Wait for Netmaker host registration and netclient join (bounded)
+     - Wait for Edge VPN host registration and netclient join (bounded)
 
   2. **Erlang Distribution** (step 2)
      - Start distributed Erlang with configured cookie
@@ -34,16 +34,16 @@ defmodule EdgeAdmin.Admins.Membership do
        is initialized separately by `EdgeAdmin.EdgeClusters`)
 
   4. **Peer Discovery** (step 4)
-     - Query Netmaker for other admins in the cluster
+     - Query Edge VPN for other admins in the cluster
      - Connect to peer Erlang nodes via `Discovery.scan_and_connect_admins/0`
 
   ## Membership Sequence
 
   ```
-  1. Join admin cluster network (create if needed) + wait for Netmaker / netclient
+  1. Join admin cluster network (create if needed) + wait for Edge VPN / netclient
   2. Start Erlang distribution
   3. Initialize syn (add :admin_scope, join cluster group with metadata)
-  4. Discover peer admins via Netmaker API and connect
+  4. Discover peer admins via Edge VPN API and connect
   ```
 
   ## Failure Handling
@@ -189,7 +189,7 @@ defmodule EdgeAdmin.Admins.Membership do
   # Step 1: VPN Network Join
   # =============================================================================
 
-  # Bounded waits prevent silent hangs when Netmaker/netclient never produce a
+  # Bounded waits prevent silent hangs when Edge VPN/netclient never produce a
   # result we expect. The total per-step budget is `:join_timeout_seconds`
   # (env: `MEMBERSHIP_JOIN_TIMEOUT_SECONDS`, default 60s). Polling cadence is
   # held at 2s — operators tune the budget, not the cadence.
@@ -217,14 +217,14 @@ defmodule EdgeAdmin.Admins.Membership do
            :ok <- check_capacity(network_name),
            {:ok, token} <- Vpn.get_default_enrollment_key(network_name),
            {:ok, _} <- Vpn.join_network([{:token, token} | join_opts]),
-           :ok <- wait_for_netmaker(admin_name, 1, max_attempts),
+           :ok <- wait_for_vpn_registration(admin_name, 1, max_attempts),
            :ok <- wait_for_netclient(network_name, 1, max_attempts) do
         Logger.info("Successfully joined admin cluster network")
         :ok
       else
         {:error, reason} ->
           Logger.error("Failed to join admin cluster network: #{inspect(reason)}")
-          # If we got far enough that a host might exist in Netmaker, delete
+          # If we got far enough that a host might exist in Edge VPN, delete
           # it so we don't leave a hostless orphan eating CIDR slots on retry.
           maybe_cleanup_orphan_self(admin_name, reason)
           {:error, {:vpn_join_failed, reason}}
@@ -248,7 +248,7 @@ defmodule EdgeAdmin.Admins.Membership do
   end
 
   # Pre-flight: refuse to attempt join if the admin cluster CIDR is exhausted.
-  # Without this check, `wait_for_netclient` would hang because Netmaker accepts
+  # Without this check, `wait_for_netclient` would hang because Edge VPN accepts
   # the host registration but never creates a node (IP allocation fails inside
   # an async goroutine). Bail out early with a clear error instead.
   defp check_capacity(network_name) do
@@ -307,21 +307,21 @@ defmodule EdgeAdmin.Admins.Membership do
     end
   end
 
-  defp wait_for_netmaker(_admin_name, attempt, max_attempts) when attempt > max_attempts do
-    {:error, :netmaker_registration_timeout}
+  defp wait_for_vpn_registration(_admin_name, attempt, max_attempts) when attempt > max_attempts do
+    {:error, :vpn_registration_timeout}
   end
 
-  defp wait_for_netmaker(admin_name, attempt, max_attempts) do
+  defp wait_for_vpn_registration(admin_name, attempt, max_attempts) do
     case Vpn.get_host_id(admin_name) do
       {:ok, _host_id} ->
-        Logger.info("Host #{admin_name} registered in Netmaker API")
+        Logger.info("Host #{admin_name} registered in Edge VPN API")
         :ok
 
       _ ->
-        Logger.debug("Waiting for #{admin_name} to appear in Netmaker (attempt #{attempt}/#{max_attempts})")
+        Logger.debug("Waiting for #{admin_name} to appear in Edge VPN (attempt #{attempt}/#{max_attempts})")
 
         Process.sleep(@join_retry_delay_ms)
-        wait_for_netmaker(admin_name, attempt + 1, max_attempts)
+        wait_for_vpn_registration(admin_name, attempt + 1, max_attempts)
     end
   end
 
@@ -353,7 +353,7 @@ defmodule EdgeAdmin.Admins.Membership do
     end
   end
 
-  # Step 1 may have registered this admin as a host in Netmaker before failing
+  # Step 1 may have registered this admin as a host in Edge VPN before failing
   # (e.g. node creation hung, netclient didn't pick up the network). Such a
   # host is an orphan: it occupies a slot but provides no functionality. Delete
   # it before propagating the error so the next restart starts from a clean
@@ -379,7 +379,7 @@ defmodule EdgeAdmin.Admins.Membership do
         end
 
       _ ->
-        # No host registered (or Netmaker unreachable) — nothing to clean up.
+        # No host registered (or Edge VPN unreachable) — nothing to clean up.
         :ok
     end
   end

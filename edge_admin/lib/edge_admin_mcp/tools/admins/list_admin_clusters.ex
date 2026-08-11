@@ -1,7 +1,7 @@
 # edge_admin/lib/edge_admin_mcp/tools/admins/list_admin_clusters.ex
 defmodule EdgeAdminMcp.Tools.Admins.ListAdminClusters do
   @moduledoc """
-  List every admin cluster Netmaker knows about, with each cluster's admins.
+  List every admin cluster Edge VPN knows about, with each cluster's admins.
 
   Includes admins this instance is not a member of (cross-cluster visibility) and
   may include stale entries — useful for spotting zombie admins by checking the

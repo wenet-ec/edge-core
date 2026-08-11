@@ -2,7 +2,7 @@
 defmodule EdgeAdmin.Naming do
   @moduledoc """
   Shared naming rules for resources whose identifiers travel through the
-  Netmaker / WireGuard / SSH stacks.
+  Edge VPN / WireGuard / SSH stacks.
 
   Centralised so every layer that validates a name (Layer 1 OpenApiSpex
   string pattern, Layer 1 MCP Peri regex, Layer 2 Form `validate_format`,
@@ -28,7 +28,7 @@ defmodule EdgeAdmin.Naming do
 
   - **Cluster names** & **alias names** share a DNS-label charset:
     lowercase alphanumeric with hyphens, no leading/trailing hyphen.
-    Different max lengths: clusters 24 (must fit Netmaker constraints),
+    Different max lengths: clusters 24 (must fit Edge VPN constraints),
     aliases 63 (DNS label maximum).
   - **SSH usernames** use a Unix-identifier charset: letter or
     underscore start, then alphanumerics / hyphens / underscores.
@@ -56,7 +56,7 @@ defmodule EdgeAdmin.Naming do
   @doc "Inner regex string for OpenApiSpex `pattern:` field."
   def cluster_name_pattern, do: @dns_label_pattern
 
-  @doc "Maximum length of a cluster name. Bounded by Netmaker network-name limits."
+  @doc "Maximum length of a cluster name. Bounded by Edge VPN network-name limits."
   def cluster_name_max_length, do: 24
 
   # ── Alias names ────────────────────────────────────────────────────────────

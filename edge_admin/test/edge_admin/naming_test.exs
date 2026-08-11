@@ -71,7 +71,7 @@ defmodule EdgeAdmin.NamingTest do
   end
 
   describe "cluster_name_max_length/0" do
-    test "is 24 (Netmaker constraint)" do
+    test "is 24 (Edge VPN constraint)" do
       assert Naming.cluster_name_max_length() == 24
     end
   end

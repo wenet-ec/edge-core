@@ -9,7 +9,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
   ## Key Concepts
 
-  - **VPN Connection**: Direct host-to-network join via Netmaker API (no enrollment keys)
+  - **VPN Connection**: Direct host-to-network join via Edge VPN API (no enrollment keys)
   - **Cross-Admin Routing**: syn registry enables routing requests to the correct admin
   - **HTTP Client**: Provides helper functions for metrics scraping and agent commands
   - **Non-blocking Operations**: All HTTP/TCP operations use Task.async to prevent head-of-line blocking
@@ -18,7 +18,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   ## Responsibilities
 
   1. **VPN Management**
-     - Join cluster network on startup (creates Netmaker node)
+     - Join cluster network on startup (creates Edge VPN node)
      - Leave cluster network on shutdown (deletes node, preserves host)
 
   2. **syn Registration**
@@ -514,11 +514,11 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
   defp join_network(cluster_name, host_id, attempt \\ 1, max_attempts \\ 3) do
     # cluster_name is already normalized (e.g., "cluster-test")
     # Add this host to the cluster network via direct API
-    # Netmaker handles DNS automatically (no custom DNS entries needed)
+    # Edge VPN handles DNS automatically (no custom DNS entries needed)
     case Vpn.add_host_to_network(host_id, cluster_name) do
       {:ok, :already_joined} ->
         # Host already has a node in this network (e.g. Gateway restarted without leaving).
-        # Netmaker returns HTTP 500 "host already part of network" for this — treat as success.
+        # Edge VPN returns HTTP 500 "host already part of network" for this — treat as success.
         Logger.info("Gateway already in network #{cluster_name}, skipping join")
         :ok
 

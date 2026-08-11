@@ -25,7 +25,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
         },
         network_name: %Schema{
           type: :string,
-          description: "Netmaker network name (must start with 'cluster-')",
+          description: "Edge VPN network name (must start with 'cluster-')",
           example: "cluster-test"
         },
         http_port: %Schema{
@@ -102,7 +102,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.NodeSchemas do
       type: :object,
       additionalProperties: false,
       properties: %{
-        network_name: %Schema{type: :string, description: "Netmaker network name (must start with 'cluster-')"},
+        network_name: %Schema{type: :string, description: "Edge VPN network name (must start with 'cluster-')"},
         http_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "Agent HTTP API port"},
         ssh_port: %Schema{type: :integer, minimum: 1, maximum: 65_535, description: "Agent SSH server port"},
         host_metrics_port: %Schema{

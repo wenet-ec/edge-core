@@ -122,7 +122,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     field(:recovery_key, :string, redact: true)
     field(:self_update_enabled, :boolean, default: false)
 
-    # Netmaker references
+    # Edge VPN references
     field(:vpn_host_id, :binary_id)
 
     # Computed fields

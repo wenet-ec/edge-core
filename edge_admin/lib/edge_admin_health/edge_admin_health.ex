@@ -7,7 +7,7 @@ defmodule EdgeAdminHealth do
   - Database connection
   - Admin-cluster membership
   - Metadata computation
-  - Netmaker API reachability
+  - Edge VPN API reachability
   - Netclient connection to admin cluster network
   - Proxy servers
   - Event broker connection (no-op when EVENT_BROKER_ENABLED=false)
@@ -31,7 +31,7 @@ defmodule EdgeAdminHealth do
       %PlugCheckup.Check{name: "Database", module: __MODULE__, function: :database_health},
       %PlugCheckup.Check{name: "Membership", module: __MODULE__, function: :membership_health},
       %PlugCheckup.Check{name: "Metadata", module: __MODULE__, function: :metadata_health},
-      %PlugCheckup.Check{name: "Netmaker API", module: __MODULE__, function: :netmaker_api_health},
+      %PlugCheckup.Check{name: "Edge VPN API", module: __MODULE__, function: :edge_vpn_api_health},
       %PlugCheckup.Check{name: "Netclient", module: __MODULE__, function: :netclient_health},
       %PlugCheckup.Check{name: "Proxy Servers", module: __MODULE__, function: :proxy_servers_health},
       %PlugCheckup.Check{name: "Event Broker", module: __MODULE__, function: :event_broker_health}
@@ -71,20 +71,20 @@ defmodule EdgeAdminHealth do
     end
   end
 
-  @doc "Checks reachability of the Netmaker API with bounded retries."
-  @spec netmaker_api_health() :: :ok | {:error, String.t()}
-  def netmaker_api_health do
+  @doc "Checks reachability of the Edge VPN API with bounded retries."
+  @spec edge_vpn_api_health() :: :ok | {:error, String.t()}
+  def edge_vpn_api_health do
     case EdgeAdmin.Vpn.netmaker_health_check(retries: 2, retry_delay: 200) do
       :ok ->
         :ok
 
       {:error, :service_unavailable} ->
-        Logger.debug("Netmaker API health check failed after retries")
+        Logger.debug("Edge VPN API health check failed after retries")
         {:error, "API unreachable"}
     end
   rescue
     e ->
-      Logger.error("Netmaker API health check exception: #{inspect(e)}")
+      Logger.error("Edge VPN API health check exception: #{inspect(e)}")
       {:error, "API check exception"}
   end
 

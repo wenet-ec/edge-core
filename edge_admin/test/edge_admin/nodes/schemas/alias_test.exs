@@ -71,32 +71,32 @@ defmodule EdgeAdmin.Nodes.Schemas.AliasTest do
   end
 
   # ---------------------------------------------------------------------------
-  # netmaker_dns_name/1
+  # vpn_dns_name/1
   # ---------------------------------------------------------------------------
 
-  describe "netmaker_dns_name/1" do
+  describe "vpn_dns_name/1" do
     test "returns node-{name}.cluster-{cluster_name} (no domain suffix)" do
       alias_record = fake_alias(%{name: "web", cluster: fake_cluster(%{name: "prod"})})
-      assert Alias.netmaker_dns_name(alias_record) == "node-web.cluster-prod"
+      assert Alias.vpn_dns_name(alias_record) == "node-web.cluster-prod"
     end
 
     test "does not include the nm.internal suffix" do
-      refute Alias.netmaker_dns_name(fake_alias()) =~ ".nm.internal"
+      refute Alias.vpn_dns_name(fake_alias()) =~ ".nm.internal"
     end
 
     test "is a prefix of the vpn_hostname" do
       alias_record = fake_alias()
-      assert String.starts_with?(Alias.vpn_hostname(alias_record), Alias.netmaker_dns_name(alias_record))
+      assert String.starts_with?(Alias.vpn_hostname(alias_record), Alias.vpn_dns_name(alias_record))
     end
 
     test "uses alias name not node id" do
       alias_record = fake_alias(%{name: "my-service"})
-      assert Alias.netmaker_dns_name(alias_record) =~ "node-my-service"
+      assert Alias.vpn_dns_name(alias_record) =~ "node-my-service"
     end
 
     test "uses cluster name from preloaded cluster" do
       alias_record = fake_alias(%{cluster: fake_cluster(%{name: "staging"})})
-      assert Alias.netmaker_dns_name(alias_record) =~ "cluster-staging"
+      assert Alias.vpn_dns_name(alias_record) =~ "cluster-staging"
     end
   end
 end

@@ -328,7 +328,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
             },
             reconciliation: %Schema{
               type: :object,
-              description: "Cluster reconciliation metrics (Netmaker ↔ DB sync)",
+              description: "Cluster reconciliation metrics (Edge VPN ↔ DB sync)",
               properties: %{
                 total: %Schema{
                   type: :integer,
@@ -343,12 +343,12 @@ defmodule EdgeAdminWeb.Schemas.Metrics.AdminMetricsSchemas do
                 nodes_added: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Nodes added to Netmaker in the most recent reconciliation run"
+                  description: "Nodes added to Edge VPN in the most recent reconciliation run"
                 },
                 nodes_removed: %Schema{
                   type: :integer,
                   nullable: true,
-                  description: "Nodes removed from Netmaker in the most recent reconciliation run"
+                  description: "Nodes removed from Edge VPN in the most recent reconciliation run"
                 },
                 nodes_deleted: %Schema{
                   type: :integer,

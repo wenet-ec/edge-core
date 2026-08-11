@@ -121,7 +121,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
         },
         vpn_hostname: %Schema{
           type: :string,
-          description: "Netmaker dns hostname"
+          description: "Edge VPN dns hostname"
         },
         erlang_node_name: %Schema{
           type: :string,
@@ -342,7 +342,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
     schema(%{
       title: "AdminClusterMember",
       description:
-        "An admin instance present in a Netmaker admin-cluster network. May include stale/disconnected entries.",
+        "An admin instance present in a Edge VPN admin-cluster network. May include stale/disconnected entries.",
       type: :object,
       properties: %{
         name: %Schema{type: :string, description: "Admin name (e.g., admin-k7m3n2p9x4j6)"},
@@ -376,13 +376,13 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           type: :string,
           enum: ["online", "offline", "disconnected"],
           description:
-            "Netmaker-derived status: online (recent checkin), offline (stale checkin), disconnected (admin disabled)",
+            "Edge VPN-derived status: online (recent checkin), offline (stale checkin), disconnected (admin disabled)",
           nullable: true
         },
         last_checked_in: %Schema{
           type: :string,
           format: :"date-time",
-          description: "Last time this admin's netclient reported in to Netmaker (ISO 8601)",
+          description: "Last time this admin's netclient reported in to Edge VPN (ISO 8601)",
           nullable: true
         }
       },
@@ -406,7 +406,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
 
     schema(%{
       title: "AdminCluster",
-      description: "An admin cluster as known to Netmaker, plus its admin members.",
+      description: "An admin cluster as known to Edge VPN, plus its admin members.",
       type: :object,
       properties: %{
         name: %Schema{type: :string, description: "Admin cluster network name (e.g., admin-cluster-main)"},
@@ -448,7 +448,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
 
     schema(%{
       title: "AdminClusters",
-      description: "All admin clusters Netmaker knows about, sorted by name.",
+      description: "All admin clusters Edge VPN knows about, sorted by name.",
       type: :array,
       items: AdminCluster
     })
@@ -461,7 +461,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
       CommonSchemas.single_response(
         AdminClusters,
         "AdminClustersResponse",
-        "All admin clusters Netmaker knows about"
+        "All admin clusters Edge VPN knows about"
       )
     )
   end

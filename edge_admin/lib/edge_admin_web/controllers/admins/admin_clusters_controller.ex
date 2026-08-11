@@ -13,15 +13,15 @@ defmodule EdgeAdminWeb.Controllers.Admins.AdminClustersController do
   tags(["Admins.Metadata"])
 
   operation(:index,
-    summary: "List all admin clusters from Netmaker",
+    summary: "List all admin clusters from Edge VPN",
     description: """
-    Lists every admin cluster Netmaker knows about, with each cluster's admins.
+    Lists every admin cluster Edge VPN knows about, with each cluster's admins.
     Includes admins this instance is not a member of (cross-cluster visibility)
     and may include stale entries.
     """,
     responses: %{
       200 => {"Admin clusters", "application/json", AdminSchemas.AdminClustersResponse},
-      503 => {"Netmaker unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
+      503 => {"Edge VPN unavailable", "application/json", CommonSchemas.ServiceUnavailableResponse}
     }
   )
 

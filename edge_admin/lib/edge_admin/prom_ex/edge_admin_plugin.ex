@@ -467,13 +467,13 @@ defmodule EdgeAdmin.PromEx.EdgeAdminPlugin do
       last_value(
         [:edge_admin, :nodes, :cluster_reconciliation, :nodes_added],
         event_name: [:edge_admin, :nodes, :cluster_reconciliation],
-        description: "Nodes added to Netmaker in last reconciliation run",
+        description: "Nodes added to Edge VPN in last reconciliation run",
         measurement: :nodes_added
       ),
       last_value(
         [:edge_admin, :nodes, :cluster_reconciliation, :nodes_removed],
         event_name: [:edge_admin, :nodes, :cluster_reconciliation],
-        description: "Nodes removed from Netmaker in last reconciliation run",
+        description: "Nodes removed from Edge VPN in last reconciliation run",
         measurement: :nodes_removed
       ),
       last_value(

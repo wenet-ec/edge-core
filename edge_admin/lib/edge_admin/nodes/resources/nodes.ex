@@ -3,7 +3,7 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
   @moduledoc """
   Owns node persistence, lookup, filtering, registration finalization, cluster
   movement, deletion, and node-local changesets. Dependencies on aliases,
-  commands, events, and Netmaker are explicit; this module never calls back
+  commands, events, and Edge VPN are explicit; this module never calls back
   through `EdgeAdmin.Nodes`.
   """
 
@@ -83,7 +83,7 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
   @spec change(Node.t(), map()) :: Ecto.Changeset.t()
   def change(%Node{} = node, attrs \\ %{}), do: Node.changeset(node, attrs)
 
-  @doc "Moves a node to an active cluster and best-effort syncs Netmaker membership."
+  @doc "Moves a node to an active cluster and best-effort syncs Edge VPN membership."
   @spec change_cluster(Node.t(), map()) ::
           {:ok, Node.t()}
           | {:error, :not_found}
@@ -101,7 +101,7 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
     end
   end
 
-  @doc "Deletes a node from Netmaker and then removes it from the database."
+  @doc "Deletes a node from Edge VPN and then removes it from the database."
   @spec delete_node(Node.t()) ::
           {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
   def delete_node(%Node{} = node) do
@@ -110,13 +110,13 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
 
     case Vpn.delete_host(node.vpn_host_id) do
       {:ok, _} ->
-        Logger.info("Deleted host #{node.vpn_host_id} from Netmaker")
-        sweep_orphan_netmaker_nodes(node)
+        Logger.info("Deleted host #{node.vpn_host_id} from Edge VPN")
+        sweep_orphan_vpn_nodes(node)
         delete_node_from_db(node)
 
       {:error, :not_found} ->
         Logger.info("VPN host #{node.vpn_host_id} already deleted")
-        sweep_orphan_netmaker_nodes(node)
+        sweep_orphan_vpn_nodes(node)
         delete_node_from_db(node)
 
       {:error, :service_unavailable} = error ->
@@ -194,9 +194,9 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
     end
   end
 
-  defp sweep_orphan_netmaker_nodes(%Node{cluster: %Ecto.Association.NotLoaded{}}), do: :ok
+  defp sweep_orphan_vpn_nodes(%Node{cluster: %Ecto.Association.NotLoaded{}}), do: :ok
 
-  defp sweep_orphan_netmaker_nodes(%Node{} = node) do
+  defp sweep_orphan_vpn_nodes(%Node{} = node) do
     network_name = Cluster.network_name(node.cluster)
 
     case Vpn.list_nodes(network_name) do
@@ -206,21 +206,21 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
         |> Enum.each(&delete_orphan_node(network_name, &1, node.vpn_host_id))
 
       {:error, reason} ->
-        Logger.warning("Orphan sweep: could not list Netmaker nodes for #{network_name}: #{inspect(reason)}")
+        Logger.warning("Orphan sweep: could not list Edge VPN nodes for #{network_name}: #{inspect(reason)}")
     end
   end
 
   defp delete_orphan_node(network_name, nm_node, host_id) do
     case Vpn.delete_node(network_name, nm_node["id"]) do
       {:ok, _} ->
-        Logger.warning("Orphan sweep: removed Netmaker node #{nm_node["id"]} (host #{host_id}) from #{network_name}")
+        Logger.warning("Orphan sweep: removed Edge VPN node #{nm_node["id"]} (host #{host_id}) from #{network_name}")
 
       {:error, :not_found} ->
         :ok
 
       {:error, reason} ->
         Logger.error(
-          "Orphan sweep: failed to remove Netmaker node #{nm_node["id"]} from #{network_name}: #{inspect(reason)}"
+          "Orphan sweep: failed to remove Edge VPN node #{nm_node["id"]} from #{network_name}: #{inspect(reason)}"
         )
     end
   end

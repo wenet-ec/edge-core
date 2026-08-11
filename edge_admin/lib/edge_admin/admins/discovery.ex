@@ -10,15 +10,15 @@ defmodule EdgeAdmin.Admins.Discovery do
 
   - **Peer Admin**: Another admin instance in the same admin cluster
   - **Erlang Node**: Distributed Erlang runtime identified by name (e.g., `admin@host`)
-  - **Discovery**: Finding peers via Netmaker API (no hardcoded addresses)
+  - **Discovery**: Finding peers via Edge VPN API (no hardcoded addresses)
   - **Connection**: Establishing distributed Erlang connection via `Node.connect/1`
 
   ## Discovery Process
 
   ```
-  1. Query Netmaker for all nodes in admin cluster network
+  1. Query Edge VPN for all nodes in admin cluster network
   2. Filter to online/connected nodes only
-  3. Query Netmaker for hosts corresponding to those nodes
+  3. Query Edge VPN for hosts corresponding to those nodes
   4. Extract hostnames from hosts
   5. Exclude self from list
   6. Build Erlang node names from hostnames
@@ -69,12 +69,12 @@ defmodule EdgeAdmin.Admins.Discovery do
       do_connect_peers(nodes, hosts, network_name)
     else
       {:error, reason} ->
-        Logger.debug("Could not query Netmaker API for peer discovery: #{inspect(reason)}")
+        Logger.debug("Could not query Edge VPN API for peer discovery: #{inspect(reason)}")
         Logger.debug("Skipping peer discovery")
         :ok
 
       _ ->
-        Logger.debug("Unexpected response format from Netmaker API")
+        Logger.debug("Unexpected response format from Edge VPN API")
         :ok
     end
   end

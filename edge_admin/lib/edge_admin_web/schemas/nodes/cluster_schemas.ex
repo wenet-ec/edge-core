@@ -101,7 +101,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.ClusterSchemas do
         },
         network_name: %Schema{
           type: :string,
-          description: "Netmaker network name",
+          description: "Edge VPN network name",
           example: "cluster-prod-east"
         },
         vpn_domain: %Schema{

@@ -1,10 +1,10 @@
 # edge_admin/lib/edge_admin/nodes/workflows/reconciliation.ex
 defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
   @moduledoc """
-  Reconciles the Admin database with Netmaker cluster and node state.
+  Reconciles the Admin database with Edge VPN cluster and node state.
 
   The database remains the source of truth. Reconciliation repairs missing
-  Netmaker networks and memberships, removes unmanaged drift, and delegates
+  Edge VPN networks and memberships, removes unmanaged drift, and delegates
   alias DNS repair to EdgeAdmin.Nodes.Resources.Aliases.
   """
 
@@ -30,15 +30,15 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
   end
 
   @doc """
-  Reconciles all active clusters and their node membership between database (source of truth) and Netmaker.
+  Reconciles all active clusters and their node membership between database (source of truth) and Edge VPN.
 
   For each cluster:
   1. Gets nodes that SHOULD be in the network (from DB)
-  2. Gets nodes that ARE in the network (from Netmaker)
-  3. Cleans up orphaned aliases (nodes not in DB or not in Netmaker)
-  4. Adds missing nodes (DB says yes, Netmaker says no)
-  5. Removes extra nodes (Netmaker says yes, DB says no)
-  6. Recreates missing Netmaker networks from active DB cluster configuration
+  2. Gets nodes that ARE in the network (from Edge VPN)
+  3. Cleans up orphaned aliases (nodes not in DB or not in Edge VPN)
+  4. Adds missing nodes (DB says yes, Edge VPN says no)
+  5. Removes extra nodes (Edge VPN says yes, DB says no)
+  6. Recreates missing Edge VPN networks from active DB cluster configuration
   7. Repairs missing/stale alias DNS and deletes ghost alias DNS
 
   Only processes edge nodes (those belonging to edge agents, identified by having a DB record).
@@ -91,7 +91,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
 
   @doc """
   Enqueues active-cluster reconciliation and retired-cluster deletion work, then cleans
-  up Netmaker cluster networks that no database row owns.
+  up Edge VPN cluster networks that no database row owns.
   """
   @spec enqueue_cluster_reconciliation() :: :ok | {:error, term()}
   def enqueue_cluster_reconciliation do
@@ -133,7 +133,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
         remove_retired_cluster(cluster, network_name)
 
       {:error, reason} ->
-        Logger.warning("Failed to delete retired Netmaker network #{network_name}: #{inspect(reason)}")
+        Logger.warning("Failed to delete retired Edge VPN network #{network_name}: #{inspect(reason)}")
         {:error, reason}
     end
   end
@@ -223,7 +223,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
         # Process next page
         reconcile_clusters_paginated(page + 1, result_with_ghost_aliases)
       else
-        # All pages processed — run the Netmaker→DB ghost network sweep once at the end
+        # All pages processed — run the Edge VPN→DB ghost network sweep once at the end
         final_result = cleanup_ghost_networks(result_with_ghost_aliases)
         Logger.info("Cluster reconciliation completed: #{inspect(final_result)}")
         final_result
@@ -241,11 +241,11 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
       expected_host_ids = MapSet.new(db_nodes, & &1.vpn_host_id)
 
       case Vpn.list_nodes(network_name) do
-        {:ok, netmaker_nodes} ->
+        {:ok, vpn_nodes} ->
           if cluster_active?(cluster.id) do
-            actual_host_ids = vpn_host_ids(netmaker_nodes)
+            actual_host_ids = vpn_host_ids(vpn_nodes)
 
-            counts = reconcile_cluster_nodes(cluster, db_nodes, netmaker_nodes, expected_host_ids, actual_host_ids)
+            counts = reconcile_cluster_nodes(cluster, db_nodes, vpn_nodes, expected_host_ids, actual_host_ids)
 
             merge_cluster_reconcile_counts(acc, counts)
           else
@@ -269,7 +269,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
     end
   end
 
-  defp reconcile_cluster_nodes(cluster, db_nodes, netmaker_nodes, expected_host_ids, actual_host_ids) do
+  defp reconcile_cluster_nodes(cluster, db_nodes, vpn_nodes, expected_host_ids, actual_host_ids) do
     network_name = Cluster.network_name(cluster)
     expected_hostnames = MapSet.new(db_nodes, &Node.node_name/1)
 
@@ -279,13 +279,13 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
     {deleted, unenrolled_host_ids} = delete_orphaned_nodes(orphaned_nodes)
     added = add_missing_nodes(unenrolled_host_ids, network_name, cluster.name)
 
-    {managed_extra, unmanaged_extra} = partition_extra_netmaker_hosts(actual_host_ids, expected_host_ids)
+    {managed_extra, unmanaged_extra} = partition_extra_vpn_hosts(actual_host_ids, expected_host_ids)
 
     removed = remove_extra_nodes(managed_extra, network_name, cluster.name)
 
     {orphan_swept, evicted, errors} =
       reconcile_host_inventory(
-        netmaker_nodes,
+        vpn_nodes,
         unmanaged_extra,
         expected_hostnames,
         network_name,
@@ -315,8 +315,8 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
     }
   end
 
-  defp vpn_host_ids(netmaker_nodes) do
-    netmaker_nodes
+  defp vpn_host_ids(vpn_nodes) do
+    vpn_nodes
     |> Enum.map(& &1["hostid"])
     |> Enum.reject(&is_nil/1)
     |> MapSet.new()
@@ -331,12 +331,12 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
     end
   end
 
-  defp reconcile_host_inventory(netmaker_nodes, unmanaged_extra, expected_hostnames, network_name, cluster_name) do
+  defp reconcile_host_inventory(vpn_nodes, unmanaged_extra, expected_hostnames, network_name, cluster_name) do
     case host_hostname_map() do
       {:ok, hostnames_by_id} ->
         live_host_ids = hostnames_by_id |> Map.keys() |> MapSet.new()
 
-        orphan_swept = sweep_orphan_nodes_in_network(netmaker_nodes, live_host_ids, network_name)
+        orphan_swept = sweep_orphan_nodes_in_network(vpn_nodes, live_host_ids, network_name)
 
         evicted =
           maybe_evict_rogue_hosts(
@@ -351,7 +351,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
 
       {:error, reason} ->
         Logger.warning(
-          "Reconciliation: Failed to list Netmaker hosts for #{network_name}; " <>
+          "Reconciliation: Failed to list Edge VPN hosts for #{network_name}; " <>
             "skipping orphan-node sweep and rogue-host eviction: #{inspect(reason)}"
         )
 
@@ -364,8 +364,8 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
     Enum.filter(db_nodes, fn node -> node.vpn_host_id in orphaned_host_ids end)
   end
 
-  defp partition_extra_netmaker_hosts(actual_host_ids, expected_host_ids) do
-    extra_in_netmaker = MapSet.difference(actual_host_ids, expected_host_ids)
+  defp partition_extra_vpn_hosts(actual_host_ids, expected_host_ids) do
+    extra_in_vpn = MapSet.difference(actual_host_ids, expected_host_ids)
 
     all_db_host_ids =
       from(n in Node, select: n.vpn_host_id)
@@ -373,8 +373,8 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
       |> MapSet.new()
 
     {
-      MapSet.intersection(extra_in_netmaker, all_db_host_ids),
-      MapSet.difference(extra_in_netmaker, all_db_host_ids)
+      MapSet.intersection(extra_in_vpn, all_db_host_ids),
+      MapSet.difference(extra_in_vpn, all_db_host_ids)
     }
   end
 
@@ -392,7 +392,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
     end
   end
 
-  # Heals the upstream Netmaker bug (`RemoveHost` iterating the cached
+  # Heals the upstream Edge VPN bug (`RemoveHost` iterating the cached
   # `host.Nodes` slice): a node row can survive a host delete and remain
   # visible to peer pulls as a dead allowed-ip. Detection: `node["hostid"]`
   # references a host that no longer exists in the global host inventory. Cleanup
@@ -401,9 +401,9 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
   #
   # The synchronous sweep in `delete_node/1` covers the originating case;
   # this is the backstop for orphans created before that fix shipped or by
-  # paths outside `delete_node/1` (e.g. UI deletes hitting Netmaker directly).
-  defp sweep_orphan_nodes_in_network(netmaker_nodes, live_host_ids, network_name) do
-    netmaker_nodes
+  # paths outside `delete_node/1` (e.g. UI deletes hitting Edge VPN directly).
+  defp sweep_orphan_nodes_in_network(vpn_nodes, live_host_ids, network_name) do
+    vpn_nodes
     |> Enum.filter(fn nm_node ->
       host_id = nm_node["hostid"]
       is_binary(host_id) and not MapSet.member?(live_host_ids, host_id)
@@ -512,27 +512,27 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
   end
 
   # Returns {deleted_count, unenrolled_host_ids} where unenrolled_host_ids is a MapSet
-  # of host ID strings confirmed to exist in Netmaker but not enrolled in this network.
+  # of host ID strings confirmed to exist in Edge VPN but not enrolled in this network.
   # These are passed to add_missing_nodes to re-enroll them.
-  # Host IDs deleted from DB (host gone from Netmaker entirely) are excluded
+  # Host IDs deleted from DB (host gone from Edge VPN entirely) are excluded
   # so add_missing_nodes never calls add_host_to_network on non-existent hosts.
   defp delete_orphaned_nodes(orphaned_nodes) do
     Enum.reduce(orphaned_nodes, {0, MapSet.new()}, fn node, {count, unenrolled_ids} ->
-      # Check if host exists in Netmaker at all
+      # Check if host exists in Edge VPN at all
       case Vpn.get_host(node.vpn_host_id) do
         {:ok, _host} ->
-          # Host exists in Netmaker but is not enrolled in this network.
+          # Host exists in Edge VPN but is not enrolled in this network.
           # Don't delete from DB - add_missing_nodes will re-enroll it.
           Logger.debug(
-            "Reconciliation: Host #{node.vpn_host_id} exists in Netmaker but is not enrolled in this network, skipping DB deletion"
+            "Reconciliation: Host #{node.vpn_host_id} exists in Edge VPN but is not enrolled in this network, skipping DB deletion"
           )
 
           {count, MapSet.put(unenrolled_ids, node.vpn_host_id)}
 
         {:error, :not_found} ->
-          # Host doesn't exist in Netmaker at all - safe to delete from DB.
-          # This means deletion was attempted and Netmaker succeeded but DB failed.
-          Logger.info("Reconciliation: Deleting orphaned node #{node.id} from DB (host not found in Netmaker)")
+          # Host doesn't exist in Edge VPN at all - safe to delete from DB.
+          # This means deletion was attempted and Edge VPN succeeded but DB failed.
+          Logger.info("Reconciliation: Deleting orphaned node #{node.id} from DB (host not found in Edge VPN)")
 
           case delete_node_from_db(node) do
             {:ok, _} ->
@@ -589,7 +589,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
 
       case Vpn.create_network(network_name, opts) do
         {:ok, _} ->
-          Logger.info("Reconciliation: Recreated missing Netmaker network #{network_name}")
+          Logger.info("Reconciliation: Recreated missing Edge VPN network #{network_name}")
           :ok
 
         {:error, :already_exists} ->
@@ -607,7 +607,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
     end
   end
 
-  # Deletes Netmaker `cluster-*` networks that have no matching database row. Retired
+  # Deletes Edge VPN `cluster-*` networks that have no matching database row. Retired
   # rows count as owned until DeleteClusterWorker confirms their network is gone, so
   # this sweep cannot race a cluster retirement.
   defp cleanup_ghost_cluster_networks do
@@ -620,8 +620,8 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
     end
   end
 
-  # Cleans up ghost networks: Netmaker has a "cluster-*" network that has no matching
-  # DB cluster record. This is the failure path for external Netmaker changes or a
+  # Cleans up ghost networks: Edge VPN has a "cluster-*" network that has no matching
+  # DB cluster record. This is the failure path for external Edge VPN changes or a
   # failed cleanup after the DB row is gone.
   #
   # Safety contract: we only ever touch networks with the "cluster-" prefix. Networks
@@ -632,15 +632,15 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
         %{acc | ghost_networks_deleted: acc.ghost_networks_deleted + deleted}
 
       {:error, reason} ->
-        Logger.warning("Reconciliation: Failed to list Netmaker networks for ghost cleanup: #{inspect(reason)}")
+        Logger.warning("Reconciliation: Failed to list Edge VPN networks for ghost cleanup: #{inspect(reason)}")
         %{acc | errors: acc.errors + 1}
     end
   end
 
   defp delete_ghost_cluster_networks do
-    with {:ok, netmaker_networks} <- Vpn.list_networks() do
-      netmaker_cluster_names =
-        netmaker_networks
+    with {:ok, vpn_networks} <- Vpn.list_networks() do
+      vpn_cluster_names =
+        vpn_networks
         |> Enum.map(& &1["netid"])
         |> Enum.filter(&String.starts_with?(&1, "cluster-"))
         |> MapSet.new()
@@ -653,7 +653,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
         |> MapSet.new(&Cluster.network_name/1)
 
       deleted =
-        netmaker_cluster_names
+        vpn_cluster_names
         |> MapSet.difference(db_network_names)
         |> Enum.count(&delete_ghost_network/1)
 
@@ -667,7 +667,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
     else
       case Vpn.delete_network(network_name) do
         {:ok, _} ->
-          Logger.info("Reconciliation: Deleted ghost Netmaker network #{network_name} (no matching DB cluster)")
+          Logger.info("Reconciliation: Deleted ghost Edge VPN network #{network_name} (no matching DB cluster)")
           true
 
         {:error, :not_found} ->

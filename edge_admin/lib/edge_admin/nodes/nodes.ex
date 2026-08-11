@@ -16,7 +16,7 @@ defmodule EdgeAdmin.Nodes do
 
   ## Architecture
 
-  Two sources of state must be kept in sync: the Admin database and Netmaker (the VPN
+  Two sources of state must be kept in sync: the Admin database and Edge VPN (the VPN
   provider). There is no transaction spanning both — every operation that touches both
   systems has a partial-failure window. Cluster reconciliation is what heals drift.
   Understand it before changing any
@@ -24,45 +24,45 @@ defmodule EdgeAdmin.Nodes do
 
   ### Ordering rules (why they are what they are)
 
-  **Cluster create — DB first, then Netmaker:**
-  Netmaker is the authority on IP space (it sees `admin-cluster-*` networks our DB
-  doesn't). To make DB-first safe, `create_cluster/1` fetches all Netmaker ranges
+  **Cluster create — DB first, then Edge VPN:**
+  Edge VPN is the authority on IP space (it sees `admin-cluster-*` networks our DB
+  doesn't). To make DB-first safe, `create_cluster/1` fetches all Edge VPN ranges
   via `Vpn.list_network_ranges/0` up front and merges them with the DB range list
   before running `SubnetOverlapCheck` and `Vpn.generate_next_subnet/1`. The fetch
-  doubles as a liveness probe — if Netmaker is unreachable, we fail fast with
-  `:service_unavailable` and never touch the DB. If Netmaker rejects the create
+  doubles as a liveness probe — if Edge VPN is unreachable, we fail fast with
+  `:service_unavailable` and never touch the DB. If Edge VPN rejects the create
   anyway (race with a concurrent admin or admin-mesh write), we rollback the DB
-  insert. A DB insert failure with no Netmaker call leaves no state to clean.
+  insert. A DB insert failure with no Edge VPN call leaves no state to clean.
 
-  **Cluster delete — retire in DB, then delete from Netmaker:**
+  **Cluster delete — retire in DB, then delete from Edge VPN:**
   `deleted_at` is the durable canonical decision that the cluster no longer exists for
-  public reads or new membership. `DeleteClusterWorker` deletes the Netmaker network
+  public reads or new membership. `DeleteClusterWorker` deletes the Edge VPN network
   after that transaction commits and finally removes the tombstone after verifying the
   network is absent. This avoids holding a database transaction across external IO.
 
-  **Alias create — read IP from Netmaker, then DB, then write DNS to Netmaker:**
-  The node's VPN IP is only known to Netmaker; we must fetch it. The DB insert anchors
+  **Alias create — read IP from Edge VPN, then DB, then write DNS to Edge VPN:**
+  The node's VPN IP is only known to Edge VPN; we must fetch it. The DB insert anchors
   the alias record. The DNS write is the final step. If DNS write fails, we rollback the
   DB insert. If rollback also fails, `cleanup_ghost_aliases/2` in the reconciler will
-  recreate the missing DNS entry from DB. Ghost DNS entries (DNS in Netmaker, no DB
-  record) are cleaned by the Netmaker→DB direction of `cleanup_ghost_aliases/2`.
+  recreate the missing DNS entry from DB. Ghost DNS entries (DNS in Edge VPN, no DB
+  record) are cleaned by the Edge VPN→DB direction of `cleanup_ghost_aliases/2`.
 
-  **Alias delete — Netmaker first, then DB:**
+  **Alias delete — Edge VPN first, then DB:**
   A missing DNS entry is harmless because the DB row still makes the alias repairable.
 
   ### Reconciler directions (both are needed)
 
-  `ensure_cluster_network/1` — active DB cluster has no Netmaker network:
+  `ensure_cluster_network/1` — active DB cluster has no Edge VPN network:
   Recreates the network from the cluster's immutable DB configuration. A retired
   cluster is never repaired here; its deletion worker owns its network instead.
 
-  `cleanup_ghost_networks/1` — Netmaker has `cluster-*` network, DB doesn't:
+  `cleanup_ghost_networks/1` — Edge VPN has `cluster-*` network, DB doesn't:
   Deletes the unowned network. Safety: we only touch networks with the `cluster-`
   prefix — `admin-cluster-*` networks are admin infrastructure and are never touched
   here. The prefix contract is enforced by `Vpn.build_network_name/2`.
 
-  `cleanup_ghost_aliases/2` — reconciles alias DNS from DB to Netmaker, repairs stale
-  IPs, and deletes Netmaker DNS entries with no matching DB alias.
+  `cleanup_ghost_aliases/2` — reconciles alias DNS from DB to Edge VPN, repairs stale
+  IPs, and deletes Edge VPN DNS entries with no matching DB alias.
 
   ### Subnet pool and scale
 
@@ -70,31 +70,31 @@ defmodule EdgeAdmin.Nodes do
   `100.64.0.0/10`) at `CLUSTER_V4_SUBNET_PREFIX` (default: `/24`). This gives a hard cap
   of 16,384 clusters per core (4,194,304 addresses ÷ 256 per /24). If the pool is
   exhausted, start a new core — do not expand the range or change the prefix on an
-  existing core. `GET /api/networks` in Netmaker has no pagination (full table scan);
+  existing core. `GET /api/networks` in Edge VPN has no pagination (full table scan);
   at the 16k ceiling the response is ~5-8MB — acceptable for a periodic reconcile call.
 
   ### Known brittleness / glue code warnings
 
-  This module is the glue between our DB and Netmaker. It is inherently brittle because:
+  This module is the glue between our DB and Edge VPN. It is inherently brittle because:
 
   - There is no distributed transaction. Every two-phase operation has a failure window.
     The reconciler heals it eventually but "eventually" can mean up to one reconcile
     interval (~minutes). Don't assume operations are atomic.
 
-  - `create_alias/2` fetches the node's VPN IP from Netmaker at call time. If the node
+  - `create_alias/2` fetches the node's VPN IP from Edge VPN at call time. If the node
     re-enrolls and gets a new IP, the reconciler repairs alias DNS by deleting and
-    recreating the Netmaker DNS entry with the current IP.
+    recreating the Edge VPN DNS entry with the current IP.
 
-  - `cleanup_ghost_networks/1` deletes by prefix convention, not by any Netmaker-side
+  - `cleanup_ghost_networks/1` deletes by prefix convention, not by any Edge VPN-side
     ownership marker. If something outside this system ever creates a `cluster-*` network
-    in Netmaker, the reconciler will delete it. The prefix contract must be maintained.
+    in Edge VPN, the reconciler will delete it. The prefix contract must be maintained.
 
   - `cleanup_ghost_networks/1` runs once per scheduled maintenance sweep. A ghost
     network created during that sweep may not be cleaned until the next run. This is
     acceptable — ghost networks are harmless, just wasteful.
 
   - `reconcile_cluster/1` does NOT run `cleanup_ghost_networks/1`. It only has context
-    for one cluster, not the global Netmaker state. The maintenance scheduler performs
+    for one cluster, not the global Edge VPN state. The maintenance scheduler performs
     the global sweep once after it queues per-cluster work.
 
   ## Examples
@@ -235,26 +235,26 @@ defmodule EdgeAdmin.Nodes do
   defdelegate get_cluster(name), to: Clusters, as: :get
 
   @doc """
-  Creates a cluster and its Netmaker network.
+  Creates a cluster and its Edge VPN network.
 
   Flow:
   1. Validate input
-  2. Fetch every IPv4 and IPv6 range Netmaker currently knows about (acts as both a
+  2. Fetch every IPv4 and IPv6 range Edge VPN currently knows about (acts as both a
      liveness probe and the authoritative overlap set — local DB only tracks
      `cluster-*` ranges, not admin-mesh networks)
   3. Merge with DB ranges, then validate or auto-generate both address families
   4. Create DB record (validates uniqueness constraints)
-  5. Create Netmaker network (rollback DB on failure)
+  5. Create Edge VPN network (rollback DB on failure)
   6. Emit event for metadata recomputation
 
-  If Netmaker is unreachable, returns service unavailable immediately (no DB call).
-  If DB creation fails, returns validation error immediately (no Netmaker call).
-  If Netmaker creation fails, deletes DB record and returns service unavailable.
+  If Edge VPN is unreachable, returns service unavailable immediately (no DB call).
+  If DB creation fails, returns validation error immediately (no Edge VPN call).
+  If Edge VPN creation fails, deletes DB record and returns service unavailable.
 
   A later missing network does not make the active DB cluster disposable: the active
   row is the desired configuration, so reconciliation recreates the network from it.
 
-  Returns `{:ok, cluster}`, `{:error, changeset}` (validation), `{:error, {:conflict, reason}}` (CIDR overlap), or `{:error, :service_unavailable}` (health check or Netmaker failure).
+  Returns `{:ok, cluster}`, `{:error, changeset}` (validation), `{:error, {:conflict, reason}}` (CIDR overlap), or `{:error, :service_unavailable}` (health check or Edge VPN failure).
   """
   @spec create_cluster(map()) ::
           {:ok, Cluster.t()}
@@ -266,8 +266,8 @@ defmodule EdgeAdmin.Nodes do
   @doc """
   Updates a cluster.
 
-  `node_limit` is an Edge Admin policy and is intentionally not sent to Netmaker.
-  Netmaker's network membership includes both Admin and Agent hosts, so its own
+  `node_limit` is an Edge Admin policy and is intentionally not sent to Edge VPN.
+  Edge VPN's network membership includes both Admin and Agent hosts, so its own
   network-level limit would not represent this cluster's edge-node limit.
   The active cluster row is re-read and locked before the limit is checked or updated.
 
@@ -285,12 +285,12 @@ defmodule EdgeAdmin.Nodes do
   defdelegate update_cluster(cluster, params), to: Clusters, as: :update
 
   @doc """
-  Retires an empty cluster from the public API and enqueues Netmaker cleanup.
+  Retires an empty cluster from the public API and enqueues Edge VPN cleanup.
 
   The retirement transaction locks the active cluster, rechecks that it is empty, writes
   `deleted_at`, and inserts the deletion job atomically. New registration and
   cluster-move paths use the same short transaction boundary, so they cannot enter a
-  cluster after retirement wins. Netmaker deletion happens asynchronously after commit.
+  cluster after retirement wins. Edge VPN deletion happens asynchronously after commit.
 
   Returns `{:ok, cluster}`, `{:error, :not_found}`, or
   `{:error, {:conflict, reason}}` when the cluster has nodes.
@@ -389,7 +389,7 @@ defmodule EdgeAdmin.Nodes do
   @doc """
   Changes a node's cluster.
 
-  DB-first approach: Updates database immediately, then best-effort syncs with Netmaker.
+  DB-first approach: Updates database immediately, then best-effort syncs with Edge VPN.
   A background reconciliation worker handles any inconsistencies.
 
   Flow:
@@ -418,22 +418,22 @@ defmodule EdgeAdmin.Nodes do
   @doc """
   Deletes a node and its VPN host.
 
-  Flow (Netmaker-first):
-  1. Clean up DNS records (aliases) from Netmaker (best-effort)
-  2. Delete host from Netmaker FIRST
+  Flow (Edge VPN-first):
+  1. Clean up DNS records (aliases) from Edge VPN (best-effort)
+  2. Delete host from Edge VPN FIRST
   3. Delete from DB. Cascade behaviour:
      - `ssh_usernames` → `:delete_all` (and their `ssh_public_keys` cascade transitively)
      - `aliases` → `:delete_all`
      - non-terminal `command_executions` → `dropped`, then `:nilify_all`
   4. Emit event for metadata recomputation
 
-  If Netmaker deletion fails (except :not_found), operation stops and returns error.
-  If Netmaker returns :not_found, continues with DB deletion (already gone).
+  If Edge VPN deletion fails (except :not_found), operation stops and returns error.
+  If Edge VPN returns :not_found, continues with DB deletion (already gone).
 
-  This ensures "node in DB but host not in Netmaker" always means failed deletion,
+  This ensures "node in DB but host not in Edge VPN" always means failed deletion,
   allowing reconciliation to safely delete orphaned DB nodes.
 
-  Returns `{:ok, node}`, `{:error, changeset}` (DB failure), or `{:error, :service_unavailable}` (Netmaker failure).
+  Returns `{:ok, node}`, `{:error, changeset}` (DB failure), or `{:error, :service_unavailable}` (Edge VPN failure).
   """
   @spec delete_node(Node.t()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
   defdelegate delete_node(node), to: NodeResource
@@ -642,7 +642,7 @@ defmodule EdgeAdmin.Nodes do
   4. Cluster has capacity (NodeLimitCheck)
 
   On success, atomically decrements `uses_remaining` (unless unlimited) and sets
-  `last_used_at`, then fetches the Netmaker default enrollment key for the cluster.
+  `last_used_at`, then fetches the Edge VPN default enrollment key for the cluster.
 
   The decrement uses a conditional UPDATE to prevent race conditions when two agents
   simultaneously attempt to consume the last use of a key.
@@ -659,10 +659,10 @@ defmodule EdgeAdmin.Nodes do
   @spec verify_enrollment_key(map()) :: {:ok, map()} | {:error, Ecto.Changeset.t()}
   def verify_enrollment_key(params), do: EnrollmentKeys.verify(params)
 
-  @doc "Reconciles all active clusters with Netmaker."
+  @doc "Reconciles all active clusters with Edge VPN."
   defdelegate reconcile_clusters(), to: Reconciliation
 
-  @doc "Reconciles one active cluster with Netmaker."
+  @doc "Reconciles one active cluster with Edge VPN."
   defdelegate reconcile_cluster(cluster_name), to: Reconciliation
 
   @doc "Completes deletion of a retired cluster."
@@ -671,7 +671,7 @@ defmodule EdgeAdmin.Nodes do
   @doc "Enqueues cluster reconciliation and retired-cluster deletion work."
   defdelegate enqueue_cluster_reconciliation(), to: Reconciliation
 
-  @doc "Cleans up aliases for a node and their Netmaker DNS entries."
+  @doc "Cleans up aliases for a node and their Edge VPN DNS entries."
   defdelegate cleanup_node_aliases(node), to: Aliases
 
   @doc "Cleans up aliases belonging to orphaned nodes."
@@ -683,10 +683,10 @@ defmodule EdgeAdmin.Nodes do
   @doc "Gets an alias by ID."
   defdelegate get_alias(id), to: Aliases, as: :get
 
-  @doc "Creates an alias and its Netmaker DNS entry."
+  @doc "Creates an alias and its Edge VPN DNS entry."
   defdelegate create_alias(node, params), to: Aliases, as: :create
 
-  @doc "Deletes an alias and its Netmaker DNS entry."
+  @doc "Deletes an alias and its Edge VPN DNS entry."
   defdelegate delete_alias(alias_record), to: Aliases, as: :delete
 
   @doc "Returns an alias changeset."

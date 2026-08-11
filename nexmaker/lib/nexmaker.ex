@@ -23,7 +23,7 @@ defmodule Nexmaker do
   Configure Nexmaker in your `config/runtime.exs`:
 
       config :nexmaker,
-        base_url: System.get_env("NETMAKER_URL", "http://netmaker:8081"),
+        base_url: System.get_env("NETMAKER_API_URL", "http://netmaker:8081"),
         master_key: System.get_env("NETMAKER_MASTER_KEY")
 
   ## CLI Usage (VPN Operations)

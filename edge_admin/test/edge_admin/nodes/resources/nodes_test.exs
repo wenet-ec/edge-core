@@ -19,7 +19,7 @@ defmodule EdgeAdmin.Nodes.Resources.NodesTest do
     Repo.insert!(%Node{
       id: Ecto.UUID.generate(),
       cluster_id: cluster.id,
-      netmaker_host_id: Ecto.UUID.generate(),
+      vpn_host_id: Ecto.UUID.generate(),
       version: "1.0.0",
       http_port: 44_000,
       ssh_port: 40_022,

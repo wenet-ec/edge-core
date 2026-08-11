@@ -443,7 +443,7 @@ Notes:
 
 - Normal state-change events carry a **full object snapshot** in `data` — same fields regardless of event type. Consumers read what they need, ignore the rest. `edge.core.test` is an operational probe and carries test metadata instead.
 - Transition events add `previous_*` fields alongside the snapshot — the previous value cannot be derived from the snapshot alone.
-- Internal/secret fields never appear: `api_token`, `proxy_password`, `netmaker_host_id`.
+- Internal/secret fields never appear: `api_token`, `proxy_password`, `vpn_host_id`.
 - Null fields are always included explicitly as `null`, never omitted.
 
 ---

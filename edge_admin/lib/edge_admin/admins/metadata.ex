@@ -56,7 +56,7 @@ defmodule EdgeAdmin.Admins.Metadata do
     erlang_node_name: :"admin@admin-abc123.admin-cluster-1.nm.internal",
     vpn_hostname: "admin-abc123.admin-cluster-1.nm.internal",
     admin_cluster_name: "admin-cluster-1",
-    netmaker_host_id: "95e2707e-...",
+    vpn_host_id: "95e2707e-...",
     last_computed_at: ~U[2025-01-15 12:00:00Z]
   }
   ```
@@ -75,7 +75,7 @@ defmodule EdgeAdmin.Admins.Metadata do
     topology: [
       %{name: "admin-abc123",
         max_wireguard_peers: 250, admin_peer_count: 1, edge_node_capacity: 249,
-        vpn_hostname: ..., erlang_node_name: ..., netmaker_host_id: "..."},
+        vpn_hostname: ..., erlang_node_name: ..., vpn_host_id: "..."},
       %{name: "admin-def456",
         max_wireguard_peers: 350, admin_peer_count: 1, edge_node_capacity: 349, ...}
     ]
@@ -190,9 +190,9 @@ defmodule EdgeAdmin.Admins.Metadata do
     vpn_hostname = Vpn.build_vpn_hostname(admin_name, admin_cluster_name)
     erlang_node_name = node()
 
-    # Fetch Netmaker host ID
-    {:ok, netmaker_host_id} = Vpn.get_host_id(admin_name)
-    Logger.info("Fetched Netmaker host ID: #{netmaker_host_id}")
+    # Fetch VPN host ID
+    {:ok, vpn_host_id} = Vpn.get_host_id(admin_name)
+    Logger.info("Fetched VPN host ID: #{vpn_host_id}")
 
     # Initial ETS state (placeholders - will be populated by first computation).
     # admin_peer_count and edge_node_capacity reflect a lone admin (no peers yet);
@@ -207,7 +207,7 @@ defmodule EdgeAdmin.Admins.Metadata do
         erlang_node_name: erlang_node_name,
         vpn_hostname: vpn_hostname,
         admin_cluster_name: admin_cluster_name,
-        netmaker_host_id: netmaker_host_id,
+        vpn_host_id: vpn_host_id,
         last_computed_at: nil
       }
 
@@ -559,7 +559,7 @@ defmodule EdgeAdmin.Admins.Metadata do
     # Get all admins from syn process group
     # :syn.members/2 returns list of {pid, metadata} tuples
     # Metadata contains: %{name: admin_name, max_wireguard_peers: int,
-    #   erlang_node_name: ..., vpn_hostname: ..., netmaker_host_id: ...}
+    #   erlang_node_name: ..., vpn_hostname: ..., vpn_host_id: ...}
     admin_cluster_name = snapshot().admin.admin_cluster_name
 
     try do

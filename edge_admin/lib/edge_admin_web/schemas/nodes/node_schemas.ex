@@ -94,11 +94,11 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
           nullable: true,
           description: "ID of the enrollment key most recently used by this node"
         },
-        netmaker_host_id: %Schema{
+        vpn_host_id: %Schema{
           type: :string,
           format: :uuid,
           nullable: true,
-          description: "Netmaker Host UUID for API operations"
+          description: "VPN host UUID for API operations"
         },
         status: %Schema{
           type: :string,
@@ -188,7 +188,7 @@ defmodule EdgeAdminWeb.Schemas.Nodes.NodeSchemas do
         node_name: "node-01234567-89ab-cdef-0123-456789abcdef",
         cluster_name: "prod-east",
         enrollment_key_id: "0190f1e0-7b2a-7abc-8def-0123456789ab",
-        netmaker_host_id: "def67890-5678-5678-5678-567890abcdef",
+        vpn_host_id: "def67890-5678-5678-5678-567890abcdef",
         status: "healthy",
         vpn_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.cluster-prod-east.nm.internal",
         mdns_hostname: "node-01234567-89ab-cdef-0123-456789abcdef.local",

@@ -238,12 +238,12 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
 
     with true <- cluster_active?(cluster.id),
          :ok <- ensure_cluster_network(cluster) do
-      expected_host_ids = MapSet.new(db_nodes, & &1.netmaker_host_id)
+      expected_host_ids = MapSet.new(db_nodes, & &1.vpn_host_id)
 
       case Vpn.list_nodes(network_name) do
         {:ok, netmaker_nodes} ->
           if cluster_active?(cluster.id) do
-            actual_host_ids = netmaker_host_ids(netmaker_nodes)
+            actual_host_ids = vpn_host_ids(netmaker_nodes)
 
             counts = reconcile_cluster_nodes(cluster, db_nodes, netmaker_nodes, expected_host_ids, actual_host_ids)
 
@@ -315,7 +315,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
     }
   end
 
-  defp netmaker_host_ids(netmaker_nodes) do
+  defp vpn_host_ids(netmaker_nodes) do
     netmaker_nodes
     |> Enum.map(& &1["hostid"])
     |> Enum.reject(&is_nil/1)
@@ -361,14 +361,14 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
 
   defp orphaned_db_nodes(db_nodes, expected_host_ids, actual_host_ids) do
     orphaned_host_ids = MapSet.difference(expected_host_ids, actual_host_ids)
-    Enum.filter(db_nodes, fn node -> node.netmaker_host_id in orphaned_host_ids end)
+    Enum.filter(db_nodes, fn node -> node.vpn_host_id in orphaned_host_ids end)
   end
 
   defp partition_extra_netmaker_hosts(actual_host_ids, expected_host_ids) do
     extra_in_netmaker = MapSet.difference(actual_host_ids, expected_host_ids)
 
     all_db_host_ids =
-      from(n in Node, select: n.netmaker_host_id)
+      from(n in Node, select: n.vpn_host_id)
       |> Repo.all()
       |> MapSet.new()
 
@@ -519,15 +519,15 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
   defp delete_orphaned_nodes(orphaned_nodes) do
     Enum.reduce(orphaned_nodes, {0, MapSet.new()}, fn node, {count, unenrolled_ids} ->
       # Check if host exists in Netmaker at all
-      case Vpn.get_host(node.netmaker_host_id) do
+      case Vpn.get_host(node.vpn_host_id) do
         {:ok, _host} ->
           # Host exists in Netmaker but is not enrolled in this network.
           # Don't delete from DB - add_missing_nodes will re-enroll it.
           Logger.debug(
-            "Reconciliation: Host #{node.netmaker_host_id} exists in Netmaker but is not enrolled in this network, skipping DB deletion"
+            "Reconciliation: Host #{node.vpn_host_id} exists in Netmaker but is not enrolled in this network, skipping DB deletion"
           )
 
-          {count, MapSet.put(unenrolled_ids, node.netmaker_host_id)}
+          {count, MapSet.put(unenrolled_ids, node.vpn_host_id)}
 
         {:error, :not_found} ->
           # Host doesn't exist in Netmaker at all - safe to delete from DB.
@@ -544,7 +544,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
           end
 
         {:error, reason} ->
-          Logger.warning("Reconciliation: Failed to check if host #{node.netmaker_host_id} exists: #{inspect(reason)}")
+          Logger.warning("Reconciliation: Failed to check if host #{node.vpn_host_id} exists: #{inspect(reason)}")
           {count, unenrolled_ids}
       end
     end)

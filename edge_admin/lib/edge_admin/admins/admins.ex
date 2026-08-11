@@ -34,7 +34,7 @@ defmodule EdgeAdmin.Admins do
             %{
               name: "admin-7k3m9p2nq8r4",
               vpn_hostname: "admin-7k3m9p2nq8r4.admin-cluster-a.nm.internal",
-              netmaker_host_id: "f272e703-...",
+              vpn_host_id: "f272e703-...",
               ipv4_address: "100.64.0.1",
               ipv6_address: "fd7a:91c2:4e8c:1::1",
               wireguard_ip_address: "10.0.0.7",
@@ -97,7 +97,7 @@ defmodule EdgeAdmin.Admins do
     %{
       name: host_name,
       vpn_hostname: Vpn.build_vpn_hostname(host_name, cluster_name),
-      netmaker_host_id: host["id"],
+      vpn_host_id: host["id"],
       ipv4_address: strip_cidr(node["address"]),
       ipv6_address: strip_cidr(node["address6"]),
       wireguard_ip_address: host["endpointip"],

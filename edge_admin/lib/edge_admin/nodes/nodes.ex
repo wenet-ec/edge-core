@@ -416,7 +416,7 @@ defmodule EdgeAdmin.Nodes do
   defdelegate change_node_cluster(node, params), to: NodeResource, as: :change_cluster
 
   @doc """
-  Deletes a node and its Netmaker host.
+  Deletes a node and its VPN host.
 
   Flow (Netmaker-first):
   1. Clean up DNS records (aliases) from Netmaker (best-effort)

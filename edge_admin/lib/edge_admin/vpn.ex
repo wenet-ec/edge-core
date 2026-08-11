@@ -1450,12 +1450,12 @@ defmodule EdgeAdmin.Vpn do
   defp get_protected_host_ids do
     admin_cluster = Metadata.get_admin_cluster()
 
-    # Extract netmaker_host_id from each admin in topology
-    # Topology structure: [%{name: "admin-abc123", netmaker_host_id: "...", ...}, ...]
+    # Extract vpn_host_id from each admin in topology
+    # Topology structure: [%{name: "admin-abc123", vpn_host_id: "...", ...}, ...]
     admin_cluster
     |> Map.get(:topology, [])
     |> Enum.map(fn admin_data ->
-      Map.get(admin_data, :netmaker_host_id)
+      Map.get(admin_data, :vpn_host_id)
     end)
     |> Enum.reject(&is_nil/1)
   rescue

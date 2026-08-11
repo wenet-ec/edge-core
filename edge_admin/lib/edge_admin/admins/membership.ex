@@ -478,7 +478,7 @@ defmodule EdgeAdmin.Admins.Membership do
 
     :syn.add_node_to_scopes([:admin_scope])
 
-    {:ok, netmaker_host_id} = Vpn.get_host_id(admin_name())
+    {:ok, vpn_host_id} = Vpn.get_host_id(admin_name())
 
     # Join the admin cluster group with metadata
     metadata = %{
@@ -486,7 +486,7 @@ defmodule EdgeAdmin.Admins.Membership do
       max_wireguard_peers: max_wireguard_peers(),
       vpn_hostname: Vpn.build_vpn_hostname(admin_name(), admin_cluster_name()),
       erlang_node_name: node(),
-      netmaker_host_id: netmaker_host_id
+      vpn_host_id: vpn_host_id
     }
 
     :ok = :syn.join(:admin_scope, admin_cluster_name(), self(), metadata)

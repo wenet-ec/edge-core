@@ -26,7 +26,7 @@ defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycleTest do
     Repo.insert!(%Node{
       id: Ecto.UUID.generate(),
       cluster_id: cluster.id,
-      netmaker_host_id: Ecto.UUID.generate(),
+      vpn_host_id: Ecto.UUID.generate(),
       status: :healthy,
       version: "0.1.0",
       http_port: 44_000,

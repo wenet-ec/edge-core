@@ -12,7 +12,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   - `status` - Health status: `:healthy`, `:unhealthy`, or `:unreachable`
   - `cluster_id` - Foreign key to cluster
   - `enrollment_key_id` - Enrollment key associated with the latest successful registration
-  - `netmaker_host_id` - Reference to Netmaker host resource
+  - `vpn_host_id` - Reference to the VPN host resource
   - `api_token` - Bearer token for node API authentication
   - `proxy_password` - Password for proxy server authentication
   - `recovery_key` - One-use key for replacing a node after local state loss
@@ -65,7 +65,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
           proxy_password: String.t(),
           recovery_key: String.t() | nil,
           self_update_enabled: boolean(),
-          netmaker_host_id: String.t(),
+          vpn_host_id: String.t(),
           node_name: String.t() | nil,
           vpn_hostname: String.t() | nil,
           mdns_hostname: String.t() | nil,
@@ -123,7 +123,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     field(:self_update_enabled, :boolean, default: false)
 
     # Netmaker references
-    field(:netmaker_host_id, :binary_id)
+    field(:vpn_host_id, :binary_id)
 
     # Computed fields
     field(:node_name, :string, virtual: true)
@@ -166,7 +166,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
       :id,
       :cluster_id,
       :enrollment_key_id,
-      :netmaker_host_id,
+      :vpn_host_id,
       :status,
       :http_port,
       :ssh_port,
@@ -185,7 +185,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
     |> validate_required([
       :id,
       :cluster_id,
-      :netmaker_host_id,
+      :vpn_host_id,
       :http_port,
       :ssh_port,
       :host_metrics_port,

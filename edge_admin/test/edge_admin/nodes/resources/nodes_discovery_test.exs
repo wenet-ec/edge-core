@@ -22,7 +22,7 @@ defmodule EdgeAdmin.Nodes.Resources.NodesDiscoveryTest do
     defaults = %{
       id: Ecto.UUID.generate(),
       cluster_id: cluster.id,
-      netmaker_host_id: Ecto.UUID.generate(),
+      vpn_host_id: Ecto.UUID.generate(),
       status: :healthy,
       last_seen_at: ~U[2026-02-01 12:00:00Z],
       version: "edge-1.2.3",

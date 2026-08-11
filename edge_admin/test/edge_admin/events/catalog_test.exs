@@ -38,7 +38,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
       api_token: "token-secret",
       proxy_password: "proxy-secret",
       enrollment_key_id: "enrollment-key-1",
-      netmaker_host_id: "host-1",
+      vpn_host_id: "host-1",
       last_seen_at: now(),
       inserted_at: now(),
       updated_at: now()
@@ -317,13 +317,13 @@ defmodule EdgeAdmin.Events.CatalogTest do
   end
 
   describe "to_data/1 — Node events (security)" do
-    test "node payload excludes api_token, proxy_password, and netmaker_host_id" do
+    test "node payload excludes api_token, proxy_password, and vpn_host_id" do
       node = node_fixture(%{api_token: "leaked-token", proxy_password: "leaked-proxy-pw"})
       data = Catalog.to_data(%Catalog.NodeRegistered{node: node})
 
       refute Map.has_key?(data, "api_token")
       refute Map.has_key?(data, "proxy_password")
-      refute Map.has_key?(data, "netmaker_host_id")
+      refute Map.has_key?(data, "vpn_host_id")
 
       # Defensive: the inspected payload contains neither secret.
       inspected = inspect(data)

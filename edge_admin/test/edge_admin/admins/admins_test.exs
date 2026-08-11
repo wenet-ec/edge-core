@@ -116,7 +116,7 @@ defmodule EdgeAdmin.AdminsTest do
   # ---------------------------------------------------------------------------
 
   describe "normalise_cluster/1 — per-admin fields" do
-    test "passes through name, netmaker_host_id, endpoint, port, status" do
+    test "passes through name, vpn_host_id, endpoint, port, status" do
       admin =
         single_admin(
           name: "admin-foo",
@@ -127,7 +127,7 @@ defmodule EdgeAdmin.AdminsTest do
         )
 
       assert admin.name == "admin-foo"
-      assert admin.netmaker_host_id == "f272e703-aaaa-bbbb-cccc-1234"
+      assert admin.vpn_host_id == "f272e703-aaaa-bbbb-cccc-1234"
       assert admin.wireguard_ip_address == "10.0.0.7"
       assert admin.wireguard_port == 51_820
       assert admin.status == "online"

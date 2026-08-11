@@ -108,19 +108,19 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
     node = Repo.preload(node, :cluster)
     Aliases.cleanup_node_aliases(node)
 
-    case Vpn.delete_host(node.netmaker_host_id) do
+    case Vpn.delete_host(node.vpn_host_id) do
       {:ok, _} ->
-        Logger.info("Deleted host #{node.netmaker_host_id} from Netmaker")
+        Logger.info("Deleted host #{node.vpn_host_id} from Netmaker")
         sweep_orphan_netmaker_nodes(node)
         delete_node_from_db(node)
 
       {:error, :not_found} ->
-        Logger.info("Netmaker host #{node.netmaker_host_id} already deleted")
+        Logger.info("VPN host #{node.vpn_host_id} already deleted")
         sweep_orphan_netmaker_nodes(node)
         delete_node_from_db(node)
 
       {:error, :service_unavailable} = error ->
-        Logger.error("Failed to delete Netmaker host #{node.netmaker_host_id}, aborting node deletion")
+        Logger.error("Failed to delete VPN host #{node.vpn_host_id}, aborting node deletion")
         error
     end
   end
@@ -170,14 +170,14 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
     old_network_name = Cluster.network_name(node.cluster)
     new_network_name = Cluster.network_name(new_cluster)
 
-    case Vpn.add_host_to_network(node.netmaker_host_id, new_network_name) do
+    case Vpn.add_host_to_network(node.vpn_host_id, new_network_name) do
       {:ok, _} ->
-        Logger.info("Added host #{node.netmaker_host_id} to network #{new_network_name}")
-        remove_host_from_old_network(node.netmaker_host_id, old_network_name)
+        Logger.info("Added host #{node.vpn_host_id} to network #{new_network_name}")
+        remove_host_from_old_network(node.vpn_host_id, old_network_name)
 
       {:error, reason} ->
         Logger.warning(
-          "Failed to add host #{node.netmaker_host_id} to new network #{new_network_name}: #{inspect(reason)}. Reconciliation worker will handle sync."
+          "Failed to add host #{node.vpn_host_id} to new network #{new_network_name}: #{inspect(reason)}. Reconciliation worker will handle sync."
         )
     end
   end
@@ -202,8 +202,8 @@ defmodule EdgeAdmin.Nodes.Resources.Nodes do
     case Vpn.list_nodes(network_name) do
       {:ok, nm_nodes} ->
         nm_nodes
-        |> Enum.filter(&(&1["hostid"] == node.netmaker_host_id))
-        |> Enum.each(&delete_orphan_node(network_name, &1, node.netmaker_host_id))
+        |> Enum.filter(&(&1["hostid"] == node.vpn_host_id))
+        |> Enum.each(&delete_orphan_node(network_name, &1, node.vpn_host_id))
 
       {:error, reason} ->
         Logger.warning("Orphan sweep: could not list Netmaker nodes for #{network_name}: #{inspect(reason)}")

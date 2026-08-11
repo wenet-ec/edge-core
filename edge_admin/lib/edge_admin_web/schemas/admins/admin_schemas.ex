@@ -52,9 +52,9 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           type: :string,
           description: "Name of the admin cluster this admin belongs to"
         },
-        netmaker_host_id: %Schema{
+        vpn_host_id: %Schema{
           type: :string,
-          description: "Netmaker host ID for this admin (UUID format)"
+          description: "VPN host ID for this admin (UUID format)"
         },
         last_computed_at: %Schema{
           type: :string,
@@ -72,7 +72,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
         :erlang_node_name,
         :vpn_hostname,
         :admin_cluster_name,
-        :netmaker_host_id
+        :vpn_host_id
       ],
       example: %{
         id: "k7m3n2p9x4j6",
@@ -83,7 +83,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
         erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
         vpn_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
         admin_cluster_name: "admin-cluster-1",
-        netmaker_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505",
+        vpn_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505",
         last_computed_at: "2025-01-15T12:00:00Z"
       }
     })
@@ -127,9 +127,9 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           type: :string,
           description: "Erlang distribution node name"
         },
-        netmaker_host_id: %Schema{
+        vpn_host_id: %Schema{
           type: :string,
-          description: "Netmaker host ID for this admin (UUID format)"
+          description: "VPN host ID for this admin (UUID format)"
         }
       },
       required: [
@@ -138,7 +138,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
         :admin_peer_count,
         :edge_node_capacity,
         :erlang_node_name,
-        :netmaker_host_id
+        :vpn_host_id
       ],
       example: %{
         name: "admin-k7m3n2p9x4j6",
@@ -147,7 +147,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
         edge_node_capacity: 249,
         vpn_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
         erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
-        netmaker_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505"
+        vpn_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505"
       }
     })
   end
@@ -208,7 +208,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
             edge_node_capacity: 249,
             vpn_hostname: "admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
             erlang_node_name: "admin@admin-k7m3n2p9x4j6.admin-cluster-1.nm.internal",
-            netmaker_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505"
+            vpn_host_id: "95e2707e-d11f-4551-bdd4-4ab2ab917505"
           },
           %{
             name: "admin-x9j4p2k7m8n3",
@@ -217,7 +217,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
             edge_node_capacity: 249,
             vpn_hostname: "admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal",
             erlang_node_name: "admin@admin-x9j4p2k7m8n3.admin-cluster-1.nm.internal",
-            netmaker_host_id: "7f3c8d4e-9a1b-4c2d-8e3f-5a6b7c8d9e0f"
+            vpn_host_id: "7f3c8d4e-9a1b-4c2d-8e3f-5a6b7c8d9e0f"
           }
         ]
       }
@@ -347,7 +347,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
       properties: %{
         name: %Schema{type: :string, description: "Admin name (e.g., admin-k7m3n2p9x4j6)"},
         vpn_hostname: %Schema{type: :string, description: "DNS hostname inside the admin cluster network"},
-        netmaker_host_id: %Schema{type: :string, description: "Netmaker host ID (UUID)"},
+        vpn_host_id: %Schema{type: :string, description: "VPN host ID (UUID)"},
         ipv4_address: %Schema{
           type: :string,
           description: "IPv4 address assigned within the admin cluster CIDR (without prefix length)",
@@ -386,11 +386,11 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           nullable: true
         }
       },
-      required: [:name, :vpn_hostname, :netmaker_host_id],
+      required: [:name, :vpn_hostname, :vpn_host_id],
       example: %{
         name: "admin-7k3m9p2n",
         vpn_hostname: "admin-7k3m9p2n.admin-cluster-main.nm.internal",
-        netmaker_host_id: "f272e703-b48f-4b61-b4c1-bfe4fffde62b",
+        vpn_host_id: "f272e703-b48f-4b61-b4c1-bfe4fffde62b",
         ipv4_address: "100.64.0.1",
         wireguard_ip_address: "10.0.0.7",
         wireguard_port: 51_820,
@@ -429,7 +429,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
           %{
             name: "admin-7k3m9p2n",
             vpn_hostname: "admin-7k3m9p2n.admin-cluster-main.nm.internal",
-            netmaker_host_id: "f272e703-b48f-4b61-b4c1-bfe4fffde62b",
+            vpn_host_id: "f272e703-b48f-4b61-b4c1-bfe4fffde62b",
             ipv4_address: "100.64.0.1",
             ipv6_address: "fd7a:91c2:4e8c:1::1",
             wireguard_ip_address: "10.0.0.7",

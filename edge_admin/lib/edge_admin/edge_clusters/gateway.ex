@@ -298,13 +298,13 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
 
     admin_name = Application.get_env(:edge_admin, :admin_name)
 
-    # Read Netmaker host ID from Metadata (set during init)
+    # Read VPN host ID from Metadata (set during init)
     admin_info = Metadata.get_admin()
-    netmaker_host_id = admin_info.netmaker_host_id
+    vpn_host_id = admin_info.vpn_host_id
 
     # Join VPN network for this cluster using direct API
     # cluster_name is already normalized (e.g., "cluster-test")
-    case join_network(cluster_name, netmaker_host_id) do
+    case join_network(cluster_name, vpn_host_id) do
       :ok ->
         # Register in syn with admin_name to avoid overriding other admins' Gateways
         :syn.register(:cluster_scope, {:gateway, admin_name, cluster_name}, self())
@@ -322,7 +322,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
         {:ok,
          %{
            cluster_name: cluster_name,
-           netmaker_host_id: netmaker_host_id,
+           vpn_host_id: vpn_host_id,
            admin_name: admin_name,
            joined_at: DateTime.utc_now()
          }}
@@ -339,7 +339,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     Logger.info("Gateway terminating for cluster #{state.cluster_name}, reason: #{inspect(reason)}")
 
     # Leave the network on shutdown
-    leave_network(state.netmaker_host_id, state.cluster_name)
+    leave_network(state.vpn_host_id, state.cluster_name)
 
     # Emit telemetry
     :telemetry.execute(
@@ -569,11 +569,11 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
     end
   end
 
-  defp leave_network(netmaker_host_id, cluster_name, attempt \\ 1, max_attempts \\ 3) do
-    case Vpn.remove_host_from_network(netmaker_host_id, cluster_name) do
+  defp leave_network(vpn_host_id, cluster_name, attempt \\ 1, max_attempts \\ 3) do
+    case Vpn.remove_host_from_network(vpn_host_id, cluster_name) do
       {:ok, _} ->
         # Verify that we actually left the network
-        case verify_left_network(netmaker_host_id, cluster_name) do
+        case verify_left_network(vpn_host_id, cluster_name) do
           :ok ->
             Logger.info("Gateway left network #{cluster_name} (verified)")
             :ok
@@ -588,7 +588,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
               delay_ms = trunc(500 * :math.pow(2, attempt - 1))
               Logger.info("Retrying leave for #{cluster_name} in #{delay_ms}ms...")
               :timer.sleep(delay_ms)
-              leave_network(netmaker_host_id, cluster_name, attempt + 1, max_attempts)
+              leave_network(vpn_host_id, cluster_name, attempt + 1, max_attempts)
             else
               Logger.error(
                 "Node still present in #{cluster_name} after #{max_attempts} leave attempts - may require manual cleanup"
@@ -615,7 +615,7 @@ defmodule EdgeAdmin.EdgeClusters.Gateway do
           delay_ms = trunc(500 * :math.pow(2, attempt - 1))
           Logger.info("Retrying leave for #{cluster_name} in #{delay_ms}ms...")
           :timer.sleep(delay_ms)
-          leave_network(netmaker_host_id, cluster_name, attempt + 1, max_attempts)
+          leave_network(vpn_host_id, cluster_name, attempt + 1, max_attempts)
         else
           Logger.error(
             "Failed to leave network #{cluster_name} after #{max_attempts} attempts - may require manual cleanup"

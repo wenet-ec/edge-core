@@ -31,7 +31,7 @@ defmodule EdgeAdmin.EventsTest do
       api_token: "token",
       proxy_password: "pw",
       enrollment_key_id: "enrollment-key-1",
-      netmaker_host_id: "h",
+      vpn_host_id: "h",
       last_seen_at: now(),
       inserted_at: now(),
       updated_at: now()

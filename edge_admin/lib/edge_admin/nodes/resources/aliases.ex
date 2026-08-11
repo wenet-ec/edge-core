@@ -278,20 +278,20 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
           # Query Netmaker only after local/schema and DB-state checks pass.
           network_name = Cluster.network_name(node.cluster)
 
-          case Vpn.find_node_by_host(network_name, node.netmaker_host_id) do
+          case Vpn.find_node_by_host(network_name, node.vpn_host_id) do
             {:ok, netmaker_node} ->
               addresses = node_dns_addresses(netmaker_node)
 
               if addresses do
                 insert_alias(changeset, network_name, addresses)
               else
-                node_without_vpn_address(network_name, node.netmaker_host_id)
+                node_without_vpn_address(network_name, node.vpn_host_id)
               end
 
             {:error, :not_found} ->
               # Node is not enrolled in Netmaker at all
               Logger.warning(
-                "Cannot create alias: node #{node.netmaker_host_id} is not enrolled in network #{network_name}"
+                "Cannot create alias: node #{node.vpn_host_id} is not enrolled in network #{network_name}"
               )
 
               {:error,
@@ -485,7 +485,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
     end)
   end
 
-  defp current_alias_node_addresses(%Alias{node: %Node{netmaker_host_id: host_id}}, network_name) do
+  defp current_alias_node_addresses(%Alias{node: %Node{vpn_host_id: host_id}}, network_name) do
     case Vpn.find_node_by_host(network_name, host_id) do
       {:ok, node} ->
         node_dns_addresses(node)

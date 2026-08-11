@@ -33,7 +33,7 @@ defmodule EdgeAdmin.Ssh.Filters.SshPublicKeyFiltersTest do
       struct(Node, %{
         id: Ecto.UUID.generate(),
         cluster_id: cluster_id,
-        netmaker_host_id: Ecto.UUID.generate(),
+        vpn_host_id: Ecto.UUID.generate(),
         status: :healthy,
         version: "0.1.0",
         http_port: 44_000,

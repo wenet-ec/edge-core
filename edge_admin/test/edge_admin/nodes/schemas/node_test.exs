@@ -35,7 +35,7 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
       %{
         id: Uniq.UUID.uuid7(),
         cluster_id: "11111111-2222-3333-4444-555555555555",
-        netmaker_host_id: "22222222-3333-4444-5555-666666666666",
+        vpn_host_id: "22222222-3333-4444-5555-666666666666",
         status: :healthy,
         http_port: 44_000,
         ssh_port: 40_022,
@@ -74,11 +74,11 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
       assert Node.changeset(%Node{}, valid_attrs(%{recovery_key: "recovery-key"})).valid?
     end
 
-    test "requires a Netmaker host ID" do
-      changeset = Node.changeset(%Node{}, Map.delete(valid_attrs(), :netmaker_host_id))
+    test "requires a VPN host ID" do
+      changeset = Node.changeset(%Node{}, Map.delete(valid_attrs(), :vpn_host_id))
 
       refute changeset.valid?
-      assert "can't be blank" in errors_on(changeset).netmaker_host_id
+      assert "can't be blank" in errors_on(changeset).vpn_host_id
     end
 
     test "accepts a valid UUID from another version" do

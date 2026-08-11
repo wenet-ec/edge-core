@@ -1,22 +1,27 @@
-# edge_admin/test/edge_admin/ssh/ssh_test.exs
-defmodule EdgeAdmin.SshTest do
+# edge_admin/test/edge_admin/ssh/resources/ssh_queries_test.exs
+defmodule EdgeAdmin.Ssh.Resources.SshQueriesTest do
   use EdgeAdmin.DataCase, async: false
 
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
-  alias EdgeAdmin.Ssh
+  alias EdgeAdmin.Ssh.Resources.SshPublicKeys
+  alias EdgeAdmin.Ssh.Resources.SshUsernames
   alias EdgeAdmin.Ssh.Schemas.SshPublicKey
   alias EdgeAdmin.Ssh.Schemas.SshUsername
 
+  defp unique_id, do: :erlang.unique_integer([:positive, :monotonic])
+
   defp insert_cluster(overrides \\ %{}) do
+    number = unique_id()
+
     attrs =
       Map.merge(
         %{
           id: Ecto.UUID.generate(),
-          name: "cluster-#{:rand.uniform(999_999)}",
-          ipv4_range: "100.64.#{:rand.uniform(200)}.0/24",
-          ipv6_range: "fd7a:91c2:4e8b:#{rem(:erlang.unique_integer([:positive, :monotonic]), 65_536)}::/64"
+          name: "cluster-#{number}",
+          ipv4_range: "100.#{64 + rem(div(number, 256), 64)}.#{rem(number, 256)}.0/24",
+          ipv6_range: "fd7a:91c2:4e8b:#{rem(number, 65_536)}::/64"
         },
         overrides
       )
@@ -45,7 +50,7 @@ defmodule EdgeAdmin.SshTest do
   end
 
   defp insert_ssh_username(node_id, opts \\ []) do
-    username = Keyword.get(opts, :username, "user-#{:rand.uniform(999_999)}")
+    username = Keyword.get(opts, :username, "user-#{unique_id()}")
 
     %SshUsername{}
     |> Ecto.Changeset.change(%{
@@ -57,7 +62,7 @@ defmodule EdgeAdmin.SshTest do
   end
 
   defp insert_public_key(ssh_username_id, opts \\ []) do
-    key_name = Keyword.get(opts, :key_name, "key-#{:rand.uniform(999_999)}")
+    key_name = Keyword.get(opts, :key_name, "key-#{unique_id()}")
 
     %SshPublicKey{}
     |> Ecto.Changeset.change(%{
@@ -81,7 +86,7 @@ defmodule EdgeAdmin.SshTest do
       user_bravo = bravo.id |> insert_node() |> then(&insert_ssh_username(&1.id))
       charlie.id |> insert_node() |> then(&insert_ssh_username(&1.id))
 
-      assert {:ok, {users, _meta}} = Ssh.list_ssh_usernames(%{"cluster_name__in" => "alpha,bravo"})
+      assert {:ok, {users, _meta}} = SshUsernames.list(%{"cluster_name__in" => "alpha,bravo"})
       assert ids(users) == ids([user_alpha, user_bravo])
     end
 
@@ -97,7 +102,7 @@ defmodule EdgeAdmin.SshTest do
       insert_public_key(server_user.id, key_name: "server")
       insert_public_key(tablet_user.id, key_name: "tablet")
 
-      assert {:ok, {users, _meta}} = Ssh.list_ssh_usernames(%{"key_name__in" => "laptop,server"})
+      assert {:ok, {users, _meta}} = SshUsernames.list(%{"key_name__in" => "laptop,server"})
       assert ids(users) == ids([laptop_user, server_user])
     end
   end
@@ -115,7 +120,7 @@ defmodule EdgeAdmin.SshTest do
       bob_key = insert_public_key(bob.id)
       insert_public_key(carol.id)
 
-      assert {:ok, {keys, _meta}} = Ssh.list_ssh_public_keys(%{"username__in" => "alice,bob"})
+      assert {:ok, {keys, _meta}} = SshPublicKeys.list(%{"username__in" => "alice,bob"})
       assert ids(keys) == ids([alice_key, bob_key])
     end
 
@@ -132,7 +137,7 @@ defmodule EdgeAdmin.SshTest do
       bravo_key = insert_public_key(bravo_user.id)
       insert_public_key(charlie_user.id)
 
-      assert {:ok, {keys, _meta}} = Ssh.list_ssh_public_keys(%{"cluster_name__in" => "alpha,bravo"})
+      assert {:ok, {keys, _meta}} = SshPublicKeys.list(%{"cluster_name__in" => "alpha,bravo"})
       assert ids(keys) == ids([alpha_key, bravo_key])
     end
 
@@ -145,7 +150,7 @@ defmodule EdgeAdmin.SshTest do
       server = insert_public_key(user.id, key_name: "server")
       insert_public_key(user.id, key_name: "tablet")
 
-      assert {:ok, {keys, _meta}} = Ssh.list_ssh_public_keys(%{"key_name__in" => "laptop,server"})
+      assert {:ok, {keys, _meta}} = SshPublicKeys.list(%{"key_name__in" => "laptop,server"})
       assert ids(keys) == ids([laptop, server])
     end
   end

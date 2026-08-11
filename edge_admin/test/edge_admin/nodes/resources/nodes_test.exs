@@ -1,8 +1,8 @@
-# edge_admin/test/edge_admin/nodes/recovery_key_test.exs
-defmodule EdgeAdmin.Nodes.RecoveryKeyTest do
+# edge_admin/test/edge_admin/nodes/resources/nodes_test.exs
+defmodule EdgeAdmin.Nodes.Resources.NodesTest do
   use EdgeAdmin.DataCase, async: false
 
-  alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Nodes.Resources.Nodes
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
@@ -35,7 +35,7 @@ defmodule EdgeAdmin.Nodes.RecoveryKeyTest do
   test "creates, replaces, and deletes the node recovery key" do
     node = insert_node()
 
-    assert {:ok, first_key} = Nodes.create_node_recovery_key(node)
+    assert {:ok, first_key} = Nodes.create_recovery_key(node)
 
     assert {:ok, %{"node_id" => node_id, "cluster_name" => cluster_name, "nonce" => nonce}} =
              first_key |> Base.decode64!() |> JSON.decode()
@@ -47,11 +47,11 @@ defmodule EdgeAdmin.Nodes.RecoveryKeyTest do
     node = Repo.get!(Node, node.id)
     assert node.recovery_key == first_key
 
-    assert {:ok, second_key} = Nodes.create_node_recovery_key(node)
+    assert {:ok, second_key} = Nodes.create_recovery_key(node)
     refute second_key == first_key
 
     node = Repo.get!(Node, node.id)
-    assert {:ok, _} = Nodes.delete_node_recovery_key(node)
+    assert {:ok, _} = Nodes.delete_recovery_key(node)
     assert Repo.get!(Node, node.id).recovery_key == nil
   end
 end

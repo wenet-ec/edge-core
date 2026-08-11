@@ -1,8 +1,8 @@
-# edge_admin/test/edge_admin/nodes/enrollment_key_creation_test.exs
-defmodule EdgeAdmin.Nodes.EnrollmentKeyCreationTest do
+# edge_admin/test/edge_admin/nodes/resources/enrollment_keys_test.exs
+defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeysTest do
   use EdgeAdmin.DataCase, async: false
 
-  alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Nodes.Resources.EnrollmentKeys
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Repo
 
@@ -15,7 +15,7 @@ defmodule EdgeAdmin.Nodes.EnrollmentKeyCreationTest do
         ipv6_range: "fd7a:91c2:4e8b:11::/64"
       })
 
-    assert {:ok, enrollment_key} = Nodes.create_enrollment_key(cluster)
+    assert {:ok, enrollment_key} = EnrollmentKeys.create(cluster)
     assert {:ok, json} = Base.decode64(enrollment_key.key, padding: false)
     assert {:ok, %{"cluster_name" => cluster_name}} = JSON.decode(json)
     assert cluster_name == cluster.name

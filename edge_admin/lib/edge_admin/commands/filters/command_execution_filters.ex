@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/commands/filters/command_command_execution_filters.ex
+# edge_admin/lib/edge_admin/commands/filters/command_execution_filters.ex
 defmodule EdgeAdmin.Commands.Filters.CommandExecutionFilters do
   @moduledoc """
   Ecto query filter helpers for the `command_executions` table.

@@ -1,10 +1,10 @@
-# edge_admin/test/edge_admin/commands/commands_test.exs
-defmodule EdgeAdmin.CommandsTest do
+# edge_admin/test/edge_admin/commands/workflows/command_execution_lifecycle_test.exs
+defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycleTest do
   use EdgeAdmin.DataCase, async: false
 
-  alias EdgeAdmin.Commands
   alias EdgeAdmin.Commands.Schemas.Command
   alias EdgeAdmin.Commands.Schemas.CommandExecution
+  alias EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
@@ -64,7 +64,7 @@ defmodule EdgeAdmin.CommandsTest do
       sent = insert_execution(sent_command, node, :sent)
       completed = insert_execution(completed_command, node, :completed)
 
-      dropped = Commands.drop_node_command_executions(node.id, cluster.name)
+      dropped = CommandExecutionLifecycle.drop_node_command_executions(node.id, cluster.name)
 
       assert MapSet.new(Enum.map(dropped, & &1.execution.id)) == MapSet.new([pending.id, sent.id])
       assert Enum.all?(dropped, &(&1.execution.status == :dropped))

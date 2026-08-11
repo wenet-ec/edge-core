@@ -1,4 +1,4 @@
-# edge_admin/lib/edge_admin/commands/workflows/command_command_execution_lifecycle.ex
+# edge_admin/lib/edge_admin/commands/workflows/command_execution_lifecycle.ex
 defmodule EdgeAdmin.Commands.Workflows.CommandExecutionLifecycle do
   @moduledoc """
   Owns command-execution state transitions and agent-facing lifecycle workflows.

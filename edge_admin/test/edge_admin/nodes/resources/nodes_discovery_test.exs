@@ -1,8 +1,8 @@
-# edge_admin/test/edge_admin/nodes/discovery_nodes_test.exs
-defmodule EdgeAdmin.Nodes.DiscoveryNodesTest do
+# edge_admin/test/edge_admin/nodes/resources/nodes_discovery_test.exs
+defmodule EdgeAdmin.Nodes.Resources.NodesDiscoveryTest do
   use EdgeAdmin.DataCase, async: false
 
-  alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Nodes.Resources.Nodes
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
@@ -51,7 +51,7 @@ defmodule EdgeAdmin.Nodes.DiscoveryNodesTest do
         insert_node!(cluster, %{status: status})
       end)
 
-    assert {:ok, discovered_nodes} = Nodes.list_nodes_for_discovery(%{})
+    assert {:ok, discovered_nodes} = Nodes.list_for_discovery(%{})
 
     assert MapSet.new(Enum.map(discovered_nodes, & &1.id)) ==
              MapSet.new(Enum.map(nodes, & &1.id))
@@ -91,7 +91,7 @@ defmodule EdgeAdmin.Nodes.DiscoveryNodesTest do
       "updated_at__lte" => "2026-02-03T00:00:00Z"
     }
 
-    assert {:ok, [node]} = Nodes.list_nodes_for_discovery(params)
+    assert {:ok, [node]} = Nodes.list_for_discovery(params)
     assert node.id == target.id
   end
 end

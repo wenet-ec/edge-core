@@ -56,6 +56,7 @@ defmodule EdgeAdmin.EdgeClusters do
   use GenServer
 
   alias EdgeAdmin.Admins.Metadata
+  alias EdgeAdmin.EdgeClusters.Reconciliation
   alias EdgeAdmin.EdgeClusters.Supervisor, as: GatewaySupervisor
 
   require Logger
@@ -166,9 +167,9 @@ defmodule EdgeAdmin.EdgeClusters do
       new_clusters = get_assigned_clusters(state.admin_name)
       new_clusters_set = MapSet.new(new_clusters)
 
-      # Diff: old vs new
-      to_join = MapSet.difference(new_clusters_set, state.current_clusters)
-      to_leave = MapSet.difference(state.current_clusters, new_clusters_set)
+      reconciliation = Reconciliation.plan(state.current_clusters, new_clusters_set)
+      to_join = reconciliation.to_join
+      to_leave = reconciliation.to_leave
 
       Logger.info("EdgeClusters reconciliation: +#{MapSet.size(to_join)} clusters, -#{MapSet.size(to_leave)} clusters")
 

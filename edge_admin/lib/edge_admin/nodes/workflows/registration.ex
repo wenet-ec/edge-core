@@ -14,6 +14,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
   alias Ecto.Adapters.Postgres
   alias EdgeAdmin.Nodes.Checks
   alias EdgeAdmin.Nodes.Forms
+  alias EdgeAdmin.Nodes.Queries.ClusterQueries
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   alias EdgeAdmin.Nodes.Schemas.Node
@@ -108,7 +109,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
           canonical_cluster =
             case existing_node do
               nil -> reported_cluster
-              node -> Repo.one(from(c in active_clusters_query(), where: c.id == ^node.cluster_id))
+              node -> Repo.one(ClusterQueries.active_by_id(node.cluster_id))
             end
 
           with %Cluster{} = canonical_cluster <- canonical_cluster,
@@ -135,7 +136,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
       with %Node{} = node <- lock_node(node_id),
            %Cluster{} = reported_cluster <- lock_active_cluster(reported_cluster_name),
            %Cluster{} = canonical_cluster <-
-             Repo.one(from(c in active_clusters_query(), where: c.id == ^node.cluster_id)),
+             Repo.one(ClusterQueries.active_by_id(node.cluster_id)),
            :ok <- cluster_matches?(reported_cluster, canonical_cluster),
            node_attrs =
              node_id
@@ -151,12 +152,8 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
     end)
   end
 
-  defp active_clusters_query do
-    from(c in Cluster, where: is_nil(c.deleted_at))
-  end
-
   defp active_cluster_exists?(cluster_name) do
-    if Repo.exists?(from(c in active_clusters_query(), where: c.name == ^cluster_name)) do
+    if Repo.exists?(ClusterQueries.active_by_name(cluster_name)) do
       :ok
     else
       {:error, :not_found}
@@ -174,7 +171,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
   end
 
   defp lock_active_cluster(name) do
-    query = from(c in active_clusters_query(), where: c.name == ^name)
+    query = ClusterQueries.active_by_name(name)
 
     query =
       case Repo.__adapter__() do

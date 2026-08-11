@@ -14,6 +14,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Commands
   alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Nodes.Queries.ClusterQueries
   alias EdgeAdmin.Nodes.Resources.Aliases
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
@@ -30,7 +31,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
     do: Vpn.build_network_name(cluster_name, prefix: :node)
 
   defp cluster_active?(cluster_id) do
-    Repo.exists?(from(c in Cluster, where: c.id == ^cluster_id and is_nil(c.deleted_at)))
+    Repo.exists?(ClusterQueries.active_by_id(cluster_id))
   end
 
   @doc """

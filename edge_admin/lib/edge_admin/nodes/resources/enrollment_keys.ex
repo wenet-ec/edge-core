@@ -155,6 +155,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
         join: c in assoc(k, :cluster),
         preload: [cluster: c]
       )
+      |> ClusterQueries.active_joined()
 
     query = apply_custom_filters(base_query, custom_by_field)
 

@@ -15,6 +15,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   alias EdgeAdmin.Nodes.Checks
   alias EdgeAdmin.Nodes.Filters.ClusterFilters
   alias EdgeAdmin.Nodes.Forms
+  alias EdgeAdmin.Nodes.Queries.ClusterQueries
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
@@ -30,7 +31,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
     do: Vpn.build_network_name(cluster_name, prefix: :node)
 
   defp active_cluster?(cluster_id) do
-    Repo.exists?(from(c in Cluster, where: c.id == ^cluster_id and is_nil(c.deleted_at)))
+    Repo.exists?(ClusterQueries.active_by_id(cluster_id))
   end
 
   @doc """
@@ -181,6 +182,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
         join: c in assoc(a, :cluster),
         preload: [cluster: c]
       )
+      |> ClusterQueries.active_joined()
 
     query = ClusterFilters.apply_name(base_query, cluster_name_filters)
 

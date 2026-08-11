@@ -140,6 +140,7 @@ defmodule EdgeAdmin.Nodes do
   alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
+  alias EdgeAdmin.Nodes.Queries.ClusterQueries
   alias EdgeAdmin.Nodes.Workers.DeleteClusterWorker
   alias EdgeAdmin.Nodes.Workflows.HealthCheck
   alias EdgeAdmin.Nodes.Workflows.Reconciliation
@@ -164,10 +165,6 @@ defmodule EdgeAdmin.Nodes do
   # ===========================================================================
   # Cluster functions
   # ===========================================================================
-  defp active_clusters_query do
-    from(c in Cluster, where: is_nil(c.deleted_at))
-  end
-
   defp cluster_transaction(fun_or_multi) do
     opts =
       case Repo.__adapter__() do
@@ -179,7 +176,7 @@ defmodule EdgeAdmin.Nodes do
   end
 
   defp lock_active_cluster(name) do
-    query = from(c in active_clusters_query(), where: c.name == ^name)
+    query = ClusterQueries.active_by_name(name)
 
     query =
       case Repo.__adapter__() do
@@ -227,7 +224,7 @@ defmodule EdgeAdmin.Nodes do
       {:ok, {[%Cluster{nodes: [...]}, ...], %Flop.Meta{}}}
   """
   @spec list_clusters(map()) :: {:ok, {[Cluster.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  def list_clusters(params \\ %{}), do: run_cluster_list_query(active_clusters_query(), params)
+  def list_clusters(params \\ %{}), do: run_cluster_list_query(ClusterQueries.active(), params)
 
   @doc "Lists active and retired clusters for maintenance reconciliation."
   @spec list_clusters_for_reconciliation(map()) ::
@@ -329,7 +326,7 @@ defmodule EdgeAdmin.Nodes do
     filter_status = Keyword.get(opts, :filter_status)
 
     base_query =
-      from(c in active_clusters_query(),
+      from(c in ClusterQueries.active(),
         left_join: n in assoc(c, :nodes),
         select: %{
           cluster_name: c.name,
@@ -387,7 +384,7 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec get_cluster(String.t()) :: {:ok, Cluster.t()} | {:error, :not_found}
   def get_cluster(name) do
-    case Repo.one(from(c in active_clusters_query(), where: c.name == ^name)) do
+    case Repo.one(ClusterQueries.active_by_name(name)) do
       nil -> {:error, :not_found}
       cluster -> {:ok, Repo.preload(cluster, :nodes)}
     end
@@ -1142,6 +1139,7 @@ defmodule EdgeAdmin.Nodes do
         join: c in assoc(n, :cluster),
         preload: [:cluster, aliases: :cluster]
       )
+      |> ClusterQueries.active_joined()
       |> ClusterFilters.apply_name(cluster_name_filters)
       |> NodeFilters.apply_node_ids(node_ids_filters)
       |> NodeFilters.apply_enrollment_key_ids(enrollment_key_ids_filters)
@@ -1209,12 +1207,11 @@ defmodule EdgeAdmin.Nodes do
     #   cluster.name (for vpn_hostname/1), alias.name (as additional lookup keys).
     rows =
       Repo.all(
-        from n in Node,
-          join: c in Cluster,
-          on: c.id == n.cluster_id,
+        from c in ClusterQueries.active(),
+          join: n in assoc(c, :nodes),
           left_join: a in Alias,
           on: a.node_id == n.id,
-          where: c.name == ^cluster_name and is_nil(c.deleted_at),
+          where: c.name == ^cluster_name,
           select: %{
             id: n.id,
             proxy_password: n.proxy_password,
@@ -1232,7 +1229,7 @@ defmodule EdgeAdmin.Nodes do
     case rows do
       [] ->
         # Verify whether the cluster exists at all to return the right error.
-        if Repo.exists?(from c in active_clusters_query(), where: c.name == ^cluster_name) do
+        if Repo.exists?(ClusterQueries.active_by_name(cluster_name)) do
           {:ok, %{}}
         else
           # ===========================================================================

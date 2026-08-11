@@ -119,7 +119,7 @@ defmodule EdgeAdmin.Mixfile do
       {:postgrex, "~> 0.22"},
       {:ecto_sqlite3, "~> 0.24"},
       {:uniq, "~> 0.6"},
-      {:flop, "~> 0.26"},
+      {:flop, "~> 0.27"},
       {:cloak, "~> 1.1"},
       {:cloak_ecto, "~> 1.3"},
 
@@ -134,7 +134,7 @@ defmodule EdgeAdmin.Mixfile do
       {:phoenix_live_dashboard, "~> 0.8"},
       {:ecto_psql_extras, "~> 0.8"},
       {:ecto_sqlite3_extras, "~> 1.2"},
-      {:oban_live_dashboard, "~> 0.2.1"},
+      {:oban_live_dashboard, "~> 0.2"},
 
       # Linting
       {:credo, "~> 1.7", only: [:dev, :test], override: true},
@@ -169,7 +169,7 @@ defmodule EdgeAdmin.Mixfile do
 
       # Event Streaming
       {:gnat, "~> 1.16"},
-      {:brod, "~> 4.5"},
+      {:brod, "~> 4.6"},
       {:amqp, "~> 4.1"},
       {:redix, "~> 1.6"},
       # Source build instead of Hex so emqtt's rebar.config.script runs on our

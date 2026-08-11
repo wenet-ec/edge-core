@@ -95,6 +95,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.GooglePubsub do
   use GenServer
 
   alias EdgeAdmin.Events.Broker.Adapter
+  alias EdgeAdmin.Events.Broker.TopicRouting
 
   require Logger
 
@@ -187,7 +188,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.GooglePubsub do
   end
 
   def handle_call({:publish, envelope}, _from, state) do
-    url = topic_url(state, topic_id_for(envelope["type"])) <> ":publish"
+    url = topic_url(state, TopicRouting.topic_for(envelope["type"])) <> ":publish"
 
     body = %{
       "messages" => [
@@ -213,13 +214,6 @@ defmodule EdgeAdmin.Events.Broker.Adapters.GooglePubsub do
   # ---------------------------------------------------------------------------
   # Helpers
   # ---------------------------------------------------------------------------
-
-  defp topic_id_for("edge.node." <> _), do: "edge-nodes-events"
-  defp topic_id_for("edge.enrollment_key." <> _), do: "edge-nodes-events"
-  defp topic_id_for("edge.command_execution." <> _), do: "edge-commands-events"
-  defp topic_id_for("edge.self_update_request." <> _), do: "edge-self-updates-events"
-  defp topic_id_for("edge.ssh_username." <> _), do: "edge-ssh-events"
-  defp topic_id_for("edge.core." <> _), do: "edge-core-events"
 
   defp topic_url(state, topic_id) do
     "#{state.base_url}/v1/projects/#{state.project}/topics/#{state.topic_id_prefix}#{topic_id}"

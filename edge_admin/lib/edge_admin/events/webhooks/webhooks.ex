@@ -1,273 +1,39 @@
 # edge_admin/lib/edge_admin/events/webhooks/webhooks.ex
 defmodule EdgeAdmin.Events.Webhooks do
   @moduledoc """
-  The Webhooks context — webhook delivery channel for the event publish path.
+  Canonical API for configured event webhooks.
 
-  Webhooks are user-configured HTTP endpoints that receive a POST per matching
-  event. Subscriptions are persisted in the `webhooks` table with field-level
-  encryption for `secret` and `headers`. Delivery is asynchronous
-  through Oban; each event is retried up to `WEBHOOK_MAX_ATTEMPTS` (default 3)
-  and then dropped.
-
-  ## Key Concepts
-
-  - **Webhook**: A `(url, secret, headers, subscribed_events)` tuple persisted
-    as a row in the `webhooks` table. `secret` and `headers` are encrypted at
-    rest. **Webhooks are immutable after create** — there is no update
-    endpoint. To change anything, delete and recreate.
-  - **`subscribed_events`**: An explicit list of event-type strings, each one
-    a literal entry from `EdgeAdmin.Events.Catalog.all_event_types/0`. No
-    wildcards. The catalog is the contract; subscriptions reference it by
-    exact string. Validated at create time.
-  - **Fan-out**: At publish time, the events context calls `fan_out/1` which
-    enqueues one Oban job per webhook subscribed to the envelope's event type.
-  - **Delivery**: An Oban worker dequeues each job and calls `deliver_event/2`,
-    which signs the body, makes the HTTP call, and classifies the response.
-    Retry budgeting is Oban's responsibility — the worker just signals the
-    outcome via `:ok` / `{:error, _}` / `{:cancel, _}`.
-
-  ## Architecture
-
-  ### Publish path
-  1. Business logic calls `EdgeAdmin.Events.publish/1` with a typed event
-  2. Events builds a CloudEvents envelope and calls `Webhooks.fan_out/1`
-  3. `fan_out/1` queries webhooks subscribed to the envelope's `type` and
-     inserts one `DeliverEventWorker` job per match, with `max_attempts` read
-     from `WEBHOOK_MAX_ATTEMPTS`
-  4. Each worker invocation calls `deliver_event/2` which performs the HTTP
-     POST and returns the outcome to Oban
-
-  ### Failure handling
-  - **Recoverable** (HTTP 408/429/503, network errors): worker returns
-    `{:error, reason}`; Oban schedules a retry with exponential backoff until
-    the job's `max_attempts` budget is exhausted, then discards
-  - **Terminal** (other HTTP errors): worker returns `{:cancel, reason}`;
-    Oban skips remaining retries
-  - **Successful**: 2xx response, worker returns `:ok`
-
-  ## Examples
-
-      # Create a webhook
-      iex> create_webhook(%{
-      ...>   "url" => "https://example.com/hook",
-      ...>   "secret" => "a-32-byte-shared-secret-string!!",
-      ...>   "subscribed_events" => ["edge.node.registered", "edge.command_execution.completed"]
-      ...> })
-      {:ok, %Webhook{}}
-
-      # List webhooks subscribed to a given event type
-      iex> list_webhooks(%{"event_type" => "edge.node.registered"})
-      {:ok, {[%Webhook{}, ...], %Flop.Meta{}}}
-
-      # Fan out an envelope to all matching webhooks (called on every publish)
-      iex> fan_out(envelope)
-      :ok
+  Persistence is delegated to `Resources.Webhooks`; fan-out and delivery are
+  delegated to explicit workflows. Webhooks remain immutable after creation.
   """
 
-  import Ecto.Query, warn: false
-  import EdgeAdmin.Query, only: [case_insensitive_like: 2]
-
-  alias Ecto.Query.CastError
-  alias EdgeAdmin.Events.Webhooks.Delivery
-  alias EdgeAdmin.Events.Webhooks.Filters.WebhookFilters
-  alias EdgeAdmin.Events.Webhooks.Forms
+  alias EdgeAdmin.Events.Webhooks.Resources.Webhooks, as: WebhookResource
   alias EdgeAdmin.Events.Webhooks.Schemas.Webhook
-  alias EdgeAdmin.Events.Webhooks.Workers.DeliverEventWorker
-  alias EdgeAdmin.Repo
+  alias EdgeAdmin.Events.Webhooks.Workflows.Delivery
+  alias EdgeAdmin.Events.Webhooks.Workflows.FanOut
 
-  require Logger
-
-  @doc """
-  Lists webhooks with filtering, sorting, and pagination via Flop.
-
-  Supports a custom `event_type` filter that returns only webhooks whose
-  `subscribed_events` list contains the given event type. Applied in SQL so
-  the returned rows and `Flop.Meta` counts come from the same scope.
-
-  ## Returns
-  - `{:ok, {webhooks, meta}}` - Page of webhooks with Flop.Meta pagination info
-  - `{:error, meta}` - Validation errors
-  """
+  @doc "Lists webhooks with filtering, sorting, and pagination."
   @spec list_webhooks(map()) ::
           {:ok, {[Webhook.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  def list_webhooks(params \\ %{}) do
-    {event_type, params} = WebhookFilters.pop_event_type(params)
+  defdelegate list_webhooks(params \\ %{}), to: WebhookResource, as: :list
 
-    flop_params = EdgeAdmin.RequestParser.parse(params)
-
-    {ilike_filters, flop_params} =
-      EdgeAdmin.RequestParser.split_ilike_filters(flop_params, [:url])
-
-    query =
-      ilike_filters
-      |> Enum.reduce(Webhook, fn %{field: field, value: value}, acc ->
-        from(w in acc, where: case_insensitive_like(field(w, ^field), ^value))
-      end)
-      |> WebhookFilters.filter_by_event_type(event_type)
-
-    case Flop.validate_and_run(query, flop_params,
-           for: Webhook,
-           replace_invalid_params: true
-         ) do
-      {:ok, result} ->
-        {:ok, result}
-
-      {:error, meta} ->
-        {:error, meta}
-    end
-  end
-
-  @doc """
-  Gets a single webhook by ID.
-
-  ## Returns
-  - `{:ok, webhook}` - Webhook found
-  - `{:error, :not_found}` - Webhook doesn't exist or invalid UUID
-  """
+  @doc "Gets a webhook by ID."
   @spec get_webhook(String.t()) :: {:ok, Webhook.t()} | {:error, :not_found}
-  def get_webhook(id) do
-    case Repo.get(Webhook, id) do
-      nil -> {:error, :not_found}
-      webhook -> {:ok, webhook}
-    end
-  rescue
-    CastError -> {:error, :not_found}
-  end
+  defdelegate get_webhook(id), to: WebhookResource, as: :get
 
-  @doc """
-  Creates a webhook.
-
-  Validates input via `Forms.CreateWebhookForm`, then inserts via the schema
-  changeset. Webhooks are immutable after create; mutate via delete + recreate.
-
-  ## Returns
-  - `{:ok, webhook}` - Webhook created successfully
-  - `{:error, changeset}` - Validation failed (form-level or schema-level)
-  """
+  @doc "Validates and creates an immutable webhook."
   @spec create_webhook(map()) :: {:ok, Webhook.t()} | {:error, Ecto.Changeset.t()}
-  def create_webhook(attrs \\ %{}) do
-    with {:ok, validated_attrs} <- Forms.CreateWebhookForm.changeset(attrs) do
-      %Webhook{}
-      |> Webhook.changeset(validated_attrs)
-      |> Repo.insert()
-    end
-  end
+  defdelegate create_webhook(attrs \\ %{}), to: WebhookResource, as: :create
 
-  @doc """
-  Deletes a webhook.
-
-  ## Returns
-  - `{:ok, webhook}` - Deletion succeeded
-  - `{:error, changeset}` - Deletion blocked by a constraint
-  """
+  @doc "Deletes a webhook."
   @spec delete_webhook(Webhook.t()) :: {:ok, Webhook.t()} | {:error, Ecto.Changeset.t()}
-  def delete_webhook(%Webhook{} = webhook), do: Repo.delete(webhook)
+  defdelegate delete_webhook(webhook), to: WebhookResource, as: :delete
 
-  @doc """
-  Inserts one Oban delivery job per matching webhook for the given envelope.
-
-  Called by `EdgeAdmin.Events.publish/1` after the broker fan-out. Always
-  returns `:ok` — webhook delivery is fire-and-forget from the publish path,
-  errors surface inside the worker.
-
-  Walks `list_webhooks/1` page by page so the underlying scan is always
-  bounded. Same code path as the public REST filter `?event_type=<type>`;
-  the two cannot drift. Per-job `max_attempts` comes from
-  `WEBHOOK_MAX_ATTEMPTS` (default 3).
-  """
+  @doc "Enqueues delivery jobs for every webhook subscribed to the envelope type."
   @spec fan_out(map()) :: :ok
-  def fan_out(envelope) do
-    max_attempts = Application.get_env(:edge_admin, :webhook_max_attempts, 3)
-    count = enqueue_matching_pages(envelope, max_attempts, 1, 0)
+  defdelegate fan_out(envelope), to: FanOut
 
-    :telemetry.execute(
-      [:edge_admin, :webhook, :fan_out],
-      %{count: count},
-      %{event_type: envelope["type"]}
-    )
-
-    :ok
-  end
-
-  defp enqueue_matching_pages(envelope, max_attempts, page, count) do
-    params = %{
-      "event_type" => envelope["type"],
-      "page" => to_string(page),
-      "page_size" => "1000"
-    }
-
-    case list_webhooks(params) do
-      {:ok, {webhooks, meta}} ->
-        Enum.each(webhooks, fn webhook ->
-          %{webhook_id: webhook.id, envelope: envelope}
-          |> DeliverEventWorker.new(max_attempts: max_attempts)
-          |> Oban.insert!()
-        end)
-
-        next_count = count + length(webhooks)
-
-        if meta.has_next_page? do
-          enqueue_matching_pages(envelope, max_attempts, page + 1, next_count)
-        else
-          next_count
-        end
-
-      {:error, _meta} ->
-        Logger.error("Webhooks.fan_out: failed to page webhooks for event_type=#{envelope["type"]}")
-        count
-    end
-  end
-
-  @doc """
-  Delivers one webhook × envelope pair.
-
-  Called by `Workers.DeliverEventWorker`. Returns Oban-shaped tuples so the
-  worker can propagate the result directly. Retry budgeting belongs to Oban
-  (per-job `max_attempts` is set at fan-out time).
-
-  ## Returns
-  - `:ok` - 2xx delivery
-  - `{:error, reason}` - Recoverable; Oban schedules a retry until the job's
-    `max_attempts` budget is exhausted
-  - `{:cancel, reason}` - Terminal; Oban skips remaining retries
-  """
+  @doc "Delivers one webhook envelope and returns an Oban-shaped result."
   @spec deliver_event(String.t(), map()) :: :ok | {:error, term()} | {:cancel, term()}
-  def deliver_event(webhook_id, envelope) do
-    case get_webhook(webhook_id) do
-      {:error, :not_found} ->
-        {:cancel, :webhook_deleted}
-
-      {:ok, webhook} ->
-        do_deliver(webhook, envelope)
-    end
-  end
-
-  defp do_deliver(webhook, envelope) do
-    start = System.monotonic_time()
-    result = Delivery.send(webhook, envelope)
-    duration = System.monotonic_time() - start
-
-    emit_delivery_telemetry(webhook, envelope, result, duration)
-
-    case result do
-      :ok -> :ok
-      {:recoverable, reason} -> {:error, reason}
-      {:terminal, reason} -> {:cancel, {:delivery_failed, reason}}
-    end
-  end
-
-  defp emit_delivery_telemetry(webhook, envelope, result, duration) do
-    outcome =
-      case result do
-        :ok -> :ok
-        {:recoverable, _} -> :recoverable
-        {:terminal, _} -> :terminal
-      end
-
-    :telemetry.execute(
-      [:edge_admin, :webhook, :delivery],
-      %{duration: duration},
-      %{event_type: envelope["type"], result: outcome, webhook_id: webhook.id}
-    )
-  end
+  defdelegate deliver_event(webhook_id, envelope), to: Delivery
 end

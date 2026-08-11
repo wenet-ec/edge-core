@@ -86,6 +86,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.AwsSns do
   use GenServer
 
   alias EdgeAdmin.Events.Broker.Adapter
+  alias EdgeAdmin.Events.Broker.TopicRouting
 
   require Logger
 
@@ -160,7 +161,7 @@ defmodule EdgeAdmin.Events.Broker.Adapters.AwsSns do
   end
 
   def handle_call({:publish, envelope}, _from, state) do
-    topic_arn = state.topic_arn_prefix <> topic_suffix_for(envelope["type"])
+    topic_arn = state.topic_arn_prefix <> TopicRouting.topic_for(envelope["type"])
     payload = JSON.encode!(envelope)
 
     # Each attribute is a map per ex_aws_sns's @type message_attribute spec:
@@ -187,11 +188,4 @@ defmodule EdgeAdmin.Events.Broker.Adapters.AwsSns do
   # ---------------------------------------------------------------------------
   # Helpers
   # ---------------------------------------------------------------------------
-
-  defp topic_suffix_for("edge.node." <> _), do: "edge-nodes-events"
-  defp topic_suffix_for("edge.enrollment_key." <> _), do: "edge-nodes-events"
-  defp topic_suffix_for("edge.command_execution." <> _), do: "edge-commands-events"
-  defp topic_suffix_for("edge.self_update_request." <> _), do: "edge-self-updates-events"
-  defp topic_suffix_for("edge.ssh_username." <> _), do: "edge-ssh-events"
-  defp topic_suffix_for("edge.core." <> _), do: "edge-core-events"
 end

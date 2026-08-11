@@ -1,8 +1,8 @@
 # edge_admin/test/edge_admin/events/webhooks/webhooks_test.exs
-defmodule EdgeAdmin.Events.WebhooksTest do
+defmodule EdgeAdmin.Events.Webhooks.Resources.WebhooksTest do
   use EdgeAdmin.DataCase, async: false
 
-  alias EdgeAdmin.Events.Webhooks
+  alias EdgeAdmin.Events.Webhooks.Resources.Webhooks
   alias EdgeAdmin.Events.Webhooks.Schemas.Webhook
   alias EdgeAdmin.Repo
 
@@ -46,7 +46,7 @@ defmodule EdgeAdmin.Events.WebhooksTest do
         })
 
       assert {:ok, {webhooks, meta}} =
-               Webhooks.list_webhooks(%{
+               Webhooks.list(%{
                  "event_type" => "edge.command_execution.completed",
                  "page" => 1,
                  "page_size" => 20,

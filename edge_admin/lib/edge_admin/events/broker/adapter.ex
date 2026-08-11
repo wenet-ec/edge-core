@@ -19,7 +19,7 @@ defmodule EdgeAdmin.Events.Broker.Adapter do
 
   Three things are derived from this registry:
 
-    * `names/0` — every internal atom name, used by the broker dispatch.
+    * `names/0` — every internal atom name, used by broker delivery routing.
     * `wire_strings/0` — every accepted `EVENT_BROKER_ADAPTER` value, used by
       `runtime.exs` for parsing and for the rejection error message.
     * `module_for/1`, `name_for_wire/1` — lookups used by `Broker` and
@@ -36,7 +36,7 @@ defmodule EdgeAdmin.Events.Broker.Adapter do
        supervision shape is genuinely heterogeneous).
     4. Add the per-adapter env-var parsing block in `config/runtime.exs`.
 
-  The dispatch in `Broker` and the rejection error in `runtime.exs` pick up
+  Broker delivery routing and the rejection error in `runtime.exs` pick up
   the new adapter automatically.
   """
 

@@ -4,7 +4,7 @@ defmodule EdgeAdmin.Events do
   Public API for publishing lifecycle events.
 
   Business logic constructs a typed event struct from `EdgeAdmin.Events.Catalog`
-  and calls `publish/1`. Events are dispatched to every configured delivery
+  and calls `publish/1`. Events are delivered to every configured delivery
   channel — today that's the broker (`EdgeAdmin.Events.Broker`); webhooks and
   other channels plug in here as they're added.
 
@@ -74,7 +74,7 @@ defmodule EdgeAdmin.Events do
   def publish(event) do
     event
     |> build_envelope()
-    |> dispatch()
+    |> deliver_to_channels()
 
     :ok
   end
@@ -86,7 +86,7 @@ defmodule EdgeAdmin.Events do
   def publish_test_event do
     event = %Catalog.CoreTest{requested_at: DateTime.utc_now()}
     envelope = build_envelope(event)
-    dispatch(envelope)
+    deliver_to_channels(envelope)
     {:ok, envelope}
   end
 
@@ -109,7 +109,7 @@ defmodule EdgeAdmin.Events do
     }
   end
 
-  defp dispatch(envelope) do
+  defp deliver_to_channels(envelope) do
     Broker.enqueue(envelope)
     Webhooks.fan_out(envelope)
   end

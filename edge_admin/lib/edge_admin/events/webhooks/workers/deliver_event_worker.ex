@@ -32,7 +32,7 @@ defmodule EdgeAdmin.Events.Webhooks.Workers.DeliverEventWorker do
     queue: :webhooks,
     max_attempts: 3
 
-  alias EdgeAdmin.Events.Webhooks
+  alias EdgeAdmin.Events.Webhooks.Workflows.Delivery
 
   require Logger
 
@@ -44,7 +44,7 @@ defmodule EdgeAdmin.Events.Webhooks.Workers.DeliverEventWorker do
 
     cond do
       max_age == 0 ->
-        Webhooks.deliver_event(webhook_id, envelope)
+        Delivery.deliver_event(webhook_id, envelope)
 
       age_seconds > max_age ->
         Logger.warning(
@@ -56,7 +56,7 @@ defmodule EdgeAdmin.Events.Webhooks.Workers.DeliverEventWorker do
         {:cancel, {:expired, age_seconds: age_seconds, max_age_seconds: max_age}}
 
       true ->
-        Webhooks.deliver_event(webhook_id, envelope)
+        Delivery.deliver_event(webhook_id, envelope)
     end
   end
 end

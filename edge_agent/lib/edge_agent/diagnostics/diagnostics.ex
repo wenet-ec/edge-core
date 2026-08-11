@@ -49,7 +49,7 @@ defmodule EdgeAgent.Diagnostics do
   defp local_checks do
     [
       {"wireguard_interface", &WireguardInterface.check/0},
-      {"netclient", &netclient_check/0},
+      {"netclient", &edge_vpn_cli_check/0},
       {"networks", &networks_check/0},
       {"configured_peers", &configured_peers_check/0},
       {"derp_map", &derp_map_check/0},
@@ -106,10 +106,10 @@ defmodule EdgeAgent.Diagnostics do
     do: passed_check(name, duration_ms, sanitize_info(info))
 
   defp normalize_check_result(name, {:ok, :degraded, info}, duration_ms),
-    do: warned_check(name, duration_ms, "Netclient is degraded", sanitize_info(info))
+    do: warned_check(name, duration_ms, "Edge VPN CLI is degraded", sanitize_info(info))
 
   defp normalize_check_result(name, {:ok, :unhealthy, info}, duration_ms),
-    do: failed_check(name, "Netclient is unhealthy: #{inspect(sanitize_info(info))}", duration_ms)
+    do: failed_check(name, "Edge VPN CLI is unhealthy: #{inspect(sanitize_info(info))}", duration_ms)
 
   defp normalize_check_result(name, {:ok, value}, duration_ms),
     do: passed_check(name, duration_ms, sanitize_info(value))
@@ -125,7 +125,7 @@ defmodule EdgeAgent.Diagnostics do
   defp normalize_check_result(name, result, duration_ms),
     do: failed_check(name, "Unexpected result: #{inspect(result)}", duration_ms)
 
-  defp netclient_check, do: Vpn.netclient_health_check()
+  defp edge_vpn_cli_check, do: Vpn.edge_vpn_cli_health_check()
   defp networks_check, do: Vpn.list_networks()
 
   defp configured_peers_check do

@@ -20,7 +20,7 @@ defmodule EdgeAdmin.Vpn do
   ## Key Concepts
 
   - **Network**: A VPN network in Netmaker (e.g., `cluster-prod`, `admin-cluster-a`)
-  - **Host**: A physical/virtual machine running netclient
+  - **Host**: A physical/virtual machine running the Edge VPN CLI
   - **Node**: A host's connection to a specific network
   - **DNS Name**: Short hostname (e.g., `node-abc123`, `admin-xyz789`)
   - **Hostname**: Fully qualified domain name (e.g., `node-abc123.cluster-prod.nm.internal`)
@@ -692,7 +692,7 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Joins a Netmaker network using netclient CLI.
+  Joins an Edge VPN network using the Edge VPN CLI.
 
   Returns `{:ok, result}` or `{:error, reason}`.
 
@@ -703,18 +703,18 @@ defmodule EdgeAdmin.Vpn do
   end
 
   @doc """
-  Checks netclient VPN connection health.
+  Checks Edge VPN CLI connection health.
 
   Returns `{:ok, status, info}` where status is `:healthy`, `:degraded`, or `:unhealthy`.
   """
-  def netclient_health_check(opts \\ []) do
+  def edge_vpn_cli_health_check(opts \\ []) do
     Nexmaker.Cli.health_check(opts)
   end
 
   @doc """
   Pulls latest VPN configuration from Netmaker server.
 
-  Forces netclient to fetch full configuration via HTTP API, bypassing MQTT.
+  Forces the Edge VPN CLI to fetch full configuration via HTTP API, bypassing MQTT.
   Used by `sync_vpn_config/0` (LocalScheduler periodic backstop) — no other
   call sites today.
 

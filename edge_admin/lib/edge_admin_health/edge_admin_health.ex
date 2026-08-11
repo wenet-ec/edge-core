@@ -8,7 +8,7 @@ defmodule EdgeAdminHealth do
   - Admin-cluster membership
   - Metadata computation
   - Edge VPN API reachability
-  - Netclient connection to admin cluster network
+  - Edge VPN CLI connection to admin cluster network
   - Proxy servers
   - Event broker connection (no-op when EVENT_BROKER_ENABLED=false)
 
@@ -32,7 +32,7 @@ defmodule EdgeAdminHealth do
       %PlugCheckup.Check{name: "Membership", module: __MODULE__, function: :membership_health},
       %PlugCheckup.Check{name: "Metadata", module: __MODULE__, function: :metadata_health},
       %PlugCheckup.Check{name: "Edge VPN API", module: __MODULE__, function: :edge_vpn_api_health},
-      %PlugCheckup.Check{name: "Netclient", module: __MODULE__, function: :netclient_health},
+      %PlugCheckup.Check{name: "Edge VPN CLI", module: __MODULE__, function: :edge_vpn_cli_health},
       %PlugCheckup.Check{name: "Proxy Servers", module: __MODULE__, function: :proxy_servers_health},
       %PlugCheckup.Check{name: "Event Broker", module: __MODULE__, function: :event_broker_health}
     ]
@@ -88,12 +88,12 @@ defmodule EdgeAdminHealth do
       {:error, "API check exception"}
   end
 
-  @doc "Checks that the Admin Netclient is connected to its Admin cluster network."
-  @spec netclient_health() :: :ok | {:error, String.t()}
-  def netclient_health do
+  @doc "Checks that the Admin Edge VPN CLI is connected to its Admin cluster network."
+  @spec edge_vpn_cli_health() :: :ok | {:error, String.t()}
+  def edge_vpn_cli_health do
     admin_cluster = EdgeAdmin.Vpn.admin_cluster_name()
 
-    case EdgeAdmin.Vpn.netclient_health_check() do
+    case EdgeAdmin.Vpn.edge_vpn_cli_health_check() do
       {:ok, :healthy, info} ->
         if admin_cluster in info[:networks] do
           :ok
@@ -107,7 +107,7 @@ defmodule EdgeAdminHealth do
         # route traffic. This is the critical signal for a network-partitioned admin
         # that has been cleaned up: MQTT auth will fail, WireGuard tears down, but
         # nodes.json may still list the cluster until the daemon restarts.
-        Logger.error("Netclient WireGuard interface is down")
+        Logger.error("Edge VPN CLI WireGuard interface is down")
         {:error, "WireGuard interface down"}
 
       {:ok, :unhealthy, _info} ->
@@ -115,7 +115,7 @@ defmodule EdgeAdminHealth do
     end
   rescue
     e ->
-      Logger.error("Netclient health check exception: #{inspect(e)}")
+      Logger.error("Edge VPN CLI health check exception: #{inspect(e)}")
       {:error, "Health check exception"}
   end
 

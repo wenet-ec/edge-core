@@ -3,7 +3,7 @@
 # EdgeAgent.Vpn now handles only the VPN join/health-check lifecycle.
 # All enrollment key extraction and fetching moved to EdgeAgent.Enrollment.
 #
-# join_if_needed/1 and all helpers call Nexmaker.Cli (netclient binary) or
+# join_if_needed/1 and all helpers call Nexmaker.Cli (Edge VPN CLI binary) or
 # Process.sleep — integration only, no unit tests here.
 #
 # This file is intentionally empty. Unit tests for the enrollment flow live in:

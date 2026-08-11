@@ -22,7 +22,7 @@ defmodule EdgeAgent.Enrollment do
               2. Decode → extract admin_urls and cluster_name (nonce only makes the blob unique)
               3. If recovering, verify the recovery key belongs to cluster_name
               4. POST the full key blob to admin verify endpoint
-              5. Require a non-empty Netmaker enrollment key
+              5. Require a non-empty VPN enrollment key
               6. On success: store admin_fallback_urls, vpn_enrollment_key,
                  then write enrollment_key_id last as the durable commit marker
 
@@ -114,7 +114,10 @@ defmodule EdgeAgent.Enrollment do
     end
   end
 
-  defp persist_enrollment_settings(admin_urls, %{vpn_enrollment_key: vpn_enrollment_key, enrollment_key_id: enrollment_key_id}) do
+  defp persist_enrollment_settings(admin_urls, %{
+         vpn_enrollment_key: vpn_enrollment_key,
+         enrollment_key_id: enrollment_key_id
+       }) do
     with {:ok, _setting} <- Settings.set_admin_fallback_urls(admin_urls),
          {:ok, _setting} <- Settings.set_vpn_enrollment_key(vpn_enrollment_key),
          {:ok, _setting} <- Settings.set_enrollment_key_id(enrollment_key_id) do
@@ -344,8 +347,8 @@ defmodule EdgeAgent.Enrollment do
 
       {:ok, %{vpn_enrollment_key: vpn_enrollment_key, enrollment_key_id: _enrollment_key_id}}
       when not is_binary(vpn_enrollment_key) or vpn_enrollment_key == "" ->
-        Logger.error("Admin verified enrollment but returned no Netmaker enrollment key")
-        {:error, "Admin returned no Netmaker enrollment key"}
+        Logger.error("Admin verified enrollment but returned no VPN enrollment key")
+        {:error, "Admin returned no VPN enrollment key"}
 
       {:error, reason} ->
         Logger.error("Could not reach admin for enrollment verification: #{inspect(reason)}")

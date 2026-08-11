@@ -28,17 +28,17 @@ if [ "$_wg_val" = "wireguard-go" ]; then
 elif [ -z "$_wg_val" ]; then
     echo "WireGuard mode: kernel (default)"
 else
-    echo "WireGuard mode: $_wg_val (unrecognised value — netclient will use kernel detection)"
+    echo "WireGuard mode: $_wg_val (unrecognised value — Edge VPN CLI (netclient) will use kernel detection)"
 fi
 unset _wg_val
 
 # Check if netclient is available
 if ! command -v netclient &> /dev/null; then
-    echo "ERROR: netclient not found in PATH"
+    echo "ERROR: Edge VPN CLI (netclient) not found in PATH"
     exit 1
 fi
 
-echo "Netclient version: $(netclient version 2>/dev/null || echo 'unknown')"
+echo "Edge VPN CLI (netclient) version: $(netclient version 2>/dev/null || echo 'unknown')"
 
 echo "All prerequisites ready, starting application..."
 exec "$@"

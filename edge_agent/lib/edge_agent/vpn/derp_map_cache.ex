@@ -22,7 +22,7 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
   ## Other behaviour
 
   If `core_derp_map_urls` is empty (not configured), the cache holds nil and the endpoint
-  returns an empty regions map — netclient skips the overlay and uses Tailscale fallback.
+  returns an empty regions map — the Edge VPN CLI skips the overlay and uses the Tailscale fallback.
 
   If a fetch fails, the last known good cache is kept. The map server URL is re-read
   from settings on every fetch cycle, so a refreshed URL list takes effect

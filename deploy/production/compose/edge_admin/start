@@ -9,18 +9,18 @@ set -o nounset
 cleanup() {
     echo "Received shutdown signal, cleaning up..."
 
-    # Signal only the netclient daemon WE started. Do NOT use pgrep/pkill
+    # Signal only the Edge VPN CLI (netclient) daemon WE started. Do NOT use pgrep/pkill
     # by name — if this container ever runs with `pid: host` (the agent
     # does), a name match would find every netclient daemon on the host
     # and tear them down with us.
     if [ -n "${NETCLIENT_PID:-}" ] && kill -0 "$NETCLIENT_PID" 2>/dev/null; then
-        echo "Stopping netclient daemon (PID: $NETCLIENT_PID)..."
+        echo "Stopping Edge VPN CLI (netclient) daemon (PID: $NETCLIENT_PID)..."
         kill -TERM "$NETCLIENT_PID" 2>/dev/null || true
 
         # Wait for it to exit gracefully (max 5 seconds)
         for _ in {1..5}; do
             if ! kill -0 "$NETCLIENT_PID" 2>/dev/null; then
-                echo "Netclient daemon stopped gracefully"
+                echo "Edge VPN CLI (netclient) daemon stopped gracefully"
                 break
             fi
             sleep 1
@@ -28,11 +28,11 @@ cleanup() {
 
         # Force kill if still running
         if kill -0 "$NETCLIENT_PID" 2>/dev/null; then
-            echo "Force killing netclient daemon (PID: $NETCLIENT_PID)"
+            echo "Force killing Edge VPN CLI (netclient) daemon (PID: $NETCLIENT_PID)"
             kill -9 "$NETCLIENT_PID" 2>/dev/null || true
         fi
     else
-        echo "No netclient daemon to stop"
+        echo "No Edge VPN CLI (netclient) daemon to stop"
     fi
 
     # Clean up routing policy rules (netmaker creates these with priorities 3000, 2500, 2000)
@@ -51,7 +51,7 @@ cleanup() {
 }
 
 # Wipe netclient credentials to start fresh every boot
-echo "Wiping netclient credentials..."
+echo "Wiping Edge VPN CLI (netclient) credentials..."
 rm -rf /etc/netclient/*
 
 # Clean up any stale WireGuard interface from previous run
@@ -108,16 +108,16 @@ if [ -n "${CORE_DERP_MAP_URLS:-}" ]; then
 fi
 
 # Start netclient daemon in the background
-echo "Starting netclient daemon..."
+echo "Starting Edge VPN CLI (netclient) daemon..."
 netclient daemon &
 NETCLIENT_PID=$!
-echo "Netclient daemon started with PID: $NETCLIENT_PID"
+echo "Edge VPN CLI (netclient) daemon started with PID: $NETCLIENT_PID"
 
 echo "Starting server..."
 /app/bin/server &
 SERVER_PID=$!
 
-# Wait for either child to exit. If netclient dies, the server is unreachable
+# Wait for either child to exit. If the Edge VPN CLI (netclient) dies, the server is unreachable
 # from the mesh — bail out and let the orchestrator restart us. Disable
 # errexit around `wait -n` so we can capture the exit code and propagate it.
 set +e
@@ -126,7 +126,7 @@ EXIT_CODE=$?
 set -e
 
 if [ "$EXIT_CODE" -ne 0 ]; then
-    echo "Child process exited with code $EXIT_CODE (netclient=$NETCLIENT_PID, server=$SERVER_PID)" >&2
+    echo "Child process exited with code $EXIT_CODE (edge_vpn_cli=$NETCLIENT_PID, server=$SERVER_PID)" >&2
 fi
 
 exit $EXIT_CODE

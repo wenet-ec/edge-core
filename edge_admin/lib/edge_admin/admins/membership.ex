@@ -20,7 +20,7 @@ defmodule EdgeAdmin.Admins.Membership do
   1. **VPN Network Join** (step 1)
      - Join admin cluster VPN network
      - Create network if this is the first admin in the cluster
-     - Wait for Edge VPN host registration and netclient join (bounded)
+     - Wait for Edge VPN host registration and Edge VPN CLI join (bounded)
 
   2. **Erlang Distribution** (step 2)
      - Start distributed Erlang with configured cookie
@@ -40,7 +40,7 @@ defmodule EdgeAdmin.Admins.Membership do
   ## Membership Sequence
 
   ```
-  1. Join admin cluster network (create if needed) + wait for Edge VPN / netclient
+  1. Join admin cluster network (create if needed) + wait for Edge VPN / Edge VPN CLI
   2. Start Erlang distribution
   3. Initialize syn (add :admin_scope, join cluster group with metadata)
   4. Discover peer admins via Edge VPN API and connect
@@ -189,7 +189,7 @@ defmodule EdgeAdmin.Admins.Membership do
   # Step 1: VPN Network Join
   # =============================================================================
 
-  # Bounded waits prevent silent hangs when Edge VPN/netclient never produce a
+  # Bounded waits prevent silent hangs when Edge VPN/Edge VPN CLI never produce a
   # result we expect. The total per-step budget is `:join_timeout_seconds`
   # (env: `MEMBERSHIP_JOIN_TIMEOUT_SECONDS`, default 60s). Polling cadence is
   # held at 2s — operators tune the budget, not the cadence.
@@ -218,7 +218,7 @@ defmodule EdgeAdmin.Admins.Membership do
            {:ok, token} <- Vpn.get_default_enrollment_key(network_name),
            {:ok, _} <- Vpn.join_network([{:token, token} | join_opts]),
            :ok <- wait_for_vpn_registration(admin_name, 1, max_attempts),
-           :ok <- wait_for_netclient(network_name, 1, max_attempts) do
+           :ok <- wait_for_edge_vpn_cli(network_name, 1, max_attempts) do
         Logger.info("Successfully joined admin cluster network")
         :ok
       else
@@ -248,7 +248,7 @@ defmodule EdgeAdmin.Admins.Membership do
   end
 
   # Pre-flight: refuse to attempt join if the admin cluster CIDR is exhausted.
-  # Without this check, `wait_for_netclient` would hang because Edge VPN accepts
+  # Without this check, `wait_for_edge_vpn_cli` would hang because Edge VPN accepts
   # the host registration but never creates a node (IP allocation fails inside
   # an async goroutine). Bail out early with a clear error instead.
   defp check_capacity(network_name) do
@@ -325,36 +325,36 @@ defmodule EdgeAdmin.Admins.Membership do
     end
   end
 
-  defp wait_for_netclient(_network_name, attempt, max_attempts) when attempt > max_attempts do
-    {:error, :netclient_join_timeout}
+  defp wait_for_edge_vpn_cli(_network_name, attempt, max_attempts) when attempt > max_attempts do
+    {:error, :edge_vpn_cli_join_timeout}
   end
 
-  defp wait_for_netclient(network_name, attempt, max_attempts) do
-    case Vpn.netclient_health_check() do
+  defp wait_for_edge_vpn_cli(network_name, attempt, max_attempts) do
+    case Vpn.edge_vpn_cli_health_check() do
       {:ok, status, info} when status in [:healthy, :degraded] ->
         if network_name in info[:networks] do
-          Logger.info("Netclient connected to #{network_name}")
+          Logger.info("Edge VPN CLI connected to #{network_name}")
           :ok
         else
           Logger.debug(
-            "Waiting for netclient to join #{network_name} (attempt #{attempt}/#{max_attempts}), " <>
+            "Waiting for Edge VPN CLI to join #{network_name} (attempt #{attempt}/#{max_attempts}), " <>
               "current networks: #{inspect(info[:networks])}"
           )
 
           Process.sleep(@join_retry_delay_ms)
-          wait_for_netclient(network_name, attempt + 1, max_attempts)
+          wait_for_edge_vpn_cli(network_name, attempt + 1, max_attempts)
         end
 
       {:ok, :unhealthy, _info} ->
-        Logger.debug("Waiting for netclient to become healthy (attempt #{attempt}/#{max_attempts})")
+        Logger.debug("Waiting for Edge VPN CLI to become healthy (attempt #{attempt}/#{max_attempts})")
 
         Process.sleep(@join_retry_delay_ms)
-        wait_for_netclient(network_name, attempt + 1, max_attempts)
+        wait_for_edge_vpn_cli(network_name, attempt + 1, max_attempts)
     end
   end
 
   # Step 1 may have registered this admin as a host in Edge VPN before failing
-  # (e.g. node creation hung, netclient didn't pick up the network). Such a
+  # (e.g. node creation hung, Edge VPN CLI didn't pick up the network). Such a
   # host is an orphan: it occupies a slot but provides no functionality. Delete
   # it before propagating the error so the next restart starts from a clean
   # slate. Best-effort — failures here are logged but don't change the outcome.

@@ -3,7 +3,7 @@ defmodule EdgeAgent.Vpn do
   @moduledoc """
   VPN network operations for the edge agent.
 
-  Handles joining the Netmaker VPN network and verifying connection health.
+  Handles joining the Edge VPN network and verifying connection health.
   The vpn_enrollment_key is expected to already be in Settings (written by
   `EdgeAgent.EnrollmentKey.ensure_verified/0` during bootstrap).
 
@@ -18,7 +18,7 @@ defmodule EdgeAgent.Vpn do
   require Logger
 
   @doc """
-  Pulls latest VPN configuration from Netmaker server.
+  Pulls the latest VPN configuration from the Edge VPN service.
 
   Returns `:ok` or `{:error, reason}`.
   """
@@ -48,10 +48,10 @@ defmodule EdgeAgent.Vpn do
   end
 
   @doc """
-  Returns WireGuard peer information from netclient.
+  Returns WireGuard peer information from the Edge VPN CLI.
 
-  Netclient reads the local WireGuard device for handshake and traffic state,
-  then asks Netmaker for peer metadata.
+  The Edge VPN CLI reads the local WireGuard device for handshake and traffic state,
+  then asks the Edge VPN service for peer metadata.
   """
   @spec list_peers(keyword()) :: {:ok, map()} | {:error, any()}
   def list_peers(opts \\ []) do
@@ -59,12 +59,12 @@ defmodule EdgeAgent.Vpn do
   end
 
   @doc """
-  Checks netclient VPN connection health.
+  Checks Edge VPN CLI connection health.
 
   Returns `{:ok, status, info}` where status is `:healthy`, `:degraded`, or `:unhealthy`.
   """
-  @spec netclient_health_check(keyword()) :: {:ok, :healthy | :degraded | :unhealthy, map()}
-  def netclient_health_check(opts \\ []) do
+  @spec edge_vpn_cli_health_check(keyword()) :: {:ok, :healthy | :degraded | :unhealthy, map()}
+  def edge_vpn_cli_health_check(opts \\ []) do
     Nexmaker.Cli.health_check(opts)
   end
 

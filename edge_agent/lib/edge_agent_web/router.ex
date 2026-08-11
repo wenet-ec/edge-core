@@ -6,7 +6,7 @@ defmodule EdgeAgentWeb.Router do
   Two pipelines:
 
   - `:public` — JSON-accepting, no auth. Currently only the `/derp_map`
-    reflection endpoint, which netclient calls without credentials.
+    reflection endpoint, which the Edge VPN CLI calls without credentials.
   - `:api` — JSON + `ApiTokenAuth` (bearer token verified against the
     agent's stored API token from bootstrap registration). All
     admin↔agent endpoints sit here.

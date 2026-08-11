@@ -4,7 +4,7 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   Admin server discovery via WireGuard peer inspection.
 
   Discovers admin servers on the VPN network by listing WireGuard peers
-  (via `netclient ping`) and probing the ones named `admin-*` on their
+  (via the Edge VPN CLI `ping` command) and probing the ones named `admin-*` on their
   discovery endpoint.
 
   ## Discovery Process
@@ -50,7 +50,7 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   @doc """
   Discover admins in the cluster.
 
-  Returns `{:ok, network_name, admin_urls}` where network_name is the Netmaker
+  Returns `{:ok, network_name, admin_urls}` where network_name is the Edge VPN
   network name (e.g. "cluster-test") or nil if none found, and admin_urls is
   a list of HTTP URLs using VPN IPs (e.g. ["http://100.64.0.4:44000"]).
 

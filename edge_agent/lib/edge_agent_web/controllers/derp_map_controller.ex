@@ -7,13 +7,13 @@ defmodule EdgeAgentWeb.Controllers.DerpMapController do
   @empty %{"Regions" => %{}}
 
   @doc """
-  DERP map reflection endpoint for netclient.
+  DERP map reflection endpoint for the Edge VPN CLI.
 
   Returns the cached DERP map fetched from the configured map server.
   If no map server is configured or the last fetch failed, returns an empty
-  regions map — netclient skips the overlay and falls back to Tailscale.
+  regions map — the Edge VPN CLI skips the overlay and falls back to Tailscale.
 
-  This endpoint is set as DERP_MAP_URLS in the agent start script so netclient
+  This endpoint is set as DERP_MAP_URLS in the agent start script so the Edge VPN CLI
   can fetch a fresh map on every DERP connect attempt without blocking on a
   live outbound request.
   """

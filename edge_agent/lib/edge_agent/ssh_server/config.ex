@@ -5,7 +5,7 @@ defmodule EdgeAgent.SshServer.Config do
 
   `ssh_system_dir` and `ssh_user_dir` are derived from the agent-wide
   `DATA_DIR` in `runtime.exs`, so SSH host keys live alongside SQLite and
-  netclient state on the persistent volume — they survive container
+  Edge VPN CLI state on the persistent volume — they survive container
   restarts. The `users` subdirectory is required by `:ssh.daemon`'s
   `:user_dir` option but is otherwise unused (we delegate authentication
   to admin via `EdgeAgent.SshServer.Authentication`, not authorized_keys

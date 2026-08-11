@@ -382,7 +382,7 @@ defmodule EdgeAdminWeb.Schemas.Admins.AdminSchemas do
         last_checked_in: %Schema{
           type: :string,
           format: :"date-time",
-          description: "Last time this admin's netclient reported in to Edge VPN (ISO 8601)",
+          description: "Last time this admin's Edge VPN CLI reported to the Edge VPN server (ISO 8601)",
           nullable: true
         }
       },

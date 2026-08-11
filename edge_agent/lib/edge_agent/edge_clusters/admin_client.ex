@@ -167,7 +167,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   @doc """
   Verify an enrollment key with admin before joining the VPN.
 
-  Called during bootstrap before netclient join. Tries each URL in `admin_urls`
+  Called during bootstrap before Edge VPN CLI join. Tries each URL in `admin_urls`
   (from the decoded enrollment key blob) in order. On 503 (degraded mode) or
   network error, tries the next URL. Returns the first successful response.
 

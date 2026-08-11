@@ -6,7 +6,7 @@ defmodule EdgeAgentHealth do
   Verifies that all critical services have successfully initialized:
   - Database connection (`SELECT 1` on the SQLite repo)
   - Bootstrap completion (identity, VPN join, admin registration)
-  - Netclient WireGuard interface health (per `Nexmaker.Cli.health_check/0`)
+  - Edge VPN CLI WireGuard interface health (per the VPN adapter health check)
   - SSH server GenServer status
   - Metrics exporter pair (node_exporter + wireguard_exporter) liveness
   - Proxy server Ranch listeners
@@ -26,7 +26,7 @@ defmodule EdgeAgentHealth do
     [
       %PlugCheckup.Check{name: "Database", module: __MODULE__, function: :database_health},
       %PlugCheckup.Check{name: "Bootstrap", module: __MODULE__, function: :bootstrap_health},
-      %PlugCheckup.Check{name: "Netclient", module: __MODULE__, function: :netclient_health},
+      %PlugCheckup.Check{name: "Edge VPN CLI", module: __MODULE__, function: :edge_vpn_cli_health},
       %PlugCheckup.Check{name: "SSH Server", module: __MODULE__, function: :ssh_server_health},
       %PlugCheckup.Check{name: "Metrics Servers", module: __MODULE__, function: :metrics_servers_health},
       %PlugCheckup.Check{name: "Proxy Servers", module: __MODULE__, function: :proxy_servers_health}
@@ -56,19 +56,19 @@ defmodule EdgeAgentHealth do
     end
   end
 
-  @doc "Checks the Netclient and WireGuard health state."
-  @spec netclient_health() :: :ok | {:error, String.t()}
-  def netclient_health do
-    case EdgeAgent.Vpn.netclient_health_check() do
+  @doc "Checks the Edge VPN CLI and WireGuard health state."
+  @spec edge_vpn_cli_health() :: :ok | {:error, String.t()}
+  def edge_vpn_cli_health do
+    case EdgeAgent.Vpn.edge_vpn_cli_health_check() do
       {:ok, :healthy, _info} ->
         :ok
 
       {:ok, :degraded, info} ->
-        # WireGuard interface is down even though nodes.json shows networks.
-        # Surface the same warning the Nexmaker CLI returns rather than a
+        # WireGuard interface is down even though the local state shows networks.
+        # Surface the same warning the VPN adapter returns rather than a
         # fixed string so operators see the actual signal.
         warnings = info[:warnings] || []
-        Logger.warning("Netclient degraded: #{Enum.join(warnings, "; ")}")
+        Logger.warning("Edge VPN CLI degraded: #{Enum.join(warnings, "; ")}")
         {:error, Enum.join(warnings, "; ")}
 
       {:ok, :unhealthy, info} ->
@@ -77,7 +77,7 @@ defmodule EdgeAgentHealth do
     end
   rescue
     e ->
-      Logger.error("Netclient health check exception: #{inspect(e)}")
+      Logger.error("Edge VPN CLI health check exception: #{inspect(e)}")
       {:error, "Health check exception"}
   end
 

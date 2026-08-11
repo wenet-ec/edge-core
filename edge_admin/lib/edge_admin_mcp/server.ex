@@ -221,7 +221,7 @@ defmodule EdgeAdminMcp.Server do
     ## Diagnosing problems
 
     When an agent looks broken or a node won't enroll, start with
-    `check_admin_health` — it runs every subsystem check (DB, Edge VPN, netclient,
+    `check_admin_health` — it runs every subsystem check (DB, Edge VPN API, Edge VPN CLI,
     proxies, broker) in parallel and returns structured pass/fail. For an
     individual edge node, use `get_node_diagnostics`.
     """

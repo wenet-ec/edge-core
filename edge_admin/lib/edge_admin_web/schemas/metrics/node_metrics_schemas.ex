@@ -477,7 +477,7 @@ defmodule EdgeAdminWeb.Schemas.Metrics.NodeMetricsSchemas do
                   type: :integer,
                   nullable: true,
                   description:
-                    "Total VPN config pulls performed (daily backstop for DNS recovery after netclient restart)"
+                    "Total VPN config pulls performed (daily backstop for DNS recovery after Edge VPN CLI restart)"
                 },
                 pulls_success_total: %Schema{
                   type: :integer,

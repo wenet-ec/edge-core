@@ -10,7 +10,7 @@ defmodule EdgeAgent.PromEx.EdgeAgentPlugin do
   - Proxy server (HTTP/SOCKS5 connections, blocks, tunnel close, bytes,
     duration)
   - SSH server (connection, authentication, session duration)
-  - VPN config pull (periodic netclient pull as DNS-recovery backstop)
+  - VPN config pull (periodic Edge VPN CLI pull as DNS-recovery backstop)
   - Health check (agent → admin status reports in HTTP-fallback mode)
   - Diagnostics push (agent → admin reports in HTTP-fallback mode)
   - Settings Config refresh (Admin URLs and Core DERP map sources)

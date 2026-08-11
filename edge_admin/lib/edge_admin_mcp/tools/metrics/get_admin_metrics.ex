@@ -11,7 +11,7 @@ defmodule EdgeAdminMcp.Tools.Metrics.GetAdminMetrics do
   - `discovery` — admin peer discovery via VPN
   - `nodes` — direct VPN health-check outcomes, latest local sweep, and HTTP fallback reports
   - `quantum` — LocalScheduler job runs
-  - `vpn` — Edge VPN API calls + netclient pulls
+  - `vpn` — Edge VPN API calls + Edge VPN CLI pulls
   - `commands` — command pipeline (creation, dispatch, completion)
   - `ssh` — SSH credential verification calls from agents
   - `reconciliation` — cluster reconciliation Oban runs

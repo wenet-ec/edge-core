@@ -147,7 +147,7 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
   end
 
   @doc """
-  Periodic `netclient pull` — daily DNS-recovery backstop.
+  Periodic Edge VPN CLI `pull` — daily DNS-recovery backstop.
 
   Disabled via `PULL_VPN_CONFIG_ENABLED=false` on resource-starved boxes
   where the pull causes disruptive interface resets.

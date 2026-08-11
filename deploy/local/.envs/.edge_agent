@@ -114,6 +114,12 @@ ALIASES=test
 #                                # resets — broken DNS can then persist indefinitely. (default: true)
 
 # =============================================================================
+# Edge VPN CLI
+# =============================================================================
+# Scheme used by the Edge VPN CLI to reach the Edge VPN server.
+EDGE_VPN_API_SCHEME=http
+
+# =============================================================================
 # DERP Map Cache
 # =============================================================================
 # DERP_MAP_REFRESH_INTERVAL_MS=300000    # Stable refresh interval once the map has been fetched

@@ -77,8 +77,8 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-# Use HTTP for Netmaker API (local dev — no TLS certs)
-ENV NETMAKER_API_SCHEME=http
+# Use HTTP for Edge VPN API (local dev — no TLS certs)
+ENV EDGE_VPN_API_SCHEME=http
 
 # Admin always runs userspace WireGuard
 ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go

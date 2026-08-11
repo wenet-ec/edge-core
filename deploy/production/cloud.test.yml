@@ -98,7 +98,7 @@ services:
     container_name: production_edge_admin_a1
     environment:
       - EDGE_VPN_API_URL=http://edge-vpn.localtest.me
-      - NETMAKER_API_SCHEME=http
+      - EDGE_VPN_API_SCHEME=http
     ports:
       - "34000:44000"
       - "33128:43128" # HTTP proxy
@@ -109,7 +109,7 @@ services:
     container_name: production_edge_admin_a2
     environment:
       - EDGE_VPN_API_URL=http://edge-vpn.localtest.me
-      - NETMAKER_API_SCHEME=http
+      - EDGE_VPN_API_SCHEME=http
     ports:
       - "34001:44000"
       - "33129:43128" # HTTP proxy
@@ -123,7 +123,7 @@ services:
       - ADMIN_CLUSTER_V4_SUBNET=100.63.1.0/24
       - ADMIN_CLUSTER_V6_SUBNET=fd7a:91c2:4e8c:2::/64
       - EDGE_VPN_API_URL=http://edge-vpn.localtest.me
-      - NETMAKER_API_SCHEME=http
+      - EDGE_VPN_API_SCHEME=http
     ports:
       - "34002:44000"
       - "33130:43128" # HTTP proxy

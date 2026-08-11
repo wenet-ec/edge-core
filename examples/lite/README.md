@@ -70,10 +70,10 @@ The minimum you must change:
 If you're using a plain IP address without TLS, add this to your `.env`:
 
 ```env
-NETMAKER_API_SCHEME=http
+EDGE_VPN_API_SCHEME=http
 ```
 
-Set this on **both** the server (`.env` used by `cloud.yml`) and the agent (`.env` used by `edge.yml`). Without it, netclient will try HTTPS and fail even though the server is running plain HTTP.
+Set this on **both** the server (`.env` used by `cloud.yml`) and the agent (`.env` used by `edge.yml`). Without it, the Edge VPN CLI (netclient) will try HTTPS and fail even though the server is running plain HTTP.
 
 A plain IP address works fine for `SERVER_HOST`, `SERVER_HTTP_HOST`, and `SERVER_API_CONN_STRING` when using HTTP. If you're using HTTPS (Caddy with a TLS cert), these must be a proper hostname — the TLS cert won't match a bare IP.
 

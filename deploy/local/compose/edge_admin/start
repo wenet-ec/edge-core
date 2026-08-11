@@ -106,6 +106,9 @@ epmd -daemon
 # Tell netclient where to fetch canonical Core DERP map sources.
 # CORE_DERP_MAP_URLS is Edge Admin configuration; DERP_MAP_URLS is netclient's contract.
 # Must be set before netclient daemon starts; cannot be pushed into a running process.
+if [ -n "${EDGE_VPN_API_SCHEME:-}" ]; then
+    export NETMAKER_API_SCHEME="${EDGE_VPN_API_SCHEME}"
+fi
 if [ -n "${CORE_DERP_MAP_URLS:-}" ]; then
     export DERP_MAP_URLS="${CORE_DERP_MAP_URLS}"
 fi

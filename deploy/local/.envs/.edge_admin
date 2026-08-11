@@ -168,10 +168,9 @@ EDGE_VPN_MASTER_KEY=supersecretkey123456789
 EDGE_VPN_BOOTSTRAP_USERNAME=admin
 EDGE_VPN_BOOTSTRAP_PASSWORD=admin
 
-# --- Netclient API Scheme ---
-# http  = local dev (no TLS certs)
-# https = production default
-NETMAKER_API_SCHEME=http
+# --- Edge VPN CLI ---
+# Scheme used by the Edge VPN CLI to reach the Edge VPN server.
+EDGE_VPN_API_SCHEME=http
 
 # --- Edge VPN DNS Domain ---
 # Appended to all admin/node hostnames (e.g. admin-abc123.nm.internal).

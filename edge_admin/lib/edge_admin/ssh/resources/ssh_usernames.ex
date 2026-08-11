@@ -7,7 +7,7 @@ defmodule EdgeAdmin.Ssh.Resources.SshUsernames do
 
   alias Ecto.Query.CastError
   alias EdgeAdmin.Nodes.Schemas.Node
-  alias EdgeAdmin.PasswordHasher
+  alias EdgeAdmin.PasswordHashers
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Ssh.Filters.SshUsernameFilters
   alias EdgeAdmin.Ssh.Forms
@@ -43,7 +43,7 @@ defmodule EdgeAdmin.Ssh.Resources.SshUsernames do
       username_attrs =
         case Map.pop(username_attrs, "password") do
           {nil, attrs} -> attrs
-          {password, attrs} -> Map.put(attrs, "password_hash", PasswordHasher.hash(password))
+          {password, attrs} -> Map.put(attrs, "password_hash", PasswordHashers.hash(password))
         end
 
       case create(Map.put(username_attrs, "node_id", node.id)) do

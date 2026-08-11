@@ -2,7 +2,7 @@
 defmodule EdgeAdmin.Ssh.CredentialMatcherTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAdmin.PasswordHasher
+  alias EdgeAdmin.PasswordHashers
   alias EdgeAdmin.Ssh.CredentialMatcher
 
   # ---------------------------------------------------------------------------
@@ -34,7 +34,7 @@ defmodule EdgeAdmin.Ssh.CredentialMatcherTest do
     end
 
     test "matching password → {true, :password}" do
-      hash = PasswordHasher.hash("correct-horse-battery-staple")
+      hash = PasswordHashers.hash("correct-horse-battery-staple")
       user = %SshUsername{password_hash: hash, ssh_public_keys: []}
 
       assert CredentialMatcher.check(user, "correct-horse-battery-staple", nil) ==
@@ -42,7 +42,7 @@ defmodule EdgeAdmin.Ssh.CredentialMatcherTest do
     end
 
     test "non-matching password → {false, :password}" do
-      hash = PasswordHasher.hash("correct-horse-battery-staple")
+      hash = PasswordHashers.hash("correct-horse-battery-staple")
       user = %SshUsername{password_hash: hash, ssh_public_keys: []}
 
       assert CredentialMatcher.check(user, "wrong-password", nil) == {false, :password}
@@ -129,7 +129,7 @@ defmodule EdgeAdmin.Ssh.CredentialMatcherTest do
     test "password supplied → password path wins (public_key path skipped)" do
       # The function head order matters: password match is tried first when
       # password is non-nil, regardless of whether public_key is also supplied.
-      hash = PasswordHasher.hash("right-pw")
+      hash = PasswordHashers.hash("right-pw")
       user = %SshUsername{password_hash: hash, ssh_public_keys: []}
 
       # Password is correct, public_key would be ignored even if it matched.

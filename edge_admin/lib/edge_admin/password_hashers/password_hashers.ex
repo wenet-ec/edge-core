@@ -1,5 +1,5 @@
-# edge_admin/lib/edge_admin/password_hasher.ex
-defmodule EdgeAdmin.PasswordHasher do
+# edge_admin/lib/edge_admin/password_hashers/password_hashers.ex
+defmodule EdgeAdmin.PasswordHashers do
   @moduledoc """
   Algorithm-agile password hashing.
 
@@ -13,7 +13,7 @@ defmodule EdgeAdmin.PasswordHasher do
   only after every remaining hash has been migrated or reset.
   """
 
-  alias EdgeAdmin.PasswordHashers.Argon2
+  alias EdgeAdmin.PasswordHashers.Algorithms.Argon2
 
   @hashers Application.compile_env(:edge_admin, :password_hashers, [Argon2])
 

@@ -25,7 +25,7 @@ defmodule EdgeAdmin.Ssh.CredentialMatcher do
   match succeeded.
   """
 
-  alias EdgeAdmin.PasswordHasher
+  alias EdgeAdmin.PasswordHashers
   alias EdgeAdmin.Ssh.Schemas.SshUsername
 
   @type auth_method :: :password | :public_key | :unknown
@@ -46,14 +46,14 @@ defmodule EdgeAdmin.Ssh.CredentialMatcher do
 
   @doc false
   @spec check_detailed(SshUsername.t() | nil, String.t() | nil, String.t() | nil) ::
-          {boolean(), auth_method(), PasswordHasher.verification() | nil}
+          {boolean(), auth_method(), PasswordHashers.verification() | nil}
   def check_detailed(nil, _password, _public_key), do: {false, :unknown, nil}
 
   def check_detailed(%SshUsername{password_hash: nil}, password, _) when not is_nil(password),
     do: {false, :password, nil}
 
   def check_detailed(%SshUsername{password_hash: hash}, password, _) when not is_nil(password) do
-    case PasswordHasher.verify(password, hash) do
+    case PasswordHashers.verify(password, hash) do
       {:ok, status} -> {true, :password, status}
       :error -> {false, :password, nil}
     end

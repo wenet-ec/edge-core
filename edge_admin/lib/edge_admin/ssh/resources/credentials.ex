@@ -4,7 +4,7 @@ defmodule EdgeAdmin.Ssh.Resources.Credentials do
 
   alias EdgeAdmin.Events
   alias EdgeAdmin.Events.Catalog
-  alias EdgeAdmin.PasswordHasher
+  alias EdgeAdmin.PasswordHashers
   alias EdgeAdmin.Repo
   alias EdgeAdmin.Ssh.CredentialMatcher
   alias EdgeAdmin.Ssh.Forms
@@ -43,7 +43,7 @@ defmodule EdgeAdmin.Ssh.Resources.Credentials do
   end
 
   defp maybe_upgrade(%SshUsername{} = username, password, :legacy) when is_binary(password) do
-    case username |> SshUsername.changeset(%{password_hash: PasswordHasher.hash(password)}) |> Repo.update() do
+    case username |> SshUsername.changeset(%{password_hash: PasswordHashers.hash(password)}) |> Repo.update() do
       {:ok, _} -> :ok
       {:error, reason} -> Logger.warning("SSH password hash upgrade failed: #{inspect(reason)}")
     end

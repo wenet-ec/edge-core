@@ -1,12 +1,12 @@
-# edge_admin/test/edge_admin/password_hasher_test.exs
-defmodule EdgeAdmin.PasswordHasherTest do
+# edge_admin/test/edge_admin/password_hashers_test.exs
+defmodule EdgeAdmin.PasswordHashersTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAdmin.PasswordHasher
+  alias EdgeAdmin.PasswordHashers
 
   defmodule CurrentHasher do
     @moduledoc false
-    @behaviour PasswordHasher
+    @behaviour PasswordHashers
 
     def matches?("current:" <> _), do: true
     def matches?(_), do: false
@@ -16,7 +16,7 @@ defmodule EdgeAdmin.PasswordHasherTest do
 
   defmodule LegacyHasher do
     @moduledoc false
-    @behaviour PasswordHasher
+    @behaviour PasswordHashers
 
     def matches?("legacy:" <> _), do: true
     def matches?(_), do: false
@@ -27,20 +27,20 @@ defmodule EdgeAdmin.PasswordHasherTest do
   test "the first hasher creates new hashes and verifies them as current" do
     hashers = [CurrentHasher, LegacyHasher]
 
-    assert PasswordHasher.hash_with("secret", hashers) == "current:secret"
-    assert PasswordHasher.verify_with("secret", "current:secret", hashers) == {:ok, :current}
+    assert PasswordHashers.hash_with("secret", hashers) == "current:secret"
+    assert PasswordHashers.verify_with("secret", "current:secret", hashers) == {:ok, :current}
   end
 
   test "a retained hasher verifies legacy hashes and marks them for migration" do
     hashers = [CurrentHasher, LegacyHasher]
 
-    assert PasswordHasher.verify_with("secret", "legacy:secret", hashers) == {:ok, :legacy}
+    assert PasswordHashers.verify_with("secret", "legacy:secret", hashers) == {:ok, :legacy}
   end
 
   test "unknown formats and incorrect passwords never verify" do
     hashers = [CurrentHasher, LegacyHasher]
 
-    assert PasswordHasher.verify_with("wrong", "legacy:secret", hashers) == :error
-    assert PasswordHasher.verify_with("secret", "unrecognized:secret", hashers) == :error
+    assert PasswordHashers.verify_with("wrong", "legacy:secret", hashers) == :error
+    assert PasswordHashers.verify_with("secret", "unrecognized:secret", hashers) == :error
   end
 end

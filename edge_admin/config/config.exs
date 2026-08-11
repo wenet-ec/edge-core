@@ -44,7 +44,7 @@ config :edge_admin, EdgeAdminWeb.Plugs.Security, allow_unsafe_scripts: false
 # Internal password-hasher rotation list. The first hasher creates new hashes;
 # retained hashers verify their own legacy hashes until those credentials have
 # been upgraded on successful use or explicitly reset.
-config :edge_admin, :password_hashers, [EdgeAdmin.PasswordHashers.Argon2]
+config :edge_admin, :password_hashers, [EdgeAdmin.PasswordHashers.Algorithms.Argon2]
 
 config :edge_admin,
   generators: [timestamp_type: :utc_datetime, binary_id: true],

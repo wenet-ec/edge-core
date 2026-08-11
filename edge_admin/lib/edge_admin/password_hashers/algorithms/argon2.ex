@@ -1,7 +1,7 @@
-# edge_admin/lib/edge_admin/password_hashers/argon2.ex
-defmodule EdgeAdmin.PasswordHashers.Argon2 do
+# edge_admin/lib/edge_admin/password_hashers/algorithms/argon2.ex
+defmodule EdgeAdmin.PasswordHashers.Algorithms.Argon2 do
   @moduledoc false
-  @behaviour EdgeAdmin.PasswordHasher
+  @behaviour EdgeAdmin.PasswordHashers
 
   @impl true
   def matches?("$argon2" <> _rest), do: true

@@ -540,7 +540,7 @@ defmodule EdgeAdminWeb.AsyncApiSpec do
               "key_expired",
               "key_spent",
               "node_limit_reached",
-              "netmaker_key_unavailable"
+              "vpn_enrollment_key_unavailable"
             ]
           },
           "verified_at" => %{"type" => "string", "format" => "date-time"}

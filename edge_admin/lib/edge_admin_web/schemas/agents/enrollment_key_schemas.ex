@@ -33,7 +33,7 @@ defmodule EdgeAdminWeb.Schemas.Agents.EnrollmentKeySchemas do
       type: :object,
       properties: %{
         error: %Schema{type: :string, description: "Error message if verification failed, empty string otherwise"},
-        netmaker_key: %Schema{
+        vpn_enrollment_key: %Schema{
           type: :string,
           description: "Edge VPN enrollment key to use for VPN join, empty string if not verified"
         },
@@ -44,10 +44,10 @@ defmodule EdgeAdminWeb.Schemas.Agents.EnrollmentKeySchemas do
           description: "Admin enrollment key ID when verification succeeds, otherwise null"
         }
       },
-      required: [:error, :netmaker_key, :enrollment_key_id],
+      required: [:error, :vpn_enrollment_key, :enrollment_key_id],
       example: %{
         error: "",
-        netmaker_key: "eyJhbGciOiJIUzI1NiJ9...",
+        vpn_enrollment_key: "eyJhbGciOiJIUzI1NiJ9...",
         enrollment_key_id: "0190f1e0-7b2a-7abc-8def-0123456789ab"
       }
     })

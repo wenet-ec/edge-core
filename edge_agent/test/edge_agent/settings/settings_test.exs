@@ -300,23 +300,23 @@ defmodule EdgeAgent.SettingsTest do
 
   # -----------------------------------------------------------------------
   # -----------------------------------------------------------------------
-  # netmaker_key — plain string roundtrip
+  # vpn_enrollment_key — plain string roundtrip
   # -----------------------------------------------------------------------
 
-  describe "netmaker_key accessors" do
-    test "get_netmaker_key returns nil when not set" do
-      assert Settings.get_netmaker_key() == nil
+  describe "vpn_enrollment_key accessors" do
+    test "get_vpn_enrollment_key returns nil when not set" do
+      assert Settings.get_vpn_enrollment_key() == nil
     end
 
-    test "set_netmaker_key then get roundtrips" do
-      {:ok, _} = Settings.set_netmaker_key("TOKEN=abc123xyz")
-      assert Settings.get_netmaker_key() == "TOKEN=abc123xyz"
+    test "set_vpn_enrollment_key then get roundtrips" do
+      {:ok, _} = Settings.set_vpn_enrollment_key("TOKEN=abc123xyz")
+      assert Settings.get_vpn_enrollment_key() == "TOKEN=abc123xyz"
     end
 
-    test "set_netmaker_key can overwrite previous value" do
-      {:ok, _} = Settings.set_netmaker_key("TOKEN=old")
-      {:ok, _} = Settings.set_netmaker_key("TOKEN=new")
-      assert Settings.get_netmaker_key() == "TOKEN=new"
+    test "set_vpn_enrollment_key can overwrite previous value" do
+      {:ok, _} = Settings.set_vpn_enrollment_key("TOKEN=old")
+      {:ok, _} = Settings.set_vpn_enrollment_key("TOKEN=new")
+      assert Settings.get_vpn_enrollment_key() == "TOKEN=new"
     end
   end
 

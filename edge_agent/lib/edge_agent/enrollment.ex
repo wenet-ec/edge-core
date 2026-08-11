@@ -23,7 +23,7 @@ defmodule EdgeAgent.Enrollment do
               3. If recovering, verify the recovery key belongs to cluster_name
               4. POST the full key blob to admin verify endpoint
               5. Require a non-empty Netmaker enrollment key
-              6. On success: store admin_fallback_urls, netmaker_key,
+              6. On success: store admin_fallback_urls, vpn_enrollment_key,
                  then write enrollment_key_id last as the durable commit marker
 
   ## Multi-URL failover semantics
@@ -43,7 +43,7 @@ defmodule EdgeAgent.Enrollment do
   the enrollment key's use count.
 
   A crash *during* the write sequence — between the
-  `set_admin_fallback_urls/1` / `set_netmaker_key/1` writes and the final
+  `set_admin_fallback_urls/1` / `set_vpn_enrollment_key/1` writes and the final
   `set_enrollment_key_id/1` — leaves the key ID absent. The
   next bootstrap will re-verify and consume another key use. Limited-use
   keys with very narrow crash windows could deplete this way, but in
@@ -79,7 +79,7 @@ defmodule EdgeAgent.Enrollment do
   immediately without contacting admin or consuming a key use.
 
   On success, Settings will contain:
-  - `netmaker_key` — for use by `EdgeAgent.Vpn`
+  - `vpn_enrollment_key` — for use by `EdgeAgent.Vpn`
   - `enrollment_key_id` — for associating the successful registration with Admin
   - `admin_fallback_urls` — for use by `AdminClient` when VPN is down
   """
@@ -114,9 +114,9 @@ defmodule EdgeAgent.Enrollment do
     end
   end
 
-  defp persist_enrollment_settings(admin_urls, %{netmaker_key: netmaker_key, enrollment_key_id: enrollment_key_id}) do
+  defp persist_enrollment_settings(admin_urls, %{vpn_enrollment_key: vpn_enrollment_key, enrollment_key_id: enrollment_key_id}) do
     with {:ok, _setting} <- Settings.set_admin_fallback_urls(admin_urls),
-         {:ok, _setting} <- Settings.set_netmaker_key(netmaker_key),
+         {:ok, _setting} <- Settings.set_vpn_enrollment_key(vpn_enrollment_key),
          {:ok, _setting} <- Settings.set_enrollment_key_id(enrollment_key_id) do
       :ok
     else
@@ -332,18 +332,18 @@ defmodule EdgeAgent.Enrollment do
 
   defp verify_enrollment_key_with_admin(key_blob, admin_urls) do
     case AdminClient.verify_enrollment_key(key_blob, admin_urls) do
-      {:ok, %{netmaker_key: netmaker_key, enrollment_key_id: enrollment_key_id}}
-      when is_binary(netmaker_key) and netmaker_key != "" and
+      {:ok, %{vpn_enrollment_key: vpn_enrollment_key, enrollment_key_id: enrollment_key_id}}
+      when is_binary(vpn_enrollment_key) and vpn_enrollment_key != "" and
              is_binary(enrollment_key_id) and enrollment_key_id != "" ->
         Logger.info("Enrollment key verified successfully")
-        {:ok, %{netmaker_key: netmaker_key, enrollment_key_id: enrollment_key_id}}
+        {:ok, %{vpn_enrollment_key: vpn_enrollment_key, enrollment_key_id: enrollment_key_id}}
 
       {:ok, %{enrollment_key_id: nil, error: error}} ->
         Logger.error("Enrollment key rejected by admin: #{error}")
         {:error, "Enrollment key verification failed: #{error}"}
 
-      {:ok, %{netmaker_key: netmaker_key, enrollment_key_id: _enrollment_key_id}}
-      when not is_binary(netmaker_key) or netmaker_key == "" ->
+      {:ok, %{vpn_enrollment_key: vpn_enrollment_key, enrollment_key_id: _enrollment_key_id}}
+      when not is_binary(vpn_enrollment_key) or vpn_enrollment_key == "" ->
         Logger.error("Admin verified enrollment but returned no Netmaker enrollment key")
         {:error, "Admin returned no Netmaker enrollment key"}
 

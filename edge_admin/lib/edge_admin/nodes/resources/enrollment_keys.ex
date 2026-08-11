@@ -131,7 +131,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
       {result, enrollment_key} =
         case Repo.get_by(EnrollmentKey, key: key_blob) do
           nil ->
-            {%{verified: false, error: "invalid_key", netmaker_key: "", enrollment_key_id: nil}, nil}
+            {%{verified: false, error: "invalid_key", vpn_enrollment_key: "", enrollment_key_id: nil}, nil}
 
           enrollment_key ->
             enrollment_key = Repo.preload(enrollment_key, :cluster)
@@ -189,7 +189,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
   defp verification_result(false, "key_expired"), do: :key_expired
   defp verification_result(false, "key_spent"), do: :key_spent
   defp verification_result(false, "node_limit_reached"), do: :node_limit_reached
-  defp verification_result(false, "netmaker_key_unavailable"), do: :netmaker_key_unavailable
+  defp verification_result(false, "vpn_enrollment_key_unavailable"), do: :vpn_enrollment_key_unavailable
 
   defp verify_key(%EnrollmentKey{} = key) do
     cond do
@@ -209,16 +209,16 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
         network_name = Cluster.network_name(key.cluster)
 
         case Vpn.get_default_enrollment_key(network_name) do
-          {:ok, netmaker_key} when is_binary(netmaker_key) and netmaker_key != "" ->
-            consume_key(key, netmaker_key)
+          {:ok, vpn_enrollment_key} when is_binary(vpn_enrollment_key) and vpn_enrollment_key != "" ->
+            consume_key(key, vpn_enrollment_key)
 
           _ ->
-            verification_failure("netmaker_key_unavailable")
+            verification_failure("vpn_enrollment_key_unavailable")
         end
     end
   end
 
-  defp verification_failure(error), do: %{verified: false, error: error, netmaker_key: "", enrollment_key_id: nil}
+  defp verification_failure(error), do: %{verified: false, error: error, vpn_enrollment_key: "", enrollment_key_id: nil}
 
   defp cluster_matches?(%EnrollmentKey{key: key_blob, cluster: %Cluster{name: cluster_name}}) do
     with {:ok, json} <- Base.decode64(key_blob, padding: false),
@@ -229,7 +229,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
     end
   end
 
-  defp consume_key(%EnrollmentKey{} = key, netmaker_key) do
+  defp consume_key(%EnrollmentKey{} = key, vpn_enrollment_key) do
     now = DateTime.truncate(DateTime.utc_now(), :second)
 
     {rows_updated, _} =
@@ -249,7 +249,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
     if rows_updated == 0 do
       verification_failure("key_spent")
     else
-      %{verified: true, error: "", netmaker_key: netmaker_key, enrollment_key_id: key.id}
+      %{verified: true, error: "", vpn_enrollment_key: vpn_enrollment_key, enrollment_key_id: key.id}
     end
   end
 end

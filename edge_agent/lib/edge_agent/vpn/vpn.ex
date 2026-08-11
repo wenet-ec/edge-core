@@ -4,7 +4,7 @@ defmodule EdgeAgent.Vpn do
   VPN network operations for the edge agent.
 
   Handles joining the Netmaker VPN network and verifying connection health.
-  The netmaker_key is expected to already be in Settings (written by
+  The vpn_enrollment_key is expected to already be in Settings (written by
   `EdgeAgent.EnrollmentKey.ensure_verified/0` during bootstrap).
 
   ## Configuration
@@ -72,7 +72,7 @@ defmodule EdgeAgent.Vpn do
   Joins the VPN network if not already connected.
 
   Checks health first. If already connected (healthy or degraded), returns `:ok`
-  immediately. If disconnected, reads the netmaker_key from Settings and joins.
+  immediately. If disconnected, reads the vpn_enrollment_key from Settings and joins.
   """
   @spec join_if_needed(String.t()) :: :ok | {:error, String.t()}
   def join_if_needed(node_id) do
@@ -94,16 +94,16 @@ defmodule EdgeAgent.Vpn do
   # =============================================================================
 
   defp join_with_stored_key(node_id) do
-    case Settings.get_netmaker_key() do
+    case Settings.get_vpn_enrollment_key() do
       nil ->
-        {:error, "No netmaker_key in Settings — enrollment may not have completed"}
+        {:error, "No vpn_enrollment_key in Settings — enrollment may not have completed"}
 
-      netmaker_key ->
-        do_join(node_id, netmaker_key)
+      vpn_enrollment_key ->
+        do_join(node_id, vpn_enrollment_key)
     end
   end
 
-  defp do_join(node_id, netmaker_key) do
+  defp do_join(node_id, vpn_enrollment_key) do
     node_name = "node-#{node_id}"
     agent_wireguard_port = Application.get_env(:edge_agent, :agent_wireguard_port)
 
@@ -111,11 +111,11 @@ defmodule EdgeAgent.Vpn do
       case agent_wireguard_port do
         nil ->
           Logger.info("Joining VPN as #{node_name} (dynamic port)...")
-          [token: netmaker_key, name: node_name]
+          [token: vpn_enrollment_key, name: node_name]
 
         port when is_integer(port) ->
           Logger.info("Joining VPN as #{node_name} (WireGuard port: #{port})...")
-          [token: netmaker_key, name: node_name, port: port, static_port: true]
+          [token: vpn_enrollment_key, name: node_name, port: port, static_port: true]
       end
 
     with {:ok, _} <- Nexmaker.Cli.join_network(join_opts),

@@ -102,11 +102,11 @@ defmodule EdgeAgent.Settings do
     set_config("admin_urls", ConfigValueCodec.encode_string_list(urls))
   end
 
-  @spec get_netmaker_key() :: String.t() | nil
-  def get_netmaker_key, do: get_config("netmaker_key")
+  @spec get_vpn_enrollment_key() :: String.t() | nil
+  def get_vpn_enrollment_key, do: get_config("vpn_enrollment_key")
 
-  @spec set_netmaker_key(String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
-  def set_netmaker_key(value), do: set_config("netmaker_key", value)
+  @spec set_vpn_enrollment_key(String.t()) :: {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
+  def set_vpn_enrollment_key(value), do: set_config("vpn_enrollment_key", value)
 
   @spec get_enrollment_key_id() :: String.t() | nil
   def get_enrollment_key_id, do: get_config("enrollment_key_id")

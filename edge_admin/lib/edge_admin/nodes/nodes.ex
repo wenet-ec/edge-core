@@ -649,7 +649,7 @@ defmodule EdgeAdmin.Nodes do
 
   ## Returns
 
-  - `{:ok, %{error: String.t(), netmaker_key: String.t(), enrollment_key_id: String.t() | nil}}` —
+  - `{:ok, %{error: String.t(), vpn_enrollment_key: String.t(), enrollment_key_id: String.t() | nil}}` —
     on every input that survives form validation. A non-nil
     `enrollment_key_id` indicates successful verification; `nil` indicates
     that verification failed.

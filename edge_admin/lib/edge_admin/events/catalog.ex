@@ -60,7 +60,7 @@ defmodule EdgeAdmin.Events.Catalog do
             | :key_expired
             | :key_spent
             | :node_limit_reached
-            | :netmaker_key_unavailable
+            | :vpn_enrollment_key_unavailable
 
     @type t :: %__MODULE__{
             enrollment_key: EnrollmentKey.t() | nil,

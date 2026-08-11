@@ -87,6 +87,6 @@ config :edge_admin,
   admin_max_wireguard_peers: 100,
   vpn_cluster_cookie: :test_cookie,
   admin_discovery_port: 44_000,
-  netmaker_default_domain: "nm.internal"
+  edge_vpn_default_domain: "nm.internal"
 
 config :logger, level: :warning

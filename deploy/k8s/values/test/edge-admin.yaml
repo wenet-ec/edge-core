@@ -15,8 +15,8 @@ config:
   dbName: "edge_admin_production"
   dbUser: "edge_admin_user"
   dbPoolSize: "5"
-  netmakerApiUrl: "http://edge-vpn:8081"
-  netmakerSuperadminUsername: "admin"
+  edgeVpnApiUrl: "http://edge-vpn:8081"
+  edgeVpnBootstrapUsername: "admin"
   adminMaxWireguardPeers: "250"
   defaultClusterName: "test"
 extraEnv:
@@ -28,5 +28,5 @@ secrets:
   secretKeyBase: "zsIbO5eGH9IJ1p+E6M1a1VL4bIGrwLeTS8W7q8QDAOE/o3Ucy0si768bJxmF4A1Q"
   masterKey: "supersecretkey123456789"
   dbPassword: "edge_admin_password"
-  netmakerMasterKey: "supersecretkey123456789"
-  netmakerSuperadminPassword: "admin"
+  edgeVpnMasterKey: "supersecretkey123456789"
+  edgeVpnBootstrapPassword: "admin"

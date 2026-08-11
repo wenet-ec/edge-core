@@ -24,7 +24,7 @@ defmodule EdgeAdmin.ProxyServers.Routing do
   def parse(node_dns), do: find_node_by_dns(node_dns)
 
   defp find_node_by_dns(node_dns) do
-    domain = Application.get_env(:edge_admin, :netmaker_default_domain, "nm.internal")
+    domain = Application.get_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
     pattern = ~r/^node-(.+)\.(cluster-[^.]+)\.#{Regex.escape(domain)}$/
 
     case Regex.run(pattern, node_dns) do

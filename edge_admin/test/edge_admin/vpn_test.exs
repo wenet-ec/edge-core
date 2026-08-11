@@ -167,7 +167,7 @@ defmodule EdgeAdmin.VpnTest do
 
   describe "build_vpn_domain/2" do
     test "combines network and default domain from config" do
-      # test.exs sets netmaker_default_domain to "nm.internal"
+      # test.exs sets edge_vpn_default_domain to "nm.internal"
       assert Vpn.build_vpn_domain("cluster-xyz") == "cluster-xyz.nm.internal"
     end
 

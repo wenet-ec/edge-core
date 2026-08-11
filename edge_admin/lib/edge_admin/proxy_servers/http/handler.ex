@@ -324,7 +324,7 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
   """
   @spec vpn_target?(String.t()) :: boolean()
   def vpn_target?(host) do
-    domain = Application.get_env(:edge_admin, :netmaker_default_domain, "nm.internal")
+    domain = Application.get_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
     String.ends_with?(host, ".#{domain}")
   end
 

@@ -158,22 +158,22 @@ SENTRY_ENVIRONMENT_NAME=production
 # GRAFANA_ANNOTATE_LIFECYCLE=false       # Annotate app start/stop events (default: false)
 
 # =============================================================================
-# VPN / Netmaker
+# Edge VPN
 # =============================================================================
 
-# --- Netmaker API Client ---
-NETMAKER_API_URL=https://edge-vpn.yourdomain.com
-NETMAKER_MASTER_KEY=supersecretkey123456789
+# --- Edge VPN API Client ---
+EDGE_VPN_API_URL=https://edge-vpn.yourdomain.com
+EDGE_VPN_MASTER_KEY=supersecretkey123456789
 
-# --- Netmaker Superadmin ---
-# Bootstraps the Netmaker UI admin account on first run.
-NETMAKER_SUPERADMIN_USERNAME=admin
-NETMAKER_SUPERADMIN_PASSWORD=admin
+# --- Edge VPN bootstrap account ---
+# Bootstraps the VPN control-plane admin account on first run.
+EDGE_VPN_BOOTSTRAP_USERNAME=admin
+EDGE_VPN_BOOTSTRAP_PASSWORD=admin
 
-# --- Netmaker DNS Domain ---
+# --- Edge VPN DNS Domain ---
 # Appended to all admin/node hostnames (e.g. admin-abc123.nm.internal).
 # Cannot be changed after nodes have enrolled — pick once and do not change.
-# NETMAKER_DEFAULT_DOMAIN=nm.internal
+# EDGE_VPN_DEFAULT_DOMAIN=nm.internal
 
 # --- Edge Cluster Network Allocation ---
 # IPv4 subnet prefix length for auto-generated cluster networks (24 = /24 = 254 usable hosts).
@@ -370,18 +370,18 @@ ADMIN_DISCOVERY_PORT=44000
 
 # Admin-cluster membership startup — per-step wait budget (seconds) before
 # the admin gives up and crashes the supervision tree. Applies independently
-# to "wait for Netmaker host registration" and "wait for netclient to join
-# the admin VPN network." Bump up if Netmaker is slow on this deployment.
+# to "wait for Edge VPN host registration" and "wait for netclient to join
+# the admin VPN network." Bump up if the VPN control plane is slow.
 # MEMBERSHIP_JOIN_TIMEOUT_SECONDS=60
 
 # --- Oban Cron (job inserted by leader; any instance competes to execute) ---
 
-# Cluster Reconciliation: heals drift between DB and Netmaker
+# Cluster Reconciliation: heals drift between DB and the Edge VPN
 # CLUSTER_RECONCILIATION_ENABLED=true
 # CLUSTER_RECONCILIATION_SCHEDULE=0 */6 * * *  # default: every 6 hours
 
 # Rogue Host Eviction: delete hosts in a cluster network with no DB record
-# Disable temporarily if you need direct Netmaker access (e.g. manual debugging).
+# Disable temporarily if you need direct Edge VPN access (e.g. manual debugging).
 # EVICT_ROGUE_HOSTS=true
 
 # Execution Pruning: periodic deletion of finalised command_executions.

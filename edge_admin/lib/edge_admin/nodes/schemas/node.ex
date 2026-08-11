@@ -251,7 +251,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   ## Format
   `node-{id}.cluster-{cluster_name}.{domain}`
 
-  where domain is configured via `NETMAKER_DEFAULT_DOMAIN` (default: `nm.internal`)
+  where domain is configured via `EDGE_VPN_DEFAULT_DOMAIN` (default: `nm.internal`)
 
   ## Requirements
   Requires cluster association to be preloaded.

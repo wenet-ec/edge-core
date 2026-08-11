@@ -120,7 +120,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   ## Format
   `cluster-{name}.{domain}`
 
-  where domain is configured via `NETMAKER_DEFAULT_DOMAIN` (default: `nm.internal`)
+  where domain is configured via `EDGE_VPN_DEFAULT_DOMAIN` (default: `nm.internal`)
 
   ## Examples
 

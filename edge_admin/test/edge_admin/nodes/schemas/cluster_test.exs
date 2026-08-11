@@ -280,7 +280,7 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
 
   describe "vpn_domain/1" do
     test "returns cluster-{name}.nm.internal by default" do
-      # test.exs sets netmaker_default_domain to "nm.internal"
+      # test.exs sets edge_vpn_default_domain to "nm.internal"
       cluster = %Cluster{name: "prod"}
       assert Cluster.vpn_domain(cluster) == "cluster-prod.nm.internal"
     end

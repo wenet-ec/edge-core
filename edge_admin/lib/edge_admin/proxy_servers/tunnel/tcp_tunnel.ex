@@ -85,7 +85,7 @@ defmodule EdgeAdmin.ProxyServers.Tunnel.TcpTunnel do
   end
 
   defp parse_cluster_from_hostname(target_host) do
-    domain = Application.get_env(:edge_admin, :netmaker_default_domain, "nm.internal")
+    domain = Application.get_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
     pattern = ~r/(cluster-[^.]+)\.#{Regex.escape(domain)}$/
 
     case Regex.run(pattern, target_host) do

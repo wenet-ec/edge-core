@@ -149,8 +149,8 @@ Config is read from application env or passed per-call:
 
 ```elixir
 config :nexmaker,
-  base_url: System.get_env("NETMAKER_API_URL"),
-  master_key: System.get_env("NETMAKER_MASTER_KEY")
+  base_url: System.get_env("EDGE_VPN_API_URL"),
+  master_key: System.get_env("EDGE_VPN_MASTER_KEY")
 ```
 
 ### `Nexmaker.Cli` — netclient CLI wrapper

@@ -34,11 +34,11 @@ ADMIN_CLUSTER_V6_SUBNET=fd7a:91c2:4e8c:71::/64
 ADMIN_URLS=http://localhost:44000
 
 # Netmaker configuration (required by runtime.exs)
-NETMAKER_API_URL=http://edge_vpn:8081
-NETMAKER_MASTER_KEY=test_master_key
-NETMAKER_SUPERADMIN_USERNAME=admin
-NETMAKER_SUPERADMIN_PASSWORD=password
-NETMAKER_DEFAULT_DOMAIN=nm.internal
+EDGE_VPN_API_URL=http://edge_vpn:8081
+EDGE_VPN_MASTER_KEY=test_master_key
+EDGE_VPN_BOOTSTRAP_USERNAME=admin
+EDGE_VPN_BOOTSTRAP_PASSWORD=password
+EDGE_VPN_DEFAULT_DOMAIN=nm.internal
 
 # Metrics configuration
 METRICS_BASE_URL=edge_admin_a1:44000

@@ -173,9 +173,9 @@ defmodule EdgeAdminMcp.Server do
     A **node** is a single edge machine running the agent. Nodes are addressed
     **only by VPN hostname**, never by IP:
 
-        node-{uuid}.{cluster_name}.<NETMAKER_DEFAULT_DOMAIN>
+        node-{uuid}.{cluster_name}.<EDGE_VPN_DEFAULT_DOMAIN>
 
-    Or via alias: `{alias_name}.{cluster_name}.<NETMAKER_DEFAULT_DOMAIN>`.
+        Or via alias: `{alias_name}.{cluster_name}.<EDGE_VPN_DEFAULT_DOMAIN>`.
 
     The agents do have VPN IPs underneath, but those are not exposed and should
     never be used. Always use hostnames.

@@ -249,10 +249,10 @@ defmodule EdgeAdmin.ProxyServers.Http.HandlerTest do
 
   describe "vpn_target?/1" do
     setup do
-      Application.put_env(:edge_admin, :netmaker_default_domain, "nm.internal")
+      Application.put_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
 
       on_exit(fn ->
-        Application.delete_env(:edge_admin, :netmaker_default_domain)
+      Application.delete_env(:edge_admin, :edge_vpn_default_domain)
       end)
 
       :ok

@@ -271,7 +271,7 @@ services:
     ports:
       - "48080:80"
     environment:
-      - BACKEND_URL=${NETMAKER_API_URL}
+      - BACKEND_URL=${EDGE_VPN_API_URL}
 
   # ---------------------------------------------------------------------------
   # Caddy — HTTP reverse proxy for Edge VPN API and admin instances

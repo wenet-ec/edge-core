@@ -481,8 +481,8 @@ config :edge_admin,
   admin_urls: admin_urls,
   # Ordered mirror / migration sources for one canonical Core DERP map.
   core_derp_map_urls: core_derp_map_urls,
-  # Netmaker DNS domain suffix (used for hostname construction)
-  netmaker_default_domain: get_env("NETMAKER_DEFAULT_DOMAIN", :string, "nm.internal"),
+  # Edge VPN DNS domain suffix (used for hostname construction)
+  edge_vpn_default_domain: get_env("EDGE_VPN_DEFAULT_DOMAIN", :string, "nm.internal"),
   # === Background Job Schedules ===
   admin_discovery_schedule: admin_discovery_schedule,
   metadata_recomputation_schedule: metadata_recomputation_schedule,
@@ -521,8 +521,8 @@ config :edge_admin,
   socks5_proxy_port: get_env("SOCKS5_PROXY_PORT", :integer, 41_080),
   # === External Services ===
   metrics_base_url: get_env!("METRICS_BASE_URL"),
-  netmaker_superadmin_username: get_env!("NETMAKER_SUPERADMIN_USERNAME"),
-  netmaker_superadmin_password: get_env!("NETMAKER_SUPERADMIN_PASSWORD")
+  edge_vpn_bootstrap_username: get_env!("EDGE_VPN_BOOTSTRAP_USERNAME"),
+  edge_vpn_bootstrap_password: get_env!("EDGE_VPN_BOOTSTRAP_PASSWORD")
 
 # =============================================================================
 # Event delivery — applies to both broker and webhook channels
@@ -542,8 +542,8 @@ config :edge_admin,
   proxy_num_acceptors: get_env("PROXY_NUM_ACCEPTORS", :integer, 100)
 
 config :nexmaker,
-  base_url: get_env!("NETMAKER_API_URL"),
-  master_key: get_env!("NETMAKER_MASTER_KEY")
+  base_url: get_env!("EDGE_VPN_API_URL"),
+  master_key: get_env!("EDGE_VPN_MASTER_KEY")
 
 # Disable memsup (memory supervisor) from :os_mon
 # We use PromEx + Prometheus for memory monitoring instead.

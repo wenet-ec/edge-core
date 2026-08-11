@@ -28,8 +28,8 @@ data:
   {{- end }}
 
   # --- Required: VPN ---
-  NETMAKER_API_URL: {{ .Values.config.netmakerApiUrl | quote }}
-  NETMAKER_SUPERADMIN_USERNAME: {{ .Values.config.netmakerSuperadminUsername | quote }}
+  EDGE_VPN_API_URL: {{ .Values.config.edgeVpnApiUrl | quote }}
+  EDGE_VPN_BOOTSTRAP_USERNAME: {{ .Values.config.edgeVpnBootstrapUsername | quote }}
 
   # --- Required: Admin cluster identity ---
   ADMIN_CLUSTER_NAME: {{ .Values.config.adminClusterName | quote }}

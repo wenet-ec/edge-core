@@ -74,11 +74,11 @@ defmodule EdgeAdmin.Vpn do
 
   @doc """
   Returns the default Netmaker DNS domain suffix.
-  Configured via NETMAKER_DEFAULT_DOMAIN (default: "nm.internal")
+  Configured via EDGE_VPN_DEFAULT_DOMAIN (default: "nm.internal")
   """
   @spec default_domain() :: String.t()
   def default_domain do
-    Application.get_env(:edge_admin, :netmaker_default_domain, "nm.internal")
+    Application.get_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
   end
 
   @doc """

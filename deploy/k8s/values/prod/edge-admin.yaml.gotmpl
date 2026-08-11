@@ -14,8 +14,8 @@ config:
   # by pointing it straight at the primary. ~1 extra connection per admin pod.
   dbNotifierHost: "edge-admin-db-rw"
   dbNotifierPort: "5432"
-  netmakerApiUrl: "http://edge-vpn:8081"
-  netmakerSuperadminUsername: "admin"
+  edgeVpnApiUrl: "http://edge-vpn:8081"
+  edgeVpnBootstrapUsername: "admin"
   adminMaxWireguardPeers: "250"
   defaultClusterName: "main"
 extraEnv:
@@ -24,8 +24,8 @@ secrets:
   secretKeyBase: {{ requiredEnv "EDGE_ADMIN_SECRET_KEY_BASE" | quote }}
   masterKey: {{ requiredEnv "EDGE_ADMIN_MASTER_KEY" | quote }}
   dbPassword: {{ requiredEnv "DB_PASSWORD" | quote }}
-  netmakerMasterKey: {{ requiredEnv "NETMAKER_MASTER_KEY" | quote }}
-  netmakerSuperadminPassword: {{ requiredEnv "NETMAKER_SUPERADMIN_PASSWORD" | quote }}
+  edgeVpnMasterKey: {{ requiredEnv "EDGE_VPN_MASTER_KEY" | quote }}
+  edgeVpnBootstrapPassword: {{ requiredEnv "EDGE_VPN_BOOTSTRAP_PASSWORD" | quote }}
   encryptionKey: {{ requiredEnv "EDGE_ADMIN_ENCRYPTION_KEY" | quote }}
   encryptionTag: {{ env "EDGE_ADMIN_ENCRYPTION_TAG" | default "AES.GCM.V1" | quote }}
   rotateOldEncryptionKey: {{ env "EDGE_ADMIN_ROTATE_OLD_ENCRYPTION_KEY" | default "" | quote }}

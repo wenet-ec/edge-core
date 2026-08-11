@@ -87,11 +87,11 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
   describe "authenticate_and_parse/2 - DNS format" do
     setup do
       Application.put_env(:edge_admin, :auth_enabled, false)
-      Application.put_env(:edge_admin, :netmaker_default_domain, "nm.internal")
+      Application.put_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
 
       on_exit(fn ->
         Application.delete_env(:edge_admin, :auth_enabled)
-        Application.delete_env(:edge_admin, :netmaker_default_domain)
+      Application.delete_env(:edge_admin, :edge_vpn_default_domain)
       end)
     end
 
@@ -144,9 +144,9 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
     end
 
     test "custom domain in config is respected" do
-      original = Application.get_env(:edge_admin, :netmaker_default_domain)
-      on_exit(fn -> Application.put_env(:edge_admin, :netmaker_default_domain, original) end)
-      Application.put_env(:edge_admin, :netmaker_default_domain, "custom.vpn")
+      original = Application.get_env(:edge_admin, :edge_vpn_default_domain)
+      on_exit(fn -> Application.put_env(:edge_admin, :edge_vpn_default_domain, original) end)
+      Application.put_env(:edge_admin, :edge_vpn_default_domain, "custom.vpn")
 
       # DNS: node-xyz.cluster-prod.custom.vpn → identifier "xyz"
       stub(EdgeAdmin.NodesMock, :list_proxy_chain_identifiers, fn "prod" ->
@@ -168,11 +168,11 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
   describe "authenticate_and_parse/2 - node lookup" do
     setup do
       Application.put_env(:edge_admin, :auth_enabled, false)
-      Application.put_env(:edge_admin, :netmaker_default_domain, "nm.internal")
+      Application.put_env(:edge_admin, :edge_vpn_default_domain, "nm.internal")
 
       on_exit(fn ->
         Application.delete_env(:edge_admin, :auth_enabled)
-        Application.delete_env(:edge_admin, :netmaker_default_domain)
+      Application.delete_env(:edge_admin, :edge_vpn_default_domain)
       end)
     end
 

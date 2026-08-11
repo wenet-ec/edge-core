@@ -116,7 +116,7 @@ Two opinionated design choices worth knowing up front:
 Nodes are addressed **only by VPN hostname**, never by IP:
 
 ```
-node-{uuid}.{cluster_name}.<NETMAKER_DEFAULT_DOMAIN>
+node-{uuid}.{cluster_name}.<EDGE_VPN_DEFAULT_DOMAIN>
 ```
 
 The agent does have a VPN IP underneath — Netmaker has to assign one — but **we do not expose it through the admin API and you should not rely on it**. Tracking IPs and keeping them in sync across enrollments, re-enrollments, cluster moves, and DERP fallbacks is the kind of bookkeeping that's a nightmare to get right; the hostname convention abstracts it away. Use `node-{uuid}.{cluster_name}.<DOMAIN>` (or its alias form, see below) everywhere — in commands, in proxy chaining usernames, in your own scripts.
@@ -246,7 +246,7 @@ ssh -o ProxyCommand="ncat --proxy admin-host:41080 --proxy-type socks5 --proxy-a
 export http_proxy=http://_:PROXY_KEY@admin-host:43128
 ```
 
-Node DNS format: `node-{id}.cluster-{cluster_name}.<NETMAKER_DEFAULT_DOMAIN>`. List nodes via the API (or `list_nodes` MCP tool) to discover IDs and clusters.
+Node DNS format: `node-{id}.cluster-{cluster_name}.<EDGE_VPN_DEFAULT_DOMAIN>`. List nodes via the API (or `list_nodes` MCP tool) to discover IDs and clusters.
 
 ### Proxy chaining (username = node DNS hostname)
 

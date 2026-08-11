@@ -37,11 +37,11 @@ defmodule EdgeAdmin.Release do
   # =============================================================================
 
   defp netmaker_superadmin_username do
-    Application.get_env(:edge_admin, :netmaker_superadmin_username)
+    Application.get_env(:edge_admin, :edge_vpn_bootstrap_username)
   end
 
   defp netmaker_superadmin_password do
-    Application.get_env(:edge_admin, :netmaker_superadmin_password)
+    Application.get_env(:edge_admin, :edge_vpn_bootstrap_password)
   end
 
   defp default_cluster_name do
@@ -95,8 +95,8 @@ defmodule EdgeAdmin.Release do
   Creates Netmaker superadmin user if doesn't exist.
 
   Reads credentials from Application config (configured in runtime.exs):
-  - `:netmaker_superadmin_username` - Username for the superadmin
-  - `:netmaker_superadmin_password` - Password for the superadmin
+  - `:edge_vpn_bootstrap_username` - Username for the bootstrap account
+  - `:edge_vpn_bootstrap_password` - Password for the bootstrap account
 
   This task is idempotent and safe to run concurrently on every Admin replica.
   Netmaker's check-then-create API is not atomic, so an ambiguous create failure

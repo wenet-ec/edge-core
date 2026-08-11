@@ -155,7 +155,7 @@ sysctls:
 secrets:
   # Set existingSecret to the name of a pre-created Secret to skip chart-managed secret creation.
   # The Secret must contain: SECRET_KEY_BASE, MASTER_KEY, DB_PASSWORD,
-  #   NETMAKER_MASTER_KEY, NETMAKER_SUPERADMIN_PASSWORD, ENCRYPTION_KEY, ENCRYPTION_TAG.
+  #   EDGE_VPN_MASTER_KEY, EDGE_VPN_BOOTSTRAP_PASSWORD, ENCRYPTION_KEY, ENCRYPTION_TAG.
   # VPN_CLUSTER_COOKIE is optional; leave it empty to use the built-in default.
   # Optional broker auth (only needed when EVENT_BROKER_ENABLED=true and broker requires auth).
   # RabbitMQ and Redis embed credentials in EVENT_BROKER_RABBITMQ_URL / EVENT_BROKER_REDIS_URL — no separate fields needed.
@@ -164,8 +164,8 @@ secrets:
   secretKeyBase: "changeme"
   masterKey: "changeme"
   dbPassword: "changeme"
-  netmakerMasterKey: "changeme"
-  netmakerSuperadminPassword: "changeme"
+  edgeVpnMasterKey: "changeme"
+  edgeVpnBootstrapPassword: "changeme"
   vpnClusterCookie: ""
   # Encryption at rest. encryptionKey is 32 bytes of base64; encryptionTag is the identifier
   # paired with the key (convention: AES.GCM.V<N>, bumped on each rotation).

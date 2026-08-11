@@ -32,7 +32,7 @@ config:
   emqxRestEndpoint: "http://edge-vpn-broker:18083"
   # EMQX credentials the Edge VPN server uses to authenticate against EMQX REST API + MQTT
   mqUsername: "admin"
-  # VPN DNS domain — must match NETMAKER_DEFAULT_DOMAIN on edge-admin
+  # VPN DNS domain — must match EDGE_VPN_DEFAULT_DOMAIN on edge-admin
   defaultDomain: "nm.internal"
   db:
     host: "postgres-rw"
@@ -94,4 +94,3 @@ ui:
     limits:
       cpu: "100m"
       memory: "64Mi"
-

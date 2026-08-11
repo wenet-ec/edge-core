@@ -25,11 +25,6 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
 
   require Logger
 
-  defp node_network_name(%Cluster{name: name}), do: Vpn.build_network_name(name, prefix: :node)
-
-  defp node_network_name(cluster_name) when is_binary(cluster_name),
-    do: Vpn.build_network_name(cluster_name, prefix: :node)
-
   defp cluster_active?(cluster_id) do
     Repo.exists?(ClusterQueries.active_by_id(cluster_id))
   end
@@ -128,7 +123,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
   end
 
   defp delete_retired_cluster(cluster) do
-    network_name = node_network_name(cluster)
+    network_name = Cluster.network_name(cluster)
 
     case Vpn.delete_network(network_name) do
       {:ok, _} ->
@@ -237,7 +232,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
   end
 
   defp reconcile_single_cluster(cluster, db_nodes, acc) do
-    network_name = node_network_name(cluster)
+    network_name = Cluster.network_name(cluster)
 
     Logger.debug("Reconciling cluster #{cluster.name} (network: #{network_name})")
 
@@ -275,7 +270,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
   end
 
   defp reconcile_cluster_nodes(cluster, db_nodes, netmaker_nodes, expected_host_ids, actual_host_ids) do
-    network_name = node_network_name(cluster)
+    network_name = Cluster.network_name(cluster)
     expected_hostnames = MapSet.new(db_nodes, &Node.node_name/1)
 
     orphaned_nodes = orphaned_db_nodes(db_nodes, expected_host_ids, actual_host_ids)
@@ -568,7 +563,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
   end
 
   defp cluster_network_state(cluster) do
-    network_name = node_network_name(cluster)
+    network_name = Cluster.network_name(cluster)
 
     case Vpn.get_network(network_name) do
       {:ok, %{"addressrange" => ipv4_range, "addressrange6" => ipv6_range}}
@@ -588,7 +583,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
 
   defp create_missing_cluster_network(cluster) do
     if cluster_active?(cluster.id) do
-      network_name = node_network_name(cluster)
+      network_name = Cluster.network_name(cluster)
 
       opts = %{addressrange: cluster.ipv4_range, addressrange6: cluster.ipv6_range}
 
@@ -655,7 +650,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Reconciliation do
       db_network_names =
         from(c in Cluster, select: c.name)
         |> Repo.all()
-        |> MapSet.new(&node_network_name/1)
+        |> MapSet.new(&Cluster.network_name/1)
 
       deleted =
         netmaker_cluster_names

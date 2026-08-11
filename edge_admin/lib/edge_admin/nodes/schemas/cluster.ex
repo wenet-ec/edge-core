@@ -110,8 +110,9 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
       iex> network_name(%Cluster{name: "prod"})
       "cluster-prod"
   """
-  @spec network_name(t()) :: String.t()
+  @spec network_name(t() | String.t()) :: String.t()
   def network_name(%__MODULE__{name: name}), do: Vpn.build_network_name(name, prefix: :node)
+  def network_name(name) when is_binary(name), do: Vpn.build_network_name(name, prefix: :node)
 
   @doc """
   Returns the VPN domain suffix for nodes in this cluster.
@@ -128,7 +129,7 @@ defmodule EdgeAdmin.Nodes.Schemas.Cluster do
   """
   @spec vpn_domain(t()) :: String.t()
   def vpn_domain(%__MODULE__{name: name}) do
-    Vpn.build_vpn_domain(Vpn.build_network_name(name, prefix: :node))
+    Vpn.build_vpn_domain(network_name(name))
   end
 
   @doc """

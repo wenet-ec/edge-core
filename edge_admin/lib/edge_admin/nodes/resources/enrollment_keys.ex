@@ -20,6 +20,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
   alias EdgeAdmin.Nodes.Filters.ClusterFilters
   alias EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters
   alias EdgeAdmin.Nodes.Forms
+  alias EdgeAdmin.Nodes.Queries.ClusterQueries
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   alias EdgeAdmin.Random
@@ -151,11 +152,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
     custom_by_field = Enum.group_by(custom, & &1.field)
 
     base_query =
-      from(k in EnrollmentKey,
-        join: c in assoc(k, :cluster),
-        preload: [cluster: c]
-      )
-      |> ClusterQueries.active_joined()
+      ClusterQueries.active_joined(from(k in EnrollmentKey, join: c in assoc(k, :cluster), preload: [cluster: c]))
 
     query = apply_custom_filters(base_query, custom_by_field)
 
@@ -209,7 +206,7 @@ defmodule EdgeAdmin.Nodes.Resources.EnrollmentKeys do
         verification_failure("node_limit_reached")
 
       :ok ->
-        network_name = Vpn.build_network_name(key.cluster.name, prefix: :node)
+        network_name = Cluster.network_name(key.cluster)
 
         case Vpn.get_default_enrollment_key(network_name) do
           {:ok, netmaker_key} when is_binary(netmaker_key) and netmaker_key != "" ->

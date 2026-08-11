@@ -132,6 +132,7 @@ defmodule EdgeAdmin.Nodes do
   alias EdgeAdmin.Nodes.Filters.ClusterFilters
   alias EdgeAdmin.Nodes.Filters.NodeFilters
   alias EdgeAdmin.Nodes.Forms
+  alias EdgeAdmin.Nodes.Queries.ClusterQueries
   alias EdgeAdmin.Nodes.Resources.Aliases
   alias EdgeAdmin.Nodes.Resources.Diagnostics
   alias EdgeAdmin.Nodes.Resources.EnrollmentKeys
@@ -140,7 +141,6 @@ defmodule EdgeAdmin.Nodes do
   alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
-  alias EdgeAdmin.Nodes.Queries.ClusterQueries
   alias EdgeAdmin.Nodes.Workers.DeleteClusterWorker
   alias EdgeAdmin.Nodes.Workflows.HealthCheck
   alias EdgeAdmin.Nodes.Workflows.Reconciliation
@@ -155,12 +155,6 @@ defmodule EdgeAdmin.Nodes do
   # ===========================================================================
   # Private Helpers
   # ===========================================================================
-
-  # Builds network name for a cluster (node network, not admin network)
-  defp node_network_name(%Cluster{name: name}), do: Vpn.build_network_name(name, prefix: :node)
-
-  defp node_network_name(cluster_name) when is_binary(cluster_name),
-    do: Vpn.build_network_name(cluster_name, prefix: :node)
 
   # ===========================================================================
   # Cluster functions
@@ -352,13 +346,13 @@ defmodule EdgeAdmin.Nodes do
       fn row ->
         case row.node_id do
           nil -> nil
-          id -> if use_prefix, do: Vpn.build_vpn_name(id, prefix: :node), else: id
+          id -> if use_prefix, do: Node.node_name(id), else: id
         end
       end
     )
     |> Enum.map(fn {cluster_name, node_ids} ->
       %{
-        name: if(use_prefix, do: node_network_name(cluster_name), else: cluster_name),
+        name: if(use_prefix, do: Cluster.network_name(cluster_name), else: cluster_name),
         nodes: Enum.reject(node_ids, &is_nil/1)
       }
     end)
@@ -456,7 +450,7 @@ defmodule EdgeAdmin.Nodes do
   end
 
   defp provision_cluster_network(cluster) do
-    network_name = node_network_name(cluster)
+    network_name = Cluster.network_name(cluster)
     opts = %{addressrange: cluster.ipv4_range, addressrange6: cluster.ipv6_range}
 
     case Vpn.create_network(network_name, opts) do
@@ -805,8 +799,8 @@ defmodule EdgeAdmin.Nodes do
   # Best-effort Netmaker network sync after a cluster change.
   # The reconciliation worker will fix any inconsistencies.
   defp sync_node_cluster_networks(node, new_cluster) do
-    old_network_name = node_network_name(node.cluster)
-    new_network_name = node_network_name(new_cluster)
+    old_network_name = Cluster.network_name(node.cluster)
+    new_network_name = Cluster.network_name(new_cluster)
 
     case Vpn.add_host_to_network(node.netmaker_host_id, new_network_name) do
       {:ok, _} ->
@@ -895,7 +889,7 @@ defmodule EdgeAdmin.Nodes do
   defp sweep_orphan_netmaker_nodes(%Node{cluster: %Ecto.Association.NotLoaded{}}), do: :ok
 
   defp sweep_orphan_netmaker_nodes(%Node{} = node) do
-    network_name = node_network_name(node.cluster)
+    network_name = Cluster.network_name(node.cluster)
 
     case Vpn.list_nodes(network_name) do
       {:ok, nm_nodes} ->
@@ -985,6 +979,9 @@ defmodule EdgeAdmin.Nodes do
     end
   end
 
+  # ===========================================================================
+  # Enrollment Key functions
+  # ===========================================================================
   @doc """
   Re-registers the node authenticated by the Agent API token.
   """
@@ -1061,10 +1058,6 @@ defmodule EdgeAdmin.Nodes do
   - `{:ok, {nodes, meta}}` - List of nodes with Flop.Meta pagination info
   - `{:error, meta}` - Validation errors (when replace_invalid_params: false)
   """
-
-  # ===========================================================================
-  # Enrollment Key functions
-  # ===========================================================================
 
   @spec list_nodes(map()) :: {:ok, {[Node.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
   def list_nodes(params \\ %{}) do

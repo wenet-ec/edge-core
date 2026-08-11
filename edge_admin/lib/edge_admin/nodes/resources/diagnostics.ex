@@ -9,9 +9,9 @@ defmodule EdgeAdmin.Nodes.Resources.Diagnostics do
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.EdgeClusters.Gateway
   alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
   alias EdgeAdmin.Repo
-  alias EdgeAdmin.Vpn
 
   require Logger
 
@@ -38,7 +38,7 @@ defmodule EdgeAdmin.Nodes.Resources.Diagnostics do
   end
 
   defp fetch_live(node) do
-    node_name = Vpn.build_vpn_name(node.id, prefix: :node)
+    node_name = Node.node_name(node)
 
     with {:ok, cluster_name, _owner} <- Metadata.find_node_cluster(node_name),
          {:ok, gateway_pid} <- Gateway.lookup(cluster_name) do

@@ -37,7 +37,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
 
       with :ok <- active_cluster_exists?(cluster_name),
            {:ok, netmaker_host_id} <-
-             Vpn.get_host_id(Vpn.build_vpn_name(node_id, prefix: :node), network_name: network_name),
+             Vpn.get_host_id(Node.node_name(node_id), network_name: network_name),
            {:ok, registration} <- persist_registration(node_id, cluster_name, netmaker_host_id, attrs) do
         {:ok, registration}
       else
@@ -74,7 +74,7 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
 
       with :ok <- active_cluster_exists?(cluster_name),
            {:ok, netmaker_host_id} <-
-             Vpn.get_host_id(Vpn.build_vpn_name(node_id, prefix: :node), network_name: network_name),
+             Vpn.get_host_id(Node.node_name(node_id), network_name: network_name),
            {:ok, registration} <- persist_reregistration(node_id, cluster_name, netmaker_host_id, attrs) do
         {:ok, registration}
       else

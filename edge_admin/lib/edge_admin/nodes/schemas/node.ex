@@ -241,10 +241,9 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
       iex> node_name(%Node{id: "abc-123"})
       "node-abc-123"
   """
-  @spec node_name(t()) :: String.t()
-  def node_name(%__MODULE__{id: id}) do
-    Vpn.build_vpn_name(id, prefix: :node)
-  end
+  @spec node_name(t() | String.t()) :: String.t()
+  def node_name(%__MODULE__{id: id}), do: Vpn.build_vpn_name(id, prefix: :node)
+  def node_name(id) when is_binary(id), do: Vpn.build_vpn_name(id, prefix: :node)
 
   @doc """
   Returns the VPN hostname for this node.
@@ -267,8 +266,8 @@ defmodule EdgeAdmin.Nodes.Schemas.Node do
   # ---------------------------------------------------------------------------
   @spec vpn_hostname(t()) :: String.t()
   def vpn_hostname(%__MODULE__{id: id, cluster: %{name: cluster_name}}) do
-    short_name = Vpn.build_vpn_name(id, prefix: :node)
-    network_name = Vpn.build_network_name(cluster_name, prefix: :node)
+    short_name = node_name(id)
+    network_name = Cluster.network_name(cluster_name)
     Vpn.build_vpn_hostname(short_name, network_name)
   end
 

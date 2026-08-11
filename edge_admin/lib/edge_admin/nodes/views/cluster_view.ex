@@ -7,6 +7,7 @@ defmodule EdgeAdmin.Nodes.Views.ClusterView do
   """
 
   alias EdgeAdmin.Nodes.Schemas.Cluster
+  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Vpn
 
   @spec render(Cluster.t()) :: map()
@@ -30,8 +31,8 @@ defmodule EdgeAdmin.Nodes.Views.ClusterView do
   defp render_nodes(_not_loaded, _cluster), do: []
 
   defp node_summary(node, cluster) do
-    short_name = Vpn.build_vpn_name(node.id, prefix: :node)
-    network_name = Vpn.build_network_name(cluster.name, prefix: :node)
+    short_name = Node.node_name(node)
+    network_name = Cluster.network_name(cluster)
 
     %{
       id: node.id,

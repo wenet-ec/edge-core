@@ -59,8 +59,8 @@ defmodule EdgeAdmin.Metrics do
   alias EdgeAdmin.Metrics.Schemas.NodeMetricsCache
   alias EdgeAdmin.Metrics.Schemas.UnifiedMetrics
   alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
-  alias EdgeAdmin.Vpn
 
   require Logger
 
@@ -275,7 +275,7 @@ defmodule EdgeAdmin.Metrics do
   defp scrape_node_metrics(node_id, metrics_type, gateway_scrape_fn) do
     # Check DB first — a missing node is always 404, regardless of VPN/cache state
     with {:ok, node} <- Nodes.get_node(node_id) do
-      node_name = Vpn.build_vpn_name(node_id, prefix: :node)
+      node_name = Node.node_name(node_id)
 
       # Attempt VPN scrape via ETS + Gateway; fall back to cache on any infra failure
       case Metadata.find_node_cluster(node_name) do

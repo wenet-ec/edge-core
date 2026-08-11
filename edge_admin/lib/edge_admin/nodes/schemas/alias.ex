@@ -89,8 +89,8 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
   """
   @spec vpn_hostname(t()) :: String.t()
   def vpn_hostname(%__MODULE__{name: name, cluster: %{name: cluster_name}}) do
-    short_name = Vpn.build_vpn_name(name, prefix: :node)
-    network_name = Vpn.build_network_name(cluster_name, prefix: :node)
+    short_name = Node.node_name(name)
+    network_name = Cluster.network_name(cluster_name)
     Vpn.build_vpn_hostname(short_name, network_name)
   end
 
@@ -114,6 +114,6 @@ defmodule EdgeAdmin.Nodes.Schemas.Alias do
   """
   @spec netmaker_dns_name(t()) :: String.t()
   def netmaker_dns_name(%__MODULE__{name: name, cluster: %{name: cluster_name}}) do
-    "#{Vpn.build_vpn_name(name, prefix: :node)}.#{Vpn.build_network_name(cluster_name, prefix: :node)}"
+    "#{Node.node_name(name)}.#{Cluster.network_name(cluster_name)}"
   end
 end

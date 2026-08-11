@@ -25,11 +25,6 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
 
   require Logger
 
-  defp node_network_name(%Cluster{name: name}), do: Vpn.build_network_name(name, prefix: :node)
-
-  defp node_network_name(cluster_name) when is_binary(cluster_name),
-    do: Vpn.build_network_name(cluster_name, prefix: :node)
-
   defp active_cluster?(cluster_id) do
     Repo.exists?(ClusterQueries.active_by_id(cluster_id))
   end
@@ -44,7 +39,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   @spec repair_node_dns(Node.t()) :: :ok
   def repair_node_dns(%Node{} = node) do
     node = Repo.preload(node, :cluster)
-    network_name = node_network_name(node.cluster)
+    network_name = Cluster.network_name(node.cluster)
 
     aliases =
       Repo.all(
@@ -119,7 +114,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   end
 
   defp cleanup_single_alias(%Alias{} = alias_record) do
-    network_name = node_network_name(alias_record.cluster)
+    network_name = Cluster.network_name(alias_record.cluster)
     vpn_hostname = Alias.vpn_hostname(alias_record)
     netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
 
@@ -177,12 +172,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
       )
 
     # Build base query with cluster preload
-    base_query =
-      from(a in Alias,
-        join: c in assoc(a, :cluster),
-        preload: [cluster: c]
-      )
-      |> ClusterQueries.active_joined()
+    base_query = ClusterQueries.active_joined(from(a in Alias, join: c in assoc(a, :cluster), preload: [cluster: c]))
 
     query = ClusterFilters.apply_name(base_query, cluster_name_filters)
 
@@ -286,7 +276,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
 
         {:ok, changeset} ->
           # Query Netmaker only after local/schema and DB-state checks pass.
-          network_name = node_network_name(node.cluster)
+          network_name = Cluster.network_name(node.cluster)
 
           case Vpn.find_node_by_host(network_name, node.netmaker_host_id) do
             {:ok, netmaker_node} ->
@@ -372,7 +362,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   @spec delete(Alias.t()) :: {:ok, Alias.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
   def delete(%Alias{} = alias_record) do
     alias_record = Repo.preload(alias_record, :cluster)
-    network_name = node_network_name(alias_record.cluster)
+    network_name = Cluster.network_name(alias_record.cluster)
     vpn_hostname = Alias.vpn_hostname(alias_record)
     netmaker_dns_name = Alias.netmaker_dns_name(alias_record)
 
@@ -444,7 +434,7 @@ defmodule EdgeAdmin.Nodes.Resources.Aliases do
   end
 
   defp cleanup_cluster_aliases(cluster, result) do
-    network_name = node_network_name(cluster)
+    network_name = Cluster.network_name(cluster)
 
     case Vpn.list_custom_dns_entries(network_name) do
       {:ok, netmaker_custom_entries} ->

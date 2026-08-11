@@ -4,257 +4,127 @@
 [![Build](https://github.com/wenet-ec/edge-core/actions/workflows/production.yml/badge.svg?branch=main)](https://github.com/wenet-ec/edge-core/actions/workflows/production.yml)
 [![Docs](https://github.com/wenet-ec/edge-core/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/wenet-ec/edge-core/actions/workflows/docs.yml)
 
-**Open-source self-hostable control plane for distributed Linux and Edge fleets — WireGuard mesh, SSH proxy, remote execution, Prometheus metrics, all over one REST API/MCP.**
+**Self-hostable control plane for distributed Linux and Edge fleets — WireGuard mesh, SSH proxy, remote execution, Prometheus metrics, events, and MCP over one API.**
 
 📖 **Docs:** [wenet-ec.github.io/edge-core](https://wenet-ec.github.io/edge-core/)
 
-Edge Core is an infrastructure management platform for fleets of Linux machines you don't physically touch. Cloud VMs across providers, on-premises servers, factory-floor equipment, Raspberry Pis, homelab boxes, IoT devices — anywhere you have N machines and want a single HTTP API to operate them. You get a secure WireGuard mesh, remote command execution, SSH without exposing port 22, HTTP/SOCKS5 forward proxying through any node, and Prometheus metrics aggregation.
+Edge Core manages Linux machines you do not physically touch: cloud VMs, on-premises servers, factory equipment, Raspberry Pis, homelab boxes, and IoT devices. It gives operators one place to connect to, observe, and operate those machines without exposing every host to the public internet.
 
-We named the project "Edge Core" because the founding pain came from edge devices, but **"edge" here means *any machine you don't physically touch right now*** — a cloud VM in Frankfurt, a bare-metal box in a colo, or a Raspberry Pi in a factory. The control plane doesn't care; it's all the same problem.
+The name comes from our original edge-device use case, but **edge means any machine that is remote from the operator**. A VM in Frankfurt and a Raspberry Pi in a factory present the same control-plane problem; the difference is how hostile and unreliable the surrounding network can be.
 
-Runs on standard Linux hosts with container support and WireGuard-capable networking. Agent host testing currently covers the two latest Ubuntu LTS releases (24.04 and 26.04), Debian 13, Rocky Linux 10 / RHEL-family hosts, and Alpine 3.24 — see [Host compatibility](#host-compatibility) below. Self-hosted, no vendor lock-in.
+## The edge version of a cloud control plane
 
-The **agent** that runs on your machines and the **Nexmaker** shared library are open-source under Apache 2.0. The **admin** server is source-available under the Elastic License 2.0 — you can self-host, modify, and use it commercially. The one thing we reserve is the right to offer Edge Admin as a hosted service to the public; we hope you respect that decision so we can keep the rest of Edge Core fully free, with no future feature gates or surprise relicensing. See [License](#license) below for details.
+Cloud providers made centralized machine management familiar: private networking, metrics, remote execution, SSH, updates, events, and automation APIs. Edge Core applies those same control-plane ideas to machines distributed across sites the operator does not fully control.
+
+| Concern | Typical cloud environment | Edge Core |
+| --- | --- | --- |
+| Private connectivity | VPC or provider network | WireGuard mesh per cluster, with DERP and HTTP fallback |
+| Remote operations | Provider API or automation runner | Per-node command executions from one API request |
+| Interactive access | Provider console or reachable SSH | Centralized credentials plus HTTP/SOCKS5 proxy |
+| Observability | Central metrics and service discovery | Host, Agent, and WireGuard metrics through Admin |
+| Local network access | Usually inside the provider boundary | Proxy chaining through an Agent's LAN or internet path |
+| Fleet updates and feedback | Image workflows, webhooks, job status | Agent self-updates, CloudEvents, webhooks, and brokers |
+| Autonomous operations | API- and increasingly AI-driven | REST and MCP expose the same control surface |
+
+The edge difference is the network and failure model: NAT, firewalls, UDP filtering, intermittent links, changing addresses, local-only services, and power outages. Edge Core treats resilient connectivity as part of the control plane instead of assuming it already exists.
+
+Edge Core manages machines that already exist; it is not a general-purpose compute, storage, or region provider. The self-hostable Core is platform-agnostic. A hosted platform can add provisioning, deployment packages, tenancy, billing, and other cloud-style services above it without changing the Core contract.
 
 ## What it does
 
-**Functionalities**
+- **Remote command execution** — run shell commands across selected nodes and collect each result independently.
+- **Centralized SSH** — manage usernames and public keys centrally, then reach nodes through the Admin proxy without exposing port 22.
+- **Metrics aggregation** — collect host, Agent, and WireGuard metrics through Prometheus-compatible discovery and endpoints.
+- **Self-updates** — coordinate Agent updates across a fleet from one API request.
+- **VPN connectivity** — create isolated WireGuard meshes per cluster, with relay fallback for difficult NAT paths.
+- **Proxying** — tunnel HTTP or arbitrary TCP traffic through a node, including access to that node's local network.
+- **Lifecycle events** — publish CloudEvents through signed webhooks or a message broker instead of polling.
+- **AI operations** — expose the REST management surface through MCP for compatible assistants and automation.
 
-- **Remote command execution** — run shell commands across hundreds of machines from a single API call, results collected centrally
-- **SSH backdoor** — SSH into any node through the admin proxy with centralized key and username management, no exposed SSH ports
-- **Metrics aggregation** — Prometheus-compatible scraping of host, agent, and WireGuard metrics via admin service discovery
-- **Self-update** — roll out agent updates across the fleet from a single API call, coordinated via Watchtower
+## Who is it for?
 
-**Connectivity**
+Edge Core is a good fit when you need to:
 
-- **Cloud ↔ Edge (forward proxy + proxy chaining)** — HTTP and SOCKS5 forward proxies tunnel any TCP traffic from the cloud through any agent to its local network or the internet
-- **Edge ↔ Edge (VPN mesh)** — full WireGuard P2P mesh per cluster, automatic peer discovery, netclient-local DNS for `.nm.internal` hostnames, DERP relay fallback for NAT
-- **Edge ↔ Local devices (mDNS)** — agents advertise themselves via mDNS for zero-config discovery by devices on the same LAN segment
+- manage Linux machines across factories, stores, offices, vehicles, homes, or multiple clouds;
+- operate hosts behind NAT or firewalls without exposing SSH and application ports;
+- collect metrics centrally without giving the monitoring system direct access to every node;
+- automate fleet work while retaining per-node output, status, and lifecycle events; or
+- self-host the control plane and build higher-level workflows on its API.
 
-**Async events**
-
-- **Lifecycle events** — every state change (node registered, command finished, SSH verified, self-update completed) is published as a CloudEvents envelope. Subscribe via webhooks or a message broker (NATS, Kafka/Redpanda, RabbitMQ, Redis, MQTT, AWS SNS, Google Cloud Pub/Sub). No polling required.
-
-**AI-driveable by default**
-
-- **MCP server** — Edge Admin exposes the **same surface as the REST API** as MCP tools, with no separate integration work. Anything you can do over HTTP, an AI assistant (Claude, Cursor, any MCP-compatible client) can do through `/mcp` with a bearer token.
-- **Closed loop** — combine MCP tools (act), lifecycle events (observe), and the forward proxy (reach the long tail of services on any node), and an AI agent has every primitive it needs to run your fleet end-to-end. Patch a CVE across hundreds of nodes, follow rollout state in real time, debug a crash by SSH'ing through the proxy — none of it requires a human in the loop. The architecture happens to be the right shape; we didn't bolt anything on.
-
-## Who is this for
-
-**If you are looking for:**
-
-- A self-hostable alternative to Balena that works for general Linux machines, not just IoT
-- A way to manage remote machines without exposing SSH ports to the internet
-- Fleet management that works on-prem, air-gapped, or across multiple clouds simultaneously
-- Remote access to machines behind strict NAT or firewalls (DERP relay handles symmetric NAT automatically)
-- A self-hosted alternative to Headscale (self-hosted Tailscale) + fleet management, where you own all the infrastructure
-- HTTP-first edge communication without needing to run MQTT brokers (like EMQX or Mosquitto) in your own application code
-- A control plane with no single point of failure — masterless admins, horizontal scale-out via independent admin clusters
-
-**Concrete use cases:**
-
-- Manage a fleet of Raspberry Pis or embedded Linux devices from a central dashboard
-- Remote command execution across factory floor machines or industrial controllers
-- SSH access to machines in remote offices or data centers through a single proxy
-- Collect Prometheus metrics from edge nodes without VPN client on the monitoring server
-- Roll out updates to hundreds of edge nodes with a single API call
-- IoT device management where you need real shell access, not just telemetry
-
-## Compared to alternatives
-
-|                                  | Edge Core    | Balena                     | Ansible¹ | Tailscale / Headscale | FleetDM |
-| -------------------------------- | ------------ | -------------------------- | -------- | --------------------- | ------- |
-| Self-hosted                      | ✅           | Partial                    | ✅       | Partial / ✅          | ✅      |
-| Works for general Linux          | ✅           | ❌ IoT-only                | ✅       | ✅                    | ✅      |
-| Built-in VPN mesh                | ✅           | ❌ hub-and-spoke (OpenVPN) | ❌       | ✅                    | ❌      |
-| SSH proxy (no VPN client needed) | ✅           | ❌                         | ❌       | ✅                    | ❌      |
-| HTTP forward proxy to edge       | ✅           | ❌                         | ❌       | ❌                    | ❌      |
-| Remote command execution         | ✅           | ✅                         | ✅       | ❌                    | Partial |
-| Prometheus metrics via admin     | ✅           | Partial                    | ❌       | ❌                    | ❌      |
-| Works behind symmetric NAT       | ✅ DERP     | ✅                         | ❌       | ✅ DERP               | ❌      |
-| No vendor lock-in                | ✅           | ❌                         | ✅       | ❌ / ✅               | ✅      |
-
-*¹ Ansible is a complement, not a competitor — see below.*
-
-**vs Balena:** Balena is optimized for IoT and requires their cloud or their OS. Edge Core is designed to run on general-purpose Linux (see [Host compatibility](#host-compatibility) for tested distros), in any cloud or on-prem. It manages hosts you control; it does not provide or take ownership of their operating system.
-
-**vs Tailscale / Headscale:** Tailscale (and its self-hosted equivalent Headscale) is a polished, opinionated mesh networking product — VPN, identity, SSH, ACLs, MagicDNS, exit nodes. We use Tailscale's [DERP](https://tailscale.com/blog/how-nat-traversal-works) relay protocol for our own NAT-traversal fallback, so this isn't really a head-to-head comparison. Edge Core sits one layer up: the network plumbing is solved (via Netmaker + DERP), and the product is the fleet-management layer on top — command execution, centralized SSH credentials, HTTP/SOCKS5 forward proxying, metrics aggregation, MCP. If your need is "give my team SSH'd access to my fleet over a VPN", Tailscale is probably what you want. If you also need to *operate* the fleet from a control plane, that's where Edge Core fits.
-
-**Works alongside Ansible:** Edge Core is not an Ansible replacement — it's the network layer that makes Ansible work on unreachable machines. Nodes behind NAT or firewalls are normally inaccessible to Ansible. With Edge Core, you SSH through the admin proxy tunnel to reach them, then run your playbooks as normal. No changes to your Ansible setup needed — just configure `ProxyCommand` in your SSH config to route through the admin's SOCKS5 proxy and Ansible works as if the nodes were on your local network.
-
-**vs running EMQX/Mosquitto yourself:** If you want edge-to-cloud communication and don't need a message bus, Edge Core gives you command delivery, result collection, SSH access, and full TCP tunneling (via HTTP and SOCKS5 forward proxy) without ever touching an MQTT broker. The broker in this repo (EMQX/Mosquitto) is internal Netmaker infrastructure — your application code never sees it.
-
-## Scaling
-
-Edge Core has a masterless control plane. Within an admin cluster there is no leader election, no Raft consensus, no primary/replica — all admin instances run the same deterministic ownership algorithm against shared PostgreSQL state and converge on identical cluster assignments. This means:
-
-- No single point of failure in the control plane
-- Adding admins is a linear capacity increase, not coordination overhead
-- Network partitions don't cause split-brain — both sides continue operating, assignments reconcile on reconnect
-- Adding more admin clusters is horizontal scale-out — admin clusters share only PostgreSQL and are otherwise independent
-
-WireGuard mesh is O(n²), so edge clusters are capped at 50–100 nodes each. Scale comes from more clusters, not bigger ones. Tunables live in the env files of each example setup.
+It is intentionally general Linux infrastructure management, not an operating system or device-management lock-in layer. Ansible, Tailscale/Headscale, cloud providers, and existing monitoring systems can complement it; Edge Core focuses on the connectivity and operational control plane between them.
 
 ## Architecture
 
 ```text
-Cloud Server
-├── Edge Admin (×N peers)     Elixir/Phoenix, shared PostgreSQL
-│   ├── Erlang peer cluster   masterless P2P, no leader election, no Raft
-│   ├── Cluster ownership     one admin owns each edge cluster (sharding)
-│   └── Forward proxies       HTTP + SOCKS5, routes traffic to edge nodes
-│
-├── HAProxy                   TCP load balancer for proxy ports
-│
-└── Netmaker VPN Stack        WireGuard mesh control plane (EMQX/Mosquitto; DNS is netclient-local)
+Cloud or self-hosted control plane
+├── Edge Admin (one or more peers)
+│   ├── REST API, OpenAPI, MCP, events, and metrics
+│   ├── Cluster ownership and background operations
+│   └── HTTP + SOCKS5 forward proxies
+├── PostgreSQL (standard) or SQLite (lite)
+└── Netmaker VPN stack
 
-Edge Nodes (one agent per machine)
-└── Edge Agent                network_mode: host, privileged
-    ├── netclient             WireGuard VPN client (DERP relay fallback for symmetric NAT)
-    ├── SSH server            port 40022, keys managed centrally by admin
-    ├── Forward proxies       HTTP + SOCKS5
-    └── Metrics exporters     node exporter + WireGuard metrics
+Distributed machines
+└── Edge Agent (one per machine)
+    ├── WireGuard netclient
+    ├── Embedded SSH server and command execution
+    ├── HTTP + SOCKS5 proxy
+    └── Metrics exporters and diagnostics
 ```
 
-**Admin clustering** is masterless peer-to-peer — admins coordinate via Erlang distribution and share a PostgreSQL database. Exactly one admin owns each edge cluster at a time (shard assignment, not replication). HA and horizontal scale come from running additional independent admin clusters.
-
-**Agent↔Admin communication** is HTTP over WireGuard, with graceful fallback: raw WireGuard UDP → DERP relay (transparent, handles symmetric NAT) → HTTP polling (last resort, eventual consistency).
-
-For full detail see [`docs/architecture.md`](https://github.com/wenet-ec/edge-core/blob/main/docs/architecture.md).
+Admin and Agent communicate over WireGuard when possible, fall back to DERP relay when direct UDP paths fail, and retain HTTP polling for eventual control during VPN outages. For the full design, see [`docs/architecture.md`](docs/architecture.md).
 
 ## Getting started
 
-Everything runs in Docker Compose — no Elixir or Go required on the host.
+Everything runs through Docker Compose; no Elixir or Go installation is required on the host.
 
-Pick the setup that fits your needs and follow its README:
+| Setup | Use it for | Start here |
+| --- | --- | --- |
+| **Lite** | Single admin, SQLite/Mosquitto, homelabs and small fleets | [`examples/lite/`](examples/lite/README.md) |
+| **Standard** | PostgreSQL, multiple Admin peers, Prometheus, production HA | [`examples/standard/`](examples/standard/README.md) |
 
-| Setup        | Description                                                                                             | Start here                                          |
-| ------------ | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| **Lite**     | Single admin, Mosquitto broker, no metrics stack. Good for homelab, small fleets, or first deployments. | [`examples/lite/`](https://github.com/wenet-ec/edge-core/blob/main/examples/lite/README.md)         |
-| **Standard** | 4 admin instances across 2 clusters, EMQX, full Prometheus metrics. Production-ready HA setup.          | [`examples/standard/`](https://github.com/wenet-ec/edge-core/blob/main/examples/standard/README.md) |
+Each setup guide covers requirements, configuration, first enrollment, and upgrades. After starting Admin, use the [operator guide](docs/guide.md), the live `/` guide, and `/swaggerui` for day-to-day work.
 
-Each README covers: server requirements, configuration, enrolling your first node, and upgrading. Once your admin is running, the **[user guide](https://github.com/wenet-ec/edge-core/blob/main/docs/guide.md)** walks through the day-to-day surface (Swagger, MCP, proxy, metrics, events).
+## Compatibility and deployment notes
 
-## Compatibility
+Admin is a containerized deployment target. Agent is a privileged, host-networked container and therefore depends on the host's networking, resolver, container runtime, and WireGuard support. Tested Agent hosts currently include Ubuntu 24.04/26.04, Debian 13, Rocky Linux 10 and RHEL-family hosts, and Alpine 3.24.
 
-### Admin deployment matrix
+See the [operator guide](docs/guide.md) for host-specific notes, including `firewalld`, and the example guides for deployment requirements. The full architecture and operational contracts live in [`docs/architecture.md`](docs/architecture.md).
 
-The admin is always a containerized deployment target. We do not support running it directly as a bare Linux host process.
+## Useful references
 
-| Deployment surface | Status | Notes |
-| ------------------ | ------ | ----- |
-| Docker Compose on Linux | Supported | Canonical deployment path today |
-| Docker on Linux | Supported | Same containerized runtime model |
-| Kubernetes | Admin/VPN deployment assets available | Helmfile/Helm assets live under `deploy/k8s`; qualify the deployment for your environment before production use |
-| Bare Linux host process | Unsupported | Not a supported runtime shape |
-
-The admin is much less host-sensitive than the agent: it runs containerized and uses `wireguard-go` (userspace) inside its own container, so it does not depend on host WireGuard kernel support.
-
-### Agent platform matrix
-
-Edge Agent ships as a Debian-slim container, so the agent process itself is portable. The real constraints come from what it does to the **host**: it runs `network_mode: host` + `privileged`, manages WireGuard interfaces, writes `/etc/resolv.conf`, and (when present) talks to `systemd-resolved` over D-Bus.
-
-| Platform | Architectures | Status | Notes |
-| -------- | ------------- | ------ | ----- |
-| Ubuntu 24.04 LTS | image-supported architectures | Tested | Supported Ubuntu LTS release |
-| Ubuntu 26.04 LTS | image-supported architectures | Tested | Supported Ubuntu LTS release |
-| Debian 13 | image-supported architectures | Tested | Agent host compatibility target |
-| Rocky Linux 10 / RHEL-family hosts | image-supported architectures | Tested | RHEL-compatible host validation |
-| Alpine 3.24 | image-supported architectures | Tested | Alpine/musl host validation |
-| Other recent Linux hosts | varies | Expected | Requires host networking, resolver, and container runtime validation |
-| Older Linux with kernel `< 5.6` | varies | Caveat | Needs WireGuard DKMS or `wireguard-go` userspace fallback |
-| Immutable / atomic distros (Fedora CoreOS, Flatcar, Bottlerocket, Talos, NixOS) | varies | Caveat | Expect extra integration work around persistence and service management |
-| SELinux-enforcing hosts | `amd64`, `arm64` | Caveat | May need custom policy or `--security-opt label=disabled` |
-| `riscv64`, `ppc64le`, `s390x` | those architectures | Unsupported today | Not currently built or tested |
-
-#### Full Agent host resources
-
-The full Agent is a privileged Docker/Compose deployment that bundles VPN,
-remote command execution, SSH, Prometheus exporters, proxies, SQLite, and
-diagnostics. It is not intended for tiny sensor- or router-class devices.
-
-- **Minimum:** 1 GB RAM on the Linux host.
-- **Recommended:** 2 GB RAM or more for comfortable Agent and workload headroom.
-- Hosts with less than 1 GB RAM may be able to start the container, but are not
-  a supported full-Agent target. Memory pressure from the operating system,
-  Docker, the Agent, and customer workloads makes them operationally fragile.
-
-#### RHEL-family hosts and firewalld
-
-Rocky Linux, RHEL, AlmaLinux, CentOS Stream, and Fedora commonly run
-`firewalld`. Its default zone can reject traffic arriving over the Netmaker
-interface even when the VPN client is connected. On affected hosts, configure
-firewalld on the **host** to allow the Netmaker interface or its traffic in an
-appropriate zone. See the [operator guide](docs/guide.md) for the host-side
-commands and troubleshooting guidance.
-
-## Using a running admin
-
-Once an admin is up, start at `/` for the short Edge Admin guide to its cluster-and-node model, then use Swagger UI for day-to-day API work. The complete surface — Swagger UI, MCP, proxy servers, metrics, events/webhooks, health checks, and concepts — is documented in the **[user guide](https://github.com/wenet-ec/edge-core/blob/main/docs/guide.md)**.
-
-Other useful pointers:
-
-- REST API reference: [`docs/openapi.md`](https://github.com/wenet-ec/edge-core/blob/main/docs/openapi.md) — lightweight index plus links to the static OpenAPI spec and live `/swaggerui` / `/redoc`
-- Configuration reference: `.env.example` in [`examples/lite/`](https://github.com/wenet-ec/edge-core/tree/main/examples/lite) or [`examples/standard/`](https://github.com/wenet-ec/edge-core/tree/main/examples/standard), and the full annotated env files in [`deploy/production/.envs/`](https://github.com/wenet-ec/edge-core/tree/main/deploy/production/.envs)
-- Grafana dashboards: [`edge_admin/priv/grafana_dashboards/`](https://github.com/wenet-ec/edge-core/tree/main/edge_admin/priv/grafana_dashboards)
-- Event catalog: `/asyncdoc` on a running admin, or [`docs/admin-asyncapi-v0.2.0.md`](https://github.com/wenet-ec/edge-core/blob/main/docs/admin-asyncapi-v0.2.0.md)
-- MCP tool catalog: [`docs/admin-mcp-v0.2.0.md`](https://github.com/wenet-ec/edge-core/blob/main/docs/admin-mcp-v0.2.0.md) — MCP has no static-spec standard yet, so this is hand-maintained alongside `EdgeAdminMcp.Server`
+- [User and operator guide](docs/guide.md)
+- [Architecture](docs/architecture.md)
+- [OpenAPI reference](docs/openapi.md)
+- [AsyncAPI event catalog](docs/admin-asyncapi-v0.2.0.md)
+- [MCP tool catalog](docs/admin-mcp-v0.2.0.md)
+- [Lite deployment](examples/lite/README.md)
+- [Standard deployment](examples/standard/README.md)
+- [Relay deployment](examples/relay/README.md)
+- [Sidecar deployment](examples/sidecar/README.md)
+- [Contributing](CONTRIBUTING.md)
 
 ## Components
 
-| Directory                 | Description                                                                                                     |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `edge_admin/`             | Phoenix admin server — REST API, OpenAPI, AsyncAPI, MCP server, HTTP/SOCKS5 proxies (PostgreSQL, Oban)          |
-| `edge_agent/`             | Phoenix agent — embedded SSH server, HTTP/SOCKS5 proxies, metrics exporters (SQLite, Oban)                      |
-| `nexmaker/`               | Shared Elixir lib — Netmaker API + netclient CLI wrapper                                                        |
-| `examples/lite/`          | Single admin, Mosquitto, no metrics — good for small fleets or resource-constrained servers                     |
-| `examples/standard/`      | 4 admins across 2 clusters, EMQX, Prometheus — when you need HA or more node capacity                           |
-| `examples/relay/`         | Self-hosted DERP relay node — optional, for agents behind strict NAT                                           |
-| `examples/sidecar/`       | Agent as a sidecar container (bridge networking) rather than host-networked                                     |
-| `examples/event_brokers/` | NATS, Redpanda, Kafka, RabbitMQ, Redis, and MQTT compose files (AWS SNS is managed — provisioning notes inline) |
-| `docs/`                   | Architecture docs and API specs                                                                                 |
-
-## Built on
-
-Edge Core stands on a stack of much larger projects, and we're grateful for them:
-
-| Layer                | Project                                                                           | Why                                                                                                |
-| -------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| WireGuard mesh       | [Netmaker](https://github.com/gravitl/netmaker) (v1.6.0)                          | Mature mesh control plane with proper network segmentation                                         |
-| Relay fallback       | [DERP](https://tailscale.com/blog/how-nat-traversal-works) (Tailscale)            | Best-in-class WireGuard-over-HTTPS for symmetric NAT                                               |
-| Runtime              | [Elixir](https://elixir-lang.org/) / [Phoenix](https://www.phoenixframework.org/) | BEAM concurrency model fits a coordination plane naturally                                         |
-| Distributed registry | [`:syn`](https://github.com/ostinelli/syn)                                        | Availability-over-consistency, scoped registries with metadata                                     |
-| Background jobs      | [Oban](https://github.com/oban-bg/oban)                                           | Same-process job runner that works on Postgres or SQLite — exactly what our two-binary shape needs |
-
-The Netmaker OpenAPI spec we target is included at [`docs/netmaker-openapi-v1.6.0.yml`](https://github.com/wenet-ec/edge-core/blob/main/docs/netmaker-openapi-v1.6.0.yml) for reference.
-
-We didn't build any of these — we glued them together in a way that solved the specific problem in front of us.
+| Directory | Description |
+| --- | --- |
+| `edge_admin/` | Phoenix control plane: REST, OpenAPI, AsyncAPI, MCP, proxies, and PostgreSQL/Oban operations |
+| `edge_agent/` | Agent runtime: VPN, SSH, commands, proxies, metrics, diagnostics, and SQLite/Oban state |
+| `nexmaker/` | Shared Netmaker API and netclient CLI library |
+| `deploy/` | Local and production Docker Compose infrastructure |
+| `examples/` | Lite, Standard, relay, sidecar, and event-broker deployments |
 
 ## License
 
-Edge Core ships under multiple licenses depending on the component. See [`LICENSE`](https://github.com/wenet-ec/edge-core/blob/main/LICENSE) at the repository root for the full overview.
+Edge Core ships under multiple licenses; see [`LICENSE`](LICENSE) for the complete terms.
 
-| Component                           | Path          | License                                                      | Posture          |
-| ----------------------------------- | ------------- | ------------------------------------------------------------ | ---------------- |
-| Edge Agent                          | `edge_agent/` | [Apache License 2.0](https://github.com/wenet-ec/edge-core/blob/main/edge_agent/LICENSE)                     | Open source      |
-| Nexmaker                            | `nexmaker/`   | [Apache License 2.0](https://github.com/wenet-ec/edge-core/blob/main/nexmaker/LICENSE)                       | Open source      |
-| Edge Admin                          | `edge_admin/` | [Elastic License 2.0](https://github.com/wenet-ec/edge-core/blob/main/edge_admin/LICENSE)                    | Source available |
-| Examples, docs, deploy, bin scripts | other         | Apache License 2.0 unless a file explicitly states otherwise | Open source      |
+| Component | License | Posture |
+| --- | --- | --- |
+| Edge Agent | [Apache License 2.0](edge_agent/LICENSE) | Open source |
+| Nexmaker | [Apache License 2.0](nexmaker/LICENSE) | Open source |
+| Edge Admin | [Elastic License 2.0](edge_admin/LICENSE) | Source available |
+| Examples, docs, deploy, and scripts | Apache License 2.0 unless otherwise stated | Open source |
 
-**Open source vs. source available — what the difference means here**
+You may self-host, modify, and use Edge Core internally or as part of your own services. The Elastic License restricts offering Edge Admin itself, or a thin wrapper around it, as a hosted service to third parties. Contact **licensing@wenet-ec.com** if your use case needs clarification or a commercial license.
 
-The agent and Nexmaker are **open source** under Apache 2.0. You can do anything you want with them — fork, modify, embed in commercial products, redistribute — as long as you preserve the copyright and license notices.
-
-The admin server is **source available** under the Elastic License 2.0. The full source is published, you can read, modify, self-host, run it for your own organization, run it as part of how you deliver services to your own customers, and use it commercially. The license carves out only one significant restriction: you may not offer Edge Admin itself (or its substantial functionality) to third parties as a hosted or managed service. That clause is what makes a hosted Edge Admin tier viable as a commercial product without a hyperscaler reselling it the next day.
-
-What this means in practice:
-
-- **Allowed without asking us:** self-hosting for your own company, using it internally to manage your own fleet, using it as a tool while delivering services to your clients (MSP / consulting / IoT vendor patterns), modifying it, redistributing modified versions under ELv2, building products on top of it that aren't themselves "Edge Admin in the cloud."
-- **Requires a commercial license from us:** offering Edge Admin (or a thin wrapper around it) as a hosted SaaS that customers sign up for and use directly.
-
-Email **<licensing@wenet-ec.com>** if your use case needs a commercial license, or if you're not sure whether what you want to build falls inside or outside ELv2 — we'll tell you, and we're not looking to be difficult about it.
-
-Contributions are welcome. See [`CONTRIBUTING.md`](https://github.com/wenet-ec/edge-core/blob/main/CONTRIBUTING.md) for the contribution flow and the Developer Certificate of Origin (DCO) sign-off we require on every commit.
-
-Copyright © 2026 WENET VIETNAM JOINT STOCK COMPANY. "Edge Core", "Edge Admin", "Edge Agent", "Nexmaker", "Wenet", and "Wenetec" are trademarks of WENET VIETNAM JOINT STOCK COMPANY. The licenses above grant rights to the software only — not to the trademarks.
+Contributions are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the contribution flow and DCO requirements.

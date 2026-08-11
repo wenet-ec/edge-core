@@ -15,6 +15,14 @@ This guide is for operators and integrators using a running Edge Admin. If you w
 
 ---
 
+## How to think about Edge Core
+
+If you have used a cloud provider, the basic control-plane model should feel familiar: a central API manages remote machines, gives them private connectivity, collects metrics, runs work, provides controlled access, and reports events. Edge Core applies that model to machines distributed across places the operator does not fully control.
+
+The difference is the network. Edge nodes can be behind NAT or firewalls, lose connectivity, have changing addresses, and still need to reach services on their local LAN. Edge Core includes the VPN, relay, polling, and proxy paths needed to keep those machines operable under those conditions. It manages existing machines; it is not a VM or storage provider.
+
+The self-hostable Core is deliberately independent of any hosted platform. Use the REST API, MCP, webhooks, and event brokers to build the workflows that fit your organization, or place a higher-level platform on top when you need provisioning, deployments, tenancy, or billing.
+
 ## Settings Config URL migrations
 
 `ADMIN_URLS` and `CORE_DERP_MAP_URLS` have deliberately different migration rules.

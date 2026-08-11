@@ -1,10 +1,26 @@
 # Edge Core — Architecture
 
-**Last Updated: 2026-08-04**
+**Last Updated: 2026-08-11**
 
 Edge Core is an infrastructure management platform for fleets of Linux machines you don't physically touch — cloud VMs, on-premises servers, factory-floor equipment, Raspberry Pis, homelab boxes, IoT devices. Anywhere you have N machines and want a single HTTP API to operate them, the same primitives apply: a secure WireGuard mesh, remote command execution, SSH without exposing port 22, HTTP/SOCKS5 forward proxying through any node, Prometheus metrics aggregation.
 
 The project is named "Edge Core" because the founding pain came from edge devices, but **"edge" here means *any machine you don't physically touch right now*** — a cloud VM in Frankfurt is as much an "edge" node to this control plane as a Pi in a factory. The control plane doesn't care; it's the same problem.
+
+## The control-plane analogy
+
+The useful mental model is not “cloud versus a list of edge products.” It is **cloud control-plane primitives applied to machines that live outside a provider's network**.
+
+In a conventional cloud environment, the provider makes remote operations straightforward: machines share a managed private network, metrics are collected centrally, APIs execute work remotely, SSH is available through a controlled path, updates can be coordinated, and events report failures or state changes. Edge Core provides those same operational primitives for machines distributed across sites that the operator does not fully control.
+
+The edge difference is the network and failure model. Nodes may be behind NAT, strict firewalls, UDP filtering, intermittent links, local-only services, or power outages. Their local network may be useful to the operator but must not be exposed to the public internet. Edge Core therefore treats resilient connectivity as part of the control plane rather than assuming it already exists:
+
+- **VPN mesh:** clusters provide an isolated WireGuard network for node-to-node and Admin-to-Agent communication.
+- **Fallback paths:** direct WireGuard is preferred, DERP relay handles difficult NAT paths, and HTTP polling preserves eventual control when the VPN path is unavailable.
+- **Proxy reachability:** an Admin proxy can reach a node directly or chain through an Agent to reach that site's LAN or internet connection.
+- **Central operations:** commands, SSH verification, metrics, self-updates, and lifecycle events remain available through one API surface.
+- **Automation:** REST and MCP expose the same management primitives to scripts, integrations, and AI operators.
+
+Edge Core is not a compute provider and does not provision virtual machines, disks, or regions. It manages machines that already exist. The open-source, self-hostable Core is intentionally platform-agnostic; a hosted platform may add provisioning, deployment, tenancy, billing, and cloud services above it without changing the Core's machine-management contract.
 
 ---
 

@@ -24,14 +24,14 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
      - URLs come from the decoded enrollment-key blob, not Settings
      - Retries the next URL on 503 (degraded mode) and on network error
 
-  2. **Bootstrap Registration** (`request_with_fallback/2`)
+  2. **Bootstrap Registration** (`AdminClient.Transport.request_with_fallback/2`)
      - Used for initial registration and recovery; no API token is sent
      - URLs come from Settings: VPN admin URLs first, then public fallback URLs
        stored at enrollment time
      - Tries public fallback URLs only after every VPN URL has a network error;
        HTTP responses remain terminal
 
-  3. **Authenticated Requests** (`request_with_auth/2`)
+  3. **Authenticated Requests** (`AdminClient.Transport.request_with_auth/2`)
      - Used for all post-registration endpoints
      - Requires API token from Settings
      - Adds `Authorization: Bearer <token>` header
@@ -109,7 +109,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
       {:ok, true}
   """
 
-  alias EdgeAgent.Settings
+  alias EdgeAgent.EdgeClusters.AdminClient.Transport
 
   require Logger
 
@@ -241,7 +241,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     path = "/api/v1/agents/nodes/register"
     payload = node_params
 
-    request_with_fallback(path, fn url ->
+    Transport.request_with_fallback(path, fn url ->
       opts = Keyword.merge([json: payload], http_options())
 
       case Req.post(url, opts) do
@@ -264,7 +264,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   """
   @spec reregister_node(map()) :: {:ok, map()} | {:error, term()}
   def reregister_node(node_params) do
-    request_with_auth("/api/v1/agents/nodes/reregister", fn url, headers ->
+    Transport.request_with_auth("/api/v1/agents/nodes/reregister", fn url, headers ->
       opts = Keyword.merge([json: node_params, headers: headers], http_options())
 
       case Req.post(url, opts) do
@@ -282,7 +282,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   """
   @spec get_settings_config() :: {:ok, map()} | {:error, term()}
   def get_settings_config do
-    request_with_auth("/api/v1/agents/settings/config", fn url, headers ->
+    Transport.request_with_auth("/api/v1/agents/settings/config", fn url, headers ->
       opts = Keyword.merge([headers: headers], http_options())
 
       case Req.get(url, opts) do
@@ -332,7 +332,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
           %{username: username, public_key: public_key}
       end
 
-    request_with_auth(path, fn url, headers ->
+    Transport.request_with_auth(path, fn url, headers ->
       opts = Keyword.merge([json: payload, headers: headers], http_options())
 
       case Req.post(url, opts) do
@@ -390,7 +390,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
       "sort" => Keyword.get(opts, :sort, "inserted_at")
     }
 
-    request_with_auth(path, fn url, headers ->
+    Transport.request_with_auth(path, fn url, headers ->
       opts = Keyword.merge([headers: headers, params: query_params], http_options())
 
       case Req.get(url, opts) do
@@ -467,7 +467,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   def acknowledge_command_execution(execution_id) do
     path = "/api/v1/agents/command_executions/#{execution_id}/acknowledge"
 
-    request_with_auth(path, fn url, headers ->
+    Transport.request_with_auth(path, fn url, headers ->
       opts = Keyword.merge([json: %{}, headers: headers], http_options())
 
       case Req.post(url, opts) do
@@ -507,7 +507,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   def report_health_check(status) do
     path = "/api/v1/agents/nodes/me/health_check"
 
-    request_with_auth(path, fn url, headers ->
+    Transport.request_with_auth(path, fn url, headers ->
       payload = %{status: status}
       opts = Keyword.merge([json: payload, headers: headers], http_options())
 
@@ -537,7 +537,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   def push_diagnostics(diagnostic) when is_map(diagnostic) do
     path = "/api/v1/agents/diagnostics/push"
 
-    request_with_auth(path, fn url, headers ->
+    Transport.request_with_auth(path, fn url, headers ->
       opts = Keyword.merge([json: %{diagnostic: diagnostic}, headers: headers], http_options())
 
       case Req.post(url, opts) do
@@ -574,7 +574,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   def check_self_update do
     path = "/api/v1/agents/self_updates/check"
 
-    request_with_auth(path, fn url, headers ->
+    Transport.request_with_auth(path, fn url, headers ->
       opts = Keyword.merge([headers: headers], http_options())
 
       case Req.get(url, opts) do
@@ -618,7 +618,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     path = "/api/v1/agents/command_executions/#{execution_id}/report_result"
     payload = command_execution_params
 
-    request_with_auth(path, fn url, headers ->
+    Transport.request_with_auth(path, fn url, headers ->
       opts = Keyword.merge([json: payload, headers: headers], http_options())
 
       case Req.post(url, opts) do
@@ -662,7 +662,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   def push_metrics(metrics_type, metrics_text) do
     path = "/api/v1/agents/metrics/push"
 
-    request_with_auth(path, fn url, headers ->
+    Transport.request_with_auth(path, fn url, headers ->
       payload = %{
         metrics_type: metrics_type,
         metrics_text: metrics_text
@@ -699,7 +699,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
   def register_alias(name) do
     path = "/api/v1/agents/aliases"
 
-    request_with_auth(path, fn url, headers ->
+    Transport.request_with_auth(path, fn url, headers ->
       payload = %{name: name}
       opts = Keyword.merge([json: payload, headers: headers], http_options())
 
@@ -716,101 +716,11 @@ defmodule EdgeAgent.EdgeClusters.AdminClient do
     end)
   end
 
-  # Private functions
-
-  defp request_with_fallback(path, request_fn) do
-    case get_urls_to_try() do
-      [] ->
-        Logger.warning("No admin URLs available")
-        {:error, :no_admin_urls}
-
-      urls ->
-        try_request(urls, path, request_fn)
-    end
-  end
-
-  defp request_with_auth(path, request_fn) do
-    case Settings.get_api_token() do
-      nil ->
-        Logger.warning("No API token found in Settings")
-        {:error, :no_api_token}
-
-      api_token ->
-        headers = [{"authorization", "Bearer #{api_token}"}]
-
-        case get_urls_to_try() do
-          [] ->
-            Logger.warning("No admin URLs available")
-            {:error, :no_admin_urls}
-
-          urls ->
-            try_request_with_auth(urls, path, headers, request_fn)
-        end
-    end
-  end
-
-  # Get list of URLs to try: every VPN admin URL first, then every distinct public
-  # fallback URL. `try_request*` only advances after transport failures, so a
-  # reachable HTTP response (including an error status) remains terminal.
-  defp get_urls_to_try do
-    vpn_urls = Settings.get_admin_urls()
-    fallback_urls = Settings.get_admin_fallback_urls()
-
-    cond do
-      vpn_urls == [] and fallback_urls != [] ->
-        Logger.info("No VPN admin URLs, using HTTP fallback: #{inspect(fallback_urls)}")
-
-      vpn_urls != [] and fallback_urls != [] ->
-        Logger.debug("VPN admin URLs will be tried before public fallback URLs: #{inspect(fallback_urls)}")
-
-      true ->
-        :ok
-    end
-
-    urls_to_try(vpn_urls, fallback_urls)
-  end
-
   @doc false
   # Kept pure and public for unit testing. VPN URLs are deliberately not
   # discarded merely because public fallbacks exist: their lower latency is the
   # preferred path. The fallback URLs follow them so the same request can still
   # escape a broken VPN path without waiting for another scheduler tick.
   @spec urls_to_try([String.t()], [String.t()]) :: [String.t()]
-  def urls_to_try(vpn_urls, fallback_urls) do
-    Enum.uniq(vpn_urls ++ fallback_urls)
-  end
-
-  defp try_request([url | remaining_urls], path, request_fn) do
-    full_url = "#{url}#{path}"
-
-    case request_fn.(full_url) do
-      {:error, {:request_failed, _reason}} when remaining_urls != [] ->
-        Logger.debug("Request to #{full_url} failed, trying next URL")
-        try_request(remaining_urls, path, request_fn)
-
-      result ->
-        result
-    end
-  end
-
-  defp try_request([], _path, _request_fn) do
-    {:error, {:all_requests_failed, "All admin URLs failed"}}
-  end
-
-  defp try_request_with_auth([url | remaining_urls], path, headers, request_fn) do
-    full_url = "#{url}#{path}"
-
-    case request_fn.(full_url, headers) do
-      {:error, {:request_failed, _reason}} when remaining_urls != [] ->
-        Logger.debug("Request to #{full_url} failed, trying next URL")
-        try_request_with_auth(remaining_urls, path, headers, request_fn)
-
-      result ->
-        result
-    end
-  end
-
-  defp try_request_with_auth([], _path, _headers, _request_fn) do
-    {:error, {:all_requests_failed, "All admin URLs failed"}}
-  end
+  def urls_to_try(vpn_urls, fallback_urls), do: Transport.urls_to_try(vpn_urls, fallback_urls)
 end

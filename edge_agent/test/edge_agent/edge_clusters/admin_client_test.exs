@@ -3,19 +3,14 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
   use EdgeAgent.DataCase, async: false
 
   alias EdgeAgent.EdgeClusters.AdminClient
+  alias EdgeAgent.EdgeClusters.AdminClient.Transport
   alias EdgeAgent.Settings
 
   # ---------------------------------------------------------------------------
   # urls_to_try/2 — fallback URL priority logic
   #
-  # The function is private, so we test it via the public API by observing
-  # which error is returned: {:error, :no_admin_urls} means the URL list was
-  # empty; any other error means a URL was found and a request was attempted.
-  #
-  # We trigger the "no URLs" path by setting everything to empty and check the
-  # "fallback used" path by seeding Settings and watching for a network attempt
-  # (which will fail with :request_failed when there's no real admin running,
-  # but that proves the URL was resolved).
+  # URL ordering is pure and belongs to AdminClient.Transport. The surrounding
+  # AdminClient cases retain coverage for Settings-backed failover behavior.
   # ---------------------------------------------------------------------------
 
   describe "urls_to_try/2 — VPN admin URLs take priority" do
@@ -39,7 +34,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
     end
 
     test "public fallback URLs follow all VPN URLs, so one request can recover from VPN transport failures" do
-      assert AdminClient.urls_to_try(
+      assert Transport.urls_to_try(
                ["http://100.64.0.4:44000", "http://100.64.0.5:44000"],
                ["https://admin.example.com", "https://admin-backup.example.com"]
              ) == [
@@ -51,7 +46,7 @@ defmodule EdgeAgent.EdgeClusters.AdminClientTest do
     end
 
     test "duplicate public URL is attempted only once" do
-      assert AdminClient.urls_to_try(
+      assert Transport.urls_to_try(
                ["http://100.64.0.4:44000"],
                ["http://100.64.0.4:44000", "https://admin.example.com"]
              ) == ["http://100.64.0.4:44000", "https://admin.example.com"]

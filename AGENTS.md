@@ -418,7 +418,7 @@ Admin background work is split between two schedulers with different semantics:
 
 **Oban** — jobs inserted by the DB peer leader, competed for by any admin across all clusters sharing the same DB:
 
-- `EdgeAdmin.Commands.Workers.CreateExecutionsWorker` - Creates CommandExecution records for each targeted node
+- `EdgeAdmin.Commands.Workers.CreateCommandExecutionsWorker` - Creates CommandExecution records for each targeted node
 - `EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker` - Enqueues active-cluster reconciliation and retired-cluster deletion work
 - `EdgeAdmin.Nodes.Workers.ReconcileClusterWorker` - Syncs a single cluster's node state with Netmaker VPN
 - `EdgeAdmin.Nodes.Workers.DeleteClusterWorker` - Completes deletion of one retired cluster

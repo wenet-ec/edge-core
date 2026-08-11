@@ -428,7 +428,7 @@ config :edge_admin, Oban,
        # Fan out active-cluster reconciliation and retired-cluster deletion work
        {cluster_reconciliation_schedule, EdgeAdmin.Nodes.Workers.ScheduleClusterReconciliationWorker},
        # Delete finalised command executions older than retention
-       {execution_pruning_schedule, EdgeAdmin.Commands.Workers.PruneExecutionsWorker}
+       {execution_pruning_schedule, EdgeAdmin.Commands.Workers.PruneCommandExecutionsWorker}
      ]},
     Oban.Plugins.Lifeline,
     {Oban.Plugins.Pruner, max_age: 86_400}

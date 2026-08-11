@@ -1,5 +1,5 @@
 # edge_admin/test/edge_admin/vpn_zombie_and_classify_test.exs
-defmodule EdgeAdmin.Vpn.ZombieAndClassifyTest do
+defmodule EdgeAdmin.VpnZombieAndClassifyTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Vpn

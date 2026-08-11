@@ -31,6 +31,7 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
   alias EdgeAdmin.ProxyServers.Config
   alias EdgeAdmin.ProxyServers.ErrorHandler
   alias EdgeAdmin.ProxyServers.Http.Parser, as: HttpParser
+  alias EdgeAdmin.ProxyServers.Http.Request, as: HttpRequest
   alias EdgeAdmin.ProxyServers.Transport.TunnelRegistry
   alias EdgeAdmin.ProxyServers.Tunnel.TcpTunnel
 
@@ -110,8 +111,8 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
   defp handle_http_request(socket, transport) do
     case HttpParser.read_request(socket, transport, Config.read_timeout()) do
       {:ok, %{method: method, uri: uri, version: version, headers: headers}, _body} ->
-        with :ok <- validate_proxy_form(method, uri),
-             :ok <- check_loop(headers),
+        with :ok <- HttpRequest.validate_proxy_form(method, uri),
+             :ok <- HttpRequest.check_loop(headers, via_pseudonym()),
              {:ok, routing_mode, exit_node} <- authenticate_request(socket, transport, headers) do
           dispatch_method(socket, transport, method, uri, version, headers, routing_mode, exit_node)
         else
@@ -172,7 +173,7 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
   end
 
   defp authenticate_request(socket, transport, headers) do
-    case get_header(headers, "proxy-authorization") do
+    case HttpRequest.get_header(headers, "proxy-authorization") do
       nil ->
         send_auth_required(socket, transport)
         {:error, :auth_failed}
@@ -223,7 +224,7 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
   end
 
   defp handle_connect_method(socket, transport, uri, routing_mode, exit_node) do
-    case parse_host_port(uri) do
+    case HttpRequest.parse_host_port(uri) do
       {:ok, host, port} ->
         opts = tunnel_opts(routing_mode, exit_node)
         proxy_mode = if routing_mode == :chain, do: :chain, else: :direct
@@ -270,7 +271,7 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
   end
 
   defp handle_regular_http_method(socket, transport, method, uri, http_version, headers, routing_mode, exit_node) do
-    case parse_http_uri(uri) do
+    case HttpRequest.parse_http_uri(uri) do
       {:ok, host, port, path} ->
         forward_http_request(
           socket,
@@ -297,11 +298,11 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
 
     headers_to_send =
       headers
-      |> reconcile_host_header(host, port)
-      |> filter_hop_by_hop_headers()
-      |> add_via_header(http_version)
+      |> HttpRequest.reconcile_host_header(host, port)
+      |> HttpRequest.filter_hop_by_hop_headers()
+      |> HttpRequest.add_via_header(http_version, via_pseudonym())
 
-    request = build_http_request(method, path, http_version, headers_to_send)
+    request = HttpRequest.build_http_request(method, path, http_version, headers_to_send)
 
     if routing_mode == :chain or is_vpn_target do
       opts = tunnel_opts(routing_mode, exit_node)

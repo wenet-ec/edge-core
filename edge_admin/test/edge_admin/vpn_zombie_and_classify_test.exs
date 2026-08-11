@@ -1,4 +1,4 @@
-# edge_admin/test/edge_admin/vpn/zombie_and_classify_test.exs
+# edge_admin/test/edge_admin/vpn_zombie_and_classify_test.exs
 defmodule EdgeAdmin.Vpn.ZombieAndClassifyTest do
   use ExUnit.Case, async: true
 

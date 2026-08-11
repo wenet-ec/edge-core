@@ -19,6 +19,7 @@ defmodule EdgeAgent.SshServer.Channel do
   @behaviour :ssh_server_channel
 
   alias EdgeAgent.Settings
+  alias EdgeAgent.SshServer.Channel.Pty
 
   require Logger
 
@@ -33,7 +34,6 @@ defmodule EdgeAgent.SshServer.Channel do
 
   # Conservative defaults when the client doesn't send sensible values
   # (or sends 0 for "use pixel dimensions instead", which we ignore).
-  @default_term ~c"xterm"
   @default_rows 24
   @default_cols 80
 
@@ -72,7 +72,7 @@ defmodule EdgeAgent.SshServer.Channel do
       case reason do
         :normal -> 0
         :noproc -> 0
-        {:exit_status, n} when is_integer(n) -> exit_status_from_wait(n)
+        {:exit_status, n} when is_integer(n) -> Pty.exit_status_from_wait(n)
         _ -> 1
       end
 
@@ -139,12 +139,12 @@ defmodule EdgeAgent.SshServer.Channel do
     )
 
     pty = %{
-      term: pty_term(term),
-      cols: nonzero_or(char_w, @default_cols),
-      rows: nonzero_or(row_h, @default_rows),
+      term: Pty.pty_term(term),
+      cols: Pty.nonzero_or(char_w, @default_cols),
+      rows: Pty.nonzero_or(row_h, @default_rows),
       pix_w: pix_w,
       pix_h: pix_h,
-      modes: sanitize_pty_modes(modes)
+      modes: Pty.sanitize_pty_modes(modes)
     }
 
     :ssh_connection.reply_request(connection_ref, want_reply, :success, channel_id)
@@ -205,10 +205,10 @@ defmodule EdgeAgent.SshServer.Channel do
     username = get_authenticated_user(connection_ref)
     Logger.info("Starting shell for user: #{username}")
 
-    pty = state.pty || %{term: @default_term, cols: @default_cols, rows: @default_rows, modes: []}
-    env = build_shell_env(pty, username, node_id)
+    pty = state.pty || %{term: Pty.pty_term(nil), cols: @default_cols, rows: @default_rows, modes: []}
+    env = Pty.build_shell_env(pty, username, node_id)
     cmd = [@host_pty_spawn, @host_ns_handle | @host_shell_argv]
-    run_opts = build_shell_run_opts(pty, env)
+    run_opts = Pty.build_shell_run_opts(pty, env)
 
     case :exec.run(cmd, run_opts) do
       {:ok, _epid, ospid} ->
@@ -292,95 +292,5 @@ defmodule EdgeAgent.SshServer.Channel do
     end
   rescue
     _ -> "unknown"
-  end
-
-  @doc false
-  @spec build_shell_env(map(), String.t(), String.t()) :: [{charlist(), charlist() | false}]
-  # Minimal env. host_pty_spawn execs `bash --login -i` inside the host's
-  # mount namespace, which sources the host's /etc/profile and the
-  # operator's ~/.bashrc — those set PATH, HOME, SHELL correctly. We
-  # forward only TERM (from the SSH pty-req), identity (USER, EDGE_NODE_ID),
-  # and locale.
-  #
-  # Locale: the container's Dockerfile sets LANG=en_US.UTF-8, which leaks
-  # through erlexec's default env inheritance into the host shell. If the
-  # host hasn't generated en_US.UTF-8 (most haven't), bash prints `cannot
-  # change locale` warnings on every shell startup. We override with
-  # C.UTF-8 (always-available on glibc — no locale-gen needed) and unset
-  # LANGUAGE / LC_ALL so they don't fight C.UTF-8.
-  def build_shell_env(pty, username, node_id) do
-    [
-      {~c"TERM", pty.term},
-      {~c"USER", to_charlist(username)},
-      {~c"EDGE_NODE_ID", to_charlist(node_id)},
-      {~c"LANG", ~c"C.UTF-8"},
-      {~c"LANGUAGE", false},
-      {~c"LC_ALL", false}
-    ]
-  end
-
-  @doc false
-  @spec build_shell_run_opts(map(), [{charlist(), charlist()}]) :: keyword()
-  # No `:cd` — host_pty_spawn enters the host's mount namespace before exec
-  # bash. Bash's --login flag reads $HOME from the host's /etc/passwd and
-  # starts the user there. Setting `:cd` here to a container path would
-  # resolve in the container's mount ns and either fail or land in the
-  # wrong place after the namespace swap.
-  def build_shell_run_opts(pty, env) do
-    [
-      {:pty, pty.modes},
-      :pty_echo,
-      :stdin,
-      {:stdout, self()},
-      {:stderr, :stdout},
-      {:winsz, {pty.rows, pty.cols}},
-      {:env, env},
-      :monitor,
-      :kill_group
-    ]
-  end
-
-  @doc false
-  @spec pty_term(term()) :: charlist()
-  def pty_term(""), do: @default_term
-  def pty_term(term) when is_list(term) and term != [], do: term
-  def pty_term(term) when is_binary(term) and byte_size(term) > 0, do: to_charlist(term)
-  def pty_term(_), do: @default_term
-
-  @doc false
-  @spec nonzero_or(term(), pos_integer()) :: pos_integer()
-  def nonzero_or(0, default), do: default
-  def nonzero_or(n, _default) when is_integer(n) and n > 0, do: n
-  def nonzero_or(_, default), do: default
-
-  @doc false
-  @spec sanitize_pty_modes(term()) :: [{atom(), integer() | boolean()}]
-  # erlexec only accepts pty modes whose key is an atom and whose value is a
-  # boolean or integer. The Erlang ssh app gives us {atom, integer} for
-  # known opcodes and {byte, integer} for unknown ones (numeric opcodes).
-  # Drop the numeric-opcode entries so erlexec's strict validation doesn't
-  # reject the whole list.
-  def sanitize_pty_modes(modes) when is_list(modes) do
-    Enum.filter(modes, fn
-      {k, v} when is_atom(k) and (is_integer(v) or is_boolean(v)) -> true
-      _ -> false
-    end)
-  end
-
-  def sanitize_pty_modes(_), do: []
-
-  @doc false
-  @spec exit_status_from_wait(integer()) :: 0..255
-  # Translate erlexec's wait(2) status (e.g. 256 for "exited with status 1")
-  # into a plain exit code. erlexec passes the raw status through; SSH wants
-  # 0..255. If the low 7 bits are zero the child exited normally and the exit
-  # code lives in the high byte; otherwise the child was killed by signal N
-  # (low 7 bits = N), which we surface as a plain N.
-  def exit_status_from_wait(n) when is_integer(n) do
-    if Bitwise.band(n, 0x7F) == 0 do
-      n |> Bitwise.bsr(8) |> Bitwise.band(0xFF)
-    else
-      Bitwise.band(n, 0x7F)
-    end
   end
 end

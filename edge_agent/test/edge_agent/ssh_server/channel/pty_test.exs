@@ -1,8 +1,8 @@
-# edge_agent/test/edge_agent/ssh_server/channel_test.exs
-defmodule EdgeAgent.SshServer.ChannelTest do
+# edge_agent/test/edge_agent/ssh_server/channel/pty_test.exs
+defmodule EdgeAgent.SshServer.Channel.PtyTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAgent.SshServer.Channel
+  alias EdgeAgent.SshServer.Channel.Pty, as: Channel
 
   # ---------------------------------------------------------------------------
   # pty_term/1 — normalises the `TERM` value coming out of the SSH pty-req.

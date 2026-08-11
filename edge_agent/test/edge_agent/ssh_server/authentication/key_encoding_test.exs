@@ -1,8 +1,8 @@
-# edge_agent/test/edge_agent/ssh_server/authentication_test.exs
-defmodule EdgeAgent.SshServer.AuthenticationTest do
+# edge_agent/test/edge_agent/ssh_server/authentication/key_encoding_test.exs
+defmodule EdgeAgent.SshServer.Authentication.KeyEncodingTest do
   use ExUnit.Case, async: true
 
-  alias EdgeAgent.SshServer.Authentication
+  alias EdgeAgent.SshServer.Authentication.KeyEncoding, as: Authentication
 
   # ---------------------------------------------------------------------------
   # ssh_string/1 — RFC 4251 §5 length-prefixed string

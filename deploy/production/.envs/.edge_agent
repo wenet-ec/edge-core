@@ -102,7 +102,7 @@ WATCHTOWER_HTTP_API_TOKEN=change-me-in-production
 # DISCOVER_ADMINS_SCHEDULE=*/3 * * * *       # Probe VPN for admin peers (default: every 3min)
 # CHECK_SELF_UPDATE_SCHEDULE=0 */2 * * *     # Poll admin for self-update requests via HTTP fallback (default: every 2h)
 # PUSH_METRICS_SCHEDULE=*/2 * * * *          # Push metrics to admin via HTTP fallback (default: every 2min)
-# PULL_VPN_CONFIG_SCHEDULE=0 0 * * *         # Pull full VPN config from Netmaker as DNS recovery backstop (default: daily)
+# PULL_VPN_CONFIG_SCHEDULE=0 0 * * *         # Pull full VPN config as DNS recovery backstop (default: daily)
 
 # =============================================================================
 # VPN

@@ -36,7 +36,7 @@ cleanup() {
         echo "No netclient daemon to stop"
     fi
 
-    # Clean up routing policy rules (netmaker creates these with priorities 3000, 2500, 2000)
+    # Clean up routing policy rules (netclient creates these with priorities 3000, 2500, 2000)
     echo "Cleaning up routing policy rules..."
     ip rule delete pref 3000 2>/dev/null || true
     ip rule delete pref 2500 2>/dev/null || true
@@ -102,9 +102,9 @@ ip link delete netmaker 2>/dev/null || true
 # (either first boot or after a clean shutdown) we pre-seed it so the daemon
 # can start cleanly.
 #
-# If resolv.conf already has the netmaker header (leftover from a prior run),
-# we strip the netmaker lines when seeding the backup — otherwise the backup
-# would contain the netmaker header itself, which defeats its purpose.
+# If resolv.conf already has the netclient header (leftover from a prior run),
+# we strip the netclient lines when seeding the backup — otherwise the backup
+# would contain the netclient header itself, which defeats its purpose.
 RESOLV_TARGET=$(readlink -f /etc/resolv.conf 2>/dev/null || echo /etc/resolv.conf)
 BACKUP=/etc/netmaker-resolv.backup.conf
 if [ ! -f "$BACKUP" ]; then

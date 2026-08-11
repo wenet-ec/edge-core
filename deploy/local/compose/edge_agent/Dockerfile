@@ -110,7 +110,7 @@ ENV LC_ALL=en_US.UTF-8
 COPY --from=node-exporter-builder /bin/node_exporter /usr/local/bin/node_exporter
 RUN chmod +x /usr/local/bin/node_exporter
 
-# Use HTTP for Netmaker API (local dev — no TLS certs)
+# Use HTTP for the Netclient VPN API contract (local dev — no TLS certs).
 ENV NETMAKER_API_SCHEME=http
 
 # Agent defaults to userspace WireGuard; override to unset for kernel mode on bare metal

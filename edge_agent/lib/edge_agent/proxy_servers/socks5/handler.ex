@@ -20,7 +20,7 @@ defmodule EdgeAgent.ProxyServers.Socks5.Handler do
   alias EdgeAgent.ProxyServers.ErrorHandler
   alias EdgeAgent.ProxyServers.Socks5.Codec, as: Socks5Codec
   alias EdgeAgent.ProxyServers.Transport.BufferedReader
-  alias EdgeAgent.ProxyServers.Transport.DestinationValidator
+  alias EdgeAgent.ProxyServers.Transport.DestinationResolver
   alias EdgeAgent.ProxyServers.Transport.Forwarder
   alias EdgeAgent.ProxyServers.Transport.TunnelRegistry
 
@@ -170,7 +170,7 @@ defmodule EdgeAgent.ProxyServers.Socks5.Handler do
   defp establish_tunnel(socket, transport, target_host, target_port) do
     metadata = %{protocol: :socks5, target_host: target_host, target_port: target_port}
 
-    case DestinationValidator.resolve_and_validate(target_host, target_port) do
+    case DestinationResolver.resolve_and_validate(target_host, target_port) do
       {:ok, ip_tuple} ->
         case :gen_tcp.connect(
                ip_tuple,

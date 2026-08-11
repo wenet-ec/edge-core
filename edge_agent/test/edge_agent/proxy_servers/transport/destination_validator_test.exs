@@ -2,6 +2,7 @@
 defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
   use ExUnit.Case, async: false
 
+  alias EdgeAgent.ProxyServers.Transport.DestinationResolver
   alias EdgeAgent.ProxyServers.Transport.DestinationValidator
 
   # Helpers to temporarily set Application env then restore
@@ -17,12 +18,12 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
       else
         Application.put_env(:edge_agent, key, old)
       end
+
+      # -----------------------------------------------------------------------
+      # localhost?/1
+      # -----------------------------------------------------------------------
     end
   end
-
-  # -----------------------------------------------------------------------
-  # localhost?/1
-  # -----------------------------------------------------------------------
 
   describe "localhost?/1" do
     test "\"localhost\" is loopback" do
@@ -117,11 +118,10 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
     end
   end
 
-  # -----------------------------------------------------------------------
-  # link_local?/1
-  # -----------------------------------------------------------------------
-
   describe "link_local?/1" do
+    # -----------------------------------------------------------------------
+    # link_local?/1
+    # -----------------------------------------------------------------------
     test "169.254.0.0 is link-local" do
       assert DestinationValidator.link_local?("169.254.0.0")
     end
@@ -151,14 +151,14 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
     end
   end
 
-  # -----------------------------------------------------------------------
-  # docker_port?/1
-  # -----------------------------------------------------------------------
-
   describe "docker_port?/1" do
     test "2375 is Docker API port" do
       assert DestinationValidator.docker_port?(2375)
     end
+
+    # -----------------------------------------------------------------------
+    # docker_port?/1
+    # -----------------------------------------------------------------------
 
     test "2376 is Docker TLS API port" do
       assert DestinationValidator.docker_port?(2376)
@@ -181,10 +181,6 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
     end
   end
 
-  # -----------------------------------------------------------------------
-  # kubernetes_port?/1
-  # -----------------------------------------------------------------------
-
   describe "kubernetes_port?/1" do
     test "6443 is K8s API server port" do
       assert DestinationValidator.kubernetes_port?(6443)
@@ -193,6 +189,10 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
     test "10250 is Kubelet API port" do
       assert DestinationValidator.kubernetes_port?(10_250)
     end
+
+    # -----------------------------------------------------------------------
+    # kubernetes_port?/1
+    # -----------------------------------------------------------------------
 
     test "10255 is Kubelet read-only port" do
       assert DestinationValidator.kubernetes_port?(10_255)
@@ -215,10 +215,6 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
     end
   end
 
-  # -----------------------------------------------------------------------
-  # metrics_port?/1
-  # -----------------------------------------------------------------------
-
   describe "metrics_port?/1" do
     test "host_metrics_port is blocked" do
       with_app_env(:host_metrics_port, 49_100, fn ->
@@ -229,6 +225,9 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
     end
 
     test "wireguard_metrics_port is blocked" do
+      # -----------------------------------------------------------------------
+      # metrics_port?/1
+      # -----------------------------------------------------------------------
       with_app_env(:host_metrics_port, 49_100, fn ->
         with_app_env(:wireguard_metrics_port, 49_586, fn ->
           assert DestinationValidator.metrics_port?(49_586)
@@ -247,10 +246,6 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
     end
   end
 
-  # -----------------------------------------------------------------------
-  # custom_blocked?/2
-  # -----------------------------------------------------------------------
-
   describe "custom_blocked?/2" do
     test "host-only entry blocks all ports for that host" do
       with_app_env(:proxy_custom_blocked_hosts, ["evil.com"], fn ->
@@ -264,6 +259,9 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
 
     test "host-only entry is case-insensitive" do
       with_app_env(:proxy_custom_blocked_hosts, ["Evil.Com"], fn ->
+        # -----------------------------------------------------------------------
+        # custom_blocked?/2
+        # -----------------------------------------------------------------------
         with_app_env(:proxy_blocked_ports, [], fn ->
           assert DestinationValidator.custom_blocked?("evil.com", 80)
           assert DestinationValidator.custom_blocked?("EVIL.COM", 80)
@@ -307,10 +305,6 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
     end
   end
 
-  # -----------------------------------------------------------------------
-  # custom_allowed?/2
-  # -----------------------------------------------------------------------
-
   describe "custom_allowed?/2" do
     test "host-only entry allows all ports for that host" do
       with_app_env(:proxy_custom_allowed_hosts, ["trusted.internal"], fn ->
@@ -327,6 +321,9 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
     end
 
     test "host+port entry allows only that specific port" do
+      # -----------------------------------------------------------------------
+      # custom_allowed?/2
+      # -----------------------------------------------------------------------
       with_app_env(:proxy_custom_allowed_hosts, [{"special.internal", 8080}], fn ->
         assert DestinationValidator.custom_allowed?("special.internal", 8080)
         refute DestinationValidator.custom_allowed?("special.internal", 443)
@@ -345,10 +342,6 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
       end)
     end
   end
-
-  # -----------------------------------------------------------------------
-  # validate_destination/2 — integration of all checks
-  # -----------------------------------------------------------------------
 
   describe "validate_destination/2" do
     setup do
@@ -372,6 +365,10 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
       assert :ok = DestinationValidator.validate_destination("8.8.8.8", 443)
       assert :ok = DestinationValidator.validate_destination("example.com", 80)
     end
+
+    # -----------------------------------------------------------------------
+    # validate_destination/2 — integration of all checks
+    # -----------------------------------------------------------------------
 
     test "private LAN addresses are allowed (not SSRF risk)" do
       assert :ok = DestinationValidator.validate_destination("192.168.1.1", 80)
@@ -455,10 +452,6 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
     end
   end
 
-  # -----------------------------------------------------------------------
-  # error_message/1
-  # -----------------------------------------------------------------------
-
   describe "error_message/1" do
     test "all known reasons return non-empty string" do
       reasons = [
@@ -483,6 +476,9 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
         :metadata_service_blocked,
         :link_local_blocked,
         :docker_port_blocked,
+        # -----------------------------------------------------------------------
+        # error_message/1
+        # -----------------------------------------------------------------------
         :kubernetes_port_blocked,
         :metrics_port_blocked,
         :custom_blocked
@@ -513,10 +509,6 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
     end
   end
 
-  # -----------------------------------------------------------------------
-  # IPv4-mapped IPv6 normalisation — attack surface that must NOT bypass
-  # -----------------------------------------------------------------------
-
   describe "IPv4-mapped IPv6 normalisation" do
     test "::ffff:127.0.0.1 is loopback" do
       assert DestinationValidator.localhost?("::ffff:127.0.0.1")
@@ -544,6 +536,9 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
       refute DestinationValidator.link_local?("::ffff:8.8.8.8")
     end
 
+    # -----------------------------------------------------------------------
+    # IPv4-mapped IPv6 normalisation — attack surface that must NOT bypass
+    # -----------------------------------------------------------------------
     test "validate_destination blocks ::ffff:127.0.0.1" do
       Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, [])
       Application.put_env(:edge_agent, :proxy_custom_blocked_hosts, [])
@@ -567,10 +562,6 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
     end
   end
 
-  # -----------------------------------------------------------------------
-  # IPv6 link-local (fe80::/10) — added coverage
-  # -----------------------------------------------------------------------
-
   describe "IPv6 link-local" do
     test "fe80::1 is link-local" do
       assert DestinationValidator.link_local?("fe80::1")
@@ -589,10 +580,6 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
     end
   end
 
-  # -----------------------------------------------------------------------
-  # Trailing-dot normalisation
-  # -----------------------------------------------------------------------
-
   describe "trailing-dot hostname normalisation" do
     test "metadata.google.internal. (FQDN form) is a metadata service" do
       assert DestinationValidator.metadata_service?("metadata.google.internal.")
@@ -605,6 +592,10 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
     test "localhost. (FQDN form) is loopback" do
       assert DestinationValidator.localhost?("localhost.")
     end
+
+    # -----------------------------------------------------------------------
+    # IPv6 link-local (fe80::/10) — added coverage
+    # -----------------------------------------------------------------------
 
     test "custom_blocked? respects trailing dots" do
       with_app_env(:proxy_custom_blocked_hosts, ["evil.com"], fn ->
@@ -621,23 +612,19 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
     end
   end
 
-  # -----------------------------------------------------------------------
-  # Tencent metadata host
-  # -----------------------------------------------------------------------
-
   describe "Tencent metadata host" do
     test "metadata.tencentyun.com is a metadata service" do
       assert DestinationValidator.metadata_service?("metadata.tencentyun.com")
     end
 
+    # -----------------------------------------------------------------------
+    # Trailing-dot normalisation
+    # -----------------------------------------------------------------------
+
     test "metadata.azure.internal is a metadata service" do
       assert DestinationValidator.metadata_service?("metadata.azure.internal")
     end
   end
-
-  # -----------------------------------------------------------------------
-  # IPv6 loopback substring no longer false-positives
-  # -----------------------------------------------------------------------
 
   describe "IPv6 loopback strict matching" do
     test "::1 is loopback" do
@@ -653,10 +640,6 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
     end
   end
 
-  # -----------------------------------------------------------------------
-  # resolve_and_validate/2 — IP literals
-  # -----------------------------------------------------------------------
-
   describe "resolve_and_validate/2 with IP literals" do
     setup do
       Application.put_env(:edge_agent, :proxy_custom_allowed_hosts, [])
@@ -667,6 +650,9 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
 
       on_exit(fn ->
         Application.delete_env(:edge_agent, :proxy_custom_allowed_hosts)
+        # -----------------------------------------------------------------------
+        # Tencent metadata host
+        # -----------------------------------------------------------------------
         Application.delete_env(:edge_agent, :proxy_custom_blocked_hosts)
         Application.delete_env(:edge_agent, :proxy_blocked_ports)
         Application.delete_env(:edge_agent, :host_metrics_port)
@@ -675,37 +661,44 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
     end
 
     test "public IPv4 literal returns the IP tuple" do
-      assert {:ok, {8, 8, 8, 8}} = DestinationValidator.resolve_and_validate("8.8.8.8", 443)
+      assert {:ok, {8, 8, 8, 8}} = DestinationResolver.resolve_and_validate("8.8.8.8", 443)
     end
 
     test "public IPv6 literal returns the IP tuple" do
       assert {:ok, {0x2001, 0x4860, 0x4860, 0, 0, 0, 0, 0x8888}} =
-               DestinationValidator.resolve_and_validate("2001:4860:4860::8888", 443)
+               DestinationResolver.resolve_and_validate("2001:4860:4860::8888", 443)
     end
+
+    # -----------------------------------------------------------------------
+    # IPv6 loopback substring no longer false-positives
+    # -----------------------------------------------------------------------
 
     test "loopback IPv4 is blocked" do
       assert {:error, :localhost_blocked} =
-               DestinationValidator.resolve_and_validate("127.0.0.1", 80)
+               DestinationResolver.resolve_and_validate("127.0.0.1", 80)
     end
 
     test "IPv4-mapped IPv6 of loopback is blocked (not bypassed)" do
       assert {:error, :localhost_blocked} =
-               DestinationValidator.resolve_and_validate("::ffff:127.0.0.1", 80)
+               DestinationResolver.resolve_and_validate("::ffff:127.0.0.1", 80)
     end
 
     test "metadata IP literal is blocked" do
       assert {:error, :metadata_service_blocked} =
-               DestinationValidator.resolve_and_validate("169.254.169.254", 80)
+               DestinationResolver.resolve_and_validate("169.254.169.254", 80)
     end
 
     test "IPv4-mapped IPv6 of metadata IP is blocked (not bypassed)" do
+      # -----------------------------------------------------------------------
+      # resolve_and_validate/2 — IP literals
+      # -----------------------------------------------------------------------
       assert {:error, :metadata_service_blocked} =
-               DestinationValidator.resolve_and_validate("::ffff:169.254.169.254", 80)
+               DestinationResolver.resolve_and_validate("::ffff:169.254.169.254", 80)
     end
 
     test "Docker port on a public IP literal is blocked" do
       assert {:error, :docker_port_blocked} =
-               DestinationValidator.resolve_and_validate("8.8.8.8", 2375)
+               DestinationResolver.resolve_and_validate("8.8.8.8", 2375)
     end
 
     test "allowlist on host:port pair bypasses Docker port block" do
@@ -715,7 +708,7 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidatorTest do
         [{"8.8.8.8", 2375}]
       )
 
-      assert {:ok, {8, 8, 8, 8}} = DestinationValidator.resolve_and_validate("8.8.8.8", 2375)
+      assert {:ok, {8, 8, 8, 8}} = DestinationResolver.resolve_and_validate("8.8.8.8", 2375)
     end
   end
 end

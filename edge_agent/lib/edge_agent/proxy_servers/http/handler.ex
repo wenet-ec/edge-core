@@ -29,7 +29,8 @@ defmodule EdgeAgent.ProxyServers.Http.Handler do
   alias EdgeAgent.ProxyServers.Config
   alias EdgeAgent.ProxyServers.ErrorHandler
   alias EdgeAgent.ProxyServers.Http.Parser, as: HttpParser
-  alias EdgeAgent.ProxyServers.Transport.DestinationValidator
+  alias EdgeAgent.ProxyServers.Http.Request, as: HttpRequest
+  alias EdgeAgent.ProxyServers.Transport.DestinationResolver
   alias EdgeAgent.ProxyServers.Transport.Forwarder
   alias EdgeAgent.ProxyServers.Transport.TunnelRegistry
 
@@ -105,8 +106,8 @@ defmodule EdgeAgent.ProxyServers.Http.Handler do
   defp handle_http_request(socket, transport) do
     case HttpParser.read_request(socket, transport, Config.read_timeout()) do
       {:ok, %{method: method, uri: uri, version: version, headers: headers}, _body} ->
-        with :ok <- validate_proxy_form(method, uri),
-             :ok <- check_loop(headers),
+        with :ok <- HttpRequest.validate_proxy_form(method, uri),
+             :ok <- HttpRequest.check_loop(headers, via_pseudonym()),
              :ok <- authenticate_request(socket, transport, headers) do
           dispatch_method(socket, transport, method, uri, version, headers)
         else
@@ -162,7 +163,7 @@ defmodule EdgeAgent.ProxyServers.Http.Handler do
   end
 
   defp authenticate_request(socket, transport, headers) do
-    case get_header(headers, "proxy-authorization") do
+    case HttpRequest.get_header(headers, "proxy-authorization") do
       nil ->
         send_auth_required(socket, transport)
         {:error, :auth_failed}
@@ -207,7 +208,7 @@ defmodule EdgeAgent.ProxyServers.Http.Handler do
   end
 
   defp handle_connect_method(socket, transport, uri) do
-    with {:ok, host, port} <- parse_host_port(uri),
+    with {:ok, host, port} <- HttpRequest.parse_host_port(uri),
          {:ok, ip_tuple} <- resolve_and_validate(host, port, "CONNECT") do
       metadata = %{protocol: :http, target_host: host, target_port: port, kind: :connect}
 
@@ -236,33 +237,11 @@ defmodule EdgeAgent.ProxyServers.Http.Handler do
   end
 
   defp handle_regular_http_method(socket, transport, method, uri, http_version, headers) do
-    with {:ok, host, port, path} <- parse_http_uri(uri),
+    with {:ok, host, port, path} <- HttpRequest.parse_http_uri(uri),
          {:ok, ip_tuple} <- resolve_and_validate(host, port, method) do
-      headers_to_send =
-        headers
-        |> reconcile_host_header(host, port)
-        |> filter_hop_by_hop_headers()
-        |> add_via_header(http_version)
-
-      request = build_http_request(method, path, http_version, headers_to_send)
+      request = build_regular_request(method, path, http_version, headers, host, port)
       metadata = %{protocol: :http, target_host: host, target_port: port, kind: :request, method: method}
-
-      case :gen_tcp.connect(ip_tuple, port, [:binary, packet: :raw, active: false], Config.connection_timeout()) do
-        {:ok, target_socket} ->
-          :gen_tcp.send(target_socket, request)
-          :ok = TunnelRegistry.register(metadata)
-
-          try do
-            Forwarder.forward(socket, target_socket, metadata)
-          after
-            TunnelRegistry.unregister()
-          end
-
-        {:error, reason} ->
-          {status, message} = ErrorHandler.http_error_response(reason)
-          send_error(socket, transport, status, message)
-          {:error, reason}
-      end
+      forward_regular_request(socket, transport, ip_tuple, port, request, metadata)
     else
       {:error, reason} ->
         {status, message} = ErrorHandler.http_error_response(reason)
@@ -271,8 +250,35 @@ defmodule EdgeAgent.ProxyServers.Http.Handler do
     end
   end
 
+  defp build_regular_request(method, path, http_version, headers, host, port) do
+    headers
+    |> HttpRequest.reconcile_host_header(host, port)
+    |> HttpRequest.filter_hop_by_hop_headers()
+    |> HttpRequest.add_via_header(http_version, via_pseudonym())
+    |> then(&HttpRequest.build_http_request(method, path, http_version, &1))
+  end
+
+  defp forward_regular_request(socket, transport, ip_tuple, port, request, metadata) do
+    case :gen_tcp.connect(ip_tuple, port, [:binary, packet: :raw, active: false], Config.connection_timeout()) do
+      {:ok, target_socket} ->
+        :gen_tcp.send(target_socket, request)
+        :ok = TunnelRegistry.register(metadata)
+
+        try do
+          Forwarder.forward(socket, target_socket, metadata)
+        after
+          TunnelRegistry.unregister()
+        end
+
+      {:error, reason} ->
+        {status, message} = ErrorHandler.http_error_response(reason)
+        send_error(socket, transport, status, message)
+        {:error, reason}
+    end
+  end
+
   defp resolve_and_validate(host, port, method) do
-    case DestinationValidator.resolve_and_validate(host, port) do
+    case DestinationResolver.resolve_and_validate(host, port) do
       {:ok, ip} ->
         {:ok, ip}
 

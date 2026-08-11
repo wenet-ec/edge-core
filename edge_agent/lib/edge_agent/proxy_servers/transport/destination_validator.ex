@@ -218,7 +218,7 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidator do
   @spec localhost?(String.t()) :: boolean()
   def localhost?(host) when is_binary(host) do
     case parse_address(host) do
-      {:ok, ip} -> loopback_ip?(ip)
+      {:ok, ip} -> localhost_ip?(ip)
       :error -> hostname_loopback?(host)
     end
   end
@@ -368,21 +368,27 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidator do
   # -------------------------------------------------------------------------
 
   # IPv4 loopback: 127.0.0.0/8
-  defp loopback_ip?({127, _, _, _}), do: true
+  @doc false
+  @spec localhost_ip?(:inet.ip_address()) :: boolean()
+  def localhost_ip?({127, _, _, _}), do: true
   # 0.0.0.0 routes to loopback on Linux
-  defp loopback_ip?({0, 0, 0, 0}), do: true
+  def localhost_ip?({0, 0, 0, 0}), do: true
   # IPv6 loopback: ::1
-  defp loopback_ip?({0, 0, 0, 0, 0, 0, 0, 1}), do: true
-  defp loopback_ip?(_), do: false
+  def localhost_ip?({0, 0, 0, 0, 0, 0, 0, 1}), do: true
+  def localhost_ip?(_), do: false
 
   # IPv4 link-local: 169.254.0.0/16
-  defp link_local_ip?({169, 254, _, _}), do: true
+  @doc false
+  @spec link_local_ip?(:inet.ip_address()) :: boolean()
+  def link_local_ip?({169, 254, _, _}), do: true
   # IPv6 link-local: fe80::/10 — first 10 bits are 1111111010
-  defp link_local_ip?({a, _, _, _, _, _, _, _}) when a >= 0xFE80 and a <= 0xFEBF, do: true
+  def link_local_ip?({a, _, _, _, _, _, _, _}) when a >= 0xFE80 and a <= 0xFEBF, do: true
 
-  defp link_local_ip?(_), do: false
+  def link_local_ip?(_), do: false
 
-  defp metadata_ip?(ip), do: ip in @metadata_ips
+  @doc false
+  @spec metadata_ip?(:inet.ip_address()) :: boolean()
+  def metadata_ip?(ip), do: ip in @metadata_ips
 
   # Collapse IPv4-mapped IPv6 (::ffff:a.b.c.d) to the embedded IPv4 tuple, so
   # range checks treat `::ffff:127.0.0.1` identically to `127.0.0.1`.
@@ -482,7 +488,7 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidator do
 
   defp ip_block_reason(ip, _port) do
     cond do
-      loopback_ip?(ip) -> :localhost_blocked
+      localhost_ip?(ip) -> :localhost_blocked
       metadata_ip?(ip) -> :metadata_service_blocked
       link_local_ip?(ip) -> :link_local_blocked
       true -> nil

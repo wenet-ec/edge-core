@@ -40,6 +40,7 @@ defmodule EdgeAgent.Settings do
   """
 
   alias EdgeAgent.Settings.Configs
+  alias EdgeAgent.Settings.ConfigValueCodec
   alias EdgeAgent.Settings.Schemas.Setting
   alias EdgeAgent.Settings.Secrets
 
@@ -92,22 +93,13 @@ defmodule EdgeAgent.Settings do
 
   @spec get_admin_urls() :: [String.t()]
   def get_admin_urls do
-    case get_config("admin_urls") do
-      nil ->
-        []
-
-      json when is_binary(json) ->
-        case JSON.decode(json) do
-          {:ok, urls} when is_list(urls) -> urls
-          _ -> []
-        end
-    end
+    "admin_urls" |> get_config() |> ConfigValueCodec.decode_string_list()
   end
 
   @spec set_admin_urls([String.t()]) ::
           {:ok, Setting.t()} | {:error, Ecto.Changeset.t() | String.t()}
   def set_admin_urls(urls) when is_list(urls) do
-    set_config("admin_urls", JSON.encode!(urls))
+    set_config("admin_urls", ConfigValueCodec.encode_string_list(urls))
   end
 
   @spec get_netmaker_key() :: String.t() | nil
@@ -124,75 +116,42 @@ defmodule EdgeAgent.Settings do
 
   @spec get_last_check_self_update_at() :: DateTime.t() | nil
   def get_last_check_self_update_at do
-    case get_config("last_check_self_update_at") do
-      nil ->
-        nil
-
-      iso_string when is_binary(iso_string) ->
-        case DateTime.from_iso8601(iso_string) do
-          {:ok, dt, _offset} -> dt
-          {:error, _} -> nil
-        end
-    end
+    "last_check_self_update_at" |> get_config() |> ConfigValueCodec.decode_datetime()
   end
 
   @spec set_last_check_self_update_at(DateTime.t()) ::
           {:ok, Setting.t()} | {:error, Ecto.Changeset.t()}
   def set_last_check_self_update_at(%DateTime{} = datetime) do
-    iso_string = DateTime.to_iso8601(datetime)
+    iso_string = ConfigValueCodec.encode_datetime(datetime)
     set_config("last_check_self_update_at", iso_string)
   end
 
   @spec get_admin_fallback_urls() :: [String.t()]
   def get_admin_fallback_urls do
-    case get_config("admin_fallback_urls") do
-      nil ->
-        []
-
-      json when is_binary(json) ->
-        case JSON.decode(json) do
-          {:ok, urls} when is_list(urls) -> urls
-          _ -> []
-        end
-    end
+    "admin_fallback_urls" |> get_config() |> ConfigValueCodec.decode_string_list()
   end
 
   @spec set_admin_fallback_urls([String.t()]) ::
           {:ok, Setting.t()} | {:error, Ecto.Changeset.t() | String.t()}
   def set_admin_fallback_urls(urls) when is_list(urls) do
-    set_config("admin_fallback_urls", JSON.encode!(urls))
+    set_config("admin_fallback_urls", ConfigValueCodec.encode_string_list(urls))
   end
 
   @spec merge_admin_fallback_urls([String.t()]) ::
           {:ok, Setting.t()} | {:error, Ecto.Changeset.t() | String.t()}
-  def merge_admin_fallback_urls(urls), do: set_admin_fallback_urls(prepend_new_urls(urls, get_admin_fallback_urls()))
+  def merge_admin_fallback_urls(urls),
+    do: set_admin_fallback_urls(ConfigValueCodec.prepend_new_strings(urls, get_admin_fallback_urls()))
 
   @spec get_core_derp_map_urls() :: [String.t()]
   def get_core_derp_map_urls do
-    case get_config("core_derp_map_urls") do
-      nil ->
-        []
-
-      json ->
-        case JSON.decode(json) do
-          {:ok, urls} when is_list(urls) -> urls
-          _ -> []
-        end
-    end
+    "core_derp_map_urls" |> get_config() |> ConfigValueCodec.decode_string_list()
   end
 
   @spec merge_core_derp_map_urls([String.t()]) ::
           {:ok, Setting.t()} | {:error, Ecto.Changeset.t() | String.t()}
   def merge_core_derp_map_urls(urls) do
-    set_config("core_derp_map_urls", JSON.encode!(prepend_new_urls(urls, get_core_derp_map_urls())))
-  end
-
-  defp prepend_new_urls(incoming, existing) do
-    incoming
-    |> Enum.filter(&(is_binary(&1) and &1 != ""))
-    |> Enum.uniq()
-    |> Enum.reject(&(&1 in existing))
-    |> Kernel.++(existing)
+    merged = ConfigValueCodec.prepend_new_strings(urls, get_core_derp_map_urls())
+    set_config("core_derp_map_urls", ConfigValueCodec.encode_string_list(merged))
   end
 
   # =============================================================================

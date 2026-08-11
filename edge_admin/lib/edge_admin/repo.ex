@@ -142,6 +142,17 @@ defmodule EdgeAdmin.Repo do
   # ---------------------------------------------------------------------------
   @doc "Runs a function or Ecto.Multi inside a database transaction."
   def transaction(fun_or_multi, opts \\ []), do: impl().transaction(fun_or_multi, opts)
+  @doc "Runs a transaction with the adapter-specific write-lock behavior."
+  def transaction_with_write_lock(fun_or_multi) do
+    opts =
+      case __adapter__() do
+        Ecto.Adapters.SQLite3 -> [mode: :immediate]
+        _ -> []
+      end
+
+    transaction(fun_or_multi, opts)
+  end
+
   @doc "Runs a function or Ecto.Multi using Ecto's transaction API."
   def transact(fun_or_multi, opts \\ []), do: impl().transact(fun_or_multi, opts)
   @doc "Returns whether the current process is inside a transaction."

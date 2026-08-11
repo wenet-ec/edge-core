@@ -122,7 +122,6 @@ defmodule EdgeAdmin.Nodes do
 
   import Ecto.Query, warn: false
 
-  alias Ecto.Adapters.Postgres
   alias Ecto.Query.CastError
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.Commands
@@ -132,6 +131,7 @@ defmodule EdgeAdmin.Nodes do
   alias EdgeAdmin.Nodes.Filters.ClusterFilters
   alias EdgeAdmin.Nodes.Filters.NodeFilters
   alias EdgeAdmin.Nodes.Forms
+  alias EdgeAdmin.Nodes.Persistence
   alias EdgeAdmin.Nodes.Queries.ClusterQueries
   alias EdgeAdmin.Nodes.Resources.Aliases
   alias EdgeAdmin.Nodes.Resources.Diagnostics
@@ -159,28 +159,6 @@ defmodule EdgeAdmin.Nodes do
   # ===========================================================================
   # Cluster functions
   # ===========================================================================
-  defp cluster_transaction(fun_or_multi) do
-    opts =
-      case Repo.__adapter__() do
-        Ecto.Adapters.SQLite3 -> [mode: :immediate]
-        _ -> []
-      end
-
-    Repo.transaction(fun_or_multi, opts)
-  end
-
-  defp lock_active_cluster(name) do
-    query = ClusterQueries.active_by_name(name)
-
-    query =
-      case Repo.__adapter__() do
-        Postgres -> from(c in query, lock: "FOR UPDATE")
-        _ -> query
-      end
-
-    Repo.one(query)
-  end
-
   @doc """
   Lists all clusters with node counts, filtering, and pagination.
 
@@ -523,7 +501,7 @@ defmodule EdgeAdmin.Nodes do
 
   defp update_active_cluster(cluster_name, attrs) do
     fn ->
-      with %Cluster{} = cluster <- lock_active_cluster(cluster_name),
+      with %Cluster{} = cluster <- Persistence.lock_active_cluster(cluster_name),
            :ok <- Checks.NodeLimitBelowCountCheck.check(cluster, Map.get(attrs, "node_limit")),
            {:ok, updated_cluster} <-
              cluster
@@ -535,7 +513,7 @@ defmodule EdgeAdmin.Nodes do
         {:error, _} = error -> Repo.rollback(error)
       end
     end
-    |> cluster_transaction()
+    |> Repo.transaction_with_write_lock()
     |> case do
       {:ok, cluster} -> {:ok, Repo.preload(cluster, :nodes)}
       {:error, reason} -> {:error, reason}
@@ -562,7 +540,7 @@ defmodule EdgeAdmin.Nodes do
     now = DateTime.truncate(DateTime.utc_now(), :second)
 
     fn ->
-      with %Cluster{} = active_cluster <- lock_active_cluster(cluster.name),
+      with %Cluster{} = active_cluster <- Persistence.lock_active_cluster(cluster.name),
            :ok <- Checks.ClusterNotEmptyCheck.check(active_cluster),
            # ===========================================================================
            # Node functions
@@ -584,7 +562,7 @@ defmodule EdgeAdmin.Nodes do
         {:error, _} = error -> Repo.rollback(error)
       end
     end
-    |> cluster_transaction()
+    |> Repo.transaction_with_write_lock()
     |> case do
       {:ok, retired_cluster} ->
         Metadata.Events.publish(:cluster_deleted)
@@ -775,10 +753,10 @@ defmodule EdgeAdmin.Nodes do
   end
 
   defp move_node_to_active_cluster(node_id, new_cluster_name) do
-    cluster_transaction(fn ->
+    Repo.transaction_with_write_lock(fn ->
       with %Node{} = current_node <- Repo.get(Node, node_id),
            current_node = Repo.preload(current_node, :cluster),
-           %Cluster{} = new_cluster <- lock_active_cluster(new_cluster_name),
+           %Cluster{} = new_cluster <- Persistence.lock_active_cluster(new_cluster_name),
            :ok <- Checks.SameClusterCheck.check(current_node, new_cluster),
            :ok <- Checks.NodeLimitCheck.check(new_cluster),
            {:ok, updated_node} <-

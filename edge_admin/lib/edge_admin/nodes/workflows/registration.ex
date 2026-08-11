@@ -9,11 +9,9 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
   `EdgeAdmin.Nodes`.
   """
 
-  import Ecto.Query, warn: false
-
-  alias Ecto.Adapters.Postgres
   alias EdgeAdmin.Nodes.Checks
   alias EdgeAdmin.Nodes.Forms
+  alias EdgeAdmin.Nodes.Persistence
   alias EdgeAdmin.Nodes.Queries.ClusterQueries
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
@@ -97,13 +95,13 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
   end
 
   defp persist_registration(node_id, reported_cluster_name, netmaker_host_id, attrs) do
-    cluster_transaction(fn ->
-      case lock_active_cluster(reported_cluster_name) do
+    Repo.transaction_with_write_lock(fn ->
+      case Persistence.lock_active_cluster(reported_cluster_name) do
         nil ->
           Repo.rollback(:not_found)
 
         reported_cluster ->
-          existing_node = lock_node(node_id)
+          existing_node = Persistence.lock_node(node_id)
           is_new_node = is_nil(existing_node)
 
           canonical_cluster =
@@ -132,9 +130,9 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
   end
 
   defp persist_reregistration(node_id, reported_cluster_name, netmaker_host_id, attrs) do
-    cluster_transaction(fn ->
-      with %Node{} = node <- lock_node(node_id),
-           %Cluster{} = reported_cluster <- lock_active_cluster(reported_cluster_name),
+    Repo.transaction_with_write_lock(fn ->
+      with %Node{} = node <- Persistence.lock_node(node_id),
+           %Cluster{} = reported_cluster <- Persistence.lock_active_cluster(reported_cluster_name),
            %Cluster{} = canonical_cluster <-
              Repo.one(ClusterQueries.active_by_id(node.cluster_id)),
            :ok <- cluster_matches?(reported_cluster, canonical_cluster),
@@ -158,40 +156,6 @@ defmodule EdgeAdmin.Nodes.Workflows.Registration do
     else
       {:error, :not_found}
     end
-  end
-
-  defp cluster_transaction(fun) do
-    opts =
-      case Repo.__adapter__() do
-        Ecto.Adapters.SQLite3 -> [mode: :immediate]
-        _ -> []
-      end
-
-    Repo.transaction(fun, opts)
-  end
-
-  defp lock_active_cluster(name) do
-    query = ClusterQueries.active_by_name(name)
-
-    query =
-      case Repo.__adapter__() do
-        Postgres -> from(c in query, lock: "FOR UPDATE")
-        _ -> query
-      end
-
-    Repo.one(query)
-  end
-
-  defp lock_node(node_id) do
-    query = from(n in Node, where: n.id == ^node_id)
-
-    query =
-      case Repo.__adapter__() do
-        Postgres -> from(n in query, lock: "FOR UPDATE")
-        _ -> query
-      end
-
-    Repo.one(query)
   end
 
   defp cluster_matches?(reported_cluster, canonical_cluster) do

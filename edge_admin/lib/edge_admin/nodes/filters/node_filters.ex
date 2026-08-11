@@ -15,6 +15,7 @@ defmodule EdgeAdmin.Nodes.Filters.NodeFilters do
   Applies ilike filters for node string fields directly via Ecto, bypassing
   Flop's `add_wildcard`.
   """
+  @spec apply_ilike(Ecto.Query.t(), list()) :: Ecto.Query.t()
   def apply_ilike(query, filters) do
     Enum.reduce(filters, query, fn %{field: field, value: value}, acc ->
       from(n in acc, where: case_insensitive_like(field(n, ^field), ^value))
@@ -24,6 +25,7 @@ defmodule EdgeAdmin.Nodes.Filters.NodeFilters do
   @doc """
   Applies `node_id__in` IN filter directly on the `nodes` table.
   """
+  @spec apply_node_ids(Ecto.Query.t(), list()) :: Ecto.Query.t()
   def apply_node_ids(query, []), do: query
 
   def apply_node_ids(query, filters) do
@@ -41,6 +43,7 @@ defmodule EdgeAdmin.Nodes.Filters.NodeFilters do
   defp apply_node_ids_one(query, _), do: query
 
   @doc "Applies `enrollment_key_id__in` to nodes with matching enrollment-key provenance."
+  @spec apply_enrollment_key_ids(Ecto.Query.t(), list()) :: Ecto.Query.t()
   def apply_enrollment_key_ids(query, []), do: query
 
   def apply_enrollment_key_ids(query, filters) do
@@ -58,6 +61,7 @@ defmodule EdgeAdmin.Nodes.Filters.NodeFilters do
   defp apply_enrollment_key_ids_one(query, _), do: query
 
   @doc "Applies `has_enrollment_key` as an enrollment-key association presence filter."
+  @spec apply_has_enrollment_key(Ecto.Query.t(), list()) :: Ecto.Query.t()
   def apply_has_enrollment_key(query, filters) do
     Enum.reduce(filters, query, fn filter, acc -> apply_has_enrollment_key_one(acc, filter) end)
   end

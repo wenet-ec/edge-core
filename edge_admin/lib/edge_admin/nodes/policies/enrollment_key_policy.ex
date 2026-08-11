@@ -18,6 +18,8 @@ defmodule EdgeAdmin.Nodes.Policies.EnrollmentKeyPolicy do
   use EdgeAdmin.Policy
 
   @impl EdgeAdmin.Policy
+  @doc "Authorizes an enrollment-key action from the configured policy."
+  @spec authorize?(atom()) :: boolean()
   def authorize?(:create_for_default) do
     is_binary(Application.get_env(:edge_admin, :default_cluster_name))
   end

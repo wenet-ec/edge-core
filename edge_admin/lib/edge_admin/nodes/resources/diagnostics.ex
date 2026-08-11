@@ -8,7 +8,7 @@ defmodule EdgeAdmin.Nodes.Resources.Diagnostics do
 
   alias EdgeAdmin.Admins.Metadata
   alias EdgeAdmin.EdgeClusters.Gateway
-  alias EdgeAdmin.Nodes
+  alias EdgeAdmin.Nodes.Resources.Nodes, as: NodeResource
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
   alias EdgeAdmin.Repo
@@ -25,7 +25,7 @@ defmodule EdgeAdmin.Nodes.Resources.Diagnostics do
   """
   @spec get_node_diagnostics(String.t()) :: {:ok, map()} | {:error, :not_found | :service_unavailable}
   def get_node_diagnostics(node_id) do
-    with {:ok, node} <- Nodes.get_node(node_id) do
+    with {:ok, node} <- NodeResource.get(node_id) do
       case fetch_live(node) do
         {:ok, report} ->
           {:ok, report}

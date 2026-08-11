@@ -12,6 +12,7 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
   @doc """
   Applies `is_unlimited` filter — `true` matches keys with no `uses_remaining` cap.
   """
+  @spec apply_is_unlimited(Ecto.Query.t(), list()) :: Ecto.Query.t()
   def apply_is_unlimited(query, filters) do
     Enum.reduce(filters, query, fn filter, acc -> apply_is_unlimited_one(acc, filter) end)
   end
@@ -29,6 +30,7 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
   @doc """
   Applies `is_spent` filter — `true` matches keys with `uses_remaining == 0`.
   """
+  @spec apply_is_spent(Ecto.Query.t(), list()) :: Ecto.Query.t()
   def apply_is_spent(query, filters) do
     Enum.reduce(filters, query, fn filter, acc -> apply_is_spent_one(acc, filter) end)
   end
@@ -46,6 +48,7 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
   @doc """
   Applies `is_expired` filter — compares `expires_at` to now at query time.
   """
+  @spec apply_is_expired(Ecto.Query.t(), list()) :: Ecto.Query.t()
   def apply_is_expired(query, filters) do
     Enum.reduce(filters, query, fn filter, acc -> apply_is_expired_one(acc, filter) end)
   end
@@ -65,6 +68,7 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
   @doc """
   Applies `is_never_used` filter — `true` matches keys with no `last_used_at`.
   """
+  @spec apply_is_never_used(Ecto.Query.t(), list()) :: Ecto.Query.t()
   def apply_is_never_used(query, filters) do
     Enum.reduce(filters, query, fn filter, acc -> apply_is_never_used_one(acc, filter) end)
   end
@@ -83,6 +87,7 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
   Applies `has_expiry` filter — `true` matches keys with `expires_at` set
   (regardless of whether the timestamp is in the past).
   """
+  @spec apply_has_expiry(Ecto.Query.t(), list()) :: Ecto.Query.t()
   def apply_has_expiry(query, filters) do
     Enum.reduce(filters, query, fn filter, acc -> apply_has_expiry_one(acc, filter) end)
   end
@@ -101,6 +106,7 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
   Applies `has_name` filter — `true` matches keys with a `name` set
   (any non-null label, including the empty string if one were ever stored).
   """
+  @spec apply_has_name(Ecto.Query.t(), list()) :: Ecto.Query.t()
   def apply_has_name(query, filters) do
     Enum.reduce(filters, query, fn filter, acc -> apply_has_name_one(acc, filter) end)
   end
@@ -119,6 +125,7 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFilters do
   Conditionally applies a filter function only when the filter list is non-empty.
   Used in pipe chains where each filter group is optional.
   """
+  @spec apply_maybe(Ecto.Query.t(), list() | nil, (Ecto.Query.t(), list() -> Ecto.Query.t())) :: Ecto.Query.t()
   def apply_maybe(query, nil, _fun), do: query
   def apply_maybe(query, [], _fun), do: query
   def apply_maybe(query, filters, fun), do: fun.(query, filters)

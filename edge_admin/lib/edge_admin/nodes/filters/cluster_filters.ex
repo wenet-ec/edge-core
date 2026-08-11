@@ -17,6 +17,7 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFilters do
 
   Maps `true`/`false` to `node_limit IS NOT NULL` / `IS NULL`.
   """
+  @spec apply_has_node_limit(Ecto.Query.t(), list()) :: Ecto.Query.t()
   def apply_has_node_limit(query, filters) do
     Enum.reduce(filters, query, fn filter, acc -> apply_has_node_limit_one(acc, filter) end)
   end
@@ -36,6 +37,7 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFilters do
   `add_wildcard` (which escapes `%` and wraps values in `%..%`, breaking
   user-supplied patterns like `prod*`).
   """
+  @spec apply_ilike(Ecto.Query.t(), list()) :: Ecto.Query.t()
   def apply_ilike(query, filters) do
     Enum.reduce(filters, query, fn %{field: field, value: value}, acc ->
       from(c in acc, where: case_insensitive_like(field(c, ^field), ^value))
@@ -48,6 +50,7 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFilters do
   Caller must have set up the query with a left_join to nodes and group_by
   on cluster id (see `EdgeAdmin.Nodes.list_clusters/1`).
   """
+  @spec apply_node_count(Ecto.Query.t(), list()) :: Ecto.Query.t()
   def apply_node_count(query, filters) do
     Enum.reduce(filters, query, fn filter, acc -> apply_node_count_one(acc, filter) end)
   end
@@ -119,6 +122,7 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFilters do
   second binding (i.e. `[primary, c]`). Used by node, alias, and enrollment-key
   listings that join cluster for filtering and preload.
   """
+  @spec apply_name(Ecto.Query.t(), list()) :: Ecto.Query.t()
   def apply_name(query, filters) do
     Enum.reduce(filters, query, fn filter, acc -> apply_name_one(acc, filter) end)
   end
@@ -142,6 +146,7 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFilters do
   clusters that contain any of the given node IDs. Applies `distinct` to
   avoid duplicate cluster rows when multiple node IDs land in the same cluster.
   """
+  @spec apply_node_ids_on_clusters(Ecto.Query.t(), list()) :: Ecto.Query.t()
   def apply_node_ids_on_clusters(query, []), do: query
 
   def apply_node_ids_on_clusters(query, filters) do

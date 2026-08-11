@@ -120,37 +120,18 @@ defmodule EdgeAdmin.Nodes do
       {:ok, %Alias{}}
   """
 
-  import Ecto.Query, warn: false
-
-  alias Ecto.Query.CastError
-  alias EdgeAdmin.Admins.Metadata
-  alias EdgeAdmin.Commands
-  alias EdgeAdmin.Events
-  alias EdgeAdmin.Events.Catalog
-  alias EdgeAdmin.Nodes.Checks
-  alias EdgeAdmin.Nodes.Filters.ClusterFilters
-  alias EdgeAdmin.Nodes.Filters.NodeFilters
-  alias EdgeAdmin.Nodes.Forms
-  alias EdgeAdmin.Nodes.Persistence
-  alias EdgeAdmin.Nodes.Queries.ClusterQueries
   alias EdgeAdmin.Nodes.Resources.Aliases
+  alias EdgeAdmin.Nodes.Resources.Clusters
   alias EdgeAdmin.Nodes.Resources.Diagnostics
   alias EdgeAdmin.Nodes.Resources.EnrollmentKeys
-  alias EdgeAdmin.Nodes.Schemas.Alias
+  alias EdgeAdmin.Nodes.Resources.Nodes, as: NodeResource
+  alias EdgeAdmin.Nodes.Resources.Proxy, as: ProxyResource
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Schemas.NodeDiagnostic
-  alias EdgeAdmin.Nodes.Workers.DeleteClusterWorker
   alias EdgeAdmin.Nodes.Workflows.HealthCheck
   alias EdgeAdmin.Nodes.Workflows.Reconciliation
-  alias EdgeAdmin.Nodes.Workflows.Registration
-  alias EdgeAdmin.Random
-  alias EdgeAdmin.Repo
-  alias EdgeAdmin.RequestParser
-  alias EdgeAdmin.Vpn
-
-  require Logger
 
   # ===========================================================================
   # Private Helpers
@@ -196,75 +177,12 @@ defmodule EdgeAdmin.Nodes do
       {:ok, {[%Cluster{nodes: [...]}, ...], %Flop.Meta{}}}
   """
   @spec list_clusters(map()) :: {:ok, {[Cluster.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  def list_clusters(params \\ %{}), do: run_cluster_list_query(ClusterQueries.active(), params)
+  defdelegate list_clusters(params \\ %{}), to: Clusters, as: :list
 
   @doc "Lists active and retired clusters for maintenance reconciliation."
   @spec list_clusters_for_reconciliation(map()) ::
           {:ok, {[Cluster.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  def list_clusters_for_reconciliation(params), do: run_cluster_list_query(Cluster, params)
-
-  defp run_cluster_list_query(cluster_query, params) do
-    # Parse API params into Flop format
-    flop_params = RequestParser.parse(params)
-
-    # Extract node_count filters to handle separately (computed field)
-    {node_count_filters, other_filters} =
-      Enum.split_with(flop_params[:filters] || [], fn filter ->
-        filter.field == :node_count
-      end)
-
-    # Extract has_node_limit filter (virtual field, handle separately)
-    {has_node_limit_filters, other_filters} =
-      Enum.split_with(other_filters, fn filter ->
-        filter.field == :has_node_limit
-      end)
-
-    {node_ids_filters, other_filters} =
-      Enum.split_with(other_filters, fn filter -> filter.field == :node_id end)
-
-    # Extract ilike filters for string fields — Flop's :ilike wraps values in %..%
-    # and escapes any existing % characters, breaking wildcard patterns like "def%".
-    # Apply these as raw Ecto ilike/2 clauses instead.
-    {ilike_filters, flop_params} =
-      RequestParser.split_ilike_filters(
-        Map.put(flop_params, :filters, other_filters),
-        [:name, :ipv4_range, :ipv6_range]
-      )
-
-    # Build base query with node_count if filtering/sorting on it
-    base_query =
-      if node_count_filters == [] do
-        cluster_query
-      else
-        ClusterFilters.apply_node_count(
-          from(c in cluster_query,
-            left_join: n in assoc(c, :nodes),
-            group_by: c.id,
-            select_merge: %{node_count: count(n.id)}
-          ),
-          node_count_filters
-        )
-      end
-
-    base_query =
-      base_query
-      |> ClusterFilters.apply_has_node_limit(has_node_limit_filters)
-      |> ClusterFilters.apply_node_ids_on_clusters(node_ids_filters)
-      |> ClusterFilters.apply_ilike(ilike_filters)
-
-    case Flop.validate_and_run(base_query, flop_params,
-           for: Cluster,
-           replace_invalid_params: true
-         ) do
-      {:ok, {clusters, meta}} ->
-        # Preload nodes to compute node_count for response
-        clusters_with_nodes = Repo.preload(clusters, :nodes)
-        {:ok, {clusters_with_nodes, meta}}
-
-      {:error, meta} ->
-        {:error, meta}
-    end
-  end
+  defdelegate list_clusters_for_reconciliation(params), to: Clusters, as: :list_for_reconciliation
 
   @doc """
   Lists cluster-node mappings.
@@ -293,48 +211,7 @@ defmodule EdgeAdmin.Nodes do
   ```
   """
   @spec list_cluster_node_mappings(keyword()) :: [map()]
-  def list_cluster_node_mappings(opts \\ []) do
-    use_prefix = Keyword.get(opts, :prefix, false)
-    filter_status = Keyword.get(opts, :filter_status)
-
-    base_query =
-      from(c in ClusterQueries.active(),
-        left_join: n in assoc(c, :nodes),
-        select: %{
-          cluster_name: c.name,
-          node_id: n.id
-        },
-        order_by: [asc: c.inserted_at]
-      )
-
-    # Apply status filter if provided
-    query =
-      if filter_status do
-        from([c, n] in base_query,
-          where: is_nil(n.id) or n.status in ^filter_status
-        )
-      else
-        base_query
-      end
-
-    query
-    |> Repo.all()
-    |> Enum.group_by(
-      fn row -> row.cluster_name end,
-      fn row ->
-        case row.node_id do
-          nil -> nil
-          id -> if use_prefix, do: Node.node_name(id), else: id
-        end
-      end
-    )
-    |> Enum.map(fn {cluster_name, node_ids} ->
-      %{
-        name: if(use_prefix, do: Cluster.network_name(cluster_name), else: cluster_name),
-        nodes: Enum.reject(node_ids, &is_nil/1)
-      }
-    end)
-  end
+  defdelegate list_cluster_node_mappings(opts \\ []), to: Clusters, as: :list_node_mappings
 
   @doc """
   Gets a single cluster by name.
@@ -355,12 +232,7 @@ defmodule EdgeAdmin.Nodes do
       {:error, :not_found}
   """
   @spec get_cluster(String.t()) :: {:ok, Cluster.t()} | {:error, :not_found}
-  def get_cluster(name) do
-    case Repo.one(ClusterQueries.active_by_name(name)) do
-      nil -> {:error, :not_found}
-      cluster -> {:ok, Repo.preload(cluster, :nodes)}
-    end
-  end
+  defdelegate get_cluster(name), to: Clusters, as: :get
 
   @doc """
   Creates a cluster and its Netmaker network.
@@ -389,90 +261,7 @@ defmodule EdgeAdmin.Nodes do
           | {:error, Ecto.Changeset.t()}
           | {:error, {:conflict, String.t()}}
           | {:error, :service_unavailable}
-  def create_cluster(attrs \\ %{}) do
-    with {:ok, validated_attrs} <- Forms.CreateClusterForm.changeset(attrs),
-         {:ok, existing_ranges} <- existing_cluster_ranges(),
-         {:ok, ranges} <- resolve_cluster_ranges(validated_attrs, existing_ranges),
-         {:ok, cluster} <- insert_cluster(validated_attrs, ranges) do
-      provision_cluster_network(cluster)
-    end
-  end
-
-  defp existing_cluster_ranges do
-    with {:ok, netmaker_ranges} <- Vpn.list_network_ranges() do
-      # Retired clusters retain their ranges until their network cleanup finishes.
-      {:ok,
-       %{
-         ipv4: Enum.uniq(Repo.all(from(c in Cluster, select: c.ipv4_range)) ++ netmaker_ranges.ipv4),
-         ipv6: Enum.uniq(Repo.all(from(c in Cluster, select: c.ipv6_range)) ++ netmaker_ranges.ipv6)
-       }}
-    end
-  end
-
-  defp resolve_cluster_ranges(attrs, existing_ranges) do
-    with :ok <- Checks.SubnetOverlapCheck.check(attrs["ipv4_range"], existing_ranges.ipv4),
-         :ok <- Checks.SubnetOverlapCheck.check_ipv6(attrs["ipv6_range"], existing_ranges.ipv6),
-         {:ok, ipv4_range} <- allocate_ipv4_range(attrs["ipv4_range"], existing_ranges.ipv4),
-         {:ok, ipv6_range} <- allocate_ipv6_range(attrs["ipv6_range"], existing_ranges.ipv6) do
-      {:ok, %{ipv4: ipv4_range, ipv6: ipv6_range}}
-    end
-  end
-
-  defp insert_cluster(attrs, %{ipv4: ipv4_range, ipv6: ipv6_range}) do
-    attrs
-    |> Map.put("ipv4_range", ipv4_range)
-    |> Map.put("ipv6_range", ipv6_range)
-    |> then(&Cluster.changeset(%Cluster{}, &1))
-    |> Repo.insert()
-    |> Repo.normalize_conflict([:name, :ipv4_range, :ipv6_range])
-  end
-
-  defp provision_cluster_network(cluster) do
-    network_name = Cluster.network_name(cluster)
-    opts = %{addressrange: cluster.ipv4_range, addressrange6: cluster.ipv6_range}
-
-    case Vpn.create_network(network_name, opts) do
-      {:ok, _} ->
-        Logger.info("Created Netmaker network: #{network_name}")
-        Metadata.Events.publish(:cluster_created)
-        {:ok, cluster}
-
-      {:error, :already_exists} ->
-        resolve_existing_network(cluster, network_name)
-
-      {:error, :service_unavailable} = error ->
-        Logger.warning("Netmaker network creation failed, rolling back DB cluster: #{cluster.name}")
-        Repo.delete(cluster)
-        error
-    end
-  end
-
-  defp resolve_existing_network(cluster, network_name) do
-    with {:ok, %{"addressrange" => ipv4_range, "addressrange6" => ipv6_range}} <- Vpn.get_network(network_name),
-         true <- ipv4_range == cluster.ipv4_range and ipv6_range == cluster.ipv6_range do
-      Logger.info("Netmaker network #{network_name} already exists with matching dual-stack ranges")
-      Metadata.Events.publish(:cluster_created)
-      {:ok, cluster}
-    else
-      {:ok, _network} ->
-        Repo.delete(cluster)
-        {:error, {:conflict, "Netmaker network #{network_name} exists with different immutable address ranges"}}
-
-      {:error, _} = error ->
-        Repo.delete(cluster)
-        error
-
-      false ->
-        Repo.delete(cluster)
-        {:error, {:conflict, "Netmaker network #{network_name} exists with different immutable address ranges"}}
-    end
-  end
-
-  defp allocate_ipv4_range(nil, existing_ranges), do: Vpn.generate_next_subnet(existing_ranges)
-  defp allocate_ipv4_range(range, _existing_ranges), do: {:ok, range}
-
-  defp allocate_ipv6_range(nil, existing_ranges), do: Vpn.generate_next_ipv6_subnet(existing_ranges)
-  defp allocate_ipv6_range(range, _existing_ranges), do: {:ok, range}
+  defdelegate create_cluster(attrs \\ %{}), to: Clusters, as: :create
 
   @doc """
   Updates a cluster.
@@ -493,32 +282,7 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec update_cluster(Cluster.t(), map()) ::
           {:ok, Cluster.t()} | {:error, :not_found} | {:error, Ecto.Changeset.t()}
-  def update_cluster(%Cluster{} = cluster, params) do
-    with {:ok, attrs} <- Forms.UpdateClusterForm.changeset(params) do
-      update_active_cluster(cluster.name, attrs)
-    end
-  end
-
-  defp update_active_cluster(cluster_name, attrs) do
-    fn ->
-      with %Cluster{} = cluster <- Persistence.lock_active_cluster(cluster_name),
-           :ok <- Checks.NodeLimitBelowCountCheck.check(cluster, Map.get(attrs, "node_limit")),
-           {:ok, updated_cluster} <-
-             cluster
-             |> Cluster.changeset(attrs)
-             |> Repo.update() do
-        updated_cluster
-      else
-        nil -> Repo.rollback(:not_found)
-        {:error, _} = error -> Repo.rollback(error)
-      end
-    end
-    |> Repo.transaction_with_write_lock()
-    |> case do
-      {:ok, cluster} -> {:ok, Repo.preload(cluster, :nodes)}
-      {:error, reason} -> {:error, reason}
-    end
-  end
+  defdelegate update_cluster(cluster, params), to: Clusters, as: :update
 
   @doc """
   Retires an empty cluster from the public API and enqueues Netmaker cleanup.
@@ -536,49 +300,7 @@ defmodule EdgeAdmin.Nodes do
           | {:error, :not_found}
           | {:error, {:conflict, String.t()}}
           | {:error, :service_unavailable}
-  def delete_cluster(%Cluster{} = cluster) do
-    now = DateTime.truncate(DateTime.utc_now(), :second)
-
-    fn ->
-      with %Cluster{} = active_cluster <- Persistence.lock_active_cluster(cluster.name),
-           :ok <- Checks.ClusterNotEmptyCheck.check(active_cluster),
-           # ===========================================================================
-           # Node functions
-           # ===========================================================================
-           {:ok, retired_cluster} <-
-             active_cluster
-             |> Ecto.Changeset.change(deleted_at: now)
-             |> Repo.update(),
-           {:ok, _job} <-
-             %{
-               "cluster_name" => retired_cluster.name,
-               "cluster_id" => retired_cluster.id
-             }
-             |> DeleteClusterWorker.new()
-             |> Oban.insert() do
-        retired_cluster
-      else
-        nil -> Repo.rollback(:not_found)
-        {:error, _} = error -> Repo.rollback(error)
-      end
-    end
-    |> Repo.transaction_with_write_lock()
-    |> case do
-      {:ok, retired_cluster} ->
-        Metadata.Events.publish(:cluster_deleted)
-        {:ok, retired_cluster}
-
-      {:error, :not_found} ->
-        {:error, :not_found}
-
-      {:error, {:conflict, _} = error} ->
-        error
-
-      {:error, reason} ->
-        Logger.error("Failed to retire cluster #{cluster.name}: #{inspect(reason)}")
-        {:error, :service_unavailable}
-    end
-  end
+  defdelegate delete_cluster(cluster), to: Clusters, as: :delete
 
   @doc """
   Returns a changeset for tracking cluster changes (for forms).
@@ -589,28 +311,7 @@ defmodule EdgeAdmin.Nodes do
       %Ecto.Changeset{data: %Cluster{}}
   """
   @spec change_cluster(Cluster.t(), map()) :: Ecto.Changeset.t()
-  def change_cluster(%Cluster{} = cluster, attrs \\ %{}) do
-    Cluster.changeset(cluster, attrs)
-  end
-
-  @doc """
-  Builds the HTTP URL for a node.
-
-  ## Parameters
-  - `node` - The node struct (must have cluster preloaded)
-
-  ## Returns
-  - String URL in format: `http://node-{id}.cluster-{name}.{domain}:{port}`
-
-  ## Examples
-
-      iex> node_http_url(node)
-      "http://node-abc123.cluster-prod.nm.internal:8080"
-  """
-  @spec node_http_url(Node.t()) :: String.t()
-  def node_http_url(%Node{http_port: port} = node) do
-    "http://#{Node.vpn_hostname(node)}:#{port}"
-  end
+  defdelegate change_cluster(cluster, attrs \\ %{}), to: Clusters, as: :change
 
   @doc """
   Gets a single node by ID.
@@ -631,14 +332,7 @@ defmodule EdgeAdmin.Nodes do
       {:error, :not_found}
   """
   @spec get_node(String.t()) :: {:ok, Node.t()} | {:error, :not_found}
-  def get_node(id) do
-    case Repo.get(Node, id) do
-      nil -> {:error, :not_found}
-      node -> {:ok, Repo.preload(node, [:cluster, aliases: :cluster])}
-    end
-  rescue
-    CastError -> {:error, :not_found}
-  end
+  defdelegate get_node(id), to: NodeResource, as: :get
 
   @doc """
   Creates a new node.
@@ -656,11 +350,7 @@ defmodule EdgeAdmin.Nodes do
       {:ok, %Node{id: "abc-123"}}
   """
   @spec create_node(map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
-  def create_node(attrs \\ %{}) do
-    %Node{}
-    |> Node.changeset(attrs)
-    |> Repo.insert()
-  end
+  defdelegate create_node(attrs \\ %{}), to: NodeResource, as: :create
 
   @doc """
   Updates a node.
@@ -679,11 +369,7 @@ defmodule EdgeAdmin.Nodes do
       {:ok, %Node{status: :unhealthy}}
   """
   @spec update_node(Node.t(), map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
-  def update_node(%Node{} = node, attrs) do
-    node
-    |> Node.changeset(attrs)
-    |> Repo.update()
-  end
+  defdelegate update_node(node, attrs), to: NodeResource, as: :update
 
   @doc """
   Creates or replaces a node's one-use recovery key.
@@ -692,25 +378,13 @@ defmodule EdgeAdmin.Nodes do
   a fresh Agent as `RECOVERY_KEY` alongside its normal enrollment key.
   """
   @spec create_node_recovery_key(Node.t()) :: {:ok, String.t()} | {:error, Ecto.Changeset.t()}
-  def create_node_recovery_key(%Node{} = node) do
-    node = Repo.preload(node, :cluster)
-
-    recovery_key =
-      %{"node_id" => node.id, "cluster_name" => node.cluster.name, "nonce" => Random.token()}
-      |> JSON.encode!()
-      |> Base.encode64()
-
-    case update_node(node, %{recovery_key: recovery_key}) do
-      {:ok, _node} -> {:ok, recovery_key}
-      {:error, changeset} -> {:error, changeset}
-    end
-  end
+  defdelegate create_node_recovery_key(node), to: NodeResource, as: :create_recovery_key
 
   @doc """
   Deletes a node's active recovery key.
   """
   @spec delete_node_recovery_key(Node.t()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
-  def delete_node_recovery_key(%Node{} = node), do: update_node(node, %{recovery_key: nil})
+  defdelegate delete_node_recovery_key(node), to: NodeResource, as: :delete_recovery_key
 
   @doc """
   Changes a node's cluster.
@@ -739,72 +413,7 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec change_node_cluster(Node.t(), map()) ::
           {:ok, Node.t()} | {:error, :not_found} | {:error, Ecto.Changeset.t()} | {:error, {:conflict, String.t()}}
-  def change_node_cluster(%Node{} = node, params) do
-    with {:ok, new_cluster_name} <- Forms.ChangeNodeClusterForm.changeset(params),
-         {:ok, %{node: current_node, new_cluster: new_cluster, updated_node: updated_node}} <-
-           move_node_to_active_cluster(node.id, new_cluster_name) do
-      cleanup_node_aliases(current_node)
-      updated_node = Repo.preload(updated_node, [:cluster, aliases: :cluster], force: true)
-      Metadata.Events.publish(:node_updated)
-      sync_node_cluster_networks(current_node, new_cluster)
-
-      {:ok, updated_node}
-    end
-  end
-
-  defp move_node_to_active_cluster(node_id, new_cluster_name) do
-    Repo.transaction_with_write_lock(fn ->
-      with %Node{} = current_node <- Repo.get(Node, node_id),
-           current_node = Repo.preload(current_node, :cluster),
-           %Cluster{} = new_cluster <- Persistence.lock_active_cluster(new_cluster_name),
-           :ok <- Checks.SameClusterCheck.check(current_node, new_cluster),
-           :ok <- Checks.NodeLimitCheck.check(new_cluster),
-           {:ok, updated_node} <-
-             current_node
-             |> Ecto.Changeset.change(
-               cluster_id: new_cluster.id,
-               recovery_key: nil
-             )
-             |> Repo.update() do
-        %{node: current_node, new_cluster: new_cluster, updated_node: updated_node}
-      else
-        nil -> Repo.rollback(:not_found)
-        {:error, _} = error -> Repo.rollback(error)
-      end
-    end)
-  end
-
-  # Best-effort Netmaker network sync after a cluster change.
-  # The reconciliation worker will fix any inconsistencies.
-  defp sync_node_cluster_networks(node, new_cluster) do
-    old_network_name = Cluster.network_name(node.cluster)
-    new_network_name = Cluster.network_name(new_cluster)
-
-    case Vpn.add_host_to_network(node.netmaker_host_id, new_network_name) do
-      {:ok, _} ->
-        Logger.info("Added host #{node.netmaker_host_id} to network #{new_network_name}")
-        remove_host_from_old_network(node.netmaker_host_id, old_network_name)
-
-      {:error, reason} ->
-        Logger.warning(
-          "Failed to add host #{node.netmaker_host_id} to new network #{new_network_name}: #{inspect(reason)}. " <>
-            "Reconciliation worker will handle sync."
-        )
-    end
-  end
-
-  defp remove_host_from_old_network(host_id, old_network_name) do
-    case Vpn.remove_host_from_network(host_id, old_network_name) do
-      {:ok, _} ->
-        Logger.info("Removed host #{host_id} from network #{old_network_name}")
-
-      {:error, reason} ->
-        Logger.warning(
-          "Failed to remove host #{host_id} from old network #{old_network_name}: #{inspect(reason)}. " <>
-            "Reconciliation worker will handle cleanup."
-        )
-    end
-  end
+  defdelegate change_node_cluster(node, params), to: NodeResource, as: :change_cluster
 
   @doc """
   Deletes a node and its Netmaker host.
@@ -827,94 +436,7 @@ defmodule EdgeAdmin.Nodes do
   Returns `{:ok, node}`, `{:error, changeset}` (DB failure), or `{:error, :service_unavailable}` (Netmaker failure).
   """
   @spec delete_node(Node.t()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, :service_unavailable}
-  def delete_node(%Node{} = node) do
-    node = Repo.preload(node, :cluster)
-
-    # 1. Clean up DNS records (aliases) from Netmaker (best-effort, outside main flow)
-    cleanup_node_aliases(node)
-
-    # 2. Delete host from Netmaker FIRST
-    case Vpn.delete_host(node.netmaker_host_id) do
-      {:ok, _} ->
-        Logger.info("Deleted host #{node.netmaker_host_id} from Netmaker")
-        sweep_orphan_netmaker_nodes(node)
-        delete_node_from_db(node)
-
-      {:error, :not_found} ->
-        # Host already gone - continue with DB deletion
-        Logger.info("Netmaker host #{node.netmaker_host_id} already deleted")
-        sweep_orphan_netmaker_nodes(node)
-        delete_node_from_db(node)
-
-      {:error, :service_unavailable} = error ->
-        # Netmaker failed - stop operation
-        Logger.error("Failed to delete Netmaker host #{node.netmaker_host_id}, aborting node deletion")
-        error
-    end
-  end
-
-  # Defends against a Netmaker bug: `RemoveHost` (logic/hosts.go) iterates the
-  # cached `host.Nodes` slice instead of querying the nodes table by host_id.
-  # Node rows that drifted out of that cache (e.g. enroll racing with delete)
-  # survive the host delete and remain visible in peer pulls as dead allowed-ips.
-  #
-  # After deleting the host, list the network's nodes and force-delete any whose
-  # `hostid` still matches the host we just removed. The per-node delete endpoint
-  # routes through `DeleteNode(purge=true)` which keys off node_id directly and
-  # skips the broken read path.
-  #
-  # Best-effort; failures are logged. The periodic reconciler is the backstop.
-  defp sweep_orphan_netmaker_nodes(%Node{cluster: %Ecto.Association.NotLoaded{}}), do: :ok
-
-  defp sweep_orphan_netmaker_nodes(%Node{} = node) do
-    network_name = Cluster.network_name(node.cluster)
-
-    case Vpn.list_nodes(network_name) do
-      {:ok, nm_nodes} ->
-        nm_nodes
-        |> Enum.filter(fn nm_node -> nm_node["hostid"] == node.netmaker_host_id end)
-        |> Enum.each(fn nm_node -> delete_orphan_node(network_name, nm_node, node.netmaker_host_id) end)
-
-      {:error, reason} ->
-        Logger.warning("Orphan sweep: could not list Netmaker nodes for #{network_name}: #{inspect(reason)}")
-    end
-  end
-
-  defp delete_orphan_node(network_name, nm_node, host_id) do
-    node_id = nm_node["id"]
-
-    case Vpn.delete_node(network_name, node_id) do
-      {:ok, _} ->
-        Logger.warning("Orphan sweep: removed Netmaker node #{node_id} (host #{host_id}) from #{network_name}")
-
-      {:error, :not_found} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Orphan sweep: failed to remove Netmaker node #{node_id} from #{network_name}: #{inspect(reason)}")
-    end
-  end
-
-  defp delete_node_from_db(%Node{} = node) do
-    node = Repo.preload(node, :cluster)
-
-    case Repo.transaction(fn ->
-           dropped_executions = Commands.drop_node_executions(node.id, node.cluster.name)
-
-           case Repo.delete(node) do
-             {:ok, deleted_node} -> {deleted_node, dropped_executions}
-             {:error, changeset} -> Repo.rollback(changeset)
-           end
-         end) do
-      {:ok, {deleted_node, dropped_executions}} ->
-        Commands.publish_dropped_executions(dropped_executions)
-        Metadata.Events.publish(:node_deleted)
-        {:ok, deleted_node}
-
-      {:error, changeset} ->
-        {:error, changeset}
-    end
-  end
+  defdelegate delete_node(node), to: NodeResource
 
   @doc """
   Returns a changeset for tracking node changes (for forms).
@@ -925,9 +447,7 @@ defmodule EdgeAdmin.Nodes do
       %Ecto.Changeset{data: %Node{}}
   """
   @spec change_node(Node.t(), map()) :: Ecto.Changeset.t()
-  def change_node(%Node{} = node, attrs \\ %{}) do
-    Node.changeset(node, attrs)
-  end
+  defdelegate change_node(node, attrs \\ %{}), to: NodeResource, as: :change
 
   @doc """
   Registers a new node or recovers an existing node from agent bootstrap.
@@ -951,11 +471,7 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec register_node(map()) ::
           {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, :unauthorized | {:conflict, String.t()}}
-  def register_node(params) do
-    with {:ok, registration} <- Registration.register(params) do
-      finalize_registration(registration)
-    end
-  end
+  defdelegate register_node(params), to: NodeResource, as: :register
 
   # ===========================================================================
   # Enrollment Key functions
@@ -965,33 +481,7 @@ defmodule EdgeAdmin.Nodes do
   """
   @spec reregister_node(Node.t(), map()) ::
           {:ok, Node.t()} | {:error, Ecto.Changeset.t()} | {:error, :unauthorized}
-  def reregister_node(%Node{} = node, params) do
-    with {:ok, registration} <- Registration.reregister(node, params) do
-      finalize_registration(registration)
-    end
-  end
-
-  defp finalize_registration(%{node: node, existing_node: existing_node, is_new_node: is_new_node}) do
-    node = Repo.preload(node, [:cluster], force: true)
-
-    if is_new_node do
-      Metadata.Events.publish(:node_created)
-      Events.publish(%Catalog.NodeRegistered{node: node})
-    else
-      Events.publish(%Catalog.NodeReregistered{node: node})
-
-      if existing_node.version != node.version do
-        Events.publish(%Catalog.NodeVersionChanged{
-          node: node,
-          previous_version: existing_node.version
-        })
-      end
-    end
-
-    Aliases.repair_node_dns(node)
-
-    {:ok, node}
-  end
+  defdelegate reregister_node(node, params), to: NodeResource, as: :reregister
 
   @doc "Records an agent health report received through HTTP fallback mode."
   @spec update_node_health_check(Node.t(), map()) :: {:ok, Node.t()} | {:error, Ecto.Changeset.t()}
@@ -1038,21 +528,7 @@ defmodule EdgeAdmin.Nodes do
   """
 
   @spec list_nodes(map()) :: {:ok, {[Node.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}
-  def list_nodes(params \\ %{}) do
-    flop_params = RequestParser.parse(params)
-    {query, flop_params} = node_filter_query(flop_params)
-
-    case Flop.validate_and_run(query, flop_params,
-           for: Node,
-           replace_invalid_params: true
-         ) do
-      {:ok, {nodes, meta}} ->
-        {:ok, {nodes, meta}}
-
-      {:error, meta} ->
-        {:error, meta}
-    end
-  end
+  defdelegate list_nodes(params \\ %{}), to: NodeResource, as: :list
 
   @doc """
   Lists every node matching the list-node filters for Prometheus discovery.
@@ -1062,63 +538,7 @@ defmodule EdgeAdmin.Nodes do
   `unreachable` — are returned.
   """
   @spec list_nodes_for_discovery(map()) :: {:ok, [Node.t()]} | {:error, Flop.Meta.t()}
-  def list_nodes_for_discovery(params \\ %{}) do
-    flop_params =
-      params
-      |> RequestParser.parse()
-      |> Map.drop([:page, :page_size, :order_by, :order_directions])
-
-    {query, flop_params} = node_filter_query(flop_params)
-
-    discovery_opts = [
-      for: Node,
-      replace_invalid_params: true,
-      default_limit: false,
-      default_order: false,
-      default_pagination_type: false
-    ]
-
-    case Flop.validate(flop_params, discovery_opts) do
-      {:ok, flop} -> {:ok, Flop.all(query, flop, discovery_opts)}
-      {:error, meta} -> {:error, meta}
-    end
-  end
-
-  defp node_filter_query(flop_params) do
-    {cluster_name_filters, other_filters} =
-      Enum.split_with(flop_params[:filters] || [], fn filter ->
-        filter.field == :cluster_name
-      end)
-
-    {node_ids_filters, other_filters} =
-      Enum.split_with(other_filters, fn filter -> filter.field == :node_id end)
-
-    {enrollment_key_ids_filters, other_filters} =
-      Enum.split_with(other_filters, fn filter -> filter.field == :enrollment_key_id end)
-
-    {has_enrollment_key_filters, other_filters} =
-      Enum.split_with(other_filters, fn filter -> filter.field == :has_enrollment_key end)
-
-    {ilike_filters, flop_params} =
-      RequestParser.split_ilike_filters(
-        Map.put(flop_params, :filters, other_filters),
-        [:version]
-      )
-
-    query =
-      from(n in Node,
-        join: c in assoc(n, :cluster),
-        preload: [:cluster, aliases: :cluster]
-      )
-      |> ClusterQueries.active_joined()
-      |> ClusterFilters.apply_name(cluster_name_filters)
-      |> NodeFilters.apply_node_ids(node_ids_filters)
-      |> NodeFilters.apply_enrollment_key_ids(enrollment_key_ids_filters)
-      |> NodeFilters.apply_has_enrollment_key(has_enrollment_key_filters)
-      |> NodeFilters.apply_ilike(ilike_filters)
-
-    {query, flop_params}
-  end
+  defdelegate list_nodes_for_discovery(params \\ %{}), to: NodeResource, as: :list_for_discovery
 
   @doc """
   Gets multiple nodes by their IDs.
@@ -1139,14 +559,7 @@ defmodule EdgeAdmin.Nodes do
   """
 
   @spec get_nodes_by_ids([String.t()]) :: [{:ok, Node.t()} | {:error, String.t()}]
-  def get_nodes_by_ids(node_ids) do
-    Enum.map(node_ids, fn node_id ->
-      case get_node(node_id) do
-        {:ok, node} -> {:ok, node}
-        {:error, :not_found} -> {:error, "Node #{node_id} not found"}
-      end
-    end)
-  end
+  defdelegate get_nodes_by_ids(node_ids), to: NodeResource, as: :get_by_ids
 
   @doc """
   Lists all valid node identifiers (IDs and aliases) for a cluster.
@@ -1171,69 +584,7 @@ defmodule EdgeAdmin.Nodes do
   """
   @callback list_proxy_chain_identifiers(String.t()) :: {:ok, map()} | {:error, :not_found}
   @spec list_proxy_chain_identifiers(String.t()) :: {:ok, map()} | {:error, :not_found}
-  def list_proxy_chain_identifiers(cluster_name) do
-    # Single join query: cluster lookup + node fields + alias names in one round trip.
-    # Returns only the fields needed for proxy chain auth:
-    #   node.id, node.proxy_password, node.http_proxy_port, node.socks5_proxy_port,
-    #   cluster.name (for vpn_hostname/1), alias.name (as additional lookup keys).
-    rows =
-      Repo.all(
-        from c in ClusterQueries.active(),
-          join: n in assoc(c, :nodes),
-          left_join: a in Alias,
-          on: a.node_id == n.id,
-          where: c.name == ^cluster_name,
-          select: %{
-            id: n.id,
-            proxy_password: n.proxy_password,
-            http_proxy_port: n.http_proxy_port,
-            socks5_proxy_port: n.socks5_proxy_port,
-            cluster_name: c.name,
-            alias_name: a.name
-          }
-      )
-
-    # Distinguish between cluster-not-found and cluster-with-no-nodes.
-    # The join returns rows only when the cluster exists; an empty result means
-    # the cluster name doesn't match any row (i.e. cluster doesn't exist).
-    # A cluster with nodes but none matching the identifier is handled upstream.
-    case rows do
-      [] ->
-        # Verify whether the cluster exists at all to return the right error.
-        if Repo.exists?(ClusterQueries.active_by_name(cluster_name)) do
-          {:ok, %{}}
-        else
-          # ===========================================================================
-          # Reconciliation functions
-          # ===========================================================================
-          {:error, :not_found}
-        end
-
-      _ ->
-        identifiers_map =
-          Enum.reduce(rows, %{}, fn row, acc ->
-            node = %Node{
-              id: row.id,
-              proxy_password: row.proxy_password,
-              http_proxy_port: row.http_proxy_port,
-              socks5_proxy_port: row.socks5_proxy_port,
-              cluster: %Cluster{name: row.cluster_name}
-            }
-
-            acc = Map.put_new(acc, row.id, node)
-
-            # ===========================================================================
-            # Alias functions
-            # ===========================================================================
-            case row.alias_name do
-              nil -> acc
-              name -> Map.put(acc, name, node)
-            end
-          end)
-
-        {:ok, identifiers_map}
-    end
-  end
+  defdelegate list_proxy_chain_identifiers(cluster_name), to: ProxyResource, as: :list_chain_identifiers
 
   @doc "Delegates enrollment-key listing to the enrollment-key resource module."
   @spec list_enrollment_keys(map()) :: {:ok, {[EnrollmentKey.t()], Flop.Meta.t()}} | {:error, Flop.Meta.t()}

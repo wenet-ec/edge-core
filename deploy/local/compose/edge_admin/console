@@ -1,0 +1,37 @@
+#!/bin/bash
+# deploy/local/compose/edge_admin/console
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+auth_key="${API_KEY:-${MASTER_KEY:-}}"
+curl_args=(--fail --silent)
+if [ -n "$auth_key" ]; then
+    curl_args+=(--header "Authorization: Bearer $auth_key")
+fi
+
+node_name=""
+for _ in {1..30}; do
+    response="$(curl "${curl_args[@]}" "http://127.0.0.1:${API_PORT:-44000}/api/v1/admins/me" 2>/dev/null || true)"
+    node_name="$(printf '%s' "$response" | sed -n 's/.*"erlang_node_name":"\([^"]*\)".*/\1/p')"
+
+    if [ -n "$node_name" ]; then
+        break
+    fi
+
+    sleep 1
+done
+
+if [ -z "$node_name" ]; then
+    echo "Admin console is unavailable: Admin membership is not ready" >&2
+    exit 1
+fi
+
+node_host="${node_name#*@}"
+if ! getent hosts "$node_host" >/dev/null 2>&1; then
+    printf '127.0.0.1 %s\n' "$node_host" >> /etc/hosts
+fi
+
+cookie="${VPN_CLUSTER_COOKIE:-edge_admin_default_cookie}"
+exec iex --name "console@127.0.0.1" --cookie "$cookie" --remsh "$node_name" "$@"

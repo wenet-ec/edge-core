@@ -1,5 +1,35 @@
 # Edge Admin — One-off Operations
 
+## Live Admin console
+
+The Admin image also exposes `/console`, which attaches IEx to an already-running
+Admin node. It does not start a second Admin container or rerun VPN membership.
+
+For local Compose:
+
+```bash
+./bin/run cloud admin:console
+
+# Lite/SQLite deployment:
+VARIANT=lite ./bin/run cloud admin:console
+```
+
+For a production or production-test container:
+
+```bash
+docker exec -it production_edge_admin_a1 /console
+```
+
+The console wrapper discovers the current ephemeral Erlang node through the
+authenticated `GET /api/v1/admins/me` endpoint, using the Admin container's
+`API_KEY` or `MASTER_KEY`, and connects with the configured
+`VPN_CLUSTER_COOKIE`. The Admin must be healthy and have completed membership
+startup first.
+
+The console runs IEx against the live Admin application. Press `Ctrl+C` twice to
+disconnect without stopping the Admin node. Do not call `:init.stop()` from the
+console because that can stop the Admin runtime itself.
+
 Compose files for running Edge Admin tasks as **one-off jobs** — container exits when the task is done. Useful as a Kubernetes Job, a CI step, or a manual operator action before/around a release.
 
 The admin image exposes three commands:

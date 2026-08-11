@@ -95,7 +95,7 @@ show_cloud_help() {
     echo ""
     echo -e "${YELLOW}Edge Admin Commands:${NC}"
     echo "  admin <mix-cmd>        - Run Mix command in Edge Admin"
-    echo "  admin:shell            - Open Edge Admin IEx shell"
+    echo "  admin:console          - Attach IEx to the running Edge Admin"
     echo "  admin:format           - Format Edge Admin code"
     echo "  admin:lint             - Lint Edge Admin code"
     echo "  admin:test [opts]      - Run Edge Admin tests"
@@ -279,10 +279,10 @@ handle_cloud() {
             log "Running Edge Admin command: mix $*"
             docker compose $compose_file run --rm edge_admin_a1 mix "$@"
             ;;
-        admin:shell)
+        admin:console)
             check_docker
-            log "Opening Edge Admin IEx shell..."
-            docker compose $compose_file run --rm edge_admin_a1 iex -S mix
+            log "Attaching to the running Edge Admin IEx console..."
+            docker compose $compose_file exec edge_admin_a1 /console "$@"
             ;;
         admin:format)
             check_docker

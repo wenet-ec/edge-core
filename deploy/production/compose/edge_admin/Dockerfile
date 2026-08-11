@@ -126,12 +126,13 @@ COPY ./deploy/production/compose/edge_admin/entrypoint /entrypoint
 COPY ./deploy/production/compose/edge_admin/start /start
 COPY ./deploy/production/compose/edge_admin/migrate /migrate
 COPY ./deploy/production/compose/edge_admin/rotate_encryption_key /rotate_encryption_key
-RUN sed -i 's/\r$//g' /entrypoint /start /migrate /rotate_encryption_key && \
-    chmod +x /entrypoint /start /migrate /rotate_encryption_key
+COPY ./deploy/production/compose/edge_admin/console /console
+RUN sed -i 's/\r$//g' /entrypoint /start /migrate /rotate_encryption_key /console && \
+    chmod +x /entrypoint /start /migrate /rotate_encryption_key /console
 
 # Copy the release from builder stage
 COPY --from=builder /app/_build/prod/rel/edge_admin /app
-RUN chmod +x /app/bin/migrate /app/bin/rotate_encryption_key /app/bin/server /app/bin/create_netmaker_superadmin /app/bin/create_default_cluster && \
+RUN chmod +x /app/bin/console /app/bin/migrate /app/bin/rotate_encryption_key /app/bin/server /app/bin/create_netmaker_superadmin /app/bin/create_default_cluster && \
     chown -R app:app /app
 
 # License text for the embedded Edge Admin release. ELv2 — see /usr/share/doc/edge_admin/LICENSE.

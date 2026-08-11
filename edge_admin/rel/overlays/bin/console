@@ -1,0 +1,12 @@
+#!/bin/sh
+# edge_admin/rel/overlays/bin/console
+
+set -eu
+
+cd -P -- "$(dirname -- "$0")"
+
+: "${RELEASE_NODE:?RELEASE_NODE is required}"
+: "${RELEASE_COOKIE:?RELEASE_COOKIE is required}"
+export RELEASE_DISTRIBUTION=name
+
+exec ./edge_admin remote "$@"

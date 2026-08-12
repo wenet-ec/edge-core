@@ -49,20 +49,16 @@ defmodule EdgeAdminHealth.Router do
   plug(:match)
   plug(:dispatch)
 
-  # Kubernetes readiness probe — runs the full check list from
-  # `EdgeAdminHealth.checks/0` (DB, membership, metadata, Edge VPN API,
-  # Edge VPN CLI, proxy servers, event broker). Only the Edge VPN API check
-  # retries internally; the others are single-shot. Returns 200 if every
-  # check passes, 503 otherwise.
+  # Kubernetes readiness probe. Runs the full Admin readiness check list.
   forward("/readyz", to: Health)
 
-  # Kubernetes general health check - alias to readyz for compatibility
+  # Kubernetes health probe alias retained for compatibility.
   forward("/healthz", to: Health)
 
-  # Cluster-level health — used by load balancer to stop routing to degraded clusters
+  # Cluster-level health used by load balancers to avoid degraded clusters.
   forward("/health/cluster", to: ClusterHealth)
 
-  # General health check
+  # General health endpoint.
   forward("/health", to: Health)
 
   match(_, do: conn)

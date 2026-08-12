@@ -1,9 +1,9 @@
 # edge_admin/lib/edge_admin_health/edge_admin_health.ex
 defmodule EdgeAdminHealth do
   @moduledoc """
-  Health check configuration for EdgeAdmin.
+  Full Admin readiness checks.
 
-  Verifies that all critical services have successfully initialized:
+  Verifies that the critical runtime services have initialized:
   - Database connection
   - Admin-cluster membership
   - Metadata computation
@@ -11,8 +11,6 @@ defmodule EdgeAdminHealth do
   - Edge VPN CLI connection to admin cluster network
   - Proxy servers
   - Event broker connection (no-op when EVENT_BROKER_ENABLED=false)
-
-  Returns 503 Service Unavailable if any check fails.
   """
 
   require Logger

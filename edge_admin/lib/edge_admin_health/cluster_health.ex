@@ -1,12 +1,6 @@
 # edge_admin/lib/edge_admin_health/cluster_health.ex
 defmodule EdgeAdminHealth.ClusterHealth do
-  @moduledoc """
-  Health check configuration for the admin cluster.
-
-  Verifies that the admin cluster is not degraded.
-
-  Returns 503 Service Unavailable if the cluster is degraded.
-  """
+  @moduledoc "Cluster-level health check used to detect degraded Admin clusters."
 
   @error_code 503
 

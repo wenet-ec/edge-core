@@ -176,10 +176,6 @@ defmodule EdgeAgent.LocalScheduler.Tasks do
     :ok
   end
 
-  # -----------------------------------------------------------------------
-  # Guards
-  # -----------------------------------------------------------------------
-
   defp http_fallback_mode? do
     Settings.get_admin_urls() == [] and Settings.get_admin_fallback_urls() != []
   end

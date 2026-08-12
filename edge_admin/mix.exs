@@ -131,7 +131,7 @@ defmodule EdgeAdmin.Mixfile do
 
       # Telemetry
       {:prom_ex, "~> 1.12"},
-      {:phoenix_live_dashboard, "~> 0.8"},
+      {:phoenix_live_dashboard, "~> 0.9"},
       {:ecto_psql_extras, "~> 0.8"},
       {:ecto_sqlite3_extras, "~> 1.2"},
       {:oban_live_dashboard, "~> 0.2"},

@@ -12,8 +12,10 @@
 ## EdgeAgent: Minimal CPU-heavy work (mostly I/O)
 +SDcpu 2
 
-## Scheduler bind type - spread across CPU cores for better distribution
-+sbt db
+## Scheduler bind type - spread across CPU cores when supported.
+## +stbt falls back to unbound schedulers instead of refusing to start when
+## container CPU topology is unavailable or unsupported.
++stbt db
 
 ## Disable scheduler compaction of load — spreads work across all schedulers
 ## rather than parking idle ones. Better latency for many concurrent connections (SSH, proxy).
@@ -25,9 +27,6 @@
 ## Increase number of concurrent ports/sockets
 ## EdgeAgent: SSH tunnels, proxy connections, metrics collection
 +Q 32768
-
-## Kernel poll - use efficient epoll/kqueue for socket events
-+K true
 
 ## Memory Management
 

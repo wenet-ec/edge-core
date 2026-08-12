@@ -15,9 +15,10 @@
 ## EdgeAdmin: Minimal CPU-heavy work (mostly I/O)
 +SDcpu 4
 
-## Scheduler bind type - spread across CPU cores for better distribution
-## Options: s (spread), db (default bind), u (unbound)
-+sbt db
+## Scheduler bind type - spread across CPU cores when supported.
+## +stbt falls back to unbound schedulers instead of refusing to start when
+## container CPU topology is unavailable or unsupported.
++stbt db
 
 ## Disable scheduler compaction of load — spreads work across all schedulers
 ## rather than parking idle ones. Better latency for many concurrent proxy connections.
@@ -35,9 +36,6 @@
 ## Under sustained high-throughput cross-admin proxy sessions this buffer is the first
 ## backpressure point on the distribution link. Raised to 64MB for heavy proxy load.
 +zdbbl 65536
-
-## Kernel poll - use efficient epoll/kqueue for socket events
-+K true
 
 ## Async thread pool size for file I/O operations
 ## Modern ERTS uses its own I/O polling for sockets — async threads handle file ops only.

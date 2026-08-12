@@ -16,8 +16,6 @@ defmodule EdgeAdmin.ProxyServers.Transport.TunnelRegistry do
 
   @table __MODULE__
 
-  # Client API
-
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
@@ -111,8 +109,6 @@ defmodule EdgeAdmin.ProxyServers.Transport.TunnelRegistry do
     Enum.each(pids, fn pid -> Process.exit(pid, :drain_timeout) end)
     length(pids)
   end
-
-  # GenServer callbacks
 
   @impl true
   def init(_opts) do

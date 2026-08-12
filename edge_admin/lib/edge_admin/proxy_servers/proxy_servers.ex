@@ -41,16 +41,6 @@ defmodule EdgeAdmin.ProxyServers do
     Reaching arbitrary internet/LAN targets is only supported through
     proxy chaining via an agent.
 
-  ## Examples
-
-      # Direct mode via HTTP proxy
-      export http_proxy=http://_:PROXY_KEY@admin-host:43128
-
-      # Direct mode via SOCKS5
-      curl --socks5 _:PROXY_KEY@admin-host:41080 http://node-abc.cluster-prod.nm.internal:8080
-
-      # Chained mode (exit via a specific agent)
-      curl --socks5 node-abc.cluster-prod.nm.internal:PROXY_KEY@admin-host:41080 https://example.com
   """
 
   use GenServer
@@ -62,7 +52,6 @@ defmodule EdgeAdmin.ProxyServers do
 
   require Logger
 
-  # Client API
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
@@ -87,7 +76,6 @@ defmodule EdgeAdmin.ProxyServers do
     end
   end
 
-  # GenServer callbacks
   @impl true
   def init(_opts) do
     Process.flag(:trap_exit, true)
@@ -152,8 +140,6 @@ defmodule EdgeAdmin.ProxyServers do
 
     :ok
   end
-
-  # Private functions
 
   defp start_proxy_servers(state) do
     with {:ok, http_ref} <- start_http_proxy(state),
@@ -239,6 +225,5 @@ defmodule EdgeAdmin.ProxyServers do
     end
   end
 
-  # Helper to format IPv4 or IPv6 tuples for logging.
   defp format_ip(ip) when is_tuple(ip), do: ip |> :inet.ntoa() |> List.to_string()
 end

@@ -401,8 +401,6 @@ defmodule EdgeAdmin.ProxyServers.Http.Handler do
     end
   end
 
-  # Helpers
-
   defp tunnel_opts(:direct, _exit_node), do: []
   defp tunnel_opts(:chain, exit_node), do: [exit_node: exit_node, protocol: :http]
 

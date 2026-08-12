@@ -13,7 +13,6 @@ defmodule EdgeAgentWeb.Controllers.FallbackController do
 
   require Logger
 
-  # 1. Changeset validation errors (422)
   def call(conn, {:error, %Ecto.Changeset{} = changeset}) do
     conn
     |> put_status(:unprocessable_entity)
@@ -21,7 +20,6 @@ defmodule EdgeAgentWeb.Controllers.FallbackController do
     |> render(:error, conn: conn, changeset: changeset)
   end
 
-  # 2. Not found (404)
   def call(conn, {:error, :not_found}) do
     conn
     |> put_status(:not_found)
@@ -29,7 +27,6 @@ defmodule EdgeAgentWeb.Controllers.FallbackController do
     |> render(:"404", conn: conn)
   end
 
-  # 3. Forbidden (403)
   def call(conn, {:error, :forbidden}) do
     conn
     |> put_status(:forbidden)
@@ -37,7 +34,6 @@ defmodule EdgeAgentWeb.Controllers.FallbackController do
     |> render(:"403", conn: conn)
   end
 
-  # 4. Unauthorized (401)
   def call(conn, {:error, :unauthorized}) do
     conn
     |> put_status(:unauthorized)
@@ -45,7 +41,6 @@ defmodule EdgeAgentWeb.Controllers.FallbackController do
     |> render(:"401", conn: conn)
   end
 
-  # 5. Conflict (409) - bare atom
   def call(conn, {:error, :conflict}) do
     conn
     |> put_status(:conflict)
@@ -53,14 +48,12 @@ defmodule EdgeAgentWeb.Controllers.FallbackController do
     |> render(:"409", conn: conn)
   end
 
-  # 6. Conflict with reason (409)
   def call(conn, {:error, {:conflict, reason}}) do
     conn
     |> put_status(:conflict)
     |> json(ResponseEnvelope.error(conn, "conflict", reason))
   end
 
-  # 7. Service unavailable (503)
   def call(conn, {:error, :service_unavailable}) do
     conn
     |> put_status(:service_unavailable)
@@ -68,7 +61,6 @@ defmodule EdgeAgentWeb.Controllers.FallbackController do
     |> render(:"503", conn: conn)
   end
 
-  # 8. Bad request (400)
   def call(conn, {:error, :bad_request}) do
     conn
     |> put_status(:bad_request)
@@ -76,7 +68,6 @@ defmodule EdgeAgentWeb.Controllers.FallbackController do
     |> render(:"400", conn: conn)
   end
 
-  # 9. CATCH-ALL: unhandled error → 500
   def call(conn, {:error, reason}) do
     Logger.error("Unhandled error in controller: #{inspect(reason)}")
 

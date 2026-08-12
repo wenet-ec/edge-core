@@ -13,17 +13,6 @@ defmodule EdgeAgentWeb.ResponseEnvelope do
 
   Error:
       %{error: %{code: "not_found", message: "...", details: nil}, meta: %{...}}
-
-  ## Usage in views
-
-      def show(%{conn: conn, command_execution: execution}) do
-        ResponseEnvelope.success(conn, data(execution))
-      end
-
-  ## Usage in FallbackController / ErrorJSON
-
-      ResponseEnvelope.error(conn, "not_found", "Resource not found")
-      ResponseEnvelope.error(conn, "validation_failed", "Validation failed", field_errors)
   """
 
   @doc """
@@ -52,8 +41,6 @@ defmodule EdgeAgentWeb.ResponseEnvelope do
 
     %{error: error_payload, meta: request_meta(conn)}
   end
-
-  # --- Private ---
 
   defp request_meta(conn) do
     %{

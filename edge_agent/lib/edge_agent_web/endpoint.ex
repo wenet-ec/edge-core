@@ -28,7 +28,6 @@ defmodule EdgeAgentWeb.Endpoint do
   plug(EdgeAgentWeb.Plugs.Security)
   plug(:ping)
 
-  # Code reloading (dev only)
   if code_reloading? do
     plug(Phoenix.CodeReloader)
     plug(Phoenix.Ecto.CheckRepoStatus, otp_app: :edge_agent)
@@ -53,7 +52,6 @@ defmodule EdgeAgentWeb.Endpoint do
   plug(EdgeAgentHealth.Router)
   plug(:halt_if_sent)
 
-  # PromEx metrics with api_token authentication
   plug(:metrics_auth_conditional)
   plug(PromEx.Plug, prom_ex_module: EdgeAgent.PromEx, path: "/api/v1/agents/me/metrics/raw")
 
@@ -72,7 +70,6 @@ defmodule EdgeAgentWeb.Endpoint do
 
   defp ping(conn, _opts), do: conn
 
-  # Apply api_token auth only for the metrics endpoint (if enabled)
   defp metrics_auth_conditional(%{request_path: "/api/v1/agents/me/metrics/raw"} = conn, _opts) do
     auth_enabled = Application.get_env(:edge_agent, :agent_metrics_auth_enabled, true)
 

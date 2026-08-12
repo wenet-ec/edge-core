@@ -3,83 +3,10 @@ defmodule EdgeAgent.Commands do
   @moduledoc """
   Command execution context for edge agents.
 
-  This module handles receiving commands from the admin server, executing them
-  via hostscript, and reporting results back. Commands flow through a queue-based
-  execution pipeline with cancellation support.
-
-  ## Architecture
-
-  The module uses a **queue-based execution model** with the following components:
-
-  1. **Local Database** - Stores command executions (pending → running → completed)
-  2. **Oban Jobs** - Manages execution queue with uniqueness constraints
-  3. **ExecutionRegistry** - Tracks running tasks for cancellation
-  4. **AdminClient** - Reports execution results to admin server
-
-  ## Execution Flow
-
-  ```
-  1. Admin sends command → Agent creates CommandExecution (status: :pending)
-  2. Enqueue Oban job → EnqueueExecutionWorker triggers ExecuteCommandWorker
-  3. Worker atomically claims pending work (pending → running), then runs it via hostscript
-  4. Execution completes → Conditionally updates running work to :completed with output/exit_code
-  5. Report to admin → Sends result via AdminClient.report_command_execution_result
-  6. Delete local copy → Removes from agent database after successful report
-  ```
-
-  ## Command Cancellation
-
-  Commands can be cancelled at any stage:
-  - **Pending or running** - Kills the running task if any, cancels the Oban job,
-    and marks the execution completed with exit code 143
-  - **Completed** - No action (already finished)
-  - **Expired** - No action (already finalized)
-
-  Cancellation involves:
-  1. Atomically finalizing pending/running work as cancelled
-  2. Killing a running task (if executing)
-  3. Cancelling the Oban job (prevents future execution)
-
-  ## Reporting
-
-  Executions are reported back to admin in batches:
-  - Report ordered by creation time (FIFO)
-  - Handle 404/409/422 from admin (execution deleted, already finalized, or
-    not in an updatable state) by discarding the local copy
-  - Stop on network errors and retry later
-  - Delete local copy after successful report
-
-  ## Key Concepts
-
-  - **CommandExecution**: Database record tracking command state
-  - **ExecutionRegistry**: ETS table mapping execution_id → task_pid
-  - **Hostscript**: Sandboxed script execution environment
-  - **FIFO Ordering**: Commands executed in order received
-
-  ## Examples
-
-      # List all command executions
-      iex> Commands.list_command_executions()
-      [%CommandExecution{id: "...", status: :pending, ...}]
-
-      # Create and enqueue execution
-      iex> Commands.create_command_execution_and_enqueue_worker(%{
-        id: "exec-123",
-        command_id: "cmd-456",
-        node_id: "node-789",
-        command_text: "uptime",
-        timeout: 30000
-      })
-      {:ok, %CommandExecution{}}
-
-      # Cancel running execution
-      iex> execution = Commands.get_command_execution("exec-123")
-      iex> Commands.cancel_execution(execution)
-      {:ok, %{action: :cancelled, task_kill: :task_killed, oban_result: :job_cancelled}}
-
-      # Report completed executions to admin
-      iex> Commands.report_unreported_executions()
-      :ok
+  Commands are stored locally, claimed by Oban workers, executed through
+  `hostscript`, and reported back to Admin. The local state machine is
+  `:pending -> :running -> :completed | :expired`; Admin-only states such as
+  `:sent` and `:cancelled` are translated at the boundary.
   """
 
   import Ecto.Query, warn: false
@@ -131,7 +58,6 @@ defmodule EdgeAgent.Commands do
   def create_command_execution_and_enqueue_worker(params \\ %{}) do
     with {:ok, attrs} <- CreateCommandExecutionForm.changeset(params),
          {:ok, command_execution} <- create_command_execution(attrs) do
-      # Trigger enqueue worker (Oban's unique constraint prevents duplicates)
       enqueue_worker(
         EdgeAgent.Commands.Workers.EnqueueExecutionWorker,
         "EnqueueExecutionWorker"
@@ -206,7 +132,6 @@ defmodule EdgeAgent.Commands do
     else
       Logger.info("Enqueueing #{length(recoverable_executions)} recoverable executions")
 
-      # Enqueue each execution as a separate Oban job
       Enum.each(recoverable_executions, fn execution ->
         enqueue_execution_job(execution)
       end)
@@ -327,7 +252,6 @@ defmodule EdgeAgent.Commands do
   def report_unreported_executions do
     Logger.info("Starting unreported executions report")
 
-    # Get completed executions ordered by creation time (oldest first)
     completed_executions = get_completed_executions()
 
     if Enum.empty?(completed_executions) do
@@ -373,7 +297,6 @@ defmodule EdgeAgent.Commands do
         :ok
 
       {:error, %Ecto.Changeset{errors: [unique: _]}} ->
-        # Already enqueued - this is fine, Oban's unique constraint prevents duplicates
         Logger.debug("Execution #{execution.id} already enqueued, skipped")
 
         :telemetry.execute(
@@ -454,7 +377,6 @@ defmodule EdgeAgent.Commands do
     end
   end
 
-  # Enqueues a worker, handling duplicates gracefully
   def enqueue_worker(worker_module, worker_name) do
     %{}
     |> worker_module.new()
@@ -465,13 +387,11 @@ defmodule EdgeAgent.Commands do
         :ok
 
       {:error, _changeset} ->
-        # Likely duplicate due to unique constraint - this is expected and fine
         Logger.debug("#{worker_name} already exists, skipped")
         :ok
     end
   end
 
-  # Queries command executions by status, ordered by insertion time (FIFO)
   defp get_executions_by_status(statuses) when is_list(statuses) do
     Repo.all(from(ce in CommandExecution, where: ce.status in ^statuses, order_by: [asc: ce.inserted_at]))
   end
@@ -483,25 +403,14 @@ defmodule EdgeAgent.Commands do
   @doc """
   Cancels a command execution.
 
-  Handles four scenarios:
-  1. Pending or running - Atomically marks the execution cancelled, kills a
-     running task if any, cancels the Oban job, and updates
-     the execution to completed with exit code 143 and "Command cancelled"
-     output
-  2. Completed - No action taken (already finalized)
-  3. Expired - No action taken (already finalized)
-
-  ## Parameters
-    - execution: CommandExecution struct
-
-  ## Returns
-    - `{:ok, result_map}` - Cancellation result with details
+  Pending or running executions are atomically finalized with exit code 143,
+  then any running task and queued Oban job are cancelled. Completed, expired,
+  or missing rows are treated as already finalized.
   """
   @spec cancel_execution(CommandExecution.t()) :: {:ok, map()}
   def cancel_execution(execution) do
     case cancel_pending_or_running_execution(execution.id) do
       :cancelled ->
-        # Try to kill running task if executing
         task_kill_result =
           case ExecutionRegistry.get_task(execution.id) do
             nil ->
@@ -618,35 +527,14 @@ defmodule EdgeAgent.Commands do
   @doc """
   Syncs unprocessed command executions from admin.
 
-  Fetches both "sent" and "pending" command executions and stores them locally.
-  This provides a comprehensive sync mechanism that handles:
-  1. Already acknowledged commands (sent) - stores them for execution
-  2. Unacknowledged commands (pending) - acknowledges then stores them
-
-  Used by:
-  - Bootstrap (initial sync on startup)
-  - `EdgeAgent.LocalScheduler.Tasks.sync_unprocessed_executions/0` (periodic sync when using HTTP fallback)
-
-  ## Flow
-  1. Fetch "sent" executions → store locally (already acknowledged)
-  2. Fetch "pending" executions → acknowledge with admin → store locally
-  3. Skip duplicates (already exist in local DB)
-  4. Continue on individual failures (retry on next sync)
-
-  ## Returns
-  - `:ok` - Sync completed (success or partial success)
-  - `{:error, reason}` - Sync failed completely
-
-  ## Examples
-
-      iex> Commands.sync_unprocessed_command_executions()
-      :ok
+  Fetches already acknowledged `sent` executions and unacknowledged `pending`
+  executions from Admin, stores missing local rows, and leaves failed items for
+  the next periodic sync.
   """
   @spec sync_unprocessed_command_executions() :: :ok | {:error, term()}
   def sync_unprocessed_command_executions do
     node_id = Settings.get_node_id()
 
-    # Step 1: Sync "sent" executions (already acknowledged)
     sent_result =
       case AdminClient.list_sent_command_executions() do
         {:ok, %{data: commands, meta: _meta}} ->
@@ -663,10 +551,8 @@ defmodule EdgeAgent.Commands do
           {:error, reason}
       end
 
-    # Step 2: Sync "pending" executions (need acknowledgment)
     pending_result = sync_pending_executions(node_id)
 
-    # Emit telemetry
     sent_count = if match?({:ok, _count}, sent_result), do: elem(sent_result, 1), else: 0
     pending_count = if match?({:ok, _count}, pending_result), do: elem(pending_result, 1), else: 0
 
@@ -689,11 +575,9 @@ defmodule EdgeAgent.Commands do
         Logger.info("Syncing #{length(commands)} pending command execution(s)")
 
         Enum.each(commands, fn command ->
-          # Acknowledge with admin first (pending → sent)
           case AdminClient.acknowledge_command_execution(command["id"]) do
             :ok ->
               Logger.debug("Acknowledged command execution: #{command["id"]}")
-              # Then store locally
               store_command_execution_locally(command, node_id)
 
             {:error, {:http_error, status, _body}} when status in [404, 409] ->
@@ -721,7 +605,6 @@ defmodule EdgeAgent.Commands do
     end
   end
 
-  # Private helper: stores a command execution locally
   defp store_command_execution_locally(command, node_id) do
     attrs = %{
       id: command["id"],

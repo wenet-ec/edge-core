@@ -3,8 +3,8 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionForm do
   @moduledoc """
   Form for validating command execution creation inputs.
 
-  Handles input validation for creating command executions received from EdgeAdmin.
-  This form validates external API inputs before passing to the domain layer.
+  Accepts pending command executions received from Admin before they are stored
+  in the local Agent database.
   """
   use EdgeAgent.Form
 
@@ -24,20 +24,7 @@ defmodule EdgeAgent.Commands.Forms.CreateCommandExecutionForm do
   @doc """
   Validates and normalizes command execution creation parameters.
 
-  ## Validations
-  - `id` - Required, must be valid UUID
-  - `command_id` - Required, must be valid UUID
-  - `node_id` - Required, must be valid UUID
-  - `command_text` - Required, must not be empty
-  - `status` - Required, must be `"pending"` on the wire (cast to atom)
-  - `timeout` - Optional, must be positive integer if present
-  - `output` - Optional
-  - `exit_code` - Optional, must be integer if present
-  - `completed_at` - Optional, must be valid datetime if present
-
-  ## Returns
-  - `{:ok, attrs}` - Validated and normalized attributes as a map with string keys
-  - `{:error, changeset}` - Validation errors
+  Returns normalized string-keyed attributes or a changeset error.
   """
   def changeset(attrs) when is_map(attrs) do
     %__MODULE__{}

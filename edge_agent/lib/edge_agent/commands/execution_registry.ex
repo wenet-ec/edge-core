@@ -1,11 +1,6 @@
 # edge_agent/lib/edge_agent/commands/execution_registry.ex
 defmodule EdgeAgent.Commands.ExecutionRegistry do
-  @moduledoc """
-  Registry for tracking currently executing command tasks.
-
-  Stores task PIDs for running commands to enable cancellation.
-  Used by cancel_execution to kill actively running commands.
-  """
+  @moduledoc "Registry for task PIDs of currently executing commands."
 
   use GenServer
 
@@ -14,32 +9,23 @@ defmodule EdgeAgent.Commands.ExecutionRegistry do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
-  @doc """
-  Registers a task PID for a command execution.
-  """
+  @doc "Registers a task PID for a command execution."
   @spec register(String.t(), pid()) :: :ok
   def register(execution_id, task_pid) do
     GenServer.cast(__MODULE__, {:register, execution_id, task_pid})
   end
 
-  @doc """
-  Unregisters a task PID for a command execution.
-  """
+  @doc "Unregisters a task PID for a command execution."
   @spec unregister(String.t()) :: :ok
   def unregister(execution_id) do
     GenServer.cast(__MODULE__, {:unregister, execution_id})
   end
 
-  @doc """
-  Gets the task PID for a command execution.
-  Returns nil if not found.
-  """
+  @doc "Returns the task PID for a command execution, if it is running."
   @spec get_task(String.t()) :: pid() | nil
   def get_task(execution_id) do
     GenServer.call(__MODULE__, {:get_task, execution_id})
   end
-
-  # GenServer callbacks
 
   def init(_), do: {:ok, %{}}
 

@@ -73,10 +73,6 @@ defmodule EdgeAgent.Commands.Schemas.CommandExecution do
     end)
   end
 
-  # ---------------------------------------------------------------------------
-  # Status registry
-  # ---------------------------------------------------------------------------
-
   @doc "All locally-tracked statuses, in canonical order."
   @spec statuses() :: [status()]
   def statuses, do: @statuses

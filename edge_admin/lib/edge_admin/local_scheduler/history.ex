@@ -19,10 +19,6 @@ defmodule EdgeAdmin.LocalScheduler.History do
   @table :edge_admin_local_scheduler_history
   @scheduler EdgeAdmin.LocalScheduler
 
-  # ---------------------------------------------------------------------------
-  # Public API
-  # ---------------------------------------------------------------------------
-
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
@@ -64,10 +60,6 @@ defmodule EdgeAdmin.LocalScheduler.History do
     ArgumentError -> %{}
   end
 
-  # ---------------------------------------------------------------------------
-  # Server callbacks
-  # ---------------------------------------------------------------------------
-
   @impl true
   def init(_opts) do
     :ets.new(@table, [:set, :public, :named_table, read_concurrency: true])
@@ -92,9 +84,7 @@ defmodule EdgeAdmin.LocalScheduler.History do
     :ok
   end
 
-  # ---------------------------------------------------------------------------
   # Telemetry handler — runs in the calling process, must not crash
-  # ---------------------------------------------------------------------------
 
   @doc false
   def handle_telemetry(event, measurements, metadata, _config) do

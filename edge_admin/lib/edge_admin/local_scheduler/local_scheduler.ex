@@ -3,8 +3,9 @@ defmodule EdgeAdmin.LocalScheduler do
   @moduledoc """
   Quantum scheduler for local (per-admin) periodic tasks.
 
-  Unlike Oban (which runs jobs on ONE leader node), Quantum runs tasks
-  locally on EACH admin node.
+  Quantum runs tasks locally on each admin node. Jobs that should avoid
+  duplicate cluster-wide work use their own weak-leader guard; jobs that need
+  DB-backed coordination belong in Oban.
 
   ## Telemetry Events
 

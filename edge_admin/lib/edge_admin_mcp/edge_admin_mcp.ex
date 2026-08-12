@@ -3,14 +3,10 @@ defmodule EdgeAdminMcp do
   @moduledoc """
   Entrypoint for MCP tool definitions.
 
-  Use this in tool modules to avoid repeating boilerplate:
-
-      use EdgeAdminMcp, :tool
-
-  Injects:
+  `use EdgeAdminMcp, :tool` injects:
   - `use Anubis.Server.Component, type: :tool`
   - `alias Anubis.Server.Response`
-  - `input_schema/0` override — rewrites the Peri-generated JSON Schema into
+  - `input_schema/0` override — rewrites the Peri JSON Schema into
     inspector-friendly form before it is served to MCP clients (see
     `normalize_json_schema/1` for the rewrite rules).
   - `paginated/3` — builds the standard MCP list response shape
@@ -56,7 +52,7 @@ defmodule EdgeAdminMcp do
   end
 
   @doc """
-  Recursively rewrites a Peri-generated JSON Schema into a form the MCP
+  Recursively rewrites a Peri JSON Schema into a form the MCP
   inspector's `DynamicJsonForm` can render.
 
   Peri emits certain `oneOf` unions that have no top-level `type`, which the
@@ -137,9 +133,7 @@ defmodule EdgeAdminMcp do
   Renders an MCP tool error response with a custom message.
 
   Used when the tool wants a more informative message than the default
-  `ToolError.message/1` would produce (e.g. including the resource id):
-
-      error_response(:not_found, "Command \#{id} not found")
+  `ToolError.message/1` would produce, such as including the resource id.
 
   The `code` is currently informational — it is not surfaced to the client
   in the response body, but tools should still pass an honest code so the

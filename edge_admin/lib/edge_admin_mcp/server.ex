@@ -86,8 +86,6 @@ defmodule EdgeAdminMcp.Server do
   alias Anubis.Server.Response
   alias EdgeAdminMcp.ToolError
 
-  # ── Degraded-mode gating ──────────────────────────────────────────────────
-  #
   # Tools that are blocked when `EdgeAdmin.Admins.Metadata.degraded?/0` is true.
   # Mirrors `plug DegradedMode, :block when action in [...]` on the REST side
   # — same source of truth (`@metadata_module.degraded?/0`), same operations
@@ -203,7 +201,7 @@ defmodule EdgeAdminMcp.Server do
 
     - **Forward proxies** (HTTP `:43128`, SOCKS5 `:41080`) — reach any TCP service
       on any node over the VPN. Auth: username `_`, password `PROXY_KEY`.
-      Node DNS is the destination. Example: `curl -x http://_:KEY@admin:43128 \
+      Node DNS is the destination, for example `curl -x http://_:KEY@admin:43128 \
       http://node-abc.cluster-prod.nm.internal:8080/`.
     - **Proxy chaining** — same proxies, but use a node's DNS hostname as the
       *username* to make that agent the exit node. Use this to reach LAN devices
@@ -227,7 +225,7 @@ defmodule EdgeAdminMcp.Server do
     """
   end
 
-  # ── Admin info ──────────────────────────────────────────────────────────────
+  # Admin info
   component(EdgeAdminMcp.Tools.Admins.GetAdmin)
   component(EdgeAdminMcp.Tools.Admins.GetMyAdminCluster)
   component(EdgeAdminMcp.Tools.Admins.ListAdminClusters)
@@ -235,14 +233,14 @@ defmodule EdgeAdminMcp.Server do
   component(EdgeAdminMcp.Tools.Admins.ListOrphanedClusters)
   component(EdgeAdminMcp.Tools.Admins.CheckAdminHealth)
 
-  # ── Clusters ─────────────────────────────────────────────────────────────────
+  # Clusters
   component(EdgeAdminMcp.Tools.Nodes.ListClusters)
   component(EdgeAdminMcp.Tools.Nodes.GetCluster)
   component(EdgeAdminMcp.Tools.Nodes.CreateCluster)
   component(EdgeAdminMcp.Tools.Nodes.UpdateCluster)
   component(EdgeAdminMcp.Tools.Nodes.DeleteCluster)
 
-  # ── Nodes ────────────────────────────────────────────────────────────────────
+  # Nodes
   component(EdgeAdminMcp.Tools.Nodes.ListNodes)
   component(EdgeAdminMcp.Tools.Nodes.GetNode)
   component(EdgeAdminMcp.Tools.Nodes.GetNodeDiagnostics)
@@ -251,62 +249,62 @@ defmodule EdgeAdminMcp.Server do
   component(EdgeAdminMcp.Tools.Nodes.CreateNodeRecoveryKey)
   component(EdgeAdminMcp.Tools.Nodes.DeleteNodeRecoveryKey)
 
-  # ── Aliases ──────────────────────────────────────────────────────────────────
+  # Aliases
   component(EdgeAdminMcp.Tools.Nodes.ListAliases)
   component(EdgeAdminMcp.Tools.Nodes.GetAlias)
   component(EdgeAdminMcp.Tools.Nodes.CreateAlias)
   component(EdgeAdminMcp.Tools.Nodes.DeleteAlias)
 
-  # ── Enrollment keys ──────────────────────────────────────────────────────────
+  # Enrollment keys
   component(EdgeAdminMcp.Tools.Nodes.ListEnrollmentKeys)
   component(EdgeAdminMcp.Tools.Nodes.GetEnrollmentKey)
   component(EdgeAdminMcp.Tools.Nodes.CreateEnrollmentKey)
   component(EdgeAdminMcp.Tools.Nodes.UpdateEnrollmentKey)
   component(EdgeAdminMcp.Tools.Nodes.DeleteEnrollmentKey)
 
-  # ── Commands ─────────────────────────────────────────────────────────────────
+  # Commands
   component(EdgeAdminMcp.Tools.Commands.ListCommands)
   component(EdgeAdminMcp.Tools.Commands.GetCommand)
   component(EdgeAdminMcp.Tools.Commands.CreateCommand)
   component(EdgeAdminMcp.Tools.Commands.DeleteCommand)
 
-  # ── Command executions ───────────────────────────────────────────────────────
+  # Command executions
   component(EdgeAdminMcp.Tools.Commands.ListCommandExecutions)
   component(EdgeAdminMcp.Tools.Commands.GetCommandExecution)
   component(EdgeAdminMcp.Tools.Commands.CancelCommandExecution)
   component(EdgeAdminMcp.Tools.Commands.DeleteCommandExecution)
 
-  # ── SSH usernames ─────────────────────────────────────────────────────────────
+  # SSH usernames
   component(EdgeAdminMcp.Tools.Ssh.ListSshUsernames)
   component(EdgeAdminMcp.Tools.Ssh.GetSshUsername)
   component(EdgeAdminMcp.Tools.Ssh.CreateSshUsername)
   component(EdgeAdminMcp.Tools.Ssh.DeleteSshUsername)
 
-  # ── SSH public keys ───────────────────────────────────────────────────────────
+  # SSH public keys
   component(EdgeAdminMcp.Tools.Ssh.ListSshPublicKeys)
   component(EdgeAdminMcp.Tools.Ssh.GetSshPublicKey)
   component(EdgeAdminMcp.Tools.Ssh.CreateSshPublicKey)
   component(EdgeAdminMcp.Tools.Ssh.DeleteSshPublicKey)
 
-  # ── Self-updates ─────────────────────────────────────────────────────────────
+  # Self-updates
   component(EdgeAdminMcp.Tools.SelfUpdates.ListSelfUpdateRequests)
   component(EdgeAdminMcp.Tools.SelfUpdates.GetSelfUpdateRequest)
   component(EdgeAdminMcp.Tools.SelfUpdates.CreateSelfUpdateRequest)
   component(EdgeAdminMcp.Tools.SelfUpdates.DeleteSelfUpdateRequest)
 
-  # ── Metrics ──────────────────────────────────────────────────────────────────
+  # Metrics
   component(EdgeAdminMcp.Tools.Metrics.GetNodeMetrics)
   component(EdgeAdminMcp.Tools.Metrics.GetHostMetrics)
   component(EdgeAdminMcp.Tools.Metrics.GetAgentMetrics)
   component(EdgeAdminMcp.Tools.Metrics.GetAdminMetrics)
 
-  # ── Webhooks ─────────────────────────────────────────────────────────────────
+  # Webhooks
   component(EdgeAdminMcp.Tools.Events.ListWebhooks)
   component(EdgeAdminMcp.Tools.Events.GetWebhook)
   component(EdgeAdminMcp.Tools.Events.CreateWebhook)
   component(EdgeAdminMcp.Tools.Events.DeleteWebhook)
 
-  # ── Event catalog / publish helpers ─────────────────────────────────────────
+  # Event catalog / publish helpers
   component(EdgeAdminMcp.Tools.Events.ListEventTypes)
   component(EdgeAdminMcp.Tools.Events.ExplainEventType)
   component(EdgeAdminMcp.Tools.Events.PublishTestEvent)

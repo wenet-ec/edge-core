@@ -15,7 +15,7 @@ defmodule EdgeAdminMcp.Tools.Events.ListWebhooks do
   ## Sorting
   - `sort` — comma-separated fields: `url`, `inserted_at`, `updated_at`; prefix with `-` for descending order
 
-  Note: `secret` and `headers` are write-only and are never returned.
+  `secret` and `headers` are write-only and are never returned.
   Webhooks have no `enabled` toggle — they're immutable after create. To
   pause delivery, delete and recreate.
   """

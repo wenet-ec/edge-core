@@ -55,10 +55,6 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest do
     |> validate_required([:targeting])
   end
 
-  # ---------------------------------------------------------------------------
-  # Status registry
-  # ---------------------------------------------------------------------------
-
   @doc "All request statuses, in canonical lifecycle order."
   @spec statuses() :: [status()]
   def statuses, do: @statuses

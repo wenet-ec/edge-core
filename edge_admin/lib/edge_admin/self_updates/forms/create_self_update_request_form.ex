@@ -3,8 +3,7 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestForm do
   @moduledoc """
   Form for validating self-update request creation inputs.
 
-  Handles input validation for creating self-update requests with flexible targeting options.
-  This form validates external API inputs before passing to the domain layer.
+  Validates external API input before passing it to the domain layer.
   """
   use EdgeAdmin.Form
 
@@ -17,26 +16,18 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestForm do
   @doc """
   Validates and normalizes self-update request creation parameters.
 
-  ## Validations
-  - `targeting_type` - Required, must be "all", "nodes", or "clusters"
-  - `node_ids` - Required if targeting_type is "nodes"
-  - `cluster_names` - Required if targeting_type is "clusters"
-
-  ## Returns
-  - `{:ok, attrs}` - Validated and normalized attributes as a map with string keys
-  - `{:error, changeset}` - Validation errors
+  `targeting.type` must be `"all"`, `"nodes"`, or `"clusters"`.
+  Node and cluster targets must include their corresponding identifier lists.
   """
   def changeset(attrs) when is_map(attrs) do
     # Normalize to string keys so Ecto never sees a mixed-key map
     attrs = Map.new(attrs, fn {k, v} -> {to_string(k), v} end)
 
-    # Extract targeting nested map if present (now always string keys)
     targeting =
       attrs
       |> Map.get("targeting", %{})
       |> Map.new(fn {k, v} -> {to_string(k), v} end)
 
-    # Flatten targeting into top-level fields for validation
     flattened_attrs =
       %{}
       |> Map.put("targeting_type", Map.get(targeting, "type"))
@@ -94,10 +85,8 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestForm do
   end
 
   defp to_map(%__MODULE__{} = form, original_attrs) do
-    # original_attrs is already normalized to string keys by changeset/1
     original_targeting = Map.get(original_attrs, "targeting", %{})
 
-    # Build base targeting with validated fields
     base_targeting =
       case form.targeting_type do
         "all" ->
@@ -110,7 +99,6 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestForm do
           %{"type" => "clusters", "cluster_names" => form.cluster_names}
       end
 
-    # Merge original targeting with base targeting (base targeting takes precedence for validated fields)
     targeting = Map.merge(original_targeting, base_targeting)
 
     %{"targeting" => targeting}

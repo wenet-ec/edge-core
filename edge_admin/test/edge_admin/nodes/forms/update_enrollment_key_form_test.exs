@@ -3,18 +3,13 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyFormTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyForm
-
-  # ---------------------------------------------------------------------------
   # helpers
-  # ---------------------------------------------------------------------------
 
   defp errors_on(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — valid cases
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — valid cases" do
     test "empty attrs succeeds (both fields optional)" do
@@ -54,9 +49,7 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — uses_remaining validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — uses_remaining validation" do
     test "zero uses_remaining is rejected" do
@@ -85,9 +78,7 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — explicit null vs omitted (preserve_null semantics)
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — explicit null vs omitted" do
     test "key present with nil value is preserved in result (explicit null)" do
@@ -122,9 +113,7 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateEnrollmentKeyFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — invalid param types (fallback returns empty map)
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid params" do
     test "non-map params return empty map (changeset(_) fallback clause)" do

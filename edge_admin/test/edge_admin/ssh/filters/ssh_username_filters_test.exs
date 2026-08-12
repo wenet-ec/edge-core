@@ -68,10 +68,7 @@ defmodule EdgeAdmin.Ssh.Filters.SshUsernameFiltersTest do
   end
 
   defp ids(query), do: query |> Repo.all() |> Enum.map(& &1.id) |> Enum.sort()
-
-  # ---------------------------------------------------------------------------
   # apply_has_password/2 — virtual boolean: password_hash IS [NOT] NULL
-  # ---------------------------------------------------------------------------
 
   describe "apply_has_password/2" do
     test "true matches usernames with non-null password_hash" do
@@ -132,9 +129,7 @@ defmodule EdgeAdmin.Ssh.Filters.SshUsernameFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_cluster_name/2 — filters by node's cluster name (3rd binding)
-  # ---------------------------------------------------------------------------
 
   describe "apply_cluster_name/2" do
     test "== matches by exact cluster name" do
@@ -211,9 +206,7 @@ defmodule EdgeAdmin.Ssh.Filters.SshUsernameFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_node_ids/2 — filters via the node binding (n.id)
-  # ---------------------------------------------------------------------------
 
   describe "apply_node_ids/2" do
     test ":in matches usernames whose node ID is in the given list" do
@@ -267,10 +260,8 @@ defmodule EdgeAdmin.Ssh.Filters.SshUsernameFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_key_name/2 — joins ssh_public_keys (has_many) and filters by key name.
   # Returns distinct usernames so multiple matching keys don't duplicate rows.
-  # ---------------------------------------------------------------------------
 
   describe "apply_key_name/2" do
     test "== matches usernames that have a key with the exact name" do

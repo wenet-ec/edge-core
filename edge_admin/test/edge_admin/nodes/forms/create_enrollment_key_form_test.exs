@@ -3,18 +3,13 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyFormTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyForm
-
-  # ---------------------------------------------------------------------------
   # helpers
-  # ---------------------------------------------------------------------------
 
   defp errors_on(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — valid cases
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — valid cases" do
     test "empty attrs succeeds (both fields optional)" do
@@ -65,9 +60,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — uses_remaining validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — uses_remaining validation" do
     test "zero uses_remaining is rejected" do
@@ -107,9 +100,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — to_map output
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — to_map output" do
     test "absent optional fields are excluded from result map" do
@@ -136,9 +127,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateEnrollmentKeyFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — invalid param types (fallback clause returns empty map)
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid params" do
     test "non-map params fall through to empty map (changeset(_) clause)" do

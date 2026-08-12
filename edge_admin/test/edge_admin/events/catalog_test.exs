@@ -10,10 +10,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
   alias EdgeAdmin.Ssh.Schemas.SshUsername
-
-  # ---------------------------------------------------------------------------
   # Fixtures
-  # ---------------------------------------------------------------------------
 
   defp now, do: DateTime.truncate(DateTime.utc_now(), :second)
 
@@ -124,10 +121,8 @@ defmodule EdgeAdmin.Events.CatalogTest do
     struct(base, overrides)
   end
 
-  # ---------------------------------------------------------------------------
   # all_event_types/0 — pinned set; webhook validation + AsyncAPI both depend
   # on this list staying authoritative.
-  # ---------------------------------------------------------------------------
 
   describe "all_event_types/0" do
     test "returns the 16 documented event types in catalog order" do
@@ -167,9 +162,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # event_type/1 — round-trip with all_event_types/0
-  # ---------------------------------------------------------------------------
 
   describe "event_type/1" do
     test "every struct produces a registered event type" do
@@ -256,13 +249,11 @@ defmodule EdgeAdmin.Events.CatalogTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # to_data/1 — payload builders. Security contracts:
   #   • enrollment_key.key blob NEVER appears
   #   • ssh_username.password_hash NEVER appears
   #   • node.api_token / node.proxy_password NEVER appear
   #   • execution.output NEVER appears (operators may have logged secrets there)
-  # ---------------------------------------------------------------------------
 
   describe "to_data/1 — CoreTest" do
     test "serializes the test message and request timestamp" do
@@ -598,9 +589,7 @@ defmodule EdgeAdmin.Events.CatalogTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # description/1, data_example/1, lookup/1, list_with_descriptions/0
-  # ---------------------------------------------------------------------------
 
   describe "description/1" do
     test "returns a non-empty string for every catalog event type" do

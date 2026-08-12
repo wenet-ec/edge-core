@@ -3,11 +3,8 @@ defmodule EdgeAdminMcp.FlopParamsTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdminMcp.FlopParams
-
-  # ---------------------------------------------------------------------------
   # build/1 — auto-detection: no per-tool opts needed.
   # Every MCP param key is translated by pattern.
-  # ---------------------------------------------------------------------------
 
   describe "build/1 — pagination defaults" do
     test "defaults page to 1 and page_size to 20 when not supplied" do
@@ -37,9 +34,7 @@ defmodule EdgeAdminMcp.FlopParamsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Plain fields (string/integer) — passed through as-is
-  # ---------------------------------------------------------------------------
 
   describe "build/1 — plain string/integer fields" do
     test "plain string field is passed through unchanged" do
@@ -68,9 +63,7 @@ defmodule EdgeAdminMcp.FlopParamsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Boolean fields — native true/false pass through; nil is dropped
-  # ---------------------------------------------------------------------------
 
   describe "build/1 — boolean fields" do
     test "native true passes through" do
@@ -92,9 +85,7 @@ defmodule EdgeAdminMcp.FlopParamsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # _in fields — list → "<field>__in" comma-joined string
-  # ---------------------------------------------------------------------------
 
   describe "build/1 — _in list fields" do
     test "list is joined and emitted as <field>__in" do
@@ -135,9 +126,7 @@ defmodule EdgeAdminMcp.FlopParamsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # _gte / _lte fields — single underscore → double underscore
-  # ---------------------------------------------------------------------------
 
   describe "build/1 — range fields (_gte / _lte)" do
     test "_gte suffix becomes __gte" do
@@ -197,9 +186,7 @@ defmodule EdgeAdminMcp.FlopParamsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Reserved keys — page, page_size, sort, event_type
-  # ---------------------------------------------------------------------------
 
   describe "build/1 — reserved keys" do
     test "sort passes through" do
@@ -221,9 +208,7 @@ defmodule EdgeAdminMcp.FlopParamsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Full integration — realistic MCP params map
-  # ---------------------------------------------------------------------------
 
   describe "build/1 — full integration" do
     test "produces the correct Flop-shaped map for a realistic list_nodes call" do

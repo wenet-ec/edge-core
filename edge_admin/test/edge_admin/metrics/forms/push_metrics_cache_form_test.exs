@@ -4,10 +4,6 @@ defmodule EdgeAdmin.Metrics.Forms.PushMetricsCacheFormTest do
 
   alias EdgeAdmin.Metrics.Forms.PushMetricsCacheForm
 
-  # ---------------------------------------------------------------------------
-  # Helpers
-  # ---------------------------------------------------------------------------
-
   defp valid_attrs(overrides \\ %{}) do
     Map.merge(
       %{"metrics_type" => "host", "metrics_text" => "# HELP node_cpu_seconds_total\nnode_cpu_seconds_total 1.0"},
@@ -19,9 +15,7 @@ defmodule EdgeAdmin.Metrics.Forms.PushMetricsCacheFormTest do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — valid cases
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — valid metrics_type values" do
     test "host metrics_type is accepted" do
@@ -40,9 +34,7 @@ defmodule EdgeAdmin.Metrics.Forms.PushMetricsCacheFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — metrics_type validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — metrics_type validation" do
     test "missing metrics_type is rejected" do
@@ -67,9 +59,7 @@ defmodule EdgeAdmin.Metrics.Forms.PushMetricsCacheFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — metrics_text validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — metrics_text validation" do
     test "missing metrics_text is rejected" do
@@ -91,9 +81,7 @@ defmodule EdgeAdmin.Metrics.Forms.PushMetricsCacheFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — to_map output
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — to_map output" do
     test "result has string key metrics_type" do
@@ -118,9 +106,7 @@ defmodule EdgeAdmin.Metrics.Forms.PushMetricsCacheFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — invalid param types
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid params" do
     test "non-map params return a base error" do

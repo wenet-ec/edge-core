@@ -3,10 +3,7 @@ defmodule EdgeAdmin.RequestParserTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.RequestParser
-
-  # ---------------------------------------------------------------------------
   # parse/1 — pagination defaults
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — pagination defaults" do
     test "empty params returns default page and page_size" do
@@ -27,9 +24,7 @@ defmodule EdgeAdmin.RequestParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — page parsing
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — page parsing" do
     test "parses page from integer" do
@@ -53,9 +48,7 @@ defmodule EdgeAdmin.RequestParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — page_size parsing
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — page_size parsing" do
     test "parses page_size from integer" do
@@ -84,9 +77,7 @@ defmodule EdgeAdmin.RequestParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — sort parsing
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — sort parsing" do
     test "parses a single ascending sort field" do
@@ -108,9 +99,7 @@ defmodule EdgeAdmin.RequestParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — reserved params are not treated as filters
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — reserved params excluded from filters" do
     test "page is not in filters" do
@@ -132,9 +121,7 @@ defmodule EdgeAdmin.RequestParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — exact match filters
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — exact match filters" do
     test "plain string value produces == filter" do
@@ -169,9 +156,7 @@ defmodule EdgeAdmin.RequestParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — wildcard / ilike filters
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — wildcard (ilike) filters" do
     test "trailing * produces starts-with ilike" do
@@ -195,9 +180,7 @@ defmodule EdgeAdmin.RequestParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — IN operator (__in suffix)
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — IN filters" do
     test "field__in with comma-separated value produces :in filter with list" do
@@ -244,9 +227,7 @@ defmodule EdgeAdmin.RequestParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — range / comparison operators (__gte, __gt, etc.)
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — range operator filters" do
     test "__gte with full datetime string passes through unchanged" do
@@ -317,9 +298,7 @@ defmodule EdgeAdmin.RequestParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — atom key normalization
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — atom key normalization" do
     test "atom key params are normalized to strings and parsed" do
@@ -342,9 +321,7 @@ defmodule EdgeAdmin.RequestParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — multiple filters combined
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — multiple filters" do
     test "multiple params produce multiple filters" do
@@ -382,9 +359,7 @@ defmodule EdgeAdmin.RequestParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — compact (nil/empty values omitted)
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — compact removes nil and empty" do
     test "Flop sort fields are absent when sort is not provided" do
@@ -400,10 +375,8 @@ defmodule EdgeAdmin.RequestParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # split_ilike_filters/2 — splits ilike filters out so callers can apply them
   # as raw Ecto clauses without Flop's wildcard escaping.
-  # ---------------------------------------------------------------------------
 
   describe "split_ilike_filters/2" do
     test "extracts ilike filters for the listed fields, leaves others untouched" do
@@ -499,10 +472,6 @@ defmodule EdgeAdmin.RequestParserTest do
       assert rest.filters == [%{field: :name, op: :ilike, value: "prod%"}]
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Helpers
-  # ---------------------------------------------------------------------------
 
   defp assert_filter(result, field, op, value) do
     filters = result[:filters] || []

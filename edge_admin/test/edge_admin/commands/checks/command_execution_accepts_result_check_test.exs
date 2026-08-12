@@ -4,10 +4,7 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheckTest do
 
   alias EdgeAdmin.Commands.Checks.CommandExecutionAcceptsResultCheck
   alias EdgeAdmin.Commands.Schemas.CommandExecution
-
-  # ---------------------------------------------------------------------------
   # check/1 — pure struct pattern match, no DB
-  # ---------------------------------------------------------------------------
 
   describe "check/1 — updatable executions" do
     test "sent execution returns :ok" do

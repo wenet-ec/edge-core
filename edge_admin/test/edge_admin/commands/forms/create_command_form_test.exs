@@ -4,10 +4,6 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandFormTest do
 
   alias EdgeAdmin.Commands.Forms.CreateCommandForm
 
-  # ---------------------------------------------------------------------------
-  # Helpers
-  # ---------------------------------------------------------------------------
-
   defp valid_attrs(overrides \\ %{}) do
     Map.merge(
       %{
@@ -22,9 +18,7 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandFormTest do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — valid cases
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — valid cases" do
     test "all targeting type with command_text succeeds" do
@@ -69,9 +63,7 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — command_text validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — command_text validation" do
     test "empty command_text is rejected" do
@@ -104,9 +96,7 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — timeout validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — timeout validation" do
     test "zero timeout is rejected" do
@@ -135,9 +125,7 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — expires_at validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — expires_at validation" do
     test "future expires_at is accepted" do
@@ -175,9 +163,7 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — targeting_type validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — targeting_type validation" do
     test "invalid targeting type is rejected" do
@@ -210,9 +196,7 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — targeting requirements
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — targeting requirements" do
     test "nodes type without node_ids is rejected" do
@@ -247,9 +231,7 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — to_map output structure
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — to_map output structure" do
     test "result has command_text key" do
@@ -291,9 +273,7 @@ defmodule EdgeAdmin.Commands.Forms.CreateCommandFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — invalid param types
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid params" do
     test "non-map params return a base error" do

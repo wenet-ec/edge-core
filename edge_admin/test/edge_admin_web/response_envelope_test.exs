@@ -31,9 +31,7 @@ defmodule EdgeAdminWeb.ResponseEnvelopeTest do
     )
   end
 
-  # -----------------------------------------------------------------------
   # success/2 — single resource
-  # -----------------------------------------------------------------------
 
   describe "success/2 — single resource" do
     test "returns a map with :data key" do
@@ -93,9 +91,7 @@ defmodule EdgeAdminWeb.ResponseEnvelopeTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # success/3 — paginated collection
-  # -----------------------------------------------------------------------
 
   describe "success/3 — paginated collection" do
     test "returns a map with :data key" do
@@ -133,9 +129,7 @@ defmodule EdgeAdminWeb.ResponseEnvelopeTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # success/3 — pagination field renames
-  # -----------------------------------------------------------------------
 
   describe "success/3 — pagination field mapping from Flop.Meta" do
     test "current_page renamed to page" do
@@ -202,9 +196,7 @@ defmodule EdgeAdminWeb.ResponseEnvelopeTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # error/3 — simple error (details omitted)
-  # -----------------------------------------------------------------------
 
   describe "error/3 — simple error" do
     test "returns a map with :error key" do
@@ -247,9 +239,7 @@ defmodule EdgeAdminWeb.ResponseEnvelopeTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # error/4 — error with details
-  # -----------------------------------------------------------------------
 
   describe "error/4 — error with details" do
     test "error.details is set to the provided map" do

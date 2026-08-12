@@ -3,12 +3,9 @@ defmodule EdgeAdmin.ChangesetErrorsTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.ChangesetErrors
-
-  # ---------------------------------------------------------------------------
   # Test fixtures: tiny embedded schemas standing in for real Forms / Schemas.
   # We need a real Ecto.Changeset to feed traverse/1 and to_flat_string/1, but
   # we don't want to depend on any concrete domain schema — those drift.
-  # ---------------------------------------------------------------------------
 
   defmodule Inner do
     @moduledoc false
@@ -53,10 +50,7 @@ defmodule EdgeAdmin.ChangesetErrorsTest do
   end
 
   defp valid_changeset, do: Outer.changeset(%Outer{}, %{name: "abc", age: 1})
-
-  # ---------------------------------------------------------------------------
   # traverse/1
-  # ---------------------------------------------------------------------------
 
   describe "traverse/1" do
     test "returns an empty map when the changeset has no errors" do
@@ -111,9 +105,7 @@ defmodule EdgeAdmin.ChangesetErrorsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # to_flat_string/1
-  # ---------------------------------------------------------------------------
 
   describe "to_flat_string/1" do
     test "returns 'Validation failed' (no detail) when no errors are present" do

@@ -8,9 +8,7 @@ defmodule EdgeAdmin.Ssh.Forms.VerifySshCredentialsFormTest do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — valid cases
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — password auth" do
     test "username + password succeeds" do
@@ -57,9 +55,7 @@ defmodule EdgeAdmin.Ssh.Forms.VerifySshCredentialsFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — mutual exclusivity: the core logic
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — mutual exclusivity" do
     test "neither password nor public_key returns error" do
@@ -100,9 +96,7 @@ defmodule EdgeAdmin.Ssh.Forms.VerifySshCredentialsFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — username required
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — username required" do
     test "missing username is rejected" do
@@ -120,9 +114,7 @@ defmodule EdgeAdmin.Ssh.Forms.VerifySshCredentialsFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — to_map output
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — to_map output" do
     test "nil fields are excluded from result" do
@@ -140,9 +132,7 @@ defmodule EdgeAdmin.Ssh.Forms.VerifySshCredentialsFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — invalid param types
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid params" do
     test "non-map params return a base error" do

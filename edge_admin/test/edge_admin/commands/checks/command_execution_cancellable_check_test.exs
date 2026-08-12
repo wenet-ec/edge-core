@@ -4,10 +4,7 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionCancellableCheckTest do
 
   alias EdgeAdmin.Commands.Checks.CommandExecutionCancellableCheck
   alias EdgeAdmin.Commands.Schemas.CommandExecution
-
-  # ---------------------------------------------------------------------------
   # check/1 — pure struct pattern match, no DB
-  # ---------------------------------------------------------------------------
 
   describe "check/1 — cancellable statuses" do
     test "pending execution returns :ok" do

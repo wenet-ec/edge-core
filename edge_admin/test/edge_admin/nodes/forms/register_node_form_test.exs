@@ -3,10 +3,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Nodes.Forms.RegisterNodeForm
-
-  # ---------------------------------------------------------------------------
   # helpers
-  # ---------------------------------------------------------------------------
 
   defp errors_on(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
@@ -31,9 +28,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
     )
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — valid cases
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — valid cases" do
     test "all required fields present succeeds" do
@@ -76,9 +71,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — required fields
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — required fields" do
     for field <- [
@@ -104,9 +97,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — node_id UUID format
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — node_id UUID validation" do
     test "valid UUID is accepted" do
@@ -138,9 +129,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — network_name validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — network_name validation" do
     test "network_name starting with 'cluster-' is accepted" do
@@ -164,9 +153,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — port validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — port validation" do
     test "port 0 is rejected" do
@@ -191,9 +178,7 @@ defmodule EdgeAdmin.Nodes.Forms.RegisterNodeFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — to_map output
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — to_map output" do
     test "all registered fields are present in result" do

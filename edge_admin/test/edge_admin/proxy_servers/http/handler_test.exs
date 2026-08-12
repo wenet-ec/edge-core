@@ -6,10 +6,7 @@ defmodule EdgeAdmin.ProxyServers.Http.HandlerTest do
   use ExUnit.Case, async: false
 
   alias EdgeAdmin.ProxyServers.Http.Handler
-
-  # ---------------------------------------------------------------------------
   # validate_proxy_form/2
-  # ---------------------------------------------------------------------------
 
   describe "validate_proxy_form/2" do
     test "CONNECT bypasses URI shape (uri carries host:port, not a URI)" do
@@ -27,9 +24,7 @@ defmodule EdgeAdmin.ProxyServers.Http.HandlerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # check_loop/1 — uses via_pseudonym/0 from app env
-  # ---------------------------------------------------------------------------
 
   describe "check_loop/1" do
     setup do
@@ -69,9 +64,7 @@ defmodule EdgeAdmin.ProxyServers.Http.HandlerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # get_header/2
-  # ---------------------------------------------------------------------------
 
   describe "get_header/2" do
     test "case-insensitive on header name" do
@@ -91,9 +84,7 @@ defmodule EdgeAdmin.ProxyServers.Http.HandlerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # reconcile_host_header/3
-  # ---------------------------------------------------------------------------
 
   describe "reconcile_host_header/3" do
     test "elides port for HTTP default 80" do
@@ -120,9 +111,7 @@ defmodule EdgeAdmin.ProxyServers.Http.HandlerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # filter_hop_by_hop_headers/1
-  # ---------------------------------------------------------------------------
 
   describe "filter_hop_by_hop_headers/1" do
     test "strips RFC 7230 hop-by-hop names regardless of case" do
@@ -184,9 +173,7 @@ defmodule EdgeAdmin.ProxyServers.Http.HandlerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # add_via_header/2
-  # ---------------------------------------------------------------------------
 
   describe "add_via_header/2" do
     setup do
@@ -222,9 +209,7 @@ defmodule EdgeAdmin.ProxyServers.Http.HandlerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse_http_version/1
-  # ---------------------------------------------------------------------------
 
   describe "parse_http_version/1" do
     test "strips HTTP/ prefix for known versions" do
@@ -243,9 +228,7 @@ defmodule EdgeAdmin.ProxyServers.Http.HandlerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # vpn_target?/1
-  # ---------------------------------------------------------------------------
 
   describe "vpn_target?/1" do
     setup do
@@ -270,9 +253,7 @@ defmodule EdgeAdmin.ProxyServers.Http.HandlerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # build_http_request/4
-  # ---------------------------------------------------------------------------
 
   describe "build_http_request/4" do
     test "produces request line + headers + blank-line terminator" do
@@ -300,9 +281,7 @@ defmodule EdgeAdmin.ProxyServers.Http.HandlerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse_http_uri/1
-  # ---------------------------------------------------------------------------
 
   describe "parse_http_uri/1" do
     test "http with explicit port and path" do
@@ -329,9 +308,7 @@ defmodule EdgeAdmin.ProxyServers.Http.HandlerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse_host_port/1
-  # ---------------------------------------------------------------------------
 
   describe "parse_host_port/1" do
     test "splits host:port" do
@@ -356,9 +333,7 @@ defmodule EdgeAdmin.ProxyServers.Http.HandlerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # via_pseudonym/0
-  # ---------------------------------------------------------------------------
 
   describe "via_pseudonym/0" do
     test "defaults to 'edge-admin' when env unset" do

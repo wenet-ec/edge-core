@@ -3,10 +3,7 @@ defmodule EdgeAdmin.Vpn.AddressingTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Vpn.Addressing, as: VpnAddressing
-
-  # ---------------------------------------------------------------------------
   # parse_ipv4/1
-  # ---------------------------------------------------------------------------
 
   describe "parse_ipv4/1" do
     test "valid address" do
@@ -50,9 +47,7 @@ defmodule EdgeAdmin.Vpn.AddressingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse_cidr/1
-  # ---------------------------------------------------------------------------
 
   describe "parse_cidr/1" do
     test "valid /24" do
@@ -96,9 +91,7 @@ defmodule EdgeAdmin.Vpn.AddressingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # usable_ipv4_capacity/1
-  # ---------------------------------------------------------------------------
 
   describe "usable_ipv4_capacity/1" do
     test "uses the same network-address exclusion as Netmaker" do
@@ -110,9 +103,7 @@ defmodule EdgeAdmin.Vpn.AddressingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # find_available_subnet/3
-  # ---------------------------------------------------------------------------
 
   describe "find_available_subnet/3" do
     test "returns first subnet when none are taken" do
@@ -177,9 +168,7 @@ defmodule EdgeAdmin.Vpn.AddressingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # cidrs_overlap?/2
-  # ---------------------------------------------------------------------------
 
   describe "cidrs_overlap?/2" do
     test "identical ranges overlap" do
@@ -235,9 +224,7 @@ defmodule EdgeAdmin.Vpn.AddressingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # generate_subnets/3
-  # ---------------------------------------------------------------------------
 
   describe "generate_subnets/3" do
     test "generates 16_384 /24 subnets from a /10 base (full /10 coverage)" do
@@ -345,10 +332,8 @@ defmodule EdgeAdmin.Vpn.AddressingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # find_available_subnet/3 — non-default pool shapes (regression for the old
   # `/10 → /24` hardcoded path)
-  # ---------------------------------------------------------------------------
 
   describe "find_available_subnet/3 with non-default pools" do
     test "/16 pool returns the first /24 inside it" do

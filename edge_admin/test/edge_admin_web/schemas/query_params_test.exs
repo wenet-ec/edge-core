@@ -4,11 +4,8 @@ defmodule EdgeAdminWeb.Schemas.QueryParamsTest do
 
   alias EdgeAdminWeb.Schemas.QueryParams
   alias OpenApiSpex.Schema
-
-  # ---------------------------------------------------------------------------
   # pagination/1 — page + page_size keys (parsed by RequestParser; drift here
   # silently breaks every paginated endpoint).
-  # ---------------------------------------------------------------------------
 
   describe "pagination/1" do
     test "returns a keyword list with :page and :page_size keys" do
@@ -50,9 +47,7 @@ defmodule EdgeAdminWeb.Schemas.QueryParamsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # sort/1 — compact sort key (parsed by RequestParser)
-  # ---------------------------------------------------------------------------
 
   describe "sort/1" do
     test "returns a :sort key" do
@@ -77,9 +72,7 @@ defmodule EdgeAdminWeb.Schemas.QueryParamsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Single-key filters — string / enum / boolean / uuid / int
-  # ---------------------------------------------------------------------------
 
   describe "string_filter/2" do
     test "produces {name, [:in, :description, :schema]} with :string schema" do
@@ -284,10 +277,8 @@ defmodule EdgeAdminWeb.Schemas.QueryParamsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Range filters — produce `name__gte` AND `name__lte` keys (the suffix
   # convention RequestParser parses).
-  # ---------------------------------------------------------------------------
 
   describe "int_range_filter/2" do
     test "produces both __gte and __lte keys" do

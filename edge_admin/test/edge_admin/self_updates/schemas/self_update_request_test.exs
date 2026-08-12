@@ -56,7 +56,7 @@ defmodule EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequestTest do
     end
 
     test "status rejects anything not in the documented set" do
-      # Note: empty string and whitespace-only are dropped to nil by Ecto's
+      # Empty string and whitespace-only are dropped to nil by Ecto's
       # cast/3 default empty_values, so validate_inclusion never sees them.
       # We don't pin those here — that's cast behaviour, not the inclusion check.
       for status <- ["draft", "failed", "cancelled", "PENDING"] do

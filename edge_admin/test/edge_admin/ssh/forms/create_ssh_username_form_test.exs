@@ -3,10 +3,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameFormTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Ssh.Forms.CreateSshUsernameForm
-
-  # ---------------------------------------------------------------------------
   # fixtures
-  # ---------------------------------------------------------------------------
 
   @valid_key "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP5B9NcAkWDeryLofh8tn2lNrOnpkCuMUuY5Ytj4VMJC test-comment"
 
@@ -18,9 +15,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameFormTest do
     Map.merge(%{"username" => "deploy"}, overrides)
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — valid cases
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — valid cases" do
     test "username only (no password, no keys) succeeds" do
@@ -97,9 +92,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — username validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — username validation" do
     test "missing username is rejected" do
@@ -124,9 +117,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — password validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — password validation" do
     test "nil password is allowed (optional field)" do
@@ -158,9 +149,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — to_map output
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — to_map output" do
     test "nil password is excluded from result" do
@@ -187,9 +176,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — nested public key validation and indexed errors
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — nested public key validation" do
     test "invalid nested key returns error" do
@@ -251,9 +238,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshUsernameFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — invalid param types
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid params" do
     test "non-map params return a base error" do

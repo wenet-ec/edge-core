@@ -3,10 +3,7 @@ defmodule EdgeAdmin.Ssh.Schemas.SshUsernameTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Ssh.Schemas.SshUsername
-
-  # ---------------------------------------------------------------------------
   # has_password?/1
-  # ---------------------------------------------------------------------------
 
   describe "has_password?/1" do
     test "returns false when password_hash is nil" do

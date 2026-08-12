@@ -8,10 +8,7 @@ defmodule EdgeAdmin.Commands.Checks.PendingCommandExecutionsCheckTest do
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
-
-  # ---------------------------------------------------------------------------
   # helpers
-  # ---------------------------------------------------------------------------
 
   # See cluster_filters_test for rationale: monotonic ints, not random, so
   # birthday-paradox collisions on the small `100.64.X.0/24` space disappear.
@@ -78,9 +75,7 @@ defmodule EdgeAdmin.Commands.Checks.PendingCommandExecutionsCheckTest do
     )
   end
 
-  # ---------------------------------------------------------------------------
   # check/1 — no pending executions
-  # ---------------------------------------------------------------------------
 
   describe "check/1 — all executions completed" do
     test "command with no executions returns :ok" do
@@ -109,9 +104,7 @@ defmodule EdgeAdmin.Commands.Checks.PendingCommandExecutionsCheckTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # check/1 — pending or in-flight executions
-  # ---------------------------------------------------------------------------
 
   describe "check/1 — pending or sent executions" do
     test "command with pending execution returns conflict error" do

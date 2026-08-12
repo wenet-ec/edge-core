@@ -5,11 +5,8 @@ defmodule EdgeAdmin.Events.Webhooks.Filters.WebhookFiltersTest do
   alias EdgeAdmin.Events.Webhooks.Filters.WebhookFilters
   alias EdgeAdmin.Events.Webhooks.Schemas.Webhook
   alias EdgeAdmin.Repo
-
-  # ---------------------------------------------------------------------------
   # pop_event_type/1 — extracts the event_type filter out of params, accepting
   # only string values (rejects anything else, returns nil + remaining params).
-  # ---------------------------------------------------------------------------
 
   describe "pop_event_type/1" do
     test "returns the string event_type and params without that key" do

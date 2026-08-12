@@ -18,10 +18,7 @@ defmodule EdgeAdmin.Events.Webhooks.DeliveryTest do
   end
 
   defp envelope, do: %{"id" => "evt-1", "type" => "edge.node.registered", "data" => %{"x" => 1}}
-
-  # ---------------------------------------------------------------------------
   # sign/2 — HMAC-SHA256, lowercase hex, no prefix
-  # ---------------------------------------------------------------------------
 
   describe "sign/2" do
     test "is deterministic for the same (secret, body)" do
@@ -56,9 +53,7 @@ defmodule EdgeAdmin.Events.Webhooks.DeliveryTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # build_headers/2
-  # ---------------------------------------------------------------------------
 
   describe "build_headers/2" do
     test "always includes Content-Type and X-Edge-Signature" do
@@ -100,9 +95,7 @@ defmodule EdgeAdmin.Events.Webhooks.DeliveryTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # classify/3 — retry decision matrix
-  # ---------------------------------------------------------------------------
 
   describe "classify/3 — successes" do
     test "200 → :ok" do

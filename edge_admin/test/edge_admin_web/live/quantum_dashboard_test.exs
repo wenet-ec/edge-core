@@ -3,10 +3,7 @@ defmodule EdgeAdminWeb.Live.QuantumDashboardTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdminWeb.Live.QuantumDashboard
-
-  # ---------------------------------------------------------------------------
   # humanize_ago/1 — non-negative seconds → past-tense relative string
-  # ---------------------------------------------------------------------------
 
   describe "humanize_ago/1" do
     test "negative seconds → 'in the future' (clock skew safety)" do
@@ -39,9 +36,7 @@ defmodule EdgeAdminWeb.Live.QuantumDashboardTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # humanize_in/1 — symmetric to humanize_ago/1, future-tense
-  # ---------------------------------------------------------------------------
 
   describe "humanize_in/1" do
     test "non-positive seconds → 'now'" do
@@ -71,9 +66,7 @@ defmodule EdgeAdminWeb.Live.QuantumDashboardTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # format_duration/1 — native time units → "?", "<1ms", "Nms", or "N.Ns"
-  # ---------------------------------------------------------------------------
 
   describe "format_duration/1" do
     test "nil → '?'" do
@@ -109,9 +102,7 @@ defmodule EdgeAdminWeb.Live.QuantumDashboardTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # format_task/1 — Quantum task tuple → "Module.function/arity"
-  # ---------------------------------------------------------------------------
 
   describe "format_task/1" do
     test "{m, f, a} tuple → 'Module.function/arity'" do
@@ -131,9 +122,7 @@ defmodule EdgeAdminWeb.Live.QuantumDashboardTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # format_schedule/1 — Crontab expression → composed cron string; otherwise inspect
-  # ---------------------------------------------------------------------------
 
   describe "format_schedule/1" do
     test "Crontab.CronExpression → composed cron string" do
@@ -153,9 +142,7 @@ defmodule EdgeAdminWeb.Live.QuantumDashboardTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # next_run_payload/1 — input shape → :dash | {:ok, map} | {:error, reason}
-  # ---------------------------------------------------------------------------
 
   describe "next_run_payload/1" do
     test "inactive job → :dash" do
@@ -197,9 +184,7 @@ defmodule EdgeAdminWeb.Live.QuantumDashboardTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # next_run_class/1 — input shape → CSS class
-  # ---------------------------------------------------------------------------
 
   describe "next_run_class/1" do
     test "inactive job → 'text-muted'" do

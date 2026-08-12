@@ -5,10 +5,7 @@ defmodule EdgeAdmin.Nodes.Checks.SameClusterCheckTest do
   alias EdgeAdmin.Nodes.Checks.SameClusterCheck
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
-
-  # ---------------------------------------------------------------------------
   # check/2 — pure struct pattern match, no DB
-  # ---------------------------------------------------------------------------
 
   describe "check/2 — same cluster" do
     test "node already in the target cluster returns conflict error" do

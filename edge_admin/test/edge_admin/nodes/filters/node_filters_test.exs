@@ -54,10 +54,7 @@ defmodule EdgeAdmin.Nodes.Filters.NodeFiltersTest do
   end
 
   defp ids(query), do: query |> Repo.all() |> Enum.map(& &1.id) |> Enum.sort()
-
-  # ---------------------------------------------------------------------------
   # apply_ilike/2
-  # ---------------------------------------------------------------------------
 
   describe "apply_ilike/2" do
     test "matches by case-insensitive LIKE on a string field (version)" do
@@ -116,9 +113,7 @@ defmodule EdgeAdmin.Nodes.Filters.NodeFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_node_ids/2 — IN filter directly on nodes.id
-  # ---------------------------------------------------------------------------
 
   describe "apply_node_ids/2" do
     test ":in matches exactly the given node IDs" do

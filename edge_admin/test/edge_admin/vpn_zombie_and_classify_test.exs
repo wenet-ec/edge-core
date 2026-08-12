@@ -3,10 +3,7 @@ defmodule EdgeAdmin.VpnZombieAndClassifyTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Vpn
-
-  # ---------------------------------------------------------------------------
   # zombie_node?/4
-  # ---------------------------------------------------------------------------
 
   defp node_with(host_id, lastcheckin) do
     %{"id" => "node-#{host_id}", "hostid" => host_id, "lastcheckin" => lastcheckin}
@@ -65,9 +62,7 @@ defmodule EdgeAdmin.VpnZombieAndClassifyTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # classify_create_network_400/1
-  # ---------------------------------------------------------------------------
 
   describe "classify_create_network_400/1" do
     test "CIDR collision → :already_exists" do
@@ -109,9 +104,7 @@ defmodule EdgeAdmin.VpnZombieAndClassifyTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # normalize_netmaker_error/1
-  # ---------------------------------------------------------------------------
 
   describe "normalize_netmaker_error/1" do
     # Inputs are whatever Nexmaker.Api.normalize/1 returns. We don't mock it —

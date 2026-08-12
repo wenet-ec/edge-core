@@ -10,10 +10,7 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFiltersTest do
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
-
-  # ---------------------------------------------------------------------------
   # Fixtures
-  # ---------------------------------------------------------------------------
 
   # Unique fixture identifiers per VM. `:erlang.unique_integer([:positive, :monotonic])`
   # never repeats within a process, eliminating the birthday-paradox flake we got with
@@ -79,9 +76,7 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFiltersTest do
     )
   end
 
-  # ---------------------------------------------------------------------------
   # apply_has_node_limit/2 — virtual boolean: node_limit IS [NOT] NULL
-  # ---------------------------------------------------------------------------
 
   describe "apply_has_node_limit/2" do
     test "true matches clusters with a non-null node_limit" do
@@ -133,10 +128,8 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_ilike/2 — bypasses Flop's add_wildcard so user-supplied % patterns
   # work as written.
-  # ---------------------------------------------------------------------------
 
   describe "apply_ilike/2" do
     test "matches by case-insensitive LIKE on the named field" do
@@ -180,10 +173,8 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_node_count/2 — HAVING clause over count(nodes.id). Caller must
   # left-join nodes and group by cluster id (see aggregate_query/0).
-  # ---------------------------------------------------------------------------
 
   describe "apply_node_count/2 (>=, >, <=, <, ==, !=)" do
     setup do
@@ -251,11 +242,9 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_name/2 — filters on the SECOND binding (cluster joined onto a
   # primary table). Used by node/alias/enrollment-key listings that join
   # cluster for filtering.
-  # ---------------------------------------------------------------------------
 
   describe "apply_name/2 (operates on second binding)" do
     test "== matches by exact cluster name" do
@@ -325,10 +314,8 @@ defmodule EdgeAdmin.Nodes.Filters.ClusterFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_node_ids_on_clusters/2 — joins nodes and returns distinct clusters
   # that contain any of the given node IDs.
-  # ---------------------------------------------------------------------------
 
   describe "apply_node_ids_on_clusters/2" do
     test ":in returns clusters containing any of the given node IDs" do

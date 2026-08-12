@@ -6,10 +6,7 @@ defmodule EdgeAdmin.Nodes.Checks.NodeLimitBelowCountCheckTest do
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
-
-  # ---------------------------------------------------------------------------
   # helpers
-  # ---------------------------------------------------------------------------
 
   defp insert_cluster(overrides \\ %{}) do
     attrs =
@@ -46,9 +43,7 @@ defmodule EdgeAdmin.Nodes.Checks.NodeLimitBelowCountCheckTest do
     Repo.insert!(struct(Node, attrs))
   end
 
-  # ---------------------------------------------------------------------------
   # check/2 — nil new_limit
-  # ---------------------------------------------------------------------------
 
   describe "check/2 — nil new_limit (removing the cap)" do
     test "nil new_limit always returns :ok regardless of node count" do
@@ -64,9 +59,7 @@ defmodule EdgeAdmin.Nodes.Checks.NodeLimitBelowCountCheckTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # check/2 — new_limit >= node count
-  # ---------------------------------------------------------------------------
 
   describe "check/2 — new_limit accommodates existing nodes" do
     test "new_limit equal to node count returns :ok" do
@@ -88,9 +81,7 @@ defmodule EdgeAdmin.Nodes.Checks.NodeLimitBelowCountCheckTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # check/2 — new_limit < node count
-  # ---------------------------------------------------------------------------
 
   describe "check/2 — new_limit below current node count" do
     test "new_limit below node count returns changeset error" do

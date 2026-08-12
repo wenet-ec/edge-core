@@ -3,12 +3,9 @@ defmodule EdgeAdmin.NamingTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Naming
-
-  # ---------------------------------------------------------------------------
   # Pattern / regex parity invariant — the moduledoc claims these are derived
   # from the same source string at compile time and "can't drift from each
   # other." Pin that explicitly: compile each pattern string and compare.
-  # ---------------------------------------------------------------------------
 
   describe "pattern ↔ regex parity" do
     test "cluster_name_pattern compiles to cluster_name_regex" do
@@ -38,10 +35,8 @@ defmodule EdgeAdmin.NamingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # DNS-label charset (cluster + alias names): lowercase alphanumeric with
   # hyphens, no leading or trailing hyphen.
-  # ---------------------------------------------------------------------------
 
   describe "cluster_name_regex/0 — DNS label charset" do
     test "accepts lowercase alphanumerics and internal hyphens" do
@@ -83,10 +78,8 @@ defmodule EdgeAdmin.NamingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # SSH username charset: letter or underscore start, then alphanumerics /
   # hyphens / underscores. (Lowercase only.)
-  # ---------------------------------------------------------------------------
 
   describe "ssh_username_regex/0" do
     test "accepts the documented charset" do
@@ -122,9 +115,7 @@ defmodule EdgeAdmin.NamingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Enum IN query values: comma-separated enum tokens with no duplicates.
-  # ---------------------------------------------------------------------------
 
   describe "enum_in_pattern/1" do
     test "accepts one or more allowed enum values" do
@@ -154,9 +145,7 @@ defmodule EdgeAdmin.NamingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # SSH public key wire format: <algorithm> <base64> [comment]
-  # ---------------------------------------------------------------------------
 
   describe "ssh_public_key_regex/0" do
     test "accepts ed25519, RSA, and ECDSA algorithms" do

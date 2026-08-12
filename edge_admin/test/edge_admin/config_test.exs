@@ -4,10 +4,6 @@ defmodule EdgeAdmin.ConfigTest do
 
   alias EdgeAdmin.Config
 
-  # ---------------------------------------------------------------------------
-  # Helpers — inject a known env var value without polluting the process env
-  # ---------------------------------------------------------------------------
-
   # We use a unique key per test to avoid collisions when running async.
   defp with_env(key, value, fun) do
     System.put_env(key, value)
@@ -19,9 +15,7 @@ defmodule EdgeAdmin.ConfigTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # get_env/3 — default when env var is missing
-  # ---------------------------------------------------------------------------
 
   describe "get_env/3 — missing env var" do
     test "returns nil default when var not set" do
@@ -40,9 +34,7 @@ defmodule EdgeAdmin.ConfigTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # get_env/3 — :string type
-  # ---------------------------------------------------------------------------
 
   describe "get_env/3 — :string type" do
     test "returns value as-is" do
@@ -62,9 +54,7 @@ defmodule EdgeAdmin.ConfigTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # get_env/3 — :integer type
-  # ---------------------------------------------------------------------------
 
   describe "get_env/3 — :integer type" do
     test "parses positive integer string" do
@@ -92,9 +82,7 @@ defmodule EdgeAdmin.ConfigTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # get_env/3 — :boolean type
-  # ---------------------------------------------------------------------------
 
   describe "get_env/3 — :boolean type" do
     test "value 'true' returns true" do
@@ -146,9 +134,7 @@ defmodule EdgeAdmin.ConfigTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # get_env/3 — :cors type
-  # ---------------------------------------------------------------------------
 
   describe "get_env/3 — :cors type" do
     test "single origin returns string" do
@@ -177,9 +163,7 @@ defmodule EdgeAdmin.ConfigTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # get_env/3 — :uri type
-  # ---------------------------------------------------------------------------
 
   describe "get_env/3 — :uri type" do
     test "parses URI string into URI struct" do
@@ -203,9 +187,7 @@ defmodule EdgeAdmin.ConfigTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # get_env/3 — :list type
-  # ---------------------------------------------------------------------------
 
   describe "get_env/3 — :list type" do
     test "comma-separated string returns trimmed list" do
@@ -233,9 +215,7 @@ defmodule EdgeAdmin.ConfigTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # get_env/3 — :atom type
-  # ---------------------------------------------------------------------------
 
   describe "get_env/3 — :atom type" do
     test "converts string to atom" do
@@ -255,9 +235,7 @@ defmodule EdgeAdmin.ConfigTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # get_env/3 — :positive_integer type
-  # ---------------------------------------------------------------------------
 
   describe "get_env/3 — :positive_integer type" do
     test "parses positive integer string" do

@@ -12,9 +12,7 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultFormTest do
     end)
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — valid cases
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — valid cases" do
     test "succeeds with status completed, output and exit_code" do
@@ -49,9 +47,7 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — completed_at handling
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — completed_at field" do
     test "defaults completed_at to now when not provided" do
@@ -79,9 +75,7 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — to_map output structure
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — to_map output" do
     test "nil output is excluded from result map" do
@@ -112,9 +106,7 @@ defmodule EdgeAdmin.Commands.Forms.UpdateCommandExecutionResultFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — invalid param types
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid params" do
     test "non-map params return a base error" do

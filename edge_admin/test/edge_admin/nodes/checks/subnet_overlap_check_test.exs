@@ -3,10 +3,7 @@ defmodule EdgeAdmin.Nodes.Checks.SubnetOverlapCheckTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Nodes.Checks.SubnetOverlapCheck
-
-  # ---------------------------------------------------------------------------
   # check/2 — nil (auto-generate path)
-  # ---------------------------------------------------------------------------
 
   describe "check/2 — nil range" do
     test "passes when ipv4_range is nil" do
@@ -18,9 +15,7 @@ defmodule EdgeAdmin.Nodes.Checks.SubnetOverlapCheckTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # check/2 — no overlap
-  # ---------------------------------------------------------------------------
 
   describe "check/2 — non-overlapping ranges" do
     test "passes when existing list is empty" do
@@ -41,9 +36,7 @@ defmodule EdgeAdmin.Nodes.Checks.SubnetOverlapCheckTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # check/2 — overlap detected
-  # ---------------------------------------------------------------------------
 
   describe "check/2 — overlapping ranges" do
     test "returns conflict for exact duplicate range" do

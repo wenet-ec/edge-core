@@ -16,9 +16,7 @@ defmodule EdgeAdminWeb.Controllers.ErrorJSONTest do
     ErrorJSON.render(template, %{conn: fake_conn()})
   end
 
-  # ---------------------------------------------------------------------------
   # Per-status mappings — Phoenix dispatches on `<status>.json` template name.
-  # ---------------------------------------------------------------------------
 
   describe "per-status renders" do
     test "400.json → bad_request" do
@@ -69,12 +67,10 @@ defmodule EdgeAdminWeb.Controllers.ErrorJSONTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Catch-all — any unrecognised template (e.g. 413 from Plug.Parsers) MUST
   # surface as a generic internal_server_error with no exception details leaked.
   # Without this clause, Phoenix raises FunctionClauseError and Bandit returns
   # an empty 500, which breaks agent retry classification.
-  # ---------------------------------------------------------------------------
 
   describe "catch-all" do
     test "unrecognised templates fall through to internal_server_error" do
@@ -89,9 +85,7 @@ defmodule EdgeAdminWeb.Controllers.ErrorJSONTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Envelope shape — all renders go through ResponseEnvelope.error/3.
-  # ---------------------------------------------------------------------------
 
   describe "envelope shape" do
     test "all renders return a map with :error and :meta" do

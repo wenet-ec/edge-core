@@ -4,10 +4,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
 
   alias EdgeAdmin.Metrics.Parsers.AdminMetricsParser
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics
-
-  # ---------------------------------------------------------------------------
   # Fixtures
-  # ---------------------------------------------------------------------------
 
   defp sample_prometheus_text do
     """
@@ -108,10 +105,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
   end
 
   defp empty_prometheus_text, do: ""
-
-  # ---------------------------------------------------------------------------
   # parse/1 — gauge extraction
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — gauge extraction" do
     test "extracts uptime_ms" do
@@ -152,9 +146,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — counter extraction (sums across labels)
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — counter extraction" do
     test "sums metadata_recomputations across label combinations" do
@@ -251,9 +243,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — Oban queue extraction
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — Oban queue extraction" do
     test "extracts both queues" do
@@ -290,9 +280,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — event broker extraction
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — event broker extraction" do
     test "sums enqueues across event types" do
@@ -355,9 +343,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # AdminMetrics.from_raw_metrics/1 — struct assembly
-  # ---------------------------------------------------------------------------
 
   describe "AdminMetrics.from_raw_metrics/1" do
     test "builds all top-level struct fields" do
@@ -504,9 +490,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AdminMetricsParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # AdminMetrics.Application.format_uptime — all branches
-  # ---------------------------------------------------------------------------
 
   describe "AdminMetrics.Application — format_uptime branches" do
     defp uptime_human(ms) do

@@ -44,10 +44,7 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
   end
 
   defp ids(query), do: query |> Repo.all() |> Enum.map(& &1.id) |> Enum.sort()
-
-  # ---------------------------------------------------------------------------
   # apply_is_unlimited/2 — uses_remaining IS [NOT] NULL
-  # ---------------------------------------------------------------------------
 
   describe "apply_is_unlimited/2" do
     test "true matches keys with uses_remaining == nil" do
@@ -97,9 +94,7 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_is_spent/2 — uses_remaining == 0
-  # ---------------------------------------------------------------------------
 
   describe "apply_is_spent/2" do
     test "true matches keys with uses_remaining == 0" do
@@ -125,9 +120,7 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_is_expired/2 — comparison against now/0 at query time
-  # ---------------------------------------------------------------------------
 
   describe "apply_is_expired/2" do
     test "true matches keys with expires_at in the past" do
@@ -159,9 +152,7 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_is_never_used/2 — last_used_at IS [NOT] NULL
-  # ---------------------------------------------------------------------------
 
   describe "apply_is_never_used/2" do
     test "true matches keys with last_used_at == nil" do
@@ -191,10 +182,8 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_has_expiry/2 — expires_at IS [NOT] NULL (does NOT check whether the
   # timestamp is in the past)
-  # ---------------------------------------------------------------------------
 
   describe "apply_has_expiry/2" do
     test "true matches keys with expires_at set, regardless of past/future" do
@@ -224,9 +213,7 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_has_name/2 — name IS [NOT] NULL
-  # ---------------------------------------------------------------------------
 
   describe "apply_has_name/2" do
     test "true matches keys with a name set" do
@@ -250,10 +237,8 @@ defmodule EdgeAdmin.Nodes.Filters.EnrollmentKeyFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_maybe/3 — pure dispatching helper. Doesn't need DB but worth
   # testing inside this file since it's part of the same module.
-  # ---------------------------------------------------------------------------
 
   describe "apply_maybe/3" do
     test "nil filters → returns query unchanged, fun is not called" do

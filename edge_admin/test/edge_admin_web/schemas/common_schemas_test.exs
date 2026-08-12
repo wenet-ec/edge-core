@@ -16,9 +16,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemasTest do
     # about the shape, only that it's referenced as the data field's items.
   end
 
-  # ---------------------------------------------------------------------------
   # paginated_response/3 — collection envelope: %{data: [...], meta: meta}
-  # ---------------------------------------------------------------------------
 
   describe "paginated_response/3" do
     test "produces the documented title, description, type" do
@@ -55,9 +53,7 @@ defmodule EdgeAdminWeb.Schemas.CommonSchemasTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # single_response/3 — single-resource envelope: %{data: <obj>, meta: meta}
-  # ---------------------------------------------------------------------------
 
   describe "single_response/3" do
     test "produces the documented title, description, type" do

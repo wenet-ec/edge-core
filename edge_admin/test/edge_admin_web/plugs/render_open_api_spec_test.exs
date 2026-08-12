@@ -22,10 +22,8 @@ defmodule EdgeAdminWeb.Plugs.RenderOpenApiSpecTest do
     end)
   end
 
-  # ---------------------------------------------------------------------------
   # filter_internal_paths/1 — security-adjacent: prevents internal endpoints
   # from leaking into public Swagger / ReDoc.
-  # ---------------------------------------------------------------------------
 
   describe "filter_internal_paths/1" do
     test "drops paths whose every operation is exclusively Internal.*-tagged" do
@@ -119,9 +117,7 @@ defmodule EdgeAdminWeb.Plugs.RenderOpenApiSpecTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # filter_internal_schemas/1
-  # ---------------------------------------------------------------------------
 
   describe "filter_internal_schemas/1" do
     test "drops component schemas whose key starts with 'Internal.'" do
@@ -174,9 +170,7 @@ defmodule EdgeAdminWeb.Plugs.RenderOpenApiSpecTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # sort_verbs/1 — post → get → put → patch → delete → head → options → trace
-  # ---------------------------------------------------------------------------
 
   describe "sort_verbs/1" do
     test "reorders verbs to the documented order" do
@@ -209,9 +203,7 @@ defmodule EdgeAdminWeb.Plugs.RenderOpenApiSpecTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # sort_paths_in_map/1
-  # ---------------------------------------------------------------------------
 
   describe "sort_paths_in_map/1" do
     test "orders paths per OpenApiSpec.paths_order_index/0" do

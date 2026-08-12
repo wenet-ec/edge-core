@@ -32,9 +32,7 @@ defmodule EdgeAdmin.Nodes.Views.ClusterViewTest do
     struct(base, overrides)
   end
 
-  # ---------------------------------------------------------------------------
   # render/1
-  # ---------------------------------------------------------------------------
 
   describe "render/1" do
     test "produces every documented field with correct values" do

@@ -3,10 +3,7 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKeyTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Nodes.Schemas.EnrollmentKey
-
-  # ---------------------------------------------------------------------------
   # helpers
-  # ---------------------------------------------------------------------------
 
   defp key(overrides) do
     Map.merge(
@@ -37,9 +34,7 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKeyTest do
     Ecto.Changeset.traverse_errors(changeset, fn {message, _opts} -> message end)
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/2
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2" do
     test "accepts a future expiry" do
@@ -70,9 +65,7 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKeyTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # spent?/1
-  # ---------------------------------------------------------------------------
 
   describe "spent?/1" do
     test "uses_remaining == 0 → true (spent)" do
@@ -92,9 +85,7 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKeyTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # expired?/1
-  # ---------------------------------------------------------------------------
 
   describe "expired?/1" do
     test "nil expires_at → false (never expires)" do
@@ -112,9 +103,7 @@ defmodule EdgeAdmin.Nodes.Schemas.EnrollmentKeyTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # unlimited?/1
-  # ---------------------------------------------------------------------------
 
   describe "unlimited?/1" do
     test "uses_remaining == nil → true (unlimited)" do

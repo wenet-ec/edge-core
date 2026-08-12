@@ -3,10 +3,7 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterFormTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Nodes.Forms.ChangeNodeClusterForm
-
-  # ---------------------------------------------------------------------------
   # helpers
-  # ---------------------------------------------------------------------------
 
   defp errors_on(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
@@ -15,10 +12,7 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterFormTest do
   # Stub callbacks — no DB needed
   defp cluster_found(_name), do: {:ok, %{name: "prod"}}
   defp cluster_not_found(_name), do: {:error, :not_found}
-
-  # ---------------------------------------------------------------------------
   # changeset/2 — valid cases
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — valid cases" do
     test "valid cluster name returns {:ok, cluster_name} string" do
@@ -43,9 +37,7 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/2 — cluster_name format validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — cluster_name format validation" do
     test "missing cluster_name is rejected" do
@@ -95,9 +87,7 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/2 — cluster existence check
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — cluster existence check" do
     test "cluster not found returns error on cluster_name field" do
@@ -144,9 +134,7 @@ defmodule EdgeAdmin.Nodes.Forms.ChangeNodeClusterFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/2 — invalid param types
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — invalid params" do
     test "non-map params return a base error" do

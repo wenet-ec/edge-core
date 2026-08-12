@@ -4,10 +4,6 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
 
   alias EdgeAdmin.Admins.Metadata.Algorithm
 
-  # ---------------------------------------------------------------------------
-  # Helpers
-  # ---------------------------------------------------------------------------
-
   # Build an admins map from a keyword list of {name, edge_node_capacity}
   defp admins(pairs) do
     Map.new(pairs, fn {name, cap} -> {to_string(name), %{edge_node_capacity: cap}} end)
@@ -20,9 +16,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
     end)
   end
 
-  # ---------------------------------------------------------------------------
   # compute_assignments/2
-  # ---------------------------------------------------------------------------
 
   describe "compute_assignments/2" do
     test "single admin gets all clusters" do
@@ -248,9 +242,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
                Enum.sort(node_names)
     end
 
-    # ---------------------------------------------------------------------------
     # total_nodes and total_edge_capacity
-    # ---------------------------------------------------------------------------
 
     test "total_nodes is sum of all nodes across all clusters" do
       admins = admins(a1: 100)
@@ -338,9 +330,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Hash affinity tiebreaker
-  # ---------------------------------------------------------------------------
 
   describe "hash-affinity placement" do
     test "stable topology recomputes identically from shared inputs" do
@@ -383,12 +373,9 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Bounded churn under topology change
-  # ---------------------------------------------------------------------------
 
   describe "topology change behavior" do
-    # Helper: count how many clusters changed owner between two outputs
     defp count_moves(prev_output, new_output) do
       prev_owners = invert(prev_output.edge_clusters)
       new_owners = invert(new_output.edge_clusters)
@@ -475,9 +462,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # bootstrap_empty_cluster/3
-  # ---------------------------------------------------------------------------
 
   describe "bootstrap_empty_cluster/3" do
     test "assigns empty cluster to best available admin" do
@@ -515,9 +500,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # extract_cluster_assignments/1
-  # ---------------------------------------------------------------------------
 
   describe "extract_cluster_assignments/1" do
     test "flattens edge_clusters to cluster_name => admin_name map" do
@@ -542,9 +525,7 @@ defmodule EdgeAdmin.Admins.Metadata.AlgorithmTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # calculate_admin_node_counts/1
-  # ---------------------------------------------------------------------------
 
   describe "calculate_admin_node_counts/1" do
     test "counts total nodes per admin across all clusters" do

@@ -17,9 +17,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecutionTest do
     %CommandExecution{command: %NotLoaded{}}
   end
 
-  # ---------------------------------------------------------------------------
   # command_text/1
-  # ---------------------------------------------------------------------------
 
   describe "command_text/1" do
     test "returns command_text from preloaded command" do
@@ -36,9 +34,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecutionTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # timeout/1
-  # ---------------------------------------------------------------------------
 
   describe "timeout/1" do
     test "returns timeout from preloaded command" do
@@ -58,9 +54,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecutionTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # expires_at/1
-  # ---------------------------------------------------------------------------
 
   describe "expires_at/1" do
     test "returns expires_at from preloaded command" do
@@ -81,9 +75,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandExecutionTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # cluster_name/1
-  # ---------------------------------------------------------------------------
 
   describe "cluster_name/1" do
     test "returns name from preloaded cluster" do

@@ -6,10 +6,7 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
   alias EdgeAdmin.Commands.Schemas.CommandExecution
   alias EdgeAdmin.Nodes.Schemas.Alias
   alias EdgeAdmin.Nodes.Schemas.Cluster
-
-  # ---------------------------------------------------------------------------
   # helpers
-  # ---------------------------------------------------------------------------
 
   defp errors_on(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
@@ -23,9 +20,7 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
     attrs |> build_changeset() |> Ecto.Changeset.apply_action(:insert)
   end
 
-  # ---------------------------------------------------------------------------
   # associations
-  # ---------------------------------------------------------------------------
 
   describe "associations" do
     test "maps aliases and command executions using their database delete behavior" do
@@ -42,9 +37,7 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/2 — name validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — name validation" do
     test "valid lowercase name passes" do
@@ -113,9 +106,7 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/2 — ipv4_range CIDR format validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — ipv4_range CIDR format" do
     test "valid /24 CIDR passes" do
@@ -189,9 +180,7 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/2 — ipv4_range exclusion rules
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — ipv4_range exclusion rules" do
     # All blocked first octets: 0, 10, 127, 169, 172, 192, 224, 240, 255
@@ -222,9 +211,7 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/2 — node_limit validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — node_limit field" do
     test "nil node_limit is allowed (no limit)" do
@@ -258,9 +245,7 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # network_name/1
-  # ---------------------------------------------------------------------------
 
   describe "network_name/1" do
     test "returns cluster-{name} format" do
@@ -274,9 +259,7 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # vpn_domain/1
-  # ---------------------------------------------------------------------------
 
   describe "vpn_domain/1" do
     test "returns cluster-{name}.nm.internal by default" do
@@ -297,9 +280,7 @@ defmodule EdgeAdmin.Nodes.Schemas.ClusterTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # node_count/1
-  # ---------------------------------------------------------------------------
 
   describe "node_count/1" do
     test "returns length of loaded nodes list" do

@@ -5,10 +5,7 @@ defmodule EdgeAdminWeb.Schemas.PathParamsTest do
   alias EdgeAdmin.Naming
   alias EdgeAdminWeb.Schemas.PathParams
   alias OpenApiSpex.Schema
-
-  # ---------------------------------------------------------------------------
   # uuid/2 — UUID path parameter
-  # ---------------------------------------------------------------------------
 
   describe "uuid/2" do
     test "produces a {name, opts} tuple with :path location" do
@@ -30,9 +27,7 @@ defmodule EdgeAdminWeb.Schemas.PathParamsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # cluster_name/2 — DNS-style charset, max 24 chars (sourced from Naming)
-  # ---------------------------------------------------------------------------
 
   describe "cluster_name/2" do
     test "produces a {name, opts} tuple with :path location" do

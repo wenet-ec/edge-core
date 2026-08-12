@@ -19,10 +19,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetricsTest do
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Ssh
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Vpn
   alias EdgeAdmin.Metrics.Schemas.AdminMetrics.Webhook
-
-  # ---------------------------------------------------------------------------
   # AdminMetrics.from_raw_metrics/1
-  # ---------------------------------------------------------------------------
 
   describe "from_raw_metrics/1" do
     test "produces a struct with fresh timestamp and every sub-struct populated" do
@@ -52,9 +49,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetricsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Application — uptime_ms / uptime_seconds + memory MB rounding
-  # ---------------------------------------------------------------------------
 
   describe "Application.from_raw/1" do
     test "uptime_ms → seconds (integer division) and human format covers each range" do
@@ -95,9 +90,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetricsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Metadata — degraded boolean coercion
-  # ---------------------------------------------------------------------------
 
   describe "Metadata.from_raw/1" do
     test "metadata_degraded == 1 → true" do
@@ -126,9 +119,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetricsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Proxy — bytes_to_mb(nil) is nil here (different from agent's 0.0 quirk)
-  # ---------------------------------------------------------------------------
 
   describe "Proxy.from_raw/1" do
     test "bytes_to_mb(nil) → nil (not 0.0)" do
@@ -152,9 +143,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetricsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Trivial passthrough sub-modules
-  # ---------------------------------------------------------------------------
 
   describe "passthrough sub-modules" do
     test "Membership passes through both keys" do
@@ -242,9 +231,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetricsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # EventBroker — `enabled` is a boolean (sourced from app config), counters pass through
-  # ---------------------------------------------------------------------------
 
   describe "EventBroker.from_raw/1" do
     test "enabled is a boolean (driven by :event_broker_enabled config)" do
@@ -267,9 +254,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AdminMetricsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # ObanQueue — flat shape (no nested "states" wrapper, unlike AgentMetrics)
-  # ---------------------------------------------------------------------------
 
   describe "ObanQueue.from_raw/1" do
     test "maps each queue entry into a struct (admin shape: counters at top level)" do

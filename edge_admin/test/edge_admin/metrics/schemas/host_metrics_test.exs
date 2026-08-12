@@ -10,10 +10,7 @@ defmodule EdgeAdmin.Metrics.Schemas.HostMetricsTest do
 
   # 1 GiB in bytes
   @gib 1_073_741_824
-
-  # ---------------------------------------------------------------------------
   # HostMetrics.from_raw_metrics/2
-  # ---------------------------------------------------------------------------
 
   describe "from_raw_metrics/2" do
     test "produces a struct with node_id, cluster_name, fresh timestamp, and all sub-structs" do
@@ -40,9 +37,7 @@ defmodule EdgeAdmin.Metrics.Schemas.HostMetricsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # CPU.from_raw/1
-  # ---------------------------------------------------------------------------
 
   describe "CPU.from_raw/1" do
     test "truncates cpu_cores and rounds load averages to 2dp" do
@@ -70,9 +65,7 @@ defmodule EdgeAdmin.Metrics.Schemas.HostMetricsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Memory.from_raw/1
-  # ---------------------------------------------------------------------------
 
   describe "Memory.from_raw/1" do
     test "computes used_bytes = total - available, and the GB fields round to 1dp" do
@@ -117,9 +110,7 @@ defmodule EdgeAdmin.Metrics.Schemas.HostMetricsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Disk.from_raw/1
-  # ---------------------------------------------------------------------------
 
   describe "Disk.from_raw/1" do
     test "computes used_bytes = total - available, and the GB fields round to 1dp" do
@@ -153,9 +144,7 @@ defmodule EdgeAdmin.Metrics.Schemas.HostMetricsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Uptime.from_raw/1
-  # ---------------------------------------------------------------------------
 
   describe "Uptime.from_raw/1" do
     test "format under 60s → seconds suffix" do

@@ -3,18 +3,13 @@ defmodule EdgeAdmin.Nodes.Forms.CreateAliasFormTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Nodes.Forms.CreateAliasForm
-
-  # ---------------------------------------------------------------------------
   # helpers
-  # ---------------------------------------------------------------------------
 
   defp errors_on(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — valid cases
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — valid cases" do
     test "simple lowercase name succeeds" do
@@ -40,9 +35,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateAliasFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — name format validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — name format validation" do
     test "uppercase letters are rejected" do
@@ -88,9 +81,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateAliasFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — invalid param types
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid params" do
     test "non-map params return a base error" do

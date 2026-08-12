@@ -101,10 +101,7 @@ defmodule EdgeAdmin.Commands.Filters.CommandExecutionFiltersTest do
   end
 
   defp ids(query), do: query |> Repo.all() |> Enum.map(& &1.id) |> Enum.sort()
-
-  # ---------------------------------------------------------------------------
   # apply_command_ids/2 — filters directly on ce.command_id
-  # ---------------------------------------------------------------------------
 
   describe "apply_command_ids/2" do
     test ":in matches executions whose command ID is in the given list" do
@@ -162,9 +159,7 @@ defmodule EdgeAdmin.Commands.Filters.CommandExecutionFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_cluster_name/2 — filters by the node's cluster name (3rd binding)
-  # ---------------------------------------------------------------------------
 
   describe "apply_cluster_name/2" do
     test "== matches by exact node-cluster name" do
@@ -246,9 +241,7 @@ defmodule EdgeAdmin.Commands.Filters.CommandExecutionFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_node_ids/2 — filters via the node binding (n.id)
-  # ---------------------------------------------------------------------------
 
   describe "apply_node_ids/2" do
     test ":in matches executions whose node ID is in the given list" do
@@ -303,12 +296,10 @@ defmodule EdgeAdmin.Commands.Filters.CommandExecutionFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_has_cluster/2 — checks ce.cluster_id (the execution's OWN cluster
   # column, NOT the node's cluster — these can differ for target_all
   # executions where cluster_id is nil despite the node belonging to a
   # cluster).
-  # ---------------------------------------------------------------------------
 
   describe "apply_has_cluster/2" do
     test "true matches executions whose own cluster_id is non-null" do
@@ -360,10 +351,8 @@ defmodule EdgeAdmin.Commands.Filters.CommandExecutionFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_has_output/2 — output IS [NOT] NULL (no binding constraint —
   # operates on the primary CommandExecution binding)
-  # ---------------------------------------------------------------------------
 
   describe "apply_has_output/2" do
     test "true matches executions whose output is non-null" do

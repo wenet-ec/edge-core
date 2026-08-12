@@ -23,10 +23,7 @@ defmodule EdgeAdmin.Commands.Filters.CommandFiltersTest do
   end
 
   defp ids(query), do: query |> Repo.all() |> Enum.map(& &1.id) |> Enum.sort()
-
-  # ---------------------------------------------------------------------------
   # apply_has_timeout/2 — virtual boolean: timeout IS [NOT] NULL
-  # ---------------------------------------------------------------------------
 
   describe "apply_has_timeout/2" do
     test "true matches commands with a non-null timeout" do
@@ -74,10 +71,8 @@ defmodule EdgeAdmin.Commands.Filters.CommandFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_has_expires_at/2 — virtual boolean: expires_at IS [NOT] NULL.
   # Critically, this does NOT check whether the timestamp is in the past.
-  # ---------------------------------------------------------------------------
 
   describe "apply_has_expires_at/2" do
     test "true matches commands with expires_at set, regardless of past/future" do

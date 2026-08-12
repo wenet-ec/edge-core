@@ -23,9 +23,7 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.WebhookTest do
     end)
   end
 
-  # ---------------------------------------------------------------------------
   # Required fields
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — required fields" do
     test "valid attrs produce a valid changeset" do
@@ -58,9 +56,7 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.WebhookTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # URL validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — url validation" do
     test "accepts http URL" do
@@ -109,9 +105,7 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.WebhookTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Secret length
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — secret length" do
     test "accepts secret at exactly min length (32 bytes)" do
@@ -145,9 +139,7 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.WebhookTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Headers validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — headers" do
     test "accepts a small map of string => string" do
@@ -195,9 +187,7 @@ defmodule EdgeAdmin.Events.Webhooks.Schemas.WebhookTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # subscribed_events
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — subscribed_events" do
     test "accepts a known catalog event type" do

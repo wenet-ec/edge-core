@@ -14,10 +14,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetricsTest do
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.SettingsConfig
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Ssh
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics.Vpn
-
-  # ---------------------------------------------------------------------------
   # AgentMetrics.from_raw_metrics/2
-  # ---------------------------------------------------------------------------
 
   describe "from_raw_metrics/2" do
     test "produces a struct with node_id, cluster_name, fresh timestamp, and all sub-structs" do
@@ -46,9 +43,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetricsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Application — uptime conversion + memory bytes_to_mb
-  # ---------------------------------------------------------------------------
 
   describe "Application.from_raw/1" do
     test "converts uptime_ms to seconds (integer division) and formats human string" do
@@ -95,9 +90,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetricsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Commands / Discovery / Ssh / Vpn / HealthCheck — passthrough with `|| 0`
-  # ---------------------------------------------------------------------------
 
   describe "passthrough sub-modules default missing keys to 0" do
     test "Commands defaults counters to 0 and last values to nil" do
@@ -181,9 +174,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetricsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Proxy — bytes math, the bytes_to_mb(0) == 0.0 quirk
-  # ---------------------------------------------------------------------------
 
   describe "Proxy.from_raw/1" do
     test "bytes_to_mb(0) returns 0.0 (not 0 integer)" do
@@ -230,9 +221,7 @@ defmodule EdgeAdmin.Metrics.Schemas.AgentMetricsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # ObanQueue — list mapping and nested "states" map
-  # ---------------------------------------------------------------------------
 
   describe "ObanQueue.from_raw/1" do
     test "maps each queue entry into a struct with state counters" do

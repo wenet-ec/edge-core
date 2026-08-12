@@ -3,18 +3,13 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateClusterFormTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Nodes.Forms.UpdateClusterForm
-
-  # ---------------------------------------------------------------------------
   # helpers
-  # ---------------------------------------------------------------------------
 
   defp errors_on(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — valid cases
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — valid cases" do
     test "valid node_limit succeeds" do
@@ -33,9 +28,7 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateClusterFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — node_limit validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — node_limit validation" do
     test "node_limit of 0 is rejected" do
@@ -49,9 +42,7 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateClusterFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — null vs omitted node_limit (explicit null = unset)
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — null vs omitted semantics" do
     test "explicit null node_limit is included in result (unsets the limit)" do
@@ -66,9 +57,7 @@ defmodule EdgeAdmin.Nodes.Forms.UpdateClusterFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — invalid param types
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid params" do
     test "non-map params return a base error" do

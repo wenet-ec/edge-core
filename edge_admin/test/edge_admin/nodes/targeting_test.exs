@@ -3,12 +3,9 @@ defmodule EdgeAdmin.Nodes.TargetingTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Nodes.Targeting
-
-  # ---------------------------------------------------------------------------
   # peri_schema/0 — shape sanity (the canonical layer-1 schema for any
   # operation that targets a fleet subset). MCP consumes this directly, so
   # changes here ripple to every targeting-aware tool.
-  # ---------------------------------------------------------------------------
 
   describe "peri_schema/0" do
     test "is a map with the documented top-level keys" do
@@ -60,9 +57,7 @@ defmodule EdgeAdmin.Nodes.TargetingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # normalize/1 — converts Peri's atom-keyed output to string-keyed maps
-  # ---------------------------------------------------------------------------
 
   describe "normalize/1" do
     test "converts atom keys to strings at the top level" do
@@ -117,9 +112,7 @@ defmodule EdgeAdmin.Nodes.TargetingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # validate_iso8601_date_or_datetime/1
-  # ---------------------------------------------------------------------------
 
   describe "validate_iso8601_date_or_datetime/1" do
     test "accepts a full ISO 8601 datetime with UTC offset" do

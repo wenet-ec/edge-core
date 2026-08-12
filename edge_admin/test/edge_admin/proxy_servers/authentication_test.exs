@@ -10,10 +10,6 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
   # Mox requires that mocks are verified after each test
   setup :verify_on_exit!
 
-  # ---------------------------------------------------------------------------
-  # Helpers
-  # ---------------------------------------------------------------------------
-
   # Stub a node struct with just what Authentication returns
   defp stub_node(id \\ "abc-123") do
     %{id: id}
@@ -35,9 +31,7 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
     Application.delete_env(:edge_admin, :proxy_key)
   end
 
-  # ---------------------------------------------------------------------------
   # Password authentication
-  # ---------------------------------------------------------------------------
 
   describe "authenticate_and_parse/2 - password" do
     test "wrong password returns invalid_credentials" do
@@ -61,9 +55,7 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Direct routing mode (username "_" or "")
-  # ---------------------------------------------------------------------------
 
   describe "authenticate_and_parse/2 - direct routing" do
     setup do
@@ -80,9 +72,7 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # DNS parsing - format validation
-  # ---------------------------------------------------------------------------
 
   describe "authenticate_and_parse/2 - DNS format" do
     setup do
@@ -161,9 +151,7 @@ defmodule EdgeAdmin.ProxyServers.AuthenticationTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Node/cluster lookup
-  # ---------------------------------------------------------------------------
 
   describe "authenticate_and_parse/2 - node lookup" do
     setup do

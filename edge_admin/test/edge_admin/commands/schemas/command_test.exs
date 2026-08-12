@@ -36,9 +36,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Required fields
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — required fields" do
     test "valid attrs produce a valid changeset" do
@@ -70,9 +68,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # validate_command_text_format
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — command_text blank handling" do
     # validate_required/3 trims strings before checking blankness, so empty,
@@ -106,9 +102,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # validate_timeout
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — timeout" do
     test "nil timeout is valid (optional field)" do
@@ -136,9 +130,7 @@ defmodule EdgeAdmin.Commands.Schemas.CommandTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # validate_expires_at
-  # ---------------------------------------------------------------------------
 
   describe "changeset/2 — expires_at" do
     test "future timestamp is valid" do

@@ -5,11 +5,8 @@ defmodule EdgeAdminWeb.Plugs.RedocUITest do
   import Plug.Test
 
   alias EdgeAdminWeb.Plugs.RedocUI
-
-  # ---------------------------------------------------------------------------
   # init/1 — validates that the route is wired with the hardcoded spec_url, so
   # a misconfigured router crashes at boot rather than serving a broken page.
-  # ---------------------------------------------------------------------------
 
   describe "init/1" do
     test "accepts no spec_url (route mounted bare)" do
@@ -27,9 +24,7 @@ defmodule EdgeAdminWeb.Plugs.RedocUITest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # call/2 — sends the precomputed HTML with content-type text/html
-  # ---------------------------------------------------------------------------
 
   describe "call/2" do
     test "returns 200 with HTML content-type" do

@@ -6,10 +6,7 @@ defmodule EdgeAdmin.Nodes.Checks.ClusterNotEmptyCheckTest do
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
-
-  # ---------------------------------------------------------------------------
   # helpers
-  # ---------------------------------------------------------------------------
 
   defp insert_cluster do
     attrs = %{
@@ -42,9 +39,7 @@ defmodule EdgeAdmin.Nodes.Checks.ClusterNotEmptyCheckTest do
     Repo.insert!(struct(Node, attrs))
   end
 
-  # ---------------------------------------------------------------------------
   # check/1 — empty cluster
-  # ---------------------------------------------------------------------------
 
   describe "check/1 — empty cluster" do
     test "cluster with no nodes returns :ok" do
@@ -53,9 +48,7 @@ defmodule EdgeAdmin.Nodes.Checks.ClusterNotEmptyCheckTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # check/1 — cluster with nodes
-  # ---------------------------------------------------------------------------
 
   describe "check/1 — cluster with nodes" do
     test "cluster with one node returns conflict error" do

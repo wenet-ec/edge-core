@@ -54,9 +54,7 @@ defmodule EdgeAdmin.EventsTest do
     :ok
   end
 
-  # ---------------------------------------------------------------------------
   # build_envelope/1 — CloudEvents 1.0 envelope shape
-  # ---------------------------------------------------------------------------
 
   describe "build_envelope/1" do
     test "produces every documented CloudEvents field" do

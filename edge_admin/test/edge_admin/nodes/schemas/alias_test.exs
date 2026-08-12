@@ -29,9 +29,7 @@ defmodule EdgeAdmin.Nodes.Schemas.AliasTest do
     )
   end
 
-  # ---------------------------------------------------------------------------
   # vpn_hostname/1
-  # ---------------------------------------------------------------------------
 
   describe "vpn_hostname/1" do
     test "returns node-{name}.cluster-{cluster_name}.nm.internal" do
@@ -70,9 +68,7 @@ defmodule EdgeAdmin.Nodes.Schemas.AliasTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # vpn_dns_name/1
-  # ---------------------------------------------------------------------------
 
   describe "vpn_dns_name/1" do
     test "returns node-{name}.cluster-{cluster_name} (no domain suffix)" do

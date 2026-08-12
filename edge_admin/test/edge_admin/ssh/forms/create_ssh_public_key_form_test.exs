@@ -3,10 +3,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyFormTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Ssh.Forms.CreateSshPublicKeyForm
-
-  # ---------------------------------------------------------------------------
   # fixtures
-  # ---------------------------------------------------------------------------
 
   @valid_ed25519 "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP5B9NcAkWDeryLofh8tn2lNrOnpkCuMUuY5Ytj4VMJC test-comment"
   @valid_rsa "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDLafo9rqBnzmfQuc/ch17cnnYCvqvRFO0I8qoxm3un+N6eStcfTkfqbuYq5K/JPMgn0SOY48kjYhNwak4wL3/Pe4ekhsmeUrJ7sshxbvsotOxho6G41WvyyRdfH/Ng0D7PtjcXIw/+xvnaehpocefzjmvlBjZFsL8mm6rVt7TFkcF/iGEmIddz4QiabT5CKLSWsUfY9dygYtv8uFKQYg3Hn8ajSGBPT+guC3DVxhpRu5XdddygSgl0h94fuqiq0Tb/a2LG1qWPE9JxfcPj0ZjtGM4dEbYKBYZjps32UnHY3AsM9asigjSxIpeFOKhX31U7Z7oyGL/yku9N7r3dhjD5 user@host"
@@ -20,9 +17,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyFormTest do
     Map.merge(%{"key_name" => "my-laptop", "public_key" => @valid_ed25519}, overrides)
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — valid cases
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — valid cases" do
     test "valid ed25519 key succeeds" do
@@ -51,9 +46,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — required fields
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — required fields" do
     test "missing key_name is rejected" do
@@ -78,9 +71,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — SSH key format validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — SSH key format validation" do
     test "plain text is rejected" do
@@ -116,9 +107,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — to_map output
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — to_map output" do
     test "result contains key_name and public_key" do
@@ -133,9 +122,7 @@ defmodule EdgeAdmin.Ssh.Forms.CreateSshPublicKeyFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — invalid param types
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid params" do
     test "non-map params return a base error" do

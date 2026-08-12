@@ -7,10 +7,7 @@ defmodule EdgeAdminWeb.Plugs.StripRequestLoggerParamTest do
   alias EdgeAdminWeb.Plugs.StripRequestLoggerParam
 
   @opts StripRequestLoggerParam.init([])
-
-  # ---------------------------------------------------------------------------
   # query_params Unfetched → pass through unchanged
-  # ---------------------------------------------------------------------------
 
   describe "call/2 — query_params not yet fetched" do
     test "returns the conn unchanged" do
@@ -26,9 +23,7 @@ defmodule EdgeAdminWeb.Plugs.StripRequestLoggerParamTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # query_params present, no request_logger → pass through unchanged
-  # ---------------------------------------------------------------------------
 
   describe "call/2 — request_logger absent" do
     test "returns the conn unchanged when no request_logger param is present" do
@@ -41,9 +36,7 @@ defmodule EdgeAdminWeb.Plugs.StripRequestLoggerParamTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # request_logger present → strip from query_params, params, and query_string
-  # ---------------------------------------------------------------------------
 
   describe "call/2 — request_logger present" do
     test "drops request_logger from query_params" do

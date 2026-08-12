@@ -4,12 +4,9 @@ defmodule EdgeAdmin.SelfUpdates.Checks.RequestCompletedCheckTest do
 
   alias EdgeAdmin.SelfUpdates.Checks.RequestCompletedCheck
   alias EdgeAdmin.SelfUpdates.Schemas.SelfUpdateRequest
-
-  # ---------------------------------------------------------------------------
   # check/1
   #
   # Pure function: pattern matches on the struct's :status field, no DB call.
-  # ---------------------------------------------------------------------------
 
   describe "check/1 — completed request" do
     test "completed request returns :ok" do

@@ -6,11 +6,8 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Nodes.Views.NodeView
-
-  # ---------------------------------------------------------------------------
   # Fixtures — bare structs, no DB. Views are pure transforms; we only need
   # the fields and preloads they actually read.
-  # ---------------------------------------------------------------------------
 
   defp cluster_fixture(overrides \\ %{}) do
     Map.merge(
@@ -63,9 +60,7 @@ defmodule EdgeAdmin.Nodes.Views.NodeViewTest do
     struct(base, overrides)
   end
 
-  # ---------------------------------------------------------------------------
   # render/1 — happy path with all fields populated
-  # ---------------------------------------------------------------------------
 
   describe "render/1" do
     test "produces every documented field with correct values" do

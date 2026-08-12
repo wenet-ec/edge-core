@@ -3,10 +3,7 @@ defmodule EdgeAdmin.VpnTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Vpn
-
-  # ---------------------------------------------------------------------------
   # select_host_id/3
-  # ---------------------------------------------------------------------------
 
   describe "select_host_id/3" do
     test "returns nil when no host matches hostname" do

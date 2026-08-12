@@ -4,13 +4,10 @@ defmodule EdgeAdmin.Ssh.CredentialMatcherTest do
 
   alias EdgeAdmin.PasswordHashers
   alias EdgeAdmin.Ssh.CredentialMatcher
-
-  # ---------------------------------------------------------------------------
   # check/3 — auth method semantics. The auth_method returned distinguishes
   # "wrong username" (:unknown) from "wrong credential" (:password / :public_key)
   # so the audit trail can tell them apart. Failure cases still return the
   # attempted method, not :unknown.
-  # ---------------------------------------------------------------------------
 
   alias EdgeAdmin.Ssh.Schemas.SshPublicKey
   alias EdgeAdmin.Ssh.Schemas.SshUsername
@@ -150,11 +147,9 @@ defmodule EdgeAdmin.Ssh.CredentialMatcherTest do
 
     test "comment with embedded spaces is fully stripped" do
       # parts: 3 split — only the first space-separated token after data is the
-      # ---------------------------------------------------------------------------
       # boundary. Anything after that (including more spaces) is the comment.
       # normalize_key/1 — strips trailing comment so re-pasting with a different
       # host suffix doesn't break matching.
-      # ---------------------------------------------------------------------------
 
       assert CredentialMatcher.normalize_key("ssh-rsa AAAA my full name comment") ==
                "ssh-rsa AAAA"

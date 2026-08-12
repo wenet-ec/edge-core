@@ -3,10 +3,7 @@ defmodule EdgeAdmin.ProxyServers.ErrorHandlerTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.ProxyServers.ErrorHandler
-
-  # ---------------------------------------------------------------------------
   # http_error_response/1
-  # ---------------------------------------------------------------------------
 
   describe "http_error_response/1" do
     test "network errors return 502" do
@@ -50,9 +47,7 @@ defmodule EdgeAdmin.ProxyServers.ErrorHandlerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # socks5_reply_code/1
-  # ---------------------------------------------------------------------------
 
   describe "socks5_reply_code/1" do
     # RFC 1928 reply codes
@@ -85,9 +80,7 @@ defmodule EdgeAdmin.ProxyServers.ErrorHandlerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # categorize_error/1
-  # ---------------------------------------------------------------------------
 
   describe "categorize_error/1" do
     test "network errors" do
@@ -154,9 +147,7 @@ defmodule EdgeAdmin.ProxyServers.ErrorHandlerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # should_trigger_degraded_mode?/1
-  # ---------------------------------------------------------------------------
 
   describe "should_trigger_degraded_mode?/1" do
     test "infrastructure errors trigger degraded mode" do
@@ -172,9 +163,7 @@ defmodule EdgeAdmin.ProxyServers.ErrorHandlerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # telemetry_metadata/2
-  # ---------------------------------------------------------------------------
 
   describe "telemetry_metadata/2" do
     test "returns map with expected keys" do

@@ -19,10 +19,8 @@ defmodule EdgeAdminMcpTest do
     )
   end
 
-  # ---------------------------------------------------------------------------
   # paginated/3 — canonical MCP list envelope. Mirrors REST's
   # ResponseEnvelope pagination renames so the two surfaces emit the same shape.
-  # ---------------------------------------------------------------------------
 
   describe "paginated/3" do
     test "wraps items in :items and exposes the documented page fields" do

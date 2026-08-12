@@ -4,10 +4,6 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestFormTest do
 
   alias EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestForm
 
-  # ---------------------------------------------------------------------------
-  # Helpers
-  # ---------------------------------------------------------------------------
-
   defp valid_attrs(overrides \\ %{}) do
     Map.merge(
       %{"targeting" => %{"type" => "all"}},
@@ -19,9 +15,7 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestFormTest do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — valid cases
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — valid cases" do
     test "all targeting type succeeds" do
@@ -55,9 +49,7 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — targeting_type validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — targeting_type validation" do
     test "missing targeting_type is rejected" do
@@ -90,9 +82,7 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — targeting requirements
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — targeting requirements" do
     test "nodes type without node_ids is rejected" do
@@ -127,9 +117,7 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — to_map output structure
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — to_map output structure" do
     test "result is a map with targeting key" do
@@ -202,9 +190,7 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — missing or absent targeting map
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — missing targeting" do
     test "missing targeting key defaults to empty targeting map → rejected for missing type" do
@@ -214,9 +200,7 @@ defmodule EdgeAdmin.SelfUpdates.Forms.CreateSelfUpdateRequestFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — invalid param types
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid params" do
     test "non-map params return a targeting error" do

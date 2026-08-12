@@ -4,10 +4,7 @@ defmodule EdgeAdmin.Metrics.Parsers.HostMetricsParserTest do
 
   alias EdgeAdmin.Metrics.Parsers.HostMetricsParser
   alias EdgeAdmin.Metrics.Schemas.HostMetrics
-
-  # ---------------------------------------------------------------------------
   # Fixtures
-  # ---------------------------------------------------------------------------
 
   defp sample_prometheus_text do
     """
@@ -40,10 +37,7 @@ defmodule EdgeAdmin.Metrics.Parsers.HostMetricsParserTest do
   end
 
   defp empty_prometheus_text, do: ""
-
-  # ---------------------------------------------------------------------------
   # parse/1 — CPU metrics
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — CPU metrics" do
     test "counts unique CPU cores" do
@@ -72,9 +66,7 @@ defmodule EdgeAdmin.Metrics.Parsers.HostMetricsParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — memory metrics
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — memory metrics" do
     test "extracts total and available memory bytes" do
@@ -97,9 +89,7 @@ defmodule EdgeAdmin.Metrics.Parsers.HostMetricsParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — disk metrics
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — disk metrics" do
     test "extracts root filesystem size and available bytes" do
@@ -128,9 +118,7 @@ defmodule EdgeAdmin.Metrics.Parsers.HostMetricsParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — network metrics
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — network metrics" do
     test "extracts eth0 network bytes" do
@@ -152,9 +140,7 @@ defmodule EdgeAdmin.Metrics.Parsers.HostMetricsParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — uptime metrics
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — uptime metrics" do
     test "calculates uptime_seconds from boot_time" do
@@ -170,9 +156,7 @@ defmodule EdgeAdmin.Metrics.Parsers.HostMetricsParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # HostMetrics.from_raw_metrics/2 — struct assembly
-  # ---------------------------------------------------------------------------
 
   describe "HostMetrics.from_raw_metrics/2" do
     test "builds struct with node_id and cluster_name" do
@@ -250,9 +234,7 @@ defmodule EdgeAdmin.Metrics.Parsers.HostMetricsParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # HostMetrics.Uptime.format_uptime — all branches (via from_raw_metrics)
-  # ---------------------------------------------------------------------------
 
   describe "HostMetrics.Uptime — format_uptime branches" do
     defp uptime_human(seconds) do

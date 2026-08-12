@@ -84,10 +84,7 @@ defmodule EdgeAdmin.Ssh.Filters.SshPublicKeyFiltersTest do
   end
 
   defp ids(query), do: query |> Repo.all() |> Enum.map(& &1.id) |> Enum.sort()
-
-  # ---------------------------------------------------------------------------
   # apply_node_id/2 — filters via the node binding (n.id)
-  # ---------------------------------------------------------------------------
 
   describe "apply_node_id/2" do
     test "matches keys whose username's node has the given id" do
@@ -160,9 +157,7 @@ defmodule EdgeAdmin.Ssh.Filters.SshPublicKeyFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_ssh_username_ids/2 — filters via the ssh_username binding (u.id)
-  # ---------------------------------------------------------------------------
 
   describe "apply_ssh_username_ids/2" do
     test ":in matches keys whose ssh_username ID is in the given list" do
@@ -223,9 +218,7 @@ defmodule EdgeAdmin.Ssh.Filters.SshPublicKeyFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_username/2 — filters via the username binding (u.username)
-  # ---------------------------------------------------------------------------
 
   describe "apply_username/2" do
     test "== matches by exact username" do
@@ -297,9 +290,7 @@ defmodule EdgeAdmin.Ssh.Filters.SshPublicKeyFiltersTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # apply_cluster_name/2 — filters via the cluster binding (c.name, 4th binding)
-  # ---------------------------------------------------------------------------
 
   describe "apply_cluster_name/2" do
     test "== matches by exact cluster name" do

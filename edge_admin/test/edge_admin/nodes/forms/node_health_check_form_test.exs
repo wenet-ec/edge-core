@@ -3,18 +3,13 @@ defmodule EdgeAdmin.Nodes.Forms.NodeHealthCheckFormTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Nodes.Forms.NodeHealthCheckForm
-
-  # ---------------------------------------------------------------------------
   # helpers
-  # ---------------------------------------------------------------------------
 
   defp errors_on(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — valid statuses
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — valid statuses" do
     test "healthy status succeeds (wire string cast to atom)" do
@@ -28,9 +23,7 @@ defmodule EdgeAdmin.Nodes.Forms.NodeHealthCheckFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — invalid statuses
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid statuses" do
     test "unreachable status is rejected (agent never reports :unreachable)" do
@@ -59,9 +52,7 @@ defmodule EdgeAdmin.Nodes.Forms.NodeHealthCheckFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — to_map output (stringify_keys)
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — to_map output" do
     test "result map has string key 'status', not atom :status" do
@@ -76,9 +67,7 @@ defmodule EdgeAdmin.Nodes.Forms.NodeHealthCheckFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — invalid param types
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid params" do
     test "non-map params return a base error" do

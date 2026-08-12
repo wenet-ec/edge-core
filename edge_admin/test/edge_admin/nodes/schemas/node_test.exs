@@ -48,10 +48,7 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
         version: "1.0.0",
         self_update_enabled: false
       },
-
-      # ---------------------------------------------------------------------------
       # changeset/2
-      # ---------------------------------------------------------------------------
 
       overrides
     )
@@ -118,10 +115,7 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
           ],
           port <- [0, 65_536] do
         changeset = Node.changeset(%Node{}, valid_attrs(%{field => port}))
-
-        # ---------------------------------------------------------------------------
         # associations
-        # ---------------------------------------------------------------------------
 
         refute changeset.valid?, "expected #{field}=#{port} to be invalid"
         assert "must be between 1 and 65535" in errors_on(changeset)[field]
@@ -160,9 +154,7 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
       assert association.through == [:ssh_usernames, :ssh_public_keys]
 
       through_association = SshPublicKey.__schema__(:association, :ssh_username)
-      # ---------------------------------------------------------------------------
       # node_name/1
-      # ---------------------------------------------------------------------------
       assert through_association.related == EdgeAdmin.Ssh.Schemas.SshUsername
     end
   end
@@ -183,9 +175,7 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # vpn_hostname/1
-  # ---------------------------------------------------------------------------
 
   describe "vpn_hostname/1" do
     test "returns node-{id}.cluster-{cluster_name}.nm.internal" do
@@ -221,9 +211,7 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
   end
 
   describe "mdns_hostname/1" do
-    # ---------------------------------------------------------------------------
     # mdns_hostname/1
-    # ---------------------------------------------------------------------------
     test "returns node-{id}.local" do
       node = fake_node(%{id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"})
       assert Node.mdns_hostname(node) == "node-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.local"
@@ -255,8 +243,6 @@ defmodule EdgeAdmin.Nodes.Schemas.NodeTest do
       refute Node.vpn_hostname(node) == Node.mdns_hostname(node)
     end
 
-    # ---------------------------------------------------------------------------
     # hostname distinctness
-    # ---------------------------------------------------------------------------
   end
 end

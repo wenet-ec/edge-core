@@ -4,12 +4,9 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionTerminalCheckTest do
 
   alias EdgeAdmin.Commands.Checks.CommandExecutionTerminalCheck
   alias EdgeAdmin.Commands.Schemas.CommandExecution
-
-  # ---------------------------------------------------------------------------
   # check/1
   #
   # Pure function: pattern matches on the struct's :status field, no DB call.
-  # ---------------------------------------------------------------------------
 
   describe "check/1 — terminal executions" do
     test "completed execution returns :ok" do

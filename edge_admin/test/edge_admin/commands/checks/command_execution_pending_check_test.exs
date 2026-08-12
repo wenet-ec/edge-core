@@ -4,10 +4,7 @@ defmodule EdgeAdmin.Commands.Checks.CommandExecutionPendingCheckTest do
 
   alias EdgeAdmin.Commands.Checks.CommandExecutionPendingCheck
   alias EdgeAdmin.Commands.Schemas.CommandExecution
-
-  # ---------------------------------------------------------------------------
   # check/1 — pure struct pattern match, no DB
-  # ---------------------------------------------------------------------------
 
   describe "check/1 — pending execution" do
     test "pending execution returns :ok" do

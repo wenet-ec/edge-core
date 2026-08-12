@@ -6,10 +6,7 @@ defmodule EdgeAdmin.Nodes.Checks.NodeLimitCheckTest do
   alias EdgeAdmin.Nodes.Schemas.Cluster
   alias EdgeAdmin.Nodes.Schemas.Node
   alias EdgeAdmin.Repo
-
-  # ---------------------------------------------------------------------------
   # helpers
-  # ---------------------------------------------------------------------------
 
   defp insert_cluster(overrides) do
     attrs =
@@ -46,9 +43,7 @@ defmodule EdgeAdmin.Nodes.Checks.NodeLimitCheckTest do
     Repo.insert!(struct(Node, attrs))
   end
 
-  # ---------------------------------------------------------------------------
   # check/1 — no limit
-  # ---------------------------------------------------------------------------
 
   describe "check/1 — cluster with no node limit" do
     test "cluster with nil node_limit always returns :ok" do
@@ -64,9 +59,7 @@ defmodule EdgeAdmin.Nodes.Checks.NodeLimitCheckTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # check/1 — with limit, below limit
-  # ---------------------------------------------------------------------------
 
   describe "check/1 — cluster with node limit, below limit" do
     test "empty cluster with limit returns :ok" do
@@ -88,9 +81,7 @@ defmodule EdgeAdmin.Nodes.Checks.NodeLimitCheckTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # check/1 — at or above limit
-  # ---------------------------------------------------------------------------
 
   describe "check/1 — cluster at node limit" do
     test "cluster at exactly the limit returns conflict error" do

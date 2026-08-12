@@ -3,10 +3,7 @@ defmodule EdgeAdmin.Vpn.NamingTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Vpn.Naming, as: VpnNaming
-
-  # ---------------------------------------------------------------------------
   # build_vpn_name/2
-  # ---------------------------------------------------------------------------
 
   describe "build_vpn_name/2" do
     test "defaults to node prefix" do
@@ -26,9 +23,7 @@ defmodule EdgeAdmin.Vpn.NamingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # build_network_name/2
-  # ---------------------------------------------------------------------------
 
   describe "build_network_name/2" do
     test "defaults to cluster prefix" do
@@ -59,9 +54,7 @@ defmodule EdgeAdmin.Vpn.NamingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # validate_admin_cluster_suffix!/1
-  # ---------------------------------------------------------------------------
 
   describe "validate_admin_cluster_suffix!/1" do
     test "valid simple name" do
@@ -121,9 +114,7 @@ defmodule EdgeAdmin.Vpn.NamingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # validate_network_name/1
-  # ---------------------------------------------------------------------------
 
   describe "validate_network_name/1" do
     test "valid simple name" do
@@ -161,9 +152,7 @@ defmodule EdgeAdmin.Vpn.NamingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # build_vpn_domain/2
-  # ---------------------------------------------------------------------------
 
   describe "build_vpn_domain/2" do
     test "combines network and default domain from config" do
@@ -180,9 +169,7 @@ defmodule EdgeAdmin.Vpn.NamingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # build_vpn_hostname/3
-  # ---------------------------------------------------------------------------
 
   describe "build_vpn_hostname/3" do
     test "builds FQDN from host, network and default domain" do
@@ -201,9 +188,7 @@ defmodule EdgeAdmin.Vpn.NamingTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # build_admin_erlang_node_name/1
-  # ---------------------------------------------------------------------------
 
   describe "build_admin_erlang_node_name/1" do
     test "produces an atom in admin@hostname format" do

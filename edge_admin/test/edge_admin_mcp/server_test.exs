@@ -14,11 +14,9 @@ defmodule EdgeAdminMcp.ServerTest do
     %{"method" => "tools/call", "params" => %{"name" => name}}
   end
 
-  # ---------------------------------------------------------------------------
   # blocked_when_degraded/0 — pin the cross-surface mirror with REST's
   # DegradedMode :block actions. Adding a new write tool: mirror REST's
   # :block list, append here, then update this assertion.
-  # ---------------------------------------------------------------------------
 
   describe "blocked_when_degraded/0" do
     test "is the documented set of write tools mirroring REST's :block actions" do
@@ -49,12 +47,10 @@ defmodule EdgeAdminMcp.ServerTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # check_not_degraded/1 — three branches:
   #   1. blocked tool + cluster degraded → :degraded
   #   2. blocked tool + cluster healthy  → :ok
   #   3. anything else (read tool, unknown method) → :ok (no Metadata call)
-  # ---------------------------------------------------------------------------
 
   describe "check_not_degraded/1 — blocked tool, cluster degraded" do
     test "returns :degraded when degraded?() is true" do

@@ -25,10 +25,7 @@ defmodule EdgeAdmin.Nodes.Policies.EnrollmentKeyPolicyTest do
 
   defp restore_env(key, nil), do: Elixir.Application.delete_env(:edge_admin, key)
   defp restore_env(key, value), do: Elixir.Application.put_env(:edge_admin, key, value)
-
-  # ---------------------------------------------------------------------------
   # :create_for_default — allowed iff default_cluster_name is a binary
-  # ---------------------------------------------------------------------------
 
   describe "authorize/1 — :create_for_default" do
     test "allowed when default_cluster_name is a binary" do
@@ -58,10 +55,8 @@ defmodule EdgeAdmin.Nodes.Policies.EnrollmentKeyPolicyTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # :create_for_public — allowed iff public_enrollment_key_enabled == true
   #                                  AND default_cluster_name is a binary
-  # ---------------------------------------------------------------------------
 
   describe "authorize/1 — :create_for_public" do
     test "allowed when both flags are set" do
@@ -101,9 +96,7 @@ defmodule EdgeAdmin.Nodes.Policies.EnrollmentKeyPolicyTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Catch-all — unknown actions deny by default
-  # ---------------------------------------------------------------------------
 
   describe "authorize/1 — unknown actions" do
     test "unknown atom action is denied" do
@@ -115,9 +108,7 @@ defmodule EdgeAdmin.Nodes.Policies.EnrollmentKeyPolicyTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # default_cluster_name/0 — convenience accessor returning the resolved value
-  # ---------------------------------------------------------------------------
 
   describe "default_cluster_name/0" do
     test "returns the configured value" do

@@ -30,10 +30,7 @@ defmodule EdgeAdminWeb.Plugs.CastAndValidateErrorRendererTest do
   defp call(errors), do: CastAndValidateErrorRenderer.call(build_conn(), errors)
 
   defp decoded(conn), do: JSON.decode!(conn.resp_body)
-
-  # -----------------------------------------------------------------------
   # HTTP status
-  # -----------------------------------------------------------------------
 
   describe "HTTP status" do
     test "returns 400 (not 422)" do
@@ -47,9 +44,7 @@ defmodule EdgeAdminWeb.Plugs.CastAndValidateErrorRendererTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # Content-Type
-  # -----------------------------------------------------------------------
 
   describe "Content-Type" do
     test "sets application/json content type" do
@@ -59,9 +54,7 @@ defmodule EdgeAdminWeb.Plugs.CastAndValidateErrorRendererTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # Envelope shape
-  # -----------------------------------------------------------------------
 
   describe "envelope shape" do
     test "body has top-level error key" do
@@ -90,9 +83,7 @@ defmodule EdgeAdminWeb.Plugs.CastAndValidateErrorRendererTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # Leading slash stripping
-  # -----------------------------------------------------------------------
 
   describe "leading slash stripping" do
     test "field key has no leading slash" do
@@ -115,9 +106,7 @@ defmodule EdgeAdminWeb.Plugs.CastAndValidateErrorRendererTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # Error grouping
-  # -----------------------------------------------------------------------
 
   describe "error grouping" do
     test "single error on a field produces list with one message" do
@@ -151,9 +140,7 @@ defmodule EdgeAdminWeb.Plugs.CastAndValidateErrorRendererTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # Friendly enum IN messages
-  # -----------------------------------------------------------------------
 
   describe "friendly enum IN messages" do
     test "hides generated enum IN regex details" do
@@ -184,9 +171,7 @@ defmodule EdgeAdminWeb.Plugs.CastAndValidateErrorRendererTest do
     end
   end
 
-  # -----------------------------------------------------------------------
   # Single error (non-list) convenience clause
-  # -----------------------------------------------------------------------
 
   describe "single error (non-list) input" do
     test "wraps a single error into a list and processes normally" do

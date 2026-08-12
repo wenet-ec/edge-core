@@ -4,10 +4,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
 
   alias EdgeAdmin.Metrics.Parsers.AgentMetricsParser
   alias EdgeAdmin.Metrics.Schemas.AgentMetrics
-
-  # ---------------------------------------------------------------------------
   # Fixtures
-  # ---------------------------------------------------------------------------
 
   defp sample_prometheus_text do
     """
@@ -64,10 +61,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
   end
 
   defp empty_prometheus_text, do: ""
-
-  # ---------------------------------------------------------------------------
   # parse/1 — gauge extraction
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — gauge extraction" do
     test "extracts uptime_ms" do
@@ -97,9 +91,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — counter extraction (sums across labels)
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — counter extraction" do
     test "sums discovery_scans across status labels" do
@@ -185,9 +177,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — extract_counter_by_label (blocked_by_reason)
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — extract_counter_by_label" do
     test "http blocked_by_reason groups counts by reason label" do
@@ -224,9 +214,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # parse/1 — Oban queue extraction
-  # ---------------------------------------------------------------------------
 
   describe "parse/1 — Oban queue extraction" do
     test "extracts queue name" do
@@ -260,9 +248,7 @@ defmodule EdgeAdmin.Metrics.Parsers.AgentMetricsParserTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # AgentMetrics.from_raw_metrics/2 — struct assembly
-  # ---------------------------------------------------------------------------
 
   describe "AgentMetrics.from_raw_metrics/2" do
     test "builds all top-level struct fields" do

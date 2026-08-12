@@ -3,10 +3,7 @@ defmodule EdgeAdmin.AdminsTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Admins
-
-  # ---------------------------------------------------------------------------
   # Fixture helpers
-  # ---------------------------------------------------------------------------
 
   defp network(netid, addressrange \\ "100.64.0.0/24") do
     %{"netid" => netid, "addressrange" => addressrange, "addressrange6" => "fd7a:91c2:4e8c:1::/64"}
@@ -41,9 +38,7 @@ defmodule EdgeAdmin.AdminsTest do
     admin
   end
 
-  # ---------------------------------------------------------------------------
   # normalise_cluster/1
-  # ---------------------------------------------------------------------------
 
   describe "normalise_cluster/1" do
     test "produces the documented admin-domain shape" do
@@ -111,9 +106,7 @@ defmodule EdgeAdmin.AdminsTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # normalise_member field-by-field (exercised through normalise_cluster)
-  # ---------------------------------------------------------------------------
 
   describe "normalise_cluster/1 — per-admin fields" do
     test "passes through name, vpn_host_id, endpoint, port, status" do

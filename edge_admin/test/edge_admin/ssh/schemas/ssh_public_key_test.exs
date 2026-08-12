@@ -3,19 +3,13 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKeyTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Ssh.Schemas.SshPublicKey
-
-  # ---------------------------------------------------------------------------
   # Real SSH public key fixtures (generated, not sensitive)
-  # ---------------------------------------------------------------------------
 
   @ed25519_key "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP5B9NcAkWDeryLofh8tn2lNrOnpkCuMUuY5Ytj4VMJC test-comment"
   @ed25519_key_no_comment "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP5B9NcAkWDeryLofh8tn2lNrOnpkCuMUuY5Ytj4VMJC"
   @ecdsa256_key "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBHIOb8aQOlQE4WbojqM+3s3nt/tOudVdC4P49Q0E41LBi4T9I/EgMMrkat9y9y0Wj+pYTJbGsCbttefkoBZK//M="
   @rsa_key "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDLafo9rqBnzmfQuc/ch17cnnYCvqvRFO0I8qoxm3un+N6eStcfTkfqbuYq5K/JPMgn0SOY48kjYhNwak4wL3/Pe4ekhsmeUrJ7sshxbvsotOxho6G41WvyyRdfH/Ng0D7PtjcXIw/+xvnaehpocefzjmvlBjZFsL8mm6rVt7TFkcF/iGEmIddz4QiabT5CKLSWsUfY9dygYtv8uFKQYg3Hn8ajSGBPT+guC3DVxhpRu5XdddygSgl0h94fuqiq0Tb/a2LG1qWPE9JxfcPj0ZjtGM4dEbYKBYZjps32UnHY3AsM9asigjSxIpeFOKhX31U7Z7oyGL/yku9N7r3dhjD5 user@host"
-
-  # ---------------------------------------------------------------------------
   # validate_key_format/1 — supported algorithms
-  # ---------------------------------------------------------------------------
 
   describe "validate_key_format/1 — supported algorithms" do
     test "ssh-ed25519 key is accepted" do
@@ -40,9 +34,7 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKeyTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # validate_key_format/1 — format failures
-  # ---------------------------------------------------------------------------
 
   describe "validate_key_format/1 — invalid format" do
     test "plain text is rejected" do
@@ -70,9 +62,7 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKeyTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # validate_key_format/1 — unsupported algorithms
-  # ---------------------------------------------------------------------------
 
   describe "validate_key_format/1 — unsupported algorithms" do
     test "ssh-dss (DSA) is rejected as unsupported algorithm" do
@@ -95,9 +85,7 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKeyTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # validate_key_format/1 — bad base64
-  # ---------------------------------------------------------------------------
 
   describe "validate_key_format/1 — invalid base64 key data" do
     test "key with invalid base64 characters is rejected" do
@@ -106,9 +94,7 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKeyTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # validate_key_format/1 — return value
-  # ---------------------------------------------------------------------------
 
   describe "validate_key_format/1 — return value" do
     test "returns {:ok, algorithm} on success" do
@@ -122,9 +108,7 @@ defmodule EdgeAdmin.Ssh.Schemas.SshPublicKeyTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # supported_algorithms/0
-  # ---------------------------------------------------------------------------
 
   describe "supported_algorithms/0" do
     test "returns a list of strings" do

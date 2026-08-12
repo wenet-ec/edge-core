@@ -4,12 +4,9 @@ defmodule EdgeAdminMcp.ToolErrorTest do
 
   alias EdgeAdmin.ChangesetErrors
   alias EdgeAdminMcp.ToolError
-
-  # ---------------------------------------------------------------------------
   # Cross-surface contract: changeset errors render through the SAME translator
   # as REST's ChangesetJSON. The shared module is EdgeAdmin.ChangesetErrors.
   # If MCP and REST ever diverge in error message text, this is where to look.
-  # ---------------------------------------------------------------------------
 
   defp changeset_with_error(field, message) do
     {%{}, %{name: :string}}

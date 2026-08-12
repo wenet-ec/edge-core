@@ -3,10 +3,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterFormTest do
   use ExUnit.Case, async: true
 
   alias EdgeAdmin.Nodes.Forms.CreateClusterForm
-
-  # ---------------------------------------------------------------------------
   # helpers
-  # ---------------------------------------------------------------------------
 
   defp errors_on(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
@@ -16,9 +13,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterFormTest do
     Map.merge(%{"name" => "prod", "ipv4_range" => "100.64.1.0/24"}, overrides)
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — node_limit validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — node_limit field" do
     test "valid node_limit is accepted" do
@@ -52,9 +47,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — valid cases
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — valid cases" do
     test "valid name and ipv4_range succeeds" do
@@ -92,9 +85,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — name format validation
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — name format validation" do
     test "uppercase letters are rejected" do
@@ -132,9 +123,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — reserved names
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — reserved names" do
     test "name 'default' is rejected as reserved" do
@@ -154,9 +143,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — ipv4_range format validation (shallow regex check)
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — ipv4_range format validation" do
     test "valid /24 CIDR passes" do
@@ -197,9 +184,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — to_map output
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — to_map output" do
     test "nil values are excluded from result" do
@@ -214,9 +199,7 @@ defmodule EdgeAdmin.Nodes.Forms.CreateClusterFormTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # changeset/1 — invalid param types
-  # ---------------------------------------------------------------------------
 
   describe "changeset/1 — invalid params" do
     test "non-map params return a base error" do

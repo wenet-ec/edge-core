@@ -44,10 +44,6 @@ defmodule EdgeAdmin.Application do
     :ok
   end
 
-  # ===========================================================================
-  # Private Helpers
-  # ===========================================================================
-
   defp event_broker_children do
     if Application.get_env(:edge_admin, :event_broker_enabled, false) do
       [EdgeAdmin.Events.Broker.Supervisor]

@@ -53,12 +53,9 @@ defmodule EdgeAdmin.Repo do
   `Application.fetch_env!(:edge_admin, :repo_impl)`.
   """
 
-  # === Resolve the impl at call time so runtime config wins ===
   defp impl, do: Application.fetch_env!(:edge_admin, :repo_impl)
 
-  # ---------------------------------------------------------------------------
-  # Schema API — Ecto.Repo callbacks for struct/changeset operations
-  # ---------------------------------------------------------------------------
+  # Ecto.Repo callbacks for struct/changeset operations.
   @doc "Inserts a struct or changeset using the active repository implementation."
   def insert(struct_or_changeset, opts \\ []), do: impl().insert(struct_or_changeset, opts)
   @doc "Inserts a struct or changeset, raising on failure."
@@ -93,9 +90,7 @@ defmodule EdgeAdmin.Repo do
   @doc "Reloads a struct or list of structs, raising when a row is missing."
   def reload!(struct_or_structs, opts \\ []), do: impl().reload!(struct_or_structs, opts)
 
-  # ---------------------------------------------------------------------------
-  # Query API — Ecto.Repo.Queryable callbacks
-  # ---------------------------------------------------------------------------
+  # Ecto.Repo.Queryable callbacks.
   @doc "Fetches a record by primary key, returning nil when it is absent."
   def get(queryable, id, opts \\ []), do: impl().get(queryable, id, opts)
   @doc "Fetches a record by primary key, raising when it is absent."
@@ -137,9 +132,7 @@ defmodule EdgeAdmin.Repo do
   def preload(structs_or_struct_or_nil, preloads, opts \\ []),
     do: impl().preload(structs_or_struct_or_nil, preloads, opts)
 
-  # ---------------------------------------------------------------------------
-  # Transaction API
-  # ---------------------------------------------------------------------------
+  # Transaction callbacks.
   @doc "Runs a function or Ecto.Multi inside a database transaction."
   def transaction(fun_or_multi, opts \\ []), do: impl().transaction(fun_or_multi, opts)
   @doc "Runs a transaction with the adapter-specific write-lock behavior."
@@ -160,9 +153,7 @@ defmodule EdgeAdmin.Repo do
   @doc "Rolls back the current transaction with the given value."
   def rollback(value), do: impl().rollback(value)
 
-  # ---------------------------------------------------------------------------
-  # Process API — dynamic repo + connection checkout
-  # ---------------------------------------------------------------------------
+  # Process-local repo and connection checkout callbacks.
   @doc "Returns the active dynamic repository for the current process."
   def get_dynamic_repo, do: impl().get_dynamic_repo()
   @doc "Sets the dynamic repository for the current process."
@@ -172,9 +163,7 @@ defmodule EdgeAdmin.Repo do
   @doc "Returns whether the current process has checked out a connection."
   def checked_out?, do: impl().checked_out?()
 
-  # ---------------------------------------------------------------------------
-  # SQL adapter passthroughs — injected by Ecto.Adapters.SQL.__before_compile__
-  # ---------------------------------------------------------------------------
+  # SQL adapter passthroughs injected by Ecto.Adapters.SQL.__before_compile__.
   @doc "Executes a raw SQL query against the active repository."
   def query(sql, params \\ [], opts \\ []), do: impl().query(sql, params, opts)
   @doc "Executes a raw SQL query, raising on failure."
@@ -190,24 +179,15 @@ defmodule EdgeAdmin.Repo do
   @doc "Disconnects idle database connections matching the interval."
   def disconnect_all(interval, opts \\ []), do: impl().disconnect_all(interval, opts)
 
-  # ---------------------------------------------------------------------------
-  # Adapter identity passthrough
-  # ---------------------------------------------------------------------------
   @doc "Returns the adapter module used by the active repository implementation."
   def __adapter__, do: impl().__adapter__()
 
-  # === Custom helper (not a delegation) ===
   @doc """
   Translates a unique constraint violation on the given fields into `{:error, {:conflict, reason}}`.
   All other changeset errors pass through as `{:error, changeset}` for a 422 response.
 
   Call this after `Repo.insert/2` anywhere a unique index collision should be a 409
   rather than a validation error. The first matching field determines the reason message.
-
-  ## Examples
-
-      Repo.insert(changeset) |> Repo.normalize_conflict([:name])
-      Repo.insert(changeset) |> Repo.normalize_conflict([:name, :cluster_id])
   """
   @spec normalize_conflict(
           {:ok, struct()} | {:error, Ecto.Changeset.t()},

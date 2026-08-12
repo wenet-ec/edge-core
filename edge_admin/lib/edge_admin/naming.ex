@@ -48,8 +48,6 @@ defmodule EdgeAdmin.Naming do
   @ssh_public_key_pattern "^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa)\\s+([A-Za-z0-9+/]+=*)\\s*(.*)$"
   @ssh_public_key_regex ~r/^(ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)|ssh-rsa)\s+([A-Za-z0-9+\/]+=*)\s*(.*)$/
 
-  # ── Cluster names ──────────────────────────────────────────────────────────
-
   @doc "Regex literal matching valid cluster names."
   def cluster_name_regex, do: @dns_label_regex
 
@@ -58,8 +56,6 @@ defmodule EdgeAdmin.Naming do
 
   @doc "Maximum length of a cluster name. Bounded by Edge VPN network-name limits."
   def cluster_name_max_length, do: 24
-
-  # ── Alias names ────────────────────────────────────────────────────────────
 
   @doc "Regex literal matching valid alias names."
   def alias_name_regex, do: @dns_label_regex
@@ -73,8 +69,6 @@ defmodule EdgeAdmin.Naming do
   @doc "Maximum length of an alias name. DNS label limit."
   def alias_name_max_length, do: 63
 
-  # ── SSH usernames ──────────────────────────────────────────────────────────
-
   @doc "Regex literal matching valid SSH usernames."
   def ssh_username_regex, do: @ssh_username_regex
 
@@ -87,8 +81,6 @@ defmodule EdgeAdmin.Naming do
   @doc "Maximum length of an SSH username."
   def ssh_username_max_length, do: 32
 
-  # ── SSH public keys ────────────────────────────────────────────────────────
-
   @doc """
   Regex literal matching the OpenSSH public-key wire format
   (`<algorithm> <base64> [comment]`). Captures algorithm, base64 data,
@@ -99,8 +91,6 @@ defmodule EdgeAdmin.Naming do
   @doc "Inner regex string for OpenApiSpex `pattern:` field."
   def ssh_public_key_pattern, do: @ssh_public_key_pattern
 
-  # ── SSH passwords ──────────────────────────────────────────────────────────
-
   @doc """
   Minimum length of an SSH password (when one is set — passwords are optional,
   key-only auth is supported). Shared across OpenApiSpex (Layer 1 REST), MCP
@@ -110,8 +100,6 @@ defmodule EdgeAdmin.Naming do
 
   @doc "Maximum length of an SSH password."
   def ssh_password_max_length, do: 128
-
-  # ── Enum IN query values ──────────────────────────────────────────────────
 
   @doc """
   Inner regex string for OpenApiSpex `pattern:` fields that accept one or more

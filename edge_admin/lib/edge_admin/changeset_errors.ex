@@ -40,10 +40,6 @@ defmodule EdgeAdmin.ChangesetErrors do
   with nested paths joined by `.`. Returns `"Validation failed"` (no
   detail) if no errors are present.
 
-  Examples:
-
-      "name can't be blank; targeting.type is invalid"
-
   Used by MCP to render tool errors that fit the protocol's
   one-string-per-error contract.
   """
@@ -54,8 +50,6 @@ defmodule EdgeAdmin.ChangesetErrors do
       pairs -> "Validation failed: " <> Enum.map_join(pairs, "; ", fn {path, msg} -> "#{path} #{msg}" end)
     end
   end
-
-  # ── Internals ─────────────────────────────────────────────────────────────
 
   defp interpolate({msg, opts}) do
     Enum.reduce(opts, msg, fn {key, value}, acc ->

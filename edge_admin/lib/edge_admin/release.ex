@@ -32,10 +32,6 @@ defmodule EdgeAdmin.Release do
   @edge_vpn_admin_bootstrap_base_delay_ms 250
   @edge_vpn_admin_bootstrap_max_delay_ms 2_000
 
-  # =============================================================================
-  # Config Helpers
-  # =============================================================================
-
   defp edge_vpn_bootstrap_username do
     Application.get_env(:edge_admin, :edge_vpn_bootstrap_username)
   end
@@ -60,10 +56,6 @@ defmodule EdgeAdmin.Release do
     Application.get_env(:edge_admin, :default_cluster_node_limit)
   end
 
-  # =============================================================================
-  # Database Migrations
-  # =============================================================================
-
   def migrate do
     boot([])
 
@@ -86,10 +78,6 @@ defmodule EdgeAdmin.Release do
       {:ok, _, _} = Migrator.with_repo(repo, &Migrator.run(&1, :down, to: version))
     end
   end
-
-  # =============================================================================
-  # Netmaker Superadmin Bootstrap
-  # =============================================================================
 
   @doc """
   Creates Edge VPN admin user if doesn't exist.
@@ -183,10 +171,6 @@ defmodule EdgeAdmin.Release do
     )
   end
 
-  # =============================================================================
-  # Default Cluster Bootstrap
-  # =============================================================================
-
   @doc """
   Creates default cluster if configured.
 
@@ -256,10 +240,6 @@ defmodule EdgeAdmin.Release do
         System.halt(1)
     end
   end
-
-  # =============================================================================
-  # Encryption Key Rotation
-  # =============================================================================
 
   @doc """
   Rotates the encryption-at-rest key.
@@ -382,10 +362,6 @@ defmodule EdgeAdmin.Release do
     :ok
   end
 
-  # =============================================================================
-  # Boot Helpers
-  # =============================================================================
-
   # Loads the app and starts the runtime dependencies a release task needs.
   # `parts` selects optional capability groups; `:logger` and `:sentry` are
   # always started so failures are observable in production.
@@ -458,10 +434,6 @@ defmodule EdgeAdmin.Release do
         fun.()
     end
   end
-
-  # =============================================================================
-  # Private Helpers
-  # =============================================================================
 
   defp repos do
     Application.fetch_env!(@app, :ecto_repos)

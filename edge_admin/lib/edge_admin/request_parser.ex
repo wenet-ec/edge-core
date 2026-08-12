@@ -88,22 +88,9 @@ defmodule EdgeAdmin.RequestParser do
   Call this after `parse/1` to extract ilike filters for fields you want to
   apply as raw Ecto `ilike/2` clauses instead of letting Flop handle them.
 
-  ## Returns
-  `{ilike_filters, updated_flop_params}` where `ilike_filters` is a list of
-  `%{field: atom, op: :ilike, value: binary}` maps and `updated_flop_params`
-  has those filters removed.
-
-  ## Example
-
-      flop_params = RequestParser.parse(params)
-      {ilike_filters, flop_params} = RequestParser.split_ilike_filters(flop_params, [:name, :version])
-      query = Enum.reduce(ilike_filters, base_query, fn %{field: f, value: v}, q ->
-        from(r in q, where: case_insensitive_like(field(r, ^f), ^v))
-      end)
-
   Use `EdgeAdmin.Query.case_insensitive_like/2` instead of raw `ilike/2` so
   the query works on both Postgres and SQLite (`ecto_sqlite3` does not
-  support `ilike`).
+  support `ilike`). Returns `{ilike_filters, updated_flop_params}`.
   """
   def split_ilike_filters(flop_params, fields) when is_list(fields) do
     {ilike, other} =

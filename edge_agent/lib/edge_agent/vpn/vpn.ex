@@ -89,10 +89,6 @@ defmodule EdgeAgent.Vpn do
     end
   end
 
-  # =============================================================================
-  # Private
-  # =============================================================================
-
   defp join_with_stored_key(node_id) do
     case Settings.get_vpn_enrollment_key() do
       nil ->

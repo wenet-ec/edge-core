@@ -9,14 +9,12 @@ defmodule EdgeAgent.Bootstrap do
 
   ## Bootstrap Sequence
 
-  ```
   1. Load or generate the node installation ID
   2. Verify enrollment key with admin
   3. Join VPN network
-  4. Discover admin URLs and register with admin (with HTTP fallback)
-  5. Sync unprocessed command executions (sent + pending)
-  6. Register node aliases (best-effort, from ALIASES env var)
-  ```
+  4. Discover admin URLs and register with admin, using HTTP fallback if needed
+  5. Sync unprocessed command executions
+  6. Register node aliases from `ALIASES` best-effort
 
   ## Failure Handling
 
@@ -50,18 +48,6 @@ defmodule EdgeAgent.Bootstrap do
   - `:vpn_ready_timeout_seconds` - VPN verification timeout in seconds (default: 30)
   - `:aliases` - List of friendly name aliases to register with admin (default: [])
 
-  ## Examples
-
-      # Bootstrap runs automatically on application start
-      # Success: Application continues
-      # Failure: Application crashes with detailed error
-
-      # Check if bootstrap completed
-      iex> Bootstrap.initialized?()
-      true
-
-      # Skip bootstrap in test environment
-      config :edge_agent, run_bootstrap: false
   """
 
   use GenServer
@@ -75,10 +61,6 @@ defmodule EdgeAgent.Bootstrap do
   alias EdgeAgent.Vpn
 
   require Logger
-
-  # =============================================================================
-  # Public API
-  # =============================================================================
 
   @doc """
   Starts the Bootstrap GenServer.
@@ -107,10 +89,6 @@ defmodule EdgeAgent.Bootstrap do
     end
   end
 
-  # =============================================================================
-  # GenServer Callbacks
-  # =============================================================================
-
   @impl true
   def init(_opts) do
     if Application.get_env(:edge_agent, :run_bootstrap, true) do
@@ -137,10 +115,6 @@ defmodule EdgeAgent.Bootstrap do
     {:reply, Map.get(state, :initialized, false), state}
   end
 
-  # =============================================================================
-  # Bootstrap Flow
-  # =============================================================================
-
   defp do_bootstrap do
     with {:ok, identity} <- step_1_determine_identity(),
          :ok <- step_2_verify_enrollment(identity.recovery_key),
@@ -157,36 +131,20 @@ defmodule EdgeAgent.Bootstrap do
     end
   end
 
-  # =============================================================================
-  # Step 1: Determine Identity
-  # =============================================================================
-
   defp step_1_determine_identity do
     Logger.info("Step 1: Determining node identity...")
     Identity.determine()
   end
-
-  # =============================================================================
-  # Step 2: Verify Enrollment Key
-  # =============================================================================
 
   defp step_2_verify_enrollment(recovery_key) do
     Logger.info("Step 2: Verifying enrollment key...")
     Enrollment.ensure_verified(recovery_key)
   end
 
-  # =============================================================================
-  # Step 3: Join VPN
-  # =============================================================================
-
   defp step_3_join_vpn(node_id) do
     Logger.info("Step 3: Joining VPN network...")
     Vpn.join_if_needed(node_id)
   end
-
-  # =============================================================================
-  # Step 4: Discover Admins and Register Node
-  # =============================================================================
 
   defp step_4_discover_and_register(%{node_id: node_id, recovery_key: recovery_key}) do
     Logger.info("Step 4: Discovering admins and registering...")
@@ -225,22 +183,13 @@ defmodule EdgeAgent.Bootstrap do
     )
   end
 
-  # =============================================================================
-  # Step 5: Sync Unprocessed Command Executions
-  # =============================================================================
-
   defp step_5_sync_unprocessed_command_executions(_node_id) do
     Logger.info("Step 5: Syncing unprocessed command executions...")
 
     Commands.sync_unprocessed_command_executions()
 
-    # Always return :ok (sync failures are non-fatal)
     :ok
   end
-
-  # =============================================================================
-  # Step 6: Register Aliases (best-effort)
-  # =============================================================================
 
   defp step_6_register_aliases do
     aliases = Application.get_env(:edge_agent, :aliases, [])

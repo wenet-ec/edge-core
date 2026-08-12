@@ -62,7 +62,6 @@ defmodule EdgeAgent.SshServer.Authentication do
 
     Logger.debug("SSH public key auth attempt for user: #{username}")
 
-    # Format the key from Erlang SSH format to OpenSSH string format
     public_key_string = KeyEncoding.format_public_key(key)
 
     result =

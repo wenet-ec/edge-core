@@ -205,10 +205,6 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidator do
     end
   end
 
-  # -------------------------------------------------------------------------
-  # Predicate API (string-domain — kept for backwards compatibility)
-  # -------------------------------------------------------------------------
-
   @doc """
   Check if `host` is a loopback address or hostname.
 
@@ -363,10 +359,6 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidator do
     end
   end
 
-  # -------------------------------------------------------------------------
-  # IP-tuple-domain checks (the source of truth for range matching)
-  # -------------------------------------------------------------------------
-
   # IPv4 loopback: 127.0.0.0/8
   @doc false
   @spec localhost_ip?(:inet.ip_address()) :: boolean()
@@ -398,10 +390,6 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidator do
   end
 
   defp normalise_mapped(ip), do: ip
-
-  # -------------------------------------------------------------------------
-  # Hostname-domain checks (only used when a host is not an IP literal)
-  # -------------------------------------------------------------------------
 
   defp hostname_loopback?(host) do
     normalise_host(host) in @localhost_hostnames
@@ -435,10 +423,6 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidator do
 
   defp normalise_host(host) when is_list(host), do: host |> List.to_string() |> normalise_host()
   defp normalise_host(host) when is_atom(host), do: host |> Atom.to_string() |> normalise_host()
-
-  # -------------------------------------------------------------------------
-  # IP resolution + multi-record validation
-  # -------------------------------------------------------------------------
 
   # Resolve a host string to a list of IP tuples.
   # If `host` is a literal IP, returns that IP without doing DNS.
@@ -494,10 +478,6 @@ defmodule EdgeAgent.ProxyServers.Transport.DestinationValidator do
       true -> nil
     end
   end
-
-  # -------------------------------------------------------------------------
-  # Address parsing helpers
-  # -------------------------------------------------------------------------
 
   # Parse a string as an IP literal (v4 or v6), normalising IPv4-mapped IPv6.
   # Returns `{:ok, tuple}` for an IP, or `:error` for a hostname.

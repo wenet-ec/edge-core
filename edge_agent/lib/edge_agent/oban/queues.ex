@@ -4,8 +4,6 @@ defmodule EdgeAgent.Oban.Queues do
   Manifest of every Oban worker in this app, plus a boot-time consistency
   check against the runtime queue config.
 
-  ## The drift class this prevents
-
   An Oban worker declares its queue inline via `use Oban.Worker, queue: :foo`,
   while `runtime.exs` separately declares `queues: [foo: 2, ...]` (queue name +
   per-deployment concurrency). If the two fall out of sync — say a worker uses
@@ -17,15 +15,6 @@ defmodule EdgeAgent.Oban.Queues do
   set of worker-declared queues doesn't exactly match the runtime config's
   `queues:` keys. The crash includes both directions of the diff so the
   operator can see what's missing or extra.
-
-  ## Adding a new worker
-
-    1. Create the worker module with `use Oban.Worker, queue: :your_queue, ...`.
-    2. Add the module to `@workers` below.
-    3. Add `your_queue: <concurrency>` to the `queues:` block in
-       `config/runtime.exs`.
-
-  Forgetting step 2 or 3 is caught at boot.
   """
 
   alias EdgeAgent.Commands.Workers.EnqueueExecutionWorker

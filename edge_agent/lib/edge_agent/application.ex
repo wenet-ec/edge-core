@@ -35,8 +35,6 @@ defmodule EdgeAgent.Application do
     Supervisor.start_link(children, opts)
   end
 
-  # Tell Phoenix to update the endpoint configuration
-  # whenever the application is updated.
   @impl true
   def config_change(changed, _new, removed) do
     EdgeAgentWeb.Endpoint.config_change(changed, removed)

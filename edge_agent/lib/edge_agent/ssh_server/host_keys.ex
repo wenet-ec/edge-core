@@ -98,8 +98,6 @@ defmodule EdgeAgent.SshServer.HostKeys do
     end
   end
 
-  # Private functions
-
   defp generate_host_key(key_path, key_type) do
     case key_type do
       :ed25519 -> generate_ed25519_key(key_path)

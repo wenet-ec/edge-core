@@ -1,7 +1,7 @@
 # edge_agent/lib/edge_agent/proxy_servers/transport/buffered_reader.ex
 defmodule EdgeAgent.ProxyServers.Transport.BufferedReader do
   @moduledoc """
-  Helper for reading a framed protocol message from a passive `:gen_tcp` socket.
+  Reads framed protocol messages from passive `:gen_tcp` sockets.
 
   Takes a `parser` function returning one of `{:ok, value, rest}`,
   `{:need_more, required}`, or `{:error, reason}`. Loops until the parser
@@ -12,7 +12,6 @@ defmodule EdgeAgent.ProxyServers.Transport.BufferedReader do
 
   @doc """
   Read from a passive socket until `parser` yields a value or errors.
-  Returns `{:ok, value, leftover_buffer}` so the caller can chain subsequent reads.
   """
   @spec read_passive(:gen_tcp.socket(), parser(t), timeout()) :: {:ok, t, binary()} | {:error, term()}
         when t: var

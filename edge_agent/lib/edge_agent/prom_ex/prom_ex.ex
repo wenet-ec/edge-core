@@ -18,7 +18,6 @@ defmodule EdgeAgent.PromEx do
   @impl true
   def plugins do
     [
-      # PromEx built in plugins
       Plugins.Application,
       Plugins.Beam,
       {Plugins.Phoenix, endpoint: EdgeAgentWeb.Endpoint, router: EdgeAgentWeb.Router},
@@ -38,9 +37,6 @@ defmodule EdgeAgent.PromEx do
 
   @impl true
   def dashboards do
-    # Built-in PromEx dashboards. The agent-specific `edge_agent.json` is
-    # operator-imported from `edge_admin/priv/grafana_dashboards/`; it is not
-    # bundled here.
     [
       {:prom_ex, "application.json"},
       {:prom_ex, "beam.json"},

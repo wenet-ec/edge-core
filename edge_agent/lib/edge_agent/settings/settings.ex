@@ -18,35 +18,12 @@ defmodule EdgeAgent.Settings do
   `get_admin_urls/0`, etc.) so the engine choice for each well-known key
   cannot be mistaken at the call site.
 
-  ## Examples
-
-      # Typed accessors (preferred)
-      iex> Settings.set_node_id("a1b2c3d4-...")
-      iex> Settings.get_node_id()
-      "a1b2c3d4-..."
-
-      iex> Settings.set_api_token("tok-abc")
-      iex> Settings.get_api_token()
-      "tok-abc"
-
-      # Generic accessors
-      iex> Settings.set_config("custom_key", "custom_value")
-      iex> Settings.get_config("custom_key")
-      "custom_value"
-
-      iex> Settings.set_secret("custom_secret", "shhh")
-      iex> Settings.get_secret("custom_secret")
-      "shhh"
   """
 
   alias EdgeAgent.Settings.Configs
   alias EdgeAgent.Settings.ConfigValueCodec
   alias EdgeAgent.Settings.Schemas.Setting
   alias EdgeAgent.Settings.Secrets
-
-  # =============================================================================
-  # Generic Config (sqlite)
-  # =============================================================================
 
   @spec get_config(String.t()) :: String.t() | nil
   @spec get_config(String.t(), default) :: String.t() | default when default: any()
@@ -64,10 +41,6 @@ defmodule EdgeAgent.Settings do
   @spec all_configs() :: %{String.t() => String.t()}
   def all_configs, do: Configs.all()
 
-  # =============================================================================
-  # Generic Secret (persistent_term)
-  # =============================================================================
-
   @spec get_secret(String.t()) :: String.t() | nil
   @spec get_secret(String.t(), default) :: String.t() | default when default: any()
   def get_secret(key, default \\ nil), do: Secrets.get(key, default)
@@ -80,10 +53,6 @@ defmodule EdgeAgent.Settings do
 
   @spec has_secret?(String.t()) :: boolean()
   def has_secret?(key), do: Secrets.has_key?(key)
-
-  # =============================================================================
-  # Typed Accessors — Config (durable)
-  # =============================================================================
 
   @spec get_node_id() :: String.t() | nil
   def get_node_id, do: get_config("node_id")
@@ -153,10 +122,6 @@ defmodule EdgeAgent.Settings do
     merged = ConfigValueCodec.prepend_new_strings(urls, get_core_derp_map_urls())
     set_config("core_derp_map_urls", ConfigValueCodec.encode_string_list(merged))
   end
-
-  # =============================================================================
-  # Typed Accessors — Credentials
-  # =============================================================================
 
   @spec get_api_token() :: String.t() | nil
   def get_api_token, do: get_config("api_token")

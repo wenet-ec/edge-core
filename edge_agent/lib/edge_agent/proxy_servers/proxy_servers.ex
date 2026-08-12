@@ -28,7 +28,6 @@ defmodule EdgeAgent.ProxyServers do
 
   require Logger
 
-  # Client API
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
@@ -36,7 +35,7 @@ defmodule EdgeAgent.ProxyServers do
   @doc """
   Returns true if the proxy GenServer has finished its `init/1` callback.
 
-  Note: this only confirms `init/1` returned, not that the Ranch listeners
+  This only confirms `init/1` returned, not that the Ranch listeners
   are actually accepting connections — listener-startup errors are logged
   but don't block the GenServer from coming up. Use `status/0` for a
   liveness signal that reflects the actual listeners. Returns `false` if
@@ -82,7 +81,6 @@ defmodule EdgeAgent.ProxyServers do
     end
   end
 
-  # GenServer callbacks
   @impl true
   def init(_opts) do
     Process.flag(:trap_exit, true)
@@ -151,8 +149,6 @@ defmodule EdgeAgent.ProxyServers do
 
     :ok
   end
-
-  # Private functions
 
   defp start_proxy_servers(state) do
     with {:ok, http_ref} <- start_http_proxy(state),
@@ -238,6 +234,5 @@ defmodule EdgeAgent.ProxyServers do
     end
   end
 
-  # Helper to format IPv4 or IPv6 tuples for logging.
   defp format_ip(ip) when is_tuple(ip), do: ip |> :inet.ntoa() |> List.to_string()
 end

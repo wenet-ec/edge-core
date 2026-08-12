@@ -231,11 +231,9 @@ defmodule EdgeAgent.SshServer.Channel do
   @impl true
   def handle_ssh_msg({:ssh_cm, _connection_ref, {:eof, _channel_id}}, state) do
     Logger.debug("EOF received from client")
-    # See the previous implementation's note: for non-interactive exec, the
-    # client sends EOF right after the command, and prematurely closing the
-    # port causes the child to be killed before producing output. For an
-    # interactive PTY shell, EOF from the client is rare and we let bash
-    # exit on its own when the user types `exit` or Ctrl-D.
+    # Non-interactive exec clients send EOF right after the command; closing
+    # the port here can kill the child before it writes output. Interactive
+    # PTY shells exit on their own when the user types `exit` or Ctrl-D.
     {:ok, state}
   end
 

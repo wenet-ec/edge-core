@@ -68,10 +68,6 @@ defmodule EdgeAgent.Enrollment do
 
   require Logger
 
-  # =============================================================================
-  # Public API
-  # =============================================================================
-
   @doc """
   Ensures the agent has a verified enrollment key.
 
@@ -99,10 +95,6 @@ defmodule EdgeAgent.Enrollment do
       verify_and_persist(recovery_key)
     end
   end
-
-  # =============================================================================
-  # Private — Verification Flow
-  # =============================================================================
 
   defp verify_and_persist(recovery_key) do
     with {:ok, enrollment_key} <- load_enrollment_key(),
@@ -164,10 +156,6 @@ defmodule EdgeAgent.Enrollment do
   end
 
   def verify_recovery_key(_recovery_key, _cluster_name), do: {:error, "RECOVERY_KEY is invalid"}
-
-  # =============================================================================
-  # Private — Load Enrollment Key
-  # =============================================================================
 
   defp load_enrollment_key do
     enrollment_key = Application.get_env(:edge_agent, :enrollment_key)
@@ -312,10 +300,6 @@ defmodule EdgeAgent.Enrollment do
   defp get_in_path(map, [key | rest]) when is_map(map), do: get_in_path(Map.get(map, key), rest)
   defp get_in_path(_, _), do: nil
 
-  # =============================================================================
-  # Private — Decode Enrollment Key
-  # =============================================================================
-
   defp decode_enrollment_key(enrollment_key) do
     with {:ok, json} <- Base.decode64(enrollment_key, padding: false),
          {:ok, decoded} <- JSON.decode(json),
@@ -328,10 +312,6 @@ defmodule EdgeAgent.Enrollment do
       _ -> {:error, "ENROLLMENT_KEY is missing admin_urls or cluster_name field"}
     end
   end
-
-  # =============================================================================
-  # Private — Verify Enrollment Key with Admin
-  # =============================================================================
 
   defp verify_enrollment_key_with_admin(key_blob, admin_urls) do
     case AdminClient.verify_enrollment_key(key_blob, admin_urls) do

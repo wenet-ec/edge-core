@@ -26,11 +26,6 @@ defmodule EdgeAgent.Metrics do
   - `push_metrics/0` always returns `{:ok, summary}` — partial failure is
     surfaced via the `failed` count, never as `{:error, _}`
 
-  ## Examples
-
-      # Push all metrics (called by worker)
-      iex> Metrics.push_metrics()
-      {:ok, %{total: 3, success: 2, failed: 1}}
   """
 
   alias EdgeAgent.EdgeClusters.AdminClient
@@ -43,9 +38,6 @@ defmodule EdgeAgent.Metrics do
   Attempts to scrape host, agent, and wireguard metrics from local exporters.
   Pushes each successful scrape to admin for caching. Failures are logged but
   don't stop other metrics from being pushed.
-
-  ## Returns
-  - `{:ok, %{total: 3, success: 2, failed: 1}}` - Summary of push results
   """
   @spec push_metrics() :: {:ok, map()}
   def push_metrics do
@@ -63,11 +55,6 @@ defmodule EdgeAgent.Metrics do
     {:ok, %{total: length(results), success: success_count, failed: failed_count}}
   end
 
-  # ===========================================================================
-  # Private Helpers
-  # ===========================================================================
-
-  # Scrapes and pushes host metrics (node_exporter)
   defp push_host_metrics do
     port = Application.get_env(:edge_agent, :host_metrics_port)
     url = "http://localhost:#{port}/metrics"
@@ -75,7 +62,6 @@ defmodule EdgeAgent.Metrics do
     scrape_and_push("host", url)
   end
 
-  # Scrapes and pushes agent metrics (agent PromEx)
   defp push_agent_metrics do
     case scrape_agent_metrics() do
       {:ok, ""} ->
@@ -99,7 +85,6 @@ defmodule EdgeAgent.Metrics do
     end
   end
 
-  # Scrapes agent metrics directly from PromEx module
   defp scrape_agent_metrics do
     case PromEx.get_metrics(EdgeAgent.PromEx) do
       :prom_ex_down ->
@@ -110,7 +95,6 @@ defmodule EdgeAgent.Metrics do
     end
   end
 
-  # Scrapes and pushes WireGuard metrics (wireguard_exporter)
   defp push_wireguard_metrics do
     port = Application.get_env(:edge_agent, :wireguard_metrics_port)
     url = "http://localhost:#{port}/metrics"
@@ -118,7 +102,6 @@ defmodule EdgeAgent.Metrics do
     scrape_and_push("wireguard", url)
   end
 
-  # Generic scrape + push logic
   defp scrape_and_push(metrics_type, url) do
     case scrape_metrics(url) do
       {:ok, ""} ->
@@ -142,7 +125,6 @@ defmodule EdgeAgent.Metrics do
     end
   end
 
-  # Scrapes metrics from local HTTP endpoint
   defp scrape_metrics(url) do
     case Req.get(url) do
       {:ok, %{status: 200, body: metrics_text}} ->

@@ -27,10 +27,6 @@ defmodule EdgeAgent.SelfUpdates do
 
   @doc """
   Checks if self-update feature is enabled.
-
-  ## Returns
-  - `true` if SELF_UPDATE_ENABLED=true
-  - `false` otherwise
   """
   @spec enabled? :: boolean()
   def enabled? do
@@ -50,29 +46,8 @@ defmodule EdgeAgent.SelfUpdates do
   @doc """
   Triggers a self-update by calling the Watchtower HTTP API.
 
-  ## Behavior
-  - Calls Watchtower's `/v1/update` endpoint
-  - Uses Bearer token authentication if WATCHTOWER_HTTP_API_TOKEN is configured
-  - Uses Watchtower's `async=true` option so the API acknowledges the update
-    before the agent is restarted
-
-  ## Returns
-  - `{:ok, body}` - Watchtower returned 202; `body` describes the accepted
-    asynchronous update
-  - `{:error, "Watchtower returned status \#{status}: \#{inspect(body)}"}` -
-    Non-202 response
-  - `{:error, "Failed to call Watchtower: \#{inspect(reason)}"}` - Other
-    transport error
-
-  ## Examples
-
-      # Asynchronous update accepted
-      iex> EdgeAgent.SelfUpdates.trigger_update()
-      {:ok, "Accepted"}
-
-      # Auth failure
-      iex> EdgeAgent.SelfUpdates.trigger_update()
-      {:error, "Watchtower returned status 401: \\"Unauthorized\\""}
+  Calls Watchtower's `/v1/update?async=true` endpoint, using bearer-token
+  authentication when `WATCHTOWER_HTTP_API_TOKEN` is configured.
   """
   @spec trigger_update :: {:ok, map() | binary()} | {:error, binary()}
   def trigger_update do
@@ -113,9 +88,6 @@ defmodule EdgeAgent.SelfUpdates do
 
   Useful when you need to respond to a caller before the agent restarts.
   The update is triggered in a separate process.
-
-  ## Returns
-  - `:ok` - Async task started successfully
   """
   @spec trigger_update_async :: :ok
   def trigger_update_async do
@@ -133,21 +105,11 @@ defmodule EdgeAgent.SelfUpdates do
   Used by HTTP fallback mechanism for periodic self-update polling.
   Compares admin's latest self-update timestamp with agent's last check timestamp
   to avoid duplicate updates.
-
-  ## Behavior
-  1. Calls admin API to check if latest self-update includes this node
-  2. If no update or already processed: Updates last_check timestamp
-  3. If new update available: Triggers Watchtower update, then updates timestamp
-
-  ## Returns
-  - `:ok` - Check completed successfully (with or without triggering update)
-  - `{:error, reason}` - Check or update failed
   """
   @spec check_self_update :: :ok | {:error, term()}
   def check_self_update do
     case AdminClient.check_self_update() do
       {:ok, %{"including_me" => false}} ->
-        # No update for this node, record check time
         Settings.set_last_check_self_update_at(DateTime.truncate(DateTime.utc_now(), :second))
         Logger.debug("Self-update check: no update available")
         :ok
@@ -159,7 +121,6 @@ defmodule EdgeAgent.SelfUpdates do
         if should_trigger_update?(inserted_at, last_check) do
           Logger.info("Self-update available (inserted_at: #{inserted_at_str}), triggering Watchtower")
 
-          # Trigger update first (in case of failure, we don't update timestamp)
           case trigger_update() do
             {:ok, _} ->
               Settings.set_last_check_self_update_at(DateTime.truncate(DateTime.utc_now(), :second))

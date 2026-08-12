@@ -37,10 +37,6 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
 
   @warmup_interval_ms 5_000
 
-  # =============================================================================
-  # Public API
-  # =============================================================================
-
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -53,10 +49,6 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
   def get do
     GenServer.call(__MODULE__, :get)
   end
-
-  # =============================================================================
-  # GenServer Callbacks
-  # =============================================================================
 
   @impl true
   def init(_opts) do
@@ -84,10 +76,6 @@ defmodule EdgeAgent.Vpn.DerpMapCache do
     schedule_refresh(next_ms)
     {:noreply, %{state | map: map, interval_ms: next_ms}}
   end
-
-  # =============================================================================
-  # Private
-  # =============================================================================
 
   defp schedule_refresh(interval_ms) do
     Process.send_after(self(), :refresh, interval_ms)

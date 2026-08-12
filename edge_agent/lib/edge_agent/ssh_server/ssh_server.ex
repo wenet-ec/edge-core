@@ -15,7 +15,6 @@ defmodule EdgeAgent.SshServer do
 
   require Logger
 
-  # Client API
   @impl EdgeAgent.SshServer.Behaviour
   def start_server, do: GenServer.call(__MODULE__, :start_server)
 
@@ -29,7 +28,6 @@ defmodule EdgeAgent.SshServer do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  # GenServer callbacks
   @impl true
   def init(_opts) do
     Process.flag(:trap_exit, true)
@@ -117,7 +115,6 @@ defmodule EdgeAgent.SshServer do
 
   def terminate(_reason, _state), do: :ok
 
-  # SSH Server Key API Callbacks (delegates to HostKeys)
   @impl true
   def host_key(algorithm, _daemon_options) do
     HostKeys.host_key(algorithm)
@@ -128,7 +125,6 @@ defmodule EdgeAgent.SshServer do
     Authentication.auth_key?(key, user)
   end
 
-  # Private functions
   defp do_start_server do
     with :ok <- HostKeys.ensure_host_keys() do
       start_ssh_daemon()

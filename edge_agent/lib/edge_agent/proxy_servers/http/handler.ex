@@ -293,8 +293,6 @@ defmodule EdgeAgent.ProxyServers.Http.Handler do
     end
   end
 
-  # Helpers
-
   @doc """
   Replaces the `Host` header with `host[:port]`, eliding the port for the
   scheme defaults (80 and 443). Drops any prior Host entries (any case).

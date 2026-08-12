@@ -14,12 +14,7 @@ defmodule EdgeAgent.EdgeClusters.HealthCheck do
   @doc """
   Reports node health to admin via HTTP fallback.
 
-  Determines current health status and sends report to admin.
-  Used by `EdgeAgent.LocalScheduler.Tasks.report_health_check/0` when operating in HTTP fallback mode.
-
-  ## Returns
-  - `:ok` - Report sent successfully
-  - `{:error, reason}` - Report failed
+  Used by `EdgeAgent.LocalScheduler.Tasks.report_health_check/0`.
   """
   @spec report() :: :ok | {:error, term()}
   def report do
@@ -48,11 +43,9 @@ defmodule EdgeAgent.EdgeClusters.HealthCheck do
     end
   end
 
-  # Determines current health status by running all health checks
   defp determine_status do
     checks = EdgeAgentHealth.checks()
 
-    # Run all checks and see if any fail
     all_healthy =
       Enum.all?(checks, fn check ->
         case apply(check.module, check.function, []) do

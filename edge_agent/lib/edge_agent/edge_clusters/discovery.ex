@@ -3,43 +3,9 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   @moduledoc """
   Admin server discovery via WireGuard peer inspection.
 
-  Discovers admin servers on the VPN network by listing WireGuard peers
-  (via the Edge VPN CLI `ping` command) and probing the ones named `admin-*` on their
-  discovery endpoint.
-
-  ## Discovery Process
-
-  ```
-  1. List WireGuard peers per network via EdgeAgent.Vpn.ping_peers/0
-  2. Filter peers whose name starts with "admin-"
-  3. HTTP GET http://ip:port/api/v1/admins/me/discovery on each candidate
-     in parallel (Task.async_stream)
-  4. Store confirmed admin URLs (http://ip:port) in Settings for AdminClient
-  ```
-
-  ## Discovery Behavior
-
-  - Always returns `{:ok, network_name | nil, admin_urls}` - never fails
-  - Stores results (even empty list) in Settings to signal discovery completion
-  - Empty list indicates VPN is up but no admins found (triggers HTTP fallback mode)
-
-  ## Admin Discovery Endpoint
-
-  Admins expose `/api/v1/admins/me/discovery` returning:
-  ```json
-  {"data": {"name": "admin-abc123"}}
-  ```
-
-  ## Examples
-
-      iex> Discovery.discover_admins()
-      {:ok, "cluster-test", ["http://100.64.0.4:44000"]}
-
-      iex> Discovery.discover_admins()
-      {:ok, nil, []}
-
-      iex> Discovery.discover_admins()
-      {:ok, "cluster-prod", ["http://100.64.0.4:44000", "http://100.64.0.5:44000"]}
+  Lists VPN peers, probes peers named `admin-*` on the discovery endpoint, and
+  stores confirmed Admin URLs in Settings. An empty result is still stored so
+  other components can enter HTTP fallback mode.
   """
 
   alias EdgeAgent.EdgeClusters.AdminClient
@@ -51,14 +17,7 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
   Discover admins in the cluster.
 
   Returns `{:ok, network_name, admin_urls}` where network_name is the Edge VPN
-  network name (e.g. "cluster-test") or nil if none found, and admin_urls is
-  a list of HTTP URLs using VPN IPs (e.g. ["http://100.64.0.4:44000"]).
-
-  Always stores discovered admins (even empty list) in Settings so other
-  components can distinguish "never discovered" from "discovered but none found".
-
-  The `opts` argument is currently reserved for future use (e.g. overriding
-  the discovery port or concurrency); pass `[]` for now.
+  network name or nil if none found.
   """
   @spec discover_admins(keyword()) :: {:ok, String.t() | nil, [String.t()]}
   def discover_admins(_opts \\ []) do
@@ -143,7 +102,6 @@ defmodule EdgeAgent.EdgeClusters.Discovery do
     end
   end
 
-  # Returns a list of 0 or 1 admin URL for this peer
   defp probe_peer(%{"name" => "admin-" <> _, "address" => ip}, network_name, port) when is_binary(ip) do
     base_url = "http://#{ip}:#{port}"
 

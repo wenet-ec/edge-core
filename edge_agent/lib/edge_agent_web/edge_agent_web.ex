@@ -12,7 +12,6 @@ defmodule EdgeAgentWeb do
       use Phoenix.Router, helpers: false
 
       import Phoenix.Controller
-
       import Plug.Conn
     end
   end

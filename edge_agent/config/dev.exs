@@ -17,7 +17,6 @@ config :edge_agent, EdgeAgentWeb.Endpoint,
   ]
 
 config :edge_agent, EdgeAgentWeb.Plugs.Security, allow_unsafe_scripts: true
-
 config :edge_agent, dev_routes: true
 
 config :file_system,
@@ -27,5 +26,4 @@ config :file_system,
 config :logger, :console, format: "[$level] $message\n"
 
 config :phoenix, :plug_init_mode, :runtime
-
 config :phoenix, :stacktrace_depth, 20
